@@ -1,0 +1,70 @@
+/**
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
+ * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ *
+ * Crazyflie Firmware
+ *
+ * Copyright (C) 2011 Fabio Varesano <fvaresano@yahoo.it>
+ * Copyright (C) 2011-2012 Bitcraze AB
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, in version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @file ms5611.h
+ * Driver for the ms5611 pressure sensor from measurement specialties.
+ * Datasheet at http://www.meas-spec.com/downloads/MS5611-01BA03.pdf
+ *
+ */
+#ifndef MS5611_H
+#define MS5611_H
+
+#include <stdbool.h>
+
+// addresses of the device
+#define MS5611_ADDR_CSB_HIGH  0x76   //CBR=1 0x76 I2C address when CSB is connected to HIGH (VCC)
+#define MS5611_ADDR_CSB_LOW   0x77   //CBR=0 0x77 I2C address when CSB is connected to LOW (GND)
+
+// registers of the device
+#define MS5611_D1 0x40
+#define MS5611_D2 0x50
+#define MS5611_RESET 0x1E
+
+// D1 and D2 result size (bytes)
+#define MS5611_D1D2_SIZE 3
+
+// OSR (Over Sampling Ratio) constants
+#define MS5611_OSR_256 0x00
+#define MS5611_OSR_512 0x02
+#define MS5611_OSR_1024 0x04
+#define MS5611_OSR_2048 0x06
+#define MS5611_OSR_4096 0x08
+
+#define MS5611_PROM_BASE_ADDR 0xA2 // by adding ints from 0 to 6 we can read all the prom configuration values.
+// C1 will be at 0xA2 and all the subsequent are multiples of 2
+#define MS5611_PROM_REG_COUNT 6 // number of registers in the PROM
+#define MS5611_PROM_REG_SIZE 2 // size in bytes of a prom registry.
+
+bool ms5611Init(I2C_TypeDef *i2cPort);
+float ms5611GetPressure(uint8_t osr);
+float ms5611GetTemperature(uint8_t osr);
+int32_t ms5611GetDeltaTemp(uint8_t osr);
+int32_t ms5611RawPressure(uint8_t osr);
+int32_t ms5611RawTemperature(uint8_t osr);
+bool ms5611ReadPROM();
+void ms5611Reset();
+void ms5611StartConversion(uint8_t command);
+int32_t ms5611GetConversion(uint8_t command);
+
+#endif // MS5611_H

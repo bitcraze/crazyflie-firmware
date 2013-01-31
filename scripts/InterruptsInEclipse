@@ -1,0 +1,31 @@
+define hook-step
+	monitor cortex_m3 maskisr on
+end
+define hookpost-step
+	monitor cortex_m3 maskisr off
+end
+
+define hook-stepi
+	monitor cortex_m3 maskisr on
+end
+
+define hookpost-stepi
+	monitor cortex_m3 maskisr off
+end
+
+define hook-next
+	monitor cortex_m3 maskisr on
+end
+
+define hookpost-next
+	monitor cortex_m3 maskisr off
+end
+
+define hook-finish
+	monitor cortex_m3 maskisr on
+end
+
+define hookpost-finish
+	monitor cortex_m3 maskisr off
+end
+
