@@ -58,5 +58,10 @@
 #define VAL_RF_SETUP_1M   0x06
 #define VAL_RF_SETUP_2M   0x0E
 
+#define VAL_SETUP_AW_3B 1
+#define VAL_SETUP_AW_4B 2
+#define VAL_SETUP_AW_5B 3
+
+
 #endif /* __NRF24L01REG_H__ */
 

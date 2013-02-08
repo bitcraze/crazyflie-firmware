@@ -36,6 +36,7 @@
 #include "pidctrl.h"
 #include "param.h"
 #include "log.h"
+#include "eskylink.h"
 
 static bool isInit;
 
@@ -45,9 +46,17 @@ void commInit(void)
     return;
   
   //usbInit();
+#ifndef USE_ESKYLINK
   radiolinkInit();
+#else
+  eskylinkInit();
+#endif
   crtpInit();
+#ifndef USE_ESKYLINK
   crtpSetLink(radiolinkGetLink());
+#else
+  crtpSetLink(eskylinkGetLink());
+#endif
   crtpserviceInit();
   multilogLaunch(4);
   logInit();

@@ -54,7 +54,7 @@ PROJ_OBJ += mpu6050.o i2cdev.o i2croutines.o hmc5883l.o
 PROJ_OBJ += ms5611.o
 
 # Hal
-PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o imu.o pm.o radiolink.o
+PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o imu.o pm.o radiolink.o eskylink.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o
@@ -94,6 +94,10 @@ ifeq ($(DEBUG), 1)
   CFLAGS = -O0 -g3
 else
   CFLAGS = -Os -g3
+endif
+
+ifeq ($(USE_ESKYLINK), 1)
+  CFLAGS += -DUSE_ESKYLINK
 endif
 
 CFLAGS += -DBOARD_REV_$(REV)
