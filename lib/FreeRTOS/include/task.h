@@ -1,6 +1,8 @@
 /*
-    FreeRTOS V7.0.2 - Copyright (C) 2011 Real Time Engineers Ltd.
+    FreeRTOS V7.4.0 - Copyright (C) 2013 Real Time Engineers Ltd.
 
+    FEATURES AND PORTS ARE ADDED TO FREERTOS ALL THE TIME.  PLEASE VISIT
+    http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
 
     ***************************************************************************
      *                                                                       *
@@ -27,28 +29,47 @@
     FreeRTOS is free software; you can redistribute it and/or modify it under
     the terms of the GNU General Public License (version 2) as published by the
     Free Software Foundation AND MODIFIED BY the FreeRTOS exception.
-    >>>NOTE<<< The modification to the GPL is included to allow you to
+
+    >>>>>>NOTE<<<<<< The modification to the GPL is included to allow you to
     distribute a combined work that includes FreeRTOS without being obliged to
     provide the source code for proprietary components outside of the FreeRTOS
-    kernel.  FreeRTOS is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-    more details. You should have received a copy of the GNU General Public
-    License and the FreeRTOS license exception along with FreeRTOS; if not it
-    can be viewed here: http://www.freertos.org/a00114.html and also obtained
-    by writing to Richard Barry, contact details for whom are available on the
-    FreeRTOS WEB site.
+    kernel.
+
+    FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
+    WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+    FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+    details. You should have received a copy of the GNU General Public License
+    and the FreeRTOS license exception along with FreeRTOS; if not itcan be
+    viewed here: http://www.freertos.org/a00114.html and also obtained by
+    writing to Real Time Engineers Ltd., contact details for whom are available
+    on the FreeRTOS WEB site.
 
     1 tab == 4 spaces!
 
-    http://www.FreeRTOS.org - Documentation, latest information, license and
-    contact details.
+    ***************************************************************************
+     *                                                                       *
+     *    Having a problem?  Start by reading the FAQ "My application does   *
+     *    not run, what could be wrong?"                                     *
+     *                                                                       *
+     *    http://www.FreeRTOS.org/FAQHelp.html                               *
+     *                                                                       *
+    ***************************************************************************
 
-    http://www.SafeRTOS.com - A version that is certified for use in safety
-    critical systems.
 
-    http://www.OpenRTOS.com - Commercial support, development, porting,
-    licensing and training services.
+    http://www.FreeRTOS.org - Documentation, books, training, latest versions,
+    license and Real Time Engineers Ltd. contact details.
+
+    http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
+    including FreeRTOS+Trace - an indispensable productivity tool, and our new
+    fully thread aware and reentrant UDP/IP stack.
+
+    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High
+    Integrity Systems, who sell the code with commercial support,
+    indemnification and middleware, under the OpenRTOS brand.
+
+    http://www.SafeRTOS.com - High Integrity Systems also provide a safety 
+    engineered and independently SIL3 certified version for use in safety and 
+    mission critical applications that require provable dependability.
 */
 
 
@@ -70,7 +91,7 @@ extern "C" {
  * MACROS AND DEFINITIONS
  *----------------------------------------------------------*/
 
-#define tskKERNEL_VERSION_NUMBER "V7.0.1"
+#define tskKERNEL_VERSION_NUMBER "V7.4.0"
 
 /**
  * task. h
@@ -116,6 +137,25 @@ typedef struct xTASK_PARAMTERS
 	portSTACK_TYPE *puxStackBuffer;
 	xMemoryRegion xRegions[ portNUM_CONFIGURABLE_REGIONS ];
 } xTaskParameters;
+
+/* Task states returned by eTaskGetState. */
+typedef enum
+{
+	eRunning = 0,	/* A task is querying the state of itself, so must be running. */
+	eReady,			/* The task being queried is in a read or pending ready list. */
+	eBlocked,		/* The task being queried is in the Blocked state. */
+	eSuspended,		/* The task being queried is in the Suspended state, or is in the Blocked state with an infinite time out. */
+	eDeleted		/* The task being queried has been deleted, but its TCB has not yet been freed. */
+} eTaskState;
+
+/* Possible return values for eTaskConfirmSleepModeStatus(). */
+typedef enum
+{
+	eAbortSleep = 0,		/* A task has been made ready or a context switch pended since portSUPPORESS_TICKS_AND_SLEEP() was called - abort entering a sleep mode. */
+	eStandardSleep,			/* Enter a sleep mode that will not last any longer than the expected idle time. */
+	eNoTasksWaitingTimeout	/* No tasks are waiting for a timeout so it is safe to enter a sleep mode that can only be exited by an external interrupt. */
+} eSleepModeStatus;
+
 
 /*
  * Defines the priority used by the idle task.  This must not be modified.
@@ -308,7 +348,7 @@ static const xTaskParameters xCheckTaskParameters =
 	// the task, with appropriate access permissions.  Different processors have
 	// different memory alignment requirements - refer to the FreeRTOS documentation
 	// for full information.
-	{											
+	{
 		// Base address					Length	Parameters
         { cReadWriteArray,				32,		portMPU_REGION_READ_WRITE },
         { cReadOnlyArray,				32,		portMPU_REGION_READ_ONLY },
@@ -359,7 +399,7 @@ xTaskHandle xHandle;
 // ucOneKByte array.  The other two of the maximum 3 definable regions are
 // unused so set to zero.
 static const xMemoryRegion xAltRegions[ portNUM_CONFIGURABLE_REGIONS ] =
-{											
+{
 	// Base address		Length		Parameters
 	{ ucOneKByte,		1024,		portMPU_REGION_READ_WRITE },
 	{ 0,				0,			0 },
@@ -375,7 +415,7 @@ void vATask( void *pvParameters )
 	// for this purpose.  NULL is used as the task handle to indicate that this
 	// function should modify the MPU regions of the calling task.
 	vTaskAllocateMPURegions( NULL, xAltRegions );
-	
+
 	// Now the task can continue its function, but from this point on can only
 	// access its stack and the ucOneKByte array (unless any other statically
 	// defined or shared regions have been declared elsewhere).
@@ -388,7 +428,7 @@ void vTaskAllocateMPURegions( xTaskHandle xTask, const xMemoryRegion * const pxR
 
 /**
  * task. h
- * <pre>void vTaskDelete( xTaskHandle pxTask );</pre>
+ * <pre>void vTaskDelete( xTaskHandle xTask );</pre>
  *
  * INCLUDE_vTaskDelete must be defined as 1 for this function to be available.
  * See the configuration section for more information.
@@ -406,7 +446,7 @@ void vTaskAllocateMPURegions( xTaskHandle xTask, const xMemoryRegion * const pxR
  * See the demo application file death.c for sample code that utilises
  * vTaskDelete ().
  *
- * @param pxTask The handle of the task to be deleted.  Passing NULL will
+ * @param xTask The handle of the task to be deleted.  Passing NULL will
  * cause the calling task to be deleted.
  *
  * Example usage:
@@ -425,7 +465,7 @@ void vTaskAllocateMPURegions( xTaskHandle xTask, const xMemoryRegion * const pxR
  * \defgroup vTaskDelete vTaskDelete
  * \ingroup Tasks
  */
-void vTaskDelete( xTaskHandle pxTaskToDelete ) PRIVILEGED_FUNCTION;
+void vTaskDelete( xTaskHandle xTaskToDelete ) PRIVILEGED_FUNCTION;
 
 /*-----------------------------------------------------------
  * TASK CONTROL API
@@ -542,17 +582,17 @@ void vTaskDelayUntil( portTickType * const pxPreviousWakeTime, portTickType xTim
 
 /**
  * task. h
- * <pre>unsigned portBASE_TYPE uxTaskPriorityGet( xTaskHandle pxTask );</pre>
+ * <pre>unsigned portBASE_TYPE uxTaskPriorityGet( xTaskHandle xTask );</pre>
  *
  * INCLUDE_xTaskPriorityGet must be defined as 1 for this function to be available.
  * See the configuration section for more information.
  *
  * Obtain the priority of any task.
  *
- * @param pxTask Handle of the task to be queried.  Passing a NULL
+ * @param xTask Handle of the task to be queried.  Passing a NULL
  * handle results in the priority of the calling task being returned.
  *
- * @return The priority of pxTask.
+ * @return The priority of xTask.
  *
  * Example usage:
    <pre>
@@ -585,11 +625,29 @@ void vTaskDelayUntil( portTickType * const pxPreviousWakeTime, portTickType xTim
  * \defgroup uxTaskPriorityGet uxTaskPriorityGet
  * \ingroup TaskCtrl
  */
-unsigned portBASE_TYPE uxTaskPriorityGet( xTaskHandle pxTask ) PRIVILEGED_FUNCTION;
+unsigned portBASE_TYPE uxTaskPriorityGet( xTaskHandle xTask ) PRIVILEGED_FUNCTION;
 
 /**
  * task. h
- * <pre>void vTaskPrioritySet( xTaskHandle pxTask, unsigned portBASE_TYPE uxNewPriority );</pre>
+ * <pre>eTaskState eTaskGetState( xTaskHandle xTask );</pre>
+ *
+ * INCLUDE_eTaskGetState must be defined as 1 for this function to be available.
+ * See the configuration section for more information.
+ *
+ * Obtain the state of any task.  States are encoded by the eTaskState
+ * enumerated type.
+ *
+ * @param xTask Handle of the task to be queried.
+ *
+ * @return The state of xTask at the time the function was called.  Note the
+ * state of the task might change between the function being called, and the
+ * functions return value being tested by the calling task.
+ */
+eTaskState eTaskGetState( xTaskHandle xTask ) PRIVILEGED_FUNCTION;
+
+/**
+ * task. h
+ * <pre>void vTaskPrioritySet( xTaskHandle xTask, unsigned portBASE_TYPE uxNewPriority );</pre>
  *
  * INCLUDE_vTaskPrioritySet must be defined as 1 for this function to be available.
  * See the configuration section for more information.
@@ -599,7 +657,7 @@ unsigned portBASE_TYPE uxTaskPriorityGet( xTaskHandle pxTask ) PRIVILEGED_FUNCTI
  * A context switch will occur before the function returns if the priority
  * being set is higher than the currently executing task.
  *
- * @param pxTask Handle to the task for which the priority is being set.
+ * @param xTask Handle to the task for which the priority is being set.
  * Passing a NULL handle results in the priority of the calling task being set.
  *
  * @param uxNewPriority The priority to which the task will be set.
@@ -627,11 +685,11 @@ unsigned portBASE_TYPE uxTaskPriorityGet( xTaskHandle pxTask ) PRIVILEGED_FUNCTI
  * \defgroup vTaskPrioritySet vTaskPrioritySet
  * \ingroup TaskCtrl
  */
-void vTaskPrioritySet( xTaskHandle pxTask, unsigned portBASE_TYPE uxNewPriority ) PRIVILEGED_FUNCTION;
+void vTaskPrioritySet( xTaskHandle xTask, unsigned portBASE_TYPE uxNewPriority ) PRIVILEGED_FUNCTION;
 
 /**
  * task. h
- * <pre>void vTaskSuspend( xTaskHandle pxTaskToSuspend );</pre>
+ * <pre>void vTaskSuspend( xTaskHandle xTaskToSuspend );</pre>
  *
  * INCLUDE_vTaskSuspend must be defined as 1 for this function to be available.
  * See the configuration section for more information.
@@ -643,7 +701,7 @@ void vTaskPrioritySet( xTaskHandle pxTask, unsigned portBASE_TYPE uxNewPriority 
  * i.e. calling vTaskSuspend () twice on the same task still only requires one
  * call to vTaskResume () to ready the suspended task.
  *
- * @param pxTaskToSuspend Handle to the task being suspended.  Passing a NULL
+ * @param xTaskToSuspend Handle to the task being suspended.  Passing a NULL
  * handle will cause the calling task to be suspended.
  *
  * Example usage:
@@ -678,11 +736,11 @@ void vTaskPrioritySet( xTaskHandle pxTask, unsigned portBASE_TYPE uxNewPriority 
  * \defgroup vTaskSuspend vTaskSuspend
  * \ingroup TaskCtrl
  */
-void vTaskSuspend( xTaskHandle pxTaskToSuspend ) PRIVILEGED_FUNCTION;
+void vTaskSuspend( xTaskHandle xTaskToSuspend ) PRIVILEGED_FUNCTION;
 
 /**
  * task. h
- * <pre>void vTaskResume( xTaskHandle pxTaskToResume );</pre>
+ * <pre>void vTaskResume( xTaskHandle xTaskToResume );</pre>
  *
  * INCLUDE_vTaskSuspend must be defined as 1 for this function to be available.
  * See the configuration section for more information.
@@ -693,7 +751,7 @@ void vTaskSuspend( xTaskHandle pxTaskToSuspend ) PRIVILEGED_FUNCTION;
  * will be made available for running again by a single call to
  * vTaskResume ().
  *
- * @param pxTaskToResume Handle to the task being readied.
+ * @param xTaskToResume Handle to the task being readied.
  *
  * Example usage:
    <pre>
@@ -727,11 +785,11 @@ void vTaskSuspend( xTaskHandle pxTaskToSuspend ) PRIVILEGED_FUNCTION;
  * \defgroup vTaskResume vTaskResume
  * \ingroup TaskCtrl
  */
-void vTaskResume( xTaskHandle pxTaskToResume ) PRIVILEGED_FUNCTION;
+void vTaskResume( xTaskHandle xTaskToResume ) PRIVILEGED_FUNCTION;
 
 /**
  * task. h
- * <pre>void xTaskResumeFromISR( xTaskHandle pxTaskToResume );</pre>
+ * <pre>void xTaskResumeFromISR( xTaskHandle xTaskToResume );</pre>
  *
  * INCLUDE_xTaskResumeFromISR must be defined as 1 for this function to be
  * available.  See the configuration section for more information.
@@ -742,12 +800,12 @@ void vTaskResume( xTaskHandle pxTaskToResume ) PRIVILEGED_FUNCTION;
  * will be made available for running again by a single call to
  * xTaskResumeFromISR ().
  *
- * @param pxTaskToResume Handle to the task being readied.
+ * @param xTaskToResume Handle to the task being readied.
  *
  * \defgroup vTaskResumeFromISR vTaskResumeFromISR
  * \ingroup TaskCtrl
  */
-portBASE_TYPE xTaskResumeFromISR( xTaskHandle pxTaskToResume ) PRIVILEGED_FUNCTION;
+portBASE_TYPE xTaskResumeFromISR( xTaskHandle xTaskToResume ) PRIVILEGED_FUNCTION;
 
 /*-----------------------------------------------------------
  * SCHEDULER CONTROL
@@ -1072,40 +1130,6 @@ void vTaskList( signed char *pcWriteBuffer ) PRIVILEGED_FUNCTION;
 void vTaskGetRunTimeStats( signed char *pcWriteBuffer ) PRIVILEGED_FUNCTION;
 
 /**
- * task. h
- * <PRE>void vTaskStartTrace( char * pcBuffer, unsigned portBASE_TYPE uxBufferSize );</PRE>
- *
- * Starts a real time kernel activity trace.  The trace logs the identity of
- * which task is running when.
- *
- * The trace file is stored in binary format.  A separate DOS utility called
- * convtrce.exe is used to convert this into a tab delimited text file which
- * can be viewed and plotted in a spread sheet.
- *
- * @param pcBuffer The buffer into which the trace will be written.
- *
- * @param ulBufferSize The size of pcBuffer in bytes.  The trace will continue
- * until either the buffer in full, or ulTaskEndTrace () is called.
- *
- * \page vTaskStartTrace vTaskStartTrace
- * \ingroup TaskUtils
- */
-void vTaskStartTrace( signed char * pcBuffer, unsigned long ulBufferSize ) PRIVILEGED_FUNCTION;
-
-/**
- * task. h
- * <PRE>unsigned long ulTaskEndTrace( void );</PRE>
- *
- * Stops a kernel activity trace.  See vTaskStartTrace ().
- *
- * @return The number of bytes that have been written into the trace buffer.
- *
- * \page usTaskEndTrace usTaskEndTrace
- * \ingroup TaskUtils
- */
-unsigned long ulTaskEndTrace( void ) PRIVILEGED_FUNCTION;
-
-/**
  * task.h
  * <PRE>unsigned portBASE_TYPE uxTaskGetStackHighWaterMark( xTaskHandle xTask );</PRE>
  *
@@ -1166,7 +1190,7 @@ constant. */
 portBASE_TYPE xTaskCallApplicationTaskHook( xTaskHandle xTask, void *pvParameter ) PRIVILEGED_FUNCTION;
 
 /**
- * xTaskGetIdleTaskHandle() is only available if 
+ * xTaskGetIdleTaskHandle() is only available if
  * INCLUDE_xTaskGetIdleTaskHandle is set to 1 in FreeRTOSConfig.h.
  *
  * Simply returns the handle of the idle task.  It is not valid to call
@@ -1300,6 +1324,41 @@ void vTaskPriorityDisinherit( xTaskHandle * const pxMutexHolder ) PRIVILEGED_FUN
  * xTaskCreate() and xTaskCreateRestricted() macros.
  */
 signed portBASE_TYPE xTaskGenericCreate( pdTASK_CODE pxTaskCode, const signed char * const pcName, unsigned short usStackDepth, void *pvParameters, unsigned portBASE_TYPE uxPriority, xTaskHandle *pxCreatedTask, portSTACK_TYPE *puxStackBuffer, const xMemoryRegion * const xRegions ) PRIVILEGED_FUNCTION;
+
+/*
+ * Get the uxTCBNumber assigned to the task referenced by the xTask parameter.
+ */
+unsigned portBASE_TYPE uxTaskGetTaskNumber( xTaskHandle xTask );
+
+/*
+ * Set the uxTCBNumber of the task referenced by the xTask parameter to
+ * ucHandle.
+ */
+void vTaskSetTaskNumber( xTaskHandle xTask, unsigned portBASE_TYPE uxHandle );
+
+/*
+ * If tickless mode is being used, or a low power mode is implemented, then
+ * the tick interrupt will not execute during idle periods.  When this is the
+ * case, the tick count value maintained by the scheduler needs to be kept up
+ * to date with the actual execution time by being skipped forward by the by
+ * a time equal to the idle period.
+ */
+void vTaskStepTick( portTickType xTicksToJump );
+
+/*
+ * Provided for use within portSUPPRESS_TICKS_AND_SLEEP() to allow the port
+ * specific sleep function to determine if it is ok to proceed with the sleep,
+ * and if it is ok to proceed, if it is ok to sleep indefinitely.
+ *
+ * This function is necessary because portSUPPRESS_TICKS_AND_SLEEP() is only
+ * called with the scheduler suspended, not from within a critical section.  It
+ * is therefore possible for an interrupt to request a context switch between
+ * portSUPPRESS_TICKS_AND_SLEEP() and the low power mode actually being
+ * entered.  eTaskConfirmSleepModeStatus() should be called from a short
+ * critical section between the timer being stopped and the sleep mode being
+ * entered to ensure it is ok to proceed into the sleep mode.
+ */
+eSleepModeStatus eTaskConfirmSleepModeStatus( void );
 
 #ifdef __cplusplus
 }

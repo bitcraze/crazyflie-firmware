@@ -1,6 +1,8 @@
 /*
-    FreeRTOS V7.0.2 - Copyright (C) 2011 Real Time Engineers Ltd.
+    FreeRTOS V7.4.0 - Copyright (C) 2013 Real Time Engineers Ltd.
 
+    FEATURES AND PORTS ARE ADDED TO FREERTOS ALL THE TIME.  PLEASE VISIT
+    http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
 
     ***************************************************************************
      *                                                                       *
@@ -27,28 +29,47 @@
     FreeRTOS is free software; you can redistribute it and/or modify it under
     the terms of the GNU General Public License (version 2) as published by the
     Free Software Foundation AND MODIFIED BY the FreeRTOS exception.
-    >>>NOTE<<< The modification to the GPL is included to allow you to
+
+    >>>>>>NOTE<<<<<< The modification to the GPL is included to allow you to
     distribute a combined work that includes FreeRTOS without being obliged to
     provide the source code for proprietary components outside of the FreeRTOS
-    kernel.  FreeRTOS is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-    more details. You should have received a copy of the GNU General Public
-    License and the FreeRTOS license exception along with FreeRTOS; if not it
-    can be viewed here: http://www.freertos.org/a00114.html and also obtained
-    by writing to Richard Barry, contact details for whom are available on the
-    FreeRTOS WEB site.
+    kernel.
+
+    FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
+    WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+    FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+    details. You should have received a copy of the GNU General Public License
+    and the FreeRTOS license exception along with FreeRTOS; if not itcan be
+    viewed here: http://www.freertos.org/a00114.html and also obtained by
+    writing to Real Time Engineers Ltd., contact details for whom are available
+    on the FreeRTOS WEB site.
 
     1 tab == 4 spaces!
 
-    http://www.FreeRTOS.org - Documentation, latest information, license and
-    contact details.
+    ***************************************************************************
+     *                                                                       *
+     *    Having a problem?  Start by reading the FAQ "My application does   *
+     *    not run, what could be wrong?"                                     *
+     *                                                                       *
+     *    http://www.FreeRTOS.org/FAQHelp.html                               *
+     *                                                                       *
+    ***************************************************************************
 
-    http://www.SafeRTOS.com - A version that is certified for use in safety
-    critical systems.
 
-    http://www.OpenRTOS.com - Commercial support, development, porting,
-    licensing and training services.
+    http://www.FreeRTOS.org - Documentation, books, training, latest versions, 
+    license and Real Time Engineers Ltd. contact details.
+
+    http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
+    including FreeRTOS+Trace - an indispensable productivity tool, and our new
+    fully thread aware and reentrant UDP/IP stack.
+
+    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High 
+    Integrity Systems, who sell the code with commercial support, 
+    indemnification and middleware, under the OpenRTOS brand.
+    
+    http://www.SafeRTOS.com - High Integrity Systems also provide a safety 
+    engineered and independently SIL3 certified version for use in safety and 
+    mission critical applications that require provable dependability.
 */
 
 
@@ -92,7 +113,7 @@ typedef void (*tmrTIMER_CALLBACK)( xTimerHandle xTimer );
 
 /**
  * xTimerHandle xTimerCreate( 	const signed char *pcTimerName,
- * 								portTickType xTimerPeriod,
+ * 								portTickType xTimerPeriodInTicks,
  * 								unsigned portBASE_TYPE uxAutoReload,
  * 								void * pvTimerID,
  * 								tmrTIMER_CALLBACK pxCallbackFunction );
@@ -110,15 +131,15 @@ typedef void (*tmrTIMER_CALLBACK)( xTimerHandle xTimer );
  * purely to assist debugging.  The kernel itself only ever references a timer by
  * its handle, and never by its name.
  *
- * @param xTimerPeriod The timer period.  The time is defined in tick periods so
+ * @param xTimerPeriodInTicks The timer period.  The time is defined in tick periods so
  * the constant portTICK_RATE_MS can be used to convert a time that has been
  * specified in milliseconds.  For example, if the timer must expire after 100
- * ticks, then xTimerPeriod should be set to 100.  Alternatively, if the timer
+ * ticks, then xTimerPeriodInTicks should be set to 100.  Alternatively, if the timer
  * must expire after 500ms, then xPeriod can be set to ( 500 / portTICK_RATE_MS )
  * provided configTICK_RATE_HZ is less than or equal to 1000.
  *
  * @param uxAutoReload If uxAutoReload is set to pdTRUE then the timer will
- * expire repeatedly with a frequency set by the xTimerPeriod parameter.  If
+ * expire repeatedly with a frequency set by the xTimerPeriodInTicks parameter.  If
  * uxAutoReload is set to pdFALSE then the timer will be a one-shot timer and
  * enter the dormant state after it expires.
  *
@@ -137,7 +158,6 @@ typedef void (*tmrTIMER_CALLBACK)( xTimerHandle xTimer );
  * structures, or the timer period was set to 0) then 0 is returned.
  *
  * Example usage:
- *
  *
  * #define NUM_TIMERS 5
  *
@@ -218,7 +238,7 @@ typedef void (*tmrTIMER_CALLBACK)( xTimerHandle xTimer );
  *     for( ;; );
  * }
  */
-xTimerHandle xTimerCreate( const signed char *pcTimerName, portTickType xTimerPeriodInTicks, unsigned portBASE_TYPE uxAutoReload, void * pvTimerID, tmrTIMER_CALLBACK pxCallbackFunction ) PRIVILEGED_FUNCTION;
+xTimerHandle xTimerCreate( const signed char * const pcTimerName, portTickType xTimerPeriodInTicks, unsigned portBASE_TYPE uxAutoReload, void * pvTimerID, tmrTIMER_CALLBACK pxCallbackFunction ) PRIVILEGED_FUNCTION;
 
 /**
  * void *pvTimerGetTimerID( xTimerHandle xTimer );
@@ -929,7 +949,7 @@ xTaskHandle xTimerGetTimerDaemonTaskHandle( void );
  * for use by the kernel only.
  */
 portBASE_TYPE xTimerCreateTimerTask( void ) PRIVILEGED_FUNCTION;
-portBASE_TYPE xTimerGenericCommand( xTimerHandle xTimer, portBASE_TYPE xCommandID, portTickType xOptionalValue, portBASE_TYPE *pxHigherPriorityTaskWoken, portTickType xBlockTime ) PRIVILEGED_FUNCTION;
+portBASE_TYPE xTimerGenericCommand( xTimerHandle xTimer, portBASE_TYPE xCommandID, portTickType xOptionalValue, signed portBASE_TYPE *pxHigherPriorityTaskWoken, portTickType xBlockTime ) PRIVILEGED_FUNCTION;
 
 #ifdef __cplusplus
 }
