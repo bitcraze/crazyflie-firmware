@@ -1,0 +1,11 @@
+
+syntax: regexp
+^bin/dep$
+syntax: glob
+bin/*
+.cproject
+.project
+.settings/*
+*~
+config.mk
+cflie.*
