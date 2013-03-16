@@ -36,6 +36,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
+#include "semphr.h"
 
 #include "config.h"
 #include "crtp.h"
@@ -87,6 +88,7 @@ struct log_block {
 
 static struct log_ops logOps[LOG_MAX_OPS];
 static struct log_block logBlocks[LOG_MAX_BLOCKS];
+static xSemaphoreHandle logLock;
 
 struct ops_setting {
     uint8_t logType;
@@ -147,6 +149,9 @@ void logInit(void)
   logsLen = &_log_stop - &_log_start;
   logsCrc = crcSlow(logs, logsLen);
   
+  // Big lock that protects the log datastructures
+  logLock = xSemaphoreCreateMutex();
+
   for (i=0; i<logsLen; i++)
   {
     if(!(logs[i].type & LOG_GROUP)) 
@@ -179,10 +184,12 @@ void logTask(void * prm)
 	while(1) {
 		crtpReceivePacketBlock(CRTP_PORT_LOG, &p);
 		
+		xSemaphoreTake(logLock, portMAX_DELAY);
 		if (p.channel==TOC_CH)
 		  logTOCProcess(p.data[0]);
 		if (p.channel==CONTROL_CH)
 		  logControlProcess();
+		xSemaphoreGive(logLock);
 	}
 }
 
@@ -299,6 +306,12 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
   logBlocks[i].timer = xTimerCreate( (const signed char *)"logTimer", M2T(1000), 
                                      pdTRUE, &logBlocks[i], logBlockTimed );
   
+  if (logBlocks[i].timer == NULL)
+  {
+	logBlocks[i].id = 0;
+	return ENOMEM;
+  }
+
   DEBUG("Added block ID %d\n", id);
   
   return logAppendBlock(id, settings, len);
@@ -398,7 +411,8 @@ static int logDeleteBlock(int id)
     ops = opsNext;
   }
   
-  xTimerDelete(logBlocks[i].timer, 100);
+  xTimerStop(logBlocks[i].timer, portMAX_DELAY);
+  xTimerDelete(logBlocks[i].timer, portMAX_DELAY);
   
   logBlocks[i].id = -1;  //Log block with id=-1 is considered free
   return 0;
@@ -442,7 +456,7 @@ static int logStopBlock(int id)
     return ENOENT;
   }
   
-  xTimerStop(logBlocks[i].timer, 100);
+  xTimerStop(logBlocks[i].timer, portMAX_DELAY);
   
   return 0;
 }
@@ -461,6 +475,8 @@ void logRunBlock(void * arg)
   static CRTPPacket pk;
   unsigned int timestamp;
   
+  xSemaphoreTake(logLock, portMAX_DELAY);
+
   timestamp = ((long long)xTaskGetTickCount()*1000)/portTICK_RATE_MS;
   
   pk.header = CRTP_HEADER(CRTP_PORT_LOG, LOG_CH);
@@ -528,6 +544,8 @@ void logRunBlock(void * arg)
     ops = ops->next;
   }
   
+  xSemaphoreGive(logLock);
+
   crtpSendPacket(&pk);
 }
 
