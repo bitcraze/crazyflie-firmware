@@ -110,6 +110,8 @@ struct ops_setting {
 #define CONTROL_STOP_BLOCK   4
 #define CONTROL_RESET        5
 
+#define BLOCK_ID_FREE -1
+
 //Private functions
 static void logTask(void * prm);
 static void logTOCProcess(int command);
@@ -158,15 +160,17 @@ void logInit(void)
       logsCount++;
   }
   
-  //Init data structur and set the log subsystem in a known state
+  //Manually free all log blocks
+  for(i=0; i<LOG_MAX_BLOCKS; i++)
+    logBlocks[i].id = BLOCK_ID_FREE;
+
+  //Init data structures and set the log subsystem in a known state
   logReset();
   
   //Start the log task
   xTaskCreate(logTask, (const signed char * const)"log",
     configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
-  
-  //consolePrintf("Length of the log block: %d\n", logsLen);
-  
+
   isInit = true;
 }
 
@@ -297,7 +301,7 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
   int i;
   
   for (i=0; i<LOG_MAX_BLOCKS; i++)
-    if (logBlocks[i].id < 0) break;
+    if (logBlocks[i].id == BLOCK_ID_FREE) break;
   
   if (i == LOG_MAX_BLOCKS)
     return ENOMEM;
@@ -305,10 +309,11 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
   logBlocks[i].id = id;
   logBlocks[i].timer = xTimerCreate( (const signed char *)"logTimer", M2T(1000), 
                                      pdTRUE, &logBlocks[i], logBlockTimed );
+  logBlocks[i].ops = NULL;
   
   if (logBlocks[i].timer == NULL)
   {
-	logBlocks[i].id = 0;
+	logBlocks[i].id = BLOCK_ID_FREE;
 	return ENOMEM;
   }
 
@@ -411,10 +416,13 @@ static int logDeleteBlock(int id)
     ops = opsNext;
   }
   
-  xTimerStop(logBlocks[i].timer, portMAX_DELAY);
-  xTimerDelete(logBlocks[i].timer, portMAX_DELAY);
+  if (logBlocks[i].timer != 0) {
+    xTimerStop(logBlocks[i].timer, portMAX_DELAY);
+    xTimerDelete(logBlocks[i].timer, portMAX_DELAY);
+    logBlocks[i].timer = 0;
+  }
   
-  logBlocks[i].id = -1;  //Log block with id=-1 is considered free
+  logBlocks[i].id = BLOCK_ID_FREE;
   return 0;
 }
 
@@ -625,17 +633,16 @@ static void logReset(void)
     for(i=0; i<LOG_MAX_BLOCKS; i++)
       if (logBlocks[i].id != -1)
       {
-        logStopBlock(i);
-        logDeleteBlock(i);
+        logStopBlock(logBlocks[i].id);
+        logDeleteBlock(logBlocks[i].id);
       }
   }
   
-  //Dataset level reset (to be sure and for first init)
-  //Free all the log block objects
+  //Force free all the log block objects
   for(i=0; i<LOG_MAX_BLOCKS; i++)
-    logBlocks[i].id = -1;
+    logBlocks[i].id = BLOCK_ID_FREE;
   
-  //Free the log ops
+  //Force free the log ops
   for (i=0; i<LOG_MAX_OPS; i++)
     logOps[i].variable = NULL;
 }

@@ -119,7 +119,7 @@ static void prvClockInit(void)
     
     GPIO_ResetBits(GPIOB, LED_RED);
     GPIO_ResetBits(GPIOB, LED_GREEN);
-    
+
     //Cannot start xtal oscillator!
     while(1); 
   }
