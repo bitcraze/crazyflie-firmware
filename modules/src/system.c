@@ -113,7 +113,9 @@ void systemTask(void *arg)
 #ifdef UART_OUTPUT_TRACE_DATA
   debugInitTrace();
 #endif
+#ifdef HAS_UART
   uartInit();
+#endif
   commInit();
 
   DEBUG_PRINT("Crazyflie is up and running!\n");
