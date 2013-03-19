@@ -32,8 +32,6 @@
 #include "crtp.h"
 #include "console.h"
 #include "crtpservice.h"
-#include "multilog.h"
-#include "pidctrl.h"
 #include "param.h"
 #include "log.h"
 #include "eskylink.h"
@@ -57,10 +55,9 @@ void commInit(void)
 #else
   crtpSetLink(eskylinkGetLink());
 #endif
+
   crtpserviceInit();
-  multilogLaunch(4);
   logInit();
-  pidCtrlInit();
   consoleInit();
   paramInit();
   
