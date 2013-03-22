@@ -52,7 +52,6 @@
 #define IMU_G_PER_LSB_CFG     MPU6050_G_PER_LSB_8
 #define IMU_1G_RAW            (int16_t)(1.0 / MPU6050_G_PER_LSB_8)
 
-#define IMU_TEST_DELAY_MS     10
 #define IMU_STARTUP_TIME_MS   1000
 
 #define GYRO_NBR_OF_AXES 3
@@ -87,8 +86,8 @@ Axis3i16   accelLPF;
 Axis3i16   accelLPFAligned;
 Axis3i16   mag;
 Axis3i32   accelStoredFilterValues;
-static bool isMagPresent;
-static bool isBaroPresent;
+static bool isHmc5883lPresent;
+static bool isMs5611Present;
 
 // Pre-calculated values for accelerometer alignment
 float cosPitch;
@@ -96,7 +95,10 @@ float sinPitch;
 float cosRoll;
 float sinRoll;
 
-static bool imuMPU6050evaluateTest(float low, float high, float value, char* string);
+/**
+ * MPU6050 selt test function. If the chip is moved to much during the self test
+ * it will cause the test to fail.
+ */
 static void imuBiasInit(BiasObj* bias);
 static void imuCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void imuCalculateVarianceAndMean(BiasObj* bias, Axis3i32* varOut, Axis3i32* meanOut);
@@ -116,15 +118,15 @@ void imu6Init(void)
   if(isInit)
     return;
 
- isMagPresent = FALSE;
- isBaroPresent = FALSE;
+ isHmc5883lPresent = FALSE;
+ isMs5611Present = FALSE;
 
   // Wait for sensors to startup
   while (xTaskGetTickCount() < M2T(IMU_STARTUP_TIME_MS));
 
   i2cdevInit(I2C1);
   mpu6050Init(I2C1);
-  if (mpu6050Test() == TRUE)
+  if (mpu6050TestConnection() == TRUE)
   {
     DEBUG_PRINT("MPU6050 I2C connection [OK].\n");
   }
@@ -135,33 +137,42 @@ void imu6Init(void)
 
   mpu6050Reset();
   vTaskDelay(M2T(50));
+  // Activate MPU6050
   mpu6050SetSleepEnabled(FALSE);
+  // Enable temp sensor
   mpu6050SetTempSensorEnabled(TRUE);
+  // Disable interrupts
   mpu6050SetIntEnabled(FALSE);
+  // Connect the HMC5883L to the main I2C bus
   mpu6050SetI2CBypassEnabled(TRUE);
+  // Set x-axis gyro as clock source
   mpu6050SetClockSource(MPU6050_CLOCK_PLL_XGYRO);
+  // Set gyro full scale range
   mpu6050SetFullScaleGyroRange(IMU_GYRO_FS_CFG);
+  // Set accelerometer full scale range
   mpu6050SetFullScaleAccelRange(IMU_ACCEL_FS_CFG);
-  mpu6050SetRate(15);  // 8000 / (1 + 15) = 500Hz
+  // Set output rate (15): 8000 / (1 + 15) = 500Hz
+  mpu6050SetRate(15);
+  // Set digital low-pass bandwidth
   mpu6050SetDLPFMode(MPU6050_DLPF_BW_256);
 
 #ifdef IMU_ENABLE_MAG_HMC5883
   hmc5883lInit(I2C1);
   if (hmc5883lTestConnection() == TRUE)
   {
-    isMagPresent = TRUE;
+    isHmc5883lPresent = TRUE;
     DEBUG_PRINT("HMC5883 I2C connection [OK].\n");
   }
   else
   {
-    DEBUG_PRINT("HMC5883 I2C connection [FAIL].\n");
+    DEBUG_PRINT("HMC5883L I2C connection [FAIL].\n");
   }
 #endif
 
 #ifdef IMU_ENABLE_PRESSURE_MS5611
   if (ms5611Init(I2C1) == TRUE)
   {
-    isBaroPresent = TRUE;
+    isMs5611Present = TRUE;
     DEBUG_PRINT("MS5611 I2C connection [OK].\n");
   }
   else
@@ -191,90 +202,23 @@ bool imu6Test(void)
     DEBUG_PRINT("Uninitialized");
     testStatus = FALSE;
   }
-
+  // Test for CF 10-DOF variant with none responding sensor
+  if((isHmc5883lPresent && !isMs5611Present) ||
+     (!isHmc5883lPresent && isMs5611Present))
+  {
+    DEBUG_PRINT("HMC5883L or MS5611 is not responding");
+    testStatus = FALSE;
+  }
   if (testStatus)
   {
-    Axis3f gyro;
-    Axis3f acc;
-    Axis3f gyroTst;
-    Axis3f accTst;
-    Axis3f gyroDiff;
-    Axis3f accDiff;
-    uint32_t scrap;
-
-    // First values read are zero. Read a couple
-    for (scrap = 0; scrap < 20; scrap++)
-    {
-      mpu6050GetMotion6(&accelMpu.x, &accelMpu.y, &accelMpu.z, &gyroMpu.x, &gyroMpu.y, &gyroMpu.z);
-      vTaskDelay(M2T(2));
-    }
-    gyro.x = gyroMpu.x * IMU_DEG_PER_LSB_CFG;
-    gyro.y = gyroMpu.y * IMU_DEG_PER_LSB_CFG;
-    gyro.z = gyroMpu.z * IMU_DEG_PER_LSB_CFG;
-    acc.x = accelMpu.x * IMU_G_PER_LSB_CFG;
-    acc.y = accelMpu.y * IMU_G_PER_LSB_CFG;
-    acc.z = accelMpu.z * IMU_G_PER_LSB_CFG;
-
-    mpu6050SetGyroXSelfTest(TRUE);
-    mpu6050SetGyroYSelfTest(TRUE);
-    mpu6050SetGyroZSelfTest(TRUE);
-    mpu6050SetAccelXSelfTest(TRUE);
-    mpu6050SetAccelYSelfTest(TRUE);
-    mpu6050SetAccelZSelfTest(TRUE);
-
-    vTaskDelay(M2T(IMU_TEST_DELAY_MS));
-    mpu6050GetMotion6(&accelMpu.x, &accelMpu.y, &accelMpu.z, &gyroMpu.x, &gyroMpu.y, &gyroMpu.z);
-    gyroTst.x = gyroMpu.x * IMU_DEG_PER_LSB_CFG;
-    gyroTst.y = gyroMpu.y * IMU_DEG_PER_LSB_CFG;
-    gyroTst.z = gyroMpu.z * IMU_DEG_PER_LSB_CFG;
-    accTst.x = accelMpu.x * IMU_G_PER_LSB_CFG;
-    accTst.y = accelMpu.y * IMU_G_PER_LSB_CFG;
-    accTst.z = accelMpu.z * IMU_G_PER_LSB_CFG;
-
-    mpu6050SetGyroXSelfTest(FALSE);
-    mpu6050SetGyroYSelfTest(FALSE);
-    mpu6050SetGyroZSelfTest(FALSE);
-    mpu6050SetAccelXSelfTest(FALSE);
-    mpu6050SetAccelYSelfTest(FALSE);
-    mpu6050SetAccelZSelfTest(FALSE);
-
-    gyroDiff.x = gyroTst.x - gyro.x;
-    gyroDiff.y = gyroTst.y - gyro.y;
-    gyroDiff.z = gyroTst.z - gyro.z;
-    accDiff.x = accTst.x - acc.x;
-    accDiff.y = accTst.y - acc.y;
-    accDiff.z = accTst.z - acc.z;
-
-    if (imuMPU6050evaluateTest(MPU6050_ST_GYRO_LOW, MPU6050_ST_GYRO_HIGH, gyroDiff.x, "Gyro X") &&
-        imuMPU6050evaluateTest(-MPU6050_ST_GYRO_HIGH, -MPU6050_ST_GYRO_LOW, gyroDiff.y, "Gyro Y") &&
-        imuMPU6050evaluateTest(MPU6050_ST_GYRO_LOW, MPU6050_ST_GYRO_HIGH, gyroDiff.z, "Gyro Z") &&
-        imuMPU6050evaluateTest(MPU6050_ST_ACCEL_LOW, MPU6050_ST_ACCEL_HIGH, accDiff.x, "Acc X") &&
-        imuMPU6050evaluateTest(MPU6050_ST_ACCEL_LOW, MPU6050_ST_ACCEL_HIGH, accDiff.y, "Acc Y") &&
-        imuMPU6050evaluateTest(MPU6050_ST_ACCEL_LOW, MPU6050_ST_ACCEL_HIGH, accDiff.z, "Acc Z"))
-    {
-      DEBUG_PRINT("MPU6050 sensor test [OK].\n");
-    }
-    else
-    {
-      testStatus = FALSE;
-    }
+    testStatus = mpu6050SelfTest();
   }
-
-
-
+  if (testStatus)
+  {
+    testStatus = hmc5883lSelfTest();
+  }
 
   return testStatus;
-}
-
-bool imuMPU6050evaluateTest(float low, float high, float value, char* string)
-{
-  if (value < low || value > high)
-  {
-    DEBUG_PRINT("MPU6050 %s test [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
-                string, low, high, value);
-    return FALSE;
-  }
-  return TRUE;
 }
 
 

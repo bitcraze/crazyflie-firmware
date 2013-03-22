@@ -64,11 +64,11 @@ PRIVATE float pitchRateDesired;
 PRIVATE float yawRateDesired;
 PRIVATE float fusionDt;
 
-LOG_GROUP_START(stabalizer)
+LOG_GROUP_START(stabilizer)
 LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
 LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
 LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
-LOG_GROUP_STOP(imu)
+LOG_GROUP_STOP(stabilizer)
 
 RPYType rollType;
 RPYType pitchType;

@@ -93,8 +93,8 @@ void paramInit(void)
 				    configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
   
   //TODO: Handle stored parameters!
-  
-  consolePrintf("Length of the param block: %d\n", paramsLen);
+  // TA: Remove?
+  //consolePrintf("Length of the param block: %d\n", paramsLen);
   
   isInit = true;
 }

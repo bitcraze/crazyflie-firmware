@@ -27,6 +27,15 @@
  THE SOFTWARE.
  ===============================================
  */
+#define DEBUG_MODULE "MPU6050"
+
+#include "stm32f10x_conf.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+// TA: Maybe not so good to bring in these dependencies...
+#include "debug.h"
+#include "eprintf.h"
 
 #include "mpu6050.h"
 
@@ -68,6 +77,111 @@ bool mpu6050Test(void)
 bool mpu6050TestConnection()
 {
   return mpu6050GetDeviceID() == 0b110100;
+}
+
+/** Do a MPU6050 self test.
+ * @return True if self test passed, false otherwise
+ */
+bool mpu6050SelfTest()
+{
+  bool testStatus = TRUE;
+  int16_t axi16, ayi16, azi16;
+  int16_t gxi16, gyi16, gzi16;
+  float axf, ayf, azf;
+  float gxf, gyf, gzf;
+  float axfTst, ayfTst, azfTst;
+  float gxfTst, gyfTst, gzfTst;
+  float axfDiff, ayfDiff, azfDiff;
+  float gxfDiff, gyfDiff, gzfDiff;
+  float gRange, aRange;
+  uint32_t scrap;
+
+  aRange = mpu6050GetFullScaleAccelGPL();
+  gRange = mpu6050GetFullScaleGyroDPL();
+
+  // First values after startup can be read as zero. Scrap a couple to be sure.
+  for (scrap = 0; scrap < 20; scrap++)
+  {
+    mpu6050GetMotion6(&axi16, &ayi16, &azi16, &gxi16, &gyi16, &gzi16);
+    vTaskDelay(M2T(2));
+  }
+  // First measurement
+  gxf = gxi16 * gRange;
+  gyf = gyi16 * gRange;
+  gzf = gzi16 * gRange;
+  axf = axi16 * aRange;
+  ayf = ayi16 * aRange;
+  azf = azi16 * aRange;
+
+  // Enable self test
+  mpu6050SetGyroXSelfTest(TRUE);
+  mpu6050SetGyroYSelfTest(TRUE);
+  mpu6050SetGyroZSelfTest(TRUE);
+  mpu6050SetAccelXSelfTest(TRUE);
+  mpu6050SetAccelYSelfTest(TRUE);
+  mpu6050SetAccelZSelfTest(TRUE);
+
+  // Wait for self test to take effect
+  vTaskDelay(M2T(MPU6050_SELF_TEST_DELAY_MS));
+  // Take second measurement
+  mpu6050GetMotion6(&axi16, &ayi16, &azi16, &gxi16, &gyi16, &gzi16);
+  gxfTst = gxi16 * gRange;
+  gyfTst = gyi16 * gRange;
+  gzfTst = gzi16 * gRange;
+  axfTst = axi16 * aRange;
+  ayfTst = ayi16 * aRange;
+  azfTst = azi16 * aRange;
+
+  // Disable self test
+  mpu6050SetGyroXSelfTest(FALSE);
+  mpu6050SetGyroYSelfTest(FALSE);
+  mpu6050SetGyroZSelfTest(FALSE);
+  mpu6050SetAccelXSelfTest(FALSE);
+  mpu6050SetAccelYSelfTest(FALSE);
+  mpu6050SetAccelZSelfTest(FALSE);
+
+  // Calculate difference
+  gxfDiff = gxfTst - gxf;
+  gyfDiff = gyfTst - gyf;
+  gzfDiff = gzfTst - gzf;
+  axfDiff = axfTst - axf;
+  ayfDiff = ayfTst - ayf;
+  azfDiff = azfTst - azf;
+
+  // Check result
+  if (mpu6050EvaluateSelfTest(MPU6050_ST_GYRO_LOW, MPU6050_ST_GYRO_HIGH, gxfDiff, "gyro X") &&
+      mpu6050EvaluateSelfTest(-MPU6050_ST_GYRO_HIGH, -MPU6050_ST_GYRO_LOW, gyfDiff, "gyro Y") &&
+      mpu6050EvaluateSelfTest(MPU6050_ST_GYRO_LOW, MPU6050_ST_GYRO_HIGH, gzfDiff, "gyro Z") &&
+      mpu6050EvaluateSelfTest(MPU6050_ST_ACCEL_LOW, MPU6050_ST_ACCEL_HIGH, axfDiff, "acc X") &&
+      mpu6050EvaluateSelfTest(MPU6050_ST_ACCEL_LOW, MPU6050_ST_ACCEL_HIGH, ayfDiff, "acc Y") &&
+      mpu6050EvaluateSelfTest(MPU6050_ST_ACCEL_LOW, MPU6050_ST_ACCEL_HIGH, azfDiff, "acc Z"))
+  {
+    DEBUG_PRINT("Self test [OK].\n");
+  }
+  else
+  {
+    testStatus = FALSE;
+  }
+
+  return testStatus;
+}
+
+/** Evaluate the values from a MPU6050 self test.
+ * @param low The low limit of the self test
+ * @param high The high limit of the self test
+ * @param value The value to compare with.
+ * @param string A pointer to a string describing the value.
+ * @return True if self test within low - high limit, false otherwise
+ */
+bool mpu6050EvaluateSelfTest(float low, float high, float value, char* string)
+{
+  if (value < low || value > high)
+  {
+    DEBUG_PRINT("Self test %s [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
+                string, low, high, value);
+    return FALSE;
+  }
+  return TRUE;
 }
 
 // AUX_VDDIO register (InvenSense demo code calls this RA_*G_OFFS_TC)
@@ -227,7 +341,7 @@ void mpu6050SetDLPFMode(uint8_t mode)
 
 // GYRO_CONFIG register
 
-/** Get full-scale gyroscope range.
+/** Get full-scale gyroscope range id.
  * The FS_SEL parameter allows setting the full-scale range of the gyro sensors,
  * as described in the table below.
  *
@@ -244,12 +358,49 @@ void mpu6050SetDLPFMode(uint8_t mode)
  * @see MPU6050_GCONFIG_FS_SEL_BIT
  * @see MPU6050_GCONFIG_FS_SEL_LENGTH
  */
-uint8_t mpu6050GetFullScaleGyroRange()
+uint8_t mpu6050GetFullScaleGyroRangeId()
 {
   i2cdevReadBits(I2Cx, devAddr, MPU6050_RA_GYRO_CONFIG, MPU6050_GCONFIG_FS_SEL_BIT,
       MPU6050_GCONFIG_FS_SEL_LENGTH, buffer);
   return buffer[0];
 }
+
+/** Get full-scale gyroscope degrees per LSB.
+ *
+ * @return float of current full-scale gyroscope setting as degrees per LSB
+ * @see MPU6050_GYRO_FS_250
+ * @see MPU6050_RA_GYRO_CONFIG
+ * @see MPU6050_GCONFIG_FS_SEL_BIT
+ * @see MPU6050_GCONFIG_FS_SEL_LENGTH
+ */
+float mpu6050GetFullScaleGyroDPL()
+{
+  int32_t rangeId;
+  float range;
+
+  rangeId = mpu6050GetFullScaleGyroRangeId();
+  switch (rangeId)
+  {
+    case MPU6050_GYRO_FS_250:
+      range = MPU6050_DEG_PER_LSB_250;
+      break;
+    case MPU6050_GYRO_FS_500:
+      range = MPU6050_DEG_PER_LSB_500;
+      break;
+    case MPU6050_GYRO_FS_1000:
+      range = MPU6050_DEG_PER_LSB_1000;
+      break;
+    case MPU6050_GYRO_FS_2000:
+      range = MPU6050_DEG_PER_LSB_2000;
+      break;
+    default:
+      range = MPU6050_DEG_PER_LSB_1000;
+      break;
+  }
+
+  return range;
+}
+
 /** Set full-scale gyroscope range.
  * @param range New full-scale gyroscope range value
  * @see getFullScaleRange()
@@ -349,12 +500,49 @@ void mpu6050SetAccelZSelfTest(bool enabled)
  * @see MPU6050_ACONFIG_AFS_SEL_BIT
  * @see MPU6050_ACONFIG_AFS_SEL_LENGTH
  */
-uint8_t mpu6050GetFullScaleAccelRange()
+uint8_t mpu6050GetFullScaleAccelRangeId()
 {
   i2cdevReadBits(I2Cx, devAddr, MPU6050_RA_ACCEL_CONFIG, MPU6050_ACONFIG_AFS_SEL_BIT,
       MPU6050_ACONFIG_AFS_SEL_LENGTH, buffer);
   return buffer[0];
 }
+
+/** Get full-scale accelerometer G per LSB.
+ *
+ * @return float of current full-scale accelerometer setting as G per LSB
+ * @see MPU6050_ACCEL_FS_2
+ * @see MPU6050_RA_ACCEL_CONFIG
+ * @see MPU6050_ACONFIG_AFS_SEL_BIT
+ * @see MPU6050_ACONFIG_AFS_SEL_LENGTH
+ */
+float mpu6050GetFullScaleAccelGPL()
+{
+  int32_t rangeId;
+  float range;
+
+  rangeId = mpu6050GetFullScaleAccelRangeId();
+  switch (rangeId)
+  {
+    case MPU6050_ACCEL_FS_2:
+      range = MPU6050_G_PER_LSB_2;
+      break;
+    case MPU6050_ACCEL_FS_4:
+      range = MPU6050_G_PER_LSB_4;
+      break;
+    case MPU6050_ACCEL_FS_8:
+      range = MPU6050_G_PER_LSB_8;
+      break;
+    case MPU6050_ACCEL_FS_16:
+      range = MPU6050_G_PER_LSB_16;
+      break;
+    default:
+      range = MPU6050_DEG_PER_LSB_1000;
+      break;
+  }
+
+  return range;
+}
+
 /** Set full-scale accelerometer range.
  * @param range New full-scale accelerometer range setting
  * @see getFullScaleAccelRange()

@@ -158,8 +158,6 @@ void systemTask(void *arg)
     }
   }
   
-  pmSetChargeState(charge500mA);
-
   workerLoop();
   
   //Should never reach this point!

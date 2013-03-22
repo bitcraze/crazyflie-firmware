@@ -95,9 +95,22 @@ THE SOFTWARE.
 #define HMC5883L_STATUS_LOCK_BIT    1
 #define HMC5883L_STATUS_READY_BIT   0
 
+#define HMC5883L_ST_GAIN            HMC5883L_GAIN_660  // Gain value during self-test
+#define HMC5883L_ST_DELAY_MS        250                // delay in millisec during self test */
+#define HMC5883L_ST_X_MIN           550
+#define HMC5883L_ST_X_NORM          766
+#define HMC5883L_ST_X_MAX           850
+#define HMC5883L_ST_Y_MIN           550
+#define HMC5883L_ST_Y_NORM          766
+#define HMC5883L_ST_Y_MAX           850
+#define HMC5883L_ST_Z_MIN           550
+#define HMC5883L_ST_Z_NORM          713
+#define HMC5883L_ST_Z_MAX           850
 
 void hmc5883lInit(I2C_TypeDef *i2cPort);
 bool hmc5883lTestConnection();
+bool hmc5883lSelfTest();
+bool hmc5883lEvaluateSelfTest(int16_t min, int16_t max, int16_t value, char* string);
 
 // CONFIG_A register
 uint8_t hmc5883lGetSampleAveraging();

@@ -27,6 +27,15 @@
  THE SOFTWARE.
  ===============================================
  */
+#define DEBUG_MODULE "HMC5883L"
+
+#include "stm32f10x_conf.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+// TA: Maybe not so good to bring in these dependencies...
+#include "debug.h"
+#include "eprintf.h"
 
 #include "hmc5883l.h"
 #include "i2cdev.h"
@@ -80,6 +89,96 @@ bool hmc5883lTestConnection()
   }
 
   return FALSE;
+}
+
+/** Do a self test.
+ * @return True if self test passed, false otherwise
+ */
+bool hmc5883lSelfTest()
+{
+  bool testStatus = TRUE;
+  int16_t mxp, myp, mzp;  // positive magnetometer measurements
+  int16_t mxn, myn, mzn;  // negative magnetometer measurements
+  struct
+  {
+    uint8_t configA;
+    uint8_t configB;
+    uint8_t mode;
+  } regSave;
+
+  // Save register values
+  if (i2cdevRead(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == FALSE)
+  {
+    // TODO: error handling
+    return FALSE;
+  }
+  // Set gain (sensitivity)
+  hmc5883lSetGain(HMC5883L_ST_GAIN);
+
+  // Write CONFIG_A register and do positive test
+  i2cdevWriteByte(I2Cx, devAddr, HMC5883L_RA_CONFIG_A,
+      (HMC5883L_AVERAGING_1 << (HMC5883L_CRA_AVERAGE_BIT - HMC5883L_CRA_AVERAGE_LENGTH + 1)) |
+      (HMC5883L_RATE_15 << (HMC5883L_CRA_RATE_BIT - HMC5883L_CRA_RATE_LENGTH + 1)) |
+      (HMC5883L_BIAS_POSITIVE << (HMC5883L_CRA_BIAS_BIT - HMC5883L_CRA_BIAS_LENGTH + 1)));
+
+  vTaskDelay(M2T(HMC5883L_ST_DELAY_MS));
+
+  /* Perform test measurement & check results */
+  hmc5883lSetMode(HMC5883L_MODE_SINGLE);
+  hmc5883lGetHeading(&mxp, &myp, &mzp);
+
+  // Write CONFIG_A register and do negative test
+  i2cdevWriteByte(I2Cx, devAddr, HMC5883L_RA_CONFIG_A,
+      (HMC5883L_AVERAGING_1 << (HMC5883L_CRA_AVERAGE_BIT - HMC5883L_CRA_AVERAGE_LENGTH + 1)) |
+      (HMC5883L_RATE_15 << (HMC5883L_CRA_RATE_BIT - HMC5883L_CRA_RATE_LENGTH + 1)) |
+      (HMC5883L_BIAS_NEGATIVE << (HMC5883L_CRA_BIAS_BIT - HMC5883L_CRA_BIAS_LENGTH + 1)));
+
+  vTaskDelay(M2T(HMC5883L_ST_DELAY_MS));
+
+  /* Perform test measurement & check results */
+  hmc5883lSetMode(HMC5883L_MODE_SINGLE);
+  hmc5883lGetHeading(&mxn, &myn, &mzn);
+
+  if (hmc5883lEvaluateSelfTest(HMC5883L_ST_X_MIN, HMC5883L_ST_X_MAX, mxp, "pos X") &&
+      hmc5883lEvaluateSelfTest(HMC5883L_ST_Y_MIN, HMC5883L_ST_Y_MAX, myp, "pos Y") &&
+      hmc5883lEvaluateSelfTest(HMC5883L_ST_Z_MIN, HMC5883L_ST_Z_MAX, mzp, "pos Z") &&
+      hmc5883lEvaluateSelfTest(-HMC5883L_ST_X_MAX, -HMC5883L_ST_X_MIN, mxn, "neg X") &&
+      hmc5883lEvaluateSelfTest(-HMC5883L_ST_Y_MAX, -HMC5883L_ST_Y_MIN, myn, "neg Y") &&
+      hmc5883lEvaluateSelfTest(-HMC5883L_ST_Z_MAX, -HMC5883L_ST_Z_MIN, mzn, "neg Z"))
+  {
+    DEBUG_PRINT("Self test [OK].\n");
+  }
+  else
+  {
+    testStatus = FALSE;
+  }
+
+  // Restore registers
+  if (i2cdevWrite(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == FALSE)
+  {
+    // TODO: error handling
+    return FALSE;
+  }
+
+  return testStatus;
+}
+
+/** Evaluate the values from a HMC8335L self test.
+ * @param min The min limit of the self test
+ * @param max The max limit of the self test
+ * @param value The value to compare with.
+ * @param string A pointer to a string describing the value.
+ * @return True if self test within min - max limit, false otherwise
+ */
+bool hmc5883lEvaluateSelfTest(int16_t min, int16_t max, int16_t value, char* string)
+{
+  if (value < min || value > max)
+  {
+    DEBUG_PRINT("Self test %s [FAIL]. low: %d, high: %d, measured: %d\n",
+                string, min, max, value);
+    return FALSE;
+  }
+  return TRUE;
 }
 
 // CONFIG_A register

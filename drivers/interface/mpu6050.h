@@ -36,7 +36,7 @@ THE SOFTWARE.
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
 #define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_LOW
-
+#define MPU6050_SELF_TEST_DELAY_MS  10
 
 //Product ID Description for MPU6050:  | High 4 bits  | Low 4 bits        |
 //                                     | Product Name | Product Revision  |
@@ -428,6 +428,9 @@ void mpu6050Init(I2C_TypeDef *i2cPort);
 bool mpu6050Test(void);
 
 bool mpu6050TestConnection();
+bool mpu6050EvaluateSelfTest(float low, float high, float value, char* string);
+bool mpu6050SelfTest();
+
 
 // AUX_VDDIO register
 uint8_t mpu6050GetAuxVDDIOLevel();
@@ -447,7 +450,8 @@ void mpu6050SetDLPFMode(uint8_t bandwidth);
 void mpu6050SetGyroXSelfTest(bool enabled);
 void mpu6050SetGyroYSelfTest(bool enabled);
 void mpu6050SetGyroZSelfTest(bool enabled);
-uint8_t mpu6050GetFullScaleGyroRange();
+uint8_t mpu6050GetFullScaleGyroRangeId();
+float mpu6050GetFullScaleGyroDPL();
 void mpu6050SetFullScaleGyroRange(uint8_t range);
 
 // ACCEL_CONFIG register
@@ -457,8 +461,9 @@ bool mpu6050GetAccelYSelfTest();
 void mpu6050SetAccelYSelfTest(bool enabled);
 bool mpu6050GetAccelZSelfTest();
 void mpu6050SetAccelZSelfTest(bool enabled);
-uint8_t mpu6050GetFullScaleAccelRange();
+uint8_t mpu6050GetFullScaleAccelRangeId();
 void mpu6050SetFullScaleAccelRange(uint8_t range);
+float mpu6050GetFullScaleAccelGPL();
 uint8_t mpu6050GetDHPFMode();
 void mpu6050SetDHPFMode(uint8_t mode);
 

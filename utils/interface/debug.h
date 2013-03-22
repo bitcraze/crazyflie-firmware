@@ -23,6 +23,7 @@
  *
  * debug.h - Debugging utility functions
  */
+#include "console.h"
 
 #ifdef DEBUG_MODULE
 #define DEBUG_FMT(fmt) DEBUG_MODULE ": " fmt
