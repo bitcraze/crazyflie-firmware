@@ -31,7 +31,7 @@
 
 #include "controller.h"
 #include "pid.h"
-
+#include "param.h"
 /*
 #define TRUNCATE_SINT16(out, in) \
   {\
@@ -59,6 +59,30 @@ int16_t pitchOutput;
 int16_t yawOutput;
 
 static bool isInit;
+
+PARAM_GROUP_START(attitudepid)
+PARAM_ADD(PARAM_FLOAT, kp_roll, &pidRoll.kp)
+PARAM_ADD(PARAM_FLOAT, ki_roll, &pidRoll.ki)
+PARAM_ADD(PARAM_FLOAT, kd_roll, &pidRoll.kd)
+PARAM_ADD(PARAM_FLOAT, kp_pitch, &pidPitch.kp)
+PARAM_ADD(PARAM_FLOAT, ki_pitch, &pidPitch.ki)
+PARAM_ADD(PARAM_FLOAT, kd_pitch, &pidPitch.kd)
+PARAM_ADD(PARAM_FLOAT, kp_yaw, &pidYaw.kp)
+PARAM_ADD(PARAM_FLOAT, ki_yaw, &pidYaw.ki)
+PARAM_ADD(PARAM_FLOAT, kd_yaw, &pidYaw.kd)
+PARAM_GROUP_STOP(attitidepid)
+
+PARAM_GROUP_START(ratepid)
+PARAM_ADD(PARAM_FLOAT, kp_roll, &pidRollRate.kp)
+PARAM_ADD(PARAM_FLOAT, ki_roll, &pidRollRate.ki)
+PARAM_ADD(PARAM_FLOAT, kd_roll, &pidRollRate.kd)
+PARAM_ADD(PARAM_FLOAT, kp_pitch, &pidPitchRate.kp)
+PARAM_ADD(PARAM_FLOAT, ki_pitch, &pidPitchRate.ki)
+PARAM_ADD(PARAM_FLOAT, kd_pitch, &pidPitchRate.kd)
+PARAM_ADD(PARAM_FLOAT, kp_yaw, &pidYawRate.kp)
+PARAM_ADD(PARAM_FLOAT, ki_yaw, &pidYawRate.ki)
+PARAM_ADD(PARAM_FLOAT, kd_yaw, &pidYawRate.kd)
+PARAM_GROUP_STOP(ratepid)
 
 void controllerInit()
 {
