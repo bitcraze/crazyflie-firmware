@@ -213,7 +213,7 @@ bool imu6Test(void)
   {
     testStatus = mpu6050SelfTest();
   }
-  if (testStatus)
+  if (testStatus && isHmc5883lPresent)
   {
     testStatus = hmc5883lSelfTest();
   }
