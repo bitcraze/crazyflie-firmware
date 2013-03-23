@@ -56,10 +56,22 @@
 #define MS5611_PROM_REG_COUNT 6 // number of registers in the PROM
 #define MS5611_PROM_REG_SIZE 2 // size in bytes of a prom registry.
 
+// Self test parameters. Only checks that values are sane
+#define MS5611_ST_PRESS_MAX   (1100.0) //mbar
+#define MS5611_ST_PRESS_MIN   (450.0)  //mbar
+#define MS5611_ST_TEMP_MAX    (60.0)   //degree celcius
+#define MS5611_ST_TEMP_MIN    (-20.0)  //degree celcius
+
+
 bool ms5611Init(I2C_TypeDef *i2cPort);
+bool ms5611SelfTest(void);
+bool ms5611EvaluateSelfTest(float min, float max, float value, char* string);
 float ms5611GetPressure(uint8_t osr);
+float ms5611CalcPressure(int32_t rawPress, int32_t dT);
 float ms5611GetTemperature(uint8_t osr);
+float ms5611CalcTemp(int32_t deltaT);
 int32_t ms5611GetDeltaTemp(uint8_t osr);
+int32_t ms5611CalcDeltaTemp(int32_t rawTemp);
 int32_t ms5611RawPressure(uint8_t osr);
 int32_t ms5611RawTemperature(uint8_t osr);
 bool ms5611ReadPROM();

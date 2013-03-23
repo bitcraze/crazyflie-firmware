@@ -217,6 +217,10 @@ bool imu6Test(void)
   {
     testStatus = hmc5883lSelfTest();
   }
+  if (testStatus && isMs5611Present)
+  {
+    testStatus = ms5611SelfTest();
+  }
 
   return testStatus;
 }

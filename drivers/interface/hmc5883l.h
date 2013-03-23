@@ -95,17 +95,19 @@ THE SOFTWARE.
 #define HMC5883L_STATUS_LOCK_BIT    1
 #define HMC5883L_STATUS_READY_BIT   0
 
-#define HMC5883L_ST_GAIN            HMC5883L_GAIN_660  // Gain value during self-test
+#define HMC5883L_ST_GAIN            HMC5883L_GAIN_440  // Gain value during self-test
+#define HMC5883L_ST_GAIN_NBR        440
+#define HMC5883L_ST_ERROR           0.1                // Max error
 #define HMC5883L_ST_DELAY_MS        250                // delay in millisec during self test */
-#define HMC5883L_ST_X_MIN           550
-#define HMC5883L_ST_X_NORM          766
-#define HMC5883L_ST_X_MAX           850
-#define HMC5883L_ST_Y_MIN           550
-#define HMC5883L_ST_Y_NORM          766
-#define HMC5883L_ST_Y_MAX           850
-#define HMC5883L_ST_Z_MIN           550
-#define HMC5883L_ST_Z_NORM          713
-#define HMC5883L_ST_Z_MAX           850
+#define HMC5883L_ST_X_NORM          (int32_t)(1.16 * HMC5883L_ST_GAIN_NBR)
+#define HMC5883L_ST_X_MIN           (int32_t)(HMC5883L_ST_X_NORM - (HMC5883L_ST_X_NORM * HMC5883L_ST_ERROR))
+#define HMC5883L_ST_X_MAX           (int32_t)(HMC5883L_ST_X_NORM + (HMC5883L_ST_X_NORM * HMC5883L_ST_ERROR))
+#define HMC5883L_ST_Y_NORM          (int32_t)(1.16 * HMC5883L_ST_GAIN_NBR)
+#define HMC5883L_ST_Y_MIN           (int32_t)(HMC5883L_ST_Y_NORM - (HMC5883L_ST_Y_NORM * HMC5883L_ST_ERROR))
+#define HMC5883L_ST_Y_MAX           (int32_t)(HMC5883L_ST_Y_NORM + (HMC5883L_ST_Y_NORM * HMC5883L_ST_ERROR))
+#define HMC5883L_ST_Z_NORM          (int32_t)(1.08 * HMC5883L_ST_GAIN_NBR)
+#define HMC5883L_ST_Z_MIN           (int32_t)(HMC5883L_ST_Z_NORM - (HMC5883L_ST_Z_NORM * HMC5883L_ST_ERROR))
+#define HMC5883L_ST_Z_MAX           (int32_t)(HMC5883L_ST_Z_NORM + (HMC5883L_ST_Z_NORM * HMC5883L_ST_ERROR))
 
 void hmc5883lInit(I2C_TypeDef *i2cPort);
 bool hmc5883lTestConnection();

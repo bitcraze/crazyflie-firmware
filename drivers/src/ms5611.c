@@ -27,15 +27,18 @@
  * Datasheet at http://www.meas-spec.com/downloads/MS5611-01BA03.pdf
  *
  */
-
+#define DEBUG_MODULE "MS5611"
 
 #include "FreeRTOS.h"
 #include "task.h"
+
 #include "ms5611.h"
 #include "i2cdev.h"
+#include "debug.h"
+#include "eprintf.h"
 
-#define EXTRA_PRECISION 5 // trick to add more precision to the pressure and temp readings
-#define CONVERSION_TIME 100 // conversion time in milliseconds
+#define EXTRA_PRECISION      5 // trick to add more precision to the pressure and temp readings
+#define CONVERSION_TIME_MS   100 // conversion time in milliseconds
 
 typedef struct
 {
@@ -76,6 +79,54 @@ bool ms5611Init(I2C_TypeDef *i2cPort)
   return TRUE;
 }
 
+bool ms5611SelfTest(void)
+{
+  bool testStatus = TRUE;
+  int32_t rawPress;
+  int32_t rawTemp;
+  int32_t deltaT;
+  float pressure;
+  float temperature;
+
+  if (!isInit)
+    return FALSE;
+
+  ms5611StartConversion(MS5611_D1 + MS5611_OSR_4096);
+  vTaskDelay(M2T(CONVERSION_TIME_MS));
+  rawPress = ms5611GetConversion(MS5611_D1 + MS5611_OSR_4096);
+
+  ms5611StartConversion(MS5611_D2 + MS5611_OSR_4096);
+  vTaskDelay(M2T(CONVERSION_TIME_MS));
+  rawTemp = ms5611GetConversion(MS5611_D2 + MS5611_OSR_4096);
+
+  deltaT = ms5611CalcDeltaTemp(rawTemp);
+  temperature = ms5611CalcTemp(deltaT);
+  pressure = ms5611CalcPressure(rawPress, deltaT);
+
+  if (ms5611EvaluateSelfTest(MS5611_ST_PRESS_MIN, MS5611_ST_PRESS_MAX, pressure, "pressure") &&
+      ms5611EvaluateSelfTest(MS5611_ST_TEMP_MIN, MS5611_ST_TEMP_MAX, temperature, "temperature"))
+  {
+    DEBUG_PRINT("Self test [OK].\n");
+  }
+  else
+  {
+   testStatus = FALSE;
+  }
+
+  return testStatus;
+}
+
+bool ms5611EvaluateSelfTest(float min, float max, float value, char* string)
+{
+  if (value < min || value > max)
+  {
+    DEBUG_PRINT("Self test %s [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
+                string, min, max, value);
+    return FALSE;
+  }
+  return TRUE;
+}
+
 float ms5611GetPressure(uint8_t osr)
 {
   // see datasheet page 7 for formulas
@@ -98,16 +149,32 @@ float ms5611GetPressure(uint8_t osr)
   }
 }
 
+float ms5611CalcPressure(int32_t rawPress, int32_t dT)
+{
+  int64_t off;
+  int64_t sens;
+
+  if (rawPress == 0 || dT == 0)
+  {
+    return 0;
+  }
+
+  off = (((int64_t)calReg.off) << 16) + ((calReg.tco * (int64_t)dT) >> 7);
+  sens = (((int64_t)calReg.psens) << 15) + ((calReg.tcs * (int64_t)dT) >> 8);
+
+  return ((((rawPress * sens) >> 21) - off) >> (15 - EXTRA_PRECISION))
+          / ((1 << EXTRA_PRECISION) * 100.0);
+}
+
 float ms5611GetTemperature(uint8_t osr)
 {
   // see datasheet page 7 for formulas
-  int64_t dT = ms5611GetDeltaTemp(osr);
+  int32_t dT;
 
+  dT = ms5611GetDeltaTemp(osr);
   if (dT != 0)
   {
-    return (float)(((1 << EXTRA_PRECISION) * 2000)
-            + ((dT * calReg.tsens) >> (23 - EXTRA_PRECISION)))
-            / ((1 << EXTRA_PRECISION)* 100.0);
+    return ms5611CalcTemp(dT);
   }
   else
   {
@@ -120,7 +187,7 @@ int32_t ms5611GetDeltaTemp(uint8_t osr)
   int32_t rawTemp = ms5611RawTemperature(osr);
   if (rawTemp != 0)
   {
-    return rawTemp - (((int32_t)calReg.tref) << 8);
+    return ms5611CalcDeltaTemp(rawTemp);
   }
   else
   {
@@ -128,10 +195,36 @@ int32_t ms5611GetDeltaTemp(uint8_t osr)
   }
 }
 
+float ms5611CalcTemp(int32_t deltaT)
+{
+  if (deltaT == 0)
+  {
+    return 0;
+  }
+  else
+  {
+    return (float)(((1 << EXTRA_PRECISION) * 2000)
+            + (((int64_t)deltaT * calReg.tsens) >> (23 - EXTRA_PRECISION)))
+            / ((1 << EXTRA_PRECISION)* 100.0);
+  }
+}
+
+int32_t ms5611CalcDeltaTemp(int32_t rawTemp)
+{
+  if (rawTemp == 0)
+  {
+    return 0;
+  }
+  else
+  {
+    return rawTemp - (((int32_t)calReg.tref) << 8);
+  }
+}
+
 int32_t ms5611RawPressure(uint8_t osr)
 {
   uint32_t now = xTaskGetTickCount();
-  if (lastPresConv != 0 && (now - lastPresConv) >= CONVERSION_TIME)
+  if (lastPresConv != 0 && (now - lastPresConv) >= CONVERSION_TIME_MS)
   {
     lastPresConv = 0;
     return ms5611GetConversion(MS5611_D1 + osr);
@@ -150,7 +243,7 @@ int32_t ms5611RawPressure(uint8_t osr)
 int32_t ms5611RawTemperature(uint8_t osr)
 {
   uint32_t now = xTaskGetTickCount();
-  if (lastTempConv != 0 && (now - lastTempConv) >= CONVERSION_TIME)
+  if (lastTempConv != 0 && (now - lastTempConv) >= CONVERSION_TIME_MS)
   {
     lastTempConv = 0;
     tempCache = ms5611GetConversion(MS5611_D2 + osr);

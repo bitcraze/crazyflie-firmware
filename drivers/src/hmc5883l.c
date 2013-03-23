@@ -69,7 +69,7 @@ void hmc5883lInit(I2C_TypeDef *i2cPort)
       (HMC5883L_BIAS_NORMAL << (HMC5883L_CRA_BIAS_BIT - HMC5883L_CRA_BIAS_LENGTH + 1)));
 
   // write CONFIG_B register
-  hmc5883lSetGain(HMC5883L_GAIN_1090);
+  hmc5883lSetGain(HMC5883L_GAIN_660);
 
   // write MODE register
   hmc5883lSetMode(HMC5883L_MODE_SINGLE);

@@ -36,6 +36,7 @@
 // TA: Maybe not so good to bring in these dependencies...
 #include "debug.h"
 #include "eprintf.h"
+#include "i2cdev.h"
 
 #include "mpu6050.h"
 
