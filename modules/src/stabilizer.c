@@ -64,12 +64,6 @@ PRIVATE float pitchRateDesired;
 PRIVATE float yawRateDesired;
 PRIVATE float fusionDt;
 
-LOG_GROUP_START(stabilizer)
-LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
-LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
-LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
-LOG_GROUP_STOP(stabilizer)
-
 RPYType rollType;
 RPYType pitchType;
 RPYType yawType;
@@ -78,6 +72,25 @@ uint16_t actuatorThrust;
 int16_t  actuatorRoll;
 int16_t  actuatorPitch;
 int16_t  actuatorYaw;
+
+uint32_t motorPowerLeft;
+uint32_t motorPowerRight;
+uint32_t motorPowerFront;
+uint32_t motorPowerRear;
+
+LOG_GROUP_START(stabilizer)
+LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
+LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
+LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
+LOG_ADD(LOG_UINT16, thrust, &actuatorThrust)
+LOG_GROUP_STOP(stabilizer)
+
+LOG_GROUP_START(motor)
+LOG_ADD(LOG_INT32, m4, &motorPowerLeft) 
+LOG_ADD(LOG_INT32, m1, &motorPowerFront) 
+LOG_ADD(LOG_INT32, m2, &motorPowerRight) 
+LOG_ADD(LOG_INT32, m3, &motorPowerRear) 
+LOG_GROUP_STOP(motor)
 
 static bool isInit;
 
@@ -207,11 +220,6 @@ static void stabilizerTask(void* param)
 static void distributePower(const uint16_t thrust, const int16_t roll,
                             const int16_t pitch, const int16_t yaw)
 {
-  uint32_t motorPowerLeft;
-  uint32_t motorPowerRight;
-  uint32_t motorPowerFront;
-  uint32_t motorPowerRear;
-
 #ifdef QUAD_FORMATION_X
   roll = roll >> 1;
   pitch = pitch >> 1;

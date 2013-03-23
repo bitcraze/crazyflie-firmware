@@ -647,12 +647,3 @@ static void logReset(void)
     logOps[i].variable = NULL;
 }
 
-int i = 13;
-
-LOG_GROUP_START(motor)
-LOG_ADD(LOG_UINT16, m1, &i)
-LOG_ADD(LOG_UINT16, m2, &i)
-LOG_ADD(LOG_UINT16, m3, &i)
-LOG_ADD(LOG_UINT16, m4, &i)
-LOG_GROUP_STOP(stabalizer)
-

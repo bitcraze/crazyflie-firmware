@@ -35,6 +35,7 @@
 #include "system.h"
 #include "pm.h"
 #include "led.h"
+#include "log.h"
 #include "adc.h"
 #include "ledseq.h"
 #include "commander.h"
@@ -62,6 +63,10 @@ const static float bat671723HS25C[10] =
   4.04, // 80%
   4.10  // 90%
 };
+
+LOG_GROUP_START(pm)
+LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+LOG_GROUP_STOP(pm)
 
 void pmInit(void)
 {
