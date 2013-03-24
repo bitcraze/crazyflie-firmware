@@ -163,11 +163,14 @@ static void radiolinkTask(void * arg)
 static void radiolinkInitNRF24L01P(void)
 {
   int i;
+  char radioAddress[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
 
   //Set the radio channel
   nrfSetChannel(configblockGetRadioChannel());
   //Set the radio data rate
   nrfSetDatarate(configblockGetRadioSpeed());
+  //Set radio address
+  nrfSetAddress(0, radioAddress);
 
   //Power the radio, Enable the DS interruption, set the radio in PRX mode
   nrfWrite1Reg(REG_CONFIG, 0x3F);
