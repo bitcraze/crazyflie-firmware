@@ -177,7 +177,6 @@ static void eskylinkInitPaired(int channel)
 }
 
 //FIXME: A lot of parameters shall be configurable
-//FIXME: The mapping is currently a bit shacky (basically impossible to fly ...)
 static void eskylinkDecode(char* packet)
 {
   static CRTPPacket crtpPacket;
@@ -185,19 +184,19 @@ static void eskylinkDecode(char* packet)
   uint16_t thrust;
   
   pitch = ((packet[2]<<8) | packet[3])-PPM_ZERO;
-  if (pitch<(-PPM_RANGE)) pitch = -PPM_RANGE;
-  if (pitch>PPM_RANGE) pitch = PPM_RANGE;
+  if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
+  if (roll>PPM_RANGE) roll = PPM_RANGE;
   pitch *= 20.0/PPM_RANGE;
   
   roll = ((packet[0]<<8) | packet[1])-PPM_ZERO;
   if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
   if (roll>PPM_RANGE) roll = PPM_RANGE;
-  pitch *= 20.0/PPM_RANGE;
+  roll *= 20.0/PPM_RANGE;
   
   yaw = ((packet[6]<<8) | packet[7])-PPM_ZERO;
   if (yaw<(-PPM_RANGE)) yaw = -PPM_RANGE;
   if (yaw>PPM_RANGE) yaw = PPM_RANGE;
-  yaw *= 50.0/PPM_RANGE;
+  yaw *= 200.0/PPM_RANGE;
   
   thrust = ((packet[4]<<8) | packet[5])-PPM_MIN;
   if (thrust<0) thrust = 0;
