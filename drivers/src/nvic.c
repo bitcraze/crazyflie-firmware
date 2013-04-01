@@ -201,7 +201,7 @@ void EXTI9_5_IRQHandler(void)
   extiInterruptHandler();
 }
 
-void USART1_IRQHandler(void)
+void USART3_IRQHandler(void)
 {
   uartIsr();
 }

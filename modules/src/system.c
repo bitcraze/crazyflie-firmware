@@ -110,12 +110,15 @@ void systemTask(void *arg)
   //Init the high-levels modules
   systemInit();
 
+#ifndef USE_UART_CRTP
 #ifdef UART_OUTPUT_TRACE_DATA
   debugInitTrace();
 #endif
 #ifdef HAS_UART
   uartInit();
 #endif
+#endif //ndef USE_UART_CRTP
+
   commInit();
 
   DEBUG_PRINT("Crazyflie is up and running!\n");

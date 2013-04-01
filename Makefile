@@ -15,7 +15,9 @@ CLOAD             ?= 0
 DEBUG             ?= 1
 
 ## Flag that can be added to config.mk
-# CFLAGS += -D HAS_UART
+# CFLAGS += -DUSE_UART_CRTP    # Set CRTP link to UART
+# CFLAGS += -DUSE_ESKYLINK     # Set CRTP link to E-SKY receiver
+# CFLAGS += -DHAS_UART         # To enable trace uart
 
 REV               ?= E
 

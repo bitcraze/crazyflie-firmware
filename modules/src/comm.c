@@ -35,6 +35,7 @@
 #include "param.h"
 #include "log.h"
 #include "eskylink.h"
+#include "uart.h"
 
 static bool isInit;
 
@@ -43,17 +44,22 @@ void commInit(void)
   if (isInit)
     return;
   
-  //usbInit();
-#ifndef USE_ESKYLINK
-  radiolinkInit();
-#else
+#ifdef USE_UART_CRTP
+  uartInit();
+#elif defined(USE_ESKYLINK)
   eskylinkInit();
-#endif
-  crtpInit();
-#ifndef USE_ESKYLINK
-  crtpSetLink(radiolinkGetLink());
 #else
+  radiolinkInit();
+#endif
+
+  crtpInit();
+
+#ifdef USE_UART_CRTP
+  crtpSetLink(uartGetLink());
+#elif defined(USE_ESKYLINK)
   crtpSetLink(eskylinkGetLink());
+#else
+  crtpSetLink(radiolinkGetLink());
 #endif
 
   crtpserviceInit();
@@ -75,8 +81,14 @@ bool commTest(void)
 {
   bool pass=isInit;
   
-  //pass &= usbTest();
+  #ifdef USE_UART_CRTP
+  pass &= uartTest();
+  #elif defined(USE_ESKYLINK)
+  pass &= eskylinkTest();
+  #else
   pass &= radiolinkTest();
+  #endif
+  
   pass &= crtpTest();
   pass &= crtpserviceTest();
   pass &= consoleTest();

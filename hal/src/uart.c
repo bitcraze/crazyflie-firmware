@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * uart.c - uart initialization and functions
+ * uart.c - uart CRTP link and raw access functions
  */
 #include <string.h>
 
@@ -48,6 +48,8 @@
 #define UART_DATA_TIMEOUT_TICKS (UART_DATA_TIMEOUT_MS / portTICK_RATE_MS)
 #define CRTP_START_BYTE 0xAA
 #define CCR_ENABLE_SET  ((uint32_t)0x00000001)
+
+static bool isInit = false;
 
 xSemaphoreHandle waitUntilSendDone = NULL;
 static uint8_t outBuffer[64];
@@ -148,6 +150,13 @@ void uartInit(void)
 #endif
   //Enable it
   USART_Cmd(UART_TYPE, ENABLE);
+  
+  isInit = true;
+}
+
+bool uartTest(void)
+{
+  return isInit;
 }
 
 void uartRxTask(void *param)
@@ -223,7 +232,7 @@ void uartRxTask(void *param)
   }
 }
 
-int uartReceiveCRTPPacket(CRTPPacket *p)
+static int uartReceiveCRTPPacket(CRTPPacket *p)
 {
   return xQueueReceive(packetDelivery, p, portMAX_DELAY);
 }
@@ -259,7 +268,7 @@ void uartIsr(void)
   }
 }
 
-void uartSendCRTPPacket(CRTPPacket *p)
+static int uartSendCRTPPacket(CRTPPacket *p)
 {
   outBuffer[0] = CRTP_START_BYTE;
   outBuffer[1] = CRTP_START_BYTE;
@@ -275,6 +284,24 @@ void uartSendCRTPPacket(CRTPPacket *p)
   USART_SendData(UART_TYPE, outBuffer[0] & 0xFF);
   USART_ITConfig(UART_TYPE, USART_IT_TXE, ENABLE);
   xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
+  
+  return 0;
+}
+
+static int uartSetEnable(bool enable) {
+  return 0;
+}
+
+static struct crtpLinkOperations uartOp =
+{
+  .setEnable         = uartSetEnable,
+  .sendPacket        = uartSendCRTPPacket,
+  .receivePacket     = uartReceiveCRTPPacket,
+};
+
+struct crtpLinkOperations * uartGetLink()
+{
+  return &uartOp;
 }
 
 void uartDmaIsr(void)

@@ -21,10 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * uart.h - uart initialization and functions header file
+ * uart.h - uart CRTP link and raw access functions
  */
 #ifndef UART_H_
 #define UART_H_
+
+#include <stdbool.h>
 
 #include "crtp.h"
 #include "eprintf.h"
@@ -40,34 +42,36 @@
 #define UART_GPIO_PORT  GPIOB
 #define UART_GPIO_TX    GPIO_Pin_10
 #define UART_GPIO_RX    GPIO_Pin_11
-
-
-
+ 
 /**
  * Initialize the UART.
+ *
+ * @note Initialize CRTP link only if USE_CRTP_UART is defined
  */
 void uartInit(void);
 
 /**
- * Receive packet from UART. Blocking.
+ * Test the UART status.
  *
- * @param[out] p The received CRTP packet
+ * @return true if the UART is initialized
  */
-int uartReceiveCRTPPacket(CRTPPacket *p);
+bool uartTest(void);
 
 /**
- * Send CRTP packet.
+ * Get CRTP link data structure
  *
- * @param[in] p The CRTP packet that shall be sent.
+ * @return Address of the crtp link operations structure.
  */
-void uartSendCRTPPacket(CRTPPacket *p);
+struct crtpLinkOperations * uartGetLink();
 
 /**
- * Sends raw data using a spinnlock. Should be used from
+ * Sends raw data using a lock. Should be used from
  * exception functions and for debugging when a lot of data
  * should be transfered.
  * @param[in] size  Number of bytes to send
  * @param[in] data  Pointer to data
+ *
+ * @note If UART Crtp link is activated this function does nothing
  */
 void uartSendData(uint32_t size, uint8_t* data);
 
@@ -75,6 +79,8 @@ void uartSendData(uint32_t size, uint8_t* data);
  * Send a single character to the serial port using the uartSendData function.
  * @param[in] ch Character to print. Only the 8 LSB are used.
  * @return Character printed
+ *
+ * @note If UART Crtp link is activated this function does nothing
  */
 int uartPutchar(int ch);
 
@@ -82,6 +88,8 @@ int uartPutchar(int ch);
  * Uart printf macro that uses eprintf
  * @param[in] FMT String format
  * @param[in] ... Parameters to print
+ *
+ * @note If UART Crtp link is activated this function does nothing
  */
 #define uartPrintf(FMT, ...) eprintf(uartPutchar, FMT, ## __VA_ARGS__)
 
@@ -91,6 +99,8 @@ int uartPutchar(int ch);
  * should be transfered.
  * @param[in] size  Number of bytes to send
  * @param[in] data  Pointer to data
+ *
+ * @note If UART Crtp link is activated this function does nothing
  */
 void uartSendDataDma(uint32_t size, uint8_t* data);
 
