@@ -43,10 +43,12 @@ void commInit(void)
 {
   if (isInit)
     return;
-  
-#ifdef USE_UART_CRTP
+
+#ifdef HAS_UART
   uartInit();
-#elif defined(USE_ESKYLINK)
+#endif
+  
+#ifdef USE_ESKYLINK
   eskylinkInit();
 #else
   radiolinkInit();

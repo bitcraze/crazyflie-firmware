@@ -230,5 +230,8 @@ struct crtpLinkOperations * radiolinkGetLink()
 
 void radiolinkReInit(void)
 {
+  if (!isInit)
+    return;
+
   radiolinkInitNRF24L01P();
 }

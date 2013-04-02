@@ -145,7 +145,7 @@ void uartInit(void)
   xTaskCreate(uartRxTask, (const signed char * const)"UART-Rx",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
 
-  packetDelivery = xQueueCreate(10, sizeof(CRTPPacket));
+  packetDelivery = xQueueCreate(2, sizeof(CRTPPacket));
   uartDataDelivery = xQueueCreate(40, sizeof(uint8_t));
 #endif
   //Enable it
@@ -234,7 +234,12 @@ void uartRxTask(void *param)
 
 static int uartReceiveCRTPPacket(CRTPPacket *p)
 {
-  return xQueueReceive(packetDelivery, p, portMAX_DELAY);
+  if (xQueueReceive(packetDelivery, p, portMAX_DELAY) == pdTRUE)
+  {
+    return 0;
+  }
+
+  return -1;
 }
 
 static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -288,7 +293,8 @@ static int uartSendCRTPPacket(CRTPPacket *p)
   return 0;
 }
 
-static int uartSetEnable(bool enable) {
+static int uartSetEnable(bool enable)
+{
   return 0;
 }
 
