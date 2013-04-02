@@ -37,8 +37,8 @@
 
 struct CommanderCrtpValues
 {
-  float roll;
   float pitch;
+  float roll;
   float yaw;
   uint16_t thrust;
 } __attribute__((packed));
