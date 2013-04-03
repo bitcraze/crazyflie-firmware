@@ -71,9 +71,6 @@ void hmc5883lInit(I2C_TypeDef *i2cPort)
   // write CONFIG_B register
   hmc5883lSetGain(HMC5883L_GAIN_660);
 
-  // write MODE register
-  hmc5883lSetMode(HMC5883L_MODE_SINGLE);
-
   isInit = TRUE;
 }
 
@@ -121,10 +118,9 @@ bool hmc5883lSelfTest()
       (HMC5883L_RATE_15 << (HMC5883L_CRA_RATE_BIT - HMC5883L_CRA_RATE_LENGTH + 1)) |
       (HMC5883L_BIAS_POSITIVE << (HMC5883L_CRA_BIAS_BIT - HMC5883L_CRA_BIAS_LENGTH + 1)));
 
-  vTaskDelay(M2T(HMC5883L_ST_DELAY_MS));
-
   /* Perform test measurement & check results */
   hmc5883lSetMode(HMC5883L_MODE_SINGLE);
+  vTaskDelay(M2T(HMC5883L_ST_DELAY_MS));
   hmc5883lGetHeading(&mxp, &myp, &mzp);
 
   // Write CONFIG_A register and do negative test
@@ -133,10 +129,9 @@ bool hmc5883lSelfTest()
       (HMC5883L_RATE_15 << (HMC5883L_CRA_RATE_BIT - HMC5883L_CRA_RATE_LENGTH + 1)) |
       (HMC5883L_BIAS_NEGATIVE << (HMC5883L_CRA_BIAS_BIT - HMC5883L_CRA_BIAS_LENGTH + 1)));
 
-  vTaskDelay(M2T(HMC5883L_ST_DELAY_MS));
-
   /* Perform test measurement & check results */
   hmc5883lSetMode(HMC5883L_MODE_SINGLE);
+  vTaskDelay(M2T(HMC5883L_ST_DELAY_MS));
   hmc5883lGetHeading(&mxn, &myn, &mzn);
 
   if (hmc5883lEvaluateSelfTest(HMC5883L_ST_X_MIN, HMC5883L_ST_X_MAX, mxp, "pos X") &&

@@ -97,7 +97,7 @@ THE SOFTWARE.
 
 #define HMC5883L_ST_GAIN            HMC5883L_GAIN_440  // Gain value during self-test
 #define HMC5883L_ST_GAIN_NBR        440
-#define HMC5883L_ST_ERROR           0.1                // Max error
+#define HMC5883L_ST_ERROR           0.2                // Max error
 #define HMC5883L_ST_DELAY_MS        250                // delay in millisec during self test */
 #define HMC5883L_ST_X_NORM          (int32_t)(1.16 * HMC5883L_ST_GAIN_NBR)
 #define HMC5883L_ST_X_MIN           (int32_t)(HMC5883L_ST_X_NORM - (HMC5883L_ST_X_NORM * HMC5883L_ST_ERROR))

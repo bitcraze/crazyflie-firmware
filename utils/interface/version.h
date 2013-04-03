@@ -29,7 +29,7 @@
 extern const char * V_SLOCAL_REVISION;
 extern const char * V_SREVISION;
 extern const char * V_STAG;
-extern const int V_MODIFIED;
+extern const bool V_MODIFIED;
 
 #endif /* __VERSION_H__ */
 

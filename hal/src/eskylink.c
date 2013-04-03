@@ -204,8 +204,8 @@ static void eskylinkDecode(char* packet)
   thrust *= 55000/(2*PPM_RANGE);
   
   crtpPacket.port = CRTP_PORT_COMMANDER;
-  memcpy(&crtpPacket.data[0],  (char*)&pitch,  4);
-  memcpy(&crtpPacket.data[4],  (char*)&roll,   4);
+  memcpy(&crtpPacket.data[0],  (char*)&roll,   4);
+  memcpy(&crtpPacket.data[4],  (char*)&pitch,  4);
   memcpy(&crtpPacket.data[8],  (char*)&yaw,    4);
   memcpy(&crtpPacket.data[12], (char*)&thrust, 2);
   
