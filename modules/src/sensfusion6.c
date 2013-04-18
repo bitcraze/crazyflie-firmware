@@ -28,13 +28,14 @@
 
 #include "sensfusion6.h"
 #include "imu.h"
+#include "param.h"
 
 //#define MADWICK_QUATERNION_IMU
 
 #ifdef MADWICK_QUATERNION_IMU
   #define BETA_DEF     0.01f    // 2 * proportional gain
 #else // MAHONY_QUATERNION_IMU
-    #define TWO_KP_DEF  (2.0f * 0.8f) // 2 * proportional gain
+    #define TWO_KP_DEF  (2.0f * 0.4f) // 2 * proportional gain
     #define TWO_KI_DEF  (2.0f * 0.001f) // 2 * integral gain
 #endif
 
@@ -254,3 +255,13 @@ float invSqrt(float x)
   y = y * (1.5f - (halfx * y * y));
   return y;
 }
+
+
+PARAM_GROUP_START(sensorfusion6)
+#ifdef MADWICK_QUATERNION_IMU
+PARAM_ADD(PARAM_FLOAT, beta, &beta)
+#else // MAHONY_QUATERNION_IMU
+PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
+PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
+#endif
+PARAM_GROUP_STOP(sensorfusion6)

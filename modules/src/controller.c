@@ -60,30 +60,6 @@ int16_t yawOutput;
 
 static bool isInit;
 
-PARAM_GROUP_START(attitudepid)
-PARAM_ADD(PARAM_FLOAT, kp_roll, &pidRoll.kp)
-PARAM_ADD(PARAM_FLOAT, ki_roll, &pidRoll.ki)
-PARAM_ADD(PARAM_FLOAT, kd_roll, &pidRoll.kd)
-PARAM_ADD(PARAM_FLOAT, kp_pitch, &pidPitch.kp)
-PARAM_ADD(PARAM_FLOAT, ki_pitch, &pidPitch.ki)
-PARAM_ADD(PARAM_FLOAT, kd_pitch, &pidPitch.kd)
-PARAM_ADD(PARAM_FLOAT, kp_yaw, &pidYaw.kp)
-PARAM_ADD(PARAM_FLOAT, ki_yaw, &pidYaw.ki)
-PARAM_ADD(PARAM_FLOAT, kd_yaw, &pidYaw.kd)
-PARAM_GROUP_STOP(attitidepid)
-
-PARAM_GROUP_START(ratepid)
-PARAM_ADD(PARAM_FLOAT, kp_roll, &pidRollRate.kp)
-PARAM_ADD(PARAM_FLOAT, ki_roll, &pidRollRate.ki)
-PARAM_ADD(PARAM_FLOAT, kd_roll, &pidRollRate.kd)
-PARAM_ADD(PARAM_FLOAT, kp_pitch, &pidPitchRate.kp)
-PARAM_ADD(PARAM_FLOAT, ki_pitch, &pidPitchRate.ki)
-PARAM_ADD(PARAM_FLOAT, kd_pitch, &pidPitchRate.kd)
-PARAM_ADD(PARAM_FLOAT, kp_yaw, &pidYawRate.kp)
-PARAM_ADD(PARAM_FLOAT, ki_yaw, &pidYawRate.ki)
-PARAM_ADD(PARAM_FLOAT, kd_yaw, &pidYawRate.kd)
-PARAM_GROUP_STOP(ratepid)
-
 void controllerInit()
 {
   if(isInit)
@@ -162,3 +138,27 @@ void controllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw)
   *pitch = pitchOutput;
   *yaw = yawOutput;
 }
+
+PARAM_GROUP_START(pid_attitude)
+PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRoll.kp)
+PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
+PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRoll.kd)
+PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitch.kp)
+PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitch.ki)
+PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitch.kd)
+PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYaw.kp)
+PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYaw.ki)
+PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
+PARAM_GROUP_STOP(pid_attitude)
+
+PARAM_GROUP_START(pid_rate)
+PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
+PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
+PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
+PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitchRate.kp)
+PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
+PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitchRate.kd)
+PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
+PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
+PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYawRate.kd)
+PARAM_GROUP_STOP(pid_rate)

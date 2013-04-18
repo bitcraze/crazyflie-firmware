@@ -42,6 +42,7 @@
 #include "ms5611.h"
 #include "ledseq.h"
 #include "uart.h"
+#include "param.h"
 
 #define IMU_ENABLE_MAG_HMC5883
 #define IMU_ENABLE_PRESSURE_MS5611
@@ -86,6 +87,7 @@ Axis3i16   accelLPF;
 Axis3i16   accelLPFAligned;
 Axis3i16   mag;
 Axis3i32   accelStoredFilterValues;
+uint8_t    imuAccLpfAttFactor;
 static bool isHmc5883lPresent;
 static bool isMs5611Present;
 
@@ -151,10 +153,22 @@ void imu6Init(void)
   mpu6050SetFullScaleGyroRange(IMU_GYRO_FS_CFG);
   // Set accelerometer full scale range
   mpu6050SetFullScaleAccelRange(IMU_ACCEL_FS_CFG);
+
+#ifdef MPU6050_DLPF_256HZ
+  // 256Hz digital low-pass filter only works with little vibrations
   // Set output rate (15): 8000 / (1 + 15) = 500Hz
   mpu6050SetRate(15);
   // Set digital low-pass bandwidth
   mpu6050SetDLPFMode(MPU6050_DLPF_BW_256);
+#else
+  // To low DLPF bandwidth might cause instability and decrease agility
+  // but it works well for handling vibrations and unbalanced propellers
+  // Set output rate (1): 1000 / (1 + 1) = 500Hz
+  mpu6050SetRate(1);
+  // Set digital low-pass bandwidth
+  mpu6050SetDLPFMode(MPU6050_DLPF_BW_98);
+#endif
+
 
 #ifdef IMU_ENABLE_MAG_HMC5883
   hmc5883lInit(I2C1);
@@ -184,6 +198,7 @@ void imu6Init(void)
   imuBiasInit(&gyroBias);
   imuBiasInit(&accelBias);
   varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
+  imuAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
 
   cosPitch = cos(configblockGetCalibPitch() * M_PI/180);
   sinPitch = sin(configblockGetCalibPitch() * M_PI/180);
@@ -264,7 +279,7 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
 
 
   imuAccIIRLPFilter(&accelMpu, &accelLPF, &accelStoredFilterValues,
-                    IMU_ACC_IIR_LPF_ATT_FACTOR);
+                    (int32_t)imuAccLpfAttFactor);
 
   imuAccAlignToGravity(&accelLPF, &accelLPFAligned);
 
@@ -455,3 +470,7 @@ static void imuAccAlignToGravity(Axis3i16* in, Axis3i16* out)
   out->y = ry.y;
   out->z = ry.z;
 }
+
+PARAM_GROUP_START(imu_acc_lpf)
+PARAM_ADD(PARAM_UINT8, factor, &imuAccLpfAttFactor)
+PARAM_GROUP_STOP(pid_attitude)

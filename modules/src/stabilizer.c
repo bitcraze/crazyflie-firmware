@@ -254,9 +254,3 @@ static uint16_t limitThrust(int32_t value)
   return (uint16_t)value;
 }
 
-#include "param.h"
-PARAM_GROUP_START(stabilizer)
-PARAM_ADD(PARAM_UINT8, initStatus, &isInit)
-PARAM_GROUP_STOP(stabilizer)
-
-
