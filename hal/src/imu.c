@@ -46,9 +46,10 @@
 
 #define IMU_ENABLE_MAG_HMC5883
 #define IMU_ENABLE_PRESSURE_MS5611
+//#define IMU_MPU6050_DLPF_256HZ
 
-#define IMU_GYRO_FS_CFG       MPU6050_GYRO_FS_1000
-#define IMU_DEG_PER_LSB_CFG   MPU6050_DEG_PER_LSB_1000
+#define IMU_GYRO_FS_CFG       MPU6050_GYRO_FS_2000
+#define IMU_DEG_PER_LSB_CFG   MPU6050_DEG_PER_LSB_2000
 #define IMU_ACCEL_FS_CFG      MPU6050_ACCEL_FS_8
 #define IMU_G_PER_LSB_CFG     MPU6050_G_PER_LSB_8
 #define IMU_1G_RAW            (int16_t)(1.0 / MPU6050_G_PER_LSB_8)
@@ -154,7 +155,7 @@ void imu6Init(void)
   // Set accelerometer full scale range
   mpu6050SetFullScaleAccelRange(IMU_ACCEL_FS_CFG);
 
-#ifdef MPU6050_DLPF_256HZ
+#ifdef IMU_MPU6050_DLPF_256HZ
   // 256Hz digital low-pass filter only works with little vibrations
   // Set output rate (15): 8000 / (1 + 15) = 500Hz
   mpu6050SetRate(15);
@@ -166,7 +167,7 @@ void imu6Init(void)
   // Set output rate (1): 1000 / (1 + 1) = 500Hz
   mpu6050SetRate(1);
   // Set digital low-pass bandwidth
-  mpu6050SetDLPFMode(MPU6050_DLPF_BW_98);
+  mpu6050SetDLPFMode(MPU6050_DLPF_BW_188);
 #endif
 
 
