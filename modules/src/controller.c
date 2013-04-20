@@ -130,6 +130,9 @@ void controllerResetAllPID(void)
   pidReset(&pidRoll);
   pidReset(&pidPitch);
   pidReset(&pidYaw);
+  pidReset(&pidRollRate);
+  pidReset(&pidPitchRate);
+  pidReset(&pidYawRate);
 }
 
 void controllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw)

@@ -402,7 +402,7 @@ static void imuAddBiasValue(BiasObj* bias, Axis3i16* dVal)
 }
 
 /**
- * Checkes if the variance is blow the predefined thresholds.
+ * Checks if the variances is below the predefined thresholds.
  * The bias value should have been added before calling this.
  * @param bias  The bias object
  */
