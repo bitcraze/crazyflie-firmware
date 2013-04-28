@@ -20,6 +20,8 @@ if len(sys.argv)<3:
 identify = subprocess.check_output(["hg", "identify", "-nitb"])
 identify = identify.split()
 version['revision'] = identify[0]
+version['irevision0'] = "0x" + identify[0][0:8]
+version['irevision1'] = "0x" + identify[0][8:12]
 version['local_revision'] = identify[1]
 version['branch'] = identify[2]
 if len(identify)>3:
