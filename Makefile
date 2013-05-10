@@ -11,8 +11,8 @@ OPENOCD_INTERFACE ?= interface/jtagkey.cfg
 OPENOCD_TARGET    ?= target/stm32f1x.cfg
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python
-CLOAD             ?= 0
-DEBUG             ?= 1
+CLOAD             ?= 1
+DEBUG             ?= 0
 
 ## Flag that can be added to config.mk
 # CFLAGS += -DUSE_UART_CRTP    # Set CRTP link to UART
