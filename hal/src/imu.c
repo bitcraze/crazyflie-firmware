@@ -474,4 +474,4 @@ static void imuAccAlignToGravity(Axis3i16* in, Axis3i16* out)
 
 PARAM_GROUP_START(imu_acc_lpf)
 PARAM_ADD(PARAM_UINT8, factor, &imuAccLpfAttFactor)
-PARAM_GROUP_STOP(pid_attitude)
+PARAM_GROUP_STOP(imu_acc_lpf)
