@@ -53,8 +53,8 @@
 
 // Test defines
 #define MOTORS_TEST_RATIO         (uint16_t)(0.5*(1<<16))
-#define MOTORS_TEST_ON_TIME       M2T(10)
-#define MOTORS_TEST_DELAY_TIME    M2T(50)
+#define MOTORS_TEST_ON_TIME_MS    10
+#define MOTORS_TEST_DELAY_TIME_MS 50
 
 /*** Public interface ***/
 

@@ -132,24 +132,17 @@ void motorsInit()
   isInit = true;
 }
 
+static int MOTORS[] = { MOTOR_FRONT, MOTOR_RIGHT, MOTOR_REAR, MOTOR_LEFT };
+
 bool motorsTest(void)
 {
-  motorsSetRatio(MOTOR_FRONT, MOTORS_TEST_RATIO);
-  vTaskDelay(MOTORS_TEST_ON_TIME);
-  motorsSetRatio(MOTOR_FRONT, 0);
-  vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME));
-  motorsSetRatio(MOTOR_RIGHT, MOTORS_TEST_RATIO);
-  vTaskDelay(M2T(MOTORS_TEST_ON_TIME));
-  motorsSetRatio(MOTOR_RIGHT, 0);
-  vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME));
-  motorsSetRatio(MOTOR_REAR, MOTORS_TEST_RATIO);
-  vTaskDelay(M2T(MOTORS_TEST_ON_TIME));
-  motorsSetRatio(MOTOR_REAR, 0);
-  vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME));
-  motorsSetRatio(MOTOR_LEFT, MOTORS_TEST_RATIO);
-  vTaskDelay(M2T(MOTORS_TEST_ON_TIME));
-  motorsSetRatio(MOTOR_LEFT, 0);
-
+  int i;
+  for (i = 0; i < sizeof(MOTORS)/sizeof(*MOTORS); i++) {
+    motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
+    vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+    motorsSetRatio(MOTORS[i], 0);
+    vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+  }
   return isInit;
 }
 
