@@ -58,7 +58,8 @@
 #define C_BITS_TO_16(X) ((X)<<(16-MOTORS_PWM_BITS))
 #define C_16_TO_BITS(X) ((X)>>(16-MOTORS_PWM_BITS)&((1<<MOTORS_PWM_BITS)-1))
 
-static bool isInit=false;
+const int MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
+static bool isInit = false;
 
 /* Public functions */
 
@@ -132,52 +133,53 @@ void motorsInit()
   isInit = true;
 }
 
-static int MOTORS[] = { MOTOR_FRONT, MOTOR_RIGHT, MOTOR_REAR, MOTOR_LEFT };
-
 bool motorsTest(void)
 {
   int i;
-  for (i = 0; i < sizeof(MOTORS)/sizeof(*MOTORS); i++) {
+
+  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
+  {
     motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
     vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
     motorsSetRatio(MOTORS[i], 0);
     vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
   }
+
   return isInit;
 }
 
 
 void motorsSetRatio(int id, uint16_t ratio)
 {
-  switch(id) {
-    case MOTOR_LEFT:
-      TIM_SetCompare3(MOTORS_GPIO_TIM_M3_4, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_REAR:
-      TIM_SetCompare4(MOTORS_GPIO_TIM_M3_4, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_RIGHT:
-      TIM_SetCompare3(MOTORS_GPIO_TIM_M1_2, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_FRONT:
+  switch(id)
+  {
+    case MOTOR_M1:
       TIM_SetCompare4(MOTORS_GPIO_TIM_M1_2, C_16_TO_BITS(ratio));
       break;
+    case MOTOR_M2:
+      TIM_SetCompare3(MOTORS_GPIO_TIM_M1_2, C_16_TO_BITS(ratio));
+      break;
+    case MOTOR_M3:
+      TIM_SetCompare4(MOTORS_GPIO_TIM_M3_4, C_16_TO_BITS(ratio));
+      break;
+    case MOTOR_M4:
+      TIM_SetCompare3(MOTORS_GPIO_TIM_M3_4, C_16_TO_BITS(ratio));
+      break;
   }
-
-  return;
 }
 
 int motorsGetRatio(int id)
 {
-  switch(id) {
-    case MOTOR_LEFT:
-      return C_BITS_TO_16(TIM_GetCapture3(MOTORS_GPIO_TIM_M3_4));
-    case MOTOR_REAR:
-      return C_BITS_TO_16(TIM_GetCapture4(MOTORS_GPIO_TIM_M3_4));
-    case MOTOR_RIGHT:
-      return C_BITS_TO_16(TIM_GetCapture3(MOTORS_GPIO_TIM_M1_2));
-    case MOTOR_FRONT:
+  switch(id)
+  {
+    case MOTOR_M1:
       return C_BITS_TO_16(TIM_GetCapture4(MOTORS_GPIO_TIM_M1_2));
+    case MOTOR_M2:
+      return C_BITS_TO_16(TIM_GetCapture3(MOTORS_GPIO_TIM_M1_2));
+    case MOTOR_M3:
+      return C_BITS_TO_16(TIM_GetCapture4(MOTORS_GPIO_TIM_M3_4));
+    case MOTOR_M4:
+      return C_BITS_TO_16(TIM_GetCapture3(MOTORS_GPIO_TIM_M3_4));
   }
 
   return -1;
@@ -191,20 +193,20 @@ void motorsTestTask(void* params)
   float rampup = 0.01;
 
   motorsSetupMinMaxPos();
-  motorsSetRatio(MOTOR_LEFT, 1*(1<<16) * 0.0);
-  motorsSetRatio(MOTOR_REAR, 1*(1<<16) * 0.0);
-  motorsSetRatio(MOTOR_RIGHT, 1*(1<<16) * 0.0);
-  motorsSetRatio(MOTOR_FRONT, 1*(1<<16) * 0.0);
+  motorsSetRatio(MOTOR_M4, 1*(1<<16) * 0.0);
+  motorsSetRatio(MOTOR_M3, 1*(1<<16) * 0.0);
+  motorsSetRatio(MOTOR_M2, 1*(1<<16) * 0.0);
+  motorsSetRatio(MOTOR_M1, 1*(1<<16) * 0.0);
   vTaskDelay(M2T(1000));
 
   while(1)
   {
     vTaskDelay(M2T(100));
 
-    motorsSetRatio(MOTOR_LEFT, 1*(1<<16) * rampup);
-    motorsSetRatio(MOTOR_REAR, 1*(1<<16) * rampup);
-    motorsSetRatio(MOTOR_RIGHT, 1*(1<<16) * rampup);
-    motorsSetRatio(MOTOR_FRONT, 1*(1<<16) * rampup);
+    motorsSetRatio(MOTOR_M4, 1*(1<<16) * rampup);
+    motorsSetRatio(MOTOR_M3, 1*(1<<16) * rampup);
+    motorsSetRatio(MOTOR_M2, 1*(1<<16) * rampup);
+    motorsSetRatio(MOTOR_M1, 1*(1<<16) * rampup);
 
     rampup += 0.001;
     if (rampup >= 0.1)
@@ -224,11 +226,12 @@ void motorsTestTask(void* params)
   //Wait 3 seconds before starting the motors
   vTaskDelay(M2T(3000));
 
-  while(1) {
-    motorsSetRatio(MOTOR_LEFT, sequence[step%4]);
-    motorsSetRatio(MOTOR_REAR, sequence[(step+1)%4]);
-    motorsSetRatio(MOTOR_RIGHT, sequence[(step+2)%4]);
-    motorsSetRatio(MOTOR_FRONT, sequence[(step+3)%4]);
+  while(1)
+  {
+    motorsSetRatio(MOTOR_M4, sequence[step%4]);
+    motorsSetRatio(MOTOR_M3, sequence[(step+1)%4]);
+    motorsSetRatio(MOTOR_M2, sequence[(step+2)%4]);
+    motorsSetRatio(MOTOR_M1, sequence[(step+3)%4]);
 
     if(++step>3) step=0;
 

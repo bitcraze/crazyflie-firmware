@@ -73,10 +73,10 @@ int16_t  actuatorRoll;
 int16_t  actuatorPitch;
 int16_t  actuatorYaw;
 
-uint32_t motorPowerLeft;
-uint32_t motorPowerRight;
-uint32_t motorPowerFront;
-uint32_t motorPowerRear;
+uint32_t motorPowerM4;
+uint32_t motorPowerM2;
+uint32_t motorPowerM1;
+uint32_t motorPowerM3;
 
 LOG_GROUP_START(stabilizer)
 LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
@@ -86,10 +86,10 @@ LOG_ADD(LOG_UINT16, thrust, &actuatorThrust)
 LOG_GROUP_STOP(stabilizer)
 
 LOG_GROUP_START(motor)
-LOG_ADD(LOG_INT32, m4, &motorPowerLeft) 
-LOG_ADD(LOG_INT32, m1, &motorPowerFront) 
-LOG_ADD(LOG_INT32, m2, &motorPowerRight) 
-LOG_ADD(LOG_INT32, m3, &motorPowerRear) 
+LOG_ADD(LOG_INT32, m4, &motorPowerM4) 
+LOG_ADD(LOG_INT32, m1, &motorPowerM1) 
+LOG_ADD(LOG_INT32, m2, &motorPowerM2) 
+LOG_ADD(LOG_INT32, m3, &motorPowerM3) 
 LOG_GROUP_STOP(motor)
 
 static bool isInit;
@@ -223,21 +223,21 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
 #ifdef QUAD_FORMATION_X
   roll = roll >> 1;
   pitch = pitch >> 1;
-  motorPowerLeft =  limitThrust(thrust + roll + pitch - yaw);
-  motorPowerRight = limitThrust(thrust - roll - pitch - yaw);
-  motorPowerFront = limitThrust(thrust - roll + pitch + yaw);
-  motorPowerRear =  limitThrust(thrust + roll - pitch + yaw);
+  motorPowerM1 = limitThrust(thrust - roll + pitch + yaw);
+  motorPowerM2 = limitThrust(thrust - roll - pitch - yaw);
+  motorPowerM3 =  limitThrust(thrust + roll - pitch + yaw);
+  motorPowerM4 =  limitThrust(thrust + roll + pitch - yaw);
 #else // QUAD_FORMATION_NORMAL
-  motorPowerLeft =  limitThrust(thrust + roll - yaw);
-  motorPowerRight = limitThrust(thrust - roll - yaw);
-  motorPowerFront = limitThrust(thrust + pitch + yaw);
-  motorPowerRear =  limitThrust(thrust - pitch + yaw);
+  motorPowerM1 = limitThrust(thrust + pitch + yaw);
+  motorPowerM2 = limitThrust(thrust - roll - yaw);
+  motorPowerM3 =  limitThrust(thrust - pitch + yaw);
+  motorPowerM4 =  limitThrust(thrust + roll - yaw);
 #endif
 
-  motorsSetRatio(MOTOR_LEFT, motorPowerLeft);
-  motorsSetRatio(MOTOR_RIGHT, motorPowerRight);
-  motorsSetRatio(MOTOR_FRONT, motorPowerFront);
-  motorsSetRatio(MOTOR_REAR, motorPowerRear);
+  motorsSetRatio(MOTOR_M1, motorPowerM1);
+  motorsSetRatio(MOTOR_M2, motorPowerM2);
+  motorsSetRatio(MOTOR_M3, motorPowerM3);
+  motorsSetRatio(MOTOR_M4, motorPowerM4);
 }
 
 static uint16_t limitThrust(int32_t value)

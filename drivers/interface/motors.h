@@ -46,10 +46,10 @@
 
 
 // Motors IDs define
-#define MOTOR_LEFT  0
-#define MOTOR_REAR  1
-#define MOTOR_RIGHT 2
-#define MOTOR_FRONT 3
+#define MOTOR_M1  0
+#define MOTOR_M2  1
+#define MOTOR_M3  2
+#define MOTOR_M4  3
 
 // Test defines
 #define MOTORS_TEST_RATIO         (uint16_t)(0.5*(1<<16))
