@@ -92,6 +92,12 @@ LOG_ADD(LOG_INT32, m2, &motorPowerM2)
 LOG_ADD(LOG_INT32, m3, &motorPowerM3) 
 LOG_GROUP_STOP(motor)
 
+LOG_GROUP_START(acc)
+LOG_ADD(LOG_FLOAT, x, &acc.x)
+LOG_ADD(LOG_FLOAT, y, &acc.y)
+LOG_ADD(LOG_FLOAT, z, &acc.z)
+LOG_GROUP_STOP(acc)
+
 static bool isInit;
 
 static void distributePower(const uint16_t thrust, const int16_t roll,
