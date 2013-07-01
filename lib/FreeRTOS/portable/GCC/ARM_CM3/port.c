@@ -130,9 +130,9 @@ void vPortSetupTimerInterrupt( void );
 /*
  * Exception handlers.
  */
-void xPortPendSVHandler( void ) __attribute__ (( naked ));
-void xPortSysTickHandler( void );
-void vPortSVCHandler( void ) __attribute__ (( naked ));
+void xPortPendSVHandler( void ) __attribute__ (( naked, used ));
+void xPortSysTickHandler( void ) __attribute__ ((used));
+void vPortSVCHandler( void ) __attribute__ (( naked, used ));
 
 /*
  * Start first task is a separate function so it can be tested in isolation.

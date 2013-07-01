@@ -30,6 +30,8 @@
 #include "i2croutines.h"
 #include "i2cdev.h"
 
+#define DONT_DISCARD __attribute__((used))
+
 void nvicInit(void)
 {
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
@@ -39,21 +41,21 @@ void nvicInit(void)
 /**
  * @brief  This function handles SysTick Handler.
  */
-void SysTick_Handler(void)
+void DONT_DISCARD SysTick_Handler(void)
 {
 }
 
 /**
   * @brief  This function handles SVCall exception.
   */
-void SVC_Handler(void)
+void DONT_DISCARD SVC_Handler(void)
 {
 }
 
 /**
  * @brief  This function handles PendSV_Handler exception.
  */
-void PendSV_Handler(void)
+void DONT_DISCARD PendSV_Handler(void)
 {
 }
 #endif
@@ -61,14 +63,14 @@ void PendSV_Handler(void)
 /**
   * @brief  This function handles NMI exception.
   */
-void NMI_Handler(void)
+void DONT_DISCARD NMI_Handler(void)
 {
 }
 
 /**
  * @brief  This function handles Hard Fault exception.
  */
-void HardFault_Handler(void)
+void DONT_DISCARD HardFault_Handler(void)
 {
   //http://www.st.com/mcu/forums-cat-6778-23.html
   //****************************************************
@@ -84,7 +86,7 @@ void HardFault_Handler(void)
   "B printHardFault");
 }
 
-void printHardFault(uint32_t* hardfaultArgs)
+void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
 {
   unsigned int stacked_r0;
   unsigned int stacked_r1;
@@ -126,7 +128,7 @@ void printHardFault(uint32_t* hardfaultArgs)
 /**
  * @brief  This function handles Memory Manage exception.
  */
-void MemManage_Handler(void)
+void DONT_DISCARD MemManage_Handler(void)
 {
   /* Go to infinite loop when Memory Manage exception occurs */
   while (1)
@@ -137,7 +139,7 @@ void MemManage_Handler(void)
 /**
  * @brief  This function handles Bus Fault exception.
  */
-void BusFault_Handler(void)
+void DONT_DISCARD BusFault_Handler(void)
 {
   /* Go to infinite loop when Bus Fault exception occurs */
   while (1)
@@ -148,7 +150,7 @@ void BusFault_Handler(void)
 /**
  * @brief  This function handles Usage Fault exception.
  */
-void UsageFault_Handler(void)
+void DONT_DISCARD UsageFault_Handler(void)
 {
   /* Go to infinite loop when Usage Fault exception occurs */
   while (1)
@@ -159,54 +161,54 @@ void UsageFault_Handler(void)
 /**
  * @brief  This function handles Debug Monitor exception.
  */
-void DebugMon_Handler(void)
+void DONT_DISCARD DebugMon_Handler(void)
 {
 }
 
-void DMA1_Channel1_IRQHandler(void)
+void DONT_DISCARD DMA1_Channel1_IRQHandler(void)
 {
   adcInterruptHandler();
 }
 
-void DMA1_Channel2_IRQHandler(void)
+void DONT_DISCARD DMA1_Channel2_IRQHandler(void)
 {
 #if defined(UART_OUTPUT_TRACE_DATA) || defined(ADC_OUTPUT_RAW_DATA)
   uartDmaIsr();
 #endif
 }
 
-void DMA1_Channel4_IRQHandler(void)
+void DONT_DISCARD DMA1_Channel4_IRQHandler(void)
 {
   i2cDmaInterruptHandlerI2c2();
 }
 
-void DMA1_Channel5_IRQHandler(void)
+void DONT_DISCARD DMA1_Channel5_IRQHandler(void)
 {
   i2cDmaInterruptHandlerI2c2();
 }
 
-void DMA1_Channel6_IRQHandler(void)
+void DONT_DISCARD DMA1_Channel6_IRQHandler(void)
 {
   i2cDmaInterruptHandlerI2c1();
 }
 
-void DMA1_Channel7_IRQHandler(void)
+void DONT_DISCARD DMA1_Channel7_IRQHandler(void)
 {
   i2cDmaInterruptHandlerI2c1();
 }
 
 
-void EXTI9_5_IRQHandler(void)
+void DONT_DISCARD EXTI9_5_IRQHandler(void)
 {
   extiInterruptHandler();
 }
 
-void USART3_IRQHandler(void)
+void DONT_DISCARD USART3_IRQHandler(void)
 {
   uartIsr();
 }
 
-void TIM1_UP_IRQHandler(void)
+void DONT_DISCARD TIM1_UP_IRQHandler(void)
 {
   extern uint32_t traceTickCount;
 
@@ -214,22 +216,22 @@ void TIM1_UP_IRQHandler(void)
   traceTickCount++;
 }
 
-void I2C1_EV_IRQHandler(void)
+void DONT_DISCARD I2C1_EV_IRQHandler(void)
 {
   i2cInterruptHandlerI2c1();
 }
 
-void I2C1_ER_IRQHandler(void)
+void DONT_DISCARD I2C1_ER_IRQHandler(void)
 {
   i2cErrorInterruptHandlerI2c1();
 }
 
-void I2C2_EV_IRQHandler(void)
+void DONT_DISCARD I2C2_EV_IRQHandler(void)
 {
 
 }
 
-void I2C2_ER_IRQHandler(void)
+void DONT_DISCARD I2C2_ER_IRQHandler(void)
 {
   I2C_ClearFlag(I2C2, 0x1000FFFF);
 }

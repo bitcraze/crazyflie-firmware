@@ -101,6 +101,10 @@ else
   CFLAGS += -Os -g3
 endif
 
+ifeq ($(LTO), 1)
+  CFLAGS += -flto
+endif
+
 ifeq ($(USE_ESKYLINK), 1)
   CFLAGS += -DUSE_ESKYLINK
 endif
@@ -120,6 +124,10 @@ ifeq ($(CLOAD), 1)
   LDFLAGS += -T scripts/STM32F103_32K_20K_FLASH_CLOAD.ld
 else
   LDFLAGS += -T scripts/STM32F103_32K_20K_FLASH.ld
+endif
+
+ifeq ($(LTO), 1)
+  LDFLAGS += -Os -flto -fuse-linker-plugin
 endif
 
 #Program name
