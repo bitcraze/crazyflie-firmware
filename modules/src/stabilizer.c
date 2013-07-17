@@ -98,6 +98,12 @@ LOG_ADD(LOG_FLOAT, y, &acc.y)
 LOG_ADD(LOG_FLOAT, z, &acc.z)
 LOG_GROUP_STOP(acc)
 
+LOG_GROUP_START(gyro)
+LOG_ADD(LOG_FLOAT, x, &gyro.x)
+LOG_ADD(LOG_FLOAT, y, &gyro.y)
+LOG_ADD(LOG_FLOAT, z, &gyro.z)
+LOG_GROUP_STOP(gyro)
+
 static bool isInit;
 
 static void distributePower(const uint16_t thrust, const int16_t roll,
