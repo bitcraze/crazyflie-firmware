@@ -75,7 +75,7 @@ bool sensfusion6Test(void)
 
 #ifdef MADWICK_QUATERNION_IMU
 // Implementation of Madgwick's IMU and AHRS algorithms.
-// See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
+// See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
 // Date     Author          Notes
 // 29/09/2011 SOH Madgwick    Initial release
@@ -150,7 +150,7 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
 }
 #else // MAHONY_QUATERNION_IMU
 // Madgwick's implementation of Mayhony's AHRS algorithm.
-// See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
+// See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
 // Date     Author      Notes
 // 29/09/2011 SOH Madgwick    Initial release
