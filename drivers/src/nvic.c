@@ -210,10 +210,11 @@ void DONT_DISCARD USART3_IRQHandler(void)
 
 void DONT_DISCARD TIM1_UP_IRQHandler(void)
 {
-  extern uint32_t traceTickCount;
+  extern uint32_t usecTimerHighCount;
 
   TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
-  traceTickCount++;
+
+  __sync_fetch_and_add(&usecTimerHighCount, 1);
 }
 
 void DONT_DISCARD I2C1_EV_IRQHandler(void)

@@ -60,6 +60,7 @@ PROJ_OBJ += ms5611.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o imu.o pm.o radiolink.o eskylink.o
+PROJ_OBJ += usec_time.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o
