@@ -129,7 +129,8 @@ void commanderGetHover(bool* hover, bool* set_hover, float* hover_change) {
     int usedSide = side;
     *hover = targetVal[usedSide].hover; // Still in hover mode
     *set_hover = !hoverMode && targetVal[usedSide].hover; // Hover just activated
-    *hover_change = targetVal[usedSide].hover ? targetVal[usedSide].thrust : 0; // Amount to change hover target
+    //*hover_change = targetVal[usedSide].hover ? targetVal[usedSide].thrust : 0; // Amount to change hover target
+    *hover_change = targetVal[usedSide].hover ? ((float)targetVal[usedSide].thrust-32767.)/32767. : 0.0; // Amount to change hover target
     hoverMode = targetVal[usedSide].hover;
 }
 

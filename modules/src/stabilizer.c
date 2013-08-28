@@ -112,7 +112,7 @@ PRIVATE float hoverKd                = 0.0;
 PRIVATE float hoverChange            = 0;     // Change in target altitude
 PRIVATE float hoverTarget            = -1;    // Target altitude
 PRIVATE float hoverErrMax            = 1.0;   // max cap on current estimated altitude vs target altitude in meters
-PRIVATE float hoverChange_SENS       = 200;   // sensitivity of target altitude change (thrust input control) while hovering. Higher = more sensitive & faster changes
+PRIVATE float hoverChange_SENS       = 200;   // sensitivity of target altitude change (thrust input control) while hovering. Lower = more sensitive & faster changes
 PRIVATE float pidAslFac              = 13000; // relates meters asl to thrust
 PRIVATE float pidAlpha               = 0.8;   // PID Smoothing //TODO: shouldnt need to do this
 PRIVATE float vSpeedASLFac           = 0;    // multiplier
