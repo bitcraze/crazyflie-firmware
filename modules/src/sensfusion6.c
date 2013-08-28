@@ -240,7 +240,7 @@ void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw, const float a
   *yaw = atan2(2*q1*q2 - 2*q0*q3, 2*q0*q0 + 2*q1*q1 - 1) * 180 / M_PI;
   *pitch = atan(gx / sqrt(gy*gy + gz*gz)) * 180 / M_PI;
   *roll = atan(gy / sqrt(gx*gx + gz*gz)) * 180 / M_PI;
-  *accWZ = az*gz; //also return vertical acceleration
+  *accWZ = az*gz -1.0; //also return vertical acceleration without gravity
 }
 
 //---------------------------------------------------------------------------------------------------
