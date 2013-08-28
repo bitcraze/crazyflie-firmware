@@ -43,6 +43,7 @@ bool commanderTest(void);
 uint32_t commanderGetInactivityTime(void);
 void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired);
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType);
-void commanderGetTrust(uint16_t* thrust);
+void commanderGetThrust(uint16_t* thrust);
+void commanderGetHover(bool* hover, bool* set_hover, float* hover_change);
 
 #endif /* COMMANDER_H_ */

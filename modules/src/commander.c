@@ -41,6 +41,7 @@ struct CommanderCrtpValues
   float pitch;
   float yaw;
   uint16_t thrust;
+  bool hover;
 } __attribute__((packed));
 
 static struct CommanderCrtpValues targetVal[2];
@@ -48,6 +49,7 @@ static bool isInit;
 static int side=0;
 static uint32_t lastUpdate;
 static bool isInactive;
+static bool hoverMode=false;
 
 static void commanderCrtpCB(CRTPPacket* pk);
 static void commanderWatchdog(void);
@@ -57,6 +59,7 @@ void commanderInit(void)
 {
   if(isInit)
     return;
+
 
   crtpInit();
   crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
@@ -122,6 +125,15 @@ void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* e
   *eulerYawDesired   = targetVal[usedSide].yaw;
 }
 
+void commanderGetHover(bool* hover, bool* set_hover, float* hover_change) {
+    int usedSide = side;
+    *hover = targetVal[usedSide].hover; // Still in hover mode
+    *set_hover = !hoverMode && targetVal[usedSide].hover; // Hover just activated
+    *hover_change = targetVal[usedSide].hover ? targetVal[usedSide].thrust : 0; // Amount to change hover target
+    hoverMode = targetVal[usedSide].hover;
+}
+
+
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType)
 {
   *rollType  = ANGLE;
@@ -129,7 +141,7 @@ void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType
   *yawType   = RATE;
 }
 
-void commanderGetTrust(uint16_t* thrust)
+void commanderGetThrust(uint16_t* thrust)
 {
   int usedSide = side;
   uint16_t rawThrust = targetVal[usedSide].thrust;

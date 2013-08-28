@@ -229,7 +229,7 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
 }
 #endif
 
-void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
+void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw, const float az, float* accWZ)
 {
   float gx, gy, gz; // estimated gravity direction
 
@@ -240,6 +240,7 @@ void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
   *yaw = atan2(2*q1*q2 - 2*q0*q3, 2*q0*q0 + 2*q1*q1 - 1) * 180 / M_PI;
   *pitch = atan(gx / sqrt(gy*gy + gz*gz)) * 180 / M_PI;
   *roll = atan(gy / sqrt(gx*gx + gz*gz)) * 180 / M_PI;
+  *accWZ = az*gz; //also return vertical acceleration
 }
 
 //---------------------------------------------------------------------------------------------------
@@ -255,6 +256,7 @@ float invSqrt(float x)
   y = y * (1.5f - (halfx * y * y));
   return y;
 }
+
 
 
 PARAM_GROUP_START(sensorfusion6)
