@@ -12,8 +12,7 @@ See the [original forum post](http://forum.bitcraze.se/viewtopic.php?f=6&t=523&p
 
 Hey guys,
 
-some of you might have seen my post here: 
-http://forum.bitcraze.se/viewtopic.php?f=6&t=331&start=10#p2405
+some of you might have seen my post [here](http://forum.bitcraze.se/viewtopic.php?f=6&t=331&start=10#p2405 "First mention of hover mode implementation").
 
 A while back I was experimenting with using the barometer to implement a hover mode. 
 It worked relatively well in stable pressure conditions. I never released the code 
@@ -57,9 +56,10 @@ during which time the flie might oscillate within a meter range or so.
 Note that hover mode only works well in pressure stable environments. Trying to hover 
 with people opening/closing windows/doors or during a thunderstorm does not work very well!
 
-Here are videos of it working:
+##Videos of it working:
 
 [StaticExample](http://www.youtube.com/watch?v=aRsvPyRQaFA "Youtube video")
+
 [ManeuoveringExample](http://www.youtube.com/watch?v=0oYzMVUKZKI "Youtube video")
 
 
