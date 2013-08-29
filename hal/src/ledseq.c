@@ -74,6 +74,14 @@ ledseq_t seq_alive[] = {
   {    0, LEDSEQ_LOOP},
 };
 
+
+//TODO: Change, right now is called so fast it looks like seq_lowbat
+ledseq_t seq_hover[] = {
+  { true, LEDSEQ_WAITMS(1)},
+  {false, LEDSEQ_WAITMS(50)},
+  {    0, LEDSEQ_STOP},
+};
+
 ledseq_t seq_linkup[] = {
   { true, LEDSEQ_WAITMS(1)},
   {false, LEDSEQ_WAITMS(0)},

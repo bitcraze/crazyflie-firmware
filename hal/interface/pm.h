@@ -128,4 +128,8 @@ float pmGetBatteryVoltageMax(void);
  */
 void pmBatteryUpdate(AdcGroup* adcValues);
 
+/**
+ * Returns true if the battery is currently in use
+ */
+bool pmIsDischarging(void);
 #endif /* PM_H_ */
