@@ -417,6 +417,9 @@ static void stabilizerTask(void* param)
       if (!hover){
           // Use thrust from controller if not in hover mode
           commanderGetThrust(&actuatorThrust);
+      } else {
+          // Added to thrust can be set to 0 while in hover mode after disconnect
+          commanderWatchdog();
       }
       if (actuatorThrust > 0)
       {

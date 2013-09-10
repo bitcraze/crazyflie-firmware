@@ -52,7 +52,6 @@ static bool isInactive;
 static bool hoverMode=false;
 
 static void commanderCrtpCB(CRTPPacket* pk);
-static void commanderWatchdog(void);
 static void commanderWatchdogReset(void);
 
 void commanderInit(void)
@@ -82,7 +81,7 @@ static void commanderCrtpCB(CRTPPacket* pk)
   commanderWatchdogReset();
 }
 
-static void commanderWatchdog(void)
+void commanderWatchdog(void)
 {
   int usedSide = side;
   uint32_t ticktimeSinceUpdate;
@@ -98,6 +97,7 @@ static void commanderWatchdog(void)
   if (ticktimeSinceUpdate > COMMANDER_WDT_TIMEOUT_SHUTDOWN)
   {
     targetVal[usedSide].thrust = 0;
+    targetVal[usedSide].hover = false; // do we need this? It would reset the target altitude upon reconnect if still hovering
     isInactive = TRUE;
   }
   else
