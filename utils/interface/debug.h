@@ -24,6 +24,7 @@
  * debug.h - Debugging utility functions
  */
 #include "console.h"
+#include "uart.h"
 
 #ifdef DEBUG_MODULE
 #define DEBUG_FMT(fmt) DEBUG_MODULE ": " fmt
@@ -33,16 +34,19 @@
 #define DEBUG_FMT(fmt) fmt
 #endif
 
-//#ifdef DEBUG
-#define DEBUG_PRINT(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
-//#else
-//#define DEBUG_PRINT(fmt, ...)
-//#endif
+#ifdef DEBUG_PRINT_ON_UART
+  #ifndef ENABLE_UART
+    #error "Need to define ENABLE_UART to use DEBUG_PRINT_ON_UART"
+  #endif
+  #define DEBUG_PRINT(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+#else
+  #define DEBUG_PRINT(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+#endif
 
 #ifdef TEST_PRINTS
   #define TEST_AND_PRINT(e, msgOK, msgFail)\
-    if(e) { consolePrintf(msgOK); } else { consolePrintf(msgFail); }
-  #define FAIL_PRINT(msg) consolePrintf(msg)
+    if(e) { DEBUG_PRINT(msgOK); } else { DEBUG_PRINT(msgFail); }
+  #define FAIL_PRINT(msg) DEBUG_PRINT(msg)
 #else
   #define TEST_AND_PRINT(e, msgOK, msgFail)
   #define FAIL_PRINT(msg)

@@ -28,7 +28,7 @@
 #include "task.h"
 
 #include "config.h"
-#include "console.h"
+#include "debug.h"
 #include "nvicconf.h"
 #include "uart.h"
 
@@ -39,7 +39,7 @@ uint32_t traceTickCount;
 #if (configCHECK_FOR_STACK_OVERFLOW == 1)
 void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed portCHAR *pcTaskName)
 {
-  consolePrintf("\nStack overflow!\n");
+  DEBUG_PRINT("\nStack overflow!\n");
   while(1);
 }
 #endif

@@ -48,8 +48,8 @@
 #include "console.h"
 
 #if 0
-#define DEBUG(fmt, ...) consolePrintf("D/log " fmt, ## __VA_ARGS__)
-#define ERROR(fmt, ...) consolePrintf("E/log " fmt, ## __VA_ARGS__)
+#define DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
+#define ERROR(fmt, ...) DEBUG_PRINT("E/log " fmt, ## __VA_ARGS__)
 #else
 #define DEBUG(...)
 #define ERROR(...)

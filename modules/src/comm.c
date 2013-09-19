@@ -44,10 +44,6 @@ void commInit(void)
   if (isInit)
     return;
 
-#ifdef HAS_UART
-  uartInit();
-#endif
-  
 #ifdef USE_ESKYLINK
   eskylinkInit();
 #else

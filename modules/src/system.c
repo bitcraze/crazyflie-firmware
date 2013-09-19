@@ -114,7 +114,7 @@ void systemTask(void *arg)
 #ifdef UART_OUTPUT_TRACE_DATA
   debugInitTrace();
 #endif
-#ifdef HAS_UART
+#ifdef ENABLE_UART
   uartInit();
 #endif
 #endif //ndef USE_UART_CRTP

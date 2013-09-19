@@ -321,7 +321,6 @@ void uartDmaIsr(void)
 
 void uartSendData(uint32_t size, uint8_t* data)
 {
-#ifdef UART_OUTPUT_RAW_DATA_ONLY
   uint32_t i;
 
   for(i = 0; i < size; i++)
@@ -329,7 +328,6 @@ void uartSendData(uint32_t size, uint8_t* data)
     while (!(UART_TYPE->SR & USART_FLAG_TXE));
     UART_TYPE->DR = (data[i] & 0xFF);
   }
-#endif
 }
 
 int uartPutchar(int ch)

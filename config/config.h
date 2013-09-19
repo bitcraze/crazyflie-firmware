@@ -82,10 +82,6 @@
 #  error "Can't define UART_OUTPUT_TRACE_DATA and ADC_OUTPUT_RAW_DATA at the same time"
 #endif
 
-#if defined(UART_OUTPUT_TRACE_DATA) || defined(ADC_OUTPUT_RAW_DATA) || defined(IMU_OUTPUT_RAW_DATA_ON_UART)
-#define UART_OUTPUT_RAW_DATA_ONLY
-#endif
-
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(T_LAUNCH_ACC)
 #  error "UART_OUTPUT_TRACE_DATA and T_LAUNCH_ACC doesn't work at the same time yet due to dma sharing..."
 #endif
