@@ -39,11 +39,15 @@
 
 static bool isInit;
 
+#define RADIO_CONNECTED_TIMEOUT   M2T(2000)
+
 /* Synchronisation */
 xSemaphoreHandle dataRdy;
 /* Data queue */
 xQueueHandle txQueue;
 xQueueHandle rxQueue;
+
+static uint32_t lastPacketTick;
 
 //Union used to efficiently handle the packets (Private type)
 typedef union
@@ -83,9 +87,8 @@ static int sendPacket(CRTPPacket * pk)
 {
   if (!state.enabled)
     return ENETDOWN;
-  
-  xQueueSend( txQueue, pk, portMAX_DELAY);
-  
+  xQueueSend( txQueue, pk, 0);
+
   return 0;
 }
 
@@ -99,11 +102,29 @@ static int receivePacket(CRTPPacket * pk)
   return 0;
 }
 
+static int reset(void)
+{
+  xQueueReset(txQueue);
+  nrfFlushTx();
+
+  return 0;
+}
+
+static bool isConnected(void)
+{
+  if ((xTaskGetTickCount() - lastPacketTick) > RADIO_CONNECTED_TIMEOUT)
+    return false;
+
+  return true;
+}
+
 static struct crtpLinkOperations radioOp =
 {
   .setEnable         = setEnable,
   .sendPacket        = sendPacket,
   .receivePacket     = receivePacket,
+  .isConnected       = isConnected,
+  .reset             = reset,
 };
 
 /* Radio task handles the CRTP packet transfers as well as the radio link
@@ -121,6 +142,7 @@ static void radiolinkTask(void * arg)
     ledseqRun(LED_GREEN, seq_linkup);
 
     xSemaphoreTake(dataRdy, portMAX_DELAY);
+    lastPacketTick = xTaskGetTickCount();
     
     nrfSetEnable(false);
     

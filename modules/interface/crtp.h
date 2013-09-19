@@ -154,8 +154,26 @@ struct crtpLinkOperations
   int (*setEnable)(bool enable);
   int (*sendPacket)(CRTPPacket *pk);
   int (*receivePacket)(CRTPPacket *pk);
+  bool (*isConnected)(void);
+  int (*reset)(void);
 };
 
 void crtpSetLink(struct crtpLinkOperations * lk);
+
+/**
+ * Check if the connection timeout has been reached, otherwise
+ * we will assume that we are connected.
+ *
+ * @return true if conencted, otherwise false
+ */
+bool crtpIsConnected(void);
+
+/**
+ * Reset the CRTP communication by flushing all the queues that
+ * contain packages.
+ *
+ * @return 0 for success
+ */
+int crtpReset(void);
 
 #endif /*CRTP_H_*/

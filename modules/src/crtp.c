@@ -176,6 +176,23 @@ int crtpSendPacketBlock(CRTPPacket *p)
   return xQueueSend(tmpQueue, p, portMAX_DELAY);
 }
 
+int crtpReset(void)
+{
+  xQueueReset(tmpQueue);
+  if (link->reset) {
+    link->reset();
+  }
+
+  return 0;
+}
+
+bool crtpIsConnected(void)
+{
+  if (link->isConnected)
+    return link->isConnected();
+  return true;
+}
+
 void crtpPacketReveived(CRTPPacket *p)
 {
   portBASE_TYPE xHigherPriorityTaskWoken;
