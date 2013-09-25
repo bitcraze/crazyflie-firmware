@@ -49,6 +49,7 @@ static int32_t  batteryVRefRawFilt = PM_BAT_ADC_FOR_1p2_VOLT;
 static uint32_t batteryLowTimeStamp;
 static uint32_t batteryCriticalLowTimeStamp;
 static bool isInit;
+static PMStates pmState;
 
 const static float bat671723HS25C[10] =
 {
@@ -66,6 +67,7 @@ const static float bat671723HS25C[10] =
 
 LOG_GROUP_START(pm)
 LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+LOG_ADD(LOG_INT8, state, &pmState)
 LOG_GROUP_STOP(pm)
 
 void pmInit(void)
@@ -242,7 +244,7 @@ void pmSetChargeState(PMChargeStates chgState)
 
 PMStates pmUpdateState()
 {
-  PMStates pmState;
+  PMStates state;
   bool isCharging = !GPIO_ReadInputDataBit(PM_GPIO_IN_CHG_PORT, PM_GPIO_IN_CHG);
   bool isPgood = !GPIO_ReadInputDataBit(PM_GPIO_IN_PGOOD_PORT, PM_GPIO_IN_PGOOD);
   uint32_t batteryLowTime;
@@ -251,27 +253,26 @@ PMStates pmUpdateState()
 
   if (isPgood && !isCharging)
   {
-    pmState = charged;
+    state = charged;
   }
   else if (isPgood && isCharging)
   {
-    pmState = charging;
+    state = charging;
   }
   else if (!isPgood && !isCharging && (batteryLowTime > PM_BAT_LOW_TIMEOUT))
   {
-    pmState = lowPower;
+    state = lowPower;
   }
   else
   {
-    pmState = battery;
+    state = battery;
   }
 
-  return pmState;
+  return state;
 }
 
 void pmTask(void *param)
 {
-  PMStates pmState;
   PMStates pmStateOld = battery;
   uint32_t tickCount;
 

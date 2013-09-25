@@ -92,6 +92,10 @@ uint8_t    imuAccLpfAttFactor;
 static bool isHmc5883lPresent;
 static bool isMs5611Present;
 
+static bool isMpu6050TestPassed;
+static bool isHmc5883lTestPassed;
+static bool isMs5611TestPassed;
+
 // Pre-calculated values for accelerometer alignment
 float cosPitch;
 float sinPitch;
@@ -227,15 +231,18 @@ bool imu6Test(void)
   }
   if (testStatus)
   {
-    testStatus = mpu6050SelfTest();
+    isMpu6050TestPassed = mpu6050SelfTest();
+    testStatus = isMpu6050TestPassed ;
   }
   if (testStatus && isHmc5883lPresent)
   {
-    testStatus = hmc5883lSelfTest();
+    isHmc5883lTestPassed = hmc5883lSelfTest();
+    testStatus = isHmc5883lTestPassed;
   }
   if (testStatus && isMs5611Present)
   {
-    testStatus = ms5611SelfTest();
+    isMs5611TestPassed = ms5611SelfTest();
+    testStatus = isMs5611TestPassed;
   }
 
   return testStatus;
@@ -475,3 +482,14 @@ static void imuAccAlignToGravity(Axis3i16* in, Axis3i16* out)
 PARAM_GROUP_START(imu_acc_lpf)
 PARAM_ADD(PARAM_UINT8, factor, &imuAccLpfAttFactor)
 PARAM_GROUP_STOP(imu_acc_lpf)
+
+PARAM_GROUP_START(imu_sensors)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5833, &isHmc5883lPresent)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5833, &isMs5611Present)
+PARAM_GROUP_STOP(imu_sensors)
+
+PARAM_GROUP_START(imu_tests)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MPU6050, &isMpu6050TestPassed)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5833, &isHmc5883lTestPassed)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5833, &isMs5611TestPassed)
+PARAM_GROUP_STOP(imu_tests)

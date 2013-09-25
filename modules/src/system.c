@@ -36,6 +36,7 @@
 #include "version.h"
 #include "config.h"
 #include "param.h"
+#include "log.h"
 #include "ledseq.h"
 #include "pm.h"
 
@@ -204,4 +205,8 @@ PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id1, 0x1FFFF7E8+4)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, 0x1FFFF7E8+8)
 PARAM_GROUP_STOP(cpu)
 
+/* Loggable variables */
+LOG_GROUP_START(sys)
+LOG_ADD(LOG_INT8, canfly, &canFly)
+LOG_GROUP_STOP(sys)
 
