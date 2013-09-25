@@ -10,9 +10,9 @@
 OPENOCD_INTERFACE ?= interface/jtagkey.cfg
 OPENOCD_TARGET    ?= target/stm32f1x.cfg
 CROSS_COMPILE     ?= arm-none-eabi-
-PYTHON2           ?= python
 CLOAD             ?= 1
 DEBUG             ?= 0
+CLOAD_SCRIPT      ?= ../crazyflie-pc-client/bin/cfloader
 
 ## Flag that can be added to config.mk
 # CFLAGS += -DUSE_UART_CRTP        # Set CRTP link to UART
@@ -174,7 +174,7 @@ size: compile
 #Radio bootloader
 cload:
 ifeq ($(CLOAD), 1)
-	$(PYTHON2) ../pc_util/crazyclient/crazyload.py flash cflie.bin
+	$(CLOAD_SCRIPT) flash cflie.bin
 else
 	@echo "Only cload build can be bootloaded. Launch build and cload with CLOAD=1"
 endif
