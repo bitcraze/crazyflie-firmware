@@ -485,14 +485,14 @@ void logRunBlock(void * arg)
   
   xSemaphoreTake(logLock, portMAX_DELAY);
 
-  timestamp = ((long long)xTaskGetTickCount()*1000)/portTICK_RATE_MS;
+  timestamp = ((long long)xTaskGetTickCount())/portTICK_RATE_MS;
   
   pk.header = CRTP_HEADER(CRTP_PORT_LOG, LOG_CH);
   pk.size = 4;
   pk.data[0] = blk->id;
   pk.data[1] = timestamp&0x0ff;
   pk.data[2] = (timestamp>>8)&0x0ff;
-  pk.data[2] = (timestamp>>16)&0x0ff;
+  pk.data[3] = (timestamp>>16)&0x0ff;
 
   while (ops)
   {
