@@ -31,6 +31,7 @@
 #include "commander.h"
 #include "crtp.h"
 #include "configblock.h"
+#include "param.h"
 
 #define MIN_THRUST  10000
 #define MAX_THRUST  60000
@@ -48,15 +49,17 @@ static bool isInit;
 static int side=0;
 static uint32_t lastUpdate;
 static bool isInactive;
+static bool altHoldMode = FALSE;
+static bool altHoldModeOld = FALSE;
 
 static void commanderCrtpCB(CRTPPacket* pk);
-static void commanderWatchdog(void);
 static void commanderWatchdogReset(void);
 
 void commanderInit(void)
 {
   if(isInit)
     return;
+
 
   crtpInit();
   crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
@@ -79,7 +82,7 @@ static void commanderCrtpCB(CRTPPacket* pk)
   commanderWatchdogReset();
 }
 
-static void commanderWatchdog(void)
+void commanderWatchdog(void)
 {
   int usedSide = side;
   uint32_t ticktimeSinceUpdate;
@@ -95,6 +98,7 @@ static void commanderWatchdog(void)
   if (ticktimeSinceUpdate > COMMANDER_WDT_TIMEOUT_SHUTDOWN)
   {
     targetVal[usedSide].thrust = 0;
+    altHoldMode = FALSE; // do we need this? It would reset the target altitude upon reconnect if still hovering
     isInactive = TRUE;
   }
   else
@@ -122,6 +126,15 @@ void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* e
   *eulerYawDesired   = targetVal[usedSide].yaw;
 }
 
+void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
+{
+  *altHold = altHoldMode; // Still in altitude hold mode
+  *setAltHold = !altHoldModeOld && altHoldMode; // Hover just activated
+  *altHoldChange = altHoldMode ? ((float) targetVal[side].thrust - 32767.) / 32767. : 0.0; // Amount to change altitude hold target
+  altHoldModeOld = altHoldMode;
+}
+
+
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType)
 {
   *rollType  = ANGLE;
@@ -129,7 +142,7 @@ void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType
   *yawType   = RATE;
 }
 
-void commanderGetTrust(uint16_t* thrust)
+void commanderGetThrust(uint16_t* thrust)
 {
   int usedSide = side;
   uint16_t rawThrust = targetVal[usedSide].thrust;
@@ -150,4 +163,9 @@ void commanderGetTrust(uint16_t* thrust)
 
   commanderWatchdog();
 }
+
+// Params for flight modes
+PARAM_GROUP_START(flightmode)
+PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
+PARAM_GROUP_STOP(flightmode)
 

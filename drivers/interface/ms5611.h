@@ -50,6 +50,7 @@
 #define MS5611_OSR_1024 0x04
 #define MS5611_OSR_2048 0x06
 #define MS5611_OSR_4096 0x08
+#define MS5611_OSR_DEFAULT MS5611_OSR_4096
 
 #define MS5611_PROM_BASE_ADDR 0xA2 // by adding ints from 0 to 6 we can read all the prom configuration values.
 // C1 will be at 0xA2 and all the subsequent are multiples of 2
@@ -61,6 +62,11 @@
 #define MS5611_ST_PRESS_MIN   (450.0)  //mbar
 #define MS5611_ST_TEMP_MAX    (60.0)   //degree celcius
 #define MS5611_ST_TEMP_MIN    (-20.0)  //degree celcius
+
+// Constants used to determine altitude from pressure
+#define CONST_SEA_PRESSURE 102610.f //1026.1f //http://www.meteo.physik.uni-muenchen.de/dokuwiki/doku.php?id=wetter:stadt:messung
+#define CONST_PF 0.1902630958 //(1/5.25588f) Pressure factor
+#define CONST_PF2 44330.0f
 
 
 bool ms5611Init(I2C_TypeDef *i2cPort);
@@ -79,4 +85,6 @@ void ms5611Reset();
 void ms5611StartConversion(uint8_t command);
 int32_t ms5611GetConversion(uint8_t command);
 
+void ms5611GetData(float* pressure, float* temperature, float* asl);
+float ms5611PressureToAltitude(float* pressure);
 #endif // MS5611_H

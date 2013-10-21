@@ -271,6 +271,14 @@ PMStates pmUpdateState()
   return state;
 }
 
+
+// return true if battery discharging
+bool pmIsDischarging(void) {
+    PMStates pmState;
+    pmState = pmUpdateState();
+    return (pmState == lowPower )|| (pmState == battery);
+}
+
 void pmTask(void *param)
 {
   PMStates pmStateOld = battery;
