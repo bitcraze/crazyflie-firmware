@@ -242,6 +242,18 @@ void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
   *roll = atan(gy / sqrt(gx*gx + gz*gz)) * 180 / M_PI;
 }
 
+float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const float az)
+{
+  float gx, gy, gz; // estimated gravity direction
+
+  gx = 2 * (q1*q3 - q0*q2);
+  gy = 2 * (q0*q1 + q2*q3);
+  gz = q0*q0 - q1*q1 - q2*q2 + q3*q3;
+
+  // return vertical acceleration without gravity
+  // (A dot G) / |G| - 1G (|G| = 1) -> (A dot G) - 1G
+  return ((ax*gx + ay*gy + az*gz) - 1.0);
+}
 //---------------------------------------------------------------------------------------------------
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -255,6 +267,7 @@ float invSqrt(float x)
   y = y * (1.5f - (halfx * y * y));
   return y;
 }
+
 
 
 PARAM_GROUP_START(sensorfusion6)

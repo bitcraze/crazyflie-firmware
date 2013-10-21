@@ -37,8 +37,13 @@
 #include "debug.h"
 #include "eprintf.h"
 
+#include "math.h"
+
 #define EXTRA_PRECISION      5 // trick to add more precision to the pressure and temp readings
-#define CONVERSION_TIME_MS   100 // conversion time in milliseconds
+#define CONVERSION_TIME_MS   10 // conversion time in milliseconds. 10 is minimum
+#define PRESSURE_PER_TEMP 5 // Length of reading cycle: 1x temp, rest pressure. Good values: 1-10
+#define FIX_TEMP 25         // Fixed Temperature. ASL is a function of pressure and temperature, but as the temperature changes so much (blow a little towards the flie and watch it drop 5 degrees) it corrupts the ASL estimates.
+                            // TLDR: Adjusting for temp changes does more harm than good.
 
 typedef struct
 {
@@ -58,6 +63,10 @@ static CalReg   calReg;
 static uint32_t lastPresConv;
 static uint32_t lastTempConv;
 static int32_t  tempCache;
+
+static uint8_t readState=0;
+static uint32_t lastConv=0;
+static int32_t tempDeltaT;
 
 bool ms5611Init(I2C_TypeDef *i2cPort)
 {
@@ -315,4 +324,73 @@ bool ms5611ReadPROM()
 void ms5611Reset()
 {
   i2cdevWriteByte(I2Cx, devAddr, I2CDEV_NO_MEM_ADDR, MS5611_RESET);
+}
+
+
+
+
+/**
+ * Gets pressure, temperature and above sea level altitude estimate (asl).
+ * Best called at 100hz. For every PRESSURE_PER_TEMP-1 pressure readings temp is read once.
+ * Effective 50-90hz baro update and 50-10hz temperature update if called at 100hz.
+ */
+void ms5611GetData(float* pressure, float* temperature, float* asl)
+{
+    int32_t tempPressureRaw, tempTemperatureRaw;
+
+    // Dont reader faster than we can
+    uint32_t now = xTaskGetTickCount();
+    if ((now - lastConv) < CONVERSION_TIME_MS)
+    {
+        return;
+    }
+    lastConv = now;
+
+    if (readState == 0)
+    {
+        // read temp
+        ++readState;
+        tempTemperatureRaw = ms5611GetConversion(MS5611_D2 + MS5611_OSR_DEFAULT);
+        tempDeltaT = ms5611CalcDeltaTemp(tempTemperatureRaw);
+        *temperature = ms5611CalcTemp(tempDeltaT);
+        // cmd to read pressure
+        ms5611StartConversion(MS5611_D1 + MS5611_OSR_DEFAULT);
+    }
+    else
+    {
+        // read pressure
+        ++readState;
+        tempPressureRaw = ms5611GetConversion(MS5611_D1 + MS5611_OSR_DEFAULT);
+        *pressure = ms5611CalcPressure(tempPressureRaw, tempDeltaT);
+        *asl = ms5611PressureToAltitude(pressure);
+        if (readState == PRESSURE_PER_TEMP){
+            // cmd to read temp
+            ms5611StartConversion(MS5611_D2 + MS5611_OSR_DEFAULT);
+            readState = 0;
+        }
+        else
+        {
+            // cmd to read pressure
+            ms5611StartConversion(MS5611_D1 + MS5611_OSR_DEFAULT);
+        }
+    }
+}
+
+//TODO: pretty expensive function. Rather smooth the pressure estimates and only call this when needed
+
+/**
+ * Converts pressure to altitude above sea level (ASL) in meters
+ */
+float ms5611PressureToAltitude(float* pressure/*, float* ground_pressure, float* ground_temp*/)
+{
+    if (*pressure > 0)
+    {
+        //return (1.f - pow(*pressure / CONST_SEA_PRESSURE, CONST_PF)) * CONST_PF2;
+        //return ((pow((1015.7 / *pressure), CONST_PF) - 1.0) * (25. + 273.15)) / 0.0065;
+        return ((pow((1015.7 / *pressure), CONST_PF) - 1.0) * (FIX_TEMP + 273.15)) / 0.0065;
+    }
+    else
+    {
+        return 0;
+    }
 }
