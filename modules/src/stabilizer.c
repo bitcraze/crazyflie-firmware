@@ -261,8 +261,9 @@ static void stabilizerTask(void* param)
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
       {
         sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, FUSION_UPDATE_DT);
-        sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual, acc.z, &accWZ);
+        sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
 
+        accWZ = sensfusion6GetAccZWithoutGravity(acc.x, acc.y, acc.z);
         // Estimate speed from acc (drifts)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
 
@@ -472,7 +473,7 @@ static float deadband(float value, const float threshold)
   return value;
 }
 
-//// Params for altitude hold
+// Params for altitude hold
 PARAM_GROUP_START(altHold)
 PARAM_ADD(PARAM_FLOAT, aslAlpha, &aslAlpha)
 PARAM_ADD(PARAM_FLOAT, aslAlphaLong, &aslAlphaLong)
