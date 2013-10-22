@@ -274,7 +274,7 @@ static void stabilizerTask(void* param)
       }
 
       // 100HZ
-      if (++altHoldCounter >= HOVER_UPDATE_RATE_DIVIDER)
+      if (imuHasBarometer() && (++altHoldCounter >= HOVER_UPDATE_RATE_DIVIDER))
       {
         stabilizerAltHoldUpdate();
         altHoldCounter = 0;
@@ -299,14 +299,14 @@ static void stabilizerTask(void* param)
 
       controllerGetActuatorOutput(&actuatorRoll, &actuatorPitch, &actuatorYaw);
 
-      if (!altHold)
+      if (!altHold || !imuHasBarometer())
       {
         // Use thrust from controller if not in altitude hold mode
         commanderGetThrust(&actuatorThrust);
       }
       else
       {
-        // Added to thrust can be set to 0 while in altitude hold mode after disconnect
+        // Added so thrust can be set to 0 while in altitude hold mode after disconnect
         commanderWatchdog();
       }
 

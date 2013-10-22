@@ -333,6 +333,16 @@ bool imu6IsCalibrated(void)
   return status;
 }
 
+bool imuHasBarometer(void)
+{
+  return isMs5611Present;
+}
+
+bool imuHasMangnetometer(void)
+{
+  return isHmc5883lPresent;
+}
+
 static void imuBiasInit(BiasObj* bias)
 {
   bias->isBufferFilled = FALSE;

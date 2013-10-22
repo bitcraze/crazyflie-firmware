@@ -55,6 +55,9 @@ void imu6Init(void);
 bool imu6Test(void);
 void imu6Read(Axis3f* gyro, Axis3f* acc);
 bool imu6IsCalibrated(void);
+bool imuHasBarometer(void);
+bool imuHasMangnetometer(void);
+
 
 
 #endif /* IMU_H_ */
