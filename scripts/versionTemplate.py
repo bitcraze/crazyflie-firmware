@@ -2,6 +2,7 @@
 
 import sys
 import subprocess
+import os
 
 
 version = { }
@@ -17,23 +18,55 @@ if len(sys.argv)<3:
     sys.exit(1)
 
 #Get the build repos information
-identify = subprocess.check_output(["hg", "identify", "-nitb"])
-identify = identify.split()
-version['revision'] = identify[0]
-version['irevision0'] = "0x" + identify[0][0:8]
-version['irevision1'] = "0x" + identify[0][8:12]
-version['local_revision'] = identify[1]
-version['branch'] = identify[2]
-if len(identify)>3:
-  version['tag'] = identify[3]
-else:
-  version['tag'] = ""
+if os.path.isdir(".git"):
+    # git
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip()
 
-try:
-    version['local_revision'].index('+')
-    version['modified'] = 'true'
-except Exception:
-    version['modified'] = 'false'
+    version['revision'] = revision[0:12]
+    version['irevision0'] = "0x" + revision[0:8]
+    version['irevision1'] = "0x" + revision[8:12]
+
+    identify = subprocess.check_output(["git", "describe", "--abbrev=12", "--tags", "HEAD"])
+    identify = identify.split('-')
+
+    if len(identify) > 2:
+        version['local_revision'] = identify[len(identify)-2] + '+'
+    else:
+        version['local_revision'] = '0'
+
+    version['tag'] = identify[0]
+    for x in range(1, len(identify)-2):
+        version['tag'] += '-'
+        version['tag'] += identify[x]
+
+    branch = subprocess.check_output(["git", "branch", "--contains"])[2:].strip()
+    version['branch'] = branch
+
+    subprocess.call(["git", "update-index", "-q", "--refresh"])
+    changes = subprocess.check_output(["git", "diff-index", "--name-only", "HEAD", "--"]).strip()
+    if len(changes):
+        version['modified'] = 'true'
+    else:
+        version['modified'] = 'false'
+else:
+    # mercury
+    identify = subprocess.check_output(["hg", "identify", "-nitb"])
+    identify = identify.split()
+    version['revision'] = identify[0]
+    version['irevision0'] = "0x" + identify[0][0:8]
+    version['irevision1'] = "0x" + identify[0][8:12]
+    version['local_revision'] = identify[1]
+    version['branch'] = identify[2]
+    if len(identify)>3:
+        version['tag'] = identify[3]
+    else:
+        version['tag'] = ""
+
+    try:
+        version['local_revision'].index('+')
+        version['modified'] = 'true'
+    except Exception:
+        version['modified'] = 'false'
 
 #Apply information to the file template
 infile  = open(sys.argv[1], 'r')
