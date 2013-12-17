@@ -6,6 +6,9 @@ You can use, modify and distribute thisfile freely, but without any waranty.
 */
 
 
+MEMORY {
+       UNEXPECTED_SECTIONS : ORIGIN = 0xffffffff, LENGTH = 0
+}
 
 /* Sections Definitions */
 
@@ -240,6 +243,8 @@ SECTIONS
     .debug_funcnames 0 : { *(.debug_funcnames) }
     .debug_typenames 0 : { *(.debug_typenames) }
     .debug_varnames  0 : { *(.debug_varnames) }
+
+    .unexpected_sections : { *(*) } > UNEXPECTED_SECTIONS
 }
 
 
