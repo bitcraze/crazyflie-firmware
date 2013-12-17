@@ -120,7 +120,7 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 CFLAGS += -ffunction-sections -fdata-sections
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
-LDFLAGS = $(CFLAGS) -Wl,-Map=$(PROG).map,--cref,--gc-sections
+LDFLAGS = $(CFLAGS) -Wl,-Map=$(PROG).map,--cref,--gc-sections -nostdlib
 
 ifeq ($(CLOAD), 1)
   LDFLAGS += -T scripts/STM32F103_32K_20K_FLASH_CLOAD.ld
