@@ -42,11 +42,14 @@ SECTIONS
         *(.rodata*)
         *(.glue_7)
         *(.glue_7t)
+        *(.vfp11_veneer)
+        *(.v4_bx)
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
         
         /* Some stuff of CodeSourcery? */
-        *(.init)
-        *(.fini)
-        *(.eh_frame)
+        KEEP (*(.init))
+        KEEP (*(.fini))
+        KEEP(*(.eh_frame))
 
         /* Parameters and log system datas */
         . = ALIGN(4);
@@ -243,6 +246,14 @@ SECTIONS
     .debug_funcnames 0 : { *(.debug_funcnames) }
     .debug_typenames 0 : { *(.debug_typenames) }
     .debug_varnames  0 : { *(.debug_varnames) }
+    /* DWARF 3 */
+    .debug_pubtypes 0 : { *(.debug_pubtypes) }
+    .debug_ranges   0 : { *(.debug_ranges) }
+    /* DWARF extension */
+    .debug_macro    0 : { *(.debug_macro) }
+    .ARM.attributes 0 : { KEEP (*(.ARM.attributes)) KEEP (*(.gnu.attributes)) }
+    .note.gnu.arm.ident 0 : { KEEP (*(.note.gnu.arm.ident)) }
+    /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
 
     .unexpected_sections : { *(*) } > UNEXPECTED_SECTIONS
 }
