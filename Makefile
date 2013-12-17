@@ -69,7 +69,7 @@ PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o
 
 # Utilities
-PROJ_OBJ += filter.o cpuid.o cfassert.o configblock.o eprintf.o crc.o fp16.o debug.o
+PROJ_OBJ += filter.o cpuid.o cfassert.o configblock.o eprintf.o crc.o fp16.o debug.o abort.o
 PROJ_OBJ += version.o
 
 
