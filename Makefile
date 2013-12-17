@@ -104,7 +104,7 @@ else
 endif
 
 ifeq ($(LTO), 1)
-  CFLAGS += -flto
+  CFLAGS += -flto -fuse-linker-plugin
 endif
 
 ifeq ($(USE_ESKYLINK), 1)
@@ -120,16 +120,12 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 CFLAGS += -ffunction-sections -fdata-sections
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
-LDFLAGS = $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections
+LDFLAGS = $(CFLAGS) -Wl,-Map=$(PROG).map,--cref,--gc-sections
 
 ifeq ($(CLOAD), 1)
   LDFLAGS += -T scripts/STM32F103_32K_20K_FLASH_CLOAD.ld
 else
   LDFLAGS += -T scripts/STM32F103_32K_20K_FLASH.ld
-endif
-
-ifeq ($(LTO), 1)
-  LDFLAGS += -Os -flto -fuse-linker-plugin
 endif
 
 #Program name
