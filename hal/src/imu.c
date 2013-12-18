@@ -43,6 +43,7 @@
 #include "ledseq.h"
 #include "uart.h"
 #include "param.h"
+#include "log.h"
 
 #define IMU_ENABLE_MAG_HMC5883
 #define IMU_ENABLE_PRESSURE_MS5611
@@ -70,6 +71,10 @@
 #define GYRO_VARIANCE_THRESHOLD_Y (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
 
+#define MAG_GAUSS_PER_LSB_CFG    HMC5883L_GAIN_660
+#define MAG_GAUSS_PER_LSB        660.0
+
+
 typedef struct
 {
   Axis3i16   bias;
@@ -79,28 +84,28 @@ typedef struct
   Axis3i16   buffer[IMU_NBR_OF_BIAS_SAMPLES];
 } BiasObj;
 
-BiasObj    gyroBias;
-BiasObj    accelBias;
-int32_t    varianceSampleTime;
-Axis3i16   gyroMpu;
-Axis3i16   accelMpu;
-Axis3i16   accelLPF;
-Axis3i16   accelLPFAligned;
-Axis3i16   mag;
-Axis3i32   accelStoredFilterValues;
-uint8_t    imuAccLpfAttFactor;
-static bool isHmc5883lPresent;
-static bool isMs5611Present;
+static BiasObj    gyroBias;
+static BiasObj    accelBias;
+static int32_t    varianceSampleTime;
+static Axis3i16   gyroMpu;
+static Axis3i16   accelMpu;
+static Axis3i16   accelLPF;
+static Axis3i16   accelLPFAligned;
+static Axis3i16   mag;
+static Axis3i32   accelStoredFilterValues;
+static uint8_t    imuAccLpfAttFactor;
+static bool       isHmc5883lPresent;
+static bool       isMs5611Present;
 
 static bool isMpu6050TestPassed;
 static bool isHmc5883lTestPassed;
 static bool isMs5611TestPassed;
 
 // Pre-calculated values for accelerometer alignment
-float cosPitch;
-float sinPitch;
-float cosRoll;
-float sinRoll;
+static float cosPitch;
+static float sinPitch;
+static float cosRoll;
+static float sinRoll;
 
 /**
  * MPU6050 selt test function. If the chip is moved to much during the self test
@@ -298,27 +303,25 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
   accOut->x = (accelLPFAligned.x - accelBias.bias.x) * IMU_G_PER_LSB_CFG;
   accOut->y = (accelLPFAligned.y - accelBias.bias.y) * IMU_G_PER_LSB_CFG;
   accOut->z = (accelLPFAligned.z - accelBias.bias.z) * IMU_G_PER_LSB_CFG;
+}
 
-//  uartSendData(sizeof(Axis3f), (uint8_t*)gyroOut);
-//  uartSendData(sizeof(Axis3f), (uint8_t*)accOut);
+void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut)
+{
+  imu6Read(gyroOut, accOut);
 
-#if 0
-  static uint32_t count = 0;
-  if (++count >= 19)
+  if (isHmc5883lPresent)
   {
-    count = 0;
-    uartPrintf("%d, %d, %d, %d, %d, %d, %d, %d, %d\n",
-                (int32_t)(gyroOut->x * 10),
-                (int32_t)(gyroOut->y * 10),
-                (int32_t)(gyroOut->z * 10),
-                (int32_t)(accOut->x * 1000),
-                (int32_t)(accOut->y * 1000),
-                (int32_t)(accOut->z * 1000),
-                mag.x,
-                mag.y,
-                mag.z);
+    hmc5883lGetHeading(&mag.x, &mag.y, &mag.z);
+    magOut->x = (float)mag.x / MAG_GAUSS_PER_LSB;
+    magOut->y = (float)mag.y / MAG_GAUSS_PER_LSB;
+    magOut->z = (float)mag.z / MAG_GAUSS_PER_LSB;
   }
-#endif
+  else
+  {
+    magOut->x = 0.0;
+    magOut->y = 0.0;
+    magOut->z = 0.0;
+  }
 }
 
 bool imu6IsCalibrated(void)

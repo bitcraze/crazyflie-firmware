@@ -65,11 +65,6 @@ const static float bat671723HS25C[10] =
   4.10  // 90%
 };
 
-LOG_GROUP_START(pm)
-LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
-LOG_ADD(LOG_INT8, state, &pmState)
-LOG_GROUP_STOP(pm)
-
 void pmInit(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -383,3 +378,9 @@ void pmTask(void *param)
     }
   }
 }
+
+LOG_GROUP_START(pm)
+LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+LOG_ADD(LOG_INT8, state, &pmState)
+LOG_GROUP_STOP(pm)
+

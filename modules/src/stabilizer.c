@@ -55,73 +55,64 @@
 #define ATTITUDE_UPDATE_RATE_DIVIDER  2
 #define FUSION_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ATTITUDE_UPDATE_RATE_DIVIDER)) // 250hz
 
+// Barometer/ Altitude hold stuff
+#define ALTHOLD_UPDATE_RATE_DIVIDER  5 // 500hz/5 = 100hz for barometer measurements
+#define ALTHOLD_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ALTHOLD_UPDATE_RATE_DIVIDER))   // 500hz
 
-// Barometer/ Hover stuff
-#define HOVER_UPDATE_RATE_DIVIDER  5 // 500hz/5 = 100hz for barometer measurements
-#define HOVER_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / HOVER_UPDATE_RATE_DIVIDER))   // 500hz
+static Axis3f gyro; // Gyro axis data in deg/s
+static Axis3f acc;  // Accelerometer axis data in mG
+static Axis3f mag;  // Magnetometer axis data in testla
 
-
-#define LOGGING_ENABLED
-#ifdef LOGGING_ENABLED
-  #define PRIVATE
-#else
-  #define PRIVATE static
-#endif
-
-PRIVATE Axis3f gyro; // Gyro axis data in deg/s
-PRIVATE Axis3f acc;  // Accelerometer axis data in mG
-
-PRIVATE float eulerRollActual;
-PRIVATE float eulerPitchActual;
-PRIVATE float eulerYawActual;
-PRIVATE float eulerRollDesired;
-PRIVATE float eulerPitchDesired;
-PRIVATE float eulerYawDesired;
-PRIVATE float rollRateDesired;
-PRIVATE float pitchRateDesired;
-PRIVATE float yawRateDesired;
-PRIVATE float fusionDt;
+static float eulerRollActual;
+static float eulerPitchActual;
+static float eulerYawActual;
+static float eulerRollDesired;
+static float eulerPitchDesired;
+static float eulerYawDesired;
+static float rollRateDesired;
+static float pitchRateDesired;
+static float yawRateDesired;
 
 // Baro variables
-PRIVATE float temperature; // temp from barometer
-PRIVATE float pressure;    // pressure from barometer
-PRIVATE float asl;     // smoothed asl
-PRIVATE float aslRaw;  // raw asl
-PRIVATE float aslLong; // long term asl
+static float temperature; // temp from barometer
+static float pressure;    // pressure from barometer
+static float asl;     // smoothed asl
+static float aslRaw;  // raw asl
+static float aslLong; // long term asl
 
-// Hover variables
-PRIVATE PidObject altHoldPID; // Used for altitute hold mode. I gets reset when the bat status changes
+// Altitude hold variables
+static PidObject altHoldPID; // Used for altitute hold mode. I gets reset when the bat status changes
 bool altHold = false;          // Currently in altitude hold mode
 bool setAltHold = false;      // Hover mode has just been activated
-PRIVATE float accWZ     = 0.0;
-PRIVATE float vSpeedASL = 0.0;
-PRIVATE float vSpeedAcc = 0.0;
-PRIVATE float vSpeed    = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
-PRIVATE float altHoldPIDVal;                    // Output of the PID controller
-PRIVATE float altHoldErr;                       // Different between target and current altitude
+static float accWZ     = 0.0;
+static float vSpeedASL = 0.0;
+static float vSpeedAcc = 0.0;
+static float vSpeed    = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
+static float altHoldPIDVal;                    // Output of the PID controller
+static float altHoldErr;                       // Different between target and current altitude
 
-// Hover & Baro Params
-PRIVATE float altHoldKp              = 0.5;  // PID gain constants, used everytime we reinitialise the PID controller
-PRIVATE float altHoldKi              = 0.18;
-PRIVATE float altHoldKd              = 0.0;
-PRIVATE float altHoldChange          = 0;     // Change in target altitude
-PRIVATE float altHoldTarget          = -1;    // Target altitude
-PRIVATE float altHoldErrMax          = 1.0;   // max cap on current estimated altitude vs target altitude in meters
-PRIVATE float altHoldChange_SENS     = 200;   // sensitivity of target altitude change (thrust input control) while hovering. Lower = more sensitive & faster changes
-PRIVATE float pidAslFac              = 13000; // relates meters asl to thrust
-PRIVATE float pidAlpha               = 0.8;   // PID Smoothing //TODO: shouldnt need to do this
-PRIVATE float vSpeedASLFac           = 0;    // multiplier
-PRIVATE float vSpeedAccFac           = -48;  // multiplier
-PRIVATE float vAccDeadband           = 0.05;  // Vertical acceleration deadband
-PRIVATE float vSpeedASLDeadband      = 0.005; // Vertical speed based on barometer readings deadband
-PRIVATE float vSpeedLimit            = 0.05;  // used to constrain vertical velocity
-PRIVATE float errDeadband            = 0.00;  // error (target - altitude) deadband
-PRIVATE float vBiasAlpha             = 0.91; // Blending factor we use to fuse vSpeedASL and vSpeedAcc
-PRIVATE float aslAlpha               = 0.92; // Short term smoothing
-PRIVATE float aslAlphaLong           = 0.93; // Long term smoothing
-PRIVATE uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used yet
-PRIVATE uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
-PRIVATE uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
+// Altitude hold & Baro Params
+static float altHoldKp              = 0.5;  // PID gain constants, used everytime we reinitialise the PID controller
+static float altHoldKi              = 0.18;
+static float altHoldKd              = 0.0;
+static float altHoldChange          = 0;     // Change in target altitude
+static float altHoldTarget          = -1;    // Target altitude
+static float altHoldErrMax          = 1.0;   // max cap on current estimated altitude vs target altitude in meters
+static float altHoldChange_SENS     = 200;   // sensitivity of target altitude change (thrust input control) while hovering. Lower = more sensitive & faster changes
+static float pidAslFac              = 13000; // relates meters asl to thrust
+static float pidAlpha               = 0.8;   // PID Smoothing //TODO: shouldnt need to do this
+static float vSpeedASLFac           = 0;    // multiplier
+static float vSpeedAccFac           = -48;  // multiplier
+static float vAccDeadband           = 0.05;  // Vertical acceleration deadband
+static float vSpeedASLDeadband      = 0.005; // Vertical speed based on barometer readings deadband
+static float vSpeedLimit            = 0.05;  // used to constrain vertical velocity
+static float errDeadband            = 0.00;  // error (target - altitude) deadband
+static float vBiasAlpha             = 0.91; // Blending factor we use to fuse vSpeedASL and vSpeedAcc
+static float aslAlpha               = 0.92; // Short term smoothing
+static float aslAlphaLong           = 0.93; // Long term smoothing
+static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used yet
+static uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
+static uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
 
 
 RPYType rollType;
@@ -137,59 +128,6 @@ uint32_t motorPowerM4;
 uint32_t motorPowerM2;
 uint32_t motorPowerM1;
 uint32_t motorPowerM3;
-
-LOG_GROUP_START(stabilizer)
-LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
-LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
-LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
-LOG_ADD(LOG_UINT16, thrust, &actuatorThrust)
-LOG_GROUP_STOP(stabilizer)
-
-LOG_GROUP_START(motor)
-LOG_ADD(LOG_INT32, m4, &motorPowerM4) 
-LOG_ADD(LOG_INT32, m1, &motorPowerM1) 
-LOG_ADD(LOG_INT32, m2, &motorPowerM2) 
-LOG_ADD(LOG_INT32, m3, &motorPowerM3) 
-LOG_GROUP_STOP(motor)
-
-LOG_GROUP_START(acc)
-LOG_ADD(LOG_FLOAT, x, &acc.x)
-LOG_ADD(LOG_FLOAT, y, &acc.y)
-LOG_ADD(LOG_FLOAT, z, &acc.z)
-LOG_ADD(LOG_FLOAT, zw, &accWZ)
-LOG_GROUP_STOP(acc)
-
-LOG_GROUP_START(gyro)
-LOG_ADD(LOG_FLOAT, x, &gyro.x)
-LOG_ADD(LOG_FLOAT, y, &gyro.y)
-LOG_ADD(LOG_FLOAT, z, &gyro.z)
-LOG_GROUP_STOP(gyro)
-
-
-// LOG altitude hold PID controller states
-LOG_GROUP_START(vpid)
-LOG_ADD(LOG_FLOAT, pid, &altHoldPID)
-LOG_ADD(LOG_FLOAT, p, &altHoldPID.outP)
-LOG_ADD(LOG_FLOAT, i, &altHoldPID.outI)
-LOG_ADD(LOG_FLOAT, d, &altHoldPID.outD)
-LOG_GROUP_STOP(vpid)
-
-LOG_GROUP_START(baro)
-LOG_ADD(LOG_FLOAT, asl, &asl)
-LOG_ADD(LOG_FLOAT, aslRaw, &aslRaw)
-LOG_ADD(LOG_FLOAT, aslLong, &aslLong)
-LOG_ADD(LOG_FLOAT, temp, &temperature)
-LOG_ADD(LOG_FLOAT, pressure, &pressure)
-LOG_GROUP_STOP(baro)
-
-LOG_GROUP_START(altHold)
-LOG_ADD(LOG_FLOAT, err, &altHoldErr)
-LOG_ADD(LOG_FLOAT, target, &altHoldTarget)
-LOG_ADD(LOG_FLOAT, zSpeed, &vSpeed)
-LOG_ADD(LOG_FLOAT, vSpeed, &vSpeed)
-LOG_ADD(LOG_FLOAT, vSpeedASL, &vSpeedASL)
-LOG_ADD(LOG_FLOAT, vSpeedAcc, &vSpeedAcc)
-LOG_GROUP_STOP(altHold)
 
 static bool isInit;
 
@@ -250,7 +188,8 @@ static void stabilizerTask(void* param)
   {
     vTaskDelayUntil(&lastWakeTime, F2T(IMU_UPDATE_FREQ)); // 500Hz
 
-    imu6Read(&gyro, &acc);
+    // Magnetometer not yet used more then for logging.
+    imu9Read(&gyro, &acc, &mag);
 
     if (imu6IsCalibrated())
     {
@@ -274,7 +213,7 @@ static void stabilizerTask(void* param)
       }
 
       // 100HZ
-      if (imuHasBarometer() && (++altHoldCounter >= HOVER_UPDATE_RATE_DIVIDER))
+      if (imuHasBarometer() && (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER))
       {
         stabilizerAltHoldUpdate();
         altHoldCounter = 0;
@@ -367,7 +306,7 @@ static void stabilizerAltHoldUpdate(void)
 
     // Reset PID controller
     pidInit(&altHoldPID, asl, altHoldKp, altHoldKi, altHoldKd,
-            HOVER_UPDATE_DT);
+            ALTHOLD_UPDATE_DT);
     // TODO set low and high limits depending on voltage
     // TODO for now just use previous I value and manually set limits for whole voltage range
     //                    pidSetIntegralLimit(&altHoldPID, 12345);
@@ -472,6 +411,64 @@ static float deadband(float value, const float threshold)
   }
   return value;
 }
+
+LOG_GROUP_START(stabilizer)
+LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
+LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
+LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
+LOG_ADD(LOG_UINT16, thrust, &actuatorThrust)
+LOG_GROUP_STOP(stabilizer)
+
+LOG_GROUP_START(acc)
+LOG_ADD(LOG_FLOAT, x, &acc.x)
+LOG_ADD(LOG_FLOAT, y, &acc.y)
+LOG_ADD(LOG_FLOAT, z, &acc.z)
+LOG_ADD(LOG_FLOAT, zw, &accWZ)
+LOG_GROUP_STOP(acc)
+
+LOG_GROUP_START(gyro)
+LOG_ADD(LOG_FLOAT, x, &gyro.x)
+LOG_ADD(LOG_FLOAT, y, &gyro.y)
+LOG_ADD(LOG_FLOAT, z, &gyro.z)
+LOG_GROUP_STOP(gyro)
+
+LOG_GROUP_START(mag)
+LOG_ADD(LOG_FLOAT, x, &mag.x)
+LOG_ADD(LOG_FLOAT, y, &mag.y)
+LOG_ADD(LOG_FLOAT, z, &mag.z)
+LOG_GROUP_STOP(mag)
+
+LOG_GROUP_START(motor)
+LOG_ADD(LOG_INT32, m4, &motorPowerM4)
+LOG_ADD(LOG_INT32, m1, &motorPowerM1)
+LOG_ADD(LOG_INT32, m2, &motorPowerM2)
+LOG_ADD(LOG_INT32, m3, &motorPowerM3)
+LOG_GROUP_STOP(motor)
+
+// LOG altitude hold PID controller states
+LOG_GROUP_START(vpid)
+LOG_ADD(LOG_FLOAT, pid, &altHoldPID)
+LOG_ADD(LOG_FLOAT, p, &altHoldPID.outP)
+LOG_ADD(LOG_FLOAT, i, &altHoldPID.outI)
+LOG_ADD(LOG_FLOAT, d, &altHoldPID.outD)
+LOG_GROUP_STOP(vpid)
+
+LOG_GROUP_START(baro)
+LOG_ADD(LOG_FLOAT, asl, &asl)
+LOG_ADD(LOG_FLOAT, aslRaw, &aslRaw)
+LOG_ADD(LOG_FLOAT, aslLong, &aslLong)
+LOG_ADD(LOG_FLOAT, temp, &temperature)
+LOG_ADD(LOG_FLOAT, pressure, &pressure)
+LOG_GROUP_STOP(baro)
+
+LOG_GROUP_START(altHold)
+LOG_ADD(LOG_FLOAT, err, &altHoldErr)
+LOG_ADD(LOG_FLOAT, target, &altHoldTarget)
+LOG_ADD(LOG_FLOAT, zSpeed, &vSpeed)
+LOG_ADD(LOG_FLOAT, vSpeed, &vSpeed)
+LOG_ADD(LOG_FLOAT, vSpeedASL, &vSpeedASL)
+LOG_ADD(LOG_FLOAT, vSpeedAcc, &vSpeedAcc)
+LOG_GROUP_STOP(altHold)
 
 // Params for altitude hold
 PARAM_GROUP_START(altHold)
