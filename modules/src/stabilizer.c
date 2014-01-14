@@ -85,6 +85,7 @@ static PidObject altHoldPID; // Used for altitute hold mode. I gets reset when t
 bool altHold = false;          // Currently in altitude hold mode
 bool setAltHold = false;      // Hover mode has just been activated
 static float accWZ     = 0.0;
+static float accMAG    = 0.0;
 static float vSpeedASL = 0.0;
 static float vSpeedAcc = 0.0;
 static float vSpeed    = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
@@ -203,6 +204,7 @@ static void stabilizerTask(void* param)
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
 
         accWZ = sensfusion6GetAccZWithoutGravity(acc.x, acc.y, acc.z);
+        accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
         // Estimate speed from acc (drifts)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
 
@@ -424,6 +426,7 @@ LOG_ADD(LOG_FLOAT, x, &acc.x)
 LOG_ADD(LOG_FLOAT, y, &acc.y)
 LOG_ADD(LOG_FLOAT, z, &acc.z)
 LOG_ADD(LOG_FLOAT, zw, &accWZ)
+LOG_ADD(LOG_FLOAT, mag2, &accMAG)
 LOG_GROUP_STOP(acc)
 
 LOG_GROUP_START(gyro)
