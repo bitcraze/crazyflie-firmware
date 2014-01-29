@@ -301,6 +301,9 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
   int i;
   
   for (i=0; i<LOG_MAX_BLOCKS; i++)
+    if (id == logBlocks[i].id) return EEXIST;
+  
+  for (i=0; i<LOG_MAX_BLOCKS; i++)
     if (logBlocks[i].id == BLOCK_ID_FREE) break;
   
   if (i == LOG_MAX_BLOCKS)
