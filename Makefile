@@ -13,7 +13,7 @@ CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python
 CLOAD             ?= 1
 DEBUG             ?= 0
-CLOAD_SCRIPT      ?= ../crazyflie-pc-client/bin/cfloader
+CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
 
 ## Flag that can be added to config.mk
 # CFLAGS += -DUSE_UART_CRTP        # Set CRTP link to UART
