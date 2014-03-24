@@ -20,6 +20,7 @@ CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
 # CFLAGS += -DUSE_ESKYLINK         # Set CRTP link to E-SKY receiver
 CFLAGS += -DENABLE_UART          # To enable the uart
 # CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
+#  CFLAGS += -DUBX_DECODE #To enable uBlox GPS decoding
 
 REV               ?= E
 
