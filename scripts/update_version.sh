@@ -2,22 +2,37 @@
 
 FILE=utils/src/version.c
 
+MODIFIED=0
+
 #Get the relevant informations
-ID=$(hg identify -nit)
-
-REV=$(echo -n $ID | cut -d' ' -f1)
-LOCAL=$(echo -n $ID | cut -d' ' -f2)
-TAG=$(echo -n $ID | cut -d' ' -f3)
-
-#LOCAL=$(hg identify -n)
-#REV=$(hg identify -i)
-#TAG=$(hg identify -t)
-#BRANCH=$(hg identify -b)
-
-if echo -n $REV | grep +\$>/dev/null; then
-  MODIFIED=1
+if test -d .git ; then
+  # git
+  ID=$(git describe --tags --abbrev=12 HEAD)
+  REV=${ID##*-}
+  REV=${REV:1}
+  LOCAL=${ID#*-*-}
+  TAG=${ID%-$LOCAL}
+  LOCAL=${LOCAL%-*}
+  git update-index -q --refresh
+  if ! test -z "$(git diff-index --name-only HEAD --)" ; then
+    MODIFIED=1
+  fi
 else
-  MODIFIED=0
+  # mercury
+  ID=$(hg identify -nit)
+
+  REV=$(echo -n $ID | cut -d' ' -f1)
+  LOCAL=$(echo -n $ID | cut -d' ' -f2)
+  TAG=$(echo -n $ID | cut -d' ' -f3)
+
+  #LOCAL=$(hg identify -n)
+  #REV=$(hg identify -i)
+  #TAG=$(hg identify -t)
+  #BRANCH=$(hg identify -b)
+
+  if echo -n $REV | grep +\$>/dev/null; then
+    MODIFIED=1
+  fi
 fi
 
 #Patch version.c

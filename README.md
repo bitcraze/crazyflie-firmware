@@ -36,7 +36,7 @@ clean_o    : Clean only the Objects files, keep the executables (ie .elf, .hex)
 clean      : Clean every compiled files
 mrproper   : Clean every compiled files and the classical editors backup files
 
-cload      : If the crazyflie-pc-client is placed on the same directory level and the Crazyradio is inserted
+cload      : If the crazyflie-clients-python is placed on the same directory level and the Crazyradio is inserted
              it will try to flash the firmware using the wireless bootloader.
 flash      : Flash cflie.elf using OpenOCD
 halt       : Halt the target using OpenOCD

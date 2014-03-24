@@ -66,7 +66,8 @@ uint8_t* Buffer_Rx1;
 uint8_t* Buffer_Tx1;
 __IO uint32_t I2CDirection;
 
-static void i2cdevResetBusI2c1(void);
+static void i2cdevResetAndLowLevelInitBusI2c1(void);
+static void i2cdevResetAndLowLevelInitBusI2c2(void);
 static inline void i2cdevRuffLoopDelay(uint32_t us);
 
 
@@ -76,7 +77,7 @@ int i2cdevInit(I2C_TypeDef *I2Cx)
   
   if (I2Cx == I2C1)
   {
-    i2cdevResetBusI2c1();
+    i2cdevResetAndLowLevelInitBusI2c1();
     // Enable the DMA1 channel6 Interrupt
     NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel6_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_ADC_PRI;
@@ -104,7 +105,7 @@ int i2cdevInit(I2C_TypeDef *I2Cx)
   }
   else if (I2Cx == I2C2)
   {
-    I2C_LowLevel_Init(I2Cx);
+    i2cdevResetAndLowLevelInitBusI2c2();
     // Enable the DMA1 channel4 Interrupt
     NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_ADC_PRI;
@@ -259,8 +260,7 @@ static inline void i2cdevRuffLoopDelay(uint32_t us)
   for(delay = I2CDEV_LOOPS_PER_US * us; delay > 0; delay--);
 }
 
-
-static void i2cdevResetBusI2c1(void)
+static void i2cdevResetAndLowLevelInitBusI2c1(void)
 {
   /* Reset the I2C block */
   I2C_DeInit(I2C1);
@@ -314,12 +314,75 @@ static void i2cdevResetBusI2c1(void)
   /* Initialize the I2C block */
   I2C_LowLevel_Init(I2C1);
 
-#define I2C_BUSY 0x20
-  if (I2C1->SR2 & I2C_BUSY)
+  /* Reset if I2C device is busy */
+  if (I2C1->SR2 & 0x20)
   {
     /* Reset the I2C block */
     I2C_SoftwareResetCmd(I2C1, ENABLE);
     I2C_SoftwareResetCmd(I2C1, DISABLE);
+  }
+}
+
+static void i2cdevResetAndLowLevelInitBusI2c2(void)
+{
+  /* Reset the I2C block */
+  I2C_DeInit(I2C2);
+
+  /* Make sure the bus is free by clocking it until any slaves release the bus. */
+  GPIO_InitTypeDef  GPIO_InitStructure;
+
+  /* I2C1 clock enable */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2, ENABLE);
+  /* I2C1 SDA configuration */
+  GPIO_InitStructure.GPIO_Pin = I2CDEV_I2C2_PIN_SDA;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  /* I2C1 SCL configuration */
+  GPIO_InitStructure.GPIO_Pin = I2CDEV_I2C2_PIN_SCL;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+  GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
+  /* Check SDA line to determine if slave is asserting bus and clock out if so */
+  while(GPIO_ReadInputDataBit(GPIOB, I2CDEV_I2C2_PIN_SDA) == Bit_RESET)
+  {
+    /* Set clock high */
+    GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
+    /* Wait for any clock stretching to finish. */
+    GPIO_WAIT_LOW(GPIOB, I2CDEV_I2C2_PIN_SCL, 10 * I2CDEV_LOOPS_PER_MS);
+    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+
+    /* Generate a clock cycle */
+    GPIO_ResetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
+    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
+    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  }
+
+  /* Generate a start then stop condition */
+  GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
+  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  GPIO_ResetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
+  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  GPIO_ResetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
+  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+
+  /* Set data and clock high and wait for any clock stretching to finish. */
+  GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
+  GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
+  GPIO_WAIT_LOW(GPIOB, I2CDEV_I2C2_PIN_SCL, 10 * I2CDEV_LOOPS_PER_MS);
+  /* Wait for data to be high */
+  GPIO_WAIT_HIGH(GPIOB, I2CDEV_I2C2_PIN_SDA, 10 * I2CDEV_LOOPS_PER_MS);
+
+  /* Initialize the I2C block */
+  I2C_LowLevel_Init(I2C2);
+
+  /* Reset if I2C device is busy */
+  if (I2C2->SR2 & 0x20)
+  {
+    /* Reset the I2C block */
+    I2C_SoftwareResetCmd(I2C2, ENABLE);
+    I2C_SoftwareResetCmd(I2C2, DISABLE);
   }
 }
 
@@ -354,4 +417,3 @@ void i2cDmaInterruptHandlerI2c2(void)
     xSemaphoreGive(i2cdevDmaEventI2c2);
   }
 }
-
