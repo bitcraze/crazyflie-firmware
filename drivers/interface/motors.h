@@ -39,10 +39,36 @@
 
 /******** Defines ********/
 
+/**
+ * *VARNING* Flashing the brushless driver on the Crazyflie with normal brushed motors connected
+ *  will turn it on at full speed when it is powered on!
+ *
+ * Generates a PWM wave (50 - 200 Hz update rate with 1-2 ms high pulse) using the timer. That way we can use the same
+ * base as for the regular PWM driver. This means it will be a PWM with a period of the update rate configured to be high
+ * only in the 1-2 ms range.
+ * The BLMC input signal are meant to be connected to the Crazyflie round motor solder pad (open-drain output). A resistor
+ * around 470 ohm needs to pull the signal high to the voltage level of the BLMC (normally 5V).
+ */
+#ifdef BRUSHLESS_MOTORCONTROLLER
+
+//#define BLMC_PERIOD 0.02   // 20ms = 50Hz
+//#define BLMC_PERIOD 0.01   // 10ms = 100Hz
+#define BLMC_PERIOD 0.005   // 5ms = 200Hz
+
+#define MOTORS_PWM_PRESCALE_RAW   (uint32_t)((72000000/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
+#define MOTORS_PWM_CNT_FOR_PERIOD (uint32_t)(72000000 * BLMC_PERIOD / MOTORS_PWM_PRESCALE_RAW)
+#define MOTORS_PWM_CNT_FOR_1MS    (uint32_t)(72000000 * 0.001 / MOTORS_PWM_PRESCALE_RAW)
+#define MOTORS_PWM_PERIOD         MOTORS_PWM_CNT_FOR_PERIOD
+#define MOTORS_PWM_BITS           11  // Only for compatibiliy
+#define MOTORS_PWM_PRESCALE       (uint16_t)(MOTORS_PWM_PRESCALE_RAW - 1)
+#define MOTORS_POLARITY           TIM_OCPolarity_Low
+#else
 //The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
 #define MOTORS_PWM_BITS     9
 #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
 #define MOTORS_PWM_PRESCALE 0
+#define MOTORS_POLARITY           TIM_OCPolarity_High
+#endif
 
 
 // Motors IDs define
