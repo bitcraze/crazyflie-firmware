@@ -316,7 +316,6 @@ void uartDmaIsr(void)
   DMA_ClearITPendingBit(UART_DMA_IT_TC);
   USART_DMACmd(UART_TYPE, USART_DMAReq_Tx, DISABLE);
   DMA_Cmd(UART_DMA_CH, DISABLE);
-
 }
 
 void uartSendData(uint32_t size, uint8_t* data)

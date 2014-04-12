@@ -29,6 +29,7 @@
 #include "uart.h"
 #include "i2croutines.h"
 #include "i2cdev.h"
+#include "ws2812.h"
 
 #define DONT_DISCARD __attribute__((used))
 
@@ -173,8 +174,9 @@ void DONT_DISCARD DMA1_Channel1_IRQHandler(void)
 void DONT_DISCARD DMA1_Channel2_IRQHandler(void)
 {
 #if defined(UART_OUTPUT_TRACE_DATA) || defined(ADC_OUTPUT_RAW_DATA)
-  uartDmaIsr();
+  // uartDmaIsr();
 #endif
+  ws2812DmaIsr();
 }
 
 void DONT_DISCARD DMA1_Channel4_IRQHandler(void)

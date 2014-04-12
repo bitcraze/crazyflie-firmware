@@ -58,7 +58,7 @@ PROJ_OBJ = main.o
 # Drivers
 PROJ_OBJ += led.o uart.o adc.o nrf24l01.o  exti.o  nvic.o motors.o
 PROJ_OBJ += mpu6050.o i2cdev.o i2croutines.o hmc5883l.o
-PROJ_OBJ += ms5611.o
+PROJ_OBJ += ms5611.o ws2812.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o imu.o pm.o radiolink.o eskylink.o
@@ -67,7 +67,7 @@ PROJ_OBJ += usec_time.o
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
-PROJ_OBJ += log.o worker.o
+PROJ_OBJ += log.o worker.o neopixelring.o
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o configblock.o eprintf.o crc.o fp16.o debug.o abort.o

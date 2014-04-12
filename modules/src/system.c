@@ -39,6 +39,7 @@
 #include "log.h"
 #include "ledseq.h"
 #include "pm.h"
+#include "neopixelring.h"
 
 #include "system.h"
 #include "configblock.h"
@@ -84,6 +85,7 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+  neopixelringInit();
     
   isInit = true;
 }
