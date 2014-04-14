@@ -46,6 +46,7 @@
 #include "fp16.h"
 
 #include "console.h"
+#include "cfassert.h"
 
 #if 0
 #define DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
@@ -658,5 +659,72 @@ static void logReset(void)
   //Force free the log ops
   for (i=0; i<LOG_MAX_OPS; i++)
     logOps[i].variable = NULL;
+}
+
+/* Public API to access log TOC from within the copter */
+int logGetVarId(char* group, char* name)
+{
+  int i;
+  char * currgroup = "";
+  
+  for(i=0; i<logsLen; i++)
+  {
+    if (logs[i].type & LOG_GROUP) {
+      if (logs[i].type & LOG_START)
+        currgroup = logs[i].name;
+    } if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name)))
+      return i;
+  }
+  
+  return -1;
+}
+
+int logGetInt(int varid)
+{
+  int valuei = 0;
+  
+  ASSERT(varid >= 0);
+  
+  switch(logs[varid].type)
+  {
+    case LOG_UINT8:
+      valuei = *(uint8_t *)logs[varid].address;
+      break;
+    case LOG_INT8:
+      valuei = *(int8_t *)logs[varid].address;
+      break;
+    case LOG_UINT16:
+      valuei = *(uint16_t *)logs[varid].address;
+      break;
+    case LOG_INT16:
+      valuei = *(int16_t *)logs[varid].address;
+      break;
+    case LOG_UINT32:
+      valuei = *(uint32_t *)logs[varid].address;
+      break;
+    case LOG_INT32:
+      valuei = *(int32_t *)logs[varid].address;
+      break;
+    case LOG_FLOAT:
+      valuei = *(float *)logs[varid].address;
+      break;
+  }
+  
+  return valuei;
+}
+
+float logGetFloat(int varid)
+{
+  ASSERT(varid >= 0);
+
+  if (logs[varid].type == LOG_FLOAT)
+    return *(float *)logs[varid].address;
+  
+  return logGetInt(varid);
+}
+
+unsigned int logGetUint(int varid)
+{
+  return (unsigned int)logGetInt(varid);
 }
 

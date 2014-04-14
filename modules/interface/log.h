@@ -34,6 +34,12 @@
 void logInit(void);
 bool logTest(void);
 
+/* Internal access of log variables */
+int logGetVarId(char* group, char* name);
+float logGetFloat(int varid);
+int logGetInt(int varid);
+unsigned int logGetUint(int varid);
+
 /* Basic log structure */
 struct log_s {
   uint8_t type;
