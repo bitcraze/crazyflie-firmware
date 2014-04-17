@@ -43,6 +43,7 @@ static ledseq_t * sequences[] = {
   seq_lowbat,
   seq_charged,
   seq_charging,
+  seq_chargingMax,
   seq_bootloader,
   seq_armed,
   seq_calibrated,
@@ -97,6 +98,12 @@ ledseq_t seq_charged[] = {
 ledseq_t seq_charging[] = {
   { true, LEDSEQ_WAITMS(200)},
   {false, LEDSEQ_WAITMS(800)},
+  {    0, LEDSEQ_LOOP},
+};
+
+ledseq_t seq_chargingMax[] = {
+  { true, LEDSEQ_WAITMS(100)},
+  {false, LEDSEQ_WAITMS(400)},
   {    0, LEDSEQ_LOOP},
 };
 

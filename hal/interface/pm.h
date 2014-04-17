@@ -28,6 +28,34 @@
 #define PM_H_
 #include "adc.h"
 
+#ifndef CRITICAL_LOW_VOLTAGE
+  #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0
+#else
+  #define PM_BAT_CRITICAL_LOW_VOLTAGE   CRITICAL_LOW_VOLTAGE
+#endif
+#ifndef CRITICAL_LOW_TIMEOUT
+  #define PM_BAT_CRITICAL_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec default
+#else
+  #define PM_BAT_CRITICAL_LOW_TIMEOUT   CRITICAL_LOW_VOLTAGE
+#endif
+
+#ifndef LOW_VOLTAGE
+  #define PM_BAT_LOW_VOLTAGE   3.2
+#else
+  #define PM_BAT_LOW_VOLTAGE   LOW_VOLTAGE
+#endif
+#ifndef LOW_TIMEOUT
+  #define PM_BAT_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec default
+#else
+  #define PM_BAT_LOW_TIMEOUT   LOW_TIMEOUT
+#endif
+
+#ifndef SYSTEM_SHUTDOWN_TIMEOUT
+  #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * 5) // 5 min default
+#else
+  #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * SYSTEM_SHUTDOWN_TIMEOUT)
+#endif
+
 // Power managment pins
 #define PM_GPIO_SYSOFF_PERIF    RCC_APB2Periph_GPIOA
 #define PM_GPIO_SYSOFF_PORT     GPIOA
@@ -53,6 +81,19 @@
 #define PM_GPIO_BAT_PERIF       RCC_APB2Periph_GPIOA
 #define PM_GPIO_BAT_PORT        GPIOA
 #define PM_GPIO_BAT             GPIO_Pin_3
+
+//USB pins to detect adapter or host.
+#define PM_GPIO_USB_CON_PERIF   RCC_APB2Periph_GPIOA
+#define PM_GPIO_USB_CON_PORT    GPIOA
+#define PM_GPIO_USB_CON         GPIO_Pin_0
+
+#define PM_GPIO_USB_DM_PERIF    RCC_APB2Periph_GPIOA
+#define PM_GPIO_USB_DM_PORT     GPIOA
+#define PM_GPIO_USB_DM          GPIO_Pin_11
+
+#define PM_GPIO_USB_DP_PERIF    RCC_APB2Periph_GPIOA
+#define PM_GPIO_USB_DP_PORT     GPIOA
+#define PM_GPIO_USB_DP          GPIO_Pin_12
 
 #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0
 #define PM_BAT_CRITICAL_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec
@@ -95,6 +136,13 @@ typedef enum
   charge500mA,
   chargeMax,
 } PMChargeStates;
+
+typedef enum
+{
+  USBNone,
+  USB500mA,
+  USBWallAdapter,
+} PMUSBPower;
 
 void pmInit(void);
 

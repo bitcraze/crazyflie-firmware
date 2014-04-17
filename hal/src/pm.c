@@ -32,6 +32,7 @@
 #include "task.h"
 #include "semphr.h"
 
+#include "config.h"
 #include "system.h"
 #include "pm.h"
 #include "led.h"
@@ -50,6 +51,9 @@ static uint32_t batteryLowTimeStamp;
 static uint32_t batteryCriticalLowTimeStamp;
 static bool isInit;
 static PMStates pmState;
+static PMChargeStates pmChargeState;
+
+static void pmSetBatteryVoltage(float voltage);
 
 const static float bat671723HS25C[10] =
 {
@@ -106,7 +110,10 @@ void pmInit(void)
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
   GPIO_InitStructure.GPIO_Pin = PM_GPIO_BAT;
   GPIO_Init(PM_GPIO_BAT_PORT, &GPIO_InitStructure);
-  
+
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Pin = PM_GPIO_USB_CON;
+  GPIO_Init(PM_GPIO_USB_CON_PORT, &GPIO_InitStructure);
   
   xTaskCreate(pmTask, (const signed char * const)"PWRMGNT",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/3, NULL);
@@ -117,6 +124,55 @@ void pmInit(void)
 bool pmTest(void)
 {
   return isInit;
+}
+
+/**
+ * Test USB signals for host or power adapter
+ */
+static PMUSBPower pmTestUSBPower(void)
+{
+  PMUSBPower pmUSBPower = USB500mA;
+
+#ifdef ENABLE_FAST_CHARGE
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  RCC_APB2PeriphClockCmd(PM_GPIO_USB_DM_PERIF | PM_GPIO_USB_DM_PERIF | PM_GPIO_USB_DP_PERIF, ENABLE);
+
+  // Configure USB connect pin
+  GPIO_InitStructure.GPIO_Pin = PM_GPIO_USB_CON;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+  GPIO_Init(PM_GPIO_USB_CON_PORT, &GPIO_InitStructure);
+  // Configure USB DM pin
+  GPIO_InitStructure.GPIO_Pin = PM_GPIO_USB_DM;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
+  GPIO_Init(PM_GPIO_USB_DM_PORT, &GPIO_InitStructure);
+  // Configure USB DP pin
+  GPIO_InitStructure.GPIO_Pin = PM_GPIO_USB_DP;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+  GPIO_Init(PM_GPIO_USB_DP_PORT, &GPIO_InitStructure);
+  
+  // Enable 1.5K pull-up for USB DP signal
+  GPIO_SetBits(PM_GPIO_USB_CON_PORT, PM_GPIO_USB_CON);
+  // Let the voltage level setle.
+  vTaskDelay(M2T(1));
+  // Read the weak pull-down of USB-DM. If it is high, DP and DM are shorted.
+  if (GPIO_ReadInputDataBit(PM_GPIO_USB_DM_PORT, PM_GPIO_USB_DM) == Bit_SET)
+  {
+    pmUSBPower = USBWallAdapter;
+  }
+  else
+  {
+    pmUSBPower = USB500mA;
+  }
+  // Reset USB pins to default
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+  GPIO_InitStructure.GPIO_Pin = PM_GPIO_USB_DM | PM_GPIO_USB_CON | PM_GPIO_USB_DP;
+  GPIO_Init(PM_GPIO_USB_DP_PORT, &GPIO_InitStructure);
+#endif
+
+  return pmUSBPower;
 }
 
 /**
@@ -220,6 +276,8 @@ void pmBatteryUpdate(AdcGroup* adcValues)
 
 void pmSetChargeState(PMChargeStates chgState)
 {
+  pmChargeState = chgState;
+
   switch (chgState)
   {
     case charge100mA:
@@ -235,6 +293,11 @@ void pmSetChargeState(PMChargeStates chgState)
       GPIO_SetBits(PM_GPIO_EN2_PORT, PM_GPIO_EN2);
       break;
   }
+}
+
+PMChargeStates pmGetChargeState(void)
+{
+  return pmChargeState;
 }
 
 PMStates pmUpdateState()
@@ -312,13 +375,23 @@ void pmTask(void *param)
       {
         case charged:
           ledseqStop(LED_GREEN, seq_charging);
+          ledseqStop(LED_GREEN, seq_chargingMax);
           ledseqRun(LED_GREEN, seq_charged);
           systemSetCanFly(false);
           break;
         case charging:
           ledseqStop(LED_RED, seq_lowbat);
           ledseqStop(LED_GREEN, seq_charged);
-          ledseqRun(LED_GREEN, seq_charging);
+          if (pmTestUSBPower() == USBWallAdapter)
+          {
+            pmSetChargeState(chargeMax);
+            ledseqRun(LED_GREEN, seq_chargingMax);
+          }
+          else
+          {
+            pmSetChargeState(charge500mA);
+            ledseqRun(LED_GREEN, seq_charging);
+          }
           systemSetCanFly(false);
           //Due to voltage change radio must be restarted
           radiolinkReInit();
@@ -329,6 +402,7 @@ void pmTask(void *param)
           break;
         case battery:
           ledseqStop(LED_GREEN, seq_charging);
+          ledseqStop(LED_GREEN, seq_chargingMax);
           ledseqStop(LED_GREEN, seq_charged);
           systemSetCanFly(true);
           //Due to voltage change radio must be restarted
@@ -348,10 +422,18 @@ void pmTask(void *param)
       case charging:
         {
           uint32_t onTime;
-
-          onTime = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) *
-                   (LEDSEQ_CHARGE_CYCLE_TIME / 10);
-          ledseqSetTimes(seq_charging, onTime, LEDSEQ_CHARGE_CYCLE_TIME - onTime);
+          if (pmGetChargeState() == chargeMax)
+          {
+            onTime = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) *
+                     (LEDSEQ_CHARGE_CYCLE_TIME_MAX / 10);
+            ledseqSetTimes(seq_chargingMax, onTime, LEDSEQ_CHARGE_CYCLE_TIME_MAX - onTime);
+          }
+          else
+          {
+            onTime = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) *
+                     (LEDSEQ_CHARGE_CYCLE_TIME_500MA / 10);
+            ledseqSetTimes(seq_charging, onTime, LEDSEQ_CHARGE_CYCLE_TIME_500MA - onTime);
+          }
         }
         break;
       case lowPower:
