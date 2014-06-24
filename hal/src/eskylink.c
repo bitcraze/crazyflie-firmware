@@ -184,8 +184,8 @@ static void eskylinkDecode(char* packet)
   uint16_t thrust;
   
   pitch = ((packet[2]<<8) | packet[3])-PPM_ZERO;
-  if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
-  if (roll>PPM_RANGE) roll = PPM_RANGE;
+  if (pitch<(-PPM_RANGE)) pitch = -PPM_RANGE;
+  if (pitch>PPM_RANGE) pitch = PPM_RANGE;
   pitch *= 20.0/PPM_RANGE;
   
   roll = ((packet[0]<<8) | packet[1])-PPM_ZERO;
