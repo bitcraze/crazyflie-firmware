@@ -66,6 +66,16 @@
 const int MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 static bool isInit = false;
 
+
+/* Startup melody
+ * TONE,DURATION, */
+uint16_t startup[] = {
+    D5,QUAD,
+    D5,QUAD,
+    C7,QUAD,
+    STOP,STOP
+};
+
 /* Public functions */
 
 //Initialization. Will set all motors ratio to 0%
@@ -138,6 +148,78 @@ void motorsInit()
   isInit = true;
 }
 
+/* Set PWM frequency for motor controller
+ * This function will set all motors into a "beep"-mode,
+ * each of the motor will turned on with a given ratio and frequency.
+ * The higher the ratio the higher the given power to the motors.
+ * ATTENTION: To much ratio can push your crazyflie into the air and hurt you!
+ * Example:
+ *     motorsBeep(TRUE, 1000, (uint16_t)(72000000L / frequency)/ 20);
+ *     motorsBeep(FALSE, 0, 0); *
+ * */
+void motorsBeep(bool enable, uint16_t frequency, uint16_t ratio)
+{
+  uint16_t period;
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+
+  if (enable)
+  {
+	  if(frequency < 1100) {
+		  TIM_TimeBaseStructure.TIM_ClockDivision = 1; //TODO: 2 and higher is not working
+	  }
+	  period = (uint16_t)(72000000L / frequency);
+  }
+  else
+  {
+	  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	  period = MOTORS_PWM_PERIOD;
+  }
+
+  // Timer configuration
+  TIM_TimeBaseStructure.TIM_Period = period;
+  TIM_TimeBaseStructure.TIM_Prescaler = MOTORS_PWM_PRESCALE;
+
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit(MOTORS_GPIO_TIM_M1_2, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(MOTORS_GPIO_TIM_M3_4, &TIM_TimeBaseStructure);
+
+ /*  This seems not to work
+  int i;
+  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
+  {
+	  motorsSetRatio(MOTORS[i], ratio);
+  }*/
+
+  // Set ratio without C_16_TO_BITS translation
+  TIM_SetCompare4(MOTORS_GPIO_TIM_M1_2, ratio);
+  TIM_SetCompare3(MOTORS_GPIO_TIM_M1_2, ratio);
+  TIM_SetCompare4(MOTORS_GPIO_TIM_M3_4, ratio);
+  TIM_SetCompare3(MOTORS_GPIO_TIM_M3_4, ratio);
+}
+
+// Play a tone with a given frequency and a specific duration in milliseconds (ms)
+void playTone(uint16_t frequency, uint16_t duration_msec)
+{
+  motorsBeep(TRUE, frequency, (uint16_t)(72000000L / frequency)/ 20);
+  vTaskDelay(M2T(duration_msec));
+  motorsBeep(FALSE, frequency, 0);
+}
+
+// Plays a melody from a note array
+void playMelody(uint16_t *notes)
+{
+  int i = 0;
+  uint16_t note;      // Note in hz
+  uint16_t duration;  // Duration in ms
+
+  do
+  {
+    note = notes[i++];
+    duration = notes[i++];
+    playTone(note, duration);
+  } while (duration != 0);
+}
+
 bool motorsTest(void)
 {
 #ifndef BRUSHLESS_MOTORCONTROLLER
@@ -150,11 +232,16 @@ bool motorsTest(void)
     motorsSetRatio(MOTORS[i], 0);
     vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
   }
+
+#ifdef ACTIVATE_STARTUP_MELODY
+  // Play startup melody
+  playMelody(startup);
+#endif
+
 #endif
 
   return isInit;
 }
-
 
 void motorsSetRatio(int id, uint16_t ratio)
 {
