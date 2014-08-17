@@ -132,6 +132,12 @@ uint32_t motorPowerM3;
 
 static bool isInit;
 
+/*****************
+ ** Flight Mode **
+ *****************/
+uint8_t flightMode = 0;
+float cosy, siny; //variable used in CareFree-Mode
+
 static void stabilizerAltHoldUpdate(void);
 static void distributePower(const uint16_t thrust, const int16_t roll,
                             const int16_t pitch, const int16_t yaw);
@@ -207,6 +213,28 @@ static void stabilizerTask(void* param)
         accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
         // Estimate speed from acc (drifts)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
+
+        if (flightMode == 0) //CareFreeMode
+          {
+            float yawRad = eulerYawActual * M_PI / 180,
+                  roll1 = eulerRollDesired;
+            cosy = cos(yawRad);
+            siny = sin(yawRad);
+            eulerRollDesired = eulerRollDesired * cosy - eulerPitchDesired * siny;
+            eulerPitchDesired = eulerPitchDesired * cosy + roll1 * siny;
+          }
+        else if (flightMode == 2) //X-Mode
+        {
+          //sqrt(2)/2 = 0,707...
+          float roll1 = eulerRollDesired;
+          eulerRollDesired = 0.707 * (eulerRollDesired + eulerPitchDesired);
+          eulerPitchDesired = 0.707 * (eulerPitchDesired - roll1);
+        }
+        else if (flightMode == 3) //Fixed-Mode or Position-Mode
+        {
+          rollRateDesired = 0;
+          pitchRateDesired = 0;
+        }
 
         controllerCorrectAttitudePID(eulerRollActual, eulerPitchActual, eulerYawActual,
                                      eulerRollDesired, eulerPitchDesired, -eulerYawDesired,
@@ -496,3 +524,7 @@ PARAM_ADD(PARAM_UINT16, maxThrust, &altHoldMaxThrust)
 PARAM_ADD(PARAM_UINT16, minThrust, &altHoldMinThrust)
 PARAM_GROUP_STOP(altHold)
 
+// Params for flight modes
+PARAM_GROUP_START(FlightMode)
+PARAM_ADD(PARAM_UINT8, flightmode, &flightMode)
+PARAM_GROUP_STOP(FlightMode)
