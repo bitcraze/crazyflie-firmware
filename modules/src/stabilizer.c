@@ -27,7 +27,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "math.h"
+#include <math.h>
 
 #include "system.h"
 #include "pm.h"
@@ -47,6 +47,8 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #undef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
+
+#define sign(x) ((x) >= 0 ? 1 : -1 )
 
 /**
  * Defines in what divided update rate should the attitude
@@ -106,11 +108,11 @@ static float vSpeedASLFac           = 0;    // multiplier
 static float vSpeedAccFac           = -48;  // multiplier
 static float vAccDeadband           = 0.05;  // Vertical acceleration deadband
 static float vSpeedASLDeadband      = 0.005; // Vertical speed based on barometer readings deadband
-static float vSpeedLimit            = 0.05;  // used to constrain vertical velocity
-static float errDeadband            = 0.00;  // error (target - altitude) deadband
-static float vBiasAlpha             = 0.91; // Blending factor we use to fuse vSpeedASL and vSpeedAcc
+static float vSpeedLimit            = 0.5;  // used to constrain vertical velocity
+static float errDeadband            = 0.0;  // error (target - altitude) deadband
+static float vBiasAlpha             = 0.985;//0.91; // Blending factor we use to fuse vSpeedASL and vSpeedAcc
 static float aslAlpha               = 0.92; // Short term smoothing
-static float aslAlphaLong           = 0.93; // Long term smoothing
+static float aslAlphaLong           = 0.96; // Long term smoothing
 static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used yet
 static uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
 static uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
@@ -136,11 +138,10 @@ static bool isInit;
  ** Flight Mode **
  *****************/
 uint8_t flightMode = 0;
-float cosy, siny; //variable used in CareFree-Mode
 
 static void stabilizerAltHoldUpdate(void);
-static void distributePower(const uint16_t thrust, const int16_t roll,
-                            const int16_t pitch, const int16_t yaw);
+void ComplementaryFilter(Axis3f acc, Axis3f gyro, float *roll, float *pitch);
+static void distributePower(uint16_t thrust, int16_t roll, int16_t pitch, int16_t yaw);
 static uint16_t limitThrust(int32_t value);
 static void stabilizerTask(void* param);
 static float constrain(float value, const float minVal, const float maxVal);
@@ -161,7 +162,7 @@ void stabilizerInit(void)
   yawRateDesired = 0;
 
   xTaskCreate(stabilizerTask, (const signed char * const)"STABILIZER",
-              2*configMINIMAL_STACK_SIZE, NULL, /*Piority*/2, NULL);
+              2*configMINIMAL_STACK_SIZE, NULL, /*Priority*/2, NULL);
 
   isInit = TRUE;
 }
@@ -189,7 +190,7 @@ static void stabilizerTask(void* param)
   //Wait for the system to be fully started to start stabilization loop
   systemWaitStart();
 
-  lastWakeTime = xTaskGetTickCount ();
+  lastWakeTime = xTaskGetTickCount();
 
   while(1)
   {
@@ -203,6 +204,16 @@ static void stabilizerTask(void* param)
       commanderGetRPY(&eulerRollDesired, &eulerPitchDesired, &eulerYawDesired);
       commanderGetRPYType(&rollType, &pitchType, &yawType);
 
+      //Correct Yaw for X-Mode and Heading-Mode
+      if (flightMode == 2) //X-Mode
+    	  {
+    	  	  eulerYawDesired = 45;
+    	  }
+      else if (flightMode == 4) //Heading-Mode: mantain yaw to 0 (zero)
+    	  {
+    	  	  eulerYawDesired = 0;
+    	  }
+
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
       {
@@ -215,27 +226,28 @@ static void stabilizerTask(void* param)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
 
         if (flightMode == 0) //CareFreeMode
-          {
-            float yawRad = eulerYawActual * M_PI / 180,
-                  roll1 = eulerRollDesired;
-            cosy = cos(yawRad);
-            siny = sin(yawRad);
-            eulerRollDesired = eulerRollDesired * cosy - eulerPitchDesired * siny;
-            eulerPitchDesired = eulerPitchDesired * cosy + roll1 * siny;
-          }
+        	{
+        		float yawRad = eulerYawActual * M_PI / 180,
+          			  roll1 = eulerRollDesired,
+          			  cosy = cos(yawRad),
+          			  siny = sin(yawRad);
+        		eulerRollDesired = eulerRollDesired * cosy - eulerPitchDesired * siny;
+        		eulerPitchDesired = eulerPitchDesired * cosy + roll1 * siny;
+			}
         else if (flightMode == 2) //X-Mode
-        {
-          //sqrt(2)/2 = 0,707...
-          float roll1 = eulerRollDesired;
-          eulerRollDesired = 0.707 * (eulerRollDesired + eulerPitchDesired);
-          eulerPitchDesired = 0.707 * (eulerPitchDesired - roll1);
-        }
+			{
+        		//sqrt(2)/2 = 0,707...
+				float roll1 = eulerRollDesired;
+				eulerRollDesired = 0.707 * (eulerRollDesired + eulerPitchDesired);
+				eulerPitchDesired = 0.707 * (eulerPitchDesired - roll1);
+			}
         else if (flightMode == 3) //Fixed-Mode or Position-Mode
-        {
-          rollRateDesired = 0;
-          pitchRateDesired = 0;
-        }
+			{
+        		eulerRollDesired = 0;
+        		eulerPitchDesired = 0;
+			}
 
+        ComplementaryFilter(acc, gyro, &eulerRollDesired, &eulerPitchDesired);
         controllerCorrectAttitudePID(eulerRollActual, eulerPitchActual, eulerYawActual,
                                      eulerRollDesired, eulerPitchDesired, -eulerYawDesired,
                                      &rollRateDesired, &pitchRateDesired, &yawRateDesired);
@@ -261,13 +273,26 @@ static void stabilizerTask(void* param)
       {
         yawRateDesired = -eulerYawDesired;
       }
-
+      /*
       // TODO: Investigate possibility to subtract gyro drift.
-      controllerCorrectRatePID(gyro.x, -gyro.y, gyro.z,
-                               rollRateDesired, pitchRateDesired, yawRateDesired);
+      float sin_roll = sin(rollRateDesired),
+      		cos_roll = cos(rollRateDesired),
+    		sin_pitch = cos(pitchRateDesired),
+    		cos_pitch = cos(pitchRateDesired);
+      // Tilt compensated Magnetic field X component:
+      float Head_X = mag.x*cos_pitch+mag.y*sin_roll*sin_pitch+mag.z*cos_roll*sin_pitch;
+      // Tilt compensated Magnetic field Y component:
+      float Head_Y = mag.y*cos_roll-mag.z*sin_roll;
 
+      // Magnetic Heading
+      float Heading = atan2(-Head_Y,Head_X);
+      rollRateDesired -= Heading;
+      pitchRateDesired -= Heading;
+	  */
+      // Apply complimentary filter (Gyro drift correction)
+      //ComplementaryFilter(acc, gyro, &rollRateDesired, &pitchRateDesired);
+      controllerCorrectRatePID(gyro.x, -gyro.y, gyro.z, rollRateDesired, pitchRateDesired, yawRateDesired);
       controllerGetActuatorOutput(&actuatorRoll, &actuatorPitch, &actuatorYaw);
-
       if (!altHold || !imuHasBarometer())
       {
         // Use thrust from controller if not in altitude hold mode
@@ -335,12 +360,11 @@ static void stabilizerAltHoldUpdate(void)
     const float pre_integral = altHoldPID.integ;
 
     // Reset PID controller
-    pidInit(&altHoldPID, asl, altHoldKp, altHoldKi, altHoldKd,
-            ALTHOLD_UPDATE_DT);
+    pidInit(&altHoldPID, asl, altHoldKp, altHoldKi, altHoldKd, ALTHOLD_UPDATE_DT);
     // TODO set low and high limits depending on voltage
     // TODO for now just use previous I value and manually set limits for whole voltage range
-    //                    pidSetIntegralLimit(&altHoldPID, 12345);
-    //                    pidSetIntegralLimitLow(&altHoldPID, 12345);              /
+    // pidSetIntegralLimit(&altHoldPID, 12345);
+    // pidSetIntegralLimitLow(&altHoldPID, 12345);
 
     altHoldPID.integ = pre_integral;
 
@@ -356,15 +380,13 @@ static void stabilizerAltHoldUpdate(void)
     pidSetDesired(&altHoldPID, altHoldTarget);
 
     // Compute error (current - target), limit the error
-    altHoldErr = constrain(deadband(asl - altHoldTarget, errDeadband),
-                           -altHoldErrMax, altHoldErrMax);
+    altHoldErr = constrain(deadband(asl - altHoldTarget, errDeadband), -altHoldErrMax, altHoldErrMax);
     pidSetError(&altHoldPID, -altHoldErr);
 
     // Get control from PID controller, dont update the error (done above)
     // Smooth it and include barometer vspeed
     // TODO same as smoothing the error??
-    altHoldPIDVal = (pidAlpha) * altHoldPIDVal + (1.f - pidAlpha) * ((vSpeedAcc * vSpeedAccFac) +
-                    (vSpeedASL * vSpeedASLFac) + pidUpdate(&altHoldPID, asl, false));
+    altHoldPIDVal = pidAlpha * altHoldPIDVal + (1.f - pidAlpha) * ((vSpeedAcc * vSpeedAccFac) + (vSpeedASL * vSpeedASLFac) + pidUpdate(&altHoldPID, asl, false));
 
     // compute new thrust
     actuatorThrust =  max(altHoldMinThrust, min(altHoldMaxThrust,
@@ -381,27 +403,26 @@ static void stabilizerAltHoldUpdate(void)
   }
 }
 
-static void distributePower(const uint16_t thrust, const int16_t roll,
-                            const int16_t pitch, const int16_t yaw)
+static void distributePower(uint16_t thrust, int16_t roll, int16_t pitch, int16_t yaw)
 {
 #ifdef QUAD_FORMATION_X
   roll = roll >> 1;
   pitch = pitch >> 1;
   motorPowerM1 = limitThrust(thrust - roll + pitch + yaw);
   motorPowerM2 = limitThrust(thrust - roll - pitch - yaw);
-  motorPowerM3 =  limitThrust(thrust + roll - pitch + yaw);
-  motorPowerM4 =  limitThrust(thrust + roll + pitch - yaw);
+  motorPowerM3 = limitThrust(thrust + roll - pitch + yaw);
+  motorPowerM4 = limitThrust(thrust + roll + pitch - yaw);
 #else // QUAD_FORMATION_NORMAL
   motorPowerM1 = limitThrust(thrust + pitch + yaw);
   motorPowerM2 = limitThrust(thrust - roll - yaw);
-  motorPowerM3 =  limitThrust(thrust - pitch + yaw);
-  motorPowerM4 =  limitThrust(thrust + roll - yaw);
+  motorPowerM3 = limitThrust(thrust - pitch + yaw);
+  motorPowerM4 = limitThrust(thrust + roll - yaw);
 #endif
 
-  motorsSetRatio(MOTOR_M1, motorPowerM1);
-  motorsSetRatio(MOTOR_M2, motorPowerM2);
-  motorsSetRatio(MOTOR_M3, motorPowerM3);
-  motorsSetRatio(MOTOR_M4, motorPowerM4);
+	motorsSetRatio(MOTOR_M1, motorPowerM1);
+	motorsSetRatio(MOTOR_M2, motorPowerM2);
+	motorsSetRatio(MOTOR_M3, motorPowerM3);
+	motorsSetRatio(MOTOR_M4, motorPowerM4);
 }
 
 static uint16_t limitThrust(int32_t value)
@@ -442,6 +463,52 @@ static float deadband(float value, const float threshold)
   return value;
 }
 
+/********************************************************************
+* Complementary Filter
+* newAngle -> accelerometer
+* newRate  -> gyro
+********************************************************************/
+
+#define ACCELEROMETER_SENSITIVITY 8192.0
+#define GYROSCOPE_SENSITIVITY 65.536
+#define dT 1/500 // 500Hz 2 ms sample rate!
+
+void ComplementaryFilter(Axis3f acc, Axis3f gyro, float *roll, float *pitch)
+{
+    float pitchAcc,
+    	  rollAcc,
+    	  a = 0.98,
+    	  b = 1-a;
+    // Integrate the gyroscope data -> int(angularSpeed) = angle
+    *roll  -= ((float)gyro.y / GYROSCOPE_SENSITIVITY) * dT; // Angle around the X-axis
+    *pitch += ((float)gyro.x / GYROSCOPE_SENSITIVITY) * dT; // Angle around the Y-axis
+
+    // Compensate for drift with accelerometer data if !bullshit
+    // Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
+    int forceMagnitudeApprox = abs(acc.x) + abs(acc.y) + abs(acc.z);
+    if (forceMagnitudeApprox > 8192 && forceMagnitudeApprox < 32768)
+    {
+        // Turning around the Y axis results in a vector on the X-axis
+        rollAcc = atan2f((float)acc.x, (float)acc.z) * 180 / M_PI;
+        *roll = *roll * a + rollAcc * b;
+
+        // Turning around the X axis results in a vector on the Y-axis
+        pitchAcc = atan2f((float)acc.y, (float)acc.z) * 180 / M_PI;
+        *pitch = *pitch * a + pitchAcc * b;
+    }
+}
+/*
+LOG_GROUP_START(CareFree)
+LOG_ADD(LOG_FLOAT, x, &cosy)
+LOG_ADD(LOG_FLOAT, y, &siny)
+LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
+LOG_GROUP_STOP(CareFree)
+
+LOG_GROUP_START(complementaryFilter)
+LOG_ADD(LOG_FLOAT, filterX, &rollRateDesired)
+LOG_ADD(LOG_FLOAT, filterY, &pitchRateDesired)
+LOG_GROUP_STOP(complementaryFilter)
+*/
 LOG_GROUP_START(stabilizer)
 LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
 LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)

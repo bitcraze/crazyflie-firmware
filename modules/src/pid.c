@@ -32,6 +32,9 @@
 #include "pid.h"
 #include "led.h"
 #include "motors.h"
+//#include "pidctrl.h"
+
+//PID_AT *pidCtrl;
 
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float dt)
@@ -57,7 +60,10 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     {
         pid->error = pid->desired - measured;
     }
-
+    //pidCtrlInit(pidCtrl, pid->desired, pid->kp, pid->ki, pid->kd, DIRECT);
+    //SetMode(pidCtrl, AUTOMATIC);
+    //SetSetpoint(pidCtrl, measured);
+    //Compute(pidCtrl);
     pid->integ += pid->error * pid->dt;
     if (pid->integ > pid->iLimit)
     {
@@ -77,8 +83,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     output = pid->outP + pid->outI + pid->outD;
 
     pid->prevError = pid->error;
-
-    return output;
+    return output;//(float)pidCtrl->myOutput;
 }
 
 void pidSetIntegralLimit(PidObject* pid, const float limit) {

@@ -238,7 +238,7 @@ void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
   gz = q0*q0 - q1*q1 - q2*q2 + q3*q3;
 
   if (gx>1) gx=1;
-  if (gx<-1) gx=-1;
+  else if (gx<-1) gx=-1;
 
   *yaw = atan2(2*(q0*q3 + q1*q2), q0*q0 + q1*q1 - q2*q2 - q3*q3) * 180 / M_PI;
   *pitch = asin(gx) * 180 / M_PI; //Pitch seems to be inverted
@@ -257,18 +257,32 @@ float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const flo
   // (A dot G) / |G| - 1G (|G| = 1) -> (A dot G) - 1G
   return ((ax*gx + ay*gy + az*gz) - 1.0);
 }
+
 //---------------------------------------------------------------------------------------------------
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
-float invSqrt(float x)
-{
-  float halfx = 0.5f * x;
-  float y = x;
-  long i = *(long*)&y;
-  i = 0x5f3759df - (i>>1);
-  y = *(float*)&i;
-  y = y * (1.5f - (halfx * y * y));
-  return y;
+#define INSTABILITY_FIX
+float invSqrt(float x) {
+#ifndef INSTABILITY_FIX
+	/* original code */
+	float halfx = 0.5f * x;
+	float y = x;
+	long i = *(long*) &y;
+	i = 0x5f3759df - (i >> 1);
+	y = *(float*) &i;
+	y = y * (1.5f - (halfx * y * y));
+	return y;
+#else
+	/* close-to-optimal  method with low cost from http://pizer.wordpress.com/2008/10/12/fast-inverse-square-root */
+	unsigned int i = 0x5F1F1412 - (*(unsigned int*) &x >> 1);
+	float tmp = *(float*) &i;
+	return tmp * (1.69000231f - 0.714158168f * x * tmp * tmp);
+#endif
+	/*} else {
+	 optimal but expensive method:
+	return 1.0f / sqrtf(x);
+	}
+	*/
 }
 
 
