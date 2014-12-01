@@ -1,7 +1,5 @@
 
-syntax: regexp
-^bin/dep$
-syntax: glob
+^bin/dep/all
 bin/*
 .cproject
 .project
