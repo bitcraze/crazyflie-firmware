@@ -54,6 +54,7 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
+#include "cfassert.h"
 /*-----------------------------------------------------------
  * Application specific definitions.
  *
@@ -67,12 +68,12 @@
  *----------------------------------------------------------*/
 
 #define configUSE_PREEMPTION		1
-#define configUSE_IDLE_HOOK			0
+#define configUSE_IDLE_HOOK			1
 #define configUSE_TICK_HOOK			0
-#define configCPU_CLOCK_HZ			( ( unsigned long ) 72000000 )
+#define configCPU_CLOCK_HZ			( ( unsigned long ) 168000000 )
 #define configTICK_RATE_HZ			( ( portTickType ) 1000 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 100 )
-#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 15000 ) )
+#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 20000 ) )
 #define configMAX_TASK_NAME_LEN		( 10 )
 #define configUSE_TRACE_FACILITY	0
 #define configUSE_16_BIT_TICKS		0
@@ -82,6 +83,7 @@
 #define configUSE_TIMERS          1
 #define configTIMER_TASK_PRIORITY 1
 #define configTIMER_QUEUE_LENGTH  20
+#define configUSE_MALLOC_FAILED_HOOK 1
 #define configTIMER_TASK_STACK_DEPTH configMINIMAL_STACK_SIZE
 
 #define configMAX_PRIORITIES		( ( unsigned portBASE_TYPE ) 5 )
@@ -97,15 +99,17 @@ to exclude the API function. */
 #define INCLUDE_vTaskSuspend			0
 #define INCLUDE_vTaskDelayUntil			1
 #define INCLUDE_vTaskDelay				1
+#define INCLUDE_uxTaskGetStackHighWaterMark 1
 
 #define configUSE_MUTEXES 1
 
 #define configKERNEL_INTERRUPT_PRIORITY     255
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY 143 /* equivalent to 0x08, or priority 8. */
+//#define configMAX_SYSCALL_INTERRUPT_PRIORITY 1
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY 0x5F /* equivalent to 0x05, or priority 5. */
 
 //Map the port handler to the crt0 interruptions handlers
 #define xPortPendSVHandler PendSV_Handler
-#define xPortSysTickHandler SysTick_Handler
+#define xPortSysTickHandler tickFreeRTOS
 #define vPortSVCHandler SVC_Handler
 
 //Milliseconds to OS Ticks
@@ -122,10 +126,12 @@ to exclude the API function. */
 #define TASK_ADC_ID_NBR         4
 #define TASK_PM_ID_NBR          5
 
+#define configASSERT( x )  if( ( x ) == 0 ) assertFail(#x, __FILE__, __LINE__ )
+/*
 #define traceTASK_SWITCHED_IN() \
   { \
     extern void debugSendTraceInfo(unsigned int taskNbr); \
     debugSendTraceInfo((int)pxCurrentTCB->pxTaskTag); \
   }
-
+*/
 #endif /* FREERTOS_CONFIG_H */

@@ -29,7 +29,7 @@
  */
 #define DEBUG_MODULE "MPU6050"
 
-#include "stm32f10x_conf.h"
+#include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -41,22 +41,23 @@
 #include "mpu6050.h"
 
 static uint8_t devAddr;
-static I2C_TypeDef *I2Cx;
+static I2C_Dev *I2Cx;
 static uint8_t buffer[14];
 static bool isInit;
 
 /** Default constructor, uses default I2C address.
  * @see MPU6050_DEFAULT_ADDRESS
  */
-void mpu6050Init(I2C_TypeDef *i2cPort)
+void mpu6050Init(I2C_Dev *i2cPort)
 {
   if (isInit)
     return;
 
   I2Cx = i2cPort;
   devAddr = MPU6050_ADDRESS_AD0_HIGH;
+//FIXME    devAddr = MPU6050_ADDRESS_AD0_LOW;
 
-  isInit = TRUE;
+  isInit = true;
 }
 
 bool mpu6050Test(void)
@@ -64,7 +65,7 @@ bool mpu6050Test(void)
   bool testStatus;
 
   if (!isInit)
-    return FALSE;
+    return false;
 
   testStatus = mpu6050TestConnection();
 
@@ -73,11 +74,11 @@ bool mpu6050Test(void)
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.
- * @return True if connection is valid, FALSE otherwise
+ * @return True if connection is valid, false otherwise
  */
 bool mpu6050TestConnection()
 {
-  return mpu6050GetDeviceID() == 0b110100;
+  return mpu6050GetDeviceID() == 0x38; //0x38 is MPU9250 ID with AD0 = 0;
 }
 
 /** Do a MPU6050 self test.
@@ -85,9 +86,11 @@ bool mpu6050TestConnection()
  */
 bool mpu6050SelfTest()
 {
-  bool testStatus = TRUE;
+  bool testStatus = true;
   int16_t axi16, ayi16, azi16;
   int16_t gxi16, gyi16, gzi16;
+//  int8_t axfi8, ayfi8, azfi8;
+//  int8_t gxfi8, gyfi8, gzfi8;
   float axf, ayf, azf;
   float gxf, gyf, gzf;
   float axfTst, ayfTst, azfTst;
@@ -115,12 +118,12 @@ bool mpu6050SelfTest()
   azf = azi16 * aRange;
 
   // Enable self test
-  mpu6050SetGyroXSelfTest(TRUE);
-  mpu6050SetGyroYSelfTest(TRUE);
-  mpu6050SetGyroZSelfTest(TRUE);
-  mpu6050SetAccelXSelfTest(TRUE);
-  mpu6050SetAccelYSelfTest(TRUE);
-  mpu6050SetAccelZSelfTest(TRUE);
+  mpu6050SetGyroXSelfTest(true);
+  mpu6050SetGyroYSelfTest(true);
+  mpu6050SetGyroZSelfTest(true);
+  mpu6050SetAccelXSelfTest(true);
+  mpu6050SetAccelYSelfTest(true);
+  mpu6050SetAccelZSelfTest(true);
 
   // Wait for self test to take effect
   vTaskDelay(M2T(MPU6050_SELF_TEST_DELAY_MS));
@@ -134,12 +137,23 @@ bool mpu6050SelfTest()
   azfTst = azi16 * aRange;
 
   // Disable self test
-  mpu6050SetGyroXSelfTest(FALSE);
-  mpu6050SetGyroYSelfTest(FALSE);
-  mpu6050SetGyroZSelfTest(FALSE);
-  mpu6050SetAccelXSelfTest(FALSE);
-  mpu6050SetAccelYSelfTest(FALSE);
-  mpu6050SetAccelZSelfTest(FALSE);
+  mpu6050SetGyroXSelfTest(false);
+  mpu6050SetGyroYSelfTest(false);
+  mpu6050SetGyroZSelfTest(false);
+  mpu6050SetAccelXSelfTest(false);
+  mpu6050SetAccelYSelfTest(false);
+  mpu6050SetAccelZSelfTest(false);
+
+//  // Read factory values
+//  i2cdevReadByte(I2Cx, devAddr, 0x00, (uint8_t *)&gxfi8);
+//  i2cdevReadByte(I2Cx, devAddr, 0x01, (uint8_t *)&gyfi8);
+//  i2cdevReadByte(I2Cx, devAddr, 0x02, (uint8_t *)&gzfi8);
+//  i2cdevReadByte(I2Cx, devAddr, 0x0D, (uint8_t *)&axfi8);
+//  i2cdevReadByte(I2Cx, devAddr, 0x0E, (uint8_t *)&ayfi8);
+//  i2cdevReadByte(I2Cx, devAddr, 0x0F, (uint8_t *)&azfi8);
+//
+//  DEBUG_PRINT("gxf:%i, gyf:%i, gzf:%i, axf:%i, ayf:%i, azf:%i\n",
+//              (int)gxfi8, (int)gyfi8, (int)gzfi8, (int)axfi8, (int)ayfi8, (int)azfi8);
 
   // Calculate difference
   gxfDiff = gxfTst - gxf;
@@ -161,7 +175,7 @@ bool mpu6050SelfTest()
   }
   else
   {
-    testStatus = FALSE;
+    testStatus = false;
   }
 
   return testStatus;
@@ -180,9 +194,9 @@ bool mpu6050EvaluateSelfTest(float low, float high, float value, char* string)
   {
     DEBUG_PRINT("Self test %s [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
                 string, low, high, value);
-    return FALSE;
+    return false;
   }
-  return TRUE;
+  return true;
 }
 
 // AUX_VDDIO register (InvenSense demo code calls this RA_*G_OFFS_TC)
@@ -2337,7 +2351,7 @@ int16_t mpu6050GetRotationZ()
  * The allocation of the EXT_SENS_DATA registers is recomputed only when (1) all
  * slaves are disabled, or (2) the I2C_MST_RST bit is set (Register 106).
  *
- * This above is also TRUE if one of the slaves gets NACKed and stops
+ * This above is also true if one of the slaves gets NACKed and stops
  * functioning.
  *
  * @param position Starting position (0-23)
@@ -2834,7 +2848,7 @@ void mpu6050SetWakeCycleEnabled(bool enabled)
  * Control the usage of the internal temperature sensor.
  *
  * Note: this register stores the *disabled* value, but for consistency with the
- * rest of the code, the function is named and used with standard TRUE/FALSE
+ * rest of the code, the function is named and used with standard true/false
  * values to indicate whether the sensor is enabled or disabled, respectively.
  *
  * @return Current temperature sensor enabled status
@@ -2848,7 +2862,7 @@ bool mpu6050GetTempSensorEnabled()
 }
 /** Set temperature sensor enabled status.
  * Note: this register stores the *disabled* value, but for consistency with the
- * rest of the code, the function is named and used with standard TRUE/FALSE
+ * rest of the code, the function is named and used with standard true/false
  * values to indicate whether the sensor is enabled or disabled, respectively.
  *
  * @param enabled New temperature sensor enabled status
@@ -3443,7 +3457,7 @@ void mpu6050WriteMemoryByte(uint8_t data)
 }
 void mpu6050ReadMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address)
 {
-  mpu6050SetMemoryBank(bank, TRUE, TRUE);
+  mpu6050SetMemoryBank(bank, true, true);
   mpu6050SetMemoryStartAddress(address);
   uint8_t chunkSize;
   uint16_t i;
@@ -3475,7 +3489,7 @@ void mpu6050ReadMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, uint
     {
       if (address == 0)
         bank++;
-      mpu6050SetMemoryBank(bank, TRUE, TRUE);
+      mpu6050SetMemoryBank(bank, true, true);
       mpu6050SetMemoryStartAddress(address);
     }
   }
@@ -3488,7 +3502,7 @@ bool mpu6050WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
   uint8_t *progBuffer;
   uint16_t i;
 
-  mpu6050SetMemoryBank(bank, TRUE, TRUE);
+  mpu6050SetMemoryBank(bank, true, true);
   mpu6050SetMemoryStartAddress(address);
 
   for (i = 0; i < dataSize;)
@@ -3513,7 +3527,7 @@ bool mpu6050WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
     if (verify)
     {
       uint32_t j;
-      mpu6050SetMemoryBank(bank, TRUE, TRUE);
+      mpu6050SetMemoryBank(bank, true, true);
       mpu6050SetMemoryStartAddress(address);
       i2cdevRead(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, verifyBuffer);
 
@@ -3538,7 +3552,7 @@ bool mpu6050WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
            Serial.print(verifyBuffer[i + j], HEX);
            }
            Serial.print("\n");*/
-          return FALSE;
+          return false;
         }
       }
     }
@@ -3554,11 +3568,11 @@ bool mpu6050WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
     {
       if (address == 0)
         bank++;
-      mpu6050SetMemoryBank(bank, TRUE, TRUE);
+      mpu6050SetMemoryBank(bank, true, true);
       mpu6050SetMemoryStartAddress(address);
     }
   }
-  return TRUE;
+  return true;
 }
 bool mpu6050WriteProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank,
     uint8_t address, bool verify)
@@ -3594,7 +3608,7 @@ bool mpu6050WriteDMPConfigurationSet(const uint8_t *data, uint16_t dataSize)
      Serial.print(", length=");
      Serial.println(length);*/
     progBuffer = (uint8_t *) data + i;
-    success = mpu6050WriteMemoryBlock(progBuffer, length, bank, offset, TRUE);
+    success = mpu6050WriteMemoryBlock(progBuffer, length, bank, offset, true);
     i += length;
   }
   else
@@ -3611,24 +3625,24 @@ bool mpu6050WriteDMPConfigurationSet(const uint8_t *data, uint16_t dataSize)
     if (special == 0x01)
     {
       // enable DMP-related interrupts
-      mpu6050SetIntZeroMotionEnabled(TRUE);
-      mpu6050SetIntFIFOBufferOverflowEnabled(TRUE);
-      mpu6050SetIntDMPEnabled(TRUE);
+      mpu6050SetIntZeroMotionEnabled(true);
+      mpu6050SetIntFIFOBufferOverflowEnabled(true);
+      mpu6050SetIntDMPEnabled(true);
       //i2cdevWriteByte(I2Cx, devAddr, MPU6050_RA_INT_ENABLE, 0x32);
-      success = TRUE;
+      success = true;
     }
     else
     {
       // unknown special command
-      success = FALSE;
+      success = false;
     }
   }
 
   if (!success)
   {
-    return FALSE; // uh oh
+    return false; // uh oh
   }
-  return TRUE;
+  return true;
 }
 
 bool mpu6050WriteProgDMPConfigurationSet(const uint8_t *data, uint16_t dataSize)

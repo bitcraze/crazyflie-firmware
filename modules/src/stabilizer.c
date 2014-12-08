@@ -23,12 +23,12 @@
  *
  *
  */
-#include "stm32f10x_conf.h"
+#include <math.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "math.h"
-
+#include "config.h"
 #include "system.h"
 #include "pm.h"
 #include "stabilizer.h"
@@ -41,7 +41,9 @@
 #include "pid.h"
 #include "ledseq.h"
 #include "param.h"
-#include "ms5611.h"
+//#include "ms5611.h"
+#include "lps25h.h"
+#include "debug.h"
 
 #undef max
 #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -108,7 +110,7 @@ static float vAccDeadband           = 0.05;  // Vertical acceleration deadband
 static float vSpeedASLDeadband      = 0.005; // Vertical speed based on barometer readings deadband
 static float vSpeedLimit            = 0.05;  // used to constrain vertical velocity
 static float errDeadband            = 0.00;  // error (target - altitude) deadband
-static float vBiasAlpha             = 0.91; // Blending factor we use to fuse vSpeedASL and vSpeedAcc
+static float vBiasAlpha             = 0.98; // Blending factor we use to fuse vSpeedASL and vSpeedAcc
 static float aslAlpha               = 0.92; // Short term smoothing
 static float aslAlphaLong           = 0.93; // Long term smoothing
 static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used yet
@@ -154,10 +156,10 @@ void stabilizerInit(void)
   pitchRateDesired = 0;
   yawRateDesired = 0;
 
-  xTaskCreate(stabilizerTask, (const signed char * const)"STABILIZER",
-              2*configMINIMAL_STACK_SIZE, NULL, /*Piority*/2, NULL);
+  xTaskCreate(stabilizerTask, (const signed char * const)STABILIZER_TASK_NAME,
+              STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
 
-  isInit = TRUE;
+  isInit = true;
 }
 
 bool stabilizerTest(void)
@@ -279,7 +281,8 @@ static void stabilizerAltHoldUpdate(void)
 
   // Get barometer height estimates
   //TODO do the smoothing within getData
-  ms5611GetData(&pressure, &temperature, &aslRaw);
+  lps25hGetData(&pressure, &temperature, &aslRaw);
+
   asl = asl * aslAlpha + aslRaw * (1 - aslAlpha);
   aslLong = aslLong * aslAlphaLong + aslRaw * (1 - aslAlphaLong);
 
@@ -357,12 +360,12 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
                             const int16_t pitch, const int16_t yaw)
 {
 #ifdef QUAD_FORMATION_X
-  roll = roll >> 1;
-  pitch = pitch >> 1;
-  motorPowerM1 = limitThrust(thrust - roll + pitch + yaw);
-  motorPowerM2 = limitThrust(thrust - roll - pitch - yaw);
-  motorPowerM3 =  limitThrust(thrust + roll - pitch + yaw);
-  motorPowerM4 =  limitThrust(thrust + roll + pitch - yaw);
+  int16_t r = roll >> 1;
+  int16_t p = pitch >> 1;
+  motorPowerM1 = limitThrust(thrust - r + p + yaw);
+  motorPowerM2 = limitThrust(thrust - r - p - yaw);
+  motorPowerM3 =  limitThrust(thrust + r - p + yaw);
+  motorPowerM4 =  limitThrust(thrust + r + p - yaw);
 #else // QUAD_FORMATION_NORMAL
   motorPowerM1 = limitThrust(thrust + pitch + yaw);
   motorPowerM2 = limitThrust(thrust - roll - yaw);

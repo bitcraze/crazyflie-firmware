@@ -62,7 +62,7 @@ clean: clean_o
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
 	@$(CLEAN_COMMAND)
 
-MRPROPER_COMMAND=rm -f *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ scripts/*~; rm -rf bin/dep ;rmdir bin
+MRPROPER_COMMAND=rm -f *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ scripts/*~; rm -rf bin/dep
 MRPROPER_COMMAND_SILENT="  MRPROPER"
 mrproper: clean
 	@$(if $(QUIET), ,echo $(MRPROPER_COMMAND$(VERBOSE)) )

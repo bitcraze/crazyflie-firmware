@@ -53,6 +53,7 @@
 
 void imu6Init(void);
 bool imu6Test(void);
+bool imu6ManufacturingTest(void);
 void imu6Read(Axis3f* gyro, Axis3f* acc);
 void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut);
 bool imu6IsCalibrated(void);

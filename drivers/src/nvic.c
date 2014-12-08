@@ -24,11 +24,12 @@
  * nvic.c - Contains all Cortex-M3 processor exceptions handlers
  */
 #include "exti.h"
-#include "adc.h"
 #include "led.h"
-#include "uart.h"
-#include "i2croutines.h"
+#include "uart_syslink.h"
+//#include "i2croutines.h"
 #include "i2cdev.h"
+#include "ws2812.h"
+#include "usb_core.h"
 
 #define DONT_DISCARD __attribute__((used))
 
@@ -37,14 +38,19 @@ void nvicInit(void)
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
 }
 
-#ifdef NVIC_NOT_USED_BY_FREERTOS
 /**
  * @brief  This function handles SysTick Handler.
  */
+extern void tickFreeRTOS(void);
+extern void tickI2C(void);
+
 void DONT_DISCARD SysTick_Handler(void)
 {
+    tickFreeRTOS();
+    tickI2C();
 }
 
+#ifdef NVIC_NOT_USED_BY_FREERTOS
 /**
   * @brief  This function handles SVCall exception.
   */
@@ -107,6 +113,7 @@ void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
   stacked_pc = ((unsigned long) hardfaultArgs[6]);
   stacked_psr = ((unsigned long) hardfaultArgs[7]);
 
+
   uartPrintf("[Hard fault handler]\n");
   uartPrintf("R0 = %x\n", stacked_r0);
   uartPrintf("R1 = %x\n", stacked_r1);
@@ -167,73 +174,58 @@ void DONT_DISCARD DebugMon_Handler(void)
 
 void DONT_DISCARD DMA1_Channel1_IRQHandler(void)
 {
-  adcInterruptHandler();
+//  adcInterruptHandler();
 }
 
-void DONT_DISCARD DMA1_Channel2_IRQHandler(void)
+void DONT_DISCARD TIM2_IRQHandler(void)
 {
-#if defined(UART_OUTPUT_TRACE_DATA) || defined(ADC_OUTPUT_RAW_DATA)
+//  ADC_StartConversion(ADC1);
+//  ADC_StartConversion(ADC2);
+//  TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+
+}
+
+void DONT_DISCARD DMA1_Stream5_IRQHandler(void)
+{
+  ws2812DmaIsr();
+}
+
+void DONT_DISCARD DMA2_Stream7_IRQHandler(void)
+{
   uartDmaIsr();
-#endif
-}
-
-void DONT_DISCARD DMA1_Channel4_IRQHandler(void)
-{
-  i2cDmaInterruptHandlerI2c2();
-}
-
-void DONT_DISCARD DMA1_Channel5_IRQHandler(void)
-{
-  i2cDmaInterruptHandlerI2c2();
-}
-
-void DONT_DISCARD DMA1_Channel6_IRQHandler(void)
-{
-  i2cDmaInterruptHandlerI2c1();
-}
-
-void DONT_DISCARD DMA1_Channel7_IRQHandler(void)
-{
-  i2cDmaInterruptHandlerI2c1();
 }
 
 
-void DONT_DISCARD EXTI9_5_IRQHandler(void)
+void DONT_DISCARD EXTI15_10_IRQHandler(void)
 {
   extiInterruptHandler();
 }
 
-void DONT_DISCARD USART3_IRQHandler(void)
+void DONT_DISCARD EXTI4_IRQHandler(void)
+{
+  uartTxenFlowctrlIsr();
+}
+
+void DONT_DISCARD USART2_IRQHandler(void)
 {
   uartIsr();
 }
 
-void DONT_DISCARD TIM1_UP_IRQHandler(void)
+void DONT_DISCARD UART4_IRQHandler(void)
 {
-  extern uint32_t usecTimerHighCount;
-
-  TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
-
-  __sync_fetch_and_add(&usecTimerHighCount, 1);
+  uartIsr();
 }
 
-void DONT_DISCARD I2C1_EV_IRQHandler(void)
+void DONT_DISCARD USART6_IRQHandler(void)
 {
-  i2cInterruptHandlerI2c1();
+  uartIsr();
 }
 
-void DONT_DISCARD I2C1_ER_IRQHandler(void)
-{
-  i2cErrorInterruptHandlerI2c1();
-}
+extern USB_OTG_CORE_HANDLE           USB_OTG_dev;
+extern uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev);
 
-void DONT_DISCARD I2C2_EV_IRQHandler(void)
+void OTG_FS_IRQHandler(void)
 {
-
-}
-
-void DONT_DISCARD I2C2_ER_IRQHandler(void)
-{
-  I2C_ClearFlag(I2C2, 0x1000FFFF);
+  USBD_OTG_ISR_Handler (&USB_OTG_dev);
 }
 

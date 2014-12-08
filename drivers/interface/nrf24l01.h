@@ -67,6 +67,8 @@ void nrfSetDatarate(int datarate);
 void nrfSetAddress(unsigned int pipe, char* address);
 void nrfSetEnable(bool enable);
 unsigned char nrfGetStatus();
+bool nrfInterruptActive(void);
+
 
 
 #endif

@@ -43,29 +43,75 @@
 #define CONFIG_H_
 #include "nrf24l01.h"
 
-#define CONFIG_BLOCK_ADDRESS 0x1FC00
+#ifdef STM32F4XX
+  #define P_NAME "Crazyflie 2.0 Rev.C"
+  #define QUAD_FORMATION_X
 
-#define P_NAME "Crazyflie Rev.F"
+  #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
+  #define MCU_ID_ADDRESS          0x1FFF7A10
+  #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
+#else
+  #define P_NAME "Crazyflie Rev.F"
+  #define CONFIG_BLOCK_ADDRESS    (1024 * (64-1))
+  #define MCU_ID_ADDRESS          0x1FFFF7E8
+  #define MCU_FLASH_SIZE_ADDRESS  0x1FFFF7E0
+#endif
 
-#define H_INIT_EXTI
-#define T_LAUNCH_ADC
-#define T_LAUNCH_RADIO
-#define T_LAUNCH_POWERMANAGMENT
 
-#define T_LAUNCH_CONTROL
-#define T_LAUNCH_MULTILOG_1
-#define T_LAUNCH_MULTICONTROL
+//Task priorities. Higher number higher priority
+#define SYSTEM_TASK_PRI         2
+#define CRTP_RXTX_TASK_PRI      2
+#define LOG_TASK_PRI            1
+#define MEM_TASK_PRI            1
+#define PARAM_TASK_PRI          1
+#define STABILIZER_TASK_PRI     4
+#define SYSLINK_TASK_PRI        3
+#define USBLINK_TASK_PRI        3
+//CF1
+#define ADC_TASK_PRI            0
+#define PM_TASK_PRI             0
+#define NRF24LINK_TASK_PRI      2
+#define ESKYLINK_TASK_PRI       1
+#define CRTP_TX_TASK_PRI        2
+#define CRTP_RX_TASK_PRI        2
+
+//Task names
+#define SYSTEM_TASK_NAME        "SYSTEM"
+#define ADC_TASK_NAME           "ADC"
+#define PM_TASK_NAME            "PWRMGNT"
+#define CRTP_TX_TASK_NAME       "CRTP-TX"
+#define CRTP_RX_TASK_NAME       "CRTP-RX"
+#define CRTP_RXTX_TASK_NAME     "CRTP-RXTX"
+#define LOG_TASK_NAME           "LOG"
+#define MEM_TASK_NAME           "MEM"
+#define PARAM_TASK_NAME         "PARAM"
+#define STABILIZER_TASK_NAME    "STABILIZER"
+#define NRF24LINK_TASK_NAME     "NRF24LINK"
+#define ESKYLINK_TASK_NAME      "ESKYLINK"
+#define SYSLINK_TASK_NAME       "SYSLINK"
+#define USBLINK_TASK_NAME       "USBLINK"
+//Task stack sizes
+#define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
+#define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
+#define PM_TASK_STACKSIZE             configMINIMAL_STACK_SIZE
+#define CRTP_TX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define CRTP_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define CRTP_RXTX_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
+#define LOG_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
+#define MEM_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
+#define PARAM_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
+#define STABILIZER_TASK_STACKSIZE     (3 * configMINIMAL_STACK_SIZE)
+#define NRF24LINK_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
+#define ESKYLINK_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
+#define SYSLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define USBLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
-#define RADIO_CHANEL 10
+#define RADIO_CHANNEL 80
 #define RADIO_DATARATE RADIO_RATE_250K
 
-#define ACTIVATE_AUTO_SHUTDOWN
-/**
- * \def ACTIVATE_STARTUP_MELODY
- * Playes a startup melody using the motors and PWM modulation
- */
-//#define ACTIVATE_STARTUP_MELODY
+// Define to force initialization of expansion board drivers. For test-rig and programming.
+//#define FORCE_EXP_DETECT
 
 //Debug defines
 //#define BRUSHLESS_MOTORCONTROLLER
@@ -85,6 +131,10 @@
 
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(ADC_OUTPUT_RAW_DATA)
 #  error "Can't define UART_OUTPUT_TRACE_DATA and ADC_OUTPUT_RAW_DATA at the same time"
+#endif
+
+#if defined(UART_OUTPUT_TRACE_DATA) || defined(ADC_OUTPUT_RAW_DATA) || defined(IMU_OUTPUT_RAW_DATA_ON_UART)
+#define UART_OUTPUT_RAW_DATA_ONLY
 #endif
 
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(T_LAUNCH_ACC)

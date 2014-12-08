@@ -23,8 +23,6 @@
  *
  *
  */
-#include "stm32f10x_conf.h"
-
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -49,8 +47,8 @@ static bool isInit;
 static int side=0;
 static uint32_t lastUpdate;
 static bool isInactive;
-static bool altHoldMode = FALSE;
-static bool altHoldModeOld = FALSE;
+static bool altHoldMode = false;
+static bool altHoldModeOld = false;
 
 static void commanderCrtpCB(CRTPPacket* pk);
 static void commanderWatchdogReset(void);
@@ -65,8 +63,8 @@ void commanderInit(void)
   crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
 
   lastUpdate = xTaskGetTickCount();
-  isInactive = TRUE;
-  isInit = TRUE;
+  isInactive = true;
+  isInit = true;
 }
 
 bool commanderTest(void)
@@ -98,12 +96,12 @@ void commanderWatchdog(void)
   if (ticktimeSinceUpdate > COMMANDER_WDT_TIMEOUT_SHUTDOWN)
   {
     targetVal[usedSide].thrust = 0;
-    altHoldMode = FALSE; // do we need this? It would reset the target altitude upon reconnect if still hovering
-    isInactive = TRUE;
+    altHoldMode = false; // do we need this? It would reset the target altitude upon reconnect if still hovering
+    isInactive = true;
   }
   else
   {
-    isInactive = FALSE;
+    isInactive = false;
   }
 }
 

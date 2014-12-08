@@ -28,26 +28,73 @@
 
 #include <stdbool.h>
 
-#include "stm32f10x_conf.h"
-
 //Led polarity configuration constant
 #define LED_POL_POS 0
 #define LED_POL_NEG 1
 
+//#define STM32F4_DISCOVERY
+
+#ifdef STM32F4_DISCOVERY
 //Hardware configuration
-#define LED_GPIO_PERIF   RCC_APB2Periph_GPIOB
-#define LED_GPIO_PORT    GPIOB
-#define LED_GPIO_GREEN   GPIO_Pin_5
-#define LED_POL_GREEN    LED_POL_NEG
-#define LED_GPIO_RED     GPIO_Pin_4
-#define LED_POL_RED      LED_POL_NEG
+#define LED_GPIO_PERIF   RCC_AHB1Periph_GPIOD
+#define LED_GPIO_PORT    GPIOD
+#define LED_GPIO_GREEN   GPIO_Pin_12
+#define LED_POL_GREEN    LED_POL_POS
+#define LED_GPIO_RED     GPIO_Pin_14
+#define LED_POL_RED      LED_POL_POS
+#define LED_GPIO_ORANGE  GPIO_Pin_13
+#define LED_POL_ORANGE   LED_POL_POS
+#define LED_GPIO_BLUE    GPIO_Pin_15
+#define LED_POL_BLUE     LED_POL_POS
 
-#define LED_NUM 2
+#define LED_NUM 4
 
-typedef enum {LED_RED=0, LED_GREEN} led_t;
+typedef enum {LED_RED = 0, LED_GREEN, LED_ORANGE, LED_BLUE} led_t;
+
+#define LINK_LED         LED_GREEN
+#define SYS_LED          LED_RED
+#define BOOT_LED         LED_BLUE
+#define ERR_LED1         LED_RED
+#define ERR_LED2         LED_GREEN
+
+#else
+//Hardware configuration
+#define LED_GPIO_PERIF   (RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD)
+#define LED_GPIO_PORT_BLUE  GPIOD
+#define LED_GPIO_BLUE_L  GPIO_Pin_2
+#define LED_POL_BLUE_L   LED_POL_POS
+#define LED_GPIO_PORT    GPIOC
+#define LED_GPIO_GREEN_L GPIO_Pin_1
+#define LED_POL_GREEN_L  LED_POL_NEG
+#define LED_GPIO_RED_L   GPIO_Pin_0
+#define LED_POL_RED_L    LED_POL_NEG
+#define LED_GPIO_GREEN_R GPIO_Pin_2
+#define LED_POL_GREEN_R  LED_POL_NEG
+#define LED_GPIO_RED_R   GPIO_Pin_3
+#define LED_POL_RED_R    LED_POL_NEG
+
+#define LINK_LED         LED_GREEN_L
+#define CHG_LED          LED_BLUE_L
+#define LOWBAT_LED       LED_RED_R
+#define LINK_DOWN_LED    LED_RED_L
+#define SYS_LED          LED_RED_R
+#define ERR_LED1         LED_RED_L
+#define ERR_LED2         LED_RED_R
+
+#define LED_NUM 5
+
+
+typedef enum {LED_BLUE_L = 0, LED_GREEN_L, LED_RED_L, LED_GREEN_R, LED_RED_R} led_t;
+#endif
 
 void ledInit();
 bool ledTest();
+
+// Clear all configured LEDs
+void ledClearAll(void);
+
+// Set all configured LEDs
+void ledSetAll(void);
 
 // Procedures to set the status of the LEDs
 void ledSet(led_t led, bool value);

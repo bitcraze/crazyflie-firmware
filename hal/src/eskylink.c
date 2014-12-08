@@ -37,34 +37,23 @@
 #include <errno.h>
 #include <string.h>
 
-#include "nrf24l01.h"
-#include "crtp.h"
-#include "configblock.h"
-#include "ledseq.h"
-
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "system.h"
 
-#define USE_XMODE   false   /* X mode mixes + mode controls */
+#include "config.h"
+#include "nrf24l01.h"
+#include "crtp.h"
+#include "configblock.h"
+#include "ledseq.h"
 
 /* FIXME: This might be a bit tight range? */
 #define PPM_ZERO 1500
 #define PPM_RANGE 500
 #define PPM_MIN 1000
 #define PPM_MAX 2000
-
-// Multipliers - Translates ESKY PPM to CrazyFlie control values
-#define M_YAW_MIN       200.0/PPM_RANGE
-#define M_PITCH_MIN     25.0/PPM_RANGE
-#define M_ROLL_MIN      25.0/PPM_RANGE
-#define M_THRUST_MIN    60000/(2*PPM_RANGE)
-
-#define M_YAW_MAX       260.0/PPM_RANGE
-#define M_PITCH_MAX     90.0/PPM_RANGE
-#define M_ROLL_MAX      90.0/PPM_RANGE
-#define M_THRUST_MAX    85000/(2*PPM_RANGE)
 
 static bool isInit;
 
@@ -193,54 +182,28 @@ static void eskylinkInitPaired(int channel)
 static void eskylinkDecode(char* packet)
 {
   static CRTPPacket crtpPacket;
-  float sensitivity, raw_pitch, raw_roll, pitch, roll, yaw;
+  float pitch, roll, yaw;
   uint16_t thrust;
   
-  // Linear interpolation of sensitivity multipliers with CH5 knob
-  // Set GYRO.SW switch to 0 to use CH5 knob
-  // Channel 5 data range of knob is [1500, 2000]
-  sensitivity = ((packet[8]<<8) | packet[9])-PPM_ZERO;
-
-  // Map sensitivity to [0.0, 1.0]
-  sensitivity = sensitivity/PPM_RANGE;
-  if (sensitivity<0.0) sensitivity = 0.0;
-  if (sensitivity>1.0) sensitivity = 1.0;
-
-  // Get raw values of pitch and roll
-  raw_pitch = ((packet[2]<<8) | packet[3])-PPM_ZERO;
-  raw_roll = ((packet[0]<<8) | packet[1])-PPM_ZERO;
-
-  // Pitch
-  if (USE_XMODE == true) {
-	  pitch = (raw_pitch + (raw_roll * -1)) / 2;
-  } else {
-	  pitch = raw_pitch;
-  }
-  if (pitch < (-PPM_RANGE)) pitch = -PPM_RANGE;
-  if (pitch > PPM_RANGE) pitch = PPM_RANGE;
-  pitch *= (1.0 - sensitivity) * M_PITCH_MIN + sensitivity * M_PITCH_MAX;
+  pitch = ((packet[2]<<8) | packet[3])-PPM_ZERO;
+  if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
+  if (roll>PPM_RANGE) roll = PPM_RANGE;
+  pitch *= 20.0/PPM_RANGE;
   
-  // Roll
-  if (USE_XMODE == true){
-	  roll = (raw_pitch + raw_roll) / 2;
-  } else {
-      roll = raw_roll;
-  }
-  if (roll < (-PPM_RANGE)) roll = -PPM_RANGE;
-  if (roll > PPM_RANGE) roll = PPM_RANGE;
-  roll *= (1.0 - sensitivity) * M_ROLL_MIN + sensitivity * M_ROLL_MAX;
+  roll = ((packet[0]<<8) | packet[1])-PPM_ZERO;
+  if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
+  if (roll>PPM_RANGE) roll = PPM_RANGE;
+  roll *= 20.0/PPM_RANGE;
   
-  // Yaw
   yaw = ((packet[6]<<8) | packet[7])-PPM_ZERO;
-  if (yaw < (-PPM_RANGE)) yaw = -PPM_RANGE;
-  if (yaw > PPM_RANGE) yaw = PPM_RANGE;
-  yaw *= (1.0 - sensitivity) * M_YAW_MIN + sensitivity * M_YAW_MAX;
+  if (yaw<(-PPM_RANGE)) yaw = -PPM_RANGE;
+  if (yaw>PPM_RANGE) yaw = PPM_RANGE;
+  yaw *= 200.0/PPM_RANGE;
   
-  // Thrust
   thrust = ((packet[4]<<8) | packet[5])-PPM_MIN;
-  if (thrust < 0) thrust = 0;
-  if (thrust > (2*PPM_RANGE)) thrust = 2*PPM_RANGE;
-  thrust *= (1.0 - sensitivity) * M_THRUST_MIN + sensitivity * M_THRUST_MAX;
+  if (thrust<0) thrust = 0;
+  if (thrust>(2*PPM_RANGE)) thrust = 2*PPM_RANGE;
+  thrust *= 55000/(2*PPM_RANGE);
   
   crtpPacket.port = CRTP_PORT_COMMANDER;
   memcpy(&crtpPacket.data[0],  (char*)&roll,   4);
@@ -348,8 +311,8 @@ void eskylinkInit()
   eskylinkInitPairing();
 
     /* Launch the Radio link task */
-  xTaskCreate(eskylinkTask, (const signed char * const)"EskyLink",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
+  xTaskCreate(eskylinkTask, (const signed char * const)ESKYLINK_TASK_NAME,
+              ESKYLINK_TASK_STACKSIZE, NULL, ESKYLINK_TASK_PRI, NULL);
 
   isInit = true;
 }

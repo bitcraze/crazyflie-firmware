@@ -40,20 +40,23 @@
 #include "ledseq.h"
 #include "pm.h"
 
+#include "config.h"
 #include "system.h"
 #include "configblock.h"
 #include "worker.h"
 #include "freeRTOSdebug.h"
-#include "uart.h"
+#include "uart_syslink.h"
 #include "comm.h"
 #include "stabilizer.h"
 #include "commander.h"
-
+#include "neopixelring.h"
 #include "console.h"
+#include "usb.h"
+#include "expbrd.h"
+#include "mem.h"
 
 /* Private variable */
 static bool canFly;
-
 static bool isInit;
 
 /* System wide synchronisation */
@@ -65,8 +68,9 @@ static void systemTask(void *arg);
 /* Public functions */
 void systemLaunch(void)
 {
-  xTaskCreate(systemTask, (const signed char * const)"SYSTEM",
-              2*configMINIMAL_STACK_SIZE, NULL, /*Piority*/2, NULL);
+  xTaskCreate(systemTask, (const signed char * const)SYSTEM_TASK_NAME,
+              SYSTEM_TASK_STACKSIZE, NULL,
+              SYSTEM_TASK_PRI, NULL);
 
 }
 
@@ -81,7 +85,7 @@ void systemInit(void)
 
   configblockInit();
   workerInit();
-  adcInit();
+  //adcInit();
   ledseqInit();
   pmInit();
     
@@ -92,7 +96,7 @@ bool systemTest()
 {
   bool pass=isInit;
   
-  pass &= adcTest();
+  //pass &= adcTest();
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
@@ -102,48 +106,56 @@ bool systemTest()
 
 /* Private functions implementation */
 
-extern int paramsLen;
-
 void systemTask(void *arg)
 {
   bool pass = true;
   
+  ledInit();
+  ledSet(CHG_LED, 1);
+
+  uartInit();
   //Init the high-levels modules
   systemInit();
 
-#ifndef USE_UART_CRTP
+#ifndef USE_RADIOLINK_CRTP
 #ifdef UART_OUTPUT_TRACE_DATA
-  debugInitTrace();
+  //debugInitTrace();
 #endif
 #ifdef ENABLE_UART
-  uartInit();
+//  uartInit();
 #endif
-#endif //ndef USE_UART_CRTP
+#endif //ndef USE_RADIOLINK_CRTP
 
   commInit();
 
+  DEBUG_PRINT("----------------------------\n");
   DEBUG_PRINT("Crazyflie is up and running!\n");
   DEBUG_PRINT("Build %s:%s (%s) %s\n", V_SLOCAL_REVISION,
               V_SREVISION, V_STAG, (V_MODIFIED)?"MODIFIED":"CLEAN");
   DEBUG_PRINT("I am 0x%X%X%X and I have %dKB of flash!\n",
-              *((int*)(0x1FFFF7E8+8)), *((int*)(0x1FFFF7E8+4)),
-              *((int*)(0x1FFFF7E8+0)), *((short*)(0x1FFFF7E0)));
+              *((int*)(MCU_ID_ADDRESS+8)), *((int*)(MCU_ID_ADDRESS+4)),
+              *((int*)(MCU_ID_ADDRESS+0)), *((short*)(MCU_FLASH_SIZE_ADDRESS)));
 
   commanderInit();
   stabilizerInit();
+  expbrdInit();
+  memInit();
   
   //Test the modules
   pass &= systemTest();
+  pass &= configblockTest();
   pass &= commTest();
   pass &= commanderTest();
   pass &= stabilizerTest();
+  pass &= expbrdTest();
+  pass &= memTest();
   
   //Start the firmware
   if(pass)
   {
     systemStart();
-    ledseqRun(LED_RED, seq_alive);
-    ledseqRun(LED_GREEN, seq_testPassed);
+    ledseqRun(SYS_LED, seq_alive);
+    ledseqRun(LINK_LED, seq_testPassed);
   }
   else
   {
@@ -151,16 +163,17 @@ void systemTask(void *arg)
     {
       while(1)
       {
-        ledseqRun(LED_RED, seq_testPassed); //Red passed == not passed!
+        ledseqRun(SYS_LED, seq_testPassed); //Red passed == not passed!
         vTaskDelay(M2T(2000));
       }
     }
     else
     {
       ledInit();
-      ledSet(LED_RED, true);
+      ledSet(SYS_LED, true);
     }
   }
+  DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
   
   workerLoop();
   
@@ -195,6 +208,20 @@ void systemSetCanFly(bool val)
 bool systemCanFly(void)
 {
   return canFly;
+}
+
+void vApplicationIdleHook( void )
+{
+  extern size_t debugPrintTCBInfo(void);
+  static uint32_t timeToPrint = M2T(5000);
+
+  if (xTaskGetTickCount() - timeToPrint > M2T(10000))
+  {
+    timeToPrint = xTaskGetTickCount();
+    debugPrintTCBInfo();
+  }
+  // Enter sleep mode
+//  { __asm volatile ("wfi"); }
 }
 
 /*System parameters (mostly for test, should be removed from here) */

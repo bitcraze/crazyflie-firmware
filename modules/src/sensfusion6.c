@@ -23,7 +23,6 @@
  *
  *
  */
-#include "stm32f10x_conf.h"
 #include <math.h>
 
 #include "sensfusion6.h"
@@ -64,7 +63,7 @@ void sensfusion6Init()
   if(isInit)
     return;
 
-  isInit = TRUE;
+  isInit = true;
 }
 
 bool sensfusion6Test(void)

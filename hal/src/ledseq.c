@@ -43,7 +43,6 @@ static ledseq_t * sequences[] = {
   seq_lowbat,
   seq_charged,
   seq_charging,
-  seq_chargingMax,
   seq_bootloader,
   seq_armed,
   seq_calibrated,
@@ -101,12 +100,6 @@ ledseq_t seq_charging[] = {
   {    0, LEDSEQ_LOOP},
 };
 
-ledseq_t seq_chargingMax[] = {
-  { true, LEDSEQ_WAITMS(100)},
-  {false, LEDSEQ_WAITMS(400)},
-  {    0, LEDSEQ_LOOP},
-};
-
 ledseq_t seq_bootloader[] = {
   { true, LEDSEQ_WAITMS(500)},
   {false, LEDSEQ_WAITMS(500)},
@@ -149,6 +142,7 @@ static xTimerHandle timer[LED_NUM];
 static xSemaphoreHandle ledseqSem;
 
 static bool isInit = false;
+static bool ledseqEnabled = false;
 
 void ledseqInit()
 {
@@ -177,7 +171,16 @@ void ledseqInit()
 
 bool ledseqTest(void)
 {
-  return isInit & ledTest();
+  bool status;
+
+  status = isInit & ledTest();
+  ledseqEnable(true);
+  return status;
+}
+
+void ledseqEnable(bool enable)
+{
+  ledseqEnabled = enable;
 }
 
 void ledseqRun(led_t led, ledseq_t *sequence)
@@ -225,6 +228,9 @@ static void runLedseq( xTimerHandle xTimer )
   led_t led = (led_t)pvTimerGetTimerID(xTimer);
   ledseq_t *step;
   bool leave=false;
+
+  if (!ledseqEnabled)
+    return;
 
   while(!leave) {
     int prio = activeSeq[led];
