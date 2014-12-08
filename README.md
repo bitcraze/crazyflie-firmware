@@ -3,8 +3,9 @@
 This project contains the source code for the Crazyflie 2.0 firmware. More information can be found on the 
 [Bitcraze wiki](http://wiki.bitcraze.se/projects:crazyflie2:index)
 
+
+####Folder description
 ```
-###Folder description
 ./              | Root, contains the Makefile
  + init         | Contains the main.c
  + config       | Configuration files
@@ -27,8 +28,9 @@ This project contains the source code for the Crazyflie 2.0 firmware. More infor
  |  + FreeRTOS  | Source FreeRTOS folder. Cleaned up from the useless files
  |  + STM32...  | Library folders of the ST STM32 peripheral libs
  |  + CMSIS     | Core abstraction layer
-
-###Make targets
+```
+####Make targets
+```
 all        : Shortcut for build
 compile    : Compile cflie.hex. WARNING: Do NOT update version.c
 build      : Update version.c and compile cflie.elf/hex
@@ -36,8 +38,8 @@ clean_o    : Clean only the Objects files, keep the executables (ie .elf, .hex)
 clean      : Clean every compiled files
 mrproper   : Clean every compiled files and the classical editors backup files
 
-cload      : If the crazyflie-clients-python is placed on the same directory level and the Crazyradio/Crazyradio PA is inserted
-             it will try to flash the firmware using the wireless bootloader.
+cload      : If the crazyflie-clients-python is placed on the same directory level and the Crazyradio/Crazyradio PA
+             is inserted it will try to flash the firmware using the wireless bootloader.
 flash      : Flash cflie.elf using OpenOCD
 halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
