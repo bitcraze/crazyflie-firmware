@@ -185,7 +185,7 @@ void imu6Init(void)
   // Set output rate (1): 1000 / (1 + 1) = 500Hz
   mpu6500SetRate(1);
   // Set digital low-pass bandwidth
-  mpu6500SetDLPFMode(MPU6500_DLPF_BW_188);
+  mpu6500SetDLPFMode(MPU6500_DLPF_BW_98);
 #endif
 
 
