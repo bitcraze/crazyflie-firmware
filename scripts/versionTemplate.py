@@ -39,6 +39,8 @@ if os.path.isdir(".git"):
         version['tag'] += '-'
         version['tag'] += identify[x]
 
+    version['tag'] = version['tag'].strip()
+
     branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
     version['branch'] = branch
 
