@@ -12,6 +12,7 @@ OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
 OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python2
+DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
 F405              ?= 1
 USE_FPU           ?= 0
@@ -204,8 +205,10 @@ LDFLAGS = $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections
 
 ifeq ($(CLOAD), 1)
   LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
+  LOAD_ADDRESS = 0x8004000
 else
   LDFLAGS += -T $(LINKER_DIR)/FLASH.ld
+  LOAD_ADDRESS = 0x8000000
 endif
 
 ifeq ($(LTO), 1)
@@ -233,7 +236,7 @@ endif
 
 all: build
 build: clean_version compile print_version size
-compile: clean_version $(PROG).hex $(PROG).bin
+compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
 
 clean_version:
 ifeq ($(SHELL),/bin/sh)
@@ -264,6 +267,9 @@ endif
 flash:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
                  -c "flash write_image erase cflie.elf" -c "verify_image cflie.elf" -c "reset run" -c shutdown
+
+flash_dfu:
+	$(DFU_UTIL) -a 0 -D cflie.dfu
 
 #STM utility targets
 halt:

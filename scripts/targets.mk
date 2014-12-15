@@ -44,6 +44,12 @@ $(PROG).bin: $(PROG).elf
 	@$(if $(QUIET), ,echo $(BIN_COMMAND$(VERBOSE)) )
 	@$(BIN_COMMAND)
 
+DFU_COMMAND=python scripts/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
+DFU_COMMAND_SILENT="  DFUse $@"
+$(PROG).dfu: $(PROG).bin
+	@$(if $(QUIET), ,echo $(DFU_COMMAND$(VERBOSE)) )
+	@$(DFU_COMMAND)
+
 AS_COMMAND=$(AS) $(ASFLAGS) $< -o $(BIN)/$@
 AS_COMMAND_SILENT="  AS    $@"
 .s.o:
@@ -56,7 +62,7 @@ clean_o: clean_version
 	@$(if $(QUIET), ,echo $(CLEAN_O_COMMAND$(VERBOSE)) )
 	@$(CLEAN_O_COMMAND)
 
-CLEAN_COMMAND=rm -f $(PROG).elf $(PROG).hex $(PROG).bin $(PROG).map $(BIN)/dep/*.d
+CLEAN_COMMAND=rm -f $(PROG).elf $(PROG).hex $(PROG).bin $(PROG).dfu $(PROG).map $(BIN)/dep/*.d
 CLEAN_COMMAND_SILENT="  CLEAN"
 clean: clean_o
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
