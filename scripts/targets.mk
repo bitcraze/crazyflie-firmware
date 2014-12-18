@@ -44,7 +44,7 @@ $(PROG).bin: $(PROG).elf
 	@$(if $(QUIET), ,echo $(BIN_COMMAND$(VERBOSE)) )
 	@$(BIN_COMMAND)
 
-DFU_COMMAND=python scripts/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
+DFU_COMMAND=$(PYTHON2) scripts/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
 DFU_COMMAND_SILENT="  DFUse $@"
 $(PROG).dfu: $(PROG).bin
 	@$(if $(QUIET), ,echo $(DFU_COMMAND$(VERBOSE)) )
