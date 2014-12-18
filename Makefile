@@ -7,8 +7,8 @@
 -include config.mk
 
 ######### JTAG and environment configuration ##########
-OPENOCD_INTERFACE ?= interface/jtagkey.cfg
-OPENOCD_TARGET    ?= target/stm32f1x.cfg
+OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python
 CLOAD             ?= 1
