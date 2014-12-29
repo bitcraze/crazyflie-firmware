@@ -237,6 +237,19 @@ static void tiltEffect(uint8_t buffer[][3], bool reset)
 {
   static int pitchid, rollid, thrust=-1;
 
+  // 2014-12-28 chad: Reset LEDs to off to avoid color artifacts
+  // when switching from other effects.
+  if (reset)
+    {
+        int i;
+        for (i=0; i<NBR_LEDS; i++) {
+            buffer[i][0] = 0;
+            buffer[i][1] = 0;
+            buffer[i][2] = 0;
+        }
+    }
+
+
   if (thrust<0) {
     //Init
     pitchid = logGetVarId("stabilizer", "pitch");
@@ -253,21 +266,21 @@ static void tiltEffect(uint8_t buffer[][3], bool reset)
     pitch=SIGN(pitch)*pitch*pitch;
     roll*=SIGN(roll)*roll;
 
+    buffer[11][0] = LIMIT(led_middle + pitch);
     buffer[0][0] = LIMIT(led_middle + pitch);
     buffer[1][0] = LIMIT(led_middle + pitch);
-    buffer[2][0] = LIMIT(led_middle + pitch);
 
+    buffer[2][2] = LIMIT(led_middle - roll);
     buffer[3][2] = LIMIT(led_middle - roll);
     buffer[4][2] = LIMIT(led_middle - roll);
-    buffer[5][2] = LIMIT(led_middle - roll);
 
+    buffer[5][0] = LIMIT(led_middle - pitch);
     buffer[6][0] = LIMIT(led_middle - pitch);
     buffer[7][0] = LIMIT(led_middle - pitch);
-    buffer[8][0] = LIMIT(led_middle - pitch);
 
+    buffer[8][2] = LIMIT(led_middle + roll);
     buffer[9][2] = LIMIT(led_middle + roll);
     buffer[10][2] = LIMIT(led_middle + roll);
-    buffer[11][2] = LIMIT(led_middle + roll);
   }
 }
 
