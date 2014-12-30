@@ -32,18 +32,24 @@
 
 extern xSemaphoreHandle i2cdevDmaEventI2c1;
 extern xSemaphoreHandle i2cdevDmaEventI2c2;
-extern uint8_t* Buffer_Rx1;
-extern uint8_t* Buffer_Tx1;
+/* Buffer of data to be received by I2C1, I2C2 */
+uint8_t* Buffer_Rx1;
+uint8_t* Buffer_Tx1;
+/* Buffer of data to be transmitted by I2C1, I2C2 */
+uint8_t* Buffer_Rx2;
+uint8_t* Buffer_Tx2;
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 DMA_InitTypeDef I2CDMA_InitStructure;
-__IO uint32_t I2CDirection = I2C_DIRECTION_TX;
+__IO uint32_t I2CDirection1 = I2C_DIRECTION_TX;
+__IO uint32_t I2CDirection2 = I2C_DIRECTION_TX;
 __IO uint32_t NumbOfBytes1;
 __IO uint32_t NumbOfBytes2;
-__IO uint8_t Address;
+__IO uint8_t Address1;
+__IO uint8_t Address2;
 __IO uint8_t Tx_Idx1 = 0, Rx_Idx1 = 0;
 __IO uint8_t Tx_Idx2 = 0, Rx_Idx2 = 0;
 /* Private function prototypes -----------------------------------------------*/
@@ -89,9 +95,7 @@ ErrorStatus I2C_Master_BufferRead(I2C_TypeDef* I2Cx, uint8_t* pBuffer,
     /* Send slave address */
     /* Set the address bit0 for read */
     SlaveAddress |= OAR1_ADD0_Set;
-    Address = SlaveAddress;
-    /* Send the slave address */
-    I2Cx->DR = Address;
+    I2Cx->DR = SlaveAddress;
     /* Wait until ADDR is set: EV6 */
     while ((I2Cx->SR1 & 0x0002) != 0x0002)
     {
@@ -133,15 +137,23 @@ ErrorStatus I2C_Master_BufferRead(I2C_TypeDef* I2Cx, uint8_t* pBuffer,
     I2Cx->CR2 |= I2C_IT_EVT;
     /* Enable BUF IT */
     I2Cx->CR2 |= I2C_IT_BUF;
-    /* Set the I2C direction to reception */
-    I2CDirection = I2C_DIRECTION_RX;
-    Buffer_Rx1 = pBuffer;
     SlaveAddress |= OAR1_ADD0_Set;
-    Address = SlaveAddress;
-    if (I2Cx == I2C1)
+    if (I2Cx== I2C1)
+    {
+      /* Set the I2C direction to reception */
+      I2CDirection1 = I2C_DIRECTION_RX;
+      Buffer_Rx1 = pBuffer;
+      Address1 = SlaveAddress;
       NumbOfBytes1 = NumByteToRead;
+    }
     else
+    {
+      /* Set the I2C direction to reception */
+      I2CDirection2 = I2C_DIRECTION_RX;
+      Buffer_Rx2 = pBuffer;
+      Address2 = SlaveAddress;
       NumbOfBytes2 = NumByteToRead;
+    }
     /* Send START condition */
     I2Cx->CR1 |= CR1_START_Set;
     Timeout = timeoutMs * I2CDEV_LOOPS_PER_MS;
@@ -204,9 +216,7 @@ ErrorStatus I2C_Master_BufferWrite(I2C_TypeDef* I2Cx, uint8_t* pBuffer,
     /* Send slave address */
     /* Reset the address bit0 for write */
     SlaveAddress &= OAR1_ADD0_Reset;
-    Address = SlaveAddress;
-    /* Send the slave address */
-    I2Cx->DR = Address;
+    I2Cx->DR = SlaveAddress;
     /* Wait until ADDR is set: EV6 */
     while ((I2Cx->SR1 & 0x0002) != 0x0002)
     {
@@ -254,14 +264,23 @@ ErrorStatus I2C_Master_BufferWrite(I2C_TypeDef* I2Cx, uint8_t* pBuffer,
     /* Enable BUF IT */
     I2Cx->CR2 |= I2C_IT_BUF;
     /* Set the I2C direction to Transmission */
-    I2CDirection = I2C_DIRECTION_TX;
-    Buffer_Tx1 = pBuffer;
     SlaveAddress &= OAR1_ADD0_Reset;
-    Address = SlaveAddress;
-    if (I2Cx == I2C1)
+    if (I2Cx== I2C1)
+    {
+      /* Set the I2C direction to reception */
+      I2CDirection1 = I2C_DIRECTION_TX;
+      Buffer_Tx1 = pBuffer;
+      Address1 = SlaveAddress;
       NumbOfBytes1 = NumByteToWrite;
+    }
     else
+    {
+      /* Set the I2C direction to reception */
+      I2CDirection2 = I2C_DIRECTION_TX;
+      Buffer_Tx2 = pBuffer;
+      Address2 = SlaveAddress;
       NumbOfBytes2 = NumByteToWrite;
+    }
     /* Send START condition */
     I2Cx->CR1 |= CR1_START_Set;
     Timeout = timeoutMs * I2CDEV_LOOPS_PER_MS;
@@ -371,6 +390,15 @@ void I2C_LowLevel_Init(I2C_TypeDef* I2Cx)
     RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C2, ENABLE);
     /* Release I2C2 from reset state */
     RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C2, DISABLE);
+
+    NVIC_InitStructure.NVIC_IRQChannel = I2C2_EV_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_PRI;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+    NVIC_InitStructure.NVIC_IRQChannel = I2C2_ER_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_PRI + 1;
+    NVIC_Init(&NVIC_InitStructure);
   }
 
   /* I2C1 and I2C2 configuration */
@@ -490,7 +518,7 @@ void I2C_DMAConfig(I2C_TypeDef* I2Cx, uint8_t* pBuffer, uint32_t BufferSize,
 }
 
 /**
- * @brief  This function handles I2C1 Event interrupt request.
+ * @brief  This function handles I2C Event interrupt request.
  * @param  None
  * @retval : None
  */
@@ -500,20 +528,20 @@ void i2cInterruptHandlerI2c1(void)
   __IO uint32_t SR1Register = 0;
   __IO uint32_t SR2Register = 0;
 
-  /* Read the I2C1 SR1 and SR2 status registers */
+  /* Read the I2C SR1 and SR2 status registers */
   SR1Register = I2C1->SR1;
   SR2Register = I2C1->SR2;
 
-  /* If SB = 1, I2C1 master sent a START on the bus: EV5) */
+  /* If SB = 1, I2C master sent a START on the bus: EV5) */
   if ((SR1Register & 0x0001) == 0x0001)
   {
     /* Send the slave address for transmssion or for reception (according to the configured value
      in the write master write routine */
-    I2C1->DR = Address;
+    I2C1->DR = Address1;
     SR1Register = 0;
     SR2Register = 0;
   }
-  /* If I2C1 is Master (MSL flag = 1) */
+  /* If I2C is Master (MSL flag = 1) */
 
   if ((SR2Register & 0x0001) == 0x0001)
   {
@@ -521,12 +549,12 @@ void i2cInterruptHandlerI2c1(void)
     if ((SR1Register & 0x0002) == 0x0002)
     {
       /* Write the first data in case the Master is Transmitter */
-      if (I2CDirection == I2C_DIRECTION_TX)
+      if (I2CDirection1 == I2C_DIRECTION_TX)
       {
         /* Initialize the Transmit counter */
         Tx_Idx1 = 0;
-        /* Write the first data in the data register */I2C1->DR =
-            Buffer_Tx1[Tx_Idx1++];
+        /* Write the first data in the data register */
+        I2C1->DR = Buffer_Tx1[Tx_Idx1++];
         /* Decrement the number of bytes to be written */
         NumbOfBytes1--;
         /* If no further data to be sent, disable the I2C BUF IT
@@ -609,39 +637,157 @@ void i2cInterruptHandlerI2c1(void)
 }
 
 /**
- * @brief  This function handles I2C1 Error interrupt request.
+ * @brief  This function handles I2C Event interrupt request.
  * @param  None
  * @retval : None
  */
-void i2cErrorInterruptHandlerI2c1(void)
+void i2cInterruptHandlerI2c2(void)
+{
+  __IO uint32_t SR1Register = 0;
+  __IO uint32_t SR2Register = 0;
+
+  /* Read the I2C SR1 and SR2 status registers */
+  SR1Register = I2C2->SR1;
+  SR2Register = I2C2->SR2;
+
+  /* If SB = 1, I2C master sent a START on the bus: EV5) */
+  if ((SR1Register & 0x0001) == 0x0001)
+  {
+    /* Send the slave address for transmssion or for reception (according to the configured value
+     in the write master write routine */
+    I2C2->DR = Address2;
+    SR1Register = 0;
+    SR2Register = 0;
+  }
+  /* If I2C is Master (MSL flag = 1) */
+
+  if ((SR2Register & 0x0001) == 0x0001)
+  {
+    /* If ADDR = 1, EV6 */
+    if ((SR1Register & 0x0002) == 0x0002)
+    {
+      /* Write the first data in case the Master is Transmitter */
+      if (I2CDirection2 == I2C_DIRECTION_TX)
+      {
+        /* Initialize the Transmit counter */
+        Tx_Idx2 = 0;
+        /* Write the first data in the data register */
+        I2C2->DR = Buffer_Tx2[Tx_Idx2++];
+        /* Decrement the number of bytes to be written */
+        NumbOfBytes2--;
+        /* If no further data to be sent, disable the I2C BUF IT
+         in order to not have a TxE  interrupt */
+        if (NumbOfBytes2 == 0)
+        {
+          I2C2->CR2 &= (uint16_t) ~I2C_IT_BUF;
+        }
+      }
+      /* Master Receiver */
+      else
+      {
+        /* Initialize Receive counter */
+        Rx_Idx2 = 0;
+        /* At this stage, ADDR is cleared because both SR1 and SR2 were read.*/
+        /* EV6_1: used for single byte reception. The ACK disable and the STOP
+         Programming should be done just after ADDR is cleared. */
+        if (NumbOfBytes2 == 1)
+        {
+          /* Clear ACK */
+          I2C2->CR1 &= CR1_ACK_Reset;
+          /* Program the STOP */
+          I2C2->CR1 |= CR1_STOP_Set;
+        }
+      }
+      SR1Register = 0;
+      SR2Register = 0;
+    }
+    /* Master transmits the remaing data: from data2 until the last one.  */
+    /* If TXE is set */
+    if ((SR1Register & 0x0084) == 0x0080)
+    {
+      /* If there is still data to write */
+      if (NumbOfBytes2 != 0)
+      {
+        /* Write the data in DR register */
+        I2C2->DR = Buffer_Tx2[Tx_Idx2++];
+        /* Decrment the number of data to be written */
+        NumbOfBytes2--;
+        /* If  no data remains to write, disable the BUF IT in order
+         to not have again a TxE interrupt. */
+        if (NumbOfBytes2 == 0)
+        {
+          /* Disable the BUF IT */
+          I2C2->CR2 &= (uint16_t) ~I2C_IT_BUF;
+        }
+      }
+      SR1Register = 0;
+      SR2Register = 0;
+    }
+    /* If BTF and TXE are set (EV8_2), program the STOP */
+    if ((SR1Register & 0x0084) == 0x0084)
+    {
+      /* Program the STOP */
+      I2C2->CR1 |= CR1_STOP_Set;
+      /* Disable EVT IT In order to not have again a BTF IT */
+      I2C2->CR2 &= (uint16_t) ~I2C_IT_EVT;
+      SR1Register = 0;
+      SR2Register = 0;
+    }
+    /* If RXNE is set */
+    if ((SR1Register & 0x0040) == 0x0040)
+    {
+      /* Read the data register */
+      Buffer_Rx2[Rx_Idx2++] = I2C2->DR;
+      /* Decrement the number of bytes to be read */
+      NumbOfBytes2--;
+      /* If it remains only one byte to read, disable ACK and program the STOP (EV7_1) */
+      if (NumbOfBytes2 == 1)
+      {
+        /* Clear ACK */
+        I2C2->CR1 &= CR1_ACK_Reset;
+        /* Program the STOP */
+        I2C2->CR1 |= CR1_STOP_Set;
+      }
+      SR1Register = 0;
+      SR2Register = 0;
+    }
+  }
+}
+
+/**
+ * @brief  This function handles I2C Error interrupt request.
+ * @param  None
+ * @retval : None
+ */
+void i2cErrorInterruptHandler(I2C_TypeDef* I2Cx)
 {
 
   __IO uint32_t SR1Register = 0;
 
-  /* Read the I2C1 status register */
-  SR1Register = I2C1->SR1;
+  /* Read the I2C status register */
+  SR1Register = I2Cx->SR1;
   /* If AF = 1 */
   if ((SR1Register & 0x0400) == 0x0400)
   {
-    I2C1->SR1 &= 0xFBFF;
+    I2Cx->SR1 &= 0xFBFF;
     SR1Register = 0;
   }
   /* If ARLO = 1 */
   if ((SR1Register & 0x0200) == 0x0200)
   {
-    I2C1->SR1 &= 0xFBFF;
+    I2Cx->SR1 &= 0xFBFF;
     SR1Register = 0;
   }
   /* If BERR = 1 */
   if ((SR1Register & 0x0100) == 0x0100)
   {
-    I2C1->SR1 &= 0xFEFF;
+    I2Cx->SR1 &= 0xFEFF;
     SR1Register = 0;
   }
   /* If OVR = 1 */
   if ((SR1Register & 0x0800) == 0x0800)
   {
-    I2C1->SR1 &= 0xF7FF;
+    I2Cx->SR1 &= 0xF7FF;
     SR1Register = 0;
   }
 }

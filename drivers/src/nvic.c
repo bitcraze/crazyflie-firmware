@@ -224,16 +224,16 @@ void DONT_DISCARD I2C1_EV_IRQHandler(void)
 
 void DONT_DISCARD I2C1_ER_IRQHandler(void)
 {
-  i2cErrorInterruptHandlerI2c1();
+  i2cErrorInterruptHandler(I2C1);
 }
 
 void DONT_DISCARD I2C2_EV_IRQHandler(void)
 {
-
+  i2cInterruptHandlerI2c2();
 }
 
 void DONT_DISCARD I2C2_ER_IRQHandler(void)
 {
-  I2C_ClearFlag(I2C2, 0x1000FFFF);
+  i2cErrorInterruptHandler(I2C2);
 }
 
