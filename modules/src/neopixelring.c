@@ -72,8 +72,9 @@
 #define LIMIT(a) ((a>255)?255:(a<0)?0:a)
 #define SIGN(a) ((a>=0)?1:-1)
 #define DEADBAND(a, b) ((a<b) ? 0:a)
+#define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
 
-static uint32_t effect = 7;
+static uint32_t effect = 9;
 static uint32_t neffect;
 static uint8_t headlightEnable = 0;
 static uint8_t black[][3] = {BLACK, BLACK, BLACK,
@@ -367,6 +368,28 @@ static void ledTestEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+/**
+ * An effect that shows the battery charge on the LED ring.
+ *
+ * Red means empty, blue means full.
+ */
+static float emptyCharge = 3.1, fullCharge = 4.2;
+static void batteryChargeEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+  static int vbatid;
+  float vbat;
+
+  vbatid = logGetVarId("pm", "vbat");
+  vbat = logGetFloat(vbatid);
+
+  for (i = 0; i < NBR_LEDS; i++) {
+    buffer[i][0] = LIMIT(LINSCALE(emptyCharge, fullCharge, 255, 0, vbat)); // Red (emtpy)
+    buffer[i][1] = 0; // Green
+    buffer[i][2] = LIMIT(LINSCALE(emptyCharge, fullCharge, 0, 255, vbat)); // Blue (charged)
+  }
+}
+
 /**************** Effect list ***************/
 
 
@@ -379,6 +402,7 @@ NeopixelRingEffect effectsFct[] = {blackEffect,
                                    doubleSpinEffect,
                                    solidColorEffect,
                                    ledTestEffect,
+                                   batteryChargeEffect,
                                   }; //TODO Add more
 
 /*
@@ -449,5 +473,6 @@ PARAM_ADD(PARAM_UINT8, solidGreen, &solidGreen)
 PARAM_ADD(PARAM_UINT8, solidBlue, &solidBlue)
 PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
 PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
+PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
+PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
 PARAM_GROUP_STOP(ring)
-
