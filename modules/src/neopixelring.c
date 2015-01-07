@@ -163,6 +163,44 @@ static void solidColorEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+static const uint8_t green[] = {0x00, 0xFF, 0x00};
+static const uint8_t red[] = {0xFF, 0x00, 0x00};
+static const uint8_t white[] = WHITE;
+static const uint8_t part_black[] = BLACK;
+
+static void boatEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+
+  uint8_t reds[] = {1,2,3,4,5};
+  uint8_t greens[] = {7,8,9,10,11};
+  uint8_t whites[] = {0};
+  uint8_t blacks[] = {6};
+
+
+  for (i=0; i<sizeof(reds); i++)
+  {
+    COPY_COLOR(buffer[reds[i]], red);
+  }
+
+  for (i=0; i<sizeof(greens); i++)
+  {
+    COPY_COLOR(buffer[greens[i]], green);
+  }
+
+  for (i=0; i<sizeof(whites); i++)
+  {
+    COPY_COLOR(buffer[whites[i]], white);
+  }
+
+  for (i=0; i<sizeof(blacks); i++)
+  {
+    COPY_COLOR(buffer[blacks[i]], part_black);
+  }
+
+
+}
+
 /**************** Color spin ***************/
 
 static const uint8_t colorRing[][3] = {{0,0,32}, {0,0,16}, {0,0,8},
@@ -416,6 +454,7 @@ NeopixelRingEffect effectsFct[] = {blackEffect,
                                    solidColorEffect,
                                    ledTestEffect,
                                    batteryChargeEffect,
+                                   boatEffect
                                   }; //TODO Add more
 
 /*
