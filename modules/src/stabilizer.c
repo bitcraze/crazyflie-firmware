@@ -138,6 +138,7 @@ static bool isInit;
  ** Flight Mode **
  *****************/
 uint8_t flightMode = 0;
+enum flightModes {CAREFREE=0, PLUSMODE=1, XMODE=2, POSITION=3, HEADING=4};
 
 static void stabilizerAltHoldUpdate(void);
 void ComplementaryFilter(Axis3f acc, Axis3f gyro, float *roll, float *pitch);
@@ -205,7 +206,7 @@ static void stabilizerTask(void* param)
       commanderGetRPYType(&rollType, &pitchType, &yawType);
 
       //Correct Yaw for X-Mode and Heading-Mode
-      if (flightMode == 2) //X-Mode
+      if (flightMode == XMODE) //X-Mode
     	  {
     	  	  eulerYawDesired = 45;
     	  }
@@ -225,7 +226,7 @@ static void stabilizerTask(void* param)
         // Estimate speed from acc (drifts)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
 
-        if (flightMode == 0) //CareFreeMode
+        if (flightMode == CAREFREE) //CareFreeMode
         	{
         		float yawRad = eulerYawActual * M_PI / 180,
           			  roll1 = eulerRollDesired,
@@ -234,14 +235,14 @@ static void stabilizerTask(void* param)
         		eulerRollDesired = eulerRollDesired * cosy - eulerPitchDesired * siny;
         		eulerPitchDesired = eulerPitchDesired * cosy + roll1 * siny;
 			}
-        else if (flightMode == 2) //X-Mode
+        else if (flightMode == XMODE) //X-Mode
 			{
         		//sqrt(2)/2 = 0,707...
 				float roll1 = eulerRollDesired;
 				eulerRollDesired = 0.707 * (eulerRollDesired + eulerPitchDesired);
 				eulerPitchDesired = 0.707 * (eulerPitchDesired - roll1);
 			}
-        else if (flightMode == 3) //Fixed-Mode or Position-Mode
+        else if (flightMode == POSITION) //Fixed-Mode or Position-Mode
 			{
         		eulerRollDesired = 0;
         		eulerPitchDesired = 0;
