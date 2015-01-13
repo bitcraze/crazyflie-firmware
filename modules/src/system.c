@@ -56,6 +56,7 @@
 #include "mem.h"
 
 /* Private variable */
+static bool selftestPassed;
 static bool canFly;
 static bool isInit;
 
@@ -153,18 +154,27 @@ void systemTask(void *arg)
   //Start the firmware
   if(pass)
   {
+    selftestPassed = 1;
     systemStart();
     ledseqRun(SYS_LED, seq_alive);
     ledseqRun(LINK_LED, seq_testPassed);
   }
   else
   {
+    selftestPassed = 0;
     if (systemTest())
     {
       while(1)
       {
         ledseqRun(SYS_LED, seq_testPassed); //Red passed == not passed!
         vTaskDelay(M2T(2000));
+        // System can be forced to start by setting the param to 1 from the cfclient
+        if (selftestPassed)
+        {
+	        DEBUG_PRINT("Start forced.\n");
+          systemStart();
+          break;
+        }
       }
     }
     else
@@ -226,14 +236,17 @@ void vApplicationIdleHook( void )
 
 /*System parameters (mostly for test, should be removed from here) */
 PARAM_GROUP_START(cpu)
-PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, flash, 0x1FFFF7E0)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id0, 0x1FFFF7E8+0)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id1, 0x1FFFF7E8+4)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, 0x1FFFF7E8+8)
+PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS+0)
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS+4)
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
 PARAM_GROUP_STOP(cpu)
+
+PARAM_GROUP_START(system)
+PARAM_ADD(PARAM_INT8, selftestPassed, &selftestPassed)
+PARAM_GROUP_STOP(sytem)
 
 /* Loggable variables */
 LOG_GROUP_START(sys)
 LOG_ADD(LOG_INT8, canfly, &canFly)
 LOG_GROUP_STOP(sys)
-

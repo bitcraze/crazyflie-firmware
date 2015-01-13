@@ -306,6 +306,7 @@ bool imu6ManufacturingTest(void)
     else
     {
       DEBUG_PRINT("Gyro variance test [FAIL]\n");
+      testStatus = false;
     }
   }
 
