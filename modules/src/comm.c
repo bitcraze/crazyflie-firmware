@@ -36,6 +36,7 @@
 #include "log.h"
 #include "eskylink.h"
 #include "uart.h"
+#include "mem.h"
 
 static bool isInit;
 
@@ -61,6 +62,7 @@ void commInit(void)
 #endif
 
   crtpserviceInit();
+  memInit();
   logInit();
   consoleInit();
   paramInit();
@@ -87,6 +89,7 @@ bool commTest(void)
   pass &= radiolinkTest();
   #endif
   
+  pass &= memTest();
   pass &= crtpTest();
   pass &= crtpserviceTest();
   pass &= consoleTest();
