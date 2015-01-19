@@ -174,7 +174,7 @@ size: compile
 #Radio bootloader
 cload:
 ifeq ($(CLOAD), 1)
-	$(CLOAD_SCRIPT) flash cflie.bin
+	$(CLOAD_SCRIPT) flash cflie.bin stm32-fw
 else
 	@echo "Only cload build can be bootloaded. Launch build and cload with CLOAD=1"
 endif
