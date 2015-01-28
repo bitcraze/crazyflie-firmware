@@ -24,7 +24,6 @@
  * debug.h - Debugging utility functions
  */
 #include "console.h"
-#include "uart.h"
 
 #ifdef DEBUG_MODULE
 #define DEBUG_FMT(fmt) DEBUG_MODULE ": " fmt
@@ -34,14 +33,26 @@
 #define DEBUG_FMT(fmt) fmt
 #endif
 
-#ifdef DEBUG_PRINT_ON_UART
+#if defined(DEBUG_PRINT_ON_UART)
   #ifndef ENABLE_UART
     #error "Need to define ENABLE_UART to use DEBUG_PRINT_ON_UART"
   #endif
   #define DEBUG_PRINT(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+  #define DEBUG_PRINT_OS(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+#elif defined(DEBUG_PRINT_ON_SWO)
+  #define DEBUG_PRINT(fmt, ...) eprintf(ITM_SendChar, fmt, ## __VA_ARGS__)
+  #define DEBUG_PRINT_OS(fmt, ...) eprintf(ITM_SendChar, fmt, ## __VA_ARGS__)
 #else
   #define DEBUG_PRINT(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+#define DEBUG_PRINT_OS(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+  //#define DEBUG_PRINT(fmt, ...)
 #endif
+
+#ifndef PRINT_OS_DEBUG_INFO
+  #undef DEBUG_PRINT_OS
+  #define DEBUG_PRINT_OS(fmt, ...)
+#endif
+
 
 #ifdef TEST_PRINTS
   #define TEST_AND_PRINT(e, msgOK, msgFail)\

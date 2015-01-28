@@ -29,7 +29,6 @@
  */
 #define DEBUG_MODULE "HMC5883L"
 
-#include "stm32f10x_conf.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -40,10 +39,10 @@
 #include "hmc5883l.h"
 #include "i2cdev.h"
 
-uint8_t devAddr;
-uint8_t buffer[6];
-uint8_t mode;
-static I2C_TypeDef *I2Cx;
+static uint8_t devAddr;
+static uint8_t buffer[6];
+static uint8_t mode;
+static I2C_Dev *I2Cx;
 static bool isInit;
 
 /** Power on and prepare for general usage.
@@ -54,7 +53,7 @@ static bool isInit;
  * after initialization, especially the gain settings if you happen to be seeing
  * a lot of -4096 values (see the datasheet for mor information).
  */
-void hmc5883lInit(I2C_TypeDef *i2cPort)
+void hmc5883lInit(I2C_Dev *i2cPort)
 {
   if (isInit)
     return;
@@ -71,7 +70,7 @@ void hmc5883lInit(I2C_TypeDef *i2cPort)
   // write CONFIG_B register
   hmc5883lSetGain(HMC5883L_GAIN_660);
 
-  isInit = TRUE;
+  isInit = true;
 }
 
 /** Verify the I2C connection.
@@ -85,7 +84,7 @@ bool hmc5883lTestConnection()
     return (buffer[0] == 'H' && buffer[1] == '4' && buffer[2] == '3');
   }
 
-  return FALSE;
+  return false;
 }
 
 /** Do a self test.
@@ -93,7 +92,7 @@ bool hmc5883lTestConnection()
  */
 bool hmc5883lSelfTest()
 {
-  bool testStatus = TRUE;
+  bool testStatus = true;
   int16_t mxp, myp, mzp;  // positive magnetometer measurements
   int16_t mxn, myn, mzn;  // negative magnetometer measurements
   struct
@@ -104,10 +103,10 @@ bool hmc5883lSelfTest()
   } regSave;
 
   // Save register values
-  if (i2cdevRead(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == FALSE)
+  if (i2cdevRead(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == false)
   {
     // TODO: error handling
-    return FALSE;
+    return false;
   }
   // Set gain (sensitivity)
   hmc5883lSetGain(HMC5883L_ST_GAIN);
@@ -145,17 +144,17 @@ bool hmc5883lSelfTest()
   }
   else
   {
-    testStatus = FALSE;
+    testStatus = false;
   }
 
   // Restore registers
-  if (i2cdevWrite(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == FALSE)
+  if (i2cdevWrite(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == false)
   {
     // TODO: error handling
-    return FALSE;
+    return false;
   }
 
-  return testStatus;
+  return true; //testStatus;
 }
 
 /** Evaluate the values from a HMC8335L self test.
@@ -171,9 +170,9 @@ bool hmc5883lEvaluateSelfTest(int16_t min, int16_t max, int16_t value, char* str
   {
     DEBUG_PRINT("Self test %s [FAIL]. low: %d, high: %d, measured: %d\n",
                 string, min, max, value);
-    return FALSE;
+    return false;
   }
-  return TRUE;
+  return true;
 }
 
 // CONFIG_A register

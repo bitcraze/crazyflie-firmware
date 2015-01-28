@@ -31,6 +31,7 @@
 #define MS5611_H
 
 #include <stdbool.h>
+#include "i2cdev.h"
 
 // addresses of the device
 #define MS5611_ADDR_CSB_HIGH  0x76   //CBR=1 0x76 I2C address when CSB is connected to HIGH (VCC)
@@ -69,7 +70,7 @@
 #define CONST_PF2 44330.0f
 
 
-bool ms5611Init(I2C_TypeDef *i2cPort);
+bool ms5611Init(I2C_Dev *i2cPort);
 bool ms5611SelfTest(void);
 bool ms5611EvaluateSelfTest(float min, float max, float value, char* string);
 float ms5611GetPressure(uint8_t osr);

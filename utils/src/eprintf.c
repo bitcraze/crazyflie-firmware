@@ -63,11 +63,18 @@ static int itoa(putc_t putcf, int num, int base, int precision)
   int numLenght = get_int_len(num);
   int fillWithZero = 0;
 
-  if (num==0)
+  if (num == 0)
   {
     putcf('0');
     return 1;
   }
+
+  if (num < 0  && base == 10)
+  {
+    n = -num;
+    putcf('-');
+  }
+
   if (numLenght < precision)
   {
     fillWithZero = precision -numLenght;

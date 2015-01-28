@@ -25,15 +25,12 @@
  */
 
 #include "cfassert.h"
-#include "uart.h"
 #include "led.h"
 
 void assertFail(char *exp, char *file, int line)
 {
-  while (1)
-  {
-    ledSet(LED_RED, 1);
-    ledSet(LED_GREEN, 1);
-    uartPrintf("Assert failed [%s] in file %s, line %d\n", exp, file, line);
-  }
+  ledClearAll();
+  ledSet(ERR_LED1, 1);
+  ledSet(ERR_LED2, 1);
+  while (1);
 }

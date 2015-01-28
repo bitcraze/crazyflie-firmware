@@ -33,8 +33,6 @@
 #include "semphr.h"
 #include "queue.h"
 
-#include "uart.h"
-
 #include "config.h"
 
 #include "crtp.h"
@@ -52,12 +50,11 @@ static struct crtpLinkOperations nopLink = {
 
 static struct crtpLinkOperations *link = &nopLink;
 
-static xQueueHandle  tmpQueue;
-
+static xQueueHandle  txQueue;
 static xQueueHandle  rxQueue;
 
 #define CRTP_NBR_OF_PORTS 16
-#define CRTP_TX_QUEUE_SIZE 20
+#define CRTP_TX_QUEUE_SIZE 60
 #define CRTP_RX_QUEUE_SIZE 2
 
 static void crtpTxTask(void *param);
@@ -71,14 +68,17 @@ void crtpInit(void)
   if(isInit)
     return;
 
-  tmpQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
+  txQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
   rxQueue = xQueueCreate(CRTP_RX_QUEUE_SIZE, sizeof(CRTPPacket));
+
+  xTaskCreate(crtpTxTask, (const signed char * const)CRTP_TX_TASK_NAME,
+              CRTP_TX_TASK_STACKSIZE, NULL, CRTP_TX_TASK_PRI, NULL);
+  xTaskCreate(crtpRxTask, (const signed char * const)CRTP_RX_TASK_NAME,
+              CRTP_RX_TASK_STACKSIZE, NULL, CRTP_RX_TASK_PRI, NULL);
+
   /* Start Rx/Tx tasks */
-  xTaskCreate(crtpTxTask, (const signed char * const)"CRTP-Tx",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
-  xTaskCreate(crtpRxTask, (const signed char * const)"CRTP-Rx",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
-  
+
+
   isInit = true;
 }
 
@@ -111,22 +111,30 @@ int crtpReceivePacketBlock(CRTPPort portId, CRTPPacket *p)
 }
 
 
-int crtpReceivePacketWait(CRTPPort portId, CRTPPacket *p, int wait) {
+int crtpReceivePacketWait(CRTPPort portId, CRTPPacket *p, int wait)
+{
   ASSERT(queues[portId]);
   ASSERT(p);
   
   return xQueueReceive(queues[portId], p, M2T(wait));
 }
 
+int crtpGetFreeTxQueuePackets(void)
+{
+  return (CRTP_TX_QUEUE_SIZE - uxQueueMessagesWaiting(txQueue));
+}
+
 void crtpTxTask(void *param)
 {
   CRTPPacket p;
 
-  while (TRUE)
+  while (true)
   {
-    if (xQueueReceive(tmpQueue, &p, portMAX_DELAY) == pdTRUE)
+    if (xQueueReceive(txQueue, &p, portMAX_DELAY) == pdTRUE)
     {
-      link->sendPacket(&p);
+      // Keep testing, if the link changes to USB it will go though
+      while (link->sendPacket(&p) == false)
+        ;
     }
   }
 }
@@ -136,7 +144,7 @@ void crtpRxTask(void *param)
   CRTPPacket p;
   static unsigned int droppedPacket=0;
 
-  while (TRUE)
+  while (true)
   {
     if (!link->receivePacket(&p))
     {
@@ -147,7 +155,7 @@ void crtpRxTask(void *param)
       } else {
         droppedPacket++;
       }
-      
+
       if(callbacks[p.port])
         callbacks[p.port](&p);  //Dangerous?
     }
@@ -166,19 +174,19 @@ int crtpSendPacket(CRTPPacket *p)
 {
   ASSERT(p); 
 
-  return xQueueSend(tmpQueue, p, 0);
+  return xQueueSend(txQueue, p, 0);
 }
 
 int crtpSendPacketBlock(CRTPPacket *p)
 {
   ASSERT(p); 
 
-  return xQueueSend(tmpQueue, p, portMAX_DELAY);
+  return xQueueSend(txQueue, p, portMAX_DELAY);
 }
 
 int crtpReset(void)
 {
-  xQueueReset(tmpQueue);
+  xQueueReset(txQueue);
   if (link->reset) {
     link->reset();
   }

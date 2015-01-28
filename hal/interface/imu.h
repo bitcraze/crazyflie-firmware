@@ -41,7 +41,7 @@
  * The highest cut-off freq that will have any affect is fs /(2*pi).
  * E.g. fs = 350 Hz -> highest cut-off = 350/(2*pi) = 55.7 Hz -> 55 Hz
  */
-#define IMU_ACC_WANTED_LPF_CUTOFF_HZ  10
+#define IMU_ACC_WANTED_LPF_CUTOFF_HZ  4
 /**
  * Attenuation should be between 1 to 256.
  *
@@ -53,6 +53,7 @@
 
 void imu6Init(void);
 bool imu6Test(void);
+bool imu6ManufacturingTest(void);
 void imu6Read(Axis3f* gyro, Axis3f* acc);
 void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut);
 bool imu6IsCalibrated(void);

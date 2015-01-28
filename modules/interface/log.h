@@ -81,4 +81,3 @@ struct log_s {
   };
 
 #endif /* __LOG_H__ */
-

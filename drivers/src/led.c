@@ -23,67 +23,140 @@
  *
  * led.c - LED handing functions
  */
-#include "led.h"
-
-#include "motors.h"
-
 #include <stdbool.h>
-#include "stm32f10x_conf.h"
+
+#include "stm32fxxx.h"
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
 #include "task.h"
 
-static bool isInit=false;
+#include "led.h"
+#include "motors.h"
 
-static GPIO_TypeDef* led_port[] = {
+#ifdef STM32F4_DISCOVERY
+static GPIO_TypeDef* led_port[] =
+{
   [LED_GREEN] = LED_GPIO_PORT, 
   [LED_RED] = LED_GPIO_PORT,
+  [LED_ORANGE] = LED_GPIO_PORT,
+  [LED_BLUE] = LED_GPIO_PORT,
 };
-static unsigned int led_pin[] = {
+static unsigned int led_pin[] =
+{
   [LED_GREEN] = LED_GPIO_GREEN, 
   [LED_RED]   = LED_GPIO_RED,
+  [LED_ORANGE] = LED_GPIO_ORANGE,
+  [LED_BLUE]   = LED_GPIO_BLUE,
 };
-static int led_polarity[] = {
+static int led_polarity[] =
+{
   [LED_GREEN] = LED_POL_GREEN, 
   [LED_RED] = LED_POL_RED,
+  [LED_ORANGE] = LED_POL_ORANGE,
+  [LED_BLUE]   = LED_POL_BLUE,
 };
+#else
+static GPIO_TypeDef* led_port[] =
+{
+  [LED_BLUE_L] = LED_GPIO_PORT_BLUE,
+  [LED_GREEN_L] = LED_GPIO_PORT,
+  [LED_RED_L] = LED_GPIO_PORT,
+  [LED_GREEN_R] = LED_GPIO_PORT,
+  [LED_RED_R] = LED_GPIO_PORT,
+};
+static unsigned int led_pin[] =
+{
+  [LED_BLUE_L] = LED_GPIO_BLUE_L,
+  [LED_GREEN_L] = LED_GPIO_GREEN_L,
+  [LED_RED_L]   = LED_GPIO_RED_L,
+  [LED_GREEN_R] = LED_GPIO_GREEN_R,
+  [LED_RED_R]   = LED_GPIO_RED_R,
+};
+static int led_polarity[] =
+{
+  [LED_BLUE_L] = LED_POL_BLUE_L,
+  [LED_GREEN_L] = LED_POL_GREEN_L,
+  [LED_RED_L]   = LED_POL_RED_L,
+  [LED_GREEN_R] = LED_POL_GREEN_R,
+  [LED_RED_R]   = LED_POL_RED_R,
+};
+#endif
+
+static bool isInit = false;
 
 //Initialize the green led pin as output
 void ledInit()
 {
+  int i;
+
   if(isInit)
     return;
 
   GPIO_InitTypeDef GPIO_InitStructure;
 
   // Enable GPIO
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | LED_GPIO_PERIF, ENABLE);
+  RCC_AHB1PeriphClockCmd(LED_GPIO_PERIF, ENABLE);
 
-  // Remap PB4
-  GPIO_PinRemapConfig(GPIO_Remap_SWJ_NoJTRST , ENABLE);
+  for (i = 0; i < LED_NUM; i++)
+  {
+    //Initialize the LED pins as an output
+    GPIO_InitStructure.GPIO_Pin = led_pin[i];
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
+    GPIO_Init(led_port[i], &GPIO_InitStructure);
 
-  //Initialize the LED pins as an output
-  GPIO_InitStructure.GPIO_Pin = LED_GPIO_GREEN | LED_GPIO_RED;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+    //Turn off the LED:s
+    ledSet(i, 0);
+  }
 
-  GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-  //Turn off the LED:s
-  ledSet(LED_GREEN, 0);
-  ledSet(LED_RED, 0);
-  
   isInit = true;
 }
 
 bool ledTest(void)
 {
+  ledSet(LED_GREEN_L, 1);
+  ledSet(LED_GREEN_R, 1);
+  ledSet(LED_RED_L, 0);
+  ledSet(LED_RED_R, 0);
+  vTaskDelay(M2T(250));
+  ledSet(LED_GREEN_L, 0);
+  ledSet(LED_GREEN_R, 0);
+  ledSet(LED_RED_L, 1);
+  ledSet(LED_RED_R, 1);
+  vTaskDelay(M2T(250));
+
+  // LED test end
+  ledClearAll();
+  ledSet(LED_BLUE_L, 1);
+
   return isInit;
 }
 
+void ledClearAll(void)
+{
+  int i;
 
-void ledSet(led_t led, bool value) {
+  for (i = 0; i < LED_NUM; i++)
+  {
+    //Turn off the LED:s
+    ledSet(i, 0);
+  }
+}
+
+void ledSetAll(void)
+{
+  int i;
+
+  for (i = 0; i < LED_NUM; i++)
+  {
+    //Turn on the LED:s
+    ledSet(i, 1);
+  }
+}
+void ledSet(led_t led, bool value)
+{
   if (led>LED_NUM)
     return;
 

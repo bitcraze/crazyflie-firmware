@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2011-2012 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,239 +21,121 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * radiolink.c: nRF24L01 implementation of the CRTP link
+ * radiolink.c - Radio link layer
  */
 
-#include <stdbool.h>
-#include <errno.h>
+#include <string.h>
 
-#include "nrf24l01.h"
-#include "crtp.h"
-#include "configblock.h"
-#include "ledseq.h"
-
+/*FreeRtos includes*/
 #include "FreeRTOS.h"
 #include "task.h"
-#include "queue.h"
 #include "semphr.h"
+#include "queue.h"
+
+#include "config.h"
+#include "radiolink.h"
+#include "syslink.h"
+#include "crtp.h"
+#include "configblock.h"
+
+static xQueueHandle crtpPacketDelivery;
 
 static bool isInit;
 
-#define RADIO_CONNECTED_TIMEOUT   M2T(2000)
+static int radiolinkSendCRTPPacket(CRTPPacket *p);
+static int radiolinkSetEnable(bool enable);
+static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
 
-/* Synchronisation */
-xSemaphoreHandle dataRdy;
-/* Data queue */
-xQueueHandle txQueue;
-xQueueHandle rxQueue;
-
-static uint32_t lastPacketTick;
-
-//Union used to efficiently handle the packets (Private type)
-typedef union
+static struct crtpLinkOperations radiolinkOp =
 {
-  CRTPPacket crtp;
-  struct {
-    uint8_t size;
-    uint8_t data[32];
-  } __attribute__((packed)) raw;
-} RadioPacket;
-
-static struct {
-  bool enabled;
-} state;
-
-static void interruptCallback()
-{
-  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
-
-  //To unlock RadioTask
-  xSemaphoreGiveFromISR(dataRdy, &xHigherPriorityTaskWoken);
-
-  if(xHigherPriorityTaskWoken)
-    vPortYieldFromISR();
-}
-
-// 'Class' functions, called from callbacks
-static int setEnable(bool enable)
-{
-  nrfSetEnable(enable);
-  state.enabled = enable;
-
-  return 0;
-}
-
-static int sendPacket(CRTPPacket * pk)
-{
-  if (!state.enabled)
-    return ENETDOWN;
-  xQueueSend( txQueue, pk, portMAX_DELAY);
-
-  return 0;
-}
-
-static int receivePacket(CRTPPacket * pk)
-{
-  if (!state.enabled)
-    return ENETDOWN;
-
-  xQueueReceive( rxQueue, pk, portMAX_DELAY);
-
-  return 0;
-}
-
-static int reset(void)
-{
-  xQueueReset(txQueue);
-  nrfFlushTx();
-
-  return 0;
-}
-
-static bool isConnected(void)
-{
-  if ((xTaskGetTickCount() - lastPacketTick) > RADIO_CONNECTED_TIMEOUT)
-    return false;
-
-  return true;
-}
-
-static struct crtpLinkOperations radioOp =
-{
-  .setEnable         = setEnable,
-  .sendPacket        = sendPacket,
-  .receivePacket     = receivePacket,
-  .isConnected       = isConnected,
-  .reset             = reset,
+  .setEnable         = radiolinkSetEnable,
+  .sendPacket        = radiolinkSendCRTPPacket,
+  .receivePacket     = radiolinkReceiveCRTPPacket,
 };
 
-/* Radio task handles the CRTP packet transfers as well as the radio link
- * specific communications (eg. Scann and ID ports, communication error handling
- * and so much other cool things that I don't have time for it ...)
- */
-static void radiolinkTask(void * arg)
+void radiolinkInit(void)
 {
-  unsigned char dataLen;
-  static RadioPacket pk;
-
-  //Packets handling loop
-  while(1)
-  {
-    ledseqRun(LED_GREEN, seq_linkup);
-
-    xSemaphoreTake(dataRdy, portMAX_DELAY);
-    lastPacketTick = xTaskGetTickCount();
-    
-    nrfSetEnable(false);
-    
-    //Fetch all the data (Loop until the RX Fifo is NOT empty)
-    while( !(nrfRead1Reg(REG_FIFO_STATUS)&0x01) )
-    {
-      dataLen = nrfRxLength(0);
-
-      if (dataLen>32)          //If a packet has a wrong size it is dropped
-        nrfFlushRx();
-      else                     //Else, it is processed
-      {
-        //Fetch the data
-        pk.raw.size = dataLen-1;
-        nrfReadRX((char *)pk.raw.data, dataLen);
-
-        //Push it in the queue (If overflow, the packet is dropped)
-        if (!CRTP_IS_NULL_PACKET(pk.crtp))  //Don't follow the NULL packets
-          xQueueSend( rxQueue, &pk, 0);
-      }
-    }
-
-    //Push the data to send (Loop until the TX Fifo is full or there is no more data to send)
-    while( (uxQueueMessagesWaiting((xQueueHandle)txQueue) > 0) && !(nrfRead1Reg(REG_FIFO_STATUS)&0x20) )
-    {
-      xQueueReceive(txQueue, &pk, 0);
-      pk.raw.size++;
-
-      nrfWriteAck(0, (char*) pk.raw.data, pk.raw.size);
-    }
-
-    //clear the interruptions flags
-    nrfWrite1Reg(REG_STATUS, 0x70);
-    
-    //Re-enable the radio
-    nrfSetEnable(true);
-  }
-}
-
-static void radiolinkInitNRF24L01P(void)
-{
-  int i;
-  char radioAddress[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-
-  //Set the radio channel
-  nrfSetChannel(configblockGetRadioChannel());
-  //Set the radio data rate
-  nrfSetDatarate(configblockGetRadioSpeed());
-  //Set radio address
-  nrfSetAddress(0, radioAddress);
-
-  //Power the radio, Enable the DS interruption, set the radio in PRX mode
-  nrfWrite1Reg(REG_CONFIG, 0x3F);
-  vTaskDelay(M2T(2)); //Wait for the chip to be ready
-  // Enable the dynamic payload size and the ack payload for the pipe 0
-  nrfWrite1Reg(REG_FEATURE, 0x06);
-  nrfWrite1Reg(REG_DYNPD, 0x01);
-
-  //Flush RX
-  for(i=0;i<3;i++)
-    nrfFlushRx();
-  //Flush TX
-  for(i=0;i<3;i++)
-    nrfFlushTx();
-}
-
-/*
- * Public functions
- */
-
-void radiolinkInit()
-{
-  if(isInit)
+  if (isInit)
     return;
 
-  nrfInit();
+  syslinkInit();
 
-  nrfSetInterruptCallback(interruptCallback);
+  crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
 
-  vTaskSetApplicationTaskTag(0, (void*)TASK_RADIO_ID_NBR);
+  if (crtpPacketDelivery == 0)
+  {
+    return;
+  }
 
-  /* Initialise the semaphores */
-  vSemaphoreCreateBinary(dataRdy);
-
-  /* Queue init */
-  rxQueue = xQueueCreate(3, sizeof(RadioPacket));
-  txQueue = xQueueCreate(3, sizeof(RadioPacket));
-
-  radiolinkInitNRF24L01P();
-
-    /* Launch the Radio link task */
-  xTaskCreate(radiolinkTask, (const signed char * const)"RadioLink",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
+  radiolinkSetChannel(configblockGetRadioChannel());
+  radiolinkSetDatarate(configblockGetRadioSpeed());
 
   isInit = true;
 }
 
-bool radiolinkTest()
+bool radiolinkTest(void)
 {
-  return nrfTest();
+  return syslinkTest();
+}
+
+void radiolinkSetChannel(uint8_t channel)
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_RADIO_CHANNEL;
+  slp.length = 1;
+  slp.data[0] = channel;
+  syslinkSendPacket(&slp);
+}
+
+void radiolinkSetDatarate(uint8_t datarate)
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_RADIO_DATARATE;
+  slp.length = 1;
+  slp.data[0] = datarate;
+  syslinkSendPacket(&slp);
+}
+
+void radiolinkSyslinkDispatch(SyslinkPacket *slp)
+{
+  if (slp->type == SYSLINK_RADIO_RAW)
+  {
+    slp->length--; // Decrease to get CRTP size.
+    xQueueSend(crtpPacketDelivery, &slp->length, 0);
+  }
+}
+
+static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
+{
+  if (xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
+  {
+    return 0;
+  }
+
+  return -1;
+}
+
+static int radiolinkSendCRTPPacket(CRTPPacket *p)
+{
+  SyslinkPacket slp;
+
+  ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
+
+  slp.type = SYSLINK_RADIO_RAW;
+  slp.length = p->size + 1;
+  memcpy(slp.data, &p->header, p->size + 1);
+
+  return syslinkSendCRTPPacket(&slp);
 }
 
 struct crtpLinkOperations * radiolinkGetLink()
 {
-  return &radioOp;
+  return &radiolinkOp;
 }
 
-void radiolinkReInit(void)
+static int radiolinkSetEnable(bool enable)
 {
-  if (!isInit)
-    return;
-
-  radiolinkInitNRF24L01P();
+  return 0;
 }

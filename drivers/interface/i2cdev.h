@@ -31,7 +31,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "stm32f10x_i2c.h"
+#if defined (STM32F40_41xxx)
+#include "cpal.h"
+#endif
+
+//#include "stm32f10x_i2c.h"
 
 // Delay is approx 0.2us per loop @64Mhz
 #define I2CDEV_LOOPS_PER_US  5
@@ -40,10 +44,13 @@
 #define I2CDEV_I2C1_PIN_SDA GPIO_Pin_7
 #define I2CDEV_I2C1_PIN_SCL GPIO_Pin_6
 
-#define I2CDEV_I2C2_PIN_SDA GPIO_Pin_11
-#define I2CDEV_I2C2_PIN_SCL GPIO_Pin_10
-
 #define I2CDEV_NO_MEM_ADDR  0xFF
+
+#define I2C1_DEV &I2C1_DevStructure
+#define I2C2_DEV &I2C2_DevStructure
+#define I2C3_DEV &I2C3_DevStructure
+
+typedef CPAL_InitTypeDef I2C_Dev;
 
 /**
  * Read bytes from an I2C peripheral
@@ -55,15 +62,29 @@
  *
  * @return TRUE if read was successful, otherwise FALSE.
  */
-bool i2cdevRead(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                uint16_t len, uint8_t *data);
+
+/**
+ * Read bytes from an I2C peripheral with a 16bit internal reg/mem address
+ * @param I2Cx  Pointer to I2C peripheral to read from
+ * @param devAddress  The device address to read from
+ * @param memAddress  The internal address to read from, I2CDEV_NO_MEM_ADDR if none.
+ * @param len  Number of bytes to read.
+ * @param data  Pointer to a buffer to read the data to.
+ *
+ * @return TRUE if read was successful, otherwise FALSE.
+ */
+bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
+               uint16_t len, uint8_t *data);
+
 /**
  * I2C device init function.
  * @param I2Cx  Pointer to I2C peripheral to initialize.
  *
  * @return TRUE if initialization went OK otherwise FALSE.
  */
-int i2cdevInit(I2C_TypeDef *I2Cx);
+int i2cdevInit(I2C_Dev *dev);
 
 /**
  * Read a byte from an I2C peripheral
@@ -74,7 +95,7 @@ int i2cdevInit(I2C_TypeDef *I2Cx);
  *
  * @return TRUE if read was successful, otherwise FALSE.
  */
-bool i2cdevReadByte(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevReadByte(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                     uint8_t *data);
 
 /**
@@ -87,7 +108,7 @@ bool i2cdevReadByte(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if read was successful, otherwise FALSE.
  */
-bool i2cdevReadBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevReadBit(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                      uint8_t bitNum, uint8_t *data);
 /**
  * Read up to 8 bits from an I2C peripheral
@@ -100,7 +121,7 @@ bool i2cdevReadBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if read was successful, otherwise FALSE.
  */
-bool i2cdevReadBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevReadBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                     uint8_t bitStart, uint8_t length, uint8_t *data);
 
 /**
@@ -113,8 +134,21 @@ bool i2cdevReadBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if write was successful, otherwise FALSE.
  */
-bool i2cdevWrite(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                  uint16_t len, uint8_t *data);
+
+/**
+ * Write bytes to an I2C peripheral with 16bit internal reg/mem address.
+ * @param I2Cx  Pointer to I2C peripheral to write to
+ * @param devAddress  The device address to write to
+ * @param memAddress  The internal address to write to, I2CDEV_NO_MEM_ADDR if none.
+ * @param len  Number of bytes to read.
+ * @param data  Pointer to a buffer to read the data from that will be written.
+ *
+ * @return TRUE if write was successful, otherwise FALSE.
+ */
+bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
+                   uint16_t len, uint8_t *data);
 
 /**
  * Write a byte to an I2C peripheral
@@ -125,7 +159,7 @@ bool i2cdevWrite(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if write was successful, otherwise FALSE.
  */
-bool i2cdevWriteByte(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWriteByte(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                      uint8_t data);
 
 /**
@@ -138,7 +172,7 @@ bool i2cdevWriteByte(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if read was successful, otherwise FALSE.
  */
-bool i2cdevWriteBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWriteBit(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                     uint8_t bitNum, uint8_t data);
 
 /**
@@ -152,8 +186,17 @@ bool i2cdevWriteBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if read was successful, otherwise FALSE.
  */
-bool i2cdevWriteBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWriteBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                      uint8_t bitStart, uint8_t length, uint8_t data);
+
+/**
+ * Unlocks the i2c bus if needed.
+ * @param portSCL  Port of the SCL pin
+ * @param portSDA  Port of the SDA pin
+ * @param pinSCL   SCL Pin
+ * @param pinSDA   SDA Pin
+ */
+void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinSCL, uint16_t pinSDA);
 
 /**
  * I2C1 DMA interrupt handler

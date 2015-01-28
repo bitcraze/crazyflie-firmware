@@ -76,6 +76,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "debug.h"
 
 /* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
 all the API functions to use the MPU wrappers.  That should only be done when
@@ -120,7 +121,7 @@ typedef struct tskTaskControlBlock
 	unsigned portBASE_TYPE	uxPriority;			/*< The priority of the task.  0 is the lowest priority. */
 	portSTACK_TYPE			*pxStack;			/*< Points to the start of the stack. */
 	signed char				pcTaskName[ configMAX_TASK_NAME_LEN ];/*< Descriptive name given to the task when created.  Facilitates debugging only. */
-
+    size_t                  stacksize;
 	#if ( portSTACK_GROWTH > 0 )
 		portSTACK_TYPE *pxEndOfStack;			/*< Points to the end of the stack on architectures where the stack grows up from low memory. */
 	#endif
@@ -148,7 +149,6 @@ typedef struct tskTaskControlBlock
 
 } tskTCB;
 
-
 /*
  * Some kernel aware debuggers require the data the debugger needs access to to
  * be global, rather than file scope.
@@ -167,6 +167,7 @@ PRIVILEGED_DATA static xList xDelayedTaskList2;							/*< Delayed tasks (two lis
 PRIVILEGED_DATA static xList * volatile pxDelayedTaskList ;				/*< Points to the delayed task list currently being used. */
 PRIVILEGED_DATA static xList * volatile pxOverflowDelayedTaskList;		/*< Points to the delayed task list currently being used to hold tasks that have overflowed the current tick count. */
 PRIVILEGED_DATA static xList xPendingReadyList;							/*< Tasks that have been readied while the scheduler was suspended.  They will be moved to the ready queue when the scheduler is resumed. */
+PRIVILEGED_DATA static volatile unsigned portBASE_TYPE uxCurrentNumberOfTasks 	= ( unsigned portBASE_TYPE ) 0U;
 
 #if ( INCLUDE_vTaskDelete == 1 )
 
@@ -188,7 +189,7 @@ PRIVILEGED_DATA static xList xPendingReadyList;							/*< Tasks that have been r
 #endif
 
 /* File private variables. --------------------------------*/
-PRIVILEGED_DATA static volatile unsigned portBASE_TYPE uxCurrentNumberOfTasks 	= ( unsigned portBASE_TYPE ) 0U;
+
 PRIVILEGED_DATA static volatile portTickType xTickCount 						= ( portTickType ) 0U;
 PRIVILEGED_DATA static unsigned portBASE_TYPE uxTopUsedPriority	 				= tskIDLE_PRIORITY;
 PRIVILEGED_DATA static volatile unsigned portBASE_TYPE uxTopReadyPriority 		= tskIDLE_PRIORITY;
@@ -215,7 +216,57 @@ PRIVILEGED_DATA static volatile portTickType xNextTaskUnblockTime				= ( portTic
  * The value used to fill the stack of a task when the task is created.  This
  * is used purely for checking the high water mark for tasks.
  */
-#define tskSTACK_FILL_BYTE	( 0xa5U )
+#define tskSTACK_FILL_BYTE	( 0xbeU )
+
+static tskTCB* tcbs[15];
+static size_t tot_task_mem;
+static size_t tot_alloc_stack;
+static size_t tot_alloc_overhead;
+
+size_t debugPrintTCBInfo(void)
+{
+  tskTCB* tcb = pxCurrentTCB;
+  int i, lowestFreeSpace, percent, totalfree, totalstack;
+  char* b;
+
+  DEBUG_PRINT_OS("-Stack info- START\n");
+
+  totalfree = 0;
+  totalstack = 0;
+
+  for (i = 0; i < uxCurrentNumberOfTasks; i++)
+  {
+
+  tcb = tcbs[i];
+
+  b = (char *)tcb->pxStack;
+
+  while (*b == tskSTACK_FILL_BYTE)
+    b++;
+  lowestFreeSpace = b - (char*)tcb->pxStack;
+  totalfree += lowestFreeSpace;
+  percent = (lowestFreeSpace*100)/tcb->stacksize;
+  (void)percent;
+  totalstack += tcb->stacksize;
+
+#if 0
+  DEBUG_PRINT_OS("-%s-\n", tcb->pcTaskName);
+  DEBUG_PRINT_OS("Stack start %x\n", tcb->pxStack);
+  DEBUG_PRINT_OS("Stack start %x\n", tcb->pxStack+tcb->stacksize);
+  DEBUG_PRINT_OS("Stack pointer %x\n", tcb->pxTopOfStack);
+  DEBUG_PRINT_OS("Stack size %x\n", tcb->stacksize);
+  DEBUG_PRINT_OS("Hit high watermark at %x\n", b);
+#endif
+  DEBUG_PRINT_OS("%s: size=%d, lowest free=%d percent (%d bytes)\n", tcb->pcTaskName, tcb->stacksize, percent, lowestFreeSpace);
+  }
+  DEBUG_PRINT_OS("Total free bytes: %d\n", totalfree);
+  DEBUG_PRINT_OS("Total allocated stack: %d\n", totalstack);
+  DEBUG_PRINT_OS("Total allocated stackmem: %d\n", tot_alloc_stack);
+  DEBUG_PRINT_OS("Total allocated overhead: %d\n", tot_alloc_overhead);
+  DEBUG_PRINT_OS("-Stack info- END\n");
+  return (tot_alloc_stack+tot_alloc_overhead);
+}
+
 
 /*
  * Macros used by vListTask to indicate which state a task is in.
@@ -491,6 +542,7 @@ static tskTCB *prvAllocateTCBAndStack( unsigned short usStackDepth, portSTACK_TY
 
 /*lint +e956 */
 
+
 signed portBASE_TYPE xTaskGenericCreate( pdTASK_CODE pxTaskCode, const signed char * const pcName, unsigned short usStackDepth, void *pvParameters, unsigned portBASE_TYPE uxPriority, xTaskHandle *pxCreatedTask, portSTACK_TYPE *puxStackBuffer, const xMemoryRegion * const xRegions )
 {
 signed portBASE_TYPE xReturn;
@@ -502,6 +554,10 @@ tskTCB * pxNewTCB;
 	/* Allocate the memory required by the TCB and stack for the new task,
 	checking that the allocation was successful. */
 	pxNewTCB = prvAllocateTCBAndStack( usStackDepth, puxStackBuffer );
+
+	tot_task_mem += usStackDepth;
+	DEBUG_PRINT_OS("Task: %d/%d\n", usStackDepth*4, tot_task_mem*4);
+	configASSERT(pxNewTCB);
 
 	if( pxNewTCB != NULL )
 	{
@@ -528,6 +584,8 @@ tskTCB * pxNewTCB;
 		#if( portSTACK_GROWTH < 0 )
 		{
 			pxTopOfStack = pxNewTCB->pxStack + ( usStackDepth - ( unsigned short ) 1 );
+			pxNewTCB->stacksize= (usStackDepth*4) - 1;
+			tcbs[uxCurrentNumberOfTasks] =pxNewTCB;
 			pxTopOfStack = ( portSTACK_TYPE * ) ( ( ( portPOINTER_SIZE_TYPE ) pxTopOfStack ) & ( ( portPOINTER_SIZE_TYPE ) ~portBYTE_ALIGNMENT_MASK  ) );
 
 			/* Check the alignment of the calculated top of stack is correct. */
@@ -2408,14 +2466,14 @@ tskTCB *pxNewTCB;
 	/* Allocate space for the TCB.  Where the memory comes from depends on
 	the implementation of the port malloc function. */
 	pxNewTCB = ( tskTCB * ) pvPortMalloc( sizeof( tskTCB ) );
-
+	tot_alloc_overhead += sizeof( tskTCB );
 	if( pxNewTCB != NULL )
 	{
 		/* Allocate space for the stack used by the task being created.
 		The base of the stack memory stored in the TCB so the task can
 		be deleted later if required. */
 		pxNewTCB->pxStack = ( portSTACK_TYPE * ) pvPortMallocAligned( ( ( ( size_t )usStackDepth ) * sizeof( portSTACK_TYPE ) ), puxStackBuffer );
-
+		tot_alloc_stack += (( size_t )usStackDepth ) * sizeof( portSTACK_TYPE );
 		if( pxNewTCB->pxStack == NULL )
 		{
 			/* Could not allocate the stack.  Delete the allocated TCB. */

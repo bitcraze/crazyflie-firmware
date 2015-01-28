@@ -26,7 +26,9 @@
 
 #ifndef PM_H_
 #define PM_H_
+
 #include "adc.h"
+#include "syslink.h"
 
 #ifndef CRITICAL_LOW_VOLTAGE
   #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0
@@ -57,54 +59,34 @@
 #endif
 
 // Power managment pins
-#define PM_GPIO_SYSOFF_PERIF    RCC_APB2Periph_GPIOA
+#define PM_GPIO_SYSOFF_PERIF    RCC_AHBPeriph_GPIOA
 #define PM_GPIO_SYSOFF_PORT     GPIOA
 #define PM_GPIO_SYSOFF          GPIO_Pin_1
 
-#define PM_GPIO_EN1_PERIF       RCC_APB2Periph_GPIOC
+#define PM_GPIO_EN1_PERIF       RCC_AHBPeriph_GPIOC
 #define PM_GPIO_EN1_PORT        GPIOC
 #define PM_GPIO_EN1             GPIO_Pin_13
 
-#define PM_GPIO_EN2_PERIF       RCC_APB2Periph_GPIOA
+#define PM_GPIO_EN2_PERIF       RCC_AHBPeriph_GPIOA
 #define PM_GPIO_EN2_PORT        GPIOA
 #define PM_GPIO_EN2             GPIO_Pin_2
 
-#define PM_GPIO_IN_CHG_PERIF    RCC_APB2Periph_GPIOB
+#define PM_GPIO_IN_CHG_PERIF    RCC_AHBPeriph_GPIOB
 #define PM_GPIO_IN_CHG_PORT     GPIOB
 #define PM_GPIO_IN_CHG          GPIO_Pin_2
 
-#define PM_GPIO_IN_PGOOD_PERIF  RCC_APB2Periph_GPIOC
+#define PM_GPIO_IN_PGOOD_PERIF  RCC_AHBPeriph_GPIOC
 #define PM_GPIO_IN_PGOOD_PORT   GPIOC
 #define PM_GPIO_IN_PGOOD        GPIO_Pin_15
 
 // Power managment pins
-#define PM_GPIO_BAT_PERIF       RCC_APB2Periph_GPIOA
+#define PM_GPIO_BAT_PERIF       RCC_AHBPeriph_GPIOA
 #define PM_GPIO_BAT_PORT        GPIOA
 #define PM_GPIO_BAT             GPIO_Pin_3
-
-//USB pins to detect adapter or host.
-#define PM_GPIO_USB_CON_PERIF   RCC_APB2Periph_GPIOA
-#define PM_GPIO_USB_CON_PORT    GPIOA
-#define PM_GPIO_USB_CON         GPIO_Pin_0
-
-#define PM_GPIO_USB_DM_PERIF    RCC_APB2Periph_GPIOA
-#define PM_GPIO_USB_DM_PORT     GPIOA
-#define PM_GPIO_USB_DM          GPIO_Pin_11
-
-#define PM_GPIO_USB_DP_PERIF    RCC_APB2Periph_GPIOA
-#define PM_GPIO_USB_DP_PORT     GPIOA
-#define PM_GPIO_USB_DP          GPIO_Pin_12
-
-#define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0
-#define PM_BAT_CRITICAL_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec
-#define PM_BAT_LOW_VOLTAGE            3.2
-#define PM_BAT_LOW_TIMEOUT            M2T(1000 * 5) // 5 sec
 
 #define PM_BAT_DIVIDER                (float)(3.0)
 #define PM_BAT_ADC_FOR_3_VOLT         (int32_t)(((3.0 / PM_BAT_DIVIDER) / 2.8) * 4096)
 #define PM_BAT_ADC_FOR_1p2_VOLT       (int32_t)(((1.2 / PM_BAT_DIVIDER) / 2.8) * 4096)
-
-#define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * 5) // 5 min
 
 #define PM_BAT_IIR_SHIFT     8
 /**
@@ -120,6 +102,22 @@
  */
 #define PM_BAT_IIR_LPF_ATTENUATION (int)(ADC_SAMPLING_FREQ / (int)(2 * 3.1415 * PM_BAT_WANTED_LPF_CUTOFF_HZ))
 #define PM_BAT_IIR_LPF_ATT_FACTOR  (int)((1<<PM_BAT_IIR_SHIFT) / PM_BAT_IIR_LPF_ATTENUATION)
+
+typedef struct _PmSyslinkInfo
+{
+  union
+  {
+    uint8_t flags;
+    struct
+    {
+      uint8_t pgood  : 1;
+      uint8_t chg    : 1;
+      uint8_t unused : 6;
+    };
+  };
+  float vBat;
+  float chargeCurrent;
+}  __attribute__((packed)) PmSyslinkInfo;
 
 typedef enum
 {
@@ -137,13 +135,6 @@ typedef enum
   chargeMax,
 } PMChargeStates;
 
-typedef enum
-{
-  USBNone,
-  USB500mA,
-  USBWallAdapter,
-} PMUSBPower;
-
 void pmInit(void);
 
 bool pmTest(void);
@@ -154,6 +145,7 @@ bool pmTest(void);
 void pmTask(void *param);
 
 void pmSetChargeState(PMChargeStates chgState);
+void pmSyslinkUpdate(SyslinkPacket *slp);
 
 /**
  * Returns the battery voltage i volts as a float

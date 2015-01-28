@@ -169,8 +169,8 @@ void logInit(void)
   logReset();
   
   //Start the log task
-  xTaskCreate(logTask, (const signed char * const)"log",
-    configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
+  xTaskCreate(logTask, (const signed char * const)LOG_TASK_NAME,
+              LOG_TASK_STACKSIZE, NULL, LOG_TASK_PRI, NULL);
 
   isInit = true;
 }
@@ -303,7 +303,7 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
   
   for (i=0; i<LOG_MAX_BLOCKS; i++)
     if (id == logBlocks[i].id) return EEXIST;
-  
+
   for (i=0; i<LOG_MAX_BLOCKS; i++)
     if (logBlocks[i].id == BLOCK_ID_FREE) break;
   
@@ -666,7 +666,7 @@ int logGetVarId(char* group, char* name)
 {
   int i;
   char * currgroup = "";
-  
+
   for(i=0; i<logsLen; i++)
   {
     if (logs[i].type & LOG_GROUP) {
@@ -675,16 +675,16 @@ int logGetVarId(char* group, char* name)
     } if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name)))
       return i;
   }
-  
+
   return -1;
 }
 
 int logGetInt(int varid)
 {
   int valuei = 0;
-  
+
   ASSERT(varid >= 0);
-  
+
   switch(logs[varid].type)
   {
     case LOG_UINT8:
@@ -709,7 +709,7 @@ int logGetInt(int varid)
       valuei = *(float *)logs[varid].address;
       break;
   }
-  
+
   return valuei;
 }
 
@@ -719,7 +719,7 @@ float logGetFloat(int varid)
 
   if (logs[varid].type == LOG_FLOAT)
     return *(float *)logs[varid].address;
-  
+
   return logGetInt(varid);
 }
 
@@ -727,4 +727,3 @@ unsigned int logGetUint(int varid)
 {
   return (unsigned int)logGetInt(varid);
 }
-

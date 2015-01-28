@@ -17,9 +17,8 @@
  * notice must not be changed or removed and no warranty is either
  * expressed or implied by its publication or distribution.
  **********************************************************************/
- 
-#include "crc.h"
 
+#include "crc.h"
 
 /*
  * Derive parameters from the standard-specific parameters in crc.h.
@@ -43,7 +42,6 @@
 #define REFLECT_REMAINDER(X)	(X)
 #endif
 
-
 /*********************************************************************
  *
  * Function:    reflect()
@@ -56,32 +54,30 @@
  * Returns:		The reflection of the original data.
  *
  *********************************************************************/
-static unsigned long
-reflect(unsigned long data, unsigned char nBits)
+static unsigned long reflect(unsigned long data, unsigned char nBits)
 {
-	unsigned long  reflection = 0x00000000;
-	unsigned char  bit;
+  unsigned long reflection = 0x00000000;
+  unsigned char bit;
 
-	/*
-	 * Reflect the data about the center bit.
-	 */
-	for (bit = 0; bit < nBits; ++bit)
-	{
-		/*
-		 * If the LSB bit is set, set the reflection of it.
-		 */
-		if (data & 0x01)
-		{
-			reflection |= (1 << ((nBits - 1) - bit));
-		}
+  /*
+   * Reflect the data about the center bit.
+   */
+  for (bit = 0; bit < nBits; ++bit)
+  {
+    /*
+     * If the LSB bit is set, set the reflection of it.
+     */
+    if (data & 0x01)
+    {
+      reflection |= (1 << ((nBits - 1) - bit));
+    }
 
-		data = (data >> 1);
-	}
+    data = (data >> 1);
+  }
 
-	return (reflection);
+  return (reflection);
 
-}	/* reflect() */
-
+} /* reflect() */
 
 /*********************************************************************
  *
@@ -94,54 +90,51 @@ reflect(unsigned long data, unsigned char nBits)
  * Returns:		The CRC of the message.
  *
  *********************************************************************/
-crc
-crcSlow(void * datas, int nBytes)
+crc crcSlow(void * datas, int nBytes)
 {
-    crc             remainder = INITIAL_REMAINDER;
-    unsigned char * message = datas;
-	int             byte;
-	unsigned char   bit;
+  crc remainder = INITIAL_REMAINDER;
+  unsigned char * message = datas;
+  int byte;
+  unsigned char bit;
 
+  /*
+   * Perform modulo-2 division, a byte at a time.
+   */
+  for (byte = 0; byte < nBytes; ++byte)
+  {
+    /*
+     * Bring the next byte into the remainder.
+     */
+    remainder ^= (REFLECT_DATA(message[byte]) << (WIDTH - 8));
 
     /*
-     * Perform modulo-2 division, a byte at a time.
+     * Perform modulo-2 division, a bit at a time.
      */
-    for (byte = 0; byte < nBytes; ++byte)
+    for (bit = 8; bit > 0; --bit)
     {
-        /*
-         * Bring the next byte into the remainder.
-         */
-        remainder ^= (REFLECT_DATA(message[byte]) << (WIDTH - 8));
-
-        /*
-         * Perform modulo-2 division, a bit at a time.
-         */
-        for (bit = 8; bit > 0; --bit)
-        {
-            /*
-             * Try to divide the current data bit.
-             */
-            if (remainder & TOPBIT)
-            {
-                remainder = (remainder << 1) ^ POLYNOMIAL;
-            }
-            else
-            {
-                remainder = (remainder << 1);
-            }
-        }
+      /*
+       * Try to divide the current data bit.
+       */
+      if (remainder & TOPBIT)
+      {
+        remainder = (remainder << 1) ^ POLYNOMIAL;
+      }
+      else
+      {
+        remainder = (remainder << 1);
+      }
     }
+  }
 
-    /*
-     * The final remainder is the CRC result.
-     */
-    return (REFLECT_REMAINDER(remainder) ^ FINAL_XOR_VALUE);
+  /*
+   * The final remainder is the CRC result.
+   */
+  return (REFLECT_REMAINDER(remainder) ^ FINAL_XOR_VALUE);
 
-}   /* crcSlow() */
+} /* crcSlow() */
 
-
-static crc  crcTable[256];
-
+#ifdef CRC_FAST
+static crc crcTable[256];
 
 /*********************************************************************
  *
@@ -156,50 +149,47 @@ static crc  crcTable[256];
  * Returns:		None defined.
  *
  *********************************************************************/
-void
-crcInit(void)
+void crcInit(void)
 {
-    crc			   remainder;
-	int			   dividend;
-	unsigned char  bit;
+  crc remainder;
+  int dividend;
+  unsigned char bit;
 
+  /*
+   * Compute the remainder of each possible dividend.
+   */
+  for (dividend = 0; dividend < 256; ++dividend)
+  {
+    /*
+     * Start with the dividend followed by zeros.
+     */
+    remainder = dividend << (WIDTH - 8);
 
     /*
-     * Compute the remainder of each possible dividend.
+     * Perform modulo-2 division, a bit at a time.
      */
-    for (dividend = 0; dividend < 256; ++dividend)
+    for (bit = 8; bit > 0; --bit)
     {
-        /*
-         * Start with the dividend followed by zeros.
-         */
-        remainder = dividend << (WIDTH - 8);
-
-        /*
-         * Perform modulo-2 division, a bit at a time.
-         */
-        for (bit = 8; bit > 0; --bit)
-        {
-            /*
-             * Try to divide the current data bit.
-             */			
-            if (remainder & TOPBIT)
-            {
-                remainder = (remainder << 1) ^ POLYNOMIAL;
-            }
-            else
-            {
-                remainder = (remainder << 1);
-            }
-        }
-
-        /*
-         * Store the result into the table.
-         */
-        crcTable[dividend] = remainder;
+      /*
+       * Try to divide the current data bit.
+       */
+      if (remainder & TOPBIT)
+      {
+        remainder = (remainder << 1) ^ POLYNOMIAL;
+      }
+      else
+      {
+        remainder = (remainder << 1);
+      }
     }
 
-}   /* crcInit() */
+    /*
+     * Store the result into the table.
+     */
+    crcTable[dividend] = remainder;
+  }
 
+} /* crcInit() */
 
 /*********************************************************************
  *
@@ -212,27 +202,26 @@ crcInit(void)
  * Returns:		The CRC of the message.
  *
  *********************************************************************/
-crc
-crcFast(void * datas, int nBytes)
+crc crcFast(void * datas, int nBytes)
 {
-    crc	            remainder = INITIAL_REMAINDER;
-    unsigned char * message = datas;
-    unsigned char   data;
-	int             byte;
+  crc remainder = INITIAL_REMAINDER;
+  unsigned char * message = datas;
+  unsigned char data;
+  int byte;
 
+  /*
+   * Divide the message by the polynomial, a byte at a time.
+   */
+  for (byte = 0; byte < nBytes; ++byte)
+  {
+    data = REFLECT_DATA(message[byte]) ^ (remainder >> (WIDTH - 8));
+    remainder = crcTable[data] ^ (remainder << 8);
+  }
 
-    /*
-     * Divide the message by the polynomial, a byte at a time.
-     */
-    for (byte = 0; byte < nBytes; ++byte)
-    {
-        data = REFLECT_DATA(message[byte]) ^ (remainder >> (WIDTH - 8));
-  		remainder = crcTable[data] ^ (remainder << 8);
-    }
+  /*
+   * The final remainder is the CRC.
+   */
+  return (REFLECT_REMAINDER(remainder) ^ FINAL_XOR_VALUE);
 
-    /*
-     * The final remainder is the CRC.
-     */
-    return (REFLECT_REMAINDER(remainder) ^ FINAL_XOR_VALUE);
-
-}   /* crcFast() */
+} /* crcFast() */
+#endif

@@ -25,13 +25,12 @@
  */
 #include <stdbool.h>
 
-#include "stm32f10x_conf.h"
-#include "stm32f10x_exti.h"
+#include "stm32fxxx.h"
 
 #include "nvicconf.h"
 #include "nrf24l01.h"
 
-#define RADIO_GPIO_IRQ_LINE EXTI_Line9
+#define RADIO_GPIO_IRQ_LINE EXTI_Line10
 
 static bool isInit;
 
@@ -43,7 +42,7 @@ void extiInit()
 
   NVIC_InitTypeDef NVIC_InitStructure;
 
-  NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_RADIO_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -59,9 +58,9 @@ bool extiTest(void)
 
 void extiInterruptHandler(void)
 {
-  if (EXTI_GetITStatus(RADIO_GPIO_IRQ_LINE)==SET)
+  if (EXTI_GetITStatus(RADIO_GPIO_IRQ_LINE) == SET)
   {
-    nrfIsr();
     EXTI_ClearITPendingBit(RADIO_GPIO_IRQ_LINE);
+//    nrfIsr();
   }
 }
