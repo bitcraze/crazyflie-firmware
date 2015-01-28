@@ -218,14 +218,28 @@ void DONT_DISCARD UART4_IRQHandler(void)
 
 void DONT_DISCARD USART6_IRQHandler(void)
 {
+<<<<<<< HEAD
+  i2cErrorInterruptHandler(I2C1);
+}
+
+void DONT_DISCARD I2C2_EV_IRQHandler(void)
+{
+  i2cInterruptHandlerI2c2();
+}
+=======
   uartIsr();
 }
 
 extern USB_OTG_CORE_HANDLE           USB_OTG_dev;
 extern uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev);
+>>>>>>> crazyflie2
 
 void OTG_FS_IRQHandler(void)
 {
+<<<<<<< HEAD
+  i2cErrorInterruptHandler(I2C2);
+=======
   USBD_OTG_ISR_Handler (&USB_OTG_dev);
+>>>>>>> crazyflie2
 }
 
