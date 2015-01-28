@@ -131,8 +131,8 @@ void I2C_LowLevel_Init(I2C_TypeDef* I2Cx);
 void I2C_DMAConfig(I2C_TypeDef* I2Cx, uint8_t* pBuffer, uint32_t BufferSize, uint32_t Direction);
 
 void i2cInterruptHandlerI2c1(void);
-void i2cErrorInterruptHandlerI2c1(void);
-void i2cDmaInterruptHandlerI2c1(void);
+void i2cInterruptHandlerI2c2(void);
+void i2cErrorInterruptHandler(I2C_TypeDef* I2Cx);
 
 #endif
 

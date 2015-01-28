@@ -7,9 +7,14 @@
 -include config.mk
 
 ######### JTAG and environment configuration ##########
+<<<<<<< HEAD
+OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
+=======
 OPENOCD           ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
 OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
+>>>>>>> crazyflie2
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python2
 DFU_UTIL          ?= dfu-util
@@ -119,7 +124,11 @@ PROJ_OBJ += imu.o pm.o
 endif
 
 # Modules
+<<<<<<< HEAD
+PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
+=======
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o platformservice.o
+>>>>>>> crazyflie2
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += offboardctrl.o supervisor.o
 PROJ_OBJ += log.o worker.o neopixelring.o expbrd.o
