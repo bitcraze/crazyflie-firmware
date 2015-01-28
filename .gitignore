@@ -7,3 +7,8 @@ bin/*
 *~
 config.mk
 cflie.*
+
+# OS generated files #
+######################
+.DS_Store
+modules/.DS_Store
