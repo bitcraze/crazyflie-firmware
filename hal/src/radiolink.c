@@ -37,6 +37,7 @@
 #include "syslink.h"
 #include "crtp.h"
 #include "configblock.h"
+#include "log.h"
 
 static xQueueHandle crtpPacketDelivery;
 
@@ -45,6 +46,9 @@ static bool isInit;
 static int radiolinkSendCRTPPacket(CRTPPacket *p);
 static int radiolinkSetEnable(bool enable);
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
+
+//Local RSSI variable used to enable logging of RSSI values from Radio
+static uint8_t rssi;
 
 static struct crtpLinkOperations radiolinkOp =
 {
@@ -104,7 +108,11 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   {
     slp->length--; // Decrease to get CRTP size.
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-  }
+  } else if (slp->type == SYSLINK_RADIO_RSSI)
+	{
+		//Extract RSSI sample sent from radio
+		memcpy(&rssi, slp->data, sizeof(uint8_t));
+	}
 }
 
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
@@ -139,3 +147,7 @@ static int radiolinkSetEnable(bool enable)
 {
   return 0;
 }
+
+LOG_GROUP_START(radio)
+LOG_ADD(LOG_UINT8, rssi, &rssi)
+LOG_GROUP_STOP(radio)
