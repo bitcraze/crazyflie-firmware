@@ -28,7 +28,6 @@
 #define __SYSLINK_H__
 
 #include <stdbool.h>
-#include "crtp.h"
 
 #define SYSLINK_MTU 32
 
@@ -81,7 +80,5 @@ typedef enum
 void syslinkInit();
 bool syslinkTest();
 int syslinkSendPacket(SyslinkPacket *slp);
-int syslinkSendCRTPPacket(SyslinkPacket *slp);
-struct crtpLinkOperations * syslinkGetLink();
 
 #endif
