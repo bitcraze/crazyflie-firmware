@@ -47,6 +47,7 @@ static bool isInit;
 static int side=0;
 static uint32_t lastUpdate;
 static bool isInactive;
+static bool thrustLocked;
 static bool altHoldMode = false;
 static bool altHoldModeOld = false;
 
@@ -64,6 +65,7 @@ void commanderInit(void)
 
   lastUpdate = xTaskGetTickCount();
   isInactive = true;
+  thrustLocked = true;
   isInit = true;
 }
 
@@ -77,6 +79,11 @@ static void commanderCrtpCB(CRTPPacket* pk)
 {
   targetVal[!side] = *((struct CommanderCrtpValues*)pk->data);
   side = !side;
+
+  if (targetVal[side].thrust == 0) {
+    thrustLocked = false;
+  }
+
   commanderWatchdogReset();
 }
 
@@ -98,6 +105,7 @@ void commanderWatchdog(void)
     targetVal[usedSide].thrust = 0;
     altHoldMode = false; // do we need this? It would reset the target altitude upon reconnect if still hovering
     isInactive = true;
+    thrustLocked = true;
   }
   else
   {
@@ -145,7 +153,10 @@ void commanderGetThrust(uint16_t* thrust)
   int usedSide = side;
   uint16_t rawThrust = targetVal[usedSide].thrust;
 
-  if (rawThrust > MIN_THRUST)
+  if (thrustLocked) {
+    *thrust = 0;
+  }
+  else if (rawThrust > MIN_THRUST)
   {
     *thrust = rawThrust;
   }

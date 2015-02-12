@@ -25,6 +25,7 @@
  */
 
 #include <string.h>
+#include <stdint.h>
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
@@ -37,7 +38,13 @@
 #include "syslink.h"
 #include "crtp.h"
 #include "configblock.h"
+#include "log.h"
+#include "led.h"
+#include "ledseq.h"
 
+#define RADIOLINK_TX_QUEUE_SIZE (1)
+
+static xQueueHandle  txQueue;
 static xQueueHandle crtpPacketDelivery;
 
 static bool isInit;
@@ -45,6 +52,9 @@ static bool isInit;
 static int radiolinkSendCRTPPacket(CRTPPacket *p);
 static int radiolinkSetEnable(bool enable);
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
+
+//Local RSSI variable used to enable logging of RSSI values from Radio
+static uint8_t rssi;
 
 static struct crtpLinkOperations radiolinkOp =
 {
@@ -60,6 +70,7 @@ void radiolinkInit(void)
 
   syslinkInit();
 
+  txQueue = xQueueCreate(RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
   crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
 
   if (crtpPacketDelivery == 0)
@@ -100,11 +111,23 @@ void radiolinkSetDatarate(uint8_t datarate)
 
 void radiolinkSyslinkDispatch(SyslinkPacket *slp)
 {
+  static SyslinkPacket txPacket;
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-  }
+    ledseqRun(LINK_LED, seq_linkup);
+    // If a radio packet is received, one can be sent
+    if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
+    {
+      ledseqRun(LINK_DOWN_LED, seq_linkup);
+      syslinkSendPacket(&txPacket);
+    }
+  } else if (slp->type == SYSLINK_RADIO_RSSI)
+	{
+		//Extract RSSI sample sent from radio
+		memcpy(&rssi, slp->data, sizeof(uint8_t));
+	}
 }
 
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
@@ -119,7 +142,7 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
 
 static int radiolinkSendCRTPPacket(CRTPPacket *p)
 {
-  SyslinkPacket slp;
+  static SyslinkPacket slp;
 
   ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
 
@@ -127,7 +150,12 @@ static int radiolinkSendCRTPPacket(CRTPPacket *p)
   slp.length = p->size + 1;
   memcpy(slp.data, &p->header, p->size + 1);
 
-  return syslinkSendCRTPPacket(&slp);
+  if (xQueueSend(txQueue, &slp, M2T(100)) == pdTRUE)
+  {
+    return true;
+  }
+
+  return false;
 }
 
 struct crtpLinkOperations * radiolinkGetLink()
@@ -139,3 +167,7 @@ static int radiolinkSetEnable(bool enable)
 {
   return 0;
 }
+
+LOG_GROUP_START(radio)
+LOG_ADD(LOG_UINT8, rssi, &rssi)
+LOG_GROUP_STOP(radio)

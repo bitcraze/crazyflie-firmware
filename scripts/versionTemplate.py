@@ -3,7 +3,8 @@
 import sys
 import subprocess
 import os
-
+from os import path
+import re
 
 version = { }
 
@@ -50,8 +51,8 @@ if os.path.isdir(".git"):
         version['modified'] = 'true'
     else:
         version['modified'] = 'false'
-else:
-    # mercury
+elif os.path.isdir(".hg"):
+    # Mercurial
     identify = subprocess.check_output(["hg", "identify", "-nitb"])
     identify = identify.split()
     version['revision'] = identify[0]
@@ -69,6 +70,21 @@ else:
         version['modified'] = 'true'
     except Exception:
         version['modified'] = 'false'
+else:
+    sourcefolder = path.basename(path.abspath(path.dirname(__file__) + '/..'))
+    match = re.match(".*(20[0-9][0-9]\\.[0-9][0-9]?(\\.[0-9][0-9]?)?)$", sourcefolder)
+
+    version['revision'] = 'NA'
+    version['irevision0'] = "0x" + '0'
+    version['irevision1'] = "0x" + '0'
+    version['local_revision'] = 'NA'
+    version['branch'] = 'NA'
+    version['modified'] = 'true'
+
+    if match is not None:
+        version['tag'] = match.group(1)
+    else:
+        version['tag'] = 'NA'
 
 #Apply information to the file template
 infile  = open(sys.argv[1], 'r')

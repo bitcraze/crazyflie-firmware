@@ -28,7 +28,6 @@
 #define __SYSLINK_H__
 
 #include <stdbool.h>
-#include "crtp.h"
 
 #define SYSLINK_MTU 32
 
@@ -44,6 +43,7 @@
 #define SYSLINK_RADIO_CHANNEL  0x01
 #define SYSLINK_RADIO_DATARATE 0x02
 #define SYSLINK_RADIO_CONTWAVE 0x03
+#define SYSLINK_RADIO_RSSI     0x04
 
 #define SYSLINK_PM_GROUP              0x10
 #define SYSLINK_PM_SOURCE             0x10
@@ -80,7 +80,5 @@ typedef enum
 void syslinkInit();
 bool syslinkTest();
 int syslinkSendPacket(SyslinkPacket *slp);
-int syslinkSendCRTPPacket(SyslinkPacket *slp);
-struct crtpLinkOperations * syslinkGetLink();
 
 #endif

@@ -21,13 +21,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * syslink.c: nRF24L01 implementation of the CRTP link
+ * syslink.c: Communication between NRF51 and STM32
  */
 #define DEBUG_MODULE "SL"
 
 #include <stdbool.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -37,11 +38,8 @@
 #include "config.h"
 #include "debug.h"
 #include "syslink.h"
-#include "radiolink.h"
-#include "crtp.h"
 #include "uart_syslink.h"
 #include "configblock.h"
-#include "ledseq.h"
 #include "pm.h"
 #include "ow.h"
 
@@ -50,15 +48,9 @@ static uint8_t sendBuffer[64];
 
 static void syslinkRouteIncommingPacket(SyslinkPacket *slp);
 
-#define SYSLINK_TX_QUEUE_SIZE (1)
-
-static xQueueHandle  txQueue;
 static xSemaphoreHandle syslinkAccess;
-static SyslinkPacket txPacket;
 
-/* Radio task handles the CRTP packet transfers as well as the radio link
- * specific communications (eg. Scann and ID ports, communication error handling
- * and so much other cool things that I don't have time for it ...)
+/* Syslink task, handles communication between nrf and stm and dispatch messages
  */
 static void syslinkTask(void *param)
 {
@@ -74,7 +66,6 @@ static void syslinkTask(void *param)
     if (uartGetDataWithTimout(&c))
     {
       counter++;
-//      ledseqRun(LED_GREEN, seq_linkup);
       switch(rxState)
       {
         case waitForFirstStart:
@@ -157,9 +148,6 @@ static void syslinkRouteIncommingPacket(SyslinkPacket *slp)
   {
     case SYSLINK_RADIO_GROUP:
       radiolinkSyslinkDispatch(slp);
-      ledseqRun(LINK_LED, seq_linkup);
-      if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
-        syslinkSendPacket(&txPacket);
       break;
     case SYSLINK_PM_GROUP:
       pmSyslinkUpdate(slp);
@@ -182,7 +170,6 @@ void syslinkInit()
   if(isInit)
     return;
 
-  txQueue = xQueueCreate(SYSLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
   vSemaphoreCreateBinary(syslinkAccess);
 
   if (xTaskCreate(syslinkTask, (const signed char * const)SYSLINK_TASK_NAME,
@@ -195,16 +182,6 @@ void syslinkInit()
 bool syslinkTest()
 {
   return isInit;
-}
-
-int syslinkSendCRTPPacket(SyslinkPacket *slp)
-{
-  if (xQueueSend(txQueue, slp, M2T(100)) == pdTRUE)
-  {
-    return true;
-  }
-
-  return false;
 }
 
 int syslinkSendPacket(SyslinkPacket *slp)
@@ -233,7 +210,6 @@ int syslinkSendPacket(SyslinkPacket *slp)
   sendBuffer[dataSize-2] = cksum[0];
   sendBuffer[dataSize-1] = cksum[1];
 
-  ledseqRun(LINK_DOWN_LED, seq_linkup);
   uartSendDataDmaBlocking(dataSize, sendBuffer);
 
   xSemaphoreGive(syslinkAccess);

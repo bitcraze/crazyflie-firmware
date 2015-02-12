@@ -14,7 +14,7 @@ if test -d .git ; then
   if ! test -z "$(git diff-index --name-only HEAD --)" ; then
     MODIFIED=1
   fi
-else
+elif test -d .hg ; then
   # mercury
   ID=$(hg identify -nit)
 
@@ -28,6 +28,11 @@ else
   if echo -n $REV | grep +\$>/dev/null; then
     MODIFIED=1
   fi
+else
+    LOCAL="Tarball build"
+    REV=" Build from GIT tree for accurate versioning"
+    TAG=`pwd | grep -o "20[0-9][0-9]\\.[0-9][0-9]\?\(\\.[0-9][0-9]\?\)\?$"`
+    MODIFIED=1
 fi
 
 echo -n Build $LOCAL:$REV \($TAG\) 
