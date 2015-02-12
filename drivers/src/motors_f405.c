@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -87,8 +87,13 @@
 #define MOTORS_GPIO_AF_M4            GPIO_AF_TIM4
 
 /* Utils Conversion macro */
+#ifdef BRUSHLESS_MOTORCONTROLLER
+#define C_BITS_TO_16(X) (0xFFFF * (X - MOTORS_PWM_CNT_FOR_1MS) / MOTORS_PWM_CNT_FOR_1MS)
+#define C_16_TO_BITS(X) (MOTORS_PWM_CNT_FOR_1MS + ((X * MOTORS_PWM_CNT_FOR_1MS) / 0xFFFF))
+#else
 #define C_BITS_TO_16(X) ((X)<<(16-MOTORS_PWM_BITS))
 #define C_16_TO_BITS(X) ((X)>>(16-MOTORS_PWM_BITS)&((1<<MOTORS_PWM_BITS)-1))
+#endif
 
 const int MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 static bool isInit = false;
@@ -146,15 +151,16 @@ void motorsInit()
   TIM_TimeBaseInit(MOTORS_TIM_M3, &TIM_TimeBaseStructure);
   TIM_TimeBaseInit(MOTORS_TIM_M4, &TIM_TimeBaseStructure);
 
-  //PWM channels configuration (All identical!)
+  // PWM channels configuration (All identical!)
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
   TIM_OCInitStructure.TIM_Pulse = 0;
+#ifdef BRUSHLESS_MOTORCONTROLLER
+  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
+#else
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-  TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low;
-  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
-  TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Set;
+#endif
+  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
   //M1:TIM2_CH2
   TIM_OC2Init(MOTORS_TIM_M1, &TIM_OCInitStructure);
@@ -194,8 +200,8 @@ void motorsInit()
 
 bool motorsTest(void)
 {
+ #ifndef BRUSHLESS_MOTORCONTROLLER
   int i;
-
   for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
   {
     motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
@@ -203,7 +209,7 @@ bool motorsTest(void)
     motorsSetRatio(MOTORS[i], 0);
     vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
   }
-
+ #endif
   return isInit;
 }
 
@@ -298,4 +304,3 @@ void motorsTestTask(void* params)
   }
 }
 #endif
-

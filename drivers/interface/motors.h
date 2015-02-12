@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -41,14 +41,27 @@
 
 // The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
 #ifdef F10X
-#define MOTORS_PWM_BITS     9
+  #define MOTORS_PWM_BITS     9
+  #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
+  #define MOTORS_PWM_PRESCALE 0
 #else
-// The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
-// CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
-#define MOTORS_PWM_BITS     8
+  #ifdef BRUSHLESS_MOTORCONTROLLER //Crazyflie2
+    #define BLMC_PERIOD 0.0025   // 2.5ms = 400Hz
+    #define TIM_CLOCK_HZ 84000000
+    #define MOTORS_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
+    #define MOTORS_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_PWM_PRESCALE_RAW)
+    #define MOTORS_PWM_CNT_FOR_1MS    (uint32_t)(TIM_CLOCK_HZ * 0.001 / MOTORS_PWM_PRESCALE_RAW)
+    #define MOTORS_PWM_PERIOD         MOTORS_PWM_CNT_FOR_PERIOD
+    #define MOTORS_PWM_BITS           11  // Only for compatibiliy
+    #define MOTORS_PWM_PRESCALE       (uint16_t)(MOTORS_PWM_PRESCALE_RAW - 1)
+  #else
+    // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
+    // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
+    #define MOTORS_PWM_BITS     8
+    #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
+    #define MOTORS_PWM_PRESCALE 0
+  #endif
 #endif
-#define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
-#define MOTORS_PWM_PRESCALE 0
 
 
 // Motors IDs define
@@ -91,4 +104,3 @@ int motorsGetRatio(int id);
 void motorsTestTask(void* params);
 
 #endif /* __MOTORS_H__ */
-
