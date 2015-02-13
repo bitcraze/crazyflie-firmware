@@ -38,6 +38,7 @@
 #include "radiolink.h"
 #include "usblink.h"
 #include "platformservice.h"
+#include "syslink.h"
 
 static bool isInit;
 

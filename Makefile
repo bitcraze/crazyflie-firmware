@@ -9,25 +9,39 @@
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
-OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python2
 DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
-F405              ?= 1
-USE_FPU           ?= 0
 DEBUG             ?= 0
 CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
+PLATFORM					?= CF2
 
-# Now needed for SYSLINK
-CFLAGS += -DUSE_RADIOLINK_CRTP     # Set CRTP link to radio
-CFLAGS += -DENABLE_UART          # To enable the uart
+ifeq ($(PLATFORM), CF1)
+OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
+F405              ?= 1
+endif
+ifeq ($(PLATFORM), CF2)
+OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
+F405              ?= 0
+USE_FPU           ?= 0
+endif
 
 ## Flag that can be added to config.mk
 # CFLAGS += -DUSE_ESKYLINK         # Set CRTP link to E-SKY receiver
 # CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
 
+ifeq ($(PLATFORM), CF1)
+OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
+F405              ?= 1
 REV               ?= E
+endif
+ifeq ($(PLATFORM), CF2)
+# Now needed for SYSLINK
+CFLAGS += -DUSE_RADIOLINK_CRTP     # Set CRTP link to radio
+CFLAGS += -DENABLE_UART          # To enable the uart
+REV               ?= D
+endif
 
 #OpenOCD conf
 RTOS_DEBUG        ?= 0
@@ -40,19 +54,20 @@ else
 PORT = $(FREERTOS)/portable/GCC/ARM_CM3
 endif
 
-ifeq ($(F405), 1)
-LINKER_DIR = scripts/F405/linker
-ST_OBJ_DIR  = scripts/F405
-else
+ifeq ($(PLATFORM), CF1)
 LINKER_DIR = scripts/F103/linker
 ST_OBJ_DIR  = scripts/F103
+endif
+ifeq ($(PLATFORM), CF2)
+LINKER_DIR = scripts/F405/linker
+ST_OBJ_DIR  = scripts/F405
 endif
 
 STLIB = lib
 
 ################ Build configuration ##################
 # St Lib
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
 	VPATH += $(STLIB)/CMSIS/STM32F4xx/Source/
 	VPATH += $(STLIB)/STM32_CPAL_Driver/src
 	VPATH += $(STLIB)/STM32_USB_Device_Library/Core/src
@@ -63,7 +78,8 @@ endif
 
 # Should maybe be in separate file?
 -include $(ST_OBJ_DIR)/st_obj.mk
-ifeq ($(F405), 1)
+
+ifeq ($(PLATFORM), CF2)
 	ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
 	# USB obj
 	ST_OBJ += usb_core.o usb_dcd_int.o usb_dcd.o
@@ -82,7 +98,7 @@ VPATH += $(FREERTOS)
 FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 
 # Crazyflie
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
 	VPATH += init hal/src modules/src utils/src drivers/src platform/cf2
 else
 	VPATH += init hal/src modules/src utils/src drivers/src
@@ -92,7 +108,7 @@ endif
 ############### Source files configuration ################
 
 # Init
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
 	PROJ_OBJ = main.o platform_cf2.o
 else
 	PROJ_OBJ = main.o
@@ -101,7 +117,7 @@ endif
 # Drivers
 PROJ_OBJ += led.o exti.o nvic.o  
 
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
   PROJ_OBJ += mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
   PROJ_OBJ += uart_syslink.o swd.o
   # USB Files
@@ -112,7 +128,7 @@ endif
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o syslink.o
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
 PROJ_OBJ += imu_cf2.o pm_f405.o radiolink.o ow.o
 else
 PROJ_OBJ += imu.o pm.o
@@ -123,9 +139,10 @@ PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o platform
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o neopixelring.o expbrd.o
 
-
 # Expansion boards
+ifeq ($(PLATFORM), CF2)
 PROJ_OBJ += exptest.o
+endif
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o configblockeeprom.o eprintf.o crc.o fp16.o debug.o
@@ -151,7 +168,7 @@ INCLUDES+= -Iconfig -Ihal/interface -Imodules/interface
 INCLUDES+= -Iutils/interface -Idrivers/interface -Iplatform
 INCLUDES+= -I$(STLIB)/CMSIS/Include
 
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
 INCLUDES+= -I$(STLIB)/STM32F4xx_StdPeriph_Driver/inc
 INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/inc
 INCLUDES+= -I$(STLIB)/STM32_USB_Device_Library/Core/inc
@@ -169,7 +186,7 @@ PROCESSOR = -mcpu=cortex-m4 -mthumb
 endif
 
 #Flags required by the ST library
-ifeq ($(F405), 1)
+ifeq ($(PLATFORM), CF2)
 STFLAGS = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
 else
 STFLAGS = -DSTM32F10X_MD -DHSE_VALUE=16000000 -include stm32f10x_conf.h
