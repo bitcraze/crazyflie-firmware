@@ -41,6 +41,22 @@
 #include "ledseq.h"
 #include "commander.h"
 
+typedef struct _PmSyslinkInfo
+{
+  union
+  {
+    uint8_t flags;
+    struct
+    {
+      uint8_t pgood  : 1;
+      uint8_t chg    : 1;
+      uint8_t unused : 6;
+    };
+  };
+  float vBat;
+  float chargeCurrent;
+}  __attribute__((packed)) PmSyslinkInfo;
+
 static float    batteryVoltage;
 static float    batteryVoltageMin = 6.0;
 static float    batteryVoltageMax = 0.0;
@@ -140,7 +156,7 @@ static void pmSetBatteryVoltage(float voltage)
 static void pmSystemShutdown(void)
 {
 #ifdef ACTIVATE_AUTO_SHUTDOWN
-  GPIO_SetBits(PM_GPIO_SYSOFF_PORT, PM_GPIO_SYSOFF);
+//TODO: Implement syslink call to shutdown
 #endif
 }
 
@@ -303,8 +319,8 @@ void pmTask(void *param)
           uint32_t onTime;
 
           onTime = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) *
-                   (LEDSEQ_CHARGE_CYCLE_TIME / 10);
-          ledseqSetTimes(seq_charging, onTime, LEDSEQ_CHARGE_CYCLE_TIME - onTime);
+                   (LEDSEQ_CHARGE_CYCLE_TIME_500MA / 10);
+          ledseqSetTimes(seq_charging, onTime, LEDSEQ_CHARGE_CYCLE_TIME_500MA - onTime);
         }
         break;
       case lowPower:

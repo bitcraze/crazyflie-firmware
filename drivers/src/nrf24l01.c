@@ -48,38 +48,30 @@
 /* Defines for the SPI and GPIO pins used to drive the SPI Flash */
 #define RADIO_GPIO_CS             GPIO_Pin_12
 #define RADIO_GPIO_CS_PORT        GPIOB
-#define RADIO_GPIO_CS_PERIF       RCC_AHBPeriph_GPIOB
+#define RADIO_GPIO_CS_PERIF       RCC_APB2Periph_GPIOB
 
 #define RADIO_GPIO_CLK            GPIO_Pin_8
 #define RADIO_GPIO_CLK_PORT       GPIOA
-#define RADIO_GPIO_CLK_PERIF      RCC_AHBPeriph_GPIOA
-#define RADIO_GPIO_AF_CLK         GPIO_AF_0
-#define RADIO_GPIO_AF_CLK_PIN     GPIO_PinSource8
+#define RADIO_GPIO_CLK_PERIF      RCC_APB2Periph_GPIOA
 
-#define RADIO_GPIO_CE             GPIO_Pin_11
-#define RADIO_GPIO_CE_PORT        GPIOB
-#define RADIO_GPIO_CE_PERIF       RCC_AHBPeriph_GPIOB
+#define RADIO_GPIO_CE             GPIO_Pin_10
+#define RADIO_GPIO_CE_PORT        GPIOA
+#define RADIO_GPIO_CE_PERIF       RCC_APB2Periph_GPIOA
 
-#define RADIO_GPIO_IRQ            GPIO_Pin_10
-#define RADIO_GPIO_IRQ_PORT       GPIOB
-#define RADIO_GPIO_IRQ_PERIF      RCC_AHBPeriph_GPIOB
-#define RADIO_GPIO_IRQ_SRC_PORT   EXTI_PortSourceGPIOB
-#define RADIO_GPIO_IRQ_SRC        EXTI_PinSource10
-#define RADIO_GPIO_IRQ_LINE       EXTI_Line10
+#define RADIO_GPIO_IRQ            GPIO_Pin_9
+#define RADIO_GPIO_IRQ_PORT       GPIOA
+#define RADIO_GPIO_IRQ_PERIF      RCC_APB2Periph_GPIOA
+#define RADIO_GPIO_IRQ_SRC_PORT   GPIO_PortSourceGPIOA
+#define RADIO_GPIO_IRQ_SRC        GPIO_PinSource9
+#define RADIO_GPIO_IRQ_LINE       EXTI_Line9
 
 #define RADIO_SPI                 SPI2
 #define RADIO_SPI_CLK             RCC_APB1Periph_SPI2
 #define RADIO_GPIO_SPI_PORT       GPIOB
-#define RADIO_GPIO_SPI_CLK        RCC_AHBPeriph_GPIOB
+#define RADIO_GPIO_SPI_CLK        RCC_APB2Periph_GPIOB
 #define RADIO_GPIO_SPI_SCK        GPIO_Pin_13
 #define RADIO_GPIO_SPI_MISO       GPIO_Pin_14
 #define RADIO_GPIO_SPI_MOSI       GPIO_Pin_15
-
-#define RADIO_GPIO_AF_SPI             GPIO_AF_5
-#define RADIO_GPIO_AF_SPI_SCK_PIN     GPIO_PinSource13
-#define RADIO_GPIO_AF_SPI_MISO_PIN    GPIO_PinSource14
-#define RADIO_GPIO_AF_SPI_MOSI_PIN    GPIO_PinSource15
-
 
 #define DUMMY_BYTE    0xA5
 
@@ -116,14 +108,14 @@ static char spiSendByte(char byte)
   /* Loop while DR register in not emplty */
   while (SPI_I2S_GetFlagStatus(RADIO_SPI, SPI_I2S_FLAG_TXE) == RESET);
 
-  /* Send byte through the SPI peripheral */
-  SPI_SendData(RADIO_SPI, byte);
+  /* Send byte through the SPI1 peripheral */
+  SPI_I2S_SendData(RADIO_SPI, byte);
 
   /* Wait to receive a byte */
   while (SPI_I2S_GetFlagStatus(RADIO_SPI, SPI_I2S_FLAG_RXNE) == RESET);
 
   /* Return the byte read from the SPI bus */
-  return SPI_ReceiveData(RADIO_SPI);
+  return SPI_I2S_ReceiveData(RADIO_SPI);
 }
 
 static char spiReceiveByte()
@@ -353,11 +345,6 @@ unsigned char nrfGetStatus()
   return nrfNop();
 }
 
-bool nrfInterruptActive(void)
-{
-  return (GPIO_ReadInputDataBit(RADIO_GPIO_IRQ_PORT, RADIO_GPIO_IRQ) == Bit_RESET);
-}
-
 /* Initialisation */
 void nrfInit(void)
 {
@@ -372,54 +359,41 @@ void nrfInit(void)
   extiInit();
 
   /* Enable SPI and GPIO clocks */
-  RCC_AHBPeriphClockCmd(RADIO_GPIO_SPI_CLK | RADIO_GPIO_CS_PERIF | RADIO_GPIO_CLK_PERIF |
+  RCC_APB2PeriphClockCmd(RADIO_GPIO_SPI_CLK | RADIO_GPIO_CS_PERIF | 
                          RADIO_GPIO_CE_PERIF | RADIO_GPIO_IRQ_PERIF, ENABLE);
 
   /* Enable SPI and GPIO clocks */
   RCC_APB1PeriphClockCmd(RADIO_SPI_CLK, ENABLE);
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-
 
   /* Configure main clock */
   GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_CLK;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_Level_3;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(RADIO_GPIO_CLK_PORT, &GPIO_InitStructure);
 
-  /* Configure the interruption (EXTI Source) */
-  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_IRQ;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_Level_3;
-  GPIO_Init(RADIO_GPIO_IRQ_PORT, &GPIO_InitStructure);
+  /* Configure SPI pins: SCK, MISO and MOSI */
+  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_SPI_SCK |  RADIO_GPIO_SPI_MOSI;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(RADIO_GPIO_SPI_PORT, &GPIO_InitStructure);
 
-  /* Configure I/O for the Chip Enable */
-  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_CE;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_Level_3;
-  GPIO_Init(RADIO_GPIO_CE_PORT, &GPIO_InitStructure);
+  //* Configure MISO */
+  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_SPI_MISO;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(RADIO_GPIO_SPI_PORT, &GPIO_InitStructure);
 
   /* Configure I/O for the Chip select */
   GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_CS;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_Level_3;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_Init(RADIO_GPIO_CS_PORT, &GPIO_InitStructure);
 
-  /* Configure SPI pins: SCK and MOSI */
-  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_SPI_SCK |  RADIO_GPIO_SPI_MOSI;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_Level_3;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(RADIO_GPIO_SPI_PORT, &GPIO_InitStructure);
-  //* Configure MISO */
-  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_SPI_MISO;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_Init(RADIO_GPIO_SPI_PORT, &GPIO_InitStructure);
+  /* Configure the interruption (EXTI Source) */
+  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_IRQ;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(RADIO_GPIO_IRQ_PORT, &GPIO_InitStructure);
 
-  SYSCFG_EXTILineConfig(RADIO_GPIO_IRQ_SRC_PORT, RADIO_GPIO_IRQ_SRC);
+  GPIO_EXTILineConfig(RADIO_GPIO_IRQ_SRC_PORT, RADIO_GPIO_IRQ_SRC);
   EXTI_InitStructure.EXTI_Line = RADIO_GPIO_IRQ_LINE;
   EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
@@ -427,19 +401,18 @@ void nrfInit(void)
   EXTI_Init(&EXTI_InitStructure);
 
   // Clock the radio with 16MHz
-  GPIO_PinAFConfig(RADIO_GPIO_CLK_PORT, RADIO_GPIO_AF_CLK_PIN,  RADIO_GPIO_AF_CLK);
-  RCC_MCOConfig(RCC_MCOSource_HSE);
+  RCC_MCOConfig(RCC_MCO_HSE);
 
   /* disable the chip select */
   RADIO_DIS_CS();
 
+  /* Configure I/O for the Chip Enable */
+  GPIO_InitStructure.GPIO_Pin = RADIO_GPIO_CE;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+  GPIO_Init(RADIO_GPIO_CE_PORT, &GPIO_InitStructure);
+
   /* disable the chip enable */
   RADIO_DIS_CE();
-
-  //Map SPI to alternate functions
-  GPIO_PinAFConfig(RADIO_GPIO_SPI_PORT, RADIO_GPIO_AF_SPI_SCK_PIN,  RADIO_GPIO_AF_SPI);
-  GPIO_PinAFConfig(RADIO_GPIO_SPI_PORT, RADIO_GPIO_AF_SPI_MISO_PIN, RADIO_GPIO_AF_SPI);
-  GPIO_PinAFConfig(RADIO_GPIO_SPI_PORT, RADIO_GPIO_AF_SPI_MOSI_PIN, RADIO_GPIO_AF_SPI);
 
   /* SPI configuration */
   SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
@@ -452,8 +425,6 @@ void nrfInit(void)
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(RADIO_SPI, &SPI_InitStructure);
-
-  SPI_RxFIFOThresholdConfig(RADIO_SPI, SPI_RxFIFOThreshold_QF);
 
   /* Enable the SPI  */
   SPI_Cmd(RADIO_SPI, ENABLE);

@@ -45,7 +45,8 @@
 #include <stdbool.h>
 #include <led.h>
 
-#define LEDSEQ_CHARGE_CYCLE_TIME  1000
+#define LEDSEQ_CHARGE_CYCLE_TIME_500MA  1000
+#define LEDSEQ_CHARGE_CYCLE_TIME_MAX    500
 //Led sequence action
 #define LEDSEQ_WAITMS(X) (X)
 #define LEDSEQ_STOP      -1
@@ -73,6 +74,7 @@ extern ledseq_t seq_linkup[];
 extern ledseq_t seq_altHold[];
 extern ledseq_t seq_charged[];
 extern ledseq_t seq_charging[];
+extern ledseq_t seq_chargingMax[];
 extern ledseq_t seq_bootloader[];
 extern ledseq_t seq_testPassed[];
 

@@ -88,7 +88,7 @@ static int sendPacket(CRTPPacket * pk)
 {
   if (!state.enabled)
     return ENETDOWN;
-  xQueueSend( txQueue, pk, 0);
+  xQueueSend( txQueue, pk, portMAX_DELAY);
 
   return 0;
 }
@@ -142,12 +142,11 @@ static void nrf24linkTask(void * arg)
   {
     ledseqRun(LED_GREEN, seq_linkup);
 
-    while (!nrfInterruptActive())
-    {
-      xSemaphoreTake(dataRdy, M2T(10));
-    }
+    xSemaphoreTake(dataRdy, portMAX_DELAY);
     lastPacketTick = xTaskGetTickCount();
-
+    
+    nrfSetEnable(false);
+    
     //Fetch all the data (Loop until the RX Fifo is NOT empty)
     while( !(nrfRead1Reg(REG_FIFO_STATUS)&0x01) )
     {
@@ -178,6 +177,9 @@ static void nrf24linkTask(void * arg)
 
     //clear the interruptions flags
     nrfWrite1Reg(REG_STATUS, 0x70);
+    
+    //Re-enable the radio
+    nrfSetEnable(true);
   }
 }
 
@@ -219,6 +221,8 @@ void nrf24linkInit()
 
   nrfInit();
 
+  nrfSetInterruptCallback(interruptCallback);
+
   vTaskSetApplicationTaskTag(0, (void*)TASK_RADIO_ID_NBR);
 
   /* Initialise the semaphores */
@@ -227,8 +231,6 @@ void nrf24linkInit()
   /* Queue init */
   rxQueue = xQueueCreate(3, sizeof(RadioPacket));
   txQueue = xQueueCreate(3, sizeof(RadioPacket));
-
-  nrfSetInterruptCallback(interruptCallback);
 
   nrf24linkInitNRF24L01P();
 

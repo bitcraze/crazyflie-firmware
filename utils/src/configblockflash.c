@@ -78,7 +78,7 @@ int configblockInit(void)
   return 0;
 }
 
-int configblockTest(void)
+bool configblockTest(void)
 {
   return true;
 }
@@ -89,7 +89,7 @@ int configblockGetRadioChannel(void)
   if (cb_ok)
     return configblock->radioChannel;
   else
-    return RADIO_CHANEL;
+    return RADIO_CHANNEL;
 }
 
 int configblockGetRadioSpeed(void)

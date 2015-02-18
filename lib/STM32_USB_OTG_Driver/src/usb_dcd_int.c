@@ -206,6 +206,14 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
 * @param  pdev: device instance
 * @retval status
 */
+
+void  __attribute__((used)) OTG_FS_IRQHandler(void)
+{
+  extern USB_OTG_CORE_HANDLE USB_OTG_dev;
+
+  USBD_OTG_ISR_Handler (&USB_OTG_dev);
+}
+
 uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
 {
   USB_OTG_GINTSTS_TypeDef  gintr_status;

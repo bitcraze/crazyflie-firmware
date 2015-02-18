@@ -28,7 +28,7 @@
 
 #include <math.h>
 
-#include "stm32fxxx.h"
+#include "stm32f10x_conf.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -43,6 +43,7 @@
 #include "ledseq.h"
 #include "uart.h"
 #include "param.h"
+#include "log.h"
 
 #define IMU_ENABLE_MAG_HMC5883
 #define IMU_ENABLE_PRESSURE_MS5611
@@ -63,12 +64,16 @@
 #define GYRO_NBR_OF_AXES            3
 #define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
 
-#define IMU_NBR_OF_BIAS_SAMPLES  32
+#define IMU_NBR_OF_BIAS_SAMPLES  128
 
 #define GYRO_VARIANCE_BASE        4000
 #define GYRO_VARIANCE_THRESHOLD_X (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Y (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
+
+#define MAG_GAUSS_PER_LSB_CFG    HMC5883L_GAIN_660
+#define MAG_GAUSS_PER_LSB        660.0
+
 
 typedef struct
 {
@@ -79,30 +84,28 @@ typedef struct
   Axis3i16   buffer[IMU_NBR_OF_BIAS_SAMPLES];
 } BiasObj;
 
-BiasObj    gyroBias;
-#ifdef IMU_TAKE_ACCEL_BIAS
-BiasObj    accelBias;
-#endif
-int32_t    varianceSampleTime;
-Axis3i16   gyroMpu;
-Axis3i16   accelMpu;
-Axis3i16   accelLPF;
-Axis3i16   accelLPFAligned;
-Axis3i16   mag;
-Axis3i32   accelStoredFilterValues;
-uint8_t    imuAccLpfAttFactor;
-static bool isHmc5883lPresent;
-static bool isMs5611Present;
+static BiasObj    gyroBias;
+static BiasObj    accelBias;
+static int32_t    varianceSampleTime;
+static Axis3i16   gyroMpu;
+static Axis3i16   accelMpu;
+static Axis3i16   accelLPF;
+static Axis3i16   accelLPFAligned;
+static Axis3i16   mag;
+static Axis3i32   accelStoredFilterValues;
+static uint8_t    imuAccLpfAttFactor;
+static bool       isHmc5883lPresent;
+static bool       isMs5611Present;
 
 static bool isMpu6050TestPassed;
 static bool isHmc5883lTestPassed;
 static bool isMs5611TestPassed;
 
 // Pre-calculated values for accelerometer alignment
-float cosPitch;
-float sinPitch;
-float cosRoll;
-float sinRoll;
+static float cosPitch;
+static float sinPitch;
+static float cosRoll;
+static float sinRoll;
 
 /**
  * MPU6050 selt test function. If the chip is moved to much during the self test
@@ -133,8 +136,8 @@ void imu6Init(void)
   // Wait for sensors to startup
   while (xTaskGetTickCount() < M2T(IMU_STARTUP_TIME_MS));
 
-  i2cdevInit(I2C3_DEV);
-  mpu6050Init(I2C3_DEV);
+  i2cdevInit(I2C1_DEV);
+  mpu6050Init(I2C1_DEV);
   if (mpu6050TestConnection() == true)
   {
     DEBUG_PRINT("MPU6050 I2C connection [OK].\n");
@@ -173,15 +176,15 @@ void imu6Init(void)
   // Set output rate (1): 1000 / (1 + 1) = 500Hz
   mpu6050SetRate(1);
   // Set digital low-pass bandwidth
-  mpu6050SetDLPFMode(MPU6050_DLPF_BW_188);
+  mpu6050SetDLPFMode(MPU6050_DLPF_BW_98);
 #endif
 
 
 #ifdef IMU_ENABLE_MAG_HMC5883
-  hmc5883lInit(I2C3_DEV);
-  if (hmc5883lTestConnection() == true)
-  {
-    isHmc5883lPresent = true;
+  hmc5883lInit(I2C1_DEV);
+	if (hmc5883lTestConnection() == true)
+	{
+		isHmc5883lPresent = true;
     DEBUG_PRINT("HMC5883 I2C connection [OK].\n");
   }
   else
@@ -191,7 +194,7 @@ void imu6Init(void)
 #endif
 
 #ifdef IMU_ENABLE_PRESSURE_MS5611
-  if (ms5611Init(I2C3_DEV) == true)
+  if (ms5611Init(I2C1_DEV) == true)
   {
     isMs5611Present = true;
     DEBUG_PRINT("MS5611 I2C connection [OK].\n");
@@ -203,9 +206,7 @@ void imu6Init(void)
 #endif
 
   imuBiasInit(&gyroBias);
-#ifdef IMU_TAKE_ACCEL_BIAS
   imuBiasInit(&accelBias);
-#endif
   varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
   imuAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
 
@@ -226,7 +227,6 @@ bool imu6Test(void)
     DEBUG_PRINT("Uninitialized");
     testStatus = false;
   }
-#if defined (IMU_ENABLE_MAG_HMC5883) && defined (IMU_ENABLE_PRESSURE_MS5611)
   // Test for CF 10-DOF variant with none responding sensor
   if((isHmc5883lPresent && !isMs5611Present) ||
      (!isHmc5883lPresent && isMs5611Present))
@@ -234,26 +234,22 @@ bool imu6Test(void)
     DEBUG_PRINT("HMC5883L or MS5611 is not responding");
     testStatus = false;
   }
-#endif
   if (testStatus)
   {
     isMpu6050TestPassed = mpu6050SelfTest();
     testStatus = isMpu6050TestPassed ;
   }
-#ifdef IMU_ENABLE_MAG_HMC5883
   if (testStatus && isHmc5883lPresent)
   {
     isHmc5883lTestPassed = hmc5883lSelfTest();
     testStatus = isHmc5883lTestPassed;
   }
-#endif
-#ifdef IMU_ENABLE_PRESSURE_MS5611
   if (testStatus && isMs5611Present)
   {
     isMs5611TestPassed = ms5611SelfTest();
     testStatus = isMs5611TestPassed;
   }
-#endif
+
   return testStatus;
 }
 
@@ -263,12 +259,10 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
   mpu6050GetMotion6(&accelMpu.x, &accelMpu.y, &accelMpu.z, &gyroMpu.x, &gyroMpu.y, &gyroMpu.z);
 
   imuAddBiasValue(&gyroBias, &gyroMpu);
-#ifdef IMU_TAKE_ACCEL_BIAS
   if (!accelBias.isBiasValueFound)
   {
     imuAddBiasValue(&accelBias, &accelMpu);
   }
-#endif
   if (!gyroBias.isBiasValueFound)
   {
     imuFindBiasValue(&gyroBias);
@@ -296,7 +290,6 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
   }
 #endif
 
-
   imuAccIIRLPFilter(&accelMpu, &accelLPF, &accelStoredFilterValues,
                     (int32_t)imuAccLpfAttFactor);
 
@@ -306,35 +299,28 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
   gyroOut->x = (gyroMpu.x - gyroBias.bias.x) * IMU_DEG_PER_LSB_CFG;
   gyroOut->y = (gyroMpu.y - gyroBias.bias.y) * IMU_DEG_PER_LSB_CFG;
   gyroOut->z = (gyroMpu.z - gyroBias.bias.z) * IMU_DEG_PER_LSB_CFG;
-#ifdef IMU_TAKE_ACCEL_BIAS
   accOut->x = (accelLPFAligned.x - accelBias.bias.x) * IMU_G_PER_LSB_CFG;
   accOut->y = (accelLPFAligned.y - accelBias.bias.y) * IMU_G_PER_LSB_CFG;
   accOut->z = (accelLPFAligned.z - accelBias.bias.z) * IMU_G_PER_LSB_CFG;
-#else
-  accOut->x = (accelLPFAligned.x) * IMU_G_PER_LSB_CFG;
-  accOut->y = (accelLPFAligned.y) * IMU_G_PER_LSB_CFG;
-  accOut->z = (accelLPFAligned.z) * IMU_G_PER_LSB_CFG;
-#endif
-//  uartSendData(sizeof(Axis3f), (uint8_t*)gyroOut);
-//  uartSendData(sizeof(Axis3f), (uint8_t*)accOut);
+}
 
-#if 0
-  static uint32_t count = 0;
-  if (++count >= 19)
+void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut)
+{
+  imu6Read(gyroOut, accOut);
+
+  if (isHmc5883lPresent)
   {
-    count = 0;
-    uartPrintf("%d, %d, %d, %d, %d, %d, %d, %d, %d\n",
-                (int32_t)(gyroOut->x * 10),
-                (int32_t)(gyroOut->y * 10),
-                (int32_t)(gyroOut->z * 10),
-                (int32_t)(accOut->x * 1000),
-                (int32_t)(accOut->y * 1000),
-                (int32_t)(accOut->z * 1000),
-                mag.x,
-                mag.y,
-                mag.z);
+    hmc5883lGetHeading(&mag.x, &mag.y, &mag.z);
+    magOut->x = (float)mag.x / MAG_GAUSS_PER_LSB;
+    magOut->y = (float)mag.y / MAG_GAUSS_PER_LSB;
+    magOut->z = (float)mag.z / MAG_GAUSS_PER_LSB;
   }
-#endif
+  else
+  {
+    magOut->x = 0.0;
+    magOut->y = 0.0;
+    magOut->z = 0.0;
+  }
 }
 
 bool imu6IsCalibrated(void)

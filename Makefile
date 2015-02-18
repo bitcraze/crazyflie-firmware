@@ -15,7 +15,7 @@ DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
 DEBUG             ?= 0
 CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
-PLATFORM					?= CF2
+PLATFORM					?= CF1
 
 ifeq ($(PLATFORM), CF1)
 OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
@@ -32,9 +32,6 @@ endif
 # CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
 
 ifeq ($(PLATFORM), CF1)
-OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
-F405              ?= 1
-REV               ?= E
 endif
 ifeq ($(PLATFORM), CF2)
 # Now needed for SYSLINK
@@ -67,6 +64,12 @@ STLIB = lib
 
 ################ Build configuration ##################
 # St Lib
+ifeq ($(PLATFORM), CF1)
+	VPATH += $(STLIB)/CMSIS/Core/CM3/startup/gcc
+	VPATH += $(STLIB)/STM32_CPAL_Driver/src
+	VPATH += $(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
+	CRT0=startup_stm32f10x_md.o
+endif
 ifeq ($(PLATFORM), CF2)
 	VPATH += $(STLIB)/CMSIS/STM32F4xx/Source/
 	VPATH += $(STLIB)/STM32_CPAL_Driver/src
@@ -79,6 +82,9 @@ endif
 # Should maybe be in separate file?
 -include $(ST_OBJ_DIR)/st_obj.mk
 
+ifeq ($(PLATFORM), CF1)
+	ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
+endif
 ifeq ($(PLATFORM), CF2)
 	ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
 	# USB obj
@@ -101,7 +107,7 @@ FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 ifeq ($(PLATFORM), CF2)
 	VPATH += init hal/src modules/src utils/src drivers/src platform/cf2
 else
-	VPATH += init hal/src modules/src utils/src drivers/src
+	VPATH += init hal/src modules/src utils/src drivers/src platform/cf1
 endif
 
 
@@ -111,33 +117,36 @@ endif
 ifeq ($(PLATFORM), CF2)
 	PROJ_OBJ = main.o platform_cf2.o
 else
-	PROJ_OBJ = main.o
+	PROJ_OBJ = main.o platform_cf1.o
 endif
 
 # Drivers
-PROJ_OBJ += led.o exti.o nvic.o  
+PROJ_OBJ += exti.o nvic.o  
 
 ifeq ($(PLATFORM), CF2)
-  PROJ_OBJ += mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
+  PROJ_OBJ += led_f405.o mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
   PROJ_OBJ += uart_syslink.o swd.o
   # USB Files
   PROJ_OBJ += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
 else
-  PROJ_OBJ += mpu6050.o motors.o hmc5883l.o ms5611.o
+  PROJ_OBJ += led_f103.o i2cdev_f405.o uart.o adc_f103.o mpu6050.o motors_f103.o hmc5883l.o ms5611.o nrf24l01.o
 endif
 
 # Hal
-PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o syslink.o
+PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o
 ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += imu_cf2.o pm_f405.o radiolink.o ow.o
+PROJ_OBJ += imu_cf2.o pm_f405.o syslink.o radiolink.o ow.o
 else
-PROJ_OBJ += imu.o pm.o
+PROJ_OBJ += imu_cf1.o pm_f103.o nrf24link.o
 endif
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o platformservice.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
-PROJ_OBJ += log.o worker.o neopixelring.o expbrd.o
+PROJ_OBJ += log.o worker.o
+ifeq ($(PLATFORM), CF2)
+PROJ_OBJ += neopixelring.o expbrd.o
+endif
 
 # Expansion boards
 ifeq ($(PLATFORM), CF2)
@@ -145,9 +154,13 @@ PROJ_OBJ += exptest.o
 endif
 
 # Utilities
-PROJ_OBJ += filter.o cpuid.o cfassert.o configblockeeprom.o eprintf.o crc.o fp16.o debug.o
+ifeq ($(PLATFORM), CF2)
+PROJ_OBJ += configblockeeprom.o
+else
+PROJ_OBJ += configblockflash.o
+endif
+PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
 PROJ_OBJ += version.o
-
 
 OBJ = $(CRT0) $(FREERTOS_OBJ) $(PORT_OBJ) $(ST_OBJ) $(PROJ_OBJ)
 
@@ -168,13 +181,19 @@ INCLUDES+= -Iconfig -Ihal/interface -Imodules/interface
 INCLUDES+= -Iutils/interface -Idrivers/interface -Iplatform
 INCLUDES+= -I$(STLIB)/CMSIS/Include
 
+ifeq ($(PLATFORM), CF1)
+INCLUDES+= -I$(STLIB)/STM32F10x_StdPeriph_Driver/inc
+INCLUDES+= -I$(STLIB)/CMSIS/Core/CM3
+INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/inc
+INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
+endif
 ifeq ($(PLATFORM), CF2)
 INCLUDES+= -I$(STLIB)/STM32F4xx_StdPeriph_Driver/inc
+INCLUDES+= -I$(STLIB)/CMSIS/STM32F4xx/Include 
 INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/inc
+INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
 INCLUDES+= -I$(STLIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES+= -I$(STLIB)/STM32_USB_OTG_Driver/inc
-INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-INCLUDES+= -I$(STLIB)/CMSIS/STM32F4xx/Include 
 endif
 
 
@@ -186,10 +205,10 @@ PROCESSOR = -mcpu=cortex-m4 -mthumb
 endif
 
 #Flags required by the ST library
-ifeq ($(PLATFORM), CF2)
-STFLAGS = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
+ifeq ($(PLATFORM), CF1)
+STFLAGS = -DSTM32F10X_MD -DHSE_VALUE=16000000 -include stm32f10x_conf.h -DPLATFORM_CF1
 else
-STFLAGS = -DSTM32F10X_MD -DHSE_VALUE=16000000 -include stm32f10x_conf.h
+STFLAGS = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER -DPLATFORM_CF2
 endif
 
 

@@ -41,8 +41,8 @@
 #include "ledseq.h"
 
 #include "debug.h"
+#include "cpal.h"
 #include "cpal_i2c.h"
-#include "stm32f40x_i2c_cpal_conf.h"
 
 #define OWN_ADDRESS        0x74
 #define I2C_CLOCK_SPEED    400000;
@@ -72,6 +72,7 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev);
 static bool i2cdevReadTransfer(I2C_Dev *dev);
 static inline void i2cdevRuffLoopDelay(uint32_t us);
 static void i2cdevReleaseSemaphoreI2C1(void);
+static void i2cdevReleaseSemaphoreI2C2(void);
 static void i2cdevReleaseSemaphoreI2C3(void);
 
 
@@ -175,6 +176,10 @@ static bool i2cdevReadTransfer(I2C_Dev *dev)
     {
       xSemaphoreTake(i2cdevDmaEventI2c1, M2T(30));
     }
+    else if (dev == I2C2_DEV)
+    {
+      xSemaphoreTake(i2cdevDmaEventI2c2, M2T(30));
+    }
     else if (dev == I2C3_DEV)
     {
       xSemaphoreTake(i2cdevDmaEventI2c3, M2T(30));
@@ -270,6 +275,10 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev)
     {
       xSemaphoreTake(i2cdevDmaEventI2c1, M2T(30));
     }
+    else if (dev == I2C2_DEV)
+    {
+      xSemaphoreTake(i2cdevDmaEventI2c2, M2T(30));
+    }
     else if (dev == I2C3_DEV)
     {
       xSemaphoreTake(i2cdevDmaEventI2c3, M2T(30));
@@ -337,6 +346,18 @@ static void i2cdevReleaseSemaphoreI2C1(void)
   }
 }
 
+static void i2cdevReleaseSemaphoreI2C2(void)
+{
+  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
+
+  xSemaphoreGiveFromISR(i2cdevDmaEventI2c2, &xHigherPriorityTaskWoken);
+
+  if(xHigherPriorityTaskWoken)
+  {
+   vPortYieldFromISR();
+  }
+}
+
 static void i2cdevReleaseSemaphoreI2C3(void)
 {
   portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
@@ -373,6 +394,10 @@ void CPAL_I2C_TXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
   {
     i2cdevReleaseSemaphoreI2C1();
   }
+  else if (pDevInitStruct == I2C2_DEV)
+  {
+    i2cdevReleaseSemaphoreI2C2();
+  }
   else if (pDevInitStruct == I2C3_DEV)
   {
     i2cdevReleaseSemaphoreI2C3();
@@ -389,6 +414,10 @@ void CPAL_I2C_RXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
   if (pDevInitStruct == I2C1_DEV)
   {
     i2cdevReleaseSemaphoreI2C1();
+  }
+  else if (pDevInitStruct == I2C2_DEV)
+  {
+    i2cdevReleaseSemaphoreI2C2();
   }
   else if (pDevInitStruct == I2C3_DEV)
   {

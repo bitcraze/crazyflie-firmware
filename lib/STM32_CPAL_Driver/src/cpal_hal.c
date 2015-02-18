@@ -46,9 +46,9 @@
 /* If STM32F4XX family is used */   
 #ifdef STM32F4XX
  #include "stm32f4xx.h"
+ #include "stm32f4xx_misc.h"
 #endif
 
-#include "stm32f4xx_misc.h"
 #include "cpal.h"
 
 /* Private typedef -----------------------------------------------------------*/

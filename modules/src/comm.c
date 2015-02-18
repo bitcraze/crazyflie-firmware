@@ -36,6 +36,7 @@
 #include "log.h"
 #include "eskylink.h"
 #include "radiolink.h"
+#include "nrf24link.h"
 #include "usblink.h"
 #include "platformservice.h"
 #include "syslink.h"
@@ -46,14 +47,15 @@ void commInit(void)
 {
   if (isInit)
     return;
-
-#ifdef USE_ESKYLINK
-  eskylinkInit();
+#ifdef PLATFORM_CF1
+  #ifdef USE_ESKYLINK
+    eskylinkInit();
+  #else
+    nrf24linkInit();
+  #endif
 #else
-
   usblinkInit();
   radiolinkInit();
-  //nrf24linkInit();
 #endif
 
   crtpInit();
@@ -62,6 +64,8 @@ void commInit(void)
   crtpSetLink(radiolinkGetLink());
 #elif defined(USE_ESKYLINK)
   crtpSetLink(eskylinkGetLink());
+#else
+  crtpSetLink(nrf24linkGetLink());
 #endif
 
   crtpserviceInit();
@@ -84,13 +88,15 @@ bool commTest(void)
 {
   bool pass=isInit;
   
-  #ifdef USE_RADIOLINK_CRTP
-  pass &= radiolinkTest();
-  #elif defined(USE_ESKYLINK)
-  pass &= eskylinkTest();
+#ifdef PLATFORM_CF1
+  #ifdef USE_ESKYLINK
+    pass &= eskylinkTest();
   #else
-  //pass &= nrf24linkTest();
+    pass &= nrf24linkTest();
   #endif
+#else
+  pass &= radiolinkTest();
+#endif
   
   pass &= crtpTest();
   pass &= crtpserviceTest();

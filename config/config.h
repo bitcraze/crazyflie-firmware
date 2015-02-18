@@ -50,11 +50,16 @@
   #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
   #define MCU_ID_ADDRESS          0x1FFF7A10
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
+  #define FREERTOS_HEAP_SIZE      20000
+  #define FREERTOS_MCU_CLOCK_HZ   168000000
+
 #else
   #define P_NAME "Crazyflie Rev.F"
   #define CONFIG_BLOCK_ADDRESS    (1024 * (64-1))
   #define MCU_ID_ADDRESS          0x1FFFF7E8
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFFF7E0
+  #define FREERTOS_HEAP_SIZE      15000
+  #define FREERTOS_MCU_CLOCK_HZ   72000000
 #endif
 
 
@@ -110,6 +115,18 @@
 #define RADIO_CHANNEL 80
 #define RADIO_DATARATE RADIO_RATE_250K
 #define RADIO_ADDRESS 0xE7E7E7E7E7ULL
+
+/**
+ * \def ACTIVATE_AUTO_SHUTDOWN
+ * Will automatically shot of system if no radio activity
+ */
+//#define ACTIVATE_AUTO_SHUTDOWN
+
+/**
+ * \def ACTIVATE_STARTUP_MELODY
+ * Playes a startup melody using the motors and PWM modulation
+ */
+//#define ACTIVATE_STARTUP_MELODY
 
 // Define to force initialization of expansion board drivers. For test-rig and programming.
 //#define FORCE_EXP_DETECT

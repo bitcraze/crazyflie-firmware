@@ -32,32 +32,28 @@
 #define LED_POL_POS 0
 #define LED_POL_NEG 1
 
-//#define STM32F4_DISCOVERY
-
-#ifdef STM32F4_DISCOVERY
+#ifdef PLATFORM_CF1
 //Hardware configuration
-#define LED_GPIO_PERIF   RCC_AHB1Periph_GPIOD
-#define LED_GPIO_PORT    GPIOD
-#define LED_GPIO_GREEN   GPIO_Pin_12
-#define LED_POL_GREEN    LED_POL_POS
-#define LED_GPIO_RED     GPIO_Pin_14
-#define LED_POL_RED      LED_POL_POS
-#define LED_GPIO_ORANGE  GPIO_Pin_13
-#define LED_POL_ORANGE   LED_POL_POS
-#define LED_GPIO_BLUE    GPIO_Pin_15
-#define LED_POL_BLUE     LED_POL_POS
+#define LED_GPIO_PERIF   RCC_APB2Periph_GPIOB
+#define LED_GPIO_PORT    GPIOB
+#define LED_GPIO_GREEN   GPIO_Pin_5
+#define LED_POL_GREEN    LED_POL_NEG
+#define LED_GPIO_RED     GPIO_Pin_4
+#define LED_POL_RED      LED_POL_NEG
 
-#define LED_NUM 4
+#define LED_NUM 2
 
-typedef enum {LED_RED = 0, LED_GREEN, LED_ORANGE, LED_BLUE} led_t;
+typedef enum {LED_RED=0, LED_GREEN} led_t;
 
 #define LINK_LED         LED_GREEN
+#define CHG_LED          LED_GREEN
+#define LOWBAT_LED       LED_RED
+#define LINK_DOWN_LED    LED_GREEN
 #define SYS_LED          LED_RED
-#define BOOT_LED         LED_BLUE
 #define ERR_LED1         LED_RED
 #define ERR_LED2         LED_GREEN
 
-#else
+#elif defined(PLATFORM_CF2)
 //Hardware configuration
 #define LED_GPIO_PERIF   (RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD)
 #define LED_GPIO_PORT_BLUE  GPIOD
@@ -82,7 +78,6 @@ typedef enum {LED_RED = 0, LED_GREEN, LED_ORANGE, LED_BLUE} led_t;
 #define ERR_LED2         LED_RED_R
 
 #define LED_NUM 5
-
 
 typedef enum {LED_BLUE_L = 0, LED_GREEN_L, LED_RED_L, LED_GREEN_R, LED_RED_R} led_t;
 #endif

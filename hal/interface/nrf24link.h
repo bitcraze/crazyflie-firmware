@@ -21,17 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * radiolink.c: nRF24L01 implementation of the CRTP link
+ * nrf24link.c: nRF24L01 implementation of the CRTP link
  */
 
-#ifndef __RADIOLINK_H__
-#define __RADIOLINK_H__
+#ifndef __NRF24LINK_H__
+#define __NRF24LINK_H__
 
 #include "crtp.h"
 
-void radiolinkInit();
-bool radiolinkTest();
-struct crtpLinkOperations * radiolinkGetLink();
-void radiolinkReInit(void);
+void nrf24linkInit();
+bool nrf24linkTest();
+struct crtpLinkOperations * nrf24linkGetLink();
+void nrf24linkReInit(void);
 
 #endif

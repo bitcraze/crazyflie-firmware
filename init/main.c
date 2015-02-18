@@ -35,6 +35,7 @@
 #include "config.h"
 #include "platform.h"
 #include "system.h"
+#include "usec_time.h"
 
 #include "led.h"
 

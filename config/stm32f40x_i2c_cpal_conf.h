@@ -334,9 +334,8 @@
                  If you need I2C1 device, uncomment relative define: #define CPAL_USE_I2C1.
                  All available I2Cx device can be used at the same time.
                  At least one I2C device should be selected. */
-        
 #define CPAL_USE_I2C1          /*<! Uncomment to use I2C1 device */
-//#define CPAL_USE_I2C2          /*<! Uncomment to use I2C2 device */
+#define CPAL_USE_I2C2          /*<! Uncomment to use I2C2 device */
 #define CPAL_USE_I2C3          /*<! Uncomment to use I2C3 device */
 
 /*-----------------------------------------------------------------------------------------------------------------------*/

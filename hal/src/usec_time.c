@@ -28,9 +28,9 @@
 #include "usec_time.h"
 
 #include "nvicconf.h"
-#include "stm32f10x.h"
+#include "stm32fxxx.h"
 
-uint32_t usecTimerHighCount;
+static uint32_t usecTimerHighCount;
 
 void initUsecTimer(void)
 {
@@ -76,4 +76,11 @@ uint64_t usecTimestamp(void)
   }
   // There was an increment, but we don't expect another one soon
   return (((uint64_t)high) << 16) + TIM1->CNT;
+}
+
+void __attribute__((used)) TIM1_UP_IRQHandler(void)
+{
+  TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
+
+  __sync_fetch_and_add(&usecTimerHighCount, 1);
 }

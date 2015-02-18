@@ -345,3 +345,9 @@ void uartTxenFlowctrlIsr()
     //ledSet(LED_GREEN_R, 0);
   }
 }
+
+void __attribute__((used)) EXTI4_IRQHandler(void)
+{
+  uartTxenFlowctrlIsr();
+}
+

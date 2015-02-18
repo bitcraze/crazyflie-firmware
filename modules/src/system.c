@@ -139,7 +139,9 @@ void systemTask(void *arg)
 
   commanderInit();
   stabilizerInit();
+#ifdef PLATFORM_CF2
   expbrdInit();
+#endif
   memInit();
   
   //Test the modules
@@ -148,7 +150,9 @@ void systemTask(void *arg)
   pass &= commTest();
   pass &= commanderTest();
   pass &= stabilizerTest();
+#ifdef PLATFORM_CF2
   pass &= expbrdTest();
+#endif
   pass &= memTest();
   
   //Start the firmware
