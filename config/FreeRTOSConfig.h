@@ -110,7 +110,7 @@ to exclude the API function. */
 
 //Map the port handler to the crt0 interruptions handlers
 #define xPortPendSVHandler PendSV_Handler
-#define xPortSysTickHandler SysTick_Handler
+#define xPortSysTickHandler tickFreeRTOS
 #define vPortSVCHandler SVC_Handler
 
 //Milliseconds to OS Ticks

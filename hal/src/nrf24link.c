@@ -88,9 +88,13 @@ static int sendPacket(CRTPPacket * pk)
 {
   if (!state.enabled)
     return ENETDOWN;
-  xQueueSend( txQueue, pk, portMAX_DELAY);
 
-  return 0;
+  if (xQueueSend(txQueue, pk, M2T(100)) == pdTRUE)
+  {
+    return true;
+  }
+
+  return false;
 }
 
 static int receivePacket(CRTPPacket * pk)

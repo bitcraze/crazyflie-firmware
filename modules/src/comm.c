@@ -69,7 +69,9 @@ void commInit(void)
 #endif
 
   crtpserviceInit();
+#ifdef PLATFORM_CF2
   platformserviceInit();
+#endif
   logInit();
   consoleInit();
   paramInit();
@@ -100,7 +102,9 @@ bool commTest(void)
   
   pass &= crtpTest();
   pass &= crtpserviceTest();
+#ifdef PLATFORM_CF2
   pass &= platformserviceTest();
+#endif
   pass &= consoleTest();
   pass &= paramTest();
   

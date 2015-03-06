@@ -32,7 +32,6 @@
 #include "task.h"
 
 #include "led.h"
-#include "motors.h"
 
 #ifdef PLATFORM_CF1
 static GPIO_TypeDef* led_port[] = {
@@ -158,27 +157,6 @@ void ledSet(led_t led, bool value)
     GPIO_SetBits(led_port[led], led_pin[led]);
   else
     GPIO_ResetBits(led_port[led], led_pin[led]); 
-
-#ifdef MOTORS_TEST    
-  if(led == LED_RED) {
-    static int step = 0;
-    
-    if(!value)
-    {
-      motorsSetRatio(step, 0x3FFF);
-      
-      step++;
-      if(step>3) step=0;
-    }
-    else
-    {
-      motorsSetRatio(0, 0x0000);
-      motorsSetRatio(1, 0x0000);
-      motorsSetRatio(2, 0x0000);
-      motorsSetRatio(3, 0x0000);
-    }
-  }
-#endif
 }
 
 

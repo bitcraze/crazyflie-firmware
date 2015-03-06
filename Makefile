@@ -15,11 +15,12 @@ DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
 DEBUG             ?= 0
 CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
-PLATFORM					?= CF1
+PLATFORM					?= CF2
 
 ifeq ($(PLATFORM), CF1)
 OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
 F405              ?= 1
+USE_FPU            = 0
 endif
 ifeq ($(PLATFORM), CF2)
 OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
@@ -65,10 +66,11 @@ STLIB = lib
 ################ Build configuration ##################
 # St Lib
 ifeq ($(PLATFORM), CF1)
+	VPATH += $(STLIB)/CMSIS/Core/CM3
 	VPATH += $(STLIB)/CMSIS/Core/CM3/startup/gcc
 	VPATH += $(STLIB)/STM32_CPAL_Driver/src
 	VPATH += $(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
-	CRT0=startup_stm32f10x_md.o
+	CRT0=startup_stm32f10x_md.o system_stm32f10x.o
 endif
 ifeq ($(PLATFORM), CF2)
 	VPATH += $(STLIB)/CMSIS/STM32F4xx/Source/
@@ -83,7 +85,7 @@ endif
 -include $(ST_OBJ_DIR)/st_obj.mk
 
 ifeq ($(PLATFORM), CF1)
-	ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
+	#ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
 endif
 ifeq ($(PLATFORM), CF2)
 	ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
@@ -96,7 +98,7 @@ endif
 
 # FreeRTOS
 VPATH += $(PORT)
-PORT_OBJ=port.o
+PORT_OBJ = port.o
 VPATH +=  $(FREERTOS)/portable/MemMang
 MEMMANG_OBJ = heap_4.o
 
@@ -129,23 +131,23 @@ ifeq ($(PLATFORM), CF2)
   # USB Files
   PROJ_OBJ += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
 else
-  PROJ_OBJ += led_f103.o i2cdev_f405.o uart.o adc_f103.o mpu6050.o motors_f103.o hmc5883l.o ms5611.o nrf24l01.o
+  PROJ_OBJ += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o motors_f103.o hmc5883l.o ms5611.o nrf24l01.o eeprom.o
 endif
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o
 ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += imu_cf2.o pm_f405.o syslink.o radiolink.o ow.o
+PROJ_OBJ += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o
 else
-PROJ_OBJ += imu_cf1.o pm_f103.o nrf24link.o
+PROJ_OBJ += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 endif
 
 # Modules
-PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o platformservice.o
+PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o
 ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += neopixelring.o expbrd.o
+PROJ_OBJ += neopixelring.o expbrd.o platformservice.o
 endif
 
 # Expansion boards

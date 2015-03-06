@@ -41,9 +41,13 @@
 #include "pid.h"
 #include "ledseq.h"
 #include "param.h"
-//#include "ms5611.h"
-#include "lps25h.h"
 #include "debug.h"
+#ifdef PLATFORM_CF1
+  #include "ms5611.h"
+#else
+  #include "lps25h.h"
+#endif
+
 
 #undef max
 #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -281,7 +285,11 @@ static void stabilizerAltHoldUpdate(void)
 
   // Get barometer height estimates
   //TODO do the smoothing within getData
+#ifdef PLATFORM_CF1
+  ms5611GetData(&pressure, &temperature, &aslRaw);
+#else
   lps25hGetData(&pressure, &temperature, &aslRaw);
+#endif
 
   asl = asl * aslAlpha + aslRaw * (1 - aslAlpha);
   aslLong = aslLong * aslAlphaLong + aslRaw * (1 - aslAlphaLong);

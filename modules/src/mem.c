@@ -63,7 +63,11 @@
 #define CMD_GET_NBR     1
 #define CMD_GET_INFO    2
 
+#ifdef PLATFORM_CF1
+#define NBR_EEPROM      0
+#else
 #define NBR_EEPROM      1
+#endif
 #define EEPROM_ID       0
 
 #define MEM_TYPE_EEPROM 0

@@ -51,7 +51,16 @@
                                                    return CPAL_I2C_Timeout (pDevInitStruct); \
                                                  }\
                                                  pDevInitStruct->wCPAL_Timeout = CPAL_I2C_TIMEOUT_DEFAULT
-                                                   
+
+#define __CPAL_I2C_TIMEOUT_SPINLOOP(cmd, timeout){\
+                                                   volatile uint32_t cntdown = 5000 * timeout;\
+                                                   while (((cmd) == 0) && (cntdown--));\
+                                                   if (cntdown == 0)\
+                                                   {\
+                                                     return CPAL_I2C_Timeout (pDevInitStruct);\
+                                                   }\
+                                                 }\
+
 /* Private variables ---------------------------------------------------------*/
 
 /*========= Table Exported from HAL =========*/
@@ -1067,7 +1076,7 @@ uint32_t CPAL_I2C_ER_IRQHandler(CPAL_InitTypeDef* pDevInitStruct)
       CPAL_LOG("\n\rLOG : I2C Device BUFF IT Disabled"); 
       
       /* Wait until Busy flag is reset */ 
-      __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
+      __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
       
       /* Update CPAL_State to CPAL_STATE_READY */
       pDevInitStruct->CPAL_State = CPAL_STATE_READY;  
@@ -1198,7 +1207,7 @@ uint32_t CPAL_I2C_DMA_TX_IRQHandler(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_DMAREQ(pDevInitStruct->CPAL_Dev); 
         
         /* Wait until BTF flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
         
         /* No Stop Condition Generation option bit not selected */   
         if ((pDevInitStruct->wCPAL_Options & CPAL_OPT_I2C_NOSTOP) == 0)
@@ -1207,7 +1216,7 @@ uint32_t CPAL_I2C_DMA_TX_IRQHandler(CPAL_InitTypeDef* pDevInitStruct)
           __CPAL_I2C_HAL_STOP(pDevInitStruct->CPAL_Dev);
           
           /* Wait until Busy flag is reset */         
-          __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
+          __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
         }
         
         /* Disable DMA Channel */                 
@@ -1233,7 +1242,7 @@ uint32_t CPAL_I2C_DMA_TX_IRQHandler(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_EVTIT(pDevInitStruct->CPAL_Dev);
         
         /* Wait until Busy flag is reset */ 
-        __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
+        __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
         
         CPAL_LOG("\n\rLOG : I2C Device Slave TX DMA Disabled");
         
@@ -1313,7 +1322,7 @@ uint32_t CPAL_I2C_DMA_RX_IRQHandler(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_DMAREQ(pDevInitStruct->CPAL_Dev);
         
         /* Wait until Busy flag is reset */ 
-        __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
+        __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
         
         /* Disable DMA Channel */
         __CPAL_I2C_HAL_DISABLE_DMARX(pDevInitStruct->CPAL_Dev);
@@ -1742,7 +1751,7 @@ static uint32_t I2C_MASTER_ADDR_Handle(CPAL_InitTypeDef* pDevInitStruct)
             __CPAL_I2C_HAL_SEND((pDevInitStruct->CPAL_Dev), (uint8_t)((pDevInitStruct->pCPAL_TransferTx->wAddr2)& 0x00FF)); 
             
             /* Wait until TXE flag is set */ 
-            __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_TXE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_TXE);              
+            __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_TXE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_TXE);
           }          
 #ifdef CPAL_16BIT_REG_OPTION
           /* If 16 Bit register mode */
@@ -1752,13 +1761,13 @@ static uint32_t I2C_MASTER_ADDR_Handle(CPAL_InitTypeDef* pDevInitStruct)
             __CPAL_I2C_HAL_SEND((pDevInitStruct->CPAL_Dev), (uint8_t)(((pDevInitStruct->pCPAL_TransferTx->wAddr2)& 0xFF00) >>8));  
             
             /* Wait until TXE flag is set */ 
-            __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_TXE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_TXE); 
+            __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_TXE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_TXE);
             
             /* Send LSB Register Address */
             __CPAL_I2C_HAL_SEND((pDevInitStruct->CPAL_Dev), (uint8_t)((pDevInitStruct->pCPAL_TransferTx->wAddr2)& 0x00FF));  
             
             /* Wait until TXE flag is set */ 
-            __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_TXE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_TXE); 
+            __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_TXE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_TXE);
           }     
 #endif /* CPAL_16BIT_REG_OPTION */
         }  
@@ -1869,12 +1878,12 @@ static uint32_t I2C_MASTER_TXE_Handle(CPAL_InitTypeDef* pDevInitStruct)
       if ((pDevInitStruct->wCPAL_Options & CPAL_OPT_I2C_NOSTOP) == 0)
       { 
         /* Wait until BTF and TXE flags are reset */ 
-        __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_EVENT(pDevInitStruct->CPAL_Dev) & (I2C_SR1_BTF | I2C_SR1_TXE )), CPAL_I2C_TIMEOUT_BUSY);
+        __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_EVENT(pDevInitStruct->CPAL_Dev) & (I2C_SR1_BTF | I2C_SR1_TXE )), CPAL_I2C_TIMEOUT_BUSY);
       }
       else
       {
         /* Wait until BTF flags is reset */ 
-        __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_EVENT(pDevInitStruct->CPAL_Dev) & I2C_SR1_TXE ), CPAL_I2C_TIMEOUT_BUSY);
+        __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_EVENT(pDevInitStruct->CPAL_Dev) & I2C_SR1_TXE ), CPAL_I2C_TIMEOUT_BUSY);
         
       }
       
@@ -1928,7 +1937,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_BUFIT(pDevInitStruct->CPAL_Dev);
         
         /* Wait until BTF flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF); 
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
         
         /* Generate Stop Condition */
         __CPAL_I2C_HAL_STOP(pDevInitStruct->CPAL_Dev);
@@ -1961,7 +1970,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_BUFIT(pDevInitStruct->CPAL_Dev);
         
         /* Wait until BTF flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF); 
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
         
         /* Program NACK Generation */
         __CPAL_I2C_HAL_DISABLE_ACK(pDevInitStruct->CPAL_Dev);
@@ -1975,7 +1984,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
         pDevInitStruct->pCPAL_TransferRx->wNumData--; 
         
          /* Wait until BTF flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF); 
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
         
         /* Generate Stop Condition */
         __CPAL_I2C_HAL_STOP(pDevInitStruct->CPAL_Dev);        
@@ -2066,7 +2075,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_BUFIT(pDevInitStruct->CPAL_Dev);
         
         /* Wait until BTF flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF); 
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
         
         /* Generate Stop Condition */
         __CPAL_I2C_HAL_STOP(pDevInitStruct->CPAL_Dev);
@@ -2102,7 +2111,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
         __CPAL_I2C_HAL_DISABLE_BUFIT(pDevInitStruct->CPAL_Dev);
         
         /* Wait until BTF flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF); 
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_BTF(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_BTF);
         
         /* Program NACK Generation */
         __CPAL_I2C_HAL_DISABLE_ACK(pDevInitStruct->CPAL_Dev);
@@ -2127,7 +2136,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
         pDevInitStruct->pCPAL_TransferRx->wNumData--; 
         
         /* Wait until RXNE flag is set */ 
-        __CPAL_I2C_TIMEOUT(__CPAL_I2C_HAL_GET_RXNE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_RXNE); 
+        __CPAL_I2C_TIMEOUT_SPINLOOP(__CPAL_I2C_HAL_GET_RXNE(pDevInitStruct->CPAL_Dev), CPAL_I2C_TIMEOUT_RXNE);
         
         /* Read Byte */
         *(pDevInitStruct->pCPAL_TransferRx->pbBuffer) = __CPAL_I2C_HAL_RECEIVE(pDevInitStruct->CPAL_Dev);
@@ -2191,7 +2200,7 @@ static uint32_t I2C_MASTER_RXNE_Handle(CPAL_InitTypeDef* pDevInitStruct)
       }
       
       /* Wait until Busy flag is reset */ 
-      __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
+      __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
       
       /* Enable ACK generation and disable POS */
       __CPAL_I2C_HAL_ENABLE_ACK(pDevInitStruct->CPAL_Dev);      
@@ -2341,7 +2350,7 @@ static uint32_t I2C_SLAVE_STOP_Handle(CPAL_InitTypeDef* pDevInitStruct)
   }  
            
   /* Wait until Busy flag is reset */ 
-  __CPAL_I2C_TIMEOUT(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
+  __CPAL_I2C_TIMEOUT_SPINLOOP(!(__CPAL_I2C_HAL_GET_BUSY(pDevInitStruct->CPAL_Dev)), CPAL_I2C_TIMEOUT_BUSY);
   
   /* If Slave run as receiver */
   if (pDevInitStruct->CPAL_State == CPAL_STATE_BUSY_RX)

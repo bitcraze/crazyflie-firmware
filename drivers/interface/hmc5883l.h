@@ -110,7 +110,7 @@ THE SOFTWARE.
 #define HMC5883L_ST_Z_MIN           (int32_t)(HMC5883L_ST_Z_NORM - (HMC5883L_ST_Z_NORM * HMC5883L_ST_ERROR))
 #define HMC5883L_ST_Z_MAX           (int32_t)(HMC5883L_ST_Z_NORM + (HMC5883L_ST_Z_NORM * HMC5883L_ST_ERROR))
 
-void hmc5883lInit(I2C_Dev *i2cPort);
+void hmc5883lInit(I2C_TypeDef *i2cPort);
 bool hmc5883lTestConnection();
 bool hmc5883lSelfTest();
 bool hmc5883lEvaluateSelfTest(int16_t min, int16_t max, int16_t value, char* string);

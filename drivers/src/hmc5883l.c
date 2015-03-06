@@ -154,7 +154,7 @@ bool hmc5883lSelfTest()
     return false;
   }
 
-  return true; //testStatus;
+  return testStatus;
 }
 
 /** Evaluate the values from a HMC8335L self test.

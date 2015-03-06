@@ -82,8 +82,29 @@ bool ledTest(void)
   return isInit;
 }
 
+void ledClearAll(void)
+{
+  int i;
 
-void ledSet(led_t led, bool value) {
+  for (i = 0; i < LED_NUM; i++)
+  {
+    //Turn off the LED:s
+    ledSet(i, 0);
+  }
+}
+
+void ledSetAll(void)
+{
+  int i;
+
+  for (i = 0; i < LED_NUM; i++)
+  {
+    //Turn on the LED:s
+    ledSet(i, 1);
+  }
+}
+void ledSet(led_t led, bool value)
+{
   if (led>LED_NUM)
     return;
 

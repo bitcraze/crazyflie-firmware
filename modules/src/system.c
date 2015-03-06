@@ -86,7 +86,9 @@ void systemInit(void)
 
   configblockInit();
   workerInit();
-  //adcInit();
+#ifdef PLATFORM_CF1
+  adcInit();
+#endif
   ledseqInit();
   pmInit();
     
@@ -97,7 +99,9 @@ bool systemTest()
 {
   bool pass=isInit;
   
-  //pass &= adcTest();
+#ifdef PLATFORM_CF1
+  pass &= adcTest();
+#endif
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();

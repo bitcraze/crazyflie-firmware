@@ -46,6 +46,12 @@
 #define I2C_TIMEOUT 5
 #define I2CDEV_CLK_TS (1000000 / 100000)
 
+#define I2CDEV_I2C1_PIN_SDA GPIO_Pin_7
+#define I2CDEV_I2C1_PIN_SCL GPIO_Pin_6
+
+#define I2CDEV_I2C2_PIN_SDA GPIO_Pin_11
+#define I2CDEV_I2C2_PIN_SCL GPIO_Pin_10
+
 #define GPIO_WAIT_LOW(gpio, pin, timeoutcycles)\
   {\
     int i = timeoutcycles;\
@@ -71,7 +77,7 @@ static void i2cdevResetAndLowLevelInitBusI2c2(void);
 static inline void i2cdevRuffLoopDelay(uint32_t us);
 
 
-int i2cdevInit(I2C_TypeDef *I2Cx)
+int i2cdevInit(I2C_Dev *I2Cx)
 {
   NVIC_InitTypeDef NVIC_InitStructure;
   
@@ -139,13 +145,13 @@ int i2cdevInit(I2C_TypeDef *I2Cx)
   return TRUE;
 }
 
-bool i2cdevReadByte(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevReadByte(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                     uint8_t *data)
 {
   return i2cdevRead(I2Cx, devAddress, memAddress, 1, data);
 }
 
-bool i2cdevReadBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevReadBit(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                      uint8_t bitNum, uint8_t *data)
 {
   uint8_t byte;
@@ -157,7 +163,7 @@ bool i2cdevReadBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
   return status;
 }
 
-bool i2cdevReadBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevReadBits(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                     uint8_t bitStart, uint8_t length, uint8_t *data)
 {
   bool status;
@@ -173,7 +179,7 @@ bool i2cdevReadBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
   return status;
 }
 
-bool i2cdevRead(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevRead(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                uint16_t len, uint8_t *data)
 {
   bool status = TRUE;
@@ -191,13 +197,27 @@ bool i2cdevRead(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
   return status;
 }
 
-bool i2cdevWriteByte(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
+               uint16_t len, uint8_t *data)
+{
+  // TODO: Implement
+  return false;
+}
+
+bool i2cdevWriteByte(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                     uint8_t data)
 {
   return i2cdevWrite(I2Cx, devAddress, memAddress, 1, &data);
 }
 
-bool i2cdevWriteBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
+                   uint16_t len, uint8_t *data)
+{
+  // TODO: Implement
+  return false;
+}
+
+bool i2cdevWriteBit(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                     uint8_t bitNum, uint8_t data)
 {
     uint8_t byte;
@@ -206,7 +226,7 @@ bool i2cdevWriteBit(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
     return i2cdevWriteByte(I2Cx, devAddress, memAddress, byte);
 }
 
-bool i2cdevWriteBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWriteBits(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                      uint8_t bitStart, uint8_t length, uint8_t data)
 {
   bool status;
@@ -225,7 +245,7 @@ bool i2cdevWriteBits(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
   return status;
 }
 
-bool i2cdevWrite(I2C_TypeDef *I2Cx, uint8_t devAddress, uint8_t memAddress,
+bool i2cdevWrite(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
                 uint16_t len, uint8_t *data)
 {
   bool status;

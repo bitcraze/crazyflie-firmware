@@ -352,3 +352,16 @@ void uartSendDataDma(uint32_t size, uint8_t* data)
     DMA_Cmd(UART_DMA_CH, ENABLE);
   }
 }
+
+void __attribute__((used)) USART3_IRQHandler(void)
+{
+  uartIsr();
+}
+
+void __attribute__((used)) DMA1_Channel2_IRQHandler(void)
+{
+#if defined(UART_OUTPUT_TRACE_DATA) || defined(ADC_OUTPUT_RAW_DATA)
+  uartDmaIsr();
+#endif
+}
+

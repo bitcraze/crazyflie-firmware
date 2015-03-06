@@ -31,6 +31,7 @@
   */
 
 #include "stm32f10x.h"
+#include "led.h"
 
 /**
   * @}
@@ -880,11 +881,11 @@ static void SetSysClockTo72(void)
     RCC->CFGR &= (uint32_t)~(RCC_CFGR_PLLXTPRE | RCC_CFGR_PLLSRC | RCC_CFGR_PLLMULL);
     RCC->CFGR |= (uint32_t)(RCC_CFGR_PLLXTPRE_PREDIV1 | RCC_CFGR_PLLSRC_PREDIV1 | 
                             RCC_CFGR_PLLMULL9); 
-#else    
-    /*  PLL configuration: PLLCLK = HSE * 9 = 72 MHz */
-    RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE |
-                                        RCC_CFGR_PLLMULL));
-    RCC->CFGR |= (uint32_t)(RCC_CFGR_PLLSRC_HSE | RCC_CFGR_PLLMULL9);
+#else
+    /*  PLL configuration: PLLCLK = HSEDIV2 * 9 = 72 MHz */
+    /*  ADCCLK = PCLK2/6 = 72 / 6 = 12 MHz*/
+    RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | RCC_CFGR_PLLMULL));
+    RCC->CFGR |= (uint32_t)(RCC_CFGR_PLLSRC_HSE | RCC_CFGR_PLLXTPRE_HSE_Div2 | RCC_CFGR_PLLMULL9 | RCC_CFGR_ADCPRE_DIV6);
 #endif /* STM32F10X_CL */
 
     /* Enable PLL */
@@ -907,7 +908,17 @@ static void SetSysClockTo72(void)
   else
   { /* If HSE fails to start-up, the application will have wrong clock 
          configuration. User can add here some code to deal with this error */    
+    GPIO_InitTypeDef GPIO_InitStructure;
 
+    //Cannot start the main oscillator: red/green LED of death...
+    GPIO_InitStructure.GPIO_Pin = LED_GPIO_RED | LED_GPIO_GREEN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+    GPIO_ResetBits(GPIOB, LED_RED);
+    GPIO_ResetBits(GPIOB, LED_GREEN);
     /* Go to infinite loop */
     while (1)
     {

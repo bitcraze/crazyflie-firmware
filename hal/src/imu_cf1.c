@@ -136,8 +136,8 @@ void imu6Init(void)
   // Wait for sensors to startup
   while (xTaskGetTickCount() < M2T(IMU_STARTUP_TIME_MS));
 
-  i2cdevInit(I2C1_DEV);
-  mpu6050Init(I2C1_DEV);
+  i2cdevInit(I2C1);
+  mpu6050Init(I2C1);
   if (mpu6050TestConnection() == true)
   {
     DEBUG_PRINT("MPU6050 I2C connection [OK].\n");
@@ -181,7 +181,7 @@ void imu6Init(void)
 
 
 #ifdef IMU_ENABLE_MAG_HMC5883
-  hmc5883lInit(I2C1_DEV);
+  hmc5883lInit(I2C1);
 	if (hmc5883lTestConnection() == true)
 	{
 		isHmc5883lPresent = true;
@@ -194,7 +194,7 @@ void imu6Init(void)
 #endif
 
 #ifdef IMU_ENABLE_PRESSURE_MS5611
-  if (ms5611Init(I2C1_DEV) == true)
+  if (ms5611Init(I2C1) == true)
   {
     isMs5611Present = true;
     DEBUG_PRINT("MS5611 I2C connection [OK].\n");

@@ -1,4 +1,4 @@
-/*
+/**
  *    ||          ____  _ __                           
  * +------+      / __ )(_) /_______________ _____  ___ 
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,23 +21,48 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * radiolink.c - Radio link layer
+ * ow.c - One-wire functions
  */
+#define DEBUG_MODULE "OW"
 
-#ifndef __RADIO_H__
-#define __RADIO_H__
+#include  <string.h>
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "syslink.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 
-void radiolinkInit(void);
-bool radiolinkTest(void);
-void radiolinkSetChannel(uint8_t channel);
-void radiolinkSetDatarate(uint8_t datarate);
-void radiolinkSetAddress(uint64_t address);
-void radiolinkSyslinkDispatch(SyslinkPacket *slp);
-struct crtpLinkOperations * radiolinkGetLink();
+#include "ow.h"
 
 
-#endif //__RADIO_H__
+void owInit()
+{
+}
+
+bool owTest()
+{
+  return true;
+}
+
+void owSyslinkRecieve(SyslinkPacket *slp)
+{
+}
+
+bool owScan(uint8_t *nMem)
+{
+  return true;
+}
+
+bool owGetinfo(uint8_t selectMem, OwSerialNum *serialNum)
+{
+  return false;
+}
+
+bool owRead(uint8_t selectMem, uint16_t address, uint8_t length, uint8_t *data)
+{
+  return false;
+}
+
+bool owWrite(uint8_t selectMem, uint16_t address, uint8_t length, uint8_t *data)
+{
+  return false;
+}
+

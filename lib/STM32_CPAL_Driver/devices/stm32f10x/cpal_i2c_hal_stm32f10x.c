@@ -30,6 +30,9 @@
 #include "cpal_i2c_hal_stm32f10x.h"
 #include "cpal_i2c.h"
 
+//TA: Added to be able to unlock bus
+#include "i2cdev.h"
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -204,7 +207,7 @@ void CPAL_I2C_HAL_GPIOInit(CPAL_DevTypeDef Device)
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   
   /* Select Output open-drain mode */
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
                                     
   /* Initialize I2Cx SCL Pin */ 
   GPIO_InitStructure.GPIO_Pin = CPAL_I2C_SCL_GPIO_PIN[Device];
@@ -214,7 +217,25 @@ void CPAL_I2C_HAL_GPIOInit(CPAL_DevTypeDef Device)
   /* Initialize I2Cx SDA Pin */
   GPIO_InitStructure.GPIO_Pin = CPAL_I2C_SDA_GPIO_PIN[Device];
   
-  GPIO_Init((GPIO_TypeDef*)CPAL_I2C_SDA_GPIO_PORT[Device], &GPIO_InitStructure);   
+  GPIO_Init((GPIO_TypeDef*)CPAL_I2C_SDA_GPIO_PORT[Device], &GPIO_InitStructure);
+
+  i2cdevUnlockBus((GPIO_TypeDef*)CPAL_I2C_SCL_GPIO_PORT[Device],
+                  (GPIO_TypeDef*)CPAL_I2C_SDA_GPIO_PORT[Device],
+                  CPAL_I2C_SCL_GPIO_PIN[Device],
+                  CPAL_I2C_SDA_GPIO_PIN[Device]);
+
+  /* Select Output open-drain mode */
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
+
+  /* Initialize I2Cx SCL Pin */
+  GPIO_InitStructure.GPIO_Pin = CPAL_I2C_SCL_GPIO_PIN[Device];
+
+  GPIO_Init((GPIO_TypeDef*)CPAL_I2C_SCL_GPIO_PORT[Device], &GPIO_InitStructure);
+
+  /* Initialize I2Cx SDA Pin */
+  GPIO_InitStructure.GPIO_Pin = CPAL_I2C_SDA_GPIO_PIN[Device];
+
+  GPIO_Init((GPIO_TypeDef*)CPAL_I2C_SDA_GPIO_PORT[Device], &GPIO_InitStructure);
 }
 
 

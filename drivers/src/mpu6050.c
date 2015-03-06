@@ -78,7 +78,7 @@ bool mpu6050Test(void)
  */
 bool mpu6050TestConnection()
 {
-  return mpu6050GetDeviceID() == 0x38; //0x38 is MPU9250 ID with AD0 = 0;
+  return mpu6050GetDeviceID() == 0b110100;
 }
 
 /** Do a MPU6050 self test.

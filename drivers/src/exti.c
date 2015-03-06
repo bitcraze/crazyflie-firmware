@@ -62,11 +62,22 @@ bool extiTest(void)
   return isInit;
 }
 
-void extiInterruptHandler(void)
+#ifdef PLATFORM_CF1
+void __attribute__((used)) EXTI9_5_IRQHandler(void)
 {
   if (EXTI_GetITStatus(RADIO_GPIO_IRQ_LINE) == SET)
   {
     EXTI_ClearITPendingBit(RADIO_GPIO_IRQ_LINE);
-//    nrfIsr();
+    nrfIsr();
   }
 }
+
+#else
+void __attribute__((used)) EXTI15_10_IRQHandler(void)
+{
+  if (EXTI_GetITStatus(RADIO_GPIO_IRQ_LINE) == SET)
+  {
+    EXTI_ClearITPendingBit(RADIO_GPIO_IRQ_LINE);
+  }
+}
+#endif
