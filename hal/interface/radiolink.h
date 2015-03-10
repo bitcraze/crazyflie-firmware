@@ -35,6 +35,7 @@ void radioInit(void);
 bool radioTest(void);
 void radiolinkSetChannel(uint8_t channel);
 void radiolinkSetDatarate(uint8_t datarate);
+void radiolinkSetAddress(uint64_t address);
 void radiolinkSyslinkDispatch(SyslinkPacket *slp);
 struct crtpLinkOperations * radiolinkGetLink();
 
