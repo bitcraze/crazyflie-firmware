@@ -57,6 +57,7 @@
 #include "expbrd.h"
 #include "mem.h"
 #include "proximity.h"
+#include "buzzer.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -104,10 +105,6 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
-
-#ifdef PROXIMITY_ENABLED
-  proximityInit();
-#endif
     
   isInit = true;
 }
@@ -162,6 +159,14 @@ void systemTask(void *arg)
   expbrdInit();
 #endif
   memInit();
+
+#ifdef PROXIMITY_ENABLED
+  proximityInit();
+#endif
+
+#ifdef BUZZER_ENABLED
+  buzzerInit();
+#endif
   
   //Test the modules
   pass &= systemTest();
