@@ -102,7 +102,7 @@ endif
 PROJ_OBJ += led.o exti.o nvic.o  
 
 ifeq ($(F405), 1)
-  PROJ_OBJ += mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
+  PROJ_OBJ += mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o piezo.o
   PROJ_OBJ += uart_syslink.o swd.o
   # USB Files
   PROJ_OBJ += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
@@ -120,7 +120,7 @@ endif
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o platformservice.o
-PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
+PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o buzzer.o
 PROJ_OBJ += log.o worker.o neopixelring.o expbrd.o
 
 

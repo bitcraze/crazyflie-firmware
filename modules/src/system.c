@@ -54,6 +54,7 @@
 #include "usb.h"
 #include "expbrd.h"
 #include "mem.h"
+#include "buzzer.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -141,6 +142,7 @@ void systemTask(void *arg)
   stabilizerInit();
   expbrdInit();
   memInit();
+  buzzerInit();
   
   //Test the modules
   pass &= systemTest();
