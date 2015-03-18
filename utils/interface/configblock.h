@@ -35,6 +35,7 @@ bool configblockTest(void);
 /* Static accessors */
 int configblockGetRadioChannel(void);
 int configblockGetRadioSpeed(void);
+uint64_t configblockGetRadioAddress(void);
 
 float configblockGetCalibPitch(void);
 float configblockGetCalibRoll(void);
