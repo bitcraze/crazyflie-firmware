@@ -1,7 +1,7 @@
 # CrazyFlie's Makefile
 # Copyright (c) 2011,2012 Bitcraze AB
 # This Makefile compiles all the objet file to ./bin/ and the resulting firmware
-# image in ./cflie.elf and ./cflie.bin
+# image in ./cfX.elf and ./cfX.bin
 
 #Put your personal build config in config.mk and DO NOT COMMIT IT!
 -include config.mk
@@ -116,10 +116,10 @@ endif
 ############### Source files configuration ################
 
 # Init
-ifeq ($(PLATFORM), CF2)
-	PROJ_OBJ = main.o platform_cf2.o
-else
+ifeq ($(PLATFORM), CF1)
 	PROJ_OBJ = main.o platform_cf1.o
+else
+	PROJ_OBJ = main.o platform_cf2.o
 endif
 
 # Drivers
@@ -254,7 +254,11 @@ ifeq ($(LTO), 1)
 endif
 
 #Program name
-PROG = cflie
+ifeq ($(PLATFORM), CF1)
+PROG = cf1
+else
+PROG = cf2
+endif
 #Where to compile the .o
 BIN = bin
 VPATH += $(BIN)
@@ -286,9 +290,16 @@ print_version: compile
 ifeq ($(SHELL),/bin/sh)
 	@./scripts/print_revision.sh
 endif
-ifeq ($(CLOAD), 1)
-	@echo "CrazyLoader build!"
+ifeq ($(PLATFORM), CF1)
+	@echo "Crazyflie Nano (1.0) build!"
 endif
+ifeq ($(PLATFORM), CF2)
+	@echo "Crazyflie 2.0 build!"
+endif
+ifeq ($(CLOAD), 1)
+	@echo "Crazyloader build!"
+endif
+
 
 size: compile
 	@$(SIZE) -B $(PROG).elf
@@ -296,7 +307,7 @@ size: compile
 #Radio bootloader
 cload:
 ifeq ($(CLOAD), 1)
-	$(CLOAD_SCRIPT) flash cflie.bin stm32-fw
+	$(CLOAD_SCRIPT) flash $(PROG).bin stm32-fw
 else
 	@echo "Only cload build can be bootloaded. Launch build and cload with CLOAD=1"
 endif
@@ -304,10 +315,10 @@ endif
 #Flash the stm.
 flash:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
-                 -c "flash write_image erase cflie.elf" -c "verify_image cflie.elf" -c "reset run" -c shutdown
+                 -c "flash write_image erase $(PROG).elf" -c "verify_image $(PROG).elf" -c "reset run" -c shutdown
 
 flash_dfu:
-	$(DFU_UTIL) -a 0 -D cflie.dfu
+	$(DFU_UTIL) -a 0 -D $(PROG).dfu
 
 #STM utility targets
 halt:
