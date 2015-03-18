@@ -38,7 +38,7 @@
 
 /* Internal format of the config block */
 #define MAGIC 0x43427830
-#define VERSION 0
+#define VERSION 1
 struct configblock_s {
   /* header */
   uint32_t magic;
@@ -48,6 +48,8 @@ struct configblock_s {
   uint8_t radioSpeed;
   float calibPitch;
   float calibRoll;
+  uint8_t radioAddress_upper;
+  uint32_t radioAddress_lower;
   /* Simple modulo 256 checksum */
   uint8_t cksum;
 } __attribute__((__packed__));
@@ -57,10 +59,12 @@ static struct configblock_s configblockDefault =
 {
     .magic = MAGIC,
     .version = VERSION,
-    .radioChannel = 80,
-    .radioSpeed = 0,
+    .radioChannel = RADIO_CHANNEL,
+    .radioSpeed = RADIO_DATARATE,
     .calibPitch = 0.0,
     .calibRoll = 0.0,
+    .radioAddress_upper = ((uint64_t)RADIO_ADDRESS >> 32),
+    .radioAddress_lower = (RADIO_ADDRESS & 0xFFFFFFFFULL),
 };
 
 static bool isInit = false;
@@ -133,6 +137,14 @@ int configblockGetRadioSpeed(void)
     return configblock.radioSpeed;
   else
     return RADIO_DATARATE;
+}
+
+uint64_t configblockGetRadioAddress(void)
+{
+  if (cb_ok)
+    return ((uint64_t)configblock.radioAddress_upper << 32) | (uint64_t)configblock.radioAddress_lower;
+  else
+    return RADIO_ADDRESS;
 }
 
 float configblockGetCalibPitch(void)
