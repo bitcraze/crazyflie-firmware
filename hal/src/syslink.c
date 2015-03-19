@@ -38,6 +38,7 @@
 #include "config.h"
 #include "debug.h"
 #include "syslink.h"
+#include "radiolink.h"
 #include "uart_syslink.h"
 #include "configblock.h"
 #include "pm.h"
