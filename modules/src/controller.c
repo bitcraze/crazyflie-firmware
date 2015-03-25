@@ -32,20 +32,23 @@
 #include "pid.h"
 #include "param.h"
 #include "imu.h"
+
+// don't use INT16_MIN, because later we may negate it, which won't work for that value.
+
 /*
 #define TRUNCATE_SINT16(out, in) \
   {\
     if (in > INT16_MAX) out = (int16_t)INT16_MAX;\
-    else if (in < INT16_MIN) out = (int16_t)INT16_MIN;\
+    else if (in < -INT16_MAX) out = (int16_t)-INT16_MAX;\
     else out = (int16_t)in;\
   }
 */
 
 //Fancier version
-#define TRUNCATE_SINT16(out, in) (out = (in<INT16_MIN)?INT16_MIN:((in>INT16_MAX)?INT16_MAX:in) )
+#define TRUNCATE_SINT16(out, in) (out = (in<-INT16_MAX)?-INT16_MAX:((in>INT16_MAX)?INT16_MAX:in) )
 
 //Better semantic
-#define SATURATE_SINT16(in) ( (in<INT16_MIN)?INT16_MIN:((in>INT16_MAX)?INT16_MAX:in) )
+#define SATURATE_SINT16(in) ( (in<-INT16_MAX)?-INT16_MAX:((in>INT16_MAX)?INT16_MAX:in) )
 
 PidObject pidRollRate;
 PidObject pidPitchRate;
