@@ -33,6 +33,7 @@ endif
 # CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
 
 ifeq ($(PLATFORM), CF1)
+REV               ?= F
 endif
 ifeq ($(PLATFORM), CF2)
 # Now needed for SYSLINK
@@ -65,35 +66,29 @@ STLIB = lib
 
 ################ Build configuration ##################
 # St Lib
-ifeq ($(PLATFORM), CF1)
-	VPATH += $(STLIB)/CMSIS/Core/CM3
-	VPATH += $(STLIB)/CMSIS/Core/CM3/startup/gcc
-	VPATH += $(STLIB)/STM32_CPAL_Driver/src
-	VPATH += $(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
-	CRT0=startup_stm32f10x_md.o system_stm32f10x.o
-endif
-ifeq ($(PLATFORM), CF2)
-	VPATH += $(STLIB)/CMSIS/STM32F4xx/Source/
-	VPATH += $(STLIB)/STM32_CPAL_Driver/src
-	VPATH += $(STLIB)/STM32_USB_Device_Library/Core/src
-	VPATH += $(STLIB)/STM32_USB_OTG_Driver/src
-	VPATH += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-	CRT0 = startup_stm32f40xx.o system_stm32f4xx.o
-endif
+VPATH_CF1 += $(STLIB)/CMSIS/Core/CM3
+VPATH_CF1 += $(STLIB)/CMSIS/Core/CM3/startup/gcc
+VPATH_CF1 += $(STLIB)/STM32_CPAL_Driver/src
+VPATH_CF1 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
+CRT0_CF1 = startup_stm32f10x_md.o system_stm32f10x.o
+
+VPATH_CF2 += $(STLIB)/CMSIS/STM32F4xx/Source/
+VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/src
+VPATH_CF2 += $(STLIB)/STM32_USB_Device_Library/Core/src
+VPATH_CF2 += $(STLIB)/STM32_USB_OTG_Driver/src
+VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
+CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
 -include $(ST_OBJ_DIR)/st_obj.mk
 
-ifeq ($(PLATFORM), CF1)
-	#ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
-endif
-ifeq ($(PLATFORM), CF2)
-	ST_OBJ += cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
-	# USB obj
-	ST_OBJ += usb_core.o usb_dcd_int.o usb_dcd.o
-	# USB Device obj
-	ST_OBJ += usbd_ioreq.o usbd_req.o usbd_core.o
-endif
+ST_OBJ_CF1 =  #cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
+
+ST_OBJ_CF2 = cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
+# USB obj
+ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
+# USB Device obj
+ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 
 
 # FreeRTOS
@@ -105,66 +100,61 @@ MEMMANG_OBJ = heap_4.o
 VPATH += $(FREERTOS)
 FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 
-# Crazyflie
+# Crazyflie sources
+VPATH += init hal/src modules/src utils/src drivers/src
+VPATH_CF1 += platform/cf1
+VPATH_CF2 += platform/cf2
+
+ifeq ($(PLATFORM), CF1)
+VPATH +=$(VPATH_CF1)
+endif
 ifeq ($(PLATFORM), CF2)
-	VPATH += init hal/src modules/src utils/src drivers/src platform/cf2
-else
-	VPATH += init hal/src modules/src utils/src drivers/src platform/cf1
+VPATH +=$(VPATH_CF2)
 endif
 
 
 ############### Source files configuration ################
 
 # Init
-ifeq ($(PLATFORM), CF1)
-	PROJ_OBJ = main.o platform_cf1.o
-else
-	PROJ_OBJ = main.o platform_cf2.o
-endif
+PROJ_OBJ = main.o
+PROJ_OBJ_CF1 = platform_cf1.o
+PROJ_OBJ_CF2 = platform_cf2.o
 
 # Drivers
 PROJ_OBJ += exti.o nvic.o  
-
-ifeq ($(PLATFORM), CF2)
-  PROJ_OBJ += led_f405.o mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
-  PROJ_OBJ += uart_syslink.o swd.o
-  # USB Files
-  PROJ_OBJ += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
-else
-  PROJ_OBJ += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o motors_f103.o hmc5883l.o ms5611.o nrf24l01.o eeprom.o
-endif
+PROJ_OBJ_CF1 += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o motors_f103.o hmc5883l.o ms5611.o nrf24l01.o eeprom.o
+PROJ_OBJ_CF2 += led_f405.o mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
+PROJ_OBJ_CF2 += uart_syslink.o swd.o
+# USB Files
+PROJ_OBJ_CF2 += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o
-ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o
-else
-PROJ_OBJ += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
-endif
+PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
+PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o
-ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += neopixelring.o expbrd.o platformservice.o
-endif
+PROJ_OBJ_CF2 += neopixelring.o expbrd.o platformservice.o
 
 # Expansion boards
-ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += exptest.o
-endif
+PROJ_OBJ_CF2 += exptest.o
 
 # Utilities
-ifeq ($(PLATFORM), CF2)
-PROJ_OBJ += configblockeeprom.o
-else
-PROJ_OBJ += configblockflash.o
-endif
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
 PROJ_OBJ += version.o
+PROJ_OBJ_CF1 += configblockflash.o
+PROJ_OBJ_CF2 += configblockeeprom.o
 
-OBJ = $(CRT0) $(FREERTOS_OBJ) $(PORT_OBJ) $(ST_OBJ) $(PROJ_OBJ)
+OBJ = $(FREERTOS_OBJ) $(PORT_OBJ) $(ST_OBJ) $(PROJ_OBJ)
+ifeq ($(PLATFORM), CF1)
+OBJ += $(CRT0_CF1) $(ST_OBJ_CF1) $(PROJ_OBJ_CF1)
+endif
+ifeq ($(PLATFORM), CF2)
+OBJ += $(CRT0_CF2) $(ST_OBJ_CF2) $(PROJ_OBJ_CF2)
+endif
 
 ifdef P
   C_PROFILE = -D P_$(P)
@@ -177,42 +167,37 @@ LD = $(CROSS_COMPILE)gcc
 SIZE = $(CROSS_COMPILE)size
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
+INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -I.
+INCLUDES += -Iconfig -Ihal/interface -Imodules/interface
+INCLUDES += -Iutils/interface -Idrivers/interface -Iplatform
+INCLUDES += -I$(STLIB)/CMSIS/Include
 
-INCLUDES = -I$(FREERTOS)/include -I$(PORT) -I.
-INCLUDES+= -Iconfig -Ihal/interface -Imodules/interface
-INCLUDES+= -Iutils/interface -Idrivers/interface -Iplatform
-INCLUDES+= -I$(STLIB)/CMSIS/Include
+INCLUDES_CF1 += -I$(STLIB)/STM32F10x_StdPeriph_Driver/inc
+INCLUDES_CF1 += -I$(STLIB)/CMSIS/Core/CM3
+INCLUDES_CF1 += -I$(STLIB)/STM32_CPAL_Driver/inc
+INCLUDES_CF1 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
 
-ifeq ($(PLATFORM), CF1)
-INCLUDES+= -I$(STLIB)/STM32F10x_StdPeriph_Driver/inc
-INCLUDES+= -I$(STLIB)/CMSIS/Core/CM3
-INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/inc
-INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f10x
-endif
-ifeq ($(PLATFORM), CF2)
-INCLUDES+= -I$(STLIB)/STM32F4xx_StdPeriph_Driver/inc
-INCLUDES+= -I$(STLIB)/CMSIS/STM32F4xx/Include 
-INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/inc
-INCLUDES+= -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-INCLUDES+= -I$(STLIB)/STM32_USB_Device_Library/Core/inc
-INCLUDES+= -I$(STLIB)/STM32_USB_OTG_Driver/inc
-endif
-
-
+INCLUDES_CF2 += -I$(STLIB)/STM32F4xx_StdPeriph_Driver/inc
+INCLUDES_CF2 += -I$(STLIB)/CMSIS/STM32F4xx/Include 
+INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/inc
+INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
+INCLUDES_CF2 += -I$(STLIB)/STM32_USB_Device_Library/Core/inc
+INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
 
 ifeq ($(USE_FPU), 1)
 PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 else
-PROCESSOR = -mcpu=cortex-m4 -mthumb
+	ifeq ($(PLATFORM), CF1)
+		PROCESSOR = -mcpu=cortex-m3 -mthumb
+	endif
+	ifeq ($(PLATFORM), CF2)
+		PROCESSOR = -mcpu=cortex-m4 -mthumb
+	endif
 endif
 
 #Flags required by the ST library
-ifeq ($(PLATFORM), CF1)
-STFLAGS = -DSTM32F10X_MD -DHSE_VALUE=16000000 -include stm32f10x_conf.h -DPLATFORM_CF1
-else
-STFLAGS = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER -DPLATFORM_CF2
-endif
-
+STFLAGS_CF1 = -DSTM32F10X_MD -DHSE_VALUE=16000000 -include stm32f10x_conf.h -DPLATFORM_CF1
+STFLAGS_CF2 = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER -DPLATFORM_CF2
 
 ifeq ($(DEBUG), 1)
   CFLAGS += -O0 -g3
@@ -230,7 +215,15 @@ endif
 
 CFLAGS += -DBOARD_REV_$(REV)
 
-CFLAGS += $(PROCESSOR) $(INCLUDES) $(STFLAGS) -Wall -fno-strict-aliasing $(C_PROFILE)
+CFLAGS += $(PROCESSOR) $(INCLUDES) $(STFLAGS)
+ifeq ($(PLATFORM), CF1)
+CFLAGS += $(INCLUDES_CF1) $(STFLAGS_CF1)
+endif
+ifeq ($(PLATFORM), CF2)
+CFLAGS += $(INCLUDES_CF2) $(STFLAGS_CF2)
+endif
+
+CFLAGS += -Wall -fno-strict-aliasing $(C_PROFILE)
 # Compiler flags to generate dependency files:
 CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 #Permits to remove un-used functions and global variables from output file
@@ -240,7 +233,6 @@ ASFLAGS = $(PROCESSOR) $(INCLUDES)
 LDFLAGS = $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections
 
 #Flags required by the ST library
-
 ifeq ($(CLOAD), 1)
   LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
   LOAD_ADDRESS = 0x8004000
