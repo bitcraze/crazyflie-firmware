@@ -165,6 +165,7 @@ static void solidColorEffect(uint8_t buffer[][3], bool reset)
 
 static const uint8_t green[] = {0x00, 0xFF, 0x00};
 static const uint8_t red[] = {0xFF, 0x00, 0x00};
+static const uint8_t blue[] = {0x00, 0x00, 0xFF};
 static const uint8_t white[] = WHITE;
 static const uint8_t part_black[] = BLACK;
 
@@ -239,8 +240,6 @@ static void spinEffect2(uint8_t buffer[][3], bool reset)
       COPY_COLOR(buffer[(NBR_LEDS-i)%NBR_LEDS], blueRing[i]);
     }
   }
-
-
 
   COPY_COLOR(temp, buffer[(NBR_LEDS-1)]);
   for (i=(NBR_LEDS-1); i>=0; i--) {
@@ -441,6 +440,36 @@ static void batteryChargeEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+/**
+ * An effect mimicking a blue light siren
+ */
+static void siren(uint8_t buffer[][3], bool reset)
+{
+  int i;
+  static int tic = 0;
+
+  if (reset)
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], part_black);
+    }
+  }
+
+  if ((tic < 10) && (tic & 1))
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], blue);
+    }
+  }
+  else
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], part_black);
+    }
+  }
+  if (++tic >= 20) tic = 0;
+}
+
 /**************** Effect list ***************/
 
 
@@ -454,7 +483,8 @@ NeopixelRingEffect effectsFct[] = {blackEffect,
                                    solidColorEffect,
                                    ledTestEffect,
                                    batteryChargeEffect,
-                                   boatEffect
+                                   boatEffect,
+                                   siren
                                   }; //TODO Add more
 
 /*
