@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <math.h>
+#include <string.h>
 
 #include "stm32fxxx.h"
 
@@ -59,7 +60,6 @@
 
 /**************** Some useful macros ***************/
 
-#define NBR_LEDS  12
 #define RED {0x10, 0x00, 0x00}
 #define GREEN {0x00, 0x10, 0x00}
 #define BLUE {0x00, 0x00, 0x10}
@@ -76,7 +76,7 @@
 #define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
 #define SET_WHITE(dest, intensity) dest[0] = intensity; dest[1] = intensity; dest[2] = intensity;
 
-static uint32_t effect = 9;
+static uint32_t effect = 13;
 static uint32_t neffect;
 static uint8_t headlightEnable = 0;
 static uint8_t black[][3] = {BLACK, BLACK, BLACK,
@@ -84,6 +84,14 @@ static uint8_t black[][3] = {BLACK, BLACK, BLACK,
                              BLACK, BLACK, BLACK,
                              BLACK, BLACK, BLACK,
                             };
+
+static const uint8_t green[] = {0x00, 0xFF, 0x00};
+static const uint8_t red[] = {0xFF, 0x00, 0x00};
+static const uint8_t blue[] = {0x00, 0x00, 0xFF};
+static const uint8_t white[] = WHITE;
+static const uint8_t part_black[] = BLACK;
+
+uint8_t ledringmem[NBR_LEDS][3];
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -165,11 +173,19 @@ static void solidColorEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
-static const uint8_t green[] = {0x00, 0xFF, 0x00};
-static const uint8_t red[] = {0xFF, 0x00, 0x00};
-static const uint8_t blue[] = {0x00, 0x00, 0xFF};
-static const uint8_t white[] = WHITE;
-static const uint8_t part_black[] = BLACK;
+static void virtualMemEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+
+  if (reset)
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+    }
+      COPY_COLOR(buffer[i], part_black);
+  }
+
+  memcpy(buffer, ledringmem, sizeof(ledringmem));
+}
 
 static void boatEffect(uint8_t buffer[][3], bool reset)
 {
@@ -534,29 +550,25 @@ static void siren(uint8_t buffer[][3], bool reset)
 /**************** Effect list ***************/
 
 
-NeopixelRingEffect effectsFct[] = {blackEffect,
-                                   whiteSpinEffect,
-                                   colorSpinEffect,
-                                   tiltEffect,
-                                   brightnessEffect,
-                                   spinEffect2,
-                                   doubleSpinEffect,
-                                   solidColorEffect,
-                                   ledTestEffect,
-                                   batteryChargeEffect,
-                                   boatEffect,
-                                   siren,
-                                   gravityLight
-                                  }; //TODO Add more
+NeopixelRingEffect effectsFct[] =
+{
+  blackEffect,
+  whiteSpinEffect,
+  colorSpinEffect,
+  tiltEffect,
+  brightnessEffect,
+  spinEffect2,
+  doubleSpinEffect,
+  solidColorEffect,
+  ledTestEffect,
+  batteryChargeEffect,
+  boatEffect,
+  siren,
+  gravityLight,
+  virtualMemEffect,
+}; //TODO Add more
 
-/*
-NeopixelRingEffect effectsFct[] = {blackEffect,
-                                   doubleSpinEffect,
-                                   solidColorEffect,
-                                  };
-*/
 /********** Ring init and switching **********/
-
 static xTimerHandle timer;
 
 

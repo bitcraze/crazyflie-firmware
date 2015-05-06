@@ -40,6 +40,7 @@
 #include "mem.h"
 #include "ow.h"
 #include "eeprom.h"
+#include "neopixelring.h"
 
 #include "console.h"
 #include "cfassert.h"
@@ -68,10 +69,13 @@
 #else
 #define NBR_EEPROM      1
 #endif
-#define EEPROM_ID       0
 
-#define MEM_TYPE_EEPROM 0
-#define MEM_TYPE_OW     1
+#define EEPROM_ID       0x00
+#define LEDMEM_ID       0x10
+
+#define MEM_TYPE_EEPROM 0x00
+#define MEM_TYPE_OW     0x01
+#define MEM_TYPE_LED12  0x10
 
 //Private functions
 static void memTask(void * prm);
@@ -261,6 +265,13 @@ void memWriteProcess()
       status = 0;
     else
       status = EIO;
+  }
+  else if(memId == LEDMEM_ID)
+  {
+    if ((memAddr + writeLen) < sizeof(ledringmem))
+    {
+      memcpy(ledringmem + memAddr, &p.data[5], writeLen);
+    }
   }
   else
   {
