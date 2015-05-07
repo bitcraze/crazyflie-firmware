@@ -44,6 +44,7 @@
 
 #include "console.h"
 #include "cfassert.h"
+#include "debug.h"
 
 #if 0
 #define MEM_DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
@@ -71,11 +72,15 @@
 #endif
 
 #define EEPROM_ID       0x00
-#define LEDMEM_ID       0x10
+#define NBR_LEDMEM      1
+#define LEDMEM_ID       0x01
+
+#define NBR_STATIC_MEM  (NBR_EEPROM + NBR_LEDMEM)
 
 #define MEM_TYPE_EEPROM 0x00
 #define MEM_TYPE_OW     0x01
 #define MEM_TYPE_LED12  0x10
+
 
 //Private functions
 static void memTask(void * prm);
@@ -150,7 +155,7 @@ void memSettingsProcess(int command)
       p.header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
       p.size = 2;
       p.data[0] = CMD_GET_NBR;
-      p.data[1] = nbrOwMems + NBR_EEPROM;
+      p.data[1] = nbrOwMems + NBR_STATIC_MEM;
       crtpSendPacket(&p);
       break;
 
@@ -173,9 +178,21 @@ void memSettingsProcess(int command)
         memcpy(&p.data[7], eepromSerialNum.data, 8);
         p.size += 8;
       }
+      else if (memId == LEDMEM_ID)
+      {
+        // Memory type (eeprom)
+        p.data[2] = MEM_TYPE_LED12;
+        p.size += 1;
+        // Size of the memory
+        memSize = sizeof(ledringmem);
+        memcpy(&p.data[3], &memSize, 4);
+        p.size += 4;
+        memcpy(&p.data[7], eepromSerialNum.data, 8); //TODO
+        p.size += 8;
+      }
       else
       {
-        if (owGetinfo(memId - NBR_EEPROM, &serialNbr))
+        if (owGetinfo(memId - NBR_STATIC_MEM, &serialNbr))
         {
           // Memory type (1-wire)
           p.data[2] = MEM_TYPE_OW;
@@ -199,7 +216,7 @@ void memReadProcess()
   uint8_t memId = p.data[0];
   uint8_t readLen = p.data[5];
   uint32_t memAddr;
-  uint8_t status;
+  uint8_t status = 0;
 
   memcpy(&memAddr, &p.data[1], 4);
 
@@ -215,9 +232,17 @@ void memReadProcess()
     else
       status = EIO;
   }
+  else if (memId == LEDMEM_ID)
+  {
+    if (memAddr + readLen <= sizeof(ledringmem) &&
+        memcpy(&p.data[6], &(ledringmem[memAddr]), readLen))
+      status = 0;
+    else
+      status = EIO;
+  }
   else
   {
-    memId = memId - NBR_EEPROM;
+    memId = memId - NBR_STATIC_MEM;
     if (memAddr + readLen <= OW_MAX_SIZE &&
         owRead(memId, memAddr, readLen, &p.data[6]))
       status = 0;
@@ -250,7 +275,7 @@ void memWriteProcess()
   uint8_t memId = p.data[0];
   uint8_t writeLen;
   uint32_t memAddr;
-  uint8_t status;
+  uint8_t status = 0;
 
   memcpy(&memAddr, &p.data[1], 4);
   writeLen = p.size - 5;
@@ -268,14 +293,19 @@ void memWriteProcess()
   }
   else if(memId == LEDMEM_ID)
   {
-    if ((memAddr + writeLen) < sizeof(ledringmem))
+    if ((memAddr + writeLen) <= sizeof(ledringmem))
     {
-      memcpy(ledringmem + memAddr, &p.data[5], writeLen);
+      memcpy(&(ledringmem[memAddr]), &p.data[5], writeLen);
+      DEBUG("LED write addr:%i, led:%i\n", memAddr, writeLen);
+    }
+    else
+    {
+      DEBUG("\LED write failed! addr:%i, led:%i\n", memAddr, writeLen);
     }
   }
   else
   {
-    memId = memId - NBR_EEPROM;
+    memId = memId - NBR_STATIC_MEM;
     if (memAddr + writeLen <= OW_MAX_SIZE &&
         owWrite(memId, memAddr, writeLen, &p.data[5]))
       status = 0;

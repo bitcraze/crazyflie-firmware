@@ -6,7 +6,7 @@
 
 #define NBR_LEDS  12
 
-extern uint8_t ledringmem[NBR_LEDS][3];
+extern uint8_t ledringmem[NBR_LEDS * 2];
 
 typedef void (*NeopixelRingEffect)(uint8_t buffer[][3], bool reset);
 

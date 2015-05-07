@@ -91,7 +91,7 @@ static const uint8_t blue[] = {0x00, 0x00, 0xFF};
 static const uint8_t white[] = WHITE;
 static const uint8_t part_black[] = BLACK;
 
-uint8_t ledringmem[NBR_LEDS][3];
+uint8_t ledringmem[NBR_LEDS * 2];
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -180,11 +180,22 @@ static void virtualMemEffect(uint8_t buffer[][3], bool reset)
   if (reset)
   {
     for (i=0; i<NBR_LEDS; i++) {
-    }
       COPY_COLOR(buffer[i], part_black);
+    }
   }
 
-  memcpy(buffer, ledringmem, sizeof(ledringmem));
+  for (i = 0; i < NBR_LEDS; i++)
+  {
+    uint8_t R5, G6, B5;
+    uint8_t (*led)[2] = ledringmem;
+    // Convert from RGB565 to RGB888
+    R5 = led[i][0] >> 3;
+    G6 = ((led[i][0] & 0x07) << 3) | (led[i][1] >> 5);
+    B5 = led[i][1] & 0x1F;
+    buffer[i][0] = ((uint16_t)R5 * 527 + 23 ) >> 6;
+    buffer[i][1] = ((uint16_t)G6 * 259 + 33 ) >> 6;
+    buffer[i][2] = ((uint16_t)B5 * 527 + 23 ) >> 6;
+  }
 }
 
 static void boatEffect(uint8_t buffer[][3], bool reset)
@@ -616,7 +627,7 @@ void neopixelringInit(void)
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-  timer = xTimerCreate( (const signed char *)"ringTimer", M2T(55),
+  timer = xTimerCreate( (const signed char *)"ringTimer", M2T(50),
                                      pdTRUE, NULL, neopixelringTimer );
   xTimerStart(timer, 100);
 }
