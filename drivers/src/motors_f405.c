@@ -32,10 +32,13 @@
 #include "stm32fxxx.h"
 
 #include "motors.h"
+#include "pm.h"
 
 //FreeRTOS includes
 #include "FreeRTOS.h"
 #include "task.h"
+
+#define THRUST_BAT_COMPENSATED
 
 // HW defines
 #define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM2
@@ -213,7 +216,7 @@ bool motorsTest(void)
   return isInit;
 }
 
-
+#ifndef THRUST_BAT_COMPENSATED
 void motorsSetRatio(int id, uint16_t ratio)
 {
   switch(id)
@@ -232,6 +235,33 @@ void motorsSetRatio(int id, uint16_t ratio)
       break;
   }
 }
+#else
+// Ithrust is thrust mapped for 65536 <==> 60g
+void motorsSetRatio(int id, uint16_t ithrust) {
+  float thrust = ((float)ithrust / 65536.0f) * 60;
+  float volts = -0.0006239 * thrust * thrust + 0.088 * thrust + 0.069;
+  float supply_voltage = pmGetBatteryVoltage();
+  float percentage = volts / supply_voltage;
+  percentage = percentage > 1.0 ? 1.0 : percentage;
+  uint16_t ratio = percentage * UINT16_MAX;
+
+  switch(id)
+  {
+   case MOTOR_M1:
+     M1_TIM_SETCOMPARE(MOTORS_TIM_M1, C_16_TO_BITS(ratio));
+     break;
+   case MOTOR_M2:
+     M2_TIM_SETCOMPARE(MOTORS_TIM_M2, C_16_TO_BITS(ratio));
+     break;
+   case MOTOR_M3:
+     M3_TIM_SETCOMPARE(MOTORS_TIM_M3, C_16_TO_BITS(ratio));
+     break;
+   case MOTOR_M4:
+     M4_TIM_SETCOMPARE(MOTORS_TIM_M4, C_16_TO_BITS(ratio));
+     break;
+  }
+}
+#endif
 
 int motorsGetRatio(int id)
 {
