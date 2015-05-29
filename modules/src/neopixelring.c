@@ -27,6 +27,7 @@
 #include "neopixelring.h"
 
 #include <stdint.h>
+#include <math.h>
 
 #include "stm32fxxx.h"
 
@@ -73,6 +74,7 @@
 #define SIGN(a) ((a>=0)?1:-1)
 #define DEADBAND(a, b) ((a<b) ? 0:a)
 #define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
+#define SET_WHITE(dest, intensity) dest[0] = intensity; dest[1] = intensity; dest[2] = intensity;
 
 static uint32_t effect = 9;
 static uint32_t neffect;
@@ -322,6 +324,65 @@ static void tiltEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+
+/*************** Gravity light effect *******************/
+
+static float gravityLightCalculateAngle(float pitch, float roll);
+static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensity);
+
+static void gravityLight(uint8_t buffer[][3], bool reset)
+{
+  static int pitchid, rollid;
+  static bool isInitialized = false;
+
+  if (!isInitialized) {
+    pitchid = logGetVarId("stabilizer", "pitch");
+    rollid = logGetVarId("stabilizer", "roll");
+    isInitialized = true;
+  }
+
+  float pitch = logGetFloat(pitchid); // -180 to 180
+  float roll = logGetFloat(rollid); // -180 to 180
+
+  float angle = gravityLightCalculateAngle(pitch, roll);
+  float led_index = NBR_LEDS * angle / (2 * M_PI);
+  int intensity = LIMIT(sqrt(pitch * pitch + roll * roll));
+  gravityLightRender(buffer, led_index, intensity);
+}
+
+static float gravityLightCalculateAngle(float pitch, float roll) {
+  float angle = 0.0;
+
+  if (roll != 0) {
+    angle = atan(pitch / roll) + M_PI_2;
+
+    if (roll < 0.0) {
+      angle += M_PI;
+    }
+  }
+
+  return angle;
+}
+
+static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensity) {
+  float width = 5;
+  float height = intensity;
+
+  int i;
+  for (i = 0; i < NBR_LEDS; i++) {
+	float distance = fabsf(led_index - i);
+	if (distance > NBR_LEDS / 2) {
+		distance = NBR_LEDS - distance;
+	}
+
+	int col = height - distance * (height / (width / 2));
+	SET_WHITE(buffer[i], LIMIT(col));
+  }
+}
+
+
+/*************** Brightness effect ********************/
+
 #define MAX_RATE 512
 
 static void brightnessEffect(uint8_t buffer[][3], bool reset)
@@ -484,7 +545,8 @@ NeopixelRingEffect effectsFct[] = {blackEffect,
                                    ledTestEffect,
                                    batteryChargeEffect,
                                    boatEffect,
-                                   siren
+                                   siren,
+                                   gravityLight
                                   }; //TODO Add more
 
 /*
