@@ -103,7 +103,7 @@ PROJ_OBJ += led.o exti.o nvic.o
 
 ifeq ($(F405), 1)
   PROJ_OBJ += mpu6500.o motors_f405.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o
-  PROJ_OBJ += uart_syslink.o swd.o
+  PROJ_OBJ += uart_syslink.o swd.o uart1.o uart2.o
   # USB Files
   PROJ_OBJ += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
 else
