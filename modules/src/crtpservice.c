@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -25,6 +25,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 
 /* FreeRtos includes */
 #include "FreeRTOS.h"
@@ -50,7 +51,7 @@ void crtpserviceInit(void)
 
   // Register a callback to service the Link port
   crtpRegisterPortCB(CRTP_PORT_LINK, crtpserviceHandler);
-  
+
   isInit = true;
 }
 
@@ -68,6 +69,8 @@ void crtpserviceHandler(CRTPPacket *p)
       break;
     case linkSource:
       p->size = CRTP_MAX_DATA_SIZE;
+      bzero(p->data, CRTP_MAX_DATA_SIZE);
+      strcpy((char*)p->data, "Bitcraze Crazyflie");
       crtpSendPacket(p);
       break;
     case linkSink:
@@ -75,6 +78,5 @@ void crtpserviceHandler(CRTPPacket *p)
       break;
     default:
       break;
-  } 
+  }
 }
-
