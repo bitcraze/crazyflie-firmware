@@ -40,30 +40,101 @@
 
 #define THRUST_BAT_COMPENSATED
 
+#ifdef BRUSHLESS_PROTO_DECK
+// HW defines for prototype brushless deck
+// M1 -> S2 -> PIN7-LEFT  -> PB5: TIM3_CH2
+// M2 -> S3 -> PIN1-RIGHT -> PA2: TIM2_CH3
+// M3 -> S4 -> PIN2-RIGHT -> PA3: TIM2_CH4
+// M4 -> S1 -> PIN8-LEFT  -> PB4: TIM3_CH1
+
+#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH2
+#define MOTORS_TIM_M1             TIM3
+#define MOTORS_TIM_M1_DBG         DBGMCU_TIM3_STOP
+#define M1_TIM_SETCOMPARE         TIM_SetCompare2
+#define M1_TIM_GETCAPTURE         TIM_GetCapture2
+#define M1_TIM_OC_INIT            TIM_OC2Init
+#define M1_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
+
+#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH3
+#define MOTORS_TIM_M2             TIM2
+#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
+#define M2_TIM_SETCOMPARE         TIM_SetCompare3
+#define M2_TIM_GETCAPTURE         TIM_GetCapture3
+#define M2_TIM_OC_INIT            TIM_OC3Init
+#define M2_TIM_OC_PRE_CFG         TIM_OC3PreloadConfig
+
+#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH4
+#define MOTORS_TIM_M3             TIM2
+#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
+#define M3_TIM_SETCOMPARE         TIM_SetCompare4
+#define M3_TIM_GETCAPTURE         TIM_GetCapture4
+#define M3_TIM_OC_INIT            TIM_OC4Init
+#define M3_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
+
+#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH1
+#define MOTORS_TIM_M4             TIM3
+#define MOTORS_TIM_M4_DBG         DBGMCU_TIM3_STOP
+#define M4_TIM_SETCOMPARE         TIM_SetCompare1
+#define M4_TIM_GETCAPTURE         TIM_GetCapture1
+#define M4_TIM_OC_INIT            TIM_OC1Init
+#define M4_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
+
+#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB // PB5
+#define MOTORS_GPIO_M1_PORT          GPIOB
+#define MOTORS_GPIO_M1_PIN           GPIO_Pin_5
+#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource5
+#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM3
+
+#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOA // PA2
+#define MOTORS_GPIO_M2_PORT          GPIOA
+#define MOTORS_GPIO_M2_PIN           GPIO_Pin_2
+#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource2
+#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA // PA3
+#define MOTORS_GPIO_M3_PORT          GPIOA
+#define MOTORS_GPIO_M3_PIN           GPIO_Pin_3
+#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource3
+#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB // PB4
+#define MOTORS_GPIO_M4_PORT          GPIOB
+#define MOTORS_GPIO_M4_PIN           GPIO_Pin_4
+#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource4
+#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM3
+#else
 // HW defines
 #define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM2
 #define MOTORS_TIM_M1             TIM2
 #define MOTORS_TIM_M1_DBG         DBGMCU_TIM2_STOP
 #define M1_TIM_SETCOMPARE         TIM_SetCompare2
 #define M1_TIM_GETCAPTURE         TIM_GetCapture2
+#define M1_TIM_OC_INIT            TIM_OC2Init
+#define M1_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
 
 #define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2
 #define MOTORS_TIM_M2             TIM2
 #define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
 #define M2_TIM_SETCOMPARE         TIM_SetCompare4
 #define M2_TIM_GETCAPTURE         TIM_GetCapture4
+#define M2_TIM_OC_INIT            TIM_OC4Init
+#define M2_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
 
 #define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2
 #define MOTORS_TIM_M3             TIM2
 #define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
 #define M3_TIM_SETCOMPARE         TIM_SetCompare1
 #define M3_TIM_GETCAPTURE         TIM_GetCapture1
+#define M3_TIM_OC_INIT            TIM_OC1Init
+#define M3_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
 
 #define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM4
 #define MOTORS_TIM_M4             TIM4
 #define MOTORS_TIM_M4_DBG         DBGMCU_TIM4_STOP
 #define M4_TIM_SETCOMPARE         TIM_SetCompare4
 #define M4_TIM_GETCAPTURE         TIM_GetCapture4
+#define M4_TIM_OC_INIT            TIM_OC4Init
+#define M4_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
 
 #define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB
 #define MOTORS_GPIO_M1_PORT          GPIOA
@@ -88,6 +159,7 @@
 #define MOTORS_GPIO_M4_PIN           GPIO_Pin_9 // TIM4_CH4
 #define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource9
 #define MOTORS_GPIO_AF_M4            GPIO_AF_TIM4
+#endif
 
 /* Utils Conversion macro */
 #ifdef BRUSHLESS_MOTORCONTROLLER
@@ -106,9 +178,6 @@ static bool isInit = false;
 //Initialization. Will set all motors ratio to 0%
 void motorsInit()
 {
-  int tempCR1_M1_2_3;
-  int tempCR1_M4;
-
   if (isInit)
     return;
 
@@ -158,34 +227,43 @@ void motorsInit()
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
   TIM_OCInitStructure.TIM_Pulse = 0;
-#ifdef BRUSHLESS_MOTORCONTROLLER
+#ifdef BRUSHLESS_INVERSED_POLARITY
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
 #else
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
 #endif
   TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
-  //M1:TIM2_CH2
-  TIM_OC2Init(MOTORS_TIM_M1, &TIM_OCInitStructure);
-  TIM_OC2PreloadConfig(MOTORS_TIM_M1, TIM_OCPreload_Enable);
-  //M2:TIM2_CH4
-  TIM_OC4Init(MOTORS_TIM_M2, &TIM_OCInitStructure);
-  TIM_OC4PreloadConfig(MOTORS_TIM_M2, TIM_OCPreload_Enable);
-  //M3:TIM2_CH1
-  TIM_OC1Init(MOTORS_TIM_M3, &TIM_OCInitStructure);
-  TIM_OC1PreloadConfig(MOTORS_TIM_M3, TIM_OCPreload_Enable);
-  //M4:TIM4_CH4
-  TIM_OC4Init(MOTORS_TIM_M4, &TIM_OCInitStructure);
-  TIM_OC4PreloadConfig(MOTORS_TIM_M4, TIM_OCPreload_Enable);
+  // Configure Output Compare for PWM
+  M1_TIM_OC_INIT(MOTORS_TIM_M1, &TIM_OCInitStructure);
+  M1_TIM_OC_PRE_CFG(MOTORS_TIM_M1, TIM_OCPreload_Enable);
+  M2_TIM_OC_INIT(MOTORS_TIM_M2, &TIM_OCInitStructure);
+  M2_TIM_OC_PRE_CFG(MOTORS_TIM_M2, TIM_OCPreload_Enable);
+  M3_TIM_OC_INIT(MOTORS_TIM_M3, &TIM_OCInitStructure);
+  M3_TIM_OC_PRE_CFG(MOTORS_TIM_M3, TIM_OCPreload_Enable);
+  M4_TIM_OC_INIT(MOTORS_TIM_M4, &TIM_OCInitStructure);
+  M4_TIM_OC_PRE_CFG(MOTORS_TIM_M4, TIM_OCPreload_Enable);
 
-  // Try to sync counters...
-  tempCR1_M1_2_3 = MOTORS_TIM_M1->CR1 | TIM_CR1_CEN;
-  tempCR1_M4 = MOTORS_TIM_M4->CR1 | TIM_CR1_CEN;
-  //Enable the timer
-  portDISABLE_INTERRUPTS();
-  MOTORS_TIM_M1->CR1 = tempCR1_M1_2_3;
-  MOTORS_TIM_M4->CR1 = tempCR1_M4;
-  portENABLE_INTERRUPTS();
+#ifdef BRUSHLESS_PROTO_DECK
+  TIM_Cmd(MOTORS_TIM_M1, ENABLE);
+  TIM_Cmd(MOTORS_TIM_M2, ENABLE);
+  TIM_Cmd(MOTORS_TIM_M3, ENABLE);
+  TIM_Cmd(MOTORS_TIM_M4, ENABLE);
+#else
+  {
+    int tempCR1_M1_2_3;
+    int tempCR1_M4;
+
+    // Try to sync counters...
+    tempCR1_M1_2_3 = MOTORS_TIM_M1->CR1 | TIM_CR1_CEN;
+    tempCR1_M4 = MOTORS_TIM_M4->CR1 | TIM_CR1_CEN;
+    //Enable the timer
+    portDISABLE_INTERRUPTS();
+    MOTORS_TIM_M1->CR1 = tempCR1_M1_2_3;
+    MOTORS_TIM_M4->CR1 = tempCR1_M4;
+    portENABLE_INTERRUPTS();
+  }
+#endif
 
   //Enable the timer PWM outputs
   TIM_CtrlPWMOutputs(MOTORS_TIM_M1, ENABLE);
