@@ -46,6 +46,8 @@
 #include "worker.h"
 #include "freeRTOSdebug.h"
 #include "uart_syslink.h"
+#include "uart1.h"
+#include "uart2.h"
 #include "comm.h"
 #include "stabilizer.h"
 #include "commander.h"
@@ -119,6 +121,13 @@ void systemTask(void *arg)
   ledSet(CHG_LED, 1);
 
   uartInit();
+#ifdef ENABLE_UART1
+  uart1Init();
+#endif
+#ifdef ENABLE_UART2
+  uart2Init();
+#endif
+
   //Init the high-levels modules
   systemInit();
 

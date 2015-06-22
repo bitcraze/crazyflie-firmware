@@ -27,6 +27,7 @@
 #include "neopixelring.h"
 
 #include <stdint.h>
+#include <math.h>
 
 #include "stm32fxxx.h"
 
@@ -73,6 +74,7 @@
 #define SIGN(a) ((a>=0)?1:-1)
 #define DEADBAND(a, b) ((a<b) ? 0:a)
 #define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
+#define SET_WHITE(dest, intensity) dest[0] = intensity; dest[1] = intensity; dest[2] = intensity;
 
 static uint32_t effect = 9;
 static uint32_t neffect;
@@ -165,6 +167,7 @@ static void solidColorEffect(uint8_t buffer[][3], bool reset)
 
 static const uint8_t green[] = {0x00, 0xFF, 0x00};
 static const uint8_t red[] = {0xFF, 0x00, 0x00};
+static const uint8_t blue[] = {0x00, 0x00, 0xFF};
 static const uint8_t white[] = WHITE;
 static const uint8_t part_black[] = BLACK;
 
@@ -239,8 +242,6 @@ static void spinEffect2(uint8_t buffer[][3], bool reset)
       COPY_COLOR(buffer[(NBR_LEDS-i)%NBR_LEDS], blueRing[i]);
     }
   }
-
-
 
   COPY_COLOR(temp, buffer[(NBR_LEDS-1)]);
   for (i=(NBR_LEDS-1); i>=0; i--) {
@@ -322,6 +323,65 @@ static void tiltEffect(uint8_t buffer[][3], bool reset)
     buffer[10][2] = LIMIT(led_middle + roll);
   }
 }
+
+
+/*************** Gravity light effect *******************/
+
+static float gravityLightCalculateAngle(float pitch, float roll);
+static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensity);
+
+static void gravityLight(uint8_t buffer[][3], bool reset)
+{
+  static int pitchid, rollid;
+  static bool isInitialized = false;
+
+  if (!isInitialized) {
+    pitchid = logGetVarId("stabilizer", "pitch");
+    rollid = logGetVarId("stabilizer", "roll");
+    isInitialized = true;
+  }
+
+  float pitch = logGetFloat(pitchid); // -180 to 180
+  float roll = logGetFloat(rollid); // -180 to 180
+
+  float angle = gravityLightCalculateAngle(pitch, roll);
+  float led_index = NBR_LEDS * angle / (2 * M_PI);
+  int intensity = LIMIT(sqrt(pitch * pitch + roll * roll));
+  gravityLightRender(buffer, led_index, intensity);
+}
+
+static float gravityLightCalculateAngle(float pitch, float roll) {
+  float angle = 0.0;
+
+  if (roll != 0) {
+    angle = atan(pitch / roll) + M_PI_2;
+
+    if (roll < 0.0) {
+      angle += M_PI;
+    }
+  }
+
+  return angle;
+}
+
+static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensity) {
+  float width = 5;
+  float height = intensity;
+
+  int i;
+  for (i = 0; i < NBR_LEDS; i++) {
+	float distance = fabsf(led_index - i);
+	if (distance > NBR_LEDS / 2) {
+		distance = NBR_LEDS - distance;
+	}
+
+	int col = height - distance * (height / (width / 2));
+	SET_WHITE(buffer[i], LIMIT(col));
+  }
+}
+
+
+/*************** Brightness effect ********************/
 
 #define MAX_RATE 512
 
@@ -441,6 +501,36 @@ static void batteryChargeEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+/**
+ * An effect mimicking a blue light siren
+ */
+static void siren(uint8_t buffer[][3], bool reset)
+{
+  int i;
+  static int tic = 0;
+
+  if (reset)
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], part_black);
+    }
+  }
+
+  if ((tic < 10) && (tic & 1))
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], blue);
+    }
+  }
+  else
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], part_black);
+    }
+  }
+  if (++tic >= 20) tic = 0;
+}
+
 /**************** Effect list ***************/
 
 
@@ -454,7 +544,9 @@ NeopixelRingEffect effectsFct[] = {blackEffect,
                                    solidColorEffect,
                                    ledTestEffect,
                                    batteryChargeEffect,
-                                   boatEffect
+                                   boatEffect,
+                                   siren,
+                                   gravityLight
                                   }; //TODO Add more
 
 /*
