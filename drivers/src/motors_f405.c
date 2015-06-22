@@ -38,14 +38,12 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#define THRUST_BAT_COMPENSATED
-
-#ifdef BRUSHLESS_PROTO_DECK
+#ifdef BRUSHLESS_PROTO_DECK_MAPPING
 // HW defines for prototype brushless deck
-// M1 -> S2 -> PIN7-LEFT  -> PB5: TIM3_CH2
-// M2 -> S3 -> PIN1-RIGHT -> PA2: TIM2_CH3
-// M3 -> S4 -> PIN2-RIGHT -> PA3: TIM2_CH4
-// M4 -> S1 -> PIN8-LEFT  -> PB4: TIM3_CH1
+// PIN7-LEFT  -> PB5: TIM3_CH2, connect as M1
+// PIN1-RIGHT -> PA2: TIM2_CH3, connect as M2
+// PIN2-RIGHT -> PA3: TIM2_CH4, connect as M3
+// PIN8-LEFT  -> PB4: TIM3_CH1, connect as M4
 
 #define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH2
 #define MOTORS_TIM_M1             TIM3
@@ -103,7 +101,14 @@
 #define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource4
 #define MOTORS_GPIO_AF_M4            GPIO_AF_TIM3
 #else
-// HW defines
+// Mapping of brushed controller timers. Brushless controller can still be activated using
+// the same mapping, PWM then needs to be inverted.
+
+#ifdef BRUSHLESS_MOTORCONTROLLER
+  // The brushed motor drivers (pull-down mosfet) inverses the output. Compensate for that.
+  #define BRUSHLESS_INVERSED_POLARITY
+#endif
+
 #define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM2
 #define MOTORS_TIM_M1             TIM2
 #define MOTORS_TIM_M1_DBG         DBGMCU_TIM2_STOP
@@ -159,6 +164,7 @@
 #define MOTORS_GPIO_M4_PIN           GPIO_Pin_9 // TIM4_CH4
 #define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource9
 #define MOTORS_GPIO_AF_M4            GPIO_AF_TIM4
+
 #endif
 
 /* Utils Conversion macro */
@@ -244,7 +250,7 @@ void motorsInit()
   M4_TIM_OC_INIT(MOTORS_TIM_M4, &TIM_OCInitStructure);
   M4_TIM_OC_PRE_CFG(MOTORS_TIM_M4, TIM_OCPreload_Enable);
 
-#ifdef BRUSHLESS_PROTO_DECK
+#ifdef BRUSHLESS_MOTORCONTROLLER
   TIM_Cmd(MOTORS_TIM_M1, ENABLE);
   TIM_Cmd(MOTORS_TIM_M2, ENABLE);
   TIM_Cmd(MOTORS_TIM_M3, ENABLE);
@@ -294,28 +300,10 @@ bool motorsTest(void)
   return isInit;
 }
 
-#ifndef THRUST_BAT_COMPENSATED
-void motorsSetRatio(int id, uint16_t ratio)
-{
-  switch(id)
-  {
-    case MOTOR_M1:
-      M1_TIM_SETCOMPARE(MOTORS_TIM_M1, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_M2:
-      M2_TIM_SETCOMPARE(MOTORS_TIM_M2, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_M3:
-      M3_TIM_SETCOMPARE(MOTORS_TIM_M3, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_M4:
-      M4_TIM_SETCOMPARE(MOTORS_TIM_M4, C_16_TO_BITS(ratio));
-      break;
-  }
-}
-#else
+#ifdef ENABLE_THRUST_BAT_COMPENSATED
 // Ithrust is thrust mapped for 65536 <==> 60g
-void motorsSetRatio(int id, uint16_t ithrust) {
+void motorsSetRatio(int id, uint16_t ithrust)
+{
   float thrust = ((float)ithrust / 65536.0f) * 60;
   float volts = -0.0006239 * thrust * thrust + 0.088 * thrust + 0.069;
   float supply_voltage = pmGetBatteryVoltage();
@@ -337,6 +325,25 @@ void motorsSetRatio(int id, uint16_t ithrust) {
    case MOTOR_M4:
      M4_TIM_SETCOMPARE(MOTORS_TIM_M4, C_16_TO_BITS(ratio));
      break;
+  }
+}
+#else
+void motorsSetRatio(int id, uint16_t ratio)
+{
+  switch(id)
+  {
+    case MOTOR_M1:
+      M1_TIM_SETCOMPARE(MOTORS_TIM_M1, C_16_TO_BITS(ratio));
+      break;
+    case MOTOR_M2:
+      M2_TIM_SETCOMPARE(MOTORS_TIM_M2, C_16_TO_BITS(ratio));
+      break;
+    case MOTOR_M3:
+      M3_TIM_SETCOMPARE(MOTORS_TIM_M3, C_16_TO_BITS(ratio));
+      break;
+    case MOTOR_M4:
+      M4_TIM_SETCOMPARE(MOTORS_TIM_M4, C_16_TO_BITS(ratio));
+      break;
   }
 }
 #endif

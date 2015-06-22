@@ -60,7 +60,11 @@ void expbrdInit()
   if (expbrdIsPresent(EXPBRD_VID_BITCRAZE, EXPBRD_PID_LEDRING))
 #endif
   {
+#ifndef BRUSHLESS_PROTO_DECK_MAPPING
+    // Can't have LED-ring and brushless breakout at the same time
+    // as they share TIM3
     neopixelringInit();
+#endif
   }
 
   isInit = true;
