@@ -31,7 +31,7 @@ if os.path.isdir(".git"):
     identify = identify.split('-')
 
     if len(identify) > 2:
-        version['local_revision'] = identify[len(identify)-2] + '+'
+        version['local_revision'] = identify[len(identify)-2]
     else:
         version['local_revision'] = '0'
 
@@ -41,6 +41,9 @@ if os.path.isdir(".git"):
         version['tag'] += identify[x]
 
     version['tag'] = version['tag'].strip()
+
+    if version['local_revision'] != '0':
+        version['tag'] = version['tag'] + '-' + version['local_revision']
 
     branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
     version['branch'] = branch

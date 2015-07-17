@@ -43,7 +43,7 @@
 #define CONFIG_H_
 #include "nrf24l01.h"
 
-#define PROTOCOL_VERSION 1
+#define PROTOCOL_VERSION 2
 
 #ifdef STM32F4XX
   #define P_NAME "Crazyflie 2.0 Rev.C"

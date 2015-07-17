@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -26,10 +26,11 @@
 #ifndef __VERSION_H__
 #define __VERSION_H__
 
+#include <stdbool.h>
+
 extern const char * V_SLOCAL_REVISION;
 extern const char * V_SREVISION;
 extern const char * V_STAG;
 extern const bool V_MODIFIED;
 
 #endif /* __VERSION_H__ */
-

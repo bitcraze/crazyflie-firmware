@@ -30,11 +30,13 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <stdint.h>
+#include <string.h>
 
 #include "config.h"
 #include "crtp.h"
 #include "platformservice.h"
 #include "syslink.h"
+#include "version.h"
 
 static bool isInit=false;
 
@@ -49,6 +51,7 @@ typedef enum {
 
 typedef enum {
   getProtocolVersion = 0x00,
+  getFirmwareVersion = 0x01,
 } VersionCommand;
 
 void platformserviceHandler(CRTPPacket *p);
@@ -108,6 +111,11 @@ static void versionCommandProcess(CRTPPacket *p)
     case getProtocolVersion:
       *(int*)&p->data[1] = PROTOCOL_VERSION;
       p->size = 5;
+      crtpSendPacket(p);
+      break;
+    case getFirmwareVersion:
+      strncpy((char*)&p->data[1], V_STAG, CRTP_MAX_DATA_SIZE-1);
+      p->size = (strlen(V_STAG)>CRTP_MAX_DATA_SIZE-1)?CRTP_MAX_DATA_SIZE:strlen(V_STAG)+1;
       crtpSendPacket(p);
       break;
     default:
