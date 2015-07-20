@@ -223,7 +223,7 @@ bool imu6Test(void)
 
   if (!isInit)
   {
-    DEBUG_PRINT("Uninitialized");
+    DEBUG_PRINT("Uninitialized\n");
     testStatus = false;
   }
 #if defined (IMU_ENABLE_MAG_HMC5883) && defined (IMU_ENABLE_PRESSURE_MS5611)
@@ -231,7 +231,7 @@ bool imu6Test(void)
   if((isHmc5883lPresent && !isMs5611Present) ||
      (!isHmc5883lPresent && isMs5611Present))
   {
-    DEBUG_PRINT("HMC5883L or MS5611 is not responding");
+    DEBUG_PRINT("HMC5883L or MS5611 is not responding\n");
     testStatus = false;
   }
 #endif
