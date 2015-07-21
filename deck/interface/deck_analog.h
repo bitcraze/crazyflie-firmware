@@ -30,7 +30,7 @@
 #include <stdint.h>
 
 /* Voltage reference types for the analogReference() function. */
-#define DEFAULT ((uint8_t)00)
+#define DEFAULT 0
 
 void adcInit(void);
 
