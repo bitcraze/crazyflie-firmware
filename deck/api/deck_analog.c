@@ -28,47 +28,6 @@
 
 #include "stm32fxxx.h"
 
-// Mapping between Pin number and real GPIO
-// TODO: Copy of identical struct in deck_digital.c - should be shared
-const struct {
-  uint32_t periph;
-  GPIO_TypeDef* port;
-  uint16_t pin;
-} gpioMapping2[13] = {
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_11},
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_10},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_7},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_6},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_8},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_5},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_4},
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_12},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_2},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_3},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_5},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_6},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_7},
-};
-
-/* TODO: Merged as extra column into the gpioMapping struct? */
-const struct {
-    int8_t adcCh; /* -1 means no ADC available for this pin. */
-} adcMapping[13] = {
-    {.adcCh=-1},            /* RX1 */
-    {.adcCh=-1},            /* TX1 */
-    {.adcCh=-1},            /* SDA */
-    {.adcCh=-1},            /* SCL */
-    {.adcCh=-1},            /* IO1 */
-    {.adcCh=-1},            /* IO2 */
-    {.adcCh=-1},            /* IO3 */
-    {.adcCh=-1},            /* IO4 */
-    {.adcCh=ADC_Channel_2}, /* TX2 */
-    {.adcCh=ADC_Channel_3}, /* RX2 */
-    {.adcCh=ADC_Channel_5}, /* SCK */
-    {.adcCh=ADC_Channel_6}, /* MISO */
-    {.adcCh=ADC_Channel_7}, /* MOSI */
-};
-
 void adcInit(void)
 {
   /*
@@ -82,7 +41,7 @@ void adcInit(void)
   ADC_InitTypeDef       ADC_InitStructure;
   ADC_CommonInitTypeDef ADC_CommonInitStructure;
 
-  /* IMPORTANT: populates structures with reset values */
+  /* Populates structures with reset values */
   ADC_StructInit(&ADC_InitStructure);
   ADC_CommonStructInit(&ADC_CommonInitStructure);
 
@@ -96,7 +55,7 @@ void adcInit(void)
   ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
   ADC_CommonInit(&ADC_CommonInitStructure);
 
-  /* init ADC2: 10bit, single-conversion for Arduino compatibility */
+  /* Init ADC2: 10bit, single-conversion for Arduino compatibility */
   ADC_InitStructure.ADC_Resolution = ADC_Resolution_10b;
   ADC_InitStructure.ADC_ScanConvMode = DISABLE;
   ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
@@ -128,28 +87,28 @@ static uint16_t analogReadChannel(uint8_t channel)
 uint16_t analogRead(uint32_t pin)
 {
   assert_param((pin >= 1) && (pin <= 13));
-  assert_param(adcMapping[pin-1].adcCh > -1);
+  assert_param(deckGPIOMapping[pin-1].adcCh > -1);
 
   /* Now set the GPIO pin to analog mode. */
 
   /* Enable clock for the peripheral of the pin.*/
-  RCC_AHB1PeriphClockCmd(gpioMapping2[pin-1].periph, ENABLE);
+  RCC_AHB1PeriphClockCmd(deckGPIOMapping[pin-1].periph, ENABLE);
 
   /* Populate structure with RESET values. */
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_StructInit(&GPIO_InitStructure);
 
   /* Initialise the GPIO pin to analog mode. */
-  GPIO_InitStructure.GPIO_Pin   = gpioMapping2[pin-1].pin;
+  GPIO_InitStructure.GPIO_Pin   = deckGPIOMapping[pin-1].pin;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
 
   /* TODO: Any settling time before we can do ADC after init on the GPIO pin? */
-  GPIO_Init(gpioMapping2[pin-1].port, &GPIO_InitStructure);
+  GPIO_Init(deckGPIOMapping[pin-1].port, &GPIO_InitStructure);
 
   /* Read the appropriate ADC channel. */
-  return analogReadChannel((uint8_t)adcMapping[pin-1].adcCh);
+  return analogReadChannel((uint8_t)deckGPIOMapping[pin-1].adcCh);
 }
 
 void analogReference(uint8_t type)

@@ -142,6 +142,7 @@ PROJ_OBJ_CF2 += neopixelring.o expbrd.o platformservice.o
 
 # Expansion boards
 PROJ_OBJ_CF2 += exptest.o
+PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
 

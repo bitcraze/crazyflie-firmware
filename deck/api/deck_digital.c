@@ -28,43 +28,22 @@
 
 #include "stm32fxxx.h"
 
-// Mapping between Pin number and real GPIO
-const struct {
-  uint32_t periph;
-  GPIO_TypeDef* port;
-  uint16_t pin;
-} gpioMapping[13] = {
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_11},
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_10},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_7},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_6},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_8},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_5},
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_4},
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_12},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_2},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_3},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_5},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_6},
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_7},
-};
-
 void pinMode(uint32_t pin, uint32_t mode)
 {
   if (pin > 13) {
     return;
   }
 
-  RCC_AHB1PeriphClockCmd(gpioMapping[pin-1].periph, ENABLE);
+  RCC_AHB1PeriphClockCmd(deckGPIOMapping[pin-1].periph, ENABLE);
 
   GPIO_InitTypeDef GPIO_InitStructure = {0};
 
-  GPIO_InitStructure.GPIO_Pin = gpioMapping[pin-1].pin;
+  GPIO_InitStructure.GPIO_Pin = deckGPIOMapping[pin-1].pin;
   GPIO_InitStructure.GPIO_Mode = (mode == OUTPUT)?GPIO_Mode_OUT:GPIO_Mode_IN;
   if (mode == OUTPUT) GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   if (mode == INPUT_PULLUP) GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
-  GPIO_Init(gpioMapping[pin-1].port, &GPIO_InitStructure);
+  GPIO_Init(deckGPIOMapping[pin-1].port, &GPIO_InitStructure);
 }
 
 void digitalWrite(uint32_t pin, uint32_t val)
@@ -75,7 +54,7 @@ void digitalWrite(uint32_t pin, uint32_t val)
 
   if (val) val = Bit_SET;
 
-  GPIO_WriteBit(gpioMapping[pin-1].port, gpioMapping[pin-1].pin, val);
+  GPIO_WriteBit(deckGPIOMapping[pin-1].port, deckGPIOMapping[pin-1].pin, val);
 }
 
 int digitalRead(uint32_t pin)
@@ -84,6 +63,6 @@ int digitalRead(uint32_t pin)
     return LOW;
   }
 
-  int val = GPIO_ReadInputDataBit(gpioMapping[pin-1].port, gpioMapping[pin-1].pin);
+  int val = GPIO_ReadInputDataBit(deckGPIOMapping[pin-1].port, deckGPIOMapping[pin-1].pin);
   return (val==Bit_SET)?HIGH:LOW;
 }
