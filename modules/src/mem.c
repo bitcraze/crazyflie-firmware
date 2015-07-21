@@ -192,7 +192,6 @@ void memSettingsProcess(int command)
 
 void memReadProcess()
 {
-  int i;
   uint8_t memId = p.data[0];
   uint8_t readLen = p.data[5];
   uint32_t memAddr;
@@ -222,12 +221,17 @@ void memReadProcess()
       status = EIO;
   }
 
-  for (i = 0; i < readLen; i++)
-    consolePrintf("%X ", p.data[i+6]);
+#if 0
+  {
+    int i;
+    for (i = 0; i < readLen; i++)
+      consolePrintf("%X ", p.data[i+6]);
 
-  consolePrintf("\nStatus %i\n", status);
-  p.data[5]=status;
+    consolePrintf("\nStatus %i\n", status);
+  }
+#endif
 
+  p.data[5] = status;
   if (status == 0)
     p.size = 6 + readLen;
   else
