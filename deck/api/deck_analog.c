@@ -72,11 +72,11 @@ const struct {
 void adcInit(void)
 {
   /*
-   * Note: This function initializes only ADC1, and only for single channel, single conversion mode. No DMA, no interrupts, no bells or whistles.
+   * Note: This function initializes only ADC2, and only for single channel, single conversion mode. No DMA, no interrupts, no bells or whistles.
    */
 
   /* Note that this de-initializes registers for all ADCs (ADCx) */
-  // ADC_DeInit();
+  ADC_DeInit();
 
   /* Define ADC init structures */
   ADC_InitTypeDef       ADC_InitStructure;
@@ -87,16 +87,16 @@ void adcInit(void)
   ADC_CommonStructInit(&ADC_CommonInitStructure);
 
   /* enable ADC clock */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
 
   /* init ADCs in independent mode, div clock by two */
   ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
+  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2; /* HCLK = 168MHz, PCLK2 = 84MHz, ADCCLK = 42MHz (when using ADC_Prescaler_Div2) */
   ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
   ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
   ADC_CommonInit(&ADC_CommonInitStructure);
 
-  /* init ADC1: 10bit, single-conversion for Arduino compatibility */
+  /* init ADC2: 10bit, single-conversion for Arduino compatibility */
   ADC_InitStructure.ADC_Resolution = ADC_Resolution_10b;
   ADC_InitStructure.ADC_ScanConvMode = DISABLE;
   ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
@@ -104,24 +104,25 @@ void adcInit(void)
   ADC_InitStructure.ADC_ExternalTrigConv = 0;
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
   ADC_InitStructure.ADC_NbrOfConversion = 1;
-  ADC_Init(ADC1, &ADC_InitStructure);
+  ADC_Init(ADC2, &ADC_InitStructure);
 
-  /* Enable ADC1 */
-  ADC_Cmd(ADC1, ENABLE);
+  /* Enable ADC2 */
+  ADC_Cmd(ADC2, ENABLE);
 }
 
 static uint16_t analogReadChannel(uint8_t channel)
 {
-  ADC_RegularChannelConfig(ADC1, channel, 1, ADC_SampleTime_480Cycles);
+  /* At 42MHz ADC clock, 480+15 cycles is slightly above 10us sampling time. */
+  ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_480Cycles);
 
   /* Start the conversion */
-  ADC_SoftwareStartConv(ADC1);
+  ADC_SoftwareStartConv(ADC2);
 
   /* Wait until conversion completion */
-  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
+  while(ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC) == RESET);
 
   /* Get the conversion value */
-  return ADC_GetConversionValue(ADC1);
+  return ADC_GetConversionValue(ADC2);
 }
 
 uint16_t analogRead(uint32_t pin)
@@ -138,9 +139,11 @@ uint16_t analogRead(uint32_t pin)
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_StructInit(&GPIO_InitStructure);
 
-  /* Initialise the GPIO pin to analog mode. According to the datasheet, only the analog mode needs to be set. */
-  GPIO_InitStructure.GPIO_Pin = gpioMapping2[pin-1].pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  /* Initialise the GPIO pin to analog mode. */
+  GPIO_InitStructure.GPIO_Pin   = gpioMapping2[pin-1].pin;
+  GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
 
   /* TODO: Any settling time before we can do ADC after init on the GPIO pin? */
   GPIO_Init(gpioMapping2[pin-1].port, &GPIO_InitStructure);
