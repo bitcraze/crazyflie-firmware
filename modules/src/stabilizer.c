@@ -42,6 +42,7 @@
 #include "ledseq.h"
 #include "param.h"
 #include "debug.h"
+#include "mb.h"
 #ifdef PLATFORM_CF1
   #include "ms5611.h"
 #else
@@ -226,6 +227,9 @@ static void stabilizerTask(void* param)
         stabilizerAltHoldUpdate();
         altHoldCounter = 0;
       }
+
+      /* TODO: This should only be read at max 20Hz. */
+      mb_read_distance(DECK_PIN_TX2);
 
       if (rollType == RATE)
       {
