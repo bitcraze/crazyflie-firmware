@@ -29,7 +29,6 @@
 #include "mb.h"
 
 #include <stddef.h>
-#include <assert.h>
 
 /* Internal tracking of last measured distance. */
 static uint32_t mb_distance = 0;
