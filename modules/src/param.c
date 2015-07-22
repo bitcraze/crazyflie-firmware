@@ -132,7 +132,7 @@ void paramTask(void * prm)
 
         // If the packet contains at least 2 zeros in the first 28 bytes
         // The packet decoding algorithm will not crash
-        for (i=0; i<31; i++) {
+        for (i=0; i<CRTP_MAX_DATA_SIZE; i++) {
           if (p.data[i] == '\0') nzero++;
         }
 
