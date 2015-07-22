@@ -38,27 +38,24 @@
 
 #include "stm32fxxx.h"
 
+/* Flag indicating if the proximityInit() function has been called or not. */
 static bool isInit = false;
 
-/* The exported values. */
-uint32_t proximityDistance  =  0; /* The distance measured in millimeters. */
-uint32_t proximityAccuracy  =  0; /* The accuracy as reported by the sensor. */
-uint16_t proximityFrequency = 10; /* The frequency at which to read sensors. Default is 10Hz. */
+/* Internal values exported by functions below. */
+static uint32_t proximityDistance  =   0; /* The distance measured in millimeters for the latest sample. */
+static uint32_t proximityDistanceAvg = 0; /* Average distance in millimeters, initialized to zero. */
+static uint32_t proximityAccuracy  =   0; /* The accuracy as reported by the sensor driver for the latest sample. */
 
 /* A sliding window used to calculate average distance. */
-#define PROXIMITY_SWIN_SIZE 5                /* Number of samples in the sliding window. */
-uint32_t proximitySWin[PROXIMITY_SWIN_SIZE]; /* Must be initialized before use. */
-uint32_t proximityDistanceAvg = 0;           /* Average distance initialized to zero. */
+#define PROXIMITY_SWIN_SIZE 5                       /* Number of samples in the sliding window. */
+static uint32_t proximitySWin[PROXIMITY_SWIN_SIZE]; /* Must be initialized before use. */
 
+/* Adding a log group for this subsystem. */
 LOG_GROUP_START(proximity)
 LOG_ADD(LOG_UINT32, distance, &proximityDistance)
 LOG_ADD(LOG_UINT32, distanceAvg, &proximityDistanceAvg)
 LOG_ADD(LOG_UINT32, accuracy, &proximityAccuracy)
 LOG_GROUP_STOP(proximity)
-
-PARAM_GROUP_START(proximity)
-PARAM_ADD(PARAM_UINT32, frequency, &proximityFrequency)
-PARAM_GROUP_STOP(proximity)
 
 #if defined(PROXIMITY_ENABLED)
 /**
@@ -91,6 +88,11 @@ static uint32_t proximitySWinAdd(uint32_t distance)
   return (uint32_t)proximityNewAvg;
 }
 
+/**
+ * Proximity task running at PROXIMITY_TASK_FREQ Hz.
+ *
+ * @param param Currently unused.
+ */
 static void proximityTask(void* param)
 {
   uint32_t lastWakeTime;
@@ -104,19 +106,22 @@ static void proximityTask(void* param)
 
   while(1)
   {
-    vTaskDelayUntil(&lastWakeTime, F2T(proximityFrequency));
+    vTaskDelayUntil(&lastWakeTime, F2T(PROXIMITY_TASK_FREQ));
 
 #if defined(MB_ENABLED)
     /* Read the MaxBotix sensor. */
     proximityDistance = mbReadDistance(MB1040AN, &proximityAccuracy);
+#endif
 
     /* If the accuracy is considered better than 0 (0 means completely inaccurate), add the new sample. */
     proximityDistanceAvg = proximitySWinAdd(proximityDistance);
-#endif
   }
 }
 #endif
 
+/**
+ * Initialization of the proximity task.
+ */
 void proximityInit(void)
 {
   if(isInit)
@@ -132,4 +137,35 @@ void proximityInit(void)
 #endif
 
   isInit = true;
+}
+
+/**
+ * Function returning the last proximity measurement.
+ *
+ * @return The last proximity measurement made.
+ */
+uint32_t proximityGetDistance(void)
+{
+  return proximityDistance;
+}
+
+/**
+ * Function returning the result of the last, average proximity calculation.
+ * The calculation is a simple average of the last PROXIMITY_SWIN_SIZE samples.
+ *
+ * @return The result from the last, average proximity calculation.
+ */
+uint32_t proximityGetDistanceAvg(void)
+{
+  return proximityDistanceAvg;
+}
+
+/**
+ * Function returning the accuracy of the last proximity measurement.
+ *
+ * @return The accuracy of the last proximity measurement made.
+ */
+uint32_t proximityGetAccuracy(void)
+{
+  return proximityAccuracy;
 }

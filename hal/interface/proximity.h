@@ -31,4 +31,10 @@
 
 void proximityInit(void);
 
+uint32_t proximityGetDistance(void);
+
+uint32_t proximityGetDistanceAvg(void);
+
+uint32_t proximityGetAccuracy(void);
+
 #endif

@@ -158,6 +158,7 @@
  * Enable the proximity measurement subsystem.
  */
 // #define PROXIMITY_ENABLED
+#define PROXIMITY_TASK_FREQ 10
 
 /**
  * \def MB_ENABLED
