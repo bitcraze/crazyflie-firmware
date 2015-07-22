@@ -158,17 +158,22 @@
  * Enable the proximity measurement subsystem.
  */
 // #define PROXIMITY_ENABLED
+
+/**
+ * \def PROXIMITY_TASK_FREQ
+ * The frequency the proximity task runs at. This is the same as the sampling frequency for the distance measurements.
+ */
 #define PROXIMITY_TASK_FREQ 10
 
 /**
  * \def MB_ENABLED
- * Enable the MaxBotix Sonar Range Finder driver.
+ * Enable the MaxBotix Sonar Range Finder driver (used by the proximity measurement subsystem).
  */
 //#define MB_ENABLED
 
 /**
  * \def MB_DECK_GPIO
- * The GPIO pin to use when reading via the analog interface of a MaxBotix Sonar Range Finder.
+ * The GPIO pin to use if reading via the analog interface of a MaxBotix Sonar Range Finder.
  */
 #define MB_DECK_GPIO DECK_GPIO_TX2
 
