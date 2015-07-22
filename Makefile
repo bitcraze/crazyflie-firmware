@@ -132,7 +132,7 @@ PROJ_OBJ_CF2 += usbd_usr.o usb_bsp.o usblink.o usbd_desc.o usb.o
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
-PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o
+PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o

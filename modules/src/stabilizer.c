@@ -228,9 +228,6 @@ static void stabilizerTask(void* param)
         altHoldCounter = 0;
       }
 
-      /* TODO: This should only be read at max 20Hz. */
-      mb_read_distance(DECK_PIN_TX2);
-
       if (rollType == RATE)
       {
         rollRateDesired = eulerRollDesired;

@@ -56,6 +56,7 @@
 #include "usb.h"
 #include "expbrd.h"
 #include "mem.h"
+#include "proximity.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -91,6 +92,7 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+  proximityInit();
     
   isInit = true;
 }

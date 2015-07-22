@@ -42,6 +42,7 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 #include "nrf24l01.h"
+#include "deck.h"
 
 #define PROTOCOL_VERSION 2
 
@@ -74,6 +75,7 @@
 #define STABILIZER_TASK_PRI     4
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
+#define PROXIMITY_TASK_PRI      0
 //CF1
 #define ADC_TASK_PRI            0
 #define PM_TASK_PRI             0
@@ -97,6 +99,7 @@
 #define ESKYLINK_TASK_NAME      "ESKYLINK"
 #define SYSLINK_TASK_NAME       "SYSLINK"
 #define USBLINK_TASK_NAME       "USBLINK"
+#define PROXIMITY_TASK_NAME     "PROXIMITY"
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
 #define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
@@ -112,6 +115,7 @@
 #define ESKYLINK_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
 #define SYSLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define USBLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80
@@ -148,6 +152,24 @@
  * The UART must be configured to run really fast, e.g. in 2Mb/s.
  */
 //#define ADC_OUTPUT_RAW_DATA
+
+/**
+ * \def PROXIMITY_ENABLED
+ * Enable the proximity measurement subsystem.
+ */
+// #define PROXIMITY_ENABLED
+
+/**
+ * \def MB_ENABLED
+ * Enable the MaxBotix Sonar Range Finder driver.
+ */
+//#define MB_ENABLED
+
+/**
+ * \def MB_DECK_GPIO
+ * The GPIO pin to use when reading via the analog interface of a MaxBotix Sonar Range Finder.
+ */
+#define MB_DECK_GPIO DECK_GPIO_TX2
 
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(ADC_OUTPUT_RAW_DATA)
 #  error "Can't define UART_OUTPUT_TRACE_DATA and ADC_OUTPUT_RAW_DATA at the same time"
