@@ -1,9 +1,30 @@
-##Crazyflie 1.0/2.0 Firmware
+## Crazyflie 1.0/2.0 Firmware
 
-This project contains the source code for the Crazyflie 1.0/2.0 firmware. More information can be found on the 
+This project contains the source code for the Crazyflie 1.0/2.0 firmware. 
+
+##### Crazyflie 1.0
+Build with:
+```
+make PLATFORM=CF1
+```
+
+##### Crazyflie 2.0
+This is the dafault build so just running "make" is enough or:
+```
+make PLATFORM=CF2
+```
+##### config.mk
+To create custom build options create a file called config.mk in the root folder 
+(same as Makefile) and fill it with options. E.g. 
+```
+PLATFORM=CF1
+DEBUG=1
+CLOAD=0
+```
+More information can be found on the 
 [Bitcraze wiki](http://wiki.bitcraze.se/projects:crazyflie2:index)
 
-####Folder description:
+#### Folder description:
 ```
 ./              | Root, contains the Makefile
  + init         | Contains the main.c
@@ -28,7 +49,7 @@ This project contains the source code for the Crazyflie 1.0/2.0 firmware. More i
  |  + STM32...  | Library folders of the ST STM32 peripheral libs
  |  + CMSIS     | Core abstraction layer
 ```
-####Make targets:
+#### Make targets:
 ```
 all        : Shortcut for build
 compile    : Compile cflie.hex. WARNING: Do NOT update version.c
@@ -37,9 +58,10 @@ clean_o    : Clean only the Objects files, keep the executables (ie .elf, .hex)
 clean      : Clean every compiled files
 mrproper   : Clean every compiled files and the classical editors backup files
 
-cload      : If the crazyflie-clients-python is placed on the same directory level and the Crazyradio/Crazyradio PA
-             is inserted it will try to flash the firmware using the wireless bootloader.
-flash      : Flash cflie.elf using OpenOCD
+cload      : If the crazyflie-clients-python is placed on the same directory level and 
+             the Crazyradio/Crazyradio PA is inserted it will try to flash the firmware 
+             using the wireless bootloader.
+flash      : Flash .elf using OpenOCD
 halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD

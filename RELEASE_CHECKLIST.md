@@ -3,7 +3,7 @@ Crazyflie firmware release checklist
 
 Checks
 ---------
- - Verify that Crazyflie 2.0 still flies:
+ - Verify that Crazyflie 1.0/2.0 still flies:
 	 - Using a BLE client, Android or iPhone
 	 - Using the PC Crazyflie client and Crazyradio
  - Verify that LOG and params are still working
@@ -20,5 +20,5 @@ Build
 Distribute
 ------------
 
- 1. Rename cflie.bin into Crazyflie-{tagged-version}.bin
+ 1. Rename cf1.bin and cf2.bin into Crazyflie-{tagged-version}.bin
  2. Upload this file to Github release for this tag
