@@ -5,5 +5,6 @@
 
 #include "deck_contants.h"
 #include "deck_digital.h"
+#include "deck_analog.h"
 
 #endif

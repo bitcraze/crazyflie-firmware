@@ -88,9 +88,7 @@ void systemInit(void)
 
   configblockInit();
   workerInit();
-#ifdef PLATFORM_CF1
   adcInit();
-#endif
   ledseqInit();
   pmInit();
     
