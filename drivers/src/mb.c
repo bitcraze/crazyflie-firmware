@@ -108,7 +108,11 @@ static uint32_t mbReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
    * Which can be simplified to:             D = analogRead() / 2
    * Last, we convert inches to millimeters: D = 25.4 * analogRead() / 2
    *
-   * TODO: The above conversion assumes the ADC VREF is the same as the LV-MaxSonar-EZ4 VREF. To be checked.
+   * The above conversion assumes the ADC VREF is the same as the LV-MaxSonar-EZ4 VREF. This means
+   * that the MB1040 Sensor must have its VCC pin connected to the VCC pin on the deck port.
+   *
+   * According to the datasheet for the MB1040, the sensor draws typically 2mA, so powering it with
+   * the VCC pin on the deck port is safe.
    */
 
   mb_distance = (uint32_t)(25.4 * analogRead(pin) / 2);

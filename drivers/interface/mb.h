@@ -24,6 +24,17 @@
  * mb.h - API for the MaxBotix MB1040 Sonar Range Finder (LV-MaxSonar-EZ04)
  */
 
+/**
+ * This driver assumes the ADC VREF is the same as the LV-MaxSonar-EZ4 VREF. This means
+ * that the MB1040 Sensor should have its VCC pin connected to the VCC pin on the deck
+ * port (instead of using the VCOM or VUSB pins).
+ *
+ * According to the datasheet for the MB1040, the sensor draws typically 2mA, so
+ * powering it with the VCC pin (50mA max) on the deck port should be safe.
+ *
+ * See also https://forum.bitcraze.io/viewtopic.php?f=6&t=1250
+ */
+
 #ifndef __MB_H__
 #define __MB_H__
 
