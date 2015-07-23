@@ -157,25 +157,13 @@
  * \def PROXIMITY_ENABLED
  * Enable the proximity measurement subsystem.
  */
-// #define PROXIMITY_ENABLED
-
-/**
- * \def PROXIMITY_TASK_FREQ
- * The frequency the proximity task runs at. This is the same as the sampling frequency for the distance measurements.
- */
-#define PROXIMITY_TASK_FREQ 10
+//#define PROXIMITY_ENABLED
 
 /**
  * \def MB_ENABLED
  * Enable the MaxBotix Sonar Range Finder driver (used by the proximity measurement subsystem).
  */
 //#define MB_ENABLED
-
-/**
- * \def MB_DECK_GPIO
- * The GPIO pin to use if reading via the analog interface of a MaxBotix Sonar Range Finder.
- */
-#define MB_DECK_GPIO DECK_GPIO_TX2
 
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(ADC_OUTPUT_RAW_DATA)
 #  error "Can't define UART_OUTPUT_TRACE_DATA and ADC_OUTPUT_RAW_DATA at the same time"

@@ -29,6 +29,12 @@
 
 #include <stdint.h>
 
+/**
+ * \def PROXIMITY_TASK_FREQ
+ * The frequency the proximity task runs at. This is the same as the sampling frequency for the distance measurements.
+ */
+#define PROXIMITY_TASK_FREQ 10
+
 void proximityInit(void);
 
 uint32_t proximityGetDistance(void);

@@ -41,6 +41,12 @@
 #include <stdint.h>
 
 /**
+ * \def MB_DECK_GPIO
+ * The GPIO pin to use if reading via the analog interface of a MaxBotix Sonar Range Finder.
+ */
+#define MB_DECK_GPIO DECK_GPIO_TX2
+
+/**
  * List of MaxBotix sensors with different interface types can be added here.
  *
  * Sensors should be listed once for each interface, for instance MB1040AN (Analog), MB1040I2C (I2C), MB1040PWM (PWM) etc.
