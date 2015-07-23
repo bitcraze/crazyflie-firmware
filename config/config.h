@@ -160,10 +160,10 @@
 //#define PROXIMITY_ENABLED
 
 /**
- * \def MB_ENABLED
- * Enable the MaxBotix Sonar Range Finder driver (used by the proximity measurement subsystem).
+ * \def MAXSONAR_ENABLED
+ * Enable the MaxSonar driver (used by the proximity measurement subsystem).
  */
-//#define MB_ENABLED
+//#define MAXSONAR_ENABLED
 
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(ADC_OUTPUT_RAW_DATA)
 #  error "Can't define UART_OUTPUT_TRACE_DATA and ADC_OUTPUT_RAW_DATA at the same time"

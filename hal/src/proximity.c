@@ -31,7 +31,7 @@
 #include "config.h"
 #include "deck.h"
 #include "proximity.h"
-#include "mb.h"
+#include "maxsonar.h"
 #include "system.h"
 #include "param.h"
 #include "log.h"
@@ -108,9 +108,9 @@ static void proximityTask(void* param)
   {
     vTaskDelayUntil(&lastWakeTime, F2T(PROXIMITY_TASK_FREQ));
 
-#if defined(MB_ENABLED)
+#if defined(MAXSONAR_ENABLED)
     /* Read the MaxBotix sensor. */
-    proximityDistance = mbReadDistance(MB1040AN, &proximityAccuracy);
+    proximityDistance = maxSonarReadDistance(MAXSONAR_MB1040_AN, &proximityAccuracy);
 #endif
 
     /* If the accuracy is considered better than 0 (0 means completely inaccurate), add the new sample. */
