@@ -29,6 +29,7 @@
 #include "config.h"
 #include "log.h"
 #include "maxsonar.h"
+#include "deck.h"
 
 /* Internal tracking of last measured distance. */
 static uint32_t maxSonarDistance = 0;

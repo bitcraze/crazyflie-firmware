@@ -42,7 +42,6 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 #include "nrf24l01.h"
-#include "deck.h"
 
 #define PROTOCOL_VERSION 2
 
