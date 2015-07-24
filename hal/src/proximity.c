@@ -42,22 +42,60 @@
 static bool isInit = false;
 
 /* Internal values exported by functions below. */
-static uint32_t proximityDistance  =   0; /* The distance measured in millimeters for the latest sample. */
-static uint32_t proximityDistanceAvg = 0; /* Average distance in millimeters, initialized to zero. */
-static uint32_t proximityAccuracy  =   0; /* The accuracy as reported by the sensor driver for the latest sample. */
+static uint32_t proximityDistance       = 0; /* The distance measured in millimeters for the latest sample. */
+static uint32_t proximityDistanceAvg    = 0; /* Average distance in millimeters, initialized to zero. */
+static uint32_t proximityDistanceMedian = 0; /* Median distance in millimeters, initialized to zero. */
+static uint32_t proximityAccuracy       = 0; /* The accuracy as reported by the sensor driver for the latest sample. */
 
-/* A sliding window used to calculate average distance. */
-#define PROXIMITY_SWIN_SIZE 5                       /* Number of samples in the sliding window. */
-static uint32_t proximitySWin[PROXIMITY_SWIN_SIZE]; /* Must be initialized before use. */
+/* The most recent samples in chronological order. Must be initialized before use. */
+static uint32_t proximitySWin[PROXIMITY_SWIN_SIZE];
 
-/* Adding a log group for this subsystem. */
+#if defined(PROXIMITY_ENABLED)
+
+#if defined(PROXIMITY_LOG_ENABLED)
+/* Define a log group. */
 LOG_GROUP_START(proximity)
 LOG_ADD(LOG_UINT32, distance, &proximityDistance)
 LOG_ADD(LOG_UINT32, distanceAvg, &proximityDistanceAvg)
+LOG_ADD(LOG_UINT32, distanceMed, &proximityDistanceMedian)
 LOG_ADD(LOG_UINT32, accuracy, &proximityAccuracy)
 LOG_GROUP_STOP(proximity)
+#endif
 
-#if defined(PROXIMITY_ENABLED)
+/**
+ * This function returns the median value of an array.
+ *
+ * Internal sorting function by Bill Gentles Nov. 12 2010, seen
+ * on http://forum.arduino.cc/index.php?topic=20920.0
+ *
+ * @param proximitySWin Array of chronologically sequenced samples.
+ *
+ * @return Median value from the array.
+ */
+static uint32_t proximitySWinMedian(uint32_t *proximitySWin)
+{
+  /* The most recent samples, sorted in increasing sample value order. Must be initialized before use. */
+  uint32_t proximitySorted[PROXIMITY_SWIN_SIZE];
+
+  /* Create a copy of the chronologically sequenced buffer. */
+  memcpy(proximitySorted, proximitySWin, sizeof(uint32_t)*PROXIMITY_SWIN_SIZE);
+
+  /* Now sort this copy. */
+  uint8_t n;
+  for (n = 1; n < PROXIMITY_SWIN_SIZE; ++n) {
+    uint32_t valn = proximitySorted[n];
+    int8_t m; /* May reach value of -1 */
+    for (m = n - 1; (m >= 0) && (valn < proximitySorted[m]); m--)
+    {
+      proximitySorted[m + 1] = proximitySorted[m];
+    }
+    proximitySorted[m + 1] = valn;
+  }
+
+  /* Return the median value of the samples. */
+  return proximitySorted[PROXIMITY_SWIN_SIZE / 2];
+}
+
 /**
  * This function adds a distance measurement to the sliding window, discarding the oldest sample.
  * After having added the new sample, a new average value of the samples is calculated and returned.
@@ -113,8 +151,11 @@ static void proximityTask(void* param)
     proximityDistance = maxSonarReadDistance(MAXSONAR_MB1040_AN, &proximityAccuracy);
 #endif
 
-    /* If the accuracy is considered better than 0 (0 means completely inaccurate), add the new sample. */
+    /* Get the latest average value calculated. */
     proximityDistanceAvg = proximitySWinAdd(proximityDistance);
+
+    /* Get the latest median value calculated. */
+    proximityDistanceMedian = proximitySWinMedian(proximitySWin);
   }
 }
 #endif
@@ -158,6 +199,17 @@ uint32_t proximityGetDistance(void)
 uint32_t proximityGetDistanceAvg(void)
 {
   return proximityDistanceAvg;
+}
+
+/**
+ * Function returning the result of the last, median proximity calculation.
+ * The calculation is the median of the last PROXIMITY_SWIN_SIZE samples.
+ *
+ * @return The result from the last, median proximity calculation.
+ */
+uint32_t proximityGetDistanceMedian(void)
+{
+  return proximityDistanceMedian;
 }
 
 /**

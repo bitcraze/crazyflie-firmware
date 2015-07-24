@@ -32,14 +32,32 @@
 /**
  * \def PROXIMITY_TASK_FREQ
  * The frequency the proximity task runs at. This is the same as the sampling frequency for the distance measurements.
+ *
+ * Of the supported sensor, the following maximum frequencies apply:
+ *
+ *    MaxBotix LV-MaxSonar-EZ4 (MB1040): 20Hz
  */
 #define PROXIMITY_TASK_FREQ 10
+
+/**
+ * Number of samples in the sliding window. Used for average and median calculations.
+ * When using median calculations, this should be an odd number.
+ */
+#define PROXIMITY_SWIN_SIZE 5
+
+/**
+ * \def PROXIMITY_LOG_ENABLED
+ * Uncomment to enable log variables.
+ */
+//#define PROXIMITY_LOG_ENABLED
 
 void proximityInit(void);
 
 uint32_t proximityGetDistance(void);
 
 uint32_t proximityGetDistanceAvg(void);
+
+uint32_t proximityGetDistanceMedian(void);
 
 uint32_t proximityGetAccuracy(void);
 

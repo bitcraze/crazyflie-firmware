@@ -34,11 +34,13 @@
 static uint32_t maxSonarDistance = 0;
 static uint32_t maxSonarAccuracy = 0; /* 0 accuracy means no measurement or unknown accuracy. */
 
-/* Define a log group */
+#if defined(MAXSONAR_LOG_ENABLED)
+/* Define a log group. */
 LOG_GROUP_START(maxSonar)
 LOG_ADD(LOG_UINT32, distance, &maxSonarDistance)
 LOG_ADD(LOG_UINT32, accuracy, &maxSonarAccuracy)
 LOG_GROUP_STOP(maxSonar)
+#endif
 
 /**
  * Gets the accuracy for a distance measurement from an MB1040 sonar range finder (LV-MaxSonar-EZ4).

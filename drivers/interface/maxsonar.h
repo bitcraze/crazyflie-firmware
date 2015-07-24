@@ -47,6 +47,12 @@
 #define MAXSONAR_DECK_GPIO DECK_GPIO_TX2
 
 /**
+ * \def MAXSONAR_LOG_ENABLED
+ * Uncomment to enable log variables for this driver.
+ */
+//#define MAXSONAR_LOG_ENABLED
+
+/**
  * List of MaxBotix sensors with different interface types can be added here.
  *
  * Sensors should be listed once for each interface, for instance MB1040AN (Analog), MB1040I2C (I2C), MB1040PWM (PWM) etc.
