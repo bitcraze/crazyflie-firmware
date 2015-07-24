@@ -37,13 +37,17 @@
  *
  *    MaxBotix LV-MaxSonar-EZ4 (MB1040): 20Hz
  */
-#define PROXIMITY_TASK_FREQ 10
+#define PROXIMITY_TASK_FREQ 20
 
 /**
  * Number of samples in the sliding window. Used for average and median calculations.
  * When using median calculations, this should be an odd number.
+ *
+ * Initial testing suggests the following values:
+ *
+ *    MaxBotix LV-MaxSonar-EZ4 (MB1040): 9 (for median values, with PROXIMITY_TASK_FREQ=20Hz)
  */
-#define PROXIMITY_SWIN_SIZE 5
+#define PROXIMITY_SWIN_SIZE 9
 
 /**
  * \def PROXIMITY_LOG_ENABLED
