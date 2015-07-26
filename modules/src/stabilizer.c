@@ -42,6 +42,7 @@
 #include "ledseq.h"
 #include "param.h"
 #include "debug.h"
+#include "sitaw.h"
 #ifdef PLATFORM_CF1
   #include "ms5611.h"
 #else
@@ -121,15 +122,6 @@ static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used 
 static uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
 static uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
 
-// Free Fall Detection variables
-static uint16_t ffCount    = 0;     // Count of consecutive samples with free fall according to ffaccWZ
-static bool     ffDetected = false; // Flag indicating whether a free fall has been detected.
-
-// Free Fall Detection parameters
-static float    ffaccWZ    = -0.85; // Threshold at 85% of free fall (accWZ approaches -1 during free fall)
-static bool     ffEnabled  = false; // Flag enabling / disabling the free fall detection. Defined as uint8 since PARAM macros do not support boolean
-static uint16_t ffTrig     = 25;    // At 250Hz sampling, this is 1/10th of a second before triggering free fall detection.
-
 RPYType rollType;
 RPYType pitchType;
 RPYType yawType;
@@ -163,6 +155,9 @@ void stabilizerInit(void)
   imu6Init();
   sensfusion6Init();
   controllerInit();
+#if defined(SITAW_ENABLED)
+  sitAwInit();
+#endif
 
   rollRateDesired = 0;
   pitchRateDesired = 0;
@@ -184,40 +179,6 @@ bool stabilizerTest(void)
   pass &= controllerTest();
 
   return pass;
-}
-
-static void ffDetect(void)
-{
-	// If altHoldMode is true, do nothing.
-	if(commanderGetAltHoldMode())
-		return;
-
-	// Only when ffEnabled is true, and free fall is detected
-	if(ffEnabled && (accWZ <= ffaccWZ))
-	{
-		ffCount++;
-	}
-	else
-	{
-		ffCount = 0;
-	}
-
-	ffDetected = (ffCount >= ffTrig);
-	return;
-}
-
-static void ffEnableAltHoldMode(void)
-{
-	// If altHoldMode is true, do nothing.
-	if(commanderGetAltHoldMode())
-		return;
-
-	if(ffDetected)
-	{
-		commanderSetAltHoldMode(true);
-		ffDetected = false;
-		ffCount = 0;
-	}
 }
 
 static void stabilizerTask(void* param)
@@ -252,7 +213,6 @@ static void stabilizerTask(void* param)
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
 
         accWZ = sensfusion6GetAccZWithoutGravity(acc.x, acc.y, acc.z);
-        ffDetect();
 
         accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
         // Estimate speed from acc (drifts)
@@ -262,16 +222,19 @@ static void stabilizerTask(void* param)
                                      eulerRollDesired, eulerPitchDesired, -eulerYawDesired,
                                      &rollRateDesired, &pitchRateDesired, &yawRateDesired);
         attitudeCounter = 0;
+
+#if defined(SITAW_ENABLED)
+        /* Free Fall Detection. */
+        sitAwFFDetect(accWZ, accMAG);
+
+        /* At Rest Detection. */
+        sitAwARDetect(acc.x, acc.y, acc.z);
+#endif
       }
 
       // 100HZ
       if (imuHasBarometer() && (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER))
       {
-        if(ffDetected)
-        {
-          ffEnableAltHoldMode();
-        }
-
         stabilizerAltHoldUpdate();
         altHoldCounter = 0;
       }
@@ -555,16 +518,3 @@ PARAM_ADD(PARAM_UINT16, baseThrust, &altHoldBaseThrust)
 PARAM_ADD(PARAM_UINT16, maxThrust, &altHoldMaxThrust)
 PARAM_ADD(PARAM_UINT16, minThrust, &altHoldMinThrust)
 PARAM_GROUP_STOP(altHold)
-
-// Log free fall detection
-LOG_GROUP_START(ff)
-LOG_ADD(LOG_UINT16, ffCount, &ffCount)
-LOG_ADD(LOG_UINT8, ffDetected, &ffDetected)
-LOG_GROUP_STOP(ff)
-
-// Params for free fall detection
-PARAM_GROUP_START(ff)
-PARAM_ADD(PARAM_UINT8, ffEnabled, &ffEnabled)
-PARAM_ADD(PARAM_UINT16, ffTrig, &ffTrig)
-PARAM_ADD(PARAM_FLOAT, ffaccWZ, &ffaccWZ)
-PARAM_GROUP_STOP(ff)
