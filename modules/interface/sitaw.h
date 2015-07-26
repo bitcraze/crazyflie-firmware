@@ -35,7 +35,7 @@ bool sitAwARDetect(float accX, float accY, float accZ);
 void sitAwInit(void);
 
 /* Enable the situation awareness framework. */
-//#define SITAW_ENABLED
+#define SITAW_ENABLED
 
 /* Configuration options for the Free Fall detection. */
 #define SITAW_FF_ENABLED           /* Uncomment to enable free fall detection. */

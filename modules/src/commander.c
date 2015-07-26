@@ -148,6 +148,19 @@ bool commanderGetAltHoldMode(void)
 void commanderSetAltHoldMode(bool altHoldModeNew)
 {
 	altHoldMode = altHoldModeNew;
+
+	/**
+	 * Dirty trick to ensure the altHoldChange variable remains zero after next call to commanderGetAltHold().
+	 *
+	 * This is needed since the commanderGetAltHold sets the altHoldChange to -1 if altHoldMode is enabled with
+	 * a simultaneous thrust command of 0.
+	 *
+	 * When altHoldMode is set to -1 when enabling altHoldMode, the altTarget will steadily decrease until thrust
+	 * is commanded to correct the altitude.
+	 */
+	if(altHoldModeNew) {
+	  targetVal[side].thrust = 32767;
+	}
 }
 
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType)

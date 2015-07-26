@@ -122,6 +122,7 @@ static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used 
 static uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
 static uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
 
+
 RPYType rollType;
 RPYType pitchType;
 RPYType yawType;
@@ -213,7 +214,6 @@ static void stabilizerTask(void* param)
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
 
         accWZ = sensfusion6GetAccZWithoutGravity(acc.x, acc.y, acc.z);
-
         accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
         // Estimate speed from acc (drifts)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
@@ -225,10 +225,14 @@ static void stabilizerTask(void* param)
 
 #if defined(SITAW_ENABLED)
         /* Free Fall Detection. */
-        sitAwFFDetect(accWZ, accMAG);
+        if(sitAwFFDetect(accWZ, accMAG)) {
+          commanderSetAltHoldMode(true);
+        }
 
         /* At Rest Detection. */
-        sitAwARDetect(acc.x, acc.y, acc.z);
+        if(sitAwARDetect(acc.x, acc.y, acc.z)) {
+          commanderSetAltHoldMode(false);
+        }
 #endif
       }
 
@@ -471,6 +475,7 @@ LOG_ADD(LOG_INT32, m2, &motorPowerM2)
 LOG_ADD(LOG_INT32, m3, &motorPowerM3)
 LOG_GROUP_STOP(motor)
 
+#if 0
 // LOG altitude hold PID controller states
 LOG_GROUP_START(vpid)
 LOG_ADD(LOG_FLOAT, pid, &altHoldPID)
@@ -478,6 +483,7 @@ LOG_ADD(LOG_FLOAT, p, &altHoldPID.outP)
 LOG_ADD(LOG_FLOAT, i, &altHoldPID.outI)
 LOG_ADD(LOG_FLOAT, d, &altHoldPID.outD)
 LOG_GROUP_STOP(vpid)
+#endif
 
 LOG_GROUP_START(baro)
 LOG_ADD(LOG_FLOAT, asl, &asl)
@@ -490,7 +496,7 @@ LOG_GROUP_STOP(baro)
 LOG_GROUP_START(altHold)
 LOG_ADD(LOG_FLOAT, err, &altHoldErr)
 LOG_ADD(LOG_FLOAT, target, &altHoldTarget)
-LOG_ADD(LOG_FLOAT, zSpeed, &vSpeed)
+LOG_ADD(LOG_FLOAT, change, &altHoldChange)
 LOG_ADD(LOG_FLOAT, vSpeed, &vSpeed)
 LOG_ADD(LOG_FLOAT, vSpeedASL, &vSpeedASL)
 LOG_ADD(LOG_FLOAT, vSpeedAcc, &vSpeedAcc)
