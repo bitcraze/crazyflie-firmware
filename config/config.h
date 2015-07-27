@@ -152,18 +152,6 @@
  */
 //#define ADC_OUTPUT_RAW_DATA
 
-/**
- * \def PROXIMITY_ENABLED
- * Enable the proximity measurement subsystem.
- */
-//#define PROXIMITY_ENABLED
-
-/**
- * \def MAXSONAR_ENABLED
- * Enable the MaxSonar driver (used by the proximity measurement subsystem).
- */
-//#define MAXSONAR_ENABLED
-
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(ADC_OUTPUT_RAW_DATA)
 #  error "Can't define UART_OUTPUT_TRACE_DATA and ADC_OUTPUT_RAW_DATA at the same time"
 #endif

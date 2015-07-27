@@ -41,6 +41,12 @@
 #include <stdint.h>
 
 /**
+ * \def MAXSONAR_ENABLED
+ * Enable the MaxSonar driver (used by the proximity measurement subsystem).
+ */
+//#define MAXSONAR_ENABLED
+
+/**
  * \def MAXSONAR_DECK_GPIO
  * The GPIO pin to use if reading via the analog interface of a MaxSonar sensor.
  */

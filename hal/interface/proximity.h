@@ -30,6 +30,12 @@
 #include <stdint.h>
 
 /**
+ * \def PROXIMITY_ENABLED
+ * Enable the proximity measurement subsystem.
+ */
+//#define PROXIMITY_ENABLED
+
+/**
  * \def PROXIMITY_TASK_FREQ
  * The frequency the proximity task runs at. This is the same as the sampling frequency for the distance measurements.
  *
