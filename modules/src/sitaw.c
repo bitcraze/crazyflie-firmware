@@ -123,7 +123,7 @@ void sitAwFFInit(void)
 
  * This can be checked by looking at the accMAG (total acceleration). If
  * the accMAG is approaching 0, there are no other accelerations than accWZ.
- * This helps to distinguish free fall situations from other other movements
+ * This helps to distinguish free fall situations from other movements
  * such as shaking.
  *
  * @param accWZ  Vertical acceleration (regardless of orientation)
