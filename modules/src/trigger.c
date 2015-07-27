@@ -37,7 +37,7 @@
  *
  * @param trigger      The trigger object.
  * @param func         The trigger function type.
- * @param threshold    The threshold to test the trigger function against.
+ * @param threshold    The threshold to use with the trigger function.
  * @param triggerCount When testCounter reaches this value, a trigger is reported.
  */
 void triggerInit(trigger_t *trigger, triggerFunc_t func, float threshold, uint32_t triggerCount)
@@ -67,6 +67,7 @@ void triggerRegisterHandler(trigger_t *trigger, triggerHandler_t handler, void *
 
   trigger->handler = handler;
   trigger->handlerArg = handlerArg;
+  trigger->handlerCalled = false;
 }
 
 /**
@@ -167,8 +168,8 @@ bool triggerTestValue(trigger_t *trigger, float testValue)
         break;
       }
       else {
-        /* Reset and reactivate the trigger if the test failed. */
-        triggerActivate(trigger, true);
+        /* Reset the trigger if the test failed. */
+        triggerReset(trigger);
         return false;
       }
     }
@@ -178,8 +179,8 @@ bool triggerTestValue(trigger_t *trigger, float testValue)
         break;
       }
       else {
-        /* Reset and reactivate the trigger if the test failed. */
-        triggerActivate(trigger, true);
+        /* Reset the trigger if the test failed. */
+        triggerReset(trigger);
         return false;
       }
     }
