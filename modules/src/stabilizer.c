@@ -182,6 +182,41 @@ bool stabilizerTest(void)
   return pass;
 }
 
+static void stabilizerPostAttitudeUpdateCallOut(void)
+{
+  /* Code that shall run AFTER each attitude update should be placed here. */
+
+#if defined(SITAW_ENABLED)
+  /* Test values for Free Fall detection. */
+  sitAwFFTest(accWZ, accMAG);
+
+  /* Test values for Tumbled detection. */
+  sitAwTuTest(eulerRollActual, eulerPitchActual);
+
+  /* Test values for At Rest detection. */
+  sitAwARTest(acc.x, acc.y, acc.z);
+
+  if(sitAwFFDetected() && !sitAwTuDetected()) {
+    commanderSetAltHoldMode(true);
+  }
+
+  if(sitAwARDetected() || sitAwTuDetected()) {
+    commanderSetAltHoldMode(false);
+  }
+#endif
+}
+
+static void stabilizerPreThrustUpdateCallOut(void)
+{
+  /* Code that shall run BEFORE each thrust distribution update should be placed here. */
+
+#if defined(SITAW_ENABLED)
+      if(sitAwTuDetected()) {
+        actuatorThrust = 0;
+      }
+#endif
+}
+
 static void stabilizerTask(void* param)
 {
   uint32_t attitudeCounter = 0;
@@ -223,17 +258,8 @@ static void stabilizerTask(void* param)
                                      &rollRateDesired, &pitchRateDesired, &yawRateDesired);
         attitudeCounter = 0;
 
-#if defined(SITAW_ENABLED)
-        /* Free Fall Detection. */
-        if(sitAwFFDetect(accWZ, accMAG)) {
-          commanderSetAltHoldMode(true);
-        }
-
-        /* At Rest Detection. */
-        if(sitAwARDetect(acc.x, acc.y, acc.z)) {
-          commanderSetAltHoldMode(false);
-        }
-#endif
+        /* Call out after performing attitude updates, if any functions would like to use the calculated values. */
+        stabilizerPostAttitudeUpdateCallOut();
       }
 
       // 100HZ
@@ -272,6 +298,9 @@ static void stabilizerTask(void* param)
         // Added so thrust can be set to 0 while in altitude hold mode after disconnect
         commanderWatchdog();
       }
+
+      /* Call out before performing thrust updates, if any functions would like to influence the thrust. */
+      stabilizerPreThrustUpdateCallOut();
 
       if (actuatorThrust > 0)
       {
@@ -475,7 +504,6 @@ LOG_ADD(LOG_INT32, m2, &motorPowerM2)
 LOG_ADD(LOG_INT32, m3, &motorPowerM3)
 LOG_GROUP_STOP(motor)
 
-#if 0
 // LOG altitude hold PID controller states
 LOG_GROUP_START(vpid)
 LOG_ADD(LOG_FLOAT, pid, &altHoldPID)
@@ -483,7 +511,6 @@ LOG_ADD(LOG_FLOAT, p, &altHoldPID.outP)
 LOG_ADD(LOG_FLOAT, i, &altHoldPID.outI)
 LOG_ADD(LOG_FLOAT, d, &altHoldPID.outD)
 LOG_GROUP_STOP(vpid)
-#endif
 
 LOG_GROUP_START(baro)
 LOG_ADD(LOG_FLOAT, asl, &asl)
