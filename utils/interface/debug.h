@@ -23,6 +23,7 @@
  *
  * debug.h - Debugging utility functions
  */
+#include "config.h"
 #include "console.h"
 
 #ifdef DEBUG_MODULE

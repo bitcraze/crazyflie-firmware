@@ -245,8 +245,11 @@ void vApplicationIdleHook( void )
     timeToPrint = xTaskGetTickCount();
     debugPrintTCBInfo();
   }
-  // Enter sleep mode
-//  { __asm volatile ("wfi"); }
+  // Enter sleep mode. Does not work when debugging chip with SWD.
+  // Currently saves about 20mA STM32F405 current consumption (~30%).
+#ifndef DEBUG
+  { __asm volatile ("wfi"); }
+#endif
 }
 
 /*System parameters (mostly for test, should be removed from here) */

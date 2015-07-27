@@ -19,13 +19,11 @@ PLATFORM					?= CF2
 
 ifeq ($(PLATFORM), CF1)
 OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
-F405              ?= 1
 USE_FPU            = 0
 endif
 ifeq ($(PLATFORM), CF2)
 OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
-F405              ?= 0
-USE_FPU           ?= 0
+USE_FPU           ?= 1
 endif
 
 ## Flag that can be added to config.mk
@@ -205,7 +203,7 @@ STFLAGS_CF1 = -DSTM32F10X_MD -DHSE_VALUE=16000000 -include stm32f10x_conf.h -DPL
 STFLAGS_CF2 = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER -DPLATFORM_CF2
 
 ifeq ($(DEBUG), 1)
-  CFLAGS += -O0 -g3
+  CFLAGS += -O0 -g3 -DDEBUG
 else
   CFLAGS += -Os -g3
 endif

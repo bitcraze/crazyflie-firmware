@@ -49,11 +49,11 @@
 #include "cfassert.h"
 
 #if 0
-#define DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
-#define ERROR(fmt, ...) DEBUG_PRINT("E/log " fmt, ## __VA_ARGS__)
+#define LOG_DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
+#define LOG_ERROR(fmt, ...) DEBUG_PRINT("E/log " fmt, ## __VA_ARGS__)
 #else
-#define DEBUG(...)
-#define ERROR(...)
+#define LOG_DEBUG(...)
+#define LOG_ERROR(...)
 #endif
 
 
@@ -207,7 +207,7 @@ void logTOCProcess(int command)
   switch (command)
   {
   case CMD_GET_INFO: //Get info packet about the log implementation
-    DEBUG("Packet is TOC_GET_INFO\n");
+    LOG_DEBUG("Packet is TOC_GET_INFO\n");
     ptr = 0;
     group = "";
     p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
@@ -220,7 +220,7 @@ void logTOCProcess(int command)
     crtpSendPacket(&p);
     break;
   case CMD_GET_ITEM:  //Get log variable
-    DEBUG("Packet is TOC_GET_ITEM Id: %d\n", p.data[1]);
+    LOG_DEBUG("Packet is TOC_GET_ITEM Id: %d\n", p.data[1]);
     for (ptr=0; ptr<logsLen; ptr++) //Ptr points a group
     {
       if (logs[ptr].type & LOG_GROUP)
@@ -240,7 +240,7 @@ void logTOCProcess(int command)
     
     if (ptr<logsLen)
     {
-      DEBUG("    Item is \"%s\":\"%s\"\n", group, logs[ptr].name);
+      LOG_DEBUG("    Item is \"%s\":\"%s\"\n", group, logs[ptr].name);
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM;
       p.data[1]=n;
@@ -250,7 +250,7 @@ void logTOCProcess(int command)
       p.size=3+2+strlen(group)+strlen(logs[ptr].name);
       crtpSendPacket(&p);      
     } else {
-      DEBUG("    Index out of range!");
+      LOG_DEBUG("    Index out of range!");
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM;
       p.size=1;
@@ -321,7 +321,7 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
 	return ENOMEM;
   }
 
-  DEBUG("Added block ID %d\n", id);
+  LOG_DEBUG("Added block ID %d\n", id);
   
   return logAppendBlock(id, settings, len);
 }
@@ -337,13 +337,13 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
   int i;
   struct log_block * block;
   
-  DEBUG("Appending %d variable to block %d\n", len, id);
+  LOG_DEBUG("Appending %d variable to block %d\n", len, id);
   
   for (i=0; i<LOG_MAX_BLOCKS; i++)
     if (logBlocks[i].id == id) break;
   
   if (i >= LOG_MAX_BLOCKS) {
-    ERROR("Trying to append block id %d that doesn't exist.", id);
+    LOG_ERROR("Trying to append block id %d that doesn't exist.", id);
     return ENOENT;
   }
   
@@ -356,14 +356,14 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
     int varId;
     
     if ((currentLength + typeLength[settings[i].logType&0x0F])>LOG_MAX_LEN) {
-      ERROR("Trying to append a full block. Block id %d.\n", id);
+      LOG_ERROR("Trying to append a full block. Block id %d.\n", id);
       return E2BIG;
     }
     
     ops = opsMalloc();
     
     if(!ops) {
-      ERROR("No more ops memory free!\n");
+      LOG_ERROR("No more ops memory free!\n");
       return ENOMEM;
     }
     
@@ -372,7 +372,7 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
       varId = variableGetIndex(settings[i].id);
       
       if (varId<0) {
-        ERROR("Trying to add variable Id %d that does not exists.", settings[i].id);
+        LOG_ERROR("Trying to add variable Id %d that does not exists.", settings[i].id);
         return ENOENT;
       }
       
@@ -380,7 +380,7 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
       ops->storageType = logs[varId].type;
       ops->logType     = settings[i].logType&0x0F;
       
-      DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
+      LOG_DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
     } else {                     //Memory variable
       //TODO: Check that the address is in ram
       ops->variable    = (void*)(&settings[i]+1);
@@ -388,11 +388,11 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
       ops->logType     = settings[i].logType&0x0F;
       i += 2;
       
-      DEBUG("Appended var addr 0x%x to block %d\n", (int)ops->variable, id);
+      LOG_DEBUG("Appended var addr 0x%x to block %d\n", (int)ops->variable, id);
     }
     blockAppendOps(block, ops);
     
-    DEBUG("   Now lenght %d\n", blockCalcLength(block));
+    LOG_DEBUG("   Now lenght %d\n", blockCalcLength(block));
   }
   
   return 0;
@@ -408,7 +408,7 @@ static int logDeleteBlock(int id)
     if (logBlocks[i].id == id) break;
   
   if (i >= LOG_MAX_BLOCKS) {
-    ERROR("trying to delete block id %d that doesn't exist.", id);
+    LOG_ERROR("trying to delete block id %d that doesn't exist.", id);
     return ENOENT;
   }
   
@@ -438,11 +438,11 @@ static int logStartBlock(int id, unsigned int period)
     if (logBlocks[i].id == id) break;
   
   if (i >= LOG_MAX_BLOCKS) {
-    ERROR("Trying to start block id %d that doesn't exist.", id);
+    LOG_ERROR("Trying to start block id %d that doesn't exist.", id);
     return ENOENT;
   }
   
-  DEBUG("Starting block %d with period %dms\n", id, period);
+  LOG_DEBUG("Starting block %d with period %dms\n", id, period);
   
   if (period>0)
   {
@@ -464,7 +464,7 @@ static int logStopBlock(int id)
     if (logBlocks[i].id == id) break;
   
   if (i >= LOG_MAX_BLOCKS) {
-    ERROR("Trying to stop block id %d that doesn't exist.\n", id);
+    LOG_ERROR("Trying to stop block id %d that doesn't exist.\n", id);
     return ENOENT;
   }
   
@@ -500,38 +500,42 @@ void logRunBlock(void * arg)
 
   while (ops)
   {
+    float variable;
     int valuei = 0;
     float valuef = 0;
-     
+
+    // FPU instructions must run on aligned data. Make sure it is.
+    variable = *(float *)ops->variable;
+
     switch(ops->storageType)
     {
       case LOG_UINT8:
-        valuei = *(uint8_t *)ops->variable;
+        valuei = *(uint8_t *)&variable;
         break;
       case LOG_INT8:
-        valuei = *(int8_t *)ops->variable;
+        valuei = *(int8_t *)&variable;
         break;
       case LOG_UINT16:
-        valuei = *(uint16_t *)ops->variable;
+        valuei = *(uint16_t *)&variable;
         break;
       case LOG_INT16:
-        valuei = *(int16_t *)ops->variable;
+        valuei = *(int16_t *)&variable;
         break;
       case LOG_UINT32:
-        valuei = *(uint32_t *)ops->variable;
+        valuei = *(uint32_t *)&variable;
         break;
       case LOG_INT32:
-        valuei = *(int32_t *)ops->variable;
+        valuei = *(int32_t *)&variable;
         break;
       case LOG_FLOAT:
-        valuei = *(float *)ops->variable;
+        valuei = *(float *)&variable;
         break;
     }
     
     if (ops->logType == LOG_FLOAT || ops->logType == LOG_FP16)
     {
       if (ops->storageType == LOG_FLOAT)
-        valuef = *(float *)ops->variable;
+        valuef = *(float *)&variable;
       else
         valuef = valuei;
       

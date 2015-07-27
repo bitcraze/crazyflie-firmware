@@ -53,6 +53,7 @@
   #define MCU_ID_ADDRESS          0x1FFF7A10
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
   #define FREERTOS_HEAP_SIZE      20000
+  #define FREERTOS_MIN_STACK_SIZE 150       // M4-FPU register setup is bigger so stack needs to be bigger
   #define FREERTOS_MCU_CLOCK_HZ   168000000
 
 #else
@@ -61,6 +62,7 @@
   #define MCU_ID_ADDRESS          0x1FFFF7E8
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFFF7E0
   #define FREERTOS_HEAP_SIZE      15000
+  #define FREERTOS_MIN_STACK_SIZE 100
   #define FREERTOS_MCU_CLOCK_HZ   72000000
 #endif
 
@@ -132,6 +134,13 @@
 
 // Define to force initialization of expansion board drivers. For test-rig and programming.
 //#define FORCE_EXP_DETECT
+
+/**
+ * \def PRINT_OS_DEBUG_INFO
+ * Print with an interval information about freertos mem/stack usage to console.
+ */
+//#define PRINT_OS_DEBUG_INFO
+
 
 //Debug defines
 //#define BRUSHLESS_MOTORCONTROLLER

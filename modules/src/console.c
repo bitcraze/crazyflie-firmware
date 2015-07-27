@@ -79,6 +79,9 @@ int consolePutchar(int ch)
 {
   int i;
 
+  if (!isInit)
+    return 0;
+
   if (xSemaphoreTake(synch, portMAX_DELAY) == pdTRUE)
   {
     if (messageToPrint.size < CRTP_MAX_DATA_SIZE)

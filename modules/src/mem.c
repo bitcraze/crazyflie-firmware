@@ -45,11 +45,11 @@
 #include "cfassert.h"
 
 #if 0
-#define DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
-#define ERROR(fmt, ...) DEBUG_PRINT("E/log " fmt, ## __VA_ARGS__)
+#define MEM_DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
+#define MEM_ERROR(fmt, ...) DEBUG_PRINT("E/log " fmt, ## __VA_ARGS__)
 #else
-#define DEBUG(...)
-#define ERROR(...)
+#define MEM_DEBUG(...)
+#define MEM_ERROR(...)
 #endif
 
 
@@ -199,7 +199,7 @@ void memReadProcess()
 
   memcpy(&memAddr, &p.data[1], 4);
 
-  DEBUG("Packet is MEM READ\n");
+  MEM_DEBUG("Packet is MEM READ\n");
   p.header = CRTP_HEADER(CRTP_PORT_MEM, READ_CH);
   // Dont' touch the first 5 bytes, they will be the same.
 
@@ -251,7 +251,7 @@ void memWriteProcess()
   memcpy(&memAddr, &p.data[1], 4);
   writeLen = p.size - 5;
 
-  DEBUG("Packet is MEM WRITE\n");
+  MEM_DEBUG("Packet is MEM WRITE\n");
   p.header = CRTP_HEADER(CRTP_PORT_MEM, WRITE_CH);
   // Dont' touch the first 5 bytes, they will be the same.
   if (memId == EEPROM_ID)
