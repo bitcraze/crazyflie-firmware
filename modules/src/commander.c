@@ -152,11 +152,11 @@ void commanderSetAltHoldMode(bool altHoldModeNew)
 	/**
 	 * Dirty trick to ensure the altHoldChange variable remains zero after next call to commanderGetAltHold().
 	 *
-	 * This is needed since the commanderGetAltHold sets the altHoldChange to -1 if altHoldMode is enabled with
-	 * a simultaneous thrust command of 0.
+	 * This is needed since the commanderGetAltHold calculates the altHoldChange to -1 if altHoldMode is enabled
+	 * with a simultaneous thrust command of 0.
 	 *
-	 * When altHoldMode is set to -1 when enabling altHoldMode, the altTarget will steadily decrease until thrust
-	 * is commanded to correct the altitude.
+	 * When altHoldChange is calculated to -1 when enabling altHoldMode, the altTarget will steadily decrease
+	 * until thrust is commanded to correct the altitude, which is what we want to avoid.
 	 */
 	if(altHoldModeNew) {
 	  targetVal[side].thrust = 32767;
