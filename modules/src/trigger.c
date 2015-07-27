@@ -140,12 +140,15 @@ static void triggerIncTestCounter(trigger_t *trigger)
 /**
  * Test a value against the trigger.
  *
- * Note that this function will call any registered handler function synchronously. The handler function
- * is called only once, when the trigger is released.
+ * Note that this function will call the registered handler function synchronously. The handler function
+ * is called only once, when the trigger is released. Subsequent calls to this function will not call
+ * the handler function again (until triggerReset() or triggerActivate() has been called to reset the
+ * trigger).
  *
- * Subsequent calls to this function (without re-activating the trigger) will never call the handler
- * function again, but this function will continue to return a value of true as long as the condition
- * for the trigger release is met (or exceeded).
+ * This function will continue to return a value of true as long as the condition for the trigger release
+ * has been met (or exceeds the triggerCount value).
+ *
+ * This function will increment the testCounter until it reaches triggerCount.
  *
  * @param trigger   The trigger object.
  * @param testValue The test value to compare against the threshold with the trigger function.
