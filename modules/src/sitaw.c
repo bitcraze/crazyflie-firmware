@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "log.h"
 #include "param.h"
@@ -88,18 +89,6 @@ PARAM_GROUP_STOP(sitAw)
 #endif /* SITAW_ENABLED */
 
 /**
- * abs() equivalent function for floating point numbers.
- *
- * @param x The floating point number to return the absolute value of.
- *
- * @return The absolute value of x.
- */
-float sitAwFAbs(float x)
-{
-  return (x < 0) ? (-x) : x;
-}
-
-/**
  * Initialize the Free Fall detection.
  *
  * See the sitAwFFTest() function for details.
@@ -134,7 +123,7 @@ void sitAwFFInit(void)
 bool sitAwFFTest(float accWZ, float accMAG)
 {
   /* Check that the total acceleration is close to zero. */
-  if(sitAwFAbs(accMAG) > SITAW_FF_THRESHOLD) {
+  if(fabs(accMAG) > SITAW_FF_THRESHOLD) {
     /* If the total acceleration deviates from 0, this is not a free fall situation. */
     triggerReset(&sitAwFFAccWZ);
     return false;
@@ -144,7 +133,7 @@ bool sitAwFFTest(float accWZ, float accMAG)
    * AccWZ approaches -1 in free fall. Check that the value stays within
    * SITAW_FF_THRESHOLD of -1 for the triggerCount specified.
    */
-  return(triggerTestValue(&sitAwFFAccWZ, sitAwFAbs(accWZ + 1)));
+  return(triggerTestValue(&sitAwFFAccWZ, fabs(accWZ + 1)));
 }
 
 /**
@@ -190,7 +179,7 @@ void sitAwARInit(void)
 bool sitAwARTest(float accX, float accY, float accZ)
 {
   /* Check that there are no horizontal accelerations. At rest, these are 0. */
-  if((sitAwFAbs(accX) > SITAW_AR_THRESHOLD) || (sitAwFAbs(accY) > SITAW_AR_THRESHOLD)) {
+  if((fabs(accX) > SITAW_AR_THRESHOLD) || (fabs(accY) > SITAW_AR_THRESHOLD)) {
     /* If the X or Y accelerations are different than 0, the crazyflie is not at rest. */
     triggerReset(&sitAwARAccZ);
     return(false);
@@ -203,7 +192,7 @@ bool sitAwARTest(float accX, float accY, float accZ)
    * The vertical acceleration must be close to 1, but is allowed to oscillate slightly
    * around 1. Testing that the deviation from 1 stays within SITAW_AR_THRESHOLD.
    */
-  return(triggerTestValue(&sitAwARAccZ, sitAwFAbs(accZ - 1)));
+  return(triggerTestValue(&sitAwARAccZ, fabs(accZ - 1)));
 }
 
 /**
@@ -254,8 +243,8 @@ bool sitAwTuTest(float eulerRollActual, float eulerPitchActual)
    * greatest of the roll and pitch absolute values to the trigger object
    * at any given time.
    */
-  float fAbsRoll  = sitAwFAbs(eulerRollActual);
-  float fAbsPitch = sitAwFAbs(eulerPitchActual);
+  float fAbsRoll  = fabs(eulerRollActual);
+  float fAbsPitch = fabs(eulerPitchActual);
 
   /* Only the roll value will report if the crazyflie is turning upside down. */
   return(triggerTestValue(&sitAwTuAngle, fAbsRoll >= fAbsPitch ? fAbsRoll : fAbsPitch));
