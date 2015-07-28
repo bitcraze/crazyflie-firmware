@@ -78,7 +78,7 @@ void systemLaunch(void)
 
 }
 
-//This must be the first module to be initialized!
+// This must be the first module to be initialized!
 void systemInit(void)
 {
   if(isInit)
@@ -92,7 +92,10 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+
+#ifdef PROXIMITY_ENABLED
   proximityInit();
+#endif
     
   isInit = true;
 }
