@@ -136,7 +136,7 @@ PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o
-PROJ_OBJ_CF2 += neopixelring.o expbrd.o platformservice.o
+PROJ_OBJ_CF2 += neopixelring.o expbrd.o platformservice.o trigger.o sitaw.o
 
 # Expansion boards
 PROJ_OBJ_CF2 += exptest.o
