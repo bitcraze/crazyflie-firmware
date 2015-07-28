@@ -56,6 +56,7 @@
 #include "usb.h"
 #include "expbrd.h"
 #include "mem.h"
+#include "proximity.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -77,7 +78,7 @@ void systemLaunch(void)
 
 }
 
-//This must be the first module to be initialized!
+// This must be the first module to be initialized!
 void systemInit(void)
 {
   if(isInit)
@@ -91,6 +92,10 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+
+#ifdef PROXIMITY_ENABLED
+  proximityInit();
+#endif
     
   isInit = true;
 }
