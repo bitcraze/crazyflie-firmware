@@ -26,7 +26,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
-#include "stm32f4xx.h"
+#include "stm32fxxx.h"
 #include "trigger.h"
 
 /**
