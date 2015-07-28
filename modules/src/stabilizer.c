@@ -42,6 +42,7 @@
 #include "ledseq.h"
 #include "param.h"
 #include "debug.h"
+#include "sitaw.h"
 #ifdef PLATFORM_CF1
   #include "ms5611.h"
 #else
@@ -155,6 +156,9 @@ void stabilizerInit(void)
   imu6Init();
   sensfusion6Init();
   controllerInit();
+#if defined(SITAW_ENABLED)
+  sitAwInit();
+#endif
 
   rollRateDesired = 0;
   pitchRateDesired = 0;
@@ -176,6 +180,41 @@ bool stabilizerTest(void)
   pass &= controllerTest();
 
   return pass;
+}
+
+static void stabilizerPostAttitudeUpdateCallOut(void)
+{
+  /* Code that shall run AFTER each attitude update should be placed here. */
+
+#if defined(SITAW_ENABLED)
+  /* Test values for Free Fall detection. */
+  sitAwFFTest(accWZ, accMAG);
+
+  /* Test values for Tumbled detection. */
+  sitAwTuTest(eulerRollActual, eulerPitchActual);
+
+  /* Test values for At Rest detection. */
+  sitAwARTest(acc.x, acc.y, acc.z);
+
+  if(sitAwFFDetected() && !sitAwTuDetected()) {
+    commanderSetAltHoldMode(true);
+  }
+
+  if(sitAwARDetected() || sitAwTuDetected()) {
+    commanderSetAltHoldMode(false);
+  }
+#endif
+}
+
+static void stabilizerPreThrustUpdateCallOut(void)
+{
+  /* Code that shall run BEFORE each thrust distribution update should be placed here. */
+
+#if defined(SITAW_ENABLED)
+      if(sitAwTuDetected()) {
+        actuatorThrust = 0;
+      }
+#endif
 }
 
 static void stabilizerTask(void* param)
@@ -218,6 +257,9 @@ static void stabilizerTask(void* param)
                                      eulerRollDesired, eulerPitchDesired, -eulerYawDesired,
                                      &rollRateDesired, &pitchRateDesired, &yawRateDesired);
         attitudeCounter = 0;
+
+        /* Call out after performing attitude updates, if any functions would like to use the calculated values. */
+        stabilizerPostAttitudeUpdateCallOut();
       }
 
       // 100HZ
@@ -256,6 +298,9 @@ static void stabilizerTask(void* param)
         // Added so thrust can be set to 0 while in altitude hold mode after disconnect
         commanderWatchdog();
       }
+
+      /* Call out before performing thrust updates, if any functions would like to influence the thrust. */
+      stabilizerPreThrustUpdateCallOut();
 
       if (actuatorThrust > 0)
       {
@@ -506,4 +551,3 @@ PARAM_ADD(PARAM_UINT16, baseThrust, &altHoldBaseThrust)
 PARAM_ADD(PARAM_UINT16, maxThrust, &altHoldMaxThrust)
 PARAM_ADD(PARAM_UINT16, minThrust, &altHoldMinThrust)
 PARAM_GROUP_STOP(altHold)
-
