@@ -78,7 +78,7 @@
   #endif
 #endif
 
-
+#define NBR_OF_MOTORS 4
 // Motors IDs define
 #define MOTOR_M1  0
 #define MOTOR_M2  1
@@ -134,6 +134,199 @@
 #define FULL 1000
 #define STOP 0
 
+#ifdef BRUSHLESS_PROTO_DECK_MAPPING
+// HW defines for prototype brushless deck
+// PIN7-LEFT  -> PB5: TIM3_CH2, connect as M1
+// PIN1-RIGHT -> PA2: TIM2_CH3, connect as M2
+// PIN2-RIGHT -> PA3: TIM2_CH4, connect as M3
+// PIN8-LEFT  -> PB4: TIM3_CH1, connect as M4
+
+#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH2
+#define MOTORS_TIM_M1             TIM3
+#define MOTORS_TIM_M1_DBG         DBGMCU_TIM3_STOP
+#define M1_TIM_SETCOMPARE         TIM_SetCompare2
+#define M1_TIM_GETCAPTURE         TIM_GetCapture2
+#define M1_TIM_OC_INIT            TIM_OC2Init
+#define M1_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
+
+#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH3
+#define MOTORS_TIM_M2             TIM2
+#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
+#define M2_TIM_SETCOMPARE         TIM_SetCompare3
+#define M2_TIM_GETCAPTURE         TIM_GetCapture3
+#define M2_TIM_OC_INIT            TIM_OC3Init
+#define M2_TIM_OC_PRE_CFG         TIM_OC3PreloadConfig
+
+#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH4
+#define MOTORS_TIM_M3             TIM2
+#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
+#define M3_TIM_SETCOMPARE         TIM_SetCompare4
+#define M3_TIM_GETCAPTURE         TIM_GetCapture4
+#define M3_TIM_OC_INIT            TIM_OC4Init
+#define M3_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
+
+#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH1
+#define MOTORS_TIM_M4             TIM3
+#define MOTORS_TIM_M4_DBG         DBGMCU_TIM3_STOP
+#define M4_TIM_SETCOMPARE         TIM_SetCompare1
+#define M4_TIM_GETCAPTURE         TIM_GetCapture1
+#define M4_TIM_OC_INIT            TIM_OC1Init
+#define M4_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
+
+#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB // PB5
+#define MOTORS_GPIO_M1_PORT          GPIOB
+#define MOTORS_GPIO_M1_PIN           GPIO_Pin_5
+#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource5
+#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM3
+
+#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOA // PA2
+#define MOTORS_GPIO_M2_PORT          GPIOA
+#define MOTORS_GPIO_M2_PIN           GPIO_Pin_2
+#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource2
+#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA // PA3
+#define MOTORS_GPIO_M3_PORT          GPIOA
+#define MOTORS_GPIO_M3_PIN           GPIO_Pin_3
+#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource3
+#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB // PB4
+#define MOTORS_GPIO_M4_PORT          GPIOB
+#define MOTORS_GPIO_M4_PIN           GPIO_Pin_4
+#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource4
+#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM3
+
+#elif defined(BRUSHLESS_DECK_MAPPING)
+// HW defines for prototype brushless deck
+// PIN7-LEFT  -> PB5: TIM3_CH2, connect as M1
+// PIN1-RIGHT -> PA2: TIM2_CH3, connect as M2
+// PIN2-RIGHT -> PA3: TIM2_CH4, connect as M3
+// PIN8-LEFT  -> PB4: TIM3_CH1, connect as M4
+
+#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH1
+#define MOTORS_TIM_M1             TIM3
+#define MOTORS_TIM_M1_DBG         DBGMCU_TIM3_STOP
+#define M1_TIM_SETCOMPARE         TIM_SetCompare1
+#define M1_TIM_GETCAPTURE         TIM_GetCapture1
+#define M1_TIM_OC_INIT            TIM_OC1Init
+#define M1_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
+
+#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH3
+#define MOTORS_TIM_M2             TIM2
+#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
+#define M2_TIM_SETCOMPARE         TIM_SetCompare3
+#define M2_TIM_GETCAPTURE         TIM_GetCapture3
+#define M2_TIM_OC_INIT            TIM_OC3Init
+#define M2_TIM_OC_PRE_CFG         TIM_OC3PreloadConfig
+
+#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH4
+#define MOTORS_TIM_M3             TIM2
+#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
+#define M3_TIM_SETCOMPARE         TIM_SetCompare4
+#define M3_TIM_GETCAPTURE         TIM_GetCapture4
+#define M3_TIM_OC_INIT            TIM_OC4Init
+#define M3_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
+
+#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH2
+#define MOTORS_TIM_M4             TIM3
+#define MOTORS_TIM_M4_DBG         DBGMCU_TIM3_STOP
+#define M4_TIM_SETCOMPARE         TIM_SetCompare2
+#define M4_TIM_GETCAPTURE         TIM_GetCapture2
+#define M4_TIM_OC_INIT            TIM_OC2Init
+#define M4_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
+
+#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB // PB4
+#define MOTORS_GPIO_M1_PORT          GPIOB
+#define MOTORS_GPIO_M1_PIN           GPIO_Pin_4
+#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource4
+#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM3
+
+#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOA // PA2
+#define MOTORS_GPIO_M2_PORT          GPIOA
+#define MOTORS_GPIO_M2_PIN           GPIO_Pin_2
+#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource2
+#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA // PA3
+#define MOTORS_GPIO_M3_PORT          GPIOA
+#define MOTORS_GPIO_M3_PIN           GPIO_Pin_3
+#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource3
+#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB // PB5
+#define MOTORS_GPIO_M4_PORT          GPIOB
+#define MOTORS_GPIO_M4_PIN           GPIO_Pin_5
+#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource5
+#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM3
+#else
+// Mapping of brushed controller timers. Brushless controller can still be activated using
+// the same mapping, PWM then needs to be inverted.
+
+#ifdef BRUSHLESS_MOTORCONTROLLER
+  // The brushed motor drivers (pull-down mosfet) inverses the output. Compensate for that.
+  #define BRUSHLESS_INVERSED_POLARITY
+#endif
+
+#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM2
+#define MOTORS_TIM_M1             TIM2
+#define MOTORS_TIM_M1_DBG         DBGMCU_TIM2_STOP
+#define M1_TIM_SETCOMPARE         TIM_SetCompare2
+#define M1_TIM_GETCAPTURE         TIM_GetCapture2
+#define M1_TIM_OC_INIT            TIM_OC2Init
+#define M1_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
+
+#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2
+#define MOTORS_TIM_M2             TIM2
+#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
+#define M2_TIM_SETCOMPARE         TIM_SetCompare4
+#define M2_TIM_GETCAPTURE         TIM_GetCapture4
+#define M2_TIM_OC_INIT            TIM_OC4Init
+#define M2_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
+
+#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2
+#define MOTORS_TIM_M3             TIM2
+#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
+#define M3_TIM_SETCOMPARE         TIM_SetCompare1
+#define M3_TIM_GETCAPTURE         TIM_GetCapture1
+#define M3_TIM_OC_INIT            TIM_OC1Init
+#define M3_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
+
+#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM4
+#define MOTORS_TIM_M4             TIM4
+#define MOTORS_TIM_M4_DBG         DBGMCU_TIM4_STOP
+#define M4_TIM_SETCOMPARE         TIM_SetCompare4
+#define M4_TIM_GETCAPTURE         TIM_GetCapture4
+#define M4_TIM_OC_INIT            TIM_OC4Init
+#define M4_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
+
+#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOA
+#define MOTORS_GPIO_M1_PORT          GPIOA
+#define MOTORS_GPIO_M1_PIN           GPIO_Pin_1 // TIM2_CH2
+#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource1
+#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOB
+#define MOTORS_GPIO_M2_PORT          GPIOB
+#define MOTORS_GPIO_M2_PIN           GPIO_Pin_11 // TIM2_CH4
+#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource11
+#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA
+#define MOTORS_GPIO_M3_PORT          GPIOA
+#define MOTORS_GPIO_M3_PIN           GPIO_Pin_15 // TIM2_CH1
+#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource15
+#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
+
+#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB
+#define MOTORS_GPIO_M4_PORT          GPIOB
+#define MOTORS_GPIO_M4_PIN           GPIO_Pin_9 // TIM4_CH4
+#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource9
+#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM4
+
+#endif
+
+
 /*** Public interface ***/
 
 /**
@@ -163,3 +356,4 @@ int motorsGetRatio(int id);
 void motorsTestTask(void* params);
 
 #endif /* __MOTORS_H__ */
+
