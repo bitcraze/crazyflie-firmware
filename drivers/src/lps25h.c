@@ -236,7 +236,7 @@ bool lps25hGetData(float* pressure, float* temperature, float* asl)
 #include "math.h"
 // Constants used to determine altitude from pressure
 #define CONST_SEA_PRESSURE 102610.f //1026.1f //http://www.meteo.physik.uni-muenchen.de/dokuwiki/doku.php?id=wetter:stadt:messung
-#define CONST_PF 0.1902630958 //(1/5.25588f) Pressure factor
+#define CONST_PF 0.1902630958f //(1/5.25588f) Pressure factor
 #define CONST_PF2 44330.0f
 #define FIX_TEMP 25         // Fixed Temperature. ASL is a function of pressure and temperature, but as the temperature changes so much (blow a little towards the flie and watch it drop 5 degrees) it corrupts the ASL estimates.
                             // TLDR: Adjusting for temp changes does more harm than good.
@@ -251,7 +251,7 @@ float lps25hPressureToAltitude(float* pressure/*, float* ground_pressure, float*
     {
         //return (1.f - pow(*pressure / CONST_SEA_PRESSURE, CONST_PF)) * CONST_PF2;
         //return ((pow((1015.7 / *pressure), CONST_PF) - 1.0) * (25. + 273.15)) / 0.0065;
-        return ((pow((1015.7 / *pressure), CONST_PF) - 1.0) * (FIX_TEMP + 273.15)) / 0.0065;
+        return ((powf((1015.7f / *pressure), CONST_PF) - 1.0f) * (FIX_TEMP + 273.15f)) / 0.0065f;
     }
     else
     {

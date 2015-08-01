@@ -305,10 +305,10 @@ bool motorsTest(void)
 void motorsSetRatio(int id, uint16_t ithrust)
 {
   float thrust = ((float)ithrust / 65536.0f) * 60;
-  float volts = -0.0006239 * thrust * thrust + 0.088 * thrust + 0.069;
+  float volts = -0.0006239f * thrust * thrust + 0.088f * thrust + 0.069f;
   float supply_voltage = pmGetBatteryVoltage();
   float percentage = volts / supply_voltage;
-  percentage = percentage > 1.0 ? 1.0 : percentage;
+  percentage = percentage > 1.0f ? 1.0f : percentage;
   uint16_t ratio = percentage * UINT16_MAX;
 
   switch(id)

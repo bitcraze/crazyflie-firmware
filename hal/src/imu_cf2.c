@@ -54,12 +54,12 @@
 #define IMU_DEG_PER_LSB_CFG   MPU6500_DEG_PER_LSB_2000
 #define IMU_ACCEL_FS_CFG      MPU6500_ACCEL_FS_8
 #define IMU_G_PER_LSB_CFG     MPU6500_G_PER_LSB_8
-#define IMU_1G_RAW            (int16_t)(1.0 / MPU6500_G_PER_LSB_8)
+#define IMU_1G_RAW            (int16_t)(1.0f / MPU6500_G_PER_LSB_8)
 
 #define IMU_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms
-#define IMU_MAN_TEST_LEVEL_MAX        5.0      // Max degrees off
+#define IMU_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off
 
-#define MAG_GAUSS_PER_LSB     666.7
+#define MAG_GAUSS_PER_LSB     666.7f
 
 #define IMU_STARTUP_TIME_MS   1000
 
@@ -225,10 +225,10 @@ void imu6Init(void)
   varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
   imuAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
 
-  cosPitch = cos(configblockGetCalibPitch() * M_PI/180);
-  sinPitch = sin(configblockGetCalibPitch() * M_PI/180);
-  cosRoll = cos(configblockGetCalibRoll() * M_PI/180);
-  sinRoll = sin(configblockGetCalibRoll() * M_PI/180);
+  cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI/180);
+  sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI/180);
+  cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI/180);
+  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI/180);
 
   isInit = true;
 }
@@ -289,10 +289,10 @@ bool imu6ManufacturingTest(void)
     if (gyroBias.isBiasValueFound)
     {
       // Calculate pitch and roll based on accelerometer. Board must be level
-      pitch = tan(-acc.x/(sqrt(acc.y*acc.y + acc.z*acc.z))) * 180/M_PI;
-      roll = tan(acc.y/acc.z) * 180/M_PI;
+      pitch = tanf(-acc.x/(sqrtf(acc.y*acc.y + acc.z*acc.z))) * 180/(float) M_PI;
+      roll = tanf(acc.y/acc.z) * 180/(float) M_PI;
 
-      if ((fabs(roll) < IMU_MAN_TEST_LEVEL_MAX) && (fabs(pitch) < IMU_MAN_TEST_LEVEL_MAX))
+      if ((fabsf(roll) < IMU_MAN_TEST_LEVEL_MAX) && (fabsf(pitch) < IMU_MAN_TEST_LEVEL_MAX))
       {
         DEBUG_PRINT("Acc level test [OK]\n");
         testStatus = true;

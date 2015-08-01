@@ -136,7 +136,7 @@ void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
 {
   *altHold = altHoldMode; // Still in altitude hold mode
   *setAltHold = !altHoldModeOld && altHoldMode; // Hover just activated
-  *altHoldChange = altHoldMode ? ((float) targetVal[side].thrust - 32767.) / 32767. : 0.0; // Amount to change altitude hold target
+  *altHoldChange = altHoldMode ? ((float) targetVal[side].thrust - 32767.f) / 32767.f : 0.0; // Amount to change altitude hold target
   altHoldModeOld = altHoldMode;
 }
 
