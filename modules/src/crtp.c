@@ -173,6 +173,7 @@ void crtpRegisterPortCB(int port, CrtpCallback cb)
 int crtpSendPacket(CRTPPacket *p)
 {
   ASSERT(p); 
+  ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
 
   return xQueueSend(txQueue, p, 0);
 }
@@ -180,6 +181,7 @@ int crtpSendPacket(CRTPPacket *p)
 int crtpSendPacketBlock(CRTPPacket *p)
 {
   ASSERT(p); 
+  ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
 
   return xQueueSend(txQueue, p, portMAX_DELAY);
 }
