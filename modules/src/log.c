@@ -479,6 +479,17 @@ void logBlockTimed(xTimerHandle timer)
   workerSchedule(logRunBlock, pvTimerGetTimerID(timer));
 }
 
+/* Appends data to a packet if space is available; returns false on failure. */
+static bool appendToPacket(CRTPPacket * pk, const void * data, size_t n) {
+  if (pk->size <= CRTP_MAX_DATA_SIZE - n)
+  {
+    memcpy(&pk->data[pk->size], data, n);
+    pk->size += n;
+    return true;
+  }
+  else return false;
+}
+
 /* This function is usually called by the worker subsystem */
 void logRunBlock(void * arg)
 {
@@ -539,22 +550,21 @@ void logRunBlock(void * arg)
       else
         valuef = valuei;
       
+      // Try to append the next item to the packet.  If we run out of space,
+      // drop this and subsequent items.
       if (ops->logType == LOG_FLOAT)
       {
-        memcpy(&pk.data[pk.size], &valuef, 4);
-        pk.size += 4;
+        if (!appendToPacket(&pk, &valuef, 4)) break;
       }
       else
       {
         valuei = single2half(valuef);
-        memcpy(&pk.data[pk.size], &valuei, 2);
-        pk.size += 2;
+        if (!appendToPacket(&pk, &valuei, 2)) break;
       }
     }
     else  //logType is an integer
     {
-      memcpy(&pk.data[pk.size], &valuei, typeLength[ops->logType]);
-      pk.size += typeLength[ops->logType];
+      if (!appendToPacket(&pk, &valuei, typeLength[ops->logType])) break;
     }
     
     ops = ops->next;
