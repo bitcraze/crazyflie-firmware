@@ -68,15 +68,12 @@ void radiolinkInit(void)
   if (isInit)
     return;
 
-  syslinkInit();
-
   txQueue = xQueueCreate(RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
   crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
 
-  if (crtpPacketDelivery == 0)
-  {
-    return;
-  }
+  ASSERT(crtpPacketDelivery);
+
+  syslinkInit();
 
   radiolinkSetChannel(configblockGetRadioChannel());
   radiolinkSetDatarate(configblockGetRadioSpeed());
