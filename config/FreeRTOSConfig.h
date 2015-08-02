@@ -114,8 +114,8 @@ to exclude the API function. */
 #define vPortSVCHandler SVC_Handler
 
 //Milliseconds to OS Ticks
-#define M2T(X) ((unsigned int)(X*(configTICK_RATE_HZ/1000.0)))
-#define F2T(X) ((unsigned int)((configTICK_RATE_HZ/X)))
+#define M2T(X) ((unsigned int)((X)*(configTICK_RATE_HZ/1000.0)))
+#define F2T(X) ((unsigned int)((configTICK_RATE_HZ/(X))))
 
 // DEBUG SECTION
 #define configUSE_APPLICATION_TASK_TAG  1
