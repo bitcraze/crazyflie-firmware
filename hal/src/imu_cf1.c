@@ -120,9 +120,6 @@ static void imuAccIIRLPFilter(Axis3i16* in, Axis3i16* out,
                               Axis3i32* storedValues, int32_t attenuation);
 static void imuAccAlignToGravity(Axis3i16* in, Axis3i16* out);
 
-// TODO: Fix __errno linker error with math lib
-int __attribute__((used)) __errno;
-
 static bool isInit;
 
 void imu6Init(void)
