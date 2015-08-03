@@ -154,7 +154,7 @@ static void solidColorEffect(uint8_t buffer[][3], bool reset)
 
   if (reset) brightness = 0;
 
-  if (brightness<1) brightness += 0.05;
+  if (brightness<1) brightness += 0.05f;
   else brightness = 1;
 
   for (i=0; i<NBR_LEDS; i++)
@@ -345,8 +345,8 @@ static void gravityLight(uint8_t buffer[][3], bool reset)
   float roll = logGetFloat(rollid); // -180 to 180
 
   float angle = gravityLightCalculateAngle(pitch, roll);
-  float led_index = NBR_LEDS * angle / (2 * M_PI);
-  int intensity = LIMIT(sqrt(pitch * pitch + roll * roll));
+  float led_index = NBR_LEDS * angle / (2 * (float) M_PI);
+  int intensity = LIMIT(sqrtf(pitch * pitch + roll * roll));
   gravityLightRender(buffer, led_index, intensity);
 }
 
@@ -354,10 +354,10 @@ static float gravityLightCalculateAngle(float pitch, float roll) {
   float angle = 0.0;
 
   if (roll != 0) {
-    angle = atan(pitch / roll) + M_PI_2;
+    angle = atanf(pitch / roll) + (float) M_PI_2;
 
     if (roll < 0.0) {
-      angle += M_PI;
+      angle += (float) M_PI;
     }
   }
 
@@ -454,7 +454,7 @@ static void ledTestEffect(uint8_t buffer[][3], bool reset)
 
   if (reset) brightness = 0;
 
-  if (brightness<1) brightness += 0.05;
+  if (brightness<1) brightness += 0.05f;
   else brightness = 1;
 
   for (i=0; i<NBR_LEDS; i++)

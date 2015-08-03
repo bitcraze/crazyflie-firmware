@@ -29,6 +29,8 @@
 #include "imu.h"
 #include "param.h"
 
+#define M_PI_F ((float) M_PI)
+
 //#define MADWICK_QUATERNION_IMU
 
 #ifdef MADWICK_QUATERNION_IMU
@@ -161,9 +163,9 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
   float halfex, halfey, halfez;
   float qa, qb, qc;
 
-  gx = gx * M_PI / 180;
-  gy = gy * M_PI / 180;
-  gz = gz * M_PI / 180;
+  gx = gx * M_PI_F / 180;
+  gy = gy * M_PI_F / 180;
+  gz = gz * M_PI_F / 180;
 
   // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
   if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f)))
@@ -239,9 +241,9 @@ void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
   if (gx>1) gx=1;
   if (gx<-1) gx=-1;
 
-  *yaw = atan2(2*(q0*q3 + q1*q2), q0*q0 + q1*q1 - q2*q2 - q3*q3) * 180 / M_PI;
-  *pitch = asin(gx) * 180 / M_PI; //Pitch seems to be inverted
-  *roll = atan2(gy, gz) * 180 / M_PI;
+  *yaw = atan2f(2*(q0*q3 + q1*q2), q0*q0 + q1*q1 - q2*q2 - q3*q3) * 180 / M_PI_F;
+  *pitch = asinf(gx) * 180 / M_PI_F; //Pitch seems to be inverted
+  *roll = atan2f(gy, gz) * 180 / M_PI_F;
 }
 
 float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const float az)

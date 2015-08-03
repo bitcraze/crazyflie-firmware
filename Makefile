@@ -188,7 +188,8 @@ INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Ideck/interface
 
 ifeq ($(USE_FPU), 1)
-PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+	CFLAGS += -fno-math-errno
 else
 	ifeq ($(PLATFORM), CF1)
 		PROCESSOR = -mcpu=cortex-m3 -mthumb

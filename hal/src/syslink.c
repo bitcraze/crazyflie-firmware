@@ -26,7 +26,6 @@
 #define DEBUG_MODULE "SL"
 
 #include <stdbool.h>
-#include <errno.h>
 #include <string.h>
 #include <stdint.h>
 

@@ -25,7 +25,6 @@
  */
 
 #include <stdbool.h>
-#include <errno.h>
 
 #include "config.h"
 #include "nrf24l01.h"

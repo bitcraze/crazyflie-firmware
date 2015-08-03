@@ -31,7 +31,7 @@
 #include "syslink.h"
 
 #ifndef CRITICAL_LOW_VOLTAGE
-  #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0
+  #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0f
 #else
   #define PM_BAT_CRITICAL_LOW_VOLTAGE   CRITICAL_LOW_VOLTAGE
 #endif
@@ -42,7 +42,7 @@
 #endif
 
 #ifndef LOW_VOLTAGE
-  #define PM_BAT_LOW_VOLTAGE   3.2
+  #define PM_BAT_LOW_VOLTAGE   3.2f
 #else
   #define PM_BAT_LOW_VOLTAGE   LOW_VOLTAGE
 #endif
@@ -58,9 +58,9 @@
   #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * SYSTEM_SHUTDOWN_TIMEOUT)
 #endif
 
-#define PM_BAT_DIVIDER                (float)(3.0)
-#define PM_BAT_ADC_FOR_3_VOLT         (int32_t)(((3.0 / PM_BAT_DIVIDER) / 2.8) * 4096)
-#define PM_BAT_ADC_FOR_1p2_VOLT       (int32_t)(((1.2 / PM_BAT_DIVIDER) / 2.8) * 4096)
+#define PM_BAT_DIVIDER                3.0f
+#define PM_BAT_ADC_FOR_3_VOLT         (int32_t)(((3.0f / PM_BAT_DIVIDER) / 2.8f) * 4096)
+#define PM_BAT_ADC_FOR_1p2_VOLT       (int32_t)(((1.2f / PM_BAT_DIVIDER) / 2.8f) * 4096)
 
 #define PM_BAT_IIR_SHIFT     8
 /**
@@ -74,7 +74,7 @@
  * f0 = fs / 2*pi*attenuation.
  * attenuation = fs / 2*pi*f0
  */
-#define PM_BAT_IIR_LPF_ATTENUATION (int)(ADC_SAMPLING_FREQ / (int)(2 * 3.1415 * PM_BAT_WANTED_LPF_CUTOFF_HZ))
+#define PM_BAT_IIR_LPF_ATTENUATION (int)(ADC_SAMPLING_FREQ / (int)(2 * 3.1415f * PM_BAT_WANTED_LPF_CUTOFF_HZ))
 #define PM_BAT_IIR_LPF_ATT_FACTOR  (int)((1<<PM_BAT_IIR_SHIFT) / PM_BAT_IIR_LPF_ATTENUATION)
 
 typedef enum
