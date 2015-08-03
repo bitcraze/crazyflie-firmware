@@ -71,8 +71,8 @@ void adcInit(void)
 
 static uint16_t analogReadChannel(uint8_t channel)
 {
-  /* At 42MHz ADC clock, 480+15 cycles is slightly above 10us sampling time. */
-  ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_480Cycles);
+  /* According to datasheet, minimum sampling time for 10-bit conversion is almost 15 cycles. */
+  ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_15Cycles);
 
   /* Start the conversion */
   ADC_SoftwareStartConv(ADC2);
