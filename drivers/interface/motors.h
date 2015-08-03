@@ -36,6 +36,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
+/* ST includes */
+#include "stm32fxxx.h"
 
 /******** Defines ********/
 /**
@@ -48,34 +50,31 @@
  * The BLMC input signal are meant to be connected to the Crazyflie round motor solder pad (open-drain output). A resistor
  * around 470 ohm needs to pull the signal high to the voltage level of the BLMC (normally 5V).
  */
-#ifdef BRUSHLESS_MOTORCONTROLLER //Crazyflie2
   #define BLMC_PERIOD 0.0025   // 2.5ms = 400Hz
   #define TIM_CLOCK_HZ 84000000
-  #define MOTORS_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
-  #define MOTORS_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_PWM_PRESCALE_RAW)
-  #define MOTORS_PWM_CNT_FOR_1MS    (uint32_t)(TIM_CLOCK_HZ * 0.001 / MOTORS_PWM_PRESCALE_RAW)
-  #define MOTORS_PWM_PERIOD         MOTORS_PWM_CNT_FOR_PERIOD
-  #define MOTORS_PWM_BITS           11  // Only for compatibiliy
-  #define MOTORS_PWM_PRESCALE       (uint16_t)(MOTORS_PWM_PRESCALE_RAW - 1)
-  #define MOTORS_POLARITY           TIM_OCPolarity_Low
+  #define MOTORS_BL_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
+  #define MOTORS_BL_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_CNT_FOR_1MS    (uint32_t)(TIM_CLOCK_HZ * 0.001 / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
+  #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
+  #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
+
+#ifdef PLATFORM_CF1
+  // The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
+  #define MOTORS_PWM_BITS     9
+  #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
+  #define MOTORS_PWM_PRESCALE 0
+  #define MOTORS_POLARITY           TIM_OCPolarity_High
 #else
-  #ifdef PLATFORM_CF1
-    // The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
-    #define MOTORS_PWM_BITS     9
-    #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
-    #define MOTORS_PWM_PRESCALE 0
-    #define MOTORS_POLARITY           TIM_OCPolarity_High
-  #else
-    // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
-    // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
-    #define MOTORS_PWM_BITS     8
-    #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
-    #define MOTORS_PWM_PRESCALE 0
-    #define MOTORS_POLARITY           TIM_OCPolarity_High
-    // Compensate thrust depending on battery voltage so it will produce about the same
-    // amount of thrust independent of the battery voltage. Based on thrust measurement.
-    #define ENABLE_THRUST_BAT_COMPENSATED
-  #endif
+  // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
+  // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
+  #define MOTORS_PWM_BITS     8
+  #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
+  #define MOTORS_PWM_PRESCALE 0
+  #define MOTORS_POLARITY           TIM_OCPolarity_High
+  // Compensate thrust depending on battery voltage so it will produce about the same
+  // amount of thrust independent of the battery voltage. Based on thrust measurement.
+  #define ENABLE_THRUST_BAT_COMPENSATED
 #endif
 
 #define NBR_OF_MOTORS 4
@@ -134,205 +133,42 @@
 #define FULL 1000
 #define STOP 0
 
-#ifdef BRUSHLESS_PROTO_DECK_MAPPING
-// HW defines for prototype brushless deck
-// PIN7-LEFT  -> PB5: TIM3_CH2, connect as M1
-// PIN1-RIGHT -> PA2: TIM2_CH3, connect as M2
-// PIN2-RIGHT -> PA3: TIM2_CH4, connect as M3
-// PIN8-LEFT  -> PB4: TIM3_CH1, connect as M4
+typedef struct
+{
+  uint32_t      gpioPerif;
+  GPIO_TypeDef* gpioPort;
+  uint32_t      gpioPin;
+  uint32_t      gpioPinSource;
+  uint32_t      gpioAF;
+  uint32_t      timPerif;
+  TIM_TypeDef*  tim;
+  uint16_t      timPolarity;
+  uint32_t      timDbgStop;
+  uint32_t      timPeriod;
+  uint16_t      timPrescaler;
+  /* Function pointers */
+  uint16_t (*convBitsTo16)(uint16_t bits);
+  uint16_t (*conv16ToBits)(uint16_t bits);
+  void (*setCompare)(TIM_TypeDef* TIMx, uint32_t Compare2);
+  uint32_t (*getCompare)(TIM_TypeDef* TIMx);
+  void (*ocInit)(TIM_TypeDef* TIMx, TIM_OCInitTypeDef* TIM_OCInitStruct);
+  void (*preloadConfig)(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload);
+} MotorPerifDef;
 
-#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH2
-#define MOTORS_TIM_M1             TIM3
-#define MOTORS_TIM_M1_DBG         DBGMCU_TIM3_STOP
-#define M1_TIM_SETCOMPARE         TIM_SetCompare2
-#define M1_TIM_GETCAPTURE         TIM_GetCapture2
-#define M1_TIM_OC_INIT            TIM_OC2Init
-#define M1_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
-
-#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH3
-#define MOTORS_TIM_M2             TIM2
-#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
-#define M2_TIM_SETCOMPARE         TIM_SetCompare3
-#define M2_TIM_GETCAPTURE         TIM_GetCapture3
-#define M2_TIM_OC_INIT            TIM_OC3Init
-#define M2_TIM_OC_PRE_CFG         TIM_OC3PreloadConfig
-
-#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH4
-#define MOTORS_TIM_M3             TIM2
-#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
-#define M3_TIM_SETCOMPARE         TIM_SetCompare4
-#define M3_TIM_GETCAPTURE         TIM_GetCapture4
-#define M3_TIM_OC_INIT            TIM_OC4Init
-#define M3_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
-
-#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH1
-#define MOTORS_TIM_M4             TIM3
-#define MOTORS_TIM_M4_DBG         DBGMCU_TIM3_STOP
-#define M4_TIM_SETCOMPARE         TIM_SetCompare1
-#define M4_TIM_GETCAPTURE         TIM_GetCapture1
-#define M4_TIM_OC_INIT            TIM_OC1Init
-#define M4_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
-
-#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB // PB5
-#define MOTORS_GPIO_M1_PORT          GPIOB
-#define MOTORS_GPIO_M1_PIN           GPIO_Pin_5
-#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource5
-#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM3
-
-#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOA // PA2
-#define MOTORS_GPIO_M2_PORT          GPIOA
-#define MOTORS_GPIO_M2_PIN           GPIO_Pin_2
-#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource2
-#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA // PA3
-#define MOTORS_GPIO_M3_PORT          GPIOA
-#define MOTORS_GPIO_M3_PIN           GPIO_Pin_3
-#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource3
-#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB // PB4
-#define MOTORS_GPIO_M4_PORT          GPIOB
-#define MOTORS_GPIO_M4_PIN           GPIO_Pin_4
-#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource4
-#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM3
-
-#elif defined(BRUSHLESS_DECK_MAPPING)
-// HW defines for prototype brushless deck
-// PIN7-LEFT  -> PB5: TIM3_CH2, connect as M1
-// PIN1-RIGHT -> PA2: TIM2_CH3, connect as M2
-// PIN2-RIGHT -> PA3: TIM2_CH4, connect as M3
-// PIN8-LEFT  -> PB4: TIM3_CH1, connect as M4
-
-#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH1
-#define MOTORS_TIM_M1             TIM3
-#define MOTORS_TIM_M1_DBG         DBGMCU_TIM3_STOP
-#define M1_TIM_SETCOMPARE         TIM_SetCompare1
-#define M1_TIM_GETCAPTURE         TIM_GetCapture1
-#define M1_TIM_OC_INIT            TIM_OC1Init
-#define M1_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
-
-#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH3
-#define MOTORS_TIM_M2             TIM2
-#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
-#define M2_TIM_SETCOMPARE         TIM_SetCompare3
-#define M2_TIM_GETCAPTURE         TIM_GetCapture3
-#define M2_TIM_OC_INIT            TIM_OC3Init
-#define M2_TIM_OC_PRE_CFG         TIM_OC3PreloadConfig
-
-#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2 // TIM2_CH4
-#define MOTORS_TIM_M3             TIM2
-#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
-#define M3_TIM_SETCOMPARE         TIM_SetCompare4
-#define M3_TIM_GETCAPTURE         TIM_GetCapture4
-#define M3_TIM_OC_INIT            TIM_OC4Init
-#define M3_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
-
-#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM3 // TIM3_CH2
-#define MOTORS_TIM_M4             TIM3
-#define MOTORS_TIM_M4_DBG         DBGMCU_TIM3_STOP
-#define M4_TIM_SETCOMPARE         TIM_SetCompare2
-#define M4_TIM_GETCAPTURE         TIM_GetCapture2
-#define M4_TIM_OC_INIT            TIM_OC2Init
-#define M4_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
-
-#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB // PB4
-#define MOTORS_GPIO_M1_PORT          GPIOB
-#define MOTORS_GPIO_M1_PIN           GPIO_Pin_4
-#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource4
-#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM3
-
-#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOA // PA2
-#define MOTORS_GPIO_M2_PORT          GPIOA
-#define MOTORS_GPIO_M2_PIN           GPIO_Pin_2
-#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource2
-#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA // PA3
-#define MOTORS_GPIO_M3_PORT          GPIOA
-#define MOTORS_GPIO_M3_PIN           GPIO_Pin_3
-#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource3
-#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB // PB5
-#define MOTORS_GPIO_M4_PORT          GPIOB
-#define MOTORS_GPIO_M4_PIN           GPIO_Pin_5
-#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource5
-#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM3
-#else
-// Mapping of brushed controller timers. Brushless controller can still be activated using
-// the same mapping, PWM then needs to be inverted.
-
-#ifdef BRUSHLESS_MOTORCONTROLLER
-  // The brushed motor drivers (pull-down mosfet) inverses the output. Compensate for that.
-  #define BRUSHLESS_INVERSED_POLARITY
-#endif
-
-#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM2
-#define MOTORS_TIM_M1             TIM2
-#define MOTORS_TIM_M1_DBG         DBGMCU_TIM2_STOP
-#define M1_TIM_SETCOMPARE         TIM_SetCompare2
-#define M1_TIM_GETCAPTURE         TIM_GetCapture2
-#define M1_TIM_OC_INIT            TIM_OC2Init
-#define M1_TIM_OC_PRE_CFG         TIM_OC2PreloadConfig
-
-#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2
-#define MOTORS_TIM_M2             TIM2
-#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
-#define M2_TIM_SETCOMPARE         TIM_SetCompare4
-#define M2_TIM_GETCAPTURE         TIM_GetCapture4
-#define M2_TIM_OC_INIT            TIM_OC4Init
-#define M2_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
-
-#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2
-#define MOTORS_TIM_M3             TIM2
-#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
-#define M3_TIM_SETCOMPARE         TIM_SetCompare1
-#define M3_TIM_GETCAPTURE         TIM_GetCapture1
-#define M3_TIM_OC_INIT            TIM_OC1Init
-#define M3_TIM_OC_PRE_CFG         TIM_OC1PreloadConfig
-
-#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM4
-#define MOTORS_TIM_M4             TIM4
-#define MOTORS_TIM_M4_DBG         DBGMCU_TIM4_STOP
-#define M4_TIM_SETCOMPARE         TIM_SetCompare4
-#define M4_TIM_GETCAPTURE         TIM_GetCapture4
-#define M4_TIM_OC_INIT            TIM_OC4Init
-#define M4_TIM_OC_PRE_CFG         TIM_OC4PreloadConfig
-
-#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOA
-#define MOTORS_GPIO_M1_PORT          GPIOA
-#define MOTORS_GPIO_M1_PIN           GPIO_Pin_1 // TIM2_CH2
-#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource1
-#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOB
-#define MOTORS_GPIO_M2_PORT          GPIOB
-#define MOTORS_GPIO_M2_PIN           GPIO_Pin_11 // TIM2_CH4
-#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource11
-#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA
-#define MOTORS_GPIO_M3_PORT          GPIOA
-#define MOTORS_GPIO_M3_PIN           GPIO_Pin_15 // TIM2_CH1
-#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource15
-#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB
-#define MOTORS_GPIO_M4_PORT          GPIOB
-#define MOTORS_GPIO_M4_PIN           GPIO_Pin_9 // TIM4_CH4
-#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource9
-#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM4
-
-#endif
-
+extern const MotorPerifDef* motorMapBrushed[NBR_OF_MOTORS];
+extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
 
 /*** Public interface ***/
 
 /**
  * Initialisation. Will set all motors ratio to 0%
  */
-void motorsInit();
+void motorsInit(const MotorPerifDef** motorMapSelect);
+
+/**
+ * DeInitialisation. Reset to defult
+ */
+void motorsDeInit(const MotorPerifDef** motorMapSelect);
 
 /**
  * Test of the motor modules. The test will spin each motor very short in

@@ -38,25 +38,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-typedef struct
-{
-  uint32_t      gpioPerif;
-  GPIO_TypeDef* gpioPort;
-  uint32_t      gpioPin;
-  uint32_t      gpioPinSource;
-  uint32_t      gpioAF;
-  uint32_t      timPerif;
-  TIM_TypeDef*  tim;
-  uint16_t      timPolarity;
-  uint32_t      timDbgStop;
-  uint32_t      timPeriod;
-  uint16_t      timPrescaler;
-  /* Function pointers */
-  void (*setCompare)(TIM_TypeDef* TIMx, uint32_t Compare2);
-  uint32_t (*getCompare)(TIM_TypeDef* TIMx);
-  void (*ocInit)(TIM_TypeDef* TIMx, TIM_OCInitTypeDef* TIM_OCInitStruct);
-  void (*preloadConfig)(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload);
-} MotorPerifDef;
+static uint16_t motorsBLConvBitsTo16(uint16_t bits);
+static uint16_t motorsBLConv16ToBits(uint16_t bits);
+static uint16_t motorsConvBitsTo16(uint16_t bits);
+static uint16_t motorsConv16ToBits(uint16_t bits);
 
 static const MotorPerifDef DECK_TX2 =
 {
@@ -69,8 +54,10 @@ static const MotorPerifDef DECK_TX2 =
     .tim           = TIM2,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM2_STOP,
-    .timPeriod     = MOTORS_PWM_PERIOD,
-    .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .convBitsTo16  = motorsBLConvBitsTo16,
+    .conv16ToBits  = motorsBLConv16ToBits,
     .setCompare    = TIM_SetCompare3,
     .getCompare    = TIM_GetCapture3,
     .ocInit        = TIM_OC3Init,
@@ -88,8 +75,10 @@ static const MotorPerifDef DECK_RX2 =
     .tim           = TIM2,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM2_STOP,
-    .timPeriod     = MOTORS_PWM_PERIOD,
-    .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .convBitsTo16  = motorsBLConvBitsTo16,
+    .conv16ToBits  = motorsBLConv16ToBits,
     .setCompare    = TIM_SetCompare4,
     .getCompare    = TIM_GetCapture4,
     .ocInit        = TIM_OC4Init,
@@ -107,8 +96,10 @@ static const MotorPerifDef DECK_IO2 =
     .tim           = TIM3,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM3_STOP,
-    .timPeriod     = MOTORS_PWM_PERIOD,
-    .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .convBitsTo16  = motorsBLConvBitsTo16,
+    .conv16ToBits  = motorsBLConv16ToBits,
     .setCompare    = TIM_SetCompare2,
     .getCompare    = TIM_GetCapture2,
     .ocInit        = TIM_OC2Init,
@@ -126,8 +117,10 @@ static const MotorPerifDef DECK_IO3 =
     .tim           = TIM3,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM3_STOP,
-    .timPeriod     = MOTORS_PWM_PERIOD,
-    .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .convBitsTo16  = motorsBLConvBitsTo16,
+    .conv16ToBits  = motorsBLConv16ToBits,
     .setCompare    = TIM_SetCompare1,
     .getCompare    = TIM_GetCapture1,
     .ocInit        = TIM_OC1Init,
@@ -147,6 +140,8 @@ static const MotorPerifDef CONN_M1 =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_PWM_PERIOD,
     .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .convBitsTo16  = motorsConvBitsTo16,
+    .conv16ToBits  = motorsConv16ToBits,
     .setCompare    = TIM_SetCompare2,
     .getCompare    = TIM_GetCapture2,
     .ocInit        = TIM_OC2Init,
@@ -166,6 +161,8 @@ static const MotorPerifDef CONN_M2 =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_PWM_PERIOD,
     .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .convBitsTo16  = motorsConvBitsTo16,
+    .conv16ToBits  = motorsConv16ToBits,
     .setCompare    = TIM_SetCompare4,
     .getCompare    = TIM_GetCapture4,
     .ocInit        = TIM_OC4Init,
@@ -185,6 +182,8 @@ static const MotorPerifDef CONN_M3 =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_PWM_PERIOD,
     .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .convBitsTo16  = motorsConvBitsTo16,
+    .conv16ToBits  = motorsConv16ToBits,
     .setCompare    = TIM_SetCompare1,
     .getCompare    = TIM_GetCapture1,
     .ocInit        = TIM_OC1Init,
@@ -204,6 +203,8 @@ static const MotorPerifDef CONN_M4 =
     .timDbgStop    = DBGMCU_TIM4_STOP,
     .timPeriod     = MOTORS_PWM_PERIOD,
     .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .convBitsTo16  = motorsConvBitsTo16,
+    .conv16ToBits  = motorsConv16ToBits,
     .setCompare    = TIM_SetCompare4,
     .getCompare    = TIM_GetCapture4,
     .ocInit        = TIM_OC4Init,
@@ -211,34 +212,53 @@ static const MotorPerifDef CONN_M4 =
 };
 
 
-static const MotorPerifDef* motorMap[NBR_OF_MOTORS] = {&CONN_M1, &CONN_M2, &CONN_M3, &CONN_M4};
+const MotorPerifDef* motorMapBrushed[NBR_OF_MOTORS] = {&CONN_M1, &CONN_M2, &CONN_M3, &CONN_M4};
+const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] = {&DECK_IO3, &DECK_TX2, &DECK_RX2, &DECK_IO2};
 
-/* Utils Conversion macro */
-#ifdef BRUSHLESS_MOTORCONTROLLER
-#define C_BITS_TO_16(X) (0xFFFF * (X - MOTORS_PWM_CNT_FOR_1MS) / MOTORS_PWM_CNT_FOR_1MS)
-#define C_16_TO_BITS(X) (MOTORS_PWM_CNT_FOR_1MS + ((X * MOTORS_PWM_CNT_FOR_1MS) / 0xFFFF))
-#else
-#define C_BITS_TO_16(X) ((X)<<(16-MOTORS_PWM_BITS))
-#define C_16_TO_BITS(X) ((X)>>(16-MOTORS_PWM_BITS)&((1<<MOTORS_PWM_BITS)-1))
-#endif
+const MotorPerifDef** motorMap;  /* Current map configuration */
 
 const int MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 static bool isInit = false;
 
+/* Private functions */
+
+static uint16_t motorsBLConvBitsTo16(uint16_t bits)
+{
+  return (0xFFFF * (bits - MOTORS_BL_PWM_CNT_FOR_1MS) / MOTORS_BL_PWM_CNT_FOR_1MS);
+}
+
+static uint16_t motorsBLConv16ToBits(uint16_t bits)
+{
+  return (MOTORS_BL_PWM_CNT_FOR_1MS + ((bits * MOTORS_BL_PWM_CNT_FOR_1MS) / 0xFFFF));
+}
+
+static uint16_t motorsConvBitsTo16(uint16_t bits)
+{
+  return ((bits) << (16 - MOTORS_PWM_BITS));
+}
+
+static uint16_t motorsConv16ToBits(uint16_t bits)
+{
+  return ((bits) >> (16 - MOTORS_PWM_BITS) & ((1 << MOTORS_PWM_BITS) - 1));
+}
+
 /* Public functions */
 
 //Initialization. Will set all motors ratio to 0%
-void motorsInit()
+void motorsInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
-
-  if (isInit)
-    return;
-
   //Init structures
   GPIO_InitTypeDef GPIO_InitStructure;
   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
   TIM_OCInitTypeDef  TIM_OCInitStructure;
+
+  if (isInit)
+  {
+    motorsDeInit(motorMap);
+  }
+
+  motorMap = motorMapSelect;
 
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
@@ -291,6 +311,25 @@ void motorsInit()
   isInit = true;
 }
 
+void motorsDeInit(const MotorPerifDef** motorMapSelect)
+{
+  int i;
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  for (i = 0; i < NBR_OF_MOTORS; i++)
+  {
+    // Configure default
+    GPIO_StructInit(&GPIO_InitStructure);
+    GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
+
+    //Map to default
+    GPIO_PinAFConfig(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, 0x00);
+
+    //Deinit timer
+    TIM_DeInit(motorMap[i]->tim);
+  }
+}
+
 bool motorsTest(void)
 {
  #ifndef BRUSHLESS_MOTORCONTROLLER
@@ -319,18 +358,18 @@ void motorsSetRatio(int id, uint16_t ithrust)
   percentage = percentage > 1.0f ? 1.0f : percentage;
   uint16_t ratio = percentage * UINT16_MAX;
 
-  motorMap[id]->setCompare(motorMap[id]->tim, C_16_TO_BITS(ratio));
+  motorMap[id]->setCompare(motorMap[id]->tim, motorMap[id]->conv16ToBits(ratio));
 }
 #else
 void motorsSetRatio(int id, uint16_t ratio)
 {
   ASSERT(id < NBR_OF_MOTORS);
-  motorMap[id]->setCompare(motorMap[id]->tim, C_16_TO_BITS(ratio));
+  motorMap[id]->setCompare(motorMap[id]->tim, motorMap[id]->conv16ToBits(ratio));
 }
 #endif
 
 int motorsGetRatio(int id)
 {
   ASSERT(id < NBR_OF_MOTORS);
-  return C_BITS_TO_16(motorMap[id]->getCompare(motorMap[id]->tim));
+  return  motorMap[id]->convBitsTo16(motorMap[id]->getCompare(motorMap[id]->tim));
 }
