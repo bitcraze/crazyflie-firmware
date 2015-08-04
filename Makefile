@@ -234,7 +234,7 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 CFLAGS += -ffunction-sections -fdata-sections
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
-LDFLAGS = $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections
+LDFLAGS = --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections
 
 #Flags required by the ST library
 ifeq ($(CLOAD), 1)
