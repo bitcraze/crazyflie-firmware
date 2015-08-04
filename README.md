@@ -1,19 +1,43 @@
-## Crazyflie 1.0/2.0 Firmware
+# Crazyflie 1.0/2.0 Firmware
 
 This project contains the source code for the Crazyflie 1.0/2.0 firmware. 
 
-##### Crazyflie 1.0
+## Dependencies
+
+You'll need to use either the Crazyflie VM or install some of an ARM toolchain.
+
+### OS X
+
+> `TODO: Please share!`
+
+### Debian/Ubuntu
+
+> `TODO: Please share!`
+
+### Arch Linux
+
+```bash
+sudo pacman -S community/arm-none-eabi-gcc community/arm-none-eabi-gdb community/arm-none-eabi-newlib
+```
+
+### Windows
+
+> `TODO: Please share!`
+
+## Compiling
+
+### Crazyflie 1.0
 Build with:
 ```
 make PLATFORM=CF1
 ```
 
-##### Crazyflie 2.0
+### Crazyflie 2.0
 This is the dafault build so just running "make" is enough or:
 ```
 make PLATFORM=CF2
 ```
-##### config.mk
+### config.mk
 To create custom build options create a file called config.mk in the root folder 
 (same as Makefile) and fill it with options. E.g. 
 ```
@@ -24,7 +48,7 @@ CLOAD=0
 More information can be found on the 
 [Bitcraze wiki](http://wiki.bitcraze.se/projects:crazyflie2:index)
 
-#### Folder description:
+## Folder description:
 ```
 ./              | Root, contains the Makefile
  + init         | Contains the main.c
@@ -49,7 +73,7 @@ More information can be found on the
  |  + STM32...  | Library folders of the ST STM32 peripheral libs
  |  + CMSIS     | Core abstraction layer
 ```
-#### Make targets:
+# Make targets:
 ```
 all        : Shortcut for build
 compile    : Compile cflie.hex. WARNING: Do NOT update version.c
