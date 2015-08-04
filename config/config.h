@@ -130,10 +130,10 @@
 //#define ACTIVATE_AUTO_SHUTDOWN
 
 /**
- * \def ACTIVATE_STARTUP_MELODY
+ * \def ACTIVATE_STARTUP_SOUND
  * Playes a startup melody using the motors and PWM modulation
  */
-//#define ACTIVATE_STARTUP_MELODY
+#define ACTIVATE_STARTUP_SOUND
 
 // Define to force initialization of expansion board drivers. For test-rig and programming.
 //#define FORCE_EXP_DETECT
