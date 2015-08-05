@@ -21,38 +21,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * expbrd.h - Expansion board handling functions
+ * bigquad.h - Big-Quad-Deck
  */
-#ifndef __EXPBRD_H__
-#define __EXPBRD_H__
+#ifndef __BIGQUAD_H__
+#define __BIGQUAD_H__
 
 #include <stdint.h>
 
-#define EXPBRD_MAX      5
-#define EXPBRD_ID       0xEB
-#define EXPBRD_OW_ADDR  0x00
+void bigquadInit();
+bool bigquadTest();
 
-// Definition of Vendor ID
-#define EXPBRD_VID_BITCRAZE  0xBC
-
-// Definition of expansion board Product ID
-#define EXPBRD_PID_LEDRING  0x01
-#define EXPBRD_PID_QI       0x02
-#define EXPBRD_PID_BIGQUAD  0x03
-#define EXPBRD_PID_ET       0xFF
-
-
-typedef struct _ExpbrdData
-{
-  uint8_t header;
-  uint8_t usedPins[4];
-  uint8_t vid;
-  uint8_t pid;
-  uint8_t crc;
-} __attribute__((packed)) ExpbrdData ;
-
-void expbrdInit();
-bool expbrdTest();
-
-#endif //__EXPBRD_H__
+#endif //__BIGQUAD_H__
 

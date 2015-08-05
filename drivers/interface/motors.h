@@ -163,8 +163,15 @@
 #define FULL 1000
 #define STOP 0
 
+typedef enum
+{
+  BRUSHED,
+  BRUSHLESS
+} motorsDrvType;
+
 typedef struct
 {
+  motorsDrvType drvType;
   uint32_t      gpioPerif;
   GPIO_TypeDef* gpioPort;
   uint32_t      gpioPin;

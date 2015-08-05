@@ -49,6 +49,7 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 #ifdef PLATFORM_CF1
 static const MotorPerifDef CONN_M1 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_APB2Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_1,
@@ -70,6 +71,7 @@ static const MotorPerifDef CONN_M1 =
 
 static const MotorPerifDef CONN_M2 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_APB2Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_0,
@@ -91,6 +93,7 @@ static const MotorPerifDef CONN_M2 =
 
 static const MotorPerifDef CONN_M3 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_APB2Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_9,
@@ -112,6 +115,7 @@ static const MotorPerifDef CONN_M3 =
 
 static const MotorPerifDef CONN_M4 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_APB2Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_8,
@@ -133,6 +137,7 @@ static const MotorPerifDef CONN_M4 =
 #else
 static const MotorPerifDef CONN_M1 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
     .gpioPort      = GPIOA,
     .gpioPin       = GPIO_Pin_1,
@@ -154,6 +159,7 @@ static const MotorPerifDef CONN_M1 =
 
 static const MotorPerifDef CONN_M2 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_11,
@@ -176,6 +182,7 @@ static const MotorPerifDef CONN_M2 =
 
 static const MotorPerifDef CONN_M3 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
     .gpioPort      = GPIOA,
     .gpioPin       = GPIO_Pin_15,
@@ -197,6 +204,7 @@ static const MotorPerifDef CONN_M3 =
 
 static const MotorPerifDef CONN_M4 =
 {
+    .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_9,
@@ -218,6 +226,7 @@ static const MotorPerifDef CONN_M4 =
 
 static const MotorPerifDef DECK_TX2 =
 {
+    .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
     .gpioPort      = GPIOA,
     .gpioPin       = GPIO_Pin_2,
@@ -239,6 +248,7 @@ static const MotorPerifDef DECK_TX2 =
 
 static const MotorPerifDef DECK_RX2 =
 {
+    .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
     .gpioPort      = GPIOA,
     .gpioPin       = GPIO_Pin_3,
@@ -260,6 +270,7 @@ static const MotorPerifDef DECK_RX2 =
 
 static const MotorPerifDef DECK_IO2 =
 {
+    .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_5,
@@ -281,6 +292,7 @@ static const MotorPerifDef DECK_IO2 =
 
 static const MotorPerifDef DECK_IO3 =
 {
+    .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
     .gpioPort      = GPIOB,
     .gpioPin       = GPIO_Pin_4,
@@ -307,6 +319,9 @@ const MotorPerifDef* motorMapBrushed[NBR_OF_MOTORS] = {&CONN_M1, &CONN_M2, &CONN
 const MotorPerifDef** motorMap;  /* Current map configuration */
 
 const int MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
+
+static const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
+
 static bool isInit = false;
 
 /* Private functions */
@@ -423,30 +438,25 @@ void motorsDeInit(const MotorPerifDef** motorMapSelect)
 
 bool motorsTest(void)
 {
- #ifndef BRUSHLESS_MOTORCONTROLLER
   int i;
 
+  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
+  {
+    if (motorMap[i]->drvType == BRUSHED)
+    {
 #ifdef ACTIVATE_STARTUP_SOUND
-  uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
-
-  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
-  {
-    motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
-    vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
-    motorsBeep(MOTORS[i], false, 0, 0);
-    vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
-  }
+      motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+      vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+      motorsBeep(MOTORS[i], false, 0, 0);
+      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
 #else
-  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
-  {
-    motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
-    vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
-    motorsSetRatio(MOTORS[i], 0);
-    vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+      motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
+      vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+      motorsSetRatio(MOTORS[i], 0);
+      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+#endif
+    }
   }
-
-#endif
-#endif
 
   return isInit;
 }

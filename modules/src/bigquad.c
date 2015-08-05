@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __                           
  * +------+      / __ )(_) /_______________ _____  ___ 
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,38 +21,41 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * expbrd.h - Expansion board handling functions
+ * exptest.c - Testing of expansion port.
  */
-#ifndef __EXPBRD_H__
-#define __EXPBRD_H__
+#define DEBUG_MODULE "BIGQUAD"
 
 #include <stdint.h>
+#include <string.h>
 
-#define EXPBRD_MAX      5
-#define EXPBRD_ID       0xEB
-#define EXPBRD_OW_ADDR  0x00
+#include "stm32fxxx.h"
+#include "config.h"
+#include "bigquad.h"
+#include "motors.h"
+#include "debug.h"
 
-// Definition of Vendor ID
-#define EXPBRD_VID_BITCRAZE  0xBC
+//Hardware configuration
+static bool isInit;
 
-// Definition of expansion board Product ID
-#define EXPBRD_PID_LEDRING  0x01
-#define EXPBRD_PID_QI       0x02
-#define EXPBRD_PID_BIGQUAD  0x03
-#define EXPBRD_PID_ET       0xFF
-
-
-typedef struct _ExpbrdData
+void bigquadInit()
 {
-  uint8_t header;
-  uint8_t usedPins[4];
-  uint8_t vid;
-  uint8_t pid;
-  uint8_t crc;
-} __attribute__((packed)) ExpbrdData ;
+  if(isInit)
+    return;
 
-void expbrdInit();
-bool expbrdTest();
+  DEBUG_PRINT("Switching to brushless.\n");
+  motorsInit(motorMapBigQuadDeck);
 
-#endif //__EXPBRD_H__
+  isInit = true;
+}
 
+bool bigquadTest()
+{
+  bool status = true;
+
+  if(!isInit)
+    return false;
+
+  status = motorsTest();
+
+  return status;
+}
