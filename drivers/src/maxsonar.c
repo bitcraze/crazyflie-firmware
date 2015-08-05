@@ -31,6 +31,8 @@
 #include "maxsonar.h"
 #include "deck.h"
 
+#define IN2MM(x) ((x) * 25.4f)
+
 /* Internal tracking of last measured distance. */
 static uint32_t maxSonarDistance = 0;
 static uint32_t maxSonarAccuracy = 0; /* 0 accuracy means no measurement or unknown accuracy. */
@@ -46,7 +48,7 @@ LOG_GROUP_STOP(maxSonar)
 /**
  * Gets the accuracy for a distance measurement from an MB1040 sonar range finder (LV-MaxSonar-EZ4).
  *
- * @param distance The distance measurement to report the accuracy for.
+ * @param distance The distance measurement to report the accuracy for (mm).
  *
  * @return Accuracy in millimeters.
  */
@@ -54,7 +56,7 @@ static uint32_t maxSonarGetAccuracyMB1040(uint32_t distance)
 {
   /* Specify the accuracy of the measurement from the MB1040 (LV-MaxBotix-EZ4) sensor. */
 
-  if((distance * 25.4) <= 6) {
+  if(distance <= IN2MM(6)) {
     /**
      * The datasheet for the MB1040 specifies that any distance below 6 inches is reported as 6 inches.
      * Since all measurements are given in 1 inch steps, the actual distance can be anything
@@ -62,16 +64,16 @@ static uint32_t maxSonarGetAccuracyMB1040(uint32_t distance)
      *
      * The accuracy is therefore set to 7(!) inches.
      */
-    maxSonarAccuracy = 7 * 25.4;
+    maxSonarAccuracy = IN2MM(7);
   }
-  else if((distance * 25.4) >= 20) {
+  else if(distance >= IN2MM(20)) {
     /**
      * The datasheet for the MB1040 specifies that any distance between 6 and 20 inches may result in
      * measurement inaccuracies up to 2 inches.
      */
-    maxSonarAccuracy = 2 * 25.4;
+    maxSonarAccuracy = IN2MM(2);
   }
-  else if((distance * 25.4) > 254) {
+  else if(distance > IN2MM(254)) {
     /**
      * The datasheet for the MB1040 specifies that maximum reported distance is 254 inches. If we for
      * some reason should measure more than this, set the accuracy to 0.
@@ -82,7 +84,7 @@ static uint32_t maxSonarGetAccuracyMB1040(uint32_t distance)
     /**
      * Otherwise the accuracy is specified by the datasheet for the MB1040 to be 1 inch.
      */
-    maxSonarAccuracy = 1 * 25.4;
+    maxSonarAccuracy = IN2MM(1);
   }
 
   /* Report accuracy if the caller asked for this. */
@@ -93,7 +95,7 @@ static uint32_t maxSonarGetAccuracyMB1040(uint32_t distance)
  * Reads distance measurement from an MB1040 sonar range finder (LV-MaxBotix-EZ4) via an analog input interface.
  *
  * @param pin      The GPIO pin to use for ADC conversion.
- * @param accuracy If not NULL, this function will write the accuracy of the distance measurement to this parameter.
+ * @param accuracy If not NULL, this function will write the accuracy of the distance measurement (in mm) to this parameter.
  *
  * @return The distance measurement in millimeters.
  */
@@ -110,6 +112,8 @@ static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
    * Expanding V, we get:                    D = (512 / VREF) * (analogRead() / 1024 * VREF)
    * Which can be simplified to:             D = analogRead() / 2
    * Last, we convert inches to millimeters: D = 25.4 * analogRead() / 2
+   * Which can be written as:                D = IN2MM(analogRead()) / 2
+   *   (to retain the sample's LSB)
    *
    * The above conversion assumes the ADC VREF is the same as the LV-MaxSonar-EZ4 VREF. This means
    * that the MB1040 Sensor must have its VCC pin connected to the VCC pin on the deck port.
@@ -118,7 +122,7 @@ static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
    * the VCC pin on the deck port is safe.
    */
 
-  maxSonarDistance = (uint32_t)(25.4 * analogRead(pin) / 2);
+  maxSonarDistance = (uint32_t) (IN2MM(analogRead(pin)) / 2);
 
   if(NULL != accuracy) {
     *accuracy = maxSonarGetAccuracyMB1040(maxSonarDistance);
@@ -130,7 +134,7 @@ static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
  * Reads distance measurement from the specified sensor type.
  *
  * @param type     The MaxSonar sensor type.
- * @param accuracy If not NULL, this function will write the accuracy of the distance measurement to this parameter.
+ * @param accuracy If not NULL, this function will write the accuracy of the distance measurement (in mm) to this parameter.
  *
  * @return The distance measurement in millimeters.
  */
