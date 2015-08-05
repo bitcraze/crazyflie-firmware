@@ -371,8 +371,15 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     MOTORS_RCC_TIM_CMD(motorMap[i]->timPerif, ENABLE);
 
     // Configure the GPIO for the timer output
+    GPIO_StructInit(&GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Mode = MOTORS_GPIO_MODE;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+#ifdef PLATFORM_CF2
+    if (motorMap[i]->drvType == BRUSHLESS)
+    {
+      GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+    }
+#endif
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
@@ -421,6 +428,7 @@ void motorsDeInit(const MotorPerifDef** motorMapSelect)
   {
     // Configure default
     GPIO_StructInit(&GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
 #ifdef PLATFORM_CF1
@@ -461,28 +469,29 @@ bool motorsTest(void)
   return isInit;
 }
 
-#ifdef ENABLE_THRUST_BAT_COMPENSATED
 // Ithrust is thrust mapped for 65536 <==> 60g
 void motorsSetRatio(int id, uint16_t ithrust)
 {
+  uint16_t ratio;
+
   ASSERT(id < NBR_OF_MOTORS);
 
-  float thrust = ((float)ithrust / 65536.0f) * 60;
-  float volts = -0.0006239 * thrust * thrust + 0.088 * thrust;
-  float supply_voltage = pmGetBatteryVoltage();
-  float percentage = volts / supply_voltage;
-  percentage = percentage > 1.0 ? 1.0 : percentage;
-  uint16_t ratio = percentage * UINT16_MAX;
+  ratio = ithrust;
 
-  motorMap[id]->setCompare(motorMap[id]->tim, motorMap[id]->conv16ToBits(ratio));
-}
-#else
-void motorsSetRatio(int id, uint16_t ratio)
-{
-  ASSERT(id < NBR_OF_MOTORS);
-  motorMap[id]->setCompare(motorMap[id]->tim, motorMap[id]->conv16ToBits(ratio));
-}
+#ifdef ENABLE_THRUST_BAT_COMPENSATED
+  if (motorMap[id]->drvType == BRUSHED)
+  {
+    float thrust = ((float)ithrust / 65536.0f) * 60;
+    float volts = -0.0006239 * thrust * thrust + 0.088 * thrust;
+    float supply_voltage = pmGetBatteryVoltage();
+    float percentage = volts / supply_voltage;
+    percentage = percentage > 1.0 ? 1.0 : percentage;
+    ratio = percentage * UINT16_MAX;
+  }
 #endif
+
+  motorMap[id]->setCompare(motorMap[id]->tim, motorMap[id]->conv16ToBits(ratio));
+}
 
 int motorsGetRatio(int id)
 {

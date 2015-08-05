@@ -70,7 +70,7 @@ void expbrdInit()
 
   if (expbrdIsPresent(EXPBRD_VID_BITCRAZE, EXPBRD_PID_BIGQUAD))
   {
-//    bigquadInit();
+    bigquadInit();
   }
 
   isInit = true;
