@@ -40,27 +40,10 @@
 #include "stm32fxxx.h"
 
 /******** Defines ********/
-/**
- * *VARNING* Flashing the brushless driver on the Crazyflie with normal brushed motors connected
- *  will turn it on at full speed when it is powered on!
- *
- * Generates a PWM wave (50 - 200 Hz update rate with 1-2 ms high pulse) using the timer. That way we can use the same
- * base as for the regular PWM driver. This means it will be a PWM with a period of the update rate configured to be high
- * only in the 1-2 ms range.
- * The BLMC input signal are meant to be connected to the Crazyflie round motor solder pad (open-drain output). A resistor
- * around 470 ohm needs to pull the signal high to the voltage level of the BLMC (normally 5V).
- */
-  #define BLMC_PERIOD 0.0025   // 2.5ms = 400Hz
-  #define TIM_CLOCK_HZ 84000000
-  #define MOTORS_BL_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
-  #define MOTORS_BL_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_BL_PWM_PRESCALE_RAW)
-  #define MOTORS_BL_PWM_CNT_FOR_1MS    (uint32_t)(TIM_CLOCK_HZ * 0.001 / MOTORS_BL_PWM_PRESCALE_RAW)
-  #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
-  #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
-  #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 
 #ifdef PLATFORM_CF1
   // The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
+  #define TIM_CLOCK_HZ 72000000
   #define MOTORS_PWM_BITS           9
   #define MOTORS_PWM_PERIOD         ((1<<MOTORS_PWM_BITS) - 1)
   #define MOTORS_PWM_PRESCALE       0
@@ -76,6 +59,7 @@
 #else
   // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
   // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
+  #define TIM_CLOCK_HZ 84000000
   #define MOTORS_PWM_BITS           8
   #define MOTORS_PWM_PERIOD         ((1<<MOTORS_PWM_BITS) - 1)
   #define MOTORS_PWM_PRESCALE       0
@@ -93,6 +77,22 @@
   // amount of thrust independent of the battery voltage. Based on thrust measurement.
   #define ENABLE_THRUST_BAT_COMPENSATED
 #endif
+
+/**
+ * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * brushed motors connected they can turn on at full speed when it is powered on!
+ *
+ * Generates a PWM wave (50 - 400 Hz update rate with 1-2 ms high pulse) using the timer. That way we can use the same
+ * base as for the regular PWM driver. This means it will be a PWM with a period of the update rate configured to be high
+ * only in the 1-2 ms range.
+ */
+  #define BLMC_PERIOD 0.0025   // 2.5ms = 400Hz
+  #define MOTORS_BL_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
+  #define MOTORS_BL_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_CNT_FOR_1MS    (uint32_t)(TIM_CLOCK_HZ * 0.001 / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
+  #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
+  #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 
 #define NBR_OF_MOTORS 4
 // Motors IDs define
@@ -176,6 +176,7 @@ typedef struct
   GPIO_TypeDef* gpioPort;
   uint32_t      gpioPin;
   uint32_t      gpioPinSource;
+  uint32_t      gpioOType;
   uint32_t      gpioAF;
   uint32_t      timPerif;
   TIM_TypeDef*  tim;
@@ -184,8 +185,6 @@ typedef struct
   uint32_t      timPeriod;
   uint16_t      timPrescaler;
   /* Function pointers */
-  uint16_t (*convBitsTo16)(uint16_t bits);
-  uint16_t (*conv16ToBits)(uint16_t bits);
 #ifdef PLATFORM_CF1
   void (*setCompare)(TIM_TypeDef* TIMx, uint16_t Compare);
   uint16_t (*getCompare)(TIM_TypeDef* TIMx);
@@ -197,7 +196,11 @@ typedef struct
   void (*preloadConfig)(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload);
 } MotorPerifDef;
 
-extern const MotorPerifDef* motorMapBrushed[NBR_OF_MOTORS];
+/**
+ * Motor mapping configurations
+ */
+extern const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS];
+extern const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
 
 /*** Public interface ***/
@@ -208,7 +211,7 @@ extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
 void motorsInit(const MotorPerifDef** motorMapSelect);
 
 /**
- * DeInitialisation. Reset to defult
+ * DeInitialisation. Reset to default
  */
 void motorsDeInit(const MotorPerifDef** motorMapSelect);
 
@@ -221,12 +224,12 @@ bool motorsTest(void);
 /**
  * Set the PWM ratio of the motor 'id'
  */
-void motorsSetRatio(int id, uint16_t ratio);
+void motorsSetRatio(uint32_t id, uint16_t ratio);
 
 /**
  * Get the PWM ratio of the motor 'id'. Return -1 if wrong ID.
  */
-int motorsGetRatio(int id);
+int motorsGetRatio(uint32_t id);
 
 /**
  * FreeRTOS Task to test the Motors driver

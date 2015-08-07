@@ -162,7 +162,7 @@ void stabilizerInit(void)
   if(isInit)
     return;
 
-  motorsInit(motorMapBrushed);
+  motorsInit(motorMapDefaultBrushed);
   imu6Init();
   sensfusion6Init();
   controllerInit();
