@@ -122,6 +122,16 @@ static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used 
 static uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
 static uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
 
+#if defined(SITAW_ENABLED)
+// Automatic take-off variables
+static bool autoTOActive           = false; // Flag indicating if automatic take-off is active / deactive.
+static float autoTOAltBase         = 0.0f;  // Base altitude for the automatic take-off. Set to altHoldTarget when automatic take-off is activated.
+static float autoTOAltCurrent      = 0.0f;  // Current target altitude adjustment. Equals 0 when function is activated, increases to autoTOThresh when function is deactivated.
+// Automatic take-off parameters
+static float autoTOAlpha           = 0.98f; // Smoothing factor when adjusting the altHoldTarget altitude.
+static float autoTOTargetAdjust    = 1.5f;  // Meters to add to altHoldTarget to reach auto take-off altitude.
+static float autoTOThresh          = 0.97f; // Threshold for when to deactivate auto Take-Off. A value of 0.97 means 97% of the target altitude adjustment.
+#endif
 
 RPYType rollType;
 RPYType pitchType;
@@ -184,7 +194,7 @@ bool stabilizerTest(void)
 
 static void stabilizerPostAttitudeUpdateCallOut(void)
 {
-  /* Code that shall run AFTER each attitude update should be placed here. */
+  /* Code that shall run AFTER each attitude update, should be placed here. */
 
 #if defined(SITAW_ENABLED)
   /* Test values for Free Fall detection. */
@@ -196,11 +206,13 @@ static void stabilizerPostAttitudeUpdateCallOut(void)
   /* Test values for At Rest detection. */
   sitAwARTest(acc.x, acc.y, acc.z);
 
+  /* Enable altHold mode if free fall is detected. */
   if(sitAwFFDetected() && !sitAwTuDetected()) {
     commanderSetAltHoldMode(true);
   }
 
-  if(sitAwARDetected() || sitAwTuDetected()) {
+  /* Disable altHold mode if a Tumbled situation is detected. */
+  if(sitAwTuDetected()) {
     commanderSetAltHoldMode(false);
   }
 #endif
@@ -208,10 +220,11 @@ static void stabilizerPostAttitudeUpdateCallOut(void)
 
 static void stabilizerPreThrustUpdateCallOut(void)
 {
-  /* Code that shall run BEFORE each thrust distribution update should be placed here. */
+  /* Code that shall run BEFORE each thrust distribution update, should be placed here. */
 
 #if defined(SITAW_ENABLED)
       if(sitAwTuDetected()) {
+        /* Kill the thrust to the motors if a Tumbled situation is detected. */
         actuatorThrust = 0;
       }
 #endif
@@ -323,6 +336,55 @@ static void stabilizerTask(void* param)
   }
 }
 
+static void stabilizerPreAltHoldComputeThrustCallOut(void)
+{
+  /* Code that shall run BEFORE each altHold thrust computation, should be placed here. */
+
+#if defined(SITAW_ENABLED)
+  /*
+   * The number of variables used for automatic Take-Off could be reduced, however that would
+   * cause debugging and tuning to become more difficult. The variables currently used ensure
+   * that tuning can easily be done through the LOG and PARAM frameworks.
+   *
+   * Note that while the automatic take-off function is active, it will overrule any other
+   * changes to altHoldTarget by the user.
+   *
+   * The automatic take-off function will automatically deactivate once the take-off has been
+   * conducted.
+   */
+  if(!autoTOActive){
+    /*
+     * Enabling automatic take-off: When At Rest, Not Tumbled, and the user pressing the AltHold button
+     */
+    if(sitAwARDetected() && !sitAwTuDetected() && setAltHold) {
+      /* Enable automatic take-off. */
+      autoTOActive = true;
+      autoTOAltBase = altHoldTarget;
+      autoTOAltCurrent = 0.0f;
+    }
+  }
+
+  if(autoTOActive) {
+    /*
+     * Automatic take-off is quite simple: Slowly increase altHoldTarget until reaching the target altitude.
+     */
+
+    /* Calculate the new current setpoint for altHoldTarget. autoTOAltCurrent is normalized to values from 0 to 1. */
+    autoTOAltCurrent = autoTOAltCurrent * autoTOAlpha + (1 - autoTOAlpha);
+
+    /* Update the altHoldTarget variable. */
+    altHoldTarget = autoTOAltBase + autoTOAltCurrent * autoTOTargetAdjust;
+
+    if((autoTOAltCurrent >= autoTOThresh)) {
+      /* Disable the automatic take-off mode if target altitude has been reached. */
+      autoTOActive = false;
+      autoTOAltBase = 0.0f;
+      autoTOAltCurrent = 0.0f;
+    }
+  }
+#endif
+}
+
 static void stabilizerAltHoldUpdate(void)
 {
   // Get altitude hold commands from pilot
@@ -375,6 +437,9 @@ static void stabilizerAltHoldUpdate(void)
     // Reset altHoldPID
     altHoldPIDVal = pidUpdate(&altHoldPID, asl, false);
   }
+
+  /* Call out before performing altHold thrust regulation. */
+  stabilizerPreAltHoldComputeThrustCallOut();
 
   // In altitude hold mode
   if (altHold)
@@ -529,6 +594,15 @@ LOG_ADD(LOG_FLOAT, vSpeedASL, &vSpeedASL)
 LOG_ADD(LOG_FLOAT, vSpeedAcc, &vSpeedAcc)
 LOG_GROUP_STOP(altHold)
 
+#if defined(SITAW_ENABLED)
+// Automatic take-off parameters
+LOG_GROUP_START(autoTO)
+LOG_ADD(LOG_UINT8, Active, &autoTOActive)
+LOG_ADD(LOG_FLOAT, AltBase, &autoTOAltBase)
+LOG_ADD(LOG_FLOAT, AltCurrent, &autoTOAltCurrent)
+LOG_GROUP_STOP(autoTO)
+#endif
+
 // Params for altitude hold
 PARAM_GROUP_START(altHold)
 PARAM_ADD(PARAM_FLOAT, aslAlpha, &aslAlpha)
@@ -551,3 +625,12 @@ PARAM_ADD(PARAM_UINT16, baseThrust, &altHoldBaseThrust)
 PARAM_ADD(PARAM_UINT16, maxThrust, &altHoldMaxThrust)
 PARAM_ADD(PARAM_UINT16, minThrust, &altHoldMinThrust)
 PARAM_GROUP_STOP(altHold)
+
+#if defined(SITAW_ENABLED)
+// Automatic take-off parameters
+PARAM_GROUP_START(autoTO)
+PARAM_ADD(PARAM_FLOAT, TargetAdjust, &autoTOTargetAdjust)
+PARAM_ADD(PARAM_FLOAT, Thresh, &autoTOThresh)
+PARAM_ADD(PARAM_FLOAT, Alpha, &autoTOAlpha)
+PARAM_GROUP_STOP(autoTO)
+#endif
