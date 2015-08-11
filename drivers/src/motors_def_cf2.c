@@ -441,10 +441,10 @@ const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
 {
-  &DECK_IO3,
   &DECK_TX2_TIM2,
-  &DECK_RX2_TIM2,
-  &DECK_IO2
+  &DECK_IO3,
+  &DECK_IO2,
+  &DECK_RX2_TIM2
 };
 
 /**
