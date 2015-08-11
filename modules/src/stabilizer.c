@@ -70,34 +70,34 @@ static Axis3f gyro; // Gyro axis data in deg/s
 static Axis3f acc;  // Accelerometer axis data in mG
 static Axis3f mag;  // Magnetometer axis data in testla
 
-static float eulerRollActual;
-static float eulerPitchActual;
-static float eulerYawActual;
-static float eulerRollDesired;
-static float eulerPitchDesired;
-static float eulerYawDesired;
-static float rollRateDesired;
-static float pitchRateDesired;
-static float yawRateDesired;
+static float eulerRollActual;   // Measured roll angle in deg
+static float eulerPitchActual;  // Measured pitch angle in deg
+static float eulerYawActual;    // Measured yaw angle in deg
+static float eulerRollDesired;  // Desired roll angle in deg
+static float eulerPitchDesired; // Desired ptich angle in deg
+static float eulerYawDesired;   // Desired yaw angle in deg
+static float rollRateDesired;   // Desired roll rate in deg/s
+static float pitchRateDesired;  // Desired pitch rate in deg/s
+static float yawRateDesired;    // Desired yaw rate in deg/s
 
 // Baro variables
-static float temperature; // temp from barometer
-static float pressure;    // pressure from barometer
-static float asl;     // smoothed asl
-static float aslRaw;  // raw asl
-static float aslLong; // long term asl
+static float temperature; // temp from barometer in celcius
+static float pressure;    // pressure from barometer in bar
+static float asl;         // smoothed asl
+static float aslRaw;      // raw asl
+static float aslLong;     // long term asl
 
 // Altitude hold variables
-static PidObject altHoldPID; // Used for altitute hold mode. I gets reset when the bat status changes
-bool altHold = false;          // Currently in altitude hold mode
+static PidObject altHoldPID;  // Used for altitute hold mode. I gets reset when the bat status changes
+bool altHold = false;         // Currently in altitude hold mode
 bool setAltHold = false;      // Hover mode has just been activated
-static float accWZ     = 0.0;
-static float accMAG    = 0.0;
-static float vSpeedASL = 0.0;
-static float vSpeedAcc = 0.0;
+static float accWZ     = 0.0; // Acceleration Without gravity along Z axis.
+static float accMAG    = 0.0; // Acceleration magnitude
+static float vSpeedASL = 0.0; // Vertical speed (world frame) derived from barometer ASL
+static float vSpeedAcc = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
 static float vSpeed    = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
-static float altHoldPIDVal;                    // Output of the PID controller
-static float altHoldErr;                       // Different between target and current altitude
+static float altHoldPIDVal;   // Output of the PID controller
+static float altHoldErr;      // Different between target and current altitude
 
 // Altitude hold & Baro Params
 static float altHoldKp              = 0.5;  // PID gain constants, used everytime we reinitialise the PID controller
@@ -133,19 +133,19 @@ static float autoTOTargetAdjust    = 1.5f;  // Meters to add to altHoldTarget to
 static float autoTOThresh          = 0.97f; // Threshold for when to deactivate auto Take-Off. A value of 0.97 means 97% of the target altitude adjustment.
 #endif
 
-RPYType rollType;
-RPYType pitchType;
-RPYType yawType;
+RPYType rollType;   // Current configuration type of roll (rate or angle)
+RPYType pitchType;  // Current configuration type of pitch (rate or angle)
+RPYType yawType;    // Current configuration type of yaw (rate or angle)
 
-uint16_t actuatorThrust;
-int16_t  actuatorRoll;
-int16_t  actuatorPitch;
-int16_t  actuatorYaw;
+uint16_t actuatorThrust;  // Actuator output for thrust base
+int16_t  actuatorRoll;    // Actuator output roll compensation
+int16_t  actuatorPitch;   // Actuator output pitch compensation
+int16_t  actuatorYaw;     // Actuator output yaw compensation
 
-uint32_t motorPowerM4;
-uint32_t motorPowerM2;
-uint32_t motorPowerM1;
-uint32_t motorPowerM3;
+uint32_t motorPowerM1;  // Motor 1 power output (16bit value used: 0 - 65535)
+uint32_t motorPowerM2;  // Motor 2 power output (16bit value used: 0 - 65535)
+uint32_t motorPowerM3;  // Motor 3 power output (16bit value used: 0 - 65535)
+uint32_t motorPowerM4;  // Motor 4 power output (16bit value used: 0 - 65535)
 
 static bool isInit;
 
