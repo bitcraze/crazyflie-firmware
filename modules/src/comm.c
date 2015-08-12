@@ -58,7 +58,10 @@ void commInit(void)
   radiolinkInit();
 #endif
 
-  crtpInit();
+  /* These functions are moved to be initialized early so
+   * that DEBUG_PRINT can be used early */
+  // crtpInit();
+  // consoleInit();
 
 #ifdef USE_RADIOLINK_CRTP
   crtpSetLink(radiolinkGetLink());
@@ -73,7 +76,6 @@ void commInit(void)
   platformserviceInit();
 #endif
   logInit();
-  consoleInit();
   paramInit();
   
   //setup CRTP communication channel

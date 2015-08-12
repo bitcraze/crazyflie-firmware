@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "debug.h"
 #include "i2cdev.h"
 #include "configblock.h"
 #include "eeprom.h"
@@ -136,10 +137,12 @@ int configblockInit(void)
           if (configblockCheckChecksum(&configblock))
           {
             // Everything is fine
+            DEBUG_PRINT("v%d, verification [OK]\n", configblock.version);
             cb_ok = true;
           }
           else
           {
+            DEBUG_PRINT("Verification [FAIL]\n");
             cb_ok = false;
           }
         }

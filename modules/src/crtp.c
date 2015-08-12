@@ -130,11 +130,18 @@ void crtpTxTask(void *param)
 
   while (true)
   {
-    if (xQueueReceive(txQueue, &p, portMAX_DELAY) == pdTRUE)
+    if (link != &nopLink)
     {
-      // Keep testing, if the link changes to USB it will go though
-      while (link->sendPacket(&p) == false)
-        ;
+      if (xQueueReceive(txQueue, &p, portMAX_DELAY) == pdTRUE)
+      {
+        // Keep testing, if the link changes to USB it will go though
+        while (link->sendPacket(&p) == false)
+          ;
+      }
+    }
+    else
+    {
+      vTaskDelay(M2T(10));
     }
   }
 }
