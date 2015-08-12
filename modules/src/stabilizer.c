@@ -133,10 +133,6 @@ static float autoTOTargetAdjust    = 1.5f;  // Meters to add to altHoldTarget to
 static float autoTOThresh          = 0.97f; // Threshold for when to deactivate auto Take-Off. A value of 0.97 means 97% of the target altitude adjustment.
 #endif
 
-RPYType rollType;   // Current configuration type of roll (rate or angle)
-RPYType pitchType;  // Current configuration type of pitch (rate or angle)
-RPYType yawType;    // Current configuration type of yaw (rate or angle)
-
 static float carefreeFrontAngle = 0; // carefree front angle that is set
 
 uint16_t actuatorThrust;  // Actuator output for thrust base
@@ -238,6 +234,9 @@ static void stabilizerPreThrustUpdateCallOut(void)
 
 static void stabilizerTask(void* param)
 {
+  RPYType rollType;
+  RPYType pitchType;
+  RPYType yawType;
   uint32_t attitudeCounter = 0;
   uint32_t altHoldCounter = 0;
   uint32_t lastWakeTime;

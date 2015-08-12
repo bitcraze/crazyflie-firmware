@@ -51,6 +51,10 @@ static bool thrustLocked;
 static bool altHoldMode = false;
 static bool altHoldModeOld = false;
 
+static RPYType stabilizationModeRoll  = ANGLE; // Current stabilization type of roll (rate or angle)
+static RPYType stabilizationModePitch = ANGLE; // Current stabilization type of pitch (rate or angle)
+static RPYType stabilizationModeYaw   = RATE;  // Current stabilization type of yaw (rate or angle)
+
 static YawModeType yawMode = DEFUALT_YAW_MODE; // Yaw mode configuration
 static bool carefreeResetFront;             // Reset what is front in carefree mode
 
@@ -169,9 +173,9 @@ void commanderSetAltHoldMode(bool altHoldModeNew)
 
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType)
 {
-  *rollType  = ANGLE;
-  *pitchType = ANGLE;
-  *yawType   = RATE;
+  *rollType  = stabilizationModeRoll;
+  *pitchType = stabilizationModePitch;
+  *yawType   = stabilizationModeYaw;
 }
 
 void commanderGetThrust(uint16_t* thrust)
@@ -218,5 +222,7 @@ PARAM_GROUP_START(flightmode)
 PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
 PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
 PARAM_ADD(PARAM_UINT8, yawRst, &carefreeResetFront)
+PARAM_ADD(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
+PARAM_ADD(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
+PARAM_ADD(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
 PARAM_GROUP_STOP(flightmode)
-
