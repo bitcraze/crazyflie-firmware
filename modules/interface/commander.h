@@ -27,15 +27,35 @@
 #define COMMANDER_H_
 #include <stdint.h>
 #include <stdbool.h>
+#include "config.h"
+
+#ifdef PLATFORM_CF1
+  #define DEFUALT_YAW_MODE  PLUSMODE
+#else
+  #define DEFUALT_YAW_MODE  XMODE
+#endif
 
 #define COMMANDER_WDT_TIMEOUT_STABALIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
+/**
+ * Stabilization modes for Roll, Pitch, Yaw.
+ */
 typedef enum
 {
-  RATE,
-  ANGLE
+  RATE    = 0,
+  ANGLE   = 1,
 } RPYType;
+
+/**
+ * Yaw flight Modes
+ */
+typedef enum
+{
+  CAREFREE  = 0, // Yaw is locked to world coordinates thus heading stays the same when yaw rotates
+  PLUSMODE  = 1, // Plus-mode. Motor M1 is defined as front
+  XMODE     = 2, // X-mode. M1 & M4 is defined as front
+} YawModeType;
 
 void commanderInit(void);
 bool commanderTest(void);
@@ -47,5 +67,7 @@ void commanderGetThrust(uint16_t* thrust);
 void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange);
 bool commanderGetAltHoldMode(void);
 void commanderSetAltHoldMode(bool altHoldModeNew);
+YawModeType commanderGetYawMode(void);
+bool commanderGetYawModeCarefreeResetFront(void);
 
 #endif /* COMMANDER_H_ */

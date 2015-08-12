@@ -51,6 +51,10 @@ static bool thrustLocked;
 static bool altHoldMode = false;
 static bool altHoldModeOld = false;
 
+static YawModeType yawMode = DEFUALT_YAW_MODE; // Yaw mode configuration
+static bool carefreeResetFront;             // Reset what is front in carefree mode
+
+
 static void commanderCrtpCB(CRTPPacket* pk);
 static void commanderWatchdogReset(void);
 
@@ -142,7 +146,7 @@ void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
 
 bool commanderGetAltHoldMode(void)
 {
-	return(altHoldMode);
+	return (altHoldMode);
 }
 
 void commanderSetAltHoldMode(bool altHoldModeNew)
@@ -199,8 +203,20 @@ void commanderGetThrust(uint16_t* thrust)
   commanderWatchdog();
 }
 
+YawModeType commanderGetYawMode(void)
+{
+  return yawMode;
+}
+
+bool commanderGetYawModeCarefreeResetFront(void)
+{
+  return carefreeResetFront;
+}
+
 // Params for flight modes
 PARAM_GROUP_START(flightmode)
 PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
+PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
+PARAM_ADD(PARAM_UINT8, yawRst, &carefreeResetFront)
 PARAM_GROUP_STOP(flightmode)
 
