@@ -58,7 +58,7 @@
 
 #else
   #define P_NAME "Crazyflie Rev.F"
-  #define CONFIG_BLOCK_ADDRESS    (1024 * (64-1))
+  #define CONFIG_BLOCK_ADDRESS    (1024 * (128-1))
   #define MCU_ID_ADDRESS          0x1FFFF7E8
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFFF7E0
   #define FREERTOS_HEAP_SIZE      15000
