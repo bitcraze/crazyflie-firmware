@@ -51,7 +51,6 @@
 #include "comm.h"
 #include "stabilizer.h"
 #include "commander.h"
-#include "neopixelring.h"
 #include "console.h"
 #include "usb.h"
 #include "expbrd.h"

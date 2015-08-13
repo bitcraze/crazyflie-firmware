@@ -40,7 +40,10 @@
 #include "mem.h"
 #include "ow.h"
 #include "eeprom.h"
-#include "neopixelring.h"
+#ifdef PLATFORM_CF2
+#include "ledring12.h"
+#endif
+
 
 #include "console.h"
 #include "cfassert.h"
@@ -72,7 +75,12 @@
 #endif
 
 #define EEPROM_ID       0x00
-#define NBR_LEDMEM      1
+#ifdef PLATFORM_CF1
+  #define NBR_LEDMEM      0
+  uint8_t ledringmem[1];
+#else
+  #define NBR_LEDMEM      1
+#endif
 #define LEDMEM_ID       0x01
 
 #define NBR_STATIC_MEM  (NBR_EEPROM + NBR_LEDMEM)
@@ -180,7 +188,7 @@ void memSettingsProcess(int command)
       }
       else if (memId == LEDMEM_ID)
       {
-        // Memory type (eeprom)
+        // Memory type virtual ledring mem
         p.data[2] = MEM_TYPE_LED12;
         p.size += 1;
         // Size of the memory
@@ -296,11 +304,11 @@ void memWriteProcess()
     if ((memAddr + writeLen) <= sizeof(ledringmem))
     {
       memcpy(&(ledringmem[memAddr]), &p.data[5], writeLen);
-      DEBUG("LED write addr:%i, led:%i\n", memAddr, writeLen);
+      MEM_DEBUG("LED write addr:%i, led:%i\n", memAddr, writeLen);
     }
     else
     {
-      DEBUG("\LED write failed! addr:%i, led:%i\n", memAddr, writeLen);
+      MEM_DEBUG("\LED write failed! addr:%i, led:%i\n", memAddr, writeLen);
     }
   }
   else

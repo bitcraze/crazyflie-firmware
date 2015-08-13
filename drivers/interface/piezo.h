@@ -39,46 +39,11 @@
 
 /******** Defines ********/
 
-// The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
-#ifdef F10X
-  #define MOTORS_PWM_BITS     9
-  #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
-  #define MOTORS_PWM_PRESCALE 0
-#else
-  #ifdef BRUSHLESS_MOTORCONTROLLER //Crazyflie2
-    #define BLMC_PERIOD 0.0025   // 2.5ms = 400Hz
-    #define TIM_CLOCK_HZ 84000000
-    #define MOTORS_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
-    #define MOTORS_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_PWM_PRESCALE_RAW)
-    #define MOTORS_PWM_CNT_FOR_1MS    (uint32_t)(TIM_CLOCK_HZ * 0.001 / MOTORS_PWM_PRESCALE_RAW)
-    #define MOTORS_PWM_PERIOD         MOTORS_PWM_CNT_FOR_PERIOD
-    #define MOTORS_PWM_BITS           11  // Only for compatibiliy
-    #define MOTORS_PWM_PRESCALE       (uint16_t)(MOTORS_PWM_PRESCALE_RAW - 1)
-  #else
-    // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
-    // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
-    #define MOTORS_PWM_BITS     8
-    #define MOTORS_PWM_PERIOD   ((1<<MOTORS_PWM_BITS) - 1)
-    #define MOTORS_PWM_PRESCALE 0
-  #endif
-#endif
-
-
-// Motors IDs define
-//#define MOTOR_M1  0
-//#define MOTOR_M2  1
-//#define MOTOR_M3  2
-//#define MOTOR_M4  3
-
-// Test defines
-//#define MOTORS_TEST_RATIO         (uint16_t)(0.2*(1<<16))
-//#define MOTORS_TEST_ON_TIME_MS    50
-//#define MOTORS_TEST_DELAY_TIME_MS 150
-
 /*** Public interface ***/
 
 /**
- * Initialisation. Will set all motors ratio to 0%
+ * Piezo Initialization. Configures two output compare channels in PWM mode
+ * with one of them inverted to increase power output.
  */
 void piezoInit();
 
@@ -88,22 +53,14 @@ void piezoInit();
  */
 bool piezoTest(void);
 
+/**
+ * Set piezo ratio/power.
+ */
 void piezoSetRatio(uint8_t ratio);
+
+/**
+ * Set piezo frequency in hertz.
+ */
 void piezoSetFreq(uint16_t freq);
-
-/**
- * Set the PWM ratio of the motor 'id'
- */
-//void motorsSetRatio(int id, uint16_t ratio);
-
-/**
- * Get the PWM ratio of the motor 'id'. Return -1 if wrong ID.
- */
-//int motorsGetRatio(int id);
-
-/**
- * FreeRTOS Task to test the Motors driver
- */
-//void motorsTestTask(void* params);
 
 #endif /* __MOTORS_H__ */

@@ -21,10 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * neopixelring.c: NeoPixel Ring 12 Leds effects/driver
+ * ledring12.c: RGB Ring 12 Leds effects/driver
  */
 
-#include "neopixelring.h"
+#include "ledring12.h"
 
 #include <stdint.h>
 #include <math.h>
@@ -187,7 +187,7 @@ static void virtualMemEffect(uint8_t buffer[][3], bool reset)
   for (i = 0; i < NBR_LEDS; i++)
   {
     uint8_t R5, G6, B5;
-    uint8_t (*led)[2] = ledringmem;
+    uint8_t (*led)[2] = (uint8_t (*)[2])ledringmem;
     // Convert from RGB565 to RGB888
     R5 = led[i][0] >> 3;
     G6 = ((led[i][0] & 0x07) << 3) | (led[i][1] >> 5);
@@ -561,7 +561,7 @@ static void siren(uint8_t buffer[][3], bool reset)
 /**************** Effect list ***************/
 
 
-NeopixelRingEffect effectsFct[] =
+Ledring12Effect effectsFct[] =
 {
   blackEffect,
   whiteSpinEffect,
@@ -584,7 +584,7 @@ static xTimerHandle timer;
 
 
 
-void neopixelringWorker(void * data)
+void ledring12Worker(void * data)
 {
   static int current_effect = 0;
   static uint8_t buffer[NBR_LEDS][3];
@@ -606,14 +606,14 @@ void neopixelringWorker(void * data)
   ws2812Send(buffer, NBR_LEDS);
 }
 
-static void neopixelringTimer(xTimerHandle timer)
+static void ledring12Timer(xTimerHandle timer)
 {
-  workerSchedule(neopixelringWorker, NULL);
+  workerSchedule(ledring12Worker, NULL);
 
   setHeadlightsOn(headlightEnable);
 }
 
-void neopixelringInit(void)
+void ledring12Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -628,7 +628,7 @@ void neopixelringInit(void)
   GPIO_Init(GPIOB, &GPIO_InitStructure);
 
   timer = xTimerCreate( (const signed char *)"ringTimer", M2T(50),
-                                     pdTRUE, NULL, neopixelringTimer );
+                                     pdTRUE, NULL, ledring12Timer );
   xTimerStart(timer, 100);
 }
 

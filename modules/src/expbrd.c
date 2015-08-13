@@ -34,7 +34,7 @@
 #include "ow.h"
 #include "crc.h"
 #include "exptest.h"
-#include "neopixelring.h"
+#include "ledring12.h"
 #include "bigquad.h"
 #include "imu.h"
 #include "config.h"
@@ -64,7 +64,7 @@ void expbrdInit()
 #ifndef BRUSHLESS_PROTO_DECK_MAPPING
     // Can't have LED-ring and brushless breakout at the same time
     // as they share TIM3
-    neopixelringInit();
+    ledring12Init();
 #endif
   }
 

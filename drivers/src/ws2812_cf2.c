@@ -86,7 +86,7 @@ void ws2812Init(void)
   GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_TIM3);
 	
 	/* Compute the prescaler value */
-	PrescalerValue = 0; //(uint16_t) (72000000 / 24000000) - 1;
+	PrescalerValue = 0;
 	/* Time base configuration */
 	TIM_TimeBaseStructure.TIM_Period = (105 - 1); // 800kHz
 	TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;

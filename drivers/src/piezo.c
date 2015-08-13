@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * motors.c - Motor driver
+ * piezo.c - Piezo/Buzzer driver
  *
  * This code mainly interfacing the PWM peripheral lib of ST.
  */
@@ -63,76 +63,12 @@
 /* This should be calculated.. */
 #define PIEZO_BASE_FREQ (329500)
 
-/*
-#define MOTORS_TIM_M1_PERIF       RCC_APB1Periph_TIM2
-#define MOTORS_TIM_M1             TIM2
-#define MOTORS_TIM_M1_DBG         DBGMCU_TIM2_STOP
-#define M1_TIM_SETCOMPARE         TIM_SetCompare2
-#define M1_TIM_GETCAPTURE         TIM_GetCapture2
-
-#define MOTORS_TIM_M2_PERIF       RCC_APB1Periph_TIM2
-#define MOTORS_TIM_M2             TIM2
-#define MOTORS_TIM_M2_DBG         DBGMCU_TIM2_STOP
-#define M2_TIM_SETCOMPARE         TIM_SetCompare4
-#define M2_TIM_GETCAPTURE         TIM_GetCapture4
-
-#define MOTORS_TIM_M3_PERIF       RCC_APB1Periph_TIM2
-#define MOTORS_TIM_M3             TIM2
-#define MOTORS_TIM_M3_DBG         DBGMCU_TIM2_STOP
-#define M3_TIM_SETCOMPARE         TIM_SetCompare1
-#define M3_TIM_GETCAPTURE         TIM_GetCapture1
-
-#define MOTORS_TIM_M4_PERIF       RCC_APB1Periph_TIM4
-#define MOTORS_TIM_M4             TIM4
-#define MOTORS_TIM_M4_DBG         DBGMCU_TIM4_STOP
-#define M4_TIM_SETCOMPARE         TIM_SetCompare4
-#define M4_TIM_GETCAPTURE         TIM_GetCapture4
-
-#define MOTORS_GPIO_M1_PERIF         RCC_AHB1Periph_GPIOB
-#define MOTORS_GPIO_M1_PORT          GPIOA
-#define MOTORS_GPIO_M1_PIN           GPIO_Pin_1 // TIM2_CH2
-#define MOTORS_GPIO_AF_M1_PIN        GPIO_PinSource1
-#define MOTORS_GPIO_AF_M1            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M2_PERIF         RCC_AHB1Periph_GPIOB
-#define MOTORS_GPIO_M2_PORT          GPIOB
-#define MOTORS_GPIO_M2_PIN           GPIO_Pin_11 // TIM2_CH4
-#define MOTORS_GPIO_AF_M2_PIN        GPIO_PinSource11
-#define MOTORS_GPIO_AF_M2            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M3_PERIF         RCC_AHB1Periph_GPIOA
-#define MOTORS_GPIO_M3_PORT          GPIOA
-#define MOTORS_GPIO_M3_PIN           GPIO_Pin_15 // TIM2_CH1
-#define MOTORS_GPIO_AF_M3_PIN        GPIO_PinSource15
-#define MOTORS_GPIO_AF_M3            GPIO_AF_TIM2
-
-#define MOTORS_GPIO_M4_PERIF         RCC_AHB1Periph_GPIOB
-#define MOTORS_GPIO_M4_PORT          GPIOB
-#define MOTORS_GPIO_M4_PIN           GPIO_Pin_9 // TIM4_CH4
-#define MOTORS_GPIO_AF_M4_PIN        GPIO_PinSource9
-#define MOTORS_GPIO_AF_M4            GPIO_AF_TIM4*/
-
-/* Utils Conversion macro */
-/*
-#ifdef BRUSHLESS_MOTORCONTROLLER
-#define C_BITS_TO_16(X) (0xFFFF * (X - MOTORS_PWM_CNT_FOR_1MS) / MOTORS_PWM_CNT_FOR_1MS)
-#define C_16_TO_BITS(X) (MOTORS_PWM_CNT_FOR_1MS + ((X * MOTORS_PWM_CNT_FOR_1MS) / 0xFFFF))
-#else
-#define C_BITS_TO_16(X) ((X)<<(16-MOTORS_PWM_BITS))
-#define C_16_TO_BITS(X) ((X)>>(16-MOTORS_PWM_BITS)&((1<<MOTORS_PWM_BITS)-1))
-#endif*/
-
-/*const int MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };*/
 static bool isInit = false;
 
 /* Public functions */
 
-//Initialization. Will set all motors ratio to 0%
 void piezoInit()
 {
-  int tempCR1_M1_2_3;
-  int tempCR1_M4;
-
   if (isInit)
     return;
 
@@ -166,58 +102,30 @@ void piezoInit()
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
   TIM_TimeBaseInit(PIEZO_TIM, &TIM_TimeBaseStructure);
-  //TIM_TimeBaseInit(PIEZO_TIM, &TIM_TimeBaseStructure);
-  /*TIM_TimeBaseInit(MOTORS_TIM_M3, &TIM_TimeBaseStructure);
-  TIM_TimeBaseInit(MOTORS_TIM_M4, &TIM_TimeBaseStructure);*/
 
-  // PWM channels configuration (All identical!)
+  // PWM channels configuration
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
   TIM_OCInitStructure.TIM_Pulse = 0;
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
   TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
-  //M1:TIM2_CH2
+  // Configure OC3
   TIM_OC3Init(PIEZO_TIM, &TIM_OCInitStructure);
   TIM_OC3PreloadConfig(PIEZO_TIM, TIM_OCPreload_Enable);
 
+  // Configure OC4 inverted
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
   TIM_OC4Init(PIEZO_TIM, &TIM_OCInitStructure);
   TIM_OC4PreloadConfig(PIEZO_TIM, TIM_OCPreload_Enable);
 
-/*  //M2:TIM2_CH4
-  TIM_OC4Init(MOTORS_TIM_M2, &TIM_OCInitStructure);
-  TIM_OC4PreloadConfig(MOTORS_TIM_M2, TIM_OCPreload_Enable);
-  //M3:TIM2_CH1
-  TIM_OC1Init(MOTORS_TIM_M3, &TIM_OCInitStructure);
-  TIM_OC1PreloadConfig(MOTORS_TIM_M3, TIM_OCPreload_Enable);
-  //M4:TIM4_CH4
-  TIM_OC4Init(MOTORS_TIM_M4, &TIM_OCInitStructure);
-  TIM_OC4PreloadConfig(MOTORS_TIM_M4, TIM_OCPreload_Enable);*/
-
-  //Enable the timer
-  // Needed?!
-  portDISABLE_INTERRUPTS();
-  PIEZO_TIM->CR1 = PIEZO_TIM->CR1 | TIM_CR1_CEN;
-  portENABLE_INTERRUPTS();
-
   //Enable the timer PWM outputs
   TIM_CtrlPWMOutputs(PIEZO_TIM, ENABLE);
-  /*TIM_CtrlPWMOutputs(MOTORS_TIM_M2, ENABLE);
-  TIM_CtrlPWMOutputs(MOTORS_TIM_M3, ENABLE);
-  TIM_CtrlPWMOutputs(MOTORS_TIM_M4, ENABLE);*/
-  // Halt timer during debug halt.
-  //DBGMCU_APB2PeriphConfig(PIEZO_TIM_DBG, ENABLE);
-  TIM_SetCompare4(PIEZO_TIM, 0x00);
   TIM_SetCompare3(PIEZO_TIM, 0x00);
+  TIM_SetCompare4(PIEZO_TIM, 0x00);
 
-  //TIM_SetCompare4(PIEZO_TIM, 0x40);
-  //TIM_SetCompare3(PIEZO_TIM, 0x40);
-
-
-/*  DBGMCU_APB2PeriphConfig(MOTORS_TIM_M2_DBG, ENABLE);
-  DBGMCU_APB2PeriphConfig(MOTORS_TIM_M3_DBG, ENABLE);
-  DBGMCU_APB2PeriphConfig(MOTORS_TIM_M4_DBG, ENABLE);*/
+  //Enable the timer
+  TIM_Cmd(PIEZO_TIM, ENABLE);
 
   isInit = true;
 }
@@ -229,102 +137,11 @@ bool piezoTest(void)
 
 void piezoSetRatio(uint8_t ratio)
 {
-  TIM_SetCompare4(PIEZO_TIM, ratio);
   TIM_SetCompare3(PIEZO_TIM, ratio);
+  TIM_SetCompare4(PIEZO_TIM, ratio);
 }
 
 void piezoSetFreq(uint16_t freq)
 {
   TIM_PrescalerConfig(PIEZO_TIM, (PIEZO_BASE_FREQ/freq), TIM_PSCReloadMode_Update);
 }
-
-/*void motorsSetRatio(int id, uint16_t ratio)
-{
-  switch(id)
-  {
-    case MOTOR_M1:
-      M1_TIM_SETCOMPARE(MOTORS_TIM_M1, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_M2:
-      M2_TIM_SETCOMPARE(MOTORS_TIM_M2, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_M3:
-      M3_TIM_SETCOMPARE(MOTORS_TIM_M3, C_16_TO_BITS(ratio));
-      break;
-    case MOTOR_M4:
-      M4_TIM_SETCOMPARE(MOTORS_TIM_M4, C_16_TO_BITS(ratio));
-      break;
-  }
-}
-
-int motorsGetRatio(int id)
-{
-  switch(id)
-  {
-    case MOTOR_M1:
-      return C_BITS_TO_16(M1_TIM_GETCAPTURE(MOTORS_TIM_M1));
-    case MOTOR_M2:
-      return C_BITS_TO_16(M2_TIM_GETCAPTURE(MOTORS_TIM_M2));
-    case MOTOR_M3:
-      return C_BITS_TO_16(M3_TIM_GETCAPTURE(MOTORS_TIM_M3));
-    case MOTOR_M4:
-      return C_BITS_TO_16(M4_TIM_GETCAPTURE(MOTORS_TIM_M4));
-  }
-
-  return -1;
-}
-*/
-/*#ifdef MOTOR_RAMPUP_TEST
-// FreeRTOS Task to test the Motors driver with a rampup of each motor alone.
-void motorsTestTask(void* params)
-{
-  int step=0;
-  float rampup = 0.01;
-
-  motorsSetupMinMaxPos();
-  motorsSetRatio(MOTOR_M4, 1*(1<<16) * 0.0);
-  motorsSetRatio(MOTOR_M3, 1*(1<<16) * 0.0);
-  motorsSetRatio(MOTOR_M2, 1*(1<<16) * 0.0);
-  motorsSetRatio(MOTOR_M1, 1*(1<<16) * 0.0);
-  vTaskDelay(M2T(1000));
-
-  while(1)
-  {
-    vTaskDelay(M2T(100));
-
-    motorsSetRatio(MOTOR_M4, 1*(1<<16) * rampup);
-    motorsSetRatio(MOTOR_M3, 1*(1<<16) * rampup);
-    motorsSetRatio(MOTOR_M2, 1*(1<<16) * rampup);
-    motorsSetRatio(MOTOR_M1, 1*(1<<16) * rampup);
-
-    rampup += 0.001;
-    if (rampup >= 0.1)
-    {
-      if(++step>3) step=0;
-      rampup = 0.01;
-    }
-  }
-}
-#else
-// FreeRTOS Task to test the Motors driver
-void motorsTestTask(void* params)
-{
-  static const int sequence[] = {0.1*(1<<16), 0.15*(1<<16), 0.2*(1<<16), 0.25*(1<<16)};
-  int step=0;
-
-  //Wait 3 seconds before starting the motors
-  vTaskDelay(M2T(3000));
-
-  while(1)
-  {
-    motorsSetRatio(MOTOR_M4, sequence[step%4]);
-    motorsSetRatio(MOTOR_M3, sequence[(step+1)%4]);
-    motorsSetRatio(MOTOR_M2, sequence[(step+2)%4]);
-    motorsSetRatio(MOTOR_M1, sequence[(step+3)%4]);
-
-    if(++step>3) step=0;
-
-    vTaskDelay(M2T(1000));
-  }
-}
-#endif*/
