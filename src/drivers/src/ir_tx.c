@@ -1,8 +1,14 @@
 
 #include <stdint.h>
-#include <stm32fxxx.h>
+
+/* FreeRtos includes */
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "stm32fxxx.h"
 #include "ir_tx.h"
 #include "debug.h"
+#include "ir_code.h"
 
 #define IR_TX_CARRIER_FREQ          56000
 #define IR_TX_CARRIER_PWM_PERIOD    (SystemCoreClock / IR_TX_CARRIER_FREQ)
@@ -34,7 +40,19 @@ volatile IrCode* g_tx_code;
 void _ir_tx_on();
 void _ir_tx_off();
 
-void ir_tx_setup() {
+void irTask(void *arg)
+{
+  ir_code_setup();
+
+  while (true)
+  {
+    vTaskDelay(M2T(500));
+    ir_tx_send(&codes[0]);
+  }
+}
+
+void ir_tx_setup()
+{
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
   TIM_OCInitTypeDef  TIM_OCInitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -83,7 +101,7 @@ void ir_tx_setup() {
   TIM_Cmd(IR_TX_CARRIER_TIMER, ENABLE);
 
   // Delay timer
-  RCC_APB2PeriphClockCmd(IR_TX_DELAY_TIMER_RCC, ENABLE);
+  RCC_APB1PeriphClockCmd(IR_TX_DELAY_TIMER_RCC, ENABLE);
 
   TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
   TIM_TimeBaseStructure.TIM_Period = 0xffff;
@@ -102,6 +120,7 @@ void ir_tx_setup() {
 
   _ir_tx_off();
 
+  xTaskCreate(irTask, (const signed char * const)"IR", 100, NULL, 0, NULL);
 }
 
 void ir_tx_send(IrCode* code)
@@ -117,7 +136,7 @@ void ir_tx_send(IrCode* code)
   TIM_Cmd(IR_TX_DELAY_TIMER, ENABLE);
 }
 
-void on_tim1_irq()
+void __attribute__((used)) TIM6_DAC_IRQHandler()
 {
   if (TIM_GetITStatus(IR_TX_DELAY_TIMER, TIM_IT_Update) != RESET)
   {

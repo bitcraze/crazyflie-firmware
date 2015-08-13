@@ -12,7 +12,6 @@
 
 int _ir_code_match(IrCode* code, uint16_t* buffer, uint16_t bufferLen);
 
-#define CODE_COUNT 13
 IrCode codes[CODE_COUNT];
 
 uint16_t code0[] = { 2440, 516, 1232, 541, 616, 541, 615, 542, 1231, 542, 615, 542, 614, 543, 614, 542, 1230, 543, 615, 542, 613, 543, 614, 543, 614, 551 };
@@ -66,67 +65,88 @@ void ir_code_setup() {
   }
 }
 
-IrCode* ir_code_getByIndex(uint16_t codeIndex) {
+IrCode* ir_code_getByIndex(uint16_t codeIndex)
+{
   return &codes[codeIndex];
 }
 
-IrCode* ir_code_decode(uint16_t* buffer, uint16_t bufferLen) {
-  if(bufferLen < MIN_SIGNAL_COUNT) {
+IrCode* ir_code_decode(uint16_t* buffer, uint16_t bufferLen)
+{
+  if (bufferLen < MIN_SIGNAL_COUNT)
+  {
     return NULL;
   }
 
-  #ifdef DEBUG_DECODE
-    debug_write("?signal: ");
-    for(int i = 0; i < bufferLen; i++) {
-      debug_write_u16(buffer[i], 10);
-      debug_write(", ");
-    }
-    debug_write_line("");
-  #endif
+#ifdef DEBUG_DECODE
+  debug_write("?signal: ");
+  for(int i = 0; i < bufferLen; i++)
+  {
+    debug_write_u16(buffer[i], 10);
+    debug_write(", ");
+  }
+  debug_write_line("");
+#endif
 
   int bestMatch = -1;
   int bestValue = 0;
-  for(int i=0; i<CODE_COUNT; i++) {
+  int i;
+
+  for (i = 0; i < CODE_COUNT; i++)
+  {
     int matchValue = _ir_code_match(&codes[i], buffer, bufferLen);
-    if(matchValue != NO_MATCH && matchValue > bestValue) {
+    if (matchValue != NO_MATCH && matchValue > bestValue)
+    {
       bestMatch = i;
       bestValue = matchValue;
     }
   }
-  #ifdef DEBUG_DECODE
-    if(bestMatch >= 0) {
-      debug_write("?match: ");
-      debug_write_u16(codes[bestMatch].brand, 16);
-      debug_write_u16(codes[bestMatch].key, 16);
-      debug_write_line("");
-    } else {
-      debug_write_line("?no match");
-    }
-  #endif
-  if(bestMatch >= 0) {
+#ifdef DEBUG_DECODE
+  if(bestMatch >= 0)
+  {
+    debug_write("?match: ");
+    debug_write_u16(codes[bestMatch].brand, 16);
+    debug_write_u16(codes[bestMatch].key, 16);
+    debug_write_line("");
+  }
+  else
+  {
+    debug_write_line("?no match");
+  }
+#endif
+  if (bestMatch >= 0)
+  {
     return &codes[bestMatch];
-  } else {
+  }
+  else
+  {
     return NULL;
   }
 }
 
-int _ir_code_match(IrCode* code, uint16_t* buffer, uint16_t bufferLen) {
+int _ir_code_match(IrCode* code, uint16_t* buffer, uint16_t bufferLen)
+{
   int minLen = bufferLen < code->codeLength ? bufferLen : code->codeLength;
+  int i;
   uint32_t diff = 0;
   uint32_t matchThreshold = minLen * MATCH_THRESHOLD;
-  for(int i=0; i<minLen; i++) {
-    diff += abs((int)buffer[i] - (int)code->code[i]);
-    if(diff > matchThreshold) {
+
+  for (i = 0; i < minLen; i++)
+  {
+    diff += abs((int) buffer[i] - (int) code->code[i]);
+    if (diff > matchThreshold)
+    {
       return NO_MATCH;
     }
   }
-  #ifdef DEBUG_DECODE
-    debug_write("?diff: ");
-    debug_write_u16(code->brand, 16);
-    debug_write_u16(code->key, 16);
-    debug_write(" ");
-    debug_write_u16(diff, 10);
-    debug_write_line("");
-  #endif
+
+#ifdef DEBUG_DECODE
+  debug_write("?diff: ");
+  debug_write_u16(code->brand, 16);
+  debug_write_u16(code->key, 16);
+  debug_write(" ");
+  debug_write_u16(diff, 10);
+  debug_write_line("");
+#endif
+
   return 0xffff - diff;
 }

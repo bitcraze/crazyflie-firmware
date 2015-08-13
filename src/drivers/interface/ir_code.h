@@ -5,6 +5,8 @@
 #define BRAND_WESTINGHOUSE 0x0002
 #define BRAND_MOTOROLA     0x0003
 
+#define CODE_COUNT 13
+
 typedef struct {
   uint16_t brand;
   uint16_t key;
@@ -14,7 +16,9 @@ typedef struct {
   uint16_t* code;
 } IrCode;
 
-void ir_code_setup();
+extern IrCode codes[CODE_COUNT];
+
+void ir_code_setup(void);
 IrCode* ir_code_decode(uint16_t* buffer, uint16_t bufferLen);
 IrCode* ir_code_getByIndex(uint16_t codeIndex);
 
