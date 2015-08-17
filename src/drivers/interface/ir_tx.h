@@ -4,7 +4,7 @@
 
 #include "ir_code.h"
 
-void ir_tx_setup();
+void irTxInit();
 void ir_tx_send(IrCode* code);
 
 #endif // IR_TX_H

@@ -8,17 +8,12 @@
 #include "stm32fxxx.h"
 #include "ir_tx.h"
 #include "debug.h"
+#include "nvicconf.h"
 #include "ir_code.h"
 
 #define IR_TX_CARRIER_FREQ          56000
 #define IR_TX_CARRIER_PWM_PERIOD    (SystemCoreClock / IR_TX_CARRIER_FREQ)
 #define IR_TX_DELAY_PRESCALER       (84 - 1)
-
-#define IR_RX_RCC                   RCC_AHB1Periph_GPIOA
-#define IR_RX_PORT                  GPIOA
-#define IR_RX_PIN                   GPIO_Pin_7
-
-#define IR_RX_TIMER                 TIM14
 
 #define IR_TX_CARRIER_TIMER                   TIM10
 #define IR_TX_CARRIER_TIMER_RCC               RCC_APB2Periph_TIM10
@@ -32,26 +27,27 @@
 #define IR_TX_DELAY_TIMER                     TIM6
 #define IR_TX_DELAY_TIMER_IRQ                 TIM6_DAC_IRQn
 #define IR_TX_DELAY_TIMER_RCC                 RCC_APB1Periph_TIM6
+#define IR_TX_DELAY_TIMER_IRQ_HANDLER         TIM6_DAC_IRQHandler
 
 volatile uint16_t g_tx_bufferIndex;
 volatile uint16_t g_tx_repeatCount;
 volatile IrCode* g_tx_code;
 
-void _ir_tx_on();
-void _ir_tx_off();
+static void irTxOn();
+static void irTxOff();
 
-void irTask(void *arg)
+void irTxTask(void *arg)
 {
   ir_code_setup();
 
   while (true)
   {
-    vTaskDelay(M2T(500));
+    vTaskDelay(M2T(1000));
     ir_tx_send(&codes[0]);
   }
 }
 
-void ir_tx_setup()
+void irTxInit(void)
 {
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
   TIM_OCInitTypeDef  TIM_OCInitStructure;
@@ -60,12 +56,6 @@ void ir_tx_setup()
 
   RCC_AHB1PeriphClockCmd(IR_TX_CARRIER_RCC, ENABLE);
   RCC_APB2PeriphClockCmd(IR_TX_CARRIER_TIMER_RCC, ENABLE);
-
-//  RCC_APB2PeriphClockCmd(IR_TX_RCC, ENABLE);
-//  gpioInitStructure.GPIO_Pin = IR_TX_PIN;
-//  gpioInitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-//  gpioInitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-//  GPIO_Init(IR_TX_PORT, &gpioInitStructure);
 
   // Configure the GPIO for the timer output
   GPIO_StructInit(&GPIO_InitStructure);
@@ -95,9 +85,8 @@ void ir_tx_setup()
   IR_TX_CARRIER_TIMER_CH_Init(IR_TX_CARRIER_TIMER, &TIM_OCInitStructure);
   IR_TX_CARRIER_TIMER_CH_PreloadConfig(IR_TX_CARRIER_TIMER, TIM_OCPreload_Enable);
 
-//  TIM_SelectOnePulseMode(IR_TX_CARRIER_TIMER, TIM_OPMode_Repetitive);
   TIM_ARRPreloadConfig(IR_TX_CARRIER_TIMER, ENABLE);
-  IR_TX_CARRIER_TIMER_CH_SetCompare(IR_TX_CARRIER_TIMER, IR_TX_CARRIER_PWM_PERIOD / 2);
+  IR_TX_CARRIER_TIMER_CH_SetCompare(IR_TX_CARRIER_TIMER, IR_TX_CARRIER_PWM_PERIOD / 10);
   TIM_Cmd(IR_TX_CARRIER_TIMER, ENABLE);
 
   // Delay timer
@@ -110,7 +99,7 @@ void ir_tx_setup()
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(IR_TX_DELAY_TIMER, &TIM_TimeBaseStructure);
 
-  NVIC_InitStructure.NVIC_IRQChannel = IR_TX_DELAY_TIMER_IRQ;
+  NVIC_InitStructure.NVIC_IRQChannel = NVIC_IR_TX_DELAY_TIMER_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -118,9 +107,9 @@ void ir_tx_setup()
 
   TIM_ITConfig(IR_TX_DELAY_TIMER, TIM_IT_Update, ENABLE);
 
-  _ir_tx_off();
+  irTxOff();
 
-  xTaskCreate(irTask, (const signed char * const)"IR", 100, NULL, 0, NULL);
+  xTaskCreate(irTxTask, (const signed char * const)"IR-TX", 50, NULL, 0, NULL);
 }
 
 void ir_tx_send(IrCode* code)
@@ -131,22 +120,22 @@ void ir_tx_send(IrCode* code)
 
   TIM_SetCounter(IR_TX_DELAY_TIMER, 1);
   TIM_SetAutoreload(IR_TX_DELAY_TIMER, g_tx_code->code[g_tx_bufferIndex++]);
-  _ir_tx_on();
+  irTxOn();
 
   TIM_Cmd(IR_TX_DELAY_TIMER, ENABLE);
 }
 
-void __attribute__((used)) TIM6_DAC_IRQHandler()
+void __attribute__((used)) IR_TX_DELAY_TIMER_IRQ_HANDLER()
 {
   if (TIM_GetITStatus(IR_TX_DELAY_TIMER, TIM_IT_Update) != RESET)
   {
     if((g_tx_bufferIndex % 2) == 0)
     {
-      _ir_tx_on();
+      irTxOn();
     }
     else
     {
-      _ir_tx_off();
+      irTxOff();
     }
 
     if(g_tx_bufferIndex < g_tx_code->codeLength - 1)
@@ -157,7 +146,7 @@ void __attribute__((used)) TIM6_DAC_IRQHandler()
     else
     {
       g_tx_repeatCount--;
-      _ir_tx_off();
+      irTxOff();
       if(g_tx_repeatCount == 0)
       {
         TIM_Cmd(IR_TX_DELAY_TIMER, DISABLE);
@@ -173,12 +162,12 @@ void __attribute__((used)) TIM6_DAC_IRQHandler()
   }
 }
 
-void _ir_tx_on()
+static void irTxOn()
 {
   TIM_CCxCmd(IR_TX_CARRIER_TIMER, TIM_Channel_1, ENABLE);
 }
 
-void _ir_tx_off()
+static void irTxOff()
 {
   TIM_CCxCmd(IR_TX_CARRIER_TIMER, TIM_Channel_1, DISABLE);
 }

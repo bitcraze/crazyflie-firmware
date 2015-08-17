@@ -84,10 +84,11 @@
 #define NVIC_UART_PRI         6
 
 // Priorities for Crazyflie 2.0
-#define NVIC_RADIO_PRI        11
-#define NVIC_ADC_PRI          12
-#define NVIC_CPPM_PRI         14
-#define NVIC_SYSLINK_PRI      5
+#define NVIC_RADIO_PRI              11
+#define NVIC_ADC_PRI                12
+#define NVIC_CPPM_PRI               14
+#define NVIC_IR_TX_DELAY_TIMER_IRQ  6
+#define NVIC_SYSLINK_PRI            5
 
 // Priorities for external interrupts
 #define EXTI0_PRI NVIC_LOW_PRI

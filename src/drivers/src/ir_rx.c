@@ -1,97 +1,120 @@
 
-#include <stm32f10x.h>
-#include <stm32f10x_gpio.h>
-#include <stm32f10x_tim.h>
-#include <stm32f10x_exti.h>
-#include <misc.h>
+#include <stm32fxxx.h>
 #include <stdint.h>
 #include <stddef.h>
+
+/* FreeRtos includes */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+
 #include "ir_rx.h"
+#include "usec_time.h"
 #include "debug.h"
-#include "platform_config.h"
+#include "nvicconf.h"
 
-void on_exti1_irq();
-void on_tim2_irq();
-void _ir_rx_process_buffer();
 
-#define IR_RX_COUNT 10
+#define IR_RX_RCC                   RCC_AHB1Periph_GPIOA
+#define IR_RX_RCC_GPIO_CMD          RCC_AHB1PeriphClockCmd
+#define IR_RX_PORT                  GPIOA
+#define IR_RX_PIN                   GPIO_Pin_7
+#define IR_RX_EXTI_IRQn             EXTI9_5_IRQn
+#define IR_RX_EXTI_LINE             EXTI_Line7
+#define IR_RX_EXTI_IRQ_HANDLER      EXTI9_5_IRQHandler
+
+#define IR_RX_COUNT 5
 
 IrRecv irRecvs[IR_RX_COUNT];
 volatile uint16_t irRecvReadIndex;
 volatile uint16_t irRecvWriteIndex;
 volatile uint16_t irRecvAvailable;
+volatile uint64_t prevTimestamp;
 
-#define TIM_PRESCALER  (72 * 2)
-#define TIM_PERIOD     0xfffe
-#define US_PER_TIM     1
+static xQueueHandle newTimediffQueue;
 
-void ir_rx_setup() {
-  GPIO_InitTypeDef gpioConfig;
+static void irRxProcessBuffer();
+
+void irRxTask(void *arg)
+{
+  uint16_t timediff;
+  IrRecv* rx;
+
+  while (true)
+  {
+    rx = &irRecvs[irRecvWriteIndex];
+
+    if (xQueueReceive(newTimediffQueue, &timediff, M2T(10)) == pdTRUE)
+    {
+      // skip the first signal change, this is the start of the signal and should not be recorded
+      if (rx->bufferLength < 0)
+      {
+        rx->bufferLength++;
+      }
+      else
+      {
+        // Record pulse length
+        rx->buffer[rx->bufferLength] = timediff;
+        rx->bufferLength++;
+
+        if (rx->bufferLength == (IR_RX_CAPTURE_BUFFER_MAX_LEN - 1))
+        {
+          irRxProcessBuffer();
+//          irRecvs[irRecvWriteIndex].bufferLength = 0;
+        }
+      }
+    }
+    else
+    {
+      if (rx->bufferLength > 0)
+      {
+        irRxProcessBuffer();
+      }
+    }
+  }
+}
+
+void irRxInit(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef nvicInit;
   EXTI_InitTypeDef extiInit;
-  TIM_TimeBaseInitTypeDef timeBaseInit;
-
-  debug_write_line("?BEGIN ir_rx_setup");
 
   irRecvAvailable = 0;
   irRecvReadIndex = 0;
   irRecvWriteIndex = 0;
   irRecvs[irRecvWriteIndex].bufferLength = -1;
 
-  RCC_APB2PeriphClockCmd(IR_RX_RCC, ENABLE);
-  gpioConfig.GPIO_Pin = IR_RX_PIN;
-  gpioConfig.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  gpioConfig.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(IR_RX_PORT, &gpioConfig);
-
-  // enable EXTI
-  GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource0);
+  IR_RX_RCC_GPIO_CMD(IR_RX_RCC, ENABLE);
+  GPIO_StructInit(&GPIO_InitStructure);
+  GPIO_InitStructure.GPIO_Pin = IR_RX_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_Init(IR_RX_PORT, &GPIO_InitStructure);
 
   EXTI_StructInit(&extiInit);
-  extiInit.EXTI_Line = EXTI_Line0;
+  extiInit.EXTI_Line = IR_RX_EXTI_LINE;
   extiInit.EXTI_Mode = EXTI_Mode_Interrupt;
   extiInit.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
   extiInit.EXTI_LineCmd = ENABLE;
   EXTI_Init(&extiInit);
 
-  nvicInit.NVIC_IRQChannel = EXTI0_IRQn;
-  nvicInit.NVIC_IRQChannelPreemptionPriority = 0;
+  nvicInit.NVIC_IRQChannel = IR_RX_EXTI_IRQn;
+  nvicInit.NVIC_IRQChannelPreemptionPriority = NVIC_IR_RX_EXTI_PRI;
   nvicInit.NVIC_IRQChannelSubPriority = 0;
   nvicInit.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&nvicInit);
 
-  // setup timer
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+  NVIC_EnableIRQ(IR_RX_EXTI_IRQn);
 
-  debug_write("?ir_rx timer period: ");
-  debug_write_u32(TIM_PERIOD, 10);
-  debug_write_line("");
-  debug_write("?ir_rx timer us: ");
-  debug_write_u32(US_PER_TIM, 10);
-  debug_write_line("");
+  newTimediffQueue = xQueueCreate(10, sizeof(uint16_t));
 
-  TIM_TimeBaseStructInit(&timeBaseInit);
-  timeBaseInit.TIM_Period = TIM_PERIOD;
-  timeBaseInit.TIM_Prescaler = TIM_PRESCALER;
-  timeBaseInit.TIM_ClockDivision = 0;
-  timeBaseInit.TIM_CounterMode = TIM_CounterMode_Up;
-  TIM_TimeBaseInit(IR_RX_TIMER, &timeBaseInit);
-
-  nvicInit.NVIC_IRQChannel = TIM2_IRQn;
-  nvicInit.NVIC_IRQChannelPreemptionPriority = 1;
-  nvicInit.NVIC_IRQChannelSubPriority = 0;
-  nvicInit.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&nvicInit);
-
-  TIM_ITConfig(IR_RX_TIMER, TIM_IT_Update, ENABLE);
-  TIM_SetCounter(IR_RX_TIMER, 0);
-  TIM_Cmd(IR_RX_TIMER, ENABLE);
-
-  debug_write_line("?END ir_rx_setup");
+  xTaskCreate(irRxTask, (const signed char * const)"IR-RX", 50, NULL, 0, NULL);
+  prevTimestamp = usecGetTimestamp();
 }
 
-IrRecv* ir_rx_recv() {
-  if(irRecvAvailable == 0) {
+IrRecv* irRxReceive()
+{
+  if (irRecvAvailable == 0)
+  {
     return NULL;
   }
   IrRecv* result = &irRecvs[irRecvReadIndex];
@@ -100,44 +123,37 @@ IrRecv* ir_rx_recv() {
   return result;
 }
 
-void _ir_rx_process_buffer() {
+static void irRxProcessBuffer()
+{
   irRecvWriteIndex = (irRecvWriteIndex + 1) % IR_RX_COUNT;
   irRecvAvailable++;
   irRecvs[irRecvWriteIndex].bufferLength = -1;
 }
+/**
+ * Edge triggered interrupt that takes a us timestamp
+ * for every edge and puts it on a receive queue.
+ */
+void __attribute__((used)) IR_RX_EXTI_IRQ_HANDLER(void)
+{
+  uint64_t timestamp = usecGetTimestamp();
 
-void on_exti0_irq() {
-  if(EXTI_GetITStatus(EXTI_Line0) != RESET) {
-    IrRecv* rx = &irRecvs[irRecvWriteIndex];
+  if (EXTI_GetITStatus(IR_RX_EXTI_LINE) != RESET)
+  {
+    uint16_t timediff;
+    portBASE_TYPE xHigherPriorityTaskWoken;
 
-    // skip the first signal change, this is the start of the signal and should not be recorded
-    if(rx->bufferLength < 0) {
-      rx->bufferLength++;
-    } else {
-      rx->buffer[rx->bufferLength] = TIM_GetCounter(TIM2) * 2;
-      if(rx->buffer[rx->bufferLength] > 10000 || rx->bufferLength == (IR_RX_CAPTURE_BUFFER_MAX_LEN - 1)) {
-        rx->bufferLength++;
-        _ir_rx_process_buffer();
-        irRecvs[irRecvWriteIndex].bufferLength = 0;
-      } else {
-        rx->bufferLength++;
-      }
-      debug_led_set(1);
+    if (timestamp - prevTimestamp < 0xFFFF)
+    {
+      timediff = (uint16_t)(timestamp - prevTimestamp);
+    }
+    else
+    {
+      timediff = 0xFFFF;
     }
 
-    TIM_SetCounter(TIM2, 0);
-    EXTI_ClearITPendingBit(EXTI_Line0);
+    xQueueSendFromISR(newTimediffQueue, &timediff, &xHigherPriorityTaskWoken);
+
+    prevTimestamp = timestamp;
+    EXTI_ClearITPendingBit(IR_RX_EXTI_LINE);
   }
 }
-
-void on_tim2_irq() {
-  if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
-    debug_led_set(0);
-    if(irRecvs[irRecvWriteIndex].bufferLength > 1) {
-      _ir_rx_process_buffer();
-    }
-    irRecvs[irRecvWriteIndex].bufferLength = -1;
-    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-  }
-}
-

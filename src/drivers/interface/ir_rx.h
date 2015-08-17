@@ -1,7 +1,6 @@
 #ifndef IR_RX_H_INCLUDED
 #define IR_RX_H_INCLUDED
 
-#include "ring_buffer.h"
 #include "ir_code.h"
 
 #define IR_RX_CAPTURE_BUFFER_MAX_LEN  100
@@ -11,7 +10,7 @@ typedef struct {
   uint16_t buffer[IR_RX_CAPTURE_BUFFER_MAX_LEN];
 } IrRecv;
 
-void ir_rx_setup();
-IrRecv* ir_rx_recv();
+void irRxInit();
+IrRecv* irRxReceive();
 
 #endif // IR_RX_H_INCLUDED
