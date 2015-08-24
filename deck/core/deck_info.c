@@ -151,6 +151,8 @@ static void enumerateDecks(void)
   uint8_t nDecks = 0;
   int i;
   bool noError = true;
+  uint32_t usedPeriph = 0;
+  uint32_t usedGpio = 0;
 
   owInit();
 
@@ -173,6 +175,24 @@ static void enumerateDecks(void)
         deckInfos[i].driver = findDriver(&deckInfos[i]);
 
         printDeckInfo(&deckInfos[i]);
+
+        // Check for Periph and Gpio conflict
+        if (usedPeriph & deckInfos[i].driver->usedPeriph) {
+          DEBUG_PRINT("ERROR: Driver Periph usage conflicts with a "
+                      "previously enumerated deck driver. No decks will be "
+                      "initialized!\n");
+          noError = false;
+        }
+
+        if (usedGpio & deckInfos[i].driver->usedGpio) {
+          DEBUG_PRINT("ERROR: Driver Gpio usage conflicts with a "
+                      "previously enumerated deck driver. No decks will be "
+                      "initialized!\n");
+          noError = false;
+        }
+
+        usedPeriph |= deckInfos[i].driver->usedPeriph;
+        usedGpio |= deckInfos[i].driver->usedGpio;
       } else {
         DEBUG_PRINT("Deck %i has corrupted OW memory. "
                     "No driver will be initialized!\n", i);

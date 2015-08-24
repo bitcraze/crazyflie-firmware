@@ -93,9 +93,9 @@ bool deckTest()
 
     if (deck->driver->test) {
       if (deck->driver->test()) {
-        DEBUG_PRINT("Deck %i test [OK].", i);
+        DEBUG_PRINT("Deck %i test [OK].\n", i);
       } else {
-        DEBUG_PRINT("Deck %i test [FAIL].", i);
+        DEBUG_PRINT("Deck %i test [FAIL].\n", i);
         pass = false;
       }
     }

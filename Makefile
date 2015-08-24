@@ -29,7 +29,7 @@ endif
 ## Flag that can be added to config.mk
 # CFLAGS += -DUSE_ESKYLINK         # Set CRTP link to E-SKY receiver
 # CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
-
+# CFLAGS += -DDECK_FORCE=bcBuzzer  # Load a deck driver that has no OW memory
 ifeq ($(PLATFORM), CF1)
 REV               ?= F
 endif
