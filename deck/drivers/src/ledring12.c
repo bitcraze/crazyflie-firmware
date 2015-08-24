@@ -32,9 +32,12 @@
 
 #include "stm32fxxx.h"
 
+#include "deck.h"
+
 #include "FreeRTOS.h"
 #include "timers.h"
 
+#include "ledring12.h"
 #include "ws2812.h"
 #include "worker.h"
 #include "param.h"
@@ -57,6 +60,7 @@
  * system. See tiltEffect for an example.
  */
 
+typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 
 /**************** Some useful macros ***************/
 
@@ -613,7 +617,7 @@ static void ledring12Timer(xTimerHandle timer)
   setHeadlightsOn(headlightEnable);
 }
 
-void ledring12Init(void)
+static void ledring12Init(DeckInfo *info)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -643,3 +647,16 @@ PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
 PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
 PARAM_GROUP_STOP(ring)
+
+static const DeckDriver ledring12_deck = {
+  .vid = 0xBC,
+  .pid = 0x01,
+  .name = "bcLedRing",
+
+  .usedPeriph = DECK_TIMER3,
+  .usedGpio = DECK_IO_2 | DECK_IO_3,
+
+  .init = ledring12Init,
+};
+
+DECK_DRIVER(ledring12_deck);

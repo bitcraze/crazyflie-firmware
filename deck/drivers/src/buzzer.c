@@ -31,6 +31,8 @@
 #include "FreeRTOS.h"
 #include "timers.h"
 
+#include "deck.h"
+
 #include "param.h"
 #include "pm.h"
 #include "log.h"
@@ -281,7 +283,7 @@ static void buzzTimer(xTimerHandle timer)
     effects[effect](counter*10);
 }
 
-void buzzerInit(void)
+static void buzzerInit(DeckInfo *info)
 {
   piezoInit();
 
@@ -301,3 +303,15 @@ PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, nmelody, &melody)
 PARAM_ADD(PARAM_UINT16, freq, &static_freq)
 PARAM_ADD(PARAM_UINT8, ratio, &static_ratio)
 PARAM_GROUP_STOP(buzzer)
+
+static const DeckDriver buzzer_deck = {
+  .vid = 0,
+  .pid = 0,
+  .name = "bcBuzzer",
+
+  .usedGpio = DECK_PA2 | DECK_PA3,
+
+  .init = buzzerInit,
+};
+
+DECK_DRIVER(buzzer_deck);

@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -53,10 +53,9 @@
 #include "commander.h"
 #include "console.h"
 #include "usb.h"
-#include "expbrd.h"
+#include "deck.h"
 #include "mem.h"
 #include "proximity.h"
-#include "buzzer.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -104,21 +103,21 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
-    
+
   isInit = true;
 }
 
 bool systemTest()
 {
   bool pass=isInit;
-  
+
 #ifdef PLATFORM_CF1
   pass &= adcTest();
 #endif
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
-  
+
   return pass;
 }
 
@@ -127,7 +126,7 @@ bool systemTest()
 void systemTask(void *arg)
 {
   bool pass = true;
-  
+
   ledInit();
   ledSet(CHG_LED, 1);
 
@@ -155,7 +154,7 @@ void systemTask(void *arg)
   commanderInit();
   stabilizerInit();
 #ifdef PLATFORM_CF2
-  expbrdInit();
+  deckInit();
 #endif
   memInit();
 
@@ -163,10 +162,6 @@ void systemTask(void *arg)
   proximityInit();
 #endif
 
-#ifdef BUZZER_ENABLED
-  buzzerInit();
-#endif
-  
   //Test the modules
   pass &= systemTest();
   pass &= configblockTest();
@@ -174,10 +169,10 @@ void systemTask(void *arg)
   pass &= commanderTest();
   pass &= stabilizerTest();
 #ifdef PLATFORM_CF2
-  pass &= expbrdTest();
+  pass &= deckTest();
 #endif
   pass &= memTest();
-  
+
   //Start the firmware
   if(pass)
   {
@@ -211,9 +206,9 @@ void systemTask(void *arg)
     }
   }
   DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
-  
+
   workerLoop();
-  
+
   //Should never reach this point!
   while(1)
     vTaskDelay(portMAX_DELAY);

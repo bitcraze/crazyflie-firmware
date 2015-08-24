@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -30,8 +30,10 @@
 
 #include "stm32fxxx.h"
 #include "config.h"
-#include "exptest.h"
 #include "debug.h"
+#include "deck.h"
+
+#include "imu.h"
 
 //Hardware configuration
 #define ET_GPIO_PERIF   (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC)
@@ -101,12 +103,14 @@ static bool isInit;
 static bool exptestTestAllPins(bool test);
 static bool exptestTestPin(EtGpio *etPin, bool test);
 
-bool exptestRun(void)
+static bool exptestRun(void)
 {
   int i;
   volatile int delay;
   bool status = true;
   isInit = true;
+
+  status &= imu6ManufacturingTest();
 
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -211,3 +215,15 @@ static bool exptestTestPin(EtGpio *etPin, bool test)
     return false;
   }
 }
+
+static const DeckDriver exptest_deck = {
+  .vid = 0xBC,
+  .pid = 0xFF,
+  .name = "bcExpTest",
+
+  .usedGpio = 0,               // FIXME: Edit the used GPIOs
+
+  .test = exptestRun,
+};
+
+DECK_DRIVER(exptest_deck);

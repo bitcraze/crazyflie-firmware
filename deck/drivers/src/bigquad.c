@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -30,14 +30,14 @@
 
 #include "stm32fxxx.h"
 #include "config.h"
-#include "bigquad.h"
 #include "motors.h"
 #include "debug.h"
+#include "deck.h"
 
 //Hardware configuration
 static bool isInit;
 
-void bigquadInit()
+static void bigquadInit(DeckInfo *info)
 {
   if(isInit)
     return;
@@ -48,7 +48,7 @@ void bigquadInit()
   isInit = true;
 }
 
-bool bigquadTest()
+static bool bigquadTest()
 {
   bool status = true;
 
@@ -59,3 +59,17 @@ bool bigquadTest()
 
   return status;
 }
+
+static const DeckDriver bigquad_deck = {
+  .vid = 0xBC,
+  .pid = 0x03,
+  .name = "bcBigQuad",
+
+  .usedPeriph = DECK_TIMER3,
+  .usedGpio = 0,               // FIXME: Edit the used GPIOs
+
+  .init = bigquadInit,
+  .test = bigquadTest,
+};
+
+DECK_DRIVER(bigquad_deck);
