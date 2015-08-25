@@ -309,7 +309,7 @@ static const DeckDriver buzzer_deck = {
   .pid = 0,
   .name = "bcBuzzer",
 
-  .usedGpio = DECK_PA2 | DECK_PA3,
+  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3,
 
   .init = buzzerInit,
 };

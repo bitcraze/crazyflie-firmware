@@ -653,8 +653,8 @@ static const DeckDriver ledring12_deck = {
   .pid = 0x01,
   .name = "bcLedRing",
 
-  .usedPeriph = DECK_TIMER3,
-  .usedGpio = DECK_IO_2 | DECK_IO_3,
+  .usedPeriph = DECK_USING_TIMER3,
+  .usedGpio = DECK_USING_IO_2 | DECK_USING_IO_3,
 
   .init = ledring12Init,
 };

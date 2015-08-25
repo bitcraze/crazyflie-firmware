@@ -65,7 +65,7 @@ static const DeckDriver bigquad_deck = {
   .pid = 0x03,
   .name = "bcBigQuad",
 
-  .usedPeriph = DECK_TIMER3,
+  .usedPeriph = DECK_USING_TIMER3,
   .usedGpio = 0,               // FIXME: Edit the used GPIOs
 
   .init = bigquadInit,
