@@ -1,4 +1,4 @@
-# Crazyflie 1.0/2.0 Firmware
+# Crazyflie 1.0/2.0 Firmware  [![Build Status](https://api.travis-ci.org/bitcraze/crazyflie-firmware.svg)](https://travis-ci.org/bitcraze/crazyflie-firmware)
 
 This project contains the source code for the Crazyflie 1.0/2.0 firmware. 
 
