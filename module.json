@@ -1,0 +1,4 @@
+{
+  "artifactType": "firmware",
+  "buildScript": "tools/build/build.sh"
+}

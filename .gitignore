@@ -8,3 +8,6 @@ bin/*
 config.mk
 cflie.*
 version.c
+
+/cf2.*
+/cf1.*
