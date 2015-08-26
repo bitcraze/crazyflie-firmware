@@ -53,9 +53,12 @@
 #include "commander.h"
 #include "console.h"
 #include "usb.h"
-#include "deck.h"
 #include "mem.h"
 #include "proximity.h"
+
+#ifdef PLATFORM_CF2
+#include "deck.h"
+#endif
 
 /* Private variable */
 static bool selftestPassed;

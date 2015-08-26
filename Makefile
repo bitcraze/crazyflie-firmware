@@ -137,7 +137,7 @@ PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
-PROJ_OBJ += log.o worker.o trigger.o sitaw.o buzzer.o
+PROJ_OBJ += log.o worker.o trigger.o sitaw.o
 PROJ_OBJ_CF2 += platformservice.o
 
 # Deck Core
@@ -147,6 +147,7 @@ PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
 PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
+PROJ_OBJ_CF2 += buzzer.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
