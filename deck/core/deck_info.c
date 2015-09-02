@@ -36,6 +36,12 @@
 #include "crc.h"
 #include "debug.h"
 
+#ifdef DEBUG
+  #define DECK_INFO_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#else
+  #define DECK_INFO_DBG_PRINT(...)
+#endif
+
 static int count = 0;
 static DeckInfo deckInfos[DECK_MAX_COUNT];
 
@@ -101,14 +107,14 @@ void printDeckInfo(DeckInfo *info)
     deckTlvGetString(&info->tlv, DECK_INFO_REVISION, rev, 10);
   }
 
-  DEBUG_PRINT("Deck %02x:%02x %s (Rev. %s)\n", info->vid, info->pid, name, rev);
-  DEBUG_PRINT("Used pin: %08x\n", (unsigned int)info->usedPins);
+  DECK_INFO_DBG_PRINT("Deck %02x:%02x %s (Rev. %s)\n", info->vid, info->pid, name, rev);
+  DECK_INFO_DBG_PRINT("Used pin: %08x\n", (unsigned int)info->usedPins);
 
   if (info->driver == &dummyDriver) {
     DEBUG_PRINT("Warning! No driver found for deck.\n");
   } else {
-    DEBUG_PRINT("Driver implements: [ %s%s]\n",
-                 info->driver->init?"init ":"", info->driver->test?"test ":"");
+    DECK_INFO_DBG_PRINT("Driver implements: [ %s%s]\n",
+                        info->driver->init?"init ":"", info->driver->test?"test ":"");
   }
 }
 
@@ -167,7 +173,7 @@ static void enumerateDecks(void)
 
   for (i = 0; i < nDecks; i++)
   {
-    DEBUG_PRINT("Enumerating deck %i\n", i);
+    DECK_INFO_DBG_PRINT("Enumerating deck %i\n", i);
     if (owRead(i, 0, sizeof(deckInfos[0].raw), (uint8_t *)&deckInfos[i]))
     {
       if (infoDecode(&deckInfos[i]))

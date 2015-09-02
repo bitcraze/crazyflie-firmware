@@ -30,8 +30,13 @@
 #include <string.h>
 
 #include "deck.h"
-
 #include "debug.h"
+
+#ifdef DEBUG
+  #define DECK_DRV_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#else
+  #define DECK_DRV_DBG_PRINT(...)
+#endif
 
 /* Symbols set by the linker script */
 extern const struct deck_driver * _deckDriver_start;
@@ -54,9 +59,9 @@ static void deckdriversInit() {
     DEBUG_PRINT("Found %d drivers\n", driversLen);
     for (i=0; i<driversLen; i++) {
       if (drivers[i]->name) {
-        DEBUG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
+        DECK_DRV_DBG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
       } else {
-        DEBUG_PRINT("VID:PID %02x:%02x\n", drivers[i]->vid, drivers[i]->pid);
+        DECK_DRV_DBG_PRINT("VID:PID %02x:%02x\n", drivers[i]->vid, drivers[i]->pid);
       }
 
     }

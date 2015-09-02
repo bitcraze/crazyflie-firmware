@@ -31,6 +31,12 @@
 #include "deck.h"
 #include "debug.h"
 
+#ifdef DEBUG
+  #define DECK_CORE_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#else
+  #define DECK_CORE_DBG_PRINT(...)
+#endif
+
 #ifndef DECK_FORCE
 #define DECK_FORCE
 #endif
@@ -59,9 +65,9 @@ void deckInit()
 
     if (deck->driver->init) {
       if (deck->driver->name) {
-        DEBUG_PRINT("Calling INIT from driver %s for deck %i\n", deck->driver->name, i);
+        DECK_CORE_DBG_PRINT("Calling INIT from driver %s for deck %i\n", deck->driver->name, i);
       } else {
-        DEBUG_PRINT("Calling INIT for deck %i\n", i);
+        DECK_CORE_DBG_PRINT("Calling INIT for deck %i\n", i);
       }
 
       deck->driver->init(deck);
