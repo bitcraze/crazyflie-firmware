@@ -74,7 +74,7 @@
 #define MEM_TASK_PRI            1
 #define PARAM_TASK_PRI          1
 #define STABILIZER_TASK_PRI     4
-#define SYSLINK_TASK_PRI        3
+#define SYSLINK_TASK_PRI        5
 #define USBLINK_TASK_PRI        3
 #define PROXIMITY_TASK_PRI      0
 //CF1
