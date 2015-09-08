@@ -128,6 +128,9 @@ PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
+# vl6180x
+PROJ_OBJ_CF2 += vl6180x_i2c.o vl6180x.o
+
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o

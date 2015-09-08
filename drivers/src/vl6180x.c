@@ -37,9 +37,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "task.h"
 
 #include "vl6180x_api.h"
-
+#include "i2cdev.h"
 #include "debug.h"
 #include "eprintf.h"
+
+#define VL6180X_ADDRESS   0x52
 
 static uint8_t devAddr;
 static uint8_t buffer[6];
@@ -56,7 +58,7 @@ void VL6180x_Init(I2C_Dev *i2cPort)
     return;
 
   I2Cx = i2cPort;
-  devAddr = AK8963_ADDRESS_00;
+  devAddr = VL6180X_ADDRESS;
 }
 
 int VL6180x_I2CWrite(VL6180xDev_t addr, uint8_t  *buff, uint8_t len)
