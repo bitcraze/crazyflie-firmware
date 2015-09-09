@@ -5,6 +5,6 @@ services:
 before_install:
   - docker pull bitcraze/builder
 script:
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build.sh PLATFORM=CF2
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build.sh PLATFORM=CF2 clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build.sh PLATFORM=CF1
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF1

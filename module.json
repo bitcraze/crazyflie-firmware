@@ -1,4 +1,28 @@
 {
-  "artifactType": "firmware",
-  "buildScript": "tools/build/build.sh"
+  "version": "1.0",
+  "environmentReq": [
+    "arm-none-eabi"
+  ],
+  "artifacts": {
+    "file": [
+      {
+        "source": "*.bin",
+        "insertTag": true,
+        "destination": "currDir"
+      },
+      {
+        "source": "*.dfu",
+        "insertTag": true,
+        "destination": "currDir"
+      }
+    ]
+  },
+  "targets": {
+    "cf1": [
+      "PLATFORM=CF1"
+    ],
+    "cf2": [
+      "PLATFORM=CF2"
+    ]
+  }
 }
