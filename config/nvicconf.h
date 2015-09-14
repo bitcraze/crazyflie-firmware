@@ -38,7 +38,7 @@
 #define NVIC_TRACE_TIM_PRI    4
 
 // Priorities for Crazyflie 2.0
-#define NVIC_UART_PRI         6
+#define NVIC_UART_PRI         10
 #define NVIC_RADIO_PRI        11
 #define NVIC_ADC_PRI          12
 

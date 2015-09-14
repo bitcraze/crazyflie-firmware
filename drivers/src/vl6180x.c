@@ -41,10 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "debug.h"
 #include "eprintf.h"
 
-#define VL6180X_ADDRESS   0x52
+#define VL6180X_ADDRESS   0x29
 
-static uint8_t devAddr;
-static uint8_t buffer[6];
+static VL6180xDev_t vl6180xDev;
 static I2C_Dev *I2Cx;
 static bool isInit;
 
@@ -52,29 +51,40 @@ static bool isInit;
 /** Power on and prepare for general usage.
  * No specific pre-configuration is necessary for this device.
  */
-void VL6180x_Init(I2C_Dev *i2cPort)
+VL6180xDev_t VL6180x_Init(I2C_Dev *i2cPort)
 {
   if (isInit)
-    return;
+    return 0;
 
   I2Cx = i2cPort;
-  devAddr = VL6180X_ADDRESS;
+  vl6180xDev = VL6180X_ADDRESS;
+
+  VL6180x_InitData(vl6180xDev);
+  VL6180x_Prepare(vl6180xDev);
+
+  return vl6180xDev;
 }
 
 int VL6180x_I2CWrite(VL6180xDev_t addr, uint8_t  *buff, uint8_t len)
 {
     int status;
-    status = i2cdevWrite(I2Cx, addr, I2CDEV_NO_MEM_ADDR, len, buff);
 
-    return status;
+    status = i2cdevWrite(I2Cx, addr, I2CDEV_NO_MEM_ADDR, len, buff);
+    if (status)
+      return 0;
+    else
+      return 1;
 }
 
 int VL6180x_I2CRead(VL6180xDev_t addr, uint8_t  *buff, uint8_t len)
 {
     int status;
-    status = i2cdevRead(I2Cx, addr, I2CDEV_NO_MEM_ADDR, len, buff);
 
-    return status;
+    status = i2cdevRead(I2Cx, addr, I2CDEV_NO_MEM_ADDR, len, buff);
+    if (status)
+      return 0;
+    else
+      return 1;
 }
 
 #define VL6180x_9to7Conv(x) (x)
@@ -238,6 +248,11 @@ static int _filter_GetResult(VL6180xDev_t dev, VL6180x_RangeData_t *pData);
 
 static int VL6180x_RangeStaticInit(VL6180xDev_t dev);
 static int  VL6180x_UpscaleStaticInit(VL6180xDev_t dev);
+
+void OnErrLog(void)
+{
+
+}
 
 int VL6180x_WaitDeviceBooted(VL6180xDev_t dev){
   uint8_t FreshOutReset;

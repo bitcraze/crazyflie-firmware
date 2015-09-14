@@ -330,6 +330,11 @@ void uartIsr(void)
     rxDataInterrupt = USART_ReceiveData(UART_TYPE) & 0x00FF;
     xQueueSendFromISR(uartDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
   }
+  else
+  {
+    // Clear spurious interrupt
+    USART_ReceiveData(UART_TYPE);
+  }
 
   if (xHigherPriorityTaskWoken)
   {

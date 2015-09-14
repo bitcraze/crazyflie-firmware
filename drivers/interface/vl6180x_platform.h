@@ -1,5 +1,5 @@
 /*******************************************************************************
-Copyright © 2014, STMicroelectronics International N.V.
+Copyright ï¿½ 2014, STMicroelectronics International N.V.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vl6180x_appcfg.h"
 #include "vl6180x_def.h"
+#include "debug.h"
 
 
 
@@ -55,7 +56,7 @@ extern volatile uint32_t g_TickCnt;
 #define LOG_GET_TIME()  g_TickCnt
 #else
 /* these is nto stm32 vl6180x GNuArm eclpse build*/
-#define trace_printf(...) (void)0
+#define trace_printf  DEBUG_PRINT
 #define LOG_GET_TIME() (int)0 /* add your code here expect to be an integer native (%d) type  value  */
 #endif
 

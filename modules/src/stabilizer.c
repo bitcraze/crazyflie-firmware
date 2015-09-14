@@ -43,6 +43,9 @@
 #include "param.h"
 #include "debug.h"
 #include "sitaw.h"
+#include "proximity.h"
+
+
 #ifdef PLATFORM_CF1
   #include "ms5611.h"
 #else
@@ -287,6 +290,7 @@ static void stabilizerTask(void* param)
       if (imuHasBarometer() && (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER))
       {
         stabilizerAltHoldUpdate();
+        proximityVL6180xFreeRunningRanging();
         altHoldCounter = 0;
       }
 

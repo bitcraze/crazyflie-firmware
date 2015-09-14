@@ -36,6 +36,9 @@
 #include "param.h"
 #include "log.h"
 
+#include "i2cdev.h"
+#include "vl6180x.h"
+
 #include "stm32fxxx.h"
 
 /* Flag indicating if the proximityInit() function has been called or not. */
@@ -49,6 +52,9 @@ static uint32_t proximityAccuracy       = 0; /* The accuracy as reported by the 
 
 /* The most recent samples in chronological order. Must be initialized before use. */
 static uint32_t proximitySWin[PROXIMITY_SWIN_SIZE];
+
+static VL6180xDev_t vl6180xDev;
+static VL6180x_RangeData_t Range;
 
 #if defined(PROXIMITY_ENABLED)
 
@@ -151,6 +157,8 @@ static void proximityTask(void* param)
     proximityDistance = maxSonarReadDistance(MAXSONAR_MB1040_AN, &proximityAccuracy);
 #endif
 
+    //proximityVL6180xFreeRunningRanging();
+
     /* Get the latest average value calculated. */
     proximityDistanceAvg = proximitySWinAdd(proximityDistance);
 
@@ -170,6 +178,8 @@ void proximityInit(void)
 
   /* Initialise the sliding window to zero. */
   memset(&proximitySWin, 0, sizeof(uint32_t)*PROXIMITY_SWIN_SIZE);
+
+  vl6180xDev = VL6180x_Init(I2C1_DEV);
 
 #if defined(PROXIMITY_ENABLED)
   /* Only start the task if the proximity subsystem is enabled in conf.h */
@@ -221,3 +231,48 @@ uint32_t proximityGetAccuracy(void)
 {
   return proximityAccuracy;
 }
+
+void proximityVL6180xFreeRunningRanging(void)
+{
+    int status;
+    int WaitedLoop;
+
+    VL6180x_RangeClearInterrupt(vl6180xDev); // make sure no interrupt is pending
+
+    /* kick off the first measurement */
+    VL6180x_RangeStartSingleShot(vl6180xDev);
+
+    // check for range measure availability
+    status= VL6180x_RangeGetMeasurementIfReady(vl6180xDev, &Range);
+    if ( status == 0 )
+    {
+        /* we have the new measure that was ready */
+        if (Range.errorStatus == 0 )
+        {
+          DEBUG_PRINT("Range: %d\n", (int)Range.range_mm);
+        }
+        else
+        {
+          (void)Range.errorStatus; // your code display error code
+        }
+        /* re-arm next measurement */
+        VL6180x_RangeStartSingleShot(vl6180xDev);
+        WaitedLoop = 0;
+    }
+    else if ( status ==  NOT_READY)
+    {
+        /* measure was not ready  */
+        WaitedLoop++;
+    }
+    else if (status < 0)
+    {
+        // it is an critical error
+        DEBUG_PRINT("critical error on VL6180x_RangeCheckAndGetMeasurement");
+    }
+}
+
+LOG_GROUP_START(proximity)
+LOG_ADD(LOG_INT32, range, &Range.range_mm)
+LOG_ADD(LOG_UINT32, error, &Range.errorStatus)
+LOG_ADD(LOG_INT32, mcps, &Range.signalRate_mcps)
+LOG_GROUP_STOP(proximity)

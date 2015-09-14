@@ -33,7 +33,7 @@
  * \def PROXIMITY_ENABLED
  * Enable the proximity measurement subsystem.
  */
-//#define PROXIMITY_ENABLED
+#define PROXIMITY_ENABLED
 
 /**
  * \def PROXIMITY_TASK_FREQ
@@ -70,5 +70,7 @@ uint32_t proximityGetDistanceAvg(void);
 uint32_t proximityGetDistanceMedian(void);
 
 uint32_t proximityGetAccuracy(void);
+
+void proximityVL6180xFreeRunningRanging(void);
 
 #endif
