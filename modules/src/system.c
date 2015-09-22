@@ -55,6 +55,7 @@
 #include "usb.h"
 #include "mem.h"
 #include "proximity.h"
+#include "watchdog.h"
 
 #ifdef PLATFORM_CF2
 #include "deck.h"
@@ -175,6 +176,7 @@ void systemTask(void *arg)
   pass &= deckTest();
 #endif
   pass &= memTest();
+  pass &= watchdogNormalStartTest();
 
   //Start the firmware
   if(pass)
@@ -222,6 +224,7 @@ void systemTask(void *arg)
 void systemStart()
 {
   xSemaphoreGive(canStartMutex);
+  watchdogInit();
 }
 
 void systemWaitStart(void)
@@ -249,12 +252,22 @@ void vApplicationIdleHook( void )
 {
   extern size_t debugPrintTCBInfo(void);
   static uint32_t timeToPrint = M2T(5000);
+  static uint32_t tickOfLatestWatchdogReset = M2T(0);
 
-  if (xTaskGetTickCount() - timeToPrint > M2T(10000))
+  portTickType tickCount = xTaskGetTickCount();
+
+  if (tickCount - tickOfLatestWatchdogReset > M2T(WATCHDOG_RESET_PERIOD_MS))
   {
-    timeToPrint = xTaskGetTickCount();
+    tickOfLatestWatchdogReset = tickCount;
+    watchdogReset();
+  }
+
+  if (tickCount - timeToPrint > M2T(10000))
+  {
+    timeToPrint = tickCount;
     debugPrintTCBInfo();
   }
+
   // Enter sleep mode. Does not work when debugging chip with SWD.
   // Currently saves about 20mA STM32F405 current consumption (~30%).
 #ifndef DEBUG
