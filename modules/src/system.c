@@ -224,7 +224,9 @@ void systemTask(void *arg)
 void systemStart()
 {
   xSemaphoreGive(canStartMutex);
+#ifndef DEBUG
   watchdogInit();
+#endif
 }
 
 void systemWaitStart(void)
