@@ -322,18 +322,12 @@ void uartIsr(void)
       xHigherPriorityTaskWoken = pdFALSE;
       xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
     }
-    USART_ClearITPendingBit(UART_TYPE, USART_IT_TXE);
   }
+  USART_ClearITPendingBit(UART_TYPE, USART_IT_TXE);
   if (USART_GetITStatus(UART_TYPE, USART_IT_RXNE))
   {
-    // Note: UART interrupt pending bit cleared by reading DR
     rxDataInterrupt = USART_ReceiveData(UART_TYPE) & 0x00FF;
     xQueueSendFromISR(uartDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
-  }
-
-  if (xHigherPriorityTaskWoken)
-  {
-    vPortYieldFromISR();
   }
 }
 
