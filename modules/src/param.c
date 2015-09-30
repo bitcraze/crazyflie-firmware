@@ -83,7 +83,7 @@ void paramInit(void)
 
   params = &_param_start;
   paramsLen = &_param_stop - &_param_start;
-  paramsCrc = crcSlow(params, paramsLen);
+  paramsCrc = crcSlow(params, paramsLen*sizeof(params[0]));
 
   for (i=0; i<paramsLen; i++)
   {
