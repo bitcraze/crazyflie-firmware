@@ -240,6 +240,7 @@ static void stabilizerTask(void* param)
   uint32_t attitudeCounter = 0;
   uint32_t altHoldCounter = 0;
   uint32_t lastWakeTime;
+  float yawRateAngle = 0;
 
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
@@ -259,6 +260,17 @@ static void stabilizerTask(void* param)
     {
       commanderGetRPY(&eulerRollDesired, &eulerPitchDesired, &eulerYawDesired);
       commanderGetRPYType(&rollType, &pitchType, &yawType);
+
+      // Rate-controled YAW is moving YAW angle setpoint
+      if (yawType == RATE) {
+        yawRateAngle -= eulerYawDesired/500.0;
+        while (yawRateAngle > 180.0)
+          yawRateAngle -= 360.0;
+        while (yawRateAngle < -180.0)
+          yawRateAngle += 360.0;
+
+        eulerYawDesired = -yawRateAngle;
+      }
 
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
@@ -298,10 +310,6 @@ static void stabilizerTask(void* param)
       {
         pitchRateDesired = eulerPitchDesired;
       }
-      if (yawType == RATE)
-      {
-        yawRateDesired = -eulerYawDesired;
-      }
 
       // TODO: Investigate possibility to subtract gyro drift.
       controllerCorrectRatePID(gyro.x, -gyro.y, gyro.z,
@@ -339,6 +347,9 @@ static void stabilizerTask(void* param)
       {
         distributePower(0, 0, 0, 0);
         controllerResetAllPID();
+
+        // Reset the calculated YAW angle for rate control
+        yawRateAngle = eulerYawActual;
       }
     }
   }
