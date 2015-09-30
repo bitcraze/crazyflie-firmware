@@ -86,6 +86,7 @@ static float pressure;    // pressure from barometer in bar
 static float asl;         // smoothed asl
 static float aslRaw;      // raw asl
 static float aslLong;     // long term asl
+static float aslRef;      // asl reference (ie. offset)
 
 // Altitude hold variables
 static PidObject altHoldPID;  // Used for altitute hold mode. I gets reset when the bat status changes
@@ -417,6 +418,8 @@ static void stabilizerAltHoldUpdate(void)
   lps25hGetData(&pressure, &temperature, &aslRaw);
 #endif
 
+  aslRaw -= aslRef;
+
   asl = asl * aslAlpha + aslRaw * (1 - aslAlpha);
   aslLong = aslLong * aslAlphaLong + aslRaw * (1 - aslAlphaLong);
 
@@ -706,6 +709,7 @@ LOG_GROUP_STOP(autoTO)
 PARAM_GROUP_START(altHold)
 PARAM_ADD(PARAM_FLOAT, aslAlpha, &aslAlpha)
 PARAM_ADD(PARAM_FLOAT, aslAlphaLong, &aslAlphaLong)
+PARAM_ADD(PARAM_FLOAT, aslRef, &aslRef)
 PARAM_ADD(PARAM_FLOAT, errDeadband, &errDeadband)
 PARAM_ADD(PARAM_FLOAT, altHoldChangeSens, &altHoldChange_SENS)
 PARAM_ADD(PARAM_FLOAT, altHoldErrMax, &altHoldErrMax)
