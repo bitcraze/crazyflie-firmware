@@ -1,0 +1,13 @@
+## Copy this file to config.mk and modify to get you personal build configuration
+
+## Set CRTP link to E-SKY receiver
+# CFLAGS += -DUSE_ESKYLINK
+
+## Redirect the console output to the UART
+# CFLAGS += -DDEBUG_PRINT_ON_UART
+
+## Load a deck driver that has no OW memory
+# CFLAGS += -DDECK_FORCE=bcBuzzer
+
+## Use morse when flashing the LED to indicate that the Crazyflie is calibrated
+# CFLAGS += -DCALIBRATED_LED_MORSE

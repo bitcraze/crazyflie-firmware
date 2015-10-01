@@ -3,7 +3,8 @@
 # This Makefile compiles all the objet file to ./bin/ and the resulting firmware
 # image in ./cfX.elf and ./cfX.bin
 
-#Put your personal build config in config.mk and DO NOT COMMIT IT!
+# Put your personal build config in config.mk and DO NOT COMMIT IT!
+# Make a copy of config.mk.example to get you started
 -include config.mk
 
 ######### JTAG and environment configuration ##########
@@ -26,10 +27,7 @@ OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
 USE_FPU           ?= 1
 endif
 
-## Flag that can be added to config.mk
-# CFLAGS += -DUSE_ESKYLINK         # Set CRTP link to E-SKY receiver
-# CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
-# CFLAGS += -DDECK_FORCE=bcBuzzer  # Load a deck driver that has no OW memory
+
 ifeq ($(PLATFORM), CF1)
 REV               ?= F
 endif

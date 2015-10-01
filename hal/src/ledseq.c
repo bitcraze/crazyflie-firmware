@@ -37,6 +37,14 @@
 #include <stdbool.h>
 #include "led.h"
 
+#ifdef CALIBRATED_LED_MORSE
+  #define DOT 100
+  #define DASH (3 * DOT)
+  #define GAP DOT
+  #define LETTER_GAP (3 * DOT)
+  #define WORD_GAP (7 * DOT)
+#endif // #ifdef CALIBRATED_LED_MORSE
+
 /* Led sequence priority */
 static ledseq_t * sequences[] = {
   seq_testPassed,
@@ -64,9 +72,29 @@ ledseq_t seq_armed[] = {
 };
 
 ledseq_t seq_calibrated[] = {
+#ifndef CALIBRATED_LED_MORSE
   { true, LEDSEQ_WAITMS(50)},
   {false, LEDSEQ_WAITMS(450)},
   {    0, LEDSEQ_LOOP},
+#else
+  { true, LEDSEQ_WAITMS(DASH)},
+  {false, LEDSEQ_WAITMS(GAP)},
+  { true, LEDSEQ_WAITMS(DOT)},
+  {false, LEDSEQ_WAITMS(GAP)},
+  { true, LEDSEQ_WAITMS(DASH)},
+  {false, LEDSEQ_WAITMS(GAP)},
+  { true, LEDSEQ_WAITMS(DOT)},
+  {false, LEDSEQ_WAITMS(LETTER_GAP)},
+  { true, LEDSEQ_WAITMS(DOT)},
+  {false, LEDSEQ_WAITMS(GAP)},
+  { true, LEDSEQ_WAITMS(DOT)},
+  {false, LEDSEQ_WAITMS(GAP)},
+  { true, LEDSEQ_WAITMS(DASH)},
+  {false, LEDSEQ_WAITMS(GAP)},
+  { true, LEDSEQ_WAITMS(DOT)},
+  {false, LEDSEQ_WAITMS(WORD_GAP)},
+  {    0, LEDSEQ_LOOP},
+#endif // ifndef CALIBRATED_LED_MORSE
 };
 
 ledseq_t seq_alive[] = {
