@@ -112,7 +112,7 @@ SECTIONS
     
     
 
-    /* This is the uninitialized data section */
+    /* This is the uninitialized data section. This memory is zeroed at start up */
     .bss :
     {
 	    . = ALIGN(4);
@@ -127,9 +127,26 @@ SECTIONS
 	    /* This is used by the startup in order to initialize the .bss secion */
    	 _ebss = . ;
     } >RAM
-    
-    PROVIDE ( end = _ebss );
-    PROVIDE ( _end = _ebss );
+
+
+
+    /* This is uninitialized data that is NOT zeroed at start up. */
+    .nzds :
+    {
+	    . = ALIGN(4);
+        _snzds = .;
+
+        *(.nzds)
+        *(.nzds.*)
+        *(COMMON)
+
+	    . = ALIGN(4);
+   	 _enzds = . ;
+    } >RAM
+
+
+    PROVIDE ( end = _enzds );
+    PROVIDE ( _end = _enzds );
     
     /* This is the user stack section 
     This is just to check that there is enough RAM left for the User mode stack

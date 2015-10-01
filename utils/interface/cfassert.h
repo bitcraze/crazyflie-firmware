@@ -36,5 +36,6 @@
  * Assert handler function
  */
 void assertFail(char *exp, char *file, int line);
+void printAssertSnapshotData();
 
 #endif //__CFASSERT_H__
