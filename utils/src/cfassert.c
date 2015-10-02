@@ -71,6 +71,8 @@ void printAssertSnapshotData()
 {
   if (MAGIC_ASSERT_INDICATOR == snapshot.magicNumber) {
     DEBUG_PRINT("Assert failed at %s:%d\n", snapshot.fileName, snapshot.line);
+  } else {
+    DEBUG_PRINT("No assert information found\n");
   }
 }
 
