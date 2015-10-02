@@ -29,6 +29,7 @@
 #include "debug.h"
 
 #include "watchdog.h"
+#include "cfassert.h"
 
 
 bool watchdogNormalStartTest(void)
