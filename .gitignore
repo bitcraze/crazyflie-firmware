@@ -5,7 +5,7 @@ bin/*
 .project
 .settings/*
 *~
-config.mk
+tools/make/config.mk
 cflie.*
 version.c
 

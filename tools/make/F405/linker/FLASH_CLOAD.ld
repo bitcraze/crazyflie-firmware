@@ -9,13 +9,13 @@ If you need to use your own script please configure your Ride7 project linker op
 You can take this one as example for wrting your custom linker script
 You can use, copy and distribute this file freely, but without any waranty.*/
 
-SEARCH_DIR("./scripts/F405/linker")
+SEARCH_DIR("./tools/make/F405/linker")
 
 /* include the common STMxxx sub-script */
 INCLUDE "COMMON.ld"
 
 /* include the memory spaces definitions sub-script */
-INCLUDE "DEF.ld"
+INCLUDE "DEF_CLOAD.ld"
 
 /* include the sections management sub-script for FLASH mode */
 INCLUDE "sections_FLASH.ld"

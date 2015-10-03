@@ -13,7 +13,7 @@ endif
 
 target = @$(if $(QUIET), ,echo $($1_COMMAND$(VERBOSE)) ); @$($1_COMMAND)
 
-VTMPL_COMMAND=$(PYTHON2) scripts/versionTemplate.py $< $@
+VTMPL_COMMAND=$(PYTHON2) tools/make/versionTemplate.py $< $@
 #$(BIN)/$(lastword $(subst /, ,$@))
 VTMPL_COMMAND_SILENT="  VTMPL $@"
 %.c: %.vtpl
@@ -44,7 +44,7 @@ $(PROG).bin: $(PROG).elf
 	@$(if $(QUIET), ,echo $(BIN_COMMAND$(VERBOSE)) )
 	@$(BIN_COMMAND)
 
-DFU_COMMAND=$(PYTHON2) scripts/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
+DFU_COMMAND=$(PYTHON2) tools/make/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
 DFU_COMMAND_SILENT="  DFUse $@"
 $(PROG).dfu: $(PROG).bin
 	@$(if $(QUIET), ,echo $(DFU_COMMAND$(VERBOSE)) )
@@ -68,7 +68,7 @@ clean:
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
 	@$(CLEAN_COMMAND)
 
-MRPROPER_COMMAND=rm -f *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ scripts/*~; rm -rf bin/dep
+MRPROPER_COMMAND=rm -f *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ tools/make/*~; rm -rf bin/dep
 MRPROPER_COMMAND_SILENT="  MRPROPER"
 mrproper: clean
 	@$(if $(QUIET), ,echo $(MRPROPER_COMMAND$(VERBOSE)) )

@@ -3,9 +3,9 @@
 # This Makefile compiles all the objet file to ./bin/ and the resulting firmware
 # image in ./cfX.elf and ./cfX.bin
 
-# Put your personal build config in config.mk and DO NOT COMMIT IT!
-# Make a copy of config.mk.example to get you started
--include config.mk
+# Put your personal build config in tools/make/config.mk and DO NOT COMMIT IT!
+# Make a copy of tools/make/config.mk.example to get you started
+-include tools/make/config.mk
 
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
@@ -50,12 +50,12 @@ PORT = $(FREERTOS)/portable/GCC/ARM_CM3
 endif
 
 ifeq ($(PLATFORM), CF1)
-LINKER_DIR = scripts/F103/linker
-ST_OBJ_DIR  = scripts/F103
+LINKER_DIR = tools/make/F103/linker
+ST_OBJ_DIR  = tools/make/F103
 endif
 ifeq ($(PLATFORM), CF2)
-LINKER_DIR = scripts/F405/linker
-ST_OBJ_DIR  = scripts/F405
+LINKER_DIR = tools/make/F405/linker
+ST_OBJ_DIR  = tools/make/F405
 endif
 
 STLIB = lib
@@ -292,7 +292,7 @@ endif
 
 print_version: compile
 ifeq ($(SHELL),/bin/sh)
-	@./scripts/print_revision.sh
+	@./tools/make/print_revision.sh
 endif
 ifeq ($(PLATFORM), CF1)
 	@echo "Crazyflie Nano (1.0) build!"
@@ -338,7 +338,7 @@ openocd:
 prep:
 	@$(CC) -dD
 
-include scripts/targets.mk
+include tools/make/targets.mk
 
 #include dependencies
 -include $(DEPS)

@@ -68,7 +68,7 @@ More information can be found on the
  |  + src       | Utils source code
  |  + interface | Utils header files. Interface with the other parts of the program
  + platform     | Platform specific files. Not really used yet
- + scripts      | Misc. scripts for LD, OpenOCD, make, version control, ...
+ + tools        | Misc. scripts for LD, OpenOCD, make, version control, ...
  |              | *** The two following folders contains the unmodified files ***
  + lib          | Libraries
  |  + FreeRTOS  | Source FreeRTOS folder. Cleaned up from the useless files

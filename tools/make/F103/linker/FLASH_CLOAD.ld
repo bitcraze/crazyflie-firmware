@@ -9,7 +9,7 @@ If you need to use your own script please configure your Ride7 project linker op
 You can take this one as example for wrting your custom linker script
 You can use, copy and distribute this file freely, but without any waranty.*/
 
-SEARCH_DIR("./scripts/F103/linker")
+SEARCH_DIR("./tools/make/F103/linker")
 
 /* include the common STMxxx sub-script */
 INCLUDE "COMMON.ld"
