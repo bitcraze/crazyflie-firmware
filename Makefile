@@ -291,9 +291,6 @@ ifeq ($(SHELL),/bin/sh)
 endif
 
 print_version: compile
-ifeq ($(SHELL),/bin/sh)
-	@./tools/make/print_revision.sh
-endif
 ifeq ($(PLATFORM), CF1)
 	@echo "Crazyflie Nano (1.0) build!"
 endif
