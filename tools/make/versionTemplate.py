@@ -111,36 +111,41 @@ def print_version():
     if (version['modified'] == 'true'):
         status = "\033[1;31mMODIFIED\033[m"
 
-    print("Build " + version['local_revision'] + ":" + version['revision'] +
-          " (" + version['tag'] + ") " + status)
+    print("Build {local_revision}:{revision} ({tag}) {}".format(status,
+                                                                **version))
+    print("Version extracted from {source}".format(**version))
+
+if __name__ == "__main__":
+    version_source = ""
+    if os.path.isfile(BUILD_TOOL_INFO_FILE_NAME):
+        version['source'] = "build tool info file"
+        extract_information_from_build_tool()
+    elif os.path.isdir(".git"):
+        version['source'] = "git"
+        extract_information_from_git()
+    elif os.path.isdir(".hg"):
+        version['source'] = "mercurial"
+        extract_information_from_mercurial()
+    else:
+        version['source'] = "folder name"
+        extract_information_from_folder_name()
+
+    if len(sys.argv) == 2 and sys.argv[1] == "--print-version":
+        print_version()
+        sys.exit(0)
+
+    if len(sys.argv) < 3:
+        print("Usage:")
+        print("  {0} <infile> <outfile>".format(sys.argv[0]))
+        sys.exit(1)
 
 
-if len(sys.argv) < 3:
-    print("Usage:")
-    print("  {0} <infile> <outfile>".format(sys.argv[0]))
-    sys.exit(1)
+    # Apply information to the file template
+    infile = open(sys.argv[1], 'r')
+    outfile = open(sys.argv[2], 'w')
 
-if os.path.isfile(BUILD_TOOL_INFO_FILE_NAME):
-    print("Extracting version information from build tool info file")
-    extract_information_from_build_tool()
-elif os.path.isdir(".git"):
-    print("Extracting version information from git")
-    extract_information_from_git()
-elif os.path.isdir(".hg"):
-    print("Extracting version information from mercurial")
-    extract_information_from_mercurial()
-else:
-    print("Extracting version information from folder name")
-    extract_information_from_folder_name()
+    outfile.write(header.format(sys.argv[0], sys.argv[1]))
+    outfile.write(infile.read().format(**version))
 
-# Apply information to the file template
-infile = open(sys.argv[1], 'r')
-outfile = open(sys.argv[2], 'w')
-
-outfile.write(header.format(sys.argv[0], sys.argv[1]))
-outfile.write(infile.read().format(**version))
-
-infile.close()
-outfile.close()
-
-print_version()
+    infile.close()
+    outfile.close()

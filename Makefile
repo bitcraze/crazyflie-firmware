@@ -296,6 +296,7 @@ ifeq ($(PLATFORM), CF1)
 endif
 ifeq ($(PLATFORM), CF2)
 	@echo "Crazyflie 2.0 build!"
+	@$(PYTHON2) tools/make/versionTemplate.py --print-version
 endif
 ifeq ($(CLOAD), 1)
 	@echo "Crazyloader build!"
