@@ -296,8 +296,8 @@ ifeq ($(PLATFORM), CF1)
 endif
 ifeq ($(PLATFORM), CF2)
 	@echo "Crazyflie 2.0 build!"
-	@$(PYTHON2) tools/make/versionTemplate.py --print-version
 endif
+	@$(PYTHON2) tools/make/versionTemplate.py --print-version
 ifeq ($(CLOAD), 1)
 	@echo "Crazyloader build!"
 endif
@@ -331,6 +331,9 @@ reset:
 
 openocd:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets
+
+trace:
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
 
 #Print preprocessor #defines
 prep:

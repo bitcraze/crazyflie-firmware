@@ -136,4 +136,6 @@ to exclude the API function. */
     debugSendTraceInfo((int)pxCurrentTCB->pxTaskTag); \
   }
 */
+// Send 4 first chatacters of task name to ITM port 1
+#define traceTASK_SWITCHED_IN() *((uint32_t*)0xE0000004) = *((uint32_t*)pxCurrentTCB->pcTaskName);
 #endif /* FREERTOS_CONFIG_H */
