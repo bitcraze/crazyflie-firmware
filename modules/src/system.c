@@ -64,6 +64,8 @@
 #include "deck.h"
 #endif
 
+#include "sppm.h"
+
 /* Private variable */
 static bool selftestPassed;
 static bool canFly;
@@ -161,6 +163,8 @@ void systemTask(void *arg)
 //  uartInit();
 #endif
 #endif //ndef USE_RADIOLINK_CRTP
+
+  sppmInit();
 
   commInit();
   commanderInit();
