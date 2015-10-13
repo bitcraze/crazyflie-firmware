@@ -39,6 +39,17 @@
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
 /**
+ * CRTP commander data struct
+ */
+struct CommanderCrtpValues
+{
+  float roll;
+  float pitch;
+  float yaw;
+  uint16_t thrust;
+} __attribute__((packed));
+
+/**
  * Stabilization modes for Roll, Pitch, Yaw.
  */
 typedef enum
@@ -69,5 +80,7 @@ bool commanderGetAltHoldMode(void);
 void commanderSetAltHoldMode(bool altHoldModeNew);
 YawModeType commanderGetYawMode(void);
 bool commanderGetYawModeCarefreeResetFront(void);
+
+void commanderSet(struct CommanderCrtpValues* val);
 
 #endif /* COMMANDER_H_ */

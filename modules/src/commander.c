@@ -34,14 +34,6 @@
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
 
-struct CommanderCrtpValues
-{
-  float roll;
-  float pitch;
-  float yaw;
-  uint16_t thrust;
-} __attribute__((packed));
-
 static struct CommanderCrtpValues targetVal[2];
 static bool isInit;
 static int side=0;
@@ -88,7 +80,21 @@ static void commanderCrtpCB(CRTPPacket* pk)
   targetVal[!side] = *((struct CommanderCrtpValues*)pk->data);
   side = !side;
 
-  if (targetVal[side].thrust == 0) {
+  if (targetVal[side].thrust == 0)
+  {
+    thrustLocked = false;
+  }
+
+  commanderWatchdogReset();
+}
+
+void commanderSet(struct CommanderCrtpValues* val)
+{
+  targetVal[!side] = *((struct CommanderCrtpValues*)val);
+  side = !side;
+
+  if (targetVal[side].thrust == 0)
+  {
     thrustLocked = false;
   }
 
