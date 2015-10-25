@@ -23,6 +23,7 @@
  *
  * info.c - Receive information requests and send them back to the client
  */
+
 #include <string.h>
 #include <math.h>
 
@@ -65,8 +66,8 @@ void infoTask(void *param);
 
 void infoInit()
 {
-  xTaskCreate(infoTask, (const signed char * const)"Info",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
+  xTaskCreate(infoTask, (const signed char * const)INFO_TASK_NAME,
+              INFO_TASK_STACKSIZE, NULL, INFO_TASK_PRI, NULL);
   crtpInitTaskQueue(crtpInfo);
 }
 

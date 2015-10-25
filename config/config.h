@@ -67,25 +67,37 @@
 #endif
 
 
-//Task priorities. Higher number higher priority
+// Task priorities. Higher number higher priority
+#define STABILIZER_TASK_PRI     4
+#define ADC_TASK_PRI            3
 #define SYSTEM_TASK_PRI         2
-#define CRTP_RXTX_TASK_PRI      2
+#define CRTP_TX_TASK_PRI        2
+#define CRTP_RX_TASK_PRI        2
 #define LOG_TASK_PRI            1
 #define MEM_TASK_PRI            1
 #define PARAM_TASK_PRI          1
-#define STABILIZER_TASK_PRI     4
-#define SYSLINK_TASK_PRI        3
-#define USBLINK_TASK_PRI        3
 #define PROXIMITY_TASK_PRI      0
-//CF1
-#define ADC_TASK_PRI            0
 #define PM_TASK_PRI             0
-#define NRF24LINK_TASK_PRI      2
-#define ESKYLINK_TASK_PRI       1
-#define CRTP_TX_TASK_PRI        2
-#define CRTP_RX_TASK_PRI        2
 
-//Task names
+#ifdef PLATFORM_CF2
+  #define SYSLINK_TASK_PRI        3
+  #define USBLINK_TASK_PRI        3
+#endif
+
+#ifdef PLATFORM_CF1
+  #define NRF24LINK_TASK_PRI      2
+  #define ESKYLINK_TASK_PRI       1
+  #define UART_RX_TASK_PRI        2
+#endif
+
+// Not compiled
+#if 0
+  #define INFO_TASK_PRI           2
+  #define PID_CTRL_TASK_PRI       2
+#endif
+
+
+// Task names
 #define SYSTEM_TASK_NAME        "SYSTEM"
 #define ADC_TASK_NAME           "ADC"
 #define PM_TASK_NAME            "PWRMGNT"
@@ -101,7 +113,11 @@
 #define SYSLINK_TASK_NAME       "SYSLINK"
 #define USBLINK_TASK_NAME       "USBLINK"
 #define PROXIMITY_TASK_NAME     "PROXIMITY"
-//Task stack sizes
+#define UART_RX_TASK_NAME       "UART-RX"
+#define INFO_TASK_NAME          "INFO"
+#define PID_CTRL_TASK_NAME      "PID-CTRL"
+
+// Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
 #define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
 #define PM_TASK_STACKSIZE             configMINIMAL_STACK_SIZE
@@ -117,6 +133,9 @@
 #define SYSLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define USBLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
+#define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define INFO_TASK_STACKSIZE           configMINIMAL_STACK_SIZE
+#define PID_CTRL_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

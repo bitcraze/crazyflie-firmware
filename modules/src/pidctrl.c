@@ -40,8 +40,8 @@ void pidCrtlTask(void *param);
 
 void pidCtrlInit()
 {
-  xTaskCreate(pidCrtlTask, (const signed char * const)"PIDCrtl",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
+  xTaskCreate(pidCrtlTask, (const signed char * const)PID_CTRL_TASK_NAME,
+              PID_CTRL_TASK_STACKSIZE, NULL, PID_CTRL_TASK_PRI, NULL);
   crtpInitTaskQueue(6);
 }
 
