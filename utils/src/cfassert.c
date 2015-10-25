@@ -53,6 +53,7 @@ void storeAssertSnapshotData(char *file, int line);
 void assertFail(char *exp, char *file, int line)
 {
   storeAssertSnapshotData(file, line);
+  DEBUG_PRINT("Assert failed %s:%d\n", file, line);
 
   ledClearAll();
   ledSet(ERR_LED1, 1);
