@@ -34,10 +34,6 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "task.h"
-
-#include "led.h"
-#include "ledseq.h"
 
 #include "stm32f10x.h"
 

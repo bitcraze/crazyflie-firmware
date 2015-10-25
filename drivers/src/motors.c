@@ -35,7 +35,6 @@
 #include "pm.h"
 
 //FreeRTOS includes
-#include "FreeRTOS.h"
 #include "task.h"
 
 static uint16_t motorsBLConvBitsTo16(uint16_t bits);

@@ -24,13 +24,8 @@
  *
  * pid.c - implementation of the PID regulator
  */
-#include <math.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
 #include "pid.h"
-#include "led.h"
-#include "motors.h"
 
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float dt)

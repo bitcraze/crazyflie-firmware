@@ -40,7 +40,6 @@
 #include "cfassert.h"
 #include "nvicconf.h"
 #include "config.h"
-#include "ledseq.h"
 
 
 #define UART_DATA_TIMEOUT_MS 1000
@@ -337,12 +336,10 @@ void uartTxenFlowctrlIsr()
   if (GPIO_ReadInputDataBit(UART_TXEN_PORT, UART_TXEN_PIN) == Bit_SET)
   {
     uartPauseDma();
-    //ledSet(LED_GREEN_R, 1);
   }
   else
   {
     uartResumeDma();
-    //ledSet(LED_GREEN_R, 0);
   }
 }
 

@@ -43,7 +43,6 @@
 #include "usb_conf.h"
 #include "usbd_desc.h"
 #include "usb_dcd.h"
-#include "ledseq.h"
 
 #include "crtp.h"
 

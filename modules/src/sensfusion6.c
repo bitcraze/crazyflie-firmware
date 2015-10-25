@@ -26,7 +26,6 @@
 #include <math.h>
 
 #include "sensfusion6.h"
-#include "imu.h"
 #include "param.h"
 
 #define M_PI_F ((float) M_PI)

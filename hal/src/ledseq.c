@@ -34,7 +34,6 @@
 #include "timers.h"
 #include "semphr.h"
 
-#include <stdbool.h>
 #include "led.h"
 
 #ifdef CALIBRATED_LED_MORSE

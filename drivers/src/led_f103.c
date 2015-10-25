@@ -32,7 +32,6 @@
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
-#include "task.h"
 
 static bool isInit=false;
 

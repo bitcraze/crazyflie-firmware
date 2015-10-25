@@ -43,7 +43,6 @@
 #include "ledseq.h"
 #include "uart.h"
 #include "param.h"
-#include "log.h"
 
 #define IMU_ENABLE_MAG_HMC5883
 #define IMU_ENABLE_PRESSURE_MS5611

@@ -37,9 +37,6 @@
 #include "semphr.h"
 #include "task.h"
 
-#include "led.h"
-#include "ledseq.h"
-
 #include "debug.h"
 #include "cpal.h"
 #include "cpal_i2c.h"

@@ -29,7 +29,6 @@
 
 /* FreeRtos includes */
 #include "FreeRTOS.h"
-#include "task.h"
 
 #include "crtp.h"
 #include "crtpservice.h"

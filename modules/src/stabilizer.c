@@ -39,9 +39,7 @@
 #include "motors.h"
 #include "log.h"
 #include "pid.h"
-#include "ledseq.h"
 #include "param.h"
-#include "debug.h"
 #include "sitaw.h"
 #ifdef PLATFORM_CF1
   #include "ms5611.h"
