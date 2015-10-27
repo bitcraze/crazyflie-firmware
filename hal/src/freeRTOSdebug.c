@@ -34,7 +34,9 @@
 #include "nvicconf.h"
 #include "led.h"
 
-//#include "stm32f10x.h"
+#ifdef UART_OUTPUT_TRACE_DATA
+  #include "uart.h"
+#endif
 
 uint32_t traceTickCount;
 

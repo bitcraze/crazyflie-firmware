@@ -7,6 +7,8 @@
 # Make a copy of tools/make/config.mk.example to get you started
 -include tools/make/config.mk
 
+CFLAGS = $(EXTRA_CFLAGS)
+
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
