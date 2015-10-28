@@ -51,17 +51,15 @@
 #define SPPM_GPIO_SOURCE             GPIO_PinSource7
 #define SPPM_GPIO_AF                 GPIO_AF_TIM14
 
-#define SPPM_NR_CHANNELS             4
+#define SPPM_TIM_PRESCALER           (84 - 1) // TIM14 clock running at sysclk/2. Will give 1us tick.
+
+#define SPPM_MIN_PPM_USEC            1100
+#define SPPM_MAX_PPM_USEC            1900
 
 static xQueueHandle captureQueue;
-static struct CommanderCrtpValues commanderPacket;
 static uint16_t prevCapureVal;
 static bool captureFlag;
 static bool isAvailible;
-
-static uint16_t ch[SPPM_NR_CHANNELS];
-
-static void sppmTask(void *param);
 
 void sppmInit(void)
 {
@@ -83,7 +81,7 @@ void sppmInit(void)
 
   // Time base configuration. 1us tick.
   TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-  TIM_TimeBaseStructure.TIM_Prescaler = 84 - 1;
+  TIM_TimeBaseStructure.TIM_Prescaler = SPPM_TIM_PRESCALER;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(SPPM_TIMER, &TIM_TimeBaseStructure);
 
@@ -92,18 +90,15 @@ void sppmInit(void)
   TIM_ICInit(SPPM_TIMER, &TIM_ICInitStructure);
 
   NVIC_InitStructure.NVIC_IRQChannel = TIM8_TRG_COM_TIM14_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 14;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SPPM_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  captureQueue = xQueueCreate(50, sizeof(uint16_t));
+  captureQueue = xQueueCreate(64, sizeof(uint16_t));
 
-  xTaskCreate(sppmTask, (const signed char * const)SPPM_TASK_NAME,
-              SPPM_TASK_STACKSIZE, NULL, SPPM_TASK_PRI, NULL);
-
-  TIM_Cmd(SPPM_TIMER, ENABLE);
   TIM_ITConfig(SPPM_TIMER, TIM_IT_Update | TIM_IT_CC1, ENABLE);
+  TIM_Cmd(SPPM_TIMER, ENABLE);
 }
 
 bool sppmIsAvailible(void)
@@ -118,64 +113,42 @@ int sppmGetTimestamp(uint16_t *timestamp)
   return xQueueReceive(captureQueue, timestamp, portMAX_DELAY);
 }
 
+void sppmClearQueue(void)
+{
+  xQueueReset(captureQueue);
+}
+
 float sppmConvert2Float(uint16_t timestamp, float min, float max)
 {
-  float scale = (float)(timestamp - 1000) / 1000.0f;
+  if (timestamp < SPPM_MIN_PPM_USEC)
+  {
+    timestamp = SPPM_MIN_PPM_USEC;
+  }
+  if (timestamp > SPPM_MAX_PPM_USEC)
+  {
+    timestamp = SPPM_MAX_PPM_USEC;
+  }
+
+  float scale = (float)(timestamp - SPPM_MIN_PPM_USEC) / (float)(SPPM_MAX_PPM_USEC - SPPM_MIN_PPM_USEC);
 
   return min + ((max - min) * scale);
 }
 
 uint16_t sppmConvert2uint16(uint16_t timestamp)
 {
-  uint16_t base = (timestamp - 1000);
-
-  return base * 65;
-}
-
-
-static void sppmTask(void *param)
-{
-  uint16_t ppm;
-  uint8_t currChannel = 0;
-
-  while (true)
+  if (timestamp < SPPM_MIN_PPM_USEC)
   {
-    if (sppmGetTimestamp(&ppm) == pdTRUE)
-    {
-      if (sppmIsAvailible() &&  ppm < 2100)
-      {
-        switch (currChannel)
-        {
-          case 0:
-            ch[0] = ppm;
-            commanderPacket.thrust = sppmConvert2uint16(ppm);
-            break;
-          case 1:
-            ch[1] = ppm;
-            commanderPacket.roll = sppmConvert2Float(ppm, -40.0f, 40.0f);
-            break;
-          case 2:
-            ch[2] = ppm;
-             commanderPacket.pitch = sppmConvert2Float(ppm, -40.0f, 40.0f);
-            break;
-          case 3:
-            ch[3] = ppm;
-            commanderPacket.yaw = sppmConvert2Float(ppm, -400.0f, 400.0f);
-            commanderSet(&commanderPacket);
-            break;
-          default:
-            break;
-        }
-        currChannel++;
-      }
-      else
-      {
-        currChannel = 0;
-      }
-    }
+    timestamp = SPPM_MIN_PPM_USEC;
   }
-}
+  if (timestamp > SPPM_MAX_PPM_USEC)
+  {
+    timestamp = SPPM_MAX_PPM_USEC;
+  }
 
+  uint16_t base = (timestamp - SPPM_MIN_PPM_USEC);
+
+  return base * (65535 / (SPPM_MAX_PPM_USEC - SPPM_MIN_PPM_USEC));
+}
 
 void __attribute__((used)) TIM8_TRG_COM_TIM14_IRQHandler()
 {
@@ -208,19 +181,3 @@ void __attribute__((used)) TIM8_TRG_COM_TIM14_IRQHandler()
     TIM_ClearITPendingBit(SPPM_TIMER, TIM_IT_Update);
   }
 }
-
-#define ENABLE_SPPM_LOG
-/* Loggable variables */
-#ifdef ENABLE_SPPM_LOG
-LOG_GROUP_START(sppm)
-LOG_ADD(LOG_UINT16, ch0, &ch[0])
-LOG_ADD(LOG_UINT16, ch1, &ch[1])
-LOG_ADD(LOG_UINT16, ch2, &ch[2])
-LOG_ADD(LOG_UINT16, ch3, &ch[3])
-LOG_ADD(LOG_UINT16, thrust, &commanderPacket.thrust)
-LOG_ADD(LOG_FLOAT, roll, &commanderPacket.roll)
-LOG_ADD(LOG_FLOAT, pitch, &commanderPacket.pitch)
-LOG_ADD(LOG_FLOAT, yaw, &commanderPacket.yaw)
-LOG_GROUP_STOP(sppm)
-#endif
-

@@ -21,102 +21,61 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * uart.h - uart CRTP link and raw access functions
+ * uart_syslink.h - uart syslink to nRF51 and raw access functions
  */
-#ifndef UART_H_
-#define UART_H_
+#ifndef UART_SYSLINK_H_
+#define UART_SYSLINK_H_
 
 #include <stdbool.h>
 
 #include "crtp.h"
 #include "eprintf.h"
 
-#define NRF_UART
+#define UARTSLK_TYPE             USART6
+#define UARTSLK_PERIF            RCC_APB2Periph_USART6
+#define ENABLE_UARTSLK_RCC       RCC_APB2PeriphClockCmd
+#define UARTSLK_IRQ              USART6_IRQn
 
-#ifdef NRF_UART
-  #define UART_TYPE             USART6
-  #define UART_PERIF            RCC_APB2Periph_USART6
-  #define ENABLE_UART_RCC       RCC_APB2PeriphClockCmd
-  #define UART_IRQ              USART6_IRQn
+#define UARTSLK_DMA_IRQ          DMA2_Stream7_IRQn
+#define UARTSLK_DMA_IT_TC        DMA_IT_TC
+#define UARTSLK_DMA_STREAM       DMA2_Stream7
+#define UARTSLK_DMA_CH           DMA_Channel_5
+#define UARTSLK_DMA_FLAG_TCIF    DMA_FLAG_TCIF7
 
-  #define UART_DMA_IRQ          DMA2_Stream7_IRQn
-  #define UART_DMA_IT_TC        DMA_IT_TC
-  #define UART_DMA_STREAM       DMA2_Stream7
-  #define UART_DMA_CH           DMA_Channel_5
-  #define UART_DMA_FLAG_TCIF    DMA_FLAG_TCIF7
+#define UARTSLK_GPIO_PERIF       RCC_AHB1Periph_GPIOC
+#define UARTSLK_GPIO_PORT        GPIOC
+#define UARTSLK_GPIO_TX_PIN      GPIO_Pin_6
+#define UARTSLK_GPIO_RX_PIN      GPIO_Pin_7
+#define UARTSLK_GPIO_AF_TX_PIN   GPIO_PinSource6
+#define UARTSLK_GPIO_AF_RX_PIN   GPIO_PinSource7
+#define UARTSLK_GPIO_AF_TX       GPIO_AF_USART6
+#define UARTSLK_GPIO_AF_RX       GPIO_AF_USART6
 
-
-  #define UART_GPIO_PERIF       RCC_AHB1Periph_GPIOC
-  #define UART_GPIO_PORT        GPIOC
-  #define UART_GPIO_TX_PIN      GPIO_Pin_6
-  #define UART_GPIO_RX_PIN      GPIO_Pin_7
-  #define UART_GPIO_AF_TX_PIN   GPIO_PinSource6
-  #define UART_GPIO_AF_RX_PIN   GPIO_PinSource7
-  #define UART_GPIO_AF_TX       GPIO_AF_USART6
-  #define UART_GPIO_AF_RX       GPIO_AF_USART6
-
-  #define UART_TXEN_PERIF       RCC_AHB1Periph_GPIOA
-  #define UART_TXEN_PORT        GPIOA
-  #define UART_TXEN_PIN         GPIO_Pin_4
-  #define UART_TXEN_EXTI        EXTI_Line4
-#elif defined (EXT_UART1)
-  #define UART_TYPE             UART4
-  #define UART_PERIF            RCC_APB1Periph_UART4
-  #define ENABLE_UART_RCC       RCC_APB1PeriphClockCmd
-  #define UART_IRQ              UART4_IRQn
-
-  #define UART_DMA_IRQ          DMA1_Channel2_IRQn
-  #define UART_DMA_IT_TC        DMA1_IT_TC2
-  #define UART_DMA_CH           DMA1_Channel2
-
-  #define UART_GPIO_PERIF       RCC_AHB1Periph_GPIOC
-  #define UART_GPIO_PORT        GPIOC
-  #define UART_GPIO_TX_PIN      GPIO_Pin_10
-  #define UART_GPIO_RX_PIN      GPIO_Pin_11
-  #define UART_GPIO_AF_TX_PIN   GPIO_PinSource10
-  #define UART_GPIO_AF_RX_PIN   GPIO_PinSource11
-  #define UART_GPIO_AF_TX       GPIO_AF_UART4
-  #define UART_GPIO_AF_RX       GPIO_AF_UART4
-#else
-  #define UART_TYPE             USART2
-  #define UART_PERIF            RCC_APB1Periph_USART2
-  #define ENABLE_UART_RCC       RCC_APB1PeriphClockCmd
-  #define UART_IRQ              USART2_IRQn
-
-  #define UART_DMA_IRQ          DMA1_Channel2_IRQn
-  #define UART_DMA_IT_TC        DMA1_IT_TC2
-  #define UART_DMA_CH           DMA1_Channel2
-
-  #define UART_GPIO_PERIF       RCC_AHB1Periph_GPIOA
-  #define UART_GPIO_PORT        GPIOA
-  #define UART_GPIO_TX_PIN      GPIO_Pin_2
-  #define UART_GPIO_RX_PIN      GPIO_Pin_3
-  #define UART_GPIO_AF_TX_PIN   GPIO_PinSource2
-  #define UART_GPIO_AF_RX_PIN   GPIO_PinSource3
-  #define UART_GPIO_AF_TX       GPIO_AF_USART2
-  #define UART_GPIO_AF_RX       GPIO_AF_USART2
-#endif
+#define UARTSLK_TXEN_PERIF       RCC_AHB1Periph_GPIOA
+#define UARTSLK_TXEN_PORT        GPIOA
+#define UARTSLK_TXEN_PIN         GPIO_Pin_4
+#define UARTSLK_TXEN_EXTI        EXTI_Line4
 
 /**
  * Initialize the UART.
  *
  * @note Initialize CRTP link only if USE_CRTP_UART is defined
  */
-void uartInit(void);
+void uartslkInit(void);
 
 /**
  * Test the UART status.
  *
  * @return true if the UART is initialized
  */
-bool uartTest(void);
+bool uartslkTest(void);
 
 /**
  * Get CRTP link data structure
  *
  * @return Address of the crtp link operations structure.
  */
-struct crtpLinkOperations * uartGetLink();
+struct crtpLinkOperations * uartslkGetLink();
 
 /**
  * Get data from rx queue with timeout.
@@ -124,7 +83,7 @@ struct crtpLinkOperations * uartGetLink();
  *
  * @return true if byte received, false if timout reached.
  */
-bool uartGetDataWithTimout(uint8_t *c);
+bool uartslkGetDataWithTimout(uint8_t *c);
 
 /**
  * Sends raw data using a lock. Should be used from
@@ -135,32 +94,23 @@ bool uartGetDataWithTimout(uint8_t *c);
  *
  * @note If UART Crtp link is activated this function does nothing
  */
-void uartSendData(uint32_t size, uint8_t* data);
+void uartslkSendData(uint32_t size, uint8_t* data);
 
 /**
  * Sends raw data using interrupts and blocking semaphore.
  * @param[in] size  Number of bytes to send
  * @param[in] data  Pointer to data
  */
-void uartSendDataIsrBlocking(uint32_t size, uint8_t* data);
+void uartslkSendDataIsrBlocking(uint32_t size, uint8_t* data);
 
 /**
- * Send a single character to the serial port using the uartSendData function.
+ * Send a single character to the serial port using the uartslkSendData function.
  * @param[in] ch Character to print. Only the 8 LSB are used.
  * @return Character printed
  *
  * @note If UART Crtp link is activated this function does nothing
  */
-int uartPutchar(int ch);
-
-/**
- * Uart printf macro that uses eprintf
- * @param[in] FMT String format
- * @param[in] ... Parameters to print
- *
- * @note If UART Crtp link is activated this function does nothing
- */
-#define uartPrintf(FMT, ...) eprintf(uartPutchar, FMT, ## __VA_ARGS__)
+int uartslkPutchar(int ch);
 
 /**
  * Sends raw data using DMA transfer. Should be used from
@@ -171,18 +121,18 @@ int uartPutchar(int ch);
  *
  * @note If UART Crtp link is activated this function does nothing
  */
-void uartSendDataDmaBlocking(uint32_t size, uint8_t* data);
+void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data);
 
 /**
  * Interrupt service routine handling UART interrupts.
  */
-void uartIsr(void);
+void uartslkIsr(void);
 
 /**
  * Interrupt service routine handling UART DMA interrupts.
  */
-void uartDmaIsr(void);
+void uartslkDmaIsr(void);
 
-void uartTxenFlowctrlIsr();
+void uartslkTxenFlowctrlIsr();
 
-#endif /* UART_H_ */
+#endif /* UART_SYSLINK_H_ */

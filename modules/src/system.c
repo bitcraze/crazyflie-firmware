@@ -64,7 +64,7 @@
 #include "deck.h"
 #endif
 
-#include "sppm.h"
+#include "extrx.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -144,7 +144,10 @@ void systemTask(void *arg)
   queueMonitorInit();
 #endif
 
+#ifdef PLATFORM_CF1
   uartInit();
+#endif
+
 #ifdef ENABLE_UART1
   uart1Init();
 #endif
@@ -164,7 +167,7 @@ void systemTask(void *arg)
 #endif
 #endif //ndef USE_RADIOLINK_CRTP
 
-  sppmInit();
+  //extRxInit();
 
   commInit();
   commanderInit();

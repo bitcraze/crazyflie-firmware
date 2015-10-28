@@ -35,6 +35,7 @@
 #include "param.h"
 #include "log.h"
 #include "eskylink.h"
+#include "uart_syslink.h"
 #include "radiolink.h"
 #include "nrf24link.h"
 #include "usblink.h"
@@ -54,6 +55,7 @@ void commInit(void)
     nrf24linkInit();
   #endif
 #else
+  uartslkInit();
   usblinkInit();
   radiolinkInit();
 #endif
