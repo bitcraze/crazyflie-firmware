@@ -25,6 +25,10 @@
  */
 #include <string.h>
 
+/*FreeRtos includes*/
+#include "FreeRTOS.h"
+#include "queue.h"
+
 /*ST includes */
 #include "stm32fxxx.h"
 
@@ -33,13 +37,11 @@
 #include "uart1.h"
 #include "cfassert.h"
 #include "config.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
+#include "nvicconf.h"
 
+
+static xQueueHandle uart1queue;
 static bool isInit = false;
-
-static xQueueHandle uartDataDelivery;
 
 void uart1Init(void)
 {
@@ -77,14 +79,15 @@ void uart1Init(void)
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART1_TYPE, &USART_InitStructure);
 
-  uartDataDelivery = xQueueCreate(40, sizeof(uint8_t));
-
-  // Configure Tx buffer empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UART1_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART1_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
+
+  uart1queue = xQueueCreate(64, sizeof(uint8_t));
+
+  USART_ITConfig(UART1_TYPE, USART_IT_RXNE, ENABLE);
 
   //Enable UART
   USART_Cmd(UART1_TYPE, ENABLE);
@@ -97,6 +100,17 @@ void uart1Init(void)
 bool uart1Test(void)
 {
   return isInit;
+}
+
+bool uart1GetDataWithTimout(uint8_t *c)
+{
+  if (xQueueReceive(uart1queue, c, UART1_DATA_TIMEOUT_TICKS) == pdTRUE)
+  {
+    return true;
+  }
+
+  *c = 0;
+  return false;
 }
 
 void uart1SendData(uint32_t size, uint8_t* data)
@@ -120,18 +134,19 @@ int uart1Putchar(int ch)
     return (unsigned char)ch;
 }
 
-void uart1Getchar(char * ch) {
-  xQueueReceive(uartDataDelivery, ch, portMAX_DELAY);
+void uart1Getchar(char * ch)
+{
+  xQueueReceive(uart1queue, ch, portMAX_DELAY);
 }
-
-static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-static uint16_t rxDataInterrupt;
 
 void __attribute__((used)) USART3_IRQHandler(void)
 {
+  uint8_t rxData;
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
   if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
   {
-    rxDataInterrupt = USART_ReceiveData(UART1_TYPE) & 0xFF;
-    xQueueSendFromISR(uartDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
+    rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
+    xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
   }
 }

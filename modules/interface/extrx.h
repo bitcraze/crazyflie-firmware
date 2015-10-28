@@ -22,20 +22,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * sppm.h - PPM sum driver header file
+ * extrx.h -  Module to handle external receiver inputs
  */
 
 #include <stdint.h>
 
-void sppmInit(void);
-
-bool sppmIsAvailible(void);
-
-void sppmClearQueue(void);
-
-int sppmGetTimestamp(uint16_t *timestamp);
-
-float sppmConvert2Float(uint16_t timestamp, float min, float max);
-
-uint16_t sppmConvert2uint16(uint16_t timestamp);
+void extrxInit(void);
 

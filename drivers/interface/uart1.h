@@ -29,7 +29,9 @@
 #include <stdbool.h>
 #include "eprintf.h"
 
-#define UART1_BAUDRATE         9600
+#define UART1_BAUDRATE           9600
+#define UART1_DATA_TIMEOUT_MS    1000
+#define UART1_DATA_TIMEOUT_TICKS (UART1_DATA_TIMEOUT_MS / portTICK_RATE_MS)
 
 #define UART1_TYPE             USART3
 #define UART1_PERIF            RCC_APB1Periph_USART3
@@ -60,6 +62,13 @@ void uart1Init(void);
  * @return true if the UART is initialized
  */
 bool uart1Test(void);
+
+/**
+ * Read a byte of data from incoming queue with a timeout defined by UART1_DATA_TIMEOUT_MS
+ * @param[out] c  Read byte
+ * @return true if data, false if timeout was reached.
+ */
+bool uart1GetDataWithTimout(uint8_t *c);
 
 /**
  * Sends raw data using a lock. Should be used from
