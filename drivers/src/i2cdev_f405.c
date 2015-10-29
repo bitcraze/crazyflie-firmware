@@ -68,10 +68,11 @@ xSemaphoreHandle i2cdevDmaEventI2c3;
 static bool i2cdevWriteTransfer(I2C_Dev *dev);
 static bool i2cdevReadTransfer(I2C_Dev *dev);
 static inline void i2cdevRuffLoopDelay(uint32_t us);
-static void i2cdevReleaseSemaphoreI2C1(void);
-static void i2cdevReleaseSemaphoreI2C2(void);
-static void i2cdevReleaseSemaphoreI2C3(void);
 
+#define SEMAPHORE_TIMEOUT M2T(30)
+static void semaphoreGiveFromISR(xSemaphoreHandle semaphore);
+static void i2cDevTakeSemaphore(I2C_Dev* dev);
+static void i2cDevGiveSemaphoreFromISR(I2C_Dev* dev);
 
 int i2cdevInit(I2C_Dev *dev)
 {
@@ -169,18 +170,7 @@ static bool i2cdevReadTransfer(I2C_Dev *dev)
 
   if (status == CPAL_PASS)
   {
-    if (dev == I2C1_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c1, M2T(30));
-    }
-    else if (dev == I2C2_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c2, M2T(30));
-    }
-    else if (dev == I2C3_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c3, M2T(30));
-    }
+    i2cDevTakeSemaphore(dev);
 
     //TODO: Remove spin loop below. It does not work without it at the moment
     while(dev->CPAL_State != CPAL_STATE_READY && dev->CPAL_State != CPAL_STATE_ERROR);
@@ -268,18 +258,7 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev)
 
   if (status == CPAL_PASS)
   {
-    if (dev == I2C1_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c1, M2T(30));
-    }
-    else if (dev == I2C2_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c2, M2T(30));
-    }
-    else if (dev == I2C3_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c3, M2T(30));
-    }
+    i2cDevTakeSemaphore(dev);
 
     //TODO: Remove spin loop below. It does not work without it at the moment
     while(dev->CPAL_State != CPAL_STATE_READY && dev->CPAL_State != CPAL_STATE_ERROR);
@@ -331,11 +310,12 @@ void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinS
   GPIO_WAIT_FOR_HIGH(portSDA, pinSDA, 10 * I2CDEV_LOOPS_PER_MS);
 }
 
-static void i2cdevReleaseSemaphoreI2C1(void)
+
+static void semaphoreGiveFromISR(xSemaphoreHandle semaphore)
 {
   portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
 
-  xSemaphoreGiveFromISR(i2cdevDmaEventI2c1, &xHigherPriorityTaskWoken);
+  xSemaphoreGiveFromISR(semaphore, &xHigherPriorityTaskWoken);
 
   if(xHigherPriorityTaskWoken)
   {
@@ -343,27 +323,35 @@ static void i2cdevReleaseSemaphoreI2C1(void)
   }
 }
 
-static void i2cdevReleaseSemaphoreI2C2(void)
+static void i2cDevTakeSemaphore(I2C_Dev* dev)
 {
-  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
-
-  xSemaphoreGiveFromISR(i2cdevDmaEventI2c2, &xHigherPriorityTaskWoken);
-
-  if(xHigherPriorityTaskWoken)
-  {
-   vPortYieldFromISR();
-  }
+    if (dev == I2C1_DEV)
+    {
+      xSemaphoreTake(i2cdevDmaEventI2c1, SEMAPHORE_TIMEOUT);
+    }
+    else if (dev == I2C2_DEV)
+    {
+      xSemaphoreTake(i2cdevDmaEventI2c2, SEMAPHORE_TIMEOUT);
+    }
+    else if (dev == I2C3_DEV)
+    {
+      xSemaphoreTake(i2cdevDmaEventI2c3, SEMAPHORE_TIMEOUT);
+    }
 }
 
-static void i2cdevReleaseSemaphoreI2C3(void)
+static void i2cDevGiveSemaphoreFromISR(I2C_Dev* dev)
 {
-  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
-
-  xSemaphoreGiveFromISR(i2cdevDmaEventI2c3, &xHigherPriorityTaskWoken);
-
-  if(xHigherPriorityTaskWoken)
+  if (dev == I2C1_DEV)
   {
-   vPortYieldFromISR();
+    semaphoreGiveFromISR(i2cdevDmaEventI2c1);
+  }
+  else if (dev == I2C2_DEV)
+  {
+    semaphoreGiveFromISR(i2cdevDmaEventI2c2);
+  }
+  else if (dev == I2C3_DEV)
+  {
+    semaphoreGiveFromISR(i2cdevDmaEventI2c3);
   }
 }
 
@@ -387,18 +375,7 @@ void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceErro
   */
 void CPAL_I2C_TXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
 {
-  if (pDevInitStruct == I2C1_DEV)
-  {
-    i2cdevReleaseSemaphoreI2C1();
-  }
-  else if (pDevInitStruct == I2C2_DEV)
-  {
-    i2cdevReleaseSemaphoreI2C2();
-  }
-  else if (pDevInitStruct == I2C3_DEV)
-  {
-    i2cdevReleaseSemaphoreI2C3();
-  }
+  i2cDevGiveSemaphoreFromISR(pDevInitStruct);
 }
 
 /**
@@ -408,16 +385,7 @@ void CPAL_I2C_TXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
   */
 void CPAL_I2C_RXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
 {
-  if (pDevInitStruct == I2C1_DEV)
-  {
-    i2cdevReleaseSemaphoreI2C1();
-  }
-  else if (pDevInitStruct == I2C2_DEV)
-  {
-    i2cdevReleaseSemaphoreI2C2();
-  }
-  else if (pDevInitStruct == I2C3_DEV)
-  {
-    i2cdevReleaseSemaphoreI2C3();
-  }
+  i2cDevGiveSemaphoreFromISR(pDevInitStruct);
 }
+
+
