@@ -31,12 +31,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-//#if defined (STM32F40_41xxx)
 #include "cpal.h"
-//#else
-//#include "stm32f10x_i2c.h"
-//#endif
-
 
 // Delay is approx 0.2us per loop @64Mhz
 #define I2CDEV_LOOPS_PER_US  5

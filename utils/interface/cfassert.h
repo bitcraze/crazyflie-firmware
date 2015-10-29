@@ -32,6 +32,8 @@
 #define ASSERT(e)  if (e) ; \
         else assertFail( #e, __FILE__, __LINE__ )
 
+#define ASSERT_FAILED() assertFail( "", __FILE__, __LINE__ )
+
 /**
  * Assert handler function
  */

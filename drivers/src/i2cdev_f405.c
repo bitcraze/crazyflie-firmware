@@ -71,8 +71,9 @@ static inline void i2cdevRuffLoopDelay(uint32_t us);
 
 #define SEMAPHORE_TIMEOUT M2T(30)
 static void semaphoreGiveFromISR(xSemaphoreHandle semaphore);
-static void i2cDevTakeSemaphore(I2C_Dev* dev);
-static void i2cDevGiveSemaphoreFromISR(I2C_Dev* dev);
+static void i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev);
+static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev);
+static xSemaphoreHandle getSemaphore(CPAL_DevTypeDef CPAL_Dev);
 
 int i2cdevInit(I2C_Dev *dev)
 {
@@ -170,7 +171,7 @@ static bool i2cdevReadTransfer(I2C_Dev *dev)
 
   if (status == CPAL_PASS)
   {
-    i2cDevTakeSemaphore(dev);
+    i2cDevTakeSemaphore(dev->CPAL_Dev);
 
     //TODO: Remove spin loop below. It does not work without it at the moment
     while(dev->CPAL_State != CPAL_STATE_READY && dev->CPAL_State != CPAL_STATE_ERROR);
@@ -258,7 +259,7 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev)
 
   if (status == CPAL_PASS)
   {
-    i2cDevTakeSemaphore(dev);
+    i2cDevTakeSemaphore(dev->CPAL_Dev);
 
     //TODO: Remove spin loop below. It does not work without it at the moment
     while(dev->CPAL_State != CPAL_STATE_READY && dev->CPAL_State != CPAL_STATE_ERROR);
@@ -323,35 +324,38 @@ static void semaphoreGiveFromISR(xSemaphoreHandle semaphore)
   }
 }
 
-static void i2cDevTakeSemaphore(I2C_Dev* dev)
-{
-    if (dev == I2C1_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c1, SEMAPHORE_TIMEOUT);
-    }
-    else if (dev == I2C2_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c2, SEMAPHORE_TIMEOUT);
-    }
-    else if (dev == I2C3_DEV)
-    {
-      xSemaphoreTake(i2cdevDmaEventI2c3, SEMAPHORE_TIMEOUT);
-    }
+
+static xSemaphoreHandle getSemaphore(CPAL_DevTypeDef CPAL_Dev) {
+  xSemaphoreHandle result = NULL;
+
+  if (CPAL_Dev == (I2C1_DEV)->CPAL_Dev) {
+    result = i2cdevDmaEventI2c1;
+  } else if (CPAL_Dev == (I2C2_DEV)->CPAL_Dev) {
+    result = i2cdevDmaEventI2c2;
+  } else if (CPAL_Dev == (I2C3_DEV)->CPAL_Dev) {
+    result = i2cdevDmaEventI2c3;
+  } else {
+    ASSERT_FAILED();
+  }
+
+  return result;
 }
 
-static void i2cDevGiveSemaphoreFromISR(I2C_Dev* dev)
+
+static void i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev) {
+  xSemaphoreHandle semaphore = getSemaphore(CPAL_Dev);
+  xSemaphoreTake(semaphore, SEMAPHORE_TIMEOUT);
+}
+
+static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev)
 {
-  if (dev == I2C1_DEV)
-  {
-    semaphoreGiveFromISR(i2cdevDmaEventI2c1);
-  }
-  else if (dev == I2C2_DEV)
-  {
-    semaphoreGiveFromISR(i2cdevDmaEventI2c2);
-  }
-  else if (dev == I2C3_DEV)
-  {
-    semaphoreGiveFromISR(i2cdevDmaEventI2c3);
+  xSemaphoreHandle semaphore = getSemaphore(CPAL_Dev);
+  bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
+
+  if (isInInterrupt) {
+    semaphoreGiveFromISR(semaphore);
+  } else {
+    xSemaphoreGive(semaphore);
   }
 }
 
@@ -365,7 +369,20 @@ static void i2cDevGiveSemaphoreFromISR(I2C_Dev* dev)
   */
 void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceError)
 {
-  DEBUG_PRINT("Error callback nr: %i\n", (int)DeviceError);
+  DEBUG_PRINT("I2C error callback dev: %i, err: %i\n", (int)pDevInstance , (int)DeviceError);
+  i2cDevGiveSemaphore(pDevInstance);
+}
+
+/**
+  * @brief  User callback that manages the Timeout error.
+  * NOTE: This method is called from both interrupts and tasks!
+  * @param  pDevInitStruct .
+  * @retval None.
+  */
+uint32_t CPAL_TIMEOUT_UserCallback(CPAL_InitTypeDef* pDevInitStruct) {
+  DEBUG_PRINT("I2C timeout callback dev: %i\n", (int)pDevInitStruct->CPAL_Dev);
+  i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
+  return CPAL_PASS;
 }
 
 /**
@@ -375,7 +392,7 @@ void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceErro
   */
 void CPAL_I2C_TXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
 {
-  i2cDevGiveSemaphoreFromISR(pDevInitStruct);
+  i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
 }
 
 /**
@@ -385,7 +402,7 @@ void CPAL_I2C_TXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
   */
 void CPAL_I2C_RXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
 {
-  i2cDevGiveSemaphoreFromISR(pDevInitStruct);
+  i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
 }
 
 
