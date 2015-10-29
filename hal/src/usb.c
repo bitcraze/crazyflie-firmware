@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -219,6 +219,7 @@ static uint8_t  usbd_cf_DataIn (void *pdev, uint8_t epnum)
 
 static uint8_t  usbd_cf_SOF (void *pdev)
 {
+  char * const nullPacket = "\xff";
   portBASE_TYPE xTaskWokenByReceive = pdFALSE;
 
   if (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
@@ -227,6 +228,14 @@ static uint8_t  usbd_cf_SOF (void *pdev)
                IN_EP,
                (uint8_t*)outPacket.data,
                outPacket.size);
+  } else {
+    // If there is not at least one packet transfer per SOF there
+    // is an interrupt storm on TX fifo empty.
+    // This is a workaround.
+    DCD_EP_Tx (pdev,
+               IN_EP,
+               (uint8_t*) nullPacket,
+               1);
   }
 
   return USBD_OK;
