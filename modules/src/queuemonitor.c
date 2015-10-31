@@ -84,10 +84,7 @@ void qm_traceQUEUE_SEND(void* xQueue) {
     Data* queueData = getQueueData(xQueue);
 
     queueData->sendCount++;
-
-    // The nr of items waiting in a queue is measured BEFORE adding next item.
-    // Must add 1 to get peak value.
-    queueData->maxWaiting = getMaxWaiting(xQueue, queueData->maxWaiting) + 1;
+    queueData->maxWaiting = getMaxWaiting(xQueue, queueData->maxWaiting);
   }
 }
 
@@ -118,7 +115,9 @@ static Data* getQueueData(xQueueHandle* xQueue) {
 }
 
 static int getMaxWaiting(xQueueHandle* xQueue, int prevPeak) {
-  unsigned portBASE_TYPE waiting = uxQueueMessagesWaitingFromISR(xQueue);
+  // We get here before the current item is added to the queue.
+  // Must add 1 to get the peak value.
+  unsigned portBASE_TYPE waiting = uxQueueMessagesWaitingFromISR(xQueue) + 1;
 
   if (waiting > prevPeak) {
     return waiting;
