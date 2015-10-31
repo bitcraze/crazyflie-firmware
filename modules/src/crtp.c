@@ -38,6 +38,7 @@
 #include "crtp.h"
 #include "info.h"
 #include "cfassert.h"
+#include "queuemonitor.h"
 
 static bool isInit;
 
@@ -69,7 +70,9 @@ void crtpInit(void)
     return;
 
   txQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
+  DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
   rxQueue = xQueueCreate(CRTP_RX_QUEUE_SIZE, sizeof(CRTPPacket));
+  DEBUG_QUEUE_MONITOR_REGISTER(rxQueue);
 
   xTaskCreate(crtpTxTask, (const signed char * const)CRTP_TX_TASK_NAME,
               CRTP_TX_TASK_STACKSIZE, NULL, CRTP_TX_TASK_PRI, NULL);
@@ -92,6 +95,7 @@ void crtpInitTaskQueue(CRTPPort portId)
   ASSERT(queues[portId] == NULL);
   
   queues[portId] = xQueueCreate(1, sizeof(CRTPPacket));
+  DEBUG_QUEUE_MONITOR_REGISTER(queues[portId]);
 }
 
 int crtpReceivePacket(CRTPPort portId, CRTPPacket *p)

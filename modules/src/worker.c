@@ -30,6 +30,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "queuemonitor.h"
 
 #include "console.h"
 
@@ -48,6 +49,7 @@ void workerInit()
     return;
 
   workerQueue = xQueueCreate(WORKER_QUEUE_LENGTH, sizeof(struct worker_work));
+  DEBUG_QUEUE_MONITOR_REGISTER(workerQueue);
 }
 
 bool workerTest()

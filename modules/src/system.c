@@ -56,6 +56,7 @@
 #include "mem.h"
 #include "proximity.h"
 #include "watchdog.h"
+#include "queuemonitor.h"
 
 #ifdef PLATFORM_CF2
 #include "deck.h"
@@ -133,6 +134,10 @@ void systemTask(void *arg)
 
   ledInit();
   ledSet(CHG_LED, 1);
+
+#ifdef DEBUG_QUEUE_MONITOR
+  queueMonitorInit();
+#endif
 
   uartInit();
 #ifdef ENABLE_UART1

@@ -33,6 +33,7 @@
 #include "task.h"
 #include "semphr.h"
 #include "queue.h"
+#include "queuemonitor.h"
 
 #include "config.h"
 #include "usblink.h"
@@ -351,7 +352,9 @@ void usbInit(void)
 
   // This should probably be reduced to a CRTP packet size
   usbDataRx = xQueueCreate(5, sizeof(USBPacket)); /* Buffer USB packets (max 64 bytes) */
+  DEBUG_QUEUE_MONITOR_REGISTER(usbDataRx);
   usbDataTx = xQueueCreate(1, sizeof(USBPacket)); /* Buffer USB packets (max 64 bytes) */
+  DEBUG_QUEUE_MONITOR_REGISTER(usbDataTx);
 
   isInit = true;
 }

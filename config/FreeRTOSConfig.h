@@ -78,7 +78,6 @@
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) FREERTOS_MIN_STACK_SIZE )
 #define configTOTAL_HEAP_SIZE		( ( size_t ) ( FREERTOS_HEAP_SIZE ) )
 #define configMAX_TASK_NAME_LEN		( 10 )
-#define configUSE_TRACE_FACILITY	0
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		0
 #define configUSE_CO_ROUTINES 		0
@@ -140,4 +139,14 @@ to exclude the API function. */
 */
 // Send 4 first chatacters of task name to ITM port 1
 #define traceTASK_SWITCHED_IN() *((uint32_t*)0xE0000004) = *((uint32_t*)pxCurrentTCB->pcTaskName);
+
+// Queue monitoring
+#ifdef DEBUG_QUEUE_MONITOR
+    #define configUSE_TRACE_FACILITY	1
+    #define traceQUEUE_SEND(xQueue) qm_traceQUEUE_SEND(xQueue)
+    void qm_traceQUEUE_SEND(void* xQueue);
+    #define traceQUEUE_SEND_FAILED(xQueue) qm_traceQUEUE_SEND_FAILED(xQueue)
+    void qm_traceQUEUE_SEND_FAILED(void* xQueue);
+#endif // DEBUG_QUEUE_MONITOR
+
 #endif /* FREERTOS_CONFIG_H */

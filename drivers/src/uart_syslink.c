@@ -40,6 +40,7 @@
 #include "cfassert.h"
 #include "nvicconf.h"
 #include "config.h"
+#include "queuemonitor.h"
 
 
 #define UART_DATA_TIMEOUT_MS 1000
@@ -154,6 +155,7 @@ void uartInit(void)
 
   vSemaphoreCreateBinary(waitUntilSendDone);
   uartDataDelivery = xQueueCreate(40, sizeof(uint8_t));
+  DEBUG_QUEUE_MONITOR_REGISTER(uartDataDelivery);
 
   USART_ITConfig(UART_TYPE, USART_IT_RXNE, ENABLE);
 
