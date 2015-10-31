@@ -38,6 +38,9 @@
 #define MAX_NR_OF_QUEUES 20
 #define TIMER_PERIOD M2T(10000)
 
+#define RESET_COUNTERS_AFTER_DISPLAY true
+#define DISPLAY_ONLY_OVERFLOW_QUEUES true
+
 typedef struct
 {
   char* fileName;
@@ -54,9 +57,12 @@ static unsigned char nrOfQueues = 1; // Unregistered queues will end up at 0
 static bool initialized = false;
 
 static void timerHandler(xTimerHandle timer);
-static void debugPrintData();
+static void debugPrint();
+static bool filter(Data* queueData);
+static void debugPrintQueue(Data* queueData);
 static Data* getQueueData(xQueueHandle* xQueue);
 static int getMaxWaiting(xQueueHandle* xQueue, int prevPeak);
+static void resetCounters();
 
 unsigned char ucQueueGetQueueNumber( xQueueHandle xQueue );
 
@@ -78,7 +84,10 @@ void qm_traceQUEUE_SEND(void* xQueue) {
     Data* queueData = getQueueData(xQueue);
 
     queueData->sendCount++;
-    queueData->maxWaiting = getMaxWaiting(xQueue, queueData->maxWaiting);
+
+    // The nr of items waiting in a queue is measured BEFORE adding next item.
+    // Must add 1 to get peak value.
+    queueData->maxWaiting = getMaxWaiting(xQueue, queueData->maxWaiting) + 1;
   }
 }
 
@@ -117,25 +126,49 @@ static int getMaxWaiting(xQueueHandle* xQueue, int prevPeak) {
   return prevPeak;
 }
 
-static void debugPrintData() {
-  DEBUG_PRINT("Report\n");
-
-  int i;
+static void debugPrint() {
+  int i = 0;
   for (i = 0; i < nrOfQueues; i++) {
-    Data* curr = &data[i];
+    Data* queueData = &data[i];
+    if (filter(queueData)) {
+      debugPrintQueue(queueData);
+    }
+  }
 
-    // The nr of items waiting in a queue is measured BEFORE adding next item.
-    // Must add 1 to get peak value.
-    int peak = curr->maxWaiting + 1;
+  if (RESET_COUNTERS_AFTER_DISPLAY) {
+    resetCounters();
+  }
+}
 
-    DEBUG_PRINT("%s:%s, sent: %i, peak: %i, full: %i\n",
-      curr->fileName, curr->queueName, curr->sendCount, peak,
-      curr->fullCount);
+static bool filter(Data* queueData) {
+  bool doDisplay = false;
+  if (DISPLAY_ONLY_OVERFLOW_QUEUES) {
+    doDisplay = (queueData->fullCount != 0);
+  } else {
+    doDisplay = true;
+  }
+  return doDisplay;
+}
+
+static void debugPrintQueue(Data* queueData) {
+  DEBUG_PRINT("%s:%s, sent: %i, peak: %i, full: %i\n",
+    queueData->fileName, queueData->queueName, queueData->sendCount,
+    queueData->maxWaiting, queueData->fullCount);
+}
+
+static void resetCounters() {
+  int i = 0;
+  for (i = 0; i < nrOfQueues; i++) {
+    Data* queueData = &data[i];
+
+    queueData->sendCount = 0;
+    queueData->maxWaiting = 0;
+    queueData->fullCount = 0;
   }
 }
 
 static void timerHandler(xTimerHandle timer) {
-  debugPrintData();
+  debugPrint();
 }
 
 #endif // DEBUG_QUEUE_MONITOR
