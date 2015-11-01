@@ -153,8 +153,6 @@ int crtpGetFreeTxQueuePackets(void);
  */
 int crtpReceivePacketBlock(CRTPPort taskId, CRTPPacket *p);
 
-void crtpPacketReveived(CRTPPacket *p);
-
 /**
  * Function pointer structure to be filled by the CRTP link to permits CRTP to
  * use manu link
