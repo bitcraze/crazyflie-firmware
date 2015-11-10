@@ -43,6 +43,8 @@
 #define CONFIG_H_
 #include "nrf24l01.h"
 
+#include "trace.h"
+
 #define PROTOCOL_VERSION 2
 
 #ifdef STM32F4XX
