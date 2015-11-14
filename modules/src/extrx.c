@@ -48,12 +48,28 @@
 #define ENABLE_SPPM
 #define ENABLE_EXTRX_LOG
 
+
+#define EXTRX_NR_CHANNELS  6
+
+#define EXTRX_CH_TRUST     2
+#define EXTRX_CH_ROLL      0
+#define EXTRX_CH_PITCH     1
+#define EXTRX_CH_YAW       3
+
+#define EXTRX_SIGN_ROLL    (-1)
+#define EXTRX_SIGN_PITCH   (-1)
+#define EXTRX_SIGN_YAW     (-1)
+
+#define EXTRX_SCALE_ROLL   (40.0f)
+#define EXTRX_SCALE_PITCH  (40.0f)
+#define EXTRX_SCALE_YAW    (400.0f)
+
 static struct CommanderCrtpValues commanderPacket;
 static uint16_t ch[EXTRX_NR_CHANNELS];
 
 static void extRxTask(void *param);
 static void extRxDecodeSppm(void);
-
+static void extRxDecodeChannels(void);
 
 void extRxInit(void)
 {
@@ -85,7 +101,16 @@ static void extRxTask(void *param)
   }
 }
 
-void extRxDecodeSppm(void)
+static void extRxDecodeChannels(void)
+{
+  commanderPacket.thrust = sppmConvert2uint16(ch[EXTRX_CH_TRUST]);
+  commanderPacket.roll = EXTRX_SIGN_ROLL * sppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
+  commanderPacket.pitch = EXTRX_SIGN_PITCH * sppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
+  commanderPacket.yaw = EXTRX_SIGN_YAW * sppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
+  commanderExtrxSet(&commanderPacket);
+}
+
+static void extRxDecodeSppm(void)
 {
   uint16_t ppm;
   uint8_t currChannel = 0;
@@ -94,40 +119,23 @@ void extRxDecodeSppm(void)
   {
     if (sppmIsAvailible() &&  ppm < 2100)
     {
-      switch (currChannel)
+      if (currChannel < EXTRX_NR_CHANNELS)
       {
-        case 0:
-          ch[0] = ppm;
-          commanderPacket.thrust = sppmConvert2uint16(ppm);
-          break;
-        case 1:
-          ch[1] = ppm;
-          commanderPacket.roll = sppmConvert2Float(ppm, -40.0f, 40.0f);
-          break;
-        case 2:
-          ch[2] = ppm;
-           commanderPacket.pitch = sppmConvert2Float(ppm, -40.0f, 40.0f);
-          break;
-        case 3:
-          ch[3] = ppm;
-          commanderPacket.yaw = sppmConvert2Float(ppm, -400.0f, 400.0f);
-          //commanderSet(&commanderPacket);
-          break;
-        default:
-          break;
+        ch[currChannel] = ppm;
       }
       currChannel++;
     }
     else
     {
+      extRxDecodeChannels();
       currChannel = 0;
     }
   }
 }
 
-void extRxDecodeSpektrum(void)
-{
 #if 0
+static void extRxDecodeSpektrum(void)
+{
   while (SerialAvailable(SPEK_SERIAL_PORT) > SPEK_FRAME_SIZE)
   { // More than a frame?  More bytes implies we weren't called for multiple frame times.  We do not want to process 'old' frames in the buffer.
     for (uint8_t i = 0; i < SPEK_FRAME_SIZE; i++)
@@ -164,8 +172,8 @@ void extRxDecodeSpektrum(void)
       spekFrameFlags = 0;
     }  //If it has been a while, make the interrupt handler start over.
   }
-#endif
 }
+#endif
 
 /* Loggable variables */
 #ifdef ENABLE_EXTRX_LOG
