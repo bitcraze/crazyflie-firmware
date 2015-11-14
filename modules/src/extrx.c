@@ -33,19 +33,16 @@
 #include "stm32fxxx.h"
 #include "config.h"
 #include "system.h"
-#include "sppm.h"
 #include "nvicconf.h"
 #include "commander.h"
 #include "uart1.h"
-#include "sppm.h"
+#include "cppm.h"
 
 #define DEBUG_MODULE  "EXTRX"
 #include "debug.h"
 #include "log.h"
 
-#define EXTRX_NR_CHANNELS             4
-
-#define ENABLE_SPPM
+#define ENABLE_CPPM
 #define ENABLE_EXTRX_LOG
 
 
@@ -68,14 +65,14 @@ static struct CommanderCrtpValues commanderPacket;
 static uint16_t ch[EXTRX_NR_CHANNELS];
 
 static void extRxTask(void *param);
-static void extRxDecodeSppm(void);
+static void extRxDecodeCppm(void);
 static void extRxDecodeChannels(void);
 
 void extRxInit(void)
 {
 
-#ifdef ENABLE_SPPM
-  sppmInit();
+#ifdef ENABLE_CPPM
+  cppmInit();
 #endif
 
 #ifdef ENABLE_SPEKTRUM
@@ -97,27 +94,27 @@ static void extRxTask(void *param)
 
   while (true)
   {
-    extRxDecodeSppm();
+    extRxDecodeCppm();
   }
 }
 
 static void extRxDecodeChannels(void)
 {
-  commanderPacket.thrust = sppmConvert2uint16(ch[EXTRX_CH_TRUST]);
-  commanderPacket.roll = EXTRX_SIGN_ROLL * sppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
-  commanderPacket.pitch = EXTRX_SIGN_PITCH * sppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
-  commanderPacket.yaw = EXTRX_SIGN_YAW * sppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
+  commanderPacket.thrust = cppmConvert2uint16(ch[EXTRX_CH_TRUST]);
+  commanderPacket.roll = EXTRX_SIGN_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
+  commanderPacket.pitch = EXTRX_SIGN_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
+  commanderPacket.yaw = EXTRX_SIGN_YAW * cppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
   commanderExtrxSet(&commanderPacket);
 }
 
-static void extRxDecodeSppm(void)
+static void extRxDecodeCppm(void)
 {
   uint16_t ppm;
   uint8_t currChannel = 0;
 
-  if (sppmGetTimestamp(&ppm) == pdTRUE)
+  if (cppmGetTimestamp(&ppm) == pdTRUE)
   {
-    if (sppmIsAvailible() &&  ppm < 2100)
+    if (cppmIsAvailible() && ppm < 2100)
     {
       if (currChannel < EXTRX_NR_CHANNELS)
       {
