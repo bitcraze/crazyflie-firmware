@@ -22,20 +22,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * sppm.h - PPM sum driver header file
+ * cppm.h - Combined PPM / PPM-Sum driver header file
  */
 
 #include <stdint.h>
 
-void sppmInit(void);
+void cppmInit(void);
 
-bool sppmIsAvailible(void);
+bool cppmIsAvailible(void);
 
-void sppmClearQueue(void);
+void cppmClearQueue(void);
 
-int sppmGetTimestamp(uint16_t *timestamp);
+int cppmGetTimestamp(uint16_t *timestamp);
 
-float sppmConvert2Float(uint16_t timestamp, float min, float max);
+float cppmConvert2Float(uint16_t timestamp, float min, float max);
 
-uint16_t sppmConvert2uint16(uint16_t timestamp);
+uint16_t cppmConvert2uint16(uint16_t timestamp);
 
