@@ -35,7 +35,7 @@
   #define DEFUALT_YAW_MODE  XMODE
 #endif
 
-#define COMMANDER_WDT_TIMEOUT_STABALIZE  M2T(500)
+#define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
 /**
@@ -81,6 +81,6 @@ void commanderSetAltHoldMode(bool altHoldModeNew);
 YawModeType commanderGetYawMode(void);
 bool commanderGetYawModeCarefreeResetFront(void);
 
-void commanderSet(struct CommanderCrtpValues* val);
+void commanderExtrxSet(struct CommanderCrtpValues* val);
 
 #endif /* COMMANDER_H_ */
