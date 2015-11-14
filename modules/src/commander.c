@@ -48,6 +48,7 @@ typedef struct _CommanderCach
 static bool isInit;
 static CommanderCach crtpCach;
 static CommanderCach extrxCach;
+static CommanderCach* activeCach;
 
 static uint32_t lastUpdate;
 static bool isInactive;
@@ -64,48 +65,67 @@ static bool carefreeResetFront;             // Reset what is front in carefree m
 
 
 static void commanderCrtpCB(CRTPPacket* pk);
-static void commanderWatchdogReset(void);
+static void commanderCachSelectorUpdate(void);
 
-void commanderInit(void)
+/* Private functions */
+static void commanderSetActiveThrust(uint16_t thrust)
 {
-  if(isInit)
-    return;
-
-
-  crtpInit();
-  crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
-
-  lastUpdate = xTaskGetTickCount();
-  isInactive = true;
-  thrustLocked = true;
-  isInit = true;
+  activeCach->targetVal[activeCach->activeSide].thrust = thrust;
 }
 
-bool commanderTest(void)
+static void commanderSetActiveRoll(float roll)
 {
-  crtpTest();
-  return isInit;
+  activeCach->targetVal[activeCach->activeSide].roll = roll;
 }
 
-static void commandeDropToGround(CommanderCach* cach)
+static void commanderSetActivePitch(float pitch)
 {
-  cach->targetVal[cach->activeSide].thrust = 0;
-  cach->targetVal[cach->activeSide].roll = 0;
-  cach->targetVal[cach->activeSide].pitch = 0;
-  cach->targetVal[cach->activeSide].yaw = 0;
+  activeCach->targetVal[activeCach->activeSide].pitch = pitch;
 }
 
-static void commanderLevelRPY(CommanderCach* cach)
+static void commanderSetActiveYaw(float yaw)
 {
-  cach->targetVal[cach->activeSide].roll = 0;
-  cach->targetVal[cach->activeSide].pitch = 0;
-  cach->targetVal[cach->activeSide].yaw = 0;
+  activeCach->targetVal[activeCach->activeSide].yaw = yaw;
 }
 
-static CommanderCach* commanderCachSelector(void)
+static uint16_t commanderGetActiveThrust(void)
+{
+  commanderCachSelectorUpdate();
+  return activeCach->targetVal[activeCach->activeSide].thrust;
+}
+
+static float commanderGetActiveRoll(void)
+{
+  return activeCach->targetVal[activeCach->activeSide].roll;
+}
+
+static float commanderGetActivePitch(void)
+{
+  return activeCach->targetVal[activeCach->activeSide].pitch;
+}
+
+static float commanderGetActiveYaw(void)
+{
+  return activeCach->targetVal[activeCach->activeSide].yaw;
+}
+
+static void commanderLevelRPY(void)
+{
+  commanderSetActiveRoll(0);
+  commanderSetActivePitch(0);
+  commanderSetActiveYaw(0);
+}
+
+static void commandeDropToGround(void)
+{
+  commanderSetActiveThrust(0);
+  commanderLevelRPY();
+}
+
+
+static void commanderCachSelectorUpdate(void)
 {
   uint32_t tickNow = xTaskGetTickCount();
-  CommanderCach* activeCach;
 
   /* Check inputs and prioritize. Extrx higher then crtp */
   if ((tickNow - extrxCach.timestamp) < COMMANDER_WDT_TIMEOUT_STABILIZE)
@@ -119,20 +139,18 @@ static CommanderCach* commanderCachSelector(void)
   else if ((tickNow - extrxCach.timestamp) < COMMANDER_WDT_TIMEOUT_SHUTDOWN)
   {
     activeCach = &extrxCach;
-    commanderLevelRPY(activeCach);
+    commanderLevelRPY();
   }
   else if ((tickNow - crtpCach.timestamp) < COMMANDER_WDT_TIMEOUT_SHUTDOWN)
   {
     activeCach = &crtpCach;
-    commanderLevelRPY(activeCach);
+    commanderLevelRPY();
   }
   else
   {
     activeCach = &crtpCach;
-    commandeDropToGround(activeCach);
+    commandeDropToGround();
   }
-
-  return activeCach;
 }
 
 static void commanderCrtpCB(CRTPPacket* pk)
@@ -145,8 +163,28 @@ static void commanderCrtpCB(CRTPPacket* pk)
   {
     thrustLocked = false;
   }
+}
 
-  commanderWatchdogReset();
+/* Public functions */
+void commanderInit(void)
+{
+  if(isInit)
+    return;
+
+  crtpInit();
+  crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
+
+  activeCach = &crtpCach;
+  lastUpdate = xTaskGetTickCount();
+  isInactive = true;
+  thrustLocked = true;
+  isInit = true;
+}
+
+bool commanderTest(void)
+{
+  crtpTest();
+  return isInit;
 }
 
 void commanderExtrxSet(struct CommanderCrtpValues* val)
@@ -159,39 +197,6 @@ void commanderExtrxSet(struct CommanderCrtpValues* val)
   {
     thrustLocked = false;
   }
-
-  commanderWatchdogReset();
-}
-
-void commanderWatchdog(void)
-{
-  CommanderCach* cach = commanderCachSelector();
-  uint32_t ticktimeSinceUpdate;
-
-  ticktimeSinceUpdate = xTaskGetTickCount() - lastUpdate;
-
-  if (ticktimeSinceUpdate > COMMANDER_WDT_TIMEOUT_STABILIZE)
-  {
-    cach->targetVal[cach->activeSide].roll = 0;
-    cach->targetVal[cach->activeSide].pitch = 0;
-    cach->targetVal[cach->activeSide].yaw = 0;
-  }
-  if (ticktimeSinceUpdate > COMMANDER_WDT_TIMEOUT_SHUTDOWN)
-  {
-    cach->targetVal[cach->activeSide].thrust = 0;
-    altHoldMode = false; // do we need this? It would reset the target altitude upon reconnect if still hovering
-    isInactive = true;
-    thrustLocked = true;
-  }
-  else
-  {
-    isInactive = false;
-  }
-}
-
-static void commanderWatchdogReset(void)
-{
-  lastUpdate = xTaskGetTickCount();
 }
 
 uint32_t commanderGetInactivityTime(void)
@@ -201,20 +206,16 @@ uint32_t commanderGetInactivityTime(void)
 
 void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired)
 {
-  CommanderCach* cach = commanderCachSelector();
-
-  *eulerRollDesired  = cach->targetVal[cach->activeSide].roll;
-  *eulerPitchDesired = cach->targetVal[cach->activeSide].pitch;
-  *eulerYawDesired   = cach->targetVal[cach->activeSide].yaw;
+  *eulerRollDesired  = commanderGetActiveRoll();
+  *eulerPitchDesired = commanderGetActivePitch();
+  *eulerYawDesired   = commanderGetActiveYaw();
 }
 
 void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
 {
-  CommanderCach* cach = commanderCachSelector();
-
   *altHold = altHoldMode; // Still in altitude hold mode
   *setAltHold = !altHoldModeOld && altHoldMode; // Hover just activated
-  *altHoldChange = altHoldMode ? ((float) cach->targetVal[cach->activeSide].thrust - 32767.f) / 32767.f : 0.0; // Amount to change altitude hold target
+  *altHoldChange = altHoldMode ? ((float) commanderGetActiveThrust() - 32767.f) / 32767.f : 0.0; // Amount to change altitude hold target
   altHoldModeOld = altHoldMode;
 }
 
@@ -225,8 +226,6 @@ bool commanderGetAltHoldMode(void)
 
 void commanderSetAltHoldMode(bool altHoldModeNew)
 {
-  CommanderCach* cach = commanderCachSelector();
-
 	altHoldMode = altHoldModeNew;
 
 	/**
@@ -238,8 +237,9 @@ void commanderSetAltHoldMode(bool altHoldModeNew)
 	 * When altHoldChange is calculated to -1 when enabling altHoldMode, the altTarget will steadily decrease
 	 * until thrust is commanded to correct the altitude, which is what we want to avoid.
 	 */
-	if(altHoldModeNew) {
-	  cach->targetVal[cach->activeSide].thrust = 32767;
+	if(altHoldModeNew)
+	{
+	  commanderSetActiveThrust(32767);
 	}
 }
 
@@ -252,8 +252,7 @@ void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType
 
 void commanderGetThrust(uint16_t* thrust)
 {
-  CommanderCach* cach = commanderCachSelector();
-  uint16_t rawThrust = cach->targetVal[cach->activeSide].thrust;
+  uint16_t rawThrust = commanderGetActiveThrust();
 
   if (thrustLocked)
   {
@@ -275,8 +274,6 @@ void commanderGetThrust(uint16_t* thrust)
       *thrust = MAX_THRUST;
     }
   }
-
-  commanderWatchdog();
 }
 
 YawModeType commanderGetYawMode(void)
