@@ -70,7 +70,6 @@ typedef enum
 
 void commanderInit(void);
 bool commanderTest(void);
-void commanderWatchdog(void);
 uint32_t commanderGetInactivityTime(void);
 void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired);
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType);
@@ -80,7 +79,6 @@ bool commanderGetAltHoldMode(void);
 void commanderSetAltHoldMode(bool altHoldModeNew);
 YawModeType commanderGetYawMode(void);
 bool commanderGetYawModeCarefreeResetFront(void);
-
 void commanderExtrxSet(struct CommanderCrtpValues* val);
 
 #endif /* COMMANDER_H_ */
