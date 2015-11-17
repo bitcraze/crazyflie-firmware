@@ -82,7 +82,7 @@
 #define PM_TASK_PRI             0
 
 #ifdef PLATFORM_CF2
-  #define SYSLINK_TASK_PRI        3
+  #define SYSLINK_TASK_PRI        5
   #define USBLINK_TASK_PRI        3
 #endif
 

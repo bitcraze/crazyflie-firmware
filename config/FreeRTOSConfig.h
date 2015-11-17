@@ -88,7 +88,7 @@
 #define configUSE_MALLOC_FAILED_HOOK 1
 #define configTIMER_TASK_STACK_DEPTH configMINIMAL_STACK_SIZE
 
-#define configMAX_PRIORITIES		( ( unsigned portBASE_TYPE ) 5 )
+#define configMAX_PRIORITIES		( ( unsigned portBASE_TYPE ) 6 )
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 /* Set the following definitions to 1 to include the API function, or zero
@@ -142,7 +142,6 @@ to exclude the API function. */
 #ifdef DEBUG_QUEUE_MONITOR
     #undef traceQUEUE_SEND
     #undef traceQUEUE_SEND_FAILED
-    #define configUSE_TRACE_FACILITY	1
     #define traceQUEUE_SEND(xQueue) qm_traceQUEUE_SEND(xQueue)
     void qm_traceQUEUE_SEND(void* xQueue);
     #define traceQUEUE_SEND_FAILED(xQueue) qm_traceQUEUE_SEND_FAILED(xQueue)
