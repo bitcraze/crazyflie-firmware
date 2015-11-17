@@ -60,9 +60,14 @@
 #include "buzzer.h"
 #include "sound.h"
 
+#ifdef PLATFORM_CF1
+#include "uart.h"
+#endif
+
 #ifdef PLATFORM_CF2
 #include "deck.h"
 #endif
+
 
 #include "extrx.h"
 
@@ -166,8 +171,6 @@ void systemTask(void *arg)
 //  uartInit();
 #endif
 #endif //ndef USE_RADIOLINK_CRTP
-
-  //extRxInit();
 
   commInit();
   commanderInit();
