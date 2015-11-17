@@ -27,5 +27,5 @@
 
 #include <stdint.h>
 
-void extrxInit(void);
+void extRxInit(void);
 

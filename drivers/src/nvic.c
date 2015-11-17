@@ -31,8 +31,10 @@
 
 #ifdef PLATFORM_CF1
 #include "uart.h"
+#define UART_PRINT    uartPrintf
 #else
 #include "uart1.h"
+#define UART_PRINT    uart1Printf
 #endif
 
 #define DONT_DISCARD __attribute__((used))
@@ -121,20 +123,20 @@ void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
   stacked_psr = ((unsigned long) hardfaultArgs[7]);
 
 
-  uart1Printf("[Hard fault handler]\n");
-  uart1Printf("R0 = %x\n", stacked_r0);
-  uart1Printf("R1 = %x\n", stacked_r1);
-  uart1Printf("R2 = %x\n", stacked_r2);
-  uart1Printf("R3 = %x\n", stacked_r3);
-  uart1Printf("R12 = %x\n", stacked_r12);
-  uart1Printf("LR = %x\n", stacked_lr);
-  uart1Printf("PC = %x\n", stacked_pc);
-  uart1Printf("PSR = %x\n", stacked_psr);
-  uart1Printf("BFAR = %x\n", (*((volatile unsigned int *)(0xE000ED38))));
-  uart1Printf("CFSR = %x\n", (*((volatile unsigned int *)(0xE000ED28))));
-  uart1Printf("HFSR = %x\n", (*((volatile unsigned int *)(0xE000ED2C))));
-  uart1Printf("DFSR = %x\n", (*((volatile unsigned int *)(0xE000ED30))));
-  uart1Printf("AFSR = %x\n", (*((volatile unsigned int *)(0xE000ED3C))));
+  UART_PRINT("[Hard fault handler]\n");
+  UART_PRINT("R0 = %x\n", stacked_r0);
+  UART_PRINT("R1 = %x\n", stacked_r1);
+  UART_PRINT("R2 = %x\n", stacked_r2);
+  UART_PRINT("R3 = %x\n", stacked_r3);
+  UART_PRINT("R12 = %x\n", stacked_r12);
+  UART_PRINT("LR = %x\n", stacked_lr);
+  UART_PRINT("PC = %x\n", stacked_pc);
+  UART_PRINT("PSR = %x\n", stacked_psr);
+  UART_PRINT("BFAR = %x\n", (*((volatile unsigned int *)(0xE000ED38))));
+  UART_PRINT("CFSR = %x\n", (*((volatile unsigned int *)(0xE000ED28))));
+  UART_PRINT("HFSR = %x\n", (*((volatile unsigned int *)(0xE000ED2C))));
+  UART_PRINT("DFSR = %x\n", (*((volatile unsigned int *)(0xE000ED30))));
+  UART_PRINT("AFSR = %x\n", (*((volatile unsigned int *)(0xE000ED3C))));
 
   while (1)
   {}

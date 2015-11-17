@@ -33,6 +33,7 @@
 #include "motors.h"
 #include "debug.h"
 #include "deck.h"
+#include "extrx.h"
 
 //Hardware configuration
 static bool isInit;
@@ -44,6 +45,7 @@ static void bigquadInit(DeckInfo *info)
 
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
+  extRxInit();
 
   isInit = true;
 }
@@ -65,7 +67,7 @@ static const DeckDriver bigquad_deck = {
   .pid = 0x03,
   .name = "bcBigQuad",
 
-  .usedPeriph = DECK_USING_TIMER3,
+  .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,
   .usedGpio = 0,               // FIXME: Edit the used GPIOs
 
   .init = bigquadInit,

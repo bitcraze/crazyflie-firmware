@@ -117,6 +117,7 @@
 #define USBLINK_TASK_NAME       "USBLINK"
 #define PROXIMITY_TASK_NAME     "PROXIMITY"
 #define EXTRX_TASK_NAME         "EXTRX"
+#define UART_RX_TASK_NAME       "UART"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
@@ -135,6 +136,7 @@
 #define USBLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
+#define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

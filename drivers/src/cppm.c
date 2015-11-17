@@ -53,7 +53,7 @@
 
 #define CPPM_TIM_PRESCALER           (84 - 1) // TIM14 clock running at sysclk/2. Will give 1us tick.
 
-#define CPPM_MIN_PPM_USEC            1100
+#define CPPM_MIN_PPM_USEC            1150
 #define CPPM_MAX_PPM_USEC            1900
 
 static xQueueHandle captureQueue;
