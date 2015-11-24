@@ -34,6 +34,10 @@
 #include "debug.h"
 #include "deck.h"
 #include "extrx.h"
+#include "pm.h"
+
+#define BIGQUAD_BAT_MON_PIN   DECK_GPIO_MISO
+#define BIGQUAD_BAT_MON_MULT  7.8
 
 //Hardware configuration
 static bool isInit;
@@ -46,6 +50,7 @@ static void bigquadInit(DeckInfo *info)
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
   extRxInit();
+  pmEnableExtBatteryMeasuring(BIGQUAD_BAT_MON_PIN, BIGQUAD_BAT_MON_MULT);
 
   isInit = true;
 }
@@ -68,8 +73,7 @@ static const DeckDriver bigquad_deck = {
   .name = "bcBigQuad",
 
   .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,
-  .usedGpio = 0,               // FIXME: Edit the used GPIOs
-
+  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_PB4 | DECK_USING_PB5 | DECK_USING_PA7,
   .init = bigquadInit,
   .test = bigquadTest,
 };
