@@ -65,6 +65,7 @@ static float    batteryVoltageMax = 0.0;
 static float    extBatteryVoltage;
 static uint8_t  extBatVoltDeckPin;
 static float    extBatVoltMultiplier;
+static float    extBatteryCurrent;
 static uint8_t  extBatCurrDeckPin;
 static float    extBatCurrAmpPerVolt;
 
@@ -314,6 +315,7 @@ void pmTask(void *param)
     tickCount = xTaskGetTickCount();
 
     extBatteryVoltage = pmMeasureExtBatteryVoltage();
+    extBatteryCurrent = pmMeasureExtBatteryCurrent();
 
     if (pmGetBatteryVoltage() > PM_BAT_LOW_VOLTAGE)
     {
@@ -403,6 +405,7 @@ void pmTask(void *param)
 LOG_GROUP_START(pm)
 LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
 LOG_ADD(LOG_FLOAT, extVbat, &extBatteryVoltage)
+LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 LOG_ADD(LOG_INT8, state, &pmState)
 LOG_GROUP_STOP(pm)
