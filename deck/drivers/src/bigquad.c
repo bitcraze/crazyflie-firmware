@@ -36,8 +36,10 @@
 #include "extrx.h"
 #include "pm.h"
 
-#define BIGQUAD_BAT_MON_PIN   DECK_GPIO_MISO
-#define BIGQUAD_BAT_MON_MULT  7.8
+#define BIGQUAD_BAT_VOLT_PIN       DECK_GPIO_MISO
+#define BIGQUAD_BAT_VOLT_MULT      7.8f
+#define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
+#define BIGQUAD_BAT_AMP_PER_VOLT   10.0f
 
 //Hardware configuration
 static bool isInit;
@@ -50,7 +52,8 @@ static void bigquadInit(DeckInfo *info)
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
   extRxInit();
-  pmEnableExtBatteryMeasuring(BIGQUAD_BAT_MON_PIN, BIGQUAD_BAT_MON_MULT);
+  pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
+  pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
 
   isInit = true;
 }

@@ -63,8 +63,10 @@ static float    batteryVoltageMin = 6.0;
 static float    batteryVoltageMax = 0.0;
 
 static float    extBatteryVoltage;
-static uint8_t  extBatDeckPin;
-static float    extBatMultiplier;
+static uint8_t  extBatVoltDeckPin;
+static float    extBatVoltMultiplier;
+static uint8_t  extBatCurrDeckPin;
+static float    extBatCurrAmpPerVolt;
 
 static uint32_t batteryLowTimeStamp;
 static uint32_t batteryCriticalLowTimeStamp;
@@ -240,19 +242,41 @@ PMStates pmUpdateState()
   return state;
 }
 
-void pmEnableExtBatteryMeasuring(uint8_t pin, float multiplier)
+void pmEnableExtBatteryCurrMeasuring(uint8_t pin, float ampPerVolt)
 {
-  extBatDeckPin = pin;
-  extBatMultiplier = multiplier;
+  extBatCurrDeckPin = pin;
+  extBatCurrAmpPerVolt = ampPerVolt;
+}
+
+float pmMeasureExtBatteryCurrent(void)
+{
+  float current;
+
+  if (extBatCurrDeckPin)
+  {
+    current = analogReadVoltage(extBatCurrDeckPin) * extBatCurrAmpPerVolt;
+  }
+  else
+  {
+    current = 0.0;
+  }
+
+  return current;
+}
+
+void pmEnableExtBatteryVoltMeasuring(uint8_t pin, float multiplier)
+{
+  extBatVoltDeckPin = pin;
+  extBatVoltMultiplier = multiplier;
 }
 
 float pmMeasureExtBatteryVoltage(void)
 {
   float voltage;
 
-  if (extBatDeckPin)
+  if (extBatVoltDeckPin)
   {
-    voltage = analogReadVoltage(extBatDeckPin) * extBatMultiplier;
+    voltage = analogReadVoltage(extBatVoltDeckPin) * extBatVoltMultiplier;
   }
   else
   {

@@ -139,13 +139,23 @@ void pmBatteryUpdate(AdcGroup* adcValues);
 bool pmIsDischarging(void);
 
 /**
- * Enable or disable external battery measuring.
+ * Enable or disable external battery voltage measuring.
  */
-void pmEnableExtBatteryMeasuring(uint8_t pin, float multiplier);
+void pmEnableExtBatteryVoltMeasuring(uint8_t pin, float multiplier);
 
 /**
- * Measure an external voltage on a deck pin.
+ * Measure an external voltage.
  */
 float pmMeasureExtBatteryVoltage(void);
+
+/**
+ * Enable or disable external battery current measuring.
+ */
+void pmEnableExtBatteryCurrMeasuring(uint8_t pin, float ampPerVolt);
+
+/**
+ * Measure an external current.
+ */
+float pmMeasureExtBatteryCurrent(void);
 
 #endif /* PM_H_ */
