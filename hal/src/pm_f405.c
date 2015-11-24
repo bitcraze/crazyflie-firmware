@@ -37,10 +37,10 @@
 #include "pm.h"
 #include "led.h"
 #include "log.h"
-#include "adc.h"
 #include "ledseq.h"
 #include "commander.h"
 #include "sound.h"
+#include "deck.h"
 
 typedef struct _PmSyslinkInfo
 {
@@ -61,6 +61,11 @@ typedef struct _PmSyslinkInfo
 static float    batteryVoltage;
 static float    batteryVoltageMin = 6.0;
 static float    batteryVoltageMax = 0.0;
+
+static float    extBatteryVoltage;
+static uint8_t  extBatDeckPin;
+static float    extBatMultiplier;
+
 static uint32_t batteryLowTimeStamp;
 static uint32_t batteryCriticalLowTimeStamp;
 static bool isInit;
@@ -87,12 +92,6 @@ const static float bat671723HS25C[10] =
   4.04, // 80%
   4.10  // 90%
 };
-
-LOG_GROUP_START(pm)
-LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
-LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
-LOG_ADD(LOG_INT8, state, &pmState)
-LOG_GROUP_STOP(pm)
 
 void pmInit(void)
 {
@@ -241,6 +240,28 @@ PMStates pmUpdateState()
   return state;
 }
 
+void pmEnableExtBatteryMeasuring(uint8_t pin, float multiplier)
+{
+  extBatDeckPin = pin;
+  extBatMultiplier = multiplier;
+}
+
+float pmMeasureExtBatteryVoltage(void)
+{
+  float voltage;
+
+  if (extBatDeckPin)
+  {
+    voltage = analogReadVoltage(extBatDeckPin) * extBatMultiplier;
+  }
+  else
+  {
+    voltage = 0.0;
+  }
+
+  return voltage;
+}
+
 
 // return true if battery discharging
 bool pmIsDischarging(void) {
@@ -267,6 +288,8 @@ void pmTask(void *param)
   {
     vTaskDelay(100);
     tickCount = xTaskGetTickCount();
+
+    extBatteryVoltage = pmMeasureExtBatteryVoltage();
 
     if (pmGetBatteryVoltage() > PM_BAT_LOW_VOLTAGE)
     {
@@ -352,3 +375,11 @@ void pmTask(void *param)
     }
   }
 }
+
+LOG_GROUP_START(pm)
+LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+LOG_ADD(LOG_FLOAT, extVbat, &extBatteryVoltage)
+LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
+LOG_ADD(LOG_INT8, state, &pmState)
+LOG_GROUP_STOP(pm)
+

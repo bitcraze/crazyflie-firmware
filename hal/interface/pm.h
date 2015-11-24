@@ -137,4 +137,15 @@ void pmBatteryUpdate(AdcGroup* adcValues);
  * Returns true if the battery is currently in use
  */
 bool pmIsDischarging(void);
+
+/**
+ * Enable or disable external battery measuring.
+ */
+void pmEnableExtBatteryMeasuring(uint8_t pin, float multiplier);
+
+/**
+ * Measure an external voltage on a deck pin.
+ */
+float pmMeasureExtBatteryVoltage(void);
+
 #endif /* PM_H_ */

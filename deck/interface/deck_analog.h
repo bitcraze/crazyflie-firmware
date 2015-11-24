@@ -31,11 +31,21 @@
 
 /* Voltage reference types for the analogReference() function. */
 #define DEFAULT 0
+#define VREF    3.0
 
 void adcInit(void);
 
 uint16_t analogRead(uint32_t pin);
 
 void analogReference(uint8_t type);
+
+void analogReadResolution(uint8_t bits);
+
+/*
+ * Read the voltage on a deck pin.
+ * @param[in] pin   deck pin to measure.
+ * @return          voltage in volts
+ */
+float analogReadVoltage(uint32_t pin);
 
 #endif

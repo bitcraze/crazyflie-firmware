@@ -102,17 +102,17 @@ static uint32_t maxSonarGetAccuracyMB1040(uint32_t distance)
 static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
 {
   /*
-   * analogRead() returns a 10-bit (0-1023) value scaled to the range between GND (0V) and VREF.
-   * The voltage conversion is: V = analogRead() / 1024 * VREF)
+   * analogRead() returns a 12-bit (0-4095) value scaled to the range between GND (0V) and VREF.
+   * The voltage conversion is: V = analogRead() / 4096 * VREF)
    *
    * The MB1040 sensor returns a voltage between GND and VREF, but scaled to VREF / 512 (volts-per-inch).
    * Inches-per-volt is therefore expressed by (512 / VREF).
    *
    * The distance conversion is:             D = (512 / VREF) * V
-   * Expanding V, we get:                    D = (512 / VREF) * (analogRead() / 1024 * VREF)
-   * Which can be simplified to:             D = analogRead() / 2
-   * Last, we convert inches to millimeters: D = 25.4 * analogRead() / 2
-   * Which can be written as:                D = IN2MM(analogRead()) / 2
+   * Expanding V, we get:                    D = (512 / VREF) * (analogRead() / 4096 * VREF)
+   * Which can be simplified to:             D = analogRead() / 8
+   * Last, we convert inches to millimeters: D = 25.4 * analogRead() / 8
+   * Which can be written as:                D = IN2MM(analogRead()) / 8
    *   (to retain the sample's LSB)
    *
    * The above conversion assumes the ADC VREF is the same as the LV-MaxSonar-EZ4 VREF. This means
@@ -122,7 +122,7 @@ static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
    * the VCC pin on the deck port is safe.
    */
 
-  maxSonarDistance = (uint32_t) (IN2MM(analogRead(pin)) / 2);
+  maxSonarDistance = (uint32_t) (IN2MM(analogRead(pin)) / 8);
 
   if(NULL != accuracy) {
     *accuracy = maxSonarGetAccuracyMB1040(maxSonarDistance);
