@@ -54,14 +54,14 @@
 #include "console.h"
 #include "usb.h"
 #include "mem.h"
-#include "buzzer.h"
-#include "sound.h"
 #include "proximity.h"
 #include "watchdog.h"
 #include "queuemonitor.h"
 
 #ifdef PLATFORM_CF2
 #include "deck.h"
+#include "buzzer.h"
+#include "sound.h"
 #endif
 
 /* Private variable */
@@ -110,8 +110,9 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+#ifdef PLATFORM_CF2
   buzzerInit();
-
+#endif
   isInit = true;
 }
 
@@ -125,8 +126,9 @@ bool systemTest()
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
+#ifdef PLATFORM_CF2
   pass &= buzzerTest();
-
+#endif
   return pass;
 }
 
@@ -168,9 +170,9 @@ void systemTask(void *arg)
   stabilizerInit();
 #ifdef PLATFORM_CF2
   deckInit();
-#endif
-  memInit();
   soundInit();
+  #endif
+  memInit();
 
 #ifdef PROXIMITY_ENABLED
   proximityInit();
@@ -184,9 +186,9 @@ void systemTask(void *arg)
   pass &= stabilizerTest();
 #ifdef PLATFORM_CF2
   pass &= deckTest();
-#endif
-  pass &= memTest();
   pass &= soundTest();
+  #endif
+  pass &= memTest();
   pass &= watchdogNormalStartTest();
 
   //Start the firmware
