@@ -142,7 +142,7 @@ void uartInit(void)
 
   vSemaphoreCreateBinary(waitUntilSendDone);
 
-  xTaskCreate(uartRxTask, (const signed char * const)UART_RX_TASK_NAME,
+  xTaskCreate(uartRxTask, UART_RX_TASK_NAME,
               UART_RX_TASK_STACKSIZE, NULL, UART_RX_TASK_PRI, NULL);
 
   packetDelivery = xQueueCreate(2, sizeof(CRTPPacket));
@@ -274,7 +274,7 @@ void uartIsr(void)
 
     if (xHigherPriorityTaskWoken)
     {
-      vPortYieldFromISR();
+      portYIELD();
     }
   }
 }

@@ -99,7 +99,7 @@ void pmInit(void)
   if(isInit)
     return;
   
-  xTaskCreate(pmTask, (const signed char * const)PM_TASK_NAME,
+  xTaskCreate(pmTask, PM_TASK_NAME,
               PM_TASK_STACKSIZE, NULL, PM_TASK_PRI, NULL);
   
   isInit = true;

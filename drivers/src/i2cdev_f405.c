@@ -320,7 +320,7 @@ static void semaphoreGiveFromISR(xSemaphoreHandle semaphore)
 
   if(xHigherPriorityTaskWoken)
   {
-   vPortYieldFromISR();
+   portYIELD();
   }
 }
 

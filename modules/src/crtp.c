@@ -71,9 +71,9 @@ void crtpInit(void)
   txQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
 
-  xTaskCreate(crtpTxTask, (const signed char * const)CRTP_TX_TASK_NAME,
+  xTaskCreate(crtpTxTask, CRTP_TX_TASK_NAME,
               CRTP_TX_TASK_STACKSIZE, NULL, CRTP_TX_TASK_PRI, NULL);
-  xTaskCreate(crtpRxTask, (const signed char * const)CRTP_RX_TASK_NAME,
+  xTaskCreate(crtpRxTask, CRTP_RX_TASK_NAME,
               CRTP_RX_TASK_STACKSIZE, NULL, CRTP_RX_TASK_PRI, NULL);
 
   /* Start Rx/Tx tasks */

@@ -631,7 +631,7 @@ static void ledring12Init(DeckInfo *info)
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-  timer = xTimerCreate( (const signed char *)"ringTimer", M2T(50),
+  timer = xTimerCreate( "ringTimer", M2T(50),
                                      pdTRUE, NULL, ledring12Timer );
   xTimerStart(timer, 100);
 }

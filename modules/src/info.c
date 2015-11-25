@@ -66,7 +66,7 @@ void infoTask(void *param);
 
 void infoInit()
 {
-  xTaskCreate(infoTask, (const signed char * const)INFO_TASK_NAME,
+  xTaskCreate(infoTask, INFO_TASK_NAME,
               INFO_TASK_STACKSIZE, NULL, INFO_TASK_PRI, NULL);
   crtpInitTaskQueue(crtpInfo);
 }

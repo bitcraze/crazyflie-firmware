@@ -49,9 +49,9 @@
 #define ITM_BLOCKING_ON_QUEUE_RECEIVE 0x0300
 #define ITM_BLOCKING_ON_QUEUE_SEND 0x0400
 
-#define traceQUEUE_SEND(xQueue) ITM_SEND(3, ITM_QUEUE_SEND | ((xQUEUE *) xQueue)->ucQueueNumber)
-#define traceQUEUE_SEND_FAILED(xQueue) ITM_SEND(3, ITM_QUEUE_FAILED | ((xQUEUE *) xQueue)->ucQueueNumber)
-#define traceBLOCKING_ON_QUEUE_RECEIVE(xQueue) ITM_SEND(3, ITM_BLOCKING_ON_QUEUE_RECEIVE | ((xQUEUE *) xQueue)->ucQueueNumber)
-#define traceBLOCKING_ON_QUEUE_SEND(xQueue) ITM_SEND(3, ITM_BLOCKING_ON_QUEUE_SEND | ((xQUEUE *) xQueue)->ucQueueNumber)
+// #define traceQUEUE_SEND(xQueue) ITM_SEND(3, ITM_QUEUE_SEND | ((xQUEUE *) xQueue)->ucQueueNumber)
+// #define traceQUEUE_SEND_FAILED(xQueue) ITM_SEND(3, ITM_QUEUE_FAILED | ((xQUEUE *) xQueue)->ucQueueNumber)
+// #define traceBLOCKING_ON_QUEUE_RECEIVE(xQueue) ITM_SEND(3, ITM_BLOCKING_ON_QUEUE_RECEIVE | ((xQUEUE *) xQueue)->ucQueueNumber)
+// #define traceBLOCKING_ON_QUEUE_SEND(xQueue) ITM_SEND(3, ITM_BLOCKING_ON_QUEUE_SEND | ((xQUEUE *) xQueue)->ucQueueNumber)
 
 #endif

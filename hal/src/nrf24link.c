@@ -72,7 +72,7 @@ static void interruptCallback()
   xSemaphoreGiveFromISR(dataRdy, &xHigherPriorityTaskWoken);
 
   if(xHigherPriorityTaskWoken)
-    vPortYieldFromISR();
+    portYIELD();
 }
 
 // 'Class' functions, called from callbacks
@@ -239,7 +239,7 @@ void nrf24linkInit()
   nrf24linkInitNRF24L01P();
 
     /* Launch the Radio link task */
-  xTaskCreate(nrf24linkTask, (const signed char * const)NRF24LINK_TASK_NAME,
+  xTaskCreate(nrf24linkTask, NRF24LINK_TASK_NAME,
               NRF24LINK_TASK_STACKSIZE, NULL, NRF24LINK_TASK_PRI, NULL);
 
   isInit = true;

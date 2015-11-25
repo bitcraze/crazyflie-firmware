@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -209,7 +209,7 @@ void adcInit(void)
 
   adcQueue = xQueueCreate(1, sizeof(AdcGroup*));
 
-  xTaskCreate(adcTask, (const signed char * const)ADC_TASK_NAME,
+  xTaskCreate(adcTask, ADC_TASK_NAME,
               ADC_TASK_STACKSIZE, NULL, ADC_TASK_PRI, NULL);
 
   isInit = true;

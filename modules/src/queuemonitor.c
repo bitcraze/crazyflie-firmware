@@ -69,7 +69,7 @@ unsigned char ucQueueGetQueueNumber( xQueueHandle xQueue );
 
 void queueMonitorInit() {
   ASSERT(!initialized);
-  timer = xTimerCreate( (const signed char *)"queueMonitorTimer", TIMER_PERIOD,
+  timer = xTimerCreate( "queueMonitorTimer", TIMER_PERIOD,
     pdTRUE, NULL, timerHandler );
   xTimerStart(timer, 100);
 

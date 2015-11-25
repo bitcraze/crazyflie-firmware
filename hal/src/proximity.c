@@ -173,7 +173,7 @@ void proximityInit(void)
 
 #if defined(PROXIMITY_ENABLED)
   /* Only start the task if the proximity subsystem is enabled in conf.h */
-  xTaskCreate(proximityTask, (const signed char * const)PROXIMITY_TASK_NAME,
+  xTaskCreate(proximityTask, PROXIMITY_TASK_NAME,
               PROXIMITY_TASK_STACKSIZE, NULL, PROXIMITY_TASK_PRI, NULL);
 #endif
 

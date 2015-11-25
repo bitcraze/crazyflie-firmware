@@ -169,7 +169,7 @@ void logInit(void)
   logReset();
 
   //Start the log task
-  xTaskCreate(logTask, (const signed char * const)LOG_TASK_NAME,
+  xTaskCreate(logTask, LOG_TASK_NAME,
               LOG_TASK_STACKSIZE, NULL, LOG_TASK_PRI, NULL);
 
   isInit = true;
@@ -311,7 +311,7 @@ static int logCreateBlock(unsigned char id, struct ops_setting * settings, int l
     return ENOMEM;
 
   logBlocks[i].id = id;
-  logBlocks[i].timer = xTimerCreate( (const signed char *)"logTimer", M2T(1000),
+  logBlocks[i].timer = xTimerCreate( "logTimer", M2T(1000),
                                      pdTRUE, &logBlocks[i], logBlockTimed );
   logBlocks[i].ops = NULL;
 

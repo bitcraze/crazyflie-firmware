@@ -119,7 +119,7 @@ void memInit(void)
     isInit = false;
   
   //Start the mem task
-  xTaskCreate(memTask, (const signed char * const)MEM_TASK_NAME,
+  xTaskCreate(memTask, MEM_TASK_NAME,
               MEM_TASK_STACKSIZE, NULL, MEM_TASK_PRI, NULL);
 }
 

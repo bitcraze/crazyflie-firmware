@@ -129,7 +129,7 @@ void usblinkInit()
   crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
-  xTaskCreate(usblinkTask, (const signed char * const)USBLINK_TASK_NAME,
+  xTaskCreate(usblinkTask, USBLINK_TASK_NAME,
               USBLINK_TASK_STACKSIZE, NULL, USBLINK_TASK_PRI, NULL);
 
   isInit = true;

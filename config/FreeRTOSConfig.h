@@ -88,7 +88,7 @@
 #define configUSE_MALLOC_FAILED_HOOK 1
 #define configTIMER_TASK_STACK_DEPTH configMINIMAL_STACK_SIZE
 
-#define configMAX_PRIORITIES		( ( unsigned portBASE_TYPE ) 6 )
+#define configMAX_PRIORITIES		( 6 )
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 /* Set the following definitions to 1 to include the API function, or zero
@@ -130,6 +130,7 @@ to exclude the API function. */
 #define TASK_PROXIMITY_ID_NBR   6
 
 #define configASSERT( x )  if( ( x ) == 0 ) assertFail(#x, __FILE__, __LINE__ )
+
 /*
 #define traceTASK_SWITCHED_IN() \
   { \

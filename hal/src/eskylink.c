@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -66,7 +66,7 @@ xQueueHandle rxQueue;
 
 static struct {
   bool enabled;
-  
+
   bool paired;
   uint8_t band;
 } state;
@@ -79,7 +79,7 @@ static void interruptCallback()
   xSemaphoreGiveFromISR(dataRdy, &xHigherPriorityTaskWoken);
 
   if(xHigherPriorityTaskWoken)
-    vPortYieldFromISR();
+    portYIELD();
 }
 
 // 'Class' functions, called from callbacks
@@ -95,9 +95,9 @@ static int sendPacket(CRTPPacket * pk)
 {
   if (!state.enabled)
     return ENETDOWN;
-  
+
   // NOP!
-  
+
   return 0;
 }
 
@@ -127,20 +127,20 @@ static int eskylinkFetchData(char * packet, int dataLen)
 
   //clear the interruptions flags
   nrfWrite1Reg(REG_STATUS, 0x70);
-  
+
   nrfSetEnable(true);
-  
+
   return dataLen;
 }
 
 static void eskylinkInitPairing(void)
 {
   int i;
-  
+
   //Power the radio, Enable the DR interruption, set the radio in PRX mode with 2bytes CRC
   nrfWrite1Reg(REG_CONFIG, 0x3F);
   vTaskDelay(M2T(2)); //Wait for the chip to be ready
-  
+
    //Set the radio channel, pairing channel is 50
   nrfSetChannel(50);
   //Set the radio data rate
@@ -183,33 +183,33 @@ static void eskylinkDecode(char* packet)
   static CRTPPacket crtpPacket;
   float pitch, roll, yaw;
   uint16_t thrust;
-  
+
   pitch = ((packet[2]<<8) | packet[3])-PPM_ZERO;
   if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
   if (roll>PPM_RANGE) roll = PPM_RANGE;
   pitch *= 20.0/PPM_RANGE;
-  
+
   roll = ((packet[0]<<8) | packet[1])-PPM_ZERO;
   if (roll<(-PPM_RANGE)) roll = -PPM_RANGE;
   if (roll>PPM_RANGE) roll = PPM_RANGE;
   roll *= 20.0/PPM_RANGE;
-  
+
   yaw = ((packet[6]<<8) | packet[7])-PPM_ZERO;
   if (yaw<(-PPM_RANGE)) yaw = -PPM_RANGE;
   if (yaw>PPM_RANGE) yaw = PPM_RANGE;
   yaw *= 200.0/PPM_RANGE;
-  
+
   thrust = ((packet[4]<<8) | packet[5])-PPM_MIN;
   if (thrust<0) thrust = 0;
   if (thrust>(2*PPM_RANGE)) thrust = 2*PPM_RANGE;
   thrust *= 55000/(2*PPM_RANGE);
-  
+
   crtpPacket.port = CRTP_PORT_COMMANDER;
   memcpy(&crtpPacket.data[0],  (char*)&roll,   4);
   memcpy(&crtpPacket.data[4],  (char*)&pitch,  4);
   memcpy(&crtpPacket.data[8],  (char*)&yaw,    4);
   memcpy(&crtpPacket.data[12], (char*)&thrust, 2);
-  
+
   xQueueSend(rxQueue, &crtpPacket, 0);
 }
 
@@ -224,7 +224,7 @@ static void eskylinkTask(void * arg)
   {
     xSemaphoreTake(dataRdy, portMAX_DELAY);
     ledseqRun(LED_GREEN, seq_linkup);
-    
+
     eskylinkFetchData(packet, 13);
 
     if (packet[4]==0x18 && packet[5]==0x29)
@@ -249,10 +249,10 @@ static void eskylinkTask(void * arg)
     if (xSemaphoreTake(dataRdy, M2T(10))==pdTRUE)
     {
       ledseqRun(LED_GREEN, seq_linkup);
-    
+
       eskylinkFetchData(packet, 13);
       eskylinkDecode(packet);
-      
+
       if (channel1<0) //Channels found!
       {
         channel1 = channel;
@@ -261,7 +261,7 @@ static void eskylinkTask(void * arg)
       }
     }
     else
-    { 
+    {
       if (channel1<0)
       {
         channel++;
@@ -276,12 +276,12 @@ static void eskylinkTask(void * arg)
           channel = channel2;
         else
           channel = channel1;
-        
+
         nrfSetEnable(false);
         nrfSetChannel(channel);
         nrfSetEnable(true);
       }
-      
+
     }
   }
 }
@@ -310,7 +310,7 @@ void eskylinkInit()
   eskylinkInitPairing();
 
     /* Launch the Radio link task */
-  xTaskCreate(eskylinkTask, (const signed char * const)ESKYLINK_TASK_NAME,
+  xTaskCreate(eskylinkTask, ESKYLINK_TASK_NAME,
               ESKYLINK_TASK_STACKSIZE, NULL, ESKYLINK_TASK_PRI, NULL);
 
   isInit = true;

@@ -154,7 +154,7 @@ void pmInit(void)
   GPIO_InitStructure.GPIO_Pin = PM_GPIO_USB_CON;
   GPIO_Init(PM_GPIO_USB_CON_PORT, &GPIO_InitStructure);
   
-  xTaskCreate(pmTask, (const signed char * const)PM_TASK_NAME,
+  xTaskCreate(pmTask, PM_TASK_NAME,
               PM_TASK_STACKSIZE, NULL, PM_TASK_PRI, NULL);
   
   isInit = true;
