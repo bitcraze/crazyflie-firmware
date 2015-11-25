@@ -29,6 +29,7 @@
 /* FreeRtos includes */
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "FreeRTOS.h"
 #include "timers.h"
