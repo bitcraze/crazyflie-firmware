@@ -130,7 +130,7 @@ PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
-PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o
+PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o
 
@@ -138,7 +138,7 @@ PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
-PROJ_OBJ_CF2 += platformservice.o
+PROJ_OBJ_CF2 += platformservice.o sound.o
 
 # Deck Core
 PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
@@ -147,7 +147,7 @@ PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
 PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
-PROJ_OBJ_CF2 += buzzer.o
+PROJ_OBJ_CF2 += buzzdeck.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o

@@ -54,6 +54,8 @@
 #include "console.h"
 #include "usb.h"
 #include "mem.h"
+#include "buzzer.h"
+#include "sound.h"
 #include "proximity.h"
 #include "watchdog.h"
 #include "queuemonitor.h"
@@ -108,6 +110,7 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+  buzzerInit();
 
   isInit = true;
 }
@@ -122,6 +125,7 @@ bool systemTest()
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
+  pass &= buzzerTest();
 
   return pass;
 }
@@ -166,6 +170,7 @@ void systemTask(void *arg)
   deckInit();
 #endif
   memInit();
+  soundInit();
 
 #ifdef PROXIMITY_ENABLED
   proximityInit();
@@ -181,6 +186,7 @@ void systemTask(void *arg)
   pass &= deckTest();
 #endif
   pass &= memTest();
+  pass &= soundTest();
   pass &= watchdogNormalStartTest();
 
   //Start the firmware
