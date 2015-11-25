@@ -324,7 +324,7 @@ void soundInit(void)
 
   neffect = sizeof(effects)/sizeof(effects[0])-1;
 
-  timer = xTimerCreate( (const signed char *)"SoundTimer", M2T(10),
+  timer = xTimerCreate("SoundTimer", M2T(10),
                                      pdTRUE, NULL, soundTimer);
   xTimerStart(timer, 100);
 
@@ -351,4 +351,3 @@ PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
 PARAM_ADD(PARAM_UINT16, freq, &static_freq)
 PARAM_ADD(PARAM_UINT8, ratio, &static_ratio)
 PARAM_GROUP_STOP(sound)
-
