@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -30,6 +30,8 @@
 // ST lib includes
 #include "stm32fxxx.h"
 
+#include "nvicconf.h"
+
 #include "FreeRTOS.h"
 #include "semphr.h"
 
@@ -45,7 +47,7 @@ static xSemaphoreHandle allLedDone = NULL;
 
 // The minimum is to have 2 leds (1 per half buffer) in the buffer, this
 // consume 42Bytes and will trigger the DMA interrupt at ~2KHz.
-// Putting 2 there will divide by 2 the interrupt frequency but will also 
+// Putting 2 there will divide by 2 the interrupt frequency but will also
 // double the memory consumption (no free lunch ;-)
 #define LED_PER_HALF 1
 
@@ -63,7 +65,7 @@ static union {
 void ws2812Init(void)
 {
 	uint16_t PrescalerValue;
-	
+
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 	/* GPIOB Configuration: TIM3 Channel 1 as alternate function push-pull */
@@ -82,7 +84,7 @@ void ws2812Init(void)
 
   //Map timer to alternate functions
   GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_TIM3);
-	
+
 	/* Compute the prescaler value */
 	PrescalerValue = 0;
 	/* Time base configuration */
@@ -130,7 +132,7 @@ void ws2812Init(void)
 	DMA_Init(DMA1_Stream5, &DMA_InitStructure);
 
   NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream5_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 11;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -140,15 +142,15 @@ void ws2812Init(void)
 
 	/* TIM3 CC2 DMA Request enable */
 	TIM_DMACmd(TIM3, TIM_DMA_CC2, ENABLE);
-	
+
 	vSemaphoreCreateBinary(allLedDone);
-	
+
 }
 
 static void fillLed(uint16_t *buffer, uint8_t *color)
 {
     int i;
-    
+
     for(i=0; i<8; i++) // GREEN data
 	{
 	    buffer[i] = ((color[1]<<i) & 0x0080) ? TIMING_ONE:TIMING_ZERO;
@@ -171,7 +173,7 @@ void ws2812Send(uint8_t (*color)[3], int len)
 {
     int i;
 	if(len<1) return;
-	
+
 	//Wait for previous transfer to be finished
 	xSemaphoreTake(allLedDone, portMAX_DELAY);
 
@@ -179,21 +181,21 @@ void ws2812Send(uint8_t (*color)[3], int len)
 	current_led = 0;
 	total_led = len;
 	color_led = color;
-	
+
     for(i=0; (i<LED_PER_HALF) && (current_led<total_led+2); i++, current_led++) {
         if (current_led<total_led)
             fillLed(led_dma.begin+(24*i), color_led[current_led]);
         else
             bzero(led_dma.begin+(24*i), sizeof(led_dma.begin));
     }
-    
+
     for(i=0; (i<LED_PER_HALF) && (current_led<total_led+2); i++, current_led++) {
         if (current_led<total_led)
             fillLed(led_dma.end+(24*i), color_led[current_led]);
         else
             bzero(led_dma.end+(24*i), sizeof(led_dma.end));
     }
-		
+
 	DMA1_Stream5->NDTR = sizeof(led_dma.buffer) / sizeof(led_dma.buffer[0]); // load number of bytes to be transferred
 	DMA_Cmd(DMA1_Stream5, ENABLE); 			// enable DMA channel 2
 	TIM_Cmd(TIM3, ENABLE);                      // Go!!!
@@ -204,19 +206,19 @@ void ws2812DmaIsr(void)
     portBASE_TYPE xHigherPriorityTaskWoken;
     uint16_t * buffer;
     int i;
-    
+
     if (total_led == 0)
     {
       TIM_Cmd(TIM3, DISABLE);
     	DMA_Cmd(DMA1_Stream5, DISABLE);
     }
-    
+
     if (DMA_GetITStatus(DMA1_Stream5, DMA_IT_HTIF5))
     {
       DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_HTIF5);
       buffer = led_dma.begin;
     }
-    
+
     if (DMA_GetITStatus(DMA1_Stream5, DMA_IT_TCIF5))
     {
       DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
@@ -229,14 +231,13 @@ void ws2812DmaIsr(void)
       else
           bzero(buffer+(24*i), sizeof(led_dma.end));
     }
-    
+
     if (current_led >= total_led+2) {
       xSemaphoreGiveFromISR(allLedDone, &xHigherPriorityTaskWoken);
-	
+
 	    TIM_Cmd(TIM3, DISABLE); 					// disable Timer 3
 	    DMA_Cmd(DMA1_Stream5, DISABLE); 			// disable DMA stream4
-	    
+
 	    total_led = 0;
     }
 }
-

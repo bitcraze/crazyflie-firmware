@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -93,7 +93,7 @@ void uartDmaInit(void)
   DMA_InitStructureShare.DMA_Channel = UART_DMA_CH;
 
   NVIC_InitStructure.NVIC_IRQChannel = UART_DMA_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -145,10 +145,9 @@ void uartInit(void)
 
   uartDmaInit();
 
-  // TODO: Enable
-  // Configure Tx buffer empty interrupt
+  // Configure Rx buffer not empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UART_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -178,7 +177,7 @@ void uartInit(void)
 
   //Enable UART
   USART_Cmd(UART_TYPE, ENABLE);
-  
+
   isInit = true;
 }
 
@@ -227,7 +226,7 @@ void uartSendDataIsrBlocking(uint32_t size, uint8_t* data)
 int uartPutchar(int ch)
 {
     uartSendData(1, (uint8_t *)&ch);
-    
+
     return (unsigned char)ch;
 }
 
@@ -369,4 +368,3 @@ void __attribute__((used)) DMA2_Stream7_IRQHandler(void)
 {
   uartDmaIsr();
 }
-

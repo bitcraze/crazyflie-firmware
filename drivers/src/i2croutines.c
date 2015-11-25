@@ -362,12 +362,12 @@ void I2C_LowLevel_Init(I2C_TypeDef* I2Cx)
     RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
 
     NVIC_InitStructure.NVIC_IRQChannel = I2C1_EV_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_PRI;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_HIGH_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
     NVIC_InitStructure.NVIC_IRQChannel = I2C1_ER_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_PRI + 1;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_LOW_PRI;
     NVIC_Init(&NVIC_InitStructure);
   }
   else /* I2Cx = I2C2 */
@@ -390,12 +390,12 @@ void I2C_LowLevel_Init(I2C_TypeDef* I2Cx)
     RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C2, DISABLE);
 
     NVIC_InitStructure.NVIC_IRQChannel = I2C2_EV_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_PRI;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_HIGH_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
     NVIC_InitStructure.NVIC_IRQChannel = I2C2_ER_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_PRI + 1;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_I2C_LOW_PRI;
     NVIC_Init(&NVIC_InitStructure);
   }
 

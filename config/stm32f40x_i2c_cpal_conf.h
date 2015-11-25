@@ -533,19 +533,21 @@
 
 /*-----------Interrupt Priority Offset-------------*/
 
+#include "nvicconf.h"
+
 /* This defines can be used to decrease the Level of Interrupt Priority for I2Cx Device (ERR, EVT, DMA_TX, DMA_RX).
    The value of I2Cx_IT_OFFSET_SUBPRIO is added to I2Cx_IT_XXX_SUBPRIO and the value of I2Cx_IT_OFFSET_PREPRIO
    is added to I2Cx_IT_XXX_PREPRIO (XXX: ERR, EVT, DMATX, DMARX).
    I2Cx Interrupt Priority are defined in cpal_i2c_hal_stm32f10x.h file in Section 3  */
 
 #define I2C1_IT_OFFSET_SUBPRIO          0      /* I2C1 SUB-PRIORITY Offset */
-#define I2C1_IT_OFFSET_PREPRIO          7      /* I2C1 PREEMPTION PRIORITY Offset */
+#define I2C1_IT_OFFSET_PREPRIO          NVIC_HIGH_PRI      /* I2C1 PREEMPTION PRIORITY Offset */
 
 #define I2C2_IT_OFFSET_SUBPRIO          0      /* I2C2 SUB-PRIORITY Offset */
-#define I2C2_IT_OFFSET_PREPRIO          7      /* I2C2 PREEMPTION PRIORITY Offset */
+#define I2C2_IT_OFFSET_PREPRIO          NVIC_HIGH_PRI      /* I2C2 PREEMPTION PRIORITY Offset */
 
 #define I2C3_IT_OFFSET_SUBPRIO          0      /* I2C3 SUB-PRIORITY Offset */
-#define I2C3_IT_OFFSET_PREPRIO          7      /* I2C3 PREEMPTION PRIORITY Offset */
+#define I2C3_IT_OFFSET_PREPRIO          NVIC_HIGH_PRI      /* I2C3 PREEMPTION PRIORITY Offset */
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------------------------------*/

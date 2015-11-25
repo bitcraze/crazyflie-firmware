@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -33,12 +33,53 @@
 #ifndef NVIC_CONF_H_
 #define NVIC_CONF_H_
 
+/*
+ Interrupt priority organisation in Crazyflie:
+
+ In Cortex-M low priority number is higher priority. Hence priority 0 is the
+ highest priority interrupt and priority 15 the lowest (STM32 implements
+ 4 priority bits)
+
+ Interrupts bellow MAX_SYSCALL_INTERRUPT_PRIORITY cannot call any RTOS
+ functions! They should be handled like some kind of softdevice, running above
+ the OS.
+
+ 3 Interrupt level are defined
+  - NVIC_LOW_PRI
+  - NVIC_MID_PRI
+  - NVIC_HIGH_PRI
+ The aim is to simplify interrupt handling and to document why any special case
+ is required.
+
+ 15 -
+ 14 -
+ 13 - NVIC_LOW_PRI
+ 12 - NVIC_ADC_PRI
+ 11 - NVIC_RADIO_PRI
+ 10 - NVIC_MID_PRI
+  9 -
+  8 -
+  7 - NVIC_HIGH_PRI
+  6 -
+  5 -                                     <-- MAX_SYSCALL_INTERRUPT_PRIORITY
+  4 ! NVIC_I2C_PRI_LOW NVIC_TRACE_TIM_PRI --- Does not call any RTOS function
+  3 ! NVIC_I2C_PRI_HIGH
+  2 !
+  1 !
+  0 !
+*/
+
+// Standard interrupt levels
+#define NVIC_LOW_PRI  13
+#define NVIC_MID_PRI  10
+#define NVIC_HIGH_PRI 7
+
 // Priorities used for Crazyflie
-#define NVIC_I2C_PRI          3
+#define NVIC_I2C_HIGH_PRI    3
+#define NVIC_I2C_LOW_PRI      4
 #define NVIC_TRACE_TIM_PRI    4
 
 // Priorities for Crazyflie 2.0
-#define NVIC_UART_PRI         6
 #define NVIC_RADIO_PRI        11
 #define NVIC_ADC_PRI          12
 
