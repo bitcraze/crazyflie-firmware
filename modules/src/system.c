@@ -57,11 +57,11 @@
 #include "proximity.h"
 #include "watchdog.h"
 #include "queuemonitor.h"
+#include "buzzer.h"
+#include "sound.h"
 
 #ifdef PLATFORM_CF2
 #include "deck.h"
-#include "buzzer.h"
-#include "sound.h"
 #endif
 
 /* Private variable */
@@ -110,9 +110,8 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
-#ifdef PLATFORM_CF2
   buzzerInit();
-#endif
+
   isInit = true;
 }
 
@@ -126,9 +125,7 @@ bool systemTest()
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
-#ifdef PLATFORM_CF2
   pass &= buzzerTest();
-#endif
   return pass;
 }
 
@@ -170,8 +167,8 @@ void systemTask(void *arg)
   stabilizerInit();
 #ifdef PLATFORM_CF2
   deckInit();
-  soundInit();
   #endif
+  soundInit();
   memInit();
 
 #ifdef PROXIMITY_ENABLED
@@ -186,8 +183,8 @@ void systemTask(void *arg)
   pass &= stabilizerTest();
 #ifdef PLATFORM_CF2
   pass &= deckTest();
-  pass &= soundTest();
   #endif
+  pass &= soundTest();
   pass &= memTest();
   pass &= watchdogNormalStartTest();
 
@@ -196,6 +193,7 @@ void systemTask(void *arg)
   {
     selftestPassed = 1;
     systemStart();
+    soundSetEffect(SND_STARTUP);
     ledseqRun(SYS_LED, seq_alive);
     ledseqRun(LINK_LED, seq_testPassed);
   }

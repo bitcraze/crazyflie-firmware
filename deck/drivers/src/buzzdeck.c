@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2015 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * buzzer.c: Play tones or melodies
+ * buzzdeck.c - Deck driver for the Crazyflie 2.0 buzzer deck
  */
 
 #include <stdint.h>
@@ -44,8 +44,7 @@ static void buzzDeckOff()
   piezoSetRatio(0);
 }
 
-static struct buzzerControl buzzDeckCtrl =
-{
+static struct buzzerControl buzzDeckCtrl = {
   .on         = buzzDeckOn,
   .off        = buzzDeckOff
 };

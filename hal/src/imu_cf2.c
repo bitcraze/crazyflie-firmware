@@ -45,6 +45,7 @@
 #include "ledseq.h"
 #include "param.h"
 #include "log.h"
+#include "sound.h"
 
 #define IMU_ENABLE_PRESSURE_LPS25H
 #define IMU_ENABLE_MAG_AK8963
@@ -328,6 +329,7 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
     imuFindBiasValue(&gyroBias);
     if (gyroBias.isBiasValueFound)
     {
+      soundSetEffect(SND_CALIB);
       ledseqRun(SYS_LED, seq_calibrated);
     }
   }

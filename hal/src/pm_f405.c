@@ -40,6 +40,7 @@
 #include "adc.h"
 #include "ledseq.h"
 #include "commander.h"
+#include "sound.h"
 
 typedef struct _PmSyslinkInfo
 {
@@ -286,21 +287,25 @@ void pmTask(void *param)
         case charged:
           ledseqStop(CHG_LED, seq_charging);
           ledseqRun(CHG_LED, seq_charged);
+          soundSetEffect(SND_BAT_FULL);
           systemSetCanFly(false);
           break;
         case charging:
           ledseqStop(LOWBAT_LED, seq_lowbat);
           ledseqStop(CHG_LED, seq_charged);
           ledseqRun(CHG_LED, seq_charging);
+          soundSetEffect(SND_USB_CONN);
           systemSetCanFly(false);
           break;
         case lowPower:
           ledseqRun(LOWBAT_LED, seq_lowbat);
+          soundSetEffect(SND_BAT_LOW);
           systemSetCanFly(true);
           break;
         case battery:
           ledseqStop(CHG_LED, seq_charging);
           ledseqRun(CHG_LED, seq_charged);
+          soundSetEffect(SND_USB_DISC);
           systemSetCanFly(true);
           break;
         default:

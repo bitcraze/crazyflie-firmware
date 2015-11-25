@@ -25,8 +25,6 @@
  */
 #define DEBUG_MODULE "BUZZER"
 
-#include  <string.h>
-
 #include "buzzer.h"
 
 static struct buzzerControl * ctrl;
@@ -40,10 +38,12 @@ bool buzzerTest()
   return true;
 }
 
-void buzzerOff() {
+void buzzerOff()
+{
   if (ctrl)
     ctrl->off();
 }
+
 void buzzerOn(uint32_t freq)
 {
   if (ctrl)

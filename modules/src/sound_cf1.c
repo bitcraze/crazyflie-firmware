@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -21,45 +21,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * buzzdeck.h - Functions for interfacing with decks with buzzers
+ * sound_cf1.c - Empty module used on Crazyflie 2.0 to play melodies and
+ *               system sounds
  */
-#ifndef __BUZZER_H__
-#define __BUZZER_H__
- 
-#include <stdint.h>
+
 #include <stdbool.h>
+#include <stdint.h>
 
-/** Functionpointers used to control the buzzer */
-struct buzzerControl
+static bool isInit=false;
+
+void soundInit(void)
 {
-  void (*off)();
-  void (*on)(uint32_t freq);
-};
+  if (isInit)
+    return;
 
-/**
- * Initilize the buzzer sub-system.
- */
-void buzzerInit();
+  isInit = true;
+}
 
-/**
- * Test the buzzer sub-system.
- */
-bool buzzerTest();
+bool soundTest(void)
+{
+  return isInit;
+}
 
-/**
- * Turn the buzzer off.
- */
-void buzzerOff();
+void soundSetEffect(uint32_t effect)
+{
+}
 
-/**
- * Turn the buzzer on and set it to a specific frequency (if supported).
- */
-void buzzerOn(uint32_t freq);
-
-/**
- * Set function pointers for controlling the buzzer hardware.
- */
-void buzzerSetControl(struct buzzerControl * bc);
-
-#endif //__BUZZER_H__
-
+void soundSetFreq(uint32_t freq)
+{
+}

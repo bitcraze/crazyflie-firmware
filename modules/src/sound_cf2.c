@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * sound.c - Module used to play melodies and system sounds though a buzzer
+ * sound_cf2.c - Module used to play melodies and system sounds though a buzzer
  */
 
 #include <stdbool.h>
@@ -151,61 +151,74 @@
 #define S (W * 16)
 #define ES (W*6)
 
+#define MAX_NOTE_LENGTH 80
+
 static bool isInit=false;
 
-typedef void (*BuzzerEffect)(uint32_t timer);
-
-typedef struct {
+typedef const struct {
   uint16_t tone;
   uint16_t duration;
 } Note;
 
-typedef struct {
+typedef const struct {
   uint32_t bpm;
-  uint32_t ni;
   uint32_t delay;
-  Note notes[80];
+  Note notes[MAX_NOTE_LENGTH];
 } Melody;
 
-Melody melodies[] = {
-    {.bpm = 120, .ni = 0, .delay = 1, .notes = {{C4, H}, {D4, H}, {E4, H}, {F4, H}, {G4, H}, {A4, H}, {B4, H}, {0xFF, 0}}},
-    {.bpm = 120, .ni = 0, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {G4, S}, {A4, S}, {B4, S}, {0xFF, 0}}},
-    /* Imperial march from http://tny.cz/e525c1b2A */
-    {.bpm = 120, .ni = 0, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A3, Q},{F3, ES}, {C4, S},
-                                                {A3, Q}, {F3, ES}, {C4, S}, {A3, H},
-                                                {E4, Q}, {E4, Q}, {E4, Q}, {F4, ES}, {C4, S},
-                                                {Ab3, Q}, {F3, ES}, {C4, S}, {A3, H},
-                                                {A4, Q}, {A3, ES}, {A3, S}, {A4, Q}, {Ab4, ES}, {G4, S},
-                                                {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
-                                                {C4, S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {A3, S},
-                                                {C4, Q}, {A3, ES}, {C4, S}, {E4, H},
-                                                {A4, Q}, {A3, ES}, {A3, S}, {A4, Q}, {Ab4, ES}, {G4, S},
-                                                {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
-                                                {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
-                                                {C4,S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {C4, S},
-                                                {A3, Q}, {F3, ES}, {C4, S}, {A3, H}, {0, H},
-                                                {0xFF, 0}}}
+static uint32_t neffect = 0;
+static uint32_t sys_effect = 0;
+static uint32_t user_effect = 0;
 
-};
+static Melody range_slow = {.bpm = 120, .delay = 1, .notes = {{C4, H}, {D4, H}, {E4, H}, {F4, H}, {G4, H}, {A4, H}, {B4, H}, {0xFF, 0}}};
+static Melody range_fast = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {G4, S}, {A4, S}, {B4, S}, {0xFF, 0}}};
+static Melody startup = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {0xFE, 0}}};
+static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {0xFE, 0}}};
+static Melody chg_done = {.bpm = 120, .delay = 1, .notes = {{D4, Q}, {A4, Q}, {0xFE, 0}}};
+static Melody lowbatt = {.bpm = 120, .delay = 1, .notes = {{D4, E}, {A4, E}, {D4, E}, {0xFF, 0}}};
+static Melody usb_disconnect = {.bpm = 120, .delay = 1, .notes = {{C4, E}, {0xFE, 0}}};
+static Melody usb_connect = {.bpm = 120, .delay = 1, .notes = {{A4, E}, {0xFE, 0}}};
+/* Imperial march from http://tny.cz/e525c1b2A */
+static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A3, Q},{F3, ES}, {C4, S},
+    {A3, Q}, {F3, ES}, {C4, S}, {A3, H},
+    {E4, Q}, {E4, Q}, {E4, Q}, {F4, ES}, {C4, S},
+    {Ab3, Q}, {F3, ES}, {C4, S}, {A3, H},
+    {A4, Q}, {A3, ES}, {A3, S}, {A4, Q}, {Ab4, ES}, {G4, S},
+    {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
+    {C4, S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {A3, S},
+    {C4, Q}, {A3, ES}, {C4, S}, {E4, H},
+    {A4, Q}, {A3, ES}, {A3, S}, {A4, Q}, {Ab4, ES}, {G4, S},
+    {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
+    {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
+    {C4,S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {C4, S},
+    {A3, Q}, {F3, ES}, {C4, S}, {A3, H}, {0, H},
+    {0xFF, 0}}};
 
-uint8_t melody = 2;
-uint8_t nmelody = 3;
-unsigned int mcounter = 0;
-static bool playing_sound = false;
-static void melodyplayer(uint32_t counter) {
-  // Sync one melody for the loop
-  Melody* m = &melodies[melody];
-  if (mcounter == 0) {
-    if (m->notes[m->ni].tone == 0xFF)
+typedef void (*BuzzerEffect)(uint32_t timer, uint32_t * mi, Melody * melody);
+
+static void off(uint32_t counter, uint32_t * mi, Melody * m) {
+  buzzerOff();
+}
+
+static uint32_t mcounter = 0;
+static void melodyplayer(uint32_t counter, uint32_t * mi, Melody * m) {
+  if (m->notes[(*mi)].tone == 0xFE) {
+    // Turn off buzzer since we're at the end
+    (*mi) = 0;
+    if (sys_effect != 0)
+      sys_effect = 0;
+    else
+      user_effect = 0;
+  } else if (mcounter == 0) {
+    if (m->notes[(*mi)].tone == 0xFF)
     {
       // Loop the melody
-      m->ni = 0;
+      (*mi) = 0;
     }
     // Play current note
-    buzzerOn(m->notes[m->ni].tone);
-    mcounter = (m->bpm * 100) / m->notes[m->ni].duration;
-    playing_sound = true;
-    m->ni++;
+    buzzerOn(m->notes[(*mi)].tone);
+    mcounter = (m->bpm * 100) / m->notes[(*mi)].duration;
+    (*mi)++;
   }
   else if (mcounter == 1)
   {
@@ -214,19 +227,18 @@ static void melodyplayer(uint32_t counter) {
   mcounter--;
 }
 
-uint8_t static_ratio = 0;
-uint16_t static_freq = 4000;
-static void bypass(uint32_t counter)
+static uint8_t static_ratio = 0;
+static uint16_t static_freq = 4000;
+static void bypass(uint32_t counter, uint32_t * mi, Melody * melody)
 {
-  /* Just set the params from the host */
   buzzerOn(static_freq);
 }
 
-uint16_t siren_start = 2000;
-uint16_t siren_freq = 2000;
-uint16_t siren_stop = 4000;
-int16_t siren_step = 40;
-static void siren(uint32_t counter)
+static uint16_t siren_start = 2000;
+static uint16_t siren_freq = 2000;
+static uint16_t siren_stop = 4000;
+static int16_t siren_step = 40;
+static void siren(uint32_t counter, uint32_t * mi, Melody * melody)
 {
   siren_freq += siren_step;
   if (siren_freq > siren_stop)
@@ -242,14 +254,13 @@ static void siren(uint32_t counter)
   buzzerOn(siren_freq);
 }
 
-
 static int pitchid;
 static int rollid;
 static int pitch;
 static int roll;
 static int tilt_freq;
 static int tilt_ratio;
-static void tilt(uint32_t counter)
+static void tilt(uint32_t counter, uint32_t * mi, Melody * melody)
 {
   pitchid = logGetVarId("stabilizer", "pitch");
   rollid = logGetVarId("stabilizer", "roll");
@@ -266,20 +277,44 @@ static void tilt(uint32_t counter)
   buzzerOn(tilt_freq);
 }
 
+typedef struct {
+  BuzzerEffect call;
+  uint32_t mi;
+  Melody * melody;
+} EffectCall;
 
-unsigned int neffect = 0;
-unsigned int effect = 3;
-static BuzzerEffect effects[] = {bypass, siren, melodyplayer, tilt};
+static EffectCall effects[] = {
+    [SND_OFF] = {.call = &off},
+    [SND_USB_CONN] = {.call = &melodyplayer, .melody = &usb_connect},
+    [SND_USB_DISC] = {.call = &melodyplayer, .melody = &usb_disconnect},
+    [SND_BAT_FULL] = {.call = &melodyplayer, .melody = &chg_done},
+    [SND_BAT_LOW] = {.call = &melodyplayer, .melody = &lowbatt},
+    [SND_STARTUP] = {.call = &melodyplayer, .melody = &startup},
+    [SND_CALIB] = {.call = &melodyplayer, .melody = &calibrated},
+    {.call = &melodyplayer, .melody = &range_slow},
+    {.call = &melodyplayer, .melody = &range_fast},
+    {.call = &melodyplayer, .melody = &starwars},
+    {.call = &bypass},
+    {.call = &siren},
+    {.call = &tilt}
+};
 
 static xTimerHandle timer;
 static uint32_t counter = 0;
 
 static void soundTimer(xTimerHandle timer)
 {
+  int effect;
   counter++;
 
-  if (effects[effect] != 0)
-    effects[effect](counter*10);
+  if (sys_effect != 0) {
+    effect = sys_effect;
+  } else {
+    effect = user_effect;
+  }
+  if (effects[effect].call != 0)
+    effects[effect].call(counter*10, &effects[effect].mi,
+                         effects[effect].melody);
 }
 
 void soundInit(void)
@@ -288,10 +323,9 @@ void soundInit(void)
     return;
 
   neffect = sizeof(effects)/sizeof(effects[0])-1;
-  nmelody = sizeof(melodies)/sizeof(melodies[0])-1;
 
   timer = xTimerCreate( (const signed char *)"SoundTimer", M2T(10),
-                                     pdTRUE, NULL, soundTimer );
+                                     pdTRUE, NULL, soundTimer);
   xTimerStart(timer, 100);
 
   isInit = true;
@@ -302,11 +336,18 @@ bool soundTest(void)
   return isInit;
 }
 
+void soundSetEffect(uint32_t effect)
+{
+  sys_effect = effect;
+}
+
+void soundSetFreq(uint32_t freq) {
+
+}
+
 PARAM_GROUP_START(sound)
-PARAM_ADD(PARAM_UINT8, effect, &effect)
+PARAM_ADD(PARAM_UINT8, effect, &user_effect)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
-PARAM_ADD(PARAM_UINT8, melody, &melody)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, nmelody, &melody)
 PARAM_ADD(PARAM_UINT16, freq, &static_freq)
 PARAM_ADD(PARAM_UINT8, ratio, &static_ratio)
 PARAM_GROUP_STOP(sound)

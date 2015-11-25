@@ -27,14 +27,36 @@
 #ifndef __SOUND_H__
 #define __SOUND_H__
 
+#include <stdint.h>
 #include <stdbool.h>
 
+#define SND_OFF         0
+#define SND_USB_DISC    1
+#define SND_USB_CONN    2
+#define SND_BAT_FULL    3
+#define SND_BAT_LOW     4
+#define SND_STARTUP     5
+#define SND_CALIB       6
+
 /**
- * Initialize the platform CRTP port
+ * Initialize sound sub-system.
  */
 void soundInit(void);
 
+/**
+ * Test the sound sub-system.
+ */
 bool soundTest(void);
+
+/**
+ * Set the effect that should be played by the sound sub-system.
+ */
+void soundSetEffect(uint32_t effect);
+
+/**
+ * Manufally set a frequency that should be played by the sound syb-system.
+ */
+void soundSetFreq(uint32_t freq);
 
 #endif /* __SOUND_H__ */
 
