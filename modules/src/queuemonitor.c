@@ -109,7 +109,7 @@ void qmRegisterQueue(xQueueHandle* xQueue, char* fileName, char* queueName) {
 }
 
 static Data* getQueueData(xQueueHandle* xQueue) {
-  unsigned char number = ucQueueGetQueueNumber(xQueue);
+  unsigned char number = uxQueueGetQueueNumber(xQueue);
   ASSERT(number < MAX_NR_OF_QUEUES);
   return &data[number];
 }
