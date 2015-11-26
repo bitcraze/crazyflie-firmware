@@ -148,12 +148,12 @@ PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
 PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
-PROJ_OBJ_CF2 += buzzdeck.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
 PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ_CF2 += ledring12.o
+PROJ_OBJ_CF2 += buzzdeck.o
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
