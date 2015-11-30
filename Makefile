@@ -154,6 +154,7 @@ PROJ_OBJ_CF2 += bigquad.o
 PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
+PROJ_OBJ_CF2 += gtgps.o
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o

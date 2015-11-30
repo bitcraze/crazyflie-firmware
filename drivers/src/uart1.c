@@ -29,18 +29,24 @@
 #include "stm32fxxx.h"
 
 #include "config.h"
+#include "nvic.h"
 #include "uart1.h"
 #include "cfassert.h"
 #include "config.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
 
 static bool isInit = false;
+
+static xQueueHandle uartDataDelivery;
 
 void uart1Init(void)
 {
 
   USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
+  NVIC_InitTypeDef NVIC_InitStructure;
 
   /* Enable GPIO and USART clock */
   RCC_AHB1PeriphClockCmd(UART1_GPIO_PERIF, ENABLE);
@@ -68,18 +74,28 @@ void uart1Init(void)
   USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
   USART_InitStructure.USART_StopBits            = USART_StopBits_1;
   USART_InitStructure.USART_Parity              = USART_Parity_No ;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_CTS;
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART1_TYPE, &USART_InitStructure);
+
+  uartDataDelivery = xQueueCreate(40, sizeof(uint8_t));
+
+  // Configure Tx buffer empty interrupt
+  NVIC_InitStructure.NVIC_IRQChannel = UART1_IRQ;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
 
   //Enable UART
   USART_Cmd(UART1_TYPE, ENABLE);
   
+  USART_ITConfig(UART1_TYPE, USART_IT_RXNE, ENABLE);
+
   isInit = true;
 }
 
 bool uart1Test(void)
 {
-  uart1Printf("Hello UART1!\n");
   return isInit;
 }
 
@@ -102,4 +118,20 @@ int uart1Putchar(int ch)
     uart1SendData(1, (uint8_t *)&ch);
     
     return (unsigned char)ch;
+}
+
+void uart1Getchar(char * ch) {
+  xQueueReceive(uartDataDelivery, ch, portMAX_DELAY);
+}
+
+static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+static uint16_t rxDataInterrupt;
+
+void __attribute__((used)) USART3_IRQHandler(void)
+{
+  if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
+  {
+    rxDataInterrupt = USART_ReceiveData(UART1_TYPE) & 0xFF;
+    xQueueSendFromISR(uartDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
+  }
 }

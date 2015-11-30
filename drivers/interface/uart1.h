@@ -29,12 +29,12 @@
 #include <stdbool.h>
 #include "eprintf.h"
 
-#define UART1_BAUDRATE         115200
+#define UART1_BAUDRATE         9600
 
-#define UART1_TYPE             UART4
-#define UART1_PERIF            RCC_APB1Periph_UART4
+#define UART1_TYPE             USART3
+#define UART1_PERIF            RCC_APB1Periph_USART3
 #define ENABLE_UART1_RCC       RCC_APB1PeriphClockCmd
-#define UART1_IRQ              UART4_IRQn
+#define UART1_IRQ              USART3_IRQn
 
 #define UART1_DMA_IRQ          DMA1_Channel2_IRQn
 #define UART1_DMA_IT_TC        DMA1_IT_TC2
@@ -46,8 +46,8 @@
 #define UART1_GPIO_RX_PIN      GPIO_Pin_11
 #define UART1_GPIO_AF_TX_PIN   GPIO_PinSource10
 #define UART1_GPIO_AF_RX_PIN   GPIO_PinSource11
-#define UART1_GPIO_AF_TX       GPIO_AF_UART4
-#define UART1_GPIO_AF_RX       GPIO_AF_UART4
+#define UART1_GPIO_AF_TX       GPIO_AF_USART3
+#define UART1_GPIO_AF_RX       GPIO_AF_USART3
 
 /**
  * Initialize the UART.
@@ -77,6 +77,8 @@ void uart1SendData(uint32_t size, uint8_t* data);
  * @return Character printed
  */
 int uart1Putchar(int ch);
+
+void uart1Getchar(char * ch);
 
 /**
  * Uart printf macro that uses eprintf
