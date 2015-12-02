@@ -39,7 +39,7 @@
 #define BIGQUAD_BAT_VOLT_PIN       DECK_GPIO_MISO
 #define BIGQUAD_BAT_VOLT_MULT      7.8f
 #define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
-#define BIGQUAD_BAT_AMP_PER_VOLT   10.0f
+#define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
 
 //Hardware configuration
 static bool isInit;
@@ -53,7 +53,7 @@ static void bigquadInit(DeckInfo *info)
   motorsInit(motorMapBigQuadDeck);
   extRxInit();
   pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
-  pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
+  pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_CURR_PIN, BIGQUAD_BAT_AMP_PER_VOLT);
 
   isInit = true;
 }
