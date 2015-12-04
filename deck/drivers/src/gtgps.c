@@ -198,7 +198,8 @@ static bool gpggaParser(char * buff) {
   skip_to_next(&sp, ',');
   // Unit for height (not used yet)
   skip_to_next(&sp, ',');
-
+  //consolePutchar('.');
+  //consoleFlush();
   return false;
 }
 
@@ -219,20 +220,45 @@ static bool verifyChecksum(const char * buff) {
   return (test_chksum == ref_chksum);
 }
 
+static uint8_t baudcmd[] = "$PMTK251,115200*1F\r\n";
+
+// 5 Hz
+static uint8_t updaterate[] = "$PMTK220,200*2C\r\n";
+static uint8_t updaterate2[] = "$PMTK300,200,0,0,0,0*2F\r\n";
+
+// 10 Hz
+//static uint8_t updaterate3[] = "$PMTK220,100*2F\r\n";
+//static uint8_t updaterate4[] = "$PMTK300,100,0,0,0,0*2C\r\n";
+
+
 void gtgpsTask(void *param)
 {
-  vTaskDelay(2000);
   char ch;
   int j;
+
+  uart1SendData(sizeof(baudcmd), baudcmd);
+
+  vTaskDelay(500);
+  uart1Init(115200);
+  vTaskDelay(500);
+
+  uart1SendData(sizeof(updaterate), updaterate);
+  uart1SendData(sizeof(updaterate2), updaterate2);
+
+//  uart1SendData(sizeof(updaterate3), updaterate3);
+//  uart1SendData(sizeof(updaterate4), updaterate4);
+
+
   while(1)
   {
     uart1Getchar(&ch);
+    //consolePutchar(ch);
+
     if (ch == '$') {
       bi = 0;
     } else if (ch == '\n') {
       buff[bi] = 0; // Terminate with null
       if (verifyChecksum(buff)) {
-        DEBUG_PRINT("O");
         for (j = 0; j < sizeof(parsers)/sizeof(parsers[0]); j++) {
           if (strncmp(parsers[j].token, buff, LEN_TOKEN) == 0) {
             parsers[j].parser(&buff[LEN_TOKEN]);
@@ -252,7 +278,7 @@ static void gtgpsInit(DeckInfo *info)
     return;
 
   DEBUG_PRINT("Enabling reading from GlobalTop GPS\n");
-  uart1Init();
+  uart1Init(9600);
 
   xTaskCreate(gtgpsTask, "GTGPS",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
@@ -275,7 +301,7 @@ static const DeckDriver gtgps_deck = {
   .pid = 0x04,
   .name = "bcGTGPS",
 
-  .usedPeriph = DECK_USING_TIMER3,
+  .usedPeriph = 0,
   .usedGpio = 0,               // FIXME: Edit the used GPIOs
 
   .init = gtgpsInit,

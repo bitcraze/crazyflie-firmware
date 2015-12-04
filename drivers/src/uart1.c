@@ -43,7 +43,7 @@
 static xQueueHandle uart1queue;
 static bool isInit = false;
 
-void uart1Init(void)
+void uart1Init(const uint32_t baudrate)
 {
 
   USART_InitTypeDef USART_InitStructure;
@@ -71,7 +71,7 @@ void uart1Init(void)
   GPIO_PinAFConfig(UART1_GPIO_PORT, UART1_GPIO_AF_TX_PIN, UART1_GPIO_AF_TX);
   GPIO_PinAFConfig(UART1_GPIO_PORT, UART1_GPIO_AF_RX_PIN, UART1_GPIO_AF_RX);
 
-  USART_InitStructure.USART_BaudRate            = UART1_BAUDRATE;
+  USART_InitStructure.USART_BaudRate            = baudrate;
   USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
   USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
   USART_InitStructure.USART_StopBits            = USART_StopBits_1;
@@ -80,7 +80,7 @@ void uart1Init(void)
   USART_Init(UART1_TYPE, &USART_InitStructure);
 
   NVIC_InitStructure.NVIC_IRQChannel = UART1_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART1_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);

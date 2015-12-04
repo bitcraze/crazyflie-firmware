@@ -80,7 +80,7 @@ void extRxInit(void)
 #endif
 
 
-  xTaskCreate(extRxTask, (const signed char * const) EXTRX_TASK_NAME,
+  xTaskCreate(extRxTask, EXTRX_TASK_NAME,
               EXTRX_TASK_STACKSIZE, NULL, EXTRX_TASK_PRI, NULL);
 }
 
@@ -89,8 +89,6 @@ static void extRxTask(void *param)
 
   //Wait for the system to be fully started
   systemWaitStart();
-
-
 
   while (true)
   {
