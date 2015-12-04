@@ -145,22 +145,15 @@ void uartslkInit(void)
 
   uartslkDmaInit();
 
-<<<<<<< Upstream, based on master
   // Configure Rx buffer not empty interrupt
-  NVIC_InitStructure.NVIC_IRQChannel = UART_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
-=======
-  // TODO: Enable
-  // Configure Tx buffer empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UARTSLK_PRI;
->>>>>>> 40f9854 Splitted sppm into a sppm driver and extrx module.
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
   vSemaphoreCreateBinary(waitUntilSendDone);
-  uartslkDataDelivery = xQueueCreate(40, sizeof(uint8_t));
+  uartslkDataDelivery = xQueueCreate(1024, sizeof(uint8_t));
   DEBUG_QUEUE_MONITOR_REGISTER(uartslkDataDelivery);
 
   USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, ENABLE);
@@ -183,13 +176,7 @@ void uartslkInit(void)
   NVIC_EnableIRQ(EXTI4_IRQn);
 
   //Enable UART
-<<<<<<< Upstream, based on master
-  USART_Cmd(UART_TYPE, ENABLE);
-
-=======
   USART_Cmd(UARTSLK_TYPE, ENABLE);
-  
->>>>>>> 40f9854 Splitted sppm into a sppm driver and extrx module.
   isInit = true;
 }
 
@@ -239,13 +226,8 @@ void uartslkSendDataIsrBlocking(uint32_t size, uint8_t* data)
 
 int uartslkPutchar(int ch)
 {
-<<<<<<< Upstream, based on master
-    uartSendData(1, (uint8_t *)&ch);
-
-=======
     uartslkSendData(1, (uint8_t *)&ch);
     
->>>>>>> 40f9854 Splitted sppm into a sppm driver and extrx module.
     return (unsigned char)ch;
 }
 
@@ -370,7 +352,7 @@ void __attribute__((used)) EXTI4_IRQHandler(void)
   uartslkTxenFlowctrlIsr();
 }
 
-void __attribute__((used)) USART2_IRQHandler(void)
+void __attribute__((used)) USART6_IRQHandler(void)
 {
   uartslkIsr();
 }

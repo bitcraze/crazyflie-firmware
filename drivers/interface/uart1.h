@@ -54,7 +54,7 @@
 /**
  * Initialize the UART.
  */
-void uart1Init(void);
+void uart1Init(const uint32_t baudrate);
 
 /**
  * Test the UART status.
