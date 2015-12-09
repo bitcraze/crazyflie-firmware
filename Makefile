@@ -75,7 +75,7 @@ VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(STLIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-VPATH_CF2 += deck/api deck/core deck/drivers/src
+VPATH_CF2 += deck/api deck/core deck/drivers/src deck/drivers/src/test
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -143,7 +143,7 @@ PROJ_OBJ_CF1 += sound_cf1.o
 PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
 
 # Deck Core
-PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
+PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o deck_test.o
 
 # Deck API
 PROJ_OBJ_CF2 += deck_constants.o
@@ -152,11 +152,12 @@ PROJ_OBJ_CF2 += deck_analog.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
-PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
 PROJ_OBJ_CF2 += cppmdeck.o
+#Deck tests
+PROJ_OBJ_CF2 += exptest.o bigquadtest.o
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
