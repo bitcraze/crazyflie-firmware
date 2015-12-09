@@ -36,19 +36,25 @@ def extract_information_from_git():
     version['irevision0'] = "0x" + revision[0:8]
     version['irevision1'] = "0x" + revision[8:12]
 
-    identify = subprocess.check_output(
-        ["git", "describe", "--abbrev=12", "--tags", "HEAD"])
-    identify = identify.split('-')
+    try:
+        identify = subprocess.check_output(
+            ["git", "describe", "--abbrev=12", "--tags", "HEAD"])
+        identify = identify.split('-')
 
-    if len(identify) > 2:
-        version['local_revision'] = identify[len(identify) - 2]
-    else:
+        if len(identify) > 2:
+            version['local_revision'] = identify[len(identify) - 2]
+        else:
+            version['local_revision'] = '0'
+
+        version['tag'] = identify[0]
+        for x in range(1, len(identify) - 2):
+            version['tag'] += '-'
+            version['tag'] += identify[x]
+    except subprocess.CalledProcessError:
+        # We are running from a shallow tree, CI build?
+        # Fill up default values, this will not happen when releasing.
         version['local_revision'] = '0'
-
-    version['tag'] = identify[0]
-    for x in range(1, len(identify) - 2):
-        version['tag'] += '-'
-        version['tag'] += identify[x]
+        version['tag'] = "ci-build"
 
     version['tag'] = version['tag'].strip()
 
