@@ -369,7 +369,7 @@ static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev)
   */
 void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceError)
 {
-  DEBUG_PRINT("I2C error callback dev: %i, err: %i\n", (int)pDevInstance , (int)DeviceError);
+  //DEBUG_PRINT("I2C error callback dev: %i, err: %i\n", (int)pDevInstance , (int)DeviceError);
   i2cDevGiveSemaphore(pDevInstance);
 }
 
@@ -380,7 +380,7 @@ void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceErro
   * @retval None.
   */
 uint32_t CPAL_TIMEOUT_UserCallback(CPAL_InitTypeDef* pDevInitStruct) {
-  DEBUG_PRINT("I2C timeout callback dev: %i\n", (int)pDevInitStruct->CPAL_Dev);
+  //DEBUG_PRINT("I2C timeout callback dev: %i\n", (int)pDevInitStruct->CPAL_Dev);
   i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
   return CPAL_PASS;
 }
