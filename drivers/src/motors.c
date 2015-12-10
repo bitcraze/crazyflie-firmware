@@ -37,10 +37,16 @@
 //FreeRTOS includes
 #include "task.h"
 
+//Logging includes
+#include "log.h"
+
 static uint16_t motorsBLConvBitsTo16(uint16_t bits);
 static uint16_t motorsBLConv16ToBits(uint16_t bits);
 static uint16_t motorsConvBitsTo16(uint16_t bits);
 static uint16_t motorsConv16ToBits(uint16_t bits);
+
+uint32_t motor_ratios[] = {0, 0, 0, 0};
+
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
@@ -219,6 +225,8 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     float percentage = volts / supply_voltage;
     percentage = percentage > 1.0 ? 1.0 : percentage;
     ratio = percentage * UINT16_MAX;
+    motor_ratios[id] = ratio;
+
   }
 #endif
   if (motorMap[id]->drvType == BRUSHLESS)
@@ -310,3 +318,9 @@ void motorsPlayMelody(uint16_t *notes)
     motorsPlayTone(note, duration);
   } while (duration != 0);
 }
+LOG_GROUP_START(pwm)
+LOG_ADD(LOG_UINT32, m1_pwm, &motor_ratios[0])
+LOG_ADD(LOG_UINT32, m2_pwm, &motor_ratios[1])
+LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
+LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
+LOG_GROUP_STOP(pwm)
