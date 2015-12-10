@@ -7,7 +7,7 @@
 #include "deck_core.h"
 
 /* Deck APIs */
-#include "deck_contants.h"
+#include "deck_constants.h"
 #include "deck_digital.h"
 #include "deck_analog.h"
 
