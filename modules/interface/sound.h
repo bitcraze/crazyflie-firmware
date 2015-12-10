@@ -31,12 +31,13 @@
 #include <stdbool.h>
 
 #define SND_OFF         0
-#define SND_USB_DISC    1
-#define SND_USB_CONN    2
-#define SND_BAT_FULL    3
-#define SND_BAT_LOW     4
-#define SND_STARTUP     5
-#define SND_CALIB       6
+#define FACTORY_TEST    1
+#define SND_USB_DISC    2
+#define SND_USB_CONN    3
+#define SND_BAT_FULL    4
+#define SND_BAT_LOW     5
+#define SND_STARTUP     6
+#define SND_CALIB       7
 
 /**
  * Initialize sound sub-system.

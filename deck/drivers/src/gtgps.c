@@ -272,7 +272,7 @@ static bool gtgpsTest()
 
 static const DeckDriver gtgps_deck = {
   .vid = 0xBC,
-  .pid = 0x04,
+  .pid = 0x05,
   .name = "bcGTGPS",
 
   .usedPeriph = DECK_USING_TIMER3,

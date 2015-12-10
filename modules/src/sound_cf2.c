@@ -43,6 +43,7 @@
 /**
  * Credit to http://tny.cz/e525c1b2 for supplying the tones
  */
+#define OFF 0
 #define C0 16
 #define Db0 17
 #define D0  18
@@ -178,6 +179,7 @@ static Melody chg_done = {.bpm = 120, .delay = 1, .notes = {{D4, Q}, {A4, Q}, {0
 static Melody lowbatt = {.bpm = 120, .delay = 1, .notes = {{D4, E}, {A4, E}, {D4, E}, {0xFF, 0}}};
 static Melody usb_disconnect = {.bpm = 120, .delay = 1, .notes = {{C4, E}, {0xFE, 0}}};
 static Melody usb_connect = {.bpm = 120, .delay = 1, .notes = {{A4, E}, {0xFE, 0}}};
+static Melody factory_test = {.bpm = 120, .delay = 1, .notes = {{A1, Q}, {OFF, S}, {A2, Q}, {OFF, S}, {0xFF, 0}}};
 /* Imperial march from http://tny.cz/e525c1b2A */
 static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A3, Q},{F3, ES}, {C4, S},
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H},
@@ -285,6 +287,7 @@ typedef struct {
 
 static EffectCall effects[] = {
     [SND_OFF] = {.call = &off},
+    {.call = &melodyplayer, .melody = &factory_test},
     [SND_USB_CONN] = {.call = &melodyplayer, .melody = &usb_connect},
     [SND_USB_DISC] = {.call = &melodyplayer, .melody = &usb_disconnect},
     [SND_BAT_FULL] = {.call = &melodyplayer, .melody = &chg_done},

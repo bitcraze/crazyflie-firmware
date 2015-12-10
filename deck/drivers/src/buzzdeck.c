@@ -56,11 +56,12 @@ static void buzzDeckInit(DeckInfo *info)
 }
 
 static const DeckDriver buzzer_deck = {
-  .vid = 0,
-  .pid = 0,
+  .vid = 0xBC,
+  .pid = 0x04,
   .name = "bcBuzzer",
 
-  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3,
+  .usedPeriph = DECK_USING_TIMER5,
+  .usedGpio = DECK_USING_TX2 | DECK_USING_RX2,
 
   .init = buzzDeckInit,
 };
