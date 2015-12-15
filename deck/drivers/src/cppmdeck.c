@@ -58,8 +58,8 @@ static bool cppmdeckTest()
 }
 
 static const DeckDriver cppm_deck = {
-  .vid = 0xBC,
-  .pid = 0x03,
+  .vid = 0,
+  .pid = 0,
   .name = "bcCPPM",
 
   .usedPeriph = DECK_USING_TIMER14,
