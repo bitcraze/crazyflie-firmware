@@ -36,11 +36,14 @@
 #include "debug.h"
 #include "deck.h"
 #include "deck_test.h"
+#include "param.h"
 
 #define VBAT_TEST_VOLTAGE_LOW      (3.0 / ((1.0 + 69.0 + 10.0) / 10.0) * 0.95) /* 0.35625 */
 #define VBAT_TEST_VOLTAGE_HIGH     (3.0 / ((1.0 + 69.0 + 10.0) / 10.0) * 1.05) /* 0.39375 */
 
 #define TEST(result, str, status) decktestEval(result, DEBUG_MODULE ": " str, status)
+
+static uint8_t testsPass = 0;
 
 static bool bigquadtestRun()
 {
@@ -114,6 +117,7 @@ static bool bigquadtestRun()
 
   if (status)
   {
+    testsPass = 1;
     DEBUG_PRINT("BigQuad deck test [OK]\n");
   }
 
@@ -124,8 +128,6 @@ static bool bigquadtestRun()
 }
 
 static const DeckDriver bigquadtest_deck = {
-  .vid = 0xBC,
-  .pid = 0xFE,
   .name = "bcBigQuadTest",
 
   .usedPeriph = 0,
@@ -135,3 +137,8 @@ static const DeckDriver bigquadtest_deck = {
 };
 
 DECK_DRIVER(bigquadtest_deck);
+
+PARAM_GROUP_START(BigQuadTest)
+PARAM_ADD(PARAM_UINT8, pass, &testsPass)
+PARAM_GROUP_STOP(BigQuadTest)
+
