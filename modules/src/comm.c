@@ -54,7 +54,6 @@ void commInit(void)
     nrf24linkInit();
   #endif
 #else
-  usblinkInit();
   radiolinkInit();
 #endif
 

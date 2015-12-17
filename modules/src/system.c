@@ -93,6 +93,8 @@ void systemInit(void)
   canStartMutex = xSemaphoreCreateMutex();
   xSemaphoreTake(canStartMutex, portMAX_DELAY);
 
+  usblinkInit();
+
   /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
   crtpInit();
   consoleInit();
