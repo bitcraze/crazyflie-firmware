@@ -52,7 +52,7 @@
 #include "stabilizer.h"
 #include "commander.h"
 #include "console.h"
-#include "usb.h"
+#include "usblink.h"
 #include "mem.h"
 #include "proximity.h"
 #include "watchdog.h"
@@ -93,7 +93,9 @@ void systemInit(void)
   canStartMutex = xSemaphoreCreateMutex();
   xSemaphoreTake(canStartMutex, portMAX_DELAY);
 
+#ifdef PLATFORM_CF2
   usblinkInit();
+#endif
 
   /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
   crtpInit();
