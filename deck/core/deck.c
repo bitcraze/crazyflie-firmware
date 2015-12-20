@@ -50,11 +50,12 @@ extern void deckInfoInit();
 
 void deckInit()
 {
-  int nDecks;
-  int i;
-
   deckDriverCount();
   deckInfoInit();
+
+#ifndef IGNORE_OW_DECKS
+  int nDecks;
+  int i;
 
   nDecks = deckCount();
 
@@ -73,6 +74,7 @@ void deckInit()
       deck->driver->init(deck);
     }
   }
+#endif
 
   // Init build-forced driver
   if (strlen(deck_force)>0) {
@@ -88,9 +90,10 @@ void deckInit()
 
 bool deckTest()
 {
+  bool pass = true;
+#ifndef IGNORE_OW_DECKS
   int nDecks;
   int i;
-  bool pass = true;
 
   nDecks = deckCount();
 
@@ -106,6 +109,7 @@ bool deckTest()
       }
     }
   }
+#endif
 
   // Test build-forced driver
   if (strlen(deck_force)>0) {
