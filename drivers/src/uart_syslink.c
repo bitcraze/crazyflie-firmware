@@ -93,7 +93,7 @@ void uartDmaInit(void)
   DMA_InitStructureShare.DMA_Channel = UART_DMA_CH;
 
   NVIC_InitStructure.NVIC_IRQChannel = UART_DMA_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -153,7 +153,7 @@ void uartInit(void)
   NVIC_Init(&NVIC_InitStructure);
 
   vSemaphoreCreateBinary(waitUntilSendDone);
-  uartDataDelivery = xQueueCreate(40, sizeof(uint8_t));
+  uartDataDelivery = xQueueCreate(400, sizeof(uint8_t));
   DEBUG_QUEUE_MONITOR_REGISTER(uartDataDelivery);
 
   USART_ITConfig(UART_TYPE, USART_IT_RXNE, ENABLE);
