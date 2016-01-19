@@ -200,9 +200,15 @@ static void enumerateDecks(void)
         usedPeriph |= deckInfos[i].driver->usedPeriph;
         usedGpio |= deckInfos[i].driver->usedGpio;
       } else {
+#ifdef DEBUG
+        DEBUG_PRINT("Deck %i has corrupted OW memory. "
+                    "Ignoring the deck in DEBUG mode.\n", i);
+        deckInfos[i].driver = &dummyDriver;
+#else
         DEBUG_PRINT("Deck %i has corrupted OW memory. "
                     "No driver will be initialized!\n", i);
         noError = false;
+#endif
       }
     }
     else
