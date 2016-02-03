@@ -146,7 +146,7 @@ static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
   if (reset)
   {
     for (i=0; i<NBR_LEDS; i++) {
-      COPY_COLOR(buffer[i], greenRing[i]);
+      COPY_COLOR(buffer[i], whiteRing[i]);
     }
   }
 

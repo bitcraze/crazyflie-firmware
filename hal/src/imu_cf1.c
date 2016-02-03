@@ -220,14 +220,14 @@ bool imu6Test(void)
 
   if (!isInit)
   {
-    DEBUG_PRINT("Uninitialized");
+    DEBUG_PRINT("Uninitialized\n");
     testStatus = false;
   }
   // Test for CF 10-DOF variant with none responding sensor
   if((isHmc5883lPresent && !isMs5611Present) ||
      (!isHmc5883lPresent && isMs5611Present))
   {
-    DEBUG_PRINT("HMC5883L or MS5611 is not responding");
+    DEBUG_PRINT("HMC5883L or MS5611 is not responding\n");
     testStatus = false;
   }
   if (testStatus)
