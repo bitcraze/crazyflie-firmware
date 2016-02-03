@@ -14,7 +14,13 @@ brew install gcc-arm-none-eabi
 
 ### Debian/Ubuntu
 
-> `TODO: Please share!`
+Tested on Ubuntu 14.04 64b:
+
+```bash
+sudo add-apt-repository ppa:terry.guo/gcc-arm-embedded
+sudo apt-get update
+sudo apt-get install libnewlib-arm-none-eabi
+```
 
 ### Arch Linux
 
