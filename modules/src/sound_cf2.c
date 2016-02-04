@@ -151,6 +151,9 @@
 #define E (W * 8)
 #define S (W * 16)
 #define ES (W*6)
+/* End markers */
+#define STOP {0xFE, 0}
+#define REPEAT {0xFF, 0}
 
 #define MAX_NOTE_LENGTH 80
 
@@ -171,15 +174,15 @@ static uint32_t neffect = 0;
 static uint32_t sys_effect = 0;
 static uint32_t user_effect = 0;
 
-static Melody range_slow = {.bpm = 120, .delay = 1, .notes = {{C4, H}, {D4, H}, {E4, H}, {F4, H}, {G4, H}, {A4, H}, {B4, H}, {0xFF, 0}}};
-static Melody range_fast = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {G4, S}, {A4, S}, {B4, S}, {0xFF, 0}}};
-static Melody startup = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {0xFE, 0}}};
-static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C5, S}, {B4, S}, {A4, S}, {C5, S}, {0xFE, 0}}};
-static Melody chg_done = {.bpm = 120, .delay = 1, .notes = {{D4, Q}, {A4, Q}, {0xFE, 0}}};
-static Melody lowbatt = {.bpm = 120, .delay = 1, .notes = {{D4, E}, {A4, E}, {D4, E}, {0xFF, 0}}};
-static Melody usb_disconnect = {.bpm = 120, .delay = 1, .notes = {{C4, E}, {0xFE, 0}}};
-static Melody usb_connect = {.bpm = 120, .delay = 1, .notes = {{A4, E}, {0xFE, 0}}};
-static Melody factory_test = {.bpm = 120, .delay = 1, .notes = {{A1, Q}, {OFF, S}, {A2, Q}, {OFF, S}, {0xFF, 0}}};
+static Melody range_slow = {.bpm = 120, .delay = 1, .notes = {{C4, H}, {D4, H}, {E4, H}, {F4, H}, {G4, H}, {A4, H}, {B4, H}, REPEAT}};
+static Melody range_fast = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {G4, S}, {A4, S}, {B4, S}, REPEAT}};
+static Melody startup = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, STOP}};
+static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C5, S}, {B4, S}, {A4, S}, {C5, S}, STOP}};
+static Melody chg_done = {.bpm = 120, .delay = 1, .notes = {{D4, Q}, {A4, Q}, STOP}};
+static Melody lowbatt = {.bpm = 120, .delay = 1, .notes = {{D4, E}, {A4, E}, {D4, E}, REPEAT}};
+static Melody usb_disconnect = {.bpm = 120, .delay = 1, .notes = {{C4, E}, STOP}};
+static Melody usb_connect = {.bpm = 120, .delay = 1, .notes = {{A4, E}, STOP}};
+static Melody factory_test = {.bpm = 120, .delay = 1, .notes = {{A1, Q}, {OFF, S}, {A2, Q}, {OFF, S}, REPEAT}};
 /* Imperial march from http://tny.cz/e525c1b2A */
 static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A3, Q},{F3, ES}, {C4, S},
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H},
@@ -194,7 +197,7 @@ static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A
     {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
     {C4,S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {C4, S},
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H}, {0, H},
-    {0xFF, 0}}};
+    REPEAT}};
 
 typedef void (*BuzzerEffect)(uint32_t timer, uint32_t * mi, Melody * melody);
 
@@ -287,7 +290,7 @@ typedef struct {
 
 static EffectCall effects[] = {
     [SND_OFF] = {.call = &off},
-    {.call = &melodyplayer, .melody = &factory_test},
+    [FACTORY_TEST] = {.call = &melodyplayer, .melody = &factory_test},
     [SND_USB_CONN] = {.call = &melodyplayer, .melody = &usb_connect},
     [SND_USB_DISC] = {.call = &melodyplayer, .melody = &usb_disconnect},
     [SND_BAT_FULL] = {.call = &melodyplayer, .melody = &chg_done},
