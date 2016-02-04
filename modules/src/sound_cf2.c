@@ -145,12 +145,12 @@
 #define D8  4698
 #define Eb8 4978
 /* Duration of notes */
-#define W (60)
-#define H (W * 2)
-#define Q (W * 4)
-#define E (W * 8)
-#define S (W * 16)
-#define ES (W*6)
+#define W  1  // 1/1
+#define H  2  // 1/2
+#define Q  4  // 1/4
+#define E  8  // 1/8
+#define S  16 // 1/16
+#define ES 6
 /* End markers */
 #define STOP {0xFE, 0}
 #define REPEAT {0xFF, 0}
@@ -205,31 +205,39 @@ static void off(uint32_t counter, uint32_t * mi, Melody * m) {
   buzzerOff();
 }
 
+static void turnCurrentEffectOff() {
+  if (sys_effect != 0) {
+    sys_effect = 0;
+  } else {
+    user_effect = 0;
+  }
+}
+
 static uint32_t mcounter = 0;
 static void melodyplayer(uint32_t counter, uint32_t * mi, Melody * m) {
-  if (m->notes[(*mi)].tone == 0xFE) {
-    // Turn off buzzer since we're at the end
-    (*mi) = 0;
-    if (sys_effect != 0)
-      sys_effect = 0;
-    else
-      user_effect = 0;
-  } else if (mcounter == 0) {
-    if (m->notes[(*mi)].tone == 0xFF)
-    {
+  uint16_t tone = m->notes[(*mi)].tone;
+  uint16_t duration = m->notes[(*mi)].duration;
+
+  if (mcounter == 0) {
+    if (tone == 0xFE) {
+      // Turn off buzzer since we're at the end
+      (*mi) = 0;
+      turnCurrentEffectOff();
+    } else if (tone == 0xFF) {
       // Loop the melody
       (*mi) = 0;
+    } else {
+      // Play current note
+      buzzerOn(tone);
+      mcounter = (100 * 4 * 60) / (m->bpm * duration) - 1;
+      (*mi)++;
     }
-    // Play current note
-    buzzerOn(m->notes[(*mi)].tone);
-    mcounter = (m->bpm * 100) / m->notes[(*mi)].duration;
-    (*mi)++;
+  } else {
+    if (mcounter == 1) {
+        buzzerOff();
+    }
+    mcounter--;
   }
-  else if (mcounter == 1)
-  {
-      buzzerOff();
-  }
-  mcounter--;
 }
 
 static uint8_t static_ratio = 0;
@@ -246,13 +254,11 @@ static int16_t siren_step = 40;
 static void siren(uint32_t counter, uint32_t * mi, Melody * melody)
 {
   siren_freq += siren_step;
-  if (siren_freq > siren_stop)
-  {
+  if (siren_freq > siren_stop) {
     siren_step *= -1;
     siren_freq = siren_stop;
   }
-  if (siren_freq < siren_start)
-  {
+  if (siren_freq < siren_start) {
     siren_step *= -1;
     siren_freq = siren_start;
   }
@@ -318,20 +324,21 @@ static void soundTimer(xTimerHandle timer)
   } else {
     effect = user_effect;
   }
-  if (effects[effect].call != 0)
-    effects[effect].call(counter*10, &effects[effect].mi,
-                         effects[effect].melody);
+
+  if (effects[effect].call != 0) {
+    effects[effect].call(counter * 10, &effects[effect].mi, effects[effect].melody);
+  }
 }
 
 void soundInit(void)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
-  neffect = sizeof(effects)/sizeof(effects[0])-1;
+  neffect = sizeof(effects) / sizeof(effects[0]) - 1;
 
-  timer = xTimerCreate("SoundTimer", M2T(10),
-                                     pdTRUE, NULL, soundTimer);
+  timer = xTimerCreate("SoundTimer", M2T(10), pdTRUE, NULL, soundTimer);
   xTimerStart(timer, 100);
 
   isInit = true;
