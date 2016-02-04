@@ -176,15 +176,14 @@ static uint32_t user_effect = 0;
 
 static Melody range_slow = {.bpm = 120, .delay = 1, .notes = {{C4, H}, {D4, H}, {E4, H}, {F4, H}, {G4, H}, {A4, H}, {B4, H}, REPEAT}};
 static Melody range_fast = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {G4, S}, {A4, S}, {B4, S}, REPEAT}};
-static Melody startup = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, STOP}};
-static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C5, S}, {B4, S}, {A4, S}, {C5, S}, STOP}};
+static Melody startup = {.bpm = 120, .delay = 1, .notes = {{C6, S}, {C6, S}, STOP}};
+static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {E4, S}, {G4, S}, {C5, E}, STOP}};
 static Melody chg_done = {.bpm = 120, .delay = 1, .notes = {{D4, Q}, {A4, Q}, STOP}};
 static Melody lowbatt = {.bpm = 120, .delay = 1, .notes = {{D4, E}, {A4, E}, {D4, E}, REPEAT}};
 static Melody usb_disconnect = {.bpm = 120, .delay = 1, .notes = {{C4, E}, STOP}};
 static Melody usb_connect = {.bpm = 120, .delay = 1, .notes = {{A4, E}, STOP}};
 static Melody factory_test = {.bpm = 120, .delay = 1, .notes = {{A1, Q}, {OFF, S}, {A2, Q}, {OFF, S}, REPEAT}};
-/* Imperial march from http://tny.cz/e525c1b2A */
-static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A3, Q},{F3, ES}, {C4, S},
+static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A3, Q}, {F3, ES}, {C4, S},
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H},
     {E4, Q}, {E4, Q}, {E4, Q}, {F4, ES}, {C4, S},
     {Ab3, Q}, {F3, ES}, {C4, S}, {A3, H},
