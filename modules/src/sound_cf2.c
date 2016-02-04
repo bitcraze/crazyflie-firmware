@@ -174,7 +174,7 @@ static uint32_t user_effect = 0;
 static Melody range_slow = {.bpm = 120, .delay = 1, .notes = {{C4, H}, {D4, H}, {E4, H}, {F4, H}, {G4, H}, {A4, H}, {B4, H}, {0xFF, 0}}};
 static Melody range_fast = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {G4, S}, {A4, S}, {B4, S}, {0xFF, 0}}};
 static Melody startup = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {0xFE, 0}}};
-static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C4, S}, {D4, S}, {E4, S}, {F4, S}, {0xFE, 0}}};
+static Melody calibrated = {.bpm = 120, .delay = 1, .notes = {{C5, S}, {B4, S}, {A4, S}, {C5, S}, {0xFE, 0}}};
 static Melody chg_done = {.bpm = 120, .delay = 1, .notes = {{D4, Q}, {A4, Q}, {0xFE, 0}}};
 static Melody lowbatt = {.bpm = 120, .delay = 1, .notes = {{D4, E}, {A4, E}, {D4, E}, {0xFF, 0}}};
 static Melody usb_disconnect = {.bpm = 120, .delay = 1, .notes = {{C4, E}, {0xFE, 0}}};
