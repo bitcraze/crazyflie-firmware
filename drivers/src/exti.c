@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -53,7 +53,7 @@ void extiInit()
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
-  
+
   isInit = true;
 }
 
@@ -69,15 +69,6 @@ void __attribute__((used)) EXTI9_5_IRQHandler(void)
   {
     EXTI_ClearITPendingBit(RADIO_GPIO_IRQ_LINE);
     nrfIsr();
-  }
-}
-
-#else
-void __attribute__((used)) EXTI15_10_IRQHandler(void)
-{
-  if (EXTI_GetITStatus(RADIO_GPIO_IRQ_LINE) == SET)
-  {
-    EXTI_ClearITPendingBit(RADIO_GPIO_IRQ_LINE);
   }
 }
 #endif
