@@ -89,6 +89,8 @@ ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 # USB Device obj
 ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 
+# libdw dw1000 driver
+VPATH_CF2 += lib/libdw/src
 
 # FreeRTOS
 VPATH += $(PORT)
@@ -133,6 +135,9 @@ PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o
+
+# libdw
+PROJ_OBJ_CF2 += libdw.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
@@ -199,6 +204,7 @@ INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Ideck/interface -I deck/drivers/interface
+INCLUDES_CF2 += -Ilib/libdw/inc
 
 ifeq ($(USE_FPU), 1)
 	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
