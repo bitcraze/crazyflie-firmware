@@ -148,6 +148,7 @@ PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
 PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
+PROJ_OBJ_CF2 += deck_spi.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o

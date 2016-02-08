@@ -10,5 +10,6 @@
 #include "deck_constants.h"
 #include "deck_digital.h"
 #include "deck_analog.h"
+#include "deck_spi.h"
 
 #endif
