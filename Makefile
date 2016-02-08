@@ -292,7 +292,7 @@ endif
 #################### Targets ###############################
 
 
-all: build
+all: check_submodules build
 build: clean_version compile print_version size
 compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
 
@@ -350,6 +350,9 @@ trace:
 #Print preprocessor #defines
 prep:
 	@$(CC) -dD
+
+check_submodules:
+	@$(PYTHON2) tools/make/check-for-submodules.py
 
 include tools/make/targets.mk
 
