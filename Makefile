@@ -349,7 +349,7 @@ trace:
 
 #Print preprocessor #defines
 prep:
-	@$(CC) -dD
+	@$(CC) $(CFLAGS) -dM -E - < /dev/null
 
 check_submodules:
 	@$(PYTHON2) tools/make/check-for-submodules.py

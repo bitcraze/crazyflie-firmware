@@ -32,7 +32,14 @@
 
 #include "crtp.h"
 
-#include "stm32fxxx.h"
+#ifdef STM32F40_41xxx
+#include "stm32f4xx.h"
+#else
+#include "stm32f10x.h"
+#ifndef SCB_ICSR_VECTACTIVE_Msk
+#define SCB_ICSR_VECTACTIVE_Msk 0x1FFUL
+#endif
+#endif
 
 CRTPPacket messageToPrint;
 xSemaphoreHandle synch = NULL;
