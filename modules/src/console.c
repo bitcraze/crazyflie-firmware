@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -31,6 +31,8 @@
 #include "semphr.h"
 
 #include "crtp.h"
+
+#include "stm32fxxx.h"
 
 CRTPPacket messageToPrint;
 xSemaphoreHandle synch = NULL;
@@ -65,7 +67,7 @@ void consoleInit()
   messageToPrint.size = 0;
   messageToPrint.header = CRTP_HEADER(CRTP_PORT_CONSOLE, 0);
   vSemaphoreCreateBinary(synch);
-  
+
   isInit = true;
 }
 
@@ -77,9 +79,15 @@ bool consoleTest(void)
 int consolePutchar(int ch)
 {
   int i;
+  bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
 
-  if (!isInit)
+  if (!isInit) {
     return 0;
+  }
+
+  if (isInInterrupt) {
+    return consolePutcharFromISR(ch);
+  }
 
   if (xSemaphoreTake(synch, portMAX_DELAY) == pdTRUE)
   {
@@ -102,17 +110,32 @@ int consolePutchar(int ch)
     }
     xSemaphoreGive(synch);
   }
-  
+
   return (unsigned char)ch;
+}
+
+int consolePutcharFromISR(int ch) {
+  BaseType_t higherPriorityTaskWoken;
+
+  if (xSemaphoreTakeFromISR(synch, &higherPriorityTaskWoken) == pdTRUE) {
+    if (messageToPrint.size < CRTP_MAX_DATA_SIZE)
+    {
+      messageToPrint.data[messageToPrint.size] = (unsigned char)ch;
+      messageToPrint.size++;
+    }
+    xSemaphoreGiveFromISR(synch, &higherPriorityTaskWoken);
+  }
+
+  return ch;
 }
 
 int consolePuts(char *str)
 {
   int ret = 0;
-  
+
   while(*str)
     ret |= consolePutchar(*str++);
-  
+
   return ret;
 }
 

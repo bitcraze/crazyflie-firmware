@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -46,10 +46,22 @@ bool consoleTest(void);
 int consolePutchar(int ch);
 
 /**
+ * Put a character to the console buffer
+ *
+ * @param ch character that shall be printed
+ * @return The character casted to unsigned int or EOF in case of error
+ *
+ * @note This version can be called by interrup. In such case the internal
+ * buffer is going to be used. If a task currently is printing or if the
+ * interrupts prints too much the data will be ignored.
+ */
+int consolePutcharFromISR(int ch);
+
+/**
  * Put a null-terminated string on the console buffer
  *
  * @param str Null terminated string
- * @return a nonnegative number on success, or EOF on error. 
+ * @return a nonnegative number on success, or EOF on error.
  */
 int consolePuts(char *str);
 
@@ -60,7 +72,7 @@ void consoleFlush(void);
 
 /**
  * Macro implementing consolePrintf with eprintf
- * 
+ *
  * @param FMT String format
  * @patam ... Parameters to print
  */
