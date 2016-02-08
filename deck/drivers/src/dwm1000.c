@@ -46,7 +46,7 @@
 #include "log.h"
 #include "nvicconf.h"
 
-#include "libdw.h"
+#include "libdw1000.h"
 
 // Minimal MAC packet format
 #include "mac.h"

@@ -90,7 +90,7 @@ ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 
 # libdw dw1000 driver
-VPATH_CF2 += lib/libdw/src
+VPATH_CF2 += vendor/libdw1000/src
 
 # FreeRTOS
 VPATH += $(PORT)
@@ -205,7 +205,7 @@ INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Ideck/interface -I deck/drivers/interface
-INCLUDES_CF2 += -Ilib/libdw/inc
+INCLUDES_CF2 += -Ivendor/libdw1000/inc
 
 ifeq ($(USE_FPU), 1)
 	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
