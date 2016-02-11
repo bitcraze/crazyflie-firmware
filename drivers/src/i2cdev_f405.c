@@ -92,7 +92,7 @@ int i2cdevInit(I2C_Dev *dev)
   vSemaphoreCreateBinary(i2cdevDmaEventI2c1);
   vSemaphoreCreateBinary(i2cdevDmaEventI2c2);
   vSemaphoreCreateBinary(i2cdevDmaEventI2c3);
-  
+
   return true;
 }
 
@@ -107,7 +107,7 @@ bool i2cdevReadBit(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 {
   uint8_t byte;
   bool status;
-  
+
   status = i2cdevRead(dev, devAddress, memAddress, 1, &byte);
   *data = byte & (1 << bitNum);
 
@@ -143,7 +143,7 @@ bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
   {
     dev->wCPAL_Options |= CPAL_OPT_NO_MEM_ADDR;
   }
- 
+
   return i2cdevReadTransfer(dev);
 }
 
@@ -222,7 +222,7 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
   dev->pCPAL_TransferTx->pbBuffer = data;
   dev->pCPAL_TransferTx->wAddr1 = devAddress << 1;
   dev->pCPAL_TransferTx->wAddr2 = memAddress;
-  
+
   if (memAddress != I2CDEV_NO_MEM_ADDR)
   {
     dev->wCPAL_Options &= !CPAL_OPT_NO_MEM_ADDR;
@@ -404,5 +404,3 @@ void CPAL_I2C_RXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
 {
   i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
 }
-
-

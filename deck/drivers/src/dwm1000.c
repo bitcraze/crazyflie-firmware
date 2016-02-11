@@ -84,13 +84,13 @@ uint8_t addresses[N_NODES+1][8] = {
 
 // Static system configuration
 #define N_ANCHORS 8
-int anchors[N_ANCHORS] = {1,2,3,4,6,7,8,9};
+int anchors[N_ANCHORS] = {1,2,3,4,5,6,7,8};
 
 #define N_TAGS 1
-int tags[N_TAGS] = {5};
+int tags[N_TAGS] = {9};
 
 // Hardcode Crazyflie as board5
-static int boardId = 5;
+static int boardId = 9;
 
 /***** Radio callbacks, Ranging algoritm *******/
 
