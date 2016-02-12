@@ -35,6 +35,7 @@
 
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
