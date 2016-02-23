@@ -298,7 +298,7 @@ static bool gtgpsTest()
 
 static const DeckDriver gtgps_deck = {
   .vid = 0xBC,
-  .pid = 0x05,
+  .pid = 0x07,
   .name = "bcGTGPS",
 
   .usedPeriph = 0,

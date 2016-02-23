@@ -72,7 +72,7 @@ static bool bigquadTest()
 
 static const DeckDriver bigquad_deck = {
   .vid = 0xBC,
-  .pid = 0x03,
+  .pid = 0x05,
   .name = "bcBigQuad",
 
   .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,

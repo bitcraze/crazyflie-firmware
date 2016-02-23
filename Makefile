@@ -157,7 +157,8 @@ PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
 PROJ_OBJ_CF2 += cppmdeck.o
 #Deck tests
-PROJ_OBJ_CF2 += exptest.o bigquadtest.o
+PROJ_OBJ_CF2 += exptest.o 
+#PROJ_OBJ_CF2 += bigquadtest.o
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
