@@ -81,4 +81,6 @@ static const DeckDriver bigquad_deck = {
   .test = bigquadTest,
 };
 
+#ifdef ENABLE_BQ_DECK
 DECK_DRIVER(bigquad_deck);
+#endif
