@@ -21,31 +21,45 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_analog.h - Arduino-compatible analog input API
+ * deck_test.h - Deck test utility functions
  */
 
-#ifndef __DECK_ANALOG_H__
-#define __DECK_ANALOG_H__
+#ifndef __DECK_TEST_H__
+#define __DECK_TEST_H__
 
 #include <stdint.h>
+#include "stm32fxxx.h"
 
-/* Voltage reference types for the analogReference() function. */
-#define DEFAULT 0
-#define VREF    3.0
+typedef struct
+{
+  GPIO_TypeDef gpioBuffA;
+  GPIO_TypeDef gpioBuffB;
+  GPIO_TypeDef gpioBuffC;
+} GpioRegBuf;
 
-void adcInit(void);
-
-uint16_t analogRead(uint32_t pin);
-
-void analogReference(uint8_t type);
-
-void analogReadResolution(uint8_t bits);
-
-/*
- * Read the voltage on a deck pin.
- * @param[in] pin   deck pin to measure.
- * @return          voltage in volts
+/**
+ * Deck test evaluation function which makes evaluation
+ * a bit less messy. Outputs failstring on console if test
+ * failed.
+ *
+ * param[in]   result      The result of the test.
+ * param[in]   failstring  Pointer to fail string.
+ * param[out]  status      Saves the test result.
  */
-float analogReadVoltage(uint32_t pin);
+void decktestEval(bool result, char *failString, bool *status);
+
+/**
+ * Save GPIO registers into buffer so it can be restored later
+ *
+ * param[out] gpioRegBuf  Buffer to which registers will be copied
+ */
+void decktestSaveGPIOStatesABC(GpioRegBuf *gpioRegBuf);
+
+/**
+ * Restore saved GPIO registers
+ *
+ * param[in] gpioRegBuf Buffer of saved registers
+ */
+void decktestRestoreGPIOStatesABC(GpioRegBuf *gpioRegBuf);
 
 #endif

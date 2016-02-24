@@ -68,7 +68,7 @@ void uart2Init(void)
   USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
   USART_InitStructure.USART_StopBits            = USART_StopBits_1;
   USART_InitStructure.USART_Parity              = USART_Parity_No ;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_CTS;
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART2_TYPE, &USART_InitStructure);
 
   //Enable UART

@@ -35,8 +35,19 @@
   #define DEFUALT_YAW_MODE  XMODE
 #endif
 
-#define COMMANDER_WDT_TIMEOUT_STABALIZE  M2T(500)
+#define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
+
+/**
+ * CRTP commander data struct
+ */
+struct CommanderCrtpValues
+{
+  float roll;
+  float pitch;
+  float yaw;
+  uint16_t thrust;
+} __attribute__((packed));
 
 /**
  * Stabilization modes for Roll, Pitch, Yaw.
@@ -59,7 +70,6 @@ typedef enum
 
 void commanderInit(void);
 bool commanderTest(void);
-void commanderWatchdog(void);
 uint32_t commanderGetInactivityTime(void);
 void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired);
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType);
@@ -69,5 +79,6 @@ bool commanderGetAltHoldMode(void);
 void commanderSetAltHoldMode(bool altHoldModeNew);
 YawModeType commanderGetYawMode(void);
 bool commanderGetYawModeCarefreeResetFront(void);
+void commanderExtrxSet(struct CommanderCrtpValues* val);
 
 #endif /* COMMANDER_H_ */

@@ -26,12 +26,12 @@
 #define DEBUG_MODULE "ET"
 
 #include <stdint.h>
-#include <string.h>
 
 #include "stm32fxxx.h"
 #include "config.h"
 #include "debug.h"
 #include "deck.h"
+#include "deck_test.h"
 
 #include "imu.h"
 
@@ -97,7 +97,6 @@ EtGpio etGpioIn[ET_NBR_PINS] =
 EtGpio etGpioSDA = {ET_GPIO_PORT_SDA,  ET_GPIO_PIN_SDA, "SDA"};
 EtGpio etGpioSCL = {ET_GPIO_PORT_SCL,  ET_GPIO_PIN_SCL, "SCL"};
 
-static GPIO_TypeDef savedGPIORegs[3];
 static bool isInit;
 
 static bool exptestTestAllPins(bool test);
@@ -108,19 +107,18 @@ static bool exptestRun(void)
   int i;
   volatile int delay;
   bool status = true;
+  GPIO_InitTypeDef GPIO_InitStructure;
+  GpioRegBuf gpioSaved;
+
   isInit = true;
 
   status &= imu6ManufacturingTest();
 
-  GPIO_InitTypeDef GPIO_InitStructure;
 
   // Enable GPIOs
   RCC_AHB1PeriphClockCmd(ET_GPIO_PERIF, ENABLE);
 
-  // Save GPIO registers
-  memcpy(&savedGPIORegs[0], GPIOA, sizeof(GPIO_TypeDef));
-  memcpy(&savedGPIORegs[1], GPIOB, sizeof(GPIO_TypeDef));
-  memcpy(&savedGPIORegs[2], GPIOC, sizeof(GPIO_TypeDef));
+  decktestSaveGPIOStatesABC(&gpioSaved);
 
   for (i = 0; i < ET_NBR_PINS; i++)
   {
@@ -163,10 +161,7 @@ static bool exptestRun(void)
     GPIO_Init(etGpioIn[i].port, &GPIO_InitStructure);
   }
 
-  // Restore GPIO registers
-  memcpy(GPIOA, &savedGPIORegs[0], sizeof(GPIO_TypeDef));
-  memcpy(GPIOB, &savedGPIORegs[1], sizeof(GPIO_TypeDef));
-  memcpy(GPIOC, &savedGPIORegs[2], sizeof(GPIO_TypeDef));
+  decktestRestoreGPIOStatesABC(&gpioSaved);
 
   if (status)
   {

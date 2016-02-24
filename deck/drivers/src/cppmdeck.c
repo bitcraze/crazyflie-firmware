@@ -23,64 +23,49 @@
  *
  * exptest.c - Testing of expansion port.
  */
-#define DEBUG_MODULE "BIGQUAD"
+#define DEBUG_MODULE "CPPM"
 
 #include <stdint.h>
 #include <string.h>
 
 #include "stm32fxxx.h"
 #include "config.h"
-#include "motors.h"
 #include "debug.h"
 #include "deck.h"
 #include "extrx.h"
-#include "pm.h"
-
-#define BIGQUAD_BAT_VOLT_PIN       DECK_GPIO_MISO
-#define BIGQUAD_BAT_VOLT_MULT      7.8f
-#define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
-#define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
 
 //Hardware configuration
 static bool isInit;
 
-static void bigquadInit(DeckInfo *info)
+static void cppmdeckInit(DeckInfo *info)
 {
   if(isInit)
     return;
 
-  DEBUG_PRINT("Switching to brushless.\n");
-  motorsInit(motorMapBigQuadDeck);
   extRxInit();
-  pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
-  pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_CURR_PIN, BIGQUAD_BAT_AMP_PER_VOLT);
 
   isInit = true;
 }
 
-static bool bigquadTest()
+static bool cppmdeckTest()
 {
   bool status = true;
 
   if(!isInit)
     return false;
 
-  status = motorsTest();
-
   return status;
 }
 
-static const DeckDriver bigquad_deck = {
-  .vid = 0xBC,
-  .pid = 0x05,
-  .name = "bcBigQuad",
+static const DeckDriver cppm_deck = {
+  .vid = 0,
+  .pid = 0,
+  .name = "bcCPPM",
 
-  .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,
-  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_PB4 | DECK_USING_PB5 | DECK_USING_PA7,
-  .init = bigquadInit,
-  .test = bigquadTest,
+  .usedPeriph = DECK_USING_TIMER14,
+  .usedGpio = DECK_USING_PA7,
+  .init = cppmdeckInit,
+  .test = cppmdeckTest,
 };
 
-#ifdef ENABLE_BQ_DECK
-DECK_DRIVER(bigquad_deck);
-#endif
+DECK_DRIVER(cppm_deck);

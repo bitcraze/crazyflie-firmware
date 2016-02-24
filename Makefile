@@ -75,7 +75,7 @@ VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(STLIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-VPATH_CF2 += deck/api deck/core deck/drivers/src
+VPATH_CF2 += deck/api deck/core deck/drivers/src deck/drivers/src/test
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -129,6 +129,7 @@ PROJ_OBJ_CF1 += eskylink.o
 PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o
 PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
+PROJ_OBJ_CF2 += cppm.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
@@ -145,10 +146,10 @@ PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
 PROJ_OBJ_CF1 += sound_cf1.o
-PROJ_OBJ_CF2 += platformservice.o sound_cf2.o
+PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
 
 # Deck Core
-PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
+PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o deck_test.o
 
 # Deck API
 PROJ_OBJ_CF2 += deck_constants.o
@@ -158,11 +159,15 @@ PROJ_OBJ_CF2 += deck_spi.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
-PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
 PROJ_OBJ_CF2 += dwm1000.o
+PROJ_OBJ_CF2 += cppmdeck.o
+#Deck tests
+PROJ_OBJ_CF2 += exptest.o
+#PROJ_OBJ_CF2 += bigquadtest.o
+
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o

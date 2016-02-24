@@ -1,4 +1,4 @@
-/*
+/**
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2015 Bitcraze AB
+ * Copyright (C) 2011-2013 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,31 +21,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_analog.h - Arduino-compatible analog input API
+ *
+ * cppm.h - Combined PPM / PPM-Sum driver header file
  */
-
-#ifndef __DECK_ANALOG_H__
-#define __DECK_ANALOG_H__
 
 #include <stdint.h>
 
-/* Voltage reference types for the analogReference() function. */
-#define DEFAULT 0
-#define VREF    3.0
+void cppmInit(void);
 
-void adcInit(void);
+bool cppmIsAvailible(void);
 
-uint16_t analogRead(uint32_t pin);
+void cppmClearQueue(void);
 
-void analogReference(uint8_t type);
+int cppmGetTimestamp(uint16_t *timestamp);
 
-void analogReadResolution(uint8_t bits);
+float cppmConvert2Float(uint16_t timestamp, float min, float max);
 
-/*
- * Read the voltage on a deck pin.
- * @param[in] pin   deck pin to measure.
- * @return          voltage in volts
- */
-float analogReadVoltage(uint32_t pin);
+uint16_t cppmConvert2uint16(uint16_t timestamp);
 
-#endif

@@ -63,7 +63,7 @@ static void syslinkTask(void *param)
 
   while(1)
   {
-    if (uartGetDataWithTimout(&c))
+    if (uartslkGetDataWithTimout(&c))
     {
       counter++;
       switch(rxState)
@@ -210,7 +210,7 @@ int syslinkSendPacket(SyslinkPacket *slp)
   sendBuffer[dataSize-2] = cksum[0];
   sendBuffer[dataSize-1] = cksum[1];
 
-  uartSendDataDmaBlocking(dataSize, sendBuffer);
+  uartslkSendDataDmaBlocking(dataSize, sendBuffer);
 
   xSemaphoreGive(syslinkAccess);
 

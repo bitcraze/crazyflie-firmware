@@ -28,6 +28,9 @@
 
 #include "stm32fxxx.h"
 
+static  uint32_t  stregResolution;
+static  uint32_t  adcRange;
+
 void adcInit(void)
 {
   /*
@@ -55,15 +58,8 @@ void adcInit(void)
   ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
   ADC_CommonInit(&ADC_CommonInitStructure);
 
-  /* Init ADC2: 10bit, single-conversion for Arduino compatibility */
-  ADC_InitStructure.ADC_Resolution = ADC_Resolution_10b;
-  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
-  ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
-  ADC_InitStructure.ADC_ExternalTrigConvEdge = 0;
-  ADC_InitStructure.ADC_ExternalTrigConv = 0;
-  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-  ADC_InitStructure.ADC_NbrOfConversion = 1;
-  ADC_Init(ADC2, &ADC_InitStructure);
+  /* Init ADC2: 12bit, single-conversion. For Arduino compatibility set 10bit */
+  analogReadResolution(12);
 
   /* Enable ADC2 */
   ADC_Cmd(ADC2, ENABLE);
@@ -71,7 +67,7 @@ void adcInit(void)
 
 static uint16_t analogReadChannel(uint8_t channel)
 {
-  /* According to datasheet, minimum sampling time for 10-bit conversion is almost 15 cycles. */
+  /* According to datasheet, minimum sampling time for 12-bit conversion is 15 cycles. */
   ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_15Cycles);
 
   /* Start the conversion */
@@ -118,4 +114,41 @@ void analogReference(uint8_t type)
    * TODO: Figure out which voltage reference to compensate with.
    */
   assert_param(type == 0 /* DEFAULT */);
+}
+
+void analogReadResolution(uint8_t bits)
+{
+  ADC_InitTypeDef       ADC_InitStructure;
+
+  assert_param((bits >= 6) && (bits <= 12));
+
+  adcRange = 1 << bits;
+  switch (bits)
+  {
+    case 12: stregResolution = ADC_Resolution_12b; break;
+    case 10: stregResolution = ADC_Resolution_10b; break;
+    case 8:  stregResolution = ADC_Resolution_8b; break;
+    case 6:  stregResolution = ADC_Resolution_6b; break;
+    default: stregResolution = ADC_Resolution_12b; break;
+  }
+
+  /* Init ADC2 witch new resolution */
+  ADC_InitStructure.ADC_Resolution = stregResolution;
+  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+  ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+  ADC_InitStructure.ADC_ExternalTrigConvEdge = 0;
+  ADC_InitStructure.ADC_ExternalTrigConv = 0;
+  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+  ADC_InitStructure.ADC_NbrOfConversion = 1;
+  ADC_Init(ADC2, &ADC_InitStructure);
+}
+
+float analogReadVoltage(uint32_t pin)
+{
+  float voltage;
+
+  voltage = analogRead(pin) * VREF / adcRange;
+
+  return voltage;
+
 }

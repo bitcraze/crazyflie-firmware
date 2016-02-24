@@ -78,9 +78,11 @@
 #define NVIC_I2C_HIGH_PRI    3
 #define NVIC_I2C_LOW_PRI      4
 #define NVIC_TRACE_TIM_PRI    4
+#define NVIC_UART_PRI         6
 
 // Priorities for Crazyflie 2.0
 #define NVIC_RADIO_PRI        11
 #define NVIC_ADC_PRI          12
+#define NVIC_CPPM_PRI         14
 
 #endif /* NVIC_CONF_H_ */

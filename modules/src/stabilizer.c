@@ -321,11 +321,6 @@ static void stabilizerTask(void* param)
         // Use thrust from controller if not in altitude hold mode
         commanderGetThrust(&actuatorThrust);
       }
-      else
-      {
-        // Added so thrust can be set to 0 while in altitude hold mode after disconnect
-        commanderWatchdog();
-      }
 
       /* Call out before performing thrust updates, if any functions would like to influence the thrust. */
       stabilizerPreThrustUpdateCallOut();

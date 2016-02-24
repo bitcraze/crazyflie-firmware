@@ -75,6 +75,7 @@
 #define SYSTEM_TASK_PRI         2
 #define CRTP_TX_TASK_PRI        2
 #define CRTP_RX_TASK_PRI        2
+#define EXTRX_TASK_PRI          2
 #define LOG_TASK_PRI            1
 #define MEM_TASK_PRI            1
 #define PARAM_TASK_PRI          1
@@ -115,11 +116,10 @@
 #define SYSLINK_TASK_NAME       "SYSLINK"
 #define USBLINK_TASK_NAME       "USBLINK"
 #define PROXIMITY_TASK_NAME     "PROXIMITY"
-#define UART_RX_TASK_NAME       "UART-RX"
-#define INFO_TASK_NAME          "INFO"
-#define PID_CTRL_TASK_NAME      "PID-CTRL"
+#define EXTRX_TASK_NAME         "EXTRX"
+#define UART_RX_TASK_NAME       "UART"
 
-// Task stack sizes
+//Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
 #define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
 #define PM_TASK_STACKSIZE             configMINIMAL_STACK_SIZE
@@ -135,9 +135,8 @@
 #define SYSLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define USBLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
+#define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
-#define INFO_TASK_STACKSIZE           configMINIMAL_STACK_SIZE
-#define PID_CTRL_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

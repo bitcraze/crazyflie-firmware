@@ -60,9 +60,16 @@
 #include "buzzer.h"
 #include "sound.h"
 
+#ifdef PLATFORM_CF1
+#include "uart.h"
+#endif
+
 #ifdef PLATFORM_CF2
 #include "deck.h"
 #endif
+
+
+#include "extrx.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -146,7 +153,10 @@ void systemTask(void *arg)
   queueMonitorInit();
 #endif
 
+#ifdef PLATFORM_CF1
   uartInit();
+#endif
+
 #ifdef ENABLE_UART1
   uart1Init();
 #endif
