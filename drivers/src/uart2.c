@@ -36,7 +36,7 @@
 
 static bool isInit = false;
 
-void uart2Init(void)
+void uart2Init(const uint32_t baudrate)
 {
 
   USART_InitTypeDef USART_InitStructure;
@@ -63,7 +63,7 @@ void uart2Init(void)
   GPIO_PinAFConfig(UART2_GPIO_PORT, UART2_GPIO_AF_TX_PIN, UART2_GPIO_AF_TX);
   GPIO_PinAFConfig(UART2_GPIO_PORT, UART2_GPIO_AF_RX_PIN, UART2_GPIO_AF_RX);
 
-  USART_InitStructure.USART_BaudRate            = UART2_BAUDRATE;
+  USART_InitStructure.USART_BaudRate            = baudrate;
   USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
   USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
   USART_InitStructure.USART_StopBits            = USART_StopBits_1;
@@ -79,7 +79,6 @@ void uart2Init(void)
 
 bool uart2Test(void)
 {
-  uart2Printf("Hello UART2!\n");
   return isInit;
 }
 

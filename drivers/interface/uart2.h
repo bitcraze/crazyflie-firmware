@@ -29,8 +29,6 @@
 #include <stdbool.h>
 #include "eprintf.h"
 
-#define UART2_BAUDRATE         115200
-
 #define UART2_TYPE             USART2
 #define UART2_PERIF            RCC_APB1Periph_USART2
 #define ENABLE_UART2_RCC       RCC_APB1PeriphClockCmd
@@ -52,7 +50,7 @@
 /**
  * Initialize the UART.
  */
-void uart2Init(void);
+void uart2Init(const uint32_t baudrate);
 
 /**
  * Test the UART status.
