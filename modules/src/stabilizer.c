@@ -630,6 +630,12 @@ static float deadband(float value, const float threshold)
   return value;
 }
 
+LOG_GROUP_START(ctrltarget)
+LOG_ADD(LOG_FLOAT, roll, &eulerRollDesired)
+LOG_ADD(LOG_FLOAT, pitch, &eulerPitchDesired)
+LOG_ADD(LOG_FLOAT, yaw, &eulerYawDesired)
+LOG_GROUP_STOP(ctrltarget)
+
 LOG_GROUP_START(stabilizer)
 LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
 LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
