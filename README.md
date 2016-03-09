@@ -4,15 +4,19 @@ This project contains the source code for the Crazyflie 1.0/2.0 firmware.
 
 ## Dependencies
 
-You'll need to use either the Crazyflie VM or install some of an ARM toolchain.
+You'll need to use either the [Crazyflie VM](https://wiki.bitcraze.io/projects:virtualmachine:index),
+[the toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) or 
+install some ARM toolchain.
 
-### OS X
+### Install a toolchain
+
+#### OS X
 ```bash
 brew tap PX4/homebrew-px4
 brew install gcc-arm-none-eabi
 ```
 
-### Debian/Ubuntu
+#### Debian/Ubuntu
 
 Tested on Ubuntu 14.04 64b:
 
@@ -22,29 +26,60 @@ sudo apt-get update
 sudo apt-get install libnewlib-arm-none-eabi
 ```
 
-### Arch Linux
+#### Arch Linux
 
 ```bash
 sudo pacman -S community/arm-none-eabi-gcc community/arm-none-eabi-gdb community/arm-none-eabi-newlib
 ```
 
-### Windows
+#### Windows
 
 > `TODO: Please share!`
+
+### Cloning
+
+This repository uses git submodules. Clone with the --recursive flag
+
+```bash
+git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git
+```
+
+If you already have cloned the repo, use
+
+```bash
+git submodule init
+git submodule update
+```
+
 
 ## Compiling
 
 ### Crazyflie 1.0
+
 Build with:
-```
+```bash
 make PLATFORM=CF1
 ```
 
-### Crazyflie 2.0
-This is the dafault build so just running "make" is enough or:
+or with the toolbelt
+
+```bash
+tb build PLATFORM=CF1
 ```
+
+### Crazyflie 2.0
+
+This is the dafault build so just running "make" is enough or:
+```bash
 make PLATFORM=CF2
 ```
+
+or with the toolbelt
+
+```bash
+tb build
+```
+
 ### config.mk
 To create custom build options create a file called config.mk in the root folder 
 (same as Makefile) and fill it with options. E.g. 
