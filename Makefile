@@ -44,7 +44,7 @@ endif
 RTOS_DEBUG        ?= 0
 
 ############### Location configuration ################
-FREERTOS = lib/FreeRTOS
+FREERTOS = src/lib/FreeRTOS
 ifeq ($(USE_FPU), 1)
 PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
 else
@@ -60,7 +60,7 @@ LINKER_DIR = tools/make/F405/linker
 ST_OBJ_DIR  = tools/make/F405
 endif
 
-STLIB = lib
+STLIB = src/lib
 
 ################ Build configuration ##################
 # St Lib
@@ -75,7 +75,7 @@ VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(STLIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-VPATH_CF2 += deck/api deck/core deck/drivers/src deck/drivers/src/test
+VPATH_CF2 += src/deck/api src/deck/core src/deck/drivers/src src/deck/drivers/src/test
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -102,9 +102,9 @@ VPATH += $(FREERTOS)
 FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 
 # Crazyflie sources
-VPATH += init hal/src modules/src utils/src drivers/src
-VPATH_CF1 += platform/cf1
-VPATH_CF2 += platform/cf2
+VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/src
+VPATH_CF1 += src/platform/cf1
+VPATH_CF2 += src/platform/cf2
 
 ifeq ($(PLATFORM), CF1)
 VPATH +=$(VPATH_CF1)
@@ -194,9 +194,9 @@ LD = $(CROSS_COMPILE)gcc
 SIZE = $(CROSS_COMPILE)size
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -I.
-INCLUDES += -Iconfig -Ihal/interface -Imodules/interface
-INCLUDES += -Iutils/interface -Idrivers/interface -Iplatform
+INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
+INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
+INCLUDES += -Isrc/utils/interface -Isrc/drivers/interface -Isrc/platform
 INCLUDES += -I$(STLIB)/CMSIS/Include
 
 INCLUDES_CF1 += -I$(STLIB)/STM32F10x_StdPeriph_Driver/inc
@@ -210,7 +210,7 @@ INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
-INCLUDES_CF2 += -Ideck/interface -I deck/drivers/interface
+INCLUDES_CF2 += -Isrc/deck/interface -Isrc/deck/drivers/interface
 INCLUDES_CF2 += -Ivendor/libdw1000/inc
 
 ifeq ($(USE_FPU), 1)
