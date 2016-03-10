@@ -170,7 +170,7 @@ PROJ_OBJ_CF2 += exptest.o
 
 
 # Utilities
-PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
+PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
 PROJ_OBJ_CF2 += configblockeeprom.o

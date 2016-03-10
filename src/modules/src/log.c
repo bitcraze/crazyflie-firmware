@@ -43,7 +43,7 @@
 #include "log.h"
 #include "crc.h"
 #include "worker.h"
-#include "fp16.h"
+#include "num.h"
 
 #include "console.h"
 #include "cfassert.h"

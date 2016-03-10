@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 Bitcraze AB
+ * Copyright (C) 2012-2016 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * fp16.c - 16bit floating point handling functions
+ * num.c - 16bit floating point handling functions
  */
 
 /* To not use the GCC implementation, uint16_t is used to carry fp16 values
@@ -38,7 +38,7 @@
  *  * Faster and smaller than the GCC implementation 
  */
 
-#include "fp16.h"
+#include "num.h"
 
 #include <stdint.h>
 
