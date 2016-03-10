@@ -24,7 +24,14 @@
  * num.c - 16bit floating point handling functions
  */
 
-/* To not use the GCC implementation, uint16_t is used to carry fp16 values
+#include <math.h>
+#include <stdint.h>
+
+#include "num.h"
+
+/* Half precision floating point **********************************************
+ *
+ * To not use the GCC implementation, uint16_t is used to carry fp16 values
  *
  * FP16 or Half precision floating points is specified by IEEE 754 as binary 16.
  * (float is specified as binary 32). This implementation is NOT GUARANTEED to
@@ -37,10 +44,6 @@
  *  * Rounding seems to give at least 11 bits precision
  *  * Faster and smaller than the GCC implementation 
  */
-
-#include "num.h"
-
-#include <stdint.h>
 
 uint16_t single2half(float number)
 {
@@ -78,4 +81,43 @@ float half2single(uint16_t number)
         fp32 = (s<<31) | ((e+127-15)<<23) | ((number&0x3ff)<<13);
     
     return *(float*)&fp32;
+}
+
+
+/*****************************************************************************/
+
+uint16_t limitUint16(int32_t value)
+{
+  if(value > UINT16_MAX)
+  {
+    value = UINT16_MAX;
+  }
+  else if(value < 0)
+  {
+    value = 0;
+  }
+
+  return (uint16_t)value;
+}
+
+float constrain(float value, const float minVal, const float maxVal)
+{
+  return min(maxVal, max(minVal,value));
+}
+
+float deadband(float value, const float threshold)
+{
+  if (fabs(value) < threshold)
+  {
+    value = 0;
+  }
+  else if (value > 0)
+  {
+    value -= threshold;
+  }
+  else if (value < 0)
+  {
+    value += threshold;
+  }
+  return value;
 }

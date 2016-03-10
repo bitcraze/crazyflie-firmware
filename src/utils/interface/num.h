@@ -29,7 +29,17 @@
 
 #include <stdint.h>
 
+#undef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#undef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+
+
 uint16_t single2half(float number);
 float half2single(uint16_t number);
+
+uint16_t limitUint16(int32_t value);
+float constrain(float value, const float minVal, const float maxVal);
+float deadband(float value, const float threshold);
 
 #endif

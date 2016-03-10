@@ -46,12 +46,8 @@
 #else
   #include "lps25h.h"
 #endif
+#include "num.h"
 
-
-#undef max
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#undef min
-#define min(a,b) ((a) < (b) ? (a) : (b))
 
 /**
  * Defines in what divided update rate should the attitude
@@ -155,8 +151,6 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
                             const int16_t pitch, const int16_t yaw);
 static uint16_t limitThrust(int32_t value);
 static void stabilizerTask(void* param);
-static float constrain(float value, const float minVal, const float maxVal);
-static float deadband(float value, const float threshold);
 
 void stabilizerInit(void)
 {
@@ -594,40 +588,7 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
 
 static uint16_t limitThrust(int32_t value)
 {
-  if(value > UINT16_MAX)
-  {
-    value = UINT16_MAX;
-  }
-  else if(value < 0)
-  {
-    value = 0;
-  }
-
-  return (uint16_t)value;
-}
-
-// Constrain value between min and max
-static float constrain(float value, const float minVal, const float maxVal)
-{
-  return min(maxVal, max(minVal,value));
-}
-
-// Deadzone
-static float deadband(float value, const float threshold)
-{
-  if (fabs(value) < threshold)
-  {
-    value = 0;
-  }
-  else if (value > 0)
-  {
-    value -= threshold;
-  }
-  else if (value < 0)
-  {
-    value += threshold;
-  }
-  return value;
+  return limitUint16(value);
 }
 
 LOG_GROUP_START(ctrltarget)
