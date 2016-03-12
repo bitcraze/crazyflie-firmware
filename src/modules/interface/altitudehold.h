@@ -26,6 +26,6 @@
 #ifndef ALTITUDE_HOLD_H_
 #define ALTITUDE_HOLD_H_
 
-void stabilizerAltHoldUpdate(uint16_t* actuatorThrust, float vSpeed);
+void altHoldUpdate(uint16_t* actuatorThrust, float asl, float velocityZ, float dt);
 
 #endif /* ALTITUDE_HOLD_H_ */

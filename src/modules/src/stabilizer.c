@@ -57,10 +57,15 @@
 #define ATTITUDE_UPDATE_RATE_DIVIDER  2
 #define FUSION_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ATTITUDE_UPDATE_RATE_DIVIDER)) // 250hz
 
+#define ALTHOLD_UPDATE_RATE_DIVIDER  5
+#define ALTHOLD_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ALTHOLD_UPDATE_RATE_DIVIDER))   // 100hz
+
+#define G 9.81;
+
 // Barometer/ Altitude hold stuff
 static float accWZ     = 0.0; // Acceleration Without gravity along Z axis (G).
 static float accMAG    = 0.0; // Acceleration magnitude
-static float velocityZ = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
+static float velocityZ = 0.0; // Vertical speed (world frame) integrated from vertical acceleration (m/s)
 
 static float vAccDeadband = 0.04; // Vertical acceleration deadband
 static float velZAlpha = 0.995;   // Blending factor to avoid vertical speed to accumulate error
@@ -103,6 +108,12 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
                             const int16_t pitch, const int16_t yaw);
 static uint16_t limitThrust(int32_t value);
 static void stabilizerTask(void* param);
+static void readBarometerData(float* pressure, float* temperature, float* asl);
+
+// Baro variables
+static float temperature; // temp from barometer in celcius
+static float pressure;    // pressure from barometer in bar
+static float asl;         // raw Altitude over Sea Level from pressure sensor, in meters. Has an offset.
 
 void stabilizerInit(void)
 {
@@ -183,6 +194,7 @@ static void stabilizerTask(void* param)
   RPYType pitchType;
   RPYType yawType;
   uint32_t attitudeCounter = 0;
+  uint32_t altHoldCounter = 0;
   uint32_t lastWakeTime;
   float yawRateAngle = 0;
 
@@ -226,7 +238,7 @@ static void stabilizerTask(void* param)
         accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
 
         // Estimate speed from acc (drifts)
-        velocityZ += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
+        velocityZ += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT * G;
         velocityZ *= velZAlpha;
 
         // Adjust yaw if configured to do so
@@ -256,8 +268,14 @@ static void stabilizerTask(void* param)
 
       controllerGetActuatorOutput(&actuatorRoll, &actuatorPitch, &actuatorYaw);
 
-      if (imuHasBarometer()) {
-        stabilizerAltHoldUpdate(&actuatorThrust, velocityZ);
+      // 100HZ
+      if (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER)
+      {
+        if (imuHasBarometer()) {
+          readBarometerData(&pressure, &temperature, &asl);
+          altHoldUpdate(&actuatorThrust, asl, velocityZ, ALTHOLD_UPDATE_DT);
+        }
+        altHoldCounter = 0;
       }
 
       if (!commanderGetAltHoldMode() || !imuHasBarometer())
@@ -402,6 +420,15 @@ static uint16_t limitThrust(int32_t value)
   return limitUint16(value);
 }
 
+static void readBarometerData(float* pressure, float* temperature, float* asl) {
+#ifdef PLATFORM_CF1
+  ms5611GetData(pressure, temperature, asl);
+#else
+  lps25hGetData(pressure, temperature, asl);
+#endif
+}
+
+
 LOG_GROUP_START(ctrltarget)
 LOG_ADD(LOG_FLOAT, roll, &eulerRollDesired)
 LOG_ADD(LOG_FLOAT, pitch, &eulerPitchDesired)
@@ -423,6 +450,12 @@ LOG_ADD(LOG_FLOAT, zw, &accWZ)
 LOG_ADD(LOG_FLOAT, mag2, &accMAG)
 LOG_ADD(LOG_FLOAT, velocityZ, &velocityZ)
 LOG_GROUP_STOP(acc)
+
+LOG_GROUP_START(baro)
+LOG_ADD(LOG_FLOAT, asl, &asl)
+LOG_ADD(LOG_FLOAT, temp, &temperature)
+LOG_ADD(LOG_FLOAT, pressure, &pressure)
+LOG_GROUP_STOP(baro)
 
 LOG_GROUP_START(gyro)
 LOG_ADD(LOG_FLOAT, x, &gyro.x)
