@@ -54,7 +54,20 @@ float q1 = 0.0f;
 float q2 = 0.0f;
 float q3 = 0.0f;  // quaternion of sensor frame relative to auxiliary frame
 
+static float gravX, gravY, gravZ; // Unit vector in the estimated gravity direction
+
+// The acc in Z for static position (g)
+// Set on first update, assuming we are in a static position since the sensors were just calibrates.
+// This value will be better the more level the copter is at calibration time
+static float baseZacc = 1.0;
+
 static bool isInit;
+
+static bool isCalibrated = false;
+
+static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float ay, float az, float dt);
+static float sensfusion6GetAccZ(const float ax, const float ay, const float az);
+static void estimatedGravityDirection(float* gx, float* gy, float* gz);
 
 // TODO: Make math util file
 static float invSqrt(float x);
@@ -72,6 +85,16 @@ bool sensfusion6Test(void)
   return isInit;
 }
 
+void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float az, float dt)
+{
+  sensfusion6UpdateQImpl(gx, gy, gz, ax, ay, az, dt);
+  estimatedGravityDirection(&gravX, &gravY, &gravZ);
+
+  if (!isCalibrated) {
+    baseZacc = sensfusion6GetAccZ(ax, ay, az);
+    isCalibrated = true;
+  }
+}
 
 #ifdef MADWICK_QUATERNION_IMU
 // Implementation of Madgwick's IMU and AHRS algorithms.
@@ -80,7 +103,7 @@ bool sensfusion6Test(void)
 // Date     Author          Notes
 // 29/09/2011 SOH Madgwick    Initial release
 // 02/10/2011 SOH Madgwick  Optimised for reduced CPU load
-void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float az, float dt)
+static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float ay, float az, float dt)
 {
   float recipNorm;
   float s0, s1, s2, s3;
@@ -155,7 +178,7 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
 // Date     Author      Notes
 // 29/09/2011 SOH Madgwick    Initial release
 // 02/10/2011 SOH Madgwick  Optimised for reduced CPU load
-void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float az, float dt)
+static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float ay, float az, float dt)
 {
   float recipNorm;
   float halfvx, halfvy, halfvz;
@@ -231,11 +254,9 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
 
 void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
 {
-  float gx, gy, gz; // estimated gravity direction
-
-  gx = 2 * (q1*q3 - q0*q2);
-  gy = 2 * (q0*q1 + q2*q3);
-  gz = q0*q0 - q1*q1 - q2*q2 + q3*q3;
+  float gx = gravX;
+  float gy = gravY;
+  float gz = gravZ;
 
   if (gx>1) gx=1;
   if (gx<-1) gx=-1;
@@ -247,16 +268,9 @@ void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
 
 float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const float az)
 {
-  float gx, gy, gz; // estimated gravity direction
-
-  gx = 2 * (q1*q3 - q0*q2);
-  gy = 2 * (q0*q1 + q2*q3);
-  gz = q0*q0 - q1*q1 - q2*q2 + q3*q3;
-
-  // return vertical acceleration without gravity
-  // (A dot G) / |G| - 1G (|G| = 1) -> (A dot G) - 1G
-  return ((ax*gx + ay*gy + az*gz) - 1.0);
+  return sensfusion6GetAccZ(ax, ay, az) - baseZacc;
 }
+
 //---------------------------------------------------------------------------------------------------
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -271,6 +285,19 @@ float invSqrt(float x)
   return y;
 }
 
+static float sensfusion6GetAccZ(const float ax, const float ay, const float az)
+{
+  // return vertical acceleration
+  // (A dot G) / |G|,  (|G| = 1) -> (A dot G)
+  return (ax * gravX + ay * gravY + az * gravZ);
+}
+
+static void estimatedGravityDirection(float* gx, float* gy, float* gz)
+{
+  *gx = 2 * (q1 * q3 - q0 * q2);
+  *gy = 2 * (q0 * q1 + q2 * q3);
+  *gz = q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3;
+}
 
 
 PARAM_GROUP_START(sensorfusion6)
@@ -280,4 +307,5 @@ PARAM_ADD(PARAM_FLOAT, beta, &beta)
 PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
 PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
 #endif
+PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
 PARAM_GROUP_STOP(sensorfusion6)

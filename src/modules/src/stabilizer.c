@@ -58,12 +58,12 @@
 #define FUSION_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ATTITUDE_UPDATE_RATE_DIVIDER)) // 250hz
 
 // Barometer/ Altitude hold stuff
-static float accWZ     = 0.0; // Acceleration Without gravity along Z axis.
+static float accWZ     = 0.0; // Acceleration Without gravity along Z axis (G).
 static float accMAG    = 0.0; // Acceleration magnitude
 static float velocityZ = 0.0; // Vertical speed (world frame) integrated from vertical acceleration
 
-static float vAccDeadband = 0.07;  // Vertical acceleration deadband
-static float velZAlpha = 0.99; // Blending factor to avoid vertical speed to accumulate error
+static float vAccDeadband = 0.04; // Vertical acceleration deadband
+static float velZAlpha = 0.995;   // Blending factor to avoid vertical speed to accumulate error
 
 
 static Axis3f gyro; // Gyro axis data in deg/s
@@ -445,5 +445,6 @@ LOG_GROUP_STOP(motor)
 
 PARAM_GROUP_START(acc)
 PARAM_ADD(PARAM_FLOAT, velZAlpha, &velZAlpha)
+PARAM_ADD(PARAM_FLOAT, vAccDeadband, &vAccDeadband)
 PARAM_GROUP_STOP(acc)
 
