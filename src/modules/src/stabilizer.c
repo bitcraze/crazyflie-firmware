@@ -286,6 +286,8 @@ static void stabilizerTask(void* param)
       /* Call out before performing thrust updates, if any functions would like to influence the thrust. */
       stabilizerPreThrustUpdateCallOut();
 
+      actuatorThrust /= sensfusion6GetInvThrustCompensationForTilt();
+
       if (actuatorThrust > 0)
       {
 #if defined(TUNE_ROLL)
