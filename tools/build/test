@@ -3,5 +3,4 @@ set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-${scriptDir}/test
-${scriptDir}/compile "${@}"
+rake -f ${scriptDir}/../../Rakefile

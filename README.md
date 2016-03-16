@@ -133,3 +133,27 @@ halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD
 ```
+
+# Unit testing
+
+## Dependencies
+
+Frameworks for unit testing are pulled in as git submodules.
+
+The testing framework uses ruby and rake to generate and run code. 
+
+To minimize the need for installations and configuration, use the docker builder
+image (bitcraze/builder) that contains all tools needed. All scripts in the 
+tools/build directory are intended to be run in the image. The 
+[toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) makes it
+easy to run the tool scripts.
+
+### Running unit tests
+    
+With the environment set up locally
+
+        rake
+
+with the docker builder image and the toolbelt
+
+        tb test

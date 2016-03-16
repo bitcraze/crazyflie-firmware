@@ -13,3 +13,5 @@ version.c
 /cf2.*
 /cf1.*
 *.gch
+
+/generated-test/**
