@@ -12,6 +12,7 @@ CFLAGS += $(EXTRA_CFLAGS)
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_CMDS      ?=
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python2
 DFU_UTIL          ?= dfu-util
@@ -334,7 +335,7 @@ endif
 
 #Flash the stm.
 flash:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
                  -c "flash write_image erase $(PROG).elf" -c "verify_image $(PROG).elf" -c "reset run" -c shutdown
 
 flash_dfu:
@@ -342,16 +343,16 @@ flash_dfu:
 
 #STM utility targets
 halt:
-	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c shutdown
+	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c shutdown
 
 reset:
-	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset" -c shutdown
+	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset" -c shutdown
 
 openocd:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "\$$_TARGETNAME configure -rtos auto"
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "\$$_TARGETNAME configure -rtos auto"
 
 trace:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
 
 #Print preprocessor #defines
 prep:
