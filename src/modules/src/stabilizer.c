@@ -56,21 +56,14 @@
  * control loop run relative the rate control loop.
  */
 #define ATTITUDE_UPDATE_RATE_DIVIDER  2
-#define FUSION_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ATTITUDE_UPDATE_RATE_DIVIDER)) // 250hz
+#define ATTITUDE_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ATTITUDE_UPDATE_RATE_DIVIDER)) // 250hz
 
 #define ALTHOLD_UPDATE_RATE_DIVIDER  5
 #define ALTHOLD_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ALTHOLD_UPDATE_RATE_DIVIDER))   // 100hz
 
-#define G 9.81;
-
 // Barometer/ Altitude hold stuff
 static float accWZ     = 0.0; // Acceleration Without gravity along Z axis (G).
 static float accMAG    = 0.0; // Acceleration magnitude
-static float velocityZ = 0.0; // Vertical speed (world frame) integrated from vertical acceleration (m/s)
-
-static float vAccDeadband = 0.04; // Vertical acceleration deadband
-static float velZAlpha = 0.995;   // Blending factor to avoid vertical speed to accumulate error
-
 
 static Axis3f gyro; // Gyro axis data in deg/s
 static Axis3f acc;  // Accelerometer axis data in mG
@@ -232,15 +225,13 @@ static void stabilizerTask(void* param)
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
       {
-        sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, FUSION_UPDATE_DT);
+        sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, ATTITUDE_UPDATE_DT);
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
 
         accWZ = sensfusion6GetAccZWithoutGravity(acc.x, acc.y, acc.z);
         accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
 
-        // Estimate speed from acc (drifts)
-        velocityZ += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT * G;
-        velocityZ *= velZAlpha;
+        positionUpdateVelocity(accWZ, ATTITUDE_UPDATE_DT);
 
         // Adjust yaw if configured to do so
         stabilizerYawModeUpdate();
@@ -276,7 +267,7 @@ static void stabilizerTask(void* param)
           readBarometerData(&pressure, &temperature, &asl);
 
           estimate_t estimatedPosition;
-          positionEstimate(&estimatedPosition, asl, velocityZ, ALTHOLD_UPDATE_DT);
+          positionEstimate(&estimatedPosition, asl, ALTHOLD_UPDATE_DT);
           positionControllerUpdate(&actuatorThrust, &estimatedPosition, ALTHOLD_UPDATE_DT);
         }
         altHoldCounter = 0;
@@ -454,7 +445,6 @@ LOG_ADD(LOG_FLOAT, y, &acc.y)
 LOG_ADD(LOG_FLOAT, z, &acc.z)
 LOG_ADD(LOG_FLOAT, zw, &accWZ)
 LOG_ADD(LOG_FLOAT, mag2, &accMAG)
-LOG_ADD(LOG_FLOAT, velocityZ, &velocityZ)
 LOG_GROUP_STOP(acc)
 
 LOG_GROUP_START(baro)
@@ -481,9 +471,4 @@ LOG_ADD(LOG_INT32, m1, &motorPowerM1)
 LOG_ADD(LOG_INT32, m2, &motorPowerM2)
 LOG_ADD(LOG_INT32, m3, &motorPowerM3)
 LOG_GROUP_STOP(motor)
-
-PARAM_GROUP_START(acc)
-PARAM_ADD(PARAM_FLOAT, velZAlpha, &velZAlpha)
-PARAM_ADD(PARAM_FLOAT, vAccDeadband, &vAccDeadband)
-PARAM_GROUP_STOP(acc)
 

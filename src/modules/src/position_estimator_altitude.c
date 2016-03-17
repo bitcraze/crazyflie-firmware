@@ -26,42 +26,63 @@
 
 #include "log.h"
 #include "param.h"
+#include "num.h"
 #include "position_estimator.h"
+
+#define G 9.81;
 
 struct state_s {
   float estimatedZ; // The current Z estimate, has same offset as asl
+  float velocityZ; // Vertical speed (world frame) integrated from vertical acceleration (m/s)
   float estAlpha;
   float velocityFactor;
+  float vAccDeadband; // Vertical acceleration deadband
+  float velZAlpha;   // Blending factor to avoid vertical speed to accumulate error
 };
 
 static struct state_s state = {
   .estimatedZ = 0.0,
+  .velocityZ = 0.0,
   .estAlpha = 0.99,
   .velocityFactor = 1.0,
+  .vAccDeadband = 0.04,
+  .velZAlpha = 0.995,
 };
 
-static void positionEstimateInternal(estimate_t* estimate, float asl, float velocityZ, float dt, struct state_s* state);
+static void positionEstimateInternal(estimate_t* estimate, float asl, float dt, struct state_s* state);
+static void positionUpdateVelocityInternal(float accWZ, float dt, struct state_s* state);
 
-void positionEstimate(estimate_t* estimate, float asl, float velocityZ, float dt) {
-  positionEstimateInternal(estimate, asl, velocityZ, dt, &state);
+void positionEstimate(estimate_t* estimate, float asl, float dt) {
+  positionEstimateInternal(estimate, asl, dt, &state);
 }
 
-static void positionEstimateInternal(estimate_t* estimate, float asl, float velocityZ, float dt, struct state_s* state) {
+void positionUpdateVelocity(float accWZ, float dt) {
+  positionUpdateVelocityInternal(accWZ, dt, &state);
+}
+
+static void positionEstimateInternal(estimate_t* estimate, float asl, float dt, struct state_s* state) {
   state->estimatedZ = state->estAlpha * state->estimatedZ +
                      (1.0 - state->estAlpha) * asl +
-                     state->velocityFactor * velocityZ * dt;
+                     state->velocityFactor * state->velocityZ * dt;
 
   estimate->position.x = 0.0;
   estimate->position.y = 0.0;
   estimate->position.z = state->estimatedZ;
 }
 
+static void positionUpdateVelocityInternal(float accWZ, float dt, struct state_s* state) {
+  state->velocityZ += deadband(accWZ, state->vAccDeadband) * dt * G;
+  state->velocityZ *= state->velZAlpha;
+}
 
 LOG_GROUP_START(posEstimatorAlt)
 LOG_ADD(LOG_FLOAT, estimatedZ, &state.estimatedZ)
+LOG_ADD(LOG_FLOAT, velocityZ, &state.velocityZ)
 LOG_GROUP_STOP(posEstimatorAlt)
 
 PARAM_GROUP_START(posEst)
 PARAM_ADD(PARAM_FLOAT, estAlpha, &state.estAlpha)
 PARAM_ADD(PARAM_FLOAT, velFactor, &state.velocityFactor)
+PARAM_ADD(PARAM_FLOAT, velZAlpha, &state.velZAlpha)
+PARAM_ADD(PARAM_FLOAT, vAccDeadband, &state.vAccDeadband)
 PARAM_GROUP_STOP(posEstimatorAlt)

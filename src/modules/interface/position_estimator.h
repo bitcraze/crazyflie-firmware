@@ -28,6 +28,7 @@
 
 #include "stabilizer_types.h"
 
-void positionEstimate(estimate_t* estimate, float asl, float velocityZ, float dt);
+void positionEstimate(estimate_t* estimate, float asl, float dt);
+void positionUpdateVelocity(float accWZ, float dt);
 
 #endif /* POSITION_ESTIMATOR_H_ */
