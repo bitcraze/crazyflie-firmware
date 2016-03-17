@@ -197,6 +197,11 @@ static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A
     {C4,S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {C4, S},
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H}, {0, H},
     REPEAT}};
+static Melody valkyries = {.bpm = 140, .delay = 1, .notes = {{Gb3, Q}, {B3, Q},
+    {Gb3, S}, {B3, E},  {D4, Q}, {B3, Q}, {D4, Q}, {B3, S}, {D4, E}, {Gb4, Q},  
+    {D4, Q}, {Gb4, Q}, {D4, S}, {Gb4, E}, {A4, Q}, {A3, Q}, {D4, Q}, {A3, S},  
+    {D4, E}, {Gb4, H}, 
+    REPEAT}};
 
 typedef void (*BuzzerEffect)(uint32_t timer, uint32_t * mi, Melody * melody);
 
@@ -305,6 +310,7 @@ static EffectCall effects[] = {
     {.call = &melodyplayer, .melody = &range_slow},
     {.call = &melodyplayer, .melody = &range_fast},
     {.call = &melodyplayer, .melody = &starwars},
+    {.call = &melodyplayer, .melody = &valkyries},
     {.call = &bypass},
     {.call = &siren},
     {.call = &tilt}
