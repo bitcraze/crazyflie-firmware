@@ -33,7 +33,7 @@
 #include "pm.h"
 #include "stabilizer.h"
 #include "commander.h"
-#include "controller.h"
+#include "attitude_controller.h"
 #include "sensfusion6.h"
 #include "imu.h"
 #include "motors.h"
@@ -47,7 +47,8 @@
   #include "lps25h.h"
 #endif
 #include "num.h"
-#include "altitudehold.h"
+#include "position_estimator.h"
+#include "position_controller.h"
 
 
 /**
@@ -123,7 +124,7 @@ void stabilizerInit(void)
   motorsInit(motorMapDefaultBrushed);
   imu6Init();
   sensfusion6Init();
-  controllerInit();
+  attitudeControllerInit();
 #if defined(SITAW_ENABLED)
   sitAwInit();
 #endif
@@ -145,7 +146,7 @@ bool stabilizerTest(void)
   pass &= motorsTest();
   pass &= imu6Test();
   pass &= sensfusion6Test();
-  pass &= controllerTest();
+  pass &= attitudeControllerTest();
 
   return pass;
 }
@@ -244,7 +245,7 @@ static void stabilizerTask(void* param)
         // Adjust yaw if configured to do so
         stabilizerYawModeUpdate();
 
-        controllerCorrectAttitudePID(eulerRollActual, eulerPitchActual, eulerYawActual,
+        attitudeControllerCorrectAttitudePID(eulerRollActual, eulerPitchActual, eulerYawActual,
                                      eulerRollDesired, eulerPitchDesired, -eulerYawDesired,
                                      &rollRateDesired, &pitchRateDesired, &yawRateDesired);
         attitudeCounter = 0;
@@ -263,17 +264,20 @@ static void stabilizerTask(void* param)
       }
 
       // TODO: Investigate possibility to subtract gyro drift.
-      controllerCorrectRatePID(gyro.x, -gyro.y, gyro.z,
+      attitudeControllerCorrectRatePID(gyro.x, -gyro.y, gyro.z,
                                rollRateDesired, pitchRateDesired, yawRateDesired);
 
-      controllerGetActuatorOutput(&actuatorRoll, &actuatorPitch, &actuatorYaw);
+      attitudeControllerGetActuatorOutput(&actuatorRoll, &actuatorPitch, &actuatorYaw);
 
       // 100HZ
       if (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER)
       {
         if (imuHasBarometer()) {
           readBarometerData(&pressure, &temperature, &asl);
-          altHoldUpdate(&actuatorThrust, asl, velocityZ, ALTHOLD_UPDATE_DT);
+
+          estimate_t estimatedPosition;
+          positionEstimate(&estimatedPosition, asl, velocityZ, ALTHOLD_UPDATE_DT);
+          positionControllerUpdate(&actuatorThrust, &estimatedPosition, ALTHOLD_UPDATE_DT);
         }
         altHoldCounter = 0;
       }
@@ -303,7 +307,7 @@ static void stabilizerTask(void* param)
       else
       {
         distributePower(0, 0, 0, 0);
-        controllerResetAllPID();
+        attitudeControllerResetAllPID();
 
         // Reset the calculated YAW angle for rate control
         yawRateAngle = eulerYawActual;

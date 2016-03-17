@@ -195,9 +195,10 @@ void paramTOCProcess(int command)
       p.data[0]=CMD_GET_ITEM;
       p.data[1]=n;
       p.data[2]=params[ptr].type;
+      p.size=3+2+strlen(group)+strlen(params[ptr].name);
+      ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+3, group, strlen(group)+1);
       memcpy(p.data+3+strlen(group)+1, params[ptr].name, strlen(params[ptr].name)+1);
-      p.size=3+2+strlen(group)+strlen(params[ptr].name);
       crtpSendPacket(&p);
     } else {
       p.header=CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);

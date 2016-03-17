@@ -21,17 +21,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
+ * attitude_controller.h: PID-based attitude controller
  */
 
-#ifndef CONTROLLER_H_
-#define CONTROLLER_H_
+#ifndef ATTITUDE_CONTROLLER_H_
+#define ATTITUDE_CONTROLLER_H_
 
 #include <stdbool.h>
 #include "commander.h"
 
 
-void controllerInit(void);
-bool controllerTest(void);
+void attitudeControllerInit(void);
+bool attitudeControllerTest(void);
 
 /**
  * Make the controller run an update of the attitude PID. The output is
@@ -39,7 +40,7 @@ bool controllerTest(void);
  * attitude controller can be run in a slower update rate then the rate
  * controller.
  */
-void controllerCorrectAttitudePID(
+void attitudeControllerCorrectAttitudePID(
        float eulerRollActual, float eulerPitchActual, float eulerYawActual,
        float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired);
@@ -48,19 +49,19 @@ void controllerCorrectAttitudePID(
  * Make the controller run an update of the rate PID. The output is
  * the actuator force.
  */
-void controllerCorrectRatePID(
+void attitudeControllerCorrectRatePID(
        float rollRateActual, float pitchRateActual, float yawRateActual,
        float rollRateDesired, float pitchRateDesired, float yawRateDesired);
 
 /**
  * Reset controller roll, pitch and yaw PID's.
  */
-void controllerResetAllPID(void);
+void attitudeControllerResetAllPID(void);
 
 /**
  * Get the actuator output.
  */
-void controllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw);
+void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw);
 
 
-#endif /* CONTROLLER_H_ */
+#endif /* ATTITUDE_CONTROLLER_H_ */

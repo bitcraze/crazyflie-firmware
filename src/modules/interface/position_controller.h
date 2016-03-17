@@ -23,9 +23,11 @@
  *
  *
  */
-#ifndef ALTITUDE_HOLD_H_
-#define ALTITUDE_HOLD_H_
+#ifndef POSITION_CONTROLLER_H_
+#define POSITION_CONTROLLER_H_
 
-void altHoldUpdate(uint16_t* actuatorThrust, float asl, float velocityZ, float dt);
+#include "stabilizer_types.h"
 
-#endif /* ALTITUDE_HOLD_H_ */
+void positionControllerUpdate(uint16_t* actuatorThrust, const estimate_t* estimate, float dt);
+
+#endif /* POSITION_CONTROLLER_H_ */

@@ -70,4 +70,11 @@ typedef struct quaternion_s {
   };
 } quaternion_t;
 
+/** Estimate of position */
+typedef struct estimate_s {
+  uint32_t timestamp; // Timestamp when the data was computed
+
+  point_t position;
+} estimate_t;
+
 #endif

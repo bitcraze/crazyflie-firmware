@@ -21,13 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- *
+ * attitude_pid_controller.c: Attitude controler using PID correctors
  */
 #include <stdbool.h>
- 
+
 #include "FreeRTOS.h"
 
-#include "controller.h"
+#include "attitude_controller.h"
 #include "pid.h"
 #include "param.h"
 #include "imu.h"
@@ -56,11 +56,11 @@ int16_t yawOutput;
 
 static bool isInit;
 
-void controllerInit()
+void attitudeControllerInit()
 {
   if(isInit)
     return;
-  
+
   //TODO: get parameters from configuration manager instead
   pidInit(&pidRollRate, 0, PID_ROLL_RATE_KP, PID_ROLL_RATE_KI, PID_ROLL_RATE_KD, IMU_UPDATE_DT);
   pidInit(&pidPitchRate, 0, PID_PITCH_RATE_KP, PID_PITCH_RATE_KI, PID_PITCH_RATE_KD, IMU_UPDATE_DT);
@@ -75,16 +75,16 @@ void controllerInit()
   pidSetIntegralLimit(&pidRoll, PID_ROLL_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitch, PID_PITCH_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYaw, PID_YAW_INTEGRATION_LIMIT);
-  
+
   isInit = true;
 }
 
-bool controllerTest()
+bool attitudeControllerTest()
 {
   return isInit;
 }
 
-void controllerCorrectRatePID(
+void attitudeControllerCorrectRatePID(
        float rollRateActual, float pitchRateActual, float yawRateActual,
        float rollRateDesired, float pitchRateDesired, float yawRateDesired)
 {
@@ -98,7 +98,7 @@ void controllerCorrectRatePID(
   yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, true));
 }
 
-void controllerCorrectAttitudePID(
+void attitudeControllerCorrectAttitudePID(
        float eulerRollActual, float eulerPitchActual, float eulerYawActual,
        float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
@@ -121,7 +121,7 @@ void controllerCorrectAttitudePID(
   *yawRateDesired = pidUpdate(&pidYaw, eulerYawActual, false);
 }
 
-void controllerResetAllPID(void)
+void attitudeControllerResetAllPID(void)
 {
   pidReset(&pidRoll);
   pidReset(&pidPitch);
@@ -131,7 +131,7 @@ void controllerResetAllPID(void)
   pidReset(&pidYawRate);
 }
 
-void controllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw)
+void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw)
 {
   *roll = rollOutput;
   *pitch = pitchOutput;
