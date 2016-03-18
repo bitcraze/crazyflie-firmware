@@ -267,7 +267,6 @@ static void stabilizerTask(void* param)
       if (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER)
       {
         if (imuHasBarometer()) {
-          // TODO krri add struct indicating whether we have baro or not
           readBarometerData(&pressure, &temperature, &asl);
         }
         positionEstimate(&estimatedPosition, asl, ALTHOLD_UPDATE_DT);
