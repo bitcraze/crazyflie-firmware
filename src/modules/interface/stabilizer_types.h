@@ -77,4 +77,10 @@ typedef struct estimate_s {
   point_t position;
 } estimate_t;
 
+/** Setpoint for althold */
+typedef struct setpointZ_s {
+  float z;
+  bool isUpdate; // True = small update of setpoint, false = completely new
+} setpointZ_t;
+
 #endif

@@ -219,11 +219,6 @@ void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
   altHoldModeOld = altHoldMode;
 }
 
-bool commanderGetAltHoldMode(void)
-{
-	return (altHoldMode);
-}
-
 void commanderSetAltHoldMode(bool altHoldModeNew)
 {
 	altHoldMode = altHoldModeNew;

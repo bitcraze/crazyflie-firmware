@@ -23,12 +23,12 @@
  *
  *
  */
-#ifndef POSITION_CONTROLLER_H_
-#define POSITION_CONTROLLER_H_
+#ifndef ALTITUDE_HOLD_H_
+#define ALTITUDE_HOLD_H_
 
 #include "stabilizer_types.h"
 
-void positionControllerUpdate(uint16_t* actuatorThrust, const estimate_t* estimate, float dt);
-void positionControllerSetZTarget(const setpointZ_t* setpoint, float dt);
+bool altHoldIsActive();
+void altHoldGetNewSetPoint(setpointZ_t* setpoint, const estimate_t* estimate);
 
-#endif /* POSITION_CONTROLLER_H_ */
+#endif /* ALTITUDE_HOLD_H_ */

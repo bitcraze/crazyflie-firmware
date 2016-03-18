@@ -49,6 +49,7 @@
 #include "num.h"
 #include "position_estimator.h"
 #include "position_controller.h"
+#include "altitude_hold.h"
 
 
 /**
@@ -108,6 +109,8 @@ static void readBarometerData(float* pressure, float* temperature, float* asl);
 static float temperature; // temp from barometer in celcius
 static float pressure;    // pressure from barometer in bar
 static float asl;         // raw Altitude over Sea Level from pressure sensor, in meters. Has an offset.
+static estimate_t estimatedPosition;
+
 
 void stabilizerInit(void)
 {
@@ -264,18 +267,22 @@ static void stabilizerTask(void* param)
       if (++altHoldCounter >= ALTHOLD_UPDATE_RATE_DIVIDER)
       {
         if (imuHasBarometer()) {
+          // TODO krri add struct indicating whether we have baro or not
           readBarometerData(&pressure, &temperature, &asl);
-
-          estimate_t estimatedPosition;
-          positionEstimate(&estimatedPosition, asl, ALTHOLD_UPDATE_DT);
-          positionControllerUpdate(&actuatorThrust, &estimatedPosition, ALTHOLD_UPDATE_DT);
         }
-        altHoldCounter = 0;
-      }
+        positionEstimate(&estimatedPosition, asl, ALTHOLD_UPDATE_DT);
 
-      if (!commanderGetAltHoldMode() || !imuHasBarometer())
-      {
-        commanderGetThrust(&actuatorThrust);
+        if (altHoldIsActive()) {
+          setpointZ_t setpoint;
+          altHoldGetNewSetPoint(&setpoint, &estimatedPosition);
+          positionControllerSetZTarget(&setpoint, ALTHOLD_UPDATE_DT);
+
+          positionControllerUpdate(&actuatorThrust, &estimatedPosition, ALTHOLD_UPDATE_DT);
+        } else {
+          commanderGetThrust(&actuatorThrust);
+        }
+
+        altHoldCounter = 0;
       }
 
       /* Call out before performing thrust updates, if any functions would like to influence the thrust. */
