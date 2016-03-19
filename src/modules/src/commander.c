@@ -54,7 +54,6 @@ static uint32_t lastUpdate;
 static bool isInactive;
 static bool thrustLocked;
 static bool altHoldMode = false;
-static bool altHoldModeOld = false;
 
 static RPYType stabilizationModeRoll  = ANGLE; // Current stabilization type of roll (rate or angle)
 static RPYType stabilizationModePitch = ANGLE; // Current stabilization type of pitch (rate or angle)
@@ -211,12 +210,10 @@ void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* e
   *eulerYawDesired   = commanderGetActiveYaw();
 }
 
-void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
+void commanderGetAltHold(bool* altHold, float* altHoldChange)
 {
   *altHold = altHoldMode; // Still in altitude hold mode
-  *setAltHold = !altHoldModeOld && altHoldMode; // Hover just activated
   *altHoldChange = altHoldMode ? ((float) commanderGetActiveThrust() - 32767.f) / 32767.f : 0.0; // Amount to change altitude hold target
-  altHoldModeOld = altHoldMode;
 }
 
 void commanderSetAltHoldMode(bool altHoldModeNew)

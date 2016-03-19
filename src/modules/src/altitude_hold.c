@@ -38,6 +38,7 @@ struct state_s {
   float targetChangeSens;   // sensitivity of target altitude change (thrust input control) while hovering. Lower = more sensitive & faster changes
 
   bool isActive;
+  bool wasActive;
   bool justActivated;
   float pilotChange;
 
@@ -58,6 +59,7 @@ static struct state_s state = {
   .targetChangeSens = 200,
 
   .isActive = false,
+  .wasActive = false,
   .justActivated = false,
   .pilotChange = 0.0,
 
@@ -87,7 +89,11 @@ void altHoldGetNewSetPoint(setpointZ_t* setpoint, const estimate_t* estimate) {
 
 static bool altHoldIsActiveInternal(struct state_s* state) {
   // Get altitude hold commands from pilot
-  commanderGetAltHold(&state->isActive, &state->justActivated, &state->pilotChange);
+  commanderGetAltHold(&state->isActive, &state->pilotChange);
+
+  state->justActivated = !state->wasActive && state->isActive;
+  state->wasActive = state->isActive;
+
   return state->isActive;
 }
 

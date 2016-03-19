@@ -27,6 +27,7 @@
 #define __STABILIZER_TYPES_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /* Data structure used by the stabilizer subsystem.
  * All have a timestamp to be set when the data is calculated.
