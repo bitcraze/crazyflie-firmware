@@ -75,11 +75,6 @@ static bool isInit;
 static PMStates pmState;
 static PmSyslinkInfo pmSyslinkInfo;
 
-#ifdef PM_IIR_FILTER
-static int32_t  batteryVRawFilt = PM_BAT_ADC_FOR_3_VOLT;
-static int32_t  batteryVRefRawFilt = PM_BAT_ADC_FOR_1p2_VOLT;
-#endif
-
 static void pmSetBatteryVoltage(float voltage);
 
 const static float bat671723HS25C[10] =
@@ -114,28 +109,6 @@ bool pmTest(void)
 {
   return isInit;
 }
-
-/**
- * IIR low pass filter the samples.
- */
-#ifdef PM_IIR_FILTER
-static int16_t pmBatteryIIRLPFilter(uint16_t in, int32_t* filt)
-{
-  int32_t inScaled;
-  int32_t filttmp = *filt;
-  int16_t out;
-
-  // Shift to keep accuracy
-  inScaled = in << PM_BAT_IIR_SHIFT;
-  // Calculate IIR filter
-  filttmp = filttmp + (((inScaled-filttmp) >> 8) * PM_BAT_IIR_LPF_ATT_FACTOR);
-  // Scale and round
-  out = (filttmp >> 8) + ((filttmp & (1 << (PM_BAT_IIR_SHIFT - 1))) >> (PM_BAT_IIR_SHIFT - 1));
-  *filt = filttmp;
-
-  return out;
-}
-#endif
 
 /**
  * Sets the battery voltage and its min and max values
