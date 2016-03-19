@@ -117,6 +117,7 @@ static void commanderLevelRPY(void)
 
 static void commandeDropToGround(void)
 {
+  commanderSetAltHoldMode(false);
   commanderSetActiveThrust(0);
   commanderLevelRPY();
 }
