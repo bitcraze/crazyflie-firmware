@@ -99,7 +99,9 @@ void uartInit(void)
 
   USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
+  #if !defined(UART_OUTPUT_TRACE_DATA) && !defined(ADC_OUTPUT_RAW_DATA)
   NVIC_InitTypeDef NVIC_InitStructure;
+  #endif
 
   /* Enable GPIO and USART clock */
   RCC_APB2PeriphClockCmd(UART_GPIO_PERIF, ENABLE);
