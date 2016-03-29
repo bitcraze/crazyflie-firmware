@@ -26,6 +26,8 @@
 #ifndef USEC_TIME_H_
 #define USEC_TIME_H_
 
+#include <stdint.h>
+
 /**
  * Initialize microsecond-resolution timer (TIM1).
  */
