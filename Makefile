@@ -194,6 +194,7 @@ CC = $(CROSS_COMPILE)gcc
 LD = $(CROSS_COMPILE)gcc
 SIZE = $(CROSS_COMPILE)size
 OBJCOPY = $(CROSS_COMPILE)objcopy
+GDB = $(CROSS_COMPILE)gdb
 
 INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
 INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
@@ -353,6 +354,9 @@ openocd:
 
 trace:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
+
+gdb: $(PROG).elf
+	$(GDB) -ex "target remote localhost:3333" -ex "monitor reset halt" $^
 
 #Print preprocessor #defines
 prep:
