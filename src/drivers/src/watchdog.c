@@ -51,10 +51,29 @@ void watchdogInit(void)
 {
   IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
 
-  // IWDG counter clock: LSI/32 = 1024Hz
+  // The watchdog uses the LSI oscillator for checking the timeout. The LSI
+  // oscillator frequency is not very exact and the range is fairly large
+  // and also differs between the Crazyflie 1.0 and 2.0:
+  //                 MIN  TYP  MAX
+  // Crazyflie 1.0   30   40   60   (in kHz)
+  // Crazyflie 2.0   17   32   47   (in kHz)
+  //
   IWDG_SetPrescaler(IWDG_Prescaler_32);
-  IWDG_SetReload(WATCHDOG_TIMEOUT_CYCLES);
+  // Divide the clock with 32 which gives
+  // an interval of 17kHz/32 (CF2 min) to 60kHz/32 (CF1 max) =>
+  // 1875 Hz to 531 Hz for the watchdog timer.
+  //
+  // The goal timeout is >100 ms, but it's acceptable
+  // that the max timeout is a bit higher. Scaling the
+  // reload counter for the fastest LSI then gives a
+  // timeout of 100ms, which in turn gives a timeout
+  // of 353ms for the slowest LSI. So the watchdog timeout
+  // will be between 100ms and 353ms on all platforms.
+  //
+  // At prescaler 32 each bit is 1 ms this gives:
+  // 1875 Hz * 0.1 s / 1 => 188
+  IWDG_SetReload(188);
 
   watchdogReset();
-	IWDG_Enable();
+  IWDG_Enable();
 }

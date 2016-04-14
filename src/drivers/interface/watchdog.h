@@ -30,11 +30,7 @@
 #include <stdbool.h>
 #include "stm32fxxx.h"
 
-#define WATCHDOG_CLOCK_FRQ 1024
-#define WATCHDOG_TIMEOUT_MS 100
 #define WATCHDOG_RESET_PERIOD_MS 80
-#define WATCHDOG_TIMEOUT_CYCLES ((WATCHDOG_CLOCK_FRQ * WATCHDOG_TIMEOUT_MS) / 1000)
-
 
 void watchdogInit(void);
 bool watchdogNormalStartTest(void);
