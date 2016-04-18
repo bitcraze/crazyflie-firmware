@@ -46,7 +46,7 @@
 #define ENABLE_EXTRX_LOG
 
 
-#define EXTRX_NR_CHANNELS  6
+#define EXTRX_NR_CHANNELS  8
 
 #define EXTRX_CH_TRUST     2
 #define EXTRX_CH_ROLL      0
@@ -108,7 +108,7 @@ static void extRxDecodeChannels(void)
 static void extRxDecodeCppm(void)
 {
   uint16_t ppm;
-  uint8_t currChannel = 0;
+  static uint8_t currChannel = 0;
 
   if (cppmGetTimestamp(&ppm) == pdTRUE)
   {
