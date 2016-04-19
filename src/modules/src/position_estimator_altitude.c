@@ -31,7 +31,7 @@
 
 #define G 9.81;
 
-struct state_s {
+struct selfState_s {
   float estimatedZ; // The current Z estimate, has same offset as asl
   float velocityZ; // Vertical speed (world frame) integrated from vertical acceleration (m/s)
   float estAlpha;
@@ -40,7 +40,7 @@ struct state_s {
   float velZAlpha;   // Blending factor to avoid vertical speed to accumulate error
 };
 
-static struct state_s state = {
+static struct selfState_s state = {
   .estimatedZ = 0.0,
   .velocityZ = 0.0,
   .estAlpha = 0.99,
@@ -49,10 +49,10 @@ static struct state_s state = {
   .velZAlpha = 0.995,
 };
 
-static void positionEstimateInternal(estimate_t* estimate, float asl, float dt, struct state_s* state);
-static void positionUpdateVelocityInternal(float accWZ, float dt, struct state_s* state);
+static void positionEstimateInternal(state_t* estimate, float asl, float dt, struct selfState_s* state);
+static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
 
-void positionEstimate(estimate_t* estimate, float asl, float dt) {
+void positionEstimate(state_t* estimate, float asl, float dt) {
   positionEstimateInternal(estimate, asl, dt, &state);
 }
 
@@ -60,7 +60,7 @@ void positionUpdateVelocity(float accWZ, float dt) {
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(estimate_t* estimate, float asl, float dt, struct state_s* state) {
+static void positionEstimateInternal(state_t* estimate, float asl, float dt, struct selfState_s* state) {
   state->estimatedZ = state->estAlpha * state->estimatedZ +
                      (1.0 - state->estAlpha) * asl +
                      state->velocityFactor * state->velocityZ * dt;
@@ -70,7 +70,7 @@ static void positionEstimateInternal(estimate_t* estimate, float asl, float dt, 
   estimate->position.z = state->estimatedZ;
 }
 
-static void positionUpdateVelocityInternal(float accWZ, float dt, struct state_s* state) {
+static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state) {
   state->velocityZ += deadband(accWZ, state->vAccDeadband) * dt * G;
   state->velocityZ *= state->velZAlpha;
 }

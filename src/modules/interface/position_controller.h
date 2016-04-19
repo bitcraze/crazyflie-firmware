@@ -28,7 +28,7 @@
 
 #include "stabilizer_types.h"
 
-void positionControllerUpdate(uint16_t* actuatorThrust, const estimate_t* estimate, float dt);
+void positionControllerUpdate(uint16_t* actuatorThrust, float z, float dt);
 void positionControllerSetZTarget(const setpointZ_t* setpoint, float dt);
 
 #endif /* POSITION_CONTROLLER_H_ */

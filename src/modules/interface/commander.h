@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
+#include "stabilizer_types.h"
 
 #ifdef PLATFORM_CF1
   #define DEFUALT_YAW_MODE  PLUSMODE
@@ -79,5 +80,7 @@ void commanderSetAltHoldMode(bool altHoldModeNew);
 YawModeType commanderGetYawMode(void);
 bool commanderGetYawModeCarefreeResetFront(void);
 void commanderExtrxSet(struct CommanderCrtpValues* val);
+
+void commanderGetSetpoint(setpoint_t *setpoint);
 
 #endif /* COMMANDER_H_ */

@@ -33,7 +33,7 @@
 #include "num.h"
 #include "position_controller.h"
 
-struct state_s {
+struct selfState_s {
   PidObject pid;
 
   float targetZ;    // Target altitude
@@ -46,7 +46,7 @@ struct state_s {
   float thrust;      // The thrust from regulator, expressed as an offset to thrustBase
 };
 
-static struct state_s state = {
+static struct selfState_s state = {
   .targetZ = -1,
 
   .pidInitKp = 30000.0,
@@ -56,18 +56,18 @@ static struct state_s state = {
   .thrustBase = 32000,
 };
 
-static void positionPidControllerUpdateInternal(uint16_t* actuatorThrust, const estimate_t* estimate, float dt, struct state_s* state);
-static void positionControllerSetZTargetInternal(const setpointZ_t* setpoint, float dt, struct state_s* state);
+static void positionPidControllerUpdateInternal(uint16_t* actuatorThrust, float z, float dt, struct selfState_s* state);
+static void positionControllerSetZTargetInternal(const setpointZ_t* setpoint, float dt, struct selfState_s* state);
 
-void positionControllerUpdate(uint16_t* actuatorThrust, const estimate_t* estimate, float dt) {
-  positionPidControllerUpdateInternal(actuatorThrust, estimate, dt, &state);
+void positionControllerUpdate(uint16_t* actuatorThrust, float z, float dt) {
+  positionPidControllerUpdateInternal(actuatorThrust, z, dt, &state);
 }
 
 void positionControllerSetZTarget(const setpointZ_t* setpoint, float dt) {
   positionControllerSetZTargetInternal(setpoint, dt, &state);
 }
 
-static void positionControllerSetZTargetInternal(const setpointZ_t* setpoint, float dt, struct state_s* state) {
+static void positionControllerSetZTargetInternal(const setpointZ_t* setpoint, float dt, struct selfState_s* state) {
   state->targetZ = setpoint->z;
   if (setpoint->isUpdate) {
     pidSetDesired(&state->pid, state->targetZ);
@@ -76,8 +76,8 @@ static void positionControllerSetZTargetInternal(const setpointZ_t* setpoint, fl
   }
 }
 
-static void positionPidControllerUpdateInternal(uint16_t* actuatorThrust, const estimate_t* estimate, float dt, struct state_s* state) {
-  state->thrust = pidUpdate(&state->pid, estimate->position.z, true);
+static void positionPidControllerUpdateInternal(uint16_t* actuatorThrust, float z, float dt, struct selfState_s* state) {
+  state->thrust = pidUpdate(&state->pid, z, true);
   *actuatorThrust = limitUint16(state->thrustBase + state->thrust);
 }
 

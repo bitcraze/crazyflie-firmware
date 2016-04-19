@@ -33,7 +33,7 @@
 #include "sitaw.h"
 #include "altitude_hold.h"
 
-struct state_s {
+struct selfState_s {
   float targetZ;    // Target altitude
   float targetChangeSens;   // sensitivity of target altitude change (thrust input control) while hovering. Lower = more sensitive & faster changes
 
@@ -54,7 +54,7 @@ struct state_s {
   #endif
 };
 
-static struct state_s state = {
+static struct selfState_s state = {
   .targetZ = -1,
   .targetChangeSens = 200,
 
@@ -75,9 +75,9 @@ static struct state_s state = {
   #endif
 };
 
-static float preAltHoldComputeZCallOut(struct state_s* state);
-static bool altHoldIsActiveInternal(struct state_s* state);
-static void altHoldGetNewSetPointInternal(setpointZ_t* setpoint, const estimate_t* estimate, struct state_s* state);
+static float preAltHoldComputeZCallOut(struct selfState_s* state);
+static bool altHoldIsActiveInternal(struct selfState_s* state);
+static void altHoldGetNewSetPointInternal(setpointZ_t* setpoint, const estimate_t* estimate, struct selfState_s* state);
 
 bool altHoldIsActive() {
   return altHoldIsActiveInternal(&state);
@@ -87,7 +87,7 @@ void altHoldGetNewSetPoint(setpointZ_t* setpoint, const estimate_t* estimate) {
   altHoldGetNewSetPointInternal(setpoint, estimate, &state);
 }
 
-static bool altHoldIsActiveInternal(struct state_s* state) {
+static bool altHoldIsActiveInternal(struct selfState_s* state) {
   // Get altitude hold commands from pilot
   commanderGetAltHold(&state->isActive, &state->pilotChange);
 
@@ -97,7 +97,7 @@ static bool altHoldIsActiveInternal(struct state_s* state) {
   return state->isActive;
 }
 
-static void altHoldGetNewSetPointInternal(setpointZ_t* setpoint, const estimate_t* estimate, struct state_s* state) {
+static void altHoldGetNewSetPointInternal(setpointZ_t* setpoint, const estimate_t* estimate, struct selfState_s* state) {
   if (state->justActivated) {
     setpoint->isUpdate = false;
 
@@ -114,7 +114,7 @@ static void altHoldGetNewSetPointInternal(setpointZ_t* setpoint, const estimate_
   setpoint->z = state->targetZ;
 }
 
-static float preAltHoldComputeZCallOut(struct state_s* state) {
+static float preAltHoldComputeZCallOut(struct selfState_s* state) {
   float result = state->targetZ;
   /* Code that shall run BEFORE each altHold z target computation, should be placed here. */
 

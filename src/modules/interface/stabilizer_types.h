@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "imu_types.h"
 
 /* Data structure used by the stabilizer subsystem.
  * All have a timestamp to be set when the data is calculated.
@@ -43,13 +44,17 @@ typedef struct attitude_s {
 } attitude_t;
 
 /* x,y,z vector */
-typedef struct point_s {
+struct vec3_s {
   uint32_t timestamp; // Timestamp when the data was computed
 
   float x;
   float y;
   float z;
-} point_t;
+};
+
+typedef struct vec3_s point_t;
+typedef struct vec3_s velocity_t;
+typedef struct vec3_s acc_t;
 
 /* Orientation as a quaternion */
 typedef struct quaternion_s {
@@ -71,6 +76,57 @@ typedef struct quaternion_s {
   };
 } quaternion_t;
 
+typedef struct baro_s {
+  float pressure;
+  float temperature;
+  float asl;
+} baro_t;
+
+typedef struct sensorData_s {
+  Axis3f acc;
+  Axis3f gyro;
+  Axis3f mag;
+  baro_t baro;
+  point_t position;
+} sensorData_t;
+
+typedef struct state_s {
+  attitude_t attitude;
+  point_t position;
+  velocity_t velocity;
+  acc_t acc;
+} state_t;
+
+typedef struct control_s {
+  int16_t roll;
+  int16_t pitch;
+  int16_t yaw;
+  float thrust;
+} control_t;
+
+typedef enum mode_e {
+  modeDisable = 0,
+  modeAbs,
+  modeVelocity
+} mode_t;
+
+typedef struct setpoint_s {
+  attitude_t attitude;
+  attitude_t attitudeRate;
+  float thrust;
+  point_t position;
+  velocity_t velocity;
+
+  struct {
+    mode_t x;
+    mode_t y;
+    mode_t z;
+    mode_t roll;
+    mode_t pitch;
+    mode_t yaw;
+  } mode;
+} setpoint_t;
+
 /** Estimate of position */
 typedef struct estimate_s {
   uint32_t timestamp; // Timestamp when the data was computed
@@ -83,5 +139,22 @@ typedef struct setpointZ_s {
   float z;
   bool isUpdate; // True = small update of setpoint, false = completely new
 } setpointZ_t;
+
+void stateEstimator(state_t *state, const sensorData_t *sensorData);
+void stateController(control_t *control, const sensorData_t *sensors,
+                                         const state_t *state,
+                                         const setpoint_t *setpoint);
+void distributePower(const control_t *control);
+
+
+#include "FreeRTOS.h"
+#include "task.h"
+
+#define _RATE_SKIP_HZ(X) ((xTaskGetTickCount() % (1000/X)) != 0)
+
+#define RATE_SKIP_500HZ() _RATE_SKIP_HZ(500)
+#define RATE_SKIP_250HZ() _RATE_SKIP_HZ(250)
+#define RATE_SKIP_100HZ() _RATE_SKIP_HZ(100)
+
 
 #endif

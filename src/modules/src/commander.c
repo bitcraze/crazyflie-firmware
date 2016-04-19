@@ -269,6 +269,49 @@ void commanderGetThrust(uint16_t* thrust)
   }
 }
 
+void commanderGetSetpoint(setpoint_t *setpoint)
+{
+  setpoint->attitude.roll  = commanderGetActiveRoll();
+  setpoint->attitude.pitch = commanderGetActivePitch();
+  setpoint->attitudeRate.yaw  = commanderGetActiveYaw();
+  uint16_t rawThrust = commanderGetActiveThrust();
+
+  if (thrustLocked)
+  {
+    setpoint->thrust = 0;
+  }
+  else
+  {
+    if (rawThrust > MIN_THRUST)
+    {
+      setpoint->thrust = rawThrust;
+    }
+    else
+    {
+      setpoint->thrust = 0;
+    }
+
+    if (rawThrust > MAX_THRUST)
+    {
+      setpoint->thrust = MAX_THRUST;
+    }
+  }
+
+  if (altHoldMode) {
+    setpoint->thrust = 0;
+    setpoint->mode.z = modeVelocity;
+    setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
+  } else {
+    setpoint->mode.z = modeDisable;
+  }
+
+  setpoint->mode.x = modeDisable;
+  setpoint->mode.y = modeDisable;
+  setpoint->mode.roll = modeAbs;
+  setpoint->mode.pitch = modeAbs;
+  setpoint->mode.yaw = modeVelocity;
+}
+
 YawModeType commanderGetYawMode(void)
 {
   return yawMode;
