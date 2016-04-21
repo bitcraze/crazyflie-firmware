@@ -28,7 +28,9 @@
 
 #include "stabilizer_types.h"
 
-void positionControllerUpdate(uint16_t* actuatorThrust, float z, float dt);
-void positionControllerSetZTarget(const setpointZ_t* setpoint, float dt);
+// A position controller calculate the thrust, roll, pitch to approach
+// a 3D position setpoint
+void positionController(float *thrust, attitude_t *attitude, const state_t *state,
+                                                             const setpoint_t *setpoint);
 
 #endif /* POSITION_CONTROLLER_H_ */
