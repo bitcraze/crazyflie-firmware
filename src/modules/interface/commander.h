@@ -50,37 +50,11 @@ struct CommanderCrtpValues
   uint16_t thrust;
 } __attribute__((packed));
 
-/**
- * Stabilization modes for Roll, Pitch, Yaw.
- */
-typedef enum
-{
-  RATE    = 0,
-  ANGLE   = 1,
-} RPYType;
-
-/**
- * Yaw flight Modes
- */
-typedef enum
-{
-  CAREFREE  = 0, // Yaw is locked to world coordinates thus heading stays the same when yaw rotates
-  PLUSMODE  = 1, // Plus-mode. Motor M1 is defined as front
-  XMODE     = 2, // X-mode. M1 & M4 is defined as front
-} YawModeType;
-
 void commanderInit(void);
 bool commanderTest(void);
 uint32_t commanderGetInactivityTime(void);
-void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired);
-void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType);
-void commanderGetThrust(uint16_t* thrust);
-void commanderGetAltHold(bool* altHold, float* altHoldChange);
-void commanderSetAltHoldMode(bool altHoldModeNew);
-YawModeType commanderGetYawMode(void);
-bool commanderGetYawModeCarefreeResetFront(void);
 void commanderExtrxSet(struct CommanderCrtpValues* val);
 
-void commanderGetSetpoint(setpoint_t *setpoint);
+void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state);
 
 #endif /* COMMANDER_H_ */

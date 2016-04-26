@@ -23,6 +23,8 @@
  *
  *
  */
+#include <math.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -30,6 +32,7 @@
 #include "crtp.h"
 #include "configblock.h"
 #include "param.h"
+#include "num.h"
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
@@ -44,6 +47,25 @@ typedef struct _CommanderCach
   bool activeSide;
   uint32_t timestamp;
 } CommanderCach;
+
+/**
+ * Stabilization modes for Roll, Pitch, Yaw.
+ */
+typedef enum
+{
+  RATE    = 0,
+  ANGLE   = 1,
+} RPYType;
+
+/**
+ * Yaw flight Modes
+ */
+typedef enum
+{
+  CAREFREE  = 0, // Yaw is locked to world coordinates thus heading stays the same when yaw rotates
+  PLUSMODE  = 1, // Plus-mode. Motor M1 is defined as front
+  XMODE     = 2, // X-mode. M1 & M4 is defined as front
+} YawModeType;
 
 static bool isInit;
 static CommanderCach crtpCach;
@@ -61,7 +83,6 @@ static RPYType stabilizationModeYaw   = RATE;  // Current stabilization type of 
 
 static YawModeType yawMode = DEFUALT_YAW_MODE; // Yaw mode configuration
 static bool carefreeResetFront;             // Reset what is front in carefree mode
-
 
 static void commanderCrtpCB(CRTPPacket* pk);
 static void commanderCachSelectorUpdate(void);
@@ -117,7 +138,7 @@ static void commanderLevelRPY(void)
 
 static void commandeDropToGround(void)
 {
-  commanderSetAltHoldMode(false);
+  altHoldMode = false;
   commanderSetActiveThrust(0);
   commanderLevelRPY();
 }
@@ -165,6 +186,79 @@ static void commanderCrtpCB(CRTPPacket* pk)
   }
 }
 
+/**
+ * Rotate Yaw so that the Crazyflie will change what is considered front.
+ *
+ * @param yawRad Amount of radians to rotate yaw.
+ */
+static void rotateYaw(setpoint_t *setpoint, float yawRad)
+{
+  float cosy = cosf(yawRad);
+  float siny = sinf(yawRad);
+  float originalRoll = setpoint->attitude.roll;
+  float originalPitch = setpoint->attitude.pitch;
+
+  setpoint->attitude.roll = originalRoll * cosy - originalPitch * siny;
+  setpoint->attitude.pitch = originalPitch * cosy + originalRoll * siny;
+}
+
+/**
+ * Yaw carefree mode means yaw will stay in world coordinates. So even though
+ * the Crazyflie rotates around the yaw, front will stay the same as when it started.
+ * This makes makes it a bit easier for beginners
+ */
+static void rotateYawCarefree(setpoint_t *setpoint, const state_t *state, bool reset)
+{
+  static float carefreeFrontAngle;
+
+  if (reset)
+  {
+    carefreeFrontAngle = state->attitude.yaw;
+  }
+
+  float yawRad = (state->attitude.yaw - carefreeFrontAngle) * (float)M_PI / 180;
+  rotateYaw(setpoint, yawRad);
+}
+
+/**
+ * Update Yaw according to current setting
+ */
+#ifdef PLATFORM_CF1
+static void yawModeUpdate(setpoint_t *setpoint, const state_t *state)
+{
+  switch (yawMode)
+  {
+    case CAREFREE:
+      rotateYawCarefree(setpoint, state, carefreeResetFront);
+      break;
+    case PLUSMODE:
+      // Default in plus mode. Do nothing
+      break;
+    case XMODE: // Fall though
+    default:
+      rotateYaw(setpoint, -45 * M_PI / 180);
+      break;
+  }
+}
+#else
+static void yawModeUpdate(setpoint_t *setpoint, const state_t *state)
+{
+  switch (yawMode)
+  {
+    case CAREFREE:
+      rotateYawCarefree(setpoint, state, carefreeResetFront);
+      break;
+    case PLUSMODE:
+      rotateYaw(setpoint, 45 * M_PI / 180);
+      break;
+    case XMODE: // Fall though
+    default:
+      // Default in x-mode. Do nothing
+      break;
+  }
+}
+#endif
+
 /* Public functions */
 void commanderInit(void)
 {
@@ -204,97 +298,17 @@ uint32_t commanderGetInactivityTime(void)
   return xTaskGetTickCount() - lastUpdate;
 }
 
-void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired)
-{
-  *eulerRollDesired  = commanderGetActiveRoll();
-  *eulerPitchDesired = commanderGetActivePitch();
-  *eulerYawDesired   = commanderGetActiveYaw();
-}
-
-void commanderGetAltHold(bool* altHold, float* altHoldChange)
-{
-  *altHold = altHoldMode; // Still in altitude hold mode
-  *altHoldChange = altHoldMode ? ((float) commanderGetActiveThrust() - 32767.f) / 32767.f : 0.0; // Amount to change altitude hold target
-}
-
-void commanderSetAltHoldMode(bool altHoldModeNew)
-{
-	altHoldMode = altHoldModeNew;
-
-	/**
-	 * Dirty trick to ensure the altHoldChange variable remains zero after next call to commanderGetAltHold().
-	 *
-	 * This is needed since the commanderGetAltHold calculates the altHoldChange to -1 if altHoldMode is enabled
-	 * with a simultaneous thrust command of 0.
-	 *
-	 * When altHoldChange is calculated to -1 when enabling altHoldMode, the altTarget will steadily decrease
-	 * until thrust is commanded to correct the altitude, which is what we want to avoid.
-	 */
-	if(altHoldModeNew)
-	{
-	  commanderSetActiveThrust(32767);
-	}
-}
-
-void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType)
-{
-  *rollType  = stabilizationModeRoll;
-  *pitchType = stabilizationModePitch;
-  *yawType   = stabilizationModeYaw;
-}
-
-void commanderGetThrust(uint16_t* thrust)
-{
-  uint16_t rawThrust = commanderGetActiveThrust();
-
-  if (thrustLocked)
-  {
-    *thrust = 0;
-  }
-  else
-  {
-    if (rawThrust > MIN_THRUST)
-    {
-      *thrust = rawThrust;
-    }
-    else
-    {
-      *thrust = 0;
-    }
-
-    if (rawThrust > MAX_THRUST)
-    {
-      *thrust = MAX_THRUST;
-    }
-  }
-}
-
-void commanderGetSetpoint(setpoint_t *setpoint)
+void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 {
   setpoint->attitude.roll  = commanderGetActiveRoll();
   setpoint->attitude.pitch = commanderGetActivePitch();
   setpoint->attitudeRate.yaw  = commanderGetActiveYaw();
   uint16_t rawThrust = commanderGetActiveThrust();
 
-  if (thrustLocked)
-  {
+  if (thrustLocked || (rawThrust < MIN_THRUST)) {
     setpoint->thrust = 0;
-  }
-  else
-  {
-    if (rawThrust > MIN_THRUST)
-    {
-      setpoint->thrust = rawThrust;
-    }
-    else
-    {
-      setpoint->thrust = 0;
-    }
-
-    if (rawThrust > MAX_THRUST)
-    {
-      setpoint->thrust = MAX_THRUST;
-    }
+  } else {
+    setpoint->thrust = min(rawThrust, MAX_THRUST);
   }
 
   if (altHoldMode) {
@@ -305,21 +319,13 @@ void commanderGetSetpoint(setpoint_t *setpoint)
     setpoint->mode.z = modeDisable;
   }
 
+  yawModeUpdate(setpoint, state);
+
   setpoint->mode.x = modeDisable;
   setpoint->mode.y = modeDisable;
   setpoint->mode.roll = modeAbs;
   setpoint->mode.pitch = modeAbs;
   setpoint->mode.yaw = modeVelocity;
-}
-
-YawModeType commanderGetYawMode(void)
-{
-  return yawMode;
-}
-
-bool commanderGetYawModeCarefreeResetFront(void)
-{
-  return carefreeResetFront;
 }
 
 // Params for flight modes

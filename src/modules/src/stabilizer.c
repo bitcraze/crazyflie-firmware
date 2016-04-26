@@ -47,10 +47,10 @@
 #include "num.h"
 
 static struct {
-  uint16_t m1;
-  uint16_t m2;
-  uint16_t m3;
-  uint16_t m4;
+  uint32_t m1;
+  uint32_t m2;
+  uint32_t m3;
+  uint32_t m4;
 } motorPower;
 
 static bool isInit;
@@ -223,86 +223,10 @@ bool stabilizerTest(void)
 // }
 //
 //
-// /**
-//  * Rotate Yaw so that the Crazyflie will change what is considered front.
-//  *
-//  * @param yawRad Amount of radians to rotate yaw.
-//  */
-// static void stabilizerRotateYaw(float yawRad)
-// {
-//   float cosy;
-//   float siny;
-//   float originalRoll = eulerRollDesired;
-//   float originalPitch = eulerPitchDesired;
 //
-//   cosy = cosf(yawRad);
-//   siny = sinf(yawRad);
-//   eulerRollDesired = originalRoll * cosy - originalPitch * siny;
-//   eulerPitchDesired = originalPitch * cosy + originalRoll * siny;
-// }
+
 //
-// /**
-//  * Yaw carefree mode means yaw will stay in world coordinates. So even though
-//  * the Crazyflie rotates around the yaw, front will stay the same as when it started.
-//  * This makes makes it a bit easier for beginners
-//  */
-// static void stabilizerRotateYawCarefree(bool reset)
-// {
-//   float yawRad;
-//   float cosy;
-//   float siny;
-//   float originalRoll = eulerRollDesired;
-//
-//   if (reset)
-//   {
-//     carefreeFrontAngle = eulerYawActual;
-//   }
-//
-//   yawRad = (eulerYawActual - carefreeFrontAngle) * (float)M_PI / 180;
-//   cosy = cosf(yawRad);
-//   siny = sinf(yawRad);
-//   eulerRollDesired = eulerRollDesired * cosy - eulerPitchDesired * siny;
-//   eulerPitchDesired = eulerPitchDesired * cosy + originalRoll * siny;
-// }
-//
-// /**
-//  * Update Yaw according to current setting
-//  */
-// #ifdef PLATFORM_CF1
-// static void stabilizerYawModeUpdate(void)
-// {
-//   switch (commanderGetYawMode())
-//   {
-//     case CAREFREE:
-//       stabilizerRotateYawCarefree(commanderGetYawModeCarefreeResetFront());
-//       break;
-//     case PLUSMODE:
-//       // Default in plus mode. Do nothing
-//       break;
-//     case XMODE: // Fall though
-//     default:
-//       stabilizerRotateYaw(-45 * M_PI / 180);
-//       break;
-//   }
-// }
-// #else
-// static void stabilizerYawModeUpdate(void)
-// {
-//   switch (commanderGetYawMode())
-//   {
-//     case CAREFREE:
-//       stabilizerRotateYawCarefree(commanderGetYawModeCarefreeResetFront());
-//       break;
-//     case PLUSMODE:
-//       stabilizerRotateYaw(45 * M_PI / 180);
-//       break;
-//     case XMODE: // Fall though
-//     default:
-//       // Default in x-mode. Do nothing
-//       break;
-//   }
-// }
-// #endif
+
 
 static uint16_t limitThrust(int32_t value)
 {
@@ -384,7 +308,7 @@ static void stabilizerTask(void* param)
     if (acquireSensors(&sensorData))
     {
       stateEstimator(&state, &sensorData);
-      commanderGetSetpoint(&setpoint);
+      commanderGetSetpoint(&setpoint, &state);
 
       sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
