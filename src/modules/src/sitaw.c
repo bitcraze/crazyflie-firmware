@@ -32,6 +32,7 @@
 #include "param.h"
 #include "trigger.h"
 #include "sitaw.h"
+#include "commander.h"
 
 /* Trigger object used to detect Free Fall situation. */
 static trigger_t sitAwFFAccWZ;
@@ -97,6 +98,62 @@ void sitAwFFInit(void)
 {
   triggerInit(&sitAwFFAccWZ, triggerFuncIsLE, SITAW_FF_THRESHOLD, SITAW_FF_TRIGGER_COUNT);
   triggerActivate(&sitAwFFAccWZ, true);
+}
+
+
+static void sitAwPostStateUpdateCallOut(const sensorData_t *sensorData,
+                                        const state_t *state)
+{
+  /* Code that shall run AFTER each attitude update, should be placed here. */
+
+#if defined(SITAW_ENABLED)
+  float accMAG = (sensorData->acc.x*sensorData->acc.x) +
+                 (sensorData->acc.y*sensorData->acc.y) +
+                 (sensorData->acc.z*sensorData->acc.z);
+
+  /* Test values for Free Fall detection. */
+  sitAwFFTest(state->acc.z, accMAG);
+
+  /* Test values for Tumbled detection. */
+  sitAwTuTest(state->attitude.roll, state->attitude.pitch);
+
+  /* Test values for At Rest detection. */
+  sitAwARTest(sensorData->acc.x, sensorData->acc.y, sensorData->acc.z);
+#endif
+}
+
+static void sitAwPreThrustUpdateCallOut(setpoint_t *setpoint)
+{
+  /* Code that shall run BEFORE each thrust distribution update, should be placed here. */
+
+#if defined(SITAW_ENABLED)
+      if(sitAwTuDetected()) {
+        /* Kill the thrust to the motors if a Tumbled situation is detected. */
+        setpoint->thrust = 0;
+      }
+
+      /* Force altHold mode if free fall is detected.
+         FIXME: Needs a flying/landing state (as soon as althold is enabled,
+                                              we are not freefalling anymore)
+       */
+      if(sitAwFFDetected() && !sitAwTuDetected()) {
+        setpoint->mode.z = modeVelocity;
+        setpoint->velocity.z = 0;
+      }
+#endif
+}
+
+/**
+ * Update setpoint according to current situation
+ *
+ * Called by the stabilizer after state and setpoint update. This function
+ * should update the setpoint accordig to the current state situation
+ */
+void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
+                                               const state_t *state)
+{
+  sitAwPostStateUpdateCallOut(sensorData, state);
+  sitAwPreThrustUpdateCallOut(setpoint);
 }
 
 /**

@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "stabilizer_types.h"
+
 bool sitAwFFTest(float accWZ, float accMag);
 bool sitAwFFDetected(void);
 bool sitAwARTest(float accX, float accY, float accZ);
@@ -37,7 +39,8 @@ bool sitAwARDetected(void);
 bool sitAwTuTest(float eulerRollActual, float eulerPitchActual);
 bool sitAwTuDetected(void);
 void sitAwInit(void);
-
+void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
+                                               const state_t *state);
 /* Enable the situation awareness framework. */
 //#define SITAW_ENABLED
 

@@ -30,7 +30,6 @@
 
 #include "config.h"
 #include "system.h"
-#include "pm.h"
 #include "stabilizer.h"
 #include "commander.h"
 #include "attitude_controller.h"
@@ -38,7 +37,6 @@
 #include "imu.h"
 #include "motors.h"
 #include "log.h"
-#include "pid.h"
 #include "param.h"
 #include "sitaw.h"
 #ifdef PLATFORM_CF1
@@ -47,70 +45,18 @@
   #include "lps25h.h"
 #endif
 #include "num.h"
-#include "position_estimator.h"
-#include "position_controller.h"
-#include "altitude_hold.h"
 
-
-/**
- * Defines in what divided update rate should the attitude
- * control loop run relative the rate control loop.
- */
-#define ATTITUDE_UPDATE_RATE_DIVIDER  2
-#define ATTITUDE_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ATTITUDE_UPDATE_RATE_DIVIDER)) // 250hz
-
-#define ALTHOLD_UPDATE_RATE_DIVIDER  5
-#define ALTHOLD_UPDATE_DT  (float)(1.0 / (IMU_UPDATE_FREQ / ALTHOLD_UPDATE_RATE_DIVIDER))   // 100hz
-
-// // Barometer/ Altitude hold stuff
-// static float accWZ     = 0.0; // Acceleration Without gravity along Z axis (G).
-// static float accMAG    = 0.0; // Acceleration magnitude
-//
-// static Axis3f gyro; // Gyro axis data in deg/s
-// static Axis3f acc;  // Accelerometer axis data in mG
-// static Axis3f mag;  // Magnetometer axis data in testla
-//
-// static float eulerRollActual;   // Measured roll angle in deg
-// static float eulerPitchActual;  // Measured pitch angle in deg
-// static float eulerYawActual;    // Measured yaw angle in deg
-// static float eulerRollDesired;  // Desired roll angle in deg
-// static float eulerPitchDesired; // Desired ptich angle in deg
-// static float eulerYawDesired;   // Desired yaw angle in deg
-// static float rollRateDesired;   // Desired roll rate in deg/s
-// static float pitchRateDesired;  // Desired pitch rate in deg/s
-// static float yawRateDesired;    // Desired yaw rate in deg/s
-//
-//
-// static float carefreeFrontAngle = 0; // carefree front angle that is set
-//
-// uint16_t actuatorThrust;  // Actuator output for thrust base
-// int16_t  actuatorRoll;    // Actuator output roll compensation
-// int16_t  actuatorPitch;   // Actuator output pitch compensation
-// int16_t  actuatorYaw;     // Actuator output yaw compensation
-//
-uint32_t motorPowerM1;  // Motor 1 power output (16bit value used: 0 - 65535)
-uint32_t motorPowerM2;  // Motor 2 power output (16bit value used: 0 - 65535)
-uint32_t motorPowerM3;  // Motor 3 power output (16bit value used: 0 - 65535)
-uint32_t motorPowerM4;  // Motor 4 power output (16bit value used: 0 - 65535)
+static struct {
+  uint16_t m1;
+  uint16_t m2;
+  uint16_t m3;
+  uint16_t m4;
+} motorPower;
 
 static bool isInit;
 
-
-// static void stabilizerRotateYaw(float yawRad);
-// static void stabilizerRotateYawCarefree(bool reset);
-// static void stabilizerYawModeUpdate(void);
-// static void distributePower(const uint16_t thrust, const int16_t roll,
-//                             const int16_t pitch, const int16_t yaw);
 static uint16_t limitThrust(int32_t value);
 static void stabilizerTask(void* param);
-// static void readBarometerData(float* pressure, float* temperature, float* asl);
-
-// Baro variables
-// static float temperature; // temp from barometer in celcius
-// static float pressure;    // pressure from barometer in bar
-// static float asl;         // raw Altitude over Sea Level from pressure sensor, in meters. Has an offset.
-// static estimate_t estimatedPosition;
-
 
 void stabilizerInit(void)
 {
@@ -147,43 +93,6 @@ bool stabilizerTest(void)
   return pass;
 }
 
-// static void stabilizerPostAttitudeUpdateCallOut(void)
-// {
-//   /* Code that shall run AFTER each attitude update, should be placed here. */
-//
-// #if defined(SITAW_ENABLED)
-//   /* Test values for Free Fall detection. */
-//   sitAwFFTest(accWZ, accMAG);
-//
-//   /* Test values for Tumbled detection. */
-//   sitAwTuTest(eulerRollActual, eulerPitchActual);
-//
-//   /* Test values for At Rest detection. */
-//   sitAwARTest(acc.x, acc.y, acc.z);
-//
-//   /* Enable altHold mode if free fall is detected. */
-//   if(sitAwFFDetected() && !sitAwTuDetected()) {
-//     commanderSetAltHoldMode(true);
-//   }
-//
-//   /* Disable altHold mode if a Tumbled situation is detected. */
-//   if(sitAwTuDetected()) {
-//     commanderSetAltHoldMode(false);
-//   }
-// #endif
-// }
-//
-// static void stabilizerPreThrustUpdateCallOut(void)
-// {
-//   /* Code that shall run BEFORE each thrust distribution update, should be placed here. */
-//
-// #if defined(SITAW_ENABLED)
-//       if(sitAwTuDetected()) {
-//         /* Kill the thrust to the motors if a Tumbled situation is detected. */
-//         actuatorThrust = 0;
-//       }
-// #endif
-// }
 //
 // static void stabilizerTask(void* param)
 // {
@@ -408,10 +317,10 @@ static void readBarometerData(baro_t *baro) {
 #endif
 }
 
-static void acquireSensors(sensorData_t *sensors)
+static bool acquireSensors(sensorData_t *sensors)
 {
   if (RATE_SKIP_500HZ()) {
-    return;
+    return imu6IsCalibrated();
   }
 
   imu9Read(&sensors->gyro, &sensors->acc, &sensors->mag);
@@ -419,6 +328,8 @@ static void acquireSensors(sensorData_t *sensors)
     readBarometerData(&sensors->baro);
   }
   // Get the position
+
+  return imu6IsCalibrated();
 }
 
 void distributePower(const control_t *control)
@@ -426,25 +337,25 @@ void distributePower(const control_t *control)
 #ifdef QUAD_FORMATION_X
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
-  motorPowerM1 = limitThrust(control->thrust - r + p + control->yaw);
-  motorPowerM2 = limitThrust(control->thrust - r - p - control->yaw);
-  motorPowerM3 =  limitThrust(control->thrust + r - p + control->yaw);
-  motorPowerM4 =  limitThrust(control->thrust + r + p - control->yaw);
+  motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw);
+  motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
+  motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
+  motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
 #else // QUAD_FORMATION_NORMAL
-  motorPowerM1 = limitThrust(control->thrust + control->pitch +
+  motorPower.m1 = limitThrust(control->thrust + control->pitch +
                              control->yaw);
-  motorPowerM2 = limitThrust(control->thrust - control->roll -
+  motorPower.m2 = limitThrust(control->thrust - control->roll -
                              control->yaw);
-  motorPowerM3 =  limitThrust(control->thrust - control->pitch +
+  motorPower.m3 =  limitThrust(control->thrust - control->pitch +
                              control->yaw);
-  motorPowerM4 =  limitThrust(control->thrust + control->roll -
+  motorPower.m4 =  limitThrust(control->thrust + control->roll -
                              control->yaw);
 #endif
 
-  motorsSetRatio(MOTOR_M1, motorPowerM1);
-  motorsSetRatio(MOTOR_M2, motorPowerM2);
-  motorsSetRatio(MOTOR_M3, motorPowerM3);
-  motorsSetRatio(MOTOR_M4, motorPowerM4);
+  motorsSetRatio(MOTOR_M1, motorPower.m1);
+  motorsSetRatio(MOTOR_M2, motorPower.m2);
+  motorsSetRatio(MOTOR_M3, motorPower.m3);
+  motorsSetRatio(MOTOR_M4, motorPower.m4);
 }
 
 // State variables for the stabilizer
@@ -470,11 +381,13 @@ static void stabilizerTask(void* param)
   {
     vTaskDelayUntil(&lastWakeTime, F2T(1000));
 
-    acquireSensors(&sensorData);
-    if (imu6IsCalibrated())
+    if (acquireSensors(&sensorData))
     {
       stateEstimator(&state, &sensorData);
       commanderGetSetpoint(&setpoint);
+
+      sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+
       stateController(&control, &sensorData, &state, &setpoint);
       distributePower(&control);
     }
@@ -518,10 +431,10 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(motor)
-LOG_ADD(LOG_INT32, m4, &motorPowerM4)
-LOG_ADD(LOG_INT32, m1, &motorPowerM1)
-LOG_ADD(LOG_INT32, m2, &motorPowerM2)
-LOG_ADD(LOG_INT32, m3, &motorPowerM3)
+LOG_ADD(LOG_INT32, m4, &motorPower.m4)
+LOG_ADD(LOG_INT32, m1, &motorPower.m1)
+LOG_ADD(LOG_INT32, m2, &motorPower.m2)
+LOG_ADD(LOG_INT32, m3, &motorPower.m3)
 LOG_GROUP_STOP(motor)
 
 LOG_GROUP_START(controller)
