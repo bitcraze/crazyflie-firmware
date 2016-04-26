@@ -11,6 +11,20 @@
 #define POS_UPDATE_HZ 100
 #define POS_UPDATE_DT 1.0/POS_UPDATE_HZ
 
+void stateEstimatorInit(void)
+{
+  sensfusion6Init();
+}
+
+bool stateEstimatorTest(void)
+{
+  bool pass = true;
+
+  pass &= sensfusion6Test();
+
+  return pass;
+}
+
 void stateEstimator(state_t *state, const sensorData_t *sensorData)
 {
   if (!RATE_SKIP_250HZ()) {

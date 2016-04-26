@@ -21,6 +21,14 @@ DEBUG             ?= 0
 CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
 PLATFORM					?= CF2
 
+######### Stabilizer configuration ##########
+##### Sets the name of the stabilizer module to use.
+SENSORS            ?= stock
+ESTIMATOR          ?= complementary
+CONTROLLER         ?= pid
+POWER_DISTRIBUTION ?= stock
+
+
 ifeq ($(PLATFORM), CF1)
 OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
 USE_FPU            = 0
@@ -144,12 +152,16 @@ PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
-PROJ_OBJ += commander.o attitude_pid_controller.o sensfusion6.o stabilizer.o
-PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
-PROJ_OBJ += estimator_complementary.o controller_pid.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
 PROJ_OBJ_CF1 += sound_cf1.o
 PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
+
+# Stabilizer modules
+PROJ_OBJ += commander.o attitude_pid_controller.o sensfusion6.o stabilizer.o
+PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
+PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o
+PROJ_OBJ += sensors_$(SENSORS).o power_distribution_$(POWER_DISTRIBUTION).o
+
 
 # Deck Core
 PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o deck_test.o

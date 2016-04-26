@@ -12,6 +12,20 @@ static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
 
+void stateControllerInit(void)
+{
+  attitudeControllerInit();
+}
+
+bool stateControllerTest(void)
+{
+  bool pass = true;
+
+  pass &= attitudeControllerTest();
+
+  return pass;
+}
+
 void stateController(control_t *control, const sensorData_t *sensors,
                                          const state_t *state,
                                          const setpoint_t *setpoint)

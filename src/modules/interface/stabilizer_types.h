@@ -140,13 +140,6 @@ typedef struct setpointZ_s {
   bool isUpdate; // True = small update of setpoint, false = completely new
 } setpointZ_t;
 
-void stateEstimator(state_t *state, const sensorData_t *sensorData);
-void stateController(control_t *control, const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const setpoint_t *setpoint);
-void distributePower(const control_t *control);
-
-
 #include "FreeRTOS.h"
 #include "task.h"
 
