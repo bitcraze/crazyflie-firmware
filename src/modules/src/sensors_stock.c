@@ -48,21 +48,20 @@ bool sensorsTest(void)
 
 bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
 {
- if (RATE_SKIP_500HZ(tick)) {
-   return imu6IsCalibrated();
- }
+  if (!RATE_SKIP_500HZ(tick)) {
+    imu9Read(&sensors->gyro, &sensors->acc, &sensors->mag);
+  }
 
- imu9Read(&sensors->gyro, &sensors->acc, &sensors->mag);
- if (imuHasBarometer()) {
-   #ifdef PLATFORM_CF1
-     ms5611GetData(&sensors->baro.pressure,
-                   &sensors->baro.temperature,
-                   &sensors->baro.asl);
-   #else
-     lps25hGetData(&sensors->baro.pressure,
-                   &sensors->baro.temperature,
-                   &sensors->baro.asl);
-   #endif
+ if (!RATE_SKIP_100HZ(tick) && imuHasBarometer()) {
+#ifdef PLATFORM_CF1
+   ms5611GetData(&sensors->baro.pressure,
+                 &sensors->baro.temperature,
+                 &sensors->baro.asl);
+#else
+   lps25hGetData(&sensors->baro.pressure,
+                 &sensors->baro.temperature,
+                 &sensors->baro.asl);
+#endif
  }
  // Get the position
 

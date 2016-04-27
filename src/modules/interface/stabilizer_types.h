@@ -140,9 +140,6 @@ typedef struct setpointZ_s {
   bool isUpdate; // True = small update of setpoint, false = completely new
 } setpointZ_t;
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #define _RATE_SKIP_HZ(T, X) ((T % (1000/X)) != 0)
 
 #define RATE_SKIP_500HZ(tick) _RATE_SKIP_HZ(tick, 500)
