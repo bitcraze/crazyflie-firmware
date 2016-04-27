@@ -32,6 +32,7 @@ void stateControllerInit(void);
 bool stateControllerTest(void);
 void stateController(control_t *control, const sensorData_t *sensors,
                                          const state_t *state,
-                                         const setpoint_t *setpoint);
+                                         const setpoint_t *setpoint,
+                                         const uint32_t tick);
 
 #endif //__CONTROLLER_H__

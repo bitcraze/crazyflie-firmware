@@ -143,11 +143,11 @@ typedef struct setpointZ_s {
 #include "FreeRTOS.h"
 #include "task.h"
 
-#define _RATE_SKIP_HZ(X) ((xTaskGetTickCount() % (1000/X)) != 0)
+#define _RATE_SKIP_HZ(T, X) ((T % (1000/X)) != 0)
 
-#define RATE_SKIP_500HZ() _RATE_SKIP_HZ(500)
-#define RATE_SKIP_250HZ() _RATE_SKIP_HZ(250)
-#define RATE_SKIP_100HZ() _RATE_SKIP_HZ(100)
+#define RATE_SKIP_500HZ(tick) _RATE_SKIP_HZ(tick, 500)
+#define RATE_SKIP_250HZ(tick) _RATE_SKIP_HZ(tick, 250)
+#define RATE_SKIP_100HZ(tick) _RATE_SKIP_HZ(tick, 100)
 
 
 #endif

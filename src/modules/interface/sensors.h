@@ -30,6 +30,6 @@
 
 void sensorsInit();
 bool sensorsTest();
-bool sensorsAcquire(sensorData_t *sensors);
+bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
 
 #endif //__SENSORS_H__

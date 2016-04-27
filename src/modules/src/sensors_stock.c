@@ -46,9 +46,9 @@ bool sensorsTest(void)
  return pass;
 }
 
-bool sensorsAcquire(sensorData_t *sensors)
+bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
 {
- if (RATE_SKIP_500HZ()) {
+ if (RATE_SKIP_500HZ(tick)) {
    return imu6IsCalibrated();
  }
 

@@ -88,6 +88,7 @@ bool stabilizerTest(void)
  */
 static void stabilizerTask(void* param)
 {
+  uint32_t tick;
   uint32_t lastWakeTime;
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
@@ -100,16 +101,17 @@ static void stabilizerTask(void* param)
   {
     vTaskDelayUntil(&lastWakeTime, F2T(1000));
 
-    if (sensorsAcquire(&sensorData))  // Test if the sensors are calibrated
+    if (sensorsAcquire(&sensorData, tick))  // Test if the sensors are calibrated
     {
-      stateEstimator(&state, &sensorData);
+      stateEstimator(&state, &sensorData, tick);
       commanderGetSetpoint(&setpoint, &state);
 
       sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
-      stateController(&control, &sensorData, &state, &setpoint);
+      stateController(&control, &sensorData, &state, &setpoint, tick);
       powerDistribution(&control);
     }
+    tick++;
   }
 }
 

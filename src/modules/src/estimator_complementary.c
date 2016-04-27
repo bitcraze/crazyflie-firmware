@@ -25,9 +25,9 @@ bool stateEstimatorTest(void)
   return pass;
 }
 
-void stateEstimator(state_t *state, const sensorData_t *sensorData)
+void stateEstimator(state_t *state, const sensorData_t *sensorData, const uint32_t tick)
 {
-  if (!RATE_SKIP_250HZ()) {
+  if (!RATE_SKIP_250HZ(tick)) {
     sensfusion6UpdateQ(sensorData->gyro.x, sensorData->gyro.y, sensorData->gyro.z,
                        sensorData->acc.x, sensorData->acc.y, sensorData->acc.z,
                        ATTITUDE_UPDATE_DT);
@@ -40,7 +40,7 @@ void stateEstimator(state_t *state, const sensorData_t *sensorData)
     positionUpdateVelocity(state->acc.z, ATTITUDE_UPDATE_DT);
   }
 
-  if (!RATE_SKIP_100HZ()) {
+  if (!RATE_SKIP_100HZ(tick)) {
     positionEstimate(state, sensorData->baro.asl, POS_UPDATE_DT);
   }
 }
