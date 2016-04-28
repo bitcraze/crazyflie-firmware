@@ -8,6 +8,9 @@
 
 #include "log.h"
 
+#define ATTITUDE_RATE RATE_500_HZ
+#define POSITION_RATE RATE_100_HZ
+
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
@@ -31,7 +34,7 @@ void stateController(control_t *control, const sensorData_t *sensors,
                                          const setpoint_t *setpoint,
                                          const uint32_t tick)
 {
-  if (!RATE_SKIP_500HZ(tick)) {
+  if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     // Rate-controled YAW is moving YAW angle setpoint
     if (setpoint->mode.yaw == modeVelocity) {
        attitudeDesired.yaw -= setpoint->attitudeRate.yaw/500.0;
@@ -44,26 +47,24 @@ void stateController(control_t *control, const sensorData_t *sensors,
     }
   }
 
-  if (!RATE_SKIP_100HZ(tick)) {
+  if (RATE_DO_EXECUTE(POSITION_RATE, tick)) {
     positionController(&actuatorThrust, &attitudeDesired, state, setpoint);
   }
 
-  // Switch between manual and automatic position control
-  if (setpoint->mode.z == modeDisable) {
-    actuatorThrust = setpoint->thrust;
-  }
-  if (setpoint->mode.x == modeDisable || setpoint->mode.y == modeDisable) {
-    attitudeDesired.roll = setpoint->attitude.roll;
-    attitudeDesired.pitch = setpoint->attitude.pitch;
-  }
+  if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
+    // Switch between manual and automatic position control
+    if (setpoint->mode.z == modeDisable) {
+      actuatorThrust = setpoint->thrust;
+    }
+    if (setpoint->mode.x == modeDisable || setpoint->mode.y == modeDisable) {
+      attitudeDesired.roll = setpoint->attitude.roll;
+      attitudeDesired.pitch = setpoint->attitude.pitch;
+    }
 
-  if (!RATE_SKIP_500HZ(tick)) {
     attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
                                 setpoint->attitude.roll, setpoint->attitude.pitch, attitudeDesired.yaw,
                                 &rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
-  }
 
-  if (!RATE_SKIP_500HZ(tick)) {
     if (setpoint->mode.roll == modeVelocity) {
       rateDesired.roll = setpoint->attitudeRate.roll;
     }

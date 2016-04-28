@@ -95,22 +95,25 @@ static void stabilizerTask(void* param)
   //Wait for the system to be fully started to start stabilization loop
   systemWaitStart();
 
+  // Wait for sensors to be calibrated
   lastWakeTime = xTaskGetTickCount ();
+  while(!sensorsAreCalibrated()) {
+    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+  }
 
-  while(1)
-  {
-    vTaskDelayUntil(&lastWakeTime, F2T(1000));
+  while(1) {
+    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
-    if (sensorsAcquire(&sensorData, tick))  // Test if the sensors are calibrated
-    {
-      stateEstimator(&state, &sensorData, tick);
-      commanderGetSetpoint(&setpoint, &state);
+    sensorsAcquire(&sensorData, tick);
 
-      sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+    stateEstimator(&state, &sensorData, tick);
+    commanderGetSetpoint(&setpoint, &state);
 
-      stateController(&control, &sensorData, &state, &setpoint, tick);
-      powerDistribution(&control);
-    }
+    sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+
+    stateController(&control, &sensorData, &state, &setpoint, tick);
+    powerDistribution(&control);
+
     tick++;
   }
 }
