@@ -25,6 +25,7 @@
  */
 
 #include <math.h>
+#include "num.h"
 
 #include "commander.h"
 #include "log.h"
@@ -57,22 +58,27 @@ struct this_s {
   uint16_t thrustBase; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
 };
 
+// Maximum roll/pitch angle permited
+static float rpLimit = 5;
+
+#define DT 0.01
+
 #ifndef UNIT_TEST
 static struct this_s this = {
 
   .pidX = {
     .init = {
-      .kp = 0,
-      .ki = 0,
-      .kd = 0
+      .kp = 25,
+      .ki = 0.28,
+      .kd = 7
     }
   },
 
   .pidY = {
     .init = {
-      .kp = 0,
-      .ki = 0,
-      .kd = 0
+      .kp = 25,
+      .ki = 0.28,
+      .kd = 7
     }
   },
 
@@ -84,7 +90,7 @@ static struct this_s this = {
     }
   },
 
-  .thrustBase = 32000,
+  .thrustBase = 36000,
 };
 #endif
 
@@ -112,8 +118,6 @@ static float runPid(float input, struct pidAxis_s *axis, mode_t mode,
   return pidUpdate(&axis->pid, input, true);
 }
 
-#define DT 0.01
-
 void positionController(float* thrust, attitude_t *attitude, const state_t *state,
                                                              const setpoint_t *setpoint)
 {
@@ -121,8 +125,12 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
   float x = runPid(state->position.x, &this.pidX, setpoint->mode.x, setpoint->position.x, setpoint->velocity.x, DT);
   float y = runPid(state->position.y, &this.pidY, setpoint->mode.y, setpoint->position.y, setpoint->velocity.y, DT);
 
-  attitude->pitch = (x * sinf(state->attitude.yaw)) + (y * cosf(state->attitude.yaw));
-  attitude->roll = (y * cosf(state->attitude.yaw)) + (x * sinf(state->attitude.yaw));
+  float yawRad = state->attitude.yaw * (float)M_PI / 180;
+  attitude->pitch = - (x * cosf(yawRad)) - (y * sinf(yawRad));
+  attitude->roll =  - (y * cosf(yawRad)) + (x * sinf(yawRad));
+
+  attitude->roll = max(min(attitude->roll, rpLimit), -rpLimit);
+  attitude->pitch = max(min(attitude->pitch, rpLimit), -rpLimit);
 
   // Z
   float newThrust = runPid(state->position.z, &this.pidZ, setpoint->mode.z, setpoint->position.z, setpoint->velocity.z, DT);
@@ -131,6 +139,8 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
 
 
 LOG_GROUP_START(posCtlAlt)
+LOG_ADD(LOG_FLOAT, targetX, &this.pidX.setpoint)
+LOG_ADD(LOG_FLOAT, targetY, &this.pidY.setpoint)
 LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.setpoint)
 
 LOG_ADD(LOG_FLOAT, p, &this.pidZ.pid.outP)
@@ -153,4 +163,6 @@ PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.init.ki)
 PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.init.kd)
 
 PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
+
+PARAM_ADD(PARAM_FLOAT, rpLimit, &rpLimit)
 PARAM_GROUP_STOP(posCtlPid)

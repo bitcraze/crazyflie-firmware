@@ -59,7 +59,7 @@ void stateController(control_t *control, const sensorData_t *sensors,
 
   if (!RATE_SKIP_500HZ(tick)) {
     attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
-                                setpoint->attitude.roll, setpoint->attitude.pitch, attitudeDesired.yaw,
+                                attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
                                 &rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
   }
 
@@ -101,4 +101,7 @@ void stateController(control_t *control, const sensorData_t *sensors,
 
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_FLOAT, actuatorThrust, &actuatorThrust)
+LOG_ADD(LOG_FLOAT, roll, &attitudeDesired.roll)
+LOG_ADD(LOG_FLOAT, pitch, &attitudeDesired.pitch)
+LOG_ADD(LOG_FLOAT, yaw, &attitudeDesired.yaw)
 LOG_GROUP_STOP(controller)
