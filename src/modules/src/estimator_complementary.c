@@ -41,6 +41,12 @@ void stateEstimator(state_t *state, const sensorData_t *sensorData, const uint32
   }
 
   if (!RATE_SKIP_100HZ(tick)) {
-    positionEstimate(state, sensorData->baro.asl, POS_UPDATE_DT);
+    // If position sensor data is preset, pass it throught
+    // FIXME: The position sensor shall be used as an input of the estimator
+    if (sensorData->position.timestamp) {
+      state->position = sensorData->position;
+    } else {
+      positionEstimate(state, sensorData->baro.asl, POS_UPDATE_DT);
+    }
   }
 }

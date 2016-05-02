@@ -32,6 +32,10 @@
   #include "lps25h.h"
 #endif
 
+#include "param.h"
+
+static point_t position;
+
 void sensorsInit(void)
 {
  imu6Init();
@@ -52,18 +56,28 @@ bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
     imu9Read(&sensors->gyro, &sensors->acc, &sensors->mag);
   }
 
- if (!RATE_SKIP_100HZ(tick) && imuHasBarometer()) {
+  if (!RATE_SKIP_100HZ(tick) && imuHasBarometer()) {
 #ifdef PLATFORM_CF1
-   ms5611GetData(&sensors->baro.pressure,
+    ms5611GetData(&sensors->baro.pressure,
                  &sensors->baro.temperature,
                  &sensors->baro.asl);
 #else
-   lps25hGetData(&sensors->baro.pressure,
+    lps25hGetData(&sensors->baro.pressure,
                  &sensors->baro.temperature,
                  &sensors->baro.asl);
 #endif
- }
- // Get the position
+    // Experimental: receive the position from parameters
+    if (position.timestamp) {
+      sensors->position = position;
+    }
+  }
 
  return imu6IsCalibrated();
 }
+
+PARAM_GROUP_START(lps)
+PARAM_ADD(PARAM_UINT32, t, &position.timestamp)
+PARAM_ADD(PARAM_FLOAT, x, &position.x)
+PARAM_ADD(PARAM_FLOAT, y, &position.y)
+PARAM_ADD(PARAM_FLOAT, z, &position.z)
+PARAM_GROUP_STOP(sensorfusion6)
