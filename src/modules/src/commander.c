@@ -76,6 +76,7 @@ static uint32_t lastUpdate;
 static bool isInactive;
 static bool thrustLocked;
 static bool altHoldMode = false;
+static bool posHoldMode = false;
 
 static RPYType stabilizationModeRoll  = ANGLE; // Current stabilization type of roll (rate or angle)
 static RPYType stabilizationModePitch = ANGLE; // Current stabilization type of pitch (rate or angle)
@@ -300,9 +301,7 @@ uint32_t commanderGetInactivityTime(void)
 
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 {
-  setpoint->attitude.roll  = commanderGetActiveRoll();
-  setpoint->attitude.pitch = commanderGetActivePitch();
-  setpoint->attitudeRate.yaw  = commanderGetActiveYaw();
+  // Thrust
   uint16_t rawThrust = commanderGetActiveThrust();
 
   if (thrustLocked || (rawThrust < MIN_THRUST)) {
@@ -313,24 +312,47 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 
   if (altHoldMode) {
     setpoint->thrust = 0;
-    setpoint->mode.z = modeVelocity;
+    setpoint->mode.z = modeDisable;
+
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
   } else {
     setpoint->mode.z = modeDisable;
   }
 
+  // roll/pitch
+  if (posHoldMode) {
+    setpoint->mode.x = modeVelocity;
+    setpoint->mode.y = modeVelocity;
+    setpoint->mode.roll = modeDisable;
+    setpoint->mode.pitch = modeDisable;
+
+    setpoint->velocity.x = commanderGetActivePitch()/30.0f;
+    setpoint->velocity.y = commanderGetActiveRoll()/30.0f;
+    setpoint->attitude.roll  = 0;
+    setpoint->attitude.pitch = 0;
+  } else {
+    setpoint->mode.x = modeDisable;
+    setpoint->mode.y = modeDisable;
+    setpoint->mode.roll = modeAbs;
+    setpoint->mode.pitch = modeAbs;
+
+    setpoint->velocity.x = 0;
+    setpoint->velocity.y = 0;
+    setpoint->attitude.roll  = commanderGetActiveRoll();
+    setpoint->attitude.pitch = commanderGetActivePitch();
+  }
+
+  // Yaw
+  setpoint->attitudeRate.yaw  = commanderGetActiveYaw();
   yawModeUpdate(setpoint, state);
 
-  setpoint->mode.x = modeDisable;
-  setpoint->mode.y = modeDisable;
-  setpoint->mode.roll = modeAbs;
-  setpoint->mode.pitch = modeAbs;
   setpoint->mode.yaw = modeVelocity;
 }
 
 // Params for flight modes
 PARAM_GROUP_START(flightmode)
 PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
+PARAM_ADD(PARAM_UINT8, poshold, &posHoldMode)
 PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
 PARAM_ADD(PARAM_UINT8, yawRst, &carefreeResetFront)
 PARAM_ADD(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
