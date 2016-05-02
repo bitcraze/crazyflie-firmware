@@ -30,6 +30,7 @@
 
 void sensorsInit();
 bool sensorsTest();
-bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
+void sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
+bool sensorsAreCalibrated();
 
 #endif //__SENSORS_H__

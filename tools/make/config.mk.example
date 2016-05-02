@@ -9,6 +9,9 @@
 ## Load a deck driver that has no OW memory
 # CFLAGS += -DDECK_FORCE=bcBuzzer
 
+## Enable biq quad deck features
+# CFLAGS += -DENABLE_BQ_DECK
+
 ## Use morse when flashing the LED to indicate that the Crazyflie is calibrated
 # CFLAGS += -DCALIBRATED_LED_MORSE
 

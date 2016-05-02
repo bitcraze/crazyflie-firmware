@@ -140,11 +140,14 @@ typedef struct setpointZ_s {
   bool isUpdate; // True = small update of setpoint, false = completely new
 } setpointZ_t;
 
-#define _RATE_SKIP_HZ(T, X) ((T % (1000/X)) != 0)
+// Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
+#define RATE_1000_HZ 1000
+#define RATE_500_HZ 500
+#define RATE_250_HZ 250
+#define RATE_100_HZ 100
 
-#define RATE_SKIP_500HZ(tick) _RATE_SKIP_HZ(tick, 500)
-#define RATE_SKIP_250HZ(tick) _RATE_SKIP_HZ(tick, 250)
-#define RATE_SKIP_100HZ(tick) _RATE_SKIP_HZ(tick, 100)
+#define RATE_MAIN_LOOP RATE_1000_HZ
 
+#define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 
 #endif

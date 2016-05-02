@@ -36,6 +36,9 @@
 
 static point_t position;
 
+#define IMU_RATE RATE_500_HZ
+#define BARO_RATE RATE_100_HZ
+
 void sensorsInit(void)
 {
  imu6Init();
@@ -50,13 +53,13 @@ bool sensorsTest(void)
  return pass;
 }
 
-bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
+void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
 {
-  if (!RATE_SKIP_500HZ(tick)) {
+  if (RATE_DO_EXECUTE(IMU_RATE, tick)) {
     imu9Read(&sensors->gyro, &sensors->acc, &sensors->mag);
   }
 
-  if (!RATE_SKIP_100HZ(tick) && imuHasBarometer()) {
+ if (RATE_DO_EXECUTE(BARO_RATE, tick) && imuHasBarometer()) {
 #ifdef PLATFORM_CF1
     ms5611GetData(&sensors->baro.pressure,
                  &sensors->baro.temperature,
@@ -71,8 +74,13 @@ bool sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
       sensors->position = position;
     }
   }
+}
 
- return imu6IsCalibrated();
+bool sensorsAreCalibrated()
+{
+  Axis3f dummyData;
+  imu6Read(&dummyData, &dummyData);
+  return imu6IsCalibrated();
 }
 
 PARAM_GROUP_START(lps)
