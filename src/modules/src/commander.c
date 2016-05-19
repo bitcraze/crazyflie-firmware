@@ -312,7 +312,7 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 
   if (altHoldMode) {
     setpoint->thrust = 0;
-    setpoint->mode.z = modeDisable;
+    setpoint->mode.z = modeVelocity;
 
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
   } else {
