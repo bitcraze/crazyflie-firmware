@@ -7,9 +7,12 @@
 #include "position_controller.h"
 
 #include "log.h"
+#include "param.h"
 
 #define ATTITUDE_RATE RATE_500_HZ
 #define POSITION_RATE RATE_100_HZ
+
+static bool tiltCompensationEnabled = true;
 
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
@@ -83,7 +86,14 @@ void stateController(control_t *control, const sensorData_t *sensors,
     control->yaw = -control->yaw;
   }
 
-  control->thrust = actuatorThrust / sensfusion6GetInvThrustCompensationForTilt();
+  if (tiltCompensationEnabled)
+  {
+    control->thrust = actuatorThrust / sensfusion6GetInvThrustCompensationForTilt();
+  }
+  else
+  {
+    control->thrust = actuatorThrust;
+  }
 
   if (control->thrust == 0)
   {
@@ -106,3 +116,7 @@ LOG_ADD(LOG_FLOAT, roll, &attitudeDesired.roll)
 LOG_ADD(LOG_FLOAT, pitch, &attitudeDesired.pitch)
 LOG_ADD(LOG_FLOAT, yaw, &attitudeDesired.yaw)
 LOG_GROUP_STOP(controller)
+
+PARAM_GROUP_START(controller)
+PARAM_ADD(PARAM_UINT8, tiltComp, &tiltCompensationEnabled)
+PARAM_GROUP_STOP(controller)
