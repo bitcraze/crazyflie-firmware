@@ -19,6 +19,7 @@ DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
 DEBUG             ?= 0
 CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
+CLOAD_CMDS        ?=
 PLATFORM					?= CF2
 
 ######### Stabilizer configuration ##########
@@ -343,7 +344,7 @@ size: compile
 #Radio bootloader
 cload:
 ifeq ($(CLOAD), 1)
-	$(CLOAD_SCRIPT) flash $(PROG).bin stm32-fw
+	$(CLOAD_SCRIPT) $(CLOAD_CMDS) flash $(PROG).bin stm32-fw
 else
 	@echo "Only cload build can be bootloaded. Launch build and cload with CLOAD=1"
 endif

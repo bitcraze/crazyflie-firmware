@@ -17,3 +17,6 @@
 
 ## Turn on monitoring of queue usages
 # CFLAGS += -DDEBUG_QUEUE_MONITOR
+
+## Automatically reboot to bootloader before flashing
+# CLOAD_CMDS = -w radio://0/100/2M/E7E7E7E7E7
