@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -72,7 +72,7 @@
 #define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
 
 // Number of samples used in variance calculation. Changing this effects the threshold
-#define IMU_NBR_OF_BIAS_SAMPLES  128
+#define IMU_NBR_OF_BIAS_SAMPLES  1024
 
 // Variance threshold to take zero bias for gyro
 #define GYRO_VARIANCE_BASE        2000
@@ -82,7 +82,7 @@
 
 typedef struct
 {
-  Axis3i16   bias;
+  Axis3f     bias;
   bool       isBiasValueFound;
   bool       isBufferFilled;
   Axis3i16*  bufHead;
@@ -125,7 +125,7 @@ LOG_GROUP_STOP(mag_raw)
  */
 static void imuBiasInit(BiasObj* bias);
 static void imuCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
-static void imuCalculateVarianceAndMean(BiasObj* bias, Axis3i32* varOut, Axis3i32* meanOut);
+static void imuCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut);
 static bool imuFindBiasValue(BiasObj* bias);
 static void imuAddBiasValue(BiasObj* bias, Axis3i16* dVal);
 static void imuAccIIRLPFilter(Axis3i16* in, Axis3i16* out,
@@ -421,10 +421,10 @@ static void imuBiasInit(BiasObj* bias)
 /**
  * Calculates the variance and mean for the bias buffer.
  */
-static void imuCalculateVarianceAndMean(BiasObj* bias, Axis3i32* varOut, Axis3i32* meanOut)
+static void imuCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut)
 {
   uint32_t i;
-  int32_t sum[GYRO_NBR_OF_AXES] = {0};
+  int64_t sum[GYRO_NBR_OF_AXES] = {0};
   int64_t sumSq[GYRO_NBR_OF_AXES] = {0};
 
   for (i = 0; i < IMU_NBR_OF_BIAS_SAMPLES; i++)
@@ -441,9 +441,9 @@ static void imuCalculateVarianceAndMean(BiasObj* bias, Axis3i32* varOut, Axis3i3
   varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / IMU_NBR_OF_BIAS_SAMPLES);
   varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / IMU_NBR_OF_BIAS_SAMPLES);
 
-  meanOut->x = sum[0] / IMU_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = sum[1] / IMU_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = sum[2] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->x = (float)sum[0] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = (float)sum[1] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = (float)sum[2] / IMU_NBR_OF_BIAS_SAMPLES;
 
   isInit = true;
 }
@@ -498,8 +498,8 @@ static bool imuFindBiasValue(BiasObj* bias)
 
   if (bias->isBufferFilled)
   {
-    Axis3i32 variance;
-    Axis3i32 mean;
+    Axis3f variance;
+    Axis3f mean;
 
     imuCalculateVarianceAndMean(bias, &variance, &mean);
 
