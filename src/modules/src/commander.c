@@ -36,17 +36,16 @@
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
-#define COMMANDER_CACH_TIMEOUT  M2T(500)
 
 /**
  * Commander control data
  */
-typedef struct _CommanderCach
+typedef struct
 {
   struct CommanderCrtpValues targetVal[2];
   bool activeSide;
-  uint32_t timestamp;
-} CommanderCach;
+  uint32_t timestamp; // FreeRTOS ticks
+} CommanderCache;
 
 /**
  * Stabilization modes for Roll, Pitch, Yaw.
@@ -64,13 +63,13 @@ typedef enum
 {
   CAREFREE  = 0, // Yaw is locked to world coordinates thus heading stays the same when yaw rotates
   PLUSMODE  = 1, // Plus-mode. Motor M1 is defined as front
-  XMODE     = 2, // X-mode. M1 & M4 is defined as front
+  XMODE     = 2, // X-mode. M1 & M4 are defined as front
 } YawModeType;
 
 static bool isInit;
-static CommanderCach crtpCach;
-static CommanderCach extrxCach;
-static CommanderCach* activeCach;
+static CommanderCache crtpCache;
+static CommanderCache extrxCache;
+static CommanderCache* activeCache;
 
 static uint32_t lastUpdate;
 static bool isInactive;
@@ -82,52 +81,52 @@ static RPYType stabilizationModeRoll  = ANGLE; // Current stabilization type of 
 static RPYType stabilizationModePitch = ANGLE; // Current stabilization type of pitch (rate or angle)
 static RPYType stabilizationModeYaw   = RATE;  // Current stabilization type of yaw (rate or angle)
 
-static YawModeType yawMode = DEFUALT_YAW_MODE; // Yaw mode configuration
+static YawModeType yawMode = DEFAULT_YAW_MODE; // Yaw mode configuration
 static bool carefreeResetFront;             // Reset what is front in carefree mode
 
 static void commanderCrtpCB(CRTPPacket* pk);
-static void commanderCachSelectorUpdate(void);
+static void commanderCacheSelectorUpdate(void);
 
 /* Private functions */
 static void commanderSetActiveThrust(uint16_t thrust)
 {
-  activeCach->targetVal[activeCach->activeSide].thrust = thrust;
+  activeCache->targetVal[activeCache->activeSide].thrust = thrust;
 }
 
 static void commanderSetActiveRoll(float roll)
 {
-  activeCach->targetVal[activeCach->activeSide].roll = roll;
+  activeCache->targetVal[activeCache->activeSide].roll = roll;
 }
 
 static void commanderSetActivePitch(float pitch)
 {
-  activeCach->targetVal[activeCach->activeSide].pitch = pitch;
+  activeCache->targetVal[activeCache->activeSide].pitch = pitch;
 }
 
 static void commanderSetActiveYaw(float yaw)
 {
-  activeCach->targetVal[activeCach->activeSide].yaw = yaw;
+  activeCache->targetVal[activeCache->activeSide].yaw = yaw;
 }
 
 static uint16_t commanderGetActiveThrust(void)
 {
-  commanderCachSelectorUpdate();
-  return activeCach->targetVal[activeCach->activeSide].thrust;
+  commanderCacheSelectorUpdate();
+  return activeCache->targetVal[activeCache->activeSide].thrust;
 }
 
 static float commanderGetActiveRoll(void)
 {
-  return activeCach->targetVal[activeCach->activeSide].roll;
+  return activeCache->targetVal[activeCache->activeSide].roll;
 }
 
 static float commanderGetActivePitch(void)
 {
-  return activeCach->targetVal[activeCach->activeSide].pitch;
+  return activeCache->targetVal[activeCache->activeSide].pitch;
 }
 
 static float commanderGetActiveYaw(void)
 {
-  return activeCach->targetVal[activeCach->activeSide].yaw;
+  return activeCache->targetVal[activeCache->activeSide].yaw;
 }
 
 static void commanderLevelRPY(void)
@@ -137,52 +136,41 @@ static void commanderLevelRPY(void)
   commanderSetActiveYaw(0);
 }
 
-static void commandeDropToGround(void)
+static void commanderDropToGround(void)
 {
   altHoldMode = false;
   commanderSetActiveThrust(0);
   commanderLevelRPY();
 }
 
-
-static void commanderCachSelectorUpdate(void)
+static void commanderCacheSelectorUpdate(void)
 {
   uint32_t tickNow = xTaskGetTickCount();
 
   /* Check inputs and prioritize. Extrx higher then crtp */
-  if ((tickNow - extrxCach.timestamp) < COMMANDER_WDT_TIMEOUT_STABILIZE)
-  {
-    activeCach = &extrxCach;
-  }
-  else if ((tickNow - crtpCach.timestamp) < COMMANDER_WDT_TIMEOUT_STABILIZE)
-  {
-    activeCach = &crtpCach;
-  }
-  else if ((tickNow - extrxCach.timestamp) < COMMANDER_WDT_TIMEOUT_SHUTDOWN)
-  {
-    activeCach = &extrxCach;
+  if ((tickNow - extrxCache.timestamp) < COMMANDER_WDT_TIMEOUT_STABILIZE) {
+    activeCache = &extrxCache;
+  } else if ((tickNow - crtpCache.timestamp) < COMMANDER_WDT_TIMEOUT_STABILIZE) {
+    activeCache = &crtpCache;
+  } else if ((tickNow - extrxCache.timestamp) < COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
+    activeCache = &extrxCache;
     commanderLevelRPY();
-  }
-  else if ((tickNow - crtpCach.timestamp) < COMMANDER_WDT_TIMEOUT_SHUTDOWN)
-  {
-    activeCach = &crtpCach;
+  } else if ((tickNow - crtpCache.timestamp) < COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
+    activeCache = &crtpCache;
     commanderLevelRPY();
-  }
-  else
-  {
-    activeCach = &crtpCach;
-    commandeDropToGround();
+  } else {
+    activeCache = &crtpCache;
+    commanderDropToGround();
   }
 }
 
 static void commanderCrtpCB(CRTPPacket* pk)
 {
-  crtpCach.targetVal[!crtpCach.activeSide] = *((struct CommanderCrtpValues*)pk->data);
-  crtpCach.activeSide = !crtpCach.activeSide;
-  crtpCach.timestamp = xTaskGetTickCount();
+  crtpCache.targetVal[!crtpCache.activeSide] = *((struct CommanderCrtpValues*)pk->data);
+  crtpCache.activeSide = !crtpCache.activeSide;
+  crtpCache.timestamp = xTaskGetTickCount();
 
-  if (crtpCach.targetVal[crtpCach.activeSide].thrust == 0)
-  {
+  if (crtpCache.targetVal[crtpCache.activeSide].thrust == 0) {
     thrustLocked = false;
   }
 }
@@ -212,8 +200,7 @@ static void rotateYawCarefree(setpoint_t *setpoint, const state_t *state, bool r
 {
   static float carefreeFrontAngle;
 
-  if (reset)
-  {
+  if (reset) {
     carefreeFrontAngle = state->attitude.yaw;
   }
 
@@ -235,7 +222,7 @@ static void yawModeUpdate(setpoint_t *setpoint, const state_t *state)
     case PLUSMODE:
       // Default in plus mode. Do nothing
       break;
-    case XMODE: // Fall though
+    case XMODE: // Fall through
     default:
       rotateYaw(setpoint, -45 * M_PI / 180);
       break;
@@ -252,7 +239,7 @@ static void yawModeUpdate(setpoint_t *setpoint, const state_t *state)
     case PLUSMODE:
       rotateYaw(setpoint, 45 * M_PI / 180);
       break;
-    case XMODE: // Fall though
+    case XMODE: // Fall through
     default:
       // Default in x-mode. Do nothing
       break;
@@ -263,13 +250,14 @@ static void yawModeUpdate(setpoint_t *setpoint, const state_t *state)
 /* Public functions */
 void commanderInit(void)
 {
-  if(isInit)
+  if(isInit) {
     return;
+  }
 
   crtpInit();
   crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
 
-  activeCach = &crtpCach;
+  activeCache = &crtpCache;
   lastUpdate = xTaskGetTickCount();
   isInactive = true;
   thrustLocked = true;
@@ -282,14 +270,13 @@ bool commanderTest(void)
   return isInit;
 }
 
-void commanderExtrxSet(struct CommanderCrtpValues* val)
+void commanderExtrxSet(const struct CommanderCrtpValues *val)
 {
-  extrxCach.targetVal[!extrxCach.activeSide] = *((struct CommanderCrtpValues*)val);
-  extrxCach.activeSide = !extrxCach.activeSide;
-  extrxCach.timestamp = xTaskGetTickCount();
+  extrxCache.targetVal[!extrxCache.activeSide] = *((struct CommanderCrtpValues*)val);
+  extrxCache.activeSide = !extrxCache.activeSide;
+  extrxCache.timestamp = xTaskGetTickCount();
 
-  if (extrxCach.targetVal[extrxCach.activeSide].thrust == 0)
-  {
+  if (extrxCache.targetVal[extrxCache.activeSide].thrust == 0) {
     thrustLocked = false;
   }
 }
