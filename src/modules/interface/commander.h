@@ -31,9 +31,9 @@
 #include "stabilizer_types.h"
 
 #ifdef PLATFORM_CF1
-  #define DEFUALT_YAW_MODE  PLUSMODE
+  #define DEFAULT_YAW_MODE  PLUSMODE
 #else
-  #define DEFUALT_YAW_MODE  XMODE
+  #define DEFAULT_YAW_MODE  XMODE
 #endif
 
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
@@ -44,16 +44,16 @@
  */
 struct CommanderCrtpValues
 {
-  float roll;
-  float pitch;
-  float yaw;
+  float roll;       // deg
+  float pitch;      // deg
+  float yaw;        // deg
   uint16_t thrust;
 } __attribute__((packed));
 
 void commanderInit(void);
 bool commanderTest(void);
 uint32_t commanderGetInactivityTime(void);
-void commanderExtrxSet(struct CommanderCrtpValues* val);
+void commanderExtrxSet(const struct CommanderCrtpValues* val);
 
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state);
 
