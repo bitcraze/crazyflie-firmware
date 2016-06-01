@@ -71,7 +71,7 @@ static inline void i2cdevRuffLoopDelay(uint32_t us);
 
 #define SEMAPHORE_TIMEOUT M2T(30)
 static void semaphoreGiveFromISR(xSemaphoreHandle semaphore);
-static void i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev);
+static BaseType_t i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev);
 static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev);
 static xSemaphoreHandle getSemaphore(CPAL_DevTypeDef CPAL_Dev);
 
@@ -89,9 +89,11 @@ int i2cdevInit(I2C_Dev *dev)
   /* Initialize CPAL device with the selected parameters */
   CPAL_I2C_Init(dev);
 
-  vSemaphoreCreateBinary(i2cdevDmaEventI2c1);
-  vSemaphoreCreateBinary(i2cdevDmaEventI2c2);
-  vSemaphoreCreateBinary(i2cdevDmaEventI2c3);
+  // binary semaphores created using xSemaphoreCreateBinary() are created in a state
+  // such that the the semaphore must first be 'given' before it can be 'taken'
+  i2cdevDmaEventI2c1 = xSemaphoreCreateBinary();
+  i2cdevDmaEventI2c2 = xSemaphoreCreateBinary();
+  i2cdevDmaEventI2c3 = xSemaphoreCreateBinary();
 
   return true;
 }
@@ -161,24 +163,27 @@ bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
 
 static bool i2cdevReadTransfer(I2C_Dev *dev)
 {
-  bool status;
+  uint32_t status;
 
   dev->CPAL_Mode = CPAL_MODE_MASTER;
   /* Force the CPAL state to ready (in case a read operation has been initiated) */
   dev->CPAL_State = CPAL_STATE_READY;
-  /* Start writing data in master mode */
+  /* Start reading data in master mode */
+  vTaskSuspendAll();
+  // we need to suspend task switching for this command: the timeout callback is called
+  // from this command, and if the stabilizer task is not the highest priority, then
+  // I2C can often timeout
   status = CPAL_I2C_Read(dev);
+  xTaskResumeAll();
 
   if (status == CPAL_PASS)
   {
-    i2cDevTakeSemaphore(dev->CPAL_Dev);
-
-    //TODO: Remove spin loop below. It does not work without it at the moment
-    while(dev->CPAL_State != CPAL_STATE_READY && dev->CPAL_State != CPAL_STATE_ERROR);
-    status = (dev->CPAL_State == CPAL_STATE_READY) || (dev->CPAL_State != CPAL_STATE_ERROR);
+    if (pdTRUE == i2cDevTakeSemaphore(dev->CPAL_Dev)) {
+      return (dev->CPAL_State == CPAL_STATE_READY); // if the semaphore was taken successfully
+    }
   }
 
-  return status;
+  return false;
 }
 
 bool i2cdevWriteByte(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
@@ -255,18 +260,21 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev)
   /* Force the CPAL state to ready (in case a read operation has been initiated) */
   dev->CPAL_State = CPAL_STATE_READY;
   /* Start writing data in master mode */
+  vTaskSuspendAll();
+  // we need to suspend task switching for this command: the timeout callback is called
+  // from this command, and if the stabilizer task is not the highest priority, then
+  // I2C can often timeout
   status = CPAL_I2C_Write(dev);
+  xTaskResumeAll();
 
   if (status == CPAL_PASS)
   {
-    i2cDevTakeSemaphore(dev->CPAL_Dev);
-
-    //TODO: Remove spin loop below. It does not work without it at the moment
-    while(dev->CPAL_State != CPAL_STATE_READY && dev->CPAL_State != CPAL_STATE_ERROR);
-    status = (dev->CPAL_State == CPAL_STATE_READY) || (dev->CPAL_State != CPAL_STATE_ERROR);
+    if (pdTRUE == i2cDevTakeSemaphore(dev->CPAL_Dev)) {
+      return (dev->CPAL_State == CPAL_STATE_READY); // if the semaphore was taken successfully
+    }
   }
 
-  return status;
+  return false;
 }
 
 static inline void i2cdevRuffLoopDelay(uint32_t us)
@@ -342,9 +350,9 @@ static xSemaphoreHandle getSemaphore(CPAL_DevTypeDef CPAL_Dev) {
 }
 
 
-static void i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev) {
+static BaseType_t i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev) {
   xSemaphoreHandle semaphore = getSemaphore(CPAL_Dev);
-  xSemaphoreTake(semaphore, SEMAPHORE_TIMEOUT);
+  return xSemaphoreTake(semaphore, SEMAPHORE_TIMEOUT);
 }
 
 static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev)
@@ -369,7 +377,6 @@ static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev)
   */
 void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceError)
 {
-  //DEBUG_PRINT("I2C error callback dev: %i, err: %i\n", (int)pDevInstance , (int)DeviceError);
   i2cDevGiveSemaphore(pDevInstance);
 }
 
@@ -380,9 +387,7 @@ void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceErro
   * @retval None.
   */
 uint32_t CPAL_TIMEOUT_UserCallback(CPAL_InitTypeDef* pDevInitStruct) {
-  //DEBUG_PRINT("I2C timeout callback dev: %i\n", (int)pDevInitStruct->CPAL_Dev);
-  i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
-  return CPAL_PASS;
+  return CPAL_FAIL;
 }
 
 /**
