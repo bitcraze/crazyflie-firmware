@@ -175,6 +175,7 @@ PROJ_OBJ_CF2 += deck_spi.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
+PROJ_OBJ_CF2 += rzr.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
@@ -372,6 +373,9 @@ trace:
 
 gdb: $(PROG).elf
 	$(GDB) -ex "target remote localhost:3333" -ex "monitor reset halt" $^
+
+erase:
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c "stm32f4x mass_erase 0" -c shutdown
 
 #Print preprocessor #defines
 prep:

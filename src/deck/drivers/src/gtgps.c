@@ -252,13 +252,14 @@ void gtgpsTask(void *param)
   while(1)
   {
     uart1Getchar(&ch);
-    //consolePutchar(ch);
+    consolePutchar(ch);
 
     if (ch == '$') {
       bi = 0;
     } else if (ch == '\n') {
       buff[bi] = 0; // Terminate with null
       if (verifyChecksum(buff)) {
+        //DEBUG_PRINT("O");
         for (j = 0; j < sizeof(parsers)/sizeof(parsers[0]); j++) {
           if (strncmp(parsers[j].token, buff, LEN_TOKEN) == 0) {
             parsers[j].parser(&buff[LEN_TOKEN]);
