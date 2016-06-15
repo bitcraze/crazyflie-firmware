@@ -70,7 +70,7 @@ __IO uint32_t I2CDirection;
 
 static void i2cdevResetAndLowLevelInitBusI2c1(void);
 static void i2cdevResetAndLowLevelInitBusI2c2(void);
-static inline void i2cdevRuffLoopDelay(uint32_t us);
+static inline void i2cdevRoughLoopDelay(uint32_t us);
 
 
 int i2cdevInit(I2C_Dev *I2Cx)
@@ -269,7 +269,7 @@ bool i2cdevWrite(I2C_Dev *I2Cx, uint8_t devAddress, uint8_t memAddress,
   return status;
 }
 
-static inline void i2cdevRuffLoopDelay(uint32_t us)
+static inline void i2cdevRoughLoopDelay(uint32_t us)
 {
   volatile uint32_t delay;
 
@@ -303,22 +303,22 @@ static void i2cdevResetAndLowLevelInitBusI2c1(void)
     GPIO_SetBits(GPIOB, I2CDEV_I2C1_PIN_SCL);
     /* Wait for any clock stretching to finish. */
     GPIO_WAIT_LOW(GPIOB, I2CDEV_I2C1_PIN_SCL, 10 * I2CDEV_LOOPS_PER_MS);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
 
     /* Generate a clock cycle */
     GPIO_ResetBits(GPIOB, I2CDEV_I2C1_PIN_SCL);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
     GPIO_SetBits(GPIOB, I2CDEV_I2C1_PIN_SCL);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   }
 
   /* Generate a start then stop condition */
   GPIO_SetBits(GPIOB, I2CDEV_I2C1_PIN_SCL);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   GPIO_ResetBits(GPIOB, I2CDEV_I2C1_PIN_SDA);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   GPIO_ResetBits(GPIOB, I2CDEV_I2C1_PIN_SDA);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
 
   /* Set data and clock high and wait for any clock stretching to finish. */
   GPIO_SetBits(GPIOB, I2CDEV_I2C1_PIN_SDA);
@@ -366,22 +366,22 @@ static void i2cdevResetAndLowLevelInitBusI2c2(void)
     GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
     /* Wait for any clock stretching to finish. */
     GPIO_WAIT_LOW(GPIOB, I2CDEV_I2C2_PIN_SCL, 10 * I2CDEV_LOOPS_PER_MS);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
 
     /* Generate a clock cycle */
     GPIO_ResetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
     GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   }
 
   /* Generate a start then stop condition */
   GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SCL);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   GPIO_ResetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   GPIO_ResetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
 
   /* Set data and clock high and wait for any clock stretching to finish. */
   GPIO_SetBits(GPIOB, I2CDEV_I2C2_PIN_SDA);
