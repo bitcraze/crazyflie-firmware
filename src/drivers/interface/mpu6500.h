@@ -35,7 +35,7 @@ THE SOFTWARE.
 
 #define MPU6500_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
 #define MPU6500_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
-#define MPU6500_DEFAULT_ADDRESS     MPU6500_ADDRESS_AD0_LOW
+#define MPU6500_DEFAULT_ADDRESS     MPU6500_ADDRESS_AD0_HIGH
 
 //Product ID Description for MPU6500:  | High 4 bits  | Low 4 bits        |
 //                                     | Product Name | Product Revision  |
@@ -530,10 +530,10 @@ bool mpu6500GetSlaveWordByteSwap(uint8_t num);
 void mpu6500SetSlaveWordByteSwap(uint8_t num, bool enabled);
 bool mpu6500GetSlaveWriteMode(uint8_t num);
 void mpu6500SetSlaveWriteMode(uint8_t num, bool mode);
-bool mpu6500GetSlaveWordGroupOffmpu6500Set(uint8_t num);
-void setSlaveWordGroupOffset(uint8_t num, bool enabled);
+bool mpu6500GetSlaveWordGroupOffset(uint8_t num);
+void mpu6500setSlaveWordGroupOffset(uint8_t num, bool enabled);
 uint8_t mpu6500GetSlaveDataLength(uint8_t num);
-void mpu6500SetSlaveDataLempu6500Seth(uint8_t num, uint8_t length);
+void mpu6500SetSlaveDataLength(uint8_t num, uint8_t length);
 
 // I2C_SLV* registers (Slave 4)
 uint8_t mpu6500GetSlave4Address();
@@ -549,7 +549,7 @@ bool mpu6500GetSlave4WriteMode();
 void mpu6500SetSlave4WriteMode(bool mode);
 uint8_t mpu6500GetSlave4MasterDelay();
 void mpu6500SetSlave4MasterDelay(uint8_t delay);
-uint8_t mpu6500GetSlate4InputByte();
+uint8_t mpu6500GetSlave4InputByte();
 
 // I2C_MST_STATUS register
 bool mpu6500GetPassthroughStatus();
