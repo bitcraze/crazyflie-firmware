@@ -23,6 +23,7 @@
  *
  * uart_syslink.c - Uart syslink to nRF51 and raw access functions
  */
+#include <stdint.h>
 #include <string.h>
 
 /*ST includes */
@@ -308,9 +309,17 @@ void uartslkDmaIsr(void)
 void uartslkIsr(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-  uint8_t rxDataInterrupt;
 
-  if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_TXE))
+  // the following if statement replaces:
+  //   if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_RXNE) == SET)
+  // we do this check as fast as possible to minimize the chance of an overrun,
+  // which occasionally cause problems and cause packet loss at high CPU usage
+  if ((UARTSLK_TYPE->SR & (1<<5)) != 0) // if the RXNE interrupt has occurred
+  {
+    uint8_t rxDataInterrupt = (uint8_t)(UARTSLK_TYPE->DR & 0xFF);
+    xQueueSendFromISR(uartslkDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
+  }
+  else if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_TXE) == SET)
   {
     if (outDataIsr && (dataIndexIsr < dataSizeIsr))
     {
@@ -324,11 +333,15 @@ void uartslkIsr(void)
       xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
     }
   }
-  USART_ClearITPendingBit(UARTSLK_TYPE, USART_IT_TXE);
-  if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_RXNE))
+  else
   {
-    rxDataInterrupt = USART_ReceiveData(UARTSLK_TYPE) & 0x00FF;
-    xQueueSendFromISR(uartslkDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
+    /** if we get here, the error is most likely caused by an overrun!
+     * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
+     * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
+     * - reading USART_SR register followed reading the USART_DR register.
+     */
+    asm volatile ("" : "=m" (UARTSLK_TYPE->SR) : "r" (UARTSLK_TYPE->SR)); // force non-optimizable reads
+    asm volatile ("" : "=m" (UARTSLK_TYPE->DR) : "r" (UARTSLK_TYPE->DR)); // of these two registers
   }
 }
 
