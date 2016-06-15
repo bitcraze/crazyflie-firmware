@@ -154,18 +154,27 @@ void crtpRxTask(void *param)
 
   while (true)
   {
-    if (!link->receivePacket(&p))
+    if (link != &nopLink)
     {
-      if(queues[p.port])
+      if (!link->receivePacket(&p))
       {
-        // The queue is only 1 long, so if the last packet hasn't been processed, we just replace it
-        xQueueOverwrite(queues[p.port], &p); 
-      } else {
-        droppedPacket++;
-      }
+        if (queues[p.port])
+        {
+          // The queue is only 1 long, so if the last packet hasn't been processed, we just replace it
+          xQueueOverwrite(queues[p.port], &p); 
+        }
+        else
+        {
+          droppedPacket++;
+        }
 
-      if(callbacks[p.port])
-        callbacks[p.port](&p);  //Dangerous?
+        if (callbacks[p.port])
+          callbacks[p.port](&p);  //Dangerous?
+      }
+    }
+    else
+    {
+      vTaskDelay(M2T(10));
     }
   }
 }
