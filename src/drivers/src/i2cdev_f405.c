@@ -67,7 +67,7 @@ xSemaphoreHandle i2cdevDmaEventI2c3;
 /* Private functions */
 static bool i2cdevWriteTransfer(I2C_Dev *dev);
 static bool i2cdevReadTransfer(I2C_Dev *dev);
-static inline void i2cdevRuffLoopDelay(uint32_t us);
+static inline void i2cdevRuffLoopDelay(uint32_t us) __attribute__((optimize("O2")));
 
 #define SEMAPHORE_TIMEOUT M2T(30)
 static void semaphoreGiveFromISR(xSemaphoreHandle semaphore);
@@ -279,9 +279,8 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev)
 
 static inline void i2cdevRuffLoopDelay(uint32_t us)
 {
-  volatile uint32_t delay;
-
-  for(delay = I2CDEV_LOOPS_PER_US * us; delay > 0; delay--);
+  volatile uint32_t delay = 0;
+  for(delay = 0; delay < I2CDEV_LOOPS_PER_US * us; ++delay) { };
 }
 
 void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinSCL, uint16_t pinSDA)
