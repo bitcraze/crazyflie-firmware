@@ -158,8 +158,8 @@ void crtpRxTask(void *param)
     {
       if(queues[p.port])
       {
-        // TODO: If full, remove one packet and then send
-        xQueueSend(queues[p.port], &p, 0);
+        // The queue is only 1 long, so if the last packet hasn't been processed, we just replace it
+        xQueueOverwrite(queues[p.port], &p); 
       } else {
         droppedPacket++;
       }
