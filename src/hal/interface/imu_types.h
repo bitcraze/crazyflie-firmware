@@ -40,6 +40,12 @@
  } Axis3i32;
 
  typedef struct {
+         int64_t x;
+         int64_t y;
+         int64_t z;
+ } Axis3i64;
+
+ typedef struct {
          float x;
          float y;
          float z;

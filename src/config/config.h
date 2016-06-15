@@ -71,10 +71,11 @@
 
 // Task priorities. Higher number higher priority
 #define STABILIZER_TASK_PRI     4
+#define SENSORS_TASK_PRI        4
 #define ADC_TASK_PRI            3
+#define CRTP_TX_TASK_PRI        3
+#define CRTP_RX_TASK_PRI        3
 #define SYSTEM_TASK_PRI         2
-#define CRTP_TX_TASK_PRI        2
-#define CRTP_RX_TASK_PRI        2
 #define EXTRX_TASK_PRI          2
 #define LOG_TASK_PRI            1
 #define MEM_TASK_PRI            1
@@ -111,6 +112,7 @@
 #define MEM_TASK_NAME           "MEM"
 #define PARAM_TASK_NAME         "PARAM"
 #define STABILIZER_TASK_NAME    "STABILIZER"
+#define SENSORS_TASK_NAME       "SENSORS"
 #define NRF24LINK_TASK_NAME     "NRF24LINK"
 #define ESKYLINK_TASK_NAME      "ESKYLINK"
 #define SYSLINK_TASK_NAME       "SYSLINK"
@@ -130,6 +132,7 @@
 #define MEM_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
 #define PARAM_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define STABILIZER_TASK_STACKSIZE     (3 * configMINIMAL_STACK_SIZE)
+#define SENSORS_TASK_STACKSIZE        (configMINIMAL_STACK_SIZE)
 #define NRF24LINK_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define ESKYLINK_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
 #define SYSLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
