@@ -41,6 +41,12 @@ bool sensorsReadGyro(Axis3f *gyro);
 bool sensorsReadAcc(Axis3f *acc);
 bool sensorsReadMag(Axis3f *mag);
 bool sensorsReadBaro(baro_t *baro);
+
+#ifdef USE_UWB
+bool sensorsReadUwb(uwb_t *uwb);
+void sensorsEnqueueUwb(uwb_t *uwb);
+#endif
+
 #endif
 
 #endif //__SENSORS_H__

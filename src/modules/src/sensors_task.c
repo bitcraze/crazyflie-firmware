@@ -69,6 +69,11 @@ static xQueueHandle magnetometerDataQueue;
 static xQueueHandle barometerDataQueue;
 static xSemaphoreHandle sensorsDataReady;
 
+#ifdef USE_UWB
+#define UWB_QUEUE_LENGTH (10) // UWB measurements come in fast, so we queue them
+static xQueueHandle uwbDataQueue;
+#endif
+
 static bool isInit = false;
 static sensorData_t sensors = {0};
 
@@ -108,6 +113,20 @@ bool sensorsReadMag(Axis3f *mag) {
 bool sensorsReadBaro(baro_t *baro) {
   return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
 }
+
+#ifdef USE_UWB
+bool sensorsReadUwb(uwb_t *uwb) {
+  return (pdTRUE == xQueueReceive(uwbDataQueue, uwb, 0));
+}
+
+void sensorsEnqueueUwb(uwb_t *uwb) {
+  while (pdFALSE == xQueueSend(uwbDataQueue, uwb, 0)) {
+    uwb_t oldUwb;
+    BaseType_t removeOldUwbSuccess = xQueueReceive(uwbDataQueue, &oldUwb, 0);
+    configASSERT(pdTRUE == removeOldUwbSuccess);
+  }
+}
+#endif
 
 void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
 {
@@ -334,6 +353,9 @@ static void sensorsTaskInit(void) {
   gyroDataQueue = xQueueCreate(1, sizeof(Axis3f));
   magnetometerDataQueue = xQueueCreate(1, sizeof(Axis3f));
   barometerDataQueue = xQueueCreate(1, sizeof(baro_t));
+#ifdef USE_UWB
+  uwbDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(uwb_t));
+#endif
 
   xTaskCreate(sensorsTask, SENSORS_TASK_NAME, SENSORS_TASK_STACKSIZE, NULL, SENSORS_TASK_PRI, NULL);
 }

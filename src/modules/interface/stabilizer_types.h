@@ -76,6 +76,11 @@ typedef struct quaternion_s {
   };
 } quaternion_t;
 
+typedef struct uwb_s {
+  float x, y, z;
+  double rx, tx;
+} uwb_t;
+
 typedef struct baro_s {
   float pressure;
   float temperature;
