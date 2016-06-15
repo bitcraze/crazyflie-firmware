@@ -355,9 +355,6 @@ void nrfInit(void)
   if (isInit)
     return;
 
-  /* Enable the EXTI interrupt router */
-  extiInit();
-
   /* Enable SPI and GPIO clocks */
   RCC_APB2PeriphClockCmd(RADIO_GPIO_SPI_CLK | RADIO_GPIO_CS_PERIF | 
                          RADIO_GPIO_CE_PERIF | RADIO_GPIO_IRQ_PERIF, ENABLE);
