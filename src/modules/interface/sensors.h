@@ -21,16 +21,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * extimator.h - State estimator interface
+ * sensors.h - Sensors interface
  */
 #ifndef __SENSORS_H__
 #define __SENSORS_H__
 
 #include "stabilizer_types.h"
 
-void sensorsInit();
-bool sensorsTest();
+void sensorsInit(void);
+bool sensorsTest(void);
+bool sensorsAreCalibrated(void);
+
+// For legacy control
 void sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
-bool sensorsAreCalibrated();
+
+#if SENSORS_TYPE==task
+// Allows individual sensor measurement
+bool sensorsReadGyro(Axis3f *gyro);
+bool sensorsReadAcc(Axis3f *acc);
+bool sensorsReadMag(Axis3f *mag);
+bool sensorsReadBaro(baro_t *baro);
+
+#ifdef USE_UWB
+bool sensorsReadUwb(uwb_t *uwb);
+void sensorsEnqueueUwb(uwb_t *uwb);
+#endif
+
+#endif
 
 #endif //__SENSORS_H__
