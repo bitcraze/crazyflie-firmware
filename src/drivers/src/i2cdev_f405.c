@@ -67,7 +67,7 @@ xSemaphoreHandle i2cdevDmaEventI2c3;
 /* Private functions */
 static bool i2cdevWriteTransfer(I2C_Dev *dev);
 static bool i2cdevReadTransfer(I2C_Dev *dev);
-static inline void i2cdevRuffLoopDelay(uint32_t us);
+static inline void i2cdevRoughLoopDelay(uint32_t us) __attribute__((optimize("O2")));
 
 #define SEMAPHORE_TIMEOUT M2T(30)
 static void semaphoreGiveFromISR(xSemaphoreHandle semaphore);
@@ -277,11 +277,10 @@ static bool i2cdevWriteTransfer(I2C_Dev *dev)
   return false;
 }
 
-static inline void i2cdevRuffLoopDelay(uint32_t us)
+static inline void i2cdevRoughLoopDelay(uint32_t us)
 {
-  volatile uint32_t delay;
-
-  for(delay = I2CDEV_LOOPS_PER_US * us; delay > 0; delay--);
+  volatile uint32_t delay = 0;
+  for(delay = 0; delay < I2CDEV_LOOPS_PER_US * us; ++delay) { };
 }
 
 void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinSCL, uint16_t pinSDA)
@@ -294,22 +293,22 @@ void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinS
     GPIO_SetBits(portSCL, pinSCL);
     /* Wait for any clock stretching to finish. */
     GPIO_WAIT_FOR_HIGH(portSCL, pinSCL, 10 * I2CDEV_LOOPS_PER_MS);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
 
     /* Generate a clock cycle */
     GPIO_ResetBits(portSCL, pinSCL);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
     GPIO_SetBits(portSCL, pinSCL);
-    i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   }
 
   /* Generate a start then stop condition */
   GPIO_SetBits(portSCL, pinSCL);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   GPIO_ResetBits(portSDA, pinSDA);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
   GPIO_ResetBits(portSDA, pinSDA);
-  i2cdevRuffLoopDelay(I2CDEV_CLK_TS);
+  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
 
   /* Set data and clock high and wait for any clock stretching to finish. */
   GPIO_SetBits(portSDA, pinSDA);

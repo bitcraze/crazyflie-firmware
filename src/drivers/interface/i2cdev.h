@@ -33,9 +33,17 @@
 
 #include "cpal.h"
 
+#ifdef PLATFORM_CF1
 // Delay is approx 0.2us per loop @64Mhz
 #define I2CDEV_LOOPS_PER_US  5
 #define I2CDEV_LOOPS_PER_MS  (1000 * I2CDEV_LOOPS_PER_US)
+#endif
+
+#ifdef PLATFORM_CF2
+// Delay is approx 0.06us per loop @168Mhz
+#define I2CDEV_LOOPS_PER_US  17
+#define I2CDEV_LOOPS_PER_MS  (16789) // measured
+#endif
 
 #define I2CDEV_I2C1_PIN_SDA GPIO_Pin_7
 #define I2CDEV_I2C1_PIN_SCL GPIO_Pin_6
