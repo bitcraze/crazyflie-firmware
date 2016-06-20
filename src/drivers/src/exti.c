@@ -31,26 +31,27 @@
 #include "nvicconf.h"
 #include "nrf24l01.h"
 
-#ifdef PLATFORM_CF1
-  #define RADIO_GPIO_IRQ_LINE   EXTI_Line9
-  #define RADIO_IRQ_CHANNEL     EXTI9_5_IRQn
-#else
-  #define RADIO_GPIO_IRQ_LINE   EXTI_Line10
-  #define RADIO_IRQ_CHANNEL     EXTI15_10_IRQn
-#endif
-
 static bool isInit;
 
 /* Interruption initialisation */
 void extiInit()
 {
+  static NVIC_InitTypeDef NVIC_InitStructure;
+
   if (isInit)
     return;
 
-  // required for the EXTI interrupt configuration
-  RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE); 
+#ifdef PLATFORM_CF2 
+  // This is required for the EXTI interrupt configuration since EXTI
+  // lines are set via the SYSCFG peripheral; eg.
+  // SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource13);
 
-  NVIC_InitTypeDef NVIC_InitStructure;
+  // On the CF1, the equivalent command is:
+  // GPIO_EXTILineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource9);
+  // which only requires the relevant GPIO clock to be enabled.
+
+  RCC_AHB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE); 
+#endif
 
   // Here we enable all EXTI interrupt handlers to save conflicting
   // reinitialization code for the 9_5 and 15_10 handlers. Note that
@@ -195,13 +196,7 @@ void __attribute__((weak)) EXTI5_Callback(void) { }
 void __attribute__((weak)) EXTI6_Callback(void) { }
 void __attribute__((weak)) EXTI7_Callback(void) { }
 void __attribute__((weak)) EXTI8_Callback(void) { }
-
-#ifndef PLATFORM_CF1
 void __attribute__((weak)) EXTI9_Callback(void) { }
-#else
-void __attribute__((used)) EXTI9_Callback(void) { nrfIsr(); }
-#endif
-
 void __attribute__((weak)) EXTI10_Callback(void) { }
 void __attribute__((weak)) EXTI11_Callback(void) { }
 void __attribute__((weak)) EXTI12_Callback(void) { }
