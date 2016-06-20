@@ -50,7 +50,8 @@
 
 static bool isInit = false;
 
-xSemaphoreHandle waitUntilSendDone = NULL;
+static xSemaphoreHandle waitUntilSendDone;
+static xSemaphoreHandle uartBusy;
 static xQueueHandle uartslkDataDelivery;
 
 static uint8_t dmaBuffer[64];
@@ -104,6 +105,13 @@ void uartslkDmaInit(void)
 
 void uartslkInit(void)
 {
+  // initialize the FreeRTOS structures first, to prevent null pointers in interrupts
+  waitUntilSendDone = xSemaphoreCreateBinary(); // initialized as blocking
+  uartBusy = xSemaphoreCreateBinary(); // initialized as blocking
+  xSemaphoreGive(uartBusy); // but we give it because the uart isn't busy at initialization
+
+  uartslkDataDelivery = xQueueCreate(1024, sizeof(uint8_t));
+  DEBUG_QUEUE_MONITOR_REGISTER(uartslkDataDelivery);
 
   USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -153,10 +161,6 @@ void uartslkInit(void)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  vSemaphoreCreateBinary(waitUntilSendDone);
-  uartslkDataDelivery = xQueueCreate(1024, sizeof(uint8_t));
-  DEBUG_QUEUE_MONITOR_REGISTER(uartslkDataDelivery);
-
   USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, ENABLE);
 
   //Setting up TXEN pin (NRF flow control)
@@ -173,6 +177,7 @@ void uartslkInit(void)
   extiInit.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
   extiInit.EXTI_LineCmd = ENABLE;
   EXTI_Init(&extiInit);
+  EXTI_ClearITPendingBit(UARTSLK_TXEN_EXTI);
 
   NVIC_EnableIRQ(EXTI4_IRQn);
 
@@ -216,6 +221,7 @@ void uartslkSendData(uint32_t size, uint8_t* data)
 
 void uartslkSendDataIsrBlocking(uint32_t size, uint8_t* data)
 {
+  xSemaphoreTake(uartBusy, portMAX_DELAY);
   outDataIsr = data;
   dataSizeIsr = size;
   dataIndexIsr = 1;
@@ -223,6 +229,7 @@ void uartslkSendDataIsrBlocking(uint32_t size, uint8_t* data)
   USART_ITConfig(UARTSLK_TYPE, USART_IT_TXE, ENABLE);
   xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
   outDataIsr = 0;
+  xSemaphoreGive(uartBusy);
 }
 
 int uartslkPutchar(int ch)
@@ -236,7 +243,7 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
 {
   if (isUartDmaInitialized)
   {
-    xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
+    xSemaphoreTake(uartBusy, portMAX_DELAY);
     // Wait for DMA to be free
     while(DMA_GetCmdStatus(UARTSLK_DMA_STREAM) != DISABLE);
     //Copy data in DMA buffer
@@ -253,6 +260,8 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
     /* Enable DMA USART TX Stream */
     DMA_Cmd(UARTSLK_DMA_STREAM, ENABLE);
+    xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
+    xSemaphoreGive(uartBusy);
   }
 }
 
@@ -329,7 +338,6 @@ void uartslkIsr(void)
     else
     {
       USART_ITConfig(UARTSLK_TYPE, USART_IT_TXE, DISABLE);
-      xHigherPriorityTaskWoken = pdFALSE;
       xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
     }
   }
