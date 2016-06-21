@@ -59,10 +59,12 @@ typedef struct _PmSyslinkInfo
 }  __attribute__((packed)) PmSyslinkInfo;
 
 static float    batteryVoltage;
+static uint16_t batteryVoltageMV;
 static float    batteryVoltageMin = 6.0;
 static float    batteryVoltageMax = 0.0;
 
 static float    extBatteryVoltage;
+static uint16_t extBatteryVoltageMV;
 static uint8_t  extBatVoltDeckPin;
 static float    extBatVoltMultiplier;
 static float    extBatteryCurrent;
@@ -116,6 +118,7 @@ bool pmTest(void)
 static void pmSetBatteryVoltage(float voltage)
 {
   batteryVoltage = voltage;
+  batteryVoltageMV = (uint16_t)(voltage * 1000);
   if (batteryVoltageMax < voltage)
   {
     batteryVoltageMax = voltage;
@@ -288,6 +291,7 @@ void pmTask(void *param)
     tickCount = xTaskGetTickCount();
 
     extBatteryVoltage = pmMeasureExtBatteryVoltage();
+    extBatteryVoltageMV = (uint16_t)(extBatteryVoltage * 1000);
     extBatteryCurrent = pmMeasureExtBatteryCurrent();
 
     if (pmGetBatteryVoltage() > PM_BAT_LOW_VOLTAGE)
@@ -377,7 +381,9 @@ void pmTask(void *param)
 
 LOG_GROUP_START(pm)
 LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+LOG_ADD(LOG_UINT16, vbatMV, &batteryVoltageMV)
 LOG_ADD(LOG_FLOAT, extVbat, &extBatteryVoltage)
+LOG_ADD(LOG_UINT16, extVbatMV, &extBatteryVoltageMV)
 LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 LOG_ADD(LOG_INT8, state, &pmState)
