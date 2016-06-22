@@ -84,5 +84,15 @@
 #define NVIC_RADIO_PRI        11
 #define NVIC_ADC_PRI          12
 #define NVIC_CPPM_PRI         14
+#define NVIC_SYSLINK_PRI      5
+
+// Priorities for external interrupts
+#define EXTI0_PRI NVIC_LOW_PRI
+#define EXTI1_PRI NVIC_LOW_PRI
+#define EXTI2_PRI NVIC_LOW_PRI
+#define EXTI3_PRI NVIC_LOW_PRI
+#define EXTI4_PRI NVIC_SYSLINK_PRI // this serves the syslink UART
+#define EXTI9_5_PRI NVIC_LOW_PRI
+#define EXTI15_10_PRI NVIC_MID_PRI // this serves the decks and sensors
 
 #endif /* NVIC_CONF_H_ */

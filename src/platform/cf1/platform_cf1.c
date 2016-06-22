@@ -25,6 +25,7 @@
  */
 
 /* Project includes */
+#include "exti.h"
 #include "nvic.h"
 
 // TODO: Implement!
@@ -32,6 +33,9 @@ int platformInit(void)
 {
   //Low level init: Clock and Interrupt controller
   nvicInit();
+
+  //EXTI interrupts
+  extiInit();
 
   return 0;
 }

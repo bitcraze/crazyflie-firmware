@@ -380,7 +380,7 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
   xSemaphoreGive(spiSemaphore);
 }
 
-void __attribute__((used)) EXTI15_10_IRQHandler(void)
+void __attribute__((used)) EXTI11_Callback(void)
 {
   portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
 

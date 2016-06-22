@@ -279,14 +279,13 @@ unsigned char nrfReadRX(char *buffer, int len)
   return status;
 }
 
-/* Interrupt service routine, call the interrupt callback
- */
-void nrfIsr()
+/* Interrupt service routine, call the interrupt callback */
+void __attribute__((used)) EXTI9_Callback(void)
 {
   if (interruptCb)
+  {
     interruptCb();
-
-  return;
+  }
 }
 
 void nrfSetInterruptCallback(void (*cb)(void))
@@ -354,9 +353,6 @@ void nrfInit(void)
 
   if (isInit)
     return;
-
-  /* Enable the EXTI interrupt router */
-  extiInit();
 
   /* Enable SPI and GPIO clocks */
   RCC_APB2PeriphClockCmd(RADIO_GPIO_SPI_CLK | RADIO_GPIO_CS_PERIF | 
