@@ -32,12 +32,15 @@
   #include "lps25h.h"
 #endif
 
+#include "gtgps.h"  
+
 #include "param.h"
 
 static point_t position;
 
 #define IMU_RATE RATE_500_HZ
 #define BARO_RATE RATE_100_HZ
+#define GPS_RATE RATE_5_HZ 
 
 void sensorsInit(void)
 {
@@ -69,6 +72,13 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
                  &sensors->baro.temperature,
                  &sensors->baro.asl);
 #endif
+#ifdef GPS_Present
+    if (RATE_DO_EXECUTE(GPS_RATE, tick))
+    {
+      gtgpsGetFrameData(&position.timestamp, &position.x, &position.y, &position.z);
+    }
+#endif 
+    
     // Experimental: receive the position from parameters
     if (position.timestamp) {
       sensors->position = position;

@@ -299,17 +299,17 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 
   if (altHoldMode) {
     setpoint->thrust = 0;
-    setpoint->mode.z = modeVelocity;
-
+    setpoint->mode.z = modeAbsVel; 
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
   } else {
     setpoint->mode.z = modeDisable;
+    setpoint->position.z = state->position.z; 
   }
 
   // roll/pitch
   if (posHoldMode) {
-    setpoint->mode.x = modeVelocity;
-    setpoint->mode.y = modeVelocity;
+    setpoint->mode.x = modeAbsVel;
+    setpoint->mode.y = modeAbsVel;
     setpoint->mode.roll = modeDisable;
     setpoint->mode.pitch = modeDisable;
 
@@ -327,6 +327,8 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->velocity.y = 0;
     setpoint->attitude.roll  = commanderGetActiveRoll();
     setpoint->attitude.pitch = commanderGetActivePitch();
+    setpoint->position.x = state->position.x;
+    setpoint->position.y = state->position.y;    
   }
 
   // Yaw

@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -21,26 +21,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * configblock.h - Simple static implementation of the config block
+ * gtgps.h - Titan-2 driver for deck port
  */
+#ifndef GTGPS_H_
+#define GTGPS_H_
 
-#include <stdint.h>
+#define LAT 0
+#define LON 1
+#define ALT 2
 
-#ifndef __CONFIGBLOCK_H__
-#define __CONFIGBLOCK_H__
+/**
+ * Transfer GPS frame data to sensor_stock.c
+ */
+void gtgpsGetFrameData(uint32_t* ts, float* px, float* py, float* pz);
 
-int configblockInit(void);
-bool configblockTest(void);
-
-/* Static accessors */
-int configblockGetRadioChannel(void);
-int configblockGetRadioSpeed(void);
-uint64_t configblockGetRadioAddress(void);
-
-float configblockGetCalibPitch(void);
-float configblockGetCalibRoll(void);
-
-bool configblockSetCalibMag(float xoff, float xsf, float yoff, float ysf, float zoff, float zsf);
-bool configblockGetCalibMag(float* xoff, float* xsf, float* yoff, float* ysf, float* zoff, float* zsf); 
-
-#endif //__CONFIGBLOCK_H__
+#endif /* GTGPS_H_ */
