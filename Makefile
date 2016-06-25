@@ -100,7 +100,7 @@ ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 
 # libdw dw1000 driver
-#VPATH_CF2 += vendor/libdw1000/src
+VPATH_CF2 += vendor/libdw1000/src
 
 # FreeRTOS
 VPATH += $(PORT)
@@ -149,7 +149,7 @@ PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
 
 # libdw
-#PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
+PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
@@ -160,7 +160,7 @@ PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
 # Stabilizer modules
 PROJ_OBJ += commander.o attitude_pid_controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
-PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o compass.o
+PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o
 PROJ_OBJ += sensors_$(SENSORS).o power_distribution_$(POWER_DISTRIBUTION).o
 
 
@@ -178,7 +178,7 @@ PROJ_OBJ_CF2 += bigquad.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
-@PROJ_OBJ_CF2 += dwm1000.o
+PROJ_OBJ_CF2 += dwm1000.o
 PROJ_OBJ_CF2 += cppmdeck.o
 #Deck tests
 PROJ_OBJ_CF2 += exptest.o
