@@ -24,7 +24,7 @@ PLATFORM					?= CF2
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
-SENSORS            ?= stock
+SENSORS            ?= task
 ESTIMATOR          ?= complementary
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
@@ -263,7 +263,7 @@ ifeq ($(USE_ESKYLINK), 1)
   CFLAGS += -DUSE_ESKYLINK
 endif
 
-CFLAGS += -DBOARD_REV_$(REV)
+CFLAGS += -DBOARD_REV_$(REV) -DSENSORS_TYPE_$(SENSORS) -DESTIMATOR_TYPE_$(ESTIMATOR) -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
 
 CFLAGS += $(PROCESSOR) $(INCLUDES) $(STFLAGS)
 ifeq ($(PLATFORM), CF1)

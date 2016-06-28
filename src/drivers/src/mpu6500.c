@@ -130,7 +130,6 @@ bool mpu6500SelfTest()
   float aDiff[3], gDiff[3];
   uint8_t FS = 0;
   int i;
-  bool testStatus = false;
 
   // Save old configuration
   i2cdevReadByte(I2Cx, devAddr, MPU6500_RA_SMPLRT_DIV, &saveReg[0]);
@@ -240,11 +239,12 @@ bool mpu6500SelfTest()
       mpu6500EvaluateSelfTest(MPU6500_ST_ACCEL_LOW, MPU6500_ST_ACCEL_HIGH, aDiff[1], "acc Y") &&
       mpu6500EvaluateSelfTest(MPU6500_ST_ACCEL_LOW, MPU6500_ST_ACCEL_HIGH, aDiff[2], "acc Z"))
   {
-    testStatus = true;
-    DEBUG_PRINT("Self test [OK].\n");
+    return true;
   }
-
-  return testStatus;
+  else
+  {
+    return false;
+  }
 }
 
 /** Evaluate the values from a MPU6500 self test.
