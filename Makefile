@@ -191,6 +191,9 @@ PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
 PROJ_OBJ_CF2 += configblockeeprom.o
 
+# Libs
+PROJ_OBJ_CF2 += libarm_math.a
+
 OBJ = $(FREERTOS_OBJ) $(PORT_OBJ) $(ST_OBJ) $(PROJ_OBJ)
 ifeq ($(PLATFORM), CF1)
 OBJ += $(CRT0_CF1) $(ST_OBJ_CF1) $(PROJ_OBJ_CF1)
@@ -214,7 +217,7 @@ GDB = $(CROSS_COMPILE)gdb
 INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
 INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
 INCLUDES += -Isrc/utils/interface -Isrc/drivers/interface -Isrc/platform
-INCLUDES += -I$(STLIB)/CMSIS/Include
+INCLUDES += -Ivendor/CMSIS/CMSIS/Include
 
 INCLUDES_CF1 += -I$(STLIB)/STM32F10x_StdPeriph_Driver/inc
 INCLUDES_CF1 += -I$(STLIB)/CMSIS/Core/CM3
@@ -318,6 +321,9 @@ endif
 all: check_submodules build
 build: clean_version compile print_version size
 compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
+
+libarm_math.a:
+	+$(MAKE) -C tools/make/cmsis_dsp/ V=$(V)
 
 clean_version:
 ifeq ($(SHELL),/bin/sh)

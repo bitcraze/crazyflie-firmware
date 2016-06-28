@@ -22,9 +22,15 @@ VTMPL_COMMAND_SILENT="  VTMPL $@"
 
 CC_COMMAND=$(CC) $(CFLAGS) -c $< -o $(BIN)/$@
 CC_COMMAND_SILENT="  CC    $@"
-.c.o: 
+.c.o:
 	@$(if $(QUIET), ,echo $(CC_COMMAND$(VERBOSE)) )
 	@$(CC_COMMAND)
+
+CCS_COMMAND=$(CC) $(CSFLAGS) -c $< -o $(BIN)/$@
+CCS_COMMAND_SILENT="  CCS   $@"
+.S.o:
+	@$(if $(QUIET), ,echo $(CCS_COMMAND$(VERBOSE)) )
+	@$(CCS_COMMAND)
 
 LD_COMMAND=$(LD) $(LDFLAGS) $(foreach o,$(OBJ),$(BIN)/$(o)) -lm -o $@
 LD_COMMAND_SILENT="  LD    $@"
@@ -68,10 +74,8 @@ clean:
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
 	@$(CLEAN_COMMAND)
 
-MRPROPER_COMMAND=rm -f *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ tools/make/*~; rm -rf bin/dep
+MRPROPER_COMMAND=rm -f *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ tools/make/*~; rm -rf bin/dep/*.d $(BIN)/*.a $(BIN)/vendor/*.o
 MRPROPER_COMMAND_SILENT="  MRPROPER"
 mrproper: clean
 	@$(if $(QUIET), ,echo $(MRPROPER_COMMAND$(VERBOSE)) )
 	@$(MRPROPER_COMMAND)
-
-
