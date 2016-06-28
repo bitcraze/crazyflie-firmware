@@ -207,35 +207,37 @@ bool motorsTest(void)
   return isInit;
 }
 
-// Ithrust is thrust mapped for 65536 <==> 60g
+// Ithrust is thrust mapped for 65536 <==> 60 grams
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
-  uint16_t ratio;
+  if (isInit) {
+    uint16_t ratio;
 
-  ASSERT(id < NBR_OF_MOTORS);
+    ASSERT(id < NBR_OF_MOTORS);
 
-  ratio = ithrust;
+    ratio = ithrust;
 
-#ifdef ENABLE_THRUST_BAT_COMPENSATED
-  if (motorMap[id]->drvType == BRUSHED)
-  {
-    float thrust = ((float)ithrust / 65536.0f) * 60;
-    float volts = -0.0006239 * thrust * thrust + 0.088 * thrust;
-    float supply_voltage = pmGetBatteryVoltage();
-    float percentage = volts / supply_voltage;
-    percentage = percentage > 1.0 ? 1.0 : percentage;
-    ratio = percentage * UINT16_MAX;
-    motor_ratios[id] = ratio;
+  #ifdef ENABLE_THRUST_BAT_COMPENSATED
+    if (motorMap[id]->drvType == BRUSHED)
+    {
+      float thrust = ((float)ithrust / 65536.0f) * 60;
+      float volts = -0.0006239 * thrust * thrust + 0.088 * thrust;
+      float supply_voltage = pmGetBatteryVoltage();
+      float percentage = volts / supply_voltage;
+      percentage = percentage > 1.0 ? 1.0 : percentage;
+      ratio = percentage * UINT16_MAX;
+      motor_ratios[id] = ratio;
 
-  }
-#endif
-  if (motorMap[id]->drvType == BRUSHLESS)
-  {
-    motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
-  }
-  else
-  {
-    motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
+    }
+  #endif
+    if (motorMap[id]->drvType == BRUSHLESS)
+    {
+      motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
+    }
+    else
+    {
+      motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
+    }
   }
 }
 
