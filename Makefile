@@ -280,7 +280,12 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 CFLAGS += -ffunction-sections -fdata-sections
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
-LDFLAGS = --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
+LDFLAGS += --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
+
+ifeq ($(PLATFORM), CF2)
+CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__TARGET_FPU_VFP
+LDFLAGS += -Wl,--whole-archive -Lsrc/lib/CMSIS -larm_cortexM4lf_math -Wl,--no-whole-archive -lm
+endif
 
 #Flags required by the ST library
 ifeq ($(CLOAD), 1)
