@@ -28,14 +28,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "eprintf.h"
+#include <string.h>
 
 /**
  * Initialize the SPI.
  */
 void spiBegin(void);
+void spiConfigureSlow(void);
+void spiConfigureFast(void);
 
-/* Send the buffer and write the byte received in the same buffer */
-void spiTransfer(void *buffer, int length);
+/* Send the data_tx buffer and receive into the data_rx buffer */
+bool spiExchange(size_t length, const uint8_t *data_tx, uint8_t *data_rx);
 
 #endif /* SPI_H_ */
