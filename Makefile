@@ -235,7 +235,7 @@ INCLUDES_CF2 += -Ivendor/libdw1000/inc
 
 ifeq ($(USE_FPU), 1)
 	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
-	CFLAGS += -fno-math-errno
+	CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__TARGET_FPU_VFP
 else
 	ifeq ($(PLATFORM), CF1)
 		PROCESSOR = -mcpu=cortex-m3 -mthumb
