@@ -81,7 +81,10 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
     
     // Experimental: receive the position from parameters
     if (position.timestamp) {
-      sensors->position = position;
+//      sensors->position = position; // !!!!! timestamp steps on asl !!!!!
+      sensors->position.x = position.x;
+      sensors->position.y = position.y;
+      sensors->position.z = position.z;
     }
   }
 }

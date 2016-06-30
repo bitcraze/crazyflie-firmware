@@ -32,4 +32,5 @@ void compassInit();
 bool compassTest();
 void compassController(state_t *state, const sensorData_t *sensorData, const uint32_t tick);
 void compassGyroBias(float* yaw);
+bool compassCaled();
 #endif //__COMPASS_H__

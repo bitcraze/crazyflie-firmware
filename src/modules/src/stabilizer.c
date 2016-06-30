@@ -60,6 +60,9 @@ void stabilizerInit(void)
   sensorsInit();
   stateEstimatorInit();
   stateControllerInit();
+#ifdef GPS_Present  
+  compassInit();
+#endif  
   powerDistributionInit();
 #if defined(SITAW_ENABLED)
   sitAwInit();

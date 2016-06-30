@@ -113,13 +113,14 @@ static float  fmagx;
 static float  fmagy;
 static float  fmagz;
 static float  yawangle;
+static bool   magCalibrated;
 static float  yawBias;
 static float  yawBias0;
 static float  yawBias1;
 static float  yawGyroBias = 0.0f;
 static float  yawMagBias = 0.0f;
-static uint16_t yawBiasCtr = 2000;
-static uint16_t updateBias = 4000;
+static uint16_t yawBiasCtr = 2000; //8 sec startup delay; function called @ 250Hz 
+static uint16_t updateBias = 4000; //16 sec update; function called @ 250Hz 
 static bool   applyBias = false;
 
 static bool isInit;
@@ -136,6 +137,7 @@ void compassInit(void)
 //After flashing new firmware, the default is xoff=yoff=zoff=0, xsf=-1,ysf=zsf=1  
 #ifdef CAL_BUTTONS  
   cb_read = configblockGetCalibMag(&xoff, &xsf, &yoff, &ysf, &zoff, &zsf);
+  if ((xoff + yoff + zoff) != 0.0f) magCalibrated = true; else magCalibrated = false;
 #endif
 }
 
@@ -198,11 +200,12 @@ bool compassCalibration(const uint32_t tick)
       ysf = (xmax+xoff)/(ymax+yoff);
       zsf = (xmax+xoff)/(zmax+zoff);
       cb_write = configblockSetCalibMag(xoff, xsf, yoff, ysf, zoff, zsf);
+      magCalibrated = true;
       calRequired = 0;
       applyBias = false;
-      yawBiasCtr = 2000;
+      yawBiasCtr = 2000; //8 sec startup delay; function called @ 250Hz 
       yawMagBias = 0.0f;
-      updateBias = 4000;
+      updateBias = 4000; //16 sec update; function called @ 250Hz
     }
     else {
       magcalOn = false;
@@ -283,41 +286,49 @@ void compassController(state_t *state, const sensorData_t *sensorData, const uin
       
   // Begin 5HZ Updates
   if (RATE_DO_EXECUTE(COMPASS_RATE, tick))
-  {  
-    fmagx = (f_magx + xoff) * xsf;
-    fmagy = (f_magy + yoff) * ysf;
-    fmagz = (f_magz + zoff) * zsf;
-
-    theta = -state->attitude.roll; //convert to magnetometer axis
-    //Limit roll to +/- 90 degrees
-    if (theta > 90.0f)
+  {
+    if (magCalibrated)
     {
-      theta = 180.0f - theta;
+      fmagx = (f_magx + xoff) * xsf;
+      fmagy = (f_magy + yoff) * ysf;
+      fmagz = (f_magz + zoff) * zsf;
+
+      theta = -state->attitude.roll; //convert to magnetometer axis
+      //Limit roll to +/- 90 degrees
+      if (theta > 90.0f)
+      {
+        theta = 180.0f - theta;
+      }
+      else if (theta < -90.0f)
+      {
+        theta = -180.0f - theta;
+      }
+      theta *= D2R;
+      phi  = state->attitude.pitch * D2R; //convert to magnetometer axis
+      sinr = sinf(theta);
+      cosr = cosf(theta);
+      sinp = sinf(phi);
+      cosp = cosf(phi);
+      //Limit pitch to +/- 90 degrees
+      if (cosp < 0.0f) cosp = -cosp;
+
+      //CF2 Yaw +/- 180 degrees, zero at power on, ccw positive rotation
+      //yawangle +/- 180 degrees, ccw positive rotation, zero at true north
+      //Note roll from eulerActuals (gyro) is negated above
+
+      xm = fmagx*cosp + fmagy*sinr*sinp + fmagz*cosr*sinp;
+      ym = fmagy*cosr - fmagz*sinr;
+
+      yawangle = atan2f(ym,xm) / D2R  + magneticdeclination;
+      AdjAngle(&yawangle);                 //+ angle cw
+      yawangle = -yawangle;                //+ angle ccw
     }
-    else if (theta < -90.0f)
+    else
     {
-      theta = -180.0f - theta;
+      yawangle = state->attitude.yaw;
     }
-    theta *= D2R;
-    phi  = state->attitude.pitch * D2R; //convert to magnetometer axis
-    sinr = sinf(theta);
-    cosr = cosf(theta);
-    sinp = sinf(phi);
-    cosp = cosf(phi);
-    //Limit pitch to +/- 90 degrees
-    if (cosp < 0.0f) cosp = -cosp;
-
-    //CF2 Yaw +/- 180 degrees, zero at power on, ccw positive rotation
-    //yawangle +/- 180 degrees, ccw positive rotation, zero at true north
-    //Note roll from eulerActuals (gyro) is negated above
-
-    xm = fmagx*cosp + fmagy*sinr*sinp + fmagz*cosr*sinp;
-    ym = fmagy*cosr - fmagz*sinr;
-
-    yawangle = atan2f(ym,xm) / D2R  + magneticdeclination;
-    AdjAngle(&yawangle);                 //+ angle cw
-    yawangle = -yawangle;                //+ angle ccw    
-    state->attitude.yawgeo = yawangle;   //+ angle ccw
+    state->attitude.yawgeo = yawangle;  //+ angle ccw
+    
 //  In converting position (desired-measured) to roll/pitch
 //  D2R = (float) M_PI/180.0f
 //  cos = cosf(yawgeo * D2R)
@@ -330,8 +341,11 @@ void compassController(state_t *state, const sensorData_t *sensorData, const uin
 
 void compassGyroBias(float* yaw)
 {
-//Compute bias to eliminate drift in gyro based euler yaw actual and
-// convert this actual to heading relative to geographic or true north
+//Compute bias to eliminate drift in gyro based euler yaw actual
+  float temp;
+
+  if (magCalibrated)
+  {
     yawGyroBias = (yawGyroBias * 99.0f + abs(*yaw)) / 100.0f;
     if (*yaw < 0.0f) yawBias = -yawGyroBias; else yawBias = yawGyroBias;
     yawMagBias = (yawMagBias * 99.0f + abs(yawangle)) / 100.0f;
@@ -340,23 +354,28 @@ void compassGyroBias(float* yaw)
     {
       if (!updateBias--)
       {
-        updateBias = 4000;
+        updateBias = 4000;             //16 sec update; function called @ 250Hz
         yawBias1 = yawBias - yawBias0;
       }
-      *yaw = *yaw - yawBias1;
+      temp = *yaw - yawBias1;
+      AdjAngle(&temp);
+      *yaw = temp; 
     }
     else
     {
-      if ((xoff + yoff + zoff) != 0.0f)  //See if compassCal has been performed
+      if (!yawBiasCtr--)
       {
-        if (!yawBiasCtr--)
-        {
-          applyBias = true;
-          yawBias0 = yawBias;
-          yawBias1 = 0.0f;
-        }
+        applyBias = true;
+        yawBias0 = yawBias;
+        yawBias1 = 0.0f;
       }
     }
+  }  
+}
+
+bool compassCaled(void)
+{
+  return magCalibrated;
 }
 
 PARAM_GROUP_START(compass)
@@ -389,6 +408,7 @@ LOG_GROUP_STOP(compassCal)
 
 LOG_GROUP_START(compass)
 LOG_ADD(LOG_FLOAT,  yawgeo, &yawangle)
+LOG_ADD(LOG_UINT8,  magCaled, &magCalibrated)
 LOG_ADD(LOG_FLOAT,  yawBias0, &yawBias0)
 LOG_ADD(LOG_FLOAT,  yawBias, &yawBias)
 LOG_GROUP_STOP(compass)
