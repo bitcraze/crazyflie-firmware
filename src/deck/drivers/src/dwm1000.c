@@ -348,7 +348,8 @@ static void dwm1000IsrTask(void *param)
   }
 }
 
-static char spiBuffer[196];
+static uint8_t spiTxBuffer[196];
+static uint8_t spiRxBuffer[196];
 
 /************ Low level ops for libdw **********/
 static void spiWrite(dwDevice_t* dev, const void *header, size_t headerLength,
@@ -357,10 +358,9 @@ static void spiWrite(dwDevice_t* dev, const void *header, size_t headerLength,
   xSemaphoreTake(spiSemaphore, portMAX_DELAY);
 
   digitalWrite(CS_PIN, LOW);
-  memcpy(spiBuffer, header, headerLength);
-  spiTransfer(spiBuffer, headerLength);
-  memcpy(spiBuffer, data, dataLength);
-  spiTransfer(spiBuffer, dataLength);
+  memcpy(spiTxBuffer, header, headerLength);
+  memcpy(spiTxBuffer+headerLength, data, dataLength);
+  spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
 
   xSemaphoreGive(spiSemaphore);
@@ -372,9 +372,10 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
   xSemaphoreTake(spiSemaphore, portMAX_DELAY);
 
   digitalWrite(CS_PIN, LOW);
-  memcpy(spiBuffer, header, headerLength);
-  spiTransfer(spiBuffer, headerLength);
-  spiTransfer(data, dataLength);
+  memcpy(spiTxBuffer, header, headerLength);
+  memset(spiTxBuffer+headerLength, 0, dataLength);
+  spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
+  memcpy(data, spiRxBuffer+headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
 
   xSemaphoreGive(spiSemaphore);
@@ -396,7 +397,14 @@ void __attribute__((used)) EXTI11_Callback(void)
 
 static void spiSetSpeed(dwDevice_t* dev, dwSpiSpeed_t speed)
 {
-  ;
+  if (speed == dwSpiSpeedLow)
+  {
+    spiConfigureSlow();
+  }
+  else if (speed == dwSpiSpeedHigh)
+  {
+    spiConfigureFast();
+  }
 }
 
 static void delayms(dwDevice_t* dev, unsigned int delay)
