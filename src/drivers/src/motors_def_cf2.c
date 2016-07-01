@@ -399,7 +399,7 @@ static const MotorPerifDef DECK_MISO =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// Deck MOSI, PA7, TIM3_CH1
+// Deck MOSI, PA7, TIM14_CH1
 static const MotorPerifDef DECK_MOSI =
 {
     .drvType       = BRUSHLESS,
@@ -408,17 +408,17 @@ static const MotorPerifDef DECK_MOSI =
     .gpioPin       = GPIO_Pin_7,
     .gpioPinSource = GPIO_PinSource7,
     .gpioOType     = GPIO_OType_OD,
-    .gpioAF        = GPIO_AF_TIM3,
-    .timPerif      = RCC_APB1Periph_TIM3,
-    .tim           = TIM3,
+    .gpioAF        = GPIO_AF_TIM14,
+    .timPerif      = RCC_APB1Periph_TIM14,
+    .tim           = TIM14,
     .timPolarity   = TIM_OCPolarity_High,
-    .timDbgStop    = DBGMCU_TIM3_STOP,
+    .timDbgStop    = DBGMCU_TIM14_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
-    .setCompare    = TIM_SetCompare2,
-    .getCompare    = TIM_GetCapture2,
-    .ocInit        = TIM_OC2Init,
-    .preloadConfig = TIM_OC2PreloadConfig,
+    .setCompare    = TIM_SetCompare1,
+    .getCompare    = TIM_GetCapture1,
+    .ocInit        = TIM_OC1Init,
+    .preloadConfig = TIM_OC1PreloadConfig,
 };
 
 /**
@@ -434,10 +434,10 @@ const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
 
 /**
  * Brushless motors mapped as on the Big-Quad deck
- * M1 -> IO3
- * M2 -> TX2
- * M3 -> RX2
- * M4 -> IO2
+ * M1 -> TX2
+ * M2 -> IO3
+ * M3 -> IO2
+ * M4 -> RX2
  */
 const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
 {
