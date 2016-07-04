@@ -320,13 +320,29 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
   } else {
     setpoint->mode.x = modeDisable;
     setpoint->mode.y = modeDisable;
-    setpoint->mode.roll = modeAbs;
-    setpoint->mode.pitch = modeAbs;
+
+    if (stabilizationModeRoll == RATE) {
+      setpoint->mode.roll = modeVelocity;
+      setpoint->attitudeRate.roll = commanderGetActiveRoll();
+      setpoint->attitude.roll = 0;
+    } else {
+      setpoint->mode.roll = modeAbs;
+      setpoint->attitudeRate.roll = 0;
+      setpoint->attitude.roll = commanderGetActiveRoll();
+    }
+
+    if (stabilizationModePitch == RATE) {
+      setpoint->mode.pitch = modeVelocity;
+      setpoint->attitudeRate.pitch = commanderGetActivePitch();
+      setpoint->attitude.pitch = 0;
+    } else {
+      setpoint->mode.pitch = modeAbs;
+      setpoint->attitudeRate.pitch = 0;
+      setpoint->attitude.pitch = commanderGetActivePitch();
+    }
 
     setpoint->velocity.x = 0;
     setpoint->velocity.y = 0;
-    setpoint->attitude.roll  = commanderGetActiveRoll();
-    setpoint->attitude.pitch = commanderGetActivePitch();
   }
 
   // Yaw
