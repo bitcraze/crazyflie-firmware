@@ -39,7 +39,8 @@
 
 /* Internal format of the config block */
 #define MAGIC 0x43427830
-#define VERSION 1
+//#define VERSION 1
+#define VERSION 2
 #define HEADER_SIZE_BYTES 5 // magic + version
 #define OVERHEAD_SIZE_BYTES (HEADER_SIZE_BYTES + 1) // + cksum
 
@@ -57,7 +58,7 @@ struct configblock_v0_s {
   uint8_t cksum;
 } __attribute__((__packed__));
 
-// Current version
+// Old Current version
 struct configblock_v1_s {
   /* header */
   uint32_t magic;
@@ -68,13 +69,36 @@ struct configblock_v1_s {
   float calibPitch;
   float calibRoll;
   uint8_t radioAddress_upper;
+  uint32_t radioAddress_lower; 
+  /* Simple modulo 256 checksum */
+  uint8_t cksum;
+} __attribute__((__packed__));
+
+// New Current version
+struct configblock_v2_s {
+  /* header */
+  uint32_t magic;
+  uint8_t  version;
+  /* Content */
+  uint8_t radioChannel;
+  uint8_t radioSpeed;
+  float calibPitch;
+  float calibRoll;
+  uint8_t radioAddress_upper;
   uint32_t radioAddress_lower;
+  float calib_xoff;
+  float calib_xsf;
+  float calib_yoff;
+  float calib_ysf;
+  float calib_zoff;
+  float calib_zsf;  
   /* Simple modulo 256 checksum */
   uint8_t cksum;
 } __attribute__((__packed__));
 
 // Set version 1 as current version
-typedef struct configblock_v1_s configblock_t;
+//typedef struct configblock_v1_s configblock_t;
+typedef struct configblock_v2_s configblock_t;
 
 static configblock_t configblock;
 static configblock_t configblockDefault =
@@ -87,12 +111,19 @@ static configblock_t configblockDefault =
     .calibRoll = 0.0,
     .radioAddress_upper = ((uint64_t)RADIO_ADDRESS >> 32),
     .radioAddress_lower = (RADIO_ADDRESS & 0xFFFFFFFFULL),
+    .calib_xoff = 0.0,
+    .calib_xsf = -1.0,
+    .calib_yoff = 0.0,
+    .calib_ysf = 1.0,
+    .calib_zoff = 0.0,
+    .calib_zsf = 1.0,    
 };
 
 static const uint32_t configblockSizes[] =
 {
   sizeof(struct configblock_v0_s),
   sizeof(struct configblock_v1_s),
+  sizeof(struct configblock_v2_s), 
 };
 
 static bool isInit = false;
@@ -226,6 +257,11 @@ static bool configblockCheckDataIntegrity(uint8_t *data, uint8_t version)
     struct configblock_v1_s *v1 = ( struct configblock_v1_s *)data;
     status = (v1->cksum == calculate_cksum(data, sizeof(struct configblock_v1_s) - 1));
   }
+  else if (version == 2)
+  {
+    struct configblock_v2_s *v2 = ( struct configblock_v2_s *)data;
+    status = (v2->cksum == calculate_cksum(data, sizeof(struct configblock_v2_s) - 1));
+  } 
 
   return status;
 }
@@ -307,3 +343,41 @@ float configblockGetCalibRoll(void)
   else
     return 0;
 }
+
+bool configblockGetCalibMag(float* xoff, float* xsf, float* yoff, float* ysf, float* zoff, float* zsf)
+{
+  if (cb_ok)
+  {
+    *xoff = configblock.calib_xoff;
+    *xsf = configblock.calib_xsf;
+    *yoff = configblock.calib_yoff;
+    *ysf = configblock.calib_ysf;
+    *zoff = configblock.calib_zoff;
+    *zsf = configblock.calib_zsf;  
+    return true;
+  }
+  else
+    return false;
+}
+
+bool configblockSetCalibMag(float xoff, float xsf, float yoff, float ysf, float zoff, float zsf)
+{
+  if (cb_ok)
+  {
+    configblock.calib_xoff = xoff;
+    configblock.calib_xsf = xsf;
+    configblock.calib_yoff = yoff;
+    configblock.calib_ysf = ysf;
+    configblock.calib_zoff = zoff;
+    configblock.calib_zsf = zsf;
+    
+//  Write updated config block to eeprom
+    if (configblockWrite(&configblock))
+      return true;
+    else
+      return false;
+  }
+  else
+    return false;
+}    
+

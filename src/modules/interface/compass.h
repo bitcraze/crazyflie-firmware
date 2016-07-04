@@ -1,13 +1,13 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2016 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,26 +21,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * configblock.h - Simple static implementation of the config block
+ * compass.h - CompassController interface
  */
+#ifndef __COMPASS_H__
+#define __COMPASS_H__
 
-#include <stdint.h>
+#include "stabilizer_types.h"
 
-#ifndef __CONFIGBLOCK_H__
-#define __CONFIGBLOCK_H__
-
-int configblockInit(void);
-bool configblockTest(void);
-
-/* Static accessors */
-int configblockGetRadioChannel(void);
-int configblockGetRadioSpeed(void);
-uint64_t configblockGetRadioAddress(void);
-
-float configblockGetCalibPitch(void);
-float configblockGetCalibRoll(void);
-
-bool configblockSetCalibMag(float xoff, float xsf, float yoff, float ysf, float zoff, float zsf);
-bool configblockGetCalibMag(float* xoff, float* xsf, float* yoff, float* ysf, float* zoff, float* zsf); 
-
-#endif //__CONFIGBLOCK_H__
+void compassInit();
+bool compassTest();
+void compassController(state_t *state, const sensorData_t *sensorData, const uint32_t tick);
+void compassGyroBias(float* yaw);
+bool compassCaled();
+#endif //__COMPASS_H__

@@ -36,6 +36,7 @@
 
 #include "sensors.h"
 #include "estimator.h"
+#include "compass.h"  
 #include "commander.h"
 #include "sitaw.h"
 #include "controller.h"
@@ -59,6 +60,9 @@ void stabilizerInit(void)
   sensorsInit();
   stateEstimatorInit();
   stateControllerInit();
+#ifdef GPS_Present  
+  compassInit();
+#endif  
   powerDistributionInit();
 #if defined(SITAW_ENABLED)
   sitAwInit();
@@ -107,6 +111,9 @@ static void stabilizerTask(void* param)
     sensorsAcquire(&sensorData, tick);
 
     stateEstimator(&state, &sensorData, tick);
+#ifdef GPS_Present
+    compassController(&state, &sensorData, tick);
+#endif      
     commanderGetSetpoint(&setpoint, &state);
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);

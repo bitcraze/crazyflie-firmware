@@ -46,7 +46,7 @@ struct pidAxis_s {
   struct pidInit_s init;
   mode_t previousMode;
   float setpoint;
-
+  float lastsetpoint;
   float output;
 };
 
@@ -84,9 +84,9 @@ static struct this_s this = {
 
   .pidZ = {
     .init = {
-      .kp = 30000.0,
-      .ki = 0,
-      .kd = 10000.0
+      .kp = 32500.0, //30000.0,
+      .ki =  2600.0, //0,
+      .kd = 13000.0  //10000.0
     }
   },
 
@@ -99,6 +99,9 @@ static float runPid(float input, struct pidAxis_s *axis, mode_t mode,
   if (axis->previousMode == modeDisable && mode != modeDisable) {
     if (mode == modeVelocity) {
       axis->setpoint = input;
+    } else if (mode == modeAbsVel) {
+      axis->setpoint = setpointPos;
+      axis->lastsetpoint = setpointPos;      
     } else {
       axis->setpoint = setpointPos;
     }
@@ -112,6 +115,9 @@ static float runPid(float input, struct pidAxis_s *axis, mode_t mode,
     axis->setpoint = setpointPos;
   } else if (mode == modeVelocity) {
     axis->setpoint += setpointVel * dt;
+  } else if (mode == modeAbsVel) {
+    axis->setpoint += (setpointVel * dt) + setpointPos - axis->lastsetpoint;
+    axis->lastsetpoint = setpointPos;     
   }
 
   pidSetDesired(&axis->pid, axis->setpoint);
@@ -125,7 +131,11 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
   float x = runPid(state->position.x, &this.pidX, setpoint->mode.x, setpoint->position.x, setpoint->velocity.x, DT);
   float y = runPid(state->position.y, &this.pidY, setpoint->mode.y, setpoint->position.y, setpoint->velocity.y, DT);
 
+#ifdef GPS_Present
+  float yawRad = state->attitude.yawgeo * (float)M_PI / 180;
+#else
   float yawRad = state->attitude.yaw * (float)M_PI / 180;
+#endif
   attitude->pitch = - (x * cosf(yawRad)) - (y * sinf(yawRad));
   attitude->roll =  - (y * cosf(yawRad)) + (x * sinf(yawRad));
 

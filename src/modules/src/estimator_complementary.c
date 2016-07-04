@@ -5,6 +5,8 @@
 #include "sensfusion6.h"
 #include "position_estimator.h"
 
+#include "compass.h"
+
 #define ATTITUDE_UPDATE_RATE RATE_250_HZ
 #define ATTITUDE_UPDATE_DT 1.0/ATTITUDE_UPDATE_RATE
 
@@ -32,7 +34,9 @@ void stateEstimator(state_t *state, const sensorData_t *sensorData, const uint32
                        sensorData->acc.x, sensorData->acc.y, sensorData->acc.z,
                        ATTITUDE_UPDATE_DT);
     sensfusion6GetEulerRPY(&state->attitude.roll, &state->attitude.pitch, &state->attitude.yaw);
-
+#ifdef GPS_Present
+    compassGyroBias(&state->attitude.yaw);
+#endif
     state->acc.z = sensfusion6GetAccZWithoutGravity(sensorData->acc.x,
                                                     sensorData->acc.y,
                                                     sensorData->acc.z);
