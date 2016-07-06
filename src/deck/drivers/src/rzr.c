@@ -36,15 +36,61 @@
 #include "extrx.h"
 #include "pm.h"
 
+#define RZR_GPIO_RCC_M1_OVERRIDE    RCC_AHB1Periph_GPIOA
+#define RZR_GPIO_PORT_M1_OVERRIDE   GPIOA
+#define RZR_GPIO_PIN_M1_OVERRIDE    GPIO_Pin_0
+#define RZR_GPIO_RCC_M2_OVERRIDE    RCC_AHB1Periph_GPIOB
+#define RZR_GPIO_PORT_M2_OVERRIDE   GPIOB
+#define RZR_GPIO_PIN_M2_OVERRIDE    GPIO_Pin_12
+#define RZR_GPIO_RCC_M3_OVERRIDE    RCC_AHB1Periph_GPIOC
+#define RZR_GPIO_PORT_M3_OVERRIDE   GPIOC
+#define RZR_GPIO_PIN_M3_OVERRIDE    GPIO_Pin_8
+#define RZR_GPIO_RCC_M4_OVERRIDE    RCC_AHB1Periph_GPIOC
+#define RZR_GPIO_PORT_M4_OVERRIDE   GPIOC
+#define RZR_GPIO_PIN_M4_OVERRIDE    GPIO_Pin_15
+
 //Hardware configuration
 static bool isInit;
 
 static void rzrInit(DeckInfo *info)
 {
+  GPIO_InitTypeDef GPIO_InitStructure = {0};
+
   if(isInit)
     return;
 
   DEBUG_PRINT("Switching to brushless.\n");
+
+
+  // Configure GPIO for power to BL motor connectors
+  RCC_AHB1PeriphClockCmd(RZR_GPIO_RCC_M1_OVERRIDE, ENABLE);
+  RCC_AHB1PeriphClockCmd(RZR_GPIO_RCC_M2_OVERRIDE, ENABLE);
+  RCC_AHB1PeriphClockCmd(RZR_GPIO_RCC_M3_OVERRIDE, ENABLE);
+  RCC_AHB1PeriphClockCmd(RZR_GPIO_RCC_M4_OVERRIDE, ENABLE);
+
+  GPIO_StructInit(&GPIO_InitStructure);
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+
+  GPIO_InitStructure.GPIO_Pin = RZR_GPIO_PIN_M1_OVERRIDE;
+  GPIO_Init(RZR_GPIO_PORT_M1_OVERRIDE, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = RZR_GPIO_PIN_M2_OVERRIDE;
+  GPIO_Init(RZR_GPIO_PORT_M2_OVERRIDE, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = RZR_GPIO_PIN_M3_OVERRIDE;
+  GPIO_Init(RZR_GPIO_PORT_M3_OVERRIDE, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = RZR_GPIO_PIN_M4_OVERRIDE;
+  GPIO_Init(RZR_GPIO_PORT_M4_OVERRIDE, &GPIO_InitStructure);
+
+  // Enable for power to BL motor connectors
+  GPIO_WriteBit(RZR_GPIO_PORT_M1_OVERRIDE, RZR_GPIO_PIN_M1_OVERRIDE, 1);
+  GPIO_WriteBit(RZR_GPIO_PORT_M2_OVERRIDE, RZR_GPIO_PIN_M2_OVERRIDE, 1);
+  GPIO_WriteBit(RZR_GPIO_PORT_M3_OVERRIDE, RZR_GPIO_PIN_M3_OVERRIDE, 1);
+  GPIO_WriteBit(RZR_GPIO_PORT_M4_OVERRIDE, RZR_GPIO_PIN_M4_OVERRIDE, 1);
+
+  // Remap motor PWM output
   motorsInit(motorMapRZRBrushless);
 
   isInit = true;
