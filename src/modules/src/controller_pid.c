@@ -12,7 +12,7 @@
 #define ATTITUDE_RATE RATE_500_HZ
 #define POSITION_RATE RATE_100_HZ
 
-static bool tiltCompensationEnabled = true;
+static bool tiltCompensationEnabled = false;
 
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;

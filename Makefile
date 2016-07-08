@@ -25,7 +25,7 @@ PLATFORM					?= CF2
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
 SENSORS            ?= task
-ESTIMATOR          ?= complementary
+ESTIMATOR          ?= kalman
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
 
@@ -273,7 +273,7 @@ ifeq ($(PLATFORM), CF2)
 CFLAGS += $(INCLUDES_CF2) $(STFLAGS_CF2)
 endif
 
-CFLAGS += -Wall -fno-strict-aliasing $(C_PROFILE)
+CFLAGS += -Wall -Wmissing-braces -fno-strict-aliasing $(C_PROFILE) -std=gnu11
 # Compiler flags to generate dependency files:
 CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 #Permits to remove un-used functions and global variables from output file

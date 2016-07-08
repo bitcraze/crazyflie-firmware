@@ -76,11 +76,47 @@ typedef struct quaternion_s {
   };
 } quaternion_t;
 
+typedef struct toaMeasurement_s {
+  int8_t senderId;
+  float x, y, z;
+  int64_t rx, tx;
+} toaMeasurement_t;
+
+typedef struct tdoaMeasurement_s {
+  toaMeasurement_t measurement[2];
+  float stdDev;
+} tdoaMeasurement_t;
+
 typedef struct baro_s {
   float pressure;
   float temperature;
   float asl;
 } baro_t;
+
+typedef struct positionMeasurement_s {
+  union {
+    struct {
+      float x;
+      float y;
+      float z;
+    };
+    float pos[3];
+  };
+  float stdDev;
+} positionMeasurement_t;
+
+typedef struct distanceMeasurement_s {
+  union {
+    struct {
+      float x;
+      float y;
+      float z;
+    };
+    float pos[3];
+  };
+  float distance;
+  float stdDev;
+} distanceMeasurement_t;
 
 typedef struct sensorData_s {
   Axis3f acc;
@@ -92,6 +128,7 @@ typedef struct sensorData_s {
 
 typedef struct state_s {
   attitude_t attitude;
+  quaternion_t attitudeQuaternion;
   point_t position;
   velocity_t velocity;
   acc_t acc;
@@ -145,8 +182,14 @@ typedef struct setpointZ_s {
 #define RATE_500_HZ 500
 #define RATE_250_HZ 250
 #define RATE_100_HZ 100
+#define RATE_50_HZ 50
+#define RATE_25_HZ 25
 
+#ifdef ESTIMATOR_TYPE_kalman
 #define RATE_MAIN_LOOP RATE_1000_HZ
+#else
+#define RATE_MAIN_LOOP RATE_1000_HZ
+#endif
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 

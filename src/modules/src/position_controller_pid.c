@@ -71,7 +71,8 @@ static struct this_s this = {
       .kp = 25,
       .ki = 0.28,
       .kd = 7
-    }
+    },
+    .pid.dt = DT,
   },
 
   .pidY = {
@@ -79,7 +80,8 @@ static struct this_s this = {
       .kp = 25,
       .ki = 0.28,
       .kd = 7
-    }
+    },
+    .pid.dt = DT,
   },
 
   .pidZ = {
@@ -87,7 +89,8 @@ static struct this_s this = {
       .kp = 30000.0,
       .ki = 0,
       .kd = 10000.0
-    }
+    },
+    .pid.dt = DT,
   },
 
   .thrustBase = 36000,
