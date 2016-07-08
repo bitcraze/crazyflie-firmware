@@ -137,7 +137,10 @@ void crtpTxTask(void *param)
       {
         // Keep testing, if the link changes to USB it will go though
         while (link->sendPacket(&p) == false)
-          ;
+        {
+          // Relaxation time
+          vTaskDelay(M2T(10));
+        }
       }
     }
     else

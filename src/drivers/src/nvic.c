@@ -53,9 +53,6 @@ extern void tickI2C(void);
 void DONT_DISCARD SysTick_Handler(void)
 {
     tickFreeRTOS();
-#ifdef PLATFORM_CF2
-    tickI2C();
-#endif
 }
 
 #ifdef NVIC_NOT_USED_BY_FREERTOS

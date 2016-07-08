@@ -29,17 +29,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "i2cdev.h"
-
-#include "nvicconf.h"
-
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
+#include "queue.h"
 
+#include "i2cdev.h"
+#include "i2c_drv.h"
+#include "nvicconf.h"
 #include "debug.h"
-#include "cpal.h"
-#include "cpal_i2c.h"
 
 #define OWN_ADDRESS        0x74
 #define I2C_CLOCK_SPEED    400000;
@@ -58,42 +56,18 @@
     while(GPIO_ReadInputDataBit(gpio, pin) == Bit_SET && i--);\
   }
 
-CPAL_TransferTypeDef  rxTransfer, txTransfer;
 
-xSemaphoreHandle i2cdevDmaEventI2c1;
-xSemaphoreHandle i2cdevDmaEventI2c2;
-xSemaphoreHandle i2cdevDmaEventI2c3;
+xQueueHandle i2cQueue;
 
 /* Private functions */
-static bool i2cdevWriteTransfer(I2C_Dev *dev);
-static bool i2cdevReadTransfer(I2C_Dev *dev);
 static inline void i2cdevRoughLoopDelay(uint32_t us) __attribute__((optimize("O2")));
 
-#define SEMAPHORE_TIMEOUT M2T(30)
-static void semaphoreGiveFromISR(xSemaphoreHandle semaphore);
-static BaseType_t i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev);
-static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev);
-static xSemaphoreHandle getSemaphore(CPAL_DevTypeDef CPAL_Dev);
 
 int i2cdevInit(I2C_Dev *dev)
 {
-  CPAL_I2C_StructInit(dev);
-  dev->CPAL_Mode = CPAL_MODE_MASTER;
-  //I2C_DevStructure.wCPAL_Options =  CPAL_OPT_NO_MEM_ADDR;
-  dev->CPAL_ProgModel = CPAL_PROGMODEL_DMA;
-  dev->CPAL_Direction = CPAL_DIRECTION_TXRX;
-  dev->pCPAL_I2C_Struct->I2C_ClockSpeed = I2C_CLOCK_SPEED;
-  dev->pCPAL_I2C_Struct->I2C_OwnAddress1 = OWN_ADDRESS;
-  dev->pCPAL_TransferRx = &rxTransfer;
-  dev->pCPAL_TransferTx = &txTransfer;
-  /* Initialize CPAL device with the selected parameters */
-  CPAL_I2C_Init(dev);
+  i2cInit();
 
-  // binary semaphores created using xSemaphoreCreateBinary() are created in a state
-  // such that the the semaphore must first be 'given' before it can be 'taken'
-  i2cdevDmaEventI2c1 = xSemaphoreCreateBinary();
-  i2cdevDmaEventI2c2 = xSemaphoreCreateBinary();
-  i2cdevDmaEventI2c3 = xSemaphoreCreateBinary();
+  i2cQueue = xQueueCreate(3, sizeof(I2cMessage));
 
   return true;
 }
@@ -135,55 +109,46 @@ bool i2cdevReadBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                uint16_t len, uint8_t *data)
 {
-  dev->pCPAL_TransferRx->wNumData = len;
-  dev->pCPAL_TransferRx->pbBuffer = data;
-  dev->pCPAL_TransferRx->wAddr1 = devAddress << 1;
-  dev->pCPAL_TransferRx->wAddr2 = memAddress;
+  I2cMessage message;
 
-  dev->wCPAL_Options = CPAL_OPT_I2C_NOSTOP_MODE;
   if (memAddress == I2CDEV_NO_MEM_ADDR)
   {
-    dev->wCPAL_Options |= CPAL_OPT_NO_MEM_ADDR;
+    i2cCreateMessage(&message, devAddress, i2cRead, i2cQueue, len, data);
   }
+  else
+  {
+    i2cCreateMessageIntAddr(&message, devAddress, false, memAddress,
+                            i2cRead, i2cQueue, len, data);
+  }
+  i2cMessageTransfer(&message, portMAX_DELAY);
 
-  return i2cdevReadTransfer(dev);
+  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdFALSE)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
                uint16_t len, uint8_t *data)
 {
-  dev->pCPAL_TransferRx->wNumData = len;
-  dev->pCPAL_TransferRx->pbBuffer = data;
-  dev->pCPAL_TransferRx->wAddr1 = devAddress << 1;
-  dev->pCPAL_TransferRx->wAddr2 = memAddress;
-  dev->wCPAL_Options = CPAL_OPT_I2C_NOSTOP_MODE | CPAL_OPT_16BIT_REG;
+  I2cMessage message;
 
-  return i2cdevReadTransfer(dev);
-}
+  i2cCreateMessageIntAddr(&message, devAddress, true, memAddress,
+                          i2cRead, i2cQueue, len, data);
+  i2cMessageTransfer(&message, portMAX_DELAY);
 
-static bool i2cdevReadTransfer(I2C_Dev *dev)
-{
-  uint32_t status;
-
-  dev->CPAL_Mode = CPAL_MODE_MASTER;
-  /* Force the CPAL state to ready (in case a read operation has been initiated) */
-  dev->CPAL_State = CPAL_STATE_READY;
-  /* Start reading data in master mode */
-  vTaskSuspendAll();
-  // we need to suspend task switching for this command: the timeout callback is called
-  // from this command, and if the stabilizer task is not the highest priority, then
-  // I2C can often timeout
-  status = CPAL_I2C_Read(dev);
-  xTaskResumeAll();
-
-  if (status == CPAL_PASS)
+  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdFALSE)
   {
-    if (pdTRUE == i2cDevTakeSemaphore(dev->CPAL_Dev)) {
-      return (dev->CPAL_State == CPAL_STATE_READY); // if the semaphore was taken successfully
-    }
+    return true;
   }
-
-  return false;
+  else
+  {
+    return false;
+  }
 }
 
 bool i2cdevWriteByte(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
@@ -223,58 +188,46 @@ bool i2cdevWriteBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                 uint16_t len, uint8_t *data)
 {
-  dev->pCPAL_TransferTx->wNumData = len;
-  dev->pCPAL_TransferTx->pbBuffer = data;
-  dev->pCPAL_TransferTx->wAddr1 = devAddress << 1;
-  dev->pCPAL_TransferTx->wAddr2 = memAddress;
+  I2cMessage message;
 
-  if (memAddress != I2CDEV_NO_MEM_ADDR)
+  if (memAddress == I2CDEV_NO_MEM_ADDR)
   {
-    dev->wCPAL_Options &= !CPAL_OPT_NO_MEM_ADDR;
+    i2cCreateMessage(&message, devAddress, i2cWrite, i2cQueue, len, data);
   }
   else
   {
-    dev->wCPAL_Options |= CPAL_OPT_NO_MEM_ADDR;
+    i2cCreateMessageIntAddr(&message, devAddress, false, memAddress,
+                            i2cWrite, i2cQueue, len, data);
   }
+  i2cMessageTransfer(&message, portMAX_DELAY);
 
-  return i2cdevWriteTransfer(dev);
+  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdFALSE)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
                    uint16_t len, uint8_t *data)
 {
-  dev->pCPAL_TransferTx->wNumData = len;
-  dev->pCPAL_TransferTx->pbBuffer = data;
-  dev->pCPAL_TransferTx->wAddr1 = devAddress << 1;
-  dev->pCPAL_TransferTx->wAddr2 = memAddress;
-  dev->wCPAL_Options = CPAL_OPT_I2C_NOSTOP_MODE | CPAL_OPT_16BIT_REG;
+  I2cMessage message;
 
-  return i2cdevWriteTransfer(dev);
-}
+  i2cCreateMessageIntAddr(&message, devAddress, true, memAddress,
+                          i2cWrite, i2cQueue, len, data);
+  i2cMessageTransfer(&message, portMAX_DELAY);
 
-static bool i2cdevWriteTransfer(I2C_Dev *dev)
-{
-  bool status;
-
-  dev->CPAL_Mode = CPAL_MODE_MASTER;
-  /* Force the CPAL state to ready (in case a read operation has been initiated) */
-  dev->CPAL_State = CPAL_STATE_READY;
-  /* Start writing data in master mode */
-  vTaskSuspendAll();
-  // we need to suspend task switching for this command: the timeout callback is called
-  // from this command, and if the stabilizer task is not the highest priority, then
-  // I2C can often timeout
-  status = CPAL_I2C_Write(dev);
-  xTaskResumeAll();
-
-  if (status == CPAL_PASS)
+  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdFALSE)
   {
-    if (pdTRUE == i2cDevTakeSemaphore(dev->CPAL_Dev)) {
-      return (dev->CPAL_State == CPAL_STATE_READY); // if the semaphore was taken successfully
-    }
+    return true;
   }
-
-  return false;
+  else
+  {
+    return false;
+  }
 }
 
 static inline void i2cdevRoughLoopDelay(uint32_t us)
@@ -316,95 +269,4 @@ void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinS
   GPIO_WAIT_FOR_HIGH(portSCL, pinSCL, 10 * I2CDEV_LOOPS_PER_MS);
   /* Wait for data to be high */
   GPIO_WAIT_FOR_HIGH(portSDA, pinSDA, 10 * I2CDEV_LOOPS_PER_MS);
-}
-
-
-static void semaphoreGiveFromISR(xSemaphoreHandle semaphore)
-{
-  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
-
-  xSemaphoreGiveFromISR(semaphore, &xHigherPriorityTaskWoken);
-
-  if(xHigherPriorityTaskWoken)
-  {
-   portYIELD();
-  }
-}
-
-
-static xSemaphoreHandle getSemaphore(CPAL_DevTypeDef CPAL_Dev) {
-  xSemaphoreHandle result = NULL;
-
-  if (CPAL_Dev == (I2C1_DEV)->CPAL_Dev) {
-    result = i2cdevDmaEventI2c1;
-  } else if (CPAL_Dev == (I2C2_DEV)->CPAL_Dev) {
-    result = i2cdevDmaEventI2c2;
-  } else if (CPAL_Dev == (I2C3_DEV)->CPAL_Dev) {
-    result = i2cdevDmaEventI2c3;
-  } else {
-    ASSERT_FAILED();
-  }
-
-  return result;
-}
-
-
-static BaseType_t i2cDevTakeSemaphore(CPAL_DevTypeDef CPAL_Dev) {
-  xSemaphoreHandle semaphore = getSemaphore(CPAL_Dev);
-  return xSemaphoreTake(semaphore, SEMAPHORE_TIMEOUT);
-}
-
-static void i2cDevGiveSemaphore(CPAL_DevTypeDef CPAL_Dev)
-{
-  xSemaphoreHandle semaphore = getSemaphore(CPAL_Dev);
-  bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
-
-  if (isInInterrupt) {
-    semaphoreGiveFromISR(semaphore);
-  } else {
-    xSemaphoreGive(semaphore);
-  }
-}
-
-/**
-  * @brief  User callback that manages the I2C device errors.
-  * @note   Make sure that the define USE_SINGLE_ERROR_CALLBACK is uncommented in
-  *         the cpal_conf.h file, otherwise this callback will not be functional.
-  * @param  pDevInitStruct.
-  * @param  DeviceError.
-  * @retval None
-  */
-void CPAL_I2C_ERR_UserCallback(CPAL_DevTypeDef pDevInstance, uint32_t DeviceError)
-{
-  i2cDevGiveSemaphore(pDevInstance);
-}
-
-/**
-  * @brief  User callback that manages the Timeout error.
-  * NOTE: This method is called from both interrupts and tasks!
-  * @param  pDevInitStruct .
-  * @retval None.
-  */
-uint32_t CPAL_TIMEOUT_UserCallback(CPAL_InitTypeDef* pDevInitStruct) {
-  return CPAL_FAIL;
-}
-
-/**
-  * @brief  Manages the End of Tx transfer event.
-  * @param  pDevInitStruct
-  * @retval None
-  */
-void CPAL_I2C_TXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
-{
-  i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
-}
-
-/**
-  * @brief  Manages the End of Rx transfer event.
-  * @param  pDevInitStruct
-  * @retval None
-  */
-void CPAL_I2C_RXTC_UserCallback(CPAL_InitTypeDef* pDevInitStruct)
-{
-  i2cDevGiveSemaphore(pDevInitStruct->CPAL_Dev);
 }

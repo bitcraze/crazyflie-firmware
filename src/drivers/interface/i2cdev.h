@@ -54,10 +54,10 @@
 #ifdef PLATFORM_CF1
 typedef I2C_TypeDef      I2C_Dev;
 #else
-typedef CPAL_InitTypeDef I2C_Dev;
-#define I2C1_DEV &I2C1_DevStructure
-#define I2C2_DEV &I2C2_DevStructure
-#define I2C3_DEV &I2C3_DevStructure
+typedef I2C_TypeDef I2C_Dev;
+#define I2C1_DEV  I2C1
+#define I2C2_DEV  I2C2
+#define I2C3_DEV  I2C3
 #endif
 
 
