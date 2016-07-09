@@ -83,6 +83,14 @@ void powerDistribution(const control_t *control)
                                control->yaw);
   #endif
 
+  if ((motorPower.m1 + motorPower.m2 + motorPower.m3 + motorPower.m4) > 3000)
+  {
+    if (motorPower.m1 < 3000) motorPower.m1 = 3000;
+    if (motorPower.m2 < 3000) motorPower.m2 = 3000;
+    if (motorPower.m3 < 3000) motorPower.m3 = 3000;
+    if (motorPower.m4 < 3000) motorPower.m4 = 3000;
+  }
+
   if (motorSetEnable)
   {
     motorsSetRatio(MOTOR_M1, motorPowerSet.m1);
