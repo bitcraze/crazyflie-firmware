@@ -41,14 +41,14 @@
 #define I2C_TYPE_EV_IRQn            I2C3_EV_IRQn
 #define I2C_TYPE_ER_IRQn            I2C3_ER_IRQn
 #define I2C_RCC                     RCC_APB1Periph_I2C3
-#define I2C_GPIO_RCC_SDA            RCC_AHB1Periph_GPIOA
-#define I2C_GPIO_PORT_SDA           GPIOA
-#define I2C_GPIO_PIN_SDA            GPIO_Pin_8
-#define I2C_GPIO_SOURCE_SDA         GPIO_PinSource8
-#define I2C_GPIO_RCC_SCL            RCC_AHB1Periph_GPIOC
-#define I2C_GPIO_PORT_SCL           GPIOC
-#define I2C_GPIO_PIN_SCL            GPIO_Pin_9
-#define I2C_GPIO_SOURCE_SCL         GPIO_PinSource9
+#define I2C_GPIO_RCC_SCL            RCC_AHB1Periph_GPIOA
+#define I2C_GPIO_PORT_SCL           GPIOA
+#define I2C_GPIO_PIN_SCL            GPIO_Pin_8
+#define I2C_GPIO_SOURCE_SCL         GPIO_PinSource8
+#define I2C_GPIO_RCC_SDA            RCC_AHB1Periph_GPIOC
+#define I2C_GPIO_PORT_SDA           GPIOC
+#define I2C_GPIO_PIN_SDA            GPIO_Pin_9
+#define I2C_GPIO_SOURCE_SDA         GPIO_PinSource9
 #define I2C_GPIO_AF                 GPIO_AF_I2C3
 
 // Misc constants.
@@ -66,10 +66,32 @@ static uint32_t nbrOfretries = 0;
 static xQueueHandle xMessagesForTx;
 // Flag to indicate the state of the I2C ISR state machine.
 static bool isBusFree;
+// DMA configuration structure used during transfer setup.
+static DMA_InitTypeDef DMA_InitStructureShare;
 
-uint32_t eventDebug[21];
+uint32_t eventDebug[1024];
+uint32_t eventDebugUnknown[1024];
 uint32_t eventPos = 0;
+uint32_t eventPosUnknown = 0;
 uint32_t stops = 0;
+uint32_t eventDMA = 0;
+
+static void i2cDmaSetup(void);
+
+
+static void i2cStartTransfer(void)
+{
+  if (txMessage.direction == i2cRead /*&& txMessage.messageLength > 1*/)
+  {
+    DMA_InitStructureShare.DMA_BufferSize = txMessage.messageLength;
+    DMA_InitStructureShare.DMA_Memory0BaseAddr = txMessage.buffer;
+    DMA_Init(DMA1_Stream2, &DMA_InitStructureShare);
+    DMA_Cmd(DMA1_Stream2, ENABLE);
+  }
+
+  I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, ENABLE);
+  I2C_GenerateSTART(I2C_TYPE, ENABLE);
+}
 
 //-----------------------------------------------------------
 void i2cMessageTransfer(I2cMessage* message, portTickType xBlockTime)
@@ -81,8 +103,8 @@ void i2cMessageTransfer(I2cMessage* message, portTickType xBlockTime)
     // can start the ISR sending this message immediately.
     memcpy((char*)&txMessage, (char*)message, sizeof(I2cMessage));
     isBusFree = pdFALSE;
-    I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, ENABLE);
-    I2C_GenerateSTART(I2C_TYPE, ENABLE);
+
+    i2cStartTransfer();
   }
   else
   {
@@ -99,7 +121,7 @@ void i2cMessageTransfer(I2cMessage* message, portTickType xBlockTime)
       // again.
       xQueueReceive(xMessagesForTx, (char*)&txMessage, I2C_NO_BLOCK);
       isBusFree = pdFALSE;
-      I2C_GenerateSTART(I2C_TYPE, ENABLE);
+      i2cStartTransfer();
     }
   }
 }
@@ -119,9 +141,17 @@ void i2cInit(void)
 
   // Configure I2C_TYPE pins: SCL and SDA
   GPIO_StructInit(&GPIO_InitStructure);
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+  GPIO_InitStructure.GPIO_Pin = I2C_GPIO_PIN_SCL; // SCL
+  GPIO_Init(I2C_GPIO_PORT_SCL, &GPIO_InitStructure);
+  GPIO_InitStructure.GPIO_Pin =  I2C_GPIO_PIN_SDA; // SDA
+  GPIO_Init(I2C_GPIO_PORT_SDA, &GPIO_InitStructure);
+
+  i2cdevUnlockBus(I2C_GPIO_PORT_SCL, I2C_GPIO_PORT_SDA, I2C_GPIO_PIN_SCL, I2C_GPIO_PIN_SDA);
+
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Pin = I2C_GPIO_PIN_SCL; // SCL
   GPIO_Init(I2C_GPIO_PORT_SCL, &GPIO_InitStructure);
   GPIO_InitStructure.GPIO_Pin =  I2C_GPIO_PIN_SDA; // SDA
@@ -131,7 +161,6 @@ void i2cInit(void)
   GPIO_PinAFConfig(I2C_GPIO_PORT_SCL, I2C_GPIO_SOURCE_SCL, I2C_GPIO_AF);
   GPIO_PinAFConfig(I2C_GPIO_PORT_SDA, I2C_GPIO_SOURCE_SDA, I2C_GPIO_AF);
 
- // i2cdevUnlockBus(I2C_GPIO_PORT_SCL, I2C_GPIO_PORT_SDA, I2C_GPIO_PIN_SCL, I2C_GPIO_PIN_SDA);
 
   // I2C_TYPE configuration
   I2C_DeInit(I2C_TYPE);
@@ -154,9 +183,42 @@ void i2cInit(void)
   NVIC_InitStructure.NVIC_IRQChannel = I2C_TYPE_ER_IRQn;
   NVIC_Init(&NVIC_InitStructure);
 
+  i2cDmaSetup();
+
   // Create the queues used to hold Rx and Tx characters.
   xMessagesForTx = xQueueCreate(I2C_QUEUE_LENGTH, sizeof(I2cMessage));
   isBusFree = true;
+}
+
+static void i2cDmaSetup(void)
+{
+
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+
+  // I2C3 RX DMA Channel Config
+  DMA_InitStructureShare.DMA_Channel = DMA_Channel_3;
+  DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&I2C3->DR;
+  DMA_InitStructureShare.DMA_Memory0BaseAddr = 0;
+  DMA_InitStructureShare.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructureShare.DMA_BufferSize = 0;
+  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShare.DMA_Priority = DMA_Priority_VeryHigh;
+  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+
+  NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream2_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
 }
 
 void i2cQueueInternalAddress(uint16_t internalAddress)
@@ -180,6 +242,7 @@ void i2cCreateMessage(I2cMessage *message,
   message->buffer = buffer;
   message->clientQueue = queue;
   message->nbrOfRetries = I2C_MAX_RETRIES;
+  message->ackDisableBeforeSR = false;
 }
 
 void i2cCreateMessageIntAddr(I2cMessage *message,
@@ -200,6 +263,7 @@ void i2cCreateMessageIntAddr(I2cMessage *message,
   message->buffer = buffer;
   message->clientQueue = queue;
   message->nbrOfRetries = I2C_MAX_RETRIES;
+  message->ackDisableBeforeSR = false;
 }
 
 static void i2cTryNextMessage(void)
@@ -209,13 +273,14 @@ static void i2cTryNextMessage(void)
   if (xQueueReceiveFromISR(xMessagesForTx, (void*)&txMessage,
       &xHigherPriorityTaskWoken) == pdTRUE)
   {
-    I2C_GenerateSTART(I2C_TYPE, ENABLE);
+    i2cStartTransfer();
   }
   else
   {
    // No more messages were found to be waiting for
    // transaction so the bus is free.
    isBusFree = true;
+   I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
   }
 }
 
@@ -241,70 +306,87 @@ void i2cEventIsrHandler(void)
   static uint32_t messageIndex = 0;
   volatile uint32_t event;
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  uint16_t SR1, SR2;
 
-  event = I2C_GetLastEvent(I2C_TYPE);
-  switch (event)
+
+  SR1 = I2C_TYPE->SR1;                                                 // read the status register here
+
+  eventDebug[eventPos++] = SR1;
+  if (eventPos == 1024)
   {
-    case I2C_EVENT_MASTER_MODE_SELECT:                 // EV5
-      if(txMessage.direction == i2cWrite ||
-         txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
+    eventPos = 0;
+  }
+
+  // Start bit event
+  if (SR1 & I2C_SR1_SB)
+  {
+    messageIndex = 0;
+    if(txMessage.direction == i2cWrite ||
+       txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
+    {
+      I2C_Send7bitAddress(I2C_TYPE, txMessage.slaveAddress << 1, I2C_Direction_Transmitter);
+    }
+    else
+    {
+      I2C_AcknowledgeConfig(I2C_TYPE, ENABLE);
+      I2C_Send7bitAddress(I2C_TYPE, txMessage.slaveAddress << 1, I2C_Direction_Receiver);
+    }
+  }
+  // Address event
+  else if (SR1 & I2C_SR1_ADDR)
+  {
+    if(txMessage.direction == i2cWrite ||
+       txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
+    {
+      SR2 = I2C_TYPE->SR2;                               // clear ADDR
+      I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, ENABLE);            // allow us to have an EV7
+    }
+    else // Reading
+    {
+      if(txMessage.messageLength == 1)
       {
-        I2C_Send7bitAddress(I2C_TYPE, txMessage.slaveAddress << 1, I2C_Direction_Transmitter);
+       I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
       }
       else
       {
-        I2C_AcknowledgeConfig(I2C_TYPE, ENABLE);
-        I2C_Send7bitAddress(I2C_TYPE, txMessage.slaveAddress << 1, I2C_Direction_Receiver);
+       I2C_DMALastTransferCmd(I2C_TYPE, ENABLE); // No repetitive start
       }
-      messageIndex = 0;
-      break;
+        // Disable I2C interrupts
+        I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
+        // Enable the Transfer Complete interrupt
+        DMA_ITConfig(DMA1_Stream2, DMA_IT_TC | DMA_IT_TE, ENABLE);
+        I2C_DMACmd(I2C_TYPE, ENABLE); // Enable before ADDR clear
 
-    case I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED:
-      // Send the first data
-      if(txMessage.internalAddress == I2C_NO_INTERNAL_ADDRESS)
+        __DMB();
+        SR2 = I2C_TYPE->SR2;                               // clear ADDR after ACK is turned off
+#if 0
+      if(txMessage.messageLength == 1)
       {
-        I2C_SendData(I2C_TYPE, txMessage.buffer[messageIndex++]);
+        I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
+        __DMB();
+        SR2 = I2C_TYPE->SR2;                               // clear ADDR after ACK is turned off
+        I2C_GenerateSTOP(I2C_TYPE, ENABLE);
+        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, ENABLE);            // allow us to have an EV7
       }
       else
       {
-        if (txMessage.isInternal16bit)
-        {
-          I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0xFF00) >> 8);
-        }
-        else
-        {
-          I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
-        }
-      }
-      break;
+        I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
+        // Enable the Transfer Complete interrupt
+        DMA_ITConfig(DMA1_Stream2, DMA_IT_TC | DMA_IT_TE, ENABLE);
+        I2C_DMALastTransferCmd(I2C_TYPE, ENABLE); // No repetitive start
+        I2C_DMACmd(I2C_TYPE, ENABLE); // Enable before ADDR clear
 
-    /* Test on I2C_TYPE EV8 and clear it */
-    case I2C_EVENT_MASTER_BYTE_TRANSMITTING:  /* Without BTF, EV8 */
-      if(txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
-      {
-        if (txMessage.isInternal16bit)
-        {
-          // Send second byte if 16 bit internal address
-          I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
-        }
-        txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
+        SR2 = I2C_TYPE->SR2;                                  // clear the ADDR here
       }
-      else
-      {
-        if(messageIndex < (txMessage.messageLength) &&
-           txMessage.direction == i2cWrite)
-        {
-          // Transmit I2C_TYPE data
-          I2C_SendData(I2C_TYPE, txMessage.buffer[messageIndex++]);
-        }
-        else
-        {
-          I2C_GenerateSTOP(I2C_TYPE, ENABLE);
-        }
-      }
-      break;
-
-    case I2C_EVENT_MASTER_BYTE_TRANSMITTED: // With BTF EV8-2
+#endif
+    }
+  }
+  // Byte transfer finished - EV7_2, EV7_3 or EV8_2
+  else if (SR1 & I2C_SR1_BTF)
+  {
+    SR2 = I2C_TYPE->SR2;
+    if (SR2 & I2C_SR2_TRA) // In write mode?
+    {
       if (txMessage.direction == i2cRead) // internal address read
       {
         I2C_GenerateSTART(I2C_TYPE, ENABLE);
@@ -314,44 +396,58 @@ void i2cEventIsrHandler(void)
         i2cNotifyClient();
         // Are there any other messages to transact?
         i2cTryNextMessage();
+        I2C_GenerateSTOP(I2C_TYPE, ENABLE);                     // program the Stop      }
+        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush
       }
-      break;
-
-
-    case I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED:
-      if(txMessage.messageLength == 1)
-      {
-       I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
-       I2C_GenerateSTOP(I2C_TYPE, ENABLE);
-      }
-      break;
-
-    case I2C_EVENT_MASTER_BYTE_RECEIVED:  // Test on I2C_TYPE EV7 and clear it
+    }
+    else // Reading
+    {
       txMessage.buffer[messageIndex++] = I2C_ReceiveData(I2C_TYPE);
-      // Disable ACK and send I2C_TYPE STOP condition before receiving the last data
-      if(messageIndex == (txMessage.messageLength - 1))
-      {
-        I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
-        I2C_GenerateSTOP(I2C_TYPE, ENABLE);
-      }
-      else if(messageIndex == txMessage.messageLength)
+      if(messageIndex == txMessage.messageLength)
       {
         i2cNotifyClient();
         // Are there any other messages to transact?
         i2cTryNextMessage();
       }
-      break;
-
-    case I2C_EVENT_SLAVE_STOP_DETECTED:
-      stops++;
-      break;
-    default:
-      eventDebug[eventPos++] = event;
-      if (eventPos == 20)
+    }
+  }
+  // Byte received - EV7
+  else if (SR1 & I2C_SR1_RXNE)
+  {
+    txMessage.buffer[messageIndex++] = I2C_ReceiveData(I2C_TYPE);
+    if(messageIndex == txMessage.messageLength)
+    {
+      I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);                // disable RXE to get BTF
+    }
+  }
+  // Byte transmitted EV8 / EV8_1
+  else if (SR1 & I2C_SR1_TXE)
+  {
+    if(txMessage.internalAddress == I2C_NO_INTERNAL_ADDRESS)
+    {
+      I2C_SendData(I2C_TYPE, txMessage.buffer[messageIndex++]);
+      if(messageIndex == txMessage.messageLength)
       {
-        eventPos = 0;
+        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush and get BTF
       }
-      break;
+    }
+    else
+    {
+      if (txMessage.isInternal16bit)
+      {
+        // FIXME: How to hande 16 bit reg
+        I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0xFF00) >> 8);
+      }
+      else
+      {
+        I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
+        txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
+        if (txMessage.direction == i2cRead)
+        {
+          I2C_GenerateSTART(I2C_TYPE, ENABLE); // Switch to read
+        }
+      }
+    }
   }
 }
 
@@ -363,6 +459,28 @@ void __attribute__((used)) I2C1_ER_IRQHandler(void)
 void __attribute__((used)) I2C3_ER_IRQHandler(void)
 {
   i2cErrorIsrHandler();
+}
+
+void __attribute__((used)) DMA1_Stream2_IRQHandler(void)
+{
+  if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2)) // Trnasfer complete
+  {
+    DMA_ClearITPendingBit(DMA1_Stream2, DMA_FLAG_TCIF2);
+    I2C_GenerateSTOP(I2C_TYPE, ENABLE);
+    I2C_DMALastTransferCmd(I2C_TYPE, DISABLE);
+    I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
+    I2C_DMACmd(I2C_TYPE, DISABLE);
+    DMA_Cmd(DMA1_Stream2, DISABLE);
+
+    i2cNotifyClient();
+    // Are there any other messages to transact?
+    i2cTryNextMessage();
+  }
+  if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TEIF2)) // Transfer error
+  {
+    DMA_ClearITPendingBit(DMA1_Stream2, DMA_FLAG_TEIF2);
+    //TODO: Implement error handling
+  }
 }
 
 void i2cErrorIsrHandler(void)
