@@ -2006,7 +2006,8 @@ void mpu6500GetAcceleration(int16_t* x, int16_t* y, int16_t* z)
  */
 int16_t mpu6500GetAccelerationX()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 2, buffer);
+//  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 2, buffer);
+  i2cdevRead(I2Cx, devAddr, 0xFFFF, 4, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Y-axis accelerometer reading.

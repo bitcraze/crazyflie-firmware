@@ -37,6 +37,9 @@
 #include "config.h"
 #include "nvicconf.h"
 
+//DEBUG
+#include "usec_time.h"
+
 #define I2C_TYPE                    I2C3
 #define I2C_TYPE_EV_IRQn            I2C3_EV_IRQn
 #define I2C_TYPE_ER_IRQn            I2C3_ER_IRQn
@@ -89,7 +92,9 @@ static void i2cStartTransfer(void)
     DMA_Cmd(DMA1_Stream2, ENABLE);
   }
 
-  I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, ENABLE);
+  while (I2C_TYPE->SR1 & I2C_CR1_STOP)
+    ;
+  I2C_ITConfig(I2C_TYPE, I2C_IT_EVT, ENABLE);
   I2C_GenerateSTART(I2C_TYPE, ENABLE);
 }
 
@@ -176,7 +181,7 @@ void i2cInit(void)
   I2C_ITConfig(I2C_TYPE, I2C_IT_ERR, ENABLE);
 
   NVIC_InitStructure.NVIC_IRQChannel = I2C_TYPE_EV_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -184,6 +189,8 @@ void i2cInit(void)
   NVIC_Init(&NVIC_InitStructure);
 
   i2cDmaSetup();
+
+  initUsecTimer();
 
   // Create the queues used to hold Rx and Tx characters.
   xMessagesForTx = xQueueCreate(I2C_QUEUE_LENGTH, sizeof(I2cMessage));
@@ -266,22 +273,27 @@ void i2cCreateMessageIntAddr(I2cMessage *message,
   message->ackDisableBeforeSR = false;
 }
 
-static void i2cTryNextMessage(void)
+static bool i2cTryNextMessage(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  bool nextMessage = false;
 
   if (xQueueReceiveFromISR(xMessagesForTx, (void*)&txMessage,
       &xHigherPriorityTaskWoken) == pdTRUE)
   {
     i2cStartTransfer();
+    nextMessage = true;
   }
   else
   {
    // No more messages were found to be waiting for
    // transaction so the bus is free.
    isBusFree = true;
-   I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
+//   I2C_GenerateSTOP(I2C_TYPE, ENABLE);                     // program the Stop
+//   I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
   }
+
+  return nextMessage;
 }
 
 static void i2cNotifyClient(void)
@@ -300,13 +312,21 @@ void __attribute__((used)) I2C3_EV_IRQHandler(void)
   i2cEventIsrHandler();
 }
 
+static inline void i2cdevRoughLoopDelay(uint32_t us) __attribute__((optimize("O2")));
+static inline void i2cdevRoughLoopDelay(uint32_t us)
+{
+  volatile uint32_t delay = 0;
+  for(delay = 0; delay < 17 * us; ++delay) { };
+}
+
+uint16_t SR1, SR2;
+
 void i2cEventIsrHandler(void)
 {
   /* Holds the current transmission state. */
   static uint32_t messageIndex = 0;
   volatile uint32_t event;
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-  uint16_t SR1, SR2;
 
 
   SR1 = I2C_TYPE->SR1;                                                 // read the status register here
@@ -321,6 +341,7 @@ void i2cEventIsrHandler(void)
   if (SR1 & I2C_SR1_SB)
   {
     messageIndex = 0;
+
     if(txMessage.direction == i2cWrite ||
        txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
     {
@@ -358,7 +379,7 @@ void i2cEventIsrHandler(void)
         I2C_DMACmd(I2C_TYPE, ENABLE); // Enable before ADDR clear
 
         __DMB();
-        SR2 = I2C_TYPE->SR2;                               // clear ADDR after ACK is turned off
+        SR2 = I2C_TYPE->SR2;                               // clear ADDR
 #if 0
       if(txMessage.messageLength == 1)
       {
@@ -389,15 +410,19 @@ void i2cEventIsrHandler(void)
     {
       if (txMessage.direction == i2cRead) // internal address read
       {
+        while (I2C_TYPE->SR1 & I2C_CR1_STOP)
+          ;
         I2C_GenerateSTART(I2C_TYPE, ENABLE);
       }
       else
       {
         i2cNotifyClient();
         // Are there any other messages to transact?
-        i2cTryNextMessage();
-        I2C_GenerateSTOP(I2C_TYPE, ENABLE);                     // program the Stop      }
-        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush
+        if (!i2cTryNextMessage())
+        {
+          I2C_GenerateSTOP(I2C_TYPE, ENABLE);                     // program the Stop
+          I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);                // disable RXE to get BTF
+        }
       }
     }
     else // Reading
@@ -444,6 +469,8 @@ void i2cEventIsrHandler(void)
         txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
         if (txMessage.direction == i2cRead)
         {
+          while (I2C_TYPE->SR1 & I2C_CR1_STOP)
+            ;
           I2C_GenerateSTART(I2C_TYPE, ENABLE); // Switch to read
         }
       }
@@ -466,11 +493,13 @@ void __attribute__((used)) DMA1_Stream2_IRQHandler(void)
   if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2)) // Trnasfer complete
   {
     DMA_ClearITPendingBit(DMA1_Stream2, DMA_FLAG_TCIF2);
+    DMA_Cmd(DMA1_Stream2, DISABLE);
+    I2C_DMACmd(I2C_TYPE, DISABLE);
     I2C_GenerateSTOP(I2C_TYPE, ENABLE);
+    while (I2C_TYPE->SR1 & I2C_CR1_STOP)
+      ;
     I2C_DMALastTransferCmd(I2C_TYPE, DISABLE);
     I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
-    I2C_DMACmd(I2C_TYPE, DISABLE);
-    DMA_Cmd(DMA1_Stream2, DISABLE);
 
     i2cNotifyClient();
     // Are there any other messages to transact?

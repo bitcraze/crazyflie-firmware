@@ -315,7 +315,9 @@ bool imu6ManufacturingTest(void)
 
 void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
 {
-  mpu6500GetMotion6(&accelMpu.y, &accelMpu.x, &accelMpu.z, &gyroMpu.y, &gyroMpu.x, &gyroMpu.z);
+  mpu6500GetAccelerationX();
+  //mpu6500GetRate();
+  //mpu6500GetMotion6(&accelMpu.y, &accelMpu.x, &accelMpu.z, &gyroMpu.y, &gyroMpu.x, &gyroMpu.z);
 
   imuAddBiasValue(&gyroBias, &gyroMpu);
 #ifdef IMU_TAKE_ACCEL_BIAS
