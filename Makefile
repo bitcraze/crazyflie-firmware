@@ -24,8 +24,8 @@ PLATFORM					?= CF2
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
-SENSORS            ?= task
-ESTIMATOR          ?= kalman
+SENSORS            ?= stock
+ESTIMATOR          ?= complementary
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
 

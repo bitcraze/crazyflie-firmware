@@ -47,8 +47,8 @@
 #include "param.h"
 #include "nvicconf.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
 #include "stabilizer_types.h"
+#ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
 #endif
 
