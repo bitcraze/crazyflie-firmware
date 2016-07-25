@@ -44,7 +44,13 @@
 #include "system.h"
 #include "debug.h"
 #include "log.h"
+#include "param.h"
 #include "nvicconf.h"
+
+#ifdef ESTIMATOR_TYPE_kalman
+#include "stabilizer_types.h"
+#include "estimator_kalman.h"
+#endif
 
 #include "libdw1000.h"
 
@@ -161,6 +167,19 @@ static int failedRanging[N_ANCHORS];
 static volatile float airtime;
 static volatile int current_anchor = 0;
 static volatile bool ranging_complete = false;
+
+/* If your Crazyflie is always flying in the same lab you can preset the anchor
+ * position there */
+// static point_t anchorPosition[N_ANCHORS] = {
+//   {x: 0.99, y: 1,49, z: 1.80},
+//   {x: 0.99, y: 3.29, z: 1.80},
+//   {x: 4.67, y: 2.54, z: 1.80},
+//   {x: 0.59, y: 2.27, z: 0.20},
+//   {x: 4.70, y: 3.38, z: 0.20},
+//   {x: 4.70, y: 1.14, z: 0.20},
+// };
+/* Otherwise it needs to be set by parameters ... */
+static point_t anchorPosition[N_ANCHORS];
 
 #define TYPE 0
 #define SEQ 1
@@ -306,6 +325,15 @@ static void dwm1000Task(void *param)
     } else {
       rangingState |= (1<<current_anchor);
       failedRanging[current_anchor] = 0;
+#ifdef ESTIMATOR_TYPE_kalman
+    distanceMeasurement_t dist;
+    dist.distance = distance[current_anchor];
+    dist.x = anchorPosition[current_anchor].x;
+    dist.y = anchorPosition[current_anchor].y;
+    dist.z = anchorPosition[current_anchor].z;
+    dist.stdDev = 0.25;
+    stateEstimatorEnqueueDistance(&dist);
+#endif
     }
     ranging_complete = false;
 
@@ -556,3 +584,24 @@ LOG_ADD(LOG_FLOAT, pressure8, &pressures[7])
 LOG_ADD(LOG_FLOAT, airtime, &airtime)
 LOG_ADD(LOG_UINT16, state, &rangingState)
 LOG_GROUP_STOP(ranging)
+
+PARAM_GROUP_START(anchorpos)
+PARAM_ADD(PARAM_FLOAT, anchor0x, &anchorPosition[0].x)
+PARAM_ADD(PARAM_FLOAT, anchor0y, &anchorPosition[0].y)
+PARAM_ADD(PARAM_FLOAT, anchor0z, &anchorPosition[0].z)
+PARAM_ADD(PARAM_FLOAT, anchor1x, &anchorPosition[1].x)
+PARAM_ADD(PARAM_FLOAT, anchor1y, &anchorPosition[1].y)
+PARAM_ADD(PARAM_FLOAT, anchor1z, &anchorPosition[1].z)
+PARAM_ADD(PARAM_FLOAT, anchor2x, &anchorPosition[2].x)
+PARAM_ADD(PARAM_FLOAT, anchor2y, &anchorPosition[2].y)
+PARAM_ADD(PARAM_FLOAT, anchor2z, &anchorPosition[2].z)
+PARAM_ADD(PARAM_FLOAT, anchor3x, &anchorPosition[3].x)
+PARAM_ADD(PARAM_FLOAT, anchor3y, &anchorPosition[3].y)
+PARAM_ADD(PARAM_FLOAT, anchor3z, &anchorPosition[3].z)
+PARAM_ADD(PARAM_FLOAT, anchor4x, &anchorPosition[4].x)
+PARAM_ADD(PARAM_FLOAT, anchor4y, &anchorPosition[4].y)
+PARAM_ADD(PARAM_FLOAT, anchor4z, &anchorPosition[4].z)
+PARAM_ADD(PARAM_FLOAT, anchor5x, &anchorPosition[5].x)
+PARAM_ADD(PARAM_FLOAT, anchor5y, &anchorPosition[5].y)
+PARAM_ADD(PARAM_FLOAT, anchor5z, &anchorPosition[5].z)
+PARAM_GROUP_STOP(anchorpos)
