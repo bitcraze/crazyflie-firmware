@@ -59,7 +59,7 @@ struct this_s {
 };
 
 // Maximum roll/pitch angle permited
-static float rpLimit = 5;
+static float rpLimit = 20;
 
 #define DT 0.01
 
@@ -138,6 +138,9 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
   // Z
   float newThrust = runPid(state->position.z, &this.pidZ, setpoint->mode.z, setpoint->position.z, setpoint->velocity.z, DT);
   *thrust = newThrust + this.thrustBase;
+  if (*thrust > 45000) {
+    *thrust = 45000;
+  }
 }
 
 
