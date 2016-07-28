@@ -326,7 +326,7 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->mode.pitch = modeDisable;
     setpoint->mode.yaw = modeAbs;
 
-    setpoint->position.x = commanderGetActivePitch();
+    setpoint->position.x = -commanderGetActivePitch();
     setpoint->position.y = commanderGetActiveRoll();
     setpoint->position.z = commanderGetActiveThrust()/1000.0f;
 
