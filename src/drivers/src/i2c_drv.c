@@ -72,7 +72,7 @@ static bool isBusFree;
 // DMA configuration structure used during transfer setup.
 static DMA_InitTypeDef DMA_InitStructureShare;
 
-uint32_t eventDebug[1024];
+uint32_t eventDebug[1024][2];
 uint32_t eventDebugUnknown[1024];
 uint32_t eventPos = 0;
 uint32_t eventPosUnknown = 0;
@@ -82,6 +82,7 @@ uint32_t eventDMA = 0;
 static void i2cDmaSetup(void);
 
 
+#if 1
 static void i2cStartTransfer(void)
 {
   if (txMessage.direction == i2cRead /*&& txMessage.messageLength > 1*/)
@@ -92,11 +93,47 @@ static void i2cStartTransfer(void)
     DMA_Cmd(DMA1_Stream2, ENABLE);
   }
 
-  while (I2C_TYPE->SR1 & I2C_CR1_STOP)
-    ;
+  I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);
   I2C_ITConfig(I2C_TYPE, I2C_IT_EVT, ENABLE);
-  I2C_GenerateSTART(I2C_TYPE, ENABLE);
+  I2C_TYPE->CR1 = (I2C_CR1_START | I2C_CR1_PE);
 }
+#else
+static void i2cStartTransfer(void)
+{
+  if (txMessage.direction == i2cRead /*&& txMessage.messageLength > 1*/)
+  {
+    /* Generate start with ack enable.
+     * For some reason setting CR1 reg in sequence with
+     * I2C_AcknowledgeConfig(I2C_TYPE, ENABLE) and after
+     * I2C_GenerateSTART(I2C_TYPE, ENABLE) sometimes creates an
+     * instant start->stop condition (3.9us long) which I found out with an I2C
+     * analyzer. This fast start->stop is only possible to generate if both
+     * start and stop flag is set in CR1 at the same time. So i tried setting the CR1
+     * at once with I2C_TYPE->CR1 = (I2C_CR1_START | I2C_CR1_ACK | I2C_CR1_PE) and the
+     * problem is gone. Go figure...
+     */
+    I2C_TYPE->CR1 = (I2C_CR1_START | I2C_CR1_ACK | I2C_CR1_PE);
+    /* Wait until SB flag is set */
+    while (I2C_GetFlagStatus(I2C_TYPE, I2C_FLAG_SB) == RESET);
+    /* Send slave address */
+    I2C_Send7bitAddress(I2C_TYPE, txMessage.slaveAddress << 1, I2C_Direction_Receiver);
+    /* Wait until ADDR flag is set */
+    while (I2C_GetFlagStatus(I2C_TYPE, I2C_FLAG_ADDR) == RESET);
+    /* SETUP DMA */
+    DMA_InitStructureShare.DMA_BufferSize = txMessage.messageLength;
+    DMA_InitStructureShare.DMA_Memory0BaseAddr = txMessage.buffer;
+    DMA_Init(DMA1_Stream2, &DMA_InitStructureShare);
+    DMA_Cmd(DMA1_Stream2, ENABLE);
+    /* Enable Last DMA bit */
+    I2C_DMALastTransferCmd(I2C_TYPE, ENABLE); // No repetitive start
+    /* Start transfer */
+    DMA_ITConfig(DMA1_Stream2, DMA_IT_TC | DMA_IT_TE, ENABLE);
+    I2C_DMACmd(I2C_TYPE, ENABLE); // Enable before ADDR clear
+    /* Clear ADDR */
+    I2C_GetLastEvent(I2C_TYPE);
+  }
+}
+#endif
 
 //-----------------------------------------------------------
 void i2cMessageTransfer(I2cMessage* message, portTickType xBlockTime)
@@ -181,7 +218,7 @@ void i2cInit(void)
   I2C_ITConfig(I2C_TYPE, I2C_IT_ERR, ENABLE);
 
   NVIC_InitStructure.NVIC_IRQChannel = I2C_TYPE_EV_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -331,8 +368,9 @@ void i2cEventIsrHandler(void)
 
   SR1 = I2C_TYPE->SR1;                                                 // read the status register here
 
-  eventDebug[eventPos++] = SR1;
-  if (eventPos == 1024)
+  eventDebug[eventPos][0] = usecTimestamp();
+  eventDebug[eventPos][1] = SR1;
+  if (++eventPos == 1024)
   {
     eventPos = 0;
   }
@@ -353,33 +391,47 @@ void i2cEventIsrHandler(void)
       I2C_Send7bitAddress(I2C_TYPE, txMessage.slaveAddress << 1, I2C_Direction_Receiver);
     }
   }
-  // Address event
+  // Address event with transmit empty
   else if (SR1 & I2C_SR1_ADDR)
   {
     if(txMessage.direction == i2cWrite ||
        txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
     {
       SR2 = I2C_TYPE->SR2;                               // clear ADDR
-      I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, ENABLE);            // allow us to have an EV7
+
+      if (txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
+      {
+        if (txMessage.isInternal16bit)
+        {
+          I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0xFF00) >> 8);
+          I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
+        }
+        else
+        {
+          I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
+        }
+        txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
+      }
+      I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, ENABLE);        // allow us to have an EV7
     }
     else // Reading
     {
       if(txMessage.messageLength == 1)
       {
-       I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
+        I2C_AcknowledgeConfig(I2C_TYPE, DISABLE);
       }
       else
       {
-       I2C_DMALastTransferCmd(I2C_TYPE, ENABLE); // No repetitive start
+        I2C_DMALastTransferCmd(I2C_TYPE, ENABLE); // No repetitive start
       }
-        // Disable I2C interrupts
-        I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
-        // Enable the Transfer Complete interrupt
-        DMA_ITConfig(DMA1_Stream2, DMA_IT_TC | DMA_IT_TE, ENABLE);
-        I2C_DMACmd(I2C_TYPE, ENABLE); // Enable before ADDR clear
+      // Disable I2C interrupts
+      I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
+      // Enable the Transfer Complete interrupt
+      DMA_ITConfig(DMA1_Stream2, DMA_IT_TC | DMA_IT_TE, ENABLE);
+      I2C_DMACmd(I2C_TYPE, ENABLE); // Enable before ADDR clear
 
-        __DMB();
-        SR2 = I2C_TYPE->SR2;                               // clear ADDR
+      __DMB();
+      SR2 = I2C_TYPE->SR2;                               // clear ADDR
 #if 0
       if(txMessage.messageLength == 1)
       {
@@ -387,7 +439,7 @@ void i2cEventIsrHandler(void)
         __DMB();
         SR2 = I2C_TYPE->SR2;                               // clear ADDR after ACK is turned off
         I2C_GenerateSTOP(I2C_TYPE, ENABLE);
-        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, ENABLE);            // allow us to have an EV7
+        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, ENABLE);        // allow us to have an EV7
       }
       else
       {
@@ -410,9 +462,7 @@ void i2cEventIsrHandler(void)
     {
       if (txMessage.direction == i2cRead) // internal address read
       {
-        while (I2C_TYPE->SR1 & I2C_CR1_STOP)
-          ;
-        I2C_GenerateSTART(I2C_TYPE, ENABLE);
+        //I2C_TYPE->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
       }
       else
       {
@@ -421,7 +471,7 @@ void i2cEventIsrHandler(void)
         if (!i2cTryNextMessage())
         {
           I2C_GenerateSTOP(I2C_TYPE, ENABLE);                     // program the Stop
-          I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);                // disable RXE to get BTF
+          I2C_ITConfig(I2C_TYPE, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
         }
       }
     }
@@ -435,6 +485,7 @@ void i2cEventIsrHandler(void)
         i2cTryNextMessage();
       }
     }
+    while (I2C_TYPE->CR1 & 0x0100) { ; }
   }
   // Byte received - EV7
   else if (SR1 & I2C_SR1_RXNE)
@@ -448,7 +499,13 @@ void i2cEventIsrHandler(void)
   // Byte transmitted EV8 / EV8_1
   else if (SR1 & I2C_SR1_TXE)
   {
-    if(txMessage.internalAddress == I2C_NO_INTERNAL_ADDRESS)
+    if (txMessage.direction == i2cRead)
+    {
+      I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);
+      /* Switch to read */
+      I2C_TYPE->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
+    }
+    else
     {
       I2C_SendData(I2C_TYPE, txMessage.buffer[messageIndex++]);
       if(messageIndex == txMessage.messageLength)
@@ -456,25 +513,31 @@ void i2cEventIsrHandler(void)
         I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush and get BTF
       }
     }
-    else
-    {
-      if (txMessage.isInternal16bit)
-      {
-        // FIXME: How to hande 16 bit reg
-        I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0xFF00) >> 8);
-      }
-      else
-      {
-        I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
-        txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
-        if (txMessage.direction == i2cRead)
-        {
-          while (I2C_TYPE->SR1 & I2C_CR1_STOP)
-            ;
-          I2C_GenerateSTART(I2C_TYPE, ENABLE); // Switch to read
-        }
-      }
-    }
+//    if(txMessage.internalAddress == I2C_NO_INTERNAL_ADDRESS)
+//    {
+//      I2C_SendData(I2C_TYPE, txMessage.buffer[messageIndex++]);
+//      if(messageIndex == txMessage.messageLength)
+//      {
+//        I2C_ITConfig(I2C_TYPE, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush and get BTF
+//      }
+//    }
+//    else
+//    {
+//      if (txMessage.isInternal16bit)
+//      {
+//        // FIXME: How to hande 16 bit reg
+//        I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0xFF00) >> 8);
+//      }
+//      else
+//      {
+//        I2C_SendData(I2C_TYPE, (txMessage.internalAddress & 0x00FF));
+//        txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
+//        if (txMessage.direction == i2cRead)
+//        {
+//          /* Switch to read */
+//          I2C_TYPE->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
+//        }
+//      }
   }
 }
 
@@ -490,7 +553,7 @@ void __attribute__((used)) I2C3_ER_IRQHandler(void)
 
 void __attribute__((used)) DMA1_Stream2_IRQHandler(void)
 {
-  if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2)) // Trnasfer complete
+  if (DMA_GetFlagStatus(DMA1_Stream2, DMA_FLAG_TCIF2)) // Tranasfer complete
   {
     DMA_ClearITPendingBit(DMA1_Stream2, DMA_FLAG_TCIF2);
     DMA_Cmd(DMA1_Stream2, DISABLE);

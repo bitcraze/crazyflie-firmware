@@ -147,6 +147,10 @@ void imu6Init(void)
 
   i2cdevInit(I2C3_DEV);
   mpu6500Init(I2C3_DEV);
+
+//  isInit = true;
+//  return;
+
   if (mpu6500TestConnection() == true)
   {
     DEBUG_PRINT("MPU9250 I2C connection [OK].\n");
@@ -315,9 +319,7 @@ bool imu6ManufacturingTest(void)
 
 void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
 {
-  mpu6500GetAccelerationX();
-  //mpu6500GetRate();
-  //mpu6500GetMotion6(&accelMpu.y, &accelMpu.x, &accelMpu.z, &gyroMpu.y, &gyroMpu.x, &gyroMpu.z);
+  mpu6500GetMotion6(&accelMpu.y, &accelMpu.x, &accelMpu.z, &gyroMpu.y, &gyroMpu.x, &gyroMpu.z);
 
   imuAddBiasValue(&gyroBias, &gyroMpu);
 #ifdef IMU_TAKE_ACCEL_BIAS
