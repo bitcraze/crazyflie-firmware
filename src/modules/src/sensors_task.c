@@ -43,12 +43,9 @@
 #include "semphr.h"
 #include "task.h"
 
-#include "deck.h"
 #include "system.h"
 #include "debug.h"
 #include "imu.h"
-#include "log.h"
-#include "param.h"
 #include "nvicconf.h"
 
 #define IMU_MPU6500_DLPF_256HZ
@@ -417,27 +414,3 @@ void __attribute__((used)) EXTI13_Callback(void) {
     portYIELD();
   }
 }
-
-LOG_GROUP_START(acc)
-        LOG_ADD(LOG_FLOAT, x, &sensors.acc.x)
-        LOG_ADD(LOG_FLOAT, y, &sensors.acc.y)
-        LOG_ADD(LOG_FLOAT, z, &sensors.acc.z)
-LOG_GROUP_STOP(acc)
-
-LOG_GROUP_START(baro)
-        LOG_ADD(LOG_FLOAT, asl, &sensors.baro.asl)
-        LOG_ADD(LOG_FLOAT, temp, &sensors.baro.temperature)
-        LOG_ADD(LOG_FLOAT, pressure, &sensors.baro.pressure)
-LOG_GROUP_STOP(baro)
-
-LOG_GROUP_START(gyro)
-        LOG_ADD(LOG_FLOAT, x, &sensors.gyro.x)
-        LOG_ADD(LOG_FLOAT, y, &sensors.gyro.y)
-        LOG_ADD(LOG_FLOAT, z, &sensors.gyro.z)
-LOG_GROUP_STOP(gyro)
-
-LOG_GROUP_START(mag)
-        LOG_ADD(LOG_FLOAT, x, &sensors.mag.x)
-        LOG_ADD(LOG_FLOAT, y, &sensors.mag.y)
-        LOG_ADD(LOG_FLOAT, z, &sensors.mag.z)
-LOG_GROUP_STOP(mag)
