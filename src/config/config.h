@@ -70,6 +70,7 @@
 
 
 // Task priorities. Higher number higher priority
+#define tmp36_TASK_PRI          4
 #define STABILIZER_TASK_PRI     4
 #define SENSORS_TASK_PRI        4
 #define ADC_TASK_PRI            3
@@ -102,6 +103,7 @@
 
 
 // Task names
+#define tmp36_TASK_NAME         "tmp36"
 #define SYSTEM_TASK_NAME        "SYSTEM"
 #define ADC_TASK_NAME           "ADC"
 #define PM_TASK_NAME            "PWRMGNT"
@@ -122,6 +124,7 @@
 #define UART_RX_TASK_NAME       "UART"
 
 //Task stack sizes
+#define tmp36_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
 #define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
 #define PM_TASK_STACKSIZE             configMINIMAL_STACK_SIZE

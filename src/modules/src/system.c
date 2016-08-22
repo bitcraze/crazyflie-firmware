@@ -60,6 +60,8 @@
 #include "buzzer.h"
 #include "sound.h"
 
+#include "tmp36.h"
+
 #ifdef PLATFORM_CF1
 #include "uart.h"
 #endif
@@ -123,6 +125,7 @@ void systemInit(void)
   pmInit();
   buzzerInit();
 
+  tmp36Init();
   isInit = true;
 }
 
