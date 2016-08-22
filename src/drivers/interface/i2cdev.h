@@ -39,12 +39,6 @@
 #define I2CDEV_LOOPS_PER_MS  (1000 * I2CDEV_LOOPS_PER_US)
 #endif
 
-#ifdef PLATFORM_CF2
-// Delay is approx 0.06us per loop @168Mhz
-#define I2CDEV_LOOPS_PER_US  17
-#define I2CDEV_LOOPS_PER_MS  (16789) // measured
-#endif
-
 #define I2CDEV_I2C1_PIN_SDA GPIO_Pin_7
 #define I2CDEV_I2C1_PIN_SCL GPIO_Pin_6
 
@@ -197,23 +191,5 @@ bool i2cdevWriteBit(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
  */
 bool i2cdevWriteBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                      uint8_t bitStart, uint8_t length, uint8_t data);
-
-/**
- * Unlocks the i2c bus if needed.
- * @param portSCL  Port of the SCL pin
- * @param portSDA  Port of the SDA pin
- * @param pinSCL   SCL Pin
- * @param pinSDA   SDA Pin
- */
-void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinSCL, uint16_t pinSDA);
-
-/**
- * I2C1 DMA interrupt handler
- */
-void i2cDmaInterruptHandlerI2c1(void);
-/**
- * I2C2 DMA interrupt handler
- */
-void i2cDmaInterruptHandlerI2c2(void);
 
 #endif //__I2CDEV_H__

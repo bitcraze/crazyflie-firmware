@@ -42,31 +42,14 @@
 #define OWN_ADDRESS        0x74
 #define I2C_CLOCK_SPEED    400000;
 
-#define I2CDEV_CLK_TS (10 * I2CDEV_LOOPS_PER_US)
-
-#define GPIO_WAIT_FOR_HIGH(gpio, pin, timeoutcycles)\
-  {\
-    int i = timeoutcycles;\
-    while(GPIO_ReadInputDataBit(gpio, pin) == Bit_RESET && i--);\
-  }
-
-#define GPIO_WAIT_FOR_LOW(gpio, pin, timeoutcycles) \
-  {\
-    int i = timeoutcycles;\
-    while(GPIO_ReadInputDataBit(gpio, pin) == Bit_SET && i--);\
-  }
-
-
 xQueueHandle i2cQueue;
-
-/* Private functions */
-static inline void i2cdevRoughLoopDelay(uint32_t us) __attribute__((optimize("O2")));
 
 
 int i2cdevInit(I2C_Dev *dev)
 {
-  i2cInit();
+  i2cInit(dev);
 
+  //FIXME
   i2cQueue = xQueueCreate(3, sizeof(I2cMessage));
 
   return true;
@@ -228,45 +211,4 @@ bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
   {
     return false;
   }
-}
-
-static inline void i2cdevRoughLoopDelay(uint32_t us)
-{
-  volatile uint32_t delay = 0;
-  for(delay = 0; delay < I2CDEV_LOOPS_PER_US * us; ++delay) { };
-}
-
-void i2cdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinSCL, uint16_t pinSDA)
-{
-  GPIO_SetBits(portSDA, pinSDA);
-  /* Check SDA line to determine if slave is asserting bus and clock out if so */
-  while(GPIO_ReadInputDataBit(portSDA, pinSDA) == Bit_RESET)
-  {
-    /* Set clock high */
-    GPIO_SetBits(portSCL, pinSCL);
-    /* Wait for any clock stretching to finish. */
-    GPIO_WAIT_FOR_HIGH(portSCL, pinSCL, 10 * I2CDEV_LOOPS_PER_MS);
-    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
-
-    /* Generate a clock cycle */
-    GPIO_ResetBits(portSCL, pinSCL);
-    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
-    GPIO_SetBits(portSCL, pinSCL);
-    i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
-  }
-
-  /* Generate a start then stop condition */
-  GPIO_SetBits(portSCL, pinSCL);
-  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
-  GPIO_ResetBits(portSDA, pinSDA);
-  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
-  GPIO_ResetBits(portSDA, pinSDA);
-  i2cdevRoughLoopDelay(I2CDEV_CLK_TS);
-
-  /* Set data and clock high and wait for any clock stretching to finish. */
-  GPIO_SetBits(portSDA, pinSDA);
-  GPIO_SetBits(portSCL, pinSCL);
-  GPIO_WAIT_FOR_HIGH(portSCL, pinSCL, 10 * I2CDEV_LOOPS_PER_MS);
-  /* Wait for data to be high */
-  GPIO_WAIT_FOR_HIGH(portSDA, pinSDA, 10 * I2CDEV_LOOPS_PER_MS);
 }

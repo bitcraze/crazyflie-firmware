@@ -43,7 +43,7 @@ typedef struct _I2cMessage
 /**
  * Must be called once before any calls to i2cMessage.
  */
-void i2cInit( void );
+void i2cInit(I2C_TypeDef* I2Cx);
 
 /**
  * Send or receive a message over the I2C bus.
@@ -89,9 +89,6 @@ void i2cCreateMessageIntAddr(I2cMessage *message,
                              xQueueHandle queue,
                              uint32_t length,
                              uint8_t  *buffer);
-
-void i2cEventIsrHandler(void);
-void i2cErrorIsrHandler(void);
 
 #endif
 
