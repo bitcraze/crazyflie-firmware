@@ -104,6 +104,7 @@ void systemInit(void)
 
 #ifdef PLATFORM_CF2
   usblinkInit();
+  tmp36Init();
 #endif
 
   /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
@@ -125,7 +126,7 @@ void systemInit(void)
   pmInit();
   buzzerInit();
 
-  tmp36Init();
+
   isInit = true;
 }
 
