@@ -17,8 +17,8 @@ static bool isInit = false;
 
 /* Measurement variables */
 float tempC=0;
-float temp_data=0;
-float temp_data_avg=0;
+float raw_data=0;
+float raw_data_avg=0;
 
 /* The most recent samples in chronological order. Must be initialized before use. */
 static float tmp36SWin[tmp36_SWIN_SIZE];
@@ -28,8 +28,7 @@ static float tmp36SWin[tmp36_SWIN_SIZE];
 #if defined(tmp36_LOG_ENABLED)
 /* Define a log group. */
 LOG_GROUP_START(tmp36)
-LOG_ADD(LOG_FLOAT, raw data, &temp_data_avg)
-//LOG_ADD(LOG_FLOAT, temperature celcius, &tempC)
+LOG_ADD(LOG_FLOAT, temperature-celcius, &tempC)
 LOG_GROUP_STOP(tmp36)
 #endif
 
@@ -41,28 +40,44 @@ LOG_GROUP_STOP(tmp36)
  *
  * @return The new average value of the samples in the sliding window (after adding the new sample).
  */
-static float tmp36SWinAdd(float temp_data)
+static float tmp36SWinAdd(float raw_data)
 {
   /* Discard oldest sample, move remaining samples one slot to the left. */
   memmove(&tmp36SWin[0], &tmp36SWin[1], (tmp36_SWIN_SIZE - 1) * sizeof(float));
 
   /* Add the new sample in the last (right-most) slot. */
-  tmp36SWin[tmp36_SWIN_SIZE - 1] = temp_data;
+  tmp36SWin[tmp36_SWIN_SIZE - 1] = raw_data;
 
   /**
-   * Calculate the new average temp_data. Sum all the samples into a float,
+   * Calculate the new average raw_data. Sum all the samples into a float,
    so that we only do a single division at the end.
    */
-  float temp_dataNewAvg = 0;
+  float raw_dataNewAvg = 0;
   uint8_t n;
   for (n = 0; n < tmp36_SWIN_SIZE; n++) {
-    temp_dataNewAvg += tmp36SWin[n];
+    raw_dataNewAvg += tmp36SWin[n];
   }
-  temp_dataNewAvg = temp_dataNewAvg / tmp36_SWIN_SIZE;
+  raw_dataNewAvg = raw_dataNewAvg / tmp36_SWIN_SIZE;
 
-  return (float)temp_dataNewAvg;
+  return (float)raw_dataNewAvg;
 }
 
+/*
+ *This function converts raw data (read from the pin) to temperature in celcius
+ *@param data ->raw data read from pin
+ *@return the temperature in celcius
+ */
+float data2C(float data)
+{
+    //Using V_ref from Vcc of crazyflie : 3000 mV
+    //analog in crazyflie is 12 bit (4096)
+    float voltage_mv= data*1.0*3000.0/4096.0;
+    //tmp36 : 750 mV at 25C, slope :10mV/C
+    float temp_c=voltage_mv/10 -50;
+
+    return temp_c;
+}
+//////////////////////////////////////////////////////////////////////////////
 /**
  * Temperature task (tmp36Task) running at tmp36_TASK_FREQ Hz.
  * @param param Currently unused.
@@ -84,12 +99,12 @@ static void tmp36Task(void* param)
 
     #if defined(tmp36_driver_ENABLED)
     /* Read data the tmp36 sensor. */
-    temp_data = temp_data_read(tmp36_GPIO);
+    raw_data = raw_data_read(tmp36_GPIO);
     #endif
 
     /* Get the latest average value calculated. */
-    temp_data_avg = tmp36SWinAdd(temp_data);
-
+    raw_data_avg = tmp36SWinAdd(raw_data);
+    tempC=data2C(raw_data_avg);
   }
 }
 #endif

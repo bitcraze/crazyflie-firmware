@@ -13,7 +13,7 @@
  * \def tmp36_TASK_FREQ
  * The frequency the temp task runs at.
  */
-#define tmp36_TASK_FREQ 20
+#define tmp36_TASK_FREQ 5
 
 /**
  * Number of samples in the sliding window. Used for average calculation.

@@ -15,6 +15,6 @@
  */
 #define tmp36_GPIO DECK_GPIO_TX2
 
-float temp_data_read(uint8_t pin);
+float raw_data_read(uint8_t pin);
 
 #endif
