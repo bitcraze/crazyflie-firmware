@@ -116,7 +116,7 @@ void systemInit(void)
               *((int*)(MCU_ID_ADDRESS+8)), *((int*)(MCU_ID_ADDRESS+4)),
               *((int*)(MCU_ID_ADDRESS+0)), *((short*)(MCU_FLASH_SIZE_ADDRESS)));
 
-//  configblockInit();
+  configblockInit();
   workerInit();
   adcInit();
   ledseqInit();
@@ -191,7 +191,7 @@ void systemTask(void *arg)
 
   //Test the modules
   pass &= systemTest();
-//  pass &= configblockTest();
+  pass &= configblockTest();
   pass &= commTest();
   pass &= commanderTest();
   pass &= stabilizerTest();

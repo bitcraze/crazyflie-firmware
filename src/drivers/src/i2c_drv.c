@@ -360,8 +360,8 @@ void i2cInitBus(I2cDrv* i2c)
   i2cDmaSetupBus(i2c);
 
   // Create the queues used to hold Rx and Tx characters.
-  sensorsBus.xMessagesForTx = xQueueCreate(I2C_SENSORS_QUEUE_LENGTH, sizeof(I2cMessage));
-  sensorsBus.isBusFree = true;
+  i2c->xMessagesForTx = xQueueCreate(I2C_SENSORS_QUEUE_LENGTH, sizeof(I2cMessage));
+  i2c->isBusFree = true;
 }
 
 static void i2cDmaSetupBus(I2cDrv* i2c)
