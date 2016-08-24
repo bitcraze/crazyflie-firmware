@@ -103,7 +103,8 @@ bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
     i2cCreateMessageIntAddr(&message, devAddress, false, memAddress,
                             i2cRead, i2cQueue, len, data);
   }
-  i2cMessageTransfer(&message, portMAX_DELAY);
+
+  i2cMessageTransfer(dev, &message, portMAX_DELAY);
 
   if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
   {
@@ -122,7 +123,7 @@ bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
 
   i2cCreateMessageIntAddr(&message, devAddress, true, memAddress,
                           i2cRead, i2cQueue, len, data);
-  i2cMessageTransfer(&message, portMAX_DELAY);
+  i2cMessageTransfer(dev, &message, portMAX_DELAY);
 
   if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
   {
@@ -182,7 +183,8 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
     i2cCreateMessageIntAddr(&message, devAddress, false, memAddress,
                             i2cWrite, i2cQueue, len, data);
   }
-  i2cMessageTransfer(&message, portMAX_DELAY);
+
+  i2cMessageTransfer(dev, &message, portMAX_DELAY);
 
   if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
   {
@@ -201,7 +203,8 @@ bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
 
   i2cCreateMessageIntAddr(&message, devAddress, true, memAddress,
                           i2cWrite, i2cQueue, len, data);
-  i2cMessageTransfer(&message, portMAX_DELAY);
+
+  i2cMessageTransfer(dev, &message, portMAX_DELAY);
 
   if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
   {

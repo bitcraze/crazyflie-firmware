@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "cpal.h"
+#include "i2c_drv.h"
 
 #ifdef PLATFORM_CF1
 // Delay is approx 0.2us per loop @64Mhz
@@ -48,10 +48,9 @@
 #ifdef PLATFORM_CF1
 typedef I2C_TypeDef      I2C_Dev;
 #else
-typedef I2C_TypeDef I2C_Dev;
-#define I2C1_DEV  I2C1
-#define I2C2_DEV  I2C2
-#define I2C3_DEV  I2C3
+typedef I2cDrv    I2C_Dev;
+#define I2C1_DEV  &deckBus
+#define I2C3_DEV  &sensorsBus
 #endif
 
 
