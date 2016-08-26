@@ -41,54 +41,12 @@
 #include "usec_time.h"
 
 // Definitions of sensors I2C bus
-#define I2C_SENSORS                         I2C3
-#define I2C_SENSORS_EV_IRQn                 I2C3_EV_IRQn
-#define I2C_SENSORS_ER_IRQn                 I2C3_ER_IRQn
-#define I2C_SENSORS_RCC                     RCC_APB1Periph_I2C3
-#define I2C_SENSORS_GPIO_RCC_SCL            RCC_AHB1Periph_GPIOA
-#define I2C_SENSORS_GPIO_PORT_SCL           GPIOA
-#define I2C_SENSORS_GPIO_PIN_SCL            GPIO_Pin_8
-#define I2C_SENSORS_GPIO_SOURCE_SCL         GPIO_PinSource8
-#define I2C_SENSORS_GPIO_RCC_SDA            RCC_AHB1Periph_GPIOC
-#define I2C_SENSORS_GPIO_PORT_SDA           GPIOC
-#define I2C_SENSORS_GPIO_PIN_SDA            GPIO_Pin_9
-#define I2C_SENSORS_GPIO_SOURCE_SDA         GPIO_PinSource9
-#define I2C_SENSORS_GPIO_AF                 GPIO_AF_I2C3
 #define I2C_SENSORS_QUEUE_LENGTH            5
 #define I2C_SENSORS_CLOCK_SPEED             400000
-// DMA definitions
-#define I2C_SENSORS_DMA_RCC                 RCC_AHB1Periph_DMA1
-#define I2C_SENSORS_DMA_CHANNEL             DMA_Channel_3
-#define I2C_SENSORS_DMA_RX_STREAM           DMA1_Stream2
-#define I2C_SENSORS_DMA_RX_IRQn             DMA1_Stream2_IRQn
-#define I2C_SENSORS_DMA_RX_TC_FLAG          DMA_FLAG_TCIF2
-#define I2C_SENSORS_DMA_RX_TE_FLAG          DMA_FLAG_TEIF2
-#define I2C_SENSORS_DR                      ((uint32_t)&I2C3->DR)
 
 // Definition of eeprom and deck I2C buss
-#define I2C_DECK                            I2C1
-#define I2C_DECK_EV_IRQn                    I2C1_EV_IRQn
-#define I2C_DECK_ER_IRQn                    I2C1_ER_IRQn
-#define I2C_DECK_RCC                        RCC_APB1Periph_I2C1
-#define I2C_DECK_GPIO_RCC_SCL               RCC_AHB1Periph_GPIOB
-#define I2C_DECK_GPIO_PORT_SCL              GPIOB
-#define I2C_DECK_GPIO_PIN_SCL               GPIO_Pin_6
-#define I2C_DECK_GPIO_SOURCE_SCL            GPIO_PinSource6
-#define I2C_DECK_GPIO_RCC_SDA               RCC_AHB1Periph_GPIOB
-#define I2C_DECK_GPIO_PORT_SDA              GPIOB
-#define I2C_DECK_GPIO_PIN_SDA               GPIO_Pin_7
-#define I2C_DECK_GPIO_SOURCE_SDA            GPIO_PinSource7
-#define I2C_DECK_GPIO_AF                    GPIO_AF_I2C1
 #define I2C_DECK_QUEUE_LENGTH               5
 #define I2C_DECK_CLOCK_SPEED                400000
-// DMA definitions
-#define I2C_DECK_DMA_RCC                    RCC_AHB1Periph_DMA1
-#define I2C_DECK_DMA_CHANNEL                DMA_Channel_1
-#define I2C_DECK_DMA_RX_STREAM              DMA1_Stream0
-#define I2C_DECK_DMA_RX_IRQn                DMA1_Stream0_IRQn
-#define I2C_DECK_DMA_RX_TC_FLAG             DMA_FLAG_TCIF0
-#define I2C_DECK_DMA_RX_TE_FLAG             DMA_FLAG_TEIF0
-#define I2C_DECK_DR                         ((uint32_t)&I2C1->DR)
 
 // Misc constants.
 #define I2C_NO_BLOCK				    0
@@ -114,13 +72,11 @@
   }
 
 
+#ifdef I2CDRV_DEBUG_LOG_EVENTS
 // Debug variables
 uint32_t eventDebug[1024][2];
-uint32_t eventDebugUnknown[1024];
 uint32_t eventPos = 0;
-uint32_t eventPosUnknown = 0;
-uint32_t stops = 0;
-uint32_t eventDMA = 0;
+#endif
 
 /* Private functions */
 void i2cInitBus(I2cDrv* i2c);
@@ -223,7 +179,7 @@ static void i2cStartTransfer(I2cDrv *i2c)
   i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE);
 }
 
-#if 0
+#if I2CDRV_DEBUG_TEST_POLLING_DMA_RECEIVE
 static void i2cStartTransfer(void)
 {
   if (txMessage.direction == i2cRead /*&& txMessage.messageLength > 1*/)
@@ -527,6 +483,7 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
   // read the status register first
   SR1 = i2c->def->i2cPort->SR1;
 
+#ifdef I2CDRV_DEBUG_LOG_EVENTS
   // Debug code
   eventDebug[eventPos][0] = usecTimestamp();
   eventDebug[eventPos][1] = SR1;
@@ -534,6 +491,7 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
   {
     eventPos = 0;
   }
+#endif
 
   // Start bit event
   if (SR1 & I2C_SR1_SB)
