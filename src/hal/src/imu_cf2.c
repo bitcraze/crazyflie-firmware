@@ -47,8 +47,8 @@
 #include "log.h"
 #include "sound.h"
 
-//#define IMU_ENABLE_PRESSURE_LPS25H
-//#define IMU_ENABLE_MAG_AK8963
+#define IMU_ENABLE_PRESSURE_LPS25H
+#define IMU_ENABLE_MAG_AK8963
 //#define IMU_MPU6500_DLPF_256HZ
 
 #define IMU_GYRO_FS_CFG       MPU6500_GYRO_FS_2000
@@ -147,9 +147,6 @@ void imu6Init(void)
 
   i2cdevInit(I2C3_DEV);
   mpu6500Init(I2C3_DEV);
-
-//  isInit = true;
-//  return;
 
   if (mpu6500TestConnection() == true)
   {

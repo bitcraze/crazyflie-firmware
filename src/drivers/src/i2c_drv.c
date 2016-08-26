@@ -451,7 +451,6 @@ void i2cCreateMessage(I2cMessage *message,
   message->buffer = buffer;
   message->clientQueue = queue;
   message->nbrOfRetries = I2C_MAX_RETRIES;
-  message->ackDisableBeforeSR = false;
 }
 
 void i2cCreateMessageIntAddr(I2cMessage *message,
@@ -472,7 +471,6 @@ void i2cCreateMessageIntAddr(I2cMessage *message,
   message->buffer = buffer;
   message->clientQueue = queue;
   message->nbrOfRetries = I2C_MAX_RETRIES;
-  message->ackDisableBeforeSR = false;
 }
 
 I2cDrv* i2cdrvGetSensorsBus()
@@ -485,27 +483,28 @@ I2cDrv* i2cdrvGetDeckBus()
   return &deckBus;
 }
 
-static bool i2cTryNextMessage(I2cDrv* i2c)
+static void i2cTryNextMessage(I2cDrv* i2c)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-  bool nextMessage = false;
 
   if (xQueueReceiveFromISR(i2c->xMessagesForTx, (void*)&i2c->txMessage,
       &xHigherPriorityTaskWoken) == pdTRUE)
   {
     i2cStartTransfer(i2c);
-    nextMessage = true;
   }
   else
   {
+    if (i2c->def->i2cPort->CR1 & (I2C_CR1_STOP | I2C_CR1_START))
+    {
+      xHigherPriorityTaskWoken = pdFALSE;
+    }
+    i2c->def->i2cPort->CR1 = (I2C_CR1_STOP | I2C_CR1_PE);
+//    I2C_GenerateSTOP(i2c->def->i2cPort, ENABLE);
+    I2C_ITConfig(i2c->def->i2cPort, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
    // No more messages were found to be waiting for
    // transaction so the bus is free.
     i2c->isBusFree = true;
-//   I2C_GenerateSTOP(I2C_SENSORS, ENABLE);                     // program the Stop
-//   I2C_ITConfig(I2C_SENSORS, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
   }
-
-  return nextMessage;
 }
 
 static void i2cNotifyClient(I2cDrv* i2c)
@@ -514,6 +513,7 @@ static void i2cNotifyClient(I2cDrv* i2c)
 
   if (i2c->txMessage.clientQueue != 0)
   {
+    //TODO: Switch to semaphore instead?
     xQueueSendFromISR(i2c->txMessage.clientQueue, (void*)&i2c->txMessage,
                       &xHigherPriorityTaskWoken);
   }
@@ -521,8 +521,6 @@ static void i2cNotifyClient(I2cDrv* i2c)
 
 static void i2cEventIsrHandler(I2cDrv* i2c)
 {
-  volatile uint32_t event;
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
   uint16_t SR1;
   uint16_t SR2;
 
@@ -553,14 +551,14 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
       I2C_Send7bitAddress(i2c->def->i2cPort, i2c->txMessage.slaveAddress << 1, I2C_Direction_Receiver);
     }
   }
-  // Address event with transmit empty
+  // Address event
   else if (SR1 & I2C_SR1_ADDR)
   {
     if(i2c->txMessage.direction == i2cWrite ||
        i2c->txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
     {
       SR2 = i2c->def->i2cPort->SR2;                               // clear ADDR
-
+      // In write mode transmit is always empty so can send up to two bytes
       if (i2c->txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
       {
         if (i2c->txMessage.isInternal16bit)
@@ -576,7 +574,7 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
       }
       I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, ENABLE);        // allow us to have an EV7
     }
-    else // Reading
+    else // Reading, start DMA transfer
     {
       if(i2c->txMessage.messageLength == 1)
       {
@@ -592,31 +590,11 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
       DMA_ITConfig(i2c->def->dmaRxStream, DMA_IT_TC | DMA_IT_TE, ENABLE);
       I2C_DMACmd(i2c->def->i2cPort, ENABLE); // Enable before ADDR clear
 
-      __DMB();
-      SR2 = i2c->def->i2cPort->SR2;                               // clear ADDR
-#if 0
-      if(i2c->txMessage.messageLength == 1)
-      {
-        I2C_AcknowledgeConfig(i2c->def->i2cPort, DISABLE);
-        __DMB();
-        SR2 = i2c->def->i2cPort->SR2;                               // clear ADDR after ACK is turned off
-        I2C_GenerateSTOP(i2c->def->i2cPort, ENABLE);
-        I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, ENABLE);        // allow us to have an EV7
-      }
-      else
-      {
-        I2C_ITConfig(i2c->def->i2cPort, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
-        // Enable the Transfer Complete interrupt
-        DMA_ITConfig(DMA1_Stream2, DMA_IT_TC | DMA_IT_TE, ENABLE);
-        I2C_DMALastTransferCmd(i2c->def->i2cPort, ENABLE); // No repetitive start
-        I2C_DMACmd(i2c->def->i2cPort, ENABLE); // Enable before ADDR clear
-
-        SR2 = i2c->def->i2cPort->SR2;                                  // clear the ADDR here
-      }
-#endif
+      __DMB();                         // Make sure instructions (clear address) are in correct order
+      SR2 = i2c->def->i2cPort->SR2;    // clear ADDR
     }
   }
-  // Byte transfer finished - EV7_2, EV7_3 or EV8_2
+  // Byte transfer finished
   else if (SR1 & I2C_SR1_BTF)
   {
     SR2 = i2c->def->i2cPort->SR2;
@@ -624,21 +602,19 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
     {
       if (i2c->txMessage.direction == i2cRead) // internal address read
       {
-        //i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
+        /* Internal address written, switch to read */
+        i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
       }
       else
       {
         i2cNotifyClient(i2c);
-        // Are there any other messages to transact?
-        if (!i2cTryNextMessage(i2c))
-        {
-          I2C_GenerateSTOP(i2c->def->i2cPort, ENABLE);                     // program the Stop
-          I2C_ITConfig(i2c->def->i2cPort, I2C_IT_EVT | I2C_IT_BUF, DISABLE);
-        }
+        // Are there any other messages to transact? If so stop else repeated start.
+        i2cTryNextMessage(i2c);
       }
     }
-    else // Reading
+    else // Reading. Shouldn't happen since we use DMA for reading.
     {
+      ASSERT(1);
       i2c->txMessage.buffer[i2c->messageIndex++] = I2C_ReceiveData(i2c->def->i2cPort);
       if(i2c->messageIndex == i2c->txMessage.messageLength)
       {
@@ -647,75 +623,52 @@ static void i2cEventIsrHandler(I2cDrv* i2c)
         i2cTryNextMessage(i2c);
       }
     }
+    // A second BTF interrupt might occur if we don't wait for it to clear.
+    // TODO Implement better method.
     while (i2c->def->i2cPort->CR1 & 0x0100) { ; }
   }
-  // Byte received - EV7
-  else if (SR1 & I2C_SR1_RXNE)
+  // Byte received
+  else if (SR1 & I2C_SR1_RXNE) // Should not happen when we use DMA for reception.
   {
     i2c->txMessage.buffer[i2c->messageIndex++] = I2C_ReceiveData(i2c->def->i2cPort);
     if(i2c->messageIndex == i2c->txMessage.messageLength)
     {
-      I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);                // disable RXE to get BTF
+      I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);   // disable RXE to get BTF
     }
   }
-  // Byte transmitted EV8 / EV8_1
+  // Byte ready to be transmitted
   else if (SR1 & I2C_SR1_TXE)
   {
     if (i2c->txMessage.direction == i2cRead)
     {
+      // Disable TXE to flush and get BTF to switch to read.
+      // Switch must be done in BTF or strange things happen.
       I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);
-      /* Switch to read */
-      i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
     }
     else
     {
       I2C_SendData(i2c->def->i2cPort, i2c->txMessage.buffer[i2c->messageIndex++]);
       if(i2c->messageIndex == i2c->txMessage.messageLength)
       {
-        I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush and get BTF
+        // Disable TXE to allow the buffer to flush and get BTF
+        I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);
       }
     }
-//    if(i2c->txMessage.internalAddress == I2C_NO_INTERNAL_ADDRESS)
-//    {
-//      I2C_SendData(i2c->def->i2cPort, i2c->txMessage.buffer[i2c->messageIndex++]);
-//      if(i2c->messageIndex == i2c->txMessage.messageLength)
-//      {
-//        I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);                // disable TXE to allow the buffer to flush and get BTF
-//      }
-//    }
-//    else
-//    {
-//      if (i2c->txMessage.isInternal16bit)
-//      {
-//        // FIXME: How to hande 16 bit reg
-//        I2C_SendData(i2c->def->i2cPort, (i2c->txMessage.internalAddress & 0xFF00) >> 8);
-//      }
-//      else
-//      {
-//        I2C_SendData(i2c->def->i2cPort, (i2c->txMessage.internalAddress & 0x00FF));
-//        i2c->txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
-//        if (i2c->txMessage.direction == i2cRead)
-//        {
-//          /* Switch to read */
-//          i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
-//        }
-//      }
   }
 }
 
 static void i2cErrorIsrHandler(I2cDrv* i2c)
 {
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
   if (I2C_GetFlagStatus(i2c->def->i2cPort, I2C_FLAG_AF))
   {
     if(i2c->txMessage.nbrOfRetries-- > 0)
     {
-      I2C_GenerateSTART(i2c->def->i2cPort, ENABLE);
+      // Retry by generating start
+      i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE);
     }
     else
     {
-      I2C_GenerateSTOP(i2c->def->i2cPort, ENABLE);
+      // Failed so notify client and try next message if any.
       i2c->txMessage.status = i2cNack;
       i2cNotifyClient(i2c);
       i2cTryNextMessage(i2c);
@@ -740,14 +693,10 @@ static void i2cDmaIsrHandler(I2cDrv* i2c)
 {
   if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Tranasfer complete
   {
-    DMA_ClearITPendingBit(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag);
     DMA_Cmd(i2c->def->dmaRxStream, DISABLE);
+    DMA_ClearITPendingBit(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag);
     I2C_DMACmd(i2c->def->i2cPort, DISABLE);
-    I2C_GenerateSTOP(i2c->def->i2cPort, ENABLE);
-    while (i2c->def->i2cPort->SR1 & I2C_CR1_STOP)
-      ;
     I2C_DMALastTransferCmd(i2c->def->i2cPort, DISABLE);
-    I2C_AcknowledgeConfig(i2c->def->i2cPort, DISABLE);
 
     i2cNotifyClient(i2c);
     // Are there any other messages to transact?

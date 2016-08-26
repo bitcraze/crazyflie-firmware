@@ -225,7 +225,7 @@ void I2C_Init(I2C_TypeDef* I2Cx, I2C_InitTypeDef* I2C_InitStruct)
       result = 0x04;  
     }
     /* Set speed value for standard mode */
-    tmpreg |= result;	  
+    tmpreg |= result;
     /* Set Maximum Rise Time for standard mode */
     I2Cx->TRISE = freqrange + 1; 
   }
@@ -396,37 +396,11 @@ void I2C_DigitalFilterConfig(I2C_TypeDef* I2Cx, uint16_t I2C_DigitalFilter)
   *          This parameter can be: ENABLE or DISABLE.
   * @retval None.
   */
-#include "led.h"
-#include "usec_time.h"
-uint32_t time[2][10];
-uint32_t pos;
-static inline void i2cdevRoughLoopDelay(uint32_t us) __attribute__((optimize("O2")));
-static inline void i2cdevRoughLoopDelay(uint32_t us)
-{
-  volatile uint32_t delay = 0;
-  for(delay = 0; delay < 17 * us; ++delay) { };
-}
-
-
 void I2C_GenerateSTART(I2C_TypeDef* I2Cx, FunctionalState NewState)
 {
   /* Check the parameters */
   assert_param(IS_I2C_ALL_PERIPH(I2Cx));
   assert_param(IS_FUNCTIONAL_STATE(NewState));
-
-  time[0][pos] = 1;
-  time[1][pos] = usecTimestamp();
-  if (++pos >= 10) pos = 0;
-
-  if (I2Cx->SR1 & I2C_CR1_STOP)
-  {
-    __ASM volatile ("bkpt ");
-  }
-
-  ledSet(LED_GREEN_L, 1);
-  i2cdevRoughLoopDelay(1);
-  ledSet(LED_GREEN_L, 0);
-
   if (NewState != DISABLE)
   {
     /* Generate a START condition */
@@ -451,20 +425,6 @@ void I2C_GenerateSTOP(I2C_TypeDef* I2Cx, FunctionalState NewState)
   /* Check the parameters */
   assert_param(IS_I2C_ALL_PERIPH(I2Cx));
   assert_param(IS_FUNCTIONAL_STATE(NewState));
-
-  if (I2Cx->SR1 & I2C_CR1_START)
-  {
-    __ASM volatile ("bkpt ");
-  }
-
-  time[0][pos] = 0;
-  time[1][pos] = usecTimestamp();
-  if (++pos >= 10) pos = 0;
-
-  ledSet(LED_RED_L, 1);
-  i2cdevRoughLoopDelay(1);
-  ledSet(LED_RED_L, 0);
-
   if (NewState != DISABLE)
   {
     /* Generate a STOP condition */
