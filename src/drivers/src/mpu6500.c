@@ -91,7 +91,6 @@ void mpu6500Init(I2C_Dev *i2cPort)
 
   I2Cx = i2cPort;
   devAddr = MPU6500_ADDRESS_AD0_HIGH;
-//FIXME    devAddr = MPU6500_ADDRESS_AD0_LOW;
 
   isInit = true;
 }

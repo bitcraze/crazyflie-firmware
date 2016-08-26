@@ -225,7 +225,7 @@ void I2C_Init(I2C_TypeDef* I2Cx, I2C_InitTypeDef* I2C_InitStruct)
       result = 0x04;  
     }
     /* Set speed value for standard mode */
-    tmpreg |= result;	  
+    tmpreg |= result;
     /* Set Maximum Rise Time for standard mode */
     I2Cx->TRISE = freqrange + 1; 
   }

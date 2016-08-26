@@ -93,7 +93,7 @@ CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 ST_OBJ_CF1 =  #cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
 
-ST_OBJ_CF2 = cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
+ST_OBJ_CF2 = #cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
 # USB obj
 ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 # USB Device obj
@@ -136,7 +136,7 @@ PROJ_OBJ += exti.o nvic.o motors.o
 PROJ_OBJ_CF1 += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o
 PROJ_OBJ_CF1 += hmc5883l.o ms5611.o nrf24l01.o eeprom.o watchdog.o
 PROJ_OBJ_CF1 += eskylink.o
-PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o
+PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o i2c_drv.o
 PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
@@ -175,6 +175,7 @@ PROJ_OBJ_CF2 += deck_spi.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
+PROJ_OBJ_CF2 += rzr.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
@@ -378,6 +379,9 @@ trace:
 
 gdb: $(PROG).elf
 	$(GDB) -ex "target remote localhost:3333" -ex "monitor reset halt" $^
+
+erase:
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c "stm32f4x mass_erase 0" -c shutdown
 
 #Print preprocessor #defines
 prep:

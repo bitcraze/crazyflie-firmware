@@ -113,8 +113,8 @@ static const MotorPerifDef CONN_M4 =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// Connector M1, PA1, TIM2_CH2, Brushless config
-static const MotorPerifDef CONN_M1_BL =
+// Connector M1, PA1, TIM2_CH2, Brushless config, inversed
+static const MotorPerifDef CONN_M1_BL_INV =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -135,8 +135,8 @@ static const MotorPerifDef CONN_M1_BL =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
-// Connector M2, PB11, TIM2_CH4, Brushless config
-static const MotorPerifDef CONN_M2_BL =
+// Connector M2, PB11, TIM2_CH4, Brushless config, inversed
+static const MotorPerifDef CONN_M2_BL_INV =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -157,8 +157,8 @@ static const MotorPerifDef CONN_M2_BL =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// Connector M3, PA15, TIM2_CH1, Brushless config
-static const MotorPerifDef CONN_M3_BL =
+// Connector M3, PA15, TIM2_CH1, Brushless config, inversed
+static const MotorPerifDef CONN_M3_BL_INV =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -179,8 +179,8 @@ static const MotorPerifDef CONN_M3_BL =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// Connector M4, PB9, TIM4_CH4, Brushless config
-static const MotorPerifDef CONN_M4_BL =
+// Connector M4, PB9, TIM4_CH4, Brushless config, inversed
+static const MotorPerifDef CONN_M4_BL_INV =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -192,6 +192,94 @@ static const MotorPerifDef CONN_M4_BL =
     .timPerif      = RCC_APB1Periph_TIM4,
     .tim           = TIM4,
     .timPolarity   = TIM_OCPolarity_Low,
+    .timDbgStop    = DBGMCU_TIM4_STOP,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare4,
+    .getCompare    = TIM_GetCapture4,
+    .ocInit        = TIM_OC4Init,
+    .preloadConfig = TIM_OC4PreloadConfig,
+};
+
+// RZR M1, PA1, TIM2_CH2, Brushless config
+static const MotorPerifDef RZR_M1_BL =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOA,
+    .gpioPort      = GPIOA,
+    .gpioPin       = GPIO_Pin_1,
+    .gpioPinSource = GPIO_PinSource1,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM2,
+    .timPerif      = RCC_APB1Periph_TIM2,
+    .tim           = TIM2,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM2_STOP,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare2,
+    .getCompare    = TIM_GetCapture2,
+    .ocInit        = TIM_OC2Init,
+    .preloadConfig = TIM_OC2PreloadConfig,
+};
+
+// RZR M2, PB11, TIM2_CH4, Brushless config
+static const MotorPerifDef RZR_M2_BL =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_11,
+    .gpioPinSource = GPIO_PinSource11,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM2,
+    .timPerif      = RCC_APB1Periph_TIM2,
+    .tim           = TIM2,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM2_STOP,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare4,
+    .getCompare    = TIM_GetCapture4,
+    .ocInit        = TIM_OC4Init,
+    .preloadConfig = TIM_OC4PreloadConfig,
+};
+
+// RZR M3, PA15, TIM2_CH1, Brushless config
+static const MotorPerifDef RZR_M3_BL =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOA,
+    .gpioPort      = GPIOA,
+    .gpioPin       = GPIO_Pin_15,
+    .gpioPinSource = GPIO_PinSource15,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM2,
+    .timPerif      = RCC_APB1Periph_TIM2,
+    .tim           = TIM2,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM2_STOP,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare1,
+    .getCompare    = TIM_GetCapture1,
+    .ocInit        = TIM_OC1Init,
+    .preloadConfig = TIM_OC1PreloadConfig,
+};
+
+// RZR M4, PB9, TIM4_CH4, Brushless config
+static const MotorPerifDef RZR_M4_BL =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_9,
+    .gpioPinSource = GPIO_PinSource9,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM4,
+    .timPerif      = RCC_APB1Periph_TIM4,
+    .tim           = TIM4,
+    .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM4_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
@@ -452,10 +540,20 @@ const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS] =
 {
-  &CONN_M1_BL,
-  &CONN_M2_BL,
-  &CONN_M3_BL,
-  &CONN_M4_BL
+  &CONN_M1_BL_INV,
+  &CONN_M2_BL_INV,
+  &CONN_M3_BL_INV,
+  &CONN_M4_BL_INV
 };
 
+/**
+ * Brushless motors mapped to the RZR PWM outputs.
+ */
+const MotorPerifDef* motorMapRZRBrushless[NBR_OF_MOTORS] =
+{
+  &RZR_M1_BL,
+  &RZR_M2_BL,
+  &RZR_M3_BL,
+  &RZR_M4_BL
+};
 

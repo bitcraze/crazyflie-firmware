@@ -147,6 +147,7 @@ void imu6Init(void)
 
   i2cdevInit(I2C3_DEV);
   mpu6500Init(I2C3_DEV);
+
   if (mpu6500TestConnection() == true)
   {
     DEBUG_PRINT("MPU9250 I2C connection [OK].\n");

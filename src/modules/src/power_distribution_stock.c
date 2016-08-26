@@ -26,9 +26,12 @@
 #include "power_distribution.h"
 
 #include "log.h"
+#include "param.h"
 #include "num.h"
 
 #include "motors.h"
+
+static bool motorSetEnable = false;
 
 static struct {
   uint32_t m1;
@@ -36,6 +39,13 @@ static struct {
   uint32_t m3;
   uint32_t m4;
 } motorPower;
+
+static struct {
+  uint16_t m1;
+  uint16_t m2;
+  uint16_t m3;
+  uint16_t m4;
+} motorPowerSet;
 
 void powerDistributionInit(void)
 {
@@ -73,11 +83,29 @@ void powerDistribution(const control_t *control)
                                control->yaw);
   #endif
 
-  motorsSetRatio(MOTOR_M1, motorPower.m1);
-  motorsSetRatio(MOTOR_M2, motorPower.m2);
-  motorsSetRatio(MOTOR_M3, motorPower.m3);
-  motorsSetRatio(MOTOR_M4, motorPower.m4);
+  if (motorSetEnable)
+  {
+    motorsSetRatio(MOTOR_M1, motorPowerSet.m1);
+    motorsSetRatio(MOTOR_M2, motorPowerSet.m2);
+    motorsSetRatio(MOTOR_M3, motorPowerSet.m3);
+    motorsSetRatio(MOTOR_M4, motorPowerSet.m4);
+  }
+  else
+  {
+    motorsSetRatio(MOTOR_M1, motorPower.m1);
+    motorsSetRatio(MOTOR_M2, motorPower.m2);
+    motorsSetRatio(MOTOR_M3, motorPower.m3);
+    motorsSetRatio(MOTOR_M4, motorPower.m4);
+  }
 }
+
+PARAM_GROUP_START(motorPowerSet)
+PARAM_ADD(PARAM_UINT8, enable, &motorSetEnable)
+PARAM_ADD(PARAM_UINT16, m1, &motorPowerSet.m1)
+PARAM_ADD(PARAM_UINT16, m2, &motorPowerSet.m2)
+PARAM_ADD(PARAM_UINT16, m3, &motorPowerSet.m3)
+PARAM_ADD(PARAM_UINT16, m4, &motorPowerSet.m4)
+PARAM_GROUP_STOP(ring)
 
 LOG_GROUP_START(motor)
 LOG_ADD(LOG_INT32, m4, &motorPower.m4)

@@ -28,12 +28,18 @@
  */
 #define DEBUG_MODULE "EEPROM"
 
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
 #include "eeprom.h"
 #include "debug.h"
 #include "eprintf.h"
+
+#ifdef EEPROM_RUN_WRITE_READ_TEST
+static bool eepromTestWriteRead(void);
+#endif
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -66,8 +72,42 @@ bool eepromTest(void)
     DEBUG_PRINT("I2C connection [FAIL].\n");
   }
 
+#ifdef EEPROM_RUN_WRITE_READ_TEST
+  status = eepromTestWriteRead();
+#endif
+
   return status;
 }
+
+#ifdef EEPROM_RUN_WRITE_READ_TEST
+static bool eepromTestWriteRead(void)
+{
+  bool status = true;
+  int i;
+  const uint8_t testData[20] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
+  uint8_t readData[20];
+
+  for (i = 0; i < sizeof(testData) && status; i++)
+  {
+    // Write one byte with increasing addresses.
+    eepromWriteBuffer(&testData[i], i, 1);
+    // Read it all back and check
+    eepromReadBuffer(readData, 0, i+1);
+    status = (memcmp(testData, readData, i+1) == 0);
+  }
+
+  // Write it all.
+  eepromWriteBuffer(testData, 0, sizeof(testData));
+  for (i = 0; i < sizeof(testData) && status; i++)
+  {
+    // Read one byte with increasing addresses and check
+    eepromReadBuffer(&readData[i], i, 1);
+    status = (memcmp(testData, readData, i+1) == 0);
+  }
+
+  return status;
+}
+#endif
 
 bool eepromTestConnection(void)
 {
