@@ -112,6 +112,7 @@ static void syslinkTask(void *param)
           else
           {
             rxState = waitForFirstStart; //Checksum error
+            IF_DEBUG_ASSERT(1);
           }
           break;
         case waitForChksum2:
@@ -122,6 +123,7 @@ static void syslinkTask(void *param)
           else
           {
             rxState = waitForFirstStart; //Checksum error
+            IF_DEBUG_ASSERT(1);
           }
           rxState = waitForFirstStart;
           break;

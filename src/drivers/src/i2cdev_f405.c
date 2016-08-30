@@ -39,18 +39,9 @@
 #include "nvicconf.h"
 #include "debug.h"
 
-#define OWN_ADDRESS        0x74
-#define I2C_CLOCK_SPEED    400000;
-
-xQueueHandle i2cQueue;
-
-
 int i2cdevInit(I2C_Dev *dev)
 {
-  i2cInit(dev);
-
-  //FIXME
-  i2cQueue = xQueueCreate(3, sizeof(I2cMessage));
+  i2cdrvInit(dev);
 
   return true;
 }
@@ -96,17 +87,17 @@ bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 
   if (memAddress == I2CDEV_NO_MEM_ADDR)
   {
-    i2cCreateMessage(&message, devAddress, i2cRead, i2cQueue, len, data);
+    i2cdrvCreateMessage(&message, devAddress, i2cRead, len, data);
   }
   else
   {
-    i2cCreateMessageIntAddr(&message, devAddress, false, memAddress,
-                            i2cRead, i2cQueue, len, data);
+    i2cdrvCreateMessageIntAddr(&message, devAddress, false, memAddress,
+                            i2cRead, len, data);
   }
 
-  i2cMessageTransfer(dev, &message, portMAX_DELAY);
+  i2cdrvMessageTransfer(dev, &message);
 
-  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
+  if (message.status == i2cAck)
   {
     return true;
   }
@@ -121,11 +112,11 @@ bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
 {
   I2cMessage message;
 
-  i2cCreateMessageIntAddr(&message, devAddress, true, memAddress,
-                          i2cRead, i2cQueue, len, data);
-  i2cMessageTransfer(dev, &message, portMAX_DELAY);
+  i2cdrvCreateMessageIntAddr(&message, devAddress, true, memAddress,
+                          i2cRead, len, data);
+  i2cdrvMessageTransfer(dev, &message);
 
-  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
+  if (message.status == i2cAck)
   {
     return true;
   }
@@ -176,17 +167,17 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 
   if (memAddress == I2CDEV_NO_MEM_ADDR)
   {
-    i2cCreateMessage(&message, devAddress, i2cWrite, i2cQueue, len, data);
+    i2cdrvCreateMessage(&message, devAddress, i2cWrite, len, data);
   }
   else
   {
-    i2cCreateMessageIntAddr(&message, devAddress, false, memAddress,
-                            i2cWrite, i2cQueue, len, data);
+    i2cdrvCreateMessageIntAddr(&message, devAddress, false, memAddress,
+                            i2cWrite, len, data);
   }
 
-  i2cMessageTransfer(dev, &message, portMAX_DELAY);
+  i2cdrvMessageTransfer(dev, &message);
 
-  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
+  if (message.status == i2cAck)
   {
     return true;
   }
@@ -201,12 +192,12 @@ bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
 {
   I2cMessage message;
 
-  i2cCreateMessageIntAddr(&message, devAddress, true, memAddress,
-                          i2cWrite, i2cQueue, len, data);
+  i2cdrvCreateMessageIntAddr(&message, devAddress, true, memAddress,
+                          i2cWrite, len, data);
 
-  i2cMessageTransfer(dev, &message, portMAX_DELAY);
+  i2cdrvMessageTransfer(dev, &message);
 
-  if (xQueueReceive(i2cQueue, &message, M2T(100)) == pdTRUE)
+  if (message.status == i2cAck)
   {
     return true;
   }

@@ -7,7 +7,7 @@
 /* ST includes */
 #include "stm32fxxx.h"
 
-#define I2C_BUFFER_SIZE 8
+#define I2C_NO_INTERNAL_ADDRESS   0xFFFF
 
 typedef enum
 {
@@ -38,8 +38,6 @@ typedef struct _I2cMessage
   uint8_t          *buffer;           //< Pointer to the buffer from where data will be read for transmission, or into which received data will be placed.
 } I2cMessage;
 
-#define I2C_NO_INTERNAL_ADDRESS   0xFFFF
-
 typedef struct
 {
   I2C_TypeDef*        i2cPort;
@@ -66,71 +64,69 @@ typedef struct
 
 typedef struct
 {
-  const I2cDef *def;              //< Definition of the i2c
-  I2cMessage txMessage;           //< The I2C send message
-  xQueueHandle xMessagesForTx;    //< Queue of messages that are waiting transmission.
-  uint32_t messageIndex;          //< Index of bytes sent/received
-  uint32_t nbrOfretries;          //< Retries done
-  bool isBusFree;                 //< Flag to indicate the state of the I2C ISR state machine.
-  DMA_InitTypeDef DMAStruct;      //< DMA configuration structure used during transfer setup.
+  const I2cDef *def;                    //< Definition of the i2c
+  I2cMessage *txMessage;                //< The I2C send message
+  uint32_t messageIndex;                //< Index of bytes sent/received
+  uint32_t nbrOfretries;                //< Retries done
+  SemaphoreHandle_t isBusFreeSemaphore; //< Semaphore to block during transaction.
+  SemaphoreHandle_t isBusFreeMutex;     //< Mutex to protect buss
+  DMA_InitTypeDef DMAStruct;            //< DMA configuration structure used during transfer setup.
 } I2cDrv;
 
+// Definitions of i2c busses found in c file.
 extern I2cDrv deckBus;
 extern I2cDrv sensorsBus;
 
 /**
- * Must be called once before any calls to i2cMessage.
+ * Initialize i2c peripheral as defined by static I2cDef structs.
  */
-void i2cInit(I2cDrv* i2c);
+void i2cdrvInit(I2cDrv* i2c);
 
 /**
  * Send or receive a message over the I2C bus.
  *
- * The message is asynchrony and uses interrupts to transfer the message.
- * Receive messages will be sent to the registered receive queue.
+ * The message is synchrony by semapthore and uses interrupts to transfer the message.
  *
- * @param bus      Bus to use.
+ * @param i2c      i2c bus to use.
  * @param message	 An I2cMessage struct containing all the i2c message
- *                 Information.
- *
- * @param xBlockTime	 The time to wait for a space in the message queue to
- *						 become available should one not be available
- *						 immediately.
+ *                 Information. Message status will be altered if nack.
  */
-void i2cMessageTransfer(I2cDrv* bus, I2cMessage* message, portTickType xBlockTime);
+void i2cdrvMessageTransfer(I2cDrv* i2c, I2cMessage* message);
+
 
 /**
- * Register your queue witch will receive incoming i2c messages.
+ * Create a message to transfer
  *
- * @param queue   The queue that will receive the messages.
+ * @param message       pointer to message struct that will be filled in.
+ * @param slaveAddress  i2c slave address
+ * @param direction     i2cWrite or i2cRead
+ * @param length        Length of message
+ * @param buffer        pointer to buffer of send/receive data
  */
-void i2cRegister(xQueueHandle queue);
-
-void i2cCreateMessage(I2cMessage *message,
+void i2cdrvCreateMessage(I2cMessage *message,
                       uint8_t  slaveAddress,
-                      uint8_t  direction,
-                      xQueueHandle queue,
+                      I2cDirection  direction,
                       uint32_t length,
                       uint8_t  *buffer);
 
-void i2cCreateMessageSem(I2cMessage *message,
-                         uint8_t  slaveAddress,
-                         uint8_t  direction,
-                         xQueueHandle queue,
-                         uint32_t length,
-                         uint8_t  *buffer);
-
-void i2cCreateMessageIntAddr(I2cMessage *message,
+/**
+ * Create a message to transfer with internal "reg" address. Will first do a write
+ * of one or two bytes depending of IsInternal16 and then write/read the data.
+ *
+ * @param message       pointer to message struct that will be filled in.
+ * @param slaveAddress  i2c slave address
+ * @param IsInternal16  It true 16bit reg address else 8bit.
+ * @param direction     i2cWrite or i2cRead
+ * @param length        Length of message
+ * @param buffer        pointer to buffer of send/receive data
+ */
+void i2cdrvCreateMessageIntAddr(I2cMessage *message,
                              uint8_t  slaveAddress,
                              bool IsInternal16,
                              uint16_t intAddress,
-                             uint8_t  direction,
-                             xQueueHandle queue,
+                             I2cDirection  direction,
                              uint32_t length,
                              uint8_t  *buffer);
-
-I2cDrv* i2cdrvGetSensorsBus();
-I2cDrv* i2cdrvGetDeckBus();
 
 #endif
 
