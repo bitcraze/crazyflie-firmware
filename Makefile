@@ -91,9 +91,6 @@ CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 # Should maybe be in separate file?
 -include $(ST_OBJ_DIR)/st_obj.mk
 
-ST_OBJ_CF1 =  #cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f10x.o
-
-ST_OBJ_CF2 = #cpal_hal.o cpal_i2c.o cpal_usercallback_template.o cpal_i2c_hal_stm32f4xx.o
 # USB obj
 ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 # USB Device obj
