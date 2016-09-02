@@ -52,10 +52,30 @@
 #include "estimator_kalman.h"
 #endif
 
+#include "arm_math.h"
+
 #include "libdw1000.h"
 
 // Minimal MAC packet format
 #include "mac.h"
+
+// Define these macros using config.mk to enable TDMA (multiple tag) mode
+// #define DWM1000_ENABLE_TDMA
+// #define DWM1000_TDMA_SLOTS_BITS 1
+// #define DWM1000_TDMA_SLOT 0
+//
+// for example for 2 copters:
+// CFLAGS+= -DDWM1000_ENABLE_TDMA -DDWM1000_TDMA_SLOTS_BITS=1 -DDWM1000_TDMA_SLOT=0
+// and
+// CFLAGS+= -DDWM1000_ENABLE_TDMA -DDWM1000_TDMA_SLOTS_BITS=1 -DDWM1000_TDMA_SLOT=1
+
+#ifndef DWM1000_TDMA_SLOTS_BITS
+#define DWM1000_TDMA_SLOTS_BITS 1
+#endif
+
+#ifndef DWM1000_TDMA_SLOT
+#define DWM1000_TDMA_SLOT 0
+#endif
 
 #define CS_PIN DECK_GPIO_IO1
 
@@ -66,13 +86,13 @@ static dwDevice_t *dwm = &dwm_device;
 // Amount of failed ranging before the ranging value is set as wrong
 #define RANGING_FAILED_TH 6
 
-#define RX_TIMEOUT 2000
+#define RX_TIMEOUT 1000
 
 static xSemaphoreHandle dwm1000Event;
 static xSemaphoreHandle spiSemaphore;
 static xSemaphoreHandle rangingComplete;
 
-#define N_NODES 9
+#define N_NODES 10
 
 // Address of the nodes are bc:cf:0:0:0:0:0:node_number
 uint8_t addresses[N_NODES+1][8] = {
@@ -86,17 +106,29 @@ uint8_t addresses[N_NODES+1][8] = {
   {7,0,0,0,0,0,0xcf,0xbc},
   {8,0,0,0,0,0,0xcf,0xbc},
   {9,0,0,0,0,0,0xcf,0xbc},
+  {0xA,0,0,0,0,0,0xcf,0xbc},
 };
 
 // Static system configuration
-#define N_ANCHORS 8
-int anchors[N_ANCHORS] = {1,2,3,4,5,6,7,8};
+#define N_ANCHORS 6
+int anchors[N_ANCHORS] = {1,2,3,4,5,6};
 
-#define N_TAGS 1
-int tags[N_TAGS] = {9};
+// Outlier rejection
+#define RANGING_HISTORY_LENGTH 32
+#define OUTLIER_TH 4
+static struct {
+  float32_t history[RANGING_HISTORY_LENGTH];
+  size_t ptr;
+} rangingStats[N_ANCHORS];
+
+#define N_TAGS 2
+int tags[N_TAGS] = {9, 10};
 
 // Hardcode Crazyflie as board5
-static int boardId = 9;
+static int boardId = 9+DWM1000_TDMA_SLOT;
+// Number of DWM timer bits allocated to one slot.
+// 27 means about 480 slots per seconds since the timer is running at ~64GHz.
+#define TIME_SLOTS 27
 
 /***** Radio callbacks, Ranging algoritm *******/
 
@@ -132,6 +164,7 @@ static dwTime_t final_rx;
 
 const double C = 299792458.0;       // Speed of light
 const double tsfreq = 499.2e6 * 128;  // Timestamp counter frequency
+#define TSFREQ 499.2e6 * 128
 
 #define ANTENNA_OFFSET 154.6   // In meter
 #define ANTENNA_DELAY  (ANTENNA_OFFSET*499.2e6*128)/299792458.0 // In radio tick
@@ -309,6 +342,13 @@ static void dwm1000Task(void *param)
   TickType_t rangingStart;
   TickType_t rangingStop;
 
+#ifdef DWM1000_ENABLE_TDMA
+  bool synchronized = false;
+  dwTime_t nextRangingTx = { .full=0 };
+  dwTime_t rangingInterval = { .full=0 };
+  dwTime_t lastRangingStart = { .full=0 };
+#endif
+
   systemWaitStart();
 
   //xLastWakeTime = xTaskGetTickCount();
@@ -322,22 +362,64 @@ static void dwm1000Task(void *param)
         failedRanging[current_anchor] ++;
         rangingState |= (1<<current_anchor);
       }
+#ifdef DWM1000_ENABLE_TDMA
+      lastRangingStart.full = poll_tx.full;
+      rangingInterval.full = 1ULL<<(TIME_SLOTS+DWM1000_TDMA_SLOTS_BITS+1);
+#endif
     } else {
+#ifdef DWM1000_ENABLE_TDMA
+      if (current_anchor == 0) {
+        int slotId = (boardId-9)&((1<<(DWM1000_TDMA_SLOTS_BITS+1))-1);
+        uint64_t nextReceiveTime = (poll_rx.full&(~((1ULL<<(TIME_SLOTS+DWM1000_TDMA_SLOTS_BITS+1))-1))) + (slotId*(1ULL<<(TIME_SLOTS+1)));
+        nextReceiveTime += 1ULL<<(TIME_SLOTS+DWM1000_TDMA_SLOTS_BITS+1);
+        if (!synchronized) {
+          // Starts well ahead to not risk starting in the past
+          nextReceiveTime += 1ULL<<(TIME_SLOTS+DWM1000_TDMA_SLOTS_BITS+1);
+        }
+        rangingInterval.full = nextReceiveTime - poll_rx.full;
+        synchronized = true;
+      } else {
+        rangingInterval.full = 1ULL<<(TIME_SLOTS+DWM1000_TDMA_SLOTS_BITS+1);
+      }
+
+      lastRangingStart.full = poll_tx.full;
+#endif
+
       rangingState |= (1<<current_anchor);
       failedRanging[current_anchor] = 0;
 #ifdef ESTIMATOR_TYPE_kalman
-    distanceMeasurement_t dist;
-    dist.distance = distance[current_anchor];
-    dist.x = anchorPosition[current_anchor].x;
-    dist.y = anchorPosition[current_anchor].y;
-    dist.z = anchorPosition[current_anchor].z;
-    dist.stdDev = 0.25;
-    stateEstimatorEnqueueDistance(&dist);
+      // Ouliers rejection
+      rangingStats[current_anchor].ptr = (rangingStats[current_anchor].ptr + 1) % RANGING_HISTORY_LENGTH;
+      float32_t mean;
+      float32_t stddev;
+
+      arm_std_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &stddev);
+      arm_mean_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &mean);
+      float32_t diff = fabsf(mean-distance[current_anchor]);
+
+      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = distance[current_anchor];
+
+      if (diff < (OUTLIER_TH*stddev)) {
+        distanceMeasurement_t dist;
+        dist.distance = distance[current_anchor];
+        dist.x = anchorPosition[current_anchor].x;
+        dist.y = anchorPosition[current_anchor].y;
+        dist.z = anchorPosition[current_anchor].z;
+        dist.stdDev = 0.25;
+        stateEstimatorEnqueueDistance(&dist);
+      }
 #endif
     }
     ranging_complete = false;
 
+#ifdef DWM1000_ENABLE_TDMA
+    if (synchronized) {
+      current_anchor = (current_anchor+1)%N_ANCHORS;
+    }
+#else
     current_anchor = (current_anchor+1)%N_ANCHORS;
+#endif
+
 
     txPacket.payload[0] = POLL;
     txPacket.payload[1] = ++curr_seq;
@@ -346,6 +428,13 @@ static void dwm1000Task(void *param)
     memcpy(txPacket.destAddress, addresses[anchors[current_anchor]], 8);
 
     dwNewTransmit(dwm);
+#ifdef DWM1000_ENABLE_TDMA
+    if (synchronized) {
+      nextRangingTx.full = lastRangingStart.full + rangingInterval.full;
+      nextRangingTx.full &= 0x000000ffffffffffull;
+      dwSetTxRxTime(dwm, nextRangingTx);
+    }
+#endif
     dwSetDefaults(dwm);
     dwSetData(dwm, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+2);
 
