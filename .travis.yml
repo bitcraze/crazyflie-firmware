@@ -12,6 +12,10 @@ script:
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST"
 
+  # Build CF2 with kalman estimator
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 ESTIMATOR=kalman SENSORS=task
+
   # Build CF1
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF1

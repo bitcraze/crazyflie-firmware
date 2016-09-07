@@ -114,12 +114,15 @@ uint8_t addresses[N_NODES+1][8] = {
 int anchors[N_ANCHORS] = {1,2,3,4,5,6};
 
 // Outlier rejection
-#define RANGING_HISTORY_LENGTH 32
-#define OUTLIER_TH 4
-static struct {
-  float32_t history[RANGING_HISTORY_LENGTH];
-  size_t ptr;
-} rangingStats[N_ANCHORS];
+#ifdef ESTIMATOR_TYPE_kalman
+  #define RANGING_HISTORY_LENGTH 32
+  #define OUTLIER_TH 4
+  static struct {
+    float32_t history[RANGING_HISTORY_LENGTH];
+    size_t ptr;
+  } rangingStats[N_ANCHORS];
+#endif
+
 
 #define N_TAGS 2
 int tags[N_TAGS] = {9, 10};

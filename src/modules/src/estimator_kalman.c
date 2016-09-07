@@ -617,8 +617,6 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
 
   if (quadIsFlying)
   {
-    uint32_t timeSinceTakeoff = xTaskGetTickCount() - takeoffTime;
-    
     // TODO: In the next lines, can either use cmdThrust/mass, or acc->z. Need to test which is more reliable.
     // cmdThrust's error comes from poorly calibrated mass, and inexact cmdThrust -> thrust map
     // acc->z's error comes from measurement noise and accelerometer scaling
@@ -788,7 +786,8 @@ static void stateEstimatorScalarUpdate(arm_matrix_instance_f32 *Hm, float error,
 
 static void stateEstimatorUpdateWithAccOnGround(Axis3f *acc)
 {
-#warning The following warnings are due to the function not being complete. See the TODO on Line 736.
+  // The following code is disabled due to the function not being complete (and that we aim for zero warnings).
+#if 0
   // This update only makes sense on the ground, when no thrust is being produced,
   // since the accelerometers can then directly measure the direction of gravity
   float accMag = sqrtf(acc->x*acc->x + acc->y*acc->y + acc->z*acc->z);
@@ -805,6 +804,7 @@ static void stateEstimatorUpdateWithAccOnGround(Axis3f *acc)
 
     // TODO: What are the update equations?
   }
+#endif
 }
 
 #ifdef KALMAN_USE_BARO_UPDATE
