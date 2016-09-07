@@ -64,7 +64,7 @@ make PLATFORM=CF1
 or with the toolbelt
 
 ```bash
-tb build PLATFORM=CF1
+tb make PLATFORM=CF1
 ```
 
 ### Crazyflie 2.0
@@ -77,7 +77,7 @@ make PLATFORM=CF2
 or with the toolbelt
 
 ```bash
-tb build
+tb make
 ```
 
 ### config.mk

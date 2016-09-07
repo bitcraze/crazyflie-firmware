@@ -3,4 +3,6 @@ set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
+echo "Deprecated. Use 'tb make clean' instead"
+
 make --directory=${scriptDir}/../.. clean "${@}"
