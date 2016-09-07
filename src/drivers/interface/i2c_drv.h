@@ -44,6 +44,7 @@ typedef struct
   uint32_t            i2cPerif;
   uint32_t            i2cEVIRQn;
   uint32_t            i2cERIRQn;
+  uint32_t            i2cClockSpeed;
   uint32_t            gpioSCLPerif;
   GPIO_TypeDef*       gpioSCLPort;
   uint32_t            gpioSCLPin;
@@ -65,7 +66,7 @@ typedef struct
 typedef struct
 {
   const I2cDef *def;                    //< Definition of the i2c
-  I2cMessage *txMessage;                //< The I2C send message
+  I2cMessage txMessage;                 //< The I2C send message
   uint32_t messageIndex;                //< Index of bytes sent/received
   uint32_t nbrOfretries;                //< Retries done
   SemaphoreHandle_t isBusFreeSemaphore; //< Semaphore to block during transaction.
@@ -90,8 +91,9 @@ void i2cdrvInit(I2cDrv* i2c);
  * @param i2c      i2c bus to use.
  * @param message	 An I2cMessage struct containing all the i2c message
  *                 Information. Message status will be altered if nack.
+ * @return         true if successful, false otherwise.
  */
-void i2cdrvMessageTransfer(I2cDrv* i2c, I2cMessage* message);
+bool i2cdrvMessageTransfer(I2cDrv* i2c, I2cMessage* message);
 
 
 /**

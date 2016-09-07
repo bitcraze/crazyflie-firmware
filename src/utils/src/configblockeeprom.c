@@ -125,6 +125,10 @@ int configblockInit(void)
   i2cdevInit(I2C1_DEV);
   eepromInit(I2C1_DEV);
 
+  // Because of strange behavior from I2C device during expansion port test
+  // the first read needs to be discarded
+  eepromTestConnection();
+
   if (eepromTestConnection())
   {
     if (eepromReadBuffer((uint8_t *)&configblock, 0, sizeof(configblock)))

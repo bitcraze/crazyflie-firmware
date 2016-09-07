@@ -45,6 +45,13 @@
  * Assert handler function
  */
 void assertFail(char *exp, char *file, int line);
+/**
+ * Print assert snapshot data
+ */
 void printAssertSnapshotData();
+/**
+ * Store assert snapshot data to be read at startup if a reset is triggered (watchdog)
+ */
+void storeAssertSnapshotData(char *file, int line);
 
 #endif //__CFASSERT_H__

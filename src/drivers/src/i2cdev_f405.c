@@ -95,16 +95,7 @@ bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                             i2cRead, len, data);
   }
 
-  i2cdrvMessageTransfer(dev, &message);
-
-  if (message.status == i2cAck)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+  return i2cdrvMessageTransfer(dev, &message);
 }
 
 bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
@@ -114,16 +105,8 @@ bool i2cdevRead16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
 
   i2cdrvCreateMessageIntAddr(&message, devAddress, true, memAddress,
                           i2cRead, len, data);
-  i2cdrvMessageTransfer(dev, &message);
 
-  if (message.status == i2cAck)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+  return i2cdrvMessageTransfer(dev, &message);
 }
 
 bool i2cdevWriteByte(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
@@ -175,16 +158,7 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
                             i2cWrite, len, data);
   }
 
-  i2cdrvMessageTransfer(dev, &message);
-
-  if (message.status == i2cAck)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+  return i2cdrvMessageTransfer(dev, &message);
 }
 
 bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
@@ -195,14 +169,5 @@ bool i2cdevWrite16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
   i2cdrvCreateMessageIntAddr(&message, devAddress, true, memAddress,
                           i2cWrite, len, data);
 
-  i2cdrvMessageTransfer(dev, &message);
-
-  if (message.status == i2cAck)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+  return i2cdrvMessageTransfer(dev, &message);
 }

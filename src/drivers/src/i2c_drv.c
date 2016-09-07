@@ -116,6 +116,10 @@ static inline void i2cdrvRoughLoopDelay(uint32_t us) __attribute__((optimize("O2
  */
 static void i2cdrvdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uint16_t pinSCL, uint16_t pinSDA);
 /**
+ * Clear DMA stream
+ */
+static void i2cdrvClearDMA(I2cDrv* i2c);
+/**
  * Event interrupt service routine
  */
 static void i2cdrvEventIsrHandler(I2cDrv* i2c);
@@ -135,6 +139,7 @@ static const I2cDef sensorBusDef =
   .i2cPerif           = RCC_APB1Periph_I2C3,
   .i2cEVIRQn          = I2C3_EV_IRQn,
   .i2cERIRQn          = I2C3_ER_IRQn,
+  .i2cClockSpeed      = I2C_SENSORS_CLOCK_SPEED,
   .gpioSCLPerif       = RCC_AHB1Periph_GPIOA,
   .gpioSCLPort        = GPIOA,
   .gpioSCLPin         = GPIO_Pin_8,
@@ -163,6 +168,7 @@ static const I2cDef deckBusDef =
   .i2cPerif           = RCC_APB1Periph_I2C1,
   .i2cEVIRQn          = I2C1_EV_IRQn,
   .i2cERIRQn          = I2C1_ER_IRQn,
+  .i2cClockSpeed      = I2C_DECK_CLOCK_SPEED,
   .gpioSCLPerif       = RCC_AHB1Periph_GPIOB,
   .gpioSCLPort        = GPIOB,
   .gpioSCLPin         = GPIO_Pin_6,
@@ -194,10 +200,10 @@ static inline void i2cdrvRoughLoopDelay(uint32_t us)
 
 static void i2cdrvStartTransfer(I2cDrv *i2c)
 {
-  if (i2c->txMessage->direction == i2cRead)
+  if (i2c->txMessage.direction == i2cRead)
   {
-    i2c->DMAStruct.DMA_BufferSize = i2c->txMessage->messageLength;
-    i2c->DMAStruct.DMA_Memory0BaseAddr = (uint32_t)i2c->txMessage->buffer;
+    i2c->DMAStruct.DMA_BufferSize = i2c->txMessage.messageLength;
+    i2c->DMAStruct.DMA_Memory0BaseAddr = (uint32_t)i2c->txMessage.buffer;
     DMA_Init(i2c->def->dmaRxStream, &i2c->DMAStruct);
     DMA_Cmd(i2c->def->dmaRxStream, ENABLE);
   }
@@ -298,7 +304,7 @@ static void i2cdrvInitBus(I2cDrv* i2c)
   I2C_InitStructure.I2C_OwnAddress1 = I2C_SLAVE_ADDRESS7;
   I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
   I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-  I2C_InitStructure.I2C_ClockSpeed = I2C_SENSORS_CLOCK_SPEED;
+  I2C_InitStructure.I2C_ClockSpeed = i2c->def->i2cClockSpeed;
   I2C_Init(i2c->def->i2cPort, &I2C_InitStructure);
 
   // Enable I2C_SENSORS error interrupts
@@ -398,20 +404,32 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
   message->nbrOfRetries = I2C_MAX_RETRIES;
 }
 
-void i2cdrvMessageTransfer(I2cDrv* i2c, I2cMessage* message)
+bool i2cdrvMessageTransfer(I2cDrv* i2c, I2cMessage* message)
 {
+  bool status = false;
+
   xSemaphoreTake(i2c->isBusFreeMutex, portMAX_DELAY); // Protect message data
-  i2c->txMessage = message;
+  // Copy message
+  memcpy((char*)&i2c->txMessage, (char*)message, sizeof(I2cMessage));
   // We can now start the ISR sending this message.
   i2cdrvStartTransfer(i2c);
   // Wait for transaction to be done
-  if (xSemaphoreTake(i2c->isBusFreeSemaphore, I2C_MESSAGE_TIMEOUT) == pdFALSE)
+  if (xSemaphoreTake(i2c->isBusFreeSemaphore, I2C_MESSAGE_TIMEOUT) == pdTRUE)
   {
-    i2c->txMessage->status = i2cNack;
+    if (i2c->txMessage.status == i2cAck)
+    {
+      status = true;
+    }
+  }
+  else
+  {
+    i2cdrvClearDMA(i2c);
     i2cdrvTryToRestartBus(i2c);
     //TODO: If bus is really hanged... fail safe
   }
   xSemaphoreGive(i2c->isBusFreeMutex);
+
+  return status;
 }
 
 
@@ -438,43 +456,43 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
   {
     i2c->messageIndex = 0;
 
-    if(i2c->txMessage->direction == i2cWrite ||
-       i2c->txMessage->internalAddress != I2C_NO_INTERNAL_ADDRESS)
+    if(i2c->txMessage.direction == i2cWrite ||
+       i2c->txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
     {
-      I2C_Send7bitAddress(i2c->def->i2cPort, i2c->txMessage->slaveAddress << 1, I2C_Direction_Transmitter);
+      I2C_Send7bitAddress(i2c->def->i2cPort, i2c->txMessage.slaveAddress << 1, I2C_Direction_Transmitter);
     }
     else
     {
       I2C_AcknowledgeConfig(i2c->def->i2cPort, ENABLE);
-      I2C_Send7bitAddress(i2c->def->i2cPort, i2c->txMessage->slaveAddress << 1, I2C_Direction_Receiver);
+      I2C_Send7bitAddress(i2c->def->i2cPort, i2c->txMessage.slaveAddress << 1, I2C_Direction_Receiver);
     }
   }
   // Address event
   else if (SR1 & I2C_SR1_ADDR)
   {
-    if(i2c->txMessage->direction == i2cWrite ||
-       i2c->txMessage->internalAddress != I2C_NO_INTERNAL_ADDRESS)
+    if(i2c->txMessage.direction == i2cWrite ||
+       i2c->txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
     {
       SR2 = i2c->def->i2cPort->SR2;                               // clear ADDR
       // In write mode transmit is always empty so can send up to two bytes
-      if (i2c->txMessage->internalAddress != I2C_NO_INTERNAL_ADDRESS)
+      if (i2c->txMessage.internalAddress != I2C_NO_INTERNAL_ADDRESS)
       {
-        if (i2c->txMessage->isInternal16bit)
+        if (i2c->txMessage.isInternal16bit)
         {
-          I2C_SendData(i2c->def->i2cPort, (i2c->txMessage->internalAddress & 0xFF00) >> 8);
-          I2C_SendData(i2c->def->i2cPort, (i2c->txMessage->internalAddress & 0x00FF));
+          I2C_SendData(i2c->def->i2cPort, (i2c->txMessage.internalAddress & 0xFF00) >> 8);
+          I2C_SendData(i2c->def->i2cPort, (i2c->txMessage.internalAddress & 0x00FF));
         }
         else
         {
-          I2C_SendData(i2c->def->i2cPort, (i2c->txMessage->internalAddress & 0x00FF));
+          I2C_SendData(i2c->def->i2cPort, (i2c->txMessage.internalAddress & 0x00FF));
         }
-        i2c->txMessage->internalAddress = I2C_NO_INTERNAL_ADDRESS;
+        i2c->txMessage.internalAddress = I2C_NO_INTERNAL_ADDRESS;
       }
       I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, ENABLE);        // allow us to have an EV7
     }
     else // Reading, start DMA transfer
     {
-      if(i2c->txMessage->messageLength == 1)
+      if(i2c->txMessage.messageLength == 1)
       {
         I2C_AcknowledgeConfig(i2c->def->i2cPort, DISABLE);
       }
@@ -498,7 +516,7 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
     SR2 = i2c->def->i2cPort->SR2;
     if (SR2 & I2C_SR2_TRA) // In write mode?
     {
-      if (i2c->txMessage->direction == i2cRead) // internal address read
+      if (i2c->txMessage.direction == i2cRead) // internal address read
       {
         /* Internal address written, switch to read */
         i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE); // Generate start
@@ -513,8 +531,8 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
     else // Reading. Shouldn't happen since we use DMA for reading.
     {
       ASSERT(1);
-      i2c->txMessage->buffer[i2c->messageIndex++] = I2C_ReceiveData(i2c->def->i2cPort);
-      if(i2c->messageIndex == i2c->txMessage->messageLength)
+      i2c->txMessage.buffer[i2c->messageIndex++] = I2C_ReceiveData(i2c->def->i2cPort);
+      if(i2c->messageIndex == i2c->txMessage.messageLength)
       {
         i2cNotifyClient(i2c);
         // Are there any other messages to transact?
@@ -528,8 +546,8 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
   // Byte received
   else if (SR1 & I2C_SR1_RXNE) // Should not happen when we use DMA for reception.
   {
-    i2c->txMessage->buffer[i2c->messageIndex++] = I2C_ReceiveData(i2c->def->i2cPort);
-    if(i2c->messageIndex == i2c->txMessage->messageLength)
+    i2c->txMessage.buffer[i2c->messageIndex++] = I2C_ReceiveData(i2c->def->i2cPort);
+    if(i2c->messageIndex == i2c->txMessage.messageLength)
     {
       I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);   // disable RXE to get BTF
     }
@@ -537,7 +555,7 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
   // Byte ready to be transmitted
   else if (SR1 & I2C_SR1_TXE)
   {
-    if (i2c->txMessage->direction == i2cRead)
+    if (i2c->txMessage.direction == i2cRead)
     {
       // Disable TXE to flush and get BTF to switch to read.
       // Switch must be done in BTF or strange things happen.
@@ -545,8 +563,8 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
     }
     else
     {
-      I2C_SendData(i2c->def->i2cPort, i2c->txMessage->buffer[i2c->messageIndex++]);
-      if(i2c->messageIndex == i2c->txMessage->messageLength)
+      I2C_SendData(i2c->def->i2cPort, i2c->txMessage.buffer[i2c->messageIndex++]);
+      if(i2c->messageIndex == i2c->txMessage.messageLength)
       {
         // Disable TXE to allow the buffer to flush and get BTF
         I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);
@@ -560,7 +578,7 @@ static void i2cdrvErrorIsrHandler(I2cDrv* i2c)
 {
   if (I2C_GetFlagStatus(i2c->def->i2cPort, I2C_FLAG_AF))
   {
-    if(i2c->txMessage->nbrOfRetries-- > 0)
+    if(i2c->txMessage.nbrOfRetries-- > 0)
     {
       // Retry by generating start
       i2c->def->i2cPort->CR1 = (I2C_CR1_START | I2C_CR1_PE);
@@ -568,7 +586,7 @@ static void i2cdrvErrorIsrHandler(I2cDrv* i2c)
     else
     {
       // Failed so notify client and try next message if any.
-      i2c->txMessage->status = i2cNack;
+      i2c->txMessage.status = i2cNack;
       i2cNotifyClient(i2c);
       i2cTryNextMessage(i2c);
     }
@@ -588,16 +606,20 @@ static void i2cdrvErrorIsrHandler(I2cDrv* i2c)
   }
 }
 
+static void i2cdrvClearDMA(I2cDrv* i2c)
+{
+  DMA_Cmd(i2c->def->dmaRxStream, DISABLE);
+  DMA_ClearITPendingBit(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag);
+  I2C_DMACmd(i2c->def->i2cPort, DISABLE);
+  I2C_DMALastTransferCmd(i2c->def->i2cPort, DISABLE);
+  DMA_ITConfig(i2c->def->dmaRxStream, DMA_IT_TC | DMA_IT_TE, DISABLE);
+}
+
 static void i2cdrvDmaIsrHandler(I2cDrv* i2c)
 {
   if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Tranasfer complete
   {
-    DMA_Cmd(i2c->def->dmaRxStream, DISABLE);
-    DMA_ClearITPendingBit(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag);
-    I2C_DMACmd(i2c->def->i2cPort, DISABLE);
-    I2C_DMALastTransferCmd(i2c->def->i2cPort, DISABLE);
-    DMA_ITConfig(i2c->def->dmaRxStream, DMA_IT_TC | DMA_IT_TE, DISABLE);
-
+    i2cdrvClearDMA(i2c);
     i2cNotifyClient(i2c);
     // Are there any other messages to transact?
     i2cTryNextMessage(i2c);
@@ -606,7 +628,7 @@ static void i2cdrvDmaIsrHandler(I2cDrv* i2c)
   {
     DMA_ClearITPendingBit(i2c->def->dmaRxStream, i2c->def->dmaRxTEFlag);
     //TODO: Best thing we could do?
-    i2c->txMessage->status = i2cNack;
+    i2c->txMessage.status = i2cNack;
     i2cNotifyClient(i2c);
     i2cTryNextMessage(i2c);
   }

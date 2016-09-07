@@ -28,6 +28,7 @@
 #include "i2cdev.h"
 #include "ws2812.h"
 #include "motors.h"
+#include "cfassert.h"
 
 #ifdef PLATFORM_CF1
 #include "uart.h"
@@ -144,6 +145,7 @@ void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
 
+  storeAssertSnapshotData(__FILE__, __LINE__);
   while (1)
   {}
 }
@@ -162,6 +164,7 @@ void DONT_DISCARD MemManage_Handler(void)
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
 
+  storeAssertSnapshotData(__FILE__, __LINE__);
   while (1)
   {}
 }
@@ -181,6 +184,7 @@ void DONT_DISCARD BusFault_Handler(void)
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
 
+  storeAssertSnapshotData(__FILE__, __LINE__);
   while (1)
   {}
 }
@@ -200,6 +204,7 @@ void DONT_DISCARD UsageFault_Handler(void)
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
 
+  storeAssertSnapshotData(__FILE__, __LINE__);
   while (1)
   {}
 }

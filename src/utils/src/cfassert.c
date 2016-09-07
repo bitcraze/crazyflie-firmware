@@ -49,8 +49,6 @@ SNAPSHOT_DATA snapshot __attribute__((section(".nzds"))) = {
   .line = 0
 };
 
-void storeAssertSnapshotData(char *file, int line);
-
 
 void assertFail(char *exp, char *file, int line)
 {
