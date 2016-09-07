@@ -277,6 +277,9 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 #Permits to remove un-used functions and global variables from output file
 CFLAGS += -ffunction-sections -fdata-sections
 
+# Fail on warnings
+CFLAGS += -Werror
+
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
 LDFLAGS = --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
 
