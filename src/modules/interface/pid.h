@@ -29,7 +29,7 @@
 
 #include <stdbool.h>
 
-#if defined(PLATFORM_CF2) && defined(EXPERIMENTAL_ATTITUDE_PID)
+#ifdef PLATFORM_CF2
 
 #define PID_ROLL_RATE_KP  250.0
 #define PID_ROLL_RATE_KI  500.0
