@@ -40,7 +40,7 @@
       pages   = {1730-1736},
       doi     = {10.1109/ICRA.2015.7139421},
       ISSN    = {1050-4729}}
-      
+
       @PHDTHESIS {Mueller2016,
       author  = {Mueller, M. W.},
       title   = {Increased autonomy for quadrocopter systems: trajectory generation, fail-safe strategies, and state-estimation},
@@ -154,7 +154,7 @@ static inline bool stateEstimatorHasTDOAPacket(tdoaMeasurement_t *uwb) {
 
 //thrust is thrust mapped for 65536 <==> 60 GRAMS!
 #define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/CRAZYFLIE_WEIGHT_grams/65536.0f)
- 
+
 #define SPEED_OF_LIGHT (299792458)
 
 // TODO: Decouple the TDOA implementation from the Kalman filter...
@@ -317,12 +317,12 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
 {
   // If the client (via a parameter update) triggers an estimator reset:
   if (resetEstimation) { stateEstimatorInit(); resetEstimation = false; }
-  
+
   // Tracks whether an update to the state has been made, and the state therefore requires finalization
   bool doneUpdate = false;
 
   uint32_t tick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
-  
+
   // Average the last IMU measurements. We do this because the prediction loop is
   // slower than the IMU loop, but the IMU information is required externally at
   // a higher rate (for body rate control).
@@ -338,6 +338,10 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
     gyroAccumulator.y += sensors->gyro.y * DEG_TO_RAD; // but the estimator requires rad/sec
     gyroAccumulator.z += sensors->gyro.z * DEG_TO_RAD;
     gyroAccumulatorCount++;
+  }
+
+  if (sensorsReadMag(&sensors->mag)) {
+      // Currently the magnetometer doesn't play a part in the estimation
   }
 
   // Average the thrust command from the last timestep, generated externally by the controller
@@ -378,26 +382,26 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
 
     doneUpdate = true;
   }
-  
-  
+
+
   /**
    * Add process noise every loop, rather than every prediction
    */
   stateEstimatorAddProcessNoise((float)(tick-lastPNUpdate)/configTICK_RATE_HZ);
   lastPNUpdate = tick;
-  
-  
-  
+
+
+
   /**
    * Update the state estimate with the barometer measurements
    */
-#ifdef KALMAN_USE_BARO_UPDATE
   // Accumulate the barometer measurements
   if (sensorsReadBaro(&sensors->baro)) {
+#ifdef KALMAN_USE_BARO_UPDATE
     baroAccumulator.asl += sensors->baro.asl;
     baroAccumulatorCount++;
   }
-  
+
   if ((tick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
       && baroAccumulatorCount > 0)
   {
@@ -409,49 +413,49 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
     baroAccumulatorCount = 0;
     lastBaroUpdate = tick;
     doneUpdate = true;
-  }
 #endif
-  
+  }
+
   /**
    * Sensor measurements can come in sporadically and faster than the stabilizer loop frequency,
    * we therefore consume all measurements since the last loop, rather than accumulating
    */
-  
+
   distanceMeasurement_t dist;
   while (stateEstimatorHasDistanceMeasurement(&dist))
   {
     stateEstimatorUpdateWithDistance(&dist);
     doneUpdate = true;
   }
-  
+
   positionMeasurement_t pos;
   while (stateEstimatorHasPositionMeasurement(&pos))
   {
     stateEstimatorUpdateWithPosition(&pos);
     doneUpdate = true;
   }
-  
+
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
     stateEstimatorUpdateWithTDOA(&tdoa);
     doneUpdate = true;
   }
-  
-  
+
+
   /**
    * If an update has been made, the state is finalized:
    * - the attitude error is moved into the body attitude quaternion,
    * - the body attitude is converted into a rotation matrix for the next prediction, and
    * - correctness of the covariance matrix is ensured
    */
-  
+
   if (doneUpdate)
   {
     stateEstimatorFinalize(sensors, tick);
     stateEstimatorAssertNotNaN();
   }
-  
+
   /**
    * Finally, the internal state is externalized.
    * This is done every round, since the external state includes some sensor data
@@ -501,11 +505,11 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   A[STATE_X][STATE_X] = 1;
   A[STATE_Y][STATE_Y] = 1;
   A[STATE_Z][STATE_Z] = 1;
-  
+
   A[STATE_PX][STATE_PX] = 1;
   A[STATE_PY][STATE_PY] = 1;
   A[STATE_PZ][STATE_PZ] = 1;
-  
+
   A[STATE_D0][STATE_D0] = 1;
   A[STATE_D1][STATE_D1] = 1;
   A[STATE_D2][STATE_D2] = 1;
@@ -604,7 +608,7 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   // ====== PREDICTION STEP ======
   // The prediction depends on whether we're on the ground, or in flight.
   // When flying, the accelerometer directly measures thrust (hence is useless to estimate body angle while flying)
-  
+
   // TODO: Find a better check for whether the quad is flying
   // Assume that the flight begins when the thrust is large enough and for now we never stop "flying".
   if (cmdThrust > IN_FLIGHT_THRUST_THRESHOLD) {
@@ -622,7 +626,7 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     // acc->z's error comes from measurement noise and accelerometer scaling
     // float zacc = cmdThrust;
     float zacc = acc->z;
-    
+
     // position updates in the body frame (will be rotated to inertial frame)
     float dx = S[STATE_PX] * dt;
     float dy = S[STATE_PY] * dt;
@@ -648,7 +652,7 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     S[STATE_PY] = 0;
     S[STATE_PZ] = 0;
   }
-  
+
   if(S[STATE_Z] < 0) {
     S[STATE_Z] = 0;
     S[STATE_PX] = 0;
@@ -687,16 +691,16 @@ static void stateEstimatorAddProcessNoise(float dt)
     P[STATE_X][STATE_X] += powf(procNoiseAcc_xy*dt*dt + procNoiseVel*dt + procNoisePos, 2);  // add process noise on position
     P[STATE_Y][STATE_Y] += powf(procNoiseAcc_xy*dt*dt + procNoiseVel*dt + procNoisePos, 2);  // add process noise on position
     P[STATE_Z][STATE_Z] += powf(procNoiseAcc_z*dt*dt + procNoiseVel*dt + procNoisePos, 2);  // add process noise on position
-    
+
     P[STATE_PX][STATE_PX] += powf(procNoiseAcc_xy*dt + procNoiseVel, 2); // add process noise on velocity
     P[STATE_PY][STATE_PY] += powf(procNoiseAcc_xy*dt + procNoiseVel, 2); // add process noise on velocity
     P[STATE_PZ][STATE_PZ] += powf(procNoiseAcc_z*dt + procNoiseVel, 2); // add process noise on velocity
-    
+
     P[STATE_D0][STATE_D0] += powf(measNoiseGyro_rollpitch * dt + procNoiseAtt, 2);
     P[STATE_D1][STATE_D1] += powf(measNoiseGyro_rollpitch * dt + procNoiseAtt, 2);
     P[STATE_D2][STATE_D2] += powf(measNoiseGyro_yaw * dt + procNoiseAtt, 2);
   }
-  
+
   for (int i=0; i<STATE_DIM; i++) {
     for (int j=i; j<STATE_DIM; j++) {
       float p = 0.5f*P[i][j] + 0.5f*P[j][i];
@@ -709,7 +713,7 @@ static void stateEstimatorAddProcessNoise(float dt)
       }
     }
   }
-  
+
   stateEstimatorAssertNotNaN();
 }
 
@@ -811,12 +815,12 @@ static void stateEstimatorUpdateWithAccOnGround(Axis3f *acc)
 static void stateEstimatorUpdateWithBaro(baro_t *baro)
 {
   static float baroReferenceHeight = 0;
-  
+
   float h[STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, STATE_DIM, h};
-  
+
   h[STATE_Z] = 1;
-  
+
   if (!quadIsFlying || baroReferenceHeight < 1) {
     //TODO: maybe we could track the zero height as a state. Would be especially useful if UWB anchors had barometers.
     baroReferenceHeight = baro->asl;
@@ -844,19 +848,19 @@ static void stateEstimatorUpdateWithDistance(distanceMeasurement_t *d)
   // a measurement of distance to point (x, y, z)
   float h[STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, STATE_DIM, h};
-  
+
   float dx = S[STATE_X] - d->x;
   float dy = S[STATE_Y] - d->y;
   float dz = S[STATE_Z] - d->z;
-  
+
   float predictedDistance = arm_sqrt(powf(dx, 2) + powf(dy, 2) + powf(dz, 2));
   float measuredDistance = d->distance;
-  
+
   // The measurement is: z = sqrt(dx^2 + dy^2 + dz^2). The derivative dz/dX gives h.
   h[STATE_X] = dx/predictedDistance;
   h[STATE_Y] = dy/predictedDistance;
   h[STATE_Z] = dz/predictedDistance;
-  
+
   stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, d->stdDev);
 }
 
@@ -906,14 +910,14 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
   {
     float h[STATE_DIM] = {0};
     arm_matrix_instance_f32 H = {1, STATE_DIM, h};
-    
+
     h[STATE_X] = ((x - x1) / d1 - (x - x0) / d0);
     h[STATE_Y] = ((y - y1) / d1 - (y - y0) / d0);
     h[STATE_Z] = ((z - z1) / d1 - (z - z0) / d0);
-    
+
     stateEstimatorScalarUpdate(&H, error, varUwb);
   }
-  
+
   tdoaCount++;
 }
 
@@ -970,11 +974,11 @@ static void stateEstimatorFinalize(sensorData_t *sensors, uint32_t tick)
     float d0 = v0/2; // the attitude error vector (v0,v1,v2) is small,
     float d1 = v1/2; // so we use a first order approximation to d0 = tan(|v0|/2)*v0/|v0|
     float d2 = v2/2;
-    
+
     A[STATE_X][STATE_X] = 1;
     A[STATE_Y][STATE_Y] = 1;
     A[STATE_Z][STATE_Z] = 1;
-    
+
     A[STATE_PX][STATE_PX] = 1;
     A[STATE_PY][STATE_PY] = 1;
     A[STATE_PZ][STATE_PZ] = 1;
@@ -1008,18 +1012,18 @@ static void stateEstimatorFinalize(sensorData_t *sensors, uint32_t tick)
   R[2][0] = 2 * q[1] * q[3] - 2 * q[0] * q[2];
   R[2][1] = 2 * q[2] * q[3] + 2 * q[0] * q[1];
   R[2][2] = q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3];
-  
+
   // reset the attitude error
   S[STATE_D0] = 0;
   S[STATE_D1] = 0;
   S[STATE_D2] = 0;
-  
+
   // constrain the states
   for (int i=0; i<3; i++)
   {
     if (S[STATE_X+i] < -MAX_POSITION) { S[STATE_X+i] = -MAX_POSITION; }
     else if (S[STATE_X+i] > MAX_POSITION) { S[STATE_X+i] = MAX_POSITION; }
-    
+
     if (S[STATE_PX+i] < -MAX_VELOCITY) { S[STATE_PX+i] = -MAX_VELOCITY; }
     else if (S[STATE_PX+i] > MAX_VELOCITY) { S[STATE_PX+i] = MAX_VELOCITY; }
   }
@@ -1037,7 +1041,7 @@ static void stateEstimatorFinalize(sensorData_t *sensors, uint32_t tick)
       }
     }
   }
-  
+
   stateEstimatorAssertNotNaN();
 }
 
@@ -1108,7 +1112,7 @@ void stateEstimatorInit(void) {
     xQueueReset(posDataQueue);
     xQueueReset(tdoaDataQueue);
   }
-  
+
   lastPrediction = xTaskGetTickCount();
   lastBaroUpdate = xTaskGetTickCount();
   lastTDOAUpdate = xTaskGetTickCount();
@@ -1123,7 +1127,7 @@ void stateEstimatorInit(void) {
   gyroAccumulatorCount = 0;
   thrustAccumulatorCount = 0;
   baroAccumulatorCount = 0;
-  
+
   // TODO: Can we initialize this more intelligently?
   S[STATE_X] = 0.5;
   S[STATE_Y] = 0.5;
@@ -1153,17 +1157,17 @@ void stateEstimatorInit(void) {
   P[STATE_X][STATE_X]  = powf(stdDevInitialPosition_xy, 2);
   P[STATE_Y][STATE_Y]  = powf(stdDevInitialPosition_xy, 2);
   P[STATE_Z][STATE_Z]  = powf(stdDevInitialPosition_z, 2);
-  
+
   P[STATE_PX][STATE_PX] = powf(stdDevInitialVelocity, 2);
   P[STATE_PY][STATE_PY] = powf(stdDevInitialVelocity, 2);
   P[STATE_PZ][STATE_PZ] = powf(stdDevInitialVelocity, 2);
-  
+
   P[STATE_D0][STATE_D0] = powf(stdDevInitialAttitude_rollpitch, 2);
   P[STATE_D1][STATE_D1] = powf(stdDevInitialAttitude_rollpitch, 2);
   P[STATE_D2][STATE_D2] = powf(stdDevInitialAttitude_yaw, 2);
-  
+
   varSkew = powf(stdDevInitialSkew, 2);
-  
+
   tdoaCount = 0;
   isInit = true;
 }
@@ -1172,7 +1176,7 @@ static bool stateEstimatorEnqueueExternalMeasurement(xQueueHandle queue, void *m
 {
   portBASE_TYPE result;
   bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
-  
+
   if (isInInterrupt) {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     result = xQueueSendFromISR(queue, measurement, &xHigherPriorityTaskWoken);

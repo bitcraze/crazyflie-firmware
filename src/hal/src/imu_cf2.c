@@ -389,11 +389,13 @@ void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut)
 
   if (isMagPresent)
   {
-    ak8963GetHeading(&mag.x, &mag.y, &mag.z);
-    ak8963GetOverflowStatus();
-    magOut->x = (float)mag.x / MAG_GAUSS_PER_LSB;
-    magOut->y = (float)mag.y / MAG_GAUSS_PER_LSB;
-    magOut->z = (float)mag.z / MAG_GAUSS_PER_LSB;
+    if (ak8963GetDataReady() == true) {
+      ak8963GetHeading(&mag.x, &mag.y, &mag.z);
+      ak8963GetOverflowStatus();
+      magOut->x = (float)mag.x / MAG_GAUSS_PER_LSB;
+      magOut->y = (float)mag.y / MAG_GAUSS_PER_LSB;
+      magOut->z = (float)mag.z / MAG_GAUSS_PER_LSB;
+    }
   }
   else
   {

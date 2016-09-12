@@ -54,7 +54,7 @@ THE SOFTWARE.
 #define AK8963_RA_HZH             0x08
 #define AK8963_RA_ST2             0x09
 #define AK8963_RA_CNTL            0x0A
-#define AK8963_RA_RSV             0x0B // RESERVED, DO NOT USE
+#define AK8963_RA_CNTL2           0x0B
 #define AK8963_RA_ASTC            0x0C
 #define AK8963_RA_TS1             0x0D // SHIPMENT TEST, DO NOT USE
 #define AK8963_RA_TS2             0x0E // SHIPMENT TEST, DO NOT USE
