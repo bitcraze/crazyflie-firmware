@@ -86,7 +86,7 @@ static bool isMagnetometerPresent = false;
 
 #define MPU6500_BUFF_LEN 14
 #define MAG_BUFF_LEN 8
-#define BARO_BUFF_LEN 5
+#define BARO_BUFF_LEN 6
 
 // This buffer needs to hold data from all sensors
 static uint8_t buffer[MPU6500_BUFF_LEN + MAG_BUFF_LEN + BARO_BUFF_LEN] = {0};
@@ -163,8 +163,14 @@ void processBarometerMeasurements(const uint8_t *buffer)
   static uint32_t rawPressure = 0;
   static int16_t rawTemp = 0;
 
-  rawPressure = ((uint32_t) buffer[2] << 16) | ((uint32_t) buffer[1] << 8) | buffer[0];
-  rawTemp = ((int16_t) buffer[4] << 8) | buffer[3];
+  // Check if there is a new pressure update
+  if (buffer[0] & 0x02) {
+    rawPressure = ((uint32_t) buffer[3] << 16) | ((uint32_t) buffer[2] << 8) | buffer[1];
+  }
+  // Check if there is a new temp update
+  if (buffer[0] & 0x01) {
+    rawTemp = ((int16_t) buffer[5] << 8) | buffer[4];
+  }
 
   sensors.baro.pressure = (float) rawPressure / LPS25H_LSB_PER_MBAR;
   sensors.baro.temperature = LPS25H_TEMP_OFFSET + ((float) rawTemp / LPS25H_LSB_PER_CELSIUS);
@@ -264,8 +270,6 @@ static void sensorsDeviceInit(void) {
   mpu6500SetTempSensorEnabled(true);
   // Disable interrupts
   mpu6500SetIntEnabled(false);
-  // Connect the HMC5883L to the main I2C bus
-  mpu6500SetI2CBypassEnabled(true);
   // Set gyro full scale range
   mpu6500SetFullScaleGyroRange(IMU_GYRO_FS_CFG);
   // Set accelerometer full scale range
@@ -311,6 +315,8 @@ static void sensorsDeviceInit(void) {
   mpu6500SetInterruptDrive(0); // push pull
   mpu6500SetInterruptLatch(0); // latched until clear
   mpu6500SetInterruptLatchClear(1); // cleared on any register read
+  mpu6500SetSlaveReadWriteTransitionEnabled(true); // Send a stop at the end of a slave read
+  mpu6500SetMasterClockSpeed(13); // Set i2c speed to 400kHz
 
 #ifdef IMU_ENABLE_MAG_AK8963
   // Reset AK8963 through MPU6500 master
@@ -325,12 +331,13 @@ static void sensorsDeviceInit(void) {
   mpu6500SetSlaveRegister(0, AK8963_RA_WIA);
   mpu6500SetSlaveDataLength(0, 1); // Only modify control register at a time
   mpu6500SetSlaveEnabled(0, true);
+
   if (mpu6500GetExternalSensorByte(0) == 0x48) {
     isMagnetometerPresent = true;
     DEBUG_PRINT("AK8963 Slave Connection [OK].\n");
 
     // Set operation mode for AK8963 through MPU6500 master
-    mpu6500SetSlaveAddress(0, AK8963_ADDRESS_00); // set the magnetometer to Slave 0, enable read
+    mpu6500SetSlaveAddress(0, AK8963_ADDRESS_00); // set the magnetometer to Slave 0, enable write
     mpu6500SetSlaveRegister(0, AK8963_RA_CNTL);
     mpu6500SetSlaveOutputByte(0, AK8963_MODE_16BIT | AK8963_MODE_CONT2); // 16bit 100Hz
     mpu6500SetSlaveEnabled(0, true);
@@ -338,9 +345,12 @@ static void sensorsDeviceInit(void) {
     // Set registers for MPU6500 master to read from
     mpu6500SetSlaveAddress(0, 0x80 | AK8963_ADDRESS_00); // set the magnetometer to Slave 0, enable read
     mpu6500SetSlaveRegister(0, AK8963_RA_ST1); // read the magnetometer heading register
-    mpu6500SetSlaveDataLength(0, 8); // read 7 bytes (x, y, z heading, ST2 (overflow check))
-    mpu6500SetSlaveEnabled(0, true);
+    mpu6500SetSlaveDataLength(0, MAG_BUFF_LEN); // read 8 bytes (ST1, x, y, z heading, ST2 (overflow check))
     mpu6500SetSlaveDelayEnabled(0, true);
+
+    // Disable the sensor to allow others to setup
+    mpu6500SetSlaveEnabled(0, false);
+    vTaskDelay(M2T(1));
 
   } else {
       DEBUG_PRINT("AK8963 Slave Connection [FAIL].\n");
@@ -348,25 +358,58 @@ static void sensorsDeviceInit(void) {
 #endif
 
 #ifdef IMU_ENABLE_PRESSURE_LPS25H
-  lps25hInit(I2C3_DEV);
-  if (lps25hTestConnection() == true)
+  // Configure the LPS2H as a slave and the get the WAI register
+  mpu6500SetSlaveAddress(1, 0x80 | LPS25H_I2C_ADDR); // Set barometer to slave 1, enable read
+  mpu6500SetSlaveRegister(1, LPS25H_WHO_AM_I);
+  mpu6500SetSlaveDataLength(1, 1);
+  mpu6500SetSlaveEnabled(1, true);
+  vTaskDelay(M2T(1));
+
+  // Check WHO_AM_I register to see if we get data
+  if (mpu6500GetExternalSensorByte(isMagnetometerPresent ? MAG_BUFF_LEN : 0) == LPS25H_WAI_ID)
   {
-    lps25hSetEnabled(true);
     isBarometerPresent = true;
-    configASSERT(lps25hSelfTest());
-    DEBUG_PRINT("LPS25H I2C connection [OK].\n");
-    mpu6500SetSlaveAddress(1, 0x80 | LPS25H_I2C_ADDR); // set the barometer to Slave 1, enable read
-    mpu6500SetSlaveRegister(1, LPS25H_PRESS_OUT_XL | LPS25H_ADDR_AUTO_INC);
-    mpu6500SetSlaveDataLength(1, 5);
-    mpu6500SetSlaveDelayEnabled(1, true);
+    DEBUG_PRINT("LPS25H slave connection [OK].\n");
+
+    // Power on, 25Hz, BDU, reset zero
+    mpu6500SetSlaveAddress(1, LPS25H_I2C_ADDR); // Set slave 1 to write mode
+    mpu6500SetSlaveRegister(1, LPS25H_CTRL_REG1);
+    mpu6500SetSlaveOutputByte(1, 0b11000110);
     mpu6500SetSlaveEnabled(1, true);
+    vTaskDelay(M2T(1));
+
+    // AVG-P 512, AVG-T 64
+    mpu6500SetSlaveRegister(1, LPS25H_RES_CONF);
+    mpu6500SetSlaveOutputByte(1, 0b00001111);
+    mpu6500SetSlaveEnabled(1, true);
+    vTaskDelay(M2T(1));
+
+    // Set slave 1 back to read mode
+    mpu6500SetSlaveAddress(1, 0x80 | LPS25H_I2C_ADDR);
+    mpu6500SetSlaveRegister(1, LPS25H_STATUS_REG | LPS25H_ADDR_AUTO_INC);
+    mpu6500SetSlaveDataLength(1, BARO_BUFF_LEN);
+    mpu6500SetSlaveDelayEnabled(1, true);
+
+    // Disable the sensor to allow others to setup
+    mpu6500SetSlaveEnabled(1, false);
+    vTaskDelay(M2T(1));
   }
   else
   {
     //TODO: Should sensor test fail hard if no connection
-    DEBUG_PRINT("LPS25H I2C connection [FAIL].\n");
+    DEBUG_PRINT("LPS25H slave connection [FAIL].\n");
   }
 #endif
+
+  // Enable sensors after configuration
+  if (isMagnetometerPresent == true) {
+    mpu6500SetSlaveEnabled(0, false);
+    vTaskDelay(M2T(1));
+  }
+  if (isBarometerPresent == true) {
+    mpu6500SetSlaveEnabled(1, true);
+    vTaskDelay(M2T(1));
+  }
 
   mpu6500SetIntDataReadyEnabled(true);
 }
