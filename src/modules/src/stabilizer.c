@@ -118,6 +118,7 @@ static void stabilizerTask(void* param)
 #endif
 
     commanderGetSetpoint(&setpoint, &state);
+    commanderGetPosition(&state);
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
