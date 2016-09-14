@@ -52,13 +52,9 @@ struct CommanderCrtpValues
 
 struct CommanderCrtpPosition
 {
-  uint8_t valid;
   float x;
   float y;
   float z;
-  float vx;
-  float vy;
-  float vz;
 } __attribute__((packed));
 
 void commanderInit(void);

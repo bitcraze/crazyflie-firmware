@@ -394,17 +394,11 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 void commanderGetPosition(state_t *state)
 {
   // Only use position information if it's valid and recent
-  if (crtpPosCache.targetVal[crtpPosCache.activeSide].valid &&
-          (xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(2)) {
+  if ((xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(2)) {
     // Update position information
     state->position.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
     state->position.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
     state->position.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
-
-    // Update velocity information
-    state->velocity.x = crtpPosCache.targetVal[crtpPosCache.activeSide].vx;
-    state->velocity.y = crtpPosCache.targetVal[crtpPosCache.activeSide].vy;
-    state->velocity.z = crtpPosCache.targetVal[crtpPosCache.activeSide].vz;
   }
 }
 
