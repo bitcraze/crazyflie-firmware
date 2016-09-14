@@ -50,11 +50,23 @@ struct CommanderCrtpValues
   uint16_t thrust;
 } __attribute__((packed));
 
+struct CommanderCrtpPosition
+{
+  uint8_t valid;
+  float x;
+  float y;
+  float z;
+  float vx;
+  float vy;
+  float vz;
+} __attribute__((packed));
+
 void commanderInit(void);
 bool commanderTest(void);
 uint32_t commanderGetInactivityTime(void);
 void commanderExtrxSet(const struct CommanderCrtpValues* val);
 
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state);
+void commanderGetPosition(state_t *state);
 
 #endif /* COMMANDER_H_ */

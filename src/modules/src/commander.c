@@ -48,6 +48,16 @@ typedef struct
 } CommanderCache;
 
 /**
+ * Commander position data
+ */
+typedef struct
+{
+  struct CommanderCrtpPosition targetVal[2];
+  bool activeSide;
+  uint32_t timestamp; // FreeRTOS ticks
+} CommanderPositionCache;
+
+/**
  * Stabilization modes for Roll, Pitch, Yaw.
  */
 typedef enum
@@ -70,6 +80,8 @@ static bool isInit;
 static CommanderCache crtpCache;
 static CommanderCache extrxCache;
 static CommanderCache* activeCache;
+
+static CommanderPositionCache crtpPosCache;
 
 static uint32_t lastUpdate;
 static bool isInactive;
@@ -176,6 +188,13 @@ static void commanderCrtpCB(CRTPPacket* pk)
   }
 }
 
+static void commanderPositionCrtpCB(CRTPPacket* pk)
+{
+  crtpPosCache.targetVal[!crtpPosCache.activeSide] = *((struct CommanderCrtpPosition*)pk->data);
+  crtpPosCache.activeSide = !crtpPosCache.activeSide;
+  crtpPosCache.timestamp = xTaskGetTickCount();
+}
+
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
  *
@@ -256,7 +275,8 @@ void commanderInit(void)
   }
 
   crtpInit();
-  crtpRegisterPortCB(CRTP_PORT_COMMANDER, commanderCrtpCB);
+  crtpRegisterPortCB(CRTP_PORT_SETPOINT, commanderCrtpCB);
+  crtpRegisterPortCB(CRTP_PORT_POSITION, commanderPositionCrtpCB);
 
   activeCache = &crtpCache;
   lastUpdate = xTaskGetTickCount();
@@ -368,6 +388,23 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     yawModeUpdate(setpoint, state);
 
     setpoint->mode.yaw = modeVelocity;
+  }
+}
+
+void commanderGetPosition(state_t *state)
+{
+  // Only use position information if it's valid and recent
+  if (crtpPosCache.targetVal[crtpPosCache.activeSide].valid &&
+          (xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(2)) {
+    // Update position information
+    state->position.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
+    state->position.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
+    state->position.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
+
+    // Update velocity information
+    state->velocity.x = crtpPosCache.targetVal[crtpPosCache.activeSide].vx;
+    state->velocity.y = crtpPosCache.targetVal[crtpPosCache.activeSide].vy;
+    state->velocity.z = crtpPosCache.targetVal[crtpPosCache.activeSide].vz;
   }
 }
 
