@@ -60,6 +60,8 @@
 #include "buzzer.h"
 #include "sound.h"
 
+#include "tmp36.h"
+
 #ifdef PLATFORM_CF1
 #include "uart.h"
 #endif
@@ -102,6 +104,7 @@ void systemInit(void)
 
 #ifdef PLATFORM_CF2
   usblinkInit();
+  tmp36Init();
 #endif
 
   /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
@@ -122,6 +125,7 @@ void systemInit(void)
   ledseqInit();
   pmInit();
   buzzerInit();
+
 
   isInit = true;
 }
