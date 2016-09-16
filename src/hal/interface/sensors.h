@@ -32,6 +32,11 @@ void sensorsInit(void);
 bool sensorsTest(void);
 bool sensorsAreCalibrated(void);
 
+/**
+ * More extensive test of the sensors
+ */
+bool sensorsManufacturingTest(void);
+
 // For legacy control
 void sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
 

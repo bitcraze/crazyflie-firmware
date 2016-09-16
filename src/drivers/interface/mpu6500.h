@@ -211,6 +211,19 @@ THE SOFTWARE.
 #define MPU6500_ACONFIG_ACCEL_HPF_BIT       2
 #define MPU6500_ACONFIG_ACCEL_HPF_LENGTH    3
 
+#define MPU6500_ACONFIG2_FCHOICE_B_BIT      2
+#define MPU6500_ACONFIG2_FCHOICE_B_LENGTH   2
+#define MPU6500_ACONFIG2_DLPF_BIT           0
+#define MPU6500_ACONFIG2_DLPF_LENGTH        2
+
+#define MPU6500_ACCEL_DLPF_BW_460   0x00
+#define MPU6500_ACCEL_DLPF_BW_184   0x01
+#define MPU6500_ACCEL_DLPF_BW_92    0x02
+#define MPU6500_ACCEL_DLPF_BW_41    0x03
+#define MPU6500_ACCEL_DLPF_BW_20    0x04
+#define MPU6500_ACCEL_DLPF_BW_10    0x05
+#define MPU6500_ACCEL_DLPF_BW_5     0x06
+
 #define MPU6500_ACCEL_FS_2          0x00
 #define MPU6500_ACCEL_FS_4          0x01
 #define MPU6500_ACCEL_FS_8          0x02
@@ -464,6 +477,9 @@ void mpu6500SetFullScaleAccelRange(uint8_t range);
 float mpu6500GetFullScaleAccelGPL();
 uint8_t mpu6500GetDHPFMode();
 void mpu6500SetDHPFMode(uint8_t mode);
+
+// ACCEL_CONFIG2 register
+void mpu6500SetAccelDLPF(uint8_t range);
 
 // FF_THR register
 uint8_t mpu6500GetFreefallDetectionThreshold();

@@ -44,6 +44,7 @@
 #include "task.h"
 
 #include "system.h"
+#include "configblock.h"
 #include "param.h"
 #include "debug.h"
 #include "imu.h"
@@ -55,27 +56,40 @@
  * Enable 250Hz digital LPF mode. However does not work with
  * multiple slave reading through MPU9250 (MAG and BARO), only single for some reason.
  */
-//#define IMU_MPU6500_DLPF_256HZ
+//#define SENSORS_MPU6500_DLPF_256HZ
 
-#define IMU_ENABLE_PRESSURE_LPS25H
+#define SENSORS_ENABLE_PRESSURE_LPS25H
 
-#define IMU_ENABLE_MAG_AK8963
+#define SENSORS_ENABLE_MAG_AK8963
 #define MAG_GAUSS_PER_LSB     666.7f
 
-#define IMU_GYRO_FS_CFG       MPU6500_GYRO_FS_2000
-#define IMU_DEG_PER_LSB_CFG   MPU6500_DEG_PER_LSB_2000
+#define SENSORS_GYRO_FS_CFG       MPU6500_GYRO_FS_2000
+#define SENSORS_DEG_PER_LSB_CFG   MPU6500_DEG_PER_LSB_2000
 
-#define IMU_ACCEL_FS_CFG      MPU6500_ACCEL_FS_8
-#define IMU_G_PER_LSB_CFG     MPU6500_G_PER_LSB_8
+#define SENSORS_ACCEL_FS_CFG      MPU6500_ACCEL_FS_8
+#define SENSORS_G_PER_LSB_CFG     MPU6500_G_PER_LSB_8
 
-#define IMU_SENSOR_BIAS_SAMPLES       1000
-#define IMU_SENSOR_ACC_SCALE_SAMPLES  200
-#define IMU_GYRO_BIAS_CALCULATE_STDDEV
+#define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(2000) // Timeout in ms
+#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off
 
+#define SENSORS_BIAS_SAMPLES       1000
+#define SENSORS_ACC_SCALE_SAMPLES  200
+#define SENSORS_GYRO_BIAS_CALCULATE_STDDEV
+
+// Buffer length for MPU9250 slave reads
+#define SENSORS_MPU6500_BUFF_LEN    14
+#define SENSORS_MAG_BUFF_LEN        8
+#define SENSORS_BARO_BUFF_LEN       6
+
+#define GYRO_NBR_OF_AXES            3
 #define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
 // Number of samples used in variance calculation. Changing this effects the threshold
-#define IMU_NBR_OF_BIAS_SAMPLES  1024
-#define GYRO_NBR_OF_AXES 3
+#define SENSORS_NBR_OF_BIAS_SAMPLES     1024
+// Variance threshold to take zero bias for gyro
+#define GYRO_VARIANCE_BASE          5000
+#define GYRO_VARIANCE_THRESHOLD_X   (GYRO_VARIANCE_BASE)
+#define GYRO_VARIANCE_THRESHOLD_Y   (GYRO_VARIANCE_BASE)
+#define GYRO_VARIANCE_THRESHOLD_Z   (GYRO_VARIANCE_BASE)
 
 typedef struct
 {
@@ -83,7 +97,7 @@ typedef struct
   bool       isBiasValueFound;
   bool       isBufferFilled;
   Axis3i16*  bufHead;
-  Axis3i16   buffer[IMU_NBR_OF_BIAS_SAMPLES];
+  Axis3i16   buffer[SENSORS_NBR_OF_BIAS_SAMPLES];
 } BiasObj;
 
 static xQueueHandle accelerometerDataQueue;
@@ -95,15 +109,9 @@ static xSemaphoreHandle sensorsDataReady;
 static bool isInit = false;
 static sensorData_t sensors;
 
-// Variance threshold to take zero bias for gyro
-#define GYRO_VARIANCE_BASE        5000
-#define GYRO_VARIANCE_THRESHOLD_X (GYRO_VARIANCE_BASE)
-#define GYRO_VARIANCE_THRESHOLD_Y (GYRO_VARIANCE_BASE)
-#define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
-
 static BiasObj gyroBiasRunning;
 static Axis3f  gyroBias;
-#if defined(IMU_GYRO_BIAS_CALCULATE_STDDEV) && defined (GYRO_BIAS_LIGHT_WEIGHT)
+#if defined(SENSORS_GYRO_BIAS_CALCULATE_STDDEV) && defined (GYRO_BIAS_LIGHT_WEIGHT)
 static Axis3f  gyroBiasStdDev;
 #endif
 static bool    gyroBiasFound = false;
@@ -117,12 +125,14 @@ static bool isMpu6500TestPassed = false;
 static bool isAK8963TestPassed = false;
 static bool isLPS25HTestPassed = false;
 
-#define MPU6500_BUFF_LEN 14
-#define MAG_BUFF_LEN 8
-#define BARO_BUFF_LEN 6
+// Pre-calculated values for accelerometer alignment
+float cosPitch;
+float sinPitch;
+float cosRoll;
+float sinRoll;
 
 // This buffer needs to hold data from all sensors
-static uint8_t buffer[MPU6500_BUFF_LEN + MAG_BUFF_LEN + BARO_BUFF_LEN] = {0};
+static uint8_t buffer[SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN + SENSORS_BARO_BUFF_LEN] = {0};
 
 static void processAccGyroMeasurements(const uint8_t *buffer);
 static void processMagnetometerMeasurements(const uint8_t *buffer);
@@ -140,7 +150,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
 static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj* bias);
-
+static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
 
 bool sensorsReadGyro(Axis3f *gyro)
 {
@@ -185,21 +195,21 @@ static void sensorsTask(void *param)
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
     {
       // data is ready to be read
-      uint8_t dataLen = (uint8_t) (MPU6500_BUFF_LEN +
-              (isMagnetometerPresent ? MAG_BUFF_LEN : 0) +
-              (isBarometerPresent ? BARO_BUFF_LEN : 0));
+      uint8_t dataLen = (uint8_t) (SENSORS_MPU6500_BUFF_LEN +
+              (isMagnetometerPresent ? SENSORS_MAG_BUFF_LEN : 0) +
+              (isBarometerPresent ? SENSORS_BARO_BUFF_LEN : 0));
 
       i2cdevRead(I2C3_DEV, MPU6500_ADDRESS_AD0_HIGH, MPU6500_RA_ACCEL_XOUT_H, dataLen, buffer);
       // these functions process the respective data and queue it on the output queues
       processAccGyroMeasurements(&(buffer[0]));
       if (isMagnetometerPresent)
       {
-          processMagnetometerMeasurements(&(buffer[MPU6500_BUFF_LEN]));
+          processMagnetometerMeasurements(&(buffer[SENSORS_MPU6500_BUFF_LEN]));
       }
       if (isBarometerPresent)
       {
           processBarometerMeasurements(&(buffer[isMagnetometerPresent ?
-                  MPU6500_BUFF_LEN + MAG_BUFF_LEN : MPU6500_BUFF_LEN]));
+                  SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN : SENSORS_MPU6500_BUFF_LEN]));
       }
 
       vTaskSuspendAll(); // ensure all queues are populated at the same time
@@ -252,6 +262,7 @@ void processMagnetometerMeasurements(const uint8_t *buffer)
 
 void processAccGyroMeasurements(const uint8_t *buffer)
 {
+  Axis3f accScaled;
   // Note the ordering to correct the rotated 90º IMU coordinate system
   int16_t ay = (((int16_t) buffer[0]) << 8) | buffer[1];
   int16_t ax = (((int16_t) buffer[2]) << 8) | buffer[3];
@@ -271,13 +282,15 @@ void processAccGyroMeasurements(const uint8_t *buffer)
      processAccScale(ax, ay, az);
   }
 
-  sensors.gyro.x = -(gx - gyroBias.x) * IMU_DEG_PER_LSB_CFG;
-  sensors.gyro.y =  (gy - gyroBias.y) * IMU_DEG_PER_LSB_CFG;
-  sensors.gyro.z =  (gz - gyroBias.z) * IMU_DEG_PER_LSB_CFG;
+  sensors.gyro.x = -(gx - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
+  sensors.gyro.y =  (gy - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
+  sensors.gyro.z =  (gz - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
 
-  sensors.acc.x = -(ax) * IMU_G_PER_LSB_CFG / accScale;
-  sensors.acc.y =  (ay) * IMU_G_PER_LSB_CFG / accScale;
-  sensors.acc.z =  (az) * IMU_G_PER_LSB_CFG / accScale;
+  accScaled.x = -(ax) * SENSORS_G_PER_LSB_CFG / accScale;
+  accScaled.y =  (ay) * SENSORS_G_PER_LSB_CFG / accScale;
+  accScaled.z =  (az) * SENSORS_G_PER_LSB_CFG / accScale;
+
+  sensorsAccAlignToGravity(&accScaled, &sensors.acc);
 }
 
 static void sensorsDeviceInit(void)
@@ -316,10 +329,14 @@ static void sensorsDeviceInit(void)
   // Connect the MAG and BARO to the main I2C bus
   mpu6500SetI2CBypassEnabled(true);
   // Set gyro full scale range
-  mpu6500SetFullScaleGyroRange(IMU_GYRO_FS_CFG);
+  mpu6500SetFullScaleGyroRange(SENSORS_GYRO_FS_CFG);
   // Set accelerometer full scale range
-  mpu6500SetFullScaleAccelRange(IMU_ACCEL_FS_CFG);
-#ifdef IMU_MPU6500_DLPF_256HZ
+  mpu6500SetFullScaleAccelRange(SENSORS_ACCEL_FS_CFG);
+#ifdef ESTIMATOR_TYPE_complementary
+  mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_20);
+#endif
+
+#ifdef SENSORS_MPU6500_DLPF_256HZ
   // 256Hz digital low-pass filter only works with little vibrations
   // Set output rate (15): 8000 / (1 + 15) = 500Hz
   mpu6500SetRate(15);
@@ -335,7 +352,7 @@ static void sensorsDeviceInit(void)
 #endif
 
 
-#ifdef IMU_ENABLE_MAG_AK8963
+#ifdef SENSORS_ENABLE_MAG_AK8963
   ak8963Init(I2C3_DEV);
   if (ak8963TestConnection() == true)
   {
@@ -349,7 +366,7 @@ static void sensorsDeviceInit(void)
   }
 #endif
 
-#ifdef IMU_ENABLE_PRESSURE_LPS25H
+#ifdef SENSORS_ENABLE_PRESSURE_LPS25H
   lps25hInit(I2C3_DEV);
   if (lps25hTestConnection() == true)
   {
@@ -363,13 +380,18 @@ static void sensorsDeviceInit(void)
     DEBUG_PRINT("LPS25H I2C connection [FAIL].\n");
   }
 #endif
+
+  cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI/180);
+  sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI/180);
+  cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI/180);
+  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI/180);
 }
 
 
 static void sensorsSetupSlaveRead(void)
 {
   // Now begin to set up the slaves
-#ifdef IMU_MPU6500_DLPF_256HZ
+#ifdef SENSORS_MPU6500_DLPF_256HZ
   // As noted in registersheet 4.4: "Data should be sampled at or above sample rate;
   // SMPLRT_DIV is only used for 1kHz internal sampling." Slowest update rate is then 500Hz.
   mpu6500SetSlave4MasterDelay(15); // read slaves at 500Hz = (8000Hz / (1 + 15))
@@ -386,25 +408,25 @@ static void sensorsSetupSlaveRead(void)
   mpu6500SetSlaveReadWriteTransitionEnabled(false); // Send a stop at the end of a slave read
   mpu6500SetMasterClockSpeed(13); // Set i2c speed to 400kHz
 
-#ifdef IMU_ENABLE_MAG_AK8963
+#ifdef SENSORS_ENABLE_MAG_AK8963
   if (isMagnetometerPresent)
   {
     // Set registers for MPU6500 master to read from
     mpu6500SetSlaveAddress(0, 0x80 | AK8963_ADDRESS_00); // set the magnetometer to Slave 0, enable read
     mpu6500SetSlaveRegister(0, AK8963_RA_ST1); // read the magnetometer heading register
-    mpu6500SetSlaveDataLength(0, MAG_BUFF_LEN); // read 8 bytes (ST1, x, y, z heading, ST2 (overflow check))
+    mpu6500SetSlaveDataLength(0, SENSORS_MAG_BUFF_LEN); // read 8 bytes (ST1, x, y, z heading, ST2 (overflow check))
     mpu6500SetSlaveDelayEnabled(0, true);
     mpu6500SetSlaveEnabled(0, true);
   }
 #endif
 
-#ifdef IMU_ENABLE_PRESSURE_LPS25H
+#ifdef SENSORS_ENABLE_PRESSURE_LPS25H
   if (isBarometerPresent)
   {
     // Configure the LPS25H as a slave and enable read
     mpu6500SetSlaveAddress(1, 0x80 | LPS25H_I2C_ADDR);
     mpu6500SetSlaveRegister(1, LPS25H_STATUS_REG | LPS25H_ADDR_AUTO_INC);
-    mpu6500SetSlaveDataLength(1, BARO_BUFF_LEN);
+    mpu6500SetSlaveDataLength(1, SENSORS_BARO_BUFF_LEN);
     mpu6500SetSlaveDelayEnabled(1, true);
     mpu6500SetSlaveEnabled(1, true);
   }
@@ -500,7 +522,7 @@ bool sensorsTest(void)
   }
   testStatus &= isMpu6500TestPassed;
 
-#ifdef IMU_ENABLE_MAG_AK8963
+#ifdef SENSORS_ENABLE_MAG_AK8963
   testStatus &= isMagnetometerPresent;
   if (testStatus)
   {
@@ -509,7 +531,7 @@ bool sensorsTest(void)
   }
 #endif
 
-#ifdef IMU_ENABLE_PRESSURE_LPS25H
+#ifdef SENSORS_ENABLE_PRESSURE_LPS25H
   testStatus &= isBarometerPresent;
   if (testStatus)
   {
@@ -522,7 +544,7 @@ bool sensorsTest(void)
 }
 
 /**
- * Calculates accelerometer scale out of IMU_SENSOR_ACC_SCALE_SAMPLES samples. Should be called when
+ * Calculates accelerometer scale out of SENSORS_ACC_SCALE_SAMPLES samples. Should be called when
  * platform is stable.
  */
 static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
@@ -532,12 +554,12 @@ static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
 
   if (!accBiasFound)
   {
-    accScaleSum += sqrtf(powf(ax * IMU_G_PER_LSB_CFG, 2) + powf(ay * IMU_G_PER_LSB_CFG, 2) + powf(az * IMU_G_PER_LSB_CFG, 2));
+    accScaleSum += sqrtf(powf(ax * SENSORS_G_PER_LSB_CFG, 2) + powf(ay * SENSORS_G_PER_LSB_CFG, 2) + powf(az * SENSORS_G_PER_LSB_CFG, 2));
     accScaleSumCount++;
 
-    if (accScaleSumCount == IMU_SENSOR_ACC_SCALE_SAMPLES)
+    if (accScaleSumCount == SENSORS_ACC_SCALE_SAMPLES)
     {
-      accScale = accScaleSum / IMU_SENSOR_ACC_SCALE_SAMPLES;
+      accScale = accScaleSum / SENSORS_ACC_SCALE_SAMPLES;
       accBiasFound = true;
     }
   }
@@ -547,7 +569,7 @@ static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
 
 #ifdef GYRO_BIAS_LIGHT_WEIGHT
 /**
- * Calculates the bias out of the first IMU_SENSOR_BIAS_SAMPLES gathered. Requires no buffer
+ * Calculates the bias out of the first SENSORS_BIAS_SAMPLES gathered. Requires no buffer
  * but needs platform to be stable during startup.
  */
 static bool processGyroBiasNoBuffer(int16_t gx, int16_t gy, int16_t gz, Axis3f *gyroBiasOut)
@@ -564,7 +586,7 @@ static bool processGyroBiasNoBuffer(int16_t gx, int16_t gy, int16_t gz, Axis3f *
     gyroBiasSampleSum.x += gx;
     gyroBiasSampleSum.y += gy;
     gyroBiasSampleSum.z += gz;
-#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
+#ifdef SENSORS_GYRO_BIAS_CALCULATE_STDDEV
     gyroBiasSampleSumSquares.x += gx * gx;
     gyroBiasSampleSumSquares.y += gy * gy;
     gyroBiasSampleSumSquares.z += gz * gz;
@@ -572,16 +594,16 @@ static bool processGyroBiasNoBuffer(int16_t gx, int16_t gy, int16_t gz, Axis3f *
     gyroBiasSampleCount += 1;
 
     // If we then have enough samples, calculate the mean and standard deviation
-    if (gyroBiasSampleCount == IMU_SENSOR_BIAS_SAMPLES)
+    if (gyroBiasSampleCount == SENSORS_BIAS_SAMPLES)
     {
-      gyroBiasOut->x = (float)(gyroBiasSampleSum.x) / IMU_SENSOR_BIAS_SAMPLES;
-      gyroBiasOut->y = (float)(gyroBiasSampleSum.y) / IMU_SENSOR_BIAS_SAMPLES;
-      gyroBiasOut->z = (float)(gyroBiasSampleSum.z) / IMU_SENSOR_BIAS_SAMPLES;
+      gyroBiasOut->x = (float)(gyroBiasSampleSum.x) / SENSORS_BIAS_SAMPLES;
+      gyroBiasOut->y = (float)(gyroBiasSampleSum.y) / SENSORS_BIAS_SAMPLES;
+      gyroBiasOut->z = (float)(gyroBiasSampleSum.z) / SENSORS_BIAS_SAMPLES;
 
-#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
-      gyroBiasStdDev.x = sqrtf((float)(gyroBiasSampleSumSquares.x) / IMU_SENSOR_BIAS_SAMPLES - (gyroBiasOut->x * gyroBiasOut->x));
-      gyroBiasStdDev.y = sqrtf((float)(gyroBiasSampleSumSquares.y) / IMU_SENSOR_BIAS_SAMPLES - (gyroBiasOut->y * gyroBiasOut->y));
-      gyroBiasStdDev.z = sqrtf((float)(gyroBiasSampleSumSquares.z) / IMU_SENSOR_BIAS_SAMPLES - (gyroBiasOut->z * gyroBiasOut->z));
+#ifdef SENSORS_GYRO_BIAS_CALCULATE_STDDEV
+      gyroBiasStdDev.x = sqrtf((float)(gyroBiasSampleSumSquares.x) / SENSORS_BIAS_SAMPLES - (gyroBiasOut->x * gyroBiasOut->x));
+      gyroBiasStdDev.y = sqrtf((float)(gyroBiasSampleSumSquares.y) / SENSORS_BIAS_SAMPLES - (gyroBiasOut->y * gyroBiasOut->y));
+      gyroBiasStdDev.z = sqrtf((float)(gyroBiasSampleSumSquares.z) / SENSORS_BIAS_SAMPLES - (gyroBiasOut->z * gyroBiasOut->z));
 #endif
       gyroBiasNoBuffFound = true;
     }
@@ -631,7 +653,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
   int64_t sum[GYRO_NBR_OF_AXES] = {0};
   int64_t sumSq[GYRO_NBR_OF_AXES] = {0};
 
-  for (i = 0; i < IMU_NBR_OF_BIAS_SAMPLES; i++)
+  for (i = 0; i < SENSORS_NBR_OF_BIAS_SAMPLES; i++)
   {
     sum[0] += bias->buffer[i].x;
     sum[1] += bias->buffer[i].y;
@@ -641,13 +663,13 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
     sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
   }
 
-  varOut->x = (sumSq[0] - ((int64_t)sum[0] * sum[0]) / IMU_NBR_OF_BIAS_SAMPLES);
-  varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / IMU_NBR_OF_BIAS_SAMPLES);
-  varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / IMU_NBR_OF_BIAS_SAMPLES);
+  varOut->x = (sumSq[0] - ((int64_t)sum[0] * sum[0]) / SENSORS_NBR_OF_BIAS_SAMPLES);
+  varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / SENSORS_NBR_OF_BIAS_SAMPLES);
+  varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / SENSORS_NBR_OF_BIAS_SAMPLES);
 
-  meanOut->x = (float)sum[0] / IMU_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = (float)sum[1] / IMU_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = (float)sum[2] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->x = (float)sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = (float)sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = (float)sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
 }
 
 /**
@@ -658,16 +680,16 @@ static void __attribute__((used)) sensorsCalculateBiasMean(BiasObj* bias, Axis3i
   uint32_t i;
   int32_t sum[GYRO_NBR_OF_AXES] = {0};
 
-  for (i = 0; i < IMU_NBR_OF_BIAS_SAMPLES; i++)
+  for (i = 0; i < SENSORS_NBR_OF_BIAS_SAMPLES; i++)
   {
     sum[0] += bias->buffer[i].x;
     sum[1] += bias->buffer[i].y;
     sum[2] += bias->buffer[i].z;
   }
 
-  meanOut->x = sum[0] / IMU_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = sum[1] / IMU_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = sum[2] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->x = sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
 }
 
 /**
@@ -681,7 +703,7 @@ static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z)
   bias->bufHead->z = z;
   bias->bufHead++;
 
-  if (bias->bufHead >= &bias->buffer[IMU_NBR_OF_BIAS_SAMPLES])
+  if (bias->bufHead >= &bias->buffer[SENSORS_NBR_OF_BIAS_SAMPLES])
   {
     bias->bufHead = bias->buffer;
     bias->isBufferFilled = true;
@@ -722,6 +744,63 @@ static bool sensorsFindBiasValue(BiasObj* bias)
   return foundBias;
 }
 
+bool sensorsManufacturingTest(void)
+{
+  bool testStatus = false;
+  Axis3i16 g;
+  Axis3i16 a;
+  Axis3f acc;  // Accelerometer axis data in mG
+  float pitch, roll;
+  uint32_t startTick = xTaskGetTickCount();
+
+  testStatus = mpu6500SelfTest();
+
+  if (testStatus)
+  {
+    sensorsBiasObjInit(&gyroBiasRunning);
+    while (xTaskGetTickCount() - startTick < SENSORS_VARIANCE_MAN_TEST_TIMEOUT)
+    {
+      mpu6500GetMotion6(&a.y, &a.x, &a.z, &g.y, &g.x, &g.z);
+
+      if (processGyroBias(g.x, g.y, g.z, &gyroBias))
+      {
+        gyroBiasFound = true;
+        DEBUG_PRINT("Gyro variance test [OK]\n");
+        break;
+      }
+    }
+
+    if (gyroBiasFound)
+    {
+      acc.x = -(a.x) * SENSORS_G_PER_LSB_CFG;
+      acc.y =  (a.y) * SENSORS_G_PER_LSB_CFG;
+      acc.z =  (a.z) * SENSORS_G_PER_LSB_CFG;
+
+      // Calculate pitch and roll based on accelerometer. Board must be level
+      pitch = tanf(-acc.x/(sqrtf(acc.y*acc.y + acc.z*acc.z))) * 180/(float) M_PI;
+      roll = tanf(acc.y/acc.z) * 180/(float) M_PI;
+
+      if ((fabsf(roll) < SENSORS_MAN_TEST_LEVEL_MAX) && (fabsf(pitch) < SENSORS_MAN_TEST_LEVEL_MAX))
+      {
+        DEBUG_PRINT("Acc level test [OK]\n");
+        testStatus = true;
+      }
+      else
+      {
+        DEBUG_PRINT("Acc level test Roll:%0.2f, Pitch:%0.2f [FAIL]\n", roll, pitch);
+        testStatus = false;
+      }
+    }
+    else
+    {
+      DEBUG_PRINT("Gyro variance test [FAIL]\n");
+      testStatus = false;
+    }
+  }
+
+  return testStatus;
+}
+
 void __attribute__((used)) EXTI13_Callback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -733,13 +812,39 @@ void __attribute__((used)) EXTI13_Callback(void)
   }
 }
 
-//PARAM_GROUP_START(imu_sensors)
-//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isMagnetometerPresent)
-//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isBarometerPresent) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
-//PARAM_GROUP_STOP(imu_sensors)
-//
-//PARAM_GROUP_START(imu_tests)
-//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MPU6500, &isMpu6500TestPassed)
-//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isAK8963TestPassed)
-//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isLPS25HTestPassed) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
-//PARAM_GROUP_STOP(imu_tests)
+/**
+ * Compensate for a miss-aligned accelerometer. It uses the trim
+ * data gathered from the UI and written in the config-block to
+ * rotate the accelerometer to be aligned with gravity.
+ */
+static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
+{
+  Axis3f rx;
+  Axis3f ry;
+
+  // Rotate around x-axis
+  rx.x = in->x;
+  rx.y = in->y * cosRoll - in->z * sinRoll;
+  rx.z = in->y * sinRoll + in->z * cosRoll;
+
+  // Rotate around y-axis
+  ry.x = rx.x * cosPitch - rx.z * sinPitch;
+  ry.y = rx.y;
+  ry.z = -rx.x * sinPitch + rx.z * cosPitch;
+
+  out->x = ry.x;
+  out->y = ry.y;
+  out->z = ry.z;
+}
+
+
+PARAM_GROUP_START(imu_sensors)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isMagnetometerPresent)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isBarometerPresent) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
+PARAM_GROUP_STOP(imu_sensors)
+
+PARAM_GROUP_START(imu_tests)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MPU6500, &isMpu6500TestPassed)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isAK8963TestPassed)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isLPS25HTestPassed) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
+PARAM_GROUP_STOP(imu_tests)
