@@ -63,7 +63,7 @@ typedef struct
   uint32_t timestamp; // FreeRTOS ticks
 } CommanderPositionCache;
 
-static positionMeasurement_t pos_mocap;
+static positionMeasurement_t pos_ext;
 
 /**
  * Stabilization modes for Roll, Pitch, Yaw.
@@ -404,12 +404,12 @@ bool commanderGetPosition(state_t *state)
   // Only use position information if it's valid and recent
   if ((xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(5)) {
     // Get the updated position from the mocap
-    pos_mocap.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
-    pos_mocap.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
-    pos_mocap.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
-    pos_mocap.stdDev = 0.01;
+    pos_ext.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
+    pos_ext.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
+    pos_ext.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
+    pos_ext.stdDev = 0.01;
 #ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorEnqueuePosition(&pos_mocap);
+    stateEstimatorEnqueuePosition(&pos_ext);
 #endif
     return true;
   }
@@ -417,9 +417,9 @@ bool commanderGetPosition(state_t *state)
 }
 
 LOG_GROUP_START(mocap_pos)
-  LOG_ADD(LOG_FLOAT, X, &pos_mocap.x)
-  LOG_ADD(LOG_FLOAT, Y, &pos_mocap.y)
-  LOG_ADD(LOG_FLOAT, Z, &pos_mocap.z)
+  LOG_ADD(LOG_FLOAT, X, &pos_ext.x)
+  LOG_ADD(LOG_FLOAT, Y, &pos_ext.y)
+  LOG_ADD(LOG_FLOAT, Z, &pos_ext.z)
 LOG_GROUP_STOP(mocap_pos)
 
 // Params for flight modes
