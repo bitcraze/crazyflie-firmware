@@ -48,6 +48,8 @@
 #include "debug.h"
 #include "imu.h"
 #include "nvicconf.h"
+#include "ledseq.h"
+#include "sound.h"
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -66,6 +68,24 @@
 #define IMU_ACCEL_FS_CFG      MPU6500_ACCEL_FS_8
 #define IMU_G_PER_LSB_CFG     MPU6500_G_PER_LSB_8
 
+#define IMU_SENSOR_BIAS_SAMPLES       1000
+#define IMU_SENSOR_ACC_SCALE_SAMPLES  200
+#define IMU_GYRO_BIAS_CALCULATE_STDDEV
+
+#define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
+// Number of samples used in variance calculation. Changing this effects the threshold
+#define IMU_NBR_OF_BIAS_SAMPLES  1024
+#define GYRO_NBR_OF_AXES 3
+
+typedef struct
+{
+  Axis3f     bias;
+  bool       isBiasValueFound;
+  bool       isBufferFilled;
+  Axis3i16*  bufHead;
+  Axis3i16   buffer[IMU_NBR_OF_BIAS_SAMPLES];
+} BiasObj;
+
 static xQueueHandle accelerometerDataQueue;
 static xQueueHandle gyroDataQueue;
 static xQueueHandle magnetometerDataQueue;
@@ -75,18 +95,21 @@ static xSemaphoreHandle sensorsDataReady;
 static bool isInit = false;
 static sensorData_t sensors;
 
-#define IMU_SENSOR_BIAS_SAMPLES  1024
-#define IMU_GYRO_BIAS_CALCULATE_STDDEV
-static Axis3f gyroBias;
-static Axis3i64 gyroBiasSampleSum;
+// Variance threshold to take zero bias for gyro
+#define GYRO_VARIANCE_BASE        5000
+#define GYRO_VARIANCE_THRESHOLD_X (GYRO_VARIANCE_BASE)
+#define GYRO_VARIANCE_THRESHOLD_Y (GYRO_VARIANCE_BASE)
+#define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
+
+static BiasObj gyroBiasRunning;
+static Axis3f  gyroBias;
+#if defined(IMU_GYRO_BIAS_CALCULATE_STDDEV) && defined (GYRO_BIAS_LIGHT_WEIGHT)
+static Axis3f  gyroBiasStdDev;
+#endif
+static bool    gyroBiasFound = false;
 static float accScaleSum = 0;
 static float accScale = 1;
-#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
-static Axis3f gyroBiasStdDev;
-static Axis3i64 gyroBiasSampleSumSquares;
-#endif
-static uint32_t sensorBiasSampleCount = 0;
-static bool sensorBiasFound = false;
+
 static bool isBarometerPresent = false;
 static bool isMagnetometerPresent = false;
 
@@ -105,6 +128,19 @@ static void processAccGyroMeasurements(const uint8_t *buffer);
 static void processMagnetometerMeasurements(const uint8_t *buffer);
 static void processBarometerMeasurements(const uint8_t *buffer);
 static void sensorsSetupSlaveRead(void);
+
+#ifdef GYRO_GYRO_BIAS_LIGHT_WEIGHT
+static bool processGyroBiasNoBuffer(int16_t gx, int16_t gy, int16_t gz, Axis3f *gyroBiasOut);
+#else
+static bool processGyroBias(int16_t gx, int16_t gy, int16_t gz,  Axis3f *gyroBiasOut);
+#endif
+static bool processAccScale(int16_t ax, int16_t ay, int16_t az);
+static void sensorsBiasObjInit(BiasObj* bias);
+static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut);
+static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
+static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
+static bool sensorsFindBiasValue(BiasObj* bias);
+
 
 bool sensorsReadGyro(Axis3f *gyro)
 {
@@ -135,7 +171,7 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
 }
 
 bool sensorsAreCalibrated() {
-  return sensorBiasFound;
+  return gyroBiasFound;
 }
 
 static void sensorsTask(void *param)
@@ -224,33 +260,15 @@ void processAccGyroMeasurements(const uint8_t *buffer)
   int16_t gx = (((int16_t) buffer[10]) << 8) | buffer[11];
   int16_t gz = (((int16_t) buffer[12]) << 8) | buffer[13];
 
-  if (!sensorBiasFound) { // If the gyro has not yet been calibrated:
-    // Add the current sample to the running mean and variance
-    gyroBiasSampleSum.x += gx;
-    gyroBiasSampleSum.y += gy;
-    gyroBiasSampleSum.z += gz;
-#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
-    gyroBiasSampleSumSquares.x += gx * gx;
-    gyroBiasSampleSumSquares.y += gy * gy;
-    gyroBiasSampleSumSquares.z += gz * gz;
-#endif
-    accScaleSum += sqrtf(powf(ax * IMU_G_PER_LSB_CFG, 2) + powf(ay * IMU_G_PER_LSB_CFG, 2) + powf(az * IMU_G_PER_LSB_CFG, 2));
-    sensorBiasSampleCount += 1;
 
-    // If we then have enough samples, calculate the mean and standard deviation
-    if (sensorBiasSampleCount == IMU_SENSOR_BIAS_SAMPLES) {
-      gyroBias.x = (float)(gyroBiasSampleSum.x) / IMU_SENSOR_BIAS_SAMPLES;
-      gyroBias.y = (float)(gyroBiasSampleSum.y) / IMU_SENSOR_BIAS_SAMPLES;
-      gyroBias.z = (float)(gyroBiasSampleSum.z) / IMU_SENSOR_BIAS_SAMPLES;
-
-#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
-      gyroBiasStdDev.x = sqrtf((float)(gyroBiasSampleSumSquares.x) / IMU_SENSOR_BIAS_SAMPLES - (gyroBias.x * gyroBias.x));
-      gyroBiasStdDev.y = sqrtf((float)(gyroBiasSampleSumSquares.y) / IMU_SENSOR_BIAS_SAMPLES - (gyroBias.y * gyroBias.y));
-      gyroBiasStdDev.z = sqrtf((float)(gyroBiasSampleSumSquares.z) / IMU_SENSOR_BIAS_SAMPLES - (gyroBias.z * gyroBias.z));
+#ifdef GYRO_BIAS_LIGHT_WEIGHT
+  gyroBiasFound = processGyroBiasNoBuffer(gx, gy, gz, &gyroBias);
+#else
+  gyroBiasFound = processGyroBias(gx, gy, gz, &gyroBias);
 #endif
-      accScale = accScaleSum / IMU_SENSOR_BIAS_SAMPLES;
-      sensorBiasFound = true;
-    }
+  if (gyroBiasFound)
+  {
+     processAccScale(ax, ay, az);
   }
 
   sensors.gyro.x = -(gx - gyroBias.x) * IMU_DEG_PER_LSB_CFG;
@@ -449,6 +467,7 @@ void sensorsInit(void)
 
   sensorsDataReady = xSemaphoreCreateBinary();
 
+  sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();
   sensorsInterruptInit();
   sensorsTaskInit();
@@ -466,8 +485,8 @@ bool sensorsTest(void)
     testStatus = false;
   }
 
-  // delay 3 seconds until the quad has stabilized enough to pass the test
-  for (int i=0; i<300; i++)
+  // Try for 3 seconds so the quad has stabilized enough to pass the test
+  for (int i = 0; i < 300; i++)
   {
     if(mpu6500SelfTest() == true)
     {
@@ -500,6 +519,207 @@ bool sensorsTest(void)
 #endif
 
   return testStatus;
+}
+
+/**
+ * Calculates accelerometer scale out of IMU_SENSOR_ACC_SCALE_SAMPLES samples. Should be called when
+ * platform is stable.
+ */
+static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
+{
+  static bool accBiasFound = false;
+  static uint32_t accScaleSumCount = 0;
+
+  if (!accBiasFound)
+  {
+    accScaleSum += sqrtf(powf(ax * IMU_G_PER_LSB_CFG, 2) + powf(ay * IMU_G_PER_LSB_CFG, 2) + powf(az * IMU_G_PER_LSB_CFG, 2));
+    accScaleSumCount++;
+
+    if (accScaleSumCount == IMU_SENSOR_ACC_SCALE_SAMPLES)
+    {
+      accScale = accScaleSum / IMU_SENSOR_ACC_SCALE_SAMPLES;
+      accBiasFound = true;
+    }
+  }
+
+  return accBiasFound;
+}
+
+#ifdef GYRO_BIAS_LIGHT_WEIGHT
+/**
+ * Calculates the bias out of the first IMU_SENSOR_BIAS_SAMPLES gathered. Requires no buffer
+ * but needs platform to be stable during startup.
+ */
+static bool processGyroBiasNoBuffer(int16_t gx, int16_t gy, int16_t gz, Axis3f *gyroBiasOut)
+{
+  static uint32_t gyroBiasSampleCount = 0;
+  static bool gyroBiasNoBuffFound = false;
+  static Axis3i64 gyroBiasSampleSum;
+  static Axis3i64 gyroBiasSampleSumSquares;
+
+  if (!gyroBiasNoBuffFound)
+  {
+    // If the gyro has not yet been calibrated:
+    // Add the current sample to the running mean and variance
+    gyroBiasSampleSum.x += gx;
+    gyroBiasSampleSum.y += gy;
+    gyroBiasSampleSum.z += gz;
+#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
+    gyroBiasSampleSumSquares.x += gx * gx;
+    gyroBiasSampleSumSquares.y += gy * gy;
+    gyroBiasSampleSumSquares.z += gz * gz;
+#endif
+    gyroBiasSampleCount += 1;
+
+    // If we then have enough samples, calculate the mean and standard deviation
+    if (gyroBiasSampleCount == IMU_SENSOR_BIAS_SAMPLES)
+    {
+      gyroBiasOut->x = (float)(gyroBiasSampleSum.x) / IMU_SENSOR_BIAS_SAMPLES;
+      gyroBiasOut->y = (float)(gyroBiasSampleSum.y) / IMU_SENSOR_BIAS_SAMPLES;
+      gyroBiasOut->z = (float)(gyroBiasSampleSum.z) / IMU_SENSOR_BIAS_SAMPLES;
+
+#ifdef IMU_GYRO_BIAS_CALCULATE_STDDEV
+      gyroBiasStdDev.x = sqrtf((float)(gyroBiasSampleSumSquares.x) / IMU_SENSOR_BIAS_SAMPLES - (gyroBiasOut->x * gyroBiasOut->x));
+      gyroBiasStdDev.y = sqrtf((float)(gyroBiasSampleSumSquares.y) / IMU_SENSOR_BIAS_SAMPLES - (gyroBiasOut->y * gyroBiasOut->y));
+      gyroBiasStdDev.z = sqrtf((float)(gyroBiasSampleSumSquares.z) / IMU_SENSOR_BIAS_SAMPLES - (gyroBiasOut->z * gyroBiasOut->z));
+#endif
+      gyroBiasNoBuffFound = true;
+    }
+  }
+
+  return gyroBiasNoBuffFound;
+}
+#else
+/**
+ * Calculates the bias first when the gyro variance is below threshold. Requires a buffer
+ * but calibrates platform first when it is stable.
+ */
+static bool processGyroBias(int16_t gx, int16_t gy, int16_t gz, Axis3f *gyroBiasOut)
+{
+  sensorsAddBiasValue(&gyroBiasRunning, gx, gy, gz);
+
+  if (!gyroBiasRunning.isBiasValueFound)
+  {
+    sensorsFindBiasValue(&gyroBiasRunning);
+    if (gyroBiasRunning.isBiasValueFound)
+    {
+      soundSetEffect(SND_CALIB);
+      ledseqRun(SYS_LED, seq_calibrated);
+    }
+  }
+
+  gyroBiasOut->x = gyroBiasRunning.bias.x;
+  gyroBiasOut->y = gyroBiasRunning.bias.y;
+  gyroBiasOut->z = gyroBiasRunning.bias.z;
+
+  return gyroBiasRunning.isBiasValueFound;
+}
+#endif
+
+static void sensorsBiasObjInit(BiasObj* bias)
+{
+  bias->isBufferFilled = false;
+  bias->bufHead = bias->buffer;
+}
+
+/**
+ * Calculates the variance and mean for the bias buffer.
+ */
+static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut)
+{
+  uint32_t i;
+  int64_t sum[GYRO_NBR_OF_AXES] = {0};
+  int64_t sumSq[GYRO_NBR_OF_AXES] = {0};
+
+  for (i = 0; i < IMU_NBR_OF_BIAS_SAMPLES; i++)
+  {
+    sum[0] += bias->buffer[i].x;
+    sum[1] += bias->buffer[i].y;
+    sum[2] += bias->buffer[i].z;
+    sumSq[0] += bias->buffer[i].x * bias->buffer[i].x;
+    sumSq[1] += bias->buffer[i].y * bias->buffer[i].y;
+    sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
+  }
+
+  varOut->x = (sumSq[0] - ((int64_t)sum[0] * sum[0]) / IMU_NBR_OF_BIAS_SAMPLES);
+  varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / IMU_NBR_OF_BIAS_SAMPLES);
+  varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / IMU_NBR_OF_BIAS_SAMPLES);
+
+  meanOut->x = (float)sum[0] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = (float)sum[1] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = (float)sum[2] / IMU_NBR_OF_BIAS_SAMPLES;
+}
+
+/**
+ * Calculates the mean for the bias buffer.
+ */
+static void __attribute__((used)) sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut)
+{
+  uint32_t i;
+  int32_t sum[GYRO_NBR_OF_AXES] = {0};
+
+  for (i = 0; i < IMU_NBR_OF_BIAS_SAMPLES; i++)
+  {
+    sum[0] += bias->buffer[i].x;
+    sum[1] += bias->buffer[i].y;
+    sum[2] += bias->buffer[i].z;
+  }
+
+  meanOut->x = sum[0] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = sum[1] / IMU_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = sum[2] / IMU_NBR_OF_BIAS_SAMPLES;
+}
+
+/**
+ * Adds a new value to the variance buffer and if it is full
+ * replaces the oldest one. Thus a circular buffer.
+ */
+static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z)
+{
+  bias->bufHead->x = x;
+  bias->bufHead->y = y;
+  bias->bufHead->z = z;
+  bias->bufHead++;
+
+  if (bias->bufHead >= &bias->buffer[IMU_NBR_OF_BIAS_SAMPLES])
+  {
+    bias->bufHead = bias->buffer;
+    bias->isBufferFilled = true;
+  }
+}
+
+/**
+ * Checks if the variances is below the predefined thresholds.
+ * The bias value should have been added before calling this.
+ * @param bias  The bias object
+ */
+static bool sensorsFindBiasValue(BiasObj* bias)
+{
+  static int32_t varianceSampleTime;
+  bool foundBias = false;
+
+  if (bias->isBufferFilled)
+  {
+    Axis3f variance;
+    Axis3f mean;
+
+    sensorsCalculateVarianceAndMean(bias, &variance, &mean);
+
+    if (variance.x < GYRO_VARIANCE_THRESHOLD_X &&
+        variance.y < GYRO_VARIANCE_THRESHOLD_Y &&
+        variance.z < GYRO_VARIANCE_THRESHOLD_Z &&
+        (varianceSampleTime + GYRO_MIN_BIAS_TIMEOUT_MS < xTaskGetTickCount()))
+    {
+      varianceSampleTime = xTaskGetTickCount();
+      bias->bias.x = mean.x;
+      bias->bias.y = mean.y;
+      bias->bias.z = mean.z;
+      foundBias = true;
+      bias->isBiasValueFound = true;
+    }
+  }
+
+  return foundBias;
 }
 
 void __attribute__((used)) EXTI13_Callback(void)
