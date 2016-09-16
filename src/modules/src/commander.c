@@ -31,8 +31,14 @@
 #include "commander.h"
 #include "crtp.h"
 #include "configblock.h"
+#include "log.h"
 #include "param.h"
 #include "num.h"
+#include "debug.h"
+
+#ifdef ESTIMATOR_TYPE_kalman
+#include "estimator_kalman.h"
+#endif
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
@@ -56,6 +62,8 @@ typedef struct
   bool activeSide;
   uint32_t timestamp; // FreeRTOS ticks
 } CommanderPositionCache;
+
+static positionMeasurement_t pos_ext;
 
 /**
  * Stabilization modes for Roll, Pitch, Yaw.
@@ -391,16 +399,28 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
   }
 }
 
-void commanderGetPosition(state_t *state)
+bool commanderGetPosition(state_t *state)
 {
   // Only use position information if it's valid and recent
-  if ((xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(2)) {
-    // Update position information
-    state->position.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
-    state->position.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
-    state->position.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
+  if ((xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(5)) {
+    // Get the updated position from the mocap
+    pos_ext.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
+    pos_ext.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
+    pos_ext.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
+    pos_ext.stdDev = 0.01;
+#ifdef ESTIMATOR_TYPE_kalman
+    stateEstimatorEnqueuePosition(&pos_ext);
+#endif
+    return true;
   }
+  return false;
 }
+
+LOG_GROUP_START(mocap_pos)
+  LOG_ADD(LOG_FLOAT, X, &pos_ext.x)
+  LOG_ADD(LOG_FLOAT, Y, &pos_ext.y)
+  LOG_ADD(LOG_FLOAT, Z, &pos_ext.z)
+LOG_GROUP_STOP(mocap_pos)
 
 // Params for flight modes
 PARAM_GROUP_START(flightmode)
