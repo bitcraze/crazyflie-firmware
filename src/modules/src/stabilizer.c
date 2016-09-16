@@ -110,6 +110,7 @@ static void stabilizerTask(void* param)
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
+    commanderGetPosition(&state);
 #ifdef ESTIMATOR_TYPE_kalman
     stateEstimatorUpdate(&state, &sensorData, &control);
 #else
@@ -118,7 +119,6 @@ static void stabilizerTask(void* param)
 #endif
 
     commanderGetSetpoint(&setpoint, &state);
-    commanderGetPosition(&state);
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 

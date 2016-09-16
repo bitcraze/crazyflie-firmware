@@ -416,11 +416,11 @@ bool commanderGetPosition(state_t *state)
   return false;
 }
 
-LOG_GROUP_START(mocap_pos)
+LOG_GROUP_START(pos_ext)
   LOG_ADD(LOG_FLOAT, X, &pos_ext.x)
   LOG_ADD(LOG_FLOAT, Y, &pos_ext.y)
   LOG_ADD(LOG_FLOAT, Z, &pos_ext.z)
-LOG_GROUP_STOP(mocap_pos)
+LOG_GROUP_STOP(pos_ext)
 
 // Params for flight modes
 PARAM_GROUP_START(flightmode)
