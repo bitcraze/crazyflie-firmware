@@ -119,11 +119,11 @@ bool lps25hSetEnabled(bool enable)
 	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_CTRL_REG1, 1, &enable_mask);
 	  enable_mask = 0b00001111; // AVG-P 512, AVG-T 64
 	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_RES_CONF, 1, &enable_mask);
-// TODO: Investigate why temp values becomes wrong when FIFO averaging is enabled.
-//	  enable_mask = 0b11000011; // FIFO Mean mode, 4 moving average
-//	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_FIFO_CTRL, 1, &enable_mask);
-//	  enable_mask = 0b01000000; // FIFO Enable
-//	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_CTRL_REG2, 1, &enable_mask);
+	  // FIFO averaging
+	  enable_mask = 0b11000011; // FIFO Mean mode, 4 moving average
+	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_FIFO_CTRL, 1, &enable_mask);
+	  enable_mask = 0b01000000; // FIFO Enable
+	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_CTRL_REG2, 1, &enable_mask);
 	}
 	else
 	{
