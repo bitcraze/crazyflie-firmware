@@ -9,8 +9,9 @@
 #include "log.h"
 #include "param.h"
 
-#define ATTITUDE_RATE RATE_500_HZ
-#define POSITION_RATE RATE_100_HZ
+#define ATTITUDE_RATE         RATE_500_HZ
+#define POSITION_RATE         RATE_100_HZ
+#define ATTITUDE_UPDATE_DT    (float)(1.0/ATTITUDE_RATE)
 
 static bool tiltCompensationEnabled = false;
 
@@ -20,7 +21,7 @@ static float actuatorThrust;
 
 void stateControllerInit(void)
 {
-  attitudeControllerInit();
+  attitudeControllerInit(ATTITUDE_UPDATE_DT);
 }
 
 bool stateControllerTest(void)

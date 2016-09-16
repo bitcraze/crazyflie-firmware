@@ -24,7 +24,6 @@ PLATFORM					?= CF2
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
-SENSORS            ?= stock
 ESTIMATOR          ?= complementary
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
@@ -143,7 +142,7 @@ PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
-PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
+PROJ_OBJ_CF2 += sensors_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
 
 # libdw
 PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
@@ -151,14 +150,14 @@ PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
-PROJ_OBJ_CF1 += sound_cf1.o
+PROJ_OBJ_CF1 += sound_cf1.o sensors_stock.o
 PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
 
 # Stabilizer modules
 PROJ_OBJ += commander.o attitude_pid_controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
 PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o
-PROJ_OBJ += sensors_$(SENSORS).o power_distribution_$(POWER_DISTRIBUTION).o
+PROJ_OBJ += power_distribution_$(POWER_DISTRIBUTION).o
 
 
 # Deck Core
@@ -261,7 +260,7 @@ ifeq ($(USE_ESKYLINK), 1)
   CFLAGS += -DUSE_ESKYLINK
 endif
 
-CFLAGS += -DBOARD_REV_$(REV) -DSENSORS_TYPE_$(SENSORS) -DESTIMATOR_TYPE_$(ESTIMATOR) -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
+CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_TYPE_$(ESTIMATOR) -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
 
 CFLAGS += $(PROCESSOR) $(INCLUDES) $(STFLAGS)
 ifeq ($(PLATFORM), CF1)

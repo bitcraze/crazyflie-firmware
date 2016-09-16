@@ -33,7 +33,7 @@
 #include "deck.h"
 #include "deck_test.h"
 
-#include "imu.h"
+#include "sensors.h"
 
 //Hardware configuration
 #define ET_GPIO_PERIF   (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC)
@@ -112,7 +112,7 @@ static bool exptestRun(void)
 
   isInit = true;
 
-  status &= imu6ManufacturingTest();
+  status &= sensorsManufacturingTest();
 
 
   // Enable GPIOs

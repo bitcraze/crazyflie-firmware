@@ -31,7 +31,7 @@
 #include "commander.h"
 
 
-void attitudeControllerInit(void);
+void attitudeControllerInit(const float updateDt);
 bool attitudeControllerTest(void);
 
 /**

@@ -608,6 +608,23 @@ void mpu6500SetFullScaleAccelRange(uint8_t range)
   i2cdevWriteBits(I2Cx, devAddr, MPU6500_RA_ACCEL_CONFIG, MPU6500_ACONFIG_AFS_SEL_BIT,
       MPU6500_ACONFIG_AFS_SEL_LENGTH, range);
 }
+
+/** Set accelerometer digital low pass filter.
+ * @param range DLPF setting
+ * @see MPU6500_ACCEL_DLPF_BW_460
+ * @see MPU6500_ACCEL_DLPF_BW_184
+ * @see MPU6500_ACCEL_DLPF_BW_92
+ * @see MPU6500_ACCEL_DLPF_BW_41
+ * @see MPU6500_ACCEL_DLPF_BW_20
+ * @see MPU6500_ACCEL_DLPF_BW_10
+ * @see MPU6500_ACCEL_DLPF_BW_5
+ */
+void mpu6500SetAccelDLPF(uint8_t range)
+{
+  i2cdevWriteBits(I2Cx, devAddr, MPU6500_RA_ACCEL_CONFIG_2, MPU6500_ACONFIG2_DLPF_BIT,
+      MPU6500_ACONFIG2_DLPF_LENGTH, range);
+}
+
 /** Get the high-pass filter configuration.
  * The DHPF is a filter module in the path leading to motion detectors (Free
  * Fall, Motion threshold, and Zero Motion). The high pass filter output is not
