@@ -9,6 +9,7 @@ bin/*
 tools/make/config.mk
 cflie.*
 version.c
+tags
 
 /cf2.*
 /cf1.*
