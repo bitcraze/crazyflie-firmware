@@ -40,12 +40,10 @@ bool sensorsManufacturingTest(void);
 // For legacy control
 void sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
 
-#ifdef SENSORS_TYPE_task
 // Allows individual sensor measurement
 bool sensorsReadGyro(Axis3f *gyro);
 bool sensorsReadAcc(Axis3f *acc);
 bool sensorsReadMag(Axis3f *mag);
 bool sensorsReadBaro(baro_t *baro);
-#endif
 
 #endif //__SENSORS_H__
