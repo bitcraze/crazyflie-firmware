@@ -79,7 +79,9 @@
 // Buffer length for MPU9250 slave reads
 #define SENSORS_MPU6500_BUFF_LEN    14
 #define SENSORS_MAG_BUFF_LEN        8
-#define SENSORS_BARO_BUFF_LEN       6
+#define SENSORS_BARO_BUFF_S_P_LEN   4
+#define SENSORS_BARO_BUFF_T_LEN     2
+#define SENSORS_BARO_BUFF_LEN       (SENSORS_BARO_BUFF_S_P_LEN + SENSORS_BARO_BUFF_T_LEN)
 
 #define GYRO_NBR_OF_AXES            3
 #define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
@@ -424,11 +426,19 @@ static void sensorsSetupSlaveRead(void)
   if (isBarometerPresent)
   {
     // Configure the LPS25H as a slave and enable read
+    // Setting up two reads works for LPS25H fifo avg filter as well as the
+    // auto inc wraps back to LPS25H_PRESS_OUT_L after LPS25H_PRESS_OUT_H is read.
     mpu6500SetSlaveAddress(1, 0x80 | LPS25H_I2C_ADDR);
     mpu6500SetSlaveRegister(1, LPS25H_STATUS_REG | LPS25H_ADDR_AUTO_INC);
-    mpu6500SetSlaveDataLength(1, SENSORS_BARO_BUFF_LEN);
+    mpu6500SetSlaveDataLength(1, SENSORS_BARO_BUFF_S_P_LEN);
     mpu6500SetSlaveDelayEnabled(1, true);
     mpu6500SetSlaveEnabled(1, true);
+
+    mpu6500SetSlaveAddress(2, 0x80 | LPS25H_I2C_ADDR);
+    mpu6500SetSlaveRegister(2, LPS25H_TEMP_OUT_L | LPS25H_ADDR_AUTO_INC);
+    mpu6500SetSlaveDataLength(2, SENSORS_BARO_BUFF_T_LEN);
+    mpu6500SetSlaveDelayEnabled(2, true);
+    mpu6500SetSlaveEnabled(2, true);
   }
 #endif
 
