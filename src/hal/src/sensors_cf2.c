@@ -38,6 +38,7 @@
 #include "lps25h.h"
 #include "mpu6500.h"
 #include "ak8963.h"
+#include "vl53l0x.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -45,6 +46,7 @@
 
 #include "system.h"
 #include "configblock.h"
+#include "log.h"
 #include "param.h"
 #include "debug.h"
 #include "imu.h"
@@ -58,7 +60,7 @@
  */
 //#define SENSORS_MPU6500_DLPF_256HZ
 
-#define SENSORS_ENABLE_PRESSURE_LPS25H
+//#define SENSORS_ENABLE_PRESSURE_LPS25H
 
 #define SENSORS_ENABLE_MAG_AK8963
 #define MAG_GAUSS_PER_LSB     666.7f
@@ -107,6 +109,7 @@ static xQueueHandle gyroDataQueue;
 static xQueueHandle magnetometerDataQueue;
 static xQueueHandle barometerDataQueue;
 static xSemaphoreHandle sensorsDataReady;
+static uint16_t range;
 
 static bool isInit = false;
 static sensorData_t sensors;
@@ -213,6 +216,10 @@ static void sensorsTask(void *param)
           processBarometerMeasurements(&(buffer[isMagnetometerPresent ?
                   SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN : SENSORS_MPU6500_BUFF_LEN]));
       }
+      uint16_t range_raw = vl53l0xReadRangeContinuousMillimeters();
+      if (range_raw < 8000) {
+        range = range_raw;
+      }
 
       vTaskSuspendAll(); // ensure all queues are populated at the same time
       xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
@@ -302,6 +309,19 @@ static void sensorsDeviceInit(void)
 
   // Wait for sensors to startup
   while (xTaskGetTickCount() < 1000);
+
+  i2cdevInit(I2C1_DEV);
+  vl53l0xInit(I2C1_DEV);
+  if (vl53l0xTestConnection() == true)
+  {
+    DEBUG_PRINT("VL53L0X I2C connection [OK].\n");
+    vl53l0xInitSensor(true);
+    vl53l0xStartContinuous(0);
+  }
+  else
+  {
+    DEBUG_PRINT("VL53L0X I2C connection [FAIL].\n");
+  }
 
   i2cdevInit(I2C3_DEV);
   mpu6500Init(I2C3_DEV);
@@ -846,6 +866,10 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->y = ry.y;
   out->z = ry.z;
 }
+
+LOG_GROUP_START(range)
+LOG_ADD(LOG_UINT16, range, &range)
+LOG_GROUP_STOP(range)
 
 
 PARAM_GROUP_START(imu_sensors)
