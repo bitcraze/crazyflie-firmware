@@ -148,11 +148,12 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 {
   I2cMessage message;
 
-  if (memAddress == I2CDEV_NO_MEM_ADDR)
-  {
-    i2cdrvCreateMessage(&message, devAddress, i2cWrite, len, data);
-  }
-  else
+  // TODO there should be a better way to deal with this
+  //if (memAddress == I2CDEV_NO_MEM_ADDR)
+  //{
+  //  i2cdrvCreateMessage(&message, devAddress, i2cWrite, len, data);
+  //}
+  //else
   {
     i2cdrvCreateMessageIntAddr(&message, devAddress, false, memAddress,
                             i2cWrite, len, data);
