@@ -35,10 +35,7 @@
 #include "param.h"
 #include "num.h"
 #include "debug.h"
-
-#ifdef ESTIMATOR_TYPE_kalman
-#include "estimator_kalman.h"
-#endif
+#include "ext_position.h"
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
@@ -53,17 +50,6 @@ typedef struct
   uint32_t timestamp; // FreeRTOS ticks
 } CommanderCache;
 
-/**
- * Commander position data
- */
-typedef struct
-{
-  struct CommanderCrtpPosition targetVal[2];
-  bool activeSide;
-  uint32_t timestamp; // FreeRTOS ticks
-} CommanderPositionCache;
-
-static positionMeasurement_t pos_ext;
 
 /**
  * Stabilization modes for Roll, Pitch, Yaw.
@@ -88,8 +74,6 @@ static bool isInit;
 static CommanderCache crtpCache;
 static CommanderCache extrxCache;
 static CommanderCache* activeCache;
-
-static CommanderPositionCache crtpPosCache;
 
 static uint32_t lastUpdate;
 static bool isInactive;
@@ -196,13 +180,6 @@ static void commanderCrtpCB(CRTPPacket* pk)
   }
 }
 
-static void commanderPositionCrtpCB(CRTPPacket* pk)
-{
-  crtpPosCache.targetVal[!crtpPosCache.activeSide] = *((struct CommanderCrtpPosition*)pk->data);
-  crtpPosCache.activeSide = !crtpPosCache.activeSide;
-  crtpPosCache.timestamp = xTaskGetTickCount();
-}
-
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
  *
@@ -284,7 +261,7 @@ void commanderInit(void)
 
   crtpInit();
   crtpRegisterPortCB(CRTP_PORT_SETPOINT, commanderCrtpCB);
-  crtpRegisterPortCB(CRTP_PORT_POSITION, commanderPositionCrtpCB);
+  extPositionInit(); // Set callback for CRTP_PORT_POSITION
 
   activeCache = &crtpCache;
   lastUpdate = xTaskGetTickCount();
@@ -398,29 +375,6 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->mode.yaw = modeVelocity;
   }
 }
-
-bool commanderGetPosition(state_t *state)
-{
-  // Only use position information if it's valid and recent
-  if ((xTaskGetTickCount() - crtpPosCache.timestamp) < M2T(5)) {
-    // Get the updated position from the mocap
-    pos_ext.x = crtpPosCache.targetVal[crtpPosCache.activeSide].x;
-    pos_ext.y = crtpPosCache.targetVal[crtpPosCache.activeSide].y;
-    pos_ext.z = crtpPosCache.targetVal[crtpPosCache.activeSide].z;
-    pos_ext.stdDev = 0.01;
-#ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorEnqueuePosition(&pos_ext);
-#endif
-    return true;
-  }
-  return false;
-}
-
-LOG_GROUP_START(pos_ext)
-  LOG_ADD(LOG_FLOAT, X, &pos_ext.x)
-  LOG_ADD(LOG_FLOAT, Y, &pos_ext.y)
-  LOG_ADD(LOG_FLOAT, Z, &pos_ext.z)
-LOG_GROUP_STOP(pos_ext)
 
 // Params for flight modes
 PARAM_GROUP_START(flightmode)
