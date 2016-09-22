@@ -142,7 +142,9 @@ bool lps25hGetData(float* pressure, float* temperature, float* asl)
   int16_t rawTemp;
   bool status;
 
-  status = i2cdevRead(I2Cx, devAddr, LPS25H_PRESS_OUT_XL | LPS25H_ADDR_AUTO_INC, 5, data);
+  status =  i2cdevRead(I2Cx, devAddr, LPS25H_PRESS_OUT_XL | LPS25H_ADDR_AUTO_INC, 3, data);
+  // If LPS25H moving avg filter is activated the temp must be read out in separate read.
+  status &= i2cdevRead(I2Cx, devAddr, LPS25H_TEMP_OUT_L | LPS25H_ADDR_AUTO_INC, 2, &data[3]);
 
   rawPressure = ((uint32_t)data[2] << 16) | ((uint32_t)data[1] << 8) | data[0];
   *pressure = (float)rawPressure / LPS25H_LSB_PER_MBAR;
