@@ -49,11 +49,12 @@ void nvicInit(void)
  * @brief  This function handles SysTick Handler.
  */
 extern void tickFreeRTOS(void);
-extern void tickI2C(void);
+extern void TM_DELAY_1msHandler(void);
 
 void DONT_DISCARD SysTick_Handler(void)
 {
     tickFreeRTOS();
+    TM_DELAY_1msHandler();
 }
 
 #ifdef NVIC_NOT_USED_BY_FREERTOS
