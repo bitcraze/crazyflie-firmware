@@ -338,24 +338,25 @@ static void sensorsDeviceInit(void)
   mpu6500SetFullScaleGyroRange(SENSORS_GYRO_FS_CFG);
   // Set accelerometer full scale range
   mpu6500SetFullScaleAccelRange(SENSORS_ACCEL_FS_CFG);
-#ifdef ESTIMATOR_TYPE_complementary
-  mpu6500SetRate(0);
-  mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_20);
-#elif SENSORS_MPU6500_DLPF_256HZ
+  // Set accelerometer digital low-pass bandwidth
+  mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_41);
+
+#if SENSORS_MPU6500_DLPF_256HZ
   // 256Hz digital low-pass filter only works with little vibrations
-  // Set output rate (15): 8000 / (1 + 15) = 500Hz
-  mpu6500SetRate(15);
+  // Set output rate (15): 8000 / (1 + 7) = 1000Hz
+  mpu6500SetRate(7);
   // Set digital low-pass bandwidth
   mpu6500SetDLPFMode(MPU6500_DLPF_BW_256);
 #else
   // To low DLPF bandwidth might cause instability and decrease agility
   // but it works well for handling vibrations and unbalanced propellers
-  // Set output rate (1): 1000 / (1 + 1) = 500Hz
+  // Set output rate (1): 1000 / (1 + 0) = 1000Hz
   mpu6500SetRate(0);
-  // Set digital low-pass bandwidth
-  mpu6500SetDLPFMode(MPU6500_DLPF_BW_42);
-
-  for (uint8_t i = 0; i < 3; i++) {
+  // Set digital low-pass bandwidth for gyro
+  mpu6500SetDLPFMode(MPU6500_DLPF_BW_98);
+  // Init second order filer for accelerometer
+  for (uint8_t i = 0; i < 3; i++)
+  {
     lpf2pInit(&accLpf[i], 1000, 30);
   }
 #endif
