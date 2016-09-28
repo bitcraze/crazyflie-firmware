@@ -46,8 +46,7 @@
 #include "usddeck.h"
 #include "system.h"
 #include "debug.h"
-#include "log.h"
-#include "param.h"
+#include "led.h"
 
 #define USD_DATAQUEUE_ITEMS       1000  // Items for roughly one second of buffer
 #define USD_CLOSE_REOPEN_BYTES    (USD_DATAQUEUE_ITEMS * 60 * sizeof(UsdLogStruct))
@@ -105,7 +104,9 @@ static void usdTask(void *param)
   {
     if (xQueueReceive(usdDataQueue, &logItem, portMAX_DELAY) && fileStatus)
     {
+      ledSet(LED_GREEN_R, 1);
       f_write(&logFile, &logItem, sizeof(UsdLogStruct), (UINT*)&bytesWritten);
+      ledSet(LED_GREEN_R, 0);
 
       totalBytesWritten += bytesWritten;
       closeReopenBytes += bytesWritten;
