@@ -51,6 +51,7 @@
 #include "nvicconf.h"
 #include "ledseq.h"
 #include "sound.h"
+#include "filter.h"
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -66,8 +67,8 @@
 #define SENSORS_GYRO_FS_CFG       MPU6500_GYRO_FS_2000
 #define SENSORS_DEG_PER_LSB_CFG   MPU6500_DEG_PER_LSB_2000
 
-#define SENSORS_ACCEL_FS_CFG      MPU6500_ACCEL_FS_8
-#define SENSORS_G_PER_LSB_CFG     MPU6500_G_PER_LSB_8
+#define SENSORS_ACCEL_FS_CFG      MPU6500_ACCEL_FS_16
+#define SENSORS_G_PER_LSB_CFG     MPU6500_G_PER_LSB_16
 
 #define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(2000) // Timeout in ms
 #define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off
@@ -119,6 +120,7 @@ static Axis3f  gyroBiasStdDev;
 static bool    gyroBiasFound = false;
 static float accScaleSum = 0;
 static float accScale = 1;
+static lpf2pData accLpf[3];
 
 static bool isBarometerPresent = false;
 static bool isMagnetometerPresent = false;
@@ -153,6 +155,7 @@ static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj* bias);
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
+static void sensorsAccApplyLpf(Axis3f* in);
 
 bool sensorsReadGyro(Axis3f *gyro)
 {
@@ -293,6 +296,7 @@ void processAccGyroMeasurements(const uint8_t *buffer)
   accScaled.z =  (az) * SENSORS_G_PER_LSB_CFG / accScale;
 
   sensorsAccAlignToGravity(&accScaled, &sensors.acc);
+  sensorsAccApplyLpf(&sensors.acc);
 }
 
 static void sensorsDeviceInit(void)
@@ -335,10 +339,9 @@ static void sensorsDeviceInit(void)
   // Set accelerometer full scale range
   mpu6500SetFullScaleAccelRange(SENSORS_ACCEL_FS_CFG);
 #ifdef ESTIMATOR_TYPE_complementary
+  mpu6500SetRate(0);
   mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_20);
-#endif
-
-#ifdef SENSORS_MPU6500_DLPF_256HZ
+#elif SENSORS_MPU6500_DLPF_256HZ
   // 256Hz digital low-pass filter only works with little vibrations
   // Set output rate (15): 8000 / (1 + 15) = 500Hz
   mpu6500SetRate(15);
@@ -348,9 +351,13 @@ static void sensorsDeviceInit(void)
   // To low DLPF bandwidth might cause instability and decrease agility
   // but it works well for handling vibrations and unbalanced propellers
   // Set output rate (1): 1000 / (1 + 1) = 500Hz
-  mpu6500SetRate(1);
+  mpu6500SetRate(0);
   // Set digital low-pass bandwidth
-  mpu6500SetDLPFMode(MPU6500_DLPF_BW_98);
+  mpu6500SetDLPFMode(MPU6500_DLPF_BW_42);
+
+  for (uint8_t i = 0; i < 3; i++) {
+    lpf2pInit(&accLpf[i], 1000, 30);
+  }
 #endif
 
 
@@ -398,7 +405,7 @@ static void sensorsSetupSlaveRead(void)
   // SMPLRT_DIV is only used for 1kHz internal sampling." Slowest update rate is then 500Hz.
   mpu6500SetSlave4MasterDelay(15); // read slaves at 500Hz = (8000Hz / (1 + 15))
 #else
-  mpu6500SetSlave4MasterDelay(4); // read slaves at 100Hz = (500Hz / (1 + 4))
+  mpu6500SetSlave4MasterDelay(9); // read slaves at 100Hz = (500Hz / (1 + 4))
 #endif
 
   mpu6500SetI2CBypassEnabled(false);
@@ -847,6 +854,12 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->z = ry.z;
 }
 
+static void sensorsAccApplyLpf(Axis3f* in)
+{
+  for (uint8_t i = 0; i < 3; i++) {
+    in->axis[i] = lpf2pApply(&accLpf[i], in->axis[i]);
+  }
+}
 
 PARAM_GROUP_START(imu_sensors)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isMagnetometerPresent)
