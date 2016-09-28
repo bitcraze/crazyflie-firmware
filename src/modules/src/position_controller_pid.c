@@ -87,7 +87,7 @@ static struct this_s this = {
   .pidZ = {
     .init = {
       .kp = 30000.0,
-      .ki = 0,
+      .ki = 5000,
       .kd = 10000.0
     },
     .pid.dt = DT,
@@ -138,8 +138,8 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
   // Z
   float newThrust = runPid(state->position.z, &this.pidZ, setpoint->mode.z, setpoint->position.z, setpoint->velocity.z, DT);
   *thrust = newThrust + this.thrustBase;
-  if (*thrust > 45000) {
-    *thrust = 45000;
+  if (*thrust > 55000) {
+    *thrust = 55000;
   }
 }
 

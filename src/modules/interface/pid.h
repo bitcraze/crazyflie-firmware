@@ -29,7 +29,7 @@
 
 #include <stdbool.h>
 
-#if defined(PLATFORM_CF2) && !defined (ESTIMATOR_TYPE_kalman)
+#if defined(PLATFORM_CF2)
 
 #define PID_ROLL_RATE_KP  250.0
 #define PID_ROLL_RATE_KI  500.0
@@ -97,7 +97,7 @@
 #define PID_YAW_INTEGRATION_LIMIT     360.0
 
 
-#define DEFAULT_PID_INTEGRATION_LIMIT  5000.0
+#define DEFAULT_PID_INTEGRATION_LIMIT  10000.0
 
 #endif
 
