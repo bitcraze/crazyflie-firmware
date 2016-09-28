@@ -207,11 +207,6 @@ static FRESULT scan_files(char* path, uint16_t tmp_buffer_size, TM_FATFS_Search_
 	int i;
 	uint8_t gonext;
 	char* fn;
-#if _USE_LFN
-	static char lfn[_MAX_LFN + 1];   /* Buffer to store the LFN */
-	fno.lfname = lfn;
-	fno.lfsize = sizeof lfn;
-#endif
 
 	/* Try to open file */
 	if ((res = f_opendir(&dir, path)) == FR_OK) {
@@ -227,11 +222,7 @@ static FRESULT scan_files(char* path, uint16_t tmp_buffer_size, TM_FATFS_Search_
 			}
 
 			/* Format name */
-	#if _USE_LFN
-			fn = *fno.lfname ? fno.lfname : fno.fname;
-	#else
 			fn = fno.fname;
-	#endif
 
 			/* Check if available memory for tmp buffer */
 			/* + 1 is for "/" used for path formatting */

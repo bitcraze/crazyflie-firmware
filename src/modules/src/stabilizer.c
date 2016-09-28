@@ -41,6 +41,11 @@
 #include "controller.h"
 #include "power_distribution.h"
 
+#define USD_LOG_DATA
+#ifdef USD_LOG_DATA
+  #include "usddeck.h"
+#endif
+
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
 #else
@@ -125,6 +130,23 @@ static void stabilizerTask(void* param)
 
     stateController(&control, &sensorData, &state, &setpoint, tick);
     powerDistribution(&control);
+
+#ifdef USD_LOG_DATA
+    {
+      UsdLogStruct logData;
+      logData.timestamp =  xTaskGetTickCount();
+      logData.gx = sensorData.gyro.x;
+      logData.gy = sensorData.gyro.y;
+      logData.gz = sensorData.gyro.z;
+      logData.ax = sensorData.acc.x;
+      logData.ay = sensorData.acc.y;
+      logData.az = sensorData.acc.z;
+      logData.mx = sensorData.mag.x;
+      logData.my = sensorData.mag.y;
+      logData.mz = sensorData.mag.z;
+      usdQueueLogData(&logData);
+    }
+#endif
 
     tick++;
   }
