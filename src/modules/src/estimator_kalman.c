@@ -619,7 +619,7 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   }
   quadIsFlying = (xTaskGetTickCount()-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
 
-  if (quadIsFlying)
+  if (quadIsFlying) // only acceleration in z direction
   {
     // TODO: In the next lines, can either use cmdThrust/mass, or acc->z. Need to test which is more reliable.
     // cmdThrust's error comes from poorly calibrated mass, and inexact cmdThrust -> thrust map
@@ -642,15 +642,22 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     S[STATE_PY] += dt * (gyro->z * S[STATE_PX] + gyro->x * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][1]);
     S[STATE_PZ] += dt * (zacc + gyro->y * S[STATE_PX] - gyro->x * S[STATE_PY] - GRAVITY_MAGNITUDE * R[2][2]);
   }
-  else // TODO: Do we need to make this distinction (flying/not flying)?
+  else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
   {
+    // position updates in the body frame (will be rotated to inertial frame)
+    float dx = S[STATE_PX] * dt + acc->x * dt2 / 2.0f;
+    float dy = S[STATE_PY] * dt + acc->y * dt2 / 2.0f;
+    float dz = S[STATE_PZ] * dt + acc->z * dt2 / 2.0f; // thrust can only be produced in the body's Z direction
+  
     // position update
-    S[STATE_Z] = 0; // equals zero because we're not yet flying...
-
+    S[STATE_X] += R[0][0] * dx + R[0][1] * dy + R[0][2] * dz;
+    S[STATE_Y] += R[1][0] * dx + R[1][1] * dy + R[1][2] * dz;
+    S[STATE_Z] += R[2][0] * dx + R[2][1] * dy + R[2][2] * dz - GRAVITY_MAGNITUDE * dt2 / 2.0f;
+  
     // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
-    S[STATE_PX] = 0;
-    S[STATE_PY] = 0;
-    S[STATE_PZ] = 0;
+    S[STATE_PX] += dt * (acc->x + gyro->z * S[STATE_PY] - gyro->y * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][0]);
+    S[STATE_PY] += dt * (acc->y + gyro->z * S[STATE_PX] + gyro->x * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][1]);
+    S[STATE_PZ] += dt * (acc->z + gyro->y * S[STATE_PX] - gyro->x * S[STATE_PY] - GRAVITY_MAGNITUDE * R[2][2]);
   }
 
   if(S[STATE_Z] < 0) {
