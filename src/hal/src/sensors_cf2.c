@@ -45,7 +45,6 @@
 
 #include "system.h"
 #include "configblock.h"
-#include "log.h"
 #include "param.h"
 #include "debug.h"
 #include "imu.h"
@@ -60,7 +59,7 @@
  */
 //#define SENSORS_MPU6500_DLPF_256HZ
 
-//#define SENSORS_ENABLE_PRESSURE_LPS25H
+#define SENSORS_ENABLE_PRESSURE_LPS25H
 
 #define SENSORS_ENABLE_MAG_AK8963
 #define MAG_GAUSS_PER_LSB     666.7f
@@ -217,6 +216,7 @@ static void sensorsTask(void *param)
           processBarometerMeasurements(&(buffer[isMagnetometerPresent ?
                   SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN : SENSORS_MPU6500_BUFF_LEN]));
       }
+
       vTaskSuspendAll(); // ensure all queues are populated at the same time
       xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
       xQueueOverwrite(gyroDataQueue, &sensors.gyro);
