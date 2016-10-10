@@ -85,11 +85,13 @@ bool i2cdevRead(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 {
   I2cMessage message;
 
+#ifdef PLATFORM_CF1
   if (memAddress == I2CDEV_NO_MEM_ADDR)
   {
     i2cdrvCreateMessage(&message, devAddress, i2cRead, len, data);
   }
   else
+#endif
   {
     i2cdrvCreateMessageIntAddr(&message, devAddress, false, memAddress,
                             i2cRead, len, data);
@@ -148,12 +150,13 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 {
   I2cMessage message;
 
-  // TODO there should be a better way to deal with this
-  //if (memAddress == I2CDEV_NO_MEM_ADDR)
-  //{
-  //  i2cdrvCreateMessage(&message, devAddress, i2cWrite, len, data);
-  //}
-  //else
+#ifdef PLATFORM_CF1
+  if (memAddress == I2CDEV_NO_MEM_ADDR)
+  {
+    i2cdrvCreateMessage(&message, devAddress, i2cWrite, len, data);
+  }
+  else
+#endif
   {
     i2cdrvCreateMessageIntAddr(&message, devAddress, false, memAddress,
                             i2cWrite, len, data);
