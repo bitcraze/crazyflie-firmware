@@ -134,12 +134,13 @@ typedef struct
 
 typedef enum vcselPeriodType_t { VcselPeriodPreRange, VcselPeriodFinalRange } vcselPeriodType;
 
-/** Default constructor, uses default I2C address.
+/** Default constructor, uses external I2C address.
  * @see VL53L0X_DEFAULT_ADDRESS
  */
-void vl53l0xInit(I2C_Dev *i2cPort);
+void vl53l0xInit(DeckInfo* info);
 
 bool vl53l0xTest(void);
+void vl53l0xTask(void* arg);
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.

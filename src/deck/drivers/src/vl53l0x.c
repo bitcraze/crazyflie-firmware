@@ -28,7 +28,11 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+
+#include "deck.h"
+#include "system.h"
 #include "debug.h"
+#include "log.h"
 
 #include "i2cdev.h"
 
@@ -41,6 +45,8 @@ static bool isInit;
 static uint16_t io_timeout = 0;
 static bool did_timeout;
 static uint16_t timeout_start_ms;
+
+static uint16_t range_last = 0;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -67,6 +73,7 @@ static uint16_t timeout_start_ms;
 static uint8_t stop_variable;
 
 static uint32_t measurement_timing_budget_us;
+static uint16_t measurement_timing_budget_ms;
 
 // Get reference SPAD (single photon avalanche diode) count and type
 // based on VL53L0X_get_info_from_device(),
@@ -113,13 +120,16 @@ static bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val);
 /** Default constructor, uses default I2C address.
  * @see VL53L0X_DEFAULT_ADDRESS
  */
-void vl53l0xInit(I2C_Dev *i2cPort)
+void vl53l0xInit(DeckInfo* info)
 {
   if (isInit)
     return;
 
-  I2Cx = i2cPort;
+  i2cdevInit(I2C1_DEV);
+  I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
+
+  xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
   isInit = true;
 }
@@ -131,10 +141,42 @@ bool vl53l0xTest(void)
   if (!isInit)
     return false;
 
-  testStatus = vl53l0xTestConnection();
+  testStatus  = vl53l0xTestConnection();
+  testStatus &= vl53l0xInitSensor(true);
 
   return testStatus;
 }
+
+void vl53l0xTask(void* arg)
+{
+  systemWaitStart();
+  TickType_t xLastWakeTime;
+
+  vl53l0xSetVcselPulsePeriod(VcselPeriodPreRange, 18);
+  vl53l0xSetVcselPulsePeriod(VcselPeriodFinalRange, 14);
+  vl53l0xStartContinuous(0);
+  while (1) {
+    xLastWakeTime = xTaskGetTickCount();
+    range_last = vl53l0xReadRangeContinuousMillimeters();
+    vTaskDelayUntil(&xLastWakeTime, M2T(measurement_timing_budget_ms));
+  }
+}
+
+static const DeckDriver vl53l0x_deck = {
+  .vid = 0xBC,
+  .pid = 0xFF,
+  .name = "vl53l0x",
+  .usedGpio = 0, // TODO: set the used pins
+
+  .init = vl53l0xInit,
+  .test = vl53l0xTest,
+};
+
+DECK_DRIVER(vl53l0x_deck);
+
+LOG_GROUP_START(range)
+LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_GROUP_STOP(range)
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.
@@ -365,6 +407,7 @@ bool vl53l0xInitSensor(bool io_2v8)
   // -- VL53L0X_SetGpioConfig() end
 
   measurement_timing_budget_us = vl53l0xGetMeasurementTimingBudget();
+  measurement_timing_budget_ms = (uint16_t)(measurement_timing_budget_us / 1000.0f);
 
   // "Disable MSRC and TCC by default"
   // MSRC = Minimum Signal Rate Check
@@ -510,6 +553,7 @@ bool vl53l0xSetMeasurementTimingBudget(uint32_t budget_us)
     // set_sequence_step_timeout() end
 
     measurement_timing_budget_us = budget_us; // store for internal reuse
+    measurement_timing_budget_ms = (uint16_t)(measurement_timing_budget_us / 1000.0f);
   }
   return true;
 }
@@ -561,6 +605,7 @@ uint32_t vl53l0xGetMeasurementTimingBudget(void)
   }
 
   measurement_timing_budget_us = budget_us; // store for internal reuse
+  measurement_timing_budget_ms = (uint16_t)(measurement_timing_budget_us / 1000.0f);
   return budget_us;
 }
 
