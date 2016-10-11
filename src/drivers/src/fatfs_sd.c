@@ -281,7 +281,7 @@ uint8_t TM_FATFS_WriteEnabled(void) {
 }
 
 DSTATUS TM_FATFS_SD_disk_initialize (void) {
-	BYTE n, cmd, ty, ocr[4], res;
+	BYTE n, cmd, ty, ocr[4], res=0;
 	
 	//Initialize CS pin
 	TM_FATFS_InitPins();

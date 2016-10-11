@@ -91,8 +91,8 @@ static void usdTask(void *param)
 {
   //Free and total space
   uint32_t bytesWritten;
-  uint32_t totalBytesWritten;
-  uint32_t closeReopenBytes;
+  uint32_t totalBytesWritten = 0;
+  uint32_t closeReopenBytes = 0;
   UsdLogStruct  logItem;
   bool fileStatus;
 
