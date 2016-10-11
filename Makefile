@@ -178,6 +178,7 @@ PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
 PROJ_OBJ_CF2 += dwm1000.o
 PROJ_OBJ_CF2 += cppmdeck.o
+PROJ_OBJ_CF2 += vl53l0x.o
 #Deck tests
 PROJ_OBJ_CF2 += exptest.o
 #PROJ_OBJ_CF2 += bigquadtest.o
