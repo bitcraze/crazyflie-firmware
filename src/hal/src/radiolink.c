@@ -136,6 +136,12 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
       ledseqRun(LINK_DOWN_LED, seq_linkup);
       syslinkSendPacket(&txPacket);
     }
+  } else if (slp->type == SYSLINK_RADIO_RAW_BROADCAST)
+  {
+    slp->length--; // Decrease to get CRTP size.
+    xQueueSend(crtpPacketDelivery, &slp->length, 0);
+    ledseqRun(LINK_LED, seq_linkup);
+    // no ack for broadcasts
   } else if (slp->type == SYSLINK_RADIO_RSSI)
 	{
 		//Extract RSSI sample sent from radio
