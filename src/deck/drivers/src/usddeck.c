@@ -49,7 +49,7 @@
 #include "led.h"
 
 #define USD_DATAQUEUE_ITEMS       1000  // Items for roughly one second of buffer
-#define USD_CLOSE_REOPEN_BYTES    (USD_DATAQUEUE_ITEMS * 60 * sizeof(UsdLogStruct))
+#define USD_CLOSE_REOPEN_BYTES    (USD_DATAQUEUE_ITEMS * 10 * sizeof(UsdLogStruct))
 
 xQueueHandle usdDataQueue;
 
@@ -134,7 +134,7 @@ static bool isInit = false;
 
 static void usdInit(DeckInfo *info)
 {
-  xTaskCreate(usdTask, "usdTask", 2*configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
+  xTaskCreate(usdTask, "usdTask", 2*configMINIMAL_STACK_SIZE, NULL, /*priority*/0, NULL);
 
   usdDataQueue = xQueueCreate(USD_DATAQUEUE_ITEMS, sizeof(UsdLogStruct));
 
@@ -156,7 +156,14 @@ static bool usdTest()
 
 bool usdQueueLogData(UsdLogStruct* logData)
 {
-  return (xQueueSendToBack(usdDataQueue, logData, 0) == pdTRUE);
+  if (!usdDataQueue || !isInit)
+  {
+    return 0;
+  }
+  else
+  {
+    return (xQueueSendToBack(usdDataQueue, logData, 0) == pdTRUE);
+  }
 }
 
 static const DeckDriver usd_deck = {
