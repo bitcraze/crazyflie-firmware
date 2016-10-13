@@ -162,22 +162,6 @@ void vl53l0xTask(void* arg)
   }
 }
 
-static const DeckDriver vl53l0x_deck = {
-  .vid = 0xBC,
-  .pid = 0xFF,
-  .name = "vl53l0x",
-  .usedGpio = 0, // TODO: set the used pins
-
-  .init = vl53l0xInit,
-  .test = vl53l0xTest,
-};
-
-DECK_DRIVER(vl53l0x_deck);
-
-LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, range, &range_last)
-LOG_GROUP_STOP(range)
-
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.
  * @return True if connection is valid, false otherwise
@@ -1118,4 +1102,21 @@ bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val)
   buffer[3] = ((val      ) & 0xFF);
   return i2cdevWrite(I2Cx, devAddr, reg, 4, (uint8_t *)&buffer);
 }
+
+// TODO: Decide on vid:pid and set the used pins
+static const DeckDriver vl53l0x_deck = {
+  .vid = 0,
+  .pid = 0,
+  .name = "vl53l0x",
+  .usedGpio = 0,
+
+  .init = vl53l0xInit,
+  .test = vl53l0xTest,
+};
+
+DECK_DRIVER(vl53l0x_deck);
+
+LOG_GROUP_START(range)
+LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_GROUP_STOP(range)
 
