@@ -61,7 +61,8 @@ struct this_s {
 // Maximum roll/pitch angle permited
 static float rpLimit = 20;
 
-#define DT 0.01
+#define DT (float)(1.0f/POSITION_RATE)
+#define POSITION_LPF_CUTOFF_FREQ 3.0f
 
 #ifndef UNIT_TEST
 static struct this_s this = {
@@ -105,7 +106,8 @@ static float runPid(float input, struct pidAxis_s *axis, mode_t mode,
     } else {
       axis->setpoint = setpointPos;
     }
-    pidInit(&axis->pid, axis->setpoint, axis->init.kp, axis->init.ki, axis->init.kd, dt);
+    pidInit(&axis->pid, axis->setpoint, axis->init.kp, axis->init.ki, axis->init.kd,
+        dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ);
   }
   axis->previousMode = mode;
 
@@ -132,8 +134,8 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
   attitude->pitch = - (x * cosf(yawRad)) - (y * sinf(yawRad));
   attitude->roll =  - (y * cosf(yawRad)) + (x * sinf(yawRad));
 
-  attitude->roll = max(min(attitude->roll, rpLimit), -rpLimit);
-  attitude->pitch = max(min(attitude->pitch, rpLimit), -rpLimit);
+  attitude->roll  = constrain(attitude->roll,  -rpLimit, rpLimit);
+  attitude->pitch = constrain(attitude->pitch, -rpLimit, rpLimit);
 
   // Z
   float newThrust = runPid(state->position.z, &this.pidZ, setpoint->mode.z, setpoint->position.z, setpoint->velocity.z, DT);
@@ -144,15 +146,23 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
 }
 
 
-LOG_GROUP_START(posCtlAlt)
+LOG_GROUP_START(posCtl)
 LOG_ADD(LOG_FLOAT, targetX, &this.pidX.setpoint)
 LOG_ADD(LOG_FLOAT, targetY, &this.pidY.setpoint)
 LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.setpoint)
 
-LOG_ADD(LOG_FLOAT, p, &this.pidZ.pid.outP)
-LOG_ADD(LOG_FLOAT, i, &this.pidZ.pid.outI)
-LOG_ADD(LOG_FLOAT, d, &this.pidZ.pid.outD)
-LOG_GROUP_STOP(posCtlAlt)
+LOG_ADD(LOG_FLOAT, Xp, &this.pidX.pid.outP)
+LOG_ADD(LOG_FLOAT, Xi, &this.pidX.pid.outI)
+LOG_ADD(LOG_FLOAT, Xd, &this.pidX.pid.outD)
+
+LOG_ADD(LOG_FLOAT, Yp, &this.pidY.pid.outP)
+LOG_ADD(LOG_FLOAT, Yi, &this.pidY.pid.outI)
+LOG_ADD(LOG_FLOAT, Yd, &this.pidY.pid.outD)
+
+LOG_ADD(LOG_FLOAT, Zp, &this.pidZ.pid.outP)
+LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
+LOG_ADD(LOG_FLOAT, Zd, &this.pidZ.pid.outD)
+LOG_GROUP_STOP(posCtl)
 
 PARAM_GROUP_START(posCtlPid)
 
