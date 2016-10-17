@@ -120,7 +120,13 @@ static Axis3f  gyroBiasStdDev;
 static bool    gyroBiasFound = false;
 static float accScaleSum = 0;
 static float accScale = 1;
+
+// Low Pass filtering
+#define GYRO_LPF_CUTOFF_FREQ  100
+#define ACCEL_LPF_CUTOFF_FREQ 30
 static lpf2pData accLpf[3];
+static lpf2pData gyroLpf[3];
+static void applyAxis3fLpf(lpf2pData *data, Axis3f* in);
 
 static bool isBarometerPresent = false;
 static bool isMagnetometerPresent = false;
@@ -155,7 +161,6 @@ static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj* bias);
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
-static void sensorsAccApplyLpf(Axis3f* in);
 
 bool sensorsReadGyro(Axis3f *gyro)
 {
@@ -290,13 +295,13 @@ void processAccGyroMeasurements(const uint8_t *buffer)
   sensors.gyro.x = -(gx - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
   sensors.gyro.y =  (gy - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
   sensors.gyro.z =  (gz - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
+  applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensors.gyro);
 
   accScaled.x = -(ax) * SENSORS_G_PER_LSB_CFG / accScale;
   accScaled.y =  (ay) * SENSORS_G_PER_LSB_CFG / accScale;
   accScaled.z =  (az) * SENSORS_G_PER_LSB_CFG / accScale;
-
   sensorsAccAlignToGravity(&accScaled, &sensors.acc);
-  sensorsAccApplyLpf(&sensors.acc);
+  applyAxis3fLpf((lpf2pData*)(&accLpf), &sensors.acc);
 }
 
 static void sensorsDeviceInit(void)
@@ -357,7 +362,8 @@ static void sensorsDeviceInit(void)
   // Init second order filer for accelerometer
   for (uint8_t i = 0; i < 3; i++)
   {
-    lpf2pInit(&accLpf[i], 1000, 30);
+    lpf2pInit(&gyroLpf[i], 1000, GYRO_LPF_CUTOFF_FREQ);
+    lpf2pInit(&accLpf[i],  1000, ACCEL_LPF_CUTOFF_FREQ);
   }
 #endif
 
@@ -855,10 +861,10 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->z = ry.z;
 }
 
-static void sensorsAccApplyLpf(Axis3f* in)
+static void applyAxis3fLpf(lpf2pData *data, Axis3f* in)
 {
   for (uint8_t i = 0; i < 3; i++) {
-    in->axis[i] = lpf2pApply(&accLpf[i], in->axis[i]);
+    in->axis[i] = lpf2pApply(&data[i], in->axis[i]);
   }
 }
 
