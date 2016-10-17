@@ -42,6 +42,9 @@ typedef struct {
 } lpf2pData;
 
 void lpf2pInit(lpf2pData* lpfData, float sample_freq, float cutoff_freq);
+void lpf2pSetCutoffFreq(lpf2pData* lpfData, float sample_freq, float cutoff_freq);
 float lpf2pApply(lpf2pData* lpfData, float sample);
+float lpf2pReset(lpf2pData* lpfData, float sample);
+
 
 #endif //FILTER_H_

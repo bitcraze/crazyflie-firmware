@@ -67,6 +67,11 @@ void lpf2pInit(lpf2pData* lpfData, float sample_freq, float cutoff_freq)
     return;
   }
 
+  lpf2pSetCutoffFreq(lpfData, sample_freq, cutoff_freq);
+}
+
+void lpf2pSetCutoffFreq(lpf2pData* lpfData, float sample_freq, float cutoff_freq)
+{
   float fr = sample_freq/cutoff_freq;
   float ohm = tanf(M_PI/fr);
   float c = 1.0f+2.0f*cosf(M_PI/4.0f)*ohm+ohm*ohm;
@@ -92,5 +97,13 @@ float lpf2pApply(lpf2pData* lpfData, float sample)
   lpfData->delay_element_2 = lpfData->delay_element_1;
   lpfData->delay_element_1 = delay_element_0;
   return output;
+}
+
+float lpf2pReset(lpf2pData* lpfData, float sample)
+{
+  float dval = sample / (lpfData->b0 + lpfData->b1 + lpfData->b2);
+  lpfData->delay_element_1 = dval;
+  lpfData->delay_element_2 = dval;
+  return lpf2pApply(lpfData, sample);
 }
 
