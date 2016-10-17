@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -28,7 +28,8 @@
 #include "pid.h"
 
 void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt)
+             const float ki, const float kd, const float dt,
+             const float samplingRate, const float cutoffFreq)
 {
   pid->error     = 0;
   pid->prevError = 0;
@@ -41,6 +42,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->iLimit    = DEFAULT_PID_INTEGRATION_LIMIT;
   pid->iLimitLow = -DEFAULT_PID_INTEGRATION_LIMIT;
   pid->dt        = dt;
+  lpf2pInit(&pid->dFilter, samplingRate, cutoffFreq);
 }
 
 float pidUpdate(PidObject* pid, const float measured, const bool updateError)
@@ -62,7 +64,8 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
         pid->integ = pid->iLimitLow;
     }
 
-    pid->deriv = (pid->error - pid->prevError) / pid->dt;
+    float deriv = (pid->error - pid->prevError) / pid->dt;
+    pid->deriv = lpf2pApply(&pid->dFilter, deriv);
 
     pid->outP = pid->kp * pid->error;
     pid->outI = pid->ki * pid->integ;
