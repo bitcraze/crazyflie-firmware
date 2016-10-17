@@ -648,12 +648,12 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     float dx = S[STATE_PX] * dt + acc->x * dt2 / 2.0f;
     float dy = S[STATE_PY] * dt + acc->y * dt2 / 2.0f;
     float dz = S[STATE_PZ] * dt + acc->z * dt2 / 2.0f; // thrust can only be produced in the body's Z direction
-  
+
     // position update
     S[STATE_X] += R[0][0] * dx + R[0][1] * dy + R[0][2] * dz;
     S[STATE_Y] += R[1][0] * dx + R[1][1] * dy + R[1][2] * dz;
     S[STATE_Z] += R[2][0] * dx + R[2][1] * dy + R[2][2] * dz - GRAVITY_MAGNITUDE * dt2 / 2.0f;
-  
+
     // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
     S[STATE_PX] += dt * (acc->x + gyro->z * S[STATE_PY] - gyro->y * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][0]);
     S[STATE_PY] += dt * (acc->y + gyro->z * S[STATE_PX] + gyro->x * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][1]);
@@ -1240,6 +1240,10 @@ LOG_GROUP_START(kalman)
   LOG_ADD(LOG_FLOAT, varD1, &P[STATE_D1][STATE_D1])
   LOG_ADD(LOG_FLOAT, varD2, &P[STATE_D2][STATE_D2])
   LOG_ADD(LOG_FLOAT, varSkew, &varSkew)
+  LOG_ADD(LOG_FLOAT, q0, &q[0])
+  LOG_ADD(LOG_FLOAT, q1, &q[1])
+  LOG_ADD(LOG_FLOAT, q2, &q[2])
+  LOG_ADD(LOG_FLOAT, q3, &q[3])
 LOG_GROUP_STOP(kalman)
 
 PARAM_GROUP_START(kalman)
