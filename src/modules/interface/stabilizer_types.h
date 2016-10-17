@@ -191,6 +191,9 @@ typedef struct setpointZ_s {
 #define RATE_MAIN_LOOP RATE_1000_HZ
 #endif
 
+#define ATTITUDE_RATE RATE_500_HZ
+#define POSITION_RATE RATE_100_HZ
+
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 
 #endif
