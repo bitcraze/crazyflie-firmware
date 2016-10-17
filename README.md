@@ -34,7 +34,19 @@ sudo pacman -S community/arm-none-eabi-gcc community/arm-none-eabi-gdb community
 
 #### Windows
 
-> `TODO: Please share!`
+The GCC ARM Embedded toolchain for Windows is available at [launchpad.net](https://launchpad.net/gcc-arm-embedded/+download). Download the zip archive rather than the executable installer. There are a few different systems for running UNIX-style shells and build systems on Windows; the instructions below are for [Cygwin](https://www.cygwin.com/).
+
+Install Cygwin with [setup-x86_64.exe](https://www.cygwin.com/setup-x86_64.exe). Use the standard `C:\cygwin64` installation directory and install at least the `make` and `git` packages.
+
+Download the latest `gcc-arm-none-eabi-*-win32.zip` archive from [launchpad.net](https://launchpad.net/gcc-arm-embedded/+download). Create the directory `C:\cygwin64\opt\gcc-arm-none-eabi` and extract the contents of the zip file to it.
+
+Launch a Cygwin terminal and run the following to append to your ~/.bashrc file:
+```bash
+echo '[[ $PATH == */opt/gcc-arm-none-eabi/bin* ]] || export PATH=/opt/gcc-arm-none-eabi/bin:$PATH' >>~/.bashrc
+source ~/.bashrc
+```
+
+Verify the toolchain installation with `arm-none-eabi-gcc --version`
 
 ### Cloning
 
