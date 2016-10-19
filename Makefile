@@ -104,7 +104,7 @@ VPATH += $(FREERTOS)
 FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 
 #FatFS
-VPATH += $(LIB)/FatFS
+VPATH_CF2 += $(LIB)/FatFS
 FATFS_OBJ  = diskio.o ff.o syscall.o unicode.o fatfs_sd.o 
 
 # Crazyflie sources

@@ -41,7 +41,8 @@
 #include "controller.h"
 #include "power_distribution.h"
 
-#define USD_LOG_DATA
+// TODO krri Remove this temp logging, only for development
+// #define USD_LOG_DATA
 #ifdef USD_LOG_DATA
   #include "usddeck.h"
 #endif
