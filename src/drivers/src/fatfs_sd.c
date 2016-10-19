@@ -188,10 +188,14 @@ BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 	}
 
 	/* Select the card and wait for ready except to stop multiple block read */
-	if (cmd != CMD12) {
-		deselect(ops);
-		if (!select(ops)) return 0xFF;
-	}
+  if(cmd == CMD0) {
+    deselect(ops);
+    ops->cs_low();
+  }
+  else if (cmd != CMD12) {
+    deselect(ops);
+    if (!select(ops)) return 0xFF;
+  }
 
 	/* Send command packet */
 	ops->xchg_spi(0x40 | cmd);				/* Start + command index */

@@ -106,7 +106,6 @@ FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 #FatFS
 VPATH += $(LIB)/FatFS
 FATFS_OBJ  = diskio.o ff.o syscall.o unicode.o fatfs_sd.o 
-#FATFS_OBJ += tm_stm32f4_fatfs.o tm_stm32f4_gpio.o tm_stm32f4_delay.o tm_stm32f4_spi.o
 
 # Crazyflie sources
 VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/src
