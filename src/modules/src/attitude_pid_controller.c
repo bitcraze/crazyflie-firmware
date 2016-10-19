@@ -31,8 +31,8 @@
 #include "pid.h"
 #include "param.h"
 
-#define ATTITUDE_LPF_CUTOFF_FREQ      10.0f
-#define ATTITUDE_RATE_LPF_CUTOFF_FREQ 20.0f
+#define ATTITUDE_LPF_CUTOFF_FREQ      15.0f
+#define ATTITUDE_RATE_LPF_CUTOFF_FREQ 30.0f
 
 static inline int16_t saturateSignedInt16(float in)
 {
