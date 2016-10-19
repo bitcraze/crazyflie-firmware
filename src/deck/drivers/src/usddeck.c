@@ -39,6 +39,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
+#include "timers.h"
 
 #include "ff.h"
 #include "fatfs_sd.h"
@@ -71,6 +72,10 @@ xQueueHandle usdDataQueue;
 
 static BYTE exchangeBuff[512];
 
+static xTimerHandle timer;
+static void usdTimer(xTimerHandle timer);
+
+
 //Fatfs object
 FATFS FatFs;
 //File object
@@ -86,7 +91,11 @@ static sdSpiOps_t sdSpiOps =
   .rcvr_spi_multi = rcvr_spi_multi,
   .xmit_spi_multi = xmit_spi_multi,
   .cs_low = cs_low,
-  .cs_high = cs_high
+  .cs_high = cs_high,
+
+  .Stat = STA_NOINIT,
+  .Timer1 = 0,
+  .Timer2 = 0
 };
 
 static DISKIO_LowLevelDriver_t fatDrv =
@@ -98,6 +107,7 @@ static DISKIO_LowLevelDriver_t fatDrv =
     SD_disk_read,
     &sdSpiOps,
 };
+
 
 static bool usdMountAndOpen(bool append)
 {
@@ -243,6 +253,9 @@ static void usdInit(DeckInfo *info)
   }
 
   FATFS_AddDriver(&fatDrv, 0);
+
+  timer = xTimerCreate( "usdTimer", M2T(SD_DISK_TIMER_PERIOD_MS), pdTRUE, NULL, usdTimer);
+  xTimerStart(timer, 0);
 }
 
 static bool usdTest()
@@ -253,6 +266,11 @@ static bool usdTest()
   }
 
   return isInit;
+}
+
+static void usdTimer(xTimerHandle timer)
+{
+  SD_disk_timerproc(&sdSpiOps);
 }
 
 bool usdQueueLogData(UsdLogStruct* logData)

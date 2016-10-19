@@ -98,5 +98,6 @@ DSTATUS SD_disk_status(void *);
 DRESULT SD_disk_ioctl(BYTE cmd, void *buff, void *);
 DRESULT SD_disk_read(BYTE *buff, DWORD sector, UINT count, void *);
 DRESULT SD_disk_write(const BYTE *buff, DWORD sector, UINT count, void *);
+void SD_disk_timerproc (void*);
 
 #endif

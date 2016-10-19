@@ -44,14 +44,6 @@
 #define CMD58	(58)		/* READ_OCR */
 
 
-static volatile
-DSTATUS Stat = STA_NOINIT;	/* Physical drive status */
-
-static volatile
-UINT Timer1, Timer2;	/* 1kHz decrement timer stopped at zero (disk_timerproc()) */
-
-static BYTE CardType;			/* Card type flags */
-
 /*-----------------------------------------------------------------------*/
 /* Wait for card ready                                                   */
 /*-----------------------------------------------------------------------*/
@@ -65,11 +57,11 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
 	BYTE d;
 
 
-	Timer2 = wt;
+	ops->Timer2 = wt;
 	do {
 		d = ops->xchg_spi(0xFF);
 		/* This loop takes a time. Insert rot_rdq() here for multitask envilonment. */
-	} while (d != 0xFF && Timer2);	/* Wait for card goes ready or timeout */
+	} while (d != 0xFF && ops->Timer2);	/* Wait for card goes ready or timeout */
 
 	return (d == 0xFF) ? 1 : 0;
 }
@@ -121,11 +113,11 @@ int rcvr_datablock (	/* 1:OK, 0:Error */
 	BYTE token;
 
 
-	Timer1 = 200;
+	ops->Timer1 = 200;
 	do {							/* Wait for DataStart token in timeout of 200ms */
 		token = ops->xchg_spi(0xFF);
 		/* This loop will take a time. Insert rot_rdq() here for multitask envilonment. */
-	} while ((token == 0xFF) && Timer1);
+	} while ((token == 0xFF) && ops->Timer1);
 	if(token != 0xFE) return 0;		/* Function fails if invalid DataStart token or timeout */
 
 	ops->rcvr_spi_multi(buff, btr);		/* Store trailing data to the buffer */
@@ -242,7 +234,7 @@ DSTATUS SD_disk_initialize (
 
 	ops->init_spi();							/* Initialize SPI */
 
-	if (Stat & STA_NODISK) return Stat;	/* Is card existing in the soket? */
+	if (ops->Stat & STA_NODISK) return ops->Stat;	/* Is card existing in the soket? */
 
 	ops->set_slow_spi_mode();
 	for (n = 10; n; n--) ops->xchg_spi(0xFF);	/* Send 80 dummy clocks */
@@ -254,12 +246,12 @@ DSTATUS SD_disk_initialize (
 
 	ty = 0;
 	if (send_cmd(ops, CMD0, 0) == 1) {			/* Put the card SPI/Idle state */
-		Timer1 = 1000;						/* Initialization timeout = 1 sec */
+		ops->Timer1 = 1000;						/* Initialization timeout = 1 sec */
 		if (send_cmd(ops, CMD8, 0x1AA) == 1) {	/* SDv2? */
 			for (n = 0; n < 4; n++) ocr[n] = ops->xchg_spi(0xFF);	/* Get 32 bit return value of R7 resp */
 			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {				/* Is the card supports vcc of 2.7-3.6V? */
-				while (Timer1 && send_cmd(ops, ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
-				if (Timer1 && send_cmd(ops, CMD58, 0) == 0) {		/* Check CCS bit in the OCR */
+				while (ops->Timer1 && send_cmd(ops, ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
+				if (ops->Timer1 && send_cmd(ops, CMD58, 0) == 0) {		/* Check CCS bit in the OCR */
 					for (n = 0; n < 4; n++) ocr[n] = ops->xchg_spi(0xFF);
 					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* Card id SDv2 */
 				}
@@ -270,22 +262,22 @@ DSTATUS SD_disk_initialize (
 			} else {
 				ty = CT_MMC; cmd = CMD1;	/* MMCv3 (CMD1(0)) */
 			}
-			while (Timer1 && send_cmd(ops, cmd, 0)) ;		/* Wait for end of initialization */
-			if (!Timer1 || send_cmd(ops, CMD16, 512) != 0)	/* Set block length: 512 */
+			while (ops->Timer1 && send_cmd(ops, cmd, 0)) ;		/* Wait for end of initialization */
+			if (!ops->Timer1 || send_cmd(ops, CMD16, 512) != 0)	/* Set block length: 512 */
 				ty = 0;
 		}
 	}
-	CardType = ty;	/* Card type */
+	ops->CardType = ty;	/* Card type */
 	deselect(ops);
 
 	if (ty) {			/* OK */
 	  ops->set_fast_spi_mode();			/* Set fast clock */
-		Stat &= ~STA_NOINIT;	/* Clear STA_NOINIT flag */
+		ops->Stat &= ~STA_NOINIT;	/* Clear STA_NOINIT flag */
 	} else {			/* Failed */
-		Stat = STA_NOINIT;
+		ops->Stat = STA_NOINIT;
 	}
 
-	return Stat;
+	return ops->Stat;
 }
 
 
@@ -298,7 +290,9 @@ DSTATUS SD_disk_status (
     void * usrOps     /* User data */
 )
 {
-	return Stat;	/* Return disk status */
+	sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+
+	return ops->Stat;	/* Return disk status */
 }
 
 
@@ -317,9 +311,9 @@ DRESULT SD_disk_read (
   sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
 
 	if (!usrOps || !count) return RES_PARERR;		/* Check parameter */
-	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
+	if (ops->Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
 
-	if (!(CardType & CT_BLOCK)) sector *= 512;	/* LBA ot BA conversion (byte addressing cards) */
+	if (!(ops->CardType & CT_BLOCK)) sector *= 512;	/* LBA ot BA conversion (byte addressing cards) */
 
 	if (count == 1) {	/* Single sector read */
 		if ((send_cmd(ops, CMD17, sector) == 0)	/* READ_SINGLE_BLOCK */
@@ -357,10 +351,10 @@ DRESULT SD_disk_write (
   sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
 
   if (!usrOps || !count) return RES_PARERR;		/* Check parameter */
-	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check drive status */
-	if (Stat & STA_PROTECT) return RES_WRPRT;	/* Check write protect */
+	if (ops->Stat & STA_NOINIT) return RES_NOTRDY;	/* Check drive status */
+	if (ops->Stat & STA_PROTECT) return RES_WRPRT;	/* Check write protect */
 
-	if (!(CardType & CT_BLOCK)) sector *= 512;	/* LBA ==> BA conversion (byte addressing cards) */
+	if (!(ops->CardType & CT_BLOCK)) sector *= 512;	/* LBA ==> BA conversion (byte addressing cards) */
 
 	if (count == 1) {	/* Single sector write */
 		if ((send_cmd(ops, CMD24, sector) == 0)	/* WRITE_BLOCK */
@@ -368,7 +362,7 @@ DRESULT SD_disk_write (
 			count = 0;
 	}
 	else {				/* Multiple sector write */
-		if (CardType & CT_SDC) send_cmd(ops, ACMD23, count);	/* Predefine number of sectors */
+		if (ops->CardType & CT_SDC) send_cmd(ops, ACMD23, count);	/* Predefine number of sectors */
 		if (send_cmd(ops, CMD25, sector) == 0) {	/* WRITE_MULTIPLE_BLOCK */
 			do {
 				if (!xmit_datablock(ops, buff, 0xFC)) break;
@@ -399,11 +393,11 @@ DRESULT SD_disk_ioctl (
 	DRESULT res;
 	BYTE n, csd[16];
 	DWORD *dp, st, ed, csize;
-	 sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+	sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
 
   if (!usrOps) return RES_PARERR;   /* Check parameter */
 
-	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
+	if (ops->Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
 
 	res = RES_ERROR;
 
@@ -427,7 +421,7 @@ DRESULT SD_disk_ioctl (
 		break;
 
 	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (DWORD) */
-		if (CardType & CT_SD2) {	/* SDC ver 2.00 */
+		if (ops->CardType & CT_SD2) {	/* SDC ver 2.00 */
 			if (send_cmd(ops, ACMD13, 0) == 0) {	/* Read SD status */
 				ops->xchg_spi(0xFF);
 				if (rcvr_datablock(ops, csd, 16)) {				/* Read partial block */
@@ -438,7 +432,7 @@ DRESULT SD_disk_ioctl (
 			}
 		} else {					/* SDC ver 1.XX or MMC */
 			if ((send_cmd(ops, CMD9, 0) == 0) && rcvr_datablock(ops, csd, 16)) {	/* Read CSD */
-				if (CardType & CT_SD1) {	/* SDC ver 1.XX */
+				if (ops->CardType & CT_SD1) {	/* SDC ver 1.XX */
 					*(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
 				} else {					/* MMC */
 					*(DWORD*)buff = ((WORD)((csd[10] & 124) >> 2) + 1) * (((csd[11] & 3) << 3) + ((csd[11] & 224) >> 5) + 1);
@@ -449,11 +443,11 @@ DRESULT SD_disk_ioctl (
 		break;
 
 	case CTRL_ERASE_SECTOR :	/* Erase a block of sectors (used when _USE_ERASE == 1) */
-		if (!(CardType & CT_SDC)) break;				/* Check if the card is SDC */
+		if (!(ops->CardType & CT_SDC)) break;				/* Check if the card is SDC */
 		if (SD_disk_ioctl(MMC_GET_CSD, csd, ops)) break;	/* Get CSD */
 		if (!(csd[0] >> 6) && !(csd[10] & 0x40)) break;	/* Check if sector erase can be applied to the card */
 		dp = buff; st = dp[0]; ed = dp[1];				/* Load sector block */
-		if (!(CardType & CT_BLOCK)) {
+		if (!(ops->CardType & CT_BLOCK)) {
 			st *= 512; ed *= 512;
 		}
 		if (send_cmd(ops, CMD32, st) == 0 && send_cmd(ops, CMD33, ed) == 0 && send_cmd(ops, CMD38, 0) == 0 && wait_ready(ops, 30000))	/* Erase sector block */
@@ -477,21 +471,21 @@ DRESULT SD_disk_ioctl (
 /* This function must be called from timer interrupt routine in period
 /  of 1 ms to generate card control timing.
 */
-// FIXME: Implement
 #define MMC_WP 0
 #define MMC_CD 1
-void SD_disk_timerproc (void)
+void SD_disk_timerproc (void* usrOps)
 {
 	WORD n;
 	BYTE s;
 
+	sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
 
-	n = Timer1;						/* 1kHz decrement timer stopped at 0 */
-	if (n) Timer1 = --n;
-	n = Timer2;
-	if (n) Timer2 = --n;
+	n = ops->Timer1;						/* 1kHz decrement timer stopped at 0 */
+	if (n) ops->Timer1 = --n;
+	n = ops->Timer2;
+	if (n) ops->Timer2 = --n;
 
-	s = Stat;
+	s = ops->Stat;
 	if (MMC_WP)		/* Write protected */
 		s |= STA_PROTECT;
 	else		/* Write enabled */
@@ -500,6 +494,6 @@ void SD_disk_timerproc (void)
 		s &= ~STA_NODISK;
 	else		/* Socket empty */
 		s |= (STA_NODISK | STA_NOINIT);
-	Stat = s;
+	ops->Stat = s;
 }
 
