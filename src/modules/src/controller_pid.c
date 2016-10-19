@@ -20,6 +20,7 @@ static float actuatorThrust;
 void stateControllerInit(void)
 {
   attitudeControllerInit(ATTITUDE_UPDATE_DT);
+  positionControllerInit();
 }
 
 bool stateControllerTest(void)
@@ -102,6 +103,7 @@ void stateController(control_t *control, const sensorData_t *sensors,
     control->yaw = 0;
 
     attitudeControllerResetAllPID();
+    positionControllerResetAllPID();
 
     // Reset the calculated YAW angle for rate control
     attitudeDesired.yaw = state->attitude.yaw;
