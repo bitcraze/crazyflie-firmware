@@ -147,12 +147,12 @@
 / Drive/Volume Configurations
 /---------------------------------------------------------------------------*/
 
-#define _VOLUMES	8
+#define _VOLUMES	1
 /* Number of volumes (logical drives) to be used. */
 
 
 #define _STR_VOLUME_ID	1
-#define _VOLUME_STRS	"SD","USB","SDRAM","SPIFLASH"
+#define _VOLUME_STRS	"SD"
 /* _STR_VOLUME_ID switches string support of volume ID.
 /  When _STR_VOLUME_ID is set to 1, also pre-defined strings can be used as drive
 /  number in the path name. _VOLUME_STRS defines the drive ID strings for each

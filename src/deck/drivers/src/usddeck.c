@@ -40,23 +40,64 @@
 #include "queue.h"
 #include "task.h"
 
-#include "tm_stm32f4_fatfs.h"
+#include "ff.h"
+#include "fatfs_sd.h"
 
 #include "deck.h"
 #include "usddeck.h"
+#include "deck_spi.h"
 #include "system.h"
 #include "debug.h"
 #include "led.h"
 
+// Hardware defines
+#define USD_CS_PIN    DECK_GPIO_IO4
+
+// Log data defines
 #define USD_DATAQUEUE_ITEMS       1000  // Items for roughly one second of buffer
 #define USD_CLOSE_REOPEN_BYTES    (USD_DATAQUEUE_ITEMS * 10 * sizeof(UsdLogStruct))
 
+// FATFS low lever driver functions.
+static void init_spi(void);
+static void set_slow_spi_mode(void);
+static void set_fast_spi_mode(void);
+static BYTE xchg_spi(BYTE dat);
+static void rcvr_spi_multi(BYTE *buff, UINT btr);
+static void xmit_spi_multi(const BYTE *buff, UINT btx);
+static void cs_high(void);
+static void cs_low(void);
+
 xQueueHandle usdDataQueue;
+
+static BYTE exchangeBuff[512];
 
 //Fatfs object
 FATFS FatFs;
 //File object
 FIL logFile;
+
+// Low lever driver functions
+static sdSpiOps_t sdSpiOps =
+{
+  .init_spi = init_spi,
+  .set_slow_spi_mode = set_slow_spi_mode,
+  .set_fast_spi_mode = set_fast_spi_mode,
+  .xchg_spi = xchg_spi,
+  .rcvr_spi_multi = rcvr_spi_multi,
+  .xmit_spi_multi = xmit_spi_multi,
+  .cs_low = cs_low,
+  .cs_high = cs_high
+};
+
+static DISKIO_LowLevelDriver_t fatDrv =
+{
+    SD_disk_initialize,
+    SD_disk_status,
+    SD_disk_ioctl,
+    SD_disk_write,
+    SD_disk_read,
+    &sdSpiOps,
+};
 
 static bool usdMountAndOpen(bool append)
 {
@@ -128,6 +169,64 @@ static void usdTask(void *param)
   }
 }
 
+/*-----------------------------------------------------------------------*/
+/* FATFS SPI controls (Platform dependent)                               */
+/*-----------------------------------------------------------------------*/
+
+/* Initialize MMC interface */
+static void init_spi(void)
+{
+  spiBegin();   /* Enable SPI function */
+  pinMode(USD_CS_PIN, OUTPUT);
+  cs_high();      /* Set CS# high */
+
+  // FIXME: DELAY of 10ms?
+}
+
+static void set_slow_spi_mode(void)
+{
+  spiConfigureSlow();
+}
+
+static void set_fast_spi_mode(void)
+{
+  spiConfigureFast();
+}
+
+/* Exchange a byte */
+static BYTE xchg_spi(BYTE dat)
+{
+  BYTE receive;
+
+  spiExchange(1, &dat, &receive);
+  return (BYTE)receive;
+}
+
+/* Receive multiple byte */
+static void rcvr_spi_multi(BYTE *buff, UINT btr)
+{
+  memset(exchangeBuff, 0xFFFFFFFF, btr);
+  spiExchange(btr, exchangeBuff, buff);
+}
+
+/* Send multiple byte */
+static void xmit_spi_multi(const BYTE *buff, UINT btx)
+{
+  spiExchange(btx, buff, exchangeBuff);
+}
+
+static void cs_high(void)
+{
+  digitalWrite(USD_CS_PIN, 1);
+}
+
+static void cs_low(void)
+{
+  digitalWrite(USD_CS_PIN, 0);
+}
+
+
+
 /*********** Deck driver initialization ***************/
 
 static bool isInit = false;
@@ -142,6 +241,8 @@ static void usdInit(DeckInfo *info)
   {
     isInit = true;
   }
+
+  FATFS_AddDriver(&fatDrv, 0);
 }
 
 static bool usdTest()
