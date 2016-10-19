@@ -26,12 +26,15 @@
  */
 
 #include "pid.h"
+#include "num.h"
+#include <float.h>
 
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float dt,
              const float samplingRate, const float cutoffFreq)
 {
   pid->error     = 0;
+  pid->errorMax  = 0.0f;
   pid->prevError = 0;
   pid->integ     = 0;
   pid->deriv     = 0;
@@ -41,6 +44,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->kd = kd;
   pid->iLimit    = DEFAULT_PID_INTEGRATION_LIMIT;
   pid->iLimitLow = -DEFAULT_PID_INTEGRATION_LIMIT;
+  pid->iCapped   = false;
   pid->dt        = dt;
   lpf2pInit(&pid->dFilter, samplingRate, cutoffFreq);
 }
@@ -52,16 +56,22 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     if (updateError)
     {
         pid->error = pid->desired - measured;
+        if (pid->errorMax > FLT_MIN) {
+          float errorMaxScaled = pid->errorMax / pid->kp;
+          pid->error = constrain(pid->error, -errorMaxScaled, errorMaxScaled);
+        }
     }
 
-    pid->integ += pid->error * pid->dt;
-    if (pid->integ > pid->iLimit)
-    {
-        pid->integ = pid->iLimit;
-    }
-    else if (pid->integ < pid->iLimitLow)
-    {
-        pid->integ = pid->iLimitLow;
+    if (pid->iCapped == false) {
+      pid->integ += pid->error * pid->dt;
+      if (pid->integ > pid->iLimit)
+      {
+          pid->integ = pid->iLimit;
+      }
+      else if (pid->integ < pid->iLimitLow)
+      {
+          pid->integ = pid->iLimitLow;
+      }
     }
 
     float deriv = (pid->error - pid->prevError) / pid->dt;
