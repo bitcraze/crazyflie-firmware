@@ -122,7 +122,7 @@ static float accScaleSum = 0;
 static float accScale = 1;
 
 // Low Pass filtering
-#define GYRO_LPF_CUTOFF_FREQ  100
+#define GYRO_LPF_CUTOFF_FREQ  80
 #define ACCEL_LPF_CUTOFF_FREQ 30
 static lpf2pData accLpf[3];
 static lpf2pData gyroLpf[3];
