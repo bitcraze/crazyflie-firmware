@@ -26,7 +26,7 @@ typedef struct {
   // 1kHz decrement timers stopped at zero (disk_timerproc())
   volatile UINT Timer1;
   volatile UINT Timer2;
-} sdSpiOps_t;
+} sdSpiContext_t;
 
 #endif // __FATFS_SD_H__
 

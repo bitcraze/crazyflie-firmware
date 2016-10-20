@@ -82,7 +82,7 @@ FATFS FatFs;
 FIL logFile;
 
 // Low lever driver functions
-static sdSpiOps_t sdSpiOps =
+static sdSpiContext_t sdSpiContext =
 {
   .init_spi = init_spi,
   .set_slow_spi_mode = set_slow_spi_mode,
@@ -105,7 +105,7 @@ static DISKIO_LowLevelDriver_t fatDrv =
     SD_disk_ioctl,
     SD_disk_write,
     SD_disk_read,
-    &sdSpiOps,
+    &sdSpiContext,
 };
 
 
@@ -270,7 +270,7 @@ static bool usdTest()
 
 static void usdTimer(xTimerHandle timer)
 {
-  SD_disk_timerproc(&sdSpiOps);
+  SD_disk_timerproc(&sdSpiContext);
 }
 
 bool usdQueueLogData(UsdLogStruct* logData)

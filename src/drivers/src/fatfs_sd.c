@@ -41,80 +41,80 @@ static const int INT_ERROR = 0;
 static const int INT_READY = 1;
 
 
-static int waitForCardReady(sdSpiOps_t *ops, UINT timeoutMs) {
+static int waitForCardReady(sdSpiContext_t *context, UINT timeoutMs) {
   BYTE d;
 
-  ops->Timer2 = timeoutMs;
+  context->Timer2 = timeoutMs;
   do {
-    d = ops->xchg_spi(0xFF);
-  } while (d != 0xFF && ops->Timer2);
+    d = context->xchg_spi(0xFF);
+  } while (d != 0xFF && context->Timer2);
 
   return (d == 0xFF) ? INT_READY : INT_TIMEOUT;
 }
 
 
 // Deselect card and release SPI
-static void deselect(sdSpiOps_t *ops) {
-  ops->cs_high();
+static void deselect(sdSpiContext_t *context) {
+  context->cs_high();
 
   // Dummy clock (force DO hi-z for multiple slave SPI)
-  ops->xchg_spi(0xFF);
+  context->xchg_spi(0xFF);
 }
 
 
-static int select(sdSpiOps_t *ops) {
-  ops->cs_low();
+static int select(sdSpiContext_t *context) {
+  context->cs_low();
 
   // Dummy clock (force DO enabled)
-  ops->xchg_spi(0xFF);
+  context->xchg_spi(0xFF);
 
-  if (waitForCardReady(ops, 500)) {
+  if (waitForCardReady(context, 500)) {
     return INT_READY;
   }
 
-  deselect(ops);
+  deselect(context);
   return INT_TIMEOUT;
 }
 
 
-static int receiveDataBlock(sdSpiOps_t *ops, BYTE *data, UINT length) {
+static int receiveDataBlock(sdSpiContext_t *context, BYTE *data, UINT length) {
   BYTE token;
 
-  ops->Timer1 = 200;
+  context->Timer1 = 200;
   do {
-    token = ops->xchg_spi(0xFF);
-  } while ((token == 0xFF) && ops->Timer1);
+    token = context->xchg_spi(0xFF);
+  } while ((token == 0xFF) && context->Timer1);
 
   if(token != 0xFE){
     return INT_ERROR;
   }
 
   // Store trailing data to the buffer
-  ops->rcvr_spi_multi(data, length);
+  context->rcvr_spi_multi(data, length);
 
   // Discard CRC
-  ops->xchg_spi(0xFF);
-  ops->xchg_spi(0xFF);
+  context->xchg_spi(0xFF);
+  context->xchg_spi(0xFF);
 
   return INT_READY;
 }
 
 
-static int transmitDataBlock(sdSpiOps_t *ops, const BYTE *data, BYTE token) {
-  if (!waitForCardReady(ops, 500)) {
+static int transmitDataBlock(sdSpiContext_t *context, const BYTE *data, BYTE token) {
+  if (!waitForCardReady(context, 500)) {
     return INT_TIMEOUT;
   }
   
-  ops->xchg_spi(token);
+  context->xchg_spi(token);
 
   // Send data if token is other than StopTran
   if (token != 0xFD) {
-    ops->xmit_spi_multi(data, 512);
+    context->xmit_spi_multi(data, 512);
 
     // Dummy CRC
-    ops->xchg_spi(0xFF); ops->xchg_spi(0xFF);
+    context->xchg_spi(0xFF); context->xchg_spi(0xFF);
 
-    BYTE resp = ops->xchg_spi(0xFF);
+    BYTE resp = context->xchg_spi(0xFF);
 
     if ((resp & 0x1F) != 0x05) {
       // Data packet was not accepted
@@ -126,11 +126,11 @@ static int transmitDataBlock(sdSpiOps_t *ops, const BYTE *data, BYTE token) {
 }
 
 
-static BYTE sendCommand(sdSpiOps_t *ops, BYTE cmd, DWORD arg) {
+static BYTE sendCommand(sdSpiContext_t *context, BYTE cmd, DWORD arg) {
   // Send a CMD55 prior to ACMD<n>
   if (cmd & 0x80) {
     cmd &= 0x7F;
-    BYTE res = sendCommand(ops, CMD55, 0);
+    BYTE res = sendCommand(context, CMD55, 0);
 
     if (res > 1) {
       return res;
@@ -139,26 +139,26 @@ static BYTE sendCommand(sdSpiOps_t *ops, BYTE cmd, DWORD arg) {
 
   // Select the card and wait for ready except to stop multiple block read
   if(cmd == CMD0) {
-    deselect(ops);
-    ops->cs_low();
+    deselect(context);
+    context->cs_low();
   } else if (cmd != CMD12) {
-    deselect(ops);
-    if (!select(ops)) {
+    deselect(context);
+    if (!select(context)) {
       return 0xFF;
     }
   }
 
   // Start + command index
-  ops->xchg_spi(0x40 | cmd);
+  context->xchg_spi(0x40 | cmd);
 
   // Argument[31..24]
-  ops->xchg_spi((BYTE)(arg >> 24));
+  context->xchg_spi((BYTE)(arg >> 24));
   // Argument[23..16]
-  ops->xchg_spi((BYTE)(arg >> 16));
+  context->xchg_spi((BYTE)(arg >> 16));
   // Argument[15..8]
-  ops->xchg_spi((BYTE)(arg >> 8));
+  context->xchg_spi((BYTE)(arg >> 8));
   // Argument[7..0]
-  ops->xchg_spi((BYTE)arg);
+  context->xchg_spi((BYTE)arg);
 
   // Dummy CRC + Stop
   BYTE crc = 0x01;
@@ -168,11 +168,11 @@ static BYTE sendCommand(sdSpiOps_t *ops, BYTE cmd, DWORD arg) {
   if (cmd == CMD8) {
     crc = 0x87;
   }
-  ops->xchg_spi(crc);
+  context->xchg_spi(crc);
 
   if (cmd == CMD12) {
     // Discard one byte when CMD12
-    ops->xchg_spi(0xFF);
+    context->xchg_spi(0xFF);
   }
 
   // Receive command resp
@@ -180,7 +180,7 @@ static BYTE sendCommand(sdSpiOps_t *ops, BYTE cmd, DWORD arg) {
     BYTE maxTries = 10;
     BYTE res;
     do {
-      res = ops->xchg_spi(0xFF);
+      res = context->xchg_spi(0xFF);
     } while ((res & 0x80) && --maxTries);
 
     // Return value: R1 resp (bit7==1:Failed to send)
@@ -190,55 +190,55 @@ static BYTE sendCommand(sdSpiOps_t *ops, BYTE cmd, DWORD arg) {
 
 
 DSTATUS SD_disk_initialize(void* usrOps) {
-  sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+  sdSpiContext_t *context = (sdSpiContext_t *)usrOps;
 
   if (!usrOps) {
     return RES_PARERR;
   }
 
-  ops->init_spi();
+  context->init_spi();
 
   // Check is card is inserted
-  if (ops->Stat & STA_NODISK) {
-    return ops->Stat;
+  if (context->Stat & STA_NODISK) {
+    return context->Stat;
   }
 
-  ops->set_slow_spi_mode();
+  context->set_slow_spi_mode();
 
   // Send 80 dummy clocks (10 * 8)
   for (BYTE n = 10; n; n--) {
-    ops->xchg_spi(0xFF);
+    context->xchg_spi(0xFF);
   }
 
   // TODO krri: Is this needed
   for (BYTE n = 100, res = 0; n && res != 1; n--) {
-    res = sendCommand(ops, CMD0, 0);
+    res = sendCommand(context, CMD0, 0);
   }
 
   BYTE cardType = 0;
 
   // Put the card SPI/Idle state
-  if (sendCommand(ops, CMD0, 0) == 1) {
-    ops->Timer1 = 1000;
+  if (sendCommand(context, CMD0, 0) == 1) {
+    context->Timer1 = 1000;
 
     // SDv2?
-    if (sendCommand(ops, CMD8, 0x1AA) == 1) {
+    if (sendCommand(context, CMD8, 0x1AA) == 1) {
       BYTE ocr[4];
 
       // Get 32 bit return value of R7 resp
       for (BYTE n = 0; n < 4; n++) {
-        ocr[n] = ops->xchg_spi(0xFF);
+        ocr[n] = context->xchg_spi(0xFF);
       }
 
       // Does the card support vcc of 2.7-3.6V?
       if (ocr[2] == 0x01 && ocr[3] == 0xAA) {
         // Wait for end of initialization with ACMD41(HCS)
-        while (ops->Timer1 && sendCommand(ops, ACMD41, 1UL << 30)) { /* Do nothing */ }
+        while (context->Timer1 && sendCommand(context, ACMD41, 1UL << 30)) { /* Do nothing */ }
 
         // Check CCS bit in the OCR
-        if (ops->Timer1 && sendCommand(ops, CMD58, 0) == 0) {
+        if (context->Timer1 && sendCommand(context, CMD58, 0) == 0) {
           for (BYTE n = 0; n < 4; n++) {
-            ocr[n] = ops->xchg_spi(0xFF);
+            ocr[n] = context->xchg_spi(0xFF);
           }
 
           // Card id SDv2
@@ -249,7 +249,7 @@ DSTATUS SD_disk_initialize(void* usrOps) {
       BYTE cmd;
 
       // SDv1 or MMC?
-      if (sendCommand(ops, ACMD41, 0) <= 1)  {
+      if (sendCommand(context, ACMD41, 0) <= 1)  {
         // SDv1
         cardType = CT_SD1;
         cmd = ACMD41;
@@ -260,121 +260,121 @@ DSTATUS SD_disk_initialize(void* usrOps) {
       }
 
       // Wait for end of initialization
-      while (ops->Timer1 && sendCommand(ops, cmd, 0)) { /* Do nothing */ }
+      while (context->Timer1 && sendCommand(context, cmd, 0)) { /* Do nothing */ }
 
       // Set block length to 512
-      if (!ops->Timer1 || sendCommand(ops, CMD16, 512) != 0) {
+      if (!context->Timer1 || sendCommand(context, CMD16, 512) != 0) {
         cardType = 0;
       }
     }
   }
 
-  ops->CardType = cardType;
-  deselect(ops);
+  context->CardType = cardType;
+  deselect(context);
 
   if (cardType) {
     // OK
-    ops->set_fast_spi_mode();
+    context->set_fast_spi_mode();
 
     // Clear STA_NOINIT flag
-    ops->Stat &= ~STA_NOINIT;
+    context->Stat &= ~STA_NOINIT;
   } else {   /* Failed */
-    ops->Stat = STA_NOINIT;
+    context->Stat = STA_NOINIT;
   }
 
-  return ops->Stat;
+  return context->Stat;
 }
 
 
 DSTATUS SD_disk_status(void * usrOps) {
- sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+ sdSpiContext_t *context = (sdSpiContext_t *)usrOps;
 
- return ops->Stat;
+ return context->Stat;
 }
 
 
 DRESULT SD_disk_read(BYTE *buff, DWORD sector, UINT count, void * usrOps) {
-  sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+  sdSpiContext_t *context = (sdSpiContext_t *)usrOps;
 
   if (!usrOps || !count) {
     return RES_PARERR;
   }
 
   // Check if drive is ready
-  if (ops->Stat & STA_NOINIT) {
+  if (context->Stat & STA_NOINIT) {
     return RES_NOTRDY;
   }
 
   // LBA ot BA conversion (byte addressing cards)
-  if (!(ops->CardType & CT_BLOCK)) {
+  if (!(context->CardType & CT_BLOCK)) {
     sector *= 512;
   }
 
   if (count == 1) {
     // Single sector read
     // READ_SINGLE_BLOCK
-    if ((sendCommand(ops, CMD17, sector) == 0) && receiveDataBlock(ops, buff, 512)) {
+    if ((sendCommand(context, CMD17, sector) == 0) && receiveDataBlock(context, buff, 512)) {
       count = 0;
     }
   } else {
     // Multiple sector read
     // READ_MULTIPLE_BLOCK
-    if (sendCommand(ops, CMD18, sector) == 0) {
+    if (sendCommand(context, CMD18, sector) == 0) {
       do {
-        if (!receiveDataBlock(ops, buff, 512)) {
+        if (!receiveDataBlock(context, buff, 512)) {
           break;
         }
         buff += 512;
       } while (--count);
 
       // STOP_TRANSMISSION
-      sendCommand(ops, CMD12, 0);
+      sendCommand(context, CMD12, 0);
     }
   }
 
-  deselect(ops);
+  deselect(context);
 
   return count ? RES_ERROR : RES_OK;
 }
 
 
 DRESULT SD_disk_write(const BYTE *buff, DWORD sector, UINT count, void * usrOps) {
-  sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+  sdSpiContext_t *context = (sdSpiContext_t *)usrOps;
 
   if (!usrOps || !count) {
     return RES_PARERR;
   }
 
   // Check drive status
-  if (ops->Stat & STA_NOINIT) {
+  if (context->Stat & STA_NOINIT) {
     return RES_NOTRDY;
   }
 
   // Check write protect
-  if (ops->Stat & STA_PROTECT) {
+  if (context->Stat & STA_PROTECT) {
     return RES_WRPRT;
   }
 
   // LBA ==> BA conversion (byte addressing cards)
-  if (!(ops->CardType & CT_BLOCK)) {
+  if (!(context->CardType & CT_BLOCK)) {
     sector *= 512;
   }
 
   if (count == 1) {
     // Single sector write
     // WRITE_BLOCK
-    if ((sendCommand(ops, CMD24, sector) == 0) && transmitDataBlock(ops, buff, 0xFE)) {
+    if ((sendCommand(context, CMD24, sector) == 0) && transmitDataBlock(context, buff, 0xFE)) {
       count = 0;
     }
   } else {
     // Multiple sector write
     // Set number of sectors
-    if (ops->CardType & CT_SDC) sendCommand(ops, ACMD23, count);
+    if (context->CardType & CT_SDC) sendCommand(context, ACMD23, count);
 
     // WRITE_MULTIPLE_BLOCK
-    if (sendCommand(ops, CMD25, sector) == 0) {
+    if (sendCommand(context, CMD25, sector) == 0) {
       do {
-        if (!transmitDataBlock(ops, buff, 0xFC)) {
+        if (!transmitDataBlock(context, buff, 0xFC)) {
           break;
         }
 
@@ -382,20 +382,20 @@ DRESULT SD_disk_write(const BYTE *buff, DWORD sector, UINT count, void * usrOps)
       } while (--count);
 
       // STOP_TRAN
-      if (!transmitDataBlock(ops, 0, 0xFD)) {
+      if (!transmitDataBlock(context, 0, 0xFD)) {
         count = 1;
       }
     }
   }
 
-  deselect(ops);
+  deselect(context);
 
   return count ? RES_ERROR : RES_OK;
 }
 
 
 DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
-  sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+  sdSpiContext_t *context = (sdSpiContext_t *)usrOps;
   BYTE csd[16];
 
   if (!usrOps) {
@@ -403,7 +403,7 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
   }
 
   // Check if drive is ready
-  if (ops->Stat & STA_NOINIT) {
+  if (context->Stat & STA_NOINIT) {
     return RES_NOTRDY;
   }
 
@@ -412,14 +412,14 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
   switch (cmd) {
     case CTRL_SYNC :
       // Wait for end of internal write process of the drive
-      if (select(ops)) {
+      if (select(context)) {
         res = RES_OK;
       }
       break;
 
     case GET_SECTOR_COUNT :
       // Get drive capacity in unit of sector (DWORD)
-      if ((sendCommand(ops, CMD9, 0) == 0) && receiveDataBlock(ops, csd, 16)) {
+      if ((sendCommand(context, CMD9, 0) == 0) && receiveDataBlock(context, csd, 16)) {
         if ((csd[0] >> 6) == 1) {
           // SDC ver 2.00
           DWORD csize = csd[9] + ((WORD)csd[8] << 8) + ((DWORD)(csd[7] & 63) << 16) + 1;
@@ -435,16 +435,16 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
       break;
 
     case GET_BLOCK_SIZE : /* Get erase block size in unit of sector (DWORD) */
-      if (ops->CardType & CT_SD2) {
+      if (context->CardType & CT_SD2) {
         // SDC ver 2.00
-        if (sendCommand(ops, ACMD13, 0) == 0) {
+        if (sendCommand(context, ACMD13, 0) == 0) {
           // Read SD status
-          ops->xchg_spi(0xFF);
-          if (receiveDataBlock(ops, csd, 16)) {
+          context->xchg_spi(0xFF);
+          if (receiveDataBlock(context, csd, 16)) {
             // Read partial block
             for (BYTE n = 64 - 16; n; n--) {
               // Purge trailing data
-              ops->xchg_spi(0xFF);
+              context->xchg_spi(0xFF);
             }
 
             *(DWORD*)buff = 16UL << (csd[10] >> 4);
@@ -453,9 +453,9 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
         }
       } else {
         // SDC ver 1.XX or MMC
-        if ((sendCommand(ops, CMD9, 0) == 0) && receiveDataBlock(ops, csd, 16)) {
+        if ((sendCommand(context, CMD9, 0) == 0) && receiveDataBlock(context, csd, 16)) {
           // Read CSD
-          if (ops->CardType & CT_SD1) {
+          if (context->CardType & CT_SD1) {
             // SDC ver 1.XX
             *(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
           } else {
@@ -471,12 +471,12 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
     case CTRL_ERASE_SECTOR :
       // Erase a block of sectors (used when _USE_ERASE == 1)
       // Check if the card is SDC
-      if (!(ops->CardType & CT_SDC)) {
+      if (!(context->CardType & CT_SDC)) {
         break;
       }
 
       // Get CSD
-      if (SD_disk_ioctl(MMC_GET_CSD, csd, ops)) {
+      if (SD_disk_ioctl(MMC_GET_CSD, csd, context)) {
         break;
       }
 
@@ -490,12 +490,12 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
         DWORD* dp = buff;
         DWORD st = dp[0];
         DWORD ed = dp[1];
-        if (!(ops->CardType & CT_BLOCK)) {
+        if (!(context->CardType & CT_BLOCK)) {
           st *= 512; ed *= 512;
         }
 
         /* Erase sector block */
-        if (sendCommand(ops, CMD32, st) == 0 && sendCommand(ops, CMD33, ed) == 0 && sendCommand(ops, CMD38, 0) == 0 && waitForCardReady(ops, 30000)) {
+        if (sendCommand(context, CMD32, st) == 0 && sendCommand(context, CMD33, ed) == 0 && sendCommand(context, CMD38, 0) == 0 && waitForCardReady(context, 30000)) {
           // FatFs does not check result of this command
           res = RES_OK;
         }
@@ -506,7 +506,7 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
       res = RES_PARERR;
   }
 
-  deselect(ops);
+  deselect(context);
 
   return res;
 }
@@ -514,24 +514,24 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
 
 // This function must be called from timer interrupt routine in period of 1 ms to generate card control timing.
 void SD_disk_timerproc (void* usrOps) {
-  sdSpiOps_t *ops = (sdSpiOps_t *)usrOps;
+  sdSpiContext_t *context = (sdSpiContext_t *)usrOps;
 
   {
-    WORD n = ops->Timer1;
+    WORD n = context->Timer1;
     if (n) {
-      ops->Timer1 = --n;
+      context->Timer1 = --n;
     }
   }
 
   {
-    WORD n = ops->Timer2;
+    WORD n = context->Timer2;
     if (n) {
-      ops->Timer2 = --n;
+      context->Timer2 = --n;
     }
   }
 
 
-  BYTE s = ops->Stat;
+  BYTE s = context->Stat;
 
   // Write enabled
   s &= ~STA_PROTECT;
@@ -539,6 +539,6 @@ void SD_disk_timerproc (void* usrOps) {
   // Card is in socket
   s &= ~STA_NODISK;
 
-  ops->Stat = s;
+  context->Stat = s;
 }
 
