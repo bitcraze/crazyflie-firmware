@@ -5,9 +5,6 @@
 #ifndef __FATFS_SD_H__
 #define __FATFS_SD_H__
 
-#define _USE_WRITE	1	/* 1: Enable disk_write function */
-#define _USE_IOCTL	1	/* 1: Enable disk_ioctl fucntion */
-
 #define SD_DISK_TIMER_PERIOD_MS 1
 
 #include "diskio.h"
