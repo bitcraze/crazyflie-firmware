@@ -49,7 +49,6 @@ void nvicInit(void)
  * @brief  This function handles SysTick Handler.
  */
 extern void tickFreeRTOS(void);
-extern void tickI2C(void);
 
 void DONT_DISCARD SysTick_Handler(void)
 {

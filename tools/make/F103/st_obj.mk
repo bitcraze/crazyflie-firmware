@@ -2,7 +2,7 @@
 # This file is part of the Crazy Flie control program
 # Copyright (c) 2009, EAT-IT
 
-VPATH+=$(STLIB)/STM32F10x_StdPeriph_Driver/src/
+VPATH+=$(LIB)/STM32F10x_StdPeriph_Driver/src/
 ST_OBJ=
 ST_OBJ+=misc.o
 ST_OBJ+=stm32f10x_adc.o
