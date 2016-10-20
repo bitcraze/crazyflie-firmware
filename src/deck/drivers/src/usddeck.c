@@ -37,7 +37,6 @@
 #include "stm32fxxx.h"
 
 #include "FreeRTOS.h"
-#include "queue.h"
 #include "task.h"
 #include "timers.h"
 
@@ -54,10 +53,6 @@
 // Hardware defines
 #define USD_CS_PIN    DECK_GPIO_IO4
 
-// Log data defines
-#define USD_DATAQUEUE_ITEMS       1000  // Items for roughly one second of buffer
-#define USD_CLOSE_REOPEN_BYTES    (USD_DATAQUEUE_ITEMS * 10 * sizeof(UsdLogStruct))
-
 // FATFS low lever driver functions.
 static void initSpi(void);
 static void setSlowSpiMode(void);
@@ -67,8 +62,6 @@ static void rcvrSpiMulti(BYTE *buff, UINT btr);
 static void xmitSpiMulti(const BYTE *buff, UINT btx);
 static void csHigh(void);
 static void csLow(void);
-
-xQueueHandle usdDataQueue;
 
 static BYTE exchangeBuff[512];
 #ifdef USD_RUN_DISKIO_FUNCTION_TESTS
@@ -110,76 +103,6 @@ static DISKIO_LowLevelDriver_t fatDrv =
     &sdSpiContext,
 };
 
-
-static bool usdMountAndOpen(bool append)
-{
-  bool fileStatus = false;
-
-  //Mount drive
-  if (f_mount(&FatFs, "", 1) == FR_OK)
-  {
-    DEBUG_PRINT("Drive mounted [OK]\n");
-    //Try to open file
-    if (append)
-    {
-      if (f_open(&logFile, "log.bin", FA_OPEN_APPEND | FA_READ | FA_WRITE) == FR_OK)
-      {
-        fileStatus = true;
-      }
-    }
-    else
-    {
-      if (f_open(&logFile, "log.bin", FA_CREATE_ALWAYS | FA_READ | FA_WRITE) == FR_OK)
-      {
-        fileStatus = true;
-      }
-    }
-  }
-
-  return fileStatus;
-}
-
-/*********** Tasks ************/
-static void usdTask(void *param)
-{
-  //Free and total space
-  uint32_t bytesWritten;
-  uint32_t totalBytesWritten = 0;
-  uint32_t closeReopenBytes = 0;
-  UsdLogStruct  logItem;
-  bool fileStatus;
-
-  systemWaitStart();
-
-  fileStatus = usdMountAndOpen(false);
-
-  while (1)
-  {
-    if (xQueueReceive(usdDataQueue, &logItem, portMAX_DELAY) && fileStatus)
-    {
-      ledSet(LED_GREEN_R, 1);
-      f_write(&logFile, &logItem, sizeof(UsdLogStruct), (UINT*)&bytesWritten);
-      ledSet(LED_GREEN_R, 0);
-
-      totalBytesWritten += bytesWritten;
-      closeReopenBytes += bytesWritten;
-
-      if (closeReopenBytes > USD_CLOSE_REOPEN_BYTES)
-      {
-        // To be sure to write down the data we close and reopen
-        closeReopenBytes = 0;
-        f_close(&logFile);
-        f_mount(0, "", 1);
-
-        if (!usdMountAndOpen(true))
-        {
-          // Suspend ourselves
-          vTaskSuspend(0);
-        }
-      }
-    }
-  }
-}
 
 /*-----------------------------------------------------------------------*/
 /* FATFS SPI controls (Platform dependent)                               */
@@ -245,14 +168,7 @@ static bool isInit = false;
 
 static void usdInit(DeckInfo *info)
 {
-  xTaskCreate(usdTask, "usdTask", 2*configMINIMAL_STACK_SIZE, NULL, /*priority*/0, NULL);
-
-  usdDataQueue = xQueueCreate(USD_DATAQUEUE_ITEMS, sizeof(UsdLogStruct));
-
-  if (usdDataQueue)
-  {
-    isInit = true;
-  }
+  isInit = true;
 
   FATFS_AddDriver(&fatDrv, 0);
 
@@ -288,18 +204,6 @@ static bool usdTest()
 static void usdTimer(xTimerHandle timer)
 {
   SD_disk_timerproc(&sdSpiContext);
-}
-
-bool usdQueueLogData(UsdLogStruct* logData)
-{
-  if (!usdDataQueue || !isInit)
-  {
-    return 0;
-  }
-  else
-  {
-    return (xQueueSendToBack(usdDataQueue, logData, 0) == pdTRUE);
-  }
 }
 
 static const DeckDriver usd_deck = {

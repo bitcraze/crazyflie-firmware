@@ -211,15 +211,16 @@ DSTATUS SD_disk_initialize(void* usrOps) {
     context->xchgSpi(0xFF);
   }
 
-  // TODO krri: Is this needed
-  for (BYTE n = 100, res = 0; n && res != 1; n--) {
+  // Try to configure SD card in SPI mode
+  BYTE res = 0;
+  for (BYTE n = 100; n && res != 1; n--) {
     res = sendCommand(context, CMD0, 0);
   }
 
   BYTE cardType = 0;
 
   // Put the card SPI/Idle state
-  if (sendCommand(context, CMD0, 0) == 1) {
+  if (res == 1) {
     context->timer1 = 1000;
 
     // SDv2?
