@@ -26,6 +26,7 @@
 #include "eprintf.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <ctype.h>
 
 static const char digit[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
@@ -123,6 +124,13 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
         case 'i':
         case 'd':
           len += itoa(putcf, va_arg(ap, int), 10 , 0);
+          break;
+        case 'u':
+          len += itoa(putcf, va_arg(ap, unsigned int), 10 , 0);
+          break;
+        case 'l':
+          if (*fmt++ == 'u')
+            len += itoa(putcf, va_arg(ap, long unsigned int), 10 , 0);
           break;
         case 'x':
         case 'X':

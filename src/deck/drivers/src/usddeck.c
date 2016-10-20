@@ -71,10 +71,12 @@ static void cs_low(void);
 xQueueHandle usdDataQueue;
 
 static BYTE exchangeBuff[512];
+#ifdef USD_RUN_DISKIO_FUNCTION_TESTS
+DWORD workBuff[512];  /* 2048 byte working buffer */
+#endif
 
 static xTimerHandle timer;
 static void usdTimer(xTimerHandle timer);
-
 
 //Fatfs object
 FATFS FatFs;
@@ -264,6 +266,21 @@ static bool usdTest()
   {
     DEBUG_PRINT("Error while initializing uSD deck\n");
   }
+#ifdef USD_RUN_DISKIO_FUNCTION_TESTS
+  int result;
+  extern int test_diskio (BYTE pdrv, UINT ncyc, DWORD* buff, UINT sz_buff);
+
+  result = test_diskio(0, 1, (DWORD*)&workBuff, sizeof(workBuff));
+  if (result)
+  {
+    DEBUG_PRINT("(result=%d)\nFatFs diskio functions test [FAIL].\n", result);
+    isInit = false;
+  }
+  else
+  {
+    DEBUG_PRINT("FatFs diskio functions test [OK].\n");
+  }
+#endif
 
   return isInit;
 }
@@ -289,9 +306,8 @@ static const DeckDriver usd_deck = {
   .vid = 0xBC,
   .pid = 0x07,
   .name = "bcUSD",
-
-  .usedGpio = 0,  // FIXME: set the used pins
-
+  .usedGpio = DECK_USING_MISO|DECK_USING_MOSI|DECK_USING_SCK|DECK_USING_IO_4,
+  .usedPeriph = DECK_USING_SPI,
   .init = usdInit,
   .test = usdTest,
 };

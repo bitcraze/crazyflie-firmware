@@ -28,6 +28,8 @@ ESTIMATOR          ?= complementary
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
 
+######### Test activation ##########
+FATFS_DISKIO_TESTS  ?= 0	# Set to 1 to enable FatFS diskio function tests. Erases card.
 
 ifeq ($(PLATFORM), CF1)
 OPENOCD_TARGET    ?= target/stm32f1x_stlink.cfg
@@ -106,6 +108,10 @@ FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 #FatFS
 VPATH_CF2 += $(LIB)/FatFS
 FATFS_OBJ  = diskio.o ff.o syscall.o unicode.o fatfs_sd.o
+ifeq ($(FATFS_DISKIO_TESTS), 1)
+FATFS_OBJ += diskio_function_tests.o
+CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS	
+endif
 
 # Crazyflie sources
 VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/src
@@ -342,7 +348,9 @@ endif
 ifeq ($(CLOAD), 1)
 	@echo "Crazyloader build!"
 endif
-
+ifeq ($(FATFS_DISKIO_TESTS), 1)
+	@echo "WARNING: FatFS diskio tests enabled. Erases SD-card!"
+endif
 
 size: compile
 	@$(SIZE) -B $(PROG).elf
