@@ -11,21 +11,21 @@
 #include "integer.h"
 
 typedef struct {
-  void (*init_spi) (void);
-  void (*set_slow_spi_mode) (void);
-  void (*set_fast_spi_mode) (void);
-  BYTE (*xchg_spi) (BYTE dat);
-  void (*rcvr_spi_multi) (BYTE *buff, UINT btr);
-  void (*xmit_spi_multi) (const BYTE *buff, UINT btx);
-  void (*cs_high) (void);
-  void (*cs_low) (void);
+  void (*initSpi) (void);
+  void (*setSlowSpiMode) (void);
+  void (*setFastSpiMode) (void);
+  BYTE (*xchgSpi) (BYTE dat);
+  void (*rcvrSpiMulti) (BYTE *buff, UINT btr);
+  void (*xmitSpiMulti) (const BYTE *buff, UINT btx);
+  void (*csHigh) (void);
+  void (*csLow) (void);
 
-  volatile DSTATUS Stat;
-  BYTE CardType;
+  volatile DSTATUS stat;
+  BYTE cardType;
 
   // 1kHz decrement timers stopped at zero (disk_timerproc())
-  volatile UINT Timer1;
-  volatile UINT Timer2;
+  volatile UINT timer1;
+  volatile UINT timer2;
 } sdSpiContext_t;
 
 #endif // __FATFS_SD_H__

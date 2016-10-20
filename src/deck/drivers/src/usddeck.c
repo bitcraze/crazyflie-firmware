@@ -59,14 +59,14 @@
 #define USD_CLOSE_REOPEN_BYTES    (USD_DATAQUEUE_ITEMS * 10 * sizeof(UsdLogStruct))
 
 // FATFS low lever driver functions.
-static void init_spi(void);
-static void set_slow_spi_mode(void);
-static void set_fast_spi_mode(void);
-static BYTE xchg_spi(BYTE dat);
-static void rcvr_spi_multi(BYTE *buff, UINT btr);
-static void xmit_spi_multi(const BYTE *buff, UINT btx);
-static void cs_high(void);
-static void cs_low(void);
+static void initSpi(void);
+static void setSlowSpiMode(void);
+static void setFastSpiMode(void);
+static BYTE xchgSpi(BYTE dat);
+static void rcvrSpiMulti(BYTE *buff, UINT btr);
+static void xmitSpiMulti(const BYTE *buff, UINT btx);
+static void csHigh(void);
+static void csLow(void);
 
 xQueueHandle usdDataQueue;
 
@@ -86,18 +86,18 @@ FIL logFile;
 // Low lever driver functions
 static sdSpiContext_t sdSpiContext =
 {
-  .init_spi = init_spi,
-  .set_slow_spi_mode = set_slow_spi_mode,
-  .set_fast_spi_mode = set_fast_spi_mode,
-  .xchg_spi = xchg_spi,
-  .rcvr_spi_multi = rcvr_spi_multi,
-  .xmit_spi_multi = xmit_spi_multi,
-  .cs_low = cs_low,
-  .cs_high = cs_high,
+  .initSpi = initSpi,
+  .setSlowSpiMode = setSlowSpiMode,
+  .setFastSpiMode = setFastSpiMode,
+  .xchgSpi = xchgSpi,
+  .rcvrSpiMulti = rcvrSpiMulti,
+  .xmitSpiMulti = xmitSpiMulti,
+  .csLow = csLow,
+  .csHigh = csHigh,
 
-  .Stat = STA_NOINIT,
-  .Timer1 = 0,
-  .Timer2 = 0
+  .stat = STA_NOINIT,
+  .timer1 = 0,
+  .timer2 = 0
 };
 
 static DISKIO_LowLevelDriver_t fatDrv =
@@ -186,27 +186,27 @@ static void usdTask(void *param)
 /*-----------------------------------------------------------------------*/
 
 /* Initialize MMC interface */
-static void init_spi(void)
+static void initSpi(void)
 {
   spiBegin();   /* Enable SPI function */
   pinMode(USD_CS_PIN, OUTPUT);
-  cs_high();      /* Set CS# high */
+  csHigh();
 
   // FIXME: DELAY of 10ms?
 }
 
-static void set_slow_spi_mode(void)
+static void setSlowSpiMode(void)
 {
   spiConfigureSlow();
 }
 
-static void set_fast_spi_mode(void)
+static void setFastSpiMode(void)
 {
   spiConfigureFast();
 }
 
 /* Exchange a byte */
-static BYTE xchg_spi(BYTE dat)
+static BYTE xchgSpi(BYTE dat)
 {
   BYTE receive;
 
@@ -215,24 +215,24 @@ static BYTE xchg_spi(BYTE dat)
 }
 
 /* Receive multiple byte */
-static void rcvr_spi_multi(BYTE *buff, UINT btr)
+static void rcvrSpiMulti(BYTE *buff, UINT btr)
 {
   memset(exchangeBuff, 0xFFFFFFFF, btr);
   spiExchange(btr, exchangeBuff, buff);
 }
 
 /* Send multiple byte */
-static void xmit_spi_multi(const BYTE *buff, UINT btx)
+static void xmitSpiMulti(const BYTE *buff, UINT btx)
 {
   spiExchange(btx, buff, exchangeBuff);
 }
 
-static void cs_high(void)
+static void csHigh(void)
 {
   digitalWrite(USD_CS_PIN, 1);
 }
 
-static void cs_low(void)
+static void csLow(void)
 {
   digitalWrite(USD_CS_PIN, 0);
 }
