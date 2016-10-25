@@ -121,6 +121,7 @@ typedef struct
   bool  iCapped;      //< true to stop integration
   float dt;           //< delta-time dt
   lpf2pData dFilter;  //< filter for D term
+  bool enableDFilter; //< filter for D term enable flag
 } PidObject;
 
 /**
@@ -134,10 +135,12 @@ typedef struct
  * @param[in] dt        Delta time since the last call
  * @param[in] samplingRate Frequency the update will be called
  * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
+ * @param[in] enableDFilter Enable setting for the D lowpass filter
  */
-void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt,
-             const float samplingRate, const float cutoffFreq);
+ void pidInit(PidObject* pid, const float desired, const float kp,
+              const float ki, const float kd, const float dt,
+              const float samplingRate, const float cutoffFreq,
+              bool enableDFilter);
 
 /**
  * Set the integral limit for this PID in deg.
