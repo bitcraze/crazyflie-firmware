@@ -51,71 +51,111 @@ struct pidAxis_s {
 };
 
 struct this_s {
+  struct pidAxis_s pidVX;
+  struct pidAxis_s pidVY;
+  struct pidAxis_s pidVZ;
+
   struct pidAxis_s pidX;
   struct pidAxis_s pidY;
   struct pidAxis_s pidZ;
 
   uint16_t thrustBase; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
+  uint16_t thrustMin;  // Minimum thrust value to output
 };
 
 // Maximum roll/pitch angle permited
-static float rpLimit = 20;
+static float rpLimit  = 20;
+// Velocity maximums
+static float xyVelMax = 1.0f;
+static float zVelMax  = 1.0f;
+static float velMaxOverhead = 1.10f;
 
-#define DT 0.01
+#define DT (float)(1.0f/POSITION_RATE)
 
 #ifndef UNIT_TEST
 static struct this_s this = {
+  .pidVX = {
+    .init = {
+      .kp = 30,
+      .ki = 0,
+      .kd = 0,
+    },
+    .pid.dt = DT,
+  },
+
+  .pidVY = {
+    .init = {
+      .kp = 30,
+      .ki = 0,
+      .kd = 0,
+    },
+    .pid.dt = DT,
+  },
+
+  .pidVZ = {
+    .init = {
+      .kp = 25,
+      .ki = 15,
+      .kd = 0,
+    },
+    .pid.dt = DT,
+  },
 
   .pidX = {
     .init = {
-      .kp = 25,
-      .ki = 0.28,
-      .kd = 7
+      .kp = 2.0f,
+      .ki = 0,
+      .kd = 0,
     },
     .pid.dt = DT,
   },
 
   .pidY = {
     .init = {
-      .kp = 25,
-      .ki = 0.28,
-      .kd = 7
+      .kp = 2.0f,
+      .ki = 0,
+      .kd = 0,
     },
     .pid.dt = DT,
   },
 
   .pidZ = {
     .init = {
-      .kp = 30000.0,
-      .ki = 5000,
-      .kd = 10000.0
+      .kp = 2.0f,
+      .ki = 0,
+      .kd = 0.01f,
     },
     .pid.dt = DT,
   },
 
   .thrustBase = 36000,
+  .thrustMin  = 20000,
 };
 #endif
 
-static float runPid(float input, struct pidAxis_s *axis, mode_t mode,
-                    float setpointPos, float setpointVel, float dt) {
-  if (axis->previousMode == modeDisable && mode != modeDisable) {
-    if (mode == modeVelocity) {
-      axis->setpoint = input;
-    } else {
-      axis->setpoint = setpointPos;
-    }
-    pidInit(&axis->pid, axis->setpoint, axis->init.kp, axis->init.ki, axis->init.kd, dt);
-  }
-  axis->previousMode = mode;
+void positionControllerInit()
+{
+  pidInit(&this.pidX.pid, this.pidX.setpoint, this.pidX.init.kp,
+      this.pidX.init.ki, this.pidX.init.kd, this.pidX.pid.dt);
+  pidInit(&this.pidY.pid, this.pidY.setpoint, this.pidY.init.kp,
+      this.pidY.init.ki, this.pidY.init.kd, this.pidY.pid.dt);
+  pidInit(&this.pidZ.pid, this.pidZ.setpoint, this.pidZ.init.kp,
+      this.pidZ.init.ki, this.pidZ.init.kd, this.pidZ.pid.dt);
 
-  // This is a position controller so if the setpoint is in velocity we
-  // integrate it to get a position setpoint
-  if (mode == modeAbs) {
-    axis->setpoint = setpointPos;
-  } else if (mode == modeVelocity) {
-    axis->setpoint += setpointVel * dt;
-  }
+  pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.init.kp,
+      this.pidVX.init.ki, this.pidVX.init.kd, this.pidVX.pid.dt);
+  pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.init.kp,
+      this.pidVY.init.ki, this.pidVY.init.kd, this.pidVY.pid.dt);
+  pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.init.kp,
+      this.pidVZ.init.ki, this.pidVZ.init.kd, this.pidVZ.pid.dt);
+
+  this.pidX.pid.errorMax = xyVelMax * velMaxOverhead;
+  this.pidY.pid.errorMax = xyVelMax * velMaxOverhead;
+  this.pidZ.pid.errorMax = zVelMax  * velMaxOverhead;
+}
+
+static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt) {
+  axis->setpoint = setpoint;
 
   pidSetDesired(&axis->pid, axis->setpoint);
   return pidUpdate(&axis->pid, input, true);
@@ -125,50 +165,120 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
                                                              const setpoint_t *setpoint)
 {
   // X, Y
-  float x = runPid(state->position.x, &this.pidX, setpoint->mode.x, setpoint->position.x, setpoint->velocity.x, DT);
-  float y = runPid(state->position.y, &this.pidY, setpoint->mode.y, setpoint->position.y, setpoint->velocity.y, DT);
+  pidSetDesired(&this.pidVX.pid, runPid(state->position.x, &this.pidX, setpoint->position.x, DT));
+  pidSetDesired(&this.pidVY.pid, runPid(state->position.y, &this.pidY, setpoint->position.y, DT));
+  pidSetDesired(&this.pidVZ.pid, runPid(state->position.z, &this.pidZ, setpoint->position.z, DT));
+
+  velocityController(thrust, attitude, state, setpoint);
+}
+
+void velocityController(float* thrust, attitude_t *attitude, const state_t *state,
+                                                             const setpoint_t *setpoint)
+{
+  // Roll and Pitch
+  float rollRaw  = pidUpdate(&this.pidVX.pid, state->velocity.x, true);
+  float pitchRaw = pidUpdate(&this.pidVY.pid, state->velocity.y, true);
 
   float yawRad = state->attitude.yaw * (float)M_PI / 180;
-  attitude->pitch = - (x * cosf(yawRad)) - (y * sinf(yawRad));
-  attitude->roll =  - (y * cosf(yawRad)) + (x * sinf(yawRad));
+  attitude->pitch = -(rollRaw  * cosf(yawRad)) - (pitchRaw * sinf(yawRad));
+  attitude->roll  = -(pitchRaw * cosf(yawRad)) + (rollRaw  * sinf(yawRad));
 
-  attitude->roll = max(min(attitude->roll, rpLimit), -rpLimit);
-  attitude->pitch = max(min(attitude->pitch, rpLimit), -rpLimit);
+  // Check for roll/pitch limits and prevent I from accumulating when capped
+  if (abs(attitude->roll) > rpLimit || abs(attitude->pitch) > rpLimit) {
+      this.pidVX.pid.iCapped = true;
+      this.pidVY.pid.iCapped = true;
+  } else {
+      this.pidVX.pid.iCapped = false;
+      this.pidVY.pid.iCapped = false;
+  }
 
-  // Z
-  float newThrust = runPid(state->position.z, &this.pidZ, setpoint->mode.z, setpoint->position.z, setpoint->velocity.z, DT);
-  *thrust = newThrust + this.thrustBase;
-  if (*thrust > 55000) {
-    *thrust = 55000;
+  attitude->roll  = constrain(attitude->roll,  -rpLimit, rpLimit);
+  attitude->pitch = constrain(attitude->pitch, -rpLimit, rpLimit);
+
+  // Thrust
+  float thrustRaw = pidUpdate(&this.pidVZ.pid, state->velocity.z, true);
+  // Scale the thrust and add feed forward term
+  *thrust = thrustRaw*1000 + this.thrustBase;
+  // Check for minimum thrust, prevent I from accumulating when capped
+  if (*thrust < this.thrustMin) {
+    *thrust = this.thrustMin;
+    this.pidVZ.pid.iCapped = true;
+  } else {
+    this.pidVZ.pid.iCapped = false;
   }
 }
 
+void positionControllerResetAllPID()
+{
+  pidReset(&this.pidX.pid);
+  pidReset(&this.pidY.pid);
+  pidReset(&this.pidZ.pid);
+  pidReset(&this.pidVX.pid);
+  pidReset(&this.pidVY.pid);
+  pidReset(&this.pidVZ.pid);
+}
 
-LOG_GROUP_START(posCtlAlt)
-LOG_ADD(LOG_FLOAT, targetX, &this.pidX.setpoint)
-LOG_ADD(LOG_FLOAT, targetY, &this.pidY.setpoint)
-LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.setpoint)
+LOG_GROUP_START(posCtl)
 
-LOG_ADD(LOG_FLOAT, p, &this.pidZ.pid.outP)
-LOG_ADD(LOG_FLOAT, i, &this.pidZ.pid.outI)
-LOG_ADD(LOG_FLOAT, d, &this.pidZ.pid.outD)
-LOG_GROUP_STOP(posCtlAlt)
+LOG_ADD(LOG_FLOAT, targetVX, &this.pidVX.pid.desired)
+LOG_ADD(LOG_FLOAT, targetVY, &this.pidVY.pid.desired)
+LOG_ADD(LOG_FLOAT, targetVZ, &this.pidVZ.pid.desired)
+
+LOG_ADD(LOG_FLOAT, targetX, &this.pidX.pid.desired)
+LOG_ADD(LOG_FLOAT, targetY, &this.pidY.pid.desired)
+LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.pid.desired)
+
+LOG_ADD(LOG_FLOAT, Xp, &this.pidX.pid.outP)
+LOG_ADD(LOG_FLOAT, Xi, &this.pidX.pid.outI)
+LOG_ADD(LOG_FLOAT, Xd, &this.pidX.pid.outD)
+
+LOG_ADD(LOG_FLOAT, Yp, &this.pidY.pid.outP)
+LOG_ADD(LOG_FLOAT, Yi, &this.pidY.pid.outI)
+LOG_ADD(LOG_FLOAT, Yd, &this.pidY.pid.outD)
+
+LOG_ADD(LOG_FLOAT, Zp, &this.pidZ.pid.outP)
+LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
+LOG_ADD(LOG_FLOAT, Zd, &this.pidZ.pid.outD)
+
+LOG_ADD(LOG_FLOAT, VZp, &this.pidVZ.pid.outP)
+LOG_ADD(LOG_FLOAT, VZi, &this.pidVZ.pid.outI)
+LOG_ADD(LOG_FLOAT, VZd, &this.pidVZ.pid.outD)
+
+LOG_GROUP_STOP(posCtl)
+
+PARAM_GROUP_START(velCtlPid)
+
+PARAM_ADD(PARAM_FLOAT, vxKp, &this.pidVX.pid.kp)
+PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
+PARAM_ADD(PARAM_FLOAT, vxKd, &this.pidVX.pid.kd)
+
+PARAM_ADD(PARAM_FLOAT, vyKp, &this.pidVY.pid.kp)
+PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
+PARAM_ADD(PARAM_FLOAT, vyKd, &this.pidVY.pid.kd)
+
+PARAM_ADD(PARAM_FLOAT, vzKp, &this.pidVZ.pid.kp)
+PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
+PARAM_ADD(PARAM_FLOAT, vzKd, &this.pidVZ.pid.kd)
+
+PARAM_GROUP_STOP(velCtlPid)
 
 PARAM_GROUP_START(posCtlPid)
 
-PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.init.kp)
-PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.init.ki)
-PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.init.kd)
+PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.pid.kp)
+PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
+PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.pid.kd)
 
-PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.init.kp)
-PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.init.ki)
-PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.init.kd)
+PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.pid.kp)
+PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
+PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.pid.kd)
 
-PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.init.kp)
-PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.init.ki)
-PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.init.kd)
+PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.pid.kp)
+PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.pid.ki)
+PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.pid.kd)
 
 PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
+PARAM_ADD(PARAM_UINT16, thrustMin, &this.thrustMin)
 
 PARAM_ADD(PARAM_FLOAT, rpLimit, &rpLimit)
+
 PARAM_GROUP_STOP(posCtlPid)

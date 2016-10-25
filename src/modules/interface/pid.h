@@ -41,7 +41,7 @@
 #define PID_PITCH_RATE_KD  2.5
 #define PID_PITCH_RATE_INTEGRATION_LIMIT   33.3
 
-#define PID_YAW_RATE_KP  70.0
+#define PID_YAW_RATE_KP  120.0
 #define PID_YAW_RATE_KI  16.7
 #define PID_YAW_RATE_KD  0.0
 #define PID_YAW_RATE_INTEGRATION_LIMIT     166.7
@@ -106,6 +106,7 @@ typedef struct
   float desired;     //< set point
   float error;        //< error
   float prevError;    //< previous error
+  float errorMax;    //< maximum error
   float integ;        //< integral
   float deriv;        //< derivative
   float kp;           //< proportional gain
@@ -116,6 +117,7 @@ typedef struct
   float outD;         //< derivative output (debugging)
   float iLimit;       //< integral limit
   float iLimitLow;    //< integral limit
+  bool  iCapped;      //< true to stop integration
   float dt;           //< delta-time dt
 } PidObject;
 
@@ -127,6 +129,7 @@ typedef struct
  * @param[in] kp        The proportional gain
  * @param[in] ki        The integral gain
  * @param[in] kd        The derivative gain
+ * @param[in] dt        Delta time since the last call
  */
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float dt);
