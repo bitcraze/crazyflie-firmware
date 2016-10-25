@@ -28,6 +28,7 @@
 #define PID_H_
 
 #include <stdbool.h>
+#include "filter.h"
 
 #if defined(PLATFORM_CF2)
 
@@ -119,6 +120,7 @@ typedef struct
   float iLimitLow;    //< integral limit
   bool  iCapped;      //< true to stop integration
   float dt;           //< delta-time dt
+  lpf2pData dFilter;  //< filter for D term
 } PidObject;
 
 /**
@@ -130,9 +132,12 @@ typedef struct
  * @param[in] ki        The integral gain
  * @param[in] kd        The derivative gain
  * @param[in] dt        Delta time since the last call
+ * @param[in] samplingRate Frequency the update will be called
+ * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
  */
 void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt);
+             const float ki, const float kd, const float dt,
+             const float samplingRate, const float cutoffFreq);
 
 /**
  * Set the integral limit for this PID in deg.

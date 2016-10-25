@@ -30,7 +30,8 @@
 #include <float.h>
 
 void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt)
+             const float ki, const float kd, const float dt,
+             const float samplingRate, const float cutoffFreq)
 {
   pid->error     = 0;
   pid->errorMax  = 0.0f;
@@ -45,6 +46,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->iLimitLow = -DEFAULT_PID_INTEGRATION_LIMIT;
   pid->iCapped   = false;
   pid->dt        = dt;
+  lpf2pInit(&pid->dFilter, samplingRate, cutoffFreq);
 }
 
 float pidUpdate(PidObject* pid, const float measured, const bool updateError)
@@ -72,7 +74,8 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
       }
     }
 
-    pid->deriv = (pid->error - pid->prevError) / pid->dt;
+    float deriv = (pid->error - pid->prevError) / pid->dt;
+    pid->deriv = lpf2pApply(&pid->dFilter, deriv);
 
     pid->outP = pid->kp * pid->error;
     pid->outI = pid->ki * pid->integ;
