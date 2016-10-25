@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -26,11 +26,16 @@
  */
 
 #include "pid.h"
+#include "num.h"
+#include <float.h>
 
 void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt)
+             const float ki, const float kd, const float dt,
+             const float samplingRate, const float cutoffFreq,
+             bool enableDFilter)
 {
   pid->error     = 0;
+  pid->errorMax  = 0.0f;
   pid->prevError = 0;
   pid->integ     = 0;
   pid->deriv     = 0;
@@ -40,7 +45,13 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->kd = kd;
   pid->iLimit    = DEFAULT_PID_INTEGRATION_LIMIT;
   pid->iLimitLow = -DEFAULT_PID_INTEGRATION_LIMIT;
+  pid->iCapped   = false;
   pid->dt        = dt;
+  pid->enableDFilter = enableDFilter;
+  if (pid->enableDFilter)
+  {
+    lpf2pInit(&pid->dFilter, samplingRate, cutoffFreq);
+  }
 }
 
 float pidUpdate(PidObject* pid, const float measured, const bool updateError)
@@ -50,19 +61,31 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     if (updateError)
     {
         pid->error = pid->desired - measured;
+        if (pid->errorMax > FLT_MIN) {
+          float errorMaxScaled = pid->errorMax / pid->kp;
+          pid->error = constrain(pid->error, -errorMaxScaled, errorMaxScaled);
+        }
     }
 
-    pid->integ += pid->error * pid->dt;
-    if (pid->integ > pid->iLimit)
-    {
-        pid->integ = pid->iLimit;
-    }
-    else if (pid->integ < pid->iLimitLow)
-    {
-        pid->integ = pid->iLimitLow;
+    if (pid->iCapped == false) {
+      pid->integ += pid->error * pid->dt;
+      if (pid->integ > pid->iLimit)
+      {
+          pid->integ = pid->iLimit;
+      }
+      else if (pid->integ < pid->iLimitLow)
+      {
+          pid->integ = pid->iLimitLow;
+      }
     }
 
-    pid->deriv = (pid->error - pid->prevError) / pid->dt;
+    float deriv = (pid->error - pid->prevError) / pid->dt;
+    if (pid->enableDFilter)
+    {
+      pid->deriv = lpf2pApply(&pid->dFilter, deriv);
+    } else {
+      pid->deriv = deriv;
+    }
 
     pid->outP = pid->kp * pid->error;
     pid->outI = pid->ki * pid->integ;
