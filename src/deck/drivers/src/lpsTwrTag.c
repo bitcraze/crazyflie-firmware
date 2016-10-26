@@ -32,8 +32,6 @@
 #include "log.h"
 #include "param.h"
 
-#include "mac.h"
-
 #include "stabilizer_types.h"
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
