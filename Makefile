@@ -110,7 +110,7 @@ VPATH_CF2 += $(LIB)/FatFS
 FATFS_OBJ  = diskio.o ff.o syscall.o unicode.o fatfs_sd.o
 ifeq ($(FATFS_DISKIO_TESTS), 1)
 FATFS_OBJ += diskio_function_tests.o
-CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS	
+CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
 # Crazyflie sources
@@ -182,7 +182,7 @@ PROJ_OBJ_CF2 += rzr.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
-PROJ_OBJ_CF2 += dwm1000.o
+PROJ_OBJ_CF2 += locodeck.o lpsTwrTag.o
 PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
 PROJ_OBJ_CF2 += vl53l0x.o
