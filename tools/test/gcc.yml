@@ -22,8 +22,17 @@ compiler:
       - *mocks_path
       - 'vendor/unity/src/'
       - 'vendor/cmock/src/'
+      - 'vendor/libdw1000/inc/'
+      - 'src/deck/drivers/interface/'
+      - 'src/deck/drivers/src/'
       - 'src/utils/interface/'
       - 'src/utils/src/'
+      - 'src/lib/FreeRTOS/include/'
+      - 'src/config/'
+      - 'src/drivers/interface/'
+      - 'src/modules/interface'
+      - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F'
+      - 'src/hal/interface/'
   defines:
     prefix: '-D'
     items:
