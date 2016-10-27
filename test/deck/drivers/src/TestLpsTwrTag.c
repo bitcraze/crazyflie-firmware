@@ -6,9 +6,6 @@
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
 
-// TODO krri really want extern or move to .h file?
-extern uwbAlgorithm_t uwbTwrTagAlgorithm;
-
 // TODO krri defined in lpsTwrTag.c. Move to where they are accessable?
 #define POLL 0x01   // Poll is initiated by the tag
 #define ANSWER 0x02
@@ -19,6 +16,7 @@ extern uwbAlgorithm_t uwbTwrTagAlgorithm;
 #define SEQ 1
 
 #define TAG_ADDRESS 8
+static const uint8_t expectedTagAddress[] = {TAG_ADDRESS, 0, 0, 0, 0, 0, 0xcf, 0xbc};
 
 
 static dwDevice_t dev;
@@ -113,11 +111,54 @@ void testEventPacketReceivedWithWrongDestinationAddressShouldReturnMAX_TIMEOUT()
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
+void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0() {
+  // Fixture
+  packet_t rxPacket;
+  memcpy(rxPacket.destAddress, expectedTagAddress, sizeof(rxPacket.destAddress));
+
+  rxPacket.payload[TYPE] = ANSWER;
+
+  uint8_t wrongSeqNr = 17; // After init curr_seq = 0
+  rxPacket.payload[SEQ] = wrongSeqNr;
+
+  const int dataLength = sizeof(rxPacket);
+  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
+  dwGetData_ExpectAndCopyData(&rxPacket, dataLength);
+
+  // Test
+  uint32_t actual = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  const uint32_t expected = 0;
+  TEST_ASSERT_EQUAL_UINT32(expected, actual);
+}
+
+void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
+  // Fixture
+  packet_t rxPacket;
+  memcpy(rxPacket.destAddress, expectedTagAddress, sizeof(rxPacket.destAddress));
+
+  rxPacket.payload[TYPE] = REPORT;
+
+  uint8_t wrongSeqNr = 17; // After init curr_seq = 0
+  rxPacket.payload[SEQ] = wrongSeqNr;
+
+  const int dataLength = sizeof(rxPacket);
+  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
+  dwGetData_ExpectAndCopyData(&rxPacket, dataLength);
+
+  // Test
+  uint32_t actual = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  const uint32_t expected = 0;
+  TEST_ASSERT_EQUAL_UINT32(expected, actual);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
 static uint8_t expectedCurrSeq;
-static const uint8_t expectedTagAddress[] = {TAG_ADDRESS, 0, 0, 0, 0, 0, 0xcf, 0xbc};
 static uint8_t expectedBaseAddress[] = {0, 0, 0, 0, 0, 0, 0xcf, 0xbc};
 
 void dwSetDataMockCallback(dwDevice_t* actualDev, uint8_t* actualData, unsigned int actualN, int cmock_num_calls) {
@@ -155,7 +196,7 @@ static void dwGetDataMockCallback(dwDevice_t* actualDev, uint8_t* data, unsigned
   TEST_ASSERT_EQUAL_PTR(&dev, actualDev);
   TEST_ASSERT_EQUAL_UINT(dwGetDataExpectedDataLength, actualDataLength);
 
-  memcpy(data, &dwGetDataRxPacket, sizeof(actualDataLength));
+  memcpy(data, &dwGetDataRxPacket, actualDataLength);
 }
 
 static void dwGetData_ExpectAndCopyData(const packet_t* rxPacket, unsigned int expDataLength) {
