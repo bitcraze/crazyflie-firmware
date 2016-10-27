@@ -180,16 +180,16 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       arm_std_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &stddev);
       arm_mean_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &mean);
-      float32_t diff = fabsf(mean-distance[current_anchor]);
+      float32_t diff = fabsf(mean - options->distance[current_anchor]);
 
       rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = options->distance[current_anchor];
 
-      if (anchorPositionOk && (diff < (OUTLIER_TH*stddev))) {
-        options->distanceMeasurement_t dist;
+      if (options->anchorPositionOk && (diff < (OUTLIER_TH*stddev))) {
+        distanceMeasurement_t dist;
         dist.distance = options->distance[current_anchor];
-        dist.x = anchorPosition[current_anchor].x;
-        dist.y = anchorPosition[current_anchor].y;
-        dist.z = anchorPosition[current_anchor].z;
+        dist.x = options->anchorPosition[current_anchor].x;
+        dist.y = options->anchorPosition[current_anchor].y;
+        dist.z = options->anchorPosition[current_anchor].z;
         dist.stdDev = 0.25;
         stateEstimatorEnqueueDistance(&dist);
       }
