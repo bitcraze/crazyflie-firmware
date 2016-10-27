@@ -48,12 +48,26 @@
 #include "nvicconf.h"
 
 #include "locodeck.h"
+#include "lpsTwrTag.h"
 
 #define CS_PIN DECK_GPIO_IO1
 
 #define RX_TIMEOUT 1000
 
-extern uwbAlgorithm_t uwbTwrTagAlgorithm;
+#define TAG_ADDRESS 8
+#define ANTENNA_OFFSET 154.6   // In meter
+
+// The anchor position can be set using parameters
+// As an option you can set a static position in this file and set
+// anchorPositionOk to enable sending the anchor rangings to the Kalman filter
+
+static lpsAlgoOptions_t algoOptions = {
+  .tagAddress = TAG_ADDRESS,
+  .anchors = {1,2,3,4,5,6},
+  .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
+  .rangingFailedThreshold = 6,
+};
+
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 
 static bool isInit = false;
@@ -87,7 +101,7 @@ static void uwbTask(void* parameters)
 {
   systemWaitStart();
 
-  algorithm->init(dwm);
+  algorithm->init(dwm, &algoOptions);
 
   while(1) {
     if (xSemaphoreTake(irqSemaphore, timeout/portTICK_PERIOD_MS)) {
@@ -280,3 +294,45 @@ static const DeckDriver dwm1000_deck = {
 };
 
 DECK_DRIVER(dwm1000_deck);
+
+LOG_GROUP_START(ranging)
+LOG_ADD(LOG_FLOAT, distance1, &algoOptions.distance[0])
+LOG_ADD(LOG_FLOAT, distance2, &algoOptions.distance[1])
+LOG_ADD(LOG_FLOAT, distance3, &algoOptions.distance[2])
+LOG_ADD(LOG_FLOAT, distance4, &algoOptions.distance[3])
+LOG_ADD(LOG_FLOAT, distance5, &algoOptions.distance[4])
+LOG_ADD(LOG_FLOAT, distance6, &algoOptions.distance[5])
+LOG_ADD(LOG_FLOAT, distance7, &algoOptions.distance[6])
+LOG_ADD(LOG_FLOAT, distance8, &algoOptions.distance[7])
+LOG_ADD(LOG_FLOAT, pressure1, &algoOptions.pressures[0])
+LOG_ADD(LOG_FLOAT, pressure2, &algoOptions.pressures[1])
+LOG_ADD(LOG_FLOAT, pressure3, &algoOptions.pressures[2])
+LOG_ADD(LOG_FLOAT, pressure4, &algoOptions.pressures[3])
+LOG_ADD(LOG_FLOAT, pressure5, &algoOptions.pressures[4])
+LOG_ADD(LOG_FLOAT, pressure6, &algoOptions.pressures[5])
+LOG_ADD(LOG_FLOAT, pressure7, &algoOptions.pressures[6])
+LOG_ADD(LOG_FLOAT, pressure8, &algoOptions.pressures[7])
+LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
+LOG_GROUP_STOP(ranging)
+
+PARAM_GROUP_START(anchorpos)
+PARAM_ADD(PARAM_FLOAT, anchor0x, &algoOptions.anchorPosition[0].x)
+PARAM_ADD(PARAM_FLOAT, anchor0y, &algoOptions.anchorPosition[0].y)
+PARAM_ADD(PARAM_FLOAT, anchor0z, &algoOptions.anchorPosition[0].z)
+PARAM_ADD(PARAM_FLOAT, anchor1x, &algoOptions.anchorPosition[1].x)
+PARAM_ADD(PARAM_FLOAT, anchor1y, &algoOptions.anchorPosition[1].y)
+PARAM_ADD(PARAM_FLOAT, anchor1z, &algoOptions.anchorPosition[1].z)
+PARAM_ADD(PARAM_FLOAT, anchor2x, &algoOptions.anchorPosition[2].x)
+PARAM_ADD(PARAM_FLOAT, anchor2y, &algoOptions.anchorPosition[2].y)
+PARAM_ADD(PARAM_FLOAT, anchor2z, &algoOptions.anchorPosition[2].z)
+PARAM_ADD(PARAM_FLOAT, anchor3x, &algoOptions.anchorPosition[3].x)
+PARAM_ADD(PARAM_FLOAT, anchor3y, &algoOptions.anchorPosition[3].y)
+PARAM_ADD(PARAM_FLOAT, anchor3z, &algoOptions.anchorPosition[3].z)
+PARAM_ADD(PARAM_FLOAT, anchor4x, &algoOptions.anchorPosition[4].x)
+PARAM_ADD(PARAM_FLOAT, anchor4y, &algoOptions.anchorPosition[4].y)
+PARAM_ADD(PARAM_FLOAT, anchor4z, &algoOptions.anchorPosition[4].z)
+PARAM_ADD(PARAM_FLOAT, anchor5x, &algoOptions.anchorPosition[5].x)
+PARAM_ADD(PARAM_FLOAT, anchor5y, &algoOptions.anchorPosition[5].y)
+PARAM_ADD(PARAM_FLOAT, anchor5z, &algoOptions.anchorPosition[5].z)
+PARAM_ADD(PARAM_UINT8, enable, &algoOptions.anchorPositionOk)
+PARAM_GROUP_STOP(anchorpos)

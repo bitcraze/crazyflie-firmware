@@ -15,16 +15,26 @@
 #define TYPE 0
 #define SEQ 1
 
+#define ANTENNA_OFFSET 154.6   // In meter
+
 #define TAG_ADDRESS 8
 static const uint8_t expectedTagAddress[] = {TAG_ADDRESS, 0, 0, 0, 0, 0, 0xcf, 0xbc};
 
-
 static dwDevice_t dev;
+static lpsAlgoOptions_t options;
 static void mockCallsForInitiateRanging(uint8_t expCurrSeq, uint8_t expAnchor);
 static void dwGetData_ExpectAndCopyData(const packet_t* rxPacket, unsigned int expDataLength);
 
+static lpsAlgoOptions_t defaultOptions = {
+  .tagAddress = TAG_ADDRESS,
+  .anchors = {1,2,3,4,5,6},
+  .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
+  .rangingFailedThreshold = 6
+};
+
 void setUp(void) {
-  uwbTwrTagAlgorithm.init(&dev);
+  memcpy(&options, &defaultOptions, sizeof(options));
+  uwbTwrTagAlgorithm.init(&dev, &options);
 }
 
 void testEventReceiveUnhandledEventShouldAssertFailure() {

@@ -6,4 +6,6 @@
 
 #include "mac.h"
 
+extern uwbAlgorithm_t uwbTwrTagAlgorithm;
+
 #endif // __LPS_TWR_TAG_H__

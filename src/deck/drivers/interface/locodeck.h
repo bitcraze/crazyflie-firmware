@@ -34,6 +34,7 @@
 #define __LOCODECK_H__
 
 #include "libdw1000.h"
+#include "stabilizer_types.h"
 
 typedef enum uwbEvent_e {
   eventTimeout,
@@ -43,9 +44,25 @@ typedef enum uwbEvent_e {
   eventReceiveFailed,
 } uwbEvent_t;
 
+#define LOCODECK_NR_OF_ANCHORS 6
+typedef struct {
+  uint8_t tagAddress;
+  const int anchors[LOCODECK_NR_OF_ANCHORS];
+  float distance[LOCODECK_NR_OF_ANCHORS];
+  float pressures[LOCODECK_NR_OF_ANCHORS];
+  int failedRanging[LOCODECK_NR_OF_ANCHORS];
+  volatile uint16_t rangingState;
+
+  point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
+  bool anchorPositionOk;
+
+  const uint64_t antennaDelay;
+  const int rangingFailedThreshold;
+} lpsAlgoOptions_t;
+
 // Callback for one uwb algorithm
 typedef struct uwbAlgorithm_s {
-  void (*init)(dwDevice_t *dev);
+  void (*init)(dwDevice_t *dev, lpsAlgoOptions_t* options);
   uint32_t (*onEvent)(dwDevice_t *dev, uwbEvent_t event);
 } uwbAlgorithm_t;
 
