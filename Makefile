@@ -21,6 +21,7 @@ DEBUG             ?= 0
 CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
 CLOAD_CMDS        ?=
 PLATFORM					?= CF2
+LPS_TDMA_ENABLE   ?= 0
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
@@ -182,10 +183,16 @@ PROJ_OBJ_CF2 += rzr.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
-PROJ_OBJ_CF2 += locodeck.o lpsTwrTag.o
 PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
 PROJ_OBJ_CF2 += vl53l0x.o
+PROJ_OBJ_CF2 += locodeck.o
+ifeq ($(LPS_TDMA_ENABLE), 1)
+PROJ_OBJ_CF2 += lpsTwrTdmaTag.o
+else
+PROJ_OBJ_CF2 += lpsTwrTag.o
+endif
+
 #Deck tests
 PROJ_OBJ_CF2 += exptest.o
 #PROJ_OBJ_CF2 += bigquadtest.o
