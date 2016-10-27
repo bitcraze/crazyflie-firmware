@@ -24,16 +24,13 @@
  */
 /* uwb_twr_anchor.c: Uwb two way ranging anchor implementation */
 
-#include "locodeck.h"
 
 #include <string.h>
 
+#include "lpsTwrTag.h"
+
 #include "log.h"
 #include "param.h"
-
-#include "libdw1000.h"
-
-#include "mac.h"
 
 #include "stabilizer_types.h"
 #ifdef ESTIMATOR_TYPE_kalman
@@ -47,7 +44,7 @@
 #define RANGING_FAILED_TH 6
 
 #define N_ANCHORS 6
-int anchors[N_ANCHORS] = {1,2,3,4,5,6};
+static const int anchors[N_ANCHORS] = {1,2,3,4,5,6};
 
 #define TAG_ADDRESS 8
 
@@ -61,8 +58,10 @@ int anchors[N_ANCHORS] = {1,2,3,4,5,6};
   } rangingStats[N_ANCHORS];
 #endif
 
-static uint8_t tag_address[] = {TAG_ADDRESS,0,0,0,0,0,0xcf,0xbc};
-static uint8_t base_address[] = {0,0,0,0,0,0,0xcf,0xbc};
+static const uint8_t tag_address[] = {TAG_ADDRESS,0,0,0,0,0,0xcf,0xbc};
+
+static const uint8_t baseAddressInitialValues[] = {0, 0, 0, 0, 0, 0, 0xcf, 0xbc};
+static uint8_t base_address[8];
 
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
@@ -101,7 +100,6 @@ static const double tsfreq = 499.2e6 * 128;  // Timestamp counter frequency
 #define ANTENNA_OFFSET 154.6   // In meter
 static const uint64_t ANTENNA_DELAY = (ANTENNA_OFFSET*499.2e6*128)/299792458.0; // In radio tick
 
-static packet_t rxPacket;
 static packet_t txPacket;
 static volatile uint8_t curr_seq = 0;
 static int current_anchor = 0;
@@ -109,7 +107,7 @@ static int current_anchor = 0;
 static float distance[N_ANCHORS];
 static float pressures[N_ANCHORS];
 static int failedRanging[N_ANCHORS];
-volatile static uint16_t rangingState = 0;
+static volatile uint16_t rangingState = 0;
 static bool ranging_complete = false;
 
 static void txcallback(dwDevice_t *dev)
@@ -137,7 +135,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
   if (dataLength == 0) return 0;
 
-  bzero(&rxPacket, MAC802154_HEADER_LENGTH);
+  packet_t rxPacket;
+  memset(&rxPacket, 0, MAC802154_HEADER_LENGTH);
 
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
 
@@ -296,7 +295,27 @@ static void twrTagInit(dwDevice_t *dev)
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
   txPacket.pan = 0xbccf;
 
-  // onEvent is going to be called with eventTimeout which will start ranging
+  memcpy(base_address, baseAddressInitialValues, sizeof(base_address));
+  memset(anchorPosition, 0, sizeof(anchorPosition));
+  anchorPositionOk = false;
+
+  memset(&poll_tx, 0, sizeof(poll_tx));
+  memset(&poll_rx, 0, sizeof(poll_rx));
+  memset(&answer_tx, 0, sizeof(answer_tx));
+  memset(&answer_rx, 0, sizeof(answer_rx));
+  memset(&final_tx, 0, sizeof(final_tx));
+  memset(&final_rx, 0, sizeof(final_rx));
+
+  memset(&txPacket, 0, sizeof(txPacket));
+  curr_seq = 0;
+  current_anchor = 0;
+
+  rangingState = 0;
+  ranging_complete = false;
+
+  memset(distance, 0, sizeof(distance));
+  memset(pressures, 0, sizeof(pressures));
+  memset(failedRanging, 0, sizeof(failedRanging));
 }
 
 uwbAlgorithm_t uwbTwrTagAlgorithm = {
