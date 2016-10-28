@@ -6,19 +6,8 @@
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
 
-// TODO krri defined in lpsTwrTag.c. Move to where they are accessable?
-#define POLL 0x01   // Poll is initiated by the tag
-#define ANSWER 0x02
-#define FINAL 0x03
-#define REPORT 0x04 // Report contains all measurement from the anchor
-
-#define TYPE 0
-#define SEQ 1
-
-#define ANTENNA_OFFSET 154.6   // In meter
 
 #define TAG_ADDRESS 8
-static const uint8_t expectedTagAddress[] = {TAG_ADDRESS, 0, 0, 0, 0, 0, 0xcf, 0xbc};
 
 static dwDevice_t dev;
 static lpsAlgoOptions_t options;
@@ -36,20 +25,16 @@ static void mockEventPacketSendHandling(dwTime_t* departureTime);
 static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t* rxPacket, const dwTime_t* answerArrivalTagTime, const packet_t* expectedTxPacket);
 static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t* rxPacket);
 
-#define ANTENNA_DELAY (ANTENNA_OFFSET*499.2e6*128)/299792458.0 // In radio tick
 static lpsAlgoOptions_t defaultOptions = {
   .tagAddress = TAG_ADDRESS,
   .anchors = {1,2,3,4,5,6},
-  .antennaDelay = ANTENNA_DELAY,
+  .antennaDelay = 30000,
   .rangingFailedThreshold = 6
 };
 
 static int dwGetDataMockCallIndex = 0;
 static int dwGetTransmitTimestampMockCallIndex = 0;
 static int dwGetReceiveTimestampMockCallIndex = 0;
-
-static const double C = 299792458.0;       // Speed of light
-static const double tsfreq = 499.2e6 * 128;  // Timestamp counter frequency
 
 
 void setUp(void) {
@@ -68,18 +53,18 @@ void testNormalMessageSequenceShouldGenerateDistance() {
   const uint8_t expectedAnchor = 1;
 
   float expectedDistance = 5.0;
-  const uint32_t distInTicks = expectedDistance * tsfreq / C;
+  const uint32_t distInTicks = expectedDistance * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
 
   dwTime_t pollDepartureTagTime = {.full = 123456};
-  dwTime_t pollArrivalAnchorTime = {.full = pollDepartureTagTime.full + distInTicks + ANTENNA_DELAY / 2};
+  dwTime_t pollArrivalAnchorTime = {.full = pollDepartureTagTime.full + distInTicks + defaultOptions.antennaDelay / 2};
   dwTime_t answerDepartureAnchorTime = {.full = pollArrivalAnchorTime.full + 100000};
-  dwTime_t answerArrivalTagTime = {.full = answerDepartureAnchorTime.full + distInTicks + ANTENNA_DELAY / 2};
+  dwTime_t answerArrivalTagTime = {.full = answerDepartureAnchorTime.full + distInTicks + defaultOptions.antennaDelay / 2};
   dwTime_t finalDepartureTagTime = {.full = answerArrivalTagTime.full + 200000};
-  dwTime_t finalArrivalAnchorTime = {.full = finalDepartureTagTime.full + distInTicks + ANTENNA_DELAY / 2};
+  dwTime_t finalArrivalAnchorTime = {.full = finalDepartureTagTime.full + distInTicks + defaultOptions.antennaDelay / 2};
 
   // eventTimeout
   packet_t expectedTxPacket1;
-  populatePacket(&expectedTxPacket1, expectedSeqNr, POLL, TAG_ADDRESS, expectedAnchor + 1);
+  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, TAG_ADDRESS, expectedAnchor + 1);
   mockEventTimeoutHandling(&expectedTxPacket1);
 
   // eventPacketSent (POLL)
@@ -87,9 +72,9 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventPacketReceived (ANSWER)
   packet_t rxPacket1;
-  populatePacket(&rxPacket1, expectedSeqNr, ANSWER, expectedAnchor + 1, TAG_ADDRESS);
+  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER, expectedAnchor + 1, TAG_ADDRESS);
   packet_t expectedTxPacket2;
-  populatePacket(&expectedTxPacket2, expectedSeqNr, FINAL, TAG_ADDRESS, expectedAnchor + 1);
+  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, TAG_ADDRESS, expectedAnchor + 1);
   mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime, &expectedTxPacket2);
 
   // eventPacketSent (FINAL)
@@ -97,7 +82,7 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventPacketReceived (REPORT)
   packet_t rxPacket2;
-  populatePacket(&rxPacket2, expectedSeqNr, REPORT, expectedAnchor + 1, TAG_ADDRESS);
+  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT, expectedAnchor + 1, TAG_ADDRESS);
   lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket2.payload + 2);
   setTime(report->pollRx, &pollArrivalAnchorTime);
   setTime(report->answerTx, &answerDepartureAnchorTime);
@@ -197,10 +182,10 @@ void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0() {
   packet_t rxPacket;
   setAddress(rxPacket.destAddress, TAG_ADDRESS);
 
-  rxPacket.payload[TYPE] = ANSWER;
+  rxPacket.payload[LPS_TWR_TYPE] = LPS_TWR_ANSWER;
 
   uint8_t wrongSeqNr = 17; // After init curr_seq = 0
-  rxPacket.payload[SEQ] = wrongSeqNr;
+  rxPacket.payload[LPS_TWR_SEQ] = wrongSeqNr;
 
   const int dataLength = sizeof(rxPacket);
   dwGetDataLength_ExpectAndReturn(&dev, dataLength);
@@ -219,10 +204,10 @@ void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
   packet_t rxPacket;
   setAddress(rxPacket.destAddress, TAG_ADDRESS);
 
-  rxPacket.payload[TYPE] = REPORT;
+  rxPacket.payload[LPS_TWR_TYPE] = LPS_TWR_REPORT;
 
   uint8_t wrongSeqNr = 17; // After init curr_seq = 0
-  rxPacket.payload[SEQ] = wrongSeqNr;
+  rxPacket.payload[LPS_TWR_SEQ] = wrongSeqNr;
 
   const int dataLength = sizeof(rxPacket);
   dwGetDataLength_ExpectAndReturn(&dev, dataLength);
@@ -343,8 +328,8 @@ static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, uint8_
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
   packet->pan = 0xbccf;
-  packet->payload[SEQ] = seqNr;
-  packet->payload[TYPE] = type;
+  packet->payload[LPS_TWR_SEQ] = seqNr;
+  packet->payload[LPS_TWR_TYPE] = type;
   setAddress(packet->sourceAddress, sourceAddress);
   setAddress(packet->destAddress, destinationAddress);
 }

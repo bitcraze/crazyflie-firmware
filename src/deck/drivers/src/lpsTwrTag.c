@@ -50,11 +50,6 @@ static uint8_t tag_address[] = {0,0,0,0,0,0,0xcf,0xbc};
 static const uint8_t baseAddressInitialValues[] = {0, 0, 0, 0, 0, 0, 0xcf, 0xbc};
 static uint8_t base_address[8];
 
-// The four packets for ranging
-#define POLL 0x01   // Poll is initiated by the tag
-#define ANSWER 0x02
-#define FINAL 0x03
-#define REPORT 0x04 // Report contains all measurement from the anchor
 
 // Timestamps for ranging
 static dwTime_t poll_tx;
@@ -63,9 +58,6 @@ static dwTime_t answer_tx;
 static dwTime_t answer_rx;
 static dwTime_t final_tx;
 static dwTime_t final_rx;
-
-static const double C = 299792458.0;       // Speed of light
-static const double tsfreq = 499.2e6 * 128;  // Timestamp counter frequency
 
 static packet_t txPacket;
 static volatile uint8_t curr_seq = 0;
@@ -82,17 +74,15 @@ static void txcallback(dwDevice_t *dev)
   departure.full += (options->antennaDelay / 2);
 
   switch (txPacket.payload[0]) {
-    case POLL:
+    case LPS_TWR_POLL:
       poll_tx = departure;
       break;
-    case FINAL:
+    case LPS_TWR_FINAL:
       final_tx = departure;
       break;
   }
 }
 
-#define TYPE 0
-#define SEQ 1
 
 static uint32_t rxcallback(dwDevice_t *dev) {
   dwTime_t arival = { .full=0 };
@@ -115,15 +105,15 @@ static uint32_t rxcallback(dwDevice_t *dev) {
   memcpy(txPacket.destAddress, rxPacket.sourceAddress, 8);
   memcpy(txPacket.sourceAddress, rxPacket.destAddress, 8);
 
-  switch(rxPacket.payload[TYPE]) {
+  switch(rxPacket.payload[LPS_TWR_TYPE]) {
     // Tag received messages
-    case ANSWER:
-      if (rxPacket.payload[SEQ] != curr_seq) {
+    case LPS_TWR_ANSWER:
+      if (rxPacket.payload[LPS_TWR_SEQ] != curr_seq) {
         return 0;
       }
 
-      txPacket.payload[0] = FINAL;
-      txPacket.payload[SEQ] = rxPacket.payload[SEQ];
+      txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_FINAL;
+      txPacket.payload[LPS_TWR_SEQ] = rxPacket.payload[LPS_TWR_SEQ];
 
       dwGetReceiveTimestamp(dev, &arival);
       arival.full -= (options->antennaDelay / 2);
@@ -136,12 +126,12 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       dwStartTransmit(dev);
 
       break;
-    case REPORT:
+    case LPS_TWR_REPORT:
     {
       lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket.payload+2);
       double tround1, treply1, treply2, tround2, tprop_ctn, tprop;
 
-      if (rxPacket.payload[SEQ] != curr_seq) {
+      if (rxPacket.payload[LPS_TWR_SEQ] != curr_seq) {
         return 0;
       }
 
@@ -156,8 +146,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       tprop_ctn = ((tround1*tround2) - (treply1*treply2)) / (tround1 + tround2 + treply1 + treply2);
 
-      tprop = tprop_ctn/tsfreq;
-      options->distance[current_anchor] = C * tprop;
+      tprop = tprop_ctn / LOCODECK_TS_FREQ;
+      options->distance[current_anchor] = SPEED_OF_LIGHT * tprop;
       options->pressures[current_anchor] = report->asl;
 
 #ifdef ESTIMATOR_TYPE_kalman
@@ -203,8 +193,8 @@ void initiateRanging(dwDevice_t *dev)
 
   dwIdle(dev);
 
-  txPacket.payload[TYPE] = POLL;
-  txPacket.payload[SEQ] = ++curr_seq;
+  txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_POLL;
+  txPacket.payload[LPS_TWR_SEQ] = ++curr_seq;
 
   memcpy(txPacket.sourceAddress, tag_address, 8);
   memcpy(txPacket.destAddress, base_address, 8);

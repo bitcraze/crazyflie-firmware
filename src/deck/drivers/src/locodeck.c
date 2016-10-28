@@ -56,6 +56,7 @@
 
 #define TAG_ADDRESS 8
 #define ANTENNA_OFFSET 154.6   // In meter
+#define ANTENNA_DELAY (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0 // In radio tick
 
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set

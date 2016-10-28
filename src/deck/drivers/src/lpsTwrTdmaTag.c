@@ -116,9 +116,6 @@ static dwTime_t answer_rx;
 static dwTime_t final_tx;
 static dwTime_t final_rx;
 
-static const double C = 299792458.0;       // Speed of light
-static const double tsfreq = 499.2e6 * 128;  // Timestamp counter frequency
-
 #define ANTENNA_OFFSET 154.6   // In meter
 static const uint64_t ANTENNA_DELAY = (ANTENNA_OFFSET*499.2e6*128)/299792458.0; // In radio tick
 
@@ -214,8 +211,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       tprop_ctn = ((tround1*tround2) - (treply1*treply2)) / (tround1 + tround2 + treply1 + treply2);
 
-      tprop = tprop_ctn/tsfreq;
-      distance[current_anchor] = C * tprop;
+      tprop = tprop_ctn/LOCODECK_TS_FREQ;
+      distance[current_anchor] = SPEED_OF_LIGHT * tprop;
       pressures[current_anchor] = report->asl;
 
 #ifdef ESTIMATOR_TYPE_kalman

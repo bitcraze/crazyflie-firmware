@@ -36,6 +36,11 @@
 #include "libdw1000.h"
 #include "stabilizer_types.h"
 
+#define SPEED_OF_LIGHT 299792458.0
+// Timestamp counter frequency
+#define LOCODECK_TS_FREQ (499.2e6 * 128)
+
+
 typedef enum uwbEvent_e {
   eventTimeout,
   eventPacketReceived,
@@ -45,6 +50,7 @@ typedef enum uwbEvent_e {
 } uwbEvent_t;
 
 #define LOCODECK_NR_OF_ANCHORS 6
+
 typedef struct {
   uint8_t tagAddress;
   const int anchors[LOCODECK_NR_OF_ANCHORS];
