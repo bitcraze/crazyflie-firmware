@@ -156,7 +156,6 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         return 0;
       }
 
-
       memcpy(&poll_rx, &report->pollRx, 5);
       memcpy(&answer_tx, &report->answerTx, 5);
       memcpy(&final_rx, &report->finalRx, 5);
@@ -173,7 +172,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       options->pressures[current_anchor] = report->asl;
 
 #ifdef ESTIMATOR_TYPE_kalman
-      // Ouliers rejection
+      // Outliers rejection
       rangingStats[current_anchor].ptr = (rangingStats[current_anchor].ptr + 1) % RANGING_HISTORY_LENGTH;
       float32_t mean;
       float32_t stddev;
@@ -272,6 +271,7 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
   tag_address[0] = options->tagAddress;
 
   // Initialize the packet in the TX buffer
+  memset(&txPacket, 0, sizeof(txPacket));
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
   txPacket.pan = 0xbccf;
 
@@ -286,7 +286,6 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
   memset(&final_tx, 0, sizeof(final_tx));
   memset(&final_rx, 0, sizeof(final_rx));
 
-  memset(&txPacket, 0, sizeof(txPacket));
   curr_seq = 0;
   current_anchor = 0;
 
