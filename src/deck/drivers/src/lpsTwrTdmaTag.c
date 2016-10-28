@@ -67,8 +67,8 @@ dwTime_t frameStart;
 // Amount of failed ranging before the ranging value is set as wrong
 #define RANGING_FAILED_TH 6
 
-#define N_ANCHORS 2
-int anchors[N_ANCHORS] = {1,2};
+#define N_ANCHORS 6
+int anchors[N_ANCHORS] = {1,2,3,4,5,6};
 
 #define TAG_ADDRESS 8+TDMA_SLOT
 
@@ -352,7 +352,7 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
   return MAX_TIMEOUT;
 }
 
-static void twrTagInit(dwDevice_t *dev)
+static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* options)
 {
   tdmaSynchronized = false;
 
