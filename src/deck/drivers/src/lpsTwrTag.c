@@ -56,17 +56,6 @@ static uint8_t base_address[8];
 #define FINAL 0x03
 #define REPORT 0x04 // Report contains all measurement from the anchor
 
-typedef struct {
-  uint8_t pollRx[5];
-  uint8_t answerTx[5];
-  uint8_t finalRx[5];
-
-  float pressure;
-  float temperature;
-  float asl;
-  uint8_t pressure_ok;
-} __attribute__((packed)) reportPayload_t;
-
 // Timestamps for ranging
 static dwTime_t poll_tx;
 static dwTime_t poll_rx;
@@ -149,7 +138,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       break;
     case REPORT:
     {
-      reportPayload_t *report = (reportPayload_t *)(rxPacket.payload+2);
+      lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket.payload+2);
       double tround1, treply1, treply2, tround2, tprop_ctn, tprop;
 
       if (rxPacket.payload[SEQ] != curr_seq) {
