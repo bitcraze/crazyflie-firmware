@@ -16,6 +16,10 @@ script:
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 ESTIMATOR=kalman SENSORS=task
 
+  # Build CF2 with TDMA
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDMA_ENABLE=1
+
   # Build CF1
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF1
