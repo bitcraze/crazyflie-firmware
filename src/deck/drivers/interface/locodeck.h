@@ -51,19 +51,22 @@ typedef enum uwbEvent_e {
 
 #define LOCODECK_NR_OF_ANCHORS 6
 
+typedef uint64_t locoAddress_t;
+
 typedef struct {
-  uint8_t tagAddress;
-  const int anchors[LOCODECK_NR_OF_ANCHORS];
-  float distance[LOCODECK_NR_OF_ANCHORS];
-  float pressures[LOCODECK_NR_OF_ANCHORS];
-  int failedRanging[LOCODECK_NR_OF_ANCHORS];
-  volatile uint16_t rangingState;
+  const uint64_t antennaDelay;
+  const int rangingFailedThreshold;
+
+  const locoAddress_t tagAddress;
+  const locoAddress_t anchorAddress[LOCODECK_NR_OF_ANCHORS];
 
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
   bool anchorPositionOk;
 
-  const uint64_t antennaDelay;
-  const int rangingFailedThreshold;
+  float distance[LOCODECK_NR_OF_ANCHORS];
+  float pressures[LOCODECK_NR_OF_ANCHORS];
+  int failedRanging[LOCODECK_NR_OF_ANCHORS];
+  volatile uint16_t rangingState;
 } lpsAlgoOptions_t;
 
 // Callback for one uwb algorithm

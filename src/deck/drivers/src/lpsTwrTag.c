@@ -45,12 +45,6 @@
   } rangingStats[LOCODECK_NR_OF_ANCHORS];
 #endif
 
-static uint8_t tag_address[] = {0,0,0,0,0,0,0xcf,0xbc};
-
-static const uint8_t baseAddressInitialValues[] = {0, 0, 0, 0, 0, 0, 0xcf, 0xbc};
-static uint8_t base_address[8];
-
-
 // Timestamps for ranging
 static dwTime_t poll_tx;
 static dwTime_t poll_rx;
@@ -95,15 +89,15 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
 
-  if (memcmp(rxPacket.destAddress, tag_address, 8)) {
+  if (rxPacket.destAddress != options->tagAddress) {
     dwNewReceive(dev);
     dwSetDefaults(dev);
     dwStartReceive(dev);
     return MAX_TIMEOUT;
   }
 
-  memcpy(txPacket.destAddress, rxPacket.sourceAddress, 8);
-  memcpy(txPacket.sourceAddress, rxPacket.destAddress, 8);
+  txPacket.destAddress = rxPacket.sourceAddress;
+  txPacket.sourceAddress = rxPacket.destAddress;
 
   switch(rxPacket.payload[LPS_TWR_TYPE]) {
     // Tag received messages
@@ -189,15 +183,13 @@ void initiateRanging(dwDevice_t *dev)
     current_anchor = 0;
   }
 
-  base_address[0] =  options->anchors[current_anchor];
-
   dwIdle(dev);
 
   txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_POLL;
   txPacket.payload[LPS_TWR_SEQ] = ++curr_seq;
 
-  memcpy(txPacket.sourceAddress, tag_address, 8);
-  memcpy(txPacket.destAddress, base_address, 8);
+  txPacket.sourceAddress = options->tagAddress;
+  txPacket.destAddress = options->anchorAddress[current_anchor];
 
   dwNewTransmit(dev);
   dwSetDefaults(dev);
@@ -247,16 +239,10 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
 {
   options = algoOptions;
 
-  tag_address[0] = options->tagAddress;
-
   // Initialize the packet in the TX buffer
   memset(&txPacket, 0, sizeof(txPacket));
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
   txPacket.pan = 0xbccf;
-
-  memcpy(base_address, baseAddressInitialValues, sizeof(base_address));
-  memset(options->anchorPosition, 0, sizeof(options->anchorPosition));
-  options->anchorPositionOk = false;
 
   memset(&poll_tx, 0, sizeof(poll_tx));
   memset(&poll_rx, 0, sizeof(poll_rx));

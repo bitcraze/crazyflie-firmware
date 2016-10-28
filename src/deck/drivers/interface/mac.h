@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "locodeck.h"
 
 // Packet format with compressed PAN and 64Bit addresses
 // Maximum 64 bytes payload
@@ -24,8 +25,8 @@ typedef struct packet_s {
 
     uint8_t seq;
     uint16_t pan;
-    uint8_t destAddress[8];
-    uint8_t sourceAddress[8];
+    locoAddress_t destAddress;
+    locoAddress_t sourceAddress;
 
     uint8_t payload[64];
 } __attribute__((packed)) packet_t;

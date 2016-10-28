@@ -54,19 +54,26 @@
 
 #define RX_TIMEOUT 1000
 
-#define TAG_ADDRESS 8
 #define ANTENNA_OFFSET 154.6   // In meter
-#define ANTENNA_DELAY (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0 // In radio tick
 
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
 // anchorPositionOk to enable sending the anchor rangings to the Kalman filter
 
 static lpsAlgoOptions_t algoOptions = {
-  .tagAddress = TAG_ADDRESS,
-  .anchors = {1,2,3,4,5,6},
+  .tagAddress = 0xbccf000000000008,
+  .anchorAddress = {
+    0xbccf000000000001,
+    0xbccf000000000002,
+    0xbccf000000000003,
+    0xbccf000000000004,
+    0xbccf000000000005,
+    0xbccf000000000006
+  },
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
+
+  .anchorPositionOk = false
 };
 
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;

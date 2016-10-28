@@ -159,15 +159,15 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
 
-  if (memcmp(rxPacket.destAddress, tag_address, 8)) {
+  if (memcmp(&rxPacket.destAddress, tag_address, 8)) {
     dwNewReceive(dev);
     dwSetDefaults(dev);
     dwStartReceive(dev);
     return MAX_TIMEOUT;
   }
 
-  memcpy(txPacket.destAddress, rxPacket.sourceAddress, 8);
-  memcpy(txPacket.sourceAddress, rxPacket.destAddress, 8);
+  txPacket.destAddress = rxPacket.sourceAddress;
+  txPacket.sourceAddress = rxPacket.destAddress;
 
   switch(rxPacket.payload[TYPE]) {
     // Tag received messages
@@ -296,8 +296,8 @@ static void initiateRanging(dwDevice_t *dev)
   txPacket.payload[TYPE] = POLL;
   txPacket.payload[SEQ] = ++curr_seq;
 
-  memcpy(txPacket.sourceAddress, tag_address, 8);
-  memcpy(txPacket.destAddress, base_address, 8);
+  memcpy(&txPacket.sourceAddress, &tag_address, 8);
+  memcpy(&txPacket.destAddress, &base_address, 8);
 
 
   dwNewTransmit(dev);

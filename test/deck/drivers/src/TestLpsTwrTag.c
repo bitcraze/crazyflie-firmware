@@ -7,8 +7,6 @@
 #include "mock_cfassert.h"
 
 
-#define TAG_ADDRESS 8
-
 static dwDevice_t dev;
 static lpsAlgoOptions_t options;
 
@@ -16,9 +14,8 @@ static void dwGetData_ExpectAndCopyData(dwDevice_t* expDev, const packet_t* rxPa
 static void dwGetTransmitTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time);
 static void dwGetReceiveTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time);
 
-static void setAddress(uint8_t* data, uint8_t addr);
 static void setTime(uint8_t* data, const dwTime_t* time);
-static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, uint8_t sourceAddress, uint8_t destinationAddress);
+static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
 
 static void mockEventTimeoutHandling(const packet_t* expectedTxPacket);
 static void mockEventPacketSendHandling(dwTime_t* departureTime);
@@ -26,10 +23,18 @@ static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t
 static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t* rxPacket);
 
 static lpsAlgoOptions_t defaultOptions = {
-  .tagAddress = TAG_ADDRESS,
-  .anchors = {1,2,3,4,5,6},
+  .tagAddress = 0xbccf000000000008,
+  .anchorAddress = {
+    0xbccf000000000001,
+    0xbccf000000000002,
+    0xbccf000000000003,
+    0xbccf000000000004,
+    0xbccf000000000005,
+    0xbccf000000000006
+  },
   .antennaDelay = 30000,
-  .rangingFailedThreshold = 6
+  .rangingFailedThreshold = 6,
+  .anchorPositionOk = false
 };
 
 static int dwGetDataMockCallIndex = 0;
@@ -64,7 +69,7 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventTimeout
   packet_t expectedTxPacket1;
-  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, TAG_ADDRESS, expectedAnchor + 1);
+  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, defaultOptions.tagAddress, defaultOptions.anchorAddress[expectedAnchor]);
   mockEventTimeoutHandling(&expectedTxPacket1);
 
   // eventPacketSent (POLL)
@@ -72,9 +77,9 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventPacketReceived (ANSWER)
   packet_t rxPacket1;
-  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER, expectedAnchor + 1, TAG_ADDRESS);
+  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER, defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
   packet_t expectedTxPacket2;
-  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, TAG_ADDRESS, expectedAnchor + 1);
+  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, defaultOptions.tagAddress, defaultOptions.anchorAddress[expectedAnchor]);
   mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime, &expectedTxPacket2);
 
   // eventPacketSent (FINAL)
@@ -82,7 +87,7 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventPacketReceived (REPORT)
   packet_t rxPacket2;
-  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT, expectedAnchor + 1, TAG_ADDRESS);
+  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT, defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
   lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket2.payload + 2);
   setTime(report->pollRx, &pollArrivalAnchorTime);
   setTime(report->answerTx, &answerDepartureAnchorTime);
@@ -159,7 +164,7 @@ void testEventPacketReceivedWithZeroDataLengthShouldBeIgnored() {
 
 void testEventPacketReceivedWithWrongDestinationAddressShouldPrepareForReceptionOfNewPacket() {
   // Fixture
-  packet_t rxPacket = {.destAddress = {47, 11, 47, 11, 47, 11, 47, 11}};
+  packet_t rxPacket = {.destAddress = 0x4711471147114711};
   const int dataLength = sizeof(rxPacket);
 
   dwGetDataLength_ExpectAndReturn(&dev, dataLength);
@@ -180,8 +185,7 @@ void testEventPacketReceivedWithWrongDestinationAddressShouldPrepareForReception
 void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0() {
   // Fixture
   packet_t rxPacket;
-  setAddress(rxPacket.destAddress, TAG_ADDRESS);
-
+  rxPacket.destAddress = defaultOptions.tagAddress;
   rxPacket.payload[LPS_TWR_TYPE] = LPS_TWR_ANSWER;
 
   uint8_t wrongSeqNr = 17; // After init curr_seq = 0
@@ -202,8 +206,7 @@ void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0() {
 void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
   // Fixture
   packet_t rxPacket;
-  setAddress(rxPacket.destAddress, TAG_ADDRESS);
-
+  rxPacket.destAddress = defaultOptions.tagAddress;
   rxPacket.payload[LPS_TWR_TYPE] = LPS_TWR_REPORT;
 
   uint8_t wrongSeqNr = 17; // After init curr_seq = 0
@@ -307,31 +310,19 @@ static void dwGetReceiveTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dw
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// TODO krri rework addresses
-static void setAddress(uint8_t* data, uint8_t addr) {
-  data[0] = addr;
-  data[1] = 0;
-  data[2] = 0;
-  data[3] = 0;
-  data[4] = 0;
-  data[5] = 0;
-  data[6] = 0xcf;
-  data[7] = 0xbc;
-}
-
 static void setTime(uint8_t* data, const dwTime_t* time) {
   memcpy(data, time, sizeof(dwTime_t));
 }
 
-static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, uint8_t sourceAddress, uint8_t destinationAddress) {
+static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAddress_t sourceAddress, locoAddress_t destinationAddress) {
   memset(packet, 0, sizeof(packet_t));
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
   packet->pan = 0xbccf;
   packet->payload[LPS_TWR_SEQ] = seqNr;
   packet->payload[LPS_TWR_TYPE] = type;
-  setAddress(packet->sourceAddress, sourceAddress);
-  setAddress(packet->destAddress, destinationAddress);
+  packet->sourceAddress = sourceAddress;
+  packet->destAddress = destinationAddress;
 }
 
 static void mockEventTimeoutHandling(const packet_t* expectedTxPacket) {
