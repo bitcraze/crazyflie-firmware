@@ -22,13 +22,19 @@ static const uint8_t expectedTagAddress[] = {TAG_ADDRESS, 0, 0, 0, 0, 0, 0xcf, 0
 
 static dwDevice_t dev;
 static lpsAlgoOptions_t options;
-static void mockCallsForInitiateRanging(uint8_t expCurrSeq, uint8_t expAnchor);
+
 static void dwGetData_ExpectAndCopyData(dwDevice_t* expDev, const packet_t* rxPacket, unsigned int expDataLength);
 static void dwGetTransmitTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time);
 static void dwGetReceiveTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time);
 
 static void setAddress(uint8_t* data, uint8_t addr);
 static void setTime(uint8_t* data, const dwTime_t* time);
+static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, uint8_t sourceAddress, uint8_t destinationAddress);
+
+static void mockEventTimeoutHandling(const packet_t* expectedTxPacket);
+static void mockEventPacketSendHandling(dwTime_t* departureTime);
+static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t* rxPacket, const dwTime_t* answerArrivalTagTime, const packet_t* expectedTxPacket);
+static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t* rxPacket);
 
 #define ANTENNA_DELAY (ANTENNA_OFFSET*499.2e6*128)/299792458.0 // In radio tick
 static lpsAlgoOptions_t defaultOptions = {
@@ -55,6 +61,67 @@ void setUp(void) {
   uwbTwrTagAlgorithm.init(&dev, &options);
 }
 
+void testNormalMessageSequenceShouldGenerateDistance() {
+  // Fixture
+  const int dataLength = sizeof(packet_t);
+  const uint8_t expectedSeqNr = 1;
+  const uint8_t expectedAnchor = 1;
+
+  float expectedDistance = 5.0;
+  const uint32_t distInTicks = expectedDistance * tsfreq / C;
+
+  dwTime_t pollDepartureTagTime = {.full = 123456};
+  dwTime_t pollArrivalAnchorTime = {.full = pollDepartureTagTime.full + distInTicks + ANTENNA_DELAY / 2};
+  dwTime_t answerDepartureAnchorTime = {.full = pollArrivalAnchorTime.full + 100000};
+  dwTime_t answerArrivalTagTime = {.full = answerDepartureAnchorTime.full + distInTicks + ANTENNA_DELAY / 2};
+  dwTime_t finalDepartureTagTime = {.full = answerArrivalTagTime.full + 200000};
+  dwTime_t finalArrivalAnchorTime = {.full = finalDepartureTagTime.full + distInTicks + ANTENNA_DELAY / 2};
+
+  // eventTimeout
+  packet_t expectedTxPacket1;
+  populatePacket(&expectedTxPacket1, expectedSeqNr, POLL, TAG_ADDRESS, expectedAnchor + 1);
+  mockEventTimeoutHandling(&expectedTxPacket1);
+
+  // eventPacketSent (POLL)
+  mockEventPacketSendHandling(&pollDepartureTagTime);
+
+  // eventPacketReceived (ANSWER)
+  packet_t rxPacket1;
+  populatePacket(&rxPacket1, expectedSeqNr, ANSWER, expectedAnchor + 1, TAG_ADDRESS);
+  packet_t expectedTxPacket2;
+  populatePacket(&expectedTxPacket2, expectedSeqNr, FINAL, TAG_ADDRESS, expectedAnchor + 1);
+  mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime, &expectedTxPacket2);
+
+  // eventPacketSent (FINAL)
+  mockEventPacketSendHandling(&finalDepartureTagTime);
+
+  // eventPacketReceived (REPORT)
+  packet_t rxPacket2;
+  populatePacket(&rxPacket2, expectedSeqNr, REPORT, expectedAnchor + 1, TAG_ADDRESS);
+  lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket2.payload + 2);
+  setTime(report->pollRx, &pollArrivalAnchorTime);
+  setTime(report->answerTx, &answerDepartureAnchorTime);
+  setTime(report->finalRx, &finalArrivalAnchorTime);
+  mockEventPacketReceivedReportHandling(dataLength, &rxPacket2);
+
+  // Test
+  uint32_t actual1 = uwbTwrTagAlgorithm.onEvent(&dev, eventTimeout);
+  uint32_t actual2 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketSent);
+  uint32_t actual3 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uint32_t actual4 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketSent);
+  uint32_t actual5 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual1);
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual2);
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual3);
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual4);
+  TEST_ASSERT_EQUAL_UINT32(0, actual5);
+
+  float actualDistance = options.distance[expectedAnchor];
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDistance, actualDistance);
+}
+
 void testEventReceiveUnhandledEventShouldAssertFailure() {
   // Fixture
   assertFail_Expect("", "", 0);
@@ -71,7 +138,7 @@ void testEventReceiveUnhandledEventShouldAssertFailure() {
   // Mock automatically validated after test
 }
 
-void testEventReceiveFailedShouldReturnZero() {
+void testEventReceiveFailedShouldBeIgnored() {
   // Fixture
 
   // Test
@@ -82,7 +149,7 @@ void testEventReceiveFailedShouldReturnZero() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventReceiveTimeoutShouldReturnZero() {
+void testEventReceiveTimeoutShouldBeIgnored() {
   // Fixture
 
   // Test
@@ -93,21 +160,7 @@ void testEventReceiveTimeoutShouldReturnZero() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventTimeoutShouldInitiateRanging() {
-  // Fixture
-  uint8_t expectedSeqNr = 1;
-  uint8_t expectedAnchor = 2;
-  mockCallsForInitiateRanging(expectedSeqNr, expectedAnchor);
-
-  // Test
-  uint32_t actual = uwbTwrTagAlgorithm.onEvent(&dev, eventTimeout);
-
-  // Assert
-  const uint32_t expected = MAX_TIMEOUT;
-  TEST_ASSERT_EQUAL_UINT32(expected, actual);
-}
-
-void testEventPacketReceivedWithZeroDataLengthShouldReturnZero() {
+void testEventPacketReceivedWithZeroDataLengthShouldBeIgnored() {
   // Fixture
   dwGetDataLength_ExpectAndReturn(&dev, 0);
 
@@ -119,7 +172,7 @@ void testEventPacketReceivedWithZeroDataLengthShouldReturnZero() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventPacketReceivedWithWrongDestinationAddressShouldReturnMAX_TIMEOUT() {
+void testEventPacketReceivedWithWrongDestinationAddressShouldPrepareForReceptionOfNewPacket() {
   // Fixture
   packet_t rxPacket = {.destAddress = {47, 11, 47, 11, 47, 11, 47, 11}};
   const int dataLength = sizeof(rxPacket);
@@ -183,134 +236,12 @@ void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testNormalMessageSequenceShouldGenerateDistance() {
-  // Fixture
-  const int dataLength = sizeof(packet_t);
-  const uint8_t expectedSeqNr = 1;
-  const uint8_t expectedAnchor = 1;
 
-  float expectedDistance = 5.0;
-  const uint32_t distInCycles = expectedDistance * tsfreq / C;
-
-  dwTime_t pollDepartureTagTime = {.full = 123456};
-  dwTime_t pollArrivalAnchorTime = {.full = pollDepartureTagTime.full + distInCycles + ANTENNA_DELAY / 2};
-  dwTime_t answerDepartureAnchorTime = {.full = pollArrivalAnchorTime.full + 100000};
-  dwTime_t answerArrivalTagTime = {.full = answerDepartureAnchorTime.full + distInCycles + ANTENNA_DELAY / 2};
-  dwTime_t finalDepartureTagTime = {.full = answerArrivalTagTime.full + 200000};
-  dwTime_t finalArrivalAnchorTime = {.full = finalDepartureTagTime.full + distInCycles + ANTENNA_DELAY / 2};
-
-
-  packet_t expectedTxPacket1;
-  memset(&expectedTxPacket1, 0, sizeof(packet_t));
-  MAC80215_PACKET_INIT(expectedTxPacket1, MAC802154_TYPE_DATA);
-  expectedTxPacket1.pan = 0xbccf;
-  expectedTxPacket1.payload[SEQ] = expectedSeqNr;
-  expectedTxPacket1.payload[TYPE] = POLL;
-  setAddress(expectedTxPacket1.sourceAddress, TAG_ADDRESS);
-  setAddress(expectedTxPacket1.destAddress, expectedAnchor + 1); // TODO krri rework addresses
-
-  packet_t rxPacket1;
-  setAddress(rxPacket1.sourceAddress, expectedAnchor + 1); // TODO krri rework addresses
-  setAddress(rxPacket1.destAddress, TAG_ADDRESS);
-  rxPacket1.payload[TYPE] = ANSWER;
-  rxPacket1.payload[SEQ] = expectedSeqNr;
-
-  packet_t expectedTxPacket2;
-  memset(&expectedTxPacket2, 0, sizeof(packet_t));
-  MAC80215_PACKET_INIT(expectedTxPacket2, MAC802154_TYPE_DATA);
-  expectedTxPacket2.pan = 0xbccf;
-  expectedTxPacket2.payload[SEQ] = expectedSeqNr;
-  expectedTxPacket2.payload[TYPE] = FINAL;
-  setAddress(expectedTxPacket2.sourceAddress, TAG_ADDRESS);
-  setAddress(expectedTxPacket2.destAddress, expectedAnchor + 1); // TODO krri rework addresses
-
-  packet_t rxPacket2;
-  setAddress(rxPacket2.sourceAddress, expectedAnchor + 1); // TODO krri rework addresses
-  setAddress(rxPacket2.destAddress, TAG_ADDRESS);
-  rxPacket2.payload[TYPE] = REPORT;
-  rxPacket2.payload[SEQ] = expectedSeqNr;
-  lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket2.payload+2);
-  setTime(report->pollRx, &pollArrivalAnchorTime);
-  setTime(report->answerTx, &answerDepartureAnchorTime);
-  setTime(report->finalRx, &finalArrivalAnchorTime);
-
-  // eventTimeout
-  dwIdle_Expect(&dev);
-  dwNewTransmit_Expect(&dev);
-  dwSetDefaults_Expect(&dev);
-  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)&expectedTxPacket1, sizeof(packet_t), MAC802154_HEADER_LENGTH + 2);
-  dwWaitForResponse_Expect(&dev, true);
-  dwStartTransmit_Expect(&dev);
-
-  // eventPacketSent (POLL)
-  dwGetTransmitTimestamp_ExpectAndCopyData(&dev, &pollDepartureTagTime);
-
-  // eventPacketReceived (ANSWER)
-  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
-  dwGetData_ExpectAndCopyData(&dev, &rxPacket1, dataLength);
-  dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &answerArrivalTagTime);
-  dwNewTransmit_Expect(&dev);
-  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)&expectedTxPacket2, sizeof(packet_t), MAC802154_HEADER_LENGTH + 2);
-  dwWaitForResponse_Expect(&dev, true);
-  dwStartTransmit_Expect(&dev);
-
-  // eventPacketSent (FINAL)
-  dwGetTransmitTimestamp_ExpectAndCopyData(&dev, &finalDepartureTagTime);
-
-  // eventPacketReceived (REPORT)
-  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
-  dwGetData_ExpectAndCopyData(&dev, &rxPacket2, dataLength);
-
-  // Test
-  uint32_t actual1 = uwbTwrTagAlgorithm.onEvent(&dev, eventTimeout);
-  uint32_t actual2 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketSent);
-  uint32_t actual3 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uint32_t actual4 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketSent);
-  uint32_t actual5 = uwbTwrTagAlgorithm.onEvent(&dev, eventPacketReceived);
-
-  // Assert
-  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual1);
-  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual2);
-  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual3);
-  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual4);
-  TEST_ASSERT_EQUAL_UINT32(0, actual5);
-
-  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDistance, options.distance[expectedAnchor]);
-}
-
+// TODO krri verify seqNr are increased
+// TODO krri verify we use all anchors
 // TODO krri verify asl
 // TODO krri verify rangingState and failedRanding after timeouts
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-static uint8_t dwSetDataExpectedCurrSeq;
-static uint8_t dwSetDataExpectedBaseAddress[] = {0, 0, 0, 0, 0, 0, 0xcf, 0xbc};
-
-void dwSetDataMockCallback(dwDevice_t* actualDev, uint8_t* actualData, unsigned int actualN, int cmock_num_calls) {
-  TEST_ASSERT_EQUAL_INT(0, cmock_num_calls);
-  TEST_ASSERT_EQUAL_PTR(&dev, actualDev);
-  TEST_ASSERT_EQUAL_INT(MAC802154_HEADER_LENGTH + 2, actualN);
-
-  packet_t *txPacket = (packet_t*)actualData;
-  TEST_ASSERT_EQUAL_UINT8(POLL, txPacket->payload[TYPE]);
-  TEST_ASSERT_EQUAL_UINT8(dwSetDataExpectedCurrSeq, txPacket->payload[SEQ]);
-  TEST_ASSERT_EQUAL_MEMORY(expectedTagAddress, txPacket->sourceAddress, sizeof(expectedTagAddress));
-  TEST_ASSERT_EQUAL_MEMORY(dwSetDataExpectedBaseAddress, txPacket->destAddress, sizeof(dwSetDataExpectedBaseAddress));
-}
-
-static void mockCallsForInitiateRanging(uint8_t expCurrSeq, uint8_t expAnchor) {
-  dwIdle_Expect(&dev);
-  dwNewTransmit_Expect(&dev);
-  dwSetDefaults_Expect(&dev);
-
-  dwSetData_StubWithCallback(dwSetDataMockCallback);
-  dwSetDataExpectedCurrSeq = expCurrSeq;
-  dwSetDataExpectedBaseAddress[0] = expAnchor;
-
-  dwWaitForResponse_Expect(&dev, true);
-  dwStartTransmit_Expect(&dev);
-}
 
 // dwGetData mock /////////////////////////////////////////////////////////////
 
@@ -391,6 +322,7 @@ static void dwGetReceiveTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dw
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// TODO krri rework addresses
 static void setAddress(uint8_t* data, uint8_t addr) {
   data[0] = addr;
   data[1] = 0;
@@ -404,4 +336,43 @@ static void setAddress(uint8_t* data, uint8_t addr) {
 
 static void setTime(uint8_t* data, const dwTime_t* time) {
   memcpy(data, time, sizeof(dwTime_t));
+}
+
+static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, uint8_t sourceAddress, uint8_t destinationAddress) {
+  memset(packet, 0, sizeof(packet_t));
+
+  MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
+  packet->pan = 0xbccf;
+  packet->payload[SEQ] = seqNr;
+  packet->payload[TYPE] = type;
+  setAddress(packet->sourceAddress, sourceAddress);
+  setAddress(packet->destAddress, destinationAddress);
+}
+
+static void mockEventTimeoutHandling(const packet_t* expectedTxPacket) {
+  dwIdle_Expect(&dev);
+  dwNewTransmit_Expect(&dev);
+  dwSetDefaults_Expect(&dev);
+  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)expectedTxPacket, sizeof(packet_t), MAC802154_HEADER_LENGTH + 2);
+  dwWaitForResponse_Expect(&dev, true);
+  dwStartTransmit_Expect(&dev);
+}
+
+static void mockEventPacketSendHandling(dwTime_t* departureTime) {
+  dwGetTransmitTimestamp_ExpectAndCopyData(&dev, departureTime);
+}
+
+static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t* rxPacket, const dwTime_t* answerArrivalTagTime, const packet_t* expectedTxPacket) {
+  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
+  dwGetData_ExpectAndCopyData(&dev, rxPacket, dataLength);
+  dwGetReceiveTimestamp_ExpectAndCopyData(&dev, answerArrivalTagTime);
+  dwNewTransmit_Expect(&dev);
+  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)expectedTxPacket, sizeof(packet_t), MAC802154_HEADER_LENGTH + 2);
+  dwWaitForResponse_Expect(&dev, true);
+  dwStartTransmit_Expect(&dev);
+}
+
+static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t* rxPacket) {
+  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
+  dwGetData_ExpectAndCopyData(&dev, rxPacket, dataLength);
 }
