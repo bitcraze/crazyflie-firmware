@@ -22,6 +22,7 @@ CLOAD_SCRIPT      ?= ../crazyflie-clients-python/bin/cfloader
 CLOAD_CMDS        ?=
 PLATFORM					?= CF2
 LPS_TDMA_ENABLE   ?= 0
+LPS_TDOA_ENABLE   ?= 0
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
@@ -191,6 +192,10 @@ ifeq ($(LPS_TDMA_ENABLE), 1)
 PROJ_OBJ_CF2 += lpsTwrTdmaTag.o
 else
 PROJ_OBJ_CF2 += lpsTwrTag.o
+endif
+
+ifeq ($(LPS_TDOA_ENABLE), 1)
+PROJ_OBJ_CF2 += lpsTdoaTag.o
 endif
 
 #Deck tests
