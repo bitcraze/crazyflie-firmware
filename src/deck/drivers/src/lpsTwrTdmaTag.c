@@ -85,12 +85,6 @@ int anchors[N_ANCHORS] = {1,2,3,4,5,6};
 static uint8_t tag_address[] = {TAG_ADDRESS,0,0,0,0,0,0xcf,0xbc};
 static uint8_t base_address[] = {0,0,0,0,0,0,0xcf,0xbc};
 
-// The anchor position can be set using parameters
-// As an option you can set a static position in this file and set
-// anchorPositionOk to enable sending the anchor rangings to the Kalman filter
-static point_t anchorPosition[N_ANCHORS];
-static bool anchorPositionOk = false;
-
 // The four packets for ranging
 #define POLL 0x01   // Poll is initiated by the tag
 #define ANSWER 0x02
@@ -124,17 +118,15 @@ static packet_t txPacket;
 static volatile uint8_t curr_seq = 0;
 static int current_anchor = 0;
 
-static float distance[N_ANCHORS];
-static float pressures[N_ANCHORS];
-static int failedRanging[N_ANCHORS];
-volatile static uint16_t rangingState = 0;
 static bool ranging_complete = false;
+
+static lpsAlgoOptions_t* options;
 
 static void txcallback(dwDevice_t *dev)
 {
   dwTime_t departure;
   dwGetTransmitTimestamp(dev, &departure);
-  departure.full += (ANTENNA_DELAY/2);
+  departure.full += (options->antennaDelay / 2);
 
   switch (txPacket.payload[0]) {
     case POLL:
@@ -212,27 +204,27 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       tprop_ctn = ((tround1*tround2) - (treply1*treply2)) / (tround1 + tround2 + treply1 + treply2);
 
       tprop = tprop_ctn/LOCODECK_TS_FREQ;
-      distance[current_anchor] = SPEED_OF_LIGHT * tprop;
-      pressures[current_anchor] = report->asl;
+      options->distance[current_anchor] = SPEED_OF_LIGHT * tprop;
+      options->pressures[current_anchor] = report->asl;
 
 #ifdef ESTIMATOR_TYPE_kalman
-      // Ouliers rejection
+      // Outliers rejection
       rangingStats[current_anchor].ptr = (rangingStats[current_anchor].ptr + 1) % RANGING_HISTORY_LENGTH;
       float32_t mean;
       float32_t stddev;
 
       arm_std_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &stddev);
       arm_mean_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &mean);
-      float32_t diff = fabsf(mean-distance[current_anchor]);
+      float32_t diff = fabsf(mean - options->distance[current_anchor]);
 
-      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = distance[current_anchor];
+      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = options->distance[current_anchor];
 
-      if (anchorPositionOk && (diff < (OUTLIER_TH*stddev))) {
+      if (options->anchorPositionOk && (diff < (OUTLIER_TH*stddev))) {
         distanceMeasurement_t dist;
-        dist.distance = distance[current_anchor];
-        dist.x = anchorPosition[current_anchor].x;
-        dist.y = anchorPosition[current_anchor].y;
-        dist.z = anchorPosition[current_anchor].z;
+        dist.distance = options->distance[current_anchor];
+        dist.x = options->anchorPosition[current_anchor].x;
+        dist.y = options->anchorPosition[current_anchor].y;
+        dist.z = options->anchorPosition[current_anchor].z;
         dist.stdDev = 0.25;
         stateEstimatorEnqueueDistance(&dist);
       }
@@ -325,14 +317,14 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
       break;
     case eventTimeout:  // Comes back to timeout after each ranging attempt
       if (!ranging_complete) {
-        rangingState &= ~(1<<current_anchor);
-        if (failedRanging[current_anchor] < RANGING_FAILED_TH) {
-          failedRanging[current_anchor] ++;
-          rangingState |= (1<<current_anchor);
+        options->rangingState &= ~(1<<current_anchor);
+        if (options->failedRanging[current_anchor] < RANGING_FAILED_TH) {
+          options->failedRanging[current_anchor] ++;
+          options->rangingState |= (1<<current_anchor);
         }
       } else {
-        rangingState |= (1<<current_anchor);
-        failedRanging[current_anchor] = 0;
+        options->rangingState |= (1<<current_anchor);
+        options->failedRanging[current_anchor] = 0;
       }
       ranging_complete = false;
       initiateRanging(dev);
@@ -349,9 +341,12 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
   return MAX_TIMEOUT;
 }
 
-static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* options)
+static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* newOptions)
 {
   tdmaSynchronized = false;
+
+  options = newOptions;
+
 
   // Initialize the packet in the TX buffer
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
@@ -364,45 +359,3 @@ uwbAlgorithm_t uwbTwrTagAlgorithm = {
   .init = twrTagInit,
   .onEvent = twrTagOnEvent,
 };
-
-LOG_GROUP_START(ranging)
-LOG_ADD(LOG_FLOAT, distance1, &distance[0])
-LOG_ADD(LOG_FLOAT, distance2, &distance[1])
-LOG_ADD(LOG_FLOAT, distance3, &distance[2])
-LOG_ADD(LOG_FLOAT, distance4, &distance[3])
-LOG_ADD(LOG_FLOAT, distance5, &distance[4])
-LOG_ADD(LOG_FLOAT, distance6, &distance[5])
-LOG_ADD(LOG_FLOAT, distance7, &distance[6])
-LOG_ADD(LOG_FLOAT, distance8, &distance[7])
-LOG_ADD(LOG_FLOAT, pressure1, &pressures[0])
-LOG_ADD(LOG_FLOAT, pressure2, &pressures[1])
-LOG_ADD(LOG_FLOAT, pressure3, &pressures[2])
-LOG_ADD(LOG_FLOAT, pressure4, &pressures[3])
-LOG_ADD(LOG_FLOAT, pressure5, &pressures[4])
-LOG_ADD(LOG_FLOAT, pressure6, &pressures[5])
-LOG_ADD(LOG_FLOAT, pressure7, &pressures[6])
-LOG_ADD(LOG_FLOAT, pressure8, &pressures[7])
-LOG_ADD(LOG_UINT16, state, &rangingState)
-LOG_GROUP_STOP(ranging)
-
-PARAM_GROUP_START(anchorpos)
-PARAM_ADD(PARAM_FLOAT, anchor0x, &anchorPosition[0].x)
-PARAM_ADD(PARAM_FLOAT, anchor0y, &anchorPosition[0].y)
-PARAM_ADD(PARAM_FLOAT, anchor0z, &anchorPosition[0].z)
-PARAM_ADD(PARAM_FLOAT, anchor1x, &anchorPosition[1].x)
-PARAM_ADD(PARAM_FLOAT, anchor1y, &anchorPosition[1].y)
-PARAM_ADD(PARAM_FLOAT, anchor1z, &anchorPosition[1].z)
-PARAM_ADD(PARAM_FLOAT, anchor2x, &anchorPosition[2].x)
-PARAM_ADD(PARAM_FLOAT, anchor2y, &anchorPosition[2].y)
-PARAM_ADD(PARAM_FLOAT, anchor2z, &anchorPosition[2].z)
-PARAM_ADD(PARAM_FLOAT, anchor3x, &anchorPosition[3].x)
-PARAM_ADD(PARAM_FLOAT, anchor3y, &anchorPosition[3].y)
-PARAM_ADD(PARAM_FLOAT, anchor3z, &anchorPosition[3].z)
-PARAM_ADD(PARAM_FLOAT, anchor4x, &anchorPosition[4].x)
-PARAM_ADD(PARAM_FLOAT, anchor4y, &anchorPosition[4].y)
-PARAM_ADD(PARAM_FLOAT, anchor4z, &anchorPosition[4].z)
-PARAM_ADD(PARAM_FLOAT, anchor5x, &anchorPosition[5].x)
-PARAM_ADD(PARAM_FLOAT, anchor5y, &anchorPosition[5].y)
-PARAM_ADD(PARAM_FLOAT, anchor5z, &anchorPosition[5].z)
-PARAM_ADD(PARAM_UINT8, enable, &anchorPositionOk)
-PARAM_GROUP_STOP(anchorpos)
