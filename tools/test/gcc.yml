@@ -33,6 +33,7 @@ compiler:
       - 'src/modules/interface'
       - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F'
       - 'src/hal/interface/'
+      - 'test/testSupport/'
   defines:
     prefix: '-D'
     items:

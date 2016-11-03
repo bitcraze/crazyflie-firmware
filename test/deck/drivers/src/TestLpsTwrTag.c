@@ -5,14 +5,11 @@
 #include "unity.h"
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
+#include "dw1000Mocks.h"
 
 
 static dwDevice_t dev;
 static lpsAlgoOptions_t options;
-
-static void dwGetData_ExpectAndCopyData(dwDevice_t* expDev, const packet_t* rxPacket, unsigned int expDataLength);
-static void dwGetTransmitTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time);
-static void dwGetReceiveTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time);
 
 static void setTime(uint8_t* data, const dwTime_t* time);
 static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
@@ -37,15 +34,11 @@ static lpsAlgoOptions_t defaultOptions = {
   .anchorPositionOk = false
 };
 
-static int dwGetDataMockCallIndex = 0;
-static int dwGetTransmitTimestampMockCallIndex = 0;
-static int dwGetReceiveTimestampMockCallIndex = 0;
-
 
 void setUp(void) {
-  dwGetDataMockCallIndex = 0;
-  dwGetTransmitTimestampMockCallIndex = 0;
-  dwGetReceiveTimestampMockCallIndex = 0;
+  dwGetData_resetMock();
+  dwGetTransmitTimestamp_resetMock();
+  dwGetReceiveTimestamp_resetMock();
 
   memcpy(&options, &defaultOptions, sizeof(options));
   uwbTwrTagAlgorithm.init(&dev, &options);
@@ -230,83 +223,6 @@ void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
 // TODO krri verify asl
 // TODO krri verify rangingState and failedRanding after timeouts
 
-
-// dwGetData mock /////////////////////////////////////////////////////////////
-
-#define DW_GET_DATA_MAX_CALLS 2
-static struct {
-  dwDevice_t* expectedDev;
-  unsigned int expectedDataLength;
-  packet_t packet;
-} dwGetDataContexts[DW_GET_DATA_MAX_CALLS];
-
-
-static void dwGetDataMockCallback(dwDevice_t* actualDev, uint8_t* data, unsigned int actualDataLength, int cmock_num_calls) {
-  TEST_ASSERT_EQUAL_PTR(dwGetDataContexts[cmock_num_calls].expectedDev, actualDev);
-  TEST_ASSERT_EQUAL_UINT(dwGetDataContexts[cmock_num_calls].expectedDataLength, actualDataLength);
-
-  memcpy(data, &dwGetDataContexts[cmock_num_calls].packet, actualDataLength);
-}
-
-static void dwGetData_ExpectAndCopyData(dwDevice_t* expDev, const packet_t* rxPacket, unsigned int expDataLength) {
-  TEST_ASSERT_TRUE(dwGetDataMockCallIndex < DW_GET_DATA_MAX_CALLS);
-
-  dwGetDataContexts[dwGetDataMockCallIndex].expectedDev = expDev;
-  dwGetDataContexts[dwGetDataMockCallIndex].expectedDataLength = expDataLength;
-  memcpy(&dwGetDataContexts[dwGetDataMockCallIndex].packet, rxPacket, sizeof(packet_t));
-
-  dwGetData_StubWithCallback(dwGetDataMockCallback);
-
-  dwGetDataMockCallIndex++;
-}
-
-
-// dwGetTransmitTimestamp mock ////////////////////////////////////////////////
-#define DW_GET_TRANSMIT_TIMESTAMP_MAX_CALLS 2
-static struct {
-  dwDevice_t* expectedDev;
-  dwTime_t time;
-} dwGetTransmitTimestampContexts[DW_GET_TRANSMIT_TIMESTAMP_MAX_CALLS];
-
-static void dwGetTransmitTimestampMockCallback(dwDevice_t* actualDev, dwTime_t* time, int cmock_num_calls) {
-  TEST_ASSERT_EQUAL_PTR(dwGetTransmitTimestampContexts[cmock_num_calls].expectedDev, actualDev);
-  memcpy(time, &dwGetTransmitTimestampContexts[cmock_num_calls].time, sizeof(dwTime_t));
-}
-
-static void dwGetTransmitTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time) {
-  TEST_ASSERT_TRUE(dwGetTransmitTimestampMockCallIndex < DW_GET_TRANSMIT_TIMESTAMP_MAX_CALLS);
-
-  dwGetTransmitTimestampContexts[dwGetTransmitTimestampMockCallIndex].expectedDev = expDev;
-  memcpy(&dwGetTransmitTimestampContexts[dwGetTransmitTimestampMockCallIndex].time, time, sizeof(dwTime_t));
-
-  dwGetTransmitTimestamp_StubWithCallback(dwGetTransmitTimestampMockCallback);
-
-  dwGetTransmitTimestampMockCallIndex++;
-}
-
-
-// dwGetReceiveTimestamp mock /////////////////////////////////////////////////
-#define DW_GET_RECEIVE_TIMESTAMP_MAX_CALLS 2
-static struct {
-  dwDevice_t* expectedDev;
-  dwTime_t time;
-} dwGetReceiveTimestampContexts[DW_GET_RECEIVE_TIMESTAMP_MAX_CALLS];
-
-static void dwGetReceiveTimestampMockCallback(dwDevice_t* actualDev, dwTime_t* time, int cmock_num_calls) {
-  TEST_ASSERT_EQUAL_PTR(dwGetReceiveTimestampContexts[cmock_num_calls].expectedDev, actualDev);
-  memcpy(time, &dwGetReceiveTimestampContexts[cmock_num_calls].time, sizeof(dwTime_t));
-}
-
-static void dwGetReceiveTimestamp_ExpectAndCopyData(dwDevice_t* expDev, const dwTime_t* time) {
-  TEST_ASSERT_TRUE(dwGetReceiveTimestampMockCallIndex < DW_GET_RECEIVE_TIMESTAMP_MAX_CALLS);
-
-  dwGetReceiveTimestampContexts[dwGetReceiveTimestampMockCallIndex].expectedDev = expDev;
-  memcpy(&dwGetReceiveTimestampContexts[dwGetReceiveTimestampMockCallIndex].time, time, sizeof(dwTime_t));
-
-  dwGetReceiveTimestamp_StubWithCallback(dwGetReceiveTimestampMockCallback);
-
-  dwGetReceiveTimestampMockCallIndex++;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
