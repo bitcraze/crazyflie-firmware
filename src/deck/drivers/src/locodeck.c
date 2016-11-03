@@ -73,7 +73,21 @@ static lpsAlgoOptions_t algoOptions = {
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
 
-  .anchorPositionOk = false
+  .anchorPositionOk = false,
+
+  // To set a static anchor position from startup, uncomment and modify the
+  // following code:
+/*
+  .anchorPosition = {
+    {x: 0.99, y: 1.49, z: 1.80},
+    {x: 0.99, y: 3.29, z: 1.80},
+    {x: 4.67, y: 2.54, z: 1.80},
+    {x: 0.59, y: 2.27, z: 0.20},
+    {x: 4.70, y: 3.38, z: 0.20},
+    {x: 4.70, y: 1.14, z: 0.20},
+  },
+  .anchorPositionOk = true,
+*/
 };
 
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
