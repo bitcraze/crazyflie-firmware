@@ -48,11 +48,22 @@
 #include "nvicconf.h"
 
 #include "locodeck.h"
-#include "lpsTwrTag.h"
+
+#if LPS_TDOA_ENABLE
+  #include "lpsTdoaTag.h"
+#else
+  #include "lpsTwrTag.h"
+#endif
+
 
 #define CS_PIN DECK_GPIO_IO1
 
-#define RX_TIMEOUT 1000
+#if LPS_TDOA_ENABLE
+  #define RX_TIMEOUT 10000
+#else
+  #define RX_TIMEOUT 1000
+#endif
+
 
 #define ANTENNA_OFFSET 154.6   // In meter
 
@@ -72,7 +83,7 @@ static lpsAlgoOptions_t algoOptions = {
   },
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
-
+ 
   .anchorPositionOk = false,
 
   // To set a static anchor position from startup, uncomment and modify the
@@ -90,7 +101,11 @@ static lpsAlgoOptions_t algoOptions = {
 */
 };
 
+#if LPS_TDOA_ENABLE
+static uwbAlgorithm_t *algorithm = &uwbTdoaTagAlgorithm;
+#else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
+#endif
 
 static bool isInit = false;
 static xSemaphoreHandle spiSemaphore;

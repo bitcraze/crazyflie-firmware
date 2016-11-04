@@ -26,6 +26,7 @@
 
 #include <string.h>
 
+#include "log.h"
 #include "lpsTdoaTag.h"
 
 #include "stabilizer_types.h"
@@ -50,7 +51,7 @@ static uint64_t dwTimestampToUint64(uint8_t *ts) {
   return timestamp.full;
 }
 
-static uint32_t rxcallback(dwDevice_t *dev) {
+static void rxcallback(dwDevice_t *dev) {
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
 
@@ -59,7 +60,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
   dwTime_t arrival = {.full = 0};
   dwGetReceiveTimestamp(dev, &arrival);
 
-  locoAddress_t anchor = rxPacket.sourceAddress;
+  uint8_t anchor = rxPacket.sourceAddress & 0xff;
 
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
@@ -69,14 +70,14 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       double frameTimeInLocalClock = arrival.full - arrivals[MASTER].full;
 
       localClockCorrection = 1.0;
-      if (frameTimeInLocalClock != 0) {
+      if (frameTimeInLocalClock != 0.0) {
         localClockCorrection = frameTimeInMasterClock / frameTimeInLocalClock;
       }
     } else {
       double frameTimeInAnchorClock = dwTimestampToUint64(packet->timestamps[MASTER]) - dwTimestampToUint64(rxPacketBuffer[anchor].timestamps[MASTER]);
 
       double anchorClockCorrection = 1.0;
-      if (frameTimeInAnchorClock != 0) {
+      if (frameTimeInAnchorClock != 0.0) {
         anchorClockCorrection = frameTimeInMasterClock / frameTimeInAnchorClock;
       }
 
@@ -99,16 +100,25 @@ static uint32_t rxcallback(dwDevice_t *dev) {
     arrivals[anchor].full = arrival.full;
     memcpy(&rxPacketBuffer[anchor], rxPacket.payload, sizeof(rangePacket_t));
   }
-
-
-  return 0;
 }
 
+static void setRadioInReceiveMode(dwDevice_t *dev) {
+  dwNewReceive(dev);
+  dwSetDefaults(dev);
+  dwStartReceive(dev);
+}
 
 static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   switch(event) {
     case eventPacketReceived:
-      return rxcallback(dev);
+      rxcallback(dev);
+      setRadioInReceiveMode(dev);
+      break;
+    case eventTimeout:
+      setRadioInReceiveMode(dev);
+      break;
+    case eventReceiveTimeout:
+      setRadioInReceiveMode(dev);
       break;
     default:
       ASSERT_FAILED();
@@ -125,3 +135,14 @@ uwbAlgorithm_t uwbTdoaTagAlgorithm = {
   .init = Initialize,
   .onEvent = onEvent,
 };
+
+
+LOG_GROUP_START(tdoa)
+LOG_ADD(LOG_FLOAT, d01, &uwbTdoaDistDiff[1])
+LOG_ADD(LOG_FLOAT, d02, &uwbTdoaDistDiff[2])
+LOG_ADD(LOG_FLOAT, d03, &uwbTdoaDistDiff[3])
+LOG_ADD(LOG_FLOAT, d04, &uwbTdoaDistDiff[4])
+LOG_ADD(LOG_FLOAT, d05, &uwbTdoaDistDiff[5])
+LOG_ADD(LOG_FLOAT, d06, &uwbTdoaDistDiff[6])
+LOG_ADD(LOG_FLOAT, d07, &uwbTdoaDistDiff[7])
+LOG_GROUP_STOP(tdoa)

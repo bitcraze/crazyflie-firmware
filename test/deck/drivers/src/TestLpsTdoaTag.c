@@ -13,7 +13,9 @@ static lpsAlgoOptions_t options;
 static const uint64_t NS = 0;
 static const int dataLength = sizeof(packet_t);
 
-static void mockMessageFromAnchor(int anchorIndex, uint64_t rxTime, uint64_t t0, uint64_t t1, uint64_t t2, uint64_t t3, uint64_t t4, uint64_t t5, uint64_t t6, uint64_t t7);
+static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint64_t t0, uint64_t t1, uint64_t t2, uint64_t t3, uint64_t t4, uint64_t t5, uint64_t t6, uint64_t t7);
+static void mockRadioSetToReceiveMode();
+
 static uint64_t drift(float factor, uint64_t time);
 
 void setUp(void) {
@@ -174,6 +176,41 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift() {
 }
 
 
+void testPacketReceivedEventShouldSetTheRadioInReceiveMode() {
+  // Fixture
+  // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
+  mockMessageFromAnchor(0, NS, NS, NS, NS, NS, NS, NS, NS, NS);
+
+  // Test
+  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+}
+
+
+void testEventTimeoutShouldSetTheRadioInReceiveMode() {
+  // Fixture
+  mockRadioSetToReceiveMode();
+
+  // Test
+  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventTimeout);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+}
+
+void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
+  // Fixture
+  mockRadioSetToReceiveMode();
+
+  // Test
+  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventReceiveTimeout);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+}
+
 ////////////////////////////////////////////
 
 static dwTime_t ts(uint64_t time) {
@@ -186,11 +223,11 @@ static void setTimestampInPayload(uint64_t time, uint8_t* dest) {
   memcpy(dest, timestamp.raw, 5);
 }
 
-static void mockMessageFromAnchor(int anchorIndex, uint64_t rxTime, uint64_t t0, uint64_t t1, uint64_t t2, uint64_t t3, uint64_t t4, uint64_t t5, uint64_t t6, uint64_t t7) {
+static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint64_t t0, uint64_t t1, uint64_t t2, uint64_t t3, uint64_t t4, uint64_t t5, uint64_t t6, uint64_t t7) {
   packet_t packet;
   MAC80215_PACKET_INIT(packet, MAC802154_TYPE_DATA);
 
-  packet.sourceAddress = anchorIndex;
+  packet.sourceAddress = 0xbccf000000000000 | anchorIndex;
 
   rangePacket_t* payload = (rangePacket_t*)&packet.payload;
   payload->type = 0x21;
@@ -208,8 +245,16 @@ static void mockMessageFromAnchor(int anchorIndex, uint64_t rxTime, uint64_t t0,
 
   dwTime_t rxTimeStr = ts(rxTime);
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
+
+  mockRadioSetToReceiveMode();
 }
 
 static uint64_t drift(float factor, uint64_t time) {
   return (uint64_t)((double)time * (double)factor);
+}
+
+static void mockRadioSetToReceiveMode() {
+  dwNewReceive_Expect(&dev);
+  dwSetDefaults_Expect(&dev);
+  dwStartReceive_Expect(&dev);
 }
