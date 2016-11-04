@@ -46,4 +46,8 @@ bool sensorsReadAcc(Axis3f *acc);
 bool sensorsReadMag(Axis3f *mag);
 bool sensorsReadBaro(baro_t *baro);
 
+// Different Acc settings
+void sensorsEnableAccPropVibrationSettings(void);
+void sensorsEnableAccNormalSettings(void);
+
 #endif //__SENSORS_H__

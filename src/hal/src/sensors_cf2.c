@@ -859,6 +859,25 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->z = ry.z;
 }
 
+void sensorsEnableAccPropVibrationSettings(void)
+{
+//  mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_460);
+//  for (uint8_t i = 0; i < 3; i++)
+//  {
+//    lpf2pInit(&accLpf[i],  1000, 500);
+//  }
+}
+
+void sensorsEnableAccNormalSettings(void)
+{
+//  mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_41);
+//  for (uint8_t i = 0; i < 3; i++)
+//  {
+//    lpf2pInit(&accLpf[i],  1000, ACCEL_LPF_CUTOFF_FREQ);
+//  }
+}
+
+
 static void applyAxis3fLpf(lpf2pData *data, Axis3f* in)
 {
   for (uint8_t i = 0; i < 3; i++) {
