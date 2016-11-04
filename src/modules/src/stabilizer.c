@@ -64,6 +64,9 @@ static ControllerType controllerType;
 typedef enum { measureNoiseFloor, measureProp, measureDone } TestState;
 static TestState testState = measureNoiseFloor;
 
+typedef enum { configureAcc, measureNoiseFloor, measureProp, evaluateResult, testDone } TestState;
+static TestState testState = configureAcc;
+
 static void stabilizerTask(void* param);
 static void testProps(sensorData_t *sensors);
 
@@ -134,12 +137,11 @@ static void stabilizerTask(void* param)
   // Initialize tick to something else then 0
   tick = 1;
 
-  sensorsEnableAccPropVibrationSettings();
-
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
-    if (testState != measureDone) {
+    if (testState != testDone)
+    {
       sensorsAcquire(&sensorData, tick);
       testProps(&sensorData);
     } else {
@@ -155,6 +157,7 @@ static void stabilizerTask(void* param)
       }
 
       getExtPosition(&state);
+      sensorsAcquire(&sensorData, tick);
       stateEstimator(&state, &sensorData, &control, tick);
       commanderGetSetpoint(&setpoint, &state);
 
@@ -206,18 +209,44 @@ static float variance(float *buffer, uint32_t length)
   return sumSq - (sum * sum) / length;
 }
 
+/** Evaluate the values from the propeller test
+ * @param low The low limit of the self test
+ * @param high The high limit of the self test
+ * @param value The value to compare with.
+ * @param string A pointer to a string describing the value.
+ * @return True if self test within low - high limit, false otherwise
+ */
+static bool evaluateTest(float low, float high, float value, uint8_t motor)
+{
+  if (value < low || value > high)
+  {
+    DEBUG_PRINT("Propeller test on M%d [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
+                motor, low, high, value);
+    return false;
+  }
+  return true;
+}
+
 
 static void testProps(sensorData_t *sensors)
 {
   static uint32_t i = 0;
-  static float accX[500];
-  static float accY[500];
-  static float accZ[500];
-  static float accVarX;
-  static float accVarY;
-  static float accVarZ;
+  static float accX[100];
+  static float accY[100];
+  static float accZ[100];
+  static float accVarX[4];
+  static float accVarY[4];
+  static float accVarZ[4];
+  static float accVarXnf;
+  static float accVarYnf;
+  static float accVarZnf;
   static int motorToTest = 0;
 
+  if (testState == configureAcc)
+  {
+    sensorsEnableAccPropVibrationSettings();
+    testState = measureNoiseFloor;
+  }
   if (testState == measureNoiseFloor)
   {
     accX[i] = sensors->acc.x;
@@ -227,11 +256,11 @@ static void testProps(sensorData_t *sensors)
     if (++i >= 100)
     {
       i = 0;
-      accVarX = variance(accX, 100);
-      accVarY = variance(accY, 100);
-      accVarZ = variance(accZ, 100);
+      accVarXnf = variance(accX, 100);
+      accVarYnf = variance(accY, 100);
+      accVarZnf = variance(accZ, 100);
       DEBUG_PRINT("Acc noise floor variance X:%f, Y:%f, Z:%f\n",
-                  accVarX, accVarY, accVarZ);
+                  accVarXnf, accVarYnf, accVarZnf);
       testState = measureProp;
     }
 
@@ -256,12 +285,11 @@ static void testProps(sensorData_t *sensors)
     }
     else if (i == 100)
     {
-      accVarX = variance(accX, 100);
-      accVarY = variance(accY, 100);
-      accVarZ = variance(accZ, 100);
-
+      accVarX[motorToTest] = variance(accX, 100);
+      accVarY[motorToTest] = variance(accY, 100);
+      accVarZ[motorToTest] = variance(accZ, 100);
       DEBUG_PRINT("Motor M%d variance X:%f, Y:%f, Z:%f\n",
-                   motorToTest+1, accVarX, accVarY, accVarZ);
+                   motorToTest+1, accVarX[motorToTest], accVarY[motorToTest], accVarZ[motorToTest]);
     }
     else if (i >= 1000)
     {
@@ -270,15 +298,27 @@ static void testProps(sensorData_t *sensors)
       if (motorToTest >= 4)
       {
         motorToTest = 0;
-        testState = measureDone;
+        testState = evaluateResult;
         sensorsEnableAccNormalSettings();
-//        testState = measureProp;
       }
     }
   }
-  else
+  else if (testState == evaluateResult)
   {
-
+    for (int m = 0; m < 4; m++)
+    {
+      if (!evaluateTest(0, 2.0f,  accVarX[m] + accVarY[m], m + 1))
+      {
+        for (int j = 0; j < 3; j++)
+        {
+          motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+          vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+          motorsBeep(m, false, 0, 0);
+          vTaskDelay(M2T(100));
+        }
+      }
+    }
+    testState = testDone;
   }
 }
 
