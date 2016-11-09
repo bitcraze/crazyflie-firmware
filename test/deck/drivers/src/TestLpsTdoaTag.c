@@ -65,6 +65,7 @@ void testDifferenceOfDistanceWithNoClockDrift() {
   uint64_t a1O = 138 * LOCODECK_TS_FREQ;
   uint64_t tO = 17 * LOCODECK_TS_FREQ;
 
+  //                    A  Arrival Time                 A0                           A1                           A2  A3  A4  A5  A6  A7
   mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS                         , NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, iTxTime1 + timeA0ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
@@ -80,6 +81,212 @@ void testDifferenceOfDistanceWithNoClockDrift() {
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
 }
 
+#define TIMER_MAX_VALUE 0x00FFFFFFFFFFul
+
+void testDifferenceOfDistanceWithNoClockDriftWithTagClockWrapping() {
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay
+  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 138 * LOCODECK_TS_FREQ;
+  uint64_t tO = 17 * LOCODECK_TS_FREQ;
+
+  // Local clock start offset
+  uint64_t localOffset = TIMER_MAX_VALUE - (iTxTime1 + timeA0ToTag + tO) - 1;
+
+  //                    A  Arrival Time                               A0                           A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, localOffset + iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, localOffset + iTxTime1 + timeA0ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, localOffset + iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, localOffset + iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
+}
+
+void testDifferenceOfDistanceWithNoClockDriftWithTagClockWrapping2() {
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay
+  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 138 * LOCODECK_TS_FREQ;
+  uint64_t tO = 17 * LOCODECK_TS_FREQ;
+
+  // Local clock start offset
+  uint64_t localOffset = TIMER_MAX_VALUE - (iTxTime2 + timeA0ToTag + tO) - 1;
+
+  //                    A  Arrival Time                               A0                           A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, localOffset + iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, localOffset + iTxTime1 + timeA0ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, localOffset + iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, localOffset + iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
+}
+
+void testDifferenceOfDistanceWithNoClockDriftWithA0ClockWrapping() {
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay
+  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 138 * LOCODECK_TS_FREQ;
+  uint64_t tO = 17 * LOCODECK_TS_FREQ;
+
+  // Local clock start offset
+  uint64_t a0Offset = TIMER_MAX_VALUE - (iTxTime1 + timeA0ToA1 + a0O) - 1;
+
+  //                    A  Arrival Time                 A0                           A1                                       A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, a0Offset + iTxTime0 + a0O  , NS                                     , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime1 + timeA0ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, a0Offset + iTxTime2 + a0O  , a0Offset + iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O                         , NS, NS, NS, NS, NS, NS);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
+}
+
+void testDifferenceOfDistanceWithNoClockDriftWithA1ClockWrapping() {
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay
+  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 138 * LOCODECK_TS_FREQ;
+  uint64_t tO = 17 * LOCODECK_TS_FREQ;
+
+  // Local clock start offset
+  uint64_t a1Offset = TIMER_MAX_VALUE - (iTxTime0 + timeA0ToA1 + a1O) - 1;
+
+  //                    A  Arrival Time                 A0                                      A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O                        , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime1 + timeA0ToTag + tO, a1Offset + iTxTime0 + timeA0ToA1 + a1O, a1Offset + iTxTime1 + a1O  , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O                        , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, a1Offset + iTxTime2 + timeA0ToA1 + a1O, a1Offset + iTxTime3 + a1O  , NS, NS, NS, NS, NS, NS);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
+}
+
+void testDifferenceOfDistanceWithNoClockDriftWithA1ClockWrapping2() {
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay
+  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 138 * LOCODECK_TS_FREQ;
+  uint64_t tO = 17 * LOCODECK_TS_FREQ;
+
+  // Local clock start offset
+  uint64_t a1Offset = TIMER_MAX_VALUE - (a1Offset + iTxTime2 + timeA0ToA1 + a1O) - 1;
+
+  //                    A  Arrival Time                 A0                                      A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O                        , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime1 + timeA0ToTag + tO, a1Offset + iTxTime0 + timeA0ToA1 + a1O, a1Offset + iTxTime1 + a1O  , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O                        , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, a1Offset + iTxTime2 + timeA0ToA1 + a1O, a1Offset + iTxTime3 + a1O  , NS, NS, NS, NS, NS, NS);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
+}
 
 void testDifferenceOfDistanceWithTwoAnchors3FramesNoDrift() {
   // Fixture
@@ -106,6 +313,7 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesNoDrift() {
   uint64_t a1O = 138 * LOCODECK_TS_FREQ;
   uint64_t tO = 17 * LOCODECK_TS_FREQ;
 
+  //                    A       Arrival Time                 A0                           A1  A2                           A3  A4  A5  A6  A7
   mockMessageFromAnchor(0     , iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS, NS                         , NS, NS, NS, NS, NS);
   mockMessageFromAnchor(anchor, iTxTime1 + timeA1ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, NS, iTxTime1 + a1O             , NS, NS, NS, NS, NS);
   mockMessageFromAnchor(0     , iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , NS, iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS);
@@ -127,7 +335,6 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesNoDrift() {
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual1);
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual2);
 }
-
 
 void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift() {
   // Fixture
@@ -153,6 +360,7 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift() {
   float aD = 1.000010;
   float tD = 0.999995;
 
+  //                    A       Arrival Time                       A0                                A1  A2  A3  A4  A5                     A6  A7
   mockMessageFromAnchor(0     , drift(tD, iTxTime0 + timeA0ToTag), iTxTime0                        , NS, NS, NS, NS, NS                   , NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime1 + timeAnToTag), drift(aD, iTxTime0 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime1)  , NS, NS);
   mockMessageFromAnchor(0     , drift(tD, iTxTime2 + timeA0ToTag), iTxTime2                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
@@ -214,7 +422,7 @@ void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
 ////////////////////////////////////////////
 
 static dwTime_t ts(uint64_t time) {
-  dwTime_t a = {.full = time};
+  dwTime_t a = {.full = time & 0x00FFFFFFFFFFul};
   return a;
 }
 
