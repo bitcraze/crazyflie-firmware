@@ -53,7 +53,7 @@ static uint64_t timestampToUint64(uint8_t *ts) {
   return timestamp.full;
 }
 
-static truncateToTimeStamp(uint64_t fullTimeStamp) {
+static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
@@ -65,7 +65,7 @@ static void rxcallback(dwDevice_t *dev) {
 
   dwTime_t arrival = {.full = 0};
   dwGetReceiveTimestamp(dev, &arrival);
-  
+
   uint8_t anchor = rxPacket.sourceAddress & 0xff;
 
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
@@ -87,18 +87,17 @@ static void rxcallback(dwDevice_t *dev) {
         anchorClockCorrection = frameTimeInMasterClock / frameTimeInAnchorClock;
       }
 
-      int64_t txAn_X = (int64_t)((double)timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]) * anchorClockCorrection);
+      int64_t txAn_X = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
       int64_t txA0_X = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
       int64_t rxAn_0 = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
-      int64_t rxA0_n = (int64_t)((double)timestampToUint64(packet->timestamps[MASTER]) * anchorClockCorrection);
+      int64_t rxA0_n = timestampToUint64(packet->timestamps[MASTER]);
 
-      int64_t rxT_0  = (int64_t)((double)arrivals[MASTER].full * localClockCorrection);
-      int64_t rxT_n  = (int64_t)((double)arrival.full * localClockCorrection);
-      int64_t txAn_X2 = (int64_t)((double)timestampToUint64(packet->timestamps[anchor]) * anchorClockCorrection);
+      int64_t rxT_0  = arrivals[MASTER].full;
+      int64_t rxT_n  = arrival.full;
+      int64_t txAn_X2 = timestampToUint64(packet->timestamps[anchor]);
 
-      int64_t tA0_n = (truncateToTimeStamp(rxAn_0 - txAn_X) - truncateToTimeStamp(txA0_X - rxA0_n)) / 2;
-
-      int64_t tT =  truncateToTimeStamp(rxT_n - rxT_0) - (tA0_n + truncateToTimeStamp(txAn_X2 - rxA0_n));
+      int64_t tA0_n = (((truncateToTimeStamp(rxA0_n - txAn_X) * anchorClockCorrection) - truncateToTimeStamp(txA0_X - rxAn_0))) / 2.0;
+      int64_t tT =  truncateToTimeStamp(rxT_n - rxT_0) * localClockCorrection - (tA0_n + truncateToTimeStamp(txAn_X2 - rxA0_n) * anchorClockCorrection);
 
       uwbTdoaDistDiff[anchor] = SPEED_OF_LIGHT * tT / LOCODECK_TS_FREQ;
     }

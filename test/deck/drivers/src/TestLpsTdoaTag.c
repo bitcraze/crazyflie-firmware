@@ -270,7 +270,7 @@ void testDifferenceOfDistanceWithNoClockDriftWithA1ClockWrapping2() {
   uint64_t tO = 17 * LOCODECK_TS_FREQ;
 
   // Local clock start offset
-  uint64_t a1Offset = TIMER_MAX_VALUE - (a1Offset + iTxTime2 + timeA0ToA1 + a1O) - 1;
+  uint64_t a1Offset = TIMER_MAX_VALUE - (iTxTime2 + timeA0ToA1 + a1O) - 1;
 
   //                    A  Arrival Time                 A0                                      A1                           A2  A3  A4  A5  A6  A7
   mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O                        , NS                         , NS, NS, NS, NS, NS, NS);
