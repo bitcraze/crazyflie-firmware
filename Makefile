@@ -196,6 +196,7 @@ endif
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 PROJ_OBJ_CF2 += lpsTdoaTag.o
+CFLAGS += -DLPS_TDOA_ENABLE
 endif
 
 #Deck tests
