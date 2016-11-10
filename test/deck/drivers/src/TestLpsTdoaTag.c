@@ -427,14 +427,12 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   float actual2 = uwbTdoaDistDiff[anchor];
 
-  printf("act1: %f, act2:%f\n", actual1, actual2);
-
   // Assert
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual1);
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual2);
 }
 
-void MackeToFix_testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0() {
+void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0() {
   // Fixture
   // Two anchors, separated by 1.0m
   // Distance from A0 to tag is 2.0m

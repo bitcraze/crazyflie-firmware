@@ -71,16 +71,6 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    // Check for lost timestamps/packages between the anchors
-//    for (int i = 0; i < LOCODECK_NR_OF_ANCHORS; i++) {
-//      uint64_t current = timestampToUint64(packet->timestamps[i]);
-//      uint64_t prev = timestampToUint64(rxPacketBuffer[anchor].timestamps[i]);
-//      //printf("c:%lu, p:%lu, d:%lu\n", current, prev, current - prev);
-//      if (prev == current) {
-//       memset(packet->timestamps[i], 0, 5);
-//      }
-//    }
-
     if (anchor == MASTER) {
       frameTimeInMasterClock = truncateToTimeStamp(timestampToUint64(packet->timestamps[MASTER]) - timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]));
       double frameTimeInLocalClock = truncateToTimeStamp(arrival.full - arrivals[MASTER].full);
@@ -97,8 +87,6 @@ static void rxcallback(dwDevice_t *dev) {
         anchorClockCorrection = frameTimeInMasterClock / frameTimeInAnchorClock;
       }
 
-      // Only update measurement if valid timestamp data
-//      if (timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]) != 0) {
         float tdoaDistDiff;
 
         int64_t txAn_X = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
@@ -115,11 +103,11 @@ static void rxcallback(dwDevice_t *dev) {
         int64_t tT =  truncateToTimeStamp(rxT_n - rxT_0) * localClockCorrection - (tA0_n + truncateToTimeStamp(txAn_X2 - rxA0_n) * anchorClockCorrection);
 
         tdoaDistDiff = SPEED_OF_LIGHT * tT / LOCODECK_TS_FREQ;
-        if (tdoaDistDiff < 300)
+        // Sanity check distances in case of missed packages
+        if (tdoaDistDiff < 300 && tdoaDistDiff > -300)
         {
           uwbTdoaDistDiff[anchor] = tdoaDistDiff;
         }
-//      }
     }
 
     arrivals[anchor].full = arrival.full;
