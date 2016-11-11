@@ -38,7 +38,6 @@
 #include "ext_position.h"
 
 #define MIN_THRUST  0
-#define IDLE_THRUST 1000
 #define MAX_THRUST  60000
 
 /**
@@ -330,7 +329,6 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
       setpoint->mode.z = modeVelocity;
       setpoint->velocity.z = rawThrust;
     } else {
-      setpoint->thrust = constrain(rawThrust, IDLE_THRUST, MAX_THRUST);
       setpoint->mode.z = modeDisable;
       setpoint->velocity.z = 0;
     }
