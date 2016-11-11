@@ -104,10 +104,9 @@
 
 typedef struct
 {
-  float desired;     //< set point
+  float desired;      //< set point
   float error;        //< error
   float prevError;    //< previous error
-  float errorMax;    //< maximum error
   float integ;        //< integral
   float deriv;        //< derivative
   float kp;           //< proportional gain
@@ -117,8 +116,7 @@ typedef struct
   float outI;         //< integral output (debugging)
   float outD;         //< derivative output (debugging)
   float iLimit;       //< integral limit
-  float iLimitLow;    //< integral limit
-  bool  iCapped;      //< true to stop integration
+  float outputLimit;  //< output limit
   float dt;           //< delta-time dt
   lpf2pData dFilter;  //< filter for D term
   bool enableDFilter; //< filter for D term enable flag
