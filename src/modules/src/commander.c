@@ -37,7 +37,8 @@
 #include "debug.h"
 #include "ext_position.h"
 
-#define MIN_THRUST  1000
+#define MIN_THRUST  0
+#define IDLE_THRUST 1000
 #define MAX_THRUST  60000
 
 /**
@@ -77,7 +78,6 @@ static CommanderCache* activeCache;
 
 static uint32_t lastUpdate;
 static bool isInactive;
-static bool thrustLocked;
 static bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
@@ -93,7 +93,7 @@ static void commanderCrtpCB(CRTPPacket* pk);
 static void commanderCacheSelectorUpdate(void);
 
 /* Private functions */
-static void commanderSetActiveThrust(uint16_t thrust)
+static void commanderSetActiveThrust(float thrust)
 {
   activeCache->targetVal[activeCache->activeSide].thrust = thrust;
 }
@@ -113,7 +113,7 @@ static void commanderSetActiveYaw(float yaw)
   activeCache->targetVal[activeCache->activeSide].yaw = yaw;
 }
 
-static uint16_t commanderGetActiveThrust(void)
+static float commanderGetActiveThrust(void)
 {
   commanderCacheSelectorUpdate();
   return activeCache->targetVal[activeCache->activeSide].thrust;
@@ -144,6 +144,8 @@ static void commanderLevelRPY(void)
 static void commanderDropToGround(void)
 {
   altHoldMode = false;
+  posHoldMode = false;
+  posSetMode = false;
   commanderSetActiveThrust(0);
   commanderLevelRPY();
 }
@@ -174,10 +176,6 @@ static void commanderCrtpCB(CRTPPacket* pk)
   crtpCache.targetVal[!crtpCache.activeSide] = *((struct CommanderCrtpValues*)pk->data);
   crtpCache.activeSide = !crtpCache.activeSide;
   crtpCache.timestamp = xTaskGetTickCount();
-
-  if (crtpCache.targetVal[crtpCache.activeSide].thrust == 0) {
-    thrustLocked = false;
-  }
 }
 
 /**
@@ -266,7 +264,6 @@ void commanderInit(void)
   activeCache = &crtpCache;
   lastUpdate = xTaskGetTickCount();
   isInactive = true;
-  thrustLocked = true;
   isInit = true;
 }
 
@@ -281,10 +278,6 @@ void commanderExtrxSet(const struct CommanderCrtpValues *val)
   extrxCache.targetVal[!extrxCache.activeSide] = *((struct CommanderCrtpValues*)val);
   extrxCache.activeSide = !extrxCache.activeSide;
   extrxCache.timestamp = xTaskGetTickCount();
-
-  if (extrxCache.targetVal[extrxCache.activeSide].thrust == 0) {
-    thrustLocked = false;
-  }
 }
 
 uint32_t commanderGetInactivityTime(void)
@@ -295,35 +288,24 @@ uint32_t commanderGetInactivityTime(void)
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 {
   // Thrust
-  uint16_t rawThrust = commanderGetActiveThrust();
-
-  if (thrustLocked || (rawThrust < MIN_THRUST)) {
-    setpoint->thrust = 0;
-  } else {
-    setpoint->thrust = min(rawThrust, MAX_THRUST);
-  }
-
-  if (altHoldMode) {
-    setpoint->thrust = 0;
-    setpoint->mode.z = modeVelocity;
-
-    setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
-  } else {
-    setpoint->mode.z = modeDisable;
-  }
+  float rawThrust = commanderGetActiveThrust();
+  setpoint->thrust = constrain(rawThrust, MIN_THRUST, MAX_THRUST);
 
   // roll/pitch
   if (posHoldMode) {
     setpoint->mode.x = modeVelocity;
     setpoint->mode.y = modeVelocity;
+    setpoint->mode.z = modeVelocity;
     setpoint->mode.roll = modeDisable;
     setpoint->mode.pitch = modeDisable;
 
     setpoint->velocity.x = commanderGetActivePitch()/30.0f;
     setpoint->velocity.y = commanderGetActiveRoll()/30.0f;
+    setpoint->velocity.z = rawThrust;
     setpoint->attitude.roll  = 0;
     setpoint->attitude.pitch = 0;
-  } else if (posSetMode && commanderGetActiveThrust() != 0) {
+    setpoint->thrust = 0;
+  } else if (posSetMode) {
     setpoint->mode.x = modeAbs;
     setpoint->mode.y = modeAbs;
     setpoint->mode.z = modeAbs;
@@ -333,7 +315,7 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 
     setpoint->position.x = -commanderGetActivePitch();
     setpoint->position.y = commanderGetActiveRoll();
-    setpoint->position.z = commanderGetActiveThrust()/1000.0f;
+    setpoint->position.z = commanderGetActiveThrust();
 
     setpoint->attitude.roll  = 0;
     setpoint->attitude.pitch = 0;
@@ -342,6 +324,16 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
   } else {
     setpoint->mode.x = modeDisable;
     setpoint->mode.y = modeDisable;
+
+    if (altHoldMode) {
+      setpoint->thrust = 0;
+      setpoint->mode.z = modeVelocity;
+      setpoint->velocity.z = rawThrust;
+    } else {
+      setpoint->thrust = constrain(rawThrust, IDLE_THRUST, MAX_THRUST);
+      setpoint->mode.z = modeDisable;
+      setpoint->velocity.z = 0;
+    }
 
     if (stabilizationModeRoll == RATE) {
       setpoint->mode.roll = modeVelocity;
