@@ -3,8 +3,11 @@
 
 #include <string.h>
 #include "unity.h"
+
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
+#include "mock_estimator_kalman.h"
+
 #include "dw1000Mocks.h"
 
 static dwDevice_t dev;
@@ -460,7 +463,8 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   //                    A       Arrival Time                       A0                                A1  A2  A3  A4  A5                     A6  A7
   mockMessageFromAnchor(0     , drift(tD, iTxTime0 + timeA0ToTag), iTxTime0                        , NS, NS, NS, NS, NS                   , NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime1 + timeAnToTag), drift(aD, iTxTime0 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime1)  , NS, NS);
-//  mockMessageFromAnchor(0     , drift(tD, iTxTime2 + timeA0ToTag), iTxTime2                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
+  // Lost packet
+  // mockMessageFromAnchor(0     , drift(tD, iTxTime2 + timeA0ToTag), iTxTime2                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime3 + timeAnToTag), drift(aD, iTxTime2 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime3)  , NS, NS);
   mockMessageFromAnchor(0     , drift(tD, iTxTime4 + timeA0ToTag), iTxTime4                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime5 + timeAnToTag), drift(aD, iTxTime4 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime5)  , NS, NS);
@@ -468,18 +472,15 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-//  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  // Lost packet
+  // uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  float actual1 = uwbTdoaDistDiff[anchor];
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  float actual2 = uwbTdoaDistDiff[anchor];
-
-  printf("act1: %f, act2:%f\n", actual1, actual2);
+  float actual = uwbTdoaDistDiff[anchor];
 
   // Assert
-//  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual1);
-  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual2);
+  TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, actual);
 }
 
 void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift() {

@@ -30,8 +30,8 @@ compiler:
       - 'src/lib/FreeRTOS/include/'
       - 'src/config/'
       - 'src/drivers/interface/'
-      - 'src/modules/interface'
-      - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F'
+      - 'src/modules/interface/'
+      - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F/'
       - 'src/hal/interface/'
       - 'test/testSupport/'
   defines:

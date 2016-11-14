@@ -31,7 +31,10 @@
 
 #include "stabilizer_types.h"
 #include "cfassert.h"
+
+#ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
+#endif // ESTIMATOR_TYPE_kalman
 
 float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
 static toaMeasurement_t lastTOA;
@@ -49,6 +52,10 @@ static double localClockCorrection = 1.0;
 #define MEASUREMENT_NOISE_STD 0.5f
 
 #define CAP_timer
+
+// The maximum diff in distances that we concider to be valid
+// Used to sanity check results and remove results that are wrong due to packet loss
+#define MAX_DISTANCE_DIFF (300.0f)
 
 static uint64_t timestampToUint64(uint8_t *ts) {
   dwTime_t timestamp = {.full = 0};
@@ -137,29 +144,29 @@ static void rxcallback(dwDevice_t *dev) {
         anchorClockCorrection = frameTimeInMasterClock / frameTimeInAnchorClock;
       }
 
-        float tdoaDistDiff;
+      float tdoaDistDiff;
 
-        int64_t txAn_X = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
-        int64_t txA0_X = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
-        int64_t rxAn_0 = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
-        int64_t rxA0_n = timestampToUint64(packet->timestamps[MASTER]);
+      int64_t txAn_X = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
+      int64_t txA0_X = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
+      int64_t rxAn_0 = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
+      int64_t rxA0_n = timestampToUint64(packet->timestamps[MASTER]);
 
-        int64_t rxT_0  = arrivals[MASTER].full;
-        int64_t rxT_n  = arrival.full;
-        int64_t txAn_X2 = timestampToUint64(packet->timestamps[anchor]);
+      int64_t rxT_0  = arrivals[MASTER].full;
+      int64_t rxT_n  = arrival.full;
+      int64_t txAn_X2 = timestampToUint64(packet->timestamps[anchor]);
 
 
-        int64_t tA0_n = (((truncateToTimeStamp(rxA0_n - txAn_X) * anchorClockCorrection) - truncateToTimeStamp(txA0_X - rxAn_0))) / 2.0;
-        int64_t txAn_A0time = (tA0_n + truncateToTimeStamp(txAn_X2 - rxA0_n) * anchorClockCorrection);
-        int64_t tT =  truncateToTimeStamp(rxT_n - rxT_0) * localClockCorrection - txAn_A0time;
+      int64_t tA0_n = (((truncateToTimeStamp(rxA0_n - txAn_X) * anchorClockCorrection) - truncateToTimeStamp(txA0_X - rxAn_0))) / 2.0;
+      int64_t txAn_A0time = (tA0_n + truncateToTimeStamp(txAn_X2 - rxA0_n) * anchorClockCorrection);
+      int64_t tT =  truncateToTimeStamp(rxT_n - rxT_0) * localClockCorrection - txAn_A0time;
 
-        tdoaDistDiff = SPEED_OF_LIGHT * tT / LOCODECK_TS_FREQ;
-        // Sanity check distances in case of missed packages
-        if (tdoaDistDiff > -300.0f && tdoaDistDiff < 300.0f)
-        {
-          uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-          enqueueTDOA(anchor, rxT_n, txAn_A0time);
-        }
+      tdoaDistDiff = SPEED_OF_LIGHT * tT / LOCODECK_TS_FREQ;
+
+      // Sanity check distances in case of missed packages
+      if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
+        uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+        enqueueTDOA(anchor, rxT_n, txAn_A0time);
+      }
     }
 
     arrivals[anchor].full = arrival.full;
