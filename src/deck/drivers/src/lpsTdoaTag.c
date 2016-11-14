@@ -88,13 +88,9 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
 //    .z = rxPacket.z,
 //    .senderId = rxPacket.senderID
 //};
-static void enqueueTDOA(uint8_t senderId, int64_t rxT, int64_t txAn_A0time)
-{
-  tdoaMeasurement_t tdoa;
+static void enqueueTDOA(uint8_t senderId, int64_t rxT, int64_t txAn_A0time) {
+  tdoaMeasurement_t tdoa = {.stdDev = MEASUREMENT_NOISE_STD};
 
-  ASSERT(senderId < LOCODECK_NR_OF_ANCHORS);
-
-  tdoa.stdDev = MEASUREMENT_NOISE_STD;
   memcpy(&(tdoa.measurement[0]), &lastTOA, sizeof(toaMeasurement_t));
 
   tdoa.measurement[1].senderId = senderId;

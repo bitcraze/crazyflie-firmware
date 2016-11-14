@@ -14,12 +14,7 @@ DEFAULT_CONFIG_FILE = './tools/test/gcc.yml'
 configure_toolchain(DEFAULT_CONFIG_FILE)
 
 task :unit do
-  if ARGV.length <= 1
-    run_tests(get_unit_test_files)
-  else
-    test_files = ARGV[1..-1]
-    run_tests(test_files)
-  end
+  parse_and_run_tests(ARGV[1..-1])
 end
 
 desc "Generate test summary"

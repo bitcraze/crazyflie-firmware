@@ -170,7 +170,20 @@ module RakefileHelpers
     raise "There were failures" if (summary.failures > 0)
   end
 
-  def run_tests(test_files)
+  def parse_and_run_tests(args)
+    test_files = find_test_files_in_args(args)
+
+    # No file names found in the args, find all files that are unit test files
+    if test_files.length == 0
+      test_files = get_unit_test_files
+    end
+
+    defines = find_defines_in_args(args)
+
+    run_tests(test_files, defines)
+  end
+
+  def run_tests(test_files, defines)
 
     report 'Running system tests...'
 
@@ -179,6 +192,7 @@ module RakefileHelpers
     test_defines = ['TEST']
     $cfg['compiler']['defines']['items'] = [] if $cfg['compiler']['defines']['items'].nil?
     $cfg['compiler']['defines']['items'] << 'TEST'
+    $cfg['compiler']['defines']['items'].concat defines
 
     include_dirs = get_local_include_dirs
 
@@ -274,4 +288,52 @@ module RakefileHelpers
     link_it(main_base, obj_list)
   end
 
+  # Any argument without '=' in it will be considered to be a file name
+  def find_test_files_in_args(args)
+    args.select do |arg|
+      not arg.include? '='
+    end
+  end
+
+  # Parse the arguments and find all defines that are passed in on the command line
+  # We support two formats
+  # 1. SOME_DEF=SOME_VALUE ==> generate define based on context
+  # 2. "EXTRA_CFLAGS=-DFIRST_DEF -DSECOND_DEF" ==> just set the define(s) in the list
+  def find_defines_in_args(args)
+    non_files = args.select do |arg|
+      arg.include? '='
+    end
+
+    defines = []
+    non_files.each do |arg|
+      parts = arg.split "="
+
+      if parts[0] == "EXTRA_CFLAGS"
+        defines.concat parse_cflags(parts[1])
+      else
+        defines.concat handle_make_arg(parts[0], parts[1])
+      end
+    end
+    return defines
+  end
+
+  def parse_cflags(flags)
+    flags.split(' ').map do |flag|
+      # Remove '-D' and return the rest of the string
+      flag[2..-1]
+    end
+  end
+
+  def handle_make_arg(name, value)
+    case name
+    when 'PLATFORM'
+      return ['PLATFORM_' + value]
+    when 'ESTIMATOR'
+      return ['ESTIMATOR_TYPE_' + value]
+    when 'DEBUG'
+      return ['DEBUG=' + value]
+    else
+      []
+    end
+  end
 end

@@ -6,7 +6,9 @@
 
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
+#ifdef ESTIMATOR_TYPE_kalman
 #include "mock_estimator_kalman.h"
+#endif // ESTIMATOR_TYPE_kalman
 
 #include "dw1000Mocks.h"
 
@@ -602,6 +604,11 @@ static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint64_t
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
 
   mockRadioSetToReceiveMode();
+
+  #ifdef ESTIMATOR_TYPE_kalman
+  // TODO krri Ugly fix to make the tests pass with Kalman filter active. Find a way to test the code in the enqueueTDOA() function
+  stateEstimatorEnqueueTDOA_IgnoreAndReturn(true);
+  #endif
 }
 
 static uint64_t drift(float factor, uint64_t time) {

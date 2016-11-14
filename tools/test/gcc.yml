@@ -70,6 +70,7 @@ colour: true
 :cmock:
   :plugins:
     - :ignore_arg
+    - :ignore
     - :array
     - :callback
   :mock_path: *mocks_path

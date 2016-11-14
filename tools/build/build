@@ -3,5 +3,5 @@ set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-${scriptDir}/test
+${scriptDir}/test "${@}"
 ${scriptDir}/make "${@}"
