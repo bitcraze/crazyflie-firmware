@@ -330,6 +330,10 @@ module RakefileHelpers
       return ['PLATFORM_' + value]
     when 'ESTIMATOR'
       return ['ESTIMATOR_TYPE_' + value]
+    when 'CONTROLLER'
+      return ['CONTROLLER_TYPE_' + value]
+    when 'POWER_DISTRIBUTION'
+      return ['POWER_DISTRIBUTION_TYPE_' + value]
     when 'DEBUG'
       return ['DEBUG=' + value]
     else
