@@ -7,6 +7,17 @@
 #include "mock_cfassert.h"
 #include "dw1000Mocks.h"
 
+#ifdef ESTIMATOR_TYPE_kalman
+// #include "mock_arm_math.h"
+
+// TODO krri The mocking FW can not handle the arm_math.h file, it crashes while parsing it. We gave to use manual mocks instead.
+// TODO krri Temporarily fix to make tests pass, add test code for the kalman part of rxcallback()
+#include "arm_math.h"
+void arm_std_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
+void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
+
+#include "mock_estimator_kalman.h"
+#endif
 
 static dwDevice_t dev;
 static lpsAlgoOptions_t options;

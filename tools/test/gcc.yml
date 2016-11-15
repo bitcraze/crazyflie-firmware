@@ -10,6 +10,7 @@ compiler:
     - '-Wall'
     - '-Wextra'
     - '-Wunused-parameter'
+    - '-Wmissing-braces'
     - '-Wno-address'
     - '-std=c11'
     - '-pedantic'
@@ -34,6 +35,7 @@ compiler:
       - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F/'
       - 'src/hal/interface/'
       - 'test/testSupport/'
+      - 'vendor/CMSIS/CMSIS/Include/'
   defines:
     prefix: '-D'
     items:
@@ -41,6 +43,7 @@ compiler:
       - 'UNITY_SUPPORT_64'
       - 'HSI48_VALUE="((uint32_t)48000000)"'
       - 'STM32F072xB'
+      - 'ARM_MATH_CM4'
   object_files:
     prefix: '-o'
     extension: '.o'
