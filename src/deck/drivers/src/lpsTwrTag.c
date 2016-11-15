@@ -29,6 +29,11 @@
 
 #include "lpsTwrTag.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "log.h"
+
 #include "stabilizer_types.h"
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
@@ -44,6 +49,13 @@
     size_t ptr;
   } rangingStats[LOCODECK_NR_OF_ANCHORS];
 #endif
+
+// Rangin statistics
+static uint32_t rangingPerSec[LOCODECK_NR_OF_ANCHORS];
+static float rangingSuccessRate[LOCODECK_NR_OF_ANCHORS];
+// Used to calculate above values
+static uint32_t succededRanging[LOCODECK_NR_OF_ANCHORS];
+static uint32_t failedRanging[LOCODECK_NR_OF_ANCHORS];
 
 // Timestamps for ranging
 static dwTime_t poll_tx;
@@ -201,6 +213,12 @@ void initiateRanging(dwDevice_t *dev)
 
 static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
 {
+  static uint32_t statisticStartTick = 0;
+
+  if (statisticStartTick == 0) {
+    statisticStartTick = xTaskGetTickCount();
+  }
+
   switch(event) {
     case eventPacketReceived:
       return rxcallback(dev);
@@ -216,10 +234,33 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
           options->failedRanging[current_anchor] ++;
           options->rangingState |= (1<<current_anchor);
         }
+
+        failedRanging[current_anchor]++;
       } else {
         options->rangingState |= (1<<current_anchor);
         options->failedRanging[current_anchor] = 0;
+
+        succededRanging[current_anchor]++;
       }
+
+      // Handle ranging statistic
+      if (xTaskGetTickCount() > (statisticStartTick+1000)) {
+        statisticStartTick = xTaskGetTickCount();
+
+        for (int i=0; i<LOCODECK_NR_OF_ANCHORS; i++) {
+          rangingPerSec[i] = failedRanging[i] + succededRanging[i];
+          if (rangingPerSec[i] > 0) {
+            rangingSuccessRate[i] = 100.0f*(float)succededRanging[i] / (float)rangingPerSec[i];
+          } else {
+            rangingSuccessRate[i] = 0.0f;
+          }
+
+          failedRanging[i] = 0;
+          succededRanging[i] = 0;
+        }
+      }
+
+
       ranging_complete = false;
       initiateRanging(dev);
       return MAX_TIMEOUT;
@@ -267,3 +308,7 @@ uwbAlgorithm_t uwbTwrTagAlgorithm = {
   .onEvent = twrTagOnEvent,
 };
 
+LOG_GROUP_START(twr)
+LOG_ADD(LOG_FLOAT, rangingSuccessRate0, &rangingSuccessRate[0])
+LOG_ADD(LOG_UINT32, rangingPerSec0, &rangingPerSec[0])
+LOG_GROUP_STOP(twr)

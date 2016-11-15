@@ -19,6 +19,8 @@ void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { 
 #include "mock_estimator_kalman.h"
 #endif
 
+#include "freertosMocks.h"
+
 static dwDevice_t dev;
 static lpsAlgoOptions_t options;
 
