@@ -22,6 +22,7 @@ static const int dataLength = sizeof(packet_t);
 
 static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint64_t t0, uint64_t t1, uint64_t t2, uint64_t t3, uint64_t t4, uint64_t t5, uint64_t t6, uint64_t t7);
 static void mockRadioSetToReceiveMode();
+static void ignoreKalmanEstimatorValidation();
 
 static uint64_t drift(float factor, uint64_t time);
 
@@ -78,6 +79,8 @@ void testDifferenceOfDistanceWithNoClockDrift() {
   mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -121,6 +124,8 @@ void testDifferenceOfDistanceWithNoClockDriftWithTagClockWrapping() {
   mockMessageFromAnchor(0, localOffset + iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, localOffset + iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -161,6 +166,8 @@ void testDifferenceOfDistanceWithNoClockDriftWithTagClockWrapping2() {
   mockMessageFromAnchor(1, localOffset + iTxTime1 + timeA0ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(0, localOffset + iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, localOffset + iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
+
+  ignoreKalmanEstimatorValidation();
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -203,6 +210,8 @@ void testDifferenceOfDistanceWithNoClockDriftWithA0ClockWrapping() {
   mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, a0Offset + iTxTime2 + a0O  , a0Offset + iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O                         , NS, NS, NS, NS, NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -244,6 +253,8 @@ void testDifferenceOfDistanceWithNoClockDriftWithA1ClockWrapping() {
   mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O                        , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, a1Offset + iTxTime2 + timeA0ToA1 + a1O, a1Offset + iTxTime3 + a1O  , NS, NS, NS, NS, NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -284,6 +295,8 @@ void testDifferenceOfDistanceWithNoClockDriftWithA1ClockWrapping2() {
   mockMessageFromAnchor(1, iTxTime1 + timeA0ToTag + tO, a1Offset + iTxTime0 + timeA0ToA1 + a1O, a1Offset + iTxTime1 + a1O  , NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O                        , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, a1Offset + iTxTime2 + timeA0ToA1 + a1O, a1Offset + iTxTime3 + a1O  , NS, NS, NS, NS, NS, NS);
+
+  ignoreKalmanEstimatorValidation();
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -327,6 +340,8 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesNoDrift() {
   mockMessageFromAnchor(anchor, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, NS, iTxTime3 + a1O             , NS, NS, NS, NS, NS);
   mockMessageFromAnchor(0     , iTxTime4 + timeA0ToTag + tO, iTxTime4 + a0O             , NS, iTxTime3 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS);
   mockMessageFromAnchor(anchor, iTxTime5 + timeA1ToTag + tO, iTxTime4 + timeA0ToA1 + a1O, NS, iTxTime5 + a1O             , NS, NS, NS, NS, NS);
+
+  ignoreKalmanEstimatorValidation();
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -376,6 +391,8 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA5
   mockMessageFromAnchor(0     , drift(tD, iTxTime4 + timeA0ToTag), iTxTime4                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime5 + timeAnToTag), drift(aD, iTxTime4 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime5)  , NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -423,6 +440,8 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   mockMessageFromAnchor(anchor, drift(tD, iTxTime3 + timeAnToTag), drift(aD, iTxTime2 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime3)  , NS, NS);
 //  mockMessageFromAnchor(0     , drift(tD, iTxTime4 + timeA0ToTag), iTxTime4                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime5 + timeAnToTag), drift(aD, iTxTime4 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime5)  , NS, NS);
+
+  ignoreKalmanEstimatorValidation();
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -473,6 +492,8 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   mockMessageFromAnchor(0     , drift(tD, iTxTime4 + timeA0ToTag), iTxTime4                        , NS, NS, NS, NS, iTxTime1 + timeA0ToAn, NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime5 + timeAnToTag), drift(aD, iTxTime4 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime5)  , NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -519,6 +540,8 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift() {
   mockMessageFromAnchor(0     , drift(tD, iTxTime4 + timeA0ToTag), iTxTime4                        , NS, NS, NS, NS, iTxTime3 + timeA0ToAn, NS, NS);
   mockMessageFromAnchor(anchor, drift(tD, iTxTime5 + timeAnToTag), drift(aD, iTxTime4 + timeA0ToAn), NS, NS, NS, NS, drift(aD, iTxTime5)  , NS, NS);
 
+  ignoreKalmanEstimatorValidation();
+
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -539,6 +562,8 @@ void testPacketReceivedEventShouldSetTheRadioInReceiveMode() {
   // Fixture
   // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
   mockMessageFromAnchor(0, NS, NS, NS, NS, NS, NS, NS, NS, NS);
+
+  ignoreKalmanEstimatorValidation();
 
   // Test
   uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -606,9 +631,10 @@ static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint64_t
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
 
   mockRadioSetToReceiveMode();
+}
 
+static void ignoreKalmanEstimatorValidation() {
   #ifdef ESTIMATOR_TYPE_kalman
-  // TODO krri Ugly fix to make the tests pass with Kalman filter active. Find a way to test the code in the enqueueTDOA() function
   stateEstimatorEnqueueTDOA_IgnoreAndReturn(true);
   #endif
 }
