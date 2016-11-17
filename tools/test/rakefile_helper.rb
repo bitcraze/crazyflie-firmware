@@ -171,14 +171,13 @@ module RakefileHelpers
   end
 
   def parse_and_run_tests(args)
+    defines = find_defines_in_args(args)
     test_files = find_test_files_in_args(args)
 
     # No file names found in the args, find all files that are unit test files
     if test_files.length == 0
-      test_files = get_unit_test_files
+      test_files = exclude_test_files(get_unit_test_files(), defines)
     end
-
-    defines = find_defines_in_args(args)
 
     run_tests(test_files, defines)
   end
@@ -288,56 +287,60 @@ module RakefileHelpers
     link_it(main_base, obj_list)
   end
 
-  # Any argument without '=' in it will be considered to be a file name
   def find_test_files_in_args(args)
-    args.select do |arg|
-      not arg.include? '='
+    key = 'FILES='
+    args.each do |arg|
+      if arg.start_with?(key)
+        return arg[(key.length)..-1].split(' ')
+      end
     end
   end
 
   # Parse the arguments and find all defines that are passed in on the command line
-  # We support two formats
-  # 1. SOME_DEF=SOME_VALUE ==> generate define based on context
-  # 2. "EXTRA_CFLAGS=-DFIRST_DEF -DSECOND_DEF" ==> just set the define(s) in the list
+  # Defines are part of compiler flags and start with -D, for instance -DMY_DEFINE
+  # All compiler flags are passed in as one string
   def find_defines_in_args(args)
-    non_files = args.select do |arg|
-      arg.include? '='
-    end
-
-    defines = []
-    non_files.each do |arg|
-      parts = arg.split "="
-
-      if parts[0] == "EXTRA_CFLAGS"
-        defines.concat parse_cflags(parts[1])
-      else
-        defines.concat handle_make_arg(parts[0], parts[1])
+    key = 'DEFINES='
+    args.each do |arg|
+      if arg.start_with?(key)
+        return extract_defines(arg[(key.length)..-1])
       end
     end
-    return defines
   end
 
-  def parse_cflags(flags)
-    flags.split(' ').map do |flag|
-      # Remove '-D' and return the rest of the string
-      flag[2..-1]
+  def extract_defines(arg)
+    arg.split(' ').select {|part| part.start_with?('-D')}.map {|flag| flag[2..-1]}
+  end
+
+  def exclude_test_files(files, defines)
+    files.select do |file|
+      annotation_keep_file?(file, defines)
     end
   end
 
-  def handle_make_arg(name, value)
-    case name
-    when 'PLATFORM'
-      return ['PLATFORM_' + value]
-    when 'ESTIMATOR'
-      return ['ESTIMATOR_TYPE_' + value]
-    when 'CONTROLLER'
-      return ['CONTROLLER_TYPE_' + value]
-    when 'POWER_DISTRIBUTION'
-      return ['POWER_DISTRIBUTION_TYPE_' + value]
-    when 'DEBUG'
-      return ['DEBUG=' + value]
-    else
-      []
+
+  # WARNING This implementation is fairly brittle. Basically only intended for cases such as
+  # // @IGNORE_IF_NOT PLATFORM_CF2
+  # Ignores values of defines, so this would fail and keep the file
+  # param to gradle: -DMYDEFINE=0
+  # // @IGNORE_IF_NOT MYDEFINE
+  def annotation_keep_file?(file, defines)
+    ignore_str = '@IGNORE_IF_NOT'
+
+    File.foreach( file ) do |line|
+      if line.include? ignore_str
+        tokens = line.split(' ')
+        index = tokens.index ignore_str
+
+        if tokens.length >= (index + 2)
+          condition = tokens[index + 1]
+          return defines.detect {|define| define == condition}
+        else
+          return false
+        end
+      end
     end
+
+    return true
   end
 end

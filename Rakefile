@@ -14,6 +14,9 @@ DEFAULT_CONFIG_FILE = './tools/test/gcc.yml'
 configure_toolchain(DEFAULT_CONFIG_FILE)
 
 task :unit do
+  # This prevents all argumets after 'unit' to be interpreted as targets by rake
+  ARGV.each { |a| task a.to_sym do ; end }
+
   if ARGV.length == 0
     parse_and_run_tests([])
   else

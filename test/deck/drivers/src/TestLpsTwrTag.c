@@ -1,3 +1,5 @@
+// @IGNORE_IF_NOT PLATFORM_CF2
+
 // File under test lpsTwrTag.h
 #include "lpsTwrTag.h"
 
