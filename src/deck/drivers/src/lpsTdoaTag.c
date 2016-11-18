@@ -36,10 +36,11 @@
 #include "estimator_kalman.h"
 #endif // ESTIMATOR_TYPE_kalman
 
-float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
-static toaMeasurement_t lastTOA;
 
 static lpsAlgoOptions_t* options;
+
+float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
+static toaMeasurement_t lastTOA;
 
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
 static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
@@ -47,13 +48,23 @@ static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
 static double frameTime_in_cl_M = 0.0;
 static double clockCorrection_T_To_M = 1.0;
 
-#define MASTER 0
+static int64_t tagClockWrapOffset = 0;
+static int64_t tagClockLatestTime = 0;
 
+static int64_t masterClockWrapOffset = 0;
+static int64_t masterClockLatestTime = 0;
+
+typedef struct {
+  int64_t offset;
+  int64_t latestTime;
+} clockWrap_t;
+
+static clockWrap_t clockWrapTag, clockWrapMaster;
+
+#define MASTER 0
 #define MEASUREMENT_NOISE_STD 0.5f
 
-#define CAP_timer
-
-// The maximum diff in distances that we concider to be valid
+// The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
 #define MAX_DISTANCE_DIFF (300.0f)
 
@@ -68,37 +79,27 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
-//tdoaMeasurement_t tdoa;
-//
-//tdoa.stdDev = MEASUREMENT_NOISE_STD;
-//memcpy(&(tdoa.measurement[1]), &TOA, sizeof(toaMeasurement_t));
-//memcpy(&(tdoa.measurement[0]), &lastTOA, sizeof(toaMeasurement_t));
-//memcpy(&lastTOA, &TOA, sizeof(toaMeasurement_t));
-//
-//stateEstimatorEnqueueTDOA(&tdoa);
-//
-// From:Michael Hamer
-// TOA is the current packet that has just come in
-//
-//toaMeasurement_t TOA = {
-//    .rx = sysRxTime,
-//    .tx = rxPacket.sysTxTime,
-//    .x = rxPacket.x,
-//    .y = rxPacket.y,
-//    .z = rxPacket.z,
-//    .senderId = rxPacket.senderID
-//};
-static void enqueueTDOA(uint8_t senderId, int64_t rxT, int64_t txAn_A0time) {
+static int64_t eliminateClockWrap(clockWrap_t* data, int64_t time) {
+  if ((time < data->latestTime)) {
+    data->offset += 0x10000000000;
+  }
+
+  data->latestTime = time;
+
+  return time + data->offset;
+}
+
+static void enqueueTDOA(uint8_t anchor, int64_t rxAn_by_T_in_cl_T, int64_t txAn_in_cl_M) {
   tdoaMeasurement_t tdoa = {.stdDev = MEASUREMENT_NOISE_STD};
 
   memcpy(&(tdoa.measurement[0]), &lastTOA, sizeof(toaMeasurement_t));
 
-  tdoa.measurement[1].senderId = senderId;
-  tdoa.measurement[1].rx = rxT;
-  tdoa.measurement[1].tx = txAn_A0time;
-  tdoa.measurement[1].x = options->anchorPosition[senderId].x;
-  tdoa.measurement[1].y = options->anchorPosition[senderId].y;
-  tdoa.measurement[1].z = options->anchorPosition[senderId].z;
+  tdoa.measurement[1].senderId = anchor;
+  tdoa.measurement[1].rx = eliminateClockWrap(&clockWrapTag, rxAn_by_T_in_cl_T);
+  tdoa.measurement[1].tx = eliminateClockWrap(&clockWrapMaster, txAn_in_cl_M);
+  tdoa.measurement[1].x = options->anchorPosition[anchor].x;
+  tdoa.measurement[1].y = options->anchorPosition[anchor].y;
+  tdoa.measurement[1].z = options->anchorPosition[anchor].z;
 
   memcpy(&lastTOA, &tdoa.measurement[1], sizeof(toaMeasurement_t));
 #ifdef ESTIMATOR_TYPE_kalman
@@ -148,7 +149,7 @@ static void rxcallback(dwDevice_t *dev) {
 
       int64_t txAn_in_cl_An = timestampToUint64(packet->timestamps[anchor]);
 
-      double frameTime_in_cl_An = truncateToTimeStamp(rxM_by_An_in_cl_An) - previuos_rxM_by_An_in_cl_An;
+      double frameTime_in_cl_An = truncateToTimeStamp(rxM_by_An_in_cl_An - previuos_rxM_by_An_in_cl_An);
 
       double clockCorrection_An_To_M = 1.0;
       if (frameTime_in_cl_An != 0.0) {
@@ -203,6 +204,24 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
+
+  // Reset module state. Needed by unit tests
+  memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
+  memset(&lastTOA, 0, sizeof(lastTOA));
+  memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
+  memset(arrivals, 0, sizeof(arrivals));
+
+  frameTime_in_cl_M = 0.0;
+  clockCorrection_T_To_M = 1.0;
+
+  tagClockWrapOffset = 0;
+  tagClockLatestTime = 0;
+
+  masterClockWrapOffset = 0;
+  masterClockLatestTime = 0;
+
+  memset(&clockWrapTag, 0, sizeof(clockWrapTag));
+  memset(&clockWrapMaster, 0, sizeof(clockWrapMaster));
 }
 #pragma GCC diagnostic pop
 

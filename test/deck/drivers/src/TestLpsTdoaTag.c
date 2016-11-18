@@ -17,7 +17,16 @@
 #define TIMER_MAX_VALUE 0x00FFFFFFFFFFul
 
 static dwDevice_t dev;
-static lpsAlgoOptions_t options;
+static lpsAlgoOptions_t options = {
+  .anchorPosition = {
+    {.x = 0.99, .y = 1.49, .z = 1.80},
+    {.x = 0.99, .y = 3.29, .z = 1.80},
+    {.x = 4.67, .y = 2.54, .z = 1.80},
+    {.x = 0.59, .y = 2.27, .z = 0.20},
+    {.x = 4.70, .y = 3.38, .z = 0.20},
+    {.x = 4.70, .y = 1.14, .z = 0.20},
+  },
+};
 
 static const uint64_t NS = 0;
 static const int dataLength = sizeof(packet_t);
@@ -109,7 +118,6 @@ void testKalmanEstimatorWithNoClockDrift() {
   // Two anchors (A0 and A1), separated by 1.0m
   // Distance from A0 to tag is 2.0m
   // Distance from A1 to tag is 2.5m
-  float expectedDiff = 0.5;
 
   // Ideal times in universal clock (A0)
   uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
@@ -146,6 +154,7 @@ void testKalmanEstimatorWithNoClockDrift() {
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
+  // Nothing here, verification in mocks
 }
 
 
@@ -190,6 +199,150 @@ void testDifferenceOfDistanceWithNoClockDriftWithTagClockWrapping() {
 
   // Assert
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDiff, uwbTdoaDistDiff[1]);
+}
+
+void testKalmanEstimatorWithNoClockDriftWithTagClockWrapping() {
+  #ifndef ESTIMATOR_TYPE_kalman
+  TEST_IGNORE();
+  #endif
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay.
+  // Intentionally less than 40 bit clock wrap around, approx 17s
+  uint64_t a0O = 3 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+  // Local clock start offset set to wrap after first message from A0
+  uint64_t tO = TIMER_MAX_VALUE - (iTxTime0 + timeA0ToTag) - 1;
+
+  //                    A  Arrival Time                 A0                           A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime1 + timeA1ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
+
+  //                  A  Arrival Time in tag clock    Tx time in A0 clock
+  mockKalmanEstimator(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O);
+  // mockKalmanEstimator(1, iTxTime1 + timeA1ToTag + tO, iTxTime1 + a0O); Not called as the packet is interpreted as packet loss and filtered out
+  mockKalmanEstimator(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O);
+  mockKalmanEstimator(1, iTxTime3 + timeA1ToTag + tO, iTxTime3 + a0O);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testKalmanEstimatorWithNoClockDriftWithA0ClockWrapping() {
+  #ifndef ESTIMATOR_TYPE_kalman
+  TEST_IGNORE();
+  #endif
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay.
+  // Intentionally less than 40 bit clock wrap around, approx 17s
+  // A0 clock start offset set to wrap after first message from A0
+  uint64_t a0O = TIMER_MAX_VALUE - iTxTime0 - 1;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+
+  //                    A  Arrival Time                 A0                           A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime1 + timeA1ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
+
+  //                  A  Arrival Time in tag clock    Tx time in A0 clock
+  mockKalmanEstimator(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O);
+  // mockKalmanEstimator(1, iTxTime1 + timeA1ToTag + tO, iTxTime1 + a0O); Not called as the packet is interpreted as packet loss and filtered out
+  mockKalmanEstimator(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O);
+  mockKalmanEstimator(1, iTxTime3 + timeA1ToTag + tO, iTxTime3 + a0O);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testKalmanEstimatorWithNoClockDriftWithA1ClockWrapping() {
+  #ifndef ESTIMATOR_TYPE_kalman
+  TEST_IGNORE();
+  #endif
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  uint64_t iTxTime0 = 1.0 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime1 = 1.002 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime2 = 1.004 * LOCODECK_TS_FREQ;
+  uint64_t iTxTime3 = 1.006 * LOCODECK_TS_FREQ;
+
+  // Clock start offset including any antenna delay.
+  // Intentionally less than 40 bit clock wrap around, approx 17s
+  // A0 clock start offset set to wrap after first message from A0
+  uint64_t a0O = 1 * LOCODECK_TS_FREQ;
+  uint64_t a1O = TIMER_MAX_VALUE - iTxTime0 + timeA0ToA1 - 1;
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+
+  //                    A  Arrival Time                 A0                           A1                           A2  A3  A4  A5  A6  A7
+  mockMessageFromAnchor(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O             , NS                         , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime1 + timeA1ToTag + tO, iTxTime0 + timeA0ToA1 + a1O, iTxTime1 + a1O             , NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O             , iTxTime1 + timeA0ToA1 + a0O, NS, NS, NS, NS, NS, NS);
+  mockMessageFromAnchor(1, iTxTime3 + timeA1ToTag + tO, iTxTime2 + timeA0ToA1 + a1O, iTxTime3 + a1O             , NS, NS, NS, NS, NS, NS);
+
+  //                  A  Arrival Time in tag clock    Tx time in A0 clock
+  mockKalmanEstimator(0, iTxTime0 + timeA0ToTag + tO, iTxTime0 + a0O);
+  // mockKalmanEstimator(1, iTxTime1 + timeA1ToTag + tO, iTxTime1 + a0O); Not called as the packet is interpreted as packet loss and filtered out
+  mockKalmanEstimator(0, iTxTime2 + timeA0ToTag + tO, iTxTime2 + a0O);
+  mockKalmanEstimator(1, iTxTime3 + timeA1ToTag + tO, iTxTime3 + a0O);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
 }
 
 void testDifferenceOfDistanceWithNoClockDriftWithTagClockWrapping2() {
@@ -519,7 +672,6 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   // Two anchors, separated by 1.0m
   // Distance from A0 to tag is 2.0m
   // Distance from other anchor to tag is 2.5m
-  float expectedDiff = 0.5;
   const int anchor = 5;
 
   // Ideal times in universal clock
@@ -553,6 +705,10 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // At this point we have an accepted distance diff for the anchor. The following packets should not be accepted and update the distance diff so this will be the expectation.
+  float expectedDiff = uwbTdoaDistDiff[anchor];
+
   // Lost packet
   // uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -705,32 +861,35 @@ static void ignoreKalmanEstimatorValidation() {
   #endif
 }
 
-
+#ifdef ESTIMATOR_TYPE_kalman
 #define STATE_ESTIMATOR_MAX_NR_OF_CALLS 10
 
 static toaMeasurement_t stateEstimatorExpectations[STATE_ESTIMATOR_MAX_NR_OF_CALLS];
 static int stateEstimatorIndex = 0;
 
-static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* uwb, int cmock_num_calls) {
-  // TODO krri Validate stdDev and anchor positions
-
+static void validateToa(const toaMeasurement_t* expected, const toaMeasurement_t* actual, int cmock_num_calls, int measurement) {
   char message[100];
-  sprintf(message, "Failed in call %i", cmock_num_calls);
+  sprintf(message, "Failed in call %i to stateEstimatorEnqueueTDOA() for message %i", cmock_num_calls, measurement);
 
+  TEST_ASSERT_EQUAL_UINT64_MESSAGE(expected->senderId, actual->senderId, message);
+  TEST_ASSERT_EQUAL_UINT64_MESSAGE(expected->rx, actual->rx, message);
+  TEST_ASSERT_EQUAL_UINT64_MESSAGE(expected->tx, actual->tx, message);
+
+  TEST_ASSERT_FLOAT_WITHIN(0.0, options.anchorPosition[expected->senderId].x, actual->x);
+  TEST_ASSERT_FLOAT_WITHIN(0.0, options.anchorPosition[expected->senderId].y, actual->y);
+  TEST_ASSERT_FLOAT_WITHIN(0.0, options.anchorPosition[expected->senderId].z, actual->z);
+}
+
+static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* uwb, int cmock_num_calls) {
   if (cmock_num_calls > 0) {
-    toaMeasurement_t* expectedM0 = &stateEstimatorExpectations[cmock_num_calls - 1];
-    TEST_ASSERT_EQUAL_UINT64_MESSAGE(expectedM0->senderId, uwb->measurement[0].senderId, message);
-    TEST_ASSERT_EQUAL_UINT64_MESSAGE(expectedM0->rx, uwb->measurement[0].rx, message);
-    TEST_ASSERT_EQUAL_UINT64_MESSAGE(expectedM0->tx, uwb->measurement[0].tx, message);
+    validateToa(&stateEstimatorExpectations[cmock_num_calls - 1], &uwb->measurement[0], cmock_num_calls, 0);
   }
 
-  toaMeasurement_t* expectedM1 = &stateEstimatorExpectations[cmock_num_calls];
-  TEST_ASSERT_EQUAL_UINT64_MESSAGE(expectedM1->senderId, uwb->measurement[1].senderId, message);
-  TEST_ASSERT_EQUAL_UINT64_MESSAGE(expectedM1->rx, uwb->measurement[1].rx, message);
-  TEST_ASSERT_EQUAL_UINT64_MESSAGE(expectedM1->tx, uwb->measurement[1].tx, message);
+  validateToa(&stateEstimatorExpectations[cmock_num_calls], &uwb->measurement[1], cmock_num_calls, 1);
 
   return true;
 }
+#endif
 
 static void mockKalmanEstimator(uint8_t anchor, uint64_t arrivalTime, uint64_t txTime) {
   #ifdef ESTIMATOR_TYPE_kalman
