@@ -123,12 +123,13 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    if (anchor == MASTER) {
-      int64_t txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
-      int64_t rxM_by_T_in_cl_T  = arrivals[MASTER].full;
-      int64_t rxAn_by_T_in_cl_T  = arrival.full;
+    int64_t rxM_by_T_in_cl_T  = arrivals[MASTER].full;
+    int64_t rxAn_by_T_in_cl_T  = arrival.full;
 
-      frameTime_in_cl_M = truncateToTimeStamp(timestampToUint64(packet->timestamps[MASTER]) - timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]));
+    if (anchor == MASTER) {
+      int64_t previous_txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
+      int64_t txM_in_cl_M = timestampToUint64(packet->timestamps[MASTER]);
+      frameTime_in_cl_M = truncateToTimeStamp(txM_in_cl_M - previous_txM_in_cl_M);
       double frameTime_in_T = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T);
 
       clockCorrection_T_To_M = 1.0;
@@ -136,17 +137,15 @@ static void rxcallback(dwDevice_t *dev) {
         clockCorrection_T_To_M = frameTime_in_cl_M / frameTime_in_T;
       }
 
-      enqueueTDOA(MASTER, rxM_by_T_in_cl_T, txM_in_cl_M);
+      enqueueTDOA(MASTER, rxAn_by_T_in_cl_T, txM_in_cl_M);
     } else {
       int64_t previous_txAn_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
-      int64_t txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
       int64_t rxAn_by_M_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
       int64_t rxM_by_An_in_cl_An = timestampToUint64(packet->timestamps[MASTER]);
+      int64_t txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
 
       int64_t previuos_rxM_by_An_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[MASTER]);
 
-      int64_t rxM_by_T_in_cl_T  = arrivals[MASTER].full;
-      int64_t rxAn_by_T_in_cl_T  = arrival.full;
       int64_t txAn_in_cl_An = timestampToUint64(packet->timestamps[anchor]);
 
       double frameTime_in_cl_An = truncateToTimeStamp(rxM_by_An_in_cl_An) - previuos_rxM_by_An_in_cl_An;
