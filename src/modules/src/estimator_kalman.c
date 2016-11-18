@@ -619,18 +619,22 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   }
   quadIsFlying = (xTaskGetTickCount()-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
 
+  static float dx, dy, dz;
+  static float tmpSPX, tmpSPY, tmpSPZ;
+  static float zacc;
+
   if (quadIsFlying) // only acceleration in z direction
   {
     // TODO: In the next lines, can either use cmdThrust/mass, or acc->z. Need to test which is more reliable.
     // cmdThrust's error comes from poorly calibrated mass, and inexact cmdThrust -> thrust map
     // acc->z's error comes from measurement noise and accelerometer scaling
     // float zacc = cmdThrust;
-    float zacc = acc->z;
+    zacc = acc->z;
 
     // position updates in the body frame (will be rotated to inertial frame)
-    float dx = S[STATE_PX] * dt;
-    float dy = S[STATE_PY] * dt;
-    float dz = S[STATE_PZ] * dt + zacc * dt2 / 2.0f; // thrust can only be produced in the body's Z direction
+    dx = S[STATE_PX] * dt;
+    dy = S[STATE_PY] * dt;
+    dz = S[STATE_PZ] * dt + zacc * dt2 / 2.0f; // thrust can only be produced in the body's Z direction
 
     // position update
     S[STATE_X] += R[0][0] * dx + R[0][1] * dy + R[0][2] * dz;
@@ -638,9 +642,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     S[STATE_Z] += R[2][0] * dx + R[2][1] * dy + R[2][2] * dz - GRAVITY_MAGNITUDE * dt2 / 2.0f;
 
     // keep previous time step's state for the update
-        float tmpSPX = S[STATE_PX];
-        float tmpSPY = S[STATE_PY];
-        float tmpSPZ = S[STATE_PZ];
+    tmpSPX = S[STATE_PX];
+    tmpSPY = S[STATE_PY];
+    tmpSPZ = S[STATE_PZ];
 
     // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
     S[STATE_PX] += dt * (gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * R[2][0]);
@@ -650,9 +654,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
   {
     // position updates in the body frame (will be rotated to inertial frame)
-    float dx = S[STATE_PX] * dt + acc->x * dt2 / 2.0f;
-    float dy = S[STATE_PY] * dt + acc->y * dt2 / 2.0f;
-    float dz = S[STATE_PZ] * dt + acc->z * dt2 / 2.0f; // thrust can only be produced in the body's Z direction
+    dx = S[STATE_PX] * dt + acc->x * dt2 / 2.0f;
+    dy = S[STATE_PY] * dt + acc->y * dt2 / 2.0f;
+    dz = S[STATE_PZ] * dt + acc->z * dt2 / 2.0f; // thrust can only be produced in the body's Z direction
 
     // position update
     S[STATE_X] += R[0][0] * dx + R[0][1] * dy + R[0][2] * dz;
