@@ -47,7 +47,7 @@ struct CommanderCrtpValues
   float roll;       // deg
   float pitch;      // deg
   float yaw;        // deg
-  float thrust;
+  uint16_t thrust;
 } __attribute__((packed));
 
 void commanderInit(void);
