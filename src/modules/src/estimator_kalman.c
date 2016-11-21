@@ -663,10 +663,15 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     S[STATE_Y] += R[1][0] * dx + R[1][1] * dy + R[1][2] * dz;
     S[STATE_Z] += R[2][0] * dx + R[2][1] * dy + R[2][2] * dz - GRAVITY_MAGNITUDE * dt2 / 2.0f;
 
+    // keep previous time step's state for the update
+    tmpSPX = S[STATE_PX];
+    tmpSPY = S[STATE_PY];
+    tmpSPZ = S[STATE_PZ];
+
     // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
-    S[STATE_PX] += dt * (acc->x + gyro->z * S[STATE_PY] - gyro->y * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][0]);
-    S[STATE_PY] += dt * (acc->y + gyro->z * S[STATE_PX] + gyro->x * S[STATE_PZ] - GRAVITY_MAGNITUDE * R[2][1]);
-    S[STATE_PZ] += dt * (acc->z + gyro->y * S[STATE_PX] - gyro->x * S[STATE_PY] - GRAVITY_MAGNITUDE * R[2][2]);
+    S[STATE_PX] += dt * (acc->x + gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * R[2][0]);
+    S[STATE_PY] += dt * (acc->y + gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
+    S[STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
 
   if(S[STATE_Z] < 0) {
