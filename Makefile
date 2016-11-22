@@ -414,3 +414,6 @@ include tools/make/targets.mk
 
 #include dependencies
 -include $(DEPS)
+
+unit:
+	rake unit "DEFINES=$(CFLAGS)" "FILES=$(FILES)"

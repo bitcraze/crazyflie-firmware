@@ -36,24 +36,35 @@
 #include "estimator_kalman.h"
 #endif // ESTIMATOR_TYPE_kalman
 
-float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
-static toaMeasurement_t lastTOA;
 
 static lpsAlgoOptions_t* options;
+
+float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
+static toaMeasurement_t lastTOA;
 
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
 static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
 
-static double frameTimeInMasterClock = 0.0;
-static double localClockCorrection = 1.0;
+static double frameTime_in_cl_M = 0.0;
+static double clockCorrection_T_To_M = 1.0;
+
+static int64_t tagClockWrapOffset = 0;
+static int64_t tagClockLatestTime = 0;
+
+static int64_t masterClockWrapOffset = 0;
+static int64_t masterClockLatestTime = 0;
+
+typedef struct {
+  int64_t offset;
+  int64_t latestTime;
+} clockWrap_t;
+
+static clockWrap_t clockWrapTag, clockWrapMaster;
 
 #define MASTER 0
-
 #define MEASUREMENT_NOISE_STD 0.5f
 
-#define CAP_timer
-
-// The maximum diff in distances that we concider to be valid
+// The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
 #define MAX_DISTANCE_DIFF (300.0f)
 
@@ -68,37 +79,27 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
-//tdoaMeasurement_t tdoa;
-//
-//tdoa.stdDev = MEASUREMENT_NOISE_STD;
-//memcpy(&(tdoa.measurement[1]), &TOA, sizeof(toaMeasurement_t));
-//memcpy(&(tdoa.measurement[0]), &lastTOA, sizeof(toaMeasurement_t));
-//memcpy(&lastTOA, &TOA, sizeof(toaMeasurement_t));
-//
-//stateEstimatorEnqueueTDOA(&tdoa);
-//
-// From:Michael Hamer
-// TOA is the current packet that has just come in
-//
-//toaMeasurement_t TOA = {
-//    .rx = sysRxTime,
-//    .tx = rxPacket.sysTxTime,
-//    .x = rxPacket.x,
-//    .y = rxPacket.y,
-//    .z = rxPacket.z,
-//    .senderId = rxPacket.senderID
-//};
-static void enqueueTDOA(uint8_t senderId, int64_t rxT, int64_t txAn_A0time) {
+static int64_t eliminateClockWrap(clockWrap_t* data, int64_t time) {
+  if ((time < data->latestTime)) {
+    data->offset += 0x10000000000;
+  }
+
+  data->latestTime = time;
+
+  return time + data->offset;
+}
+
+static void enqueueTDOA(uint8_t anchor, int64_t rxAn_by_T_in_cl_T, int64_t txAn_in_cl_M) {
   tdoaMeasurement_t tdoa = {.stdDev = MEASUREMENT_NOISE_STD};
 
   memcpy(&(tdoa.measurement[0]), &lastTOA, sizeof(toaMeasurement_t));
 
-  tdoa.measurement[1].senderId = senderId;
-  tdoa.measurement[1].rx = rxT;
-  tdoa.measurement[1].tx = txAn_A0time;
-  tdoa.measurement[1].x = options->anchorPosition[senderId].x;
-  tdoa.measurement[1].y = options->anchorPosition[senderId].y;
-  tdoa.measurement[1].z = options->anchorPosition[senderId].z;
+  tdoa.measurement[1].senderId = anchor;
+  tdoa.measurement[1].rx = eliminateClockWrap(&clockWrapTag, rxAn_by_T_in_cl_T);
+  tdoa.measurement[1].tx = eliminateClockWrap(&clockWrapMaster, txAn_in_cl_M);
+  tdoa.measurement[1].x = options->anchorPosition[anchor].x;
+  tdoa.measurement[1].y = options->anchorPosition[anchor].y;
+  tdoa.measurement[1].z = options->anchorPosition[anchor].z;
 
   memcpy(&lastTOA, &tdoa.measurement[1], sizeof(toaMeasurement_t));
 #ifdef ESTIMATOR_TYPE_kalman
@@ -106,6 +107,9 @@ static void enqueueTDOA(uint8_t senderId, int64_t rxT, int64_t txAn_A0time) {
 #endif
 }
 
+// A note on variable names. They might seem a bit verbose but express quite a lot of information
+// We have three actors: Master (M), Anchor n (An) and the deck on the CF called Tag (T)
+// rxM_by_An_in_cl_An should be interpreted as "The time when packet was received from the Master Anchor by Anchor N expressed in the clock of Anchor N"
 static void rxcallback(dwDevice_t *dev) {
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
@@ -120,48 +124,49 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
+    int64_t rxM_by_T_in_cl_T  = arrivals[MASTER].full;
+    int64_t rxAn_by_T_in_cl_T  = arrival.full;
+
     if (anchor == MASTER) {
-      frameTimeInMasterClock = truncateToTimeStamp(timestampToUint64(packet->timestamps[MASTER]) - timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]));
-      double frameTimeInLocalClock = truncateToTimeStamp(arrival.full - arrivals[MASTER].full);
+      int64_t previous_txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
+      int64_t txM_in_cl_M = timestampToUint64(packet->timestamps[MASTER]);
+      frameTime_in_cl_M = truncateToTimeStamp(txM_in_cl_M - previous_txM_in_cl_M);
+      double frameTime_in_T = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T);
 
-      localClockCorrection = 1.0;
-      if (frameTimeInLocalClock != 0.0) {
-        localClockCorrection = frameTimeInMasterClock / frameTimeInLocalClock;
+      clockCorrection_T_To_M = 1.0;
+      if (frameTime_in_T != 0.0) {
+        clockCorrection_T_To_M = frameTime_in_cl_M / frameTime_in_T;
       }
 
-      int64_t txA0_X = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
-      int64_t rxT_0  = arrivals[MASTER].full;
-      enqueueTDOA(MASTER, rxT_0, txA0_X);
+      enqueueTDOA(MASTER, rxAn_by_T_in_cl_T, txM_in_cl_M);
     } else {
-      double frameTimeInAnchorClock = truncateToTimeStamp(timestampToUint64(packet->timestamps[MASTER]) - timestampToUint64(rxPacketBuffer[anchor].timestamps[MASTER]));
+      int64_t previous_txAn_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
+      int64_t rxAn_by_M_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
+      int64_t rxM_by_An_in_cl_An = timestampToUint64(packet->timestamps[MASTER]);
+      int64_t txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
 
-      double anchorClockCorrection = 1.0;
-      if (frameTimeInAnchorClock != 0.0) {
-        anchorClockCorrection = frameTimeInMasterClock / frameTimeInAnchorClock;
+      int64_t previuos_rxM_by_An_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[MASTER]);
+
+      int64_t txAn_in_cl_An = timestampToUint64(packet->timestamps[anchor]);
+
+      double frameTime_in_cl_An = truncateToTimeStamp(rxM_by_An_in_cl_An - previuos_rxM_by_An_in_cl_An);
+
+      double clockCorrection_An_To_M = 1.0;
+      if (frameTime_in_cl_An != 0.0) {
+        clockCorrection_An_To_M = frameTime_in_cl_M / frameTime_in_cl_An;
       }
 
-      float tdoaDistDiff;
+      int64_t tof_M_to_An_in_cl_M = (((truncateToTimeStamp(rxM_by_An_in_cl_An - previous_txAn_in_cl_An) * clockCorrection_An_To_M) - truncateToTimeStamp(txM_in_cl_M - rxAn_by_M_in_cl_M))) / 2.0;
+      int64_t delta_txM_to_txAn_in_cl_M = (tof_M_to_An_in_cl_M + truncateToTimeStamp(txAn_in_cl_An - rxM_by_An_in_cl_An) * clockCorrection_An_To_M);
+      int64_t timeDiffOfArrival_in_cl_M =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) * clockCorrection_T_To_M - delta_txM_to_txAn_in_cl_M;
+      int64_t txAn_in_cl_M = txM_in_cl_M + delta_txM_to_txAn_in_cl_M;
 
-      int64_t txAn_X = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
-      int64_t txA0_X = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
-      int64_t rxAn_0 = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
-      int64_t rxA0_n = timestampToUint64(packet->timestamps[MASTER]);
-
-      int64_t rxT_0  = arrivals[MASTER].full;
-      int64_t rxT_n  = arrival.full;
-      int64_t txAn_X2 = timestampToUint64(packet->timestamps[anchor]);
-
-
-      int64_t tA0_n = (((truncateToTimeStamp(rxA0_n - txAn_X) * anchorClockCorrection) - truncateToTimeStamp(txA0_X - rxAn_0))) / 2.0;
-      int64_t txAn_A0time = (tA0_n + truncateToTimeStamp(txAn_X2 - rxA0_n) * anchorClockCorrection);
-      int64_t tT =  truncateToTimeStamp(rxT_n - rxT_0) * localClockCorrection - txAn_A0time;
-
-      tdoaDistDiff = SPEED_OF_LIGHT * tT / LOCODECK_TS_FREQ;
+      float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_M / LOCODECK_TS_FREQ;
 
       // Sanity check distances in case of missed packages
       if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
         uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-        enqueueTDOA(anchor, rxT_n, txAn_A0time);
+        enqueueTDOA(anchor, rxAn_by_T_in_cl_T, txAn_in_cl_M);
       }
     }
 
@@ -195,9 +200,30 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   return MAX_TIMEOUT;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
+
+  // Reset module state. Needed by unit tests
+  memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
+  memset(&lastTOA, 0, sizeof(lastTOA));
+  memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
+  memset(arrivals, 0, sizeof(arrivals));
+
+  frameTime_in_cl_M = 0.0;
+  clockCorrection_T_To_M = 1.0;
+
+  tagClockWrapOffset = 0;
+  tagClockLatestTime = 0;
+
+  masterClockWrapOffset = 0;
+  masterClockLatestTime = 0;
+
+  memset(&clockWrapTag, 0, sizeof(clockWrapTag));
+  memset(&clockWrapMaster, 0, sizeof(clockWrapMaster));
 }
+#pragma GCC diagnostic pop
 
 uwbAlgorithm_t uwbTdoaTagAlgorithm = {
   .init = Initialize,
