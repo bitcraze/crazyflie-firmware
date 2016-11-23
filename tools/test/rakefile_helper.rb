@@ -314,7 +314,7 @@ module RakefileHelpers
 
   def exclude_test_files(files, defines)
     files.select do |file|
-      annotation_keep_file?(file, defines)
+      !annotation_ignore_file?(file, defines)
     end
   end
 
@@ -324,7 +324,7 @@ module RakefileHelpers
   # Ignores values of defines, so this would fail and keep the file
   # param to gradle: -DMYDEFINE=0
   # // @IGNORE_IF_NOT MYDEFINE
-  def annotation_keep_file?(file, defines)
+  def annotation_ignore_file?(file, defines)
     ignore_str = '@IGNORE_IF_NOT'
 
     File.foreach( file ) do |line|
@@ -334,13 +334,14 @@ module RakefileHelpers
 
         if tokens.length >= (index + 2)
           condition = tokens[index + 1]
-          return defines.detect {|define| define == condition}
-        else
-          return false
+          conditionIsMet = defines.detect {|define| define == condition}
+          if !conditionIsMet
+            return true
+          end
         end
       end
     end
 
-    return true
+    return false
   end
 end

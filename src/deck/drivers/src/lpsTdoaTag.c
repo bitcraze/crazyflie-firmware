@@ -41,19 +41,20 @@ static lpsAlgoOptions_t* options;
 
 float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
 
+static uint8_t previousAnchor;
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
 static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
 
-static double frameTime_in_cl_M = 0.0;
-static double clockCorrection_T_To_M = 1.0;
+static double frameTime_in_cl_A[LOCODECK_NR_OF_ANCHORS];
+static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
+
 
 typedef struct {
   int64_t offset;
   int64_t latestTime;
 } clockWrap_t;
 
-#define MASTER 0
-#define MEASUREMENT_NOISE_STD 10.0f
+#define MEASUREMENT_NOISE_STD 20.0f
 
 // The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
@@ -71,22 +72,22 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
 }
 
 #ifdef ESTIMATOR_TYPE_kalman
-static void enqueueTDOA(uint8_t anchor, double distanceDiff, double timeBetweenMeasurements) {
+static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff, double timeBetweenMeasurements) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff,
     .timeBetweenMeasurements = timeBetweenMeasurements,
 
     .anchorPosition[0] = {
-      .x = options->anchorPosition[0].x,
-      .y = options->anchorPosition[0].y,
-      .z = options->anchorPosition[0].z
+      .x = options->anchorPosition[anchor1].x,
+      .y = options->anchorPosition[anchor1].y,
+      .z = options->anchorPosition[anchor1].z
     },
 
     .anchorPosition[1] = {
-      .x = options->anchorPosition[anchor].x,
-      .y = options->anchorPosition[anchor].y,
-      .z = options->anchorPosition[anchor].z
+      .x = options->anchorPosition[anchor2].x,
+      .y = options->anchorPosition[anchor2].y,
+      .z = options->anchorPosition[anchor2].z
     }
   };
 
@@ -95,8 +96,8 @@ static void enqueueTDOA(uint8_t anchor, double distanceDiff, double timeBetweenM
 #endif
 
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
-// We have three actors: Master (M), Anchor n (An) and the deck on the CF called Tag (T)
-// rxM_by_An_in_cl_An should be interpreted as "The time when packet was received from the Master Anchor by Anchor N expressed in the clock of Anchor N"
+// We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
+// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Referecne Anchor by Anchor N expressed in the clock of Anchor N"
 static void rxcallback(dwDevice_t *dev) {
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
@@ -111,54 +112,63 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    int64_t rxM_by_T_in_cl_T  = arrivals[MASTER].full;
     int64_t rxAn_by_T_in_cl_T  = arrival.full;
 
-    if (anchor == MASTER) {
-      int64_t previous_txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
-      int64_t txM_in_cl_M = timestampToUint64(packet->timestamps[MASTER]);
-      frameTime_in_cl_M = truncateToTimeStamp(txM_in_cl_M - previous_txM_in_cl_M);
-      double frameTime_in_T = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T);
+    {
+      int64_t previous_rxAr_by_T_in_cl_T  = arrivals[anchor].full;
 
-      clockCorrection_T_To_M = 1.0;
+      int64_t previous_txAr_in_cl_Ar = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
+      int64_t txAr_in_cl_Ar = timestampToUint64(packet->timestamps[anchor]);
+      frameTime_in_cl_A[anchor] = truncateToTimeStamp(txAr_in_cl_Ar - previous_txAr_in_cl_Ar);
+      double frameTime_in_T = truncateToTimeStamp(rxAn_by_T_in_cl_T - previous_rxAr_by_T_in_cl_T);
+
+      clockCorrection_T_To_A[anchor] = 1.0;
       if (frameTime_in_T != 0.0) {
-        clockCorrection_T_To_M = frameTime_in_cl_M / frameTime_in_T;
+        clockCorrection_T_To_A[anchor] = frameTime_in_cl_A[anchor] / frameTime_in_T;
       }
-    } else {
-      int64_t previous_txAn_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
-      int64_t rxAn_by_M_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
-      int64_t rxM_by_An_in_cl_An = timestampToUint64(packet->timestamps[MASTER]);
-      int64_t txM_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[MASTER]);
+    }
 
-      int64_t previuos_rxM_by_An_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[MASTER]);
+    {
+      int64_t rxAr_by_T_in_cl_T  = arrivals[previousAnchor].full;
+
+      int64_t previous_txAn_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
+      int64_t rxAn_by_Ar_in_cl_Ar = timestampToUint64(rxPacketBuffer[previousAnchor].timestamps[anchor]);
+      int64_t rxAr_by_An_in_cl_An = timestampToUint64(packet->timestamps[previousAnchor]);
+      // TODO krri name reused
+      int64_t txAr_in_cl_Ar = timestampToUint64(rxPacketBuffer[previousAnchor].timestamps[previousAnchor]);
+
+      int64_t previuos_rxAr_by_An_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[previousAnchor]);
 
       int64_t txAn_in_cl_An = timestampToUint64(packet->timestamps[anchor]);
 
-      double frameTime_in_cl_An = truncateToTimeStamp(rxM_by_An_in_cl_An - previuos_rxM_by_An_in_cl_An);
+      double frameTime_in_cl_An = truncateToTimeStamp(rxAr_by_An_in_cl_An - previuos_rxAr_by_An_in_cl_An);
 
-      double clockCorrection_An_To_M = 1.0;
+      double clockCorrection_An_To_Ar = 1.0;
       if (frameTime_in_cl_An != 0.0) {
-        clockCorrection_An_To_M = frameTime_in_cl_M / frameTime_in_cl_An;
+        clockCorrection_An_To_Ar = frameTime_in_cl_A[previousAnchor] / frameTime_in_cl_An;
       }
 
-      int64_t tof_M_to_An_in_cl_M = (((truncateToTimeStamp(rxM_by_An_in_cl_An - previous_txAn_in_cl_An) * clockCorrection_An_To_M) - truncateToTimeStamp(txM_in_cl_M - rxAn_by_M_in_cl_M))) / 2.0;
-      int64_t delta_txM_to_txAn_in_cl_M = (tof_M_to_An_in_cl_M + truncateToTimeStamp(txAn_in_cl_An - rxM_by_An_in_cl_An) * clockCorrection_An_To_M);
-      int64_t timeDiffOfArrival_in_cl_M =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) * clockCorrection_T_To_M - delta_txM_to_txAn_in_cl_M;
+      int64_t tof_Ar_to_An_in_cl_Ar = (((truncateToTimeStamp(rxAr_by_An_in_cl_An - previous_txAn_in_cl_An) * clockCorrection_An_To_Ar) - truncateToTimeStamp(txAr_in_cl_Ar - rxAn_by_Ar_in_cl_Ar))) / 2.0;
+      int64_t delta_txAr_to_txAn_in_cl_Ar = (tof_Ar_to_An_in_cl_Ar + truncateToTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An) * clockCorrection_An_To_Ar);
+      int64_t timeDiffOfArrival_in_cl_Ar =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection_T_To_A[previousAnchor] - delta_txAr_to_txAn_in_cl_Ar;
 
-      float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_M / LOCODECK_TS_FREQ;
+      float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_Ar / LOCODECK_TS_FREQ;
 
       // Sanity check distances in case of missed packages
       if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
         uwbTdoaDistDiff[anchor] = tdoaDistDiff;
 #ifdef ESTIMATOR_TYPE_kalman
-        float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) / LOCODECK_TS_FREQ;
-        enqueueTDOA(anchor, tdoaDistDiff, timeBetweenMeasurements);
+        float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) / LOCODECK_TS_FREQ;
+        enqueueTDOA(previousAnchor, anchor, tdoaDistDiff, timeBetweenMeasurements);
 #endif
       }
+
     }
 
     arrivals[anchor].full = arrival.full;
     memcpy(&rxPacketBuffer[anchor], rxPacket.payload, sizeof(rangePacket_t));
+
+    previousAnchor = anchor;
   }
 }
 
@@ -197,8 +207,10 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
   memset(arrivals, 0, sizeof(arrivals));
 
-  frameTime_in_cl_M = 0.0;
-  clockCorrection_T_To_M = 1.0;
+  memset(frameTime_in_cl_A, 0, sizeof(frameTime_in_cl_A));
+  memset(clockCorrection_T_To_A, 0, sizeof(clockCorrection_T_To_A));
+
+  previousAnchor = 0;
 }
 #pragma GCC diagnostic pop
 
@@ -209,11 +221,12 @@ uwbAlgorithm_t uwbTdoaTagAlgorithm = {
 
 
 LOG_GROUP_START(tdoa)
-LOG_ADD(LOG_FLOAT, d01, &uwbTdoaDistDiff[1])
-LOG_ADD(LOG_FLOAT, d02, &uwbTdoaDistDiff[2])
-LOG_ADD(LOG_FLOAT, d03, &uwbTdoaDistDiff[3])
-LOG_ADD(LOG_FLOAT, d04, &uwbTdoaDistDiff[4])
-LOG_ADD(LOG_FLOAT, d05, &uwbTdoaDistDiff[5])
-LOG_ADD(LOG_FLOAT, d06, &uwbTdoaDistDiff[6])
-LOG_ADD(LOG_FLOAT, d07, &uwbTdoaDistDiff[7])
+LOG_ADD(LOG_FLOAT, d0, &uwbTdoaDistDiff[0])
+LOG_ADD(LOG_FLOAT, d1, &uwbTdoaDistDiff[1])
+LOG_ADD(LOG_FLOAT, d2, &uwbTdoaDistDiff[2])
+LOG_ADD(LOG_FLOAT, d3, &uwbTdoaDistDiff[3])
+LOG_ADD(LOG_FLOAT, d4, &uwbTdoaDistDiff[4])
+LOG_ADD(LOG_FLOAT, d5, &uwbTdoaDistDiff[5])
+LOG_ADD(LOG_FLOAT, d6, &uwbTdoaDistDiff[6])
+LOG_ADD(LOG_FLOAT, d7, &uwbTdoaDistDiff[7])
 LOG_GROUP_STOP(tdoa)
