@@ -40,7 +40,6 @@
 static lpsAlgoOptions_t* options;
 
 float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
-static toaMeasurement_t lastTOA;
 
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
 static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
@@ -48,21 +47,13 @@ static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
 static double frameTime_in_cl_M = 0.0;
 static double clockCorrection_T_To_M = 1.0;
 
-static int64_t tagClockWrapOffset = 0;
-static int64_t tagClockLatestTime = 0;
-
-static int64_t masterClockWrapOffset = 0;
-static int64_t masterClockLatestTime = 0;
-
 typedef struct {
   int64_t offset;
   int64_t latestTime;
 } clockWrap_t;
 
-static clockWrap_t clockWrapTag, clockWrapMaster;
-
 #define MASTER 0
-#define MEASUREMENT_NOISE_STD 0.5f
+#define MEASUREMENT_NOISE_STD 10.0f
 
 // The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
@@ -79,29 +70,25 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
-static int64_t eliminateClockWrap(clockWrap_t* data, int64_t time) {
-  if ((time < data->latestTime)) {
-    data->offset += 0x10000000000;
-  }
+static void enqueueTDOA(uint8_t anchor, double distanceDiff, double timeBetweenMeasurements) {
+  tdoaMeasurement_t tdoa = {
+    .stdDev = MEASUREMENT_NOISE_STD,
+    .distanceDiff = distanceDiff,
+    .timeBetweenMeasurements = timeBetweenMeasurements,
 
-  data->latestTime = time;
+    .anchorPosition[0] = {
+      .x = options->anchorPosition[0].x,
+      .y = options->anchorPosition[0].y,
+      .z = options->anchorPosition[0].z
+    },
 
-  return time + data->offset;
-}
+    .anchorPosition[1] = {
+      .x = options->anchorPosition[anchor].x,
+      .y = options->anchorPosition[anchor].y,
+      .z = options->anchorPosition[anchor].z
+    }
+  };
 
-static void enqueueTDOA(uint8_t anchor, int64_t rxAn_by_T_in_cl_T, int64_t txAn_in_cl_M) {
-  tdoaMeasurement_t tdoa = {.stdDev = MEASUREMENT_NOISE_STD};
-
-  memcpy(&(tdoa.measurement[0]), &lastTOA, sizeof(toaMeasurement_t));
-
-  tdoa.measurement[1].senderId = anchor;
-  tdoa.measurement[1].rx = eliminateClockWrap(&clockWrapTag, rxAn_by_T_in_cl_T);
-  tdoa.measurement[1].tx = eliminateClockWrap(&clockWrapMaster, txAn_in_cl_M);
-  tdoa.measurement[1].x = options->anchorPosition[anchor].x;
-  tdoa.measurement[1].y = options->anchorPosition[anchor].y;
-  tdoa.measurement[1].z = options->anchorPosition[anchor].z;
-
-  memcpy(&lastTOA, &tdoa.measurement[1], sizeof(toaMeasurement_t));
 #ifdef ESTIMATOR_TYPE_kalman
   stateEstimatorEnqueueTDOA(&tdoa);
 #endif
@@ -137,8 +124,6 @@ static void rxcallback(dwDevice_t *dev) {
       if (frameTime_in_T != 0.0) {
         clockCorrection_T_To_M = frameTime_in_cl_M / frameTime_in_T;
       }
-
-      enqueueTDOA(MASTER, rxAn_by_T_in_cl_T, txM_in_cl_M);
     } else {
       int64_t previous_txAn_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
       int64_t rxAn_by_M_in_cl_M = timestampToUint64(rxPacketBuffer[MASTER].timestamps[anchor]);
@@ -159,14 +144,14 @@ static void rxcallback(dwDevice_t *dev) {
       int64_t tof_M_to_An_in_cl_M = (((truncateToTimeStamp(rxM_by_An_in_cl_An - previous_txAn_in_cl_An) * clockCorrection_An_To_M) - truncateToTimeStamp(txM_in_cl_M - rxAn_by_M_in_cl_M))) / 2.0;
       int64_t delta_txM_to_txAn_in_cl_M = (tof_M_to_An_in_cl_M + truncateToTimeStamp(txAn_in_cl_An - rxM_by_An_in_cl_An) * clockCorrection_An_To_M);
       int64_t timeDiffOfArrival_in_cl_M =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) * clockCorrection_T_To_M - delta_txM_to_txAn_in_cl_M;
-      int64_t txAn_in_cl_M = txM_in_cl_M + delta_txM_to_txAn_in_cl_M;
 
       float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_M / LOCODECK_TS_FREQ;
+      float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) / LOCODECK_TS_FREQ;
 
       // Sanity check distances in case of missed packages
       if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
         uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-        enqueueTDOA(anchor, rxAn_by_T_in_cl_T, txAn_in_cl_M);
+        enqueueTDOA(anchor, tdoaDistDiff, timeBetweenMeasurements);
       }
     }
 
@@ -207,21 +192,11 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
 
   // Reset module state. Needed by unit tests
   memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
-  memset(&lastTOA, 0, sizeof(lastTOA));
   memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
   memset(arrivals, 0, sizeof(arrivals));
 
   frameTime_in_cl_M = 0.0;
   clockCorrection_T_To_M = 1.0;
-
-  tagClockWrapOffset = 0;
-  tagClockLatestTime = 0;
-
-  masterClockWrapOffset = 0;
-  masterClockLatestTime = 0;
-
-  memset(&clockWrapTag, 0, sizeof(clockWrapTag));
-  memset(&clockWrapMaster, 0, sizeof(clockWrapMaster));
 }
 #pragma GCC diagnostic pop
 

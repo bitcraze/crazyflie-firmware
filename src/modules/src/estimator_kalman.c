@@ -875,43 +875,28 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
 {
   /**
    * Measurement equation:
-   * dR = dT + dT*skew + d1 - d0
+   * dR = dT + d1 - d0
    */
 
-  // We cannot accurately position, until we have an accurate knowledge of skew.
-  // We assume that skew is uncorrelated with other quad states, we can therefore track it
-  // using a separate, 1D Kalman filter. Here, we predict the skew forward
-  float dt = (float)(tdoa->measurement[1].rx - tdoa->measurement[0].rx)*SECONDS_PER_TDOATICK;
-  if (dt > 0)
-  {
-    // We assume skew stays constant, but increase the variance
-    varSkew += powf(procNoiseSkew * dt, 2); // compute variance from standard deviation
-    stateEstimatorAddProcessNoise(dt); // add process noise occurring between packet receptions
-  }
+  float dt = tdoa->timeBetweenMeasurements;
+  stateEstimatorAddProcessNoise(dt); // add process noise occurring between packet receptions
 
-  // calculate the TDOA measurement
-  int64_t dR = tdoa->measurement[1].rx - tdoa->measurement[0].rx;
-  int64_t dT = tdoa->measurement[1].tx - tdoa->measurement[0].tx;
-  float measurement = METERS_PER_TDOATICK*(dR - dT); // possible to lose precision here in floats
+  float measurement = tdoa->distanceDiff;
 
   // predict based on current state
   float x = S[STATE_X];
   float y = S[STATE_Y];
   float z = S[STATE_Z];
 
-  float x1 = tdoa->measurement[1].x, y1 = tdoa->measurement[1].y, z1 = tdoa->measurement[1].z;
-  float x0 = tdoa->measurement[0].x, y0 = tdoa->measurement[0].y, z0 = tdoa->measurement[0].z;
+  float x1 = tdoa->anchorPosition[1].x, y1 = tdoa->anchorPosition[1].y, z1 = tdoa->anchorPosition[1].z;
+  float x0 = tdoa->anchorPosition[0].x, y0 = tdoa->anchorPosition[0].y, z0 = tdoa->anchorPosition[0].z;
 
   float d1 = sqrtf(powf(x - x1, 2) + powf(y - y1, 2) + powf(z - z1, 2));
   float d0 = sqrtf(powf(x - x0, 2) + powf(y - y0, 2) + powf(z - z0, 2));
 
-  float predicted = METERS_PER_TDOATICK * dT * stateSkew + (d1 - d0);
+  float predicted = d1 - d0;
   float error = measurement - predicted;
   float varUwb = tdoa->stdDev*tdoa->stdDev*dt*dt;
-  float Hs = METERS_PER_TDOATICK * dT; // derivative of prediction equation with respect to stateSkew
-  float Ks = varSkew * Hs / (Hs * varSkew * Hs + varUwb);
-  stateSkew = (stateSkew + Ks * error);
-  varSkew = ((1 - Ks * Hs) * varSkew * (1 - Ks * Hs) + Ks * varUwb * Ks);
 
   if (tdoaCount >= 100)
   {
