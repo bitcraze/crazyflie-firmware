@@ -144,14 +144,16 @@ PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o i2c_drv
 PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
+PROJ_OBJ_CF2 += bmi160.o bma2x2.o bmg160.o bmp280.o bstdr_comm_support.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
-PROJ_OBJ_CF2 += sensors_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
-
+PROJ_OBJ_CF2 +=  pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
+#PROJ_OBJ_CF2 +=  sensors_cf2.o 
+PROJ_OBJ_CF2 +=  sensors_bst.o
 # libdw
 PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 
@@ -268,7 +270,8 @@ STFLAGS_CF2 = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_D
 ifeq ($(DEBUG), 1)
   CFLAGS += -O0 -g3 -DDEBUG
 else
-  CFLAGS += -Os -g3
+	# Fail on warnings
+  CFLAGS += -Os -g3 -Werror
 endif
 
 ifeq ($(LTO), 1)
@@ -295,8 +298,6 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 #Permits to remove un-used functions and global variables from output file
 CFLAGS += -ffunction-sections -fdata-sections
 
-# Fail on warnings
-CFLAGS += -Werror
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
 LDFLAGS = --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority

@@ -84,11 +84,10 @@ static lpsAlgoOptions_t algoOptions = {
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
  
-  .anchorPositionOk = false,
+//  .anchorPositionOk = false,
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
-/*
   .anchorPosition = {
     {x: 0.99, y: 1.49, z: 1.80},
     {x: 0.99, y: 3.29, z: 1.80},
@@ -98,7 +97,6 @@ static lpsAlgoOptions_t algoOptions = {
     {x: 4.70, y: 1.14, z: 0.20},
   },
   .anchorPositionOk = true,
-*/
 };
 
 #if LPS_TDOA_ENABLE
@@ -288,7 +286,7 @@ static void dwm1000Init(DeckInfo *info)
   dwNewConfiguration(dwm);
   dwSetDefaults(dwm);
   dwEnableMode(dwm, MODE_SHORTDATA_FAST_ACCURACY);
-  dwSetChannel(dwm, CHANNEL_2);
+  dwSetChannel(dwm, CHANNEL_3);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
   dwSetReceiveWaitTimeout(dwm, RX_TIMEOUT);
