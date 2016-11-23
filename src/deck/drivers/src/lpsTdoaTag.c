@@ -70,6 +70,7 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
+#ifdef ESTIMATOR_TYPE_kalman
 static void enqueueTDOA(uint8_t anchor, double distanceDiff, double timeBetweenMeasurements) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
@@ -89,10 +90,9 @@ static void enqueueTDOA(uint8_t anchor, double distanceDiff, double timeBetweenM
     }
   };
 
-#ifdef ESTIMATOR_TYPE_kalman
   stateEstimatorEnqueueTDOA(&tdoa);
-#endif
 }
+#endif
 
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
 // We have three actors: Master (M), Anchor n (An) and the deck on the CF called Tag (T)
@@ -146,12 +146,14 @@ static void rxcallback(dwDevice_t *dev) {
       int64_t timeDiffOfArrival_in_cl_M =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) * clockCorrection_T_To_M - delta_txM_to_txAn_in_cl_M;
 
       float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_M / LOCODECK_TS_FREQ;
-      float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) / LOCODECK_TS_FREQ;
 
       // Sanity check distances in case of missed packages
       if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
         uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+#ifdef ESTIMATOR_TYPE_kalman
+        float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxM_by_T_in_cl_T) / LOCODECK_TS_FREQ;
         enqueueTDOA(anchor, tdoaDistDiff, timeBetweenMeasurements);
+#endif
       }
     }
 
