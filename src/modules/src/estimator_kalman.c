@@ -878,9 +878,6 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
    * dR = dT + d1 - d0
    */
 
-  float dt = tdoa->timeBetweenMeasurements;
-  stateEstimatorAddProcessNoise(dt); // add process noise occurring between packet receptions
-
   float measurement = tdoa->distanceDiff;
 
   // predict based on current state
@@ -896,7 +893,6 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
 
   float predicted = d1 - d0;
   float error = measurement - predicted;
-  float varUwb = tdoa->stdDev*tdoa->stdDev*dt*dt;
 
   if (tdoaCount >= 100)
   {
@@ -907,7 +903,7 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
     h[STATE_Y] = ((y - y1) / d1 - (y - y0) / d0);
     h[STATE_Z] = ((z - z1) / d1 - (z - z0) / d0);
 
-    stateEstimatorScalarUpdate(&H, error, varUwb);
+    stateEstimatorScalarUpdate(&H, error, tdoa->stdDev);
   }
 
   tdoaCount++;
