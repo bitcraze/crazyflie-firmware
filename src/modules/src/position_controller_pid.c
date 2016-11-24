@@ -65,10 +65,12 @@ struct this_s {
 
 // Maximum roll/pitch angle permited
 static float rpLimit  = 20;
+static float rpLimitOverhead = 1.10f;
 // Velocity maximums
 static float xyVelMax = 1.0f;
 static float zVelMax  = 1.0f;
 static float velMaxOverhead = 1.10f;
+static const float thrustScale = 1000.0f;
 
 #define DT (float)(1.0f/POSITION_RATE)
 #define POSITION_LPF_CUTOFF_FREQ 20.0f
@@ -96,8 +98,8 @@ static struct this_s this = {
 
   .pidVZ = {
     .init = {
-      .kp = 25,
-      .ki = 15,
+      .kp = 15,
+      .ki = 20,
       .kd = 0,
     },
     .pid.dt = DT,
@@ -125,7 +127,7 @@ static struct this_s this = {
     .init = {
       .kp = 2.0f,
       .ki = 0,
-      .kd = 0.01f,
+      .kd = 0,
     },
     .pid.dt = DT,
   },
@@ -150,10 +152,6 @@ void positionControllerInit()
       this.pidVY.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
   pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.init.kp, this.pidVZ.init.ki, this.pidVZ.init.kd,
       this.pidVZ.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
-
-  this.pidX.pid.errorMax = xyVelMax * velMaxOverhead;
-  this.pidY.pid.errorMax = xyVelMax * velMaxOverhead;
-  this.pidZ.pid.errorMax = zVelMax  * velMaxOverhead;
 }
 
 static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt) {
@@ -166,6 +164,12 @@ static float runPid(float input, struct pidAxis_s *axis, float setpoint, float d
 void positionController(float* thrust, attitude_t *attitude, const state_t *state,
                                                              const setpoint_t *setpoint)
 {
+  this.pidX.pid.outputLimit = xyVelMax * velMaxOverhead;
+  this.pidY.pid.outputLimit = xyVelMax * velMaxOverhead;
+  // The ROS landing detector will prematurely trip if
+  // this value is below 0.5
+  this.pidZ.pid.outputLimit = max(zVelMax, 0.5)  * velMaxOverhead;
+
   // X, Y
   pidSetDesired(&this.pidVX.pid, runPid(state->position.x, &this.pidX, setpoint->position.x, DT));
   pidSetDesired(&this.pidVY.pid, runPid(state->position.y, &this.pidY, setpoint->position.y, DT));
@@ -177,6 +181,12 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
 void velocityController(float* thrust, attitude_t *attitude, const state_t *state,
                                                              const setpoint_t *setpoint)
 {
+  this.pidVX.pid.outputLimit = rpLimit * rpLimitOverhead;
+  this.pidVY.pid.outputLimit = rpLimit * rpLimitOverhead;
+  // Set the output limit to the maximum thrust range
+  this.pidVZ.pid.outputLimit = (UINT16_MAX / 2 / thrustScale);
+  //this.pidVZ.pid.outputLimit = (this.thrustBase - this.thrustMin) / thrustScale;
+
   // Roll and Pitch
   float rollRaw  = pidUpdate(&this.pidVX.pid, state->velocity.x, true);
   float pitchRaw = pidUpdate(&this.pidVY.pid, state->velocity.y, true);
@@ -185,28 +195,16 @@ void velocityController(float* thrust, attitude_t *attitude, const state_t *stat
   attitude->pitch = -(rollRaw  * cosf(yawRad)) - (pitchRaw * sinf(yawRad));
   attitude->roll  = -(pitchRaw * cosf(yawRad)) + (rollRaw  * sinf(yawRad));
 
-  // Check for roll/pitch limits and prevent I from accumulating when capped
-  if (abs(attitude->roll) > rpLimit || abs(attitude->pitch) > rpLimit) {
-      this.pidVX.pid.iCapped = true;
-      this.pidVY.pid.iCapped = true;
-  } else {
-      this.pidVX.pid.iCapped = false;
-      this.pidVY.pid.iCapped = false;
-  }
-
   attitude->roll  = constrain(attitude->roll,  -rpLimit, rpLimit);
   attitude->pitch = constrain(attitude->pitch, -rpLimit, rpLimit);
 
   // Thrust
   float thrustRaw = pidUpdate(&this.pidVZ.pid, state->velocity.z, true);
   // Scale the thrust and add feed forward term
-  *thrust = thrustRaw*1000 + this.thrustBase;
-  // Check for minimum thrust, prevent I from accumulating when capped
+  *thrust = thrustRaw*thrustScale + this.thrustBase;
+  // Check for minimum thrust
   if (*thrust < this.thrustMin) {
     *thrust = this.thrustMin;
-    this.pidVZ.pid.iCapped = true;
-  } else {
-    this.pidVZ.pid.iCapped = false;
   }
 }
 
@@ -281,6 +279,8 @@ PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.pid.kd)
 PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
 PARAM_ADD(PARAM_UINT16, thrustMin, &this.thrustMin)
 
-PARAM_ADD(PARAM_FLOAT, rpLimit, &rpLimit)
+PARAM_ADD(PARAM_FLOAT, rpLimit,  &rpLimit)
+PARAM_ADD(PARAM_FLOAT, xyVelMax, &xyVelMax)
+PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
 
 PARAM_GROUP_STOP(posCtlPid)

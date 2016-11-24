@@ -30,6 +30,7 @@
 #include "attitude_controller.h"
 #include "pid.h"
 #include "param.h"
+#include "log.h"
 
 #define ATTITUDE_LPF_CUTOFF_FREQ      15.0f
 #define ATTITUDE_LPF_ENABLE false
@@ -55,9 +56,13 @@ PidObject pidRoll;
 PidObject pidPitch;
 PidObject pidYaw;
 
-int16_t rollOutput;
-int16_t pitchOutput;
-int16_t yawOutput;
+static int16_t rollOutput;
+static int16_t pitchOutput;
+static int16_t yawOutput;
+
+static float rpRateLimit  = 150.0f;
+static float yawRateLimit = 150.0f;
+static float rpyRateLimitOverhead = 1.1f;
 
 static bool isInit;
 
@@ -89,6 +94,10 @@ void attitudeControllerInit(const float updateDt)
   pidSetIntegralLimit(&pidPitch, PID_PITCH_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYaw,   PID_YAW_INTEGRATION_LIMIT);
 
+  pidRollRate.outputLimit  = INT16_MAX;
+  pidPitchRate.outputLimit = INT16_MAX;
+  pidYawRate.outputLimit   = INT16_MAX;
+
   isInit = true;
 }
 
@@ -116,6 +125,10 @@ void attitudeControllerCorrectAttitudePID(
        float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
 {
+  pidRoll.outputLimit  = rpRateLimit  * rpyRateLimitOverhead;
+  pidPitch.outputLimit = rpRateLimit  * rpyRateLimitOverhead;
+  pidYaw.outputLimit   = yawRateLimit * rpyRateLimitOverhead;
+
   pidSetDesired(&pidRoll, eulerRollDesired);
   *rollRateDesired = pidUpdate(&pidRoll, eulerRollActual, true);
 
@@ -151,6 +164,30 @@ void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t*
   *yaw = yawOutput;
 }
 
+LOG_GROUP_START(pid_attitude)
+LOG_ADD(LOG_FLOAT, roll_outP, &pidRoll.outP)
+LOG_ADD(LOG_FLOAT, roll_outI, &pidRoll.outI)
+LOG_ADD(LOG_FLOAT, roll_outD, &pidRoll.outD)
+LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitch.outP)
+LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitch.outI)
+LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitch.outD)
+LOG_ADD(LOG_FLOAT, yaw_outP, &pidYaw.outP)
+LOG_ADD(LOG_FLOAT, yaw_outI, &pidYaw.outI)
+LOG_ADD(LOG_FLOAT, yaw_outD, &pidYaw.outD)
+LOG_GROUP_STOP(pid_attitude)
+
+LOG_GROUP_START(pid_rate)
+LOG_ADD(LOG_FLOAT, roll_outP, &pidRollRate.outP)
+LOG_ADD(LOG_FLOAT, roll_outI, &pidRollRate.outI)
+LOG_ADD(LOG_FLOAT, roll_outD, &pidRollRate.outD)
+LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitchRate.outP)
+LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitchRate.outI)
+LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitchRate.outD)
+LOG_ADD(LOG_FLOAT, yaw_outP, &pidYawRate.outP)
+LOG_ADD(LOG_FLOAT, yaw_outI, &pidYawRate.outI)
+LOG_ADD(LOG_FLOAT, yaw_outD, &pidYawRate.outD)
+LOG_GROUP_STOP(pid_rate)
+
 PARAM_GROUP_START(pid_attitude)
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRoll.kp)
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
@@ -164,6 +201,8 @@ PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
 PARAM_GROUP_STOP(pid_attitude)
 
 PARAM_GROUP_START(pid_rate)
+PARAM_ADD(PARAM_FLOAT, rpRateLimit,  &rpRateLimit)
+PARAM_ADD(PARAM_FLOAT, yawRateLimit, &yawRateLimit)
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
 PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
