@@ -99,7 +99,8 @@
  *
  * @return Zero if successful, otherwise an error code
  */
-bstdr_ret_t bstdr_comm_init(void){
+bstdr_ret_t bstdr_comm_init(void)
+{
 	/**< Communication initialization --Optional!*/
 	i2cdevInit(I2C1_DEV);
 	return (bstdr_ret_t)0;
@@ -113,7 +114,8 @@ bstdr_ret_t bstdr_comm_init(void){
  *
  * @return Zero if successful, otherwise an error code
  */
-bstdr_ret_t bstdr_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint32_t len){
+bstdr_ret_t bstdr_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
+{
 	/**< Burst read code comes here */
 	i2cdevRead(I2C1_DEV, dev_id, reg_addr, (uint16_t) len, reg_data);
 

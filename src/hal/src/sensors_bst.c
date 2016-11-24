@@ -90,7 +90,7 @@ typedef enum{
 }sensorsTypes_e;
 
 // holds the IMU type
-static sensorsTypes_e usedImuType = SENSORS_BMI055;
+static sensorsTypes_e usedImuType = SENSORS_BMI160;
 
 typedef struct
 {
@@ -122,7 +122,7 @@ static bool isBarometerPresent = false;
 	static BiasObj    accelBiasBmi160;
 	static Axis3i16   gyroBmi160;
 	static Axis3i16   accelBmi160;
-	static bmi160_t bmi160Dev;
+	static struct bmi160_dev bmi160Dev;
 	static bool isBmi160TestPassed = true;
 #endif
 
@@ -244,39 +244,43 @@ void sensorsDeviceInit(void)
 
   isBarometerPresent = false;
 
- // Wait for sensors to startup
- while (xTaskGetTickCount() < M2T(SENSORS_STARTUP_TIME_MS));
+  // Wait for sensors to startup
+  while (xTaskGetTickCount() < M2T(SENSORS_STARTUP_TIME_MS));
 
-// BMI160 Initialization
+  // BMI160 Initialization
 #ifdef SENSORS_ENABLE_BMI160
-	bmi160Dev.bus_read = bstdr_burst_read;	// assign bus read function for bst devices
-	bmi160Dev.bus_write = bstdr_burst_write;	// assign bus write function for bst devices
-	bmi160Dev.delay = bstdr_ms_delay;	// assign delay function
-	bmi160Dev.dev_addr = 0x69; 	// I2C device address
+  bstdr_ret_t ret_res;
 
-	bmi160_init(&bmi160Dev); // initialize the device
-	bstdr_ret_t ret_res = bmi160_check_connection();
-	if (ret_res == BSTDR_OK) {
-		DEBUG_PRINT("BMI160 I2C connection [OK].\n");
-		bmi160_set_command_register(ACCEL_MODE_NORMAL);
-		bmi160Dev.delay(3);
-		bmi160_set_command_register(GYRO_MODE_NORMAL);
-		// delay
-		bmi160Dev.delay(50);
+  bmi160Dev.read = bstdr_burst_read;  // assign bus read function for bst devices
+  bmi160Dev.write = bstdr_burst_write;  // assign bus write function for bst devices
+  bmi160Dev.delay_ms = bstdr_ms_delay; // assign delay function
+  bmi160Dev.id = 0x69;  // I2C device address
+  ret_res = bmi160_init(&bmi160Dev); // initialize the device
 
-		bmi160_set_accel_range(BMI160_ACCEL_RANGE_8G);
-		bmi160_set_accel_bw(BMI160_ACCEL_OSR4_AVG1);
-		bmi160_set_accel_output_datarate(BMI160_ACCEL_OUTPUT_DATA_RATE_800HZ);
+  if (ret_res == BSTDR_OK)
+  {
+    DEBUG_PRINT("BMI160 I2C connection [OK].\n");
+    /* Select the Output data rate, range of accelerometer sensor ~92Hz BW by OSR4 @ODR=800Hz */
+    bmi160Dev.accel_cfg.odr = BMI160_ACCEL_ODR_800HZ;
+    bmi160Dev.accel_cfg.range = BMI160_ACCEL_RANGE_16G;
+    bmi160Dev.accel_cfg.bw = BMI160_ACCEL_BW_OSR4_AVG1;
+    /* Select the power mode of accelerometer sensor */
+    bmi160Dev.accel_cfg.power = BMI160_ACCEL_NORMAL_MODE;
 
-		bmi160_set_gyro_range(BMI160_GYRO_RANGE_2000_DEG_SEC);
-		bmi160_set_gyro_bw(BMI160_GYRO_OSR4_MODE);
-		bmi160_set_gyro_output_datarate(BMI160_GYRO_OUTPUT_DATA_RATE_800HZ);
+    /* Select the Output data rate, range of Gyroscope sensor ~92Hz BW by OSR4 @ODR=800Hz */
+    bmi160Dev.gyro_cfg.odr = BMI160_GYRO_ODR_800HZ;
+    bmi160Dev.gyro_cfg.range = BMI160_GYRO_RANGE_2000_DPS;
+    bmi160Dev.gyro_cfg.bw = BMI160_GYRO_BW_OSR4_MODE;
 
-		bmi160Dev.delay(50);
-	}
-	else{
-		DEBUG_PRINT("BMI160 I2C connection [FAIL].\n");
-	}
+    /* Select the power mode of Gyroscope sensor */
+    bmi160Dev.gyro_cfg.power = BMI160_GYRO_NORMAL_MODE;
+
+    /* Set the sensor configuration */
+    ret_res = bmi160_set_sens_conf(&bmi160Dev);
+  }
+  else{
+    DEBUG_PRINT("BMI160 I2C connection [FAIL].\n");
+  }
 
 	#ifdef SENSORS_TAKE_ACCEL_BIAS
 		sensorsBiasInit(&accelBiasBmi160);
@@ -345,7 +349,7 @@ void sensorsDeviceInit(void)
 	bmp280Dev.dev_addr = 0x76;
 	bmp280_init(&bmp280Dev); // initialize the device
 	comtest = bmp280_test_connection();
-	if(comtest==BSTDR_OK){
+	if(comtest==BSTDR_OK) {
 	  isBarometerPresent = true;
 		DEBUG_PRINT("BME280 I2C connection [OK].\n");
 		bmp280_set_filter(0x03);
@@ -415,10 +419,10 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
 {
 	bma2x2_xyz_t bmi055acc;
 	bmg160_xyz_t bmi055gyr;
-	bmi160_xyz_t bmi160acc, bmi160gyro;
 
 	// read out the data
-	switch (usedImuType) {
+	switch (usedImuType)
+	{
 		case SENSORS_BMI055:
 #ifdef SENSORS_ENABLE_BMI055
 			bma2x2_read_accel_xyz(&bmi055acc);
@@ -434,14 +438,14 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
 			break;
 		case SENSORS_BMI160:
 #ifdef SENSORS_ENABLE_BMI160
-		  bmi160_read_imu_data(&bmi160acc, &bmi160gyro);
+		  bmi160_get_sensor_data(ACCEL_AND_GYRO, &bmi160Dev);
 			// re-align the axes
-			accelBmi160.x =  bmi160acc.x;
-			accelBmi160.y = -bmi160acc.y;
-			accelBmi160.z = -bmi160acc.z;
-			gyroBmi160.x  =  bmi160gyro.x;
-			gyroBmi160.y  = -bmi160gyro.y;
-			gyroBmi160.z  = -bmi160gyro.z;
+			accelBmi160.x =  bmi160Dev.accel.x;
+			accelBmi160.y = -bmi160Dev.accel.y;
+			accelBmi160.z = -bmi160Dev.accel.z;
+			gyroBmi160.x  =  bmi160Dev.gyro.x;
+			gyroBmi160.y  = -bmi160Dev.gyro.y;
+			gyroBmi160.z  = -bmi160Dev.gyro.z;
 #endif
 			break;
 	}
