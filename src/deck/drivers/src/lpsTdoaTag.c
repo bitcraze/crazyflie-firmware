@@ -49,13 +49,14 @@ static double frameTime_in_cl_A[LOCODECK_NR_OF_ANCHORS];
 static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
 
-#define MEASUREMENT_NOISE_STD 20.0f
+#define MEASUREMENT_NOISE_STD 0.15f
 
 // The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
-#define MAX_DISTANCE_DIFF (300.0f)
+#define MAX_DISTANCE_DIFF (5.0f)
 
 static uint32_t statsReceivedPackets = 0;
+static uint32_t statsAcceptedAnchorDataPackets = 0;
 static uint32_t statsAcceptedPackets = 0;
 
 static uint64_t timestampToUint64(const uint8_t *ts) {
@@ -94,6 +95,13 @@ static double calcClockCorrection(const double frameTime, const double previuosF
     return clockCorrection;
 }
 
+// The default receive time in the anchors for messages from other anchors is 0
+// and is overwritten with the actual receive time when a packet arrives.
+// That is, if no message was received the rx time will be 0.
+static bool isValidRxTime(const int64_t anchorRxTime) {
+  return anchorRxTime != 0;
+}
+
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
 // We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
 // rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Referecne Anchor by Anchor N expressed in the clock of Anchor N"
@@ -113,41 +121,44 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    const int64_t rxAn_by_T_in_cl_T  = arrival.full;
     const int64_t previous_rxAn_by_T_in_cl_T  = arrivals[anchor].full;
+    const int64_t rxAn_by_T_in_cl_T  = arrival.full;
     const int64_t previous_txAn_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[anchor]);
     const int64_t txAn_in_cl_An = timestampToUint64(packet->timestamps[anchor]);
 
     if (anchor != previousAnchor) {
-      const int64_t rxAr_by_T_in_cl_T  = arrivals[previousAnchor].full;
-
-      const int64_t rxAn_by_Ar_in_cl_Ar = timestampToUint64(rxPacketBuffer[previousAnchor].timestamps[anchor]);
-      const int64_t rxAr_by_An_in_cl_An = timestampToUint64(packet->timestamps[previousAnchor]);
-      const int64_t txAr_in_cl_Ar = timestampToUint64(rxPacketBuffer[previousAnchor].timestamps[previousAnchor]);
-
       const int64_t previuos_rxAr_by_An_in_cl_An = timestampToUint64(rxPacketBuffer[anchor].timestamps[previousAnchor]);
+      const int64_t rxAr_by_An_in_cl_An = timestampToUint64(packet->timestamps[previousAnchor]);
+      const int64_t rxAn_by_Ar_in_cl_Ar = timestampToUint64(rxPacketBuffer[previousAnchor].timestamps[anchor]);
 
-      // Caclculate clock correction from anchor to reference anchor
-      const double frameTime_in_cl_An = truncateToTimeStamp(rxAr_by_An_in_cl_An - previuos_rxAr_by_An_in_cl_An);
-      const double clockCorrection_An_To_Ar = calcClockCorrection(frameTime_in_cl_An, frameTime_in_cl_A[previousAnchor]);
+      if (isValidRxTime(previuos_rxAr_by_An_in_cl_An) && isValidRxTime(rxAr_by_An_in_cl_An) && isValidRxTime(rxAn_by_Ar_in_cl_Ar)) {
+        statsAcceptedAnchorDataPackets++;
 
-      // Calculate distance diff
-      const int64_t tof_Ar_to_An_in_cl_Ar = (((truncateToTimeStamp(rxAr_by_An_in_cl_An - previous_txAn_in_cl_An) * clockCorrection_An_To_Ar) - truncateToTimeStamp(txAr_in_cl_Ar - rxAn_by_Ar_in_cl_Ar))) / 2.0;
-      const int64_t delta_txAr_to_txAn_in_cl_Ar = (tof_Ar_to_An_in_cl_Ar + truncateToTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An) * clockCorrection_An_To_Ar);
-      const int64_t timeDiffOfArrival_in_cl_Ar =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection_T_To_A[previousAnchor] - delta_txAr_to_txAn_in_cl_Ar;
+        // Caclculate clock correction from anchor to reference anchor
+        const double frameTime_in_cl_An = truncateToTimeStamp(rxAr_by_An_in_cl_An - previuos_rxAr_by_An_in_cl_An);
+        const double clockCorrection_An_To_Ar = calcClockCorrection(frameTime_in_cl_An, frameTime_in_cl_A[previousAnchor]);
 
-      const float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_Ar / LOCODECK_TS_FREQ;
+        const int64_t rxAr_by_T_in_cl_T  = arrivals[previousAnchor].full;
+        const int64_t txAr_in_cl_Ar = timestampToUint64(rxPacketBuffer[previousAnchor].timestamps[previousAnchor]);
 
-      // Sanity check distances in case of missed packages
-      if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
-        uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+        // Calculate distance diff
+        const int64_t tof_Ar_to_An_in_cl_Ar = (((truncateToTimeStamp(rxAr_by_An_in_cl_An - previous_txAn_in_cl_An) * clockCorrection_An_To_Ar) - truncateToTimeStamp(txAr_in_cl_Ar - rxAn_by_Ar_in_cl_Ar))) / 2.0;
+        const int64_t delta_txAr_to_txAn_in_cl_Ar = (tof_Ar_to_An_in_cl_Ar + truncateToTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An) * clockCorrection_An_To_Ar);
+        const int64_t timeDiffOfArrival_in_cl_Ar =  truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection_T_To_A[previousAnchor] - delta_txAr_to_txAn_in_cl_Ar;
 
-        #ifdef ESTIMATOR_TYPE_kalman
-        const float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) / LOCODECK_TS_FREQ;
-        enqueueTDOA(previousAnchor, anchor, tdoaDistDiff, timeBetweenMeasurements);
-        #endif
+        const float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_Ar / LOCODECK_TS_FREQ;
 
-        statsAcceptedPackets++;
+        // Sanity check distances in case of missed packages
+        if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
+          uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+
+          #ifdef ESTIMATOR_TYPE_kalman
+          const float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) / LOCODECK_TS_FREQ;
+          enqueueTDOA(previousAnchor, anchor, tdoaDistDiff, timeBetweenMeasurements);
+          #endif
+
+          statsAcceptedPackets++;
+        }
       }
     }
 
@@ -194,7 +205,6 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
 
   // Reset module state. Needed by unit tests
-  memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
   memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
   memset(arrivals, 0, sizeof(arrivals));
 
@@ -202,6 +212,12 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   memset(clockCorrection_T_To_A, 0, sizeof(clockCorrection_T_To_A));
 
   previousAnchor = 0;
+
+  memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
+
+  statsReceivedPackets = 0;
+  statsAcceptedAnchorDataPackets = 0;
+  statsAcceptedPackets = 0;
 }
 #pragma GCC diagnostic pop
 
@@ -222,6 +238,7 @@ LOG_ADD(LOG_FLOAT, d6, &uwbTdoaDistDiff[6])
 LOG_ADD(LOG_FLOAT, d7, &uwbTdoaDistDiff[7])
 
 LOG_ADD(LOG_UINT32, rxCnt, &statsReceivedPackets)
+LOG_ADD(LOG_UINT32, anCnt, &statsAcceptedAnchorDataPackets)
 LOG_ADD(LOG_UINT32, okCnt, &statsAcceptedPackets)
 
 LOG_GROUP_STOP(tdoa)
