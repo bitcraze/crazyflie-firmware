@@ -7,7 +7,6 @@
 #include "mac.h"
 
 extern uwbAlgorithm_t uwbTdoaTagAlgorithm;
-extern float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
 
 typedef struct rangePacket_s {
   uint8_t type;

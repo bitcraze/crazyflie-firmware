@@ -39,7 +39,7 @@
 
 static lpsAlgoOptions_t* options;
 
-float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
+static float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
 
 static uint8_t previousAnchor;
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
@@ -49,16 +49,14 @@ static double frameTime_in_cl_A[LOCODECK_NR_OF_ANCHORS];
 static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
 
-typedef struct {
-  int64_t offset;
-  int64_t latestTime;
-} clockWrap_t;
-
 #define MEASUREMENT_NOISE_STD 20.0f
 
 // The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
 #define MAX_DISTANCE_DIFF (300.0f)
+
+static uint32_t statsReceivedPackets = 0;
+static uint32_t statsAcceptedPackets = 0;
 
 static uint64_t timestampToUint64(const uint8_t *ts) {
   dwTime_t timestamp = {.full = 0};
@@ -100,6 +98,8 @@ static double calcClockCorrection(const double frameTime, const double previuosF
 // We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
 // rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Referecne Anchor by Anchor N expressed in the clock of Anchor N"
 static void rxcallback(dwDevice_t *dev) {
+  statsReceivedPackets++;
+
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
 
@@ -141,10 +141,13 @@ static void rxcallback(dwDevice_t *dev) {
       // Sanity check distances in case of missed packages
       if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
         uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-#ifdef ESTIMATOR_TYPE_kalman
+
+        #ifdef ESTIMATOR_TYPE_kalman
         const float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) / LOCODECK_TS_FREQ;
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff, timeBetweenMeasurements);
-#endif
+        #endif
+
+        statsAcceptedPackets++;
       }
     }
 
@@ -217,4 +220,8 @@ LOG_ADD(LOG_FLOAT, d4, &uwbTdoaDistDiff[4])
 LOG_ADD(LOG_FLOAT, d5, &uwbTdoaDistDiff[5])
 LOG_ADD(LOG_FLOAT, d6, &uwbTdoaDistDiff[6])
 LOG_ADD(LOG_FLOAT, d7, &uwbTdoaDistDiff[7])
+
+LOG_ADD(LOG_UINT32, rxCnt, &statsReceivedPackets)
+LOG_ADD(LOG_UINT32, okCnt, &statsAcceptedPackets)
+
 LOG_GROUP_STOP(tdoa)
