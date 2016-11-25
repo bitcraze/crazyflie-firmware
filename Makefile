@@ -29,6 +29,7 @@ LPS_TDOA_ENABLE   ?= 0
 ESTIMATOR          ?= complementary
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
+SENSORS 					 ?= cf2
 
 ######### Test activation ##########
 FATFS_DISKIO_TESTS  ?= 0	# Set to 1 to enable FatFS diskio function tests. Erases card.
@@ -152,15 +153,15 @@ PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 PROJ_OBJ_CF2 +=  pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
-#PROJ_OBJ_CF2 +=  sensors_cf2.o 
-PROJ_OBJ_CF2 +=  sensors_bst.o
+
+PROJ_OBJ_CF2 +=  sensors_$(SENSORS).o
 # libdw
 PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
-PROJ_OBJ_CF1 += sound_cf1.o sensors_stock.o
+PROJ_OBJ_CF1 += sound_cf1.o sensors_cf1.o
 PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
 
 # Stabilizer modules
