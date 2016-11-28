@@ -76,14 +76,10 @@ typedef struct quaternion_s {
   };
 } quaternion_t;
 
-typedef struct toaMeasurement_s {
-  int8_t senderId;
-  float x, y, z;
-  int64_t rx, tx;
-} toaMeasurement_t;
-
 typedef struct tdoaMeasurement_s {
-  toaMeasurement_t measurement[2];
+  point_t anchorPosition[2];
+  float distanceDiff;
+  float timeBetweenMeasurements;
   float stdDev;
 } tdoaMeasurement_t;
 
