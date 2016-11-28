@@ -43,6 +43,8 @@
 #include "arm_math.h"
 #endif
 
+//#define UPDATE_KALMAN_WITH_RANGING
+
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
@@ -51,7 +53,7 @@ static uint16_t io_timeout = 0;
 static bool did_timeout;
 static uint16_t timeout_start_ms;
 
-static uint16_t range_last = 10;
+static uint16_t range_last = 0;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -163,7 +165,7 @@ void vl53l0xTask(void* arg)
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     range_last = vl53l0xReadRangeContinuousMillimeters();
-#if defined(ESTIMATOR_TYPE_kalman)
+#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
     float distance = (float)range_last;
     if (distance < 2.0f){
