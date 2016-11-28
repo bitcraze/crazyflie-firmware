@@ -35,8 +35,13 @@
 #include "log.h"
 
 #include "i2cdev.h"
-
 #include "vl53l0x.h"
+
+#include "stabilizer_types.h"
+#ifdef ESTIMATOR_TYPE_kalman
+#include "estimator_kalman.h"
+#include "arm_math.h"
+#endif
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -46,7 +51,7 @@ static uint16_t io_timeout = 0;
 static bool did_timeout;
 static uint16_t timeout_start_ms;
 
-static uint16_t range_last = 0;
+static uint16_t range_last = 10;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -120,6 +125,7 @@ static bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val);
 /** Default constructor, uses default I2C address.
  * @see VL53L0X_DEFAULT_ADDRESS
  */
+
 void vl53l0xInit(DeckInfo* info)
 {
   if (isInit)
@@ -128,7 +134,6 @@ void vl53l0xInit(DeckInfo* info)
   i2cdevInit(I2C1_DEV);
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
-
   xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
   isInit = true;
@@ -154,10 +159,21 @@ void vl53l0xTask(void* arg)
 
   vl53l0xSetVcselPulsePeriod(VcselPeriodPreRange, 18);
   vl53l0xSetVcselPulsePeriod(VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(0);
+  vl53l0xStartContinuous(100);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     range_last = vl53l0xReadRangeContinuousMillimeters();
+#if defined(ESTIMATOR_TYPE_kalman)
+    // check if range is feasible and push into the kalman filter
+    float distance = (float)range_last;
+    if (distance < 2.0f){
+      tofMeasurement_t tofData;
+      tofData.timestamp = 100;
+      tofData.distance = distance;
+      tofData.stdDev = 0.0025;
+      stateEstimatorEnqueueTOF(&tofData);
+    }
+#endif
     vTaskDelayUntil(&xLastWakeTime, M2T(measurement_timing_budget_ms));
   }
 }
@@ -1105,8 +1121,8 @@ bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val)
 
 // TODO: Decide on vid:pid and set the used pins
 static const DeckDriver vl53l0x_deck = {
-  .vid = 0,
-  .pid = 0,
+  .vid = 0, // Changed this from 0
+  .pid = 0, // Changed this from 0
   .name = "vl53l0x",
   .usedGpio = 0,
 
@@ -1115,8 +1131,4 @@ static const DeckDriver vl53l0x_deck = {
 };
 
 DECK_DRIVER(vl53l0x_deck);
-
-LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, range, &range_last)
-LOG_GROUP_STOP(range)
 
