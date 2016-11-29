@@ -44,6 +44,7 @@
 #endif
 
 //#define UPDATE_KALMAN_WITH_RANGING
+#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -167,12 +168,13 @@ void vl53l0xTask(void* arg)
     range_last = vl53l0xReadRangeContinuousMillimeters();
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
-    float distance = (float)range_last;
-    if (distance < 2.0f){
+    // the sensor should not be able to measure >3 [m], and outliers typically
+    // occur as >8 [m] measurements
+    if (range_last < RANGE_OUTLIER_LIMIT){
       tofMeasurement_t tofData;
-      tofData.timestamp = 100;
-      tofData.distance = distance;
-      tofData.stdDev = 0.0025;
+      tofData.timestamp = xTaskGetTickCount();
+      tofData.distance = (float)range_last;
+      tofData.stdDev = 0.0025;                 // [mm]
       stateEstimatorEnqueueTOF(&tofData);
     }
 #endif
@@ -1133,4 +1135,8 @@ static const DeckDriver vl53l0x_deck = {
 };
 
 DECK_DRIVER(vl53l0x_deck);
+
+LOG_GROUP_START(range)
+LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_GROUP_STOP(range)
 

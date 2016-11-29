@@ -924,9 +924,6 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
   tdoaCount++;
 }
 
-// TODO remove the temporary test variable (used for logging)
-static float testRange;
-
 static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
 {
   // Updates the filter with a measured distance in the zb direction using the
@@ -934,12 +931,20 @@ static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
   arm_matrix_instance_f32 H = {1, STATE_DIM, h};
 
   // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
-  if (fabs(R[2][2]) > 0.1){
-    float predictedDistance = S[STATE_Z] / R[2][2];
+  if (fabs(R[2][2]) > 0.1 && R[2][2] > 0){
+    float angleOfApterure = 10 * DEG_TO_RAD; // Half aperture angle radians
+    float alpha = acosf(R[2][2]) - angleOfApterure;
+    if (alpha < 0.0f){
+      alpha = 0.0f;
+    }
+    float predictedDistance = S[STATE_Z] / cosf(alpha);
     float measuredDistance = tof->distance / 1000.0; // scale from [mm] to [m]
-    testRange = measuredDistance;
-    //Measurement equation; h = z/((R*z_b)\dot z_b) = z/R[2][2]
-    h[STATE_Z] = 1 / R[2][2];
+
+    //Measurement equation
+    //
+    // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
+    
+    h[STATE_Z] = 1 / cosf(alpha);
 
     // Scalar update
     stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, tof->stdDev);
@@ -1243,10 +1248,6 @@ bool stateEstimatorTest(void)
   // TODO: Figure out what we could test?
   return isInit;
 }
-
-LOG_GROUP_START(tof)
-  LOG_ADD(LOG_FLOAT, range, &testRange)
-LOG_GROUP_STOP(tof)
 
 LOG_GROUP_START(kalman)
   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
