@@ -125,7 +125,7 @@ bool pidIsActive(PidObject* pid)
 {
   bool isActive = true;
 
-  if (pid->kp < 0.0001 && pid->ki < 0.0001 && pid->kd < 0.0001)
+  if (pid->kp < 0.0001f && pid->ki < 0.0001f && pid->kd < 0.0001f)
   {
     isActive = false;
   }

@@ -139,10 +139,10 @@ void attitudeControllerCorrectAttitudePID(
   // Update PID for yaw axis
   float yawError;
   yawError = eulerYawDesired - eulerYawActual;
-  if (yawError > 180.0)
-    yawError -= 360.0;
-  else if (yawError < -180.0)
-    yawError += 360.0;
+  if (yawError > 180.0f)
+    yawError -= 360.0f;
+  else if (yawError < -180.0f)
+    yawError += 360.0f;
   pidSetError(&pidYaw, yawError);
   *yawRateDesired = pidUpdate(&pidYaw, eulerYawActual, false);
 }
