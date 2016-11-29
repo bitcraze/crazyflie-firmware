@@ -294,6 +294,8 @@ CFLAGS += -Wall -Wmissing-braces -fno-strict-aliasing $(C_PROFILE) -std=gnu11
 CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 #Permits to remove un-used functions and global variables from output file
 CFLAGS += -ffunction-sections -fdata-sections
+# Prevent promoting floats to doubles
+CFLAGS += -Wdouble-promotion
 
 # Fail on warnings
 CFLAGS += -Werror
