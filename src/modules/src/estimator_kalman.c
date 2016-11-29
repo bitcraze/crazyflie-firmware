@@ -619,9 +619,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   }
   quadIsFlying = (xTaskGetTickCount()-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
 
-  static float dx, dy, dz;
-  static float tmpSPX, tmpSPY, tmpSPZ;
-  static float zacc;
+  float dx, dy, dz;
+  float tmpSPX, tmpSPY, tmpSPZ;
+  float zacc;
 
   if (quadIsFlying) // only acceleration in z direction
   {
