@@ -80,26 +80,26 @@ static const float thrustScale = 1000.0f;
 static struct this_s this = {
   .pidVX = {
     .init = {
-      .kp = 30,
-      .ki = 0,
-      .kd = 0,
+      .kp = 25.0f,
+      .ki = 1.0f,
+      .kd = 0.0f,
     },
     .pid.dt = DT,
   },
 
   .pidVY = {
     .init = {
-      .kp = 30,
-      .ki = 0,
-      .kd = 0,
+      .kp = 25.0f,
+      .ki = 1.0f,
+      .kd = 0.0f,
     },
     .pid.dt = DT,
   },
 
   .pidVZ = {
     .init = {
-      .kp = 15,
-      .ki = 20,
+      .kp = 25,
+      .ki = 15,
       .kd = 0,
     },
     .pid.dt = DT,
@@ -161,8 +161,8 @@ static float runPid(float input, struct pidAxis_s *axis, float setpoint, float d
   return pidUpdate(&axis->pid, input, true);
 }
 
-void positionController(float* thrust, attitude_t *attitude, const state_t *state,
-                                                             const setpoint_t *setpoint)
+void positionController(float* thrust, attitude_t *attitude, setpoint_t *setpoint,
+                                                             const state_t *state)
 {
   this.pidX.pid.outputLimit = xyVelMax * velMaxOverhead;
   this.pidY.pid.outputLimit = xyVelMax * velMaxOverhead;
@@ -171,15 +171,15 @@ void positionController(float* thrust, attitude_t *attitude, const state_t *stat
   this.pidZ.pid.outputLimit = max(zVelMax, 0.5)  * velMaxOverhead;
 
   // X, Y
-  pidSetDesired(&this.pidVX.pid, runPid(state->position.x, &this.pidX, setpoint->position.x, DT));
-  pidSetDesired(&this.pidVY.pid, runPid(state->position.y, &this.pidY, setpoint->position.y, DT));
-  pidSetDesired(&this.pidVZ.pid, runPid(state->position.z, &this.pidZ, setpoint->position.z, DT));
+  setpoint->velocity.x = runPid(state->position.x, &this.pidX, setpoint->position.x, DT);
+  setpoint->velocity.y = runPid(state->position.y, &this.pidY, setpoint->position.y, DT);
+  setpoint->velocity.z = runPid(state->position.z, &this.pidZ, setpoint->position.z, DT);
 
-  velocityController(thrust, attitude, state, setpoint);
+  velocityController(thrust, attitude, setpoint, state);
 }
 
-void velocityController(float* thrust, attitude_t *attitude, const state_t *state,
-                                                             const setpoint_t *setpoint)
+void velocityController(float* thrust, attitude_t *attitude, setpoint_t *setpoint,
+                                                             const state_t *state)
 {
   this.pidVX.pid.outputLimit = rpLimit * rpLimitOverhead;
   this.pidVY.pid.outputLimit = rpLimit * rpLimitOverhead;
@@ -188,8 +188,8 @@ void velocityController(float* thrust, attitude_t *attitude, const state_t *stat
   //this.pidVZ.pid.outputLimit = (this.thrustBase - this.thrustMin) / thrustScale;
 
   // Roll and Pitch
-  float rollRaw  = pidUpdate(&this.pidVX.pid, state->velocity.x, true);
-  float pitchRaw = pidUpdate(&this.pidVY.pid, state->velocity.y, true);
+  float rollRaw  = runPid(state->velocity.x, &this.pidVX, setpoint->velocity.x, DT);
+  float pitchRaw = runPid(state->velocity.y, &this.pidVY, setpoint->velocity.y, DT);
 
   float yawRad = state->attitude.yaw * (float)M_PI / 180;
   attitude->pitch = -(rollRaw  * cosf(yawRad)) - (pitchRaw * sinf(yawRad));
@@ -199,7 +199,7 @@ void velocityController(float* thrust, attitude_t *attitude, const state_t *stat
   attitude->pitch = constrain(attitude->pitch, -rpLimit, rpLimit);
 
   // Thrust
-  float thrustRaw = pidUpdate(&this.pidVZ.pid, state->velocity.z, true);
+  float thrustRaw = runPid(state->velocity.z, &this.pidVZ, setpoint->velocity.z, DT);
   // Scale the thrust and add feed forward term
   *thrust = thrustRaw*thrustScale + this.thrustBase;
   // Check for minimum thrust
@@ -239,6 +239,10 @@ LOG_ADD(LOG_FLOAT, Yd, &this.pidY.pid.outD)
 LOG_ADD(LOG_FLOAT, Zp, &this.pidZ.pid.outP)
 LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
 LOG_ADD(LOG_FLOAT, Zd, &this.pidZ.pid.outD)
+
+LOG_ADD(LOG_FLOAT, VXp, &this.pidVX.pid.outP)
+LOG_ADD(LOG_FLOAT, VXi, &this.pidVX.pid.outI)
+LOG_ADD(LOG_FLOAT, VXd, &this.pidVX.pid.outD)
 
 LOG_ADD(LOG_FLOAT, VZp, &this.pidVZ.pid.outP)
 LOG_ADD(LOG_FLOAT, VZi, &this.pidVZ.pid.outI)

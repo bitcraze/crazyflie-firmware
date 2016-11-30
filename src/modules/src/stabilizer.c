@@ -123,7 +123,7 @@ static void stabilizerTask(void* param)
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
-    stateController(&control, &sensorData, &state, &setpoint, tick);
+    stateController(&control, &setpoint, &sensorData, &state, tick);
     powerDistribution(&control);
 
     tick++;

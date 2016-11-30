@@ -32,9 +32,9 @@ bool stateControllerTest(void)
   return pass;
 }
 
-void stateController(control_t *control, const sensorData_t *sensors,
+void stateController(control_t *control, setpoint_t *setpoint,
+                                         const sensorData_t *sensors,
                                          const state_t *state,
-                                         const setpoint_t *setpoint,
                                          const uint32_t tick)
 {
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
@@ -51,7 +51,11 @@ void stateController(control_t *control, const sensorData_t *sensors,
   }
 
   if (RATE_DO_EXECUTE(POSITION_RATE, tick)) {
-    positionController(&actuatorThrust, &attitudeDesired, state, setpoint);
+    if (setpoint->mode.z == modeAbs) {
+      positionController(&actuatorThrust, &attitudeDesired, setpoint, state);
+    } else if (setpoint->mode.z == modeVelocity) {
+      velocityController(&actuatorThrust, &attitudeDesired, setpoint, state);
+    }
   }
 
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
