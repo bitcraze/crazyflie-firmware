@@ -37,13 +37,13 @@
 #include "i2cdev.h"
 #include "vl53l0x.h"
 
-#define UPDATE_KALMAN_WITH_RANGING
-
 #include "stabilizer_types.h"
 #ifdef ESTIMATOR_TYPE_kalman
+
 #include "estimator_kalman.h"
 #include "arm_math.h"
 
+//#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
 #define RANGE_OUTLIER_LIMIT 1500 // the measured range is in [mm]
 // Measurement noise model
 static float expPointA = 1.0f;
@@ -147,8 +147,10 @@ void vl53l0xInit(DeckInfo* info)
   devAddr = VL53L0X_DEFAULT_ADDRESS;
   xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
   
-  // Compute constant in the measurement noise mdoel
+#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
+  // pre-compute constant in the measurement noise mdoel
   expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
+#endif
   
   isInit = true;
 }
