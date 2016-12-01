@@ -44,6 +44,7 @@
 #include "arm_math.h"
 
 //#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
+#ifdef UPDATE_KALMAN_WITH_RANGING
 #define RANGE_OUTLIER_LIMIT 1500 // the measured range is in [mm]
 // Measurement noise model
 static float expPointA = 1.0f;
@@ -51,8 +52,8 @@ static float expStdA = 0.0025f; // STD at elevation expPointA [m]
 static float expPointB = 1.3f;
 static float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
-
-#endif
+#endif // UPDATE_KALMAN_WITH_RANGING
+#endif // ESTIMATOR_TYPE_kalman
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
