@@ -141,6 +141,15 @@ static inline bool stateEstimatorHasTDOAPacket(tdoaMeasurement_t *uwb) {
   return (pdTRUE == xQueueReceive(tdoaDataQueue, uwb, 0));
 }
 
+// Measurements of TOF from laser sensor
+static xQueueHandle tofDataQueue;
+#define TOF_QUEUE_LENGTH (10)
+
+static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof);
+
+static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
+  return (pdTRUE == xQueueReceive(tofDataQueue, tof, 0));
+}
 
 /**
  * Constants used in the estimator
@@ -260,8 +269,6 @@ static float varSkew;
 static uint32_t lastFlightCmd;
 static uint32_t takeoffTime;
 static uint32_t tdoaCount;
-
-
 
 /**
  * Supporting and utility functions
@@ -421,6 +428,13 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
    * we therefore consume all measurements since the last loop, rather than accumulating
    */
 
+  tofMeasurement_t tof;
+  while (stateEstimatorHasTOFPacket(&tof))
+  {
+    stateEstimatorUpdateWithTof(&tof);
+    doneUpdate = true;
+  }
+  
   distanceMeasurement_t dist;
   while (stateEstimatorHasDistanceMeasurement(&dist))
   {
@@ -441,7 +455,6 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
     stateEstimatorUpdateWithTDOA(&tdoa);
     doneUpdate = true;
   }
-
 
   /**
    * If an update has been made, the state is finalized:
@@ -923,6 +936,32 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
   tdoaCount++;
 }
 
+static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
+{
+  // Updates the filter with a measured distance in the zb direction using the
+  float h[STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, STATE_DIM, h};
+
+  // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
+  if (fabs(R[2][2]) > 0.1 && R[2][2] > 0){
+    float angleOfApterure = 10 * DEG_TO_RAD; // Half aperture angle radians
+    float alpha = acosf(R[2][2]) - angleOfApterure;
+    if (alpha < 0.0f){
+      alpha = 0.0f;
+    }
+    float predictedDistance = S[STATE_Z] / cosf(alpha);
+    float measuredDistance = tof->distance; // [m]
+
+    //Measurement equation
+    //
+    // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
+    h[STATE_Z] = 1 / cosf(alpha); 
+    
+    // Scalar update
+    stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, tof->stdDev);
+  }
+}
+
 static void stateEstimatorFinalize(sensorData_t *sensors, uint32_t tick)
 {
   // Matrix to rotate the attitude covariances once updated
@@ -1107,12 +1146,14 @@ void stateEstimatorInit(void) {
     distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
     posDataQueue = xQueueCreate(POS_QUEUE_LENGTH, sizeof(positionMeasurement_t));
     tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
+    tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
   }
   else
   {
     xQueueReset(distDataQueue);
     xQueueReset(posDataQueue);
     xQueueReset(tdoaDataQueue);
+    xQueueReset(tofDataQueue);
   }
 
   lastPrediction = xTaskGetTickCount();
@@ -1205,6 +1246,12 @@ bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos)
 bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist)
 {
   return stateEstimatorEnqueueExternalMeasurement(distDataQueue, (void *)dist);
+}
+
+bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof)
+{
+  // A distance (distance) [m] to the ground along the z_B axis.
+  return stateEstimatorEnqueueExternalMeasurement(tofDataQueue, (void *)tof);
 }
 
 bool stateEstimatorTest(void)
