@@ -270,8 +270,6 @@ static uint32_t lastFlightCmd;
 static uint32_t takeoffTime;
 static uint32_t tdoaCount;
 
-
-
 /**
  * Supporting and utility functions
  */
@@ -430,6 +428,13 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
    * we therefore consume all measurements since the last loop, rather than accumulating
    */
 
+  tofMeasurement_t tof;
+  while (stateEstimatorHasTOFPacket(&tof))
+  {
+    stateEstimatorUpdateWithTof(&tof);
+    doneUpdate = true;
+  }
+  
   distanceMeasurement_t dist;
   while (stateEstimatorHasDistanceMeasurement(&dist))
   {
@@ -448,13 +453,6 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
     stateEstimatorUpdateWithTDOA(&tdoa);
-    doneUpdate = true;
-  }
-
-  tofMeasurement_t tof;
-  while (stateEstimatorHasTOFPacket(&tof))
-  {
-    stateEstimatorUpdateWithTof(&tof);
     doneUpdate = true;
   }
 
@@ -938,14 +936,13 @@ static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
       alpha = 0.0f;
     }
     float predictedDistance = S[STATE_Z] / cosf(alpha);
-    float measuredDistance = tof->distance / 1000.0; // scale from [mm] to [m]
+    float measuredDistance = tof->distance; // [m]
 
     //Measurement equation
     //
     // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
+    h[STATE_Z] = 1 / cosf(alpha); 
     
-    h[STATE_Z] = 1 / cosf(alpha);
-
     // Scalar update
     stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, tof->stdDev);
   }

@@ -37,14 +37,22 @@
 #include "i2cdev.h"
 #include "vl53l0x.h"
 
+#define UPDATE_KALMAN_WITH_RANGING
+
 #include "stabilizer_types.h"
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
 #include "arm_math.h"
-#endif
 
-//#define UPDATE_KALMAN_WITH_RANGING
-#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
+#define RANGE_OUTLIER_LIMIT 1500 // the measured range is in [mm]
+// Measurement noise model
+static float expPointA = 1.0f;
+static float expStdA = 0.0025f; // STD at elevation expPointA [m]
+static float expPointB = 1.3f;
+static float expStdB = 0.2f;    // STD at elevation expPointB [m]
+static float expCoeff;
+
+#endif
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -138,7 +146,10 @@ void vl53l0xInit(DeckInfo* info)
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
   xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
-
+  
+  // Compute constant in the measurement noise mdoel
+  expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
+  
   isInit = true;
 }
 
@@ -148,7 +159,7 @@ bool vl53l0xTest(void)
 
   if (!isInit)
     return false;
-
+       // Measurement noise model
   testStatus  = vl53l0xTestConnection();
   testStatus &= vl53l0xInitSensor(true);
 
@@ -171,10 +182,12 @@ void vl53l0xTask(void* arg)
     // the sensor should not be able to measure >3 [m], and outliers typically
     // occur as >8 [m] measurements
     if (range_last < RANGE_OUTLIER_LIMIT){
+    
+      // Form measurement
       tofMeasurement_t tofData;
       tofData.timestamp = xTaskGetTickCount();
-      tofData.distance = (float)range_last;
-      tofData.stdDev = 0.0025;                 // [mm]
+      tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
+      tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
       stateEstimatorEnqueueTOF(&tofData);
     }
 #endif
