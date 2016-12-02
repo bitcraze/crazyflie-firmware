@@ -59,6 +59,7 @@
 #include "queuemonitor.h"
 #include "buzzer.h"
 #include "sound.h"
+#include "sysload.h"
 
 #ifdef PLATFORM_CF1
 #include "uart.h"
@@ -102,6 +103,7 @@ void systemInit(void)
 
 #ifdef PLATFORM_CF2
   usblinkInit();
+  sysLoadInit();
 #endif
 
   /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
