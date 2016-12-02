@@ -18,7 +18,7 @@ script:
 
   # Build CF2 with TDMA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDMA_ENABLE=1
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0"
 
   # Build CF2 with TDOA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
