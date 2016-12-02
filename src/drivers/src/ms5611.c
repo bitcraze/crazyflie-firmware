@@ -130,7 +130,7 @@ bool ms5611EvaluateSelfTest(float min, float max, float value, char* string)
   if (value < min || value > max)
   {
     DEBUG_PRINT("Self test %s [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
-                string, min, max, value);
+                string, (double)min, (double)max, (double)value);
     return false;
   }
   return true;
@@ -214,7 +214,7 @@ float ms5611CalcTemp(int32_t deltaT)
   {
     return (float)(((1 << EXTRA_PRECISION) * 2000)
             + (((int64_t)deltaT * calReg.tsens) >> (23 - EXTRA_PRECISION)))
-            / ((1 << EXTRA_PRECISION)* 100.0);
+            / ((1 << EXTRA_PRECISION)* 100.0f);
   }
 }
 
@@ -392,9 +392,9 @@ float ms5611PressureToAltitude(float* pressure/*, float* ground_pressure, float*
 {
     if (*pressure > 0)
     {
-        //return (1.f - pow(*pressure / CONST_SEA_PRESSURE, CONST_PF)) * CONST_PF2;
-        //return ((pow((1015.7 / *pressure), CONST_PF) - 1.0) * (25. + 273.15)) / 0.0065;
-        return ((pow((1015.7 / *pressure), CONST_PF) - 1.0) * (FIX_TEMP + 273.15)) / 0.0065;
+        //return (1.f - powf(*pressure / CONST_SEA_PRESSURE, CONST_PF)) * CONST_PF2;
+        //return ((powf((1015.7f / *pressure), CONST_PF) - 1.0f) * (25.f + 273.15f)) / 0.0065f;
+        return ((powf((1015.7f / *pressure), CONST_PF) - 1.0f) * (FIX_TEMP + 273.15f)) / 0.0065f;
     }
     else
     {

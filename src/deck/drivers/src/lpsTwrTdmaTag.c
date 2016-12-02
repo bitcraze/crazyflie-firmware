@@ -48,10 +48,12 @@ bool tdmaSynchronized;
 dwTime_t frameStart;
 
 #ifndef TDMA_NSLOTS_BITS
+#warning "Number of slots for TDMA not defined! Defaulting to 1."
 #define TDMA_NSLOTS_BITS 1
 #endif
 
 #ifndef TDMA_SLOT
+#warning "Slot number for TDMA not defined! Defaulting to 0."
 #define TDMA_SLOT 0
 #endif
 
