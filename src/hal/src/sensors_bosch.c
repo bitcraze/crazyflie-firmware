@@ -59,11 +59,12 @@
 #define SENSORS_READ_RATE_HZ      1000
 #define SENSORS_STARTUP_TIME_MS   1000
 
-#define SENSORS_G_PER_LSB_CFG     (float)((2 * 8) / 65536.0)
-#define SENSORS_DEG_PER_LSB_CFG   (float)((2 * 2000.0) / 65536.0)
-#define SENSORS_1G_RAW            (int16_t)(1.0 / (float)((2 * 8) / 65536.0))
+#define SENSORS_BMI160_G_CFG             16
+#define SENSORS_BMI160_G_PER_LSB_CFG     (2 * SENSORS_BMI160_G_CFG) / 65536.0f
+#define SENSORS_BMI160_DEG_PER_LSB_CFG   (2 * 2000.0) / 65536.0f
+#define SENSORS_1G_RAW            (int16_t)(1.0 / (float)((2 * SENSORS_BMI160_G_CFG) / 65536.0f))
 
-#define SENSORS_BMI055_1G_PER_LSB_CFG   (2 * 8.0 / (4096))
+#define SENSORS_BMI055_1G_PER_LSB_CFG   (2 * 8.0f / (4096))
 #define SENSORS_BMI055_1G_IN_LSB		    (int16_t)(1.0f / SENSORS_BMI055_1G_PER_LSB_CFG)
 
 #define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off#define GYRO_NBR_OF_AXES            3
@@ -87,7 +88,7 @@ typedef enum
 } sensorsTypes_e;
 
 // holds the IMU type
-static sensorsTypes_e usedImuType = SENSORS_BMI055;
+static sensorsTypes_e usedImuType = SENSORS_BMI160;
 
 typedef struct
 {
@@ -417,8 +418,6 @@ static void sensorsTaskInit(void)
 
 static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
 {
-  bma2x2_xyz_t bmi055acc;
-  bmg160_xyz_t bmi055gyr;
   Axis3f accScaled;
 
   // read out the data
@@ -426,6 +425,9 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
   {
     case SENSORS_BMI055:
 #ifdef SENSORS_ENABLE_BMI055
+    {
+      bma2x2_xyz_t bmi055acc;
+      bmg160_xyz_t bmi055gyr;
       bma2x2_read_accel_xyz(&bmi055acc);
       bmg160_get_data_XYZ(&bmi055gyr);
       // re-align the axes
@@ -435,18 +437,23 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
       gyroBmi055.x = bmi055gyr.x;
       gyroBmi055.y = -bmi055gyr.y;
       gyroBmi055.z = -bmi055gyr.z;
+    }
 #endif
       break;
     case SENSORS_BMI160:
 #ifdef SENSORS_ENABLE_BMI160
-      bmi160_get_sensor_data(ACCEL_AND_GYRO, &bmi160Dev);
+    {
+      struct bmi160_sensor_data bmi160acc;
+      struct bmi160_sensor_data bmi160gyr;
+      bmi160_get_sensor_data(BMI160_BOTH_ACCEL_AND_GYRO, &bmi160acc, &bmi160gyr, &bmi160Dev);
       // re-align the axes
-      accelBmi160.x = bmi160Dev.accel.x;
-      accelBmi160.y = -bmi160Dev.accel.y;
-      accelBmi160.z = -bmi160Dev.accel.z;
-      gyroBmi160.x = bmi160Dev.gyro.x;
-      gyroBmi160.y = -bmi160Dev.gyro.y;
-      gyroBmi160.z = -bmi160Dev.gyro.z;
+      accelBmi160.x = bmi160acc.x;
+      accelBmi160.y = -bmi160acc.y;
+      accelBmi160.z = -bmi160acc.z;
+      gyroBmi160.x = bmi160gyr.x;
+      gyroBmi160.y = -bmi160gyr.y;
+      gyroBmi160.z = -bmi160gyr.z;
+    }
 #endif
       break;
   }
@@ -487,12 +494,12 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
 
 #ifdef SENSORS_ENABLE_BMI160
       sensorsAccIIRLPFilter(&accelBmi160, &accelLPF, &accelStoredFilterValues, (int32_t) sensorsAccLpfAttFactor);
-      gyroOut->x = ((float) gyroBmi160.x - gyroBiasBmi160.bias.x) * SENSORS_DEG_PER_LSB_CFG;
-      gyroOut->y = ((float) gyroBmi160.y - gyroBiasBmi160.bias.y) * SENSORS_DEG_PER_LSB_CFG;
-      gyroOut->z = ((float) gyroBmi160.z - gyroBiasBmi160.bias.z) * SENSORS_DEG_PER_LSB_CFG;
-      accScaled.x = (accelLPF.x - accelBiasBmi160.bias.x) * SENSORS_G_PER_LSB_CFG;
-      accScaled.y = (accelLPF.y - accelBiasBmi160.bias.y) * SENSORS_G_PER_LSB_CFG;
-      accScaled.z = (accelLPF.z - accelBiasBmi160.bias.z) * SENSORS_G_PER_LSB_CFG;
+      gyroOut->x = ((float) gyroBmi160.x - gyroBiasBmi160.bias.x) * SENSORS_BMI160_DEG_PER_LSB_CFG;
+      gyroOut->y = ((float) gyroBmi160.y - gyroBiasBmi160.bias.y) * SENSORS_BMI160_DEG_PER_LSB_CFG;
+      gyroOut->z = ((float) gyroBmi160.z - gyroBiasBmi160.bias.z) * SENSORS_BMI160_DEG_PER_LSB_CFG;
+      accScaled.x = (accelLPF.x - accelBiasBmi160.bias.x) * SENSORS_BMI160_G_PER_LSB_CFG;
+      accScaled.y = (accelLPF.y - accelBiasBmi160.bias.y) * SENSORS_BMI160_G_PER_LSB_CFG;
+      accScaled.z = (accelLPF.z - accelBiasBmi160.bias.z) * SENSORS_BMI160_G_PER_LSB_CFG;
       sensorsAccAlignToGravity(&accScaled, accOut);
 #endif
       break;
@@ -528,9 +535,9 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
 #endif
 #ifdef SENSORS_ENABLE_BMI055
       sensorsAccIIRLPFilter(&accelBmi055, &accelLPF, &accelStoredFilterValues, (int32_t) sensorsAccLpfAttFactor);
-      gyroOut->x = ((float) gyroBmi055.x - gyroBiasBmi055.bias.x) * SENSORS_DEG_PER_LSB_CFG;
-      gyroOut->y = ((float) gyroBmi055.y - gyroBiasBmi055.bias.y) * SENSORS_DEG_PER_LSB_CFG;
-      gyroOut->z = ((float) gyroBmi055.z - gyroBiasBmi055.bias.z) * SENSORS_DEG_PER_LSB_CFG;
+      gyroOut->x = ((float) gyroBmi055.x - gyroBiasBmi055.bias.x) * SENSORS_BMI160_DEG_PER_LSB_CFG;
+      gyroOut->y = ((float) gyroBmi055.y - gyroBiasBmi055.bias.y) * SENSORS_BMI160_DEG_PER_LSB_CFG;
+      gyroOut->z = ((float) gyroBmi055.z - gyroBiasBmi055.bias.z) * SENSORS_BMI160_DEG_PER_LSB_CFG;
       accScaled.x = (accelLPF.x - accelBiasBmi055.bias.x) * SENSORS_BMI055_1G_PER_LSB_CFG;
       accScaled.y = (accelLPF.y - accelBiasBmi055.bias.y) * SENSORS_BMI055_1G_PER_LSB_CFG;
       accScaled.z = (accelLPF.z - accelBiasBmi055.bias.z) * SENSORS_BMI055_1G_PER_LSB_CFG;
