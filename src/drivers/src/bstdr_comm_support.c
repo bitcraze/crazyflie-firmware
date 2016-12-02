@@ -117,9 +117,14 @@ bstdr_ret_t bstdr_comm_init(void)
 bstdr_ret_t bstdr_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
 {
 	/**< Burst read code comes here */
-	i2cdevRead(I2C1_DEV, dev_id, reg_addr, (uint16_t) len, reg_data);
-
-	return (bstdr_ret_t)0;
+	if (i2cdevRead(I2C1_DEV, dev_id, reg_addr, (uint16_t) len, reg_data))
+	{
+	  return BSTDR_OK;
+	}
+	else
+	{
+    return BSTDR_E_CON_ERROR;
+	}
 }
 
 
@@ -133,9 +138,14 @@ bstdr_ret_t bstdr_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data
 bstdr_ret_t bstdr_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
 {
 	/**< Burst write code comes here */
-	i2cdevWrite(I2C1_DEV, dev_id,reg_addr,(uint16_t) len, reg_data);
-
-	return (bstdr_ret_t)0;
+	if (i2cdevWrite(I2C1_DEV, dev_id,reg_addr,(uint16_t) len, reg_data))
+  {
+    return BSTDR_OK;
+  }
+  else
+  {
+    return BSTDR_E_CON_ERROR;
+  }
 }
 
 

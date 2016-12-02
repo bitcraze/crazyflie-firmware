@@ -59,12 +59,12 @@
 #define SENSORS_READ_RATE_HZ      1000
 #define SENSORS_STARTUP_TIME_MS   1000
 
-#define SENSORS_BMI160_G_CFG             16
-#define SENSORS_BMI160_G_PER_LSB_CFG     (2 * SENSORS_BMI160_G_CFG) / 65536.0f
-#define SENSORS_BMI160_DEG_PER_LSB_CFG   (2 * 2000.0) / 65536.0f
-#define SENSORS_1G_RAW            (int16_t)(1.0 / (float)((2 * SENSORS_BMI160_G_CFG) / 65536.0f))
+#define SENSORS_BMI160_G_CFG             2
+#define SENSORS_BMI160_G_PER_LSB_CFG     (2.0f * SENSORS_BMI160_G_CFG) / 65536.0f
+#define SENSORS_BMI160_DEG_PER_LSB_CFG   (2.0f * 2000.0) / 65536.0f
+#define SENSORS_1G_RAW            (int16_t)(1.0f / (float)((2.0f * SENSORS_BMI160_G_CFG) / 65536.0f))
 
-#define SENSORS_BMI055_1G_PER_LSB_CFG   (2 * 8.0f / (4096))
+#define SENSORS_BMI055_1G_PER_LSB_CFG   (2.0f * 8.0f / (4096))
 #define SENSORS_BMI055_1G_IN_LSB		    (int16_t)(1.0f / SENSORS_BMI055_1G_PER_LSB_CFG)
 
 #define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off#define GYRO_NBR_OF_AXES            3
