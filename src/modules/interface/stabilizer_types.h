@@ -173,6 +173,13 @@ typedef struct setpointZ_s {
   bool isUpdate; // True = small update of setpoint, false = completely new
 } setpointZ_t;
 
+/** TOF measurement**/
+typedef struct tofMeasurement_s {
+  uint32_t timestamp;
+  float distance;
+  float stdDev;
+} tofMeasurement_t;
+
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000
 #define RATE_500_HZ 500

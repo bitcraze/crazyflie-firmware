@@ -67,3 +67,4 @@ bool stateEstimatorTest(void);
 bool stateEstimatorEnqueueTDOA(tdoaMeasurement_t *uwb);
 bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos);
 bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist);
+bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof);
