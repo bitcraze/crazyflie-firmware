@@ -61,7 +61,7 @@
 
 #define SENSORS_BMI160_G_CFG             2
 #define SENSORS_BMI160_G_PER_LSB_CFG     (2.0f * SENSORS_BMI160_G_CFG) / 65536.0f
-#define SENSORS_BMI160_DEG_PER_LSB_CFG   (2.0f * 2000.0) / 65536.0f
+#define SENSORS_BMI160_DEG_PER_LSB_CFG   (2.0f * 2000.0f) / 65536.0f
 #define SENSORS_1G_RAW            (int16_t)(1.0f / (float)((2.0f * SENSORS_BMI160_G_CFG) / 65536.0f))
 
 #define SENSORS_BMI055_1G_PER_LSB_CFG   (2.0f * 8.0f / (4096))

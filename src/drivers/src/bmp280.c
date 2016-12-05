@@ -748,16 +748,16 @@ float bmp280_compensate_temperature_float(int32_t v_uncomp_temperature_s32)
 	float temperature;
 
 	/* calculate x1*/
-	v_x1_u32r  = (((float)v_uncomp_temperature_s32) / 16384.0 -((float)p_bmp280->calib_param.dig_T1) / 1024.0) * ((float)p_bmp280->calib_param.dig_T2);
+	v_x1_u32r  = (((float)v_uncomp_temperature_s32) / 16384.0f -((float)p_bmp280->calib_param.dig_T1) / 1024.0f) * ((float)p_bmp280->calib_param.dig_T2);
 	/* calculate x2*/
-	v_x2_u32r  = ((((float)v_uncomp_temperature_s32) / 131072.0 - ((float)p_bmp280->calib_param.dig_T1) / 8192.0) *
-			(((float)v_uncomp_temperature_s32) / 131072.0 - ((float)p_bmp280->calib_param.dig_T1) / 8192.0)) * ((float)p_bmp280->calib_param.dig_T3);
+	v_x2_u32r  = ((((float)v_uncomp_temperature_s32) / 131072.0f - ((float)p_bmp280->calib_param.dig_T1) / 8192.0f) *
+			(((float)v_uncomp_temperature_s32) / 131072.0f - ((float)p_bmp280->calib_param.dig_T1) / 8192.0f)) * ((float)p_bmp280->calib_param.dig_T3);
 
 	/* calculate t_fine*/
 	p_bmp280->calib_param.t_fine = (int32_t)(v_x1_u32r + v_x2_u32r);
 
 	/* calculate true pressure*/
-	temperature  = (v_x1_u32r + v_x2_u32r) / 5120.0;
+	temperature  = (v_x1_u32r + v_x2_u32r) / 5120.0f;
 
 	return temperature;
 }
@@ -784,21 +784,21 @@ float bmp280_compensate_pressure_float(int32_t v_uncomp_pressure_s32)
 	float v_x2_u32r;
 	float pressure;
 
-	v_x1_u32r = ((float)p_bmp280->calib_param.t_fine/2.0) - 64000.0;
-	v_x2_u32r = v_x1_u32r * v_x1_u32r *	((float)p_bmp280->calib_param.dig_P6) / 32768.0;
-	v_x2_u32r = v_x2_u32r + v_x1_u32r *	((float)p_bmp280->calib_param.dig_P5) * 2.0;
-	v_x2_u32r = (v_x2_u32r / 4.0) +	(((float)p_bmp280->calib_param.dig_P4) * 65536.0);
-	v_x1_u32r = (((float)p_bmp280->calib_param.dig_P3) * v_x1_u32r * v_x1_u32r / 524288.0 + ((float)p_bmp280->calib_param.dig_P2) * v_x1_u32r) / 524288.0;
-	v_x1_u32r = (1.0 + v_x1_u32r / 32768.0) * ((float)p_bmp280->calib_param.dig_P1);
-	pressure = 1048576.0 - (float)v_uncomp_pressure_s32;
+	v_x1_u32r = ((float)p_bmp280->calib_param.t_fine/2.0f) - 64000.0f;
+	v_x2_u32r = v_x1_u32r * v_x1_u32r *	((float)p_bmp280->calib_param.dig_P6) / 32768.0f;
+	v_x2_u32r = v_x2_u32r + v_x1_u32r *	((float)p_bmp280->calib_param.dig_P5) * 2.0f;
+	v_x2_u32r = (v_x2_u32r / 4.0f) +	(((float)p_bmp280->calib_param.dig_P4) * 65536.0f);
+	v_x1_u32r = (((float)p_bmp280->calib_param.dig_P3) * v_x1_u32r * v_x1_u32r / 524288.0f + ((float)p_bmp280->calib_param.dig_P2) * v_x1_u32r) / 524288.0f;
+	v_x1_u32r = (1.0f + v_x1_u32r / 32768.0f) * ((float)p_bmp280->calib_param.dig_P1);
+	pressure = 1048576.0f - (float)v_uncomp_pressure_s32;
 	/* Avoid exception caused by division by zero */
-	if (v_x1_u32r != 0.0)
-		pressure = (pressure - (v_x2_u32r / 4096.0)) * 6250.0 / v_x1_u32r;
+	if (v_x1_u32r != 0.0f)
+		pressure = (pressure - (v_x2_u32r / 4096.0f)) * 6250.0f / v_x1_u32r;
 	else
 		return 0;
-	v_x1_u32r = ((float)p_bmp280->calib_param.dig_P9) *	pressure * pressure / 2147483648.0;
-	v_x2_u32r = pressure * ((float)p_bmp280->calib_param.dig_P8) / 32768.0;
-	pressure = pressure + (v_x1_u32r + v_x2_u32r + ((float)p_bmp280->calib_param.dig_P7)) / 16.0;
+	v_x1_u32r = ((float)p_bmp280->calib_param.dig_P9) *	pressure * pressure / 2147483648.0f;
+	v_x2_u32r = pressure * ((float)p_bmp280->calib_param.dig_P8) / 32768.0f;
+	pressure = pressure + (v_x1_u32r + v_x2_u32r + ((float)p_bmp280->calib_param.dig_P7)) / 16.0f;
 
 	return pressure;
 }
