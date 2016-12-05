@@ -14,7 +14,11 @@ script:
 
   # Build CF2 with kalman estimator
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 ESTIMATOR=kalman SENSORS=task
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 ESTIMATOR=kalman
+
+  # Build CF2 with bosch sensors
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 SENSORS=bosch
 
   # Build CF2 with TDMA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
