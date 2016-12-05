@@ -477,7 +477,7 @@ bool vl53l0xInitSensor(bool io_2v8)
 // Defaults to 0.25 MCPS as initialized by the ST API and this library.
 bool vl53l0xSetSignalRateLimit(float limit_Mcps)
 {
-  if (limit_Mcps < 0 || limit_Mcps > 511.99) { return false; }
+  if (limit_Mcps < 0 || limit_Mcps > 511.99f) { return false; }
 
   // Q9.7 fixed point format (9 integer bits, 7 fractional bits)
   uint16_t fixed_pt = limit_Mcps * (1 << 7);

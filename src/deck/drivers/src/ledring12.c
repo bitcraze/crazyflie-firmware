@@ -387,7 +387,7 @@ static float gravityLightCalculateAngle(float pitch, float roll) {
   if (roll != 0) {
     angle = atanf(pitch / roll) + (float) M_PI_2;
 
-    if (roll < 0.0) {
+    if (roll < 0.0f) {
       angle += (float) M_PI;
     }
   }

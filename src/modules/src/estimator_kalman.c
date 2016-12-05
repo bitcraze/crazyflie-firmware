@@ -186,7 +186,7 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
 
 // The bounds on the covariance, these shouldn't be hit, but sometimes are... why?
 #define MAX_COVARIANCE (100)
-#define MIN_COVARIANCE (1e-6)
+#define MIN_COVARIANCE (1e-6f)
 
 // The bounds on states, these shouldn't be hit...
 #define MAX_POSITION (10) //meters
@@ -981,7 +981,7 @@ static void stateEstimatorFinalize(sensorData_t *sensors, uint32_t tick)
   float v2 = S[STATE_D2];
 
   // Move attitude error into attitude if any of the angle errors are large enough
-  if ((fabsf(v0) > 0.1e-3 || fabsf(v1) > 0.1e-3 || fabsf(v2) > 0.1e-3) && (fabsf(v0) < 10 && fabsf(v1) < 10 && fabsf(v2) < 10))
+  if ((fabsf(v0) > 0.1e-3f || fabsf(v1) > 0.1e-3f || fabsf(v2) > 0.1e-3f) && (fabsf(v0) < 10 && fabsf(v1) < 10 && fabsf(v2) < 10))
   {
     float angle = arm_sqrt(v0*v0 + v1*v1 + v2*v2);
     float ca = arm_cos_f32(angle / 2.0f);

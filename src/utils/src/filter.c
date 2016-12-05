@@ -29,6 +29,8 @@
 
 #include "filter.h"
 
+#define M_PI_F (float)M_PI
+
 /**
  * IIR filter the samples.
  */
@@ -73,13 +75,13 @@ void lpf2pInit(lpf2pData* lpfData, float sample_freq, float cutoff_freq)
 void lpf2pSetCutoffFreq(lpf2pData* lpfData, float sample_freq, float cutoff_freq)
 {
   float fr = sample_freq/cutoff_freq;
-  float ohm = tanf(M_PI/fr);
-  float c = 1.0f+2.0f*cosf(M_PI/4.0f)*ohm+ohm*ohm;
+  float ohm = tanf(M_PI_F/fr);
+  float c = 1.0f+2.0f*cosf(M_PI_F/4.0f)*ohm+ohm*ohm;
   lpfData->b0 = ohm*ohm/c;
   lpfData->b1 = 2.0f*lpfData->b0;
   lpfData->b2 = lpfData->b0;
   lpfData->a1 = 2.0f*(ohm*ohm-1.0f)/c;
-  lpfData->a2 = (1.0f-2.0f*cosf(M_PI/4.0f)*ohm+ohm*ohm)/c;
+  lpfData->a2 = (1.0f-2.0f*cosf(M_PI_F/4.0f)*ohm+ohm*ohm)/c;
   lpfData->delay_element_1 = 0.0f;
   lpfData->delay_element_2 = 0.0f;
 }

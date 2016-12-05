@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -52,7 +52,7 @@
 #define IMU_DEG_PER_LSB_CFG   MPU6050_DEG_PER_LSB_2000
 #define IMU_ACCEL_FS_CFG      MPU6050_ACCEL_FS_8
 #define IMU_G_PER_LSB_CFG     MPU6050_G_PER_LSB_8
-#define IMU_1G_RAW            (int16_t)(1.0 / MPU6050_G_PER_LSB_8)
+#define IMU_1G_RAW            (int16_t)(1.0f / MPU6050_G_PER_LSB_8)
 
 #define IMU_STARTUP_TIME_MS   1000
 
@@ -71,8 +71,9 @@
 #define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
 
 #define MAG_GAUSS_PER_LSB_CFG    HMC5883L_GAIN_660
-#define MAG_GAUSS_PER_LSB        660.0
+#define MAG_GAUSS_PER_LSB        660.0f
 
+#define M_PI_F (float)M_PI
 
 typedef struct
 {
@@ -206,10 +207,10 @@ void imu6Init(void)
   varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
   imuAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
 
-  cosPitch = cos(configblockGetCalibPitch() * M_PI/180);
-  sinPitch = sin(configblockGetCalibPitch() * M_PI/180);
-  cosRoll = cos(configblockGetCalibRoll() * M_PI/180);
-  sinRoll = sin(configblockGetCalibRoll() * M_PI/180);
+  cosPitch = cos(configblockGetCalibPitch() * M_PI_F/180);
+  sinPitch = sin(configblockGetCalibPitch() * M_PI_F/180);
+  cosRoll = cos(configblockGetCalibRoll() * M_PI_F/180);
+  sinRoll = sin(configblockGetCalibRoll() * M_PI_F/180);
 
   isInit = true;
 }
@@ -313,9 +314,9 @@ void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut)
   }
   else
   {
-    magOut->x = 0.0;
-    magOut->y = 0.0;
-    magOut->z = 0.0;
+    magOut->x = 0.0f;
+    magOut->y = 0.0f;
+    magOut->z = 0.0f;
   }
 }
 
