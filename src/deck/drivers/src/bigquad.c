@@ -35,6 +35,11 @@
 #include "deck.h"
 #include "extrx.h"
 #include "pm.h"
+#include "uart1.h"
+#include "msp.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
 
 #define BIGQUAD_BAT_VOLT_PIN       DECK_GPIO_MISO
 #define BIGQUAD_BAT_VOLT_MULT      7.8f
@@ -43,6 +48,27 @@
 
 //Hardware configuration
 static bool isInit;
+
+#ifdef BQ_DECK_ENABLE_OSD
+static MspObject s_MspObject;
+
+void osdTask(void *param)
+{
+  while(1)
+  {
+    char ch;
+    uart1Getchar(&ch);
+
+    mspProcessByte(&s_MspObject, (uint8_t)ch);
+  }
+}
+
+void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
+{
+  uart1SendData(bufferLen, pBuffer);
+}
+#endif // BQ_DECK_ENABLE_OSD
+
 
 static void bigquadInit(DeckInfo *info)
 {
@@ -55,6 +81,13 @@ static void bigquadInit(DeckInfo *info)
 #ifdef BQ_DECK_ENABLE_PM
   pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
   pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_CURR_PIN, BIGQUAD_BAT_AMP_PER_VOLT);
+#endif
+
+#ifdef BQ_DECK_ENABLE_OSD
+  uart1Init(115200);
+  mspInit(&s_MspObject, osdResponseCallback);
+  xTaskCreate(osdTask, "BQ_OSDTASK",
+              configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
 #endif
 
   isInit = true;
