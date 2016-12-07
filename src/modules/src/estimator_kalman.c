@@ -434,7 +434,7 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
     stateEstimatorUpdateWithTof(&tof);
     doneUpdate = true;
   }
-  
+
   distanceMeasurement_t dist;
   while (stateEstimatorHasDistanceMeasurement(&dist))
   {
@@ -955,8 +955,8 @@ static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
     //Measurement equation
     //
     // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
-    h[STATE_Z] = 1 / cosf(alpha); 
-    
+    h[STATE_Z] = 1 / cosf(alpha);
+
     // Scalar update
     stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, tof->stdDev);
   }
@@ -1170,6 +1170,11 @@ void stateEstimatorInit(void) {
   gyroAccumulatorCount = 0;
   thrustAccumulatorCount = 0;
   baroAccumulatorCount = 0;
+
+  // Reset all matrices to 0 (like uppon system reset)
+  memset(q, 0, sizeof(q));
+  memset(R, 0, sizeof(R));
+  memset(P, 0, sizeof(S));
 
   // TODO: Can we initialize this more intelligently?
   S[STATE_X] = 0.5;
