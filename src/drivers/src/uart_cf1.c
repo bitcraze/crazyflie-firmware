@@ -38,7 +38,7 @@
 #include "semphr.h"
 #include "queue.h"
 
-#include "uart.h"
+#include "uart_cf1.h"
 #include "crtp.h"
 #include "cfassert.h"
 #include "nvicconf.h"

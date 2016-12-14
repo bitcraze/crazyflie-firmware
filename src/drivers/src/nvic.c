@@ -31,7 +31,7 @@
 #include "cfassert.h"
 
 #ifdef PLATFORM_CF1
-#include "uart.h"
+#include "uart_cf1.h"
 #define UART_PRINT    uartPrintf
 #else
 #include "uart1.h"

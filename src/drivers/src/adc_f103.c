@@ -40,7 +40,7 @@
 #include "imu.h"
 
 #ifdef ADC_OUTPUT_RAW_DATA
-#include "uart.h"
+#include "uart_cf1.h"
 #include "acc.h"
 #endif
 

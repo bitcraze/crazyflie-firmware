@@ -41,7 +41,7 @@
 #include "hmc5883l.h"
 #include "ms5611.h"
 #include "ledseq.h"
-#include "uart.h"
+#include "uart_cf1.h"
 #include "param.h"
 
 #define IMU_ENABLE_MAG_HMC5883

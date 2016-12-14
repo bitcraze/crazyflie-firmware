@@ -26,6 +26,16 @@
 #include "config.h"
 #include "console.h"
 
+#ifdef DEBUG_PRINT_ON_UART
+  #ifdef PLATFORM_CF1
+    #include "uart_cf1.h"
+  #endif
+  #ifdef PLATFORM_CF2
+    #include "uart1.h"
+    #define uartPrintf uart1Printf
+  #endif
+#endif
+
 #ifdef DEBUG_MODULE
 #define DEBUG_FMT(fmt) DEBUG_MODULE ": " fmt
 #endif
@@ -35,15 +45,12 @@
 #endif
 
 #if defined(DEBUG_PRINT_ON_UART)
-  #ifndef ENABLE_UART
-    #error "Need to define ENABLE_UART to use DEBUG_PRINT_ON_UART"
-  #endif
   #define DEBUG_PRINT(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
   #define DEBUG_PRINT_OS(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
 #elif defined(DEBUG_PRINT_ON_SWO)
   #define DEBUG_PRINT(fmt, ...) eprintf(ITM_SendChar, fmt, ## __VA_ARGS__)
   #define DEBUG_PRINT_OS(fmt, ...) eprintf(ITM_SendChar, fmt, ## __VA_ARGS__)
-#else
+#else // Debug using radio or USB
   #define DEBUG_PRINT(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
 #define DEBUG_PRINT_OS(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
   //#define DEBUG_PRINT(fmt, ...)

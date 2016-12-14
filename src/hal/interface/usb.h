@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * uart.h - uart CRTP link and raw access functions
+ * usb.h - USB CRTP link and raw access functions
  */
 #ifndef USB_H_
 #define USB_H_

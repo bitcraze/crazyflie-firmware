@@ -62,7 +62,7 @@
 #include "sysload.h"
 
 #ifdef PLATFORM_CF1
-#include "uart.h"
+#include "uart_cf1.h"
 #endif
 
 #ifdef PLATFORM_CF2
@@ -168,16 +168,6 @@ void systemTask(void *arg)
 
   //Init the high-levels modules
   systemInit();
-
-#ifndef USE_RADIOLINK_CRTP
-#ifdef UART_OUTPUT_TRACE_DATA
-  //debugInitTrace();
-#endif
-#ifdef ENABLE_UART
-//  uartInit();
-#endif
-#endif //ndef USE_RADIOLINK_CRTP
-
   commInit();
   commanderInit();
   stabilizerInit();
