@@ -24,15 +24,14 @@
  *
  * and
  *
- * "Kalman filtering with an attitude" as published in the PhD thesis "Increased autonomy for quadrocopter systems: trajectory generation, fail-safe strategies, and state estimation"
- * http://dx.doi.org/10.3929/ethz-a-010655275
- * TODO: Update the above reference once the paper has been published
+ * "Covariance Correction Step for Kalman Filtering with an Attitude"
+ * http://arc.aiaa.org/doi/abs/10.2514/1.G000848
  *
  * Academic citation would be appreciated.
  *
  * BIBTEX ENTRIES:
-      @INPROCEEDINGS{MuellerHamer2015,
-      author  = {Mueller, M. W. and Hamer, M. and D'Andrea, R.},
+      @INPROCEEDINGS{MuellerHamerUWB2015,
+      author  = {Mueller, Mark W and Hamer, Michael and D'Andrea, Raffaello},
       title   = {Fusing ultra-wideband range measurements with accelerometers and rate gyroscopes for quadrocopter state estimation},
       booktitle = {2015 IEEE International Conference on Robotics and Automation (ICRA)},
       year    = {2015},
@@ -40,13 +39,14 @@
       pages   = {1730-1736},
       doi     = {10.1109/ICRA.2015.7139421},
       ISSN    = {1050-4729}}
-      
-      @PHDTHESIS {Mueller2016,
-      author  = {Mueller, M. W.},
-      title   = {Increased autonomy for quadrocopter systems: trajectory generation, fail-safe strategies, and state-estimation},
-      school  = {ETH Zurich},
-      year    = {2016},
-      doi     = {10.3929/ethz-a-010655275}}
+
+      @ARTICLE{MuellerCovariance2016,
+      author={Mueller, Mark W and Hehn, Markus and D'Andrea, Raffaello},
+      title={Covariance Correction Step for Kalman Filtering with an Attitude},
+      journal={Journal of Guidance, Control, and Dynamics},
+      pages={1--7},
+      year={2016},
+      publisher={American Institute of Aeronautics and Astronautics}}
  *
  * ============================================================================
  */
