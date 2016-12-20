@@ -944,18 +944,13 @@ static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
 
   // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
   if (fabs(R[2][2]) > 0.1 && R[2][2] > 0){
-    float angleOfApterure = 10 * DEG_TO_RAD; // Half aperture angle radians
-    float alpha = acosf(R[2][2]) - angleOfApterure;
-    if (alpha < 0.0f){
-      alpha = 0.0f;
-    }
-    float predictedDistance = S[STATE_Z] / cosf(alpha);
+    float predictedDistance = S[STATE_Z] / R[2][2];
     float measuredDistance = tof->distance; // [m]
 
     //Measurement equation
     //
     // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
-    h[STATE_Z] = 1 / cosf(alpha);
+    h[STATE_Z] = 1 / R[2][2];
 
     // Scalar update
     stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, tof->stdDev);
