@@ -46,13 +46,14 @@
 #define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
 #define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
 
+#ifdef ENABLE_BQ_DECK
 //Hardware configuration
 static bool isInit;
 
 #ifdef BQ_DECK_ENABLE_OSD
 static MspObject s_MspObject;
 
-void osdTask(void *param)
+static void osdTask(void *param)
 {
   while(1)
   {
@@ -63,7 +64,7 @@ void osdTask(void *param)
   }
 }
 
-void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
+static void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
 {
   uart1SendData(bufferLen, pBuffer);
 }
@@ -116,6 +117,5 @@ static const DeckDriver bigquad_deck = {
   .test = bigquadTest,
 };
 
-#ifdef ENABLE_BQ_DECK
 DECK_DRIVER(bigquad_deck);
-#endif
+#endif // ENABLE_BQ_DECK

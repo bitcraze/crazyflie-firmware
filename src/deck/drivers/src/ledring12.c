@@ -126,17 +126,17 @@ static const uint8_t blueRing[][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
                                        BLACK, BLACK, BLACK,
                                       };
 
-static const uint8_t greenRing[][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
-                                       BLACK, BLACK, BLACK,
-                                       BLACK, BLACK, BLACK,
-                                       BLACK, BLACK, BLACK,
-                                      };
-
-static const uint8_t redRing[][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
-                                       {4,0,0}, {2,0,0}, {1,0,0},
-                                       BLACK, BLACK, BLACK,
-                                       BLACK, BLACK, BLACK,
-                                      };
+//static const uint8_t greenRing[][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                      };
+//
+//static const uint8_t redRing[][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
+//                                       {4,0,0}, {2,0,0}, {1,0,0},
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                      };
 
 static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
 {
