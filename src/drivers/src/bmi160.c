@@ -374,7 +374,7 @@ int8_t bmi160_set_sens_conf(struct bmi160_dev *dev)
         rslt = bmi160_set_regs(reg_addr, &data, 1, dev);/* Write output data rate and bandwidth */
         if (rslt != BMI160_OK)
             return rslt;
-        dev->delay_ms(BMI160_ONE_MS_DELAY);
+        dev->delay_ms(4);
     }
 
     if ((dev->accel_cfg.range <= BMI160_ACCEL_RANGE_MAX) && (dev->accel_cfg.range != prev_accel_cfg->range)) {
@@ -391,6 +391,7 @@ int8_t bmi160_set_sens_conf(struct bmi160_dev *dev)
         if (rslt != BMI160_OK)
             return rslt;
         prev_accel_cfg->range = dev->accel_cfg.range;
+        dev->delay_ms(4);
     }
 
     if (((dev->gyro_cfg.odr <= BMI160_GYRO_ODR_MAX) && (dev->gyro_cfg.odr != prev_gyro_cfg->odr))
@@ -415,7 +416,7 @@ int8_t bmi160_set_sens_conf(struct bmi160_dev *dev)
         rslt = bmi160_set_regs(reg_addr, &data, 1, dev);/* Write output data rate and bandwidth */
         if (rslt != BMI160_OK)
             return rslt;
-        dev->delay_ms(BMI160_ONE_MS_DELAY);
+        dev->delay_ms(4);
     }
 
     if ((dev->gyro_cfg.range <= BMI160_GYRO_RANGE_MAX) && (dev->gyro_cfg.range != prev_gyro_cfg->range)) {
@@ -432,6 +433,7 @@ int8_t bmi160_set_sens_conf(struct bmi160_dev *dev)
         if (rslt != BMI160_OK)
             return rslt;
         prev_gyro_cfg->range = dev->gyro_cfg.range;
+        dev->delay_ms(4);
     }
 
     /* write power mode for accel and gyro */
