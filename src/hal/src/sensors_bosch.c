@@ -67,7 +67,10 @@
 #define SENSORS_BMI055_1G_PER_LSB_CFG   (2.0f * 8.0f / (4096))
 #define SENSORS_BMI055_1G_IN_LSB		    (int16_t)(1.0f / SENSORS_BMI055_1G_PER_LSB_CFG)
 
-#define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off#define GYRO_NBR_OF_AXES            3
+#define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms
+#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off
+
+#define GYRO_NBR_OF_AXES            3
 #define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
 
 #define SENSORS_TAKE_ACCEL_BIAS
@@ -565,6 +568,9 @@ bool sensorsIsCalibrated(void)
 #ifdef SENSORS_TAKE_ACCEL_BIAS
       status &= accelBiasBmi055.isBiasValueFound;
 #endif
+      break;
+    default:
+      status = false;
       break;
   }
 
