@@ -316,6 +316,21 @@ static void stateEstimatorAssertNotNaN()
 }
 #endif
 
+#ifdef KALMAN_DECOUPLE_XY
+// Reset a state to 0 with max covariance
+// If called often, this decouples the state to the rest of the filter
+static void decoupleState(stateIdx_t state)
+{
+  // Set all covariance to 0
+  for(int i=0; i<STATE_DIM; i++) {
+    P[state][i] = 0;
+  }
+  // Set state variance to maximum
+  P[state][state] = MAX_COVARIANCE;
+  // set state to zero
+  S[state] = 0;
+}
+#endif
 
 // --------------------------------------------------
 
@@ -329,6 +344,14 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
   bool doneUpdate = false;
 
   uint32_t tick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
+
+#ifdef KALMAN_DECOUPLE_XY
+  // Decouple position states
+  decoupleState(STATE_X);
+  decoupleState(STATE_PX);
+  decoupleState(STATE_Y);
+  decoupleState(STATE_PY);
+#endif
 
   // Average the last IMU measurements. We do this because the prediction loop is
   // slower than the IMU loop, but the IMU information is required externally at
