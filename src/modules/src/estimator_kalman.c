@@ -324,6 +324,7 @@ static void decoupleState(stateIdx_t state)
   // Set all covariance to 0
   for(int i=0; i<STATE_DIM; i++) {
     P[state][i] = 0;
+    P[i][state] = 0;
   }
   // Set state variance to maximum
   P[state][state] = MAX_COVARIANCE;
