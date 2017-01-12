@@ -682,9 +682,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     tmpSPY = S[STATE_PY];
     tmpSPZ = S[STATE_PZ];
 
-    // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
+    // body-velocity update: accelerometers - gyros cross velocity - gravity in body frame
     S[STATE_PX] += dt * (gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * R[2][0]);
-    S[STATE_PY] += dt * (gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
+    S[STATE_PY] += dt * (-gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
     S[STATE_PZ] += dt * (zacc + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
@@ -704,9 +704,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     tmpSPY = S[STATE_PY];
     tmpSPZ = S[STATE_PZ];
 
-    // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
+    // body-velocity update: accelerometers - gyros cross velocity - gravity in body frame
     S[STATE_PX] += dt * (acc->x + gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * R[2][0]);
-    S[STATE_PY] += dt * (acc->y + gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
+    S[STATE_PY] += dt * (acc->y - gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
     S[STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
 
