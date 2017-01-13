@@ -34,7 +34,7 @@ static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint64_t
 static void mockRadioSetToReceiveMode();
 
 static void ignoreKalmanEstimatorValidation();
-static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff, double timeBetweenMeasurements);
+static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff);
 static void mockKalmanEstimator_validate();
 static void mockKalmanEstimator_resetMock();
 
@@ -668,8 +668,6 @@ static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int
   // Rounding error based on clock resolution is around 3 mm
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.02, expected->distanceDiff, actual->distanceDiff, message);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.0, expected->timeBetweenMeasurements, actual->timeBetweenMeasurements, message);
-
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.0, expected->anchorPosition[0].x, actual->anchorPosition[0].x, message);
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.0, expected->anchorPosition[0].y, actual->anchorPosition[0].y, message);
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.0, expected->anchorPosition[0].z, actual->anchorPosition[0].z, message);
@@ -683,7 +681,7 @@ static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int
   return true;
 }
 
-static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff, double timeBetweenMeasurements) {
+static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     TEST_ASSERT_TRUE(stateEstimatorIndex < STATE_ESTIMATOR_MAX_NR_OF_CALLS);
 
     stateEstimatorEnqueueTDOA_StubWithCallback(stateEstimatorEnqueueTDOAMockCallback);
@@ -691,7 +689,6 @@ static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanc
     tdoaMeasurement_t* measurement = &stateEstimatorExpectations[stateEstimatorIndex];
 
     measurement->distanceDiff = distanceDiff;
-    measurement->timeBetweenMeasurements = timeBetweenMeasurements;
 
     measurement->anchorPosition[0].x = options.anchorPosition[anchor1].x;
     measurement->anchorPosition[0].y = options.anchorPosition[anchor1].y;
