@@ -79,7 +79,6 @@ typedef struct quaternion_s {
 typedef struct tdoaMeasurement_s {
   point_t anchorPosition[2];
   float distanceDiff;
-  float timeBetweenMeasurements;
   float stdDev;
 } tdoaMeasurement_t;
 

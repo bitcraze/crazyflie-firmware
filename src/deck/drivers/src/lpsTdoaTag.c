@@ -71,11 +71,10 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
 }
 
 #ifdef ESTIMATOR_TYPE_kalman
-static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff, double timeBetweenMeasurements) {
+static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff,
-    .timeBetweenMeasurements = timeBetweenMeasurements,
 
     .anchorPosition[0] = options->anchorPosition[anchor1],
     .anchorPosition[1] = options->anchorPosition[anchor2]
@@ -153,8 +152,7 @@ static void rxcallback(dwDevice_t *dev) {
           uwbTdoaDistDiff[anchor] = tdoaDistDiff;
 
           #ifdef ESTIMATOR_TYPE_kalman
-          const float timeBetweenMeasurements = truncateToTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) / LOCODECK_TS_FREQ;
-          enqueueTDOA(previousAnchor, anchor, tdoaDistDiff, timeBetweenMeasurements);
+          enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
           #endif
 
           statsAcceptedPackets++;
