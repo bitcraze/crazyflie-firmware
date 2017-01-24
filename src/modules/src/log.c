@@ -131,6 +131,8 @@ static int logsLen;
 static uint32_t logsCrc;
 static int logsCount = 0;
 
+static CRTPPacket p;
+
 static bool isInit = false;
 
 /* Log management functions */
@@ -150,7 +152,22 @@ void logInit(void)
 
   logs = &_log_start;
   logsLen = &_log_stop - &_log_start;
-  logsCrc = crcSlow(logs, logsLen*sizeof(logs[0]));
+
+  // Calculate a hash of the toc by chaining description of each elements
+  // Using the CRTP packet as temporary buffer
+  logsCrc = 0;
+  for (int i=0; i<logsLen; i++)
+  {
+    int len = 5;
+    memcpy(&p.data[0], &logsCrc, 4);
+    p.data[4] = logs[i].type;
+    if (logs[i].name) {
+      ASSERT(strlen(logs[i].name) < (30-4-1));  // Param group or name too big!
+      memcpy(&p.data[5], logs[i].name, strlen(logs[i].name));
+      len += strlen(logs[i].name);
+    }
+    logsCrc = crcSlow(p.data, len);
+  }
 
   // Big lock that protects the log datastructures
   logLock = xSemaphoreCreateMutex();
@@ -179,8 +196,6 @@ bool logTest(void)
 {
   return isInit;
 }
-
-static CRTPPacket p;
 
 void logTask(void * prm)
 {

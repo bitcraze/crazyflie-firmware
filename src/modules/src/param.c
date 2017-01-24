@@ -72,6 +72,8 @@ static int paramsLen;
 static uint32_t paramsCrc;
 static int paramsCount = 0;
 
+static CRTPPacket p;
+
 static bool isInit = false;
 
 void paramInit(void)
@@ -83,7 +85,22 @@ void paramInit(void)
 
   params = &_param_start;
   paramsLen = &_param_stop - &_param_start;
-  paramsCrc = crcSlow(params, paramsLen*sizeof(params[0]));
+
+  // Calculate a hash of the toc by chaining description of each elements
+  // Using the CRTP packet as temporary buffer
+  paramsCrc = 0;
+  for (int i=0; i<paramsLen; i++)
+  {
+    int len = 5;
+    memcpy(&p.data[0], &paramsCrc, 4);
+    p.data[4] = params[i].type;
+    if (params[i].name) {
+      ASSERT(strlen(params[i].name) < (30-4-1));  // Param group or name too big!
+      memcpy(&p.data[5], params[i].name, strlen(params[i].name));
+      len += strlen(params[i].name);
+    }
+    paramsCrc = crcSlow(p.data, len);
+  }
 
   for (i=0; i<paramsLen; i++)
   {
@@ -105,8 +122,6 @@ bool paramTest(void)
 {
   return isInit;
 }
-
-CRTPPacket p;
 
 void paramTask(void * prm)
 {
