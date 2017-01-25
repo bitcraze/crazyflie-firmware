@@ -143,6 +143,8 @@ typedef enum mode_e {
 } mode_t;
 
 typedef struct setpoint_s {
+  uint32_t timestamp;
+
   attitude_t attitude;
   attitude_t attitudeRate;
   float thrust;

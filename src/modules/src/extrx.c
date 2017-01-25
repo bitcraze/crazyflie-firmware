@@ -61,7 +61,7 @@
 #define EXTRX_SCALE_PITCH  (40.0f)
 #define EXTRX_SCALE_YAW    (400.0f)
 
-static struct CommanderCrtpValues commanderPacket;
+static setpoint_t extrxSetpoint;
 static uint16_t ch[EXTRX_NR_CHANNELS];
 
 static void extRxTask(void *param);
@@ -70,6 +70,10 @@ static void extRxDecodeChannels(void);
 
 void extRxInit(void)
 {
+
+  extrxSetpoint.mode.roll = modeAbs;
+  extrxSetpoint.mode.pitch = modeAbs;
+  extrxSetpoint.mode.yaw = modeVelocity;
 
 #ifdef ENABLE_CPPM
   cppmInit();
@@ -98,11 +102,11 @@ static void extRxTask(void *param)
 
 static void extRxDecodeChannels(void)
 {
-  commanderPacket.thrust = cppmConvert2uint16(ch[EXTRX_CH_TRUST]);
-  commanderPacket.roll = EXTRX_SIGN_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
-  commanderPacket.pitch = EXTRX_SIGN_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
-  commanderPacket.yaw = EXTRX_SIGN_YAW * cppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
-  commanderExtrxSet(&commanderPacket);
+  extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_TRUST]);
+  extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
+  extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
+  extrxSetpoint.attitude.yaw = EXTRX_SIGN_YAW * cppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
+  commanderSetSetpoint(&extrxSetpoint, COMMANDER_PRIORITY_EXTRX);
 }
 
 static void extRxDecodeCppm(void)
@@ -177,11 +181,9 @@ LOG_ADD(LOG_UINT16, ch0, &ch[0])
 LOG_ADD(LOG_UINT16, ch1, &ch[1])
 LOG_ADD(LOG_UINT16, ch2, &ch[2])
 LOG_ADD(LOG_UINT16, ch3, &ch[3])
-LOG_ADD(LOG_UINT16, thrust, &commanderPacket.thrust)
-LOG_ADD(LOG_FLOAT, roll, &commanderPacket.roll)
-LOG_ADD(LOG_FLOAT, pitch, &commanderPacket.pitch)
-LOG_ADD(LOG_FLOAT, yaw, &commanderPacket.yaw)
+LOG_ADD(LOG_UINT16, thrust, &extrxSetpoint.thrust)
+LOG_ADD(LOG_FLOAT, roll, &extrxSetpoint.attitude.roll)
+LOG_ADD(LOG_FLOAT, pitch, &extrxSetpoint.attitude.pitch)
+LOG_ADD(LOG_FLOAT, yaw, &extrxSetpoint.attitude.yaw)
 LOG_GROUP_STOP(extrx)
 #endif
-
-
