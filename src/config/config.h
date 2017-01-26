@@ -46,7 +46,7 @@
 #include "trace.h"
 #include "usec_time.h"
 
-#define PROTOCOL_VERSION 2
+#define PROTOCOL_VERSION 3
 
 #ifdef STM32F4XX
   #define P_NAME "Crazyflie 2.0"

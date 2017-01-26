@@ -23,7 +23,6 @@
  *
  *
  */
-// #include <math.h>
 #include <stdbool.h>
 
 #include "crtp_commander.h"
@@ -53,9 +52,11 @@ static void commanderCrtpCB(CRTPPacket* pk)
 {
   static setpoint_t setpoint;
 
-  if(pk->channel == CRTP_CONTROLLER_LEGACY_CH)
-  {
+  if(pk->channel == CRTP_CONTROLLER_RPYT_CH) {
     crtpCommanderRpytDecodeSetpoint(&setpoint, pk);
+    commanderSetSetpoint(&setpoint, COMMANDER_PRIORITY_CRTP);
+  } else if (pk->channel == CRTP_CONTROLLER_GENERIC_CH) {
+    crtpCommanderGenericDecodeSetpoint(&setpoint, pk);
     commanderSetSetpoint(&setpoint, COMMANDER_PRIORITY_CRTP);
   }
 }
