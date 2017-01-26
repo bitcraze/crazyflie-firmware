@@ -30,9 +30,6 @@
 #include "stabilizer_types.h"
 #include "crtp.h"
 
-#define CRTP_CONTROLLER_RPYT_CH 0
-#define CRTP_CONTROLLER_GENERIC_CH   1
-
 void crtpCommanderInit(void);
 void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
 void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
