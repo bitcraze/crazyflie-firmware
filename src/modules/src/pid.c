@@ -43,7 +43,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->ki            = ki;
   pid->kd            = kd;
   pid->iLimit        = DEFAULT_PID_INTEGRATION_LIMIT;
-  pid->outputLimit   = DEFAULT_PID_INTEGRATION_LIMIT;
+  pid->outputLimit   = DEFAULT_PID_OUTPUT_LIMIT;
   pid->dt            = dt;
   pid->enableDFilter = enableDFilter;
   if (pid->enableDFilter)
@@ -77,16 +77,23 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     pid->outD = pid->kd * pid->deriv;
     output += pid->outD;
 
-    float i = pid->integ + pid->error * pid->dt;
-    // Check if integral is saturated
-    if (abs(i) <= pid->iLimit || abs(pid->ki * i + output) <= pid->outputLimit) {
-      pid->integ = i;
+    pid->integ += pid->error * pid->dt;
+
+    // Constrain the integral (unless the iLimit is zero)
+    if(pid->iLimit != 0)
+    {
+    	pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
     }
 
     pid->outI = pid->ki * pid->integ;
     output += pid->outI;
 
-    output = constrain(output, -pid->outputLimit, pid->outputLimit);
+    // Constrain the total PID output (unless the outputLimit is zero)
+    if(pid->outputLimit != 0)
+    {
+      output = constrain(output, -pid->outputLimit, pid->outputLimit);
+    }
+
 
     pid->prevError = pid->error;
 
