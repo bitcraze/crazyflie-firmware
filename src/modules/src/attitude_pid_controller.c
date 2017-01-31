@@ -135,6 +135,16 @@ void attitudeControllerCorrectAttitudePID(
   *yawRateDesired = pidUpdate(&pidYaw, eulerYawActual, false);
 }
 
+void attitudeControllerResetRollAttitudePID(void)
+{
+    pidReset(&pidRoll);
+}
+
+void attitudeControllerResetPitchAttitudePID(void)
+{
+    pidReset(&pidRoll);
+}
+
 void attitudeControllerResetAllPID(void)
 {
   pidReset(&pidRoll);

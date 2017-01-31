@@ -30,6 +30,7 @@
 
 #include "commander.h"
 #include "crtp.h"
+#include "num.h"
 #include "FreeRTOS.h"
 
 /* The generic commander format contains a packet type and data that has to be
@@ -60,6 +61,7 @@ typedef void (*packetDecoder_t)(setpoint_t *setpoint, uint8_t type, const void *
 enum packet_type {
   stopType          = 0,
   velocityWorldType = 1,
+  rateType          = 2,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -68,7 +70,7 @@ enum packet_type {
  */
 
 /* stopDecoder
- * Keeps setopoint to 0: stops the motors and fall
+ * Keeps setpoint to 0: stops the motors and fall
  */
 static void stopDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
@@ -103,11 +105,62 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
   setpoint->attitudeRate.yaw = values->yawrate;
 }
 
+/* rateDecoder
+ * Crazyflie setpoint in 'Rate' aka 'Acro' aka 'Non-self-leveling'
+ * mode. This is identical to the legacy rpyt packet except values
+ * are to be interpreted as degrees per second instead of degrees
+ * which is useful for non self-leveled acrobatic flight
+ */
+#define MIN_THRUST  1000
+#define MAX_THRUST  60000
+static bool thrustLocked = true;
+struct ratePacket_s {
+  float rollRate;   // deg/s
+  float pitchRate;  // deg/s
+  float yawRate;    // deg/s
+  uint16_t thrust;  // ratio 0-MAXUINT16
+} __attribute__((packed));
+static void rateDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct ratePacket_s *values = data;
+  
+  ASSERT(datalen == sizeof(struct ratePacket_s));
+
+  // Thrust lock for safety -- same as in crtp_commander_rpyt
+  if (commanderGetActivePriority() == COMMANDER_PRIORITY_DISABLE) {
+    thrustLocked = true;
+  }
+  if (values->thrust == 0) {
+    thrustLocked = false;
+  }
+
+  uint16_t rawThrust = values->thrust;
+
+  if (thrustLocked || (rawThrust < MIN_THRUST)) {
+    setpoint->thrust = 0;
+  } else {
+    setpoint->thrust = min(rawThrust, MAX_THRUST);
+  }
+
+  setpoint->mode.x = modeDisable;
+  setpoint->mode.y = modeDisable;
+  setpoint->mode.z = modeDisable;
+
+  setpoint->mode.roll = modeVelocity;
+  setpoint->attitudeRate.roll = values->rollRate;
+  
+  setpoint->mode.pitch = modeVelocity;
+  setpoint->attitudeRate.pitch = values->pitchRate;
+
+  setpoint->mode.yaw = modeVelocity;
+  setpoint->attitudeRate.yaw = values->yawRate;
+}
 
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]          = stopDecoder,
   [velocityWorldType] = velocityDecoder,
+  [rateType]          = rateDecoder,
 };
 
 /* Decoder switch */
