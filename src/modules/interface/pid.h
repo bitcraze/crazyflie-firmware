@@ -63,7 +63,8 @@
 #define PID_YAW_INTEGRATION_LIMIT     360.0
 
 
-#define DEFAULT_PID_INTEGRATION_LIMIT  5000.0
+#define DEFAULT_PID_INTEGRATION_LIMIT 5000.0
+#define DEFAULT_PID_OUTPUT_LIMIT      0.0
 
 #else
 
@@ -98,7 +99,8 @@
 #define PID_YAW_INTEGRATION_LIMIT     360.0
 
 
-#define DEFAULT_PID_INTEGRATION_LIMIT  10000.0
+#define DEFAULT_PID_INTEGRATION_LIMIT 10000.0
+#define DEFAULT_PID_OUTPUT_LIMIT      0.0
 
 #endif
 
@@ -115,8 +117,8 @@ typedef struct
   float outP;         //< proportional output (debugging)
   float outI;         //< integral output (debugging)
   float outD;         //< derivative output (debugging)
-  float iLimit;       //< integral limit
-  float outputLimit;  //< output limit
+  float iLimit;       //< integral limit, absolute value. '0' means no limit.
+  float outputLimit;  //< total PID output limit, absolute value. '0' means no limit.
   float dt;           //< delta-time dt
   lpf2pData dFilter;  //< filter for D term
   bool enableDFilter; //< filter for D term enable flag

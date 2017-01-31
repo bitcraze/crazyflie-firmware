@@ -60,10 +60,6 @@ static int16_t rollOutput;
 static int16_t pitchOutput;
 static int16_t yawOutput;
 
-static float rpRateLimit  = 150.0f;
-static float yawRateLimit = 150.0f;
-static float rpyRateLimitOverhead = 1.1f;
-
 static bool isInit;
 
 void attitudeControllerInit(const float updateDt)
@@ -94,10 +90,6 @@ void attitudeControllerInit(const float updateDt)
   pidSetIntegralLimit(&pidPitch, PID_PITCH_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYaw,   PID_YAW_INTEGRATION_LIMIT);
 
-  pidRollRate.outputLimit  = INT16_MAX;
-  pidPitchRate.outputLimit = INT16_MAX;
-  pidYawRate.outputLimit   = INT16_MAX;
-
   isInit = true;
 }
 
@@ -125,10 +117,6 @@ void attitudeControllerCorrectAttitudePID(
        float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
 {
-  pidRoll.outputLimit  = rpRateLimit  * rpyRateLimitOverhead;
-  pidPitch.outputLimit = rpRateLimit  * rpyRateLimitOverhead;
-  pidYaw.outputLimit   = yawRateLimit * rpyRateLimitOverhead;
-
   pidSetDesired(&pidRoll, eulerRollDesired);
   *rollRateDesired = pidUpdate(&pidRoll, eulerRollActual, true);
 
@@ -201,8 +189,6 @@ PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
 PARAM_GROUP_STOP(pid_attitude)
 
 PARAM_GROUP_START(pid_rate)
-PARAM_ADD(PARAM_FLOAT, rpRateLimit,  &rpRateLimit)
-PARAM_ADD(PARAM_FLOAT, yawRateLimit, &yawRateLimit)
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
 PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
