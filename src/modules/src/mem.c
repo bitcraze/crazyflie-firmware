@@ -68,22 +68,18 @@
 #define CMD_GET_NBR     1
 #define CMD_GET_INFO    2
 
-#ifdef PLATFORM_CF1
-#define NBR_EEPROM      0
-#else
-#define NBR_EEPROM      1
-#endif
-
+// The first part of the memory ids are static followed by a dynamic part
+// of one wire ids that depends on the decks that are attached
 #define EEPROM_ID       0x00
-#ifdef PLATFORM_CF1
-  #define NBR_LEDMEM      0
-  uint8_t ledringmem[1];
-#else
-  #define NBR_LEDMEM      1
-#endif
 #define LEDMEM_ID       0x01
 
-#define NBR_STATIC_MEM  (NBR_EEPROM + NBR_LEDMEM)
+#ifdef PLATFORM_CF1
+  #define OW_FIRST_ID   0x00
+  uint8_t ledringmem[1];
+#else
+  #define OW_FIRST_ID   0x02
+#endif
+
 
 #define MEM_TYPE_EEPROM 0x00
 #define MEM_TYPE_OW     0x01
@@ -95,7 +91,11 @@ static void memTask(void * prm);
 static void memSettingsProcess(int command);
 static void memWriteProcess(void);
 static void memReadProcess(void);
-
+static void createNbrResponse(CRTPPacket* p);
+static void createInfoResponse(CRTPPacket* p, uint8_t memId);
+static void createEepromInfoResponse(CRTPPacket* p);
+static void createLedInfoResponse(CRTPPacket* p);
+static void createOwInfoResponse(CRTPPacket* p);
 
 static bool isInit = false;
 
@@ -155,68 +155,90 @@ void memTask(void * param)
 
 void memSettingsProcess(int command)
 {
-  uint8_t memId;
-  
   switch (command)
   {
     case CMD_GET_NBR:
-      p.header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
-      p.size = 2;
-      p.data[0] = CMD_GET_NBR;
-      p.data[1] = nbrOwMems + NBR_STATIC_MEM;
+      createNbrResponse(&p);
       crtpSendPacket(&p);
       break;
 
     case CMD_GET_INFO:
-      memId = p.data[1];
-      p.header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
-      p.size = 2;
-      p.data[0] = CMD_GET_INFO;
-      p.data[1] = memId;
-      // No error code if we fail, just send an empty packet back
-      if (memId == EEPROM_ID)
       {
-        // Memory type (eeprom)
-        p.data[2] = MEM_TYPE_EEPROM;
-        p.size += 1;
-        // Size of the memory
-        memSize = EEPROM_SIZE;
-        memcpy(&p.data[3], &memSize, 4);
-        p.size += 4;
-        memcpy(&p.data[7], eepromSerialNum.data, 8);
-        p.size += 8;
+        uint8_t memId = p.data[1];
+        createInfoResponse(&p, memId);
+        crtpSendPacket(&p);
       }
-      else if (memId == LEDMEM_ID)
-      {
-        // Memory type virtual ledring mem
-        p.data[2] = MEM_TYPE_LED12;
-        p.size += 1;
-        // Size of the memory
-        memSize = sizeof(ledringmem);
-        memcpy(&p.data[3], &memSize, 4);
-        p.size += 4;
-        memcpy(&p.data[7], eepromSerialNum.data, 8); //TODO
-        p.size += 8;
-      }
-      else
-      {
-        if (owGetinfo(memId - NBR_STATIC_MEM, &serialNbr))
-        {
-          // Memory type (1-wire)
-          p.data[2] = MEM_TYPE_OW;
-          p.size += 1;
-          // Size of the memory TODO: Define length type
-          memSize = OW_MAX_SIZE;
-          memcpy(&p.data[3], &memSize, 4);
-          p.size += 4;
-          memcpy(&p.data[7], serialNbr.data, 8);
-          p.size += 8;
-        }
-      }
-      crtpSendPacket(&p);
-
       break;
   }
+}
+
+void createNbrResponse(CRTPPacket* p)
+{
+  p->header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
+  p->size = 2;
+  p->data[0] = CMD_GET_NBR;
+  p->data[1] = nbrOwMems + OW_FIRST_ID;
+}
+
+void createInfoResponse(CRTPPacket* p, uint8_t memId)
+{
+  p->header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
+  p->size = 2;
+  p->data[0] = CMD_GET_INFO;
+  p->data[1] = memId;
+
+  // No error code if we fail, just send an empty packet back
+  switch(memId)
+  {
+    case EEPROM_ID:
+      createEepromInfoResponse(p);
+      break;
+    case LEDMEM_ID:
+      createLedInfoResponse(p);
+      break;
+    default:
+      if (owGetinfo(memId - OW_FIRST_ID, &serialNbr))
+      {
+        createOwInfoResponse(p);
+      }
+      break;
+  }
+}
+
+void createEepromInfoResponse(CRTPPacket* p)
+{
+  p->data[2] = MEM_TYPE_EEPROM;
+  p->size += 1;
+  // Size of the memory
+  memSize = EEPROM_SIZE;
+  memcpy(&p->data[3], &memSize, 4);
+  p->size += 4;
+  memcpy(&p->data[7], eepromSerialNum.data, 8);
+  p->size += 8;
+}
+
+void createLedInfoResponse(CRTPPacket* p)
+{
+  p->data[2] = MEM_TYPE_LED12;
+  p->size += 1;
+  // Size of the memory
+  memSize = sizeof(ledringmem);
+  memcpy(&p->data[3], &memSize, 4);
+  p->size += 4;
+  memcpy(&p->data[7], eepromSerialNum.data, 8); //TODO
+  p->size += 8;
+}
+
+void createOwInfoResponse(CRTPPacket* p)
+{
+  p->data[2] = MEM_TYPE_OW;
+  p->size += 1;
+  // Size of the memory TODO: Define length type
+  memSize = OW_MAX_SIZE;
+  memcpy(&p->data[3], &memSize, 4);
+  p->size += 4;
+  memcpy(&p->data[7], serialNbr.data, 8);
+  p->size += 8;
 }
 
 void memReadProcess()
@@ -232,30 +254,38 @@ void memReadProcess()
   p.header = CRTP_HEADER(CRTP_PORT_MEM, READ_CH);
   // Dont' touch the first 5 bytes, they will be the same.
 
-  if (memId == EEPROM_ID)
+  switch(memId)
   {
-    if (memAddr + readLen <= EEPROM_SIZE &&
-        eepromReadBuffer(&p.data[6], memAddr, readLen))
-      status = 0;
-    else
-      status = EIO;
-  }
-  else if (memId == LEDMEM_ID)
-  {
-    if (memAddr + readLen <= sizeof(ledringmem) &&
-        memcpy(&p.data[6], &(ledringmem[memAddr]), readLen))
-      status = 0;
-    else
-      status = EIO;
-  }
-  else
-  {
-    memId = memId - NBR_STATIC_MEM;
-    if (memAddr + readLen <= OW_MAX_SIZE &&
-        owRead(memId, memAddr, readLen, &p.data[6]))
-      status = 0;
-    else
-      status = EIO;
+    case EEPROM_ID:
+      {
+        if (memAddr + readLen <= EEPROM_SIZE &&
+            eepromReadBuffer(&p.data[6], memAddr, readLen))
+          status = 0;
+        else
+          status = EIO;
+      }
+      break;
+
+    case LEDMEM_ID:
+      {
+        if (memAddr + readLen <= sizeof(ledringmem) &&
+            memcpy(&p.data[6], &(ledringmem[memAddr]), readLen))
+          status = 0;
+        else
+          status = EIO;
+      }
+      break;
+
+    default:
+      {
+        memId = memId - OW_FIRST_ID;
+        if (memAddr + readLen <= OW_MAX_SIZE &&
+            owRead(memId, memAddr, readLen, &p.data[6]))
+          status = 0;
+        else
+          status = EIO;
+      }
+      break;
   }
 
 #if 0
@@ -291,34 +321,43 @@ void memWriteProcess()
   MEM_DEBUG("Packet is MEM WRITE\n");
   p.header = CRTP_HEADER(CRTP_PORT_MEM, WRITE_CH);
   // Dont' touch the first 5 bytes, they will be the same.
-  if (memId == EEPROM_ID)
+
+  switch(memId)
   {
-    if (memAddr + writeLen <= EEPROM_SIZE &&
-        eepromWriteBuffer(&p.data[5], memAddr, writeLen))
-      status = 0;
-    else
-      status = EIO;
-  }
-  else if(memId == LEDMEM_ID)
-  {
-    if ((memAddr + writeLen) <= sizeof(ledringmem))
-    {
-      memcpy(&(ledringmem[memAddr]), &p.data[5], writeLen);
-      MEM_DEBUG("LED write addr:%i, led:%i\n", memAddr, writeLen);
-    }
-    else
-    {
-      MEM_DEBUG("\LED write failed! addr:%i, led:%i\n", memAddr, writeLen);
-    }
-  }
-  else
-  {
-    memId = memId - NBR_STATIC_MEM;
-    if (memAddr + writeLen <= OW_MAX_SIZE &&
-        owWrite(memId, memAddr, writeLen, &p.data[5]))
-      status = 0;
-    else
-      status = EIO;
+    case EEPROM_ID:
+      {
+        if (memAddr + writeLen <= EEPROM_SIZE &&
+            eepromWriteBuffer(&p.data[5], memAddr, writeLen))
+          status = 0;
+        else
+          status = EIO;
+      }
+      break;
+
+    case LEDMEM_ID:
+      {
+        if ((memAddr + writeLen) <= sizeof(ledringmem))
+        {
+          memcpy(&(ledringmem[memAddr]), &p.data[5], writeLen);
+          MEM_DEBUG("LED write addr:%i, led:%i\n", memAddr, writeLen);
+        }
+        else
+        {
+          MEM_DEBUG("\nLED write failed! addr:%i, led:%i\n", memAddr, writeLen);
+        }
+      }
+      break;
+
+    default:
+      {
+        memId = memId - OW_FIRST_ID;
+        if (memAddr + writeLen <= OW_MAX_SIZE &&
+            owWrite(memId, memAddr, writeLen, &p.data[5]))
+          status = 0;
+        else
+          status = EIO;
+      }
+      break;
   }
 
   p.data[5] = status;
