@@ -7,6 +7,7 @@
 #include "unity.h"
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
+#include "crtp_localization_serviceMocks.h"
 #include "dw1000Mocks.h"
 
 #ifdef ESTIMATOR_TYPE_kalman
