@@ -23,17 +23,38 @@
  *
  *
  */
+#include <string.h>
+#include <stdint.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "ext_position.h"
 #include "crtp.h"
+#include "crtp_localization_service.h"
 #include "log.h"
+#include "param.h"
 
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
 #endif
+
+#define NBR_OF_RANGES_IN_PACKET   5
+
+typedef enum
+{
+  EXT_POSITION  = 0,
+  GENERIC_TYPE  = 1,
+} locsrvChannels_t;
+
+typedef struct
+{
+  uint8_t type;
+  struct
+  {
+    uint8_t id;
+    float range;
+  } __attribute__((packed)) ranges[NBR_OF_RANGES_IN_PACKET];
+} __attribute__((packed)) rangePacket;
 
 /**
  * Position data cache
@@ -48,21 +69,39 @@ typedef struct
 // Struct for logging position information
 static positionMeasurement_t ext_pos;
 static ExtPositionCache crtpExtPosCache;
-static void extPositionCrtpCB(CRTPPacket* pk);
-
+static CRTPPacket pkRange;
+static uint8_t rangeIndex;
+static bool enableRangeStreamFloat = false;
 static bool isInit = false;
 
-void extPositionInit()
+static void locSrvCrtpCB(CRTPPacket* pk);
+static void extPositionHandler(CRTPPacket* pk);
+
+void locSrvInit()
 {
   if (isInit) {
     return;
   }
 
-  crtpRegisterPortCB(CRTP_PORT_POSITION, extPositionCrtpCB);
+  crtpRegisterPortCB(CRTP_PORT_LOCALIZATION, locSrvCrtpCB);
   isInit = true;
 }
 
-static void extPositionCrtpCB(CRTPPacket* pk)
+static void locSrvCrtpCB(CRTPPacket* pk)
+{
+  switch (pk->channel)
+  {
+    case EXT_POSITION:
+      extPositionHandler(pk);
+      break;
+    case GENERIC_TYPE:
+      // TODO: Implement
+    default:
+      break;
+  }
+}
+
+static void extPositionHandler(CRTPPacket* pk)
 {
   crtpExtPosCache.targetVal[!crtpExtPosCache.activeSide] = *((struct CrtpExtPosition*)pk->data);
   crtpExtPosCache.activeSide = !crtpExtPosCache.activeSide;
@@ -87,9 +126,48 @@ bool getExtPosition(state_t *state)
   return false;
 }
 
+void locSrvSendPacket(locsrv_t type, uint8_t *data, uint8_t length)
+{
+  CRTPPacket pk;
+
+  ASSERT(length < CRTP_MAX_DATA_SIZE);
+
+  pk.port = CRTP_PORT_LOCALIZATION;
+  pk.channel = GENERIC_TYPE;
+  memcpy(pk.data, data, length);
+  crtpSendPacket(&pk);
+}
+
+void locSrvSendRangeFloat(uint8_t id, float range)
+{
+  rangePacket *rp = (rangePacket *)pkRange.data;
+
+  ASSERT(rangeIndex <= NBR_OF_RANGES_IN_PACKET);
+
+  if (enableRangeStreamFloat)
+  {
+    rp->ranges[rangeIndex].id = id;
+    rp->ranges[rangeIndex].range = range;
+    rangeIndex++;
+
+    if (rangeIndex >= 5)
+    {
+      rp->type = RANGE_STREAM_FLOAT;
+      pkRange.port = CRTP_PORT_LOCALIZATION;
+      pkRange.channel = GENERIC_TYPE;
+      pkRange.size = sizeof(rangePacket);
+      crtpSendPacket(&pkRange);
+      rangeIndex = 0;
+    }
+  }
+}
+
 LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, X, &ext_pos.x)
   LOG_ADD(LOG_FLOAT, Y, &ext_pos.y)
   LOG_ADD(LOG_FLOAT, Z, &ext_pos.z)
 LOG_GROUP_STOP(ext_pos)
 
+PARAM_GROUP_START(locSrv)
+PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
+PARAM_GROUP_STOP(locSrv)

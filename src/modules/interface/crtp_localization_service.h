@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _EXT_POSITION_H_
-#define _EXT_POSITION_H_
+#ifndef _CRTP_LOCALIZATION_SERVICE_H_
+#define _CRTP_LOCALIZATION_SERVICE_H_
 
 #include "stabilizer_types.h"
 
@@ -38,10 +38,19 @@ struct CrtpExtPosition
   float z; // in m
 } __attribute__((packed));
 
-// Set up the callback for the CRTP_PORT_POSITION
-void extPositionInit(void);
+typedef enum
+{
+  RANGE_STREAM_FLOAT = 0,
+  RANGE_STREAM_FP16  = 1,
+} locsrv_t;
+
+// Set up the callback for the CRTP_PORT_LOCALIZATION
+void locSrvInit(void);
 
 // Get the current position from the cache
 bool getExtPosition(state_t *state);
 
-#endif /* _EXT_POSITION_H_ */
+// Send range in float. After 5 ranges it will send the packet.
+void locSrvSendRangeFloat(uint8_t id, float range);
+
+#endif /* _CRTP_LOCALIZATION_SERVICE_H_ */
