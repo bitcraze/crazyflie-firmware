@@ -33,6 +33,7 @@
 #include "crtp_localization_service.h"
 #include "log.h"
 #include "param.h"
+#include "locodeck.h"
 
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
@@ -76,6 +77,7 @@ static bool isInit = false;
 
 static void locSrvCrtpCB(CRTPPacket* pk);
 static void extPositionHandler(CRTPPacket* pk);
+static void genericLocHandle(CRTPPacket* pk);
 
 void locSrvInit()
 {
@@ -95,7 +97,7 @@ static void locSrvCrtpCB(CRTPPacket* pk)
       extPositionHandler(pk);
       break;
     case GENERIC_TYPE:
-      // TODO: Implement
+      genericLocHandle(pk);
     default:
       break;
   }
@@ -108,6 +110,21 @@ static void extPositionHandler(CRTPPacket* pk)
   crtpExtPosCache.timestamp = xTaskGetTickCount();
 }
 
+static void genericLocHandle(CRTPPacket* pk)
+{
+  uint8_t type = pk->data[0];
+  if (pk->size < 1) return;
+
+  if (type == LPS_SHORT_LPP_PACKET && pk->size >= 2) {
+    bool success = lpsSendLppShort(pk->data[1], &pk->data[2], pk->size-2);
+
+    pk->port = CRTP_PORT_LOCALIZATION;
+    pk->channel = GENERIC_TYPE;
+    pk->size = 3;
+    pk->data[2] = success?1:0;
+    crtpSendPacket(pk);
+  }
+}
 
 bool getExtPosition(state_t *state)
 {

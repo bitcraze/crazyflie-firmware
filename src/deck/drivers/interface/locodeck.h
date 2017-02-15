@@ -33,6 +33,9 @@
 #ifndef __LOCODECK_H__
 #define __LOCODECK_H__
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include "libdw1000.h"
 #include "stabilizer_types.h"
 
@@ -80,5 +83,21 @@ typedef struct uwbAlgorithm_s {
 #include <FreeRTOS.h>
 
 #define MAX_TIMEOUT portMAX_DELAY
+
+// Send a short configuration packet to the LPS system
+// Returns true if packet will be send, false instead
+bool lpsSendLppShort(uint8_t destId, void* data, size_t length);
+
+typedef struct {
+  uint8_t dest;
+  uint8_t length;
+  uint8_t data[30];
+} lpsLppShortPacket_t;
+
+// Poll if there is a LPS short configuration packet to send
+// Return true if the packet data has been filled in shortPacket
+// Return false if no packet to send
+// Function to be used by the LPS algorithm
+bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
 
 #endif // __LOCODECK_H__

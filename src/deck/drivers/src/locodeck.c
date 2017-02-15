@@ -39,6 +39,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
+#include "queue.h"
 
 #include "deck.h"
 #include "system.h"
@@ -117,6 +118,8 @@ static SemaphoreHandle_t irqSemaphore;
 static dwDevice_t dwm_device;
 static dwDevice_t *dwm = &dwm_device;
 
+static QueueHandle_t lppShortQueue;
+
 static uint32_t timeout;
 
 static void txCallback(dwDevice_t *dev)
@@ -140,6 +143,8 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
 
 static void uwbTask(void* parameters)
 {
+  lppShortQueue = xQueueCreate(10, sizeof(lpsLppShortPacket_t));
+
   systemWaitStart();
 
   algorithm->init(dwm, &algoOptions);
@@ -153,6 +158,21 @@ static void uwbTask(void* parameters)
       timeout = algorithm->onEvent(dwm, eventTimeout);
     }
   }
+}
+
+static lpsLppShortPacket_t lppShortPacket;
+
+bool lpsSendLppShort(uint8_t destId, void* data, size_t length)
+{
+  lppShortPacket.dest = destId;
+  lppShortPacket.length = length;
+  memcpy(lppShortPacket.data, data, length);
+  return xQueueSend(lppShortQueue, &lppShortPacket,0) == pdPASS;
+}
+
+bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket)
+{
+  return xQueueReceive(lppShortQueue, shortPacket, 0) == pdPASS;
 }
 
 static uint8_t spiTxBuffer[196];
