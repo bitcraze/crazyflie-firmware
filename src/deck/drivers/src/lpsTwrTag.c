@@ -72,6 +72,9 @@ static volatile uint8_t curr_seq = 0;
 static int current_anchor = 0;
 
 static bool ranging_complete = false;
+static bool lpp_transaction = false;
+
+static lpsLppShortPacket_t lppShortPacket;
 
 static lpsAlgoOptions_t* options;
 
@@ -213,6 +216,24 @@ void initiateRanging(dwDevice_t *dev)
   dwStartTransmit(dev);
 }
 
+void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
+{
+  dwIdle(dev);
+
+  txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_LPP_SHORT;
+  memcpy(&txPacket.payload[LPS_TWR_LPP_PAYLOAD], packet->data, packet->length);
+
+  txPacket.sourceAddress = options->tagAddress;
+  txPacket.destAddress = options->anchorAddress[packet->dest];
+
+  dwNewTransmit(dev);
+  dwSetDefaults(dev);
+  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
+
+  dwWaitForResponse(dev, false);
+  dwStartTransmit(dev);
+}
+
 static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
 {
   static uint32_t statisticStartTick = 0;
@@ -227,10 +248,14 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
       break;
     case eventPacketSent:
       txcallback(dev);
+
+      if (lpp_transaction) {
+        return 0;
+      }
       return MAX_TIMEOUT;
       break;
     case eventTimeout:  // Comes back to timeout after each ranging attempt
-      if (!ranging_complete) {
+      if (!ranging_complete && !lpp_transaction) {
         options->rangingState &= ~(1<<current_anchor);
         if (options->failedRanging[current_anchor] < options->rangingFailedThreshold) {
           options->failedRanging[current_anchor] ++;
@@ -265,8 +290,14 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
       }
 
 
-      ranging_complete = false;
-      initiateRanging(dev);
+      if (lpsGetLppShort(&lppShortPacket)) {
+        lpp_transaction = true;
+        sendLppShort(dev, &lppShortPacket);
+      } else {
+        lpp_transaction = false;
+        ranging_complete = false;
+        initiateRanging(dev);
+      }
       return MAX_TIMEOUT;
       break;
     case eventReceiveTimeout:
