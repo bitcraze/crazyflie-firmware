@@ -167,7 +167,7 @@ PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o sysload.o
 
 # Stabilizer modules
 PROJ_OBJ += commander.o crtp_commander.o crtp_commander_rpyt.o
-PROJ_OBJ += crtp_commander_generic.o ext_position.o
+PROJ_OBJ += crtp_commander_generic.o crtp_localization_service.o
 PROJ_OBJ += attitude_pid_controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
 PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o

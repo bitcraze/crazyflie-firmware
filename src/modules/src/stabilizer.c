@@ -36,7 +36,7 @@
 
 #include "sensors.h"
 #include "commander.h"
-#include "ext_position.h"
+#include "crtp_localization_service.h"
 #include "sitaw.h"
 #include "controller.h"
 #include "power_distribution.h"

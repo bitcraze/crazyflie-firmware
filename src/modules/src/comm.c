@@ -41,6 +41,7 @@
 #include "usblink.h"
 #include "platformservice.h"
 #include "syslink.h"
+#include "crtp_localization_service.h"
 
 static bool isInit;
 
@@ -78,7 +79,8 @@ void commInit(void)
 #endif
   logInit();
   paramInit();
-  
+  locSrvInit();
+
   //setup CRTP communication channel
   //TODO: check for USB first and prefer USB over radio
   //if (usbTest())

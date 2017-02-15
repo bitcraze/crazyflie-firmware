@@ -60,7 +60,6 @@
 #include "buzzer.h"
 #include "sound.h"
 #include "sysload.h"
-#include "ext_position.h"
 
 #ifdef PLATFORM_CF1
 #include "uart_cf1.h"
@@ -171,7 +170,6 @@ void systemTask(void *arg)
   systemInit();
   commInit();
   commanderInit();
-  extPositionInit(); // Set callback for CRTP_PORT_POSITION
   stabilizerInit();
 #ifdef PLATFORM_CF2
   deckInit();

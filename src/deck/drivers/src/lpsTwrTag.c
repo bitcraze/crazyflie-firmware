@@ -26,6 +26,7 @@
 
 
 #include <string.h>
+#include <math.h>
 
 #include "lpsTwrTag.h"
 
@@ -33,6 +34,7 @@
 #include "task.h"
 
 #include "log.h"
+#include "crtp_localization_service.h"
 
 #include "stabilizer_types.h"
 #ifdef ESTIMATOR_TYPE_kalman
@@ -235,11 +237,13 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
           options->rangingState |= (1<<current_anchor);
         }
 
+        locSrvSendRangeFloat(current_anchor, NAN);
         failedRanging[current_anchor]++;
       } else {
         options->rangingState |= (1<<current_anchor);
         options->failedRanging[current_anchor] = 0;
 
+        locSrvSendRangeFloat(current_anchor, options->distance[current_anchor]);
         succededRanging[current_anchor]++;
       }
 
