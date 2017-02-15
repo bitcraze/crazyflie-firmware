@@ -30,6 +30,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+
+#define MEM_SETTINGS_CH     0
+#define MEM_READ_CH         1
+#define MEM_WRITE_CH        2
+
+#define MEM_CMD_GET_NBR     1
+#define MEM_CMD_GET_INFO    2
+
+
 /* Public functions */
 void memInit(void);
 bool memTest(void);

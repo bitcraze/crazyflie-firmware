@@ -40,14 +40,12 @@
 #include "mem.h"
 #include "ow.h"
 #include "eeprom.h"
-#ifdef PLATFORM_CF2
+
 #include "ledring12.h"
 #include "locodeck.h"
-#endif
-
 
 #include "console.h"
-#include "cfassert.h"
+#include "assert.h"
 #include "debug.h"
 
 #if 0
@@ -62,25 +60,12 @@
 // Maximum log payload length
 #define MEM_MAX_LEN 30
 
-#define SETTINGS_CH     0
-#define READ_CH         1
-#define WRITE_CH        2
-
-#define CMD_GET_NBR     1
-#define CMD_GET_INFO    2
-
 // The first part of the memory ids are static followed by a dynamic part
 // of one wire ids that depends on the decks that are attached
 #define EEPROM_ID       0x00
 #define LEDMEM_ID       0x01
 #define LOCO_ID         0x02
-
-#ifdef PLATFORM_CF1
-  #define OW_FIRST_ID   0x00
-  uint8_t ledringmem[1];
-#else
-  #define OW_FIRST_ID   0x03
-#endif
+#define OW_FIRST_ID     0x03
 
 #define STATUS_OK 0
 
@@ -145,13 +130,13 @@ void memTask(void * param)
 
 		switch (p.channel)
 		{
-      case SETTINGS_CH:
+      case MEM_SETTINGS_CH:
         memSettingsProcess(p.data[0]);
         break;
-      case READ_CH:
+      case MEM_READ_CH:
         memReadProcess();
         break;
-      case WRITE_CH:
+      case MEM_WRITE_CH:
         memWriteProcess();
         break;
       default:
@@ -164,12 +149,12 @@ void memSettingsProcess(int command)
 {
   switch (command)
   {
-    case CMD_GET_NBR:
+    case MEM_CMD_GET_NBR:
       createNbrResponse(&p);
       crtpSendPacket(&p);
       break;
 
-    case CMD_GET_INFO:
+    case MEM_CMD_GET_INFO:
       {
         uint8_t memId = p.data[1];
         createInfoResponse(&p, memId);
@@ -181,17 +166,17 @@ void memSettingsProcess(int command)
 
 void createNbrResponse(CRTPPacket* p)
 {
-  p->header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
+  p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_SETTINGS_CH);
   p->size = 2;
-  p->data[0] = CMD_GET_NBR;
+  p->data[0] = MEM_CMD_GET_NBR;
   p->data[1] = nbrOwMems + OW_FIRST_ID;
 }
 
 void createInfoResponse(CRTPPacket* p, uint8_t memId)
 {
-  p->header = CRTP_HEADER(CRTP_PORT_MEM, SETTINGS_CH);
+  p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_SETTINGS_CH);
   p->size = 2;
-  p->data[0] = CMD_GET_INFO;
+  p->data[0] = MEM_CMD_GET_INFO;
   p->data[1] = memId;
 
   // No error code if we fail, just send an empty packet back
@@ -238,7 +223,7 @@ void memReadProcess()
   memcpy(&memAddr, &p.data[1], 4);
 
   MEM_DEBUG("Packet is MEM READ\n");
-  p.header = CRTP_HEADER(CRTP_PORT_MEM, READ_CH);
+  p.header = CRTP_HEADER(CRTP_PORT_MEM, MEM_READ_CH);
   // Dont' touch the first 5 bytes, they will be the same.
 
   switch(memId)
@@ -349,7 +334,7 @@ void memWriteProcess()
   writeLen = p.size - 5;
 
   MEM_DEBUG("Packet is MEM WRITE\n");
-  p.header = CRTP_HEADER(CRTP_PORT_MEM, WRITE_CH);
+  p.header = CRTP_HEADER(CRTP_PORT_MEM, MEM_WRITE_CH);
   // Dont' touch the first 5 bytes, they will be the same.
 
   switch(memId)
