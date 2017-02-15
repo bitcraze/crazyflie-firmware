@@ -69,7 +69,7 @@
 
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
-// anchorPositionOk to enable sending the anchor rangings to the Kalman filter
+// combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
 
 static lpsAlgoOptions_t algoOptions = {
   .tagAddress = 0xbccf000000000008,
@@ -84,20 +84,26 @@ static lpsAlgoOptions_t algoOptions = {
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
 
-  .anchorPositionOk = false,
+  .combinedAnchorPositionOk = false,
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
-  // .anchorPosition = {
-  //   {x: 0.99, y: 1.49, z: 1.80},
-  //   {x: 0.99, y: 3.29, z: 1.80},
-  //   {x: 4.67, y: 2.54, z: 1.80},
-  //   {x: 0.59, y: 2.27, z: 0.20},
-  //   {x: 4.70, y: 3.38, z: 0.20},
-  //   {x: 4.70, y: 1.14, z: 0.20},
-  // },
-  // .anchorPositionOk = true,
+//   .anchorPosition = {
+//     {timestamp: 4711, x: 0.99, y: 1.49, z: 1.80},
+//     {x: 0.99, y: 3.29, z: 1.80},
+//     {x: 4.67, y: 2.54, z: 1.80},
+//     {timestamp: 17, x: 0.59, y: 2.27, z: 0.20},
+//     {x: 4.70, y: 3.38, z: 0.20},
+//     {timestamp: 13, x: 4.70, y: 1.14, z: 0.20},
+//   },
+//
+//   .combinedAnchorPositionOk = true,
 };
+
+point_t* locodeckGetAnchorPosition(uint8_t anchor)
+{
+  return &algoOptions.anchorPosition[anchor];
+}
 
 #if LPS_TDOA_ENABLE
 static uwbAlgorithm_t *algorithm = &uwbTdoaTagAlgorithm;
@@ -423,5 +429,5 @@ PARAM_ADD(PARAM_FLOAT, anchor7x, &algoOptions.anchorPosition[7].x)
 PARAM_ADD(PARAM_FLOAT, anchor7y, &algoOptions.anchorPosition[7].y)
 PARAM_ADD(PARAM_FLOAT, anchor7z, &algoOptions.anchorPosition[7].z)
 #endif
-PARAM_ADD(PARAM_UINT8, enable, &algoOptions.anchorPositionOk)
+PARAM_ADD(PARAM_UINT8, enable, &algoOptions.combinedAnchorPositionOk)
 PARAM_GROUP_STOP(anchorpos)

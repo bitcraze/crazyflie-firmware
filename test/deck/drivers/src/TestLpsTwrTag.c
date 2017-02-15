@@ -47,7 +47,7 @@ static lpsAlgoOptions_t defaultOptions = {
   },
   .antennaDelay = 30000,
   .rangingFailedThreshold = 6,
-  .anchorPositionOk = false
+  .combinedAnchorPositionOk = false
 };
 
 

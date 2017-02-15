@@ -42,6 +42,7 @@
 #include "eeprom.h"
 #ifdef PLATFORM_CF2
 #include "ledring12.h"
+#include "locodeck.h"
 #endif
 
 
@@ -72,30 +73,36 @@
 // of one wire ids that depends on the decks that are attached
 #define EEPROM_ID       0x00
 #define LEDMEM_ID       0x01
+#define LOCO_ID         0x02
 
 #ifdef PLATFORM_CF1
   #define OW_FIRST_ID   0x00
   uint8_t ledringmem[1];
 #else
-  #define OW_FIRST_ID   0x02
+  #define OW_FIRST_ID   0x03
 #endif
 
+#define STATUS_OK 0
 
 #define MEM_TYPE_EEPROM 0x00
 #define MEM_TYPE_OW     0x01
 #define MEM_TYPE_LED12  0x10
+#define MEM_TYPE_LOCO   0x11
 
+#define MEM_LOCO_INFO             0x0000
+#define MEM_LOCO_ANCHOR_BASE      0x1000
+#define MEM_LOCO_ANCHOR_PAGE_SIZE 0x0100
+#define MEM_LOCO_PAGE_LEN         (3 * sizeof(float) + 1)
 
 //Private functions
 static void memTask(void * prm);
 static void memSettingsProcess(int command);
 static void memWriteProcess(void);
 static void memReadProcess(void);
+static uint8_t handleLocoMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest);
 static void createNbrResponse(CRTPPacket* p);
 static void createInfoResponse(CRTPPacket* p, uint8_t memId);
-static void createEepromInfoResponse(CRTPPacket* p);
-static void createLedInfoResponse(CRTPPacket* p);
-static void createOwInfoResponse(CRTPPacket* p);
+static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8]);
 
 static bool isInit = false;
 
@@ -105,7 +112,7 @@ static const OwSerialNum eepromSerialNum =
 {
   .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, EEPROM_I2C_ADDR}
 };
-static uint32_t memSize;
+static const uint8_t noData[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static CRTPPacket p;
 
 void memInit(void)
@@ -191,62 +198,42 @@ void createInfoResponse(CRTPPacket* p, uint8_t memId)
   switch(memId)
   {
     case EEPROM_ID:
-      createEepromInfoResponse(p);
+      createInfoResponseBody(p, MEM_TYPE_EEPROM, EEPROM_SIZE, eepromSerialNum.data);
       break;
     case LEDMEM_ID:
-      createLedInfoResponse(p);
+      createInfoResponseBody(p, MEM_TYPE_LED12, sizeof(ledringmem), noData);
+      break;
+    case LOCO_ID:
+      createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCODECK_NR_OF_ANCHORS, noData);
       break;
     default:
       if (owGetinfo(memId - OW_FIRST_ID, &serialNbr))
       {
-        createOwInfoResponse(p);
+        createInfoResponseBody(p, MEM_TYPE_OW, OW_MAX_SIZE, serialNbr.data);
       }
       break;
   }
 }
 
-void createEepromInfoResponse(CRTPPacket* p)
+void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8])
 {
-  p->data[2] = MEM_TYPE_EEPROM;
+  p->data[2] = type;
   p->size += 1;
-  // Size of the memory
-  memSize = EEPROM_SIZE;
+
   memcpy(&p->data[3], &memSize, 4);
   p->size += 4;
-  memcpy(&p->data[7], eepromSerialNum.data, 8);
+
+  memcpy(&p->data[7], data, 8);
   p->size += 8;
 }
 
-void createLedInfoResponse(CRTPPacket* p)
-{
-  p->data[2] = MEM_TYPE_LED12;
-  p->size += 1;
-  // Size of the memory
-  memSize = sizeof(ledringmem);
-  memcpy(&p->data[3], &memSize, 4);
-  p->size += 4;
-  memcpy(&p->data[7], eepromSerialNum.data, 8); //TODO
-  p->size += 8;
-}
-
-void createOwInfoResponse(CRTPPacket* p)
-{
-  p->data[2] = MEM_TYPE_OW;
-  p->size += 1;
-  // Size of the memory TODO: Define length type
-  memSize = OW_MAX_SIZE;
-  memcpy(&p->data[3], &memSize, 4);
-  p->size += 4;
-  memcpy(&p->data[7], serialNbr.data, 8);
-  p->size += 8;
-}
 
 void memReadProcess()
 {
   uint8_t memId = p.data[0];
   uint8_t readLen = p.data[5];
   uint32_t memAddr;
-  uint8_t status = 0;
+  uint8_t status = STATUS_OK;
 
   memcpy(&memAddr, &p.data[1], 4);
 
@@ -260,7 +247,7 @@ void memReadProcess()
       {
         if (memAddr + readLen <= EEPROM_SIZE &&
             eepromReadBuffer(&p.data[6], memAddr, readLen))
-          status = 0;
+          status = STATUS_OK;
         else
           status = EIO;
       }
@@ -270,10 +257,14 @@ void memReadProcess()
       {
         if (memAddr + readLen <= sizeof(ledringmem) &&
             memcpy(&p.data[6], &(ledringmem[memAddr]), readLen))
-          status = 0;
+          status = STATUS_OK;
         else
           status = EIO;
       }
+      break;
+
+    case LOCO_ID:
+      status = handleLocoMemRead(memAddr, readLen, &p.data[6]);
       break;
 
     default:
@@ -281,7 +272,7 @@ void memReadProcess()
         memId = memId - OW_FIRST_ID;
         if (memAddr + readLen <= OW_MAX_SIZE &&
             owRead(memId, memAddr, readLen, &p.data[6]))
-          status = 0;
+          status = STATUS_OK;
         else
           status = EIO;
       }
@@ -299,7 +290,7 @@ void memReadProcess()
 #endif
 
   p.data[5] = status;
-  if (status == 0)
+  if (status == STATUS_OK)
     p.size = 6 + readLen;
   else
     p.size = 6;
@@ -308,12 +299,51 @@ void memReadProcess()
   crtpSendPacket(&p);
 }
 
+uint8_t handleLocoMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest) {
+  uint8_t status = EIO;
+
+  if (MEM_LOCO_INFO == memAddr)
+  {
+    if (1 == readLen)
+    {
+      *dest = LOCODECK_NR_OF_ANCHORS;
+      status = STATUS_OK;
+    }
+  }
+  else
+  {
+    if (memAddr >= MEM_LOCO_ANCHOR_BASE)
+    {
+      uint32_t pageAddress = memAddr - MEM_LOCO_ANCHOR_BASE;
+      if ((pageAddress % MEM_LOCO_ANCHOR_PAGE_SIZE) == 0)
+      {
+        uint32_t page = pageAddress / MEM_LOCO_ANCHOR_PAGE_SIZE;
+        if (page < LOCODECK_NR_OF_ANCHORS && MEM_LOCO_PAGE_LEN == readLen)
+        {
+          point_t* position = locodeckGetAnchorPosition(page);
+          float* destAsFloat = (float*)dest;
+          destAsFloat[0] = position->x;
+          destAsFloat[1] = position->y;
+          destAsFloat[2] = position->z;
+
+          bool hasBeenSet = (position->timestamp != 0);
+          dest[sizeof(float) * 3] = hasBeenSet;
+
+          status = STATUS_OK;
+        }
+      }
+    }
+  }
+
+  return status;
+}
+
 void memWriteProcess()
 {
   uint8_t memId = p.data[0];
   uint8_t writeLen;
   uint32_t memAddr;
-  uint8_t status = 0;
+  uint8_t status = STATUS_OK;
 
   memcpy(&memAddr, &p.data[1], 4);
   writeLen = p.size - 5;
@@ -328,7 +358,7 @@ void memWriteProcess()
       {
         if (memAddr + writeLen <= EEPROM_SIZE &&
             eepromWriteBuffer(&p.data[5], memAddr, writeLen))
-          status = 0;
+          status = STATUS_OK;
         else
           status = EIO;
       }
@@ -348,12 +378,17 @@ void memWriteProcess()
       }
       break;
 
+    case LOCO_ID:
+      // Not supported
+      status = EIO;
+      break;
+
     default:
       {
         memId = memId - OW_FIRST_ID;
         if (memAddr + writeLen <= OW_MAX_SIZE &&
             owWrite(memId, memAddr, writeLen, &p.data[5]))
-          status = 0;
+          status = STATUS_OK;
         else
           status = EIO;
       }

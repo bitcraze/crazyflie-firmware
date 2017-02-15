@@ -61,13 +61,15 @@ typedef struct {
   const locoAddress_t anchorAddress[LOCODECK_NR_OF_ANCHORS];
 
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
-  bool anchorPositionOk;
+  bool combinedAnchorPositionOk;
 
   float distance[LOCODECK_NR_OF_ANCHORS];
   float pressures[LOCODECK_NR_OF_ANCHORS];
   int failedRanging[LOCODECK_NR_OF_ANCHORS];
   volatile uint16_t rangingState;
 } lpsAlgoOptions_t;
+
+point_t* locodeckGetAnchorPosition(uint8_t anchor);
 
 // Callback for one uwb algorithm
 typedef struct uwbAlgorithm_s {
