@@ -164,10 +164,17 @@ static lpsLppShortPacket_t lppShortPacket;
 
 bool lpsSendLppShort(uint8_t destId, void* data, size_t length)
 {
-  lppShortPacket.dest = destId;
-  lppShortPacket.length = length;
-  memcpy(lppShortPacket.data, data, length);
-  return xQueueSend(lppShortQueue, &lppShortPacket,0) == pdPASS;
+  bool result = false;
+
+  if (isInit)
+  {
+    lppShortPacket.dest = destId;
+    lppShortPacket.length = length;
+    memcpy(lppShortPacket.data, data, length);
+    result = xQueueSend(lppShortQueue, &lppShortPacket,0) == pdPASS;
+  }
+
+  return result;
 }
 
 bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket)
