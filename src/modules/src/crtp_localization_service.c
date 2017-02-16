@@ -33,7 +33,10 @@
 #include "crtp_localization_service.h"
 #include "log.h"
 #include "param.h"
+
+#ifndef PLATFORM_CF1
 #include "locodeck.h"
+#endif
 
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
@@ -112,6 +115,7 @@ static void extPositionHandler(CRTPPacket* pk)
 
 static void genericLocHandle(CRTPPacket* pk)
 {
+#ifndef PLATFORM_CF1
   uint8_t type = pk->data[0];
   if (pk->size < 1) return;
 
@@ -124,6 +128,7 @@ static void genericLocHandle(CRTPPacket* pk)
     pk->data[2] = success?1:0;
     crtpSendPacket(pk);
   }
+#endif
 }
 
 bool getExtPosition(state_t *state)
