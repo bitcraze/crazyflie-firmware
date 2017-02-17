@@ -123,6 +123,24 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         return 0;
       }
 
+      if (dataLength - MAC802154_HEADER_LENGTH > 3) {
+        if (rxPacket.payload[LPS_TWR_LPP_HEADER] == LPP_HEADER_SHORT_PACKET) {
+          int srcId = -1;
+
+          for (int i=0; i<LOCODECK_NR_OF_ANCHORS; i++) {
+            if (rxPacket.sourceAddress == options->anchorAddress[i]) {
+              srcId = i;
+              break;
+            }
+          }
+
+          if (srcId >= 0) {
+            lpsHandleLppShortPacket(srcId, &rxPacket.payload[LPS_TWR_LPP_TYPE],
+                                    dataLength - MAC802154_HEADER_LENGTH - 3);
+          }
+        }
+      }
+
       txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_FINAL;
       txPacket.payload[LPS_TWR_SEQ] = rxPacket.payload[LPS_TWR_SEQ];
 
@@ -221,7 +239,7 @@ void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
   dwIdle(dev);
 
   txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_LPP_SHORT;
-  memcpy(&txPacket.payload[LPS_TWR_LPP_PAYLOAD], packet->data, packet->length);
+  memcpy(&txPacket.payload[LPS_TWR_SEND_LPP_PAYLOAD], packet->data, packet->length);
 
   txPacket.sourceAddress = options->tagAddress;
   txPacket.destAddress = options->anchorAddress[packet->dest];

@@ -293,7 +293,7 @@ static void populateLppPacket(packet_t* packet, char *data, int length, locoAddr
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
   packet->pan = 0xbccf;
-  memcpy(&packet->payload[LPS_TWR_LPP_PAYLOAD], data, length);
+  memcpy(&packet->payload[LPS_TWR_SEND_LPP_PAYLOAD], data, length);
   packet->payload[LPS_TWR_TYPE] = LPS_TWR_LPP_SHORT;
   packet->sourceAddress = sourceAddress;
   packet->destAddress = destinationAddress;

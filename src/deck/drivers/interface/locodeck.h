@@ -100,4 +100,18 @@ typedef struct {
 // Function to be used by the LPS algorithm
 bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
 
+// Handle incoming short LPP packets from the UWB system
+void lpsHandleLppShortPacket(uint8_t srcId, uint8_t *data, int length);
+
+// LPP Packet types and format
+#define LPP_HEADER_SHORT_PACKET 0xF0
+
+#define LPP_SHORT_ANCHORPOS 0x01
+
+struct lppShortAnchorPos_s {
+  float x;
+  float y;
+  float z;
+} __attribute__((packed));
+
 #endif // __LOCODECK_H__
