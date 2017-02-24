@@ -191,7 +191,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = options->distance[current_anchor];
 
-      if (options->combinedAnchorPositionOk && (diff < (OUTLIER_TH*stddev))) {
+      if ((options->combinedAnchorPositionOk || options->anchorPosition[current_anchor].timestamp) &&
+          (diff < (OUTLIER_TH*stddev))) {
         distanceMeasurement_t dist;
         dist.distance = options->distance[current_anchor];
         dist.x = options->anchorPosition[current_anchor].x;
