@@ -147,12 +147,12 @@ void vl53l0xInit(DeckInfo* info)
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
   xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
-  
+
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
   // pre-compute constant in the measurement noise mdoel
   expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
 #endif
-  
+
   isInit = true;
 }
 
@@ -185,7 +185,7 @@ void vl53l0xTask(void* arg)
     // the sensor should not be able to measure >3 [m], and outliers typically
     // occur as >8 [m] measurements
     if (range_last < RANGE_OUTLIER_LIMIT){
-    
+
       // Form measurement
       tofMeasurement_t tofData;
       tofData.timestamp = xTaskGetTickCount();
@@ -1139,12 +1139,11 @@ bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val)
   return i2cdevWrite(I2Cx, devAddr, reg, 4, (uint8_t *)&buffer);
 }
 
-// TODO: Decide on vid:pid and set the used pins
 static const DeckDriver vl53l0x_deck = {
-  .vid = 0, // Changed this from 0
-  .pid = 0, // Changed this from 0
-  .name = "vl53l0x",
-  .usedGpio = 0,
+  .vid = 0xBC,
+  .pid = 0x09,
+  .name = "bcZRanger",
+  .usedGpio = 0x0C,
 
   .init = vl53l0xInit,
   .test = vl53l0xTest,
@@ -1155,4 +1154,3 @@ DECK_DRIVER(vl53l0x_deck);
 LOG_GROUP_START(range)
 LOG_ADD(LOG_UINT16, range, &range_last)
 LOG_GROUP_STOP(range)
-
