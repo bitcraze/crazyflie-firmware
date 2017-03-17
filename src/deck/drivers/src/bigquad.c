@@ -48,6 +48,7 @@
 #define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
 
 #ifdef ENABLE_BQ_DECK
+
 //Hardware configuration
 static bool isInit;
 
