@@ -320,6 +320,7 @@ static void dwm1000Init(DeckInfo *info)
   dwSetDefaults(dwm);
   dwEnableMode(dwm, MODE_SHORTDATA_FAST_ACCURACY);
   dwSetChannel(dwm, CHANNEL_2);
+  dwUseSmartPower(dwm, true);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
   dwSetReceiveWaitTimeout(dwm, RX_TIMEOUT);
