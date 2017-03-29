@@ -89,7 +89,7 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->mode.yaw = modeVelocity;
     setpoint->attitude.roll = 0;
     setpoint->attitude.pitch = 0;
-    setpoint->attitude.yaw = 0;
+    setpoint->attitudeRate.yaw = 0;
     // Keep Z as it is
   }
 }
