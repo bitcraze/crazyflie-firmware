@@ -38,6 +38,7 @@
 #include "lps25h.h"
 #include "mpu6500.h"
 #include "ak8963.h"
+#include "vl53l0x.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -188,6 +189,7 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadAcc(&sensors->acc);
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
+  vl53l0xReadRange(&sensors->zrange, tick);
 }
 
 bool sensorsAreCalibrated() {

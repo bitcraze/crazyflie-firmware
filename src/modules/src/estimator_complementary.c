@@ -46,7 +46,7 @@ void stateEstimator(state_t *state, const sensorData_t *sensorData, const uint32
     if (sensorData->position.timestamp) {
       state->position = sensorData->position;
     } else {
-      positionEstimate(state, sensorData->baro.asl, POS_UPDATE_DT);
+      positionEstimate(state, sensorData, POS_UPDATE_DT, tick);
     }
   }
 }

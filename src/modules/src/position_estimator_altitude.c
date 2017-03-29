@@ -34,7 +34,8 @@
 struct selfState_s {
   float estimatedZ; // The current Z estimate, has same offset as asl
   float velocityZ; // Vertical speed (world frame) integrated from vertical acceleration (m/s)
-  float estAlpha;
+  float estAlphaZrange;
+  float estAlphaAsl;
   float velocityFactor;
   float vAccDeadband; // Vertical acceleration deadband
   float velZAlpha;   // Blending factor to avoid vertical speed to accumulate error
@@ -44,29 +45,50 @@ struct selfState_s {
 static struct selfState_s state = {
   .estimatedZ = 0.0f,
   .velocityZ = 0.0f,
-  .estAlpha = 0.997f,
+  .estAlphaZrange = 0.93f,
+  .estAlphaAsl = 0.997f,
   .velocityFactor = 1.0f,
   .vAccDeadband = 0.04f,
   .velZAlpha = 0.995f,
   .estimatedVZ = 0.0f,
 };
 
-static void positionEstimateInternal(state_t* estimate, float asl, float dt, struct selfState_s* state);
+static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, float dt, uint32_t tick, struct selfState_s* state);
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
 
-void positionEstimate(state_t* estimate, float asl, float dt) {
-  positionEstimateInternal(estimate, asl, dt, &state);
+void positionEstimate(state_t* estimate, const sensorData_t* sensorData, float dt, uint32_t tick) {
+  positionEstimateInternal(estimate, sensorData, dt, tick, &state);
 }
 
 void positionUpdateVelocity(float accWZ, float dt) {
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(state_t* estimate, float asl, float dt, struct selfState_s* state) {
+static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, float dt, uint32_t tick, struct selfState_s* state) {
+  float filteredZ;
   static float prev_estimatedZ = 0;
-  state->estimatedZ = state->estAlpha * state->estimatedZ +
-                     (1.0f - state->estAlpha) * asl +
-                     state->velocityFactor * state->velocityZ * dt;
+  static bool surfaceFollowingMode = false;
+
+  if (sensorData->zrange.timestamp == tick) {
+    surfaceFollowingMode = true;
+  }
+
+  if (surfaceFollowingMode) {
+    if (sensorData->zrange.timestamp == tick) {
+      // IIR filter zrange
+      filteredZ = (state->estAlphaZrange       ) * state->estimatedZ +
+                  (1.0f - state->estAlphaZrange) * sensorData->zrange.distance;
+      // Use zrange as base and add velocity changes.
+      state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+    }
+  } else {
+    // IIR filter asl
+    filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
+                (1.0f - state->estAlphaAsl) * sensorData->baro.asl;
+    // Use asl as base and add velocity changes.
+    state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+  }
+
 
   estimate->position.x = 0.0f;
   estimate->position.y = 0.0f;
@@ -74,6 +96,7 @@ static void positionEstimateInternal(state_t* estimate, float asl, float dt, str
   estimate->velocity.z = (state->estimatedZ - prev_estimatedZ) / dt;
   state->estimatedVZ = estimate->velocity.z;
   prev_estimatedZ = state->estimatedZ;
+
 }
 
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state) {
@@ -88,7 +111,8 @@ LOG_ADD(LOG_FLOAT, velocityZ, &state.velocityZ)
 LOG_GROUP_STOP(posEstimatorAlt)
 
 PARAM_GROUP_START(posEst)
-PARAM_ADD(PARAM_FLOAT, estAlpha, &state.estAlpha)
+PARAM_ADD(PARAM_FLOAT, estAlphaAsl, &state.estAlphaAsl)
+PARAM_ADD(PARAM_FLOAT, estAlphaZr, &state.estAlphaZrange)
 PARAM_ADD(PARAM_FLOAT, velFactor, &state.velocityFactor)
 PARAM_ADD(PARAM_FLOAT, velZAlpha, &state.velZAlpha)
 PARAM_ADD(PARAM_FLOAT, vAccDeadband, &state.vAccDeadband)

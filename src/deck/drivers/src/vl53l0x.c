@@ -45,7 +45,6 @@
 
 //#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
 #ifdef UPDATE_KALMAN_WITH_RANGING
-#define RANGE_OUTLIER_LIMIT 1500 // the measured range is in [mm]
 // Measurement noise model
 static float expPointA = 1.0f;
 static float expStdA = 0.0025f; // STD at elevation expPointA [m]
@@ -55,6 +54,8 @@ static float expCoeff;
 #endif // UPDATE_KALMAN_WITH_RANGING
 #endif // ESTIMATOR_TYPE_kalman
 
+#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
+
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
@@ -63,7 +64,7 @@ static uint16_t io_timeout = 0;
 static bool did_timeout;
 static uint16_t timeout_start_ms;
 
-static uint16_t range_last = 0;
+uint16_t range_last = 0;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -196,6 +197,20 @@ void vl53l0xTask(void* arg)
 #endif
     vTaskDelayUntil(&xLastWakeTime, M2T(measurement_timing_budget_ms));
   }
+}
+
+bool vl53l0xReadRange(zDistance_t* zrange, const uint32_t tick)
+{
+  bool updated = false;
+
+  if (isInit) {
+    if (range_last != 0 && range_last < RANGE_OUTLIER_LIMIT) {
+      zrange->distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
+      zrange->timestamp = tick;
+      updated = true;
+    }
+  }
+  return updated;
 }
 
 /** Verify the I2C connection.

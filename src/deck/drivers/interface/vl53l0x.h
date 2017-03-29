@@ -27,6 +27,10 @@
 #ifndef _VL53L0X_H_
 #define _VL53L0X_H_
 
+#include "stabilizer_types.h"
+#include "deck_core.h"
+
+
 #define VL53L0X_DEFAULT_ADDRESS 0b0101001
 
 #define VL53L0X_RA_SYSRANGE_START                              0x00
@@ -141,6 +145,8 @@ void vl53l0xInit(DeckInfo* info);
 
 bool vl53l0xTest(void);
 void vl53l0xTask(void* arg);
+
+bool vl53l0xReadRange(zDistance_t* zrange, const uint32_t tick);
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.

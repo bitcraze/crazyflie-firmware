@@ -113,11 +113,17 @@ typedef struct distanceMeasurement_s {
   float stdDev;
 } distanceMeasurement_t;
 
+typedef struct zDistance_s {
+  uint32_t timestamp;
+  float distance;
+} zDistance_t;
+
 typedef struct sensorData_s {
   Axis3f acc;
   Axis3f gyro;
   Axis3f mag;
   baro_t baro;
+  zDistance_t zrange;
   point_t position;
 } sensorData_t;
 
