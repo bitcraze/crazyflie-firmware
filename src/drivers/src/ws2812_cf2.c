@@ -169,7 +169,7 @@ static int current_led = 0;
 static int total_led = 0;
 static uint8_t (*color_led)[3] = NULL;
 
-void ws2812Send(uint8_t (*color)[3], int len)
+void ws2812Send(uint8_t (*color)[3], uint16_t len)
 {
     int i;
 	if(len<1) return;
