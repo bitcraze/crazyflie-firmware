@@ -60,6 +60,7 @@ typedef void (*packetDecoder_t)(setpoint_t *setpoint, uint8_t type, const void *
 enum packet_type {
   stopType          = 0,
   velocityWorldType = 1,
+  zDistanceType = 2,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -103,11 +104,44 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
   setpoint->attitudeRate.yaw = values->yawrate;
 }
 
+/* velocityDecoder
+ * Set the Crazyflie velocity in the world coordinate system
+ */
+struct zDistancePacket_s {
+  float roll;            // rad
+  float pitch;           // ...
+  float yawrate;         // rad/s
+  float zDistance;        // m in the world frame of reference
+} __attribute__((packed));
+static void zDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct zDistancePacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct velocityPacket_s));
+
+
+  setpoint->mode.z = modeAbs;
+
+  setpoint->position.z = values->zDistance;
+
+
+  setpoint->mode.yaw = modeVelocity;
+
+  setpoint->attitudeRate.yaw = values->yawrate;
+
+
+  setpoint->mode.roll = modeAbs;
+  setpoint->mode.pitch = modeAbs;
+
+  setpoint->attitude.roll = values->roll;
+  setpoint->attitude.pitch = values->pitch;
+}
 
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]          = stopDecoder,
   [velocityWorldType] = velocityDecoder,
+  [zDistanceType] = zDistanceDecoder,
 };
 
 /* Decoder switch */
