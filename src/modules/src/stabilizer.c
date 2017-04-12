@@ -95,7 +95,7 @@ bool stabilizerTest(void)
 
 static void stabilizerTask(void* param)
 {
-  uint32_t tick = 0;
+  uint32_t tick;
   uint32_t lastWakeTime;
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
@@ -107,6 +107,8 @@ static void stabilizerTask(void* param)
   while(!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
+  // Initialize tick to something else then 0
+  tick = 1;
 
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
