@@ -515,10 +515,10 @@ void sensorsInit(void)
 
   sensorsDataReady = xSemaphoreCreateBinary();
 
-  sensorsBiasObjInit(&gyroBiasRunning);
-  sensorsDeviceInit();
-  sensorsInterruptInit();
-  sensorsTaskInit();
+//  sensorsBiasObjInit(&gyroBiasRunning);
+//  sensorsDeviceInit();
+//  sensorsInterruptInit();
+//  sensorsTaskInit();
 
   isInit = true;
 }
@@ -526,6 +526,8 @@ void sensorsInit(void)
 bool sensorsTest(void)
 {
   bool testStatus = true;
+
+  return true;
 
   if (!isInit)
   {
