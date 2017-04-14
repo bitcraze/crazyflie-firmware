@@ -147,6 +147,7 @@ PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
 PROJ_OBJ_CF2 += bmi160.o bma2x2.o bmg160.o bmp280.o bstdr_comm_support.o
+PROJ_OBJ_CF2 += icm20789.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
