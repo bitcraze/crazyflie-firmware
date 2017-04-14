@@ -112,7 +112,7 @@ static bool exptestRun(void)
 
   isInit = true;
 
-  status &= sensorsManufacturingTest();
+//  status &= sensorsManufacturingTest();
 
 
   // Enable GPIOs
