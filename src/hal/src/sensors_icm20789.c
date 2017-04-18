@@ -172,18 +172,12 @@ bool sensorsAreCalibrated() {
 
 static void sensorsTask(void *param)
 {
-  uint32_t lastWakeTime;
-
   systemWaitStart();
-
-  lastWakeTime = xTaskGetTickCount();
 
   while (1)
   {
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
     {
-//      vTaskDelayUntil(&lastWakeTime, F2T(SENSORS_READ_RATE_HZ));
-
       icm20789ReadAllSensors(buffer);
       // these functions process the respective data and queue it on the output queues
       processAccGyroMeasurements(&(buffer[0]));
