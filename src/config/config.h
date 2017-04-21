@@ -82,6 +82,7 @@
 #define CRTP_TX_TASK_PRI        2
 #define CRTP_RX_TASK_PRI        2
 #define EXTRX_TASK_PRI          2
+#define VL53_TASK_PRI           2
 #define LOG_TASK_PRI            1
 #define MEM_TASK_PRI            1
 #define PARAM_TASK_PRI          1
@@ -125,6 +126,7 @@
 #define PROXIMITY_TASK_NAME     "PROXIMITY"
 #define EXTRX_TASK_NAME         "EXTRX"
 #define UART_RX_TASK_NAME       "UART"
+#define VL53_TASK_NAME          "VL53"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
@@ -145,6 +147,7 @@
 #define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define VL53_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

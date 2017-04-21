@@ -147,7 +147,7 @@ void vl53l0xInit(DeckInfo* info)
   i2cdevInit(I2C1_DEV);
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
-  xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+  xTaskCreate(vl53l0xTask, VL53_TASK_NAME, VL53_TASK_STACKSIZE, NULL, VL53_TASK_PRI, NULL);
 
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
   // pre-compute constant in the measurement noise mdoel
@@ -177,7 +177,7 @@ void vl53l0xTask(void* arg)
 
   vl53l0xSetVcselPulsePeriod(VcselPeriodPreRange, 18);
   vl53l0xSetVcselPulsePeriod(VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(100);
+  vl53l0xStartContinuous(0);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     range_last = vl53l0xReadRangeContinuousMillimeters();
@@ -912,6 +912,11 @@ uint16_t vl53l0xReadRangeContinuousMillimeters(void)
   while ((val & 0x07) == 0)
   {
     i2cdevReadByte(I2Cx, devAddr, VL53L0X_RA_RESULT_INTERRUPT_STATUS, &val);
+    if ((val & 0x07) == 0)
+    {
+      // Relaxation delay when polling interrupt
+      vTaskDelay(M2T(1));
+    }
     if (checkTimeoutExpired())
     {
       did_timeout = true;
