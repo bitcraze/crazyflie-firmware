@@ -146,7 +146,7 @@ PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o i2c_drv
 PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
-PROJ_OBJ_CF2 += bmi160.o bma2x2.o bmg160.o bmp280.o bstdr_comm_support.o
+PROJ_OBJ_CF2 += bmi055_accel.o bmi055_gyro.o bmi160.o bmp285.o bstdr_comm_support.o bmi160_filter.o bmm150.o bma4.o bma455.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
@@ -213,7 +213,7 @@ PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
-PROJ_OBJ_CF2 += configblockeeprom.o
+PROJ_OBJ_CF2 += configblockeeprom.o crc_bosch.o
 
 # Libs
 PROJ_OBJ_CF2 += libarm_math.a

@@ -151,6 +151,14 @@ LOG_ADD(LOG_FLOAT, y, &sensorData.acc.y)
 LOG_ADD(LOG_FLOAT, z, &sensorData.acc.z)
 LOG_GROUP_STOP(acc)
 
+#ifdef LOG_SEC_IMU
+LOG_GROUP_START(accSpare)
+LOG_ADD(LOG_FLOAT, x, &sensorData.accSpare.x)
+LOG_ADD(LOG_FLOAT, y, &sensorData.accSpare.y)
+LOG_ADD(LOG_FLOAT, z, &sensorData.accSpare.z)
+LOG_GROUP_STOP(accSpare)
+#endif
+
 LOG_GROUP_START(baro)
 LOG_ADD(LOG_FLOAT, asl, &sensorData.baro.asl)
 LOG_ADD(LOG_FLOAT, temp, &sensorData.baro.temperature)
@@ -162,6 +170,14 @@ LOG_ADD(LOG_FLOAT, x, &sensorData.gyro.x)
 LOG_ADD(LOG_FLOAT, y, &sensorData.gyro.y)
 LOG_ADD(LOG_FLOAT, z, &sensorData.gyro.z)
 LOG_GROUP_STOP(gyro)
+
+#ifdef LOG_SEC_IMU
+LOG_GROUP_START(gyroSpare)
+LOG_ADD(LOG_FLOAT, x, &sensorData.gyroSpare.x)
+LOG_ADD(LOG_FLOAT, y, &sensorData.gyroSpare.y)
+LOG_ADD(LOG_FLOAT, z, &sensorData.gyroSpare.z)
+LOG_GROUP_STOP(gyroSpare)
+#endif
 
 LOG_GROUP_START(mag)
 LOG_ADD(LOG_FLOAT, x, &sensorData.mag.x)
