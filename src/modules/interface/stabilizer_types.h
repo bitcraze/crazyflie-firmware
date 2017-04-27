@@ -125,6 +125,10 @@ typedef struct sensorData_s {
   baro_t baro;
   zDistance_t zrange;
   point_t position;
+#ifdef LOG_SEC_IMU
+  Axis3f accSpare;
+  Axis3f gyroSpare;
+#endif
 } sensorData_t;
 
 typedef struct state_s {
