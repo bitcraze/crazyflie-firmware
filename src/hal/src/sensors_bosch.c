@@ -212,7 +212,7 @@ bool sensorsAreCalibrated()
 
 static void sensorsTask(void *param)
 {
-  uint32_t lastWakeTime;
+  uint32_t lastWakeTime = xTaskGetTickCount();
 
   systemWaitStart();
 
