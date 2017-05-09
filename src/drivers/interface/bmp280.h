@@ -61,24 +61,77 @@
 #include "bstdr_comm_support.h"
 #include "bstdr_types.h"
 
+#define BMP280_ENABLE_FLOAT
+
+/***************************************************************/
+/**\name	GET AND SET BITSLICE FUNCTIONS       */
+/***************************************************************/
+/* never change this line */
+#define BMP280_GET_BITSLICE(regvar, bitname)\
+	((regvar & bitname##__MSK) >> bitname##__POS)
+
+#define BMP280_SET_BITSLICE(regvar, bitname, val)\
+	((regvar & ~bitname##__MSK) | ((val<<bitname##__POS)&bitname##__MSK))
 
 /***************************************************************/
 /**\name	COMMON USED CONSTANTS       */
 /***************************************************************/
 /* Constants */
+#define BMP280_NULL                          (0)
+#define BMP280_RETURN_FUNCTION_TYPE          bstdr_ret_t
+/* shift definitions*/
+#define BMP280_SHIFT_BIT_POSITION_BY_01_BIT				 (1)
+#define BMP280_SHIFT_BIT_POSITION_BY_02_BITS			(2)
+#define BMP280_SHIFT_BIT_POSITION_BY_03_BITS			(3)
+#define BMP280_SHIFT_BIT_POSITION_BY_04_BITS			(4)
+#define BMP280_SHIFT_BIT_POSITION_BY_05_BITS			(5)
+#define BMP280_SHIFT_BIT_POSITION_BY_08_BITS			(8)
+#define BMP280_SHIFT_BIT_POSITION_BY_10_BITS			(10)
+#define BMP280_SHIFT_BIT_POSITION_BY_11_BITS			(11)
+#define BMP280_SHIFT_BIT_POSITION_BY_12_BITS			(12)
+#define BMP280_SHIFT_BIT_POSITION_BY_13_BITS			(13)
+#define BMP280_SHIFT_BIT_POSITION_BY_14_BITS			(14)
+#define BMP280_SHIFT_BIT_POSITION_BY_15_BITS			(15)
+#define BMP280_SHIFT_BIT_POSITION_BY_16_BITS			(16)
+#define BMP280_SHIFT_BIT_POSITION_BY_17_BITS			(17)
+#define BMP280_SHIFT_BIT_POSITION_BY_18_BITS			(18)
+#define BMP280_SHIFT_BIT_POSITION_BY_19_BITS			(19)
+#define BMP280_SHIFT_BIT_POSITION_BY_25_BITS			(25)
+#define BMP280_SHIFT_BIT_POSITION_BY_29_BITS			(29)
+#define BMP280_SHIFT_BIT_POSITION_BY_30_BITS			(30)
+#define BMP280_SHIFT_BIT_POSITION_BY_31_BITS			(31)
+#define BMP280_SHIFT_BIT_POSITION_BY_33_BITS			(33)
+#define BMP280_SHIFT_BIT_POSITION_BY_35_BITS			(35)
+#define BMP280_SHIFT_BIT_POSITION_BY_47_BITS			(47)
 
 /* numeric definitions */
-#define	BMP280_PRESSURE_TEMPERATURE_CALIB_DATA_LENGTH	    (24)
-#define	BMP280_TEMPERATURE_DATA_LENGTH						(3)
-#define	BMP280_PRESSURE_DATA_LENGTH							(3)
-#define	BMP280_ALL_DATA_FRAME_LENGTH						(6)
+#define	BMP280_PRESSURE_TEMPERATURE_CALIB_DATA_LENGTH	    (25)
+#define	BMP280_GEN_READ_WRITE_DATA_LENGTH			(1)
+#define	BMP280_TEMPERATURE_DATA_LENGTH				(3)
+#define	BMP280_PRESSURE_DATA_LENGTH				(3)
+#define	BMP280_ALL_DATA_FRAME_LENGTH				(6)
+#define	BMP280_INIT_VALUE					(0)
+#define	BMP280_INVALID_DATA					(0)
 
+/************************************************/
+/**\name	ERROR CODES      */
+/************************************************/
+#define	SUCCESS			((uint8_t)0)
+#define E_BMP280_NULL_PTR         ((int8_t)-127)
+#define E_BMP280_COMM_RES         ((int8_t)-1)
+#define E_BMP280_OUT_OF_RANGE     ((int8_t)-2)
+#define ERROR                     ((int8_t)-1)
+/************************************************/
+/**\name	CHIP ID DEFINITION       */
+/***********************************************/
+#define BMP280_CHIP_ID1		(0x56)
+#define BMP280_CHIP_ID2		(0x57)
+#define BMP280_CHIP_ID3		(0x58)
 /************************************************/
 /**\name	I2C ADDRESS DEFINITION       */
 /***********************************************/
 #define BMP280_I2C_ADDRESS1                  (0x76)
 #define BMP280_I2C_ADDRESS2                  (0x77)
-
 /************************************************/
 /**\name	POWER MODE DEFINITION       */
 /***********************************************/
@@ -87,7 +140,6 @@
 #define BMP280_FORCED_MODE                   (0x01)
 #define BMP280_NORMAL_MODE                   (0x03)
 #define BMP280_SOFT_RESET_CODE               (0xB6)
-
 /************************************************/
 /**\name	STANDBY TIME DEFINITION       */
 /***********************************************/
@@ -99,7 +151,6 @@
 #define BMP280_STANDBY_TIME_1000_MS           (0x05)
 #define BMP280_STANDBY_TIME_2000_MS           (0x06)
 #define BMP280_STANDBY_TIME_4000_MS           (0x07)
-
 /************************************************/
 /**\name	OVERSAMPLING DEFINITION       */
 /***********************************************/
@@ -109,7 +160,6 @@
 #define BMP280_OVERSAMP_4X               (0x03)
 #define BMP280_OVERSAMP_8X               (0x04)
 #define BMP280_OVERSAMP_16X              (0x05)
-
 /************************************************/
 /**\name	WORKING MODE DEFINITION       */
 /***********************************************/
@@ -122,7 +172,7 @@
 #define BMP280_ULTRALOWPOWER_OVERSAMP_PRESSURE          BMP280_OVERSAMP_1X
 #define BMP280_ULTRALOWPOWER_OVERSAMP_TEMPERATURE       BMP280_OVERSAMP_1X
 
-#define BMP280_LOWPOWER_OVERSAMP_PRESSURE	             BMP280_OVERSAMP_2X
+#define BMP280_LOWPOWER_OVERSAMP_PRESSURE	         BMP280_OVERSAMP_2X
 #define BMP280_LOWPOWER_OVERSAMP_TEMPERATURE	         BMP280_OVERSAMP_1X
 
 #define BMP280_STANDARDRESOLUTION_OVERSAMP_PRESSURE     BMP280_OVERSAMP_4X
@@ -133,7 +183,6 @@
 
 #define BMP280_ULTRAHIGHRESOLUTION_OVERSAMP_PRESSURE       BMP280_OVERSAMP_16X
 #define BMP280_ULTRAHIGHRESOLUTION_OVERSAMP_TEMPERATURE    BMP280_OVERSAMP_2X
-
 /************************************************/
 /**\name	FILTER DEFINITION       */
 /***********************************************/
@@ -142,17 +191,15 @@
 #define BMP280_FILTER_COEFF_4                 (0x02)
 #define BMP280_FILTER_COEFF_8                 (0x03)
 #define BMP280_FILTER_COEFF_16                (0x04)
-
 /************************************************/
 /**\name	DELAY TIME DEFINITION       */
 /***********************************************/
-#define T_INIT_MAX							(20)
+#define T_INIT_MAX					(20)
 /* 20/16 = 1.25 ms */
 #define T_MEASURE_PER_OSRS_MAX				(37)
 /* 37/16 = 2.3125 ms*/
 #define T_SETUP_PRESSURE_MAX				(10)
 /* 10/16 = 0.625 ms */
-
 /************************************************/
 /**\name	CALIBRATION PARAMETERS DEFINITION       */
 /***********************************************/
@@ -181,7 +228,6 @@
 #define BMP280_PRESSURE_CALIB_DIG_P8_MSB_REG                (0x9D)
 #define BMP280_PRESSURE_CALIB_DIG_P9_LSB_REG                (0x9E)
 #define BMP280_PRESSURE_CALIB_DIG_P9_MSB_REG                (0x9F)
-
 /************************************************/
 /**\name	REGISTER ADDRESS DEFINITION       */
 /***********************************************/
@@ -196,7 +242,6 @@
 #define BMP280_TEMPERATURE_MSB_REG           (0xFA)  /*Temperature MSB Reg */
 #define BMP280_TEMPERATURE_LSB_REG           (0xFB)  /*Temperature LSB Reg */
 #define BMP280_TEMPERATURE_XLSB_REG          (0xFC)  /*Temperature XLSB Reg */
-
 /************************************************/
 /**\name	BIT LENGTH,POSITION AND MASK DEFINITION      */
 /***********************************************/
@@ -263,7 +308,8 @@ FOR SPI ENABLE*/
 #define BMP280_CONFIG_REG_SPI3_ENABLE__LEN             (1)
 #define BMP280_CONFIG_REG_SPI3_ENABLE__REG             (BMP280_CONFIG_REG)
 /************************************************/
-/**\name	BIT LENGTH,POSITION AND MASK DEFINITION FOR PRESSURE AND TEMPERATURE DATA REGISTERS */
+/**\name	BIT LENGTH,POSITION AND MASK DEFINITION
+FOR PRESSURE AND TEMPERATURE DATA REGISTERS */
 /***********************************************/
 /* Data Register */
 #define BMP280_PRESSURE_XLSB_REG_DATA__POS         (4)
@@ -277,6 +323,58 @@ FOR SPI ENABLE*/
 #define BMP280_TEMPERATURE_XLSB_REG_DATA__REG      (BMP280_TEMPERATURE_XLSB_REG)
 
 
+#define BMP280_MDELAY_DATA_TYPE uint32_t
+/****************************************************/
+/**\name	DEFINITIONS FOR ARRAY SIZE OF DATA   */
+/***************************************************/
+#define	BMP280_TEMPERATURE_DATA_SIZE		(3)
+#define	BMP280_PRESSURE_DATA_SIZE		(3)
+#define	BMP280_DATA_FRAME_SIZE			(6)
+#define	BMP280_CALIB_DATA_SIZE			(25)
+
+#define	BMP280_TEMPERATURE_MSB_DATA		(0)
+#define	BMP280_TEMPERATURE_LSB_DATA		(1)
+#define	BMP280_TEMPERATURE_XLSB_DATA		(2)
+
+#define	BMP280_PRESSURE_MSB_DATA		(0)
+#define	BMP280_PRESSURE_LSB_DATA		(1)
+#define	BMP280_PRESSURE_XLSB_DATA		(2)
+
+#define	BMP280_DATA_FRAME_PRESSURE_MSB_BYTE	(0)
+#define	BMP280_DATA_FRAME_PRESSURE_LSB_BYTE	(1)
+#define	BMP280_DATA_FRAME_PRESSURE_XLSB_BYTE	(2)
+#define	BMP280_DATA_FRAME_TEMPERATURE_MSB_BYTE	(3)
+#define	BMP280_DATA_FRAME_TEMPERATURE_LSB_BYTE	(4)
+#define	BMP280_DATA_FRAME_TEMPERATURE_XLSB_BYTE	(5)
+
+/****************************************************/
+/**\name	ARRAY PARAMETER FOR CALIBRATION     */
+/***************************************************/
+#define	BMP280_TEMPERATURE_CALIB_DIG_T1_LSB		(0)
+#define	BMP280_TEMPERATURE_CALIB_DIG_T1_MSB		(1)
+#define	BMP280_TEMPERATURE_CALIB_DIG_T2_LSB		(2)
+#define	BMP280_TEMPERATURE_CALIB_DIG_T2_MSB		(3)
+#define	BMP280_TEMPERATURE_CALIB_DIG_T3_LSB		(4)
+#define	BMP280_TEMPERATURE_CALIB_DIG_T3_MSB		(5)
+#define	BMP280_PRESSURE_CALIB_DIG_P1_LSB       (6)
+#define	BMP280_PRESSURE_CALIB_DIG_P1_MSB       (7)
+#define	BMP280_PRESSURE_CALIB_DIG_P2_LSB       (8)
+#define	BMP280_PRESSURE_CALIB_DIG_P2_MSB       (9)
+#define	BMP280_PRESSURE_CALIB_DIG_P3_LSB       (10)
+#define	BMP280_PRESSURE_CALIB_DIG_P3_MSB       (11)
+#define	BMP280_PRESSURE_CALIB_DIG_P4_LSB       (12)
+#define	BMP280_PRESSURE_CALIB_DIG_P4_MSB       (13)
+#define	BMP280_PRESSURE_CALIB_DIG_P5_LSB       (14)
+#define	BMP280_PRESSURE_CALIB_DIG_P5_MSB       (15)
+#define	BMP280_PRESSURE_CALIB_DIG_P6_LSB       (16)
+#define	BMP280_PRESSURE_CALIB_DIG_P6_MSB       (17)
+#define	BMP280_PRESSURE_CALIB_DIG_P7_LSB       (18)
+#define	BMP280_PRESSURE_CALIB_DIG_P7_MSB       (19)
+#define	BMP280_PRESSURE_CALIB_DIG_P8_LSB       (20)
+#define	BMP280_PRESSURE_CALIB_DIG_P8_MSB       (21)
+#define	BMP280_PRESSURE_CALIB_DIG_P9_LSB       (22)
+#define	BMP280_PRESSURE_CALIB_DIG_P9_MSB       (23)
+#define	BMP280_PRESSURE_CALIB_DIG_P10	       (24)
 /**************************************************************/
 /**\name	STRUCTURE DEFINITIONS                         */
 /**************************************************************/
@@ -296,13 +394,15 @@ struct bmp280_calib_param_t {
 	int16_t dig_P7;/**<calibration P7 data*/
 	int16_t dig_P8;/**<calibration P8 data*/
 	int16_t dig_P9;/**<calibration P9 data*/
+	int8_t dig_P10;/**<calibration P10 data*/
+	
 	int32_t t_fine;/**<calibration t_fine data*/
 };
 
 /*!
  * @brief This structure holds BMP280 initialization parameters
  */
-typedef struct bmp280_t{
+struct bmp280_t{
 	struct bmp280_calib_param_t calib_param;/**<calibration data*/
 
 	uint8_t chip_id;/**< chip id of the sensor*/
@@ -313,8 +413,8 @@ typedef struct bmp280_t{
 
 	sensor_read bus_read;/**< bus write function pointer*/
 	sensor_write bus_write;/**< bus read function pointer*/
-	delay_msec delay;/**< delay function pointer*/
-}bmp280_t;
+	delay_msec delay_ms;/**< delay function pointer*/
+};
 
 /**************************************************************/
 /**\name	FUNCTION DECLARATIONS                         */
@@ -347,18 +447,7 @@ typedef struct bmp280_t{
  *
  *
 */
-bstdr_ret_t bmp280_init( bmp280_t *bmp280);
-
-/*!
- *	@brief test connection with bmp280 (read chip id and check if the value correct)
- *
- *	@return connection test results
- *	@retval 0 -> BSTDR_OK
- *	@retval -4 -> BSTDR_E_CON_ERROR
- *
- *
-*/
-bstdr_ret_t bmp280_test_connection();
+BMP280_RETURN_FUNCTION_TYPE bmp280_init(struct bmp280_t *bmp280);
 /**************************************************************/
 /**\name	FUNCTION FOR READ UNCOMPENSATED TEMPERATURE     */
 /**************************************************************/
@@ -379,7 +468,7 @@ bstdr_ret_t bmp280_test_connection();
  *
  *
 */
-bstdr_ret_t bmp280_read_uncomp_temperature(int32_t *v_uncomp_temperature_s32);
+BMP280_RETURN_FUNCTION_TYPE bmp280_read_uncomp_temperature(int32_t *v_uncomp_temperature_s32);
 /**************************************************************/
 /**\name	FUNCTION FOR READ TRUE TEMPERATURE S32 OUTPUT    */
 /**************************************************************/
@@ -421,7 +510,7 @@ int32_t bmp280_compensate_temperature_int32(int32_t v_uncomp_temperature_s32);
  *
  *
 */
-bstdr_ret_t bmp280_read_uncomp_pressure(int32_t *v_uncomp_pressure_s32);
+BMP280_RETURN_FUNCTION_TYPE bmp280_read_uncomp_pressure(int32_t *v_uncomp_pressure_s32);
 /**************************************************************/
 /**\name	FUNCTION FOR READ TRUE PRESSURE S32 OUTPUT    */
 /**************************************************************/
@@ -452,7 +541,8 @@ uint32_t bmp280_compensate_pressure_int32(int32_t v_uncomp_pressure_s32);
  *	@retval -1 -> Error
  *
 */
-bstdr_ret_t bmp280_read_uncomp_data(int32_t *v_uncomp_pressure_s32, int32_t *v_uncomp_temperature_s32);
+BMP280_RETURN_FUNCTION_TYPE bmp280_read_uncomp_pressure_temperature(
+		int32_t *v_uncomp_pressure_s32, int32_t *v_uncomp_temperature_s32);
 /**************************************************************/
 /**\name	FUNCTION FOR READ TRUE TEMPERATURE AND PRESSURE    */
 /**************************************************************/
@@ -470,7 +560,8 @@ bstdr_ret_t bmp280_read_uncomp_data(int32_t *v_uncomp_pressure_s32, int32_t *v_u
  *
  *
 */
-bstdr_ret_t bmp280_read_data(uint32_t *v_pressure_u32, int32_t *v_pressure_s32);
+BMP280_RETURN_FUNCTION_TYPE bmp280_read_pressure_temperature(
+		uint32_t *v_pressure_u32, int32_t *v_pressure_s32);
 /**************************************************************/
 /**\name	FUNCTION FOR READ CALIBRATION DATA    */
 /**************************************************************/
@@ -499,8 +590,36 @@ bstdr_ret_t bmp280_read_data(uint32_t *v_pressure_u32, int32_t *v_pressure_s32);
  *
  *
 */
-bstdr_ret_t bmp280_get_calib_param(void);
-
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_calib_param(void);
+/**************************************************************/
+/**\name	FUNCTION FOR OVERSAMPLING TEMPERATURE AND PRESSURE    */
+/**************************************************************/
+/*!
+ *	@brief This API is used to get
+ *	the temperature oversampling setting in the register 0xF4
+ *	bits from 5 to 7
+ *
+ *        value             | Temperature oversampling
+ *  ------------------------|------------------------------
+ *       0x00               |  BMP280_OVERSAMP_SKIPPED
+ *       0x01               |  BMP280_OVERSAMP_1X
+ *       0x02               |  BMP280_OVERSAMP_2X
+ *       0x03               |  BMP280_OVERSAMP_4X
+ *       0x04               |  BMP280_OVERSAMP_8X
+ *       0x05,0x06 and 0x07 |  BMP280_OVERSAMP_16X
+ *
+ *
+ *  @param v_value_u8 :The value of temperature over sampling
+ *
+ *
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_oversamp_temperature(uint8_t *v_value_u8);
 /*!
  *	@brief This API is used to set
  *	the temperature oversampling setting in the register 0xF4
@@ -526,7 +645,33 @@ bstdr_ret_t bmp280_get_calib_param(void);
  *
  *
 */
-bstdr_ret_t bmp280_set_osr_temperature(uint8_t v_value_u8);
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_oversamp_temperature(uint8_t v_value_u8);
+/*!
+ *	@brief This API is used to get
+ *	the pressure oversampling setting in the register 0xF4
+ *	bits from 2 to 4
+ *
+ *        value             | Pressure oversampling
+ *  ------------------------|------------------------------
+ *       0x00               |  BMP280_OVERSAMP_SKIPPED
+ *       0x01               |  BMP280_OVERSAMP_1X
+ *       0x02               |  BMP280_OVERSAMP_2X
+ *       0x03               |  BMP280_OVERSAMP_4X
+ *       0x04               |  BMP280_OVERSAMP_8X
+ *       0x05,0x06 and 0x07 |  BMP280_OVERSAMP_16X
+ *
+ *
+ *  @param  v_value_u8 : The value of pressure over sampling
+ *
+ *
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_oversamp_pressure(uint8_t *v_value_u8);
 /*!
  *	@brief This API is used to set
  *	the pressure oversampling setting in the register 0xF4
@@ -552,8 +697,30 @@ bstdr_ret_t bmp280_set_osr_temperature(uint8_t v_value_u8);
  *
  *
 */
-bstdr_ret_t bmp280_set_osr_pressure(uint8_t v_value_u8);
-
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_oversamp_pressure(uint8_t v_value_u8);
+/**************************************************************/
+/**\name	FUNCTION FOR POWER MODE    */
+/**************************************************************/
+/*!
+ *	@brief This API used to get the
+ *	Operational Mode from the sensor in the register 0xF4 bit 0 and 1
+ *
+ *
+ *
+ *	@param v_power_mode_u8 : The value of power mode value
+ *  value            |   Power mode
+ * ------------------|------------------
+ *	0x00             | BMP280_SLEEP_MODE
+ *	0x01 and 0x02    | BMP280_FORCED_MODE
+ *	0x03             | BMP280_NORMAL_MODE
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_power_mode(uint8_t *v_power_mode_u8);
 /*!
  *	@brief This API used to set the
  *	Operational Mode from the sensor in the register 0xF4 bit 0 and 1
@@ -573,7 +740,7 @@ bstdr_ret_t bmp280_set_osr_pressure(uint8_t v_value_u8);
  *
  *
 */
-bstdr_ret_t bmp280_set_power_mode(uint8_t v_power_mode_u8);
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_power_mode(uint8_t v_power_mode_u8);
 /**************************************************************/
 /**\name	FUNCTION FOR SOFT RESET   */
 /**************************************************************/
@@ -593,8 +760,77 @@ bstdr_ret_t bmp280_set_power_mode(uint8_t v_power_mode_u8);
  *
  *
 */
-bstdr_ret_t bmp280_set_soft_rst(void);
-
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_soft_rst(void);
+/**************************************************************/
+/**\name	FUNCTION FOR SPI ENABLE    */
+/**************************************************************/
+/*!
+ *	@brief This API used to get the sensor
+ *	SPI mode(communication type) in the register 0xF5 bit 0
+ *
+ *
+ *
+ *	@param v_enable_disable_u8 : The spi3 enable or disable state
+ *    value    | Description
+ *  -----------|---------------
+ *     0       | Disable
+ *     1       | Enable
+ *
+ *
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_spi3(uint8_t *v_enable_disable_u8);
+/*!
+ *	@brief This API used to set the sensor
+ *	SPI mode(communication type) in the register 0xF5 bit 0
+ *
+ *
+ *
+ *	@param v_enable_disable_u8 : The spi3 enable or disable state
+ *    value    | Description
+ *  -----------|---------------
+ *     0       | Disable
+ *     1       | Enable
+ *
+ *
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_spi3(uint8_t v_enable_disable_u8);
+/**************************************************************/
+/**\name	FUNCTION FOR IIR FILTER SETTING   */
+/**************************************************************/
+/*!
+ *	@brief This API is used to reads filter setting
+ *	in the register 0xF5 bit 3 and 4
+ *
+ *
+ *
+ *	@param v_value_u8 : The value of filter coefficient
+ *	value	    |	Filter coefficient
+ * -------------|-------------------------
+ *	0x00        | BMP280_FILTER_COEFF_OFF
+ *	0x01        | BMP280_FILTER_COEFF_2
+ *	0x02        | BMP280_FILTER_COEFF_4
+ *	0x03        | BMP280_FILTER_COEFF_8
+ *	0x04        | BMP280_FILTER_COEFF_16
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_filter(uint8_t *v_value_u8);
 /*!
  *	@brief This API is used to write filter setting
  *	in the register 0xF5 bit 3 and 4
@@ -616,9 +852,35 @@ bstdr_ret_t bmp280_set_soft_rst(void);
  *
  *
 */
-bstdr_ret_t bmp280_set_filter(uint8_t v_value_u8);
-
-
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_filter(uint8_t v_value_u8);
+/**************************************************************/
+/**\name	FUNCTION FOR STANDBY DURATION   */
+/**************************************************************/
+/*!
+ *	@brief This API used to Read the
+ *	standby duration time from the sensor in the register 0xF5 bit 5 to 7
+ *
+ *	@param v_standby_durn_u8 : The standby duration time value.
+ *  value     |  standby duration
+ * -----------|--------------------
+ *    0x00    | BMP280_STANDBYTIME_1_MS
+ *    0x01    | BMP280_STANDBYTIME_63_MS
+ *    0x02    | BMP280_STANDBYTIME_125_MS
+ *    0x03    | BMP280_STANDBYTIME_250_MS
+ *    0x04    | BMP280_STANDBYTIME_500_MS
+ *    0x05    | BMP280_STANDBYTIME_1000_MS
+ *    0x06    | BMP280_STANDBYTIME_2000_MS
+ *    0x07    | BMP280_STANDBYTIME_4000_MS
+ *
+ *
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_standby_durn(uint8_t *v_standby_durn_u8);
 /*!
  *	@brief This API used to Read the
  *	standby duration time from the sensor in the register 0xF5 bit 5 to 7
@@ -627,7 +889,7 @@ bstdr_ret_t bmp280_set_filter(uint8_t v_value_u8);
  *	@note The standby time is determined by the contents of the register t_sb.
  *	Standby time can be set using BMP280_STANDBYTIME_125_MS.
  *
- *	@note bme280_set_standby_durN(BMP280_STANDBYTIME_125_MS)
+ *	@note bmp280_set_standby_durn(BMP280_STANDBYTIME_125_MS)
  *
  *
  *
@@ -651,8 +913,7 @@ bstdr_ret_t bmp280_set_filter(uint8_t v_value_u8);
  *
  *
 */
-bstdr_ret_t bmp280_set_standby_durn(uint8_t v_standby_durn_u8);
-
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_standby_durn(uint8_t v_standby_durn_u8);
 /**************************************************************/
 /**\name	FUNCTION FOR WORK MODE   */
 /**************************************************************/
@@ -676,11 +937,72 @@ bstdr_ret_t bmp280_set_standby_durn(uint8_t v_standby_durn_u8);
  *
  *
 */
-bstdr_ret_t bmp280_set_work_mode(uint8_t v_work_mode_u8);
-
+BMP280_RETURN_FUNCTION_TYPE bmp280_set_work_mode(uint8_t v_work_mode_u8);
+/**************************************************************/
+/**\name	FUNCTION FOR FORCE MODE READING    */
+/**************************************************************/
+/*!
+ *	@brief This API used to read both
+ *	uncompensated pressure and temperature in forced mode
+ *
+ *
+ *  @param  v_uncomp_pressure_s32: The value of uncompensated pressure.
+ *  @param  v_uncomp_temperature_s32: The value of uncompensated temperature
+ *
+ *
+ *  @return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+*/
+BMP280_RETURN_FUNCTION_TYPE bmp280_get_forced_uncomp_pressure_temperature(
+		int32_t *v_uncomp_pressure_s32, int32_t *v_uncomp_temperature_s32);
+/**************************************************************/
+/**\name	FUNCTION FOR COMMON READ AND WRITE    */
+/**************************************************************/
+/*!
+ * @brief
+ *	This API write the data to
+ *	the given register
+ *
+ *
+ *	@param v_addr_u8 -> Address of the register
+ *	@param v_data_u8 -> The data from the register
+ *	@param v_len_u8 -> no of bytes to read
+ *
+ *
+ *	@return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+ */
+BMP280_RETURN_FUNCTION_TYPE bmp280_write_register(uint8_t v_addr_u8,
+		uint8_t *v_data_u8, uint8_t v_len_u8);
+/*!
+ * @brief
+ *	This API reads the data from
+ *	the given register
+ *
+ *
+ *	@param v_addr_u8 -> Address of the register
+ *	@param v_data_u8 -> The data from the register
+ *	@param v_len_u8 -> no of bytes to read
+ *
+ *
+ *	@return results of bus communication function
+ *	@retval 0 -> Success
+ *	@retval -1 -> Error
+ *
+ *
+ */
+BMP280_RETURN_FUNCTION_TYPE bmp280_read_register(uint8_t v_addr_u8,
+		uint8_t *v_data_u8, uint8_t v_len_u8);
 /**************************************************************/
 /**\name	FUNCTION FOR TRUE TEMPERATURE CALCULATION   */
 /**************************************************************/
+#ifdef BMP280_ENABLE_FLOAT
 /*!
  * @brief This API used to read
  * actual temperature from uncompensated temperature
@@ -718,5 +1040,43 @@ float bmp280_compensate_temperature_float(int32_t v_uncomp_temperature_s32);
  *
 */
 float bmp280_compensate_pressure_float(int32_t v_uncomp_pressure_s32);
+#endif
+#if defined(BMP280_ENABLE_INT64) && defined(BMP280_64BITSUPPORT_PRESENT)
+/*!
+ * @brief This API used to read actual pressure from uncompensated pressure
+ * @note returns the value in Pa as unsigned 32 bit
+ * integer in Q24.8 format (24 integer bits and
+ * 8 fractional bits). Output value of "24674867"
+ * represents 24674867 / 256 = 96386.2 Pa = 963.862 hPa
+ *
+ *
+ *
+ *  @param v_uncomp_pressure_s32 : value of uncompensated pressure
+ *
+ *
+ *
+ *  @return actual pressure as 64bit output
+ *
+*/
+uint32_t bmp280_compensate_pressure_int64(int32_t v_uncomp_pressure_s32);
+#endif
+/**************************************************************/
+/**\name	FUNCTION FOR DELAY CALCULATION DURING FORCEMODE  */
+/**************************************************************/
+/*!
+ * @brief Computing waiting time for sensor data read
+ *
+ *
+ *
+ *
+ *  @param v_delaytime_u8r: The value of delay time
+ *
+ *
+ *  @return 0
+ *
+ *
+ */
+BMP280_RETURN_FUNCTION_TYPE bmp280_compute_wait_time(uint8_t
+		*v_delaytime_u8r);
 
 #endif

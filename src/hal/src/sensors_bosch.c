@@ -22,125 +22,156 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * sensors_bst.c - sensors Bosch
+ * sensors_bosch.c
  */
+
+/*********************************************
+ * IMPORTANT NOTE relating to sensor_deck v1 *
+ * Don't miss to align the axes correctly!	 *
+ *********************************************/
 #define DEBUG_MODULE "IMU"
 
-#include <math.h>
-#include "stm32fxxx.h"
+/* available sensors */
+#define SENSORS_BMI055		0x01
+#define SENSORS_BMI160		0x02
+#define SENSORS_BMM150		0x08
+#define SENSORS_BMP280		0x10
 
-#include "sensors.h"
-#include "imu.h"
-// BST Drivers
-#include "bmi160.h"
-#include "bmp280.h"
-#include "bma2x2.h"
-#include "bmg160.h"
-#include "bstdr_comm_support.h"
-
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include "task.h"
-
-#include "system.h"
-#include "configblock.h"
-#include "param.h"
-#include "debug.h"
-#include "imu.h"
-#include "nvicconf.h"
-#include "ledseq.h"
-#include "sound.h"
-#include "filter.h"
-
-#define SENSORS_ENABLE_BMI055
-#define SENSORS_ENABLE_BMI160
-#define SENSORS_ENABLE_PRESSURE_BMP280
-
-#define SENSORS_READ_RATE_HZ      1000
-#define SENSORS_STARTUP_TIME_MS   1000
-
-#define SENSORS_BMI160_G_CFG             16
-#define SENSORS_BMI160_G_PER_LSB_CFG     (2.0f * SENSORS_BMI160_G_CFG) / 65536.0f
-#define SENSORS_BMI160_DEG_PER_LSB_CFG   (2.0f * 2000.0f) / 65536.0f
-#define SENSORS_1G_RAW            (int16_t)(1.0f / (float)((2.0f * SENSORS_BMI160_G_CFG) / 65536.0f))
-
-#define SENSORS_BMI055_1G_PER_LSB_CFG   (2.0f * 8.0f / (4096))
-#define SENSORS_BMI055_1G_IN_LSB		    (int16_t)(1.0f / SENSORS_BMI055_1G_PER_LSB_CFG)
-
-#define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms
-#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off
-
-#define GYRO_NBR_OF_AXES            3
-#define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
+/* configure sensor's use
+ * PRIMARIES are the sensors which are used for stabilization
+ * SECONDARIES are only added to the log if compilations is
+ * done with CFLAGS += -DLOG_SEC_IMU */
+#define GYRO_PRIMARY		SENSORS_BMI055
+#define ACCEL_PRIMARY		SENSORS_BMI055
+#ifdef LOG_SEC_IMU
+#define GYRO_SECONDARY		SENSORS_BMI160
+#define ACCEL_SECONDARY		SENSORS_BMI160
+#endif
+#define MAGNETOMETER		SENSORS_BMM150
+#define BARO_PRIMARY		SENSORS_BMP280
 
 #define SENSORS_TAKE_ACCEL_BIAS
 
-// Number of samples used in variance calculation. Changing this effects the threshold
-#define SENSORS_NBR_OF_BIAS_SAMPLES  512
+#include "sensors_bosch.h"
 
-// Variance threshold to take zero bias for gyro
-#define GYRO_VARIANCE_BASE        2000
-#define GYRO_VARIANCE_THRESHOLD_X (GYRO_VARIANCE_BASE)
-#define GYRO_VARIANCE_THRESHOLD_Y (GYRO_VARIANCE_BASE)
-#define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
-
-typedef enum
-{
-  SENSORS_BMI055 = 1,
-  SENSORS_BMI160 = 2
-} sensorsTypes_e;
-
-// holds the IMU type
-static sensorsTypes_e usedImuType = SENSORS_BMI160;
-
-typedef struct
-{
-  Axis3f bias;
-  bool isBiasValueFound;
-  bool isBufferFilled;
-  Axis3i16* bufHead;
-  Axis3i16 buffer[SENSORS_NBR_OF_BIAS_SAMPLES];
+typedef struct {
+	Axis3i16	value;
+	Axis3i16*	bufStart;
+	Axis3i16*	bufPtr;
+	uint8_t		found : 1;
+	uint8_t		ongoing : 1;
+	uint8_t		bufIsFull : 1;
 } BiasObj;
 
-static xQueueHandle accelerometerDataQueue;
-static xQueueHandle gyroDataQueue;
-static xQueueHandle barometerDataQueue;
+/* calculate constants */
+/* BMI160 */
+#if (GYRO_PRIMARY == SENSORS_BMI160) || (GYRO_SECONDARY == SENSORS_BMI160)
+#define SENSORS_BMI160_GYRO_FS_CFG			BMI160_GYRO_RANGE_2000_DPS
+#define SENSORS_BMI160_DEG_PER_LSB_CFG		(2.0f *2000.0f) / 65536.0f
+#endif
+
+#if (ACCEL_PRIMARY == SENSORS_BMI160) || (ACCEL_SECONDARY == SENSORS_BMI160)
+#define SENSORS_BMI160_ACCEL_CFG			16
+#define SENSORS_BMI160_ACCEL_FS_CFG			BMI160_ACCEL_RANGE_16G
+#define SENSORS_BMI160_G_PER_LSB_CFG		(2.0f * (float)SENSORS_BMI160_ACCEL_CFG) / 65536.0f
+#define SENSORS_BMI160_1G_IN_LSB		    65536 / SENSORS_BMI160_ACCEL_CFG / 2
+#endif
+/* /BMI160 */
+
+/* BMI055 */
+#if (GYRO_PRIMARY == SENSORS_BMI055) || (GYRO_SECONDARY == SENSORS_BMI055)
+#define SENSORS_BMI055_GYRO_FS_CFG			BMI055_GYRO_RANGE_2000_DPS
+#define SENSORS_BMI055_DEG_PER_LSB_CFG		(2.0f *2000.0f) / 65536.0f
+#endif
+
+#if (ACCEL_PRIMARY == SENSORS_BMI055) || (ACCEL_SECONDARY == SENSORS_BMI055)
+#define SENSORS_BMI055_ACCEL_CFG			16
+#define SENSORS_BMI055_ACCEL_FS_CFG			BMI055_ACCEL_RANGE_16G
+#define SENSORS_BMI055_G_PER_LSB_CFG		(2.0f * (float)SENSORS_BMI055_ACCEL_CFG) / 4096.0f
+#define SENSORS_BMI055_1G_IN_LSB		    4096 / SENSORS_BMI055_ACCEL_CFG / 2
+#endif
+/* /BMI055 */
+
+/* assign primary and secondary constants */
+#if GYRO_PRIMARY == SENSORS_BMI160
+#define SENSORS_PRIM_DEG_PER_LSB_CFG		SENSORS_BMI160_DEG_PER_LSB_CFG
+#elif  GYRO_SECONDARY == SENSORS_BMI160
+#define SENSORS_SEC_DEG_PER_LSB_CFG			SENSORS_BMI160_DEG_PER_LSB_CFG
+#endif
+
+#if GYRO_PRIMARY == SENSORS_BMI055
+#define SENSORS_PRIM_DEG_PER_LSB_CFG		SENSORS_BMI055_DEG_PER_LSB_CFG
+#elif  GYRO_SECONDARY == SENSORS_BMI055
+#define SENSORS_SEC_DEG_PER_LSB_CFG			SENSORS_BMI055_DEG_PER_LSB_CFG
+#endif
+
+#if ACCEL_PRIMARY == SENSORS_BMI160
+#define SENSORS_PRIM_G_PER_LSB_CFG		SENSORS_BMI160_G_PER_LSB_CFG
+#define SENSORS_PRIM_1G_IN_LSB			SENSORS_BMI160_1G_IN_LSB
+#elif ACCEL_SECONDARY == SENSORS_BMI160
+#define SENSORS_SEC_G_PER_LSB_CFG		SENSORS_BMI160_G_PER_LSB_CFG
+#define SENSORS_SEC_1G_IN_LSB			SENSORS_BMI160_1G_IN_LSB
+#endif
+
+#if ACCEL_PRIMARY == SENSORS_BMI055
+#define SENSORS_PRIM_G_PER_LSB_CFG		SENSORS_BMI055_G_PER_LSB_CFG
+#define SENSORS_PRIM_1G_IN_LSB			SENSORS_BMI055_1G_IN_LSB
+#elif ACCEL_SECONDARY == SENSORS_BMI055
+#define SENSORS_SEC_G_PER_LSB_CFG		SENSORS_BMI055_G_PER_LSB_CFG
+#define SENSORS_SEC_1G_IN_LSB			SENSORS_BMI055_1G_IN_LSB
+#endif
+
+/* initialize necessary variables */
+/* BMI160 */
+#if (GYRO_PRIMARY == SENSORS_BMI160) || (GYRO_SECONDARY == SENSORS_BMI160) || \
+	(ACCEL_PRIMARY == SENSORS_BMI160) || (ACCEL_SECONDARY == SENSORS_BMI160)
+static struct bmi160_dev bmi160Dev;
+#endif /* BMI160 */
+
+/* BMI055 */
+#if (GYRO_PRIMARY == SENSORS_BMI055) || (GYRO_SECONDARY == SENSORS_BMI055) || \
+	(ACCEL_PRIMARY == SENSORS_BMI055) || (ACCEL_SECONDARY == SENSORS_BMI055)
+static struct bmi055_dev bmi055Dev;
+#endif /* BMI055 */
+
+#if (BARO_PRIMARY == SENSORS_BMP280)
+static struct bmp280_t bmp280Dev;
+#endif
+
+#if MAGNETOMETER == SENSORS_BMM150
+static struct bmm150_dev bmm150Dev;
+#endif
+
+static xQueueHandle accelPrimDataQueue;
+static xQueueHandle gyroPrimDataQueue;
+#ifdef LOG_SEC_IMU
+static xQueueHandle accelSecDataQueue;
+static xQueueHandle gyroSecDataQueue;
+#endif
+static xQueueHandle baroPrimDataQueue;
+static xQueueHandle magPrimDataQueue;
 
 static bool isInit = false;
 static sensorData_t sensors;
 
+static BiasObj gyroPrimBias;
+#ifdef SENSORS_TAKE_ACCEL_BIAS
+static BiasObj accelPrimBias;
+#endif
+
+#ifdef LOG_SEC_IMU
+static BiasObj gyroSecBias;
+#ifdef SENSORS_TAKE_ACCEL_BIAS
+static BiasObj accelSecBias;
+#endif
+#endif /* LOG_SEC_IMU */
+
 static int32_t varianceSampleTime;
-static Axis3i16 accelLPF;
-static Axis3i32 accelStoredFilterValues;
 static uint8_t sensorsAccLpfAttFactor;
 
 static bool isBarometerPresent = false;
-
-// Bosch sensors support
-#ifdef SENSORS_ENABLE_BMI160
-static BiasObj gyroBiasBmi160;
-static BiasObj accelBiasBmi160;
-static Axis3i16 gyroBmi160;
-static Axis3i16 accelBmi160;
-static struct bmi160_dev bmi160Dev;
-//static bool isBmi160TestPassed = true;
-#endif
-
-#ifdef SENSORS_ENABLE_BMI055
-static BiasObj gyroBiasBmi055;
-static BiasObj accelBiasBmi055;
-static Axis3i16 gyroBmi055;
-static Axis3i16 accelBmi055;
-static bma2x2_t bmi055DevAcc;
-static bmg160_t bmi055DevGyro;
-//static bool isBmi055TestPassed = true;
-#endif
-
-//
-#ifdef SENSORS_ENABLE_PRESSURE_BMP280
-static bmp280_t bmp280Dev;
-//static bool isBMP280TestPassed = true;
-#endif
+static bool isMagnetometerPresent = false;
+static uint8_t baroMeasDelay = SENSORS_DELAY_BARO;
 
 // Pre-calculated values for accelerometer alignment
 float cosPitch;
@@ -148,516 +179,505 @@ float sinPitch;
 float cosRoll;
 float sinRoll;
 
-static void sensorsBiasInit(BiasObj* bias);
-static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
-static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut);
-static bool sensorsFindBiasValue(BiasObj* bias);
-static void sensorsAddBiasValue(BiasObj* bias, Axis3i16* dVal);
+static void sensorsDeviceInit(void);
+static void sensorsTaskInit(void);
+static void sensorsTask(void *param);
+static void sensorsApplyBiasAndScale(Axis3f* scaled, Axis3i16* aligned, Axis3i16* bias, float scale);
+static void sensorsReAlign(Axis3i16* output, int16_t* inX, int16_t* inY, int16_t* inZ);
+static void sensorsScaleBaro(baro_t* baroScaled, float pressure, float temperature);
+static bool processGyroBias(BiasObj* bias);
+static void processAccelBias(BiasObj* bias);
+
 static void sensorsAccIIRLPFilter(Axis3i16* in, Axis3i16* out, Axis3i32* storedValues, int32_t attenuation);
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
-static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut);
-static void sensorsTaskInit(void);
-
-bool sensorsReadGyro(Axis3f *gyro)
-{
-  return (pdTRUE == xQueueReceive(gyroDataQueue, gyro, 0));
-}
-
-bool sensorsReadAcc(Axis3f *acc)
-{
-  return (pdTRUE == xQueueReceive(accelerometerDataQueue, acc, 0));
-}
-
-bool sensorsReadMag(Axis3f *mag)
-{
-  return 0;
-}
-
-bool sensorsReadBaro(baro_t *baro)
-{
-  return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
-}
-
-void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
-{
-  sensorsReadGyro(&sensors->gyro);
-  sensorsReadAcc(&sensors->acc);
-  sensorsReadMag(&sensors->mag);
-  sensorsReadBaro(&sensors->baro);
-}
-
-bool sensorsAreCalibrated()
-{
-  bool gyroBiasFound;
-
-  switch (usedImuType)
-  {
-    case SENSORS_BMI055:
-#ifdef SENSORS_ENABLE_BMI055
-      gyroBiasFound = gyroBiasBmi055.isBiasValueFound;
-#endif
-      break;
-    case SENSORS_BMI160:
-#ifdef SENSORS_ENABLE_BMI160
-      gyroBiasFound = gyroBiasBmi160.isBiasValueFound;
-#endif
-      break;
-    default:
-      gyroBiasFound = false;
-      break;
-  }
-
-  return gyroBiasFound;
-}
-
-static void sensorsTask(void *param)
-{
-  uint32_t lastWakeTime = xTaskGetTickCount();
-
-  systemWaitStart();
-
-  while (1)
-  {
-    vTaskDelayUntil(&lastWakeTime, F2T(SENSORS_READ_RATE_HZ));
-
-    sensorsRead(&sensors.gyro, &sensors.acc);
-
-    // ensure all queues are populated at the same time
-    vTaskSuspendAll();
-    xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
-    xQueueOverwrite(gyroDataQueue, &sensors.gyro);
-    if (isBarometerPresent)
-    {
-      xQueueOverwrite(barometerDataQueue, &sensors.baro);
-    }
-    xTaskResumeAll();
-  }
-}
-
-void sensorsDeviceInit(void)
-{
-  if (isInit)
-    return;
-
-  isBarometerPresent = false;
-
-  // Wait for sensors to startup
-  while (xTaskGetTickCount() < M2T(SENSORS_STARTUP_TIME_MS))
-    ;
-
-  // BMI160 Initialization
-#ifdef SENSORS_ENABLE_BMI160
-  bstdr_ret_t ret_res;
-
-  bmi160Dev.read = (bmi160_com_fptr_t)bstdr_burst_read;  // assign bus read function for bst devices
-  bmi160Dev.write = (bmi160_com_fptr_t)bstdr_burst_write;  // assign bus write function for bst devices
-  bmi160Dev.delay_ms = (bmi160_delay_fptr_t)bstdr_ms_delay; // assign delay function
-  bmi160Dev.id = 0x69;  // I2C device address
-  ret_res = bmi160_init(&bmi160Dev); // initialize the device
-
-  if (ret_res == BSTDR_OK)
-  {
-    DEBUG_PRINT("BMI160 I2C connection [OK].\n");
-    /* Select the Output data rate, range of accelerometer sensor ~92Hz BW by OSR4 @ODR=800Hz */
-    bmi160Dev.accel_cfg.odr = BMI160_ACCEL_ODR_800HZ;
-    bmi160Dev.accel_cfg.range = BMI160_ACCEL_RANGE_16G;
-    bmi160Dev.accel_cfg.bw = BMI160_ACCEL_BW_OSR4_AVG1;
-    /* Select the power mode of accelerometer sensor */
-    bmi160Dev.accel_cfg.power = BMI160_ACCEL_NORMAL_MODE;
-
-    /* Select the Output data rate, range of Gyroscope sensor ~92Hz BW by OSR4 @ODR=800Hz */
-    bmi160Dev.gyro_cfg.odr = BMI160_GYRO_ODR_800HZ;
-    bmi160Dev.gyro_cfg.range = BMI160_GYRO_RANGE_2000_DPS;
-    bmi160Dev.gyro_cfg.bw = BMI160_GYRO_BW_OSR4_MODE;
-
-    /* Select the power mode of Gyroscope sensor */
-    bmi160Dev.gyro_cfg.power = BMI160_GYRO_NORMAL_MODE;
-
-    /* Set the sensor configuration */
-    ret_res = bmi160_set_sens_conf(&bmi160Dev);
-  }
-  else
-  {
-    DEBUG_PRINT("BMI160 I2C connection [FAIL].\n");
-  }
-
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-  sensorsBiasInit(&accelBiasBmi160);
-#endif
-  sensorsBiasInit(&gyroBiasBmi160);
-
-#endif
-
-#ifdef SENSORS_ENABLE_BMI055
-  bmi055DevAcc.bus_read = bstdr_burst_read;	// assign bus read function for bst devices
-  bmi055DevAcc.bus_write = bstdr_burst_write;	// assign bus write function for bst devices
-  bmi055DevAcc.delay = bstdr_ms_delay;	// assign delay function
-  bmi055DevAcc.dev_addr = 0x18;
-
-  bmi055DevGyro.bus_read = bstdr_burst_read;	// assign bus read function for bst devices
-  bmi055DevGyro.bus_write = bstdr_burst_write;	// assign bus write function for bst devices
-  bmi055DevGyro.delay = bstdr_ms_delay;	// assign delay function
-  bmi055DevGyro.dev_addr = 0x68;
-
-  bma2x2_init(&bmi055DevAcc); // initialize the device
-
-  if (bma2x2_check_connection() == BSTDR_OK)
-  {
-
-    DEBUG_PRINT("BMI055 Accel I2C connection [OK].\n");
-    bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
-    bma2x2_set_bw(BMA2x2_BW_125HZ);
-    bma2x2_set_range(BMA2x2_RANGE_8G);
-
-    bmi055DevAcc.delay(10);
-    bma2x2_xyz_t acc;
-    bma2x2_read_accel_xyz(&acc);
-  }
-  else
-  {
-    DEBUG_PRINT("BMI055 Accel I2C connection [FAIL].\n");
-  }
-
-  bmg160_init(&bmi055DevGyro); // initialize the device
-
-  if (bmg160_check_connection() == BSTDR_OK)
-  {
-    DEBUG_PRINT("BMI055 Gyro I2C connection [OK].\n");
-    bmg160_set_power_mode(BMG160_MODE_NORMAL);
-    bmi055DevGyro.delay(50);
-    bmg160_set_bw(BMG160_BW_116_HZ);
-    bmg160_set_range(BMG160_RANGE_2000);
-    bmi055DevGyro.delay(50);
-    bmg160_xyz_t gyr;
-    bmg160_get_data_XYZ(&gyr);
-  }
-  else
-  {
-    DEBUG_PRINT("BMI055 Gyro I2C connection [FAIL].\n");
-  }
-
-  sensorsBiasInit(&gyroBiasBmi055);
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-  sensorsBiasInit(&accelBiasBmi055);
-#endif
-
-#endif
-
-// Bosch Sensortec Sensor
-#ifdef SENSORS_ENABLE_PRESSURE_BMP280
-  bstdr_ret_t comtest = BSTDR_E_GEN_ERROR;
-  bmp280Dev.bus_read = bstdr_burst_read;	// assign bus read function for bst devices
-  bmp280Dev.bus_write = bstdr_burst_write;	// assign bus write function for bst devices
-  bmp280Dev.delay = bstdr_ms_delay;	// assign delay function
-  bmp280Dev.dev_addr = 0x76;
-  bmp280_init(&bmp280Dev); // initialize the device
-  comtest = bmp280_test_connection();
-  if (comtest == BSTDR_OK)
-  {
-    isBarometerPresent = true;
-    DEBUG_PRINT("BME280 I2C connection [OK].\n");
-    bmp280_set_filter(0x03);
-    bmp280_set_work_mode(BMP280_STANDARD_RESOLUTION_MODE);
-    bmp280_set_standby_durn(BMP280_STANDBY_TIME_1_MS);
-    bmp280_set_power_mode(BMP280_NORMAL_MODE);
-    bmp280Dev.delay(20);	// wait before first read out
-    // read out data
-    int32_t v_temp_s32;
-    uint32_t v_pres_u32;
-    bmp280_read_data(&v_pres_u32, &v_temp_s32);
-  }
-#endif
-
-  varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
-  sensorsAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
-
-  cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI / 180);
-  sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI / 180);
-  cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI / 180);
-  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI / 180);
-
-  isInit = true;
-}
+static void sensorsBiasReset(BiasObj* bias);
+static void sensorsBiasMalloc(BiasObj* bias);
+static void sensorsBiasFree(BiasObj* bias);
+static void sensorsBiasAdd(BiasObj* bias, Axis3i16* value);
 
 void sensorsInit(void)
 {
-  if (isInit)
-  {
-    return;
-  }
+	if (isInit)
+	{
+		return;
+	}
 
-  sensorsDeviceInit();
-  sensorsTaskInit();
+	sensorsDeviceInit();
+	sensorsTaskInit();
 
-  isInit = true;
+	isInit = true;
 }
 
-bool sensorsTest(void)
+static void sensorsDeviceInit(void)
 {
-  bool testStatus = true;
+	if (isInit)
+		return;
 
-  if (!isInit)
-  {
-    DEBUG_PRINT("Uninitialized\n");
-    testStatus = false;
-  }
+	bstdr_ret_t rslt;
+	isBarometerPresent = false;
 
-  return testStatus;
-}
+	// Wait for sensors to startup
+	vTaskDelay(M2T(SENSORS_STARTUP_TIME_MS));
 
-bool sensorsManufacturingTest(void)
-{
-  return true;
+	/* BMI160 */
+#if (GYRO_PRIMARY == SENSORS_BMI160) || (GYRO_SECONDARY == SENSORS_BMI160) || \
+	(ACCEL_PRIMARY == SENSORS_BMI160) || (ACCEL_SECONDARY == SENSORS_BMI160)
+	bmi160Dev.read = (bmi160_com_fptr_t)bstdr_burst_read;  // assign bus read function for bst devices
+	bmi160Dev.write = (bmi160_com_fptr_t)bstdr_burst_write;  // assign bus write function for bst devices
+	bmi160Dev.delay_ms = (bmi160_delay_fptr_t)bstdr_ms_delay; // assign delay function
+	bmi160Dev.id = BMI160_I2C_ADDR+1;  // I2C device address
+
+	rslt = bmi160_init(&bmi160Dev); // initialize the device
+	if (rslt == BSTDR_OK)
+	{
+		DEBUG_PRINT("BMI160 I2C connection [OK].\n");
+#if (GYRO_PRIMARY == SENSORS_BMI160) || (GYRO_SECONDARY == SENSORS_BMI160)
+		/* Select the Output data rate, range of Gyroscope sensor ~92Hz BW by OSR4 @ODR=800Hz */
+		bmi160Dev.gyro_cfg.odr = BMI160_GYRO_ODR_800HZ;
+		bmi160Dev.gyro_cfg.range = SENSORS_BMI160_GYRO_FS_CFG;
+		bmi160Dev.gyro_cfg.bw = BMI160_GYRO_BW_OSR4_MODE;
+
+		/* Select the power mode of Gyroscope sensor */
+		bmi160Dev.gyro_cfg.power = BMI160_GYRO_NORMAL_MODE;
+#endif
+
+#if (ACCEL_PRIMARY == SENSORS_BMI160) || (ACCEL_SECONDARY == SENSORS_BMI160)
+		/* Select the Output data rate, range of accelerometer sensor ~92Hz BW by OSR4 @ODR=800Hz */
+		bmi160Dev.accel_cfg.odr = BMI160_ACCEL_ODR_1600HZ;
+		bmi160Dev.accel_cfg.range = SENSORS_BMI160_ACCEL_FS_CFG;
+		bmi160Dev.accel_cfg.bw = BMI160_ACCEL_BW_OSR4_AVG1;
+		/* Select the power mode of accelerometer sensor */
+		bmi160Dev.accel_cfg.power = BMI160_ACCEL_NORMAL_MODE;
+#endif
+		/* Set the sensor configuration */
+		rslt |= bmi160_set_sens_conf(&bmi160Dev);
+		bmi160Dev.delay_ms(50);
+
+#if (GYRO_PRIMARY == SENSORS_BMI160) || (GYRO_SECONDARY == SENSORS_BMI160)
+		struct bmi160_sensor_data gyr;
+		rslt |= bmi160_get_sensor_data(BMI160_GYRO_ONLY, NULL, &gyr, &bmi160Dev);
+#endif
+#if (ACCEL_PRIMARY == SENSORS_BMI160) || (ACCEL_SECONDARY == SENSORS_BMI160)
+		struct bmi160_sensor_data acc;
+		rslt |= bmi160_get_sensor_data(BMI160_ACCEL_ONLY, &acc, NULL, &bmi160Dev);
+#endif
+	}
+	else
+	{
+		DEBUG_PRINT("BMI160 I2C connection [FAIL].\n");
+	}
+
+#endif /* BMI160 */
+
+	/* BMI055 */
+#if (GYRO_PRIMARY == SENSORS_BMI055) || (GYRO_SECONDARY == SENSORS_BMI055) || \
+	(ACCEL_PRIMARY == SENSORS_BMI055) || (ACCEL_SECONDARY == SENSORS_BMI055)
+	bmi055Dev.accel_id = BMI055_ACCEL_I2C_ADDR;
+	bmi055Dev.gyro_id = BMI055_GYRO_I2C_ADDR;
+	bmi055Dev.interface = BMI055_I2C_INTF;
+	bmi055Dev.read = (bmi055_com_fptr_t)bstdr_burst_read;
+	bmi055Dev.write = (bmi055_com_fptr_t)bstdr_burst_write;
+	bmi055Dev.delay_ms = (bmi055_delay_fptr_t)bstdr_ms_delay;
+
+	/* BMI055 GYRO */
+#if (GYRO_PRIMARY == SENSORS_BMI055) || (GYRO_SECONDARY == SENSORS_BMI055)
+	rslt = bmi055_gyro_init(&bmi055Dev); // initialize the device
+	if (rslt == BSTDR_OK)
+	{
+		DEBUG_PRINT("BMI055 Gyro I2C connection [OK].\n");
+		/* set power mode of gyro */
+		bmi055Dev.gyro_cfg.power = BMI055_GYRO_PM_NORMAL;
+		rslt |= bmi055_set_gyro_power_mode(&bmi055Dev);
+		/* set bandwidth and range of gyro */
+		bmi055Dev.gyro_cfg.bw = BMI055_GYRO_BW_116_HZ;
+		bmi055Dev.gyro_cfg.range = SENSORS_BMI055_GYRO_FS_CFG;
+		rslt |= bmi055_set_gyro_sensor_config(CONFIG_ALL, &bmi055Dev);
+
+		bmi055Dev.delay_ms(50);
+		struct bmi055_sensor_data gyr;
+		rslt |= bmi055_get_gyro_data(&gyr, &bmi055Dev);
+	}
+	else
+	{
+		DEBUG_PRINT("BMI055 Gyro I2C connection [FAIL].\n");
+	}
+#endif /* BMI055 GYRO */
+
+	/* BMI055 ACCEL */
+#if (ACCEL_PRIMARY == SENSORS_BMI055) || (ACCEL_PRIMARY == SENSORS_BMI055)
+	rslt = bmi055_accel_init(&bmi055Dev); // initialize the device
+	if (rslt == BSTDR_OK)
+	{
+		DEBUG_PRINT("BMI055 Accel I2C connection [OK].\n");
+		/* set power mode of accel */
+		bmi055Dev.accel_cfg.power = BMI055_ACCEL_PM_NORMAL;
+		rslt |= bmi055_set_accel_power_mode(&bmi055Dev);
+		/* set bandwidth and range of accel */
+		bmi055Dev.accel_cfg.bw = BMI055_ACCEL_BW_125_HZ;
+		bmi055Dev.accel_cfg.range = SENSORS_BMI055_ACCEL_FS_CFG;
+		rslt |= bmi055_set_accel_sensor_config(CONFIG_ALL, &bmi055Dev);
+
+		bmi055Dev.delay_ms(10);
+		struct bmi055_sensor_data acc;
+		rslt |= bmi055_get_accel_data(&acc, &bmi055Dev);
+	}
+	else
+	{
+		DEBUG_PRINT("BMI055 Accel I2C connection [FAIL].\n");
+	}
+#endif /* BMI055 ACCEL */
+
+#endif /* BMI055 */
+
+	/* BMM150 */
+#if MAGNETOMETER == SENSORS_BMM150
+	// Bosch Sensortec Sensor BMM150 connection check
+	rslt = BSTDR_E_GEN_ERROR;
+
+	/* Sensor interface over I2C */
+	bmm150Dev.id = BMM150_DEFAULT_I2C_ADDRESS;
+	bmm150Dev.interface = BMM150_I2C_INTF;
+	bmm150Dev.read = (bmm150_com_fptr_t)bstdr_burst_read;
+	bmm150Dev.write = (bmm150_com_fptr_t)bstdr_burst_write;
+	bmm150Dev.delay_ms = bstdr_ms_delay;
+
+	rslt = bmm150_init(&bmm150Dev);
+
+	if (rslt == BMM150_OK){
+		bmm150Dev.settings.pwr_mode = BMM150_NORMAL_MODE;
+		rslt |= bmm150_set_op_mode(&bmm150Dev);
+		bmm150Dev.settings.preset_mode = BMM150_PRESETMODE_HIGHACCURACY;
+		rslt |= bmm150_set_presetmode(&bmm150Dev);
+
+		DEBUG_PRINT("BMM150 I2C connection [OK].\n");
+		isMagnetometerPresent = true;
+	}
+#endif /* BMM150 */
+
+	/* BMP280 */
+#if (BARO_PRIMARY == SENSORS_BMP280) || (BARO_SECONDARY == SENSORS_BMP280)
+	/* Bosch Sensortec Sensor BMP280 connection check */
+	rslt = BSTDR_E_GEN_ERROR;
+
+	bmp280Dev.bus_read = bstdr_burst_read;	// assign bus read function for bst devices
+	bmp280Dev.bus_write = bstdr_burst_write;	// assign bus write function for bst devices
+	bmp280Dev.delay_ms = bstdr_ms_delay;	// assign delay function
+	bmp280Dev.dev_addr = BMP280_I2C_ADDRESS1;
+	rslt = bmp280_init(&bmp280Dev); // initialize the device
+	if (rslt == BSTDR_OK)
+	{
+		isBarometerPresent = true;
+		DEBUG_PRINT("BME280 I2C connection [OK].\n");
+		bmp280_set_filter(BMP280_FILTER_COEFF_OFF);
+		bmp280_set_oversamp_temperature(BMP280_OVERSAMP_2X);
+		bmp280_set_oversamp_pressure(BMP280_OVERSAMP_8X);
+		bmp280_set_power_mode(BMP280_NORMAL_MODE);
+		bmp280Dev.delay_ms(20);	// wait before first read out
+		// read out data
+		int32_t v_temp_s32;
+		uint32_t v_pres_u32;
+		bmp280_read_pressure_temperature(&v_pres_u32, &v_temp_s32);
+	}
+#endif /* BMP280 */
+
+	varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
+	sensorsAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
+
+	cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI / 180);
+	sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI / 180);
+	cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI / 180);
+	sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI / 180);
+
+	isInit = true;
 }
 
 static void sensorsTaskInit(void)
 {
-  accelerometerDataQueue = xQueueCreate(1, sizeof(Axis3f));
-  gyroDataQueue = xQueueCreate(1, sizeof(Axis3f));
-  barometerDataQueue = xQueueCreate(1, sizeof(baro_t));
+	accelPrimDataQueue = xQueueCreate(1, sizeof(Axis3f));
+	gyroPrimDataQueue = xQueueCreate(1, sizeof(Axis3f));
+#ifdef LOG_SEC_IMU
+	accelSecDataQueue = xQueueCreate(1, sizeof(Axis3f));
+	gyroSecDataQueue = xQueueCreate(1, sizeof(Axis3f));
+#endif
+	magPrimDataQueue = xQueueCreate(1, sizeof(Axis3f));
+	baroPrimDataQueue = xQueueCreate(1, sizeof(baro_t));
 
-  xTaskCreate(sensorsTask, SENSORS_TASK_NAME, SENSORS_TASK_STACKSIZE, NULL, SENSORS_TASK_PRI, NULL);
+	xTaskCreate(sensorsTask, SENSORS_TASK_NAME, SENSORS_TASK_STACKSIZE, NULL, SENSORS_TASK_PRI, NULL);
 }
 
-static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
+static void sensorsTask(void *param)
 {
-  Axis3f accScaled;
+	systemWaitStart();
 
-  // read out the data
-  switch (usedImuType)
-  {
-    case SENSORS_BMI055:
-#ifdef SENSORS_ENABLE_BMI055
-    {
-      bma2x2_xyz_t bmi055acc;
-      bmg160_xyz_t bmi055gyr;
-      bma2x2_read_accel_xyz(&bmi055acc);
-      bmg160_get_data_XYZ(&bmi055gyr);
-      // re-align the axes
-      accelBmi055.x = bmi055acc.x;
-      accelBmi055.y = bmi055acc.y;
-      accelBmi055.z = bmi055acc.z;
-      gyroBmi055.x = bmi055gyr.x;
-      gyroBmi055.y = bmi055gyr.y;
-      gyroBmi055.z = bmi055gyr.z;
-    }
+	uint32_t lastWakeTime = xTaskGetTickCount();
+	Axis3i16 gyroPrimRaw;
+	Axis3i16 gyroPrimAligned;
+	Axis3i16 accelPrimRaw;
+	Axis3i16 accelPrimAligned;
+	Axis3f accelPrimScaled;
+	Axis3i16 accelPrimLPF;
+	Axis3i32 accelPrimStoredFilterValues;
+#ifdef LOG_SEC_IMU
+	Axis3i16 gyroSecRaw;
+	Axis3i16 gyroSecAligned;
+	Axis3i16 accelSecRaw;
+	Axis3i16 accelSecAligned;
+	Axis3f accelSecScaled;
+	Axis3i16 accelSecLPF;
+	Axis3i32 accelSecStoredFilterValues;
+#endif /* LOG_SEC_IMU */
+	/* wait an additional second the keep bus free
+	 * this is only required by the z-ranger, since the
+	 * configuration will be done after system start-up */
+	//vTaskDelayUntil(&lastWakeTime, M2T(1500));
+	while (1)
+	{
+		vTaskDelayUntil(&lastWakeTime, F2T(SENSORS_READ_RATE_HZ));
+		/* get data from chosen sensors */
+		/* BMI160 GYRO */
+#if GYRO_PRIMARY == SENSORS_BMI160
+		bmi160_get_sensor_data(BMI160_GYRO_ONLY, NULL, (struct bmi160_sensor_data*)&gyroPrimRaw, &bmi160Dev);
+#elif GYRO_SECONDARY == SENSORS_BMI160
+		bmi160_get_sensor_data(BMI160_GYRO_ONLY, NULL, (struct bmi160_sensor_data*)&gyroSecRaw, &bmi160Dev);
 #endif
-      break;
-    case SENSORS_BMI160:
-#ifdef SENSORS_ENABLE_BMI160
-    {
-      struct bmi160_sensor_data bmi160acc;
-      struct bmi160_sensor_data bmi160gyr;
-      bmi160_get_sensor_data(BMI160_BOTH_ACCEL_AND_GYRO, &bmi160acc, &bmi160gyr, &bmi160Dev);
-      // re-align the axes
-      accelBmi160.x = bmi160acc.x;
-      accelBmi160.y = bmi160acc.y;
-      accelBmi160.z = bmi160acc.z;
-      gyroBmi160.x = bmi160gyr.x;
-      gyroBmi160.y = bmi160gyr.y;
-      gyroBmi160.z = bmi160gyr.z;
-    }
-#endif
-      break;
-  }
 
-  // output depends on the
-  switch (usedImuType)
-  {
-    case SENSORS_BMI160:
-      sensorsAddBiasValue(&gyroBiasBmi160, &gyroBmi160);
+		/* BMI055 GYRO */
+#if GYRO_PRIMARY == SENSORS_BMI055
+		bmi055_get_gyro_data((struct bmi055_sensor_data*)&gyroPrimRaw, &bmi055Dev);
+#elif GYRO_SECONDARY == SENSORS_BMI055
+		bmi055_get_gyro_data((struct bmi055_sensor_data*)&gyroSecRaw, &bmi055Dev);
+#endif
+
+		/* BMI160 ACCEL */
+#if ACCEL_PRIMARY == SENSORS_BMI160
+		bmi160_get_sensor_data(BMI160_ACCEL_ONLY, (struct bmi160_sensor_data*)&accelPrimRaw, NULL, &bmi160Dev);
+#elif ACCEL_SECONDARY == SENSORS_BMI160
+		bmi160_get_sensor_data(BMI160_ACCEL_ONLY, (struct bmi160_sensor_data*)&accelSecRaw, NULL, &bmi160Dev);
+#endif
+
+		/* BMI055 ACCEL */
+#if ACCEL_PRIMARY == SENSORS_BMI055
+		bmi055_get_accel_data((struct bmi055_sensor_data*)&accelPrimRaw, &bmi055Dev);
+#elif ACCEL_SECONDARY == SENSORS_BMI055
+		bmi055_get_accel_data((struct bmi055_sensor_data*)&accelSecRaw, &bmi055Dev);
+#endif
+
+		/* re-align the axes */
+		sensorsReAlign(&gyroPrimAligned, &gyroPrimRaw.x, &gyroPrimRaw.y, &gyroPrimRaw.z);
+		sensorsReAlign(&accelPrimAligned, &accelPrimRaw.x, &accelPrimRaw.y, &accelPrimRaw.z);
+#ifdef LOG_SEC_IMU
+		sensorsReAlign(&gyroSecAligned, &gyroSecRaw.x, &gyroSecRaw.y, &gyroSecRaw.z);
+		sensorsReAlign(&accelSecAligned, &accelSecRaw.x, &accelSecRaw.y, &accelSecRaw.z);
+#endif
+
+		/* bias handling */
+		if (gyroPrimBias.found == 0) {
+			if (gyroPrimBias.ongoing == 0) {
+				sensorsBiasMalloc(&gyroPrimBias);
+			}
+			sensorsBiasAdd(&gyroPrimBias, &gyroPrimAligned);
+			if (gyroPrimBias.bufIsFull == 1) {
+				if (processGyroBias(&gyroPrimBias)) {
+					sensorsBiasFree(&gyroPrimBias);
+				}
+			}
+		}
 #ifdef SENSORS_TAKE_ACCEL_BIAS
-      if (!accelBiasBmi160.isBiasValueFound)
-      {
-        sensorsAddBiasValue(&accelBiasBmi160, &accelBmi160);
-      }
+		if (accelPrimBias.found == 0) {
+			if (accelPrimBias.ongoing == 0) {
+				sensorsBiasMalloc(&accelPrimBias);
+			}
+			sensorsBiasAdd(&accelPrimBias, &accelPrimAligned);
+			if ( (accelPrimBias.bufIsFull == 1) && (gyroPrimBias.found == 1) ) {
+				processAccelBias(&accelPrimBias);
+				accelPrimBias.value.z = accelPrimBias.value.z - SENSORS_PRIM_1G_IN_LSB;
+				sensorsBiasFree(&accelPrimBias);
+			}
+		}
 #endif
-      if (!gyroBiasBmi160.isBiasValueFound)
-      {
-        sensorsFindBiasValue(&gyroBiasBmi160);
-        if (gyroBiasBmi160.isBiasValueFound)
-        {
-          soundSetEffect(SND_CALIB);
-          ledseqRun(SYS_LED, seq_calibrated);
-        }
-      }
 
+#ifdef LOG_SEC_IMU
+		if (gyroSecBias.found == 0) {
+			if (gyroSecBias.ongoing == 0) {
+				sensorsBiasMalloc(&gyroSecBias);
+			}
+			sensorsBiasAdd(&gyroSecBias, &gyroSecAligned);
+			if (gyroSecBias.bufIsFull == 1) {
+				if (processGyroBias(&gyroSecBias)) {
+					sensorsBiasFree(&gyroSecBias);
+				}
+			}
+		}
 #ifdef SENSORS_TAKE_ACCEL_BIAS
-      if (gyroBiasBmi160.isBiasValueFound && !accelBiasBmi160.isBiasValueFound)
-      {
-        Axis3i32 mean;
+		if (accelSecBias.found == 0) {
+			if (accelSecBias.ongoing == 0) {
+				sensorsBiasMalloc(&accelSecBias);
+			}
+			sensorsBiasAdd(&accelSecBias, &accelSecAligned);
+			if ( (accelSecBias.bufIsFull == 1) && (gyroSecBias.found == 1) ) {
+				processAccelBias(&accelSecBias);
+				accelSecBias.value.z = accelSecBias.value.z - SENSORS_SEC_1G_IN_LSB;
+				sensorsBiasFree(&accelSecBias);
+			}
+		}
+#endif
+#endif /* LOG_SEC_IMU */
+		sensorsApplyBiasAndScale(&sensors.gyro, &gyroPrimAligned, &gyroPrimBias.value,
+				SENSORS_PRIM_DEG_PER_LSB_CFG);
 
-        sensorsCalculateBiasMean(&accelBiasBmi160, &mean);
-        accelBiasBmi160.bias.x = mean.x;
-        accelBiasBmi160.bias.y = mean.y;
-        accelBiasBmi160.bias.z = mean.z - SENSORS_1G_RAW;
-        accelBiasBmi160.isBiasValueFound = true;
-      }
+		sensorsAccIIRLPFilter(&accelPrimAligned, &accelPrimLPF,
+				&accelPrimStoredFilterValues, (int32_t)sensorsAccLpfAttFactor);
+		sensorsApplyBiasAndScale(&accelPrimScaled, &accelPrimLPF, &accelPrimBias.value,
+				SENSORS_PRIM_G_PER_LSB_CFG);
+		sensorsAccAlignToGravity(&accelPrimScaled, &sensors.acc);
+
+#ifdef LOG_SEC_IMU
+		sensorsApplyBiasAndScale(&sensors.gyroSec, &gyroSecAligned, &gyroSecBias.value,
+				SENSORS_SEC_DEG_PER_LSB_CFG);
+
+		sensorsAccIIRLPFilter(&accelSecAligned, &accelSecLPF,
+				&accelSecStoredFilterValues, (int32_t)sensorsAccLpfAttFactor);
+		sensorsApplyBiasAndScale(&accelSecScaled, &accelSecLPF, &accelSecBias.value,
+				SENSORS_SEC_G_PER_LSB_CFG);
+		sensorsAccAlignToGravity(&accelSecScaled, &sensors.accSec);
 #endif
 
-#ifdef SENSORS_ENABLE_BMI160
-      sensorsAccIIRLPFilter(&accelBmi160, &accelLPF, &accelStoredFilterValues, (int32_t) sensorsAccLpfAttFactor);
-      gyroOut->x = ((float) gyroBmi160.x - gyroBiasBmi160.bias.x) * SENSORS_BMI160_DEG_PER_LSB_CFG;
-      gyroOut->y = ((float) gyroBmi160.y - gyroBiasBmi160.bias.y) * SENSORS_BMI160_DEG_PER_LSB_CFG;
-      gyroOut->z = ((float) gyroBmi160.z - gyroBiasBmi160.bias.z) * SENSORS_BMI160_DEG_PER_LSB_CFG;
-      accScaled.x = (accelLPF.x - accelBiasBmi160.bias.x) * SENSORS_BMI160_G_PER_LSB_CFG;
-      accScaled.y = (accelLPF.y - accelBiasBmi160.bias.y) * SENSORS_BMI160_G_PER_LSB_CFG;
-      accScaled.z = (accelLPF.z - accelBiasBmi160.bias.z) * SENSORS_BMI160_G_PER_LSB_CFG;
-      sensorsAccAlignToGravity(&accScaled, accOut);
-#endif
-      break;
-    case SENSORS_BMI055:
-      sensorsAddBiasValue(&gyroBiasBmi055, &gyroBmi055);
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-      if (!accelBiasBmi055.isBiasValueFound)
-      {
-        sensorsAddBiasValue(&accelBiasBmi055, &accelBmi055);
-      }
-#endif
-      if (!gyroBiasBmi055.isBiasValueFound)
-      {
-        sensorsFindBiasValue(&gyroBiasBmi055);
-        if (gyroBiasBmi055.isBiasValueFound)
-        {
-          soundSetEffect(SND_CALIB);
-          ledseqRun(SYS_LED, seq_calibrated);
-        }
-      }
+#if MAGNETOMETER == SENSORS_BMM150
+		static uint8_t magMeasDelay = SENSORS_DELAY_MAG;
 
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-      if (gyroBiasBmi055.isBiasValueFound && !accelBiasBmi055.isBiasValueFound)
-      {
-        Axis3i32 mean;
+		if (--magMeasDelay == 0){
+			bmm150_read_mag_data(&bmm150Dev);
+			sensors.mag.x = bmm150Dev.data.x;
+			sensors.mag.y = bmm150Dev.data.y;
+			sensors.mag.z = bmm150Dev.data.z;
+			magMeasDelay = SENSORS_DELAY_MAG;
+		}
+#endif
 
-        sensorsCalculateBiasMean(&accelBiasBmi055, &mean);
-        accelBiasBmi055.bias.x = mean.x;
-        accelBiasBmi055.bias.y = mean.y;
-        accelBiasBmi055.bias.z = mean.z - SENSORS_BMI055_1G_IN_LSB;
-        accelBiasBmi055.isBiasValueFound = true;
-      }
+#if (BARO_PRIMARY == SENSORS_BMP280)
+
+		static int32_t v_temp_s32;
+		static uint32_t v_pres_u32;
+		static baro_t* baro280 = &sensors.baro;
+
+		if (--baroMeasDelay == 0) {
+			bmp280_read_pressure_temperature(&v_pres_u32, &v_temp_s32);
+			sensorsScaleBaro(baro280, (float)v_pres_u32, (float)v_temp_s32/100.0f);
+			baroMeasDelay = SENSORS_DELAY_BARO;
+		}
+#endif /* (BARO_PRIMARY == SENSORS_BMP280) */
+
+		// ensure all queues are populated at the same time
+		vTaskSuspendAll();
+		xQueueOverwrite(accelPrimDataQueue, &sensors.acc);
+		xQueueOverwrite(gyroPrimDataQueue, &sensors.gyro);
+
+#ifdef LOG_SEC_IMU
+		xQueueOverwrite(gyroSecDataQueue, &sensors.gyroSec);
+		xQueueOverwrite(accelSecDataQueue, &sensors.accSec);
 #endif
-#ifdef SENSORS_ENABLE_BMI055
-      sensorsAccIIRLPFilter(&accelBmi055, &accelLPF, &accelStoredFilterValues, (int32_t) sensorsAccLpfAttFactor);
-      gyroOut->x = ((float) gyroBmi055.x - gyroBiasBmi055.bias.x) * SENSORS_BMI160_DEG_PER_LSB_CFG;
-      gyroOut->y = ((float) gyroBmi055.y - gyroBiasBmi055.bias.y) * SENSORS_BMI160_DEG_PER_LSB_CFG;
-      gyroOut->z = ((float) gyroBmi055.z - gyroBiasBmi055.bias.z) * SENSORS_BMI160_DEG_PER_LSB_CFG;
-      accScaled.x = (accelLPF.x - accelBiasBmi055.bias.x) * SENSORS_BMI055_1G_PER_LSB_CFG;
-      accScaled.y = (accelLPF.y - accelBiasBmi055.bias.y) * SENSORS_BMI055_1G_PER_LSB_CFG;
-      accScaled.z = (accelLPF.z - accelBiasBmi055.bias.z) * SENSORS_BMI055_1G_PER_LSB_CFG;
-      sensorsAccAlignToGravity(&accScaled, accOut);
-#endif
-      break;
-  }
+
+		if (isBarometerPresent)
+		{
+			xQueueOverwrite(baroPrimDataQueue, &sensors.baro);
+		}
+
+		if (isMagnetometerPresent)
+		{
+			xQueueOverwrite(magPrimDataQueue, &sensors.mag);
+		}
+		xTaskResumeAll();
+	}
 }
 
-bool sensorsIsCalibrated(void)
+static void sensorsBiasMalloc(BiasObj* bias)
 {
-  bool status;
-
-  // output depends on the
-  switch (usedImuType)
-  {
-    case SENSORS_BMI160:
-      status = gyroBiasBmi160.isBiasValueFound;
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-      status &= accelBiasBmi160.isBiasValueFound;
-#endif
-      break;
-    case SENSORS_BMI055:
-      status = gyroBiasBmi055.isBiasValueFound;
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-      status &= accelBiasBmi055.isBiasValueFound;
-#endif
-      break;
-    default:
-      status = false;
-      break;
-  }
-
-  return status;
+	/* allocate memory for buffer */
+	bias->bufStart = pvPortMalloc(SENSORS_NBR_OF_BIAS_SAMPLES * sizeof(Axis3i16));
+	bias->bufPtr = bias->bufStart;
+	/* set ongoing bit */
+	bias->ongoing = 1;
 }
 
-bool sensorsHasBarometer(void)
+static void __attribute__((used)) sensorsBiasReset(BiasObj* bias)
 {
-  return isBarometerPresent;
+	/* unset bias found and buffer full status bits */
+	bias->found = 0;
+	bias->bufIsFull = 0;
+	/* set bufPtr to start to ensure the buffer has to be refilled
+	 * completly before bufferIsFull Status bit will be set */
+	bias->bufPtr = bias->bufStart;
+	/* clear any exisiting bias value */
+	bias->value.x = 0;
+	bias->value.y = 0;
+	bias->value.z = 0;
 }
 
-bool sensorsHasMangnetometer(void)
+static void sensorsBiasFree(BiasObj* bias)
 {
-  return false;
-}
-
-static void sensorsBiasInit(BiasObj* bias)
-{
-  bias->isBufferFilled = false;
-  bias->bufHead = bias->buffer;
+	/* unset buffer is full */
+	bias->bufIsFull = 0;
+	/* free buffer memory */
+	vPortFree(bias->bufStart);
+	bias->bufStart = NULL;
+	bias->bufPtr = NULL;
 }
 
 /**
- * Calculates the variance and mean for the bias buffer.
+ * Adds a new value to the variance buffer and if it is full
+ * replaces the oldest one. Thus a circular buffer.
  */
-static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut)
+static void sensorsBiasAdd(BiasObj* bias, Axis3i16* value)
 {
-  uint32_t i;
-  int64_t sum[GYRO_NBR_OF_AXES] =  { 0 };
-  int64_t sumSq[GYRO_NBR_OF_AXES] =  { 0 };
+  bias->bufPtr->x = value->x;
+  bias->bufPtr->y = value->y;
+  bias->bufPtr->z = value->z;
+  bias->bufPtr++;
 
-  for (i = 0; i < SENSORS_NBR_OF_BIAS_SAMPLES; i++)
+  if (bias->bufPtr >= bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES)
   {
-    sum[0] += bias->buffer[i].x;
-    sum[1] += bias->buffer[i].y;
-    sum[2] += bias->buffer[i].z;
-    sumSq[0] += bias->buffer[i].x * bias->buffer[i].x;
-    sumSq[1] += bias->buffer[i].y * bias->buffer[i].y;
-    sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
+    bias->bufPtr = bias->bufStart;
+    bias->bufIsFull = 1;
   }
-
-  meanOut->x = (float) sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = (float) sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = (float) sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
-
-  varOut->x = fabs(sumSq[0] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->x * meanOut->x);
-  varOut->y = fabs(sumSq[1] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->y * meanOut->y);
-  varOut->z = fabs(sumSq[2] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->z * meanOut->z);
 }
 
 /**
  * Calculates the mean for the bias buffer.
  */
-static void __attribute__((used)) sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut)
-{
-  uint32_t i;
-  int32_t sum[GYRO_NBR_OF_AXES] =  { 0 };
+static void calcMean(BiasObj* bias, Axis3f* mean) {
+	Axis3i16* elem;
+	int64_t sum[GYRO_NBR_OF_AXES] = {0};
 
-  for (i = 0; i < SENSORS_NBR_OF_BIAS_SAMPLES; i++)
-  {
-    sum[0] += bias->buffer[i].x;
-    sum[1] += bias->buffer[i].y;
-    sum[2] += bias->buffer[i].z;
-  }
+	for (elem = bias->bufStart; elem != (bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES); elem++)
+	{
+		sum[0] += elem->x;
+		sum[1] += elem->y;
+		sum[2] += elem->z;
+	}
 
-  meanOut->x = sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
+	mean->x = (float)sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
+	mean->y = (float)sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
+	mean->z = (float)sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
 }
 
 /**
- * Adds a new value to the variance buffer and if it is full
-
- * replaces the oldest one. Thus a circular buffer.
+ * Calculates the variance and mean for the bias buffer.
  */
-static void sensorsAddBiasValue(BiasObj* bias, Axis3i16* dVal)
-{
-  bias->bufHead->x = dVal->x;
-  bias->bufHead->y = dVal->y;
-  bias->bufHead->z = dVal->z;
-  bias->bufHead++;
+static void calcVarianceAndMean(BiasObj* bias, Axis3f* variance, Axis3f* mean) {
+	Axis3i16* elem;
+	int64_t sumSquared[GYRO_NBR_OF_AXES] = {0};
 
-  if (bias->bufHead >= &bias->buffer[SENSORS_NBR_OF_BIAS_SAMPLES])
-  {
-    bias->bufHead = bias->buffer;
-    bias->isBufferFilled = true;
-  }
+	for (elem = bias->bufStart; elem != (bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES); elem++)
+	{
+		sumSquared[0] += elem->x * elem->x;
+		sumSquared[1] += elem->y * elem->y;
+		sumSquared[2] += elem->z * elem->z;
+	}
+	calcMean(bias, mean);
+
+	variance->x = fabs(sumSquared[0] / SENSORS_NBR_OF_BIAS_SAMPLES - mean->x * mean->x);
+	variance->y = fabs(sumSquared[1] / SENSORS_NBR_OF_BIAS_SAMPLES - mean->y * mean->y);
+	variance->z = fabs(sumSquared[2] / SENSORS_NBR_OF_BIAS_SAMPLES - mean->z * mean->z);
 }
 
 /**
@@ -665,37 +685,157 @@ static void sensorsAddBiasValue(BiasObj* bias, Axis3i16* dVal)
  * The bias value should have been added before calling this.
  * @param bias  The bias object
  */
-static bool sensorsFindBiasValue(BiasObj* bias)
+static bool processGyroBias(BiasObj* bias)
 {
-  bool foundBias = false;
+	Axis3f mean, variance;
+	calcVarianceAndMean(bias, &variance, &mean);
 
-  if (bias->isBufferFilled)
-  {
-    Axis3f variance;
-    Axis3f mean;
+	if (variance.x < GYRO_VARIANCE_THRESHOLD_X
+			&& variance.y < GYRO_VARIANCE_THRESHOLD_Y
+			&& variance.z < GYRO_VARIANCE_THRESHOLD_Z
+			&& (varianceSampleTime + GYRO_MIN_BIAS_TIMEOUT_MS < xTaskGetTickCount()))
+	{
+		varianceSampleTime = xTaskGetTickCount();
+		bias->value.x = (int16_t)(mean.x + 0.5f);
+		bias->value.y = (int16_t)(mean.y + 0.5f);
+		bias->value.z = (int16_t)(mean.z + 0.5f);
+		bias->found = 1;
+		return true;
+	}
+	return false;
+}
 
-    sensorsCalculateVarianceAndMean(bias, &variance, &mean);
+static void processAccelBias(BiasObj* bias)
+{
+	Axis3f mean;
+	calcMean(bias, &mean);
 
-    if (variance.x < GYRO_VARIANCE_THRESHOLD_X && variance.y < GYRO_VARIANCE_THRESHOLD_Y && variance.z < GYRO_VARIANCE_THRESHOLD_Z
-        && (varianceSampleTime + GYRO_MIN_BIAS_TIMEOUT_MS < xTaskGetTickCount()))
-    {
-      varianceSampleTime = xTaskGetTickCount();
-      bias->bias.x = mean.x;
-      bias->bias.y = mean.y;
-      bias->bias.z = mean.z;
-      foundBias = true;
-      bias->isBiasValueFound = true;
-    }
-  }
+		varianceSampleTime = xTaskGetTickCount();
+		bias->value.x = (int16_t)(mean.x + 0.5f);
+		bias->value.y = (int16_t)(mean.y + 0.5f);
+		bias->value.z = (int16_t)(mean.z + 0.5f);
+		bias->found = 1;
+}
+static void sensorsApplyBiasAndScale(Axis3f* scaled, Axis3i16* aligned, Axis3i16* bias, float scale) {
+	scaled->x = ((float)aligned->x - (float)bias->x) * scale;
+	scaled->y = ((float)aligned->y - (float)bias->y) * scale;
+	scaled->z = ((float)aligned->z - (float)bias->z) * scale;
+}
 
-  return foundBias;
+static void sensorsReAlign(Axis3i16* output, int16_t* inX, int16_t* inY, int16_t* inZ) {
+	output->x = *inX;
+	output->y = *inY;
+	output->z = *inZ;
+}
+
+static void sensorsScaleBaro(baro_t* baroScaled, float pressure, float temperature) {
+	baroScaled->pressure = pressure*0.01f;
+	baroScaled->temperature = temperature;
+	baroScaled->asl = ((powf((1015.7f / baroScaled->pressure), 0.1902630958f) - 1.0f) * (25.0f + 273.15f)) / 0.0065f;
+}
+
+bool sensorsReadGyro(Axis3f *gyro)
+{
+	return (pdTRUE == xQueueReceive(gyroPrimDataQueue, gyro, 0));
+}
+
+#ifdef LOG_SEC_IMU
+bool sensorsReadGyroSpare(Axis3f *gyro)
+{
+	return (pdTRUE == xQueueReceive(gyroSecDataQueue, gyro, 0));
+}
+
+bool sensorsReadAccSpare(Axis3f *acc)
+{
+	return (pdTRUE == xQueueReceive(accelSecDataQueue, acc, 0));
+}
+#endif
+
+bool sensorsReadAcc(Axis3f *acc)
+{
+	return (pdTRUE == xQueueReceive(accelPrimDataQueue, acc, 0));
+}
+
+bool sensorsReadMag(Axis3f *mag)
+{
+	return (pdTRUE == xQueueReceive(magPrimDataQueue, mag, 0));
+}
+
+bool sensorsReadBaro(baro_t *baro)
+{
+	return (pdTRUE == xQueueReceive(baroPrimDataQueue, baro, 0));
+}
+
+void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
+{
+	sensorsReadGyro(&sensors->gyro);
+	sensorsReadAcc(&sensors->acc);
+	sensorsReadMag(&sensors->mag);
+	sensorsReadBaro(&sensors->baro);
+	vl53l0xReadRange(&sensors->zrange, tick);
+#ifdef LOG_SEC_IMU
+	sensorsReadGyroSpare(&sensors->gyroSec);
+	sensorsReadAccSpare(&sensors->accSec);
+#endif
+}
+
+bool sensorsAreCalibrated()
+{
+	if ( (gyroPrimBias.found == 1)
+#ifdef SENSORS_TAKE_ACCEL_BIAS
+			&& (accelPrimBias.found == 1)
+#endif
+#ifdef LOG_SEC_IMU
+			&& (gyroSecBias.found == 1)
+#ifdef SENSORS_TAKE_ACCEL_BIAS
+			&& (accelSecBias.found == 1)
+#endif
+#endif /* LOG_SEC_IMU */
+			) {
+		// soundSetEffect(SND_CALIB);
+		ledseqRun(SYS_LED, seq_calibrated);
+		return true;
+	}
+	else
+		return false;
+}
+
+#ifdef SENSORS_TAKE_ACCEL_BIAS
+#endif
+
+bool sensorsTest(void)
+{
+	bool testStatus = true;
+
+	if (!isInit)
+	{
+		DEBUG_PRINT("Uninitialized\n");
+		testStatus = false;
+	}
+
+	return testStatus;
+}
+
+bool sensorsManufacturingTest(void)
+{
+	return true;
+}
+
+bool sensorsHasBarometer(void)
+{
+	return isBarometerPresent;
+}
+
+bool sensorsHasMangnetometer(void)
+{
+	return isMagnetometerPresent;
 }
 
 static void sensorsAccIIRLPFilter(Axis3i16* in, Axis3i16* out, Axis3i32* storedValues, int32_t attenuation)
 {
-  out->x = iirLPFilterSingle(in->x, attenuation, &storedValues->x);
-  out->y = iirLPFilterSingle(in->y, attenuation, &storedValues->y);
-  out->z = iirLPFilterSingle(in->z, attenuation, &storedValues->z);
+	out->x = iirLPFilterSingle(in->x, attenuation, &storedValues->x);
+	out->y = iirLPFilterSingle(in->y, attenuation, &storedValues->y);
+	out->z = iirLPFilterSingle(in->z, attenuation, &storedValues->z);
 }
 
 /**
@@ -705,24 +845,20 @@ static void sensorsAccIIRLPFilter(Axis3i16* in, Axis3i16* out, Axis3i32* storedV
  */
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
 {
-  Axis3f rx;
-  Axis3f ry;
+	Axis3f rx;
+	Axis3f ry;
 
-  // Rotate around x-axis
-  rx.x = in->x;
-  rx.y = in->y * cosRoll - in->z * sinRoll;
-  rx.z = in->y * sinRoll + in->z * cosRoll;
+	// Rotate around x-axis
+	rx.x = in->x;
+	rx.y = in->y * cosRoll - in->z * sinRoll;
+	rx.z = in->y * sinRoll + in->z * cosRoll;
 
-  // Rotate around y-axis
-  ry.x = rx.x * cosPitch - rx.z * sinPitch;
-  ry.y = rx.y;
-  ry.z = -rx.x * sinPitch + rx.z * cosPitch;
+	// Rotate around y-axis
+	ry.x = rx.x * cosPitch - rx.z * sinPitch;
+	ry.y = rx.y;
+	ry.z = -rx.x * sinPitch + rx.z * cosPitch;
 
-  out->x = ry.x;
-  out->y = ry.y;
-  out->z = ry.z;
+	out->x = ry.x;
+	out->y = ry.y;
+	out->z = ry.z;
 }
-
-PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8, BoschIMUSelect, &usedImuType)
-PARAM_GROUP_STOP(imu_sensors)
