@@ -37,6 +37,7 @@
 #include "stm32fxxx.h"
 
 #include "FreeRTOS.h"
+#include "queue.h"
 #include "task.h"
 #include "timers.h"
 
@@ -47,8 +48,12 @@
 #include "usddeck.h"
 #include "deck_spi.h"
 #include "system.h"
+#include "sensors.h"
 #include "debug.h"
 #include "led.h"
+
+#include "log.h"
+#include "crc_bosch.h"
 
 // Hardware defines
 #define USD_CS_PIN    DECK_GPIO_IO4
@@ -63,18 +68,26 @@ static void xmitSpiMulti(const BYTE *buff, UINT btx);
 static void csHigh(void);
 static void csLow(void);
 
+static void usdLogTask(void* prm);
+static void usdWriteTask(void* prm);
+
+static crc crcTable[256];
+
+static usdLogConfig_t usdLogConfig;
+
 static BYTE exchangeBuff[512];
 #ifdef USD_RUN_DISKIO_FUNCTION_TESTS
 DWORD workBuff[512];  /* 2048 byte working buffer */
 #endif
 
+//Fatfs object
+static FATFS FatFs;
+//File object
+static FIL logFile;
+
 static xTimerHandle timer;
 static void usdTimer(xTimerHandle timer);
 
-//Fatfs object
-FATFS FatFs;
-//File object
-FIL logFile;
 
 // Low lever driver functions
 static sdSpiContext_t sdSpiContext =
@@ -168,12 +181,338 @@ static bool isInit = false;
 
 static void usdInit(DeckInfo *info)
 {
-  isInit = true;
+	if (!isInit) {
+		/* create driver structure */
+		FATFS_AddDriver(&fatDrv, 0);
+		vTaskDelay(M2T(100));
+		/* try to mount drives before creating the tasks */
+		if (f_mount(&FatFs, "", 1) == FR_OK) {
+			/* try to open config file */
+			if (f_open(&logFile, "config", FA_READ) == FR_OK) {/* try to read configuration */
+				char readBuffer[5];
+				unsigned int bytesRead;
+				if (f_read(&logFile, readBuffer, 4, &bytesRead) == FR_OK) {
+					/* assign bytes to config struct */
+					usdLogConfig.items = readBuffer[0];
+					usdLogConfig.frequency = readBuffer[1]<<8 | readBuffer[2];
+					usdLogConfig.bufferSize = readBuffer[3];
+					if ( (f_read(&logFile, usdLogConfig.filename, 10, &bytesRead) != FR_OK) && ~bytesRead ) {
+						bytesRead = 12;
+						while(bytesRead--)
+							usdLogConfig.filename[bytesRead] = '0';
+						usdLogConfig.filename[12] = '\0';
+					}
+					else {
+						usdLogConfig.filename[bytesRead + 0] = '0';
+						usdLogConfig.filename[bytesRead + 1] = '0';
+						usdLogConfig.filename[bytesRead + 2] = '\0';
+					}
 
-  FATFS_AddDriver(&fatDrv, 0);
+					f_close(&logFile);
 
-  timer = xTimerCreate( "usdTimer", M2T(SD_DISK_TIMER_PERIOD_MS), pdTRUE, NULL, usdTimer);
-  xTimerStart(timer, 0);
+					usdLogConfig.floatSlots = ((usdLogConfig.items & USDLOG_ACC) ? 3 : 0)
+#ifdef LOG_SEC_IMU
+							+ ((usdLogConfig.items & USDLOG_ACC) ? 3 : 0)
+#endif
+							+ ((usdLogConfig.items & USDLOG_GYRO) ? 3 : 0)
+#ifdef LOG_SEC_IMU
+							+ ((usdLogConfig.items & USDLOG_GYRO) ? 3 : 0)
+#endif
+							+ ((usdLogConfig.items & USDLOG_BARO) ? 3 : 0)
+							+ ((usdLogConfig.items & USDLOG_MAG) ? 3 : 0)
+							+ ((usdLogConfig.items & USDLOG_STABILIZER) ? 4 : 0)
+							+ ((usdLogConfig.items & USDLOG_CONTROL) ? 3 : 0);
+					usdLogConfig.intSlots = ((usdLogConfig.items & USDLOG_RANGE) ? 1 : 0);
+
+					/* create usd-log task */
+					xTaskCreate(usdLogTask, USDLOG_TASK_NAME,
+							USDLOG_TASK_STACKSIZE, NULL, USDLOG_TASK_PRI, NULL);
+				}
+			}
+		}
+	}
+	isInit = true;
+}
+
+/* checks if log ids are in usual range */
+static bool checkLogIds(int* idsPtr, uint8_t idsToAdd) {
+	for (int* id = idsPtr; id < idsPtr+idsToAdd; id++) {
+		if (*id < 0)
+			return false;
+	}
+	return true;
+}
+
+static void usdLogTask(void* prm)
+{
+	int floatIds[usdLogConfig.floatSlots];
+	int intIds[usdLogConfig.intSlots];
+	{
+		uint8_t usedSlots = 0;
+		/* acquire log ids */
+		if (usdLogConfig.items & USDLOG_ACC) {
+			floatIds[0] = logGetVarId("acc", "x");
+			floatIds[1] = logGetVarId("acc", "y");
+			floatIds[2] = logGetVarId("acc", "z");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+			else
+				usdLogConfig.items &= ~USDLOG_ACC;
+#ifdef LOG_SEC_IMU
+			floatIds[0 + usedSlots] = logGetVarId("accSpare", "x");
+			floatIds[1 + usedSlots] = logGetVarId("accSpare", "y");
+			floatIds[2 + usedSlots] = logGetVarId("accSpare", "z");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+#endif
+		}
+		if (usdLogConfig.items & USDLOG_GYRO) {
+			floatIds[0 + usedSlots] = logGetVarId("gyro", "x");
+			floatIds[1 + usedSlots] = logGetVarId("gyro", "y");
+			floatIds[2 + usedSlots] = logGetVarId("gyro", "z");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+			else
+				usdLogConfig.items &= ~USDLOG_GYRO;
+#ifdef LOG_SEC_IMU
+			floatIds[0 + usedSlots] = logGetVarId("gyroSpare", "x");
+			floatIds[1 + usedSlots] = logGetVarId("gyroSpare", "y");
+			floatIds[2 + usedSlots] = logGetVarId("gyroSpare", "z");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+#endif
+		}
+		if (usdLogConfig.items & USDLOG_BARO) {
+			floatIds[0 + usedSlots] = logGetVarId("baro", "asl");
+			floatIds[1 + usedSlots] = logGetVarId("baro", "temp");
+			floatIds[2 + usedSlots] = logGetVarId("baro", "pressure");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+			else
+				usdLogConfig.items &= ~USDLOG_BARO;
+		}
+		if (usdLogConfig.items & USDLOG_MAG) {
+			floatIds[0 + usedSlots] = logGetVarId("mag", "x");
+			floatIds[1 + usedSlots] = logGetVarId("mag", "y");
+			floatIds[2 + usedSlots] = logGetVarId("mag", "z");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+			else
+				usdLogConfig.items &= ~USDLOG_MAG;
+		}
+		if (usdLogConfig.items & USDLOG_STABILIZER) {
+			floatIds[0 + usedSlots] = logGetVarId("stabilizer", "roll");
+			floatIds[1 + usedSlots] = logGetVarId("stabilizer", "pitch");
+			floatIds[2 + usedSlots] = logGetVarId("stabilizer", "yaw");
+			floatIds[3 + usedSlots] = logGetVarId("stabilizer", "thrust");
+			if (checkLogIds(&floatIds[usedSlots], 4))
+				usedSlots += 4;
+			else
+				usdLogConfig.items &= ~USDLOG_STABILIZER;
+		}
+		if (usdLogConfig.items & USDLOG_CONTROL) {
+			floatIds[0 + usedSlots] = logGetVarId("ctrltarget", "roll");
+			floatIds[1 + usedSlots] = logGetVarId("ctrltarget", "pitch");
+			floatIds[2 + usedSlots] = logGetVarId("ctrltarget", "yaw");
+			if (checkLogIds(&floatIds[usedSlots], 3))
+				usedSlots += 3;
+			else
+				usdLogConfig.items &= ~USDLOG_CONTROL;
+		}
+		/* replace number of slots by the calculated one,
+		 * ('cause it was purged of unavailable log items) */
+		usdLogConfig.floatSlots = usedSlots;
+		usedSlots = 0;
+		if (usdLogConfig.items & USDLOG_RANGE) {
+			intIds[0] = logGetVarId("range", "zrange");
+			if (checkLogIds(&intIds[usedSlots], 1))
+				usedSlots += 1;
+			else
+				usdLogConfig.items &= ~USDLOG_RANGE;
+		}
+		usdLogConfig.intSlots = usedSlots;
+	}
+
+    TickType_t lastWakeTime = xTaskGetTickCount();
+	int i;
+
+	/* struct definition for buffering data to write
+	 * requires up to 100 elements for 1kHz logging */
+	struct usdLogStruct {
+		uint32_t tick;
+		float floats[usdLogConfig.floatSlots];
+		int ints[usdLogConfig.intSlots];
+	};
+
+	/* wait until sensor calibration is done
+	 * (memory of bias calculation buffer is free again) */
+	while(!sensorsAreCalibrated())
+		vTaskDelayUntil(&lastWakeTime, F2T(10));
+
+	/* allocate memory for buffer */
+	struct usdLogStruct* usdLogBufferStart =
+			pvPortMalloc(usdLogConfig.bufferSize * sizeof(struct usdLogStruct));
+	struct usdLogStruct* usdLogBuffer = usdLogBufferStart;
+
+	/* create queue to hand over pointer to usdLogData */
+	QueueHandle_t usdLogQueue =
+			xQueueCreate(usdLogConfig.bufferSize, sizeof(usdLogQueuePtr_t));
+
+	/* create usd-write task */
+	TaskHandle_t xHandleWriteTask;
+	xTaskCreate(usdWriteTask, USDWRITE_TASK_NAME,
+			USDWRITE_TASK_STACKSIZE, usdLogQueue, USDWRITE_TASK_PRI, &xHandleWriteTask);
+
+	/*  */
+	usdLogQueuePtr_t usdLogQueuePtr;
+	uint8_t queueMessagesWaiting = 0;
+
+    while(1) {
+		vTaskDelayUntil(&lastWakeTime, F2T(usdLogConfig.frequency));
+		queueMessagesWaiting = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
+     	/* always trigger writing, frequency will result itself */
+		vTaskResume(xHandleWriteTask);
+		/* skip if queue is full, one slot will be spared as mutex */
+		if (queueMessagesWaiting == (usdLogConfig.bufferSize - 1))
+			continue;
+
+		/* write data into buffer */
+		usdLogBuffer->tick = lastWakeTime;
+		for (i = usdLogConfig.floatSlots-1; i >= 0; i--) {
+			usdLogBuffer->floats[i] = logGetFloat(floatIds[i]);
+		}
+		for (i = usdLogConfig.intSlots-1; i >= 0; i--) {
+			usdLogBuffer->ints[i] = logGetInt(intIds[i]);
+		}
+		/* set pointer on latest data and queue */
+		usdLogQueuePtr.tick = &usdLogBuffer->tick;
+		usdLogQueuePtr.floats = usdLogBuffer->floats;
+		usdLogQueuePtr.ints = usdLogBuffer->ints;
+		xQueueSend(usdLogQueue, &usdLogQueuePtr, 0);
+		/* set pointer to next buffer item */
+		if (++usdLogBuffer >= usdLogBufferStart+usdLogConfig.bufferSize)
+			usdLogBuffer = usdLogBufferStart;
+    }
+}
+
+static void usdWriteTask(void* usdLogQueue)
+{
+	/* necessary variables for f_write */
+	unsigned int bytesWritten;
+	uint8_t setsInQueue = 0;
+
+	/* iniatialize crc and create lookup-table */
+	crc crcValue;
+	crcTableInit(crcTable);
+
+	/* create and start timer for card control timing */
+	timer = xTimerCreate( "usdTimer", M2T(SD_DISK_TIMER_PERIOD_MS), pdTRUE, NULL, usdTimer);
+	xTimerStart(timer, 0);
+
+	vTaskDelay(M2T(50));
+	/* look for existing files and use first not existent combination of two chars */
+	{
+		FILINFO fno;
+		uint8_t NUL = 0;
+		while(usdLogConfig.filename[NUL] != '\0')
+			NUL++;
+		while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
+			/* increase file */
+			switch(usdLogConfig.filename[NUL-1]) {
+			case '9':
+				usdLogConfig.filename[NUL-1] = '0';
+				usdLogConfig.filename[NUL-2]++;
+				break;
+			default:
+				usdLogConfig.filename[NUL-1]++;
+			}
+		}
+	}
+	/* try to create file */
+	if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE) == FR_OK) {
+		/* write dataset header */
+		{
+		uint8_t logWidth = 1 + usdLogConfig.floatSlots + usdLogConfig.intSlots;
+		f_write(&logFile, &logWidth, 1, &bytesWritten);
+		crcValue = crcByByte(&logWidth, 1, INITIAL_REMAINDER, 0, crcTable);
+		}
+		USD_WRITE(&logFile, (uint8_t*)"Itick", 5, &bytesWritten, crcValue, 0, crcTable)
+
+     	if (usdLogConfig.items & USDLOG_ACC) {
+			USD_WRITE(&logFile, (uint8_t*)"faccxfaccyfaccz", 15, &bytesWritten, crcValue, 0, crcTable)
+#ifdef LOG_SEC_IMU
+			USD_WRITE(&logFile, (uint8_t*)"fac2xfac2yfac2z", 15, &bytesWritten, crcValue, 0, crcTable)
+#endif
+    	}
+
+    	if (usdLogConfig.items & USDLOG_GYRO) {
+			USD_WRITE(&logFile, (uint8_t*)"fgyrxfgyryfgyrz", 15, &bytesWritten, crcValue, 0, crcTable)
+#ifdef LOG_SEC_IMU
+			USD_WRITE(&logFile, (uint8_t*)"fgy2xfgy2yfgy2z", 15, &bytesWritten, crcValue, 0, crcTable)
+#endif
+    	}
+
+    	if (usdLogConfig.items & USDLOG_BARO) {
+			USD_WRITE(&logFile, (uint8_t*)"f aslftempfpres", 15, &bytesWritten, crcValue, 0, crcTable)
+    	}
+
+    	if (usdLogConfig.items & USDLOG_MAG) {
+			USD_WRITE(&logFile, (uint8_t*)"fmagxfmagyfmagz", 15, &bytesWritten, crcValue, 0, crcTable)
+    	}
+
+    	if (usdLogConfig.items & USDLOG_STABILIZER) {
+			USD_WRITE(&logFile, (uint8_t*)"fsrolfspitfsyawfsthr", 20, &bytesWritten, crcValue, 0, crcTable)
+    	}
+
+    	if (usdLogConfig.items & USDLOG_CONTROL) {
+			USD_WRITE(&logFile, (uint8_t*)"fcrolfcpitfcyaw", 15, &bytesWritten, crcValue, 0, crcTable)
+    	}
+
+    	if (usdLogConfig.items & USDLOG_RANGE) {
+			USD_WRITE(&logFile, (uint8_t*)"irang", 5, &bytesWritten, crcValue, 0, crcTable)
+    	}
+
+		/* negate crc value */
+		crcValue = ~(crcValue^FINAL_XOR_VALUE);
+		f_write(&logFile, &crcValue, 4, &bytesWritten);
+		f_close(&logFile);
+
+		uint8_t floatBytes = usdLogConfig.floatSlots * 4;
+		uint8_t intBytes = usdLogConfig.intSlots * 4;
+		usdLogQueuePtr_t usdLogQueuePtr;
+
+		//systemWaitStart();
+		while (1) {
+			/* sleep */
+			vTaskSuspend(NULL);
+			/* determine how many sets can be written */
+			setsInQueue = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
+			if (!setsInQueue)
+				continue;
+			/* try to open file in append mode */
+			if (f_open(&logFile, usdLogConfig.filename, FA_OPEN_APPEND | FA_WRITE) != FR_OK)
+				continue;
+			f_write(&logFile, &setsInQueue, 1, &bytesWritten);
+			crcValue = crcByByte(&setsInQueue, 1, INITIAL_REMAINDER, 0, crcTable);
+			do {
+				/* receive data pointer from queue */
+				xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
+				/* write binary data and point on next item */
+				USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.tick, 4, &bytesWritten, crcValue, 0, crcTable)
+				if (usdLogConfig.floatSlots)
+					USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.floats, floatBytes, &bytesWritten, crcValue, 0, crcTable)
+				if (usdLogConfig.intSlots)
+					USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.ints, intBytes, &bytesWritten, crcValue, 0, crcTable)
+			} while(--setsInQueue);
+			/* final xor and negate crc value */
+			crcValue = ~(crcValue^FINAL_XOR_VALUE);
+			f_write(&logFile, &crcValue, 4, &bytesWritten);
+			/* close file */
+			f_close(&logFile);
+		}
+	} else f_mount(NULL, "", 0);
+	/* something went wrong */
+	vTaskDelete(NULL);
 }
 
 static bool usdTest()

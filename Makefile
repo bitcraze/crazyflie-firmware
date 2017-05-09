@@ -213,7 +213,7 @@ PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
-PROJ_OBJ_CF2 += configblockeeprom.o
+PROJ_OBJ_CF2 += configblockeeprom.o crc_bosch.o
 
 # Libs
 PROJ_OBJ_CF2 += libarm_math.a
