@@ -49,7 +49,7 @@ static uint8_t accelPrimInUse = 	SENSORS_BMI055;
 //static uint8_t baroPrimInUse =		SENSORS_BMP280;
 #ifdef LOG_SEC_IMU
 static uint8_t gyroSecInUse = 		SENSORS_BMI160;
-static öuint8_t accelSecInUse = 	SENSORS_BMI160;
+static uint8_t accelSecInUse = 	SENSORS_BMI160;
 #endif
 
 #define GYRO_PRIMARY		SENSORS_BMI055
