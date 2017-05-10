@@ -106,7 +106,6 @@ static void sensorsDeviceInit(void);
 static void sensorsTaskInit(void);
 static void sensorsTask(void *param);
 static void sensorsApplyBiasAndScale(Axis3f* scaled, Axis3i16* aligned, Axis3i16* bias, float scale);
-static void sensorsReAlign(Axis3i16* output, int16_t* inX, int16_t* inY, int16_t* inZ);
 static void sensorsScaleBaro(baro_t* baroScaled, float pressure, float temperature);
 static bool processGyroBias(BiasObj* bias);
 static void processAccelBias(BiasObj* bias);
