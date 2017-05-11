@@ -49,17 +49,8 @@ static uint8_t accelPrimInUse = 	SENSORS_BMI055;
 //static uint8_t baroPrimInUse =		SENSORS_BMP280;
 #ifdef LOG_SEC_IMU
 static uint8_t gyroSecInUse = 		SENSORS_BMI160;
-static uint8_t accelSecInUse = 	SENSORS_BMI160;
+static uint8_t accelSecInUse = 		SENSORS_BMI160;
 #endif
-
-#define GYRO_PRIMARY		SENSORS_BMI055
-#define ACCEL_PRIMARY		SENSORS_BMI055
-#ifdef LOG_SEC_IMU
-#define GYRO_SECONDARY		SENSORS_BMI160
-#define ACCEL_SECONDARY		SENSORS_BMI160
-#endif
-#define MAGNETOMETER		SENSORS_BMM150
-#define BARO_PRIMARY		SENSORS_BMP280
 
 typedef struct {
 	Axis3i16	value;
@@ -86,7 +77,7 @@ static xQueueHandle baroPrimDataQueue;
 static xQueueHandle magPrimDataQueue;
 
 static bool isInit = false;
-static bool allCalibrated = false;
+static bool allSensorsAreCalibrated = false;
 static sensorData_t sensors;
 
 static int32_t varianceSampleTime;
@@ -330,11 +321,7 @@ static void sensorsAccelGet(Axis3i16* dataOut, uint8_t device) {
 	}
 }
 
-static void sensorsCalibrate(BiasObj* gyro
-#ifdef SENSORS_TAKE_ACCEL_BIAS
-		, BiasObj* accel
-#endif
-		, uint8_t type) {
+static void sensorsGyroCalibrate(BiasObj* gyro, uint8_t type) {
 	if (gyro->found == 0) {
 		if (gyro->ongoing == 0) {
 			sensorsBiasMalloc(gyro);
@@ -350,13 +337,16 @@ static void sensorsCalibrate(BiasObj* gyro
 			}
 		}
 	}
-#ifdef SENSORS_TAKE_ACCEL_BIAS
+}
+
+static void __attribute__((used)) sensorsAccelCalibrate(BiasObj* accel, BiasObj* gyro, uint8_t type) {
 	if (accel->found == 0) {
 		if (accel->ongoing == 0) {
 			sensorsBiasMalloc(accel);
 		}
 		/* write directly into buffer */
 		sensorsAccelGet(accel->bufPtr, type);
+		/* FIXME: for sensor deck v1 realignment has to be added her */
 		sensorsBiasBufPtrIncrement(accel);
 		if ( (accel->bufIsFull == 1) && (gyro->found == 1) ) {
 			processAccelBias(accel);
@@ -371,7 +361,6 @@ static void sensorsCalibrate(BiasObj* gyro
 			sensorsBiasFree(accel);
 		}
 	}
-#endif
 }
 
 static void sensorsTask(void *param)
@@ -404,30 +393,28 @@ static void sensorsTask(void *param)
 	while (1) {
 		vTaskDelayUntil(&lastWakeTime, F2T(SENSORS_READ_RATE_HZ));
 		/* calibrate if necessary */
-		if (!allCalibrated) {
+		if (!allSensorsAreCalibrated) {
 			if (!bmi160GyroBias.found) {
-				sensorsCalibrate(&bmi160GyroBias
+				sensorsGyroCalibrate(&bmi160GyroBias, SENSORS_BMI160);
 #ifdef SENSORS_TAKE_ACCEL_BIAS
-						,&bmi160AccelBias
+				sensorsAccelCalibrate(&bmi160AccelBias, &bmi160GyroBias, SENSORS_BMI160);
 #endif
-						, SENSORS_BMI160);
 			}
 
 			if (!bmi055GyroBias.found) {
-				sensorsCalibrate(&bmi055GyroBias
+				sensorsGyroCalibrate(&bmi055GyroBias, SENSORS_BMI055);
 #ifdef SENSORS_TAKE_ACCEL_BIAS
-						,&bmi055AccelBias
+				sensorsAccelCalibrate(&bmi055AccelBias, &bmi055GyroBias, SENSORS_BMI055);
 #endif
-						, SENSORS_BMI055);
 			}
 			if ( bmi160GyroBias.found && bmi055GyroBias.found
-		#ifdef SENSORS_TAKE_ACCEL_BIAS
+#ifdef SENSORS_TAKE_ACCEL_BIAS
 					&& bmi160AccelBias.found && bmi055AccelBias.found
-		#endif /* LOG_SEC_IMU */
+#endif
 					) {
 				// soundSetEffect(SND_CALIB);
 				ledseqRun(SYS_LED, seq_calibrated);
-				allCalibrated= true;
+				allSensorsAreCalibrated= true;
 			}
 			else
 				continue;
@@ -472,11 +459,11 @@ static void sensorsTask(void *param)
 #ifdef LOG_SEC_IMU
 		switch(gyroSecInUse) {
 		case SENSORS_BMI160:
-			sensorsApplyBiasAndScale(&sensors.gyro, &gyroSec,
+			sensorsApplyBiasAndScale(&sensors.gyroSec, &gyroSec,
 					&bmi160GyroBias.value, SENSORS_BMI160_DEG_PER_LSB_CFG);
 			break;
 		case SENSORS_BMI055:
-			sensorsApplyBiasAndScale(&sensors.gyro, &gyroSec,
+			sensorsApplyBiasAndScale(&sensors.gyroSec, &gyroSec,
 					&bmi055GyroBias.value, SENSORS_BMI055_DEG_PER_LSB_CFG);
 			break;
 		}
@@ -495,7 +482,7 @@ static void sensorsTask(void *param)
 			break;
 		}
 
-		sensorsAccAlignToGravity(&accelSecScaled, &sensors.acc);
+		sensorsAccAlignToGravity(&accelSecScaled, &sensors.accSec);
 #endif
 
 		if (isMagnetometerPresent){
@@ -522,7 +509,7 @@ static void sensorsTask(void *param)
 			}
 		}
 
-		// ensure all queues are populated at the same time
+		/* ensure all queues are populated at the same time */
 		vTaskSuspendAll();
 		xQueueOverwrite(accelPrimDataQueue, &sensors.acc);
 		xQueueOverwrite(gyroPrimDataQueue, &sensors.gyro);
@@ -566,6 +553,7 @@ static void __attribute__((used)) sensorsBiasReset(BiasObj* bias)
 	bias->value.x = 0;
 	bias->value.y = 0;
 	bias->value.z = 0;
+	allSensorsAreCalibrated = false;
 }
 
 static void sensorsBiasFree(BiasObj* bias)
@@ -726,7 +714,7 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
 
 bool sensorsAreCalibrated()
 {
-	return allCalibrated;
+	return allSensorsAreCalibrated;
 }
 
 #ifdef SENSORS_TAKE_ACCEL_BIAS
@@ -792,10 +780,9 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
 	out->z = ry.z;
 }
 
-/* FIXME: params require some additional changes to
- * allow usage of different sensors for accel and gyro
 PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8, BoschGyroSelect, &gyroPrimInUse)
-PARAM_ADD(PARAM_UINT8, BoschAccelSelect, &accelPrimInUse)
+PARAM_ADD(PARAM_UINT8, BoschGyrSel, &gyroPrimInUse)
+PARAM_ADD(PARAM_UINT8, BoschAccSel, &accelPrimInUse)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMM150, &isMagnetometerPresent)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP285, &isBarometerPresent)
 PARAM_GROUP_STOP(imu_sensors)
- * */
