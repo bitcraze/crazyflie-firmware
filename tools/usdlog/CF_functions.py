@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar 07 14:23:16 2017
 decode: decodes binary logged sensor data from crazyflie2 with uSD-Card-Deck
-@author: SJA7SI
+createConfig: create config file which has to placed on µSD-Card
+@author: jsschell
 """
 from zlib import crc32
 import struct
@@ -13,11 +13,11 @@ import os
 fmtChars = {'c': 1, 'b': 1, 'b': 1, 'B': 1, '?': 1, 'h': 2, 'H': 2,
             'i': 4, 'I': 4, 'l': 4, 'L': 4, 'q': 8, 'Q': 8, 'f': 4, 'd': 8} 
 
-def decode(filName, conCut):
+def decode(filName):
     # read file as binary
     filObj = open(filName, 'rb')
     filCon = filObj.read()
-    #filObj.close()
+    filObj.close()
     
     # get file size to forecast output array
     statinfo = os.stat(filName)
@@ -67,8 +67,6 @@ def decode(filName, conCut):
     
     # remove not required elements and reshape as matrix
     setCon = np.reshape(setCon[0:idx], (setWidth[0], idx//setWidth[0]), 'f')
-    # remove all ticks (and according data) lower/equal conCut
-    setCon = setCon[:, (setCon[0]>conCut)]
     
     # create output dictionary
     output = {}
@@ -83,31 +81,31 @@ def createConfig():
     
     print("Which data should be logged?")
     inStr = input(" * Acceleration ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 1
         
     inStr = input(" * Gyroscope ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 2
         
     inStr = input(" * Barometer ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 4
         
     inStr = input(" * Magnetometer ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 8
         
     inStr = input(" * Stabilizer ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 16
         
     inStr = input(" * Control ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 32
         
     inStr = input(" * Z-Range ([Y]es / [n]o): ")
-    if ((re.search(inStr, '^[Yy]')) or (inStr == '')):
+    if ((re.search('^[Yy]', inStr)) or (inStr == '')):
         temp += 64
         
     config = temp.to_bytes(1, byteorder='big', signed=False)
