@@ -187,6 +187,7 @@ static void usdInit(DeckInfo *info)
 		vTaskDelay(M2T(100));
 		/* try to mount drives before creating the tasks */
 		if (f_mount(&FatFs, "", 1) == FR_OK) {
+			DEBUG_PRINT("mount SD-Card [OK].\n");
 			/* try to open config file */
 			if (f_open(&logFile, "config", FA_READ) == FR_OK) {/* try to read configuration */
 				char readBuffer[5];
@@ -223,13 +224,20 @@ static void usdInit(DeckInfo *info)
 							+ ((usdLogConfig.items & USDLOG_STABILIZER) ? 4 : 0)
 							+ ((usdLogConfig.items & USDLOG_CONTROL) ? 3 : 0);
 					usdLogConfig.intSlots = ((usdLogConfig.items & USDLOG_RANGE) ? 1 : 0);
+					DEBUG_PRINT("Config read [OK].\n");
+					DEBUG_PRINT("Frequency: %dHz. Buffer size: %d\n", usdLogConfig.frequency, usdLogConfig.bufferSize);
+					DEBUG_PRINT("Filename: %s.\n", usdLogConfig.filename);
 
 					/* create usd-log task */
 					xTaskCreate(usdLogTask, USDLOG_TASK_NAME,
 							USDLOG_TASK_STACKSIZE, NULL, USDLOG_TASK_PRI, NULL);
 				}
+				else
+					DEBUG_PRINT("Config read [FAIL].\n");
 			}
 		}
+		else
+			DEBUG_PRINT("mount SD-Card [FAIL].\n");
 	}
 	isInit = true;
 }
@@ -250,44 +258,55 @@ static void usdLogTask(void* prm)
 	{
 		uint8_t usedSlots = 0;
 		/* acquire log ids */
+		DEBUG_PRINT("Log items:\n");
 		if (usdLogConfig.items & USDLOG_ACC) {
 			floatIds[0] = logGetVarId("acc", "x");
 			floatIds[1] = logGetVarId("acc", "y");
 			floatIds[2] = logGetVarId("acc", "z");
-			if (checkLogIds(&floatIds[usedSlots], 3))
+			if (checkLogIds(&floatIds[usedSlots], 3)) {
 				usedSlots += 3;
+				DEBUG_PRINT("* Accel\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_ACC;
+		}
 #ifdef LOG_SEC_IMU
+		if (usdLogConfig.items & USDLOG_ACC) {
 			floatIds[0 + usedSlots] = logGetVarId("accSpare", "x");
 			floatIds[1 + usedSlots] = logGetVarId("accSpare", "y");
 			floatIds[2 + usedSlots] = logGetVarId("accSpare", "z");
 			if (checkLogIds(&floatIds[usedSlots], 3))
 				usedSlots += 3;
-#endif
 		}
+#endif
 		if (usdLogConfig.items & USDLOG_GYRO) {
 			floatIds[0 + usedSlots] = logGetVarId("gyro", "x");
 			floatIds[1 + usedSlots] = logGetVarId("gyro", "y");
 			floatIds[2 + usedSlots] = logGetVarId("gyro", "z");
-			if (checkLogIds(&floatIds[usedSlots], 3))
+			if (checkLogIds(&floatIds[usedSlots], 3)) {
 				usedSlots += 3;
+				DEBUG_PRINT("* Gyro\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_GYRO;
+		}
 #ifdef LOG_SEC_IMU
+		if (usdLogConfig.items & USDLOG_GYRO) {
 			floatIds[0 + usedSlots] = logGetVarId("gyroSpare", "x");
 			floatIds[1 + usedSlots] = logGetVarId("gyroSpare", "y");
 			floatIds[2 + usedSlots] = logGetVarId("gyroSpare", "z");
 			if (checkLogIds(&floatIds[usedSlots], 3))
 				usedSlots += 3;
-#endif
 		}
+#endif
 		if (usdLogConfig.items & USDLOG_BARO) {
 			floatIds[0 + usedSlots] = logGetVarId("baro", "asl");
 			floatIds[1 + usedSlots] = logGetVarId("baro", "temp");
 			floatIds[2 + usedSlots] = logGetVarId("baro", "pressure");
-			if (checkLogIds(&floatIds[usedSlots], 3))
+			if (checkLogIds(&floatIds[usedSlots], 3)){
 				usedSlots += 3;
+				DEBUG_PRINT("* Baro\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_BARO;
 		}
@@ -295,8 +314,10 @@ static void usdLogTask(void* prm)
 			floatIds[0 + usedSlots] = logGetVarId("mag", "x");
 			floatIds[1 + usedSlots] = logGetVarId("mag", "y");
 			floatIds[2 + usedSlots] = logGetVarId("mag", "z");
-			if (checkLogIds(&floatIds[usedSlots], 3))
+			if (checkLogIds(&floatIds[usedSlots], 3)){
 				usedSlots += 3;
+				DEBUG_PRINT("* Mag\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_MAG;
 		}
@@ -305,8 +326,10 @@ static void usdLogTask(void* prm)
 			floatIds[1 + usedSlots] = logGetVarId("stabilizer", "pitch");
 			floatIds[2 + usedSlots] = logGetVarId("stabilizer", "yaw");
 			floatIds[3 + usedSlots] = logGetVarId("stabilizer", "thrust");
-			if (checkLogIds(&floatIds[usedSlots], 4))
+			if (checkLogIds(&floatIds[usedSlots], 4)){
 				usedSlots += 4;
+				DEBUG_PRINT("* Stabilizer\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_STABILIZER;
 		}
@@ -314,8 +337,10 @@ static void usdLogTask(void* prm)
 			floatIds[0 + usedSlots] = logGetVarId("ctrltarget", "roll");
 			floatIds[1 + usedSlots] = logGetVarId("ctrltarget", "pitch");
 			floatIds[2 + usedSlots] = logGetVarId("ctrltarget", "yaw");
-			if (checkLogIds(&floatIds[usedSlots], 3))
+			if (checkLogIds(&floatIds[usedSlots], 3)){
 				usedSlots += 3;
+				DEBUG_PRINT("* Control\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_CONTROL;
 		}
@@ -325,8 +350,10 @@ static void usdLogTask(void* prm)
 		usedSlots = 0;
 		if (usdLogConfig.items & USDLOG_RANGE) {
 			intIds[0] = logGetVarId("range", "zrange");
-			if (checkLogIds(&intIds[usedSlots], 1))
+			if (checkLogIds(&intIds[usedSlots], 1)){
 				usedSlots += 1;
+				DEBUG_PRINT("* Z-Range\n");
+			}
 			else
 				usdLogConfig.items &= ~USDLOG_RANGE;
 		}
@@ -350,9 +377,13 @@ static void usdLogTask(void* prm)
 		vTaskDelayUntil(&lastWakeTime, F2T(10));
 
 	/* allocate memory for buffer */
+	DEBUG_PRINT("malloc buffer ...\n");
+	// vTaskDelay(10); // small delay to allow debug message to be send
 	struct usdLogStruct* usdLogBufferStart =
 			pvPortMalloc(usdLogConfig.bufferSize * sizeof(struct usdLogStruct));
 	struct usdLogStruct* usdLogBuffer = usdLogBufferStart;
+	DEBUG_PRINT("[OK].\n");
+	DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
 
 	/* create queue to hand over pointer to usdLogData */
 	QueueHandle_t usdLogQueue =
@@ -370,8 +401,10 @@ static void usdLogTask(void* prm)
     while(1) {
 		vTaskDelayUntil(&lastWakeTime, F2T(usdLogConfig.frequency));
 		queueMessagesWaiting = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
-     	/* always trigger writing, frequency will result itself */
-		vTaskResume(xHandleWriteTask);
+     	/* trigger writing once there exists at least one queue item,
+     	 * frequency will result itself */
+		if (queueMessagesWaiting)
+			vTaskResume(xHandleWriteTask);
 		/* skip if queue is full, one slot will be spared as mutex */
 		if (queueMessagesWaiting == (usdLogConfig.bufferSize - 1))
 			continue;
@@ -399,7 +432,7 @@ static void usdWriteTask(void* usdLogQueue)
 {
 	/* necessary variables for f_write */
 	unsigned int bytesWritten;
-	uint8_t setsInQueue = 0;
+	uint8_t setsToWrite = 0;
 
 	/* iniatialize crc and create lookup-table */
 	crc crcValue;
@@ -481,29 +514,29 @@ static void usdWriteTask(void* usdLogQueue)
 		uint8_t intBytes = usdLogConfig.intSlots * 4;
 		usdLogQueuePtr_t usdLogQueuePtr;
 
-		//systemWaitStart();
 		while (1) {
 			/* sleep */
 			vTaskSuspend(NULL);
 			/* determine how many sets can be written */
-			setsInQueue = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
-			if (!setsInQueue)
-				continue;
+			setsToWrite = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
 			/* try to open file in append mode */
 			if (f_open(&logFile, usdLogConfig.filename, FA_OPEN_APPEND | FA_WRITE) != FR_OK)
 				continue;
-			f_write(&logFile, &setsInQueue, 1, &bytesWritten);
-			crcValue = crcByByte(&setsInQueue, 1, INITIAL_REMAINDER, 0, crcTable);
+			f_write(&logFile, &setsToWrite, 1, &bytesWritten);
+			crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
 			do {
 				/* receive data pointer from queue */
 				xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
 				/* write binary data and point on next item */
-				USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.tick, 4, &bytesWritten, crcValue, 0, crcTable)
+				USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.tick, 4,
+						&bytesWritten, crcValue, 0, crcTable)
 				if (usdLogConfig.floatSlots)
-					USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.floats, floatBytes, &bytesWritten, crcValue, 0, crcTable)
+					USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.floats,
+							floatBytes, &bytesWritten, crcValue, 0, crcTable)
 				if (usdLogConfig.intSlots)
-					USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.ints, intBytes, &bytesWritten, crcValue, 0, crcTable)
-			} while(--setsInQueue);
+					USD_WRITE(&logFile, (uint8_t*)usdLogQueuePtr.ints,
+							intBytes, &bytesWritten, crcValue, 0, crcTable)
+			} while(--setsToWrite);
 			/* final xor and negate crc value */
 			crcValue = ~(crcValue^FINAL_XOR_VALUE);
 			f_write(&logFile, &crcValue, 4, &bytesWritten);
