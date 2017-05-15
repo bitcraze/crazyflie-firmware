@@ -14,7 +14,7 @@ OPENOCD           ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
 OPENOCD_CMDS      ?=
 CROSS_COMPILE     ?= arm-none-eabi-
-PYTHON2           ?= python2
+PYTHON2           ?= python
 DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
 DEBUG             ?= 0
@@ -118,7 +118,7 @@ CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
 # Crazyflie sources
-VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/src
+VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/bosch/src src/drivers/src
 VPATH_CF1 += src/platform/cf1
 VPATH_CF2 += src/platform/cf2
 
@@ -241,7 +241,7 @@ GDB = $(CROSS_COMPILE)gdb
 INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
 INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
 INCLUDES += -Isrc/utils/interface -Isrc/drivers/interface -Isrc/platform
-INCLUDES += -Ivendor/CMSIS/CMSIS/Include
+INCLUDES += -Ivendor/CMSIS/CMSIS/Include -Isrc/drivers/bosch/interface
 
 INCLUDES_CF1 += -I$(LIB)/STM32F10x_StdPeriph_Driver/inc
 INCLUDES_CF1 += -I$(LIB)/CMSIS/Core/CM3
