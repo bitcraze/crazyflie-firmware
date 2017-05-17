@@ -31,6 +31,8 @@
 #include <stdbool.h>
 
 #include "stabilizer_types.h"
+#include "trigger.h"
+
 
 bool sitAwFFTest(float accWZ, float accMag);
 bool sitAwFFDetected(void);
@@ -41,6 +43,9 @@ bool sitAwTuDetected(void);
 void sitAwInit(void);
 void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
                                                const state_t *state);
+
+void sitAwRegisterFFCallback(triggerHandler_t handler, void *handlerArg);
+
 /* Enable the situation awareness framework. */
 //#define SITAW_ENABLED
 

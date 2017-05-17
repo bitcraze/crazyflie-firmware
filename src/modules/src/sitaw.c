@@ -326,3 +326,7 @@ void sitAwInit(void)
   sitAwARInit();
   sitAwTuInit();
 }
+
+void sitAwRegisterFFCallback(triggerHandler_t handler, void *handlerArg) {
+  triggerRegisterHandler(&sitAwFFAccWZ, handler, handlerArg);
+}

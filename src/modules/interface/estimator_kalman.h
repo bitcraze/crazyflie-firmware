@@ -68,3 +68,11 @@ bool stateEstimatorEnqueueTDOA(tdoaMeasurement_t *uwb);
 bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos);
 bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist);
 bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof);
+
+
+float getX();
+float getY();
+float getZ();
+float getVarPX();
+float getVarPY();
+float getVarPZ();

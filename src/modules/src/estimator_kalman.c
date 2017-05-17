@@ -1284,6 +1284,31 @@ bool stateEstimatorTest(void)
   return isInit;
 }
 
+float getX() {
+  return S[STATE_X];
+}
+
+float getY() {
+  return S[STATE_Y];
+}
+
+float getZ() {
+  return S[STATE_Z];
+}
+
+float getVarPX() {
+  return P[STATE_PX][STATE_PX];
+}
+
+float getVarPY() {
+  return P[STATE_PY][STATE_PY];
+}
+
+float getVarPZ() {
+  return P[STATE_PZ][STATE_PZ];
+}
+
+
 LOG_GROUP_START(kalman)
   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
   LOG_ADD(LOG_FLOAT, stateX, &S[STATE_X])

@@ -27,7 +27,7 @@ LPS_TDOA_ENABLE   ?= 0
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
-ESTIMATOR          ?= complementary
+ESTIMATOR          ?= kalman
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
 SENSORS 					 ?= cf2
@@ -57,6 +57,8 @@ endif
 
 #OpenOCD conf
 RTOS_DEBUG        ?= 0
+
+CFLAGS += -DSITAW_ENABLED
 
 ############### Location configuration ################
 FREERTOS = src/lib/FreeRTOS
@@ -163,7 +165,7 @@ PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o msp.o
 PROJ_OBJ_CF1 += sound_cf1.o sensors_cf1.o mem_cf1.o
-PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o sysload.o mem_cf2.o
+PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o sysload.o mem_cf2.o retrace.o
 
 # Stabilizer modules
 PROJ_OBJ += commander.o crtp_commander.o crtp_commander_rpyt.o

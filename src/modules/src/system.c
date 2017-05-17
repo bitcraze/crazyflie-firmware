@@ -60,6 +60,7 @@
 #include "buzzer.h"
 #include "sound.h"
 #include "sysload.h"
+#include "retrace.h"
 
 #ifdef PLATFORM_CF1
 #include "uart_cf1.h"
@@ -124,6 +125,7 @@ void systemInit(void)
   ledseqInit();
   pmInit();
   buzzerInit();
+  retraceInit();
 
   isInit = true;
 }
