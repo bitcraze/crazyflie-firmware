@@ -77,5 +77,7 @@ extern ledseq_t seq_charging[];
 extern ledseq_t seq_chargingMax[];
 extern const ledseq_t seq_bootloader[];
 extern const ledseq_t seq_testPassed[];
+extern const ledseq_t seq_lps_lock[];
+extern const ledseq_t seq_lps_retrace[];
 
 #endif

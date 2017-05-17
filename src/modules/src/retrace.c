@@ -6,12 +6,14 @@
 #include "retrace.h"
 #include "sound.h"
 #include "commander.h"
+#include "ledseq.h"
 
 #include "debug.h"
 #include "estimator_kalman.h"
 
 #define DEBUG_MODULE "RETRACE"
 
+#define LED_RETRACE LED_GREEN_R
 
 typedef enum {
   ST_WAIT_POS_LOCK = 0,
@@ -202,6 +204,7 @@ static void moveSetPoint(float x, float y, float z) {
 static void handleStateWaitPosLock() {
   if (hasLock()) {
     soundSetEffect(SND_CALIB);
+    ledseqRun(LED_RETRACE, seq_lps_lock);
     DEBUG_PRINT("Position lock OK\n");
     changeState(ST_RECORD_TRACE);
   }
@@ -211,6 +214,8 @@ static void handleStateWaitPosLock() {
 static void handleStateRecordTrace() {
   if (startReplay) {
     nextPosIndex--;
+    ledseqStop(LED_RETRACE, seq_lps_lock);
+    ledseqRun(LED_RETRACE, seq_lps_retrace);
     DEBUG_PRINT("End of recording\n");
     changeState(ST_RETRACE);
   } else {
@@ -228,6 +233,7 @@ static void handleStateRetrace() {
       nextPosIndex--;
     }
   } else {
+    ledseqStop(LED_RETRACE, seq_lps_retrace);
     DEBUG_PRINT("End of retrace\n");
     changeState(ST_STOP);
   }
