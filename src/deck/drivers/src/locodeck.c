@@ -75,12 +75,12 @@
 static lpsAlgoOptions_t algoOptions = {
   .tagAddress = 0xbccf000000000008,
   .anchorAddress = {
+    0xbccf000000000000,
     0xbccf000000000001,
     0xbccf000000000002,
     0xbccf000000000003,
     0xbccf000000000004,
     0xbccf000000000005,
-    0xbccf000000000006
   },
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
