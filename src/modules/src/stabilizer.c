@@ -48,6 +48,8 @@
 #endif
 
 static bool isInit;
+static bool emergencyStop = false;
+static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
 // State variables for the stabilizer
 static setpoint_t setpoint;
@@ -88,6 +90,17 @@ bool stabilizerTest(void)
   return pass;
 }
 
+static void checkEmergencyStopTimeout()
+{
+  if (emergencyStopTimeout >= 0) {
+    emergencyStopTimeout -= 1;
+
+    if (emergencyStopTimeout == 0) {
+      emergencyStop = true;
+    }
+  }
+}
+
 /* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
@@ -126,10 +139,33 @@ static void stabilizerTask(void* param)
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
     stateController(&control, &setpoint, &sensorData, &state, tick);
-    powerDistribution(&control);
+
+    checkEmergencyStopTimeout();
+
+    if (emergencyStop) {
+      powerStop();
+    } else {
+      powerDistribution(&control);
+    }
 
     tick++;
   }
+}
+
+void stabilizerSetEmergencyStop()
+{
+  emergencyStop = true;
+}
+
+void stabilizerResetEmergencyStop()
+{
+  emergencyStop = false;
+}
+
+void stabilizerSetEmergencyStopTimeout(int timeout)
+{
+  emergencyStop = false;
+  emergencyStopTimeout = timeout;
 }
 
 LOG_GROUP_START(ctrltarget)
