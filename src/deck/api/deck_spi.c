@@ -136,6 +136,8 @@ void spiBegin(void)
   /*!< SPI configuration */
   spiConfigureSlow();
 
+  SPI_Cmd(SPI, ENABLE);
+
   isInit = true;
 }
 
@@ -252,14 +254,14 @@ bool spiExchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
   SPI_I2S_DMACmd(SPI, SPI_I2S_DMAReq_Rx, ENABLE);
 
   // Enable peripheral
-  SPI_Cmd(SPI, ENABLE);
+  // SPI_Cmd(SPI, ENABLE);				/*Note(Jaskirat): looks like if you enale/disable each time you have slower performance*/
 
   // Wait for completion
   bool result = (xSemaphoreTake(txComplete, portMAX_DELAY) == pdTRUE)
              && (xSemaphoreTake(rxComplete, portMAX_DELAY) == pdTRUE);
 
   // Disable peripheral
-  SPI_Cmd(SPI, DISABLE);
+  // SPI_Cmd(SPI, DISABLE);				/*Note(Jaskirat): looks like if you enale/disable each time you have slower performance*/
   return result;
 }
 
