@@ -65,6 +65,7 @@ enum packet_type {
   velocityWorldType = 1,
   zDistanceType     = 2,
   cppmEmuType       = 3,
+  altHoldType       = 4,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -87,7 +88,7 @@ struct velocityPacket_s {
   float vx;        // m in the world frame of reference
   float vy;        // ...
   float vz;        // ...
-  float yawrate;  // rad/s
+  float yawrate;  // deg/s
 } __attribute__((packed));
 static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
@@ -108,13 +109,13 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
   setpoint->attitudeRate.yaw = values->yawrate;
 }
 
-/* velocityDecoder
+/* zDistanceDecoder
  * Set the Crazyflie velocity in the world coordinate system
  */
 struct zDistancePacket_s {
   float roll;            // rad
   float pitch;           // ...
-  float yawrate;         // rad/s
+  float yawrate;         // deg/s
   float zDistance;        // m in the world frame of reference
 } __attribute__((packed));
 static void zDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
@@ -226,12 +227,46 @@ static void cppmEmuDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
   }
 }
 
+/* altHoldDecoder
+ * Set the Crazyflie velocity in the world coordinate system
+ */
+struct altHoldPacket_s {
+  float roll;            // rad
+  float pitch;           // ...
+  float yawrate;         // deg/s
+  float zVelocity;       // m/s in the world frame of reference
+} __attribute__((packed));
+static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct altHoldPacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct velocityPacket_s));
+
+
+  setpoint->mode.z = modeVelocity;
+
+  setpoint->velocity.z = values->zVelocity;
+
+
+  setpoint->mode.yaw = modeVelocity;
+
+  setpoint->attitudeRate.yaw = values->yawrate;
+
+
+  setpoint->mode.roll = modeAbs;
+  setpoint->mode.pitch = modeAbs;
+
+  setpoint->attitude.roll = values->roll;
+  setpoint->attitude.pitch = values->pitch;
+}
+
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]          = stopDecoder,
   [velocityWorldType] = velocityDecoder,
   [zDistanceType]     = zDistanceDecoder,
   [cppmEmuType]       = cppmEmuDecoder,
+  [altHoldType]       = altHoldDecoder,
 };
 
 /* Decoder switch */
