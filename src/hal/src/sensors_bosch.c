@@ -307,10 +307,13 @@ static void sensorsTaskInit(void)
 }
 
 static void sensorsGyroGet(Axis3i16* dataOut, uint8_t device) {
+  static struct bmi160_sensor_data temp;
   switch(device) {
     case SENSORS_BMI160:
-      bmi160_get_sensor_data(BMI160_GYRO_ONLY, NULL,
-                             (struct bmi160_sensor_data*)dataOut, &bmi160Dev);
+      bmi160_get_sensor_data(BMI160_GYRO_ONLY, NULL, &temp, &bmi160Dev);
+      dataOut->x = temp.x;
+      dataOut->y = temp.y;
+      dataOut->z = temp.z;
       break;
     case SENSORS_BMI055:
       bmi055_get_gyro_data(
@@ -320,11 +323,13 @@ static void sensorsGyroGet(Axis3i16* dataOut, uint8_t device) {
 }
 
 static void sensorsAccelGet(Axis3i16* dataOut, uint8_t device) {
+  static struct bmi160_sensor_data temp;
   switch(device) {
     case SENSORS_BMI160:
-      bmi160_get_sensor_data(BMI160_ACCEL_ONLY,
-                             (struct bmi160_sensor_data*)dataOut, NULL,
-                             &bmi160Dev);
+      bmi160_get_sensor_data(BMI160_ACCEL_ONLY, &temp, NULL, &bmi160Dev);
+      dataOut->x = temp.x;
+      dataOut->y = temp.y;
+      dataOut->z = temp.z;
       break;
     case SENSORS_BMI055:
       bmi055_get_accel_data(
@@ -451,8 +456,8 @@ static void sensorsTask(void *param)
           sensorsGyroGet(&gyroPrim, gyroPrimInUse);
           sensorsAccelGet(&accelPrim, accelPrimInUse);
 #ifdef LOG_SEC_IMU
-          sensorsGyroGet(&gyroSecRaw, gyroSecInUse);
-          sensorsAccelGet(&gyroSecRaw, accelSecInUse);
+          sensorsGyroGet(&gyroSec, gyroSecInUse);
+          sensorsAccelGet(&accelSec, accelSecInUse);
 #endif
           /* FIXME: for sensor deck v1 realignment has to be added her */
 
@@ -475,12 +480,12 @@ static void sensorsTask(void *param)
 
           switch(accelPrimInUse) {
             case SENSORS_BMI160:
-              sensorsApplyBiasAndScale(&accelPrimScaled, &accelPrim,
+              sensorsApplyBiasAndScale(&accelPrimScaled, &accelPrimLPF,
                                        &bmi160AccelBias.value,
                                        SENSORS_BMI160_G_PER_LSB_CFG);
               break;
             case SENSORS_BMI055:
-              sensorsApplyBiasAndScale(&accelPrimScaled, &accelPrim,
+              sensorsApplyBiasAndScale(&accelPrimScaled, &accelPrimLPF,
                                        &bmi055AccelBias.value,
                                        SENSORS_BMI055_G_PER_LSB_CFG);
               break;
@@ -508,12 +513,12 @@ static void sensorsTask(void *param)
 
           switch(accelSecInUse) {
             case SENSORS_BMI160:
-              sensorsApplyBiasAndScale(&accelSecScaled, &accelSec,
+              sensorsApplyBiasAndScale(&accelSecScaled, &accelSecLPF,
                                        &bmi160AccelBias.value,
                                        SENSORS_BMI160_G_PER_LSB_CFG);
               break;
             case SENSORS_BMI055:
-              sensorsApplyBiasAndScale(&accelSecScaled, &accelSec,
+              sensorsApplyBiasAndScale(&accelSecScaled, &accelSecLPF,
                                        &bmi055AccelBias.value,
                                        SENSORS_BMI055_G_PER_LSB_CFG);
               break;
@@ -629,7 +634,8 @@ static void calcMean(BiasObj* bias, Axis3f* mean) {
   Axis3i16* elem;
   int64_t sum[GYRO_NBR_OF_AXES] = {0};
 
-  for (elem = bias->bufStart; elem != (bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES); elem++)
+  for (elem = bias->bufStart;
+       elem != (bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES); elem++)
     {
       sum[0] += elem->x;
       sum[1] += elem->y;
@@ -644,7 +650,8 @@ static void calcMean(BiasObj* bias, Axis3f* mean) {
 /**
  * Calculates the variance and mean for the bias buffer.
  */
-static void calcVarianceAndMean(BiasObj* bias, Axis3f* variance, Axis3f* mean) {
+static void calcVarianceAndMean(BiasObj* bias, Axis3f* variance, Axis3f* mean)
+{
   Axis3i16* elem;
   int64_t sumSquared[GYRO_NBR_OF_AXES] = {0};
 
