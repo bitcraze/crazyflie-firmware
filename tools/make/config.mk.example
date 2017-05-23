@@ -22,3 +22,6 @@
 
 ## Automatically reboot to bootloader before flashing
 # CLOAD_CMDS = -w radio://0/100/2M/E7E7E7E7E7
+
+## Set number of anchor in LocoPositioningSystem
+# CFLAGS += -DLOCODECK_NR_OF_ANCHORS=8

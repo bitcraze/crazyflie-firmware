@@ -52,7 +52,9 @@ typedef enum uwbEvent_e {
   eventReceiveFailed,
 } uwbEvent_t;
 
+#ifndef LOCODECK_NR_OF_ANCHORS
 #define LOCODECK_NR_OF_ANCHORS 6
+#endif
 
 typedef uint64_t locoAddress_t;
 
