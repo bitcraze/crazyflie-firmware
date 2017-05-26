@@ -184,6 +184,22 @@ typedef struct setpointZ_s {
   bool isUpdate; // True = small update of setpoint, false = completely new
 } setpointZ_t;
 
+/** Flow measurement**/
+typedef struct flowMeasurement_s {
+  uint32_t timestamp;
+  union {
+    struct {
+      float dpixelx;  // Accumulated pixel count x
+      float dpixely;  // Accumulated pixel count y
+    };
+    float dpixel[2];  // Accumulated pixel count
+  };
+  float stdDevX;      // Measurement standard deviation
+  float stdDevY;      // Measurement standard deviation
+  float dt;           // Time during which pixels were accumulated
+} flowMeasurement_t;
+
+
 /** TOF measurement**/
 typedef struct tofMeasurement_s {
   uint32_t timestamp;

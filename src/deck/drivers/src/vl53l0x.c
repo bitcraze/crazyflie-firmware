@@ -43,7 +43,7 @@
 #include "estimator_kalman.h"
 #include "arm_math.h"
 
-//#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
+#define UPDATE_KALMAN_WITH_RANGING
 #ifdef UPDATE_KALMAN_WITH_RANGING
 // Measurement noise model
 static float expPointA = 1.0f;

@@ -68,3 +68,10 @@ bool stateEstimatorEnqueueTDOA(tdoaMeasurement_t *uwb);
 bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos);
 bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist);
 bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof);
+bool stateEstimatorEnqueueFlow(flowMeasurement_t *flow);
+
+/*
+ * Methods used in the optical flow implementation to get elevation and reset position
+ */
+float stateEstimatorGetElevation();
+void stateEstimatorSetShift(float deltax, float deltay);

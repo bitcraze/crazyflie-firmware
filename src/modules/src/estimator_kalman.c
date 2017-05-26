@@ -141,6 +141,17 @@ static inline bool stateEstimatorHasTDOAPacket(tdoaMeasurement_t *uwb) {
   return (pdTRUE == xQueueReceive(tdoaDataQueue, uwb, 0));
 }
 
+
+// Measurements of flow (dnx, dny)
+static xQueueHandle flowDataQueue;
+#define FLOW_QUEUE_LENGTH (10)
+
+static void stateEstimatorUpdateWithFlow(flowMeasurement_t *flow, sensorData_t *sensors);
+
+static inline bool stateEstimatorHasFlowPacket(flowMeasurement_t *flow) {
+  return (pdTRUE == xQueueReceive(flowDataQueue, flow, 0));
+}
+
 // Measurements of TOF from laser sensor
 static xQueueHandle tofDataQueue;
 #define TOF_QUEUE_LENGTH (10)
@@ -477,6 +488,13 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
     stateEstimatorUpdateWithTDOA(&tdoa);
+    doneUpdate = true;
+  }
+
+  flowMeasurement_t flow;
+  while (stateEstimatorHasFlowPacket(&flow))
+  {
+    stateEstimatorUpdateWithFlow(&flow, sensors);
     doneUpdate = true;
   }
 
@@ -960,6 +978,79 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
   tdoaCount++;
 }
 
+// TODO remove the temporary test variables (used for logging)
+static float omegax_b;
+static float omegay_b;
+static float dx_g;
+static float dy_g;
+static float z_g;
+static float predictedNX;
+static float predictedNY;
+static float measuredNX;
+static float measuredNY;
+
+static void stateEstimatorUpdateWithFlow(flowMeasurement_t *flow, sensorData_t *sensors)
+{
+  // Inclusion of flow measurements in the EKF done by two scalar updates
+
+  // ~~~ Camera constants ~~~
+  // The angle of aperture is guessed from the raw data register and thankfully look to be symmetric
+  float Npix = 30.0;                      // [pixels] (same in x and y)
+  float thetapix = DEG_TO_RAD * 4.0f;    // [rad]    (same in x and y)
+
+  //~~~ Body rates ~~~
+  // TODO check if this is feasible or if some filtering has to be done
+  omegax_b = sensors->gyro.x * DEG_TO_RAD;
+  omegay_b = sensors->gyro.y * DEG_TO_RAD;
+
+  // ~~~ Moves the body velocity into the global coordinate system ~~~
+  // [bar{x},bar{y},bar{z}]_G = R*[bar{x},bar{y},bar{z}]_B
+  //
+  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
+  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
+  //
+  // where \hat{} denotes a basis vector, \dot{} denotes a derivative and
+  // _G and _B refer to the global/body coordinate systems.
+  // dx_g = R[0][0] * S[STATE_PX] + R[1][0] * S[STATE_PY] + R[2][0] * S[STATE_PZ];
+  // dy_g = R[0][1] * S[STATE_PX] + R[1][1] * S[STATE_PY] + R[2][1] * S[STATE_PZ];
+
+  dx_g = S[STATE_PX];
+  dy_g = S[STATE_PY];
+  // Saturate elevation in prediction and correction to avoid singularities
+  if ( S[STATE_Z] < 0.1f ) {
+      z_g = 0.1;
+  } else {
+      z_g = S[STATE_Z];
+  }
+
+  // ~~~ X velocity prediction and update ~~~
+  // predics the number of accumulated pixels in the x-direction
+  float hx[STATE_DIM] = {0};
+  arm_matrix_instance_f32 Hx = {1, STATE_DIM, hx};
+  predictedNX = (flow->dt * Npix / thetapix ) * ((dx_g * R[2][2] / z_g) - omegay_b);
+  measuredNX = flow->dpixelx;
+
+  // derive measurement equation with respect to dx (and z?)
+  hx[STATE_Z] = (Npix * flow->dt / thetapix) * ((R[2][2] * dx_g) / (-z_g * z_g));
+  hx[STATE_PX] = (Npix * flow->dt / thetapix) * (R[2][2] / z_g);
+
+  //First update
+  stateEstimatorScalarUpdate(&Hx, measuredNX-predictedNX, flow->stdDevX);
+
+  // ~~~ Y velocity prediction and update ~~~
+  float hy[STATE_DIM] = {0};
+  arm_matrix_instance_f32 Hy = {1, STATE_DIM, hy};
+  predictedNY = (flow->dt * Npix / thetapix ) * ((dy_g * R[2][2] / z_g) + omegax_b);
+  measuredNY = flow->dpixely;
+
+  // derive measurement equation with respect to dy (and z?)
+  hy[STATE_Z] = (Npix * flow->dt / thetapix) * ((R[2][2] * dy_g) / (-z_g * z_g));
+  hy[STATE_PY] = (Npix * flow->dt / thetapix) * (R[2][2] / z_g);
+
+  // Second update
+  stateEstimatorScalarUpdate(&Hy, measuredNY-predictedNY, flow->stdDevY);
+}
+
 static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
 {
   // Updates the filter with a measured distance in the zb direction using the
@@ -1165,6 +1256,7 @@ void stateEstimatorInit(void) {
     distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
     posDataQueue = xQueueCreate(POS_QUEUE_LENGTH, sizeof(positionMeasurement_t));
     tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
+    flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
     tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
   }
   else
@@ -1172,6 +1264,7 @@ void stateEstimatorInit(void) {
     xQueueReset(distDataQueue);
     xQueueReset(posDataQueue);
     xQueueReset(tdoaDataQueue);
+    xQueueReset(flowDataQueue);
     xQueueReset(tofDataQueue);
   }
 
@@ -1272,6 +1365,13 @@ bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist)
   return stateEstimatorEnqueueExternalMeasurement(distDataQueue, (void *)dist);
 }
 
+bool stateEstimatorEnqueueFlow(flowMeasurement_t *flow)
+{
+  // A flow measurement (dnx,  dny) [accumulated pixels]
+  return stateEstimatorEnqueueExternalMeasurement(flowDataQueue, (void *)flow);
+}
+
+
 bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof)
 {
   // A distance (distance) [m] to the ground along the z_B axis.
@@ -1284,6 +1384,35 @@ bool stateEstimatorTest(void)
   return isInit;
 }
 
+float stateEstimatorGetElevation()
+{
+  // Return elevation, used in the optical flow
+  return S[STATE_Z];
+}
+
+void stateEstimatorSetShift(float deltax, float deltay)
+{
+  // Return elevation, used in the optical flow
+  S[STATE_X] -= deltax;
+  S[STATE_Y] -= deltay;
+}
+
+// Temporary development groups
+LOG_GROUP_START(kalman_states)
+  LOG_ADD(LOG_FLOAT, ox, &S[STATE_X])
+  LOG_ADD(LOG_FLOAT, oy, &S[STATE_Y])
+  LOG_ADD(LOG_FLOAT, vx, &S[STATE_PX])
+  LOG_ADD(LOG_FLOAT, vy, &S[STATE_PY])
+LOG_GROUP_STOP(kalman_states)
+
+LOG_GROUP_START(kalman_pred)
+  LOG_ADD(LOG_FLOAT, predNX, &predictedNX)
+  LOG_ADD(LOG_FLOAT, predNY, &predictedNY)
+  LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
+  LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
+LOG_GROUP_STOP(kalman_pred)
+
+// Stock log groups
 LOG_GROUP_START(kalman)
   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
   LOG_ADD(LOG_FLOAT, stateX, &S[STATE_X])
