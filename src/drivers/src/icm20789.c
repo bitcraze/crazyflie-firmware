@@ -33,6 +33,7 @@
 #include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "nvicconf.h"
 
 // TA: Maybe not so good to bring in these dependencies...
 #include "debug.h"
@@ -58,11 +59,35 @@
 #define RZR_GPIO_SPI_MOSI       GPIO_Pin_15
 #define RZR_GPIO_SPI_MOSI_SRC   GPIO_PinSource15
 
+#define RZR_SPI_DMA_IRQ_PRIO        NVIC_HIGH_PRI
+#define RZR_SPI_DMA                 DMA1
+#define RZR_SPI_DMA_CLK             RCC_AHB1Periph_DMA1
+#define RZR_SPI_DMA_CLK_INIT        RCC_AHB1PeriphClockCmd
+
+#define RZR_SPI_RX_DMA_STREAM       DMA1_Stream3
+#define RZR_SPI_RX_DMA_IRQ          DMA1_Stream3_IRQn
+#define RZR_SPI_RX_DMA_IRQHandler   DMA1_Stream3_IRQHandler
+#define RZR_SPI_RX_DMA_CHANNEL      DMA_Channel_0
+#define RZR_SPI_RX_DMA_FLAG_TCIF    DMA_FLAG_TCIF3
+
+#define RZR_SPI_TX_DMA_STREAM       DMA1_Stream4
+#define RZR_SPI_TX_DMA_IRQ          DMA1_Stream4_IRQn
+#define RZR_SPI_TX_DMA_IRQHandler   DMA1_Stream4_IRQHandler
+#define RZR_SPI_TX_DMA_CHANNEL      DMA_Channel_0
+#define RZR_SPI_TX_DMA_FLAG_TCIF    DMA_FLAG_TCIF4
+
 #define DUMMY_BYTE    0x00
 /* Usefull macro */
 #define RZR_EN_CS() GPIO_ResetBits(RZR_GPIO_CS_PORT, RZR_GPIO_CS)
 #define RZR_DIS_CS() GPIO_SetBits(RZR_GPIO_CS_PORT, RZR_GPIO_CS)
 
+/* Defines and buffers for full duplex SPI DMA transactions */
+#define SENSORS_READ_START_CMD      (MPU6500_RA_ACCEL_XOUT_H | 0x80)
+#define SENSORS_READ_TRANSACTION_SIZE 15 // 1 byte command followed by 14 bytes data
+static uint8_t spiTxBuffer[SENSORS_READ_TRANSACTION_SIZE];
+static uint8_t spiRxBuffer[SENSORS_READ_TRANSACTION_SIZE];
+static xSemaphoreHandle spiTxDMAComplete;
+static xSemaphoreHandle spiRxDMAComplete;
 
 static bool isInit;
 
@@ -102,7 +127,6 @@ static void writeReg(uint8_t reg, uint8_t val)
 static uint8_t readReg(uint8_t reg)
 {
   uint8_t regval;
-
   RZR_EN_CS();
   spiSendByte(reg | 0x80);
   regval = spiReceiveByte();
@@ -219,8 +243,53 @@ static void spiInit(void)
   RZR_DIS_CS();
 
   spiRzrConfigureSlow();
+}
 
-  isInit = true;
+static void spiDMAInit(void)
+{
+  DMA_InitTypeDef  DMA_InitStructure;
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  /*!< Enable DMA Clocks */
+  RZR_SPI_DMA_CLK_INIT(RZR_SPI_DMA_CLK, ENABLE);
+
+  /* Configure DMA Initialization Structure */
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(RZR_SPI->DR));
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_BufferSize = 0; // set later
+  DMA_InitStructure.DMA_Memory0BaseAddr = 0; // set later
+
+  // Configure TX DMA
+  DMA_InitStructure.DMA_Channel = RZR_SPI_TX_DMA_CHANNEL;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_Cmd(RZR_SPI_TX_DMA_STREAM,DISABLE);
+  DMA_Init(RZR_SPI_TX_DMA_STREAM, &DMA_InitStructure);
+
+  // Configure RX DMA
+  DMA_InitStructure.DMA_Channel = RZR_SPI_RX_DMA_CHANNEL;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_Cmd(RZR_SPI_RX_DMA_STREAM, DISABLE);
+  DMA_Init(RZR_SPI_RX_DMA_STREAM, &DMA_InitStructure);
+
+  // Configure interrupts
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+
+  NVIC_InitStructure.NVIC_IRQChannel = RZR_SPI_TX_DMA_IRQ;
+  NVIC_Init(&NVIC_InitStructure);
+
+  NVIC_InitStructure.NVIC_IRQChannel = RZR_SPI_RX_DMA_IRQ;
+  NVIC_Init(&NVIC_InitStructure);
 }
 
 bool icm20789Init(void)
@@ -229,6 +298,10 @@ bool icm20789Init(void)
     return false;
 
   spiInit();
+  spiDMAInit();
+
+  spiTxDMAComplete = xSemaphoreCreateBinary();
+  spiRxDMAComplete = xSemaphoreCreateBinary();
 
   if (readReg(MPU6500_RA_WHO_AM_I) == 0x03)
   {
@@ -422,12 +495,98 @@ bool icm20789EvaluateSelfTest(float low, float high, float value, char* string)
 
 void icm20789ReadAllSensors(uint8_t *buffer)
 {
-  RZR_EN_CS();
-  spiSendByte(MPU6500_RA_ACCEL_XOUT_H | 0x80);
+  // Disable peripheral before setting up for duplex DMA
+  SPI_Cmd(RZR_SPI, DISABLE);
 
-  for (int i=0; i<14; i++)
-  {
-    buffer[i] = spiReceiveByte();
-  }
+  RZR_EN_CS();
+
+  // DMA already configured, just need to set memory addresses and read command byte
+  spiTxBuffer[0] = SENSORS_READ_START_CMD;
+  RZR_SPI_TX_DMA_STREAM->M0AR = (uint32_t)&spiTxBuffer[0];
+  RZR_SPI_TX_DMA_STREAM->NDTR = SENSORS_READ_TRANSACTION_SIZE;
+
+  RZR_SPI_RX_DMA_STREAM->M0AR = (uint32_t)&spiRxBuffer[0];
+  RZR_SPI_RX_DMA_STREAM->NDTR = SENSORS_READ_TRANSACTION_SIZE;
+
+  // Enable SPI DMA Interrupts
+  DMA_ITConfig(RZR_SPI_TX_DMA_STREAM, DMA_IT_TC, ENABLE);
+  DMA_ITConfig(RZR_SPI_RX_DMA_STREAM, DMA_IT_TC, ENABLE);
+
+  // Clear DMA Flags
+  DMA_ClearFlag(RZR_SPI_TX_DMA_STREAM, DMA_FLAG_FEIF4|DMA_FLAG_DMEIF4|DMA_FLAG_TEIF4|DMA_FLAG_HTIF4|DMA_FLAG_TCIF4);
+  DMA_ClearFlag(RZR_SPI_RX_DMA_STREAM, DMA_FLAG_FEIF3|DMA_FLAG_DMEIF3|DMA_FLAG_TEIF3|DMA_FLAG_HTIF3|DMA_FLAG_TCIF3);
+
+  // Enable DMA Streams
+  DMA_Cmd(RZR_SPI_TX_DMA_STREAM,ENABLE);
+  DMA_Cmd(RZR_SPI_RX_DMA_STREAM,ENABLE);
+
+  // Enable SPI DMA requests
+  SPI_I2S_DMACmd(RZR_SPI, SPI_I2S_DMAReq_Tx, ENABLE);
+  SPI_I2S_DMACmd(RZR_SPI, SPI_I2S_DMAReq_Rx, ENABLE);
+
+  // Enable peripheral to begin the transaction
+  SPI_Cmd(RZR_SPI, ENABLE);
+
+  // Wait for completion
+  // TODO: Better error handling rather than passing up invalid data
+  xSemaphoreTake(spiTxDMAComplete, portMAX_DELAY);
+  xSemaphoreTake(spiRxDMAComplete, portMAX_DELAY);
+
+  // Copy the data (discarding the dummy byte) into the buffer
+  // TODO: Avoid this memcpy either by figuring out how to configure the STM SPI to discard the byte or handle it in sensors_icm20789.c
+  memcpy(buffer, &spiRxBuffer[1], SENSORS_READ_TRANSACTION_SIZE - 1);
+
   RZR_DIS_CS();
+}
+
+void __attribute__((used)) RZR_SPI_TX_DMA_IRQHandler(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  // Stop and cleanup DMA stream
+  DMA_ITConfig(RZR_SPI_TX_DMA_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(RZR_SPI_TX_DMA_STREAM, RZR_SPI_TX_DMA_FLAG_TCIF);
+
+  // Clear stream flags
+  DMA_ClearFlag(RZR_SPI_TX_DMA_STREAM,RZR_SPI_TX_DMA_FLAG_TCIF);
+
+  // Disable SPI DMA requests
+  SPI_I2S_DMACmd(RZR_SPI, SPI_I2S_DMAReq_Tx, DISABLE);
+
+  // Disable streams
+  DMA_Cmd(RZR_SPI_TX_DMA_STREAM,DISABLE);
+
+  // Give the semaphore, allowing the SPI transaction to complete
+  xSemaphoreGiveFromISR(spiTxDMAComplete, &xHigherPriorityTaskWoken);
+
+  if (xHigherPriorityTaskWoken)
+  {
+    portYIELD();
+  }
+}
+
+void __attribute__((used)) RZR_SPI_RX_DMA_IRQHandler(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  // Stop and cleanup DMA stream
+  DMA_ITConfig(RZR_SPI_RX_DMA_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(RZR_SPI_RX_DMA_STREAM, RZR_SPI_RX_DMA_FLAG_TCIF);
+
+  // Clear stream flags
+  DMA_ClearFlag(RZR_SPI_RX_DMA_STREAM, RZR_SPI_RX_DMA_FLAG_TCIF);
+
+  // Disable SPI DMA requests
+  SPI_I2S_DMACmd(RZR_SPI, SPI_I2S_DMAReq_Rx, DISABLE);
+
+  // Disable streams
+  DMA_Cmd(RZR_SPI_RX_DMA_STREAM, DISABLE);
+
+  // Give the semaphore, allowing the SPI transaction to complete
+  xSemaphoreGiveFromISR(spiRxDMAComplete, &xHigherPriorityTaskWoken);
+
+  if (xHigherPriorityTaskWoken)
+  {
+    portYIELD();
+  }
 }
