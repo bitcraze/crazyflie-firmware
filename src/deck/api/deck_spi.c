@@ -198,7 +198,7 @@ void spiConfigureSlow()
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 0; // Not used
 
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32; //~2.7 MHz
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64; //~1.35 MHz
   SPI_Init(SPI, &SPI_InitStructure);
 }
 
