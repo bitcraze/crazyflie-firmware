@@ -51,11 +51,7 @@ void stateController(control_t *control, setpoint_t *setpoint,
   }
 
   if (RATE_DO_EXECUTE(POSITION_RATE, tick)) {
-    if (setpoint->mode.z == modeAbs) {
-      positionController(&actuatorThrust, &attitudeDesired, setpoint, state);
-    } else if (setpoint->mode.z == modeVelocity) {
-      velocityController(&actuatorThrust, &attitudeDesired, setpoint, state);
-    }
+    positionController(&actuatorThrust, &attitudeDesired, setpoint, state);
   }
 
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {

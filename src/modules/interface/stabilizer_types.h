@@ -160,6 +160,7 @@ typedef struct setpoint_s {
   float thrust;
   point_t position;
   velocity_t velocity;
+  bool velocity_body;
 
   struct {
     mode_t x;
