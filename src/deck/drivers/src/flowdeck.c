@@ -227,12 +227,12 @@ static void pamotionTask(void *param)
 
     readMotion(&currentMotion);
 
+#ifdef ESTIMATOR_TYPE_kalman
     // Flip motion information to comply with sensor mounting
     // (might need to be changed if mounted diffrently)
     int16_t accpx = -currentMotion.deltaY;
     int16_t accpy = -currentMotion.deltaX;
 
-#ifdef ESTIMATOR_TYPE_kalman
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
 
