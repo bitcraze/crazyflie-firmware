@@ -66,6 +66,7 @@ enum packet_type {
   zDistanceType     = 2,
   cppmEmuType       = 3,
   altHoldType       = 4,
+  hoverType         = 5,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -110,10 +111,10 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
 }
 
 /* zDistanceDecoder
- * Set the Crazyflie velocity in the world coordinate system
+ * Set the Crazyflie absolute height and roll/pitch angles
  */
 struct zDistancePacket_s {
-  float roll;            // rad
+  float roll;            // deg
   float pitch;           // ...
   float yawrate;         // deg/s
   float zDistance;        // m in the world frame of reference
@@ -228,7 +229,7 @@ static void cppmEmuDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
 }
 
 /* altHoldDecoder
- * Set the Crazyflie velocity in the world coordinate system
+ * Set the Crazyflie vertical velocity and roll/pitch angle
  */
 struct altHoldPacket_s {
   float roll;            // rad
@@ -260,6 +261,37 @@ static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
   setpoint->attitude.pitch = values->pitch;
 }
 
+/* hoverDecoder
+ * Set the Crazyflie absolute height and velocity in the body coordinate system
+ */
+struct hoverPacket_s {
+  float vx;           // m/s in the body frame of reference
+  float vy;           // ...
+  float yawrate;      // deg/s
+  float zDistance;    // m in the world frame of reference
+} __attribute__((packed));
+static void hoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct hoverPacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct velocityPacket_s));
+
+  setpoint->mode.z = modeAbs;
+  setpoint->position.z = values->zDistance;
+
+
+  setpoint->mode.yaw = modeVelocity;
+  setpoint->attitudeRate.yaw = values->yawrate;
+
+
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->velocity.x = values->vx;
+  setpoint->velocity.y = values->vy;
+
+  setpoint->velocity_body = true;
+}
+
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]          = stopDecoder,
@@ -267,6 +299,7 @@ const static packetDecoder_t packetDecoders[] = {
   [zDistanceType]     = zDistanceDecoder,
   [cppmEmuType]       = cppmEmuDecoder,
   [altHoldType]       = altHoldDecoder,
+  [hoverType]         = hoverDecoder,
 };
 
 /* Decoder switch */
