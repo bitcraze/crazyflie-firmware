@@ -367,8 +367,8 @@ static bool pamotionTest()
 }
 
 static const DeckDriver pamotion_deck = {
-  .vid = 0,
-  .pid = 0,
+  .vid = 0xBC,
+  .pid = 0x0A,
   .name = "bcFlow",
 
   .usedGpio = 0,  // FIXME: set the used pins
