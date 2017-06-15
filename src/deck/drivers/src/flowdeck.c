@@ -47,7 +47,7 @@
 #define AVERAGE_HISTORY_LENGTH 4
 #define OULIER_LIMIT 100
 #define LP_CONSTANT 0.8f
-#define USE_LP_FILTER
+// #define USE_LP_FILTER
 // #define USE_MA_SMOOTHING
 
 #if defined(USE_MA_SMOOTHING)
@@ -262,8 +262,8 @@ static void pamotionTask(void *param)
 
       // Form flow measurement struct and push into the EKF
       flowMeasurement_t flowData;
-      flowData.stdDevX = 0.5;    // [pixels] should perhaps be made larger?
-      flowData.stdDevY = 0.5;    // [pixels] should perhaps be made larger?
+      flowData.stdDevX = 0.25;    // [pixels] should perhaps be made larger?
+      flowData.stdDevY = 0.25;    // [pixels] should perhaps be made larger?
       flowData.dt = 0.01;
 
 #if defined(USE_MA_SMOOTHING)
