@@ -44,7 +44,7 @@ struct pidAxis_s {
   PidObject pid;
 
   struct pidInit_s init;
-  mode_t previousMode;
+    stab_mode_t previousMode;
   float setpoint;
 
   float output;

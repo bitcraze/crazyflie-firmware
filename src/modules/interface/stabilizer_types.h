@@ -150,7 +150,7 @@ typedef enum mode_e {
   modeDisable = 0,
   modeAbs,
   modeVelocity
-} mode_t;
+} stab_mode_t;
 
 typedef struct setpoint_s {
   uint32_t timestamp;
@@ -163,12 +163,12 @@ typedef struct setpoint_s {
   bool velocity_body;
 
   struct {
-    mode_t x;
-    mode_t y;
-    mode_t z;
-    mode_t roll;
-    mode_t pitch;
-    mode_t yaw;
+    stab_mode_t x;
+    stab_mode_t y;
+    stab_mode_t z;
+    stab_mode_t roll;
+    stab_mode_t pitch;
+    stab_mode_t yaw;
   } mode;
 } setpoint_t;
 

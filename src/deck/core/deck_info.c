@@ -46,6 +46,20 @@ static int count = 0;
 static DeckInfo deckInfos[DECK_MAX_COUNT];
 
 static void enumerateDecks(void);
+static void checkPeriphAndGpioConflicts(void);
+
+static void scanRequiredSystemProperties(void);
+static StateEstimatorType requiredEstimator = AnyEstimator;
+static bool registerRequiredEstimator(StateEstimatorType estimator);
+
+#ifndef DECK_FORCE
+#define DECK_FORCE
+#endif
+
+#define xstr(s) str(s)
+#define str(s) #s
+
+static char* deck_force = xstr(DECK_FORCE);
 
 void deckInfoInit()
 {
@@ -54,6 +68,8 @@ void deckInfoInit()
   if (isInit) return;
 
   enumerateDecks();
+  checkPeriphAndGpioConflicts();
+  scanRequiredSystemProperties();
 
   isInit = true;
 }
@@ -157,8 +173,6 @@ static void enumerateDecks(void)
   uint8_t nDecks = 0;
   int i;
   bool noError = true;
-  uint32_t usedPeriph = 0;
-  uint32_t usedGpio = 0;
 
   owInit();
 
@@ -179,33 +193,14 @@ static void enumerateDecks(void)
       if (infoDecode(&deckInfos[i]))
       {
         deckInfos[i].driver = findDriver(&deckInfos[i]);
-
         printDeckInfo(&deckInfos[i]);
-
-        // Check for Periph and Gpio conflict
-        if (usedPeriph & deckInfos[i].driver->usedPeriph) {
-          DEBUG_PRINT("ERROR: Driver Periph usage conflicts with a "
-                      "previously enumerated deck driver. No decks will be "
-                      "initialized!\n");
-          noError = false;
-        }
-
-        if (usedGpio & deckInfos[i].driver->usedGpio) {
-          DEBUG_PRINT("ERROR: Driver Gpio usage conflicts with a "
-                      "previously enumerated deck driver. No decks will be "
-                      "initialized!\n");
-          noError = false;
-        }
-
-        usedPeriph |= deckInfos[i].driver->usedPeriph;
-        usedGpio |= deckInfos[i].driver->usedGpio;
       } else {
 #ifdef DEBUG
-        DEBUG_PRINT("Deck %i has corrupted OW memory. "
+        DEBUG_PRINT("Deck %i has corrupt OW memory. "
                     "Ignoring the deck in DEBUG mode.\n", i);
         deckInfos[i].driver = &dummyDriver;
 #else
-        DEBUG_PRINT("Deck %i has corrupted OW memory. "
+        DEBUG_PRINT("Deck %i has corrupt OW memory. "
                     "No driver will be initialized!\n", i);
         noError = false;
 #endif
@@ -219,11 +214,59 @@ static void enumerateDecks(void)
     }
   }
 
+  // Add build-forced driver
+  if (strlen(deck_force) > 0) {
+    const DeckDriver *driver = deckFindDriverByName(deck_force);
+    if (!driver) {
+      DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
+    } else if (driver->init) {
+      if (nDecks <= DECK_MAX_COUNT)
+      {
+        nDecks++;
+        deckInfos[nDecks - 1].driver = driver;
+        DEBUG_PRINT("compile-time forced driver %s added\n", deck_force);
+      } else {
+        DEBUG_PRINT("WARNING: No room for compile-time forced driver\n");
+      }
+    }
+  }
+
   if (noError) {
     count = nDecks;
   }
 
   return;
+}
+
+static void checkPeriphAndGpioConflicts(void)
+{
+  bool noError = true;
+  uint32_t usedPeriph = 0;
+  uint32_t usedGpio = 0;
+
+  for (int i = 0; i < count; i++)
+  {
+    if (usedPeriph & deckInfos[i].driver->usedPeriph) {
+      DEBUG_PRINT("ERROR: Driver Periph usage conflicts with a "
+                  "previously enumerated deck driver. No decks will be "
+                  "initialized!\n");
+      noError = false;
+    }
+
+    if (usedGpio & deckInfos[i].driver->usedGpio) {
+      DEBUG_PRINT("ERROR: Driver Gpio usage conflicts with a "
+                  "previously enumerated deck driver. No decks will be "
+                  "initialized!\n");
+      noError = false;
+    }
+
+    usedPeriph |= deckInfos[i].driver->usedPeriph;
+    usedGpio |= deckInfos[i].driver->usedGpio;
+  }
+
+  if (!noError) {
+    count = 0;
+  }
 }
 
 /****** Key/value area handling ********/
@@ -279,4 +322,40 @@ char* deckTlvGetBuffer(TlvArea *tlv, int type, int *length) {
 void deckTlvGetTlv(TlvArea *tlv, int type, TlvArea *output) {
   output->length = 0;
   output->data = (uint8_t *)deckTlvGetBuffer(tlv, type, &output->length);
+}
+
+static void scanRequiredSystemProperties(void)
+{
+  bool isError = false;
+
+  for (int i = 0; i < count; i++)
+  {
+    isError = isError || registerRequiredEstimator(deckInfos[i].driver->requiredEstimator);
+  }
+
+  if (isError) {
+    count = 0;
+  }
+}
+
+static bool registerRequiredEstimator(StateEstimatorType estimator)
+{
+  bool isError = false;
+
+  if (AnyEstimator != estimator)
+  {
+    if (AnyEstimator == requiredEstimator)
+    {
+      requiredEstimator = estimator;
+    }
+    else
+    {
+      if (requiredEstimator != estimator) {
+        isError = true;
+        DEBUG_PRINT("WARNING: Two decks require different estimators\n");
+      }
+    }
+  }
+
+  return isError;
 }

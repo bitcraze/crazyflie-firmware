@@ -32,6 +32,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "estimator.h"
+
 /* Maximum number of decks that can be enumerated */
 #define DECK_MAX_COUNT 4
 
@@ -89,6 +91,9 @@ typedef struct deck_driver {
   /* Periphreal and Gpio used _dirrectly_ by the driver */
   uint32_t usedPeriph;
   uint32_t usedGpio;
+
+  /* Required system properties */
+  StateEstimatorType requiredEstimator;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
