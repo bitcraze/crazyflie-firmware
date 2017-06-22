@@ -146,8 +146,10 @@ bool getExtPosition(state_t *state)
     ext_pos.y = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].y;
     ext_pos.z = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].z;
     ext_pos.stdDev = 0.01;
+#ifndef PLATFORM_CF1
     estimatorKalmanEnqueuePosition(&ext_pos);
-
+#endif
+  
     return true;
   }
   return false;
