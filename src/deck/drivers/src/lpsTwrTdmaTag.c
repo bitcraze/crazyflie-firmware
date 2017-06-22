@@ -224,7 +224,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         dist.y = options->anchorPosition[current_anchor].y;
         dist.z = options->anchorPosition[current_anchor].z;
         dist.stdDev = 0.25;
-        kalmanEstimatorEnqueueDistance(&dist);
+        estimatorKalmanEnqueueDistance(&dist);
       }
 
       if (current_anchor == 0) {
