@@ -216,12 +216,7 @@ typedef struct tofMeasurement_s {
 #define RATE_50_HZ 50
 #define RATE_25_HZ 25
 
-#ifdef ESTIMATOR_TYPE_kalman
 #define RATE_MAIN_LOOP RATE_1000_HZ
-#else
-#define RATE_MAIN_LOOP RATE_1000_HZ
-#endif
-
 #define ATTITUDE_RATE RATE_500_HZ
 #define POSITION_RATE RATE_100_HZ
 

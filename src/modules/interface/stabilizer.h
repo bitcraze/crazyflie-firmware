@@ -29,13 +29,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "estimator.h"
+
 #define EMERGENCY_STOP_TIMEOUT_DISABLED (-1)
 
 /**
  * Initialize the stabilizer subsystem and launch the stabilizer loop task.
  * The stabilizer loop task will wait on systemWaitStart() before running.
  */
-void stabilizerInit(void);
+void stabilizerInit(StateEstimatorType estimator);
 
 /**
  * Test the stabilizer subsystem. Calls test for all the stabilizer related

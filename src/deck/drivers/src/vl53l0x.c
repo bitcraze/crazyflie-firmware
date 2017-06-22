@@ -38,7 +38,6 @@
 #include "vl53l0x.h"
 
 #include "stabilizer_types.h"
-#ifdef ESTIMATOR_TYPE_kalman
 
 #include "estimator_kalman.h"
 #include "arm_math.h"
@@ -52,7 +51,6 @@ static float expPointB = 1.3f;
 static float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
 #endif // UPDATE_KALMAN_WITH_RANGING
-#endif // ESTIMATOR_TYPE_kalman
 
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
@@ -149,7 +147,7 @@ void vl53l0xInit(DeckInfo* info)
   devAddr = VL53L0X_DEFAULT_ADDRESS;
   xTaskCreate(vl53l0xTask, VL53_TASK_NAME, VL53_TASK_STACKSIZE, NULL, VL53_TASK_PRI, NULL);
 
-#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
+#if defined(UPDATE_KALMAN_WITH_RANGING)
   // pre-compute constant in the measurement noise mdoel
   expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
 #endif
@@ -181,7 +179,7 @@ void vl53l0xTask(void* arg)
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     range_last = vl53l0xReadRangeContinuousMillimeters();
-#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
+#if defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
     // occur as >8 [m] measurements
@@ -192,7 +190,7 @@ void vl53l0xTask(void* arg)
       tofData.timestamp = xTaskGetTickCount();
       tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
       tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
-      stateEstimatorEnqueueTOF(&tofData);
+      estimatorKalmanEnqueueTOF(&tofData);
     }
 #endif
     vTaskDelayUntil(&xLastWakeTime, M2T(measurement_timing_budget_ms));

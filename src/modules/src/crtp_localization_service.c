@@ -41,9 +41,7 @@
 #include "locodeck.h"
 #endif
 
-#ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
-#endif
 
 #define NBR_OF_RANGES_IN_PACKET   5
 #define DEFAULT_EMERGENCY_STOP_TIMEOUT (1 * RATE_MAIN_LOOP)
@@ -148,9 +146,8 @@ bool getExtPosition(state_t *state)
     ext_pos.y = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].y;
     ext_pos.z = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].z;
     ext_pos.stdDev = 0.01;
-#ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorEnqueuePosition(&ext_pos);
-#endif
+    estimatorKalmanEnqueuePosition(&ext_pos);
+
     return true;
   }
   return false;

@@ -170,10 +170,13 @@ void systemTask(void *arg)
   systemInit();
   commInit();
   commanderInit();
-  stabilizerInit();
+
+  StateEstimatorType estimator = AnyEstimator;
 #ifdef PLATFORM_CF2
   deckInit();
-  #endif
+  estimator = deckGetRequiredEstimator();
+#endif
+  stabilizerInit(estimator);
   soundInit();
   memInit();
 
@@ -189,7 +192,7 @@ void systemTask(void *arg)
   pass &= stabilizerTest();
 #ifdef PLATFORM_CF2
   pass &= deckTest();
-  #endif
+#endif
   pass &= soundTest();
   pass &= memTest();
   pass &= watchdogNormalStartTest();

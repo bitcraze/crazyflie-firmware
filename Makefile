@@ -27,7 +27,7 @@ LPS_TDOA_ENABLE   ?= 0
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
-ESTIMATOR          ?= complementary
+ESTIMATOR          ?= Any
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
 SENSORS 					 ?= cf2
@@ -170,7 +170,8 @@ PROJ_OBJ += commander.o crtp_commander.o crtp_commander_rpyt.o
 PROJ_OBJ += crtp_commander_generic.o crtp_localization_service.o
 PROJ_OBJ += attitude_pid_controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
-PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o
+PROJ_OBJ += estimator.o estimator_kalman.o estimator_complementary.o
+PROJ_OBJ += controller_$(CONTROLLER).o
 PROJ_OBJ += power_distribution_$(POWER_DISTRIBUTION).o
 
 
@@ -287,7 +288,7 @@ ifeq ($(USE_ESKYLINK), 1)
   CFLAGS += -DUSE_ESKYLINK
 endif
 
-CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_TYPE_$(ESTIMATOR) -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
+CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_NAME=$(ESTIMATOR)Estimator -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
 
 CFLAGS += $(PROCESSOR) $(INCLUDES) $(STFLAGS)
 ifeq ($(PLATFORM), CF1)

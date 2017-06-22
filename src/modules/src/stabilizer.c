@@ -41,11 +41,8 @@
 #include "controller.h"
 #include "power_distribution.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
-#else
 #include "estimator.h"
-#endif
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -59,13 +56,13 @@ static control_t control;
 
 static void stabilizerTask(void* param);
 
-void stabilizerInit(void)
+void stabilizerInit(StateEstimatorType estimator)
 {
   if(isInit)
     return;
 
   sensorsInit();
-  stateEstimatorInit();
+  stateEstimatorInit(estimator);
   stateControllerInit();
   powerDistributionInit();
 #if defined(SITAW_ENABLED)
@@ -127,12 +124,7 @@ static void stabilizerTask(void* param)
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
     getExtPosition(&state);
-#ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorUpdate(&state, &sensorData, &control);
-#else
-    sensorsAcquire(&sensorData, tick);
-    stateEstimator(&state, &sensorData, tick);
-#endif
+    stateEstimator(&state, &sensorData, &control, tick);
 
     commanderGetSetpoint(&setpoint, &state);
 

@@ -34,15 +34,12 @@
 #include "sleepus.h"
 
 #include "stabilizer_types.h"
-#ifdef ESTIMATOR_TYPE_kalman
+#include "estimator.h"
 #include "estimator_kalman.h"
-#endif
 
 #include "arm_math.h"
 
 #include <stdlib.h>
-
-#ifdef ESTIMATOR_TYPE_kalman
 
 #define AVERAGE_HISTORY_LENGTH 4
 #define OULIER_LIMIT 100
@@ -62,8 +59,6 @@ float dpixelx_previous = 0;
 float dpixely_previous = 0;
 
 static uint8_t outlierCount = 0;
-
-#endif
 
 static bool isInit = false;
 
@@ -251,7 +246,6 @@ static void pamotionTask(void *param)
 
     readMotion(&currentMotion);
 
-#ifdef ESTIMATOR_TYPE_kalman
     // Flip motion information to comply with sensor mounting
     // (might need to be changed if mounted diffrently)
     int16_t accpx = -currentMotion.deltaY;
@@ -294,12 +288,11 @@ static void pamotionTask(void *param)
 #endif
       // Push measurements into the Kalman filter
       if (!useFlowDisabled) {
-        stateEstimatorEnqueueFlow(&flowData);
+        estimatorKalmanEnqueueFlow(&flowData);
       }
     } else {
       outlierCount++;
     }
-#endif
   }
 }
 
@@ -372,6 +365,7 @@ static const DeckDriver pamotion_deck = {
   .name = "bcFlow",
 
   .usedGpio = 0,  // FIXME: set the used pins
+  .requiredEstimator = KalmanEstimator,
 
   .init = pamotionInit,
   .test = pamotionTest,
@@ -387,9 +381,7 @@ LOG_ADD(LOG_UINT16, shutter, &currentMotion.shutter)
 LOG_ADD(LOG_UINT8, maxRaw, &currentMotion.maxRawData)
 LOG_ADD(LOG_UINT8, minRaw, &currentMotion.minRawData)
 LOG_ADD(LOG_UINT8, Rawsum, &currentMotion.rawDataSum)
-#ifdef ESTIMATOR_TYPE_kalman
 LOG_ADD(LOG_UINT8, outlierCount, &outlierCount)
-#endif
 LOG_GROUP_STOP(motion)
 
 PARAM_GROUP_START(motion)

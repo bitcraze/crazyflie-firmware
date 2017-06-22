@@ -47,6 +47,7 @@
 #include "log.h"
 #include "param.h"
 #include "nvicconf.h"
+#include "estimator.h"
 
 #include "locodeck.h"
 
@@ -363,6 +364,7 @@ static const DeckDriver dwm1000_deck = {
   .name = "bcDWM1000",
 
   .usedGpio = 0,  // FIXME: set the used pins
+  .requiredEstimator = KalmanEstimator,
 
   .init = dwm1000Init,
   .test = dwm1000Test,

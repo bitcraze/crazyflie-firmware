@@ -11,7 +11,6 @@
 #include "crtp_localization_serviceMocks.h"
 #include "dw1000Mocks.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
 // #include "mock_arm_math.h"
 
 // TODO krri The mocking FW can not handle the arm_math.h file, it crashes while parsing it. We gave to use manual mocks instead.
@@ -21,7 +20,6 @@ void arm_std_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *
 void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
 
 #include "mock_estimator_kalman.h"
-#endif
 
 #include "freertosMocks.h"
 

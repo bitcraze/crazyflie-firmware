@@ -1,9 +1,9 @@
 
 #include "stabilizer.h"
-#include "stabilizer_types.h"
-
+#include "estimator_complementary.h"
 #include "sensfusion6.h"
 #include "position_estimator.h"
+#include "sensors.h"
 
 #define ATTITUDE_UPDATE_RATE RATE_250_HZ
 #define ATTITUDE_UPDATE_DT 1.0/ATTITUDE_UPDATE_RATE
@@ -11,12 +11,12 @@
 #define POS_UPDATE_RATE RATE_100_HZ
 #define POS_UPDATE_DT 1.0/POS_UPDATE_RATE
 
-void stateEstimatorInit(void)
+void estimatorComplementaryInit(void)
 {
   sensfusion6Init();
 }
 
-bool stateEstimatorTest(void)
+bool estimatorComplementaryTest(void)
 {
   bool pass = true;
 
@@ -25,9 +25,10 @@ bool stateEstimatorTest(void)
   return pass;
 }
 
-void stateEstimator(state_t *state, const sensorData_t *sensorData, const uint32_t tick)
+void estimatorComplementary(state_t *state, sensorData_t *sensorData, control_t *control, const uint32_t tick)
 {
   if (RATE_DO_EXECUTE(ATTITUDE_UPDATE_RATE, tick)) {
+    sensorsAcquire(sensorData, tick);
     sensfusion6UpdateQ(sensorData->gyro.x, sensorData->gyro.y, sensorData->gyro.z,
                        sensorData->acc.x, sensorData->acc.y, sensorData->acc.z,
                        ATTITUDE_UPDATE_DT);

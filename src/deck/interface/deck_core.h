@@ -168,4 +168,6 @@ const struct deck_driver* deckFindDriverByVidPid(uint8_t vid, uint8_t pid);
 /*find driver by name */
 const struct deck_driver* deckFindDriverByName(char* name);
 
+StateEstimatorType deckGetRequiredEstimator();
+
 #endif //__DECK_CODE_H__

@@ -104,9 +104,9 @@ static void stateEstimatorExternalizeState(state_t *state, sensorData_t *sensors
  * Additionally, the filter supports the incorporation of additional sensors into the state estimate
  *
  * This is done via the external functions:
- * - bool stateEstimatorEnqueueUWBPacket(uwbPacket_t *uwb)
- * - bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos)
- * - bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist)
+ * - bool estimatorKalmanEnqueueUWBPacket(uwbPacket_t *uwb)
+ * - bool estimatorKalmanEnqueuePosition(positionMeasurement_t *pos)
+ * - bool estimatorKalmanEnqueueDistance(distanceMeasurement_t *dist)
  *
  * As well as by the following internal functions and datatypes
  */
@@ -347,15 +347,13 @@ static void decoupleState(stateIdx_t state)
 // --------------------------------------------------
 
 
-void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *control)
+void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick)
 {
   // If the client (via a parameter update) triggers an estimator reset:
-  if (resetEstimation) { stateEstimatorInit(); resetEstimation = false; }
+  if (resetEstimation) { estimatorKalmanInit(); resetEstimation = false; }
 
   // Tracks whether an update to the state has been made, and the state therefore requires finalization
   bool doneUpdate = false;
-
-  uint32_t tick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
 
 #ifdef KALMAN_DECOUPLE_XY
   // Decouple position states
@@ -1250,7 +1248,7 @@ static void stateEstimatorExternalizeState(state_t *state, sensorData_t *sensors
 }
 
 
-void stateEstimatorInit(void) {
+void estimatorKalmanInit(void) {
   if (!isInit)
   {
     distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
@@ -1350,47 +1348,51 @@ static bool stateEstimatorEnqueueExternalMeasurement(xQueueHandle queue, void *m
   return (result==pdTRUE);
 }
 
-bool stateEstimatorEnqueueTDOA(tdoaMeasurement_t *uwb)
+bool estimatorKalmanEnqueueTDOA(tdoaMeasurement_t *uwb)
 {
+  ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(tdoaDataQueue, (void *)uwb);
 }
 
-bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos)
+bool estimatorKalmanEnqueuePosition(positionMeasurement_t *pos)
 {
+  ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(posDataQueue, (void *)pos);
 }
 
-bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist)
+bool estimatorKalmanEnqueueDistance(distanceMeasurement_t *dist)
 {
+  ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(distDataQueue, (void *)dist);
 }
 
-bool stateEstimatorEnqueueFlow(flowMeasurement_t *flow)
+bool estimatorKalmanEnqueueFlow(flowMeasurement_t *flow)
 {
   // A flow measurement (dnx,  dny) [accumulated pixels]
+  ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(flowDataQueue, (void *)flow);
 }
 
-
-bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof)
+bool estimatorKalmanEnqueueTOF(tofMeasurement_t *tof)
 {
   // A distance (distance) [m] to the ground along the z_B axis.
+  ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(tofDataQueue, (void *)tof);
 }
 
-bool stateEstimatorTest(void)
+bool estimatorKalmanTest(void)
 {
   // TODO: Figure out what we could test?
   return isInit;
 }
 
-float stateEstimatorGetElevation()
+float estimatorKalmanGetElevation()
 {
   // Return elevation, used in the optical flow
   return S[STATE_Z];
 }
 
-void stateEstimatorSetShift(float deltax, float deltay)
+void estimatorKalmanSetShift(float deltax, float deltay)
 {
   // Return elevation, used in the optical flow
   S[STATE_X] -= deltax;

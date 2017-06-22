@@ -1,5 +1,4 @@
 // @IGNORE_IF_NOT PLATFORM_CF2
-// @IGNORE_IF_NOT ESTIMATOR_TYPE_kalman
 
 // File under test lpsTwrTag.h
 #include "lpsTdoaTag.h"
@@ -650,7 +649,7 @@ static void mockRadioSetToReceiveMode() {
 }
 
 static void ignoreKalmanEstimatorValidation() {
-  stateEstimatorEnqueueTDOA_IgnoreAndReturn(true);
+  estimatorKalmanEnqueueTDOA_IgnoreAndReturn(true);
 }
 
 #define STATE_ESTIMATOR_MAX_NR_OF_CALLS 10
@@ -659,9 +658,9 @@ static tdoaMeasurement_t stateEstimatorExpectations[STATE_ESTIMATOR_MAX_NR_OF_CA
 static int stateEstimatorIndex = 0;
 static int stateEstimatorNrOfCalls = 0;
 
-static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int cmock_num_calls) {
+static bool estimatorKalmanEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int cmock_num_calls) {
   char message[100];
-  sprintf(message, "Failed in call %i to stateEstimatorEnqueueTDOA()", cmock_num_calls);
+  sprintf(message, "Failed in call %i to kalmanEstimatorEnqueueTDOA()", cmock_num_calls);
 
   tdoaMeasurement_t* expected = &stateEstimatorExpectations[cmock_num_calls];
   // TODO krri What is a reasonable accepted error here? 2 cm is needed to make the clock drift cases pass (expected: -0.500000 actual: -0.487943).
@@ -684,7 +683,7 @@ static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int
 static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     TEST_ASSERT_TRUE(stateEstimatorIndex < STATE_ESTIMATOR_MAX_NR_OF_CALLS);
 
-    stateEstimatorEnqueueTDOA_StubWithCallback(stateEstimatorEnqueueTDOAMockCallback);
+    estimatorKalmanEnqueueTDOA_StubWithCallback(estimatorKalmanEnqueueTDOAMockCallback);
 
     tdoaMeasurement_t* measurement = &stateEstimatorExpectations[stateEstimatorIndex];
 
