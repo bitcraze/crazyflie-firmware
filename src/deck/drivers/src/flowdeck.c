@@ -25,6 +25,7 @@
 /* flowdeck.c: Flow deck driver */
 #include "deck.h"
 #include "debug.h"
+#include "system.h"
 #include "log.h"
 #include "param.h"
 
@@ -241,6 +242,8 @@ static void InitRegisters()
 
 static void pamotionTask(void *param)
 {
+  systemWaitStart();
+
   while(1) {
     vTaskDelay(10);
 
