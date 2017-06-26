@@ -193,7 +193,7 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
 #define IN_FLIGHT_TIME_THRESHOLD (500)
 
 // the reversion of pitch and roll to zero
-#define ROLLPITCH_ZERO_REVERSION (0)
+#define ROLLPITCH_ZERO_REVERSION (0.001f)
 
 // The bounds on the covariance, these shouldn't be hit, but sometimes are... why?
 #define MAX_COVARIANCE (100)
@@ -746,11 +746,25 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
   float sa = arm_sin_f32(angle/2.0f);
   float dq[4] = {ca , sa*dtwx/angle , sa*dtwy/angle , sa*dtwz/angle};
 
-  // rotate the quad's attitude by the delta quaternion vector computed above
-  float tmpq0 = (dq[0]*q[0] - dq[1]*q[1] - dq[2]*q[2] - dq[3]*q[3]);
-  float tmpq1 = (1.0f-ROLLPITCH_ZERO_REVERSION)*(dq[1]*q[0] + dq[0]*q[1] + dq[3]*q[2] - dq[2]*q[3]);
-  float tmpq2 = (1.0f-ROLLPITCH_ZERO_REVERSION)*(dq[2]*q[0] - dq[3]*q[1] + dq[0]*q[2] + dq[1]*q[3]);
-  float tmpq3 = (1.0f-ROLLPITCH_ZERO_REVERSION)*(dq[3]*q[0] + dq[2]*q[1] - dq[1]*q[2] + dq[0]*q[3]);
+  float tmpq0;
+  float tmpq1;
+  float tmpq2;
+  float tmpq3;
+
+  if (quadIsFlying) {
+    // rotate the quad's attitude by the delta quaternion vector computed above
+    tmpq0 = (dq[0]*q[0] - dq[1]*q[1] - dq[2]*q[2] - dq[3]*q[3]);
+    tmpq1 = (1.0f)*(dq[1]*q[0] + dq[0]*q[1] + dq[3]*q[2] - dq[2]*q[3]);
+    tmpq2 = (1.0f)*(dq[2]*q[0] - dq[3]*q[1] + dq[0]*q[2] + dq[1]*q[3]);
+    tmpq3 = (1.0f)*(dq[3]*q[0] + dq[2]*q[1] - dq[1]*q[2] + dq[0]*q[3]);
+  } else {
+    // rotate the quad's attitude by the delta quaternion vector computed above
+    tmpq0 = (dq[0]*q[0] - dq[1]*q[1] - dq[2]*q[2] - dq[3]*q[3]);
+    tmpq1 = (1.0f-ROLLPITCH_ZERO_REVERSION)*(dq[1]*q[0] + dq[0]*q[1] + dq[3]*q[2] - dq[2]*q[3]);
+    tmpq2 = (1.0f-ROLLPITCH_ZERO_REVERSION)*(dq[2]*q[0] - dq[3]*q[1] + dq[0]*q[2] + dq[1]*q[3]);
+    tmpq3 = (1.0f-ROLLPITCH_ZERO_REVERSION)*(dq[3]*q[0] + dq[2]*q[1] - dq[1]*q[2] + dq[0]*q[3]);
+  }
+
 
   // normalize and store the result
   float norm = arm_sqrt(tmpq0*tmpq0 + tmpq1*tmpq1 + tmpq2*tmpq2 + tmpq3*tmpq3);
