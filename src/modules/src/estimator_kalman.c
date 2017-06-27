@@ -355,6 +355,8 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   // Tracks whether an update to the state has been made, and the state therefore requires finalization
   bool doneUpdate = false;
 
+  uint32_t osTick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
+
 #ifdef KALMAN_DECOUPLE_XY
   // Decouple position states
   decoupleState(STATE_X);
@@ -389,7 +391,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   thrustAccumulatorCount++;
 
   // Run the system dynamics to predict the state forward.
-  if ((tick-lastPrediction) >= configTICK_RATE_HZ/PREDICT_RATE // update at the PREDICT_RATE
+  if ((osTick-lastPrediction) >= configTICK_RATE_HZ/PREDICT_RATE // update at the PREDICT_RATE
       && gyroAccumulatorCount > 0
       && accAccumulatorCount > 0
       && thrustAccumulatorCount > 0)
@@ -404,14 +406,14 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
 
     thrustAccumulator /= thrustAccumulatorCount;
 
-    float dt = (float)(tick-lastPrediction)/configTICK_RATE_HZ;
+    float dt = (float)(osTick-lastPrediction)/configTICK_RATE_HZ;
     stateEstimatorPredict(thrustAccumulator, &accAccumulator, &gyroAccumulator, dt);
 
     if (!quadIsFlying) { // accelerometers give us information about attitude on slanted ground
       stateEstimatorUpdateWithAccOnGround(&accAccumulator);
     }
 
-    lastPrediction = tick;
+    lastPrediction = osTick;
 
     accAccumulator = (Axis3f){.axis={0}};
     accAccumulatorCount = 0;
@@ -427,8 +429,8 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   /**
    * Add process noise every loop, rather than every prediction
    */
-  stateEstimatorAddProcessNoise((float)(tick-lastPNUpdate)/configTICK_RATE_HZ);
-  lastPNUpdate = tick;
+  stateEstimatorAddProcessNoise((float)(osTick-lastPNUpdate)/configTICK_RATE_HZ);
+  lastPNUpdate = osTick;
 
 
 
@@ -442,7 +444,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
     baroAccumulatorCount++;
   }
 
-  if ((tick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
+  if ((osTick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
       && baroAccumulatorCount > 0)
   {
     baroAccumulator.asl /= baroAccumulatorCount;
@@ -451,7 +453,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
 
     baroAccumulator.asl = 0;
     baroAccumulatorCount = 0;
-    lastBaroUpdate = tick;
+    lastBaroUpdate = osTick;
     doneUpdate = true;
 #endif
   }
@@ -505,7 +507,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
 
   if (doneUpdate)
   {
-    stateEstimatorFinalize(sensors, tick);
+    stateEstimatorFinalize(sensors, osTick);
     stateEstimatorAssertNotNaN();
   }
 
@@ -513,7 +515,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
    * Finally, the internal state is externalized.
    * This is done every round, since the external state includes some sensor data
    */
-  stateEstimatorExternalizeState(state, sensors, tick);
+  stateEstimatorExternalizeState(state, sensors, osTick);
   stateEstimatorAssertNotNaN();
 }
 
