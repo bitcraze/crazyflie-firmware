@@ -48,6 +48,10 @@ void stateEstimatorInit(StateEstimatorType estimator) {
   DEBUG_PRINT("Using estimator %d\n", currentEstimator);
 }
 
+StateEstimatorType getStateEstimator(void) {
+  return currentEstimator;
+}
+
 static void initEstimator() {
   estimatorFunctions[currentEstimator].init();
 }
