@@ -27,8 +27,8 @@ bool estimatorComplementaryTest(void)
 
 void estimatorComplementary(state_t *state, sensorData_t *sensorData, control_t *control, const uint32_t tick)
 {
+  sensorsAcquire(sensorData, tick); // Read sensors at full rate (1000Hz)
   if (RATE_DO_EXECUTE(ATTITUDE_UPDATE_RATE, tick)) {
-    sensorsAcquire(sensorData, tick);
     sensfusion6UpdateQ(sensorData->gyro.x, sensorData->gyro.y, sensorData->gyro.z,
                        sensorData->acc.x, sensorData->acc.y, sensorData->acc.z,
                        ATTITUDE_UPDATE_DT);
