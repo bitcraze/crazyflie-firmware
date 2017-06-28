@@ -30,12 +30,19 @@
 #include <stdbool.h>
 #include <string.h>
 
+// Based on 84MHz peripheral clock
+#define SPI_BAUDRATE_21MHZ  SPI_BaudRatePrescaler_4     // 21MHz
+#define SPI_BAUDRATE_12MHZ  SPI_BaudRatePrescaler_8     // 11.5MHz
+#define SPI_BAUDRATE_6MHZ   SPI_BaudRatePrescaler_16    // 5.25MHz
+#define SPI_BAUDRATE_3MHZ   SPI_BaudRatePrescaler_32    // 2.625MHz
+#define SPI_BAUDRATE_2MHZ   SPI_BaudRatePrescaler_64    // 1.3125MHz
+
 /**
  * Initialize the SPI.
  */
 void spiBegin(void);
-void spiConfigureSlow(void);
-void spiConfigureFast(void);
+void spiBeginTransaction(uint16_t baudRatePrescaler);
+void spiEndTransaction();
 
 /* Send the data_tx buffer and receive into the data_rx buffer */
 bool spiExchange(size_t length, const uint8_t *data_tx, uint8_t *data_rx);

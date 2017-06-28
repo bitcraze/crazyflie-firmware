@@ -76,6 +76,8 @@ static crc crcTable[256];
 static usdLogConfig_t usdLogConfig;
 
 static BYTE exchangeBuff[512];
+static uint16_t spiSpeed;
+
 #ifdef USD_RUN_DISKIO_FUNCTION_TESTS
 DWORD workBuff[512];  /* 2048 byte working buffer */
 #endif
@@ -125,20 +127,22 @@ static DISKIO_LowLevelDriver_t fatDrv =
 static void initSpi(void)
 {
   spiBegin();   /* Enable SPI function */
+  spiSpeed = SPI_BAUDRATE_2MHZ;
+
   pinMode(USD_CS_PIN, OUTPUT);
-  csHigh();
+  digitalWrite(USD_CS_PIN, 1);
 
   // FIXME: DELAY of 10ms?
 }
 
 static void setSlowSpiMode(void)
 {
-  spiConfigureSlow();
+  spiSpeed = SPI_BAUDRATE_2MHZ;
 }
 
 static void setFastSpiMode(void)
 {
-  spiConfigureFast();
+  spiSpeed = SPI_BAUDRATE_21MHZ;
 }
 
 /* Exchange a byte */
@@ -166,10 +170,17 @@ static void xmitSpiMulti(const BYTE *buff, UINT btx)
 static void csHigh(void)
 {
   digitalWrite(USD_CS_PIN, 1);
+
+  // Dummy clock (force DO hi-z for multiple slave SPI)
+  // Moved here from fatfs_sd.c to handle bus release
+  xchgSpi(0xFF);
+
+  spiEndTransaction();
 }
 
 static void csLow(void)
 {
+  spiBeginTransaction(spiSpeed);
   digitalWrite(USD_CS_PIN, 0);
 }
 

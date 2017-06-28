@@ -152,7 +152,7 @@
 #define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define VL53_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
-#define USDLOG_TASK_STACKSIZE         configMINIMAL_STACK_SIZE
+#define USDLOG_TASK_STACKSIZE         (2 * configMINIMAL_STACK_SIZE)
 #define USDWRITE_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
