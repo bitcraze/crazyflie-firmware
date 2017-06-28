@@ -29,9 +29,9 @@
 #include "stabilizer_types.h"
 
 typedef enum {
-  AnyEstimator = 0,
-  ComplementaryEstimator,
-  KalmanEstimator,
+  anyEstimator = 0,
+  complementaryEstimator,
+  kalmanEstimator,
 } StateEstimatorType;
 
 void stateEstimatorInit(StateEstimatorType estimator);

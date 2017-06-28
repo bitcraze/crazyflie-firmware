@@ -364,7 +364,7 @@ static const DeckDriver dwm1000_deck = {
   .name = "bcDWM1000",
 
   .usedGpio = 0,  // FIXME: set the used pins
-  .requiredEstimator = KalmanEstimator,
+  .requiredEstimator = kalmanEstimator,
 
   .init = dwm1000Init,
   .test = dwm1000Test,

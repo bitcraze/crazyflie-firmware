@@ -179,7 +179,7 @@ void vl53l0xTask(void* arg)
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
     // occur as >8 [m] measurements
-    if (getStateEstimator() == KalmanEstimator &&
+    if (getStateEstimator() == kalmanEstimator &&
         range_last < RANGE_OUTLIER_LIMIT) {
       // Form measurement
       tofMeasurement_t tofData;

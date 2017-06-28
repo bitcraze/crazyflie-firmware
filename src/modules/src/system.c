@@ -171,7 +171,7 @@ void systemTask(void *arg)
   commInit();
   commanderInit();
 
-  StateEstimatorType estimator = AnyEstimator;
+  StateEstimatorType estimator = anyEstimator;
 #ifdef PLATFORM_CF2
   deckInit();
   estimator = deckGetRequiredEstimator();

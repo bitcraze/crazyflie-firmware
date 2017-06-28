@@ -6,8 +6,8 @@
 #include "estimator_complementary.h"
 #include "estimator_kalman.h"
 
-#define DEFAULT_ESTIMATOR ComplementaryEstimator
-static StateEstimatorType currentEstimator = AnyEstimator;
+#define DEFAULT_ESTIMATOR complementaryEstimator
+static StateEstimatorType currentEstimator = anyEstimator;
 static bool isInit;
 
 static void initEstimator();
@@ -32,12 +32,12 @@ void stateEstimatorInit(StateEstimatorType estimator) {
 
   currentEstimator = estimator;
 
-  if (AnyEstimator == currentEstimator) {
+  if (anyEstimator == currentEstimator) {
     currentEstimator = DEFAULT_ESTIMATOR;
   }
 
   StateEstimatorType forcedEstimator = ESTIMATOR_NAME;
-  if (forcedEstimator != AnyEstimator) {
+  if (forcedEstimator != anyEstimator) {
     DEBUG_PRINT("Estimator type forced\n");
     currentEstimator = forcedEstimator;
   }

@@ -49,7 +49,7 @@ static void enumerateDecks(void);
 static void checkPeriphAndGpioConflicts(void);
 
 static void scanRequiredSystemProperties(void);
-static StateEstimatorType requiredEstimator = AnyEstimator;
+static StateEstimatorType requiredEstimator = anyEstimator;
 static bool registerRequiredEstimator(StateEstimatorType estimator);
 
 #ifndef DECK_FORCE
@@ -342,9 +342,9 @@ static bool registerRequiredEstimator(StateEstimatorType estimator)
 {
   bool isError = false;
 
-  if (AnyEstimator != estimator)
+  if (anyEstimator != estimator)
   {
-    if (AnyEstimator == requiredEstimator)
+    if (anyEstimator == requiredEstimator)
     {
       requiredEstimator = estimator;
     }

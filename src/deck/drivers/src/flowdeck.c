@@ -368,7 +368,7 @@ static const DeckDriver pamotion_deck = {
   .name = "bcFlow",
 
   .usedGpio = 0,  // FIXME: set the used pins
-  .requiredEstimator = KalmanEstimator,
+  .requiredEstimator = kalmanEstimator,
 
   .init = pamotionInit,
   .test = pamotionTest,
