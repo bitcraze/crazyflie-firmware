@@ -708,14 +708,11 @@ static bool icm20789BaroReadRawPressureTemp(int *pressure, int *temp)
        // Temperature
       *temp = dataRead[6] << 8 | dataRead[7];
 
-#ifdef DEBUG
+#ifdef ICM20789_DEBUG_PRINT
     float T = -45.f + 175.f/65536.f * (float)*temp;
-    INV_MSG(INV_MSG_LEVEL_INFO, "raw temp = %d\r\n", *temp);
-    INV_MSG(INV_MSG_LEVEL_INFO, "Temperature = %f\r\n", T);
-#endif
-
-#ifdef DEBUG
-    INV_MSG(INV_MSG_LEVEL_INFO, "raw pressure = %d\r\n", *pressure);
+    DEBUG_PRINT("raw temp = %d\r\n", *temp);
+    DEBUG_PRINT("Temperature = %f\r\n", T);
+    DEBUG_PRINT("raw pressure = %d\r\n", *pressure);
 #endif
     }
 
