@@ -165,7 +165,7 @@ void ak8963GetHeading(int16_t *x, int16_t *y, int16_t *z)
 {
 //  i2cdevWriteByte(I2Cx, devAddr, AK8963_RA_CNTL, AK8963_MODE_SINGLE);
 //  delay(10);
-  i2cdevRead(I2Cx, devAddr, AK8963_RA_HXL, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, AK8963_RA_HXL, 6, buffer);
   *x = (((int16_t) buffer[1]) << 8) | buffer[0];
   *y = (((int16_t) buffer[3]) << 8) | buffer[2];
   *z = (((int16_t) buffer[5]) << 8) | buffer[4];
@@ -174,21 +174,21 @@ int16_t ak8963GetHeadingX()
 {
   i2cdevWriteByte(I2Cx, devAddr, AK8963_RA_CNTL, AK8963_MODE_SINGLE);
 //  delay(10);
-  i2cdevRead(I2Cx, devAddr, AK8963_RA_HXL, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, AK8963_RA_HXL, 2, buffer);
   return (((int16_t) buffer[1]) << 8) | buffer[0];
 }
 int16_t ak8963GetHeadingY()
 {
   i2cdevWriteByte(I2Cx, devAddr, AK8963_RA_CNTL, AK8963_MODE_SINGLE);
 //  delay(10);
-  i2cdevRead(I2Cx, devAddr, AK8963_RA_HYL, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, AK8963_RA_HYL, 2, buffer);
   return (((int16_t) buffer[1]) << 8) | buffer[0];
 }
 int16_t ak8963GetHeadingZ()
 {
   i2cdevWriteByte(I2Cx, devAddr, AK8963_RA_CNTL, AK8963_MODE_SINGLE);
 //  delay(10);
-  i2cdevRead(I2Cx, devAddr, AK8963_RA_HZL, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, AK8963_RA_HZL, 2, buffer);
   return (((int16_t) buffer[1]) << 8) | buffer[0];
 }
 
@@ -235,7 +235,7 @@ void ak8963DisableI2C()
 // ASA* registers
 void ak8963GetAdjustment(int8_t *x, int8_t *y, int8_t *z)
 {
-  i2cdevRead(I2Cx, devAddr, AK8963_RA_ASAX, 3, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, AK8963_RA_ASAX, 3, buffer);
   *x = buffer[0];
   *y = buffer[1];
   *z = buffer[2];
@@ -245,7 +245,7 @@ void ak8963SetAdjustment(int8_t x, int8_t y, int8_t z)
   buffer[0] = x;
   buffer[1] = y;
   buffer[2] = z;
-  i2cdevWrite(I2Cx, devAddr, AK8963_RA_ASAX, 3, buffer);
+  i2cdevWriteReg8(I2Cx, devAddr, AK8963_RA_ASAX, 3, buffer);
 }
 uint8_t ak8963GetAdjustmentX()
 {

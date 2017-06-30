@@ -35,4 +35,8 @@ bool icm20789TestConnection(void);
 bool icm20789SelfTest(void);
 void icm20789ReadAllSensors(uint8_t *buffer);
 
+bool icm20789BaroInit(I2C_Dev *i2cPort);
+bool icm20789BaroStartMeasurement(void);
+bool icm20789BaroGetPressureData(float* pressure,float* temperature, float* asf);
+
 #endif /* ICM20789_H_ */

@@ -54,7 +54,7 @@
 #endif
 
 // Definitions of sensors I2C bus
-#define I2C_SENSORS_CLOCK_SPEED             400000
+#define I2C_SENSORS_CLOCK_SPEED             100000
 
 // Definition of eeprom and deck I2C buss
 #define I2C_DECK_CLOCK_SPEED                400000
@@ -279,6 +279,7 @@ static void i2cdrvInitBus(I2cDrv* i2c)
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_InitStructure.GPIO_Pin = i2c->def->gpioSCLPin; // SCL
   GPIO_Init(i2c->def->gpioSCLPort, &GPIO_InitStructure);
   GPIO_InitStructure.GPIO_Pin =  i2c->def->gpioSDAPin; // SDA
