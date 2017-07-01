@@ -33,6 +33,7 @@
 #include "system.h"
 #include "debug.h"
 #include "log.h"
+#include "param.h"
 
 #include "i2cdev.h"
 #include "vl53l0x.h"
@@ -1164,6 +1165,10 @@ static const DeckDriver vl53l0x_deck = {
 };
 
 DECK_DRIVER(vl53l0x_deck);
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
+PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(range)
 LOG_ADD(LOG_UINT16, zrange, &range_last)
