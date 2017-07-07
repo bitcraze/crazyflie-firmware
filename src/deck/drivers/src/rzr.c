@@ -95,12 +95,6 @@ static void rzrInit(DeckInfo *info)
 // Remap motor PWM output
   motorsInit(motorMapRZRBrushless);
 
-  // Initialize the sonar deck driver
-#ifdef ENABLE_SONAR
-  const DeckDriver *sonar = deckFindDriverByName("bcMaxSonar");
-  sonar->init(NULL);
-#endif
-
   isInit = true;
 }
 
