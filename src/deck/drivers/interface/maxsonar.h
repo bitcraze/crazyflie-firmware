@@ -41,16 +41,26 @@
 #include <stdint.h>
 
 /**
- * \def MAXSONAR_ENABLED
- * Enable the MaxSonar driver (used by the proximity measurement subsystem).
+ * \def MAXSONAR_AN_ENABLED
+ * Enable the MaxSonar analog driver (used by the proximity measurement subsystem).
  */
-//#define MAXSONAR_ENABLED
-
+//#define MAXSONAR_AN_ENABLED
 /**
  * \def MAXSONAR_DECK_GPIO
  * The GPIO pin to use if reading via the analog interface of a MaxSonar sensor.
  */
 #define MAXSONAR_DECK_GPIO DECK_GPIO_TX2
+
+/**
+ * \def MAXSONAR_I2C_ENABLED
+ * Enable the MaxSonar I2C driver (used by the proximity measurement subsystem).
+ */
+#define MAXSONAR_I2C_ENABLED
+/**
+ * \def MAXSONAR_I2C_DEV_ADDR
+ * The I2C device address of the MaxSonar sensor.
+ */
+#define MAXSONAR_I2C_DEV_ADDR   0x70
 
 /**
  * \def MAXSONAR_LOG_ENABLED
@@ -64,7 +74,8 @@
  * Sensors should be listed once for each interface, for instance MB1040AN (Analog), MB1040I2C (I2C), MB1040PWM (PWM) etc.
  */
 typedef enum {
-  MAXSONAR_MB1040_AN = 0, /* The MB1040 (LV-MaxSonar-EZ4) sensor read by analog conversion (GPIO pin read by ADC). */
+  MAXSONAR_MB1040_AN  = 0, /* The MB1040 (LV-MaxSonar-EZ) sensor read by analog conversion (GPIO pin read by ADC). */
+  MAXSONAR_MB1232_I2C = 1, /* The MB1232 (I2CXL-MaxSonar-EZ) sensor read by I2C */
 } maxSonarSensor_t;
 
 uint32_t maxSonarReadDistance(maxSonarSensor_t type, uint32_t *accuracy);

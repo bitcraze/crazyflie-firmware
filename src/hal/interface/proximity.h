@@ -33,7 +33,7 @@
  * \def PROXIMITY_ENABLED
  * Enable the proximity measurement subsystem.
  */
-//#define PROXIMITY_ENABLED
+#define PROXIMITY_ENABLED
 
 /**
  * \def PROXIMITY_TASK_FREQ
@@ -59,7 +59,7 @@
  * \def PROXIMITY_LOG_ENABLED
  * Uncomment to enable log variables.
  */
-//#define PROXIMITY_LOG_ENABLED
+#define PROXIMITY_LOG_ENABLED
 
 void proximityInit(void);
 

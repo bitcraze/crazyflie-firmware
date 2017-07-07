@@ -589,10 +589,12 @@ static bool icm20789BaroReadID(uint8_t * whoami)
   dataWrite[0] = 0xEF;
   dataWrite[1] = 0xC8;
   status = i2cdevWrite(I2Cx, BARO_I2C_ADDR, 2, (uint8_t *) dataWrite);
-  DEBUG_PRINT("read_id_from_i2c %d \n", status);
 
   status = i2cdevRead(I2Cx, BARO_I2C_ADDR, 3, (uint8_t *) dataRead);
-  DEBUG_PRINT("read_id_from_i2c1 %d \n", status);
+  if (!status)
+  {
+    DEBUG_PRINT("Read id from i2c [FAILED]\n");
+  }
 
   out = dataRead[0] << 8 | dataRead[1];
   out &= 0x3f; // take bit5 to 0

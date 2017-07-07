@@ -121,7 +121,8 @@ static void stabilizerTask(void* param)
   tick = 1;
 
   while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+    //vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+    sensorsWaitDataReady(); // Sync to sensor reading
 
     getExtPosition(&state);
     stateEstimator(&state, &sensorData, &control, tick);

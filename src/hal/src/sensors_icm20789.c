@@ -96,6 +96,7 @@ static xQueueHandle gyroDataQueue;
 static xQueueHandle magnetometerDataQueue;
 static xQueueHandle barometerDataQueue;
 static xSemaphoreHandle sensorsDataReady;
+static xSemaphoreHandle dataReady;
 
 static bool isInit = false;
 static sensorData_t sensors;
@@ -184,12 +185,18 @@ static void sensorsTask(void *param)
       // these functions process the respective data and queue it on the output queues
       processAccGyroMeasurements(&(buffer[0]));
 
-      vTaskSuspendAll(); // ensure all queues are populated at the same time
+//      vTaskSuspendAll(); // ensure all queues are populated at the same time
       xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
       xQueueOverwrite(gyroDataQueue, &sensors.gyro);
-      xTaskResumeAll();
+      xSemaphoreGive(dataReady);
+//      xTaskResumeAll();
     }
   }
+}
+
+void sensorsWaitDataReady(void)
+{
+  xSemaphoreTake(dataReady, portMAX_DELAY);
 }
 
 #ifdef ICM20789_ENABLE_BARO
@@ -347,6 +354,7 @@ void sensorsInit(void)
   }
 
   sensorsDataReady = xSemaphoreCreateBinary();
+  dataReady = xSemaphoreCreateBinary();
 
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();

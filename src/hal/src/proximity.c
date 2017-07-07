@@ -23,11 +23,13 @@
  *
  * proximity.c - Implementation of hardware abstraction layer for proximity sensors
  */
+#define DEBUG_MODULE "PRXIMITY"
 
 #include <string.h>
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "stm32fxxx.h"
 #include "config.h"
 #include "deck.h"
 #include "proximity.h"
@@ -35,8 +37,8 @@
 #include "system.h"
 #include "param.h"
 #include "log.h"
+#include "debug.h"
 
-#include "stm32fxxx.h"
 
 /* Flag indicating if the proximityInit() function has been called or not. */
 static bool isInit = false;
@@ -146,9 +148,12 @@ static void proximityTask(void* param)
   {
     vTaskDelayUntil(&lastWakeTime, F2T(PROXIMITY_TASK_FREQ));
 
-#if defined(MAXSONAR_ENABLED)
+#if defined(MAXSONAR_AN_ENABLED)
     /* Read the MaxBotix sensor. */
     proximityDistance = maxSonarReadDistance(MAXSONAR_MB1040_AN, &proximityAccuracy);
+#elif defined(MAXSONAR_I2C_ENABLED)
+    /* Read the MaxBotix sensor. */
+    proximityDistance = maxSonarReadDistance(MAXSONAR_MB1232_I2C, &proximityAccuracy);
 #endif
 
     /* Get the latest average value calculated. */
@@ -173,8 +178,12 @@ void proximityInit(void)
 
 #if defined(PROXIMITY_ENABLED)
   /* Only start the task if the proximity subsystem is enabled in conf.h */
-  xTaskCreate(proximityTask, PROXIMITY_TASK_NAME,
-              PROXIMITY_TASK_STACKSIZE, NULL, PROXIMITY_TASK_PRI, NULL);
+  if (pdTRUE == xTaskCreate(proximityTask, PROXIMITY_TASK_NAME,
+                            PROXIMITY_TASK_STACKSIZE, NULL,
+                            PROXIMITY_TASK_PRI, NULL))
+  {
+    DEBUG_PRINT("Up and running [OK]\n");
+  }
 #endif
 
   isInit = true;
