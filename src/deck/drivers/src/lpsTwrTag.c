@@ -29,6 +29,7 @@
 #include <math.h>
 
 #include "lpsTwrTag.h"
+#include "lpsTdma.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -73,6 +74,10 @@ static bool lpp_transaction = false;
 static lpsLppShortPacket_t lppShortPacket;
 
 static lpsAlgoOptions_t* options;
+
+// TDMA handling
+static bool tdmaSynchronized;
+static dwTime_t frameStart;
 
 static void txcallback(dwDevice_t *dev)
 {
@@ -197,6 +202,14 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         estimatorKalmanEnqueueDistance(&dist);
       }
 
+      if (options->useTdma && current_anchor == 0) {
+        // Final packet is sent by us and received by the anchor
+        // We use it as synchonisation time for TDMA
+        dwTime_t offset = { .full =final_tx.full - final_rx.full };
+        frameStart.full = TDMA_LAST_FRAME(final_rx.full) + offset.full;
+        tdmaSynchronized = true;
+      }
+
       ranging_complete = true;
 
       return 0;
@@ -206,10 +219,39 @@ static uint32_t rxcallback(dwDevice_t *dev) {
   return MAX_TIMEOUT;
 }
 
+/* Adjust time for schedule transfer by DW1000 radio. Set 9 LSB to 0 */
+static uint32_t adjustTxRxTime(dwTime_t *time)
+{
+  uint32_t added = (1<<9) - (time->low32 & ((1<<9)-1));
+  time->low32 = (time->low32 & ~((1<<9)-1)) + (1<<9);
+  return added;
+}
+
+/* Calculate the transmit time for a given timeslot in the current frame */
+static dwTime_t transmitTimeForSlot(int slot)
+{
+  dwTime_t transmitTime = { .full = 0 };
+  // Calculate start of the slot
+  transmitTime.full = frameStart.full + slot*TDMA_SLOT_LEN;
+
+  // DW1000 can only schedule time with 9 LSB at 0, adjust for it
+  adjustTxRxTime(&transmitTime);
+  return transmitTime;
+}
+
 void initiateRanging(dwDevice_t *dev)
 {
-  current_anchor ++;
-  if (current_anchor >= LOCODECK_NR_OF_ANCHORS) {
+  if (!options->useTdma || tdmaSynchronized) {
+    if (options->useTdma) {
+      // go to next TDMA frame
+      frameStart.full += TDMA_FRAME_LEN;
+    }
+
+    current_anchor ++;
+    if (current_anchor >= LOCODECK_NR_OF_ANCHORS) {
+      current_anchor = 0;
+    }
+  } else {
     current_anchor = 0;
   }
 
@@ -224,6 +266,11 @@ void initiateRanging(dwDevice_t *dev)
   dwNewTransmit(dev);
   dwSetDefaults(dev);
   dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+2);
+
+  if (options->useTdma && tdmaSynchronized) {
+    dwTime_t txTime = transmitTimeForSlot(options->tdmaSlot);
+    dwSetTxRxTime(dev, txTime);
+  }
 
   dwWaitForResponse(dev, true);
   dwStartTransmit(dev);
@@ -345,6 +392,8 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
 
   options->rangingState = 0;
   ranging_complete = false;
+
+  tdmaSynchronized = false;
 
   memset(options->distance, 0, sizeof(options->distance));
   memset(options->pressures, 0, sizeof(options->pressures));

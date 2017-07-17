@@ -195,16 +195,16 @@ PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
 PROJ_OBJ_CF2 += vl53l0x.o
 PROJ_OBJ_CF2 += locodeck.o
-ifeq ($(LPS_TDMA_ENABLE), 1)
-PROJ_OBJ_CF2 += lpsTwrTdmaTag.o
-else
 PROJ_OBJ_CF2 += lpsTwrTag.o
-endif
 PROJ_OBJ_CF2 += flowdeck.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 PROJ_OBJ_CF2 += lpsTdoaTag.o
 CFLAGS += -DLPS_TDOA_ENABLE
+endif
+
+ifeq ($(LPS_TDMA_ENABLE), 1)
+CFLAGS += -DLPS_TDMA_ENABLE
 endif
 
 #Deck tests

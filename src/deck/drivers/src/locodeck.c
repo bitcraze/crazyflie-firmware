@@ -50,6 +50,7 @@
 #include "estimator.h"
 
 #include "locodeck.h"
+#include "lpsTdma.h"
 
 #if LPS_TDOA_ENABLE
   #include "lpsTdoaTag.h"
@@ -74,7 +75,7 @@
 // combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
 
 static lpsAlgoOptions_t algoOptions = {
-  .tagAddress = 0xbccf000000000008,
+  .tagAddress = 0xbccf000000000008 + TDMA_SLOT,
   .anchorAddress = {
     0xbccf000000000000,
     0xbccf000000000001,
@@ -93,6 +94,11 @@ static lpsAlgoOptions_t algoOptions = {
   .rangingFailedThreshold = 6,
 
   .combinedAnchorPositionOk = false,
+
+#ifdef LPS_TDMA_ENABLE
+  .useTdma = true,
+  .tdmaSlot = TDMA_SLOT,
+#endif
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
