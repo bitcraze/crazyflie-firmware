@@ -40,10 +40,7 @@
 #endif
 
 #ifndef TDMA_SLOT
-#ifdef LPS_TDMA_ENABLE
-#warning "Slot number for TDMA not defined! Defaulting to 0."
-#endif
-#define TDMA_SLOT 0
+#define TDMA_SLOT -1
 #endif
 
 #define TDMA_SLOT_BITS 27

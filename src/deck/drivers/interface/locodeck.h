@@ -62,7 +62,7 @@ typedef struct {
   const uint64_t antennaDelay;
   const int rangingFailedThreshold;
 
-  const locoAddress_t tagAddress;
+  locoAddress_t tagAddress;
   const locoAddress_t anchorAddress[LOCODECK_NR_OF_ANCHORS];
 
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];

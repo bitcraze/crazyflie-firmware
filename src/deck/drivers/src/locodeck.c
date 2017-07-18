@@ -49,6 +49,8 @@
 #include "nvicconf.h"
 #include "estimator.h"
 
+#include "configblock.h"
+
 #include "locodeck.h"
 #include "lpsTdma.h"
 
@@ -75,7 +77,7 @@
 // combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
 
 static lpsAlgoOptions_t algoOptions = {
-  .tagAddress = 0xbccf000000000008 + TDMA_SLOT,
+  .tagAddress = 0xbccf000000000008,
   .anchorAddress = {
     0xbccf000000000000,
     0xbccf000000000001,
@@ -152,12 +154,26 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
 //   timeout = algorithm->onEvent(dev, eventReceiveFailed);
 // }
 
+static void updateTagTdmaSlot(lpsAlgoOptions_t * options)
+{
+  if (options->tdmaSlot < 0) {
+    uint64_t radioAddress = configblockGetRadioAddress();
+    int nslot = 1;
+    for (int i=0; i<TDMA_NSLOTS_BITS; i++) {
+      nslot *= 2;
+    }
+    options->tdmaSlot = radioAddress % nslot;
+  }
+  options->tagAddress += options->tdmaSlot;
+}
 
 static void uwbTask(void* parameters)
 {
   lppShortQueue = xQueueCreate(10, sizeof(lpsLppShortPacket_t));
 
   systemWaitStart();
+
+  updateTagTdmaSlot(&algoOptions);
 
   algorithm->init(dwm, &algoOptions);
 
