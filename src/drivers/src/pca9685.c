@@ -169,7 +169,7 @@ struct asyncRequest
   uint16_t durations[16];
 };
 
-static struct asyncRequest reqPush;
+// reqPush is not static for thread safety
 static struct asyncRequest reqPop;
 
 static TaskHandle_t task;
@@ -208,9 +208,11 @@ bool pca9685startAsyncTask()
 bool pca9685setDutiesAsync(
   int addr, int chanBegin, int nChan, float const *duties)
 {
-  reqPush.addr = addr;
-  reqPush.chanBegin = chanBegin;
-  reqPush.nChan = nChan;
+  struct asyncRequest reqPush = {
+    .addr = addr,
+    .chanBegin = chanBegin,
+    .nChan = nChan,
+  };
   for (int i = 0; i < nChan; ++i) {
     reqPush.durations[i] = dutyToDuration(duties[i]);
   }
@@ -222,9 +224,11 @@ bool pca9685setDutiesAsync(
 bool pca9685setDurationsAsync(
   int addr, int chanBegin, int nChan, uint16_t const *durations)
 {
-  reqPush.addr = addr;
-  reqPush.chanBegin = chanBegin;
-  reqPush.nChan = nChan;
+  struct asyncRequest reqPush = {
+    .addr = addr,
+    .chanBegin = chanBegin,
+    .nChan = nChan,
+  };
   for (int i = 0; i < nChan; ++i) {
     reqPush.durations[i] = durations[i];
   }
