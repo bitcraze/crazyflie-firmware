@@ -100,7 +100,8 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   if (isInit)
   {
-    motorsDeInit(motorMap);
+    // First to init will configure it
+    return;
   }
 
   motorMap = motorMapSelect;
