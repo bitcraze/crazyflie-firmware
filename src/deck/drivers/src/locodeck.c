@@ -262,20 +262,9 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
 
 #if LOCODECK_USE_ALT_PINS
 	void __attribute__((used)) EXTI5_Callback(void)
-	{
-	  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
-
-	  NVIC_ClearPendingIRQ(EXTI_IRQChannel);
-	  EXTI_ClearITPendingBit(EXTI_LineN);
-
-	  //To unlock RadioTask
-	  xSemaphoreGiveFromISR(irqSemaphore, &xHigherPriorityTaskWoken);
-
-	  if(xHigherPriorityTaskWoken)
-		portYIELD();
-	}
 #else
 	void __attribute__((used)) EXTI11_Callback(void)
+#endif
 	{
 	  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
 
@@ -288,9 +277,6 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
 	  if(xHigherPriorityTaskWoken)
 		portYIELD();
 	}
-#endif
-
-
 
 static void spiSetSpeed(dwDevice_t* dev, dwSpiSpeed_t speed)
 {
