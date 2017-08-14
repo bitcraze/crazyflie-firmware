@@ -25,3 +25,6 @@
 
 ## Set number of anchor in LocoPositioningSystem
 # CFLAGS += -DLOCODECK_NR_OF_ANCHORS=8
+
+## Set alternative pins for LOCO deck (IRQ=IO_2, RESET=IO_3, default are RX1 and TX1)
+# CFLAGS += -DLOCODECK_USE_ALT_PINS
