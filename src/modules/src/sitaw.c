@@ -322,7 +322,13 @@ bool sitAwTuDetected(void)
  */
 void sitAwInit(void)
 {
+#ifdef SITAW_FF_ENABLED
   sitAwFFInit();
+#endif
+#ifdef SITAW_AR_ENABLED
   sitAwARInit();
+#endif
+#ifdef SITAW_TU_ENABLED
   sitAwTuInit();
+#endif
 }

@@ -65,9 +65,10 @@ void stabilizerInit(StateEstimatorType estimator)
   stateEstimatorInit(estimator);
   stateControllerInit();
   powerDistributionInit();
-#if defined(SITAW_ENABLED)
-  sitAwInit();
-#endif
+  if (estimator == kalmanEstimator)
+  {
+    sitAwInit();
+  }
 
   xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
               STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
