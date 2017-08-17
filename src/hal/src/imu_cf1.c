@@ -85,7 +85,9 @@ typedef struct
 } BiasObj;
 
 static BiasObj    gyroBias;
-static BiasObj    accelBias;
+#ifdef IMU_TAKE_ACCEL_BIAS
+  static BiasObj    accelBias;
+#endif
 static int32_t    varianceSampleTime;
 static Axis3i16   gyroMpu;
 static Axis3i16   accelMpu;
@@ -203,7 +205,9 @@ void imu6Init(void)
 #endif
 
   imuBiasInit(&gyroBias);
+#ifdef IMU_TAKE_ACCEL_BIAS
   imuBiasInit(&accelBias);
+#endif
   varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
   imuAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
 
@@ -256,10 +260,12 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
   mpu6050GetMotion6(&accelMpu.x, &accelMpu.y, &accelMpu.z, &gyroMpu.x, &gyroMpu.y, &gyroMpu.z);
 
   imuAddBiasValue(&gyroBias, &gyroMpu);
+#ifdef IMU_TAKE_ACCEL_BIAS
   if (!accelBias.isBiasValueFound)
   {
     imuAddBiasValue(&accelBias, &accelMpu);
   }
+#endif
   if (!gyroBias.isBiasValueFound)
   {
     imuFindBiasValue(&gyroBias);
@@ -296,9 +302,15 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
   gyroOut->x = (gyroMpu.x - gyroBias.bias.x) * IMU_DEG_PER_LSB_CFG;
   gyroOut->y = (gyroMpu.y - gyroBias.bias.y) * IMU_DEG_PER_LSB_CFG;
   gyroOut->z = (gyroMpu.z - gyroBias.bias.z) * IMU_DEG_PER_LSB_CFG;
+#ifdef IMU_TAKE_ACCEL_BIAS
   accOut->x = (accelLPFAligned.x - accelBias.bias.x) * IMU_G_PER_LSB_CFG;
   accOut->y = (accelLPFAligned.y - accelBias.bias.y) * IMU_G_PER_LSB_CFG;
   accOut->z = (accelLPFAligned.z - accelBias.bias.z) * IMU_G_PER_LSB_CFG;
+#else
+  accOut->x = (accelLPFAligned.x) * IMU_G_PER_LSB_CFG;
+  accOut->y = (accelLPFAligned.y) * IMU_G_PER_LSB_CFG;
+  accOut->z = (accelLPFAligned.z) * IMU_G_PER_LSB_CFG;
+#endif
 }
 
 void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut)
