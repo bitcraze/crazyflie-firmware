@@ -55,10 +55,6 @@
  *
  */
 
-#ifdef PLATFORM_CF1
-#error ESTIMATOR = kalman is only compatible with the Crazyflie 2.0 // since it requires an FPU
-#endif
-
 #include "estimator_kalman.h"
 
 #include "stm32f4xx.h"

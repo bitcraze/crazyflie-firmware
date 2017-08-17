@@ -32,28 +32,6 @@
 #define LED_POL_POS 0
 #define LED_POL_NEG 1
 
-#ifdef PLATFORM_CF1
-//Hardware configuration
-#define LED_GPIO_PERIF   RCC_APB2Periph_GPIOB
-#define LED_GPIO_PORT    GPIOB
-#define LED_GPIO_GREEN   GPIO_Pin_5
-#define LED_POL_GREEN    LED_POL_NEG
-#define LED_GPIO_RED     GPIO_Pin_4
-#define LED_POL_RED      LED_POL_NEG
-
-#define LED_NUM 2
-
-typedef enum {LED_RED=0, LED_GREEN} led_t;
-
-#define LINK_LED         LED_GREEN
-#define CHG_LED          LED_GREEN
-#define LOWBAT_LED       LED_RED
-#define LINK_DOWN_LED    LED_GREEN
-#define SYS_LED          LED_RED
-#define ERR_LED1         LED_RED
-#define ERR_LED2         LED_GREEN
-
-#elif defined(PLATFORM_CF2)
 //Hardware configuration
 #define LED_GPIO_PERIF   (RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD)
 #define LED_GPIO_PORT_BLUE  GPIOD
@@ -80,7 +58,7 @@ typedef enum {LED_RED=0, LED_GREEN} led_t;
 #define LED_NUM 5
 
 typedef enum {LED_BLUE_L = 0, LED_GREEN_L, LED_RED_L, LED_GREEN_R, LED_RED_R} led_t;
-#endif
+
 
 void ledInit();
 bool ledTest();

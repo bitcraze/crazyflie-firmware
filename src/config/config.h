@@ -92,16 +92,8 @@
 #define USDWRITE_TASK_PRI       0
 #define PCA9685_TASK_PRI        3
 
-#ifdef PLATFORM_CF2
-  #define SYSLINK_TASK_PRI        5
-  #define USBLINK_TASK_PRI        3
-#endif
-
-#ifdef PLATFORM_CF1
-  #define NRF24LINK_TASK_PRI      2
-  #define ESKYLINK_TASK_PRI       1
-  #define UART_RX_TASK_PRI        2
-#endif
+#define SYSLINK_TASK_PRI        5
+#define USBLINK_TASK_PRI        3
 
 // Not compiled
 #if 0

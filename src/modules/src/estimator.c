@@ -21,9 +21,7 @@ typedef struct {
 static EstimatorFcns estimatorFunctions[] = {
   {.init = 0, .test = 0, .update = 0}, // Any
   {.init = estimatorComplementaryInit, .test = estimatorComplementaryTest, .update = estimatorComplementary},
-#ifndef PLATFORM_CF1
   {.init = estimatorKalmanInit, .test = estimatorKalmanTest, .update = estimatorKalman},
-#endif
 };
 
 

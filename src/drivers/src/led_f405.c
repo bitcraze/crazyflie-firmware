@@ -33,20 +33,6 @@
 
 #include "led.h"
 
-#ifdef PLATFORM_CF1
-static GPIO_TypeDef* led_port[] = {
-  [LED_GREEN] = LED_GPIO_PORT, 
-  [LED_RED] = LED_GPIO_PORT,
-};
-static unsigned int led_pin[] = {
-  [LED_GREEN] = LED_GPIO_GREEN, 
-  [LED_RED]   = LED_GPIO_RED,
-};
-static int led_polarity[] = {
-  [LED_GREEN] = LED_POL_GREEN, 
-  [LED_RED] = LED_POL_RED,
-};
-#else
 static GPIO_TypeDef* led_port[] =
 {
   [LED_BLUE_L] = LED_GPIO_PORT_BLUE,
@@ -71,7 +57,6 @@ static int led_polarity[] =
   [LED_GREEN_R] = LED_POL_GREEN_R,
   [LED_RED_R]   = LED_POL_RED_R,
 };
-#endif
 
 static bool isInit = false;
 
