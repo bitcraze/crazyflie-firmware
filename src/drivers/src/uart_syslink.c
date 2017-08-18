@@ -51,6 +51,7 @@
 static bool isInit = false;
 
 static xSemaphoreHandle waitUntilSendDone;
+static xSemaphoreHandle waitUntilPacketReceived;
 static xSemaphoreHandle uartBusy;
 static xQueueHandle uartslkDataDelivery;
 
@@ -63,6 +64,9 @@ static DMA_InitTypeDef DMA_InitStructureShare;
 static uint32_t initialDMACount;
 static uint32_t remainingDMACount;
 static bool     dmaIsPaused;
+
+static volatile SyslinkPacket *clientSlp;
+static volatile bool bufferPended;
 
 static void uartslkPauseDma();
 static void uartslkResumeDma();
@@ -107,6 +111,7 @@ void uartslkInit(void)
 {
   // initialize the FreeRTOS structures first, to prevent null pointers in interrupts
   waitUntilSendDone = xSemaphoreCreateBinary(); // initialized as blocking
+  waitUntilPacketReceived = xSemaphoreCreateBinary(); // initialized as blocking
   uartBusy = xSemaphoreCreateBinary(); // initialized as blocking
   xSemaphoreGive(uartBusy); // but we give it because the uart isn't busy at initialization
 
@@ -200,6 +205,16 @@ bool uartslkGetDataWithTimout(uint8_t *c)
 
   *c = 0;
   return false;
+}
+
+void uartslkGetPacketBlocking(SyslinkPacket* slp)
+{
+  clientSlp = slp;
+  bufferPended = true;
+
+  xSemaphoreTake(waitUntilPacketReceived, portMAX_DELAY);
+  clientSlp = NULL;
+  bufferPended = false;
 }
 
 void uartslkSendData(uint32_t size, uint8_t* data)
@@ -315,6 +330,11 @@ void uartslkDmaIsr(void)
   xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
 }
 
+
+static volatile SyslinkRxState rxState = waitForFirstStart;
+static volatile uint8_t dataIndex = 0;
+static volatile uint8_t cksum[2] = {0};
+
 void uartslkIsr(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -325,8 +345,77 @@ void uartslkIsr(void)
   // which occasionally cause problems and cause packet loss at high CPU usage
   if ((UARTSLK_TYPE->SR & (1<<5)) != 0) // if the RXNE interrupt has occurred
   {
-    uint8_t rxDataInterrupt = (uint8_t)(UARTSLK_TYPE->DR & 0xFF);
-    xQueueSendFromISR(uartslkDataDelivery, &rxDataInterrupt, &xHigherPriorityTaskWoken);
+    uint8_t c = (uint8_t)(UARTSLK_TYPE->DR & 0xFF);
+    if ( bufferPended)
+    {
+    switch(rxState)
+      {
+        case waitForFirstStart:
+          rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
+          break;
+        case waitForSecondStart:
+          rxState = (c == SYSLINK_START_BYTE2) ? waitForType : waitForFirstStart;
+          break;
+        case waitForType:
+          cksum[0] = c;
+          cksum[1] = c;
+          clientSlp->type = c;
+          rxState = waitForLengt;
+          break;
+        case waitForLengt:
+          if (c <= SYSLINK_MTU)
+          {
+            clientSlp->length = c;
+            cksum[0] += c;
+            cksum[1] += cksum[0];
+            dataIndex = 0;
+            rxState = (c > 0) ? waitForData : waitForChksum1;
+          }
+          else
+          {
+            rxState = waitForFirstStart;
+          }
+          break;
+        case waitForData:
+          clientSlp->data[dataIndex] = c;
+          cksum[0] += c;
+          cksum[1] += cksum[0];
+          dataIndex++;
+          if (dataIndex == clientSlp->length)
+          {
+            rxState = waitForChksum1;
+          }
+          break;
+        case waitForChksum1:
+          if (cksum[0] == c)
+          {
+            rxState = waitForChksum2;
+          }
+          else
+          {
+            rxState = waitForFirstStart; //Checksum error
+            //IF_DEBUG_ASSERT(1);
+          }
+          break;
+        case waitForChksum2:
+          if (cksum[1] == c)
+          {
+            // Mark the buffer not pended so we don't try to overwrite
+            bufferPended = false;
+            xSemaphoreGiveFromISR(waitUntilPacketReceived, &xHigherPriorityTaskWoken);
+          }
+          else
+          {
+            rxState = waitForFirstStart; //Checksum error
+            //IF_DEBUG_ASSERT(1);
+          }
+          rxState = waitForFirstStart;
+          break;
+        default:
+          //ASSERT(0);
+          break;
+      }
+    }  
   }
   else if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_TXE) == SET)
   {
@@ -351,6 +440,8 @@ void uartslkIsr(void)
     asm volatile ("" : "=m" (UARTSLK_TYPE->SR) : "r" (UARTSLK_TYPE->SR)); // force non-optimizable reads
     asm volatile ("" : "=m" (UARTSLK_TYPE->DR) : "r" (UARTSLK_TYPE->DR)); // of these two registers
   }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void uartslkTxenFlowctrlIsr()

@@ -30,6 +30,7 @@
 
 #include "crtp.h"
 #include "eprintf.h"
+#include "syslink.h"
 
 #define UARTSLK_TYPE             USART6
 #define UARTSLK_PERIF            RCC_APB2Periph_USART6
@@ -84,6 +85,8 @@ struct crtpLinkOperations * uartslkGetLink();
  * @return true if byte received, false if timout reached.
  */
 bool uartslkGetDataWithTimout(uint8_t *c);
+
+void uartslkGetPacketBlocking(SyslinkPacket* slp);
 
 /**
  * Sends raw data using a lock. Should be used from

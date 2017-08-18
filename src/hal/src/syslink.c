@@ -54,89 +54,93 @@ static xSemaphoreHandle syslinkAccess;
  */
 static void syslinkTask(void *param)
 {
-  SyslinkRxState rxState = waitForFirstStart;
+  // SyslinkRxState rxState = waitForFirstStart;
   SyslinkPacket slp;
-  uint8_t c;
-  uint8_t dataIndex = 0;
-  uint8_t cksum[2] = {0};
-  uint8_t counter = 0;
+  // uint8_t c;
+  // uint8_t dataIndex = 0;
+  // uint8_t cksum[2] = {0};
+  // uint8_t counter = 0;
 
   while(1)
   {
-    if (uartslkGetDataWithTimout(&c))
-    {
-      counter++;
-      switch(rxState)
-      {
-        case waitForFirstStart:
-          rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
-          break;
-        case waitForSecondStart:
-          rxState = (c == SYSLINK_START_BYTE2) ? waitForType : waitForFirstStart;
-          break;
-        case waitForType:
-          cksum[0] = c;
-          cksum[1] = c;
-          slp.type = c;
-          rxState = waitForLengt;
-          break;
-        case waitForLengt:
-          if (c <= SYSLINK_MTU)
-          {
-            slp.length = c;
-            cksum[0] += c;
-            cksum[1] += cksum[0];
-            dataIndex = 0;
-            rxState = (c > 0) ? waitForData : waitForChksum1;
-          }
-          else
-          {
-            rxState = waitForFirstStart;
-          }
-          break;
-        case waitForData:
-          slp.data[dataIndex] = c;
-          cksum[0] += c;
-          cksum[1] += cksum[0];
-          dataIndex++;
-          if (dataIndex == slp.length)
-          {
-            rxState = waitForChksum1;
-          }
-          break;
-        case waitForChksum1:
-          if (cksum[0] == c)
-          {
-            rxState = waitForChksum2;
-          }
-          else
-          {
-            rxState = waitForFirstStart; //Checksum error
-            IF_DEBUG_ASSERT(1);
-          }
-          break;
-        case waitForChksum2:
-          if (cksum[1] == c)
-          {
-            syslinkRouteIncommingPacket(&slp);
-          }
-          else
-          {
-            rxState = waitForFirstStart; //Checksum error
-            IF_DEBUG_ASSERT(1);
-          }
-          rxState = waitForFirstStart;
-          break;
-        default:
-          ASSERT(0);
-          break;
-      }
-    }
-    else
-    {
-      // Timeout
-      rxState = waitForFirstStart;
-    }
+
+    uartslkGetPacketBlocking(&slp);
+    syslinkRouteIncommingPacket(&slp);
+
+    // if (uartslkGetDataWithTimout(&c))
+    // {
+    //   counter++;
+    //   switch(rxState)
+    //   {
+    //     case waitForFirstStart:
+    //       rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
+    //       break;
+    //     case waitForSecondStart:
+    //       rxState = (c == SYSLINK_START_BYTE2) ? waitForType : waitForFirstStart;
+    //       break;
+    //     case waitForType:
+    //       cksum[0] = c;
+    //       cksum[1] = c;
+    //       slp.type = c;
+    //       rxState = waitForLengt;
+    //       break;
+    //     case waitForLengt:
+    //       if (c <= SYSLINK_MTU)
+    //       {
+    //         slp.length = c;
+    //         cksum[0] += c;
+    //         cksum[1] += cksum[0];
+    //         dataIndex = 0;
+    //         rxState = (c > 0) ? waitForData : waitForChksum1;
+    //       }
+    //       else
+    //       {
+    //         rxState = waitForFirstStart;
+    //       }
+    //       break;
+    //     case waitForData:
+    //       slp.data[dataIndex] = c;
+    //       cksum[0] += c;
+    //       cksum[1] += cksum[0];
+    //       dataIndex++;
+    //       if (dataIndex == slp.length)
+    //       {
+    //         rxState = waitForChksum1;
+    //       }
+    //       break;
+    //     case waitForChksum1:
+    //       if (cksum[0] == c)
+    //       {
+    //         rxState = waitForChksum2;
+    //       }
+    //       else
+    //       {
+    //         rxState = waitForFirstStart; //Checksum error
+    //         IF_DEBUG_ASSERT(1);
+    //       }
+    //       break;
+    //     case waitForChksum2:
+    //       if (cksum[1] == c)
+    //       {
+    //         syslinkRouteIncommingPacket(&slp);
+    //       }
+    //       else
+    //       {
+    //         rxState = waitForFirstStart; //Checksum error
+    //         IF_DEBUG_ASSERT(1);
+    //       }
+    //       rxState = waitForFirstStart;
+    //       break;
+    //     default:
+    //       ASSERT(0);
+    //       break;
+    //   }
+    // }
+    // else
+    // {
+    //   // Timeout
+    //   rxState = waitForFirstStart;
+    // }
   }
 }
 
