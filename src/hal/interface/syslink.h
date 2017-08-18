@@ -72,7 +72,7 @@ typedef enum
   waitForFirstStart,
   waitForSecondStart,
   waitForType,
-  waitForLengt,
+  waitForLength,
   waitForData,
   waitForChksum1,
   waitForChksum2
