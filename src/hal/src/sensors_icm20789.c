@@ -52,6 +52,7 @@
 #include "ledseq.h"
 #include "sound.h"
 #include "filter.h"
+#include "usec_time.h"
 
 //#define ICM20789_ENABLE_BARO
 
@@ -356,6 +357,8 @@ void sensorsInit(void)
   sensorsDataReady = xSemaphoreCreateBinary();
   dataReady = xSemaphoreCreateBinary();
 
+  initUsecTimer();
+
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();
   sensorsInterruptInit();
@@ -549,9 +552,11 @@ static bool sensorsFindBiasValue(BiasObj* bias)
   return foundBias;
 }
 
+uint64_t mpuIntTimestamp;
 void __attribute__((used)) EXTI13_Callback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  mpuIntTimestamp = usecTimestamp();
   xSemaphoreGiveFromISR(sensorsDataReady, &xHigherPriorityTaskWoken);
 
   if (xHigherPriorityTaskWoken)

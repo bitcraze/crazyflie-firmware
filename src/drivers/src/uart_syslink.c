@@ -115,7 +115,7 @@ void uartslkInit(void)
   uartBusy = xSemaphoreCreateBinary(); // initialized as blocking
   xSemaphoreGive(uartBusy); // but we give it because the uart isn't busy at initialization
 
-  uartslkDataDelivery = xQueueCreate(1024, sizeof(uint8_t));
+//  uartslkDataDelivery = xQueueCreate(1024, sizeof(uint8_t));
   DEBUG_QUEUE_MONITOR_REGISTER(uartslkDataDelivery);
 
   USART_InitTypeDef USART_InitStructure;
@@ -346,9 +346,9 @@ void uartslkIsr(void)
   if ((UARTSLK_TYPE->SR & (1<<5)) != 0) // if the RXNE interrupt has occurred
   {
     uint8_t c = (uint8_t)(UARTSLK_TYPE->DR & 0xFF);
-    if ( bufferPended)
+    if (bufferPended)
     {
-    switch(rxState)
+      switch(rxState)
       {
         case waitForFirstStart:
           rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
@@ -394,7 +394,7 @@ void uartslkIsr(void)
           else
           {
             rxState = waitForFirstStart; //Checksum error
-            //IF_DEBUG_ASSERT(1);
+            ASSERT(1);
           }
           break;
         case waitForChksum2:
@@ -407,7 +407,7 @@ void uartslkIsr(void)
           else
           {
             rxState = waitForFirstStart; //Checksum error
-            //IF_DEBUG_ASSERT(1);
+            ASSERT(1);
           }
           rxState = waitForFirstStart;
           break;
@@ -415,7 +415,12 @@ void uartslkIsr(void)
           //ASSERT(0);
           break;
       }
-    }  
+    }
+    else
+    {
+      // Packet overrun
+      ASSERT(1);
+    }
   }
   else if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_TXE) == SET)
   {
