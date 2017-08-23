@@ -72,8 +72,13 @@ static const uint8_t typeLength[] = {
 #define LOG_MAX_LEN 26
 
 /* Log packet parameters storage */
+#ifdef PLATFORM_CF1
 #define LOG_MAX_OPS 64
 #define LOG_MAX_BLOCKS 8
+#else
+#define LOG_MAX_OPS 128
+#define LOG_MAX_BLOCKS 16
+#endif
 struct log_ops {
   struct log_ops * next;
   uint8_t storageType : 4;

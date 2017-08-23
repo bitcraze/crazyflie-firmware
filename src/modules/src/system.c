@@ -170,16 +170,15 @@ void systemTask(void *arg)
   systemInit();
   commInit();
   commanderInit();
-  stabilizerInit();
+
+  StateEstimatorType estimator = anyEstimator;
 #ifdef PLATFORM_CF2
   deckInit();
-  #endif
+  estimator = deckGetRequiredEstimator();
+#endif
+  stabilizerInit(estimator);
   soundInit();
   memInit();
-
-#ifdef PROXIMITY_ENABLED
-  proximityInit();
-#endif
 
   //Test the modules
   pass &= systemTest();
@@ -189,7 +188,7 @@ void systemTask(void *arg)
   pass &= stabilizerTest();
 #ifdef PLATFORM_CF2
   pass &= deckTest();
-  #endif
+#endif
   pass &= soundTest();
   pass &= memTest();
   pass &= watchdogNormalStartTest();

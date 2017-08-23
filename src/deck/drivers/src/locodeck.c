@@ -47,6 +47,7 @@
 #include "log.h"
 #include "param.h"
 #include "nvicconf.h"
+#include "estimator.h"
 
 #include "locodeck.h"
 
@@ -75,12 +76,18 @@
 static lpsAlgoOptions_t algoOptions = {
   .tagAddress = 0xbccf000000000008,
   .anchorAddress = {
+    0xbccf000000000000,
     0xbccf000000000001,
     0xbccf000000000002,
     0xbccf000000000003,
     0xbccf000000000004,
     0xbccf000000000005,
-    0xbccf000000000006
+#if LOCODECK_NR_OF_ANCHORS > 6
+    0xbccf000000000006,
+#endif
+#if LOCODECK_NR_OF_ANCHORS > 7
+    0xbccf000000000007,
+#endif
   },
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
@@ -113,7 +120,6 @@ static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
 
 static bool isInit = false;
-static xSemaphoreHandle spiSemaphore;
 static SemaphoreHandle_t irqSemaphore;
 static dwDevice_t dwm_device;
 static dwDevice_t *dwm = &dwm_device;
@@ -184,35 +190,32 @@ bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket)
 
 static uint8_t spiTxBuffer[196];
 static uint8_t spiRxBuffer[196];
+static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
 /************ Low level ops for libdw **********/
 static void spiWrite(dwDevice_t* dev, const void *header, size_t headerLength,
                                       const void* data, size_t dataLength)
 {
-  xSemaphoreTake(spiSemaphore, portMAX_DELAY);
-
+  spiBeginTransaction(spiSpeed);
   digitalWrite(CS_PIN, LOW);
   memcpy(spiTxBuffer, header, headerLength);
   memcpy(spiTxBuffer+headerLength, data, dataLength);
   spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
-
-  xSemaphoreGive(spiSemaphore);
+  spiEndTransaction();
 }
 
 static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
                                      void* data, size_t dataLength)
 {
-  xSemaphoreTake(spiSemaphore, portMAX_DELAY);
-
+  spiBeginTransaction(spiSpeed);
   digitalWrite(CS_PIN, LOW);
   memcpy(spiTxBuffer, header, headerLength);
   memset(spiTxBuffer+headerLength, 0, dataLength);
   spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
   memcpy(data, spiRxBuffer+headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
-
-  xSemaphoreGive(spiSemaphore);
+  spiEndTransaction();
 }
 
 void __attribute__((used)) EXTI11_Callback(void)
@@ -233,11 +236,11 @@ static void spiSetSpeed(dwDevice_t* dev, dwSpiSpeed_t speed)
 {
   if (speed == dwSpiSpeedLow)
   {
-    spiConfigureSlow();
+    spiSpeed = SPI_BAUDRATE_2MHZ;
   }
   else if (speed == dwSpiSpeedHigh)
   {
-    spiConfigureFast();
+    spiSpeed = SPI_BAUDRATE_21MHZ;
   }
 }
 
@@ -293,9 +296,6 @@ static void dwm1000Init(DeckInfo *info)
   vTaskDelay(M2T(10));
   GPIO_WriteBit(GPIOC, GPIO_Pin_10, 1);
   vTaskDelay(M2T(10));
-
-  // Semaphore that protect the SPI communication
-  spiSemaphore = xSemaphoreCreateMutex();
 
   // Initialize the driver
   dwInit(dwm, &dwOps);       // Init libdw
@@ -357,6 +357,7 @@ static const DeckDriver dwm1000_deck = {
   .name = "bcDWM1000",
 
   .usedGpio = 0,  // FIXME: set the used pins
+  .requiredEstimator = kalmanEstimator,
 
   .init = dwm1000Init,
   .test = dwm1000Test,

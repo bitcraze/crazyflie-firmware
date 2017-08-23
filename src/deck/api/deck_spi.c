@@ -84,8 +84,10 @@ static bool isInit = false;
 
 static SemaphoreHandle_t txComplete;
 static SemaphoreHandle_t rxComplete;
+static SemaphoreHandle_t spiMutex;
 
 static void spiDMAInit();
+static void spiConfigureWithSpeed(uint16_t baudRatePrescaler);
 
 void spiBegin(void)
 {
@@ -95,6 +97,7 @@ void spiBegin(void)
   // such that the the semaphore must first be 'given' before it can be 'taken'
   txComplete = xSemaphoreCreateBinary();
   rxComplete = xSemaphoreCreateBinary();
+  spiMutex = xSemaphoreCreateMutex();
 
   /*!< Enable the SPI clock */
   SPI_CLK_INIT(SPI_CLK, ENABLE);
@@ -134,12 +137,12 @@ void spiBegin(void)
   spiDMAInit();
 
   /*!< SPI configuration */
-  spiConfigureSlow();
+  spiConfigureWithSpeed(SPI_BAUDRATE_2MHZ);
 
   isInit = true;
 }
 
-void spiDMAInit()
+static void spiDMAInit()
 {
   DMA_InitTypeDef  DMA_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
@@ -183,7 +186,7 @@ void spiDMAInit()
   NVIC_Init(&NVIC_InitStructure);
 }
 
-void spiConfigureSlow()
+static void spiConfigureWithSpeed(uint16_t baudRatePrescaler)
 {
   SPI_InitTypeDef  SPI_InitStructure;
 
@@ -198,26 +201,7 @@ void spiConfigureSlow()
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 0; // Not used
 
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32; //~2.7 MHz
-  SPI_Init(SPI, &SPI_InitStructure);
-}
-
-void spiConfigureFast()
-{
-  SPI_InitTypeDef  SPI_InitStructure;
-
-  SPI_I2S_DeInit(SPI);
-
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 0; // Not used
-
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4; //~21 MHz
+  SPI_InitStructure.SPI_BaudRatePrescaler = baudRatePrescaler;
   SPI_Init(SPI, &SPI_InitStructure);
 }
 
@@ -261,6 +245,17 @@ bool spiExchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
   // Disable peripheral
   SPI_Cmd(SPI, DISABLE);
   return result;
+}
+
+void spiBeginTransaction(uint16_t baudRatePrescaler)
+{
+  xSemaphoreTake(spiMutex, portMAX_DELAY);
+  spiConfigureWithSpeed(baudRatePrescaler);
+}
+
+void spiEndTransaction()
+{
+  xSemaphoreGive(spiMutex);
 }
 
 void __attribute__((used)) SPI_TX_DMA_IRQHandler(void)

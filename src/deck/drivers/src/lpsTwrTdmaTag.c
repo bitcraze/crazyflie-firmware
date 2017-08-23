@@ -36,10 +36,9 @@
 #include "mac.h"
 
 #include "stabilizer_types.h"
-#ifdef ESTIMATOR_TYPE_kalman
+#include "estimator.h"
 #include "estimator_kalman.h"
 #include "arm_math.h"
-#endif
 
 #define RX_TIMEOUT 1000
 
@@ -75,14 +74,12 @@ int anchors[N_ANCHORS] = {1,2,3,4,5,6};
 #define TAG_ADDRESS 8+TDMA_SLOT
 
 // Outlier rejection
-#ifdef ESTIMATOR_TYPE_kalman
-  #define RANGING_HISTORY_LENGTH 32
-  #define OUTLIER_TH 4
-  static struct {
-    float32_t history[RANGING_HISTORY_LENGTH];
-    size_t ptr;
-  } rangingStats[N_ANCHORS];
-#endif
+#define RANGING_HISTORY_LENGTH 32
+#define OUTLIER_TH 4
+static struct {
+  float32_t history[RANGING_HISTORY_LENGTH];
+  size_t ptr;
+} rangingStats[N_ANCHORS];
 
 static uint8_t tag_address[] = {TAG_ADDRESS,0,0,0,0,0,0xcf,0xbc};
 static uint8_t base_address[] = {0,0,0,0,0,0,0xcf,0xbc};
@@ -209,7 +206,6 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       options->distance[current_anchor] = SPEED_OF_LIGHT * tprop;
       options->pressures[current_anchor] = report->asl;
 
-#ifdef ESTIMATOR_TYPE_kalman
       // Outliers rejection
       rangingStats[current_anchor].ptr = (rangingStats[current_anchor].ptr + 1) % RANGING_HISTORY_LENGTH;
       float32_t mean;
@@ -228,9 +224,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         dist.y = options->anchorPosition[current_anchor].y;
         dist.z = options->anchorPosition[current_anchor].z;
         dist.stdDev = 0.25;
-        stateEstimatorEnqueueDistance(&dist);
+        estimatorKalmanEnqueueDistance(&dist);
       }
-#endif
 
       if (current_anchor == 0) {
         // Final packet is sent by us and received by the anchor

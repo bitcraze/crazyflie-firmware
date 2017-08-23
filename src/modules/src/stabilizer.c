@@ -41,13 +41,12 @@
 #include "controller.h"
 #include "power_distribution.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
-#else
 #include "estimator.h"
-#endif
 
 static bool isInit;
+static bool emergencyStop = false;
+static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
 // State variables for the stabilizer
 static setpoint_t setpoint;
@@ -57,13 +56,13 @@ static control_t control;
 
 static void stabilizerTask(void* param);
 
-void stabilizerInit(void)
+void stabilizerInit(StateEstimatorType estimator)
 {
   if(isInit)
     return;
 
   sensorsInit();
-  stateEstimatorInit();
+  stateEstimatorInit(estimator);
   stateControllerInit();
   powerDistributionInit();
 #if defined(SITAW_ENABLED)
@@ -88,6 +87,17 @@ bool stabilizerTest(void)
   return pass;
 }
 
+static void checkEmergencyStopTimeout()
+{
+  if (emergencyStopTimeout >= 0) {
+    emergencyStopTimeout -= 1;
+
+    if (emergencyStopTimeout == 0) {
+      emergencyStop = true;
+    }
+  }
+}
+
 /* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
@@ -95,7 +105,7 @@ bool stabilizerTest(void)
 
 static void stabilizerTask(void* param)
 {
-  uint32_t tick = 0;
+  uint32_t tick;
   uint32_t lastWakeTime;
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
@@ -107,27 +117,48 @@ static void stabilizerTask(void* param)
   while(!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
+  // Initialize tick to something else then 0
+  tick = 1;
 
   while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+    //vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+    sensorsWaitDataReady(); // Sync to sensor reading
 
     getExtPosition(&state);
-#ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorUpdate(&state, &sensorData, &control);
-#else
-    sensorsAcquire(&sensorData, tick);
-    stateEstimator(&state, &sensorData, tick);
-#endif
+    stateEstimator(&state, &sensorData, &control, tick);
 
     commanderGetSetpoint(&setpoint, &state);
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
     stateController(&control, &setpoint, &sensorData, &state, tick);
-    powerDistribution(&control);
+
+    checkEmergencyStopTimeout();
+
+    if (emergencyStop) {
+      powerStop();
+    } else {
+      powerDistribution(&control);
+    }
 
     tick++;
   }
+}
+
+void stabilizerSetEmergencyStop()
+{
+  emergencyStop = true;
+}
+
+void stabilizerResetEmergencyStop()
+{
+  emergencyStop = false;
+}
+
+void stabilizerSetEmergencyStopTimeout(int timeout)
+{
+  emergencyStop = false;
+  emergencyStopTimeout = timeout;
 }
 
 LOG_GROUP_START(ctrltarget)
@@ -149,6 +180,14 @@ LOG_ADD(LOG_FLOAT, y, &sensorData.acc.y)
 LOG_ADD(LOG_FLOAT, z, &sensorData.acc.z)
 LOG_GROUP_STOP(acc)
 
+#ifdef LOG_SEC_IMU
+LOG_GROUP_START(accSec)
+LOG_ADD(LOG_FLOAT, x, &sensorData.accSec.x)
+LOG_ADD(LOG_FLOAT, y, &sensorData.accSec.y)
+LOG_ADD(LOG_FLOAT, z, &sensorData.accSec.z)
+LOG_GROUP_STOP(accSec)
+#endif
+
 LOG_GROUP_START(baro)
 LOG_ADD(LOG_FLOAT, asl, &sensorData.baro.asl)
 LOG_ADD(LOG_FLOAT, temp, &sensorData.baro.temperature)
@@ -161,6 +200,14 @@ LOG_ADD(LOG_FLOAT, y, &sensorData.gyro.y)
 LOG_ADD(LOG_FLOAT, z, &sensorData.gyro.z)
 LOG_GROUP_STOP(gyro)
 
+#ifdef LOG_SEC_IMU
+LOG_GROUP_START(gyroSec)
+LOG_ADD(LOG_FLOAT, x, &sensorData.gyroSec.x)
+LOG_ADD(LOG_FLOAT, y, &sensorData.gyroSec.y)
+LOG_ADD(LOG_FLOAT, z, &sensorData.gyroSec.z)
+LOG_GROUP_STOP(gyroSec)
+#endif
+
 LOG_GROUP_START(mag)
 LOG_ADD(LOG_FLOAT, x, &sensorData.mag.x)
 LOG_ADD(LOG_FLOAT, y, &sensorData.mag.y)
@@ -170,3 +217,9 @@ LOG_GROUP_STOP(mag)
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
+
+LOG_GROUP_START(stateEstimate)
+LOG_ADD(LOG_FLOAT, x, &state.position.x)
+LOG_ADD(LOG_FLOAT, y, &state.position.y)
+LOG_ADD(LOG_FLOAT, z, &state.position.z)
+LOG_GROUP_STOP(stateEstimate)

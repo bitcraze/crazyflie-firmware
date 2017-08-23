@@ -21,15 +21,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * extimator.h - State estimator interface
+ * estimator.h - State estimator interface
  */
 #ifndef __ESTIMATOR_H__
 #define __ESTIMATOR_H__
 
 #include "stabilizer_types.h"
 
-void stateEstimatorInit(void);
+typedef enum {
+  anyEstimator = 0,
+  complementaryEstimator,
+  kalmanEstimator,
+} StateEstimatorType;
+
+void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
-void stateEstimator(state_t *state, const sensorData_t *sensorData, const uint32_t tick);
+void stateEstimator(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
+StateEstimatorType getStateEstimator(void);
 
 #endif //__ESTIMATOR_H__

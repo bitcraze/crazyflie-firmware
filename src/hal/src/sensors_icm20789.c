@@ -53,6 +53,8 @@
 #include "sound.h"
 #include "filter.h"
 
+//#define ICM20789_ENABLE_BARO
+
 #define SENSORS_READ_RATE_HZ      1000
 
 #define SENSORS_GYRO_FS_CFG       MPU6500_GYRO_FS_2000
@@ -94,6 +96,7 @@ static xQueueHandle gyroDataQueue;
 static xQueueHandle magnetometerDataQueue;
 static xQueueHandle barometerDataQueue;
 static xSemaphoreHandle sensorsDataReady;
+static xSemaphoreHandle dataReady;
 
 static bool isInit = false;
 static sensorData_t sensors;
@@ -182,13 +185,58 @@ static void sensorsTask(void *param)
       // these functions process the respective data and queue it on the output queues
       processAccGyroMeasurements(&(buffer[0]));
 
-      vTaskSuspendAll(); // ensure all queues are populated at the same time
+//      vTaskSuspendAll(); // ensure all queues are populated at the same time
       xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
       xQueueOverwrite(gyroDataQueue, &sensors.gyro);
-      xTaskResumeAll();
+      xSemaphoreGive(dataReady);
+//      xTaskResumeAll();
     }
   }
 }
+
+void sensorsWaitDataReady(void)
+{
+  xSemaphoreTake(dataReady, portMAX_DELAY);
+}
+
+#ifdef ICM20789_ENABLE_BARO
+static void  baroTask(void *param)
+{
+  systemWaitStart();
+
+  static int pressuredataReady = 0;
+  int status = false;
+
+  while(1)
+  {
+    status = icm20789BaroStartMeasurement();
+
+    vTaskDelay(M2T(25));
+
+    while (status == true)
+    {
+      status = icm20789BaroGetPressureData(&sensors.baro.pressure,
+                                           &sensors.baro.temperature,
+                                           &sensors.baro.asl);
+      if (status)
+      {
+        pressuredataReady = 1;
+      }
+      else
+      {
+        vTaskDelay(M2T(1));
+      }
+
+      if (pressuredataReady)
+      {
+          xQueueOverwrite(barometerDataQueue, &sensors.baro);
+          pressuredataReady = 0;
+          status = false;
+      }
+    }
+  }
+}
+#endif
 
 void processAccGyroMeasurements(const uint8_t *buffer)
 {
@@ -237,6 +285,18 @@ static void sensorsDeviceInit(void)
     DEBUG_PRINT("ICM-20789 SPI connection [FAIL].\n");
   }
 
+#ifdef ICM20789_ENABLE_BARO
+  i2cdevInit(I2C3_DEV);
+  if (icm20789BaroInit(I2C3_DEV) == true)
+  {
+    DEBUG_PRINT("ICM-20789 I2C connection [OK].\n");
+  }
+  else
+  {
+    DEBUG_PRINT("ICM-20789 I2C connection [FAIL].\n");
+  }
+#endif
+
   // Init second order filer for accelerometer
   for (uint8_t i = 0; i < 3; i++)
   {
@@ -258,6 +318,9 @@ static void sensorsTaskInit(void)
   barometerDataQueue = xQueueCreate(1, sizeof(baro_t));
 
   xTaskCreate(sensorsTask, SENSORS_TASK_NAME, SENSORS_TASK_STACKSIZE, NULL, SENSORS_TASK_PRI, NULL);
+#ifdef ICM20789_ENABLE_BARO
+  xTaskCreate(baroTask, "BARO", configMINIMAL_STACK_SIZE, NULL, 2 /*prio*/, NULL);
+#endif
 }
 
 static void sensorsInterruptInit(void)
@@ -291,6 +354,7 @@ void sensorsInit(void)
   }
 
   sensorsDataReady = xSemaphoreCreateBinary();
+  dataReady = xSemaphoreCreateBinary();
 
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();

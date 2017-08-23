@@ -58,7 +58,8 @@ static void deselect(sdSpiContext_t *context) {
   context->csHigh();
 
   // Dummy clock (force DO hi-z for multiple slave SPI)
-  context->xchgSpi(0xFF);
+  // which has been moved to higher layer.
+  //context->xchgSpi(0xFF);
 }
 
 

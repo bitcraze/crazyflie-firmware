@@ -64,7 +64,7 @@ bool lps25hTestConnection(void)
 	return false;
 
 
-  status = i2cdevRead(I2Cx, devAddr, LPS25H_WHO_AM_I, 1, &id);
+  status = i2cdevReadReg8(I2Cx, devAddr, LPS25H_WHO_AM_I, 1, &id);
 
   if (status == true && id == LPS25H_WAI_ID)
 	  return true;
@@ -116,20 +116,20 @@ bool lps25hSetEnabled(bool enable)
 	if (enable)
 	{
 	  enable_mask = 0b11000110; // Power on, 25Hz, BDU, reset zero
-	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_CTRL_REG1, 1, &enable_mask);
+	  status = i2cdevWriteReg8(I2Cx, devAddr, LPS25H_CTRL_REG1, 1, &enable_mask);
 	  enable_mask = 0b00001111; // AVG-P 512, AVG-T 64
-	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_RES_CONF, 1, &enable_mask);
+	  status = i2cdevWriteReg8(I2Cx, devAddr, LPS25H_RES_CONF, 1, &enable_mask);
 	  // FIFO averaging. This requres temp reg to be read in different read as reg auto inc
 	  // wraps back to LPS25H_PRESS_OUT_L after LPS25H_PRESS_OUT_H is read.
 	  enable_mask = 0b11000011; // FIFO Mean mode, 4 moving average
-	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_FIFO_CTRL, 1, &enable_mask);
+	  status = i2cdevWriteReg8(I2Cx, devAddr, LPS25H_FIFO_CTRL, 1, &enable_mask);
 	  enable_mask = 0b01000000; // FIFO Enable
-	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_CTRL_REG2, 1, &enable_mask);
+	  status = i2cdevWriteReg8(I2Cx, devAddr, LPS25H_CTRL_REG2, 1, &enable_mask);
 	}
 	else
 	{
 	  enable_mask = 0x00; // Power off and default values
-	  status = i2cdevWrite(I2Cx, devAddr, LPS25H_CTRL_REG1, 1, &enable_mask);
+	  status = i2cdevWriteReg8(I2Cx, devAddr, LPS25H_CTRL_REG1, 1, &enable_mask);
 	}
 
 	return status;
@@ -142,9 +142,9 @@ bool lps25hGetData(float* pressure, float* temperature, float* asl)
   int16_t rawTemp;
   bool status;
 
-  status =  i2cdevRead(I2Cx, devAddr, LPS25H_PRESS_OUT_XL | LPS25H_ADDR_AUTO_INC, 3, data);
+  status =  i2cdevReadReg8(I2Cx, devAddr, LPS25H_PRESS_OUT_XL | LPS25H_ADDR_AUTO_INC, 3, data);
   // If LPS25H moving avg filter is activated the temp must be read out in separate read.
-  status &= i2cdevRead(I2Cx, devAddr, LPS25H_TEMP_OUT_L | LPS25H_ADDR_AUTO_INC, 2, &data[3]);
+  status &= i2cdevReadReg8(I2Cx, devAddr, LPS25H_TEMP_OUT_L | LPS25H_ADDR_AUTO_INC, 2, &data[3]);
 
   rawPressure = ((uint32_t)data[2] << 16) | ((uint32_t)data[1] << 8) | data[0];
   *pressure = (float)rawPressure / LPS25H_LSB_PER_MBAR;

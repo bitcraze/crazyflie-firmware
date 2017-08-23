@@ -38,21 +38,17 @@
 #include "vl53l0x.h"
 
 #include "stabilizer_types.h"
-#ifdef ESTIMATOR_TYPE_kalman
 
+#include "estimator.h"
 #include "estimator_kalman.h"
 #include "arm_math.h"
 
-//#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
-#ifdef UPDATE_KALMAN_WITH_RANGING
 // Measurement noise model
 static float expPointA = 1.0f;
 static float expStdA = 0.0025f; // STD at elevation expPointA [m]
 static float expPointB = 1.3f;
 static float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
-#endif // UPDATE_KALMAN_WITH_RANGING
-#endif // ESTIMATOR_TYPE_kalman
 
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
@@ -147,12 +143,10 @@ void vl53l0xInit(DeckInfo* info)
   i2cdevInit(I2C1_DEV);
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
-  xTaskCreate(vl53l0xTask, "vl53l0x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+  xTaskCreate(vl53l0xTask, VL53_TASK_NAME, VL53_TASK_STACKSIZE, NULL, VL53_TASK_PRI, NULL);
 
-#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
-  // pre-compute constant in the measurement noise mdoel
+  // pre-compute constant in the measurement noise model for kalman
   expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
-#endif
 
   isInit = true;
 }
@@ -177,24 +171,24 @@ void vl53l0xTask(void* arg)
 
   vl53l0xSetVcselPulsePeriod(VcselPeriodPreRange, 18);
   vl53l0xSetVcselPulsePeriod(VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(100);
+  vl53l0xStartContinuous(0);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     range_last = vl53l0xReadRangeContinuousMillimeters();
-#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
+
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
     // occur as >8 [m] measurements
-    if (range_last < RANGE_OUTLIER_LIMIT){
-
+    if (getStateEstimator() == kalmanEstimator &&
+        range_last < RANGE_OUTLIER_LIMIT) {
       // Form measurement
       tofMeasurement_t tofData;
       tofData.timestamp = xTaskGetTickCount();
       tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
       tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
-      stateEstimatorEnqueueTOF(&tofData);
+      estimatorKalmanEnqueueTOF(&tofData);
     }
-#endif
+
     vTaskDelayUntil(&xLastWakeTime, M2T(measurement_timing_budget_ms));
   }
 }
@@ -302,7 +296,7 @@ bool vl53l0xInitSensor(bool io_2v8)
   // the API, but the same data seems to be more easily readable from
   // GLOBAL_CONFIG_SPAD_ENABLES_REF_0 through _6, so read it from there
   uint8_t ref_spad_map[6];
-  i2cdevRead(I2Cx, devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
+  i2cdevReadReg8(I2Cx, devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
 
   // -- VL53L0X_set_reference_spads() begin (assume NVM values are valid)
 
@@ -329,7 +323,7 @@ bool vl53l0xInitSensor(bool io_2v8)
     }
   }
 
-  i2cdevWrite(I2Cx, devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
+  i2cdevWriteReg8(I2Cx, devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
 
   // -- VL53L0X_set_reference_spads() end
 
@@ -912,6 +906,11 @@ uint16_t vl53l0xReadRangeContinuousMillimeters(void)
   while ((val & 0x07) == 0)
   {
     i2cdevReadByte(I2Cx, devAddr, VL53L0X_RA_RESULT_INTERRUPT_STATUS, &val);
+    if ((val & 0x07) == 0)
+    {
+      // Relaxation delay when polling interrupt
+      vTaskDelay(M2T(1));
+    }
     if (checkTimeoutExpired())
     {
       did_timeout = true;
@@ -1132,7 +1131,7 @@ bool vl53l0xPerformSingleRefCalibration(uint8_t vhv_init_byte)
 uint16_t vl53l0xReadReg16Bit(uint8_t reg)
 {
   uint8_t buffer[2] = {};
-  i2cdevRead(I2Cx, devAddr, reg, 2, (uint8_t *)&buffer);
+  i2cdevReadReg8(I2Cx, devAddr, reg, 2, (uint8_t *)&buffer);
   return ((uint16_t)(buffer[0]) << 8) | buffer[1];
 }
 
@@ -1141,7 +1140,7 @@ bool vl53l0xWriteReg16Bit(uint8_t reg, uint16_t val)
   uint8_t buffer[2] = {};
   buffer[0] = ((val >> 8) & 0xFF);
   buffer[1] = ((val     ) & 0xFF);
-  return i2cdevWrite(I2Cx, devAddr, reg, 2, (uint8_t *)&buffer);
+  return i2cdevWriteReg8(I2Cx, devAddr, reg, 2, (uint8_t *)&buffer);
 }
 
 bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val)
@@ -1151,7 +1150,7 @@ bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val)
   buffer[1] = ((val >> 16) & 0xFF);
   buffer[2] = ((val >>  8) & 0xFF);
   buffer[3] = ((val      ) & 0xFF);
-  return i2cdevWrite(I2Cx, devAddr, reg, 4, (uint8_t *)&buffer);
+  return i2cdevWriteReg8(I2Cx, devAddr, reg, 4, (uint8_t *)&buffer);
 }
 
 static const DeckDriver vl53l0x_deck = {
@@ -1167,5 +1166,5 @@ static const DeckDriver vl53l0x_deck = {
 DECK_DRIVER(vl53l0x_deck);
 
 LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_ADD(LOG_UINT16, zrange, &range_last)
 LOG_GROUP_STOP(range)

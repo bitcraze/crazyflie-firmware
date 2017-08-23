@@ -32,9 +32,8 @@
 #include "stabilizer_types.h"
 #include "cfassert.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
+#include "estimator.h"
 #include "estimator_kalman.h"
-#endif // ESTIMATOR_TYPE_kalman
 
 
 static lpsAlgoOptions_t* options;
@@ -70,7 +69,6 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
-#ifdef ESTIMATOR_TYPE_kalman
 static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
@@ -80,9 +78,8 @@ static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     .anchorPosition[1] = options->anchorPosition[anchor2]
   };
 
-  stateEstimatorEnqueueTDOA(&tdoa);
+  estimatorKalmanEnqueueTDOA(&tdoa);
 }
-#endif
 
 static double calcClockCorrection(const double frameTime, const double previuosFrameTime) {
     double clockCorrection = 1.0;
@@ -151,9 +148,7 @@ static void rxcallback(dwDevice_t *dev) {
         if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
           uwbTdoaDistDiff[anchor] = tdoaDistDiff;
 
-          #ifdef ESTIMATOR_TYPE_kalman
           enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-          #endif
 
           statsAcceptedPackets++;
         }

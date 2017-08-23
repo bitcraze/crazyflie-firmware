@@ -27,7 +27,7 @@ LPS_TDOA_ENABLE   ?= 0
 
 ######### Stabilizer configuration ##########
 ##### Sets the name of the stabilizer module to use.
-ESTIMATOR          ?= complementary
+ESTIMATOR          ?= any
 CONTROLLER         ?= pid
 POWER_DISTRIBUTION ?= stock
 SENSORS 					 ?= cf2
@@ -118,7 +118,7 @@ CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
 # Crazyflie sources
-VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/src
+VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/bosch/src src/drivers/src
 VPATH_CF1 += src/platform/cf1
 VPATH_CF2 += src/platform/cf2
 
@@ -146,7 +146,7 @@ PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o i2c_drv
 PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
-PROJ_OBJ_CF2 += bmi160.o bma2x2.o bmg160.o bmp280.o bstdr_comm_support.o
+PROJ_OBJ_CF2 += bmi055_accel.o bmi055_gyro.o bmi160.o bmp280.o bstdr_comm_support.o bmm150.o
 PROJ_OBJ_CF2 += icm20789.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
@@ -171,8 +171,10 @@ PROJ_OBJ += commander.o crtp_commander.o crtp_commander_rpyt.o
 PROJ_OBJ += crtp_commander_generic.o crtp_localization_service.o
 PROJ_OBJ += attitude_pid_controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o
-PROJ_OBJ += estimator_$(ESTIMATOR).o controller_$(CONTROLLER).o
+PROJ_OBJ += estimator.o estimator_complementary.o
+PROJ_OBJ += controller_$(CONTROLLER).o
 PROJ_OBJ += power_distribution_$(POWER_DISTRIBUTION).o
+PROJ_OBJ_CF2 += estimator_kalman.o
 
 
 # Deck Core
@@ -199,6 +201,7 @@ PROJ_OBJ_CF2 += lpsTwrTdmaTag.o
 else
 PROJ_OBJ_CF2 += lpsTwrTag.o
 endif
+PROJ_OBJ_CF2 += flowdeck.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 PROJ_OBJ_CF2 += lpsTdoaTag.o
@@ -214,7 +217,8 @@ PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
-PROJ_OBJ_CF2 += configblockeeprom.o
+PROJ_OBJ_CF2 += configblockeeprom.o crc_bosch.o
+PROJ_OBJ_CF2 += sleepus.o
 
 # Libs
 PROJ_OBJ_CF2 += libarm_math.a
@@ -242,7 +246,7 @@ GDB = $(CROSS_COMPILE)gdb
 INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
 INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
 INCLUDES += -Isrc/utils/interface -Isrc/drivers/interface -Isrc/platform
-INCLUDES += -Ivendor/CMSIS/CMSIS/Include
+INCLUDES += -Ivendor/CMSIS/CMSIS/Include -Isrc/drivers/bosch/interface
 
 INCLUDES_CF1 += -I$(LIB)/STM32F10x_StdPeriph_Driver/inc
 INCLUDES_CF1 += -I$(LIB)/CMSIS/Core/CM3
@@ -286,7 +290,7 @@ ifeq ($(USE_ESKYLINK), 1)
   CFLAGS += -DUSE_ESKYLINK
 endif
 
-CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_TYPE_$(ESTIMATOR) -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
+CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_NAME=$(ESTIMATOR)Estimator -DCONTROLLER_TYPE_$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
 
 CFLAGS += $(PROCESSOR) $(INCLUDES) $(STFLAGS)
 ifeq ($(PLATFORM), CF1)

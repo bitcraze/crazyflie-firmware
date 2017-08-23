@@ -44,7 +44,7 @@ struct pidAxis_s {
   PidObject pid;
 
   struct pidInit_s init;
-  mode_t previousMode;
+    stab_mode_t previousMode;
   float setpoint;
 
   float output;
@@ -126,7 +126,7 @@ static struct this_s this = {
   .pidZ = {
     .init = {
       .kp = 2.0f,
-      .ki = 0,
+      .ki = 0.5,
       .kd = 0,
     },
     .pid.dt = DT,
@@ -170,10 +170,25 @@ void positionController(float* thrust, attitude_t *attitude, setpoint_t *setpoin
   // this value is below 0.5
   this.pidZ.pid.outputLimit = max(zVelMax, 0.5f)  * velMaxOverhead;
 
+  float cosyaw = cosf(state->attitude.yaw * (float)M_PI / 180.0f);
+  float sinyaw = sinf(state->attitude.yaw * (float)M_PI / 180.0f);
+  float bodyvx = setpoint->velocity.x;
+  float bodyvy = setpoint->velocity.y;
+
   // X, Y
-  setpoint->velocity.x = runPid(state->position.x, &this.pidX, setpoint->position.x, DT);
-  setpoint->velocity.y = runPid(state->position.y, &this.pidY, setpoint->position.y, DT);
-  setpoint->velocity.z = runPid(state->position.z, &this.pidZ, setpoint->position.z, DT);
+  if (setpoint->mode.x == modeAbs) {
+    setpoint->velocity.x = runPid(state->position.x, &this.pidX, setpoint->position.x, DT);
+  } else if (setpoint->velocity_body) {
+    setpoint->velocity.x = bodyvx * cosyaw - bodyvy * sinyaw;
+  }
+  if (setpoint->mode.y == modeAbs) {
+    setpoint->velocity.y = runPid(state->position.y, &this.pidY, setpoint->position.y, DT);
+  } else if (setpoint->velocity_body) {
+    setpoint->velocity.y = bodyvy * cosyaw + bodyvx * sinyaw;
+  }
+  if (setpoint->mode.z == modeAbs) {
+    setpoint->velocity.z = runPid(state->position.z, &this.pidZ, setpoint->position.z, DT);
+  }
 
   velocityController(thrust, attitude, setpoint, state);
 }
