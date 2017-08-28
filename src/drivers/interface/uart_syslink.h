@@ -30,6 +30,7 @@
 
 #include "crtp.h"
 #include "eprintf.h"
+#include "syslink.h"
 
 #define UARTSLK_TYPE             USART6
 #define UARTSLK_PERIF            RCC_APB2Periph_USART6
@@ -78,12 +79,10 @@ bool uartslkTest(void);
 struct crtpLinkOperations * uartslkGetLink();
 
 /**
- * Get data from rx queue with timeout.
- * @param[out] c  Byte of data
- *
- * @return true if byte received, false if timout reached.
+ * Get data from rx queue. Blocks until data is available.
+ * @param[out] slp Pointer to a complete syslink packet
  */
-bool uartslkGetDataWithTimout(uint8_t *c);
+void uartslkGetPacketBlocking(SyslinkPacket* slp);
 
 /**
  * Sends raw data using a lock. Should be used from
