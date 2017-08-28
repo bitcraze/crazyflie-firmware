@@ -10,8 +10,9 @@ extern uwbAlgorithm_t uwbTdoaTagAlgorithm;
 
 typedef struct rangePacket_s {
   uint8_t type;
-  uint8_t txMaster[5];
-  uint8_t timestamps[LOCODECK_NR_OF_ANCHORS][5];
+  uint8_t sequenceNrs[LOCODECK_NR_OF_ANCHORS];
+  uint32_t timestamps[LOCODECK_NR_OF_ANCHORS];
+  uint16_t distances[LOCODECK_NR_OF_ANCHORS];
 } __attribute__((packed)) rangePacket_t;
 
 #endif // __LPS_TDOA_TAG_H__
