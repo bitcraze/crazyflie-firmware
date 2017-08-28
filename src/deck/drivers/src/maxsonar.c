@@ -177,9 +177,9 @@ static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
 }
 
 /**
- * Reads distance measurement from an MB1040 sonar range finder (LV-MaxBotix-EZ4) via an analog input interface.
+ * Reads distance measurement from an MB1040 sonar range finder (LV-MaxBotix-EZ4) via I2C interface.
  *
- * @param pin      The GPIO pin to use for ADC conversion.
+ * @param devAddr  I2C device address to sensor
  * @param accuracy If not NULL, this function will write the accuracy of the distance measurement (in mm) to this parameter.
  *
  * @return The distance measurement in millimeters.
@@ -195,7 +195,7 @@ static uint32_t maxSonarReadDistanceMB1232(uint8_t devAddr, uint32_t *accuracy)
   status = i2cdevRead(I2Cx, devAddr, 2, (uint8_t *)dataRead);
   if (status)
   {
-    maxSonarDistance = ((uint16_t)dataRead[0] << 8) + dataRead[1];
+    maxSonarDistance = 10 * (((uint16_t)dataRead[0] << 8) + dataRead[1]);
     if (NULL != accuracy)
     {
       *accuracy = maxSonarGetAccuracyMB1040(maxSonarDistance);
