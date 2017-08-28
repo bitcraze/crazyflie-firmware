@@ -90,17 +90,10 @@
 #define PM_TASK_PRI             0
 #define USDLOG_TASK_PRI         1
 #define USDWRITE_TASK_PRI       0
+#define PCA9685_TASK_PRI        3
 
-#ifdef PLATFORM_CF2
-  #define SYSLINK_TASK_PRI        3
-  #define USBLINK_TASK_PRI        3
-#endif
-
-#ifdef PLATFORM_CF1
-  #define NRF24LINK_TASK_PRI      2
-  #define ESKYLINK_TASK_PRI       1
-  #define UART_RX_TASK_PRI        2
-#endif
+#define SYSLINK_TASK_PRI        3
+#define USBLINK_TASK_PRI        3
 
 // Not compiled
 #if 0
@@ -131,6 +124,7 @@
 #define VL53_TASK_NAME          "VL53"
 #define USDLOG_TASK_NAME        "USDLOG"
 #define USDWRITE_TASK_NAME      "USDWRITE"
+#define PCA9685_TASK_NAME       "PCA9685"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
@@ -154,6 +148,7 @@
 #define VL53_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 #define USDLOG_TASK_STACKSIZE         (2 * configMINIMAL_STACK_SIZE)
 #define USDWRITE_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
+#define PCA9685_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

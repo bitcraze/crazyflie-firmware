@@ -37,9 +37,7 @@
 #include "stabilizer_types.h"
 #include "stabilizer.h"
 
-#ifndef PLATFORM_CF1
 #include "locodeck.h"
-#endif
 
 #include "estimator_kalman.h"
 
@@ -117,7 +115,6 @@ static void extPositionHandler(CRTPPacket* pk)
 
 static void genericLocHandle(CRTPPacket* pk)
 {
-#ifndef PLATFORM_CF1
   uint8_t type = pk->data[0];
   if (pk->size < 1) return;
 
@@ -134,7 +131,6 @@ static void genericLocHandle(CRTPPacket* pk)
   } else if (type == EMERGENCY_STOP_WATCHDOG) {
     stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
   }
-#endif
 }
 
 bool getExtPosition(state_t *state)
@@ -146,10 +142,8 @@ bool getExtPosition(state_t *state)
     ext_pos.y = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].y;
     ext_pos.z = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].z;
     ext_pos.stdDev = 0.01;
-#ifndef PLATFORM_CF1
     estimatorKalmanEnqueuePosition(&ext_pos);
-#endif
-  
+
     return true;
   }
   return false;

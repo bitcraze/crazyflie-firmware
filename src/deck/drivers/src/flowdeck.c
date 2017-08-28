@@ -245,6 +245,10 @@ static void InitRegisters()
   registerWrite(0x4E, 0xA8);
   registerWrite(0x5A, 0x50);
   registerWrite(0x40, 0x80);
+
+  registerWrite(0x7F, 0x00);
+  registerWrite(0x5A, 0x10);
+  registerWrite(0x54, 0x00);
 }
 
 static void pamotionTask(void *param)

@@ -31,29 +31,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifdef PLATFORM_CF2
 #include "i2c_drv.h"
-#endif
-
-#ifdef PLATFORM_CF1
-// Delay is approx 0.2us per loop @64Mhz
-#define I2CDEV_LOOPS_PER_US  5
-#define I2CDEV_LOOPS_PER_MS  (1000 * I2CDEV_LOOPS_PER_US)
-#endif
 
 #define I2CDEV_I2C1_PIN_SDA GPIO_Pin_7
 #define I2CDEV_I2C1_PIN_SCL GPIO_Pin_6
 
 #define I2CDEV_NO_MEM_ADDR  0xFF
 
-
-#ifdef PLATFORM_CF1
-typedef I2C_TypeDef      I2C_Dev;
-#else
 typedef I2cDrv    I2C_Dev;
 #define I2C1_DEV  &deckBus
 #define I2C3_DEV  &sensorsBus
-#endif
 
 /**
  * Read bytes from an I2C peripheral

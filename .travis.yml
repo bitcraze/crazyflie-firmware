@@ -23,11 +23,3 @@ script:
   # Build CF2 with TDOA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDOA_ENABLE=1
-
-  # Build CF1
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF1
-
-  # Build CF1 with "all" features enabled
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF1 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DUSE_ESKYLINK -DUART_OUTPUT_TRACE_DATA -DDEBUG_PRINT_ON_UART"

@@ -30,13 +30,8 @@
 #include "motors.h"
 #include "cfassert.h"
 
-#ifdef PLATFORM_CF1
-#include "uart_cf1.h"
-#define UART_PRINT    uartPrintf
-#else
 #include "uart1.h"
 #define UART_PRINT    uart1Printf
-#endif
 
 #define DONT_DISCARD __attribute__((used))
 

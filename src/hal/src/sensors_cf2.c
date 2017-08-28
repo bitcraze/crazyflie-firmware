@@ -26,10 +26,6 @@
  * 2016.06.15: Initial version by Mike Hamer, http://mikehamer.info
  */
 
-#ifdef PLATFORM_CF1
-#error SENSORS = task is only compatible with the Crazyflie 2.0 // due to the IMU initialization
-#endif
-
 #include "sensors.h"
 
 #include <math.h>
