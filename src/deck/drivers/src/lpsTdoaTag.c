@@ -73,15 +73,22 @@ static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
   estimatorKalmanEnqueueTDOA(&tdoa);
 }
 
-static double calcClockCorrection(const double frameTime, const double previuosFrameTime) {
-    double clockCorrection = 1.0;
+// A note on variable names. They might seem a bit verbose but express quite a lot of information
+// We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
+// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference Anchor by Anchor N expressed in the clock of Anchor N"
 
-    if (frameTime != 0.0) {
-      clockCorrection = previuosFrameTime / frameTime;
-    }
+static double calcClockCorrection(const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
+  const int64_t rxAn_by_T_in_cl_T = arrival->full;
+  const int64_t txAn_in_cl_An = packet->timestamps[anchor];
+  const int64_t previous_rxAn_by_T_in_cl_T  = arrivals[anchor].full;
+  const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
+  const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
+  const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
 
-    return clockCorrection;
+  double clockCorrection = frameTime_in_cl_An / frameTime_in_T;
+  return clockCorrection;
 }
+
 
 // The default receive time in the anchors for messages from other anchors is 0
 // and is overwritten with the actual receive time when a packet arrives.
@@ -90,12 +97,33 @@ static bool isValidRxTime(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
 }
 
-// A note on variable names. They might seem a bit verbose but express quite a lot of information
-// We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
-// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Referecne Anchor by Anchor N expressed in the clock of Anchor N"
-static void rxcallback(dwDevice_t *dev) {
-  statsReceivedPackets++;
+static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
+  const int64_t rxAn_by_T_in_cl_T  = arrival->full;
+  const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
+  const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
 
+  if (! isValidRxTime(rxAr_by_An_in_cl_An)) {
+    return false;
+  }
+
+  const int64_t txAn_in_cl_An = packet->timestamps[anchor];
+  const int64_t rxAr_by_T_in_cl_T  = arrivals[previousAnchor].full;
+  const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
+  const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection_T_To_A[anchor] - delta_txAr_to_txAn_in_cl_An;
+
+  *tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_An / LOCODECK_TS_FREQ;
+  return true;
+}
+
+static void logDistanceDiff(const uint8_t anchor, const float tdoaDistDiff) {
+  // Only store diffs for anchors with succeeding numbers. In case of packet
+  // loss we can get ranging between any anchors and that messes up the graphs.
+  if (((previousAnchor + 1) & 0x07) == anchor) {
+    uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+  }
+}
+
+static void rxcallback(dwDevice_t *dev) {
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
 
@@ -109,39 +137,13 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    const int64_t rxAn_by_T_in_cl_T  = arrival.full;
-    const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-
-    // Calculate clock correction for anchor clock compared to tag clock
-    const int64_t previous_rxAn_by_T_in_cl_T  = arrivals[anchor].full;
-    const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
-    const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
-    const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
-    clockCorrection_T_To_A[anchor] = calcClockCorrection(frameTime_in_T, frameTime_in_cl_An);
+    clockCorrection_T_To_A[anchor] = calcClockCorrection(anchor, packet, &arrival);
 
     if (anchor != previousAnchor) {
-      const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
-
-      if (isValidRxTime(rxAr_by_An_in_cl_An)) {
-        statsAcceptedAnchorDataPackets++;
-
-        const int64_t rxAr_by_T_in_cl_T  = arrivals[previousAnchor].full;
-
-        // Calculate distance diff
-        const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
-        const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
-        const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection_T_To_A[anchor] - delta_txAr_to_txAn_in_cl_An;
-
-        const float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_An / LOCODECK_TS_FREQ;
-
+      float tdoaDistDiff = 0.0;
+      if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-
-        statsAcceptedPackets++;
-
-        // Only store some select diffs. In case of packet loss we can get ranging between any anchors and that messes up the graphs.
-        if (((previousAnchor + 1) & 0x07) == anchor) {
-          uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-        }
+        logDistanceDiff(anchor, tdoaDistDiff);
       }
     }
 
