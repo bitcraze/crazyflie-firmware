@@ -727,9 +727,11 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
   float expectedDiff = 0.5;
 
   // Ideal times in universal clock
-  uint64_t timeA0ToA1 = time1m;
   uint64_t timeA0ToTag = time2m;
   uint64_t timeA1ToTag = time2_5m;
+
+  // Time between anchors in universal time. Including anchor delay.
+  uint64_t timeA0ToA1 = time1m + 150.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
 
   mockMessageFromAnchor(1, iTxTime0_1 + timeA1ToTag + tO,
     (uint8_t[]) {10,                            20,               0,  0,  0,  0,  0,  0},
@@ -744,7 +746,7 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
   mockMessageFromAnchor(1, iTxTime1_1 + timeA1ToTag + tO,
     (uint8_t[]) {11,                            21,               0,  0,  0,  0,  0,  0},
     (uint64_t[]){iTxTime1_0 + timeA0ToA1 + a1O, iTxTime1_1 + a1O, NS, NS, NS, NS, NS, NS},
-    (uint64_t[]){time1m,                        NS,               NS, NS, NS, NS, NS, NS});
+    (uint64_t[]){timeA0ToA1,                    NS,               NS, NS, NS, NS, NS, NS});
 
   mockKalmanEstimator(0, 1, expectedDiff);
 
@@ -766,9 +768,11 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
   float expectedDiff = 0.5;
 
   // Ideal times in universal clock
-  uint64_t timeA0ToA5 = time1m;
   uint64_t timeA0ToTag = time2m;
   uint64_t timeA5ToTag = time2_5m;
+
+  // Distance between anchors including antenna delay
+  uint64_t timeA0ToA5 = time1m + 150.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
 
   // Clock start offset including any antenna delay
   uint64_t tO = 17 * LOCODECK_TS_FREQ;
@@ -788,17 +792,17 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
   mockMessageFromAnchor(5, drift(driftTag, iTxTime1_5 + timeA5ToTag + tO),
     (uint8_t[]) {11,                                            0,  0,  0,  0,  21,                               0,  0},
     (uint64_t[]){drift(driftA5, iTxTime1_0 + timeA0ToA5 + a5O), NS, NS, NS, NS, drift(driftA5, iTxTime1_5 + a5O), NS, NS},
-    (uint64_t[]){time1m,                                        NS, NS, NS, NS, NS,                               NS, NS});
+    (uint64_t[]){timeA0ToA5,                                    NS, NS, NS, NS, NS,                               NS, NS});
 
   mockMessageFromAnchor(0, drift(driftTag, iTxTime2_0 + timeA0ToTag + tO),
     (uint8_t[]) {12,                                            0,  0,  0,  0,  21,                               0, 0},
     (uint64_t[]){iTxTime2_0 + a0O,                              NS, NS, NS, NS, iTxTime1_5 + timeA0ToA5 + a0O,    NS, NS},
-    (uint64_t[]){NS,                                            NS, NS, NS, NS, time1m,                           NS, NS});
+    (uint64_t[]){NS,                                            NS, NS, NS, NS, timeA0ToA5,                       NS, NS});
 
   mockMessageFromAnchor(5, drift(driftTag, iTxTime2_5 + timeA5ToTag + tO),
     (uint8_t[]) {12,                                            0,  0,  0,  0,  22,                               0, 0},
     (uint64_t[]){drift(driftA5, iTxTime2_0 + timeA0ToA5 + a5O), NS, NS, NS, NS, drift(driftA5, iTxTime2_5 + a5O), NS, NS},
-    (uint64_t[]){time1m,                                        NS, NS, NS, NS, NS,                               NS, NS});
+    (uint64_t[]){timeA0ToA5,                                    NS, NS, NS, NS, NS,                               NS, NS});
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
