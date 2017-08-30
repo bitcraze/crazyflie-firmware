@@ -49,10 +49,6 @@ static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
 #define MEASUREMENT_NOISE_STD 0.15f
 
-// The maximum diff in distances that we consider to be valid
-// Used to sanity check results and remove results that are wrong due to packet loss
-#define MAX_DISTANCE_DIFF (5.0f)
-
 static uint32_t statsReceivedPackets = 0;
 static uint32_t statsAcceptedAnchorDataPackets = 0;
 static uint32_t statsAcceptedPackets = 0;
@@ -138,11 +134,14 @@ static void rxcallback(dwDevice_t *dev) {
 
         const float tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_An / LOCODECK_TS_FREQ;
 
-        uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
 
         statsAcceptedPackets++;
+
+        // Only store some select diffs. In case of packet loss we can get ranging between any anchors and that messes up the graphs.
+        if (((previousAnchor + 1) & 0x07) == anchor) {
+          uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+        }
       }
     }
 
@@ -206,14 +205,14 @@ uwbAlgorithm_t uwbTdoaTagAlgorithm = {
 
 
 LOG_GROUP_START(tdoa)
-LOG_ADD(LOG_FLOAT, d0, &uwbTdoaDistDiff[0])
-LOG_ADD(LOG_FLOAT, d1, &uwbTdoaDistDiff[1])
-LOG_ADD(LOG_FLOAT, d2, &uwbTdoaDistDiff[2])
-LOG_ADD(LOG_FLOAT, d3, &uwbTdoaDistDiff[3])
-LOG_ADD(LOG_FLOAT, d4, &uwbTdoaDistDiff[4])
-LOG_ADD(LOG_FLOAT, d5, &uwbTdoaDistDiff[5])
-LOG_ADD(LOG_FLOAT, d6, &uwbTdoaDistDiff[6])
-LOG_ADD(LOG_FLOAT, d7, &uwbTdoaDistDiff[7])
+LOG_ADD(LOG_FLOAT, d7-0, &uwbTdoaDistDiff[0])
+LOG_ADD(LOG_FLOAT, d0-1, &uwbTdoaDistDiff[1])
+LOG_ADD(LOG_FLOAT, d1-2, &uwbTdoaDistDiff[2])
+LOG_ADD(LOG_FLOAT, d2-3, &uwbTdoaDistDiff[3])
+LOG_ADD(LOG_FLOAT, d3-4, &uwbTdoaDistDiff[4])
+LOG_ADD(LOG_FLOAT, d4-5, &uwbTdoaDistDiff[5])
+LOG_ADD(LOG_FLOAT, d5-6, &uwbTdoaDistDiff[6])
+LOG_ADD(LOG_FLOAT, d6-7, &uwbTdoaDistDiff[7])
 
 LOG_ADD(LOG_UINT32, rxCnt, &statsReceivedPackets)
 LOG_ADD(LOG_UINT32, anCnt, &statsAcceptedAnchorDataPackets)
