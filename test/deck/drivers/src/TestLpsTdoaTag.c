@@ -83,6 +83,12 @@ const uint64_t iTxTime2_3 = ANCHOR_TIME(2, 3);
 const uint64_t iTxTime2_4 = ANCHOR_TIME(2, 4);
 const uint64_t iTxTime2_5 = ANCHOR_TIME(2, 5);
 
+const uint64_t iTxTime3_0 = ANCHOR_TIME(3, 0);
+const uint64_t iTxTime3_1 = ANCHOR_TIME(3, 1);
+const uint64_t iTxTime3_2 = ANCHOR_TIME(3, 2);
+const uint64_t iTxTime3_3 = ANCHOR_TIME(3, 3);
+const uint64_t iTxTime3_4 = ANCHOR_TIME(3, 4);
+const uint64_t iTxTime3_5 = ANCHOR_TIME(3, 5);
 
 void setUp(void) {
   dwGetData_resetMock();
@@ -302,259 +308,51 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift3() {
   // Nothing here, verification in mocks
 }
 
-// TODO krri Replace the following tests with tests that verify
-//             * missing packets
-//             * sequence numbering of anchor to CF packets
-//             * sequence numbering of anchor to anchor packets
-//             * wrap of sequence numbers, anchor to CF packets
-//             * wrap of sequence numbers, anchor to anchor packets
-
-/*
-void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA5toA0() {
+void testMissingTimestamInhibitsClockDriftCalculationInFirstIteration() {
   // Fixture
   // Two anchors, separated by 1.0m
   // Distance from A0 to tag is 2.0m
-  // Distance from other anchor to tag is 2.5m
-  float expectedDiff = 0.5;
-  const int anchor = 5;
-
-  // Ideal times in universal clock
-  uint64_t timeA0ToAn = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeAnToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-
-  // Clock start offset including any antenna delay
-  uint64_t tO = 17 * LOCODECK_TS_FREQ;
-  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
-  uint64_t anO = 138 * LOCODECK_TS_FREQ;
-
-  // Clock drifts
-  float aD = 1.000010;
-  float tD = 0.999995;
-
-  // Message from A5 -> A0 lost
-  //                    A       Arrival Time                       A0                                           A1  A2  A3  A4  A5                           A6  A7
-  mockMessageFromAnchor(0     , drift(tD, iTxTime0_0 + timeA0ToTag + tO), iTxTime0_0 + a0O                        , NS, NS, NS, NS, NS                         , NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime0_5 + timeAnToTag + tO), drift(aD, iTxTime0_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime0_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime1_0 + timeA0ToTag + tO), iTxTime1_0 + a0O                        , NS, NS, NS, NS, iTxTime0_5 + timeA0ToAn + a0O, NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime1_5 + timeAnToTag + tO), drift(aD, iTxTime1_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime1_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime2_0 + timeA0ToTag + tO), iTxTime2_0 + a0O                        , NS, NS, NS, NS, 0                          , NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime2_5 + timeAnToTag + tO), drift(aD, iTxTime2_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime2_5 + anO)  , NS, NS);
-
-  // Only message 4 will lead to a call to the estimator
-  mockKalmanEstimator(0, anchor, expectedDiff);
-
-  // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-
-  // Assert
-  // Nothing here, verification in mocks
-}
-
-void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageA0toA5() {
-  // Fixture
-  // Two anchors, separated by 1.0m
-  // Distance from A0 to tag is 2.0m
-  // Distance from other anchor to tag is 2.5m
-  const int anchor = 5;
-
-  // Ideal times in universal clock
-  uint64_t timeA0ToAn = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeAnToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-
-  // Clock start offset including any antenna delay
-  uint64_t tO = 17 * LOCODECK_TS_FREQ;
-  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
-  uint64_t anO = 138 * LOCODECK_TS_FREQ;
-
-  // Clock drifts
-  float aD = 1.000010;
-  float tD = 0.999995;
-
-  // Message from A5 -> A0 lost
-  //                    A       Arrival Time                              A0                                        A1  A2  A3  A4  A5                             A6  A7
-  mockMessageFromAnchor(0     , drift(tD, iTxTime0_0 + timeA0ToTag + tO), iTxTime0_0 + a0O                        , NS, NS, NS, NS, NS                           , NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime0_5 + timeAnToTag + tO), drift(aD, iTxTime0_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime0_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime1_0 + timeA0ToTag + tO), iTxTime1_0 + a0O                        , NS, NS, NS, NS, iTxTime0_5 + timeA0ToAn + a0O, NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime1_5 + timeAnToTag + tO), 0                                       , NS, NS, NS, NS, drift(aD, iTxTime1_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime2_0 + timeA0ToTag + tO), iTxTime2_0 + a0O                        , NS, NS, NS, NS, iTxTime1_5 + timeA0ToAn + a0O, NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime2_5 + timeAnToTag + tO), drift(aD, iTxTime2_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime2_5 + anO)  , NS, NS);
-
-  // There are no calls to the estimator
-
-  // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-
-  // Assert
-  // Nothing here, verification in mocks
-}
-
-void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageNr3() {
-  // Fixture
-  // Two anchors, separated by 1.0m
-  // Distance from A0 to tag is 2.0m
-  // Distance from other anchor to tag is 2.5m
-  const int anchor = 5;
-
-  // Ideal times in universal clock
-  uint64_t timeA0ToAn = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeAnToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-
-  // Clock start offset including any antenna delay
-  uint64_t tO = 17 * LOCODECK_TS_FREQ;
-  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
-  uint64_t anO = 138 * LOCODECK_TS_FREQ;
-
-  // Clock drifts
-  float aD = 1.000010;
-  float tD = 0.999995;
-
-  //                    A       Arrival Time                              A0                                        A1  A2  A3  A4  A5                             A6  A7
-  mockMessageFromAnchor(0     , drift(tD, iTxTime0_0 + timeA0ToTag + tO), iTxTime0_0 + a0O                        , NS, NS, NS, NS, NS                           , NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime0_5 + timeAnToTag + tO), drift(aD, iTxTime0_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime0_5 + anO)  , NS, NS);
-  //mockMessageFromAnchor(0     , drift(tD, iTxTime1_0 + timeA0ToTag + tO), iTxTime1_0 + a0O                        , NS, NS, NS, NS, iTxTime0_5 + timeA0ToAn + a0O, NS, NS); message lost
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime1_5 + timeAnToTag + tO), drift(aD, iTxTime1_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime1_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime2_0 + timeA0ToTag + tO), iTxTime2_0 + a0O                        , NS, NS, NS, NS, iTxTime1_5 + timeA0ToAn + a0O, NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime2_5 + timeAnToTag + tO), drift(aD, iTxTime2_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime2_5 + anO)  , NS, NS);
-
-  // The missing packet will lead to no calls to the estimator
-
-  // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  //uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-
-  // Assert
-  // Nothing here, verification in mocks
-}
-
-void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageNr4() {
-  // Fixture
-  // Two anchors, separated by 1.0m
-  // Distance from A0 to tag is 2.0m
-  // Distance from other anchor to tag is 2.5m
-  const int anchor = 5;
-
-  // Ideal times in universal clock
-  uint64_t timeA0ToAn = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeAnToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-
-  // Clock start offset including any antenna delay
-  uint64_t tO = 17 * LOCODECK_TS_FREQ;
-  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
-  uint64_t anO = 138 * LOCODECK_TS_FREQ;
-
-  // Clock drifts
-  float aD = 1.000010;
-  float tD = 0.999995;
-
-  //                    A       Arrival Time                              A0                                        A1  A2  A3  A4  A5                             A6  A7
-  mockMessageFromAnchor(0     , drift(tD, iTxTime0_0 + timeA0ToTag + tO), iTxTime0_0 + a0O                        , NS, NS, NS, NS, NS                           , NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime0_5 + timeAnToTag + tO), drift(aD, iTxTime0_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime0_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime1_0 + timeA0ToTag + tO), iTxTime1_0 + a0O                        , NS, NS, NS, NS, iTxTime0_5 + timeA0ToAn + a0O, NS, NS);
-  //mockMessageFromAnchor(anchor, drift(tD, iTxTime1_5 + timeAnToTag + tO), drift(aD, iTxTime1_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime1_5 + anO)  , NS, NS); message lost
-  mockMessageFromAnchor(0     , drift(tD, iTxTime2_0 + timeA0ToTag + tO), iTxTime2_0 + a0O                        , NS, NS, NS, NS, iTxTime1_5 + timeA0ToAn + a0O, NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime2_5 + timeAnToTag + tO), drift(aD, iTxTime2_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime2_5 + anO)  , NS, NS);
-
-  // The missing packet will lead to no calls to the estimator
-
-  // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  //uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-
-  // Assert
-  // Nothing here, verification in mocks
-}
-
-void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDriftAndLostMessageNr5() {
-  // Fixture
-  // Two anchors, separated by 1.0m
-  // Distance from A0 to tag is 2.0m
-  // Distance from other anchor to tag is 2.5m
-  float expectedDiff = 0.5;
-  const int anchor = 5;
-
-  // Ideal times in universal clock
-  uint64_t timeA0ToAn = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeAnToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-
-  // Clock start offset including any antenna delay
-  uint64_t tO = 17 * LOCODECK_TS_FREQ;
-  uint64_t a0O = 60 * LOCODECK_TS_FREQ;
-  uint64_t anO = 138 * LOCODECK_TS_FREQ;
-
-  // Clock drifts
-  float aD = 1.000010;
-  float tD = 0.999995;
-
-  //                    A       Arrival Time                       A0                                           A1  A2  A3  A4  A5                           A6  A7
-  mockMessageFromAnchor(0     , drift(tD, iTxTime0_0 + timeA0ToTag + tO), iTxTime0_0 + a0O                        , NS, NS, NS, NS, NS                         , NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime0_5 + timeAnToTag + tO), drift(aD, iTxTime0_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime0_5 + anO)  , NS, NS);
-  mockMessageFromAnchor(0     , drift(tD, iTxTime1_0 + timeA0ToTag + tO), iTxTime1_0 + a0O                        , NS, NS, NS, NS, iTxTime0_5 + timeA0ToAn + a0O, NS, NS);
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime1_5 + timeAnToTag + tO), drift(aD, iTxTime1_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime1_5 + anO)  , NS, NS);
-  //mockMessageFromAnchor(0     , drift(tD, iTxTime2_0 + timeA0ToTag + tO), iTxTime2_0 + a0O                        , NS, NS, NS, NS, iTxTime1_5 + timeA0ToAn + a0O, NS, NS); message lost
-  mockMessageFromAnchor(anchor, drift(tD, iTxTime2_5 + timeAnToTag + tO), drift(aD, iTxTime2_0 + timeA0ToAn + anO), NS, NS, NS, NS, drift(aD, iTxTime2_5 + anO)  , NS, NS);
-
-  // Only message 4 will lead to a call to the estimator
-  mockKalmanEstimator(0, anchor, expectedDiff);
-
-  // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  //uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-
-  // Assert
-  // Nothing here, verification in mocks
-}
-
-
-void testNotUsingAnchor0() {
-  // Fixture
-  // Two anchors (A2 and A5), separated by 1.0m
-  // Distance from A2 to tag is 2.0m
   // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
 
-  // Ideal times in universal clock (A0)
-  uint64_t timeA2ToA5 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeA2ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
-  uint64_t timeA5ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
 
-  // Clock start offset including any antenna delay
-  // Intentionally less than 40 bit clock wrap around, approx 17s
-  uint64_t a2O = 1 * LOCODECK_TS_FREQ;
-  uint64_t a5O = 2 * LOCODECK_TS_FREQ;
-  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
 
-  //                    A  Arrival Time                   A0  A1  A2                             A3  A4  A5                              A6  A7
-  mockMessageFromAnchor(2, iTxTime0_2 + timeA2ToTag + tO, NS, NS, iTxTime0_2 + a2O             , NS, NS, NS                            , NS, NS);
-  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag + tO, NS, NS, iTxTime0_2 + timeA2ToA5 + a5O, NS, NS, iTxTime0_5 + a5O              , NS, NS);
-  mockMessageFromAnchor(2, iTxTime1_2 + timeA2ToTag + tO, NS, NS, iTxTime1_2 + a2O             , NS, NS, iTxTime0_5 + timeA2ToA5 + a2O , NS, NS);
-  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag + tO, NS, NS, iTxTime1_2 + timeA2ToA5 + a5O, NS, NS, iTxTime1_5 + a5O              , NS, NS);
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
 
-  //                  A1 A2 Exp diff   Exp measurement diff
-  // mockKalmanEstimator(2, 5, 2.5 - 2.0);  Not called as the packet is interpreted as packet loss and filtered out
-  mockKalmanEstimator(2, 5, 2.5 - 2.0);
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  21,                      0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  21,                      0, 0},
+    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, iTxTime1_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+
+  // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
+  mockKalmanEstimator(0, 5, expectedDiff);
+  mockKalmanEstimator(5, 0, -expectedDiff);
+  mockKalmanEstimator(0, 5, expectedDiff);
 
   // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -564,7 +362,302 @@ void testNotUsingAnchor0() {
   // Nothing here, verification in mocks
 }
 
-*/
+void testMissingPacketAnchorToAnchorInhibitsDiffCalculation() {
+  // Fixture
+  // Two anchors, separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
+
+  uint64_t missing = 0;
+
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  21,                      0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  // The timestamp is missing for A5
+  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  21,                      0, 0},
+    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, missing                , NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+
+  // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
+  mockKalmanEstimator(0, 5, expectedDiff);
+  // Not called
+  // mockKalmanEstimator(5, 0, -expectedDiff);
+  mockKalmanEstimator(0, 5, expectedDiff);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testMissingAnchorToAnchorDistanceInhibitsDiffCalculation() {
+  // Fixture
+  // Two anchors, separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
+
+  uint64_t missing = 0;
+
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  21,                      0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  // The distance is missing for A5
+  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  21,                      0, 0},
+    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, iTxTime1_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, missing,                 NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+
+  // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
+  mockKalmanEstimator(0, 5, expectedDiff);
+  // Not called
+  // mockKalmanEstimator(5, 0, -expectedDiff);
+  mockKalmanEstimator(0, 5, expectedDiff);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculation() {
+  // Fixture
+  // Two anchors, separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
+
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  21,                      0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  // The packet from A5 to A0 is missing
+  // The sequence number, timestamp and distance is same as in previous packet from A0
+  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  20,                      0, 0},
+    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+
+  // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
+  mockKalmanEstimator(0, 5, expectedDiff);
+  // Not called
+  // mockKalmanEstimator(5, 0, -expectedDiff);
+  mockKalmanEstimator(0, 5, expectedDiff);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculationWhenSequenceNrWraps() {
+  // Fixture
+  // Two anchors, separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
+
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  255,                     0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  255,                     0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  0,                       0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  // The packet from A5 to A0 is missing
+  // The sequence number, timestamp and distance is same as in previous packet from A0
+  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  255,                     0, 0},
+    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  1,                       0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+
+  // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
+  mockKalmanEstimator(0, 5, expectedDiff);
+  // Not called
+  // mockKalmanEstimator(5, 0, -expectedDiff);
+  mockKalmanEstimator(0, 5, expectedDiff);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testMissingPacketAnchorToTagInhibitsDiffCalculation() {
+  // Fixture
+  // Two anchors, separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
+
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  21,                      0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  // Missing packet
+  //  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+  //    (uint8_t[]) {12,                      0,  0,  0,  0,  21,                      0, 0},
+  //    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, iTxTime1_5 + timeA0ToA5, NS, NS},
+  //    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime3_0 + timeA0ToTag,
+    (uint8_t[]) {13,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime3_0,              NS, NS, NS, NS, iTxTime2_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+
+  // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
+  mockKalmanEstimator(0, 5, expectedDiff);
+  // Not called due to the packet loss
+  //  mockKalmanEstimator(5, 0, -expectedDiff);
+
+  // Not called since packet from previous anchor was lost
+  //  mockKalmanEstimator(0, 5, expectedDiff);
+
+  // Not called since previous packet from same anchor was lost
+  //  mockKalmanEstimator(5, 0, -expectedDiff);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  //  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
 
 void testPacketReceivedEventShouldSetTheRadioInReceiveMode() {
   // Fixture
@@ -610,11 +703,6 @@ void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
 static dwTime_t ts(uint64_t time) {
   dwTime_t a = {.full = time & 0x00FFFFFFFFFFul};
   return a;
-}
-
-static void setTimestampInPayload(uint64_t time, uint8_t* dest) {
-  dwTime_t timestamp = {.full = time};
-  memcpy(dest, timestamp.raw, 5);
 }
 
 static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]) {
@@ -665,7 +753,7 @@ static bool estimatorKalmanEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, in
   sprintf(message, "Failed in call %i to kalmanEstimatorEnqueueTDOA()", cmock_num_calls);
 
   tdoaMeasurement_t* expected = &stateEstimatorExpectations[cmock_num_calls];
-  // TODO krri What is a reasonable accepted error here? 2 cm is needed to make the clock drift cases pass (expected: -0.500000 actual: -0.487943).
+  // What is a reasonable accepted error here? 2 cm is needed to make the clock drift cases pass (expected: -0.500000 actual: -0.487943).
   // Rounding error based on clock resolution is around 3 mm
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.02, expected->distanceDiff, actual->distanceDiff, message);
 
@@ -740,7 +828,7 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
 
   mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag + tO,
     (uint8_t[]) {11,                            20,               0,  0,  0,  0,  0,  0},
-    (uint64_t[]){NS,                            NS,               NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){iTxTime1_0 + a0O,              NS,               NS, NS, NS, NS, NS, NS},
     (uint64_t[]){NS,                            NS,               NS, NS, NS, NS, NS, NS});
 
   mockMessageFromAnchor(1, iTxTime1_1 + timeA1ToTag + tO,
@@ -748,6 +836,7 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
     (uint64_t[]){iTxTime1_0 + timeA0ToA1 + a1O, iTxTime1_1 + a1O, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){timeA0ToA1,                    NS,               NS, NS, NS, NS, NS, NS});
 
+  // Only the last message will create calls to the estimator. The two first are discarded due to missing data.
   mockKalmanEstimator(0, 1, expectedDiff);
 
   // Test

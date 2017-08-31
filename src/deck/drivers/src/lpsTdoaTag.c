@@ -43,6 +43,7 @@ static float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
 static uint8_t previousAnchor;
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
 static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
+static uint8_t sequenceNrs[LOCODECK_NR_OF_ANCHORS];
 
 static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
@@ -73,6 +74,13 @@ static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
   estimatorKalmanEnqueueTDOA(&tdoa);
 }
 
+// The default receive time in the anchors for messages from other anchors is 0
+// and is overwritten with the actual receive time when a packet arrives.
+// That is, if no message was received the rx time will be 0.
+static bool isValidTimeStamp(const int64_t anchorRxTime) {
+  return anchorRxTime != 0;
+}
+
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
 // We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
 // rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference Anchor by Anchor N expressed in the clock of Anchor N"
@@ -80,38 +88,49 @@ static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
 static double calcClockCorrection(const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
   const int64_t rxAn_by_T_in_cl_T = arrival->full;
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t previous_rxAn_by_T_in_cl_T  = arrivals[anchor].full;
-  const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
-  const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
-  const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
+  const int64_t previous_rxAn_by_T_in_cl_T = arrivals[anchor].full;
 
-  double clockCorrection = frameTime_in_cl_An / frameTime_in_T;
-  return clockCorrection;
+  // The first time we get here, previous_txAn_in_cl_An will not be set
+  const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
+  if (isValidTimeStamp(previous_txAn_in_cl_An)) {
+    const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
+    const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
+
+    double clockCorrection = frameTime_in_cl_An / frameTime_in_T;
+    return clockCorrection;
+  } else {
+    return 0.0;
+  }
 }
 
-
-// The default receive time in the anchors for messages from other anchors is 0
-// and is overwritten with the actual receive time when a packet arrives.
-// That is, if no message was received the rx time will be 0.
-static bool isValidRxTime(const int64_t anchorRxTime) {
-  return anchorRxTime != 0;
+static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
+  return (currentSeqNr == ((prevSeqNr + 1) & 0xff));
 }
 
 static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
   const int64_t rxAn_by_T_in_cl_T  = arrival->full;
   const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
   const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
+  const double clockCorrection = clockCorrection_T_To_A[anchor];
 
-  if (! isValidRxTime(rxAr_by_An_in_cl_An)) {
+  const bool isSeqNrInTagOk = isSeqNrConsecutive(rxPacketBuffer[anchor].sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
+  const bool isSeqNrInAnchorOk = isSeqNrConsecutive(sequenceNrs[anchor], packet->sequenceNrs[anchor]);
+  const bool isAnchorDistanceOk = isValidTimeStamp(tof_Ar_to_An_in_cl_An);
+  const bool isRxTimeInTagOk = isValidTimeStamp(rxAr_by_An_in_cl_An);
+  const bool isClockCorrectionOk = (clockCorrection != 0.0);
+
+  if (! (isSeqNrInTagOk && isSeqNrInAnchorOk && isAnchorDistanceOk && isRxTimeInTagOk && isClockCorrectionOk)) {
     return false;
   }
 
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t rxAr_by_T_in_cl_T  = arrivals[previousAnchor].full;
+  const int64_t rxAr_by_T_in_cl_T = arrivals[previousAnchor].full;
+
   const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
-  const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection_T_To_A[anchor] - delta_txAr_to_txAn_in_cl_An;
+  const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection - delta_txAr_to_txAn_in_cl_An;
 
   *tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_An / LOCODECK_TS_FREQ;
+
   return true;
 }
 
@@ -149,6 +168,7 @@ static void rxcallback(dwDevice_t *dev) {
 
     arrivals[anchor].full = arrival.full;
     memcpy(&rxPacketBuffer[anchor], rxPacket.payload, sizeof(rangePacket_t));
+    sequenceNrs[anchor] = packet->sequenceNrs[anchor];
 
     previousAnchor = anchor;
   }
@@ -187,6 +207,7 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   // Reset module state. Needed by unit tests
   memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
   memset(arrivals, 0, sizeof(arrivals));
+  memset(sequenceNrs, 0, sizeof(sequenceNrs));
 
   memset(clockCorrection_T_To_A, 0, sizeof(clockCorrection_T_To_A));
 
