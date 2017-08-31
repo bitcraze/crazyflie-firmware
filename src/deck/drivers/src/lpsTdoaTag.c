@@ -40,6 +40,7 @@ static lpsAlgoOptions_t* options;
 
 static float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
 static float clockCorrectionLog[LOCODECK_NR_OF_ANCHORS];
+static uint16_t anchorDistanceLog[LOCODECK_NR_OF_ANCHORS];
 
 static uint8_t previousAnchor;
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
@@ -134,11 +135,12 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
   return true;
 }
 
-static void addToLog(const uint8_t anchor, const float tdoaDistDiff) {
+static void addToLog(const uint8_t anchor, const float tdoaDistDiff, const rangePacket_t* packet) {
   // Only store diffs for anchors with succeeding numbers. In case of packet
   // loss we can get ranging between any anchors and that messes up the graphs.
   if (((previousAnchor + 1) & 0x07) == anchor) {
     uwbTdoaDistDiff[anchor] = tdoaDistDiff;
+    anchorDistanceLog[anchor] = packet->distances[previousAnchor];
   }
 }
 
@@ -163,7 +165,7 @@ static void rxcallback(dwDevice_t *dev) {
       float tdoaDistDiff = 0.0;
       if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-        addToLog(anchor, tdoaDistDiff);
+        addToLog(anchor, tdoaDistDiff, packet);
       }
     }
 
@@ -212,6 +214,7 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
 
   memset(clockCorrection_T_To_A, 0, sizeof(clockCorrection_T_To_A));
   memset(clockCorrectionLog, 0, sizeof(clockCorrectionLog));
+  memset(anchorDistanceLog, 0, sizeof(anchorDistanceLog));
 
   previousAnchor = 0;
 
@@ -247,6 +250,15 @@ LOG_ADD(LOG_FLOAT, cc4, &clockCorrectionLog[4])
 LOG_ADD(LOG_FLOAT, cc5, &clockCorrectionLog[5])
 LOG_ADD(LOG_FLOAT, cc6, &clockCorrectionLog[6])
 LOG_ADD(LOG_FLOAT, cc7, &clockCorrectionLog[7])
+
+LOG_ADD(LOG_UINT16, dist7-0, &anchorDistanceLog[0])
+LOG_ADD(LOG_UINT16, dist0-1, &anchorDistanceLog[1])
+LOG_ADD(LOG_UINT16, dist1-2, &anchorDistanceLog[2])
+LOG_ADD(LOG_UINT16, dist2-3, &anchorDistanceLog[3])
+LOG_ADD(LOG_UINT16, dist3-4, &anchorDistanceLog[4])
+LOG_ADD(LOG_UINT16, dist4-5, &anchorDistanceLog[5])
+LOG_ADD(LOG_UINT16, dist5-6, &anchorDistanceLog[6])
+LOG_ADD(LOG_UINT16, dist6-7, &anchorDistanceLog[7])
 
 LOG_ADD(LOG_UINT32, rxCnt, &statsReceivedPackets)
 LOG_ADD(LOG_UINT32, anCnt, &statsAcceptedAnchorDataPackets)
