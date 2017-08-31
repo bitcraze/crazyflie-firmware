@@ -82,33 +82,29 @@ static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
 }
 
+static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
+  return (currentSeqNr == ((prevSeqNr + 1) & 0xff));
+}
+
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
 // We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
 // rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference Anchor by Anchor N expressed in the clock of Anchor N"
 
-static double calcClockCorrection(const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
+static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
+  const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
+
+  if (! isSeqNrConsecutive(rxPacketBuffer[anchor].sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
+    return false;
+  }
+
   const int64_t rxAn_by_T_in_cl_T = arrival->full;
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
   const int64_t previous_rxAn_by_T_in_cl_T = arrivals[anchor].full;
+  const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
+  const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
 
-  // The first time we get here, previous_txAn_in_cl_An will not be set
-  const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
-  if (isValidTimeStamp(previous_txAn_in_cl_An)) {
-    const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
-    const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
-
-    double clockCorrection = frameTime_in_cl_An / frameTime_in_T;
-
-    clockCorrectionLog[anchor] = clockCorrection;
-
-    return clockCorrection;
-  } else {
-    return 0.0;
-  }
-}
-
-static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
-  return (currentSeqNr == ((prevSeqNr + 1) & 0xff));
+  *clockCorrection = frameTime_in_cl_An / frameTime_in_T;
+  return true;
 }
 
 static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
@@ -160,7 +156,8 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    clockCorrection_T_To_A[anchor] = calcClockCorrection(anchor, packet, &arrival);
+    calcClockCorrection(&clockCorrection_T_To_A[anchor], anchor, packet, &arrival);
+    clockCorrectionLog[anchor] = clockCorrection_T_To_A[anchor];
 
     if (anchor != previousAnchor) {
       float tdoaDistDiff = 0.0;
