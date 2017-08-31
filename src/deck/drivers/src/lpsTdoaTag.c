@@ -39,6 +39,7 @@
 static lpsAlgoOptions_t* options;
 
 static float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
+static float clockCorrectionLog[LOCODECK_NR_OF_ANCHORS];
 
 static uint8_t previousAnchor;
 static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
@@ -93,10 +94,13 @@ static double calcClockCorrection(const uint8_t anchor, const rangePacket_t* pac
   // The first time we get here, previous_txAn_in_cl_An will not be set
   const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
   if (isValidTimeStamp(previous_txAn_in_cl_An)) {
-    const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
     const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
+    const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
 
     double clockCorrection = frameTime_in_cl_An / frameTime_in_T;
+
+    clockCorrectionLog[anchor] = clockCorrection;
+
     return clockCorrection;
   } else {
     return 0.0;
@@ -134,7 +138,7 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
   return true;
 }
 
-static void logDistanceDiff(const uint8_t anchor, const float tdoaDistDiff) {
+static void addToLog(const uint8_t anchor, const float tdoaDistDiff) {
   // Only store diffs for anchors with succeeding numbers. In case of packet
   // loss we can get ranging between any anchors and that messes up the graphs.
   if (((previousAnchor + 1) & 0x07) == anchor) {
@@ -162,7 +166,7 @@ static void rxcallback(dwDevice_t *dev) {
       float tdoaDistDiff = 0.0;
       if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-        logDistanceDiff(anchor, tdoaDistDiff);
+        addToLog(anchor, tdoaDistDiff);
       }
     }
 
@@ -210,6 +214,7 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   memset(sequenceNrs, 0, sizeof(sequenceNrs));
 
   memset(clockCorrection_T_To_A, 0, sizeof(clockCorrection_T_To_A));
+  memset(clockCorrectionLog, 0, sizeof(clockCorrectionLog));
 
   previousAnchor = 0;
 
@@ -236,6 +241,15 @@ LOG_ADD(LOG_FLOAT, d3-4, &uwbTdoaDistDiff[4])
 LOG_ADD(LOG_FLOAT, d4-5, &uwbTdoaDistDiff[5])
 LOG_ADD(LOG_FLOAT, d5-6, &uwbTdoaDistDiff[6])
 LOG_ADD(LOG_FLOAT, d6-7, &uwbTdoaDistDiff[7])
+
+LOG_ADD(LOG_FLOAT, cc0, &clockCorrectionLog[0])
+LOG_ADD(LOG_FLOAT, cc1, &clockCorrectionLog[1])
+LOG_ADD(LOG_FLOAT, cc2, &clockCorrectionLog[2])
+LOG_ADD(LOG_FLOAT, cc3, &clockCorrectionLog[3])
+LOG_ADD(LOG_FLOAT, cc4, &clockCorrectionLog[4])
+LOG_ADD(LOG_FLOAT, cc5, &clockCorrectionLog[5])
+LOG_ADD(LOG_FLOAT, cc6, &clockCorrectionLog[6])
+LOG_ADD(LOG_FLOAT, cc7, &clockCorrectionLog[7])
 
 LOG_ADD(LOG_UINT32, rxCnt, &statsReceivedPackets)
 LOG_ADD(LOG_UINT32, anCnt, &statsAcceptedAnchorDataPackets)
