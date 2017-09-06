@@ -5,6 +5,7 @@ bin/*
 .cproject
 .project
 .settings/*
+.vscode/*
 *~
 tools/make/config.mk
 cflie.*
