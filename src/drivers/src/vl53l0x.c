@@ -96,6 +96,8 @@ static uint16_t vl53l0xReadReg16Bit(VL53L0xDev* dev, uint8_t reg);
 static bool vl53l0xWriteReg16Bit(VL53L0xDev* dev, uint8_t reg, uint16_t val);
 static bool vl53l0xWriteReg32Bit(VL53L0xDev* dev, uint8_t reg, uint32_t val);
 
+static int nextI2CAddress = VL53L0X_DEFAULT_ADDRESS+1;
+
 /** Default constructor, uses default I2C address.
  * @see VL53L0X_DEFAULT_ADDRESS
  */
@@ -113,7 +115,18 @@ bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8)
   dev->measurement_timing_budget_us = 0;
   dev->measurement_timing_budget_ms = 0;
 
-  return vl53l0xInitSensor(dev, io_2V8);
+  if (!vl53l0xInitSensor(dev, io_2V8)) {
+    return false;
+  }
+
+  /* Move initialized sensor to a new I2C address */
+  int newAddress;
+
+  taskENTER_CRITICAL();
+  newAddress = nextI2CAddress++;
+  taskEXIT_CRITICAL();
+
+  return vl53l0xSetI2CAddress(dev, newAddress);
 }
 
 /** Verify the I2C connection.
@@ -152,6 +165,17 @@ uint8_t vl53l0xGetRevisionID(VL53L0xDev* dev)
   uint8_t output = 0;
   i2cdevReadByte(dev->I2Cx, dev->devAddr, VL53L0X_RA_IDENTIFICATION_REVISION_ID, &output);
   return output;
+}
+
+/** Set I2C address
+ * Any subsequent communication will be on the new address
+ * The address passed is the 7bit I2C address from LSB (ie. without the
+ * read/write bit)
+ */
+bool vl53l0xSetI2CAddress(VL53L0xDev* dev, uint8_t address) {
+  bool pass = i2cdevWriteByte(dev->I2Cx, dev->devAddr, VL53L0X_REG_I2C_SLAVE_DEVICE_ADDRESS, address);
+  dev->devAddr = address;
+  return pass;
 }
 
 // Initialize sensor using sequence based on VL53L0X_DataInit(),

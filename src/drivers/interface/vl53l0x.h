@@ -35,6 +35,8 @@
 
 #define VL53L0X_RA_SYSRANGE_START                              0x00
 
+#define VL53L0X_REG_I2C_SLAVE_DEVICE_ADDRESS                   0x8a
+
 #define VL53L0X_RA_SYSTEM_THRESH_HIGH                          0x0C
 #define VL53L0X_RA_SYSTEM_THRESH_LOW                           0x0E
 
@@ -185,6 +187,13 @@ uint16_t vl53l0xGetModelID(VL53L0xDev* dev);
  * @see VL53L0X_IDENTIFICATION_REVISION_ID
  */
 uint8_t vl53l0xGetRevisionID(VL53L0xDev* dev);
+
+/** Set I2C address
+ * Any subsequent communication will be on the new address
+ * The address passed is the 7bit I2C address from LSB (ie. without the
+ * read/write bit)
+ */
+bool vl53l0xSetI2CAddress(VL53L0xDev* dev, uint8_t address);
 
 // Initialize sensor using sequence based on VL53L0X_DataInit(),
 // VL53L0X_StaticInit(), and VL53L0X_PerformRefCalibration().
