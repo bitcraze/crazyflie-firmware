@@ -27,9 +27,7 @@
 #ifndef _VL53L0X_H_
 #define _VL53L0X_H_
 
-#include "stabilizer_types.h"
-#include "deck_core.h"
-
+#include "i2cdev.h"
 
 #define VL53L0X_DEFAULT_ADDRESS 0b0101001
 
@@ -161,8 +159,6 @@ typedef struct
  * @see VL53L0X_DEFAULT_ADDRESS
  */
 bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8);
-
-bool vl53l0xReadRange(VL53L0xDev* dev, zDistance_t* zrange, const uint32_t tick);
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.
