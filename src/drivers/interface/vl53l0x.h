@@ -138,21 +138,35 @@ typedef struct
 
 typedef enum vcselPeriodType_t { VcselPeriodPreRange, VcselPeriodFinalRange } vcselPeriodType;
 
+typedef struct
+{
+  uint8_t devAddr;
+  I2C_Dev *I2Cx;
+
+  uint16_t io_timeout;
+  bool did_timeout;
+  uint16_t timeout_start_ms;
+
+  // read by init and used when starting measurement;
+  // is StopVariable field of VL53L0X_DevData_t structure in API
+  uint8_t stop_variable;
+
+  uint32_t measurement_timing_budget_us;
+  uint16_t measurement_timing_budget_ms;
+} VL53L0xDev;
+
 /** Default constructor, uses external I2C address.
  * @see VL53L0X_DEFAULT_ADDRESS
  */
-void vl53l0xInit(DeckInfo* info);
+bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8);
 
-bool vl53l0xTest(void);
-void vl53l0xTask(void* arg);
-
-bool vl53l0xReadRange(zDistance_t* zrange, const uint32_t tick);
+bool vl53l0xReadRange(VL53L0xDev* dev, zDistance_t* zrange, const uint32_t tick);
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.
  * @return True if connection is valid, false otherwise
  */
-bool vl53l0xTestConnection();
+bool vl53l0xTestConnection(VL53L0xDev* dev);
 
 /** Get Model ID.
  * This register is used to verify the model number of the device,
@@ -161,7 +175,7 @@ bool vl53l0xTestConnection();
  * @see VL53L0X_RA_IDENTIFICATION_MODEL_ID
  * @see VL53L0X_IDENTIFICATION_MODEL_ID
  */
-uint16_t vl53l0xGetModelID();
+uint16_t vl53l0xGetModelID(VL53L0xDev* dev);
 
 /** Get Revision ID.
  * This register is used to verify the revision number of the device,
@@ -170,7 +184,7 @@ uint16_t vl53l0xGetModelID();
  * @see VL53L0X_RA_IDENTIFICATION_REVISION_ID
  * @see VL53L0X_IDENTIFICATION_REVISION_ID
  */
-uint8_t vl53l0xGetRevisionID();
+uint8_t vl53l0xGetRevisionID(VL53L0xDev* dev);
 
 // Initialize sensor using sequence based on VL53L0X_DataInit(),
 // VL53L0X_StaticInit(), and VL53L0X_PerformRefCalibration().
@@ -180,7 +194,7 @@ uint8_t vl53l0xGetRevisionID();
 // enough unless a cover glass is added.
 // If io_2v8 (optional) is true or not given, the sensor is configured for 2V8
 // mode.
-bool vl53l0xInitSensor(bool io_2v8);
+bool vl53l0xInitSensor(VL53L0xDev* dev, bool io_2v8);
 
 // Set the return signal rate limit check value in units of MCPS (mega counts
 // per second). "This represents the amplitude of the signal reflected from the
@@ -190,7 +204,7 @@ bool vl53l0xInitSensor(bool io_2v8);
 // seems to increase the likelihood of getting an inaccurate reading because of
 // unwanted reflections from objects other than the intended target.
 // Defaults to 0.25 MCPS as initialized by the ST API and this library.
-bool vl53l0xSetSignalRateLimit(float limit_Mcps);
+bool vl53l0xSetSignalRateLimit(VL53L0xDev* dev, float limit_Mcps);
 
 // Set the measurement timing budget in microseconds, which is the time allowed
 // for one measurement; the ST API and this library take care of splitting the
@@ -199,12 +213,12 @@ bool vl53l0xSetSignalRateLimit(float limit_Mcps);
 // factor of N decreases the range measurement standard deviation by a factor of
 // sqrt(N). Defaults to about 33 milliseconds; the minimum is 20 ms.
 // based on VL53L0X_set_measurement_timing_budget_micro_seconds()
-bool vl53l0xSetMeasurementTimingBudget(uint32_t budget_us);
+bool vl53l0xSetMeasurementTimingBudget(VL53L0xDev* dev, uint32_t budget_us);
 
 // Get the measurement timing budget in microseconds
 // based on VL53L0X_get_measurement_timing_budget_micro_seconds()
 // in us
-uint32_t vl53l0xGetMeasurementTimingBudget(void);
+uint32_t vl53l0xGetMeasurementTimingBudget(VL53L0xDev* dev);
 
 // Set the VCSEL (vertical cavity surface emitting laser) pulse period for the
 // given period type (pre-range or final range) to the given value in PCLKs.
@@ -213,11 +227,11 @@ uint32_t vl53l0xGetMeasurementTimingBudget(void);
 //  pre:  12 to 18 (initialized default: 14)
 //  final: 8 to 14 (initialized default: 10)
 // based on VL53L0X_set_vcsel_pulse_period()
-bool vl53l0xSetVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks);
+bool vl53l0xSetVcselPulsePeriod(VL53L0xDev* dev, vcselPeriodType type, uint8_t period_pclks);
 
 // Get the VCSEL pulse period in PCLKs for the given period type.
 // based on VL53L0X_get_vcsel_pulse_period()
-uint8_t vl53l0xGetVcselPulsePeriod(vcselPeriodType type);
+uint8_t vl53l0xGetVcselPulsePeriod(VL53L0xDev* dev, vcselPeriodType type);
 
 // Start continuous ranging measurements. If period_ms (optional) is 0 or not
 // given, continuous back-to-back mode is used (the sensor takes measurements as
@@ -225,20 +239,20 @@ uint8_t vl53l0xGetVcselPulsePeriod(vcselPeriodType type);
 // inter-measurement period in milliseconds determining how often the sensor
 // takes a measurement.
 // based on VL53L0X_StartMeasurement()
-void vl53l0xStartContinuous(uint32_t period_ms);
+void vl53l0xStartContinuous(VL53L0xDev* dev, uint32_t period_ms);
 
 // Stop continuous measurements
 // based on VL53L0X_StopMeasurement()
-void vl53l0xStopContinuous(void);
+void vl53l0xStopContinuous(VL53L0xDev* dev);
 
 // Returns a range reading in millimeters when continuous mode is active
 // (readRangeSingleMillimeters() also calls this function after starting a
 // single-shot range measurement)
-uint16_t vl53l0xReadRangeContinuousMillimeters(void);
+uint16_t vl53l0xReadRangeContinuousMillimeters(VL53L0xDev* dev);
 
 // Performs a single-shot range measurement and returns the reading in
 // millimeters
 // based on VL53L0X_PerformSingleRangingMeasurement()
-uint16_t vl53l0xReadRangeSingleMillimeters(void);
+uint16_t vl53l0xReadRangeSingleMillimeters(VL53L0xDev* dev);
 
 #endif /* _VL53L0X_H_ */
