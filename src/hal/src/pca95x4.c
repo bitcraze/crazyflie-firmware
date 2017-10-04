@@ -56,7 +56,7 @@ bool pca95x4ConfigOutput(uint32_t val) {
   bool pass;
 
   pass = i2cdevWriteByte(I2Cx, devAddr, PCA95X4_CONFIG_REG, val);
-  DEBUG_PRINT("Config Output: 0x%X\n", val);
+  DEBUG_PRINT("Config Output: 0x%X\n", (unsigned int) val);
   return pass;
 }
 
