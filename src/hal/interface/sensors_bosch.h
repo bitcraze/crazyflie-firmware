@@ -33,7 +33,7 @@
 #include "sensors.h"
 #include "imu.h"
 
-#include "vl53l0x.h"
+#include "zranger.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
