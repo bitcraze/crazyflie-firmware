@@ -56,7 +56,6 @@ bool pca95x4ConfigOutput(uint32_t val) {
   bool pass;
 
   pass = i2cdevWriteByte(I2Cx, devAddr, PCA95X4_CONFIG_REG, val);
-  DEBUG_PRINT("Config Output: 0x%X\n", (unsigned int) val);
   return pass;
 }
 
@@ -66,7 +65,6 @@ bool pca95x4SetOutput(uint32_t mask) {
 
   pass = i2cdevReadByte(I2Cx, devAddr, PCA95X4_OUTPUT_REG, &val);
   val |= mask;
-  DEBUG_PRINT("Set Output: 0x%X\n", val);
   pass = i2cdevWriteByte(I2Cx, devAddr, PCA95X4_OUTPUT_REG, val);
 
   return pass;
@@ -78,7 +76,6 @@ bool pca95x4ClearOutput(uint32_t mask) {
 
   pass = i2cdevReadByte(I2Cx, devAddr, PCA95X4_OUTPUT_REG, &val);
   val &= ~mask;
-  DEBUG_PRINT("Clear Output: 0x%X\n", val);
   pass = i2cdevWriteByte(I2Cx, devAddr, PCA95X4_OUTPUT_REG, val);
 
   return pass;
