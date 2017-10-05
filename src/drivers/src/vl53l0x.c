@@ -198,7 +198,9 @@ bool vl53l0xInitSensor(VL53L0xDev* dev, bool io_2v8)
   }
 
   // "Set I2C standard mode"
-  i2cdevWriteByte(dev->I2Cx, dev->devAddr, 0x88, 0x00);
+  if (!i2cdevWriteByte(dev->I2Cx, dev->devAddr, 0x88, 0x00)) {
+    return false;
+  }
 
   i2cdevWriteByte(dev->I2Cx, dev->devAddr, 0x80, 0x01);
   i2cdevWriteByte(dev->I2Cx, dev->devAddr, 0xFF, 0x01);
