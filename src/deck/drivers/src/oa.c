@@ -25,7 +25,10 @@
 /* oa.c: Codename Obstacle Avoidance driver */
 #include "deck.h"
 
+#define DEBUG_MODULE "OA"
+
 #include "system.h"
+#include "debug.h"
 #include "log.h"
 #include "pca95x4.h"
 #include "vl53l0x.h"
@@ -38,6 +41,7 @@
 #include <stdlib.h>
 
 static bool isInit = false;
+static bool isTested = false;
 
 #define OA_PIN_UP     PCA95X4_P0
 #define OA_PIN_FRONT  PCA95X4_P4
@@ -108,20 +112,52 @@ static bool oaTest()
 {
   bool pass = isInit;
 
+  if (isTested) {
+    DEBUG_PRINT("Cannot test OA deck a second time\n");
+    return false;
+  }
+
   pca95x4SetOutput(OA_PIN_FRONT);
-  pass &= vl53l0xInit(&devFront, I2C1_DEV, true);
+  if (vl53l0xInit(&devFront, I2C1_DEV, true)) {
+    DEBUG_PRINT("Init front sensor [OK]\n");
+  } else {
+    DEBUG_PRINT("Init front sensor [FAIL]\n");
+    pass = false;
+  }
 
   pca95x4SetOutput(OA_PIN_BACK);
-  pass &= vl53l0xInit(&devBack, I2C1_DEV, true);
+  if (vl53l0xInit(&devBack, I2C1_DEV, true)) {
+    DEBUG_PRINT("Init back sensor [OK]\n");
+  } else {
+    DEBUG_PRINT("Init back sensor [FAIL]\n");
+    pass = false;
+  }
 
   pca95x4SetOutput(OA_PIN_UP);
-  pass &= vl53l0xInit(&devUp, I2C1_DEV, true);
+  if (vl53l0xInit(&devUp, I2C1_DEV, true)) {
+    DEBUG_PRINT("Init up sensor [OK]\n");
+  } else {
+    DEBUG_PRINT("Init up sensor [FAIL]\n");
+    pass = false;
+  }
 
   pca95x4SetOutput(OA_PIN_LEFT);
-  pass &= vl53l0xInit(&devLeft, I2C1_DEV, true);
+  if (vl53l0xInit(&devLeft, I2C1_DEV, true)) {
+    DEBUG_PRINT("Init left sensor [OK]\n");
+  } else {
+    DEBUG_PRINT("Init left sensor [FAIL]\n");
+    pass = false;
+  }
 
   pca95x4SetOutput(OA_PIN_RIGHT);
-  pass &= vl53l0xInit(&devRight, I2C1_DEV, true);
+  if (vl53l0xInit(&devRight, I2C1_DEV, true)) {
+    DEBUG_PRINT("Init right sensor [OK]\n");
+  } else {
+    DEBUG_PRINT("Init right sensor [FAIL]\n");
+    pass = false;
+  }
+
+  isTested = true;
 
   return pass;
 }
