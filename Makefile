@@ -124,7 +124,7 @@ PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
 PROJ_OBJ_CF2 += bmi055_accel.o bmi055_gyro.o bmi160.o bmp280.o bstdr_comm_support.o bmm150.o
-PROJ_OBJ_CF2 += pca9685.o vl53l0x.o
+PROJ_OBJ_CF2 += pca9685.o vl53l0x.o pca95x4.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
@@ -173,6 +173,7 @@ PROJ_OBJ_CF2 += zranger.o
 PROJ_OBJ_CF2 += locodeck.o
 PROJ_OBJ_CF2 += lpsTwrTag.o
 PROJ_OBJ_CF2 += flowdeck.o
+PROJ_OBJ_CF2 += oa.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 PROJ_OBJ_CF2 += lpsTdoaTag.o
