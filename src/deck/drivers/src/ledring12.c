@@ -206,10 +206,10 @@ static void boatEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
 
-  uint8_t reds[] = {1,2,3,4,5};
-  uint8_t greens[] = {7,8,9,10,11};
-  uint8_t whites[] = {0};
-  uint8_t blacks[] = {6};
+  uint8_t reds[] = {8,9,10,11};
+  uint8_t greens[] = {1,2,3,4};
+  uint8_t whites[] = {5,6,7};
+  uint8_t blacks[] = {0};
 
 
   for (i=0; i<sizeof(reds); i++)
