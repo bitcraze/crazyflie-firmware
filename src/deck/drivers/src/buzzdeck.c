@@ -29,9 +29,12 @@
 #include "stm32fxxx.h"
 
 #include "deck.h"
+#include "param.h"
 
 #include "buzzer.h"
 #include "piezo.h"
+
+static bool isInitBuzzer;
 
 static void buzzDeckOn(uint32_t freq)
 {
@@ -51,8 +54,13 @@ static struct buzzerControl buzzDeckCtrl = {
 
 static void buzzDeckInit(DeckInfo *info)
 {
+  if (isInitBuzzer)
+    return;
+
   piezoInit();
   buzzerSetControl(&buzzDeckCtrl);
+
+  isInitBuzzer = true;
 }
 
 static const DeckDriver buzzer_deck = {
@@ -67,3 +75,7 @@ static const DeckDriver buzzer_deck = {
 };
 
 DECK_DRIVER(buzzer_deck);
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &isInitBuzzer)
+PARAM_GROUP_STOP(deck)
