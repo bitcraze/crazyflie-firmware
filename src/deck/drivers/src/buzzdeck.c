@@ -54,8 +54,9 @@ static struct buzzerControl buzzDeckCtrl = {
 
 static void buzzDeckInit(DeckInfo *info)
 {
-  if (isInitBuzzer)
+  if (isInitBuzzer) {
     return;
+  }
 
   piezoInit();
   buzzerSetControl(&buzzDeckCtrl);
