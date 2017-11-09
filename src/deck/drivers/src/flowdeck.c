@@ -261,7 +261,7 @@ static void pamotionTask(void *param)
     readMotion(&currentMotion);
 
     // Flip motion information to comply with sensor mounting
-    // (might need to be changed if mounted diffrently)
+    // (might need to be changed if mounted differently)
     int16_t accpx = -currentMotion.deltaY;
     int16_t accpy = -currentMotion.deltaX;
 
@@ -312,7 +312,9 @@ static void pamotionTask(void *param)
 
 static void pamotionInit()
 {
-  if (isInit) return;
+  if (isInit) {
+    return;
+  }
 
   // Initialize the VL53 sensor using the zRanger deck driver
   const DeckDriver *zRanger = deckFindDriverByName("bcZRanger");
@@ -399,3 +401,7 @@ LOG_GROUP_STOP(motion)
 PARAM_GROUP_START(motion)
 PARAM_ADD(PARAM_UINT8, disable, &useFlowDisabled)
 PARAM_GROUP_STOP(motion)
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcFlow, &isInit)
+PARAM_GROUP_STOP(deck)
