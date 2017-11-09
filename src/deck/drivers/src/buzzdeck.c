@@ -34,7 +34,7 @@
 #include "buzzer.h"
 #include "piezo.h"
 
-static bool isInitBuzzer;
+static bool isInit;
 
 static void buzzDeckOn(uint32_t freq)
 {
@@ -54,14 +54,14 @@ static struct buzzerControl buzzDeckCtrl = {
 
 static void buzzDeckInit(DeckInfo *info)
 {
-  if (isInitBuzzer) {
+  if (isInit) {
     return;
   }
 
   piezoInit();
   buzzerSetControl(&buzzDeckCtrl);
 
-  isInitBuzzer = true;
+  isInit = true;
 }
 
 static const DeckDriver buzzer_deck = {
@@ -78,5 +78,5 @@ static const DeckDriver buzzer_deck = {
 DECK_DRIVER(buzzer_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &isInitBuzzer)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &isInit)
 PARAM_GROUP_STOP(deck)
