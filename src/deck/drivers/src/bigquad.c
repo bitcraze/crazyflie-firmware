@@ -33,6 +33,7 @@
 #include "motors.h"
 #include "debug.h"
 #include "deck.h"
+#include "param.h"
 #include "extrx.h"
 #include "pm.h"
 #include "uart1.h"

@@ -24,6 +24,7 @@
  */
 /* oa.c: Codename Obstacle Avoidance driver */
 #include "deck.h"
+#include "param.h"
 
 #define DEBUG_MODULE "OA"
 
