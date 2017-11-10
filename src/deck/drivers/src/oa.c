@@ -24,6 +24,7 @@
  */
 /* oa.c: Codename Obstacle Avoidance driver */
 #include "deck.h"
+#include "param.h"
 
 #define DEBUG_MODULE "OA"
 
@@ -86,7 +87,9 @@ static void oaTask(void *param)
 
 static void oaInit()
 {
-  if (isInit) return;
+  if (isInit) {
+    return;
+  }
 
   pca95x4Init();
 
@@ -182,3 +185,7 @@ LOG_ADD(LOG_UINT16, up, &rangeUp)
 LOG_ADD(LOG_UINT16, left, &rangeLeft)
 LOG_ADD(LOG_UINT16, right, &rangeRight)
 LOG_GROUP_STOP(oa)
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcOA, &isInit)
+PARAM_GROUP_STOP(deck)

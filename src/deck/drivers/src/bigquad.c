@@ -33,6 +33,7 @@
 #include "motors.h"
 #include "debug.h"
 #include "deck.h"
+#include "param.h"
 #include "extrx.h"
 #include "pm.h"
 #include "uart1.h"
@@ -73,8 +74,9 @@ static void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
 
 static void bigquadInit(DeckInfo *info)
 {
-  if(isInit)
+  if(isInit) {
     return;
+  }
 
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
@@ -118,4 +120,8 @@ static const DeckDriver bigquad_deck = {
 };
 
 DECK_DRIVER(bigquad_deck);
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
+PARAM_GROUP_STOP(deck)
 #endif // ENABLE_BQ_DECK
