@@ -26,6 +26,8 @@
 
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
 #include "log.h"
 #include "lpsTdoaTag.h"
 
@@ -47,8 +49,10 @@ static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
 static double frameTime_in_cl_A[LOCODECK_NR_OF_ANCHORS];
 static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
+static uint32_t anchorStatusTimeout[LOCODECK_NR_OF_ANCHORS];
 
 #define MEASUREMENT_NOISE_STD 0.15f
+#define ANCHOR_OK_TIMEOUT 1500
 
 // The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
@@ -163,6 +167,8 @@ static void rxcallback(dwDevice_t *dev) {
     arrivals[anchor].full = arrival.full;
     memcpy(&rxPacketBuffer[anchor], rxPacket.payload, sizeof(rangePacket_t));
 
+    anchorStatusTimeout[anchor] = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
+
     previousAnchor = anchor;
   }
 }
@@ -189,6 +195,14 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       ASSERT_FAILED();
   }
 
+  uint32_t now = xTaskGetTickCount();
+  options->rangingState = 0;
+  for (int anchor = 0; anchor < LOCODECK_NR_OF_ANCHORS; anchor++) {
+    if (now < anchorStatusTimeout[anchor]) {
+      options->rangingState |= (1 << anchor);
+    }
+  }
+
   return MAX_TIMEOUT;
 }
 
@@ -207,6 +221,9 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   previousAnchor = 0;
 
   memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
+
+  options->rangingState = 0;
+  memset(anchorStatusTimeout, 0, sizeof(anchorStatusTimeout));
 
   statsReceivedPackets = 0;
   statsAcceptedAnchorDataPackets = 0;

@@ -9,6 +9,7 @@
 #include "mock_estimator_kalman.h"
 
 #include "dw1000Mocks.h"
+#include "freertosMocks.h"
 
 #define TIMER_MAX_VALUE 0x00FFFFFFFFFFul
 
@@ -597,6 +598,24 @@ void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
   // Assert
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
 }
+
+void testStatusShowsAnchorIsRanging() {
+  // Fixture
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+  uint64_t a0O = 1 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+  verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(tO, a0O, a1O);
+
+  // Expect anchors 0 and 1 to be active
+  uint16_t expected = (1 << 0) | (1 << 1);
+
+  // test
+  uint16_t actual = options.rangingState;
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT16(expected, actual);
+}
+
 
 ////////////////////////////////////////////
 
