@@ -121,6 +121,11 @@ static lpsAlgoOptions_t algoOptions = {
   .useTdma = true,
   .tdmaSlot = TDMA_SLOT,
 #endif
+#if LPS_TDOA_ENABLE
+  .rangingMode = lpsMode_TDoA,
+#else
+  .rangingMode = lpsMode_TWR,
+#endif
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
@@ -463,6 +468,11 @@ LOG_ADD(LOG_FLOAT, pressure7, &algoOptions.pressures[7])
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
 LOG_GROUP_STOP(ranging)
 
+LOG_GROUP_START(loco)
+LOG_ADD(LOG_UINT8, mode, &algoOptions.rangingMode)
+LOG_GROUP_STOP(loco)
+
+
 PARAM_GROUP_START(anchorpos)
 #if (LOCODECK_NR_OF_ANCHORS > 0)
 PARAM_ADD(PARAM_FLOAT, anchor0x, &algoOptions.anchorPosition[0].x)
@@ -506,7 +516,6 @@ PARAM_ADD(PARAM_FLOAT, anchor7z, &algoOptions.anchorPosition[7].z)
 #endif
 PARAM_ADD(PARAM_UINT8, enable, &algoOptions.combinedAnchorPositionOk)
 PARAM_GROUP_STOP(anchorpos)
-
 
 // Loco Posisioning Protocol (LPP) handling
 
