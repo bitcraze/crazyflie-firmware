@@ -26,6 +26,9 @@
 
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "log.h"
 #include "lpsTdoaTag.h"
 
@@ -51,10 +54,22 @@ static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
 
 #define MEASUREMENT_NOISE_STD 0.15f
+#define STATS_INTERVAL 500
 
-static uint32_t statsReceivedPackets = 0;
-static uint32_t statsAcceptedAnchorDataPackets = 0;
-static uint32_t statsAcceptedPackets = 0;
+static uint32_t statsPacketsReceived = 0;
+static uint32_t statsPacketsSeqNrPass = 0;
+static uint32_t statsPacketsDataPass = 0;
+static uint16_t statsPacketsReceivedRate = 0;
+static uint16_t statsPacketsSeqNrPassRate = 0;
+static uint16_t statsPacketsDataPassRate = 0;
+static uint32_t nextStatisticsTime = 0;
+static uint32_t previousStatisticsTime = 0;
+
+static void clearStats() {
+  statsPacketsReceived = 0;
+  statsPacketsSeqNrPass = 0;
+  statsPacketsDataPass = 0;
+}
 
 static uint64_t truncateToLocalTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFul;
@@ -116,13 +131,20 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
 
   const bool isSeqNrInTagOk = isSeqNrConsecutive(rxPacketBuffer[anchor].sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
   const bool isSeqNrInAnchorOk = isSeqNrConsecutive(sequenceNrs[anchor], packet->sequenceNrs[anchor]);
+
+  if (! (isSeqNrInTagOk && isSeqNrInAnchorOk)) {
+    return false;
+  }
+  statsPacketsSeqNrPass++;
+
   const bool isAnchorDistanceOk = isValidTimeStamp(tof_Ar_to_An_in_cl_An);
   const bool isRxTimeInTagOk = isValidTimeStamp(rxAr_by_An_in_cl_An);
   const bool isClockCorrectionOk = (clockCorrection != 0.0);
 
-  if (! (isSeqNrInTagOk && isSeqNrInAnchorOk && isAnchorDistanceOk && isRxTimeInTagOk && isClockCorrectionOk)) {
+  if (! (isAnchorDistanceOk && isRxTimeInTagOk && isClockCorrectionOk)) {
     return false;
   }
+  statsPacketsDataPass++;
 
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
   const int64_t rxAr_by_T_in_cl_T = arrivals[previousAnchor].full;
@@ -145,6 +167,8 @@ static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const f
 }
 
 static void rxcallback(dwDevice_t *dev) {
+  statsPacketsReceived++;
+
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
 
@@ -199,6 +223,18 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       ASSERT_FAILED();
   }
 
+  uint32_t now = xTaskGetTickCount();
+  if (now > nextStatisticsTime) {
+    float interval = now - previousStatisticsTime;
+    statsPacketsReceivedRate = (uint16_t)(1000.0f * statsPacketsReceived / interval);
+    statsPacketsSeqNrPassRate = (uint16_t)(1000.0f * statsPacketsSeqNrPass / interval);
+    statsPacketsDataPassRate = (uint16_t)(1000.0f * statsPacketsDataPass / interval);
+
+    clearStats();
+    previousStatisticsTime = now;
+    nextStatisticsTime = now + STATS_INTERVAL;
+  }
+
   return MAX_TIMEOUT;
 }
 
@@ -220,9 +256,12 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
 
   memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
 
-  statsReceivedPackets = 0;
-  statsAcceptedAnchorDataPackets = 0;
-  statsAcceptedPackets = 0;
+  clearStats();
+  statsPacketsReceivedRate = 0;
+  statsPacketsSeqNrPassRate = 0;
+  statsPacketsDataPassRate = 0;
+  nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
+  previousStatisticsTime = 0;
 }
 #pragma GCC diagnostic pop
 
@@ -260,8 +299,8 @@ LOG_ADD(LOG_UINT16, dist4-5, &anchorDistanceLog[5])
 LOG_ADD(LOG_UINT16, dist5-6, &anchorDistanceLog[6])
 LOG_ADD(LOG_UINT16, dist6-7, &anchorDistanceLog[7])
 
-LOG_ADD(LOG_UINT32, rxCnt, &statsReceivedPackets)
-LOG_ADD(LOG_UINT32, anCnt, &statsAcceptedAnchorDataPackets)
-LOG_ADD(LOG_UINT32, okCnt, &statsAcceptedPackets)
+LOG_ADD(LOG_UINT16, stRx, &statsPacketsReceivedRate)
+LOG_ADD(LOG_UINT16, stSeq, &statsPacketsSeqNrPassRate)
+LOG_ADD(LOG_UINT16, stData, &statsPacketsDataPassRate)
 
 LOG_GROUP_STOP(tdoa)

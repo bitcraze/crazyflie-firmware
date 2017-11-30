@@ -9,6 +9,7 @@
 #include "mock_estimator_kalman.h"
 
 #include "dw1000Mocks.h"
+#include "freertosMocks.h"
 
 // The local clock uses 40 bits
 #define TIMER_TAG_MAX_VALUE 0x000000FFFFFFFFFFul
