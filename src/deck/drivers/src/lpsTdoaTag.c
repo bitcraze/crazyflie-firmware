@@ -135,8 +135,8 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
   return true;
 }
 
-static void addToLog(const uint8_t anchor, const float tdoaDistDiff, const rangePacket_t* packet) {
-  // Only store diffs for anchors with succeeding numbers. In case of packet
+static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const float tdoaDistDiff, const rangePacket_t* packet) {
+  // Only store diffs for anchors with succeeding seq numbers. In case of packet
   // loss we can get ranging between any anchors and that messes up the graphs.
   if (((previousAnchor + 1) & 0x07) == anchor) {
     uwbTdoaDistDiff[anchor] = tdoaDistDiff;
@@ -165,7 +165,7 @@ static void rxcallback(dwDevice_t *dev) {
       float tdoaDistDiff = 0.0;
       if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-        addToLog(anchor, tdoaDistDiff, packet);
+        addToLog(anchor, previousAnchor, tdoaDistDiff, packet);
       }
     }
 

@@ -308,7 +308,7 @@ void testDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift3() {
   // Nothing here, verification in mocks
 }
 
-void testMissingTimestamInhibitsClockDriftCalculationInFirstIteration() {
+void testMissingTimestampInhibitsClockDriftCalculationInFirstIteration() {
   // Fixture
   // Two anchors, separated by 1.0m
   // Distance from A0 to tag is 2.0m
