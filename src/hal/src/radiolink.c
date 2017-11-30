@@ -121,6 +121,16 @@ void radiolinkSetAddress(uint64_t address)
   syslinkSendPacket(&slp);
 }
 
+void radiolinkSetPowerDbm(int8_t powerDbm)
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_RADIO_POWER;
+  slp.length = 1;
+  slp.data[0] = powerDbm;
+  syslinkSendPacket(&slp);
+}
+
 
 void radiolinkSyslinkDispatch(SyslinkPacket *slp)
 {

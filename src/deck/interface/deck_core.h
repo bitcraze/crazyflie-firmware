@@ -94,6 +94,7 @@ typedef struct deck_driver {
 
   /* Required system properties */
   StateEstimatorType requiredEstimator;
+  bool requiredLowInterferenceRadioMode;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
@@ -169,5 +170,7 @@ const struct deck_driver* deckFindDriverByVidPid(uint8_t vid, uint8_t pid);
 const struct deck_driver* deckFindDriverByName(char* name);
 
 StateEstimatorType deckGetRequiredEstimator();
+
+bool deckGetRequiredLowInterferenceRadioMode();
 
 #endif //__DECK_CODE_H__

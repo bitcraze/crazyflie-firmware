@@ -46,6 +46,7 @@
 #define SYSLINK_RADIO_RSSI          0x04
 #define SYSLINK_RADIO_ADDRESS       0x05
 #define SYSLINK_RADIO_RAW_BROADCAST 0x06
+#define SYSLINK_RADIO_POWER         0x07
 
 #define SYSLINK_PM_GROUP              0x10
 #define SYSLINK_PM_SOURCE             0x10

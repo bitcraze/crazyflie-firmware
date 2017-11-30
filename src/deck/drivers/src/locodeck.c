@@ -409,6 +409,7 @@ static const DeckDriver dwm1000_deck = {
 
   .usedGpio = 0,  // FIXME: set the used pins
   .requiredEstimator = kalmanEstimator,
+  .requiredLowInterferenceRadioMode = true,
 
   .init = dwm1000Init,
   .test = dwm1000Test,
