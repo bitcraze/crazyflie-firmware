@@ -54,6 +54,7 @@ void deckInit()
 
   for (i=0; i<nDecks; i++) {
     DeckInfo *deck = deckInfo(i);
+    DEBUG_PRINT("%d deck OW codes %x-%x\n", i, deck->vid, deck->pid);
 
     if (deck->driver->init) {
       if (deck->driver->name) {
