@@ -41,16 +41,16 @@
 
 static lpsAlgoOptions_t* options;
 
-static float uwbTdoaDistDiff[LOCODECK_NR_OF_ANCHORS];
-static float clockCorrectionLog[LOCODECK_NR_OF_ANCHORS];
-static uint16_t anchorDistanceLog[LOCODECK_NR_OF_ANCHORS];
+static float uwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static float clockCorrectionLog[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static uint16_t anchorDistanceLog[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 static uint8_t previousAnchor;
-static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_ANCHORS];
-static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
-static uint8_t sequenceNrs[LOCODECK_NR_OF_ANCHORS];
+static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static dwTime_t arrivals[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static uint8_t sequenceNrs[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
-static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
+static double clockCorrection_T_To_A[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 
 #define MEASUREMENT_NOISE_STD 0.15f
@@ -179,7 +179,7 @@ static void rxcallback(dwDevice_t *dev) {
 
   const uint8_t anchor = rxPacket.sourceAddress & 0xff;
 
-  if (anchor < LOCODECK_NR_OF_ANCHORS) {
+  if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
     calcClockCorrection(&clockCorrection_T_To_A[anchor], anchor, packet, &arrival);
