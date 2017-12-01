@@ -38,27 +38,28 @@
 #include "estimator.h"
 #include "estimator_kalman.h"
 
-
-static lpsAlgoOptions_t* options;
-
-static float uwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static float clockCorrectionLog[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static uint16_t anchorDistanceLog[LOCODECK_NR_OF_TDOA2_ANCHORS];
-
-static uint8_t previousAnchor;
-static rangePacket_t rxPacketBuffer[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static dwTime_t arrivals[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static uint8_t sequenceNrs[LOCODECK_NR_OF_TDOA2_ANCHORS];
-
-static double clockCorrection_T_To_A[LOCODECK_NR_OF_TDOA2_ANCHORS];
-
-
 #define MEASUREMENT_NOISE_STD 0.15f
 #define STATS_INTERVAL 500
+
+
+// State
+static lpsAlgoOptions_t* options;
+
+static uint8_t previousAnchor;
+static rangePacket_t storedPackets[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static dwTime_t storedArrivals[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static uint8_t storedSequenceNrs[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static double storedClockCorrection_T_To_A[LOCODECK_NR_OF_TDOA2_ANCHORS];
+
+// Log data
+static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static float logClockCorrection[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static uint16_t logAnchorDistance[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 static uint32_t statsPacketsReceived = 0;
 static uint32_t statsPacketsSeqNrPass = 0;
 static uint32_t statsPacketsDataPass = 0;
+
 static uint16_t statsPacketsReceivedRate = 0;
 static uint16_t statsPacketsSeqNrPassRate = 0;
 static uint16_t statsPacketsDataPassRate = 0;
@@ -104,38 +105,39 @@ static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
 
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
 // We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
-// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference Anchor by Anchor N expressed in the clock of Anchor N"
+// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference 
+// Anchor by Anchor N expressed in the clock of Anchor N"
 
 static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
-  const int64_t previous_txAn_in_cl_An = rxPacketBuffer[anchor].timestamps[anchor];
 
-  if (! isSeqNrConsecutive(rxPacketBuffer[anchor].sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
+  if (! isSeqNrConsecutive(storedPackets[anchor].sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
     return false;
   }
 
   const int64_t rxAn_by_T_in_cl_T = arrival->full;
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t previous_rxAn_by_T_in_cl_T = arrivals[anchor].full;
-  const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - previous_txAn_in_cl_An);
-  const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - previous_rxAn_by_T_in_cl_T);
+  const int64_t latest_rxAn_by_T_in_cl_T = storedArrivals[anchor].full;
+  const int64_t latest_txAn_in_cl_An = storedPackets[anchor].timestamps[anchor];
+
+  const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
+  const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
 
   *clockCorrection = frameTime_in_cl_An / frameTime_in_T;
   return true;
 }
 
 static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
-  const int64_t rxAn_by_T_in_cl_T  = arrival->full;
-  const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
-  const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
-  const double clockCorrection = clockCorrection_T_To_A[anchor];
-
-  const bool isSeqNrInTagOk = isSeqNrConsecutive(rxPacketBuffer[anchor].sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
-  const bool isSeqNrInAnchorOk = isSeqNrConsecutive(sequenceNrs[anchor], packet->sequenceNrs[anchor]);
-
+  const bool isSeqNrInTagOk = isSeqNrConsecutive(storedPackets[anchor].sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
+  const bool isSeqNrInAnchorOk = isSeqNrConsecutive(storedSequenceNrs[anchor], packet->sequenceNrs[anchor]);
   if (! (isSeqNrInTagOk && isSeqNrInAnchorOk)) {
     return false;
   }
   statsPacketsSeqNrPass++;
+
+  const int64_t rxAn_by_T_in_cl_T  = arrival->full;
+  const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
+  const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
+  const double clockCorrection = storedClockCorrection_T_To_A[anchor];
 
   const bool isAnchorDistanceOk = isValidTimeStamp(tof_Ar_to_An_in_cl_An);
   const bool isRxTimeInTagOk = isValidTimeStamp(rxAr_by_An_in_cl_An);
@@ -147,7 +149,7 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
   statsPacketsDataPass++;
 
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t rxAr_by_T_in_cl_T = arrivals[previousAnchor].full;
+  const int64_t rxAr_by_T_in_cl_T = storedArrivals[previousAnchor].full;
 
   const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
   const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection - delta_txAr_to_txAn_in_cl_An;
@@ -158,11 +160,11 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
 }
 
 static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const float tdoaDistDiff, const rangePacket_t* packet) {
-  // Only store diffs for anchors with succeeding seq numbers. In case of packet
+  // Only store diffs for anchors when we have consecutive anchor ids. In case of packet
   // loss we can get ranging between any anchors and that messes up the graphs.
   if (((previousAnchor + 1) & 0x07) == anchor) {
-    uwbTdoaDistDiff[anchor] = tdoaDistDiff;
-    anchorDistanceLog[anchor] = packet->distances[previousAnchor];
+    logUwbTdoaDistDiff[anchor] = tdoaDistDiff;
+    logAnchorDistance[anchor] = packet->distances[previousAnchor];
   }
 }
 
@@ -182,8 +184,8 @@ static void rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    calcClockCorrection(&clockCorrection_T_To_A[anchor], anchor, packet, &arrival);
-    clockCorrectionLog[anchor] = clockCorrection_T_To_A[anchor];
+    calcClockCorrection(&storedClockCorrection_T_To_A[anchor], anchor, packet, &arrival);
+    logClockCorrection[anchor] = storedClockCorrection_T_To_A[anchor];
 
     if (anchor != previousAnchor) {
       float tdoaDistDiff = 0.0;
@@ -193,9 +195,9 @@ static void rxcallback(dwDevice_t *dev) {
       }
     }
 
-    arrivals[anchor].full = arrival.full;
-    memcpy(&rxPacketBuffer[anchor], rxPacket.payload, sizeof(rangePacket_t));
-    sequenceNrs[anchor] = packet->sequenceNrs[anchor];
+    storedArrivals[anchor].full = arrival.full;
+    memcpy(&storedPackets[anchor], rxPacket.payload, sizeof(rangePacket_t));
+    storedSequenceNrs[anchor] = packet->sequenceNrs[anchor];
 
     previousAnchor = anchor;
   }
@@ -244,17 +246,17 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
 
   // Reset module state. Needed by unit tests
-  memset(rxPacketBuffer, 0, sizeof(rxPacketBuffer));
-  memset(arrivals, 0, sizeof(arrivals));
-  memset(sequenceNrs, 0, sizeof(sequenceNrs));
+  memset(storedPackets, 0, sizeof(storedPackets));
+  memset(storedArrivals, 0, sizeof(storedArrivals));
+  memset(storedSequenceNrs, 0, sizeof(storedSequenceNrs));
 
-  memset(clockCorrection_T_To_A, 0, sizeof(clockCorrection_T_To_A));
-  memset(clockCorrectionLog, 0, sizeof(clockCorrectionLog));
-  memset(anchorDistanceLog, 0, sizeof(anchorDistanceLog));
+  memset(storedClockCorrection_T_To_A, 0, sizeof(storedClockCorrection_T_To_A));
+  memset(logClockCorrection, 0, sizeof(logClockCorrection));
+  memset(logAnchorDistance, 0, sizeof(logAnchorDistance));
 
   previousAnchor = 0;
 
-  memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
+  memset(logUwbTdoaDistDiff, 0, sizeof(logUwbTdoaDistDiff));
 
   clearStats();
   statsPacketsReceivedRate = 0;
@@ -272,32 +274,32 @@ uwbAlgorithm_t uwbTdoaTagAlgorithm = {
 
 
 LOG_GROUP_START(tdoa)
-LOG_ADD(LOG_FLOAT, d7-0, &uwbTdoaDistDiff[0])
-LOG_ADD(LOG_FLOAT, d0-1, &uwbTdoaDistDiff[1])
-LOG_ADD(LOG_FLOAT, d1-2, &uwbTdoaDistDiff[2])
-LOG_ADD(LOG_FLOAT, d2-3, &uwbTdoaDistDiff[3])
-LOG_ADD(LOG_FLOAT, d3-4, &uwbTdoaDistDiff[4])
-LOG_ADD(LOG_FLOAT, d4-5, &uwbTdoaDistDiff[5])
-LOG_ADD(LOG_FLOAT, d5-6, &uwbTdoaDistDiff[6])
-LOG_ADD(LOG_FLOAT, d6-7, &uwbTdoaDistDiff[7])
+LOG_ADD(LOG_FLOAT, d7-0, &logUwbTdoaDistDiff[0])
+LOG_ADD(LOG_FLOAT, d0-1, &logUwbTdoaDistDiff[1])
+LOG_ADD(LOG_FLOAT, d1-2, &logUwbTdoaDistDiff[2])
+LOG_ADD(LOG_FLOAT, d2-3, &logUwbTdoaDistDiff[3])
+LOG_ADD(LOG_FLOAT, d3-4, &logUwbTdoaDistDiff[4])
+LOG_ADD(LOG_FLOAT, d4-5, &logUwbTdoaDistDiff[5])
+LOG_ADD(LOG_FLOAT, d5-6, &logUwbTdoaDistDiff[6])
+LOG_ADD(LOG_FLOAT, d6-7, &logUwbTdoaDistDiff[7])
 
-LOG_ADD(LOG_FLOAT, cc0, &clockCorrectionLog[0])
-LOG_ADD(LOG_FLOAT, cc1, &clockCorrectionLog[1])
-LOG_ADD(LOG_FLOAT, cc2, &clockCorrectionLog[2])
-LOG_ADD(LOG_FLOAT, cc3, &clockCorrectionLog[3])
-LOG_ADD(LOG_FLOAT, cc4, &clockCorrectionLog[4])
-LOG_ADD(LOG_FLOAT, cc5, &clockCorrectionLog[5])
-LOG_ADD(LOG_FLOAT, cc6, &clockCorrectionLog[6])
-LOG_ADD(LOG_FLOAT, cc7, &clockCorrectionLog[7])
+LOG_ADD(LOG_FLOAT, cc0, &logClockCorrection[0])
+LOG_ADD(LOG_FLOAT, cc1, &logClockCorrection[1])
+LOG_ADD(LOG_FLOAT, cc2, &logClockCorrection[2])
+LOG_ADD(LOG_FLOAT, cc3, &logClockCorrection[3])
+LOG_ADD(LOG_FLOAT, cc4, &logClockCorrection[4])
+LOG_ADD(LOG_FLOAT, cc5, &logClockCorrection[5])
+LOG_ADD(LOG_FLOAT, cc6, &logClockCorrection[6])
+LOG_ADD(LOG_FLOAT, cc7, &logClockCorrection[7])
 
-LOG_ADD(LOG_UINT16, dist7-0, &anchorDistanceLog[0])
-LOG_ADD(LOG_UINT16, dist0-1, &anchorDistanceLog[1])
-LOG_ADD(LOG_UINT16, dist1-2, &anchorDistanceLog[2])
-LOG_ADD(LOG_UINT16, dist2-3, &anchorDistanceLog[3])
-LOG_ADD(LOG_UINT16, dist3-4, &anchorDistanceLog[4])
-LOG_ADD(LOG_UINT16, dist4-5, &anchorDistanceLog[5])
-LOG_ADD(LOG_UINT16, dist5-6, &anchorDistanceLog[6])
-LOG_ADD(LOG_UINT16, dist6-7, &anchorDistanceLog[7])
+LOG_ADD(LOG_UINT16, dist7-0, &logAnchorDistance[0])
+LOG_ADD(LOG_UINT16, dist0-1, &logAnchorDistance[1])
+LOG_ADD(LOG_UINT16, dist1-2, &logAnchorDistance[2])
+LOG_ADD(LOG_UINT16, dist2-3, &logAnchorDistance[3])
+LOG_ADD(LOG_UINT16, dist3-4, &logAnchorDistance[4])
+LOG_ADD(LOG_UINT16, dist4-5, &logAnchorDistance[5])
+LOG_ADD(LOG_UINT16, dist5-6, &logAnchorDistance[6])
+LOG_ADD(LOG_UINT16, dist6-7, &logAnchorDistance[7])
 
 LOG_ADD(LOG_UINT16, stRx, &statsPacketsReceivedRate)
 LOG_ADD(LOG_UINT16, stSeq, &statsPacketsSeqNrPassRate)
