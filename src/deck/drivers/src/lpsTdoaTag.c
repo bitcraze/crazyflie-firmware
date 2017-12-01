@@ -40,6 +40,7 @@
 
 #define MEASUREMENT_NOISE_STD 0.15f
 #define STATS_INTERVAL 500
+#define ANCHOR_OK_TIMEOUT 1500
 
 
 // State
@@ -50,6 +51,8 @@ static rangePacket_t storedPackets[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static dwTime_t storedArrivals[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static uint8_t storedSequenceNrs[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static double storedClockCorrection_T_To_A[LOCODECK_NR_OF_TDOA2_ANCHORS];
+
+static uint32_t anchorStatusTimeout[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 // Log data
 static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
@@ -199,6 +202,8 @@ static void rxcallback(dwDevice_t *dev) {
     memcpy(&storedPackets[anchor], rxPacket.payload, sizeof(rangePacket_t));
     storedSequenceNrs[anchor] = packet->sequenceNrs[anchor];
 
+    anchorStatusTimeout[anchor] = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
+
     previousAnchor = anchor;
   }
 }
@@ -237,6 +242,14 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
     nextStatisticsTime = now + STATS_INTERVAL;
   }
 
+  options->rangingState = 0;
+  for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA2_ANCHORS; anchor++) {
+    if (now < anchorStatusTimeout[anchor]) {
+      options->rangingState |= (1 << anchor);
+    }
+  }
+
+
   return MAX_TIMEOUT;
 }
 
@@ -257,6 +270,9 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   previousAnchor = 0;
 
   memset(logUwbTdoaDistDiff, 0, sizeof(logUwbTdoaDistDiff));
+
+  options->rangingState = 0;
+  memset(anchorStatusTimeout, 0, sizeof(anchorStatusTimeout));
 
   clearStats();
   statsPacketsReceivedRate = 0;
