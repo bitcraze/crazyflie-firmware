@@ -51,6 +51,7 @@ static void checkPeriphAndGpioConflicts(void);
 static void scanRequiredSystemProperties(void);
 static StateEstimatorType requiredEstimator = anyEstimator;
 static bool registerRequiredEstimator(StateEstimatorType estimator);
+static bool requiredLowInterferenceRadioMode = false;
 
 #ifndef DECK_FORCE
 #define DECK_FORCE
@@ -331,6 +332,7 @@ static void scanRequiredSystemProperties(void)
   for (int i = 0; i < count; i++)
   {
     isError = isError || registerRequiredEstimator(deckInfos[i].driver->requiredEstimator);
+    requiredLowInterferenceRadioMode |= deckInfos[i].driver->requiredLowInterferenceRadioMode;
   }
 
   if (isError) {
@@ -363,4 +365,9 @@ static bool registerRequiredEstimator(StateEstimatorType estimator)
 StateEstimatorType deckGetRequiredEstimator()
 {
   return requiredEstimator;
+}
+
+bool deckGetRequiredLowInterferenceRadioMode()
+{
+  return requiredLowInterferenceRadioMode;
 }

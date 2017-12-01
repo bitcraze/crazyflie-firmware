@@ -1,13 +1,13 @@
-/*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+/**
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2012 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +21,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * radiolink.c - Radio link layer
+ * zranger.h: Z-Ranger deck driver
  */
 
-#ifndef __RADIO_H__
-#define __RADIO_H__
+#ifndef _ZRANGER_H_
+#define _ZRANGER_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "syslink.h"
+#include "stabilizer_types.h"
+#include "deck_core.h"
 
-void radiolinkInit(void);
-bool radiolinkTest(void);
-void radiolinkSetChannel(uint8_t channel);
-void radiolinkSetDatarate(uint8_t datarate);
-void radiolinkSetAddress(uint64_t address);
-void radiolinkSetPowerDbm(int8_t powerDbm);
-void radiolinkSyslinkDispatch(SyslinkPacket *slp);
-struct crtpLinkOperations * radiolinkGetLink();
+void zRangerInit(DeckInfo* info);
 
+bool zRangerTest(void);
+void zRangerTask(void* arg);
 
-#endif //__RADIO_H__
+bool zRangerReadRange(zDistance_t* zrange, const uint32_t tick);
+
+#endif /* _ZRANGER_H_ */

@@ -58,6 +58,11 @@ typedef enum uwbEvent_e {
 
 typedef uint64_t locoAddress_t;
 
+typedef enum {
+  lpsMode_TWR = 0,
+  lpsMode_TDoA = 1
+} lpsMode_t;
+
 typedef struct {
   const uint64_t antennaDelay;
   const int rangingFailedThreshold;
@@ -65,13 +70,19 @@ typedef struct {
   locoAddress_t tagAddress;
   const locoAddress_t anchorAddress[LOCODECK_NR_OF_ANCHORS];
 
+  // The status of anchors. A bit field (bit 0 - anchor 0, bit 1 - anchor 1 and so on)
+  // where a set bit indicates that an anchor reentry has been detected
+  volatile uint16_t rangingState;
+
+  lpsMode_t rangingMode;
+
+   // TWR data
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
   bool combinedAnchorPositionOk;
 
   float distance[LOCODECK_NR_OF_ANCHORS];
   float pressures[LOCODECK_NR_OF_ANCHORS];
   int failedRanging[LOCODECK_NR_OF_ANCHORS];
-  volatile uint16_t rangingState;
 
   // TWR-TDMA options
   bool useTdma;

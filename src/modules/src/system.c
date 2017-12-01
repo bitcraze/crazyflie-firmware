@@ -42,6 +42,7 @@
 
 #include "config.h"
 #include "system.h"
+#include "platform.h"
 #include "configblock.h"
 #include "worker.h"
 #include "freeRTOSdebug.h"
@@ -157,6 +158,10 @@ void systemTask(void *arg)
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
+  if (deckGetRequiredLowInterferenceRadioMode())
+  {
+    platformSetLowInterferenceRadioMode();
+  }
   soundInit();
   memInit();
 
