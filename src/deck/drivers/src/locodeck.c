@@ -524,7 +524,7 @@ PARAM_GROUP_STOP(deck)
 
 // Loco Posisioning Protocol (LPP) handling
 
-void lpsHandleLppShortPacket(uint8_t srcId, uint8_t *data, int length)
+void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, const int length)
 {
   uint8_t type = data[0];
 

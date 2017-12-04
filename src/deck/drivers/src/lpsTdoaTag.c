@@ -171,6 +171,26 @@ static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const f
   }
 }
 
+static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
+  if (dataLength - MAC802154_HEADER_LENGTH > (int)LPS_TDOA_LPP_HEADER) {
+    if (rxPacket->payload[LPS_TDOA_LPP_HEADER] == LPP_HEADER_SHORT_PACKET) {
+      int srcId = -1;
+
+      for (int i=0; i<LOCODECK_NR_OF_ANCHORS; i++) {
+        if (rxPacket->sourceAddress == options->anchorAddress[i]) {
+          srcId = i;
+          break;
+        }
+      }
+
+      if (srcId >= 0) {
+        lpsHandleLppShortPacket(srcId, &rxPacket->payload[LPS_TDOA_LPP_TYPE],
+          dataLength - MAC802154_HEADER_LENGTH - LPS_TDOA_LPP_HEADER);
+      }
+    }
+  }
+}
+
 static void rxcallback(dwDevice_t *dev) {
   statsPacketsReceived++;
 
@@ -205,6 +225,8 @@ static void rxcallback(dwDevice_t *dev) {
     anchorStatusTimeout[anchor] = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
 
     previousAnchor = anchor;
+
+    handleLppPacket(dataLength, &rxPacket);
   }
 }
 

@@ -118,7 +118,7 @@ typedef struct {
 bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
 
 // Handle incoming short LPP packets from the UWB system
-void lpsHandleLppShortPacket(uint8_t srcId, uint8_t *data, int length);
+void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, const int length);
 
 // LPP Packet types and format
 #define LPP_HEADER_SHORT_PACKET 0xF0

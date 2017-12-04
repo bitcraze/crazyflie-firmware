@@ -17,4 +17,9 @@ typedef struct rangePacket_s {
   uint16_t distances[LOCODECK_NR_OF_TDOA2_ANCHORS];
 } __attribute__((packed)) rangePacket_t;
 
+#define LPS_TDOA_LPP_HEADER (sizeof(rangePacket_t))
+#define LPS_TDOA_LPP_TYPE (sizeof(rangePacket_t) + 1)
+#define LPS_TDOA_LPP_PAYLOAD (sizeof(rangePacket_t) + 2)
+
+
 #endif // __LPS_TDOA_TAG_H__
