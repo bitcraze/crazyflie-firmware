@@ -7,6 +7,7 @@
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
 #include "mock_estimator_kalman.h"
+#include "mock_locodeck.h"
 
 #include "dw1000Mocks.h"
 #include "freertosMocks.h"
