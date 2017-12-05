@@ -272,14 +272,10 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
   dwStartReceive(dev);
 }
 
-#include "debug.h"
-
 static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   switch(event) {
     case eventPacketReceived:
       if (rxcallback(dev)) {
-        DEBUG_PRINT("Sending LPP short packet ...");
-
         lppPacketToSend = false;
       } else {
         setRadioInReceiveMode(dev);
