@@ -54,6 +54,10 @@ static double storedClockCorrection_T_To_A[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 static uint32_t anchorStatusTimeout[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
+// LPP packet handling
+lpsLppShortPacket_t lppPacket;
+bool lppPacketToSend;
+
 // Log data
 static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static float logClockCorrection[LOCODECK_NR_OF_TDOA2_ANCHORS];
@@ -108,7 +112,7 @@ static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
 
 // A note on variable names. They might seem a bit verbose but express quite a lot of information
 // We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
-// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference 
+// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference
 // Anchor by Anchor N expressed in the clock of Anchor N"
 
 static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
@@ -191,18 +195,48 @@ static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
   }
 }
 
-static void rxcallback(dwDevice_t *dev) {
+
+#define LPS_TDOA2_TYPE 0
+#define LPS_TDOA2_SEND_LPP_PAYLOAD 1
+
+// Send an LPP packet, the radio will automatically go back in RX mode
+static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
+{
+  static packet_t txPacket;
+  dwIdle(dev);
+
+  txPacket.payload[LPS_TDOA2_TYPE] = LPP_HEADER_SHORT_PACKET;
+  memcpy(&txPacket.payload[LPS_TDOA2_SEND_LPP_PAYLOAD], packet->data, packet->length);
+
+  txPacket.sourceAddress = 0xff;
+  txPacket.destAddress = options->anchorAddress[packet->dest];
+
+  dwNewTransmit(dev);
+  dwSetDefaults(dev);
+  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
+
+  dwWaitForResponse(dev, true);
+  dwStartTransmit(dev);
+}
+
+static bool rxcallback(dwDevice_t *dev) {
   statsPacketsReceived++;
 
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
 
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
+  const uint8_t anchor = rxPacket.sourceAddress & 0xff;
+
+  // Check if we need to send the current LPP packet
+  bool lppSent = false;
+  if (lppPacketToSend && lppPacket.dest == anchor) {
+    sendLppShort(dev, &lppPacket);
+    lppSent = true;
+  }
 
   dwTime_t arrival = {.full = 0};
   dwGetReceiveTimestamp(dev, &arrival);
-
-  const uint8_t anchor = rxPacket.sourceAddress & 0xff;
 
   if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
@@ -228,6 +262,8 @@ static void rxcallback(dwDevice_t *dev) {
 
     handleLppPacket(dataLength, &rxPacket);
   }
+
+  return lppSent;
 }
 
 static void setRadioInReceiveMode(dwDevice_t *dev) {
@@ -236,17 +272,32 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
   dwStartReceive(dev);
 }
 
+#include "debug.h"
+
 static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   switch(event) {
     case eventPacketReceived:
-      rxcallback(dev);
-      setRadioInReceiveMode(dev);
+      if (rxcallback(dev)) {
+        DEBUG_PRINT("Sending LPP short packet ...");
+
+        lppPacketToSend = false;
+      } else {
+        setRadioInReceiveMode(dev);
+      }
+
+      if (!lppPacketToSend) {
+        // Get next lpp packet
+        lppPacketToSend = lpsGetLppShort(&lppPacket);
+      }
       break;
     case eventTimeout:
       setRadioInReceiveMode(dev);
       break;
     case eventReceiveTimeout:
       setRadioInReceiveMode(dev);
+      break;
+    case eventPacketSent:
+      // Service packet sent, the radio is back to receive automatically
       break;
     default:
       ASSERT_FAILED();
