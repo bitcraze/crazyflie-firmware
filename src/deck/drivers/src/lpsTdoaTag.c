@@ -176,11 +176,16 @@ static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const f
 }
 
 static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
-  if (dataLength - MAC802154_HEADER_LENGTH > (int)LPS_TDOA_LPP_HEADER) {
-    if (rxPacket->payload[LPS_TDOA_LPP_HEADER] == LPP_HEADER_SHORT_PACKET) {
+  const int32_t payloadLength = dataLength - MAC802154_HEADER_LENGTH;
+  const int32_t startOfLppDataInPayload = LPS_TDOA_LPP_HEADER;
+  const int32_t lppDataLength = payloadLength - startOfLppDataInPayload;
+
+  if (lppDataLength > 0) {
+    const uint8_t lppPacketHeader = rxPacket->payload[LPS_TDOA_LPP_HEADER];
+    if (lppPacketHeader == LPP_HEADER_SHORT_PACKET) {
       int srcId = -1;
 
-      for (int i=0; i<LOCODECK_NR_OF_ANCHORS; i++) {
+      for (int i=0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
         if (rxPacket->sourceAddress == options->anchorAddress[i]) {
           srcId = i;
           break;
@@ -188,8 +193,9 @@ static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
       }
 
       if (srcId >= 0) {
+        const int32_t lppTypeAndPayloadLength = lppDataLength - 1;
         lpsHandleLppShortPacket(srcId, &rxPacket->payload[LPS_TDOA_LPP_TYPE],
-          dataLength - MAC802154_HEADER_LENGTH - LPS_TDOA_LPP_HEADER);
+          lppTypeAndPayloadLength);
       }
     }
   }
