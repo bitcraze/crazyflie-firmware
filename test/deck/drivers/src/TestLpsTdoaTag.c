@@ -56,10 +56,12 @@ static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanc
 static void mockKalmanEstimator_validate();
 static void mockKalmanEstimator_resetMock();
 static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
-static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls);
 static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int length);
 
 static uint64_t drift(float factor, uint64_t time);
+
+static bool lpsGetLppShort_ignoreAndReturnFalse = true;
+static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls);
 
 
 // Stock test case for verifying clock offsets and clock wrap
@@ -124,6 +126,9 @@ void setUp(void) {
   options.combinedAnchorPositionOk = true;
 
   uwbTdoaTagAlgorithm.init(&dev, &options);
+
+  lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
+  lpsGetLppShort_ignoreAndReturnFalse = true;
 }
 
 void tearDown(void)
@@ -378,8 +383,6 @@ void testMissingTimestampInhibitsClockDriftCalculationInFirstIteration() {
   mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -437,8 +440,6 @@ void testMissingPacketAnchorToAnchorInhibitsDiffCalculation() {
   // Not called
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
-
-  lpsGetLppShort_IgnoreAndReturn(false);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -498,8 +499,6 @@ void testMissingAnchorToAnchorDistanceInhibitsDiffCalculation() {
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -557,8 +556,6 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculation() {
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -615,8 +612,6 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculationWhenSequenceNrW
   // Not called
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
-
-  lpsGetLppShort_IgnoreAndReturn(false);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -684,8 +679,6 @@ void testMissingPacketAnchorToTagInhibitsDiffCalculation() {
   // Not called since previous packet from same anchor was lost
   //  mockKalmanEstimator(5, 0, -expectedDiff);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -708,8 +701,6 @@ void testPacketReceivedEventShouldSetTheRadioInReceiveMode() {
 
   ignoreKalmanEstimatorValidation();
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
 
@@ -721,8 +712,6 @@ void testEventTimeoutShouldSetTheRadioInReceiveMode() {
   // Fixture
   mockRadioSetToReceiveMode();
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventTimeout);
 
@@ -733,8 +722,6 @@ void testEventTimeoutShouldSetTheRadioInReceiveMode() {
 void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
   // Fixture
   mockRadioSetToReceiveMode();
-
-  lpsGetLppShort_IgnoreAndReturn(false);
 
   // Test
   uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventReceiveTimeout);
@@ -770,7 +757,6 @@ void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
 
   ignoreKalmanEstimatorValidation();
 
-  lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
   packet_t expectedTxPacket;
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
 
@@ -791,7 +777,6 @@ void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
 
   ignoreKalmanEstimatorValidation();
 
-  lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
   packet_t expectedTxPacket;
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketSource, 0xbccf000000000000 | lppShortPacketDest);
 
@@ -867,8 +852,6 @@ void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
 
   // The measurement should not be pushed in the kalman filter
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -891,7 +874,6 @@ void testLppPacketIsHandled() {
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     lppDataSize, lppData);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
   ignoreKalmanEstimatorValidation();
 
   // Test
@@ -1080,8 +1062,6 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
   // Only the last message will create calls to the estimator. The two first are discarded due to missing data.
   mockKalmanEstimator(0, 1, expectedDiff);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -1142,8 +1122,6 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
   mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
 
-  lpsGetLppShort_IgnoreAndReturn(false);
-
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -1156,6 +1134,8 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
 }
 
 static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress) {
+  lpsGetLppShort_ignoreAndReturnFalse = false;
+
   memset(packet, 0, sizeof(packet_t));
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
@@ -1167,11 +1147,15 @@ static void populateLppPacket(packet_t* packet, char *data, int length, locoAddr
 }
 
 static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls) {
-  memcpy(shortPacket->data, lppShortPacketData, lppShortPacketLength);
-  shortPacket->dest = lppShortPacketDest;
-  shortPacket->length = lppShortPacketLength;
+  if (lpsGetLppShort_ignoreAndReturnFalse) {
+    return false;
+  } else {
+    memcpy(shortPacket->data, lppShortPacketData, lppShortPacketLength);
+    shortPacket->dest = lppShortPacketDest;
+    shortPacket->length = lppShortPacketLength;
 
-  return true;
+    return true;
+  }
 }
 
 static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int length) {
