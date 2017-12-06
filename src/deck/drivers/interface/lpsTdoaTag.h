@@ -26,5 +26,7 @@ typedef struct rangePacket_s {
 #define LPS_TDOA2_TYPE 0
 #define LPS_TDOA2_SEND_LPP_PAYLOAD 1
 
+#define TDOA2_LPP_PACKET_SEND_TIMEOUT (LOCODECK_NR_OF_ANCHORS * 5)
+
 
 #endif // __LPS_TDOA_TAG_H__

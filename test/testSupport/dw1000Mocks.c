@@ -7,7 +7,7 @@
 
 // dwGetData mock /////////////////////////////////////////////////////////////
 
-#define DW_GET_DATA_MAX_CALLS 10
+#define DW_GET_DATA_MAX_CALLS 100
 
 static struct {
   dwDevice_t* expectedDev;
@@ -43,7 +43,7 @@ void dwGetData_resetMock() {
 
 // dwGetTransmitTimestamp mock ////////////////////////////////////////////////
 
-#define DW_GET_TRANSMIT_TIMESTAMP_MAX_CALLS 10
+#define DW_GET_TRANSMIT_TIMESTAMP_MAX_CALLS 100
 
 static struct {
   dwDevice_t* expectedDev;
@@ -75,7 +75,7 @@ void dwGetTransmitTimestamp_resetMock() {
 
 // dwGetReceiveTimestamp mock /////////////////////////////////////////////////
 
-#define DW_GET_RECEIVE_TIMESTAMP_MAX_CALLS 10
+#define DW_GET_RECEIVE_TIMESTAMP_MAX_CALLS 100
 
 static struct {
   dwDevice_t* expectedDev;

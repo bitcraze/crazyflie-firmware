@@ -83,6 +83,8 @@ static int lppShortPacketLength = 5;
 static int lppShortPacketDest = 3;
 static int lppShortPacketSource = 0xff;
 
+static int lpsGetLppShort_numberOfCall;
+
 // End stock test case
 
 #define SLOT_TIME 0.002
@@ -754,6 +756,10 @@ void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
     (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
+  mockMessageFromAnchor(lppShortPacketDest+1, NS,
+    (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
 
   ignoreKalmanEstimatorValidation();
 
@@ -761,15 +767,20 @@ void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
 
   // Test
-  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+  // Nothing here, verification in mocks
 }
 
 void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
   // Fixture
   // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
+  mockMessageFromAnchor(lppShortPacketDest, NS,
+    (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
   mockMessageFromAnchorNotComingBackToReceive(lppShortPacketDest, NS,
     (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
@@ -783,10 +794,37 @@ void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
   mockSendLppShortHandling(&expectedTxPacket, lppShortPacketLength);
 
   // Test
-  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+  // Nothing here, verification in mocks
+}
+
+void testThatLppShortPacketIsDiscardedIfAnchorNotPresentForTooLong() {
+  // Fixture
+  // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
+  for (int i=0; i<TDOA2_LPP_PACKET_SEND_TIMEOUT+1; i++) {
+    mockMessageFromAnchor(lppShortPacketDest+1, NS,
+      (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
+      (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+      (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
+  }
+
+  ignoreKalmanEstimatorValidation();
+
+  packet_t expectedTxPacket;
+  populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
+
+  lpsGetLppShort_numberOfCall =  0;
+
+  // Test
+  for (int i=0; i<TDOA2_LPP_PACKET_SEND_TIMEOUT+1; i++) {
+    uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  }
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(2, lpsGetLppShort_numberOfCall);
 }
 
 void testDifferenceOfDistancePushedInKalmanIfAnchorsPositionIsValid() {
@@ -825,8 +863,6 @@ void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
   // Two anchors (A0 and A1), separated by 1.0m
   // Distance from A0 to tag is 2.0m
   // Distance from A1 to tag is 2.5m
-
-  float expectedDiff = 0.5;
 
   // Ideal times in universal clock
   uint64_t timeA0ToTag = time2m;
@@ -1147,6 +1183,8 @@ static void populateLppPacket(packet_t* packet, char *data, int length, locoAddr
 }
 
 static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls) {
+  lpsGetLppShort_numberOfCall++;
+
   if (lpsGetLppShort_ignoreAndReturnFalse) {
     return false;
   } else {

@@ -57,6 +57,7 @@ static uint32_t anchorStatusTimeout[LOCODECK_NR_OF_TDOA2_ANCHORS];
 // LPP packet handling
 lpsLppShortPacket_t lppPacket;
 bool lppPacketToSend;
+int lppPacketSendTryCounter;
 
 // Log data
 static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
@@ -288,11 +289,17 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
         lppPacketToSend = false;
       } else {
         setRadioInReceiveMode(dev);
+
+        // Discard lpp packet if we cannot send it for too long
+        if (++lppPacketSendTryCounter >= TDOA2_LPP_PACKET_SEND_TIMEOUT) {
+          lppPacketToSend = false;
+        }
       }
 
       if (!lppPacketToSend) {
         // Get next lpp packet
         lppPacketToSend = lpsGetLppShort(&lppPacket);
+        lppPacketSendTryCounter = 0;
       }
       break;
     case eventTimeout:
@@ -346,6 +353,8 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   memset(logAnchorDistance, 0, sizeof(logAnchorDistance));
 
   previousAnchor = 0;
+
+  lppPacketToSend = false;
 
   memset(logUwbTdoaDistDiff, 0, sizeof(logUwbTdoaDistDiff));
 
