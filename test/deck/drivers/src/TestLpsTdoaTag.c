@@ -2,6 +2,7 @@
 #include "lpsTdoaTag.h"
 
 #include <string.h>
+#include <stdlib.h>
 #include "unity.h"
 
 #include "mock_libdw1000.h"
@@ -37,14 +38,17 @@ static lpsAlgoOptions_t options = {
     {.x = 0.59, .y = 2.27, .z = 0.20},
     {.x = 4.70, .y = 3.38, .z = 0.20},
     {.x = 4.70, .y = 1.14, .z = 0.20},
+    {.x = 4.70, .y = 3.38, .z = 0.20},
+    {.x = 4.70, .y = 1.14, .z = 0.20},
   },
 };
 
 static const uint64_t NS = 0;
-static const int dataLength = sizeof(packet_t);
+static const uint32_t dataLengthNoLpp = MAC802154_HEADER_LENGTH + sizeof(rangePacket_t);
 
 static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
-static void mockMessageFromAnchorNotCommingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
+static void mockMessageFromAnchorNotComingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
+static void mockMessageFromAnchorWithLppData(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[], uint32_t lppDataSize, uint8_t* lppData);
 static void mockRadioSetToReceiveMode();
 
 static void ignoreKalmanEstimatorValidation();
@@ -780,7 +784,7 @@ void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
 void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
   // Fixture
   // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
-  mockMessageFromAnchorNotCommingBackToReceive(lppShortPacketDest, NS,
+  mockMessageFromAnchorNotComingBackToReceive(lppShortPacketDest, NS,
     (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
@@ -874,6 +878,29 @@ void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
   // Nothing here, verification in mocks
 }
 
+void testLppPacketIsHandled() {
+  // Simplified test, not verifying the actual LPP data
+  // Fixture
+  uint8_t lppData[] = {1, 2, 3, 4};
+  uint8_t lppDataSize = sizeof(lppData);
+  uint8_t expectedId = 4;
+
+  mockMessageFromAnchorWithLppData(expectedId, NS,
+    (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+    lppDataSize, lppData);
+
+  lpsGetLppShort_IgnoreAndReturn(false);
+  ignoreKalmanEstimatorValidation();
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Verified in mock
+}
+
 ////////////////////////////////////////////
 
 static dwTime_t ts(uint64_t time) {
@@ -881,11 +908,11 @@ static dwTime_t ts(uint64_t time) {
   return a;
 }
 
-static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]) {
+static void mockMessageFromAnchorWithLppData(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[], uint32_t lppDataSize, uint8_t* lppData) {
   packet_t packet;
   MAC80215_PACKET_INIT(packet, MAC802154_TYPE_DATA);
 
-  packet.sourceAddress = 0xbccf000000000000 | anchorIndex;
+  packet.sourceAddress = options.anchorAddress[anchorIndex];
 
   rangePacket_t* payload = (rangePacket_t*)&packet.payload;
   payload->type = 0x22;
@@ -895,8 +922,21 @@ static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t 
     payload->distances[i] = (uint16_t)(distances[i] & 0xffff);
   }
 
-  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
-  dwGetData_ExpectAndCopyData(&dev, &packet, dataLength);
+  uint32_t lppTotalSize = 0;
+  if (lppDataSize > 0) {
+    packet.payload[LPS_TDOA_LPP_HEADER] = LPP_HEADER_SHORT_PACKET;
+    packet.payload[LPS_TDOA_LPP_TYPE] = LPP_SHORT_ANCHORPOS;
+    memcpy(&packet.payload[LPS_TDOA_LPP_PAYLOAD], lppData, lppDataSize);
+    lppTotalSize = lppDataSize + 2;
+
+    uint8_t* ignore = 0;
+    lpsHandleLppShortPacket_Expect(anchorIndex, ignore, lppTotalSize - 1); // Header byte not included
+    lpsHandleLppShortPacket_IgnoreArg_data();
+  }
+
+  uint32_t totalDataLength = dataLengthNoLpp + lppTotalSize;
+  dwGetDataLength_ExpectAndReturn(&dev, totalDataLength);
+  dwGetData_ExpectAndCopyData(&dev, &packet, totalDataLength);
 
   dwTime_t rxTimeStr = ts(rxTime);
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
@@ -904,7 +944,11 @@ static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t 
   mockRadioSetToReceiveMode();
 }
 
-static void mockMessageFromAnchorNotCommingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]) {
+static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]) {
+  mockMessageFromAnchorWithLppData(anchorIndex, rxTime, sequenceNrs, timestamps, distances, 0, 0);
+}
+
+static void mockMessageFromAnchorNotComingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]) {
   packet_t packet;
   MAC80215_PACKET_INIT(packet, MAC802154_TYPE_DATA);
 
@@ -918,8 +962,8 @@ static void mockMessageFromAnchorNotCommingBackToReceive(uint8_t anchorIndex, ui
     payload->distances[i] = (uint16_t)(distances[i] & 0xffff);
   }
 
-  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
-  dwGetData_ExpectAndCopyData(&dev, &packet, dataLength);
+  dwGetDataLength_ExpectAndReturn(&dev, dataLengthNoLpp);
+  dwGetData_ExpectAndCopyData(&dev, &packet, dataLengthNoLpp);
 
   dwTime_t rxTimeStr = ts(rxTime);
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
