@@ -195,10 +195,6 @@ static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
   }
 }
 
-
-#define LPS_TDOA2_TYPE 0
-#define LPS_TDOA2_SEND_LPP_PAYLOAD 1
-
 // Send an LPP packet, the radio will automatically go back in RX mode
 static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 {
