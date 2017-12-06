@@ -201,10 +201,13 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
   static packet_t txPacket;
   dwIdle(dev);
 
+  MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
+
   txPacket.payload[LPS_TDOA2_TYPE] = LPP_HEADER_SHORT_PACKET;
   memcpy(&txPacket.payload[LPS_TDOA2_SEND_LPP_PAYLOAD], packet->data, packet->length);
 
-  txPacket.sourceAddress = 0xff;
+  txPacket.pan = 0xbccf;
+  txPacket.sourceAddress = 0xbccf000000000000 | 0xff;
   txPacket.destAddress = options->anchorAddress[packet->dest];
 
   dwNewTransmit(dev);

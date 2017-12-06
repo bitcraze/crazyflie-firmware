@@ -20,6 +20,16 @@
 
 static dwDevice_t dev;
 static lpsAlgoOptions_t options = {
+  .anchorAddress = {
+    0xbccf000000000000,
+    0xbccf000000000001,
+    0xbccf000000000002,
+    0xbccf000000000003,
+    0xbccf000000000004,
+    0xbccf000000000005,
+    0xbccf000000000006,
+    0xbccf000000000007,
+  },
   .anchorPosition = {
     {.x = 0.99, .y = 1.49, .z = 1.80},
     {.x = 0.99, .y = 3.29, .z = 1.80},
@@ -34,12 +44,16 @@ static const uint64_t NS = 0;
 static const int dataLength = sizeof(packet_t);
 
 static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
+static void mockMessageFromAnchorNotCommingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
 static void mockRadioSetToReceiveMode();
 
 static void ignoreKalmanEstimatorValidation();
 static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff);
 static void mockKalmanEstimator_validate();
 static void mockKalmanEstimator_resetMock();
+static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
+static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls);
+static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int length);
 
 static uint64_t drift(float factor, uint64_t time);
 
@@ -57,6 +71,11 @@ const uint64_t time2_5m = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
 const uint64_t timeA0ToA1 = 1.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
 const uint64_t timeA0ToTag = 2.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
 const uint64_t timeA1ToTag = 2.5 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+static char * lppShortPacketData = "hello";
+static int lppShortPacketLength = 5;
+static int lppShortPacketDest = 3;
+static int lppShortPacketSource = 0xff;
 
 // End stock test case
 
@@ -735,6 +754,49 @@ void testStatusShowsAnchorIsRanging() {
   TEST_ASSERT_EQUAL_UINT16(expected, actual);
 }
 
+void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
+  // Fixture
+  // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
+  mockMessageFromAnchor(lppShortPacketDest+1, NS,
+    (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
+
+  ignoreKalmanEstimatorValidation();
+
+  lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
+  packet_t expectedTxPacket;
+  populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
+
+  // Test
+  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+}
+
+void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
+  // Fixture
+  // mockRadioSetToReceiveMode() called as part of mockMessageFromAnchor()
+  mockMessageFromAnchorNotCommingBackToReceive(lppShortPacketDest, NS,
+    (uint8_t[]) {0, 0, 0,  0,  0,  0,  0,  0},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
+
+  ignoreKalmanEstimatorValidation();
+
+  lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
+  packet_t expectedTxPacket;
+  populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketSource, 0xbccf000000000000 | lppShortPacketDest);
+
+  mockSendLppShortHandling(&expectedTxPacket, lppShortPacketLength);
+
+  // Test
+  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+}
 
 ////////////////////////////////////////////
 
@@ -764,6 +826,27 @@ static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t 
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
 
   mockRadioSetToReceiveMode();
+}
+
+static void mockMessageFromAnchorNotCommingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]) {
+  packet_t packet;
+  MAC80215_PACKET_INIT(packet, MAC802154_TYPE_DATA);
+
+  packet.sourceAddress = 0xbccf000000000000 | anchorIndex;
+
+  rangePacket_t* payload = (rangePacket_t*)&packet.payload;
+  payload->type = 0x22;
+  for (int i = 0; i < LOCODECK_NR_OF_ANCHORS; i++) {
+    payload->sequenceNrs[i] = sequenceNrs[i];
+    payload->timestamps[i] = (uint32_t)(timestamps[i] & 0xffffffff);
+    payload->distances[i] = (uint16_t)(distances[i] & 0xffff);
+  }
+
+  dwGetDataLength_ExpectAndReturn(&dev, dataLength);
+  dwGetData_ExpectAndCopyData(&dev, &packet, dataLength);
+
+  dwTime_t rxTimeStr = ts(rxTime);
+  dwGetReceiveTimestamp_ExpectAndCopyData(&dev, &rxTimeStr);
 }
 
 static uint64_t drift(float factor, uint64_t time) {
@@ -950,4 +1033,32 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
 
   // Assert
   // Nothing here, verification in mocks
+}
+
+static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress) {
+  memset(packet, 0, sizeof(packet_t));
+
+  MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
+  packet->pan = 0xbccf;
+  memcpy(&packet->payload[LPS_TDOA2_SEND_LPP_PAYLOAD], data, length);
+  packet->payload[LPS_TDOA2_TYPE] = LPP_HEADER_SHORT_PACKET;
+  packet->sourceAddress = sourceAddress;
+  packet->destAddress = destinationAddress;
+}
+
+static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls) {
+  memcpy(shortPacket->data, lppShortPacketData, lppShortPacketLength);
+  shortPacket->dest = lppShortPacketDest;
+  shortPacket->length = lppShortPacketLength;
+
+  return true;
+}
+
+static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int length) {
+  dwIdle_Expect(&dev);
+  dwNewTransmit_Expect(&dev);
+  dwSetDefaults_Expect(&dev);
+  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)expectedTxPacket, sizeof(packet_t), MAC802154_HEADER_LENGTH + 1 + length);
+  dwWaitForResponse_Expect(&dev, true);
+  dwStartTransmit_Expect(&dev);
 }
