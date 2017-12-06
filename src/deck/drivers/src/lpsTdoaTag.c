@@ -96,7 +96,11 @@ static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     .anchorPosition[1] = options->anchorPosition[anchor2]
   };
 
-  estimatorKalmanEnqueueTDOA(&tdoa);
+  if (options->combinedAnchorPositionOk ||
+      (options->anchorPosition[anchor1].timestamp && options->anchorPosition[anchor2].timestamp)) {
+    estimatorKalmanEnqueueTDOA(&tdoa);
+  }
+
 }
 
 // The default receive time in the anchors for messages from other anchors is 0

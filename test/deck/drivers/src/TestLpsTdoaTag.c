@@ -117,6 +117,8 @@ void setUp(void) {
 
   mockKalmanEstimator_resetMock();
 
+  options.combinedAnchorPositionOk = true;
+
   uwbTdoaTagAlgorithm.init(&dev, &options);
 }
 
@@ -796,6 +798,80 @@ void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
+}
+
+void testDifferenceOfDistancePushedInKalmanIfAnchorsPositionIsValid() {
+  // Fixture
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+  uint64_t a0O = 1 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+
+  options.combinedAnchorPositionOk = false;
+  options.anchorPosition[0].timestamp = 1;
+  options.anchorPosition[1].timestamp = 1;
+
+  // test
+  verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(tO, a0O, a1O);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
+  // Fixture
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+  uint64_t a0O = 1 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+
+  options.combinedAnchorPositionOk = false;
+  options.anchorPosition[0].timestamp = 1;
+  options.anchorPosition[1].timestamp = 0;
+
+  // test
+  // tO:  offset for tag clock
+  // a0O: offset for anchor 0 clock
+  // a1O: offset for anchor 1 clock
+
+  // Fixture
+  // Two anchors (A0 and A1), separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A1 to tag is 2.5m
+
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA1ToTag = time2_5m;
+
+  // Time between anchors in universal time. Including anchor delay.
+  uint64_t timeA0ToA1 = time1m + 150.0 * LOCODECK_TS_FREQ / SPEED_OF_LIGHT;
+
+  mockMessageFromAnchor(1, iTxTime0_1 + timeA1ToTag + tO,
+    (uint8_t[]) {10,                            20,               0,  0,  0,  0,  0,  0},
+    (uint64_t[]){NS,                            iTxTime0_1 + a1O, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS,                            NS,               NS, NS, NS, NS, NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag + tO,
+    (uint8_t[]) {11,                            20,               0,  0,  0,  0,  0,  0},
+    (uint64_t[]){iTxTime1_0 + a0O,              NS,               NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){NS,                            NS,               NS, NS, NS, NS, NS, NS});
+
+  mockMessageFromAnchor(1, iTxTime1_1 + timeA1ToTag + tO,
+    (uint8_t[]) {11,                            21,               0,  0,  0,  0,  0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA1 + a1O, iTxTime1_1 + a1O, NS, NS, NS, NS, NS, NS},
+    (uint64_t[]){timeA0ToA1,                    NS,               NS, NS, NS, NS, NS, NS});
+
+  // The measurement should not be pushed in the kalman filter
+
+  lpsGetLppShort_IgnoreAndReturn(false);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
 }
 
 ////////////////////////////////////////////
