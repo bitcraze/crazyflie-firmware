@@ -196,7 +196,7 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
 #define MIN_COVARIANCE (1e-6f)
 
 // The bounds on states, these shouldn't be hit...
-#define MAX_POSITION (10) //meters
+#define MAX_POSITION (100) //meters
 #define MAX_VELOCITY (10) //meters per second
 
 // Initial variances, uncertain of position, but know we're stationary and roughly flat
