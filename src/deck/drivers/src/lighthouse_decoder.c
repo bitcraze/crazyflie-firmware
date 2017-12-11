@@ -55,6 +55,15 @@
 
 #define LHPULSE_TIM_PRESCALER           (0) // TIM14 clock running at sysclk/2. Gives us 84MHz
 
+typedef struct _LhPulseType
+{
+  uint32_t tsRise; // Timestamp of rising edge
+  uint32_t width;  // Width of the pulse in clock ticks
+} LhPulseType;
+
+static xQueueHandle pulsesQueueRight;
+static xQueueHandle pulsesQueueLeft;
+
 void lhInit(DeckInfo* info)
 {
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -85,7 +94,8 @@ void lhInit(DeckInfo* info)
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(LHPULSE_TIMER, &TIM_TimeBaseStructure);
 
-
+  pulsesQueueRight = xQueueCreate(10, sizeof(LhPulseType));
+  pulsesQueueLeft = xQueueCreate(10, sizeof(LhPulseType));
 
   // Setup input capture to measure pulse width
   // RIGHT
@@ -126,29 +136,47 @@ void lhInit(DeckInfo* info)
 
   TIM_ITConfig(LHPULSE_TIMER, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
   TIM_Cmd(LHPULSE_TIMER, ENABLE);
+
 }
 
-static uint32_t pulseWidthRight;
-static uint32_t pulseWidthLeft;
+int lhGetPulseRight(LhPulseType *pulse)
+{
+   ASSERT(pulse);
+
+   return xQueueReceive(pulsesQueueRight, pulse, portMAX_DELAY);
+}
+
+int lhGetPulseLeft(LhPulseType *pulse)
+{
+   ASSERT(pulse);
+
+   return xQueueReceive(pulsesQueueLeft, pulse, portMAX_DELAY);
+}
+
+static LhPulseType pulseRight;
+static LhPulseType pulseLeft;
+
+static LhPulseType buffR[1000];
+static LhPulseType buffL[1000];
+static int pR=0, pL=0;
 
 void __attribute__((used)) TIM5_IRQHandler()
 {
-  static uint32_t pulseStartRight = 0;
-  static uint32_t pulseStartLeft = 0;
-
-  // pulseWidth++;
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC1) != RESET)
   {
-    pulseStartRight = TIM_GetCapture1(LHPULSE_TIMER);
-
+    if (pR < 1000-1) pR++;
+    pulseRight.tsRise = TIM_GetCapture1(LHPULSE_TIMER);
+    buffR[pR].tsRise = pulseRight.tsRise;
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC1);
   }
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC2) != RESET)
   {
-
-    pulseWidthRight = TIM_GetCapture2(LHPULSE_TIMER) - pulseStartRight;
+    pulseRight.width = TIM_GetCapture2(LHPULSE_TIMER) -  pulseRight.tsRise;
+    buffR[pR].width = pulseRight.width;
+    xQueueSendFromISR(pulsesQueueRight, &pulseRight, &xHigherPriorityTaskWoken);
 
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC2);
   }
@@ -156,15 +184,18 @@ void __attribute__((used)) TIM5_IRQHandler()
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC3) != RESET)
   {
-    pulseStartLeft = TIM_GetCapture3(LHPULSE_TIMER);
+    if (pL < 1000-1) pL++;
+    pulseLeft.tsRise = TIM_GetCapture3(LHPULSE_TIMER);
+    buffL[pL].tsRise = pulseLeft.tsRise;
 
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC3);
   }
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC4) != RESET)
   {
-
-    pulseWidthLeft = TIM_GetCapture4(LHPULSE_TIMER) - pulseStartLeft;
+    pulseLeft.width = TIM_GetCapture4(LHPULSE_TIMER) - pulseLeft.tsRise;
+    buffL[pL].width = pulseLeft.width;
+    xQueueSendFromISR(pulsesQueueLeft, &pulseLeft, &xHigherPriorityTaskWoken);
 
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC4);
   }
@@ -184,6 +215,6 @@ static const DeckDriver lighthouse_deck = {
 DECK_DRIVER(lighthouse_deck);
 
 LOG_GROUP_START(lhpulse)
-LOG_ADD(LOG_UINT32, widthRight, &pulseWidthRight)
-LOG_ADD(LOG_UINT32, widthLeft, &pulseWidthLeft)
+LOG_ADD(LOG_UINT32, widthRight, &pulseRight.width)
+LOG_ADD(LOG_UINT32, widthLeft, &pulseLeft.width)
 LOG_GROUP_STOP(lhpulse)
