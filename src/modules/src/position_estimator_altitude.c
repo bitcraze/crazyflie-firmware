@@ -45,7 +45,7 @@ struct selfState_s {
 static struct selfState_s state = {
   .estimatedZ = 0.0f,
   .velocityZ = 0.0f,
-  .estAlphaZrange = 0.93f,
+  .estAlphaZrange = 0.90f,
   .estAlphaAsl = 0.997f,
   .velocityFactor = 1.0f,
   .vAccDeadband = 0.04f,
@@ -82,9 +82,14 @@ static void positionEstimateInternal(state_t* estimate, const sensorData_t* sens
       state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
     }
   } else {
-    // IIR filter asl
-    filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
-                (1.0f - state->estAlphaAsl) * sensorData->baro.asl;
+    // FIXME: A bit of an hack to init IIR filter
+    if (state->estimatedZ == 0.0f) {
+      filteredZ = sensorData->baro.asl;
+    } else {
+      // IIR filter asl
+      filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
+                  (1.0f - state->estAlphaAsl) * sensorData->baro.asl;
+    }
     // Use asl as base and add velocity changes.
     state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
   }

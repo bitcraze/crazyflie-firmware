@@ -42,6 +42,7 @@
 
 #include "config.h"
 #include "system.h"
+#include "platform.h"
 #include "configblock.h"
 #include "worker.h"
 #include "freeRTOSdebug.h"
@@ -60,16 +61,7 @@
 #include "buzzer.h"
 #include "sound.h"
 #include "sysload.h"
-
-#ifdef PLATFORM_CF1
-#include "uart_cf1.h"
-#endif
-
-#ifdef PLATFORM_CF2
 #include "deck.h"
-#endif
-
-
 #include "extrx.h"
 
 /* Private variable */
@@ -101,10 +93,8 @@ void systemInit(void)
   canStartMutex = xSemaphoreCreateMutex();
   xSemaphoreTake(canStartMutex, portMAX_DELAY);
 
-#ifdef PLATFORM_CF2
   usblinkInit();
   sysLoadInit();
-#endif
 
   /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
   crtpInit();
@@ -132,9 +122,6 @@ bool systemTest()
 {
   bool pass=isInit;
 
-#ifdef PLATFORM_CF1
-  pass &= adcTest();
-#endif
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
@@ -155,10 +142,6 @@ void systemTask(void *arg)
   queueMonitorInit();
 #endif
 
-#ifdef PLATFORM_CF1
-  uartInit();
-#endif
-
 #ifdef ENABLE_UART1
   uart1Init();
 #endif
@@ -170,10 +153,15 @@ void systemTask(void *arg)
   systemInit();
   commInit();
   commanderInit();
-  stabilizerInit();
-#ifdef PLATFORM_CF2
+
+  StateEstimatorType estimator = anyEstimator;
   deckInit();
-  #endif
+  estimator = deckGetRequiredEstimator();
+  stabilizerInit(estimator);
+  if (deckGetRequiredLowInterferenceRadioMode())
+  {
+    platformSetLowInterferenceRadioMode();
+  }
   soundInit();
   memInit();
 
@@ -187,9 +175,7 @@ void systemTask(void *arg)
   pass &= commTest();
   pass &= commanderTest();
   pass &= stabilizerTest();
-#ifdef PLATFORM_CF2
   pass &= deckTest();
-  #endif
   pass &= soundTest();
   pass &= memTest();
   pass &= watchdogNormalStartTest();

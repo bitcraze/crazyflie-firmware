@@ -27,13 +27,8 @@
 #include "console.h"
 
 #ifdef DEBUG_PRINT_ON_UART
-  #ifdef PLATFORM_CF1
-    #include "uart_cf1.h"
-  #endif
-  #ifdef PLATFORM_CF2
-    #include "uart1.h"
-    #define uartPrintf uart1Printf
-  #endif
+  #include "uart1.h"
+  #define uartPrintf uart1Printf
 #endif
 
 #ifdef DEBUG_MODULE

@@ -54,6 +54,16 @@ void attitudeControllerCorrectRatePID(
        float rollRateDesired, float pitchRateDesired, float yawRateDesired);
 
 /**
+ * Reset controller roll attitude PID
+ */
+void attitudeControllerResetRollAttitudePID(void);
+
+/**
+ * Reset controller pitch attitude PID
+ */
+void attitudeControllerResetPitchAttitudePID(void);
+
+/**
  * Reset controller roll, pitch and yaw PID's.
  */
 void attitudeControllerResetAllPID(void);

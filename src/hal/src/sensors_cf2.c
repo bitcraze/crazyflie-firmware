@@ -26,10 +26,6 @@
  * 2016.06.15: Initial version by Mike Hamer, http://mikehamer.info
  */
 
-#ifdef PLATFORM_CF1
-#error SENSORS = task is only compatible with the Crazyflie 2.0 // due to the IMU initialization
-#endif
-
 #include "sensors.h"
 
 #include <math.h>
@@ -38,7 +34,7 @@
 #include "lps25h.h"
 #include "mpu6500.h"
 #include "ak8963.h"
-#include "vl53l0x.h"
+#include "zranger.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -189,7 +185,7 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadAcc(&sensors->acc);
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
-  vl53l0xReadRange(&sensors->zrange, tick);
+  zRangerReadRange(&sensors->zrange, tick);
 }
 
 bool sensorsAreCalibrated() {

@@ -1,6 +1,12 @@
-# Crazyflie 1.0/2.0 Firmware  [![Build Status](https://api.travis-ci.org/bitcraze/crazyflie-firmware.svg)](https://travis-ci.org/bitcraze/crazyflie-firmware)
+# Crazyflie 2.0 Firmware  [![Build Status](https://api.travis-ci.org/bitcraze/crazyflie-firmware.svg)](https://travis-ci.org/bitcraze/crazyflie-firmware)
 
-This project contains the source code for the Crazyflie 1.0/2.0 firmware. 
+This project contains the source code for the Crazyflie 2.0 firmware.
+
+### Crazyflie 1.0 support
+
+The 2017.06 release was the last release with Crazyflie 1.0 support. If you want
+to play with the Crazyflie 1.0 and modify the code, please clone this repo and
+branch off from the 2017.06 tag. 
 
 ## Dependencies
 
@@ -79,19 +85,6 @@ git submodule update
 
 ## Compiling
 
-### Crazyflie 1.0
-
-Build with:
-```bash
-make PLATFORM=CF1
-```
-
-or with the toolbelt
-
-```bash
-tb make PLATFORM=CF1
-```
-
 ### Crazyflie 2.0
 
 This is the dafault build so just running "make" is enough or:
@@ -109,7 +102,7 @@ tb make
 To create custom build options create a file called config.mk in the root folder 
 (same as Makefile) and fill it with options. E.g. 
 ```
-PLATFORM=CF1
+PLATFORM=CF2
 DEBUG=1
 CLOAD=0
 ```
@@ -187,7 +180,7 @@ Defines are managed by make and are passed on to the unit test code. Use the
 normal ways of configuring make when running tests. For instance to run test
 for Crazyflie 1
 
-      make unit PLATFORM=CF1
+      make unit LPS_TDOA_ENABLE=1
 
 ## Dependencies
 

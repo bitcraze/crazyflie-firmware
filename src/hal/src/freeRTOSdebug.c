@@ -34,10 +34,6 @@
 #include "nvicconf.h"
 #include "led.h"
 
-#ifdef UART_OUTPUT_TRACE_DATA
-  #include "uart_cf1.h"
-#endif
-
 uint32_t traceTickCount;
 
 void vApplicationMallocFailedHook( void )

@@ -1,6 +1,3 @@
-// @IGNORE_IF_NOT PLATFORM_CF2
-// @IGNORE_IF_NOT ESTIMATOR_TYPE_kalman
-
 // File under test lpsTwrTag.h
 #include "lpsTdoaTag.h"
 
@@ -12,6 +9,7 @@
 #include "mock_estimator_kalman.h"
 
 #include "dw1000Mocks.h"
+#include "freertosMocks.h"
 
 #define TIMER_MAX_VALUE 0x00FFFFFFFFFFul
 
@@ -601,6 +599,24 @@ void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
 }
 
+void testStatusShowsAnchorIsRanging() {
+  // Fixture
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+  uint64_t a0O = 1 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+  verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(tO, a0O, a1O);
+
+  // Expect anchors 0 and 1 to be active
+  uint16_t expected = (1 << 0) | (1 << 1);
+
+  // test
+  uint16_t actual = options.rangingState;
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT16(expected, actual);
+}
+
+
 ////////////////////////////////////////////
 
 static dwTime_t ts(uint64_t time) {
@@ -650,7 +666,7 @@ static void mockRadioSetToReceiveMode() {
 }
 
 static void ignoreKalmanEstimatorValidation() {
-  stateEstimatorEnqueueTDOA_IgnoreAndReturn(true);
+  estimatorKalmanEnqueueTDOA_IgnoreAndReturn(true);
 }
 
 #define STATE_ESTIMATOR_MAX_NR_OF_CALLS 10
@@ -659,9 +675,9 @@ static tdoaMeasurement_t stateEstimatorExpectations[STATE_ESTIMATOR_MAX_NR_OF_CA
 static int stateEstimatorIndex = 0;
 static int stateEstimatorNrOfCalls = 0;
 
-static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int cmock_num_calls) {
+static bool estimatorKalmanEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int cmock_num_calls) {
   char message[100];
-  sprintf(message, "Failed in call %i to stateEstimatorEnqueueTDOA()", cmock_num_calls);
+  sprintf(message, "Failed in call %i to kalmanEstimatorEnqueueTDOA()", cmock_num_calls);
 
   tdoaMeasurement_t* expected = &stateEstimatorExpectations[cmock_num_calls];
   // TODO krri What is a reasonable accepted error here? 2 cm is needed to make the clock drift cases pass (expected: -0.500000 actual: -0.487943).
@@ -684,7 +700,7 @@ static bool stateEstimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int
 static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     TEST_ASSERT_TRUE(stateEstimatorIndex < STATE_ESTIMATOR_MAX_NR_OF_CALLS);
 
-    stateEstimatorEnqueueTDOA_StubWithCallback(stateEstimatorEnqueueTDOAMockCallback);
+    estimatorKalmanEnqueueTDOA_StubWithCallback(estimatorKalmanEnqueueTDOAMockCallback);
 
     tdoaMeasurement_t* measurement = &stateEstimatorExpectations[stateEstimatorIndex];
 

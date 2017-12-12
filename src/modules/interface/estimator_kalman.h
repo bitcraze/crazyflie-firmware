@@ -51,20 +51,30 @@
  * ============================================================================
  */
 
-#pragma once
+#ifndef __ESTIMATOR_KALMAN_H__
+#define __ESTIMATOR_KALMAN_H__
 
 #include <stdint.h>
 #include "stabilizer_types.h"
 
-void stateEstimatorInit(void);
-void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *control);
-bool stateEstimatorTest(void);
+void estimatorKalmanInit(void);
+bool estimatorKalmanTest(void);
+void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
 
 
 /**
  * The filter supports the incorporation of additional sensors into the state estimate via the following functions:
  */
-bool stateEstimatorEnqueueTDOA(tdoaMeasurement_t *uwb);
-bool stateEstimatorEnqueuePosition(positionMeasurement_t *pos);
-bool stateEstimatorEnqueueDistance(distanceMeasurement_t *dist);
-bool stateEstimatorEnqueueTOF(tofMeasurement_t *tof);
+bool estimatorKalmanEnqueueTDOA(tdoaMeasurement_t *uwb);
+bool estimatorKalmanEnqueuePosition(positionMeasurement_t *pos);
+bool estimatorKalmanEnqueueDistance(distanceMeasurement_t *dist);
+bool estimatorKalmanEnqueueTOF(tofMeasurement_t *tof);
+bool estimatorKalmanEnqueueFlow(flowMeasurement_t *flow);
+
+/*
+ * Methods used in the optical flow implementation to get elevation and reset position
+ */
+float estimatorKalmanGetElevation();
+void estimatorKalmanSetShift(float deltax, float deltay);
+
+#endif // __ESTIMATOR_KALMAN_H__

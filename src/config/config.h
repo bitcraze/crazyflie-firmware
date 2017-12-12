@@ -55,7 +55,7 @@
   #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
   #define MCU_ID_ADDRESS          0x1FFF7A10
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
-  #define FREERTOS_HEAP_SIZE      30000
+  #define FREERTOS_HEAP_SIZE      40000
   #define FREERTOS_MIN_STACK_SIZE 150       // M4-FPU register setup is bigger so stack needs to be bigger
   #define FREERTOS_MCU_CLOCK_HZ   168000000
 
@@ -82,22 +82,18 @@
 #define CRTP_TX_TASK_PRI        2
 #define CRTP_RX_TASK_PRI        2
 #define EXTRX_TASK_PRI          2
+#define ZRANGER_TASK_PRI        2
 #define LOG_TASK_PRI            1
 #define MEM_TASK_PRI            1
 #define PARAM_TASK_PRI          1
 #define PROXIMITY_TASK_PRI      0
 #define PM_TASK_PRI             0
+#define USDLOG_TASK_PRI         1
+#define USDWRITE_TASK_PRI       0
+#define PCA9685_TASK_PRI        3
 
-#ifdef PLATFORM_CF2
-  #define SYSLINK_TASK_PRI        5
-  #define USBLINK_TASK_PRI        3
-#endif
-
-#ifdef PLATFORM_CF1
-  #define NRF24LINK_TASK_PRI      2
-  #define ESKYLINK_TASK_PRI       1
-  #define UART_RX_TASK_PRI        2
-#endif
+#define SYSLINK_TASK_PRI        5
+#define USBLINK_TASK_PRI        3
 
 // Not compiled
 #if 0
@@ -125,6 +121,10 @@
 #define PROXIMITY_TASK_NAME     "PROXIMITY"
 #define EXTRX_TASK_NAME         "EXTRX"
 #define UART_RX_TASK_NAME       "UART"
+#define ZRANGER_TASK_NAME       "ZRANGER"
+#define USDLOG_TASK_NAME        "USDLOG"
+#define USDWRITE_TASK_NAME      "USDWRITE"
+#define PCA9685_TASK_NAME       "PCA9685"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
@@ -145,6 +145,10 @@
 #define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define ZRANGER_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
+#define USDLOG_TASK_STACKSIZE         (2 * configMINIMAL_STACK_SIZE)
+#define USDWRITE_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
+#define PCA9685_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

@@ -51,11 +51,7 @@ void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 
-#ifdef PLATFORM_CF1
-#include "motors_def_cf1.c"
-#else
 #include "motors_def_cf2.c"
-#endif
 
 const MotorPerifDef** motorMap;  /* Current map configuration */
 
@@ -100,7 +96,8 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   if (isInit)
   {
-    motorsDeInit(motorMap);
+    // First to init will configure it
+    return;
   }
 
   motorMap = motorMapSelect;
@@ -115,9 +112,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     GPIO_StructInit(&GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Mode = MOTORS_GPIO_MODE;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-#ifdef PLATFORM_CF2
     GPIO_InitStructure.GPIO_OType = motorMap[i]->gpioOType;
-#endif
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
@@ -169,13 +164,8 @@ void motorsDeInit(const MotorPerifDef** motorMapSelect)
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
-#ifdef PLATFORM_CF1
-    //Map timers to alternate functions
-    GPIO_PinRemapConfig(motorMap[i]->gpioAF , DISABLE);
-#else
     //Map timers to alternate functions
     GPIO_PinAFConfig(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, 0x00);
-#endif
 
     //Deinit timer
     TIM_DeInit(motorMap[i]->tim);

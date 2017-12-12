@@ -47,5 +47,6 @@
  */
 int platformInit(void);
 
+void platformSetLowInterferenceRadioMode(void);
 
 #endif /* PLATFORM_H_ */

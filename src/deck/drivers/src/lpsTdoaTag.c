@@ -26,15 +26,16 @@
 
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
 #include "log.h"
 #include "lpsTdoaTag.h"
 
 #include "stabilizer_types.h"
 #include "cfassert.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
+#include "estimator.h"
 #include "estimator_kalman.h"
-#endif // ESTIMATOR_TYPE_kalman
 
 
 static lpsAlgoOptions_t* options;
@@ -48,8 +49,10 @@ static dwTime_t arrivals[LOCODECK_NR_OF_ANCHORS];
 static double frameTime_in_cl_A[LOCODECK_NR_OF_ANCHORS];
 static double clockCorrection_T_To_A[LOCODECK_NR_OF_ANCHORS];
 
+static uint32_t anchorStatusTimeout[LOCODECK_NR_OF_ANCHORS];
 
 #define MEASUREMENT_NOISE_STD 0.15f
+#define ANCHOR_OK_TIMEOUT 1500
 
 // The maximum diff in distances that we consider to be valid
 // Used to sanity check results and remove results that are wrong due to packet loss
@@ -70,7 +73,6 @@ static uint64_t truncateToTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFFFul;
 }
 
-#ifdef ESTIMATOR_TYPE_kalman
 static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
@@ -80,9 +82,8 @@ static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     .anchorPosition[1] = options->anchorPosition[anchor2]
   };
 
-  stateEstimatorEnqueueTDOA(&tdoa);
+  estimatorKalmanEnqueueTDOA(&tdoa);
 }
-#endif
 
 static double calcClockCorrection(const double frameTime, const double previuosFrameTime) {
     double clockCorrection = 1.0;
@@ -151,9 +152,7 @@ static void rxcallback(dwDevice_t *dev) {
         if (tdoaDistDiff > -MAX_DISTANCE_DIFF && tdoaDistDiff < MAX_DISTANCE_DIFF) {
           uwbTdoaDistDiff[anchor] = tdoaDistDiff;
 
-          #ifdef ESTIMATOR_TYPE_kalman
           enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-          #endif
 
           statsAcceptedPackets++;
         }
@@ -167,6 +166,8 @@ static void rxcallback(dwDevice_t *dev) {
 
     arrivals[anchor].full = arrival.full;
     memcpy(&rxPacketBuffer[anchor], rxPacket.payload, sizeof(rangePacket_t));
+
+    anchorStatusTimeout[anchor] = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
 
     previousAnchor = anchor;
   }
@@ -194,6 +195,14 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       ASSERT_FAILED();
   }
 
+  uint32_t now = xTaskGetTickCount();
+  options->rangingState = 0;
+  for (int anchor = 0; anchor < LOCODECK_NR_OF_ANCHORS; anchor++) {
+    if (now < anchorStatusTimeout[anchor]) {
+      options->rangingState |= (1 << anchor);
+    }
+  }
+
   return MAX_TIMEOUT;
 }
 
@@ -212,6 +221,9 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   previousAnchor = 0;
 
   memset(uwbTdoaDistDiff, 0, sizeof(uwbTdoaDistDiff));
+
+  options->rangingState = 0;
+  memset(anchorStatusTimeout, 0, sizeof(anchorStatusTimeout));
 
   statsReceivedPackets = 0;
   statsAcceptedAnchorDataPackets = 0;

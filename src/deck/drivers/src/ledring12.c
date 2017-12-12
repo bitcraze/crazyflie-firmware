@@ -44,6 +44,7 @@
 #include "pm.h"
 #include "log.h"
 
+static bool isInit = false;
 
 /*
  * To add a new effect just add it as a static function with the prototype
@@ -619,6 +620,10 @@ static void ledring12Timer(xTimerHandle timer)
 
 static void ledring12Init(DeckInfo *info)
 {
+  if (isInit) {
+    return;
+  }
+
   GPIO_InitTypeDef GPIO_InitStructure;
 
   ws2812Init();
@@ -630,6 +635,8 @@ static void ledring12Init(DeckInfo *info)
   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+  isInit = true;
 
   timer = xTimerCreate( "ringTimer", M2T(50),
                                      pdTRUE, NULL, ledring12Timer );
@@ -660,3 +667,7 @@ static const DeckDriver ledring12_deck = {
 };
 
 DECK_DRIVER(ledring12_deck);
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLedRing, &isInit)
+PARAM_GROUP_STOP(deck)

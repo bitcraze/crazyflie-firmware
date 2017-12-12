@@ -41,42 +41,25 @@
 
 /******** Defines ********/
 
-#ifdef PLATFORM_CF1
-  // The following defines gives a PWM of 9 bits at ~140KHz for a sysclock of 72MHz
-  #define TIM_CLOCK_HZ 72000000
-  #define MOTORS_PWM_BITS           9
-  #define MOTORS_PWM_PERIOD         ((1<<MOTORS_PWM_BITS) - 1)
-  #define MOTORS_PWM_PRESCALE       0
-  #define MOTORS_TIM_BEEP_CLK_FREQ  (72000000L / 5)
-  #define MOTORS_POLARITY           TIM_OCPolarity_High
+// The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
+// CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
+#define TIM_CLOCK_HZ 84000000
+#define MOTORS_PWM_BITS           8
+#define MOTORS_PWM_PERIOD         ((1<<MOTORS_PWM_BITS) - 1)
+#define MOTORS_PWM_PRESCALE       0
+#define MOTORS_TIM_BEEP_CLK_FREQ  (84000000L / 5)
+#define MOTORS_POLARITY           TIM_OCPolarity_High
 
 // Abstraction of ST lib functions
-  #define MOTORS_GPIO_MODE          GPIO_Mode_AF_PP
-  #define MOTORS_RCC_GPIO_CMD       RCC_APB2PeriphClockCmd
-  #define MOTORS_RCC_TIM_CMD        RCC_APB1PeriphClockCmd
-  #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinRemapConfig(c, ENABLE)
-  #define MOTORS_TIM_DBG_CFG        DBGMCU_Config
-#else
-  // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
-  // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
-  #define TIM_CLOCK_HZ 84000000
-  #define MOTORS_PWM_BITS           8
-  #define MOTORS_PWM_PERIOD         ((1<<MOTORS_PWM_BITS) - 1)
-  #define MOTORS_PWM_PRESCALE       0
-  #define MOTORS_TIM_BEEP_CLK_FREQ  (84000000L / 5)
-  #define MOTORS_POLARITY           TIM_OCPolarity_High
-
-// Abstraction of ST lib functions
-  #define MOTORS_GPIO_MODE          GPIO_Mode_AF
-  #define MOTORS_RCC_GPIO_CMD       RCC_AHB1PeriphClockCmd
-  #define MOTORS_RCC_TIM_CMD        RCC_APB1PeriphClockCmd
-  #define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
-  #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
+#define MOTORS_GPIO_MODE          GPIO_Mode_AF
+#define MOTORS_RCC_GPIO_CMD       RCC_AHB1PeriphClockCmd
+#define MOTORS_RCC_TIM_CMD        RCC_APB1PeriphClockCmd
+#define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
+#define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
 // Compensate thrust depending on battery voltage so it will produce about the same
-  // amount of thrust independent of the battery voltage. Based on thrust measurement.
-  #define ENABLE_THRUST_BAT_COMPENSATED
-#endif
+// amount of thrust independent of the battery voltage. Based on thrust measurement.
+#define ENABLE_THRUST_BAT_COMPENSATED
 
 //#define ENABLE_ONESHOT125
 
@@ -205,13 +188,8 @@ typedef struct
   uint32_t      timPeriod;
   uint16_t      timPrescaler;
   /* Function pointers */
-#ifdef PLATFORM_CF1
-  void (*setCompare)(TIM_TypeDef* TIMx, uint16_t Compare);
-  uint16_t (*getCompare)(TIM_TypeDef* TIMx);
-#else
   void (*setCompare)(TIM_TypeDef* TIMx, uint32_t Compare);
   uint32_t (*getCompare)(TIM_TypeDef* TIMx);
-#endif
   void (*ocInit)(TIM_TypeDef* TIMx, TIM_OCInitTypeDef* TIM_OCInitStruct);
   void (*preloadConfig)(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload);
 } MotorPerifDef;

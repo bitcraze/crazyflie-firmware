@@ -107,18 +107,22 @@ static void sitAwPostStateUpdateCallOut(const sensorData_t *sensorData,
   /* Code that shall run AFTER each attitude update, should be placed here. */
 
 #if defined(SITAW_ENABLED)
+#ifdef SITAW_FF_ENABLED
   float accMAG = (sensorData->acc.x*sensorData->acc.x) +
                  (sensorData->acc.y*sensorData->acc.y) +
                  (sensorData->acc.z*sensorData->acc.z);
 
   /* Test values for Free Fall detection. */
   sitAwFFTest(state->acc.z, accMAG);
-
+#endif
+#ifdef SITAW_TU_ENABLED
   /* Test values for Tumbled detection. */
   sitAwTuTest(state->attitude.roll, state->attitude.pitch);
-
-  /* Test values for At Rest detection. */
+#endif
+#ifdef SITAW_AR_ENABLED
+/* Test values for At Rest detection. */
   sitAwARTest(sensorData->acc.x, sensorData->acc.y, sensorData->acc.z);
+#endif
 #endif
 }
 
@@ -127,11 +131,17 @@ static void sitAwPreThrustUpdateCallOut(setpoint_t *setpoint)
   /* Code that shall run BEFORE each thrust distribution update, should be placed here. */
 
 #if defined(SITAW_ENABLED)
+#ifdef SITAW_TU_ENABLED
       if(sitAwTuDetected()) {
         /* Kill the thrust to the motors if a Tumbled situation is detected. */
+        setpoint->mode.x = modeDisable;
+        setpoint->mode.y = modeDisable;
+        setpoint->mode.z = modeDisable;
         setpoint->thrust = 0;
       }
+#endif
 
+#ifdef SITAW_FF_ENABLED
       /* Force altHold mode if free fall is detected.
          FIXME: Needs a flying/landing state (as soon as althold is enabled,
                                               we are not freefalling anymore)
@@ -140,6 +150,7 @@ static void sitAwPreThrustUpdateCallOut(setpoint_t *setpoint)
         setpoint->mode.z = modeVelocity;
         setpoint->velocity.z = 0;
       }
+#endif
 #endif
 }
 
@@ -322,7 +333,13 @@ bool sitAwTuDetected(void)
  */
 void sitAwInit(void)
 {
+#ifdef SITAW_FF_ENABLED
   sitAwFFInit();
+#endif
+#ifdef SITAW_AR_ENABLED
   sitAwARInit();
+#endif
+#ifdef SITAW_TU_ENABLED
   sitAwTuInit();
+#endif
 }

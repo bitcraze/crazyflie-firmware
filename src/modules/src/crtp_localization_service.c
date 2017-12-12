@@ -34,15 +34,15 @@
 #include "log.h"
 #include "param.h"
 
-#ifndef PLATFORM_CF1
-#include "locodeck.h"
-#endif
+#include "stabilizer_types.h"
+#include "stabilizer.h"
 
-#ifdef ESTIMATOR_TYPE_kalman
+#include "locodeck.h"
+
 #include "estimator_kalman.h"
-#endif
 
 #define NBR_OF_RANGES_IN_PACKET   5
+#define DEFAULT_EMERGENCY_STOP_TIMEOUT (1 * RATE_MAIN_LOOP)
 
 typedef enum
 {
@@ -115,7 +115,6 @@ static void extPositionHandler(CRTPPacket* pk)
 
 static void genericLocHandle(CRTPPacket* pk)
 {
-#ifndef PLATFORM_CF1
   uint8_t type = pk->data[0];
   if (pk->size < 1) return;
 
@@ -127,8 +126,11 @@ static void genericLocHandle(CRTPPacket* pk)
     pk->size = 3;
     pk->data[2] = success?1:0;
     crtpSendPacket(pk);
+  } else if (type == EMERGENCY_STOP) {
+    stabilizerSetEmergencyStop();
+  } else if (type == EMERGENCY_STOP_WATCHDOG) {
+    stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
   }
-#endif
 }
 
 bool getExtPosition(state_t *state)
@@ -140,9 +142,8 @@ bool getExtPosition(state_t *state)
     ext_pos.y = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].y;
     ext_pos.z = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].z;
     ext_pos.stdDev = 0.01;
-#ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorEnqueuePosition(&ext_pos);
-#endif
+    estimatorKalmanEnqueuePosition(&ext_pos);
+
     return true;
   }
   return false;
