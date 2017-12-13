@@ -127,6 +127,9 @@ void setUp(void) {
 
   options.combinedAnchorPositionOk = true;
 
+  dwSetReceiveWaitTimeout_Expect(&dev, TDOA_RECEIVE_TIMEOUT);
+  dwCommitConfiguration_Expect(&dev);
+
   uwbTdoaTagAlgorithm.init(&dev, &options);
 
   lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);

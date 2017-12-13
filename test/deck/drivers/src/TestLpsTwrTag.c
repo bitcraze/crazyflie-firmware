@@ -60,6 +60,9 @@ void setUp(void) {
   dwGetTransmitTimestamp_resetMock();
   dwGetReceiveTimestamp_resetMock();
 
+  dwSetReceiveWaitTimeout_Expect(&dev, TWR_RECEIVE_TIMEOUT);
+  dwCommitConfiguration_Expect(&dev);
+
   memcpy(&options, &defaultOptions, sizeof(options));
   uwbTwrTagAlgorithm.init(&dev, &options);
 }

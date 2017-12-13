@@ -28,5 +28,6 @@ typedef struct rangePacket_s {
 
 #define TDOA2_LPP_PACKET_SEND_TIMEOUT (LOCODECK_NR_OF_ANCHORS * 5)
 
+#define TDOA_RECEIVE_TIMEOUT 10000
 
 #endif // __LPS_TDOA_TAG_H__

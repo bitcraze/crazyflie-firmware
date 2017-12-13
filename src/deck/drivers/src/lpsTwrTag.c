@@ -41,8 +41,6 @@
 #include "estimator_kalman.h"
 #include "arm_math.h"
 
-#define TWR_RECEIVE_TIMEOUT 1000
-
 // Outlier rejection
 #define RANGING_HISTORY_LENGTH 32
 #define OUTLIER_TH 4
@@ -259,10 +257,6 @@ void initiateRanging(dwDevice_t *dev)
 
   dwIdle(dev);
 
-  dwSetReceiveWaitTimeout(dev, TWR_RECEIVE_TIMEOUT);
-
-  dwCommitConfiguration(dev);
-
   txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_POLL;
   txPacket.payload[LPS_TWR_SEQ] = ++curr_seq;
 
@@ -404,6 +398,10 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
   memset(options->distance, 0, sizeof(options->distance));
   memset(options->pressures, 0, sizeof(options->pressures));
   memset(options->failedRanging, 0, sizeof(options->failedRanging));
+
+  dwSetReceiveWaitTimeout(dev, TWR_RECEIVE_TIMEOUT);
+
+  dwCommitConfiguration(dev);
 }
 
 uwbAlgorithm_t uwbTwrTagAlgorithm = {
