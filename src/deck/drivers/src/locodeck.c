@@ -223,7 +223,6 @@ static void uwbTask(void* parameters)
 
           // Defaults to TDoA algorithm
           algoOptions.currentRangingMode = lpsMode_TDoA;
-          DEBUG_PRINT("Automatic mode: intially trying %s\n", algorithmsList[algoOptions.currentRangingMode].name);
           algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
           algorithm->init(dwm, &algoOptions);
           timeout = algorithm->onEvent(dwm, eventTimeout);
@@ -243,7 +242,6 @@ static void uwbTask(void* parameters)
               algoOptions.currentRangingMode++;
             }
 
-            DEBUG_PRINT("Automatic mode: trying %s\n", algorithmsList[algoOptions.currentRangingMode].name);
             algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
             algorithm->init(dwm, &algoOptions);
             timeout = algorithm->onEvent(dwm, eventTimeout);
