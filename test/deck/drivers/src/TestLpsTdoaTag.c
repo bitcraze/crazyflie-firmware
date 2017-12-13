@@ -922,6 +922,27 @@ void testLppPacketIsHandled() {
   // Verified in mock
 }
 
+void testThatInitiallyNoRangingAreReportedToBeOk() {
+  // Test
+  // Nothing there, there has been no rangings
+
+  // Assert
+  TEST_ASSERT_FALSE(uwbTdoaTagAlgorithm.isRangingOk());
+}
+
+void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
+  // Fixture, runs a simple ranging
+  uint64_t tO = 3 * LOCODECK_TS_FREQ;
+  uint64_t a0O = 1 * LOCODECK_TS_FREQ;
+  uint64_t a1O = 2 * LOCODECK_TS_FREQ;
+
+  // test
+  verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(tO, a0O, a1O);
+
+  // Assert
+  TEST_ASSERT_TRUE(uwbTdoaTagAlgorithm.isRangingOk());
+}
+
 ////////////////////////////////////////////
 
 static dwTime_t ts(uint64_t time) {

@@ -118,8 +118,10 @@ static lpsAlgoOptions_t algoOptions = {
   // .rangingMode is the wanted algorithm, available as a parameter
 #if LPS_TDOA_ENABLE
   .rangingMode = lpsMode_TDoA,
-#else
+#elif defined(LPS_TWR_ENABLE)
   .rangingMode = lpsMode_TWR,
+#else
+  .rangingMode = lpsMode_auto,
 #endif
   // .currentRangingMode is the currently running algorithm, available as a log
   // -1 is an impossible mode which forces initialization of the requested mode
@@ -203,15 +205,55 @@ static void uwbTask(void* parameters)
 {
   lppShortQueue = xQueueCreate(10, sizeof(lpsLppShortPacket_t));
 
+  algoOptions.currentRangingMode = lpsMode_auto;
+
   systemWaitStart();
 
   updateTagTdmaSlot(&algoOptions);
 
   while(1) {
     // Change and init algorithm uppon request
-    // The first time this loop enters, currentRangingMode is set to -1 which forces
+    // The first time this loop enters, currentRangingMode is set to auto which forces
     // the initialization of the set algorithm
-    if (algoOptions.currentRangingMode != algoOptions.rangingMode) {
+    if (algoOptions.rangingMode == lpsMode_auto) { // Auto switch
+      if (algoOptions.rangingModeDetected == false) {
+        if (algoOptions.currentRangingMode == lpsMode_auto) {
+          // Initialize the algorithm, set time for next switch
+          algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
+
+          // Defaults to TDoA algorithm
+          algoOptions.currentRangingMode = lpsMode_TDoA;
+          DEBUG_PRINT("Automatic mode: intially trying %s\n", algorithmsList[algoOptions.currentRangingMode].name);
+          algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
+          algorithm->init(dwm, &algoOptions);
+          timeout = algorithm->onEvent(dwm, eventTimeout);
+        } else if (xTaskGetTickCount() > algoOptions.nextSwitchTick) {
+          // Test if we have detected anchors
+          if (algorithm->isRangingOk()) {
+            algoOptions.rangingModeDetected = true;
+            DEBUG_PRINT("Automatic mode: detected %s\n", algorithmsList[algoOptions.currentRangingMode].name);
+          } else {
+            // Setting up next switching time
+            algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
+
+            // Switch to next algorithm!
+            if ((algoOptions.currentRangingMode+1) > LPS_NUMBER_OF_ALGORITHM) {
+              algoOptions.currentRangingMode = 1;
+            } else {
+              algoOptions.currentRangingMode++;
+            }
+
+            DEBUG_PRINT("Automatic mode: trying %s\n", algorithmsList[algoOptions.currentRangingMode].name);
+            algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
+            algorithm->init(dwm, &algoOptions);
+            timeout = algorithm->onEvent(dwm, eventTimeout);
+          }
+        }
+      }
+    } else if (algoOptions.currentRangingMode != algoOptions.rangingMode) {  // Set modes
+      // Reset auto mode
+      algoOptions.rangingModeDetected = false;
+
       if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHM) {
         DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA!\n");
         algoOptions.currentRangingMode = algoOptions.rangingMode;
@@ -223,6 +265,7 @@ static void uwbTask(void* parameters)
       }
 
       algorithm->init(dwm, &algoOptions);
+      timeout = algorithm->onEvent(dwm, eventTimeout);
     }
 
     if (xSemaphoreTake(irqSemaphore, timeout/portTICK_PERIOD_MS)) {

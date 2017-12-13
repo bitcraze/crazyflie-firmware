@@ -79,6 +79,8 @@ static lpsAlgoOptions_t* options;
 static bool tdmaSynchronized;
 static dwTime_t frameStart;
 
+static bool rangingOk;
+
 static void txcallback(dwDevice_t *dev)
 {
   dwTime_t departure;
@@ -190,6 +192,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       float32_t diff = fabsf(mean - options->distance[current_anchor]);
 
       rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = options->distance[current_anchor];
+
+      rangingOk = true;
 
       if ((options->combinedAnchorPositionOk || options->anchorPosition[current_anchor].timestamp) &&
           (diff < (OUTLIER_TH*stddev))) {
@@ -402,11 +406,19 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
   dwSetReceiveWaitTimeout(dev, TWR_RECEIVE_TIMEOUT);
 
   dwCommitConfiguration(dev);
+
+  rangingOk = false;
+}
+
+static bool isRangingOk()
+{
+  return rangingOk;
 }
 
 uwbAlgorithm_t uwbTwrTagAlgorithm = {
   .init = twrTagInit,
   .onEvent = twrTagOnEvent,
+  .isRangingOk = isRangingOk,
 };
 
 LOG_GROUP_START(twr)

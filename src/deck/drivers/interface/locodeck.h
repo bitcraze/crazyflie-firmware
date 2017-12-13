@@ -36,6 +36,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+
 #include "libdw1000.h"
 #include "stabilizer_types.h"
 
@@ -60,6 +62,8 @@ typedef uint64_t locoAddress_t;
 
 #define LPS_NUMBER_OF_ALGORITHM 2
 
+#define LPS_AUTO_MODE_SWITCH_PERIOD M2T(1000)
+
 typedef enum {
   lpsMode_auto = 0,
   lpsMode_TWR = 1,
@@ -83,6 +87,7 @@ typedef struct {
 
   // State of the ranging mode auto detection
   bool rangingModeDetected;
+  uint32_t nextSwitchTick;
 
    // TWR data
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
@@ -103,6 +108,7 @@ point_t* locodeckGetAnchorPosition(uint8_t anchor);
 typedef struct uwbAlgorithm_s {
   void (*init)(dwDevice_t *dev, lpsAlgoOptions_t* options);
   uint32_t (*onEvent)(dwDevice_t *dev, uwbEvent_t event);
+  bool (*isRangingOk)();
 } uwbAlgorithm_t;
 
 #include <FreeRTOS.h>

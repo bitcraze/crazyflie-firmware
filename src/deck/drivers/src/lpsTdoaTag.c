@@ -74,6 +74,8 @@ static uint16_t statsPacketsDataPassRate = 0;
 static uint32_t nextStatisticsTime = 0;
 static uint32_t previousStatisticsTime = 0;
 
+static bool rangingOk;
+
 static void clearStats() {
   statsPacketsReceived = 0;
   statsPacketsSeqNrPass = 0;
@@ -257,6 +259,7 @@ static bool rxcallback(dwDevice_t *dev) {
     if (anchor != previousAnchor) {
       float tdoaDistDiff = 0.0;
       if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
+        rangingOk = true;
         enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
         addToLog(anchor, previousAnchor, tdoaDistDiff, packet);
       }
@@ -371,12 +374,20 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   dwSetReceiveWaitTimeout(dev, TDOA_RECEIVE_TIMEOUT);
 
   dwCommitConfiguration(dev);
+
+  rangingOk = false;
 }
 #pragma GCC diagnostic pop
+
+static bool isRangingOk()
+{
+  return rangingOk;
+}
 
 uwbAlgorithm_t uwbTdoaTagAlgorithm = {
   .init = Initialize,
   .onEvent = onEvent,
+  .isRangingOk = isRangingOk,
 };
 
 
