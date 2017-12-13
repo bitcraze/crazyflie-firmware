@@ -54,11 +54,8 @@
 #include "locodeck.h"
 #include "lpsTdma.h"
 
-#if LPS_TDOA_ENABLE
-  #include "lpsTdoaTag.h"
-#else
-  #include "lpsTwrTag.h"
-#endif
+#include "lpsTdoaTag.h"
+#include "lpsTwrTag.h"
 
 
 #define CS_PIN DECK_GPIO_IO1
@@ -83,11 +80,7 @@
 #endif
 
 
-#if LPS_TDOA_ENABLE
-  #define RX_TIMEOUT 10000
-#else
-  #define RX_TIMEOUT 1000
-#endif
+#define DEFAULT_RX_TIMEOUT 10000
 
 
 #define ANTENNA_OFFSET 154.6   // In meter
@@ -121,11 +114,17 @@ static lpsAlgoOptions_t algoOptions = {
   .useTdma = true,
   .tdmaSlot = TDMA_SLOT,
 #endif
+
+  // .rangingMode is the wanted algorithm, available as a parameter
 #if LPS_TDOA_ENABLE
   .rangingMode = lpsMode_TDoA,
 #else
   .rangingMode = lpsMode_TWR,
 #endif
+  // .currentRangingMode is the currently running algorithm, available as a log
+  // -1 is an impossible mode which forces initialization of the requested mode
+  // at startup
+  .currentRangingMode = -1,
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
@@ -139,6 +138,14 @@ static lpsAlgoOptions_t algoOptions = {
 //   },
 //
 //   .combinedAnchorPositionOk = true,
+};
+
+struct {
+  uwbAlgorithm_t *algorithm;
+  char *name;
+} algorithmsList[LPS_NUMBER_OF_ALGORITHM+1] = {
+  [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
+  [lpsMode_TDoA] = {.algorithm = &uwbTdoaTagAlgorithm, .name="TDoA"},
 };
 
 point_t* locodeckGetAnchorPosition(uint8_t anchor)
@@ -200,9 +207,24 @@ static void uwbTask(void* parameters)
 
   updateTagTdmaSlot(&algoOptions);
 
-  algorithm->init(dwm, &algoOptions);
-
   while(1) {
+    // Change and init algorithm uppon request
+    // The first time this loop enters, currentRangingMode is set to -1 which forces
+    // the initialization of the set algorithm
+    if (algoOptions.currentRangingMode != algoOptions.rangingMode) {
+      if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHM) {
+        DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA!\n");
+        algoOptions.currentRangingMode = algoOptions.rangingMode;
+        algorithm = algorithmsList[lpsMode_TDoA].algorithm;
+      } else {
+        algoOptions.currentRangingMode = algoOptions.rangingMode;
+        algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
+        DEBUG_PRINT("Switching mode to %s\n", algorithmsList[algoOptions.currentRangingMode].name);
+      }
+
+      algorithm->init(dwm, &algoOptions);
+    }
+
     if (xSemaphoreTake(irqSemaphore, timeout/portTICK_PERIOD_MS)) {
       do{
           dwHandleInterrupt(dwm);
@@ -374,7 +396,7 @@ static void dwm1000Init(DeckInfo *info)
   dwUseSmartPower(dwm, true);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
-  dwSetReceiveWaitTimeout(dwm, RX_TIMEOUT);
+  dwSetReceiveWaitTimeout(dwm, DEFAULT_RX_TIMEOUT);
 
   dwCommitConfiguration(dwm);
 
@@ -470,8 +492,12 @@ LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
 LOG_GROUP_STOP(ranging)
 
 LOG_GROUP_START(loco)
-LOG_ADD(LOG_UINT8, mode, &algoOptions.rangingMode)
+LOG_ADD(LOG_UINT8, mode, &algoOptions.currentRangingMode)
 LOG_GROUP_STOP(loco)
+
+PARAM_GROUP_START(loco)
+PARAM_ADD(PARAM_UINT8, mode, &algoOptions.rangingMode)
+PARAM_GROUP_STOP(loco)
 
 
 PARAM_GROUP_START(anchorpos)

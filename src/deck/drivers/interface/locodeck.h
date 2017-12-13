@@ -58,9 +58,12 @@ typedef enum uwbEvent_e {
 
 typedef uint64_t locoAddress_t;
 
+#define LPS_NUMBER_OF_ALGORITHM 2
+
 typedef enum {
-  lpsMode_TWR = 0,
-  lpsMode_TDoA = 1
+  lpsMode_auto = 0,
+  lpsMode_TWR = 1,
+  lpsMode_TDoA = 2,
 } lpsMode_t;
 
 typedef struct {
@@ -74,7 +77,12 @@ typedef struct {
   // where a set bit indicates that an anchor reentry has been detected
   volatile uint16_t rangingState;
 
+  // Requested and current ranging mode
   lpsMode_t rangingMode;
+  lpsMode_t currentRangingMode;
+
+  // State of the ranging mode auto detection
+  bool rangingModeDetected;
 
    // TWR data
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];

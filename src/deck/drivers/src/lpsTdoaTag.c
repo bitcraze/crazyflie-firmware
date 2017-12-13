@@ -38,6 +38,8 @@
 #include "estimator.h"
 #include "estimator_kalman.h"
 
+#define TDOA_RECEIVE_TIMEOUT 10000
+
 #define MEASUREMENT_NOISE_STD 0.15f
 #define STATS_INTERVAL 500
 #define ANCHOR_OK_TIMEOUT 1500
@@ -211,6 +213,11 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 {
   static packet_t txPacket;
   dwIdle(dev);
+
+
+  dwSetReceiveWaitTimeout(dev, TDOA_RECEIVE_TIMEOUT);
+
+  dwCommitConfiguration(dev);
 
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
 
