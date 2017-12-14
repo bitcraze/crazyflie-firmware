@@ -30,8 +30,10 @@
 #include "num.h"
 
 #include "motors.h"
+#include "usec_time.h"
 
 static bool motorSetEnable = false;
+uint32_t sysLatency;
 
 static struct {
   uint32_t m1;
@@ -113,6 +115,12 @@ void powerDistribution(const control_t *control)
     motorsSetRatio(MOTOR_M3, motorPower.m3);
     motorsSetRatio(MOTOR_M4, motorPower.m4);
   }
+
+  {
+    extern uint64_t mpuIntTimestamp;
+    uint64_t outTimestamp = usecTimestamp();
+    sysLatency = outTimestamp - mpuIntTimestamp;
+  }
 }
 
 PARAM_GROUP_START(motorPowerSet)
@@ -129,3 +137,7 @@ LOG_ADD(LOG_INT32, m1, &motorPower.m1)
 LOG_ADD(LOG_INT32, m2, &motorPower.m2)
 LOG_ADD(LOG_INT32, m3, &motorPower.m3)
 LOG_GROUP_STOP(motor)
+
+LOG_GROUP_START(latency)
+LOG_ADD(LOG_UINT32, intToOut, &sysLatency)
+LOG_GROUP_STOP(latency)

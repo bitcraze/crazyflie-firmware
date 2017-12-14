@@ -117,7 +117,7 @@ bool eepromTestConnection(void)
   if (!isInit)
     return false;
 
-  status = i2cdevRead16(I2Cx, devAddr, 0, 1, &tmp);
+  status = i2cdevReadReg16(I2Cx, devAddr, 0, 1, &tmp);
 
   return status;
 }
@@ -131,7 +131,7 @@ bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len)
      return false;
   }
 
-  status = i2cdevRead16(I2Cx, devAddr, readAddr, len, buffer);
+  status = i2cdevReadReg16(I2Cx, devAddr, readAddr, len, buffer);
 
   return status;
 }
@@ -148,7 +148,7 @@ bool eepromWriteBuffer(uint8_t* buffer, uint16_t writeAddr, uint16_t len)
 
   for (index = 0; index < len && status; index++)
   {
-    status = i2cdevWrite16(I2Cx, devAddr, writeAddr + index, 1, &buffer[index]);
+    status = i2cdevWriteReg16(I2Cx, devAddr, writeAddr + index, 1, &buffer[index]);
     vTaskDelay(M2T(6));
   }
 

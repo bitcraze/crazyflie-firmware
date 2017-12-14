@@ -376,7 +376,9 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       }
       else
       {
-        IF_DEBUG_ASSERT(0); // Queue overflow
+        //FIXME: Removed since it triggers when debugging and restarting while
+        //       nRF is sending syslink data.
+        //IF_DEBUG_ASSERT(0); // Queue overflow
       }
     }
     else

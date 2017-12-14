@@ -137,7 +137,7 @@ bool pca9685setDuties(
     durationToBytes(duration, data + 4*i);
   }
   int const reg = channelReg(chanBegin);
-  return i2cdevWrite(&deckBus, addr, reg, 4*nChan, data);
+  return i2cdevWriteReg8(&deckBus, addr, reg, 4*nChan, data);
 }
 
 bool pca9685setDurations(
@@ -148,7 +148,7 @@ bool pca9685setDurations(
     durationToBytes(durations[i], data + 4*i);
   }
   int const reg = channelReg(chanBegin);
-  return i2cdevWrite(&deckBus, addr, reg, 4*nChan, data);
+  return i2cdevWriteReg8(&deckBus, addr, reg, 4*nChan, data);
 }
 
 //

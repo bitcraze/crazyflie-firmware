@@ -49,6 +49,7 @@
 #include "ledseq.h"
 #include "sound.h"
 #include "filter.h"
+#include "usec_time.h"
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -105,6 +106,7 @@ static xQueueHandle gyroDataQueue;
 static xQueueHandle magnetometerDataQueue;
 static xQueueHandle barometerDataQueue;
 static xSemaphoreHandle sensorsDataReady;
+static xSemaphoreHandle dataReady;
 
 static bool isInit = false;
 static sensorData_t sensors;
@@ -207,7 +209,7 @@ static void sensorsTask(void *param)
               (isMagnetometerPresent ? SENSORS_MAG_BUFF_LEN : 0) +
               (isBarometerPresent ? SENSORS_BARO_BUFF_LEN : 0));
 
-      i2cdevRead(I2C3_DEV, MPU6500_ADDRESS_AD0_HIGH, MPU6500_RA_ACCEL_XOUT_H, dataLen, buffer);
+      i2cdevReadReg8(I2C3_DEV, MPU6500_ADDRESS_AD0_HIGH, MPU6500_RA_ACCEL_XOUT_H, dataLen, buffer);
       // these functions process the respective data and queue it on the output queues
       processAccGyroMeasurements(&(buffer[0]));
       if (isMagnetometerPresent)
@@ -220,7 +222,6 @@ static void sensorsTask(void *param)
                   SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN : SENSORS_MPU6500_BUFF_LEN]));
       }
 
-      vTaskSuspendAll(); // ensure all queues are populated at the same time
       xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
       xQueueOverwrite(gyroDataQueue, &sensors.gyro);
       if (isMagnetometerPresent)
@@ -231,9 +232,14 @@ static void sensorsTask(void *param)
       {
         xQueueOverwrite(barometerDataQueue, &sensors.baro);
       }
-      xTaskResumeAll();
+      xSemaphoreGive(dataReady);
     }
   }
+}
+
+void sensorsWaitDataReady(void)
+{
+  xSemaphoreTake(dataReady, portMAX_DELAY);
 }
 
 void processBarometerMeasurements(const uint8_t *buffer)
@@ -510,11 +516,12 @@ void sensorsInit(void)
   }
 
   sensorsDataReady = xSemaphoreCreateBinary();
+  dataReady = xSemaphoreCreateBinary();
 
-//  sensorsBiasObjInit(&gyroBiasRunning);
-//  sensorsDeviceInit();
-//  sensorsInterruptInit();
-//  sensorsTaskInit();
+  sensorsBiasObjInit(&gyroBiasRunning);
+  sensorsDeviceInit();
+  sensorsInterruptInit();
+  sensorsTaskInit();
 
   isInit = true;
 }
@@ -825,9 +832,11 @@ bool sensorsManufacturingTest(void)
   return testStatus;
 }
 
+uint64_t mpuIntTimestamp;
 void __attribute__((used)) EXTI13_Callback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  mpuIntTimestamp = usecTimestamp();
   xSemaphoreGiveFromISR(sensorsDataReady, &xHigherPriorityTaskWoken);
 
   if (xHigherPriorityTaskWoken)

@@ -40,6 +40,7 @@ bool sensorsManufacturingTest(void);
 // For legacy control
 void sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
 
+void sensorsWaitDataReady(void);
 // Allows individual sensor measurement
 bool sensorsReadGyro(Axis3f *gyro);
 bool sensorsReadAcc(Axis3f *acc);

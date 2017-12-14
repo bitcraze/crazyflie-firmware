@@ -165,10 +165,6 @@ void systemTask(void *arg)
   soundInit();
   memInit();
 
-#ifdef PROXIMITY_ENABLED
-  proximityInit();
-#endif
-
   //Test the modules
   pass &= systemTest();
   pass &= configblockTest();

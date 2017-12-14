@@ -25,15 +25,23 @@
  * usec_time.c - microsecond-resolution timer and timestamps.
  */
 
+#include <stdbool.h>
+
 #include "usec_time.h"
 
 #include "nvicconf.h"
 #include "stm32fxxx.h"
 
 static uint32_t usecTimerHighCount;
+static bool isInit = false;
 
 void initUsecTimer(void)
 {
+  if (isInit)
+  {
+    return;
+  }
+
   usecTimerHighCount = 0;
 
   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -61,6 +69,8 @@ void initUsecTimer(void)
   DBGMCU_Config(DBGMCU_TIM7_STOP, ENABLE);
   TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);
   TIM_Cmd(TIM7, ENABLE);
+
+  isInit = true;
 }
 
 uint64_t usecTimestamp(void)
