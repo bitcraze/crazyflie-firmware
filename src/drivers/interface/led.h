@@ -59,7 +59,6 @@
 
 typedef enum {LED_BLUE_L = 0, LED_GREEN_L, LED_RED_L, LED_GREEN_R, LED_RED_R} led_t;
 
-
 void ledInit();
 bool ledTest();
 
