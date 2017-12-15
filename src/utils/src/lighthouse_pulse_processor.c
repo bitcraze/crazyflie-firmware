@@ -31,6 +31,9 @@
 
 #define US2TICK(usec) (84*usec) //  84000000MHz * usec/1000000
 
+#define ANGLE_CENTER_TICKS  US2TICK(4000)
+#define CYCLE_PERIOD_TICKS  US2TICK(8333)
+
 #define MIN_SHORT_PULSE_LEN_TICKS US2TICK(2)
 #define MIN_LONG_PULSE_LEN_TICKS  US2TICK(40)
 #define MAX_LONG_PULSE_LEN_TICKS  US2TICK(300)
@@ -38,60 +41,48 @@
 #define SYNC_A_TO_B_TIME_TICKS    US2TICK(400)
 #define FRAME_TIME_TICKS          US2TICK(8333)
 
-typedef struct _LhPulseType
-{
-  uint32_t tsRise; // Timestamp of rising edge
-  uint32_t width;  // Width of the pulse in clock ticks
-} LhPulseType;
-
-LhPulseType pulses[18] = {
-    {175243,  382}, {479637,  9693}, {514749,  7965},  {815882,  368}, {1180949, 7065}, {1216055, 8831},
-    {1546318, 458}, {1882115, 6185}, {1917209, 11456}, {2152833, 384}, {2583431, 8844}, {2618527, 5334},
-    {2980187, 384}, {3284600, 9691}, {3319677, 6177},  {3620805, 367}, {3985899, 5345}, {4021009, 10582}
-};
-
-typedef struct _LhFrame
-{
-  LhPulseType syncA;
-  LhPulseType syncB;
-  LhPulseType sweep;
-} LhFrame;
-
 enum {PULSE_A, PULSE_B, PULSE_SWEEP} pulseState;
-static LhFrame frame;
 
-lhppAnalysePulse(LhPulseType *p)
+static void lhppSynchPulse(LhObj* lhObj, LhPulseType *p);
+static bool lhppFrameDecode(LhObj* lhObj);
+static float calculateAngle(int32_t sweepTime);
+
+bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p)
 {
-  if (p.width >= MAX_LONG_PULSE_LEN_TICKS)
+  bool anglesCalculated = false;
+
+  if (p->width >= MAX_LONG_PULSE_LEN_TICKS)
   {
       // Ignore very long pulses.
   }
-  else if (p.width >= MIN_LONG_PULSE_LEN_TICKS)
+  else if (p->width >= MIN_LONG_PULSE_LEN_TICKS)
   { // Long pulse - likely sync pulse
-    lhppSynchPulse(p);
+    lhppSynchPulse(lhObj, p);
   }
   else
   { // Short pulse - likely laser sweep
-    frame.sweep.tsRise = p->tsRise;
-    frame.sweep.width = p->width;
+    lhObj->frame.sweep.tsRise = p->tsRise;
+    lhObj->frame.sweep.width = p->width;
     pulseState = PULSE_A;
 
-    lhppFrameDecode(p);
+    anglesCalculated = lhppFrameDecode(lhObj);
   }
+
+  return anglesCalculated;
 }
 
-lhppSynchPulse(LhPulseType *p)
+static void lhppSynchPulse(LhObj* lhObj, LhPulseType *p)
 {
   switch(pulseState)
   {
     case PULSE_A:
-      frame.syncA.tsRise = p->tsRise;
-      frame.syncA.width = p->width;
+      lhObj->frame.syncA.tsRise = p->tsRise;
+      lhObj->frame.syncA.width = p->width;
       pulseState = PULSE_B;
       break;
     case PULSE_B:
-      frame.syncB.tsRise = p->tsRise;
-      frame.syncB.width = p->width;
+      lhObj->frame.syncB.tsRise = p->tsRise;
+      lhObj->frame.syncB.width = p->width;
       pulseState = PULSE_A;
       break;
     default:
@@ -100,12 +91,36 @@ lhppSynchPulse(LhPulseType *p)
   }
 }
 
-void lhppFrameDecode(void)
+static bool lhppFrameDecode(LhObj* lhObj)
 {
-  uint32_t sweepTimeFromA = frame.sweep.tsRise - frame.syncA.tsRise;
-  uint32_t sweepTimeFromB = frame.sweep.tsRise - frame.syncB.tsRise;
+  bool anglesCalculated = false;
+  SyncInfo syncInfoA;
+  SyncInfo syncInfoB;
+  int32_t sweepTimeFromA = lhObj->frame.sweep.tsRise - lhObj->frame.syncA.tsRise;
+  int32_t sweepTimeFromB = lhObj->frame.sweep.tsRise - lhObj->frame.syncB.tsRise;
+  int32_t syncToSync = lhObj->frame.syncB.tsRise - lhObj->frame.syncA.tsRise;
 
-  //TODO
+  syncInfoA.bits = (lhObj->frame.syncA.width - 4814) / 875;
+  syncInfoB.bits = (lhObj->frame.syncB.width - 4814) / 875;
 
+  // Check sync pulses
+  if (syncToSync > US2TICK(370) && syncToSync < US2TICK(430))
+  {
+    // Determine sweep
+    if      (syncInfoA.axis == 0 && syncInfoA.skip == 0) { lhObj->angles.x0 = calculateAngle(sweepTimeFromA); }
+    else if (syncInfoA.axis == 1 && syncInfoA.skip == 0) { lhObj->angles.y0 = calculateAngle(sweepTimeFromA); }
+    else if (syncInfoB.axis == 0 && syncInfoB.skip == 0) { lhObj->angles.x1 = calculateAngle(sweepTimeFromB); }
+    else if (syncInfoB.axis == 1 && syncInfoB.skip == 0)
+    {
+      lhObj->angles.y1 = calculateAngle(sweepTimeFromB);
+      anglesCalculated = true;
+    }
+  }
+
+  return anglesCalculated;
 }
 
+static float calculateAngle(int32_t sweepTime)
+{
+  return ((int32_t)sweepTime - ANGLE_CENTER_TICKS) * (float)M_PI / CYCLE_PERIOD_TICKS;
+}

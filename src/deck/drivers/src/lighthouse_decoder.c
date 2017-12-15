@@ -24,18 +24,19 @@
  *
  * cppm.c - Combined PPM / PPM-Sum driver
  */
+#define DEBUG_MODULE  "LHPULSE"
 
 /* FreeRtos includes */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 
-#include "deck.h"
-
 #include "stm32fxxx.h"
-#include "nvicconf.h"
 
-#define DEBUG_MODULE  "LHPULSE"
+#include "system.h"
+#include "deck.h"
+#include "nvicconf.h"
+#include "lighthouse_pulse_processor.h"
 #include "debug.h"
 #include "log.h"
 
@@ -55,14 +56,16 @@
 
 #define LHPULSE_TIM_PRESCALER           (0) // TIM14 clock running at sysclk/2. Gives us 84MHz
 
-typedef struct _LhPulseType
-{
-  uint32_t tsRise; // Timestamp of rising edge
-  uint32_t width;  // Width of the pulse in clock ticks
-} LhPulseType;
-
 static xQueueHandle pulsesQueueRight;
 static xQueueHandle pulsesQueueLeft;
+
+LhObj       lhObjLeft;
+LhPulseType lhPulseLeft;
+
+static void lhTask(void *param);
+int lhGetPulseRight(LhPulseType *pulse);
+int lhGetPulseLeft(LhPulseType *pulse);
+
 
 void lhInit(DeckInfo* info)
 {
@@ -137,7 +140,43 @@ void lhInit(DeckInfo* info)
   TIM_ITConfig(LHPULSE_TIMER, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
   TIM_Cmd(LHPULSE_TIMER, ENABLE);
 
+  xTaskCreate(lhTask, "LHTASK", 2*configMINIMAL_STACK_SIZE, NULL, /*priority*/3, NULL);
 }
+
+#define LH_TEST
+
+#ifdef LH_TEST
+LhPulseType pulses[18] = {
+    {175243,  382}, {479637,  9693}, {514749,  7965},  {815882,  368}, {1180949, 7065}, {1216055, 8831},
+    {1546318, 458}, {1882115, 6185}, {1917209, 11456}, {2152833, 384}, {2583431, 8844}, {2618527, 5334},
+    {2980187, 384}, {3284600, 9691}, {3319677, 6177},  {3620805, 367}, {3985899, 5345}, {4021009, 10582}
+};
+static void lhTask(void *param)
+{
+  systemWaitStart();
+
+  for (int i=0; i < 18; i++)
+  {
+    lhppAnalysePulse(&lhObjLeft, &pulses[i]);
+  }
+
+  while(1) {
+    lhGetPulseRight(&lhPulseLeft);
+    lhppAnalysePulse(&lhObjLeft, &lhPulseLeft);
+  }
+}
+#else
+static void lhTask(void *param)
+{
+  systemWaitStart();
+
+  while(1) {
+    lhGetPulseRight(&lhPulseLeft);
+    lhppAnalysePulse(&lhObjLeft, &lhPulseLeft);
+  }
+}
+#endif
+
 
 int lhGetPulseRight(LhPulseType *pulse)
 {
