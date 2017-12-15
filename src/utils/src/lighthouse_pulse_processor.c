@@ -96,8 +96,9 @@ static bool lhppFrameDecode(LhObj* lhObj)
   bool anglesCalculated = false;
   SyncInfo syncInfoA;
   SyncInfo syncInfoB;
-  int32_t sweepTimeFromA = lhObj->frame.sweep.tsRise - lhObj->frame.syncA.tsRise;
-  int32_t sweepTimeFromB = lhObj->frame.sweep.tsRise - lhObj->frame.syncB.tsRise;
+  int32_t sweepPulseCentre = lhObj->frame.sweep.tsRise + (lhObj->frame.sweep.width / 2);
+  int32_t sweepTimeFromA = sweepPulseCentre - lhObj->frame.syncA.tsRise;
+  int32_t sweepTimeFromB = sweepPulseCentre - lhObj->frame.syncB.tsRise;
   int32_t syncToSync = lhObj->frame.syncB.tsRise - lhObj->frame.syncA.tsRise;
 
   syncInfoA.bits = (lhObj->frame.syncA.width - 4814) / 875;
