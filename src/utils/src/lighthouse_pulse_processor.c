@@ -109,10 +109,10 @@ static bool lhppFrameDecode(LhObj* lhObj)
     // Determine sweep
     if      (syncInfoA.axis == 0 && syncInfoA.skip == 0) { lhObj->angles.x0 = calculateAngle(sweepTimeFromA); }
     else if (syncInfoA.axis == 1 && syncInfoA.skip == 0) { lhObj->angles.y0 = calculateAngle(sweepTimeFromA); }
-    else if (syncInfoB.axis == 0 && syncInfoB.skip == 0) { lhObj->angles.x1 = calculateAngle(sweepTimeFromB); }
+    else if (syncInfoB.axis == 0 && syncInfoB.skip == 0) { lhObj->angles.x1 = calculateAngle(sweepTimeFromA); }
     else if (syncInfoB.axis == 1 && syncInfoB.skip == 0)
     {
-      lhObj->angles.y1 = calculateAngle(sweepTimeFromB);
+      lhObj->angles.y1 = calculateAngle(sweepTimeFromA);
       anglesCalculated = true;
     }
   }
