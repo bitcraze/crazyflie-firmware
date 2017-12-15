@@ -37,6 +37,7 @@
 #include "deck.h"
 #include "nvicconf.h"
 #include "lighthouse_pulse_processor.h"
+#include "lighthouseGeometry.h"
 #include "debug.h"
 #include "log.h"
 
@@ -151,6 +152,17 @@ LhPulseType pulses[18] = {
     {1546318, 458}, {1882115, 6185}, {1917209, 11456}, {2152833, 384}, {2583431, 8844}, {2618527, 5334},
     {2980187, 384}, {3284600, 9691}, {3319677, 6177},  {3620805, 367}, {3985899, 5345}, {4021009, 10582}
 };
+
+// My base baseStations
+static baseStationGeometry_t baseStations[2] = {
+  {.origin = {1.576887, 2.448647, -1.601387}, .mat = {{-0.634552, -0.280564, 0.720158}, {-0.016947, 0.936612, 0.349959}, {-0.772695, 0.209863, -0.599083}}},
+  {.origin = {-1.828970, 2.628525, 1.256474}, .mat = {{0.482050, 0.446738, -0.753693}, {-0.005340, 0.861721, 0.507355}, {0.876127, -0.240546, 0.417778}}},
+};
+
+static vec3d position = {};
+static float delta = 0;
+
+
 static void lhTask(void *param)
 {
   systemWaitStart();
@@ -162,7 +174,11 @@ static void lhTask(void *param)
 
   while(1) {
     lhGetPulseRight(&lhPulseLeft);
-    lhppAnalysePulse(&lhObjLeft, &lhPulseLeft);
+    if (lhppAnalysePulse(&lhObjLeft, &lhPulseLeft) == true)
+    {
+      float angles[4] = {lhObjLeft.angles.x0, lhObjLeft.angles.y0, lhObjLeft.angles.x1, lhObjLeft.angles.y1};
+      lhgeometryGetPosition(baseStations, angles, position, &delta);
+    }
   }
 }
 #else
@@ -257,3 +273,14 @@ LOG_GROUP_START(lhpulse)
 LOG_ADD(LOG_UINT32, widthRight, &pulseRight.width)
 LOG_ADD(LOG_UINT32, widthLeft, &pulseLeft.width)
 LOG_GROUP_STOP(lhpulse)
+
+LOG_GROUP_START(lighthouse)
+LOG_ADD(LOG_FLOAT, anglex0, &lhObjLeft.angles.x0)
+LOG_ADD(LOG_FLOAT, angley0, &lhObjLeft.angles.y0)
+LOG_ADD(LOG_FLOAT, anglex1, &lhObjLeft.angles.x1)
+LOG_ADD(LOG_FLOAT, angley1, &lhObjLeft.angles.y1)
+LOG_ADD(LOG_FLOAT, positionX, &position[0])
+LOG_ADD(LOG_FLOAT, positionY, &position[1])
+LOG_ADD(LOG_FLOAT, positionZ, &position[2])
+LOG_ADD(LOG_FLOAT, delta, &delta)
+LOG_GROUP_STOP(lighthouse)
