@@ -59,7 +59,7 @@ static bool registerRequiredEstimator(StateEstimatorType estimator);
 #define xstr(s) str(s)
 #define str(s) #s
 
-static char* deck_force = xstr(DECK_FORCE);
+static char* deck_force = xstr(bcGTGPS);
 
 void deckInfoInit()
 {
@@ -130,6 +130,8 @@ void printDeckInfo(DeckInfo *info)
     DEBUG_PRINT("Warning! No driver found for deck.\n");
   } else {
     DECK_INFO_DBG_PRINT("Driver implements: [ %s%s]\n",
+                        info->driver->init?"init ":"", info->driver->test?"test ":"");
+    DEBUG_PRINT("Driver implements: [ %s%s]\n",
                         info->driver->init?"init ":"", info->driver->test?"test ":"");
   }
 }

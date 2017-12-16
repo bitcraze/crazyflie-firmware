@@ -24,6 +24,7 @@
  * system.c - Top level module implementation
  */
 #define DEBUG_MODULE "SYS"
+#define ENABLE_UART1
 
 #include <stdbool.h>
 
@@ -142,7 +143,7 @@ void systemTask(void *arg)
 #endif
 
 #ifdef ENABLE_UART1
-  uart1Init();
+  uart1Init(UART1_BAUDRATE);
 #endif
 #ifdef ENABLE_UART2
   uart2Init();

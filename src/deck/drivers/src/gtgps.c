@@ -298,12 +298,12 @@ static bool gtgpsTest()
 }
 
 static const DeckDriver gtgps_deck = {
-  .vid = 0xBC,
-  .pid = 0x07,
+  .vid = 0,
+  .pid = 0,
   .name = "bcGTGPS",
 
   .usedPeriph = 0,
-  .usedGpio = 0,               // FIXME: Edit the used GPIOs
+  .usedGpio = DECK_USING_TX1 | DECK_USING_RX1,               // FIXME: Edit the used GPIOs
 
   .init = gtgpsInit,
   .test = gtgpsTest,
