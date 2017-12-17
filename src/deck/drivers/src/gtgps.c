@@ -220,11 +220,11 @@ static bool verifyChecksum(const char * buff) {
   return (test_chksum == ref_chksum);
 }
 
-static uint8_t baudcmd[] = "$PMTK251,115200*1F\r\n";
+//static uint8_t baudcmd[] = "$PMTK251,115200*1F\r\n";
 
 // 5 Hz
-static uint8_t updaterate[] = "$PMTK220,200*2C\r\n";
-static uint8_t updaterate2[] = "$PMTK300,200,0,0,0,0*2F\r\n";
+//static uint8_t updaterate[] = "$PMTK220,200*2C\r\n";
+//static uint8_t updaterate2[] = "$PMTK300,200,0,0,0,0*2F\r\n";
 
 // 10 Hz
 //static uint8_t updaterate3[] = "$PMTK220,100*2F\r\n";
@@ -236,14 +236,14 @@ void gtgpsTask(void *param)
   char ch;
   int j;
 
-  uart1SendData(sizeof(baudcmd), baudcmd);
+//  uart1SendData(sizeof(baudcmd), baudcmd);
 
   vTaskDelay(500);
-  uart1Init(115200);
+//  uart1Init(115200);
   vTaskDelay(500);
 
-  uart1SendData(sizeof(updaterate), updaterate);
-  uart1SendData(sizeof(updaterate2), updaterate2);
+//  uart1SendData(sizeof(updaterate), updaterate);
+//  uart1SendData(sizeof(updaterate2), updaterate2);
 
 //  uart1SendData(sizeof(updaterate3), updaterate3);
 //  uart1SendData(sizeof(updaterate4), updaterate4);
