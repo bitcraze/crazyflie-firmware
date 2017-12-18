@@ -26,8 +26,13 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lighthouse_pulse_processor.h"
+
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif
 
 #define US2TICK(usec) (84*usec) //  84000000MHz * usec/1000000
 
@@ -40,6 +45,9 @@
 
 #define SYNC_A_TO_B_TIME_TICKS    US2TICK(400)
 #define FRAME_TIME_TICKS          US2TICK(8333)
+
+#define SYNC_BITS_BASE_TICKS      4814
+#define SYNC_BITS_DEVIDER         875
 
 enum {PULSE_A, PULSE_B, PULSE_SWEEP} pulseState;
 
@@ -96,27 +104,44 @@ static bool lhppFrameDecode(LhObj* lhObj)
   bool anglesCalculated = false;
   SyncInfo syncInfoA;
   SyncInfo syncInfoB;
-  int32_t sweepPulseCentre = lhObj->frame.sweep.tsRise + (lhObj->frame.sweep.width / 2);
-  int32_t sweepTimeFromA = sweepPulseCentre - lhObj->frame.syncA.tsRise;
-  int32_t sweepTimeFromB = sweepPulseCentre - lhObj->frame.syncB.tsRise;
+  int32_t sweepPulseCenter = lhObj->frame.sweep.tsRise + (lhObj->frame.sweep.width / 2);
+  int32_t sweepTimeFromA = sweepPulseCenter - lhObj->frame.syncA.tsRise;
   int32_t syncToSync = lhObj->frame.syncB.tsRise - lhObj->frame.syncA.tsRise;
 
-  syncInfoA.bits = (lhObj->frame.syncA.width - 4814) / 875;
-  syncInfoB.bits = (lhObj->frame.syncB.width - 4814) / 875;
+  syncInfoA.bits = (lhObj->frame.syncA.width - SYNC_BITS_BASE_TICKS) / SYNC_BITS_DEVIDER;
+  syncInfoB.bits = (lhObj->frame.syncB.width - SYNC_BITS_BASE_TICKS) / SYNC_BITS_DEVIDER;
 
-  // Check sync pulses
+  // Check that booth sync pulses exist and are correctly spaced
   if (syncToSync > US2TICK(370) && syncToSync < US2TICK(430))
   {
-    // Determine sweep
-    if      (syncInfoA.axis == 0 && syncInfoA.skip == 0) { lhObj->angles.x0 = calculateAngle(sweepTimeFromA); }
-    else if (syncInfoA.axis == 1 && syncInfoA.skip == 0) { lhObj->angles.y0 = calculateAngle(sweepTimeFromA); }
-    else if (syncInfoB.axis == 0 && syncInfoB.skip == 0) { lhObj->angles.x1 = calculateAngle(sweepTimeFromA); }
+    // Determine sweep and calculate angles
+    if      (syncInfoA.axis == 0 && syncInfoA.skip == 0)
+    {
+      lhObj->workAngles.x0 = calculateAngle(sweepTimeFromA);
+    }
+    else if (syncInfoA.axis == 1 && syncInfoA.skip == 0)
+    {
+      lhObj->workAngles.y0 = calculateAngle(sweepTimeFromA);
+    }
+    else if (syncInfoB.axis == 0 && syncInfoB.skip == 0)
+    {
+      lhObj->workAngles.x1 = calculateAngle(sweepTimeFromA);
+    }
     else if (syncInfoB.axis == 1 && syncInfoB.skip == 0)
     {
-      lhObj->angles.y1 = calculateAngle(sweepTimeFromA);
-      anglesCalculated = true;
+      lhObj->workAngles.y1 = calculateAngle(sweepTimeFromA);
     }
   }
+
+  if ((lhObj->workAngles.x0 != 0.0f) &&
+      (lhObj->workAngles.y0 != 0.0f) &&
+      (lhObj->workAngles.x1 != 0.0f) &&
+      (lhObj->workAngles.y1 != 0.0f))
+    {
+      memcpy(&lhObj->workAngles, &lhObj->angles, sizeof(LhAngles));
+      memset(&lhObj->workAngles, 0,  sizeof(LhAngles));
+      anglesCalculated = true;
+    }
 
   return anglesCalculated;
 }

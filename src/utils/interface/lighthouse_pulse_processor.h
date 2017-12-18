@@ -67,6 +67,7 @@ typedef struct _LhObj
 {
   LhFrame   frame;
   LhAngles  angles;
+  LhAngles  workAngles;
 } LhObj;
 
 bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p);
