@@ -172,7 +172,7 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
     setpoint->attitude.pitch = 0;
     setpoint->attitude.yaw = values->yaw;
     setpoint->thrust = 0;
-  } else {
+  } else { /////////////////////////////////cas sans assistance, althold et heighthold et hover ????
     setpoint->mode.x = modeDisable;
     setpoint->mode.y = modeDisable;
 

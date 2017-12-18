@@ -68,6 +68,7 @@
 static bool selftestPassed;
 static bool canFly;
 static bool isInit;
+static bool timeOutSys = true;
 
 /* System wide synchronisation */
 xSemaphoreHandle canStartMutex;
@@ -268,6 +269,11 @@ void vApplicationIdleHook( void )
 #endif
 }
 
+bool systemStop(void)
+{
+return timeOutSys;
+}
+
 /*System parameters (mostly for test, should be removed from here) */
 PARAM_GROUP_START(cpu)
 PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
@@ -280,6 +286,9 @@ PARAM_GROUP_START(system)
 PARAM_ADD(PARAM_INT8, selftestPassed, &selftestPassed)
 PARAM_GROUP_STOP(sytem)
 
+PARAM_GROUP_START(pm)
+PARAM_ADD(PARAM_UINT8, timeOutSystem, &timeOutSys)
+PARAM_GROUP_STOP(pm)
 /* Loggable variables */
 LOG_GROUP_START(sys)
 LOG_ADD(LOG_INT8, canfly, &canFly)
