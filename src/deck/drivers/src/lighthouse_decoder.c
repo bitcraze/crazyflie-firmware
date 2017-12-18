@@ -41,6 +41,8 @@
 #include "debug.h"
 #include "log.h"
 
+#include "estimator_kalman.h"
+
 
 #define LHPULSE_TIMER                   TIM5
 #define LHPULSE_TIMER_RCC               RCC_APB1Periph_TIM5
@@ -162,6 +164,7 @@ static baseStationGeometry_t baseStations[2] = {
 static vec3d position = {};
 static float delta = 0;
 
+static positionMeasurement_t ext_pos;
 
 static void lhTask(void *param)
 {
@@ -178,6 +181,12 @@ static void lhTask(void *param)
     {
       float angles[4] = {lhObjLeft.angles.x0, lhObjLeft.angles.y0, lhObjLeft.angles.x1, lhObjLeft.angles.y1};
       lhgeometryGetPosition(baseStations, angles, position, &delta);
+
+      ext_pos.x = position[0];
+      ext_pos.y = -position[2];
+      ext_pos.z = position[1];
+      ext_pos.stdDev = 0.01;
+      estimatorKalmanEnqueuePosition(&ext_pos);
     }
   }
 }
@@ -263,6 +272,7 @@ static const DeckDriver lighthouse_deck = {
   .name = "bcLH",
 
   .usedGpio = 0,  // FIXME: set the used pins
+  .requiredEstimator = kalmanEstimator,
 
   .init = lhInit,
 };
