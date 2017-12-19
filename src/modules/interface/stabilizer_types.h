@@ -157,9 +157,11 @@ typedef struct setpoint_s {
 
   attitude_t attitude;
   attitude_t attitudeRate;
+  quaternion_t attitudeQuaternion;
   float thrust;
   point_t position;
   velocity_t velocity;
+  acc_t acceleration;
   bool velocity_body;
 
   struct {
@@ -169,6 +171,7 @@ typedef struct setpoint_s {
     stab_mode_t roll;
     stab_mode_t pitch;
     stab_mode_t yaw;
+    stab_mode_t quat;
   } mode;
 } setpoint_t;
 
