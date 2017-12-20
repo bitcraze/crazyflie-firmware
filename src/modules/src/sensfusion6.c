@@ -253,6 +253,14 @@ static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float
 }
 #endif
 
+void sensfusion6GetQuaternion(float* qx, float* qy, float* qz, float* qw)
+{
+  *qx = q1;
+  *qy = q2;
+  *qz = q3;
+  *qw = q0;
+}
+
 void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw)
 {
   float gx = gravX;
