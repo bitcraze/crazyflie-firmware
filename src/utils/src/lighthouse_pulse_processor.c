@@ -110,6 +110,7 @@ static bool lhppFrameDecode(LhObj* lhObj)
 
   syncInfoA.bits = (lhObj->frame.syncA.width - SYNC_BITS_BASE_TICKS) / SYNC_BITS_DEVIDER;
   syncInfoB.bits = (lhObj->frame.syncB.width - SYNC_BITS_BASE_TICKS) / SYNC_BITS_DEVIDER;
+  printf("SyncA:%d SyncB:%d\n", syncInfoA.bits, syncInfoB.bits);
 
   // Check that booth sync pulses exist and are correctly spaced
   if (syncToSync > US2TICK(370) && syncToSync < US2TICK(430))
@@ -117,29 +118,33 @@ static bool lhppFrameDecode(LhObj* lhObj)
     // Determine sweep and calculate angles
     if      (syncInfoA.axis == 0 && syncInfoA.skip == 0)
     {
-      lhObj->workAngles.x0 = calculateAngle(sweepTimeFromA);
+      lhObj->angles.x0 = calculateAngle(sweepTimeFromA);
+      lhObj->isCalc.x0 = true;
     }
     else if (syncInfoA.axis == 1 && syncInfoA.skip == 0)
     {
-      lhObj->workAngles.y0 = calculateAngle(sweepTimeFromA);
+      lhObj->angles.y0 = calculateAngle(sweepTimeFromA);
+      lhObj->isCalc.y0 = true;
     }
     else if (syncInfoB.axis == 0 && syncInfoB.skip == 0)
     {
-      lhObj->workAngles.x1 = calculateAngle(sweepTimeFromA);
+      lhObj->angles.x1 = calculateAngle(sweepTimeFromA);
+      lhObj->isCalc.x1 = true;
     }
     else if (syncInfoB.axis == 1 && syncInfoB.skip == 0)
     {
-      lhObj->workAngles.y1 = calculateAngle(sweepTimeFromA);
+      lhObj->angles.y1 = calculateAngle(sweepTimeFromA);
+      lhObj->isCalc.y1 = true;
     }
   }
 
-  if ((lhObj->workAngles.x0 != 0.0f) &&
-      (lhObj->workAngles.y0 != 0.0f) &&
-      (lhObj->workAngles.x1 != 0.0f) &&
-      (lhObj->workAngles.y1 != 0.0f))
+  if ((lhObj->isCalc.x0) &&
+      (lhObj->isCalc.y0) &&
+      (lhObj->isCalc.x1) &&
+      (lhObj->isCalc.y1))
     {
-      memcpy(&lhObj->workAngles, &lhObj->angles, sizeof(LhAngles));
-      memset(&lhObj->workAngles, 0,  sizeof(LhAngles));
+      printf("x0:%f, y0:%f, x1:%f, y1:%f\n", lhObj->angles.x0, lhObj->angles.y0, lhObj->angles.x1, lhObj->angles.y1);
+      memset(&lhObj->isCalc, 0,  sizeof(LhAnglesCalc));
       anglesCalculated = true;
     }
 

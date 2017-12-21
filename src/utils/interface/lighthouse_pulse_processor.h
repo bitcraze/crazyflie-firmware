@@ -63,11 +63,19 @@ typedef struct _LhAngle
   float y1;
 } LhAngles;
 
+typedef struct _LhAnglesCalc
+{
+  bool x0;
+  bool y0;
+  bool x1;
+  bool y1;
+} LhAnglesCalc;
+
 typedef struct _LhObj
 {
-  LhFrame   frame;
-  LhAngles  angles;
-  LhAngles  workAngles;
+  LhFrame       frame;
+  LhAngles      angles;
+  LhAnglesCalc  isCalc;
 } LhObj;
 
 bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p);
