@@ -24,6 +24,7 @@
  *
  */
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "crtp_commander.h"
@@ -32,6 +33,7 @@
 #include "param.h"
 #include "crtp.h"
 #include "num.h"
+#include "quatcompress.h"
 #include "FreeRTOS.h"
 
 /* The generic commander format contains a packet type and data that has to be
@@ -67,6 +69,7 @@ enum packet_type {
   cppmEmuType       = 3,
   altHoldType       = 4,
   hoverType         = 5,
+  fullStateType     = 6,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -292,6 +295,50 @@ static void hoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, s
   setpoint->velocity_body = true;
 }
 
+struct fullStatePacket_s {
+  int16_t x;         // position - mm
+  int16_t y;
+  int16_t z;
+  int16_t vx;        // velocity - mm / sec
+  int16_t vy;
+  int16_t vz;
+  int16_t ax;        // acceleration - mm / sec^2
+  int16_t ay;
+  int16_t az;
+  int32_t quat;      // compressed quaternion, see quatcompress.h
+  int16_t rateRoll;  // angular velocity - milliradians / sec
+  int16_t ratePitch; //  (NOTE: limits to about 5 full circles per sec.
+  int16_t rateYaw;   //   may not be enough for extremely aggressive flight.)
+} __attribute__((packed));
+static void fullStateDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct fullStatePacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct fullStatePacket_s));
+
+  #define UNPACK(x) \
+  setpoint->mode.x = modeAbs; \
+  setpoint->position.x = values->x / 1000.0f; \
+  setpoint->velocity.x = (values->v ## x) / 1000.0f; \
+  setpoint->acceleration.x = (values->a ## x) / 1000.0f; \
+
+  UNPACK(x)
+  UNPACK(y)
+  UNPACK(z)
+  #undef UNPACK
+
+  float const millirad2deg = 180.0f / ((float)M_PI * 1000.0f);
+  setpoint->attitudeRate.roll = millirad2deg * values->rateRoll;
+  setpoint->attitudeRate.pitch = millirad2deg * values->ratePitch;
+  setpoint->attitudeRate.yaw = millirad2deg * values->rateYaw;
+
+  quatdecompress(values->quat, (float *)&setpoint->attitudeQuaternion.q0);
+  setpoint->mode.quat = modeAbs;
+  setpoint->mode.roll = modeDisable;
+  setpoint->mode.pitch = modeDisable;
+  setpoint->mode.yaw = modeDisable;
+}
+
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]          = stopDecoder,
@@ -300,6 +347,7 @@ const static packetDecoder_t packetDecoders[] = {
   [cppmEmuType]       = cppmEmuDecoder,
   [altHoldType]       = altHoldDecoder,
   [hoverType]         = hoverDecoder,
+  [fullStateType]     = fullStateDecoder,
 };
 
 /* Decoder switch */
