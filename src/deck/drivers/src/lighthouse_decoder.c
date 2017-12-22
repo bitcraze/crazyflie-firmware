@@ -40,6 +40,7 @@
 #include "lighthouseGeometry.h"
 #include "debug.h"
 #include "log.h"
+#include "ledseq.h"
 
 #include "estimator_kalman.h"
 
@@ -49,11 +50,11 @@
 #define LHPULSE_GPIO_RCC                RCC_AHB1Periph_GPIOA
 #define LHPULSE_GPIO_PORT               GPIOA
 
-#define LHPULSE_RIGHT_GPIO_PIN                GPIO_Pin_2      // TIM5_CH3
-#define LHPULSE_RIGHT_GPIO_SOURCE             GPIO_PinSource2
+#define LHPULSE_RIGHT_GPIO_PIN          GPIO_Pin_2      // TIM5_CH3
+#define LHPULSE_RIGHT_GPIO_SOURCE       GPIO_PinSource2
 
-#define LHPULSE_LEFT_GPIO_PIN                GPIO_Pin_3      // TIM5_CH4
-#define LHPULSE_LEFT_GPIO_SOURCE             GPIO_PinSource3
+#define LHPULSE_LEFT_GPIO_PIN           GPIO_Pin_3      // TIM5_CH4
+#define LHPULSE_LEFT_GPIO_SOURCE        GPIO_PinSource3
 
 #define LHPULSE_GPIO_AF                 GPIO_AF_TIM5
 
@@ -187,6 +188,7 @@ static void lhTask(void *param)
       ext_pos.z = position[1];
       ext_pos.stdDev = 0.01;
       estimatorKalmanEnqueuePosition(&ext_pos);
+      ledseqRun(LED_GREEN_R, seq_linkup);
     }
   }
 }
@@ -289,8 +291,8 @@ LOG_ADD(LOG_FLOAT, anglex0, &lhObjLeft.angles.x0)
 LOG_ADD(LOG_FLOAT, angley0, &lhObjLeft.angles.y0)
 LOG_ADD(LOG_FLOAT, anglex1, &lhObjLeft.angles.x1)
 LOG_ADD(LOG_FLOAT, angley1, &lhObjLeft.angles.y1)
-LOG_ADD(LOG_FLOAT, positionX, &position[0])
-LOG_ADD(LOG_FLOAT, positionY, &position[1])
-LOG_ADD(LOG_FLOAT, positionZ, &position[2])
+LOG_ADD(LOG_FLOAT, positionX, &ext_pos.x)
+LOG_ADD(LOG_FLOAT, positionY, &ext_pos.y)
+LOG_ADD(LOG_FLOAT, positionZ, &ext_pos.z)
 LOG_ADD(LOG_FLOAT, delta, &delta)
 LOG_GROUP_STOP(lighthouse)
