@@ -274,13 +274,13 @@ bool systemStop(void)
 return timeOutSys;
 }
 
-/*System parameters (mostly for test, should be removed from here) */
+/*System parameters (mostly for test, should be removed from here)
 PARAM_GROUP_START(cpu)
 PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS+0)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS+4)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
-PARAM_GROUP_STOP(cpu)
+PARAM_GROUP_STOP(cpu)*/
 
 PARAM_GROUP_START(system)
 PARAM_ADD(PARAM_INT8, selftestPassed, &selftestPassed)
