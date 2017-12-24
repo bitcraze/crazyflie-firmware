@@ -51,12 +51,12 @@ static bool isInit;
 char buff[MAX_LEN_SENTANCE];
 uint8_t bi;
 
-//typedef bool (*SentanceParser)(char * buff);
+typedef bool (*SentanceParser)(char * buff);
 
-/*typedef struct {
+typedef struct {
   const char * token;
   SentanceParser parser;
-} ParserConfig;*/
+} ParserConfig;
 
 typedef enum {
   FixNone = 1,
@@ -64,63 +64,172 @@ typedef enum {
   Fix3D = 3
 } FixQuality;
 
+typedef enum {FIELD_COORD, FIELD_FLOAT, FIELD_INT, FIELD_CHAR} FieldType;
+
 typedef enum {
   NoFix = 1,
   GPSFix = 2
 } FixType;
 
 typedef struct {
-  FixQuality fix;
-  uint32_t locks[20];
+  uint32_t locks[12];
   float pdop;
   float hdop;
   float vdop;
+  float height;
+  FixType fixtype;
 } Basic;
 
 typedef struct {
   uint32_t fixtime;
+  uint8_t status;
   uint32_t latitude_d;
   uint32_t latitude_m;
   uint8_t NS;
   uint32_t longitude_d;
   uint32_t longitude_m;
   uint8_t EW;
-  FixType fixtype;
+  uint32_t fix;
   uint8_t nsat;
-  float hdop;
   float alt;
-  float height;
+//  uint8_t posMode;
+//  uint8_t navStatus;
 } MeasData;
 
-//static Basic b;
-//static MeasData m;
-bool result = false;
+static Basic b;
+static MeasData m;
+//static float empty = 0.;
+bool longitude = false;
+bool correct = false; // cas longitude > 180
 uint8_t messages = 0;
 
-/*static bool gnrmcParser(char * buff) {
-  int i = 0;
-  consolePutchar('$');
-  consolePutchar('G');
-  consolePutchar('N');
-  consolePutchar('R');
-  consolePutchar('M');
-  consolePutchar('C');
-  while (buff[i] != 0) {
-      consolePutchar(buff[i]);
-      i++;
+// Only use on 0-terminated strings!
+static int skip_to_next(char ** sp, const char ch) {
+  int steps;
+  while (ch != 0 && (**sp) != ch) {
+    (*sp)++;
+    steps++;
   }
-  consolePutchar(0x0c);
-  if (messages == 1) {
-    for (i = 0; i< MAX_LEN_SENTANCE; i++){  // longueur de buff, plutôt,  // strlen ?
-        consolePutchar(buff[i]);}
-  }
-  return false;
-}*/
+  if (ch != 0)
+    (*sp)++;
+  return (ch != 0 ? steps : -1);
+}
 
-/*static ParserConfig parsers[] = {
+static uint32_t parse_coordinate(char ** sp) {
+  uint32_t dm;
+  uint16_t degree;
+  uint32_t minute;
+  uint32_t second;
+  uint32_t ret;
+  char * i;
+  char * j;
+
+//  *sp = "27833.914843";
+  dm = strtoul(*sp, &i, 10);
+  degree = dm / 100;
+  if (longitude){m.longitude_d = degree;}
+  else {m.latitude_d = degree;}
+  second = strtoul(i+1, &j, 10);
+  minute = (dm % 100) * 10000000;// * 100000);// / 60;
+  ret = minute + second; //Transmets les degrés d'une part, les minutes avec décimales d'autre part
+  return ret;
+}
+
+static float parse_float(char * sp) {
+  float ret = 0;
+  int major = 0;
+  int minor = 0;
+  int deci_nbr = 0;
+  char * i;
+  char * j;
+
+  major = strtol(sp, &i, 10);
+  // Do decimals
+  if (strncmp(i, ".", 1) == 0) {
+    minor = strtol(i+1, &j, 10);
+    deci_nbr = j - i - 1;
+  }
+  ret = (major * pow(10, deci_nbr) + minor) / pow(10, deci_nbr);
+  //printf("%i.%i == %f (%i) (%c)\n", major, minor, ret, deci_nbr, (int) *i);
+  return ret;
+}
+
+static void parse_next(char ** sp, FieldType t, void * value) {
+  skip_to_next(sp, ',');
+  //DEBUG_PRINT("[%s]\n", (*sp));
+  switch (t) {
+    case FIELD_CHAR:
+      value = *sp;
+      break;
+    case FIELD_INT:
+      *((uint32_t*) value) = strtoul(*sp, 0, 10);
+      break;
+    case FIELD_FLOAT:
+      *((float*) value) = parse_float(*sp);
+      break;
+    case FIELD_COORD:
+      *((uint32_t*) value) = parse_coordinate(sp);
+  }
+}
+
+static bool gnrmcParser(char * buff) {
+/*  char * sp = buff;
+
+  parse_next(&sp, FIELD_INT, &m.fixtime);
+  parse_next(&sp, FIELD_CHAR, &m.status);
+  longitude = false;
+  parse_next(&sp, FIELD_COORD, &m.latitude_m);//minutes and seconds only
+  parse_next(&sp, FIELD_CHAR, &m.NS);
+  longitude = true;
+  parse_next(&sp, FIELD_COORD, &m.longitude_m);//minutes and seconds only
+  parse_next(&sp, FIELD_CHAR, &m.EW);
+  parse_next(&sp, FIELD_FLOAT, &empty);//speed
+  parse_next(&sp, FIELD_FLOAT, &empty);//cog
+  parse_next(&sp, FIELD_INT, &empty);//date
+  parse_next(&sp, FIELD_FLOAT, &empty);//magnetic
+  parse_next(&sp, FIELD_CHAR, &empty);//magnetic indicator
+  parse_next(&sp, FIELD_CHAR, &m.posMode);
+  parse_next(&sp, FIELD_CHAR, &m.navStatus);*/
+  return false;
+}
+
+static bool gnggaParser(char * buff) {
+  char * sp = buff;
+
+  parse_next(&sp, FIELD_INT, &m.fixtime);
+  longitude = false;
+  parse_next(&sp, FIELD_COORD, &m.latitude_m);//minutes and seconds only
+  parse_next(&sp, FIELD_CHAR, &m.NS);
+//  m.NS = 'N';
+  longitude = true;
+  parse_next(&sp, FIELD_COORD, &m.longitude_m);//minutes and seconds only
+  parse_next(&sp, FIELD_CHAR, &m.EW);
+//  m.EW = 'E';
+  parse_next(&sp, FIELD_INT, &m.fix);
+//  m.fix = 1;
+  parse_next(&sp, FIELD_INT, &m.nsat);
+//  m.nsat = 8;
+  parse_next(&sp, FIELD_FLOAT, &b.hdop);
+  parse_next(&sp, FIELD_FLOAT, &m.alt);
+  return false;
+}
+
+
+static bool gngsaParser(char * buff) {
+  char * sp = buff;
+  // Skip leading A/M
+  skip_to_next(&sp, ',');
+  skip_to_next(&sp, ',');
+  parse_next(&sp, FIELD_INT, &m.nsat);
+  return false;
+}
+
+static ParserConfig parsers[] = {
+  {.token = "GNGSA", .parser = gngsaParser},
+  {.token = "GNGGA", .parser = gnggaParser},
   {.token = "GNRMC", .parser = gnrmcParser}
-};*/
-/*
+};
+
 static bool verifyChecksum(const char * buff) {
   uint8_t test_chksum = 0;
   uint32_t ref_chksum = 0;
@@ -131,12 +240,12 @@ static bool verifyChecksum(const char * buff) {
   ref_chksum = strtol(&buff[i+1], 0, 16);
 
   return (test_chksum == ref_chksum);
-}*/
+}
 
 void gtgpsTask(void *param)
 {
   char ch;
-//  int j;
+  int j;
 
   vTaskDelay(500);
 //  uart1Init(115200);
@@ -152,35 +261,24 @@ void gtgpsTask(void *param)
   while(1)
   {
     uart1Getchar(&ch);
-//    if (messages == 1) {consolePutchar(ch);}
-    if (ch != 0){consolePutchar(ch);}
-//    if (ch == 10){consolePuts("FIN");}
-//    if (ch == '*'){consolePutchar(ch);}
-//    if (ch == '\n'){consolePutchar(ch);}
-//    consolePutchar('$');
-//    consolePutchar(10);
-//    consolePutchar('\n');
-//    consolePutchar('\r');
-//    consolePutchar('*');
-//    consolePutchar('A');
-//    if (ch == '\r'){consolePuts("slash r");}
-/*    if (ch == '$') {
-      buff[0] = '$';
-      buff[1] = '$';
-      bi = 1;
-//      consolePutchar('$');
-    } else if ((ch == '\r') | (ch == '\n')){
+    if ((messages == 1) & (ch != 0)) {consolePutchar(ch);}
+
+    if (ch == '$') {
+      bi = 0;
+//      consolePutchar('$');////
+    } else if (ch == '\n') {
       buff[bi] = 0; // Terminate with null
       if (verifyChecksum(buff)) {
-//          consolePuts(buff);
-          DEBUG_PRINT("yyyyyyyyyyyyyyyyyyyyy%s",buff);
-          buff[0] = 0;
+        for (j = 0; j < sizeof(parsers)/sizeof(parsers[0]); j++) {
+          if (strncmp(parsers[j].token, buff, LEN_TOKEN) == 0) {
+            parsers[j].parser(&buff[LEN_TOKEN]);
+          }
+        }
       }
     } else if (bi < MAX_LEN_SENTANCE) {
       buff[bi++] = ch;
 //      consolePutchar(ch);
     }
-    if (strlen(buff) > 0){consolePuts(buff);}*/
   }
 }
 
@@ -222,12 +320,12 @@ static const DeckDriver gtgps_deck = {
 };
 
 DECK_DRIVER(gtgps_deck);
-/*
+
 LOG_GROUP_START(gps_base)
 LOG_ADD(LOG_FLOAT, time, &m.fixtime)
 LOG_ADD(LOG_FLOAT, hAcc, &b.hdop)
 LOG_ADD(LOG_UINT8, nsat, &m.nsat)
-LOG_ADD(LOG_UINT8, fix, &b.fix)
+LOG_ADD(LOG_UINT8, fixquality, &m.fix)
 LOG_GROUP_STOP(gps_base)
 
 LOG_GROUP_START(gps_track)
@@ -242,4 +340,4 @@ LOG_GROUP_STOP(gps_track)
 
 PARAM_GROUP_START(gps)
 PARAM_ADD(PARAM_INT8, messages, &messages)
-PARAM_GROUP_STOP(gps)*/
+PARAM_GROUP_STOP(gps)
