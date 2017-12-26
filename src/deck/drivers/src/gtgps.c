@@ -90,14 +90,14 @@ typedef struct {
   uint32_t longitude_m;
   uint8_t EW;
   uint32_t fix;
-  uint8_t nsat;
+  uint32_t nsat;
   float alt;
 //  uint8_t posMode;
 //  uint8_t navStatus;
-} MeasData;
+} NMEAData;
 
 static Basic b;
-static MeasData m;
+static NMEAData m;
 //static float empty = 0.;
 bool longitude = false;
 bool correct = false; // cas longitude > 180
@@ -124,7 +124,8 @@ static uint32_t parse_coordinate(char ** sp) {
   char * i;
   char * j;
 
-//  *sp = "27833.914843";
+//  *sp = "00833.914843";
+//  *sp = "00000.000000";
   dm = strtoul(*sp, &i, 10);
   degree = dm / 100;
   if (longitude){m.longitude_d = degree;}
@@ -137,16 +138,16 @@ static uint32_t parse_coordinate(char ** sp) {
 
 static float parse_float(char * sp) {
   float ret = 0;
-  int major = 0;
-  int minor = 0;
+  uint32_t major = 0;
+  uint32_t minor = 0;
   int deci_nbr = 0;
   char * i;
   char * j;
 
-  major = strtol(sp, &i, 10);
+  major = strtoul(sp, &i, 10);
   // Do decimals
   if (strncmp(i, ".", 1) == 0) {
-    minor = strtol(i+1, &j, 10);
+    minor = strtoul(i+1, &j, 10);
     deci_nbr = j - i - 1;
   }
   ret = (major * pow(10, deci_nbr) + minor) / pow(10, deci_nbr);
@@ -197,6 +198,7 @@ static bool gnggaParser(char * buff) {
   char * sp = buff;
 
   parse_next(&sp, FIELD_INT, &m.fixtime);
+//  m.fixtime = 121025.20;
   longitude = false;
   parse_next(&sp, FIELD_COORD, &m.latitude_m);//minutes and seconds only
   parse_next(&sp, FIELD_CHAR, &m.NS);
@@ -206,11 +208,13 @@ static bool gnggaParser(char * buff) {
   parse_next(&sp, FIELD_CHAR, &m.EW);
 //  m.EW = 'E';
   parse_next(&sp, FIELD_INT, &m.fix);
-//  m.fix = 1;
+//  m.fix = 3;
   parse_next(&sp, FIELD_INT, &m.nsat);
-//  m.nsat = 8;
+//  m.nsat = 6;
   parse_next(&sp, FIELD_FLOAT, &b.hdop);
+//  b.hdop = 2.94;
   parse_next(&sp, FIELD_FLOAT, &m.alt);
+//  m.alt = 285.5;
   return false;
 }
 
@@ -220,7 +224,7 @@ static bool gngsaParser(char * buff) {
   // Skip leading A/M
   skip_to_next(&sp, ',');
   skip_to_next(&sp, ',');
-  parse_next(&sp, FIELD_INT, &m.nsat);
+//  parse_next(&sp, FIELD_INT, &m.nsat);
   return false;
 }
 
@@ -322,9 +326,9 @@ static const DeckDriver gtgps_deck = {
 DECK_DRIVER(gtgps_deck);
 
 LOG_GROUP_START(gps_base)
-LOG_ADD(LOG_FLOAT, time, &m.fixtime)
+LOG_ADD(LOG_UINT32, time, &m.fixtime)
 LOG_ADD(LOG_FLOAT, hAcc, &b.hdop)
-LOG_ADD(LOG_UINT8, nsat, &m.nsat)
+LOG_ADD(LOG_UINT32, nsat, &m.nsat)
 LOG_ADD(LOG_UINT8, fixquality, &m.fix)
 LOG_GROUP_STOP(gps_base)
 
