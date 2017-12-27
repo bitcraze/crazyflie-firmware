@@ -59,9 +59,12 @@ typedef struct {
 } ParserConfig;
 
 typedef enum {
-  FixNone = 1,
-  Fix2D = 2,
-  Fix3D = 3
+  FixNone = 0,
+  Fix2D = 1,
+  Fix3D = 2,
+  RTKfixed = 4,
+  RTKfloat = 5,
+  DeadReckoning = 6
 } FixQuality;
 
 typedef enum {FIELD_COORD, FIELD_FLOAT, FIELD_INT, FIELD_CHAR} FieldType;
@@ -72,7 +75,10 @@ typedef enum {
 } FixType;
 
 typedef struct {
+  uint8_t fixed;
   uint32_t locks[12];
+  uint8_t Pnsat;
+  uint8_t Lnsat;
   float pdop;
   float hdop;
   float vdop;
@@ -81,7 +87,7 @@ typedef struct {
 } Basic;
 
 typedef struct {
-  uint32_t fixtime;
+  uint32_t time;
   uint8_t status;
   uint32_t latitude_d;
   uint32_t latitude_m;
@@ -89,7 +95,7 @@ typedef struct {
   uint32_t longitude_d;
   uint32_t longitude_m;
   uint8_t EW;
-  uint32_t fix;
+  FixQuality fix_q;
   uint32_t nsat;
   float alt;
 //  uint8_t posMode;
@@ -173,32 +179,11 @@ static void parse_next(char ** sp, FieldType t, void * value) {
   }
 }
 
-static bool gnrmcParser(char * buff) {
-/*  char * sp = buff;
-
-  parse_next(&sp, FIELD_INT, &m.fixtime);
-  parse_next(&sp, FIELD_CHAR, &m.status);
-  longitude = false;
-  parse_next(&sp, FIELD_COORD, &m.latitude_m);//minutes and seconds only
-  parse_next(&sp, FIELD_CHAR, &m.NS);
-  longitude = true;
-  parse_next(&sp, FIELD_COORD, &m.longitude_m);//minutes and seconds only
-  parse_next(&sp, FIELD_CHAR, &m.EW);
-  parse_next(&sp, FIELD_FLOAT, &empty);//speed
-  parse_next(&sp, FIELD_FLOAT, &empty);//cog
-  parse_next(&sp, FIELD_INT, &empty);//date
-  parse_next(&sp, FIELD_FLOAT, &empty);//magnetic
-  parse_next(&sp, FIELD_CHAR, &empty);//magnetic indicator
-  parse_next(&sp, FIELD_CHAR, &m.posMode);
-  parse_next(&sp, FIELD_CHAR, &m.navStatus);*/
-  return false;
-}
-
 static bool gnggaParser(char * buff) {
   char * sp = buff;
 
-  parse_next(&sp, FIELD_INT, &m.fixtime);
-//  m.fixtime = 121025.20;
+  parse_next(&sp, FIELD_INT, &m.time);
+//  m.time = 121025.20;
   longitude = false;
   parse_next(&sp, FIELD_COORD, &m.latitude_m);//minutes and seconds only
   parse_next(&sp, FIELD_CHAR, &m.NS);
@@ -207,10 +192,9 @@ static bool gnggaParser(char * buff) {
   parse_next(&sp, FIELD_COORD, &m.longitude_m);//minutes and seconds only
   parse_next(&sp, FIELD_CHAR, &m.EW);
 //  m.EW = 'E';
-  parse_next(&sp, FIELD_INT, &m.fix);
-//  m.fix = 3;
+  parse_next(&sp, FIELD_INT, &m.fix_q);
+//  m.fix_q = 1;
   parse_next(&sp, FIELD_INT, &m.nsat);
-//  m.nsat = 6;
   parse_next(&sp, FIELD_FLOAT, &b.hdop);
 //  b.hdop = 2.94;
   parse_next(&sp, FIELD_FLOAT, &m.alt);
@@ -218,19 +202,37 @@ static bool gnggaParser(char * buff) {
   return false;
 }
 
-
-static bool gngsaParser(char * buff) {
+static bool gpgsvParser(char * buff) {
   char * sp = buff;
-  // Skip leading A/M
+  uint8_t index = 0;
   skip_to_next(&sp, ',');
+  parse_next(&sp, FIELD_INT, &index);
+  if (index == 1){parse_next(&sp, FIELD_INT, &b.Pnsat);}
+//  b.Pnsat = 6;
+  return false;
+}
+
+static bool glgsvParser(char * buff) {
+  char * sp = buff;
+  uint8_t index = 0;
   skip_to_next(&sp, ',');
-//  parse_next(&sp, FIELD_INT, &m.nsat);
+  parse_next(&sp, FIELD_INT, &index);
+  if (index == 1){parse_next(&sp, FIELD_INT, &b.Lnsat);}
+//  b.Lnsat = 1;
+  return false;
+}
+
+static bool gnrmcParser(char * buff) {
+  char * sp = buff;
+  skip_to_next(&sp, ',');
+  parse_next(&sp, FIELD_CHAR, &b.fixed);
   return false;
 }
 
 static ParserConfig parsers[] = {
-  {.token = "GNGSA", .parser = gngsaParser},
   {.token = "GNGGA", .parser = gnggaParser},
+  {.token = "GPGSV", .parser = gpgsvParser},
+  {.token = "GLGSV", .parser = glgsvParser},
   {.token = "GNRMC", .parser = gnrmcParser}
 };
 
@@ -283,6 +285,7 @@ void gtgpsTask(void *param)
       buff[bi++] = ch;
 //      consolePutchar(ch);
     }
+    if ((int)ch >= 100) {DEBUG_PRINT("Message UBX");}
   }
 }
 
@@ -326,10 +329,12 @@ static const DeckDriver gtgps_deck = {
 DECK_DRIVER(gtgps_deck);
 
 LOG_GROUP_START(gps_base)
-LOG_ADD(LOG_UINT32, time, &m.fixtime)
+LOG_ADD(LOG_UINT32, time, &m.time)
+LOG_ADD(LOG_UINT8, fixed, &b.fixed)
 LOG_ADD(LOG_FLOAT, hAcc, &b.hdop)
-LOG_ADD(LOG_UINT32, nsat, &m.nsat)
-LOG_ADD(LOG_UINT8, fixquality, &m.fix)
+LOG_ADD(LOG_UINT8, Pnsat, &b.Pnsat)
+LOG_ADD(LOG_UINT8, Lnsat, &b.Lnsat)
+LOG_ADD(LOG_UINT8, fixquality, &m.fix_q)
 LOG_GROUP_STOP(gps_base)
 
 LOG_GROUP_START(gps_track)
