@@ -76,7 +76,7 @@ typedef enum {
 
 typedef struct {
   char fixed;
-  uint32_t locks[12];
+//  uint32_t locks[12];
   uint32_t Pnsat;
   uint32_t Lnsat;
   float pdop;
@@ -163,7 +163,7 @@ static float parse_float(char * sp) {
 
 static void parse_next(char ** sp, FieldType t, void * value) {
   skip_to_next(sp, ',');
-  DEBUG_PRINT("Next [%s]\n", (*sp));
+//  DEBUG_PRINT("Next [%s]\n", (*sp));
   switch (t) {
     case FIELD_CHAR:
       *((char*)value) = (*sp)[0];
@@ -204,11 +204,12 @@ static bool gnggaParser(char * buff) {
 
 static bool gpgsvParser(char * buff) {
   char * sp = buff;
-  uint32_t index = 0;
+//  uint32_t index = 0;
   skip_to_next(&sp, ',');
-  parse_next(&sp, FIELD_INT, &index);
-  if (index == 1){
-    parse_next(&sp, FIELD_INT, &b.Pnsat);
+  skip_to_next(&sp, ',');
+//  parse_next(&sp, FIELD_INT, &index);
+//  if (index == 1){
+  parse_next(&sp, FIELD_INT, &b.Pnsat);
 //    DEBUG_PRINT("Pnsat %d\n", (int)b.Pnsat);}
 //  b.Pnsat = 6;
   return false;
@@ -216,11 +217,12 @@ static bool gpgsvParser(char * buff) {
 
 static bool glgsvParser(char * buff) {
   char * sp = buff;
-  uint32_t index = 0;
+//  uint32_t index = 0;
   skip_to_next(&sp, ',');
-  parse_next(&sp, FIELD_INT, &index);
-  if (index == 1){
-    parse_next(&sp, FIELD_INT, &b.Lnsat);
+  skip_to_next(&sp, ',');
+//  parse_next(&sp, FIELD_INT, &index);
+//  if (index == 1){
+  parse_next(&sp, FIELD_INT, &b.Lnsat);
 //  DEBUG_PRINT("index %d Lnsat %d\n", (int)index, (int)b.Lnsat);}
 
 //  b.Lnsat = 1;

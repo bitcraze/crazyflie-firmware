@@ -46,7 +46,6 @@ int main()
 {
   //Initialize the platform.
   platformInit();
-
   //Launch the system task that will initialize and start everything
   systemLaunch();
 

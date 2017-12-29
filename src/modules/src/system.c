@@ -24,7 +24,7 @@
  * system.c - Top level module implementation
  */
 #define DEBUG_MODULE "SYS"
-#define ENABLE_UART1
+//#define ENABLE_UART1
 
 #include <stdbool.h>
 
