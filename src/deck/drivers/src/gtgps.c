@@ -75,10 +75,10 @@ typedef enum {
 } FixType;
 
 typedef struct {
-  uint8_t fixed;
+  char fixed;
   uint32_t locks[12];
-  uint8_t Pnsat;
-  uint8_t Lnsat;
+  uint32_t Pnsat;
+  uint32_t Lnsat;
   float pdop;
   float hdop;
   float vdop;
@@ -163,10 +163,10 @@ static float parse_float(char * sp) {
 
 static void parse_next(char ** sp, FieldType t, void * value) {
   skip_to_next(sp, ',');
-  //DEBUG_PRINT("[%s]\n", (*sp));
+  DEBUG_PRINT("Next [%s]\n", (*sp));
   switch (t) {
     case FIELD_CHAR:
-      value = *sp;
+      *((char*)value) = (*sp)[0];
       break;
     case FIELD_INT:
       *((uint32_t*) value) = strtoul(*sp, 0, 10);
@@ -204,20 +204,25 @@ static bool gnggaParser(char * buff) {
 
 static bool gpgsvParser(char * buff) {
   char * sp = buff;
-  uint8_t index = 0;
+  uint32_t index = 0;
   skip_to_next(&sp, ',');
   parse_next(&sp, FIELD_INT, &index);
-  if (index == 1){parse_next(&sp, FIELD_INT, &b.Pnsat);}
+  if (index == 1){
+    parse_next(&sp, FIELD_INT, &b.Pnsat);
+//    DEBUG_PRINT("Pnsat %d\n", (int)b.Pnsat);}
 //  b.Pnsat = 6;
   return false;
 }
 
 static bool glgsvParser(char * buff) {
   char * sp = buff;
-  uint8_t index = 0;
+  uint32_t index = 0;
   skip_to_next(&sp, ',');
   parse_next(&sp, FIELD_INT, &index);
-  if (index == 1){parse_next(&sp, FIELD_INT, &b.Lnsat);}
+  if (index == 1){
+    parse_next(&sp, FIELD_INT, &b.Lnsat);
+//  DEBUG_PRINT("index %d Lnsat %d\n", (int)index, (int)b.Lnsat);}
+
 //  b.Lnsat = 1;
   return false;
 }
@@ -226,6 +231,8 @@ static bool gnrmcParser(char * buff) {
   char * sp = buff;
   skip_to_next(&sp, ',');
   parse_next(&sp, FIELD_CHAR, &b.fixed);
+//  DEBUG_PRINT("Validation %d\n", (int)b.fixed);
+//  b.fixed = 'V';
   return false;
 }
 
@@ -285,7 +292,6 @@ void gtgpsTask(void *param)
       buff[bi++] = ch;
 //      consolePutchar(ch);
     }
-    if ((int)ch >= 100) {DEBUG_PRINT("Message UBX");}
   }
 }
 
@@ -332,8 +338,8 @@ LOG_GROUP_START(gps_base)
 LOG_ADD(LOG_UINT32, time, &m.time)
 LOG_ADD(LOG_UINT8, fixed, &b.fixed)
 LOG_ADD(LOG_FLOAT, hAcc, &b.hdop)
-LOG_ADD(LOG_UINT8, Pnsat, &b.Pnsat)
-LOG_ADD(LOG_UINT8, Lnsat, &b.Lnsat)
+LOG_ADD(LOG_UINT32, Pnsat, &b.Pnsat)
+LOG_ADD(LOG_UINT32, Lnsat, &b.Lnsat)
 LOG_ADD(LOG_UINT8, fixquality, &m.fix_q)
 LOG_GROUP_STOP(gps_base)
 
