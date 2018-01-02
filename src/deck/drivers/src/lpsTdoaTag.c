@@ -44,15 +44,19 @@
 
 
 // State
+typedef struct {
+  rangePacket_t packet;
+  dwTime_t arrival;
+  double clockCorrection_T_To_A;
+
+  uint32_t anchorStatusTimeout;
+} history_t;
+
 static lpsAlgoOptions_t* options;
-
 static uint8_t previousAnchor;
-static rangePacket_t storedPackets[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static dwTime_t storedArrivals[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static uint8_t storedSequenceNrs[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static double storedClockCorrection_T_To_A[LOCODECK_NR_OF_TDOA2_ANCHORS];
+// Holds data for the latest packet from all anchors
+static history_t history[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
-static uint32_t anchorStatusTimeout[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 // LPP packet handling
 lpsLppShortPacket_t lppPacket;
@@ -64,22 +68,25 @@ static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static float logClockCorrection[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static uint16_t logAnchorDistance[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
-static uint32_t statsPacketsReceived = 0;
-static uint32_t statsPacketsSeqNrPass = 0;
-static uint32_t statsPacketsDataPass = 0;
 
-static uint16_t statsPacketsReceivedRate = 0;
-static uint16_t statsPacketsSeqNrPassRate = 0;
-static uint16_t statsPacketsDataPassRate = 0;
-static uint32_t nextStatisticsTime = 0;
-static uint32_t previousStatisticsTime = 0;
+static struct {
+  uint32_t packetsReceived;
+  uint32_t packetsSeqNrPass;
+  uint32_t packetsDataPass;
+
+  uint16_t packetsReceivedRate;
+  uint16_t packetsSeqNrPassRate;
+  uint16_t packetsDataPassRate;
+  uint32_t nextStatisticsTime;
+  uint32_t previousStatisticsTime;
+} stats;
 
 static bool rangingOk;
 
 static void clearStats() {
-  statsPacketsReceived = 0;
-  statsPacketsSeqNrPass = 0;
-  statsPacketsDataPass = 0;
+  stats.packetsReceived = 0;
+  stats.packetsSeqNrPass = 0;
+  stats.packetsDataPass = 0;
 }
 
 static uint64_t truncateToLocalTimeStamp(uint64_t fullTimeStamp) {
@@ -90,20 +97,19 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFul;
 }
 
-static void enqueueTDOA(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
+static void enqueueTDOA(uint8_t anchorA, uint8_t anchorB, double distanceDiff) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff,
 
-    .anchorPosition[0] = options->anchorPosition[anchor1],
-    .anchorPosition[1] = options->anchorPosition[anchor2]
+    .anchorPosition[0] = options->anchorPosition[anchorA],
+    .anchorPosition[1] = options->anchorPosition[anchorB]
   };
 
   if (options->combinedAnchorPositionOk ||
-      (options->anchorPosition[anchor1].timestamp && options->anchorPosition[anchor2].timestamp)) {
+      (options->anchorPosition[anchorA].timestamp && options->anchorPosition[anchorB].timestamp)) {
     estimatorKalmanEnqueueTDOA(&tdoa);
   }
-
 }
 
 // The default receive time in the anchors for messages from other anchors is 0
@@ -124,14 +130,14 @@ static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
 
 static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
 
-  if (! isSeqNrConsecutive(storedPackets[anchor].sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
+  if (! isSeqNrConsecutive(history[anchor].packet.sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
     return false;
   }
 
   const int64_t rxAn_by_T_in_cl_T = arrival->full;
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t latest_rxAn_by_T_in_cl_T = storedArrivals[anchor].full;
-  const int64_t latest_txAn_in_cl_An = storedPackets[anchor].timestamps[anchor];
+  const int64_t latest_rxAn_by_T_in_cl_T = history[anchor].arrival.full;
+  const int64_t latest_txAn_in_cl_An = history[anchor].packet.timestamps[anchor];
 
   const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
   const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
@@ -141,17 +147,17 @@ static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, c
 }
 
 static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
-  const bool isSeqNrInTagOk = isSeqNrConsecutive(storedPackets[anchor].sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
-  const bool isSeqNrInAnchorOk = isSeqNrConsecutive(storedSequenceNrs[anchor], packet->sequenceNrs[anchor]);
+  const bool isSeqNrInTagOk = isSeqNrConsecutive(history[anchor].packet.sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
+  const bool isSeqNrInAnchorOk = isSeqNrConsecutive(history[anchor].packet.sequenceNrs[anchor], packet->sequenceNrs[anchor]);
   if (! (isSeqNrInTagOk && isSeqNrInAnchorOk)) {
     return false;
   }
-  statsPacketsSeqNrPass++;
+  stats.packetsSeqNrPass++;
 
   const int64_t rxAn_by_T_in_cl_T  = arrival->full;
   const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
   const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
-  const double clockCorrection = storedClockCorrection_T_To_A[anchor];
+  const double clockCorrection = history[anchor].clockCorrection_T_To_A;
 
   const bool isAnchorDistanceOk = isValidTimeStamp(tof_Ar_to_An_in_cl_An);
   const bool isRxTimeInTagOk = isValidTimeStamp(rxAr_by_An_in_cl_An);
@@ -160,10 +166,10 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
   if (! (isAnchorDistanceOk && isRxTimeInTagOk && isClockCorrectionOk)) {
     return false;
   }
-  statsPacketsDataPass++;
+  stats.packetsDataPass++;
 
   const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t rxAr_by_T_in_cl_T = storedArrivals[previousAnchor].full;
+  const int64_t rxAr_by_T_in_cl_T = history[previousAnchor].arrival.full;
 
   const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
   const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection - delta_txAr_to_txAn_in_cl_An;
@@ -232,7 +238,7 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 }
 
 static bool rxcallback(dwDevice_t *dev) {
-  statsPacketsReceived++;
+  stats.packetsReceived++;
 
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
@@ -253,8 +259,8 @@ static bool rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-    calcClockCorrection(&storedClockCorrection_T_To_A[anchor], anchor, packet, &arrival);
-    logClockCorrection[anchor] = storedClockCorrection_T_To_A[anchor];
+    calcClockCorrection(&history[anchor].clockCorrection_T_To_A, anchor, packet, &arrival);
+    logClockCorrection[anchor] = history[anchor].clockCorrection_T_To_A;
 
     if (anchor != previousAnchor) {
       float tdoaDistDiff = 0.0;
@@ -265,11 +271,10 @@ static bool rxcallback(dwDevice_t *dev) {
       }
     }
 
-    storedArrivals[anchor].full = arrival.full;
-    memcpy(&storedPackets[anchor], rxPacket.payload, sizeof(rangePacket_t));
-    storedSequenceNrs[anchor] = packet->sequenceNrs[anchor];
+    history[anchor].arrival.full = arrival.full;
+    memcpy(&history[anchor].packet, packet, sizeof(rangePacket_t));
 
-    anchorStatusTimeout[anchor] = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
+    history[anchor].anchorStatusTimeout = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
 
     previousAnchor = anchor;
 
@@ -319,20 +324,20 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   }
 
   uint32_t now = xTaskGetTickCount();
-  if (now > nextStatisticsTime) {
-    float interval = now - previousStatisticsTime;
-    statsPacketsReceivedRate = (uint16_t)(1000.0f * statsPacketsReceived / interval);
-    statsPacketsSeqNrPassRate = (uint16_t)(1000.0f * statsPacketsSeqNrPass / interval);
-    statsPacketsDataPassRate = (uint16_t)(1000.0f * statsPacketsDataPass / interval);
+  if (now > stats.nextStatisticsTime) {
+    float interval = now - stats.previousStatisticsTime;
+    stats.packetsReceivedRate = (uint16_t)(1000.0f * stats.packetsReceived / interval);
+    stats.packetsSeqNrPassRate = (uint16_t)(1000.0f * stats.packetsSeqNrPass / interval);
+    stats.packetsDataPassRate = (uint16_t)(1000.0f * stats.packetsDataPass / interval);
 
     clearStats();
-    previousStatisticsTime = now;
-    nextStatisticsTime = now + STATS_INTERVAL;
+    stats.previousStatisticsTime = now;
+    stats.nextStatisticsTime = now + STATS_INTERVAL;
   }
 
   options->rangingState = 0;
   for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA2_ANCHORS; anchor++) {
-    if (now < anchorStatusTimeout[anchor]) {
+    if (now < history[anchor].anchorStatusTimeout) {
       options->rangingState |= (1 << anchor);
     }
   }
@@ -347,29 +352,24 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
 
   // Reset module state. Needed by unit tests
-  memset(storedPackets, 0, sizeof(storedPackets));
-  memset(storedArrivals, 0, sizeof(storedArrivals));
-  memset(storedSequenceNrs, 0, sizeof(storedSequenceNrs));
+  memset(history, 0, sizeof(history));
 
-  memset(storedClockCorrection_T_To_A, 0, sizeof(storedClockCorrection_T_To_A));
   memset(logClockCorrection, 0, sizeof(logClockCorrection));
   memset(logAnchorDistance, 0, sizeof(logAnchorDistance));
+  memset(logUwbTdoaDistDiff, 0, sizeof(logUwbTdoaDistDiff));
 
   previousAnchor = 0;
 
   lppPacketToSend = false;
 
-  memset(logUwbTdoaDistDiff, 0, sizeof(logUwbTdoaDistDiff));
-
   options->rangingState = 0;
-  memset(anchorStatusTimeout, 0, sizeof(anchorStatusTimeout));
 
   clearStats();
-  statsPacketsReceivedRate = 0;
-  statsPacketsSeqNrPassRate = 0;
-  statsPacketsDataPassRate = 0;
-  nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
-  previousStatisticsTime = 0;
+  stats.packetsReceivedRate = 0;
+  stats.packetsSeqNrPassRate = 0;
+  stats.packetsDataPassRate = 0;
+  stats.nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
+  stats.previousStatisticsTime = 0;
 
   dwSetReceiveWaitTimeout(dev, TDOA_RECEIVE_TIMEOUT);
 
@@ -419,8 +419,8 @@ LOG_ADD(LOG_UINT16, dist4-5, &logAnchorDistance[5])
 LOG_ADD(LOG_UINT16, dist5-6, &logAnchorDistance[6])
 LOG_ADD(LOG_UINT16, dist6-7, &logAnchorDistance[7])
 
-LOG_ADD(LOG_UINT16, stRx, &statsPacketsReceivedRate)
-LOG_ADD(LOG_UINT16, stSeq, &statsPacketsSeqNrPassRate)
-LOG_ADD(LOG_UINT16, stData, &statsPacketsDataPassRate)
+LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
+LOG_ADD(LOG_UINT16, stSeq, &stats.packetsSeqNrPassRate)
+LOG_ADD(LOG_UINT16, stData, &stats.packetsDataPassRate)
 
 LOG_GROUP_STOP(tdoa)
