@@ -129,15 +129,22 @@ static uint32_t parse_coordinate(char ** sp) {
   uint32_t ret;
   char * i;
   char * j;
+  int k = 0;
 
+  *sp = "00833";
+//  *sp = "00833.";
 //  *sp = "00833.914843";
 //  *sp = "00000.000000";
+  i = strchr(*sp,46);  // cas sans décimales ????  != NULL
+  if (i != NULL) {k = strlen(i)-1;}
+  else {k = 0;}
+//  k = strlen(i)-1;
   dm = strtoul(*sp, &i, 10);
-  degree = dm / 100;
+  degree = (dm / 100) + (k*1000);
   if (longitude){m.longitude_d = degree;}
   else {m.latitude_d = degree;}
   second = strtoul(i+1, &j, 10);
-  minute = (dm % 100) * 10000000;// * 100000);// / 60;
+  minute = (dm % 100) * (10 ^ k);// * 100000);// / 60;
   ret = minute + second; //Transmets les degrés d'une part, les minutes avec décimales d'autre part
   return ret;
 }
