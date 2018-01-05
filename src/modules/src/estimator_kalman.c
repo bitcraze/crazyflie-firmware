@@ -1421,6 +1421,12 @@ void estimatorKalmanSetShift(float deltax, float deltay)
   S[STATE_Y] -= deltay;
 }
 
+void estimatorKalmanGetEstimatedPos(point_t* pos) {
+  pos->x = S[STATE_X];
+  pos->y = S[STATE_Y];
+  pos->z = S[STATE_Z];
+}
+
 // Temporary development groups
 LOG_GROUP_START(kalman_states)
   LOG_ADD(LOG_FLOAT, ox, &S[STATE_X])

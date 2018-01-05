@@ -9,6 +9,7 @@
 #include "mock_cfassert.h"
 #include "mock_estimator_kalman.h"
 #include "mock_locodeck.h"
+#include "mock_outlierFilter.h"
 
 #include "dw1000Mocks.h"
 #include "freertosMocks.h"
@@ -124,6 +125,7 @@ void setUp(void) {
   dwGetReceiveTimestamp_resetMock();
 
   mockKalmanEstimator_resetMock();
+  estimatorKalmanGetEstimatedPos_Ignore();
 
   options.combinedAnchorPositionOk = true;
 
@@ -387,6 +389,7 @@ void testMissingTimestampInhibitsClockDriftCalculationInFirstIteration() {
   mockKalmanEstimator(0, 5, expectedDiff);
   mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -445,6 +448,7 @@ void testMissingPacketAnchorToAnchorInhibitsDiffCalculation() {
   // Not called
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -503,6 +507,7 @@ void testMissingAnchorToAnchorDistanceInhibitsDiffCalculation() {
   // Not called
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -560,6 +565,7 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculation() {
   // Not called
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -617,6 +623,7 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculationWhenSequenceNrW
   // Not called
   // mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -683,12 +690,66 @@ void testMissingPacketAnchorToTagInhibitsDiffCalculation() {
 
   // Not called since previous packet from same anchor was lost
   //  mockKalmanEstimator(5, 0, -expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   //  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+
+  // Assert
+  // Nothing here, verification in mocks
+}
+
+void testDataNotSentToKalmanFilterWhenOutlierDetected() {
+  // Fixture
+  // Two anchors, separated by 1.0m
+  // Distance from A0 to tag is 2.0m
+  // Distance from A5 to tag is 2.5m
+  float expectedDiff = 0.5;
+
+  // Ideal times in universal clock
+  uint64_t timeA0ToTag = time2m;
+  uint64_t timeA5ToTag = time2_5m;
+  uint64_t timeA0ToA5 = time1m;
+
+  mockMessageFromAnchor(5, iTxTime0_5 + timeA5ToTag,
+    (uint8_t[]) {10,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, iTxTime0_5,              NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime1_0 + timeA0ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  20,                      0,  0},
+    (uint64_t[]){iTxTime1_0,              NS, NS, NS, NS, iTxTime0_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime1_5 + timeA5ToTag,
+    (uint8_t[]) {11,                      0,  0,  0,  0,  21,                      0,  0},
+    (uint64_t[]){iTxTime1_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime1_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+  mockMessageFromAnchor(0, iTxTime2_0 + timeA0ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  21,                      0, 0},
+    (uint64_t[]){iTxTime2_0,              NS, NS, NS, NS, iTxTime1_5 + timeA0ToA5, NS, NS},
+    (uint64_t[]){NS,                      NS, NS, NS, NS, timeA0ToA5,              NS, NS});
+
+  mockMessageFromAnchor(5, iTxTime2_5 + timeA5ToTag,
+    (uint8_t[]) {12,                      0,  0,  0,  0,  22,                      0, 0},
+    (uint64_t[]){iTxTime2_0 + timeA0ToA5, NS, NS, NS, NS, iTxTime2_5,              NS, NS},
+    (uint64_t[]){timeA0ToA5,              NS, NS, NS, NS, NS,                      NS, NS});
+
+
+  // The outlier filter reports that the data is identified as outliers and should
+  // not be sent to the kalman filter
+  outlierFilterValidateTdoa_IgnoreAndReturn(false);
+
+  // Test
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
 
@@ -890,6 +951,7 @@ void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
     (uint64_t[]){timeA0ToA1,                    NS,               NS, NS, NS, NS, NS, NS});
 
   // The measurement should not be pushed in the kalman filter
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -1121,6 +1183,7 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
 
   // Only the last message will create calls to the estimator. The two first are discarded due to missing data.
   mockKalmanEstimator(0, 1, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -1181,6 +1244,7 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
   mockKalmanEstimator(0, 5, expectedDiff);
   mockKalmanEstimator(5, 0, -expectedDiff);
   mockKalmanEstimator(0, 5, expectedDiff);
+  outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
   uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);

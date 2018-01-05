@@ -30,6 +30,7 @@
 #include "task.h"
 
 #include "log.h"
+#include "param.h"
 #include "lpsTdoaTag.h"
 
 #include "stabilizer_types.h"
@@ -37,6 +38,7 @@
 
 #include "estimator.h"
 #include "estimator_kalman.h"
+#include "outlierFilter.h"
 
 #define MEASUREMENT_NOISE_STD 0.15f
 #define STATS_INTERVAL 500
@@ -73,10 +75,13 @@ static struct {
   uint32_t packetsReceived;
   uint32_t packetsSeqNrPass;
   uint32_t packetsDataPass;
+  uint32_t packetsToEstimator;
 
   uint16_t packetsReceivedRate;
   uint16_t packetsSeqNrPassRate;
   uint16_t packetsDataPassRate;
+  uint32_t packetsToEstimatorRate;
+
   uint32_t nextStatisticsTime;
   uint32_t previousStatisticsTime;
 } stats;
@@ -87,6 +92,7 @@ static void clearStats() {
   stats.packetsReceived = 0;
   stats.packetsSeqNrPass = 0;
   stats.packetsDataPass = 0;
+  stats.packetsToEstimator = 0;
 }
 
 static uint64_t truncateToLocalTimeStamp(uint64_t fullTimeStamp) {
@@ -98,6 +104,9 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
 }
 
 static void enqueueTDOA(uint8_t anchorA, uint8_t anchorB, double distanceDiff) {
+  point_t estimatedPos;
+  estimatorKalmanGetEstimatedPos(&estimatedPos);
+
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff,
@@ -106,9 +115,12 @@ static void enqueueTDOA(uint8_t anchorA, uint8_t anchorB, double distanceDiff) {
     .anchorPosition[1] = options->anchorPosition[anchorB]
   };
 
-  if (options->combinedAnchorPositionOk ||
-      (options->anchorPosition[anchorA].timestamp && options->anchorPosition[anchorB].timestamp)) {
-    estimatorKalmanEnqueueTDOA(&tdoa);
+  if (outlierFilterValidateTdoa(&tdoa, &estimatedPos)) {
+    if (options->combinedAnchorPositionOk ||
+        (options->anchorPosition[anchorA].timestamp && options->anchorPosition[anchorB].timestamp)) {
+      stats.packetsToEstimator++;
+      estimatorKalmanEnqueueTDOA(&tdoa);
+    }
   }
 }
 
@@ -329,6 +341,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
     stats.packetsReceivedRate = (uint16_t)(1000.0f * stats.packetsReceived / interval);
     stats.packetsSeqNrPassRate = (uint16_t)(1000.0f * stats.packetsSeqNrPass / interval);
     stats.packetsDataPassRate = (uint16_t)(1000.0f * stats.packetsDataPass / interval);
+    stats.packetsToEstimatorRate = (uint16_t)(1000.0f * stats.packetsToEstimator / interval);
 
     clearStats();
     stats.previousStatisticsTime = now;
@@ -368,6 +381,7 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   stats.packetsReceivedRate = 0;
   stats.packetsSeqNrPassRate = 0;
   stats.packetsDataPassRate = 0;
+  stats.packetsToEstimatorRate = 0;
   stats.nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
   stats.previousStatisticsTime = 0;
 
@@ -422,5 +436,6 @@ LOG_ADD(LOG_UINT16, dist6-7, &logAnchorDistance[7])
 LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
 LOG_ADD(LOG_UINT16, stSeq, &stats.packetsSeqNrPassRate)
 LOG_ADD(LOG_UINT16, stData, &stats.packetsDataPassRate)
+LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
 
 LOG_GROUP_STOP(tdoa)

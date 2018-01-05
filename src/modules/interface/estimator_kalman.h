@@ -77,4 +77,6 @@ bool estimatorKalmanEnqueueFlow(flowMeasurement_t *flow);
 float estimatorKalmanGetElevation();
 void estimatorKalmanSetShift(float deltax, float deltay);
 
+void estimatorKalmanGetEstimatedPos(point_t* pos);
+
 #endif // __ESTIMATOR_KALMAN_H__
