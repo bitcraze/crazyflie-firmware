@@ -54,12 +54,15 @@ void deckInit()
 
   for (i=0; i<nDecks; i++) {
     DeckInfo *deck = deckInfo(i);
+    DEBUG_PRINT("%d deck OW codes %x-%x\n", i, deck->vid, deck->pid);
 
     if (deck->driver->init) {
       if (deck->driver->name) {
         DECK_CORE_DBG_PRINT("Calling INIT from driver %s for deck %i\n", deck->driver->name, i);
+        DEBUG_PRINT("Calling INIT from driver %s for deck %i\n", deck->driver->name, i);
       } else {
         DECK_CORE_DBG_PRINT("Calling INIT for deck %i\n", i);
+        DEBUG_PRINT("Calling INIT for deck %i\n", i);
       }
 
       deck->driver->init(deck);

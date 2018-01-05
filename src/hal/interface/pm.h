@@ -46,14 +46,17 @@
 #else
   #define PM_BAT_LOW_VOLTAGE   LOW_VOLTAGE
 #endif
+
 #ifndef LOW_TIMEOUT
   #define PM_BAT_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec default
 #else
   #define PM_BAT_LOW_TIMEOUT   LOW_TIMEOUT
 #endif
 
+#define ACTIVATE_AUTO_SHUTDOWN
+
 #ifndef SYSTEM_SHUTDOWN_TIMEOUT
-  #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * 5) // 5 min default
+  #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * 2) // 2 min default
 #else
   #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * SYSTEM_SHUTDOWN_TIMEOUT)
 #endif

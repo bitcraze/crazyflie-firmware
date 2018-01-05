@@ -60,8 +60,10 @@ static void deckdriversInit() {
     for (i=0; i<driversLen; i++) {
       if (drivers[i]->name) {
         DECK_DRV_DBG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
+        DEBUG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
       } else {
-        DECK_DRV_DBG_PRINT("VID:PID %02x:%02x\n", drivers[i]->vid, drivers[i]->pid);
+        DECK_DRV_DBG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
+        DEBUG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
       }
 
     }

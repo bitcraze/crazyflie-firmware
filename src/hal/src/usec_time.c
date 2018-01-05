@@ -69,7 +69,6 @@ uint64_t usecTimestamp(void)
   __atomic_load(&usecTimerHighCount, &high0, __ATOMIC_SEQ_CST);
   uint32_t low = TIM7->CNT;
   uint32_t high;
-  uint32_t low;
 
   __atomic_load(&usecTimerHighCount, &high0, __ATOMIC_SEQ_CST);
   low = TIM1->CNT;

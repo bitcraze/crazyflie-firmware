@@ -150,7 +150,7 @@ static bool filter(Data* queueData) {
 }
 
 static void debugPrintQueue(Data* queueData) {
-  DEBUG_PRINT("%s:%s, sent: %i, peak: %i, full: %i\n",
+  DEBUG_PRINT("XXXX Queue %s:%s, sent: %i, peak: %i, full: %i\n",
     queueData->fileName, queueData->queueName, queueData->sendCount,
     queueData->maxWaiting, queueData->fullCount);
 }
