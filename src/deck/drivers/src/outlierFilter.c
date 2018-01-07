@@ -27,21 +27,25 @@
 #include <math.h>
 #include "outlierFilter.h"
 
-static double distance(point_t* a, point_t* b);
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoaMeasurement_t* tdoa);
+static double distanceSq(const point_t* a, const point_t* b);
 static double sq(double a) {return a * a;}
 
 
 bool outlierFilterValidateTdoa(tdoaMeasurement_t* tdoa, point_t* estimatedPosition) {
-  float anchorDistance = (float)(distance(&tdoa->anchorPosition[0], &tdoa->anchorPosition[1]));
-  bool acceptSample = (fabsf(tdoa->distanceDiff) < anchorDistance);
-
-  return acceptSample;
+  return isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa);
 }
 
 void outlierFilterReset() {
   // Nothing here
 }
 
-static double distance(point_t* a, point_t* b) {
-  return sqrt(sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z));
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoaMeasurement_t* tdoa) {  
+  double anchorDistanceSq = distanceSq(&tdoa->anchorPosition[0], &tdoa->anchorPosition[1]);
+  double distanceDiffSq = sq(tdoa->distanceDiff);
+  return (distanceDiffSq < anchorDistanceSq);
+}
+
+static double distanceSq(const point_t* a, const point_t* b) {
+  return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
 }
