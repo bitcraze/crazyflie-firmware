@@ -82,7 +82,7 @@ void stateController(control_t *control, setpoint_t *setpoint,
 
     // TODO: Investigate possibility to subtract gyro drift.
     attitudeControllerCorrectRatePID(sensors->gyro.x, -sensors->gyro.y, sensors->gyro.z,
-                             rateDesired.roll, rateDesired.pitch, rateDesired.yaw);
+                             rateDesired.roll, rateDesired.pitch, rateDesired.yaw); //// cas du vol stationnaire ?
 
     attitudeControllerGetActuatorOutput(&control->roll,
                                         &control->pitch,

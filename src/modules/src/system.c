@@ -68,6 +68,7 @@
 static bool selftestPassed;
 static bool canFly;
 static bool isInit;
+static bool timeOutSys = true;
 
 /* System wide synchronisation */
 xSemaphoreHandle canStartMutex;
@@ -143,7 +144,7 @@ void systemTask(void *arg)
 #endif
 
 #ifdef ENABLE_UART1
-  uart1Init();
+  uart1Init(UART1_BAUDRATE);
 #endif
 #ifdef ENABLE_UART2
   uart2Init();
@@ -272,18 +273,26 @@ void vApplicationIdleHook( void )
 #endif
 }
 
-/*System parameters (mostly for test, should be removed from here) */
+bool systemStop(void)
+{
+return timeOutSys;
+}
+
+/*System parameters (mostly for test, should be removed from here)
 PARAM_GROUP_START(cpu)
 PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS+0)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS+4)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
-PARAM_GROUP_STOP(cpu)
+PARAM_GROUP_STOP(cpu)*/
 
 PARAM_GROUP_START(system)
 PARAM_ADD(PARAM_INT8, selftestPassed, &selftestPassed)
 PARAM_GROUP_STOP(sytem)
 
+PARAM_GROUP_START(pm)
+PARAM_ADD(PARAM_UINT8, timeOutSystem, &timeOutSys)
+PARAM_GROUP_STOP(pm)
 /* Loggable variables */
 LOG_GROUP_START(sys)
 LOG_ADD(LOG_INT8, canfly, &canFly)

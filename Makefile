@@ -40,7 +40,6 @@ OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
 USE_FPU           ?= 1
 endif
 
-
 ifeq ($(PLATFORM), CF2)
 # Now needed for SYSLINK
 CFLAGS += -DUSE_RADIOLINK_CRTP     # Set CRTP link to radio

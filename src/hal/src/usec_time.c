@@ -69,6 +69,9 @@ uint64_t usecTimestamp(void)
   __atomic_load(&usecTimerHighCount, &high0, __ATOMIC_SEQ_CST);
   uint32_t low = TIM7->CNT;
   uint32_t high;
+
+  __atomic_load(&usecTimerHighCount, &high0, __ATOMIC_SEQ_CST);
+  low = TIM1->CNT;
   __atomic_load(&usecTimerHighCount, &high, __ATOMIC_SEQ_CST);
 
   // There was no increment in between

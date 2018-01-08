@@ -81,7 +81,7 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 #define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
 #define SET_WHITE(dest, intensity) dest[0] = intensity; dest[1] = intensity; dest[2] = intensity;
 
-static uint32_t effect = 6;
+static uint32_t effect = 0;
 static uint32_t neffect;
 static uint8_t headlightEnable = 0;
 static uint8_t black[][3] = {BLACK, BLACK, BLACK,
@@ -207,10 +207,10 @@ static void boatEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
 
-  uint8_t reds[] = {1,2,3,4,5};
-  uint8_t greens[] = {7,8,9,10,11};
-  uint8_t whites[] = {0};
-  uint8_t blacks[] = {6};
+  uint8_t reds[] = {8,9,10,11};
+  uint8_t greens[] = {1,2,3,4};
+  uint8_t whites[] = {5,6,7};
+  uint8_t blacks[] = {0};
 
 
   for (i=0; i<sizeof(reds); i++)

@@ -135,7 +135,10 @@ static void pmSetBatteryVoltage(float voltage)
 static void pmSystemShutdown(void)
 {
 #ifdef ACTIVATE_AUTO_SHUTDOWN
-//TODO: Implement syslink call to shutdown
+  SyslinkPacket slp;
+  slp.type = SYSLINK_PM_ONOFF_SWITCHOFF;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
 #endif
 }
 
@@ -367,7 +370,7 @@ void pmTask(void *param)
         break;
       case battery:
         {
-          if ((commanderGetInactivityTime() > PM_SYSTEM_SHUTDOWN_TIMEOUT))
+          if ((commanderGetInactivityTime() > PM_SYSTEM_SHUTDOWN_TIMEOUT) && systemStop())
           {
             pmSystemShutdown();
           }

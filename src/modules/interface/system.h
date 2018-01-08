@@ -39,5 +39,6 @@ void systemStart();
 void systemWaitStart(void);
 void systemSetCanFly(bool val);
 bool systemCanFly(void);
+bool systemStop(void);
 
 #endif //__SYSTEM_H__
