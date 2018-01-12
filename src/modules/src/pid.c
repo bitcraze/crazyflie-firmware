@@ -28,6 +28,7 @@
 #include "pid.h"
 #include "num.h"
 #include <float.h>
+#include <stddef.h>
 
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float dt,
@@ -46,10 +47,44 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->outputLimit   = DEFAULT_PID_OUTPUT_LIMIT;
   pid->dt            = dt;
   pid->enableDFilter = enableDFilter;
+  pidSetIntegralHistoryBuffer(pid, NULL, 0);
   if (pid->enableDFilter)
   {
     lpf2pInit(&pid->dFilter, samplingRate, cutoffFreq);
   }
+}
+
+void pidSetIntegralHistoryBuffer(PidObject *pid, float *buffer, uint8_t capacity) {
+  pid->iHistory.head     = 0;
+  pid->iHistory.tail     = 0;
+  pid->iHistory.size     = 0;
+  pid->iHistory.capacity = capacity;
+  pid->iHistory.buffer   = buffer;
+}
+
+static inline
+bool pidUpdateHistoryBuffer(PidHistoryBuffer *history,
+                           float value, float *oldval)
+{
+    // If history is full, need to dequeue one value to make room,
+    // otherwise only increase history size
+    bool dequeued = history->size == history->capacity;
+    if (dequeued) {
+        if (oldval != NULL) 
+           *oldval = history->buffer[history->tail++];
+       if (history->tail >= history->capacity)
+           history->tail = 0;
+    } else {
+        history->size++;
+    }
+
+    // Now we are ensured to have room left,
+    // and the new history size has already be taken into account
+    history->buffer[history->head++] = value;
+    if (history->head >= history->capacity)
+        history->head = 0;
+
+    return dequeued;
 }
 
 float pidUpdate(PidObject* pid, const float measured, const bool updateError)
@@ -79,10 +114,15 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
 
     pid->integ += pid->error * pid->dt;
 
-    // Constrain the integral (unless the iLimit is zero)
-    if(pid->iLimit != 0)
-    {
-    	pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
+    // Constrain the integral (by history or limit)
+    //  (No constrain if iHistory.buffer is null or iLimit is zero)
+    if(pid->iHistory.buffer) {
+      float oldval = 0;
+      pidUpdateHistoryBuffer(&pid->iHistory,
+			     pid->error * pid->dt, &oldval);
+      pid->integ -= oldval;
+    } else if(pid->iLimit != 0) {
+      pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
     }
 
     pid->outI = pid->ki * pid->integ;
@@ -107,10 +147,13 @@ void pidSetIntegralLimit(PidObject* pid, const float limit) {
 
 void pidReset(PidObject* pid)
 {
-  pid->error     = 0;
-  pid->prevError = 0;
-  pid->integ     = 0;
-  pid->deriv     = 0;
+  pid->error         = 0;
+  pid->prevError     = 0;
+  pid->integ         = 0;
+  pid->deriv         = 0;
+  pid->iHistory.size = 0;
+  pid->iHistory.tail = 0;
+  pid->iHistory.head = 0;
 }
 
 void pidSetError(PidObject* pid, const float error)
