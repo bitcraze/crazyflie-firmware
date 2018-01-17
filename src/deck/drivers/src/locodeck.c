@@ -228,10 +228,13 @@ static void uwbTask(void* parameters)
           timeout = algorithm->onEvent(dwm, eventTimeout);
         } else if (xTaskGetTickCount() > algoOptions.nextSwitchTick) {
           // Test if we have detected anchors
-          if (algorithm->isRangingOk()) {
+          if (algoOptions.autoStarted && algorithm->isRangingOk()) {
             algoOptions.rangingModeDetected = true;
             DEBUG_PRINT("Automatic mode: detected %s\n", algorithmsList[algoOptions.currentRangingMode].name);
           } else {
+            // We have started the auto mode by initializing the next modes
+            algoOptions.autoStarted = true;
+
             // Setting up next switching time
             algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
 
@@ -251,6 +254,7 @@ static void uwbTask(void* parameters)
     } else if (algoOptions.currentRangingMode != algoOptions.rangingMode) {  // Set modes
       // Reset auto mode
       algoOptions.rangingModeDetected = false;
+      algoOptions.autoStarted = false;
 
       if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHM) {
         DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA!\n");

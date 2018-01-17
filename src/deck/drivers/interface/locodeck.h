@@ -87,6 +87,7 @@ typedef struct {
 
   // State of the ranging mode auto detection
   bool rangingModeDetected;
+  bool autoStarted;
   uint32_t nextSwitchTick;
 
    // TWR data
