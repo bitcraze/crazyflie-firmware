@@ -63,8 +63,13 @@
 static xQueueHandle pulsesQueueRight;
 static xQueueHandle pulsesQueueLeft;
 
+static LhPulseType pulseRightISR;
+static LhPulseType pulseLeftISR;
+
 LhObj       lhObjLeft;
 LhPulseType lhPulseLeft;
+LhObj       lhObjRight;
+LhPulseType lhPulseRight;
 
 static void lhTask(void *param);
 int lhGetPulseRight(LhPulseType *pulse);
@@ -150,14 +155,16 @@ void lhInit(DeckInfo* info)
 #define LH_TEST
 
 #ifdef LH_TEST
-LhPulseType pulses[18] = {
+LhPulseType pulses[18] =
+{
     {175243,  382}, {479637,  9693}, {514749,  7965},  {815882,  368}, {1180949, 7065}, {1216055, 8831},
     {1546318, 458}, {1882115, 6185}, {1917209, 11456}, {2152833, 384}, {2583431, 8844}, {2618527, 5334},
     {2980187, 384}, {3284600, 9691}, {3319677, 6177},  {3620805, 367}, {3985899, 5345}, {4021009, 10582}
 };
 
 // My base baseStations
-static baseStationGeometry_t baseStations[2] = {
+static baseStationGeometry_t baseStations[2] =
+{
   {.origin = {1.576887, 2.448647, -1.601387}, .mat = {{-0.634552, -0.280564, 0.720158}, {-0.016947, 0.936612, 0.349959}, {-0.772695, 0.209863, -0.599083}}},
   {.origin = {-1.828970, 2.628525, 1.256474}, .mat = {{0.482050, 0.446738, -0.753693}, {-0.005340, 0.861721, 0.507355}, {0.876127, -0.240546, 0.417778}}},
 };
@@ -167,18 +174,39 @@ static float delta = 0;
 
 static positionMeasurement_t ext_pos;
 
+extern bool usdQueueLogData(UsdLogStruct* logData);
+
 static void lhTask(void *param)
 {
   systemWaitStart();
+  bool isLeftFrameOK;
+  bool isRightFrameOK;
 
-  for (int i=0; i < 18; i++)
+  while(1)
   {
-    lhppAnalysePulse(&lhObjLeft, &pulses[i]);
-  }
+    lhGetPulseLeft(&lhPulseLeft);
+    lhGetPulseRight(&lhPulseRight);
 
-  while(1) {
-    lhGetPulseRight(&lhPulseLeft);
-    if (lhppAnalysePulse(&lhObjLeft, &lhPulseLeft) == true)
+    isLeftFrameOK = lhppAnalysePulse(&lhObjLeft, &lhPulseLeft);
+    isRightFrameOK = lhppAnalysePulse(&lhObjRight, &lhPulseRight);
+
+    // Write to logfile
+    if ((isLeftFrameOK || isRightFrameOK) == true)
+    {
+      UsdLogStruct allAngles;
+      allAngles.left.x0 =  lhObjLeft.angles.x0;
+      allAngles.left.y0 =  lhObjLeft.angles.y0;
+      allAngles.left.x1 =  lhObjLeft.angles.x1;
+      allAngles.left.y1 =  lhObjLeft.angles.y1;
+      allAngles.right.x0 =  lhObjRight.angles.x0;
+      allAngles.right.y0 =  lhObjRight.angles.y0;
+      allAngles.right.x1 =  lhObjRight.angles.x1;
+      allAngles.right.y1 =  lhObjRight.angles.y1;
+      usdQueueLogData(&allAngles);
+    }
+
+    // Send to Kalman estimator
+    if (isLeftFrameOK == true)
     {
       float angles[4] = {lhObjLeft.angles.x0, lhObjLeft.angles.y0, lhObjLeft.angles.x1, lhObjLeft.angles.y1};
       lhgeometryGetPosition(baseStations, angles, position, &delta);
@@ -197,7 +225,8 @@ static void lhTask(void *param)
 {
   systemWaitStart();
 
-  while(1) {
+  while(1)
+  {
     lhGetPulseRight(&lhPulseLeft);
     lhppAnalysePulse(&lhObjLeft, &lhPulseLeft);
   }
@@ -219,30 +248,20 @@ int lhGetPulseLeft(LhPulseType *pulse)
    return xQueueReceive(pulsesQueueLeft, pulse, portMAX_DELAY);
 }
 
-static LhPulseType pulseRight;
-static LhPulseType pulseLeft;
-
-static LhPulseType buffR[1000];
-static LhPulseType buffL[1000];
-static int pR=0, pL=0;
-
 void __attribute__((used)) TIM5_IRQHandler()
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC1) != RESET)
   {
-    if (pR < 1000-1) pR++;
-    pulseRight.tsRise = TIM_GetCapture1(LHPULSE_TIMER);
-    buffR[pR].tsRise = pulseRight.tsRise;
+    pulseRightISR.tsRise = TIM_GetCapture1(LHPULSE_TIMER);
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC1);
   }
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC2) != RESET)
   {
-    pulseRight.width = TIM_GetCapture2(LHPULSE_TIMER) -  pulseRight.tsRise;
-    buffR[pR].width = pulseRight.width;
-    xQueueSendFromISR(pulsesQueueRight, &pulseRight, &xHigherPriorityTaskWoken);
+    pulseRightISR.width = TIM_GetCapture2(LHPULSE_TIMER) - pulseRightISR.tsRise;
+    xQueueSendFromISR(pulsesQueueRight, &pulseRightISR, &xHigherPriorityTaskWoken);
 
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC2);
   }
@@ -250,18 +269,14 @@ void __attribute__((used)) TIM5_IRQHandler()
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC3) != RESET)
   {
-    if (pL < 1000-1) pL++;
-    pulseLeft.tsRise = TIM_GetCapture3(LHPULSE_TIMER);
-    buffL[pL].tsRise = pulseLeft.tsRise;
-
+    pulseLeftISR.tsRise = TIM_GetCapture3(LHPULSE_TIMER);
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC3);
   }
 
   if (TIM_GetITStatus(LHPULSE_TIMER, TIM_IT_CC4) != RESET)
   {
-    pulseLeft.width = TIM_GetCapture4(LHPULSE_TIMER) - pulseLeft.tsRise;
-    buffL[pL].width = pulseLeft.width;
-    xQueueSendFromISR(pulsesQueueLeft, &pulseLeft, &xHigherPriorityTaskWoken);
+    pulseLeftISR.width = TIM_GetCapture4(LHPULSE_TIMER) - pulseLeftISR.tsRise;
+    xQueueSendFromISR(pulsesQueueLeft, &pulseLeftISR, &xHigherPriorityTaskWoken);
 
     TIM_ClearITPendingBit(LHPULSE_TIMER, TIM_IT_CC4);
   }
@@ -282,17 +297,21 @@ static const DeckDriver lighthouse_deck = {
 DECK_DRIVER(lighthouse_deck);
 
 LOG_GROUP_START(lhpulse)
-LOG_ADD(LOG_UINT32, widthRight, &pulseRight.width)
-LOG_ADD(LOG_UINT32, widthLeft, &pulseLeft.width)
+LOG_ADD(LOG_UINT32, widthRight, &pulseRightISR.width)
+LOG_ADD(LOG_UINT32, widthLeft, &pulseLeftISR.width)
 LOG_GROUP_STOP(lhpulse)
 
 LOG_GROUP_START(lighthouse)
-LOG_ADD(LOG_FLOAT, anglex0, &lhObjLeft.angles.x0)
-LOG_ADD(LOG_FLOAT, angley0, &lhObjLeft.angles.y0)
-LOG_ADD(LOG_FLOAT, anglex1, &lhObjLeft.angles.x1)
-LOG_ADD(LOG_FLOAT, angley1, &lhObjLeft.angles.y1)
-LOG_ADD(LOG_FLOAT, positionX, &ext_pos.x)
-LOG_ADD(LOG_FLOAT, positionY, &ext_pos.y)
-LOG_ADD(LOG_FLOAT, positionZ, &ext_pos.z)
-LOG_ADD(LOG_FLOAT, delta, &delta)
+LOG_ADD(LOG_FLOAT, angLx0, &lhObjLeft.angles.x0)
+LOG_ADD(LOG_FLOAT, angLy0, &lhObjLeft.angles.y0)
+LOG_ADD(LOG_FLOAT, angLx1, &lhObjLeft.angles.x1)
+LOG_ADD(LOG_FLOAT, angLy1, &lhObjLeft.angles.y1)
+LOG_ADD(LOG_FLOAT, angRx0, &lhObjRight.angles.x0)
+LOG_ADD(LOG_FLOAT, angRy0, &lhObjRight.angles.y0)
+LOG_ADD(LOG_FLOAT, angRx1, &lhObjRight.angles.x1)
+LOG_ADD(LOG_FLOAT, angRy1, &lhObjRight.angles.y1)
+//LOG_ADD(LOG_FLOAT, positionX, &ext_pos.x)
+//LOG_ADD(LOG_FLOAT, positionY, &ext_pos.y)
+//LOG_ADD(LOG_FLOAT, positionZ, &ext_pos.z)
+//LOG_ADD(LOG_FLOAT, delta, &delta)
 LOG_GROUP_STOP(lighthouse)

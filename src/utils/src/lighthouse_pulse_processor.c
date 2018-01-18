@@ -52,8 +52,6 @@
 #define SYNC_BITS_BASE_TICKS      4814
 #define SYNC_BITS_DEVIDER         875
 
-enum {PULSE_A, PULSE_B, PULSE_SWEEP} pulseState;
-
 static void lhppSynchPulse(LhObj* lhObj, LhPulseType *p);
 static bool lhppFrameDecode(LhObj* lhObj);
 static float calculateAngle(int32_t sweepTime);
@@ -76,7 +74,7 @@ bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p)
   { // Short pulse - likely laser sweep
     lhObj->frame.sweep.tsRise = p->tsRise;
     lhObj->frame.sweep.width = p->width;
-    pulseState = PULSE_A;
+    lhObj->state = PULSE_A;
 
     anglesCalculated = lhppFrameDecode(lhObj);
   }
@@ -86,21 +84,21 @@ bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p)
 
 static void lhppSynchPulse(LhObj* lhObj, LhPulseType *p)
 {
-  switch(pulseState)
+  switch(lhObj->state)
   {
     case PULSE_A:
       timeAtoA = (p->tsRise - lhObj->frame.syncA.tsRise) / 84.0f;
       lhObj->frame.syncA.tsRise = p->tsRise;
       lhObj->frame.syncA.width = p->width;
-      pulseState = PULSE_B;
+      lhObj->state = PULSE_B;
       break;
     case PULSE_B:
       lhObj->frame.syncB.tsRise = p->tsRise;
       lhObj->frame.syncB.width = p->width;
-      pulseState = PULSE_A;
+      lhObj->state = PULSE_A;
       break;
     default:
-      pulseState = PULSE_A;
+      lhObj->state = PULSE_A;
       break;
   }
 }

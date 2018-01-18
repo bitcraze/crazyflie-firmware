@@ -30,6 +30,13 @@
 #ifndef __LIGHTHOUSE_PULSE_PROCESSOR_H__
 #define __LIGHTHOUSE_PULSE_PROCESSOR_H__
 
+typedef enum
+{
+  PULSE_A,
+  PULSE_B,
+  PULSE_SWEEP
+} PulseState;
+
 typedef struct _LhPulseType
 {
   uint32_t tsRise; // Timestamp of rising edge
@@ -73,11 +80,18 @@ typedef struct _LhAnglesCalc
 
 typedef struct _LhObj
 {
+  PulseState    state;
   LhFrame       frame;
   LhAngles      angles;
   LhAnglesCalc  isCalc;
 } LhObj;
 
 bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p);
+
+typedef struct
+{
+  LhAngles left;
+  LhAngles right;
+} UsdLogStruct;
 
 #endif //__LIGHTHOUSE_PULSE_PROCESSOR_H__
