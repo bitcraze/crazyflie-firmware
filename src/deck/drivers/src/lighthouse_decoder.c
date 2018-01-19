@@ -43,6 +43,9 @@
 #include "ledseq.h"
 
 #include "estimator_kalman.h"
+#ifdef LH_LOG_TO_USD
+#include "usddeck.h"
+#endif
 
 
 #define LHPULSE_TIMER                   TIM5
@@ -174,8 +177,6 @@ static float delta = 0;
 
 static positionMeasurement_t ext_pos;
 
-extern bool usdQueueLogData(UsdLogStruct* logData);
-
 static void lhTask(void *param)
 {
   systemWaitStart();
@@ -193,6 +194,7 @@ static void lhTask(void *param)
     // Write to logfile
     if ((isLeftFrameOK || isRightFrameOK) == true)
     {
+#ifdef LH_LOG_TO_USD
       UsdLogStruct allAngles;
       allAngles.left.x0 =  lhObjLeft.angles.x0;
       allAngles.left.y0 =  lhObjLeft.angles.y0;
@@ -203,6 +205,7 @@ static void lhTask(void *param)
       allAngles.right.x1 =  lhObjRight.angles.x1;
       allAngles.right.y1 =  lhObjRight.angles.y1;
       usdQueueLogData(&allAngles);
+#endif
     }
 
     // Send to Kalman estimator
@@ -310,8 +313,8 @@ LOG_ADD(LOG_FLOAT, angRx0, &lhObjRight.angles.x0)
 LOG_ADD(LOG_FLOAT, angRy0, &lhObjRight.angles.y0)
 LOG_ADD(LOG_FLOAT, angRx1, &lhObjRight.angles.x1)
 LOG_ADD(LOG_FLOAT, angRy1, &lhObjRight.angles.y1)
-//LOG_ADD(LOG_FLOAT, positionX, &ext_pos.x)
-//LOG_ADD(LOG_FLOAT, positionY, &ext_pos.y)
-//LOG_ADD(LOG_FLOAT, positionZ, &ext_pos.z)
-//LOG_ADD(LOG_FLOAT, delta, &delta)
+LOG_ADD(LOG_FLOAT, positionX, &ext_pos.x)
+LOG_ADD(LOG_FLOAT, positionY, &ext_pos.y)
+LOG_ADD(LOG_FLOAT, positionZ, &ext_pos.z)
+LOG_ADD(LOG_FLOAT, delta, &delta)
 LOG_GROUP_STOP(lighthouse)

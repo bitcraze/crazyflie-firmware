@@ -50,7 +50,6 @@
 #include "system.h"
 #include "debug.h"
 #include "led.h"
-#include "lighthouse_pulse_processor.h"
 
 // Hardware defines
 #define USD_CS_PIN    DECK_GPIO_IO4
@@ -191,12 +190,12 @@ static bool usdMountAndOpen(bool append)
   //Mount drive
   if (f_mount(&FatFs, "", 1) == FR_OK)
   {
-    DEBUG_PRINT("Drive mounted [OK]\n");
     //Try to open file
     if (append)
     {
       if (f_open(&logFile, "angles.bin", FA_OPEN_APPEND | FA_READ | FA_WRITE) == FR_OK)
       {
+        DEBUG_PRINT("Drive mounted and reopened [OK]\n");
         fileStatus = true;
       }
     }
@@ -204,6 +203,7 @@ static bool usdMountAndOpen(bool append)
     {
       if (f_open(&logFile, "angles.bin", FA_CREATE_ALWAYS | FA_READ | FA_WRITE) == FR_OK)
       {
+        DEBUG_PRINT("Drive mounted and created [OK]\n");
         fileStatus = true;
       }
     }
@@ -239,6 +239,7 @@ static void usdTask(void *param)
 
       if (closeReopenBytes > USD_CLOSE_REOPEN_BYTES)
       {
+        DEBUG_PRINT("Closing and reopening, written %u\n", (unsigned int)totalBytesWritten);
         // To be sure to write down the data we close and reopen
         closeReopenBytes = 0;
         f_close(&logFile);
@@ -248,6 +249,7 @@ static void usdTask(void *param)
         {
           // Suspend ourselves
           vTaskSuspend(0);
+          DEBUG_PRINT("Reopened failed\n");
         }
       }
     }

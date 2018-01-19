@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "lighthouse_pulse_processor.h"
 
 #define USDLOG_ACC              (0x01)
 #define USDLOG_GYRO             (0x02)
@@ -26,6 +27,16 @@ typedef struct usdLogConfig_s {
   uint8_t floatSlots;
   uint8_t intSlots;
 } usdLogConfig_t;
+
+// For logging of lighthouse
+typedef struct
+{
+  LhAngles left;
+  LhAngles right;
+} UsdLogStruct;
+
+bool usdQueueLogData(UsdLogStruct* logData);
+
 
 #define USD_WRITE(FILE, MESSAGE, BYTES, BYTES_WRITTEN, CRC_VALUE, CRC_FINALXOR, CRC_TABLE) \
   f_write(FILE, MESSAGE, BYTES, BYTES_WRITTEN); \

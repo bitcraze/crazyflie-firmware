@@ -88,10 +88,4 @@ typedef struct _LhObj
 
 bool lhppAnalysePulse(LhObj* lhObj, LhPulseType *p);
 
-typedef struct
-{
-  LhAngles left;
-  LhAngles right;
-} UsdLogStruct;
-
 #endif //__LIGHTHOUSE_PULSE_PROCESSOR_H__
