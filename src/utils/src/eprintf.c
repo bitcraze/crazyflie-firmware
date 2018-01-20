@@ -32,13 +32,13 @@
 static const char digit[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
                              'A', 'B', 'C', 'D', 'E', 'F'};
 
-int get_int_len (int value)
+int get_int_len (int value, int base)
 {
   int l=1;
-  while(value>9)
+  while(value>(base - 1))
   {
     l++;
-    value/=10;
+    value/=base;
   }
   return l;
 }
@@ -56,13 +56,12 @@ int power(int a, int b)
   return x;
 }
 
-static int itoa(putc_t putcf, int num, int base, int precision)
+static int itoa(putc_t putcf, int num, int base, int precision, int width, char padChar)
 {
   long long int i = 1;
   int len = 0;
   unsigned int n = num;
-  int numLenght = get_int_len(num);
-  int fillWithZero = 0;
+  int numLenght = get_int_len(num, base);
 
   if (num == 0)
   {
@@ -76,9 +75,20 @@ static int itoa(putc_t putcf, int num, int base, int precision)
     putcf('-');
   }
 
+  if (numLenght < width)
+  {
+    int fill = width - numLenght;
+    while (fill > 0)
+    {
+      putcf(padChar);
+      len++;
+      fill--;
+    }
+  }
+
   if (numLenght < precision)
   {
-    fillWithZero = precision -numLenght;
+    int fillWithZero = precision -numLenght;
     while (fillWithZero>0)
     {
       putcf('0');
@@ -105,36 +115,58 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
   float num;
   char* str;
   int precision;
+  int width;
+  char padChar;
+
 
   while (*fmt)
   {
-    precision = 6;
     if (*fmt == '%')
     {
-      while (!isalpha((unsigned) * ++fmt))//TODO: Implement basic print length handling!
+      precision = 6;
+      padChar = ' ';
+      width = 0;
+
+      fmt++;
+      while ('0' == *fmt)
+      {
+        padChar = '0';
+        fmt++;
+      }
+
+			while(isdigit((unsigned)*fmt))
+			{
+				width *= 10;
+				width += *fmt - '0';
+				fmt++;
+			}
+
+      while (!isalpha((unsigned) *fmt))
       {
         if (*fmt == '.')
         {
-          if (isdigit((unsigned)*++fmt))
+          fmt++;
+          if (isdigit((unsigned)*fmt))
             precision = *fmt - '0';
+            fmt++;
         }
       }
       switch (*fmt++)
       {
         case 'i':
         case 'd':
-          len += itoa(putcf, va_arg(ap, int), 10 , 0);
+          len += itoa(putcf, va_arg(ap, int), 10 , 0, 0, ' ');
           break;
         case 'u':
-          len += itoa(putcf, va_arg(ap, unsigned int), 10 , 0);
+          len += itoa(putcf, va_arg(ap, unsigned int), 10 , 0, 0, ' ');
           break;
         case 'l':
           if (*fmt++ == 'u')
-            len += itoa(putcf, va_arg(ap, long unsigned int), 10 , 0);
+            len += itoa(putcf, va_arg(ap, long unsigned int), 10 , 0, 0, ' ');
           break;
         case 'x':
         case 'X':
-          len += itoa(putcf, va_arg(ap, int), 16 , 0);
+          len += itoa(putcf, va_arg(ap, int), 16 , 0, width, padChar);
           break;
         case 'f':
           num = va_arg(ap, double);
@@ -144,9 +176,9 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
             num = -num;
             len++;
           }
-          len += itoa(putcf, (int)num, 10, 0);
+          len += itoa(putcf, (int)num, 10, 0, 0, ' ');
           putcf('.'); len++;
-          len += itoa(putcf, (num - (int)num) * power(10,precision), 10, precision);
+          len += itoa(putcf, (num - (int)num) * power(10,precision), 10, precision, 0, ' ');
           break;
         case 's':
           str = va_arg( ap, char* );
