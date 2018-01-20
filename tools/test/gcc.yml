@@ -52,7 +52,7 @@ compiler:
 linker:
   path: gcc
   options:
-    - -lm
+    - '-lm'
   includes:
     prefix: '-I'
   object_files:

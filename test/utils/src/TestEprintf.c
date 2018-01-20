@@ -1,15 +1,46 @@
+/**
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
+ * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ *
+ * Crazyflie control firmware
+ *
+ * Copyright (C) 2018 Bitcraze AB
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, in version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * TestEprintf.c - Unit tests for printing of formatted strings
+ */
+
 #include "unity.h"
 #include "eprintf.h"
 
 #include <stdarg.h>
 #include <string.h>
 
-static int putc_mock(int c);
-static void verify_stdio(char* format, ...);
+static int putcMock(int c);
+static void verifyStdio(char* format, ...);
+static void verify(char* expected, char* format, ...);
 static char actual[100];
 
-void setUp(void) {
+static void reset() {
   memset(actual, 0, sizeof(actual));
+}
+
+void setUp(void) {
+  reset();
 }
 
 void tearDown(void) {}
@@ -19,7 +50,7 @@ void testThatTextIsPrinted() {
   char* expected = "Some text\n";
 
   // Test
-  eprintf(putc_mock, "Some text\n");
+  eprintf(putcMock, "Some text\n");
 
   // Assert
   TEST_ASSERT_EQUAL_STRING(expected, actual);
@@ -30,7 +61,7 @@ void testThatTheNumberOfCharactersIsReturned() {
   int expected = 10;
 
   // Test
-  int actual = eprintf(putc_mock, "Some text\n");
+  int actual = eprintf(putcMock, "Some text\n");
 
   // Assert
   TEST_ASSERT_EQUAL_INT(expected, actual);
@@ -40,7 +71,7 @@ void testThatStringIsPrinted() {
   // Fixture
   // Test
   // Assert
-  verify_stdio("Some %s text", "extra");
+  verifyStdio("Some %s text", "extra");
 }
 
 void testThatIntIsPrinted() {
@@ -49,7 +80,7 @@ void testThatIntIsPrinted() {
 
   // Test
   // Assert
-  verify_stdio("Some %i text", val);
+  verifyStdio("Some %i text", val);
 }
 
 void testThatIntIsPrinted2() {
@@ -58,7 +89,25 @@ void testThatIntIsPrinted2() {
 
   // Test
   // Assert
-  verify_stdio("Some %d text", val);
+  verifyStdio("Some %d text", val);
+}
+
+void testThatLongIntIsPrinted() {
+  // Fixture
+  long int val = -456123434;
+
+  // Test
+  // Assert
+  verifyStdio("Some %ld text", val);
+}
+
+void testThatLongLongIntIsPrinted() {
+  // Fixture
+  long long int val = -4561234345345;
+
+  // Test
+  // Assert
+  verifyStdio("Some %lld text", val);
 }
 
 void testThatUnsignedIntIsPrinted() {
@@ -67,7 +116,7 @@ void testThatUnsignedIntIsPrinted() {
 
   // Test
   // Assert
-  verify_stdio("Some %u text", val);
+  verifyStdio("Some %u text", val);
 }
 
 void testThatLongUnsignedIntIsPrinted() {
@@ -76,7 +125,16 @@ void testThatLongUnsignedIntIsPrinted() {
 
   // Test
   // Assert
-  verify_stdio("Some %lu text", val);
+  verifyStdio("Some %lu text", val);
+}
+
+void testThatLongLongUnsignedIntIsPrinted() {
+  // Fixture
+  long long unsigned int val = 9223372036854775807;
+
+  // Test
+  // Assert
+  verifyStdio("Some %llu text", val);
 }
 
 void testThatHexIsPrinted() {
@@ -87,7 +145,7 @@ void testThatHexIsPrinted() {
   char* expected = "Some ABCD text";
 
   // Test
-  eprintf(putc_mock, "Some %x text", val);
+  eprintf(putcMock, "Some %x text", val);
 
   // Assert
   TEST_ASSERT_EQUAL_STRING(expected, actual);
@@ -95,11 +153,30 @@ void testThatHexIsPrinted() {
 
 void testThatHexIsPrinted2() {
   // Fixture
-  int val = 0xABCD;
+  unsigned int val = 0xABCD;
 
   // Test
   // Assert
-  verify_stdio("Some %X text", val);
+  verifyStdio("Some %X text", val);
+}
+
+void testThatLongHexIsPrinted() {
+  // Fixture
+  long int val = 0xABCD;
+
+  // Test
+  // Assert
+  verifyStdio("Some %lX text", val);
+}
+
+
+void testThatLongLongHexIsPrinted() {
+  // Fixture
+  long long int val = 0xABCD98768FEDC098;
+
+  // Test
+  // Assert
+  verifyStdio("Some %llX text", val);
 }
 
 void testThatHexWithWidthIsPrinted() {
@@ -108,7 +185,7 @@ void testThatHexWithWidthIsPrinted() {
 
   // Test
   // Assert
-  verify_stdio("Some %4X text", val);
+  verifyStdio("Some %4X text", val);
 }
 
 void testThatHexWithZeroPaddedWidthIsPrinted() {
@@ -117,7 +194,7 @@ void testThatHexWithZeroPaddedWidthIsPrinted() {
 
   // Test
   // Assert
-  verify_stdio("Some %08X text", val);
+  verifyStdio("Some %08X text", val);
 }
 
 void testThatDoubleWithPrecisionIsPrinted() {
@@ -126,7 +203,7 @@ void testThatDoubleWithPrecisionIsPrinted() {
 
   // Test
   // Assert
-  verify_stdio("Some %.2f text", val);
+  verifyStdio("Some %.2f text", val);
 }
 
 void testThatMultipleParamsArePrinted() {
@@ -134,19 +211,40 @@ void testThatMultipleParamsArePrinted() {
 
   // Test
   // Assert
-  verify_stdio("Bla %i %d text %s %03x %5x", 10, 20, "hello", 4, 5);
+  verifyStdio("Bla %i %d text %s %03x %5x", 10, 20, "hello", 4, 5);
+}
+
+void testThatAllIntTypesArePrinted() {
+  // Fixture
+  // Test
+  // Assert
+  verify("255", "%u", (uint8_t)255);
+  verify("65535", "%u", (uint16_t)65535);
+  verify("4294967295", "%lu", (uint32_t)4294967295);
+  verify("18446744073709551615", "%llu", (uint64_t)18446744073709551615u);
+
+  verify("127", "%i", (int8_t)127);
+  verify("32767", "%i", (int16_t)32767);
+  verify("2147483647", "%li", (int32_t)2147483647);
+  verify("9223372036854775807", "%lli", (int64_t)9223372036854775807);
+
+  verify("FF", "%X", (uint8_t)0xFF);
+  verify("FFFF", "%X", (uint16_t)0xFFFF);
+  verify("FFFFFFFF", "%lX", (uint32_t)0xFFFFFFFF);
+  verify("FFFFFFFFFFFFFFFF", "%llX", (uint64_t)0xFFFFFFFFFFFFFFFF);
 }
 
 //////////////////////////////
 
-static int putc_mock(int c) {
+static int putcMock(int c) {
   uint32_t i = 0;
   for (; actual[i] != 0 && i < sizeof(actual); i++) {}
   actual[i] = (char)c;
   return 1;
 }
 
-static void verify_stdio(char* format, ...) {
+static void verifyStdio(char* format, ...) {
+  reset();
   va_list ap;
 
   // Fixture
@@ -159,7 +257,22 @@ static void verify_stdio(char* format, ...) {
 
   // Test
   va_start(ap, format);
-  evprintf(putc_mock, format, ap);
+  evprintf(putcMock, format, ap);
+  va_end(ap);
+
+  // Assert
+  TEST_ASSERT_EQUAL_STRING(expected, actual);
+}
+
+static void verify(char* expected, char* format, ...) {
+  reset();
+  va_list ap;
+
+  // Fixture
+  // Trust sprintf() to be correct
+  // Test
+  va_start(ap, format);
+  evprintf(putcMock, format, ap);
   va_end(ap);
 
   // Assert

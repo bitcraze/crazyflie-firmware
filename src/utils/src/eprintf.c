@@ -26,19 +26,20 @@
 #include "eprintf.h"
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <ctype.h>
 
 static const char digit[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
                              'A', 'B', 'C', 'D', 'E', 'F'};
 
-int get_int_len (int value, int base)
+static int getIntLen (long int value)
 {
-  int l=1;
-  while(value>(base - 1))
+  int l = 1;
+  while(value > 9)
   {
     l++;
-    value/=base;
+    value /= 10;
   }
   return l;
 }
@@ -56,12 +57,9 @@ int power(int a, int b)
   return x;
 }
 
-static int itoa(putc_t putcf, int num, int base, int precision, int width, char padChar)
+static int itoa10Unsigned(putc_t putcf, unsigned long long int num)
 {
-  long long int i = 1;
   int len = 0;
-  unsigned int n = num;
-  int numLenght = get_int_len(num, base);
 
   if (num == 0)
   {
@@ -69,27 +67,46 @@ static int itoa(putc_t putcf, int num, int base, int precision, int width, char 
     return 1;
   }
 
-  if (num < 0  && base == 10)
+  unsigned long long int i = 1;
+
+  while ((num / i) > 9)
+  {
+    i *= 10L;
+  }
+
+  do
+  {
+    putcf(digit[(num / i) % 10L]);
+    len++;
+  }
+  while (i /= 10L);
+
+  return len;
+}
+
+static int itoa10(putc_t putcf, long long int num, int precision)
+{
+  int len = 0;
+
+  if (num == 0)
+  {
+    putcf('0');
+    return 1;
+  }
+
+  long long unsigned int n = num;
+  if (num < 0)
   {
     n = -num;
     putcf('-');
+    len++;
   }
 
-  if (numLenght < width)
-  {
-    int fill = width - numLenght;
-    while (fill > 0)
-    {
-      putcf(padChar);
-      len++;
-      fill--;
-    }
-  }
-
+  int numLenght = getIntLen(num);
   if (numLenght < precision)
   {
-    int fillWithZero = precision -numLenght;
-    while (fillWithZero>0)
+    int fillWithZero = precision - numLenght;
+    while (fillWithZero > 0)
     {
       putcf('0');
       len++;
@@ -97,16 +114,83 @@ static int itoa(putc_t putcf, int num, int base, int precision, int width, char 
     }
   }
 
-  while (n / i)
-  i*=base;
+  return itoa10Unsigned(putcf, n);
+}
 
-  while (i /= base)
+static int itoa16(putc_t putcf, uint64_t num, int width, char padChar)
+{
+  int len = 0;
+  bool foundFirst = false;
+
+  for (int i = 15; i >= 0; i--)
   {
-    putcf(digit[(n / i) % base]);
-    len++;
+    int shift = i * 4;
+    uint64_t mask = (uint64_t)0x0F << shift;
+    uint64_t val = (num & mask) >> shift;
+
+    if (val > 0)
+    {
+      foundFirst = true;
+    }
+
+    if (foundFirst || i < width)
+    {
+      if (foundFirst)
+      {
+        putcf(digit[val]);
+      }
+      else
+      {
+        putcf(padChar);
+      }
+
+      len++;
+    }
   }
-  
+
   return len;
+}
+
+static int handleLongLong(putc_t putcf, char** fmt, va_list ap, int width, char padChar)
+{
+  switch(*((*fmt)++))
+  {
+    case 'i':
+    case 'd':
+      return itoa10(putcf, va_arg(ap, long long int), 0);
+    case 'u':
+      return itoa10Unsigned(putcf, va_arg(ap, long long unsigned int));
+    case 'x':
+    case 'X':
+      return itoa16(putcf, va_arg(ap, uint64_t), width, padChar);
+    default:
+      // Nothing here
+      break;
+  }
+
+  return 0;
+}
+
+static int handleLong(putc_t putcf, char** fmt, va_list ap, int width, char padChar)
+{
+  switch(*((*fmt)++))
+  {
+    case 'i':
+    case 'd':
+      return itoa10(putcf, va_arg(ap, long int), 0);
+    case 'u':
+      return itoa10Unsigned(putcf, va_arg(ap, unsigned long int));
+    case 'x':
+    case 'X':
+      return itoa16(putcf, va_arg(ap, unsigned long int), width, padChar);
+    case 'l':
+      return handleLongLong(putcf, fmt, ap, width, padChar);
+    default:
+      // Nothing here
+      break;
+  }
+
+  return 0;
 }
 
 int evprintf(putc_t putcf, char * fmt, va_list ap)
@@ -117,7 +201,6 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
   int precision;
   int width;
   char padChar;
-
 
   while (*fmt)
   {
@@ -155,18 +238,17 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
       {
         case 'i':
         case 'd':
-          len += itoa(putcf, va_arg(ap, int), 10 , 0, 0, ' ');
+          len += itoa10(putcf, va_arg(ap, int), 0);
           break;
         case 'u':
-          len += itoa(putcf, va_arg(ap, unsigned int), 10 , 0, 0, ' ');
-          break;
-        case 'l':
-          if (*fmt++ == 'u')
-            len += itoa(putcf, va_arg(ap, long unsigned int), 10 , 0, 0, ' ');
+          len += itoa10Unsigned(putcf, va_arg(ap, unsigned int));
           break;
         case 'x':
         case 'X':
-          len += itoa(putcf, va_arg(ap, int), 16 , 0, width, padChar);
+          len += itoa16(putcf, va_arg(ap, unsigned int), width, padChar);
+          break;
+        case 'l':
+          len += handleLong(putcf, &fmt, ap, width, padChar);
           break;
         case 'f':
           num = va_arg(ap, double);
@@ -176,9 +258,9 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
             num = -num;
             len++;
           }
-          len += itoa(putcf, (int)num, 10, 0, 0, ' ');
+          len += itoa10(putcf, (int)num, 0);
           putcf('.'); len++;
-          len += itoa(putcf, (num - (int)num) * power(10,precision), 10, precision, 0, ' ');
+          len += itoa10(putcf, (num - (int)num) * power(10,precision), precision);
           break;
         case 's':
           str = va_arg( ap, char* );
