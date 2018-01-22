@@ -18,9 +18,6 @@
     ]
   },
   "targets": {
-    "cf1": [
-      "PLATFORM=CF1"
-    ],
     "cf2": [
       "PLATFORM=CF2"
     ]
