@@ -63,6 +63,16 @@
 
 #define DEFAULT_PID_INTEGRATION_LIMIT 5000.0
 #define DEFAULT_PID_OUTPUT_LIMIT      0.0
+#define DEFAULT_PID_HISTORY_SIZE      16
+ 
+typedef struct
+{
+  uint8_t capacity;
+  uint8_t size;
+  uint8_t head;
+  uint8_t tail;
+  float * buffer;
+} PidHistoryBuffer;
 
 
 typedef struct
@@ -70,6 +80,7 @@ typedef struct
   float desired;      //< set point
   float error;        //< error
   float prevError;    //< previous error
+  PidHistoryBuffer iHistory; //< history buffer of previous integral errors
   float integ;        //< integral
   float deriv;        //< derivative
   float kp;           //< proportional gain
@@ -102,6 +113,16 @@ typedef struct
               const float ki, const float kd, const float dt,
               const float samplingRate, const float cutoffFreq,
               bool enableDFilter);
+
+/**
+ * Set the history buffer for intregral errors on this PID
+ *
+ * @param[in] pid      A pointer to the pid object.
+ * @param[in] buffer   The float buffer
+ * @param[in] capacity The buffer size
+ */
+void pidSetIntegralHistoryBuffer(PidObject* pid, float* buffer, uint8_t capacity);
+
 
 /**
  * Set the integral limit for this PID in deg.

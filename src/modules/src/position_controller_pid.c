@@ -76,6 +76,9 @@ static const float thrustScale = 1000.0f;
 #define POSITION_LPF_CUTOFF_FREQ 20.0f
 #define POSITION_LPF_ENABLE true
 
+#define PID_Z_IHISTORY_SIZE DEFAULT_PID_HISTORY_SIZE
+static float pid_z_ihistory_buffer[PID_Z_IHISTORY_SIZE];
+
 #ifndef UNIT_TEST
 static struct this_s this = {
   .pidVX = {
@@ -145,6 +148,7 @@ void positionControllerInit()
       this.pidY.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
   pidInit(&this.pidZ.pid, this.pidZ.setpoint, this.pidZ.init.kp, this.pidZ.init.ki, this.pidZ.init.kd,
       this.pidZ.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  pidSetIntegralHistoryBuffer(&this.pidZ.pid, pid_z_ihistory_buffer, PID_Z_IHISTORY_SIZE);
 
   pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.init.kp, this.pidVX.init.ki, this.pidVX.init.kd,
       this.pidVX.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
