@@ -89,8 +89,6 @@ static float i_error_m_x = 0;
 static float i_error_m_y = 0;
 static float i_error_m_z = 0;
 
-static float desiredYaw = 0.0;
-
 // Logging variables
 static struct vec z_axis_desired;
 
@@ -111,7 +109,6 @@ void stateControllerReset(void)
   i_error_m_x = 0;
   i_error_m_y = 0;
   i_error_m_z = 0;
-  desiredYaw = 0;
 }
 
 float clamp(float value, float min, float max) {
@@ -135,6 +132,7 @@ void stateController(control_t *control, setpoint_t *setpoint,
   struct vec x_c_des;
   struct vec eR, ew, M;
   float dt;
+  float desiredYaw = 0; //deg
 
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     return;
@@ -170,16 +168,18 @@ void stateController(control_t *control, setpoint_t *setpoint,
   } else {
     target_thrust.x = -sinf(radians(setpoint->attitude.pitch));
     target_thrust.y = -sinf(radians(setpoint->attitude.roll));
-    target_thrust.z = 1;
+    // In case of a timeout, the commander tries to level, ie. x/y are disabled, but z will use the previous setting
+    // In that case we ignore the last feedforward term for acceleration
+    if (setpoint->mode.z == modeAbs) {
+      target_thrust.z = g_vehicleMass * GRAVITY_MAGNITUDE + kp_z  * r_error.z + kd_z  * v_error.z + ki_z  * i_error_z;
+    } else {
+      target_thrust.z = 1;
+    }
   }
 
   // Rate-controled YAW is moving YAW angle setpoint
   if (setpoint->mode.yaw == modeVelocity) {
-     desiredYaw -= setpoint->attitudeRate.yaw * dt;
-    while (desiredYaw > 180.0f)
-      desiredYaw -= 360.0f;
-    while (desiredYaw < -180.0f)
-      desiredYaw += 360.0f;
+     desiredYaw = state->attitude.yaw - setpoint->attitudeRate.yaw * dt;
   } else if (setpoint->mode.quat == modeAbs) {
     struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
     struct vec rpy = quat2rpy(setpoint_quat);
@@ -296,9 +296,6 @@ void stateController(control_t *control, setpoint_t *setpoint,
     control->pitch = 0;
     control->yaw = 0;
     stateControllerReset();
-
-    // Reset the calculated YAW angle for rate control
-    desiredYaw = state->attitude.yaw;
   }
 }
 
