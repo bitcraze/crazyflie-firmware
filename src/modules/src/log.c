@@ -49,6 +49,7 @@
 #include "cfassert.h"
 
 #if 0
+#include "debug.h"
 #define LOG_DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
 #define LOG_ERROR(fmt, ...) DEBUG_PRINT("E/log " fmt, ## __VA_ARGS__)
 #else
@@ -146,6 +147,8 @@ static void logReset();
 void logInit(void)
 {
   int i;
+  const char* group = NULL;
+  int groupLength = 0;
 
   if(isInit)
     return;
@@ -161,8 +164,19 @@ void logInit(void)
     int len = 5;
     memcpy(&p.data[0], &logsCrc, 4);
     p.data[4] = logs[i].type;
+    if (logs[i].type & LOG_GROUP) {
+      if (logs[i].type & LOG_START) {
+        group = logs[i].name;
+        groupLength = strlen(group);
+      }
+    } else {
+      // CMD_GET_ITEM result's size is: 3 + strlen(logs[i].name) + groupLength + 2
+      if (strlen(logs[i].name) + groupLength + 2 > 27) {
+        LOG_ERROR("'%s.%s' too long\n", group, logs[i].name);
+        ASSERT_FAILED();
+      }
+    }
     if (logs[i].name) {
-      ASSERT(strlen(logs[i].name) < (30-4-1));  // Param group or name too big!
       memcpy(&p.data[5], logs[i].name, strlen(logs[i].name));
       len += strlen(logs[i].name);
     }
@@ -260,9 +274,10 @@ void logTOCProcess(int command)
       p.data[0]=CMD_GET_ITEM;
       p.data[1]=n;
       p.data[2]=logs[ptr].type;
+      p.size=3+2+strlen(group)+strlen(logs[ptr].name);
+      ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+3, group, strlen(group)+1);
       memcpy(p.data+3+strlen(group)+1, logs[ptr].name, strlen(logs[ptr].name)+1);
-      p.size=3+2+strlen(group)+strlen(logs[ptr].name);
       crtpSendPacket(&p);
     } else {
       LOG_DEBUG("    Index out of range!");
