@@ -230,8 +230,10 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
         {
           fmt++;
           if (isdigit((unsigned)*fmt))
+          {
             precision = *fmt - '0';
             fmt++;
+          }
         }
       }
       switch (*fmt++)
