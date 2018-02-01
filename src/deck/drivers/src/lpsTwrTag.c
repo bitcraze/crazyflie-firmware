@@ -243,7 +243,7 @@ static dwTime_t transmitTimeForSlot(int slot)
   return transmitTime;
 }
 
-void initiateRanging(dwDevice_t *dev)
+static void initiateRanging(dwDevice_t *dev)
 {
   if (!options->useTdma || tdmaSynchronized) {
     if (options->useTdma) {
@@ -280,7 +280,7 @@ void initiateRanging(dwDevice_t *dev)
   dwStartTransmit(dev);
 }
 
-void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
+static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 {
   dwIdle(dev);
 
