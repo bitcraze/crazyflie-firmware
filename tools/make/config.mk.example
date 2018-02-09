@@ -31,3 +31,8 @@
 
 ## Compile positioning system for TDoA mode
 # LPS_TDOA_ENABLE=1
+
+## Use J-Link as Debugger/flasher
+# OPENOCD_INTERFACE ?= interface/jlink.cfg
+# OPENOCD_TARGET    ?= target/stm32f4x.cfg
+# OPENOCD_CMDS      ?= -c "transport select swd"
