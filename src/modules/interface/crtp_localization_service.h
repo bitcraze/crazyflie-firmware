@@ -45,6 +45,8 @@ typedef enum
   LPS_SHORT_LPP_PACKET    = 2,
   EMERGENCY_STOP          = 3,
   EMERGENCY_STOP_WATCHDOG = 4,
+  COMM_GNSS_NMEA           = 6,
+  COMM_GNSS_PROPRIETARY    = 7,
 } locsrv_t;
 
 // Set up the callback for the CRTP_PORT_LOCALIZATION
