@@ -84,6 +84,9 @@ static struct {
 
   uint32_t nextStatisticsTime;
   uint32_t previousStatisticsTime;
+
+  uint8_t lastAnchor0Seq;
+  uint32_t lastAnchor0RxTick;
 } stats;
 
 static bool rangingOk;
@@ -271,6 +274,14 @@ static bool rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
+#ifdef LPS_TDOA_SYNCHRONIZATION_VARIABLE
+    // Storing timing
+    if (anchor == 0) {
+      stats.lastAnchor0Seq = packet->sequenceNrs[anchor];
+      stats.lastAnchor0RxTick = xTaskGetTickCount();
+    }
+#endif
+
     calcClockCorrection(&history[anchor].clockCorrection_T_To_A, anchor, packet, &arrival);
     logClockCorrection[anchor] = history[anchor].clockCorrection_T_To_A;
 
@@ -437,5 +448,10 @@ LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
 LOG_ADD(LOG_UINT16, stSeq, &stats.packetsSeqNrPassRate)
 LOG_ADD(LOG_UINT16, stData, &stats.packetsDataPassRate)
 LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
+
+#ifdef LPS_TDOA_SYNCHRONIZATION_VARIABLE
+LOG_ADD(LOG_UINT8, a0Seq, &stats.lastAnchor0Seq)
+LOG_ADD(LOG_UINT32, a0RxTick, &stats.lastAnchor0RxTick)
+#endif
 
 LOG_GROUP_STOP(tdoa)
