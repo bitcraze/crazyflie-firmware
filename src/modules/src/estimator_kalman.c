@@ -215,6 +215,10 @@ static float measNoiseBaro = 2.0f; // meters
 static float measNoiseGyro_rollpitch = 0.1f; // radians per second
 static float measNoiseGyro_yaw = 0.1f; // radians per second
 
+static float initialX = 0.5;
+static float initialY = 0.5;
+static float initialZ = 0.0;
+
 // We track a TDOA skew as part of the Kalman filter
 static const float stdDevInitialSkew = 0.1;
 static float procNoiseSkew = 10e-6f; // seconds per second^2 (is multiplied by dt to give skew noise)
@@ -1309,9 +1313,9 @@ void estimatorKalmanInit(void) {
   memset(P, 0, sizeof(S));
 
   // TODO: Can we initialize this more intelligently?
-  S[STATE_X] = 0.5;
-  S[STATE_Y] = 0.5;
-  S[STATE_Z] = 0;
+  S[STATE_X] = initialX;
+  S[STATE_Y] = initialY;
+  S[STATE_Z] = initialZ;
   S[STATE_PX] = 0;
   S[STATE_PY] = 0;
   S[STATE_PZ] = 0;
@@ -1483,4 +1487,7 @@ PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_FLOAT, mNBaro, &measNoiseBaro)
   PARAM_ADD(PARAM_FLOAT, mNGyro_rollpitch, &measNoiseGyro_rollpitch)
   PARAM_ADD(PARAM_FLOAT, mNGyro_yaw, &measNoiseGyro_yaw)
+  PARAM_ADD(PARAM_FLOAT, initialX, &initialX)
+  PARAM_ADD(PARAM_FLOAT, initialY, &initialY)
+  PARAM_ADD(PARAM_FLOAT, initialZ, &initialZ)
 PARAM_GROUP_STOP(kalman)
