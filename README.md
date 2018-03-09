@@ -75,9 +75,11 @@ This repository uses git submodules. Clone with the --recursive flag
 git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git
 ```
 
-If you already have cloned the repo, use
+If you already have cloned the repo without the --recursive option, you need to 
+get the submodules manually
 
 ```bash
+cd crazyflie-firmware
 git submodule init
 git submodule update
 ```
