@@ -151,6 +151,8 @@ PROJ_OBJ += controller_$(CONTROLLER).o
 PROJ_OBJ += power_distribution_$(POWER_DISTRIBUTION).o
 PROJ_OBJ_CF2 += estimator_kalman.o
 
+# High-Level Commander
+PROJ_OBJ += crtp_commander_high_level.o planner.o pptraj.o
 
 # Deck Core
 PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o deck_test.o

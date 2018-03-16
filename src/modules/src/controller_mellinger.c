@@ -179,7 +179,9 @@ void stateController(control_t *control, setpoint_t *setpoint,
 
   // Rate-controled YAW is moving YAW angle setpoint
   if (setpoint->mode.yaw == modeVelocity) {
-     desiredYaw = state->attitude.yaw - setpoint->attitudeRate.yaw * dt;
+    desiredYaw = state->attitude.yaw - setpoint->attitudeRate.yaw * dt;
+  } else if (setpoint->mode.yaw == modeAbs) {
+    desiredYaw = setpoint->attitude.yaw;
   } else if (setpoint->mode.quat == modeAbs) {
     struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
     struct vec rpy = quat2rpy(setpoint_quat);
