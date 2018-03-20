@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _VL53L1_WAIT_H_
 #define _VL53L1_WAIT_H_
 
-#include "vl53l1_platform.h"
+#include "../../../../drivers/interface/vl53l1x.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -37,7 +37,8 @@
 
 #include "i2cdev.h"
 #include "zranger.h"
-#include "vl53l0x.h"
+#include "vl53l1x.h"
+#include "vl53l1_api.h"
 
 #include "stabilizer_types.h"
 
@@ -54,18 +55,18 @@ static float expCoeff;
 
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
-static uint16_t range_last = 0;
+static int16_t range_last = 0;
 
 static bool isInit;
 
-static VL53L0xDev dev;
+static VL53L1_Dev_t dev;
 
 void zRangerInit(DeckInfo* info)
 {
   if (isInit)
     return;
 
-  vl53l0xInit(&dev, I2C1_DEV, true);
+  vl53l1xInit(&dev, I2C1_DEV);
 
   xTaskCreate(zRangerTask, ZRANGER_TASK_NAME, ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
 
@@ -82,37 +83,62 @@ bool zRangerTest(void)
   if (!isInit)
     return false;
 
-  testStatus  = vl53l0xTestConnection(&dev);
+  testStatus = vl53l1xTestConnection(&dev);
 
   return testStatus;
 }
 
 void zRangerTask(void* arg)
 {
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+  uint8_t dataReady = 0;
+  VL53L1_RangingMeasurementData_t rangingData;
+  VL53L1_UserRoi_t roiSetting;
+
+//  roiSetting.
+
   systemWaitStart();
   TickType_t xLastWakeTime;
 
-  vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodPreRange, 18);
-  vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(&dev, 0);
+  status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(&dev, 100000);
+  status = VL53L1_SetInterMeasurementPeriodMilliSeconds(&dev, 190);
+  status = VL53L1_SetPresetMode(&dev, VL53L1_PRESETMODE_AUTONOMOUS);
+
+  xLastWakeTime = xTaskGetTickCount();
+  status = VL53L1_StopMeasurement(&dev);
+  status = VL53L1_StartMeasurement(&dev);
+
   while (1) {
-    xLastWakeTime = xTaskGetTickCount();
-    range_last = vl53l0xReadRangeContinuousMillimeters(&dev);
+    vTaskDelayUntil(&xLastWakeTime, M2T(200));
 
-    // check if range is feasible and push into the kalman filter
-    // the sensor should not be able to measure >3 [m], and outliers typically
-    // occur as >8 [m] measurements
-    if (getStateEstimator() == kalmanEstimator &&
-        range_last < RANGE_OUTLIER_LIMIT) {
-      // Form measurement
-      tofMeasurement_t tofData;
-      tofData.timestamp = xTaskGetTickCount();
-      tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
-      estimatorKalmanEnqueueTOF(&tofData);
+    dataReady = 0;
+    while (dataReady == 0) {
+      status = VL53L1_GetMeasurementDataReady(&dev, &dataReady);
+      vTaskDelay(M2T(1));
     }
+    if (1)
+    {
+      status = VL53L1_GetRangingMeasurementData(&dev, &rangingData);
+      range_last = rangingData.RangeMilliMeter;
 
-    vTaskDelayUntil(&xLastWakeTime, M2T(dev.measurement_timing_budget_ms));
+      // check if range is feasible and push into the kalman filter
+      // the sensor should not be able to measure >3 [m], and outliers typically
+      // occur as >8 [m] measurements
+      if (getStateEstimator() == kalmanEstimator &&
+          range_last < RANGE_OUTLIER_LIMIT) {
+        // Form measurement
+        tofMeasurement_t tofData;
+        tofData.timestamp = xTaskGetTickCount();
+        tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
+        tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
+        estimatorKalmanEnqueueTOF(&tofData);
+      }
+
+//      status = VL53L1_ClearInterruptAndStartMeasurement(&dev);
+      VL53L1_StopMeasurement(&dev);
+      status = VL53L1_StartMeasurement(&dev);
+      status = status;
+    }
   }
 }
 

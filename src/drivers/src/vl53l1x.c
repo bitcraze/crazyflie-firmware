@@ -35,18 +35,75 @@
 #include <stdint.h>
 #include <string.h>     // strncpy(), strnlen()
 
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
+#include "FreeRTOS.h"
+#include "task.h"
+#include "debug.h"
+#include "i2cdev.h"
+#include "vl53l1x.h"
 
-#include "vl53l1_platform.h"
-#include "vl53l1_platform_log.h"
 
 #ifdef PAL_EXTENDED
 	#include "vl53l1_register_strings.h"
 #else
 	#define VL53L1_get_register_name(a,b)
 #endif
+
+static int nextI2CAddress = VL53L1X_DEFAULT_ADDRESS+1;
+
+
+bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
+{
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+
+  pdev->I2Cx = I2Cx;
+  pdev->devAddr = VL53L1X_DEFAULT_ADDRESS;
+  i2cdevInit(pdev->I2Cx);
+
+  /* Move initialized sensor to a new I2C address */
+  int newAddress;
+
+  taskENTER_CRITICAL();
+  newAddress = nextI2CAddress++;
+  taskEXIT_CRITICAL();
+
+  status = vl53l1xSetI2CAddress(pdev, newAddress);
+
+  if (status == VL53L1_ERROR_NONE)
+  {
+    status = VL53L1_DataInit(pdev);
+  }
+  if (status == VL53L1_ERROR_NONE)
+  {
+    status = VL53L1_StaticInit(pdev);
+  }
+
+  return status == VL53L1_ERROR_NONE;
+}
+
+bool vl53l1xTestConnection(VL53L1_Dev_t* pdev)
+{
+  VL53L1_DeviceInfo_t info;
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+
+  status = VL53L1_GetDeviceInfo(pdev, &info);
+
+  return status == VL53L1_ERROR_NONE;
+}
+
+/** Set I2C address
+ * Any subsequent communication will be on the new address
+ * The address passed is the 7bit I2C address from LSB (ie. without the
+ * read/write bit)
+ */
+VL53L1_Error vl53l1xSetI2CAddress(VL53L1_Dev_t* pdev, uint8_t address)
+{
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+
+  status = VL53L1_SetDeviceAddress(pdev, address);
+  pdev->devAddr = address;
+  return  status;
+}
+
 
 /*
  * ----------------- COMMS FUNCTIONS -----------------
@@ -60,21 +117,12 @@ VL53L1_Error VL53L1_WriteMulti(
 {
 	VL53L1_Error status         = VL53L1_ERROR_NONE;
 
-  if (!i2cdevWrite16(dev->I2Cx, dev->devAddr, index, count, pdata))
+  if (!i2cdevWrite16(pdev->I2Cx, pdev->devAddr, index, count, pdata))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
-}
-
-bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8)
-{
-  dev->I2Cx = I2Cx;
-  dev->devAddr = VL53L0X_DEFAULT_ADDRESS;
-  i2cdevInit(dev->I2Cx);
-
-
 }
 
 VL53L1_Error VL53L1_ReadMulti(
@@ -84,13 +132,10 @@ VL53L1_Error VL53L1_ReadMulti(
 	uint32_t      count)
 {
 	VL53L1_Error status         = VL53L1_ERROR_NONE;
-	uint32_t     position       = 0;
-	uint32_t     data_size      = 0;
 
-
-  if (!i2cdevRead16(dev->I2Cx, dev->devAddr, index, count, pdata))
+  if (!i2cdevRead16(pdev->I2Cx, pdev->devAddr, index, count, pdata))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
@@ -104,9 +149,9 @@ VL53L1_Error VL53L1_WrByte(
 {
 	VL53L1_Error status         = VL53L1_ERROR_NONE;
 
-	if (!i2cdevWrite16(dev->I2Cx, dev->devAddr, index, 1, &data))
+	if (!i2cdevWrite16(pdev->I2Cx, pdev->devAddr, index, 1, &data))
 	{
-	  status = VL53L1_ERROR_CONTROL_INTERFACE
+	  status = VL53L1_ERROR_CONTROL_INTERFACE;
 	}
 
 	return status;
@@ -120,9 +165,9 @@ VL53L1_Error VL53L1_WrWord(
 {
   VL53L1_Error status         = VL53L1_ERROR_NONE;
 
-  if (!i2cdevWrite16(dev->I2Cx, dev->devAddr, index, 2, &data))
+  if (!i2cdevWrite16(pdev->I2Cx, pdev->devAddr, index, 2, (uint8_t *)&data))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
@@ -136,9 +181,9 @@ VL53L1_Error VL53L1_WrDWord(
 {
 	VL53L1_Error status         = VL53L1_ERROR_NONE;
 
-	if (!i2cdevWrite16(dev->I2Cx, dev->devAddr, index, 4, &data))
+	if (!i2cdevWrite16(pdev->I2Cx, pdev->devAddr, index, 4, (uint8_t *)&data))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
@@ -152,9 +197,9 @@ VL53L1_Error VL53L1_RdByte(
 {
 	VL53L1_Error status         = VL53L1_ERROR_NONE;
 
-	if (!i2cdevRead16(dev->I2Cx, dev->devAddr, index, 1, pdata))
+	if (!i2cdevRead16(pdev->I2Cx, pdev->devAddr, index, 1, pdata))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
@@ -168,9 +213,9 @@ VL53L1_Error VL53L1_RdWord(
 {
 	VL53L1_Error status         = VL53L1_ERROR_NONE;
 
-  if (!i2cdevRead16(dev->I2Cx, dev->devAddr, index, 2, pdata))
+  if (!i2cdevRead16(pdev->I2Cx, pdev->devAddr, index, 2, (uint8_t *)pdata))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
@@ -184,9 +229,9 @@ VL53L1_Error VL53L1_RdDWord(
 {
 	VL53L1_Error status = VL53L1_ERROR_NONE;
 
-	if (!i2cdevRead16(dev->I2Cx, dev->devAddr, index, 4, pdata))
+	if (!i2cdevRead16(pdev->I2Cx, pdev->devAddr, index, 4, (uint8_t *)pdata))
   {
-    status = VL53L1_ERROR_CONTROL_INTERFACE
+    status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
 
 	return status;
@@ -227,27 +272,11 @@ VL53L1_Error VL53L1_WaitMs(
  * ----------------- DEVICE TIMING FUNCTIONS -----------------
  */
 
-VL53L1_Error VL53L1_GetTimerFrequency(int32_t *ptimer_freq_hz)
-{
-	*ptimer_freq_hz = 0;
-
-	return VL53L1_ERROR_NONE;
-}
-
-
-VL53L1_Error VL53L1_GetTimerValue(int32_t *ptimer_count)
-{
-	*ptimer_count = 0;
-
-	return VL53L1_ERROR_NONE;
-}
-
-
 VL53L1_Error VL53L1_GetTickCount(
 	uint32_t *ptick_count_ms)
 {
 	/* Returns current tick count in [ms] */
-	*ptick_count_ms = xTaskGetTick();
+	*ptick_count_ms = xTaskGetTickCount();
 
 	return VL53L1_ERROR_NONE;
 }
@@ -281,7 +310,7 @@ VL53L1_Error VL53L1_WaitValueMaskEx(
 	uint32_t     trace_functions = 0;
 #endif
 
-	_LOG_STRING_BUFFER(register_name);
+//	_LOG_STRING_BUFFER(register_name);
 
 	SUPPRESS_UNUSED_WARNING(poll_delay_ms);
 
@@ -308,7 +337,7 @@ VL53L1_Error VL53L1_WaitValueMaskEx(
 #ifdef VL53L1_LOG_ENABLE
 	trace_functions = _LOG_GET_TRACE_FUNCTIONS();
 #endif
-	_LOG_SET_TRACE_FUNCTIONS(VL53L1_TRACE_FUNCTION_NONE);
+//	_LOG_SET_TRACE_FUNCTIONS(VL53L1_TRACE_FUNCTION_NONE);
 
 	/* wait until value is found, timeout reached on error occurred */
 
@@ -326,13 +355,12 @@ VL53L1_Error VL53L1_WaitValueMaskEx(
 			found = 1;
 		}
 
-		/*if (status == VL53L1_ERROR_NONE  &&
+		if (status == VL53L1_ERROR_NONE  &&
 			found == 0 &&
 			poll_delay_ms > 0)
 			status = VL53L1_WaitMs(
 							pdev,
 							poll_delay_ms);
-		*/
 
 		/* Update polling time (Compare difference rather than absolute to
 		negate 32bit wrap around issue) */
@@ -341,7 +369,7 @@ VL53L1_Error VL53L1_WaitValueMaskEx(
 	}
 
 	/* Restore function logging */
-	_LOG_SET_TRACE_FUNCTIONS(trace_functions);
+//	_LOG_SET_TRACE_FUNCTIONS(trace_functions);
 
 	if (found == 0 && status == VL53L1_ERROR_NONE)
 		status = VL53L1_ERROR_TIME_OUT;

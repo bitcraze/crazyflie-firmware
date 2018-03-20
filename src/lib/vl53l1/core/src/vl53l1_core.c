@@ -34,12 +34,13 @@
 
 #include "vl53l1_ll_def.h"
 #include "vl53l1_ll_device.h"
-#include "vl53l1_platform.h"
 #include "vl53l1_register_map.h"
 #include "vl53l1_register_funcs.h"
 #include "vl53l1_register_settings.h"
 #include "vl53l1_api_preset_modes.h"
 #include "vl53l1_core.h"
+
+#include "../../../../drivers/interface/vl53l1x.h"
 #include "vl53l1_tuning_parm_defaults.h"
 
 #ifdef VL53L1_LOGGING

@@ -32,7 +32,7 @@
 #include "debug.h"
 #include "log.h"
 #include "pca95x4.h"
-#include "vl53l0x.h"
+#include "vl53l1x.h"
 
 #include "i2cdev.h"
 
@@ -50,11 +50,11 @@ static bool isTested = false;
 #define OA_PIN_LEFT   PCA95X4_P6
 #define OA_PIN_RIGHT  PCA95X4_P2
 
-static VL53L0xDev devFront;
-static VL53L0xDev devBack;
-static VL53L0xDev devUp;
-static VL53L0xDev devLeft;
-static VL53L0xDev devRight;
+static VL53L1_Dev_t devFront;
+static VL53L1_Dev_t devBack;
+static VL53L1_Dev_t devUp;
+static VL53L1_Dev_t devLeft;
+static VL53L1_Dev_t devRight;
 
 static uint16_t rangeFront;
 static uint16_t rangeBack;
@@ -62,26 +62,54 @@ static uint16_t rangeUp;
 static uint16_t rangeLeft;
 static uint16_t rangeRight;
 
+static uint16_t oaGetMeasurementAndRestart(VL53L1_Dev_t *dev)
+{
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+  VL53L1_RangingMeasurementData_t rangingData;
+  uint8_t dataReady = 0;
+  uint16_t range;
+
+  while (dataReady == 0) {
+    status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
+    vTaskDelay(M2T(1));
+  }
+
+  status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
+  range = rangingData.RangeMilliMeter;
+
+  VL53L1_StopMeasurement(dev);
+  status = VL53L1_StartMeasurement(dev);
+
+  return range;
+}
+
 static void oaTask(void *param)
 {
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+
   systemWaitStart();
 
-  vl53l0xStartContinuous(&devFront, 0);
-  vl53l0xStartContinuous(&devBack, 0);
-  vl53l0xStartContinuous(&devUp, 0);
-  vl53l0xStartContinuous(&devLeft, 0);
-  vl53l0xStartContinuous(&devRight, 0);
+  status = VL53L1_StopMeasurement(&devFront);
+  status = VL53L1_StartMeasurement(&devFront);
+  status = VL53L1_StopMeasurement(&devBack);
+  status = VL53L1_StartMeasurement(&devBack);
+  status = VL53L1_StopMeasurement(&devUp);
+  status = VL53L1_StartMeasurement(&devUp);
+  status = VL53L1_StopMeasurement(&devLeft);
+  status = VL53L1_StartMeasurement(&devLeft);
+  status = VL53L1_StopMeasurement(&devRight);
+  status = VL53L1_StartMeasurement(&devRight);
 
   TickType_t lastWakeTime = xTaskGetTickCount();
 
   while(1) {
-    vTaskDelayUntil(&lastWakeTime, M2T(50));
+    vTaskDelayUntil(&lastWakeTime, M2T(100));
 
-    rangeFront = vl53l0xReadRangeContinuousMillimeters(&devFront);
-    rangeBack = vl53l0xReadRangeContinuousMillimeters(&devBack);
-    rangeUp = vl53l0xReadRangeContinuousMillimeters(&devUp);
-    rangeLeft = vl53l0xReadRangeContinuousMillimeters(&devLeft);
-    rangeRight = vl53l0xReadRangeContinuousMillimeters(&devRight);
+    rangeFront = oaGetMeasurementAndRestart(&devFront);
+    rangeBack = oaGetMeasurementAndRestart(&devBack);
+    rangeUp = oaGetMeasurementAndRestart(&devUp);
+    rangeLeft = oaGetMeasurementAndRestart(&devLeft);
+    rangeRight = oaGetMeasurementAndRestart(&devRight);
   }
 }
 
@@ -121,7 +149,7 @@ static bool oaTest()
   }
 
   pca95x4SetOutput(OA_PIN_FRONT);
-  if (vl53l0xInit(&devFront, I2C1_DEV, true)) {
+  if (vl53l1xInit(&devFront, I2C1_DEV)) {
     DEBUG_PRINT("Init front sensor [OK]\n");
   } else {
     DEBUG_PRINT("Init front sensor [FAIL]\n");
@@ -129,7 +157,7 @@ static bool oaTest()
   }
 
   pca95x4SetOutput(OA_PIN_BACK);
-  if (vl53l0xInit(&devBack, I2C1_DEV, true)) {
+  if (vl53l1xInit(&devBack, I2C1_DEV)) {
     DEBUG_PRINT("Init back sensor [OK]\n");
   } else {
     DEBUG_PRINT("Init back sensor [FAIL]\n");
@@ -137,7 +165,7 @@ static bool oaTest()
   }
 
   pca95x4SetOutput(OA_PIN_UP);
-  if (vl53l0xInit(&devUp, I2C1_DEV, true)) {
+  if (vl53l1xInit(&devUp, I2C1_DEV)) {
     DEBUG_PRINT("Init up sensor [OK]\n");
   } else {
     DEBUG_PRINT("Init up sensor [FAIL]\n");
@@ -145,7 +173,7 @@ static bool oaTest()
   }
 
   pca95x4SetOutput(OA_PIN_LEFT);
-  if (vl53l0xInit(&devLeft, I2C1_DEV, true)) {
+  if (vl53l1xInit(&devLeft, I2C1_DEV)) {
     DEBUG_PRINT("Init left sensor [OK]\n");
   } else {
     DEBUG_PRINT("Init left sensor [FAIL]\n");
@@ -153,7 +181,7 @@ static bool oaTest()
   }
 
   pca95x4SetOutput(OA_PIN_RIGHT);
-  if (vl53l0xInit(&devRight, I2C1_DEV, true)) {
+  if (vl53l1xInit(&devRight, I2C1_DEV)) {
     DEBUG_PRINT("Init right sensor [OK]\n");
   } else {
     DEBUG_PRINT("Init right sensor [FAIL]\n");

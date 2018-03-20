@@ -34,10 +34,11 @@
 
 
 #include "vl53l1_ll_def.h"
-#include "vl53l1_platform.h"
 #include "vl53l1_register_map.h"
 #include "vl53l1_core.h"
 #include "vl53l1_silicon_core.h"
+
+#include "../../../../drivers/interface/vl53l1x.h"
 
 
 #define LOG_FUNCTION_START(fmt, ...) \
