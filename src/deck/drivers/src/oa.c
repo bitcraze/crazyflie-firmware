@@ -79,6 +79,7 @@ static uint16_t oaGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 
   VL53L1_StopMeasurement(dev);
   status = VL53L1_StartMeasurement(dev);
+  status = status;
 
   return range;
 }
@@ -99,6 +100,7 @@ static void oaTask(void *param)
   status = VL53L1_StartMeasurement(&devLeft);
   status = VL53L1_StopMeasurement(&devRight);
   status = VL53L1_StartMeasurement(&devRight);
+  status = status;
 
   TickType_t lastWakeTime = xTaskGetTickCount();
 

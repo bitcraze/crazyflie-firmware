@@ -47,13 +47,13 @@
 #include "arm_math.h"
 
 // Measurement noise model
-static float expPointA = 1.0f;
+static float expPointA = 1.5f;
 static float expStdA = 0.0025f; // STD at elevation expPointA [m]
-static float expPointB = 1.3f;
+static float expPointB = 2.0f;
 static float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
 
-#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
+#define RANGE_OUTLIER_LIMIT 8000 // the measured range is in [mm]
 
 static int16_t range_last = 0;
 
@@ -93,14 +93,14 @@ void zRangerTask(void* arg)
   VL53L1_Error status = VL53L1_ERROR_NONE;
   uint8_t dataReady = 0;
   VL53L1_RangingMeasurementData_t rangingData;
-  VL53L1_UserRoi_t roiSetting;
+  // VL53L1_UserRoi_t roiSetting;
 
 //  roiSetting.
 
   systemWaitStart();
   TickType_t xLastWakeTime;
 
-  status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(&dev, 100000);
+  status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(&dev, 50000);
   status = VL53L1_SetInterMeasurementPeriodMilliSeconds(&dev, 190);
   status = VL53L1_SetPresetMode(&dev, VL53L1_PRESETMODE_AUTONOMOUS);
 
@@ -109,7 +109,7 @@ void zRangerTask(void* arg)
   status = VL53L1_StartMeasurement(&dev);
 
   while (1) {
-    vTaskDelayUntil(&xLastWakeTime, M2T(200));
+    vTaskDelayUntil(&xLastWakeTime, M2T(1));
 
     dataReady = 0;
     while (dataReady == 0) {
