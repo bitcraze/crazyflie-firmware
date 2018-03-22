@@ -234,7 +234,7 @@ LOG_ADD(LOG_UINT16, back, &rangeBack)
 LOG_ADD(LOG_UINT16, up, &rangeUp)
 LOG_ADD(LOG_UINT16, left, &rangeLeft)
 LOG_ADD(LOG_UINT16, right, &rangeRight)
-LOG_GROUP_STOP(oa)
+LOG_GROUP_STOP(range)
 
 PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
