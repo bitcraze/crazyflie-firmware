@@ -42,7 +42,6 @@ Header file for piecewise polynomial trajectories
 
 #define PP_DEGREE (7)
 #define PP_SIZE (PP_DEGREE + 1)
-#define PP_MAX_PIECES (30)
 
 
 //
@@ -83,7 +82,7 @@ struct poly4d
 {
 	float p[4][PP_SIZE];
 	float duration; // TODO use int millis instead?
-};
+} __attribute__((packed));
 
 // construct a 4d zero polynomial.
 struct poly4d poly4d_zero(float duration);
@@ -139,9 +138,11 @@ struct traj_eval poly4d_eval(struct poly4d const *p, float t);
 
 struct piecewise_traj
 {
-	struct poly4d pieces[PP_MAX_PIECES];
 	float t_begin;
+	float timescale;
+	struct vec shift;
 	unsigned char n_pieces;
+	struct poly4d* pieces;
 };
 
 static inline float piecewise_duration(struct piecewise_traj const *pp)
@@ -150,7 +151,7 @@ static inline float piecewise_duration(struct piecewise_traj const *pp)
 	for (int i = 0; i < pp->n_pieces; ++i) {
 		total_dur += pp->pieces[i].duration;
 	}
-	return total_dur;
+	return total_dur * pp->timescale;
 }
 
 void piecewise_plan_5th_order(struct piecewise_traj *p, float duration,
@@ -167,14 +168,6 @@ struct traj_eval piecewise_eval(
 struct traj_eval piecewise_eval_reversed(
 	struct piecewise_traj const *traj, float t);
 
-void piecewise_scale(struct piecewise_traj *pp, float x, float y, float z, float yaw);
-
-void piecewise_shift(struct piecewise_traj *pp, float x, float y, float z, float yaw);
-static inline void piecewise_shift_vec(struct piecewise_traj *pp, struct vec pos, float yaw) {
-	piecewise_shift(pp, pos.x, pos.y, pos.z, yaw);
-}
-
-void piecewise_stretchtime(struct piecewise_traj *pp, float s);
 
 static inline bool piecewise_is_finished(struct piecewise_traj const *traj, float t)
 {
