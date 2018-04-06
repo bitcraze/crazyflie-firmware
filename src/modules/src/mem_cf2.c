@@ -43,6 +43,7 @@
 
 #include "ledring12.h"
 #include "locodeck.h"
+#include "crtp_commander_high_level.h"
 
 #include "console.h"
 #include "assert.h"
@@ -65,7 +66,8 @@
 #define EEPROM_ID       0x00
 #define LEDMEM_ID       0x01
 #define LOCO_ID         0x02
-#define OW_FIRST_ID     0x03
+#define TRAJ_ID         0x03
+#define OW_FIRST_ID     0x04
 
 #define STATUS_OK 0
 
@@ -73,6 +75,7 @@
 #define MEM_TYPE_OW     0x01
 #define MEM_TYPE_LED12  0x10
 #define MEM_TYPE_LOCO   0x11
+#define MEM_TYPE_TRAJ   0x12
 
 #define MEM_LOCO_INFO             0x0000
 #define MEM_LOCO_ANCHOR_BASE      0x1000
@@ -191,6 +194,9 @@ void createInfoResponse(CRTPPacket* p, uint8_t memId)
     case LOCO_ID:
       createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCODECK_NR_OF_ANCHORS, noData);
       break;
+    case TRAJ_ID:
+      createInfoResponseBody(p, MEM_TYPE_TRAJ, sizeof(trajectories_memory), noData);
+      break;
     default:
       if (owGetinfo(memId - OW_FIRST_ID, &serialNbr))
       {
@@ -250,6 +256,17 @@ void memReadProcess()
 
     case LOCO_ID:
       status = handleLocoMemRead(memAddr, readLen, &p.data[6]);
+      break;
+
+    case TRAJ_ID:
+      {
+        if (memAddr + readLen <= sizeof(trajectories_memory) &&
+            memcpy(&p.data[6], &(trajectories_memory[memAddr]), readLen)) {
+          status = STATUS_OK;
+        } else {
+          status = EIO;
+        }
+      }
       break;
 
     default:
@@ -366,6 +383,17 @@ void memWriteProcess()
     case LOCO_ID:
       // Not supported
       status = EIO;
+      break;
+
+    case TRAJ_ID:
+      {
+        if ((memAddr + writeLen) <= sizeof(trajectories_memory)) {
+          memcpy(&(trajectories_memory[memAddr]), &p.data[5], writeLen);
+          status = STATUS_OK;
+        } else {
+          status = EIO;
+        }
+      }
       break;
 
     default:

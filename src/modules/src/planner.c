@@ -39,6 +39,7 @@ implementation of planning state machine
 #include "planner.h"
 
 static struct piecewise_traj planned_trajectory;
+static struct poly4d pieces[1]; // the on-board planner requires a single piece, only
 
 static void plan_takeoff_or_landing(struct planner *p, struct vec pos, float yaw, float height, float duration)
 {
@@ -59,6 +60,7 @@ void plan_init(struct planner *p)
 	p->state = TRAJECTORY_STATE_IDLE;
 	p->reversed = false;
 	p->trajectory = NULL;
+	planned_trajectory.pieces = pieces;
 }
 
 void plan_stop(struct planner *p)
@@ -141,5 +143,14 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 	p->state = TRAJECTORY_STATE_FLYING;
 	planned_trajectory.t_begin = t;
 	p->trajectory = &planned_trajectory;
+	return 0;
+}
+
+int plan_start_trajectory( struct planner *p, const struct piecewise_traj* trajectory, bool reversed)
+{
+	p->reversed = reversed;
+	p->trajectory = trajectory;
+	p->state = TRAJECTORY_STATE_FLYING;
+
 	return 0;
 }

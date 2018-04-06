@@ -56,11 +56,14 @@ such as: take-off, landing, polynomial trajectories.
 #include "param.h"
 
 // Global variables
+uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
+
 static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;
 static struct vec pos; // last known state (position [m])
 static float yaw; // last known state (yaw [rad])
+static struct piecewise_traj trajectory;
 
 // makes sure that we don't evaluate the trajectory while it is being changed
 static xSemaphoreHandle lockTraj;
@@ -74,6 +77,7 @@ enum TrajectoryCommand_e {
   COMMAND_LAND                    = 2,
   COMMAND_STOP                    = 3,
   COMMAND_GO_TO                   = 4,
+  COMMAND_START_TRAJECTORY        = 5,
 };
 
 struct data_set_group_mask {
@@ -110,6 +114,33 @@ struct data_go_to {
   float duration; // sec
 } __attribute__((packed));
 
+enum TrajectoryLocation_e {
+  TRAJECTORY_LOCATION_MEM = 0, // for trajectories that are uploaded dynamically
+  // Future features might include trajectories on flash or uSD card
+};
+
+enum TrajectoryType_e {
+  TRAJECTORY_TYPE_POLY4D = 0, // struct poly4d, see pptraj.h
+  // Future types might include versions without yaw
+};
+
+// starts executing a specified trajectory
+struct data_start_trajectory {
+  uint8_t groupMask; // mask for which CFs this should apply to
+  uint8_t relative;  // set to true, if trajectory should be shifted to current setpoint
+  uint8_t reversed;  // set to true, if trajectory should be executed in reverse
+  uint8_t trajectoryLocation; // one of TrajectoryLocation_e
+  uint8_t trajectoryType;     // one of TrajectoryType_e
+  union
+  {
+    struct {
+      uint32_t offset;  // offset in uploaded memory
+      uint8_t n_pieces;
+    } __attribute__((packed)) mem; // if trajectoryLocation is TRAJECTORY_LOCATION_MEM
+  } trajectoryIdentifier;
+  float timescale; // time factor; 1 = original speed; >1: slower; <1: faster
+} __attribute__((packed));
+
 // Private functions
 static void crtpCommanderHighLevelTask(void * prm);
 
@@ -118,6 +149,7 @@ static int takeoff(const struct data_takeoff* data);
 static int land(const struct data_land* data);
 static int stop(const struct data_stop* data);
 static int go_to(const struct data_go_to* data);
+static int start_trajectory(const struct data_start_trajectory* data);
 
 // Helper functions
 static struct vec state2vec(struct vec3_s v)
@@ -147,7 +179,6 @@ void crtpCommanderHighLevelInit(void)
   yaw = 0;
 
   isInit = true;
-  DEBUG_PRINT("traj. initialized.\n");
 }
 
 void crtpCommanderHighLevelStop()
@@ -224,6 +255,9 @@ void crtpCommanderHighLevelTask(void * prm)
       case COMMAND_GO_TO:
         ret = go_to((const struct data_go_to*)&p.data[1]);
         break;
+      case COMMAND_START_TRAJECTORY:
+        ret = start_trajectory((const struct data_start_trajectory*)&p.data[1]);
+        break;
       default:
         ret = ENOEXEC;
         break;
@@ -286,6 +320,39 @@ int go_to(const struct data_go_to* data)
     xSemaphoreTake(lockTraj, portMAX_DELAY);
     float t = usecTimestamp() / 1e6;
     result = plan_go_to(&planner, data->relative, hover_pos, data->yaw, data->duration, t);
+    xSemaphoreGive(lockTraj);
+  }
+  return result;
+}
+
+int start_trajectory(const struct data_start_trajectory* data)
+{
+  int result = 0;
+  if (isInGroup(data->groupMask)
+    && data->trajectoryLocation == TRAJECTORY_LOCATION_MEM
+    && data->trajectoryType == TRAJECTORY_TYPE_POLY4D) {
+    xSemaphoreTake(lockTraj, portMAX_DELAY);
+    float t = usecTimestamp() / 1e6;
+    trajectory.t_begin = t;
+    trajectory.timescale = data->timescale;
+    trajectory.n_pieces = data->trajectoryIdentifier.mem.n_pieces;
+    trajectory.pieces = (struct poly4d*)&trajectories_memory[data->trajectoryIdentifier.mem.offset];
+    if (data->relative) {
+      trajectory.shift = vzero();
+      struct traj_eval traj_init;
+      if (data->reversed) {
+        traj_init = piecewise_eval_reversed(&trajectory, trajectory.t_begin);
+      }
+      else {
+        traj_init = piecewise_eval(&trajectory, trajectory.t_begin);
+      }
+      struct vec shift_pos = vsub(pos, traj_init.pos);
+      trajectory.shift = shift_pos;
+    } else {
+      trajectory.shift = vzero();
+    }
+
+    result = plan_start_trajectory(&planner, &trajectory, data->reversed);
     xSemaphoreGive(lockTraj);
   }
   return result;
