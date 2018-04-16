@@ -89,7 +89,7 @@ git submodule update
 
 ### Crazyflie 2.0
 
-This is the dafault build so just running "make" is enough or:
+This is the default build so just running "make" is enough or:
 ```bash
 make PLATFORM=CF2
 ```
@@ -168,7 +168,7 @@ with the docker builder image and the toolbelt
         
 ## Running one unit test
        
-When working with one specific file it is often convinient to run only one unit test
+When working with one specific file it is often convenient to run only one unit test
        
        make unit FILES=test/utils/src/TestNum.c
 
