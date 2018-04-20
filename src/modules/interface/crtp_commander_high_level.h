@@ -52,6 +52,8 @@ Header file for high-level commander that computes smooth setpoints based on hig
 #define TRAJECTORY_MEMORY_SIZE 4096
 extern uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
 
+#define NUM_TRAJECTORY_DEFINITIONS 10
+
 /* Public functions */
 void crtpCommanderHighLevelInit(void);
 
