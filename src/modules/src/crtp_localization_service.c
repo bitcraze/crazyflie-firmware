@@ -36,6 +36,7 @@
 
 #include "stabilizer_types.h"
 #include "stabilizer.h"
+#include "configblock.h"
 
 #include "locodeck.h"
 
@@ -46,8 +47,9 @@
 
 typedef enum
 {
-  EXT_POSITION  = 0,
-  GENERIC_TYPE  = 1,
+  EXT_POSITION        = 0,
+  GENERIC_TYPE        = 1,
+  EXT_POSITION_PACKED = 2,
 } locsrvChannels_t;
 
 typedef struct
@@ -59,6 +61,14 @@ typedef struct
     float range;
   } __attribute__((packed)) ranges[NBR_OF_RANGES_IN_PACKET];
 } __attribute__((packed)) rangePacket;
+
+// up to 4 items per CRTP packet
+typedef struct {
+  uint8_t id; // last 8 bit of the Crazyflie address
+  int16_t x; // mm
+  int16_t y; // mm
+  int16_t z; // mm
+} __attribute__((packed)) extPositionPackedItem;
 
 /**
  * Position data cache
@@ -77,16 +87,21 @@ static CRTPPacket pkRange;
 static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 static bool isInit = false;
+static uint8_t my_id;
 
 static void locSrvCrtpCB(CRTPPacket* pk);
 static void extPositionHandler(CRTPPacket* pk);
 static void genericLocHandle(CRTPPacket* pk);
+static void extPositionPackedHandler(CRTPPacket* pk);
 
 void locSrvInit()
 {
   if (isInit) {
     return;
   }
+
+  uint64_t address = configblockGetRadioAddress();
+  my_id = address & 0xFF;
 
   crtpRegisterPortCB(CRTP_PORT_LOCALIZATION, locSrvCrtpCB);
   isInit = true;
@@ -101,6 +116,8 @@ static void locSrvCrtpCB(CRTPPacket* pk)
       break;
     case GENERIC_TYPE:
       genericLocHandle(pk);
+    case EXT_POSITION_PACKED:
+      extPositionPackedHandler(pk);
     default:
       break;
   }
@@ -130,6 +147,26 @@ static void genericLocHandle(CRTPPacket* pk)
     stabilizerSetEmergencyStop();
   } else if (type == EMERGENCY_STOP_WATCHDOG) {
     stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
+  }
+}
+
+static void extPositionPackedHandler(CRTPPacket* pk)
+{
+  uint8_t numItems = pk->size / sizeof(extPositionPackedItem);
+  for (uint8_t i = 0; i < numItems; ++i) {
+    const extPositionPackedItem* item = (const extPositionPackedItem*)&pk->data[i * sizeof(extPositionPackedItem)];
+    if (item->id == my_id) {
+      struct CrtpExtPosition position;
+      position.x = item->x / 1000.0f;
+      position.y = item->y / 1000.0f;
+      position.z = item->z / 1000.0f;
+
+      crtpExtPosCache.targetVal[!crtpExtPosCache.activeSide] = position;
+      crtpExtPosCache.activeSide = !crtpExtPosCache.activeSide;
+      crtpExtPosCache.timestamp = xTaskGetTickCount();
+
+      break;
+    }
   }
 }
 
