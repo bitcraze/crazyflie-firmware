@@ -304,6 +304,7 @@ struct traj_eval piecewise_eval(
 	// if we get here, the trajectory has ended
 	struct poly4d const *end_piece = &(traj->pieces[traj->n_pieces - 1]);
 	struct traj_eval ev = poly4d_eval(end_piece, end_piece->duration);
+	ev.pos = vadd(ev.pos, traj->shift);
 	ev.vel = vzero();
 	ev.acc = vzero();
 	ev.omega = vzero();
@@ -333,6 +334,7 @@ struct traj_eval piecewise_eval_reversed(
 	// if we get here, the trajectory has ended
 	struct poly4d const *end_piece = &(traj->pieces[0]);
 	struct traj_eval ev = poly4d_eval(end_piece, 0.0f);
+	ev.pos = vadd(ev.pos, traj->shift);
 	ev.vel = vzero();
 	ev.acc = vzero();
 	ev.omega = vzero();
