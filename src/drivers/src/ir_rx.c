@@ -98,7 +98,7 @@ void irRxInit(void)
   EXTI_Init(&extiInit);
 
   nvicInit.NVIC_IRQChannel = IR_RX_EXTI_IRQn;
-  nvicInit.NVIC_IRQChannelPreemptionPriority = NVIC_IR_RX_EXTI_PRI;
+  nvicInit.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   nvicInit.NVIC_IRQChannelSubPriority = 0;
   nvicInit.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&nvicInit);
@@ -107,8 +107,8 @@ void irRxInit(void)
 
   newTimediffQueue = xQueueCreate(10, sizeof(uint16_t));
 
-  xTaskCreate(irRxTask, (const signed char * const)"IR-RX", 50, NULL, 0, NULL);
-  prevTimestamp = usecGetTimestamp();
+  xTaskCreate(irRxTask, "IR-RX", 50, NULL, 0, NULL);
+  prevTimestamp = usecTimestamp();
 }
 
 IrRecv* irRxReceive()
@@ -133,9 +133,9 @@ static void irRxProcessBuffer()
  * Edge triggered interrupt that takes a us timestamp
  * for every edge and puts it on a receive queue.
  */
-void __attribute__((used)) IR_RX_EXTI_IRQ_HANDLER(void)
+void __attribute__((used)) EXTI7_Callback(void)
 {
-  uint64_t timestamp = usecGetTimestamp();
+  uint64_t timestamp = usecTimestamp();
 
   if (EXTI_GetITStatus(IR_RX_EXTI_LINE) != RESET)
   {
@@ -154,6 +154,5 @@ void __attribute__((used)) IR_RX_EXTI_IRQ_HANDLER(void)
     xQueueSendFromISR(newTimediffQueue, &timediff, &xHigherPriorityTaskWoken);
 
     prevTimestamp = timestamp;
-    EXTI_ClearITPendingBit(IR_RX_EXTI_LINE);
   }
 }

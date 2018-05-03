@@ -99,7 +99,7 @@ void irTxInit(void)
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(IR_TX_DELAY_TIMER, &TIM_TimeBaseStructure);
 
-  NVIC_InitStructure.NVIC_IRQChannel = NVIC_IR_TX_DELAY_TIMER_IRQ;
+  NVIC_InitStructure.NVIC_IRQChannel = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -109,7 +109,7 @@ void irTxInit(void)
 
   irTxOff();
 
-  xTaskCreate(irTxTask, (const signed char * const)"IR-TX", 50, NULL, 0, NULL);
+  xTaskCreate(irTxTask, "IR-TX", 50, NULL, 0, NULL);
 }
 
 void ir_tx_send(IrCode* code)
