@@ -1,5 +1,5 @@
 // File under test lpsTwrTag.h
-#include "lpsTdoaTag.h"
+#include "lpsTdoa2Tag.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -129,10 +129,10 @@ void setUp(void) {
 
   options.combinedAnchorPositionOk = true;
 
-  dwSetReceiveWaitTimeout_Expect(&dev, TDOA_RECEIVE_TIMEOUT);
+  dwSetReceiveWaitTimeout_Expect(&dev, TDOA2_RECEIVE_TIMEOUT);
   dwCommitConfiguration_Expect(&dev);
 
-  uwbTdoaTagAlgorithm.init(&dev, &options);
+  uwbTdoa2TagAlgorithm.init(&dev, &options);
 
   lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
   lpsGetLppShort_ignoreAndReturnFalse = true;
@@ -154,7 +154,7 @@ void testEventReceiveUnhandledEventShouldAssertFailure() {
   uwbEvent_t unknownEvent = 100;
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, unknownEvent);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, unknownEvent);
 
   // Assert
   // Mock automatically validated after test
@@ -392,11 +392,11 @@ void testMissingTimestampInhibitsClockDriftCalculationInFirstIteration() {
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -451,11 +451,11 @@ void testMissingPacketAnchorToAnchorInhibitsDiffCalculation() {
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -510,11 +510,11 @@ void testMissingAnchorToAnchorDistanceInhibitsDiffCalculation() {
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -568,11 +568,11 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculation() {
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -626,11 +626,11 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculationWhenSequenceNrW
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -693,12 +693,12 @@ void testMissingPacketAnchorToTagInhibitsDiffCalculation() {
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  //  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  //  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -747,11 +747,11 @@ void testDataNotSentToKalmanFilterWhenOutlierDetected() {
   outlierFilterValidateTdoa_IgnoreAndReturn(false);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -768,7 +768,7 @@ void testPacketReceivedEventShouldSetTheRadioInReceiveMode() {
   ignoreKalmanEstimatorValidation();
 
   // Test
-  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uint32_t actual = uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
@@ -779,7 +779,7 @@ void testEventTimeoutShouldSetTheRadioInReceiveMode() {
   mockRadioSetToReceiveMode();
 
   // Test
-  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventTimeout);
+  uint32_t actual = uwbTdoa2TagAlgorithm.onEvent(&dev, eventTimeout);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
@@ -790,7 +790,7 @@ void testEventReceiveTimeoutShouldSetTheRadioInReceiveMode() {
   mockRadioSetToReceiveMode();
 
   // Test
-  uint32_t actual = uwbTdoaTagAlgorithm.onEvent(&dev, eventReceiveTimeout);
+  uint32_t actual = uwbTdoa2TagAlgorithm.onEvent(&dev, eventReceiveTimeout);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual);
@@ -831,8 +831,8 @@ void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -858,8 +858,8 @@ void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
   mockSendLppShortHandling(&expectedTxPacket, lppShortPacketLength);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -884,7 +884,7 @@ void testThatLppShortPacketIsDiscardedIfAnchorNotPresentForTooLong() {
 
   // Test
   for (int i=0; i<TDOA2_LPP_PACKET_SEND_TIMEOUT+1; i++) {
-    uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+    uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
   }
 
   // Assert
@@ -954,9 +954,9 @@ void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -978,7 +978,7 @@ void testLppPacketIsHandled() {
   ignoreKalmanEstimatorValidation();
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Verified in mock
@@ -989,7 +989,7 @@ void testThatInitiallyNoRangingAreReportedToBeOk() {
   // Nothing there, there has been no rangings
 
   // Assert
-  TEST_ASSERT_FALSE(uwbTdoaTagAlgorithm.isRangingOk());
+  TEST_ASSERT_FALSE(uwbTdoa2TagAlgorithm.isRangingOk());
 }
 
 void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
@@ -1002,7 +1002,7 @@ void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
   verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(tO, a0O, a1O);
 
   // Assert
-  TEST_ASSERT_TRUE(uwbTdoaTagAlgorithm.isRangingOk());
+  TEST_ASSERT_TRUE(uwbTdoa2TagAlgorithm.isRangingOk());
 }
 
 ////////////////////////////////////////////
@@ -1028,9 +1028,9 @@ static void mockMessageFromAnchorWithLppData(uint8_t anchorIndex, uint64_t rxTim
 
   uint32_t lppTotalSize = 0;
   if (lppDataSize > 0) {
-    packet.payload[LPS_TDOA_LPP_HEADER] = LPP_HEADER_SHORT_PACKET;
-    packet.payload[LPS_TDOA_LPP_TYPE] = LPP_SHORT_ANCHORPOS;
-    memcpy(&packet.payload[LPS_TDOA_LPP_PAYLOAD], lppData, lppDataSize);
+    packet.payload[LPS_TDOA2_LPP_HEADER] = LPP_HEADER_SHORT_PACKET;
+    packet.payload[LPS_TDOA2_LPP_TYPE] = LPP_SHORT_ANCHORPOS;
+    memcpy(&packet.payload[LPS_TDOA2_LPP_PAYLOAD], lppData, lppDataSize);
     lppTotalSize = lppDataSize + 2;
 
     uint8_t* ignore = 0;
@@ -1186,9 +1186,9 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks
@@ -1247,11 +1247,11 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
   outlierFilterValidateTdoa_IgnoreAndReturn(true);
 
   // Test
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
-  uwbTdoaTagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
+  uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
 
   // Assert
   // Nothing here, verification in mocks

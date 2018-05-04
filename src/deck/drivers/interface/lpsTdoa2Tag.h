@@ -1,12 +1,12 @@
-#ifndef __LPS_TDOA_TAG_H__
-#define __LPS_TDOA_TAG_H__
+#ifndef __LPS_TDOA2_TAG_H__
+#define __LPS_TDOA2_TAG_H__
 
 #include "locodeck.h"
 #include "libdw1000.h"
 
 #include "mac.h"
 
-extern uwbAlgorithm_t uwbTdoaTagAlgorithm;
+extern uwbAlgorithm_t uwbTdoa2TagAlgorithm;
 
 #define LOCODECK_NR_OF_TDOA2_ANCHORS 8
 
@@ -17,10 +17,13 @@ typedef struct rangePacket_s {
   uint16_t distances[LOCODECK_NR_OF_TDOA2_ANCHORS];
 } __attribute__((packed)) rangePacket_t;
 
+
+
+
 // Positions in payload for received LPP packets
-#define LPS_TDOA_LPP_HEADER (sizeof(rangePacket_t))
-#define LPS_TDOA_LPP_TYPE (sizeof(rangePacket_t) + 1)
-#define LPS_TDOA_LPP_PAYLOAD (sizeof(rangePacket_t) + 2)
+#define LPS_TDOA2_LPP_HEADER (sizeof(rangePacket_t))
+#define LPS_TDOA2_LPP_TYPE (sizeof(rangePacket_t) + 1)
+#define LPS_TDOA2_LPP_PAYLOAD (sizeof(rangePacket_t) + 2)
 
 // Positions for sent LPP packets
 #define LPS_TDOA2_TYPE 0
@@ -28,6 +31,6 @@ typedef struct rangePacket_s {
 
 #define TDOA2_LPP_PACKET_SEND_TIMEOUT (LOCODECK_NR_OF_ANCHORS * 5)
 
-#define TDOA_RECEIVE_TIMEOUT 10000
+#define TDOA2_RECEIVE_TIMEOUT 10000
 
-#endif // __LPS_TDOA_TAG_H__
+#endif // __LPS_TDOA2_TAG_H__

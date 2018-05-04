@@ -14,13 +14,13 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * lpsTdoaTag.c is distributed in the hope that it will be useful,
+ * lpsTdoa2Tag.c is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with lpsTdoaTag.c.  If not, see <http://www.gnu.org/licenses/>.
+ * along with lpsTdoa2Tag.c.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -31,7 +31,7 @@
 
 #include "log.h"
 #include "param.h"
-#include "lpsTdoaTag.h"
+#include "lpsTdoa2Tag.h"
 
 #include "stabilizer_types.h"
 #include "cfassert.h"
@@ -205,11 +205,11 @@ static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const f
 
 static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
   const int32_t payloadLength = dataLength - MAC802154_HEADER_LENGTH;
-  const int32_t startOfLppDataInPayload = LPS_TDOA_LPP_HEADER;
+  const int32_t startOfLppDataInPayload = LPS_TDOA2_LPP_HEADER;
   const int32_t lppDataLength = payloadLength - startOfLppDataInPayload;
 
   if (lppDataLength > 0) {
-    const uint8_t lppPacketHeader = rxPacket->payload[LPS_TDOA_LPP_HEADER];
+    const uint8_t lppPacketHeader = rxPacket->payload[LPS_TDOA2_LPP_HEADER];
     if (lppPacketHeader == LPP_HEADER_SHORT_PACKET) {
       int srcId = -1;
 
@@ -222,7 +222,7 @@ static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
 
       if (srcId >= 0) {
         const int32_t lppTypeAndPayloadLength = lppDataLength - 1;
-        lpsHandleLppShortPacket(srcId, &rxPacket->payload[LPS_TDOA_LPP_TYPE],
+        lpsHandleLppShortPacket(srcId, &rxPacket->payload[LPS_TDOA2_LPP_TYPE],
           lppTypeAndPayloadLength);
       }
     }
@@ -274,7 +274,7 @@ static bool rxcallback(dwDevice_t *dev) {
   if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
     const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
 
-#ifdef LPS_TDOA_SYNCHRONIZATION_VARIABLE
+#ifdef LPS_TDOA2_SYNCHRONIZATION_VARIABLE
     // Storing timing
     if (anchor == 0) {
       stats.lastAnchor0Seq = packet->sequenceNrs[anchor];
@@ -396,7 +396,7 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   stats.nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
   stats.previousStatisticsTime = 0;
 
-  dwSetReceiveWaitTimeout(dev, TDOA_RECEIVE_TIMEOUT);
+  dwSetReceiveWaitTimeout(dev, TDOA2_RECEIVE_TIMEOUT);
 
   dwCommitConfiguration(dev);
 
@@ -409,7 +409,7 @@ static bool isRangingOk()
   return rangingOk;
 }
 
-uwbAlgorithm_t uwbTdoaTagAlgorithm = {
+uwbAlgorithm_t uwbTdoa2TagAlgorithm = {
   .init = Initialize,
   .onEvent = onEvent,
   .isRangingOk = isRangingOk,
@@ -449,7 +449,7 @@ LOG_ADD(LOG_UINT16, stSeq, &stats.packetsSeqNrPassRate)
 LOG_ADD(LOG_UINT16, stData, &stats.packetsDataPassRate)
 LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
 
-#ifdef LPS_TDOA_SYNCHRONIZATION_VARIABLE
+#ifdef LPS_TDOA2_SYNCHRONIZATION_VARIABLE
 LOG_ADD(LOG_UINT8, a0Seq, &stats.lastAnchor0Seq)
 LOG_ADD(LOG_UINT32, a0RxTick, &stats.lastAnchor0RxTick)
 #endif
