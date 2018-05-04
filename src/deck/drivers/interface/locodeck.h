@@ -67,7 +67,7 @@ typedef uint64_t locoAddress_t;
 typedef enum {
   lpsMode_auto = 0,
   lpsMode_TWR = 1,
-  lpsMode_TDoA2 = 2,
+  lpsMode_TDoA = 2,
 } lpsMode_t;
 
 typedef struct {
