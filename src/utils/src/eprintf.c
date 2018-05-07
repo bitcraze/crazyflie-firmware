@@ -151,46 +151,54 @@ static int itoa16(putc_t putcf, uint64_t num, int width, char padChar)
   return len;
 }
 
-static int handleLongLong(putc_t putcf, char** fmt, va_list ap, int width, char padChar)
+static int handleLongLong(putc_t putcf, char** fmt, unsigned long long int val, int width, char padChar)
 {
+  int len = 0;
+
   switch(*((*fmt)++))
   {
     case 'i':
     case 'd':
-      return itoa10(putcf, va_arg(ap, long long int), 0);
+      len = itoa10(putcf, (long long int)val, 0);
+      break;
     case 'u':
-      return itoa10Unsigned(putcf, va_arg(ap, long long unsigned int));
+      len = itoa10Unsigned(putcf, val);
+      break;
     case 'x':
     case 'X':
-      return itoa16(putcf, va_arg(ap, uint64_t), width, padChar);
+      len = itoa16(putcf, val, width, padChar);
+      break;
     default:
       // Nothing here
       break;
   }
 
-  return 0;
+  return len;
 }
 
-static int handleLong(putc_t putcf, char** fmt, va_list ap, int width, char padChar)
+static int handleLong(putc_t putcf, char** fmt, unsigned long int val, int width, char padChar)
 {
+  int len = 0;
+
   switch(*((*fmt)++))
   {
     case 'i':
     case 'd':
-      return itoa10(putcf, va_arg(ap, long int), 0);
+      len = itoa10(putcf, (long int)val, 0);
+      break;
     case 'u':
-      return itoa10Unsigned(putcf, va_arg(ap, unsigned long int));
+      len = itoa10Unsigned(putcf, val);
+      break;
     case 'x':
     case 'X':
-      return itoa16(putcf, va_arg(ap, unsigned long int), width, padChar);
-    case 'l':
-      return handleLongLong(putcf, fmt, ap, width, padChar);
+      len = itoa16(putcf, val, width, padChar);
+      break;
     default:
       // Nothing here
       break;
   }
 
-  return 0;
+  return len;
 }
 
 int evprintf(putc_t putcf, char * fmt, va_list ap)
@@ -250,7 +258,14 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
           len += itoa16(putcf, va_arg(ap, unsigned int), width, padChar);
           break;
         case 'l':
-          len += handleLong(putcf, &fmt, ap, width, padChar);
+          // Look ahead for ll
+          if (*fmt == 'l') {
+            fmt++;
+            len += handleLongLong(putcf, &fmt, va_arg(ap, unsigned long long int), width, padChar);
+          } else {
+            len += handleLong(putcf, &fmt, va_arg(ap, unsigned long int), width, padChar);
+          }
+
           break;
         case 'f':
           num = va_arg(ap, double);
@@ -265,7 +280,7 @@ int evprintf(putc_t putcf, char * fmt, va_list ap)
           len += itoa10(putcf, (num - (int)num) * power(10,precision), precision);
           break;
         case 's':
-          str = va_arg( ap, char* );
+          str = va_arg(ap, char* );
           while(*str)
           {
             putcf(*str++);
