@@ -45,7 +45,7 @@ static lpsAlgoOptions_t options = {
 };
 
 static const uint64_t NS = 0;
-static const uint32_t dataLengthNoLpp = MAC802154_HEADER_LENGTH + sizeof(rangePacket_t);
+static const uint32_t dataLengthNoLpp = MAC802154_HEADER_LENGTH + sizeof(rangePacket2_t);
 
 static void mockMessageFromAnchor(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
 static void mockMessageFromAnchorNotComingBackToReceive(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[]);
@@ -1018,7 +1018,7 @@ static void mockMessageFromAnchorWithLppData(uint8_t anchorIndex, uint64_t rxTim
 
   packet.sourceAddress = options.anchorAddress[anchorIndex];
 
-  rangePacket_t* payload = (rangePacket_t*)&packet.payload;
+  rangePacket2_t* payload = (rangePacket2_t*)&packet.payload;
   payload->type = 0x22;
   for (int i = 0; i < LOCODECK_NR_OF_ANCHORS; i++) {
     payload->sequenceNrs[i] = sequenceNrs[i];
@@ -1058,7 +1058,7 @@ static void mockMessageFromAnchorNotComingBackToReceive(uint8_t anchorIndex, uin
 
   packet.sourceAddress = 0xbccf000000000000 | anchorIndex;
 
-  rangePacket_t* payload = (rangePacket_t*)&packet.payload;
+  rangePacket2_t* payload = (rangePacket2_t*)&packet.payload;
   payload->type = 0x22;
   for (int i = 0; i < LOCODECK_NR_OF_ANCHORS; i++) {
     payload->sequenceNrs[i] = sequenceNrs[i];

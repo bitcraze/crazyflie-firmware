@@ -55,6 +55,7 @@
 #include "lpsTdma.h"
 
 #include "lpsTdoa2Tag.h"
+#include "lpsTdoa3Tag.h"
 #include "lpsTwrTag.h"
 
 
@@ -147,7 +148,12 @@ struct {
   char *name;
 } algorithmsList[LPS_NUMBER_OF_ALGORITHM+1] = {
   [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
+
+  #ifdef LPS_TDOA_USE_V3
+  [lpsMode_TDoA] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA"},
+  #else
   [lpsMode_TDoA] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA"},
+  #endif
 };
 
 point_t* locodeckGetAnchorPosition(uint8_t anchor)

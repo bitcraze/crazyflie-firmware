@@ -10,20 +10,20 @@ extern uwbAlgorithm_t uwbTdoa2TagAlgorithm;
 
 #define LOCODECK_NR_OF_TDOA2_ANCHORS 8
 
-typedef struct rangePacket_s {
+typedef struct {
   uint8_t type;
   uint8_t sequenceNrs[LOCODECK_NR_OF_TDOA2_ANCHORS];
   uint32_t timestamps[LOCODECK_NR_OF_TDOA2_ANCHORS];
   uint16_t distances[LOCODECK_NR_OF_TDOA2_ANCHORS];
-} __attribute__((packed)) rangePacket_t;
+} __attribute__((packed)) rangePacket2_t;
 
 
 
 
 // Positions in payload for received LPP packets
-#define LPS_TDOA2_LPP_HEADER (sizeof(rangePacket_t))
-#define LPS_TDOA2_LPP_TYPE (sizeof(rangePacket_t) + 1)
-#define LPS_TDOA2_LPP_PAYLOAD (sizeof(rangePacket_t) + 2)
+#define LPS_TDOA2_LPP_HEADER (sizeof(rangePacket2_t))
+#define LPS_TDOA2_LPP_TYPE (sizeof(rangePacket2_t) + 1)
+#define LPS_TDOA2_LPP_PAYLOAD (sizeof(rangePacket2_t) + 2)
 
 // Positions for sent LPP packets
 #define LPS_TDOA2_TYPE 0

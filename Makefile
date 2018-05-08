@@ -183,6 +183,7 @@ PROJ_OBJ_CF2 += zranger.o
 PROJ_OBJ_CF2 += locodeck.o
 PROJ_OBJ_CF2 += lpsTwrTag.o
 PROJ_OBJ_CF2 += lpsTdoa2Tag.o
+PROJ_OBJ_CF2 += lpsTdoa3Tag.o
 PROJ_OBJ_CF2 += outlierFilter.o
 PROJ_OBJ_CF2 += flowdeck.o
 PROJ_OBJ_CF2 += oa.o
