@@ -78,11 +78,13 @@
 #define STABILIZER_TASK_PRI     4
 #define SENSORS_TASK_PRI        4
 #define ADC_TASK_PRI            3
+#define FLOW_TASK_PRI           3
 #define SYSTEM_TASK_PRI         2
 #define CRTP_TX_TASK_PRI        2
 #define CRTP_RX_TASK_PRI        2
 #define EXTRX_TASK_PRI          2
 #define ZRANGER_TASK_PRI        2
+#define ZRANGER2_TASK_PRI       2
 #define LOG_TASK_PRI            1
 #define MEM_TASK_PRI            1
 #define PARAM_TASK_PRI          1
@@ -123,6 +125,8 @@
 #define EXTRX_TASK_NAME         "EXTRX"
 #define UART_RX_TASK_NAME       "UART"
 #define ZRANGER_TASK_NAME       "ZRANGER"
+#define ZRANGER2_TASK_NAME      "ZRANGER2"
+#define FLOW_TASK_NAME          "FLOW"
 #define USDLOG_TASK_NAME        "USDLOG"
 #define USDWRITE_TASK_NAME      "USDWRITE"
 #define PCA9685_TASK_NAME       "PCA9685"
@@ -148,6 +152,8 @@
 #define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define UART_RX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define ZRANGER_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
+#define ZRANGER2_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
+#define FLOW_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 #define USDLOG_TASK_STACKSIZE         (2 * configMINIMAL_STACK_SIZE)
 #define USDWRITE_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
 #define PCA9685_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
