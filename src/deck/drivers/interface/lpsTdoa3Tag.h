@@ -8,8 +8,6 @@
 
 extern uwbAlgorithm_t uwbTdoa3TagAlgorithm;
 
-#define LOCODECK_NR_OF_TDOA3_ANCHORS 8
-
 typedef struct {
   uint8_t type;
   uint8_t seq;

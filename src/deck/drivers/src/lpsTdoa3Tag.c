@@ -31,7 +31,7 @@
 
 #include "log.h"
 #include "param.h"
-#include "lpsTdoa2Tag.h"
+#include "debug.h"
 #include "lpsTdoa3Tag.h"
 
 #include "stabilizer_types.h"
@@ -41,63 +41,363 @@
 #include "estimator_kalman.h"
 #include "outlierFilter.h"
 
+#define DEBUG_MODULE "tdoa3"
+
 #define MEASUREMENT_NOISE_STD 0.15f
 #define STATS_INTERVAL 500
 #define ANCHOR_OK_TIMEOUT 1500
 
 
+#define ANCHOR_STORAGE_COUNT 8
+#define REMOTE_ANCHOR_DATA_COUNT 8
+#define TOF_PER_ANCHOR_COUNT 8
+
+#define TOF_VALIDITY_PERIOD M2T(10 * 1000);
+#define REMOTE_DATA_VALIDITY_PERIOD M2T(30);
+#define ANCHOR_POSITION_VALIDITY_PERIOD M2T(10 * 1000);
+
 // State
 typedef struct {
-  rangePacket2_t packet;
-  dwTime_t arrival;
-  double clockCorrection_T_To_A;
+  uint8_t id; // Id of remote remote anchor
+  uint8_t seqNr; // Sequence number of the packet received in the remote anchor (7 bits)
+  int64_t rxTime; // Receive time of packet from anchor id in the remote anchor, in remote DWM clock
+  uint32_t endOfLife;
+} remoteAnchorData_t;
 
-  uint32_t anchorStatusTimeout;
-} history_t;
+typedef struct {
+  uint8_t id;
+  int64_t tof;
+  uint32_t endOfLife; // Time stamp when the tof data is outdated, local system time
+} timeOfFlight_t;
+
+typedef struct {
+  bool isInitialized;
+  uint32_t lastUpdateTime; // The time when this anchor was updated the last time
+  uint8_t id; // Anchor id
+
+  int64_t txTime; // Transmit time of last packet, in remote DWM clock
+  int64_t rxTime; // Receive time of last packet, in local DWM clock
+  uint8_t seqNr; // Sequence nr of last packet (7 bits)
+
+  double clockCorrection; // local DWM clock frequency / Ratio of remote DWM clock frequency
+
+  point_t position; // The coordinates of the anchor
+
+  timeOfFlight_t tof[TOF_PER_ANCHOR_COUNT];
+  remoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];
+} anchorInfo_t;
+
+anchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
+
+
+// TODO krri Debug code to dump state to the console, remove
+uint8_t dumpTrigger;
+uint8_t dumpTriggerOld;
+
+static void dumpData(uint8_t anchorId) {
+  uint32_t now = xTaskGetTickCount();
+
+  DEBUG_PRINT("Dump----\n");
+  for (int slot = 0; slot < ANCHOR_STORAGE_COUNT; slot++) {
+    const anchorInfo_t* ctx = &anchorStorage[slot];
+    if (ctx->isInitialized && anchorId == ctx->id) {
+      DEBUG_PRINT("\nAnchor id %i\n", ctx->id);
+      DEBUG_PRINT(" seqNr: %i\n", ctx->seqNr);
+      DEBUG_PRINT(" rx: %lli, tx: %lli\n", ctx->rxTime, ctx->txTime);
+      DEBUG_PRINT(" clockCorrection: %f\n", ctx->clockCorrection);
+
+      DEBUG_PRINT(" TOF:\n");
+      for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
+        if (ctx->tof[i].endOfLife > now) {
+          DEBUG_PRINT("  id: %i, tof: %lli\n", ctx->tof[i].id, ctx->tof[i].tof);
+        }
+      }
+
+      DEBUG_PRINT(" Remote:\n");
+      for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
+        if (ctx->remoteAnchorData[i].endOfLife > now) {
+          DEBUG_PRINT("  id: %i, seq: %i, rx: %lli \n", ctx->remoteAnchorData[i].id, ctx->remoteAnchorData[i].seqNr, ctx->remoteAnchorData[i].rxTime);
+        }
+      }
+    }
+  }
+}
+
+static int64_t packetTxTime(const rangePacket3_t* packet) {
+  return packet->header.txTimeStamp;
+}
+
+static anchorInfo_t* historyGetAnchorCtx(const uint8_t anchor) {
+  for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
+    if (anchor == anchorStorage[i].id && anchorStorage[i].isInitialized) {
+      return &anchorStorage[i];
+    }
+  }
+
+  return 0;
+}
+
+static anchorInfo_t* historyInitializeNewAchorContext(const uint8_t anchor) {
+  int indexToInitialize = 0;
+  uint32_t now = xTaskGetTickCount();
+  uint32_t oldestUpdateTime = now;
+
+  for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
+    if (!anchorStorage[i].isInitialized) {
+      indexToInitialize = i;
+      break;
+    }
+
+    if (anchorStorage[i].lastUpdateTime < oldestUpdateTime) {
+      oldestUpdateTime = anchorStorage[i].lastUpdateTime;
+      indexToInitialize = i;
+    }
+  }
+
+  memset(&anchorStorage[indexToInitialize], 0, sizeof(anchorInfo_t));
+  anchorStorage[indexToInitialize].id = anchor;
+  anchorStorage[indexToInitialize].isInitialized = true;
+
+  return &anchorStorage[indexToInitialize];
+}
+
+static uint8_t historyGetId(const anchorInfo_t* anchorCtx) {
+  return anchorCtx->id;
+}
+
+static int64_t historyGetRxTime(const anchorInfo_t* anchorCtx) {
+  return anchorCtx->rxTime;
+}
+
+static int64_t historyGetTxTime(const anchorInfo_t* anchorCtx) {
+  return anchorCtx->txTime;
+}
+
+static uint8_t historyGetSeqNr(const anchorInfo_t* anchorCtx) {
+  return anchorCtx->seqNr;
+}
+
+static bool historyGetAnchorPosition(const anchorInfo_t* anchorCtx, point_t* position) {
+  uint32_t now = xTaskGetTickCount();
+  uint32_t validCreationTime = now - ANCHOR_POSITION_VALIDITY_PERIOD;
+  if (anchorCtx->position.timestamp > validCreationTime) {
+    position->x = anchorCtx->position.x;
+    position->y = anchorCtx->position.y;
+    position->z = anchorCtx->position.z;
+    return true;
+  }
+
+  return false;
+}
+
+static void historySetAnchorPosition(anchorInfo_t* anchorCtx, const float x, const float y, const float z) {
+  uint32_t now = xTaskGetTickCount();
+
+  anchorCtx->position.timestamp = now;
+  anchorCtx->position.x = x;
+  anchorCtx->position.y = y;
+  anchorCtx->position.z = z;
+}
+
+static void historySetRxTxData(anchorInfo_t* anchorCtx, int64_t rxTime, int64_t txTime, uint8_t seqNr) {
+  uint32_t now = xTaskGetTickCount();
+
+  anchorCtx->rxTime = rxTime;
+  anchorCtx->txTime = txTime;
+  anchorCtx->seqNr = seqNr;
+  anchorCtx->lastUpdateTime = now;
+}
+
+static double historyGetClockCorrection(const anchorInfo_t* anchorCtx) {
+  return anchorCtx->clockCorrection;
+}
+
+static void historySetClockCorrection(anchorInfo_t* anchorCtx, const double clockCorrection) {
+  anchorCtx->clockCorrection = clockCorrection;
+}
+
+static int64_t historyGetRemoteRxTime(const anchorInfo_t* anchorCtx, const uint8_t remoteAnchor) {
+  for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
+    if (remoteAnchor == anchorCtx->remoteAnchorData[i].id) {
+      uint32_t now = xTaskGetTickCount();
+      if (anchorCtx->remoteAnchorData[i].endOfLife > now) {
+        return anchorCtx->remoteAnchorData[i].rxTime;
+      }
+      break;
+    }
+  }
+
+  return 0;
+}
+
+static void historySetRemoteRxTime(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr) {
+  int indexToUpdate = 0;
+  uint32_t now = xTaskGetTickCount();
+  uint32_t oldestTime = 0xFFFFFFFF;
+
+  for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
+    if (remoteAnchor == anchorCtx->remoteAnchorData[i].id) {
+      indexToUpdate = i;
+      break;
+    }
+
+    if (anchorCtx->remoteAnchorData[i].endOfLife < oldestTime) {
+      oldestTime = anchorCtx->remoteAnchorData[i].endOfLife;
+      indexToUpdate = i;
+    }
+  }
+
+  anchorCtx->remoteAnchorData[indexToUpdate].id = remoteAnchor;
+  anchorCtx->remoteAnchorData[indexToUpdate].rxTime = remoteRxTime;
+  anchorCtx->remoteAnchorData[indexToUpdate].seqNr = remoteSeqNr;
+  anchorCtx->remoteAnchorData[indexToUpdate].endOfLife = now + REMOTE_DATA_VALIDITY_PERIOD;
+}
+
+static void historyGetRemoteSeqNrList(const anchorInfo_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]) {
+  int count = 0;
+
+  uint32_t now = xTaskGetTickCount();
+  for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
+    if (anchorCtx->remoteAnchorData[i].endOfLife > now) {
+      id[count] = anchorCtx->remoteAnchorData[i].id;
+      seqNr[count] = anchorCtx->remoteAnchorData[i].seqNr;
+      count++;
+    }
+  }
+
+  *remoteCount = count;
+}
+
+static int64_t historyGetTimeOfFlight(const anchorInfo_t* anchorCtx, const uint8_t otherAnchor) {
+  for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
+    if (otherAnchor == anchorCtx->tof[i].id) {
+      uint32_t now = xTaskGetTickCount();
+      if (anchorCtx->tof[i].endOfLife > now) {
+        return anchorCtx->tof[i].tof;
+      }
+      break;
+    }
+  }
+
+  return 0;
+}
+
+static void historySetTimeOfFlight(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof) {
+  int indexToUpdate = 0;
+  uint32_t now = xTaskGetTickCount();
+  uint32_t oldestTime = 0xFFFFFFFF;
+
+  for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
+    if (remoteAnchor == anchorCtx->tof[i].id) {
+      indexToUpdate = i;
+      break;
+    }
+
+    if (anchorCtx->tof[i].endOfLife < oldestTime) {
+      oldestTime = anchorCtx->tof[i].endOfLife;
+      indexToUpdate = i;
+    }
+  }
+
+  anchorCtx->tof[indexToUpdate].id = remoteAnchor;
+  anchorCtx->tof[indexToUpdate].tof = tof;
+  anchorCtx->tof[indexToUpdate].endOfLife = now + TOF_VALIDITY_PERIOD;
+}
+
+
+///////////////////////////////////////////////////////////////
+
 
 static lpsAlgoOptions_t* options;
-static uint8_t previousAnchor;
-// Holds data for the latest packet from all anchors
-static history_t history[LOCODECK_NR_OF_TDOA3_ANCHORS];
-
-
-// LPP packet handling
-lpsLppShortPacket_t lppPacket;
-bool lppPacketToSend;
-int lppPacketSendTryCounter;
 
 // Log data
-static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA3_ANCHORS];
-static float logClockCorrection[LOCODECK_NR_OF_TDOA3_ANCHORS];
-static uint16_t logAnchorDistance[LOCODECK_NR_OF_TDOA3_ANCHORS];
-
 
 static struct {
   uint32_t packetsReceived;
-  uint32_t packetsSeqNrPass;
-  uint32_t packetsDataPass;
   uint32_t packetsToEstimator;
+  uint32_t contextHitCount;
+  uint32_t contextMissCount;
+  uint32_t suitableDataFound;
 
   uint16_t packetsReceivedRate;
-  uint16_t packetsSeqNrPassRate;
-  uint16_t packetsDataPassRate;
-  uint32_t packetsToEstimatorRate;
+  uint16_t packetsToEstimatorRate;
+  uint16_t contextHitRate;
+  uint16_t contextMissRate;
+  uint16_t suitableDataFoundRate;
 
   uint32_t nextStatisticsTime;
   uint32_t previousStatisticsTime;
 
-  uint8_t lastAnchor0Seq;
-  uint32_t lastAnchor0RxTick;
+  // Anchor stats
+  uint8_t anchorId; // The id of the anchor to log
+  uint8_t newAnchorId; // Used to change anchor to log, set as param
+
+  uint8_t remoteAnchorId; // The id of the remote anchor to log
+  uint8_t newRemoteAnchorId; // Used to change remote anchor to log, set as param
+
+  float clockCorrection;
+  uint32_t clockCorrectionCount;
+  uint16_t clockCorrectionRate;
+  uint16_t tof;
 } stats;
 
-static bool rangingOk;
 
 static void clearStats() {
   stats.packetsReceived = 0;
-  stats.packetsSeqNrPass = 0;
-  stats.packetsDataPass = 0;
   stats.packetsToEstimator = 0;
+  stats.clockCorrectionCount = 0;
+  stats.contextHitCount = 0;
+  stats.contextMissCount = 0;
+  stats.suitableDataFound = 0;
 }
+
+static void updateStats() {
+  uint32_t now = xTaskGetTickCount();
+  if (now > stats.nextStatisticsTime) {
+    float interval = now - stats.previousStatisticsTime;
+    ASSERT(interval > 0.0f);
+    stats.packetsReceivedRate = (uint16_t)(1000.0f * stats.packetsReceived / interval);
+    stats.packetsToEstimatorRate = (uint16_t)(1000.0f * stats.packetsToEstimator / interval);
+    stats.clockCorrectionRate = (uint16_t)(1000.0f * stats.clockCorrectionCount / interval);
+
+    stats.contextHitRate = (uint16_t)(1000.0f * stats.contextHitCount / interval);
+    stats.contextMissRate = (uint16_t)(1000.0f * stats.contextMissCount / interval);
+
+    stats.suitableDataFoundRate = (uint16_t)(1000.0f * stats.suitableDataFound / interval);
+
+    if (stats.anchorId != stats.newAnchorId) {
+      stats.anchorId = stats.newAnchorId;
+
+      // Reset anchor stats
+      stats.clockCorrection = 0.0;
+      stats.tof = 0;
+    }
+
+    if (stats.remoteAnchorId != stats.newRemoteAnchorId) {
+      stats.remoteAnchorId = stats.newRemoteAnchorId;
+
+      // Reset remote anchor stats
+      stats.tof = 0;
+    }
+
+    clearStats();
+    stats.previousStatisticsTime = now;
+    stats.nextStatisticsTime = now + STATS_INTERVAL;
+  }
+}
+
+// TODO krri Find better way to communicate system state to the client. Currently only supports 8 anchors
+static void updateRangingState() {
+  options->rangingState = 0;
+//  for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA2_ANCHORS; anchor++) {
+//    if (now < history[anchor].anchorStatusTimeout) {
+//      options->rangingState |= (1 << anchor);
+//    }
+//  }
+}
+
+static bool rangingOk;
+
 
 static uint64_t truncateToLocalTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFul;
@@ -107,104 +407,166 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & 0x00FFFFFFFFul;
 }
 
-static void enqueueTDOA(uint8_t anchorA, uint8_t anchorB, double distanceDiff) {
+static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anchorBCtx, double distanceDiff) {
   point_t estimatedPos;
   estimatorKalmanGetEstimatedPos(&estimatedPos);
 
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
-    .distanceDiff = distanceDiff,
-
-    .anchorPosition[0] = options->anchorPosition[anchorA],
-    .anchorPosition[1] = options->anchorPosition[anchorB]
+    .distanceDiff = distanceDiff
   };
 
-  if (outlierFilterValidateTdoa(&tdoa, &estimatedPos)) {
-    if (options->combinedAnchorPositionOk ||
-        (options->anchorPosition[anchorA].timestamp && options->anchorPosition[anchorB].timestamp)) {
+  if (historyGetAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && historyGetAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
+    if (outlierFilterValidateTdoa(&tdoa, &estimatedPos)) {
       stats.packetsToEstimator++;
       estimatorKalmanEnqueueTDOA(&tdoa);
+
+      rangingOk = true;
     }
   }
 }
 
-// The default receive time in the anchors for messages from other anchors is 0
-// and is overwritten with the actual receive time when a packet arrives.
-// That is, if no message was received the rx time will be 0.
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
 }
 
-static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
-  return (currentSeqNr == ((prevSeqNr + 1) & 0xff));
+//static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
+//  return (currentSeqNr == ((prevSeqNr + 1) & 0x7f));
+//}
+
+static double calcClockCorrection(const anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
+  const int64_t rxAn_by_T_in_cl_T = arrival->full;
+  const int64_t txAn_in_cl_An = packetTxTime(packet);
+  const int64_t latest_rxAn_by_T_in_cl_T = historyGetRxTime(anchorCtx);
+  const int64_t latest_txAn_in_cl_An = historyGetTxTime(anchorCtx);
+
+  const double tickCount_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
+  const double tickCount_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
+
+  if (tickCount_in_cl_An == 0) {
+    return 0.0d;
+  }
+
+  return tickCount_in_T / tickCount_in_cl_An;
 }
 
-// A note on variable names. They might seem a bit verbose but express quite a lot of information
-// We have three actors: Reference anchor (Ar), Anchor n (An) and the deck on the CF called Tag (T)
-// rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference
-// Anchor by Anchor N expressed in the clock of Anchor N"
+static void updateClockCorrection(anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
+  double clockCorrectionCandidate = calcClockCorrection(anchorCtx, packet, arrival);
 
-static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket2_t* packet, const dwTime_t* arrival) {
+//  const double MAX_CLOCK_CORRECTION_ERR 0.00004
+//  if (clockCorrectionCandidate < (1.0d - MAX_CLOCK_CORRECTION_ERR) || (1.0d + MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate) {
+//    return;
+//  }
 
-  if (! isSeqNrConsecutive(history[anchor].packet.sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
-    return false;
+  // TODO krri Add sanity checks
+  //           * reject if missing seq nrs?
+  //           * If too long between samples, clocks may have wrapped several times, problem?
+  // TODO krri reject outliers?
+  // TODO krri LP filter
+
+  historySetClockCorrection(anchorCtx, clockCorrectionCandidate);
+  if (historyGetId(anchorCtx) == stats.anchorId) {
+    stats.clockCorrection = clockCorrectionCandidate;
+    stats.clockCorrectionCount++;
   }
+}
+
+static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
+  const uint8_t otherAnchorId = historyGetId(otherAnchorCtx);
 
   const int64_t rxAn_by_T_in_cl_T = arrival->full;
-  const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t latest_rxAn_by_T_in_cl_T = history[anchor].arrival.full;
-  const int64_t latest_txAn_in_cl_An = history[anchor].packet.timestamps[anchor];
+  const int64_t tof_Ar_to_An_in_cl_An = historyGetTimeOfFlight(anchorCtx, otherAnchorId);
+  const int64_t rxAr_by_An_in_cl_An = historyGetRemoteRxTime(anchorCtx, otherAnchorId);
+  const double clockCorrection = historyGetClockCorrection(anchorCtx);
 
-  const double frameTime_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
-  const double frameTime_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
-
-  *clockCorrection = frameTime_in_cl_An / frameTime_in_T;
-  return true;
-}
-
-static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket2_t* packet, const dwTime_t* arrival) {
-  const bool isSeqNrInTagOk = isSeqNrConsecutive(history[anchor].packet.sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
-  const bool isSeqNrInAnchorOk = isSeqNrConsecutive(history[anchor].packet.sequenceNrs[anchor], packet->sequenceNrs[anchor]);
-  if (! (isSeqNrInTagOk && isSeqNrInAnchorOk)) {
-    return false;
-  }
-  stats.packetsSeqNrPass++;
-
-  const int64_t rxAn_by_T_in_cl_T  = arrival->full;
-  const int64_t rxAr_by_An_in_cl_An = packet->timestamps[previousAnchor];
-  const int64_t tof_Ar_to_An_in_cl_An = packet->distances[previousAnchor];
-  const double clockCorrection = history[anchor].clockCorrection_T_To_A;
-
-  const bool isAnchorDistanceOk = isValidTimeStamp(tof_Ar_to_An_in_cl_An);
-  const bool isRxTimeInTagOk = isValidTimeStamp(rxAr_by_An_in_cl_An);
-  const bool isClockCorrectionOk = (clockCorrection != 0.0);
-
-  if (! (isAnchorDistanceOk && isRxTimeInTagOk && isClockCorrectionOk)) {
-    return false;
-  }
-  stats.packetsDataPass++;
-
-  const int64_t txAn_in_cl_An = packet->timestamps[anchor];
-  const int64_t rxAr_by_T_in_cl_T = history[previousAnchor].arrival.full;
+  const int64_t txAn_in_cl_An = packetTxTime(packet);
+  const int64_t rxAr_by_T_in_cl_T = historyGetRxTime(otherAnchorCtx);
 
   const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
-  const int64_t timeDiffOfArrival_in_cl_An =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) * clockCorrection - delta_txAr_to_txAn_in_cl_An;
+  const int64_t timeDiffOfArrival_in_cl_T =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) - delta_txAr_to_txAn_in_cl_An  * clockCorrection;
 
-  *tdoaDistDiff = SPEED_OF_LIGHT * timeDiffOfArrival_in_cl_An / LOCODECK_TS_FREQ;
-
-  return true;
+  return timeDiffOfArrival_in_cl_T;
 }
 
-static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const float tdoaDistDiff, const rangePacket2_t* packet) {
-  // Only store diffs for anchors when we have consecutive anchor ids. In case of packet
-  // loss we can get ranging between any anchors and that messes up the graphs.
-  if (((previousAnchor + 1) & 0x07) == anchor) {
-    logUwbTdoaDistDiff[anchor] = tdoaDistDiff;
-    logAnchorDistance[anchor] = packet->distances[previousAnchor];
+static float calcDistanceDiff(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
+  const int64_t tdoa = calcTDoA(otherAnchorCtx, anchorCtx, packet, arrival);
+  return SPEED_OF_LIGHT * tdoa / LOCODECK_TS_FREQ;
+}
+
+static int updateRemoteData(anchorInfo_t* anchorCtx, const rangePacket3_t* packet) {
+  const void* anchorDataPtr = &packet->remoteAnchorData;
+  for (uint8_t i = 0; i < packet->header.remoteCount; i++) {
+    remoteAnchorDataFull_t* anchorData = (remoteAnchorDataFull_t*)anchorDataPtr;
+
+    uint8_t remoteId = anchorData->id;
+    int64_t remoteRxTime = anchorData->rxTimeStamp;
+    uint8_t remoteSeqNr = anchorData->seq & 0x7f;
+
+    if (isValidTimeStamp(remoteRxTime)) {
+      historySetRemoteRxTime(anchorCtx, remoteId, remoteRxTime, remoteSeqNr);
+    }
+
+    bool hasDistance = ((anchorData->seq & 0x80) != 0);
+    if (hasDistance) {
+      int64_t tof = anchorData->distance;
+      if (isValidTimeStamp(tof)) {
+        historySetTimeOfFlight(anchorCtx, remoteId, tof);
+
+        uint8_t anchorId = historyGetId(anchorCtx);
+        if (anchorId == stats.anchorId && remoteId == stats.remoteAnchorId) {
+          stats.tof = (uint16_t)tof;
+        }
+      }
+
+      anchorDataPtr += sizeof(remoteAnchorDataFull_t);
+    } else {
+      anchorDataPtr += sizeof(remoteAnchorDataShort_t);
+    }
+  }
+
+  return anchorDataPtr - (void*)packet;
+}
+
+static void updateAnchorData(anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
+  historySetRxTxData(anchorCtx, arrival->full, packet->header.txTimeStamp, packet->header.seq);
+}
+
+static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t* anchorCtx) {
+  static uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
+  static uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
+
+  if (historyGetClockCorrection(anchorCtx) == 0) {
+    return false;
+  }
+
+  int remoteCount = 0;
+  historyGetRemoteSeqNrList(anchorCtx, &remoteCount, seqNr, id);
+
+  for (int i = 0; i < remoteCount; i++) {
+    const uint8_t candidateAnchorId = id[i];
+    anchorInfo_t* candidateAnchorCtx = historyGetAnchorCtx(candidateAnchorId);
+    if (candidateAnchorCtx) {
+      if (seqNr[i] == historyGetSeqNr(candidateAnchorCtx) && historyGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
+        *otherAnchorCtx = candidateAnchorCtx;
+        stats.suitableDataFound++;
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+static void handleLppShortPacket(anchorInfo_t* anchorCtx, const uint8_t *data, const int length) {
+  uint8_t type = data[0];
+
+  if (type == LPP_SHORT_ANCHORPOS) {
+    struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
+    historySetAnchorPosition(anchorCtx, newpos->x, newpos->y, newpos->z);
   }
 }
 
-static void handleLppPacket(const int dataLength, int rangePacketLength, const packet_t* rxPacket) {
+static void handleLppPacket(const int dataLength, int rangePacketLength, const packet_t* rxPacket, anchorInfo_t* anchorCtx) {
   const int32_t payloadLength = dataLength - MAC802154_HEADER_LENGTH;
   const int32_t startOfLppDataInPayload = rangePacketLength;
   const int32_t lppDataLength = payloadLength - startOfLppDataInPayload;
@@ -213,76 +575,14 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
   if (lppDataLength > 0) {
     const uint8_t lppPacketHeader = rxPacket->payload[startOfLppDataInPayload];
     if (lppPacketHeader == LPP_HEADER_SHORT_PACKET) {
-      int srcId = -1;
+      const int32_t lppTypeAndPayloadLength = lppDataLength - 1;
+      handleLppShortPacket(anchorCtx, &rxPacket->payload[lppTypeInPayload], lppTypeAndPayloadLength);
 
-      for (int i=0; i < LOCODECK_NR_OF_TDOA3_ANCHORS; i++) {
-        if (rxPacket->sourceAddress == options->anchorAddress[i]) {
-          srcId = i;
-          break;
-        }
-      }
-
-      if (srcId >= 0) {
-        const int32_t lppTypeAndPayloadLength = lppDataLength - 1;
-        lpsHandleLppShortPacket(srcId, &rxPacket->payload[lppTypeInPayload],
-          lppTypeAndPayloadLength);
-      }
+      // TODO krri Find better solution for communicating system state to the client
+      // Send it to the "old" path to log anchor 0 - 7 positions to the client.
+      lpsHandleLppShortPacket(historyGetId(anchorCtx), &rxPacket->payload[lppTypeInPayload], lppTypeAndPayloadLength);
     }
   }
-}
-
-// Send an LPP packet, the radio will automatically go back in RX mode
-static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
-{
-  static packet_t txPacket;
-  dwIdle(dev);
-
-  MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
-
-  txPacket.payload[LPS_TDOA3_TYPE] = LPP_HEADER_SHORT_PACKET;
-  memcpy(&txPacket.payload[LPS_TDOA3_SEND_LPP_PAYLOAD], packet->data, packet->length);
-
-  txPacket.pan = 0xbccf;
-  txPacket.sourceAddress = 0xbccf000000000000 | 0xff;
-  txPacket.destAddress = options->anchorAddress[packet->dest];
-
-  dwNewTransmit(dev);
-  dwSetDefaults(dev);
-  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
-
-  dwWaitForResponse(dev, true);
-  dwStartTransmit(dev);
-}
-
-static int convertTdoa3ToTdoa2(const uint8_t anchor, const rangePacket3_t* range3, rangePacket2_t* range2)
-{
-  memset(range2, 0, sizeof(rangePacket2_t));
-
-  range2->sequenceNrs[anchor] = range3->header.seq;
-  range2->timestamps[anchor] = range3->header.txTimeStamp;
-
-  const void* anchorDataPtr = &range3->remoteAnchorData;
-  for (uint8_t i = 0; i < range3->header.remoteCount; i++) {
-    remoteAnchorDataFull_t* anchorData = (remoteAnchorDataFull_t*)anchorDataPtr;
-
-    // TODO krri For now assume id < 8
-    uint8_t id = anchorData->id;
-    uint8_t seq = anchorData->seq & 0x7f;
-    bool hasDistance = ((anchorData->seq & 0x80) != 0);
-
-    range2->sequenceNrs[id] = seq;
-    range2->timestamps[id] = anchorData->rxTimeStamp;
-
-    if (hasDistance) {
-      range2->distances[id] = anchorData->distance;
-      anchorDataPtr += sizeof(remoteAnchorDataFull_t);
-    } else {
-      anchorDataPtr += sizeof(remoteAnchorDataShort_t);
-    }
-  }
-
-  int rangePacketLength = (void*)anchorDataPtr - (void*)range3;
-  return rangePacketLength;
 }
 
 static bool rxcallback(dwDevice_t *dev) {
@@ -292,56 +592,36 @@ static bool rxcallback(dwDevice_t *dev) {
   packet_t rxPacket;
 
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
-  const uint8_t anchor = rxPacket.sourceAddress & 0xff;
-
-  // Check if we need to send the current LPP packet
-  bool lppSent = false;
-  if (lppPacketToSend && lppPacket.dest == anchor) {
-    sendLppShort(dev, &lppPacket);
-    lppSent = true;
-  }
+  const uint8_t anchorId = rxPacket.sourceAddress & 0xff;
+  anchorInfo_t* anchorCtx = historyGetAnchorCtx(anchorId);
 
   dwTime_t arrival = {.full = 0};
   dwGetReceiveTimestamp(dev, &arrival);
 
-  if (anchor < LOCODECK_NR_OF_TDOA3_ANCHORS) {
-    const rangePacket3_t* rangePacket3 = (rangePacket3_t*)rxPacket.payload;
+  const rangePacket3_t* packet = (rangePacket3_t*)rxPacket.payload;
+  int rangeDataLength = 0;
 
-    rangePacket2_t packetMem;
-    rangePacket2_t* packet = &packetMem;
-    int rangePacketLength = convertTdoa3ToTdoa2(anchor, rangePacket3, packet);
+  if (anchorCtx) {
+    stats.contextHitCount++;
+    updateClockCorrection(anchorCtx, packet, &arrival);
+    rangeDataLength = updateRemoteData(anchorCtx, packet);
 
-#ifdef LPS_TDOA3_SYNCHRONIZATION_VARIABLE
-    // Storing timing
-    if (anchor == 0) {
-      stats.lastAnchor0Seq = packet->sequenceNrs[anchor];
-      stats.lastAnchor0RxTick = xTaskGetTickCount();
+    anchorInfo_t* otherAnchorCtx = 0;
+    if (findSuitableAnchor(&otherAnchorCtx, anchorCtx)) {
+      float tdoaDistDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, packet, &arrival);
+      enqueueTDOA(otherAnchorCtx, anchorCtx, tdoaDistDiff);
     }
-#endif
-
-    calcClockCorrection(&history[anchor].clockCorrection_T_To_A, anchor, packet, &arrival);
-    logClockCorrection[anchor] = history[anchor].clockCorrection_T_To_A;
-
-    if (anchor != previousAnchor) {
-      float tdoaDistDiff = 0.0;
-      if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
-        rangingOk = true;
-        enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-        addToLog(anchor, previousAnchor, tdoaDistDiff, packet);
-      }
-    }
-
-    history[anchor].arrival.full = arrival.full;
-    memcpy(&history[anchor].packet, packet, sizeof(rangePacket2_t));
-
-    history[anchor].anchorStatusTimeout = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
-
-    previousAnchor = anchor;
-
-    handleLppPacket(dataLength, rangePacketLength, &rxPacket);
+  } else {
+    stats.contextMissCount++;
+    anchorCtx = historyInitializeNewAchorContext(anchorId);
+    rangeDataLength = updateRemoteData(anchorCtx, packet);
   }
 
-  return lppSent;
+  updateAnchorData(anchorCtx, packet, &arrival);
+
+  handleLppPacket(dataLength, rangeDataLength, &rxPacket, anchorCtx);
+
+  return false;
 }
 
 static void setRadioInReceiveMode(dwDevice_t *dev) {
@@ -353,22 +633,8 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
 static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   switch(event) {
     case eventPacketReceived:
-      if (rxcallback(dev)) {
-        lppPacketToSend = false;
-      } else {
-        setRadioInReceiveMode(dev);
-
-        // Discard lpp packet if we cannot send it for too long
-        if (++lppPacketSendTryCounter >= TDOA3_LPP_PACKET_SEND_TIMEOUT) {
-          lppPacketToSend = false;
-        }
-      }
-
-      if (!lppPacketToSend) {
-        // Get next lpp packet
-        lppPacketToSend = lpsGetLppShort(&lppPacket);
-        lppPacketSendTryCounter = 0;
-      }
+      rxcallback(dev);
+      setRadioInReceiveMode(dev);
       break;
     case eventTimeout:
       setRadioInReceiveMode(dev);
@@ -383,26 +649,13 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       ASSERT_FAILED();
   }
 
-  uint32_t now = xTaskGetTickCount();
-  if (now > stats.nextStatisticsTime) {
-    float interval = now - stats.previousStatisticsTime;
-    stats.packetsReceivedRate = (uint16_t)(1000.0f * stats.packetsReceived / interval);
-    stats.packetsSeqNrPassRate = (uint16_t)(1000.0f * stats.packetsSeqNrPass / interval);
-    stats.packetsDataPassRate = (uint16_t)(1000.0f * stats.packetsDataPass / interval);
-    stats.packetsToEstimatorRate = (uint16_t)(1000.0f * stats.packetsToEstimator / interval);
+  updateStats();
+  updateRangingState();
 
-    clearStats();
-    stats.previousStatisticsTime = now;
-    stats.nextStatisticsTime = now + STATS_INTERVAL;
+  if (dumpTrigger != dumpTriggerOld) {
+    dumpTriggerOld = dumpTrigger;
+    dumpData(dumpTrigger);
   }
-
-  options->rangingState = 0;
-  for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA3_ANCHORS; anchor++) {
-    if (now < history[anchor].anchorStatusTimeout) {
-      options->rangingState |= (1 << anchor);
-    }
-  }
-
 
   return MAX_TIMEOUT;
 }
@@ -413,23 +666,14 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
 
   // Reset module state. Needed by unit tests
-  memset(history, 0, sizeof(history));
-
-  memset(logClockCorrection, 0, sizeof(logClockCorrection));
-  memset(logAnchorDistance, 0, sizeof(logAnchorDistance));
-  memset(logUwbTdoaDistDiff, 0, sizeof(logUwbTdoaDistDiff));
-
-  previousAnchor = 0;
-
-  lppPacketToSend = false;
+  memset(anchorStorage, 0, sizeof(anchorStorage));
 
   options->rangingState = 0;
 
   clearStats();
   stats.packetsReceivedRate = 0;
-  stats.packetsSeqNrPassRate = 0;
-  stats.packetsDataPassRate = 0;
   stats.packetsToEstimatorRate = 0;
+  stats.clockCorrectionRate = 0;
   stats.nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
   stats.previousStatisticsTime = 0;
 
@@ -454,23 +698,22 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
 
 
 LOG_GROUP_START(tdoa3)
-LOG_ADD(LOG_FLOAT, cc0, &logClockCorrection[0])
-LOG_ADD(LOG_FLOAT, cc1, &logClockCorrection[1])
-LOG_ADD(LOG_FLOAT, cc2, &logClockCorrection[2])
-LOG_ADD(LOG_FLOAT, cc3, &logClockCorrection[3])
-LOG_ADD(LOG_FLOAT, cc4, &logClockCorrection[4])
-LOG_ADD(LOG_FLOAT, cc5, &logClockCorrection[5])
-LOG_ADD(LOG_FLOAT, cc6, &logClockCorrection[6])
-LOG_ADD(LOG_FLOAT, cc7, &logClockCorrection[7])
-
 LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
-LOG_ADD(LOG_UINT16, stSeq, &stats.packetsSeqNrPassRate)
-LOG_ADD(LOG_UINT16, stData, &stats.packetsDataPassRate)
 LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
+LOG_ADD(LOG_UINT16, stCc, &stats.clockCorrectionRate)
 
-#ifdef LPS_TDOA3_SYNCHRONIZATION_VARIABLE
-LOG_ADD(LOG_UINT8, a0Seq, &stats.lastAnchor0Seq)
-LOG_ADD(LOG_UINT32, a0RxTick, &stats.lastAnchor0RxTick)
-#endif
+LOG_ADD(LOG_UINT16, stHit, &stats.contextHitRate)
+LOG_ADD(LOG_UINT16, stMiss, &stats.contextMissRate)
+
+LOG_ADD(LOG_UINT16, stFound, &stats.suitableDataFound)
+
+LOG_ADD(LOG_FLOAT, cc, &stats.clockCorrection)
+LOG_ADD(LOG_UINT16, tof, &stats.tof)
 
 LOG_GROUP_STOP(tdoa3)
+
+PARAM_GROUP_START(tdoa3)
+PARAM_ADD(PARAM_UINT8, logid, &stats.newAnchorId)
+PARAM_ADD(PARAM_UINT8, logremid, &stats.newRemoteAnchorId)
+PARAM_ADD(PARAM_UINT8, dump, &dumpTrigger)
+PARAM_GROUP_STOP(tdoa3)
