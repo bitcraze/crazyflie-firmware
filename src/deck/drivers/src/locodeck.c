@@ -54,7 +54,8 @@
 #include "locodeck.h"
 #include "lpsTdma.h"
 
-#include "lpsTdoaTag.h"
+#include "lpsTdoa2Tag.h"
+#include "lpsTdoa3Tag.h"
 #include "lpsTwrTag.h"
 
 
@@ -147,7 +148,12 @@ struct {
   char *name;
 } algorithmsList[LPS_NUMBER_OF_ALGORITHM+1] = {
   [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
-  [lpsMode_TDoA] = {.algorithm = &uwbTdoaTagAlgorithm, .name="TDoA"},
+
+  #ifdef LPS_TDOA_USE_V3
+  [lpsMode_TDoA] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA"},
+  #else
+  [lpsMode_TDoA] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA"},
+  #endif
 };
 
 point_t* locodeckGetAnchorPosition(uint8_t anchor)
@@ -156,7 +162,7 @@ point_t* locodeckGetAnchorPosition(uint8_t anchor)
 }
 
 #if LPS_TDOA_ENABLE
-static uwbAlgorithm_t *algorithm = &uwbTdoaTagAlgorithm;
+static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif

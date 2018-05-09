@@ -7,20 +7,20 @@
  *
  * LPS node firmware.
  *
- * Copyright 2016, Bitcraze AB
+ * Copyright 2018, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * lpsTdoaTag.c is distributed in the hope that it will be useful,
+ * lpsTdoa3Tag.c is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with lpsTdoaTag.c.  If not, see <http://www.gnu.org/licenses/>.
+ * along with lpsTdoa3Tag.c. If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -31,7 +31,8 @@
 
 #include "log.h"
 #include "param.h"
-#include "lpsTdoaTag.h"
+#include "lpsTdoa2Tag.h"
+#include "lpsTdoa3Tag.h"
 
 #include "stabilizer_types.h"
 #include "cfassert.h"
@@ -47,7 +48,7 @@
 
 // State
 typedef struct {
-  rangePacket_t packet;
+  rangePacket2_t packet;
   dwTime_t arrival;
   double clockCorrection_T_To_A;
 
@@ -57,7 +58,7 @@ typedef struct {
 static lpsAlgoOptions_t* options;
 static uint8_t previousAnchor;
 // Holds data for the latest packet from all anchors
-static history_t history[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static history_t history[LOCODECK_NR_OF_TDOA3_ANCHORS];
 
 
 // LPP packet handling
@@ -66,9 +67,9 @@ bool lppPacketToSend;
 int lppPacketSendTryCounter;
 
 // Log data
-static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static float logClockCorrection[LOCODECK_NR_OF_TDOA2_ANCHORS];
-static uint16_t logAnchorDistance[LOCODECK_NR_OF_TDOA2_ANCHORS];
+static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA3_ANCHORS];
+static float logClockCorrection[LOCODECK_NR_OF_TDOA3_ANCHORS];
+static uint16_t logAnchorDistance[LOCODECK_NR_OF_TDOA3_ANCHORS];
 
 
 static struct {
@@ -143,7 +144,7 @@ static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
 // rxAr_by_An_in_cl_An should be interpreted as "The time when packet was received from the Reference
 // Anchor by Anchor N expressed in the clock of Anchor N"
 
-static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
+static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, const rangePacket2_t* packet, const dwTime_t* arrival) {
 
   if (! isSeqNrConsecutive(history[anchor].packet.sequenceNrs[anchor], packet->sequenceNrs[anchor])) {
     return false;
@@ -161,7 +162,7 @@ static bool calcClockCorrection(double* clockCorrection, const uint8_t anchor, c
   return true;
 }
 
-static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket_t* packet, const dwTime_t* arrival) {
+static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, const uint8_t anchor, const rangePacket2_t* packet, const dwTime_t* arrival) {
   const bool isSeqNrInTagOk = isSeqNrConsecutive(history[anchor].packet.sequenceNrs[previousAnchor], packet->sequenceNrs[previousAnchor]);
   const bool isSeqNrInAnchorOk = isSeqNrConsecutive(history[anchor].packet.sequenceNrs[anchor], packet->sequenceNrs[anchor]);
   if (! (isSeqNrInTagOk && isSeqNrInAnchorOk)) {
@@ -194,7 +195,7 @@ static bool calcDistanceDiff(float* tdoaDistDiff, const uint8_t previousAnchor, 
   return true;
 }
 
-static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const float tdoaDistDiff, const rangePacket_t* packet) {
+static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const float tdoaDistDiff, const rangePacket2_t* packet) {
   // Only store diffs for anchors when we have consecutive anchor ids. In case of packet
   // loss we can get ranging between any anchors and that messes up the graphs.
   if (((previousAnchor + 1) & 0x07) == anchor) {
@@ -203,17 +204,18 @@ static void addToLog(const uint8_t anchor, const uint8_t previousAnchor, const f
   }
 }
 
-static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
+static void handleLppPacket(const int dataLength, int rangePacketLength, const packet_t* rxPacket) {
   const int32_t payloadLength = dataLength - MAC802154_HEADER_LENGTH;
-  const int32_t startOfLppDataInPayload = LPS_TDOA_LPP_HEADER;
+  const int32_t startOfLppDataInPayload = rangePacketLength;
   const int32_t lppDataLength = payloadLength - startOfLppDataInPayload;
+  const int32_t lppTypeInPayload = startOfLppDataInPayload + 1;
 
   if (lppDataLength > 0) {
-    const uint8_t lppPacketHeader = rxPacket->payload[LPS_TDOA_LPP_HEADER];
+    const uint8_t lppPacketHeader = rxPacket->payload[startOfLppDataInPayload];
     if (lppPacketHeader == LPP_HEADER_SHORT_PACKET) {
       int srcId = -1;
 
-      for (int i=0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
+      for (int i=0; i < LOCODECK_NR_OF_TDOA3_ANCHORS; i++) {
         if (rxPacket->sourceAddress == options->anchorAddress[i]) {
           srcId = i;
           break;
@@ -222,7 +224,7 @@ static void handleLppPacket(const int dataLength, const packet_t* rxPacket) {
 
       if (srcId >= 0) {
         const int32_t lppTypeAndPayloadLength = lppDataLength - 1;
-        lpsHandleLppShortPacket(srcId, &rxPacket->payload[LPS_TDOA_LPP_TYPE],
+        lpsHandleLppShortPacket(srcId, &rxPacket->payload[lppTypeInPayload],
           lppTypeAndPayloadLength);
       }
     }
@@ -237,8 +239,8 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
 
-  txPacket.payload[LPS_TDOA2_TYPE] = LPP_HEADER_SHORT_PACKET;
-  memcpy(&txPacket.payload[LPS_TDOA2_SEND_LPP_PAYLOAD], packet->data, packet->length);
+  txPacket.payload[LPS_TDOA3_TYPE] = LPP_HEADER_SHORT_PACKET;
+  memcpy(&txPacket.payload[LPS_TDOA3_SEND_LPP_PAYLOAD], packet->data, packet->length);
 
   txPacket.pan = 0xbccf;
   txPacket.sourceAddress = 0xbccf000000000000 | 0xff;
@@ -250,6 +252,37 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 
   dwWaitForResponse(dev, true);
   dwStartTransmit(dev);
+}
+
+static int convertTdoa3ToTdoa2(const uint8_t anchor, const rangePacket3_t* range3, rangePacket2_t* range2)
+{
+  memset(range2, 0, sizeof(rangePacket2_t));
+
+  range2->sequenceNrs[anchor] = range3->header.seq;
+  range2->timestamps[anchor] = range3->header.txTimeStamp;
+
+  const void* anchorDataPtr = &range3->remoteAnchorData;
+  for (uint8_t i = 0; i < range3->header.remoteCount; i++) {
+    remoteAnchorDataFull_t* anchorData = (remoteAnchorDataFull_t*)anchorDataPtr;
+
+    // TODO krri For now assume id < 8
+    uint8_t id = anchorData->id;
+    uint8_t seq = anchorData->seq & 0x7f;
+    bool hasDistance = ((anchorData->seq & 0x80) != 0);
+
+    range2->sequenceNrs[id] = seq;
+    range2->timestamps[id] = anchorData->rxTimeStamp;
+
+    if (hasDistance) {
+      range2->distances[id] = anchorData->distance;
+      anchorDataPtr += sizeof(remoteAnchorDataFull_t);
+    } else {
+      anchorDataPtr += sizeof(remoteAnchorDataShort_t);
+    }
+  }
+
+  int rangePacketLength = (void*)anchorDataPtr - (void*)range3;
+  return rangePacketLength;
 }
 
 static bool rxcallback(dwDevice_t *dev) {
@@ -271,10 +304,14 @@ static bool rxcallback(dwDevice_t *dev) {
   dwTime_t arrival = {.full = 0};
   dwGetReceiveTimestamp(dev, &arrival);
 
-  if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
-    const rangePacket_t* packet = (rangePacket_t*)rxPacket.payload;
+  if (anchor < LOCODECK_NR_OF_TDOA3_ANCHORS) {
+    const rangePacket3_t* rangePacket3 = (rangePacket3_t*)rxPacket.payload;
 
-#ifdef LPS_TDOA_SYNCHRONIZATION_VARIABLE
+    rangePacket2_t packetMem;
+    rangePacket2_t* packet = &packetMem;
+    int rangePacketLength = convertTdoa3ToTdoa2(anchor, rangePacket3, packet);
+
+#ifdef LPS_TDOA3_SYNCHRONIZATION_VARIABLE
     // Storing timing
     if (anchor == 0) {
       stats.lastAnchor0Seq = packet->sequenceNrs[anchor];
@@ -295,13 +332,13 @@ static bool rxcallback(dwDevice_t *dev) {
     }
 
     history[anchor].arrival.full = arrival.full;
-    memcpy(&history[anchor].packet, packet, sizeof(rangePacket_t));
+    memcpy(&history[anchor].packet, packet, sizeof(rangePacket2_t));
 
     history[anchor].anchorStatusTimeout = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
 
     previousAnchor = anchor;
 
-    handleLppPacket(dataLength, &rxPacket);
+    handleLppPacket(dataLength, rangePacketLength, &rxPacket);
   }
 
   return lppSent;
@@ -322,7 +359,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
         setRadioInReceiveMode(dev);
 
         // Discard lpp packet if we cannot send it for too long
-        if (++lppPacketSendTryCounter >= TDOA2_LPP_PACKET_SEND_TIMEOUT) {
+        if (++lppPacketSendTryCounter >= TDOA3_LPP_PACKET_SEND_TIMEOUT) {
           lppPacketToSend = false;
         }
       }
@@ -360,7 +397,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   }
 
   options->rangingState = 0;
-  for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA2_ANCHORS; anchor++) {
+  for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA3_ANCHORS; anchor++) {
     if (now < history[anchor].anchorStatusTimeout) {
       options->rangingState |= (1 << anchor);
     }
@@ -396,7 +433,7 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   stats.nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
   stats.previousStatisticsTime = 0;
 
-  dwSetReceiveWaitTimeout(dev, TDOA_RECEIVE_TIMEOUT);
+  dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);
 
   dwCommitConfiguration(dev);
 
@@ -409,23 +446,14 @@ static bool isRangingOk()
   return rangingOk;
 }
 
-uwbAlgorithm_t uwbTdoaTagAlgorithm = {
+uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .init = Initialize,
   .onEvent = onEvent,
   .isRangingOk = isRangingOk,
 };
 
 
-LOG_GROUP_START(tdoa)
-LOG_ADD(LOG_FLOAT, d7-0, &logUwbTdoaDistDiff[0])
-LOG_ADD(LOG_FLOAT, d0-1, &logUwbTdoaDistDiff[1])
-LOG_ADD(LOG_FLOAT, d1-2, &logUwbTdoaDistDiff[2])
-LOG_ADD(LOG_FLOAT, d2-3, &logUwbTdoaDistDiff[3])
-LOG_ADD(LOG_FLOAT, d3-4, &logUwbTdoaDistDiff[4])
-LOG_ADD(LOG_FLOAT, d4-5, &logUwbTdoaDistDiff[5])
-LOG_ADD(LOG_FLOAT, d5-6, &logUwbTdoaDistDiff[6])
-LOG_ADD(LOG_FLOAT, d6-7, &logUwbTdoaDistDiff[7])
-
+LOG_GROUP_START(tdoa3)
 LOG_ADD(LOG_FLOAT, cc0, &logClockCorrection[0])
 LOG_ADD(LOG_FLOAT, cc1, &logClockCorrection[1])
 LOG_ADD(LOG_FLOAT, cc2, &logClockCorrection[2])
@@ -435,23 +463,14 @@ LOG_ADD(LOG_FLOAT, cc5, &logClockCorrection[5])
 LOG_ADD(LOG_FLOAT, cc6, &logClockCorrection[6])
 LOG_ADD(LOG_FLOAT, cc7, &logClockCorrection[7])
 
-LOG_ADD(LOG_UINT16, dist7-0, &logAnchorDistance[0])
-LOG_ADD(LOG_UINT16, dist0-1, &logAnchorDistance[1])
-LOG_ADD(LOG_UINT16, dist1-2, &logAnchorDistance[2])
-LOG_ADD(LOG_UINT16, dist2-3, &logAnchorDistance[3])
-LOG_ADD(LOG_UINT16, dist3-4, &logAnchorDistance[4])
-LOG_ADD(LOG_UINT16, dist4-5, &logAnchorDistance[5])
-LOG_ADD(LOG_UINT16, dist5-6, &logAnchorDistance[6])
-LOG_ADD(LOG_UINT16, dist6-7, &logAnchorDistance[7])
-
 LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
 LOG_ADD(LOG_UINT16, stSeq, &stats.packetsSeqNrPassRate)
 LOG_ADD(LOG_UINT16, stData, &stats.packetsDataPassRate)
 LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
 
-#ifdef LPS_TDOA_SYNCHRONIZATION_VARIABLE
+#ifdef LPS_TDOA3_SYNCHRONIZATION_VARIABLE
 LOG_ADD(LOG_UINT8, a0Seq, &stats.lastAnchor0Seq)
 LOG_ADD(LOG_UINT32, a0RxTick, &stats.lastAnchor0RxTick)
 #endif
 
-LOG_GROUP_STOP(tdoa)
+LOG_GROUP_STOP(tdoa3)
