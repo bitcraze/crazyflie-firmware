@@ -47,7 +47,7 @@ typedef struct {
   uint32_t xTaskNumber;
 } taskData_t;
 
-#define TASK_MAX_COUNT 15
+#define TASK_MAX_COUNT 16
 static taskData_t previousSnapshot[TASK_MAX_COUNT];
 static int taskTopIndex = 0;
 static uint32_t previousTotalRunTime = 0;
@@ -97,7 +97,6 @@ static void timerHandler(xTimerHandle timer) {
 
     DEBUG_PRINT("Task dump\n");
     DEBUG_PRINT("Load\tStack left\tName\n");
-    // TODO krri More description
     for (uint32_t i = 0; i < taskCount; i++) {
       TaskStatus_t* stats = &taskStats[i];
       taskData_t* previousTaskData = getPreviousTaskData(stats->xTaskNumber);
