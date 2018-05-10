@@ -322,7 +322,11 @@ endif
 
 
 all: check_submodules build
-build: clean_version compile print_version size
+build: 
+	@$(MAKE) clean_version
+	@$(MAKE) compile
+	@$(MAKE) print_version 
+	@$(MAKE) size
 compile: $(PROG).hex $(PROG).bin $(PROG).dfu
 
 libarm_math.a:
@@ -334,7 +338,7 @@ ifeq ($(SHELL),/bin/sh)
 	@rm -f version.c
 endif
 
-print_version: compile
+print_version:
 ifeq ($(PLATFORM), CF2)
 	@echo "Crazyflie 2.0 build!"
 endif
@@ -346,7 +350,7 @@ ifeq ($(FATFS_DISKIO_TESTS), 1)
 	@echo "WARNING: FatFS diskio tests enabled. Erases SD-card!"
 endif
 
-size: compile
+size:
 	@$(SIZE) -B $(PROG).elf
 
 #Radio bootloader
