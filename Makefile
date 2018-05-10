@@ -323,7 +323,7 @@ endif
 
 all: check_submodules build
 build: clean_version compile print_version size
-compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
+compile: $(PROG).hex $(PROG).bin $(PROG).dfu
 
 libarm_math.a:
 	+$(MAKE) -C tools/make/cmsis_dsp/ V=$(V)
