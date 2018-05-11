@@ -548,7 +548,6 @@ static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t
     if (candidateAnchorCtx) {
       if (seqNr[i] == historyGetSeqNr(candidateAnchorCtx) && historyGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
         *otherAnchorCtx = candidateAnchorCtx;
-        stats.suitableDataFound++;
         return true;
       }
     }
@@ -608,6 +607,7 @@ static bool rxcallback(dwDevice_t *dev) {
 
     anchorInfo_t* otherAnchorCtx = 0;
     if (findSuitableAnchor(&otherAnchorCtx, anchorCtx)) {
+      stats.suitableDataFound++;
       float tdoaDistDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, packet, &arrival);
       enqueueTDOA(otherAnchorCtx, anchorCtx, tdoaDistDiff);
     }
@@ -700,12 +700,12 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
 LOG_GROUP_START(tdoa3)
 LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
 LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
+LOG_ADD(LOG_UINT16, stFound, &stats.suitableDataFoundRate)
+
 LOG_ADD(LOG_UINT16, stCc, &stats.clockCorrectionRate)
 
 LOG_ADD(LOG_UINT16, stHit, &stats.contextHitRate)
 LOG_ADD(LOG_UINT16, stMiss, &stats.contextMissRate)
-
-LOG_ADD(LOG_UINT16, stFound, &stats.suitableDataFound)
 
 LOG_ADD(LOG_FLOAT, cc, &stats.clockCorrection)
 LOG_ADD(LOG_UINT16, tof, &stats.tof)
