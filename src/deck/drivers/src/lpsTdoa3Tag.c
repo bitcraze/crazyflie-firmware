@@ -24,6 +24,24 @@
  */
 
 
+/*
+
+The tag is assumed to move around in a large system of anchors. Any anchor ids
+can be used, and the same anchor id can even be used by multiple anchors as long
+as they are not visible in the same area. It is assumed that the anchor density
+is evenly distributed in the covered volume and that 5-15 anchors are visible
+in every point. The tag is attached to a physical object and the expected
+velocity is a few m/s, this means that anchors are within range for a time
+period of seconds.
+
+The implementation must handle
+1. An infinite number of anchors, where around 20 are visible at one time
+2. Any anchor ids
+3. Dynamically changing visibility of anchors over time
+4. Random TX times from anchors with possible packet collisions and packet loss
+
+*/
+
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -309,6 +327,9 @@ static void historySetTimeOfFlight(anchorInfo_t* anchorCtx, const uint8_t remote
 
 
 static lpsAlgoOptions_t* options;
+
+// Outgoing LPP packet
+lpsLppShortPacket_t lppPacket;
 
 // Log data
 
@@ -630,23 +651,55 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
   dwStartReceive(dev);
 }
 
+static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
+{
+  static packet_t txPacket;
+  dwIdle(dev);
+
+  MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
+
+  txPacket.payload[LPS_TDOA3_TYPE] = LPP_HEADER_SHORT_PACKET;
+  memcpy(&txPacket.payload[LPS_TDOA3_SEND_LPP_PAYLOAD], packet->data, packet->length);
+
+  txPacket.pan = 0xbccf;
+  txPacket.sourceAddress = 0xbccf000000000000 | 0xff;
+  txPacket.destAddress = 0xbccf000000000000 | packet->dest;
+
+  dwNewTransmit(dev);
+  dwSetDefaults(dev);
+  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
+
+  dwStartTransmit(dev);
+}
+
+static bool sendLpp(dwDevice_t *dev) {
+  bool lppPacketToSend = lpsGetLppShort(&lppPacket);
+  if (lppPacketToSend) {
+    sendLppShort(dev, &lppPacket);
+    return true;
+  }
+
+  return false;
+}
+
 static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   switch(event) {
     case eventPacketReceived:
       rxcallback(dev);
-      setRadioInReceiveMode(dev);
       break;
     case eventTimeout:
-      setRadioInReceiveMode(dev);
       break;
     case eventReceiveTimeout:
-      setRadioInReceiveMode(dev);
       break;
     case eventPacketSent:
       // Service packet sent, the radio is back to receive automatically
       break;
     default:
       ASSERT_FAILED();
+  }
+
+  if(!sendLpp(dev)) {
+    setRadioInReceiveMode(dev);
   }
 
   updateStats();
