@@ -54,11 +54,9 @@
 #include "locodeck.h"
 #include "lpsTdma.h"
 
-#if LPS_TDOA_ENABLE
-  #include "lpsTdoaTag.h"
-#else
-  #include "lpsTwrTag.h"
-#endif
+#include "lpsTdoa2Tag.h"
+#include "lpsTdoa3Tag.h"
+#include "lpsTwrTag.h"
 
 
 #define CS_PIN DECK_GPIO_IO1
@@ -83,11 +81,7 @@
 #endif
 
 
-#if LPS_TDOA_ENABLE
-  #define RX_TIMEOUT 10000
-#else
-  #define RX_TIMEOUT 1000
-#endif
+#define DEFAULT_RX_TIMEOUT 10000
 
 
 #define ANTENNA_OFFSET 154.6   // In meter
@@ -121,11 +115,19 @@ static lpsAlgoOptions_t algoOptions = {
   .useTdma = true,
   .tdmaSlot = TDMA_SLOT,
 #endif
+
+  // .rangingMode is the wanted algorithm, available as a parameter
 #if LPS_TDOA_ENABLE
   .rangingMode = lpsMode_TDoA,
-#else
+#elif defined(LPS_TWR_ENABLE)
   .rangingMode = lpsMode_TWR,
+#else
+  .rangingMode = lpsMode_auto,
 #endif
+  // .currentRangingMode is the currently running algorithm, available as a log
+  // -1 is an impossible mode which forces initialization of the requested mode
+  // at startup
+  .currentRangingMode = -1,
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
@@ -141,13 +143,26 @@ static lpsAlgoOptions_t algoOptions = {
 //   .combinedAnchorPositionOk = true,
 };
 
+struct {
+  uwbAlgorithm_t *algorithm;
+  char *name;
+} algorithmsList[LPS_NUMBER_OF_ALGORITHM+1] = {
+  [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
+
+  #ifdef LPS_TDOA_USE_V3
+  [lpsMode_TDoA] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA"},
+  #else
+  [lpsMode_TDoA] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA"},
+  #endif
+};
+
 point_t* locodeckGetAnchorPosition(uint8_t anchor)
 {
   return &algoOptions.anchorPosition[anchor];
 }
 
 #if LPS_TDOA_ENABLE
-static uwbAlgorithm_t *algorithm = &uwbTdoaTagAlgorithm;
+static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
@@ -196,13 +211,71 @@ static void uwbTask(void* parameters)
 {
   lppShortQueue = xQueueCreate(10, sizeof(lpsLppShortPacket_t));
 
+  algoOptions.currentRangingMode = lpsMode_auto;
+
   systemWaitStart();
 
   updateTagTdmaSlot(&algoOptions);
 
-  algorithm->init(dwm, &algoOptions);
-
   while(1) {
+    // Change and init algorithm uppon request
+    // The first time this loop enters, currentRangingMode is set to auto which forces
+    // the initialization of the set algorithm
+    if (algoOptions.rangingMode == lpsMode_auto) { // Auto switch
+      if (algoOptions.rangingModeDetected == false) {
+        if (algoOptions.currentRangingMode == lpsMode_auto) {
+          // Initialize the algorithm, set time for next switch
+          algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
+
+          // Defaults to TDoA algorithm
+          algoOptions.currentRangingMode = lpsMode_TDoA;
+          algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
+          algorithm->init(dwm, &algoOptions);
+          timeout = algorithm->onEvent(dwm, eventTimeout);
+        } else if (xTaskGetTickCount() > algoOptions.nextSwitchTick) {
+          // Test if we have detected anchors
+          if (algoOptions.autoStarted && algorithm->isRangingOk()) {
+            algoOptions.rangingModeDetected = true;
+            DEBUG_PRINT("Automatic mode: detected %s\n", algorithmsList[algoOptions.currentRangingMode].name);
+          } else {
+            // We have started the auto mode by initializing the next modes
+            algoOptions.autoStarted = true;
+
+            // Setting up next switching time
+            algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
+
+            // Switch to next algorithm!
+            if ((algoOptions.currentRangingMode+1) > LPS_NUMBER_OF_ALGORITHM) {
+              algoOptions.currentRangingMode = 1;
+            } else {
+              algoOptions.currentRangingMode++;
+            }
+
+            algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
+            algorithm->init(dwm, &algoOptions);
+            timeout = algorithm->onEvent(dwm, eventTimeout);
+          }
+        }
+      }
+    } else if (algoOptions.currentRangingMode != algoOptions.rangingMode) {  // Set modes
+      // Reset auto mode
+      algoOptions.rangingModeDetected = false;
+      algoOptions.autoStarted = false;
+
+      if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHM) {
+        DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA!\n");
+        algoOptions.currentRangingMode = algoOptions.rangingMode;
+        algorithm = algorithmsList[lpsMode_TDoA].algorithm;
+      } else {
+        algoOptions.currentRangingMode = algoOptions.rangingMode;
+        algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
+        DEBUG_PRINT("Switching mode to %s\n", algorithmsList[algoOptions.currentRangingMode].name);
+      }
+
+      algorithm->init(dwm, &algoOptions);
+      timeout = algorithm->onEvent(dwm, eventTimeout);
+    }
+
     if (xSemaphoreTake(irqSemaphore, timeout/portTICK_PERIOD_MS)) {
       do{
           dwHandleInterrupt(dwm);
@@ -374,13 +447,13 @@ static void dwm1000Init(DeckInfo *info)
   dwUseSmartPower(dwm, true);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
-  dwSetReceiveWaitTimeout(dwm, RX_TIMEOUT);
+  dwSetReceiveWaitTimeout(dwm, DEFAULT_RX_TIMEOUT);
 
   dwCommitConfiguration(dwm);
 
   // Enable interrupt
   NVIC_InitStructure.NVIC_IRQChannel = EXTI_IRQChannel;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_VERY_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -470,8 +543,12 @@ LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
 LOG_GROUP_STOP(ranging)
 
 LOG_GROUP_START(loco)
-LOG_ADD(LOG_UINT8, mode, &algoOptions.rangingMode)
+LOG_ADD(LOG_UINT8, mode, &algoOptions.currentRangingMode)
 LOG_GROUP_STOP(loco)
+
+PARAM_GROUP_START(loco)
+PARAM_ADD(PARAM_UINT8, mode, &algoOptions.rangingMode)
+PARAM_GROUP_STOP(loco)
 
 
 PARAM_GROUP_START(anchorpos)
@@ -524,7 +601,7 @@ PARAM_GROUP_STOP(deck)
 
 // Loco Posisioning Protocol (LPP) handling
 
-void lpsHandleLppShortPacket(uint8_t srcId, uint8_t *data, int length)
+void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, const int length)
 {
   uint8_t type = data[0];
 

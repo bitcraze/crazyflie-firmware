@@ -23,3 +23,7 @@ script:
   # Build CF2 with TDOA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDOA_ENABLE=1
+
+  # Build CF2 with TDOA3
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDOA_ENABLE=1 "EXTRA_CFLAGS=-DLPS_TDOA_USE_V3"

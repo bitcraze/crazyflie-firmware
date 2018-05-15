@@ -44,10 +44,11 @@
  functions! They should be handled like some kind of softdevice, running above
  the OS.
 
- 3 Interrupt level are defined
+ 4 Interrupt level are defined
   - NVIC_LOW_PRI
   - NVIC_MID_PRI
   - NVIC_HIGH_PRI
+  - NVIC_VERY_HIGH_PRI
  The aim is to simplify interrupt handling and to document why any special case
  is required.
 
@@ -60,7 +61,7 @@
   9 -
   8 -
   7 - NVIC_HIGH_PRI
-  6 -
+  6 - NVIC_VERY_HIGH_PRI
   5 -                                     <-- MAX_SYSCALL_INTERRUPT_PRIORITY
   4 ! NVIC_I2C_PRI_LOW NVIC_TRACE_TIM_PRI --- Does not call any RTOS function
   3 ! NVIC_I2C_PRI_HIGH
@@ -73,6 +74,8 @@
 #define NVIC_LOW_PRI  13
 #define NVIC_MID_PRI  10
 #define NVIC_HIGH_PRI 7
+#define NVIC_VERY_HIGH_PRI 7
+
 
 // Priorities used for Crazyflie
 #define NVIC_I2C_HIGH_PRI    3

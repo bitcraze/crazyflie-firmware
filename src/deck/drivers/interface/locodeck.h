@@ -36,6 +36,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+
 #include "libdw1000.h"
 #include "stabilizer_types.h"
 
@@ -53,14 +55,19 @@ typedef enum uwbEvent_e {
 } uwbEvent_t;
 
 #ifndef LOCODECK_NR_OF_ANCHORS
-#define LOCODECK_NR_OF_ANCHORS 6
+#define LOCODECK_NR_OF_ANCHORS 8
 #endif
 
 typedef uint64_t locoAddress_t;
 
+#define LPS_NUMBER_OF_ALGORITHM 2
+
+#define LPS_AUTO_MODE_SWITCH_PERIOD M2T(1000)
+
 typedef enum {
-  lpsMode_TWR = 0,
-  lpsMode_TDoA = 1
+  lpsMode_auto = 0,
+  lpsMode_TWR = 1,
+  lpsMode_TDoA = 2,
 } lpsMode_t;
 
 typedef struct {
@@ -74,7 +81,14 @@ typedef struct {
   // where a set bit indicates that an anchor reentry has been detected
   volatile uint16_t rangingState;
 
+  // Requested and current ranging mode
   lpsMode_t rangingMode;
+  lpsMode_t currentRangingMode;
+
+  // State of the ranging mode auto detection
+  bool rangingModeDetected;
+  bool autoStarted;
+  uint32_t nextSwitchTick;
 
    // TWR data
   point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
@@ -95,6 +109,7 @@ point_t* locodeckGetAnchorPosition(uint8_t anchor);
 typedef struct uwbAlgorithm_s {
   void (*init)(dwDevice_t *dev, lpsAlgoOptions_t* options);
   uint32_t (*onEvent)(dwDevice_t *dev, uwbEvent_t event);
+  bool (*isRangingOk)();
 } uwbAlgorithm_t;
 
 #include <FreeRTOS.h>
@@ -118,7 +133,7 @@ typedef struct {
 bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
 
 // Handle incoming short LPP packets from the UWB system
-void lpsHandleLppShortPacket(uint8_t srcId, uint8_t *data, int length);
+void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, const int length);
 
 // LPP Packet types and format
 #define LPP_HEADER_SHORT_PACKET 0xF0

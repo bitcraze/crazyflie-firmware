@@ -36,6 +36,15 @@
 #include "crc.h"
 #include "console.h"
 
+#if 0
+#include "debug.h"
+#define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
+#define PARAM_ERROR(fmt, ...) DEBUG_PRINT("E/param " fmt, ## __VA_ARGS__)
+#else
+#define PARAM_DEBUG(...)
+#define PARAM_ERROR(...)
+#endif
+
 
 #define TOC_CH 0
 #define READ_CH 1
@@ -79,6 +88,8 @@ static bool isInit = false;
 void paramInit(void)
 {
   int i;
+  const char* group = NULL;
+  int groupLength = 0;
 
   if(isInit)
     return;
@@ -94,8 +105,20 @@ void paramInit(void)
     int len = 5;
     memcpy(&p.data[0], &paramsCrc, 4);
     p.data[4] = params[i].type;
+    if (params[i].type & PARAM_GROUP) {
+      if (params[i].type & PARAM_START) {
+        group = params[i].name;
+        groupLength = strlen(group);
+      }
+    } else {
+      // CMD_GET_ITEM result's size is: 3 + strlen(params[i].name) + groupLength + 2
+      if (strlen(params[i].name) + groupLength + 2 > 27) {
+        PARAM_ERROR("'%s.%s' too long\n", group, params[i].name);
+        ASSERT_FAILED();
+      }
+    }
+
     if (params[i].name) {
-      ASSERT(strlen(params[i].name) < (30-4-1));  // Param group or name too big!
       memcpy(&p.data[5], params[i].name, strlen(params[i].name));
       len += strlen(params[i].name);
     }

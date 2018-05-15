@@ -40,6 +40,9 @@
 #include "cfassert.h"
 #include "queuemonitor.h"
 
+#include "log.h"
+
+
 static bool isInit;
 
 static int nopFunc(void);
@@ -50,6 +53,20 @@ static struct crtpLinkOperations nopLink = {
 }; 
 
 static struct crtpLinkOperations *link = &nopLink;
+
+#define STATS_INTERVAL 500
+static struct {
+  uint32_t rxCount;
+  uint32_t rxDroppedCount;
+  uint32_t txCount;
+
+  uint16_t rxRate;
+  uint16_t rxDroppedRate;
+  uint16_t txRate;
+
+  uint32_t nextStatisticsTime;
+  uint32_t previousStatisticsTime;
+} stats;
 
 static xQueueHandle  txQueue;
 
@@ -62,6 +79,7 @@ static void crtpRxTask(void *param);
 
 static xQueueHandle queues[CRTP_NBR_OF_PORTS];
 static volatile CrtpCallback callbacks[CRTP_NBR_OF_PORTS];
+static void updateStats();
 
 void crtpInit(void)
 {
@@ -141,6 +159,8 @@ void crtpTxTask(void *param)
           // Relaxation time
           vTaskDelay(M2T(10));
         }
+        stats.txCount++;
+        updateStats();
       }
     }
     else
@@ -153,7 +173,6 @@ void crtpTxTask(void *param)
 void crtpRxTask(void *param)
 {
   CRTPPacket p;
-  static unsigned int droppedPacket=0;
 
   while (true)
   {
@@ -164,15 +183,20 @@ void crtpRxTask(void *param)
         if (queues[p.port])
         {
           // The queue is only 1 long, so if the last packet hasn't been processed, we just replace it
-          xQueueOverwrite(queues[p.port], &p); 
-        }
-        else
-        {
-          droppedPacket++;
+          if (uxQueueMessagesWaiting(queues[p.port]) > 0)
+          {
+            stats.rxDroppedCount++;
+          }
+          xQueueOverwrite(queues[p.port], &p);
         }
 
         if (callbacks[p.port])
-          callbacks[p.port](&p);  //Dangerous?
+        {
+          callbacks[p.port](&p);
+        }
+
+        stats.rxCount++;
+        updateStats();
       }
     }
     else
@@ -240,3 +264,31 @@ static int nopFunc(void)
 {
   return ENETDOWN;
 }
+
+static void clearStats()
+{
+  stats.rxCount = 0;
+  stats.rxDroppedCount = 0;
+  stats.txCount = 0;
+}
+
+static void updateStats()
+{
+  uint32_t now = xTaskGetTickCount();
+  if (now > stats.nextStatisticsTime) {
+    float interval = now - stats.previousStatisticsTime;
+    stats.rxRate = (uint16_t)(1000.0f * stats.rxCount / interval);
+    stats.rxDroppedRate = (uint16_t)(1000.0f * stats.rxDroppedCount / interval);
+    stats.txRate = (uint16_t)(1000.0f * stats.txCount / interval);
+
+    clearStats();
+    stats.previousStatisticsTime = now;
+    stats.nextStatisticsTime = now + STATS_INTERVAL;
+  }
+}
+
+LOG_GROUP_START(crtp)
+LOG_ADD(LOG_UINT16, rxRate, &stats.rxRate)
+LOG_ADD(LOG_UINT16, rxDrpRte, &stats.rxDroppedRate)
+LOG_ADD(LOG_UINT16, txRate, &stats.txRate)
+LOG_GROUP_STOP(tdoa)

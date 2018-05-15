@@ -28,7 +28,7 @@ typedef struct packet_s {
     locoAddress_t destAddress;
     locoAddress_t sourceAddress;
 
-    uint8_t payload[64];
+    uint8_t payload[128];
 } __attribute__((packed)) packet_t;
 
 #define MAC80215_PACKET_INIT(packet, TYPE) packet.fcf_s.type = (TYPE); \

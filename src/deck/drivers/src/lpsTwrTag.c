@@ -79,6 +79,8 @@ static lpsAlgoOptions_t* options;
 static bool tdmaSynchronized;
 static dwTime_t frameStart;
 
+static bool rangingOk;
+
 static void txcallback(dwDevice_t *dev)
 {
   dwTime_t departure;
@@ -191,6 +193,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = options->distance[current_anchor];
 
+      rangingOk = true;
+
       if ((options->combinedAnchorPositionOk || options->anchorPosition[current_anchor].timestamp) &&
           (diff < (OUTLIER_TH*stddev))) {
         distanceMeasurement_t dist;
@@ -239,7 +243,7 @@ static dwTime_t transmitTimeForSlot(int slot)
   return transmitTime;
 }
 
-void initiateRanging(dwDevice_t *dev)
+static void initiateRanging(dwDevice_t *dev)
 {
   if (!options->useTdma || tdmaSynchronized) {
     if (options->useTdma) {
@@ -276,7 +280,7 @@ void initiateRanging(dwDevice_t *dev)
   dwStartTransmit(dev);
 }
 
-void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
+static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 {
   dwIdle(dev);
 
@@ -398,11 +402,23 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
   memset(options->distance, 0, sizeof(options->distance));
   memset(options->pressures, 0, sizeof(options->pressures));
   memset(options->failedRanging, 0, sizeof(options->failedRanging));
+
+  dwSetReceiveWaitTimeout(dev, TWR_RECEIVE_TIMEOUT);
+
+  dwCommitConfiguration(dev);
+
+  rangingOk = false;
+}
+
+static bool isRangingOk()
+{
+  return rangingOk;
 }
 
 uwbAlgorithm_t uwbTwrTagAlgorithm = {
   .init = twrTagInit,
   .onEvent = twrTagOnEvent,
+  .isRangingOk = isRangingOk,
 };
 
 LOG_GROUP_START(twr)

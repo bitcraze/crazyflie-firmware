@@ -42,6 +42,10 @@ typedef I2cDrv    I2C_Dev;
 #define I2C1_DEV  &deckBus
 #define I2C3_DEV  &sensorsBus
 
+// For compatibility
+#define i2cdevWrite16 i2cdevWriteReg16
+#define i2cdevRead16  i2cdevReadReg16
+
 /**
  * Read bytes from an I2C peripheral
  * @param dev  Pointer to I2C peripheral to read from

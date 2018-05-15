@@ -85,6 +85,9 @@ ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 # libdw dw1000 driver
 VPATH_CF2 += vendor/libdw1000/src
 
+# vl53l1 driver
+VPATH_CF2 += $(LIB)/vl53l1/core/src
+
 # FreeRTOS
 VPATH += $(PORT)
 PORT_OBJ = port.o
@@ -125,7 +128,7 @@ PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ_CF2 += cppm.o
 PROJ_OBJ_CF2 += bmi055_accel.o bmi055_gyro.o bmi160.o bmp280.o bstdr_comm_support.o bmm150.o
 PROJ_OBJ_CF2 += icm20789.o
-PROJ_OBJ_CF2 += pca9685.o vl53l0x.o pca95x4.o
+PROJ_OBJ_CF2 += pca9685.o vl53l0x.o pca95x4.o vl53l1x.o pmw3901.o
 
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
@@ -137,6 +140,11 @@ PROJ_OBJ_CF2 +=  pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o usec_t
 PROJ_OBJ_CF2 +=  sensors_$(SENSORS).o
 # libdw
 PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
+
+# vl53l1 lib
+PROJ_OBJ_CF2 += vl53l1_api_core.o vl53l1_api.o vl53l1_core.o vl53l1_silicon_core.o vl53l1_api_strings.o
+PROJ_OBJ_CF2 += vl53l1_api_calibration.o vl53l1_api_debug.o vl53l1_api_preset_modes.o vl53l1_error_strings.o
+PROJ_OBJ_CF2 += vl53l1_register_funcs.o vl53l1_wait.o vl53l1_core_support.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o
@@ -153,6 +161,8 @@ PROJ_OBJ += controller_$(CONTROLLER).o
 PROJ_OBJ += power_distribution_$(POWER_DISTRIBUTION).o
 PROJ_OBJ_CF2 += estimator_kalman.o
 
+# High-Level Commander
+PROJ_OBJ += crtp_commander_high_level.o planner.o pptraj.o
 
 # Deck Core
 PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o deck_test.o
@@ -171,14 +181,17 @@ PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
 PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
-PROJ_OBJ_CF2 += zranger.o
+PROJ_OBJ_CF2 += zranger.o zranger2.o
 PROJ_OBJ_CF2 += locodeck.o
 PROJ_OBJ_CF2 += lpsTwrTag.o
-PROJ_OBJ_CF2 += flowdeck.o
+PROJ_OBJ_CF2 += lpsTdoa2Tag.o
+PROJ_OBJ_CF2 += lpsTdoa3Tag.o
+PROJ_OBJ_CF2 += outlierFilter.o
+PROJ_OBJ_CF2 += flowdeck_v1v2.o
 PROJ_OBJ_CF2 += oa.o
+PROJ_OBJ_CF2 += multiranger.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
-PROJ_OBJ_CF2 += lpsTdoaTag.o
 CFLAGS += -DLPS_TDOA_ENABLE
 endif
 
@@ -229,6 +242,8 @@ INCLUDES_CF2 += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Isrc/deck/interface -Isrc/deck/drivers/interface
 INCLUDES_CF2 += -Ivendor/libdw1000/inc
 INCLUDES_CF2 += -I$(LIB)/FatFS
+INCLUDES_CF2 += -I$(LIB)/vl53l1
+INCLUDES_CF2 += -I$(LIB)/vl53l1/core/inc
 
 ifeq ($(USE_FPU), 1)
 	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -347,7 +362,13 @@ endif
 #Flash the stm.
 flash:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
-                 -c "flash write_image erase $(PROG).elf" -c "verify_image $(PROG).elf" -c "reset run" -c shutdown
+                 -c "flash write_image erase $(PROG).bin $(LOAD_ADDRESS) bin" \
+                 -c "verify_image $(PROG).bin $(LOAD_ADDRESS) bin" -c "reset run" -c shutdown
+
+#verify only
+flash_verify:
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
+                 -c "verify_image $(PROG).bin $(LOAD_ADDRESS) bin" -c "reset run" -c shutdown
 
 flash_dfu:
 	$(DFU_UTIL) -a 0 -D $(PROG).dfu

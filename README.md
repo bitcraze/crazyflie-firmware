@@ -75,9 +75,11 @@ This repository uses git submodules. Clone with the --recursive flag
 git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git
 ```
 
-If you already have cloned the repo, use
+If you already have cloned the repo without the --recursive option, you need to 
+get the submodules manually
 
 ```bash
+cd crazyflie-firmware
 git submodule init
 git submodule update
 ```
@@ -87,7 +89,7 @@ git submodule update
 
 ### Crazyflie 2.0
 
-This is the dafault build so just running "make" is enough or:
+This is the default build so just running "make" is enough or:
 ```bash
 make PLATFORM=CF2
 ```
@@ -166,7 +168,7 @@ with the docker builder image and the toolbelt
         
 ## Running one unit test
        
-When working with one specific file it is often convinient to run only one unit test
+When working with one specific file it is often convenient to run only one unit test
        
        make unit FILES=test/utils/src/TestNum.c
 
