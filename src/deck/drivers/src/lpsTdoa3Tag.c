@@ -29,7 +29,7 @@
 The tag is assumed to move around in a large system of anchors. Any anchor ids
 can be used, and the same anchor id can even be used by multiple anchors as long
 as they are not visible in the same area. It is assumed that the anchor density
-is evenly distributed in the covered volume and that 5-15 anchors are visible
+is evenly distributed in the covered volume and that 5-20 anchors are visible
 in every point. The tag is attached to a physical object and the expected
 velocity is a few m/s, this means that anchors are within range for a time
 period of seconds.
@@ -66,13 +66,13 @@ The implementation must handle
 #define ANCHOR_OK_TIMEOUT 1500
 
 
-#define ANCHOR_STORAGE_COUNT 8
-#define REMOTE_ANCHOR_DATA_COUNT 8
-#define TOF_PER_ANCHOR_COUNT 8
+#define ANCHOR_STORAGE_COUNT 16
+#define REMOTE_ANCHOR_DATA_COUNT 16
+#define TOF_PER_ANCHOR_COUNT 16
 
-#define TOF_VALIDITY_PERIOD M2T(10 * 1000);
+#define TOF_VALIDITY_PERIOD M2T(2 * 1000);
 #define REMOTE_DATA_VALIDITY_PERIOD M2T(30);
-#define ANCHOR_POSITION_VALIDITY_PERIOD M2T(10 * 1000);
+#define ANCHOR_POSITION_VALIDITY_PERIOD M2T(2 * 1000);
 
 // State
 typedef struct {
@@ -97,7 +97,7 @@ typedef struct {
   int64_t rxTime; // Receive time of last packet, in local DWM clock
   uint8_t seqNr; // Sequence nr of last packet (7 bits)
 
-  double clockCorrection; // local DWM clock frequency / Ratio of remote DWM clock frequency
+  double clockCorrection; // local DWM clock frequency / remote DWM clock frequency
 
   point_t position; // The coordinates of the anchor
 
@@ -106,40 +106,6 @@ typedef struct {
 } anchorInfo_t;
 
 anchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
-
-
-// TODO krri Debug code to dump state to the console, remove
-uint8_t dumpTrigger;
-uint8_t dumpTriggerOld;
-
-static void dumpData(uint8_t anchorId) {
-  uint32_t now = xTaskGetTickCount();
-
-  DEBUG_PRINT("Dump----\n");
-  for (int slot = 0; slot < ANCHOR_STORAGE_COUNT; slot++) {
-    const anchorInfo_t* ctx = &anchorStorage[slot];
-    if (ctx->isInitialized && anchorId == ctx->id) {
-      DEBUG_PRINT("\nAnchor id %i\n", ctx->id);
-      DEBUG_PRINT(" seqNr: %i\n", ctx->seqNr);
-      DEBUG_PRINT(" rx: %lli, tx: %lli\n", ctx->rxTime, ctx->txTime);
-      DEBUG_PRINT(" clockCorrection: %f\n", ctx->clockCorrection);
-
-      DEBUG_PRINT(" TOF:\n");
-      for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
-        if (ctx->tof[i].endOfLife > now) {
-          DEBUG_PRINT("  id: %i, tof: %lli\n", ctx->tof[i].id, ctx->tof[i].tof);
-        }
-      }
-
-      DEBUG_PRINT(" Remote:\n");
-      for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
-        if (ctx->remoteAnchorData[i].endOfLife > now) {
-          DEBUG_PRINT("  id: %i, seq: %i, rx: %lli \n", ctx->remoteAnchorData[i].id, ctx->remoteAnchorData[i].seqNr, ctx->remoteAnchorData[i].rxTime);
-        }
-      }
-    }
-  }
-}
 
 static int64_t packetTxTime(const rangePacket3_t* packet) {
   return packet->header.txTimeStamp;
@@ -360,6 +326,7 @@ static struct {
   uint32_t clockCorrectionCount;
   uint16_t clockCorrectionRate;
   uint16_t tof;
+  float tdoa;
 } stats;
 
 
@@ -392,6 +359,7 @@ static void updateStats() {
       // Reset anchor stats
       stats.clockCorrection = 0.0;
       stats.tof = 0;
+      stats.tdoa = 0;
     }
 
     if (stats.remoteAnchorId != stats.newRemoteAnchorId) {
@@ -399,6 +367,7 @@ static void updateStats() {
 
       // Reset remote anchor stats
       stats.tof = 0;
+      stats.tdoa = 0;
     }
 
     clearStats();
@@ -442,6 +411,15 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
       stats.packetsToEstimator++;
       estimatorKalmanEnqueueTDOA(&tdoa);
 
+      uint8_t idA = historyGetId(anchorACtx);
+      uint8_t idB = historyGetId(anchorBCtx);
+      if (idA == stats.anchorId && idB == stats.remoteAnchorId) {
+        stats.tdoa = distanceDiff;
+      }
+      if (idB == stats.anchorId && idA == stats.remoteAnchorId) {
+        stats.tdoa = -distanceDiff;
+      }
+
       rangingOk = true;
     }
   }
@@ -450,10 +428,6 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
 }
-
-//static bool isSeqNrConsecutive(uint8_t prevSeqNr, uint8_t currentSeqNr) {
-//  return (currentSeqNr == ((prevSeqNr + 1) & 0x7f));
-//}
 
 static double calcClockCorrection(const anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
   const int64_t rxAn_by_T_in_cl_T = arrival->full;
@@ -474,21 +448,20 @@ static double calcClockCorrection(const anchorInfo_t* anchorCtx, const rangePack
 static void updateClockCorrection(anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
   double clockCorrectionCandidate = calcClockCorrection(anchorCtx, packet, arrival);
 
-//  const double MAX_CLOCK_CORRECTION_ERR 0.00004
-//  if (clockCorrectionCandidate < (1.0d - MAX_CLOCK_CORRECTION_ERR) || (1.0d + MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate) {
-//    return;
-//  }
+  const double MAX_CLOCK_CORRECTION_ERR = 0.00001;
+    if ((1.0d - MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate && clockCorrectionCandidate < (1.0d + MAX_CLOCK_CORRECTION_ERR)) {
 
-  // TODO krri Add sanity checks
-  //           * reject if missing seq nrs?
-  //           * If too long between samples, clocks may have wrapped several times, problem?
-  // TODO krri reject outliers?
-  // TODO krri LP filter
+    // TODO krri Add sanity checks
+    //           * reject if missing seq nrs?
+    //           * If too long between samples, clocks may have wrapped several times, problem?
+    // TODO krri reject outliers?
+    // TODO krri LP filter
 
-  historySetClockCorrection(anchorCtx, clockCorrectionCandidate);
-  if (historyGetId(anchorCtx) == stats.anchorId) {
-    stats.clockCorrection = clockCorrectionCandidate;
-    stats.clockCorrectionCount++;
+    historySetClockCorrection(anchorCtx, clockCorrectionCandidate);
+    if (historyGetId(anchorCtx) == stats.anchorId) {
+      stats.clockCorrection = clockCorrectionCandidate;
+      stats.clockCorrectionCount++;
+    }
   }
 }
 
@@ -705,11 +678,6 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   updateStats();
   updateRangingState();
 
-  if (dumpTrigger != dumpTriggerOld) {
-    dumpTriggerOld = dumpTrigger;
-    dumpData(dumpTrigger);
-  }
-
   return MAX_TIMEOUT;
 }
 
@@ -762,11 +730,11 @@ LOG_ADD(LOG_UINT16, stMiss, &stats.contextMissRate)
 
 LOG_ADD(LOG_FLOAT, cc, &stats.clockCorrection)
 LOG_ADD(LOG_UINT16, tof, &stats.tof)
+LOG_ADD(LOG_FLOAT, tdoa, &stats.tdoa)
 
 LOG_GROUP_STOP(tdoa3)
 
 PARAM_GROUP_START(tdoa3)
-PARAM_ADD(PARAM_UINT8, logid, &stats.newAnchorId)
-PARAM_ADD(PARAM_UINT8, logremid, &stats.newRemoteAnchorId)
-PARAM_ADD(PARAM_UINT8, dump, &dumpTrigger)
+PARAM_ADD(PARAM_UINT8, logId, &stats.newAnchorId)
+PARAM_ADD(PARAM_UINT8, logOthrId, &stats.newRemoteAnchorId)
 PARAM_GROUP_STOP(tdoa3)
