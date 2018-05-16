@@ -304,12 +304,14 @@ static struct {
   uint32_t packetsToEstimator;
   uint32_t contextHitCount;
   uint32_t contextMissCount;
+  uint32_t timeIsGood;
   uint32_t suitableDataFound;
 
   uint16_t packetsReceivedRate;
   uint16_t packetsToEstimatorRate;
   uint16_t contextHitRate;
   uint16_t contextMissRate;
+  uint16_t timeIsGoodRate;
   uint16_t suitableDataFoundRate;
 
   uint32_t nextStatisticsTime;
@@ -336,6 +338,7 @@ static void clearStats() {
   stats.clockCorrectionCount = 0;
   stats.contextHitCount = 0;
   stats.contextMissCount = 0;
+  stats.timeIsGood = 0;
   stats.suitableDataFound = 0;
 }
 
@@ -352,6 +355,7 @@ static void updateStats() {
     stats.contextMissRate = (uint16_t)(1000.0f * stats.contextMissCount / interval);
 
     stats.suitableDataFoundRate = (uint16_t)(1000.0f * stats.suitableDataFound / interval);
+    stats.timeIsGoodRate = (uint16_t)(1000.0f * stats.timeIsGood / interval);
 
     if (stats.anchorId != stats.newAnchorId) {
       stats.anchorId = stats.newAnchorId;
@@ -445,11 +449,11 @@ static double calcClockCorrection(const anchorInfo_t* anchorCtx, const rangePack
   return tickCount_in_T / tickCount_in_cl_An;
 }
 
-static void updateClockCorrection(anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
+static bool updateClockCorrection(anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
   double clockCorrectionCandidate = calcClockCorrection(anchorCtx, packet, arrival);
 
   const double MAX_CLOCK_CORRECTION_ERR = 0.00001;
-    if ((1.0d - MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate && clockCorrectionCandidate < (1.0d + MAX_CLOCK_CORRECTION_ERR)) {
+  if ((1.0d - MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate && clockCorrectionCandidate < (1.0d + MAX_CLOCK_CORRECTION_ERR)) {
 
     // TODO krri Add sanity checks
     //           * reject if missing seq nrs?
@@ -462,7 +466,10 @@ static void updateClockCorrection(anchorInfo_t* anchorCtx, const rangePacket3_t*
       stats.clockCorrection = clockCorrectionCandidate;
       stats.clockCorrectionCount++;
     }
+    return true;
   }
+  
+  return false;
 }
 
 static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
@@ -596,14 +603,18 @@ static bool rxcallback(dwDevice_t *dev) {
 
   if (anchorCtx) {
     stats.contextHitCount++;
-    updateClockCorrection(anchorCtx, packet, &arrival);
     rangeDataLength = updateRemoteData(anchorCtx, packet);
 
-    anchorInfo_t* otherAnchorCtx = 0;
-    if (findSuitableAnchor(&otherAnchorCtx, anchorCtx)) {
-      stats.suitableDataFound++;
-      float tdoaDistDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, packet, &arrival);
-      enqueueTDOA(otherAnchorCtx, anchorCtx, tdoaDistDiff);
+    bool timeIsGood = updateClockCorrection(anchorCtx, packet, &arrival);
+    if (timeIsGood) {
+      stats.timeIsGood++;
+
+      anchorInfo_t* otherAnchorCtx = 0;
+      if (findSuitableAnchor(&otherAnchorCtx, anchorCtx)) {
+        stats.suitableDataFound++;
+        float tdoaDistDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, packet, &arrival);
+        enqueueTDOA(otherAnchorCtx, anchorCtx, tdoaDistDiff);
+      }
     }
   } else {
     stats.contextMissCount++;
@@ -721,6 +732,7 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
 LOG_GROUP_START(tdoa3)
 LOG_ADD(LOG_UINT16, stRx, &stats.packetsReceivedRate)
 LOG_ADD(LOG_UINT16, stEst, &stats.packetsToEstimatorRate)
+LOG_ADD(LOG_UINT16, stTime, &stats.timeIsGoodRate)
 LOG_ADD(LOG_UINT16, stFound, &stats.suitableDataFoundRate)
 
 LOG_ADD(LOG_UINT16, stCc, &stats.clockCorrectionRate)
