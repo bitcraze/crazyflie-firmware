@@ -322,8 +322,13 @@ endif
 
 
 all: check_submodules build
-build: clean_version compile print_version size
-compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
+build: 
+# Each target is in a different line, so they are executed one after the other even when the processor has multiple cores (when the -j option for the make command is > 1). See: https://www.gnu.org/software/make/manual/html_node/Parallel.html
+	@$(MAKE) clean_version
+	@$(MAKE) compile
+	@$(MAKE) print_version 
+	@$(MAKE) size
+compile: $(PROG).hex $(PROG).bin $(PROG).dfu
 
 libarm_math.a:
 	+$(MAKE) -C tools/make/cmsis_dsp/ V=$(V)
@@ -334,7 +339,7 @@ ifeq ($(SHELL),/bin/sh)
 	@rm -f version.c
 endif
 
-print_version: compile
+print_version:
 ifeq ($(PLATFORM), CF2)
 	@echo "Crazyflie 2.0 build!"
 endif
@@ -346,7 +351,7 @@ ifeq ($(FATFS_DISKIO_TESTS), 1)
 	@echo "WARNING: FatFS diskio tests enabled. Erases SD-card!"
 endif
 
-size: compile
+size:
 	@$(SIZE) -B $(PROG).elf
 
 #Radio bootloader
