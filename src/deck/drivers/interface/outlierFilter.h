@@ -29,7 +29,7 @@
 
 #include "stabilizer_types.h"
 
-bool outlierFilterValidateTdoa(tdoaMeasurement_t* tdoa, point_t* estimatedPosition);
+bool outlierFilterValidateTdoa(tdoaMeasurement_t* tdoa);
 void outlierFilterReset();
 
 #endif // __OUTLIER_FILTER_H__

@@ -264,16 +264,13 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
 }
 
 static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anchorBCtx, double distanceDiff) {
-  point_t estimatedPos;
-  estimatorKalmanGetEstimatedPos(&estimatedPos);
-
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff
   };
 
   if (getAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && getAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
-    if (outlierFilterValidateTdoa(&tdoa, &estimatedPos)) {
+    if (outlierFilterValidateTdoa(&tdoa)) {
       lpsTdoaStats.packetsToEstimator++;
       estimatorKalmanEnqueueTDOA(&tdoa);
 

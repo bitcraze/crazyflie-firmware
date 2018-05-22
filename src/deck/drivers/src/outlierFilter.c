@@ -28,11 +28,11 @@
 #include "outlierFilter.h"
 
 static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoaMeasurement_t* tdoa);
-static double distanceSq(const point_t* a, const point_t* b);
-static double sq(double a) {return a * a;}
+static float distanceSq(const point_t* a, const point_t* b);
+static float sq(float a) {return a * a;}
 
 
-bool outlierFilterValidateTdoa(tdoaMeasurement_t* tdoa, point_t* estimatedPosition) {
+bool outlierFilterValidateTdoa(tdoaMeasurement_t* tdoa) {
   return isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa);
 }
 
@@ -41,11 +41,11 @@ void outlierFilterReset() {
 }
 
 static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoaMeasurement_t* tdoa) {  
-  double anchorDistanceSq = distanceSq(&tdoa->anchorPosition[0], &tdoa->anchorPosition[1]);
-  double distanceDiffSq = sq(tdoa->distanceDiff);
+  float anchorDistanceSq = distanceSq(&tdoa->anchorPosition[0], &tdoa->anchorPosition[1]);
+  float distanceDiffSq = sq(tdoa->distanceDiff);
   return (distanceDiffSq < anchorDistanceSq);
 }
 
-static double distanceSq(const point_t* a, const point_t* b) {
+static float distanceSq(const point_t* a, const point_t* b) {
   return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
 }

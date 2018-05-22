@@ -6,7 +6,6 @@
 #include "mock_cfassert.h"
 
 static tdoaMeasurement_t tdoa;
-static point_t estimatedPosition;
 
 void setUp(void) {
   outlierFilterReset();
@@ -33,7 +32,7 @@ void testThatSamplesAreAcceptedWhenTdoaIsCloserThanDistanceBetweenAnchors() {
   bool expected = true;
 
   // Test
-  bool actual = outlierFilterValidateTdoa(&tdoa, &estimatedPosition);
+  bool actual = outlierFilterValidateTdoa(&tdoa);
 
   // Assert
   TEST_ASSERT_EQUAL(actual, expected);
@@ -46,7 +45,7 @@ void testThatSamplesAreRejectedWhenTdoaIsGreaterThanDistanceBetweenAnchors() {
   bool expected = false;
 
   // Test
-  bool actual = outlierFilterValidateTdoa(&tdoa, &estimatedPosition);
+  bool actual = outlierFilterValidateTdoa(&tdoa);
 
   // Assert
   TEST_ASSERT_EQUAL(actual, expected);
@@ -59,7 +58,7 @@ void testThatSamplesAreRejectedWhenTdoaIsGreaterButNegativeThanDistanceBetweenAn
   bool expected = false;
 
   // Test
-  bool actual = outlierFilterValidateTdoa(&tdoa, &estimatedPosition);
+  bool actual = outlierFilterValidateTdoa(&tdoa);
 
   // Assert
   TEST_ASSERT_EQUAL(actual, expected);

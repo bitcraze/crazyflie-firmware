@@ -107,9 +107,6 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
 }
 
 static void enqueueTDOA(uint8_t anchorA, uint8_t anchorB, double distanceDiff) {
-  point_t estimatedPos;
-  estimatorKalmanGetEstimatedPos(&estimatedPos);
-
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff,
@@ -118,7 +115,7 @@ static void enqueueTDOA(uint8_t anchorA, uint8_t anchorB, double distanceDiff) {
     .anchorPosition[1] = options->anchorPosition[anchorB]
   };
 
-  if (outlierFilterValidateTdoa(&tdoa, &estimatedPos)) {
+  if (outlierFilterValidateTdoa(&tdoa)) {
     if (options->combinedAnchorPositionOk ||
         (options->anchorPosition[anchorA].timestamp && options->anchorPosition[anchorB].timestamp)) {
       stats.packetsToEstimator++;

@@ -125,7 +125,6 @@ void setUp(void) {
   dwGetReceiveTimestamp_resetMock();
 
   mockKalmanEstimator_resetMock();
-  estimatorKalmanGetEstimatedPos_Ignore();
 
   options.combinedAnchorPositionOk = true;
 
