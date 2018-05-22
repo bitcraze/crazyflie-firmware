@@ -61,9 +61,9 @@ static history_t history[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 
 // LPP packet handling
-lpsLppShortPacket_t lppPacket;
-bool lppPacketToSend;
-int lppPacketSendTryCounter;
+static lpsLppShortPacket_t lppPacket;
+static bool lppPacketToSend;
+static int lppPacketSendTryCounter;
 
 // Log data
 static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
