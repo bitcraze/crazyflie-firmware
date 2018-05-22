@@ -196,9 +196,13 @@ static void rxcallback(dwDevice_t *dev) {
     const int64_t txAn_in_cl_An = packet->header.txTimeStamp;;
     const uint8_t seqNr = packet->header.seq;
 
-    int rangeDataLength = 0;
-    anchorInfo_t* anchorCtx = tdoaEngineProcessPacket(anchorId, txAn_in_cl_An, rxAn_by_T_in_cl_T, seqNr, updateRemoteData, packet, &rangeDataLength);
-    handleLppPacket(dataLength, rangeDataLength, &rxPacket, anchorCtx);
+    anchorInfo_t* anchorCtx = getAnchorCtxForPacketProcessing(anchorId);
+    if (anchorCtx) {
+      int rangeDataLength = updateRemoteData(anchorCtx, packet);
+      tdoaEngineProcessPacket(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+      tdoaEngineSetRxTxData(anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
+      handleLppPacket(dataLength, rangeDataLength, &rxPacket, anchorCtx);
+    }
 
     rangingOk = true;
   }

@@ -38,13 +38,15 @@ typedef struct {
 } anchorInfo_t;
 
 
-typedef int (*updateRemoteDataFromPacketFkn_t)(anchorInfo_t* anchorCtx, const void* payload);
-
 void tdoaEngineInit();
+
 void tdoaEngineSetRemoteRxTime(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr);
 void tdoaEngineSetTimeOfFlight(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof);
 uint8_t tdoaEngineGetId(const anchorInfo_t* anchorCtx);
 void tdoaEngineSetAnchorPosition(anchorInfo_t* anchorCtx, const float x, const float y, const float z);
-anchorInfo_t* tdoaEngineProcessPacket(uint8_t anchorId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const uint8_t seqNr, updateRemoteDataFromPacketFkn_t updateRemoteData, const void* packet, int* rangeDataLength);
+void tdoaEngineSetRxTxData(anchorInfo_t* anchorCtx, int64_t rxTime, int64_t txTime, uint8_t seqNr);
+
+anchorInfo_t* getAnchorCtxForPacketProcessing(const uint8_t anchor);
+void tdoaEngineProcessPacket(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T);
 
 #endif // __LPS_TDOA_TAG_ENGINE_H__

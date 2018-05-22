@@ -73,7 +73,7 @@ void tdoaEngineInit() {
   memset(anchorStorage, 0, sizeof(anchorStorage));
 }
 
-anchorInfo_t* tdoaEngineGetAnchorCtx(const uint8_t anchor) {
+static anchorInfo_t* getAnchorCtx(const uint8_t anchor) {
   // TODO krri add lookup table to avoid linear search
   for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
     if (anchor == anchorStorage[i].id && anchorStorage[i].isInitialized) {
@@ -84,7 +84,7 @@ anchorInfo_t* tdoaEngineGetAnchorCtx(const uint8_t anchor) {
   return 0;
 }
 
-static anchorInfo_t* initializeNewAchorContext(const uint8_t anchor) {
+static anchorInfo_t* initializeNewAnchorContext(const uint8_t anchor) {
   int indexToInitialize = 0;
   uint32_t now = xTaskGetTickCount();
   uint32_t oldestUpdateTime = now;
@@ -286,10 +286,7 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
   }
 }
 
-static double calcClockCorrection(const anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-  const int64_t latest_rxAn_by_T_in_cl_T = getRxTime(anchorCtx);
-  const int64_t latest_txAn_in_cl_An = getTxTime(anchorCtx);
-
+static double calcClockCorrection(const int64_t latest_rxAn_by_T_in_cl_T, const int64_t latest_txAn_in_cl_An, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   const double tickCount_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
   const double tickCount_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
 
@@ -301,26 +298,33 @@ static double calcClockCorrection(const anchorInfo_t* anchorCtx, const int64_t t
 }
 
 static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-  double clockCorrectionCandidate = calcClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+  bool result = false;
 
-  const double MAX_CLOCK_CORRECTION_ERR = 0.00001;
-  if ((1.0 - MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate && clockCorrectionCandidate < (1.0 + MAX_CLOCK_CORRECTION_ERR)) {
+  const int64_t latest_rxAn_by_T_in_cl_T = getRxTime(anchorCtx);
+  const int64_t latest_txAn_in_cl_An = getTxTime(anchorCtx);
 
-    // TODO krri Add sanity checks
-    //           * reject if missing seq nrs?
-    //           * If too long between samples, clocks may have wrapped several times, problem?
-    // TODO krri reject outliers?
-    // TODO krri LP filter
+  if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
+    double clockCorrectionCandidate = calcClockCorrection(latest_rxAn_by_T_in_cl_T, latest_txAn_in_cl_An, txAn_in_cl_An, rxAn_by_T_in_cl_T);
 
-    setClockCorrection(anchorCtx, clockCorrectionCandidate);
-    if (tdoaEngineGetId(anchorCtx) == lpsTdoaStats.anchorId) {
-      lpsTdoaStats.clockCorrection = clockCorrectionCandidate;
-      lpsTdoaStats.clockCorrectionCount++;
+    const double MAX_CLOCK_CORRECTION_ERR = 0.00001;
+    if ((1.0 - MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate && clockCorrectionCandidate < (1.0 + MAX_CLOCK_CORRECTION_ERR)) {
+
+      // TODO krri Add sanity checks
+      //           * reject if missing seq nrs?
+      //           * If too long between samples, clocks may have wrapped several times, problem?
+      // TODO krri reject outliers?
+      // TODO krri LP filter
+
+      setClockCorrection(anchorCtx, clockCorrectionCandidate);
+      if (tdoaEngineGetId(anchorCtx) == lpsTdoaStats.anchorId) {
+        lpsTdoaStats.clockCorrection = clockCorrectionCandidate;
+        lpsTdoaStats.clockCorrectionCount++;
+      }
+      result = true;
     }
-    return true;
   }
 
-  return false;
+  return result;
 }
 
 static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
@@ -358,7 +362,7 @@ static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t
   // TODO krri Add randomization of which anchor to pick. Current implementation will favour anchors early in the list.
   for (int i = 0; i < remoteCount; i++) {
     const uint8_t candidateAnchorId = id[i];
-    anchorInfo_t* candidateAnchorCtx = tdoaEngineGetAnchorCtx(candidateAnchorId);
+    anchorInfo_t* candidateAnchorCtx = getAnchorCtx(candidateAnchorId);
     if (candidateAnchorCtx) {
       if (seqNr[i] == getSeqNr(candidateAnchorCtx) && getTimeOfFlight(anchorCtx, candidateAnchorId)) {
         *otherAnchorCtx = candidateAnchorCtx;
@@ -370,15 +374,19 @@ static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t
   return false;
 }
 
-
-anchorInfo_t* tdoaEngineProcessPacket(uint8_t anchorId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const uint8_t seqNr, updateRemoteDataFromPacketFkn_t updateRemoteData, const void* packet, int* rangeDataLength) {
-  *rangeDataLength = 0;
-
-  anchorInfo_t* anchorCtx = tdoaEngineGetAnchorCtx(anchorId);
+anchorInfo_t* getAnchorCtxForPacketProcessing(const uint8_t anchorId) {
+  anchorInfo_t* anchorCtx = getAnchorCtx(anchorId);
   if (anchorCtx) {
     lpsTdoaStats.contextHitCount++;
-    *rangeDataLength = updateRemoteData(anchorCtx, packet);
+  } else {
+    lpsTdoaStats.contextMissCount++;
+    anchorCtx = initializeNewAnchorContext(anchorId);
+  }
 
+  return anchorCtx;
+}
+
+void tdoaEngineProcessPacket(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
     bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
     if (timeIsGood) {
       lpsTdoaStats.timeIsGood++;
@@ -390,13 +398,4 @@ anchorInfo_t* tdoaEngineProcessPacket(uint8_t anchorId, const int64_t txAn_in_cl
         enqueueTDOA(otherAnchorCtx, anchorCtx, tdoaDistDiff);
       }
     }
-  } else {
-    lpsTdoaStats.contextMissCount++;
-    anchorCtx = initializeNewAchorContext(anchorId);
-    *rangeDataLength = updateRemoteData(anchorCtx, packet);
-  }
-
-  tdoaEngineSetRxTxData(anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
-
-  return anchorCtx;
 }
