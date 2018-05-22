@@ -525,7 +525,7 @@ static int updateRemoteData(anchorInfo_t* anchorCtx, const rangePacket3_t* packe
     }
   }
 
-  return anchorDataPtr - (void*)packet;
+  return (uint8_t*)anchorDataPtr - (uint8_t*)packet;
 }
 
 static void updateAnchorData(anchorInfo_t* anchorCtx, const rangePacket3_t* packet, const dwTime_t* arrival) {
