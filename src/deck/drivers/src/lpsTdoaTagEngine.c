@@ -126,8 +126,8 @@ static uint8_t getSeqNr(const anchorInfo_t* anchorCtx) {
 
 static bool getAnchorPosition(const anchorInfo_t* anchorCtx, point_t* position) {
   uint32_t now = xTaskGetTickCount();
-  uint32_t validCreationTime = now - ANCHOR_POSITION_VALIDITY_PERIOD;
-  if (anchorCtx->position.timestamp > validCreationTime) {
+  int32_t validCreationTime = now - ANCHOR_POSITION_VALIDITY_PERIOD;
+  if ((int32_t)anchorCtx->position.timestamp > validCreationTime) {
     position->x = anchorCtx->position.x;
     position->y = anchorCtx->position.y;
     position->z = anchorCtx->position.z;
