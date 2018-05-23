@@ -66,6 +66,14 @@ The implementation must handle
 #define REMOTE_DATA_VALIDITY_PERIOD M2T(30);
 #define ANCHOR_POSITION_VALIDITY_PERIOD M2T(2 * 1000);
 
+#define MAX_CLOCK_DEVIATION_SPEC 10e-6
+#define CLOCK_CORRECTION_SPEC_MIN (1.0 - MAX_CLOCK_DEVIATION_SPEC * 1.5)
+#define CLOCK_CORRECTION_SPEC_MAX (1.0 + MAX_CLOCK_DEVIATION_SPEC * 1.5)
+
+#define CLOCK_CORRECTION_ACCEPTED_NOISE 0.03e-6
+#define CLOCK_CORRECTION_FILTER 0.1
+#define CLOCK_CORRECTION_BUCKET_MAX 4
+
 
 static anchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
 
@@ -286,6 +294,21 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
   }
 }
 
+static void fillClockCorrectionBucket(anchorInfo_t* anchorCtx) {
+    if (anchorCtx->clockCorrectionBucket < CLOCK_CORRECTION_BUCKET_MAX) {
+      anchorCtx->clockCorrectionBucket++;
+    }
+}
+
+static bool emptyClockCorrectionBucket(anchorInfo_t* anchorCtx) {
+    if (anchorCtx->clockCorrectionBucket > 0) {
+      anchorCtx->clockCorrectionBucket--;
+      return false;
+    }
+
+    return true;
+}
+
 static double calcClockCorrection(const int64_t latest_rxAn_by_T_in_cl_T, const int64_t latest_txAn_in_cl_An, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   const double tickCount_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
   const double tickCount_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
@@ -298,7 +321,7 @@ static double calcClockCorrection(const int64_t latest_rxAn_by_T_in_cl_T, const 
 }
 
 static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-  bool result = false;
+  bool sampleIsAccepted = false;
 
   const int64_t latest_rxAn_by_T_in_cl_T = getRxTime(anchorCtx);
   const int64_t latest_txAn_in_cl_An = getTxTime(anchorCtx);
@@ -306,25 +329,33 @@ static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in
   if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
     double clockCorrectionCandidate = calcClockCorrection(latest_rxAn_by_T_in_cl_T, latest_txAn_in_cl_An, txAn_in_cl_An, rxAn_by_T_in_cl_T);
 
-    const double MAX_CLOCK_CORRECTION_ERR = 0.00001;
-    if ((1.0 - MAX_CLOCK_CORRECTION_ERR) < clockCorrectionCandidate && clockCorrectionCandidate < (1.0 + MAX_CLOCK_CORRECTION_ERR)) {
+    const double currClockCorrection = getClockCorrection(anchorCtx);
+    const double diff = clockCorrectionCandidate - currClockCorrection;
 
-      // TODO krri Add sanity checks
-      //           * reject if missing seq nrs?
-      //           * If too long between samples, clocks may have wrapped several times, problem?
-      // TODO krri reject outliers?
-      // TODO krri LP filter
+    if (-CLOCK_CORRECTION_ACCEPTED_NOISE < diff && diff < CLOCK_CORRECTION_ACCEPTED_NOISE) {
+      // LP filter
+      const double newClockCorrection = currClockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
+      fillClockCorrectionBucket(anchorCtx);
 
-      setClockCorrection(anchorCtx, clockCorrectionCandidate);
+      setClockCorrection(anchorCtx, newClockCorrection);
+      sampleIsAccepted = true;
+    } else {
+      if (emptyClockCorrectionBucket(anchorCtx)) {
+        if (CLOCK_CORRECTION_SPEC_MIN < clockCorrectionCandidate && clockCorrectionCandidate < CLOCK_CORRECTION_SPEC_MAX) {
+          setClockCorrection(anchorCtx, clockCorrectionCandidate);
+        }
+      }
+    }
+
+    if (sampleIsAccepted){
       if (tdoaEngineGetId(anchorCtx) == lpsTdoaStats.anchorId) {
-        lpsTdoaStats.clockCorrection = clockCorrectionCandidate;
+        lpsTdoaStats.clockCorrection = getClockCorrection(anchorCtx);
         lpsTdoaStats.clockCorrectionCount++;
       }
-      result = true;
     }
   }
 
-  return result;
+  return sampleIsAccepted;
 }
 
 static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {

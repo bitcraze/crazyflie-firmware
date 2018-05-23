@@ -30,6 +30,7 @@ typedef struct {
   uint8_t seqNr; // Sequence nr of last packet (7 bits)
 
   double clockCorrection; // local DWM clock frequency / remote DWM clock frequency
+  int clockCorrectionBucket;
 
   point_t position; // The coordinates of the anchor
 

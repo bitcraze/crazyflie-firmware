@@ -125,7 +125,7 @@ start_time = 0
 with open("input/ground_truth.yaml", 'r') as gt_stream:
     gt = GroundTruth(gt_stream)
 
-    with open("input/toda3_8_anchors.yaml", 'r') as stream:
+    with open("input/tdoa3_8_anchors.yaml", 'r') as stream:
         for packet in yaml.load_all(stream, Loader=yaml.CLoader):
             if not packet:
                 continue
