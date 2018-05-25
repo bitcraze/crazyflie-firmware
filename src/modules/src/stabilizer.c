@@ -130,6 +130,7 @@ static void stabilizerTask(void* param)
     // allow to update estimator dynamically
     if (getStateEstimator() != estimatorType) {
       stateEstimatorInit(estimatorType);
+      estimatorType = getStateEstimator();
     }
 
     getExtPosition(&state);

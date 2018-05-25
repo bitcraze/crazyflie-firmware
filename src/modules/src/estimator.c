@@ -25,6 +25,10 @@ static EstimatorFcns estimatorFunctions[] = {
 
 
 void stateEstimatorInit(StateEstimatorType estimator) {
+  if (estimator < 0 || estimator >= StateEstimatorTypeCount) {
+    return;
+  }
+
   currentEstimator = estimator;
 
   if (anyEstimator == currentEstimator) {
