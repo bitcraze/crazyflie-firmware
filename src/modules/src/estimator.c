@@ -8,7 +8,6 @@
 
 #define DEFAULT_ESTIMATOR complementaryEstimator
 static StateEstimatorType currentEstimator = anyEstimator;
-static bool isInit;
 
 static void initEstimator();
 
@@ -26,7 +25,9 @@ static EstimatorFcns estimatorFunctions[] = {
 
 
 void stateEstimatorInit(StateEstimatorType estimator) {
-  ASSERT(!isInit);
+  if (estimator < 0 || estimator >= StateEstimatorTypeCount) {
+    return;
+  }
 
   currentEstimator = estimator;
 
@@ -41,7 +42,6 @@ void stateEstimatorInit(StateEstimatorType estimator) {
   }
 
   initEstimator();
-  isInit = true;
 
   DEBUG_PRINT("Using estimator %d\n", currentEstimator);
 }

@@ -54,6 +54,8 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
+static StateEstimatorType estimatorType;
+
 static void stabilizerTask(void* param);
 
 void stabilizerInit(StateEstimatorType estimator)
@@ -69,6 +71,7 @@ void stabilizerInit(StateEstimatorType estimator)
   {
     sitAwInit();
   }
+  estimatorType = getStateEstimator();
 
   xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
               STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
@@ -124,6 +127,12 @@ static void stabilizerTask(void* param)
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
+    // allow to update estimator dynamically
+    if (getStateEstimator() != estimatorType) {
+      stateEstimatorInit(estimatorType);
+      estimatorType = getStateEstimator();
+    }
+
     getExtPosition(&state);
     stateEstimator(&state, &sensorData, &control, tick);
 
@@ -160,6 +169,10 @@ void stabilizerSetEmergencyStopTimeout(int timeout)
   emergencyStop = false;
   emergencyStopTimeout = timeout;
 }
+
+PARAM_GROUP_START(stabilizer)
+PARAM_ADD(PARAM_UINT8, estimator, &estimatorType)
+PARAM_GROUP_STOP(stabilizer)
 
 LOG_GROUP_START(ctrltarget)
 LOG_ADD(LOG_FLOAT, roll, &setpoint.attitude.roll)
