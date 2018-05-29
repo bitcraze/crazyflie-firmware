@@ -5,6 +5,7 @@
 #include "attitude_controller.h"
 #include "sensfusion6.h"
 #include "position_controller.h"
+#include "controller_pid.h"
 
 #include "log.h"
 #include "param.h"
@@ -17,13 +18,13 @@ static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
 
-void stateControllerInit(void)
+void controllerPidInit(void)
 {
   attitudeControllerInit(ATTITUDE_UPDATE_DT);
   positionControllerInit();
 }
 
-bool stateControllerTest(void)
+bool controllerPidTest(void)
 {
   bool pass = true;
 
@@ -32,7 +33,7 @@ bool stateControllerTest(void)
   return pass;
 }
 
-void stateController(control_t *control, setpoint_t *setpoint,
+void controllerPid(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick)
