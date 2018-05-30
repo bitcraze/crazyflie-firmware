@@ -36,6 +36,10 @@ bool logTest(void);
 
 /* Internal access of log variables */
 int logGetVarId(char* group, char* name);
+int logGetType(int varid);
+void logGetGroupAndName(int varid, char** group, char** name);
+void* logGetAddress(int varid);
+uint8_t logVarSize(int type);
 float logGetFloat(int varid);
 int logGetInt(int varid);
 unsigned int logGetUint(int varid);
