@@ -322,12 +322,12 @@ endif
 
 
 all: check_submodules build
-build: 
+build:
 # Each target is in a different line, so they are executed one after the other even when the processor has multiple cores (when the -j option for the make command is > 1). See: https://www.gnu.org/software/make/manual/html_node/Parallel.html
-	@$(MAKE) clean_version
-	@$(MAKE) compile
-	@$(MAKE) print_version 
-	@$(MAKE) size
+	@$(MAKE) --no-print-directory clean_version
+	@$(MAKE) --no-print-directory compile
+	@$(MAKE) --no-print-directory print_version
+	@$(MAKE) --no-print-directory size
 compile: $(PROG).hex $(PROG).bin $(PROG).dfu
 
 libarm_math.a:
