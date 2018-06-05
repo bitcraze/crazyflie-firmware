@@ -411,4 +411,4 @@ include tools/make/targets.mk
 -include $(DEPS)
 
 unit:
-	rake unit "DEFINES=$(CFLAGS)" "FILES=$(FILES)"
+	rake unit "DEFINES=$(CFLAGS) -DUNITY_INCLUDE_DOUBLE" "FILES=$(FILES)"
