@@ -90,3 +90,34 @@ void testEmptyClockCorrectionBucket() {
     }
   }
 }
+
+void testCalculateClockCorrectionWithValidInputData() {
+  // Fixture
+  double expectedClockCorrection = 1.005;
+  uint64_t old_t_in_cl_x = 1000;
+  uint64_t new_t_in_cl_x = 2000;
+  uint64_t old_t_in_cl_reference = old_t_in_cl_x * expectedClockCorrection;
+  uint64_t new_t_in_cl_reference = new_t_in_cl_x * expectedClockCorrection;
+
+  // Test
+  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x);
+
+  // Assert
+  TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);
+}
+
+void testCalculateClockCorrectionWithInvalidInputData() {
+  // Fixture
+  double expectedClockCorrection = -1;
+  double clockCorrection = 1.005;
+  uint64_t old_t_in_cl_x = 1000;
+  uint64_t new_t_in_cl_x = 1000;
+  uint64_t old_t_in_cl_reference = old_t_in_cl_x * clockCorrection;
+  uint64_t new_t_in_cl_reference = new_t_in_cl_x * clockCorrection;
+
+  // Test
+  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x);
+
+  // Assert
+  TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);
+}
