@@ -25,6 +25,7 @@ compiler:
       - 'vendor/cmock/src/'
       - 'vendor/libdw1000/inc/'
       - 'src/deck/drivers/interface/'
+      - 'src/deck/drivers/interface/clockCorrection'
       - 'src/deck/drivers/src/'
       - 'src/utils/interface/'
       - 'src/utils/src/'
