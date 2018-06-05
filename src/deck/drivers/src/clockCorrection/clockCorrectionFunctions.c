@@ -86,6 +86,7 @@ bool updateClockCorrection(clockCorrectionStorage_t* storage, const double clock
     } else {
       const bool shouldAcceptANewClockReference = emptyClockCorrectionBucket(storage);
       if (shouldAcceptANewClockReference) {
+        fillClockCorrectionBucket(storage);
         storage->clockCorrection = clockCorrectionCandidate;
         sampleIsAccepted = true;
       }
