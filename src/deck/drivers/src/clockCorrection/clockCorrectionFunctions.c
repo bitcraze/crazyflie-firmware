@@ -53,7 +53,7 @@ bool emptyClockCorrectionBucket(clockCorrectionStorage_t* storage) {
  @param old_t_in_cl_x The previous time of occurrence for an event (t), meassured by clock x
  @return The necessary clock correction to apply to timestamps meassured by clock x, in order to obtain their value like if the meassurement was done by the reference clock. Or -1 if it was not possible to perform the computation. Example: timestamp_in_cl_reference = clockCorrection * timestamp_in_cl_x
  */
-double calculateClockCorrection(const int64_t new_t_in_cl_reference, const int64_t old_t_in_cl_reference, const int64_t new_t_in_cl_x, const int64_t old_t_in_cl_x) {
+double calculateClockCorrection(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x) {
   const uint64_t tickCount_in_cl_reference = truncateTimeStampFromDW1000(new_t_in_cl_reference - old_t_in_cl_reference);
   const uint64_t tickCount_in_cl_x = truncateTimeStampFromDW1000(new_t_in_cl_x - old_t_in_cl_x);
 

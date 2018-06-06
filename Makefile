@@ -260,6 +260,8 @@ STFLAGS_CF2 = -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_D
 
 ifeq ($(DEBUG), 1)
   CFLAGS += -O0 -g3 -DDEBUG
+  # Prevent silent errors when converting between types (requires explicit casting)
+  CFLAGS += -Wconversion
 else
 	# Fail on warnings
   CFLAGS += -Os -g3 -Werror

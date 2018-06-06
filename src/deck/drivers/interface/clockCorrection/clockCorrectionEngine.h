@@ -10,7 +10,7 @@
 
 typedef struct {
   double (*getClockCorrection)(clockCorrectionStorage_t* storage);
-  double (*calculateClockCorrection)(const int64_t new_t_in_cl_reference, const int64_t old_t_in_cl_reference, const int64_t new_t_in_cl_x, const int64_t old_t_in_cl_x);
+  double (*calculateClockCorrection)(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x);
   bool (*updateClockCorrection)(clockCorrectionStorage_t* storage, const double clockCorrectionCandidate);
 
 } clockCorrectionEngine_t;
