@@ -143,11 +143,15 @@ void testCalculateClockCorrectionWithValidInputDataWithWrapAround() {
   uint64_t new_t_in_cl_reference = old_t_in_cl_reference + clockCorrection * difference_in_cl_x; // Does not wrap around
 
   // Test
-  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
+  double result1 = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
+  // This second part of the test veryfies that when the bit mask has a higher number of bits than the timestamps, the result is wrong if wrap around happens
+  uint64_t wrongMask = 0x1FFFFFFFFFF; // 41 bits
+  double result2 = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, wrongMask);
 
   // Assert
   double expectedClockCorrection = clockCorrection;
-  TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);
+  TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result1);
+  TEST_ASSERT_NOT_EQUAL(expectedClockCorrection, result2);
 }
 
 void testCalculateClockCorrectionWithInvalidInputData() {
