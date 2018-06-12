@@ -9,14 +9,14 @@
 #define CLOCK_CORRECTION_BUCKET_MAX 4
 
 /**
- Obtains the clock correction from a clockCorrectionStorage_t object. This is the recommended public API to obtan the clock correction, instead of getting it directly from the storage object.
+ Obtains the clock correction from a clockCorrectionStorage_t object. This is the recommended public API to obtain the clock correction, instead of getting it directly from the storage object.
  */
 double getClockCorrection(clockCorrectionStorage_t* storage) {
   return storage->clockCorrection;
 }
 
 /**
- Truncates a timestamp to the number of bits of the mask. This truncation ensures that the value returned is a valid time event, even if wrapped arounds of the time counter happened at some point.
+ Truncates a timestamp to the number of bits of the mask. This truncation ensures that the value returned is a valid time event, even if the time counter wrapped around.
  */
 uint64_t truncateTimeStamp(uint64_t timeStamp, uint64_t mask) {
   return timeStamp & mask;
