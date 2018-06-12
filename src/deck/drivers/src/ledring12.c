@@ -81,7 +81,11 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 #define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
 #define SET_WHITE(dest, intensity) dest[0] = intensity; dest[1] = intensity; dest[2] = intensity;
 
-static uint32_t effect = 6;
+#ifndef LEDRING_DEFAULT_EFFECT
+#define LEDRING_DEFAULT_EFFECT 6
+#endif
+
+static uint32_t effect = LEDRING_DEFAULT_EFFECT;
 static uint32_t neffect;
 static uint8_t headlightEnable = 0;
 static uint8_t black[][3] = {BLACK, BLACK, BLACK,
@@ -563,6 +567,75 @@ static void siren(uint8_t buffer[][3], bool reset)
   if (++tic >= 20) tic = 0;
 }
 
+/**
+ * Display a solid color and fade to the next one in a given time
+ */
+static uint32_t fadeColor = 0;
+static float fadeTime = 0.5;
+
+static float currentFadeTime = 0.5;
+
+#include "log.h"
+
+LOG_GROUP_START(ring)
+LOG_ADD(LOG_FLOAT, fadeTime, &currentFadeTime)
+LOG_GROUP_STOP(ring)
+static void fadeColorEffect(uint8_t buffer[][3], bool reset)
+{
+  static float currentRed = 255;
+  static float currentGreen = 255;
+  static float currentBlue = 255;
+  static float targetRed, targetGreen, targetBlue;
+  static uint32_t previousTargetColor = 0xffffffff;
+  static float cachedFadeTime = 0.5;
+
+  if (fadeColor != previousTargetColor) {
+    float alpha = currentFadeTime / cachedFadeTime;
+
+    currentRed = (alpha * currentRed) + ((1 - alpha) * targetRed);
+    currentGreen = (alpha * currentGreen) + ((1 - alpha) * targetGreen);
+    currentBlue = (alpha * currentBlue) + ((1 - alpha) * targetBlue);
+
+    currentFadeTime = fadeTime;
+    cachedFadeTime = fadeTime;
+    targetRed = (fadeColor >> 16) & 0x0FF;
+    targetGreen = (fadeColor >> 8) & 0x0FF;
+    targetBlue = (fadeColor >> 0) & 0x0FF;
+
+    previousTargetColor = fadeColor;
+  }
+
+  if (currentFadeTime > 0)
+  {
+    float alpha = currentFadeTime / cachedFadeTime;
+
+    int red = (alpha * currentRed) + ((1-alpha) * targetRed);
+    int green = (alpha * currentGreen) + ((1 - alpha) * targetGreen);
+    int blue = (alpha * currentBlue) + ((1 - alpha) * targetBlue);
+
+    for (int i = 0; i < NBR_LEDS; i++)
+    {
+      buffer[i][0] = red;
+      buffer[i][1] = green;
+      buffer[i][2] = blue;
+    }
+
+    currentFadeTime -= 50e-3f;
+  } else {
+    currentFadeTime = 0;
+    currentRed = (fadeColor >> 16) & 0x0FF;
+    currentGreen = (fadeColor >> 8) & 0x0FF;
+    currentBlue = (fadeColor >> 0) & 0x0FF;
+
+    for (int i = 0; i < NBR_LEDS; i++)
+    {
+      buffer[i][0] = currentRed;
+      buffer[i][1] = currentGreen;
+      buffer[i][2] = currentBlue;
+    }
+  }
+}
+
 /**************** Effect list ***************/
 
 
@@ -582,6 +655,7 @@ Ledring12Effect effectsFct[] =
   siren,
   gravityLight,
   virtualMemEffect,
+  fadeColorEffect,
 }; //TODO Add more
 
 /********** Ring init and switching **********/
@@ -653,6 +727,8 @@ PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
 PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
 PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
+PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
+PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
 PARAM_GROUP_STOP(ring)
 
 static const DeckDriver ledring12_deck = {
