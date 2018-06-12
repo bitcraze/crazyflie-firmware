@@ -16,10 +16,9 @@ double getClockCorrection(clockCorrectionStorage_t* storage) {
 }
 
 /**
- Truncates a timestamp to 40 bits, which is the number of bits used to timestamp events in the DW1000 chip. This truncation ensures that the value returned is a valid time event, even if the DW1000 wrapped around at some point.
+ Truncates a timestamp to the number of bits of the mask. This truncation ensures that the value returned is a valid time event, even if wrapped arounds of the time counter happened at some point.
  */
-uint64_t truncateTimeStampFromDW1000(uint64_t timeStamp) {
-  uint64_t mask = 0xFFFFFFFFFF; // 40 bits
+uint64_t truncateTimeStamp(uint64_t timeStamp, uint64_t mask) {
   return timeStamp & mask;
 }
 
@@ -51,11 +50,12 @@ bool emptyClockCorrectionBucket(clockCorrectionStorage_t* storage) {
  @param old_t_in_cl_reference An older time of occurrence for an event (t), meassured by the clock of reference
  @param new_t_in_cl_x The newest time of occurrence for an event (t), meassured by clock x
  @param old_t_in_cl_x The previous time of occurrence for an event (t), meassured by clock x
+ @param mask A mask as long as the number of bits used to represent the timestamps. Used to calculate a valid timestamp, even if wrapped arounds of the time counter happened at some point
  @return The necessary clock correction to apply to timestamps meassured by clock x, in order to obtain their value like if the meassurement was done by the reference clock. Or -1 if it was not possible to perform the computation. Example: timestamp_in_cl_reference = clockCorrection * timestamp_in_cl_x
  */
-double calculateClockCorrection(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x) {
-  const uint64_t tickCount_in_cl_reference = truncateTimeStampFromDW1000(new_t_in_cl_reference - old_t_in_cl_reference);
-  const uint64_t tickCount_in_cl_x = truncateTimeStampFromDW1000(new_t_in_cl_x - old_t_in_cl_x);
+double calculateClockCorrection(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x, const uint64_t mask) {
+  const uint64_t tickCount_in_cl_reference = truncateTimeStamp(new_t_in_cl_reference - old_t_in_cl_reference, mask);
+  const uint64_t tickCount_in_cl_x = truncateTimeStamp(new_t_in_cl_x - old_t_in_cl_x, mask);
 
   if (tickCount_in_cl_x == 0) {
     return -1;

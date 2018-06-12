@@ -30,25 +30,40 @@ void testGetClockCorrection() {
   TEST_ASSERT_EQUAL_DOUBLE(expectedResult, result);
 }
 
-void testTruncateTimeStampFromDW1000WithBigInput() {
+void testTruncateTimeStampFromDW1000WithBigInputAnd40BitsMask() {
   // Fixture
   uint64_t input = 0xABCDEFABCDEFABCD;
   uint64_t expectedResult = 0x000000ABCDEFABCD;
+  uint64_t mask = 0xFFFFFFFFFF; // 40 bits
 
   // Test
-  uint64_t result = truncateTimeStampFromDW1000(input);
+  uint64_t result = truncateTimeStamp(input, mask);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT64(expectedResult, result);
 }
 
-void testTruncateTimeStampFromDW1000WithSmallInput() {
+void testTruncateTimeStampFromDW1000WithBigInputAnd30BitsMask() {
+  // Fixture
+  uint64_t input = 0xABCDEFABCDEFABCD;
+  uint64_t expectedResult = 0x000000000DEFABCD;
+  uint64_t mask = 0x3FFFFFFF; // 30 bits
+
+  // Test
+  uint64_t result = truncateTimeStamp(input, mask);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT64(expectedResult, result);
+}
+
+void testTruncateTimeStampFromDW1000WithSmallInputAnd40BitsMask() {
   // Fixture
   uint64_t input = 0x0000000000012345;
   uint64_t expectedResult = 0x0000000000012345;
+  uint64_t mask = 0xFFFFFFFFFF; // 40 bits
 
   // Test
-  uint64_t result = truncateTimeStampFromDW1000(input);
+  uint64_t result = truncateTimeStamp(input, mask);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT64(expectedResult, result);
@@ -103,9 +118,10 @@ void testCalculateClockCorrectionWithValidInputData() {
   uint64_t new_t_in_cl_x = 2000;
   uint64_t old_t_in_cl_reference = old_t_in_cl_x * expectedClockCorrection;
   uint64_t new_t_in_cl_reference = new_t_in_cl_x * expectedClockCorrection;
+  uint64_t mask = 0xFFFFFFFFFF; // 40 bits
 
   // Test
-  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x);
+  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
 
   // Assert
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);
@@ -119,9 +135,10 @@ void testCalculateClockCorrectionWithInvalidInputData() {
   uint64_t new_t_in_cl_x = 1000;
   uint64_t old_t_in_cl_reference = old_t_in_cl_x * clockCorrection;
   uint64_t new_t_in_cl_reference = new_t_in_cl_x * clockCorrection;
+  uint64_t mask = 0xFFFFFFFFFF; // 40 bits
 
   // Test
-  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x);
+  double result = calculateClockCorrection(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
 
   // Assert
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);

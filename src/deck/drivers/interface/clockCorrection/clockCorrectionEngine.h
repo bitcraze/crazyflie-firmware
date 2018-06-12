@@ -9,6 +9,7 @@
 #include "clockCorrectionStorage.h"
 
 typedef struct {
+  void (*init)(const uint16_t sizeOfTimestamps);
   double (*getClockCorrection)(clockCorrectionStorage_t* storage);
   double (*calculateClockCorrection)(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x);
   bool (*updateClockCorrection)(clockCorrectionStorage_t* storage, const double clockCorrectionCandidate);
