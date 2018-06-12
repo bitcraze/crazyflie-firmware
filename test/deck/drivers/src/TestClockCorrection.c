@@ -66,7 +66,7 @@ void testTruncateTimeStampWithSmallInputAnd40BitsMask() {
   const uint64_t result = truncateTimeStamp(input, mask);
 
   // Assert
-  const uint64_t expectedResult = 0x0000000000012345;
+  const uint64_t expectedResult = input;
   TEST_ASSERT_EQUAL_UINT64(expectedResult, result);
 }
 
