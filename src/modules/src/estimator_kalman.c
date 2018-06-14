@@ -189,7 +189,11 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
 #define IN_FLIGHT_TIME_THRESHOLD (500)
 
 // the reversion of pitch and roll to zero
+#ifdef LPS_2D_POSITION_HEIGHT
+#define ROLLPITCH_ZERO_REVERSION (0.0f)
+#else
 #define ROLLPITCH_ZERO_REVERSION (0.001f)
+#endif
 
 // The bounds on the covariance, these shouldn't be hit, but sometimes are... why?
 #define MAX_COVARIANCE (100)

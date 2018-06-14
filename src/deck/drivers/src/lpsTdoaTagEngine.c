@@ -53,11 +53,12 @@ The implementation must handle
 #include "locodeck.h"
 #include "cfassert.h"
 
+#define DEBUG_MODULE "TDOA_ENGINE"
+#include "debug.h"
+
 #include "estimator.h"
 #include "estimator_kalman.h"
 #include "outlierFilter.h"
-
-#define DEBUG_MODULE "tdoaEngine"
 
 #define MEASUREMENT_NOISE_STD 0.15f
 #define ANCHOR_OK_TIMEOUT 1500
@@ -79,6 +80,9 @@ static anchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
 
 void tdoaEngineInit() {
   memset(anchorStorage, 0, sizeof(anchorStorage));
+  #ifdef LPS_2D_POSITION_HEIGHT
+  DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
+  #endif
 }
 
 static anchorInfo_t* getAnchorCtx(const uint8_t anchor) {
@@ -281,6 +285,16 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
     if (outlierFilterValidateTdoa(&tdoa)) {
       lpsTdoaStats.packetsToEstimator++;
       estimatorKalmanEnqueueTDOA(&tdoa);
+
+      #ifdef LPS_2D_POSITION_HEIGHT
+      // If LPS_2D_POSITION_HEIGHT we assume that we are doing 2D positioning.
+      // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
+      tofMeasurement_t tofData;
+      tofData.timestamp = xTaskGetTickCount();
+      tofData.distance = LPS_2D_POSITION_HEIGHT;
+      tofData.stdDev = 0.0;
+      estimatorKalmanEnqueueTOF(&tofData);
+      #endif
 
       uint8_t idA = tdoaEngineGetId(anchorACtx);
       uint8_t idB = tdoaEngineGetId(anchorBCtx);
