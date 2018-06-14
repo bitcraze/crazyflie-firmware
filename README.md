@@ -101,8 +101,8 @@ tb make
 ```
 
 ### config.mk
-To create custom build options create a file called config.mk in the root folder 
-(same as Makefile) and fill it with options. E.g. 
+To create custom build options create a file called config.mk in the tools/make/
+folder and fill it with options. E.g. 
 ```
 PLATFORM=CF2
 DEBUG=1
