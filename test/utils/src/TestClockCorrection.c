@@ -183,12 +183,12 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheSpecs() {
   };
 
   // Test
-  const double result = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrection;
-  const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket;
-  TEST_ASSERT_FALSE(result);
+  const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket - 1;
+  TEST_ASSERT_FALSE(sampleIsReliable);
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, clockCorrectionStorage.clockCorrection);
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
@@ -205,12 +205,12 @@ void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheSpecsWithEmptyBucket
   };
 
   // Test
-  const double result = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrectionCandidate;
-  const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket + 1;
-  TEST_ASSERT_TRUE(result);
+  const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket;
+  TEST_ASSERT_FALSE(sampleIsReliable);
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, clockCorrectionStorage.clockCorrection);
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
@@ -227,12 +227,12 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithE
   };
 
   // Test
-  const double result = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrectionCandidate;
-  const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket + 1;
-  TEST_ASSERT_TRUE(result);
+  const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket;
+  TEST_ASSERT_FALSE(sampleIsReliable);
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, clockCorrectionStorage.clockCorrection);
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
@@ -249,12 +249,12 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithN
   };
 
   // Test
-  const double result = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrection;
   const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket - 1;
-  TEST_ASSERT_FALSE(result);
+  TEST_ASSERT_FALSE(sampleIsReliable);
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, clockCorrectionStorage.clockCorrection);
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
@@ -271,12 +271,12 @@ void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheAcceptableNoise() {
   };
 
   // Test
-  const double result = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = updateClockCorrection(&clockCorrectionStorage, clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
   const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket + 1;
-  TEST_ASSERT_TRUE(result);
+  TEST_ASSERT_TRUE(sampleIsReliable);
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, clockCorrectionStorage.clockCorrection);
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
