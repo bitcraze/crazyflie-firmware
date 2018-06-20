@@ -66,32 +66,30 @@ double calculateClockCorrection(const uint64_t new_t_in_cl_reference, const uint
 
 /**
  Updates the clock correction only if the provided value follows certain conditions. This is used to discard wrong clock correction meassurements.
- @return True if the provided clock correction was valid and accepted, false otherwise.
+ @return True if the provided clock correction sample ir reliable, false otherwise. A sample is reliable when it is in the accepted noise level (which means that we already have two or more samples that are similar) and has been LP filtered.
  */
 bool updateClockCorrection(clockCorrectionStorage_t* storage, const double clockCorrectionCandidate) {
-  bool sampleIsAccepted = false;
+  bool sampleIsReliable = false;
 
-  if (CLOCK_CORRECTION_SPEC_MIN < clockCorrectionCandidate && clockCorrectionCandidate < CLOCK_CORRECTION_SPEC_MAX) {
-    const double currentClockCorrection = storage->clockCorrection;
-    const double difference = clockCorrectionCandidate - currentClockCorrection;
+  const double currentClockCorrection = storage->clockCorrection;
+  const double difference = clockCorrectionCandidate - currentClockCorrection;
 
-    if (-CLOCK_CORRECTION_ACCEPTED_NOISE < difference && difference < CLOCK_CORRECTION_ACCEPTED_NOISE) {
-      // Simple low pass filter
-      const double newClockCorrection = currentClockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
+  if (-CLOCK_CORRECTION_ACCEPTED_NOISE < difference && difference < CLOCK_CORRECTION_ACCEPTED_NOISE) {
+    // Simple low pass filter
+    const double newClockCorrection = currentClockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
 
-      fillClockCorrectionBucket(storage);
-
-      storage->clockCorrection = newClockCorrection;
-      sampleIsAccepted = true;
-    } else {
-      const bool shouldAcceptANewClockReference = emptyClockCorrectionBucket(storage);
-      if (shouldAcceptANewClockReference) {
-        fillClockCorrectionBucket(storage);
+    sampleIsReliable = true;
+    fillClockCorrectionBucket(storage);
+    storage->clockCorrection = newClockCorrection;
+  } else {
+    const bool shouldAcceptANewClockReference = emptyClockCorrectionBucket(storage);
+    if (shouldAcceptANewClockReference) {
+      if (CLOCK_CORRECTION_SPEC_MIN < clockCorrectionCandidate && clockCorrectionCandidate < CLOCK_CORRECTION_SPEC_MAX) {
+        // We do not fill the bucket and accept the clock correction sample as reliable: a sample is reliable when it is in the accepted noise level (which means that we already have two or more samples that are similar) and has been LP filtered. See: https://github.com/bitcraze/crazyflie-firmware/pull/328
         storage->clockCorrection = clockCorrectionCandidate;
-        sampleIsAccepted = true;
       }
     }
   }
 
-  return sampleIsAccepted;
+  return sampleIsReliable;
 }
