@@ -11,7 +11,7 @@
 /**
  Obtains the clock correction from a clockCorrectionStorage_t object. This is the recommended public API to obtain the clock correction, instead of getting it directly from the storage object.
  */
-double getClockCorrection(clockCorrectionStorage_t* storage) {
+double getClockCorrection(const clockCorrectionStorage_t* storage) {
   return storage->clockCorrection;
 }
 
