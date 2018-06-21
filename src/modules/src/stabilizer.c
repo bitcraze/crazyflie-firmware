@@ -61,9 +61,6 @@ static control_t control;
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
 
-typedef enum { measureNoiseFloor, measureProp, measureDone } TestState;
-static TestState testState = measureNoiseFloor;
-
 typedef enum { configureAcc, measureNoiseFloor, measureProp, evaluateResult, testDone } TestState;
 static TestState testState = configureAcc;
 
@@ -221,7 +218,7 @@ static bool evaluateTest(float low, float high, float value, uint8_t motor)
   if (value < low || value > high)
   {
     DEBUG_PRINT("Propeller test on M%d [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
-                motor, low, high, value);
+                motor, (double)low, (double)high, (double)value);
     return false;
   }
   return true;
@@ -260,7 +257,7 @@ static void testProps(sensorData_t *sensors)
       accVarYnf = variance(accY, 100);
       accVarZnf = variance(accZ, 100);
       DEBUG_PRINT("Acc noise floor variance X:%f, Y:%f, Z:%f\n",
-                  accVarXnf, accVarYnf, accVarZnf);
+                  (double)accVarXnf, (double)accVarYnf, (double)accVarZnf);
       testState = measureProp;
     }
 
@@ -289,7 +286,8 @@ static void testProps(sensorData_t *sensors)
       accVarY[motorToTest] = variance(accY, 100);
       accVarZ[motorToTest] = variance(accZ, 100);
       DEBUG_PRINT("Motor M%d variance X:%f, Y:%f, Z:%f\n",
-                   motorToTest+1, accVarX[motorToTest], accVarY[motorToTest], accVarZ[motorToTest]);
+                   motorToTest+1, (double)accVarX[motorToTest],
+                   (double)accVarY[motorToTest], (double)accVarZ[motorToTest]);
     }
     else if (i >= 1000)
     {
