@@ -142,7 +142,7 @@ void attitudeControllerResetRollAttitudePID(void)
 
 void attitudeControllerResetPitchAttitudePID(void)
 {
-    pidReset(&pidRoll);
+    pidReset(&pidPitch);
 }
 
 void attitudeControllerResetAllPID(void)
