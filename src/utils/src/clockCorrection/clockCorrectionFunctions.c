@@ -9,6 +9,24 @@
 #define CLOCK_CORRECTION_BUCKET_MAX 4
 
 /**
+ Logging all the clock correction information requires scaling the values repeatedly, which is computer intense. Thus, the logging functionality is enabled at compile time with the CLOCK_CORRECTION_ENABLE_LOGGING flag.
+ */
+#ifdef CLOCK_CORRECTION_ENABLE_LOGGING
+#include "log.h"
+
+static float logMinAcceptedNoiseLimit = 0;
+static float logMaxAcceptedNoiseLimit = 0;
+static float logMinSpecLimit = 0;
+static float logMaxSpecLimit = 0;
+static float logClockCorrection = 0;
+static float logClockCorrectionCandidate = 0;
+
+static float scaleValueForLogging(double value) {
+  return (float)((value - 1) * (1 / MAX_CLOCK_DEVIATION_SPEC) * 1000);
+}
+#endif
+
+/**
  Obtains the clock correction from a clockCorrectionStorage_t object. This is the recommended public API to obtain the clock correction, instead of getting it directly from the storage object.
  */
 double getClockCorrection(const clockCorrectionStorage_t* storage) {
@@ -74,6 +92,15 @@ bool updateClockCorrection(clockCorrectionStorage_t* storage, const double clock
   const double currentClockCorrection = storage->clockCorrection;
   const double difference = clockCorrectionCandidate - currentClockCorrection;
 
+#ifdef CLOCK_CORRECTION_ENABLE_LOGGING
+  logMinAcceptedNoiseLimit = scaleValueForLogging(currentClockCorrection - CLOCK_CORRECTION_ACCEPTED_NOISE);
+  logMaxAcceptedNoiseLimit = scaleValueForLogging(currentClockCorrection + CLOCK_CORRECTION_ACCEPTED_NOISE);
+  logMinSpecLimit = scaleValueForLogging(CLOCK_CORRECTION_SPEC_MIN);
+  logMaxSpecLimit = scaleValueForLogging(CLOCK_CORRECTION_SPEC_MAX);
+  logClockCorrection = scaleValueForLogging(currentClockCorrection);
+  logClockCorrectionCandidate = scaleValueForLogging(clockCorrectionCandidate);
+#endif
+
   if (-CLOCK_CORRECTION_ACCEPTED_NOISE < difference && difference < CLOCK_CORRECTION_ACCEPTED_NOISE) {
     // Simple low pass filter
     const double newClockCorrection = currentClockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
@@ -93,3 +120,14 @@ bool updateClockCorrection(clockCorrectionStorage_t* storage, const double clock
 
   return sampleIsReliable;
 }
+
+#ifdef CLOCK_CORRECTION_ENABLE_LOGGING
+LOG_GROUP_START(CkCorrection)
+LOG_ADD(LOG_FLOAT, minNoise, &logMinAcceptedNoiseLimit)
+LOG_ADD(LOG_FLOAT, maxNoise, &logMaxAcceptedNoiseLimit)
+LOG_ADD(LOG_FLOAT, minSpec, &logMinSpecLimit)
+LOG_ADD(LOG_FLOAT, maxSpec, &logMaxSpecLimit)
+LOG_ADD(LOG_FLOAT, actualValue, &logClockCorrection)
+LOG_ADD(LOG_FLOAT, candidate, &logClockCorrectionCandidate)
+LOG_GROUP_STOP(CkCorrection)
+#endif
