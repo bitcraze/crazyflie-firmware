@@ -44,7 +44,6 @@ void deckInit()
   deckDriverCount();
   deckInfoInit();
 
-#ifndef IGNORE_OW_DECKS
   int nDecks;
   int i;
 
@@ -65,13 +64,11 @@ void deckInit()
       deck->driver->init(deck);
     }
   }
-#endif
 }
 
 bool deckTest()
 {
   bool pass = true;
-#ifndef IGNORE_OW_DECKS
   int nDecks;
   int i;
 
@@ -89,7 +86,6 @@ bool deckTest()
       }
     }
   }
-#endif
 
   return pass;
 }

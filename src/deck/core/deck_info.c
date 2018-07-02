@@ -92,6 +92,7 @@ DeckInfo * deckInfo(int i)
 // Dummy driver for decks that do not have a driver implemented
 static const DeckDriver dummyDriver;
 
+#ifndef IGNORE_OW_DECKS
 static const DeckDriver * findDriver(DeckInfo *deck)
 {
   char name[30];
@@ -110,6 +111,7 @@ static const DeckDriver * findDriver(DeckInfo *deck)
 
   return driver;
 }
+#endif
 
 void printDeckInfo(DeckInfo *info)
 {
@@ -135,6 +137,7 @@ void printDeckInfo(DeckInfo *info)
   }
 }
 
+#ifndef IGNORE_OW_DECKS
 static bool infoDecode(DeckInfo * info)
 {
   uint8_t crcHeader;
@@ -168,11 +171,11 @@ static bool infoDecode(DeckInfo * info)
 
   return true;
 }
+#endif
 
 static void enumerateDecks(void)
 {
   uint8_t nDecks = 0;
-  int i;
   bool noError = true;
 
   owInit();
@@ -186,7 +189,8 @@ static void enumerateDecks(void)
     nDecks = 0;
   }
 
-  for (i = 0; i < nDecks; i++)
+#ifndef IGNORE_OW_DECKS
+  for (int i = 0; i < nDecks; i++)
   {
     DECK_INFO_DBG_PRINT("Enumerating deck %i\n", i);
     if (owRead(i, 0, sizeof(deckInfos[0].raw), (uint8_t *)&deckInfos[i]))
@@ -214,6 +218,10 @@ static void enumerateDecks(void)
       noError = false;
     }
   }
+#else
+  DEBUG_PRINT("Ignoring all OW decks because of compile flag.\n");
+  nDecks = 0;
+#endif
 
   // Add build-forced driver
   if (strlen(deck_force) > 0) {
