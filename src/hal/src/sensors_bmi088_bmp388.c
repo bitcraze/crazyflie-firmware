@@ -692,7 +692,7 @@ static bstdr_ret_t bstdr_bmi088_comm_init(void)
  *
  * @return Zero if successful, otherwise an error code
  */
-static bstdr_ret_t bstdr_bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+static bstdr_ret_t bstdr_bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
 {
 	/**< Burst read code comes here */
 	if (i2cdevRead(I2C3_DEV, dev_id, reg_addr, (uint16_t) len, reg_data))
@@ -713,7 +713,7 @@ static bstdr_ret_t bstdr_bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uin
  *
  * @return Zero if successful, otherwise an error code
  */
-static bstdr_ret_t bstdr_bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+static bstdr_ret_t bstdr_bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
 {
 	/**< Burst write code comes here */
 	if (i2cdevWrite(I2C3_DEV, dev_id,reg_addr,(uint16_t) len, reg_data))
