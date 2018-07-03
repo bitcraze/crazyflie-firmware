@@ -208,7 +208,13 @@ bool ledseqTest(void)
   bool status;
 
   status = isInit & ledTest();
+  #ifdef TURN_OFF_LEDS
+  ledseqEnable(false);
+  ledSet(LED_BLUE_L, 0);
+  #else
   ledseqEnable(true);
+  #endif
+
   return status;
 }
 

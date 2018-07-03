@@ -20,6 +20,9 @@
 ## Use morse when flashing the LED to indicate that the Crazyflie is calibrated
 # CFLAGS += -DCALIBRATED_LED_MORSE
 
+## Disable LEDs from turning on/flashing
+# CFLAGS += -DTURN_OFF_LEDS
+
 ## Set LED Rings to use less LEDs
 # CFLAGS += -DLED_RING_NBR_LEDS=6
 
