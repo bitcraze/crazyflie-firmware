@@ -23,6 +23,9 @@
 ## Disable LEDs from turning on/flashing
 # CFLAGS += -DTURN_OFF_LEDS
 
+## Set the default LED Ring effect (if not set, effect 6 will be used)
+# CFLAGS += -DLEDRING_DEFAULT_EFFECT=0
+
 ## Set LED Rings to use less LEDs
 # CFLAGS += -DLED_RING_NBR_LEDS=6
 
