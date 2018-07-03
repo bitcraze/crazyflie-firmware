@@ -50,3 +50,8 @@
 # Only use in TDoA 3
 # Note: Anchors must also be built with this flag
 # CFLAGS += -DLPS_LONGER_RANGE
+
+## Low interference communication
+# Set the 'low interference' 2.4GHz TX power. This power is set when the loco deck is initialized
+# Possible power are: +4, 0, -4, -8, -12, -16, -20, -30
+# CFLAGS += -DPLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM="(-12)"
