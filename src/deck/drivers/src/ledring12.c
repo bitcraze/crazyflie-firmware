@@ -676,6 +676,28 @@ static void fadeColorEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+/**
+ * An effect that shows the Signal Strength (RSSI) on the LED ring.
+ *
+ * Red means bad, green means good.
+ */
+static float badRssi = 85, goodRssi = 35;
+static void rssiEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+  static int rssiid;
+  float rssi;
+
+  rssiid = logGetVarId("radio", "rssi");
+  rssi = logGetFloat(rssiid);
+
+  for (i = 0; i < NBR_LEDS; i++) {
+    buffer[i][0] = LIMIT(LINSCALE(badRssi, goodRssi, 255, 0, rssi)); // Red (bad)
+    buffer[i][1] = LIMIT(LINSCALE(badRssi, goodRssi, 0, 255, rssi)); // Green (good)
+    buffer[i][2] = 0; // Blue
+  }
+}
+
 /**************** Effect list ***************/
 
 
@@ -696,6 +718,7 @@ Ledring12Effect effectsFct[] =
   gravityLight,
   virtualMemEffect,
   fadeColorEffect,
+  rssiEffect,
 }; //TODO Add more
 
 /********** Ring init and switching **********/
