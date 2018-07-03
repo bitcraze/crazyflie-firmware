@@ -51,9 +51,11 @@
 
 /* Bosch Sensortec Drivers */
 #include "bmi055.h"
+#include "bmi088.h"
 #include "bmi160.h"
 #include "bmm150.h"
 #include "bmp280.h"
+#include "bmp3.h"
 #include "bstdr_comm_support.h"
 
 #define SENSORS_READ_RATE_HZ            1000
@@ -80,7 +82,16 @@
 #define SENSORS_BMI055_ACCEL_CFG        16
 #define SENSORS_BMI055_ACCEL_FS_CFG     BMI055_ACCEL_RANGE_16G
 #define SENSORS_BMI055_G_PER_LSB_CFG    (2.0f * (float)SENSORS_BMI055_ACCEL_CFG) / 65536.0f
-#define SENSORS_BMI055_1G_IN_LSB        65536 / SENSORS_BMI055_ACCEL_CFG / 2
+#define SENSORS_BMI055_1G_IN_LSB        (65536 / SENSORS_BMI055_ACCEL_CFG / 2)
+
+/* BMI088 */
+#define SENSORS_BMI088_GYRO_FS_CFG      BMI088_GYRO_RANGE_2000_DPS
+#define SENSORS_BMI088_DEG_PER_LSB_CFG  (2.0f *2000.0f) / 65536.0f
+
+#define SENSORS_BMI088_ACCEL_CFG        24
+#define SENSORS_BMI088_ACCEL_FS_CFG     BMI088_ACCEL_RANGE_24G
+#define SENSORS_BMI088_G_PER_LSB_CFG    (2.0f * (float)SENSORS_BMI088_ACCEL_CFG) / 65536.0f
+#define SENSORS_BMI088_1G_IN_LSB        (65536 / SENSORS_BMI088_ACCEL_CFG / 2)
 
 #define SENSORS_VARIANCE_MAN_TEST_TIMEOUT   M2T(1000) // Timeout in ms
 #define SENSORS_MAN_TEST_LEVEL_MAX          5.0f      // Max degrees off
