@@ -119,29 +119,61 @@ static void blackEffect(uint8_t buffer[][3], bool reset)
 }
 
 /**************** White spin ***************/
+#if NBR_LEDS > 12
+static const uint8_t whiteRing[NBR_LEDS][3] = {{32, 32, 32}, {8,8,8}, {2,2,2},
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                      };
+#else
 static const uint8_t whiteRing[][3] = {{32, 32, 32}, {8,8,8}, {2,2,2},
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                       };
+#endif 
 
+#if NBR_LEDS > 12
+static const uint8_t blueRing[NBR_LEDS][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                      };
+#else
 static const uint8_t blueRing[][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                       };
+#endif 
 
-//static const uint8_t greenRing[][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
+// #if NBR_LEDS > 12
+// static const uint8_t greenRing[NBR_LEDS][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                      };
-//
-//static const uint8_t redRing[][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
+// #else
+// static const uint8_t greenRing[][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                      };
+// #endif 
+
+// #if NBR_LEDS > 12
+// static const uint8_t redRing[NBR_LEDS][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
 //                                       {4,0,0}, {2,0,0}, {1,0,0},
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                      };
+// #else
+// static const uint8_t redRing[][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
+//                                       {4,0,0}, {2,0,0}, {1,0,0},
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                      };
+// #endif 
 
 static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
 {
@@ -242,11 +274,19 @@ static void boatEffect(uint8_t buffer[][3], bool reset)
 
 /**************** Color spin ***************/
 
+#if NBR_LEDS > 12
+static const uint8_t colorRing[NBR_LEDS][3] = {{0,0,32}, {0,0,16}, {0,0,8},
+                                       {0,0,4}, {16,16,16}, {8,8,8},
+                                       {4,4,4},{32,0,0},{16,0,0},
+                                       {8,0,0}, {4,0,0}, {2,0,0},
+                                      };
+#else
 static const uint8_t colorRing[][3] = {{0,0,32}, {0,0,16}, {0,0,8},
                                        {0,0,4}, {16,16,16}, {8,8,8},
                                        {4,4,4},{32,0,0},{16,0,0},
                                        {8,0,0}, {4,0,0}, {2,0,0},
                                       };
+#endif
 
 static void colorSpinEffect(uint8_t buffer[][3], bool reset)
 {

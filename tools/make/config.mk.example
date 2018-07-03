@@ -20,6 +20,12 @@
 ## Use morse when flashing the LED to indicate that the Crazyflie is calibrated
 # CFLAGS += -DCALIBRATED_LED_MORSE
 
+## Set LED Rings to use less LEDs
+# CFLAGS += -DLED_RING_NBR_LEDS=6
+
+## Set LED Rings to use less more LEDs (only if board is modified)
+# CFLAGS += -DLED_RING_NBR_LEDS=24
+
 ## Turn on monitoring of queue usages
 # CFLAGS += -DDEBUG_QUEUE_MONITOR
 
