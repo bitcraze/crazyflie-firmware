@@ -34,7 +34,9 @@
 #include "radiolink.h"
 
 // Define to decrease the nRF51 Tx power to reduce interference
-#define PLATFORM_NRF51_TX_POWER_DBM (-12)
+#ifndef PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM
+#define PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM (-12)
+#endif
 
 // TODO: Implement!
 int platformInit(void)
@@ -51,6 +53,6 @@ int platformInit(void)
 void platformSetLowInterferenceRadioMode(void)
 {
   // Decrease the nRF51 Tx power to reduce interference
-  radiolinkSetPowerDbm(PLATFORM_NRF51_TX_POWER_DBM);
-  DEBUG_PRINT("Low interference mode. NRF51 TX power reduced by %ddb.\r\n", PLATFORM_NRF51_TX_POWER_DBM);
+  radiolinkSetPowerDbm(PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
+  DEBUG_PRINT("Low interference mode. NRF51 TX power offset by %ddb.\r\n", PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
 }
