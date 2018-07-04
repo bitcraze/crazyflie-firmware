@@ -211,6 +211,13 @@ typedef struct tofMeasurement_s {
   float stdDev;
 } tofMeasurement_t;
 
+/** Absolute height measurement */
+typedef struct heightMeasurement_s {
+  uint32_t timestamp;
+  float height;
+  float stdDev;
+} heightMeasurement_t;
+
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000
 #define RATE_500_HZ 500

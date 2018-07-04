@@ -289,11 +289,11 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
       #ifdef LPS_2D_POSITION_HEIGHT
       // If LPS_2D_POSITION_HEIGHT we assume that we are doing 2D positioning.
       // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
-      tofMeasurement_t tofData;
-      tofData.timestamp = xTaskGetTickCount();
-      tofData.distance = LPS_2D_POSITION_HEIGHT;
-      tofData.stdDev = 0.0;
-      estimatorKalmanEnqueueTOF(&tofData);
+      heightMeasurement_t heightData;
+      heightData.timestamp = xTaskGetTickCount();
+      heightData.height = LPS_2D_POSITION_HEIGHT;
+      heightData.stdDev = 0.0001;
+      estimatorKalmanEnqueueAsoluteHeight(&heightData);
       #endif
 
       uint8_t idA = tdoaEngineGetId(anchorACtx);
