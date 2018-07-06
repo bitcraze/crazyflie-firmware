@@ -159,7 +159,10 @@ static void sensorsDeviceInit(void)
     }
   else
     {
+#ifndef SENSORS_IGNORE_IMU_FAIL
       DEBUG_PRINT("BMI088 Gyro I2C connection [FAIL]\n");
+      isInit = false;
+#endif
     }
 
   /* BMI088 ACCEL */
@@ -186,7 +189,10 @@ static void sensorsDeviceInit(void)
     }
   else
     {
+#ifndef SENSORS_IGNORE_IMU_FAIL
       DEBUG_PRINT("BMI088 Accel I2C connection [FAIL]\n");
+      isInit = false;
+#endif
     }
 
   /* BMP388 */
