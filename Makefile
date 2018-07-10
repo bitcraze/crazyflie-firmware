@@ -201,6 +201,7 @@ endif
 
 #Deck tests
 PROJ_OBJ_CF2 += exptest.o
+PROJ_OBJ_CF2 += exptestRR.o
 #PROJ_OBJ_CF2 += bigquadtest.o
 
 

@@ -158,6 +158,16 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
   return (pdTRUE == xQueueReceive(tofDataQueue, tof, 0));
 }
 
+// Absolute height measurement along the room Z
+static xQueueHandle heightDataQueue;
+#define HEIGHT_QUEUE_LENGTH (10)
+
+static void stateEstimatorUpdateWithAbsoluteHeight(heightMeasurement_t *height);
+
+static inline bool stateEstimatorHasHeightPacket(heightMeasurement_t *height) {
+  return (pdTRUE == xQueueReceive(heightDataQueue, height, 0));
+}
+
 /**
  * Constants used in the estimator
  */
@@ -471,6 +481,13 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   while (stateEstimatorHasTOFPacket(&tof))
   {
     stateEstimatorUpdateWithTof(&tof);
+    doneUpdate = true;
+  }
+
+  heightMeasurement_t height;
+  while (stateEstimatorHasHeightPacket(&height))
+  {
+    stateEstimatorUpdateWithAbsoluteHeight(&height);
     doneUpdate = true;
   }
 
@@ -925,6 +942,13 @@ static void stateEstimatorUpdateWithBaro(baro_t *baro)
 }
 #endif
 
+static void stateEstimatorUpdateWithAbsoluteHeight(heightMeasurement_t* height) {
+  float h[STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, STATE_DIM, h};
+  h[STATE_Z] = 1;
+  stateEstimatorScalarUpdate(&H, height->height - S[STATE_Z], height->stdDev);
+}
+
 static void stateEstimatorUpdateWithPosition(positionMeasurement_t *xyz)
 {
   // a direct measurement of states x, y, and z
@@ -1286,6 +1310,7 @@ void estimatorKalmanInit(void) {
     tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
     flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
     tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
+    heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
   }
   else
   {
@@ -1408,6 +1433,13 @@ bool estimatorKalmanEnqueueTOF(tofMeasurement_t *tof)
   // A distance (distance) [m] to the ground along the z_B axis.
   ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(tofDataQueue, (void *)tof);
+}
+
+bool estimatorKalmanEnqueueAsoluteHeight(heightMeasurement_t *height)
+{
+  // A distance (height) [m] to the ground along the z axis.
+  ASSERT(isInit);
+  return stateEstimatorEnqueueExternalMeasurement(heightDataQueue, (void *)height);
 }
 
 bool estimatorKalmanTest(void)
