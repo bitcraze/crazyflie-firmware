@@ -87,8 +87,8 @@ static struct trajectoryDescription trajectory_descriptions[NUM_TRAJECTORY_DEFIN
 static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;
-static struct vec pos; // last known state (position [m])
-static float yaw; // last known state (yaw [rad])
+static struct vec pos; // last known setpoint (position [m])
+static float yaw; // last known setpoint yaw (yaw [rad])
 static struct piecewise_traj trajectory;
 
 // makes sure that we don't evaluate the trajectory while it is being changed
@@ -209,9 +209,6 @@ bool crtpCommanderHighLevelIsStopped()
 
 void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state)
 {
-  pos = state2vec(state->position);
-  yaw = radians(state->attitude.yaw);
-
   xSemaphoreTake(lockTraj, portMAX_DELAY);
   float t = usecTimestamp() / 1e6;
   struct traj_eval ev = plan_current_goal(&planner, t);
@@ -220,6 +217,12 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     plan_stop(&planner);
   }
   xSemaphoreGive(lockTraj);
+
+  // if we are on the ground, update the last setpoint with the current state estimate
+  if (plan_is_stopped(&planner)) {
+    pos = state2vec(state->position);
+    yaw = radians(state->attitude.yaw);
+  }
 
   if (is_traj_eval_valid(&ev)) {
     setpoint->position.x = ev.pos.x;
@@ -242,6 +245,10 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     setpoint->acceleration.x = ev.acc.x;
     setpoint->acceleration.y = ev.acc.y;
     setpoint->acceleration.z = ev.acc.z;
+
+    // store the last setpoint
+    pos = ev.pos;
+    yaw = ev.yaw;
   }
 }
 
