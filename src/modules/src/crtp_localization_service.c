@@ -37,6 +37,7 @@
 #include "stabilizer_types.h"
 #include "stabilizer.h"
 #include "configblock.h"
+#include "crtp_commander_high_level.h"
 
 #include "locodeck.h"
 
@@ -87,6 +88,8 @@ static CRTPPacket pkRange;
 static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 static bool isInit = false;
+static bool enableExtPos = false;
+static bool prevExtPos = false;
 static uint8_t my_id;
 
 static void locSrvCrtpCB(CRTPPacket* pk);
@@ -179,8 +182,29 @@ bool getExtPosition(state_t *state)
     ext_pos.y = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].y;
     ext_pos.z = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].z;
     ext_pos.stdDev = 0.01;
-    estimatorKalmanEnqueuePosition(&ext_pos);
+    if (enableExtPos){
+      estimatorKalmanEnqueuePosition(&ext_pos);
+       
+      if (!prevExtPos){
+        prevExtPos = true;
+      //    static setpoint_t setpoint;
+      //    setpoint.mode.x = modeAbs;
+      //    setpoint.mode.y = modeAbs;
+      //    setpoint.mode.z = modeAbs;
 
+      //    setpoint.position.x = ext_pos.x;
+      //    setpoint.position.y = ext_pos.y;
+      //    setpoint.position.z = ext_pos.z;
+
+
+      //    setpoint.mode.yaw = modeAbs;
+
+      //    setpoint.attitude.yaw = 0;
+      //    commanderSetSetpoint(&setpoint, COMMANDER_PRIORITY_CRTP)
+      plan_hover(ext_pos.x, ext_pos.y, ext_pos.z);
+      }
+    }
+     
     return true;
   }
   return false;
@@ -230,4 +254,6 @@ LOG_GROUP_STOP(ext_pos)
 
 PARAM_GROUP_START(locSrv)
 PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
+PARAM_ADD(PARAM_UINT8, useExtPos, &enableExtPos)
 PARAM_GROUP_STOP(locSrv)
+ 
