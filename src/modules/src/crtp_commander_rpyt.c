@@ -202,7 +202,8 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 
   // Yaw
   if (!posSetMode) {
-    setpoint->attitudeRate.yaw  = values->yaw;
+    // legacy rate input is inverted
+    setpoint->attitudeRate.yaw = -values->yaw;
     yawModeUpdate(setpoint);
 
     setpoint->mode.yaw = modeVelocity;
