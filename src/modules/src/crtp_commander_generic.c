@@ -111,7 +111,7 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 }
 
 /* zDistanceDecoder
@@ -137,7 +137,7 @@ static void zDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 
 
   setpoint->mode.roll = modeAbs;
@@ -255,7 +255,7 @@ static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 
 
   setpoint->mode.roll = modeAbs;
@@ -285,7 +285,7 @@ static void hoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, s
 
 
   setpoint->mode.yaw = modeVelocity;
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 
 
   setpoint->mode.x = modeVelocity;
