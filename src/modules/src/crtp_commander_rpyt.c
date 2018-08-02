@@ -133,7 +133,7 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   if (thrustLocked || (rawThrust < MIN_THRUST)) {
     setpoint->thrust = 0;
   } else {
-    setpoint->thrust = min(rawThrust, MAX_THRUST);
+    setpoint->thrust = fminf(rawThrust, MAX_THRUST);
   }
 
   if (altHoldMode) {
