@@ -71,8 +71,6 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 #define WHITE {0xff, 0xff, 0xff}
 #define BLACK {0x00, 0x00, 0x00}
 
-#define MAX(a,b) ((a>b)?a:b)
-#define MIN(a,b) ((a<b)?a:b)
 #define COPY_COLOR(dest, orig) dest[0]=orig[0]; dest[1]=orig[1]; dest[2]=orig[2]
 #define ADD_COLOR(dest, o1, o2) dest[0]=(o1[0]>>1)+(o2[0]>>1);dest[1]=(o1[1]>>1)+(o2[1]>>1);dest[2]=(o1[2]>>1)+(o2[2]>>1);
 #define LIMIT(a) ((a>255)?255:(a<0)?0:a)

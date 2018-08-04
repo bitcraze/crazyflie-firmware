@@ -27,6 +27,7 @@
 
 #include "pid.h"
 #include "num.h"
+#include <math.h>
 #include <float.h>
 
 void pidInit(PidObject* pid, const float desired, const float kp,

@@ -168,7 +168,7 @@ void positionController(float* thrust, attitude_t *attitude, setpoint_t *setpoin
   this.pidY.pid.outputLimit = xyVelMax * velMaxOverhead;
   // The ROS landing detector will prematurely trip if
   // this value is below 0.5
-  this.pidZ.pid.outputLimit = max(zVelMax, 0.5f)  * velMaxOverhead;
+  this.pidZ.pid.outputLimit = fmaxf(zVelMax, 0.5f)  * velMaxOverhead;
 
   float cosyaw = cosf(state->attitude.yaw * (float)M_PI / 180.0f);
   float sinyaw = sinf(state->attitude.yaw * (float)M_PI / 180.0f);
