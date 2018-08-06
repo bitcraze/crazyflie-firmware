@@ -9,6 +9,9 @@
 ## Load a deck driver that has no OW memory
 # CFLAGS += -DDECK_FORCE=bcBuzzer
 
+## Load multiple deck drivers that has no OW memory
+# CFLAGS += -DDECK_FORCE=bcBuzzer:bcLedRing
+
 ## Enable biq quad deck features
 # CFLAGS += -DENABLE_BQ_DECK
 # CFLAGS += -DBQ_DECK_ENABLE_PM
@@ -16,6 +19,18 @@
 
 ## Use morse when flashing the LED to indicate that the Crazyflie is calibrated
 # CFLAGS += -DCALIBRATED_LED_MORSE
+
+## Disable LEDs from turning on/flashing
+# CFLAGS += -DTURN_OFF_LEDS
+
+## Set the default LED Ring effect (if not set, effect 6 will be used)
+# CFLAGS += -DLEDRING_DEFAULT_EFFECT=0
+
+## Set LED Rings to use less LEDs
+# CFLAGS += -DLED_RING_NBR_LEDS=6
+
+## Set LED Rings to use less more LEDs (only if board is modified)
+# CFLAGS += -DLED_RING_NBR_LEDS=24
 
 ## Turn on monitoring of queue usages
 # CFLAGS += -DDEBUG_QUEUE_MONITOR
@@ -28,6 +43,9 @@
 
 ## Set alternative pins for LOCO deck (IRQ=IO_2, RESET=IO_3, default are RX1 and TX1)
 # CFLAGS += -DLOCODECK_USE_ALT_PINS
+
+## Disable Low Interference Mode when using Loco Deck
+# CFLAGS += -DLOCODECK_NO_LOW_INTERFERENCE
 
 ## Compile positioning system for TDoA mode
 # LPS_TDOA_ENABLE=1
