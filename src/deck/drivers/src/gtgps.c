@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "log.h"
+#include "param.h"
 
 static bool isInit;
 
@@ -310,6 +311,10 @@ static const DeckDriver gtgps_deck = {
 };
 
 DECK_DRIVER(gtgps_deck);
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcGTGPS, &isInit)
+PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(gps)
 LOG_ADD(LOG_INT32, lat, &m.latitude)

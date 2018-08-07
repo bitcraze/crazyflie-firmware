@@ -501,6 +501,10 @@ static const DeckDriver dwm1000_deck = {
 
 DECK_DRIVER(dwm1000_deck);
 
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+PARAM_GROUP_STOP(deck)
+
 LOG_GROUP_START(ranging)
 #if (LOCODECK_NR_OF_ANCHORS > 0)
 LOG_ADD(LOG_FLOAT, distance0, &algoOptions.distance[0])
@@ -605,10 +609,6 @@ PARAM_ADD(PARAM_FLOAT, anchor7z, &algoOptions.anchorPosition[7].z)
 #endif
 PARAM_ADD(PARAM_UINT8, enable, &algoOptions.combinedAnchorPositionOk)
 PARAM_GROUP_STOP(anchorpos)
-
-PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
-PARAM_GROUP_STOP(deck)
 
 // Loco Posisioning Protocol (LPP) handling
 
