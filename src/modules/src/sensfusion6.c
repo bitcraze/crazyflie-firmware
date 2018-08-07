@@ -315,7 +315,7 @@ static void estimatedGravityDirection(float* gx, float* gy, float* gz)
   *gz = q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3;
 }
 
-LOG_GROUP_START(sensorfusion6)
+LOG_GROUP_START(sensfusion6)
   LOG_ADD(LOG_FLOAT, qw, &q0)
   LOG_ADD(LOG_FLOAT, qx, &q1)
   LOG_ADD(LOG_FLOAT, qy, &q2)
@@ -326,9 +326,9 @@ LOG_GROUP_START(sensorfusion6)
   LOG_ADD(LOG_FLOAT, accZbase, &baseZacc)
   LOG_ADD(LOG_UINT8, isInit, &isInit)
   LOG_ADD(LOG_UINT8, isCalibrated, &isCalibrated)
-LOG_GROUP_STOP(sensorfusion6)
+LOG_GROUP_STOP(sensfusion6)
 
-PARAM_GROUP_START(sensorfusion6)
+PARAM_GROUP_START(sensfusion6)
 #ifdef MADWICK_QUATERNION_IMU
 PARAM_ADD(PARAM_FLOAT, beta, &beta)
 #else // MAHONY_QUATERNION_IMU
@@ -336,4 +336,4 @@ PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
 PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
 #endif
 PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
-PARAM_GROUP_STOP(sensorfusion6)
+PARAM_GROUP_STOP(sensfusion6)
