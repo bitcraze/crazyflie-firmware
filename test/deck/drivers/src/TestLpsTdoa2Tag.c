@@ -1263,8 +1263,8 @@ static void populateLppPacket(packet_t* packet, char *data, int length, locoAddr
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
   packet->pan = 0xbccf;
-  memcpy(&packet->payload[LPS_TDOA2_SEND_LPP_PAYLOAD], data, length);
-  packet->payload[LPS_TDOA2_TYPE] = LPP_HEADER_SHORT_PACKET;
+  memcpy(&packet->payload[LPS_TDOA2_SEND_LPP_PAYLOAD_INDEX], data, length);
+  packet->payload[LPS_TDOA2_TYPE_INDEX] = LPP_HEADER_SHORT_PACKET;
   packet->sourceAddress = sourceAddress;
   packet->destAddress = destinationAddress;
 }

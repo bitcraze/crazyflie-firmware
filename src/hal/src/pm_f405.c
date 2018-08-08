@@ -77,6 +77,8 @@ static bool isInit;
 static PMStates pmState;
 static PmSyslinkInfo pmSyslinkInfo;
 
+static uint8_t batteryLevel;
+
 static void pmSetBatteryVoltage(float voltage);
 
 const static float bat671723HS25C[10] =
@@ -293,6 +295,7 @@ void pmTask(void *param)
     extBatteryVoltage = pmMeasureExtBatteryVoltage();
     extBatteryVoltageMV = (uint16_t)(extBatteryVoltage * 1000);
     extBatteryCurrent = pmMeasureExtBatteryCurrent();
+    batteryLevel = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) * 10;
 
     if (pmGetBatteryVoltage() > PM_BAT_LOW_VOLTAGE)
     {
@@ -387,5 +390,6 @@ LOG_ADD(LOG_UINT16, extVbatMV, &extBatteryVoltageMV)
 LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 LOG_ADD(LOG_INT8, state, &pmState)
+LOG_ADD(LOG_UINT8, batteryLevel, &batteryLevel)
 LOG_GROUP_STOP(pm)
 

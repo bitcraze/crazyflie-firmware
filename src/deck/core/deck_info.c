@@ -92,6 +92,7 @@ DeckInfo * deckInfo(int i)
 // Dummy driver for decks that do not have a driver implemented
 static const DeckDriver dummyDriver;
 
+#ifndef IGNORE_OW_DECKS
 static const DeckDriver * findDriver(DeckInfo *deck)
 {
   char name[30];
@@ -110,6 +111,7 @@ static const DeckDriver * findDriver(DeckInfo *deck)
 
   return driver;
 }
+#endif
 
 void printDeckInfo(DeckInfo *info)
 {
@@ -135,6 +137,7 @@ void printDeckInfo(DeckInfo *info)
   }
 }
 
+#ifndef IGNORE_OW_DECKS
 static bool infoDecode(DeckInfo * info)
 {
   uint8_t crcHeader;
@@ -168,11 +171,11 @@ static bool infoDecode(DeckInfo * info)
 
   return true;
 }
+#endif
 
 static void enumerateDecks(void)
 {
   uint8_t nDecks = 0;
-  int i;
   bool noError = true;
 
   owInit();
@@ -186,7 +189,8 @@ static void enumerateDecks(void)
     nDecks = 0;
   }
 
-  for (i = 0; i < nDecks; i++)
+#ifndef IGNORE_OW_DECKS
+  for (int i = 0; i < nDecks; i++)
   {
     DECK_INFO_DBG_PRINT("Enumerating deck %i\n", i);
     if (owRead(i, 0, sizeof(deckInfos[0].raw), (uint8_t *)&deckInfos[i]))
@@ -214,22 +218,38 @@ static void enumerateDecks(void)
       noError = false;
     }
   }
+#else
+  DEBUG_PRINT("Ignoring all OW decks because of compile flag.\n");
+  nDecks = 0;
+#endif
 
   // Add build-forced driver
   if (strlen(deck_force) > 0) {
-    const DeckDriver *driver = deckFindDriverByName(deck_force);
-    if (!driver) {
-      DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
-    } else if (driver->init) {
-      if (nDecks <= DECK_MAX_COUNT)
-      {
-        nDecks++;
-        deckInfos[nDecks - 1].driver = driver;
-        DEBUG_PRINT("compile-time forced driver %s added\n", deck_force);
-      } else {
-        DEBUG_PRINT("WARNING: No room for compile-time forced driver\n");
+  	//split deck_force into multiple, separated by colons, if available 
+    char delim[] = ":"; 
+
+    char temp_deck_force[strlen(deck_force)]; 
+    strcpy(temp_deck_force, deck_force); 
+    char * token = strtok(temp_deck_force, delim); 
+ 
+    while (token) { 
+      deck_force = token; 
+
+      const DeckDriver *driver = deckFindDriverByName(deck_force);
+      if (!driver) {
+        DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
+      } else if (driver->init) {
+        if (nDecks <= DECK_MAX_COUNT)
+        {
+          nDecks++;
+          deckInfos[nDecks - 1].driver = driver;
+          DEBUG_PRINT("compile-time forced driver %s added\n", deck_force);
+        } else {
+          DEBUG_PRINT("WARNING: No room for compile-time forced driver\n");
+        }
       }
-    }
+      token = strtok(NULL, delim); 
+	}
   }
 
   if (noError) {

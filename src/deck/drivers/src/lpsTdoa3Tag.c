@@ -51,10 +51,10 @@ The implementation must handle
 #include "libdw1000.h"
 #include "mac.h"
 
+#define DEBUG_MODULE "TDOA3"
 #include "debug.h"
 #include "cfassert.h"
 
-#define DEBUG_MODULE "tdoa3"
 
 // Positions for sent LPP packets
 #define LPS_TDOA3_TYPE 0
@@ -274,6 +274,8 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
+  DEBUG_PRINT("TDoA 3 initialized\n");
+
   options = algoOptions;
   options->rangingState = 0;
 

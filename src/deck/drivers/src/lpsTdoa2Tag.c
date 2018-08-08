@@ -234,8 +234,8 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
 
-  txPacket.payload[LPS_TDOA2_TYPE] = LPP_HEADER_SHORT_PACKET;
-  memcpy(&txPacket.payload[LPS_TDOA2_SEND_LPP_PAYLOAD], packet->data, packet->length);
+  txPacket.payload[LPS_TDOA2_TYPE_INDEX] = LPP_HEADER_SHORT_PACKET;
+  memcpy(&txPacket.payload[LPS_TDOA2_SEND_LPP_PAYLOAD_INDEX], packet->data, packet->length);
 
   txPacket.pan = 0xbccf;
   txPacket.sourceAddress = 0xbccf000000000000 | 0xff;
@@ -256,49 +256,52 @@ static bool rxcallback(dwDevice_t *dev) {
   packet_t rxPacket;
 
   dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
-  const uint8_t anchor = rxPacket.sourceAddress & 0xff;
+  const rangePacket2_t* packet = (rangePacket2_t*)rxPacket.payload;
 
-  // Check if we need to send the current LPP packet
   bool lppSent = false;
-  if (lppPacketToSend && lppPacket.dest == anchor) {
-    sendLppShort(dev, &lppPacket);
-    lppSent = true;
-  }
+  if (packet->type == PACKET_TYPE_TDOA2) {
+    const uint8_t anchor = rxPacket.sourceAddress & 0xff;
 
-  dwTime_t arrival = {.full = 0};
-  dwGetReceiveTimestamp(dev, &arrival);
+    // Check if we need to send the current LPP packet
+    if (lppPacketToSend && lppPacket.dest == anchor) {
+      sendLppShort(dev, &lppPacket);
+      lppSent = true;
+    }
 
-  if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
-    const rangePacket2_t* packet = (rangePacket2_t*)rxPacket.payload;
+    dwTime_t arrival = {.full = 0};
+    dwGetReceiveTimestamp(dev, &arrival);
+
+    if (anchor < LOCODECK_NR_OF_TDOA2_ANCHORS) {
 
 #ifdef LPS_TDOA2_SYNCHRONIZATION_VARIABLE
-    // Storing timing
-    if (anchor == 0) {
-      stats.lastAnchor0Seq = packet->sequenceNrs[anchor];
-      stats.lastAnchor0RxTick = xTaskGetTickCount();
-    }
+      // Storing timing
+      if (anchor == 0) {
+        stats.lastAnchor0Seq = packet->sequenceNrs[anchor];
+        stats.lastAnchor0RxTick = xTaskGetTickCount();
+      }
 #endif
 
-    calcClockCorrection(&history[anchor].clockCorrection_T_To_A, anchor, packet, &arrival);
-    logClockCorrection[anchor] = history[anchor].clockCorrection_T_To_A;
+      calcClockCorrection(&history[anchor].clockCorrection_T_To_A, anchor, packet, &arrival);
+      logClockCorrection[anchor] = history[anchor].clockCorrection_T_To_A;
 
-    if (anchor != previousAnchor) {
-      float tdoaDistDiff = 0.0;
-      if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
-        rangingOk = true;
-        enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
-        addToLog(anchor, previousAnchor, tdoaDistDiff, packet);
+      if (anchor != previousAnchor) {
+        float tdoaDistDiff = 0.0;
+        if (calcDistanceDiff(&tdoaDistDiff, previousAnchor, anchor, packet, &arrival)) {
+          rangingOk = true;
+          enqueueTDOA(previousAnchor, anchor, tdoaDistDiff);
+          addToLog(anchor, previousAnchor, tdoaDistDiff, packet);
+        }
       }
+
+      history[anchor].arrival.full = arrival.full;
+      memcpy(&history[anchor].packet, packet, sizeof(rangePacket2_t));
+
+      history[anchor].anchorStatusTimeout = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
+
+      previousAnchor = anchor;
+
+      handleLppPacket(dataLength, &rxPacket);
     }
-
-    history[anchor].arrival.full = arrival.full;
-    memcpy(&history[anchor].packet, packet, sizeof(rangePacket2_t));
-
-    history[anchor].anchorStatusTimeout = xTaskGetTickCount() + ANCHOR_OK_TIMEOUT;
-
-    previousAnchor = anchor;
-
-    handleLppPacket(dataLength, &rxPacket);
   }
 
   return lppSent;

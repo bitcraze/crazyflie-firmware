@@ -102,7 +102,7 @@ uint16_t limitUint16(int32_t value)
 
 float constrain(float value, const float minVal, const float maxVal)
 {
-  return min(maxVal, max(minVal,value));
+  return fminf(maxVal, fmaxf(minVal,value));
 }
 
 float deadband(float value, const float threshold)

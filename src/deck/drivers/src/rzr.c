@@ -35,6 +35,7 @@
 #include "deck.h"
 #include "extrx.h"
 #include "pm.h"
+#include "param.h"
 
 #define RZR_GPIO_RCC_M1_OVERRIDE    RCC_AHB1Periph_GPIOA
 #define RZR_GPIO_PORT_M1_OVERRIDE   GPIOA
@@ -120,3 +121,7 @@ static const DeckDriver rzr_deck = {
 };
 
 DECK_DRIVER(rzr_deck);
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcRZR, &isInit)
+PARAM_GROUP_STOP(deck)

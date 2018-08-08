@@ -111,7 +111,7 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 }
 
 /* zDistanceDecoder
@@ -127,8 +127,8 @@ static void zDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
 {
   const struct zDistancePacket_s *values = data;
 
-  ASSERT(datalen == sizeof(struct velocityPacket_s));
 
+  ASSERT(datalen == sizeof(struct zDistancePacket_s));
 
   setpoint->mode.z = modeAbs;
 
@@ -137,7 +137,7 @@ static void zDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 
 
   setpoint->mode.roll = modeAbs;
@@ -245,7 +245,7 @@ static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
 {
   const struct altHoldPacket_s *values = data;
 
-  ASSERT(datalen == sizeof(struct velocityPacket_s));
+  ASSERT(datalen == sizeof(struct altHoldPacket_s));
 
 
   setpoint->mode.z = modeVelocity;
@@ -255,7 +255,7 @@ static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 
 
   setpoint->mode.roll = modeAbs;
@@ -278,14 +278,14 @@ static void hoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, s
 {
   const struct hoverPacket_s *values = data;
 
-  ASSERT(datalen == sizeof(struct velocityPacket_s));
+  ASSERT(datalen == sizeof(struct hoverPacket_s));
 
   setpoint->mode.z = modeAbs;
   setpoint->position.z = values->zDistance;
 
 
   setpoint->mode.yaw = modeVelocity;
-  setpoint->attitudeRate.yaw = values->yawrate;
+  setpoint->attitudeRate.yaw = -values->yawrate;
 
 
   setpoint->mode.x = modeVelocity;
