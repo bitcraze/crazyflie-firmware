@@ -351,6 +351,16 @@ int go_to(const struct data_go_to* data)
   return result;
 }
 
+int plan_hover(float x, float y, float z)
+{ 
+  int result = 0; 
+  struct vec hover_pos = mkvec(x, y, z);
+  float t = usecTimestamp() / 1e6;
+  result = plan_go_to(&planner, false, hover_pos, 0, 0.1, t);
+   
+  return result;
+}
+
 int start_trajectory(const struct data_start_trajectory* data)
 {
   int result = 0;

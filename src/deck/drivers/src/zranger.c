@@ -58,6 +58,8 @@ static uint16_t range_last = 0;
 
 static bool isInit;
 
+static bool useRangeDisabled = false; 
+
 static VL53L0xDev dev;
 
 void zRangerInit(DeckInfo* info)
@@ -108,8 +110,10 @@ void zRangerTask(void* arg)
       tofMeasurement_t tofData;
       tofData.timestamp = xTaskGetTickCount();
       tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
-      estimatorKalmanEnqueueTOF(&tofData);
+       tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
+      if (!useRangeDisabled){
+        estimatorKalmanEnqueueTOF(&tofData);
+      }
     }
 
     vTaskDelayUntil(&xLastWakeTime, M2T(dev.measurement_timing_budget_ms));
@@ -145,6 +149,10 @@ DECK_DRIVER(zranger_deck);
 PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
 PARAM_GROUP_STOP(deck)
+
+PARAM_GROUP_START(motion)
+PARAM_ADD(PARAM_UINT8, disable, &useRangeDisabled) 
+PARAM_GROUP_STOP(motion)
 
 LOG_GROUP_START(range)
 LOG_ADD(LOG_UINT16, zrange, &range_last)

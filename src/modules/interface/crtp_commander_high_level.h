@@ -67,4 +67,7 @@ void crtpCommanderHighLevelStop();
 // True if we have landed or emergency-stopped.
 bool crtpCommanderHighLevelIsStopped();
 
+// Hovering interface for internal api (not CRTP)
+int plan_hover(float x, float y, float z);
+
 #endif /* CRTP_COMMANDER_HIGH_LEVEL_H_ */
