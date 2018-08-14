@@ -3,8 +3,8 @@
 
 #include "task.h"
 #include "stabilizer_types.h"
-#include "lpsTdoaTagStats.h"
-#include "lpsTdoaTagEngine.h"
+#include "tdoaStats.h"
+#include "tdoaEngine.h"
 
 lpsTdoaStats_t lpsTdoaStats;
 

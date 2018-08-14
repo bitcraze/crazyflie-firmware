@@ -45,8 +45,8 @@ The implementation must handle
 #include <string.h>
 
 #include "lpsTdoa3Tag.h"
-#include "lpsTdoaTagEngine.h"
-#include "lpsTdoaTagStats.h"
+#include "tdoaEngine.h"
+#include "tdoaStats.h"
 
 #include "libdw1000.h"
 #include "mac.h"
@@ -126,16 +126,16 @@ static int updateRemoteData(anchorInfo_t* anchorCtx, const void* payload) {
     uint8_t remoteSeqNr = anchorData->seq & 0x7f;
 
     if (isValidTimeStamp(remoteRxTime)) {
-      tdoaEngineSetRemoteRxTime(anchorCtx, remoteId, remoteRxTime, remoteSeqNr);
+      tdoaStorageSetRemoteRxTime(anchorCtx, remoteId, remoteRxTime, remoteSeqNr);
     }
 
     bool hasDistance = ((anchorData->seq & 0x80) != 0);
     if (hasDistance) {
       int64_t tof = anchorData->distance;
       if (isValidTimeStamp(tof)) {
-        tdoaEngineSetTimeOfFlight(anchorCtx, remoteId, tof);
+        tdoaStorageSetTimeOfFlight(anchorCtx, remoteId, tof);
 
-        uint8_t anchorId = tdoaEngineGetId(anchorCtx);
+        uint8_t anchorId = tdoaStorageGetId(anchorCtx);
         if (anchorId == lpsTdoaStats.anchorId && remoteId == lpsTdoaStats.remoteAnchorId) {
           lpsTdoaStats.tof = (uint16_t)tof;
         }
@@ -155,7 +155,7 @@ static void handleLppShortPacket(anchorInfo_t* anchorCtx, const uint8_t *data, c
 
   if (type == LPP_SHORT_ANCHORPOS) {
     struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
-    tdoaEngineSetAnchorPosition(anchorCtx, newpos->x, newpos->y, newpos->z);
+    tdoaStorageSetAnchorPosition(anchorCtx, newpos->x, newpos->y, newpos->z);
   }
 }
 
@@ -173,7 +173,7 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
 
       // TODO krri Find better solution for communicating system state to the client
       // Send it to the "old" path to log anchor 0 - 7 positions to the client.
-      lpsHandleLppShortPacket(tdoaEngineGetId(anchorCtx), &rxPacket->payload[lppTypeInPayload], lppTypeAndPayloadLength);
+      lpsHandleLppShortPacket(tdoaStorageGetId(anchorCtx), &rxPacket->payload[lppTypeInPayload], lppTypeAndPayloadLength);
     }
   }
 }
@@ -196,11 +196,11 @@ static void rxcallback(dwDevice_t *dev) {
     const int64_t txAn_in_cl_An = packet->header.txTimeStamp;;
     const uint8_t seqNr = packet->header.seq;
 
-    anchorInfo_t* anchorCtx = getAnchorCtxForPacketProcessing(anchorId);
+    anchorInfo_t* anchorCtx = tdoaEngineGetAnchorCtxForPacketProcessing(anchorId);
     if (anchorCtx) {
       int rangeDataLength = updateRemoteData(anchorCtx, packet);
       tdoaEngineProcessPacket(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
-      tdoaEngineSetRxTxData(anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
+      tdoaStorageSetRxTxData(anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
       handleLppPacket(dataLength, rangeDataLength, &rxPacket, anchorCtx);
     }
 
