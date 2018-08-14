@@ -340,20 +340,25 @@ static double calcDistanceDiff(const anchorInfo_t* otherAnchorCtx, const anchorI
 static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t* anchorCtx) {
   static uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
   static uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
+  static uint8_t offset = 0;
 
   if (getClockCorrection(anchorCtx) <= 0.0) {
     return false;
   }
 
+  offset++;
   int remoteCount = 0;
   getRemoteSeqNrList(anchorCtx, &remoteCount, seqNr, id);
 
-  // TODO krri Add randomization of which anchor to pick. Current implementation will favour anchors early in the list.
-  for (int i = 0; i < remoteCount; i++) {
-    const uint8_t candidateAnchorId = id[i];
+  // Loop over the candidates and pick the first one that is useful
+  // An offset (updated for each call) is added to make sure we start at
+  // different positions in the list and vary which candidate to choose
+  for (int i = offset; i < (remoteCount + offset); i++) {
+    uint8_t index = i % remoteCount;
+    const uint8_t candidateAnchorId = id[index];
     anchorInfo_t* candidateAnchorCtx = getAnchorCtx(candidateAnchorId);
     if (candidateAnchorCtx) {
-      if (seqNr[i] == getSeqNr(candidateAnchorCtx) && getTimeOfFlight(anchorCtx, candidateAnchorId)) {
+      if (seqNr[index] == getSeqNr(candidateAnchorCtx) && getTimeOfFlight(anchorCtx, candidateAnchorId)) {
         *otherAnchorCtx = candidateAnchorCtx;
         return true;
       }
