@@ -59,6 +59,7 @@ The implementation must handle
 #include "estimator.h"
 #include "estimator_kalman.h"
 #include "outlierFilter.h"
+#include "clockCorrectionEngine.h"
 
 #define MEASUREMENT_NOISE_STD 0.15f
 #define ANCHOR_OK_TIMEOUT 1500
@@ -66,15 +67,6 @@ The implementation must handle
 #define TOF_VALIDITY_PERIOD M2T(2 * 1000);
 #define REMOTE_DATA_VALIDITY_PERIOD M2T(30);
 #define ANCHOR_POSITION_VALIDITY_PERIOD M2T(2 * 1000);
-
-#define MAX_CLOCK_DEVIATION_SPEC 10e-6
-#define CLOCK_CORRECTION_SPEC_MIN (1.0 - MAX_CLOCK_DEVIATION_SPEC * 2)
-#define CLOCK_CORRECTION_SPEC_MAX (1.0 + MAX_CLOCK_DEVIATION_SPEC * 2)
-
-#define CLOCK_CORRECTION_ACCEPTED_NOISE 0.03e-6
-#define CLOCK_CORRECTION_FILTER 0.1
-#define CLOCK_CORRECTION_BUCKET_MAX 4
-
 
 static anchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
 
@@ -167,12 +159,10 @@ void tdoaEngineSetRxTxData(anchorInfo_t* anchorCtx, int64_t rxTime, int64_t txTi
   anchorCtx->lastUpdateTime = now;
 }
 
-static double getClockCorrection(const anchorInfo_t* anchorCtx) {
-  return anchorCtx->clockCorrection;
-}
 
-static void setClockCorrection(anchorInfo_t* anchorCtx, const double clockCorrection) {
-  anchorCtx->clockCorrection = clockCorrection;
+
+static double getClockCorrection(const anchorInfo_t* anchorCtx) {
+  return clockCorrectionEngine.getClockCorrection(&anchorCtx->clockCorrectionStorage);
 }
 
 static int64_t getRemoteRxTime(const anchorInfo_t* anchorCtx, const uint8_t remoteAnchor) {
@@ -267,12 +257,9 @@ void tdoaEngineSetTimeOfFlight(anchorInfo_t* anchorCtx, const uint8_t remoteAnch
 ///////////////////////////////////////////////////////////////
 
 
-static uint64_t truncateToLocalTimeStamp(uint64_t fullTimeStamp) {
-  return fullTimeStamp & 0x00FFFFFFFFul;
-}
-
+#define TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
 static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
-  return fullTimeStamp & 0x00FFFFFFFFul;
+  return fullTimeStamp & TRUNCATE_TO_ANCHOR_TS_BITMAP;
 }
 
 static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anchorBCtx, double distanceDiff) {
@@ -308,60 +295,17 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
   }
 }
 
-static void fillClockCorrectionBucket(anchorInfo_t* anchorCtx) {
-    if (anchorCtx->clockCorrectionBucket < CLOCK_CORRECTION_BUCKET_MAX) {
-      anchorCtx->clockCorrectionBucket++;
-    }
-}
-
-static bool emptyClockCorrectionBucket(anchorInfo_t* anchorCtx) {
-    if (anchorCtx->clockCorrectionBucket > 0) {
-      anchorCtx->clockCorrectionBucket--;
-      return false;
-    }
-
-    return true;
-}
-
-static double calcClockCorrection(const int64_t latest_rxAn_by_T_in_cl_T, const int64_t latest_txAn_in_cl_An, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-  const double tickCount_in_cl_An = truncateToAnchorTimeStamp(txAn_in_cl_An - latest_txAn_in_cl_An);
-  const double tickCount_in_T = truncateToLocalTimeStamp(rxAn_by_T_in_cl_T - latest_rxAn_by_T_in_cl_T);
-
-  if (tickCount_in_cl_An == 0) {
-    return 0.0;
-  }
-
-  return tickCount_in_T / tickCount_in_cl_An;
-}
-
 static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-  bool sampleIsAccepted = false;
+  bool sampleIsReliable = false;
 
   const int64_t latest_rxAn_by_T_in_cl_T = getRxTime(anchorCtx);
   const int64_t latest_txAn_in_cl_An = getTxTime(anchorCtx);
 
   if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
-    double clockCorrectionCandidate = calcClockCorrection(latest_rxAn_by_T_in_cl_T, latest_txAn_in_cl_An, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+    double clockCorrectionCandidate = clockCorrectionEngine.calculateClockCorrection(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TRUNCATE_TO_ANCHOR_TS_BITMAP);
+    sampleIsReliable = clockCorrectionEngine.updateClockCorrection(&anchorCtx->clockCorrectionStorage, clockCorrectionCandidate);
 
-    const double currClockCorrection = getClockCorrection(anchorCtx);
-    const double diff = clockCorrectionCandidate - currClockCorrection;
-
-    if (-CLOCK_CORRECTION_ACCEPTED_NOISE < diff && diff < CLOCK_CORRECTION_ACCEPTED_NOISE) {
-      // LP filter
-      const double newClockCorrection = currClockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
-      fillClockCorrectionBucket(anchorCtx);
-
-      setClockCorrection(anchorCtx, newClockCorrection);
-      sampleIsAccepted = true;
-    } else {
-      if (emptyClockCorrectionBucket(anchorCtx)) {
-        if (CLOCK_CORRECTION_SPEC_MIN < clockCorrectionCandidate && clockCorrectionCandidate < CLOCK_CORRECTION_SPEC_MAX) {
-          setClockCorrection(anchorCtx, clockCorrectionCandidate);
-        }
-      }
-    }
-
-    if (sampleIsAccepted){
+    if (sampleIsReliable){
       if (tdoaEngineGetId(anchorCtx) == lpsTdoaStats.anchorId) {
         lpsTdoaStats.clockCorrection = getClockCorrection(anchorCtx);
         lpsTdoaStats.clockCorrectionCount++;
@@ -369,7 +313,7 @@ static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in
     }
   }
 
-  return sampleIsAccepted;
+  return sampleIsReliable;
 }
 
 static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
@@ -397,7 +341,7 @@ static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t
   static uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
   static uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
 
-  if (getClockCorrection(anchorCtx) == 0) {
+  if (getClockCorrection(anchorCtx) <= 0.0) {
     return false;
   }
 

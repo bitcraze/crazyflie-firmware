@@ -2,6 +2,7 @@
 #define __LPS_TDOA_TAG_ENGINE_H__
 
 #include "stabilizer_types.h"
+#include "clockCorrectionStorage.h"
 
 #define ANCHOR_STORAGE_COUNT 16
 #define REMOTE_ANCHOR_DATA_COUNT 16
@@ -29,8 +30,7 @@ typedef struct {
   int64_t rxTime; // Receive time of last packet, in local DWM clock
   uint8_t seqNr; // Sequence nr of last packet (7 bits)
 
-  double clockCorrection; // local DWM clock frequency / remote DWM clock frequency
-  int clockCorrectionBucket;
+  clockCorrectionStorage_t clockCorrectionStorage;
 
   point_t position; // The coordinates of the anchor
 
