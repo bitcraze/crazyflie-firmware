@@ -44,6 +44,9 @@ The implementation must handle
 
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "lpsTdoa3Tag.h"
 #include "tdoaEngine.h"
 #include "tdoaStats.h"
@@ -115,7 +118,7 @@ static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
 }
 
-static int updateRemoteData(anchorInfo_t* anchorCtx, const void* payload) {
+static int updateRemoteData(tdoaAnchorContext_t* anchorCtx, const void* payload) {
   const rangePacket3_t* packet = (rangePacket3_t*)payload;
   const void* anchorDataPtr = &packet->remoteAnchorData;
   for (uint8_t i = 0; i < packet->header.remoteCount; i++) {
@@ -150,7 +153,7 @@ static int updateRemoteData(anchorInfo_t* anchorCtx, const void* payload) {
   return (uint8_t*)anchorDataPtr - (uint8_t*)packet;
 }
 
-static void handleLppShortPacket(anchorInfo_t* anchorCtx, const uint8_t *data, const int length) {
+static void handleLppShortPacket(tdoaAnchorContext_t* anchorCtx, const uint8_t *data, const int length) {
   uint8_t type = data[0];
 
   if (type == LPP_SHORT_ANCHORPOS) {
@@ -159,7 +162,7 @@ static void handleLppShortPacket(anchorInfo_t* anchorCtx, const uint8_t *data, c
   }
 }
 
-static void handleLppPacket(const int dataLength, int rangePacketLength, const packet_t* rxPacket, anchorInfo_t* anchorCtx) {
+static void handleLppPacket(const int dataLength, int rangePacketLength, const packet_t* rxPacket, tdoaAnchorContext_t* anchorCtx) {
   const int32_t payloadLength = dataLength - MAC802154_HEADER_LENGTH;
   const int32_t startOfLppDataInPayload = rangePacketLength;
   const int32_t lppDataLength = payloadLength - startOfLppDataInPayload;
@@ -196,13 +199,14 @@ static void rxcallback(dwDevice_t *dev) {
     const int64_t txAn_in_cl_An = packet->header.txTimeStamp;;
     const uint8_t seqNr = packet->header.seq;
 
-    anchorInfo_t* anchorCtx = tdoaEngineGetAnchorCtxForPacketProcessing(anchorId);
-    if (anchorCtx) {
-      int rangeDataLength = updateRemoteData(anchorCtx, packet);
-      tdoaEngineProcessPacket(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
-      tdoaStorageSetRxTxData(anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
-      handleLppPacket(dataLength, rangeDataLength, &rxPacket, anchorCtx);
-    }
+    tdoaAnchorContext_t anchorCtx;
+    uint32_t now_ms = T2M(xTaskGetTickCount());
+
+    tdoaEngineGetAnchorCtxForPacketProcessing(anchorId, now_ms, &anchorCtx);
+    int rangeDataLength = updateRemoteData(&anchorCtx, packet);
+    tdoaEngineProcessPacket(&anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+    tdoaStorageSetRxTxData(&anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
+    handleLppPacket(dataLength, rangeDataLength, &rxPacket, &anchorCtx);
 
     rangingOk = true;
   }

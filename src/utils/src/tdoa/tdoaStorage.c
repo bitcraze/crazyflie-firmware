@@ -30,9 +30,6 @@ Data storage encapsulation for the TDoA engine
 
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "cfassert.h"
 
 #define DEBUG_MODULE "TDOA_STORAGE"
@@ -41,32 +38,36 @@ Data storage encapsulation for the TDoA engine
 #include "tdoaStorage.h"
 #include "clockCorrectionEngine.h"
 
-#define TOF_VALIDITY_PERIOD M2T(2 * 1000);
-#define REMOTE_DATA_VALIDITY_PERIOD M2T(30);
-#define ANCHOR_POSITION_VALIDITY_PERIOD M2T(2 * 1000);
+// All times in milli seconds
+#define TOF_VALIDITY_PERIOD (2 * 1000)
+#define REMOTE_DATA_VALIDITY_PERIOD 30
+#define ANCHOR_POSITION_VALIDITY_PERIOD (2 * 1000)
 
 
-static anchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
+static tdoaAnchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
 
 void tdoaStorageInitialize() {
   memset(anchorStorage, 0, sizeof(anchorStorage));
 }
 
-anchorInfo_t* tdoaStorageGetAnchorCtx(const uint8_t anchor) {
+bool tdoaStorageGetAnchorCtx(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+  anchorCtx->currentTime_ms = currentTime_ms;
+
   // TODO krri add lookup table to avoid linear search
   for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
     if (anchor == anchorStorage[i].id && anchorStorage[i].isInitialized) {
-      return &anchorStorage[i];
+      anchorCtx->anchorInfo = &anchorStorage[i];
+      return true;
     }
   }
 
-  return 0;
+  anchorCtx->anchorInfo = (void*)0;
+  return false;
 }
 
-anchorInfo_t* tdoaStorageInitializeNewAnchorContext(const uint8_t anchor) {
+void tdoaStorageInitializeNewAnchorContext(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
   int indexToInitialize = 0;
-  uint32_t now = xTaskGetTickCount();
-  uint32_t oldestUpdateTime = now;
+  uint32_t oldestUpdateTime = currentTime_ms;
 
   for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
     if (!anchorStorage[i].isInitialized) {
@@ -80,70 +81,81 @@ anchorInfo_t* tdoaStorageInitializeNewAnchorContext(const uint8_t anchor) {
     }
   }
 
-  memset(&anchorStorage[indexToInitialize], 0, sizeof(anchorInfo_t));
+  memset(&anchorStorage[indexToInitialize], 0, sizeof(tdoaAnchorInfo_t));
   anchorStorage[indexToInitialize].id = anchor;
   anchorStorage[indexToInitialize].isInitialized = true;
 
-  return &anchorStorage[indexToInitialize];
+  anchorCtx->currentTime_ms = currentTime_ms;
+  anchorCtx->anchorInfo = &anchorStorage[indexToInitialize];
 }
 
-uint8_t tdoaStorageGetId(const anchorInfo_t* anchorCtx) {
-  return anchorCtx->id;
+uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx) {
+  return anchorCtx->anchorInfo->id;
 }
 
-int64_t tdoaStorageGetRxTime(const anchorInfo_t* anchorCtx) {
-  return anchorCtx->rxTime;
+int64_t tdoaStorageGetRxTime(const tdoaAnchorContext_t* anchorCtx) {
+  return anchorCtx->anchorInfo->rxTime;
 }
 
-int64_t tdoaStorageGetTxTime(const anchorInfo_t* anchorCtx) {
-  return anchorCtx->txTime;
+int64_t tdoaStorageGetTxTime(const tdoaAnchorContext_t* anchorCtx) {
+  return anchorCtx->anchorInfo->txTime;
 }
 
-uint8_t tdoaStorageGetSeqNr(const anchorInfo_t* anchorCtx) {
-  return anchorCtx->seqNr;
+uint8_t tdoaStorageGetSeqNr(const tdoaAnchorContext_t* anchorCtx) {
+  return anchorCtx->anchorInfo->seqNr;
 }
 
-bool tdoaStorageGetAnchorPosition(const anchorInfo_t* anchorCtx, point_t* position) {
-  uint32_t now = xTaskGetTickCount();
+clockCorrectionStorage_t* tdoaStorageGetClockCorrectionStorage(const tdoaAnchorContext_t* anchorCtx) {
+  return &anchorCtx->anchorInfo->clockCorrectionStorage;
+}
+
+bool tdoaStorageGetAnchorPosition(const tdoaAnchorContext_t* anchorCtx, point_t* position) {
+  uint32_t now = anchorCtx->currentTime_ms;
+
   int32_t validCreationTime = now - ANCHOR_POSITION_VALIDITY_PERIOD;
-  if ((int32_t)anchorCtx->position.timestamp > validCreationTime) {
-    position->x = anchorCtx->position.x;
-    position->y = anchorCtx->position.y;
-    position->z = anchorCtx->position.z;
+  const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+  if ((int32_t)anchorInfo->position.timestamp > validCreationTime) {
+    position->x = anchorInfo->position.x;
+    position->y = anchorInfo->position.y;
+    position->z = anchorInfo->position.z;
     return true;
   }
 
   return false;
 }
 
-void tdoaStorageSetAnchorPosition(anchorInfo_t* anchorCtx, const float x, const float y, const float z) {
-  uint32_t now = xTaskGetTickCount();
+void tdoaStorageSetAnchorPosition(tdoaAnchorContext_t* anchorCtx, const float x, const float y, const float z) {
+  uint32_t now = anchorCtx->currentTime_ms;
+  tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
 
-  anchorCtx->position.timestamp = now;
-  anchorCtx->position.x = x;
-  anchorCtx->position.y = y;
-  anchorCtx->position.z = z;
+  anchorInfo->position.timestamp = now;
+  anchorInfo->position.x = x;
+  anchorInfo->position.y = y;
+  anchorInfo->position.z = z;
 }
 
-void tdoaStorageSetRxTxData(anchorInfo_t* anchorCtx, int64_t rxTime, int64_t txTime, uint8_t seqNr) {
-  uint32_t now = xTaskGetTickCount();
+void tdoaStorageSetRxTxData(tdoaAnchorContext_t* anchorCtx, int64_t rxTime, int64_t txTime, uint8_t seqNr) {
+  uint32_t now = anchorCtx->currentTime_ms;
+  tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
 
-  anchorCtx->rxTime = rxTime;
-  anchorCtx->txTime = txTime;
-  anchorCtx->seqNr = seqNr;
-  anchorCtx->lastUpdateTime = now;
+  anchorInfo->rxTime = rxTime;
+  anchorInfo->txTime = txTime;
+  anchorInfo->seqNr = seqNr;
+  anchorInfo->lastUpdateTime = now;
 }
 
-  double tdoaStorageGetClockCorrection(const anchorInfo_t* anchorCtx) {
-  return clockCorrectionEngine.getClockCorrection(&anchorCtx->clockCorrectionStorage);
+  double tdoaStorageGetClockCorrection(const tdoaAnchorContext_t* anchorCtx) {
+  return clockCorrectionEngine.getClockCorrection(&anchorCtx->anchorInfo->clockCorrectionStorage);
 }
 
-int64_t tdoaStorageGetRemoteRxTime(const anchorInfo_t* anchorCtx, const uint8_t remoteAnchor) {
+int64_t tdoaStorageGetRemoteRxTime(const tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor) {
+  const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+
   for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
-    if (remoteAnchor == anchorCtx->remoteAnchorData[i].id) {
-      uint32_t now = xTaskGetTickCount();
-      if (anchorCtx->remoteAnchorData[i].endOfLife > now) {
-        return anchorCtx->remoteAnchorData[i].rxTime;
+    if (remoteAnchor == anchorInfo->remoteAnchorData[i].id) {
+      uint32_t now = anchorCtx->currentTime_ms;
+      if (anchorInfo->remoteAnchorData[i].endOfLife > now) {
+        return anchorInfo->remoteAnchorData[i].rxTime;
       }
       break;
     }
@@ -152,37 +164,41 @@ int64_t tdoaStorageGetRemoteRxTime(const anchorInfo_t* anchorCtx, const uint8_t 
   return 0;
 }
 
-void tdoaStorageSetRemoteRxTime(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr) {
+void tdoaStorageSetRemoteRxTime(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr) {
+  tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+
   int indexToUpdate = 0;
-  uint32_t now = xTaskGetTickCount();
+  uint32_t now = anchorCtx->currentTime_ms;
   uint32_t oldestTime = 0xFFFFFFFF;
 
   for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
-    if (remoteAnchor == anchorCtx->remoteAnchorData[i].id) {
+    if (remoteAnchor == anchorInfo->remoteAnchorData[i].id) {
       indexToUpdate = i;
       break;
     }
 
-    if (anchorCtx->remoteAnchorData[i].endOfLife < oldestTime) {
-      oldestTime = anchorCtx->remoteAnchorData[i].endOfLife;
+    if (anchorInfo->remoteAnchorData[i].endOfLife < oldestTime) {
+      oldestTime = anchorInfo->remoteAnchorData[i].endOfLife;
       indexToUpdate = i;
     }
   }
 
-  anchorCtx->remoteAnchorData[indexToUpdate].id = remoteAnchor;
-  anchorCtx->remoteAnchorData[indexToUpdate].rxTime = remoteRxTime;
-  anchorCtx->remoteAnchorData[indexToUpdate].seqNr = remoteSeqNr;
-  anchorCtx->remoteAnchorData[indexToUpdate].endOfLife = now + REMOTE_DATA_VALIDITY_PERIOD;
+  anchorInfo->remoteAnchorData[indexToUpdate].id = remoteAnchor;
+  anchorInfo->remoteAnchorData[indexToUpdate].rxTime = remoteRxTime;
+  anchorInfo->remoteAnchorData[indexToUpdate].seqNr = remoteSeqNr;
+  anchorInfo->remoteAnchorData[indexToUpdate].endOfLife = now + REMOTE_DATA_VALIDITY_PERIOD;
 }
 
-void tdoaStorageGetRemoteSeqNrList(const anchorInfo_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]) {
+void tdoaStorageGetRemoteSeqNrList(const tdoaAnchorContext_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]) {
+  const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+  uint32_t now = anchorCtx->currentTime_ms;
+
   int count = 0;
 
-  uint32_t now = xTaskGetTickCount();
   for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
-    if (anchorCtx->remoteAnchorData[i].endOfLife > now) {
-      id[count] = anchorCtx->remoteAnchorData[i].id;
-      seqNr[count] = anchorCtx->remoteAnchorData[i].seqNr;
+    if (anchorInfo->remoteAnchorData[i].endOfLife > now) {
+      id[count] = anchorInfo->remoteAnchorData[i].id;
+      seqNr[count] = anchorInfo->remoteAnchorData[i].seqNr;
       count++;
     }
   }
@@ -190,12 +206,14 @@ void tdoaStorageGetRemoteSeqNrList(const anchorInfo_t* anchorCtx, int* remoteCou
   *remoteCount = count;
 }
 
-int64_t tdoaStorageGetTimeOfFlight(const anchorInfo_t* anchorCtx, const uint8_t otherAnchor) {
+int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor) {
+  const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+
   for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
-    if (otherAnchor == anchorCtx->tof[i].id) {
-      uint32_t now = xTaskGetTickCount();
-      if (anchorCtx->tof[i].endOfLife > now) {
-        return anchorCtx->tof[i].tof;
+    if (otherAnchor == anchorInfo->tof[i].id) {
+      uint32_t now = anchorCtx->currentTime_ms;
+      if (anchorInfo->tof[i].endOfLife > now) {
+        return anchorInfo->tof[i].tof;
       }
       break;
     }
@@ -204,24 +222,26 @@ int64_t tdoaStorageGetTimeOfFlight(const anchorInfo_t* anchorCtx, const uint8_t 
   return 0;
 }
 
-void tdoaStorageSetTimeOfFlight(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof) {
+void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof) {
+  tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+
   int indexToUpdate = 0;
-  uint32_t now = xTaskGetTickCount();
+  uint32_t now = anchorCtx->currentTime_ms;
   uint32_t oldestTime = 0xFFFFFFFF;
 
   for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
-    if (remoteAnchor == anchorCtx->tof[i].id) {
+    if (remoteAnchor == anchorInfo->tof[i].id) {
       indexToUpdate = i;
       break;
     }
 
-    if (anchorCtx->tof[i].endOfLife < oldestTime) {
-      oldestTime = anchorCtx->tof[i].endOfLife;
+    if (anchorInfo->tof[i].endOfLife < oldestTime) {
+      oldestTime = anchorInfo->tof[i].endOfLife;
       indexToUpdate = i;
     }
   }
 
-  anchorCtx->tof[indexToUpdate].id = remoteAnchor;
-  anchorCtx->tof[indexToUpdate].tof = tof;
-  anchorCtx->tof[indexToUpdate].endOfLife = now + TOF_VALIDITY_PERIOD;
+  anchorInfo->tof[indexToUpdate].id = remoteAnchor;
+  anchorInfo->tof[indexToUpdate].tof = tof;
+  anchorInfo->tof[indexToUpdate].endOfLife = now + TOF_VALIDITY_PERIOD;
 }

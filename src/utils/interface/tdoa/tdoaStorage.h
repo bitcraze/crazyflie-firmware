@@ -8,18 +8,19 @@
 #define REMOTE_ANCHOR_DATA_COUNT 16
 #define TOF_PER_ANCHOR_COUNT 16
 
+
 typedef struct {
   uint8_t id; // Id of remote remote anchor
   uint8_t seqNr; // Sequence number of the packet received in the remote anchor (7 bits)
   int64_t rxTime; // Receive time of packet from anchor id in the remote anchor, in remote DWM clock
   uint32_t endOfLife;
-} remoteAnchorData_t;
+} tdoaRemoteAnchorData_t;
 
 typedef struct {
   uint8_t id;
   int64_t tof;
-  uint32_t endOfLife; // Time stamp when the tof data is outdated, local system time
-} timeOfFlight_t;
+  uint32_t endOfLife; // Time stamp when the tof data is outdated, local system time in ms
+} tdoaTimeOfFlight_t;
 
 typedef struct {
   bool isInitialized;
@@ -34,26 +35,36 @@ typedef struct {
 
   point_t position; // The coordinates of the anchor
 
-  timeOfFlight_t tof[TOF_PER_ANCHOR_COUNT];
-  remoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];
-} anchorInfo_t;
+  tdoaTimeOfFlight_t tof[TOF_PER_ANCHOR_COUNT];
+  tdoaRemoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];
+} tdoaAnchorInfo_t;
+
+
+// The anchor context is used to pass information about an anchor as well as
+// the current time to functions.
+// The context should not be stored.
+typedef struct {
+  tdoaAnchorInfo_t* anchorInfo;
+  uint32_t currentTime_ms;
+} tdoaAnchorContext_t;
 
 void tdoaStorageInitialize();
 
-anchorInfo_t* tdoaStorageGetAnchorCtx(const uint8_t anchor);
-anchorInfo_t* tdoaStorageInitializeNewAnchorContext(const uint8_t anchor);
-uint8_t tdoaStorageGetId(const anchorInfo_t* anchorCtx);
-int64_t tdoaStorageGetRxTime(const anchorInfo_t* anchorCtx);
-int64_t tdoaStorageGetTxTime(const anchorInfo_t* anchorCtx);
-uint8_t tdoaStorageGetSeqNr(const anchorInfo_t* anchorCtx);
-bool tdoaStorageGetAnchorPosition(const anchorInfo_t* anchorCtx, point_t* position);
-void tdoaStorageSetAnchorPosition(anchorInfo_t* anchorCtx, const float x, const float y, const float z);
-void tdoaStorageSetRxTxData(anchorInfo_t* anchorCtx, int64_t rxTime, int64_t txTime, uint8_t seqNr);
-double tdoaStorageGetClockCorrection(const anchorInfo_t* anchorCtx);
-int64_t tdoaStorageGetRemoteRxTime(const anchorInfo_t* anchorCtx, const uint8_t remoteAnchor);
-void tdoaStorageSetRemoteRxTime(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr);
-void tdoaStorageGetRemoteSeqNrList(const anchorInfo_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]);
-int64_t tdoaStorageGetTimeOfFlight(const anchorInfo_t* anchorCtx, const uint8_t otherAnchor);
-void tdoaStorageSetTimeOfFlight(anchorInfo_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof);
+bool tdoaStorageGetAnchorCtx(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
+void tdoaStorageInitializeNewAnchorContext(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
+uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx);
+int64_t tdoaStorageGetRxTime(const tdoaAnchorContext_t* anchorCtx);
+int64_t tdoaStorageGetTxTime(const tdoaAnchorContext_t* anchorCtx);
+uint8_t tdoaStorageGetSeqNr(const tdoaAnchorContext_t* anchorCtx);
+clockCorrectionStorage_t* tdoaStorageGetClockCorrectionStorage(const tdoaAnchorContext_t* anchorCtx);
+bool tdoaStorageGetAnchorPosition(const tdoaAnchorContext_t* anchorCtx, point_t* position);
+void tdoaStorageSetAnchorPosition(tdoaAnchorContext_t* anchorCtx, const float x, const float y, const float z);
+void tdoaStorageSetRxTxData(tdoaAnchorContext_t* anchorCtx, int64_t rxTime, int64_t txTime, uint8_t seqNr);
+double tdoaStorageGetClockCorrection(const tdoaAnchorContext_t* anchorCtx);
+int64_t tdoaStorageGetRemoteRxTime(const tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor);
+void tdoaStorageSetRemoteRxTime(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr);
+void tdoaStorageGetRemoteSeqNrList(const tdoaAnchorContext_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]);
+int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor);
+void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof);
 
 #endif // __TDOA_STORAGE_H__

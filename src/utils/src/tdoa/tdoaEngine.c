@@ -45,9 +45,6 @@ The implementation must handle
 
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "tdoaEngine.h"
 #include "tdoaStats.h"
 
@@ -78,7 +75,7 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & TRUNCATE_TO_ANCHOR_TS_BITMAP;
 }
 
-static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anchorBCtx, double distanceDiff) {
+static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff
@@ -111,7 +108,7 @@ static void enqueueTDOA(const anchorInfo_t* anchorACtx, const anchorInfo_t* anch
   }
 }
 
-static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   bool sampleIsReliable = false;
 
   const int64_t latest_rxAn_by_T_in_cl_T = tdoaStorageGetRxTime(anchorCtx);
@@ -119,7 +116,7 @@ static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in
 
   if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
     double clockCorrectionCandidate = clockCorrectionEngine.calculateClockCorrection(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TRUNCATE_TO_ANCHOR_TS_BITMAP);
-    sampleIsReliable = clockCorrectionEngine.updateClockCorrection(&anchorCtx->clockCorrectionStorage, clockCorrectionCandidate);
+    sampleIsReliable = clockCorrectionEngine.updateClockCorrection(tdoaStorageGetClockCorrectionStorage(anchorCtx), clockCorrectionCandidate);
 
     if (sampleIsReliable){
       if (tdoaStorageGetId(anchorCtx) == lpsTdoaStats.anchorId) {
@@ -132,7 +129,7 @@ static bool updateClockCorrection(anchorInfo_t* anchorCtx, const int64_t txAn_in
   return sampleIsReliable;
 }
 
-static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+static int64_t calcTDoA(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   const uint8_t otherAnchorId = tdoaStorageGetId(otherAnchorCtx);
 
   const int64_t tof_Ar_to_An_in_cl_An = tdoaStorageGetTimeOfFlight(anchorCtx, otherAnchorId);
@@ -147,13 +144,12 @@ static int64_t calcTDoA(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* 
   return timeDiffOfArrival_in_cl_T;
 }
 
-static double calcDistanceDiff(const anchorInfo_t* otherAnchorCtx, const anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   const int64_t tdoa = calcTDoA(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
   return SPEED_OF_LIGHT * tdoa / LOCODECK_TS_FREQ;
 }
 
-
-static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t* anchorCtx) {
+static bool findSuitableAnchor(tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
   static uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
   static uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
   static uint8_t offset = 0;
@@ -166,46 +162,44 @@ static bool findSuitableAnchor(anchorInfo_t** otherAnchorCtx, const anchorInfo_t
   int remoteCount = 0;
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, seqNr, id);
 
+  uint32_t now = anchorCtx->currentTime_ms;
+
   // Loop over the candidates and pick the first one that is useful
   // An offset (updated for each call) is added to make sure we start at
   // different positions in the list and vary which candidate to choose
   for (int i = offset; i < (remoteCount + offset); i++) {
     uint8_t index = i % remoteCount;
     const uint8_t candidateAnchorId = id[index];
-    anchorInfo_t* candidateAnchorCtx = tdoaStorageGetAnchorCtx(candidateAnchorId);
-    if (candidateAnchorCtx) {
-      if (seqNr[index] == tdoaStorageGetSeqNr(candidateAnchorCtx) && tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
-        *otherAnchorCtx = candidateAnchorCtx;
+    if (tdoaStorageGetAnchorCtx(candidateAnchorId, now, otherAnchorCtx)) {
+      if (seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
         return true;
       }
     }
   }
 
+  otherAnchorCtx->anchorInfo = 0;
   return false;
 }
 
-anchorInfo_t* tdoaEngineGetAnchorCtxForPacketProcessing(const uint8_t anchorId) {
-  anchorInfo_t* anchorCtx = tdoaStorageGetAnchorCtx(anchorId);
-  if (anchorCtx) {
+void tdoaEngineGetAnchorCtxForPacketProcessing(const uint8_t anchorId, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+  if (tdoaStorageGetAnchorCtx(anchorId, currentTime_ms, anchorCtx)) {
     lpsTdoaStats.contextHitCount++;
   } else {
     lpsTdoaStats.contextMissCount++;
-    anchorCtx = tdoaStorageInitializeNewAnchorContext(anchorId);
+    tdoaStorageInitializeNewAnchorContext(anchorId, currentTime_ms, anchorCtx);
   }
-
-  return anchorCtx;
 }
 
-void tdoaEngineProcessPacket(anchorInfo_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+void tdoaEngineProcessPacket(tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
     bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
     if (timeIsGood) {
       lpsTdoaStats.timeIsGood++;
 
-      anchorInfo_t* otherAnchorCtx = 0;
+      tdoaAnchorContext_t otherAnchorCtx;
       if (findSuitableAnchor(&otherAnchorCtx, anchorCtx)) {
         lpsTdoaStats.suitableDataFound++;
-        double tdoaDistDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
-        enqueueTDOA(otherAnchorCtx, anchorCtx, tdoaDistDiff);
+        double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff);
       }
     }
 }
