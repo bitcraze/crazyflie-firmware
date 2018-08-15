@@ -49,7 +49,6 @@ The implementation must handle
 #include "tdoaStats.h"
 
 #include "locodeck.h"
-#include "cfassert.h"
 
 #define DEBUG_MODULE "TDOA_ENGINE"
 #include "debug.h"
@@ -62,8 +61,9 @@ The implementation must handle
 #define MEASUREMENT_NOISE_STD 0.15f
 #define ANCHOR_OK_TIMEOUT 1500
 
-void tdoaEngineInit() {
-  tdoaStorageInitialize();
+void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms) {
+  tdoaStorageInitialize(engineState->anchorInfoArray);
+  tdoaStatsInit(&engineState->stats, now_ms);
 
   #ifdef LPS_2D_POSITION_HEIGHT
   DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
@@ -75,7 +75,7 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & TRUNCATE_TO_ANCHOR_TS_BITMAP;
 }
 
-static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff) {
+static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff, tdoaStats_t* stats) {
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff
@@ -83,7 +83,7 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
 
   if (tdoaStorageGetAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && tdoaStorageGetAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
     if (outlierFilterValidateTdoa(&tdoa)) {
-      lpsTdoaStats.packetsToEstimator++;
+      stats->packetsToEstimator++;
       estimatorKalmanEnqueueTDOA(&tdoa);
 
       #ifdef LPS_2D_POSITION_HEIGHT
@@ -98,17 +98,17 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
 
       uint8_t idA = tdoaStorageGetId(anchorACtx);
       uint8_t idB = tdoaStorageGetId(anchorBCtx);
-      if (idA == lpsTdoaStats.anchorId && idB == lpsTdoaStats.remoteAnchorId) {
-        lpsTdoaStats.tdoa = distanceDiff;
+      if (idA == stats->anchorId && idB == stats->remoteAnchorId) {
+        stats->tdoa = distanceDiff;
       }
-      if (idB == lpsTdoaStats.anchorId && idA == lpsTdoaStats.remoteAnchorId) {
-        lpsTdoaStats.tdoa = -distanceDiff;
+      if (idB == stats->anchorId && idA == stats->remoteAnchorId) {
+        stats->tdoa = -distanceDiff;
       }
     }
   }
 }
 
-static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, tdoaStats_t* stats) {
   bool sampleIsReliable = false;
 
   const int64_t latest_rxAn_by_T_in_cl_T = tdoaStorageGetRxTime(anchorCtx);
@@ -119,9 +119,9 @@ static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t 
     sampleIsReliable = clockCorrectionEngine.updateClockCorrection(tdoaStorageGetClockCorrectionStorage(anchorCtx), clockCorrectionCandidate);
 
     if (sampleIsReliable){
-      if (tdoaStorageGetId(anchorCtx) == lpsTdoaStats.anchorId) {
-        lpsTdoaStats.clockCorrection = tdoaStorageGetClockCorrection(anchorCtx);
-        lpsTdoaStats.clockCorrectionCount++;
+      if (tdoaStorageGetId(anchorCtx) == stats->anchorId) {
+        stats->clockCorrection = tdoaStorageGetClockCorrection(anchorCtx);
+        stats->clockCorrectionCount++;
       }
     }
   }
@@ -149,7 +149,7 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
   return SPEED_OF_LIGHT * tdoa / LOCODECK_TS_FREQ;
 }
 
-static bool findSuitableAnchor(tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
+static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
   static uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
   static uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
   static uint8_t offset = 0;
@@ -162,7 +162,7 @@ static bool findSuitableAnchor(tdoaAnchorContext_t* otherAnchorCtx, const tdoaAn
   int remoteCount = 0;
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, seqNr, id);
 
-  uint32_t now = anchorCtx->currentTime_ms;
+  uint32_t now_ms = anchorCtx->currentTime_ms;
 
   // Loop over the candidates and pick the first one that is useful
   // An offset (updated for each call) is added to make sure we start at
@@ -170,7 +170,7 @@ static bool findSuitableAnchor(tdoaAnchorContext_t* otherAnchorCtx, const tdoaAn
   for (int i = offset; i < (remoteCount + offset); i++) {
     uint8_t index = i % remoteCount;
     const uint8_t candidateAnchorId = id[index];
-    if (tdoaStorageGetAnchorCtx(candidateAnchorId, now, otherAnchorCtx)) {
+    if (tdoaStorageGetAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
       if (seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
         return true;
       }
@@ -181,25 +181,25 @@ static bool findSuitableAnchor(tdoaAnchorContext_t* otherAnchorCtx, const tdoaAn
   return false;
 }
 
-void tdoaEngineGetAnchorCtxForPacketProcessing(const uint8_t anchorId, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
-  if (tdoaStorageGetAnchorCtx(anchorId, currentTime_ms, anchorCtx)) {
-    lpsTdoaStats.contextHitCount++;
+void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, const uint8_t anchorId, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+  if (tdoaStorageGetAnchorCtx(engineState->anchorInfoArray, anchorId, currentTime_ms, anchorCtx)) {
+    engineState->stats.contextHitCount++;
   } else {
-    lpsTdoaStats.contextMissCount++;
-    tdoaStorageInitializeNewAnchorContext(anchorId, currentTime_ms, anchorCtx);
+    engineState->stats.contextMissCount++;
+    tdoaStorageInitializeNewAnchorContext(engineState->anchorInfoArray, anchorId, currentTime_ms, anchorCtx);
   }
 }
 
-void tdoaEngineProcessPacket(tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-    bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+    bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, &engineState->stats);
     if (timeIsGood) {
-      lpsTdoaStats.timeIsGood++;
+      engineState->stats.timeIsGood++;
 
       tdoaAnchorContext_t otherAnchorCtx;
-      if (findSuitableAnchor(&otherAnchorCtx, anchorCtx)) {
-        lpsTdoaStats.suitableDataFound++;
+      if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx)) {
+        engineState->stats.suitableDataFound++;
         double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
-        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff);
+        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, &engineState->stats);
       }
     }
 }

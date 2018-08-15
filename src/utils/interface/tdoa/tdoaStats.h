@@ -1,6 +1,8 @@
 #ifndef __LPS_TDOA_STATS_H__
 #define __LPS_TDOA_STATS_H__
 
+#include <inttypes.h>
+
 typedef struct {
   uint32_t packetsReceived;
   uint32_t packetsToEstimator;
@@ -22,12 +24,24 @@ typedef struct {
 
   // TDoA (in meters) between anchorId and remoteAnchorId
   float tdoa;
-} lpsTdoaStats_t;
 
-extern lpsTdoaStats_t lpsTdoaStats;
 
-void lpsTdoaStatsInit();
-void lpsTdoaStatsClear();
-void lpsTdoaStatsUpdate();
+  uint16_t packetsReceivedRate;
+  uint16_t packetsToEstimatorRate;
+  uint16_t contextHitRate;
+  uint16_t contextMissRate;
+  uint16_t timeIsGoodRate;
+  uint16_t suitableDataFoundRate;
+  uint16_t clockCorrectionRate;
+
+  uint32_t nextStatisticsTime;
+  uint32_t previousStatisticsTime;
+
+  uint8_t newAnchorId; // Used to change anchor to log, set as param
+  uint8_t newRemoteAnchorId; // Used to change remote anchor to log, set as param
+} tdoaStats_t;
+
+void tdoaStatsInit(tdoaStats_t* tdoaStats, uint32_t now_ms);
+void tdoaStatsUpdate(tdoaStats_t* tdoaStats, uint32_t now_ms);
 
 #endif // __LPS_TDOA_STATS_H__

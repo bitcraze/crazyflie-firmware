@@ -39,6 +39,8 @@ typedef struct {
   tdoaRemoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];
 } tdoaAnchorInfo_t;
 
+typedef tdoaAnchorInfo_t tdaoAnchorInfoArray_t[ANCHOR_STORAGE_COUNT];
+
 
 // The anchor context is used to pass information about an anchor as well as
 // the current time to functions.
@@ -48,10 +50,12 @@ typedef struct {
   uint32_t currentTime_ms;
 } tdoaAnchorContext_t;
 
-void tdoaStorageInitialize();
 
-bool tdoaStorageGetAnchorCtx(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
-void tdoaStorageInitializeNewAnchorContext(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
+void tdoaStorageInitialize(tdoaAnchorInfo_t anchorStorage[]);
+
+bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
+void tdoaStorageInitializeNewAnchorContext(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
+
 uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx);
 int64_t tdoaStorageGetRxTime(const tdoaAnchorContext_t* anchorCtx);
 int64_t tdoaStorageGetTxTime(const tdoaAnchorContext_t* anchorCtx);

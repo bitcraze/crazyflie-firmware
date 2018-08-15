@@ -30,8 +30,6 @@ Data storage encapsulation for the TDoA engine
 
 #include <string.h>
 
-#include "cfassert.h"
-
 #define DEBUG_MODULE "TDOA_STORAGE"
 #include "debug.h"
 
@@ -44,13 +42,11 @@ Data storage encapsulation for the TDoA engine
 #define ANCHOR_POSITION_VALIDITY_PERIOD (2 * 1000)
 
 
-static tdoaAnchorInfo_t anchorStorage[ANCHOR_STORAGE_COUNT];
-
-void tdoaStorageInitialize() {
-  memset(anchorStorage, 0, sizeof(anchorStorage));
+void tdoaStorageInitialize(tdoaAnchorInfo_t anchorStorage[]) {
+  memset(anchorStorage, 0, sizeof(tdoaAnchorInfo_t) * ANCHOR_STORAGE_COUNT);
 }
 
-bool tdoaStorageGetAnchorCtx(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
   anchorCtx->currentTime_ms = currentTime_ms;
 
   // TODO krri add lookup table to avoid linear search
@@ -65,7 +61,7 @@ bool tdoaStorageGetAnchorCtx(const uint8_t anchor, const uint32_t currentTime_ms
   return false;
 }
 
-void tdoaStorageInitializeNewAnchorContext(const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+void tdoaStorageInitializeNewAnchorContext(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
   int indexToInitialize = 0;
   uint32_t oldestUpdateTime = currentTime_ms;
 

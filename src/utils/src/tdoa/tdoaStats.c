@@ -29,113 +29,67 @@ Log statistics for the tdoa engine
 
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
-#include "log.h"
-#include "param.h"
-
 #include "tdoaStats.h"
 
 #define STATS_INTERVAL 500
 
-lpsTdoaStats_t lpsTdoaStats;
 
-static uint16_t packetsReceivedRate;
-static uint16_t packetsToEstimatorRate;
-static uint16_t contextHitRate;
-static uint16_t contextMissRate;
-static uint16_t timeIsGoodRate;
-static uint16_t suitableDataFoundRate;
-
-static uint32_t nextStatisticsTime;
-static uint32_t previousStatisticsTime;
-
-static uint8_t newAnchorId; // Used to change anchor to log, set as param
-static uint8_t newRemoteAnchorId; // Used to change remote anchor to log, set as param
-
-static uint16_t clockCorrectionRate;
-
-
-void lpsTdoaStatsInit() {
-  memset(&lpsTdoaStats, 0, sizeof(lpsTdoaStats));
-  lpsTdoaStats.remoteAnchorId = newRemoteAnchorId = 1;
-
-  packetsReceivedRate = 0;
-  clockCorrectionRate = 0;
-  nextStatisticsTime = xTaskGetTickCount() + STATS_INTERVAL;
-  previousStatisticsTime = 0;
-
-  lpsTdoaStatsClear();
+static void clearStats(tdoaStats_t* tdoaStats) {
+  tdoaStats->packetsReceived = 0;
+  tdoaStats->packetsToEstimator = 0;
+  tdoaStats->clockCorrectionCount = 0;
+  tdoaStats->contextHitCount = 0;
+  tdoaStats->contextMissCount = 0;
+  tdoaStats->timeIsGood = 0;
+  tdoaStats->suitableDataFound = 0;
 }
 
-void lpsTdoaStatsClear() {
-  lpsTdoaStats.packetsReceived = 0;
-  lpsTdoaStats.packetsToEstimator = 0;
-  lpsTdoaStats.clockCorrectionCount = 0;
-  lpsTdoaStats.contextHitCount = 0;
-  lpsTdoaStats.contextMissCount = 0;
-  lpsTdoaStats.timeIsGood = 0;
-  lpsTdoaStats.suitableDataFound = 0;
+void tdoaStatsInit(tdoaStats_t* tdoaStats, uint32_t now_ms) {
+  memset(tdoaStats, 0, sizeof(tdoaStats_t));
+  tdoaStats->remoteAnchorId = tdoaStats->newRemoteAnchorId = 1;
+
+  tdoaStats->packetsReceivedRate = 0;
+  tdoaStats->clockCorrectionRate = 0;
+  tdoaStats->nextStatisticsTime = now_ms + STATS_INTERVAL;
+  tdoaStats->previousStatisticsTime = 0;
+
+  clearStats(tdoaStats);
 }
 
-void lpsTdoaStatsUpdate() {
-  uint32_t now = xTaskGetTickCount();
-  if (now > nextStatisticsTime) {
-    float interval = now - previousStatisticsTime;
-    ASSERT(interval > 0.0f);
-    packetsReceivedRate = (uint16_t)(1000.0f * lpsTdoaStats.packetsReceived / interval);
-    packetsToEstimatorRate = (uint16_t)(1000.0f * lpsTdoaStats.packetsToEstimator / interval);
-    clockCorrectionRate = (uint16_t)(1000.0f * lpsTdoaStats.clockCorrectionCount / interval);
+void tdoaStatsUpdate(tdoaStats_t* tdoaStats, uint32_t now_ms) {
+  if (now_ms > tdoaStats->nextStatisticsTime) {
+    float interval = now_ms - tdoaStats->previousStatisticsTime;
+    if (interval > 0.0f) {
+      tdoaStats->packetsReceivedRate = (uint16_t)(1000.0f * tdoaStats->packetsReceived / interval);
+      tdoaStats->packetsToEstimatorRate = (uint16_t)(1000.0f * tdoaStats->packetsToEstimator / interval);
+      tdoaStats->clockCorrectionRate = (uint16_t)(1000.0f * tdoaStats->clockCorrectionCount / interval);
 
-    contextHitRate = (uint16_t)(1000.0f * lpsTdoaStats.contextHitCount / interval);
-    contextMissRate = (uint16_t)(1000.0f * lpsTdoaStats.contextMissCount / interval);
+      tdoaStats->contextHitRate = (uint16_t)(1000.0f * tdoaStats->contextHitCount / interval);
+      tdoaStats->contextMissRate = (uint16_t)(1000.0f * tdoaStats->contextMissCount / interval);
 
-    suitableDataFoundRate = (uint16_t)(1000.0f * lpsTdoaStats.suitableDataFound / interval);
-    timeIsGoodRate = (uint16_t)(1000.0f * lpsTdoaStats.timeIsGood / interval);
+      tdoaStats->suitableDataFoundRate = (uint16_t)(1000.0f * tdoaStats->suitableDataFound / interval);
+      tdoaStats->timeIsGoodRate = (uint16_t)(1000.0f * tdoaStats->timeIsGood / interval);
+    }
 
-    if (lpsTdoaStats.anchorId != newAnchorId) {
-      lpsTdoaStats.anchorId = newAnchorId;
+    if (tdoaStats->anchorId != tdoaStats->newAnchorId) {
+      tdoaStats->anchorId = tdoaStats->newAnchorId;
 
       // Reset anchor stats
-      lpsTdoaStats.clockCorrection = 0.0;
-      lpsTdoaStats.tof = 0;
-      lpsTdoaStats.tdoa = 0;
+      tdoaStats->clockCorrection = 0.0;
+      tdoaStats->tof = 0;
+      tdoaStats->tdoa = 0;
     }
 
-    if (lpsTdoaStats.remoteAnchorId != newRemoteAnchorId) {
-      lpsTdoaStats.remoteAnchorId = newRemoteAnchorId;
+    if (tdoaStats->remoteAnchorId != tdoaStats->newRemoteAnchorId) {
+      tdoaStats->remoteAnchorId = tdoaStats->newRemoteAnchorId;
 
       // Reset remote anchor stats
-      lpsTdoaStats.tof = 0;
-      lpsTdoaStats.tdoa = 0;
+      tdoaStats->tof = 0;
+      tdoaStats->tdoa = 0;
     }
 
-    lpsTdoaStatsClear();
-    previousStatisticsTime = now;
-    nextStatisticsTime = now + STATS_INTERVAL;
+    clearStats(tdoaStats);
+    tdoaStats->previousStatisticsTime = now_ms;
+    tdoaStats->nextStatisticsTime = now_ms + STATS_INTERVAL;
   }
 }
-
-
-LOG_GROUP_START(tdoa3)
-LOG_ADD(LOG_UINT16, stRx, &packetsReceivedRate)
-LOG_ADD(LOG_UINT16, stEst, &packetsToEstimatorRate)
-LOG_ADD(LOG_UINT16, stTime, &timeIsGoodRate)
-LOG_ADD(LOG_UINT16, stFound, &suitableDataFoundRate)
-
-LOG_ADD(LOG_UINT16, stCc, &clockCorrectionRate)
-
-LOG_ADD(LOG_UINT16, stHit, &contextHitRate)
-LOG_ADD(LOG_UINT16, stMiss, &contextMissRate)
-
-LOG_ADD(LOG_FLOAT, cc, &lpsTdoaStats.clockCorrection)
-LOG_ADD(LOG_UINT16, tof, &lpsTdoaStats.tof)
-LOG_ADD(LOG_FLOAT, tdoa, &lpsTdoaStats.tdoa)
-
-LOG_GROUP_STOP(tdoa3)
-
-PARAM_GROUP_START(tdoa3)
-PARAM_ADD(PARAM_UINT8, logId, &newAnchorId)
-PARAM_ADD(PARAM_UINT8, logOthrId, &newRemoteAnchorId)
-PARAM_GROUP_STOP(tdoa3)

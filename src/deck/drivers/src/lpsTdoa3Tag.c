@@ -57,7 +57,8 @@ The implementation must handle
 #define DEBUG_MODULE "TDOA3"
 #include "debug.h"
 #include "cfassert.h"
-
+#include "log.h"
+#include "param.h"
 
 // Positions for sent LPP packets
 #define LPS_TDOA3_TYPE 0
@@ -100,6 +101,9 @@ static lpsAlgoOptions_t* options;
 // Outgoing LPP packet
 static lpsLppShortPacket_t lppPacket;
 
+static bool rangingOk;
+
+static tdoaEngineState_t engineState;
 
 // TODO krri Find better way to communicate system state to the client. Currently only supports 8 anchors
 static void updateRangingState() {
@@ -110,8 +114,6 @@ static void updateRangingState() {
 //    }
 //  }
 }
-
-static bool rangingOk;
 
 
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
@@ -139,8 +141,9 @@ static int updateRemoteData(tdoaAnchorContext_t* anchorCtx, const void* payload)
         tdoaStorageSetTimeOfFlight(anchorCtx, remoteId, tof);
 
         uint8_t anchorId = tdoaStorageGetId(anchorCtx);
-        if (anchorId == lpsTdoaStats.anchorId && remoteId == lpsTdoaStats.remoteAnchorId) {
-          lpsTdoaStats.tof = (uint16_t)tof;
+        tdoaStats_t* stats = &engineState.stats;
+        if (anchorId == stats->anchorId && remoteId == stats->remoteAnchorId) {
+          stats->tof = (uint16_t)tof;
         }
       }
 
@@ -182,7 +185,8 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
 }
 
 static void rxcallback(dwDevice_t *dev) {
-  lpsTdoaStats.packetsReceived++;
+  tdoaStats_t* stats = &engineState.stats;
+  stats->packetsReceived++;
 
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
@@ -202,9 +206,9 @@ static void rxcallback(dwDevice_t *dev) {
     tdoaAnchorContext_t anchorCtx;
     uint32_t now_ms = T2M(xTaskGetTickCount());
 
-    tdoaEngineGetAnchorCtxForPacketProcessing(anchorId, now_ms, &anchorCtx);
+    tdoaEngineGetAnchorCtxForPacketProcessing(&engineState, anchorId, now_ms, &anchorCtx);
     int rangeDataLength = updateRemoteData(&anchorCtx, packet);
-    tdoaEngineProcessPacket(&anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+    tdoaEngineProcessPacket(&engineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
     tdoaStorageSetRxTxData(&anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
     handleLppPacket(dataLength, rangeDataLength, &rxPacket, &anchorCtx);
 
@@ -269,7 +273,8 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
     setRadioInReceiveMode(dev);
   }
 
-  lpsTdoaStatsUpdate();
+  uint32_t now_ms = T2M(xTaskGetTickCount());
+  tdoaStatsUpdate(&engineState.stats, now_ms);
   updateRangingState();
 
   return MAX_TIMEOUT;
@@ -283,8 +288,8 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options = algoOptions;
   options->rangingState = 0;
 
-  tdoaEngineInit();
-  lpsTdoaStatsInit();
+  uint32_t now_ms = T2M(xTaskGetTickCount());
+  tdoaEngineInit(&engineState, now_ms);
 
   dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);
 
@@ -304,3 +309,25 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .onEvent = onEvent,
   .isRangingOk = isRangingOk,
 };
+
+
+LOG_GROUP_START(tdoa3)
+LOG_ADD(LOG_UINT16, stRx, &engineState.stats.packetsReceivedRate)
+LOG_ADD(LOG_UINT16, stEst, &engineState.stats.packetsToEstimatorRate)
+LOG_ADD(LOG_UINT16, stTime, &engineState.stats.timeIsGoodRate)
+LOG_ADD(LOG_UINT16, stFound, &engineState.stats.suitableDataFoundRate)
+
+LOG_ADD(LOG_UINT16, stCc, &engineState.stats.clockCorrectionRate)
+
+LOG_ADD(LOG_UINT16, stHit, &engineState.stats.contextHitRate)
+LOG_ADD(LOG_UINT16, stMiss, &engineState.stats.contextMissRate)
+
+LOG_ADD(LOG_FLOAT, cc, &engineState.stats.clockCorrection)
+LOG_ADD(LOG_UINT16, tof, &engineState.stats.tof)
+LOG_ADD(LOG_FLOAT, tdoa, &engineState.stats.tdoa)
+LOG_GROUP_STOP(tdoa3)
+
+PARAM_GROUP_START(tdoa3)
+PARAM_ADD(PARAM_UINT8, logId, &engineState.stats.newAnchorId)
+PARAM_ADD(PARAM_UINT8, logOthrId, &engineState.stats.newRemoteAnchorId)
+PARAM_GROUP_STOP(tdoa3)
