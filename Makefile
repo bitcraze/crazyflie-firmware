@@ -72,7 +72,7 @@ VPATH_CF2 += $(LIB)/CMSIS/STM32F4xx/Source/
 VPATH_CF2 += $(LIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(LIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += src/deck/api src/deck/core src/deck/drivers/src src/deck/drivers/src/test
-VPATH_CF2 += src/utils/src/clockCorrection src/utils/src/tdoa
+VPATH_CF2 += src/utils/src/tdoa
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -184,7 +184,7 @@ PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
 PROJ_OBJ_CF2 += zranger.o zranger2.o
 PROJ_OBJ_CF2 += locodeck.o
-PROJ_OBJ_CF2 += clockCorrectionFunctions.o clockCorrectionEngine.o
+PROJ_OBJ_CF2 += clockCorrectionEngine.o
 PROJ_OBJ_CF2 += lpsTwrTag.o
 PROJ_OBJ_CF2 += lpsTdoa2Tag.o
 PROJ_OBJ_CF2 += lpsTdoa3Tag.o tdoaEngine.o tdoaStats.o tdoaStorage.o

@@ -26,8 +26,6 @@ compiler:
       - 'vendor/libdw1000/inc/'
       - 'src/deck/drivers/interface/'
       - 'src/deck/drivers/src/'
-      - 'src/utils/interface/clockCorrection/'
-      - 'src/utils/src/clockCorrection/'
       - 'src/utils/interface/'
       - 'src/utils/src/'
       - 'src/lib/FreeRTOS/include/'

@@ -1,4 +1,4 @@
-#include "clockCorrectionFunctions.h"
+#include "clockCorrectionEngine.h"
 
 #define MAX_CLOCK_DEVIATION_SPEC 10e-6
 #define CLOCK_CORRECTION_SPEC_MIN (1.0 - MAX_CLOCK_DEVIATION_SPEC * 2)
@@ -29,21 +29,21 @@ static float scaleValueForLogging(double value) {
 /**
  Obtains the clock correction from a clockCorrectionStorage_t object. This is the recommended public API to obtain the clock correction, instead of getting it directly from the storage object.
  */
-double getClockCorrection(const clockCorrectionStorage_t* storage) {
+double clockCorrectionEngineGet(const clockCorrectionStorage_t* storage) {
   return storage->clockCorrection;
 }
 
 /**
  Truncates a timestamp to the number of bits of the mask. This truncation ensures that the value returned is a valid time event, even if the time counter wrapped around.
  */
-uint64_t truncateTimeStamp(uint64_t timeStamp, uint64_t mask) {
+static uint64_t truncateTimeStamp(uint64_t timeStamp, uint64_t mask) {
   return timeStamp & mask;
 }
 
 /**
  Implementation of the leaky bucket algorithm. See: https://en.wikipedia.org/wiki/Leaky_bucket
  */
-void fillClockCorrectionBucket(clockCorrectionStorage_t* storage) {
+static void fillClockCorrectionBucket(clockCorrectionStorage_t* storage) {
   if (storage->clockCorrectionBucket < CLOCK_CORRECTION_BUCKET_MAX) {
     storage->clockCorrectionBucket++;
   }
@@ -52,7 +52,7 @@ void fillClockCorrectionBucket(clockCorrectionStorage_t* storage) {
 /**
  Implementation of the leaky bucket algorithm. See: https://en.wikipedia.org/wiki/Leaky_bucket
  */
-bool emptyClockCorrectionBucket(clockCorrectionStorage_t* storage) {
+static bool emptyClockCorrectionBucket(clockCorrectionStorage_t* storage) {
   if (storage->clockCorrectionBucket > 0) {
     storage->clockCorrectionBucket--;
     return false;
@@ -64,14 +64,14 @@ bool emptyClockCorrectionBucket(clockCorrectionStorage_t* storage) {
 /**
  Calculates the clock correction between a reference clock and another clock (x).
 
- @param new_t_in_cl_reference The newest time of occurrence for an event (t), meassured by the clock of reference
- @param old_t_in_cl_reference An older time of occurrence for an event (t), meassured by the clock of reference
- @param new_t_in_cl_x The newest time of occurrence for an event (t), meassured by clock x
- @param old_t_in_cl_x The previous time of occurrence for an event (t), meassured by clock x
+ @param new_t_in_cl_reference The newest time of occurrence for an event (t), measured by the clock of reference
+ @param old_t_in_cl_reference An older time of occurrence for an event (t), measured by the clock of reference
+ @param new_t_in_cl_x The newest time of occurrence for an event (t), measured by clock x
+ @param old_t_in_cl_x The previous time of occurrence for an event (t), measured by clock x
  @param mask A mask as long as the number of bits used to represent the timestamps. Used to calculate a valid timestamp, even if wrapped arounds of the time counter happened at some point
- @return The necessary clock correction to apply to timestamps meassured by clock x, in order to obtain their value like if the meassurement was done by the reference clock. Or -1 if it was not possible to perform the computation. Example: timestamp_in_cl_reference = clockCorrection * timestamp_in_cl_x
+ @return The necessary clock correction to apply to timestamps measured by clock x, in order to obtain their value like if the measurement was done by the reference clock. Or -1 if it was not possible to perform the computation. Example: timestamp_in_cl_reference = clockCorrection * timestamp_in_cl_x
  */
-double calculateClockCorrection(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x, const uint64_t mask) {
+double clockCorrectionEngineCalculate(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x, const uint64_t mask) {
   const uint64_t tickCount_in_cl_reference = truncateTimeStamp(new_t_in_cl_reference - old_t_in_cl_reference, mask);
   const uint64_t tickCount_in_cl_x = truncateTimeStamp(new_t_in_cl_x - old_t_in_cl_x, mask);
 
@@ -83,10 +83,10 @@ double calculateClockCorrection(const uint64_t new_t_in_cl_reference, const uint
 }
 
 /**
- Updates the clock correction only if the provided value follows certain conditions. This is used to discard wrong clock correction meassurements.
+ Updates the clock correction only if the provided value follows certain conditions. This is used to discard wrong clock correction measurements.
  @return True if the provided clock correction sample ir reliable, false otherwise. A sample is reliable when it is in the accepted noise level (which means that we already have two or more samples that are similar) and has been LP filtered.
  */
-bool updateClockCorrection(clockCorrectionStorage_t* storage, const double clockCorrectionCandidate) {
+bool clockCorrectionEngineUpdate(clockCorrectionStorage_t* storage, const double clockCorrectionCandidate) {
   bool sampleIsReliable = false;
 
   const double currentClockCorrection = storage->clockCorrection;

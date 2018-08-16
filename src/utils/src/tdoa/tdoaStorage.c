@@ -34,7 +34,6 @@ Data storage encapsulation for the TDoA engine
 #include "debug.h"
 
 #include "tdoaStorage.h"
-#include "clockCorrectionEngine.h"
 
 // All times in milli seconds
 #define TOF_VALIDITY_PERIOD (2 * 1000)
@@ -140,8 +139,8 @@ void tdoaStorageSetRxTxData(tdoaAnchorContext_t* anchorCtx, int64_t rxTime, int6
   anchorInfo->lastUpdateTime = now;
 }
 
-  double tdoaStorageGetClockCorrection(const tdoaAnchorContext_t* anchorCtx) {
-  return clockCorrectionEngine.getClockCorrection(&anchorCtx->anchorInfo->clockCorrectionStorage);
+double tdoaStorageGetClockCorrection(const tdoaAnchorContext_t* anchorCtx) {
+  return clockCorrectionEngineGet(&anchorCtx->anchorInfo->clockCorrectionStorage);
 }
 
 int64_t tdoaStorageGetRemoteRxTime(const tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor) {

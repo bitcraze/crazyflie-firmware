@@ -100,8 +100,8 @@ static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t 
   const int64_t latest_txAn_in_cl_An = tdoaStorageGetTxTime(anchorCtx);
 
   if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
-    double clockCorrectionCandidate = clockCorrectionEngine.calculateClockCorrection(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TRUNCATE_TO_ANCHOR_TS_BITMAP);
-    sampleIsReliable = clockCorrectionEngine.updateClockCorrection(tdoaStorageGetClockCorrectionStorage(anchorCtx), clockCorrectionCandidate);
+    double clockCorrectionCandidate = clockCorrectionEngineCalculate(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TRUNCATE_TO_ANCHOR_TS_BITMAP);
+    sampleIsReliable = clockCorrectionEngineUpdate(tdoaStorageGetClockCorrectionStorage(anchorCtx), clockCorrectionCandidate);
 
     if (sampleIsReliable){
       if (tdoaStorageGetId(anchorCtx) == stats->anchorId) {
