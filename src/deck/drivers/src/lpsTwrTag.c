@@ -41,6 +41,8 @@
 #include "estimator_kalman.h"
 #include "arm_math.h"
 
+#include "physicalConstants.h"
+
 // Outlier rejection
 #define RANGING_HISTORY_LENGTH 32
 #define OUTLIER_TH 4

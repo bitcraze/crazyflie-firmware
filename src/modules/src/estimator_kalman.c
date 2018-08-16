@@ -181,8 +181,6 @@ static inline bool stateEstimatorHasHeightPacket(heightMeasurement_t *height) {
 //thrust is thrust mapped for 65536 <==> 60 GRAMS!
 #define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/CRAZYFLIE_WEIGHT_grams/65536.0f)
 
-#define SPEED_OF_LIGHT (299792458)
-
 // TODO: Decouple the TDOA implementation from the Kalman filter...
 #define METERS_PER_TDOATICK (4.691763979e-3f)
 #define SECONDS_PER_TDOATICK (15.650040064e-12f)

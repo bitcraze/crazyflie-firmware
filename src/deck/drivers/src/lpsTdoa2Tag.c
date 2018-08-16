@@ -40,6 +40,8 @@
 #include "estimator_kalman.h"
 #include "outlierFilter.h"
 
+#include "physicalConstants.h"
+
 #define MEASUREMENT_NOISE_STD 0.15f
 #define STATS_INTERVAL 500
 #define ANCHOR_OK_TIMEOUT 1500

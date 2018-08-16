@@ -50,6 +50,7 @@ The implementation must handle
 #include "lpsTdoa3Tag.h"
 #include "tdoaEngine.h"
 #include "tdoaStats.h"
+#include "estimator_kalman.h"
 
 #include "libdw1000.h"
 #include "mac.h"
@@ -280,6 +281,20 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   return MAX_TIMEOUT;
 }
 
+static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
+    estimatorKalmanEnqueueTDOA(tdoaMeasurement);
+
+    #ifdef LPS_2D_POSITION_HEIGHT
+    // If LPS_2D_POSITION_HEIGHT is defined we assume that we are doing 2D positioning.
+    // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
+    heightMeasurement_t heightData;
+    heightData.timestamp = xTaskGetTickCount();
+    heightData.height = LPS_2D_POSITION_HEIGHT;
+    heightData.stdDev = 0.0001;
+    estimatorKalmanEnqueueAsoluteHeight(&heightData);
+    #endif
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
@@ -289,7 +304,11 @@ static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
   options->rangingState = 0;
 
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  tdoaEngineInit(&engineState, now_ms);
+  tdoaEngineInit(&engineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ);
+
+  #ifdef LPS_2D_POSITION_HEIGHT
+  DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
+  #endif
 
   dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);
 

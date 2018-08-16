@@ -45,29 +45,22 @@ The implementation must handle
 
 #include <string.h>
 
-#include "tdoaEngine.h"
-#include "tdoaStats.h"
-
-#include "locodeck.h"
-
 #define DEBUG_MODULE "TDOA_ENGINE"
 #include "debug.h"
 
-#include "estimator.h"
-#include "estimator_kalman.h"
+#include "tdoaEngine.h"
+#include "tdoaStats.h"
 #include "outlierFilter.h"
 #include "clockCorrectionEngine.h"
+#include "physicalConstants.h"
 
 #define MEASUREMENT_NOISE_STD 0.15f
-#define ANCHOR_OK_TIMEOUT 1500
 
-void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms) {
+void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
   tdoaStatsInit(&engineState->stats, now_ms);
-
-  #ifdef LPS_2D_POSITION_HEIGHT
-  DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
-  #endif
+  engineState->sendTdoaToEstimator = sendTdoaToEstimator;
+  engineState->locodeckTsFreq = locodeckTsFreq;
 }
 
 #define TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
@@ -75,7 +68,9 @@ static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & TRUNCATE_TO_ANCHOR_TS_BITMAP;
 }
 
-static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff, tdoaStats_t* stats) {
+static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff, tdoaEngineState_t* engineState) {
+  tdoaStats_t* stats = &engineState->stats;
+
   tdoaMeasurement_t tdoa = {
     .stdDev = MEASUREMENT_NOISE_STD,
     .distanceDiff = distanceDiff
@@ -84,17 +79,7 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
   if (tdoaStorageGetAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && tdoaStorageGetAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
     if (outlierFilterValidateTdoa(&tdoa)) {
       stats->packetsToEstimator++;
-      estimatorKalmanEnqueueTDOA(&tdoa);
-
-      #ifdef LPS_2D_POSITION_HEIGHT
-      // If LPS_2D_POSITION_HEIGHT we assume that we are doing 2D positioning.
-      // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
-      heightMeasurement_t heightData;
-      heightData.timestamp = xTaskGetTickCount();
-      heightData.height = LPS_2D_POSITION_HEIGHT;
-      heightData.stdDev = 0.0001;
-      estimatorKalmanEnqueueAsoluteHeight(&heightData);
-      #endif
+      engineState->sendTdoaToEstimator(&tdoa);
 
       uint8_t idA = tdoaStorageGetId(anchorACtx);
       uint8_t idB = tdoaStorageGetId(anchorBCtx);
@@ -144,9 +129,9 @@ static int64_t calcTDoA(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnc
   return timeDiffOfArrival_in_cl_T;
 }
 
-static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq) {
   const int64_t tdoa = calcTDoA(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
-  return SPEED_OF_LIGHT * tdoa / LOCODECK_TS_FREQ;
+  return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
 }
 
 static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
@@ -198,8 +183,8 @@ void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t
       tdoaAnchorContext_t otherAnchorCtx;
       if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx)) {
         engineState->stats.suitableDataFound++;
-        double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
-        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, &engineState->stats);
+        double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
+        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
       }
     }
 }
