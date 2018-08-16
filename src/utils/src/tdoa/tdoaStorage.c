@@ -41,47 +41,47 @@ Data storage encapsulation for the TDoA engine
 #define ANCHOR_POSITION_VALIDITY_PERIOD (2 * 1000)
 
 
+static tdoaAnchorInfo_t* initializeSlot(tdoaAnchorInfo_t anchorStorage[], const uint8_t slot, const uint8_t anchor);
+
 void tdoaStorageInitialize(tdoaAnchorInfo_t anchorStorage[]) {
   memset(anchorStorage, 0, sizeof(tdoaAnchorInfo_t) * ANCHOR_STORAGE_COUNT);
 }
 
 bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
   anchorCtx->currentTime_ms = currentTime_ms;
+  uint32_t oldestUpdateTime = currentTime_ms;
+  int firstUninitializedSlot = -1;
+  int oldestSlot = 0;
 
   // TODO krri add lookup table to avoid linear search
   for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
-    if (anchor == anchorStorage[i].id && anchorStorage[i].isInitialized) {
-      anchorCtx->anchorInfo = &anchorStorage[i];
-      return true;
+    if (anchorStorage[i].isInitialized) {
+      if (anchor == anchorStorage[i].id) {
+        anchorCtx->anchorInfo = &anchorStorage[i];
+        return true;
+      }
+
+      if (anchorStorage[i].lastUpdateTime < oldestUpdateTime) {
+        oldestUpdateTime = anchorStorage[i].lastUpdateTime;
+        oldestSlot = i;
+      }
+    } else {
+      if (firstUninitializedSlot == -1) {
+        firstUninitializedSlot = i;
+      }
     }
   }
 
-  anchorCtx->anchorInfo = (void*)0;
+  // The anchor was not found in storage
+  tdoaAnchorInfo_t* newAnchorInfo = 0;
+  if (firstUninitializedSlot != -1) {
+    newAnchorInfo = initializeSlot(anchorStorage, firstUninitializedSlot, anchor);
+  } else {
+    newAnchorInfo = initializeSlot(anchorStorage, oldestSlot, anchor);
+  }
+
+  anchorCtx->anchorInfo = newAnchorInfo;
   return false;
-}
-
-void tdoaStorageInitializeNewAnchorContext(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
-  int indexToInitialize = 0;
-  uint32_t oldestUpdateTime = currentTime_ms;
-
-  for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
-    if (!anchorStorage[i].isInitialized) {
-      indexToInitialize = i;
-      break;
-    }
-
-    if (anchorStorage[i].lastUpdateTime < oldestUpdateTime) {
-      oldestUpdateTime = anchorStorage[i].lastUpdateTime;
-      indexToInitialize = i;
-    }
-  }
-
-  memset(&anchorStorage[indexToInitialize], 0, sizeof(tdoaAnchorInfo_t));
-  anchorStorage[indexToInitialize].id = anchor;
-  anchorStorage[indexToInitialize].isInitialized = true;
-
-  anchorCtx->currentTime_ms = currentTime_ms;
-  anchorCtx->anchorInfo = &anchorStorage[indexToInitialize];
 }
 
 uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx) {
@@ -98,6 +98,10 @@ int64_t tdoaStorageGetTxTime(const tdoaAnchorContext_t* anchorCtx) {
 
 uint8_t tdoaStorageGetSeqNr(const tdoaAnchorContext_t* anchorCtx) {
   return anchorCtx->anchorInfo->seqNr;
+}
+
+uint32_t tdoaStorageGetLastUpdateTime(const tdoaAnchorContext_t* anchorCtx) {
+  return anchorCtx->anchorInfo->lastUpdateTime;
 }
 
 clockCorrectionStorage_t* tdoaStorageGetClockCorrectionStorage(const tdoaAnchorContext_t* anchorCtx) {
@@ -239,4 +243,24 @@ void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t re
   anchorInfo->tof[indexToUpdate].id = remoteAnchor;
   anchorInfo->tof[indexToUpdate].tof = tof;
   anchorInfo->tof[indexToUpdate].endOfLife = now + TOF_VALIDITY_PERIOD;
+}
+
+bool tdoaStorageIsAnchorInStorage(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor) {
+  for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
+    if (anchorStorage[i].isInitialized) {
+      if (anchor == anchorStorage[i].id) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+static tdoaAnchorInfo_t* initializeSlot(tdoaAnchorInfo_t anchorStorage[], const uint8_t slot, const uint8_t anchor) {
+  memset(&anchorStorage[slot], 0, sizeof(tdoaAnchorInfo_t));
+  anchorStorage[slot].id = anchor;
+  anchorStorage[slot].isInitialized = true;
+
+  return &anchorStorage[slot];
 }

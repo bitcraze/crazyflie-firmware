@@ -54,12 +54,12 @@ typedef struct {
 void tdoaStorageInitialize(tdoaAnchorInfo_t anchorStorage[]);
 
 bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
-void tdoaStorageInitializeNewAnchorContext(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
 
 uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx);
 int64_t tdoaStorageGetRxTime(const tdoaAnchorContext_t* anchorCtx);
 int64_t tdoaStorageGetTxTime(const tdoaAnchorContext_t* anchorCtx);
 uint8_t tdoaStorageGetSeqNr(const tdoaAnchorContext_t* anchorCtx);
+uint32_t tdoaStorageGetLastUpdateTime(const tdoaAnchorContext_t* anchorCtx);
 clockCorrectionStorage_t* tdoaStorageGetClockCorrectionStorage(const tdoaAnchorContext_t* anchorCtx);
 bool tdoaStorageGetAnchorPosition(const tdoaAnchorContext_t* anchorCtx, point_t* position);
 void tdoaStorageSetAnchorPosition(tdoaAnchorContext_t* anchorCtx, const float x, const float y, const float z);
@@ -70,5 +70,8 @@ void tdoaStorageSetRemoteRxTime(tdoaAnchorContext_t* anchorCtx, const uint8_t re
 void tdoaStorageGetRemoteSeqNrList(const tdoaAnchorContext_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]);
 int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor);
 void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof);
+
+// Mainly for test
+bool tdoaStorageIsAnchorInStorage(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor);
 
 #endif // __TDOA_STORAGE_H__

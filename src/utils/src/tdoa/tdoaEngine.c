@@ -171,7 +171,6 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
     engineState->stats.contextHitCount++;
   } else {
     engineState->stats.contextMissCount++;
-    tdoaStorageInitializeNewAnchorContext(engineState->anchorInfoArray, anchorId, currentTime_ms, anchorCtx);
   }
 }
 
