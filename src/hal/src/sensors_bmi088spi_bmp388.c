@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * sensors_bmi088_bmp388.c: IMU sensor driver for the *88 bosch sensors
+ * sensors_bmi088_bmp388.c: IMU sensor accusation for the *88 bosch sensors
  */
 
 #define DEBUG_MODULE "IMU"
@@ -31,6 +31,59 @@
 #include "i2cdev.h"
 
 #define SENSORS_TAKE_ACCEL_BIAS
+
+/* Defines for the SPI and GPIO pins used to drive the SPI Flash */
+#define BMI088_ACC_GPIO_CS             GPIO_Pin_1
+#define BMI088_ACC_GPIO_CS_PORT        GPIOB
+#define BMI088_ACC_GPIO_CS_PERIF       RCC_AHB1Periph_GPIOB
+#define BMI088_GYR_GPIO_CS             GPIO_Pin_0
+#define BMI088_GYR_GPIO_CS_PORT        GPIOB
+#define BMI088_GYR_GPIO_CS_PERIF       RCC_AHB1Periph_GPIOB
+
+#define BMI088_SPI                     SPI2
+#define BMI088_SPI_AF                  GPIO_AF_SPI2
+#define BMI088_SPI_CLK                 RCC_APB1Periph_SPI2
+#define BMI088_GPIO_SPI_PORT           GPIOB
+#define BMI088_GPIO_SPI_CLK            RCC_AHB1Periph_GPIOB
+#define BMI088_GPIO_SPI_SCK            GPIO_Pin_13
+#define BMI088_GPIO_SPI_SCK_SRC        GPIO_PinSource13
+#define BMI088_GPIO_SPI_MISO           GPIO_Pin_14
+#define BMI088_GPIO_SPI_MISO_SRC       GPIO_PinSource14
+#define BMI088_GPIO_SPI_MOSI           GPIO_Pin_15
+#define BMI088_GPIO_SPI_MOSI_SRC       GPIO_PinSource15
+
+#define BMI088_SPI_DMA_IRQ_PRIO        NVIC_HIGH_PRI
+#define BMI088_SPI_DMA                 DMA1
+#define BMI088_SPI_DMA_CLK             RCC_AHB1Periph_DMA1
+#define BMI088_SPI_DMA_CLK_INIT        RCC_AHB1PeriphClockCmd
+
+#define BMI088_SPI_RX_DMA_STREAM       DMA1_Stream3
+#define BMI088_SPI_RX_DMA_IRQ          DMA1_Stream3_IRQn
+#define BMI088_SPI_RX_DMA_IRQHandler   DMA1_Stream3_IRQHandler
+#define BMI088_SPI_RX_DMA_CHANNEL      DMA_Channel_0
+#define BMI088_SPI_RX_DMA_FLAG_TCIF    DMA_FLAG_TCIF3
+
+#define BMI088_SPI_TX_DMA_STREAM       DMA1_Stream4
+#define BMI088_SPI_TX_DMA_IRQ          DMA1_Stream4_IRQn
+#define BMI088_SPI_TX_DMA_IRQHandler   DMA1_Stream4_IRQHandler
+#define BMI088_SPI_TX_DMA_CHANNEL      DMA_Channel_0
+#define BMI088_SPI_TX_DMA_FLAG_TCIF    DMA_FLAG_TCIF4
+
+#define DUMMY_BYTE    0x00
+
+/* Usefull macro */
+#define ACC_EN_CS() GPIO_ResetBits(BMI088_ACC_GPIO_CS_PORT, BMI088_ACC_GPIO_CS)
+#define ACC_DIS_CS() GPIO_SetBits(BMI088_ACC_GPIO_CS_PORT, BMI088_ACC_GPIO_CS)
+#define GYR_EN_CS() GPIO_ResetBits(BMI088_GYR_GPIO_CS_PORT, BMI088_GYR_GPIO_CS)
+#define GYR_DIS_CS() GPIO_SetBits(BMI088_GYR_GPIO_CS_PORT, BMI088_GYR_GPIO_CS)
+
+/* Defines and buffers for full duplex SPI DMA transactions */
+#define SPI_MAX_DMA_TRANSACTION_SIZE    15 // 1 byte command followed by 14 bytes data
+static uint8_t spiTxBuffer[SPI_MAX_DMA_TRANSACTION_SIZE + 1];
+static uint8_t spiRxBuffer[SPI_MAX_DMA_TRANSACTION_SIZE + 1];
+static xSemaphoreHandle spiTxDMAComplete;
+static xSemaphoreHandle spiRxDMAComplete;
+
 
 typedef struct {
   Axis3i16      value;
@@ -47,8 +100,8 @@ static struct bmp3_dev   bmp388Dev;
 
 static xQueueHandle accelDataQueue;
 static xQueueHandle gyroDataQueue;
-static xQueueHandle baroDataQueue;
 static xQueueHandle magDataQueue;
+static xQueueHandle baroDataQueue;
 static xSemaphoreHandle sensorsDataReady;
 static xSemaphoreHandle dataReady;
 
@@ -88,16 +141,146 @@ static void sensorsBiasMalloc(BiasObj* bias);
 static void sensorsBiasFree(BiasObj* bias);
 static void sensorsBiasBufPtrIncrement(BiasObj* bias);
 
+/***********************
+ * SPI private methods *
+ ***********************/
+static char spiSendByte(char byte)
+{
+  /* Loop while DR register in not emplty */
+  while (SPI_I2S_GetFlagStatus(BMI088_SPI, SPI_I2S_FLAG_TXE) == RESET);
+
+  /* Send byte through the SPI peripheral */
+  SPI_I2S_SendData(BMI088_SPI, byte);
+
+  /* Wait to receive a byte */
+  while (SPI_I2S_GetFlagStatus(BMI088_SPI, SPI_I2S_FLAG_RXNE) == RESET);
+
+  /* Return the byte read from the SPI bus */
+  return SPI_I2S_ReceiveData(BMI088_SPI);
+}
+
+static char spiReceiveByte()
+{
+  return spiSendByte(DUMMY_BYTE);
+}
+
+static void spiDMATransaction(uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+{
+  ASSERT(len < SPI_MAX_DMA_TRANSACTION_SIZE);
+
+  // Disable peripheral before setting up for duplex DMA
+  SPI_Cmd(BMI088_SPI, DISABLE);
+
+  // DMA already configured, just need to set memory addresses and read command byte
+  spiTxBuffer[0] = reg_addr;
+  BMI088_SPI_TX_DMA_STREAM->M0AR = (uint32_t)&spiTxBuffer[0];
+  BMI088_SPI_TX_DMA_STREAM->NDTR = len + 1;
+
+  BMI088_SPI_RX_DMA_STREAM->M0AR = (uint32_t)&spiRxBuffer[0];
+  BMI088_SPI_RX_DMA_STREAM->NDTR = len + 1;
+
+  // Enable SPI DMA Interrupts
+  DMA_ITConfig(BMI088_SPI_TX_DMA_STREAM, DMA_IT_TC, ENABLE);
+  DMA_ITConfig(BMI088_SPI_RX_DMA_STREAM, DMA_IT_TC, ENABLE);
+
+  // Clear DMA Flags
+  DMA_ClearFlag(BMI088_SPI_TX_DMA_STREAM, DMA_FLAG_FEIF4|DMA_FLAG_DMEIF4|
+                DMA_FLAG_TEIF4|DMA_FLAG_HTIF4|DMA_FLAG_TCIF4);
+  DMA_ClearFlag(BMI088_SPI_RX_DMA_STREAM, DMA_FLAG_FEIF3|DMA_FLAG_DMEIF3|
+                DMA_FLAG_TEIF3|DMA_FLAG_HTIF3|DMA_FLAG_TCIF3);
+
+  // Enable DMA Streams
+  DMA_Cmd(BMI088_SPI_TX_DMA_STREAM,ENABLE);
+  DMA_Cmd(BMI088_SPI_RX_DMA_STREAM,ENABLE);
+
+  // Enable SPI DMA requests
+  SPI_I2S_DMACmd(BMI088_SPI, SPI_I2S_DMAReq_Tx, ENABLE);
+  SPI_I2S_DMACmd(BMI088_SPI, SPI_I2S_DMAReq_Rx, ENABLE);
+
+  // Enable peripheral to begin the transaction
+  SPI_Cmd(BMI088_SPI, ENABLE);
+
+  // Wait for completion
+  // TODO: Better error handling rather than passing up invalid data
+  xSemaphoreTake(spiTxDMAComplete, portMAX_DELAY);
+  xSemaphoreTake(spiRxDMAComplete, portMAX_DELAY);
+
+  // Copy the data (discarding the dummy byte) into the buffer
+  // TODO: Avoid this memcpy either by figuring out how to configure the STM SPI to discard the byte or handle it higher up
+  memcpy(reg_data, &spiRxBuffer[1], len);
+}
+
 // Communication routines
 
-/*!
- * @brief Generic burst read
- *
- * @param [out] dev_id I2C address, SPI chip select or user desired identifier
- *
- * @return Zero if successful, otherwise an error code
- */
-static bstdr_ret_t bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+static bstdr_ret_t spi_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+{
+  /**< Burst read code comes here */
+  if (dev_id == BMI088_ACCEL_I2C_ADDR_PRIMARY)
+  {
+    ACC_EN_CS();
+  }
+  else
+  {
+    GYR_EN_CS();
+  }
+
+  if (len <= 1 || len > SPI_MAX_DMA_TRANSACTION_SIZE)
+  {
+    spiSendByte(reg_addr);
+    for (int i = 0; i < len; i++)
+    {
+      reg_data[i] = spiReceiveByte();
+    }
+  }
+  else
+  {
+    spiDMATransaction(reg_addr, reg_data, len);
+  }
+
+  if (dev_id == BMI088_ACCEL_I2C_ADDR_PRIMARY)
+  {
+    ACC_DIS_CS();
+  }
+  else
+  {
+    GYR_DIS_CS();
+  }
+
+  return BSTDR_OK;
+}
+
+static bstdr_ret_t spi_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+{
+  if (dev_id == BMI088_ACCEL_I2C_ADDR_PRIMARY)
+  {
+    ACC_EN_CS();
+  }
+  else
+  {
+    GYR_EN_CS();
+  }
+  spiSendByte(reg_addr);
+  for (int i = 0; i < len; i++)
+  {
+    spiSendByte(reg_data[i]);
+  }
+
+  if (dev_id == BMI088_ACCEL_I2C_ADDR_PRIMARY)
+  {
+    ACC_DIS_CS();
+  }
+  else
+  {
+    GYR_DIS_CS();
+  }
+
+  return BSTDR_OK;
+}
+
+/***********************
+ * I2C private methods *
+ ***********************/
+static bstdr_ret_t i2c_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
 {
   /**< Burst read code comes here */
   if (i2cdevRead(I2C3_DEV, dev_id, reg_addr, (uint16_t) len, reg_data))
@@ -110,14 +293,7 @@ static bstdr_ret_t bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *
   }
 }
 
-/*!
- * @brief Generic burst write
- *
- * @param [out] dev_id I2C address, SPI chip select or user desired identifier
- *
- * @return Zero if successful, otherwise an error code
- */
-static bstdr_ret_t bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+static bstdr_ret_t i2c_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
 {
   /**< Burst write code comes here */
   if (i2cdevWrite(I2C3_DEV, dev_id,reg_addr,(uint16_t) len, reg_data))
@@ -130,17 +306,129 @@ static bstdr_ret_t bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t 
   }
 }
 
-/*!
- * @brief Generic burst read
- *
- * @param [in] period Delay period in milliseconds
- *
- * @return None
- */
+
 static void bmi088_ms_delay(uint32_t period)
 {
   /**< Delay code comes */
-  vTaskDelay(M2T(period)); // Delay a while to let the device stabilize
+  vTaskDelay(M2T(period));
+}
+
+static void spiConfigure(void)
+{
+  SPI_InitTypeDef  SPI_InitStructure;
+
+  SPI_Cmd(BMI088_SPI, DISABLE);
+  SPI_I2S_DeInit(BMI088_SPI);
+
+  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+  SPI_InitStructure.SPI_CRCPolynomial = 0; // Not used
+
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4; //~10.5 MHz
+  SPI_Init(BMI088_SPI, &SPI_InitStructure);
+  /* Enable the SPI  */
+  SPI_Cmd(BMI088_SPI, ENABLE);
+}
+
+/* Initialisation */
+static void spiInit(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  if (isInit)
+    return;
+
+  /* Enable SPI and GPIO clocks */
+  RCC_AHB1PeriphClockCmd(BMI088_GPIO_SPI_CLK | BMI088_ACC_GPIO_CS_PERIF, ENABLE);
+  /* Enable SPI and GPIO clocks */
+  RCC_APB1PeriphClockCmd(BMI088_SPI_CLK, ENABLE);
+
+  /* Configure SPI pins: SCK, MISO and MOSI */
+  GPIO_InitStructure.GPIO_Pin = BMI088_GPIO_SPI_SCK |  BMI088_GPIO_SPI_MOSI;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(BMI088_GPIO_SPI_PORT, &GPIO_InitStructure);
+
+  //* Configure MISO */
+  GPIO_InitStructure.GPIO_Pin = BMI088_GPIO_SPI_MISO;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_Init(BMI088_GPIO_SPI_PORT, &GPIO_InitStructure);
+
+  /* Configure I/O for the Chip select */
+  GPIO_InitStructure.GPIO_Pin = BMI088_ACC_GPIO_CS;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_Init(BMI088_ACC_GPIO_CS_PORT, &GPIO_InitStructure);
+  /* Configure I/O for the Chip select */
+  GPIO_InitStructure.GPIO_Pin = BMI088_GYR_GPIO_CS;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_Init(BMI088_GYR_GPIO_CS_PORT, &GPIO_InitStructure);
+
+
+  /*!< Connect SPI pins to AF5 */
+  GPIO_PinAFConfig(BMI088_GPIO_SPI_PORT, BMI088_GPIO_SPI_SCK_SRC, BMI088_SPI_AF);
+  GPIO_PinAFConfig(BMI088_GPIO_SPI_PORT, BMI088_GPIO_SPI_MISO_SRC, BMI088_SPI_AF);
+  GPIO_PinAFConfig(BMI088_GPIO_SPI_PORT, BMI088_GPIO_SPI_MOSI_SRC, BMI088_SPI_AF);
+
+  /* disable the chip select */
+  ACC_DIS_CS();
+
+  spiConfigure();
+}
+
+static void spiDMAInit(void)
+{
+  DMA_InitTypeDef  DMA_InitStructure;
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  /*!< Enable DMA Clocks */
+  BMI088_SPI_DMA_CLK_INIT(BMI088_SPI_DMA_CLK, ENABLE);
+
+  /* Configure DMA Initialization Structure */
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(BMI088_SPI->DR));
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_BufferSize = 0; // set later
+  DMA_InitStructure.DMA_Memory0BaseAddr = 0; // set later
+
+  // Configure TX DMA
+  DMA_InitStructure.DMA_Channel = BMI088_SPI_TX_DMA_CHANNEL;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_Cmd(BMI088_SPI_TX_DMA_STREAM,DISABLE);
+  DMA_Init(BMI088_SPI_TX_DMA_STREAM, &DMA_InitStructure);
+
+  // Configure RX DMA
+  DMA_InitStructure.DMA_Channel = BMI088_SPI_RX_DMA_CHANNEL;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_Cmd(BMI088_SPI_RX_DMA_STREAM, DISABLE);
+  DMA_Init(BMI088_SPI_RX_DMA_STREAM, &DMA_InitStructure);
+
+  // Configure interrupts
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+
+  NVIC_InitStructure.NVIC_IRQChannel = BMI088_SPI_TX_DMA_IRQ;
+  NVIC_Init(&NVIC_InitStructure);
+
+  NVIC_InitStructure.NVIC_IRQChannel = BMI088_SPI_RX_DMA_IRQ;
+  NVIC_Init(&NVIC_InitStructure);
+
+  spiTxDMAComplete = xSemaphoreCreateBinary();
+  spiRxDMAComplete = xSemaphoreCreateBinary();
 }
 
 static void sensorsInterruptInit(void)
@@ -177,6 +465,8 @@ void sensorsInit(void)
     }
 
   i2cdevInit(I2C3_DEV);
+  spiInit();
+  spiDMAInit();
 
   sensorsDeviceInit();
   sensorsInterruptInit();
@@ -196,10 +486,10 @@ static void sensorsDeviceInit(void)
 
   /* BMI088 */
   bmi088Dev.accel_id = BMI088_ACCEL_I2C_ADDR_PRIMARY;
-  bmi088Dev.gyro_id = BMI088_GYRO_I2C_ADDR_SECONDARY;
-  bmi088Dev.interface = BMI088_I2C_INTF;
-  bmi088Dev.read = bmi088_burst_read;
-  bmi088Dev.write = bmi088_burst_write;
+  bmi088Dev.gyro_id = BMI088_GYRO_I2C_ADDR_PRIMARY;
+  bmi088Dev.interface = BMI088_SPI_INTF;
+  bmi088Dev.read = spi_burst_read;
+  bmi088Dev.write = spi_burst_write;
   bmi088Dev.delay_ms = bmi088_ms_delay;
 
   /* BMI088 GYRO */
@@ -208,7 +498,7 @@ static void sensorsDeviceInit(void)
   {
     struct bmi088_int_cfg intConfig;
 
-    DEBUG_PRINT("BMI088 Gyro I2C connection [OK].\n");
+    DEBUG_PRINT("BMI088 Gyro SPI connection [OK].\n");
     /* set power mode of gyro */
     bmi088Dev.gyro_cfg.power = BMI088_GYRO_PM_NORMAL;
     rslt |= bmi088_set_gyro_power_mode(&bmi088Dev);
@@ -229,11 +519,12 @@ static void sensorsDeviceInit(void)
     bmi088Dev.delay_ms(50);
     struct bmi088_sensor_data gyr;
     rslt |= bmi088_get_gyro_data(&gyr, &bmi088Dev);
+
   }
   else
   {
 #ifndef SENSORS_IGNORE_IMU_FAIL
-    DEBUG_PRINT("BMI088 Gyro I2C connection [FAIL]\n");
+    DEBUG_PRINT("BMI088 Gyro SPI connection [FAIL]\n");
     isInit = false;
 #endif
   }
@@ -245,7 +536,7 @@ static void sensorsDeviceInit(void)
   rslt = bmi088_accel_init(&bmi088Dev); // initialize the device
   if (rslt == BSTDR_OK)
   {
-    DEBUG_PRINT("BMI088 Accel I2C connection [OK]\n");
+    DEBUG_PRINT("BMI088 Accel SPI connection [OK]\n");
     /* set power mode of accel */
     bmi088Dev.accel_cfg.power = BMI088_ACCEL_PM_ACTIVE;
     rslt |= bmi088_set_accel_power_mode(&bmi088Dev);
@@ -263,7 +554,7 @@ static void sensorsDeviceInit(void)
   else
   {
 #ifndef SENSORS_IGNORE_IMU_FAIL
-    DEBUG_PRINT("BMI088 Accel I2C connection [FAIL]\n");
+    DEBUG_PRINT("BMI088 Accel SPI connection [FAIL]\n");
     isInit = false;
 #endif
   }
@@ -271,8 +562,8 @@ static void sensorsDeviceInit(void)
   /* BMP388 */
   bmp388Dev.dev_id = BMP3_I2C_ADDR_SEC;
   bmp388Dev.intf = BMP3_I2C_INTF;
-  bmp388Dev.read = bmi088_burst_read;
-  bmp388Dev.write = bmi088_burst_write;
+  bmp388Dev.read = i2c_burst_read;
+  bmp388Dev.write = i2c_burst_write;
   bmp388Dev.delay_ms = bmi088_ms_delay;
 
   int i = 3;
@@ -352,63 +643,60 @@ static void sensorsTaskInit(void)
               NULL, SENSORS_TASK_PRI, NULL);
 }
 
-static void sensorsGyroGet(Axis3i16* dataOut)
-{
+static void sensorsGyroGet(Axis3i16* dataOut) {
   bmi088_get_gyro_data((struct bmi088_sensor_data*)dataOut, &bmi088Dev);
 }
 
-static void sensorsAccelGet(Axis3i16* dataOut)
-{
+static void sensorsAccelGet(Axis3i16* dataOut) {
   bmi088_get_accel_data((struct bmi088_sensor_data*)dataOut, &bmi088Dev);
 }
 
-static void sensorsGyroCalibrate(BiasObj* gyro)
-{
+static void sensorsGyroCalibrate(BiasObj* gyro) {
   if (gyro->found == 0)
-  {
-    if (gyro->ongoing == 0)
     {
-      sensorsBiasMalloc(gyro);
-    }
-    /* write directly into buffer */
-    sensorsGyroGet(gyro->bufPtr);
-    /* FIXME: for sensor deck v1 realignment has to be added her */
-    sensorsBiasBufPtrIncrement(gyro);
+      if (gyro->ongoing == 0)
+        {
+          sensorsBiasMalloc(gyro);
+        }
+      /* write directly into buffer */
+      sensorsGyroGet(gyro->bufPtr);
+      /* FIXME: for sensor deck v1 realignment has to be added her */
+      sensorsBiasBufPtrIncrement(gyro);
 
-    if (gyro->bufIsFull == 1)
-    {
-      if (processGyroBias(gyro))
-        sensorsBiasFree(gyro);
+      if (gyro->bufIsFull == 1)
+        {
+          if (processGyroBias(gyro))
+            sensorsBiasFree(gyro);
+        }
     }
-  }
 }
 
 static void __attribute__((used))
-sensorsAccelCalibrate(BiasObj* accel, BiasObj* gyro)
-{
+sensorsAccelCalibrate(BiasObj* accel, BiasObj* gyro) {
   if (accel->found == 0)
-  {
-    if (accel->ongoing == 0)
     {
-      sensorsBiasMalloc(accel);
+      if (accel->ongoing == 0)
+        {
+          sensorsBiasMalloc(accel);
+        }
+      /* write directly into buffer */
+      sensorsAccelGet(accel->bufPtr);
+      /* FIXME: for sensor deck v1 realignment has to be added her */
+      sensorsBiasBufPtrIncrement(accel);
+      if ( (accel->bufIsFull == 1) && (gyro->found == 1) )
+      {
+        processAccelBias(accel);
+        accel->value.z -= SENSORS_BMI088_1G_IN_LSB;
+        sensorsBiasFree(accel);
+      }
     }
-    /* write directly into buffer */
-    sensorsAccelGet(accel->bufPtr);
-    /* FIXME: for sensor deck v1 realignment has to be added her */
-    sensorsBiasBufPtrIncrement(accel);
-    if ((accel->bufIsFull == 1) && (gyro->found == 1))
-    {
-      processAccelBias(accel);
-      accel->value.z -= SENSORS_BMI088_1G_IN_LSB;
-      sensorsBiasFree(accel);
-    }
-  }
 }
 
 static void sensorsTask(void *param)
 {
   systemWaitStart();
 
+//  uint32_t lastWakeTime = xTaskGetTickCount();
   static BiasObj bmi088GyroBias;
 #ifdef SENSORS_TAKE_ACCEL_BIAS
   static BiasObj bmi088AccelBias;
@@ -424,6 +712,7 @@ static void sensorsTask(void *param)
   //vTaskDelayUntil(&lastWakeTime, M2T(1500));
   while (1)
   {
+//      vTaskDelayUntil(&lastWakeTime, F2T(SENSORS_READ_RATE_HZ));
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
     {
       sensorData.interruptTimestamp = imuIntTimestamp;
@@ -434,7 +723,8 @@ static void sensorsTask(void *param)
         {
           sensorsGyroCalibrate(&bmi088GyroBias);
   #ifdef SENSORS_TAKE_ACCEL_BIAS
-          sensorsAccelCalibrate(&bmi088AccelBias, &bmi088GyroBias);
+          sensorsAccelCalibrate(&bmi088AccelBias,
+                                &bmi088GyroBias);
   #endif
         }
 
@@ -469,6 +759,7 @@ static void sensorsTask(void *param)
       sensorsAccAlignToGravity(&accelScaled, &sensorData.acc);
 
       }
+      // TODO: Move barometer reading to separate task to minimize gyro to output latency
       if (isBarometerPresent)
       {
         static uint8_t baroMeasDelay = SENSORS_DELAY_BARO;
@@ -483,6 +774,7 @@ static void sensorsTask(void *param)
           baroMeasDelay = baroMeasDelayMin;
         }
       }
+
       xQueueOverwrite(accelDataQueue, &sensorData.acc);
       xQueueOverwrite(gyroDataQueue, &sensorData.gyro);
       if (isBarometerPresent)
@@ -542,28 +834,27 @@ static void sensorsBiasFree(BiasObj* bias)
 static void sensorsBiasBufPtrIncrement(BiasObj* bias)
 {
   bias->bufPtr++;
-  if (bias->bufPtr >= bias->bufStart + SENSORS_NBR_OF_BIAS_SAMPLES)
-  {
-    bias->bufPtr = bias->bufStart;
-    bias->bufIsFull = 1;
-  }
+  if (bias->bufPtr >= bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES)
+    {
+      bias->bufPtr = bias->bufStart;
+      bias->bufIsFull = 1;
+    }
 }
 
 /**
  * Calculates the mean for the bias buffer.
  */
-static void calcMean(BiasObj* bias, Axis3f* mean)
-{
+static void calcMean(BiasObj* bias, Axis3f* mean) {
   Axis3i16* elem;
   int64_t sum[GYRO_NBR_OF_AXES] = {0};
 
   for (elem = bias->bufStart;
        elem != (bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES); elem++)
-  {
-    sum[0] += elem->x;
-    sum[1] += elem->y;
-    sum[2] += elem->z;
-  }
+    {
+      sum[0] += elem->x;
+      sum[1] += elem->y;
+      sum[2] += elem->z;
+    }
 
   mean->x = (float)sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
   mean->y = (float)sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
@@ -580,11 +871,11 @@ static void calcVarianceAndMean(BiasObj* bias, Axis3f* variance, Axis3f* mean)
 
   for (elem = bias->bufStart;
       elem != (bias->bufStart+SENSORS_NBR_OF_BIAS_SAMPLES); elem++)
-  {
-    sumSquared[0] += elem->x * elem->x;
-    sumSquared[1] += elem->y * elem->y;
-    sumSquared[2] += elem->z * elem->z;
-  }
+    {
+      sumSquared[0] += elem->x * elem->x;
+      sumSquared[1] += elem->y * elem->y;
+      sumSquared[2] += elem->z * elem->z;
+    }
   calcMean(bias, mean);
 
   variance->x = fabs(sumSquared[0] / SENSORS_NBR_OF_BIAS_SAMPLES
@@ -609,15 +900,14 @@ static bool processGyroBias(BiasObj* bias)
       && variance.y < GYRO_VARIANCE_THRESHOLD_Y
       && variance.z < GYRO_VARIANCE_THRESHOLD_Z
       && (varianceSampleTime + GYRO_MIN_BIAS_TIMEOUT_MS < xTaskGetTickCount()))
-  {
-    varianceSampleTime = xTaskGetTickCount();
-    bias->value.x = (int16_t)(mean.x + 0.5f);
-    bias->value.y = (int16_t)(mean.y + 0.5f);
-    bias->value.z = (int16_t)(mean.z + 0.5f);
-    bias->found = 1;
-    return true;
-  }
-
+    {
+      varianceSampleTime = xTaskGetTickCount();
+      bias->value.x = (int16_t)(mean.x + 0.5f);
+      bias->value.y = (int16_t)(mean.y + 0.5f);
+      bias->value.z = (int16_t)(mean.z + 0.5f);
+      bias->found = 1;
+      return true;
+    }
   return false;
 }
 
@@ -633,16 +923,14 @@ static void processAccelBias(BiasObj* bias)
   bias->found = 1;
 }
 static void sensorsApplyBiasAndScale(Axis3f* scaled, Axis3i16* aligned,
-                                     Axis3i16* bias, float scale)
-{
+                                     Axis3i16* bias, float scale) {
   scaled->x = ((float)aligned->x - (float)bias->x) * scale;
   scaled->y = ((float)aligned->y - (float)bias->y) * scale;
   scaled->z = ((float)aligned->z - (float)bias->z) * scale;
 }
 
 static void sensorsScaleBaro(baro_t* baroScaled, float pressure,
-                             float temperature)
-{
+                             float temperature) {
   baroScaled->pressure = pressure*0.01f;
   baroScaled->temperature = temperature;
   baroScaled->asl = ((powf((1015.7f / baroScaled->pressure), 0.1902630958f)
@@ -689,10 +977,10 @@ bool sensorsTest(void)
   bool testStatus = true;
 
   if (!isInit)
-  {
-    DEBUG_PRINT("Uninitialized\n");
-    testStatus = false;
-  }
+    {
+      DEBUG_PRINT("Uninitialized\n");
+      testStatus = false;
+    }
 
   return testStatus;
 }
@@ -756,6 +1044,59 @@ void __attribute__((used)) EXTI14_Callback(void)
     portYIELD();
   }
 }
+
+void __attribute__((used)) BMI088_SPI_TX_DMA_IRQHandler(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  // Stop and cleanup DMA stream
+  DMA_ITConfig(BMI088_SPI_TX_DMA_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(BMI088_SPI_TX_DMA_STREAM, BMI088_SPI_TX_DMA_FLAG_TCIF);
+
+  // Clear stream flags
+  DMA_ClearFlag(BMI088_SPI_TX_DMA_STREAM,BMI088_SPI_TX_DMA_FLAG_TCIF);
+
+  // Disable SPI DMA requests
+  SPI_I2S_DMACmd(BMI088_SPI, SPI_I2S_DMAReq_Tx, DISABLE);
+
+  // Disable streams
+  DMA_Cmd(BMI088_SPI_TX_DMA_STREAM, DISABLE);
+
+  // Give the semaphore, allowing the SPI transaction to complete
+  xSemaphoreGiveFromISR(spiTxDMAComplete, &xHigherPriorityTaskWoken);
+
+  if (xHigherPriorityTaskWoken)
+  {
+    portYIELD();
+  }
+}
+
+void __attribute__((used)) BMI088_SPI_RX_DMA_IRQHandler(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  // Stop and cleanup DMA stream
+  DMA_ITConfig(BMI088_SPI_RX_DMA_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(BMI088_SPI_RX_DMA_STREAM, BMI088_SPI_RX_DMA_FLAG_TCIF);
+
+  // Clear stream flags
+  DMA_ClearFlag(BMI088_SPI_RX_DMA_STREAM, BMI088_SPI_RX_DMA_FLAG_TCIF);
+
+  // Disable SPI DMA requests
+  SPI_I2S_DMACmd(BMI088_SPI, SPI_I2S_DMAReq_Rx, DISABLE);
+
+  // Disable streams
+  DMA_Cmd(BMI088_SPI_RX_DMA_STREAM, DISABLE);
+
+  // Give the semaphore, allowing the SPI transaction to complete
+  xSemaphoreGiveFromISR(spiRxDMAComplete, &xHigherPriorityTaskWoken);
+
+  if (xHigherPriorityTaskWoken)
+  {
+    portYIELD();
+  }
+}
+
 
 PARAM_GROUP_START(imu_sensors)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)

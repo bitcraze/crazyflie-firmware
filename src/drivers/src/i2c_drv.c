@@ -54,10 +54,10 @@
 #endif
 
 // Definitions of sensors I2C bus
-#define I2C_SENSORS_CLOCK_SPEED             400000
+#define I2C_DEFAULT_SENSORS_CLOCK_SPEED             400000
 
 // Definition of eeprom and deck I2C buss
-#define I2C_DECK_CLOCK_SPEED                400000
+#define I2C_DEFAULT_DECK_CLOCK_SPEED                400000
 
 // Misc constants.
 #define I2C_NO_BLOCK				    0
@@ -139,7 +139,7 @@ static const I2cDef sensorBusDef =
   .i2cPerif           = RCC_APB1Periph_I2C3,
   .i2cEVIRQn          = I2C3_EV_IRQn,
   .i2cERIRQn          = I2C3_ER_IRQn,
-  .i2cClockSpeed      = I2C_SENSORS_CLOCK_SPEED,
+  .i2cClockSpeed      = I2C_DEFAULT_SENSORS_CLOCK_SPEED,
   .gpioSCLPerif       = RCC_AHB1Periph_GPIOA,
   .gpioSCLPort        = GPIOA,
   .gpioSCLPin         = GPIO_Pin_8,
@@ -168,7 +168,7 @@ static const I2cDef deckBusDef =
   .i2cPerif           = RCC_APB1Periph_I2C1,
   .i2cEVIRQn          = I2C1_EV_IRQn,
   .i2cERIRQn          = I2C1_ER_IRQn,
-  .i2cClockSpeed      = I2C_DECK_CLOCK_SPEED,
+  .i2cClockSpeed      = I2C_DEFAULT_DECK_CLOCK_SPEED,
   .gpioSCLPerif       = RCC_AHB1Periph_GPIOB,
   .gpioSCLPort        = GPIOB,
   .gpioSCLPin         = GPIO_Pin_6,

@@ -48,6 +48,8 @@ static bool isInit;
 static bool emergencyStop = false;
 static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
+uint32_t inToOutLatency;
+
 // State variables for the stabilizer
 static setpoint_t setpoint;
 static sensorData_t sensorData;
@@ -58,6 +60,12 @@ static StateEstimatorType estimatorType;
 static ControllerType controllerType;
 
 static void stabilizerTask(void* param);
+
+static void calcSensorToOutputLatency(const sensorData_t *sensorData)
+{
+  uint64_t outTimestamp = usecTimestamp();
+  inToOutLatency = outTimestamp - sensorData->interruptTimestamp;
+}
 
 void stabilizerInit(StateEstimatorType estimator)
 {
@@ -127,7 +135,8 @@ static void stabilizerTask(void* param)
   tick = 1;
 
   while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+    // The sensor should unlock at 1kHz
+    sensorsWaitDataReady();
 
     // allow to update estimator dynamically
     if (getStateEstimator() != estimatorType) {
@@ -157,6 +166,7 @@ static void stabilizerTask(void* param)
       powerDistribution(&control);
     }
 
+    calcSensorToOutputLatency(&sensorData);
     tick++;
   }
 }
@@ -244,3 +254,8 @@ LOG_ADD(LOG_FLOAT, x, &state.position.x)
 LOG_ADD(LOG_FLOAT, y, &state.position.y)
 LOG_ADD(LOG_FLOAT, z, &state.position.z)
 LOG_GROUP_STOP(stateEstimate)
+
+LOG_GROUP_START(latency)
+LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
+LOG_GROUP_STOP(latency)
+
