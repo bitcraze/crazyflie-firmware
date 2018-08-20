@@ -175,15 +175,15 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
 }
 
 void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
-    bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, &engineState->stats);
-    if (timeIsGood) {
-      engineState->stats.timeIsGood++;
+  bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, &engineState->stats);
+  if (timeIsGood) {
+    engineState->stats.timeIsGood++;
 
-      tdoaAnchorContext_t otherAnchorCtx;
-      if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx)) {
-        engineState->stats.suitableDataFound++;
-        double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
-        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
-      }
+    tdoaAnchorContext_t otherAnchorCtx;
+    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx)) {
+      engineState->stats.suitableDataFound++;
+      double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
+      enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
     }
+  }
 }
