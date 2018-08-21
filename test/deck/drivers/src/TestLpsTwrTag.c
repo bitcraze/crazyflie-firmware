@@ -6,14 +6,16 @@
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
 #include "mock_locodeck.h"
+#include "mock_configblock.h"
+
 #include "crtp_localization_serviceMocks.h"
 #include "dw1000Mocks.h"
 #include "physicalConstants.h"
 
 // #include "mock_arm_math.h"
 
-// TODO krri The mocking FW can not handle the arm_math.h file, it crashes while parsing it. We gave to use manual mocks instead.
-// TODO krri Temporarily fix to make tests pass, add test code for the kalman part of rxcallback()
+// The mocking FW can not handle the arm_math.h file, it crashes while parsing it. We have to use manual mocks instead.
+// Temporarily fix to make tests pass, add test code for the kalman part of rxcallback()
 #include "arm_math.h"
 void arm_std_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
 void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
@@ -23,7 +25,7 @@ void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { 
 #include "freertosMocks.h"
 
 static dwDevice_t dev;
-static lpsAlgoOptions_t options;
+static lpsTwrAlgoOptions_t options;
 
 static void setTime(uint8_t* data, const dwTime_t* time);
 static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
@@ -37,7 +39,7 @@ static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int datal
 
 static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls);
 
-static lpsAlgoOptions_t defaultOptions = {
+static lpsTwrAlgoOptions_t defaultOptions = {
   .tagAddress = 0xbccf000000000008,
   .anchorAddress = {
     0xbccf000000000001,
@@ -65,7 +67,14 @@ void setUp(void) {
   dwCommitConfiguration_Expect(&dev);
 
   memcpy(&options, &defaultOptions, sizeof(options));
-  uwbTwrTagAlgorithm.init(&dev, &options);
+  uwbTwrTagSetOptions(&options);
+
+  locoDeckSetRangingState_Expect(0);
+
+  uwbTwrTagAlgorithm.init(&dev);
+
+  locoDeckGetRangingState_IgnoreAndReturn(0);
+  locoDeckSetRangingState_Ignore();
 }
 
 void testNormalMessageSequenceShouldGenerateDistance() {
@@ -126,7 +135,7 @@ void testNormalMessageSequenceShouldGenerateDistance() {
   TEST_ASSERT_EQUAL_UINT32(MAX_TIMEOUT, actual4);
   TEST_ASSERT_EQUAL_UINT32(0, actual5);
 
-  float actualDistance = options.distance[expectedAnchor];
+  float actualDistance = lpsTwrTagGetDistance(expectedAnchor);
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDistance, actualDistance);
 }
 
@@ -327,11 +336,6 @@ void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
   // Assert
   TEST_ASSERT_TRUE(uwbTwrTagAlgorithm.isRangingOk());
 }
-
-// TODO krri verify seqNr are increased
-// TODO krri verify we use all anchors
-// TODO krri verify asl
-// TODO krri verify rangingState and failedRanding after timeouts
 
 
 ///////////////////////////////////////////////////////////////////////////////

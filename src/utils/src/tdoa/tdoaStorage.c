@@ -47,13 +47,12 @@ void tdoaStorageInitialize(tdoaAnchorInfo_t anchorStorage[]) {
   memset(anchorStorage, 0, sizeof(tdoaAnchorInfo_t) * ANCHOR_STORAGE_COUNT);
 }
 
-bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+bool tdoaStorageGetCreateAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
   anchorCtx->currentTime_ms = currentTime_ms;
   uint32_t oldestUpdateTime = currentTime_ms;
   int firstUninitializedSlot = -1;
   int oldestSlot = 0;
 
-  // TODO krri add lookup table to avoid linear search
   for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
     if (anchorStorage[i].isInitialized) {
       if (anchor == anchorStorage[i].id) {
@@ -81,6 +80,22 @@ bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anc
   }
 
   anchorCtx->anchorInfo = newAnchorInfo;
+  return false;
+}
+
+bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
+  anchorCtx->currentTime_ms = currentTime_ms;
+
+  for (int i = 0; i < ANCHOR_STORAGE_COUNT; i++) {
+    if (anchorStorage[i].isInitialized) {
+      if (anchor == anchorStorage[i].id) {
+        anchorCtx->anchorInfo = &anchorStorage[i];
+        return true;
+      }
+    }
+  }
+
+  anchorCtx->anchorInfo = 0;
   return false;
 }
 
@@ -114,6 +129,7 @@ bool tdoaStorageGetAnchorPosition(const tdoaAnchorContext_t* anchorCtx, point_t*
   int32_t validCreationTime = now - ANCHOR_POSITION_VALIDITY_PERIOD;
   const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
   if ((int32_t)anchorInfo->position.timestamp > validCreationTime) {
+    position->timestamp = anchorInfo->position.timestamp;
     position->x = anchorInfo->position.x;
     position->y = anchorInfo->position.y;
     position->z = anchorInfo->position.z;

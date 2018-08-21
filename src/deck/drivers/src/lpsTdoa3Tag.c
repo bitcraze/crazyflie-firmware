@@ -65,8 +65,6 @@ The implementation must handle
 #define LPS_TDOA3_TYPE 0
 #define LPS_TDOA3_SEND_LPP_PAYLOAD 1
 
-#define TDOA3_LPP_PACKET_SEND_TIMEOUT (LOCODECK_NR_OF_ANCHORS * 5)
-
 #define PACKET_TYPE_TDOA3 0x30
 
 #define TDOA3_RECEIVE_TIMEOUT 10000
@@ -97,24 +95,12 @@ typedef struct {
 } __attribute__((packed)) rangePacket3_t;
 
 
-static lpsAlgoOptions_t* options;
-
 // Outgoing LPP packet
 static lpsLppShortPacket_t lppPacket;
 
 static bool rangingOk;
 
 static tdoaEngineState_t engineState;
-
-// TODO krri Find better way to communicate system state to the client. Currently only supports 8 anchors
-static void updateRangingState() {
-  options->rangingState = 0;
-//  for (int anchor = 0; anchor < LOCODECK_NR_OF_TDOA2_ANCHORS; anchor++) {
-//    if (now < history[anchor].anchorStatusTimeout) {
-//      options->rangingState |= (1 << anchor);
-//    }
-//  }
-}
 
 
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
@@ -177,10 +163,6 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
     if (lppPacketHeader == LPP_HEADER_SHORT_PACKET) {
       const int32_t lppTypeAndPayloadLength = lppDataLength - 1;
       handleLppShortPacket(anchorCtx, &rxPacket->payload[lppTypeInPayload], lppTypeAndPayloadLength);
-
-      // TODO krri Find better solution for communicating system state to the client
-      // Send it to the "old" path to log anchor 0 - 7 positions to the client.
-      lpsHandleLppShortPacket(tdoaStorageGetId(anchorCtx), &rxPacket->payload[lppTypeInPayload], lppTypeAndPayloadLength);
     }
   }
 }
@@ -276,32 +258,41 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 
   uint32_t now_ms = T2M(xTaskGetTickCount());
   tdoaStatsUpdate(&engineState.stats, now_ms);
-  updateRangingState();
 
   return MAX_TIMEOUT;
 }
 
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
-    estimatorKalmanEnqueueTDOA(tdoaMeasurement);
+  estimatorKalmanEnqueueTDOA(tdoaMeasurement);
 
-    #ifdef LPS_2D_POSITION_HEIGHT
-    // If LPS_2D_POSITION_HEIGHT is defined we assume that we are doing 2D positioning.
-    // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
-    heightMeasurement_t heightData;
-    heightData.timestamp = xTaskGetTickCount();
-    heightData.height = LPS_2D_POSITION_HEIGHT;
-    heightData.stdDev = 0.0001;
-    estimatorKalmanEnqueueAsoluteHeight(&heightData);
-    #endif
+  #ifdef LPS_2D_POSITION_HEIGHT
+  // If LPS_2D_POSITION_HEIGHT is defined we assume that we are doing 2D positioning.
+  // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
+  heightMeasurement_t heightData;
+  heightData.timestamp = xTaskGetTickCount();
+  heightData.height = LPS_2D_POSITION_HEIGHT;
+  heightData.stdDev = 0.0001;
+  estimatorKalmanEnqueueAsoluteHeight(&heightData);
+  #endif
+}
+
+static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
+  tdoaAnchorContext_t anchorCtx;
+  uint32_t now_ms = T2M(xTaskGetTickCount());
+
+  bool contextFound = tdoaStorageGetAnchorCtx(engineState.anchorInfoArray, anchorId, now_ms, &anchorCtx);
+  if (contextFound) {
+    tdoaStorageGetAnchorPosition(&anchorCtx, position);
+    return true;
+  }
+
+  return false;
 }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-static void Initialize(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions) {
+static void Initialize(dwDevice_t *dev) {
   DEBUG_PRINT("TDoA 3 initialized\n");
-
-  options = algoOptions;
-  options->rangingState = 0;
 
   uint32_t now_ms = T2M(xTaskGetTickCount());
   tdoaEngineInit(&engineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ);
@@ -327,6 +318,7 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .init = Initialize,
   .onEvent = onEvent,
   .isRangingOk = isRangingOk,
+  .getAnchorPosition = getAnchorPosition,
 };
 
 

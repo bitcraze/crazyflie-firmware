@@ -155,7 +155,7 @@ static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext
   for (int i = offset; i < (remoteCount + offset); i++) {
     uint8_t index = i % remoteCount;
     const uint8_t candidateAnchorId = id[index];
-    if (tdoaStorageGetAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
+    if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
       if (seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
         return true;
       }
@@ -167,7 +167,7 @@ static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext
 }
 
 void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, const uint8_t anchorId, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
-  if (tdoaStorageGetAnchorCtx(engineState->anchorInfoArray, anchorId, currentTime_ms, anchorCtx)) {
+  if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, anchorId, currentTime_ms, anchorCtx)) {
     engineState->stats.contextHitCount++;
   } else {
     engineState->stats.contextMissCount++;

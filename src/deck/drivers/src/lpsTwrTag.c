@@ -42,6 +42,60 @@
 #include "arm_math.h"
 
 #include "physicalConstants.h"
+#include "configblock.h"
+#include "lpsTdma.h"
+
+#define ANTENNA_OFFSET 154.6   // In meter
+
+// Config
+static lpsTwrAlgoOptions_t defaultOptions = {
+   .tagAddress = 0xbccf000000000008,
+   .anchorAddress = {
+     0xbccf000000000000,
+     0xbccf000000000001,
+     0xbccf000000000002,
+     0xbccf000000000003,
+     0xbccf000000000004,
+     0xbccf000000000005,
+ #if LOCODECK_NR_OF_TWR_ANCHORS > 6
+     0xbccf000000000006,
+ #endif
+ #if LOCODECK_NR_OF_TWR_ANCHORS > 7
+     0xbccf000000000007,
+ #endif
+   },
+   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
+   .rangingFailedThreshold = 6,
+
+   .combinedAnchorPositionOk = false,
+
+ #ifdef LPS_TDMA_ENABLE
+   .useTdma = true,
+   .tdmaSlot = TDMA_SLOT,
+ #endif
+
+   // To set a static anchor position from startup, uncomment and modify the
+   // following code:
+ //   .anchorPosition = {
+ //     {timestamp: 1, x: 0.99, y: 1.49, z: 1.80},
+ //     {timestamp: 1, x: 0.99, y: 3.29, z: 1.80},
+ //     {timestamp: 1, x: 4.67, y: 2.54, z: 1.80},
+ //     {timestamp: 1, x: 0.59, y: 2.27, z: 0.20},
+ //     {timestamp: 1, x: 4.70, y: 3.38, z: 0.20},
+ //     {timestamp: 1, x: 4.70, y: 1.14, z: 0.20},
+ //   },
+ //
+ //   .combinedAnchorPositionOk = true,
+};
+
+typedef struct {
+  float distance[LOCODECK_NR_OF_TWR_ANCHORS];
+  float pressures[LOCODECK_NR_OF_TWR_ANCHORS];
+  int failedRanging[LOCODECK_NR_OF_TWR_ANCHORS];
+} twrState_t;
+
+static twrState_t state;
+static lpsTwrAlgoOptions_t* options = &defaultOptions;
 
 // Outlier rejection
 #define RANGING_HISTORY_LENGTH 32
@@ -49,14 +103,14 @@
 static struct {
   float32_t history[RANGING_HISTORY_LENGTH];
   size_t ptr;
-} rangingStats[LOCODECK_NR_OF_ANCHORS];
+} rangingStats[LOCODECK_NR_OF_TWR_ANCHORS];
 
 // Rangin statistics
-static uint8_t rangingPerSec[LOCODECK_NR_OF_ANCHORS];
-static uint8_t rangingSuccessRate[LOCODECK_NR_OF_ANCHORS];
+static uint8_t rangingPerSec[LOCODECK_NR_OF_TWR_ANCHORS];
+static uint8_t rangingSuccessRate[LOCODECK_NR_OF_TWR_ANCHORS];
 // Used to calculate above values
-static uint8_t succededRanging[LOCODECK_NR_OF_ANCHORS];
-static uint8_t failedRanging[LOCODECK_NR_OF_ANCHORS];
+static uint8_t succededRanging[LOCODECK_NR_OF_TWR_ANCHORS];
+static uint8_t failedRanging[LOCODECK_NR_OF_TWR_ANCHORS];
 
 // Timestamps for ranging
 static dwTime_t poll_tx;
@@ -75,13 +129,13 @@ static bool lpp_transaction = false;
 
 static lpsLppShortPacket_t lppShortPacket;
 
-static lpsAlgoOptions_t* options;
-
 // TDMA handling
 static bool tdmaSynchronized;
 static dwTime_t frameStart;
 
 static bool rangingOk;
+
+static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data);
 
 static void txcallback(dwDevice_t *dev)
 {
@@ -132,7 +186,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         if (rxPacket.payload[LPS_TWR_LPP_HEADER] == LPP_HEADER_SHORT_PACKET) {
           int srcId = -1;
 
-          for (int i=0; i<LOCODECK_NR_OF_ANCHORS; i++) {
+          for (int i=0; i<LOCODECK_NR_OF_TWR_ANCHORS; i++) {
             if (rxPacket.sourceAddress == options->anchorAddress[i]) {
               srcId = i;
               break;
@@ -140,8 +194,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
           }
 
           if (srcId >= 0) {
-            lpsHandleLppShortPacket(srcId, &rxPacket.payload[LPS_TWR_LPP_TYPE],
-                                    dataLength - MAC802154_HEADER_LENGTH - 3);
+            lpsHandleLppShortPacket(srcId, &rxPacket.payload[LPS_TWR_LPP_TYPE]);
           }
         }
       }
@@ -181,8 +234,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       tprop_ctn = ((tround1*tround2) - (treply1*treply2)) / (tround1 + tround2 + treply1 + treply2);
 
       tprop = tprop_ctn / LOCODECK_TS_FREQ;
-      options->distance[current_anchor] = SPEED_OF_LIGHT * tprop;
-      options->pressures[current_anchor] = report->asl;
+      state.distance[current_anchor] = SPEED_OF_LIGHT * tprop;
+      state.pressures[current_anchor] = report->asl;
 
       // Outliers rejection
       rangingStats[current_anchor].ptr = (rangingStats[current_anchor].ptr + 1) % RANGING_HISTORY_LENGTH;
@@ -191,16 +244,16 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       arm_std_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &stddev);
       arm_mean_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &mean);
-      float32_t diff = fabsf(mean - options->distance[current_anchor]);
+      float32_t diff = fabsf(mean - state.distance[current_anchor]);
 
-      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = options->distance[current_anchor];
+      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = state.distance[current_anchor];
 
       rangingOk = true;
 
       if ((options->combinedAnchorPositionOk || options->anchorPosition[current_anchor].timestamp) &&
           (diff < (OUTLIER_TH*stddev))) {
         distanceMeasurement_t dist;
-        dist.distance = options->distance[current_anchor];
+        dist.distance = state.distance[current_anchor];
         dist.x = options->anchorPosition[current_anchor].x;
         dist.y = options->anchorPosition[current_anchor].y;
         dist.z = options->anchorPosition[current_anchor].z;
@@ -254,7 +307,7 @@ static void initiateRanging(dwDevice_t *dev)
     }
 
     current_anchor ++;
-    if (current_anchor >= LOCODECK_NR_OF_ANCHORS) {
+    if (current_anchor >= LOCODECK_NR_OF_TWR_ANCHORS) {
       current_anchor = 0;
     }
   } else {
@@ -321,28 +374,32 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
       return MAX_TIMEOUT;
       break;
     case eventTimeout:  // Comes back to timeout after each ranging attempt
-      if (!ranging_complete && !lpp_transaction) {
-        options->rangingState &= ~(1<<current_anchor);
-        if (options->failedRanging[current_anchor] < options->rangingFailedThreshold) {
-          options->failedRanging[current_anchor] ++;
-          options->rangingState |= (1<<current_anchor);
+      {
+        uint16_t rangingState = locoDeckGetRangingState();
+        if (!ranging_complete && !lpp_transaction) {
+          rangingState &= ~(1<<current_anchor);
+          if (state.failedRanging[current_anchor] < options->rangingFailedThreshold) {
+            state.failedRanging[current_anchor] ++;
+            rangingState |= (1<<current_anchor);
+          }
+
+          locSrvSendRangeFloat(current_anchor, NAN);
+          failedRanging[current_anchor]++;
+        } else {
+          rangingState |= (1<<current_anchor);
+          state.failedRanging[current_anchor] = 0;
+
+          locSrvSendRangeFloat(current_anchor, state.distance[current_anchor]);
+          succededRanging[current_anchor]++;
         }
-
-        locSrvSendRangeFloat(current_anchor, NAN);
-        failedRanging[current_anchor]++;
-      } else {
-        options->rangingState |= (1<<current_anchor);
-        options->failedRanging[current_anchor] = 0;
-
-        locSrvSendRangeFloat(current_anchor, options->distance[current_anchor]);
-        succededRanging[current_anchor]++;
+        locoDeckSetRangingState(rangingState);
       }
 
       // Handle ranging statistic
       if (xTaskGetTickCount() > (statisticStartTick+1000)) {
         statisticStartTick = xTaskGetTickCount();
 
-        for (int i=0; i<LOCODECK_NR_OF_ANCHORS; i++) {
+        for (int i=0; i<LOCODECK_NR_OF_TWR_ANCHORS; i++) {
           rangingPerSec[i] = failedRanging[i] + succededRanging[i];
           if (rangingPerSec[i] > 0) {
             rangingSuccessRate[i] = 100.0f*(float)succededRanging[i] / (float)rangingPerSec[i];
@@ -377,9 +434,39 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
   return MAX_TIMEOUT;
 }
 
-static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
+// Loco Posisioning Protocol (LPP) handling
+static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data)
 {
-  options = algoOptions;
+  uint8_t type = data[0];
+
+  if (type == LPP_SHORT_ANCHORPOS) {
+    if (srcId < LOCODECK_NR_OF_TWR_ANCHORS) {
+      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
+      options->anchorPosition[srcId].timestamp = xTaskGetTickCount();
+      options->anchorPosition[srcId].x = newpos->x;
+      options->anchorPosition[srcId].y = newpos->y;
+      options->anchorPosition[srcId].z = newpos->z;
+    }
+  }
+}
+
+static void updateTagTdmaSlot(lpsTwrAlgoOptions_t * options)
+{
+  if (options->tdmaSlot < 0) {
+    uint64_t radioAddress = configblockGetRadioAddress();
+    int nslot = 1;
+    for (int i=0; i<TDMA_NSLOTS_BITS; i++) {
+      nslot *= 2;
+    }
+    options->tdmaSlot = radioAddress % nslot;
+  }
+  options->tagAddress += options->tdmaSlot;
+}
+
+
+static void twrTagInit(dwDevice_t *dev)
+{
+  updateTagTdmaSlot(options);
 
   // Initialize the packet in the TX buffer
   memset(&txPacket, 0, sizeof(txPacket));
@@ -396,14 +483,14 @@ static void twrTagInit(dwDevice_t *dev, lpsAlgoOptions_t* algoOptions)
   curr_seq = 0;
   current_anchor = 0;
 
-  options->rangingState = 0;
+  locoDeckSetRangingState(0);
   ranging_complete = false;
 
   tdmaSynchronized = false;
 
-  memset(options->distance, 0, sizeof(options->distance));
-  memset(options->pressures, 0, sizeof(options->pressures));
-  memset(options->failedRanging, 0, sizeof(options->failedRanging));
+  memset(state.distance, 0, sizeof(state.distance));
+  memset(state.pressures, 0, sizeof(state.pressures));
+  memset(state.failedRanging, 0, sizeof(state.failedRanging));
 
   dwSetReceiveWaitTimeout(dev, TWR_RECEIVE_TIMEOUT);
 
@@ -417,10 +504,29 @@ static bool isRangingOk()
   return rangingOk;
 }
 
+void uwbTwrTagSetOptions(lpsTwrAlgoOptions_t* newOptions) {
+  options = newOptions;
+}
+
+float lpsTwrTagGetDistance(const uint8_t anchorId) {
+  return state.distance[anchorId];
+}
+
+static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
+  if (anchorId < LOCODECK_NR_OF_TWR_ANCHORS) {
+    *position = options->anchorPosition[anchorId];
+    return true;
+  }
+
+  return false;
+}
+
+
 uwbAlgorithm_t uwbTwrTagAlgorithm = {
   .init = twrTagInit,
   .onEvent = twrTagOnEvent,
   .isRangingOk = isRangingOk,
+  .getAnchorPosition = getAnchorPosition,
 };
 
 LOG_GROUP_START(twr)
@@ -437,3 +543,54 @@ LOG_ADD(LOG_UINT8, rangingPerSec4, &rangingPerSec[4])
 LOG_ADD(LOG_UINT8, rangingSuccessRate5, &rangingSuccessRate[5])
 LOG_ADD(LOG_UINT8, rangingPerSec5, &rangingPerSec[5])
 LOG_GROUP_STOP(twr)
+
+LOG_GROUP_START(ranging)
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 0)
+LOG_ADD(LOG_FLOAT, distance0, &state.distance[0])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 1)
+LOG_ADD(LOG_FLOAT, distance1, &state.distance[1])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 2)
+LOG_ADD(LOG_FLOAT, distance2, &state.distance[2])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 3)
+LOG_ADD(LOG_FLOAT, distance3, &state.distance[3])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 4)
+LOG_ADD(LOG_FLOAT, distance4, &state.distance[4])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 5)
+LOG_ADD(LOG_FLOAT, distance5, &state.distance[5])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 6)
+LOG_ADD(LOG_FLOAT, distance6, &state.distance[6])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 7)
+LOG_ADD(LOG_FLOAT, distance7, &state.distance[7])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 0)
+LOG_ADD(LOG_FLOAT, pressure0, &state.pressures[0])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 1)
+LOG_ADD(LOG_FLOAT, pressure1, &state.pressures[1])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 2)
+LOG_ADD(LOG_FLOAT, pressure2, &state.pressures[2])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 3)
+LOG_ADD(LOG_FLOAT, pressure3, &state.pressures[3])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 4)
+LOG_ADD(LOG_FLOAT, pressure4, &state.pressures[4])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 5)
+LOG_ADD(LOG_FLOAT, pressure5, &state.pressures[5])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 6)
+LOG_ADD(LOG_FLOAT, pressure6, &state.pressures[6])
+#endif
+#if (LOCODECK_NR_OF_TWR_ANCHORS > 7)
+LOG_ADD(LOG_FLOAT, pressure7, &state.pressures[7])
+#endif
+LOG_GROUP_STOP(ranging)

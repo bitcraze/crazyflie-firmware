@@ -717,7 +717,7 @@ Ledring12Effect effectsFct[] =
   virtualMemEffect,
   fadeColorEffect,
   rssiEffect,
-}; //TODO Add more
+};
 
 /********** Ring init and switching **********/
 static xTimerHandle timer;

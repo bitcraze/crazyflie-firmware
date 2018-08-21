@@ -8,7 +8,19 @@
 
 extern uwbAlgorithm_t uwbTdoa2TagAlgorithm;
 
+#ifdef LOCODECK_NR_OF_ANCHORS
+#define LOCODECK_NR_OF_TDOA2_ANCHORS LOCODECK_NR_OF_ANCHORS
+#else
 #define LOCODECK_NR_OF_TDOA2_ANCHORS 8
+#endif
+
+typedef struct {
+  const locoAddress_t anchorAddress[LOCODECK_NR_OF_TDOA2_ANCHORS];
+
+  point_t anchorPosition[LOCODECK_NR_OF_TDOA2_ANCHORS];
+  bool combinedAnchorPositionOk;
+} lpsTdoa2AlgoOptions_t;
+
 
 typedef struct {
   uint8_t type;
@@ -30,8 +42,10 @@ typedef struct {
 #define LPS_TDOA2_TYPE_INDEX 0
 #define LPS_TDOA2_SEND_LPP_PAYLOAD_INDEX 1
 
-#define TDOA2_LPP_PACKET_SEND_TIMEOUT (LOCODECK_NR_OF_ANCHORS * 5)
+#define TDOA2_LPP_PACKET_SEND_TIMEOUT (LOCODECK_NR_OF_TDOA2_ANCHORS * 5)
 
 #define TDOA2_RECEIVE_TIMEOUT 10000
+
+void lpsTdoa2TagSetOptions(lpsTdoa2AlgoOptions_t* newOptions);
 
 #endif // __LPS_TDOA2_TAG_H__
