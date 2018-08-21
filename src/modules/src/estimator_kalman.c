@@ -748,13 +748,6 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     S[STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
 
-  if(S[STATE_Z] < 0) {
-    S[STATE_Z] = 0;
-    S[STATE_PX] = 0;
-    S[STATE_PY] = 0;
-    S[STATE_PZ] = 0;
-  }
-
   // attitude update (rotate by gyroscope), we do this in quaternions
   // this is the gyroscope angular velocity integrated over the sample period
   float dtwx = dt*gyro->x;
