@@ -292,8 +292,6 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev) {
-  DEBUG_PRINT("TDoA 3 initialized\n");
-
   uint32_t now_ms = T2M(xTaskGetTickCount());
   tdoaEngineInit(&engineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ);
 

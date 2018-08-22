@@ -90,7 +90,9 @@
 static lpsAlgoOptions_t algoOptions = {
   // .rangingMode is the wanted algorithm, available as a parameter
 #if LPS_TDOA_ENABLE
-  .rangingMode = lpsMode_TDoA,
+  .rangingMode = lpsMode_TDoA2,
+#elif LPS_TDOA3_ENABLE
+  .rangingMode = lpsMode_TDoA3,
 #elif defined(LPS_TWR_ENABLE)
   .rangingMode = lpsMode_TWR,
 #else
@@ -105,18 +107,16 @@ static lpsAlgoOptions_t algoOptions = {
 struct {
   uwbAlgorithm_t *algorithm;
   char *name;
-} algorithmsList[LPS_NUMBER_OF_ALGORITHM+1] = {
+} algorithmsList[LPS_NUMBER_OF_ALGORITHMS + 1] = {
   [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
-
-  #ifdef LPS_TDOA_USE_V3
-  [lpsMode_TDoA] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA"},
-  #else
-  [lpsMode_TDoA] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA"},
-  #endif
+  [lpsMode_TDoA2] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA2"},
+  [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA3"},
 };
 
 #if LPS_TDOA_ENABLE
 static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
+#elif LPS_TDOA3_ENABLE
+static uwbAlgorithm_t *algorithm = &uwbTdoa3TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
@@ -175,7 +175,7 @@ static void uwbTask(void* parameters)
           algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
 
           // Defaults to TDoA algorithm
-          algoOptions.currentRangingMode = lpsMode_TDoA;
+          algoOptions.currentRangingMode = lpsMode_TDoA2;
           algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
           algorithm->init(dwm);
           timeout = algorithm->onEvent(dwm, eventTimeout);
@@ -192,7 +192,7 @@ static void uwbTask(void* parameters)
             algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
 
             // Switch to next algorithm!
-            if ((algoOptions.currentRangingMode+1) > LPS_NUMBER_OF_ALGORITHM) {
+            if ((algoOptions.currentRangingMode+1) > LPS_NUMBER_OF_ALGORITHMS) {
               algoOptions.currentRangingMode = 1;
             } else {
               algoOptions.currentRangingMode++;
@@ -209,10 +209,10 @@ static void uwbTask(void* parameters)
       algoOptions.rangingModeDetected = false;
       algoOptions.autoStarted = false;
 
-      if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHM) {
-        DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA!\n");
+      if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHMS) {
+        DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA2!\n");
         algoOptions.currentRangingMode = algoOptions.rangingMode;
-        algorithm = algorithmsList[lpsMode_TDoA].algorithm;
+        algorithm = algorithmsList[lpsMode_TDoA2].algorithm;
       } else {
         algoOptions.currentRangingMode = algoOptions.rangingMode;
         algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
