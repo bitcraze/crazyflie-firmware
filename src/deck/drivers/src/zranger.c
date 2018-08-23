@@ -95,8 +95,12 @@ void zRangerTask(void* arg)
   vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodPreRange, 18);
   vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodFinalRange, 14);
   vl53l0xStartContinuous(&dev, 0);
+  
+  xLastWakeTime = xTaskGetTickCount();
+
   while (1) {
-    xLastWakeTime = xTaskGetTickCount();
+    vTaskDelayUntil(&xLastWakeTime, M2T(dev.measurement_timing_budget_ms));
+
     range_last = vl53l0xReadRangeContinuousMillimeters(&dev);
 
     // check if range is feasible and push into the kalman filter
@@ -111,8 +115,6 @@ void zRangerTask(void* arg)
       tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
       estimatorKalmanEnqueueTOF(&tofData);
     }
-
-    vTaskDelayUntil(&xLastWakeTime, M2T(dev.measurement_timing_budget_ms));
   }
 }
 
