@@ -69,6 +69,7 @@ bool estimatorKalmanEnqueueTDOA(tdoaMeasurement_t *uwb);
 bool estimatorKalmanEnqueuePosition(positionMeasurement_t *pos);
 bool estimatorKalmanEnqueueDistance(distanceMeasurement_t *dist);
 bool estimatorKalmanEnqueueTOF(tofMeasurement_t *tof);
+bool estimatorKalmanEnqueueAsoluteHeight(heightMeasurement_t *height);
 bool estimatorKalmanEnqueueFlow(flowMeasurement_t *flow);
 
 /*

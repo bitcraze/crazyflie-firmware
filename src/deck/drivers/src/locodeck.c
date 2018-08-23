@@ -49,10 +49,7 @@
 #include "nvicconf.h"
 #include "estimator.h"
 
-#include "configblock.h"
-
 #include "locodeck.h"
-#include "lpsTdma.h"
 
 #include "lpsTdoa2Tag.h"
 #include "lpsTdoa3Tag.h"
@@ -91,34 +88,11 @@
 // combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
 
 static lpsAlgoOptions_t algoOptions = {
-  .tagAddress = 0xbccf000000000008,
-  .anchorAddress = {
-    0xbccf000000000000,
-    0xbccf000000000001,
-    0xbccf000000000002,
-    0xbccf000000000003,
-    0xbccf000000000004,
-    0xbccf000000000005,
-#if LOCODECK_NR_OF_ANCHORS > 6
-    0xbccf000000000006,
-#endif
-#if LOCODECK_NR_OF_ANCHORS > 7
-    0xbccf000000000007,
-#endif
-  },
-  .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
-  .rangingFailedThreshold = 6,
-
-  .combinedAnchorPositionOk = false,
-
-#ifdef LPS_TDMA_ENABLE
-  .useTdma = true,
-  .tdmaSlot = TDMA_SLOT,
-#endif
-
   // .rangingMode is the wanted algorithm, available as a parameter
 #if LPS_TDOA_ENABLE
-  .rangingMode = lpsMode_TDoA,
+  .rangingMode = lpsMode_TDoA2,
+#elif LPS_TDOA3_ENABLE
+  .rangingMode = lpsMode_TDoA3,
 #elif defined(LPS_TWR_ENABLE)
   .rangingMode = lpsMode_TWR,
 #else
@@ -128,47 +102,28 @@ static lpsAlgoOptions_t algoOptions = {
   // -1 is an impossible mode which forces initialization of the requested mode
   // at startup
   .currentRangingMode = -1,
-
-  // To set a static anchor position from startup, uncomment and modify the
-  // following code:
-//   .anchorPosition = {
-//     {timestamp: 1, x: 0.99, y: 1.49, z: 1.80},
-//     {timestamp: 1, x: 0.99, y: 3.29, z: 1.80},
-//     {timestamp: 1, x: 4.67, y: 2.54, z: 1.80},
-//     {timestamp: 1, x: 0.59, y: 2.27, z: 0.20},
-//     {timestamp: 1, x: 4.70, y: 3.38, z: 0.20},
-//     {timestamp: 1, x: 4.70, y: 1.14, z: 0.20},
-//   },
-//
-//   .combinedAnchorPositionOk = true,
 };
 
 struct {
   uwbAlgorithm_t *algorithm;
   char *name;
-} algorithmsList[LPS_NUMBER_OF_ALGORITHM+1] = {
+} algorithmsList[LPS_NUMBER_OF_ALGORITHMS + 1] = {
   [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
-
-  #ifdef LPS_TDOA_USE_V3
-  [lpsMode_TDoA] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA"},
-  #else
-  [lpsMode_TDoA] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA"},
-  #endif
+  [lpsMode_TDoA2] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA2"},
+  [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA3"},
 };
-
-point_t* locodeckGetAnchorPosition(uint8_t anchor)
-{
-  return &algoOptions.anchorPosition[anchor];
-}
 
 #if LPS_TDOA_ENABLE
 static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
+#elif LPS_TDOA3_ENABLE
+static uwbAlgorithm_t *algorithm = &uwbTdoa3TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
 
 static bool isInit = false;
 static SemaphoreHandle_t irqSemaphore;
+static SemaphoreHandle_t algoSemaphore;
 static dwDevice_t dwm_device;
 static dwDevice_t *dwm = &dwm_device;
 
@@ -190,21 +145,14 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
   timeout = algorithm->onEvent(dev, eventReceiveTimeout);
 }
 
-// static void rxfailedcallback(dwDevice_t *dev) {
-//   timeout = algorithm->onEvent(dev, eventReceiveFailed);
-// }
-
-static void updateTagTdmaSlot(lpsAlgoOptions_t * options)
+// This function is called from the memory sub system that runs in a different
+// task, protect it from concurrent calls from this task
+bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
 {
-  if (options->tdmaSlot < 0) {
-    uint64_t radioAddress = configblockGetRadioAddress();
-    int nslot = 1;
-    for (int i=0; i<TDMA_NSLOTS_BITS; i++) {
-      nslot *= 2;
-    }
-    options->tdmaSlot = radioAddress % nslot;
-  }
-  options->tagAddress += options->tdmaSlot;
+  xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+  bool result = algorithm->getAnchorPosition(anchorId, position);
+  xSemaphoreGive(algoSemaphore);
+  return result;
 }
 
 static void uwbTask(void* parameters)
@@ -215,12 +163,11 @@ static void uwbTask(void* parameters)
 
   systemWaitStart();
 
-  updateTagTdmaSlot(&algoOptions);
-
   while(1) {
     // Change and init algorithm uppon request
     // The first time this loop enters, currentRangingMode is set to auto which forces
     // the initialization of the set algorithm
+    xSemaphoreTake(algoSemaphore, portMAX_DELAY);
     if (algoOptions.rangingMode == lpsMode_auto) { // Auto switch
       if (algoOptions.rangingModeDetected == false) {
         if (algoOptions.currentRangingMode == lpsMode_auto) {
@@ -228,9 +175,9 @@ static void uwbTask(void* parameters)
           algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
 
           // Defaults to TDoA algorithm
-          algoOptions.currentRangingMode = lpsMode_TDoA;
+          algoOptions.currentRangingMode = lpsMode_TDoA2;
           algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
-          algorithm->init(dwm, &algoOptions);
+          algorithm->init(dwm);
           timeout = algorithm->onEvent(dwm, eventTimeout);
         } else if (xTaskGetTickCount() > algoOptions.nextSwitchTick) {
           // Test if we have detected anchors
@@ -245,14 +192,14 @@ static void uwbTask(void* parameters)
             algoOptions.nextSwitchTick = xTaskGetTickCount() + LPS_AUTO_MODE_SWITCH_PERIOD;
 
             // Switch to next algorithm!
-            if ((algoOptions.currentRangingMode+1) > LPS_NUMBER_OF_ALGORITHM) {
+            if ((algoOptions.currentRangingMode+1) > LPS_NUMBER_OF_ALGORITHMS) {
               algoOptions.currentRangingMode = 1;
             } else {
               algoOptions.currentRangingMode++;
             }
 
             algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
-            algorithm->init(dwm, &algoOptions);
+            algorithm->init(dwm);
             timeout = algorithm->onEvent(dwm, eventTimeout);
           }
         }
@@ -262,26 +209,31 @@ static void uwbTask(void* parameters)
       algoOptions.rangingModeDetected = false;
       algoOptions.autoStarted = false;
 
-      if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHM) {
-        DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA!\n");
+      if (algoOptions.rangingMode < 1 || algoOptions.rangingMode > LPS_NUMBER_OF_ALGORITHMS) {
+        DEBUG_PRINT("Trying to select wrong LPS algorithm, defaulting to TDoA2!\n");
         algoOptions.currentRangingMode = algoOptions.rangingMode;
-        algorithm = algorithmsList[lpsMode_TDoA].algorithm;
+        algorithm = algorithmsList[lpsMode_TDoA2].algorithm;
       } else {
         algoOptions.currentRangingMode = algoOptions.rangingMode;
         algorithm = algorithmsList[algoOptions.currentRangingMode].algorithm;
         DEBUG_PRINT("Switching mode to %s\n", algorithmsList[algoOptions.currentRangingMode].name);
       }
 
-      algorithm->init(dwm, &algoOptions);
+      algorithm->init(dwm);
       timeout = algorithm->onEvent(dwm, eventTimeout);
     }
+    xSemaphoreGive(algoSemaphore);
 
     if (xSemaphoreTake(irqSemaphore, timeout/portTICK_PERIOD_MS)) {
       do{
-          dwHandleInterrupt(dwm);
+        xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+        dwHandleInterrupt(dwm);
+        xSemaphoreGive(algoSemaphore);
       } while(digitalRead(GPIO_PIN_IRQ) != 0);
     } else {
+      xSemaphoreTake(algoSemaphore, portMAX_DELAY);
       timeout = algorithm->onEvent(dwm, eventTimeout);
+      xSemaphoreGive(algoSemaphore);
     }
   }
 }
@@ -466,12 +418,22 @@ static void dwm1000Init(DeckInfo *info)
   NVIC_Init(&NVIC_InitStructure);
 
   vSemaphoreCreateBinary(irqSemaphore);
+  vSemaphoreCreateBinary(algoSemaphore);
 
   xTaskCreate(uwbTask, "lps", 3*configMINIMAL_STACK_SIZE, NULL,
                     5/*priority*/, NULL);
 
   isInit = true;
 }
+
+uint16_t locoDeckGetRangingState() {
+  return algoOptions.rangingState;
+}
+
+void locoDeckSetRangingState(const uint16_t newState) {
+  algoOptions.rangingState = newState;
+}
+
 
 static bool dwm1000Test()
 {
@@ -489,7 +451,11 @@ static const DeckDriver dwm1000_deck = {
 
   .usedGpio = 0,  // FIXME: set the used pins
   .requiredEstimator = kalmanEstimator,
+  #ifdef LOCODECK_NO_LOW_INTERFERENCE
+  .requiredLowInterferenceRadioMode = false,
+  #else
   .requiredLowInterferenceRadioMode = true,
+  #endif
 
   .init = dwm1000Init,
   .test = dwm1000Test,
@@ -497,55 +463,11 @@ static const DeckDriver dwm1000_deck = {
 
 DECK_DRIVER(dwm1000_deck);
 
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+PARAM_GROUP_STOP(deck)
+
 LOG_GROUP_START(ranging)
-#if (LOCODECK_NR_OF_ANCHORS > 0)
-LOG_ADD(LOG_FLOAT, distance0, &algoOptions.distance[0])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 1)
-LOG_ADD(LOG_FLOAT, distance1, &algoOptions.distance[1])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 2)
-LOG_ADD(LOG_FLOAT, distance2, &algoOptions.distance[2])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 3)
-LOG_ADD(LOG_FLOAT, distance3, &algoOptions.distance[3])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 4)
-LOG_ADD(LOG_FLOAT, distance4, &algoOptions.distance[4])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 5)
-LOG_ADD(LOG_FLOAT, distance5, &algoOptions.distance[5])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 6)
-LOG_ADD(LOG_FLOAT, distance6, &algoOptions.distance[6])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 7)
-LOG_ADD(LOG_FLOAT, distance7, &algoOptions.distance[7])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 0)
-LOG_ADD(LOG_FLOAT, pressure0, &algoOptions.pressures[0])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 1)
-LOG_ADD(LOG_FLOAT, pressure1, &algoOptions.pressures[1])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 2)
-LOG_ADD(LOG_FLOAT, pressure2, &algoOptions.pressures[2])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 3)
-LOG_ADD(LOG_FLOAT, pressure3, &algoOptions.pressures[3])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 4)
-LOG_ADD(LOG_FLOAT, pressure4, &algoOptions.pressures[4])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 5)
-LOG_ADD(LOG_FLOAT, pressure5, &algoOptions.pressures[5])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 6)
-LOG_ADD(LOG_FLOAT, pressure6, &algoOptions.pressures[6])
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 7)
-LOG_ADD(LOG_FLOAT, pressure7, &algoOptions.pressures[7])
-#endif
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
 LOG_GROUP_STOP(ranging)
 
@@ -556,69 +478,3 @@ LOG_GROUP_STOP(loco)
 PARAM_GROUP_START(loco)
 PARAM_ADD(PARAM_UINT8, mode, &algoOptions.rangingMode)
 PARAM_GROUP_STOP(loco)
-
-
-PARAM_GROUP_START(anchorpos)
-#if (LOCODECK_NR_OF_ANCHORS > 0)
-PARAM_ADD(PARAM_FLOAT, anchor0x, &algoOptions.anchorPosition[0].x)
-PARAM_ADD(PARAM_FLOAT, anchor0y, &algoOptions.anchorPosition[0].y)
-PARAM_ADD(PARAM_FLOAT, anchor0z, &algoOptions.anchorPosition[0].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 1)
-PARAM_ADD(PARAM_FLOAT, anchor1x, &algoOptions.anchorPosition[1].x)
-PARAM_ADD(PARAM_FLOAT, anchor1y, &algoOptions.anchorPosition[1].y)
-PARAM_ADD(PARAM_FLOAT, anchor1z, &algoOptions.anchorPosition[1].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 2)
-PARAM_ADD(PARAM_FLOAT, anchor2x, &algoOptions.anchorPosition[2].x)
-PARAM_ADD(PARAM_FLOAT, anchor2y, &algoOptions.anchorPosition[2].y)
-PARAM_ADD(PARAM_FLOAT, anchor2z, &algoOptions.anchorPosition[2].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 3)
-PARAM_ADD(PARAM_FLOAT, anchor3x, &algoOptions.anchorPosition[3].x)
-PARAM_ADD(PARAM_FLOAT, anchor3y, &algoOptions.anchorPosition[3].y)
-PARAM_ADD(PARAM_FLOAT, anchor3z, &algoOptions.anchorPosition[3].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 4)
-PARAM_ADD(PARAM_FLOAT, anchor4x, &algoOptions.anchorPosition[4].x)
-PARAM_ADD(PARAM_FLOAT, anchor4y, &algoOptions.anchorPosition[4].y)
-PARAM_ADD(PARAM_FLOAT, anchor4z, &algoOptions.anchorPosition[4].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 5)
-PARAM_ADD(PARAM_FLOAT, anchor5x, &algoOptions.anchorPosition[5].x)
-PARAM_ADD(PARAM_FLOAT, anchor5y, &algoOptions.anchorPosition[5].y)
-PARAM_ADD(PARAM_FLOAT, anchor5z, &algoOptions.anchorPosition[5].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 6)
-PARAM_ADD(PARAM_FLOAT, anchor6x, &algoOptions.anchorPosition[6].x)
-PARAM_ADD(PARAM_FLOAT, anchor6y, &algoOptions.anchorPosition[6].y)
-PARAM_ADD(PARAM_FLOAT, anchor6z, &algoOptions.anchorPosition[6].z)
-#endif
-#if (LOCODECK_NR_OF_ANCHORS > 7)
-PARAM_ADD(PARAM_FLOAT, anchor7x, &algoOptions.anchorPosition[7].x)
-PARAM_ADD(PARAM_FLOAT, anchor7y, &algoOptions.anchorPosition[7].y)
-PARAM_ADD(PARAM_FLOAT, anchor7z, &algoOptions.anchorPosition[7].z)
-#endif
-PARAM_ADD(PARAM_UINT8, enable, &algoOptions.combinedAnchorPositionOk)
-PARAM_GROUP_STOP(anchorpos)
-
-PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
-PARAM_GROUP_STOP(deck)
-
-// Loco Posisioning Protocol (LPP) handling
-
-void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, const int length)
-{
-  uint8_t type = data[0];
-
-  if (type == LPP_SHORT_ANCHORPOS) {
-    if (srcId < LOCODECK_NR_OF_ANCHORS) {
-      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
-      algoOptions.anchorPosition[srcId].timestamp = xTaskGetTickCount();
-      algoOptions.anchorPosition[srcId].x = newpos->x;
-      algoOptions.anchorPosition[srcId].y = newpos->y;
-      algoOptions.anchorPosition[srcId].z = newpos->z;
-    }
-  }
-}

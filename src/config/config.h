@@ -46,10 +46,12 @@
 #include "trace.h"
 #include "usec_time.h"
 
-#define PROTOCOL_VERSION 3
+#define PROTOCOL_VERSION 4
 
 #ifdef STM32F4XX
+#ifndef P_NAME
   #define P_NAME "Crazyflie 2.0"
+#endif
   #define QUAD_FORMATION_X
 
   #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
@@ -62,20 +64,11 @@
   #define configGENERATE_RUN_TIME_STATS 1
   #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initUsecTimer()
   #define portGET_RUN_TIME_COUNTER_VALUE() usecTimestamp()
-
-#else
-  #define P_NAME "Crazyflie 1.0"
-  #define CONFIG_BLOCK_ADDRESS    (1024 * (128-1))
-  #define MCU_ID_ADDRESS          0x1FFFF7E8
-  #define MCU_FLASH_SIZE_ADDRESS  0x1FFFF7E0
-  #define FREERTOS_HEAP_SIZE      13900
-  #define FREERTOS_MIN_STACK_SIZE 80
-  #define FREERTOS_MCU_CLOCK_HZ   72000000
 #endif
 
 
 // Task priorities. Higher number higher priority
-#define STABILIZER_TASK_PRI     4
+#define STABILIZER_TASK_PRI     5
 #define SENSORS_TASK_PRI        4
 #define ADC_TASK_PRI            3
 #define FLOW_TASK_PRI           3
@@ -95,7 +88,7 @@
 #define PCA9685_TASK_PRI        3
 #define CMD_HIGH_LEVEL_TASK_PRI 2
 
-#define SYSLINK_TASK_PRI        5
+#define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
 
 // Not compiled

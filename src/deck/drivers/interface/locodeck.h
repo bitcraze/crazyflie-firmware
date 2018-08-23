@@ -41,7 +41,6 @@
 #include "libdw1000.h"
 #include "stabilizer_types.h"
 
-#define SPEED_OF_LIGHT 299792458.0
 // Timestamp counter frequency
 #define LOCODECK_TS_FREQ (499.2e6 * 128)
 
@@ -54,29 +53,20 @@ typedef enum uwbEvent_e {
   eventReceiveFailed,
 } uwbEvent_t;
 
-#ifndef LOCODECK_NR_OF_ANCHORS
-#define LOCODECK_NR_OF_ANCHORS 8
-#endif
-
 typedef uint64_t locoAddress_t;
 
-#define LPS_NUMBER_OF_ALGORITHM 2
+#define LPS_NUMBER_OF_ALGORITHMS 3
 
 #define LPS_AUTO_MODE_SWITCH_PERIOD M2T(1000)
 
 typedef enum {
   lpsMode_auto = 0,
   lpsMode_TWR = 1,
-  lpsMode_TDoA = 2,
+  lpsMode_TDoA2 = 2,
+  lpsMode_TDoA3 = 3,
 } lpsMode_t;
 
 typedef struct {
-  const uint64_t antennaDelay;
-  const int rangingFailedThreshold;
-
-  locoAddress_t tagAddress;
-  const locoAddress_t anchorAddress[LOCODECK_NR_OF_ANCHORS];
-
   // The status of anchors. A bit field (bit 0 - anchor 0, bit 1 - anchor 1 and so on)
   // where a set bit indicates that an anchor reentry has been detected
   volatile uint16_t rangingState;
@@ -89,27 +79,16 @@ typedef struct {
   bool rangingModeDetected;
   bool autoStarted;
   uint32_t nextSwitchTick;
-
-   // TWR data
-  point_t anchorPosition[LOCODECK_NR_OF_ANCHORS];
-  bool combinedAnchorPositionOk;
-
-  float distance[LOCODECK_NR_OF_ANCHORS];
-  float pressures[LOCODECK_NR_OF_ANCHORS];
-  int failedRanging[LOCODECK_NR_OF_ANCHORS];
-
-  // TWR-TDMA options
-  bool useTdma;
-  int tdmaSlot;
 } lpsAlgoOptions_t;
 
-point_t* locodeckGetAnchorPosition(uint8_t anchor);
+bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position);
 
-// Callback for one uwb algorithm
+// Callbacks for uwb algorithms
 typedef struct uwbAlgorithm_s {
-  void (*init)(dwDevice_t *dev, lpsAlgoOptions_t* options);
+  void (*init)(dwDevice_t *dev);
   uint32_t (*onEvent)(dwDevice_t *dev, uwbEvent_t event);
   bool (*isRangingOk)();
+  bool (*getAnchorPosition)(const uint8_t anchorId, point_t* position);
 } uwbAlgorithm_t;
 
 #include <FreeRTOS.h>
@@ -132,8 +111,8 @@ typedef struct {
 // Function to be used by the LPS algorithm
 bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
 
-// Handle incoming short LPP packets from the UWB system
-void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, const int length);
+uint16_t locoDeckGetRangingState();
+void locoDeckSetRangingState(const uint16_t newState);
 
 // LPP Packet types and format
 #define LPP_HEADER_SHORT_PACKET 0xF0

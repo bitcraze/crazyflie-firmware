@@ -105,9 +105,11 @@ static xQueueHandle gyroDataQueue;
 static xQueueHandle magnetometerDataQueue;
 static xQueueHandle barometerDataQueue;
 static xSemaphoreHandle sensorsDataReady;
+static xSemaphoreHandle dataReady;
 
 static bool isInit = false;
-static sensorData_t sensors;
+static sensorData_t sensorData;
+static uint64_t imuIntTimestamp;
 
 static BiasObj gyroBiasRunning;
 static Axis3f  gyroBias;
@@ -186,6 +188,7 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
   zRangerReadRange(&sensors->zrange, tick);
+  sensors->interruptTimestamp = sensorData.interruptTimestamp;
 }
 
 bool sensorsAreCalibrated() {
@@ -202,6 +205,7 @@ static void sensorsTask(void *param)
   {
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
     {
+      sensorData.interruptTimestamp = imuIntTimestamp;
       // data is ready to be read
       uint8_t dataLen = (uint8_t) (SENSORS_MPU6500_BUFF_LEN +
               (isMagnetometerPresent ? SENSORS_MAG_BUFF_LEN : 0) +
@@ -220,20 +224,26 @@ static void sensorsTask(void *param)
                   SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN : SENSORS_MPU6500_BUFF_LEN]));
       }
 
-      vTaskSuspendAll(); // ensure all queues are populated at the same time
-      xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
-      xQueueOverwrite(gyroDataQueue, &sensors.gyro);
+      xQueueOverwrite(accelerometerDataQueue, &sensorData.acc);
+      xQueueOverwrite(gyroDataQueue, &sensorData.gyro);
       if (isMagnetometerPresent)
       {
-        xQueueOverwrite(magnetometerDataQueue, &sensors.mag);
+        xQueueOverwrite(magnetometerDataQueue, &sensorData.mag);
       }
       if (isBarometerPresent)
       {
-        xQueueOverwrite(barometerDataQueue, &sensors.baro);
+        xQueueOverwrite(barometerDataQueue, &sensorData.baro);
       }
-      xTaskResumeAll();
+
+      // Unlock stabilizer task
+      xSemaphoreGive(dataReady);
     }
   }
+}
+
+void sensorsWaitDataReady(void)
+{
+  xSemaphoreTake(dataReady, portMAX_DELAY);
 }
 
 void processBarometerMeasurements(const uint8_t *buffer)
@@ -250,9 +260,9 @@ void processBarometerMeasurements(const uint8_t *buffer)
     rawTemp = ((int16_t) buffer[5] << 8) | buffer[4];
   }
 
-  sensors.baro.pressure = (float) rawPressure / LPS25H_LSB_PER_MBAR;
-  sensors.baro.temperature = LPS25H_TEMP_OFFSET + ((float) rawTemp / LPS25H_LSB_PER_CELSIUS);
-  sensors.baro.asl = lps25hPressureToAltitude(&sensors.baro.pressure);
+  sensorData.baro.pressure = (float) rawPressure / LPS25H_LSB_PER_MBAR;
+  sensorData.baro.temperature = LPS25H_TEMP_OFFSET + ((float) rawTemp / LPS25H_LSB_PER_CELSIUS);
+  sensorData.baro.asl = lps25hPressureToAltitude(&sensorData.baro.pressure);
 }
 
 void processMagnetometerMeasurements(const uint8_t *buffer)
@@ -262,9 +272,9 @@ void processMagnetometerMeasurements(const uint8_t *buffer)
     int16_t headingy = (((int16_t) buffer[4]) << 8) | buffer[3];
     int16_t headingz = (((int16_t) buffer[6]) << 8) | buffer[5];
 
-    sensors.mag.x = (float)headingx / MAG_GAUSS_PER_LSB;
-    sensors.mag.y = (float)headingy / MAG_GAUSS_PER_LSB;
-    sensors.mag.z = (float)headingz / MAG_GAUSS_PER_LSB;
+    sensorData.mag.x = (float)headingx / MAG_GAUSS_PER_LSB;
+    sensorData.mag.y = (float)headingy / MAG_GAUSS_PER_LSB;
+    sensorData.mag.z = (float)headingz / MAG_GAUSS_PER_LSB;
   }
 }
 
@@ -290,16 +300,16 @@ void processAccGyroMeasurements(const uint8_t *buffer)
      processAccScale(ax, ay, az);
   }
 
-  sensors.gyro.x = -(gx - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
-  sensors.gyro.y =  (gy - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
-  sensors.gyro.z =  (gz - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
-  applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensors.gyro);
+  sensorData.gyro.x = -(gx - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
+  sensorData.gyro.y =  (gy - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
+  sensorData.gyro.z =  (gz - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
+  applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensorData.gyro);
 
   accScaled.x = -(ax) * SENSORS_G_PER_LSB_CFG / accScale;
   accScaled.y =  (ay) * SENSORS_G_PER_LSB_CFG / accScale;
   accScaled.z =  (az) * SENSORS_G_PER_LSB_CFG / accScale;
-  sensorsAccAlignToGravity(&accScaled, &sensors.acc);
-  applyAxis3fLpf((lpf2pData*)(&accLpf), &sensors.acc);
+  sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
+  applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
 }
 
 static void sensorsDeviceInit(void)
@@ -475,6 +485,9 @@ static void sensorsInterruptInit(void)
   GPIO_InitTypeDef GPIO_InitStructure;
   EXTI_InitTypeDef EXTI_InitStructure;
 
+  sensorsDataReady = xSemaphoreCreateBinary();
+  dataReady = xSemaphoreCreateBinary();
+
   // FSYNC "shall not be floating, must be set high or low by the MCU"
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -508,8 +521,6 @@ void sensorsInit(void)
   {
     return;
   }
-
-  sensorsDataReady = xSemaphoreCreateBinary();
 
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();
@@ -826,6 +837,7 @@ bool sensorsManufacturingTest(void)
 void __attribute__((used)) EXTI13_Callback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  imuIntTimestamp = usecTimestamp();
   xSemaphoreGiveFromISR(sensorsDataReady, &xHigherPriorityTaskWoken);
 
   if (xHigherPriorityTaskWoken)

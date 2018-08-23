@@ -71,8 +71,6 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 #define WHITE {0xff, 0xff, 0xff}
 #define BLACK {0x00, 0x00, 0x00}
 
-#define MAX(a,b) ((a>b)?a:b)
-#define MIN(a,b) ((a<b)?a:b)
 #define COPY_COLOR(dest, orig) dest[0]=orig[0]; dest[1]=orig[1]; dest[2]=orig[2]
 #define ADD_COLOR(dest, o1, o2) dest[0]=(o1[0]>>1)+(o2[0]>>1);dest[1]=(o1[1]>>1)+(o2[1]>>1);dest[2]=(o1[2]>>1)+(o2[2]>>1);
 #define LIMIT(a) ((a>255)?255:(a<0)?0:a)
@@ -119,29 +117,61 @@ static void blackEffect(uint8_t buffer[][3], bool reset)
 }
 
 /**************** White spin ***************/
+#if NBR_LEDS > 12
+static const uint8_t whiteRing[NBR_LEDS][3] = {{32, 32, 32}, {8,8,8}, {2,2,2},
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                      };
+#else
 static const uint8_t whiteRing[][3] = {{32, 32, 32}, {8,8,8}, {2,2,2},
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                       };
+#endif 
 
+#if NBR_LEDS > 12
+static const uint8_t blueRing[NBR_LEDS][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                       BLACK, BLACK, BLACK,
+                                      };
+#else
 static const uint8_t blueRing[][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                       };
+#endif 
 
-//static const uint8_t greenRing[][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
+// #if NBR_LEDS > 12
+// static const uint8_t greenRing[NBR_LEDS][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                      };
-//
-//static const uint8_t redRing[][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
+// #else
+// static const uint8_t greenRing[][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                      };
+// #endif 
+
+// #if NBR_LEDS > 12
+// static const uint8_t redRing[NBR_LEDS][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
 //                                       {4,0,0}, {2,0,0}, {1,0,0},
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                      };
+// #else
+// static const uint8_t redRing[][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
+//                                       {4,0,0}, {2,0,0}, {1,0,0},
+//                                       BLACK, BLACK, BLACK,
+//                                       BLACK, BLACK, BLACK,
+//                                      };
+// #endif 
 
 static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
 {
@@ -242,11 +272,19 @@ static void boatEffect(uint8_t buffer[][3], bool reset)
 
 /**************** Color spin ***************/
 
+#if NBR_LEDS > 12
+static const uint8_t colorRing[NBR_LEDS][3] = {{0,0,32}, {0,0,16}, {0,0,8},
+                                       {0,0,4}, {16,16,16}, {8,8,8},
+                                       {4,4,4},{32,0,0},{16,0,0},
+                                       {8,0,0}, {4,0,0}, {2,0,0},
+                                      };
+#else
 static const uint8_t colorRing[][3] = {{0,0,32}, {0,0,16}, {0,0,8},
                                        {0,0,4}, {16,16,16}, {8,8,8},
                                        {4,4,4},{32,0,0},{16,0,0},
                                        {8,0,0}, {4,0,0}, {2,0,0},
                                       };
+#endif
 
 static void colorSpinEffect(uint8_t buffer[][3], bool reset)
 {
@@ -636,6 +674,28 @@ static void fadeColorEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+/**
+ * An effect that shows the Signal Strength (RSSI) on the LED ring.
+ *
+ * Red means bad, green means good.
+ */
+static float badRssi = 85, goodRssi = 35;
+static void rssiEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+  static int rssiid;
+  float rssi;
+
+  rssiid = logGetVarId("radio", "rssi");
+  rssi = logGetFloat(rssiid);
+
+  for (i = 0; i < NBR_LEDS; i++) {
+    buffer[i][0] = LIMIT(LINSCALE(badRssi, goodRssi, 255, 0, rssi)); // Red (bad)
+    buffer[i][1] = LIMIT(LINSCALE(badRssi, goodRssi, 0, 255, rssi)); // Green (good)
+    buffer[i][2] = 0; // Blue
+  }
+}
+
 /**************** Effect list ***************/
 
 
@@ -656,7 +716,8 @@ Ledring12Effect effectsFct[] =
   gravityLight,
   virtualMemEffect,
   fadeColorEffect,
-}; //TODO Add more
+  rssiEffect,
+};
 
 /********** Ring init and switching **********/
 static xTimerHandle timer;

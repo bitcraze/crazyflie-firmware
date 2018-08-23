@@ -75,6 +75,7 @@ static xQueueHandle gyroSecDataQueue;
 #endif
 static xQueueHandle baroPrimDataQueue;
 static xQueueHandle magPrimDataQueue;
+static xSemaphoreHandle dataReady;
 
 static bool isInit = false;
 static bool allSensorsAreCalibrated = false;
@@ -117,6 +118,8 @@ void sensorsInit(void)
     {
       return;
     }
+
+  dataReady = xSemaphoreCreateBinary();
 
   sensorsDeviceInit();
   sensorsTaskInit();
@@ -287,8 +290,6 @@ static void sensorsDeviceInit(void)
   sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI / 180);
   cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI / 180);
   sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI / 180);
-
-  isInit = true;
 }
 
 static void sensorsTaskInit(void)
@@ -555,8 +556,6 @@ static void sensorsTask(void *param)
               baroMeasDelay = baroMeasDelayMin;
             }
         }
-      /* ensure all queues are populated at the same time */
-      vTaskSuspendAll();
       xQueueOverwrite(accelPrimDataQueue, &sensors.acc);
       xQueueOverwrite(gyroPrimDataQueue, &sensors.gyro);
 
@@ -574,8 +573,14 @@ static void sensorsTask(void *param)
         {
           xQueueOverwrite(magPrimDataQueue, &sensors.mag);
         }
-      xTaskResumeAll();
+
+      xSemaphoreGive(dataReady);
     }
+}
+
+void sensorsWaitDataReady(void)
+{
+  xSemaphoreTake(dataReady, portMAX_DELAY);
 }
 
 static void sensorsBiasMalloc(BiasObj* bias)

@@ -158,6 +158,16 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
   return (pdTRUE == xQueueReceive(tofDataQueue, tof, 0));
 }
 
+// Absolute height measurement along the room Z
+static xQueueHandle heightDataQueue;
+#define HEIGHT_QUEUE_LENGTH (10)
+
+static void stateEstimatorUpdateWithAbsoluteHeight(heightMeasurement_t *height);
+
+static inline bool stateEstimatorHasHeightPacket(heightMeasurement_t *height) {
+  return (pdTRUE == xQueueReceive(heightDataQueue, height, 0));
+}
+
 /**
  * Constants used in the estimator
  */
@@ -170,8 +180,6 @@ static inline bool stateEstimatorHasTOFPacket(tofMeasurement_t *tof) {
 
 //thrust is thrust mapped for 65536 <==> 60 GRAMS!
 #define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/CRAZYFLIE_WEIGHT_grams/65536.0f)
-
-#define SPEED_OF_LIGHT (299792458)
 
 // TODO: Decouple the TDOA implementation from the Kalman filter...
 #define METERS_PER_TDOATICK (4.691763979e-3f)
@@ -474,6 +482,13 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
     doneUpdate = true;
   }
 
+  heightMeasurement_t height;
+  while (stateEstimatorHasHeightPacket(&height))
+  {
+    stateEstimatorUpdateWithAbsoluteHeight(&height);
+    doneUpdate = true;
+  }
+
   distanceMeasurement_t dist;
   while (stateEstimatorHasDistanceMeasurement(&dist))
   {
@@ -733,13 +748,6 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     S[STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
 
-  if(S[STATE_Z] < 0) {
-    S[STATE_Z] = 0;
-    S[STATE_PX] = 0;
-    S[STATE_PY] = 0;
-    S[STATE_PZ] = 0;
-  }
-
   // attitude update (rotate by gyroscope), we do this in quaternions
   // this is the gyroscope angular velocity integrated over the sample period
   float dtwx = dt*gyro->x;
@@ -924,6 +932,13 @@ static void stateEstimatorUpdateWithBaro(baro_t *baro)
   stateEstimatorScalarUpdate(&H, meas - S[STATE_Z], measNoiseBaro);
 }
 #endif
+
+static void stateEstimatorUpdateWithAbsoluteHeight(heightMeasurement_t* height) {
+  float h[STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, STATE_DIM, h};
+  h[STATE_Z] = 1;
+  stateEstimatorScalarUpdate(&H, height->height - S[STATE_Z], height->stdDev);
+}
 
 static void stateEstimatorUpdateWithPosition(positionMeasurement_t *xyz)
 {
@@ -1286,6 +1301,7 @@ void estimatorKalmanInit(void) {
     tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
     flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
     tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
+    heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
   }
   else
   {
@@ -1408,6 +1424,13 @@ bool estimatorKalmanEnqueueTOF(tofMeasurement_t *tof)
   // A distance (distance) [m] to the ground along the z_B axis.
   ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(tofDataQueue, (void *)tof);
+}
+
+bool estimatorKalmanEnqueueAsoluteHeight(heightMeasurement_t *height)
+{
+  // A distance (height) [m] to the ground along the z axis.
+  ASSERT(isInit);
+  return stateEstimatorEnqueueExternalMeasurement(heightDataQueue, (void *)height);
 }
 
 bool estimatorKalmanTest(void)

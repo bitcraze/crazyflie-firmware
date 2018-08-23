@@ -79,7 +79,7 @@ typedef struct _etGpio
   char              name[6];
 } EtGpio;
 
-EtGpio etGpioIn[ET_NBR_PINS] =
+static EtGpio etGpioIn[ET_NBR_PINS] =
 {
     {ET_GPIO_PORT_TX1,  ET_GPIO_PIN_TX1, "TX1"},
     {ET_GPIO_PORT_RX1,  ET_GPIO_PIN_RX1, "RX1"},
@@ -94,8 +94,8 @@ EtGpio etGpioIn[ET_NBR_PINS] =
     {ET_GPIO_PORT_IO4,  ET_GPIO_PIN_IO4, "IO4"}
 };
 
-EtGpio etGpioSDA = {ET_GPIO_PORT_SDA,  ET_GPIO_PIN_SDA, "SDA"};
-EtGpio etGpioSCL = {ET_GPIO_PORT_SCL,  ET_GPIO_PIN_SCL, "SCL"};
+static EtGpio etGpioSDA = {ET_GPIO_PORT_SDA,  ET_GPIO_PIN_SDA, "SDA"};
+static EtGpio etGpioSCL = {ET_GPIO_PORT_SCL,  ET_GPIO_PIN_SCL, "SCL"};
 
 static bool isInit;
 

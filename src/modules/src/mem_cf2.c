@@ -82,6 +82,8 @@
 #define MEM_LOCO_ANCHOR_PAGE_SIZE 0x0100
 #define MEM_LOCO_PAGE_LEN         (3 * sizeof(float) + 1)
 
+#define LOCO_MESSAGE_NR_OF_ANCHORS 8
+
 //Private functions
 static void memTask(void * prm);
 static void memSettingsProcess(int command);
@@ -192,7 +194,7 @@ void createInfoResponse(CRTPPacket* p, uint8_t memId)
       createInfoResponseBody(p, MEM_TYPE_LED12, sizeof(ledringmem), noData);
       break;
     case LOCO_ID:
-      createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCODECK_NR_OF_ANCHORS, noData);
+      createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCO_MESSAGE_NR_OF_ANCHORS, noData);
       break;
     case TRAJ_ID:
       createInfoResponseBody(p, MEM_TYPE_TRAJ, sizeof(trajectories_memory), noData);
@@ -301,34 +303,46 @@ void memReadProcess()
   crtpSendPacket(&p);
 }
 
+#define ANCHOR_ID_LIST_LENGTH 256
 uint8_t handleLocoMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest) {
   uint8_t status = EIO;
+
+  // This message was defined for TWR and TDoA2 that supports up to 8 anchors
+  // with ids 0 - 7. Adapt data to this format even if it means we have to
+  // throw away some data to stay compatible with old clients.
 
   if (MEM_LOCO_INFO == memAddr)
   {
     if (1 == readLen)
     {
-      *dest = LOCODECK_NR_OF_ANCHORS;
+      *dest = LOCO_MESSAGE_NR_OF_ANCHORS;
       status = STATUS_OK;
     }
   }
   else
   {
-    if (memAddr >= MEM_LOCO_ANCHOR_BASE)
+    if (memAddr >= MEM_LOCO_ANCHOR_BASE && readLen == MEM_LOCO_PAGE_LEN)
     {
       uint32_t pageAddress = memAddr - MEM_LOCO_ANCHOR_BASE;
       if ((pageAddress % MEM_LOCO_ANCHOR_PAGE_SIZE) == 0)
       {
         uint32_t page = pageAddress / MEM_LOCO_ANCHOR_PAGE_SIZE;
-        if (page < LOCODECK_NR_OF_ANCHORS && MEM_LOCO_PAGE_LEN == readLen)
-        {
-          point_t* position = locodeckGetAnchorPosition(page);
-          float* destAsFloat = (float*)dest;
-          destAsFloat[0] = position->x;
-          destAsFloat[1] = position->y;
-          destAsFloat[2] = position->z;
+        uint8_t anchorId = page;
 
-          bool hasBeenSet = (position->timestamp != 0);
+        if (anchorId < LOCO_MESSAGE_NR_OF_ANCHORS)
+        {
+          point_t position;
+          if (!locoDeckGetAnchorPosition(anchorId, &position))
+          {
+            memset(&position, 0, sizeof(position));
+          }
+
+          float* destAsFloat = (float*)dest;
+          destAsFloat[0] = position.x;
+          destAsFloat[1] = position.y;
+          destAsFloat[2] = position.z;
+
+          bool hasBeenSet = (position.timestamp != 0);
           dest[sizeof(float) * 3] = hasBeenSet;
 
           status = STATUS_OK;

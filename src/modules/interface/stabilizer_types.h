@@ -129,6 +129,7 @@ typedef struct sensorData_s {
   Axis3f accSec;            // Gs
   Axis3f gyroSec;           // deg/s
 #endif
+  uint64_t interruptTimestamp;
 } sensorData_t;
 
 typedef struct state_s {
@@ -210,6 +211,13 @@ typedef struct tofMeasurement_s {
   float distance;
   float stdDev;
 } tofMeasurement_t;
+
+/** Absolute height measurement */
+typedef struct heightMeasurement_s {
+  uint32_t timestamp;
+  float height;
+  float stdDev;
+} heightMeasurement_t;
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000

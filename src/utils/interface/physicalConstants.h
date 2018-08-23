@@ -1,0 +1,8 @@
+#ifndef __PHYSICAL_CONSTANTS_H__
+#define __PHYSICAL_CONSTANTS_H__
+
+
+#define SPEED_OF_LIGHT 299792458.0
+
+
+#endif // __PHYSICAL_CONSTANTS_H__

@@ -22,6 +22,12 @@
 
 #define LPS_TWR_SEND_LPP_PAYLOAD 1
 
+#ifdef LOCODECK_NR_OF_ANCHORS
+#define LOCODECK_NR_OF_TWR_ANCHORS LOCODECK_NR_OF_ANCHORS
+#else
+#define LOCODECK_NR_OF_TWR_ANCHORS 8
+#endif
+
 extern uwbAlgorithm_t uwbTwrTagAlgorithm;
 
 typedef struct {
@@ -34,6 +40,26 @@ typedef struct {
   float asl;
   uint8_t pressure_ok;
 } __attribute__((packed)) lpsTwrTagReportPayload_t;
+
+typedef struct {
+  const uint64_t antennaDelay;
+  const int rangingFailedThreshold;
+
+  locoAddress_t tagAddress;
+  const locoAddress_t anchorAddress[LOCODECK_NR_OF_TWR_ANCHORS];
+
+   // TWR data
+  point_t anchorPosition[LOCODECK_NR_OF_TWR_ANCHORS];
+  bool combinedAnchorPositionOk;
+
+  // TWR-TDMA options
+  bool useTdma;
+  int tdmaSlot;
+} lpsTwrAlgoOptions_t;
+
+
+void uwbTwrTagSetOptions(lpsTwrAlgoOptions_t* newOptions);
+float lpsTwrTagGetDistance(const uint8_t anchorId);
 
 #define TWR_RECEIVE_TIMEOUT 1000
 
