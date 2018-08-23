@@ -49,8 +49,8 @@ typedef struct _PmSyslinkInfo
     uint8_t flags;
     struct
     {
-      uint8_t pgood  : 1;
       uint8_t chg    : 1;
+      uint8_t pgood  : 1;
       uint8_t unused : 6;
     };
   };
@@ -183,8 +183,10 @@ float pmGetBatteryVoltageMax(void)
 
 void pmSyslinkUpdate(SyslinkPacket *slp)
 {
-  memcpy(&pmSyslinkInfo, &slp->data[0], sizeof(pmSyslinkInfo));
-  pmSetBatteryVoltage(pmSyslinkInfo.vBat);
+  if (slp->type == SYSLINK_PM_BATTERY_STATE) {
+    memcpy(&pmSyslinkInfo, &slp->data[0], sizeof(pmSyslinkInfo));
+    pmSetBatteryVoltage(pmSyslinkInfo.vBat);
+  }
 }
 
 void pmSetChargeState(PMChargeStates chgState)
