@@ -249,7 +249,7 @@ static void testProps(sensorData_t *sensors)
 
   if (testState == configureAcc)
   {
-    sensorsEnableAccPropVibrationSettings();
+    sensorsSetAccMode(ACC_MODE_PROPTEST);
     testState = measureNoiseFloor;
   }
   if (testState == measureNoiseFloor)
@@ -305,7 +305,7 @@ static void testProps(sensorData_t *sensors)
       {
         motorToTest = 0;
         testState = evaluateResult;
-        sensorsEnableAccNormalSettings();
+        sensorsSetAccMode(ACC_MODE_FLIGHT);
       }
     }
   }
