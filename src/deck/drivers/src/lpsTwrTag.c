@@ -521,12 +521,34 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
   return false;
 }
 
+static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  for (int i = 0; i < LOCODECK_NR_OF_TWR_ANCHORS; i++) {
+    unorderedAnchorList[i] = i;
+  }
+
+  return LOCODECK_NR_OF_TWR_ANCHORS;
+}
+
+static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  uint8_t count = 0;
+
+  for (int i = 0; i < LOCODECK_NR_OF_TWR_ANCHORS; i++) {
+    if (state.failedRanging[i] < options->rangingFailedThreshold) {
+      unorderedAnchorList[count] = i;
+      count++;
+    }
+  }
+
+  return count;
+}
 
 uwbAlgorithm_t uwbTwrTagAlgorithm = {
   .init = twrTagInit,
   .onEvent = twrTagOnEvent,
   .isRangingOk = isRangingOk,
   .getAnchorPosition = getAnchorPosition,
+  .getAnchorIdList = getAnchorIdList,
+  .getActiveAnchorIdList = getActiveAnchorIdList,
 };
 
 LOG_GROUP_START(twr)

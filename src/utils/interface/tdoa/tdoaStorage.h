@@ -55,6 +55,8 @@ void tdoaStorageInitialize(tdoaAnchorInfo_t anchorStorage[]);
 
 bool tdoaStorageGetCreateAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
 bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
+uint8_t tdoaStorageGetListOfAnchorIds(tdoaAnchorInfo_t anchorStorage[], uint8_t unorderedAnchorList[], const int maxListSize);
+uint8_t tdoaStorageGetListOfActiveAnchorIds(tdoaAnchorInfo_t anchorStorage[], uint8_t unorderedAnchorList[], const int maxListSize, const uint32_t currentTime_ms);
 
 uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx);
 int64_t tdoaStorageGetRxTime(const tdoaAnchorContext_t* anchorCtx);
