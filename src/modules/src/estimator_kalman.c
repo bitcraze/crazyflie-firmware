@@ -962,48 +962,94 @@ static void stateEstimatorUpdateWithDistance(distanceMeasurement_t *d)
   float dy = S[STATE_Y] - d->y;
   float dz = S[STATE_Z] - d->z;
 
-  float predictedDistance = arm_sqrt(powf(dx, 2) + powf(dy, 2) + powf(dz, 2));
   float measuredDistance = d->distance;
 
-  // The measurement is: z = sqrt(dx^2 + dy^2 + dz^2). The derivative dz/dX gives h.
-  h[STATE_X] = dx/predictedDistance;
-  h[STATE_Y] = dy/predictedDistance;
-  h[STATE_Z] = dz/predictedDistance;
+  float predictedDistance = arm_sqrt(powf(dx, 2) + powf(dy, 2) + powf(dz, 2));
+  if (predictedDistance != 0.0f)
+  {
+    // The measurement is: z = sqrt(dx^2 + dy^2 + dz^2). The derivative dz/dX gives h.
+    h[STATE_X] = dx/predictedDistance;
+    h[STATE_Y] = dy/predictedDistance;
+    h[STATE_Z] = dz/predictedDistance;
+  }
+  else
+  {
+    // Avoid divide by zero
+    h[STATE_X] = 1.0f;
+    h[STATE_Y] = 0.0f;
+    h[STATE_Z] = 0.0f;
+  }
 
   stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, d->stdDev);
 }
 
 static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
 {
-  /**
-   * Measurement equation:
-   * dR = dT + d1 - d0
-   */
-
-  float measurement = tdoa->distanceDiff;
-
-  // predict based on current state
-  float x = S[STATE_X];
-  float y = S[STATE_Y];
-  float z = S[STATE_Z];
-
-  float x1 = tdoa->anchorPosition[1].x, y1 = tdoa->anchorPosition[1].y, z1 = tdoa->anchorPosition[1].z;
-  float x0 = tdoa->anchorPosition[0].x, y0 = tdoa->anchorPosition[0].y, z0 = tdoa->anchorPosition[0].z;
-
-  float d1 = sqrtf(powf(x - x1, 2) + powf(y - y1, 2) + powf(z - z1, 2));
-  float d0 = sqrtf(powf(x - x0, 2) + powf(y - y0, 2) + powf(z - z0, 2));
-
-  float predicted = d1 - d0;
-  float error = measurement - predicted;
-
   if (tdoaCount >= 100)
   {
+    /**
+     * Measurement equation:
+     * dR = dT + d1 - d0
+     */
+
+    float measurement = tdoa->distanceDiff;
+
+    // predict based on current state
+    float x = S[STATE_X];
+    float y = S[STATE_Y];
+    float z = S[STATE_Z];
+
+    float x1 = tdoa->anchorPosition[1].x, y1 = tdoa->anchorPosition[1].y, z1 = tdoa->anchorPosition[1].z;
+    float x0 = tdoa->anchorPosition[0].x, y0 = tdoa->anchorPosition[0].y, z0 = tdoa->anchorPosition[0].z;
+
+    float dx1 = x - x1;
+    float dy1 = y - y1;
+    float dz1 = z - z1;
+
+    float dx0 = x - x0;
+    float dy0 = y - y0;
+    float dz0 = z - z0;
+
+    float d1 = sqrtf(powf(dx1, 2) + powf(dy1, 2) + powf(dz1, 2));
+    float d0 = sqrtf(powf(dx0, 2) + powf(dy0, 2) + powf(dz0, 2));
+
+    float predicted = d1 - d0;
+    float error = measurement - predicted;
+
     float h[STATE_DIM] = {0};
     arm_matrix_instance_f32 H = {1, STATE_DIM, h};
 
-    h[STATE_X] = ((x - x1) / d1 - (x - x0) / d0);
-    h[STATE_Y] = ((y - y1) / d1 - (y - y0) / d0);
-    h[STATE_Z] = ((z - z1) / d1 - (z - z0) / d0);
+    // We want to do
+    // h[STATE_X] = (dx1 / d1 - dx0 / d0);
+    // h[STATE_Y] = (dy1 / d1 - dy0 / d0);
+    // h[STATE_Z] = (dz1 / d1 - dz0 / d0);
+    // but have to handle divide by zero
+
+    if (d1 != 0.0f)
+    {
+      h[STATE_X] = dx1 / d1;
+      h[STATE_Y] = dy1 / d1;
+      h[STATE_Z] = dz1 / d1;
+    }
+    else
+    {
+      h[STATE_X] = 1.0f;
+      h[STATE_Y] = 0.0f;
+      h[STATE_Z] = 0.0f;
+    }
+
+    if (d0 != 0.0f)
+    {
+      h[STATE_X] = h[STATE_X] - dx0 / d0;
+      h[STATE_Y] = h[STATE_Y] - dy0 / d0;
+      h[STATE_Z] = h[STATE_Z] - dz0 / d0;
+    }
+    else
+    {
+      h[STATE_X] = h[STATE_X] - 0.0f;
+      h[STATE_Y] = h[STATE_Y] - 1.0f;
+      h[STATE_Z] = h[STATE_Z] - 0.0f;
+    }
 
     stateEstimatorScalarUpdate(&H, error, tdoa->stdDev);
   }
