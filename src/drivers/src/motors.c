@@ -174,25 +174,25 @@ void motorsDeInit(const MotorPerifDef** motorMapSelect)
 
 bool motorsTest(void)
 {
-  int i;
-
-  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
-  {
-    if (motorMap[i]->drvType == BRUSHED)
-    {
-#ifdef ACTIVATE_STARTUP_SOUND
-      motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
-      vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
-      motorsBeep(MOTORS[i], false, 0, 0);
-      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
-#else
-      motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
-      vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
-      motorsSetRatio(MOTORS[i], 0);
-      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
-#endif
-    }
-  }
+//  int i;
+//
+//  for (i = 0; i < sizeof(MOTORS) / sizeof(*MOTORS); i++)
+//  {
+//    if (motorMap[i]->drvType == BRUSHED)
+//    {
+//#ifdef ACTIVATE_STARTUP_SOUND
+//      motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+//      vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+//      motorsBeep(MOTORS[i], false, 0, 0);
+//      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+//#else
+//      motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
+//      vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+//      motorsSetRatio(MOTORS[i], 0);
+//      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+//#endif
+//    }
+//  }
 
   return isInit;
 }

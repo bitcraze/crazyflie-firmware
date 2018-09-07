@@ -35,6 +35,7 @@
 #include "param.h"
 #include "debug.h"
 #include "motors.h"
+#include "pm.h"
 
 #include "stabilizer.h"
 
@@ -63,8 +64,12 @@ static control_t control;
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
 
-typedef enum { configureAcc, measureNoiseFloor, measureProp, evaluateResult, testDone } TestState;
-static TestState testState = configureAcc;
+typedef enum { configureAcc, measureNoiseFloor, measureProp, testBattery, restartBatTest, evaluateResult, testDone } TestState;
+#if DONT_RUN_PROP_TEST
+  static TestState testState = testDone;
+#else
+  static TestState testState = configureAcc;
+#endif
 
 static void stabilizerTask(void* param);
 static void testProps(sensorData_t *sensors);
@@ -246,11 +251,21 @@ static void testProps(sensorData_t *sensors)
   static float accVarYnf;
   static float accVarZnf;
   static int motorToTest = 0;
+  static uint8_t nrFailedTests = 0;
+
+  static float idleVoltage;
+  static float minSingleLoadedVoltage[4];
+  static float minLoadedVoltage;
 
   if (testState == configureAcc)
   {
     sensorsSetAccMode(ACC_MODE_PROPTEST);
     testState = measureNoiseFloor;
+    minLoadedVoltage = idleVoltage = pmGetBatteryVoltage();
+    minSingleLoadedVoltage[MOTOR_M1] = minLoadedVoltage;
+    minSingleLoadedVoltage[MOTOR_M2] = minLoadedVoltage;
+    minSingleLoadedVoltage[MOTOR_M3] = minLoadedVoltage;
+    minSingleLoadedVoltage[MOTOR_M4] = minLoadedVoltage;
   }
   if (testState == measureNoiseFloor)
   {
@@ -264,8 +279,8 @@ static void testProps(sensorData_t *sensors)
       accVarXnf = variance(accX, 100);
       accVarYnf = variance(accY, 100);
       accVarZnf = variance(accZ, 100);
-      DEBUG_PRINT("Acc noise floor variance X:%f, Y:%f, Z:%f\n",
-                  (double)accVarXnf, (double)accVarYnf, (double)accVarZnf);
+//      DEBUG_PRINT("Acc noise floor variance X:%f, Y:%f, Z:%f\n",
+//                  (double)accVarXnf, (double)accVarYnf, (double)accVarZnf);
       testState = measureProp;
     }
 
@@ -277,6 +292,10 @@ static void testProps(sensorData_t *sensors)
       accX[i] = sensors->acc.x;
       accY[i] = sensors->acc.y;
       accZ[i] = sensors->acc.z;
+      if (pmGetBatteryVoltage() < minSingleLoadedVoltage[motorToTest])
+      {
+        minSingleLoadedVoltage[motorToTest] = pmGetBatteryVoltage();
+      }
     }
     i++;
 
@@ -293,9 +312,9 @@ static void testProps(sensorData_t *sensors)
       accVarX[motorToTest] = variance(accX, 100);
       accVarY[motorToTest] = variance(accY, 100);
       accVarZ[motorToTest] = variance(accZ, 100);
-      DEBUG_PRINT("Motor M%d variance X:%f, Y:%f, Z:%f\n",
-                   motorToTest+1, (double)accVarX[motorToTest],
-                   (double)accVarY[motorToTest], (double)accVarZ[motorToTest]);
+//      DEBUG_PRINT("Motor M%d variance X:%f, Y:%f, Z:%f\n",
+//                   motorToTest+1, (double)accVarX[motorToTest],
+//                   (double)accVarY[motorToTest], (double)accVarZ[motorToTest]);
     }
     else if (i >= 1000)
     {
@@ -303,10 +322,60 @@ static void testProps(sensorData_t *sensors)
       motorToTest++;
       if (motorToTest >= 4)
       {
+        i = 0;
         motorToTest = 0;
-        testState = evaluateResult;
+        testState = testBattery;
         sensorsSetAccMode(ACC_MODE_FLIGHT);
       }
+    }
+  }
+  else if (testState == testBattery)
+  {
+    if (i == 0)
+    {
+      minLoadedVoltage = idleVoltage = pmGetBatteryVoltage();
+    }
+    if (i == 1)
+    {
+      motorsSetRatio(MOTOR_M1, 0xFFFF);
+      motorsSetRatio(MOTOR_M2, 0xFFFF);
+      motorsSetRatio(MOTOR_M3, 0xFFFF);
+      motorsSetRatio(MOTOR_M4, 0xFFFF);
+    }
+    else if (i < 50)
+    {
+      if (pmGetBatteryVoltage() < minLoadedVoltage)
+        minLoadedVoltage = pmGetBatteryVoltage();
+    }
+    else if (i == 50)
+    {
+      motorsSetRatio(MOTOR_M1, 0);
+      motorsSetRatio(MOTOR_M2, 0);
+      motorsSetRatio(MOTOR_M3, 0);
+      motorsSetRatio(MOTOR_M4, 0);
+//      DEBUG_PRINT("IdleV: %f, minV: %f, M1V: %f, M2V: %f, M3V: %f, M4V: %f\n", (double)idleVoltage,
+//                  (double)minLoadedVoltage,
+//                  (double)minSingleLoadedVoltage[MOTOR_M1],
+//                  (double)minSingleLoadedVoltage[MOTOR_M2],
+//                  (double)minSingleLoadedVoltage[MOTOR_M3],
+//                  (double)minSingleLoadedVoltage[MOTOR_M4]);
+      DEBUG_PRINT("%f %f %f %f %f %f\n", (double)idleVoltage,
+                  (double)(idleVoltage - minLoadedVoltage),
+                  (double)(idleVoltage - minSingleLoadedVoltage[MOTOR_M1]),
+                  (double)(idleVoltage - minSingleLoadedVoltage[MOTOR_M2]),
+                  (double)(idleVoltage - minSingleLoadedVoltage[MOTOR_M3]),
+                  (double)(idleVoltage - minSingleLoadedVoltage[MOTOR_M4]));
+      testState = restartBatTest;
+      i = 0;
+    }
+    i++;
+  }
+  else if (testState == restartBatTest)
+  {
+    if (i++ > 2000)
+    {
+      testState = configureAcc;
+      i = 0;
     }
   }
   else if (testState == evaluateResult)
@@ -315,6 +384,7 @@ static void testProps(sensorData_t *sensors)
     {
       if (!evaluateTest(0, 2.0f,  accVarX[m] + accVarY[m], m + 1))
       {
+        nrFailedTests++;
         for (int j = 0; j < 3; j++)
         {
           motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
@@ -322,6 +392,17 @@ static void testProps(sensorData_t *sensors)
           motorsBeep(m, false, 0, 0);
           vTaskDelay(M2T(100));
         }
+      }
+    }
+
+    if (nrFailedTests == 0)
+    {
+      for (int m = 0; m < 4; m++)
+      {
+        motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+        vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
+        motorsBeep(m, false, 0, 0);
+        vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
       }
     }
     testState = testDone;

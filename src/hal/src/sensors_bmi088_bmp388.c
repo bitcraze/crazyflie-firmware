@@ -54,7 +54,6 @@
 #include "bmp3.h"
 #include "bstdr_types.h"
 
-#define SENSORS_TAKE_ACCEL_BIAS
 #define GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
 
 #define SENSORS_READ_RATE_HZ            1000
@@ -769,18 +768,6 @@ bool sensorsManufacturingTest(void)
   return true;
 }
 
-void __attribute__((used)) EXTI14_Callback(void)
-{
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-  imuIntTimestamp = usecTimestamp();
-  xSemaphoreGiveFromISR(sensorsDataReady, &xHigherPriorityTaskWoken);
-
-  if (xHigherPriorityTaskWoken)
-  {
-    portYIELD();
-  }
-}
-
 /**
  * Compensate for a miss-aligned accelerometer. It uses the trim
  * data gathered from the UI and written in the config-block to
@@ -847,6 +834,18 @@ static void applyAxis3fLpf(lpf2pData *data, Axis3f* in)
 {
   for (uint8_t i = 0; i < 3; i++) {
     in->axis[i] = lpf2pApply(&data[i], in->axis[i]);
+  }
+}
+
+void __attribute__((used)) EXTI14_Callback(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  imuIntTimestamp = usecTimestamp();
+  xSemaphoreGiveFromISR(sensorsDataReady, &xHigherPriorityTaskWoken);
+
+  if (xHigherPriorityTaskWoken)
+  {
+    portYIELD();
   }
 }
 
