@@ -58,7 +58,7 @@ void initUsecTimer(void)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  DBGMCU_Config(DBGMCU_TIM7_STOP, ENABLE);
+  DBGMCU_APB1PeriphConfig(DBGMCU_TIM7_STOP, ENABLE);
   TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);
   TIM_Cmd(TIM7, ENABLE);
 }

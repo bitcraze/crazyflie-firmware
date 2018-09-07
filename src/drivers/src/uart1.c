@@ -25,6 +25,8 @@
  */
 #include <string.h>
 
+#include "stm32fxxx.h"
+
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -42,6 +44,7 @@
 
 static xQueueHandle uart1queue;
 static bool isInit = false;
+static bool hasOverrun = false;
 
 void uart1Init(const uint32_t baudrate)
 {
@@ -139,6 +142,14 @@ void uart1Getchar(char * ch)
   xQueueReceive(uart1queue, ch, portMAX_DELAY);
 }
 
+bool uart1DidOverrun()
+{
+  bool result = hasOverrun;
+  hasOverrun = false;
+
+  return result;
+}
+
 void __attribute__((used)) USART3_IRQHandler(void)
 {
   uint8_t rxData;
@@ -148,5 +159,15 @@ void __attribute__((used)) USART3_IRQHandler(void)
   {
     rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
     xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
+  } else {
+    /** if we get here, the error is most likely caused by an overrun!
+     * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
+     * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
+     * - reading USART_SR register followed reading the USART_DR register.
+     */
+    asm volatile ("" : "=m" (UART1_TYPE->SR) : "r" (UART1_TYPE->SR)); // force non-optimizable reads
+    asm volatile ("" : "=m" (UART1_TYPE->DR) : "r" (UART1_TYPE->DR)); // of these two registers
+
+    hasOverrun = true;
   }
 }

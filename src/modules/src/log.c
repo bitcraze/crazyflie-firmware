@@ -572,7 +572,7 @@ static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
       return ENOMEM;
     }
 
-    if (settings[i].id != 255)  //TOC variable
+    if (settings[i].id != 0xFFFFul)  //TOC variable
     {
       varId = variableGetIndex(settings[i].id);
 

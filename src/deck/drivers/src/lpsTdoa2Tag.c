@@ -451,6 +451,28 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
   return false;
 }
 
+static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  for (int i = 0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
+    unorderedAnchorList[i] = i;
+  }
+
+  return LOCODECK_NR_OF_TDOA2_ANCHORS;
+}
+
+static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  uint32_t now = xTaskGetTickCount();
+  uint8_t count = 0;
+
+  for (int i = 0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
+    if (now < history[i].anchorStatusTimeout) {
+      unorderedAnchorList[count] = i;
+      count++;
+    }
+  }
+
+  return count;
+}
+
 // Loco Posisioning Protocol (LPP) handling
 static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data)
 {
@@ -472,6 +494,8 @@ uwbAlgorithm_t uwbTdoa2TagAlgorithm = {
   .onEvent = onEvent,
   .isRangingOk = isRangingOk,
   .getAnchorPosition = getAnchorPosition,
+  .getAnchorIdList = getAnchorIdList,
+  .getActiveAnchorIdList = getActiveAnchorIdList,
 };
 
 void lpsTdoa2TagSetOptions(lpsTdoa2AlgoOptions_t* newOptions) {

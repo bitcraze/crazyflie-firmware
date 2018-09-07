@@ -90,6 +90,14 @@ int uart1Putchar(int ch);
 void uart1Getchar(char * ch);
 
 /**
+ * Returns true if an overrun condition has happened since initialisation or
+ * since the last call to this funcion.
+ * 
+ * @return true if an overrun condition has happened
+ */
+bool uart1DidOverrun();
+
+/**
  * Uart printf macro that uses eprintf
  * @param[in] FMT String format
  * @param[in] ... Parameters to print

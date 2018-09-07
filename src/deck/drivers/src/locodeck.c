@@ -147,10 +147,43 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
 
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
+// TODO krri Break the dependency, do not call directly from other modules into the deck driver
 bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
 {
+  if (!isInit) {
+    return false;
+  }
+
   xSemaphoreTake(algoSemaphore, portMAX_DELAY);
   bool result = algorithm->getAnchorPosition(anchorId, position);
+  xSemaphoreGive(algoSemaphore);
+  return result;
+}
+
+// This function is called from the memory sub system that runs in a different
+// task, protect it from concurrent calls from this task
+// TODO krri Break the dependency, do not call directly from other modules into the deck driver
+uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  if (!isInit) {
+    return 0;
+  }
+
+  xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+  uint8_t result = algorithm->getAnchorIdList(unorderedAnchorList, maxListSize);
+  xSemaphoreGive(algoSemaphore);
+  return result;
+}
+
+// This function is called from the memory sub system that runs in a different
+// task, protect it from concurrent calls from this task
+// TODO krri Break the dependency, do not call directly from other modules into the deck driver
+uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  if (!isInit) {
+    return 0;
+  }
+
+  xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+  uint8_t result = algorithm->getActiveAnchorIdList(unorderedAnchorList, maxListSize);
   xSemaphoreGive(algoSemaphore);
   return result;
 }

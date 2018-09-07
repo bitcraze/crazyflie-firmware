@@ -182,6 +182,124 @@ void testThatTheOldestAnchorContextIsReplacedWhenStorageIsFull() {
 }
 
 
+void testThatAListOfAnchorIdsIsReturned() {
+  // Fixture
+  tdoaAnchorContext_t context;
+  uint32_t currentTime = 1234;
+
+  uint8_t expectedId0 = 17;
+  uint8_t expectedId1 = 47;
+  uint8_t expectedId2 = 11;
+
+  uint8_t expectedCount = 3;
+
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId0, currentTime, &context);
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId1, currentTime, &context);
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId2, currentTime, &context);
+
+  uint8_t unorderedAnchorList[10];
+
+  // Test
+  uint8_t actualCount = tdoaStorageGetListOfAnchorIds(storage, unorderedAnchorList, 10);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT8(expectedCount, actualCount);
+  TEST_ASSERT_EQUAL_INT8(expectedId0, unorderedAnchorList[0]);
+  TEST_ASSERT_EQUAL_INT8(expectedId1, unorderedAnchorList[1]);
+  TEST_ASSERT_EQUAL_INT8(expectedId2, unorderedAnchorList[2]);
+}
+
+void testThatAListOfAnchorIdsIsReturnedButNotMoreThanTheListLength() {
+  // Fixture
+  tdoaAnchorContext_t context;
+  uint32_t currentTime = 1234;
+
+  uint8_t expectedId0 = 17;
+  uint8_t expectedId1 = 47;
+  uint8_t expectedId2 = 11;
+
+  uint8_t expectedCount = 2;
+
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId0, currentTime, &context);
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId1, currentTime, &context);
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId2, currentTime, &context);
+
+  uint8_t unorderedAnchorList[10];
+
+  // Test
+  uint8_t actualCount = tdoaStorageGetListOfAnchorIds(storage, unorderedAnchorList, expectedCount);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT8(expectedCount, actualCount);
+  TEST_ASSERT_EQUAL_INT8(expectedId0, unorderedAnchorList[0]);
+  TEST_ASSERT_EQUAL_INT8(expectedId1, unorderedAnchorList[1]);
+}
+
+
+void testThatAListOfActiveAnchorIdsIsReturned() {
+  // Fixture
+  tdoaAnchorContext_t context;
+  uint32_t oldTime = 1234; // Not valid
+  // Validity time is 2000 ms
+  uint32_t recentTime = 9000; // Still valid
+  uint32_t currentTime = 10000;
+
+
+  uint8_t expectedId0 = 17;
+  uint8_t expectedId1 = 47;
+  uint8_t otherId = 11;
+
+  uint8_t expectedCount = 2;
+
+  tdoaStorageGetCreateAnchorCtx(storage, otherId, oldTime, &context);
+  tdoaStorageSetRxTxData(&context, 0, 0, 0);
+
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId0, recentTime, &context);
+  tdoaStorageSetRxTxData(&context, 0, 0, 0);
+
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId1, recentTime, &context);
+  tdoaStorageSetRxTxData(&context, 0, 0, 0);
+
+  uint8_t unorderedAnchorList[10];
+
+  // Test
+  uint8_t actualCount = tdoaStorageGetListOfActiveAnchorIds(storage, unorderedAnchorList, 10, currentTime);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT8(expectedCount, actualCount);
+  TEST_ASSERT_EQUAL_INT8(expectedId0, unorderedAnchorList[0]);
+  TEST_ASSERT_EQUAL_INT8(expectedId1, unorderedAnchorList[1]);
+}
+
+
+void testThatAListOfActiveAnchorIdsIsReturnedButNotMoreThanTheListLength() {
+  // Fixture
+  tdoaAnchorContext_t context;
+  uint32_t currentTime = 10000;
+
+
+  uint8_t expectedId0 = 17;
+  uint8_t otherId = 11;
+
+  uint8_t expectedCount = 1;
+
+  tdoaStorageGetCreateAnchorCtx(storage, expectedId0, currentTime, &context);
+  tdoaStorageSetRxTxData(&context, 0, 0, 0);
+
+  tdoaStorageGetCreateAnchorCtx(storage, otherId, currentTime, &context);
+  tdoaStorageSetRxTxData(&context, 0, 0, 0);
+
+  uint8_t unorderedAnchorList[10];
+
+  // Test
+  uint8_t actualCount = tdoaStorageGetListOfActiveAnchorIds(storage, unorderedAnchorList, expectedCount, currentTime);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT8(expectedCount, actualCount);
+  TEST_ASSERT_EQUAL_INT8(expectedId0, unorderedAnchorList[0]);
+}
+
+
 void testThatAnchorPositionIsSetAndGet() {
   // Fixture
   float expectedX = 1.0;

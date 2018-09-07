@@ -82,6 +82,8 @@ typedef struct {
 } lpsAlgoOptions_t;
 
 bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position);
+uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
+uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
 
 // Callbacks for uwb algorithms
 typedef struct uwbAlgorithm_s {
@@ -89,6 +91,8 @@ typedef struct uwbAlgorithm_s {
   uint32_t (*onEvent)(dwDevice_t *dev, uwbEvent_t event);
   bool (*isRangingOk)();
   bool (*getAnchorPosition)(const uint8_t anchorId, point_t* position);
+  uint8_t (*getAnchorIdList)(uint8_t unorderedAnchorList[], const int maxListSize);
+  uint8_t (*getActiveAnchorIdList)(uint8_t unorderedAnchorList[], const int maxListSize);
 } uwbAlgorithm_t;
 
 #include <FreeRTOS.h>

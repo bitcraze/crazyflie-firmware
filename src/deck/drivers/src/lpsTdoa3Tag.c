@@ -289,6 +289,15 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
   return false;
 }
 
+static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  return tdoaStorageGetListOfAnchorIds(engineState.anchorInfoArray, unorderedAnchorList, maxListSize);
+}
+
+static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+  uint32_t now_ms = T2M(xTaskGetTickCount());
+  return tdoaStorageGetListOfActiveAnchorIds(engineState.anchorInfoArray, unorderedAnchorList, maxListSize, now_ms);
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev) {
@@ -317,6 +326,8 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .onEvent = onEvent,
   .isRangingOk = isRangingOk,
   .getAnchorPosition = getAnchorPosition,
+  .getAnchorIdList = getAnchorIdList,
+  .getActiveAnchorIdList = getActiveAnchorIdList,
 };
 
 

@@ -39,6 +39,7 @@ Data storage encapsulation for the TDoA engine
 #define TOF_VALIDITY_PERIOD (2 * 1000)
 #define REMOTE_DATA_VALIDITY_PERIOD 30
 #define ANCHOR_POSITION_VALIDITY_PERIOD (2 * 1000)
+#define ANCHOR_ACTIVE_VALIDITY_PERIOD (2 * 1000)
 
 
 static tdoaAnchorInfo_t* initializeSlot(tdoaAnchorInfo_t anchorStorage[], const uint8_t slot, const uint8_t anchor);
@@ -97,6 +98,33 @@ bool tdoaStorageGetAnchorCtx(tdoaAnchorInfo_t anchorStorage[], const uint8_t anc
 
   anchorCtx->anchorInfo = 0;
   return false;
+}
+
+uint8_t tdoaStorageGetListOfAnchorIds(tdoaAnchorInfo_t anchorStorage[], uint8_t unorderedAnchorList[], const int maxListSize) {
+  int count = 0;
+
+  for (int i = 0; i < ANCHOR_STORAGE_COUNT && count < maxListSize; i++) {
+    if (anchorStorage[i].isInitialized) {
+      unorderedAnchorList[count] = anchorStorage[i].id;
+      count++;
+    }
+  }
+
+  return count;
+}
+
+uint8_t tdoaStorageGetListOfActiveAnchorIds(tdoaAnchorInfo_t anchorStorage[], uint8_t unorderedAnchorList[], const int maxListSize, const uint32_t currentTime_ms) {
+  int count = 0;
+
+  const uint32_t expiryTime = currentTime_ms - ANCHOR_ACTIVE_VALIDITY_PERIOD;
+  for (int i = 0; i < ANCHOR_STORAGE_COUNT && count < maxListSize; i++) {
+    if (anchorStorage[i].isInitialized && anchorStorage[i].lastUpdateTime > expiryTime) {
+      unorderedAnchorList[count] = anchorStorage[i].id;
+      count++;
+    }
+  }
+
+  return count;
 }
 
 uint8_t tdoaStorageGetId(const tdoaAnchorContext_t* anchorCtx) {
