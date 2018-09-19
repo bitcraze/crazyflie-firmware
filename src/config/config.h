@@ -158,6 +158,13 @@
 #define RADIO_ADDRESS 0xE7E7E7E7E7ULL
 
 /**
+ * \def PROPELLER_BALANCE_TEST_THRESHOLD
+ * This is the threshold for a propeller/motor to pass. It calculates the variance of the accelerometer X+Y
+ * when the propeller is spinning.
+ */
+#define PROPELLER_BALANCE_TEST_THRESHOLD  2.5f
+
+/**
  * \def ACTIVATE_AUTO_SHUTDOWN
  * Will automatically shot of system if no radio activity
  */
