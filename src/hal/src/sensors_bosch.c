@@ -839,6 +839,19 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->z = ry.z;
 }
 
+void sensorsSetAccMode(accModes accMode)
+{
+  // Difficult to switch mode so do nothing.
+  switch (accMode)
+  {
+    case ACC_MODE_PROPTEST:
+      break;
+    case ACC_MODE_FLIGHT:
+    default:
+      break;
+  }
+}
+
 PARAM_GROUP_START(imu_sensors)
 PARAM_ADD(PARAM_UINT8, BoschGyrSel, &gyroPrimInUse)
 PARAM_ADD(PARAM_UINT8, BoschAccSel, &accelPrimInUse)
