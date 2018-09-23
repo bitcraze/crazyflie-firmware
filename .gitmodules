@@ -10,3 +10,7 @@
 [submodule "vendor/CMSIS"]
 	path = vendor/CMSIS
 	url = https://github.com/ARM-software/CMSIS
+[submodule "vendor/FIFO"]
+	path = vendor/FIFO
+	url = https://github.com/acecilia/FIFO
+	branch = fifo_add_despite_full

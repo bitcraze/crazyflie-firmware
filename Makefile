@@ -87,6 +87,9 @@ ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 # libdw dw1000 driver
 VPATH_CF2 += vendor/libdw1000/src
 
+# FIFO queue implementation
+VPATH_CF2 += vendor/FIFO/src
+
 # vl53l1 driver
 VPATH_CF2 += $(LIB)/vl53l1/core/src
 
@@ -143,6 +146,9 @@ PROJ_OBJ_CF2 +=  sensors_$(SENSORS).o
 # libdw
 PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
 
+# FIFO queue implementation
+PROJ_OBJ_CF2 += FIFO.o
+
 # vl53l1 lib
 PROJ_OBJ_CF2 += vl53l1_api_core.o vl53l1_api.o vl53l1_core.o vl53l1_silicon_core.o vl53l1_api_strings.o
 PROJ_OBJ_CF2 += vl53l1_api_calibration.o vl53l1_api_debug.o vl53l1_api_preset_modes.o vl53l1_error_strings.o
@@ -185,7 +191,6 @@ PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
 PROJ_OBJ_CF2 += zranger.o zranger2.o
 PROJ_OBJ_CF2 += locodeck.o
-PROJ_OBJ_CF2 += clockCorrectionEngine.o
 PROJ_OBJ_CF2 += lpsTwrTag.o
 PROJ_OBJ_CF2 += lpsTdoa2Tag.o
 PROJ_OBJ_CF2 += lpsTdoa3Tag.o tdoaEngine.o tdoaStats.o tdoaStorage.o
@@ -217,6 +222,8 @@ PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF2 += configblockeeprom.o crc_bosch.o
 PROJ_OBJ_CF2 += sleepus.o
+PROJ_OBJ_CF2 += clockCorrectionEngine.o
+PROJ_OBJ_CF2 += estimatorKalmanEngine.o estimatorKalmanStorage.o
 
 # Libs
 PROJ_OBJ_CF2 += libarm_math.a
@@ -249,6 +256,7 @@ INCLUDES_CF2 += -I$(LIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Isrc/deck/interface -Isrc/deck/drivers/interface
 INCLUDES_CF2 += -Isrc/utils/interface/clockCorrection
+INCLUDES_CF2 += -Isrc/utils/interface/estimatorKalman
 INCLUDES_CF2 += -Isrc/utils/interface/tdoa
 INCLUDES_CF2 += -Ivendor/libdw1000/inc
 INCLUDES_CF2 += -I$(LIB)/FatFS
