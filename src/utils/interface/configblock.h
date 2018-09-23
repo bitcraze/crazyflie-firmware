@@ -25,6 +25,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef __CONFIGBLOCK_H__
 #define __CONFIGBLOCK_H__

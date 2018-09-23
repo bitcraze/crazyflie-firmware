@@ -172,8 +172,9 @@ static void extPositionPackedHandler(CRTPPacket* pk)
 
 bool getExtPosition(state_t *state)
 {
-  // Only use position information if it's valid and recent
-  if ((xTaskGetTickCount() - crtpExtPosCache.timestamp) < M2T(5)) {
+  // Only use position information if it's valid, recent, and if the kalman filter is enabled
+  if (getStateEstimator() == kalmanEstimator && 
+      (xTaskGetTickCount() - crtpExtPosCache.timestamp) < M2T(5)) {
     // Get the updated position from the mocap
     ext_pos.x = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].x;
     ext_pos.y = crtpExtPosCache.targetVal[crtpExtPosCache.activeSide].y;

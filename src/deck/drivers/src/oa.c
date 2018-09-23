@@ -178,6 +178,10 @@ static const DeckDriver oa_deck = {
 
 DECK_DRIVER(oa_deck);
 
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcOA, &isInit)
+PARAM_GROUP_STOP(deck)
+
 LOG_GROUP_START(oa)
 LOG_ADD(LOG_UINT16, front, &rangeFront)
 LOG_ADD(LOG_UINT16, back, &rangeBack)
@@ -185,7 +189,3 @@ LOG_ADD(LOG_UINT16, up, &rangeUp)
 LOG_ADD(LOG_UINT16, left, &rangeLeft)
 LOG_ADD(LOG_UINT16, right, &rangeRight)
 LOG_GROUP_STOP(oa)
-
-PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcOA, &isInit)
-PARAM_GROUP_STOP(deck)

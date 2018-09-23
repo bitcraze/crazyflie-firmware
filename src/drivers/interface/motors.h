@@ -202,6 +202,10 @@ extern const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapRZRBrushless[NBR_OF_MOTORS];
 
+/**
+ * Test sound tones
+ */
+extern const uint16_t testsound[NBR_OF_MOTORS];
 /*** Public interface ***/
 
 /**
@@ -234,6 +238,17 @@ int motorsGetRatio(uint32_t id);
  * FreeRTOS Task to test the Motors driver
  */
 void motorsTestTask(void* params);
+
+/* Set PWM frequency for motor controller
+ * This function will set all motors into a "beep"-mode,
+ * each of the motor will turned on with a given ratio and frequency.
+ * The higher the ratio the higher the given power to the motors.
+ * ATTENTION: To much ratio can push your crazyflie into the air and hurt you!
+ * Example:
+ *     motorsBeep(true, 1000, (uint16_t)(72000000L / frequency)/ 20);
+ *     motorsBeep(false, 0, 0); *
+ * */
+void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 
 #endif /* __MOTORS_H__ */
 

@@ -67,7 +67,8 @@
 #define LEDMEM_ID       0x01
 #define LOCO_ID         0x02
 #define TRAJ_ID         0x03
-#define OW_FIRST_ID     0x04
+#define LOCO2_ID        0x04
+#define OW_FIRST_ID     0x05
 
 #define STATUS_OK 0
 
@@ -76,11 +77,21 @@
 #define MEM_TYPE_LED12  0x10
 #define MEM_TYPE_LOCO   0x11
 #define MEM_TYPE_TRAJ   0x12
+#define MEM_TYPE_LOCO2  0x13
 
 #define MEM_LOCO_INFO             0x0000
 #define MEM_LOCO_ANCHOR_BASE      0x1000
 #define MEM_LOCO_ANCHOR_PAGE_SIZE 0x0100
 #define MEM_LOCO_PAGE_LEN         (3 * sizeof(float) + 1)
+
+#define LOCO_MESSAGE_NR_OF_ANCHORS 8
+
+#define MEM_LOCO2_ID_LIST          0x0000
+#define MEM_LOCO2_ACTIVE_LIST      0x1000
+#define MEM_LOCO2_ANCHOR_BASE      0x2000
+#define MEM_LOCO2_ANCHOR_PAGE_SIZE 0x0100
+#define MEM_LOCO2_PAGE_LEN         (3 * sizeof(float) + 1)
+
 
 //Private functions
 static void memTask(void * prm);
@@ -88,6 +99,7 @@ static void memSettingsProcess(int command);
 static void memWriteProcess(void);
 static void memReadProcess(void);
 static uint8_t handleLocoMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest);
+static uint8_t handleLoco2MemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest);
 static void createNbrResponse(CRTPPacket* p);
 static void createInfoResponse(CRTPPacket* p, uint8_t memId);
 static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8]);
@@ -192,10 +204,13 @@ void createInfoResponse(CRTPPacket* p, uint8_t memId)
       createInfoResponseBody(p, MEM_TYPE_LED12, sizeof(ledringmem), noData);
       break;
     case LOCO_ID:
-      createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCODECK_NR_OF_ANCHORS, noData);
+      createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCO_MESSAGE_NR_OF_ANCHORS, noData);
       break;
     case TRAJ_ID:
       createInfoResponseBody(p, MEM_TYPE_TRAJ, sizeof(trajectories_memory), noData);
+      break;
+    case LOCO2_ID:
+      createInfoResponseBody(p, MEM_TYPE_LOCO2, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256, noData);
       break;
     default:
       if (owGetinfo(memId - OW_FIRST_ID, &serialNbr))
@@ -269,6 +284,10 @@ void memReadProcess()
       }
       break;
 
+    case LOCO2_ID:
+      status = handleLoco2MemRead(memAddr, readLen, &p.data[6]);
+      break;
+
     default:
       {
         memId = memId - OW_FIRST_ID;
@@ -304,31 +323,42 @@ void memReadProcess()
 uint8_t handleLocoMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest) {
   uint8_t status = EIO;
 
+  // This message was defined for TWR and TDoA2 that supports up to 8 anchors
+  // with ids 0 - 7. Adapt data to this format even if it means we have to
+  // throw away some data to stay compatible with old clients.
+
   if (MEM_LOCO_INFO == memAddr)
   {
     if (1 == readLen)
     {
-      *dest = LOCODECK_NR_OF_ANCHORS;
+      *dest = LOCO_MESSAGE_NR_OF_ANCHORS;
       status = STATUS_OK;
     }
   }
   else
   {
-    if (memAddr >= MEM_LOCO_ANCHOR_BASE)
+    if (memAddr >= MEM_LOCO_ANCHOR_BASE && readLen == MEM_LOCO_PAGE_LEN)
     {
       uint32_t pageAddress = memAddr - MEM_LOCO_ANCHOR_BASE;
       if ((pageAddress % MEM_LOCO_ANCHOR_PAGE_SIZE) == 0)
       {
         uint32_t page = pageAddress / MEM_LOCO_ANCHOR_PAGE_SIZE;
-        if (page < LOCODECK_NR_OF_ANCHORS && MEM_LOCO_PAGE_LEN == readLen)
-        {
-          point_t* position = locodeckGetAnchorPosition(page);
-          float* destAsFloat = (float*)dest;
-          destAsFloat[0] = position->x;
-          destAsFloat[1] = position->y;
-          destAsFloat[2] = position->z;
+        uint8_t anchorId = page;
 
-          bool hasBeenSet = (position->timestamp != 0);
+        if (anchorId < LOCO_MESSAGE_NR_OF_ANCHORS)
+        {
+          point_t position;
+          if (!locoDeckGetAnchorPosition(anchorId, &position))
+          {
+            memset(&position, 0, sizeof(position));
+          }
+
+          float* destAsFloat = (float*)dest;
+          destAsFloat[0] = position.x;
+          destAsFloat[1] = position.y;
+          destAsFloat[2] = position.z;
+
+          bool hasBeenSet = (position.timestamp != 0);
           dest[sizeof(float) * 3] = hasBeenSet;
 
           status = STATUS_OK;
@@ -340,6 +370,76 @@ uint8_t handleLocoMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest) {
   return status;
 }
 
+static void buildAnchorList(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest, const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[])
+{
+  for (int i = 0; i < readLen; i++)
+  {
+    int address = memAddr + i;
+    int addressInPage = address - pageBase_address;
+    uint8_t val = 0;
+
+    if (addressInPage == 0)
+    {
+      val = anchorCount;
+    }
+    else
+    {
+      int anchorIndex = addressInPage - 1;
+      if (anchorIndex < anchorCount)
+      {
+        val = unsortedAnchorList[anchorIndex];
+      }
+    }
+
+    dest[i] = val;
+  }
+}
+
+#define ANCHOR_ID_LIST_LENGTH 256
+uint8_t handleLoco2MemRead(uint32_t memAddr, uint8_t readLen, uint8_t* dest) {
+  uint8_t status = EIO;
+  static uint8_t unsortedAnchorList[ANCHOR_ID_LIST_LENGTH];
+
+  if (memAddr >= MEM_LOCO2_ID_LIST && memAddr < MEM_LOCO2_ACTIVE_LIST)
+  {
+    uint8_t anchorCount = locoDeckGetAnchorIdList(unsortedAnchorList, ANCHOR_ID_LIST_LENGTH);
+    buildAnchorList(memAddr, readLen, dest, MEM_LOCO2_ID_LIST, anchorCount, unsortedAnchorList);
+    status = STATUS_OK;
+  }
+  else if (memAddr >= MEM_LOCO2_ACTIVE_LIST && memAddr < MEM_LOCO2_ANCHOR_BASE)
+  {
+    uint8_t anchorCount = locoDeckGetActiveAnchorIdList(unsortedAnchorList, ANCHOR_ID_LIST_LENGTH);
+    buildAnchorList(memAddr, readLen, dest, MEM_LOCO2_ACTIVE_LIST, anchorCount, unsortedAnchorList);
+    status = STATUS_OK;
+  }
+  else
+  {
+    if (memAddr >= MEM_LOCO2_ANCHOR_BASE)
+    {
+      uint32_t pageAddress = memAddr - MEM_LOCO2_ANCHOR_BASE;
+      if ((pageAddress % MEM_LOCO2_ANCHOR_PAGE_SIZE) == 0 && MEM_LOCO2_PAGE_LEN == readLen)
+      {
+        uint32_t anchorId = pageAddress / MEM_LOCO2_ANCHOR_PAGE_SIZE;
+
+        point_t position;
+        memset(&position, 0, sizeof(position));
+        locoDeckGetAnchorPosition(anchorId, &position);
+
+        float* destAsFloat = (float*)dest;
+        destAsFloat[0] = position.x;
+        destAsFloat[1] = position.y;
+        destAsFloat[2] = position.z;
+
+        bool hasBeenSet = (position.timestamp != 0);
+        dest[sizeof(float) * 3] = hasBeenSet;
+
+        status = STATUS_OK;
+      }
+    }
+  }
+
+  return status;
+}
 void memWriteProcess()
 {
   uint8_t memId = p.data[0];
@@ -381,6 +481,8 @@ void memWriteProcess()
       break;
 
     case LOCO_ID:
+        // Fall through
+    case LOCO2_ID:
       // Not supported
       status = EIO;
       break;
