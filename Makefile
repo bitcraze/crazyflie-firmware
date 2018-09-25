@@ -73,6 +73,7 @@ VPATH_CF2 += $(LIB)/CMSIS/STM32F4xx/Source/
 VPATH_CF2 += $(LIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(LIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += src/deck/api src/deck/core src/deck/drivers/src src/deck/drivers/src/test
+VPATH_CF2 += src/utils/src/estimatorKalman
 VPATH_CF2 += src/utils/src/tdoa
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
@@ -84,11 +85,11 @@ ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 # USB Device obj
 ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 
-# libdw dw1000 driver
-VPATH_CF2 += vendor/libdw1000/src
-
 # FIFO queue implementation
 VPATH_CF2 += vendor/FIFO/src
+
+# libdw dw1000 driver
+VPATH_CF2 += vendor/libdw1000/src
 
 # vl53l1 driver
 VPATH_CF2 += $(LIB)/vl53l1/core/src
@@ -223,7 +224,7 @@ PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF2 += configblockeeprom.o crc_bosch.o
 PROJ_OBJ_CF2 += sleepus.o
 PROJ_OBJ_CF2 += clockCorrectionEngine.o
-PROJ_OBJ_CF2 += estimatorKalmanEngine.o estimatorKalmanStorage.o
+PROJ_OBJ_CF2 += estimatorKalmanEngine.o
 
 # Libs
 PROJ_OBJ_CF2 += libarm_math.a
@@ -255,9 +256,9 @@ INCLUDES_CF2 += -I$(LIB)/CMSIS/STM32F4xx/Include
 INCLUDES_CF2 += -I$(LIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Isrc/deck/interface -Isrc/deck/drivers/interface
-INCLUDES_CF2 += -Isrc/utils/interface/clockCorrection
 INCLUDES_CF2 += -Isrc/utils/interface/estimatorKalman
 INCLUDES_CF2 += -Isrc/utils/interface/tdoa
+INCLUDES_CF2 += -Ivendor/FIFO/src
 INCLUDES_CF2 += -Ivendor/libdw1000/inc
 INCLUDES_CF2 += -I$(LIB)/FatFS
 INCLUDES_CF2 += -I$(LIB)/vl53l1
