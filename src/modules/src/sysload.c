@@ -47,7 +47,7 @@ typedef struct {
   uint32_t xTaskNumber;
 } taskData_t;
 
-#define TASK_MAX_COUNT 16
+#define TASK_MAX_COUNT 32
 static taskData_t previousSnapshot[TASK_MAX_COUNT];
 static int taskTopIndex = 0;
 static uint32_t previousTotalRunTime = 0;
