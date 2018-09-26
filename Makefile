@@ -73,7 +73,7 @@ VPATH_CF2 += $(LIB)/CMSIS/STM32F4xx/Source/
 VPATH_CF2 += $(LIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(LIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += src/deck/api src/deck/core src/deck/drivers/src src/deck/drivers/src/test
-VPATH_CF2 += src/utils/src/tdoa
+VPATH_CF2 += src/utils/src/tdoa src/utils/src/lighthouse
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -193,6 +193,7 @@ PROJ_OBJ_CF2 += outlierFilter.o
 PROJ_OBJ_CF2 += flowdeck_v1v2.o
 PROJ_OBJ_CF2 += oa.o
 PROJ_OBJ_CF2 += multiranger.o
+PROJ_OBJ_CF2 += lighthouse.o
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 CFLAGS += -DLPS_TDOA_ENABLE
@@ -217,6 +218,8 @@ PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF2 += configblockeeprom.o crc_bosch.o
 PROJ_OBJ_CF2 += sleepus.o
+PROJ_OBJ_CF2 += pulseProcessor.o lighthouseGeometry.o
+
 
 # Libs
 PROJ_OBJ_CF2 += libarm_math.a
@@ -250,6 +253,7 @@ INCLUDES_CF2 += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES_CF2 += -Isrc/deck/interface -Isrc/deck/drivers/interface
 INCLUDES_CF2 += -Isrc/utils/interface/clockCorrection
 INCLUDES_CF2 += -Isrc/utils/interface/tdoa
+INCLUDES_CF2 += -Isrc/utils/interface/lighthouse
 INCLUDES_CF2 += -Ivendor/libdw1000/inc
 INCLUDES_CF2 += -I$(LIB)/FatFS
 INCLUDES_CF2 += -I$(LIB)/vl53l1
