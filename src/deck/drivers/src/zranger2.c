@@ -35,6 +35,7 @@
 #include "debug.h"
 #include "log.h"
 #include "param.h"
+#include "range.h"
 
 #include "i2cdev.h"
 #include "zranger2.h"
@@ -131,6 +132,7 @@ void zRanger2Task(void* arg)
     vTaskDelayUntil(&lastWakeTime, M2T(100));
 
     range_last = zRanger2GetMeasurementAndRestart(&dev);
+    rangeSet(rangeDown, range_last / 1000.0f);
 
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >5 [m], and outliers typically
@@ -176,7 +178,3 @@ DECK_DRIVER(zranger2_deck);
 PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcZRanger2, &isInit)
 PARAM_GROUP_STOP(deck)
-
-LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, zrange, &range_last)
-LOG_GROUP_STOP(range)

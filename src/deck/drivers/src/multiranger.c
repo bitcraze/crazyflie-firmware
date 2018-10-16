@@ -33,6 +33,7 @@
 #include "log.h"
 #include "pca95x4.h"
 #include "vl53l1x.h"
+#include "range.h"
 
 #include "i2cdev.h"
 
@@ -55,12 +56,6 @@ static VL53L1_Dev_t devBack;
 static VL53L1_Dev_t devUp;
 static VL53L1_Dev_t devLeft;
 static VL53L1_Dev_t devRight;
-
-static uint16_t rangeFront;
-static uint16_t rangeBack;
-static uint16_t rangeUp;
-static uint16_t rangeLeft;
-static uint16_t rangeRight;
 
 static uint16_t oaGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
@@ -110,11 +105,11 @@ static void oaTask(void *param)
     {
         vTaskDelayUntil(&lastWakeTime, M2T(100));
 
-        rangeFront = oaGetMeasurementAndRestart(&devFront);
-        rangeBack = oaGetMeasurementAndRestart(&devBack);
-        rangeUp = oaGetMeasurementAndRestart(&devUp);
-        rangeLeft = oaGetMeasurementAndRestart(&devLeft);
-        rangeRight = oaGetMeasurementAndRestart(&devRight);
+        rangeSet(rangeFront, oaGetMeasurementAndRestart(&devFront)/1000.0f);
+        rangeSet(rangeBack, oaGetMeasurementAndRestart(&devBack)/1000.0f);
+        rangeSet(rangeUp, oaGetMeasurementAndRestart(&devUp)/1000.0f);
+        rangeSet(rangeLeft, oaGetMeasurementAndRestart(&devLeft)/1000.0f);
+        rangeSet(rangeRight, oaGetMeasurementAndRestart(&devRight)/1000.0f);
     }
 }
 
@@ -227,14 +222,6 @@ static const DeckDriver multiranger_deck = {
 };
 
 DECK_DRIVER(multiranger_deck);
-
-LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, front, &rangeFront)
-LOG_ADD(LOG_UINT16, back, &rangeBack)
-LOG_ADD(LOG_UINT16, up, &rangeUp)
-LOG_ADD(LOG_UINT16, left, &rangeLeft)
-LOG_ADD(LOG_UINT16, right, &rangeRight)
-LOG_GROUP_STOP(range)
 
 PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
