@@ -21,31 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * outlierFilter.c: Outlier rejection filter for the LPS system
+ * outlierFilter.h: Outlier rejection filter for the LPS system
  */
 
-#include <math.h>
-#include "outlierFilter.h"
+#ifndef __OUTLIER_FILTER_H__
+#define __OUTLIER_FILTER_H__
 
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoaMeasurement_t* tdoa);
-static float distanceSq(const point_t* a, const point_t* b);
-static float sq(float a) {return a * a;}
+#include "stabilizer_types.h"
 
+bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa);
+bool outlierFilterVaildateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);
 
-bool outlierFilterValidateTdoa(tdoaMeasurement_t* tdoa) {
-  return isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa);
-}
+void outlierFilterReset();
 
-void outlierFilterReset() {
-  // Nothing here
-}
-
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoaMeasurement_t* tdoa) {  
-  float anchorDistanceSq = distanceSq(&tdoa->anchorPosition[0], &tdoa->anchorPosition[1]);
-  float distanceDiffSq = sq(tdoa->distanceDiff);
-  return (distanceDiffSq < anchorDistanceSq);
-}
-
-static float distanceSq(const point_t* a, const point_t* b) {
-  return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
-}
+#endif // __OUTLIER_FILTER_H__

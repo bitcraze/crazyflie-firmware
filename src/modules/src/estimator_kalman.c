@@ -56,6 +56,8 @@
  */
 
 #include "estimator_kalman.h"
+#include "outlierFilter.h"
+
 
 #include "stm32f4xx.h"
 
@@ -1019,39 +1021,28 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
     float h[STATE_DIM] = {0};
     arm_matrix_instance_f32 H = {1, STATE_DIM, h};
 
-    // We want to do
-    // h[STATE_X] = (dx1 / d1 - dx0 / d0);
-    // h[STATE_Y] = (dy1 / d1 - dy0 / d0);
-    // h[STATE_Z] = (dz1 / d1 - dz0 / d0);
-    // but have to handle divide by zero
+    if ((d0 != 0.0f) && (d1 != 0.0f)) {
+      h[STATE_X] = (dx1 / d1 - dx0 / d0);
+      h[STATE_Y] = (dy1 / d1 - dy0 / d0);
+      h[STATE_Z] = (dz1 / d1 - dz0 / d0);
 
-    if (d1 != 0.0f)
-    {
-      h[STATE_X] = dx1 / d1;
-      h[STATE_Y] = dy1 / d1;
-      h[STATE_Z] = dz1 / d1;
-    }
-    else
-    {
-      h[STATE_X] = 1.0f;
-      h[STATE_Y] = 0.0f;
-      h[STATE_Z] = 0.0f;
-    }
+      vector_t jacobian = {
+        .x = h[STATE_X],
+        .y = h[STATE_Y],
+        .z = h[STATE_Z],
+      };
 
-    if (d0 != 0.0f)
-    {
-      h[STATE_X] = h[STATE_X] - dx0 / d0;
-      h[STATE_Y] = h[STATE_Y] - dy0 / d0;
-      h[STATE_Z] = h[STATE_Z] - dz0 / d0;
-    }
-    else
-    {
-      h[STATE_X] = h[STATE_X] - 0.0f;
-      h[STATE_Y] = h[STATE_Y] - 1.0f;
-      h[STATE_Z] = h[STATE_Z] - 0.0f;
-    }
+      point_t estimatedPosition = {
+        .x = S[STATE_X],
+        .y = S[STATE_Y],
+        .z = S[STATE_Z],
+      };
 
-    stateEstimatorScalarUpdate(&H, error, tdoa->stdDev);
+      bool sampleIsGood = outlierFilterVaildateTdoaSteps(tdoa, error, &jacobian, &estimatedPosition);
+      if (sampleIsGood) {
+        stateEstimatorScalarUpdate(&H, error, tdoa->stdDev);
+      }
+    }
   }
 
   tdoaCount++;

@@ -50,7 +50,6 @@ The implementation must handle
 
 #include "tdoaEngine.h"
 #include "tdoaStats.h"
-#include "outlierFilter.h"
 #include "clockCorrectionEngine.h"
 #include "physicalConstants.h"
 
@@ -77,7 +76,6 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
   };
 
   if (tdoaStorageGetAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && tdoaStorageGetAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
-    if (outlierFilterValidateTdoa(&tdoa)) {
       stats->packetsToEstimator++;
       engineState->sendTdoaToEstimator(&tdoa);
 
@@ -89,7 +87,6 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
       if (idB == stats->anchorId && idA == stats->remoteAnchorId) {
         stats->tdoa = -distanceDiff;
       }
-    }
   }
 }
 

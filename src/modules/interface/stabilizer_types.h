@@ -52,6 +52,7 @@ struct vec3_s {
   float z;
 };
 
+typedef struct vec3_s vector_t;
 typedef struct vec3_s point_t;
 typedef struct vec3_s velocity_t;
 typedef struct vec3_s acc_t;
