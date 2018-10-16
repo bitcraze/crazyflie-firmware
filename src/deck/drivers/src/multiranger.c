@@ -26,7 +26,7 @@
 #include "deck.h"
 #include "param.h"
 
-#define DEBUG_MODULE "OA"
+#define DEBUG_MODULE "MR"
 
 #include "system.h"
 #include "debug.h"
@@ -45,11 +45,11 @@
 static bool isInit = false;
 static bool isTested = false;
 
-#define OA_PIN_UP PCA95X4_P0
-#define OA_PIN_FRONT PCA95X4_P4
-#define OA_PIN_BACK PCA95X4_P1
-#define OA_PIN_LEFT PCA95X4_P6
-#define OA_PIN_RIGHT PCA95X4_P2
+#define MR_PIN_UP     PCA95X4_P0
+#define MR_PIN_FRONT  PCA95X4_P4
+#define MR_PIN_BACK   PCA95X4_P1
+#define MR_PIN_LEFT   PCA95X4_P6
+#define MR_PIN_RIGHT  PCA95X4_P2
 
 static VL53L1_Dev_t devFront;
 static VL53L1_Dev_t devBack;
@@ -57,7 +57,7 @@ static VL53L1_Dev_t devUp;
 static VL53L1_Dev_t devLeft;
 static VL53L1_Dev_t devRight;
 
-static uint16_t oaGetMeasurementAndRestart(VL53L1_Dev_t *dev)
+static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
     VL53L1_Error status = VL53L1_ERROR_NONE;
     VL53L1_RangingMeasurementData_t rangingData;
@@ -80,7 +80,7 @@ static uint16_t oaGetMeasurementAndRestart(VL53L1_Dev_t *dev)
     return range;
 }
 
-static void oaTask(void *param)
+static void mrTask(void *param)
 {
     VL53L1_Error status = VL53L1_ERROR_NONE;
 
@@ -105,15 +105,15 @@ static void oaTask(void *param)
     {
         vTaskDelayUntil(&lastWakeTime, M2T(100));
 
-        rangeSet(rangeFront, oaGetMeasurementAndRestart(&devFront)/1000.0f);
-        rangeSet(rangeBack, oaGetMeasurementAndRestart(&devBack)/1000.0f);
-        rangeSet(rangeUp, oaGetMeasurementAndRestart(&devUp)/1000.0f);
-        rangeSet(rangeLeft, oaGetMeasurementAndRestart(&devLeft)/1000.0f);
-        rangeSet(rangeRight, oaGetMeasurementAndRestart(&devRight)/1000.0f);
+        rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront)/1000.0f);
+        rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack)/1000.0f);
+        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp)/1000.0f);
+        rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft)/1000.0f);
+        rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight)/1000.0f);
     }
 }
 
-static void oaInit()
+static void mrInit()
 {
     if (isInit)
     {
@@ -122,35 +122,35 @@ static void oaInit()
 
     pca95x4Init();
 
-    pca95x4ConfigOutput(~(OA_PIN_UP |
-                          OA_PIN_RIGHT |
-                          OA_PIN_LEFT |
-                          OA_PIN_FRONT |
-                          OA_PIN_BACK));
+    pca95x4ConfigOutput(~(MR_PIN_UP |
+                          MR_PIN_RIGHT |
+                          MR_PIN_LEFT |
+                          MR_PIN_FRONT |
+                          MR_PIN_BACK));
 
-    pca95x4ClearOutput(OA_PIN_UP |
-                       OA_PIN_RIGHT |
-                       OA_PIN_LEFT |
-                       OA_PIN_FRONT |
-                       OA_PIN_BACK);
+    pca95x4ClearOutput(MR_PIN_UP |
+                       MR_PIN_RIGHT |
+                       MR_PIN_LEFT |
+                       MR_PIN_FRONT |
+                       MR_PIN_BACK);
 
     isInit = true;
 
-    xTaskCreate(oaTask, "oa", 2 * configMINIMAL_STACK_SIZE, NULL,
-                /*priority*/ 3, NULL);
+    xTaskCreate(mrTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
+        MULTIRANGER_TASK_PRI, NULL);
 }
 
-static bool oaTest()
+static bool mrTest()
 {
     bool pass = isInit;
 
     if (isTested)
     {
-        DEBUG_PRINT("Cannot test OA deck a second time\n");
+        DEBUG_PRINT("Cannot test MR deck a second time\n");
         return false;
     }
 
-    pca95x4SetOutput(OA_PIN_FRONT);
+    pca95x4SetOutput(MR_PIN_FRONT);
     if (vl53l1xInit(&devFront, I2C1_DEV))
     {
         DEBUG_PRINT("Init front sensor [OK]\n");
@@ -161,7 +161,7 @@ static bool oaTest()
         pass = false;
     }
 
-    pca95x4SetOutput(OA_PIN_BACK);
+    pca95x4SetOutput(MR_PIN_BACK);
     if (vl53l1xInit(&devBack, I2C1_DEV))
     {
         DEBUG_PRINT("Init back sensor [OK]\n");
@@ -172,7 +172,7 @@ static bool oaTest()
         pass = false;
     }
 
-    pca95x4SetOutput(OA_PIN_UP);
+    pca95x4SetOutput(MR_PIN_UP);
     if (vl53l1xInit(&devUp, I2C1_DEV))
     {
         DEBUG_PRINT("Init up sensor [OK]\n");
@@ -183,7 +183,7 @@ static bool oaTest()
         pass = false;
     }
 
-    pca95x4SetOutput(OA_PIN_LEFT);
+    pca95x4SetOutput(MR_PIN_LEFT);
     if (vl53l1xInit(&devLeft, I2C1_DEV))
     {
         DEBUG_PRINT("Init left sensor [OK]\n");
@@ -194,7 +194,7 @@ static bool oaTest()
         pass = false;
     }
 
-    pca95x4SetOutput(OA_PIN_RIGHT);
+    pca95x4SetOutput(MR_PIN_RIGHT);
     if (vl53l1xInit(&devRight, I2C1_DEV))
     {
         DEBUG_PRINT("Init right sensor [OK]\n");
@@ -217,8 +217,8 @@ static const DeckDriver multiranger_deck = {
 
     .usedGpio = 0, // FIXME: set the used pins
 
-    .init = oaInit,
-    .test = oaTest,
+    .init = mrInit,
+    .test = mrTest,
 };
 
 DECK_DRIVER(multiranger_deck);
