@@ -36,6 +36,7 @@
 #include "imu.h"
 
 #include "zranger.h"
+#include "zranger2.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"

@@ -35,6 +35,7 @@
 #include "mpu6500.h"
 #include "ak8963.h"
 #include "zranger.h"
+#include "zranger2.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
