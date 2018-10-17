@@ -169,6 +169,8 @@ static const DeckDriver zranger2_deck = {
   .name = "bcZRanger2",
   .usedGpio = 0x0C,
 
+  .requiredEstimator = kalmanEstimator,
+
   .init = zRanger2Init,
   .test = zRanger2Test,
 };

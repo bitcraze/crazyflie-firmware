@@ -34,6 +34,7 @@
 #include "imu.h"
 
 #include "zranger.h"
+#include "zranger2.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -254,7 +255,9 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadAcc(&sensors->acc);
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
-  zRangerReadRange(&sensors->zrange, tick);
+  if (!zRangerReadRange(&sensors->zrange, tick)) {
+    zRanger2ReadRange(&sensors->zrange, tick);
+  }
   sensors->interruptTimestamp = sensorData.interruptTimestamp;
 }
 
