@@ -33,6 +33,7 @@ compiler:
       - 'src/lib/FreeRTOS/include/'
       - 'src/config/'
       - 'src/drivers/interface/'
+      - 'src/drivers/src/'
       - 'src/modules/interface/'
       - 'src/modules/src/'
       - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F/'
@@ -43,6 +44,7 @@ compiler:
     prefix: '-D'
     items:
       - CMOCK
+      - 'UNIT_TEST_MODE'
       - 'UNITY_SUPPORT_64'
       - 'HSI48_VALUE="((uint32_t)48000000)"'
       - 'STM32F072xB'

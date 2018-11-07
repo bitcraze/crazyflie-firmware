@@ -120,7 +120,7 @@ endif
 
 # Init
 PROJ_OBJ += main.o
-PROJ_OBJ_CF2 += platform_cf2.o
+PROJ_OBJ_CF2 += platform_cf2.o platform_info_stm32.o
 
 # Drivers
 PROJ_OBJ += exti.o nvic.o motors.o
