@@ -44,7 +44,7 @@ $(PROG).hex: $(PROG).elf
 	@$(if $(QUIET), ,echo $(HEX_COMMAND$(VERBOSE)) )
 	@$(HEX_COMMAND)
 
-BIN_COMMAND=$(OBJCOPY) $< -O binary --pad-to 0 $@
+BIN_COMMAND=$(OBJCOPY) $< -O binary --pad-to 0 --remove-section=.bss --remove-section=.nzds  --remove-section=._usrstack $@
 BIN_COMMAND_SILENT="  COPY  $@"
 $(PROG).bin: $(PROG).elf
 	@$(if $(QUIET), ,echo $(BIN_COMMAND$(VERBOSE)) )
