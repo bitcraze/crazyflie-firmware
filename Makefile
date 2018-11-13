@@ -108,8 +108,7 @@ CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
 # Crazyflie sources
-VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/bosch/src src/drivers/src
-VPATH_CF2 += src/platform/cf2
+VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/bosch/src src/drivers/src src/platform
 
 ifeq ($(PLATFORM), CF2)
 VPATH +=$(VPATH_CF2)
@@ -120,7 +119,7 @@ endif
 
 # Init
 PROJ_OBJ += main.o
-PROJ_OBJ_CF2 += platform_cf2.o platform_info_stm32.o
+PROJ_OBJ_CF2 += platform.o platform_cf2.o platform_stm32.o
 
 # Drivers
 PROJ_OBJ += exti.o nvic.o motors.o

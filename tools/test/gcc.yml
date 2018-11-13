@@ -36,6 +36,7 @@ compiler:
       - 'src/drivers/src/'
       - 'src/modules/interface/'
       - 'src/modules/src/'
+      - 'src/platform/'
       - 'src/lib/FreeRTOS/portable/GCC/ARM_CM4F/'
       - 'src/hal/interface/'
       - 'test/testSupport/'

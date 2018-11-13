@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018 Bitcraze AB
+ * Copyright (C) 2011-2012 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +21,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * platform_info_stm32.c - platform information driver for STM32 based platforms
- *
- * Platform information is used to identify the hardware platform the firmware
- * is running on.
+ * Platform functionality for platforms using the STM32
  *
  */
 
 #include <string.h>
-#include "platform_info_stm32.h"
+#include "platform.h"
+
+#define PLATFORM_INFO_OTP_NR_OF_BLOCKS 16
+#define PLATFORM_INFO_OTP_BLOCK_LEN 32
+#if PLATFORM_DEVICE_TYPE_STRING_MAX_LEN < (PLATFORM_INFO_OTP_BLOCK_LEN + 1)
+  #error
+#endif
+
 
 #define DEFAULT_PLATFORM_STRING "0;CF20"
+
 
 #ifndef UNIT_TEST_MODE
 static char* getAddressOfOtpMemoryBlock(int blockNr) {
@@ -45,7 +50,7 @@ static char* getAddressOfOtpMemoryBlock(int blockNr) {
 
 
 
-void platformInfoGetPlatformString(char* buf) {
+void platformGetDeviceTypeString(char* deviceTypeString) {
   char* block = 0;
 
   for (int i = 0; i < PLATFORM_INFO_OTP_NR_OF_BLOCKS; i++) {
@@ -60,6 +65,6 @@ void platformInfoGetPlatformString(char* buf) {
     block = DEFAULT_PLATFORM_STRING;
   }
 
-  strncpy(buf, block, PLATFORM_INFO_OTP_BLOCK_LEN);
-  buf[PLATFORM_INFO_OTP_BLOCK_LEN] = '\0';
+  strncpy(deviceTypeString, block, PLATFORM_INFO_OTP_BLOCK_LEN);
+  deviceTypeString[PLATFORM_INFO_OTP_BLOCK_LEN] = '\0';
 }

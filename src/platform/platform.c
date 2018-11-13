@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018 Bitcraze AB
+ * Copyright (C) 2011-2012 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +21,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * platform_info_stm32.h - platform information driver for STM32 based platforms
- *
- * Platform information is used to identify the hardware platform the firmware
- * is running on.
+ * Generic platform functionality
  *
  */
 
-#define PLATFORM_INFO_OTP_NR_OF_BLOCKS 16
-#define PLATFORM_INFO_OTP_BLOCK_LEN 32
-#define PLATFORM_INFO_MAX_PLATFORM_STRING_LEN (PLATFORM_INFO_OTP_BLOCK_LEN + 1)
+#include <string.h>
+#include "platform.h"
 
-void platformInfoGetPlatformString(char* buf);
+int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType) {
+  if (deviceTypeString[0] != '0' || deviceTypeString[1] != ';') {
+    return 1;
+  }
+
+  const int start = 2;
+  const int last = start + PLATFORM_DEVICE_TYPE_MAX_LEN - 1;
+  int end = 0;
+  for (end = start; end <= last; end++) {
+    if (deviceTypeString[end] == '\0' || deviceTypeString[end] == ';') {
+      break;
+    }
+  }
+
+  if (end > last) {
+    return 1;
+  }
+
+  int length = end - start;
+  memcpy(deviceType, &deviceTypeString[start], length);
+  deviceType[length] = '\0';
+  return 0;
+}

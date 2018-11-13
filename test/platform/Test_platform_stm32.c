@@ -1,9 +1,14 @@
-// File under test platform_info_stm32.h
-#include "platform_info_stm32.h"
+// File under test platform_stm32.c
+
+// @MODULE "platform_stm32.c"
+#include "platform.h" // @NO_MODULE
 
 #include "unity.h"
 #include <string.h>
 
+
+#define PLATFORM_INFO_OTP_NR_OF_BLOCKS 16
+#define PLATFORM_INFO_OTP_BLOCK_LEN 32
 static char mockOtpBlocks[PLATFORM_INFO_OTP_NR_OF_BLOCKS][PLATFORM_INFO_OTP_BLOCK_LEN];
 
 static void fixtureInitOtpBlocks();
@@ -22,10 +27,10 @@ void testThatFirstBlockIsReturnedIfSet() {
   // Fixture
   fixtureSetOtpBlockString(0, "0;CF21");
 
-  char actual[PLATFORM_INFO_MAX_PLATFORM_STRING_LEN];
+  char actual[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
 
   // Test
-  platformInfoGetPlatformString(actual);
+  platformGetDeviceTypeString(actual);
 
   // Assert
   TEST_ASSERT_EQUAL_STRING("0;CF21", actual);
@@ -38,10 +43,10 @@ void testThatLAterBlockIsReturnedIfEarlierBlockAreCleared() {
   fixtureClearOtpBlock(2);
   fixtureSetOtpBlockString(3, "0;CF21");
 
-  char actual[PLATFORM_INFO_MAX_PLATFORM_STRING_LEN];
+  char actual[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
 
   // Test
-  platformInfoGetPlatformString(actual);
+  platformGetDeviceTypeString(actual);
 
   // Assert
   TEST_ASSERT_EQUAL_STRING("0;CF21", actual);
@@ -49,10 +54,10 @@ void testThatLAterBlockIsReturnedIfEarlierBlockAreCleared() {
 
 void testThatDefaultPlatformStringIsCF20IfNoInfoIsSet() {
   // Fixture
-  char actual[PLATFORM_INFO_MAX_PLATFORM_STRING_LEN];
+  char actual[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
 
   // Test
-  platformInfoGetPlatformString(actual);
+  platformGetDeviceTypeString(actual);
 
   // Assert
   TEST_ASSERT_EQUAL_STRING("0;CF20", actual);
@@ -62,10 +67,10 @@ void testThatDefaultPlatformStringIsCF20IfAllBlocksAreCleared() {
   // Fixture
   memset(mockOtpBlocks, 0x00, sizeof(mockOtpBlocks));
 
-  char actual[PLATFORM_INFO_MAX_PLATFORM_STRING_LEN];
+  char actual[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
 
   // Test
-  platformInfoGetPlatformString(actual);
+  platformGetDeviceTypeString(actual);
 
   // Assert
   TEST_ASSERT_EQUAL_STRING("0;CF20", actual);
@@ -79,7 +84,7 @@ void testThatNoMoreThanTheBlockSizeIsCopiedIfTheBlockIsNotNullTerminated() {
   char actual[100];
 
   // Test
-  platformInfoGetPlatformString(actual);
+  platformGetDeviceTypeString(actual);
 
   // Assert
   TEST_ASSERT_EQUAL_STRING("01234567890123456789012345678901", actual);

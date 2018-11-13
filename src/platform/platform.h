@@ -42,11 +42,25 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+#include <stdbool.h>
+
+#define PLATFORM_DEVICE_TYPE_STRING_MAX_LEN (32 + 1)
+#define PLATFORM_DEVICE_TYPE_MAX_LEN (4 + 1)
+
 /**
  * Initilizes all platform specific things.
  */
 int platformInit(void);
 
+void platformGetDeviceTypeString(char* deviceTypeString);
+int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType);
+
 void platformSetLowInterferenceRadioMode(void);
+
+
+// Functions to read configuration
+const char* platformConfigGetPlatformName();
+const char* platformConfigGetDeviceTypeName();
+// TODO Add relevant config functions
 
 #endif /* PLATFORM_H_ */
