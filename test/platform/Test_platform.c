@@ -14,7 +14,8 @@ void platformGetDeviceTypeString(char* deviceTypeString) {
   strcpy(deviceTypeString, deviceTypeStringToReturn);
 }
 
-static platformConfig_t fixtureConfig[];
+#define CONFIG_COUNT 3
+static platformConfig_t fixtureConfig[CONFIG_COUNT];
 
 void setUp(void) {
   strcpy(actualDeviceType, "abcdefghijklmn");
@@ -99,7 +100,7 @@ void testThatFirstMatchingPlatformConfigIsReturned() {
   deviceTypeStringToReturn = "0;ASD";
 
   // Test
-  int actual = platformInitConfiguration(fixtureConfig, 3);
+  int actual = platformInitConfiguration(fixtureConfig, CONFIG_COUNT);
 
   // Assert
   const char* actualName = platformConfigGetDeviceTypeName();
@@ -113,7 +114,7 @@ void testThatErrorIsReturnedWhenDeviceIsNotInConfig() {
   deviceTypeStringToReturn = "0;WRNG";
 
   // Test
-  int actual = platformInitConfiguration(fixtureConfig, 3);
+  int actual = platformInitConfiguration(fixtureConfig, CONFIG_COUNT);
 
   // Assert
   TEST_ASSERT_EQUAL(1, actual);
@@ -124,7 +125,7 @@ void testThatItIsNotSearchingOutsideListOfPlatformConfigs() {
   deviceTypeStringToReturn = "0;ZXC";
 
   // Test
-  int actual = platformInitConfiguration(fixtureConfig, 2);
+  int actual = platformInitConfiguration(fixtureConfig, CONFIG_COUNT - 1);
 
   // Assert
   TEST_ASSERT_EQUAL(1, actual);
@@ -134,7 +135,7 @@ void testThatItIsNotSearchingOutsideListOfPlatformConfigs() {
 // Fixtures -------------------------
 
 
-static platformConfig_t fixtureConfig[] = {
+static platformConfig_t fixtureConfig[CONFIG_COUNT] = {
   {
     .deviceType = "QWE",
     .deviceTypeName = "First",
