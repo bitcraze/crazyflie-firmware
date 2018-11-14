@@ -46,24 +46,26 @@ static void initHardware();
 typedef struct {
   char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
   char deviceTypeName[14];
+  SensorImplementation_t sensorImplementation;
 } config_t;
 
 static config_t configs[] = {
   {
     .deviceType = "CF20",
     .deviceTypeName = "Crazyflie 2.0",
+    .sensorImplementation = SensorImplementation_mpu9250_lps25h,
   },
   {
     .deviceType = "CF21",
     .deviceTypeName = "Crazyflie 2.1",
+    .sensorImplementation = SensorImplementation_bmi088_bmp388,
   }
 };
 
 static config_t* active_config = 0;
 
 
-int platformInit(void)
-{
+int platformInit(void) {
   int err = initPlatformConfiguration();
   if (err != 0)
   {
@@ -76,16 +78,14 @@ int platformInit(void)
 }
 
 
-void platformSetLowInterferenceRadioMode(void)
-{
+void platformSetLowInterferenceRadioMode(void) {
   // Decrease the nRF51 Tx power to reduce interference
   radiolinkSetPowerDbm(PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
   DEBUG_PRINT("Low interference mode. NRF51 TX power offset by %ddb.\r\n", PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
 }
 
 
-static int initPlatformConfiguration()
-{
+static int initPlatformConfiguration() {
   char deviceTypeString[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
   char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
 
@@ -103,8 +103,7 @@ static int initPlatformConfiguration()
   return 1;
 }
 
-static void initHardware()
-{
+static void initHardware() {
   //Low level init: Clock and Interrupt controller
   nvicInit();
 
@@ -115,14 +114,15 @@ static void initHardware()
 
 // Config functions ------------------------
 
-const char* platformConfigGetPlatformName()
-{
+const char* platformConfigGetPlatformName() {
   return "cf2";
 }
 
-const char* platformConfigGetDeviceTypeName()
-{
+const char* platformConfigGetDeviceTypeName() {
   return active_config->deviceTypeName;
 }
 
+SensorImplementation_t platformConfigGetSensorImplementation() {
+  return active_config->sensorImplementation;
+}
 

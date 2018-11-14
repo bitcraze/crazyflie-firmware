@@ -21,7 +21,7 @@ DEBUG             ?= 0
 CLOAD_SCRIPT      ?= python3 -m cfloader
 CLOAD_CMDS        ?=
 CLOAD_ARGS        ?=
-PLATFORM		  ?= cf2   # TODO: remove this default platform when we have more than one
+PLATFORM          ?= cf2
 LPS_TDMA_ENABLE   ?= 0
 LPS_TDOA_ENABLE   ?= 0
 LPS_TDOA3_ENABLE  ?= 0
@@ -36,7 +36,6 @@ include tools/make/platform.mk
 ESTIMATOR          ?= any
 CONTROLLER         ?= Any # one of Any, PID, Mellinger
 POWER_DISTRIBUTION ?= stock
-SENSORS 		   ?= cf2
 
 #OpenOCD conf
 RTOS_DEBUG        ?= 0
@@ -100,7 +99,7 @@ FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 
 #FatFS
 VPATH += $(LIB)/FatFS
-PROJ_OBJ  = diskio.o ff.o syscall.o unicode.o fatfs_sd.o
+PROJ_OBJ += diskio.o ff.o syscall.o unicode.o fatfs_sd.o
 ifeq ($(FATFS_DISKIO_TESTS), 1)
 PROJ_OBJ += diskio_function_tests.o
 CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
@@ -131,9 +130,9 @@ PROJ_OBJ += usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
-PROJ_OBJ +=  pm_$(CPU).o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
+PROJ_OBJ += pm_$(CPU).o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
+PROJ_OBJ += sensors.o
 
-PROJ_OBJ +=  sensors_$(SENSORS).o
 # libdw
 PROJ_OBJ += libdw1000.o libdw1000Spi.o
 
@@ -200,6 +199,13 @@ endif
 
 ifeq ($(LPS_TDMA_ENABLE), 1)
 CFLAGS += -DLPS_TDMA_ENABLE
+endif
+
+ifdef SENSORS
+SENSORS_UPPER = $(shell echo $(SENSORS) | tr a-z A-Z)
+CFLAGS += -DSENSOR_INCLUDED_$(SENSORS_UPPER)
+CFLAGS += -DSENSORS_FORCE=SensorImplementation_$(SENSORS)
+PROJ_OBJ += sensors_$(SENSORS).o
 endif
 
 #Deck tests
