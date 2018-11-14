@@ -1,6 +1,6 @@
-// File under test platform_stm32.c
+// File under test platform_stm32f4.c
 
-// @MODULE "platform_stm32.c"
+// @MODULE "platform_stm32f4.c"
 #include "platform.h" // @NO_MODULE
 
 #include "unity.h"

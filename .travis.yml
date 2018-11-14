@@ -5,29 +5,29 @@ services:
 before_install:
   - docker pull bitcraze/builder
 script:
-  # Build CF2 basic
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2
+  # Build cf2 basic
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2
 
-  # Build CF2 with "all" features enabled
+  # Build cf2 with "all" features enabled
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART"
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART"
 
-  # Build CF2 with bosch sensors
+  # Build cf2 with bosch sensors
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 SENSORS=bosch
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 SENSORS=bosch
 
-  # Build CF2 with TDMA
+  # Build cf2 with TDMA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0"
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0"
 
-  # Build CF2 with TDOA2 positioning mode
+  # Build cf2 with TDOA2 positioning mode
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDOA_ENABLE=1
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA_ENABLE=1
 
-  # Build CF2 with TDOA3 positioning mode
+  # Build cf2 with TDOA3 positioning mode
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDOA3_ENABLE=1
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA3_ENABLE=1
 
-  # Build CF2 with TDOA3 and all config options
+  # Build cf2 with TDOA3 and all config options
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=CF2 DEBUG=1 LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE"
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE"
