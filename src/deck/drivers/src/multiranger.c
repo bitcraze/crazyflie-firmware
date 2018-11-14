@@ -44,6 +44,7 @@
 
 static bool isInit = false;
 static bool isTested = false;
+static bool isPassed = false;
 
 #define MR_PIN_UP     PCA95X4_P0
 #define MR_PIN_FRONT  PCA95X4_P4
@@ -142,13 +143,12 @@ static void mrInit()
 
 static bool mrTest()
 {
-    bool pass = isInit;
-
     if (isTested)
     {
-        DEBUG_PRINT("Cannot test MR deck a second time\n");
-        return false;
+        return isPassed;
     }
+
+    isPassed = isInit;
 
     pca95x4SetOutput(MR_PIN_FRONT);
     if (vl53l1xInit(&devFront, I2C1_DEV))
@@ -158,7 +158,7 @@ static bool mrTest()
     else
     {
         DEBUG_PRINT("Init front sensor [FAIL]\n");
-        pass = false;
+        isPassed = false;
     }
 
     pca95x4SetOutput(MR_PIN_BACK);
@@ -169,7 +169,7 @@ static bool mrTest()
     else
     {
         DEBUG_PRINT("Init back sensor [FAIL]\n");
-        pass = false;
+        isPassed = false;
     }
 
     pca95x4SetOutput(MR_PIN_UP);
@@ -180,7 +180,7 @@ static bool mrTest()
     else
     {
         DEBUG_PRINT("Init up sensor [FAIL]\n");
-        pass = false;
+        isPassed = false;
     }
 
     pca95x4SetOutput(MR_PIN_LEFT);
@@ -191,7 +191,7 @@ static bool mrTest()
     else
     {
         DEBUG_PRINT("Init left sensor [FAIL]\n");
-        pass = false;
+        isPassed = false;
     }
 
     pca95x4SetOutput(MR_PIN_RIGHT);
@@ -202,12 +202,12 @@ static bool mrTest()
     else
     {
         DEBUG_PRINT("Init right sensor [FAIL]\n");
-        pass = false;
+        isPassed = false;
     }
 
     isTested = true;
 
-    return pass;
+    return isPassed;
 }
 
 static const DeckDriver multiranger_deck = {
