@@ -7,8 +7,18 @@
 
 static char actualDeviceType[100];
 
+
+// Mock implementation
+static char* deviceTypeStringToReturn = "";
+void platformGetDeviceTypeString(char* deviceTypeString) {
+  strcpy(deviceTypeString, deviceTypeStringToReturn);
+}
+
+static platformConfig_t fixtureConfig[];
+
 void setUp(void) {
   strcpy(actualDeviceType, "abcdefghijklmn");
+  deviceTypeStringToReturn = "";
 }
 
 void tearDown(void) {
@@ -83,3 +93,58 @@ void testThatDeviceTypeIsNotReturnedIfSecondCharIsNotSemicolon() {
   // Assert
   TEST_ASSERT_NOT_EQUAL(0, actual);
 }
+
+void testThatFirstMatchingPlatformConfigIsReturned() {
+  // Fixture
+  deviceTypeStringToReturn = "0;ASD";
+
+  // Test
+  int actual = platformInitConfiguration(fixtureConfig, 3);
+
+  // Assert
+  const char* actualName = platformConfigGetDeviceTypeName();
+
+  TEST_ASSERT_EQUAL(0, actual);
+  TEST_ASSERT_EQUAL_STRING("Second", actualName);
+}
+
+void testThatErrorIsReturnedWhenDeviceIsNotInConfig() {
+  // Fixture
+  deviceTypeStringToReturn = "0;WRNG";
+
+  // Test
+  int actual = platformInitConfiguration(fixtureConfig, 3);
+
+  // Assert
+  TEST_ASSERT_EQUAL(1, actual);
+}
+
+void testThatItIsNotSearchingOutsideListOfPlatformConfigs() {
+  // Fixture
+  deviceTypeStringToReturn = "0;ZXC";
+
+  // Test
+  int actual = platformInitConfiguration(fixtureConfig, 2);
+
+  // Assert
+  TEST_ASSERT_EQUAL(1, actual);
+}
+
+
+// Fixtures -------------------------
+
+
+static platformConfig_t fixtureConfig[] = {
+  {
+    .deviceType = "QWE",
+    .deviceTypeName = "First",
+  },
+  {
+    .deviceType = "ASD",
+    .deviceTypeName = "Second",
+  },
+  {
+    .deviceType = "ZXC",
+    .deviceTypeName = "Third",
+  }
+};

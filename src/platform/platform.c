@@ -28,6 +28,9 @@
 #include <string.h>
 #include "platform.h"
 
+static const platformConfig_t* active_config = 0;
+
+
 int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType) {
   if (deviceTypeString[0] != '0' || deviceTypeString[1] != ';') {
     return 1;
@@ -51,3 +54,30 @@ int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType
   deviceType[length] = '\0';
   return 0;
 }
+
+int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs) {
+  char deviceTypeString[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
+  char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
+
+  platformGetDeviceTypeString(deviceTypeString);
+  platformParseDeviceTypeString(deviceTypeString, deviceType);
+
+  for (int i = 0; i < nrOfConfigs; i++) {
+    const platformConfig_t* config = &configs[i];
+    if (strcmp(config->deviceType, deviceType) == 0) {
+      active_config = config;
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+const char* platformConfigGetDeviceTypeName() {
+  return active_config->deviceTypeName;
+}
+
+SensorImplementation_t platformConfigGetSensorImplementation() {
+  return active_config->sensorImplementation;
+}
+

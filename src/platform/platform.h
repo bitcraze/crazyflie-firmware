@@ -51,6 +51,12 @@ typedef enum {
   SensorImplementation_COUNT,
 } SensorImplementation_t;
 
+typedef struct {
+  char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
+  char deviceTypeName[14];
+  SensorImplementation_t sensorImplementation;
+} platformConfig_t;
+
 /**
  * Initilizes all platform specific things.
  */
@@ -58,6 +64,7 @@ int platformInit(void);
 
 void platformGetDeviceTypeString(char* deviceTypeString);
 int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType);
+int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs);
 
 void platformSetLowInterferenceRadioMode(void);
 

@@ -39,17 +39,9 @@
 #define PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM (-12)
 #endif
 
-static int initPlatformConfiguration();
 static void initHardware();
 
-
-typedef struct {
-  char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
-  char deviceTypeName[14];
-  SensorImplementation_t sensorImplementation;
-} config_t;
-
-static config_t configs[] = {
+static platformConfig_t configs[] = {
   {
     .deviceType = "CF20",
     .deviceTypeName = "Crazyflie 2.0",
@@ -62,11 +54,10 @@ static config_t configs[] = {
   }
 };
 
-static config_t* active_config = 0;
 
 
 int platformInit(void) {
-  int err = initPlatformConfiguration();
+  int err = platformInitConfiguration(configs, sizeof(configs) / sizeof(platformConfig_t));
   if (err != 0)
   {
     // This firmware is not compatible, abort init
@@ -85,24 +76,6 @@ void platformSetLowInterferenceRadioMode(void) {
 }
 
 
-static int initPlatformConfiguration() {
-  char deviceTypeString[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
-  char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
-
-  platformGetDeviceTypeString(deviceTypeString);
-  platformParseDeviceTypeString(deviceTypeString, deviceType);
-
-  for (int i = 0; i < (sizeof(configs) / sizeof(config_t)); i++) {
-    config_t* config = &configs[i];
-    if (strcmp(config->deviceType, deviceType) == 0) {
-      active_config = config;
-      return 0;
-    }
-  }
-
-  return 1;
-}
-
 static void initHardware() {
   //Low level init: Clock and Interrupt controller
   nvicInit();
@@ -116,13 +89,5 @@ static void initHardware() {
 
 const char* platformConfigGetPlatformName() {
   return "cf2";
-}
-
-const char* platformConfigGetDeviceTypeName() {
-  return active_config->deviceTypeName;
-}
-
-SensorImplementation_t platformConfigGetSensorImplementation() {
-  return active_config->sensorImplementation;
 }
 
