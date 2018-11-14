@@ -203,9 +203,13 @@ endif
 
 ifdef SENSORS
 SENSORS_UPPER = $(shell echo $(SENSORS) | tr a-z A-Z)
-CFLAGS += -DSENSOR_INCLUDED_$(SENSORS_UPPER)
 CFLAGS += -DSENSORS_FORCE=SensorImplementation_$(SENSORS)
+
+# Add sensor file to the build if needed
+ifeq (,$(findstring DSENSOR_INCLUDED_$(SENSORS_UPPER),$(CFLAGS)))
+CFLAGS += -DSENSOR_INCLUDED_$(SENSORS_UPPER)
 PROJ_OBJ += sensors_$(SENSORS).o
+endif
 endif
 
 #Deck tests
