@@ -1,13 +1,13 @@
-/*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+/**
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2011-2012 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +21,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * nrf24link.c: nRF24L01 implementation of the CRTP link
+ * Generic platform functionality
+ *
  */
 
-#ifndef __NRF24LINK_H__
-#define __NRF24LINK_H__
+#include <string.h>
+#include "platform.h"
 
-#include "crtp.h"
+int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType) {
+  if (deviceTypeString[0] != '0' || deviceTypeString[1] != ';') {
+    return 1;
+  }
 
-void nrf24linkInit();
-bool nrf24linkTest();
-struct crtpLinkOperations * nrf24linkGetLink();
-void nrf24linkReInit(void);
+  const int start = 2;
+  const int last = start + PLATFORM_DEVICE_TYPE_MAX_LEN - 1;
+  int end = 0;
+  for (end = start; end <= last; end++) {
+    if (deviceTypeString[end] == '\0' || deviceTypeString[end] == ';') {
+      break;
+    }
+  }
 
-#endif
+  if (end > last) {
+    return 1;
+  }
+
+  int length = end - start;
+  memcpy(deviceType, &deviceTypeString[start], length);
+  deviceType[length] = '\0';
+  return 0;
+}

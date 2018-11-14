@@ -17,3 +17,5 @@ tags
 *.gch
 
 /generated-test/**
+
+current_platform.mk

@@ -75,3 +75,7 @@
 # Only use in TDoA 3
 # Note: Anchors must also be built with this flag
 # CFLAGS += -DLPS_LONGER_RANGE
+
+## SDCard test configuration ------------------------------------
+# FATFS_DISKIO_TESTS  = 1	# Set to 1 to enable FatFS diskio function tests. Erases card.
+

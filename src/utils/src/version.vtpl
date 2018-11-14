@@ -33,7 +33,6 @@ const char * V_SLOCAL_REVISION="{local_revision}";
 const char * V_SREVISION="{revision}";
 const char * V_STAG="{tag}";
 const char * V_BRANCH="{branch}";
-const char * V_PROFILE=P_NAME;
 const bool V_MODIFIED={modified};
 
 /* Version recoverable from the ground */

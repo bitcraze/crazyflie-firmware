@@ -45,7 +45,11 @@
 int main() 
 {
   //Initialize the platform.
-  platformInit();
+  int err = platformInit();
+  if (err != 0) {
+    // The firmware is running on the wrong hardware. Halt
+    while(1);
+  }
 
   //Launch the system task that will initialize and start everything
   systemLaunch();
