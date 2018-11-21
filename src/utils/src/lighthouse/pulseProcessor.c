@@ -2,6 +2,9 @@
 
 #include <math.h>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // Decoding contants
 // Times are expressed in a 48MHz clock
@@ -11,13 +14,16 @@
 #define SYNC_BASE_WIDTH 2750
 #define SYNC_DIVIDER 500
 #define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
+#define SENSOR_MAX_DISPERTION 10
+#define MAX_FRAME_LENGTH_NOISE 40
 
 // Utility functions and macros
 #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
 
-static bool isSweep(int width)
+static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
 {
-  return (width < SWEEP_MAX_WIDTH);
+  int delta = TS_DIFF(timestamp, state->lastSync);
+  return ((delta > SYNC_MAX_SEPARATION) && (delta < (FRAME_LENGTH - (2*SYNC_MAX_SEPARATION)))) || (width < SWEEP_MAX_WIDTH);
 }
 
 static bool getAxis(int width)
@@ -34,7 +40,7 @@ bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int 
 {
   bool angleMeasured = false;
 
-  if (isSweep(width)) {
+  if (isSweep(state, timestamp, width)) {
     int delta = TS_DIFF(timestamp, state->currentSync);
     
     if (delta < FRAME_LENGTH) {
@@ -66,4 +72,35 @@ bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int 
   }
 
   return angleMeasured;
+}
+
+
+bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime)
+{
+  int nFound = 0;
+  bool wasSweep = false;
+  uint32_t foundTimes[2];
+  
+  for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
+    if (wasSweep && pulseHistory[i].width > SWEEP_MAX_WIDTH) {
+      foundTimes[nFound] = pulseHistory[i].timestamp;
+
+      nFound++;
+      if (nFound == 2) {
+        break;
+      }
+    }
+    
+    if (pulseHistory[i].width < SWEEP_MAX_WIDTH) {
+      wasSweep = true;
+    } else {
+      wasSweep = false;
+    }
+  }
+
+  *foundSyncTime = foundTimes[0];
+
+  uint32_t delta = TS_DIFF(foundTimes[1], foundTimes[0]);
+
+  return (nFound == 2 && delta < (FRAME_LENGTH + MAX_FRAME_LENGTH_NOISE) && delta > (FRAME_LENGTH - MAX_FRAME_LENGTH_NOISE));
 }
