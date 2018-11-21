@@ -104,3 +104,60 @@ bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyn
 
   return (nFound == 2 && delta < (FRAME_LENGTH + MAX_FRAME_LENGTH_NOISE) && delta > (FRAME_LENGTH - MAX_FRAME_LENGTH_NOISE));
 }
+
+bool getSystemSyncTime(const uint32_t syncTimes[], int nSyncTimes, uint32_t *syncTime)
+{
+  if (nSyncTimes == 0) {
+    return false;
+  }
+
+  // Detect if samples are wrapping
+  // If the samples are wrapping, all samples bellow TIMESTAMP_MAX/2 will
+  // be pushed by (1<<TIMESTAMP_BITWIDTH) to correct the wrapping
+  bool isWrapping = false;
+  int wref = syncTimes[0];
+  for (int i=0; i<nSyncTimes; i++) {
+    if (abs(wref - syncTimes[i]) > (TIMESTAMP_MAX/2)) {
+      isWrapping = true;
+    }
+  }
+
+  int32_t differenceSum = 0;
+  int32_t reference = syncTimes[0] % FRAME_LENGTH;
+  if (isWrapping && syncTimes[0] < (TIMESTAMP_MAX/2)) {
+    reference = (syncTimes[0] + (1<<TIMESTAMP_BITWIDTH)) % FRAME_LENGTH;
+  }
+
+  int minDiff = INT32_MAX;
+  int maxDiff = INT32_MIN;
+
+  for (size_t i=1; i<nSyncTimes; i++) {
+
+    int diff;
+    
+    if (isWrapping && (syncTimes[i] < (TIMESTAMP_MAX/2))) {
+      diff = ((syncTimes[i] + (1<<TIMESTAMP_BITWIDTH)) % FRAME_LENGTH) - reference;
+    } else {
+      diff = (syncTimes[i] % FRAME_LENGTH) - reference;
+    }
+     
+
+    if (diff < minDiff) {
+      minDiff = diff;
+    }
+    if (diff > maxDiff) {
+      maxDiff = diff;
+    }
+
+    differenceSum += diff;
+  }
+
+  if ((maxDiff - minDiff) > MAX_FRAME_LENGTH_NOISE) {
+    return false;
+  }
+
+  *syncTime = ((int)syncTimes[0] + (differenceSum / (nSyncTimes))) & (TIMESTAMP_MAX);
+  
+
+  return true;
+}

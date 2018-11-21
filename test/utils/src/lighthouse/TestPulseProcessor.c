@@ -250,6 +250,81 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithTimestampWrapping()
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
+void testThatGetSystemSyncTimeReturnsTheAverageForGoodSyncData()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = 2;
+  uint32_t syncTimes[8] = {1, 2, 3};
+  size_t nSyncTimes = 3;
+
+  // Test
+  bool found = getSystemSyncTime(syncTimes, nSyncTimes, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL(expectedSyncTime, actualSyncTime);
+}
+
+void testThatGetSystemSyncTimeHandlesTimestampsFromMultipleFrames()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = 2;
+  uint32_t syncTimes[8] = {1 + FRAME_LENGTH, 2 + (2*FRAME_LENGTH), 3, 2 + (2*FRAME_LENGTH)};
+  size_t nSyncTimes = 4;
+
+  // Test
+  bool found = getSystemSyncTime(syncTimes, nSyncTimes, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_TRUE(found);
+  assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
+}
+
+void testThatGetSystemSyncTimeDoesNotReturnTimestampFor0Samples()
+{
+  // Fixture
+  uint32_t unused = 0;
+  uint32_t syncTimes[8] = {};
+  size_t nSyncTimes = 0;
+
+  // Test
+  bool found = getSystemSyncTime(syncTimes, nSyncTimes, &unused);
+
+  // Assert
+  TEST_ASSERT_FALSE(found);
+}
+
+void testThatGetSystemSyncTimeDoesNotReturnTimestampIfTooMuchTimestampsSpread()
+{
+  // Fixture
+  uint32_t unused = 0;
+  uint32_t syncTimes[8] = {1, 50, 3};
+  size_t nSyncTimes = 3;
+
+  // Test
+  bool found = getSystemSyncTime(syncTimes, nSyncTimes, &unused);
+
+  // Assert
+  TEST_ASSERT_FALSE(found);
+}
+
+void testThatGetSystemSyncTimeHandlesTimestampsWithWrapping()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = TIMESTAMP_MAX;
+  uint32_t syncTimes[8] = {0, TIMESTAMP_MAX - 1, TIMESTAMP_MAX};
+  size_t nSyncTimes = 3;
+
+  // Test
+  bool found = getSystemSyncTime(syncTimes, nSyncTimes, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL(expectedSyncTime, actualSyncTime);
+}
 
 // Test helpers
 
@@ -257,7 +332,7 @@ void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t a
 {
   uint32_t diff = actualSyncTime - expectedSyncTime;
   
-  TEST_ASSERT_TRUE_MESSAGE(diff % FRAME_LENGTH < MAX_FRAME_LENGTH_NOISE, "Sync time out of bound");
+  TEST_ASSERT_LESS_THAN_MESSAGE(MAX_FRAME_LENGTH_NOISE, diff % FRAME_LENGTH, "Sync time out of bound");
 }
 
 void limitTimestamps(pulseProcessorPulse_t history[])
