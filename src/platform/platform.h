@@ -55,6 +55,7 @@ typedef struct {
   char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
   char deviceTypeName[14];
   SensorImplementation_t sensorImplementation;
+  bool physicalLayoutAntennasAreClose;
 } platformConfig_t;
 
 /**
@@ -64,14 +65,18 @@ int platformInit(void);
 
 void platformGetDeviceTypeString(char* deviceTypeString);
 int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType);
-int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs);
+
+// Implemented in platform specific files
+const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs);
+void platformInitHardware();
+
 
 void platformSetLowInterferenceRadioMode(void);
-
 
 // Functions to read configuration
 const char* platformConfigGetPlatformName();
 const char* platformConfigGetDeviceTypeName();
 SensorImplementation_t platformConfigGetSensorImplementation();
+bool platformConfigPhysicalLayoutAntennasAreClose();
 
 #endif /* PLATFORM_H_ */

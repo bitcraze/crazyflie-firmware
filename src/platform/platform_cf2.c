@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2018 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,51 +32,28 @@
 #include "exti.h"
 #include "nvic.h"
 #include "debug.h"
-#include "radiolink.h"
-
-// Define to decrease the nRF51 Tx power to reduce interference
-#ifndef PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM
-#define PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM (-12)
-#endif
-
-static void initHardware();
 
 static platformConfig_t configs[] = {
   {
     .deviceType = "CF20",
     .deviceTypeName = "Crazyflie 2.0",
     .sensorImplementation = SensorImplementation_mpu9250_lps25h,
+    .physicalLayoutAntennasAreClose = true,
   },
   {
     .deviceType = "CF21",
     .deviceTypeName = "Crazyflie 2.1",
     .sensorImplementation = SensorImplementation_bmi088_bmp388,
+    .physicalLayoutAntennasAreClose = true,
   }
 };
 
-
-
-int platformInit(void) {
-  int err = platformInitConfiguration(configs, sizeof(configs) / sizeof(platformConfig_t));
-  if (err != 0)
-  {
-    // This firmware is not compatible, abort init
-    return 1;
-  }
-
-  initHardware();
-  return 0;
+const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs) {
+  *nrOfConfigs = sizeof(configs) / sizeof(platformConfig_t);
+  return configs;
 }
 
-
-void platformSetLowInterferenceRadioMode(void) {
-  // Decrease the nRF51 Tx power to reduce interference
-  radiolinkSetPowerDbm(PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
-  DEBUG_PRINT("Low interference mode. NRF51 TX power offset by %ddb.\r\n", PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
-}
-
-
-static void initHardware() {
+void platformInitHardware() {
   //Low level init: Clock and Interrupt controller
   nvicInit();
 
