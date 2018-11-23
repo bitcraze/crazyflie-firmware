@@ -113,7 +113,7 @@ VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/bosch/sr
 
 # Init
 PROJ_OBJ += main.o
-PROJ_OBJ += platform.o platform_$(PLATFORM).o platform_$(CPU).o
+PROJ_OBJ += platform.o platform_utils.o platform_$(PLATFORM).o platform_$(CPU).o
 
 # Drivers
 PROJ_OBJ += exti.o nvic.o motors.o

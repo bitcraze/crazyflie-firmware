@@ -65,6 +65,7 @@ int platformInit(void);
 
 void platformGetDeviceTypeString(char* deviceTypeString);
 int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType);
+int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs);
 
 // Implemented in platform specific files
 const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs);

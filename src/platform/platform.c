@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2018 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,20 +25,10 @@
  *
  */
 
-#define DEBUG_MODULE "PLATFORM"
-
 #include <string.h>
 #include "platform.h"
-#include "radiolink.h"
-#include "debug.h"
-
-// Define to decrease the nRF51 Tx power to reduce interference
-#ifndef PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM
-#define PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM (-12)
-#endif
 
 static const platformConfig_t* active_config = 0;
-static int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs);
 
 int platformInit(void) {
   int nrOfConfigs = 0;
@@ -79,7 +69,7 @@ int platformParseDeviceTypeString(const char* deviceTypeString, char* deviceType
   return 0;
 }
 
-static int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs) {
+int platformInitConfiguration(const platformConfig_t* configs, const int nrOfConfigs) {
 #ifndef DEVICE_TYPE_STRING_FORCE
   char deviceTypeString[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
   char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
@@ -114,11 +104,4 @@ SensorImplementation_t platformConfigGetSensorImplementation() {
 
 bool platformConfigPhysicalLayoutAntennasAreClose() {
   return active_config->physicalLayoutAntennasAreClose;
-}
-
-
-void platformSetLowInterferenceRadioMode(void) {
-  // Decrease the nRF51 Tx power to reduce interference
-  radiolinkSetPowerDbm(PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
-  DEBUG_PRINT("Low interference mode. NRF51 TX power offset by %ddb.\r\n", PLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM);
 }

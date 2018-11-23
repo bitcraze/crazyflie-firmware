@@ -132,6 +132,15 @@ void testThatItIsNotSearchingOutsideListOfPlatformConfigs() {
 }
 
 
+
+// Dummy implementations -------------------
+
+const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs){
+  return 0;
+}
+
+void platformInitHardware(){}
+
 // Fixtures -------------------------
 
 
