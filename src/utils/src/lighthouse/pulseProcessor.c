@@ -14,11 +14,44 @@
 #define SYNC_BASE_WIDTH 2750
 #define SYNC_DIVIDER 500
 #define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
+#define SYNC_SEPARATION 19200
 #define SENSOR_MAX_DISPERTION 10
 #define MAX_FRAME_LENGTH_NOISE 40
 
 // Utility functions and macros
 #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
+
+// static bool resetSynchonization(pulseProcessor_t *state)
+// {
+//   state->synchronized = false;
+//   memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
+// }
+
+static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp, uint32_t width)
+{
+  state->pulseHistory[sensor][state->pulseHistoryPtr[sensor]].timestamp = timestamp;
+  state->pulseHistory[sensor][state->pulseHistoryPtr[sensor]].width = width;
+
+  state->pulseHistoryPtr[sensor] += 1;
+
+  // As soon as one of the history buffer is full, run the syncrhonization algorithm!
+  if (state->pulseHistoryPtr[sensor] == PULSE_PROCESSOR_HISTORY_LENGTH) {
+    static uint32_t syncTimes[PULSE_PROCESSOR_HISTORY_LENGTH];
+    int nSyncTimes = 0;
+
+    for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
+      if (findSyncTime(state->pulseHistory[i], &syncTimes[nSyncTimes])) {
+        nSyncTimes += 1;
+      }
+
+      if (getSystemSyncTime(syncTimes, nSyncTimes, &state->currentSync0)) {
+        state->synchronized = true;
+        state->lastSync = state->currentSync0;
+        state->currentSync1 = state->currentSync0 + SYNC_SEPARATION;
+      }
+    }
+  }
+}
 
 static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
 {
@@ -40,35 +73,39 @@ bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int 
 {
   bool angleMeasured = false;
 
-  if (isSweep(state, timestamp, width)) {
-    int delta = TS_DIFF(timestamp, state->currentSync);
-    
-    if (delta < FRAME_LENGTH) {
-      *angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
-      *baseStation = state->currentBs;
-      *axis = state->currentAxis;
-      angleMeasured = true;
-    }
-
-    state->currentSync = 0;
+  if (!state->synchronized) {
+    synchronize(state, 0, timestamp, width);
   } else {
-    if (TS_DIFF(timestamp, state->lastSync) > SYNC_MAX_SEPARATION) {
-      // This is sync0
-      if (!getSkip(width)) {
-        state->currentBs = 0;
-        state->currentAxis = getAxis(width);
-        state->currentSync = timestamp;
+    if (isSweep(state, timestamp, width)) {
+      int delta = TS_DIFF(timestamp, state->currentSync);
+      
+      if (delta < FRAME_LENGTH) {
+        *angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
+        *baseStation = state->currentBs;
+        *axis = state->currentAxis;
+        angleMeasured = true;
       }
+
+      state->currentSync = 0;
     } else {
-      // this is sync1
-      if (!getSkip(width)) {
-        state->currentBs = 1;
-        state->currentAxis = getAxis(width);
-        state->currentSync = timestamp;
+      if (TS_DIFF(timestamp, state->lastSync) > SYNC_MAX_SEPARATION) {
+        // This is sync0
+        if (!getSkip(width)) {
+          state->currentBs = 0;
+          state->currentAxis = getAxis(width);
+          state->currentSync = timestamp;
+        }
+      } else {
+        // this is sync1
+        if (!getSkip(width)) {
+          state->currentBs = 1;
+          state->currentAxis = getAxis(width);
+          state->currentSync = timestamp;
+        }
       }
+      
+      state->lastSync = timestamp;
     }
-    
-    state->lastSync = timestamp;
   }
 
   return angleMeasured;

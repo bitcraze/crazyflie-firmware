@@ -22,6 +22,7 @@ typedef struct pulseProcessor_s {
 
   // Synchronization state
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];
+  int pulseHistoryPtr[PULSE_PROCESSOR_N_SENSORS];
 
 
   // Sync pulse timestamp estimation
