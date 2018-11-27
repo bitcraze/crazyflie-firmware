@@ -68,8 +68,10 @@ typedef struct {
   void (*dataAvailableCallback)(void);
 } sensorsImplementation_t;
 
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static void nullFunction(void) {}
+#pragma GCC diagnostic pop
 
 static const sensorsImplementation_t sensorImplementations[SensorImplementation_COUNT] = {
 #ifdef SENSOR_INCLUDED_BMI088_BMP388

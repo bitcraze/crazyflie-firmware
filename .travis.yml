@@ -31,3 +31,7 @@ script:
   # Build cf2 with TDOA3 and all config options
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE"
+
+  # Build the tag platform
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=tag

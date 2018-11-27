@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2018 Bitcraze AB
+ * Copyright (C) 2018 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * Platform functionality for the CF2 platform
+ * Platform functionality for the TAG platform
  */
 
 #define DEBUG_MODULE "PLATFORM"
@@ -35,17 +35,11 @@
 
 static platformConfig_t configs[] = {
   {
-    .deviceType = "CF20",
-    .deviceTypeName = "Crazyflie 2.0",
-    .sensorImplementation = SensorImplementation_mpu9250_lps25h,
-    .physicalLayoutAntennasAreClose = true,
-  },
-  {
-    .deviceType = "CF21",
-    .deviceTypeName = "Crazyflie 2.1",
+    .deviceType = "RR10",
+    .deviceTypeName = "Roadrunner 1.0",
     .sensorImplementation = SensorImplementation_bmi088_bmp388,
-    .physicalLayoutAntennasAreClose = true,
-  }
+    .physicalLayoutAntennasAreClose = false,
+  },
 };
 
 const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs) {
@@ -65,6 +59,6 @@ void platformInitHardware() {
 // Config functions ------------------------
 
 const char* platformConfigGetPlatformName() {
-  return "cf2";
+  return "tag";
 }
 

@@ -1,5 +1,11 @@
 ## Copy this file to config.mk and modify to get you personal build configuration
 
+## Force device type string
+# CFLAGS += -DDEVICE_TYPE_STRING_FORCE="CF20"
+
+## Force a sensor implementation to be used
+# SENSORS=bosch
+
 ## Set CRTP link to E-SKY receiver
 # CFLAGS += -DUSE_ESKYLINK
 
@@ -63,10 +69,6 @@
 
 
 ## TDaA 3 - experimental -------------------------------------------
-
-## Set the positioning system in TDoA3 mode on startup
-# LPS_TDOA3_ENABLE=1
-
 # Enable 2D positioning. The value (1.2) is the height that the tag will move at
 # Only use in TDoA 3
 # CFLAGS += -DLPS_2D_POSITION_HEIGHT=1.2
