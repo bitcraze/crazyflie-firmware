@@ -70,7 +70,7 @@
 #include "param.h"
 
 #include "math.h"
-#include "arm_math.h"
+#include "cf_math.h"
 
 //#define KALMAN_USE_BARO_UPDATE
 //#define KALMAN_NAN_CHECK

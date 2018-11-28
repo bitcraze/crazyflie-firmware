@@ -38,7 +38,7 @@
 #include "estimator.h"
 #include "estimator_kalman.h"
 
-#include "arm_math.h"
+#include "cf_math.h"
 
 #include <stdlib.h>
 

@@ -14,9 +14,9 @@
 
 // #include "mock_arm_math.h"
 
-// The mocking FW can not handle the arm_math.h file, it crashes while parsing it. We have to use manual mocks instead.
+// The mocking FW can not handle the cf_math.h/arm_math.h file, it crashes while parsing it. We have to use manual mocks instead.
 // Temporarily fix to make tests pass, add test code for the kalman part of rxcallback()
-#include "arm_math.h"
+#include "cf_math.h"
 void arm_std_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
 void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
 
