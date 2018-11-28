@@ -49,5 +49,5 @@ typedef struct pulseProcessor_s {
 } pulseProcessor_t;
 
 // If returns true, the angle, base station and direction are written
-bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis);
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis);
 

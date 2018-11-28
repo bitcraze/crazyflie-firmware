@@ -1,4 +1,4 @@
-#include "pulseProcessor.h"
+#include "pulse_processor.h"
 
 #include <math.h>
 #include "test_support.h"
@@ -75,43 +75,53 @@ static bool getSkip(int width)
   return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x04) != 0;
 }
 
-bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis)
+
+static bool processWhenSynchronized(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis) {
+  bool angleMeasured = false;
+
+  if (isSweep(state, timestamp, width)) {
+    int delta = TS_DIFF(timestamp, state->currentSync);
+
+    if (delta < FRAME_LENGTH) {
+      *angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
+      *baseStation = state->currentBs;
+      *axis = state->currentAxis;
+      angleMeasured = true;
+    }
+
+    state->currentSync = 0;
+  } else {
+    if (TS_DIFF(timestamp, state->lastSync) > SYNC_MAX_SEPARATION) {
+      // This is sync0
+      if (!getSkip(width)) {
+        state->currentBs = 0;
+        state->currentAxis = getAxis(width);
+        state->currentSync = timestamp;
+      }
+    } else {
+      // this is sync1
+      if (!getSkip(width)) {
+        state->currentBs = 1;
+        state->currentAxis = getAxis(width);
+        state->currentSync = timestamp;
+      }
+    }
+
+    state->lastSync = timestamp;
+  }
+
+  return angleMeasured;
+}
+
+
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis)
 {
   bool angleMeasured = false;
 
   if (!state->synchronized) {
     synchronize(state, 0, timestamp, width);
   } else {
-    if (isSweep(state, timestamp, width)) {
-      int delta = TS_DIFF(timestamp, state->currentSync);
-      
-      if (delta < FRAME_LENGTH) {
-        *angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
-        *baseStation = state->currentBs;
-        *axis = state->currentAxis;
-        angleMeasured = true;
-      }
-
-      state->currentSync = 0;
-    } else {
-      if (TS_DIFF(timestamp, state->lastSync) > SYNC_MAX_SEPARATION) {
-        // This is sync0
-        if (!getSkip(width)) {
-          state->currentBs = 0;
-          state->currentAxis = getAxis(width);
-          state->currentSync = timestamp;
-        }
-      } else {
-        // this is sync1
-        if (!getSkip(width)) {
-          state->currentBs = 1;
-          state->currentAxis = getAxis(width);
-          state->currentSync = timestamp;
-        }
-      }
-      
-      state->lastSync = timestamp;
-    }
+    angleMeasured = processWhenSynchronized(state, timestamp, width, angle, baseStation, axis);
   }
 
   return angleMeasured;
@@ -170,7 +180,7 @@ TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], ui
  * @return true If an acceptable sync time could be calculated
  * @return false If the sampled Sync0 timestamps do not make sense
  */
-bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime)
+TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime)
 {
   if (nSyncTimes == 0) {
     return false;

@@ -41,8 +41,8 @@
 #include "debug.h"
 #include "uart1.h"
 
-#include "pulseProcessor.h"
-#include "lighthouseGeometry.h"
+#include "pulse_processor.h"
+#include "lighthouse_geometry.h"
 
 #include "estimator_kalman.h"
 
@@ -125,11 +125,11 @@ static void lighthouseTask(void *param)
 
       if (frame.sensor == 0) {
         // DEBUG_PRINT("Reading %08X:%04X\n", frame.timestamp, frame.width);
-        if (processPulse(&ppState, frame.timestamp, frame.width, &angle, &basestation, &axis)) {
+        if (pulseProcessorProcessPulse(&ppState, frame.timestamp, frame.width, &angle, &basestation, &axis)) {
           angles[basestation][axis] = angle;
           
           if (basestation == 1 && axis == 1) {
-            lhgeometryGetPosition(baseStationsGeometry, (void*)angles, position, &delta);
+            lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles, position, &delta);
 
             ext_pos.x = position[0];
             ext_pos.y = -position[2];

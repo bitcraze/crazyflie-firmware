@@ -170,11 +170,11 @@ with the docker builder image and the toolbelt
        
 When working with one specific file it is often convenient to run only one unit test
        
-       make unit FILES=test/utils/src/TestNum.c
+       make unit FILES=test/utils/src/test_num.c
 
 or with the toolbelt        
 
-       tb make unit FILES=test/utils/src/TestNum.c
+       tb make unit FILES=test/utils/src/test_num.c
               
 ## Running unit tests with specific build settings
       

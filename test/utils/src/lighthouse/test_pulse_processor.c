@@ -1,4 +1,4 @@
-#include "pulseProcessor.h"
+#include "pulse_processor.h"
 
 #include <stdlib.h>
 #include <string.h>

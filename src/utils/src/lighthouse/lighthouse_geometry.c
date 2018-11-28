@@ -34,7 +34,7 @@
  * lighthouseGeometry.c: lighthouse tracking system geometry functions
  */
 
-#include "lighthouseGeometry.h"
+#include "lighthouse_geometry.h"
 
 #include <arm_math.h>
 
@@ -118,7 +118,7 @@ static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, ve
     return true;
 }
 
-bool lhgeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta)
+bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta)
 {
   static vec3d ray1, ray2, origin1, origin2;
 

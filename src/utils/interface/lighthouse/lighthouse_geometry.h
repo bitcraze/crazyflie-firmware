@@ -11,4 +11,4 @@ typedef struct baseStationGeometry_s {
   float origin[3];
 } baseStationGeometry_t;
 
-bool lhgeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta);
+bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta);

@@ -223,7 +223,7 @@ PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ += configblockeeprom.o crc_bosch.o
 PROJ_OBJ += sleepus.o
-PROJ_OBJ += pulseProcessor.o lighthouseGeometry.o
+PROJ_OBJ += pulse_processor.o lighthouse_geometry.o
 
 
 # Libs
