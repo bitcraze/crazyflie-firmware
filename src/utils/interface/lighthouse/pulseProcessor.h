@@ -51,28 +51,3 @@ typedef struct pulseProcessor_s {
 // If returns true, the angle, base station and direction are written
 bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis);
 
-/**
- * @brief Find the timestamp of a SYNC0 pulse detectable in pulseHistory
- * 
- * @param pulseHistory PULSE_PROCESSOR_HISTORY_LENGTH pulses
- * @param[out] foundSyncTime Timestamp of the fist Sync0 written in this variable
- * @return true if the Sync0 was found
- * @return false if no Sync0 found
- */
-bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
-
-/**
- * @brief Get the System Sync time from sampled Sync0 time from multiple sensors
- * 
- * This function places the Sync0 timestamps modulo the lighthouse V1 frame length
- * to estimate if they can possibly be coming from the same lighthouse system.
- * This allows to check that the sampling done on multiple receiving sensor is
- * consistent.
- * 
- * @param syncTimes Array of Sync0 timestamps
- * @param nSyncTimes Number of timestamps in syncTimes array
- * @param[out] syncTime Pointer to the variable where the resulting sync time is written
- * @return true If an acceptable sync time could be calculated
- * @return false If the sampled Sync0 timestamps do not make sense
- */
-bool getSystemSyncTime(const uint32_t syncTimes[], int nSyncTimes, uint32_t *syncTime);

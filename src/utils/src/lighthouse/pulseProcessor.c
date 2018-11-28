@@ -1,6 +1,7 @@
 #include "pulseProcessor.h"
 
 #include <math.h>
+#include "test_support.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -21,6 +22,11 @@
 // Utility functions and macros
 #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
 
+
+TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
+TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
+
+
 // static bool resetSynchonization(pulseProcessor_t *state)
 // {
 //   state->synchronized = false;
@@ -37,7 +43,7 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
   // As soon as one of the history buffer is full, run the syncrhonization algorithm!
   if (state->pulseHistoryPtr[sensor] == PULSE_PROCESSOR_HISTORY_LENGTH) {
     static uint32_t syncTimes[PULSE_PROCESSOR_HISTORY_LENGTH];
-    int nSyncTimes = 0;
+    size_t nSyncTimes = 0;
 
     for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
       if (findSyncTime(state->pulseHistory[i], &syncTimes[nSyncTimes])) {
@@ -112,7 +118,15 @@ bool processPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int 
 }
 
 
-bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime)
+/**
+ * @brief Find the timestamp of a SYNC0 pulse detectable in pulseHistory
+ *
+ * @param pulseHistory PULSE_PROCESSOR_HISTORY_LENGTH pulses
+ * @param[out] foundSyncTime Timestamp of the fist Sync0 written in this variable
+ * @return true if the Sync0 was found
+ * @return false if no Sync0 found
+ */
+TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime)
 {
   int nFound = 0;
   bool wasSweep = false;
@@ -142,7 +156,21 @@ bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyn
   return (nFound == 2 && delta < (FRAME_LENGTH + MAX_FRAME_LENGTH_NOISE) && delta > (FRAME_LENGTH - MAX_FRAME_LENGTH_NOISE));
 }
 
-bool getSystemSyncTime(const uint32_t syncTimes[], int nSyncTimes, uint32_t *syncTime)
+/**
+ * @brief Get the System Sync time from sampled Sync0 time from multiple sensors
+ *
+ * This function places the Sync0 timestamps modulo the lighthouse V1 frame length
+ * to estimate if they can possibly be coming from the same lighthouse system.
+ * This allows to check that the sampling done on multiple receiving sensor is
+ * consistent.
+ *
+ * @param syncTimes Array of Sync0 timestamps
+ * @param nSyncTimes Number of timestamps in syncTimes array
+ * @param[out] syncTime Pointer to the variable where the resulting sync time is written
+ * @return true If an acceptable sync time could be calculated
+ * @return false If the sampled Sync0 timestamps do not make sense
+ */
+bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime)
 {
   if (nSyncTimes == 0) {
     return false;
@@ -153,8 +181,8 @@ bool getSystemSyncTime(const uint32_t syncTimes[], int nSyncTimes, uint32_t *syn
   // be pushed by (1<<TIMESTAMP_BITWIDTH) to correct the wrapping
   bool isWrapping = false;
   int wref = syncTimes[0];
-  for (int i=0; i<nSyncTimes; i++) {
-    if (abs(wref - syncTimes[i]) > (TIMESTAMP_MAX/2)) {
+  for (size_t i=0; i<nSyncTimes; i++) {
+    if (abs(wref - (int)syncTimes[i]) > (TIMESTAMP_MAX/2)) {
       isWrapping = true;
     }
   }
@@ -169,7 +197,6 @@ bool getSystemSyncTime(const uint32_t syncTimes[], int nSyncTimes, uint32_t *syn
   int maxDiff = INT32_MIN;
 
   for (size_t i=1; i<nSyncTimes; i++) {
-
     int diff;
     
     if (isWrapping && (syncTimes[i] < (TIMESTAMP_MAX/2))) {
@@ -193,7 +220,7 @@ bool getSystemSyncTime(const uint32_t syncTimes[], int nSyncTimes, uint32_t *syn
     return false;
   }
 
-  *syncTime = ((int)syncTimes[0] + (differenceSum / (nSyncTimes))) & (TIMESTAMP_MAX);
+  *syncTime = ((int)syncTimes[0] + ((int)differenceSum / (int)nSyncTimes)) & (TIMESTAMP_MAX);
   
 
   return true;

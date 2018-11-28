@@ -20,6 +20,14 @@
 #define LONG_SWEEP 1500
 
 
+static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime);
+static void limitTimestamps(pulseProcessorPulse_t history[]);
+
+// Functions under test
+bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
+bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
+
+
 void setUp(void) {
 }
 
@@ -112,7 +120,6 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithShortSpuriousSpike()
     {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
     {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
     {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -138,7 +145,6 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithShortSpuriousSpike
     {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
     {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
     {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -286,7 +292,7 @@ void testThatGetSystemSyncTimeDoesNotReturnTimestampFor0Samples()
 {
   // Fixture
   uint32_t unused = 0;
-  uint32_t syncTimes[8] = {};
+  uint32_t syncTimes[8];
   size_t nSyncTimes = 0;
 
   // Test
@@ -328,14 +334,14 @@ void testThatGetSystemSyncTimeHandlesTimestampsWithWrapping()
 
 // Test helpers
 
-void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime)
+static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime)
 {
   uint32_t diff = actualSyncTime - expectedSyncTime;
   
   TEST_ASSERT_LESS_THAN_MESSAGE(MAX_FRAME_LENGTH_NOISE, diff % FRAME_LENGTH, "Sync time out of bound");
 }
 
-void limitTimestamps(pulseProcessorPulse_t history[])
+static void limitTimestamps(pulseProcessorPulse_t history[])
 {
   for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
     history[i].timestamp &= ((1<<TIMESTAMP_BITWIDTH)-1);
