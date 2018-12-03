@@ -1,5 +1,6 @@
 #include "pulse_processor.h"
 
+#include <string.h>
 #include <math.h>
 #include "test_support.h"
 
@@ -27,11 +28,11 @@ TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], ui
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
 
 
-// static bool resetSynchonization(pulseProcessor_t *state)
-// {
-//   state->synchronized = false;
-//   memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
-// }
+static void resetSynchonization(pulseProcessor_t *state)
+{
+  state->synchronized = false;
+  memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
+}
 
 static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp, uint32_t width)
 {
@@ -65,6 +66,17 @@ static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
   return ((delta > SYNC_MAX_SEPARATION) && (delta < (FRAME_LENGTH - (2*SYNC_MAX_SEPARATION)))) || (width < SWEEP_MAX_WIDTH);
 }
 
+static bool isSync(pulseProcessor_t *state, unsigned int timestamp, int width)
+{
+  int delta = TS_DIFF(timestamp, state->currentSync0);
+  int deltaModulo = delta % FRAME_LENGTH;
+
+  if (deltaModulo < MAX_FRAME_LENGTH_NOISE || abs(deltaModulo - (FRAME_LENGTH - SYNC_SEPARATION)) < MAX_FRAME_LENGTH_NOISE) {
+    return true;
+  }
+  return false;
+}
+
 static bool getAxis(int width)
 {
   return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x01) != 0;
@@ -90,7 +102,7 @@ static bool processWhenSynchronized(pulseProcessor_t *state, unsigned int timest
     }
 
     state->currentSync = 0;
-  } else {
+  } else if (isSync(state, timestamp, width)) {
     if (TS_DIFF(timestamp, state->lastSync) > SYNC_MAX_SEPARATION) {
       // This is sync0
       if (!getSkip(width)) {
@@ -108,6 +120,9 @@ static bool processWhenSynchronized(pulseProcessor_t *state, unsigned int timest
     }
 
     state->lastSync = timestamp;
+  } else {
+    // If the pulse is not sync nor sweep: we are not syncronized anymore!
+    resetSynchonization(state);
   }
 
   return angleMeasured;
