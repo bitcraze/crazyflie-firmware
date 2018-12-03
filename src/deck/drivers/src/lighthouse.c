@@ -155,7 +155,7 @@ static void lighthouseTask(void *param)
 
 static void lighthouseInit(DeckInfo *info)
 {
-  uart1Init(115200);
+  uart1Init(230400);
 
   xTaskCreate(lighthouseTask, "LH",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
