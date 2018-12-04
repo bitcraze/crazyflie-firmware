@@ -28,10 +28,14 @@ TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], ui
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
 
 
-static void resetSynchonization(pulseProcessor_t *state)
+
+static void resetPulseHistory(pulseProcessor_t *state) {
+  memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
+}
+
+static void resetSynchronization(pulseProcessor_t *state)
 {
   state->synchronized = false;
-  memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
 }
 
 static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp, uint32_t width)
@@ -41,8 +45,8 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
 
   state->pulseHistoryPtr[sensor] += 1;
 
-  // As soon as one of the history buffer is full, run the syncrhonization algorithm!
-  if (state->pulseHistoryPtr[sensor] == PULSE_PROCESSOR_HISTORY_LENGTH) {
+  // As soon as one of the history buffers is full, run the synchronization algorithm!
+  if (state->pulseHistoryPtr[sensor] >= PULSE_PROCESSOR_HISTORY_LENGTH) {
     static uint32_t syncTimes[PULSE_PROCESSOR_HISTORY_LENGTH];
     size_t nSyncTimes = 0;
 
@@ -57,6 +61,8 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
         state->currentSync1 = state->currentSync0 + SYNC_SEPARATION;
       }
     }
+
+    resetPulseHistory(state);
   }
 }
 
