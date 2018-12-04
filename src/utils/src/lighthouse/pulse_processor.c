@@ -17,25 +17,23 @@
 #define SYNC_DIVIDER 500
 #define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
 #define SYNC_SEPARATION 19200
-#define SENSOR_MAX_DISPERTION 10
+#define SENSOR_MAX_DISPERTION 20
 #define MAX_FRAME_LENGTH_NOISE 400
 
 // Utility functions and macros
-#define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
+// #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
+static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
+  const uint32_t bitmask = (1 << TIMESTAMP_BITWIDTH) - 1;
+  return (x - y) & bitmask;
+}
+
 
 
 TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
 
-
-
 static void resetPulseHistory(pulseProcessor_t *state) {
   memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
-}
-
-static void resetSynchronization(pulseProcessor_t *state)
-{
-  state->synchronized = false;
 }
 
 static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp, uint32_t width)
@@ -68,13 +66,13 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
 
 static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
 {
-  int delta = TS_DIFF(timestamp, state->lastSync);
+  uint32_t delta = TS_DIFF(timestamp, state->lastSync);
   return ((delta > SYNC_MAX_SEPARATION) && (delta < (FRAME_LENGTH - (2*SYNC_MAX_SEPARATION)))) || (width < SWEEP_MAX_WIDTH);
 }
 
 TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int width)
 {
-  int delta = TS_DIFF(timestamp, state->currentSync0);
+  uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
   int deltaModulo = delta % FRAME_LENGTH;
 
   // We expect a modulo close to 0, detect and handle wrapping around FRAME_LENGTH
@@ -88,70 +86,147 @@ TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int
   return false;
 }
 
-static bool getAxis(int width)
-{
-  return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x01) != 0;
+static int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp) {
+  int baseStation = 1;
+
+  uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
+  if (delta > SYNC_MAX_SEPARATION) {
+    baseStation = 0;
+  }
+
+  return baseStation;
 }
 
-static bool getSkip(int width)
-{
-  return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x04) != 0;
+static SweepDirection getAxis(int width) {
+  SweepDirection result = sweepDirection_j;
+
+  if ((((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x01) != 0) {
+    result = sweepDirection_k;
+  }
+
+  return result;
 }
 
+static bool isSweepActiveThisFrame(int width) {
+  return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x04) == 0;
+}
 
-static bool processWhenSynchronized(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis) {
-  bool angleMeasured = false;
+static void storeSweepData(pulseProcessor_t *state, int sensor, unsigned int timestamp) {
+  if (state->sweeps[sensor].state == sweepStorageStateWaiting) {
+    state->sweeps[sensor].timestamp = timestamp;
+    state->sweeps[sensor].state = sweepStorageStateValid;
+  } else {
+    state->sweeps[sensor].state = sweepStorageStateError;
+  }
+
+  state->sweepDataStored = true;
+}
+
+static void resetSweepData(pulseProcessor_t *state) {
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    state->sweeps[sensor].state = sweepStorageStateWaiting;
+  }
+  state->sweepDataStored = false;
+}
+
+static void resetSynchronization(pulseProcessor_t *state)
+{
+  resetSweepData(state);
+  state->synchronized = false;
+}
+
+static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t result[], int *baseStation, int *axis) {
+  bool anglesMeasured = false;
+
+  if (state->sweepDataStored) {
+    for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+      if (state->sweeps[sensor].state == sweepStorageStateValid) {
+        int delta = TS_DIFF(state->sweeps[sensor].timestamp, state->currentSync);
+        if (delta < FRAME_LENGTH) {
+          float angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
+
+          *baseStation = state->currentBaseStation;
+          *axis = state->currentAxis;
+
+          result[sensor].angles[state->currentBaseStation][state->currentAxis] = angle;
+          result[sensor].validCount++;
+
+          anglesMeasured = true;
+        }
+      }
+    }
+
+    resetSweepData(state);
+  }
+
+  return anglesMeasured;
+}
+
+static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsigned int width) {
+  int baseStation = getBaseStationId(state, timestamp);
+  if (0 == baseStation) {
+    state->currentSync0 = timestamp;
+  } else {
+    state->currentSync1 = timestamp;
+  }
+
+  state->lastSync = timestamp;
+
+  if (isSweepActiveThisFrame(width)) {
+    state->currentBaseStation = baseStation;
+    state->currentAxis = getAxis(width);
+    state->currentSync = timestamp;
+  }
+}
+
+TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
+  const uint32_t min = (1 << TIMESTAMP_BITWIDTH) - SENSOR_MAX_DISPERTION;
+  const uint32_t max = SENSOR_MAX_DISPERTION;
+
+  uint32_t diff = TS_DIFF(timestamp, lastSync);
+  return (diff > max) && (diff < min);
+}
+
+static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
+  bool anglesMeasured = false;
+
+  if (isNewSync(timestamp, state->lastSync)) {
+    if (isSync(state, timestamp, width)) {
+      anglesMeasured = processPreviousFrame(state, angles, baseStation, axis);
+      storeSyncData(state, timestamp, width);
+    } else {
+      // Expected a sync but something is wrong, re-synchronize.
+      resetSynchronization(state);
+    }
+  }
+
+  return anglesMeasured;
+}
+
+static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
+  bool anglesMeasured = false;
 
   if (isSweep(state, timestamp, width)) {
-    int delta = TS_DIFF(timestamp, state->currentSync);
-
-    if (delta < FRAME_LENGTH) {
-      *angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
-      *baseStation = state->currentBs;
-      *axis = state->currentAxis;
-      angleMeasured = true;
-    }
-
-    state->currentSync = 0;
-  } else if (isSync(state, timestamp, width)) {
-    if (TS_DIFF(timestamp, state->lastSync) > SYNC_MAX_SEPARATION) {
-      // This is sync0
-      if (!getSkip(width)) {
-        state->currentBs = 0;
-        state->currentAxis = getAxis(width);
-        state->currentSync = timestamp;
-        state->currentSync0 = timestamp;
-      }
-    } else {
-      // this is sync1
-      if (!getSkip(width)) {
-        state->currentBs = 1;
-        state->currentAxis = getAxis(width);
-        state->currentSync = timestamp;
-      }
-    }
-
-    state->lastSync = timestamp;
+    storeSweepData(state, sensor, timestamp);
   } else {
-    // If the pulse is not sync nor sweep: we are not syncronized anymore!
-    resetSynchronization(state);
+    anglesMeasured = processSync(state, timestamp, width, angles, baseStation, axis);
   }
 
-  return angleMeasured;
+  return anglesMeasured;
 }
 
 
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, float *angle, int *baseStation, int *axis)
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis)
 {
-  bool angleMeasured = false;
+  bool anglesMeasured = false;
 
   if (!state->synchronized) {
-    synchronize(state, 0, timestamp, width);
+    synchronize(state, sensor, timestamp, width);
   } else {
-    angleMeasured = processWhenSynchronized(state, timestamp, width, angle, baseStation, axis);
+    anglesMeasured = processWhenSynchronized(state, sensor, timestamp, width, angles, baseStation, axis);
   }
 
-  return angleMeasured;
+  return anglesMeasured;
 }
 
 

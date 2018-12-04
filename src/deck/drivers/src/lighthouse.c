@@ -47,7 +47,7 @@
 #include "estimator_kalman.h"
 
 
-static float angles[2][2];
+static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 
 typedef union frame_u {
   struct {
@@ -88,7 +88,6 @@ static void lighthouseTask(void *param)
   static frame_t frame;
   static pulseProcessor_t ppState = {};
 
-  float angle;
   int basestation;
   int axis;
 
@@ -123,23 +122,27 @@ static void lighthouseTask(void *param)
         continue;
       }
 
-      if (frame.sensor == 0) {
-        // DEBUG_PRINT("Reading %08X:%04X\n", frame.timestamp, frame.width);
-        if (pulseProcessorProcessPulse(&ppState, frame.timestamp, frame.width, &angle, &basestation, &axis)) {
-          angles[basestation][axis] = angle;
-          
-          if (basestation == 1 && axis == 1) {
-            lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles, position, &delta);
+      if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
+        if (basestation == 1 && axis == 1) {
+          for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+            // Only use sensor 0 for now
+            if (sensor == 0) {
+              if (angles[sensor].validCount == 4) {
+                lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles[sensor].angles, position, &delta);
 
-            ext_pos.x = position[0];
-            ext_pos.y = -position[2];
-            ext_pos.z = position[1];
-            ext_pos.stdDev = 0.01;
-            estimatorKalmanEnqueuePosition(&ext_pos);
+                ext_pos.x = position[0];
+                ext_pos.y = -position[2];
+                ext_pos.z = position[1];
+                ext_pos.stdDev = 0.01;
+                estimatorKalmanEnqueuePosition(&ext_pos);
+
+//                DEBUG_PRINT("%i %f %f %f\n", sensor, (double)ext_pos.x, (double)ext_pos.y, (double)ext_pos.z);
+              }
+            }
+
+            angles[sensor].validCount = 0;
           }
         }
-      } else {
-        DEBUG_PRINT("Receiving from wrong sensor?!?!?!\n");
       }
 
       synchronized = getFrame(&frame);
@@ -174,10 +177,10 @@ static const DeckDriver lighthouse_deck = {
 DECK_DRIVER(lighthouse_deck);
 
 LOG_GROUP_START(lighthouse)
-LOG_ADD(LOG_FLOAT, angle0x, &angles[0][0])
-LOG_ADD(LOG_FLOAT, angle0y, &angles[1][0])
-LOG_ADD(LOG_FLOAT, angle1x, &angles[0][1])
-LOG_ADD(LOG_FLOAT, angle1y, &angles[1][1])
+LOG_ADD(LOG_FLOAT, angle0x, &angles[0].angles[0][0])
+LOG_ADD(LOG_FLOAT, angle0y, &angles[0].angles[1][0])
+LOG_ADD(LOG_FLOAT, angle1x, &angles[0].angles[0][1])
+LOG_ADD(LOG_FLOAT, angle1y, &angles[0].angles[1][1])
 LOG_ADD(LOG_FLOAT, x, &position[0])
 LOG_ADD(LOG_FLOAT, y, &position[1])
 LOG_ADD(LOG_FLOAT, z, &position[2])

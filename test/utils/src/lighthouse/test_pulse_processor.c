@@ -455,7 +455,6 @@ void testThatIsSyncFindsSync1WithWrapping()
   TEST_ASSERT_TRUE(result);
 }
 
-
 void testThatIsSyncReturnsFalseIfSync1WasSync0AndTheRealSync0IsReceived()
 {
   // Fixture
@@ -471,6 +470,55 @@ void testThatIsSyncReturnsFalseIfSync1WasSync0AndTheRealSync0IsReceived()
   TEST_ASSERT_FALSE(result);
 }
 
+bool isNewSync(uint32_t timestamp, uint32_t lastSync);
+
+void testThatIsNewSyncMatchesTimestampCloseAfter() {
+  // Fixture
+  uint32_t lastSync = 4711;
+  uint32_t timestamp = lastSync + 3;
+
+  // Test
+  bool actual = isNewSync(timestamp, lastSync);
+
+  // Assert
+  TEST_ASSERT_FALSE(actual);
+}
+
+void testThatIsNewSyncMatchesTimestampCloseBefore() {
+  // Fixture
+  uint32_t lastSync = 4711;
+  uint32_t timestamp = lastSync - 3;
+
+  // Test
+  bool actual = isNewSync(timestamp, lastSync);
+
+  // Assert
+  TEST_ASSERT_FALSE(actual);
+}
+
+void testThatIsNewSyncMatchesTimestampCloseBeforeWhenWrapping() {
+  // Fixture
+  uint32_t lastSync = 1;
+  uint32_t timestamp = (1 << TIMESTAMP_BITWIDTH) - 1;
+
+  // Test
+  bool actual = isNewSync(timestamp, lastSync);
+
+  // Assert
+  TEST_ASSERT_FALSE(actual);
+}
+
+void testThatIsNewSyncDoesNotMatchTimestampTooFarAway() {
+  // Fixture
+  uint32_t lastSync = 4711;
+  uint32_t timestamp = lastSync + 30;
+
+  // Test
+  bool actual = isNewSync(timestamp, lastSync);
+
+  // Assert
+  TEST_ASSERT_TRUE(actual);
+}
 
 
 // Test helpers
