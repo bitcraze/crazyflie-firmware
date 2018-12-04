@@ -332,6 +332,131 @@ void testThatGetSystemSyncTimeHandlesTimestampsWithWrapping()
   TEST_ASSERT_EQUAL(expectedSyncTime, actualSyncTime);
 }
 
+bool isSync(pulseProcessor_t *state, unsigned int timestamp, int width);
+
+void testThatIsSyncFindsNextSync0()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = 0;
+  uint32_t timestamp = state.currentSync0 + FRAME_LENGTH;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+void testThatIsSyncFindsNextSync1()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = 0;
+  uint32_t timestamp = state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+void testThatIsSyncFindsDistantSync1()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = 0;
+  uint32_t timestamp = state.currentSync0 + (10*FRAME_LENGTH) + SYNC_SEPARATION;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+void testThatIsSyncReturnFalseOnSweep()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = 0;
+  uint32_t timestamp = state.currentSync0 + FRAME_LENGTH + SWEEP_CENTER;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_FALSE(result);
+}
+
+void testThatIsSyncFindsSync0WithSomeNoise()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = 0;
+  uint32_t timestamp = state.currentSync0 + FRAME_LENGTH - 10;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+void testThatIsSyncFindsSync1WithSomeNoise()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = 0;
+  uint32_t timestamp = state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION + 500;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+
+void testThatIsSyncFindsSync0WithWrapping()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = TIMESTAMP_MAX - (FRAME_LENGTH/2);
+  uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH) & TIMESTAMP_MAX;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+void testThatIsSyncFindsSync1WithWrapping()
+{
+  // Fixture
+  pulseProcessor_t state = {0};
+  state.currentSync0 = TIMESTAMP_MAX - (FRAME_LENGTH/2);;
+  uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION) & TIMESTAMP_MAX;;
+  uint32_t width = SYNC_X;
+
+  // Test
+  bool result = isSync(&state, timestamp, width);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+
+
 // Test helpers
 
 static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime)

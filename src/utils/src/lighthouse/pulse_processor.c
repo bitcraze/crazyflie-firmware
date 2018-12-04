@@ -72,12 +72,17 @@ static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
   return ((delta > SYNC_MAX_SEPARATION) && (delta < (FRAME_LENGTH - (2*SYNC_MAX_SEPARATION)))) || (width < SWEEP_MAX_WIDTH);
 }
 
-static bool isSync(pulseProcessor_t *state, unsigned int timestamp, int width)
+TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int width)
 {
   int delta = TS_DIFF(timestamp, state->currentSync0);
   int deltaModulo = delta % FRAME_LENGTH;
 
-  if (deltaModulo < MAX_FRAME_LENGTH_NOISE || abs(deltaModulo - (FRAME_LENGTH - SYNC_SEPARATION)) < MAX_FRAME_LENGTH_NOISE) {
+  // We expect a modulo close to 0, detect and handle wrapping around FRAME_LENGTH
+  if (deltaModulo > (FRAME_LENGTH/2)) {
+    deltaModulo -= FRAME_LENGTH;
+  }
+
+  if (abs(deltaModulo) < SYNC_MAX_SEPARATION) {
     return true;
   }
   return false;
@@ -115,6 +120,7 @@ static bool processWhenSynchronized(pulseProcessor_t *state, unsigned int timest
         state->currentBs = 0;
         state->currentAxis = getAxis(width);
         state->currentSync = timestamp;
+        state->currentSync0 = timestamp;
       }
     } else {
       // this is sync1
@@ -128,7 +134,7 @@ static bool processWhenSynchronized(pulseProcessor_t *state, unsigned int timest
     state->lastSync = timestamp;
   } else {
     // If the pulse is not sync nor sweep: we are not syncronized anymore!
-    resetSynchonization(state);
+    resetSynchronization(state);
   }
 
   return angleMeasured;
