@@ -18,7 +18,7 @@
 #define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
 #define SYNC_SEPARATION 19200
 #define SENSOR_MAX_DISPERTION 10
-#define MAX_FRAME_LENGTH_NOISE 40
+#define MAX_FRAME_LENGTH_NOISE 400
 
 // Utility functions and macros
 #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
@@ -82,7 +82,7 @@ TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int
     deltaModulo -= FRAME_LENGTH;
   }
 
-  if (abs(deltaModulo) < SYNC_MAX_SEPARATION) {
+  if ((deltaModulo > -1*MAX_FRAME_LENGTH_NOISE) && (deltaModulo < SYNC_MAX_SEPARATION)) {
     return true;
   }
   return false;
