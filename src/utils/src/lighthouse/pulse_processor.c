@@ -86,12 +86,29 @@ TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int
   return false;
 }
 
+/**
+ * @brief Get the Base Station Id
+ * 
+ * This function looks at the pulse position modulo FRAME_LENGTH in relation to
+ * the latest sync0. Values ~0 means a Sync0 pulse, ~19200 means a Sync1.
+ * 
+ * @param state State of the pulse processor
+ * @param timestamp Timestamp of the syn to process
+ * @return 0 for Sync0, 1 for Sync1
+ */
 static int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp) {
-  int baseStation = 1;
+  int baseStation = 0;
 
   uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
-  if (delta > SYNC_MAX_SEPARATION) {
-    baseStation = 0;
+  int deltaModulo = delta % FRAME_LENGTH;
+
+  // We expect a modulo close to 0, detect and handle wrapping around FRAME_LENGTH
+  if (deltaModulo > (FRAME_LENGTH/2)) {
+    deltaModulo -= FRAME_LENGTH;
+  }
+
+  if (deltaModulo > (SYNC_SEPARATION/2)) {
+    baseStation = 1;
   }
 
   return baseStation;
