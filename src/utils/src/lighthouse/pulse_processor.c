@@ -18,7 +18,7 @@
 #define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
 #define SYNC_SEPARATION 19200
 #define SENSOR_MAX_DISPERTION 20
-#define MAX_FRAME_LENGTH_NOISE 400
+#define MAX_FRAME_LENGTH_NOISE 800
 
 // Utility functions and macros
 // #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
