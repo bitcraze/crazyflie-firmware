@@ -101,14 +101,40 @@ static void calculateStats(uint32_t nowMs) {
   resetStats();
 }
 
-static vec3d position;
 
 baseStationGeometry_t baseStationsGeometry[] = {
   {.origin = {-2.029516, 2.391417, -1.356382, }, .mat = {{-0.718327, 0.285313, -0.634511, }, {0.066982, 0.936164, 0.345125, }, {0.692474, 0.205412, -0.691582, }, }},
   {.origin = {1.027486, 2.587440, 1.884445, }, .mat = {{0.846093, -0.256320, 0.467361, }, {-0.021730, 0.859477, 0.510712, }, {-0.532592, -0.442266, 0.721628, }, }},
 };
 
+static vec3d position;
 static positionMeasurement_t ext_pos;
+static void estimatePosition(pulseProcessorResult_t angles[]) {
+  memset(&ext_pos, 0, sizeof(ext_pos));
+  int sensorsUsed = 0;
+  float delta;
+
+  // Average over all sensors with valid data
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+      if (angles[sensor].validCount == 4) {
+        lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles[sensor].angles, position, &delta);
+
+        ext_pos.x += position[0];
+        ext_pos.y -= position[2];
+        ext_pos.z += position[1];
+        sensorsUsed++;
+
+        positionCount++;
+      }
+  }
+
+  ext_pos.x /= sensorsUsed;
+  ext_pos.y /= sensorsUsed;
+  ext_pos.z /= sensorsUsed;
+
+  ext_pos.stdDev = 0.01;
+  estimatorKalmanEnqueuePosition(&ext_pos);
+}
 
 static void lighthouseTask(void *param)
 {
@@ -121,13 +147,10 @@ static void lighthouseTask(void *param)
   int basestation;
   int axis;
 
-  float delta;
-
   systemWaitStart();
 
   while(1) {
     // Synchronize
-    // DEBUG_PRINT("Resynchronizing ...!\n");
     syncCounter = 0;
     while (!synchronized) {
       
@@ -140,14 +163,10 @@ static void lighthouseTask(void *param)
       synchronized = syncCounter == 7;
     }
 
-    // DEBUG_PRINT("Sync!\n");
-
-
     // Receive data until being desynchronized
     synchronized = getFrame(&frame);
     while(synchronized) {
       if (frame.sync != 0) {
-        // DEBUG_PRINT("Sync!\n");
         synchronized = getFrame(&frame);
         continue;
       }
@@ -158,24 +177,8 @@ static void lighthouseTask(void *param)
         frameCount++;
         if (basestation == 1 && axis == 1) {
           cycleCount++;
+          estimatePosition(angles);
           for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-            // Only use sensor 0 for now
-            if (sensor == 0) {
-              if (angles[sensor].validCount == 4) {
-                lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles[sensor].angles, position, &delta);
-
-                ext_pos.x = position[0];
-                ext_pos.y = -position[2];
-                ext_pos.z = position[1];
-                ext_pos.stdDev = 0.01;
-                estimatorKalmanEnqueuePosition(&ext_pos);
-
-                positionCount++;
-
-//                DEBUG_PRINT("%i %f %f %f\n", sensor, (double)ext_pos.x, (double)ext_pos.y, (double)ext_pos.z);
-              }
-            }
-
             angles[sensor].validCount = 0;
           }
         }
@@ -189,7 +192,6 @@ static void lighthouseTask(void *param)
 
       synchronized = getFrame(&frame);
       if (frame.sync != 0) {
-        // DEBUG_PRINT("Sync!\n");
         synchronized = getFrame(&frame);
         continue;
       }
