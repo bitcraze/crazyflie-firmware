@@ -49,6 +49,19 @@
 
 static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 
+// Stats
+static int serialFrameCount = 0;
+static int frameCount = 0;
+static int cycleCount = 0;
+static int positionCount = 0;
+
+static float serialFrameRate = 0.0;
+static float frameRate = 0.0;
+static float cycleRate = 0.0;
+static float positionRate = 0.0;
+
+static uint32_t latestStatsTimeMs = 0;
+
 typedef union frame_u {
   struct {
     uint32_t timestamp:29;
@@ -69,6 +82,23 @@ static bool getFrame(frame_t *frame)
     }
   }
   return (frame->sync == 0 || (syncCounter==7));
+}
+
+static void resetStats() {
+  serialFrameCount = 0;
+  frameCount = 0;
+  cycleCount = 0;
+  positionCount = 0;
+}
+
+static void calculateStats(uint32_t nowMs) {
+  double time = (nowMs - latestStatsTimeMs) / 1000.0;
+  serialFrameRate = serialFrameCount / time;
+  frameRate = frameCount / time;
+  cycleRate = cycleCount / time;
+  positionRate = positionCount / time;
+
+  resetStats();
 }
 
 static vec3d position;
@@ -122,8 +152,12 @@ static void lighthouseTask(void *param)
         continue;
       }
 
+      serialFrameCount++;
+
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
+        frameCount++;
         if (basestation == 1 && axis == 1) {
+          cycleCount++;
           for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
             // Only use sensor 0 for now
             if (sensor == 0) {
@@ -136,6 +170,8 @@ static void lighthouseTask(void *param)
                 ext_pos.stdDev = 0.01;
                 estimatorKalmanEnqueuePosition(&ext_pos);
 
+                positionCount++;
+
 //                DEBUG_PRINT("%i %f %f %f\n", sensor, (double)ext_pos.x, (double)ext_pos.y, (double)ext_pos.z);
               }
             }
@@ -143,6 +179,12 @@ static void lighthouseTask(void *param)
             angles[sensor].validCount = 0;
           }
         }
+      }
+
+      uint32_t nowMs = T2M(xTaskGetTickCount());
+      if ((nowMs - latestStatsTimeMs) > 1000) {
+        calculateStats(nowMs);
+        latestStatsTimeMs = nowMs;
       }
 
       synchronized = getFrame(&frame);
@@ -184,4 +226,9 @@ LOG_ADD(LOG_FLOAT, angle1y, &angles[0].angles[1][1])
 LOG_ADD(LOG_FLOAT, x, &position[0])
 LOG_ADD(LOG_FLOAT, y, &position[1])
 LOG_ADD(LOG_FLOAT, z, &position[2])
+
+LOG_ADD(LOG_FLOAT, serRt, &serialFrameRate)
+LOG_ADD(LOG_FLOAT, frmRt, &frameRate)
+LOG_ADD(LOG_FLOAT, cycleRt, &cycleRate)
+LOG_ADD(LOG_FLOAT, posRt, &positionRate)
 LOG_GROUP_STOP(lighthouse)
