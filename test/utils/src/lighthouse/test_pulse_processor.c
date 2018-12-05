@@ -306,7 +306,7 @@ void testThatGetSystemSyncTimeDoesNotReturnTimestampIfTooMuchTimestampsSpread()
 {
   // Fixture
   uint32_t unused = 0;
-  uint32_t syncTimes[8] = {1, 500, 3};
+  uint32_t syncTimes[8] = {1, 900, 3};
   size_t nSyncTimes = 3;
 
   // Test

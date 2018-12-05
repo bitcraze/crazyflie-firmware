@@ -57,6 +57,7 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
         state->synchronized = true;
         state->lastSync = state->currentSync0;
         state->currentSync1 = state->currentSync0 + SYNC_SEPARATION;
+        break;
       }
     }
 
