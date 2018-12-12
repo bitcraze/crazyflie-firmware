@@ -19,7 +19,10 @@
   },
   "targets": {
     "cf2": [
-      "PLATFORM=CF2"
+      "PLATFORM=cf2"
+    ],
+    "tag": [
+      "PLATFORM=tag"
     ]
   }
 }
