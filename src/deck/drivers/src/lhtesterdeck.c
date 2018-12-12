@@ -26,7 +26,7 @@
  * Used in production tests of Lighthouse decks.
  *
  * The deck has an IR LED that is used to test the receivers on Lighthouse decks.
- * The LED is modulated at > 1 MHz and pulsed on/off in 10 + 10 ms cycles.
+ * The LED is modulated at > 1 MHz and pulsed on/off.
  *
  */
 
@@ -69,14 +69,19 @@ static void ledOnOff(bool on)
 
 static void timerFcn(xTimerHandle xTimer)
 {
-  static bool isOn = false;
+  static int onCounter = 0;
 
+  bool isOn = (onCounter == 0);
   ledOnOff(isOn);
-  isOn = !isOn;
+
+  onCounter++;
+  if (onCounter > 10) {
+    onCounter = 0;
+  }
 }
 
 static void startSwTimer() {
-  xTimerHandle timer = xTimerCreate("lhTesterTimer", M2T(10), pdTRUE, 0, timerFcn);
+  xTimerHandle timer = xTimerCreate("lhTesterTimer", M2T(1), pdTRUE, 0, timerFcn);
   xTimerStart(timer, 0);
 }
 
