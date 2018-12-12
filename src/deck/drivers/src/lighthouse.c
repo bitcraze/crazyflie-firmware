@@ -60,6 +60,8 @@ static float frameRate = 0.0;
 static float cycleRate = 0.0;
 static float positionRate = 0.0;
 
+static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
+
 static uint32_t latestStatsTimeMs = 0;
 
 typedef union frame_u {
@@ -168,10 +170,13 @@ static void lighthouseTask(void *param)
     while(synchronized) {
       if (frame.sync != 0) {
         synchronized = getFrame(&frame);
+        memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
         continue;
       }
 
       serialFrameCount++;
+
+      pulseWidth[frame.sensor] = frame.width;
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
         frameCount++;
@@ -233,4 +238,15 @@ LOG_ADD(LOG_FLOAT, serRt, &serialFrameRate)
 LOG_ADD(LOG_FLOAT, frmRt, &frameRate)
 LOG_ADD(LOG_FLOAT, cycleRt, &cycleRate)
 LOG_ADD(LOG_FLOAT, posRt, &positionRate)
+
+LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
+#if PULSE_PROCESSOR_N_SENSORS > 1
+LOG_ADD(LOG_UINT16, width1, &pulseWidth[1])
+#endif
+#if PULSE_PROCESSOR_N_SENSORS > 2
+LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
+#endif
+#if PULSE_PROCESSOR_N_SENSORS > 3
+LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
+#endif
 LOG_GROUP_STOP(lighthouse)
