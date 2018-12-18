@@ -215,7 +215,9 @@ static void lighthouseInit(DeckInfo *info)
 
 
 static const DeckDriver lighthouse_deck = {
-  .name = "bcLH8",
+  .vid = 0xBC,
+  .pid = 0x10,
+  .name = "bcLighthouse4",
 
   .usedGpio = 0,  // FIXME: set the used pins
   .requiredEstimator = kalmanEstimator,
