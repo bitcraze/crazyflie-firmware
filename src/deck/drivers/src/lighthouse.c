@@ -30,6 +30,8 @@
  * lighthouse.c: lighthouse tracking system receiver
  */
 
+#include <math.h>
+
 #include "system.h"
 #include "deck.h"
 #include "log.h"
@@ -134,6 +136,10 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   ext_pos.y /= sensorsUsed;
   ext_pos.z /= sensorsUsed;
 
+  // Make sure we feed sane data into the estimator
+  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
+    return;
+  }
   ext_pos.stdDev = 0.01;
   estimatorKalmanEnqueuePosition(&ext_pos);
 }
