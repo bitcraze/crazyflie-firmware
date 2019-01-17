@@ -31,6 +31,8 @@
  */
 
 #include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "system.h"
 #include "deck.h"
@@ -48,6 +50,7 @@
 
 #include "estimator_kalman.h"
 
+static bool isInit = false;
 
 static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 
@@ -171,6 +174,8 @@ static void lighthouseTask(void *param)
       synchronized = syncCounter == 7;
     }
 
+    DEBUG_PRINT("LH: Synchronized!\n");
+
     // Receive data until being desynchronized
     synchronized = getFrame(&frame);
     while(synchronized) {
@@ -213,10 +218,14 @@ static void lighthouseTask(void *param)
 
 static void lighthouseInit(DeckInfo *info)
 {
-  uart1Init(230400);
+  if (isInit) return;
 
+  uart1Init(230400);
+  
   xTaskCreate(lighthouseTask, "LH",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
+  
+  isInit = true;
 }
 
 
