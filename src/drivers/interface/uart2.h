@@ -29,6 +29,9 @@
 #include <stdbool.h>
 #include "eprintf.h"
 
+#define UART2_DATA_TIMEOUT_MS    1000
+#define UART2_DATA_TIMEOUT_TICKS (UART2_DATA_TIMEOUT_MS / portTICK_RATE_MS)
+
 #define UART2_TYPE             USART2
 #define UART2_PERIF            RCC_APB1Periph_USART2
 #define ENABLE_UART2_RCC       RCC_APB1PeriphClockCmd
@@ -60,6 +63,13 @@ void uart2Init(const uint32_t baudrate);
 bool uart2Test(void);
 
 /**
+ * Read a byte of data from incoming queue with a timeout defined by UART2_DATA_TIMEOUT_MS
+ * @param[out] c  Read byte
+ * @return true if data, false if timeout was reached.
+ */
+bool uart2GetDataWithTimout(uint8_t *c);
+
+/**
  * Sends raw data using a lock. Should be used from
  * exception functions and for debugging when a lot of data
  * should be transfered.
@@ -75,6 +85,16 @@ void uart2SendData(uint32_t size, uint8_t* data);
  * @return Character printed
  */
 int uart2Putchar(int ch);
+
+void uart2Getchar(char * ch);
+
+/**
+ * Returns true if an overrun condition has happened since initialization or
+ * since the last call to this function.
+ *
+ * @return true if an overrun condition has happened
+ */
+bool uart2DidOverrun();
 
 /**
  * Uart printf macro that uses eprintf

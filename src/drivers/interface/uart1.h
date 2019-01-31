@@ -90,8 +90,8 @@ int uart1Putchar(int ch);
 void uart1Getchar(char * ch);
 
 /**
- * Returns true if an overrun condition has happened since initialisation or
- * since the last call to this funcion.
+ * Returns true if an overrun condition has happened since initialization or
+ * since the last call to this function.
  * 
  * @return true if an overrun condition has happened
  */

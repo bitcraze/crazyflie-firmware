@@ -225,6 +225,7 @@ static void enumerateDecks(void)
 
   // Add build-forced driver
   if (strlen(deck_force) > 0) {
+    DEBUG_PRINT("DECK_FORCE=%s found\n", deck_force);
   	//split deck_force into multiple, separated by colons, if available 
     char delim[] = ":"; 
 
@@ -238,7 +239,7 @@ static void enumerateDecks(void)
       const DeckDriver *driver = deckFindDriverByName(deck_force);
       if (!driver) {
         DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
-      } else if (driver->init) {
+      } else if (driver->init || driver->test) {
         if (nDecks <= DECK_MAX_COUNT)
         {
           nDecks++;
