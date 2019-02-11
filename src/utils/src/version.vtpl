@@ -34,6 +34,7 @@ const char * V_SREVISION="{revision}";
 const char * V_STAG="{tag}";
 const char * V_BRANCH="{branch}";
 const bool V_MODIFIED={modified};
+const bool V_PRODUCTION_RELEASE={productionRelease};
 
 /* Version recoverable from the ground */
 const uint32_t V_REVISION_0={irevision0};

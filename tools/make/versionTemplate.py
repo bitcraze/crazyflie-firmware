@@ -5,6 +5,7 @@ import subprocess
 import os
 from os import path
 import re
+import json
 
 version = {}
 
@@ -20,31 +21,26 @@ def extract_information_from_git():
     version['revision'] = revision[0:12]
     version['irevision0'] = "0x" + revision[0:8]
     version['irevision1'] = "0x" + revision[8:12]
+    version['productionRelease'] = 'false'
 
-    try:
-        identify = subprocess.check_output(
-            ["git", "describe", "--abbrev=12", "--tags", "HEAD"])
-        identify = identify.split('-')
+    identify = subprocess.check_output(
+        ["git", "describe", "--abbrev=12", "--tags", "HEAD"])
+    identify = identify.split('-')
 
-        if len(identify) > 2:
-            version['local_revision'] = identify[len(identify) - 2]
-        else:
-            version['local_revision'] = '0'
-
-        version['tag'] = identify[0]
-        for x in range(1, len(identify) - 2):
-            version['tag'] += '-'
-            version['tag'] += identify[x]
-    except subprocess.CalledProcessError:
-        # We are running from a shallow tree, CI build?
-        # Fill up default values, this will not happen when releasing.
+    if len(identify) > 2:
+        version['local_revision'] = identify[len(identify) - 2]
+    else:
         version['local_revision'] = '0'
-        version['tag'] = "ci-build"
+
+    version['tag'] = identify[0]
+    for x in range(1, len(identify) - 2):
+        version['tag'] += '-'
+        version['tag'] += identify[x]
 
     version['tag'] = version['tag'].strip()
 
     if version['local_revision'] != '0':
-        version['tag'] = version['tag'] + '-' + version['local_revision']
+        version['tag'] = version['tag'] + ' +' + version['local_revision']
 
     branch = subprocess.check_output(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
@@ -59,41 +55,47 @@ def extract_information_from_git():
         version['modified'] = 'false'
 
 
-def extract_information_from_folder_name():
-    sourcefolder = path.basename(path.abspath(path.dirname(__file__) + '/..'))
-    match = re.match(".*(20[0-9][0-9]\\.[0-9][0-9]?(\\.[0-9][0-9]?)?)$",
-                     sourcefolder)
+def extract_information_from_build_info_file():
+    info_file = path.basename(path.abspath(path.dirname(__file__) +
+                                           '/../../build_info.json'))
+    if not path.exists(info_file):
+        return False
+
+    with open(info_file) as json_file:
+        build_info = json.load(json_file)
 
     version['revision'] = 'NA'
     version['irevision0'] = "0x" + '0'
     version['irevision1'] = "0x" + '0'
     version['local_revision'] = 'NA'
     version['branch'] = 'NA'
-    version['modified'] = 'true'
+    version['tag'] = build_info['tag']
+    version['modified'] = 'false'
+    version['productionRelease'] = 'true'
 
-    if match is not None:
-        version['tag'] = match.group(1)
-    else:
-        version['tag'] = 'NA'
+    return True
 
 
 def print_version():
-    status = "\033[1;32mCLEAN\033[m"
-    if (version['modified'] == 'true'):
-        status = "\033[1;31mMODIFIED\033[m"
+    if version['productionRelease'] == 'true':
+        print("\033[1;31mProduction build {tag}\033[m".format(**version))
+    else:
+        status = "\033[1;32mCLEAN\033[m"
+        if (version['modified'] == 'true'):
+            status = "\033[1;31mMODIFIED\033[m"
 
-    print("Build {local_revision}:{revision} ({tag}) {}".format(status,
-                                                                **version))
+        print("Build {local_revision}:{revision} ({tag}) {}".format(status,
+                                                                    **version))
     print("Version extracted from {source}".format(**version))
 
+
 if __name__ == "__main__":
-    version_source = ""
-    if os.path.isdir(".git"):
+
+    if extract_information_from_build_info_file():
+        version['source'] = "build info file"
+    else:
         version['source'] = "git"
         extract_information_from_git()
-    else:
-        version['source'] = "folder name"
-        extract_information_from_folder_name()
 
     if len(sys.argv) == 2 and sys.argv[1] == "--print-version":
         print_version()

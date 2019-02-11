@@ -340,7 +340,7 @@ ifeq ($(SHELL),/bin/sh)
 endif
 
 print_version:
-	@echo "BUild for the $(PLATFORM_NAME_$(PLATFORM))!"
+	@echo "Build for the $(PLATFORM_NAME_$(PLATFORM))!"
 	@$(PYTHON2) tools/make/versionTemplate.py --print-version
 ifeq ($(CLOAD), 1)
 	@echo "Crazyloader build!"
