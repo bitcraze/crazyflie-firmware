@@ -15,12 +15,13 @@ typedef struct {
   void (*init)(void);
   bool (*test)(void);
   void (*update)(control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick);
+  const char* name;
 } ControllerFcns;
 
 static ControllerFcns controllerFunctions[] = {
-  {.init = 0, .test = 0, .update = 0}, // Any
-  {.init = controllerPidInit, .test = controllerPidTest, .update = controllerPid},
-  {.init = controllerMellingerInit, .test = controllerMellingerTest, .update = controllerMellinger},
+  {.init = 0, .test = 0, .update = 0, .name = "None"}, // Any
+  {.init = controllerPidInit, .test = controllerPidTest, .update = controllerPid, .name = "PID"},
+  {.init = controllerMellingerInit, .test = controllerMellingerTest, .update = controllerMellinger, .name = "Mellinger"},
 };
 
 
@@ -43,7 +44,7 @@ void controllerInit(ControllerType controller) {
 
   initController();
 
-  DEBUG_PRINT("Using controller %d\n", currentController);
+  DEBUG_PRINT("Using %s (%d) controller\n", controllerGetName(), currentController);
 }
 
 ControllerType getControllerType(void) {
@@ -60,4 +61,8 @@ bool controllerTest(void) {
 
 void controller(control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
   controllerFunctions[currentController].update(control, setpoint, sensors, state, tick);
+}
+
+const char* controllerGetName() {
+  return controllerFunctions[currentController].name;
 }

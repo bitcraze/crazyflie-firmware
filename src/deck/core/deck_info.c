@@ -182,7 +182,7 @@ static void enumerateDecks(void)
 
   if (owScan(&nDecks))
   {
-    DEBUG_PRINT("Found %d deck memor%s.\n", nDecks, nDecks>1?"ies":"y");
+    DECK_INFO_DBG_PRINT("Found %d deck memor%s.\n", nDecks, nDecks>1?"ies":"y");
   } else {
     DEBUG_PRINT("Error scanning for deck memories, "
                 "no deck drivers will be initialised\n");

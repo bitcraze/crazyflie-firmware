@@ -15,12 +15,13 @@ typedef struct {
   void (*init)(void);
   bool (*test)(void);
   void (*update)(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
+  const char* name;
 } EstimatorFcns;
 
 static EstimatorFcns estimatorFunctions[] = {
-  {.init = 0, .test = 0, .update = 0}, // Any
-  {.init = estimatorComplementaryInit, .test = estimatorComplementaryTest, .update = estimatorComplementary},
-  {.init = estimatorKalmanInit, .test = estimatorKalmanTest, .update = estimatorKalman},
+  {.init = 0, .test = 0, .update = 0, .name = "None"}, // Any
+  {.init = estimatorComplementaryInit, .test = estimatorComplementaryTest, .update = estimatorComplementary, .name = "Complementary"},
+  {.init = estimatorKalmanInit, .test = estimatorKalmanTest, .update = estimatorKalman, .name = "Kalman"},
 };
 
 
@@ -43,7 +44,7 @@ void stateEstimatorInit(StateEstimatorType estimator) {
 
   initEstimator();
 
-  DEBUG_PRINT("Using estimator %d\n", currentEstimator);
+  DEBUG_PRINT("Using %s (%d) estimator\n", stateEstimatorGetName(), currentEstimator);
 }
 
 StateEstimatorType getStateEstimator(void) {
@@ -60,4 +61,8 @@ bool stateEstimatorTest(void) {
 
 void stateEstimator(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick) {
   estimatorFunctions[currentEstimator].update(state, sensors, control, tick);
+}
+
+const char* stateEstimatorGetName() {
+  return estimatorFunctions[currentEstimator].name;
 }

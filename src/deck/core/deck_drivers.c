@@ -56,7 +56,7 @@ static void deckdriversInit() {
     driversLen = &_deckDriver_stop - &_deckDriver_start;
     init = true;
 
-    DEBUG_PRINT("Found %d drivers\n", driversLen);
+    DECK_DRV_DBG_PRINT("Found %d drivers\n", driversLen);
     for (i=0; i<driversLen; i++) {
       if (drivers[i]->name) {
         DECK_DRV_DBG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);

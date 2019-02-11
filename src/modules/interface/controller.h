@@ -42,5 +42,6 @@ void controller(control_t *control, setpoint_t *setpoint,
                                          const state_t *state,
                                          const uint32_t tick);
 ControllerType getControllerType(void);
+const char* controllerGetName();
 
 #endif //__CONTROLLER_H__
