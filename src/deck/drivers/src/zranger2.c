@@ -54,17 +54,26 @@ static float expCoeff;
 #define RANGE_OUTLIER_LIMIT 5000 // the measured range is in [mm]
 
 static uint16_t range_last = 0;
+static int16_t range[4] = {0};
+static int activeSpad = 0;
 
 static bool isInit;
 
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t dev;
+
+static VL53L1_UserRoi_t roiConfig[4] = {{0,15,7,7},{7,15,15,7},{0,7,7,0},{7,7,15,0}};
+//  {
+//    .TopLeftX = 9;
+//    .TopLeftY = 13;
+//    .BotRightX = 14;
+//    .BotRightY = 10;
+//  };
 
 static uint16_t zRanger2GetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
     VL53L1_Error status = VL53L1_ERROR_NONE;
     VL53L1_RangingMeasurementData_t rangingData;
     uint8_t dataReady = 0;
-    uint16_t range;
 
     while (dataReady == 0)
     {
@@ -73,13 +82,22 @@ static uint16_t zRanger2GetMeasurementAndRestart(VL53L1_Dev_t *dev)
     }
 
     status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
-    range = rangingData.RangeMilliMeter;
+    range[activeSpad] = rangingData.RangeMilliMeter;
 
     VL53L1_StopMeasurement(dev);
+
+    status = VL53L1_SetUserROI(dev, &roiConfig[activeSpad]);
+
     status = VL53L1_StartMeasurement(dev);
     status = status;
 
-    return range;
+    activeSpad++;
+    if (activeSpad >= 4)
+    {
+      activeSpad = 0;
+    }
+
+    return (uint16_t)range[0];
 }
 
 void zRanger2Init(DeckInfo* info)
@@ -121,7 +139,7 @@ void zRanger2Task(void* arg)
 
   // Restart sensor
   VL53L1_StopMeasurement(&dev);
-  VL53L1_SetDistanceMode(&dev, VL53L1_DISTANCEMODE_MEDIUM);
+  VL53L1_SetDistanceMode(&dev, VL53L1_DISTANCEMODE_SHORT);
   VL53L1_SetMeasurementTimingBudgetMicroSeconds(&dev, 25000);
 
   VL53L1_StartMeasurement(&dev);
@@ -157,6 +175,13 @@ static const DeckDriver zranger2_deck = {
 };
 
 DECK_DRIVER(zranger2_deck);
+
+LOG_GROUP_START(zrange)
+LOG_ADD(LOG_INT16, x11, &range[0])
+LOG_ADD(LOG_INT16, x12, &range[1])
+LOG_ADD(LOG_INT16, x21, &range[2])
+LOG_ADD(LOG_INT16, x22, &range[3])
+LOG_GROUP_STOP(zrange)
 
 PARAM_GROUP_START(deck)
 

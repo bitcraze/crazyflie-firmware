@@ -1,8 +1,10 @@
+
 /*
 * Copyright (c) 2017, STMicroelectronics - All Rights Reserved
 *
-* This file is part of VL53L1 Core and is dual licensed, either
-* 'STMicroelectronics Proprietary license'
+* This file is part of VL53L1 Core and is dual licensed,
+* either 'STMicroelectronics
+* Proprietary license'
 * or 'BSD 3-clause "New" or "Revised" License' , at your option.
 *
 ********************************************************************************
@@ -12,7 +14,7 @@
 ********************************************************************************
 *
 * License terms: STMicroelectronics Proprietary in accordance with licensing
-*  terms at www.st.com/sla0044
+* terms at www.st.com/sla0081
 *
 * STMicroelectronics confidential
 * Reproduction and Communication of this document is strictly prohibited unless
@@ -23,8 +25,7 @@
 *
 * Alternatively, VL53L1 Core may be distributed under the terms of
 * 'BSD 3-clause "New" or "Revised" License', in which case the following
-*  provisions apply instead of the ones
-* mentioned above :
+* provisions apply instead of the ones mentioned above :
 *
 ********************************************************************************
 *
@@ -69,6 +70,18 @@
 #ifdef __cplusplus
 extern "C"
 {
+#endif
+
+#if !defined(VL53L1DevDataGet)
+#warning "Usage of PALDevDataGet is deprecated define VL53L1DevDataGet instead\
+	in your vl53l1_platform_user_data.h file"
+#define VL53L1DevDataGet(Dev, field) (Dev->Data.field)
+#endif
+
+#if !defined(VL53L1DevDataSet)
+#warning "Usage of PALDevDataSet is deprecated define VL53L1DevDataSet instead\
+	in your vl53l1_platform_user_data.h file"
+#define VL53L1DevDataSet(Dev, field, data) ((Dev->Data.field) = (data))
 #endif
 
 /** @defgroup VL53L1_cut11_group VL53L1 cut1.1 Function Definition
@@ -194,6 +207,9 @@ VL53L1_Error VL53L1_GetPalState(VL53L1_DEV Dev,
  * This function should be called when several devices are used in parallel
  * before start programming the sensor.
  * When a single device us used, there is no need to call this function.
+ *
+ * When it is requested for multi devices system this function MUST be called
+ * prior to VL53L1_DataInit()
  *
  * @note This function Access to the device
  *
@@ -399,6 +415,9 @@ VL53L1_Error VL53L1_GetMeasurementTimingBudgetMicroSeconds(
  *
  * @param   Dev                                  Device Handle
  * @param   InterMeasurementPeriodMilliSeconds   Inter-Measurement Period in ms.
+ *  this value should be greater than the duration set in
+ *  @a VL53L1_SetMeasurementTimingBudgetMicroSeconds() to ensure smooth ranging
+ *  operation.
  * @return  VL53L1_ERROR_NONE            Success
  * @return  "Other error code"           See ::VL53L1_Error
  */
@@ -757,8 +776,12 @@ VL53L1_Error VL53L1_GetSequenceStepEnable(VL53L1_DEV Dev,
  * @return  VL53L1_ERROR_NONE                  Success
  * @return  VL53L1_ERROR_MODE_NOT_SUPPORTED    This error occurs when
  * PresetMode programmed with @a VL53L1_SetPresetMode
- *
  * @return  VL53L1_ERROR_TIME_OUT    Time out on start measurement
+ * @return  VL53L1_ERROR_INVALID_PARAMS This error might occur in timed mode
+ * when inter measurement period is smaller or too close to the timing budget.
+ * In such case measurements are not started and user must correct the timings
+ * passed to @a VL53L1_SetMeasurementTimingBudgetMicroSeconds() and
+ * @a VL53L1_SetInterMeasurementPeriodMilliSeconds() functions.
  * @return  "Other error code"   See ::VL53L1_Error
  */
 VL53L1_Error VL53L1_StartMeasurement(VL53L1_DEV Dev);
@@ -962,8 +985,8 @@ VL53L1_Error VL53L1_GetXTalkCompensationEnable(VL53L1_DEV Dev,
  *
  * @note This function Access to the device
  *
- * @param   Dev                  Device Handle
- * @param   XTalkCalDistance     Target distance in mm
+ * @param   Dev                   Device Handle
+ * @param   CalDistanceMilliMeter Target distance in mm
  * The calibration uses current preset and distance mode without altering them.
  * <br>User must call @a VL53L1_SetPresetMode() with
  * VL53L1_PRESETMODE_AUTONOMOUS, VL53L1_PRESETMODE_LITE_RANGING or
@@ -973,7 +996,7 @@ VL53L1_Error VL53L1_GetXTalkCompensationEnable(VL53L1_DEV Dev,
  * @return  "Other error code"   See ::VL53L1_Error
  */
 VL53L1_Error VL53L1_PerformSingleTargetXTalkCalibration(VL53L1_DEV Dev,
-		int32_t XTalkCalDistance);
+		int32_t CalDistanceMilliMeter);
 
 
 /**

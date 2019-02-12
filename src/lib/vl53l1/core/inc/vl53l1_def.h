@@ -1,8 +1,9 @@
 /*
 * Copyright (c) 2017, STMicroelectronics - All Rights Reserved
 *
-* This file is part of VL53L1 Core and is dual licensed, either
-* 'STMicroelectronics Proprietary license'
+* This file is part of VL53L1 Core and is dual licensed,
+* either 'STMicroelectronics
+* Proprietary license'
 * or 'BSD 3-clause "New" or "Revised" License' , at your option.
 *
 ********************************************************************************
@@ -12,7 +13,7 @@
 ********************************************************************************
 *
 * License terms: STMicroelectronics Proprietary in accordance with licensing
-* terms at www.st.com/sla0044
+* terms at www.st.com/sla0081
 *
 * STMicroelectronics confidential
 * Reproduction and Communication of this document is strictly prohibited unless
@@ -23,8 +24,7 @@
 *
 * Alternatively, VL53L1 Core may be distributed under the terms of
 * 'BSD 3-clause "New" or "Revised" License', in which case the following
-* provisions apply instead of the ones
-* mentioned above :
+* provisions apply instead of the ones mentioned above :
 *
 ********************************************************************************
 *
@@ -86,11 +86,11 @@ extern "C" {
 /** VL53L1 IMPLEMENTATION major version */
 #define VL53L1_IMPLEMENTATION_VER_MAJOR       2
 /** VL53L1 IMPLEMENTATION minor version */
-#define VL53L1_IMPLEMENTATION_VER_MINOR       2
+#define VL53L1_IMPLEMENTATION_VER_MINOR       3
 /** VL53L1 IMPLEMENTATION sub version */
-#define VL53L1_IMPLEMENTATION_VER_SUB         1
+#define VL53L1_IMPLEMENTATION_VER_SUB         3
 /** VL53L1 IMPLEMENTATION sub version */
-#define VL53L1_IMPLEMENTATION_VER_REVISION  1798
+#define VL53L1_IMPLEMENTATION_VER_REVISION  1885
 
 /****************************************
  * PRIVATE define do not edit
@@ -167,6 +167,9 @@ typedef uint8_t VL53L1_XtalkCalibrationModes;
 #define VL53L1_XTALKCALIBRATIONMODE_SINGLE_TARGET \
 	((VL53L1_OffsetCalibrationModes)  1)
 /*!< To perform Xtalk calibration with one target */
+#define VL53L1_XTALKCALIBRATIONMODE_FULL_ROI \
+	((VL53L1_OffsetCalibrationModes)  2)
+/*!< To perform Xtalk calibration based on histogram with full ROI */
 
 /** @} VL53L1_define_XtalkCal_group */
 
@@ -562,80 +565,80 @@ typedef struct {
 
 /* Defines */
 #define VL53L1_SETPARAMETERFIELD(Dev, field, value) \
-	(PALDevDataSet(Dev, CurrentParameters.field, value))
+	(VL53L1DevDataSet(Dev, CurrentParameters.field, value))
 
 #define VL53L1_GETPARAMETERFIELD(Dev, field, variable) \
-	(variable = PALDevDataGet(Dev, CurrentParameters).field)
+	(variable = VL53L1DevDataGet(Dev, CurrentParameters).field)
 
 
 #define VL53L1_SETARRAYPARAMETERFIELD(Dev, field, index, value) \
-	(PALDevDataSet(Dev, CurrentParameters.field[index], value))
+	(VL53L1DevDataSet(Dev, CurrentParameters.field[index], value))
 
 #define VL53L1_GETARRAYPARAMETERFIELD(Dev, field, index, variable) \
-	(variable = PALDevDataGet(Dev, CurrentParameters).field[index])
+	(variable = VL53L1DevDataGet(Dev, CurrentParameters).field[index])
 
 
 #define VL53L1_SETDEVICESPECIFICPARAMETER(Dev, field, value) \
-	(PALDevDataSet(Dev, DeviceSpecificParameters.field, value))
+	(VL53L1DevDataSet(Dev, DeviceSpecificParameters.field, value))
 
 #define VL53L1_GETDEVICESPECIFICPARAMETER(Dev, field) \
-	(PALDevDataGet(Dev, DeviceSpecificParameters).field)
+	(VL53L1DevDataGet(Dev, DeviceSpecificParameters).field)
 
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT44(Value) \
 	(uint16_t)((Value>>12)&0xFFFF)
 #define VL53L1_FIXPOINT44TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<12)
+	(FixPoint1616_t)((uint32_t)Value<<12)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT72(Value) \
 	(uint16_t)((Value>>14)&0xFFFF)
 #define VL53L1_FIXPOINT72TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<14)
+	(FixPoint1616_t)((uint32_t)Value<<14)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT97(Value) \
 	(uint16_t)((Value>>9)&0xFFFF)
 #define VL53L1_FIXPOINT97TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<9)
+	(FixPoint1616_t)((uint32_t)Value<<9)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT88(Value) \
 	(uint16_t)((Value>>8)&0xFFFF)
 #define VL53L1_FIXPOINT88TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<8)
+	(FixPoint1616_t)((uint32_t)Value<<8)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT412(Value) \
 	(uint16_t)((Value>>4)&0xFFFF)
 #define VL53L1_FIXPOINT412TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<4)
+	(FixPoint1616_t)((uint32_t)Value<<4)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT313(Value) \
 	(uint16_t)((Value>>3)&0xFFFF)
 #define VL53L1_FIXPOINT313TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<3)
+	(FixPoint1616_t)((uint32_t)Value<<3)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT08(Value) \
 	(uint8_t)((Value>>8)&0x00FF)
 #define VL53L1_FIXPOINT08TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<8)
+	(FixPoint1616_t)((uint32_t)Value<<8)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT53(Value) \
 	(uint8_t)((Value>>13)&0x00FF)
 #define VL53L1_FIXPOINT53TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<13)
+	(FixPoint1616_t)((uint32_t)Value<<13)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT102(Value) \
 	(uint16_t)((Value>>14)&0x0FFF)
 #define VL53L1_FIXPOINT102TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<14)
+	(FixPoint1616_t)((uint32_t)Value<<14)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT142(Value) \
 	(uint16_t)((Value>>14)&0xFFFF)
 #define VL53L1_FIXPOINT142TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<14)
+	(FixPoint1616_t)((uint32_t)Value<<14)
 
 #define VL53L1_FIXPOINT1616TOFIXPOINT160(Value) \
 	(uint16_t)((Value>>16)&0xFFFF)
 #define VL53L1_FIXPOINT160TOFIXPOINT1616(Value) \
-	(FixPoint1616_t)(Value<<16)
+	(FixPoint1616_t)((uint32_t)Value<<16)
 
 #define VL53L1_MAKEUINT16(lsb, msb) (uint16_t)((((uint16_t)msb)<<8) + \
 		(uint16_t)lsb)
