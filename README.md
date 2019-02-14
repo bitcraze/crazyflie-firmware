@@ -1,6 +1,7 @@
-# Crazyflie 2.0 Firmware  [![Build Status](https://api.travis-ci.org/bitcraze/crazyflie-firmware.svg)](https://travis-ci.org/bitcraze/crazyflie-firmware)
+# Crazyflie Firmware  [![Build Status](https://api.travis-ci.org/bitcraze/crazyflie-firmware.svg)](https://travis-ci.org/bitcraze/crazyflie-firmware)
 
-This project contains the source code for the Crazyflie 2.0 firmware.
+This project contains the source code for the firmware used in the Crazyflie range of platforms, including
+the Crazyflie 2.X and the Roadrunner.
 
 ### Crazyflie 1.0 support
 
@@ -87,18 +88,33 @@ git submodule update
 
 ## Compiling
 
-### Crazyflie 2.0
+### Crazyflie 2.X
 
-This is the default build so just running "make" is enough or:
+This is the default build so just running ```make``` is enough or:
 ```bash
-make PLATFORM=CF2
+make PLATFORM=cf2
 ```
 
 or with the toolbelt
 
 ```bash
-tb make
+tb make PLATFORM=cf2
 ```
+
+### Roadrunner
+
+Use the ```tag``` platform
+
+```bash
+make PLATFORM=tag
+```
+
+or with the toolbelt
+
+```bash
+tb make PLATFORM=tag
+```
+
 
 ### config.mk
 To create custom build options create a file called config.mk in the tools/make/

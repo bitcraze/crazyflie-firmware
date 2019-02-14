@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * buzzdeck.c - Deck driver for the Crazyflie 2.0 buzzer deck
+ * buzzdeck.c - Deck driver for the buzzer deck
  */
 
 #include <stdint.h>
