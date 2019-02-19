@@ -75,5 +75,5 @@ void watchdogInit(void)
   IWDG_SetReload(188);
 
   watchdogReset();
-  IWDG_Enable();
+  // IWDG_Enable();
 }
