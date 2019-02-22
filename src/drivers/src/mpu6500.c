@@ -146,12 +146,12 @@ bool mpu6500SelfTest()
   for(i = 0; i < 200; i++)
   {
     // get average current values of gyro and acclerometer
-    i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
+    i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
     aAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
     aAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
     aAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
 
-    i2cdevRead(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
+    i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
     gAvg[0] += (int16_t)((int16_t)rawData[0] << 8) | rawData[1]; // Turn the MSB and LSB into a signed 16-bit value
     gAvg[1] += (int16_t)((int16_t)rawData[2] << 8) | rawData[3];
     gAvg[2] += (int16_t)((int16_t)rawData[4] << 8) | rawData[5];
@@ -171,12 +171,12 @@ bool mpu6500SelfTest()
   for(i = 0; i < 200; i++)
   {
     // get average self-test values of gyro and acclerometer
-    i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
+    i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
     aSTAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
     aSTAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
     aSTAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
 
-    i2cdevRead(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
+    i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
     gSTAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
     gSTAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
     gSTAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
@@ -1964,7 +1964,7 @@ void mpu6500GetMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16
  */
 void mpu6500GetMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 14, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 14, buffer);
   *ax = (((int16_t) buffer[0]) << 8) | buffer[1];
   *ay = (((int16_t) buffer[2]) << 8) | buffer[3];
   *az = (((int16_t) buffer[4]) << 8) | buffer[5];
@@ -2010,7 +2010,7 @@ void mpu6500GetMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16
  */
 void mpu6500GetAcceleration(int16_t* x, int16_t* y, int16_t* z)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 6, buffer);
   *x = (((int16_t) buffer[0]) << 8) | buffer[1];
   *y = (((int16_t) buffer[2]) << 8) | buffer[3];
   *z = (((int16_t) buffer[4]) << 8) | buffer[5];
@@ -2022,7 +2022,7 @@ void mpu6500GetAcceleration(int16_t* x, int16_t* y, int16_t* z)
  */
 int16_t mpu6500GetAccelerationX()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_XOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Y-axis accelerometer reading.
@@ -2032,7 +2032,7 @@ int16_t mpu6500GetAccelerationX()
  */
 int16_t mpu6500GetAccelerationY()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_YOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_YOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Z-axis accelerometer reading.
@@ -2042,7 +2042,7 @@ int16_t mpu6500GetAccelerationY()
  */
 int16_t mpu6500GetAccelerationZ()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_ACCEL_ZOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_ACCEL_ZOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2054,7 +2054,7 @@ int16_t mpu6500GetAccelerationZ()
  */
 int16_t mpu6500GetTemperature()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_TEMP_OUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_TEMP_OUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2094,7 +2094,7 @@ int16_t mpu6500GetTemperature()
  */
 void mpu6500GetRotation(int16_t* x, int16_t* y, int16_t* z)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 6, buffer);
   *x = (((int16_t) buffer[0]) << 8) | buffer[1];
   *y = (((int16_t) buffer[2]) << 8) | buffer[3];
   *z = (((int16_t) buffer[4]) << 8) | buffer[5];
@@ -2106,7 +2106,7 @@ void mpu6500GetRotation(int16_t* x, int16_t* y, int16_t* z)
  */
 int16_t mpu6500GetRotationX()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_GYRO_XOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Y-axis gyroscope reading.
@@ -2116,7 +2116,7 @@ int16_t mpu6500GetRotationX()
  */
 int16_t mpu6500GetRotationY()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_GYRO_YOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_GYRO_YOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Z-axis gyroscope reading.
@@ -2126,7 +2126,7 @@ int16_t mpu6500GetRotationY()
  */
 int16_t mpu6500GetRotationZ()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_GYRO_ZOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_GYRO_ZOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2218,7 +2218,7 @@ uint8_t mpu6500GetExternalSensorByte(int position)
  */
 uint16_t mpu6500GetExternalSensorWord(int position)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_EXT_SENS_DATA_00 + position, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_EXT_SENS_DATA_00 + position, 2, buffer);
   return (((uint16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Read double word (4 bytes) from external sensor data registers.
@@ -2228,7 +2228,7 @@ uint16_t mpu6500GetExternalSensorWord(int position)
  */
 uint32_t mpu6500GetExternalSensorDWord(int position)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_EXT_SENS_DATA_00 + position, 4, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_EXT_SENS_DATA_00 + position, 4, buffer);
   return (((uint32_t) buffer[0]) << 24) | (((uint32_t) buffer[1]) << 16)
       | (((uint16_t) buffer[2]) << 8) | buffer[3];
 }
@@ -2951,7 +2951,7 @@ void mpu6500SetStandbyZGyroEnabled(bool enabled)
  */
 uint16_t mpu6500GetFIFOCount()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_FIFO_COUNTH, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_FIFO_COUNTH, 2, buffer);
   return (((uint16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2989,7 +2989,7 @@ uint8_t mpu6500GetFIFOByte()
 }
 void mpu6500GetFIFOBytes(uint8_t *data, uint8_t length)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6500_RA_FIFO_R_W, length, data);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_FIFO_R_W, length, data);
 }
 /** Write byte to FIFO buffer.
  * @see getFIFOByte()
@@ -3168,7 +3168,7 @@ void mpu6500ReadMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, uint
       chunkSize = 256 - address;
 
     // read the chunk of data as specified
-    i2cdevRead(I2Cx, devAddr, MPU6500_RA_MEM_R_W, chunkSize, data + i);
+    i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_MEM_R_W, chunkSize, data + i);
 
     // increase byte index by [chunkSize]
     i += chunkSize;
@@ -3213,7 +3213,7 @@ bool mpu6500WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
     // write the chunk of data as specified
     progBuffer = (uint8_t *) data + i;
 
-    i2cdevWrite(I2Cx, devAddr, MPU6500_RA_MEM_R_W, chunkSize, progBuffer);
+    i2cdevWriteReg8(I2Cx, devAddr, MPU6500_RA_MEM_R_W, chunkSize, progBuffer);
 
     // verify data if needed
     if (verify)
@@ -3221,7 +3221,7 @@ bool mpu6500WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
       uint32_t j;
       mpu6500SetMemoryBank(bank, true, true);
       mpu6500SetMemoryStartAddress(address);
-      i2cdevRead(I2Cx, devAddr, MPU6500_RA_MEM_R_W, chunkSize, verifyBuffer);
+      i2cdevReadReg8(I2Cx, devAddr, MPU6500_RA_MEM_R_W, chunkSize, verifyBuffer);
 
       for (j = 0; j < chunkSize; j++)
       {

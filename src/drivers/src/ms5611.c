@@ -284,7 +284,7 @@ int32_t ms5611GetConversion(uint8_t command)
   // start read sequence
   i2cdevWriteByte(I2Cx, devAddr, I2CDEV_NO_MEM_ADDR, 0);
   // Read conversion
-  i2cdevRead(I2Cx, devAddr, I2CDEV_NO_MEM_ADDR, MS5611_D1D2_SIZE, buffer);
+  i2cdevRead(I2Cx, devAddr, MS5611_D1D2_SIZE, buffer);
   conversion = ((int32_t)buffer[0] << 16) |
                ((int32_t)buffer[1] << 8) | buffer[2];
 
@@ -309,7 +309,7 @@ bool ms5611ReadPROM()
     // Read conversion
     if (status)
     {
-      status = i2cdevRead(I2Cx, devAddr, I2CDEV_NO_MEM_ADDR, MS5611_PROM_REG_SIZE, buffer);
+      status = i2cdevRead(I2Cx, devAddr, MS5611_PROM_REG_SIZE, buffer);
       pCalRegU16[i] = ((uint16_t)buffer[0] << 8) | buffer[1];
     }
   }

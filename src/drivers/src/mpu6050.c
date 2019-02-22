@@ -2115,7 +2115,7 @@ void mpu6050GetMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16
  */
 void mpu6050GetMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ACCEL_XOUT_H, 14, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ACCEL_XOUT_H, 14, buffer);
   *ax = (((int16_t) buffer[0]) << 8) | buffer[1];
   *ay = (((int16_t) buffer[2]) << 8) | buffer[3];
   *az = (((int16_t) buffer[4]) << 8) | buffer[5];
@@ -2161,7 +2161,7 @@ void mpu6050GetMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16
  */
 void mpu6050GetAcceleration(int16_t* x, int16_t* y, int16_t* z)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ACCEL_XOUT_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ACCEL_XOUT_H, 6, buffer);
   *x = (((int16_t) buffer[0]) << 8) | buffer[1];
   *y = (((int16_t) buffer[2]) << 8) | buffer[3];
   *z = (((int16_t) buffer[4]) << 8) | buffer[5];
@@ -2173,7 +2173,7 @@ void mpu6050GetAcceleration(int16_t* x, int16_t* y, int16_t* z)
  */
 int16_t mpu6050GetAccelerationX()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ACCEL_XOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ACCEL_XOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Y-axis accelerometer reading.
@@ -2183,7 +2183,7 @@ int16_t mpu6050GetAccelerationX()
  */
 int16_t mpu6050GetAccelerationY()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ACCEL_YOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ACCEL_YOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Z-axis accelerometer reading.
@@ -2193,7 +2193,7 @@ int16_t mpu6050GetAccelerationY()
  */
 int16_t mpu6050GetAccelerationZ()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ACCEL_ZOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ACCEL_ZOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2205,7 +2205,7 @@ int16_t mpu6050GetAccelerationZ()
  */
 int16_t mpu6050GetTemperature()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_TEMP_OUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_TEMP_OUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2245,7 +2245,7 @@ int16_t mpu6050GetTemperature()
  */
 void mpu6050GetRotation(int16_t* x, int16_t* y, int16_t* z)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_GYRO_XOUT_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_GYRO_XOUT_H, 6, buffer);
   *x = (((int16_t) buffer[0]) << 8) | buffer[1];
   *y = (((int16_t) buffer[2]) << 8) | buffer[3];
   *z = (((int16_t) buffer[4]) << 8) | buffer[5];
@@ -2257,7 +2257,7 @@ void mpu6050GetRotation(int16_t* x, int16_t* y, int16_t* z)
  */
 int16_t mpu6050GetRotationX()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_GYRO_XOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_GYRO_XOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Y-axis gyroscope reading.
@@ -2267,7 +2267,7 @@ int16_t mpu6050GetRotationX()
  */
 int16_t mpu6050GetRotationY()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_GYRO_YOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_GYRO_YOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Get Z-axis gyroscope reading.
@@ -2277,7 +2277,7 @@ int16_t mpu6050GetRotationY()
  */
 int16_t mpu6050GetRotationZ()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_GYRO_ZOUT_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_GYRO_ZOUT_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -2369,7 +2369,7 @@ uint8_t mpu6050GetExternalSensorByte(int position)
  */
 uint16_t mpu6050GetExternalSensorWord(int position)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_EXT_SENS_DATA_00 + position, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_EXT_SENS_DATA_00 + position, 2, buffer);
   return (((uint16_t) buffer[0]) << 8) | buffer[1];
 }
 /** Read double word (4 bytes) from external sensor data registers.
@@ -2379,7 +2379,7 @@ uint16_t mpu6050GetExternalSensorWord(int position)
  */
 uint32_t mpu6050GetExternalSensorDWord(int position)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_EXT_SENS_DATA_00 + position, 4, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_EXT_SENS_DATA_00 + position, 4, buffer);
   return (((uint32_t) buffer[0]) << 24) | (((uint32_t) buffer[1]) << 16)
       | (((uint16_t) buffer[2]) << 8) | buffer[3];
 }
@@ -3102,7 +3102,7 @@ void mpu6050SetStandbyZGyroEnabled(bool enabled)
  */
 uint16_t mpu6050GetFIFOCount()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_FIFO_COUNTH, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_FIFO_COUNTH, 2, buffer);
   return (((uint16_t) buffer[0]) << 8) | buffer[1];
 }
 
@@ -3140,7 +3140,7 @@ uint8_t mpu6050GetFIFOByte()
 }
 void mpu6050GetFIFOBytes(uint8_t *data, uint8_t length)
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_FIFO_R_W, length, data);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_FIFO_R_W, length, data);
 }
 /** Write byte to FIFO buffer.
  * @see getFIFOByte()
@@ -3274,72 +3274,72 @@ void mpu6050SetZFineGain(int8_t gain)
 
 int16_t mpu6050GetXAccelOffset()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_XA_OFFS_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_XA_OFFS_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 void mpu6050SetXAccelOffset(int16_t offset)
 {
-  i2cdevWrite(I2Cx, devAddr, MPU6050_RA_XA_OFFS_H, 2, (uint8_t *)&offset);
+  i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_XA_OFFS_H, 2, (uint8_t *)&offset);
 }
 
 // YA_OFFS_* register
 
 int16_t mpu6050GetYAccelOffset()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_YA_OFFS_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_YA_OFFS_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 void mpu6050SetYAccelOffset(int16_t offset)
 {
-  i2cdevWrite(I2Cx, devAddr, MPU6050_RA_YA_OFFS_H, 2, (uint8_t *)&offset);
+  i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_YA_OFFS_H, 2, (uint8_t *)&offset);
 }
 
 // ZA_OFFS_* register
 
 int16_t mpu6050GetZAccelOffset()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ZA_OFFS_H, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ZA_OFFS_H, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 void mpu6050SetZAccelOffset(int16_t offset)
 {
-  i2cdevWrite(I2Cx, devAddr, MPU6050_RA_ZA_OFFS_H, 2, (uint8_t *)&offset);
+  i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_ZA_OFFS_H, 2, (uint8_t *)&offset);
 }
 
 // XG_OFFS_USR* registers
 
 int16_t mpu6050GetXGyroOffsetUser()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_XG_OFFS_USRH, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_XG_OFFS_USRH, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 void mpu6050SetXGyroOffsetUser(int16_t offset)
 {
-  i2cdevWrite(I2Cx, devAddr, MPU6050_RA_XG_OFFS_USRH, 2, (uint8_t *)&offset);
+  i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_XG_OFFS_USRH, 2, (uint8_t *)&offset);
 }
 
 // YG_OFFS_USR* register
 
 int16_t mpu6050GetYGyroOffsetUser()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_YG_OFFS_USRH, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_YG_OFFS_USRH, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 void mpu6050SetYGyroOffsetUser(int16_t offset)
 {
-  i2cdevWrite(I2Cx, devAddr, MPU6050_RA_YG_OFFS_USRH, 2, (uint8_t *)&offset);
+  i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_YG_OFFS_USRH, 2, (uint8_t *)&offset);
 }
 
 // ZG_OFFS_USR* register
 
 int16_t mpu6050GetZGyroOffsetUser()
 {
-  i2cdevRead(I2Cx, devAddr, MPU6050_RA_ZG_OFFS_USRH, 2, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_ZG_OFFS_USRH, 2, buffer);
   return (((int16_t) buffer[0]) << 8) | buffer[1];
 }
 void mpu6050SetZGyroOffsetUser(int16_t offset)
 {
-  i2cdevWrite(I2Cx, devAddr, MPU6050_RA_ZG_OFFS_USRH, 2, (uint8_t *)&offset);
+  i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_ZG_OFFS_USRH, 2, (uint8_t *)&offset);
 }
 
 // INT_ENABLE register (DMP functions)
@@ -3476,7 +3476,7 @@ void mpu6050ReadMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, uint
       chunkSize = 256 - address;
 
     // read the chunk of data as specified
-    i2cdevRead(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, data + i);
+    i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, data + i);
 
     // increase byte index by [chunkSize]
     i += chunkSize;
@@ -3521,7 +3521,7 @@ bool mpu6050WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
     // write the chunk of data as specified
     progBuffer = (uint8_t *) data + i;
 
-    i2cdevWrite(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, progBuffer);
+    i2cdevWriteReg8(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, progBuffer);
 
     // verify data if needed
     if (verify)
@@ -3529,7 +3529,7 @@ bool mpu6050WriteMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t ban
       uint32_t j;
       mpu6050SetMemoryBank(bank, true, true);
       mpu6050SetMemoryStartAddress(address);
-      i2cdevRead(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, verifyBuffer);
+      i2cdevReadReg8(I2Cx, devAddr, MPU6050_RA_MEM_R_W, chunkSize, verifyBuffer);
 
       for (j = 0; j < chunkSize; j++)
       {

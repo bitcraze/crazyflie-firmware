@@ -231,7 +231,7 @@ uint8_t read8(AMG8833_Dev_t *dev, uint8_t reg)
 **************************************************************************/
 void read(AMG8833_Dev_t *dev, uint8_t reg, uint8_t *buf, uint8_t num)
 {
-  i2cdevRead(dev->I2Cx, dev->devAddr, reg, num, buf);
+  i2cdevReadReg8(dev->I2Cx, dev->devAddr, reg, num, buf);
 }
 
 /**************************************************************************

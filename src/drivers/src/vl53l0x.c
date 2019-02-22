@@ -231,7 +231,7 @@ bool vl53l0xInitSensor(VL53L0xDev* dev, bool io_2v8)
   // the API, but the same data seems to be more easily readable from
   // GLOBAL_CONFIG_SPAD_ENABLES_REF_0 through _6, so read it from there
   uint8_t ref_spad_map[6];
-  i2cdevRead(dev->I2Cx, dev->devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
+  i2cdevReadReg8(dev->I2Cx, dev->devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
 
   // -- VL53L0X_set_reference_spads() begin (assume NVM values are valid)
 
@@ -258,7 +258,7 @@ bool vl53l0xInitSensor(VL53L0xDev* dev, bool io_2v8)
     }
   }
 
-  i2cdevWrite(dev->I2Cx, dev->devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
+  i2cdevWriteReg8(dev->I2Cx, dev->devAddr, VL53L0X_RA_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 6, ref_spad_map);
 
   // -- VL53L0X_set_reference_spads() end
 
@@ -1066,7 +1066,7 @@ bool vl53l0xPerformSingleRefCalibration(VL53L0xDev* dev, uint8_t vhv_init_byte)
 uint16_t vl53l0xReadReg16Bit(VL53L0xDev* dev, uint8_t reg)
 {
   uint8_t buffer[2] = {};
-  i2cdevRead(dev->I2Cx, dev->devAddr, reg, 2, (uint8_t *)&buffer);
+  i2cdevReadReg8(dev->I2Cx, dev->devAddr, reg, 2, (uint8_t *)&buffer);
   return ((uint16_t)(buffer[0]) << 8) | buffer[1];
 }
 
@@ -1075,7 +1075,7 @@ bool vl53l0xWriteReg16Bit(VL53L0xDev* dev, uint8_t reg, uint16_t val)
   uint8_t buffer[2] = {};
   buffer[0] = ((val >> 8) & 0xFF);
   buffer[1] = ((val     ) & 0xFF);
-  return i2cdevWrite(dev->I2Cx, dev->devAddr, reg, 2, (uint8_t *)&buffer);
+  return i2cdevWriteReg8(dev->I2Cx, dev->devAddr, reg, 2, (uint8_t *)&buffer);
 }
 
 bool vl53l0xWriteReg32Bit(VL53L0xDev* dev, uint8_t reg, uint32_t val)
@@ -1085,5 +1085,5 @@ bool vl53l0xWriteReg32Bit(VL53L0xDev* dev, uint8_t reg, uint32_t val)
   buffer[1] = ((val >> 16) & 0xFF);
   buffer[2] = ((val >>  8) & 0xFF);
   buffer[3] = ((val      ) & 0xFF);
-  return i2cdevWrite(dev->I2Cx, dev->devAddr, reg, 4, (uint8_t *)&buffer);
+  return i2cdevWriteReg8(dev->I2Cx, dev->devAddr, reg, 4, (uint8_t *)&buffer);
 }

@@ -124,7 +124,7 @@ PROJ_OBJ += cppm.o
 PROJ_OBJ += bmi055_accel.o bmi055_gyro.o bmi160.o bmp280.o bstdr_comm_support.o bmm150.o
 PROJ_OBJ += bmi088_accel.o bmi088_gyro.o bmi088_fifo.o bmp3.o
 PROJ_OBJ += pca9685.o vl53l0x.o pca95x4.o pca9555.o vl53l1x.o pmw3901.o
-PROJ_OBJ += amg8833.o
+PROJ_OBJ += amg8833.o lh_bootloader.o
 
 # USB Files
 PROJ_OBJ += usb_bsp.o usblink.o usbd_desc.o usb.o
@@ -218,6 +218,7 @@ PROJ_OBJ += exptest.o
 PROJ_OBJ += exptestRR.o
 #PROJ_OBJ += bigquadtest.o
 #PROJ_OBJ += uarttest.o
+PROJ_OBJ += push.o
 
 
 # Utilities

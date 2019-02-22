@@ -79,7 +79,7 @@ void hmc5883lInit(I2C_Dev *i2cPort)
  */
 bool hmc5883lTestConnection()
 {
-  if (i2cdevRead(I2Cx, devAddr, HMC5883L_RA_ID_A, 3, buffer))
+  if (i2cdevReadReg8(I2Cx, devAddr, HMC5883L_RA_ID_A, 3, buffer))
   {
     return (buffer[0] == 'H' && buffer[1] == '4' && buffer[2] == '3');
   }
@@ -103,7 +103,7 @@ bool hmc5883lSelfTest()
   } regSave;
 
   // Save register values
-  if (i2cdevRead(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == false)
+  if (i2cdevReadReg8(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == false)
   {
     // TODO: error handling
     return false;
@@ -148,7 +148,7 @@ bool hmc5883lSelfTest()
   }
 
   // Restore registers
-  if (i2cdevWrite(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == false)
+  if (i2cdevWriteReg8(I2Cx, devAddr, HMC5883L_RA_CONFIG_A, sizeof(regSave), (uint8_t *)&regSave) == false)
   {
     // TODO: error handling
     return false;
@@ -371,7 +371,7 @@ void hmc5883lSetMode(uint8_t newMode)
  */
 void hmc5883lGetHeading(int16_t *x, int16_t *y, int16_t *z)
 {
-  i2cdevRead(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
   if (mode == HMC5883L_MODE_SINGLE) i2cdevWriteByte(I2Cx, devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
   *x = (((int16_t)buffer[0]) << 8) | buffer[1];
   *y = (((int16_t)buffer[4]) << 8) | buffer[5];
@@ -385,7 +385,7 @@ int16_t hmc5883lGetHeadingX()
 {
   // each axis read requires that ALL axis registers be read, even if only
   // one is used; this was not done ineffiently in the code by accident
-  i2cdevRead(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
   if (mode == HMC5883L_MODE_SINGLE) i2cdevWriteByte(I2Cx, devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
   return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
@@ -397,7 +397,7 @@ int16_t hmc5883lGetHeadingY()
 {
   // each axis read requires that ALL axis registers be read, even if only
   // one is used; this was not done ineffiently in the code by accident
-  i2cdevRead(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
   if (mode == HMC5883L_MODE_SINGLE) i2cdevWriteByte(I2Cx, devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
   return (((int16_t)buffer[4]) << 8) | buffer[5];
 }
@@ -409,7 +409,7 @@ int16_t hmc5883lGetHeadingZ()
 {
   // each axis read requires that ALL axis registers be read, even if only
   // one is used; this was not done ineffiently in the code by accident
-  i2cdevRead(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+  i2cdevReadReg8(I2Cx, devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
   if (mode == HMC5883L_MODE_SINGLE) i2cdevWriteByte(I2Cx, devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
   return (((int16_t)buffer[2]) << 8) | buffer[3];
 }

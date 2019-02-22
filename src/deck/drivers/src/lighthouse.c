@@ -42,13 +42,40 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#define DEBUG_MODULE "LH"
 #include "debug.h"
 #include "uart1.h"
+#include "lh_bootloader.h"
 
 #include "pulse_processor.h"
 #include "lighthouse_geometry.h"
 
 #include "estimator_kalman.h"
+
+#define STR2(x) #x
+#define STR(x) STR2(x)
+
+#define INCBIN(name, file) \
+    __asm__(".section .rodata\n" \
+            ".global incbin_" STR(name) "_start\n" \
+            ".align 4\n" \
+            "incbin_" STR(name) "_start:\n" \
+            ".incbin \"" file "\"\n" \
+            \
+            ".global incbin_" STR(name) "_end\n" \
+            ".align 1\n" \
+            "incbin_" STR(name) "_end:\n" \
+            ".byte 0\n" \
+            ".align 4\n" \
+            STR(name) "Size:\n" \
+            ".int incbin_" STR(name) "_end - incbin_" STR(name) "_start\n" \
+    ); \
+    extern const __attribute__((aligned(4))) void* incbin_ ## name ## _start; \
+    extern const void* incbin_ ## name ## _end; \
+    extern const int name ## Size; \
+    static const __attribute__((used)) unsigned char* name = (unsigned char*) & incbin_ ## name ## _start; \
+
+INCBIN(bitstream, "lighthouse.bin");
 
 static bool isInit = false;
 
@@ -160,6 +187,23 @@ static void lighthouseTask(void *param)
 
   systemWaitStart();
 
+  // Wakeup mem
+  lhblFlashWakeup();
+  vTaskDelay(M2T(1));
+
+  // Erase LH deck FW
+  lhblFlashEraseFirmware();
+
+  // Flash LH deck FW
+  if (lhblFlashWriteFW((uint8_t*)bitstream, bitstreamSize))  {
+    DEBUG_PRINT("FW updated [OK]\n");
+  } else {
+    DEBUG_PRINT("FW updated [FAILED]\n");
+  }
+
+  // Launch LH deck FW
+  lhblBootToFW();
+
   while(1) {
     // Synchronize
     syncCounter = 0;
@@ -174,7 +218,7 @@ static void lighthouseTask(void *param)
       synchronized = syncCounter == 7;
     }
 
-    DEBUG_PRINT("LH: Synchronized!\n");
+    DEBUG_PRINT("Synchronized!\n");
 
     // Receive data until being desynchronized
     synchronized = getFrame(&frame);
@@ -221,6 +265,7 @@ static void lighthouseInit(DeckInfo *info)
   if (isInit) return;
 
   uart1Init(230400);
+  lhblInit(I2C1_DEV);
   
   xTaskCreate(lighthouseTask, "LH",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
