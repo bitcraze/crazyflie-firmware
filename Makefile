@@ -320,6 +320,7 @@ endif
 
 #################### Targets ###############################
 
+print-%  : ; @echo $* = $($*)
 
 all: check_submodules build
 build:
