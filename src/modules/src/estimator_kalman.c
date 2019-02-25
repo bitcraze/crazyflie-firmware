@@ -222,8 +222,8 @@ static const float stdDevInitialAttitude_yaw = 0.01;
 
 static float procNoiseAcc_xy = 0.5f;
 static float procNoiseAcc_z = 1.0f;
-static float procNoiseVel = 0.05;
-static float procNoisePos = 0.15;
+static float procNoiseVel = 0.00;
+static float procNoisePos = 0.00;
 static float procNoiseAtt = 0;
 static float measNoiseBaro = 2.0f; // meters
 static float measNoiseGyro_rollpitch = 0.1f; // radians per second
