@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,25 +50,11 @@
 #define FLASH_CMD_WAKEUP        0xAB
 
 
-
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
 static uint8_t flashWriteBuf[LH_WRITE_BUF_SIZE];
 static uint8_t flashReadBuf[LH_WRITE_BUF_SIZE];
-
-
-typedef struct lhExchangeHeader_s
-{
-  union {
-    struct {
-      uint8_t command;
-      uint16_t writeLen;
-      uint16_t readLen;
-    };
-    uint8_t data[5];
-  };
-} lhExchangeHeader;
 
 static bool lhExchange(uint16_t writeLen, uint8_t* writeData, uint16_t readLen, uint8_t* readData)
 {
@@ -92,6 +78,19 @@ static void lhblHeaderPrepare(uint16_t writeLen, uint16_t readLen, uint8_t* buff
   buff[4] = (uint8_t)((readLen >> 8)  & 0x000000FF);
 }
 
+static bool verify(uint8_t *dataA, uint8_t *dataB, uint16_t length)
+{
+  for (int i = 0; i < length; i++)
+  {
+    if (dataA[i] != dataB[i])
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool lhblInit(I2C_Dev *i2cPort)
 {
   if (isInit)
@@ -110,6 +109,66 @@ bool lhblTest()
   return true;
 }
 
+static bool lhblFlashReadStatus(uint8_t* status)
+{
+  lhblHeaderPrepare(1, 1, flashWriteBuf);
+  flashWriteBuf[5] = FLASH_CMD_READ_STATUS;
+
+  return lhExchange(5+1, flashWriteBuf, 1, status);
+}
+
+static bool lhblFlashWriteEnable(void)
+{
+  lhblHeaderPrepare(1, 0, flashWriteBuf);
+  flashWriteBuf[5] = FLASH_CMD_WRITE_EN;
+
+  return lhExchange(5 + 1, flashWriteBuf, 0, 0);
+}
+
+static bool lhblFlashEraseBlock64k(uint32_t address)
+{
+  lhblHeaderPrepare(4, 0, flashWriteBuf);
+  flashWriteBuf[5] = FLASH_CMD_ERASE_SECTOR;
+  flashWriteBuf[6] = (uint8_t)((address >> 16) & 0x000000FF);
+  flashWriteBuf[7] = (uint8_t)((address >> 8)  & 0x000000FF);
+  flashWriteBuf[8] = (uint8_t)((address >> 0)  & 0x000000FF);
+
+  return lhExchange(5 + 4, flashWriteBuf, 0, 0);
+}
+
+static bool lhblFlashWaitComplete(void)
+{
+  bool status;
+  uint8_t flashStatus;
+
+  status = lhblFlashReadStatus(&flashStatus);
+
+  while ((flashStatus & 0x01) != 0)
+  {
+    vTaskDelay(M2T(1));
+    status &= lhblFlashReadStatus(&flashStatus);
+  }
+
+  return status;
+}
+
+static bool lhblFlashWritePage(uint32_t address, uint16_t length, uint8_t *data)
+{
+  ASSERT(address >= LH_FW_ADDR);
+  ASSERT(length <= LH_FLASH_PAGE_SIZE);
+
+  lhblFlashWriteEnable();
+
+  lhblHeaderPrepare(4 + length, 0, flashWriteBuf);
+  flashWriteBuf[5] = FLASH_CMD_WRITE_PAGE;
+  flashWriteBuf[6] = (uint8_t)((address >> 16) & 0x000000FF);
+  flashWriteBuf[7] = (uint8_t)((address >> 8)  & 0x000000FF);
+  flashWriteBuf[8] = (uint8_t)((address >> 0)  & 0x000000FF);
+
+  memcpy(&flashWriteBuf[9], data, length);
+
+  return lhExchange(5 + 4 + length, flashWriteBuf, 0, 0);
+}
 
 bool lhblBootToFW(void)
 {
@@ -134,14 +193,6 @@ bool lhblFlashRead(uint32_t address, uint16_t length, uint8_t *data)
   return lhExchange(5 + 4, flashWriteBuf, length, data);
 }
 
-bool lhblFlashReadStatus(uint8_t* status)
-{
-  lhblHeaderPrepare(1, 1, flashWriteBuf);
-  flashWriteBuf[5] = FLASH_CMD_READ_STATUS;
-
-  return lhExchange(5+1, flashWriteBuf, 1, status);
-}
-
 bool lhblFlashWakeup(void)
 {
   lhblHeaderPrepare(1, 0, flashWriteBuf);
@@ -150,25 +201,20 @@ bool lhblFlashWakeup(void)
   return lhExchange(5 + 1, flashWriteBuf, 0, 0);
 }
 
-bool lhblFlashWriteEnable(void)
+bool lhblFlashEraseFirmware(void)
 {
-  lhblHeaderPrepare(1, 0, flashWriteBuf);
-  flashWriteBuf[5] = FLASH_CMD_WRITE_EN;
+  bool status;
 
-  return lhExchange(5 + 1, flashWriteBuf, 0, 0);
-}
+  /* Erase first 64K */
+  lhblFlashWriteEnable();
+  status = lhblFlashEraseBlock64k(LH_FW_ADDR);
+  status &= lhblFlashWaitComplete();
+  /* Erase last 64K */
+  lhblFlashWriteEnable();
+  status &= lhblFlashEraseBlock64k(LH_FW_ADDR + 0x10000);
+  status &= lhblFlashWaitComplete();
 
-bool verify(uint8_t *dataA, uint8_t *dataB, uint16_t length)
-{
-  for (int i = 0; i < length; i++)
-  {
-    if (dataA[i] != dataB[i])
-    {
-      return false;
-    }
-  }
-
-  return true;
+  return status;
 }
 
 bool lhblFlashWriteFW(uint8_t *data, uint32_t length)
@@ -212,68 +258,6 @@ bool lhblFlashWriteFW(uint8_t *data, uint32_t length)
       return false;
     }
   }
-
-  return status;
-}
-
-bool lhblFlashWritePage(uint32_t address, uint16_t length, uint8_t *data)
-{
-  ASSERT(address >= LH_FW_ADDR);
-  ASSERT(length <= LH_FLASH_PAGE_SIZE);
-
-  lhblFlashWriteEnable();
-
-  lhblHeaderPrepare(4 + length, 0, flashWriteBuf);
-  flashWriteBuf[5] = FLASH_CMD_WRITE_PAGE;
-  flashWriteBuf[6] = (uint8_t)((address >> 16) & 0x000000FF);
-  flashWriteBuf[7] = (uint8_t)((address >> 8)  & 0x000000FF);
-  flashWriteBuf[8] = (uint8_t)((address >> 0)  & 0x000000FF);
-
-  memcpy(&flashWriteBuf[9], data, length);
-
-  return lhExchange(5 + 4 + length, flashWriteBuf, 0, 0);
-}
-
-bool lhblFlashEraseBlock64k(uint32_t address)
-{
-  lhblHeaderPrepare(4, 0, flashWriteBuf);
-  flashWriteBuf[5] = FLASH_CMD_ERASE_SECTOR;
-  flashWriteBuf[6] = (uint8_t)((address >> 16) & 0x000000FF);
-  flashWriteBuf[7] = (uint8_t)((address >> 8)  & 0x000000FF);
-  flashWriteBuf[8] = (uint8_t)((address >> 0)  & 0x000000FF);
-
-  return lhExchange(5 + 4, flashWriteBuf, 0, 0);
-}
-
-bool lhblFlashWaitComplete(void)
-{
-  bool status;
-  uint8_t flashStatus;
-
-  status = lhblFlashReadStatus(&flashStatus);
-
-  while ((flashStatus & 0x01) != 0)
-  {
-    vTaskDelay(M2T(1));
-    status &= lhblFlashReadStatus(&flashStatus);
-  }
-
-  return status;
-}
-
-
-bool lhblFlashEraseFirmware(void)
-{
-  bool status;
-
-  /* Erase first 64K */
-  lhblFlashWriteEnable();
-  status = lhblFlashEraseBlock64k(LH_FW_ADDR);
-  status &= lhblFlashWaitComplete();
-  /* Erase last 64K */
-  lhblFlashWriteEnable();
-  status &= lhblFlashEraseBlock64k(LH_FW_ADDR + 0x10000);
-  status &= lhblFlashWaitComplete();
 
   return status;
 }

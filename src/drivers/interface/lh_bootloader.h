@@ -7,7 +7,7 @@
  *
  * Crazyflie Firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,34 +21,63 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * @file eeprom.h
- * Driver for writing/reading the the lighthouse SPI flash mem.
+ * @file lh_bootloader.h
+ * Driver for writing/reading to the lighthouse SPI flash mem.
  *
  */
-#ifndef EERROM_H
-#define EERROM_H
+#ifndef LH_BOOTLOADER_H
+#define LH_BOOTLOADER_H
 
 #include <stdbool.h>
 #include "i2cdev.h"
 
 /**
  * Initialize the i2c lighthouse module
- * @param i2cPort  I2C port ( a CPAL_InitTypeDef) the lighthouse is connected to.
+ * @param i2cPort  I2C port (a CPAL_InitTypeDef) the lighthouse is connected to.
  *
  * @return True on success, else false.
  */
 bool lhblInit(I2C_Dev *i2cPort);
 
+/**
+ * Boot lighthouse to firmware.
+ *
+ * @return True on success, else false.
+ */
 bool lhblBootToFW(void);
 
+/**
+ * Read data from lighthouse spi flash.
+ * @param address Address to write from
+ * @param length  Length of data
+ * @param data    Pointer to memory were data will be stored
+ *
+ * @return True on success, else false.
+ */
+bool lhblFlashRead(uint32_t address, uint16_t length, uint8_t *data);
+
+/**
+ * Write FW data to lighthouse spi flash.
+ * @param data    Data to write
+ * @param length  Length of data
+ *
+ * @return True on success, else false.
+ */
 bool lhblFlashWriteFW(uint8_t *data, uint32_t length);
 
-bool lhblFlashWritePage(uint32_t address, uint16_t length, uint8_t *data);
-
+/**
+ * Erase firwmare section in lighthouse spi flash
+ *
+ * @return True on success, else false.
+ */
 bool lhblFlashEraseFirmware(void);
 
+/**
+ * Wakeup lighthouse spi flash.
+ *
+ * @return True on success, else false.
+ */
 bool lhblFlashWakeup(void);
 
-bool lhblFlashWaitComplete(void);
 
-#endif // EERROM_H
+#endif // LH_BOOTLOADER_H
