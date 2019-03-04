@@ -52,6 +52,15 @@
 
 #include "estimator_kalman.h"
 
+#define DISABLE_DRIVER
+
+baseStationGeometry_t baseStationsGeometry[] = {
+{.origin = {-1.866722, 2.229666, 1.521226, }, .mat = {{0.710527, 0.378001, -0.593521, }, {0.027454, 0.827931, 0.560158, }, {0.703134, -0.414302, 0.577889, }, }},
+{.origin = {2.158244, 2.287099, -1.858179, }, .mat = {{-0.645509, -0.380170, 0.662412, }, {0.017664, 0.859648, 0.510581, }, {-0.763548, 0.341286, -0.548195, }, }},
+};
+
+#ifndef DISABLE_DRIVER
+
 #define STR2(x) #x
 #define STR(x) STR2(x)
 
@@ -76,6 +85,8 @@
     static const __attribute__((used)) unsigned char* name = (unsigned char*) & incbin_ ## name ## _start; \
 
 INCBIN(bitstream, "lighthouse.bin");
+
+static void checkVersionAndBoot();
 
 static bool isInit = false;
 
@@ -135,12 +146,6 @@ static void calculateStats(uint32_t nowMs) {
   resetStats();
 }
 
-
-baseStationGeometry_t baseStationsGeometry[] = {
-  {.origin = {-1.642549, 2.367428, -1.647901, }, .mat = {{-0.778188, 0.261763, -0.570880, }, {0.068261, 0.938867, 0.337445, }, {0.624311, 0.223627, -0.748483, }, }},
-  {.origin = {1.156152, 2.559995, 1.866168, }, .mat = {{0.871025, -0.170744, 0.460609, }, {-0.088093, 0.868159, 0.488406, }, {-0.483274, -0.465991, 0.741147, }, }},
-};
-  
 static vec3d position;
 static positionMeasurement_t ext_pos;
 static void estimatePosition(pulseProcessorResult_t angles[]) {
@@ -187,22 +192,8 @@ static void lighthouseTask(void *param)
 
   systemWaitStart();
 
-  // Wakeup mem
-  lhblFlashWakeup();
-  vTaskDelay(M2T(1));
-
-  // Erase LH deck FW
-  lhblFlashEraseFirmware();
-
-  // Flash LH deck FW
-  if (lhblFlashWriteFW((uint8_t*)bitstream, bitstreamSize))  {
-    DEBUG_PRINT("FW updated [OK]\n");
-  } else {
-    DEBUG_PRINT("FW updated [FAILED]\n");
-  }
-
-  // Launch LH deck FW
-  lhblBootToFW();
+  // Boot the deck firmware
+  checkVersionAndBoot();
 
   while(1) {
     // Synchronize
@@ -259,6 +250,56 @@ static void lighthouseTask(void *param)
   }
 }
 
+static void checkVersionAndBoot()
+{
+
+  uint8_t bootloaderVersion = 0;
+  lhblGetVersion(&bootloaderVersion);
+  DEBUG_PRINT("Lighthouse bootloader version: %d\n", bootloaderVersion);
+
+  // Wakeup mem
+  lhblFlashWakeup();
+  vTaskDelay(M2T(1));
+
+  // Checking if first and last 64 bytes of bitstream are identical
+  // Also decoding bitstream version for console
+  static char deckBitstream[65];
+  lhblFlashRead(LH_FW_ADDR, 64, (uint8_t*)deckBitstream);
+  deckBitstream[64] = 0;
+  int deckVersion = strtol(&deckBitstream[2], NULL, 10);
+  int embeddedVersion = strtol((char*)&bitstream[2], NULL, 10);
+
+  bool identical = true;
+  if (memcmp(deckBitstream, bitstream, 64)) {
+    DEBUG_PRINT("Fail comparing begining\n");
+    identical = false;
+  }
+
+  lhblFlashRead(LH_FW_ADDR + (bitstreamSize - 64), 64, (uint8_t*)deckBitstream);
+  if (memcmp(deckBitstream, &bitstream[(bitstreamSize - 64)], 64)) {
+    DEBUG_PRINT("Fail comparing end\n");
+    identical = false;
+  }
+
+  if (identical == false) {
+    DEBUG_PRINT("Deck has version %d and we embeed version %d\n", deckVersion, embeddedVersion);
+    DEBUG_PRINT("Updating deck with embedded version!\n");
+
+    // Erase LH deck FW
+    lhblFlashEraseFirmware();
+
+    // Flash LH deck FW
+    if (lhblFlashWriteFW((uint8_t*)bitstream, bitstreamSize)) {
+      DEBUG_PRINT("FW updated [OK]\n");
+    } else {
+      DEBUG_PRINT("FW updated [FAILED]\n");
+    }
+  }
+
+  // Launch LH deck FW
+  DEBUG_PRINT("Firmware version %d verified, booting deck!\n", deckVersion);
+  lhblBootToFW();
+}
 
 static void lighthouseInit(DeckInfo *info)
 {
@@ -312,3 +353,6 @@ LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 #endif
 LOG_GROUP_STOP(lighthouse)
+
+
+#endif // DISABLE_DRIVER

@@ -34,7 +34,6 @@
 #include "debug.h"
 
 #define LH_I2C_ADDR         0x2F
-#define LH_FW_ADDR          0x020000
 #define LH_FW_SIZE          0x020000
 #define LH_FLASH_PAGE_SIZE  256
 #define LH_WRITE_BUF_SIZE   (5 + 4 + LH_FLASH_PAGE_SIZE)
@@ -42,6 +41,7 @@
 /* Commands */
 #define LHBL_BOOT_TO_FW         0x00
 #define LHBL_BL_CMD             0x01
+#define LHBL_GET_VERSION        0x02
 #define FLASH_CMD_READ          0x03
 #define FLASH_CMD_READ_STATUS   0x05
 #define FLASH_CMD_WRITE_PAGE    0x02
@@ -175,6 +175,13 @@ bool lhblBootToFW(void)
   uint8_t instruction = LHBL_BOOT_TO_FW;
 
   return lhExchange(1, &instruction, 0, 0);
+}
+
+bool lhblGetVersion(uint8_t *version)
+{
+  uint8_t instruction = LHBL_GET_VERSION;
+
+  return lhExchange(1, &instruction, 1, version);
 }
 
 bool lhblFlashGetProtocolVersion(void)

@@ -32,6 +32,12 @@
 #include "i2cdev.h"
 
 /**
+ * @brief Address of the firmware in the flash
+ * 
+ */
+#define LH_FW_ADDR          0x020000
+
+/**
  * Initialize the i2c lighthouse module
  * @param i2cPort  I2C port (a CPAL_InitTypeDef) the lighthouse is connected to.
  *
@@ -45,6 +51,14 @@ bool lhblInit(I2C_Dev *i2cPort);
  * @return True on success, else false.
  */
 bool lhblBootToFW(void);
+
+/**
+ * Get bootloader version
+ * @param version Pointer to where the single byte version number will be written.
+ *
+ * @return True on success, else false.
+ */
+bool lhblGetVersion(uint8_t *version);
 
 /**
  * Read data from lighthouse spi flash.
