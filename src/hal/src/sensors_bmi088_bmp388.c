@@ -122,7 +122,7 @@ static Axis3f  gyroBias;
 static Axis3f  gyroBiasStdDev;
 #endif
 static bool gyroBiasFound = false;
-static bool accBiasFound = false;
+static bool accScaleFound = false;
 static float accScaleSum = 0;
 static float accScale = 1;
 
@@ -574,7 +574,7 @@ static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
 {
   static uint32_t accScaleSumCount = 0;
 
-  if (!accBiasFound)
+  if (!accScaleFound)
   {
     accScaleSum += sqrtf(powf(ax * SENSORS_BMI088_G_PER_LSB_CFG, 2) + powf(ay * SENSORS_BMI088_G_PER_LSB_CFG, 2) + powf(az * SENSORS_BMI088_G_PER_LSB_CFG, 2));
     accScaleSumCount++;
@@ -582,11 +582,11 @@ static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
     if (accScaleSumCount == SENSORS_ACC_SCALE_SAMPLES)
     {
       accScale = accScaleSum / SENSORS_ACC_SCALE_SAMPLES;
-      accBiasFound = true;
+      accScaleFound = true;
     }
   }
 
-  return accBiasFound;
+  return accScaleFound;
 }
 
 #ifdef GYRO_BIAS_LIGHT_WEIGHT
