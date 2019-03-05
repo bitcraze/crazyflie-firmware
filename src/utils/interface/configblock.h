@@ -26,9 +26,17 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "config.h"
 
 #ifndef __CONFIGBLOCK_H__
 #define __CONFIGBLOCK_H__
+
+
+/* Internal format of the config block */
+#define CONFIGBLOCK_MAGIC 0x43427830
+#define CONFIGBLOCK_VERSION 2
+#define CONFIGBLOCK_HEADER_SIZE_BYTES 5 // magic + version
+#define CONFIGBLOCK_OVERHEAD_SIZE_BYTES (CONFIGBLOCK_HEADER_SIZE_BYTES + 1) // + cksum
 
 int configblockInit(void);
 bool configblockTest(void);
@@ -41,11 +49,75 @@ uint64_t configblockGetRadioAddress(void);
 float configblockGetCalibPitch(void);
 float configblockGetCalibRoll(void);
 
+/* IMU EEPROM parameters Getters */
 bool configblockGetGyroCalibrated(void);
 float configblockGetGyroBiasX(void);
 float configblockGetGyroBiasY(void);
 float configblockGetGyroBiasZ(void);
 bool configblockGetAccCalibrated(void);
 float configblockGetAccScale(void);
+
+/* IMU EEPROM parameters Setters */
+bool configblockSetGyroCalibrated(void);
+float configblockSetGyroBiasX(void);
+float configblockSetGyroBiasY(void);
+float configblockSetGyroBiasZ(void);
+bool configblockSetAccCalibrated(void);
+float configblockSetAccScale(void);
+
+// Old versions
+struct configblock_v0_s {
+  /* header */
+  uint32_t magic;
+  uint8_t  version;
+  /* Content */
+  uint8_t radioChannel;
+  uint8_t radioSpeed;
+  float calibPitch;
+  float calibRoll;
+  /* Simple modulo 256 checksum */
+  uint8_t cksum;
+} __attribute__((__packed__));
+
+// Master version
+struct configblock_v1_s {
+  /* header */
+  uint32_t magic;
+  uint8_t  version;
+  /* Content */
+  uint8_t radioChannel;
+  uint8_t radioSpeed;
+  float calibPitch;
+  float calibRoll;
+  uint8_t radioAddress_upper;
+  uint32_t radioAddress_lower;
+  /* Simple modulo 256 checksum */
+  uint8_t cksum;
+} __attribute__((__packed__));
+
+// Dev version
+struct configblock_v2_s {
+  /* header */
+  uint32_t magic;
+  uint8_t  version;
+  /* Content */
+  uint8_t radioChannel;
+  uint8_t radioSpeed;
+  float calibPitch;
+  float calibRoll;
+  uint8_t radioAddress_upper;
+  uint32_t radioAddress_lower;
+  bool gyroCalibrated;
+  float gyroBiasX;
+  float gyroBiasY;
+  float gyroBiasZ;
+  bool accCalibrated;
+  float accScale;
+  /* Simple modulo 256 checksum */
+  uint8_t cksum;
+} __attribute__((__packed__));
+
+// Set version 1 as current version
+typedef struct configblock_v2_s configblock_t;
 
 #endif //__CONFIGBLOCK_H__
