@@ -39,7 +39,7 @@
 
 /* Internal format of the config block */
 #define MAGIC 0x43427830
-#define VERSION 1
+#define VERSION 2
 #define HEADER_SIZE_BYTES 5 // magic + version
 #define OVERHEAD_SIZE_BYTES (HEADER_SIZE_BYTES + 1) // + cksum
 
@@ -73,8 +73,30 @@ struct configblock_v1_s {
   uint8_t cksum;
 } __attribute__((__packed__));
 
+// Current version
+struct configblock_v2_s {
+  /* header */
+  uint32_t magic;
+  uint8_t  version;
+  /* Content */
+  uint8_t radioChannel;
+  uint8_t radioSpeed;
+  float calibPitch;
+  float calibRoll;
+  uint8_t radioAddress_upper;
+  uint32_t radioAddress_lower;
+  bool gyroCalibrated;
+  float gyroBiasX;
+  float gyroBiasY;
+  float gyroBiasZ;
+  bool accCalibrated;
+  float accScale;
+  /* Simple modulo 256 checksum */
+  uint8_t cksum;
+} __attribute__((__packed__));
+
 // Set version 1 as current version
-typedef struct configblock_v1_s configblock_t;
+typedef struct configblock_v2_s configblock_t;
 
 static configblock_t configblock;
 static configblock_t configblockDefault =
@@ -87,12 +109,19 @@ static configblock_t configblockDefault =
     .calibRoll = 0.0,
     .radioAddress_upper = ((uint64_t)RADIO_ADDRESS >> 32),
     .radioAddress_lower = (RADIO_ADDRESS & 0xFFFFFFFFULL),
+    .gyroCalibrated = false,
+    .gyroBiasX = 0.0,
+    .gyroBiasY = 0.0,
+    .gyroBiasZ = 0.0,
+    .accCalibrated = false,
+    .accScale = 0.0,
 };
 
 static const uint32_t configblockSizes[] =
 {
   sizeof(struct configblock_v0_s),
   sizeof(struct configblock_v1_s),
+  sizeof(struct configblock_v2_s),
 };
 
 static bool isInit = false;
@@ -308,6 +337,54 @@ float configblockGetCalibRoll(void)
 {
   if (cb_ok)
     return configblock.calibRoll;
+  else
+    return 0;
+}
+
+bool configblockGetGyroCalibrated(void)
+{
+  if (cb_ok)
+    return configblock.gyroCalibrated;
+  else
+    return 0;
+}
+
+float configblockGetGyroBiasX(void)
+{
+  if (cb_ok)
+    return configblock.gyroBiasX;
+  else
+    return 0;
+}
+
+float configblockGetGyroBiasY(void)
+{
+  if (cb_ok)
+    return configblock.gyroBiasY;
+  else
+    return 0;
+}
+
+float configblockGetGyroBiasZ(void)
+{
+  if (cb_ok)
+    return configblock.gyroBiasZ;
+  else
+    return 0;
+}
+
+bool configblockGetAccCalibrated(void)
+{
+  if (cb_ok)
+    return configblock.accCalibrated;
+  else
+    return 0;
+}
+
+float configblockGetAccScale(void)
+{
+  if (cb_ok)
+    return configblock.accScale;
   else
     return 0;
 }

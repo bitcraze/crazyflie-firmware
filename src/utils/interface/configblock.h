@@ -41,4 +41,11 @@ uint64_t configblockGetRadioAddress(void);
 float configblockGetCalibPitch(void);
 float configblockGetCalibRoll(void);
 
+bool configblockGetGyroCalibrated(void);
+float configblockGetGyroBiasX(void);
+float configblockGetGyroBiasY(void);
+float configblockGetGyroBiasZ(void);
+bool configblockGetAccCalibrated(void);
+float configblockGetAccScale(void);
+
 #endif //__CONFIGBLOCK_H__
