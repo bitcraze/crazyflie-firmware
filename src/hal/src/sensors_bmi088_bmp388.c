@@ -121,7 +121,8 @@ static Axis3f  gyroBias;
 #if defined(SENSORS_GYRO_BIAS_CALCULATE_STDDEV) && defined (GYRO_BIAS_LIGHT_WEIGHT)
 static Axis3f  gyroBiasStdDev;
 #endif
-static bool    gyroBiasFound = false;
+static bool gyroBiasFound = false;
+static bool accBiasFound = false;
 static float accScaleSum = 0;
 static float accScale = 1;
 
@@ -571,7 +572,6 @@ bool sensorsBmi088Bmp388Test(void)
  */
 static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
 {
-  static bool accBiasFound = false;
   static uint32_t accScaleSumCount = 0;
 
   if (!accBiasFound)
