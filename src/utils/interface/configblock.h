@@ -40,7 +40,7 @@
 
 int configblockInit(void);
 bool configblockTest(void);
-
+bool configblockSave(void);
 /* Static accessors */
 int configblockGetRadioChannel(void);
 int configblockGetRadioSpeed(void);

@@ -375,3 +375,11 @@ float configblockSetAccScale(void)
   else
     return 0;
 }
+
+bool configblockSave(void)
+{
+  if (cb_ok)
+    return configblockWrite(&configblock);
+  else
+    return 0;
+}
