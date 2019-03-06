@@ -308,8 +308,6 @@ static void sensorsTask(void *param)
       sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
     }
-    // This is only saving if a modification happened
-    configblockSave();
 
     if (isBarometerPresent)
     {
@@ -765,6 +763,12 @@ static bool sensorsFindBiasValue(BiasObj* bias)
       configblockSetGyroBiasX(bias->bias.x);
       configblockSetGyroBiasY(bias->bias.y);
       configblockSetGyroBiasZ(bias->bias.z);
+      // This is only saving if a modification happened
+      if(configblockSave()) {
+        DEBUG_PRINT("BMI088 Gyro calib to EEPROM [OK].\n");
+      } else {
+        DEBUG_PRINT("BMI088 Gyro calib to EEPROM [FAIL].\n");
+      }
     } else {
       if(configblockGetGyroCalibrated()) {
         varianceSampleTime = xTaskGetTickCount();
@@ -773,6 +777,7 @@ static bool sensorsFindBiasValue(BiasObj* bias)
         bias->bias.z = configblockGetGyroBiasZ();
         foundBias = true;
         bias->isBiasValueFound = true;
+        DEBUG_PRINT("BMI088 Gyro calib from EEPROM [OK].\n");
       }
     }
   }
