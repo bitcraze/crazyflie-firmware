@@ -759,6 +759,26 @@ static bool sensorsFindBiasValue(BiasObj* bias)
       bias->bias.z = bias->mean.z;
       foundBias = true;
       bias->isBiasValueFound = true;
+      configblockSetGyroCalibrated(true);
+      configblockSetGyroBiasX(bias->bias.x);
+      configblockSetGyroBiasY(bias->bias.y);
+      configblockSetGyroBiasZ(bias->bias.z);
+      // This is only saving if a modification happened
+      if(configblockSave()) {
+        DEBUG_PRINT("BMI088 Calib to EEPROM [OK].\n");
+      } else {
+        DEBUG_PRINT("BMI088 Calib to EEPROM [FAIL].\n");
+      }
+    } else {
+      if(configblockGetGyroCalibrated()) {
+        varianceSampleTime = xTaskGetTickCount();
+        bias->bias.x = configblockGetGyroBiasX();
+        bias->bias.y = configblockGetGyroBiasY();
+        bias->bias.z = configblockGetGyroBiasZ();
+        foundBias = true;
+        bias->isBiasValueFound = true;
+        DEBUG_PRINT("BMI088 Gyro calib from EEPROM [OK].\n");
+      }
     }
   }
 

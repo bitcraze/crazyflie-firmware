@@ -36,67 +36,35 @@
 #include "configblock.h"
 #include "eeprom.h"
 
-
-/* Internal format of the config block */
-#define MAGIC 0x43427830
-#define VERSION 1
-#define HEADER_SIZE_BYTES 5 // magic + version
-#define OVERHEAD_SIZE_BYTES (HEADER_SIZE_BYTES + 1) // + cksum
-
-// Old versions
-struct configblock_v0_s {
-  /* header */
-  uint32_t magic;
-  uint8_t  version;
-  /* Content */
-  uint8_t radioChannel;
-  uint8_t radioSpeed;
-  float calibPitch;
-  float calibRoll;
-  /* Simple modulo 256 checksum */
-  uint8_t cksum;
-} __attribute__((__packed__));
-
-// Current version
-struct configblock_v1_s {
-  /* header */
-  uint32_t magic;
-  uint8_t  version;
-  /* Content */
-  uint8_t radioChannel;
-  uint8_t radioSpeed;
-  float calibPitch;
-  float calibRoll;
-  uint8_t radioAddress_upper;
-  uint32_t radioAddress_lower;
-  /* Simple modulo 256 checksum */
-  uint8_t cksum;
-} __attribute__((__packed__));
-
-// Set version 1 as current version
-typedef struct configblock_v1_s configblock_t;
-
 static configblock_t configblock;
 static configblock_t configblockDefault =
 {
-    .magic = MAGIC,
-    .version = VERSION,
+    .magic = CONFIGBLOCK_MAGIC,
+    .version = CONFIGBLOCK_VERSION,
     .radioChannel = RADIO_CHANNEL,
     .radioSpeed = RADIO_DATARATE,
     .calibPitch = 0.0,
     .calibRoll = 0.0,
     .radioAddress_upper = ((uint64_t)RADIO_ADDRESS >> 32),
     .radioAddress_lower = (RADIO_ADDRESS & 0xFFFFFFFFULL),
+    .gyroCalibrated = false,
+    .gyroBiasX = 0.0,
+    .gyroBiasY = 0.0,
+    .gyroBiasZ = 0.0,
+    .accCalibrated = false,
+    .accScale = 0.0,
 };
 
 static const uint32_t configblockSizes[] =
 {
   sizeof(struct configblock_v0_s),
   sizeof(struct configblock_v1_s),
+  sizeof(struct configblock_v2_s),
 };
 
 static bool isInit = false;
 static bool cb_ok = false;
+static bool isChanged = false;
 
 static bool configblockCheckMagic(configblock_t *configblock);
 static bool configblockCheckVersion(configblock_t *configblock);
@@ -153,7 +121,7 @@ int configblockInit(void)
         else // configblockCheckVersion
         {
           // Check data integrity of old version data
-          if (configblock.version <= VERSION &&
+          if (configblock.version <= CONFIGBLOCK_VERSION &&
               configblockCheckDataIntegrity((uint8_t *)&configblock, configblock.version))
           {
             // Not the same version, try to upgrade
@@ -203,12 +171,12 @@ bool configblockTest(void)
 
 static bool configblockCheckMagic(configblock_t *configblock)
 {
-  return (configblock->magic == MAGIC);
+  return (configblock->magic == CONFIGBLOCK_MAGIC);
 }
 
 static bool configblockCheckVersion(configblock_t *configblock)
 {
-  return (configblock->version == VERSION);
+  return (configblock->version == CONFIGBLOCK_VERSION);
 }
 
 static bool configblockCheckChecksum(configblock_t *configblock)
@@ -253,13 +221,13 @@ static bool configblockCopyToNewVersion(configblock_t *configblockSaved, configb
   // Copy new data to temp config memory
   memcpy((uint8_t *)&configblockTmp, (uint8_t *)configblockNew, sizeof(configblock_t));
 
-  if (configblockSaved->version <= VERSION &&
+  if (configblockSaved->version <= CONFIGBLOCK_VERSION &&
       sizeof(configblock_t) >= configblockSizes[configblockSaved->version])
   {
     // Copy old saved eeprom data to new structure
-    memcpy((uint8_t *)&configblockTmp + HEADER_SIZE_BYTES,
-           (uint8_t *)configblockSaved + HEADER_SIZE_BYTES,
-           configblockSizes[configblockSaved->version] - OVERHEAD_SIZE_BYTES);
+    memcpy((uint8_t *)&configblockTmp + CONFIGBLOCK_HEADER_SIZE_BYTES,
+           (uint8_t *)configblockSaved + CONFIGBLOCK_HEADER_SIZE_BYTES,
+           configblockSizes[configblockSaved->version] - CONFIGBLOCK_OVERHEAD_SIZE_BYTES);
     // Copy updated block to saved structure
     memcpy((uint8_t *)configblockSaved, (uint8_t *)&configblockTmp, sizeof(configblock_t));
   }
@@ -308,6 +276,123 @@ float configblockGetCalibRoll(void)
 {
   if (cb_ok)
     return configblock.calibRoll;
+  else
+    return 0;
+}
+
+bool configblockGetGyroCalibrated(void)
+{
+  if (cb_ok)
+    return configblock.gyroCalibrated;
+  else
+    return 0;
+}
+
+float configblockGetGyroBiasX(void)
+{
+  if (cb_ok)
+    return configblock.gyroBiasX;
+  else
+    return 0;
+}
+
+float configblockGetGyroBiasY(void)
+{
+  if (cb_ok)
+    return configblock.gyroBiasY;
+  else
+    return 0;
+}
+
+float configblockGetGyroBiasZ(void)
+{
+  if (cb_ok)
+    return configblock.gyroBiasZ;
+  else
+    return 0;
+}
+
+bool configblockGetAccCalibrated(void)
+{
+  if (cb_ok)
+    return configblock.accCalibrated;
+  else
+    return 0;
+}
+
+float configblockGetAccScale(void)
+{
+  if (cb_ok)
+    return configblock.accScale;
+  else
+    return 0;
+}
+
+
+void configblockSetGyroCalibrated(bool data)
+{
+  if (cb_ok) {
+    if (data != configblock.gyroCalibrated) {
+      configblock.gyroCalibrated = data;
+      isChanged = true;
+    }
+  }
+}
+
+void configblockSetGyroBiasX(float data)
+{
+  if (cb_ok) {
+    if (data != configblock.gyroBiasX) {
+      configblock.gyroBiasX = data;
+      isChanged = true;
+    }
+  }
+}
+
+void configblockSetGyroBiasY(float data)
+{
+  if (cb_ok) {
+    if (data != configblock.gyroBiasY) {
+      configblock.gyroBiasY = data;
+      isChanged = true;
+    }
+  }
+}
+
+void configblockSetGyroBiasZ(float data)
+{
+  if (cb_ok) {
+    if (data != configblock.gyroBiasZ) {
+      configblock.gyroBiasZ = data;
+      isChanged = true;
+    }
+  }
+}
+
+void configblockSetAccCalibrated(bool data)
+{
+  if (cb_ok) {
+    if (data != configblock.accCalibrated) {
+      configblock.accCalibrated = data;
+      isChanged = true;
+    }
+  }
+}
+
+void configblockSetAccScale(float data)
+{
+  if (cb_ok) {
+    if (data != configblock.accScale) {
+      configblock.accScale = data;
+      isChanged = true;
+    }
+  }
+}
+
+bool configblockSave(void)
+{
+  if (cb_ok && isChanged)
+    return configblockWrite(&configblock);
   else
     return 0;
 }
