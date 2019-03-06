@@ -309,6 +309,15 @@ static void sensorsTask(void *param)
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
     }
 
+    configblockSetGyroCalibrated(gyroBiasFound);
+    configblockSetGyroBiasX(gyroBias.x);
+    configblockSetGyroBiasY(gyroBias.y);
+    configblockSetGyroBiasZ(gyroBias.z);
+    configblockSetAccScale(accScale);
+    configblockSetAccCalibrated(accScaleFound);
+    // This is only saving if a modification happened
+    configblockSave();
+
     if (isBarometerPresent)
     {
       static uint8_t baroMeasDelay = SENSORS_DELAY_BARO;

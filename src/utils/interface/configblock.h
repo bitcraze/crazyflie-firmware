@@ -58,12 +58,12 @@ bool configblockGetAccCalibrated(void);
 float configblockGetAccScale(void);
 
 /* IMU EEPROM parameters Setters */
-bool configblockSetGyroCalibrated(void);
-float configblockSetGyroBiasX(void);
-float configblockSetGyroBiasY(void);
-float configblockSetGyroBiasZ(void);
-bool configblockSetAccCalibrated(void);
-float configblockSetAccScale(void);
+void configblockSetGyroCalibrated(bool);
+void configblockSetGyroBiasX(float);
+void configblockSetGyroBiasY(float);
+void configblockSetGyroBiasZ(float);
+void configblockSetAccCalibrated(bool);
+void configblockSetAccScale(float);
 
 // Old versions
 struct configblock_v0_s {

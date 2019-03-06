@@ -64,6 +64,7 @@ static const uint32_t configblockSizes[] =
 
 static bool isInit = false;
 static bool cb_ok = false;
+static bool isChanged = false;
 
 static bool configblockCheckMagic(configblock_t *configblock);
 static bool configblockCheckVersion(configblock_t *configblock);
@@ -328,57 +329,69 @@ float configblockGetAccScale(void)
 }
 
 
-bool configblockSetGyroCalibrated(void)
+void configblockSetGyroCalibrated(bool data)
 {
-  if (cb_ok)
-    return configblock.gyroCalibrated;
-  else
-    return 0;
+  if (cb_ok) {
+    if (data != configblock.gyroCalibrated) {
+      configblock.gyroCalibrated = data;
+      isChanged = true;
+    }
+  }
 }
 
-float configblockSetGyroBiasX(void)
+void configblockSetGyroBiasX(float data)
 {
-  if (cb_ok)
-    return configblock.gyroBiasX;
-  else
-    return 0;
+  if (cb_ok) {
+    if (data != configblock.gyroBiasX) {
+      configblock.gyroBiasX = data;
+      isChanged = true;
+    }
+  }
 }
 
-float configblockSetGyroBiasY(void)
+void configblockSetGyroBiasY(float data)
 {
-  if (cb_ok)
-    return configblock.gyroBiasY;
-  else
-    return 0;
+  if (cb_ok) {
+    if (data != configblock.gyroBiasY) {
+      configblock.gyroBiasY = data;
+      isChanged = true;
+    }
+  }
 }
 
-float configblockSetGyroBiasZ(void)
+void configblockSetGyroBiasZ(float data)
 {
-  if (cb_ok)
-    return configblock.gyroBiasZ;
-  else
-    return 0;
+  if (cb_ok) {
+    if (data != configblock.gyroBiasZ) {
+      configblock.gyroBiasZ = data;
+      isChanged = true;
+    }
+  }
 }
 
-bool configblockSetAccCalibrated(void)
+void configblockSetAccCalibrated(bool data)
 {
-  if (cb_ok)
-    return configblock.accCalibrated;
-  else
-    return 0;
+  if (cb_ok) {
+    if (data != configblock.accCalibrated) {
+      configblock.accCalibrated = data;
+      isChanged = true;
+    }
+  }
 }
 
-float configblockSetAccScale(void)
+void configblockSetAccScale(float data)
 {
-  if (cb_ok)
-    return configblock.accScale;
-  else
-    return 0;
+  if (cb_ok) {
+    if (data != configblock.accScale) {
+      configblock.accScale = data;
+      isChanged = true;
+    }
+  }
 }
 
 bool configblockSave(void)
 {
-  if (cb_ok)
+  if (cb_ok && isChanged)
     return configblockWrite(&configblock);
   else
     return 0;
