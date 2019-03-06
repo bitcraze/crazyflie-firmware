@@ -275,13 +275,6 @@ static void sensorsTask(void *param)
    * this is only required by the z-ranger, since the
    * configuration will be done after system start-up */
   //vTaskDelayUntil(&lastWakeTime, M2T(1500));
-  
-  gyroBiasFound = configblockGetGyroCalibrated();
-  gyroBias.x = configblockGetGyroBiasX();
-  gyroBias.y = configblockGetGyroBiasY();
-  gyroBias.z = configblockGetGyroBiasZ();
-  accScaleFound = configblockGetAccCalibrated();
-  accScale = configblockGetAccScale();
   while (1)
   {
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
@@ -315,13 +308,6 @@ static void sensorsTask(void *param)
       sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
     }
-
-    configblockSetGyroCalibrated(gyroBiasFound);
-    configblockSetGyroBiasX(gyroBias.x);
-    configblockSetGyroBiasY(gyroBias.y);
-    configblockSetGyroBiasZ(gyroBias.z);
-    configblockSetAccCalibrated(accScaleFound);
-    configblockSetAccScale(accScale);
     // This is only saving if a modification happened
     configblockSave();
 
@@ -775,6 +761,19 @@ static bool sensorsFindBiasValue(BiasObj* bias)
       bias->bias.z = bias->mean.z;
       foundBias = true;
       bias->isBiasValueFound = true;
+      configblockSetGyroCalibrated(true);
+      configblockSetGyroBiasX(bias->bias.x);
+      configblockSetGyroBiasY(bias->bias.y);
+      configblockSetGyroBiasZ(bias->bias.z);
+    } else {
+      if(configblockGetGyroCalibrated()) {
+        varianceSampleTime = xTaskGetTickCount();
+        bias->bias.x = configblockGetGyroBiasX();
+        bias->bias.y = configblockGetGyroBiasY();
+        bias->bias.z = configblockGetGyroBiasZ();
+        foundBias = true;
+        bias->isBiasValueFound = true;
+      }
     }
   }
 
