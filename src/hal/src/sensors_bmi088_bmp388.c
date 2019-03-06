@@ -765,9 +765,9 @@ static bool sensorsFindBiasValue(BiasObj* bias)
       configblockSetGyroBiasZ(bias->bias.z);
       // This is only saving if a modification happened
       if(configblockSave()) {
-        DEBUG_PRINT("BMI088 Gyro calib to EEPROM [OK].\n");
+        DEBUG_PRINT("BMI088 Calib to EEPROM [OK].\n");
       } else {
-        DEBUG_PRINT("BMI088 Gyro calib to EEPROM [FAIL].\n");
+        DEBUG_PRINT("BMI088 Calib to EEPROM [FAIL].\n");
       }
     } else {
       if(configblockGetGyroCalibrated()) {
