@@ -275,6 +275,13 @@ static void sensorsTask(void *param)
    * this is only required by the z-ranger, since the
    * configuration will be done after system start-up */
   //vTaskDelayUntil(&lastWakeTime, M2T(1500));
+  
+  gyroBiasFound = configblockGetGyroCalibrated();
+  gyroBias.x = configblockGetGyroBiasX();
+  gyroBias.y = configblockGetGyroBiasY();
+  gyroBias.z = configblockGetGyroBiasZ();
+  accScaleFound = configblockGetAccCalibrated();
+  accScale = configblockGetAccScale();
   while (1)
   {
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
@@ -313,8 +320,8 @@ static void sensorsTask(void *param)
     configblockSetGyroBiasX(gyroBias.x);
     configblockSetGyroBiasY(gyroBias.y);
     configblockSetGyroBiasZ(gyroBias.z);
-    configblockSetAccScale(accScale);
     configblockSetAccCalibrated(accScaleFound);
+    configblockSetAccScale(accScale);
     // This is only saving if a modification happened
     configblockSave();
 
