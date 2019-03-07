@@ -158,8 +158,8 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
       if (angles[sensor].validCount == 4) {
         lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles[sensor].angles, position, &delta);
 
-        ext_pos.x += position[0];
-        ext_pos.y -= position[2];
+        ext_pos.x -= position[2];
+        ext_pos.y -= position[0];
         ext_pos.z += position[1];
         sensorsUsed++;
 
