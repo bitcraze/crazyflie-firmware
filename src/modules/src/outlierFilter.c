@@ -67,7 +67,7 @@ bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa) {
   return isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa);
 }
 
-bool outlierFilterVaildateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
+bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
   bool sampleIsGood = false;
 
   if (isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa)) {
