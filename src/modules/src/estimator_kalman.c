@@ -1038,7 +1038,7 @@ static void stateEstimatorUpdateWithTDOA(tdoaMeasurement_t *tdoa)
         .z = S[STATE_Z],
       };
 
-      bool sampleIsGood = outlierFilterVaildateTdoaSteps(tdoa, error, &jacobian, &estimatedPosition);
+      bool sampleIsGood = outlierFilterValidateTdoaSteps(tdoa, error, &jacobian, &estimatedPosition);
       if (sampleIsGood) {
         stateEstimatorScalarUpdate(&H, error, tdoa->stdDev);
       }
