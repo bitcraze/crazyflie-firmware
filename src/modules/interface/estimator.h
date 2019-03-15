@@ -41,4 +41,12 @@ void stateEstimator(state_t *state, sensorData_t *sensors, control_t *control, c
 StateEstimatorType getStateEstimator(void);
 const char* stateEstimatorGetName();
 
+// Support to incorporate additional sensors into the state estimate via the following functions:
+bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb);
+bool estimatorEnqueuePosition(const positionMeasurement_t *pos);
+bool estimatorEnqueueDistance(const distanceMeasurement_t *dist);
+bool estimatorEnqueueTOF(const tofMeasurement_t *tof);
+bool estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height);
+bool estimatorEnqueueFlow(const flowMeasurement_t *flow);
+
 #endif //__ESTIMATOR_H__

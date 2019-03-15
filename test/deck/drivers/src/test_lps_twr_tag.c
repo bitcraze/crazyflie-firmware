@@ -15,12 +15,12 @@
 // #include "mock_arm_math.h"
 
 // The mocking FW can not handle the cf_math.h/arm_math.h file, it crashes while parsing it. We have to use manual mocks instead.
-// Temporarily fix to make tests pass, add test code for the kalman part of rxcallback()
+// Temporarily fix to make tests pass, add test code for the estimator part of rxcallback()
 #include "cf_math.h"
 void arm_std_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
 void arm_mean_f32( float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
 
-#include "mock_estimator_kalman.h"
+#include "mock_estimator.h"
 
 #include "freertosMocks.h"
 

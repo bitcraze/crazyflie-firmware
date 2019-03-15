@@ -65,12 +65,12 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
 /**
  * The filter supports the incorporation of additional sensors into the state estimate via the following functions:
  */
-bool estimatorKalmanEnqueueTDOA(tdoaMeasurement_t *uwb);
-bool estimatorKalmanEnqueuePosition(positionMeasurement_t *pos);
-bool estimatorKalmanEnqueueDistance(distanceMeasurement_t *dist);
-bool estimatorKalmanEnqueueTOF(tofMeasurement_t *tof);
-bool estimatorKalmanEnqueueAsoluteHeight(heightMeasurement_t *height);
-bool estimatorKalmanEnqueueFlow(flowMeasurement_t *flow);
+bool estimatorKalmanEnqueueTDOA(const tdoaMeasurement_t *uwb);
+bool estimatorKalmanEnqueuePosition(const positionMeasurement_t *pos);
+bool estimatorKalmanEnqueueDistance(const distanceMeasurement_t *dist);
+bool estimatorKalmanEnqueueTOF(const tofMeasurement_t *tof);
+bool estimatorKalmanEnqueueAbsoluteHeight(const heightMeasurement_t *height);
+bool estimatorKalmanEnqueueFlow(const flowMeasurement_t *flow);
 
 /*
  * Methods used in the optical flow implementation to get elevation and reset position

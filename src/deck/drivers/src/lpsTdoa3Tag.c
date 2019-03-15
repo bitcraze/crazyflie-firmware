@@ -50,7 +50,7 @@ The implementation must handle
 #include "lpsTdoa3Tag.h"
 #include "tdoaEngine.h"
 #include "tdoaStats.h"
-#include "estimator_kalman.h"
+#include "estimator.h"
 
 #include "libdw1000.h"
 #include "mac.h"
@@ -263,7 +263,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 }
 
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
-  estimatorKalmanEnqueueTDOA(tdoaMeasurement);
+  estimatorEnqueueTDOA(tdoaMeasurement);
 
   #ifdef LPS_2D_POSITION_HEIGHT
   // If LPS_2D_POSITION_HEIGHT is defined we assume that we are doing 2D positioning.
@@ -272,7 +272,7 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   heightData.timestamp = xTaskGetTickCount();
   heightData.height = LPS_2D_POSITION_HEIGHT;
   heightData.stdDev = 0.0001;
-  estimatorKalmanEnqueueAsoluteHeight(&heightData);
+  estimatorEnqueueAsoluteHeight(&heightData);
   #endif
 }
 

@@ -46,7 +46,6 @@
 #include "controller.h"
 #include "power_distribution.h"
 
-#include "estimator_kalman.h"
 #include "estimator.h"
 
 static bool isInit;

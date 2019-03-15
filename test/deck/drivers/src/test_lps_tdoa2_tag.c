@@ -7,7 +7,7 @@
 
 #include "mock_libdw1000.h"
 #include "mock_cfassert.h"
-#include "mock_estimator_kalman.h"
+#include "mock_estimator.h"
 #include "mock_locodeck.h"
 
 #include "dw1000Mocks.h"
@@ -52,10 +52,10 @@ static void mockMessageFromAnchorNotComingBackToReceive(uint8_t anchorIndex, uin
 static void mockMessageFromAnchorWithLppData(uint8_t anchorIndex, uint64_t rxTime, uint8_t sequenceNrs[], uint64_t timestamps[], uint64_t distances[], uint32_t lppDataSize, uint8_t* lppData);
 static void mockRadioSetToReceiveMode();
 
-static void ignoreKalmanEstimatorValidation();
-static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff);
-static void mockKalmanEstimator_validate();
-static void mockKalmanEstimator_resetMock();
+static void ignoreEstimatorValidation();
+static void mockEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff);
+static void mockEstimator_validate();
+static void mockEstimator_resetMock();
 static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
 static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int length);
 
@@ -126,7 +126,7 @@ void setUp(void) {
   dwGetData_resetMock();
   dwGetReceiveTimestamp_resetMock();
 
-  mockKalmanEstimator_resetMock();
+  mockEstimator_resetMock();
 
   options.combinedAnchorPositionOk = true;
 
@@ -144,7 +144,7 @@ void setUp(void) {
 
 void tearDown(void)
 {
-  mockKalmanEstimator_validate();
+  mockEstimator_validate();
 }
 
 
@@ -390,9 +390,9 @@ void testMissingTimestampInhibitsClockDriftCalculationInFirstIteration() {
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
-  mockKalmanEstimator(5, 0, -expectedDiff);
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
+  mockEstimator(5, 0, -expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -447,10 +447,10 @@ void testMissingPacketAnchorToAnchorInhibitsDiffCalculation() {
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
   // Not called
-  // mockKalmanEstimator(5, 0, -expectedDiff);
-  mockKalmanEstimator(0, 5, expectedDiff);
+  // mockEstimator(5, 0, -expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -505,10 +505,10 @@ void testMissingAnchorToAnchorDistanceInhibitsDiffCalculation() {
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
   // Not called
-  // mockKalmanEstimator(5, 0, -expectedDiff);
-  mockKalmanEstimator(0, 5, expectedDiff);
+  // mockEstimator(5, 0, -expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -562,10 +562,10 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculation() {
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
   // Not called
-  // mockKalmanEstimator(5, 0, -expectedDiff);
-  mockKalmanEstimator(0, 5, expectedDiff);
+  // mockEstimator(5, 0, -expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -619,10 +619,10 @@ void testMissingPacketPacketAnchorToAnchorInhibitsDiffCalculationWhenSequenceNrW
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
   // Not called
-  // mockKalmanEstimator(5, 0, -expectedDiff);
-  mockKalmanEstimator(0, 5, expectedDiff);
+  // mockEstimator(5, 0, -expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -680,15 +680,15 @@ void testMissingPacketAnchorToTagInhibitsDiffCalculation() {
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
   // Not called due to the packet loss
-  //  mockKalmanEstimator(5, 0, -expectedDiff);
+  //  mockEstimator(5, 0, -expectedDiff);
 
   // Not called since packet from previous anchor was lost
-  //  mockKalmanEstimator(0, 5, expectedDiff);
+  //  mockEstimator(0, 5, expectedDiff);
 
   // Not called since previous packet from same anchor was lost
-  //  mockKalmanEstimator(5, 0, -expectedDiff);
+  //  mockEstimator(5, 0, -expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -710,7 +710,7 @@ void testPacketReceivedEventShouldSetTheRadioInReceiveMode() {
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
 
-  ignoreKalmanEstimatorValidation();
+  ignoreEstimatorValidation();
 
   // Test
   uint32_t actual = uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -753,7 +753,7 @@ void testThatLppShortPacketIsNotSentToWrongAnchorWhenAvailable() {
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
 
-  ignoreKalmanEstimatorValidation();
+  ignoreEstimatorValidation();
 
   packet_t expectedTxPacket;
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
@@ -778,7 +778,7 @@ void testThatLppShortPacketIsSentToGoodAnchorWhenAvailable() {
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
 
-  ignoreKalmanEstimatorValidation();
+  ignoreEstimatorValidation();
 
   packet_t expectedTxPacket;
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketSource, 0xbccf000000000000 | lppShortPacketDest);
@@ -803,7 +803,7 @@ void testThatLppShortPacketIsDiscardedIfAnchorNotPresentForTooLong() {
       (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS});
   }
 
-  ignoreKalmanEstimatorValidation();
+  ignoreEstimatorValidation();
 
   packet_t expectedTxPacket;
   populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, 0xbccf000000000000 | lppShortPacketDest, 0xbccf000000000000 | lppShortPacketSource);
@@ -819,7 +819,7 @@ void testThatLppShortPacketIsDiscardedIfAnchorNotPresentForTooLong() {
   TEST_ASSERT_EQUAL_INT(2, lpsGetLppShort_numberOfCall);
 }
 
-void testDifferenceOfDistancePushedInKalmanIfAnchorsPositionIsValid() {
+void testDifferenceOfDistancePushedInEstimatorIfAnchorsPositionIsValid() {
   // Fixture
   uint64_t tO = 3 * LOCODECK_TS_FREQ;
   uint64_t a0O = 1 * LOCODECK_TS_FREQ;
@@ -836,7 +836,7 @@ void testDifferenceOfDistancePushedInKalmanIfAnchorsPositionIsValid() {
   // Nothing here, verification in mocks
 }
 
-void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
+void testDifferenceOfDistanceNotPushedInEstimatorIfAnchorsPositionIsInValid() {
   // Fixture
   uint64_t tO = 3 * LOCODECK_TS_FREQ;
   uint64_t a0O = 1 * LOCODECK_TS_FREQ;
@@ -878,7 +878,7 @@ void testDifferenceOfDistanceNotPushedInKalmanIfAnchorsPositionIsInValid() {
     (uint64_t[]){iTxTime1_0 + timeA0ToA1 + a1O, iTxTime1_1 + a1O, NS, NS, NS, NS, NS, NS},
     (uint64_t[]){timeA0ToA1,                    NS,               NS, NS, NS, NS, NS, NS});
 
-  // The measurement should not be pushed in the kalman filter
+  // The measurement should not be pushed in the estimator
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -909,7 +909,7 @@ void testLppPacketIsHandled() {
     (uint64_t[]){NS, NS, NS, NS, NS, NS, NS, NS},
     lppDataSize, (uint8_t*)(&position));
 
-  ignoreKalmanEstimatorValidation();
+  ignoreEstimatorValidation();
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -1015,8 +1015,8 @@ static void mockRadioSetToReceiveMode() {
   dwStartReceive_Expect(&dev);
 }
 
-static void ignoreKalmanEstimatorValidation() {
-  estimatorKalmanEnqueueTDOA_IgnoreAndReturn(true);
+static void ignoreEstimatorValidation() {
+  estimatorEnqueueTDOA_IgnoreAndReturn(true);
 }
 
 #define STATE_ESTIMATOR_MAX_NR_OF_CALLS 10
@@ -1025,9 +1025,9 @@ static tdoaMeasurement_t stateEstimatorExpectations[STATE_ESTIMATOR_MAX_NR_OF_CA
 static int stateEstimatorIndex = 0;
 static int stateEstimatorNrOfCalls = 0;
 
-static bool estimatorKalmanEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int cmock_num_calls) {
+static bool estimatorEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, int cmock_num_calls) {
   char message[100];
-  sprintf(message, "Failed in call %i to kalmanEstimatorEnqueueTDOA()", cmock_num_calls);
+  sprintf(message, "Failed in call %i to EstimatorEnqueueTDOA()", cmock_num_calls);
 
   tdoaMeasurement_t* expected = &stateEstimatorExpectations[cmock_num_calls];
   // What is a reasonable accepted error here? 2 cm is needed to make the clock drift cases pass (expected: -0.500000 actual: -0.487943).
@@ -1047,10 +1047,10 @@ static bool estimatorKalmanEnqueueTDOAMockCallback(tdoaMeasurement_t* actual, in
   return true;
 }
 
-static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
+static void mockEstimator(uint8_t anchor1, uint8_t anchor2, double distanceDiff) {
     TEST_ASSERT_TRUE(stateEstimatorIndex < STATE_ESTIMATOR_MAX_NR_OF_CALLS);
 
-    estimatorKalmanEnqueueTDOA_StubWithCallback(estimatorKalmanEnqueueTDOAMockCallback);
+    estimatorEnqueueTDOA_StubWithCallback(estimatorEnqueueTDOAMockCallback);
 
     tdoaMeasurement_t* measurement = &stateEstimatorExpectations[stateEstimatorIndex];
 
@@ -1067,11 +1067,11 @@ static void mockKalmanEstimator(uint8_t anchor1, uint8_t anchor2, double distanc
     stateEstimatorIndex++;
 }
 
-static void mockKalmanEstimator_validate() {
+static void mockEstimator_validate() {
     TEST_ASSERT_EQUAL_INT(stateEstimatorIndex, stateEstimatorNrOfCalls);
 }
 
-static void mockKalmanEstimator_resetMock() {
+static void mockEstimator_resetMock() {
     stateEstimatorIndex = 0;
     stateEstimatorNrOfCalls = 0;
 }
@@ -1114,7 +1114,7 @@ void verifyDifferenceOfDistanceWithNoClockDriftButConfigurableClockOffset(uint64
     (uint64_t[]){timeA0ToA1,                    NS,               NS, NS, NS, NS, NS, NS});
 
   // Only the last message will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 1, expectedDiff);
+  mockEstimator(0, 1, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);
@@ -1172,9 +1172,9 @@ void verifyDifferenceOfDistanceWithTwoAnchors3FramesWithClockDrift(float driftTa
 
 
   // Only the three last messages will create calls to the estimator. The two first are discarded due to missing data.
-  mockKalmanEstimator(0, 5, expectedDiff);
-  mockKalmanEstimator(5, 0, -expectedDiff);
-  mockKalmanEstimator(0, 5, expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
+  mockEstimator(5, 0, -expectedDiff);
+  mockEstimator(0, 5, expectedDiff);
 
   // Test
   uwbTdoa2TagAlgorithm.onEvent(&dev, eventPacketReceived);

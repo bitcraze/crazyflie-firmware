@@ -38,7 +38,7 @@
 #include "crtp_localization_service.h"
 
 #include "stabilizer_types.h"
-#include "estimator_kalman.h"
+#include "estimator.h"
 #include "cf_math.h"
 
 #include "physicalConstants.h"
@@ -258,7 +258,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         dist.y = options->anchorPosition[current_anchor].y;
         dist.z = options->anchorPosition[current_anchor].z;
         dist.stdDev = 0.25;
-        estimatorKalmanEnqueueDistance(&dist);
+        estimatorEnqueueDistance(&dist);
       }
 
       if (options->useTdma && current_anchor == 0) {

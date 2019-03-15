@@ -50,7 +50,7 @@
 #include "pulse_processor.h"
 #include "lighthouse_geometry.h"
 
-#include "estimator_kalman.h"
+#include "estimator.h"
 
 #ifndef DISABLE_LIGHTHOUSE_DRIVER
   #define DISABLE_LIGHTHOUSE_DRIVER 1
@@ -178,7 +178,7 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
     return;
   }
   ext_pos.stdDev = 0.01;
-  estimatorKalmanEnqueuePosition(&ext_pos);
+  estimatorEnqueuePosition(&ext_pos);
 }
 
 static void lighthouseTask(void *param)
