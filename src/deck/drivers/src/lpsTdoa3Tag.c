@@ -272,7 +272,7 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   heightData.timestamp = xTaskGetTickCount();
   heightData.height = LPS_2D_POSITION_HEIGHT;
   heightData.stdDev = 0.0001;
-  estimatorEnqueueAsoluteHeight(&heightData);
+  estimatorEnqueueAbsoluteHeight(&heightData);
   #endif
 }
 
