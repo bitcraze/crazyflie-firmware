@@ -52,14 +52,16 @@
 
 #include "estimator_kalman.h"
 
-#define DISABLE_DRIVER
+#ifndef DISABLE_LIGHTHOUSE_DRIVER
+  #define DISABLE_LIGHTHOUSE_DRIVER 1
+#endif
 
 baseStationGeometry_t baseStationsGeometry[] = {
 {.origin = {-1.866722, 2.229666, 1.521226, }, .mat = {{0.710527, 0.378001, -0.593521, }, {0.027454, 0.827931, 0.560158, }, {0.703134, -0.414302, 0.577889, }, }},
 {.origin = {2.158244, 2.287099, -1.858179, }, .mat = {{-0.645509, -0.380170, 0.662412, }, {0.017664, 0.859648, 0.510581, }, {-0.763548, 0.341286, -0.548195, }, }},
 };
 
-#ifndef DISABLE_DRIVER
+#if DISABLE_LIGHTHOUSE_DRIVER == 0
 
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -355,4 +357,4 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 LOG_GROUP_STOP(lighthouse)
 
 
-#endif // DISABLE_DRIVER
+#endif // DISABLE_LIGHTHOUSE_DRIVER

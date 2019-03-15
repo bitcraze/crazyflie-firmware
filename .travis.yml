@@ -35,3 +35,7 @@ script:
   # Build the tag platform
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=tag
+
+  # Build with the lighthouse driver
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 "EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0"
