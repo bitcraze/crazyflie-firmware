@@ -43,27 +43,44 @@ print("Origin: {}", offset)
 
 print("-------------------------------")
 
+bs_poses = [None, None]
+
 for i in range(openvr.k_unMaxTrackedDeviceCount):
     if poses[i].bPoseIsValid:
         device_class = vr.getTrackedDeviceClass(i)
         if (device_class == openvr.TrackedDeviceClass_TrackingReference):
+            mode = vr.getStringTrackedDeviceProperty(i, openvr.Prop_ModeLabel_String).decode("utf-8")
             pose = poses[i].mDeviceToAbsoluteTracking
 
-            position = [pose[0][3] - offset[0], pose[1][3] - offset[1], pose[2][3] - offset[2]]
-            rotation = [pose[0][:3], pose[1][:3], pose[2][:3]]
+            # Mode 'B' is master
+            if mode == 'B':
+                bs_poses[0] = pose
+            elif mode == 'A' or mode == 'C':
+                bs_poses[1] = pose
+            else:
+                print("Base station with mode {} detected.".format(mode))
+                print("This script can only work with base station V1 (mode A, B or C). Exiting.")
+                sys.exit(1)
 
-            print("{.origin = {", end='')
-            for i in position:
-                print("{:0.6f}, ".format(i), end='')
-            
-            print("}, .mat = {", end='')
-            
-            for i in rotation:
-                print("{", end='')
-                for j in i:
-                    print("{:0.6f}, ".format(j), end='')
-                print("}, ", end='')
-            
-            print("}},")
+for pose in bs_poses:
+    if pose is None:
+        continue
+
+    position = [pose[0][3] - offset[0], pose[1][3] - offset[1], pose[2][3] - offset[2]]
+    rotation = [pose[0][:3], pose[1][:3], pose[2][:3]]
+
+    print("{.origin = {", end='')
+    for i in position:
+        print("{:0.6f}, ".format(i), end='')
+    
+    print("}, .mat = {", end='')
+    
+    for i in rotation:
+        print("{", end='')
+        for j in i:
+            print("{:0.6f}, ".format(j), end='')
+        print("}, ", end='')
+    
+    print("}},")
 
 openvr.shutdown()
