@@ -52,9 +52,6 @@ typedef enum
 // Set up the callback for the CRTP_PORT_LOCALIZATION
 void locSrvInit(void);
 
-// Get the current position from the cache
-bool getExtPosition(state_t *state);
-
 // Send range in float. After 5 ranges it will send the packet.
 void locSrvSendRangeFloat(uint8_t id, float range);
 
