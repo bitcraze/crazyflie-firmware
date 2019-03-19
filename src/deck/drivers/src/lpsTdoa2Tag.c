@@ -37,7 +37,6 @@
 #include "cfassert.h"
 
 #include "estimator.h"
-#include "estimator.h"
 
 #include "physicalConstants.h"
 

@@ -43,7 +43,6 @@
 #include "stabilizer_types.h"
 
 #include "estimator.h"
-#include "estimator.h"
 #include "cf_math.h"
 
 // Measurement noise model
