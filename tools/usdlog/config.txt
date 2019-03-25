@@ -1,6 +1,8 @@
 250   # frequency
 50    # buffer size
 log   # file name
+1     # enable on startup (0/1)
+2     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
 acc.x
 acc.y
 acc.z
