@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "stm32fxxx.h"
 
 #include "FreeRTOS.h"
@@ -186,6 +187,45 @@ static void csLow(void)
   digitalWrite(USD_CS_PIN, 0);
 }
 
+/********** FS helper function ***************/
+
+// reads a line and returns the string without any whitespace/comment
+//  * comments are indicated by #
+//  * a line ending is marked by \n
+//  * only up to "len" will be read
+TCHAR* f_gets_without_comments (
+  TCHAR* buff,  /* Pointer to the string buffer to read */
+  int len,    /* Size of string buffer (characters) */
+  FIL* fp     /* Pointer to the file object */
+)
+{
+  int n = 0;
+  TCHAR c, *p = buff;
+  UINT rc;
+  bool isComment = false;
+
+  while (n < len - 1) { /* Read characters until buffer gets filled */
+    f_read(fp, &c, 1, &rc);
+    if (rc != 1) {
+      break;
+    }
+    if (c == '\n') {
+      break;   /* Break on EOL */
+    }
+    if (isspace(c)) {
+      continue; /* Strip whitespace */
+    }
+    if (c == '#') {
+      isComment = true; /* keep reading until end of line */
+    }
+    if (!isComment) {
+      *p++ = c;
+      n++;
+    }
+  }
+  *p = 0;
+  return n ? buff : 0;      /* When no data read (eof or error), return with error. */
+}
 
 
 /*********** Deck driver initialization ***************/
@@ -207,29 +247,29 @@ static void usdInit(DeckInfo *info)
         /* try to read configuration */
         char readBuffer[32];
         char* endptr;
-        TCHAR* line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+        TCHAR* line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
         if (!line) break;
         usdLogConfig.frequency = strtol(line, &endptr, 10);
         // strtol(line, &usdLogConfig.frequency, 10);
-        line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+        line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
         if (!line) break;
         usdLogConfig.bufferSize = strtol(line, &endptr, 10);
         // strtol(line, &usdLogConfig.bufferSize, 10);
-        line = f_gets(usdLogConfig.filename, sizeof(usdLogConfig.filename), &logFile);
+        line = f_gets_without_comments(usdLogConfig.filename, sizeof(usdLogConfig.filename), &logFile);
         if (!line) break;
 
         int l = strlen(usdLogConfig.filename);
-        if (l > sizeof(usdLogConfig.filename) - 2) {
-          l = sizeof(usdLogConfig.filename) - 2;
+        if (l > sizeof(usdLogConfig.filename) - 3) {
+          l = sizeof(usdLogConfig.filename) - 3;
         }
-        usdLogConfig.filename[l-1] = '0';
         usdLogConfig.filename[l] = '0';
-        usdLogConfig.filename[l+1] = 0;
+        usdLogConfig.filename[l+1] = '0';
+        usdLogConfig.filename[l+2] = 0;
 
         usdLogConfig.numSlots = 0;
         usdLogConfig.numBytes = 0;
         while (line) {
-          line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+          line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
           if (!line) break;
           char* group = line;
           char* name = 0;
@@ -238,15 +278,12 @@ static void usdInit(DeckInfo *info)
               line[i] = 0;
               name = &line[i+1];
               i = strlen(name);
-              if (name[i-1] == '\n') {
-                name[i-1] = 0; // remove newline at the end
-              }
               break;
             }
           }
           int varid = logGetVarId(group, name);
           if (varid == -1) {
-            DEBUG_PRINT("Unknown log variable %s.%s.\n", group, name);
+            DEBUG_PRINT("Unknown log variable %s.%s\n", group, name);
             continue;
           }
 
@@ -258,8 +295,8 @@ static void usdInit(DeckInfo *info)
         DEBUG_PRINT("Config read [OK].\n");
         DEBUG_PRINT("Frequency: %dHz. Buffer size: %d\n",
                     usdLogConfig.frequency, usdLogConfig.bufferSize);
-        DEBUG_PRINT("Filename: %s.\n", usdLogConfig.filename);
-        DEBUG_PRINT("slots: %d, %d.\n", usdLogConfig.numSlots, usdLogConfig.numBytes);
+        DEBUG_PRINT("Filename: %s\n", usdLogConfig.filename);
+        DEBUG_PRINT("slots: %d, %d\n", usdLogConfig.numSlots, usdLogConfig.numBytes);
 
         /* create usd-log task */
         xTaskCreate(usdLogTask, USDLOG_TASK_NAME,
@@ -303,15 +340,15 @@ static void usdLogTask(void* prm)
     while (f_open(&logFile, "config.txt", FA_READ) == FR_OK) {
       /* try to read configuration */
       char readBuffer[32];
-      TCHAR* line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+      TCHAR* line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
       if (!line) break;
-      line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+      line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
       if (!line) break;
-      line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+      line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
       if (!line) break;
 
       while (line) {
-        line = f_gets(readBuffer, sizeof(readBuffer), &logFile);
+        line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
         if (!line) break;
         char* group = line;
         char* name = 0;

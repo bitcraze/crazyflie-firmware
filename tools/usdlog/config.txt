@@ -1,6 +1,6 @@
-250
-50
-log
+250   # frequency
+50    # buffer size
+log   # file name
 acc.x
 acc.y
 acc.z
