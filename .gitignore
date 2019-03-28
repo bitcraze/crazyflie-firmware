@@ -17,5 +17,6 @@ tags
 *.gch
 
 /generated-test/**
+**/__pycache__/**
 
 current_platform.mk
