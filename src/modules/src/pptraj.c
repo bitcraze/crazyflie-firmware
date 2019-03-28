@@ -121,22 +121,31 @@ static void poly7_nojerk(float poly[PP_SIZE], float T,
 	float x0, float dx0, float ddx0,
 	float xf, float dxf, float ddxf)
 {
-	float T2 = T * T;
-	float T3 = T2 * T;
-	float T4 = T3 * T;
-	float T5 = T4 * T;
-	float T6 = T5 * T;
-	float T7 = T6 * T;
-	poly[0] = x0;
-	poly[1] = dx0;
-	poly[2] = ddx0/2;
-	poly[3] = 0;
-	poly[4] = -(5*(14*x0 - 14*xf + 8*T*dx0 + 6*T*dxf + 2*T2*ddx0 - T2*ddxf))/(2*T4);
-	poly[5] = (84*x0 - 84*xf + 45*T*dx0 + 39*T*dxf + 10*T2*ddx0 - 7*T2*ddxf)/T5;
-	poly[6] = -(140*x0 - 140*xf + 72*T*dx0 + 68*T*dxf + 15*T2*ddx0 - 13*T2*ddxf)/(2*T6);
-	poly[7] = (2*(10*x0 - 10*xf + 5*T*dx0 + 5*T*dxf + T2*ddx0 - T2*ddxf))/T7;
-	for (int i = 8; i < PP_SIZE; ++i) {
-		poly[i] = 0;
+	if (T <= 0.0f) {
+		poly[0] = xf;
+		poly[1] = dxf;
+		poly[2] = ddxf/2;
+		for (int i = 3; i < PP_SIZE; ++i) {
+			poly[i] = 0;
+		}
+	} else {
+		float T2 = T * T;
+		float T3 = T2 * T;
+		float T4 = T3 * T;
+		float T5 = T4 * T;
+		float T6 = T5 * T;
+		float T7 = T6 * T;
+		poly[0] = x0;
+		poly[1] = dx0;
+		poly[2] = ddx0/2;
+		poly[3] = 0;
+		poly[4] = -(5*(14*x0 - 14*xf + 8*T*dx0 + 6*T*dxf + 2*T2*ddx0 - T2*ddxf))/(2*T4);
+		poly[5] = (84*x0 - 84*xf + 45*T*dx0 + 39*T*dxf + 10*T2*ddx0 - 7*T2*ddxf)/T5;
+		poly[6] = -(140*x0 - 140*xf + 72*T*dx0 + 68*T*dxf + 15*T2*ddx0 - 13*T2*ddxf)/(2*T6);
+		poly[7] = (2*(10*x0 - 10*xf + 5*T*dx0 + 5*T*dxf + T2*ddx0 - T2*ddxf))/T7;
+		for (int i = 8; i < PP_SIZE; ++i) {
+			poly[i] = 0;
+		}
 	}
 }
 
