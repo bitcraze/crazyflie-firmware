@@ -47,6 +47,7 @@
 #include "power_distribution.h"
 
 #include "estimator.h"
+#include "usddeck.h"
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -192,6 +193,13 @@ static void stabilizerTask(void* param)
         powerStop();
       } else {
         powerDistribution(&control);
+      }
+
+      // Log data to uSD card if configured
+      if (   usddeckLoggingEnabled()
+          && usddeckLoggingMode() == usddeckLoggingMode_SynchronousStabilizer
+          && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
+        usddeckTriggerLogging();
       }
     }
     calcSensorToOutputLatency(&sensorData);

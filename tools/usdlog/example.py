@@ -6,9 +6,14 @@ example on how to plot decoded sensor data from crazyflie
 import CF_functions as cff
 import matplotlib.pyplot as plt
 import re
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("filename")
+args = parser.parse_args()
 
 # decode binary log data
-logData = cff.decode("test100")
+logData = cff.decode(args.filename)
 
 # set window background to white
 plt.rcParams['figure.facecolor'] = 'w'
