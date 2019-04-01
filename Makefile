@@ -227,6 +227,12 @@ PROJ_OBJ += configblockeeprom.o crc_bosch.o
 PROJ_OBJ += sleepus.o
 PROJ_OBJ += pulse_processor.o lighthouse_geometry.o
 
+ifeq ($(DEBUG_PRINT_ON_SEGGER_RTT), 1)
+VPATH += $(LIB)/Segger_RTT/RTT
+INCLUDES += -I$(LIB)/Segger_RTT/RTT
+PROJ_OBJ += SEGGER_RTT.o SEGGER_RTT_printf.o
+CFLAGS += -DDEBUG_PRINT_ON_SEGGER_RTT
+endif
 
 # Libs
 PROJ_OBJ += libarm_math.a
@@ -241,7 +247,7 @@ SIZE = $(CROSS_COMPILE)size
 OBJCOPY = $(CROSS_COMPILE)objcopy
 GDB = $(CROSS_COMPILE)gdb
 
-INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
+INCLUDES += -I$(FREERTOS)/include -I$(PORT) -Isrc
 INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
 INCLUDES += -Isrc/utils/interface -Isrc/drivers/interface -Isrc/platform
 INCLUDES += -Ivendor/CMSIS/CMSIS/Include -Isrc/drivers/bosch/interface
