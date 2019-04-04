@@ -97,6 +97,7 @@ void systemInit(void)
   sysLoadInit();
 
   /* Initialized here so that DEBUG_PRINT (buffered) can be used early */
+  debugInit();
   crtpInit();
   consoleInit();
 

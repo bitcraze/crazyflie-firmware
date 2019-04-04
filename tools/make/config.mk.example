@@ -12,6 +12,9 @@
 ## Redirect the console output to the UART
 # CFLAGS += -DDEBUG_PRINT_ON_UART
 
+## Redirect the console output to JLINK (using SEGGER RTT)
+# DEBUG_PRINT_ON_SEGGER_RTT = 1
+
 ## Load a deck driver that has no OW memory
 # CFLAGS += -DDECK_FORCE=bcBuzzer
 
