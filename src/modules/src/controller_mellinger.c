@@ -113,12 +113,6 @@ bool controllerMellingerTest(void)
   return true;
 }
 
-float clamp(float value, float min, float max) {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
-}
-
 void controllerMellinger(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
@@ -202,7 +196,7 @@ void controllerMellinger(control_t *control, setpoint_t *setpoint,
     x_yaw = vnormalize(x_yaw);
     struct vec y_yaw = vcross(mkvec(0, 0, 1), x_yaw);
     struct mat33 R_yaw_only = mcolumns(x_yaw, y_yaw, mkvec(0, 0, 1));
-    target_thrust = mvmult(R_yaw_only, target_thrust);
+    target_thrust = mvmul(R_yaw_only, target_thrust);
   }
 
   // Current thrust [F]
