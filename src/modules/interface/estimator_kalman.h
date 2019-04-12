@@ -72,12 +72,6 @@ bool estimatorKalmanEnqueueTOF(const tofMeasurement_t *tof);
 bool estimatorKalmanEnqueueAbsoluteHeight(const heightMeasurement_t *height);
 bool estimatorKalmanEnqueueFlow(const flowMeasurement_t *flow);
 
-/*
- * Methods used in the optical flow implementation to get elevation and reset position
- */
-float estimatorKalmanGetElevation();
-void estimatorKalmanSetShift(float deltax, float deltay);
-
 void estimatorKalmanGetEstimatedPos(point_t* pos);
 
 #endif // __ESTIMATOR_KALMAN_H__
