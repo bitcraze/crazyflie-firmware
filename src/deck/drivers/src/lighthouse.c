@@ -52,6 +52,10 @@
 
 #include "estimator.h"
 
+#ifdef LH_FLASH_DECK
+#include "lh_flasher.h"
+#endif
+
 #ifndef DISABLE_LIGHTHOUSE_DRIVER
   #define DISABLE_LIGHTHOUSE_DRIVER 1
 #endif
@@ -193,6 +197,12 @@ static void lighthouseTask(void *param)
   int axis;
 
   systemWaitStart();
+
+#ifdef LH_FLASH_DECK
+  // Flash deck bootloader using SPI (factory and recovery flashing)
+  lhflashInit();
+  lhflashFlashBootloader();
+#endif
 
   // Boot the deck firmware
   checkVersionAndBoot();

@@ -119,7 +119,11 @@ void spiBegin(void)
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+#ifdef DECK_SPI_MODE3
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
+#else
   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+#endif
 
   /*!< SPI SCK pin configuration */
   GPIO_InitStructure.GPIO_Pin = SPI_SCK_PIN;
@@ -195,8 +199,13 @@ static void spiConfigureWithSpeed(uint16_t baudRatePrescaler)
   SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
   SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
   SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+#ifdef DECK_SPI_MODE3
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+#else
   SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
   SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+#endif
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 0; // Not used

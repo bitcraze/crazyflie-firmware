@@ -179,9 +179,10 @@ bool lhblBootToFW(void)
 
 bool lhblGetVersion(uint8_t *version)
 {
-  uint8_t instruction = LHBL_GET_VERSION;
+  uint8_t instruction[2] = {LHBL_GET_VERSION, 0x42};
 
-  return lhExchange(1, &instruction, 1, version);
+  // Add one dummy byte to fix an I2C bug that sends 2 bytes instead of 1
+  return lhExchange(2, instruction, 1, version);
 }
 
 bool lhblFlashGetProtocolVersion(void)
