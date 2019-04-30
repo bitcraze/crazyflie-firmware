@@ -48,7 +48,7 @@
 #include "lh_bootloader.h"
 
 #include "pulse_processor.h"
-#include "lighthouse_geometry.h"
+#include "lighthouse.h"
 
 #include "estimator.h"
 
@@ -60,10 +60,11 @@
   #define DISABLE_LIGHTHOUSE_DRIVER 1
 #endif
 
-baseStationGeometry_t baseStationsGeometry[] = {
-{.origin = {-1.866722, 2.229666, 1.521226, }, .mat = {{0.710527, 0.378001, -0.593521, }, {0.027454, 0.827931, 0.560158, }, {0.703134, -0.414302, 0.577889, }, }},
-{.origin = {2.158244, 2.287099, -1.858179, }, .mat = {{-0.645509, -0.380170, 0.662412, }, {0.017664, 0.859648, 0.510581, }, {-0.763548, 0.341286, -0.548195, }, }},
+baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
+  {.origin = {-1.866722, 2.229666, 1.521226, }, .mat = {{0.710527, 0.378001, -0.593521, }, {0.027454, 0.827931, 0.560158, }, {0.703134, -0.414302, 0.577889, }, }},
+  {.origin = {2.158244, 2.287099, -1.858179, }, .mat = {{-0.645509, -0.380170, 0.662412, }, {0.017664, 0.859648, 0.510581, }, {-0.763548, 0.341286, -0.548195, }, }},
 };
+
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
 
@@ -162,7 +163,7 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       if (angles[sensor].validCount == 4) {
-        lighthouseGeometryGetPosition(baseStationsGeometry, (void*)angles[sensor].angles, position, &delta);
+        lighthouseGeometryGetPosition(lighthouseBaseStationsGeometry, (void*)angles[sensor].angles, position, &delta);
 
         ext_pos.x -= position[2];
         ext_pos.y -= position[0];
@@ -322,7 +323,7 @@ static void lighthouseInit(DeckInfo *info)
   
   xTaskCreate(lighthouseTask, "LH",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
-  
+
   isInit = true;
 }
 
@@ -337,6 +338,7 @@ static const DeckDriver lighthouse_deck = {
 
   .init = lighthouseInit,
 };
+
 
 DECK_DRIVER(lighthouse_deck);
 
