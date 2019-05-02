@@ -37,9 +37,11 @@
 #define ENABLE_UART2_RCC       RCC_APB1PeriphClockCmd
 #define UART2_IRQ              USART2_IRQn
 
-#define UART2_DMA_IRQ          DMA1_Channel2_IRQn
-#define UART2_DMA_IT_TC        DMA1_IT_TC2
-#define UART2_DMA_CH           DMA1_Channel2
+#define UART2_DMA_IRQ           DMA1_Stream6_IRQn
+#define UART2_DMA_IT_TC         DMA_IT_TC4
+#define UART2_DMA_STREAM        DMA1_Stream6
+#define UART2_DMA_CH            DMA_Channel_4
+#define UART2_DMA_FLAG_TCIF     DMA_FLAG_TCIF6
 
 #define UART2_GPIO_PERIF       RCC_AHB1Periph_GPIOA
 #define UART2_GPIO_PORT        GPIOA
@@ -77,6 +79,13 @@ bool uart2GetDataWithTimout(uint8_t *c);
  * @param[in] data  Pointer to data
  */
 void uart2SendData(uint32_t size, uint8_t* data);
+
+/**
+ * Sends raw data using DMA transfer.
+ * @param[in] size  Number of bytes to send
+ * @param[in] data  Pointer to data
+ */
+void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data);
 
 /**
  * Send a single character to the serial port using the uartSendData function.

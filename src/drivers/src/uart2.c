@@ -31,6 +31,7 @@
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "semphr.h"
 
 #include "config.h"
 #include "nvic.h"
@@ -41,8 +42,52 @@
 
 
 static xQueueHandle uart2queue;
+static xSemaphoreHandle uartBusy;
+static xSemaphoreHandle waitUntilSendDone;
+
 static bool isInit = false;
 static bool hasOverrun = false;
+
+static DMA_InitTypeDef DMA_InitStructureShare;
+static uint8_t dmaBuffer[128];
+static bool    isUartDmaInitialized;
+static uint32_t initialDMACount;
+
+/**
+  * Configures the UART DMA. Mainly used for FreeRTOS trace
+  * data transfer.
+  */
+static void uart2DmaInit(void)
+{
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+
+  // USART TX DMA Channel Config
+  DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&UART2_TYPE->DR;
+  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dmaBuffer;
+  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructureShare.DMA_BufferSize = 0;
+  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShare.DMA_Priority = DMA_Priority_Low;
+  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+  DMA_InitStructureShare.DMA_Channel = UART2_DMA_CH;
+
+  NVIC_InitStructure.NVIC_IRQChannel = UART2_DMA_IRQ;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+
+  isUartDmaInitialized = true;
+}
 
 void uart2Init(const uint32_t baudrate)
 {
@@ -50,6 +95,11 @@ void uart2Init(const uint32_t baudrate)
   USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
+
+  // initialize the FreeRTOS structures first, to prevent null pointers in interrupts
+  waitUntilSendDone = xSemaphoreCreateBinary(); // initialized as blocking
+  uartBusy = xSemaphoreCreateBinary(); // initialized as blocking
+  xSemaphoreGive(uartBusy); // but we give it because the uart isn't busy at initialization
 
   /* Enable GPIO and USART clock */
   RCC_AHB1PeriphClockCmd(UART2_GPIO_PERIF, ENABLE);
@@ -80,6 +130,9 @@ void uart2Init(const uint32_t baudrate)
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART2_TYPE, &USART_InitStructure);
 
+  uart2DmaInit();
+
+  // Configure Rx buffer not empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UART2_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -128,6 +181,32 @@ void uart2SendData(uint32_t size, uint8_t* data)
   }
 }
 
+void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data)
+{
+  if (isUartDmaInitialized)
+  {
+    xSemaphoreTake(uartBusy, portMAX_DELAY);
+    // Wait for DMA to be free
+    while(DMA_GetCmdStatus(UART2_DMA_STREAM) != DISABLE);
+    //Copy data in DMA buffer
+    memcpy(dmaBuffer, data, size);
+    DMA_InitStructureShare.DMA_BufferSize = size;
+    initialDMACount = size;
+    // Init new DMA stream
+    DMA_Init(UART2_DMA_STREAM, &DMA_InitStructureShare);
+    // Enable the Transfer Complete interrupt
+    DMA_ITConfig(UART2_DMA_STREAM, DMA_IT_TC, ENABLE);
+    /* Enable USART DMA TX Requests */
+    USART_DMACmd(UART2_TYPE, USART_DMAReq_Tx, ENABLE);
+    /* Clear transfer complete */
+    USART_ClearFlag(UART2_TYPE, USART_FLAG_TC);
+    /* Enable DMA USART TX Stream */
+    DMA_Cmd(UART2_DMA_STREAM, ENABLE);
+    xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
+    xSemaphoreGive(uartBusy);
+  }
+}
+
 int uart2Putchar(int ch)
 {
     uart2SendData(1, (uint8_t *)&ch);
@@ -148,16 +227,31 @@ bool uart2DidOverrun()
   return result;
 }
 
+void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  // Stop and cleanup DMA stream
+  DMA_ITConfig(UART2_DMA_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(UART2_DMA_STREAM, UART2_DMA_FLAG_TCIF);
+  USART_DMACmd(UART2_TYPE, USART_DMAReq_Tx, DISABLE);
+  DMA_Cmd(UART2_DMA_STREAM, DISABLE);
+
+  xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
+}
+
 void __attribute__((used)) USART2_IRQHandler(void)
 {
   uint8_t rxData;
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
-  if (USART_GetITStatus(UART2_TYPE, USART_IT_RXNE))
+  if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
   {
     rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
     xQueueSendFromISR(uart2queue, &rxData, &xHigherPriorityTaskWoken);
-  } else {
+  }
+  else
+  {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
      * - and IDLE (Idle line detected) pending bits are cleared by software sequence:

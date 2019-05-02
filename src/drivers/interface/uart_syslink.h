@@ -90,8 +90,6 @@ void uartslkGetPacketBlocking(SyslinkPacket* slp);
  * should be transfered.
  * @param[in] size  Number of bytes to send
  * @param[in] data  Pointer to data
- *
- * @note If UART Crtp link is activated this function does nothing
  */
 void uartslkSendData(uint32_t size, uint8_t* data);
 
@@ -106,19 +104,13 @@ void uartslkSendDataIsrBlocking(uint32_t size, uint8_t* data);
  * Send a single character to the serial port using the uartslkSendData function.
  * @param[in] ch Character to print. Only the 8 LSB are used.
  * @return Character printed
- *
- * @note If UART Crtp link is activated this function does nothing
  */
 int uartslkPutchar(int ch);
 
 /**
- * Sends raw data using DMA transfer. Should be used from
- * exception functions and for debugging when a lot of data
- * should be transfered.
+ * Sends raw data using DMA transfer.
  * @param[in] size  Number of bytes to send
  * @param[in] data  Pointer to data
- *
- * @note If UART Crtp link is activated this function does nothing
  */
 void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data);
 

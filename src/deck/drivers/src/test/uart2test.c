@@ -21,72 +21,73 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * uartTest.c - Testing of the deck uarts.
- *
- * Connect deck UART1_TX to UART2_RX and UART2_TX to UART1_RX
- *
+ * uart2test.c - Uart echo implementation to test uart.
  */
-#define DEBUG_MODULE "UART-TEST"
-
+#define DEBUG_MODULE "U1T"
 
 #include <stdint.h>
+#include <string.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
 
 #include "stm32fxxx.h"
+#include "system.h"
 #include "config.h"
 #include "debug.h"
 #include "deck.h"
-#include "uart1.h"
 #include "uart2.h"
 
+//Hardware configuration
+static bool isInit;
 
-static const char testString[] = "ABC123";
+void uart2testTask(void* arg);
 
-static bool uarttestRun()
+static void uart2testInit(DeckInfo *info)
+{
+  if(isInit)
+    return;
+
+  uart2Init(115200);
+
+  xTaskCreate(uart2testTask, "UART2TEST", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+
+  isInit = true;
+}
+
+static bool uart2testTest()
 {
   bool status = true;
-  uint8_t testChar;
 
-  uart1Init(9600);
-  uart2Init(9600);
-
-  for (int i = 0; i < sizeof(testString) && status; i++)
-  {
-    uart1Putchar(testString[i]);
-    uart2GetDataWithTimout(&testChar);
-    if (testChar != testString[i])
-    {
-      DEBUG_PRINT(" Uart1->Uart2 [FAIL]\n");
-      status = false;
-    }
-
-    uart2Putchar(testString[i]);
-    uart1GetDataWithTimout(&testChar);
-    if (testChar != testString[i])
-    {
-      DEBUG_PRINT(" Uart2->Uart1 [FAIL]\n");
-      status = false;
-    }
-  }
-
-  if (status)
-  {
-    DEBUG_PRINT("Read/write test [OK]\n");
-  }
+  if(!isInit)
+    return false;
 
   return status;
 }
 
-static const DeckDriver uarttest_deck = {
-  .name = "bcUartTest",
+void uart2testTask(void* arg)
+{
+  systemWaitStart();
+
+  while (1)
+  {
+    char c;
+    uart2Getchar(&c);
+    consolePutchar(c);
+    uart2Putchar(c);
+    //uart2SendDataDmaBlocking(36, (uint8_t *)"Testing UART2 DMA and it is working\n");
+  }
+}
+
+static const DeckDriver uart2test_deck = {
+//  .vid = 0xBC,
+//  .pid = 0x08,
+  .name = "bcUart2Test",
 
   .usedPeriph = 0,
   .usedGpio = 0,
-
-  .test = uarttestRun,
+  .init = uart2testInit,
+  .test = uart2testTest,
 };
 
-DECK_DRIVER(uarttest_deck);
-
+DECK_DRIVER(uart2test_deck);
