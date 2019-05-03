@@ -344,8 +344,8 @@ DECK_DRIVER(lighthouse_deck);
 
 LOG_GROUP_START(lighthouse)
 LOG_ADD(LOG_FLOAT, angle0x, &angles[0].angles[0][0])
-LOG_ADD(LOG_FLOAT, angle0y, &angles[0].angles[1][0])
-LOG_ADD(LOG_FLOAT, angle1x, &angles[0].angles[0][1])
+LOG_ADD(LOG_FLOAT, angle0y, &angles[0].angles[0][1])
+LOG_ADD(LOG_FLOAT, angle1x, &angles[0].angles[1][0])
 LOG_ADD(LOG_FLOAT, angle1y, &angles[0].angles[1][1])
 LOG_ADD(LOG_FLOAT, x, &position[0])
 LOG_ADD(LOG_FLOAT, y, &position[1])
