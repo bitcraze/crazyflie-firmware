@@ -141,6 +141,20 @@ USBD_Usr_cb_TypeDef USR_cb =
 
 int command = 0xFF;
 
+static void resetUSB(void) {
+  portBASE_TYPE xTaskWokenByReceive = pdFALSE;
+
+  crtpSetLink(radiolinkGetLink());
+
+  if (isInit == true) {
+    // Empty queue
+    while (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
+      ;
+  }
+  
+  USB_OTG_FlushTxFifo(&USB_OTG_dev, IN_EP);
+}
+
 static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
 {
   command = req->wIndex;
@@ -288,6 +302,7 @@ void USBD_USR_Init(void)
 */
 void USBD_USR_DeviceReset(uint8_t speed)
 {
+  resetUSB();
 }
 
 
@@ -308,7 +323,7 @@ void USBD_USR_DeviceConfigured(void)
 void USBD_USR_DeviceSuspended(void)
 {
   /* USB communication suspended (probably USB unplugged). Switch back to radiolink */
-  crtpSetLink(radiolinkGetLink());
+  resetUSB();
 }
 
 
@@ -339,7 +354,7 @@ void USBD_USR_DeviceConnected(void)
 */
 void USBD_USR_DeviceDisconnected(void)
 {
-  crtpSetLink(radiolinkGetLink());
+  resetUSB();
 }
 
 void usbInit(void)
