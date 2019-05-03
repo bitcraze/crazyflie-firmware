@@ -7,8 +7,8 @@
 typedef float vec3d[vec3d_size];
 
 typedef struct baseStationGeometry_s {
-  float mat[3][3];
   float origin[3];
-} baseStationGeometry_t;
+  float mat[3][3];
+} __attribute__((packed)) baseStationGeometry_t;
 
 bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta);
