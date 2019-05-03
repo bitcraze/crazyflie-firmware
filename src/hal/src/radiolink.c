@@ -44,6 +44,7 @@
 #include "queuemonitor.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
+#define RADIO_ACTIVITY_TIMEOUT_MS (1000)
 
 static xQueueHandle  txQueue;
 static xQueueHandle crtpPacketDelivery;
@@ -56,12 +57,19 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
 
 //Local RSSI variable used to enable logging of RSSI values from Radio
 static uint8_t rssi;
+static uint32_t lastPacketTick;
+
+
+static bool radiolinkIsConnected(void) {
+  return (xTaskGetTickCount() - lastPacketTick) < M2T(RADIO_ACTIVITY_TIMEOUT_MS);
+}
 
 static struct crtpLinkOperations radiolinkOp =
 {
   .setEnable         = radiolinkSetEnable,
   .sendPacket        = radiolinkSendCRTPPacket,
   .receivePacket     = radiolinkReceiveCRTPPacket,
+  .isConnected       = radiolinkIsConnected
 };
 
 void radiolinkInit(void)
@@ -135,6 +143,11 @@ void radiolinkSetPowerDbm(int8_t powerDbm)
 void radiolinkSyslinkDispatch(SyslinkPacket *slp)
 {
   static SyslinkPacket txPacket;
+
+  if (slp->type == SYSLINK_RADIO_RAW || slp->type == SYSLINK_RADIO_RAW_BROADCAST) {
+    lastPacketTick = xTaskGetTickCount();
+  }
+
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
