@@ -12,7 +12,6 @@
 // Times are expressed in a 48MHz clock
 #define FRAME_LENGTH 400000    // 8.333ms
 #define SWEEP_MAX_WIDTH 1024    // 20us
-#define SWEEP_CENTER 192000    // 4ms
 #define SYNC_BASE_WIDTH 2750
 #define SYNC_DIVIDER 500
 #define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
@@ -129,6 +128,11 @@ static bool isSweepActiveThisFrame(int width) {
   return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x04) == 0;
 }
 
+static int getOotxDataBit(int width)
+{
+  return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x02) >> 1;
+}
+
 static void storeSweepData(pulseProcessor_t *state, int sensor, unsigned int timestamp) {
   if (state->sweeps[sensor].state == sweepStorageStateWaiting) {
     state->sweeps[sensor].timestamp = timestamp;
@@ -161,7 +165,9 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
       if (state->sweeps[sensor].state == sweepStorageStateValid) {
         int delta = TS_DIFF(state->sweeps[sensor].timestamp, state->currentSync);
         if (delta < FRAME_LENGTH) {
-          float angle = (delta - SWEEP_CENTER)*(float)M_PI/FRAME_LENGTH;
+          float frameWidth = state->frameWidth[state->currentBaseStation][state->currentAxis];
+          float center = frameWidth/4.0f;
+          float angle = (delta - center)*2*(float)M_PI/frameWidth;
 
           *baseStation = state->currentBaseStation;
           *axis = state->currentAxis;
@@ -183,9 +189,37 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
 static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsigned int width) {
   int baseStation = getBaseStationId(state, timestamp);
   if (0 == baseStation) {
+    state->prevSync0 = state->currentSync0;
     state->currentSync0 = timestamp;
+    state->currentSync0Width = width;
+    if (isSweepActiveThisFrame(width)) {
+      state->prevSync = state->prevSync0;
+    }
+    if (getAxis(width) == 0) {
+      state->prevSync0X = state->currentSync0X;
+      state->currentSync0X = timestamp;
+      state->frameWidth[0][0] = TS_DIFF(state->currentSync0X, state->prevSync0X);
+    } else {
+      state->prevSync0Y = state->currentSync0Y;
+      state->currentSync0Y = timestamp;
+      state->frameWidth[0][1] = TS_DIFF(state->currentSync0Y, state->prevSync0Y);
+    }
   } else {
+    state->prevSync1 = state->currentSync1;
     state->currentSync1 = timestamp;
+    state->currentSync1Width = width;
+    if (isSweepActiveThisFrame(width)) {
+      state->prevSync = state->prevSync1;
+    }
+    if (getAxis(width) == 0) {
+      state->prevSync1X = state->currentSync1X;
+      state->currentSync1X = timestamp;
+      state->frameWidth[1][0] = TS_DIFF(state->currentSync1X, state->prevSync1X);
+    } else {
+      state->prevSync1Y = state->currentSync1Y;
+      state->currentSync1Y = timestamp;
+      state->frameWidth[1][1] = TS_DIFF(state->currentSync1Y, state->prevSync1Y);
+    }
   }
 
   state->lastSync = timestamp;
@@ -205,12 +239,36 @@ TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
   return (diff > max) && (diff < min);
 }
 
+#include "debug.h"
+
+static void printBSInfo(struct ootxDataFrame_s *frame)
+{
+  DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
+  DEBUG_PRINT("  phase0: %f\n", (double)frame->phase0);
+  DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
+}
+
 static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
   if (isNewSync(timestamp, state->lastSync)) {
     if (isSync(state, timestamp, width)) {
       anglesMeasured = processPreviousFrame(state, angles, baseStation, axis);
+
+      // Receive OOTX data frame and initialize BS calibration when we get it
+      if (anglesMeasured) {
+        if (!state->bsCalibration0.valid &&
+            ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->currentSync0Width))) {
+          printBSInfo(&state->ootxDecoder0.frame);
+          lighthouseCalibrationInitFromFrame(&state->bsCalibration0, &state->ootxDecoder0.frame);
+        }
+        if (!state->bsCalibration1.valid &&
+            ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->currentSync1Width))) {
+          printBSInfo(&state->ootxDecoder1.frame);
+          lighthouseCalibrationInitFromFrame(&state->bsCalibration1, &state->ootxDecoder1.frame);
+        }
+      }
+
       storeSyncData(state, timestamp, width);
     } else {
       // Expected a sync but something is wrong, re-synchronize.
@@ -245,6 +303,14 @@ bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned in
   }
 
   return anglesMeasured;
+}
+
+void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t angles[])
+{
+  for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    lighthouseCalibrationApply(&state->bsCalibration0, angles[sensor].angles[0], angles[sensor].correctedAngles[0]);
+    lighthouseCalibrationApply(&state->bsCalibration1, angles[sensor].angles[1], angles[sensor].correctedAngles[1]);
+  }
 }
 
 
