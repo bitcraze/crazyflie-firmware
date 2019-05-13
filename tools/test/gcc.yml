@@ -52,6 +52,7 @@ compiler:
       - 'HSI48_VALUE="((uint32_t)48000000)"'
       - 'STM32F072xB'
       - 'ARM_MATH_CM4'
+      - '__fp16=float'
   object_files:
     prefix: '-o'
     extension: '.o'

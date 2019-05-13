@@ -31,6 +31,8 @@ LPS_TDOA3_ENABLE  ?= 0
 -include current_platform.mk
 include tools/make/platform.mk
 
+CFLAGS += -DCRAZYFLIE_FW
+
 ######### Stabilizer configuration ##########
 ## These are set by the platform (see tools/make/platforms/*.mk), can be overwritten here
 ESTIMATOR          ?= any

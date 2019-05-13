@@ -4,6 +4,9 @@
 #include <string.h>
 #include "unity.h"
 
+#include "mock_ootx_decoder.h"
+#include "mock_lighthouse_calibration.h"
+
 #define FRAME_LENGTH 400000    // 8.333ms
 #define SWEEP_MAX_WIDTH 1024    // 20us
 #define SWEEP_CENTER 192000    // 4ms

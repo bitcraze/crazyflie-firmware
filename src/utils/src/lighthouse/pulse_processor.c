@@ -239,7 +239,11 @@ TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
   return (diff > max) && (diff < min);
 }
 
+#ifdef CRAZYFLIE_FW
 #include "debug.h"
+#else
+#define DEBUG_PRINT printf
+#endif
 
 static void printBSInfo(struct ootxDataFrame_s *frame)
 {
