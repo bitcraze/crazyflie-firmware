@@ -239,9 +239,10 @@ TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
   return (diff > max) && (diff < min);
 }
 
-#ifdef CRAZYFLIE_FW
+#ifndef UNIT_TEST_MODE
 #include "debug.h"
 #else
+#include <stdio.h>
 #define DEBUG_PRINT printf
 #endif
 
