@@ -19,6 +19,9 @@
 #define SENSOR_MAX_DISPERTION 20
 #define MAX_FRAME_LENGTH_NOISE 800
 
+#define FRAME_WIDTH_MIN 790000
+#define FRAME_WIDTH_MAX 810000
+
 // Utility functions and macros
 // #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
 static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
@@ -166,6 +169,11 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
         int delta = TS_DIFF(state->sweeps[sensor].timestamp, state->currentSync);
         if (delta < FRAME_LENGTH) {
           float frameWidth = state->frameWidth[state->currentBaseStation][state->currentAxis];
+          
+          if ((frameWidth < FRAME_WIDTH_MIN) || (frameWidth > FRAME_WIDTH_MAX)) {
+            return false;
+          }
+
           float center = frameWidth/4.0f;
           float angle = (delta - center)*2*(float)M_PI/frameWidth;
 
