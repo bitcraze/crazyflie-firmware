@@ -65,6 +65,10 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {2.563488, 3.112367, -1.062398, }, .mat = {{0.034269, -0.647552, 0.761251, }, {-0.012392, 0.761364, 0.648206, }, {-0.999336, -0.031647, 0.018067, }, }},
 };
 
+// Uncomment if you want to force the Crazyflie to reflash the deck at each startup
+// Warning: good to revover a deck but it will wear the Deck's flash and the Crazyflie
+// will be slow to start, so disable it once your deck is back
+// #define FORCE_FLASH true
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
 
@@ -301,7 +305,7 @@ static void checkVersionAndBoot()
     identical = false;
   }
 
-  if (identical == false) {
+  if (identical == false || FORCE_FLASH) {
     DEBUG_PRINT("Deck has version %d and we embeed version %d\n", deckVersion, embeddedVersion);
     DEBUG_PRINT("Updating deck with embedded version!\n");
 
