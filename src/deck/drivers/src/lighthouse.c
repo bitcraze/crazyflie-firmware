@@ -57,7 +57,7 @@
 #endif
 
 #ifndef DISABLE_LIGHTHOUSE_DRIVER
-  // #define DISABLE_LIGHTHOUSE_DRIVER 1
+  #define DISABLE_LIGHTHOUSE_DRIVER 1
 #endif
 
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
