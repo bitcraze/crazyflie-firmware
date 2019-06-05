@@ -51,6 +51,7 @@
 __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
 
 static bool isInit = false;
+static bool doingTransfer = false;
 
 static xQueueHandle usbDataRx;
 static xQueueHandle usbDataTx;
@@ -219,15 +220,8 @@ static uint8_t  usbd_cf_DeInit (void  *pdev,
   */
 static uint8_t  usbd_cf_DataIn (void *pdev, uint8_t epnum)
 {
-  portBASE_TYPE xTaskWokenByReceive = pdFALSE;
 
-  if (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
-  {
-    DCD_EP_Tx (pdev,
-               IN_EP,
-               (uint8_t*)outPacket.data,
-               outPacket.size);
-  }
+  doingTransfer = false;
 
   return USBD_OK;
 }
@@ -236,12 +230,15 @@ static uint8_t  usbd_cf_SOF (void *pdev)
 {
   portBASE_TYPE xTaskWokenByReceive = pdFALSE;
 
-  if (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
-  {
-    DCD_EP_Tx (pdev,
-               IN_EP,
-               (uint8_t*)outPacket.data,
-               outPacket.size);
+  if (!doingTransfer) {
+    if (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
+    {
+      doingTransfer = true;
+      DCD_EP_Tx (pdev,
+                IN_EP,
+                (uint8_t*)outPacket.data,
+                outPacket.size);
+    }
   }
 
   return USBD_OK;

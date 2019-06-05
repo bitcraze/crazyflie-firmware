@@ -73,7 +73,7 @@ static void usblinkTask(void *param)
     p.size = usbIn.size - 1;
     memcpy(&p.raw, usbIn.data, usbIn.size);
     // This queuing will copy a CRTP packet size from usbIn
-    xQueueSend(crtpPacketDelivery, &p, 0);
+    ASSERT(xQueueSend(crtpPacketDelivery, &p, 0) == pdTRUE);
   }
 
 }
