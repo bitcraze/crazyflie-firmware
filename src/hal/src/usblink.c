@@ -126,7 +126,7 @@ void usblinkInit()
   // Initialize the USB peripheral
   usbInit();
 
-  crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
+  crtpPacketDelivery = xQueueCreate(16, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
   xTaskCreate(usblinkTask, USBLINK_TASK_NAME,

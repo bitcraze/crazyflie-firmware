@@ -220,8 +220,20 @@ static uint8_t  usbd_cf_DeInit (void  *pdev,
   */
 static uint8_t  usbd_cf_DataIn (void *pdev, uint8_t epnum)
 {
+  portBASE_TYPE xTaskWokenByReceive = pdFALSE;
 
   doingTransfer = false;
+
+  if (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
+  {
+    doingTransfer = true;
+    DCD_EP_Tx (pdev,
+              IN_EP,
+              (uint8_t*)outPacket.data,
+              outPacket.size);
+  }
+
+  portYIELD_FROM_ISR(xTaskWokenByReceive);
 
   return USBD_OK;
 }
@@ -240,6 +252,8 @@ static uint8_t  usbd_cf_SOF (void *pdev)
                 outPacket.size);
     }
   }
+
+  portYIELD_FROM_ISR(xTaskWokenByReceive);
 
   return USBD_OK;
 }
