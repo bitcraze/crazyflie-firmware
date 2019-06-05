@@ -57,11 +57,9 @@ static struct crtpLinkOperations *link = &nopLink;
 #define STATS_INTERVAL 500
 static struct {
   uint32_t rxCount;
-  uint32_t rxDroppedCount;
   uint32_t txCount;
 
   uint16_t rxRate;
-  uint16_t rxDroppedRate;
   uint16_t txRate;
 
   uint32_t nextStatisticsTime;
@@ -72,7 +70,7 @@ static xQueueHandle  txQueue;
 
 #define CRTP_NBR_OF_PORTS 16
 #define CRTP_TX_QUEUE_SIZE 100
-#define CRTP_RX_QUEUE_SIZE 2
+#define CRTP_RX_QUEUE_SIZE 16
 
 static void crtpTxTask(void *param);
 static void crtpRxTask(void *param);
@@ -109,7 +107,7 @@ void crtpInitTaskQueue(CRTPPort portId)
 {
   ASSERT(queues[portId] == NULL);
   
-  queues[portId] = xQueueCreate(1, sizeof(CRTPPacket));
+  queues[portId] = xQueueCreate(CRTP_RX_QUEUE_SIZE, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(queues[portId]);
 }
 
@@ -182,12 +180,11 @@ void crtpRxTask(void *param)
       {
         if (queues[p.port])
         {
-          // The queue is only 1 long, so if the last packet hasn't been processed, we just replace it
-          if (uxQueueMessagesWaiting(queues[p.port]) > 0)
+          if (xQueueSend(queues[p.port], &p, 0) == errQUEUE_FULL)
           {
-            stats.rxDroppedCount++;
-          }
-          xQueueOverwrite(queues[p.port], &p);
+            // We should never drop packet
+            ASSERT(0);
+          }          
         }
 
         if (callbacks[p.port])
@@ -268,7 +265,6 @@ static int nopFunc(void)
 static void clearStats()
 {
   stats.rxCount = 0;
-  stats.rxDroppedCount = 0;
   stats.txCount = 0;
 }
 
@@ -278,7 +274,6 @@ static void updateStats()
   if (now > stats.nextStatisticsTime) {
     float interval = now - stats.previousStatisticsTime;
     stats.rxRate = (uint16_t)(1000.0f * stats.rxCount / interval);
-    stats.rxDroppedRate = (uint16_t)(1000.0f * stats.rxDroppedCount / interval);
     stats.txRate = (uint16_t)(1000.0f * stats.txCount / interval);
 
     clearStats();
@@ -289,6 +284,5 @@ static void updateStats()
 
 LOG_GROUP_START(crtp)
 LOG_ADD(LOG_UINT16, rxRate, &stats.rxRate)
-LOG_ADD(LOG_UINT16, rxDrpRte, &stats.rxDroppedRate)
 LOG_ADD(LOG_UINT16, txRate, &stats.txRate)
 LOG_GROUP_STOP(tdoa)
