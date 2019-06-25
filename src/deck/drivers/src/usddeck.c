@@ -42,6 +42,7 @@
 #include "queue.h"
 #include "task.h"
 #include "timers.h"
+#include "semphr.h"
 
 #include "ff.h"
 #include "fatfs_sd.h"
@@ -105,6 +106,7 @@ DWORD workBuff[512];  /* 2048 byte working buffer */
 static FATFS FatFs;
 //File object
 static FIL logFile;
+static SemaphoreHandle_t logFileMutex;
 
 static QueueHandle_t usdLogQueue;
 static uint8_t* usdLogBufferStart;
@@ -112,6 +114,7 @@ static uint8_t* usdLogBuffer;
 static TaskHandle_t xHandleWriteTask;
 
 static bool enableLogging;
+static uint32_t lastFileSize = 0;
 
 static xTimerHandle timer;
 static void usdTimer(xTimerHandle timer);
@@ -254,10 +257,12 @@ TCHAR* f_gets_without_comments (
 /*********** Deck driver initialization ***************/
 
 static bool isInit = false;
+static bool initSuccess = false;
 
 static void usdInit(DeckInfo *info)
 {
   if (!isInit) {
+    logFileMutex = xSemaphoreCreateMutex();
     /* create driver structure */
     FATFS_AddDriver(&fatDrv, 0);
     vTaskDelay(M2T(100));
@@ -265,7 +270,6 @@ static void usdInit(DeckInfo *info)
     if (f_mount(&FatFs, "", 1) == FR_OK) {
       DEBUG_PRINT("mount SD-Card [OK].\n");
       /* try to open config file */
-      bool success = false;
       while (f_open(&logFile, "config.txt", FA_READ) == FR_OK) {
         /* try to read configuration */
         char readBuffer[32];
@@ -335,11 +339,11 @@ static void usdInit(DeckInfo *info)
                     USDLOG_TASK_STACKSIZE, NULL,
                     USDLOG_TASK_PRI, NULL);
 
-        success = true;
+        initSuccess = true;
         break;
       }
       
-      if (!success) {
+      if (!initSuccess) {
           DEBUG_PRINT("Config read [FAIL].\n");
       }
     }
@@ -423,21 +427,24 @@ static void usdLogTask(void* prm)
   xHandleWriteTask = 0;
   enableLogging = usdLogConfig.enableOnStartup; // enable logging if desired
 
+  /* create usd-write task */
+  xTaskCreate(usdWriteTask, USDWRITE_TASK_NAME,
+              USDWRITE_TASK_STACKSIZE, usdLogQueue,
+              USDWRITE_TASK_PRI, &xHandleWriteTask);
+
+  bool lastEnableLogging = enableLogging;
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(usdLogConfig.frequency));
 
-    // if logging was just (re)-enabled, start write task
-    if (!xHandleWriteTask && enableLogging) {
-      xQueueReset(usdLogQueue);
-      /* create usd-write task */
-      xTaskCreate(usdWriteTask, USDWRITE_TASK_NAME,
-                  USDWRITE_TASK_STACKSIZE, usdLogQueue,
-                  USDWRITE_TASK_PRI, &xHandleWriteTask);
+    // if logging was just disabled, resume the writer task to give up mutex
+    if (!enableLogging && lastEnableLogging != enableLogging) {
+      vTaskResume(xHandleWriteTask);
     }
 
     if (enableLogging && usdLogConfig.mode == usddeckLoggingMode_Asyncronous) {
       usddeckTriggerLogging();
     }
+    lastEnableLogging = enableLogging;
   }
 }
 
@@ -512,6 +519,35 @@ void usddeckTriggerLogging(void)
   }
 }
 
+// returns size of current file if logging is stopped (0 otherwise)
+uint32_t usddeckFileSize(void)
+{
+  return lastFileSize;
+}
+
+// Read "length" number of bytes at "offset" into "buffer" of current file
+// Only works if logging is stopped
+bool usddeckRead(uint32_t offset, uint8_t* buffer, uint16_t length)
+{
+  bool result = false;
+  if (initSuccess && xSemaphoreTake(logFileMutex, 0) == pdTRUE) {
+    if (f_open(&logFile, usdLogConfig.filename, FA_READ) == FR_OK) {
+      if (f_lseek(&logFile, offset) == FR_OK) {
+        UINT bytesRead;
+        FRESULT r = f_read(&logFile, buffer, length, &bytesRead);
+        f_close(&logFile);
+        if (r == FR_OK && bytesRead == length) {
+          result = true;
+        }
+      } else {
+        f_close(&logFile);
+      }
+    }
+    xSemaphoreGive(logFileMutex);
+  }
+  return result;
+}
+
 static void usdWriteTask(void* usdLogQueue)
 {
   /* necessary variables for f_write */
@@ -528,31 +564,35 @@ static void usdWriteTask(void* usdLogQueue)
   xTimerStart(timer, 0);
 
   vTaskDelay(M2T(50));
-  /* look for existing files and use first not existent combination
-   * of two chars */
+
+  while (true)
   {
-    FILINFO fno;
-    uint8_t NUL = 0;
-    while(usdLogConfig.filename[NUL] != '\0') {
-      NUL++;
-    }
-    while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
-      /* increase file */
-      switch(usdLogConfig.filename[NUL-1]) {
-        case '9':
-          usdLogConfig.filename[NUL-1] = '0';
-          usdLogConfig.filename[NUL-2]++;
-          break;
-        default:
-          usdLogConfig.filename[NUL-1]++;
+    xSemaphoreTake(logFileMutex, portMAX_DELAY);
+    lastFileSize = 0;
+    /* look for existing files and use first not existent combination
+     * of two chars */
+    {
+      FILINFO fno;
+      uint8_t NUL = 0;
+      while(usdLogConfig.filename[NUL] != '\0') {
+        NUL++;
+      }
+      while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
+        /* increase file */
+        switch(usdLogConfig.filename[NUL-1]) {
+          case '9':
+            usdLogConfig.filename[NUL-1] = '0';
+            usdLogConfig.filename[NUL-2]++;
+            break;
+          default:
+            usdLogConfig.filename[NUL-1]++;
+        }
       }
     }
-  }
 
-  /* try to create file */
-  if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
-      == FR_OK)
-    {
+    /* try to create file */
+    if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
+        == FR_OK) {
       /* write dataset header */
       {
         uint8_t logWidth = 1 + usdLogConfig.numSlots;
@@ -619,32 +659,46 @@ static void usdWriteTask(void* usdLogQueue)
         vTaskSuspend(NULL);
         /* determine how many sets can be written */
         setsToWrite = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
-        /* try to open file in append mode */
-        if (f_open(&logFile, usdLogConfig.filename, FA_OPEN_APPEND | FA_WRITE)
-            != FR_OK) {
-          continue;
+        if (setsToWrite > 0) {
+          /* try to open file in append mode in every iteration to avoid
+             loss of data during/after a crash */
+          if (f_open(&logFile, usdLogConfig.filename, FA_OPEN_APPEND | FA_WRITE)
+              != FR_OK) {
+            continue;
+          }
+          f_write(&logFile, &setsToWrite, 1, &bytesWritten);
+          crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
+          do {
+            /* receive data pointer from queue */
+            xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
+            /* write binary data and point on next item */
+            USD_WRITE(&logFile, usdLogQueuePtr,
+                      4 + usdLogConfig.numBytes, &bytesWritten, crcValue, 0, crcTable)
+          } while(--setsToWrite);
+          /* final xor and negate crc value */
+          crcValue = ~(crcValue^FINAL_XOR_VALUE);
+          f_write(&logFile, &crcValue, 4, &bytesWritten);
+          /* close file */
+          f_close(&logFile);
         }
-        f_write(&logFile, &setsToWrite, 1, &bytesWritten);
-        crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
-        do {
-          /* receive data pointer from queue */
-          xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
-          /* write binary data and point on next item */
-          USD_WRITE(&logFile, usdLogQueuePtr,
-                    4 + usdLogConfig.numBytes, &bytesWritten, crcValue, 0, crcTable)
-        } while(--setsToWrite);
-        /* final xor and negate crc value */
-        crcValue = ~(crcValue^FINAL_XOR_VALUE);
-        f_write(&logFile, &crcValue, 4, &bytesWritten);
-        /* close file */
-        f_close(&logFile);
       }
-  } else {
-    f_mount(NULL, "", 0);
+
+      // Update file size for fast query
+      FILINFO info;
+      if (f_stat(usdLogConfig.filename, &info) == FR_OK) {
+        lastFileSize = info.fsize;
+      }
+
+      xSemaphoreGive(logFileMutex);
+      vTaskSuspend(NULL);
+    } else {
+      f_mount(NULL, "", 0);
+      break;
+    }
   }
-  /* something went wrong or writing finished */
-  vTaskDelete(NULL);
+  /* something went wrong */
   xHandleWriteTask = 0;
+  vTaskDelete(NULL);
 }
 
 static bool usdTest()

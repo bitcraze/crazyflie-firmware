@@ -45,6 +45,7 @@
 #include "locodeck.h"
 #include "crtp_commander_high_level.h"
 #include "lighthouse.h"
+#include "usddeck.h"
 
 #include "console.h"
 #include "assert.h"
@@ -74,7 +75,8 @@
 #define LOCO2_ID        0x04
 #define LH_ID           0x05
 #define TESTER_ID       0x06
-#define OW_FIRST_ID     0x07
+#define USD_ID          0x07
+#define OW_FIRST_ID     0x08
 
 #define STATUS_OK 0
 
@@ -86,6 +88,7 @@
 #define MEM_TYPE_LOCO2  0x13
 #define MEM_TYPE_LH     0x14
 #define MEM_TYPE_TESTER 0x15
+#define MEM_TYPE_USD    0x16
 
 #define MEM_LOCO_INFO             0x0000
 #define MEM_LOCO_ANCHOR_BASE      0x1000
@@ -232,6 +235,9 @@ void createInfoResponse(CRTPPacket* p, uint8_t memId)
     case TESTER_ID:
       createInfoResponseBody(p, MEM_TYPE_TESTER, MEM_TESTER_SIZE, noData);
       break;
+    case USD_ID:
+      createInfoResponseBody(p, MEM_TYPE_USD, usddeckFileSize(), noData);
+      break;
     default:
       if (owGetinfo(memId - OW_FIRST_ID, &serialNbr))
       {
@@ -322,6 +328,17 @@ void memReadProcess()
 
     case TESTER_ID:
       status = handleMemTesterRead(memAddr, readLen, &p.data[6]);
+      break;
+
+    case USD_ID:
+      {
+        if (memAddr + readLen <= usddeckFileSize() &&
+            usddeckRead(memAddr, &p.data[6], readLen)) {
+          status = STATUS_OK;
+        } else {
+          status = EIO;
+        }
+      }
       break;
 
     default:
@@ -543,6 +560,8 @@ void memWriteProcess()
       status = handleMemTesterWrite(memAddr, writeLen, &p.data[5]);
       break;
 
+    case USD_ID:
+        // Fall through
     case LOCO_ID:
         // Fall through
     case LOCO2_ID:
