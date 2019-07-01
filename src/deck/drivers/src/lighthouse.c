@@ -37,6 +37,7 @@
 #include "system.h"
 #include "deck.h"
 #include "log.h"
+#include "param.h"
 
 #include "config.h"
 #include "FreeRTOS.h"
@@ -67,6 +68,8 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
+
+static bool isInit = false;
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
 
@@ -100,8 +103,6 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 INCBIN(bitstream, "lighthouse.bin");
 
 static void checkVersionAndBoot();
-
-static bool isInit = false;
 
 static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 
@@ -402,5 +403,8 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 #endif
 LOG_GROUP_STOP(lighthouse)
 
-
 #endif // DISABLE_LIGHTHOUSE_DRIVER
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bdLighthouse4, &isInit)
+PARAM_GROUP_STOP(deck)
