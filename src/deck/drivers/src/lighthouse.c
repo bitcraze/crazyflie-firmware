@@ -107,6 +107,8 @@ static void checkVersionAndBoot();
 static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 
 // Stats
+static bool comSynchronized = false;
+
 static int serialFrameCount = 0;
 static int frameCount = 0;
 static int cycleCount = 0;
@@ -233,6 +235,7 @@ static void lighthouseTask(void *param)
       synchronized = syncCounter == 7;
     }
 
+    comSynchronized = true;
     DEBUG_PRINT("Synchronized!\n");
 
     // Receive data until being desynchronized
@@ -401,6 +404,8 @@ LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
 #if PULSE_PROCESSOR_N_SENSORS > 3
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 #endif
+
+LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
 
 #endif // DISABLE_LIGHTHOUSE_DRIVER
