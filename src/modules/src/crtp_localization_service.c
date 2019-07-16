@@ -41,6 +41,7 @@
 #include "locodeck.h"
 
 #include "estimator.h"
+#include "quatcompress.h"
 
 #define NBR_OF_RANGES_IN_PACKET   5
 #define DEFAULT_EMERGENCY_STOP_TIMEOUT (1 * RATE_MAIN_LOOP)
@@ -70,12 +71,25 @@ typedef struct {
   int16_t z; // mm
 } __attribute__((packed)) extPositionPackedItem;
 
+// up to 2 items per CRTP packet
+typedef struct {
+  uint8_t id; // last 8 bit of the Crazyflie address
+  int16_t x; // mm
+  int16_t y; // mm
+  int16_t z; // mm
+  uint32_t quat; // compressed quaternion, see quatcompress.h
+} __attribute__((packed)) extPosePackedItem;
+
 // Struct for logging position information
 static positionMeasurement_t ext_pos;
+// Struct for logging pose information
+static poseMeasurement_t ext_pose;
+
 static CRTPPacket pkRange;
 static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 static float extPosStdDev = 0.01;
+static float extQuatStdDev = 4.5e-3;
 static bool isInit = false;
 static uint8_t my_id;
 
@@ -141,6 +155,33 @@ static void genericLocHandle(CRTPPacket* pk)
     stabilizerSetEmergencyStop();
   } else if (type == EMERGENCY_STOP_WATCHDOG) {
     stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
+  } else if (type == EXT_POSE) {
+    const struct CrtpExtPose* data = (const struct CrtpExtPose*)&pk->data[1];
+    ext_pose.x = data->x;
+    ext_pose.y = data->y;
+    ext_pose.z = data->z;
+    ext_pose.quat.x = data->qx;
+    ext_pose.quat.y = data->qy;
+    ext_pose.quat.z = data->qz;
+    ext_pose.quat.w = data->qw;
+    ext_pose.stdDevPos = extPosStdDev;
+    ext_pose.stdDevQuat = extQuatStdDev;
+    estimatorEnqueuePose(&ext_pose);
+  } else if (type == EXT_POSE_PACKED) {
+    uint8_t numItems = (pk->size - 1) / sizeof(extPosePackedItem);
+    for (uint8_t i = 0; i < numItems; ++i) {
+      const extPosePackedItem* item = (const extPosePackedItem*)&pk->data[1 + i * sizeof(extPosePackedItem)];
+      if (item->id == my_id) {
+        ext_pose.x = item->x / 1000.0f;
+        ext_pose.y = item->y / 1000.0f;
+        ext_pose.z = item->z / 1000.0f;
+        quatdecompress(item->quat, (float *)&ext_pose.quat.q0);
+        ext_pose.stdDevPos = extPosStdDev;
+        ext_pose.stdDevQuat = extQuatStdDev;
+        estimatorEnqueuePose(&ext_pose);
+        break;
+      }
+    }
   }
 }
 
@@ -206,4 +247,5 @@ LOG_GROUP_STOP(ext_pos)
 PARAM_GROUP_START(locSrv)
   PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
   PARAM_ADD(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
+  PARAM_ADD(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
 PARAM_GROUP_STOP(locSrv)
