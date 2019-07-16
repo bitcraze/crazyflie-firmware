@@ -567,133 +567,137 @@ static void usdWriteTask(void* usdLogQueue)
 
   while (true)
   {
-    xSemaphoreTake(logFileMutex, portMAX_DELAY);
-    lastFileSize = 0;
-    /* look for existing files and use first not existent combination
-     * of two chars */
-    {
-      FILINFO fno;
-      uint8_t NUL = 0;
-      while(usdLogConfig.filename[NUL] != '\0') {
-        NUL++;
-      }
-      while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
-        /* increase file */
-        switch(usdLogConfig.filename[NUL-1]) {
-          case '9':
-            usdLogConfig.filename[NUL-1] = '0';
-            usdLogConfig.filename[NUL-2]++;
-            break;
-          default:
-            usdLogConfig.filename[NUL-1]++;
-        }
-      }
-    }
-
-    /* try to create file */
-    if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
-        == FR_OK) {
-      /* write dataset header */
+    vTaskSuspend(NULL);
+    if (enableLogging) {
+      xSemaphoreTake(logFileMutex, portMAX_DELAY);
+      lastFileSize = 0;
+      usdLogBuffer = usdLogBufferStart;
+      xQueueReset(usdLogQueue);
+      /* look for existing files and use first not existent combination
+       * of two chars */
       {
-        uint8_t logWidth = 1 + usdLogConfig.numSlots;
-        f_write(&logFile, &logWidth, 1, &bytesWritten);
-        crcValue = crcByByte(&logWidth, 1, INITIAL_REMAINDER, 0, crcTable);
-      }
-      USD_WRITE(&logFile, (uint8_t*)"tick(I),", 8, &bytesWritten,
-                crcValue, 0, crcTable)
-
-      for (int i = 0; i < usdLogConfig.numSlots; ++i) {
-        char* group;
-        char* name;
-        int varid = usdLogConfig.varIds[i];
-        logGetGroupAndName(varid, &group, &name);
-        USD_WRITE(&logFile, (uint8_t*)group, strlen(group), &bytesWritten,
-          crcValue, 0, crcTable)
-        USD_WRITE(&logFile, (uint8_t*)".", 1, &bytesWritten,
-          crcValue, 0, crcTable)
-        USD_WRITE(&logFile, (uint8_t*)name, strlen(name), &bytesWritten,
-          crcValue, 0, crcTable)
-        USD_WRITE(&logFile, (uint8_t*)"(", 1, &bytesWritten,
-                    crcValue, 0, crcTable)
-        char typeChar;
-        switch (logGetType(varid)) {
-          case LOG_UINT8:
-            typeChar = 'B';
-            break;
-          case LOG_INT8:
-            typeChar = 'b';
-            break;
-          case LOG_UINT16:
-            typeChar = 'H';
-            break;
-          case LOG_INT16:
-            typeChar = 'h';
-            break;
-          case LOG_UINT32:
-            typeChar = 'I';
-            break;
-          case LOG_INT32:
-            typeChar = 'i';
-            break;
-          case LOG_FLOAT:
-            typeChar = 'f';
-            break;
-          default:
-            ASSERT(false);
+        FILINFO fno;
+        uint8_t NUL = 0;
+        while(usdLogConfig.filename[NUL] != '\0') {
+          NUL++;
         }
-        USD_WRITE(&logFile, (uint8_t*)&typeChar, 1, &bytesWritten,
-                    crcValue, 0, crcTable)
-        USD_WRITE(&logFile, (uint8_t*)"),", 2, &bytesWritten,
-                    crcValue, 0, crcTable)
-      }
-
-      /* negate crc value */
-      crcValue = ~(crcValue^FINAL_XOR_VALUE);
-      f_write(&logFile, &crcValue, 4, &bytesWritten);
-      f_close(&logFile);
-
-      uint8_t* usdLogQueuePtr;
-
-      while (enableLogging) {
-        /* sleep */
-        vTaskSuspend(NULL);
-        /* determine how many sets can be written */
-        setsToWrite = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
-        if (setsToWrite > 0) {
-          /* try to open file in append mode in every iteration to avoid
-             loss of data during/after a crash */
-          if (f_open(&logFile, usdLogConfig.filename, FA_OPEN_APPEND | FA_WRITE)
-              != FR_OK) {
-            continue;
+        while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
+          /* increase file */
+          switch(usdLogConfig.filename[NUL-1]) {
+            case '9':
+              usdLogConfig.filename[NUL-1] = '0';
+              usdLogConfig.filename[NUL-2]++;
+              break;
+            default:
+              usdLogConfig.filename[NUL-1]++;
           }
-          f_write(&logFile, &setsToWrite, 1, &bytesWritten);
-          crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
-          do {
-            /* receive data pointer from queue */
-            xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
-            /* write binary data and point on next item */
-            USD_WRITE(&logFile, usdLogQueuePtr,
-                      4 + usdLogConfig.numBytes, &bytesWritten, crcValue, 0, crcTable)
-          } while(--setsToWrite);
-          /* final xor and negate crc value */
-          crcValue = ~(crcValue^FINAL_XOR_VALUE);
-          f_write(&logFile, &crcValue, 4, &bytesWritten);
-          /* close file */
-          f_close(&logFile);
         }
       }
 
-      // Update file size for fast query
-      FILINFO info;
-      if (f_stat(usdLogConfig.filename, &info) == FR_OK) {
-        lastFileSize = info.fsize;
-      }
+      /* try to create file */
+      if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
+          == FR_OK) {
+        /* write dataset header */
+        {
+          uint8_t logWidth = 1 + usdLogConfig.numSlots;
+          f_write(&logFile, &logWidth, 1, &bytesWritten);
+          crcValue = crcByByte(&logWidth, 1, INITIAL_REMAINDER, 0, crcTable);
+        }
+        USD_WRITE(&logFile, (uint8_t*)"tick(I),", 8, &bytesWritten,
+                  crcValue, 0, crcTable)
 
-      xSemaphoreGive(logFileMutex);
-      vTaskSuspend(NULL);
-    } else {
-      f_mount(NULL, "", 0);
-      break;
+        for (int i = 0; i < usdLogConfig.numSlots; ++i) {
+          char* group;
+          char* name;
+          int varid = usdLogConfig.varIds[i];
+          logGetGroupAndName(varid, &group, &name);
+          USD_WRITE(&logFile, (uint8_t*)group, strlen(group), &bytesWritten,
+            crcValue, 0, crcTable)
+          USD_WRITE(&logFile, (uint8_t*)".", 1, &bytesWritten,
+            crcValue, 0, crcTable)
+          USD_WRITE(&logFile, (uint8_t*)name, strlen(name), &bytesWritten,
+            crcValue, 0, crcTable)
+          USD_WRITE(&logFile, (uint8_t*)"(", 1, &bytesWritten,
+                      crcValue, 0, crcTable)
+          char typeChar;
+          switch (logGetType(varid)) {
+            case LOG_UINT8:
+              typeChar = 'B';
+              break;
+            case LOG_INT8:
+              typeChar = 'b';
+              break;
+            case LOG_UINT16:
+              typeChar = 'H';
+              break;
+            case LOG_INT16:
+              typeChar = 'h';
+              break;
+            case LOG_UINT32:
+              typeChar = 'I';
+              break;
+            case LOG_INT32:
+              typeChar = 'i';
+              break;
+            case LOG_FLOAT:
+              typeChar = 'f';
+              break;
+            default:
+              ASSERT(false);
+          }
+          USD_WRITE(&logFile, (uint8_t*)&typeChar, 1, &bytesWritten,
+                      crcValue, 0, crcTable)
+          USD_WRITE(&logFile, (uint8_t*)"),", 2, &bytesWritten,
+                      crcValue, 0, crcTable)
+        }
+
+        /* negate crc value */
+        crcValue = ~(crcValue^FINAL_XOR_VALUE);
+        f_write(&logFile, &crcValue, 4, &bytesWritten);
+        f_close(&logFile);
+
+        uint8_t* usdLogQueuePtr;
+
+        while (enableLogging) {
+          /* sleep */
+          vTaskSuspend(NULL);
+          /* determine how many sets can be written */
+          setsToWrite = (uint8_t)uxQueueMessagesWaiting(usdLogQueue);
+          if (setsToWrite > 0) {
+            /* try to open file in append mode in every iteration to avoid
+               loss of data during/after a crash */
+            if (f_open(&logFile, usdLogConfig.filename, FA_OPEN_APPEND | FA_WRITE)
+                != FR_OK) {
+              continue;
+            }
+            f_write(&logFile, &setsToWrite, 1, &bytesWritten);
+            crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
+            do {
+              /* receive data pointer from queue */
+              xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
+              /* write binary data and point on next item */
+              USD_WRITE(&logFile, usdLogQueuePtr,
+                        4 + usdLogConfig.numBytes, &bytesWritten, crcValue, 0, crcTable)
+            } while(--setsToWrite);
+            /* final xor and negate crc value */
+            crcValue = ~(crcValue^FINAL_XOR_VALUE);
+            f_write(&logFile, &crcValue, 4, &bytesWritten);
+            /* close file */
+            f_close(&logFile);
+          }
+        }
+
+        // Update file size for fast query
+        FILINFO info;
+        if (f_stat(usdLogConfig.filename, &info) == FR_OK) {
+          lastFileSize = info.fsize;
+        }
+
+        xSemaphoreGive(logFileMutex);
+      } else {
+        f_mount(NULL, "", 0);
+        break;
+      }
     }
   }
   /* something went wrong */
