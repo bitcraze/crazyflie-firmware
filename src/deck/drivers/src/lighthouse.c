@@ -37,6 +37,7 @@
 #include "system.h"
 #include "deck.h"
 #include "log.h"
+#include "param.h"
 
 #include "config.h"
 #include "FreeRTOS.h"
@@ -67,6 +68,8 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
+
+static bool isInit = false;
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
 
@@ -101,11 +104,11 @@ INCBIN(bitstream, "lighthouse.bin");
 
 static void checkVersionAndBoot();
 
-static bool isInit = false;
-
 static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 
 // Stats
+static bool comSynchronized = false;
+
 static int serialFrameCount = 0;
 static int frameCount = 0;
 static int cycleCount = 0;
@@ -232,6 +235,7 @@ static void lighthouseTask(void *param)
       synchronized = syncCounter == 7;
     }
 
+    comSynchronized = true;
     DEBUG_PRINT("Synchronized!\n");
 
     // Receive data until being desynchronized
@@ -400,7 +404,12 @@ LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
 #if PULSE_PROCESSOR_N_SENSORS > 3
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 #endif
+
+LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
 
-
 #endif // DISABLE_LIGHTHOUSE_DRIVER
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bdLighthouse4, &isInit)
+PARAM_GROUP_STOP(deck)

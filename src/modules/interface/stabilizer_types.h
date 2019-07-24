@@ -101,6 +101,20 @@ typedef struct positionMeasurement_s {
   float stdDev;
 } positionMeasurement_t;
 
+typedef struct poseMeasurement_s {
+  union {
+    struct {
+      float x;
+      float y;
+      float z;
+    };
+    float pos[3];
+  };
+  quaternion_t quat;
+  float stdDevPos;
+  float stdDevQuat;
+} poseMeasurement_t;
+
 typedef struct distanceMeasurement_s {
   union {
     struct {
