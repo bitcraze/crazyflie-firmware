@@ -102,6 +102,14 @@ static inline bool stateEstimatorHasPositionMeasurement(positionMeasurement_t *p
   return (pdTRUE == xQueueReceive(posDataQueue, pos, 0));
 }
 
+// Direct measurements of Crazyflie pose
+static xQueueHandle poseDataQueue;
+#define POSE_QUEUE_LENGTH (10)
+
+static inline bool stateEstimatorHasPoseMeasurement(poseMeasurement_t *pose) {
+  return (pdTRUE == xQueueReceive(poseDataQueue, pose, 0));
+}
+
 // Measurements of a UWB Tx/Rx
 static xQueueHandle tdoaDataQueue;
 #define UWB_QUEUE_LENGTH (10)
@@ -369,6 +377,13 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
     doneUpdate = true;
   }
 
+  poseMeasurement_t pose;
+  while (stateEstimatorHasPoseMeasurement(&pose))
+  {
+    kalmanCoreUpdateWithPose(&coreData, &pose);
+    doneUpdate = true;
+  }
+
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
@@ -423,6 +438,7 @@ void estimatorKalmanInit(void) {
   {
     distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
     posDataQueue = xQueueCreate(POS_QUEUE_LENGTH, sizeof(positionMeasurement_t));
+    poseDataQueue = xQueueCreate(POSE_QUEUE_LENGTH, sizeof(poseMeasurement_t));
     tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
     flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
     tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
@@ -432,6 +448,7 @@ void estimatorKalmanInit(void) {
   {
     xQueueReset(distDataQueue);
     xQueueReset(posDataQueue);
+    xQueueReset(poseDataQueue);
     xQueueReset(tdoaDataQueue);
     xQueueReset(flowDataQueue);
     xQueueReset(tofDataQueue);
@@ -485,6 +502,12 @@ bool estimatorKalmanEnqueuePosition(const positionMeasurement_t *pos)
 {
   ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(posDataQueue, (void *)pos);
+}
+
+bool estimatorKalmanEnqueuePose(const poseMeasurement_t *pose)
+{
+  ASSERT(isInit);
+  return stateEstimatorEnqueueExternalMeasurement(poseDataQueue, (void *)pose);
 }
 
 bool estimatorKalmanEnqueueDistance(const distanceMeasurement_t *dist)

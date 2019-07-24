@@ -44,6 +44,7 @@ const char* stateEstimatorGetName();
 // Support to incorporate additional sensors into the state estimate via the following functions:
 bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb);
 bool estimatorEnqueuePosition(const positionMeasurement_t *pos);
+bool estimatorEnqueuePose(const poseMeasurement_t *pose);
 bool estimatorEnqueueDistance(const distanceMeasurement_t *dist);
 bool estimatorEnqueueTOF(const tofMeasurement_t *tof);
 bool estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height);
