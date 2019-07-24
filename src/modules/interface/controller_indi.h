@@ -21,28 +21,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * controller.h - Controller interface
+ * controller_indi.h - INDI Controller Interface
  */
-#ifndef __CONTROLLER_H__
-#define __CONTROLLER_H__
+#ifndef __CONTROLLER_INDI_H__
+#define __CONTROLLER_INDI_H__
 
 #include "stabilizer_types.h"
 
-typedef enum {
-  ControllerTypeAny,
-  ControllerTypePID,
-  ControllerTypeMellinger,
-  ControllerTypeINDI,
-  ControllerType_COUNT,
-} ControllerType;
-
-void controllerInit(ControllerType controller);
-bool controllerTest(void);
-void controller(control_t *control, setpoint_t *setpoint,
+void controllerINDIInit(void);
+bool controllerINDITest(void);
+void controllerINDI(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick);
-ControllerType getControllerType(void);
-const char* controllerGetName();
 
-#endif //__CONTROLLER_H__
+#endif //__CONTROLLER_INDI_H__

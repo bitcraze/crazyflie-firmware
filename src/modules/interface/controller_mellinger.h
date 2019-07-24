@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * controller_pid.h - Mellinger Controller Interface
+ * controller_mellinger.h - Mellinger Controller Interface
  */
 #ifndef __CONTROLLER_MELLINGER_H__
 #define __CONTROLLER_MELLINGER_H__
