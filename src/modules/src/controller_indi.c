@@ -35,9 +35,6 @@ SOFTWARE.
 
 #include "controller_indi.h"
 
-#include "log.h"
-#include "param.h"
-
 void controllerINDIInit(void)
 {
 

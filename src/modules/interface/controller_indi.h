@@ -27,6 +27,7 @@
 #define __CONTROLLER_INDI_H__
 
 #include "stabilizer_types.h"
+#include "filter.h"
 
 void controllerINDIInit(void);
 bool controllerINDITest(void);
