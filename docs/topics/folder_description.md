@@ -1,7 +1,7 @@
 ---
 title: Folder description
 layout: page
-page_id: folder_description
+page_id: /topics/folder_description
 ---
 
 ## Folder description:
