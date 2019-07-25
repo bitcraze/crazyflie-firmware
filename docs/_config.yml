@@ -1,6 +1,4 @@
 name: A test
 theme: jekyll-theme-minimal
 logo: images/bitcraze_logo.png
-include:
- - topics/
-
+permalink: /docs/topics/
