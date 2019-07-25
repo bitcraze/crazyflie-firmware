@@ -2,19 +2,19 @@ docs_list_title: Index
 docs:
 
 - title: Main page
-  url: /
+  url: /crazyflie-firmware/
 
 - title: Crazyflie 1.0 support
-  url: /crazyflie_1_support
+  url: /crazyflie-firmware/crazyflie_1_support
 
 - title: Build instructions
-  url: /build_instructions
+  url: /crazyflie-firmware/build_instructions
 
 - title: Folder description
-  url: /folder_description
+  url: /crazyflie-firmware/folder_description
 
 - title: Unit Testing
-  url: /unit_testing
+  url: /crazyflie-firmware/unit_testing
 
 
 
