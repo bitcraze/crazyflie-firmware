@@ -2,19 +2,19 @@ docs_list_title: Index
 docs:
 
 - title: Main page
-  url: /index
+  url: /
 
 - title: Crazyflie 1.0 support
-  url: /topics/crazyflie_1_support
+  url: /crazyflie_1_support
 
 - title: Build instructions
-  url: /topics/build_instructions
+  url: /build_instructions
 
 - title: Folder description
-  url: /topics/folder_description
+  url: /folder_description
 
 - title: Unit Testing
-  url: /topics/unit_testing
+  url: /unit_testing
 
 
 
