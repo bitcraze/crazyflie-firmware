@@ -23,7 +23,7 @@ tags
 current_platform.mk
 
 # generated files for githubpages
-/docs/_sites/*
+/docs/_site/*
 /docs/Gemfile.lock
 
 
