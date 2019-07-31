@@ -58,6 +58,12 @@ struct IndiVariables indi = {
 #endif
 };
 
+static inline void float_rates_zero(struct FloatRates *fr) {
+	fr->p = 0.0;
+	fr->q = 0.0;
+	fr->r = 0.0;
+}
+
 void indi_init_filters(void)
 {
   // tau = 1/(2*pi*Fc)
@@ -104,12 +110,12 @@ static inline void finite_difference_from_filter(float *output, Butterworth2LowP
 
 void controllerINDIInit(void)
 {
-	  FLOAT_RATES_ZERO(indi.angular_accel_ref);
-	  FLOAT_RATES_ZERO(indi.u_act_dyn);
-	  FLOAT_RATES_ZERO(indi.u_in);
+	float_rates_zero(&indi.angular_accel_ref);
+	float_rates_zero(&indi.u_act_dyn);
+	float_rates_zero(&indi.u_in);
 
-	  // Re-initialize filters
-	  indi_init_filters();
+	// Re-initialize filters
+	indi_init_filters();
 }
 
 bool controllerINDITest(void)

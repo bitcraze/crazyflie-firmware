@@ -109,17 +109,6 @@ struct IndiVariables {
   struct IndiEstimation est; ///< Estimation parameters for adaptive INDI
 };
 
-#define FLOAT_RATES_ZERO(_r) {          \
-    RATES_ASSIGN(_r, 0., 0., 0.);       \
-}
-
-/* ra =  {p, q, r} */
-#define RATES_ASSIGN(_ra, _p, _q, _r) {   \
-    (_ra).p = (_p);       \
-    (_ra).q = (_q);       \
-    (_ra).r = (_r);       \
-  }
-
 void controllerINDIInit(void);
 bool controllerINDITest(void);
 void controllerINDI(control_t *control, setpoint_t *setpoint,
