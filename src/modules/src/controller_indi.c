@@ -165,10 +165,18 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 * though this will be inaccurate for large attitude errors, but it will be ok for now.
 	 * 4.2 Angular_acceleration_reference = D * (rate_reference – rate_measurement)
 	 */
+	 float referenceAttitudeRateRoll = radians(setpoint->attitudeRate.roll);
+	 float referenceAttitudeRatePitch = -radians(setpoint->attitudeRate.pitch);
+	 float referenceAttitudeRateYaw = radians(setpoint->attitudeRate.yaw);
+
+	 indi.angular_accel_ref.p = indi.reference_acceleration.rate_p * (referenceAttitudeRateRoll - body_rates.p);
+	 indi.angular_accel_ref.q = indi.reference_acceleration.rate_q * (referenceAttitudeRatePitch - body_rates.q);
+	 indi.angular_accel_ref.r = indi.reference_acceleration.rate_r * (referenceAttitudeRateYaw - body_rates.r);
 
 	/*
 	 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
 	 */
+
 
 	/*
 	 * 6. Add delta_commands to commands and bound to allowable values
