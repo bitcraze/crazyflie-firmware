@@ -50,34 +50,29 @@ struct IndiVariables indi = {
     .g2 = STABILIZATION_INDI_G2_R / INDI_EST_SCALE,
     .mu = STABILIZATION_INDI_ADAPTIVE_MU,
   },
-
-#if STABILIZATION_INDI_USE_ADAPTIVE
-  .adaptive = true,
-#else
-  .adaptive = false,
-#endif
+  .adaptive = STABILIZATION_INDI_USE_ADAPTIVE,
 };
 
 static inline void float_rates_zero(struct FloatRates *fr) {
-	fr->p = 0.0;
-	fr->q = 0.0;
-	fr->r = 0.0;
+	fr->p = 0.0f;
+	fr->q = 0.0f;
+	fr->r = 0.0f;
 }
 
 void indi_init_filters(void)
 {
   // tau = 1/(2*pi*Fc)
-  float tau = 1.0 / (2.0 * M_PI * STABILIZATION_INDI_FILT_CUTOFF);
-  float tau_r = 1.0 / (2.0 * M_PI * STABILIZATION_INDI_FILT_CUTOFF_R);
+  float tau = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF);
+  float tau_r = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF_R);
   float tau_axis[3] = {tau, tau, tau_r};
-  float tau_est = 1.0 / (2.0 * M_PI * STABILIZATION_INDI_ESTIMATION_FILT_CUTOFF);
-  float sample_time = 1.0 / PERIODIC_FREQUENCY;
+  float tau_est = 1.0f / (2.0f * PI * STABILIZATION_INDI_ESTIMATION_FILT_CUTOFF);
+  float sample_time = 1.0f / PERIODIC_FREQUENCY;
   // Filtering of gyroscope and actuators
   for (int8_t i = 0; i < 3; i++) {
-    init_butterworth_2_low_pass(&indi.u[i], tau_axis[i], sample_time, 0.0);
-    init_butterworth_2_low_pass(&indi.rate[i], tau_axis[i], sample_time, 0.0);
-    init_butterworth_2_low_pass(&indi.est.u[i], tau_est, sample_time, 0.0);
-    init_butterworth_2_low_pass(&indi.est.rate[i], tau_est, sample_time, 0.0);
+    init_butterworth_2_low_pass(&indi.u[i], tau_axis[i], sample_time, 0.0f);
+    init_butterworth_2_low_pass(&indi.rate[i], tau_axis[i], sample_time, 0.0f);
+    init_butterworth_2_low_pass(&indi.est.u[i], tau_est, sample_time, 0.0f);
+    init_butterworth_2_low_pass(&indi.est.rate[i], tau_est, sample_time, 0.0f);
   }
 }
 
@@ -105,6 +100,88 @@ static inline void finite_difference_from_filter(float *output, Butterworth2LowP
 {
   for (int8_t i = 0; i < 3; i++) {
     output[i] = (filter[i].o[0] - filter[i].o[1]) * PERIODIC_FREQUENCY;
+  }
+}
+
+/**
+ * @brief Calculate derivative of an array via finite difference
+ *
+ * @param output[3] The output array
+ * @param new[3] The newest values
+ * @param old[3] The values of the previous timestep
+ */
+static inline void finite_difference(float output[3], float new[3], float old[3])
+{
+  for (int8_t i = 0; i < 3; i++) {
+    output[i] = (new[i] - old[i])*PERIODIC_FREQUENCY;
+  }
+}
+
+/** a = b */
+static inline void float_vect_copy(float *a, const float *b, const int n)
+{
+  int i;
+  for (i = 0; i < n; i++) { a[i] = b[i]; }
+}
+
+/** a *= s */
+static inline void float_vect_scale(float *a, const float s, const int n)
+{
+  int i;
+  for (i = 0; i < n; i++) { a[i] *= s; }
+}
+
+/**
+ * This is a Least Mean Squares adaptive filter
+ * It estimates the actuator effectiveness online, by comparing the expected
+ * angular acceleration based on the inputs with the measured angular
+ * acceleration
+ */
+static inline void lms_estimation(float stateAttitudeRateRoll, float stateAttitudeRatePitch, float stateAttitudeRateYaw)
+{
+  static struct IndiEstimation *est = &indi.est;
+  // Only pass really low frequencies so you don't adapt to noise
+  struct FloatRates body_rates = {
+			  .p = stateAttitudeRateRoll,
+			  .q = stateAttitudeRatePitch,
+			  .r = stateAttitudeRateYaw,
+  };
+  filter_pqr(est->u, &indi.u_act_dyn);
+  filter_pqr(est->rate, &body_rates);
+
+  // Calculate the first and second derivatives of the rates and actuators
+  float rate_d_prev[3];
+  float u_d_prev[3];
+  float_vect_copy(rate_d_prev, est->rate_d, 3);
+  float_vect_copy(u_d_prev, est->u_d, 3);
+  finite_difference_from_filter(est->rate_d, est->rate);
+  finite_difference_from_filter(est->u_d, est->u);
+  finite_difference(est->rate_dd, est->rate_d, rate_d_prev);
+  finite_difference(est->u_dd, est->u_d, u_d_prev);
+
+  // The inputs are scaled in order to avoid overflows
+  float du[3];
+  float_vect_copy(du, est->u_d, 3);
+  float_vect_scale(du, INDI_EST_SCALE, 3);
+  est->g1.p = est->g1.p - (est->g1.p * du[0] - est->rate_dd[0]) * du[0] * est->mu;
+  est->g1.q = est->g1.q - (est->g1.q * du[1] - est->rate_dd[1]) * du[1] * est->mu;
+  float ddu = est->u_dd[2] * INDI_EST_SCALE / PERIODIC_FREQUENCY;
+  float error = (est->g1.r * du[2] + est->g2 * ddu - est->rate_dd[2]);
+  est->g1.r = est->g1.r - error * du[2] * est->mu / 3.0f;
+  est->g2 = est->g2 - error * 1000.0f * ddu * est->mu / 3.0f;
+
+  //the g values should be larger than zero, otherwise there is positive feedback, the command will go to max and there is nothing to learn anymore...
+  if (est->g1.p < 0.01f) { est->g1.p = 0.01f; }
+  if (est->g1.q < 0.01f) { est->g1.q = 0.01f; }
+  if (est->g1.r < 0.01f) { est->g1.r = 0.01f; }
+  if (est->g2   < 0.01f) { est->g2 = 0.01f; }
+
+  if (indi.adaptive) {
+    //Commit the estimated G values and apply the scaling
+    indi.g1.p = est->g1.p * INDI_EST_SCALE;
+    indi.g1.q = est->g1.q * INDI_EST_SCALE;
+    indi.g1.r = est->g1.r * INDI_EST_SCALE;
+    indi.g2   = est->g2 * INDI_EST_SCALE;
   }
 }
 
@@ -177,10 +254,56 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
 	 */
 
+	 //Increment in angular acceleration requires increment in control input
+	 //G1 is the control effectiveness. In the yaw axis, we need something additional: G2.
+	 //It takes care of the angular acceleration caused by the change in rotation rate of the propellers
+	 //(they have significant inertia, see the paper mentioned in the header for more explanation)
+	 indi.du.p = 1.0f / indi.g1.p * (indi.angular_accel_ref.p - indi.rate_d[0]);
+	 indi.du.q = 1.0f / indi.g1.q * (indi.angular_accel_ref.q - indi.rate_d[1]);
+	 indi.du.r = 1.0f / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate_d[2] + indi.g2 * indi.du.r);
+
 
 	/*
 	 * 6. Add delta_commands to commands and bound to allowable values
 	*/
 
+	 indi.u_in.p = indi.u[0].o[0] + indi.du.p;
+	 indi.u_in.q = indi.u[1].o[0] + indi.du.q;
+	 indi.u_in.r = indi.u[2].o[0] + indi.du.r;
 
+	  //bound the total control input
+	if(STABILIZATION_INDI_FULL_AUTHORITY){
+	  clamp(indi.u_in.p, -9600.0f, 9600.0f);
+	  clamp(indi.u_in.q, -9600.0f, 9600.0f);
+	  float rlim = 9600.0f - fabsf(indi.u_in.q);
+	  clamp(indi.u_in.r, -rlim, rlim);
+	  clamp(indi.u_in.r, -9600.0f, 9600.0f);
+	}else{
+	  clamp(indi.u_in.p, -4500.0f, 4500.0f);
+	  clamp(indi.u_in.q, -4500.0f, 4500.0f);
+	  clamp(indi.u_in.r, -4500.0f, 4500.0f);
+	}
+
+	 //Propagate input filters
+	 //first order actuator dynamics
+	 indi.u_act_dyn.p = indi.u_act_dyn.p + STABILIZATION_INDI_ACT_DYN_P * (indi.u_in.p - indi.u_act_dyn.p);
+	 indi.u_act_dyn.q = indi.u_act_dyn.q + STABILIZATION_INDI_ACT_DYN_Q * (indi.u_in.q - indi.u_act_dyn.q);
+	 indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
+
+	 //Don't increment if thrust is off
+	 //TODO: this should be something more elegant, but without this the inputs
+	 //will increment to the maximum before even getting in the air.
+	 if(control->thrust < 300) {
+		 float_rates_zero(&indi.du);
+		 float_rates_zero(&indi.u_act_dyn);
+		 float_rates_zero(&indi.u_in);
+	 } else {
+	   // only run the estimation if the commands are not zero.
+	   lms_estimation(stateAttitudeRateRoll, stateAttitudeRatePitch, stateAttitudeRateYaw);
+	 }
+
+	 /*  INDI feedback */
+	 control->roll = indi.u_in.p;
+	 control->pitch = indi.u_in.q;
+	 control->yaw  = indi.u_in.r;
 }
