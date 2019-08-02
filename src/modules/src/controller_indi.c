@@ -187,6 +187,11 @@ static inline void lms_estimation(float stateAttitudeRateRoll, float stateAttitu
 
 void controllerINDIInit(void)
 {
+	/*
+	 * TODO
+	 * Can this also be called during flight, for instance when switching controllers?
+	 * Then the filters should not be reset to zero but to the current values of sensors and actuators.
+	 */
 	float_rates_zero(&indi.angular_accel_ref);
 	float_rates_zero(&indi.u_act_dyn);
 	float_rates_zero(&indi.u_in);
