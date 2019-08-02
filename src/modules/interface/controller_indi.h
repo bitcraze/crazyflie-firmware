@@ -43,8 +43,6 @@
 
 #define STABILIZATION_INDI_ESTIMATION_FILT_CUTOFF 4.0f
 
-#define PERIODIC_FREQUENCY 512.0f
-
 // these parameters are used in the filtering of the angular acceleration
 #define STABILIZATION_INDI_MAX_RATE 6.0f
 #define STABILIZATION_INDI_MAX_R 120.0f

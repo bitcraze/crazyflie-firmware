@@ -66,7 +66,7 @@ void indi_init_filters(void)
   float tau_r = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF_R);
   float tau_axis[3] = {tau, tau, tau_r};
   float tau_est = 1.0f / (2.0f * PI * STABILIZATION_INDI_ESTIMATION_FILT_CUTOFF);
-  float sample_time = 1.0f / PERIODIC_FREQUENCY;
+  float sample_time = 1.0f / ATTITUDE_RATE;
   // Filtering of gyroscope and actuators
   for (int8_t i = 0; i < 3; i++) {
     init_butterworth_2_low_pass(&indi.u[i], tau_axis[i], sample_time, 0.0f);
@@ -99,7 +99,7 @@ static inline void filter_pqr(Butterworth2LowPass *filter, struct FloatRates *ne
 static inline void finite_difference_from_filter(float *output, Butterworth2LowPass *filter)
 {
   for (int8_t i = 0; i < 3; i++) {
-    output[i] = (filter[i].o[0] - filter[i].o[1]) * PERIODIC_FREQUENCY;
+    output[i] = (filter[i].o[0] - filter[i].o[1]) * ATTITUDE_RATE;
   }
 }
 
@@ -113,7 +113,7 @@ static inline void finite_difference_from_filter(float *output, Butterworth2LowP
 static inline void finite_difference(float output[3], float new[3], float old[3])
 {
   for (int8_t i = 0; i < 3; i++) {
-    output[i] = (new[i] - old[i])*PERIODIC_FREQUENCY;
+    output[i] = (new[i] - old[i])*ATTITUDE_RATE;
   }
 }
 
@@ -165,7 +165,7 @@ static inline void lms_estimation(float stateAttitudeRateRoll, float stateAttitu
   float_vect_scale(du, INDI_EST_SCALE, 3);
   est->g1.p = est->g1.p - (est->g1.p * du[0] - est->rate_dd[0]) * du[0] * est->mu;
   est->g1.q = est->g1.q - (est->g1.q * du[1] - est->rate_dd[1]) * du[1] * est->mu;
-  float ddu = est->u_dd[2] * INDI_EST_SCALE / PERIODIC_FREQUENCY;
+  float ddu = est->u_dd[2] * INDI_EST_SCALE / ATTITUDE_RATE;
   float error = (est->g1.r * du[2] + est->g2 * ddu - est->rate_dd[2]);
   est->g1.r = est->g1.r - error * du[2] * est->mu / 3.0f;
   est->g2 = est->g2 - error * 1000.0f * ddu * est->mu / 3.0f;
