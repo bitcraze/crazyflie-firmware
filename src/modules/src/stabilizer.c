@@ -142,9 +142,9 @@ static void compressState()
   stateCompressed.vy = state.velocity.y * 1000.0f;
   stateCompressed.vz = state.velocity.z * 1000.0f;
 
-  stateCompressed.ax = state.acc.x * 1000.0f;
-  stateCompressed.ay = state.acc.y * 1000.0f;
-  stateCompressed.az = state.acc.z * 1000.0f;
+  stateCompressed.ax = state.acc.x * 9.81f * 1000.0f;
+  stateCompressed.ay = state.acc.y * 9.81f * 1000.0f;
+  stateCompressed.az = (state.acc.z + 1) * 9.81f * 1000.0f;
 
   float const q[4] = {
     state.attitudeQuaternion.x,
