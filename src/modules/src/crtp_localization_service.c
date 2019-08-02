@@ -120,8 +120,10 @@ static void locSrvCrtpCB(CRTPPacket* pk)
       break;
     case GENERIC_TYPE:
       genericLocHandle(pk);
+      break;
     case EXT_POSITION_PACKED:
       extPositionPackedHandler(pk);
+      break;
     default:
       break;
   }
