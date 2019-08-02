@@ -295,7 +295,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 //Don't increment if thrust is off
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
-	 if(control->thrust == 0) {
+	 if(setpoint->thrust < 300) {
 		 float_rates_zero(&indi.du);
 		 float_rates_zero(&indi.u_act_dyn);
 		 float_rates_zero(&indi.u_in);
