@@ -278,15 +278,15 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 	  //bound the total control input
 	if(STABILIZATION_INDI_FULL_AUTHORITY){
-	  clamp(indi.u_in.p, -9600.0f, 9600.0f);
-	  clamp(indi.u_in.q, -9600.0f, 9600.0f);
-	  float rlim = 9600.0f - fabsf(indi.u_in.q);
+	  clamp(indi.u_in.p, -32000.0f, 32000.0f);
+	  clamp(indi.u_in.q, -32000.0f, 32000.0f);
+	  float rlim = 32000.0f - fabsf(indi.u_in.q);
 	  clamp(indi.u_in.r, -rlim, rlim);
-	  clamp(indi.u_in.r, -9600.0f, 9600.0f);
+	  clamp(indi.u_in.r, -32000.0f, 32000.0f);
 	}else{
-	  clamp(indi.u_in.p, -4500.0f, 4500.0f);
-	  clamp(indi.u_in.q, -4500.0f, 4500.0f);
-	  clamp(indi.u_in.r, -4500.0f, 4500.0f);
+	  clamp(indi.u_in.p, -32000.0f, 32000.0f);
+	  clamp(indi.u_in.q, -32000.0f, 32000.0f);
+	  clamp(indi.u_in.r, -32000.0f, 32000.0f);
 	}
 
 	 //Propagate input filters
