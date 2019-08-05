@@ -212,6 +212,13 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 {
 
 	/*
+	 * Skipping calls faster than ATTITUDE_RATE
+	 */
+	if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
+	    return;
+	}
+
+	/*
 	 * 1 - Update the gyro filter with the new measurements.
 	 */
 
