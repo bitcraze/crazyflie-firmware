@@ -1,9 +1,3 @@
----
-title: Unit Testing
-layout: page
-page_id: unit_testing
----
-
 
 # Unit testing
 

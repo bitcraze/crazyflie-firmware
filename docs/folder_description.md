@@ -1,8 +1,3 @@
----
-title: Folder description
-layout: page
-page_id: /topics/folder_description
----
 
 ## Folder description:
 ```
