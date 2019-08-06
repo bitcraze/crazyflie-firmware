@@ -25,6 +25,9 @@
 
 #include "controller_indi.h"
 
+// Logging variables
+float thrust;
+
 struct IndiVariables indi = {
   .max_rate = STABILIZATION_INDI_MAX_RATE,
   .attitude_max_yaw_rate = STABILIZATION_INDI_MAX_R,
@@ -303,11 +306,12 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
 
 	 control->thrust = setpoint->thrust;
+	 thrust = setpoint->thrust;
 
 	 //Don't increment if thrust is off
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
-	 if(setpoint->thrust < 300) {
+	 if(setpoint->thrust < 30000) {
 		 float_rates_zero(&indi.du);
 		 float_rates_zero(&indi.u_act_dyn);
 		 float_rates_zero(&indi.u_in);
@@ -321,3 +325,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 control->pitch = indi.u_in.q;
 	 control->yaw  = indi.u_in.r;
 }
+
+LOG_GROUP_START(controller_indi)
+LOG_ADD(LOG_FLOAT, thrust, &thrust)
+LOG_GROUP_STOP(controller_indi)
