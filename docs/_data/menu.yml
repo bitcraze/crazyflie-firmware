@@ -1,0 +1,20 @@
+- page_id: home
+- title: Introduction
+  subs:
+    - {page_id: folder_description}
+    - {page_id: crazyflie-1-support}
+- title: Building and Flashing
+  subs:
+    - {page_id: build_instructions}
+    - {page_id: dfu}
+- title: Explanation Sub-elements
+  subs:
+    - {page_id: deck}
+    - {page_id: logparam}
+    - {page_id: sensor_to_control}
+- title: Development Instructions
+  subs:
+    - {page_id: howto}
+    - {page_id: serial}
+    - {page_id: openocd_gdb_debugging}
+    - {page_id: unit_testing}
