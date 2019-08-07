@@ -30,6 +30,7 @@
 #include "filter.h"
 #include "math3d.h"
 #include "log.h"
+#include "param.h"
 
 #define PI 3.14159265358979323846f
 
