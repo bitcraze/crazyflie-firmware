@@ -1,5 +1,7 @@
-Making your first Deck driver
-=============================
+---
+title: Making your first Deck driver
+page_id: howto
+---
 
 This howto is going to describe step-by-step how to make and flash your
 first Crazyflie 2.X deck driver. See the deck [api documentation

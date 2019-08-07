@@ -1,5 +1,7 @@
-On-chip debugging
-=================
+---
+title: On-chip debugging
+page_id: openocd_gdb_debugging
+---
 
 One of the key components of getting really serious about developing on
 the crazyflie, is to dive into the C-based firmware. If you really want

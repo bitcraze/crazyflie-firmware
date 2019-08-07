@@ -1,4 +1,7 @@
-# Building Crazyflie 2.0 firmware
+---
+title: Building Crazyflie 2.0 firmware
+page_id: build_instructions
+---
 
 ## Dependencies
 

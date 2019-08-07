@@ -27,3 +27,4 @@ current_platform.mk
 /docs/Gemfile.lock
 
 
+/docs/.jekyll-metadata

@@ -1,5 +1,7 @@
-Logging and parameter frameworks
-================================
+---
+title: Logging and parameter frameworks
+page_id: logparam
+---
 
 The aim of the logging and parameter framework is to easily be able to
 log data from the Crazyflie and to set variables during runtime.

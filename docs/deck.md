@@ -1,5 +1,7 @@
-Deck API
-========
+---
+title: Deck API
+page_id: deck
+---
 
 The Deck API allows to easily communicates with decks installed on the
 Crazyflie. The deck API is still in development, it will:

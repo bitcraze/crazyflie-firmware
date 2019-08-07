@@ -1,5 +1,7 @@
-Getting the serial number of the Crazyflie 2.X
-==============================================
+---
+title: Getting the serial number of the Crazyflie 2.X
+page_id: serial
+---
 
 The Crazyflie 2.X ID is a character string of 24 characters. It is
 unique to each Crazyflie 2.X.

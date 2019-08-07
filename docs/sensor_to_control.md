@@ -1,3 +1,8 @@
+---
+title: Sensor to control
+page_id: sensor_to_control
+---
+
 This page is meant as an introduction and overview of the path from
 sensor acquisition to motor control. In order to understand the details
 of each of the step the best is to read the code, but it\'s not trivial

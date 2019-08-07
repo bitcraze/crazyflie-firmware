@@ -1,5 +1,7 @@
-DFU update of the STM32F405
-===========================
+---
+title: DFU update of the STM32F405
+page_id: dfu
+---
 
 The DFU update mode should mainly be considered as a recovery mode in
 which you can load new firmware to the STM32F405 MCU. The OTA (Over The

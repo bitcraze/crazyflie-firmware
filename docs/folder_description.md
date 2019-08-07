@@ -1,5 +1,8 @@
+---
+title: Folder description
+page_id: folder_description
+---
 
-## Folder description:
 ```
 ./              | Root, contains the Makefile
  + init         | Contains the main.c
