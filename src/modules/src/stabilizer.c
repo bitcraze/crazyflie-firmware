@@ -119,8 +119,8 @@ static float accVarZ[NBR_OF_MOTORS];
 // Bit 1 - 1 = M2 passed
 // Bit 2 - 1 = M3 passed
 // Bit 3 - 1 = M4 passed
-// Bit 7 - 1 = Test finished
 static uint8_t motorPass = 0;
+static uint16_t motorTestCount = 0;
 
 
 static void stabilizerTask(void* param);
@@ -518,7 +518,7 @@ static void testProps(sensorData_t *sensors)
       }
     }
 #endif
-    motorPass |= 0x80;
+    motorTestCount++;
     testState = testDone;
   }
 }
@@ -542,6 +542,7 @@ LOG_ADD(LOG_FLOAT, motorVarYM3, &accVarY[2])
 LOG_ADD(LOG_FLOAT, motorVarXM4, &accVarX[3])
 LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
 LOG_ADD(LOG_UINT8, motorPass, &motorPass)
+LOG_ADD(LOG_UINT16, motorTestCount, &motorTestCount)
 LOG_GROUP_STOP(health)
 
 LOG_GROUP_START(ctrltarget)
