@@ -25,8 +25,8 @@
 
 #include "controller_indi.h"
 
-// Logging variables
-float thrust;
+static float thrust_threshold = 30000.0f;
+static float bound_control_input = 32000.0f;
 
 struct IndiVariables indi = {
   .max_rate = STABILIZATION_INDI_MAX_RATE,
@@ -288,15 +288,15 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 	  //bound the total control input
 	if(STABILIZATION_INDI_FULL_AUTHORITY){
-	  clamp(indi.u_in.p, -32000.0f, 32000.0f);
-	  clamp(indi.u_in.q, -32000.0f, 32000.0f);
-	  float rlim = 32000.0f - fabsf(indi.u_in.q);
+	  clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
+	  clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
+	  float rlim = bound_control_input - fabsf(indi.u_in.q);
 	  clamp(indi.u_in.r, -rlim, rlim);
-	  clamp(indi.u_in.r, -32000.0f, 32000.0f);
+	  clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 	}else{
-	  clamp(indi.u_in.p, -32000.0f, 32000.0f);
-	  clamp(indi.u_in.q, -32000.0f, 32000.0f);
-	  clamp(indi.u_in.r, -32000.0f, 32000.0f);
+	  clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
+	  clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
+	  clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 	}
 
 	 //Propagate input filters
@@ -306,12 +306,11 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
 
 	 control->thrust = setpoint->thrust;
-	 thrust = setpoint->thrust;
 
 	 //Don't increment if thrust is off
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
-	 if(setpoint->thrust < 30000) {
+	 if(setpoint->thrust < thrust_threshold) {
 		 float_rates_zero(&indi.du);
 		 float_rates_zero(&indi.u_act_dyn);
 		 float_rates_zero(&indi.u_in);
@@ -326,6 +325,31 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 control->yaw  = indi.u_in.r;
 }
 
+PARAM_GROUP_START(controller_indi)
+PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
+PARAM_ADD(PARAM_FLOAT, bound_control_input, &bound_control_input)
+PARAM_GROUP_STOP(controller_indi)
+
 LOG_GROUP_START(controller_indi)
-LOG_ADD(LOG_FLOAT, thrust, &thrust)
+LOG_ADD(LOG_FLOAT, indi.u_in.p, &indi.u_in.p)
+LOG_ADD(LOG_FLOAT, indi.u_in.q, &indi.u_in.q)
+LOG_ADD(LOG_FLOAT, indi.u_in.r, &indi.u_in.r)
+LOG_ADD(LOG_FLOAT, indi.u_act_dyn.p, &indi.u_act_dyn.p)
+LOG_ADD(LOG_FLOAT, indi.u_act_dyn.q, &indi.u_act_dyn.q)
+LOG_ADD(LOG_FLOAT, indi.u_act_dyn.r, &indi.u_act_dyn.r)
+LOG_ADD(LOG_FLOAT, indi.du.p, &indi.du.p)
+LOG_ADD(LOG_FLOAT, indi.du.q, &indi.du.q)
+LOG_ADD(LOG_FLOAT, indi.du.r, &indi.du.r)
+LOG_ADD(LOG_FLOAT, indi.angular_accel_ref.p, &indi.angular_accel_ref.p)
+LOG_ADD(LOG_FLOAT, indi.angular_accel_ref.q, &indi.angular_accel_ref.q)
+LOG_ADD(LOG_FLOAT, indi.angular_accel_ref.r, &indi.angular_accel_ref.r)
+LOG_ADD(LOG_FLOAT, indi.rate_d[0], &indi.rate_d[0])
+LOG_ADD(LOG_FLOAT, indi.rate_d[1], &indi.rate_d[1])
+LOG_ADD(LOG_FLOAT, indi.rate_d[2], &indi.rate_d[2])
+LOG_ADD(LOG_FLOAT, indi.reference_acceleration.err_p, &indi.reference_acceleration.err_p)
+LOG_ADD(LOG_FLOAT, indi.reference_acceleration.err_q, &indi.reference_acceleration.err_q)
+LOG_ADD(LOG_FLOAT, indi.reference_acceleration.err_r, &indi.reference_acceleration.err_r)
+LOG_ADD(LOG_FLOAT, indi.reference_acceleration.rate_p, &indi.reference_acceleration.rate_p)
+LOG_ADD(LOG_FLOAT, indi.reference_acceleration.rate_q, &indi.reference_acceleration.rate_q)
+LOG_ADD(LOG_FLOAT, indi.reference_acceleration.rate_r, &indi.reference_acceleration.rate_r)
 LOG_GROUP_STOP(controller_indi)
