@@ -288,15 +288,15 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 	  //bound the total control input
 	if(STABILIZATION_INDI_FULL_AUTHORITY){
-	  clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
-	  clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
 	  float rlim = bound_control_input - fabsf(indi.u_in.q);
-	  clamp(indi.u_in.r, -rlim, rlim);
-	  clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.r = clamp(-1.0f*indi.u_in.r, -rlim, rlim);
+	  indi.u_in.r = clamp(-1.0f*indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 	}else{
-	  clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
-	  clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
-	  clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.r = clamp(-1.0f*indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 	}
 
 	 //Propagate input filters
@@ -305,12 +305,12 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 indi.u_act_dyn.q = indi.u_act_dyn.q + STABILIZATION_INDI_ACT_DYN_Q * (indi.u_in.q - indi.u_act_dyn.q);
 	 indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
 
-	 control->thrust = setpoint->thrust;
+	 indi.thrust = setpoint->thrust;
 
 	 //Don't increment if thrust is off
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
-	 if(setpoint->thrust < thrust_threshold) {
+	 if(indi.thrust < thrust_threshold) {
 		 float_rates_zero(&indi.du);
 		 float_rates_zero(&indi.u_act_dyn);
 		 float_rates_zero(&indi.u_in);
@@ -320,6 +320,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 }
 
 	 /*  INDI feedback */
+	 control->thrust = indi.thrust;
 	 control->roll = indi.u_in.p;
 	 control->pitch = indi.u_in.q;
 	 control->yaw  = indi.u_in.r;
@@ -331,9 +332,10 @@ PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
-LOG_ADD(LOG_FLOAT, u_in.p, &indi.u_in.p)
-LOG_ADD(LOG_FLOAT, u_in.q, &indi.u_in.q)
-LOG_ADD(LOG_FLOAT, u_in.r, &indi.u_in.r)
+LOG_ADD(LOG_FLOAT, cmd_thrust, &indi.thrust)
+LOG_ADD(LOG_FLOAT, cmd_roll, &indi.u_in.p)
+LOG_ADD(LOG_FLOAT, cmd_pitch, &indi.u_in.q)
+LOG_ADD(LOG_FLOAT, cmd_yaw, &indi.u_in.r)
 LOG_ADD(LOG_FLOAT, u_act_dyn.p, &indi.u_act_dyn.p)
 LOG_ADD(LOG_FLOAT, u_act_dyn.q, &indi.u_act_dyn.q)
 LOG_ADD(LOG_FLOAT, u_act_dyn.r, &indi.u_act_dyn.r)

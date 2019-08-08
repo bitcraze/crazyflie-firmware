@@ -9,6 +9,7 @@
 
 #include "log.h"
 #include "param.h"
+#include "math3d.h"
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
 
@@ -17,6 +18,15 @@ static bool tiltCompensationEnabled = false;
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
+
+static float cmd_thrust;
+static float cmd_roll;
+static float cmd_pitch;
+static float cmd_yaw;
+static float r_roll;
+static float r_pitch;
+static float r_yaw;
+static float accelz;
 
 void controllerPidInit(void)
 {
@@ -90,6 +100,15 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
                                         &control->yaw);
 
     control->yaw = -control->yaw;
+
+    cmd_thrust = control->thrust;
+    cmd_roll = control->roll;
+    cmd_pitch = control->pitch;
+    cmd_yaw = control->yaw;
+    r_roll = radians(sensors->gyro.x);
+    r_pitch = -radians(sensors->gyro.y);
+    r_yaw = radians(sensors->gyro.z);
+    accelz = sensors->acc.z;
   }
 
   if (tiltCompensationEnabled)
@@ -108,6 +127,11 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     control->pitch = 0;
     control->yaw = 0;
 
+    cmd_thrust = control->thrust;
+    cmd_roll = control->roll;
+    cmd_pitch = control->pitch;
+    cmd_yaw = control->yaw;
+
     attitudeControllerResetAllPID();
     positionControllerResetAllPID();
 
@@ -118,6 +142,14 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
 
 
 LOG_GROUP_START(controller)
+LOG_ADD(LOG_FLOAT, cmd_thrust, &cmd_thrust)
+LOG_ADD(LOG_FLOAT, cmd_roll, &cmd_roll)
+LOG_ADD(LOG_FLOAT, cmd_pitch, &cmd_pitch)
+LOG_ADD(LOG_FLOAT, cmd_yaw, &cmd_yaw)
+LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
+LOG_ADD(LOG_FLOAT, accelz, &accelz)
 LOG_ADD(LOG_FLOAT, actuatorThrust, &actuatorThrust)
 LOG_ADD(LOG_FLOAT, roll,      &attitudeDesired.roll)
 LOG_ADD(LOG_FLOAT, pitch,     &attitudeDesired.pitch)
