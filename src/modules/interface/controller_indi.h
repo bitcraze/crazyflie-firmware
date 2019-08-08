@@ -96,6 +96,7 @@ struct IndiEstimation {
 };
 
 struct IndiVariables {
+  float thrust;
   struct FloatRates angular_accel_ref;
   struct FloatRates du;
   struct FloatRates u_in;
