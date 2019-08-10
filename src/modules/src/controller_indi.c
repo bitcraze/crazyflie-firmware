@@ -296,7 +296,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	}else{
 	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
 	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
-	  indi.u_in.r = clamp(-1.0f*indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 	}
 
 	 //Propagate input filters
