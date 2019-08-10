@@ -327,6 +327,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 }
 
 PARAM_GROUP_START(ctrlINDI)
+PARAM_ADD(PARAM_UINT8, adptive, &indi.adaptive)
 PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
 PARAM_GROUP_STOP(ctrlINDI)
