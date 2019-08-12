@@ -7,11 +7,14 @@
   subs:
     - {page_id: build_instructions}
     - {page_id: dfu}
-- title: Explanation Sub-elements
+- title: Userguides
   subs:
     - {page_id: deck}
     - {page_id: logparam}
+- title: Explanation Functionalities
+  subs:
     - {page_id: sensor_to_control}
+    - {page_id: ctrp_index}
 - title: Development Instructions
   subs:
     - {page_id: howto}
