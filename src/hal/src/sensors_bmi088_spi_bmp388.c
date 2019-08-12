@@ -170,13 +170,16 @@ static uint64_t imuIntTimestamp;
 static Axis3i16 gyroRaw;
 static Axis3i16 accelRaw;
 static BiasObj gyroBiasRunning;
-static Axis3f  gyroBias;
+static Axis3f gyroBias;
 #if defined(SENSORS_GYRO_BIAS_CALCULATE_STDDEV) && defined (GYRO_BIAS_LIGHT_WEIGHT)
-static Axis3f  gyroBiasStdDev;
+static Axis3f gyroBiasStdDev;
 #endif
-static bool    gyroBiasFound = false;
+static bool gyroBiasFound = false;
 static float accScaleSum = 0;
 static float accScale = 1;
+static bool accScaleFound = false;
+static uint32_t accScaleSumCount = 0;
+
 
 // Low Pass filtering
 #define GYRO_LPF_CUTOFF_FREQ  80
@@ -862,10 +865,7 @@ bool sensorsBmi088SpiBmp388Test(void)
  */
 static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
 {
-  static bool accBiasFound = false;
-  static uint32_t accScaleSumCount = 0;
-
-  if (!accBiasFound)
+  if (!accScaleFound)
   {
     accScaleSum += sqrtf(powf(ax * SENSORS_BMI088_G_PER_LSB_CFG, 2) + powf(ay * SENSORS_BMI088_G_PER_LSB_CFG, 2) + powf(az * SENSORS_BMI088_G_PER_LSB_CFG, 2));
     accScaleSumCount++;
@@ -873,11 +873,11 @@ static bool processAccScale(int16_t ax, int16_t ay, int16_t az)
     if (accScaleSumCount == SENSORS_ACC_SCALE_SAMPLES)
     {
       accScale = accScaleSum / SENSORS_ACC_SCALE_SAMPLES;
-      accBiasFound = true;
+      accScaleFound = true;
     }
   }
 
-  return accBiasFound;
+  return accScaleFound;
 }
 
 #ifdef GYRO_BIAS_LIGHT_WEIGHT
