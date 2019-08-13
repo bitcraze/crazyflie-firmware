@@ -15,8 +15,10 @@
   subs:
     - {page_id: sensor_to_control}
     - {page_id: ctrp_index}
+    - {page_id: deck_memory_format}
 - title: Development Instructions
   subs:
+    - {page_id: starting_development}
     - {page_id: howto}
     - {page_id: serial}
     - {page_id: openocd_gdb_debugging}
