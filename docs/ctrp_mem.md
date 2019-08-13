@@ -26,7 +26,7 @@ Getting information and reading/writing the memories is optional for the
 clients, but the -Crazyflie Python Client- always downloads information
 about the memories on connect.
 
-![](../images/ctrp_mem.png)
+![](images/ctrp_mem.png)
 
 Communication protocol
 ======================

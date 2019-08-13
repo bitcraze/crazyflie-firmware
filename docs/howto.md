@@ -133,4 +133,4 @@ $
 Now you can connect your Crazyflie with the client and see your driver
 in the console!
 
-![](../images/deckhelloconsole.png){:align-center}
+![](images/deckhelloconsole.png){:align-center}

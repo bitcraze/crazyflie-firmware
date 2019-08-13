@@ -29,7 +29,7 @@ Defined IDs:
  | ----| -----------------------------------------------------------------------|
  | 0   | [stop](#stop)|
  | 1   | [Velocity World](#velocity-world)|
-  |2   | [Z Distance](/#z-distance)|
+  |2   | [Z Distance](#z-distance)|
  | 3   | [CPPM Emulation](#cppm-emulation)|
  | 4   | [Altitude Hold](#altitude-hold)|
  | 5   | [Hover](#hover)|

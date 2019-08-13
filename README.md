@@ -124,7 +124,7 @@ DEBUG=1
 CLOAD=0
 ```
 More information can be found on the 
-[Bitcraze wiki](http://wiki.bitcraze.se/projects:crazyflie2:index)
+[Bitcraze wiki](http://wiki.bitcraze.io/projects:crazyflie2:index)
 
 ## Folder description:
 ```
