@@ -899,7 +899,7 @@ ITStatus CAN_GetITStatus(CAN_TypeDef* CANx, uint32_t CAN_IT)
 }
 
 /**
-  * @brief  Clears the CAN’s interrupt pending bits.
+  * @brief  Clears the CANï¿½s interrupt pending bits.
   * @param  CANx: where x can be 1 or 2 to to select the CAN peripheral.
   * @param  CAN_IT: specifies the interrupt pending bit to clear.
   * @retval None.

@@ -262,7 +262,7 @@ FlagStatus RTC_GetFlagStatus(uint16_t RTC_FLAG)
 }
 
 /**
-  * @brief  Clears the RTC’s pending flags.
+  * @brief  Clears the RTCï¿½s pending flags.
   * @param  RTC_FLAG: specifies the flag to clear.
   *   This parameter can be any combination of the following values:
   *     @arg RTC_FLAG_RSF: Registers Synchronized flag. This flag is cleared only after
@@ -309,7 +309,7 @@ ITStatus RTC_GetITStatus(uint16_t RTC_IT)
 }
 
 /**
-  * @brief  Clears the RTC’s interrupt pending bits.
+  * @brief  Clears the RTCï¿½s interrupt pending bits.
   * @param  RTC_IT: specifies the interrupt pending bit to clear.
   *   This parameter can be any combination of the following values:
   *     @arg RTC_IT_OW: Overflow interrupt

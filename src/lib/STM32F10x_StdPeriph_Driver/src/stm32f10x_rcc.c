@@ -864,7 +864,7 @@ void RCC_LSICmd(FunctionalState NewState)
 
 /**
   * @brief  Configures the RTC clock (RTCCLK).
-  * @note   Once the RTC clock is selected it can’t be changed unless the Backup domain is reset.
+  * @note   Once the RTC clock is selected it canï¿½t be changed unless the Backup domain is reset.
   * @param  RCC_RTCCLKSource: specifies the RTC clock source.
   *   This parameter can be one of the following values:
   *     @arg RCC_RTCCLKSource_LSE: LSE selected as RTC clock
@@ -1397,7 +1397,7 @@ ITStatus RCC_GetITStatus(uint8_t RCC_IT)
 }
 
 /**
-  * @brief  Clears the RCC’s interrupt pending bits.
+  * @brief  Clears the RCCï¿½s interrupt pending bits.
   * @param  RCC_IT: specifies the interrupt pending bit to clear.
   *   
   *   For @b STM32_Connectivity_line_devices, this parameter can be any combination

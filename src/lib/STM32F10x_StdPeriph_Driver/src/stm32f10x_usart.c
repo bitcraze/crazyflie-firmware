@@ -399,7 +399,7 @@ void USART_ITConfig(USART_TypeDef* USARTx, uint16_t USART_IT, FunctionalState Ne
 }
 
 /**
-  * @brief  Enables or disables the USART’s DMA interface.
+  * @brief  Enables or disables the USARTï¿½s DMA interface.
   * @param  USARTx: Select the USART or the UART peripheral. 
   *   This parameter can be one of the following values:
   *   USART1, USART2, USART3 or UART4.  
@@ -522,7 +522,7 @@ void USART_LINBreakDetectLengthConfig(USART_TypeDef* USARTx, uint16_t USART_LINB
 }
 
 /**
-  * @brief  Enables or disables the USART’s LIN mode.
+  * @brief  Enables or disables the USARTï¿½s LIN mode.
   * @param  USARTx: Select the USART or the UART peripheral. 
   *   This parameter can be one of the following values:
   *   USART1, USART2, USART3, UART4 or UART5.
@@ -637,7 +637,7 @@ void USART_SetPrescaler(USART_TypeDef* USARTx, uint8_t USART_Prescaler)
 }
 
 /**
-  * @brief  Enables or disables the USART’s Smart Card mode.
+  * @brief  Enables or disables the USARTï¿½s Smart Card mode.
   * @param  USARTx: where x can be 1, 2 or 3 to select the USART peripheral.
   * @param  NewState: new state of the Smart Card mode.
   *   This parameter can be: ENABLE or DISABLE.     
@@ -687,7 +687,7 @@ void USART_SmartCardNACKCmd(USART_TypeDef* USARTx, FunctionalState NewState)
 }
 
 /**
-  * @brief  Enables or disables the USART’s Half Duplex communication.
+  * @brief  Enables or disables the USARTï¿½s Half Duplex communication.
   * @param  USARTx: Select the USART or the UART peripheral. 
   *   This parameter can be one of the following values:
   *   USART1, USART2, USART3, UART4 or UART5.
@@ -714,7 +714,7 @@ void USART_HalfDuplexCmd(USART_TypeDef* USARTx, FunctionalState NewState)
 }
 
 /**
-  * @brief  Configures the USART’s IrDA interface.
+  * @brief  Configures the USARTï¿½s IrDA interface.
   * @param  USARTx: Select the USART or the UART peripheral. 
   *   This parameter can be one of the following values:
   *   USART1, USART2, USART3, UART4 or UART5.
@@ -735,7 +735,7 @@ void USART_IrDAConfig(USART_TypeDef* USARTx, uint16_t USART_IrDAMode)
 }
 
 /**
-  * @brief  Enables or disables the USART’s IrDA interface.
+  * @brief  Enables or disables the USARTï¿½s IrDA interface.
   * @param  USARTx: Select the USART or the UART peripheral. 
   *   This parameter can be one of the following values:
   *   USART1, USART2, USART3, UART4 or UART5.
@@ -910,7 +910,7 @@ ITStatus USART_GetITStatus(USART_TypeDef* USARTx, uint16_t USART_IT)
 }
 
 /**
-  * @brief  Clears the USARTx’s interrupt pending bits.
+  * @brief  Clears the USARTxï¿½s interrupt pending bits.
   * @param  USARTx: Select the USART or the UART peripheral. 
   *   This parameter can be one of the following values:
   *   USART1, USART2, USART3, UART4 or UART5.

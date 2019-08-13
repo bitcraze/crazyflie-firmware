@@ -76,7 +76,7 @@ typedef struct
                                              to the memory before getting the first data.
                                              The value of this parameter depends on the memory type as shown below:
                                               - It must be set to 0 in case of a CRAM
-                                              - It is don’t care in asynchronous NOR, SRAM or ROM accesses
+                                              - It is donï¿½t care in asynchronous NOR, SRAM or ROM accesses
                                               - It may assume a value between 0 and 0xF in NOR Flash memories
                                                 with synchronous burst mode enable */
 

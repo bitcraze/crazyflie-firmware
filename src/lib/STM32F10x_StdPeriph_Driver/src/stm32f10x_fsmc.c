@@ -723,7 +723,7 @@ FlagStatus FSMC_GetFlagStatus(uint32_t FSMC_Bank, uint32_t FSMC_FLAG)
 }
 
 /**
-  * @brief  Clears the FSMC’s pending flags.
+  * @brief  Clears the FSMCï¿½s pending flags.
   * @param  FSMC_Bank: specifies the FSMC Bank to be used
   *   This parameter can be one of the following values:
   *     @arg FSMC_Bank2_NAND: FSMC Bank2 NAND 
@@ -809,7 +809,7 @@ ITStatus FSMC_GetITStatus(uint32_t FSMC_Bank, uint32_t FSMC_IT)
 }
 
 /**
-  * @brief  Clears the FSMC’s interrupt pending bits.
+  * @brief  Clears the FSMCï¿½s interrupt pending bits.
   * @param  FSMC_Bank: specifies the FSMC Bank to be used
   *   This parameter can be one of the following values:
   *     @arg FSMC_Bank2_NAND: FSMC Bank2 NAND 
