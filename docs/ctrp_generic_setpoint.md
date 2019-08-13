@@ -11,7 +11,7 @@ format:
 
 |  Port  | Channel  | Name|
 |  ------| ---------| --------------------------------------------------|
-|  7     | 0        | [Generic setpoint](/doc/crazyflie/crtp/generic_setpoint#generic_setpoint)|
+|  7     | 0        | [Generic setpoint](#generic-setpoint)|
 
 Generic setpoint
 ----------------
@@ -27,14 +27,14 @@ Defined IDs:
 
  | ID  | Type|
  | ----| -----------------------------------------------------------------------|
- | 0   | [stop](/doc/crazyflie/crtp/generic_setpoint#stop)|
- | 1   | [Velocity World](/doc/crazyflie/crtp/generic_setpoint#velocity_world)|
-  |2   | [Z Distance](/doc/crazyflie/crtp/generic_setpoint#z_distance)|
- | 3   | [CPPM Emulation](/doc/crazyflie/crtp/generic_setpoint#cppm_emulation)|
- | 4   | [Altitude Hold](/doc/crazyflie/crtp/generic_setpoint#altitude_hold)|
- | 5   | [Hover](/doc/crazyflie/crtp/generic_setpoint#hover)|
- | 6   | [Full State](/doc/crazyflie/crtp/generic_setpoint#full_state)|
- | 7   | [Position](/doc/crazyflie/crtp/generic_setpoint#position)|
+ | 0   | [stop](#stop)|
+ | 1   | [Velocity World](#velocity-world)|
+  |2   | [Z Distance](/#z-distance)|
+ | 3   | [CPPM Emulation](#cppm-emulation)|
+ | 4   | [Altitude Hold](#altitude-hold)|
+ | 5   | [Hover](#hover)|
+ | 6   | [Full State](#full-state)|
+ | 7   | [Position](#position)|
 
 ### Stop
 

@@ -11,10 +11,10 @@ parameters:
 
 |  Port |  Channel  | Function |
 |  ------| ---------| --------------------------------------------------------------|
-|  2   |   0        | [TOC access](/doc/crazyflie/crtp/param#toc_access)|
-|  2   |   1        | [Parameter read](/doc/crazyflie/crtp/param#parameter_read)|
-|  2   |   2        | [Parameter write](/doc/crazyflie/crtp/param#parameter_write)|
-|  2   |   3        | [Misc. commands](/doc/crazyflie/crtp/param#misc_command)|
+|  2   |   0        | [TOC access](#toc-access)|
+|  2   |   1        | [Parameter read](#parameter-read)|
+|  2   |   2        | [Parameter write](#parameter-write)|
+|  2   |   3        | [Misc. commands](#misc-command)|
 
 TOC access
 ----------
@@ -118,7 +118,7 @@ The following misc commands are implemented:
 
 |  Code  | Command|
 |  ------| ------------------------------------------------------|
-|  0x00  | [Set by name](/doc/crazyflie/crtp/param#set_by_name)|
+|  0x00  | [Set by name](#set-by-name)|
 
 ### Set by name
 
