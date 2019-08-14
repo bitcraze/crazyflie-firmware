@@ -109,8 +109,11 @@ a breakpoints anywhere in the code (double clicking just in front of the
 line in the gray area or press Shift+Ctrl+B). Now you should be able to
 read out the values of the defined variables at that very position.
 
-\<WRAP center round important 60%\> Make sure that your cf2.elf is the
-same as the one you uploaded to the crazyflie. \</WRAP\>
+----
+ Make sure that your cf2.elf is the
+same as the one you uploaded to the crazyflie!
+
+---
 
 ### Mac OS
 

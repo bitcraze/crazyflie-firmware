@@ -4,7 +4,7 @@ page_id: ctrp_log
 ---
 
 For more information on how to use this and how this is implemented have
-a look [here](/projects/crazyflie/firmware/log).
+a look [here](/logparam/).
 
 State machines
 ==============
@@ -12,7 +12,7 @@ State machines
 Downloading the Table Of Contents
 ---------------------------------
 
-![](images/ctrp_log.png)
+![](/images/ctrp_log.png)
 
 Communication protocol
 ======================
