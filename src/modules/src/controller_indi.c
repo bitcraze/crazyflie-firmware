@@ -291,8 +291,8 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
 	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
 	  float rlim = bound_control_input - fabsf(indi.u_in.q);
-	  indi.u_in.r = clamp(-1.0f*indi.u_in.r, -rlim, rlim);
-	  indi.u_in.r = clamp(-1.0f*indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
+	  indi.u_in.r = clamp(indi.u_in.r, -rlim, rlim);
+	  indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 	}else{
 	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
 	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
