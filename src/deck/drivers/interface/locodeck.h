@@ -72,12 +72,12 @@ typedef struct {
   volatile uint16_t rangingState;
 
   // Requested and current ranging mode
-  lpsMode_t rangingMode;
+  lpsMode_t userRequestedMode;
   lpsMode_t currentRangingMode;
 
   // State of the ranging mode auto detection
-  bool rangingModeDetected;
-  bool autoStarted;
+  bool modeAutoSearchDoInitialize;
+  bool modeAutoSearchActive;
   uint32_t nextSwitchTick;
 } lpsAlgoOptions_t;
 
