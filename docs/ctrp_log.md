@@ -12,7 +12,7 @@ State machines
 Downloading the Table Of Contents
 ---------------------------------
 
-![](/images/ctrp_log.png)
+![ctrp log](/images/ctrp_log.png)
 
 Communication protocol
 ======================

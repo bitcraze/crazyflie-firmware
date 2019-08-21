@@ -21,7 +21,7 @@ Sensor fusion
 Rate- and attitude control
 ==========================
 
-![](/images/pid.png){:width="500"}
+![PID](/images/pid.png){:width="500"}
 
 Motor control
 =============
