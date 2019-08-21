@@ -83,9 +83,9 @@ DEBUG=1 allows to get more information from the Crazyflie console when
 it starts. Debug should not be enabled if you intend to fly the
 Crazyflie out of the lab (it disables the watchdog).
 
-\<WRAP center round info\> ***Note*** Each time you modify config.mk you
+**Note** Each time you modify config.mk you
 should recompile the full firmware by cleaning up the build folder with
-\'make clean\' \</WRAP\>
+\'make clean\'
 
 Compile, flash and run!
 -----------------------
@@ -133,4 +133,4 @@ $
 Now you can connect your Crazyflie with the client and see your driver
 in the console!
 
-![](images/deckhelloconsole.png){:align-center}
+![](/images/deckhelloconsole.png){:align-center}
