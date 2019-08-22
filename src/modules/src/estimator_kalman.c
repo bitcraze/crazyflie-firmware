@@ -58,7 +58,7 @@
 
 #include "kalman_core.h"
 #include "estimator_kalman.h"
-
+#include "kalman_supervisor.h"
 
 #include "stm32f4xx.h"
 
@@ -70,6 +70,9 @@
 #include "log.h"
 #include "param.h"
 #include "physicalConstants.h"
+
+#define DEBUG_MODULE "ESTKALMAN"
+#include "debug.h"
 
 
 // #define KALMAN_USE_BARO_UPDATE
@@ -408,6 +411,10 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   if (doneUpdate)
   {
     kalmanCoreFinalize(&coreData, sensors, osTick);
+    if (! kalmanSupervisorIsStateWithinBounds(&coreData)) {
+      coreData.resetEstimation = true;
+      DEBUG_PRINT("State out of bounds, resetting\n");
+    }
   }
 
   /**
@@ -416,21 +423,6 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
    */
   kalmanCoreExternalizeState(&coreData, state, sensors, osTick);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 void estimatorKalmanInit(void) {

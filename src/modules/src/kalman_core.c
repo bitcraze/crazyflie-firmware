@@ -106,7 +106,6 @@ static void assertStateNotNaN(kalmanCoreData_t* this) {
       (isnan(this->q[3])))
   {
     ASSERT(false);
-    // this->resetEstimation = true;
   }
 
   for(int i=0; i<KC_STATE_DIM; i++) {
@@ -115,7 +114,6 @@ static void assertStateNotNaN(kalmanCoreData_t* this) {
       if (isnan(this->P[i][j]))
       {
         ASSERT(false);
-        // this->resetEstimation = true;
       }
     }
   }
@@ -131,10 +129,6 @@ static void assertStateNotNaN(kalmanCoreData_t* this)
 // The bounds on the covariance, these shouldn't be hit, but sometimes are... why?
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
-
-// The bounds on states, these shouldn't be hit...
-#define MAX_POSITION (100) //meters
-#define MAX_VELOCITY (10) //meters per second
 
 // Initial variances, uncertain of position, but know we're stationary and roughly flat
 static const float stdDevInitialPosition_xy = 100;
@@ -933,16 +927,6 @@ void kalmanCoreFinalize(kalmanCoreData_t* this, sensorData_t *sensors, uint32_t 
   this->S[KC_STATE_D0] = 0;
   this->S[KC_STATE_D1] = 0;
   this->S[KC_STATE_D2] = 0;
-
-  // constrain the states
-  for (int i=0; i<3; i++)
-  {
-    if (this->S[KC_STATE_X+i] < -MAX_POSITION) { this->S[KC_STATE_X+i] = -MAX_POSITION; }
-    else if (this->S[KC_STATE_X+i] > MAX_POSITION) { this->S[KC_STATE_X+i] = MAX_POSITION; }
-
-    if (this->S[KC_STATE_PX+i] < -MAX_VELOCITY) { this->S[KC_STATE_PX+i] = -MAX_VELOCITY; }
-    else if (this->S[KC_STATE_PX+i] > MAX_VELOCITY) { this->S[KC_STATE_PX+i] = MAX_VELOCITY; }
-  }
 
   // enforce symmetry of the covariance matrix, and ensure the values stay bounded
   for (int i=0; i<KC_STATE_DIM; i++) {
