@@ -5,7 +5,7 @@ page_id: ctrp_mem
 
 
 Memory access is not used for the [Crazyflie Nano
-Quadcopter](/projects/crazyflie/index), it\'s currently only implemented
+Quadcopter](https://wiki.bitcraze.io/projects:crazyflie:index), it\'s currently only implemented
 in the Crazyflie 2.0. Using the memory access gives the possibility to:
 
 -   Get information about which memories are available

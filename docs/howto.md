@@ -5,7 +5,7 @@ page_id: howto
 
 This howto is going to describe step-by-step how to make and flash your
 first Crazyflie 2.X deck driver. See the deck [api documentation
-page](deck) for more information about the
+page](/deck/) for more information about the
 code.
 
 Development environment

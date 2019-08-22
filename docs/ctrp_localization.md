@@ -54,7 +54,7 @@ streams. The format of the packet is:
 
 Packet used to send LPP short packet to the loco positioning system. The
 payload is sent to the sytem as an [LPP Short
-Packet](https://www.bitcraze.io/docs/lps-node-firmware/lpp/).
+Packet](https://www.bitcraze.io/docs/lps-node-firmware/master/lpp/).
 
 ### Emergency stop
 

@@ -14,7 +14,7 @@ parameters:
 |  2   |   0        | [TOC access](#toc-access)|
 |  2   |   1        | [Parameter read](#parameter-read)|
 |  2   |   2        | [Parameter write](#parameter-write)|
-|  2   |   3        | [Misc. commands](#misc-command)|
+|  2   |   3        | [Misc. commands](#misc-commands)|
 
 TOC access
 ----------
