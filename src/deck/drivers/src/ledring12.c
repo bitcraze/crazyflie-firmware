@@ -696,6 +696,28 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
   }
 }
 
+/**
+ * An effect that shows the Lighthouse Reception Rate on the LED ring.
+ *
+ * Red means bad, green means good.
+ */
+static float badRate = 0, goodRate = 120;
+static void lighthouseRateEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+  static int posRtId;
+  float posRt;
+
+  posRtId = logGetVarId("lighthouse", "posRt"); //rate of successful retrieval of position data
+  posRt = logGetFloat(posRtId);
+
+  for (i = 0; i < NBR_LEDS; i++) {
+    buffer[i][0] = LIMIT(LINSCALE(badRate, goodRate, 255, 0, posRt)); // Red (bad)
+    buffer[i][1] = LIMIT(LINSCALE(badRate, goodRate, 0, 255, posRt)); // Green (good)
+    buffer[i][2] = 0; // Blue
+  }
+}
+
 /**************** Effect list ***************/
 
 
@@ -717,6 +739,7 @@ Ledring12Effect effectsFct[] =
   virtualMemEffect,
   fadeColorEffect,
   rssiEffect,
+  lighthouseRateEffect,
 };
 
 /********** Ring init and switching **********/
