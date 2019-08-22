@@ -81,9 +81,16 @@ struct param_s {
    { \
   .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
 
+// Fix to make unit tests run on MacOS
+#ifdef __APPLE__
+#define PARAM_GROUP_START(NAME)  \
+  static const struct param_s __params_##NAME[] __attribute__((section("__DATA,__.param." #NAME), used)) = { \
+  PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
+#else
 #define PARAM_GROUP_START(NAME)  \
   static const struct param_s __params_##NAME[] __attribute__((section(".param." #NAME), used)) = { \
   PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
+#endif
 
 //#define PARAM_GROUP_START_SYNC(NAME, LOCK) PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, LOCK);
 

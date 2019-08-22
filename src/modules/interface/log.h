@@ -74,6 +74,7 @@ struct log_s {
    { \
   .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
 
+// Fix to make unit tests run on MacOS
 #ifdef __APPLE__
 #define LOG_GROUP_START(NAME)  \
   static const struct log_s __logs_##NAME[] __attribute__((section("__DATA,__.log." #NAME), used)) = { \
