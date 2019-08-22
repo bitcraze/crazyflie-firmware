@@ -5,7 +5,7 @@ page_id: ctrp_mem
 
 
 Memory access is not used for the [Crazyflie Nano
-Quadcopter](/projects/crazyflie/index), it\'s currently only implemented
+Quadcopter](https://wiki.bitcraze.io/projects:crazyflie:index), it\'s currently only implemented
 in the Crazyflie 2.0. Using the memory access gives the possibility to:
 
 -   Get information about which memories are available
@@ -26,7 +26,7 @@ Getting information and reading/writing the memories is optional for the
 clients, but the -Crazyflie Python Client- always downloads information
 about the memories on connect.
 
-![](/images/ctrp_mem.png)
+![ctrp mem](/images/ctrp_mem.png)
 
 Communication protocol
 ======================

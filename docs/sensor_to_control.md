@@ -10,7 +10,7 @@ to understand the flow. Therefore this should be seen more as a map of
 where to look in the code to understand, than a complete documentation
 of each step.
 
-![](/images/sensor.png){:width="500"}
+![sensor](/images/sensor.png){:width="500"}
 
 Sensor acquisition
 ==================
@@ -21,7 +21,7 @@ Sensor fusion
 Rate- and attitude control
 ==========================
 
-![](/images/pid.png){:width="500"}
+![PID](/images/pid.png){:width="500"}
 
 Motor control
 =============

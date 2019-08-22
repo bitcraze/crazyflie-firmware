@@ -14,7 +14,7 @@ parameters:
 |  2   |   0        | [TOC access](#toc-access)|
 |  2   |   1        | [Parameter read](#parameter-read)|
 |  2   |   2        | [Parameter write](#parameter-write)|
-|  2   |   3        | [Misc. commands](#misc-command)|
+|  2   |   3        | [Misc. commands](#misc-commands)|
 
 TOC access
 ----------
@@ -56,17 +56,17 @@ The type is one byte describing the parameter type:
 
 |  Type code |  C type     | Python unpack |
 |  -----------| -----------| ---------------|
-| 0x08      |  uint8\_t  |  \'\<B\' |
-|  0x09      |  uint16\_t |  \'\<H\' |
-|  0x0A      |  uint32\_t |  \'\<L\' |
-|  0x0B      |  uint64\_t |  \'\<Q\' |
-|  0x00      |  int8\_t   |  \'\<b\' |
-|  0x01      |  int16\_t  |  \'\<h\' |
-|  0x02      |  int32\_t  |  \'\<i\' |
-|  0x03      |  int64\_t  |  \'\<q\' |
+| 0x08      |  uint8\_t   |  \'&lt;B \'| 
+|  0x09      |  uint16\_t |  \'&lt;H\' |
+|  0x0A      |  uint32\_t |  \'&lt;L\' |
+|  0x0B      |  uint64\_t |  \'&lt;Q\' |
+|  0x00      |  int8\_t   |  \'&lt;b\' |
+|  0x01      |  int16\_t  |  \'&lt;h\' |
+|  0x02      |  int32\_t  |  \'&lt;i\' |
+|  0x03      |  int64\_t  |  \'&lt;q\' |
 |  0x05      |  FP16      |  \'\'    |
-|  0x06      |  float     |  \'\<f\' |
-|  0x07      |  double    |  \'\<d\' |
+|  0x06      |  float     |  \'&lt;f\' |
+|  0x07      |  double    |  \'&lt;d\' |
 
 Parameter read
 --------------
@@ -143,7 +143,7 @@ The following misc commands are implemented:
 |  n-(n+1)       |  NULL           | 0|
 |  (n+1)-(n+m+1) |  name           | Name of the parameter|
 |  (n+m+2)       |  NULL           | 0|
-|  (n+m+3)       |  ERROR          | 0 if the parameter has been successfully written. Other code are taken from[errno C codes](http://www.virtsync.com/c-error-codes-include-errno). |
+|  (n+m+3)       |  ERROR          | 0 if the parameter has been successfully written. Other code are taken from [errno C codes](http://www.virtsync.com/c-error-codes-include-errno). |
 
 
 *Group* and *name* are ascii strings of size respectively *n* and *m*.

@@ -77,16 +77,15 @@ into eclipse:
 -   Double click \'GDB OpenOCD Debugging\'
 
 Now input the following settings in the debug configurations:
-
 ##### Main
 
-![](/images/stm_openocd_main.png)
+![stm openocd main](/images/stm_openocd_main.png)
 
 Insert the filepath to the cf2.elf file to *C/C++ Application*.
 
 ##### Debugger
 
-![](/images/stm_openocd_debugger.png)
+![stm openocd debug](/images/stm_openocd_debugger.png)
 
 check the following settings: OpenOCD setup -\> Config options: \<code\>
 -f interface/stlink-v2.cfg -f target/stm32f4x.cfg -c init -c targets
@@ -97,7 +96,7 @@ check the following settings: OpenOCD setup -\> Config options: \<code\>
 
 ##### Startup
 
-![](/images/stm_openocd_startup.png)
+![stm openocd startup](/images/stm_openocd_startup.png)
 
 ##### Hit Debug!
 
