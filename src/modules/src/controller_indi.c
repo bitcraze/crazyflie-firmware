@@ -25,7 +25,7 @@
 
 #include "controller_indi.h"
 
-static float thrust_threshold = 30000.0f;
+static float thrust_threshold = 3000.0f;
 static float bound_control_input = 32000.0f;
 
 struct IndiVariables indi = {
@@ -284,7 +284,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 	 indi.u_in.p = indi.u[0].o[0] + indi.du.p;
 	 indi.u_in.q = indi.u[1].o[0] + indi.du.q;
-	 indi.u_in.r = indi.u[2].o[0] + indi.du.r;
+	 indi.u_in.r = -indi.u[2].o[0] - indi.du.r;
 
 	  //bound the total control input
 	if(STABILIZATION_INDI_FULL_AUTHORITY){
