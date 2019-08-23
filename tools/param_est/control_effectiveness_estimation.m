@@ -26,9 +26,9 @@ clc
 clear all
 close all
 
-filename = 'identification.csv';
+filename = 'logData3.csv';
 
-frequency = 50;
+frequency = 500;
 
 %% Read in Data
 
