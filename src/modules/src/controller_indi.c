@@ -284,7 +284,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 	 indi.u_in.p = indi.u[0].o[0] + indi.du.p;
 	 indi.u_in.q = indi.u[1].o[0] + indi.du.q;
-	 indi.u_in.r = -indi.u[2].o[0] - indi.du.r;
+	 indi.u_in.r = indi.u[2].o[0] + indi.du.r;
 
 	  //bound the total control input
 	if(STABILIZATION_INDI_FULL_AUTHORITY){
@@ -311,13 +311,15 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
 	 if(indi.thrust < thrust_threshold) {
-		 float_rates_zero(&indi.du);
+		 /*float_rates_zero(&indi.du);
 		 float_rates_zero(&indi.u_act_dyn);
-		 float_rates_zero(&indi.u_in);
-	 } else {
+		 float_rates_zero(&indi.u_in);*/
+
+		 controllerINDIInit();
+	 } /* else {
 	   // only run the estimation if the commands are not zero.
 	   lms_estimation(stateAttitudeRateRoll, stateAttitudeRatePitch, stateAttitudeRateYaw);
-	 }
+	 } */
 
 	 /*  INDI feedback */
 	 control->thrust = indi.thrust;
