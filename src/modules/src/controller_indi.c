@@ -25,7 +25,7 @@
 
 #include "controller_indi.h"
 
-static float thrust_threshold = 3000.0f;
+static float thrust_threshold = 300.0f;
 static float bound_control_input = 32000.0f;
 
 struct IndiVariables indi = {
