@@ -106,88 +106,6 @@ static inline void finite_difference_from_filter(float *output, Butterworth2LowP
   }
 }
 
-/**
- * @brief Calculate derivative of an array via finite difference
- *
- * @param output[3] The output array
- * @param new[3] The newest values
- * @param old[3] The values of the previous timestep
- */
-static inline void finite_difference(float output[3], float new[3], float old[3])
-{
-  for (int8_t i = 0; i < 3; i++) {
-    output[i] = (new[i] - old[i])*ATTITUDE_RATE;
-  }
-}
-
-/** a = b */
-static inline void float_vect_copy(float *a, const float *b, const int n)
-{
-  int i;
-  for (i = 0; i < n; i++) { a[i] = b[i]; }
-}
-
-/** a *= s */
-static inline void float_vect_scale(float *a, const float s, const int n)
-{
-  int i;
-  for (i = 0; i < n; i++) { a[i] *= s; }
-}
-
-/**
- * This is a Least Mean Squares adaptive filter
- * It estimates the actuator effectiveness online, by comparing the expected
- * angular acceleration based on the inputs with the measured angular
- * acceleration
- */
-static inline void lms_estimation(float stateAttitudeRateRoll, float stateAttitudeRatePitch, float stateAttitudeRateYaw)
-{
-  static struct IndiEstimation *est = &indi.est;
-  // Only pass really low frequencies so you don't adapt to noise
-  struct FloatRates body_rates = {
-			  .p = stateAttitudeRateRoll,
-			  .q = stateAttitudeRatePitch,
-			  .r = stateAttitudeRateYaw,
-  };
-  filter_pqr(est->u, &indi.u_act_dyn);
-  filter_pqr(est->rate, &body_rates);
-
-  // Calculate the first and second derivatives of the rates and actuators
-  float rate_d_prev[3];
-  float u_d_prev[3];
-  float_vect_copy(rate_d_prev, est->rate_d, 3);
-  float_vect_copy(u_d_prev, est->u_d, 3);
-  finite_difference_from_filter(est->rate_d, est->rate);
-  finite_difference_from_filter(est->u_d, est->u);
-  finite_difference(est->rate_dd, est->rate_d, rate_d_prev);
-  finite_difference(est->u_dd, est->u_d, u_d_prev);
-
-  // The inputs are scaled in order to avoid overflows
-  float du[3];
-  float_vect_copy(du, est->u_d, 3);
-  float_vect_scale(du, INDI_EST_SCALE, 3);
-  est->g1.p = est->g1.p - (est->g1.p * du[0] - est->rate_dd[0]) * du[0] * est->mu;
-  est->g1.q = est->g1.q - (est->g1.q * du[1] - est->rate_dd[1]) * du[1] * est->mu;
-  float ddu = est->u_dd[2] * INDI_EST_SCALE / ATTITUDE_RATE;
-  float error = (est->g1.r * du[2] + est->g2 * ddu - est->rate_dd[2]);
-  est->g1.r = est->g1.r - error * du[2] * est->mu / 3.0f;
-  est->g2 = est->g2 - error * 1000.0f * ddu * est->mu / 3.0f;
-
-  //the g values should be larger than zero, otherwise there is positive feedback, the command will go to max and there is nothing to learn anymore...
-  if (est->g1.p < 0.01f) { est->g1.p = 0.01f; }
-  if (est->g1.q < 0.01f) { est->g1.q = 0.01f; }
-  if (est->g1.r < 0.01f) { est->g1.r = 0.01f; }
-  if (est->g2   < 0.01f) { est->g2 = 0.01f; }
-
-  if (indi.adaptive) {
-    //Commit the estimated G values and apply the scaling
-    indi.g1.p = est->g1.p * INDI_EST_SCALE;
-    indi.g1.q = est->g1.q * INDI_EST_SCALE;
-    indi.g1.r = est->g1.r * INDI_EST_SCALE;
-    indi.g2   = est->g2 * INDI_EST_SCALE;
-  }
-}
-
 void controllerINDIInit(void)
 {
 	/*
@@ -310,17 +228,10 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 //Don't increment if thrust is off
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
-
 	 if(indi.thrust < thrust_threshold) {
-		 /*float_rates_zero(&indi.du);
-		 float_rates_zero(&indi.u_act_dyn);
-		 float_rates_zero(&indi.u_in);*/
 
 		 controllerINDIInit();
-	 } /* else {
-	   // only run the estimation if the commands are not zero.
-	   lms_estimation(stateAttitudeRateRoll, stateAttitudeRatePitch, stateAttitudeRateYaw);
-	 } */
+	 }
 
 	 /*  INDI feedback */
 	 control->thrust = indi.thrust;
