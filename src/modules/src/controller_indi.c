@@ -27,7 +27,7 @@
 #include "position_controller.h"
 
 static float thrust_threshold = 300.0f;
-static float bound_control_input = 32000.0f;
+static float bound_control_input = 20000.0f;
 
 static struct IndiVariables indi = {
   .max_rate = STABILIZATION_INDI_MAX_RATE,
@@ -311,6 +311,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 //Don't increment if thrust is off
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
+
 	 if(indi.thrust < thrust_threshold) {
 		 /*float_rates_zero(&indi.du);
 		 float_rates_zero(&indi.u_act_dyn);
