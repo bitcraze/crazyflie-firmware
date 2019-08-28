@@ -24,11 +24,12 @@
  */
 
 #include "controller_indi.h"
+#include "position_controller.h"
 
 static float thrust_threshold = 300.0f;
 static float bound_control_input = 32000.0f;
 
-struct IndiVariables indi = {
+static struct IndiVariables indi = {
   .max_rate = STABILIZATION_INDI_MAX_RATE,
   .attitude_max_yaw_rate = STABILIZATION_INDI_MAX_R,
 
