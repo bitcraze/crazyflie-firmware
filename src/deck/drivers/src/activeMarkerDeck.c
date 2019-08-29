@@ -40,7 +40,7 @@ static bool isInit = false;
 static uint8_t currentId[LED_COUNT] = {0xff, 0xff, 0xff, 0xff};
 static uint8_t requestedId[LED_COUNT] = {1, 3, 4, 2}; // 1 to 4, clockwise
 
-#define DECK_I2C_ADDRESS 22
+#define DECK_I2C_ADDRESS 0x2E
 
 static xTimerHandle timer;
 
@@ -69,7 +69,7 @@ static void timerHandler(xTimerHandle timer) {
 
 static void writeToDeck(const uint8_t led, const uint8_t id) {
   uint8_t buf[] = {led, id};
-  bool status = i2cdevWrite(I2C1_DEV, DECK_I2C_ADDRESS, sizeof(buf), buf);
+  i2cdevWrite(I2C1_DEV, DECK_I2C_ADDRESS, sizeof(buf), buf);
 }
 
 
