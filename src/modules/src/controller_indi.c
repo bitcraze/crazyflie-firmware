@@ -29,16 +29,16 @@ static float thrust_threshold = 300.0f;
 static float bound_control_input = 20000.0f;
 
 static struct IndiVariables indi = {
-  .g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
-  .g2 = STABILIZATION_INDI_G2_R,
-  .reference_acceleration = {
-		  STABILIZATION_INDI_REF_ERR_P,
-		  STABILIZATION_INDI_REF_ERR_Q,
-		  STABILIZATION_INDI_REF_ERR_R,
-		  STABILIZATION_INDI_REF_RATE_P,
-		  STABILIZATION_INDI_REF_RATE_Q,
-		  STABILIZATION_INDI_REF_RATE_R
-  },
+		.g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
+		.g2 = STABILIZATION_INDI_G2_R,
+		.reference_acceleration = {
+				STABILIZATION_INDI_REF_ERR_P,
+				STABILIZATION_INDI_REF_ERR_Q,
+				STABILIZATION_INDI_REF_ERR_R,
+				STABILIZATION_INDI_REF_RATE_P,
+				STABILIZATION_INDI_REF_RATE_Q,
+				STABILIZATION_INDI_REF_RATE_R
+		},
 };
 
 static inline void float_rates_zero(struct FloatRates *fr) {
@@ -49,16 +49,16 @@ static inline void float_rates_zero(struct FloatRates *fr) {
 
 void indi_init_filters(void)
 {
-  // tau = 1/(2*pi*Fc)
-  float tau = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF);
-  float tau_r = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF_R);
-  float tau_axis[3] = {tau, tau, tau_r};
-  float sample_time = 1.0f / ATTITUDE_RATE;
-  // Filtering of gyroscope and actuators
-  for (int8_t i = 0; i < 3; i++) {
-    init_butterworth_2_low_pass(&indi.u[i], tau_axis[i], sample_time, 0.0f);
-    init_butterworth_2_low_pass(&indi.rate[i], tau_axis[i], sample_time, 0.0f);
-  }
+	// tau = 1/(2*pi*Fc)
+	float tau = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF);
+	float tau_r = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF_R);
+	float tau_axis[3] = {tau, tau, tau_r};
+	float sample_time = 1.0f / ATTITUDE_RATE;
+	// Filtering of gyroscope and actuators
+	for (int8_t i = 0; i < 3; i++) {
+		init_butterworth_2_low_pass(&indi.u[i], tau_axis[i], sample_time, 0.0f);
+		init_butterworth_2_low_pass(&indi.rate[i], tau_axis[i], sample_time, 0.0f);
+	}
 }
 
 /**
@@ -69,9 +69,9 @@ void indi_init_filters(void)
  */
 static inline void filter_pqr(Butterworth2LowPass *filter, struct FloatRates *new_values)
 {
-  update_butterworth_2_low_pass(&filter[0], new_values->p);
-  update_butterworth_2_low_pass(&filter[1], new_values->q);
-  update_butterworth_2_low_pass(&filter[2], new_values->r);
+	update_butterworth_2_low_pass(&filter[0], new_values->p);
+	update_butterworth_2_low_pass(&filter[1], new_values->q);
+	update_butterworth_2_low_pass(&filter[2], new_values->r);
 }
 
 /**
@@ -83,9 +83,9 @@ static inline void filter_pqr(Butterworth2LowPass *filter, struct FloatRates *ne
  */
 static inline void finite_difference_from_filter(float *output, Butterworth2LowPass *filter)
 {
-  for (int8_t i = 0; i < 3; i++) {
-    output[i] = (filter[i].o[0] - filter[i].o[1]) * ATTITUDE_RATE;
-  }
+	for (int8_t i = 0; i < 3; i++) {
+		output[i] = (filter[i].o[0] - filter[i].o[1]) * ATTITUDE_RATE;
+	}
 }
 
 void controllerINDIInit(void)
@@ -109,65 +109,74 @@ bool controllerINDITest(void)
 }
 
 void controllerINDI(control_t *control, setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const uint32_t tick)
+		const sensorData_t *sensors,
+		const state_t *state,
+		const uint32_t tick)
 {
 
 	/*
 	 * Skipping calls faster than ATTITUDE_RATE
 	 */
-	if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
-	    return;
-	}
+	 if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
+		 return;
+	 }
 
-	/*
-	 * 1 - Update the gyro filter with the new measurements.
-	 */
+	 /*
+	  * 1 - Update the gyro filter with the new measurements.
+	  */
 
-	float stateAttitudeRateRoll = radians(sensors->gyro.x);
-	float stateAttitudeRatePitch = -radians(sensors->gyro.y);
-	float stateAttitudeRateYaw = radians(sensors->gyro.z);
+	 float stateAttitudeRateRoll = radians(sensors->gyro.x);
+	 float stateAttitudeRatePitch = -radians(sensors->gyro.y);
+	 float stateAttitudeRateYaw = radians(sensors->gyro.z);
 
 	 struct FloatRates body_rates = {
-			  .p = stateAttitudeRateRoll,
-			  .q = stateAttitudeRatePitch,
-			  .r = stateAttitudeRateYaw,
+			 .p = stateAttitudeRateRoll,
+			 .q = stateAttitudeRatePitch,
+			 .r = stateAttitudeRateYaw,
 	 };
 	 filter_pqr(indi.rate, &body_rates);
 
 
-	/*
-	 * 2 - Calculate the derivative with finite difference.
-	 */
+	 /*
+	  * 2 - Calculate the derivative with finite difference.
+	  */
 
 	 finite_difference_from_filter(indi.rate_d, indi.rate);
 
 
-	/*
-	 * 3 - same filter on the actuators (or control_t values), using the commands from the previous timestep.
-	 */
+	 /*
+	  * 3 - same filter on the actuators (or control_t values), using the commands from the previous timestep.
+	  */
 	 filter_pqr(indi.u, &indi.u_act_dyn);
 
 
-	/*
-	 * 4 - Calculate the desired angular acceleration by:
-	 * 4.1 - Rate_reference = P * attitude_error, where attitude error can be calculated with your favorite
-	 * algorithm. You may even use a function that is already there, such as attitudeControllerCorrectAttitudePID(),
-	 * though this will be inaccurate for large attitude errors, but it will be ok for now.
-	 * 4.2 Angular_acceleration_reference = D * (rate_reference – rate_measurement)
-	 */
+	 /*
+	  * 4 - Calculate the desired angular acceleration by:
+	  * 4.1 - Rate_reference = P * attitude_error, where attitude error can be calculated with your favorite
+	  * algorithm. You may even use a function that is already there, such as attitudeControllerCorrectAttitudePID(),
+	  * though this will be inaccurate for large attitude errors, but it will be ok for now.
+	  * 4.2 Angular_acceleration_reference = D * (rate_reference – rate_measurement)
+	  */
 	 float referenceAttitudeRateRoll = radians(setpoint->attitudeRate.roll);
 	 float referenceAttitudeRatePitch = -radians(setpoint->attitudeRate.pitch);
 	 float referenceAttitudeRateYaw = radians(setpoint->attitudeRate.yaw);
 
-	 indi.angular_accel_ref.p = indi.reference_acceleration.rate_p * (referenceAttitudeRateRoll - body_rates.p);
-	 indi.angular_accel_ref.q = indi.reference_acceleration.rate_q * (referenceAttitudeRatePitch - body_rates.q);
-	 indi.angular_accel_ref.r = indi.reference_acceleration.rate_r * (referenceAttitudeRateYaw - body_rates.r);
+	 float attitude_error_p = referenceAttitudeRateRoll - stateAttitudeRateRoll;
+	 float attitude_error_q = referenceAttitudeRatePitch - stateAttitudeRatePitch;
+	 float attitude_error_r = referenceAttitudeRateYaw - stateAttitudeRateYaw;
 
-	/*
-	 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
-	 */
+	 indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p
+			 - indi.reference_acceleration.rate_p * body_rates.p;
+
+	 indi.angular_accel_ref.q = indi.reference_acceleration.err_q * attitude_error_q
+			 - indi.reference_acceleration.rate_q * body_rates.q;
+
+	 indi.angular_accel_ref.r = indi.reference_acceleration.err_r * attitude_error_r
+			 - indi.reference_acceleration.rate_r * body_rates.r;
+
+	 /*
+	  * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
+	  */
 
 	 //Increment in angular acceleration requires increment in control input
 	 //G1 is the control effectiveness. In the yaw axis, we need something additional: G2.
@@ -178,9 +187,9 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 indi.du.r = 1.0f / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate_d[2] + indi.g2 * indi.du.r);
 
 
-	/*
-	 * 6. Add delta_commands to commands and bound to allowable values
-	*/
+	 /*
+	  * 6. Add delta_commands to commands and bound to allowable values
+	  */
 
 	 indi.u_in.p = indi.u[0].o[0] + indi.du.p;
 	 indi.u_in.q = indi.u[1].o[0] + indi.du.q;
