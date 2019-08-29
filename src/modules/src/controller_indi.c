@@ -145,116 +145,116 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	/*
 	 * Skipping calls faster than ATTITUDE_RATE
 	 */
-	if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
-		return;
+	if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
+
+		// Switch between manual and automatic position control
+		if (setpoint->mode.z == modeDisable) {
+			actuatorThrust = setpoint->thrust;
+		}
+		if (setpoint->mode.x == modeDisable || setpoint->mode.y == modeDisable) {
+			attitudeDesired.roll = setpoint->attitude.roll;
+			attitudeDesired.pitch = setpoint->attitude.pitch;
+		}
+
+		attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
+				attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
+				&rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
+
+		// For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint
+		// value. Also reset the PID to avoid error buildup, which can lead to unstable
+		// behavior if level mode is engaged later
+		if (setpoint->mode.roll == modeVelocity) {
+			rateDesired.roll = setpoint->attitudeRate.roll;
+			attitudeControllerResetRollAttitudePID();
+		}
+		if (setpoint->mode.pitch == modeVelocity) {
+			rateDesired.pitch = setpoint->attitudeRate.pitch;
+			attitudeControllerResetPitchAttitudePID();
+		}
+
+		/*
+		 * 1 - Update the gyro filter with the new measurements.
+		 */
+
+		float stateAttitudeRateRoll = radians(sensors->gyro.x);
+		float stateAttitudeRatePitch = -radians(sensors->gyro.y); // Account for Crazyflie coordinate system
+		float stateAttitudeRateYaw = radians(sensors->gyro.z);
+
+		struct FloatRates body_rates = {
+				.p = stateAttitudeRateRoll,
+				.q = stateAttitudeRatePitch,
+				.r = stateAttitudeRateYaw,
+		};
+		filter_pqr(indi.rate, &body_rates);
+
+
+		/*
+		 * 2 - Calculate the derivative with finite difference.
+		 */
+
+		finite_difference_from_filter(indi.rate_d, indi.rate);
+
+
+		/*
+		 * 3 - same filter on the actuators (or control_t values), using the commands from the previous timestep.
+		 */
+		filter_pqr(indi.u, &indi.u_act_dyn);
+
+
+		/*
+		 * 4 - Calculate the desired angular acceleration by:
+		 * 4.1 - Rate_reference = P * attitude_error, where attitude error can be calculated with your favorite
+		 * algorithm. You may even use a function that is already there, such as attitudeControllerCorrectAttitudePID(),
+		 * though this will be inaccurate for large attitude errors, but it will be ok for now.
+		 * 4.2 Angular_acceleration_reference = D * (rate_reference – rate_measurement)
+		 */
+
+		float attitude_error_p = radians(rateDesired.roll) - stateAttitudeRateRoll;
+		float attitude_error_q = - radians(rateDesired.pitch) - stateAttitudeRatePitch; // Account for Crazyflie coordinate system
+		float attitude_error_r = radians(rateDesired.yaw) - stateAttitudeRateYaw;
+
+		indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p
+				- indi.reference_acceleration.rate_p * body_rates.p;
+
+		indi.angular_accel_ref.q = indi.reference_acceleration.err_q * attitude_error_q
+				- indi.reference_acceleration.rate_q * body_rates.q;
+
+		indi.angular_accel_ref.r = indi.reference_acceleration.err_r * attitude_error_r
+				- indi.reference_acceleration.rate_r * body_rates.r;
+
+		/*
+		 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
+		 */
+
+		//Increment in angular acceleration requires increment in control input
+		//G1 is the control effectiveness. In the yaw axis, we need something additional: G2.
+		//It takes care of the angular acceleration caused by the change in rotation rate of the propellers
+		//(they have significant inertia, see the paper mentioned in the header for more explanation)
+		indi.du.p = 1.0f / indi.g1.p * (indi.angular_accel_ref.p - indi.rate_d[0]);
+		indi.du.q = 1.0f / indi.g1.q * (indi.angular_accel_ref.q - indi.rate_d[1]);
+		indi.du.r = 1.0f / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate_d[2] + indi.g2 * indi.du.r);
+
+
+		/*
+		 * 6. Add delta_commands to commands and bound to allowable values
+		 */
+
+		indi.u_in.p = indi.u[0].o[0] + indi.du.p;
+		indi.u_in.q = indi.u[1].o[0] + indi.du.q;
+		indi.u_in.r = indi.u[2].o[0] + indi.du.r;
+
+		//bound the total control input
+		indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
+		indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
+		indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
+
+		//Propagate input filters
+		//first order actuator dynamics
+		indi.u_act_dyn.p = indi.u_act_dyn.p + STABILIZATION_INDI_ACT_DYN_P * (indi.u_in.p - indi.u_act_dyn.p);
+		indi.u_act_dyn.q = indi.u_act_dyn.q + STABILIZATION_INDI_ACT_DYN_Q * (indi.u_in.q - indi.u_act_dyn.q);
+		indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
+
 	}
-
-	// Switch between manual and automatic position control
-	if (setpoint->mode.z == modeDisable) {
-		actuatorThrust = setpoint->thrust;
-	}
-	if (setpoint->mode.x == modeDisable || setpoint->mode.y == modeDisable) {
-		attitudeDesired.roll = setpoint->attitude.roll;
-		attitudeDesired.pitch = setpoint->attitude.pitch;
-	}
-
-	attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
-			attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
-			&rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
-
-	// For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint
-	// value. Also reset the PID to avoid error buildup, which can lead to unstable
-	// behavior if level mode is engaged later
-	if (setpoint->mode.roll == modeVelocity) {
-		rateDesired.roll = setpoint->attitudeRate.roll;
-		attitudeControllerResetRollAttitudePID();
-	}
-	if (setpoint->mode.pitch == modeVelocity) {
-		rateDesired.pitch = setpoint->attitudeRate.pitch;
-		attitudeControllerResetPitchAttitudePID();
-	}
-
-	/*
-	 * 1 - Update the gyro filter with the new measurements.
-	 */
-
-	float stateAttitudeRateRoll = radians(sensors->gyro.x);
-	float stateAttitudeRatePitch = -radians(sensors->gyro.y); // Account for Crazyflie coordinate system
-	float stateAttitudeRateYaw = radians(sensors->gyro.z);
-
-	struct FloatRates body_rates = {
-			.p = stateAttitudeRateRoll,
-			.q = stateAttitudeRatePitch,
-			.r = stateAttitudeRateYaw,
-	};
-	filter_pqr(indi.rate, &body_rates);
-
-
-	/*
-	 * 2 - Calculate the derivative with finite difference.
-	 */
-
-	finite_difference_from_filter(indi.rate_d, indi.rate);
-
-
-	/*
-	 * 3 - same filter on the actuators (or control_t values), using the commands from the previous timestep.
-	 */
-	filter_pqr(indi.u, &indi.u_act_dyn);
-
-
-	/*
-	 * 4 - Calculate the desired angular acceleration by:
-	 * 4.1 - Rate_reference = P * attitude_error, where attitude error can be calculated with your favorite
-	 * algorithm. You may even use a function that is already there, such as attitudeControllerCorrectAttitudePID(),
-	 * though this will be inaccurate for large attitude errors, but it will be ok for now.
-	 * 4.2 Angular_acceleration_reference = D * (rate_reference – rate_measurement)
-	 */
-
-	float attitude_error_p = radians(rateDesired.roll) - stateAttitudeRateRoll;
-	float attitude_error_q = - radians(rateDesired.pitch) - stateAttitudeRatePitch; // Account for Crazyflie coordinate system
-	float attitude_error_r = radians(rateDesired.yaw) - stateAttitudeRateYaw;
-
-	indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p
-			- indi.reference_acceleration.rate_p * body_rates.p;
-
-	indi.angular_accel_ref.q = indi.reference_acceleration.err_q * attitude_error_q
-			- indi.reference_acceleration.rate_q * body_rates.q;
-
-	indi.angular_accel_ref.r = indi.reference_acceleration.err_r * attitude_error_r
-			- indi.reference_acceleration.rate_r * body_rates.r;
-
-	/*
-	 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
-	 */
-
-	//Increment in angular acceleration requires increment in control input
-	//G1 is the control effectiveness. In the yaw axis, we need something additional: G2.
-	//It takes care of the angular acceleration caused by the change in rotation rate of the propellers
-	//(they have significant inertia, see the paper mentioned in the header for more explanation)
-	indi.du.p = 1.0f / indi.g1.p * (indi.angular_accel_ref.p - indi.rate_d[0]);
-	indi.du.q = 1.0f / indi.g1.q * (indi.angular_accel_ref.q - indi.rate_d[1]);
-	indi.du.r = 1.0f / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate_d[2] + indi.g2 * indi.du.r);
-
-
-	/*
-	 * 6. Add delta_commands to commands and bound to allowable values
-	 */
-
-	indi.u_in.p = indi.u[0].o[0] + indi.du.p;
-	indi.u_in.q = indi.u[1].o[0] + indi.du.q;
-	indi.u_in.r = indi.u[2].o[0] + indi.du.r;
-
-	//bound the total control input
-	indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
-	indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
-	indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
-
-	//Propagate input filters
-	//first order actuator dynamics
-	indi.u_act_dyn.p = indi.u_act_dyn.p + STABILIZATION_INDI_ACT_DYN_P * (indi.u_in.p - indi.u_act_dyn.p);
-	indi.u_act_dyn.q = indi.u_act_dyn.q + STABILIZATION_INDI_ACT_DYN_Q * (indi.u_in.q - indi.u_act_dyn.q);
-	indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
 
 	indi.thrust = actuatorThrust;
 
@@ -266,11 +266,13 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		float_rates_zero(&indi.u_act_dyn);
 		float_rates_zero(&indi.u_in);
 
-		attitudeControllerResetAllPID();
-		positionControllerResetAllPID();
+		if(indi.thrust == 0){
+			attitudeControllerResetAllPID();
+			positionControllerResetAllPID();
 
-		// Reset the calculated YAW angle for rate control
-		attitudeDesired.yaw = state->attitude.yaw;
+			// Reset the calculated YAW angle for rate control
+			attitudeDesired.yaw = state->attitude.yaw;
+		}
 	}
 
 	/*  INDI feedback */
