@@ -89,7 +89,7 @@ G_specific_force = cmd_filtd(:,1)\accelzd_filt;
 %% Plotting
 disp('Fill in these values in your airframe file:')
 %disp(['G_roll = ' num2str(G_roll) ' G_pitch = ' num2str(G_pitch) ' G1_yaw = ' num2str(G_yaw(1)) ' G2_yaw = ' num2str(G_yaw(2)*1000) ' Specific_force_gain = ' num2str(1/G_specific_force)])
-disp(['G_roll = ' num2str(G_roll) ' G_pitch = ' num2str(G_pitch) ' G1_yaw = ' num2str(G_yaw(1)) ' G2_yaw = ' num2str(G_yaw(2)) ])
+disp(['G_roll = ' num2str(G_roll) ' G_pitch = ' num2str(G_pitch) ' G1_yaw = ' num2str(G_yaw(1)) ' G2_yaw = ' num2str(G_yaw(2)*1000) ])
 
 figure;
 plot(angular_accel_filtd(:,1)); hold on
