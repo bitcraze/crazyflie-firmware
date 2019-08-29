@@ -31,6 +31,10 @@
 #include "math3d.h"
 #include "log.h"
 #include "param.h"
+#include "position_controller.h"
+#include "attitude_controller.h"
+
+#define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
 
 #define PI 3.14159265358979323846f
 
