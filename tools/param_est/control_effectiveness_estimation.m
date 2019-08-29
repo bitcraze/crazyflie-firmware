@@ -58,7 +58,7 @@ accelz = dataArray{1, 9}(1:N); %accel body z
 
 % The filter needed to get rid of the noise on the gyro
 [b, a] = butter(4,4/(frequency/2));
-first_order_dynamics_constant = .1;
+first_order_dynamics_constant = 0.03149;
 
 % Filter the stabilization command with the actuator dynamics to get an
 % estimate of the actuator state
