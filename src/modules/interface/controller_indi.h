@@ -34,20 +34,13 @@
 
 #define PI 3.14159265358979323846f
 
-//The G values are scaled to avoid numerical problems during the estimation
-#define INDI_EST_SCALE 0.001f
-
 // these parameters are used in the filtering of the angular acceleration
 #define STABILIZATION_INDI_FILT_CUTOFF 8.0f
 
 // the yaw sometimes requires more filtering
 #define STABILIZATION_INDI_FILT_CUTOFF_R STABILIZATION_INDI_FILT_CUTOFF
 
-#define STABILIZATION_INDI_ESTIMATION_FILT_CUTOFF 4.0f
-
 // these parameters are used in the filtering of the angular acceleration
-#define STABILIZATION_INDI_MAX_RATE 6.0f
-#define STABILIZATION_INDI_MAX_R 120.0f
 #define STABILIZATION_INDI_G1_P 0.0016046f
 #define STABILIZATION_INDI_G1_Q 0.0023808f
 #define STABILIZATION_INDI_G1_R -0.0016934f
@@ -58,9 +51,6 @@
 #define STABILIZATION_INDI_REF_RATE_P 14.0f
 #define STABILIZATION_INDI_REF_RATE_Q 14.0f
 #define STABILIZATION_INDI_REF_RATE_R 14.0f
-#define STABILIZATION_INDI_USE_ADAPTIVE true
-#define STABILIZATION_INDI_ADAPTIVE_MU 0.0001f
-#define STABILIZATION_INDI_FULL_AUTHORITY false
 #define STABILIZATION_INDI_ACT_DYN_P 0.03149f
 #define STABILIZATION_INDI_ACT_DYN_Q 0.03149f
 #define STABILIZATION_INDI_ACT_DYN_R 0.03149f
@@ -83,18 +73,6 @@ struct ReferenceSystem {
   float rate_r;
 };
 
-struct IndiEstimation {
-  Butterworth2LowPass u[3];
-  Butterworth2LowPass rate[3];
-  float rate_d[3];
-  float rate_dd[3];
-  float u_d[3];
-  float u_dd[3];
-  struct FloatRates g1;
-  float g2;
-  float mu;
-};
-
 struct IndiVariables {
   float thrust;
   struct FloatRates angular_accel_ref;
@@ -109,11 +87,6 @@ struct IndiVariables {
   float g2;
 
   struct ReferenceSystem reference_acceleration;
-
-  bool adaptive;             ///< Enable adataptive estimation
-  float max_rate;            ///< Maximum rate in rate control in rad/s
-  float attitude_max_yaw_rate; ///< Maximum yaw rate in atttiude control in rad/s
-  struct IndiEstimation est; ///< Estimation parameters for adaptive INDI
 };
 
 void controllerINDIInit(void);

@@ -29,31 +29,16 @@ static float thrust_threshold = 300.0f;
 static float bound_control_input = 20000.0f;
 
 static struct IndiVariables indi = {
-  .max_rate = STABILIZATION_INDI_MAX_RATE,
-  .attitude_max_yaw_rate = STABILIZATION_INDI_MAX_R,
-
   .g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
   .g2 = STABILIZATION_INDI_G2_R,
   .reference_acceleration = {
-    STABILIZATION_INDI_REF_ERR_P,
-    STABILIZATION_INDI_REF_ERR_Q,
-    STABILIZATION_INDI_REF_ERR_R,
-    STABILIZATION_INDI_REF_RATE_P,
-    STABILIZATION_INDI_REF_RATE_Q,
-    STABILIZATION_INDI_REF_RATE_R
+		  STABILIZATION_INDI_REF_ERR_P,
+		  STABILIZATION_INDI_REF_ERR_Q,
+		  STABILIZATION_INDI_REF_ERR_R,
+		  STABILIZATION_INDI_REF_RATE_P,
+		  STABILIZATION_INDI_REF_RATE_Q,
+		  STABILIZATION_INDI_REF_RATE_R
   },
-
-  /* Estimation parameters for adaptive INDI */
-  .est = {
-    .g1 = {
-      STABILIZATION_INDI_G1_P / INDI_EST_SCALE,
-      STABILIZATION_INDI_G1_Q / INDI_EST_SCALE,
-      STABILIZATION_INDI_G1_R / INDI_EST_SCALE
-    },
-    .g2 = STABILIZATION_INDI_G2_R / INDI_EST_SCALE,
-    .mu = STABILIZATION_INDI_ADAPTIVE_MU,
-  },
-  .adaptive = STABILIZATION_INDI_USE_ADAPTIVE,
 };
 
 static inline void float_rates_zero(struct FloatRates *fr) {
@@ -68,14 +53,11 @@ void indi_init_filters(void)
   float tau = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF);
   float tau_r = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF_R);
   float tau_axis[3] = {tau, tau, tau_r};
-  float tau_est = 1.0f / (2.0f * PI * STABILIZATION_INDI_ESTIMATION_FILT_CUTOFF);
   float sample_time = 1.0f / ATTITUDE_RATE;
   // Filtering of gyroscope and actuators
   for (int8_t i = 0; i < 3; i++) {
     init_butterworth_2_low_pass(&indi.u[i], tau_axis[i], sample_time, 0.0f);
     init_butterworth_2_low_pass(&indi.rate[i], tau_axis[i], sample_time, 0.0f);
-    init_butterworth_2_low_pass(&indi.est.u[i], tau_est, sample_time, 0.0f);
-    init_butterworth_2_low_pass(&indi.est.rate[i], tau_est, sample_time, 0.0f);
   }
 }
 
@@ -204,18 +186,10 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 indi.u_in.q = indi.u[1].o[0] + indi.du.q;
 	 indi.u_in.r = indi.u[2].o[0] + indi.du.r;
 
-	  //bound the total control input
-	if(STABILIZATION_INDI_FULL_AUTHORITY){
-	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
-	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
-	  float rlim = bound_control_input - fabsf(indi.u_in.q);
-	  indi.u_in.r = clamp(indi.u_in.r, -rlim, rlim);
-	  indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
-	}else{
-	  indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
-	  indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
-	  indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
-	}
+	 //bound the total control input
+	 indi.u_in.p = clamp(indi.u_in.p, -1.0f*bound_control_input, bound_control_input);
+	 indi.u_in.q = clamp(indi.u_in.q, -1.0f*bound_control_input, bound_control_input);
+	 indi.u_in.r = clamp(indi.u_in.r, -1.0f*bound_control_input, bound_control_input);
 
 	 //Propagate input filters
 	 //first order actuator dynamics
@@ -229,8 +203,9 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	 //TODO: this should be something more elegant, but without this the inputs
 	 //will increment to the maximum before even getting in the air.
 	 if(indi.thrust < thrust_threshold) {
-
-		 controllerINDIInit();
+		 float_rates_zero(&indi.angular_accel_ref);
+		 float_rates_zero(&indi.u_act_dyn);
+		 float_rates_zero(&indi.u_in);
 	 }
 
 	 /*  INDI feedback */
@@ -241,9 +216,18 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 }
 
 PARAM_GROUP_START(ctrlINDI)
-PARAM_ADD(PARAM_UINT8, adptive, &indi.adaptive)
 PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
+PARAM_ADD(PARAM_FLOAT, g1_p, &indi.g1.p)
+PARAM_ADD(PARAM_FLOAT, g1_q, &indi.g1.q)
+PARAM_ADD(PARAM_FLOAT, g1_r, &indi.g1.r)
+PARAM_ADD(PARAM_FLOAT, g2, &indi.g2)
+PARAM_ADD(PARAM_FLOAT, ref_err_p, &indi.reference_acceleration.err_p)
+PARAM_ADD(PARAM_FLOAT, ref_err_q, &indi.reference_acceleration.err_q)
+PARAM_ADD(PARAM_FLOAT, ref_err_r, &indi.reference_acceleration.err_r)
+PARAM_ADD(PARAM_FLOAT, ref_rate_p, &indi.reference_acceleration.rate_p)
+PARAM_ADD(PARAM_FLOAT, ref_rate_q, &indi.reference_acceleration.rate_q)
+PARAM_ADD(PARAM_FLOAT, ref_rate_r, &indi.reference_acceleration.rate_r)
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
