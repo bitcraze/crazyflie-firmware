@@ -91,6 +91,9 @@ struct IndiVariables {
   float g2;
 
   struct ReferenceSystem reference_acceleration;
+  struct FloatRates act_dyn;
+  float filt_cutoff;
+  float filt_cutoff_r;
 };
 
 void controllerINDIInit(void);
