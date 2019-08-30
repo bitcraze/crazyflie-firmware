@@ -43,6 +43,9 @@ static struct IndiVariables indi = {
 				STABILIZATION_INDI_REF_RATE_Q,
 				STABILIZATION_INDI_REF_RATE_R
 		},
+		.act_dyn = {STABILIZATION_INDI_ACT_DYN_P, STABILIZATION_INDI_ACT_DYN_Q, STABILIZATION_INDI_ACT_DYN_R},
+		.filt_cutoff = STABILIZATION_INDI_FILT_CUTOFF,
+		.filt_cutoff_r = STABILIZATION_INDI_FILT_CUTOFF_R,
 };
 
 static inline void float_rates_zero(struct FloatRates *fr) {
@@ -54,8 +57,8 @@ static inline void float_rates_zero(struct FloatRates *fr) {
 void indi_init_filters(void)
 {
 	// tau = 1/(2*pi*Fc)
-	float tau = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF);
-	float tau_r = 1.0f / (2.0f * PI * STABILIZATION_INDI_FILT_CUTOFF_R);
+	float tau = 1.0f / (2.0f * PI * indi.filt_cutoff);
+	float tau_r = 1.0f / (2.0f * PI * indi.filt_cutoff_r);
 	float tau_axis[3] = {tau, tau, tau_r};
 	float sample_time = 1.0f / ATTITUDE_RATE;
 	// Filtering of gyroscope and actuators
@@ -250,9 +253,9 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 		//Propagate input filters
 		//first order actuator dynamics
-		indi.u_act_dyn.p = indi.u_act_dyn.p + STABILIZATION_INDI_ACT_DYN_P * (indi.u_in.p - indi.u_act_dyn.p);
-		indi.u_act_dyn.q = indi.u_act_dyn.q + STABILIZATION_INDI_ACT_DYN_Q * (indi.u_in.q - indi.u_act_dyn.q);
-		indi.u_act_dyn.r = indi.u_act_dyn.r + STABILIZATION_INDI_ACT_DYN_R * (indi.u_in.r - indi.u_act_dyn.r);
+		indi.u_act_dyn.p = indi.u_act_dyn.p + indi.act_dyn.p * (indi.u_in.p - indi.u_act_dyn.p);
+		indi.u_act_dyn.q = indi.u_act_dyn.q + indi.act_dyn.q * (indi.u_in.q - indi.u_act_dyn.q);
+		indi.u_act_dyn.r = indi.u_act_dyn.r + indi.act_dyn.r * (indi.u_in.r - indi.u_act_dyn.r);
 
 	}
 
@@ -295,6 +298,11 @@ PARAM_ADD(PARAM_FLOAT, ref_err_r, &indi.reference_acceleration.err_r)
 PARAM_ADD(PARAM_FLOAT, ref_rate_p, &indi.reference_acceleration.rate_p)
 PARAM_ADD(PARAM_FLOAT, ref_rate_q, &indi.reference_acceleration.rate_q)
 PARAM_ADD(PARAM_FLOAT, ref_rate_r, &indi.reference_acceleration.rate_r)
+PARAM_ADD(PARAM_FLOAT, act_dyn_p, &indi.act_dyn.p)
+PARAM_ADD(PARAM_FLOAT, act_dyn_q, &indi.act_dyn.q)
+PARAM_ADD(PARAM_FLOAT, act_dyn_r, &indi.act_dyn.r)
+PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
+PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
@@ -314,10 +322,4 @@ LOG_ADD(LOG_FLOAT, ang_accel_ref.r, &indi.angular_accel_ref.r)
 LOG_ADD(LOG_FLOAT, rate_d[0], &indi.rate_d[0])
 LOG_ADD(LOG_FLOAT, rate_d[1], &indi.rate_d[1])
 LOG_ADD(LOG_FLOAT, rate_d[2], &indi.rate_d[2])
-LOG_ADD(LOG_FLOAT, ref_accel.err_p, &indi.reference_acceleration.err_p)
-LOG_ADD(LOG_FLOAT, ref_accel.err_q, &indi.reference_acceleration.err_q)
-LOG_ADD(LOG_FLOAT, ref_accel.err_r, &indi.reference_acceleration.err_r)
-LOG_ADD(LOG_FLOAT, ref_accel.rate_p, &indi.reference_acceleration.rate_p)
-LOG_ADD(LOG_FLOAT, ref_accel.rate_q, &indi.reference_acceleration.rate_q)
-LOG_ADD(LOG_FLOAT, ref_accel.rate_r, &indi.reference_acceleration.rate_r)
 LOG_GROUP_STOP(ctrlINDI)
