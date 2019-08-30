@@ -97,6 +97,10 @@ static float cmd_thrust;
 static float cmd_roll;
 static float cmd_pitch;
 static float cmd_yaw;
+static float r_roll;
+static float r_pitch;
+static float r_yaw;
+static float accelz;
 
 void controllerMellingerReset(void)
 {
@@ -291,6 +295,10 @@ void controllerMellinger(control_t *control, setpoint_t *setpoint,
   }
 
   cmd_thrust = control->thrust;
+  r_roll = radians(sensors->gyro.x);
+  r_pitch = -radians(sensors->gyro.y);
+  r_yaw = radians(sensors->gyro.z);
+  accelz = sensors->acc.z;
 
   if (control->thrust > 0) {
     control->roll = clamp(M.x, -32000, 32000);
@@ -341,6 +349,10 @@ LOG_ADD(LOG_FLOAT, cmd_thrust, &cmd_thrust)
 LOG_ADD(LOG_FLOAT, cmd_roll, &cmd_roll)
 LOG_ADD(LOG_FLOAT, cmd_pitch, &cmd_pitch)
 LOG_ADD(LOG_FLOAT, cmd_yaw, &cmd_yaw)
+LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
+LOG_ADD(LOG_FLOAT, accelz, &accelz)
 LOG_ADD(LOG_FLOAT, zdx, &z_axis_desired.x)
 LOG_ADD(LOG_FLOAT, zdy, &z_axis_desired.y)
 LOG_ADD(LOG_FLOAT, zdz, &z_axis_desired.z)
