@@ -69,6 +69,8 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
 
+#define LH_FPGA_RESET DECK_GPIO_RX2
+
 static bool isInit = false;
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
@@ -199,6 +201,15 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   estimatorEnqueuePosition(&ext_pos);
 }
 
+void fpgaTriggerReset(void)
+{
+  pinMode(LH_FPGA_RESET, OUTPUT);
+  digitalWrite(LH_FPGA_RESET, 0);
+  vTaskDelay(M2T(10));
+  digitalWrite(LH_FPGA_RESET, 1);
+  pinMode(LH_FPGA_RESET, INPUT);
+}
+
 static void lighthouseTask(void *param)
 {
   bool synchronized = false;
@@ -211,6 +222,8 @@ static void lighthouseTask(void *param)
   int axis;
 
   systemWaitStart();
+
+  fpgaTriggerReset();
 
 #ifdef LH_FLASH_DECK
   // Flash deck bootloader using SPI (factory and recovery flashing)
