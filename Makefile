@@ -107,6 +107,9 @@ PROJ_OBJ += diskio_function_tests.o
 CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
+#mymathlib.com
+VPATH += $(LIB)/mymathlib.com
+
 # Crazyflie sources
 VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/bosch/src src/drivers/src src/platform
 
@@ -237,6 +240,9 @@ PROJ_OBJ += SEGGER_RTT.o SEGGER_RTT_printf.o
 CFLAGS += -DDEBUG_PRINT_ON_SEGGER_RTT
 endif
 
+# mymathlib.com
+PROJ_OBJ += singular_value_decomposition.o
+
 # Libs
 PROJ_OBJ += libarm_math.a
 
@@ -267,6 +273,7 @@ INCLUDES += -Ivendor/libdw1000/inc
 INCLUDES += -I$(LIB)/FatFS
 INCLUDES += -I$(LIB)/vl53l1
 INCLUDES += -I$(LIB)/vl53l1/core/inc
+INCLUDES += -I$(LIB)/mymathlib.com
 
 ifeq ($(DEBUG), 1)
   CFLAGS += -O0 -g3 -DDEBUG
