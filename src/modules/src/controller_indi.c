@@ -35,6 +35,11 @@ static float roll_kp = 6.0f;
 static float pitch_kp = 6.0f;
 static float yaw_kp = 6.0f;
 
+static float r_roll;
+static float r_pitch;
+static float r_yaw;
+static float accelz;
+
 static struct IndiVariables indi = {
 		.g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
 		.g2 = STABILIZATION_INDI_G2_R,
@@ -267,6 +272,10 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	}
 
 	indi.thrust = actuatorThrust;
+	r_roll = radians(sensors->gyro.x);
+	r_pitch = -radians(sensors->gyro.y);
+	r_yaw = radians(sensors->gyro.z);
+	accelz = sensors->acc.z;
 
 	//Don't increment if thrust is off
 	//TODO: this should be something more elegant, but without this the inputs
@@ -320,6 +329,10 @@ LOG_ADD(LOG_FLOAT, cmd_thrust, &indi.thrust)
 LOG_ADD(LOG_FLOAT, cmd_roll, &indi.u_in.p)
 LOG_ADD(LOG_FLOAT, cmd_pitch, &indi.u_in.q)
 LOG_ADD(LOG_FLOAT, cmd_yaw, &indi.u_in.r)
+LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
+LOG_ADD(LOG_FLOAT, accelz, &accelz)
 LOG_ADD(LOG_FLOAT, u_act_dyn.p, &indi.u_act_dyn.p)
 LOG_ADD(LOG_FLOAT, u_act_dyn.q, &indi.u_act_dyn.q)
 LOG_ADD(LOG_FLOAT, u_act_dyn.r, &indi.u_act_dyn.r)
