@@ -26,7 +26,7 @@ clc
 clear all
 close all
 
-filename = 'logData5.csv';
+filename = 'logDataMel4.csv';
 
 frequency = 500;
 
