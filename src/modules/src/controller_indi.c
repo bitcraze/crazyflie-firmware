@@ -26,11 +26,14 @@
 #include "controller_indi.h"
 
 static float thrust_threshold = 300.0f;
-static float bound_control_input = 20000.0f;
+static float bound_control_input = 32000.0f;
 
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
+static float roll_kp = 6.0f;
+static float pitch_kp = 6.0f;
+static float yaw_kp = 6.0f;
 
 static struct IndiVariables indi = {
 		.g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
@@ -159,9 +162,13 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 			attitudeDesired.pitch = setpoint->attitude.pitch;
 		}
 
-		attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
-				attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
-				&rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
+//	    attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
+//	                                attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
+//	                                &rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
+
+		rateDesired.roll = roll_kp*(attitudeDesired.roll - state->attitude.roll);
+		rateDesired.pitch = pitch_kp*(attitudeDesired.pitch - state->attitude.pitch);
+		rateDesired.yaw = yaw_kp*(attitudeDesired.yaw - state->attitude.yaw);
 
 		// For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint
 		// value. Also reset the PID to avoid error buildup, which can lead to unstable
@@ -213,7 +220,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		 */
 
 		float attitude_error_p = radians(rateDesired.roll) - stateAttitudeRateRoll;
-		float attitude_error_q = - radians(rateDesired.pitch) - stateAttitudeRatePitch; // Account for Crazyflie coordinate system
+		float attitude_error_q = radians(rateDesired.pitch) - stateAttitudeRatePitch;
 		float attitude_error_r = radians(rateDesired.yaw) - stateAttitudeRateYaw;
 
 		indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p
@@ -288,6 +295,9 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 PARAM_GROUP_START(ctrlINDI)
 PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
+PARAM_ADD(PARAM_FLOAT, roll_kp, &roll_kp)
+PARAM_ADD(PARAM_FLOAT, pitch_kp, &pitch_kp)
+PARAM_ADD(PARAM_FLOAT, yaw_kp, &yaw_kp)
 PARAM_ADD(PARAM_FLOAT, g1_p, &indi.g1.p)
 PARAM_ADD(PARAM_FLOAT, g1_q, &indi.g1.q)
 PARAM_ADD(PARAM_FLOAT, g1_r, &indi.g1.r)
