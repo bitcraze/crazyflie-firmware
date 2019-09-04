@@ -135,8 +135,6 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 {
 
 
-
-
 	vec3d orig1;
 	memcpy(orig1, _orig1, sizeof(vec3d));
 
@@ -152,9 +150,6 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	vec3d D;
 	memcpy(D, _D, sizeof(vec3d));
 
-	arm_matrix_instance_f32 orig0_mat = {3, 1, orig0};
-	arm_matrix_instance_f32 orig1_mat = {3, 1, orig1};
-
 
 //	vec3d orig0;
 //	memcpy(orig0, rays[0].origin, sizeof(vec3d));
@@ -165,20 +160,15 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 //	memcpy(orig1, rays[1].origin, sizeof(vec3d));
 //			vec3d orig1 = {2.375781, 2.739366, 1.372339};
 
-	vec3d w = {};
 
-
+	vec3d w;
 	arm_sub_f32(orig1, orig0, w, vec3d_size);
-
-
-
-
-
 
 
 	vec3d wD;
 	arm_matrix_instance_f32 wD_mat = {3, 1, wD};
 	arm_sub_f32(w, D, wD, vec3d_size);
+
 
 	vec3d Dw;
 	arm_matrix_instance_f32 Dw_mat = {3, 1, Dw};
@@ -186,10 +176,9 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 
 
 //	vec3d u;
+//	vec3d u = {0.79735142, -0.581848264, 0.160261855};
 //	memcpy(u, rays[0].direction, sizeof(vec3d));
-//			vec3d u = {0.79735142, -0.581848264, 0.160261855};
 	arm_matrix_instance_f32 u_mat = {3, 1, u};
-
 	// arm_matrix_instance_f32 u_mat = {3, 1, rays[0].direction}; //can work
 
 
@@ -198,12 +187,11 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	arm_mat_trans_f32(&u_mat, &u_t_mat);
 
 
-	// arm_matrix_instance_f32 v_mat = {3, 1, rays[1].direction}; //cannot work
-
 //	vec3d v;
+//	vec3d v = {-0.47880125, -0.564612567, -0.672280788};
 //	memcpy(v, rays[1].direction, sizeof(vec3d));
-//			vec3d v = {-0.47880125, -0.564612567, -0.672280788};
 	arm_matrix_instance_f32 v_mat = {3, 1, v};
+// arm_matrix_instance_f32 v_mat = {3, 1, rays[1].direction}; //cannot work
 
 
 	float32_t m[1];
@@ -215,40 +203,36 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	arm_matrix_instance_f32 Dw_t_mat = {1, 3, Dw_t};
 	arm_mat_trans_f32(&Dw_mat, &Dw_t_mat);
 
+
 	float32_t c[1];
 	arm_matrix_instance_f32 c_mat = {1, 1, c};
 	arm_mat_mult_f32(&Dw_t_mat, &v_mat, &c_mat);
+
 
 	vec3d vc;
 	arm_matrix_instance_f32 vc_mat = {3, 1, vc};
 	arm_mat_mult_f32(&v_mat, &c_mat, &vc_mat);
 
+
 	vec3d vm;
 	arm_matrix_instance_f32 vm_mat = {3, 1, vm};
 	arm_mat_mult_f32(&v_mat, &m_mat, &vm_mat);
 
-//			#define N_ROWS 3
-//			#define N_COLS 3
-
-//			float A[N_ROWS][N_COLS] =  {
-//				{ 2.8282, 0, 0},
-//				{-2.4898, 0, 0},
-//				{ 0.0768, 0, 0},
-//			};
-
-	#define N_ROWS 3
-	#define N_COLS 1
 
 	vec3d A;
 	arm_matrix_instance_f32 A_mat = {3, 1, A};
 	arm_sub_f32(u, vm, A, vec3d_size);
 
+
 	vec3d B;
 	arm_matrix_instance_f32 B_mat = {3, 1, B};
 	arm_add_f32(wD, vc, B, vec3d_size);
 
-	float x0[N_COLS];
+
+	float x0[1];
 	arm_matrix_instance_f32 x0_mat = {1, 1, x0};
+
+
 
 
 
@@ -262,6 +246,10 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 //void linsolve(const arm_matrix_instance_f32 * A_mat, const arm_matrix_instance_f32 * B_mat, arm_matrix_instance_f32 * x0_mat){
 //
 //	float32_t *A = A_mat->pData;
+
+	#define N_ROWS 3
+	#define N_COLS 1
+
 
 	float U[N_ROWS][N_COLS];
 	float singular_values[N_COLS];
@@ -286,11 +274,12 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 		//		printf("failed to converge");
  		return false;
 	}
-	/*
-  float tolerance = 0.0001f;
+
 
 	arm_matrix_instance_f32 U_mat = {N_ROWS, N_COLS, U};
 
+
+  float tolerance = 0.0001f;
 	float D_inv[N_COLS];
   for ( uint8_t i = 0; i < N_COLS; i++ ) {
   	if(singular_values[i] >= tolerance){
@@ -299,11 +288,12 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
   }
 	arm_matrix_instance_f32 D_inv_mat = {N_COLS, N_COLS, D_inv};
 
+
 	arm_matrix_instance_f32 V_mat = {N_COLS, N_COLS, V};
+
 
 	float VD_inv[N_COLS];
 	arm_matrix_instance_f32 VD_inv_mat = {N_COLS, N_COLS, VD_inv};
-
 	arm_mat_mult_f32(&V_mat, &D_inv_mat, &VD_inv_mat);
 
 
@@ -314,8 +304,8 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 
 	float A_inv[N_COLS][N_ROWS];
 	arm_matrix_instance_f32 A_inv_mat = {N_COLS, N_ROWS, A_inv};
-
 	arm_mat_mult_f32(&VD_inv_mat, &U_t_mat, &A_inv_mat);
+
 
 //	float x0[N_COLS];
 //	arm_matrix_instance_f32 x0_mat = {N_COLS, N_COLS, x0};
@@ -323,60 +313,16 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 
 	arm_mat_mult_f32(&A_inv_mat, &B_mat, &x0_mat);
 
-/*
-	float x0[N_COLS];
-	float tolerance = 0.0001f;
-
-//			float U_[3][3] = {
-//				{0.7504 , 0.6607,  -0.0204},
-//				{-0.6607 , 0.7506,  0.0077},
-//				{ 0.0204,  0.0077, 	0.9998}
-//			};
-
-	float U_[3][1] = {
-			{-0.729786634, 0.681639731, -0.052715674}
-	};
-
-	float D_[1] = {1/0.986955404};
-//			float D_[1] = {0.986955404};
-
-	float V_[1][1] = {
-			{-1}
-	};
-
-	Singular_Value_Decomposition_Solve(&U_, &D_, &V_, tolerance, 3, 1, &B, &x0);
-
-*/
 
 
 
-
-
-//
-//		  float N1[3][3] = {
-//		  		{-1, 0, 0},
-//					{ 0, 1, 0},
-//					{ 0, 0, 1}
-//		  };
-//
-//
-//		  // vec3d U = {};
-//			arm_matrix_instance_f32 U_mat = {3, 1, U};
-//
-//			arm_matrix_instance_f32 N1_mat = {3, 3, N1};
-//		  vec3d U_N1 = {};
-//			arm_matrix_instance_f32 U_N1_mat = {3, 1, U_N1};
-//
-//			arm_mat_mult_f32(&U_mat, &N1_mat, &U_N1_mat);
-//
-//
-//			Singular_Value_Decomposition_Solve(&U_N1, &singular_values, &V, tolerance, N_ROWS, N_COLS, &B, &x0);
 
 
 
 	float mx0[N_COLS];
 	arm_matrix_instance_f32 mx0_mat = {1, 1, mx0};
 	arm_mat_mult_f32(&m_mat, &x0_mat, &mx0_mat);
+
 
 	float x1[N_COLS];
 	arm_matrix_instance_f32 x1_mat = {1, 1, x1};
@@ -387,27 +333,31 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	arm_matrix_instance_f32 ux0_mat = {3, 1, ux0};
 	arm_mat_mult_f32(&u_mat, &x0_mat, &ux0_mat);
 
+
 	vec3d vx1;
 	arm_matrix_instance_f32 vx1_mat = {3, 1, vx1};
 	arm_mat_mult_f32(&v_mat, &x1_mat, &vx1_mat);
 
 
+	arm_matrix_instance_f32 orig0_mat = {3, 1, orig0};
+
+
+	arm_matrix_instance_f32 orig1_mat = {3, 1, orig1};
+
+
 	arm_matrix_instance_f32 pt0_mat = {3, 1, pt0};
 	arm_mat_add_f32(&orig0_mat, &ux0_mat, &pt0_mat);
-
 //	vec3d pt0;
 //  arm_add_f32(orig0, ux0, pt0, vec3d_size);
 //	memcpy(_pt0, pt0, sizeof(vec3d));
 
+
 	arm_matrix_instance_f32 pt1_mat = {3, 1, pt1};
 	arm_mat_add_f32(&orig1_mat, &vx1_mat, &pt1_mat);
-
 //	vec3d pt1;
 //  arm_add_f32(orig1, vx1, pt1, vec3d_size);
 //	memcpy(_pt1, pt1, sizeof(vec3d));
 
-
-	*/
 
 	return true;
 }
