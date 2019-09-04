@@ -15,4 +15,4 @@ void calc_ray_vec(baseStationGeometry_t *bs, float angle1, float angle2, vec3d r
 
 bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta);
 
-void lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, vec3d _v, vec3d _D, vec3d pt0, vec3d pt1);
+bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, vec3d _v, vec3d _D, vec3d pt0, vec3d pt1);

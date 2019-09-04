@@ -131,7 +131,7 @@ bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float 
   return intersect_lines(origin1, ray1, origin2, ray2, position, position_delta);
 }
 
-void lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, vec3d _v, vec3d _D, vec3d pt0, vec3d pt1)
+bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, vec3d _v, vec3d _D, vec3d pt0, vec3d pt1)
 {
 
 
@@ -266,12 +266,27 @@ void lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	float U[N_ROWS][N_COLS];
 	float singular_values[N_COLS];
 	float V[N_COLS][N_COLS];
-	float dummy_array[N_COLS];
+//	float dummy_array[N_COLS];
+//  int svdError = Singular_Value_Decomposition(&A, N_ROWS, N_COLS, &U, &singular_values, &V, &dummy_array);
 
 
-  Singular_Value_Decomposition(&A, N_ROWS, N_COLS, &U, &singular_values, &V, &dummy_array);
+	float* dummy_array;
+	dummy_array = (float*) malloc(N_COLS * sizeof(float));
+	if (dummy_array == NULL) {
+		//	 printf(" No memory available");
+		return false;
+	}
+	int svdError = Singular_Value_Decomposition((float*)A, N_ROWS, N_COLS, (float*)U, singular_values, (float*)V, dummy_array);
 
 
+	if (svdError == 0) {
+		//		success
+		//		printf("success");
+	}else{
+		//		printf("failed to converge");
+ 		return false;
+	}
+	/*
   float tolerance = 0.0001f;
 
 	arm_matrix_instance_f32 U_mat = {N_ROWS, N_COLS, U};
@@ -391,5 +406,8 @@ void lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 //  arm_add_f32(orig1, vx1, pt1, vec3d_size);
 //	memcpy(_pt1, pt1, sizeof(vec3d));
 
-  return;
+
+	*/
+
+	return true;
 }
