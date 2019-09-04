@@ -254,8 +254,9 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					hasBothAxis = false;
 				}else {
 					uint32_t deltaTimestamp = startT - angleTimestamp;
-					if(deltaTimestamp > 1000){ //if not fresh enough
-						hasBothAxis = false;
+					if(deltaTimestamp > 17){ //previous readings cannot be older than 1 cycle (more accurately 1/60*1000)
+//					if(deltaTimestamp > 34){//previous readings cannot be older than 2 cycles (more accurately 1/60*1000)
+						hasBothAxis = false; //should be 60hz per sensor
 					}
 				}
 
@@ -424,15 +425,14 @@ static void lighthouseTask(void *param)
       	// an angle was successfully measured
         frameCount++;
 
+//				estimatePosition2(&ppState, angles);
+
         if (basestation == 1 && axis == 1) { // 4 frames per cycle: BS0-AX0, BS0-AX1, BS1-AX0, BS1-AX1
           cycleCount++;
 
 
           pulseProcessorApplyCalibration(&ppState, angles);
           estimatePosition(angles);
-//					pulseProcessorApplyCalibration2(&ppState, angles, basestation, frame.sensor);
-//					estimatePosition2(&ppState, angles);
-//
           for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
             angles[sensor].validCount = 0;
           }
