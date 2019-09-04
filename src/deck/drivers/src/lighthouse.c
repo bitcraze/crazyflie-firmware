@@ -186,18 +186,23 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
 
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-      if (angles[sensor].validCount == 4) {
-        lighthouseGeometryGetPosition(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta);
+	  positionsIsValid[sensor] = false;
+		if (angles[sensor].validCount == 4) { //single sensor has gotten x & y axis from both basestations (2*2=4)
+			//it is possible to get position from single basestation, using multiple sensors
+			lighthouseGeometryGetPosition(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta); //requires two base stations to be in view
 
-        deltaLog = delta;
+			deltaLog = delta;
 
-        ext_pos.x -= position[2];
-        ext_pos.y -= position[0];
-        ext_pos.z += position[1];
-        sensorsUsed++;
+			memcpy(positions[sensor], position, vec3d_size);
+			positionsIsValid[sensor] = true;
 
-        positionCount++;
-      }
+			ext_pos.x -= position[2];
+			ext_pos.y -= position[0];
+			ext_pos.z += position[1];
+			sensorsUsed++;
+
+			positionCount++;
+		}
   }
 
   ext_pos.x /= sensorsUsed;
