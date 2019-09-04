@@ -17,16 +17,16 @@
 #define MAX_ITERATION_COUNT 30   // Maximum number of iterations
 
 //                        Internally Defined Routines 
-static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,
-    int ncols, double* U, double* V, double* diagonal, double* superdiagonal );
+static void Householders_Reduction_to_Bidiagonal_Form(float* A, int nrows,
+    int ncols, float* U, float* V, float* diagonal, float* superdiagonal );
 static int  Givens_Reduction_to_Diagonal_Form( int nrows, int ncols,
-           double* U, double* V, double* diagonal, double* superdiagonal );
+           float* U, float* V, float* diagonal, float* superdiagonal );
 static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
-                                double* singular_value, double* U, double* V);
+                                float* singular_value, float* U, float* V);
 
 ////////////////////////////////////////////////////////////////////////////////
-//  int Singular_Value_Decomposition(double* A, int nrows, int ncols,         //
-//        double* U, double* singular_values, double* V, double* dummy_array) //
+//  int Singular_Value_Decomposition(float* A, int nrows, int ncols,         //
+//        float* U, float* singular_values, float* V, float* dummy_array) //
 //                                                                            //
 //  Description:                                                              //
 //     This routine decomposes an m x n matrix A, with m >= n, into a product //
@@ -61,29 +61,29 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 //     of A.                                                                  //
 //                                                                            //
 //  Arguments:                                                                //
-//     double* A                                                              //
+//     float* A                                                              //
 //        On input, the pointer to the first element of the matrix            //
 //        A[nrows][ncols].  The matrix A is unchanged.                        //
 //     int nrows                                                              //
 //        The number of rows of the matrix A.                                 //
 //     int ncols                                                              //
 //        The number of columns of the matrix A.                              //
-//     double* U                                                              //
+//     float* U                                                              //
 //        On input, a pointer to a matrix with the same number of rows and    //
 //        columns as the matrix A.  On output, the matrix with mutually       //
 //        orthogonal columns which is the left-most factor in the singular    //
 //        value decomposition of A.                                           //
-//     double* singular_values                                                //
+//     float* singular_values                                                //
 //        On input, a pointer to an array dimensioned to same as the number   //
 //        of columns of the matrix A, ncols.  On output, the singular values  //
 //        of the matrix A sorted in decreasing order.  This array corresponds //
 //        to the diagonal matrix in the singular value decomposition of A.    //
-//     double* V                                                              //
+//     float* V                                                              //
 //        On input, a pointer to a square matrix with the same number of rows //
 //        and columns as the columns of the matrix A, i.e. V[ncols][ncols].   //
 //        On output, the orthogonal matrix whose transpose is the right-most  //
 //        factor in the singular value decomposition of A.                    //
-//     double* dummy_array                                                    //
+//     float* dummy_array                                                    //
 //        On input, a pointer to an array dimensioned to same as the number   //
 //        of columns of the matrix A, ncols.  This array is used to store     //
 //        the super-diagonal elements resulting from the Householder reduction//
@@ -99,18 +99,18 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 //  Example:                                                                  //
 //     #define M                                                              //
 //     #define N                                                              //
-//     double A[M][N];                                                        //
-//     double U[M][N];                                                        //
-//     double V[N][N];                                                        //
-//     double singular_values[N];                                             //
-//     double* dummy_array;                                                   //
+//     float A[M][N];                                                        //
+//     float U[M][N];                                                        //
+//     float V[N][N];                                                        //
+//     float singular_values[N];                                             //
+//     float* dummy_array;                                                   //
 //                                                                            //
 //     (your code to initialize the matrix A)                                 //
-//     dummy_array = (double*) malloc(N * sizeof(double));                    //
+//     dummy_array = (float*) malloc(N * sizeof(float));                    //
 //     if (dummy_array == NULL) {printf(" No memory available\n"); exit(0); } //
 //                                                                            //
-//     err = Singular_Value_Decomposition((double*) A, M, N, (double*) U,     //
-//                              singular_values, (double*) V, dummy_array);   //
+//     err = Singular_Value_Decomposition((float*) A, M, N, (float*) U,     //
+//                              singular_values, (float*) V, dummy_array);   //
 //                                                                            //
 //     free(dummy_array);                                                     //
 //     if (err < 0) printf(" Failed to converge\n");                          //
@@ -118,8 +118,8 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 //           ...                                                              //
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-int Singular_Value_Decomposition(double* A, int nrows, int ncols, double* U, 
-                      double* singular_values, double* V, double* dummy_array)
+int Singular_Value_Decomposition(float* A, int nrows, int ncols, float* U,
+                      float* singular_values, float* V, float* dummy_array)
 {
    Householders_Reduction_to_Bidiagonal_Form( A, nrows, ncols, U, V,
                                                 singular_values, dummy_array);
@@ -134,8 +134,8 @@ int Singular_Value_Decomposition(double* A, int nrows, int ncols, double* U,
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,//
-//  int ncols, double* U, double* V, double* diagonal, double* superdiagonal )//
+// static void Householders_Reduction_to_Bidiagonal_Form(float* A, int nrows,//
+//  int ncols, float* U, float* V, float* diagonal, float* superdiagonal )//
 //                                                                            //
 //  Description:                                                              //
 //     This routine decomposes an m x n matrix A, with m >= n, into a product //
@@ -159,28 +159,28 @@ int Singular_Value_Decomposition(double* A, int nrows, int ncols, double* U,
 //     sign is chosen opposite that of the diagonal element.                  //
 //                                                                            //
 //  Arguments:                                                                //
-//     double* A                                                              //
+//     float* A                                                              //
 //        On input, the pointer to the first element of the matrix            //
 //        A[nrows][ncols].  The matrix A is unchanged.                        //
 //     int nrows                                                              //
 //        The number of rows of the matrix A.                                 //
 //     int ncols                                                              //
 //        The number of columns of the matrix A.                              //
-//     double* U                                                              //
+//     float* U                                                              //
 //        On input, a pointer to a matrix with the same number of rows and    //
 //        columns as the matrix A.  On output, the matrix with mutually       //
 //        orthogonal columns which is the left-most factor in the bidiagonal  //
 //        decomposition of A.                                                 //
-//     double* V                                                              //
+//     float* V                                                              //
 //        On input, a pointer to a square matrix with the same number of rows //
 //        and columns as the columns of the matrix A, i.e. V[ncols][ncols].   //
 //        On output, the orthogonal matrix whose transpose is the right-most  //
 //        factor in the bidiagonal decomposition of A.                        //
-//     double* diagonal                                                       //
+//     float* diagonal                                                       //
 //        On input, a pointer to an array dimensioned to same as the number   //
 //        of columns of the matrix A, ncols.  On output, the diagonal of the  //
 //        bidiagonal matrix.                                                  //
-//     double* superdiagonal                                                  //
+//     float* superdiagonal                                                  //
 //        On input, a pointer to an array dimensioned to same as the number   //
 //        of columns of the matrix A, ncols.  On output, the superdiagonal    //
 //        of the bidiagonal matrix.                                           //
@@ -193,34 +193,34 @@ int Singular_Value_Decomposition(double* A, int nrows, int ncols, double* U,
 //  Example:                                                                  //
 //     #define M                                                              //
 //     #define N                                                              //
-//     double A[M][N];                                                        //
-//     double U[M][N];                                                        //
-//     double V[N][N];                                                        //
-//     double diagonal[N];                                                    //
-//     double superdiagonal[N];                                               //
+//     float A[M][N];                                                        //
+//     float U[M][N];                                                        //
+//     float V[N][N];                                                        //
+//     float diagonal[N];                                                    //
+//     float superdiagonal[N];                                               //
 //                                                                            //
 //     (your code to initialize the matrix A - Note this routine is not       //
 //     (accessible from outside i.e. it is declared static)                   //
 //                                                                            //
-//     Householders_Reduction_to_Bidiagonal_Form((double*) A, nrows, ncols,   //
-//                   (double*) U, (double*) V, diagonal, superdiagonal )      //
+//     Householders_Reduction_to_Bidiagonal_Form((float*) A, nrows, ncols,   //
+//                   (float*) U, (float*) V, diagonal, superdiagonal )      //
 //                                                                            //
 //     free(dummy_array);                                                     //
 //           ...                                                              //
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,
-    int ncols, double* U, double* V, double* diagonal, double* superdiagonal )
+static void Householders_Reduction_to_Bidiagonal_Form(float* A, int nrows,
+    int ncols, float* U, float* V, float* diagonal, float* superdiagonal )
 {
    int i,j,k,ip1;
-   double s, s2, si, scale;
-   double dum;
-   double *pu, *pui, *pv, *pvi;
-   double half_norm_squared;
+   float s, s2, si, scale;
+   float dum;
+   float *pu, *pui, *pv, *pvi;
+   float half_norm_squared;
 
 // Copy A to U
 
-   memcpy(U,A, sizeof(double) * nrows * ncols);
+   memcpy(U,A, sizeof(float) * nrows * ncols);
 
 //
  
@@ -365,7 +365,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,
 
 ////////////////////////////////////////////////////////////////////////////////
 // static int Givens_Reduction_to_Diagonal_Form( int nrows, int ncols,        //
-//         double* U, double* V, double* diagonal, double* superdiagonal )    //
+//         float* U, float* V, float* diagonal, float* superdiagonal )    //
 //                                                                            //
 //  Description:                                                              //
 //     This routine decomposes a bidiagonal matrix given by the arrays        //
@@ -388,20 +388,20 @@ static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,
 //        The number of rows of the matrix U.                                 //
 //     int ncols                                                              //
 //        The number of columns of the matrix U.                              //
-//     double* U                                                              //
+//     float* U                                                              //
 //        On input, a pointer to a matrix already initialized to a matrix     //
 //        with mutually orthogonal columns.   On output, the matrix with      //
 //        mutually orthogonal columns.                                        //
-//     double* V                                                              //
+//     float* V                                                              //
 //        On input, a pointer to a square matrix with the same number of rows //
 //        and columns as the columns of the matrix U, i.e. V[ncols][ncols].   //
 //        The matrix V is assumed to be initialized to an orthogonal matrix.  //
 //        On output, V is an orthogonal matrix.                               //
-//     double* diagonal                                                       //
+//     float* diagonal                                                       //
 //        On input, a pointer to an array of dimension ncols which initially  //
 //        contains the diagonal of the bidiagonal matrix.  On output, the     //
 //        it contains the diagonal of the diagonal matrix.                    //
-//     double* superdiagonal                                                  //
+//     float* superdiagonal                                                  //
 //        On input, a pointer to an array of dimension ncols which initially  //
 //        the first component is zero and the successive components form the  //
 //        superdiagonal of the bidiagonal matrix.                             //
@@ -414,17 +414,17 @@ static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,
 //  Example:                                                                  //
 //     #define M                                                              //
 //     #define N                                                              //
-//     double U[M][N];                                                        //
-//     double V[N][N];                                                        //
-//     double diagonal[N];                                                    //
-//     double superdiagonal[N];                                               //
+//     float U[M][N];                                                        //
+//     float V[N][N];                                                        //
+//     float diagonal[N];                                                    //
+//     float superdiagonal[N];                                               //
 //     int err;                                                               //
 //                                                                            //
 //     (your code to initialize the matrices U, V, diagonal, and )            //
 //     ( superdiagonal.  - Note this routine is not accessible from outside)  //
 //     ( i.e. it is declared static.)                                         //
 //                                                                            //
-//     err = Givens_Reduction_to_Diagonal_Form( M,N,(double*)U,(double*)V,    //
+//     err = Givens_Reduction_to_Diagonal_Form( M,N,(float*)U,(float*)V,    //
 //                                                 diagonal, superdiagonal ); //
 //     if ( err < 0 ) printf("Failed to converge\n");                         //
 //     else { ... }                                                           //
@@ -432,14 +432,14 @@ static void Householders_Reduction_to_Bidiagonal_Form(double* A, int nrows,
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
 static int Givens_Reduction_to_Diagonal_Form( int nrows, int ncols,
-           double* U, double* V, double* diagonal, double* superdiagonal )
+           float* U, float* V, float* diagonal, float* superdiagonal )
 {
 
-   double epsilon;
-   double c, s;
-   double f,g,h;
-   double x,y,z;
-   double *pu, *pv;
+   float epsilon;
+   float c, s;
+   float f,g,h;
+   float x,y,z;
+   float *pu, *pv;
    int i,j,k,m;
    int rotation_test;
    int iteration_count;
@@ -546,7 +546,7 @@ static int Givens_Reduction_to_Diagonal_Form( int nrows, int ncols,
 
 ////////////////////////////////////////////////////////////////////////////////
 // static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,       //
-//                            double* singular_values, double* U, double* V)  //
+//                            float* singular_values, float* U, float* V)  //
 //                                                                            //
 //  Description:                                                              //
 //     This routine sorts the singular values from largest to smallest        //
@@ -560,14 +560,14 @@ static int Givens_Reduction_to_Diagonal_Form( int nrows, int ncols,
 //        The number of rows of the matrix U.                                 //
 //     int ncols                                                              //
 //        The number of columns of the matrix U.                              //
-//     double* singular_values                                                //
+//     float* singular_values                                                //
 //        On input, a pointer to the array of singular values.  On output, the//
 //        sorted array of singular values.                                    //
-//     double* U                                                              //
+//     float* U                                                              //
 //        On input, a pointer to a matrix already initialized to a matrix     //
 //        with mutually orthogonal columns.  On output, the matrix with       //
 //        mutually orthogonal possibly permuted columns.                      //
-//     double* V                                                              //
+//     float* V                                                              //
 //        On input, a pointer to a square matrix with the same number of rows //
 //        and columns as the columns of the matrix U, i.e. V[ncols][ncols].   //
 //        The matrix V is assumed to be initialized to an orthogonal matrix.  //
@@ -579,25 +579,25 @@ static int Givens_Reduction_to_Diagonal_Form( int nrows, int ncols,
 //  Example:                                                                  //
 //     #define M                                                              //
 //     #define N                                                              //
-//     double U[M][N];                                                        //
-//     double V[N][N];                                                        //
-//     double diagonal[N];                                                    //
+//     float U[M][N];                                                        //
+//     float V[N][N];                                                        //
+//     float diagonal[N];                                                    //
 //                                                                            //
 //     (your code to initialize the matrices U, V, and diagonal. )            //
 //     ( - Note this routine is not accessible from outside)                  //
 //     ( i.e. it is declared static.)                                         //
 //                                                                            //
 //     Sort_by_Decreasing_Singular_Values(nrows, ncols, singular_values,      //
-//                                                 (double*) U, (double*) V); //
+//                                                 (float*) U, (float*) V); //
 //           ...                                                              //
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
 static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
-                                double* singular_values, double* U, double* V)
+                                float* singular_values, float* U, float* V)
 {
    int i,j,max_index;
-   double temp;
-   double *p1, *p2;
+   float temp;
+   float *p1, *p2;
 
    for (i = 0; i < ncols - 1; i++) {
       max_index = i;
@@ -627,8 +627,8 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 
 
 ////////////////////////////////////////////////////////////////////////////////
-//  void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,  //
-//              double tolerance, int nrows, int ncols, double *B, double* x) //
+//  void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,  //
+//              float tolerance, int nrows, int ncols, float *B, float* x) //
 //                                                                            //
 //  Description:                                                              //
 //     This routine solves the system of linear equations Ax=B where A =UDV', //
@@ -642,14 +642,14 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 //     tolerance is used.                                                     //
 //                                                                            //
 //  Arguments:                                                                //
-//     double* U                                                              //
+//     float* U                                                              //
 //        A matrix with mutually orthonormal columns.                         //
-//     double* D                                                              //
+//     float* D                                                              //
 //        A diagonal matrix with decreasing non-negative diagonal elements.   //
 //        i.e. D[i] > D[j] if i < j and D[i] >= 0 for all i.                  //
-//     double* V                                                              //
+//     float* V                                                              //
 //        An orthogonal matrix.                                               //
-//     double tolerance                                                       //
+//     float tolerance                                                       //
 //        An lower bound for non-zero singular values (provided tolerance >   //
 //        ncols * DBL_EPSILON * D[0]).                                        //
 //     int nrows                                                              //
@@ -657,10 +657,10 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 //     int ncols                                                              //
 //        The number of columns of the matrix U.  Also the number of rows and //
 //        columns of the matrices D and V.                                    //
-//     double* B                                                              //
+//     float* B                                                              //
 //        A pointer to a vector dimensioned as nrows which is the  right-hand //
 //        side of the equation Ax = B where A = UDV'.                         //
-//     double* x                                                              //
+//     float* x                                                              //
 //        A pointer to a vector dimensioned as ncols, which is the least      //
 //        squares solution of the equation Ax = B where A = UDV'.             //
 //                                                                            //
@@ -671,16 +671,16 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 //     #define M                                                              //
 //     #define N                                                              //
 //     #define NB                                                             //
-//     double U[M][N];                                                        //
-//     double V[N][N];                                                        //
-//     double D[N];                                                           //
-//     double B[M];                                                           //
-//     double x[N];                                                           //
-//     double tolerance;                                                      //
+//     float U[M][N];                                                        //
+//     float V[N][N];                                                        //
+//     float D[N];                                                           //
+//     float B[M];                                                           //
+//     float x[N];                                                           //
+//     float tolerance;                                                      //
 //                                                                            //
 //     (your code to initialize the matrices U,D,V,B)                         //
 //                                                                            //
-//     Singular_Value_Decomposition_Solve((double*) U, D, (double*) V,        //
+//     Singular_Value_Decomposition_Solve((float*) U, D, (float*) V,        //
 //                                              tolerance, M, N, B, x, bcols) //
 //                                                                            //
 //     printf(" The solution of Ax=B is \n");                                 //
@@ -688,14 +688,14 @@ static void Sort_by_Decreasing_Singular_Values(int nrows, int ncols,
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
 
-void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,  
-                double tolerance, int nrows, int ncols, double *B, double* x) 
+void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,
+                float tolerance, int nrows, int ncols, float *B, float* x)
 {
    int i,j,k;
-   double *pu, *pv;
-   double dum;
+   float *pu, *pv;
+   float dum;
 
-   dum = DBL_EPSILON * D[0] * (double) ncols;
+   dum = DBL_EPSILON * D[0] * (float) ncols;
    if (tolerance < dum) tolerance = dum;
 
    for ( i = 0, pv = V; i < ncols; i++, pv += ncols) {
@@ -711,8 +711,8 @@ void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,
 
 
 ////////////////////////////////////////////////////////////////////////////////
-//  void Singular_Value_Decomposition_Inverse(double* U, double* D, double* V,//
-//                     double tolerance, int nrows, int ncols, double *Astar) //
+//  void Singular_Value_Decomposition_Inverse(float* U, float* D, float* V,//
+//                     float tolerance, int nrows, int ncols, float *Astar) //
 //                                                                            //
 //  Description:                                                              //
 //     This routine calculates the pseudo-inverse of the matrix A = UDV'.     //
@@ -728,14 +728,14 @@ void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,
 //     then the default tolerance is used.                                    //
 //                                                                            //
 //  Arguments:                                                                //
-//     double* U                                                              //
+//     float* U                                                              //
 //        A matrix with mutually orthonormal columns.                         //
-//     double* D                                                              //
+//     float* D                                                              //
 //        A diagonal matrix with decreasing non-negative diagonal elements.   //
 //        i.e. D[i] > D[j] if i < j and D[i] >= 0 for all i.                  //
-//     double* V                                                              //
+//     float* V                                                              //
 //        An orthogonal matrix.                                               //
-//     double tolerance                                                       //
+//     float tolerance                                                       //
 //        An lower bound for non-zero singular values (provided tolerance >   //
 //        ncols * DBL_EPSILON * D[0]).                                        //
 //     int nrows                                                              //
@@ -743,7 +743,7 @@ void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,
 //     int ncols                                                              //
 //        The number of columns of the matrix U.  Also the number of rows and //
 //        columns of the matrices D and V.                                    //
-//     double* Astar                                                          //
+//     float* Astar                                                          //
 //        On input, a pointer to the first element of an ncols x nrows matrix.//
 //        On output, the pseudo-inverse of UDV'.                              //
 //                                                                            //
@@ -753,30 +753,30 @@ void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,
 //  Example:                                                                  //
 //     #define M                                                              //
 //     #define N                                                              //
-//     double U[M][N];                                                        //
-//     double V[N][N];                                                        //
-//     double D[N];                                                           //
-//     double Astar[N][M];                                                    //
-//     double tolerance;                                                      //
+//     float U[M][N];                                                        //
+//     float V[N][N];                                                        //
+//     float D[N];                                                           //
+//     float Astar[N][M];                                                    //
+//     float tolerance;                                                      //
 //                                                                            //
 //     (your code to initialize the matrices U,D,V)                           //
 //                                                                            //
-//     Singular_Value_Decomposition_Inverse((double*) U, D, (double*) V,      //
-//                                        tolerance, M, N, (double*) Astar);  //
+//     Singular_Value_Decomposition_Inverse((float*) U, D, (float*) V,      //
+//                                        tolerance, M, N, (float*) Astar);  //
 //                                                                            //
 //     printf(" The pseudo-inverse of A = UDV' is \n");                       //
 //           ...                                                              //
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
 
-void Singular_Value_Decomposition_Inverse(double* U, double* D, double* V,  
-                        double tolerance, int nrows, int ncols, double *Astar) 
+void Singular_Value_Decomposition_Inverse(float* U, float* D, float* V,
+                        float tolerance, int nrows, int ncols, float *Astar)
 {
    int i,j,k;
-   double *pu, *pv, *pa;
-   double dum;
+   float *pu, *pv, *pa;
+   float dum;
 
-   dum = DBL_EPSILON * D[0] * (double) ncols;
+   dum = DBL_EPSILON * D[0] * (float) ncols;
    if (tolerance < dum) tolerance = dum;
    for ( i = 0, pv = V, pa = Astar; i < ncols; i++, pv += ncols) 
       for ( j = 0, pu = U; j < nrows; j++, pa++) 

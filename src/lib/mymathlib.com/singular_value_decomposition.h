@@ -6,15 +6,15 @@
   extern "C" {
 #endif
 
-int Singular_Value_Decomposition(double* A, int nrows, int ncols, double* U,
-                      double* singular_values, double* V, double* dummy_array);
+int Singular_Value_Decomposition(float* A, int nrows, int ncols, float* U,
+                      float* singular_values, float* V, float* dummy_array);
 
 
-void Singular_Value_Decomposition_Solve(double* U, double* D, double* V,
-                double tolerance, int nrows, int ncols, double *B, double* x);
+void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,
+                float tolerance, int nrows, int ncols, float *B, float* x);
 
 
-void Singular_Value_Decomposition_Inverse(double* U, double* D, double* V,
-                        double tolerance, int nrows, int ncols, double *Astar);
+void Singular_Value_Decomposition_Inverse(float* U, float* D, float* V,
+                        float tolerance, int nrows, int ncols, float *Astar);
 
 #endif
