@@ -53,6 +53,10 @@
 
 #include "estimator.h"
 
+#include "singular_value_decomposition.h"
+#include "estimator_kalman.h"
+#include <arm_math.h>
+
 #ifdef LH_FLASH_DECK
 #include "lh_flasher.h"
 #endif
@@ -64,6 +68,13 @@
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {-0.542299, 3.152727, 1.958483, }, .mat = {{0.999975, -0.007080, -0.000000, }, {0.005645, 0.797195, 0.603696, }, {-0.004274, -0.603681, 0.797215, }, }},
 {.origin = {2.563488, 3.112367, -1.062398, }, .mat = {{0.034269, -0.647552, 0.761251, }, {-0.012392, 0.761364, 0.648206, }, {-0.999336, -0.031647, 0.018067, }, }},
+};
+
+vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
+		{-0.0150,  0.0075, 0},
+		{-0.0150, -0.0075, 0},
+		{ 0.0150,  0.0075, 0},
+		{ 0.0150, -0.0075, 0},
 };
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
@@ -201,6 +212,146 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   estimatorEnqueuePosition(&ext_pos);
 }
 
+
+typedef struct sensorBasestationCombo_s {
+  uint8_t sensor;
+  uint8_t baseStation;
+} __attribute__((packed)) sensorBasestationCombo_t;
+
+typedef struct ray_s {
+  uint8_t sensor;
+  uint8_t baseStation;
+  vec3d origin;
+  vec3d direction;
+} __attribute__((packed)) ray_t;
+
+
+void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
+{
+	uint32_t startT = T2M(xTaskGetTickCount());
+
+
+	sensorBasestationCombo_t combos[8];
+
+	uint8_t combo_count = 0;
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+
+		for (size_t baseStation = 0; baseStation < 2; baseStation++) {
+
+
+
+			bool hasBothAxis = true;
+			for (size_t axis = 0; axis < 2; axis++) {
+				//require valid horizontal and vertical sweeps
+
+				uint32_t angleTimestamp = angles[sensor].angleTimestamps[baseStation][axis];
+				if(angleTimestamp == 0){
+					hasBothAxis = false;
+				}else {
+					uint32_t deltaTimestamp = startT - angleTimestamp;
+					if(deltaTimestamp > 1000){ //if not fresh enough
+						hasBothAxis = false;
+					}
+				}
+
+			}
+
+			if(hasBothAxis){
+				combos[combo_count].sensor = sensor;
+				combos[combo_count].baseStation = baseStation;
+				combo_count++;
+			}
+
+
+		}
+
+  }
+
+
+
+
+  if(combo_count >= 2){
+    ray_t rays[8] = {0};
+
+  	//ref: https://stackoverflow.com/a/3389591/3553367
+//		memset(&rays, 1, sizeof rays); //set all of rays to 0 (not working properly for floats)
+//		memset(&rays[1], 10, sizeof(struct ray_s)); //set all of only index 1 to 10
+//		memset(rays[2].origin, 10, 3*sizeof(float) ); //set only index 2's origin to 10
+//		#define MEMBER_SIZE(type, member) sizeof(((type *)0)->member) //ref: https://stackoverflow.com/a/3553321/3553367
+//		memset(rays[2].origin, 10, MEMBER_SIZE(ray_t, origin) ); //set only index 2's origin to 10
+
+  	uint8_t ray_count = 0;
+		for (size_t combo_index = 0; combo_index < combo_count; combo_index++) {
+			uint8_t sensor = combos[combo_index].sensor;
+			uint8_t baseStation = combos[combo_index].baseStation;
+
+			static vec3d direction, origin; //TODO: very weirdly, passing rays[combo_index].direction, rays[combo_index].origin by reference causes error
+
+//			pulseProcessorApplyCalibration(state, angles); //apply calibration only when needed
+			pulseProcessorApplyCalibration2(state, angles, baseStation, sensor); //apply calibration only when needed
+			calc_ray_vec(&lighthouseBaseStationsGeometry[baseStation], angles[sensor].correctedAngles[baseStation][0], angles[sensor].correctedAngles[baseStation][1], direction, origin);
+
+			rays[combo_index].sensor = sensor;
+			rays[combo_index].baseStation = baseStation;
+			memcpy(rays[combo_index].origin, origin, sizeof(vec3d));
+			memcpy(rays[combo_index].direction, direction, sizeof(vec3d));
+
+			ray_count++;
+		}
+
+	  if(ray_count >= 2){
+
+			if(rays[0].sensor != rays[1].sensor || rays[0].baseStation != rays[1].baseStation){ //must have either different basestations, or differnt sensors, or both
+				vec3d D = {0}; //0 by default, likely rays fall on same sensor
+
+				if(rays[0].sensor != rays[1].sensor){ //if rays do not fall on same sensor, find the vector between sensors
+					float R[3][3];
+					estimatorKalmanGetEstimatedRotationMatrix(R);
+					arm_matrix_instance_f32 R_mat = {3, 3, R};
+
+					vec3d S = {};
+					arm_sub_f32(lighthouseSensorsGeometry[rays[1].sensor], lighthouseSensorsGeometry[rays[0].sensor], S, vec3d_size);
+					arm_matrix_instance_f32 S_mat = {3, 1, S};
+
+					arm_matrix_instance_f32 D_mat = {3, 1, D};
+
+					arm_mat_mult_f32(&R_mat, &S_mat, &D_mat);
+
+				}
+
+
+
+
+				vec3d pt0;
+				vec3d pt1;
+//				float pt0[3];
+//				float pt1[3];
+
+				lighthouseGeometryBestFitBetweenRays(rays[0].origin, rays[1].origin, rays[0].direction, rays[1].direction, D, pt0, pt1);
+
+				vec3d pt10;
+		    arm_sub_f32(pt1, pt0, pt10, vec3d_size);
+
+				vec3d pt10_half;
+				arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
+
+				vec3d pt_mid;
+		    arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
+
+
+
+
+	//			uint32_t endT = T2M(xTaskGetTickCount());
+	//			uint32_t deltaT = endT - startT;
+
+				return;
+			}
+	  }
+  }
+
+
+}
+
 void fpgaTriggerReset(void)
 {
   pinMode(LH_FPGA_RESET, OUTPUT);
@@ -265,17 +416,25 @@ static void lighthouseTask(void *param)
       pulseWidth[frame.sensor] = frame.width;
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
+      	// angle measured
+      	angles[frame.sensor].angleTimestamps[basestation][axis] = T2M(xTaskGetTickCount());
+
         frameCount++;
-        if (basestation == 1 && axis == 1) {
+        if (basestation == 1 && axis == 1) { // 4 frames per cycle: BS0-AX0, BS0-AX1, BS1-AX0, BS1-AX1
           cycleCount++;
 
-          pulseProcessorApplyCalibration(&ppState, angles);
 
+          pulseProcessorApplyCalibration(&ppState, angles);
           estimatePosition(angles);
+//					pulseProcessorApplyCalibration2(&ppState, angles, basestation, frame.sensor);
+//					estimatePosition2(&ppState, angles);
+//
           for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
             angles[sensor].validCount = 0;
           }
         }
+
+//				estimatePosition2(&ppState, angles); //runs too often, will miss pulses
       }
 
       uint32_t nowMs = T2M(xTaskGetTickCount());

@@ -540,6 +540,16 @@ void estimatorKalmanGetEstimatedPos(point_t* pos) {
   pos->z = coreData.S[KC_STATE_Z];
 }
 
+void estimatorKalmanGetEstimatedRotationMatrix(float R[3][3]) {
+// TODO: couldn't figure out how to pass by reference
+
+//	R = coreData.R;
+//  memcpy ( R, coreData.R, sizeof(R) );
+  memcpy ( R, coreData.R, sizeof(float [3][3]) );
+//  memcpy ( R, coreData.R, sizeof(coreData.R)); //same as sizeof(float [3][3])
+
+  return;
+}
 // Temporary development groups
 LOG_GROUP_START(kalman_states)
   LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])

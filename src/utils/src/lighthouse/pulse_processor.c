@@ -167,7 +167,7 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
     for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       if (state->sweeps[sensor].state == sweepStorageStateValid) {
         int delta = TS_DIFF(state->sweeps[sensor].timestamp, state->currentSync);
-        if (delta < FRAME_LENGTH) {
+        if (delta < FRAME_LENGTH) { //check to see if timing is in sync
           float frameWidth = state->frameWidth[state->currentBaseStation][state->currentAxis];
           
           if ((frameWidth < FRAME_WIDTH_MIN) || (frameWidth > FRAME_WIDTH_MAX)) {
@@ -324,6 +324,16 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
     lighthouseCalibrationApply(&state->bsCalibration0, angles[sensor].angles[0], angles[sensor].correctedAngles[0]);
     lighthouseCalibrationApply(&state->bsCalibration1, angles[sensor].angles[1], angles[sensor].correctedAngles[1]);
   }
+}
+
+void pulseProcessorApplyCalibration2(pulseProcessor_t *state, pulseProcessorResult_t angles[], uint8_t baseStation, uint8_t sensor)
+{
+	if(baseStation == 0){
+    lighthouseCalibrationApply(&state->bsCalibration0, angles[sensor].angles[0], angles[sensor].correctedAngles[0]);
+	}else if(baseStation == 1){
+    lighthouseCalibrationApply(&state->bsCalibration1, angles[sensor].angles[1], angles[sensor].correctedAngles[1]);
+	}
+	return;
 }
 
 

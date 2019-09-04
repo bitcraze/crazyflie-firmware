@@ -86,6 +86,7 @@ typedef struct pulseProcessor_s {
 typedef struct {
   float angles[2][2];
   float correctedAngles[2][2];
+  uint32_t angleTimestamps[2][2];
   int validCount;
 } pulseProcessorResult_t;
 
@@ -99,4 +100,5 @@ bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned in
  * @param angles 
  */
 void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t angles[4]);
+void pulseProcessorApplyCalibration2(pulseProcessor_t *state, pulseProcessorResult_t angles[4], uint8_t baseStation, uint8_t sensor);
 
