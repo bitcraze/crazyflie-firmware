@@ -126,11 +126,13 @@ static int serialFrameCount = 0;
 static int frameCount = 0;
 static int cycleCount = 0;
 static int positionCount = 0;
+static int rayCount = 0;
 
 static float serialFrameRate = 0.0;
 static float frameRate = 0.0;
 static float cycleRate = 0.0;
 static float positionRate = 0.0;
+static float rayRate = 0.0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
@@ -163,6 +165,7 @@ static void resetStats() {
   frameCount = 0;
   cycleCount = 0;
   positionCount = 0;
+  rayCount = 0;
 }
 
 static void calculateStats(uint32_t nowMs) {
@@ -171,6 +174,7 @@ static void calculateStats(uint32_t nowMs) {
   frameRate = frameCount / time;
   cycleRate = cycleCount / time;
   positionRate = positionCount / time;
+  rayRate = rayCount / time;
 
   resetStats();
 }
@@ -273,6 +277,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
   }
 
+	rayCount += combo_count;
 
 
 
@@ -569,6 +574,7 @@ LOG_ADD(LOG_FLOAT, serRt, &serialFrameRate)
 LOG_ADD(LOG_FLOAT, frmRt, &frameRate)
 LOG_ADD(LOG_FLOAT, cycleRt, &cycleRate)
 LOG_ADD(LOG_FLOAT, posRt, &positionRate)
+LOG_ADD(LOG_FLOAT, rayRt, &rayRate)
 
 LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
 #if PULSE_PROCESSOR_N_SENSORS > 1
