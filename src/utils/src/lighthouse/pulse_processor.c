@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include "test_support.h"
+#include "FreeRTOS.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -182,6 +183,7 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
 
           result[sensor].angles[state->currentBaseStation][state->currentAxis] = angle;
           result[sensor].validCount++;
+          result[sensor].angleTimestamps[state->currentBaseStation][state->currentAxis] = T2M(xTaskGetTickCount()); //record time angle was received
 
           anglesMeasured = true;
         }

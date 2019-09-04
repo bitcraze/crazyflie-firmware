@@ -421,10 +421,9 @@ static void lighthouseTask(void *param)
       pulseWidth[frame.sensor] = frame.width;
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
-      	// angle measured
-      	angles[frame.sensor].angleTimestamps[basestation][axis] = T2M(xTaskGetTickCount());
-
+      	// an angle was successfully measured
         frameCount++;
+
         if (basestation == 1 && axis == 1) { // 4 frames per cycle: BS0-AX0, BS0-AX1, BS1-AX0, BS1-AX1
           cycleCount++;
 
