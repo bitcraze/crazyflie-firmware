@@ -33,6 +33,9 @@
 #include "param.h"
 #include "i2cdev.h"
 
+#define DEBUG_MODULE "ACTIVE_MARKER"
+#include "debug.h"
+
 #define LED_COUNT 4
 
 static bool isInit = false;
@@ -41,11 +44,12 @@ static uint8_t currentId[LED_COUNT] = {0xff, 0xff, 0xff, 0xff};
 static uint8_t requestedId[LED_COUNT] = {1, 3, 4, 2}; // 1 to 4, clockwise
 
 #define DECK_I2C_ADDRESS 0x2E
+#define VERSION_STRING_LEN 12
 
 static xTimerHandle timer;
+static char versionString[VERSION_STRING_LEN + 1];
 
 static void timerHandler(xTimerHandle timer);
-static void writeToDeck(const uint8_t led, const uint8_t id);
 
 static void activeMarkerDeckInit(DeckInfo *info) {
   if (isInit) {
@@ -58,20 +62,35 @@ static void activeMarkerDeckInit(DeckInfo *info) {
   isInit = true;
 }
 
+static bool activeMarkerDeckTest() {
+  if (!isInit) {
+    return false;
+  }
+
+  memset(versionString, 0, VERSION_STRING_LEN + 1);
+  bool status = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, 0x10, VERSION_STRING_LEN, (uint8_t*)versionString);
+  DEBUG_PRINT("Deck FW %s\n", versionString);
+  return status;
+}
+
 static void timerHandler(xTimerHandle timer) {
+  bool isDifferent = false;
   for (int led = 0; led < LED_COUNT; led++) {
     if (currentId[led] != requestedId[led]) {
+      isDifferent = true;
       currentId[led] = requestedId[led];
-      writeToDeck(led, currentId[led]);
     }
   }
-}
 
-static void writeToDeck(const uint8_t led, const uint8_t id) {
-  uint8_t buf[] = {led, id};
-  i2cdevWrite(I2C1_DEV, DECK_I2C_ADDRESS, sizeof(buf), buf);
-}
+  if (isDifferent) {
+      // TODO krri, i2cdevWriteReg8 is not behaving as expected. Investigate.
+      // i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, 0, LED_COUNT, currentId);
 
+      uint8_t adr = 0;
+      i2cdevWrite(I2C1_DEV, DECK_I2C_ADDRESS, 1, &adr);
+      i2cdevWrite(I2C1_DEV, DECK_I2C_ADDRESS, LED_COUNT, currentId);
+  }
+}
 
 static const DeckDriver deck_info = {
   .vid = 0xBC,
@@ -81,6 +100,7 @@ static const DeckDriver deck_info = {
   .usedGpio = DECK_USING_SDA | DECK_USING_SCL,
 
   .init = activeMarkerDeckInit,
+  .test = activeMarkerDeckTest,
 };
 
 DECK_DRIVER(deck_info);
