@@ -227,11 +227,6 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
 }
 
 
-typedef struct sensorBasestationCombo_s {
-  uint8_t sensor;
-  uint8_t baseStation;
-} __attribute__((packed)) sensorBasestationCombo_t;
-
 typedef struct ray_s {
   uint8_t sensor;
   uint8_t baseStation;
@@ -244,10 +239,10 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 {
 	uint32_t startT = T2M(xTaskGetTickCount());
 
+	#define MAX_RAYS PULSE_PROCESSOR_N_SENSORS*2  //given 2 base stations and 4 sensors, only possible to obtain in total of 8 unique rays
+  ray_t rays[MAX_RAYS] = {0};
 
-	sensorBasestationCombo_t combos[8];
-
-	uint8_t combo_count = 0;
+	uint8_t rays_count = 0;
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
 		for (size_t baseStation = 0; baseStation < 2; baseStation++) {
 
@@ -301,98 +296,100 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 			}
 
 			if(validAxisCount >= 2){
-				combos[combo_count].sensor = sensor;
-				combos[combo_count].baseStation = baseStation;
-				combo_count++;
+
+				static vec3d direction, origin; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
+
+	//			pulseProcessorApplyCalibration(state, angles); //apply calibration only when needed
+				pulseProcessorApplyCalibration2(state, angles, baseStation, sensor); //apply calibration only when needed
+				calc_ray_vec(&lighthouseBaseStationsGeometry[baseStation], angles[sensor].correctedAngles[baseStation][0], angles[sensor].correctedAngles[baseStation][1], direction, origin);
+
+				rays[rays_count].sensor = sensor;
+				rays[rays_count].baseStation = baseStation;
+				memcpy(rays[rays_count].origin, origin, sizeof(vec3d));
+				memcpy(rays[rays_count].direction, direction, sizeof(vec3d));
+
+				rays_count++;
+
 			}
 
 		}
 
   }
 
-	rayCount += combo_count;
+	rayCount += rays_count;
 
 //	return;
 
-  if(combo_count >= 8){
 
-    ray_t rays[8] = {0};
+  if(rays_count >= 2){ //require al
 
-//  	return;
+		for (size_t i = 0; i < rays_count; i++) {
+			for (size_t j = 0; j < rays_count; j++) {
 
-  	//ref: https://stackoverflow.com/a/3389591/3553367
-//		memset(&rays, 1, sizeof rays); //set all of rays to 0 (not working properly for floats)
-//		memset(&rays[1], 10, sizeof(struct ray_s)); //set all of only index 1 to 10
-//		memset(rays[2].origin, 10, 3*sizeof(float) ); //set only index 2's origin to 10
-//		#define MEMBER_SIZE(type, member) sizeof(((type *)0)->member) //ref: https://stackoverflow.com/a/3553321/3553367
-//		memset(rays[2].origin, 10, MEMBER_SIZE(ray_t, origin) ); //set only index 2's origin to 10
+//    	return;
 
-  	uint8_t ray_count = 0;
-		for (size_t combo_index = 0; combo_index < combo_count; combo_index++) {
-			uint8_t sensor = combos[combo_index].sensor;
-			uint8_t baseStation = combos[combo_index].baseStation;
+//      ref: https://stackoverflow.com/a/3389591/3553367
+//	  	memset(&rays, 1, sizeof rays); //set all of rays to 0 (not working properly for floats)
+//	  	memset(&rays[1], 10, sizeof(struct ray_s)); //set all of only index 1 to 10
+//	  	memset(rays[2].origin, 10, 3*sizeof(float) ); //set only index 2's origin to 10
+//		  #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member) //ref: https://stackoverflow.com/a/3553321/3553367
+//		  memset(rays[2].origin, 10, MEMBER_SIZE(ray_t, origin) ); //set only index 2's origin to 10
 
-			static vec3d direction, origin; //TODO: very weirdly, passing rays[combo_index].direction, rays[combo_index].origin by reference causes error
 
-//			pulseProcessorApplyCalibration(state, angles); //apply calibration only when needed
-			pulseProcessorApplyCalibration2(state, angles, baseStation, sensor); //apply calibration only when needed
-			calc_ray_vec(&lighthouseBaseStationsGeometry[baseStation], angles[sensor].correctedAngles[baseStation][0], angles[sensor].correctedAngles[baseStation][1], direction, origin);
+				if(rays[i].sensor != rays[j].sensor || rays[i].baseStation != rays[j].baseStation){ //must have either different basestations, or differnt sensors, or both
+					vec3d D = {0}; //0 by default, likely rays fall on same sensor
 
-			rays[combo_index].sensor = sensor;
-			rays[combo_index].baseStation = baseStation;
-			memcpy(rays[combo_index].origin, origin, sizeof(vec3d));
-			memcpy(rays[combo_index].direction, direction, sizeof(vec3d));
+					if(rays[i].sensor != rays[j].sensor){ //if rays do not fall on same sensor, find the vector between sensors
+						float R[3][3];
+						estimatorKalmanGetEstimatedRotationMatrix(R);
+						arm_matrix_instance_f32 R_mat = {3, 3, R};
 
-			ray_count++;
-		}
+						vec3d S = {};
+						arm_sub_f32(lighthouseSensorsGeometry[rays[j].sensor], lighthouseSensorsGeometry[rays[i].sensor], S, vec3d_size);
+						arm_matrix_instance_f32 S_mat = {3, 1, S};
 
-	  if(ray_count >= 2){
+						arm_matrix_instance_f32 D_mat = {3, 1, D};
 
-			if(rays[0].sensor != rays[1].sensor || rays[0].baseStation != rays[1].baseStation){ //must have either different basestations, or differnt sensors, or both
-				vec3d D = {0}; //0 by default, likely rays fall on same sensor
+						arm_mat_mult_f32(&R_mat, &S_mat, &D_mat);
 
-				if(rays[0].sensor != rays[1].sensor){ //if rays do not fall on same sensor, find the vector between sensors
-					float R[3][3];
-					estimatorKalmanGetEstimatedRotationMatrix(R);
-					arm_matrix_instance_f32 R_mat = {3, 3, R};
+					}
 
-					vec3d S = {};
-					arm_sub_f32(lighthouseSensorsGeometry[rays[1].sensor], lighthouseSensorsGeometry[rays[0].sensor], S, vec3d_size);
-					arm_matrix_instance_f32 S_mat = {3, 1, S};
 
-					arm_matrix_instance_f32 D_mat = {3, 1, D};
+					vec3d pt0;
+					vec3d pt1;
+//					float pt0[3];
+//					float pt1[3];
 
-					arm_mat_mult_f32(&R_mat, &S_mat, &D_mat);
+					bool fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
+
+//					vec3d pt0 = {1.0, 2.0, 3.0};
+//					vec3d pt1 = {2.0, 3.0, 4.0};
+//					bool fitSuccess = true;
+
+					if (fitSuccess){
+
+						vec3d pt10;
+						arm_sub_f32(pt1, pt0, pt10, vec3d_size);
+
+						vec3d pt10_half;
+						arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
+
+						vec3d pt_mid;
+						arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
+
+//						printf("hehe");
+
+					}
+
+
+
+
+//					uint32_t endT = T2M(xTaskGetTickCount());
+//					uint32_t deltaT = endT - startT;
 
 				}
 
-
-
-
-				vec3d pt0;
-				vec3d pt1;
-//				float pt0[3];
-//				float pt1[3];
-
-				lighthouseGeometryBestFitBetweenRays(rays[0].origin, rays[1].origin, rays[0].direction, rays[1].direction, D, pt0, pt1);
-
-				vec3d pt10;
-		    arm_sub_f32(pt1, pt0, pt10, vec3d_size);
-
-				vec3d pt10_half;
-				arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
-
-				vec3d pt_mid;
-		    arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
-
-
-
-
-	//			uint32_t endT = T2M(xTaskGetTickCount());
-	//			uint32_t deltaT = endT - startT;
-
-				return;
-			}
+		  }
 	  }
   }
 
@@ -466,14 +463,14 @@ static void lighthouseTask(void *param)
       	// an angle was successfully measured
         frameCount++;
 
-//				estimatePosition2(&ppState, angles);
+				estimatePosition2(&ppState, angles);
 
         if (basestation == 1 && axis == 1) { // 4 frames per cycle: BS0-AX0, BS0-AX1, BS1-AX0, BS1-AX1
           cycleCount++;
 
+//          pulseProcessorApplyCalibration(&ppState, angles);
+//          estimatePosition(angles);
 
-          pulseProcessorApplyCalibration(&ppState, angles);
-          estimatePosition(angles);
           for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
             angles[sensor].validCount = 0;
           }

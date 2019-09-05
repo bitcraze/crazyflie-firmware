@@ -265,13 +265,7 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 		return false;
 	}
 	int svdError = Singular_Value_Decomposition((float*)A, N_ROWS, N_COLS, (float*)U, singular_values, (float*)V, dummy_array);
-
-
-	if (svdError == 0) {
-		//		success
-		//		printf("success");
-	}else{
-		//		printf("failed to converge");
+	if (svdError != 0) {
  		return false;
 	}
 
