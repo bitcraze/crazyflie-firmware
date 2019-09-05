@@ -82,6 +82,11 @@ vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
 
 #define LH_FPGA_RESET DECK_GPIO_RX2
 
+static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
+  const uint32_t bitmask = (1 << TIMESTAMP_BITWIDTH) - 1;
+  return (x - y) & bitmask;
+}
+
 static bool isInit = false;
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
@@ -244,34 +249,62 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 	uint8_t combo_count = 0;
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-
 		for (size_t baseStation = 0; baseStation < 2; baseStation++) {
 
-
-
-			bool hasBothAxis = true;
+			uint8_t validAxisCount  = 0;
 			for (size_t axis = 0; axis < 2; axis++) {
 				//require valid horizontal and vertical sweeps
 
-				uint32_t angleTimestamp = angles[sensor].angleTimestamps[baseStation][axis];
-				if(angleTimestamp == 0){
-					hasBothAxis = false;
-				}else {
-					uint32_t deltaTimestamp = startT - angleTimestamp;
-					if(deltaTimestamp > 17){ //previous readings cannot be older than 1 cycle (more accurately 1/60*1000)
-//					if(deltaTimestamp > 34){//previous readings cannot be older than 2 cycles (more accurately 1/60*1000)
-						hasBothAxis = false; //should be 60hz per sensor
+				uint32_t timestamp = angles[sensor].timestamps[baseStation][axis];
+				uint32_t timestamp_i = angles[sensor].timestamps_i[baseStation][axis];
+
+				uint32_t currentSync = state->currentSync; //latest observed timestamp from fgpa
+
+				//				sweepDirection_j = X = 0
+				//				sweepDirection_k = Y = 1
+//				uint32_t currentSync;
+//				if(baseStation == 0 && axis == 0){
+//					currentSync = state->currentSync0X;
+//				}else if(baseStation == 0 && axis == 1){
+//					currentSync = state->currentSync0Y;
+//				}else if(baseStation == 1 && axis == 0){
+//					currentSync = state->currentSync1X;
+//				}else if(baseStation == 1 && axis == 1){
+//					currentSync = state->currentSync1Y;
+//				}
+
+				int delta = TS_DIFF(currentSync, timestamp);
+				int delta_i = startT - timestamp_i;
+
+
+				if(timestamp != 0 && timestamp_i != 0) {
+//					int delta = TS_DIFF(timestamp, currentSync);
+//					if(delta < 400000){ //1 sweep/frame/axis only
+//					if(delta < 400000*2){ //2 sweeps/frames/axes, 1 cycle
+//					if(delta < 400000*2*2){ //2 cycles //enough time only for 1 basestation, but all axis
+//					if(delta < 48000000){ //1 second, 48000000/(400000*2) = 60 cycles
+//					if(delta_i < 17){ //previous readings just slightly older than 1 cycle (more accurately 1/60*1000)
+//					if(delta_i < 34){//previous readings just slightly older than 2 cycles (more accurately 1/60*1000 * 2)
+//						validAxisCount++;//should be 60hz per sensor
+//					}
+//					if(delta_i < 67){//previous readings just slightly older than 4 cycles (more accurately 1/60*1000 * 4)
+//					if(delta_i < 1000){//previous readings cannot be older than 1 sec
+//						validAxisCount++;//should be 60hz per sensor
+//					}
+//					if(delta_i < 27){//previous readings just slightly older than 1.5 cycles (more accurately 1/60*1000 * 1.5) (min steps: 0, 8/9, 16/17, 25/26)
+//						validAxisCount++;//should be 60hz per sensor
+//					}
+					if(delta_i < 31){//previous readings cannot never be older than 2 cycles (1/60*1000 * 2), but capture all possible 1.5 cycles (more accurately 1/60*1000 * 1.5) (min steps: 0, 8/9, 16/17, 25/26)
+						validAxisCount++;//should be 60hz per sensor
 					}
 				}
-
 			}
 
-			if(hasBothAxis){
+			if(validAxisCount >= 2){
 				combos[combo_count].sensor = sensor;
 				combos[combo_count].baseStation = baseStation;
 				combo_count++;
 			}
-
 
 		}
 
@@ -279,10 +312,13 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 	rayCount += combo_count;
 
+//	return;
 
+  if(combo_count >= 8){
 
-  if(combo_count >= 2){
     ray_t rays[8] = {0};
+
+//  	return;
 
   	//ref: https://stackoverflow.com/a/3389591/3553367
 //		memset(&rays, 1, sizeof rays); //set all of rays to 0 (not working properly for floats)

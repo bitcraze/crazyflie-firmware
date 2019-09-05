@@ -183,7 +183,8 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
 
           result[sensor].angles[state->currentBaseStation][state->currentAxis] = angle;
           result[sensor].validCount++;
-          result[sensor].angleTimestamps[state->currentBaseStation][state->currentAxis] = T2M(xTaskGetTickCount()); //record time angle was received
+          result[sensor].timestamps[state->currentBaseStation][state->currentAxis] = state->sweeps[sensor].timestamp; //record time angle was received
+          result[sensor].timestamps_i[state->currentBaseStation][state->currentAxis] = T2M(xTaskGetTickCount()); //record time angle was received
 
           anglesMeasured = true;
         }

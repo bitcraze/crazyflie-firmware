@@ -86,7 +86,8 @@ typedef struct pulseProcessor_s {
 typedef struct {
   float angles[2][2];
   float correctedAngles[2][2];
-  uint32_t angleTimestamps[2][2];
+  uint32_t timestamps[2][2]; //overflows in about 11 secs (2^29/(48*10^6)), 29 bits, 48MHz
+  uint32_t timestamps_i[2][2]; //stores time from internal
   int validCount;
 } pulseProcessorResult_t;
 
