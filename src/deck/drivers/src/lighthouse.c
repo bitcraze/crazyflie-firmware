@@ -317,12 +317,20 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
   }
 
 	rayCount += rays_count;
+	//not necessarily unique rays per round, but out of all the rays, one of them will surely be new,
+	//so the combination of rays is unique as a whole, but some may have been detected in previous invocation
+
+//  if(rays_count >= 8){ // also produces 960Hz of Rays only when rays_count
+//  	rayCount += rays_count;
+//  }
 
 //	return;
 
+//  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
+  if(rays_count >= 2){ //require at least two rays
 
-  if(rays_count >= 2){ //require al
 
+  	bool hasPosition = false;
 		for (size_t i = 0; i < rays_count; i++) {
 			for (size_t j = 0; j < rays_count; j++) {
 
@@ -355,16 +363,13 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					}
 
 
-					vec3d pt0;
-					vec3d pt1;
-//					float pt0[3];
-//					float pt1[3];
+//					vec3d pt0;
+//					vec3d pt1;
+//					bool fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
 
-					bool fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
-
-//					vec3d pt0 = {1.0, 2.0, 3.0};
-//					vec3d pt1 = {2.0, 3.0, 4.0};
-//					bool fitSuccess = true;
+					vec3d pt0 = {1.0, 2.0, 3.0};
+					vec3d pt1 = {2.0, 3.0, 4.0};
+					bool fitSuccess = true;
 
 					if (fitSuccess){
 
@@ -377,20 +382,22 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						vec3d pt_mid;
 						arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
 
-//						printf("hehe");
+
+						hasPosition = true;
 
 					}
 
-
-
-
-//					uint32_t endT = T2M(xTaskGetTickCount());
-//					uint32_t deltaT = endT - startT;
 
 				}
 
 		  }
 	  }
+
+		if(hasPosition){
+			uint32_t endT = T2M(xTaskGetTickCount());
+			uint32_t deltaT = endT - startT;
+			return;
+		}
   }
 
 
