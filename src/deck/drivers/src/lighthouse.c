@@ -335,8 +335,8 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 //	return;
 
-//  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
-  if(rays_count >= 2){ //require at least two rays
+  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
+//  if(rays_count >= 2){ //require at least two rays
 
 
   	bool hasPosition = false;
