@@ -193,26 +193,29 @@ static void calculateStats(uint32_t nowMs) {
   resetStats();
 }
 
-static vec3d position;
+//static vec3d positions[PULSE_PROCESSOR_N_SENSORS];
+//static bool positionsIsValid[PULSE_PROCESSOR_N_SENSORS];
+
 static positionMeasurement_t ext_pos;
 static float deltaLog;
 
-static void estimatePosition(pulseProcessorResult_t angles[]) {
+/*static void estimatePosition(pulseProcessorResult_t angles[]) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
 
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-	  positionsIsValid[sensor] = false;
+//	  positionsIsValid[sensor] = false;
 		if (angles[sensor].validCount == 4) { //single sensor has gotten x & y axis from both basestations (2*2=4)
 			//it is possible to get position from single basestation, using multiple sensors
+			vec3d position;
 			lighthouseGeometryGetPosition(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta); //requires two base stations to be in view
 
 			deltaLog = delta;
 
-			memcpy(positions[sensor], position, vec3d_size);
-			positionsIsValid[sensor] = true;
+//			memcpy(positions[sensor], position, vec3d_size);
+//			positionsIsValid[sensor] = true;
 
 			ext_pos.x -= position[2];
 			ext_pos.y -= position[0];
@@ -233,7 +236,7 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   }
   ext_pos.stdDev = 0.01;
   estimatorEnqueuePosition(&ext_pos);
-}
+}*/
 
 
 typedef struct ray_s {
@@ -306,7 +309,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 			if(validAxisCount >= 2){
 
-				static vec3d direction, origin; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
+				vec3d direction, origin; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
 
 	//			pulseProcessorApplyCalibration(state, angles); //apply calibration only when needed
 				pulseProcessorApplyCalibration2(state, angles, baseStation, sensor); //apply calibration only when needed
@@ -378,15 +381,33 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					}
 
 
-					vec3d pt0;
-					vec3d pt1;
-					bool fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
+					bool fitSuccess = false;
 
-//					vec3d pt0 = {1.0, 2.0, 3.0};
-//					vec3d pt1 = {2.0, 3.0, 4.0};
-//					bool fitSuccess = true;
+//					{
+						vec3d pt0;
+						vec3d pt1;
+//						fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
+
+						ray_t test_rays[2]  = {
+								{.sensor = 0, .baseStation = 0, .origin = {-2.611738, 2.682860, -1.736229, }, .direction = { 0.798410177, -0.577826262,  0.169288218}, },
+								{.sensor = 1, .baseStation = 1, .origin = { 2.375781, 2.739366,  1.372339, }, .direction = {-0.478063911, -0.568822145, -0.669249952}, },
+						};
+						vec3d test_D = {0.015, 0, 0};
+						fitSuccess = lighthouseGeometryBestFitBetweenRays(test_rays[0].origin, test_rays[1].origin, test_rays[0].direction, test_rays[1].direction, test_D, pt0, pt1);
+
+//						printf("he");
+//					}
+//					fitSuccess = true;
+
+
+
+
 
 					if (fitSuccess){
+
+
+//						vec3d pt0 = {1.0, 2.0, 3.0};
+//						vec3d pt1 = {2.0, 3.0, 4.0};
 
 						vec3d pt10;
 						arm_sub_f32(pt1, pt0, pt10, vec3d_size);
@@ -619,9 +640,33 @@ LOG_ADD(LOG_FLOAT, angle0y_3, &angles[3].correctedAngles[0][1])
 LOG_ADD(LOG_FLOAT, angle1x_3, &angles[3].correctedAngles[1][0])
 LOG_ADD(LOG_FLOAT, angle1y_3, &angles[3].correctedAngles[1][1])
 
-LOG_ADD(LOG_FLOAT, x, &position[0])
-LOG_ADD(LOG_FLOAT, y, &position[1])
-LOG_ADD(LOG_FLOAT, z, &position[2])
+LOG_ADD(LOG_FLOAT, x, &ext_pos.y)
+LOG_ADD(LOG_FLOAT, y, &ext_pos.z)
+LOG_ADD(LOG_FLOAT, z, &ext_pos.x)
+//LOG_ADD(LOG_FLOAT, x, &position[0])
+//LOG_ADD(LOG_FLOAT, y, &position[1])
+//LOG_ADD(LOG_FLOAT, z, &position[2])
+LOG_ADD(LOG_FLOAT, delta, &delta)
+
+//LOG_ADD(LOG_FLOAT, posX_0, &positions[0][0])
+//LOG_ADD(LOG_FLOAT, posY_0, &positions[0][1])
+//LOG_ADD(LOG_FLOAT, posZ_0, &positions[0][2])
+//LOG_ADD(LOG_UINT8, posValid_0, &positionsIsValid[0])
+//
+//LOG_ADD(LOG_FLOAT, posX_1, &positions[1][0])
+//LOG_ADD(LOG_FLOAT, posY_1, &positions[1][1])
+//LOG_ADD(LOG_FLOAT, posZ_1, &positions[1][2])
+//LOG_ADD(LOG_UINT8, posValid_1, &positionsIsValid[1])
+//
+//LOG_ADD(LOG_FLOAT, posX_2, &positions[2][0])
+//LOG_ADD(LOG_FLOAT, posY_2, &positions[2][1])
+//LOG_ADD(LOG_FLOAT, posZ_2, &positions[2][2])
+//LOG_ADD(LOG_UINT8, posValid_2, &positionsIsValid[2])
+//
+//LOG_ADD(LOG_FLOAT, posX_3, &positions[3][0])
+//LOG_ADD(LOG_FLOAT, posY_3, &positions[3][1])
+//LOG_ADD(LOG_FLOAT, posZ_3, &positions[3][2])
+//LOG_ADD(LOG_UINT8, posValid_3, &positionsIsValid[3])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
