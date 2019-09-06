@@ -254,106 +254,114 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	float U[N_ROWS][N_COLS];
 	float singular_values[N_COLS];
 	float V[N_COLS][N_COLS];
+
+
+
 //	float dummy_array[N_COLS];
 //  int svdError = Singular_Value_Decomposition(&A, N_ROWS, N_COLS, &U, &singular_values, &V, &dummy_array);
 
 
+
+
 	float* dummy_array;
 	dummy_array = (float*) malloc(N_COLS * sizeof(float));
-	if (dummy_array == NULL) {
-		//	 printf(" No memory available");
+	if (dummy_array == NULL) { //no memory
 		return false;
 	}
 //	size_t freerambytes = xPortGetFreeHeapSize();
 	int svdError = Singular_Value_Decomposition((float*)A, N_ROWS, N_COLS, (float*)U, singular_values, (float*)V, dummy_array);
 	free(dummy_array);
-	if (svdError != 0) {
- 		return false;
+
+
+
+
+	if (svdError != 0) { //cannot converge
+		return false;
+	}else{ //found SVD, now solve for x
+
+		arm_matrix_instance_f32 U_mat = {N_ROWS, N_COLS, U};
+
+
+		float tolerance = 0.0001f;
+		float D_inv[N_COLS];
+		for ( uint8_t i = 0; i < N_COLS; i++ ) {
+			if(singular_values[i] >= tolerance){
+				D_inv[i] = 1/singular_values[i]; // conditional element-wise invert (this case only first element), ref: https://www.cse.unr.edu/~bebis/CS791E/Notes/SVD.pdf (page 2)
+			}
+		}
+		arm_matrix_instance_f32 D_inv_mat = {N_COLS, N_COLS, D_inv};
+
+
+		arm_matrix_instance_f32 V_mat = {N_COLS, N_COLS, V};
+
+
+		float VD_inv[N_COLS];
+		arm_matrix_instance_f32 VD_inv_mat = {N_COLS, N_COLS, VD_inv};
+		arm_mat_mult_f32(&V_mat, &D_inv_mat, &VD_inv_mat);
+
+
+		vec3d U_t;
+		arm_matrix_instance_f32 U_t_mat = {N_COLS, N_ROWS, U_t};
+		arm_mat_trans_f32(&U_mat, &U_t_mat);
+
+
+		float A_inv[N_COLS][N_ROWS];
+		arm_matrix_instance_f32 A_inv_mat = {N_COLS, N_ROWS, A_inv};
+		arm_mat_mult_f32(&VD_inv_mat, &U_t_mat, &A_inv_mat);
+
+
+	//	float x0[N_COLS];
+	//	arm_matrix_instance_f32 x0_mat = {N_COLS, N_COLS, x0};
+
+
+		arm_mat_mult_f32(&A_inv_mat, &B_mat, &x0_mat);
+
+
+
+		//DONE Solving for X, obtain the 2 points on each of the 2 rays
+
+
+
+		float mx0[N_COLS];
+		arm_matrix_instance_f32 mx0_mat = {1, 1, mx0};
+		arm_mat_mult_f32(&m_mat, &x0_mat, &mx0_mat);
+
+
+		float x1[N_COLS];
+		arm_matrix_instance_f32 x1_mat = {1, 1, x1};
+		arm_mat_add_f32(&mx0_mat, &c_mat, &x1_mat);
+
+
+		vec3d ux0;
+		arm_matrix_instance_f32 ux0_mat = {3, 1, ux0};
+		arm_mat_mult_f32(&u_mat, &x0_mat, &ux0_mat);
+
+
+		vec3d vx1;
+		arm_matrix_instance_f32 vx1_mat = {3, 1, vx1};
+		arm_mat_mult_f32(&v_mat, &x1_mat, &vx1_mat);
+
+
+		arm_matrix_instance_f32 orig0_mat = {3, 1, orig0};
+
+
+		arm_matrix_instance_f32 orig1_mat = {3, 1, orig1};
+
+
+		arm_matrix_instance_f32 pt0_mat = {3, 1, pt0};
+		arm_mat_add_f32(&orig0_mat, &ux0_mat, &pt0_mat);
+	//	vec3d pt0;
+	//  arm_add_f32(orig0, ux0, pt0, vec3d_size);
+	//	memcpy(_pt0, pt0, sizeof(vec3d));
+
+
+		arm_matrix_instance_f32 pt1_mat = {3, 1, pt1};
+		arm_mat_add_f32(&orig1_mat, &vx1_mat, &pt1_mat);
+	//	vec3d pt1;
+	//  arm_add_f32(orig1, vx1, pt1, vec3d_size);
+	//	memcpy(_pt1, pt1, sizeof(vec3d));
+
+
+		return true;
 	}
-
-
-	arm_matrix_instance_f32 U_mat = {N_ROWS, N_COLS, U};
-
-
-  float tolerance = 0.0001f;
-	float D_inv[N_COLS];
-  for ( uint8_t i = 0; i < N_COLS; i++ ) {
-  	if(singular_values[i] >= tolerance){
-    	D_inv[i] = 1/singular_values[i]; // conditional element-wise invert (this case only first element), ref: https://www.cse.unr.edu/~bebis/CS791E/Notes/SVD.pdf (page 2)
-  	}
-  }
-	arm_matrix_instance_f32 D_inv_mat = {N_COLS, N_COLS, D_inv};
-
-
-	arm_matrix_instance_f32 V_mat = {N_COLS, N_COLS, V};
-
-
-	float VD_inv[N_COLS];
-	arm_matrix_instance_f32 VD_inv_mat = {N_COLS, N_COLS, VD_inv};
-	arm_mat_mult_f32(&V_mat, &D_inv_mat, &VD_inv_mat);
-
-
-	vec3d U_t;
-	arm_matrix_instance_f32 U_t_mat = {N_COLS, N_ROWS, U_t};
-	arm_mat_trans_f32(&U_mat, &U_t_mat);
-
-
-	float A_inv[N_COLS][N_ROWS];
-	arm_matrix_instance_f32 A_inv_mat = {N_COLS, N_ROWS, A_inv};
-	arm_mat_mult_f32(&VD_inv_mat, &U_t_mat, &A_inv_mat);
-
-
-//	float x0[N_COLS];
-//	arm_matrix_instance_f32 x0_mat = {N_COLS, N_COLS, x0};
-
-
-	arm_mat_mult_f32(&A_inv_mat, &B_mat, &x0_mat);
-
-
-
-
-
-
-
-	float mx0[N_COLS];
-	arm_matrix_instance_f32 mx0_mat = {1, 1, mx0};
-	arm_mat_mult_f32(&m_mat, &x0_mat, &mx0_mat);
-
-
-	float x1[N_COLS];
-	arm_matrix_instance_f32 x1_mat = {1, 1, x1};
-	arm_mat_add_f32(&mx0_mat, &c_mat, &x1_mat);
-
-
-	vec3d ux0;
-	arm_matrix_instance_f32 ux0_mat = {3, 1, ux0};
-	arm_mat_mult_f32(&u_mat, &x0_mat, &ux0_mat);
-
-
-	vec3d vx1;
-	arm_matrix_instance_f32 vx1_mat = {3, 1, vx1};
-	arm_mat_mult_f32(&v_mat, &x1_mat, &vx1_mat);
-
-
-	arm_matrix_instance_f32 orig0_mat = {3, 1, orig0};
-
-
-	arm_matrix_instance_f32 orig1_mat = {3, 1, orig1};
-
-
-	arm_matrix_instance_f32 pt0_mat = {3, 1, pt0};
-	arm_mat_add_f32(&orig0_mat, &ux0_mat, &pt0_mat);
-//	vec3d pt0;
-//  arm_add_f32(orig0, ux0, pt0, vec3d_size);
-//	memcpy(_pt0, pt0, sizeof(vec3d));
-
-
-	arm_matrix_instance_f32 pt1_mat = {3, 1, pt1};
-	arm_mat_add_f32(&orig1_mat, &vx1_mat, &pt1_mat);
-//	vec3d pt1;
-//  arm_add_f32(orig1, vx1, pt1, vec3d_size);
-//	memcpy(_pt1, pt1, sizeof(vec3d));
-
-
-	return true;
 }
