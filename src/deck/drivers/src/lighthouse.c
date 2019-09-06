@@ -70,11 +70,20 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {2.563488, 3.112367, -1.062398, }, .mat = {{0.034269, -0.647552, 0.761251, }, {-0.012392, 0.761364, 0.648206, }, {-0.999336, -0.031647, 0.018067, }, }},
 };
 
+//with respect to MATLAB
+//vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
+//		{-0.0150,  0.0075, 0},
+//		{-0.0150, -0.0075, 0},
+//		{ 0.0150,  0.0075, 0},
+//		{ 0.0150, -0.0075, 0},
+//};
+
+//to work  with base stations
 vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
-		{-0.0150,  0.0075, 0},
-		{-0.0150, -0.0075, 0},
-		{ 0.0150,  0.0075, 0},
-		{ 0.0150, -0.0075, 0},
+		{-0.0075, 0,  0.0150},
+		{ 0.0075, 0,  0.0150},
+		{-0.0075, 0, -0.0150},
+		{ 0.0075, 0, -0.0150},
 };
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
