@@ -378,13 +378,13 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					}
 
 
-//					vec3d pt0;
-//					vec3d pt1;
-//					bool fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
+					vec3d pt0;
+					vec3d pt1;
+					bool fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
 
-					vec3d pt0 = {1.0, 2.0, 3.0};
-					vec3d pt1 = {2.0, 3.0, 4.0};
-					bool fitSuccess = true;
+//					vec3d pt0 = {1.0, 2.0, 3.0};
+//					vec3d pt1 = {2.0, 3.0, 4.0};
+//					bool fitSuccess = true;
 
 					if (fitSuccess){
 
