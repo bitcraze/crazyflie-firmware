@@ -266,6 +266,7 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, 
 	}
 //	size_t freerambytes = xPortGetFreeHeapSize();
 	int svdError = Singular_Value_Decomposition((float*)A, N_ROWS, N_COLS, (float*)U, singular_values, (float*)V, dummy_array);
+	free(dummy_array);
 	if (svdError != 0) {
  		return false;
 	}
