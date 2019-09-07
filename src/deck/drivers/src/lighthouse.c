@@ -524,9 +524,9 @@ static void lighthouseTask(void *param)
 //          pulseProcessorApplyCalibration(&ppState, angles);
 //          estimatePosition(angles);
 
-          for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-            angles[sensor].validCount = 0;
-          }
+//          for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+//            angles[sensor].validCount = 0;
+//          }
         }
 
 //				estimatePosition2(&ppState, angles); //runs too often, will miss pulses
