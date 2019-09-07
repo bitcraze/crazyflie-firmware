@@ -249,9 +249,12 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
   ray_t rays[MAX_RAYS] = {0};
 
 	uint8_t rays_count = 0;
+	uint8_t sensorsInvolved = 0;
+	bool isBaseStationInvolved[2] = {0};
 	{
 		uint32_t startT = T2M(xTaskGetTickCount());
 		for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+			bool isSensorInvolved = false;
 			for (uint8_t baseStation = 0; baseStation < 2; baseStation++) {
 
 				uint8_t validAxisCount  = 0;
@@ -318,6 +321,13 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 					rays_count++;
 
+					isBaseStationInvolved[baseStation] = true;
+
+					if(!isSensorInvolved){
+						isSensorInvolved = true;
+						sensorsInvolved++;
+					}
+
 				}
 
 			}
@@ -336,6 +346,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 //	return;
 
 //  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
+	bool noSingleBaseStation = isBaseStationInvolved[0] && isBaseStationInvolved[1] && sensorsInvolved >= 2;
   if(rays_count >= 2){ //require at least two rays
 
     uint8_t ray_pairs_count = 0;
@@ -346,9 +357,12 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 				if(rays[i].sensor != rays[j].sensor || rays[i].baseStation != rays[j].baseStation){ //must have either different basestations, or different sensors, or both
 
 
-//					if(rays[i].baseStation == rays[j].baseStation){ //skip if same basestation, does not allow single basestation
-//					 continue;
-//					}
+					if(noSingleBaseStation && rays[i].baseStation == rays[j].baseStation){
+						//for sake of effeciency,
+						//just drop single basestation ray pairs if there are 2 basestations in view, and if at least 2 sensors detected
+						//otherwise, continue the ineffecient but necessary computation of all possible pairs
+					 continue;
+					}
 
 					static vec3d D = {0}; //0 by default, likely rays fall on same sensor
 
@@ -403,9 +417,16 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						ext_pos.z += pt_mid[2];
 						ray_pairs_count++;
 
+
+						if(ray_pairs_count >= 12){
+							break; //just stop if more than 12
+						}
 					}
 				}
 		  }
+			if(ray_pairs_count >= 12){
+				break; //just stop if more than 12
+			}
 	  }
 
 
@@ -421,8 +442,11 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 //			positionCount++;
 			positionCount += ray_pairs_count;
-
-		  ext_pos.stdDev = 0.01;
+		  if(noSingleBaseStation){
+		  	ext_pos.stdDev = 0.01;
+		  }else{
+			  ext_pos.stdDev = 0.05; //since single basestation is possible, don't trust it that much
+		  }
 		  estimatorEnqueuePosition(&ext_pos);
 
 		  //			uint32_t endT = T2M(xTaskGetTickCount());
