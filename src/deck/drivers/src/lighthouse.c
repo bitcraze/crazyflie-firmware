@@ -343,10 +343,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 //  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
   if(rays_count >= 2){ //require at least two rays
 
-
-  	bool hasPosition = false;
-
-    uint8_t rayPairsUsed = 0;
+    uint8_t ray_pairs_count = 0;
 
 		for (uint8_t i = 0; i < rays_count; i++) {
 			for (uint8_t j = 0; j < rays_count; j++) {
@@ -440,27 +437,25 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					if (fitSuccess){
 
 
-//						vec3d pt0 = {1.0, 2.0, 3.0};
-//						vec3d pt1 = {2.0, 3.0, 4.0};
-
-						vec3d pt10;
-						arm_sub_f32(pt1, pt0, pt10, vec3d_size);
-
-						vec3d pt10_half;
-						arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
-
 						vec3d pt_mid;
-						arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
-
-						if(hasPosition != true){
-							hasPosition = true;
-							memset(&ext_pos, 0, sizeof(ext_pos)); //reset ext_pos once
+						{
+							vec3d pt10_half;
+							{
+								vec3d pt10;
+								arm_sub_f32(pt1, pt0, pt10, vec3d_size);
+								arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
+							}
+							arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
 						}
 
+
+						if(ray_pairs_count == 0){
+							memset(&ext_pos, 0, sizeof(ext_pos)); //reset ext_pos once
+						}
 						ext_pos.x -= pt_mid[2];
 						ext_pos.y -= pt_mid[0];
 						ext_pos.z += pt_mid[1];
-						rayPairsUsed++;
+						ray_pairs_count++;
 
 
 
@@ -473,10 +468,10 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 	  }
 
 
-		if(rayPairsUsed > 0){
-			ext_pos.x /= rayPairsUsed;
-			ext_pos.y /= rayPairsUsed;
-			ext_pos.z /= rayPairsUsed;
+		if(ray_pairs_count > 0){
+			ext_pos.x /= ray_pairs_count;
+			ext_pos.y /= ray_pairs_count;
+			ext_pos.z /= ray_pairs_count;
 
 		  // Make sure we feed sane data into the estimator
 		  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
@@ -484,7 +479,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 		  }
 
 //			positionCount++;
-			positionCount += rayPairsUsed;
+			positionCount += ray_pairs_count;
 
 		  ext_pos.stdDev = 0.01;
 		  estimatorEnqueuePosition(&ext_pos);
