@@ -348,16 +348,6 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 		for (uint8_t i = 0; i < rays_count; i++) {
 			for (uint8_t j = 0; j < rays_count; j++) {
 
-//    	return;
-
-//      ref: https://stackoverflow.com/a/3389591/3553367
-//	  	memset(&rays, 1, sizeof rays); //set all of rays to 0 (not working properly for floats)
-//	  	memset(&rays[1], 10, sizeof(struct ray_s)); //set all of only index 1 to 10
-//	  	memset(rays[2].origin, 10, 3*sizeof(float) ); //set only index 2's origin to 10
-//		  #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member) //ref: https://stackoverflow.com/a/3553321/3553367
-//		  memset(rays[2].origin, 10, MEMBER_SIZE(ray_t, origin) ); //set only index 2's origin to 10
-
-
 				if(rays[i].sensor != rays[j].sensor || rays[i].baseStation != rays[j].baseStation){ //must have either different basestations, or differnt sensors, or both
 
 
@@ -379,7 +369,6 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						arm_matrix_instance_f32 D_mat = {3, 1, D};
 
 						arm_mat_mult_f32(&R_mat, &S_mat, &D_mat);
-
 					}
 
 
@@ -387,55 +376,16 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 					static vec3d pt0;
 					static vec3d pt1;
-//					static vec3d pt0 = {1.0, 2.0, 3.0};
-//					static vec3d pt1 = {2.0, 3.0, 4.0};
 
 					{
-
-						 //						static vec3d orig0 = lighthouseBaseStationsGeometry[rays[i].baseStation]
-						 //						static vec3d orig1 = lighthouseBaseStationsGeometry[rays[j].baseStation]
-//						static vec3d pt0;
-//						static vec3d pt1;
-//						fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
-
-//						ray_t test_rays[2]  = {
-//								{.sensor = 0, .baseStation = 0, .origin = {-2.611738, 2.682860, -1.736229, }, .direction = { 0.798410177, -0.577826262,  0.169288218}, },
-//								{.sensor = 1, .baseStation = 1, .origin = { 2.375781, 2.739366,  1.372339, }, .direction = {-0.478063911, -0.568822145, -0.669249952}, },
-//						};
-//						vec3d test_D = {0.015, 0, 0};
-
-
-//						fitSuccess = lighthouseGeometryBestFitBetweenRays(test_rays[0].origin, test_rays[1].origin, test_rays[0].direction, test_rays[1].direction, test_D, pt0, pt1);
-//						fitSuccess = lighthouseGeometryBestFitBetweenRays(test_rays[0].origin, test_rays[1].origin, pt0, pt1);
-//
-//							static vec3d orig0 = {-2.611738, 2.682860, -1.736229};
-//							static vec3d orig1 = {2.375781, 2.739366, 1.372339};
-//							static vec3d u = { 0.798410177, -0.577826262,  0.169288218};
-//							static vec3d v = {-0.478063911, -0.568822145, -0.669249952};
-//							static vec3d test_D = {0.015, 0, 0};
-//							fitSuccess = lighthouseGeometryBestFitBetweenRays(orig0, orig1, u, v, test_D, pt0, pt1);
-
-
-//							fitSuccess = lighthouseGeometryBestFitBetweenRays(orig0, orig1, u, v, test_D);
-//							fitSuccess = lighthouseGeometryBestFitBetweenRays(pt0, pt1);
-
 						static vec3d origin_i, origin_j, direction_i, direction_j; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
 						calc_ray_vec(&lighthouseBaseStationsGeometry[rays[i].baseStation], angles[rays[i].sensor].correctedAngles[rays[i].baseStation][0], angles[rays[i].sensor].correctedAngles[rays[i].baseStation][1], direction_i, origin_i);
 						calc_ray_vec(&lighthouseBaseStationsGeometry[rays[j].baseStation], angles[rays[j].sensor].correctedAngles[rays[j].baseStation][0], angles[rays[j].sensor].correctedAngles[rays[j].baseStation][1], direction_j, origin_j);
 
 						fitSuccess = lighthouseGeometryBestFitBetweenRays(origin_i, origin_j, direction_i, direction_j, D, pt0, pt1);
-
-
-//						printf("he");
 					}
-//					fitSuccess = true;
-
-
-
-
 
 					if (fitSuccess){
-
 
 						vec3d pt_mid;
 						{
@@ -457,13 +407,8 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						ext_pos.z += pt_mid[1];
 						ray_pairs_count++;
 
-
-
 					}
-
-
 				}
-
 		  }
 	  }
 

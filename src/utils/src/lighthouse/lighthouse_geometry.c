@@ -131,45 +131,8 @@ bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float 
   return intersect_lines(origin1, ray1, origin2, ray2, position, position_delta);
 }
 
-//bool lighthouseGeometryBestFitBetweenRays(vec3d _orig0, vec3d _orig1, vec3d _u, vec3d _v, vec3d _D, vec3d _pt0, vec3d _pt1)
-bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec3d v, vec3d D, vec3d _pt0, vec3d _pt1)
-//bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec3d v, vec3d D)
-//bool lighthouseGeometryBestFitBetweenRays(vec3d_pt0, vec3d _pt1)
+bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec3d v, vec3d D, vec3d pt0, vec3d pt1)
 {
-
-
-//	vec3d orig0;
-//	memcpy(orig0, _orig0, sizeof(vec3d));
-//	vec3d orig0 = {-2.611738, 2.682860, -1.736229};
-
-
-//	vec3d orig1;
-//	memcpy(orig1, _orig1, sizeof(vec3d));
-//	vec3d orig1 = {2.375781, 2.739366, 1.372339};
-
-
-//	vec3d u;
-//	memcpy(u, _u, sizeof(vec3d));
-//	vec3d u = {0.79735142, -0.581848264, 0.160261855};
-//	vec3d u = { 0.798410177, -0.577826262,  0.169288218};
-
-
-//	vec3d v;
-//	memcpy(v, _v, sizeof(vec3d));
-//	vec3d v = {-0.47880125, -0.564612567, -0.672280788};
-//	vec3d v = {-0.478063911, -0.568822145, -0.669249952};
-
-
-//	vec3d D;
-//	memcpy(D, _D, sizeof(vec3d));
-//	vec3d D = {0.015, 0, 0};
-
-
-//	arm_matrix_instance_f32 u_mat = {3, 1, u};
-	// arm_matrix_instance_f32 u_mat = {3, 1, rays[0].direction}; //can work
-
-//	arm_matrix_instance_f32 v_mat = {3, 1, v};
-// arm_matrix_instance_f32 v_mat = {3, 1, rays[1].direction}; //cannot work
 
 
 	float32_t m[1];
@@ -362,7 +325,7 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec
 				arm_matrix_instance_f32 x0_mat = {N_COLS, N_COLS, x0};
 				arm_mat_mult_f32(&u_mat, &x0_mat, &ux0_mat);
 			}
-			arm_add_f32(orig0, ux0, _pt0, vec3d_size);
+			arm_add_f32(orig0, ux0, pt0, vec3d_size);
 		}
 
 		{
@@ -390,47 +353,12 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec
 					arm_matrix_instance_f32 x1_mat = {1, 1, x1};
 					arm_mat_mult_f32(&v_mat, &x1_mat, &vx1_mat);
 				}
-				  arm_add_f32(orig1, vx1, _pt1, vec3d_size);
+				  arm_add_f32(orig1, vx1, pt1, vec3d_size);
 			}
 
 		}
 	}
 
-
-
-	//DONE Solving for X, obtain the 2 points on each of the 2 rays
-
-
-//	vec3d pt0 = {1.0, 2.0, 3.0};
-//	vec3d pt1 = {2.0, 3.0, 4.0};
-//	memcpy(_pt0, pt0, sizeof(vec3d));
-//	memcpy(_pt1, pt1, sizeof(vec3d));
-//	return false;
-//	/*
-
-
-
-
-
-//	{
-//		arm_matrix_instance_f32 pt0_mat = {3, 1, _pt0};
-//		arm_matrix_instance_f32 orig0_mat = {3, 1, orig0};
-//		arm_matrix_instance_f32 ux0_mat = {3, 1, ux0};
-//		arm_mat_add_f32(&orig0_mat, &ux0_mat, &pt0_mat);
-//	}
-	//	vec3d pt0;
-	//  arm_add_f32(orig0, ux0, pt0, vec3d_size);
-	//	memcpy(_pt0, pt0, sizeof(vec3d));
-
-//	{
-//		arm_matrix_instance_f32 pt1_mat = {3, 1, _pt1};
-//		arm_matrix_instance_f32 orig1_mat = {3, 1, orig1};
-//		arm_matrix_instance_f32 vx1_mat = {3, 1, vx1};
-//		arm_mat_add_f32(&orig1_mat, &vx1_mat, &pt1_mat);
-//	}
-	//	vec3d pt1;
-	//  arm_add_f32(orig1, vx1, pt1, vec3d_size);
-	//	memcpy(_pt1, pt1, sizeof(vec3d));
 
 
 		return true;
