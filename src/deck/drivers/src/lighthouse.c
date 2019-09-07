@@ -353,9 +353,9 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 				if(rays[i].sensor != rays[j].sensor || rays[i].baseStation != rays[j].baseStation){ //must have either different basestations, or differnt sensors, or both
 
 
-					if(rays[i].baseStation == rays[j].baseStation){ //skip if same basestation, does not allow single basestation
-					 continue;
-					}
+//					if(rays[i].baseStation == rays[j].baseStation){ //skip if same basestation, does not allow single basestation
+//					 continue;
+//					}
 
 					static vec3d D = {0}; //0 by default, likely rays fall on same sensor
 
