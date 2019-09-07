@@ -343,7 +343,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 		for (uint8_t i = 0; i < rays_count; i++) {
 			for (uint8_t j = 0; j < rays_count; j++) {
 
-				if(rays[i].sensor != rays[j].sensor || rays[i].baseStation != rays[j].baseStation){ //must have either different basestations, or differnt sensors, or both
+				if(rays[i].sensor != rays[j].sensor || rays[i].baseStation != rays[j].baseStation){ //must have either different basestations, or different sensors, or both
 
 
 //					if(rays[i].baseStation == rays[j].baseStation){ //skip if same basestation, does not allow single basestation
@@ -360,7 +360,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 //						vec3d S = {};
 //						arm_sub_f32(lighthouseSensorsGeometry[rays[j].sensor], lighthouseSensorsGeometry[rays[i].sensor], S, vec3d_size);
 //						arm_matrix_instance_f32 S_mat = {3, 1, S};
-						arm_matrix_instance_f32 S_mat = {3, 1, S[j][i]};
+						arm_matrix_instance_f32 S_mat = {3, 1, S[rays[j].sensor][rays[i].sensor]};
 
 						arm_matrix_instance_f32 D_mat = {3, 1, D};
 
