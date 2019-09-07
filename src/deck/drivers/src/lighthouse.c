@@ -65,25 +65,18 @@
   #define DISABLE_LIGHTHOUSE_DRIVER 1
 #endif
 
+//with respect to MATLAB
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
-{.origin = {-0.542299, 3.152727, 1.958483, }, .mat = {{0.999975, -0.007080, -0.000000, }, {0.005645, 0.797195, 0.603696, }, {-0.004274, -0.603681, 0.797215, }, }},
-{.origin = {2.563488, 3.112367, -1.062398, }, .mat = {{0.034269, -0.647552, 0.761251, }, {-0.012392, 0.761364, 0.648206, }, {-0.999336, -0.031647, 0.018067, }, }},
+{.origin = { 1.736229,  2.611738, 2.682860, }, .mat = {{-0.855681, -0.345626, 0.385167, }, {0.516858, -0.607955, 0.602701, }, {0.025856, 0.714796, 0.698855, }, }},
+{.origin = {-1.372339, -2.375781, 2.739366, }, .mat = {{0.840995, 0.307949, -0.444853, }, {-0.534727, 0.598345, -0.596699, }, {0.082423, 0.739696, 0.667874, }, }},
 };
 
 //with respect to MATLAB
-//vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
-//		{-0.0150,  0.0075, 0},
-//		{-0.0150, -0.0075, 0},
-//		{ 0.0150,  0.0075, 0},
-//		{ 0.0150, -0.0075, 0},
-//};
-
-//to work  with base stations
-const vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
-		{-0.0075, 0,  0.0150},
-		{ 0.0075, 0,  0.0150},
-		{-0.0075, 0, -0.0150},
-		{ 0.0075, 0, -0.0150},
+vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
+		{-0.0150,  0.0075, 0},
+		{-0.0150, -0.0075, 0},
+		{ 0.0150,  0.0075, 0},
+		{ 0.0150, -0.0075, 0},
 };
 
 vec3d S[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_N_SENSORS];
@@ -405,9 +398,9 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						if(ray_pairs_count == 0){
 							memset(&ext_pos, 0, sizeof(ext_pos)); //reset ext_pos once
 						}
-						ext_pos.x -= pt_mid[2];
-						ext_pos.y -= pt_mid[0];
-						ext_pos.z += pt_mid[1];
+						ext_pos.x += pt_mid[0];
+						ext_pos.y += pt_mid[1];
+						ext_pos.z += pt_mid[2];
 						ray_pairs_count++;
 
 					}
@@ -650,9 +643,9 @@ LOG_ADD(LOG_FLOAT, angle0y_3, &angles[3].correctedAngles[0][1])
 LOG_ADD(LOG_FLOAT, angle1x_3, &angles[3].correctedAngles[1][0])
 LOG_ADD(LOG_FLOAT, angle1y_3, &angles[3].correctedAngles[1][1])
 
-LOG_ADD(LOG_FLOAT, x, &ext_pos.y)
-LOG_ADD(LOG_FLOAT, y, &ext_pos.z)
-LOG_ADD(LOG_FLOAT, z, &ext_pos.x)
+LOG_ADD(LOG_FLOAT, x, &ext_pos.x)
+LOG_ADD(LOG_FLOAT, y, &ext_pos.y)
+LOG_ADD(LOG_FLOAT, z, &ext_pos.z)
 //LOG_ADD(LOG_FLOAT, x, &position[0])
 //LOG_ADD(LOG_FLOAT, y, &position[1])
 //LOG_ADD(LOG_FLOAT, z, &position[2])
