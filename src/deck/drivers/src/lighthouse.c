@@ -86,6 +86,8 @@ const vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
 		{ 0.0075, 0, -0.0150},
 };
 
+vec3d S[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_N_SENSORS];
+
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
 
@@ -362,9 +364,10 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						estimatorKalmanGetEstimatedRotationMatrix(R);
 						arm_matrix_instance_f32 R_mat = {3, 3, R};
 
-						vec3d S = {};
-						arm_sub_f32(lighthouseSensorsGeometry[rays[j].sensor], lighthouseSensorsGeometry[rays[i].sensor], S, vec3d_size);
-						arm_matrix_instance_f32 S_mat = {3, 1, S};
+//						vec3d S = {};
+//						arm_sub_f32(lighthouseSensorsGeometry[rays[j].sensor], lighthouseSensorsGeometry[rays[i].sensor], S, vec3d_size);
+//						arm_matrix_instance_f32 S_mat = {3, 1, S};
+						arm_matrix_instance_f32 S_mat = {3, 1, S[j][i]};
 
 						arm_matrix_instance_f32 D_mat = {3, 1, D};
 
@@ -471,6 +474,13 @@ static void lighthouseTask(void *param)
 
   // Boot the deck firmware
   checkVersionAndBoot();
+
+
+	for (uint8_t j = 0; j < PULSE_PROCESSOR_N_SENSORS; j++) {
+		for (uint8_t i = 0; i < PULSE_PROCESSOR_N_SENSORS; i++) {
+			arm_sub_f32(lighthouseSensorsGeometry[j], lighthouseSensorsGeometry[i], S[j][i], vec3d_size);
+		}
+	}
 
   while(1) {
     // Synchronize
