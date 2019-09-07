@@ -79,7 +79,7 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 //};
 
 //to work  with base stations
-vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
+const vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
 		{-0.0075, 0,  0.0150},
 		{ 0.0075, 0,  0.0150},
 		{-0.0075, 0, -0.0150},
@@ -136,11 +136,11 @@ static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 // Stats
 static bool comSynchronized = false;
 
-static int serialFrameCount = 0;
-static int frameCount = 0;
-static int cycleCount = 0;
-static int positionCount = 0;
-static int rayCount = 0;
+static uint16_t serialFrameCount = 0;
+static uint16_t frameCount = 0;
+static uint16_t cycleCount = 0;
+static uint16_t positionCount = 0;
+static uint16_t rayCount = 0;
 
 static float serialFrameRate = 0.0;
 static float frameRate = 0.0;
@@ -148,7 +148,7 @@ static float cycleRate = 0.0;
 static float positionRate = 0.0;
 static float rayRate = 0.0;
 
-static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
+//static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
 static uint32_t latestStatsTimeMs = 0;
 
@@ -164,8 +164,8 @@ typedef union frame_u {
 
 static bool getFrame(frame_t *frame)
 {
-  int syncCounter = 0;
-  for(int i=0; i<7; i++) {
+  uint8_t syncCounter = 0;
+  for(uint8_t i=0; i<7; i++) {
     uart1Getchar(&frame->data[i]);
     if (frame->data[i] != 0) {
       syncCounter += 1;
@@ -201,15 +201,15 @@ static float deltaLog;
 
 /*static void estimatePosition(pulseProcessorResult_t angles[]) {
   memset(&ext_pos, 0, sizeof(ext_pos));
-  int sensorsUsed = 0;
-  float delta;
+  uint8_t sensorsUsed = 0;
 
   // Average over all sensors with valid data
-  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+  for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
 //	  positionsIsValid[sensor] = false;
 		if (angles[sensor].validCount == 4) { //single sensor has gotten x & y axis from both basestations (2*2=4)
 			//it is possible to get position from single basestation, using multiple sensors
 			vec3d position;
+			float delta;
 			lighthouseGeometryGetPosition(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta); //requires two base stations to be in view
 
 			deltaLog = delta;
@@ -242,91 +242,93 @@ static float deltaLog;
 typedef struct ray_s {
   uint8_t sensor;
   uint8_t baseStation;
-  vec3d origin;
-  vec3d direction;
+//  vec3d origin;
+//  vec3d direction;
 } __attribute__((packed)) ray_t;
 
 
 void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 {
-	uint32_t startT = T2M(xTaskGetTickCount());
 
 	#define MAX_RAYS PULSE_PROCESSOR_N_SENSORS*2  //given 2 base stations and 4 sensors, only possible to obtain in total of 8 unique rays
   ray_t rays[MAX_RAYS] = {0};
 
 	uint8_t rays_count = 0;
-  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-		for (size_t baseStation = 0; baseStation < 2; baseStation++) {
+	{
+		uint32_t startT = T2M(xTaskGetTickCount());
+		for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+			for (uint8_t baseStation = 0; baseStation < 2; baseStation++) {
 
-			uint8_t validAxisCount  = 0;
-			for (size_t axis = 0; axis < 2; axis++) {
-				//require valid horizontal and vertical sweeps
+				uint8_t validAxisCount  = 0;
+				for (uint8_t axis = 0; axis < 2; axis++) {
+					//require valid horizontal and vertical sweeps
 
-				uint32_t timestamp = angles[sensor].timestamps[baseStation][axis];
-				uint32_t timestamp_i = angles[sensor].timestamps_i[baseStation][axis];
+	//				uint32_t timestamp = angles[sensor].timestamps[baseStation][axis];
+					uint32_t timestamp_i = angles[sensor].timestamps_i[baseStation][axis];
 
-				uint32_t currentSync = state->currentSync; //latest observed timestamp from fgpa
-
-				//				sweepDirection_j = X = 0
-				//				sweepDirection_k = Y = 1
-//				uint32_t currentSync;
-//				if(baseStation == 0 && axis == 0){
-//					currentSync = state->currentSync0X;
-//				}else if(baseStation == 0 && axis == 1){
-//					currentSync = state->currentSync0Y;
-//				}else if(baseStation == 1 && axis == 0){
-//					currentSync = state->currentSync1X;
-//				}else if(baseStation == 1 && axis == 1){
-//					currentSync = state->currentSync1Y;
-//				}
-
-				int delta = TS_DIFF(currentSync, timestamp);
-				int delta_i = startT - timestamp_i;
+	//				if(timestamp != 0 && timestamp_i != 0) {
+					if(timestamp_i != 0) {
 
 
-				if(timestamp != 0 && timestamp_i != 0) {
-//					int delta = TS_DIFF(timestamp, currentSync);
-//					if(delta < 400000){ //1 sweep/frame/axis only
-//					if(delta < 400000*2){ //2 sweeps/frames/axes, 1 cycle
-//					if(delta < 400000*2*2){ //2 cycles //enough time only for 1 basestation, but all axis
-//					if(delta < 48000000){ //1 second, 48000000/(400000*2) = 60 cycles
-//					if(delta_i < 17){ //previous readings just slightly older than 1 cycle (more accurately 1/60*1000)
-//					if(delta_i < 34){//previous readings just slightly older than 2 cycles (more accurately 1/60*1000 * 2)
-//						validAxisCount++;//should be 60hz per sensor
-//					}
-//					if(delta_i < 67){//previous readings just slightly older than 4 cycles (more accurately 1/60*1000 * 4)
-//					if(delta_i < 1000){//previous readings cannot be older than 1 sec
-//						validAxisCount++;//should be 60hz per sensor
-//					}
-//					if(delta_i < 27){//previous readings just slightly older than 1.5 cycles (more accurately 1/60*1000 * 1.5) (min steps: 0, 8/9, 16/17, 25/26)
-//						validAxisCount++;//should be 60hz per sensor
-//					}
-					if(delta_i < 31){//previous readings cannot never be older than 2 cycles (1/60*1000 * 2), but capture all possible 1.5 cycles (more accurately 1/60*1000 * 1.5) (min steps: 0, 8/9, 16/17, 25/26)
-						validAxisCount++;//should be 60hz per sensor
+	//				sweepDirection_j = X = 0
+	//				sweepDirection_k = Y = 1
+	//				uint32_t currentSync;
+	//				if(baseStation == 0 && axis == 0){
+	//					currentSync = state->currentSync0X;
+	//				}else if(baseStation == 0 && axis == 1){
+	//					currentSync = state->currentSync0Y;
+	//				}else if(baseStation == 1 && axis == 0){
+	//					currentSync = state->currentSync1X;
+	//				}else if(baseStation == 1 && axis == 1){
+	//					currentSync = state->currentSync1Y;
+	//				}
+	//				uint32_t currentSync = state->currentSync;
+	//				int delta = TS_DIFF(urrentSync, timestamp);
+
+						int delta_i = startT - timestamp_i;
+
+	//					if(delta < 400000){ //1 sweep/frame/axis only
+	//					if(delta < 400000*2){ //2 sweeps/frames/axes, 1 cycle
+	//					if(delta < 400000*2*2){ //2 cycles //enough time only for 1 basestation, but all axis
+	//					if(delta < 48000000){ //1 second, 48000000/(400000*2) = 60 cycles
+	//					if(delta_i < 17){ //previous readings just slightly older than 1 cycle (more accurately 1/60*1000)
+	//					if(delta_i < 34){//previous readings just slightly older than 2 cycles (more accurately 1/60*1000 * 2)
+	//						validAxisCount++;//should be 60hz per sensor
+	//					}
+	//					if(delta_i < 67){//previous readings just slightly older than 4 cycles (more accurately 1/60*1000 * 4)
+	//					if(delta_i < 1000){//previous readings cannot be older than 1 sec
+	//						validAxisCount++;//should be 60hz per sensor
+	//					}
+	//					if(delta_i < 27){//previous readings just slightly older than 1.5 cycles (more accurately 1/60*1000 * 1.5) (min steps: 0, 8/9, 16/17, 25/26)
+	//						validAxisCount++;//should be 60hz per sensor
+	//					}
+						if(delta_i < 31){//previous readings cannot never be older than 2 cycles (1/60*1000 * 2), but capture all possible 1.5 cycles (more accurately 1/60*1000 * 1.5) (min steps: 0, 8/9, 16/17, 25/26)
+							validAxisCount++;//should be 60hz per sensor
+						}
 					}
 				}
-			}
 
-			if(validAxisCount >= 2){
+				if(validAxisCount >= 2){
 
-				vec3d direction, origin; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
+//					vec3d direction, origin; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
 
-	//			pulseProcessorApplyCalibration(state, angles); //apply calibration only when needed
-				pulseProcessorApplyCalibration2(state, angles, baseStation, sensor); //apply calibration only when needed
-				calc_ray_vec(&lighthouseBaseStationsGeometry[baseStation], angles[sensor].correctedAngles[baseStation][0], angles[sensor].correctedAngles[baseStation][1], direction, origin);
+		//			pulseProcessorApplyCalibration(state, angles); //apply calibration only when needed
+					pulseProcessorApplyCalibration2(state, angles, baseStation, sensor); //apply calibration only when needed
+//					calc_ray_vec(&lighthouseBaseStationsGeometry[baseStation], angles[sensor].correctedAngles[baseStation][0], angles[sensor].correctedAngles[baseStation][1], direction, origin);
 
-				rays[rays_count].sensor = sensor;
-				rays[rays_count].baseStation = baseStation;
-				memcpy(rays[rays_count].origin, origin, sizeof(vec3d));
-				memcpy(rays[rays_count].direction, direction, sizeof(vec3d));
+					rays[rays_count].sensor = sensor;
+					rays[rays_count].baseStation = baseStation;
+	//				memcpy(rays[rays_count].origin, origin, sizeof(vec3d));
+//					memcpy(rays[rays_count].direction, direction, sizeof(vec3d));
 
-				rays_count++;
+					rays_count++;
+
+				}
 
 			}
 
 		}
-
-  }
+	}
 
 	rayCount += rays_count;
 	//not necessarily unique rays per round, but out of all the rays, one of them will surely be new,
@@ -338,13 +340,16 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 //	return;
 
-  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
-//  if(rays_count >= 2){ //require at least two rays
+//  if(rays_count >= 8){ //test if 8 rays at 1 go were possible
+  if(rays_count >= 2){ //require at least two rays
 
 
   	bool hasPosition = false;
-		for (size_t i = 0; i < rays_count; i++) {
-			for (size_t j = 0; j < rays_count; j++) {
+
+    uint8_t rayPairsUsed = 0;
+
+		for (uint8_t i = 0; i < rays_count; i++) {
+			for (uint8_t j = 0; j < rays_count; j++) {
 
 //    	return;
 
@@ -363,7 +368,7 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					 continue;
 					}
 
-					vec3d D = {0}; //0 by default, likely rays fall on same sensor
+					static vec3d D = {0}; //0 by default, likely rays fall on same sensor
 
 					if(rays[i].sensor != rays[j].sensor){ //if rays do not fall on same sensor, find the vector between sensors
 						float R[3][3];
@@ -383,20 +388,49 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 					bool fitSuccess = false;
 
-//					{
-						vec3d pt0;
-						vec3d pt1;
+					static vec3d pt0;
+					static vec3d pt1;
+//					static vec3d pt0 = {1.0, 2.0, 3.0};
+//					static vec3d pt1 = {2.0, 3.0, 4.0};
+
+					{
+
+						 //						static vec3d orig0 = lighthouseBaseStationsGeometry[rays[i].baseStation]
+						 //						static vec3d orig1 = lighthouseBaseStationsGeometry[rays[j].baseStation]
+//						static vec3d pt0;
+//						static vec3d pt1;
 //						fitSuccess = lighthouseGeometryBestFitBetweenRays(rays[i].origin, rays[j].origin, rays[i].direction, rays[j].direction, D, pt0, pt1);
 
-						ray_t test_rays[2]  = {
-								{.sensor = 0, .baseStation = 0, .origin = {-2.611738, 2.682860, -1.736229, }, .direction = { 0.798410177, -0.577826262,  0.169288218}, },
-								{.sensor = 1, .baseStation = 1, .origin = { 2.375781, 2.739366,  1.372339, }, .direction = {-0.478063911, -0.568822145, -0.669249952}, },
-						};
-						vec3d test_D = {0.015, 0, 0};
-						fitSuccess = lighthouseGeometryBestFitBetweenRays(test_rays[0].origin, test_rays[1].origin, test_rays[0].direction, test_rays[1].direction, test_D, pt0, pt1);
+//						ray_t test_rays[2]  = {
+//								{.sensor = 0, .baseStation = 0, .origin = {-2.611738, 2.682860, -1.736229, }, .direction = { 0.798410177, -0.577826262,  0.169288218}, },
+//								{.sensor = 1, .baseStation = 1, .origin = { 2.375781, 2.739366,  1.372339, }, .direction = {-0.478063911, -0.568822145, -0.669249952}, },
+//						};
+//						vec3d test_D = {0.015, 0, 0};
+
+
+//						fitSuccess = lighthouseGeometryBestFitBetweenRays(test_rays[0].origin, test_rays[1].origin, test_rays[0].direction, test_rays[1].direction, test_D, pt0, pt1);
+//						fitSuccess = lighthouseGeometryBestFitBetweenRays(test_rays[0].origin, test_rays[1].origin, pt0, pt1);
+//
+//							static vec3d orig0 = {-2.611738, 2.682860, -1.736229};
+//							static vec3d orig1 = {2.375781, 2.739366, 1.372339};
+//							static vec3d u = { 0.798410177, -0.577826262,  0.169288218};
+//							static vec3d v = {-0.478063911, -0.568822145, -0.669249952};
+//							static vec3d test_D = {0.015, 0, 0};
+//							fitSuccess = lighthouseGeometryBestFitBetweenRays(orig0, orig1, u, v, test_D, pt0, pt1);
+
+
+//							fitSuccess = lighthouseGeometryBestFitBetweenRays(orig0, orig1, u, v, test_D);
+//							fitSuccess = lighthouseGeometryBestFitBetweenRays(pt0, pt1);
+
+						static vec3d origin_i, origin_j, direction_i, direction_j; //TODO: very weirdly, passing rays[rays_count].direction, rays[rays_count].origin by reference causes error
+						calc_ray_vec(&lighthouseBaseStationsGeometry[rays[i].baseStation], angles[rays[i].sensor].correctedAngles[rays[i].baseStation][0], angles[rays[i].sensor].correctedAngles[rays[i].baseStation][1], direction_i, origin_i);
+						calc_ray_vec(&lighthouseBaseStationsGeometry[rays[j].baseStation], angles[rays[j].sensor].correctedAngles[rays[j].baseStation][0], angles[rays[j].sensor].correctedAngles[rays[j].baseStation][1], direction_j, origin_j);
+
+						fitSuccess = lighthouseGeometryBestFitBetweenRays(origin_i, origin_j, direction_i, direction_j, D, pt0, pt1);
+
 
 //						printf("he");
-//					}
+					}
 //					fitSuccess = true;
 
 
@@ -418,8 +452,17 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						vec3d pt_mid;
 						arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
 
+						if(hasPosition != true){
+							hasPosition = true;
+							memset(&ext_pos, 0, sizeof(ext_pos)); //reset ext_pos once
+						}
 
-						hasPosition = true;
+						ext_pos.x -= pt_mid[2];
+						ext_pos.y -= pt_mid[0];
+						ext_pos.z += pt_mid[1];
+						rayPairsUsed++;
+
+
 
 					}
 
@@ -429,10 +472,27 @@ void estimatePosition2(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 		  }
 	  }
 
-		if(hasPosition){
-			uint32_t endT = T2M(xTaskGetTickCount());
-			uint32_t deltaT = endT - startT;
-			return;
+
+		if(rayPairsUsed > 0){
+			ext_pos.x /= rayPairsUsed;
+			ext_pos.y /= rayPairsUsed;
+			ext_pos.z /= rayPairsUsed;
+
+		  // Make sure we feed sane data into the estimator
+		  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
+		    return;
+		  }
+
+//			positionCount++;
+			positionCount += rayPairsUsed;
+
+		  ext_pos.stdDev = 0.01;
+		  estimatorEnqueuePosition(&ext_pos);
+
+		  //			uint32_t endT = T2M(xTaskGetTickCount());
+		  //			uint32_t deltaT = endT - startT;
+		  //			return;
+
 		}
   }
 
@@ -451,13 +511,13 @@ void fpgaTriggerReset(void)
 static void lighthouseTask(void *param)
 {
   bool synchronized = false;
-  int syncCounter = 0;
+  uint8_t syncCounter = 0;
   char c;
   static frame_t frame;
   static pulseProcessor_t ppState = {};
 
-  int basestation;
-  int axis;
+  uint8_t basestation;
+  uint8_t axis;
 
   systemWaitStart();
 
@@ -494,13 +554,13 @@ static void lighthouseTask(void *param)
     while(synchronized) {
       if (frame.sync != 0) {
         synchronized = getFrame(&frame);
-        memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
+//        memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
         continue;
       }
 
       serialFrameCount++;
 
-      pulseWidth[frame.sensor] = frame.width;
+//      pulseWidth[frame.sensor] = frame.width;
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
       	// an angle was successfully measured
@@ -514,7 +574,7 @@ static void lighthouseTask(void *param)
 //          pulseProcessorApplyCalibration(&ppState, angles);
 //          estimatePosition(angles);
 
-          for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+          for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
             angles[sensor].validCount = 0;
           }
         }
@@ -616,10 +676,10 @@ static const DeckDriver lighthouse_deck = {
 DECK_DRIVER(lighthouse_deck);
 
 LOG_GROUP_START(lighthouse)
-LOG_ADD(LOG_FLOAT, rawAngle0x, &angles[0].angles[0][0])
-LOG_ADD(LOG_FLOAT, rawAngle0y, &angles[0].angles[0][1])
-LOG_ADD(LOG_FLOAT, rawAngle1x, &angles[0].angles[1][0])
-LOG_ADD(LOG_FLOAT, rawAngle1y, &angles[0].angles[1][1])
+//LOG_ADD(LOG_FLOAT, rawAngle0x, &angles[0].angles[0][0])
+//LOG_ADD(LOG_FLOAT, rawAngle0y, &angles[0].angles[0][1])
+//LOG_ADD(LOG_FLOAT, rawAngle1x, &angles[0].angles[1][0])
+//LOG_ADD(LOG_FLOAT, rawAngle1y, &angles[0].angles[1][1])
 LOG_ADD(LOG_FLOAT, angle0x, &angles[0].correctedAngles[0][0])
 LOG_ADD(LOG_FLOAT, angle0y, &angles[0].correctedAngles[0][1])
 LOG_ADD(LOG_FLOAT, angle1x, &angles[0].correctedAngles[1][0])
@@ -646,7 +706,7 @@ LOG_ADD(LOG_FLOAT, z, &ext_pos.x)
 //LOG_ADD(LOG_FLOAT, x, &position[0])
 //LOG_ADD(LOG_FLOAT, y, &position[1])
 //LOG_ADD(LOG_FLOAT, z, &position[2])
-LOG_ADD(LOG_FLOAT, delta, &delta)
+//LOG_ADD(LOG_FLOAT, delta, &delta)
 
 //LOG_ADD(LOG_FLOAT, posX_0, &positions[0][0])
 //LOG_ADD(LOG_FLOAT, posY_0, &positions[0][1])
@@ -676,16 +736,16 @@ LOG_ADD(LOG_FLOAT, cycleRt, &cycleRate)
 LOG_ADD(LOG_FLOAT, posRt, &positionRate)
 LOG_ADD(LOG_FLOAT, rayRt, &rayRate)
 
-LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
-#if PULSE_PROCESSOR_N_SENSORS > 1
-LOG_ADD(LOG_UINT16, width1, &pulseWidth[1])
-#endif
-#if PULSE_PROCESSOR_N_SENSORS > 2
-LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
-#endif
-#if PULSE_PROCESSOR_N_SENSORS > 3
-LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
-#endif
+//LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
+//#if PULSE_PROCESSOR_N_SENSORS > 1
+//LOG_ADD(LOG_UINT16, width1, &pulseWidth[1])
+//#endif
+//#if PULSE_PROCESSOR_N_SENSORS > 2
+//LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
+//#endif
+//#if PULSE_PROCESSOR_N_SENSORS > 3
+//LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
+//#endif
 
 LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
