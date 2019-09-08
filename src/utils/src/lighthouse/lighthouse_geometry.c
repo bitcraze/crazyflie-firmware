@@ -190,18 +190,21 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec
 	#define N_COLS 1
 
 	{
+		// A x0 = B
+		// solve for x0
 		float x0[N_COLS];
 		{
 
-			float A_inv[N_COLS][N_ROWS];
-			{
+//			float A_inv[N_COLS][N_ROWS];
+//			{
 				float U[N_ROWS][N_COLS];
 				float V[N_COLS][N_COLS];
-				float D_inv[N_COLS];
+//				float D_inv[N_COLS];
+				float singular_values[N_COLS];
 				{
 
-					{
-						float singular_values[N_COLS];
+//					{
+//						float singular_values[N_COLS];
 
 						//	float* dummy_array;
 						//	dummy_array = (float*) malloc(N_COLS * sizeof(float));
@@ -245,44 +248,18 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec
 
 
 				//		float D_inv[N_COLS];
-						#define tolerance 0.0001f
-						for ( uint8_t i = 0; i < N_COLS; i++ ) {
-							if(singular_values[i] >= tolerance){
-								D_inv[i] = 1/singular_values[i]; // conditional element-wise invert (this case only first element), ref: https://www.cse.unr.edu/~bebis/CS791E/Notes/SVD.pdf (page 2)
-							}
-						}
-					}
+//						#define tolerance 0.0001f
+//						for ( uint8_t i = 0; i < N_COLS; i++ ) {
+//							if(singular_values[i] >= tolerance){
+//								D_inv[i] = 1/singular_values[i]; // conditional element-wise invert (this case only first element), ref: https://www.cse.unr.edu/~bebis/CS791E/Notes/SVD.pdf (page 2)
+//							}
+//						}
+//					}
 				}
 
-				 //found SVD, compute pseudoinverse A_inv
 
-				{
-						float VD_inv[N_COLS];
-		//			float *VD_inv=malloc(N_COLS * sizeof(float));
-					{
-						arm_matrix_instance_f32 VD_inv_mat = {N_COLS, N_COLS, VD_inv};
-						arm_matrix_instance_f32 D_inv_mat = {N_COLS, N_COLS, D_inv};
-						arm_matrix_instance_f32 V_mat = {N_COLS, N_COLS, V};
-						arm_mat_mult_f32(&V_mat, &D_inv_mat, &VD_inv_mat);
-					}
-
-					{
-						{
-				//			arm_matrix_instance_f32 U_mat = {N_ROWS, N_COLS, U};
-				//			vec3d U_t;
-				//			arm_matrix_instance_f32 U_t_mat = {N_COLS, N_ROWS, U_t};
-				//			arm_mat_trans_f32(&U_mat, &U_t_mat);
-
-							arm_matrix_instance_f32 A_inv_mat = {N_COLS, N_ROWS, A_inv};
-							arm_matrix_instance_f32 U_t_mat = {N_COLS, N_ROWS, U}; //fast transpose
-							arm_matrix_instance_f32 VD_inv_mat = {N_COLS, N_COLS, VD_inv};
-							arm_mat_mult_f32(&VD_inv_mat, &U_t_mat, &A_inv_mat);
-		//					free(VD_inv); //computed A_inv, VD_inv no longer needed
-						}
-
-					}
-				}
-			}
+//			}
+			 //found SVD
 
 
 			vec3d B;
@@ -308,11 +285,11 @@ bool lighthouseGeometryBestFitBetweenRays(vec3d orig0, vec3d orig1, vec3d u, vec
 					arm_add_f32(wD, vc, B, vec3d_size);
 				}
 			}
+			//found B
 
-			arm_matrix_instance_f32 x0_mat = {N_COLS, N_COLS, x0};
-			arm_matrix_instance_f32 A_inv_mat = {N_COLS, N_ROWS, A_inv};
-			arm_matrix_instance_f32 B_mat = {3, 1, B};
-			arm_mat_mult_f32(&A_inv_mat, &B_mat, &x0_mat);
+		  //found SVD & B, solve for x0
+			#define tolerance 0.0001f
+			Singular_Value_Decomposition_Solve((float*) U, singular_values, (float*) V, tolerance, N_ROWS, N_COLS, B, x0);
 		}
 
 		//DONE Solving for X, obtain the 2 points on each of the 2 rays
