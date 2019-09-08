@@ -53,7 +53,6 @@
 
 #include "estimator.h"
 
-#include "singular_value_decomposition.h"
 #include "estimator_kalman.h"
 #include <arm_math.h>
 
