@@ -136,7 +136,6 @@ static uint16_t positionCount = 0;
 
 static float serialFrameRate = 0.0;
 static float frameRate = 0.0;
-static float cycleRate = 0.0;
 static float positionRate = 0.0;
 //static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
@@ -581,7 +580,6 @@ LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
 LOG_ADD(LOG_FLOAT, serRt, &serialFrameRate)
 LOG_ADD(LOG_FLOAT, frmRt, &frameRate)
-LOG_ADD(LOG_FLOAT, cycleRt, &cycleRate)
 LOG_ADD(LOG_FLOAT, posRt, &positionRate)
 
 LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
