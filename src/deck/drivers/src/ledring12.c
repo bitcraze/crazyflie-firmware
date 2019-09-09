@@ -692,21 +692,18 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
 
   rssiId = logGetVarId("radio", "rssi");
   rssi = logGetFloat(rssiId);
+  uint8_t rssi_scaled = LIMIT(LINSCALE(badRssi, goodRssi, 0, 255, rssi));
 
   for (i = 0; i < NBR_LEDS; i++) {
-	if(isConnected){
-      buffer[i][0] = LIMIT(LINSCALE(badRssi, goodRssi, 255, 0, rssi)); // Red (bad)
-	  buffer[i][1] = LIMIT(LINSCALE(badRssi, goodRssi, 0, 255, rssi)); // Green (good)
-	  buffer[i][2] = 0; // Blue
-	}else{
-//	  buffer[i][0] = 255; // Red
-//	  buffer[i][1] = 0; // Green
-//	  buffer[i][2] = 0; // Blue
-
-	  buffer[i][0] = 100; // Red
-	  buffer[i][1] = 100; // Green
-	  buffer[i][2] = 100; // Blue
-	}
+    if (isConnected) {
+      buffer[i][0] = 255 - rssi_scaled; // Red (bad)
+      buffer[i][1] = rssi_scaled; // Green (good)
+      buffer[i][2] = 0; // Blue
+    } else {
+      buffer[i][0] = 100; // Red
+      buffer[i][1] = 100; // Green
+      buffer[i][2] = 100; // Blue
+    }
   }
 }
 
