@@ -11,7 +11,7 @@
 #include "singular_value_decomposition.h"
 
 #include <string.h>              // required for memcpy()
-#include <float.h>               // required for DBL_EPSILON
+#include <float.h>               // required for FLT_EPSILON
 #include <math.h>                // required for fabs(), sqrt();
 #include <stdint.h>
 
@@ -449,7 +449,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
       y = fabs(diagonal[i]) + fabs(superdiagonal[i]);
       if ( x < y ) x = y;
    }
-   epsilon = x * DBL_EPSILON;
+   epsilon = x * FLT_EPSILON;
    for (k = ncols - 1; k >= 0; k--) {
       iteration_count = 0;
       while(1) {
@@ -638,7 +638,7 @@ static void Sort_by_Decreasing_Singular_Values(int8_t nrows, int8_t ncols,
 //     then (1/D)[i] = 1/D[i] and if D[i] = 0, then (1/D)[i] = 0.  Since      //
 //     the singular values are subject to round-off error.  A tolerance is    //
 //     given so that if D[i] < tolerance, D[i] is treated as if it is 0.      //
-//     The default tolerance is D[0] * DBL_EPSILON * ncols, if the user       //
+//     The default tolerance is D[0] * FLT_EPSILON * ncols, if the user       //
 //     specified tolerance is less than the default tolerance, the default    //
 //     tolerance is used.                                                     //
 //                                                                            //
@@ -652,7 +652,7 @@ static void Sort_by_Decreasing_Singular_Values(int8_t nrows, int8_t ncols,
 //        An orthogonal matrix.                                               //
 //     float tolerance                                                       //
 //        An lower bound for non-zero singular values (provided tolerance >   //
-//        ncols * DBL_EPSILON * D[0]).                                        //
+//        ncols * FLT_EPSILON * D[0]).                                        //
 //     int8_t nrows                                                              //
 //        The number of rows of the matrix U and B.                           //
 //     int8_t ncols                                                              //
@@ -696,7 +696,7 @@ void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,
    float *pu, *pv;
    float dum;
 
-   dum = DBL_EPSILON * D[0] * (float) ncols;
+   dum = FLT_EPSILON * D[0] * (float) ncols;
    if (tolerance < dum) tolerance = dum;
 
    for ( i = 0, pv = V; i < ncols; i++, pv += ncols) {
@@ -723,7 +723,7 @@ void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,
 //     if D[i] = 0, then (1/D)[i] = 0.  Because the singular values are       //
 //     subject to round-off error.  A tolerance is given so that if           //
 //     D[i] < tolerance, D[i] is treated as if it were 0.                     //
-//     The default tolerance is D[0] * DBL_EPSILON * ncols, assuming that the //
+//     The default tolerance is D[0] * FLT_EPSILON * ncols, assuming that the //
 //     diagonal matrix of singular values is sorted from largest to smallest, //
 //     if the user specified tolerance is less than the default tolerance,    //
 //     then the default tolerance is used.                                    //
@@ -738,7 +738,7 @@ void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,
 //        An orthogonal matrix.                                               //
 //     float tolerance                                                       //
 //        An lower bound for non-zero singular values (provided tolerance >   //
-//        ncols * DBL_EPSILON * D[0]).                                        //
+//        ncols * FLT_EPSILON * D[0]).                                        //
 //     int8_t nrows                                                              //
 //        The number of rows of the matrix U and B.                           //
 //     int8_t ncols                                                              //
@@ -777,7 +777,7 @@ void Singular_Value_Decomposition_Inverse(float* U, float* D, float* V,
    float *pu, *pv, *pa;
    float dum;
 
-   dum = DBL_EPSILON * D[0] * (float) ncols;
+   dum = FLT_EPSILON * D[0] * (float) ncols;
    if (tolerance < dum) tolerance = dum;
    for ( i = 0, pv = V, pa = Astar; i < ncols; i++, pv += ncols) 
       for ( j = 0, pu = U; j < nrows; j++, pa++) 
