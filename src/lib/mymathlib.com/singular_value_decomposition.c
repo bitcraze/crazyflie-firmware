@@ -12,7 +12,7 @@
 
 #include <string.h>              // required for memcpy()
 #include <float.h>               // required for FLT_EPSILON
-#include <math.h>                // required for fabsf(), sqrt();
+#include <math.h>                // required for fabsf(), sqrtf();
 #include <stdint.h>
 
 #define MAX_ITERATION_COUNT 30   // Maximum number of iterations
@@ -156,7 +156,7 @@ int8_t Singular_Value_Decomposition(float* A, int8_t nrows, int8_t ncols, float*
 //     vector the first k-1 components of which are zero and the last         //
 //     components agree with the current transformed matrix below the diagonal//
 //     diagonal, the remaining k-th element is the diagonal element - s, where//
-//     s = (+/-)sqrt(sum of squares of the elements below the diagonal), the  //
+//     s = (+/-)sqrtf(sum of squares of the elements below the diagonal), the  //
 //     sign is chosen opposite that of the diagonal element.                  //
 //                                                                            //
 //  Arguments:                                                                //
@@ -215,7 +215,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 {
    int8_t i,j,k,ip1;
    float s, s2, si, scale;
-   float dum;
+//   float dum;
    float *pu, *pui, *pv, *pvi;
    float half_norm_squared;
 
@@ -248,7 +248,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 //    
 //       Chose sign of s which maximizes the norm
 //  
-         s = ( *(pui + i) < 0.0 ) ? sqrt(s2) : -sqrt(s2);
+         s = ( *(pui + i) < 0.0 ) ? sqrtf(s2) : -sqrtf(s2);
 //
 //       Calculate -2/u'u
 //
@@ -284,7 +284,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
             *(pui + j) /= scale;
             s2 += *(pui + j) * *(pui + j);
          }
-         s = ( *(pui + ip1) < 0.0 ) ? sqrt(s2) : -sqrt(s2);
+         s = ( *(pui + ip1) < 0.0 ) ? sqrtf(s2) : -sqrtf(s2);
 //
 //       Calculate -2/u'u
 //
@@ -466,7 +466,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
                superdiagonal[i] *= c;
                if (fabsf(f) <= epsilon) break;
                g = diagonal[i];
-               h = sqrt(f*f + g*g);
+               h = sqrtf(f*f + g*g);
                diagonal[i] = h;
                c = g / h;
                s = -f / h; 
@@ -495,7 +495,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
             g = superdiagonal[k-1];
             h = superdiagonal[k];
             f = ( (y - z) * ( y + z ) + (g - h) * (g + h) )/(2.0 * h * y);
-            g = sqrt( f * f + 1.0 );
+            g = sqrtf( f * f + 1.0 );
             if ( f < 0.0 ) g = -g;
             f = ( (x - z) * (x + z) + h * (y / (f + g) - h) ) / x;
 // Next QR Transformtion
@@ -506,7 +506,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
                y = diagonal[i];
                h = s * g;
                g *= c;
-               z = sqrt( f * f + h * h );
+               z = sqrtf( f * f + h * h );
                superdiagonal[i-1] = z;
                c = f / z;
                s = h / z;
@@ -520,7 +520,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
                   *(pv + i - 1) = x * c + z * s;
                   *(pv + i) = -x * s + z * c;
                }
-               z = sqrt( f * f + h * h );
+               z = sqrtf( f * f + h * h );
                diagonal[i - 1] = z;
                if (z != 0.0) {
                   c = f / z;
