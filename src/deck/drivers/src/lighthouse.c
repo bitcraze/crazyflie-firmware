@@ -70,6 +70,13 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {-1.372339, -2.375781, 2.739366, }, .mat = {{0.840995, 0.307949, -0.444853, }, {-0.534727, 0.598345, -0.596699, }, {0.082423, 0.739696, 0.667874, }, }},
 };
 
+// Uncomment if you want to force the Crazyflie to reflash the deck at each startup
+// #define FORCE_FLASH true
+
+static bool isInit = false;
+
+#if DISABLE_LIGHTHOUSE_DRIVER == 0
+
 //Sensor Positions wrt World
 vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
 		{-0.0150,  0.0075, 0},
@@ -80,19 +87,12 @@ vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
 
 vec3d S[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_N_SENSORS];
 
-// Uncomment if you want to force the Crazyflie to reflash the deck at each startup
-// #define FORCE_FLASH true
-
 #define LH_FPGA_RESET DECK_GPIO_RX2
 
 static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
   const uint32_t bitmask = (1 << TIMESTAMP_BITWIDTH) - 1;
   return (x - y) & bitmask;
 }
-
-static bool isInit = false;
-
-#if DISABLE_LIGHTHOUSE_DRIVER == 0
 
 #ifndef FORCE_FLASH
 #define FORCE_FLASH false
