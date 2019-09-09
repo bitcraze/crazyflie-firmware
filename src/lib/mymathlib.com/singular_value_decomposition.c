@@ -221,7 +221,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 
 // Copy A to U
 
-   memcpy(U,A, sizeof(float) * nrows * ncols);
+   memcpy(U,A, sizeof(float) * (unsigned int)nrows * (unsigned int)ncols);
 
 //
  
