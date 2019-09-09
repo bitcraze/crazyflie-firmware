@@ -225,9 +225,9 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 
 //
  
-   diagonal[0] = 0.0;
-   s = 0.0;
-   scale = 0.0;
+   diagonal[0] = 0.0f;
+   s = 0.0f;
+   scale = 0.0f;
    for ( i = 0, pui = U, ip1 = 1; i < ncols; pui += ncols, i++, ip1++ ) {
       superdiagonal[i] = scale * s;
 //       
@@ -236,11 +236,11 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 //       Calculate the normed squared of the i-th column vector starting at 
 //       row i.
 //
-      for (j = i, pu = pui, scale = 0.0; j < nrows; j++, pu += ncols)
+      for (j = i, pu = pui, scale = 0.0f; j < nrows; j++, pu += ncols)
          scale += fabsf( *(pu + i) );
        
-      if (scale > 0.0) {
-         for (j = i, pu = pui, s2 = 0.0; j < nrows; j++, pu += ncols) {
+      if (scale > 0.0f) {
+         for (j = i, pu = pui, s2 = 0.0f; j < nrows; j++, pu += ncols) {
             *(pu + i) /= scale;
             s2 += *(pu + i) * *(pu + i);
          }
@@ -248,7 +248,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 //    
 //       Chose sign of s which maximizes the norm
 //  
-         s = ( *(pui + i) < 0.0 ) ? sqrtf(s2) : -sqrtf(s2);
+         s = ( *(pui + i) < 0.0f ) ? sqrtf(s2) : -sqrtf(s2);
 //
 //       Calculate -2/u'u
 //
@@ -259,7 +259,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
          *(pui + i) -= s;
          
          for (j = ip1; j < ncols; j++) {
-            for (k = i, si = 0.0, pu = pui; k < nrows; k++, pu += ncols)
+            for (k = i, si = 0.0f, pu = pui; k < nrows; k++, pu += ncols)
                si += *(pu + i) * *(pu + j);
             si /= half_norm_squared;
             for (k = i, pu = pui; k < nrows; k++, pu += ncols) {
@@ -275,16 +275,16 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 //       Calculate the normed squared of the i-th row vector starting at 
 //       column i.
 //
-      s = 0.0;
-      scale = 0.0;
+      s = 0.0f;
+      scale = 0.0f;
       if (i >= nrows || i == (ncols - 1) ) continue;
       for (j = ip1; j < ncols; j++) scale += fabsf ( *(pui + j) );
-      if ( scale > 0.0 ) {
-         for (j = ip1, s2 = 0.0; j < ncols; j++) {
+      if ( scale > 0.0f ) {
+         for (j = ip1, s2 = 0.0f; j < ncols; j++) {
             *(pui + j) /= scale;
             s2 += *(pui + j) * *(pui + j);
          }
-         s = ( *(pui + ip1) < 0.0 ) ? sqrtf(s2) : -sqrtf(s2);
+         s = ( *(pui + ip1) < 0.0f ) ? sqrtf(s2) : -sqrtf(s2);
 //
 //       Calculate -2/u'u
 //
@@ -297,7 +297,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
             superdiagonal[k] = *(pui + k) / half_norm_squared;
          if ( i < (nrows - 1) ) {
             for (j = ip1, pu = pui + ncols; j < nrows; j++, pu += ncols) {
-               for (k = ip1, si = 0.0; k < ncols; k++) 
+               for (k = ip1, si = 0.0f; k < ncols; k++)
                   si += *(pui + k) * *(pu + k);
                for (k = ip1; k < ncols; k++) { 
                   *(pu + k) += si * superdiagonal[k];
@@ -311,17 +311,17 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 // Update V
    pui = U + ncols * (ncols - 2);
    pvi = V + ncols * (ncols - 1);
-   *(pvi + ncols - 1) = 1.0;
+   *(pvi + ncols - 1) = 1.0f;
    s = superdiagonal[ncols - 1];
    pvi -= ncols;
    for (i = ncols - 2, ip1 = ncols - 1; i >= 0; i--, pui -= ncols,
                                                       pvi -= ncols, ip1-- ) {
-      if ( s != 0.0 ) {
+      if ( s != 0.0f ) {
          pv = pvi + ncols;
          for (j = ip1; j < ncols; j++, pv += ncols)
             *(pv + i) = ( *(pui + j) / *(pui + ip1) ) / s;
          for (j = ip1; j < ncols; j++) { 
-            si = 0.0;
+            si = 0.0f;
             for (k = ip1, pv = pvi + ncols; k < ncols; k++, pv += ncols)
                si += *(pui + k) * *(pv + j);
             for (k = ip1, pv = pvi + ncols; k < ncols; k++, pv += ncols)
@@ -330,10 +330,10 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
       }
       pv = pvi + ncols;
       for ( j = ip1; j < ncols; j++, pv += ncols ) {
-         *(pvi + j) = 0.0;
-         *(pv + i) = 0.0;
+         *(pvi + j) = 0.0f;
+         *(pv + i) = 0.0f;
       }
-      *(pvi + i) = 1.0;
+      *(pvi + i) = 1.0f;
       s = superdiagonal[i];
    }
 
@@ -342,10 +342,10 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
    pui = U + ncols * (ncols - 1);
    for (i = ncols - 1, ip1 = ncols; i >= 0; ip1 = i, i--, pui -= ncols ) {
       s = diagonal[i];
-      for ( j = ip1; j < ncols; j++) *(pui + j) = 0.0;
-      if ( s != 0.0 ) {
+      for ( j = ip1; j < ncols; j++) *(pui + j) = 0.0f;
+      if ( s != 0.0f ) {
          for (j = ip1; j < ncols; j++) { 
-            si = 0.0;
+            si = 0.0f;
             pu = pui + ncols;
             for (k = ip1; k < nrows; k++, pu += ncols)
                si += *(pu + i) * *(pu + j);
@@ -358,8 +358,8 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
          }
       }
       else 
-         for (j = i, pu = pui; j < nrows; j++, pu += ncols) *(pu + i) = 0.0;
-      *(pui + i) += 1.0;
+         for (j = i, pu = pui; j < nrows; j++, pu += ncols) *(pu + i) = 0.0f;
+      *(pui + i) += 1.0f;
    }
 }
 
@@ -445,7 +445,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
    int8_t rotation_test;
    int8_t iteration_count;
   
-   for (i = 0, x = 0.0; i < ncols; i++) {
+   for (i = 0, x = 0.0f; i < ncols; i++) {
       y = fabsf(diagonal[i]) + fabsf(superdiagonal[i]);
       if ( x < y ) x = y;
    }
@@ -459,8 +459,8 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
             if (fabsf(diagonal[m-1]) <= epsilon) break;
          }
          if (rotation_test) {
-            c = 0.0;
-            s = 1.0;
+            c = 0.0f;
+            s = 1.0f;
             for (i = m; i <= k; i++) {  
                f = s * superdiagonal[i];
                superdiagonal[i] *= c;
@@ -480,7 +480,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
          }
          z = diagonal[k];
          if (m == k ) {
-            if ( z < 0.0 ) {
+            if ( z < 0.0f ) {
                diagonal[k] = -z;
                for ( j = 0, pv = V; j < ncols; j++, pv += ncols) 
                   *(pv + k) = - *(pv + k);
@@ -494,13 +494,13 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
             y = diagonal[k-1];
             g = superdiagonal[k-1];
             h = superdiagonal[k];
-            f = ( (y - z) * ( y + z ) + (g - h) * (g + h) )/(2.0 * h * y);
-            g = sqrtf( f * f + 1.0 );
-            if ( f < 0.0 ) g = -g;
+            f = ( (y - z) * ( y + z ) + (g - h) * (g + h) )/(2.0f * h * y);
+            g = sqrtf( f * f + 1.0f );
+            if ( f < 0.0f ) g = -g;
             f = ( (x - z) * (x + z) + h * (y / (f + g) - h) ) / x;
 // Next QR Transformtion
-            c = 1.0;
-            s = 1.0;
+            c = 1.0f;
+            s = 1.0f;
             for (i = m + 1; i <= k; i++) {
                g = superdiagonal[i];
                y = diagonal[i];
@@ -522,7 +522,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
                }
                z = sqrtf( f * f + h * h );
                diagonal[i - 1] = z;
-               if (z != 0.0) {
+               if (z != 0.0f) {
                   c = f / z;
                   s = h / z;
                } 
@@ -535,7 +535,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
                   *(pu + i) = -s * y + c * z;
                }
             }
-            superdiagonal[m] = 0.0;
+            superdiagonal[m] = 0.0f;
             superdiagonal[k] = f;
             diagonal[k] = x;
          }
@@ -700,10 +700,10 @@ void Singular_Value_Decomposition_Solve(float* U, float* D, float* V,
    if (tolerance < dum) tolerance = dum;
 
    for ( i = 0, pv = V; i < ncols; i++, pv += ncols) {
-      x[i] = 0.0;
+      x[i] = 0.0f;
       for (j = 0; j < ncols; j++)
          if (D[j] > tolerance ) {
-            for (k = 0, dum = 0.0, pu = U; k < nrows; k++, pu += ncols)
+            for (k = 0, dum = 0.0f, pu = U; k < nrows; k++, pu += ncols)
                dum += *(pu + j) * B[k];
             x[i] += dum * *(pv + j) / D[j];
          }
@@ -781,6 +781,6 @@ void Singular_Value_Decomposition_Inverse(float* U, float* D, float* V,
    if (tolerance < dum) tolerance = dum;
    for ( i = 0, pv = V, pa = Astar; i < ncols; i++, pv += ncols) 
       for ( j = 0, pu = U; j < nrows; j++, pa++) 
-        for (k = 0, *pa = 0.0; k < ncols; k++, pu++)
+        for (k = 0, *pa = 0.0f; k < ncols; k++, pu++)
            if (D[k] > tolerance) *pa += *(pv + k) * *pu / D[k];
 }
