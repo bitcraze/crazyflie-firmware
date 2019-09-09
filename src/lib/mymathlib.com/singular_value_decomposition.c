@@ -12,7 +12,7 @@
 
 #include <string.h>              // required for memcpy()
 #include <float.h>               // required for FLT_EPSILON
-#include <math.h>                // required for fabs(), sqrt();
+#include <math.h>                // required for fabsf(), sqrt();
 #include <stdint.h>
 
 #define MAX_ITERATION_COUNT 30   // Maximum number of iterations
@@ -237,7 +237,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
 //       row i.
 //
       for (j = i, pu = pui, scale = 0.0; j < nrows; j++, pu += ncols)
-         scale += fabs( *(pu + i) );
+         scale += fabsf( *(pu + i) );
        
       if (scale > 0.0) {
          for (j = i, pu = pui, s2 = 0.0; j < nrows; j++, pu += ncols) {
@@ -278,7 +278,7 @@ static void Householders_Reduction_to_Bidiagonal_Form(float* A, int8_t nrows,
       s = 0.0;
       scale = 0.0;
       if (i >= nrows || i == (ncols - 1) ) continue;
-      for (j = ip1; j < ncols; j++) scale += fabs ( *(pui + j) );
+      for (j = ip1; j < ncols; j++) scale += fabsf ( *(pui + j) );
       if ( scale > 0.0 ) {
          for (j = ip1, s2 = 0.0; j < ncols; j++) {
             *(pui + j) /= scale;
@@ -446,7 +446,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
    int8_t iteration_count;
   
    for (i = 0, x = 0.0; i < ncols; i++) {
-      y = fabs(diagonal[i]) + fabs(superdiagonal[i]);
+      y = fabsf(diagonal[i]) + fabsf(superdiagonal[i]);
       if ( x < y ) x = y;
    }
    epsilon = x * FLT_EPSILON;
@@ -455,8 +455,8 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
       while(1) {
          rotation_test = 1;
          for (m = k; m >= 0; m--) { 
-            if (fabs(superdiagonal[m]) <= epsilon) {rotation_test = 0; break;}
-            if (fabs(diagonal[m-1]) <= epsilon) break;
+            if (fabsf(superdiagonal[m]) <= epsilon) {rotation_test = 0; break;}
+            if (fabsf(diagonal[m-1]) <= epsilon) break;
          }
          if (rotation_test) {
             c = 0.0;
@@ -464,7 +464,7 @@ static int8_t Givens_Reduction_to_Diagonal_Form( int8_t nrows, int8_t ncols,
             for (i = m; i <= k; i++) {  
                f = s * superdiagonal[i];
                superdiagonal[i] *= c;
-               if (fabs(f) <= epsilon) break;
+               if (fabsf(f) <= epsilon) break;
                g = diagonal[i];
                h = sqrt(f*f + g*g);
                diagonal[i] = h;
