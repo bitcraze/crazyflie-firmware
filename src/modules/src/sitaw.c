@@ -32,7 +32,7 @@
 #include "param.h"
 #include "trigger.h"
 #include "sitaw.h"
-#include "commander.h"
+#include "crtp_commander_high_level.h"
 
 /* Trigger object used to detect Free Fall situation. */
 static trigger_t sitAwFFAccWZ;
@@ -42,6 +42,12 @@ static trigger_t sitAwARAccZ;
 
 /* Trigger object used to detect Tumbled situation. */
 static trigger_t sitAwTuAngle;
+
+/* Flag to denote whether we have cut the motor thrust because of a tumbled situation earlier. */
+static bool sitAwMotorThrustCut;
+
+/* Flag that the user can set to 1 to mark a tumbled situation as resolved. */
+static bool sitAwResetRequested;
 
 #if defined(SITAW_ENABLED)
 
@@ -63,6 +69,7 @@ LOG_ADD(LOG_UINT8, TuDetected, &sitAwTuAngle.released)
 LOG_ADD(LOG_UINT8, FFAccWZDetected, &sitAwFFAccWZ.released)
 LOG_ADD(LOG_UINT8, ARDetected, &sitAwARAccZ.released)
 LOG_ADD(LOG_UINT8, TuDetected, &sitAwTuAngle.released)
+LOG_ADD(LOG_UINT8, MotorThrustCut, &sitAwMotorThrustCut)
 #endif
 LOG_GROUP_STOP(sitAw)
 #endif /* SITAW_LOG_ENABLED */
@@ -84,6 +91,7 @@ PARAM_ADD(PARAM_UINT8, TuActive, &sitAwTuAngle.active)
 PARAM_ADD(PARAM_UINT32, TuTriggerCount, &sitAwTuAngle.triggerCount)
 PARAM_ADD(PARAM_FLOAT, TuAngle, &sitAwTuAngle.threshold)
 #endif
+PARAM_ADD(PARAM_UINT8, resetDetector, &sitAwResetRequested);
 PARAM_GROUP_STOP(sitAw)
 #endif /* SITAW_PARAM_ENABLED */
 
@@ -132,12 +140,26 @@ static void sitAwPreThrustUpdateCallOut(setpoint_t *setpoint)
 
 #if defined(SITAW_ENABLED)
 #ifdef SITAW_TU_ENABLED
-      if(sitAwTuDetected()) {
+      if(sitAwResetRequested) {
+        /* Reset the "tumbled earlier" flag if the operator marks the situation as resolved */
+        sitAwMotorThrustCut = 0;
+        sitAwResetRequested = 0;
+      }
+
+      if(sitAwTuDetected() || sitAwMotorThrustCut) {
         /* Kill the thrust to the motors if a Tumbled situation is detected. */
         setpoint->mode.x = modeDisable;
         setpoint->mode.y = modeDisable;
         setpoint->mode.z = modeDisable;
         setpoint->thrust = 0;
+
+        /* Also stop the high-level commander */
+        crtpCommanderHighLevelStop();
+
+        /* And set a flag to mark that we have cut the motor thrust and we should not
+         * re-enable the motors until the operator marks the situation as
+         * resolved */
+        sitAwMotorThrustCut = 1;
       }
 #endif
 
@@ -298,7 +320,7 @@ void sitAwTuInit(void)
  * cut the thrust to the motors, avoiding the crazyflie from running
  * propellers at significant thrust when accidentially crashing into walls
  * or the ground.
-
+ *
  * @param The actual roll in degrees. +180/-180 degrees means upside down.
  * @param The actual pitch in degrees. 0 degrees means horizontal.
  *
