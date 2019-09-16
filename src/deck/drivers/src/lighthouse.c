@@ -66,8 +66,8 @@
 
 //Origins and Rotation Matrixes converted to World, because Rotation Matrix from Kalman Estimator is wrt World
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
-{.origin = { 1.736229,  2.611738, 2.682860, }, .mat = {{-0.855681, -0.345626, 0.385167, }, {0.516858, -0.607955, 0.602701, }, {0.025856, 0.714796, 0.698855, }, }},
-{.origin = {-1.372339, -2.375781, 2.739366, }, .mat = {{0.840995, 0.307949, -0.444853, }, {-0.534727, 0.598345, -0.596699, }, {0.082423, 0.739696, 0.667874, }, }},
+{.origin = { 1.736229f,  2.611738f, 2.682860f, }, .mat = {{-0.855681f, -0.345626f, 0.385167f, }, {0.516858f, -0.607955f, 0.602701f, }, {0.025856f, 0.714796f, 0.698855f, }, }},
+{.origin = {-1.372339f, -2.375781f, 2.739366f, }, .mat = {{0.840995f, 0.307949f, -0.444853f, }, {-0.534727f, 0.598345f, -0.596699f, }, {0.082423f, 0.739696f, 0.667874f, }, }},
 };
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
@@ -79,10 +79,10 @@ static bool isInit = false;
 
 //Sensor Positions wrt World
 vec3d lighthouseSensorsGeometry[PULSE_PROCESSOR_N_SENSORS] = {
-		{-0.0150,  0.0075, 0},
-		{-0.0150, -0.0075, 0},
-		{ 0.0150,  0.0075, 0},
-		{ 0.0150, -0.0075, 0},
+		{-0.0150f,  0.0075f, 0.0000f},
+		{-0.0150f, -0.0075f, 0.0000f},
+		{ 0.0150f,  0.0075f, 0.0000f},
+		{ 0.0150f, -0.0075f, 0.0000f},
 };
 
 vec3d S[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_N_SENSORS];
