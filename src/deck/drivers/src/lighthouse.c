@@ -276,6 +276,8 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
     uint8_t ray_pairs_count = 0;
 
+    float accum_pos[3] = {0};
+
 		for (uint8_t i = 0; i < rays_count; i++) {
 			for (uint8_t j = 0; j < rays_count; j++) {
 
@@ -334,12 +336,9 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						}
 
 
-						if(ray_pairs_count == 0){
-							memset(&ext_pos, 0, sizeof(ext_pos)); //reset ext_pos once
-						}
-						ext_pos.x += pt_mid[0];
-						ext_pos.y += pt_mid[1];
-						ext_pos.z += pt_mid[2];
+						accum_pos[0] += pt_mid[0];
+						accum_pos[1] += pt_mid[1];
+						accum_pos[2] += pt_mid[2];
 						ray_pairs_count++;
 
 
@@ -356,9 +355,9 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 
 		if(ray_pairs_count > 0){
-			ext_pos.x /= ray_pairs_count;
-			ext_pos.y /= ray_pairs_count;
-			ext_pos.z /= ray_pairs_count;
+			ext_pos.x = accum_pos[0] / ray_pairs_count;
+			ext_pos.y = accum_pos[1] / ray_pairs_count;
+			ext_pos.z = accum_pos[2] / ray_pairs_count;
 
 		  // Make sure we feed sane data into the estimator
 		  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
