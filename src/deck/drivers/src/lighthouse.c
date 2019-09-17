@@ -407,6 +407,7 @@ static void lighthouseTask(void *param)
   systemWaitStart();
 
   fpgaTriggerReset();
+  vTaskDelay(M2T(100)); //add some delay since FPGA just woke up from reset
 
 #ifdef LH_FLASH_DECK
   // Flash deck bootloader using SPI (factory and recovery flashing)
