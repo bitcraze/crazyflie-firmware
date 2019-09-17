@@ -92,7 +92,7 @@ typedef struct {
 } pulseProcessorResult_t;
 
 // If returns true, the angle, base station and direction are written
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis);
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], uint8_t *baseStation, uint8_t *axis);
 
 /**
  * @brief Apply calibration correction to all angles of all sensors

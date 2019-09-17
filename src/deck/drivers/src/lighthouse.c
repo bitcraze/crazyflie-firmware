@@ -89,10 +89,10 @@ vec3d S[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_N_SENSORS];
 
 #define LH_FPGA_RESET DECK_GPIO_RX2
 
-static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
-  const uint32_t bitmask = (1 << TIMESTAMP_BITWIDTH) - 1;
-  return (x - y) & bitmask;
-}
+//static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
+//  const uint32_t bitmask = (1 << TIMESTAMP_BITWIDTH) - 1;
+//  return (x - y) & bitmask;
+//}
 
 #ifndef FORCE_FLASH
 #define FORCE_FLASH false
@@ -294,7 +294,7 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 					if(rays[i].sensor != rays[j].sensor){ //if rays do not fall on same sensor, find the vector between sensors
 						float R[3][3]; //Estimated rotation matrix of the Sensors
 						estimatorKalmanGetEstimatedRotationMatrix(R);
-						arm_matrix_instance_f32 R_mat = {3, 3, R};
+						arm_matrix_instance_f32 R_mat = {3, 3, (float*)R};
 
 //						vec3d S = {}; //the vector between the 2 sensors
 //						arm_sub_f32(lighthouseSensorsGeometry[rays[j].sensor], lighthouseSensorsGeometry[rays[i].sensor], S, vec3d_size);

@@ -162,7 +162,7 @@ static void resetSynchronization(pulseProcessor_t *state)
   state->synchronized = false;
 }
 
-static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t result[], int *baseStation, int *axis) {
+static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t result[], uint8_t *baseStation, uint8_t *axis) {
   bool anglesMeasured = false;
 
   if (state->sweepDataStored) {
@@ -265,7 +265,7 @@ static void printBSInfo(struct ootxDataFrame_s *frame)
   DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
 }
 
-static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
+static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], uint8_t *baseStation, uint8_t *axis) {
   bool anglesMeasured = false;
 
   if (isNewSync(timestamp, state->lastSync)) {
@@ -296,7 +296,7 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
   return anglesMeasured;
 }
 
-static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
+static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], uint8_t *baseStation, uint8_t *axis) {
   bool anglesMeasured = false;
 
   if (isSweep(state, timestamp, width)) {
@@ -309,7 +309,7 @@ static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigne
 }
 
 
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis)
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], uint8_t *baseStation, uint8_t *axis)
 {
   bool anglesMeasured = false;
 
