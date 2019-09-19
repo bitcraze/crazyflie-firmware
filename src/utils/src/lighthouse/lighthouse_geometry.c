@@ -45,7 +45,7 @@ static void vec_cross_product(const vec3d a, const vec3d b, vec3d res) {
     res[2] = a[0]*b[1] - a[1]*b[0];
 }
 
-static float vec_length(vec3d vec) {
+float vec_length(vec3d vec) {
     float pow, res;
 
     arm_power_f32(vec, vec3d_size, &pow); // returns sum of squares

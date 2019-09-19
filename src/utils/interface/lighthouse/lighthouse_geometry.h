@@ -11,6 +11,8 @@ typedef struct baseStationGeometry_s {
   float mat[3][3];
 } __attribute__((packed)) baseStationGeometry_t;
 
+float vec_length(vec3d vec);
+
 void calc_ray_vec(baseStationGeometry_t *bs, float angle1, float angle2, vec3d res, vec3d origin);
 
 bool lighthouseGeometryGetPosition(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta);

@@ -140,6 +140,7 @@ static float positionRate = 0.0;
 //static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
 static uint32_t latestStatsTimeMs = 0;
+//static uint32_t latestPositionTimeMs = 0;
 
 typedef union frame_u {
   struct {
@@ -179,7 +180,7 @@ static void calculateStats(uint32_t nowMs) {
 }
 
 static positionMeasurement_t ext_pos;
-static float deltaLog;
+//static float deltaLog;
 
 typedef struct ray_s {
   uint8_t sensor;
@@ -187,17 +188,18 @@ typedef struct ray_s {
 } __attribute__((packed)) ray_t;
 
 
-void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
+bool estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 {
 
 	#define MAX_RAYS PULSE_PROCESSOR_N_SENSORS*2  //given 2 base stations and 4 sensors, only possible to obtain in total of 8 unique rays
-  ray_t rays[MAX_RAYS] = {0}; //stores all possible rays between all & and basestations
+	ray_t rays[MAX_RAYS] = {0}; //stores all possible rays between all & and basestations
 
 	uint8_t rays_count = 0;
 	uint8_t uniqueSensorsInvolved = 0; //number of different sensors to be involved in the position calculation
 	bool isBaseStationInvolved[2] = {0}; //different basestations to be involved
+	uint32_t startT = T2M(xTaskGetTickCount());
 	{
-		uint32_t startT = T2M(xTaskGetTickCount());
+//		uint32_t startT = T2M(xTaskGetTickCount());
 		for (uint8_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
 			bool isSensorInvolved = false; //has the sensor in this loop been involved already
 			for (uint8_t baseStation = 0; baseStation < 2; baseStation++) {
@@ -271,12 +273,13 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 	bool noSingleBaseStation = isBaseStationInvolved[0] && isBaseStationInvolved[1] && uniqueSensorsInvolved >= 2; //condition to ignore pairs of rays from only 1 BS (error prone)
 
-	//  if(rays_count >= 8){ //test if all 8 rays at 1 go was possible
+//	  if(rays_count >= 8){ //test if all 8 rays at 1 go was possible
   if(rays_count >= 2){ //require at least two rays
 
     uint8_t ray_pairs_count = 0;
 
     float accum_pos[3] = {0};
+//    float accum_delta = 0;
 
 		for (uint8_t i = 0; i < rays_count; i++) {
 			for (uint8_t j = 0; j < rays_count; j++) {
@@ -302,7 +305,7 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 //						arm_sub_f32(lighthouseSensorsGeometry[rays[j].sensor], lighthouseSensorsGeometry[rays[i].sensor], S, vec3d_size);
 //						arm_matrix_instance_f32 S_mat = {3, 1, S};
 
-						arm_matrix_instance_f32 S_mat = {3, 1, S[rays[j].sensor][rays[i].sensor]}; //use pre-computed values for speed
+						arm_matrix_instance_f32 S_mat = {3, 1, S[rays[j].sensor][rays[i].sensor]}; //use pre-computed values for speed //with respect to i
 						arm_matrix_instance_f32 D_mat = {3, 1, D};
 						arm_mat_mult_f32(&R_mat, &S_mat, &D_mat);
 					}
@@ -310,8 +313,8 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 					bool fitSuccess = false;
 
-					static vec3d pt0;
-					static vec3d pt1;
+					static vec3d pt0; //position of first sensor in World
+					static vec3d pt1; //position of second sensor in World
 
 					{
 						static vec3d origin_i, origin_j, direction_i, direction_j;
@@ -319,26 +322,48 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 						calc_ray_vec(&lighthouseBaseStationsGeometry[rays[j].baseStation], angles[rays[j].sensor].correctedAngles[rays[j].baseStation][0], angles[rays[j].sensor].correctedAngles[rays[j].baseStation][1], direction_j, origin_j);
 						//TODO: should probably cache results of calc_ray_vec
 
-						fitSuccess = lighthouseGeometryBestFitBetweenRays(origin_i, origin_j, direction_i, direction_j, D, pt0, pt1);
+						fitSuccess = lighthouseGeometryBestFitBetweenRays(origin_i, origin_j, direction_i, direction_j, D, pt0, pt1); //with respect to i or first sensor
 					}
 
 					if (fitSuccess){
 
-						vec3d pt_mid;
+
 						{
-							vec3d pt10_half;
+							vec3d pc; //position of LH deck center
 							{
-								vec3d pt10;
-								arm_sub_f32(pt1, pt0, pt10, vec3d_size);
-								arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
+								vec3d pt_mid1; //idealized position of first sensor
+								{
+									vec3d pt_mid; //midpoint between the two sensors
+									{
+										vec3d pt10_half;
+										{
+											vec3d pt10;
+											arm_sub_f32(pt1, pt0, pt10, vec3d_size); //with respect to i or first sensor
+											arm_scale_f32(pt10, 0.5, pt10_half, vec3d_size);
+
+//											float dist_real = vec_length(D); //get absolute distance between sensors
+//											float dist_est = vec_length(pt10); //get absolute distance between estimated sensors
+//											accum_delta += fabsf(vec_length(pt10) - vec_length(D)); //difference in absolute distance between points
+											//interestingly, delta will be larger if using dual base station, and single base station will be near-zero.
+											//This is because the lines are almost parallel and will be able to fit nearly exact
+										}
+										arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
+									}
+
+
+									vec3d D_half;
+									arm_scale_f32(D, 0.5, D_half, vec3d_size);
+
+									arm_sub_f32(pt_mid, D_half, pt_mid1, vec3d_size);
+								}
+
+								arm_sub_f32(pt_mid1, lighthouseSensorsGeometry[rays[i].sensor], pc, vec3d_size); //with respect to i or first sensor
 							}
-							arm_add_f32(pt0, pt10_half, pt_mid, vec3d_size);
+
+							accum_pos[0] += pc[0];
+							accum_pos[1] += pc[1];
+							accum_pos[2] += pc[2];
 						}
-
-
-						accum_pos[0] += pt_mid[0];
-						accum_pos[1] += pt_mid[1];
-						accum_pos[2] += pt_mid[2];
 						ray_pairs_count++;
 
 
@@ -355,32 +380,36 @@ void estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 
 
 		if(ray_pairs_count > 0){
+//		if(ray_pairs_count >= 32){ //all basestations from all sensors, takes too long 2-3 milliseconds
 			ext_pos.x = accum_pos[0] / ray_pairs_count;
 			ext_pos.y = accum_pos[1] / ray_pairs_count;
 			ext_pos.z = accum_pos[2] / ray_pairs_count;
+//			deltaLog = accum_delta / ray_pairs_count;
 
 		  // Make sure we feed sane data into the estimator
 		  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
-		    return;
+		    return false;
 		  }
 
 			positionCount++; //maxes at 60hz with 1 BS, 120 hz with 2 BS,
 //			positionCount += ray_pairs_count; // maxes 720hz with 1 BS, over thousands for 2 BS (exponential increase)
 
 		  if(noSingleBaseStation){
-		  	ext_pos.stdDev = 0.01;
+		  	ext_pos.stdDev = 0.10;
 		  }else{
-			  ext_pos.stdDev = 0.05; //since position may be from single basestation, don't trust it that much
+			  ext_pos.stdDev = 0.20; //since position may be from single basestation, don't trust it that much
 		  }
 		  estimatorEnqueuePosition(&ext_pos);
 
-		  //			uint32_t endT = T2M(xTaskGetTickCount());
-		  //			uint32_t deltaT = endT - startT; //estimate time taken for all the pairs for rays and averaging
+//			uint32_t endT = T2M(xTaskGetTickCount());
+//			uint32_t deltaT = endT - startT; //estimate time taken for all the pairs for rays and averaging
 
+		  return true;
 		}
   }
 
 
+  return false;
 }
 
 void fpgaTriggerReset(void)
@@ -451,14 +480,27 @@ static void lighthouseTask(void *param)
 
       serialFrameCount++;
 
+      uint32_t nowMs;
+
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
       	// an angle was successfully measured
         frameCount++;
-
-				estimatePosition(&ppState, angles);
+        estimatePosition(&ppState, angles);
+        /*
+        nowMs = T2M(xTaskGetTickCount());
+//				if ((nowMs - latestPositionTimeMs) >= 66) { //15Hz
+				if ((nowMs - latestPositionTimeMs) >= 33) { //30Hz
+//				if ((nowMs - latestPositionTimeMs) >= 50) { //20Hz
+					//if time to attempt calculation
+					if(estimatePosition(&ppState, angles)){
+						//if actual position retrieved
+						latestPositionTimeMs = nowMs;
+					}
+				}
+				*/
       }
 
-      uint32_t nowMs = T2M(xTaskGetTickCount());
+      nowMs = T2M(xTaskGetTickCount());
       if ((nowMs - latestStatsTimeMs) > 1000) {
         calculateStats(nowMs);
         latestStatsTimeMs = nowMs;
@@ -576,7 +618,7 @@ LOG_ADD(LOG_FLOAT, angle1y_3, &angles[3].correctedAngles[1][1])
 LOG_ADD(LOG_FLOAT, x, &ext_pos.x)
 LOG_ADD(LOG_FLOAT, y, &ext_pos.y)
 LOG_ADD(LOG_FLOAT, z, &ext_pos.z)
-LOG_ADD(LOG_FLOAT, delta, &deltaLog)
+//LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
 LOG_ADD(LOG_FLOAT, serRt, &serialFrameRate)
 LOG_ADD(LOG_FLOAT, frmRt, &frameRate)
