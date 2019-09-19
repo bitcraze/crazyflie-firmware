@@ -395,9 +395,9 @@ bool estimatePosition(pulseProcessor_t *state, pulseProcessorResult_t angles[])
 //			positionCount += ray_pairs_count; // maxes 720hz with 1 BS, over thousands for 2 BS (exponential increase)
 
 		  if(noSingleBaseStation){
-		  	ext_pos.stdDev = 0.10;
+		  	ext_pos.stdDev = 0.02;
 		  }else{
-			  ext_pos.stdDev = 0.20; //since position may be from single basestation, don't trust it that much
+			  ext_pos.stdDev = 0.10; //since position may be from single basestation, don't trust it that much
 		  }
 		  estimatorEnqueuePosition(&ext_pos);
 
