@@ -25,6 +25,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
@@ -41,11 +42,15 @@
 #endif
 #endif
 
-CRTPPacket messageToPrint;
-xSemaphoreHandle synch = NULL;
+static CRTPPacket messageToPrint;
+static bool messageSendingIsPending = false;
+static xSemaphoreHandle synch = NULL;
 
-static const char fullMsg[] = "<F>\n";
+static const char bufferFullMsg[] = "<F>\n";
 static bool isInit;
+
+static void addBufferFullMarker();
+
 
 /**
  * Send the data to the client
@@ -53,10 +58,10 @@ static bool isInit;
  */
 static bool consoleSendMessage(void)
 {
-
   if (crtpSendPacket(&messageToPrint) == pdTRUE)
   {
     messageToPrint.size = 0;
+    messageSendingIsPending = false;
   }
   else
   {
@@ -74,6 +79,7 @@ void consoleInit()
   messageToPrint.size = 0;
   messageToPrint.header = CRTP_HEADER(CRTP_PORT_CONSOLE, 0);
   vSemaphoreCreateBinary(synch);
+  messageSendingIsPending = false;
 
   isInit = true;
 }
@@ -85,7 +91,6 @@ bool consoleTest(void)
 
 int consolePutchar(int ch)
 {
-  int i;
   bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
 
   if (!isInit) {
@@ -98,22 +103,29 @@ int consolePutchar(int ch)
 
   if (xSemaphoreTake(synch, portMAX_DELAY) == pdTRUE)
   {
-    if (messageToPrint.size < CRTP_MAX_DATA_SIZE)
+    // Try to send if we already have a pending message
+    if (messageSendingIsPending) 
     {
-      messageToPrint.data[messageToPrint.size] = (unsigned char)ch;
-      messageToPrint.size++;
-    }
-    if (ch == '\n' || messageToPrint.size >= CRTP_MAX_DATA_SIZE)
-    {
-      if (crtpGetFreeTxQueuePackets() == 1)
-      {
-        for (i = 0; i < sizeof(fullMsg) && (messageToPrint.size - i) > 0; i++)
-        {
-          messageToPrint.data[messageToPrint.size - i] =
-              (uint8_t)fullMsg[sizeof(fullMsg) - i - 1];
-        }
-      }
       consoleSendMessage();
+    }
+
+    if (! messageSendingIsPending) 
+    {
+      if (messageToPrint.size < CRTP_MAX_DATA_SIZE)
+      {
+        messageToPrint.data[messageToPrint.size] = (unsigned char)ch;
+        messageToPrint.size++;
+      }
+
+      if (ch == '\n' || messageToPrint.size >= CRTP_MAX_DATA_SIZE)
+      {
+        if (crtpGetFreeTxQueuePackets() == 1)
+        {
+          addBufferFullMarker();
+        }
+        messageSendingIsPending = true;
+        consoleSendMessage();
+      }
     }
     xSemaphoreGive(synch);
   }
@@ -153,4 +165,32 @@ void consoleFlush(void)
     consoleSendMessage();
     xSemaphoreGive(synch);
   }
+}
+
+
+static int findMarkerStart()
+{
+  int start = messageToPrint.size;
+  
+  // If last char is new line, rewind one char since the marker contains a new line.
+  if (start > 0 && messageToPrint.data[start - 1] == '\n')
+  {
+    start -= 1;
+  }
+
+  return start;
+}
+
+static void addBufferFullMarker()
+{
+  // Try to add the marker after the message if it fits in the buffer, otherwise overwrite the end of the message 
+  int endMarker = findMarkerStart() + sizeof(bufferFullMsg);
+  if (endMarker >= (CRTP_MAX_DATA_SIZE)) 
+  {
+    endMarker = CRTP_MAX_DATA_SIZE;
+  }
+
+  int startMarker = endMarker - sizeof(bufferFullMsg);
+  memcpy(&messageToPrint.data[startMarker], bufferFullMsg, sizeof(bufferFullMsg));
+  messageToPrint.size = startMarker + sizeof(bufferFullMsg);
 }
