@@ -174,7 +174,7 @@ PROJ_OBJ += deck_spi.o
 
 # Decks
 PROJ_OBJ += bigquad.o
-PROJ_OBJ += rzr.o
+PROJ_OBJ += bolt.o
 PROJ_OBJ += ledring12.o
 PROJ_OBJ += buzzdeck.o
 PROJ_OBJ += gtgps.o
@@ -219,6 +219,7 @@ endif
 #Deck tests
 PROJ_OBJ += exptest.o
 PROJ_OBJ += exptestRR.o
+PROJ_OBJ += exptestBolt.o
 #PROJ_OBJ += bigquadtest.o
 #PROJ_OBJ += uarttest.o
 

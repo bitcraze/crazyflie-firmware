@@ -201,8 +201,8 @@ static const MotorPerifDef CONN_M4_BL_INV =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// RZR M1, PA1, TIM2_CH2, Brushless config
-static const MotorPerifDef RZR_M1_BL =
+// Bolt M1, PA1, TIM2_CH2, Brushless config
+static const MotorPerifDef BOLT_M1_BL =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -211,6 +211,9 @@ static const MotorPerifDef RZR_M1_BL =
     .gpioPinSource = GPIO_PinSource1,
     .gpioOType     = GPIO_OType_PP,
     .gpioAF        = GPIO_AF_TIM2,
+    .gpioPowerswitchPerif = RCC_AHB1Periph_GPIOA,
+    .gpioPowerswitchPort  = GPIOA,
+    .gpioPowerswitchPin   = GPIO_Pin_0,
     .timPerif      = RCC_APB1Periph_TIM2,
     .tim           = TIM2,
     .timPolarity   = TIM_OCPolarity_High,
@@ -223,8 +226,8 @@ static const MotorPerifDef RZR_M1_BL =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
-// RZR M2, PB11, TIM2_CH4, Brushless config
-static const MotorPerifDef RZR_M2_BL =
+// Bolt M2, PB11, TIM2_CH4, Brushless config
+static const MotorPerifDef BOLT_M2_BL =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -233,6 +236,9 @@ static const MotorPerifDef RZR_M2_BL =
     .gpioPinSource = GPIO_PinSource11,
     .gpioOType     = GPIO_OType_PP,
     .gpioAF        = GPIO_AF_TIM2,
+    .gpioPowerswitchPerif = RCC_AHB1Periph_GPIOB,
+    .gpioPowerswitchPort  = GPIOB,
+    .gpioPowerswitchPin   = GPIO_Pin_12,
     .timPerif      = RCC_APB1Periph_TIM2,
     .tim           = TIM2,
     .timPolarity   = TIM_OCPolarity_High,
@@ -245,8 +251,8 @@ static const MotorPerifDef RZR_M2_BL =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// RZR M3, PA15, TIM2_CH1, Brushless config
-static const MotorPerifDef RZR_M3_BL =
+// Bolt M3, PA15, TIM2_CH1, Brushless config
+static const MotorPerifDef BOLT_M3_BL =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -255,6 +261,9 @@ static const MotorPerifDef RZR_M3_BL =
     .gpioPinSource = GPIO_PinSource15,
     .gpioOType     = GPIO_OType_PP,
     .gpioAF        = GPIO_AF_TIM2,
+    .gpioPowerswitchPerif = RCC_AHB1Periph_GPIOC,
+    .gpioPowerswitchPort  = GPIOC,
+    .gpioPowerswitchPin   = GPIO_Pin_8,
     .timPerif      = RCC_APB1Periph_TIM2,
     .tim           = TIM2,
     .timPolarity   = TIM_OCPolarity_High,
@@ -267,8 +276,8 @@ static const MotorPerifDef RZR_M3_BL =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// RZR M4, PB9, TIM4_CH4, Brushless config
-static const MotorPerifDef RZR_M4_BL =
+// Bolt M4, PB9, TIM4_CH4, Brushless config
+static const MotorPerifDef BOLT_M4_BL =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -277,6 +286,9 @@ static const MotorPerifDef RZR_M4_BL =
     .gpioPinSource = GPIO_PinSource9,
     .gpioOType     = GPIO_OType_PP,
     .gpioAF        = GPIO_AF_TIM4,
+    .gpioPowerswitchPerif = RCC_AHB1Periph_GPIOC,
+    .gpioPowerswitchPort  = GPIOC,
+    .gpioPowerswitchPin   = GPIO_Pin_15,
     .timPerif      = RCC_APB1Periph_TIM4,
     .tim           = TIM4,
     .timPolarity   = TIM_OCPolarity_High,
@@ -547,13 +559,13 @@ const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS] =
 };
 
 /**
- * Brushless motors mapped to the RZR PWM outputs.
+ * Brushless motors mapped to the Bolt PWM outputs.
  */
-const MotorPerifDef* motorMapRZRBrushless[NBR_OF_MOTORS] =
+const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS] =
 {
-  &RZR_M1_BL,
-  &RZR_M2_BL,
-  &RZR_M3_BL,
-  &RZR_M4_BL
+  &BOLT_M1_BL,
+  &BOLT_M2_BL,
+  &BOLT_M3_BL,
+  &BOLT_M4_BL
 };
 

@@ -94,6 +94,10 @@ int platformInitConfiguration(const platformConfig_t* configs, const int nrOfCon
   return 1;
 }
 
+const char* platformConfigGetDeviceType() {
+  return active_config->deviceType;
+}
+
 const char* platformConfigGetDeviceTypeName() {
   return active_config->deviceTypeName;
 }
@@ -105,3 +109,8 @@ SensorImplementation_t platformConfigGetSensorImplementation() {
 bool platformConfigPhysicalLayoutAntennasAreClose() {
   return active_config->physicalLayoutAntennasAreClose;
 }
+
+const MotorPerifDef** platformConfigGetMotorMapping() {
+  return active_config->motorMap;
+}
+

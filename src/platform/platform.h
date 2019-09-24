@@ -27,6 +27,7 @@
 #define PLATFORM_H_
 
 #include <stdbool.h>
+#include "motors.h"
 
 #define PLATFORM_DEVICE_TYPE_STRING_MAX_LEN (32 + 1)
 #define PLATFORM_DEVICE_TYPE_MAX_LEN (4 + 1)
@@ -53,9 +54,10 @@ typedef enum {
 
 typedef struct {
   char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
-  char deviceTypeName[14];
+  char deviceTypeName[20];
   SensorImplementation_t sensorImplementation;
   bool physicalLayoutAntennasAreClose;
+  const MotorPerifDef** motorMap;
 } platformConfig_t;
 
 /**
@@ -76,8 +78,10 @@ void platformSetLowInterferenceRadioMode(void);
 
 // Functions to read configuration
 const char* platformConfigGetPlatformName();
+const char* platformConfigGetDeviceType();
 const char* platformConfigGetDeviceTypeName();
 SensorImplementation_t platformConfigGetSensorImplementation();
 bool platformConfigPhysicalLayoutAntennasAreClose();
+const MotorPerifDef** platformConfigGetMotorMapping();
 
 #endif /* PLATFORM_H_ */
