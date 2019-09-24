@@ -43,6 +43,8 @@ compiler:
       - 'src/hal/interface/'
       - 'test/testSupport/'
       - 'vendor/CMSIS/CMSIS/Include/'
+      - 'src/lib/CMSIS/STM32F4xx/Include'
+      - 'src/lib/STM32F4xx_StdPeriph_Driver/inc'
   defines:
     prefix: '-D'
     items:
