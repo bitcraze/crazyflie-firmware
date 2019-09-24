@@ -33,19 +33,27 @@
 #include "param.h"
 #include "i2cdev.h"
 
+#define DEBUG_MODULE "ACTIVE_MARKER"
+#include "debug.h"
+
 #define LED_COUNT 4
 
+#define MEM_ADR_LED 0x0
+#define MEM_ADR_VER 0x10
+
 static bool isInit = false;
+static bool isVerified = false;
 // currentId != requestedID at startup to make sure all IDs are initialized in the deck
 static uint8_t currentId[LED_COUNT] = {0xff, 0xff, 0xff, 0xff};
 static uint8_t requestedId[LED_COUNT] = {1, 3, 4, 2}; // 1 to 4, clockwise
 
 #define DECK_I2C_ADDRESS 0x2E
+#define VERSION_STRING_LEN 12
 
 static xTimerHandle timer;
+static char versionString[VERSION_STRING_LEN + 1];
 
 static void timerHandler(xTimerHandle timer);
-static void writeToDeck(const uint8_t led, const uint8_t id);
 
 static void activeMarkerDeckInit(DeckInfo *info) {
   if (isInit) {
@@ -55,23 +63,41 @@ static void activeMarkerDeckInit(DeckInfo *info) {
   timer = xTimerCreate( "activeMarkerDeckTimer", M2T(1000), pdTRUE, NULL, timerHandler);
   xTimerStart(timer, 100);
 
+  memset(versionString, 0, VERSION_STRING_LEN + 1);
+  i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  DEBUG_PRINT("Deck FW %s\n", versionString);
+
   isInit = true;
 }
 
+static bool activeMarkerDeckTest() {
+  if (!isInit) {
+    return false;
+  }
+
+  isVerified = (0 == strcmp("Qualisys0.A", versionString));
+  if (! isVerified) {
+    DEBUG_PRINT("Incomaptible deck FW\n");
+  }
+
+  return isVerified;
+}
+
 static void timerHandler(xTimerHandle timer) {
-  for (int led = 0; led < LED_COUNT; led++) {
-    if (currentId[led] != requestedId[led]) {
-      currentId[led] = requestedId[led];
-      writeToDeck(led, currentId[led]);
+  if (isVerified) {
+    bool isDifferent = false;
+    for (int led = 0; led < LED_COUNT; led++) {
+      if (currentId[led] != requestedId[led]) {
+        isDifferent = true;
+        currentId[led] = requestedId[led];
+      }
+    }
+
+    if (isDifferent) {
+        i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
     }
   }
 }
-
-static void writeToDeck(const uint8_t led, const uint8_t id) {
-  uint8_t buf[] = {led, id};
-  i2cdevWrite(I2C1_DEV, DECK_I2C_ADDRESS, sizeof(buf), buf);
-}
-
 
 static const DeckDriver deck_info = {
   .vid = 0xBC,
@@ -81,6 +107,7 @@ static const DeckDriver deck_info = {
   .usedGpio = DECK_USING_SDA | DECK_USING_SCL,
 
   .init = activeMarkerDeckInit,
+  .test = activeMarkerDeckTest,
 };
 
 DECK_DRIVER(deck_info);

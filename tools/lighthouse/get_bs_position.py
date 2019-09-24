@@ -11,10 +11,10 @@ import openvr
 
 CENTER_AROUND_CONTROLLER = False
 
-print("Openning OpenVR")
+print("Opening OpenVR")
 vr = openvr.init(openvr.VRApplication_Other)
 
-print("OpenVR Oppened")
+print("OpenVR Opened")
 devices = {}
 poses = vr.getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseStanding, 0,
                                            openvr.k_unMaxTrackedDeviceCount)
@@ -49,7 +49,14 @@ for i in range(openvr.k_unMaxTrackedDeviceCount):
     if poses[i].bPoseIsValid:
         device_class = vr.getTrackedDeviceClass(i)
         if (device_class == openvr.TrackedDeviceClass_TrackingReference):
-            mode = vr.getStringTrackedDeviceProperty(i, openvr.Prop_ModeLabel_String).decode("utf-8")
+            
+            mode = vr.getStringTrackedDeviceProperty(i, openvr.Prop_ModeLabel_String)
+            try:
+                mode = mode.decode("utf-8")
+            except:
+                #likely already decoded
+                pass
+
             pose = poses[i].mDeviceToAbsoluteTracking
 
             # Mode 'B' is master

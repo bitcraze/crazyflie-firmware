@@ -57,6 +57,7 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
 
 //Local RSSI variable used to enable logging of RSSI values from Radio
 static uint8_t rssi;
+static bool isConnected;
 static uint32_t lastPacketTick;
 
 
@@ -166,10 +167,12 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
     ledseqRun(LINK_LED, seq_linkup);
     // no ack for broadcasts
   } else if (slp->type == SYSLINK_RADIO_RSSI)
-	{
-		//Extract RSSI sample sent from radio
-		memcpy(&rssi, slp->data, sizeof(uint8_t));
-	}
+  {
+    //Extract RSSI sample sent from radio
+    memcpy(&rssi, slp->data, sizeof(uint8_t)); //rssi will not change on disconnect
+  }
+
+  isConnected = radiolinkIsConnected();
 }
 
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
@@ -212,4 +215,5 @@ static int radiolinkSetEnable(bool enable)
 
 LOG_GROUP_START(radio)
 LOG_ADD(LOG_UINT8, rssi, &rssi)
+LOG_ADD(LOG_UINT8, isConnected, &isConnected)
 LOG_GROUP_STOP(radio)
