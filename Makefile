@@ -174,7 +174,6 @@ PROJ_OBJ += deck_spi.o
 
 # Decks
 PROJ_OBJ += bigquad.o
-PROJ_OBJ += bolt.o
 PROJ_OBJ += ledring12.o
 PROJ_OBJ += buzzdeck.o
 PROJ_OBJ += gtgps.o
