@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -52,14 +52,14 @@ static platformConfig_t configs[] = {
     .deviceType = "RZ10",
     .deviceTypeName = "Crazyflie Bolt",
     .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
-    .physicalLayoutAntennasAreClose = true,
+    .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBoltBrushless,
   },
   {
     .deviceType = "CB10",
     .deviceTypeName = "Crazyflie Bolt",
     .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
-    .physicalLayoutAntennasAreClose = true,
+    .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBoltBrushless,
   }
 };

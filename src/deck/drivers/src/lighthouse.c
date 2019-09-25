@@ -100,7 +100,7 @@ static bool isInit = false;
     extern const int name ## Size; \
     static const __attribute__((used)) unsigned char* name = (unsigned char*) & incbin_ ## name ## _start; \
 
-INCBIN(bitstream, "lighthouse.bin");
+INCBIN(bitstream, "blobs/lighthouse.bin");
 
 static void checkVersionAndBoot();
 
@@ -225,7 +225,7 @@ static void lighthouseTask(void *param)
     // Synchronize
     syncCounter = 0;
     while (!synchronized) {
-      
+
       uart1Getchar(&c);
       if (c != 0) {
         syncCounter += 1;
@@ -336,7 +336,7 @@ static void lighthouseInit(DeckInfo *info)
 
   uart1Init(230400);
   lhblInit(I2C1_DEV);
-  
+
   xTaskCreate(lighthouseTask, "LH",
               2*configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
 

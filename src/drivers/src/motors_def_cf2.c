@@ -522,6 +522,18 @@ static const MotorPerifDef DECK_MOSI =
 };
 
 /**
+ * Mapping for Tags that don't have motors.
+ * Actually same mapping as for CF2 but the pins are not connected.
+ */
+const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS] =
+{
+  &CONN_M1,
+  &CONN_M2,
+  &CONN_M3,
+  &CONN_M4
+};
+
+/**
  * Default brushed mapping to M1-M4 connectors.
  */
 const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
