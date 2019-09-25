@@ -123,12 +123,15 @@ void zRanger2Task(void* arg)
 
   // Restart sensor
   VL53L1_StopMeasurement(&dev);
+  VL53L1_SetDistanceMode(&dev, VL53L1_DISTANCEMODE_MEDIUM);
+  VL53L1_SetMeasurementTimingBudgetMicroSeconds(&dev, 25000);
+
   VL53L1_StartMeasurement(&dev);
 
   lastWakeTime = xTaskGetTickCount();
 
   while (1) {
-    vTaskDelayUntil(&lastWakeTime, M2T(100));
+    vTaskDelayUntil(&lastWakeTime, M2T(25));
 
     range_last = zRanger2GetMeasurementAndRestart(&dev);
     rangeSet(rangeDown, range_last / 1000.0f);
@@ -167,8 +170,6 @@ static const DeckDriver zranger2_deck = {
   .pid = 0x0E,
   .name = "bcZRanger2",
   .usedGpio = 0x0C,
-
-  .requiredEstimator = kalmanEstimator,
 
   .init = zRanger2Init,
   .test = zRanger2Test,
