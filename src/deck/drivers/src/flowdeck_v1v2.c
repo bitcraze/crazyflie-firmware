@@ -98,7 +98,7 @@ static void flowdeckTask(void *param)
 #if defined(USE_MA_SMOOTHING)
       // Use MA Smoothing
       pixelAverages.averageX[pixelAverages.ptr] = (float32_t)accpx;
-      pixelAverages.averageX[pixelAverages.ptr] = (float32_t)accpy;
+      pixelAverages.averageY[pixelAverages.ptr] = (float32_t)accpy;
 
       float32_t meanX;
       float32_t meanY;
