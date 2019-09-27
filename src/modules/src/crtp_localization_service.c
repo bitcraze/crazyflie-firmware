@@ -92,6 +92,7 @@ static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
 static bool isInit = false;
 static uint8_t my_id;
+static uint16_t tickOfLastPacket; // tick when last packet was received
 
 static void locSrvCrtpCB(CRTPPacket* pk);
 static void extPositionHandler(CRTPPacket* pk);
@@ -138,6 +139,7 @@ static void extPositionHandler(CRTPPacket* pk)
   ext_pos.z = data->z;
   ext_pos.stdDev = extPosStdDev;
   estimatorEnqueuePosition(&ext_pos);
+  tickOfLastPacket = xTaskGetTickCount();
 }
 
 static void genericLocHandle(CRTPPacket* pk)
@@ -169,6 +171,7 @@ static void genericLocHandle(CRTPPacket* pk)
     ext_pose.stdDevPos = extPosStdDev;
     ext_pose.stdDevQuat = extQuatStdDev;
     estimatorEnqueuePose(&ext_pose);
+    tickOfLastPacket = xTaskGetTickCount();
   } else if (type == EXT_POSE_PACKED) {
     uint8_t numItems = (pk->size - 1) / sizeof(extPosePackedItem);
     for (uint8_t i = 0; i < numItems; ++i) {
@@ -181,6 +184,7 @@ static void genericLocHandle(CRTPPacket* pk)
         ext_pose.stdDevPos = extPosStdDev;
         ext_pose.stdDevQuat = extQuatStdDev;
         estimatorEnqueuePose(&ext_pose);
+        tickOfLastPacket = xTaskGetTickCount();
         break;
       }
     }
@@ -198,7 +202,7 @@ static void extPositionPackedHandler(CRTPPacket* pk)
       ext_pos.z = item->z / 1000.0f;
       ext_pos.stdDev = extPosStdDev;
       estimatorEnqueuePosition(&ext_pos);
-
+      tickOfLastPacket = xTaskGetTickCount();
       break;
     }
   }
@@ -245,6 +249,10 @@ LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, Y, &ext_pos.y)
   LOG_ADD(LOG_FLOAT, Z, &ext_pos.z)
 LOG_GROUP_STOP(ext_pos)
+
+LOG_GROUP_START(locSrvZ)
+  LOG_ADD(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)
+LOG_GROUP_STOP(locSrvZ)
 
 PARAM_GROUP_START(locSrv)
   PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
