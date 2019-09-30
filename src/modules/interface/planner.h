@@ -53,6 +53,9 @@ struct planner
 	enum trajectory_state state;	// current state
 	bool reversed;					// true, if trajectory should be evaluated in reverse
 	const struct piecewise_traj* trajectory; // pointer to trajectory
+
+	struct piecewise_traj planned_trajectory; // trajectory for on-board planning
+	struct poly4d pieces[1]; // the on-board planner requires a single piece, only
 };
 
 // initialize the planner
