@@ -41,7 +41,9 @@
  * Initialize the SPI.
  */
 void spiBegin(void);
+void spiBeginSlave(void);
 void spiBeginTransaction(uint16_t baudRatePrescaler);
+void spiBeginTransactionSlave(uint16_t baudRatePrescaler);
 void spiEndTransaction();
 
 /* Send the data_tx buffer and receive into the data_rx buffer */

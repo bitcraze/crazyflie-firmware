@@ -88,6 +88,7 @@ static SemaphoreHandle_t spiMutex;
 
 static void spiDMAInit();
 static void spiConfigureWithSpeed(uint16_t baudRatePrescaler);
+static void spiConfigureWithSpeedSlave(uint16_t baudRatePrescaler);
 
 void spiBegin(void)
 {
@@ -142,6 +143,59 @@ void spiBegin(void)
 
   /*!< SPI configuration */
   spiConfigureWithSpeed(SPI_BAUDRATE_2MHZ);
+
+  isInit = true;
+}
+
+void spiBeginSlave(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  // binary semaphores created using xSemaphoreCreateBinary() are created in a state
+  // such that the the semaphore must first be 'given' before it can be 'taken'
+  txComplete = xSemaphoreCreateBinary();
+  rxComplete = xSemaphoreCreateBinary();
+  spiMutex = xSemaphoreCreateMutex();
+
+  /*!< Enable the SPI clock */
+  SPI_CLK_INIT(SPI_CLK, ENABLE);
+
+  /*!< Enable GPIO clocks */
+  RCC_AHB1PeriphClockCmd(SPI_SCK_GPIO_CLK | SPI_MISO_GPIO_CLK |
+                         SPI_MOSI_GPIO_CLK, ENABLE);
+
+  /*!< Enable DMA Clocks */
+  SPI_DMA_CLK_INIT(SPI_DMA_CLK, ENABLE);
+
+  /*!< SPI pins configuration *************************************************/
+
+  /*!< Connect SPI pins to AF5 */
+  GPIO_PinAFConfig(SPI_SCK_GPIO_PORT, SPI_SCK_SOURCE, SPI_SCK_AF);
+  GPIO_PinAFConfig(SPI_MISO_GPIO_PORT, SPI_MISO_SOURCE, SPI_MISO_AF);
+  GPIO_PinAFConfig(SPI_MOSI_GPIO_PORT, SPI_MOSI_SOURCE, SPI_MOSI_AF);
+
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+
+  /*!< SPI SCK pin configuration */
+  GPIO_InitStructure.GPIO_Pin = SPI_SCK_PIN;
+  GPIO_Init(SPI_SCK_GPIO_PORT, &GPIO_InitStructure);
+
+  /*!< SPI MOSI pin configuration */
+  GPIO_InitStructure.GPIO_Pin =  SPI_MOSI_PIN;
+  GPIO_Init(SPI_MOSI_GPIO_PORT, &GPIO_InitStructure);
+
+  /*!< SPI MISO pin configuration */
+  GPIO_InitStructure.GPIO_Pin =  SPI_MISO_PIN;
+  GPIO_Init(SPI_MISO_GPIO_PORT, &GPIO_InitStructure);
+
+  /*!< SPI DMA Initialization */
+  spiDMAInit();
+
+  /*!< SPI configuration */
+  spiConfigureWithSpeedSlave(SPI_BAUDRATE_2MHZ);
 
   isInit = true;
 }
@@ -214,6 +268,26 @@ static void spiConfigureWithSpeed(uint16_t baudRatePrescaler)
   SPI_Init(SPI, &SPI_InitStructure);
 }
 
+static void spiConfigureWithSpeedSlave(uint16_t baudRatePrescaler)
+{
+  SPI_InitTypeDef  SPI_InitStructure;
+
+  SPI_I2S_DeInit(SPI);
+
+  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+  SPI_InitStructure.SPI_Mode = SPI_Mode_Slave;
+  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+  SPI_InitStructure.SPI_CRCPolynomial = 0; // Not used
+
+  SPI_InitStructure.SPI_BaudRatePrescaler = baudRatePrescaler;
+  SPI_Init(SPI, &SPI_InitStructure);
+}
+
+
 bool spiTest(void)
 {
   return isInit;
@@ -260,6 +334,12 @@ void spiBeginTransaction(uint16_t baudRatePrescaler)
 {
   xSemaphoreTake(spiMutex, portMAX_DELAY);
   spiConfigureWithSpeed(baudRatePrescaler);
+}
+
+void spiBeginTransactionSlave(uint16_t baudRatePrescaler)
+{
+  xSemaphoreTake(spiMutex, portMAX_DELAY);
+  spiConfigureWithSpeedSlave(baudRatePrescaler);
 }
 
 void spiEndTransaction()

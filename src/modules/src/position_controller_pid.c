@@ -82,7 +82,7 @@ static struct this_s this = {
     .init = {
       .kp = 25.0f,
       .ki = 1.0f,
-      .kd = 0.0f,
+      .kd = 0.5f,
     },
     .pid.dt = DT,
   },
@@ -91,7 +91,7 @@ static struct this_s this = {
     .init = {
       .kp = 25.0f,
       .ki = 1.0f,
-      .kd = 0.0f,
+      .kd = 0.5f,
     },
     .pid.dt = DT,
   },

@@ -85,14 +85,16 @@ static void flowdeckTask(void *param)
     // (might need to be changed if mounted differently)
     int16_t accpx = -currentMotion.deltaY;
     int16_t accpy = -currentMotion.deltaX;
+    currentMotion.deltaY = accpy;
+    currentMotion.deltaX = accpx;
 
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
 
       // Form flow measurement struct and push into the EKF
       flowMeasurement_t flowData;
-      flowData.stdDevX = 0.25;    // [pixels] should perhaps be made larger?
-      flowData.stdDevY = 0.25;    // [pixels] should perhaps be made larger?
+      flowData.stdDevX = 2.0f; // Default: 0.25;    // [pixels] should perhaps be made larger?
+      flowData.stdDevY = 2.0f; // Default: 0.25;    // [pixels] should perhaps be made larger?
       flowData.dt = 0.01;
 
 #if defined(USE_MA_SMOOTHING)

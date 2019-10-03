@@ -32,8 +32,12 @@
 #include "commander.h"
 #include "crtp_commander.h"
 #include "crtp_commander_high_level.h"
+#include "pulp_shield.h"
+#include "stm32f4xx_rcc.h"
 
 #include "param.h"
+#include "debug.h"
+#include "log.h"
 
 static bool isInit;
 const static setpoint_t nullSetpoint;
@@ -41,6 +45,13 @@ const static int priorityDisable = COMMANDER_PRIORITY_DISABLE;
 
 static uint32_t lastUpdate;
 static bool enableHighLevel = false;
+
+/* PULP-Shield variables */
+static bool enablePULPShield  = false;
+static bool PULPRunning       = false;
+static bool landing           = false;
+static uint32_t landingStep, lastLandingUpdate;
+static float PULP_vel_x, PULP_pos_z, PULP_att_yaw;
 
 QueueHandle_t setpointQueue;
 QueueHandle_t priorityQueue;
@@ -59,6 +70,12 @@ void commanderInit(void)
   crtpCommanderInit();
   crtpCommanderHighLevelInit();
   lastUpdate = xTaskGetTickCount();
+  lastLandingUpdate = xTaskGetTickCount();
+
+  /* PULP-Shield initialization */
+  PULP_vel_x   = 0.0f;
+  PULP_pos_z   = 0.0f;
+  PULP_att_yaw = 0.0f;
 
   isInit = true;
 }
@@ -102,6 +119,119 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->attitudeRate.yaw = 0;
     // Keep Z as it is
   }
+
+  #ifdef PULP_SHIELD
+
+  if(enablePULPShield) {
+
+    if(!PULPRunning) {
+      //Turning on the Power-Enable on the Shield
+      PULPShieldOn();
+      PULPRunning = true;
+      landing     = true;
+      landingStep = 1;
+    }
+
+    /* Watchdog triggering emergency landing in case of missing SPI
+     * communication from PULP. Typically due to FLL issue on GAP8 SoC */
+#ifdef WATCH_DOG_EN
+    if(xTaskGetTickCount()-getLastPULPUpdate()>ERROR_THRESHOLD) {
+      enablePULPShield  = false;
+      PULPRunning       = false;
+      DEBUG_PRINT("EMERGENCY STOP!\n");
+    }
+#endif
+
+    setpoint->mode.x            = PULPShieldGetSetpoint().mode.x;
+    setpoint->mode.y            = PULPShieldGetSetpoint().mode.y;
+    setpoint->mode.z            = PULPShieldGetSetpoint().mode.z;
+    setpoint->mode.pitch        = modeDisable;
+    setpoint->mode.roll         = modeDisable;
+    setpoint->mode.yaw          = PULPShieldGetSetpoint().mode.yaw;
+    setpoint->mode.quat         = modeDisable;
+    setpoint->velocity_body     = true;
+    setpoint->position.z        = PULPShieldGetSetpoint().position.z;
+    setpoint->velocity.x        = PULPShieldGetSetpoint().velocity.x;
+    setpoint->velocity.y        = PULPShieldGetSetpoint().velocity.y;
+    setpoint->attitudeRate.yaw  = PULPShieldGetSetpoint().attitudeRate.yaw;
+  }
+  else {
+    if(landing) {
+      if(landingStep==PULP_STEPS_LANDING) {
+        landing = false;
+        landingStep = 1;
+      }
+      else {
+
+        setpoint->mode.x              = modeDisable;
+        setpoint->mode.y              = modeDisable;
+        setpoint->mode.z              = modeAbs;
+        setpoint->mode.roll           = modeAbs;
+        setpoint->mode.pitch          = modeAbs;
+        setpoint->mode.yaw            = modeVelocity;
+        setpoint->mode.quat           = modeDisable;
+        setpoint->velocity_body       = true;
+        setpoint->position.x          = 0.0f;
+        setpoint->position.y          = 0.0f;
+        setpoint->position.z          = PULP_TARGET_H-((PULP_TARGET_H/PULP_STEPS_LANDING*1.0f)*(landingStep*1.0f));
+        setpoint->velocity.x          = 0.0f;
+        setpoint->velocity.y          = 0.0f;
+        setpoint->velocity.z          = 0.0f;
+        setpoint->acceleration.x      = 0.0f;
+        setpoint->acceleration.y      = 0.0f;
+        setpoint->acceleration.z      = 0.0f;
+        setpoint->attitude.pitch      = 0.0f;
+        setpoint->attitude.roll       = 0.0f;
+        setpoint->attitude.yaw        = 0.0f;
+        setpoint->attitudeRate.pitch  = 0.0f;
+        setpoint->attitudeRate.roll   = 0.0f;
+        setpoint->attitudeRate.yaw    = 0.0f;
+
+        if((currentTime-lastLandingUpdate) > PULP_LANDING_RATE) {
+          landingStep++;
+          lastLandingUpdate = xTaskGetTickCount();
+        }
+      }
+    }
+    else {
+
+      PULPShieldOff();
+
+      setpoint->mode.x              = modeDisable;
+      setpoint->mode.y              = modeDisable;
+      setpoint->mode.z              = modeDisable;
+      setpoint->mode.roll           = modeDisable;
+      setpoint->mode.pitch          = modeDisable;
+      setpoint->mode.yaw            = modeDisable;
+      setpoint->mode.quat           = modeDisable;
+      setpoint->velocity_body       = true;
+      setpoint->position.x          = 0.0f;
+      setpoint->position.y          = 0.0f;
+      setpoint->position.z          = 0.0f;
+      setpoint->velocity.x          = 0.0f;
+      setpoint->velocity.y          = 0.0f;
+      setpoint->velocity.z          = 0.0f;
+      setpoint->acceleration.x      = 0.0f;
+      setpoint->acceleration.y      = 0.0f;
+      setpoint->acceleration.z      = 0.0f;
+      setpoint->attitude.pitch      = 0.0f;
+      setpoint->attitude.roll       = 0.0f;
+      setpoint->attitude.yaw        = 0.0f;
+      setpoint->attitudeRate.pitch  = 0.0f;
+      setpoint->attitudeRate.roll   = 0.0f;
+      setpoint->attitudeRate.yaw    = 0.0f;
+
+      PULPRunning  = false;
+    }
+  }
+
+  // only for logging
+  PULP_vel_x          = setpoint->velocity.x;
+  PULP_pos_z          = setpoint->position.z;
+  PULP_att_yaw        = setpoint->attitudeRate.yaw/YAW_SCALING;
+
+#endif // PULP_SHIELD
+
 }
 
 bool commanderTest(void)
@@ -123,4 +253,11 @@ int commanderGetActivePriority(void)
 
 PARAM_GROUP_START(commander)
 PARAM_ADD(PARAM_UINT8, enHighLevel, &enableHighLevel)
+PARAM_ADD(PARAM_UINT8, enPULPShield, &enablePULPShield)
 PARAM_GROUP_STOP(commander)
+
+LOG_GROUP_START(PULP)
+LOG_ADD(LOG_FLOAT, PULP_x, &PULP_vel_x)
+LOG_ADD(LOG_FLOAT, PULP_z, &PULP_pos_z)
+LOG_ADD(LOG_FLOAT, PULP_yaw, &PULP_att_yaw)
+LOG_GROUP_STOP(PULP)

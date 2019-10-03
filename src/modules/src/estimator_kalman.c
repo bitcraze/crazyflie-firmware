@@ -540,6 +540,10 @@ void estimatorKalmanGetEstimatedPos(point_t* pos) {
   pos->z = coreData.S[KC_STATE_Z];
 }
 
+void setResetEstimation(bool val) {
+  coreData.resetEstimation = val;
+}
+
 // Temporary development groups
 LOG_GROUP_START(kalman_states)
   LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])

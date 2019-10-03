@@ -35,8 +35,8 @@ CFLAGS += -DCRAZYFLIE_FW
 
 ######### Stabilizer configuration ##########
 ## These are set by the platform (see tools/make/platforms/*.mk), can be overwritten here
-ESTIMATOR          ?= any
-CONTROLLER         ?= Any # one of Any, PID, Mellinger
+ESTIMATOR          ?= Kalman # any
+CONTROLLER         ?= PID # one of Any, PID, Mellinger
 POWER_DISTRIBUTION ?= stock
 
 #OpenOCD conf
@@ -173,6 +173,7 @@ PROJ_OBJ += deck_analog.o
 PROJ_OBJ += deck_spi.o
 
 # Decks
+PROJ_OBJ += pulp_shield.o
 PROJ_OBJ += bigquad.o
 PROJ_OBJ += rzr.o
 PROJ_OBJ += ledring12.o
