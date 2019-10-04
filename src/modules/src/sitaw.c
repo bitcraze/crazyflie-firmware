@@ -33,6 +33,8 @@
 #include "trigger.h"
 #include "sitaw.h"
 #include "commander.h"
+#include "stabilizer.h"
+#include "motors.h"
 
 /* Trigger object used to detect Free Fall situation. */
 static trigger_t sitAwFFAccWZ;
@@ -41,7 +43,7 @@ static trigger_t sitAwFFAccWZ;
 static trigger_t sitAwARAccZ;
 
 /* Trigger object used to detect Tumbled situation. */
-static trigger_t sitAwTuAngle;
+static trigger_t sitAwTuAcc;
 
 #if defined(SITAW_ENABLED)
 
@@ -56,13 +58,13 @@ LOG_ADD(LOG_UINT32, ARTestCounter, &sitAwARAccZ.testCounter)
 LOG_ADD(LOG_UINT8, ARDetected, &sitAwARAccZ.released)
 #endif
 #if defined(SITAW_TU_LOG_ENABLED) /* Log trigger variables for Tumbled detection. */
-LOG_ADD(LOG_UINT32, TuTestCounter, &sitAwTuAngle.testCounter)
-LOG_ADD(LOG_UINT8, TuDetected, &sitAwTuAngle.released)
+LOG_ADD(LOG_UINT32, TuTestCounter, &sitAwTuAcc.testCounter)
+LOG_ADD(LOG_UINT8, TuDetected, &sitAwTuAcc.released)
 #endif
 #if defined(SITAW_LOG_ALL_DETECT_ENABLED) /* Log all the 'Detected' flags. */
 LOG_ADD(LOG_UINT8, FFAccWZDetected, &sitAwFFAccWZ.released)
 LOG_ADD(LOG_UINT8, ARDetected, &sitAwARAccZ.released)
-LOG_ADD(LOG_UINT8, TuDetected, &sitAwTuAngle.released)
+LOG_ADD(LOG_UINT8, TuDetected, &sitAwTuAcc.released)
 #endif
 LOG_GROUP_STOP(sitAw)
 #endif /* SITAW_LOG_ENABLED */
@@ -80,26 +82,25 @@ PARAM_ADD(PARAM_UINT32, ARTriggerCount, &sitAwARAccZ.triggerCount)
 PARAM_ADD(PARAM_FLOAT, ARaccZ, &sitAwARAccZ.threshold)
 #endif
 #if defined(SITAW_TU_PARAM_ENABLED) /* Param variables for Tumbled detection. */
-PARAM_ADD(PARAM_UINT8, TuActive, &sitAwTuAngle.active)
-PARAM_ADD(PARAM_UINT32, TuTriggerCount, &sitAwTuAngle.triggerCount)
-PARAM_ADD(PARAM_FLOAT, TuAngle, &sitAwTuAngle.threshold)
+PARAM_ADD(PARAM_UINT8, TuActive, &sitAwTuAcc.active)
+PARAM_ADD(PARAM_UINT32, TuTriggerCount, &sitAwTuAcc.triggerCount)
+PARAM_ADD(PARAM_FLOAT, TuAcc, &sitAwTuAcc.threshold)
 #endif
 PARAM_GROUP_STOP(sitAw)
 #endif /* SITAW_PARAM_ENABLED */
 
 #endif /* SITAW_ENABLED */
 
-/**
- * Initialize the Free Fall detection.
- *
- * See the sitAwFFTest() function for details.
- */
-void sitAwFFInit(void)
-{
-  triggerInit(&sitAwFFAccWZ, triggerFuncIsLE, SITAW_FF_THRESHOLD, SITAW_FF_TRIGGER_COUNT);
-  triggerActivate(&sitAwFFAccWZ, true);
-}
-
+// forward declaration of private functions
+#ifdef SITAW_FF_ENABLED
+static void sitAwFFTest(float accWZ, float accMag);
+#endif
+#ifdef SITAW_AR_ENABLED
+static void sitAwARTest(float accX, float accY, float accZ);
+#endif
+#ifdef SITAW_TU_ENABLED
+static void sitAwTuTest(float accz);
+#endif
 
 static void sitAwPostStateUpdateCallOut(const sensorData_t *sensorData,
                                         const state_t *state)
@@ -116,8 +117,16 @@ static void sitAwPostStateUpdateCallOut(const sensorData_t *sensorData,
   sitAwFFTest(state->acc.z, accMAG);
 #endif
 #ifdef SITAW_TU_ENABLED
-  /* Test values for Tumbled detection. */
-  sitAwTuTest(state->attitude.roll, state->attitude.pitch);
+  /* check if we actually fly */
+  int sumRatio = 0;
+  for (int i = 0; i < NBR_OF_MOTORS; ++i) {
+    sumRatio += motorsGetRatio(i);
+  }
+  bool isFlying = sumRatio > SITAW_TU_IN_FLIGHT_THRESHOLD;
+  if (isFlying) {
+    /* Test values for Tumbled detection. */
+    sitAwTuTest(sensorData->acc.z);
+  }
 #endif
 #ifdef SITAW_AR_ENABLED
 /* Test values for At Rest detection. */
@@ -134,10 +143,7 @@ static void sitAwPreThrustUpdateCallOut(setpoint_t *setpoint)
 #ifdef SITAW_TU_ENABLED
       if(sitAwTuDetected()) {
         /* Kill the thrust to the motors if a Tumbled situation is detected. */
-        setpoint->mode.x = modeDisable;
-        setpoint->mode.y = modeDisable;
-        setpoint->mode.z = modeDisable;
-        setpoint->thrust = 0;
+        stabilizerSetEmergencyStop();
       }
 #endif
 
@@ -167,6 +173,18 @@ void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
   sitAwPreThrustUpdateCallOut(setpoint);
 }
 
+#ifdef SITAW_FF_ENABLED
+/**
+ * Initialize the Free Fall detection.
+ *
+ * See the sitAwFFTest() function for details.
+ */
+void sitAwFFInit(void)
+{
+  triggerInit(&sitAwFFAccWZ, triggerFuncIsLE, SITAW_FF_THRESHOLD, SITAW_FF_TRIGGER_COUNT);
+  triggerActivate(&sitAwFFAccWZ, true);
+}
+
 /**
  * Test values for a Free Fall situation.
  *
@@ -185,23 +203,21 @@ void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
  *
  * @param accWZ  Vertical acceleration (regardless of orientation)
  * @param accMAG All experienced accelerations.
- *
- * @return True if the situation has been detected, otherwise false.
  */
-bool sitAwFFTest(float accWZ, float accMAG)
+void sitAwFFTest(float accWZ, float accMAG)
 {
   /* Check that the total acceleration is close to zero. */
   if(fabs(accMAG) > SITAW_FF_THRESHOLD) {
     /* If the total acceleration deviates from 0, this is not a free fall situation. */
     triggerReset(&sitAwFFAccWZ);
-    return false;
-  }
+  } else {
 
-  /**
-   * AccWZ approaches -1 in free fall. Check that the value stays within
-   * SITAW_FF_THRESHOLD of -1 for the triggerCount specified.
-   */
-  return(triggerTestValue(&sitAwFFAccWZ, fabs(accWZ + 1)));
+    /**
+     * AccWZ approaches -1 in free fall. Check that the value stays within
+     * SITAW_FF_THRESHOLD of -1 for the triggerCount specified.
+     */
+    triggerTestValue(&sitAwFFAccWZ, fabs(accWZ + 1));
+  }
 }
 
 /**
@@ -213,7 +229,9 @@ bool sitAwFFDetected(void)
 {
   return sitAwFFAccWZ.released;
 }
+#endif
 
+#ifdef SITAW_AR_ENABLED
 /**
  * Initialize the At Rest detection.
  *
@@ -241,16 +259,13 @@ void sitAwARInit(void)
  * @param accX   Horizontal X acceleration (when crazyflie is placed on its feet)
  * @param accY   Horizontal Y acceleration (when crazyflie is placed on its feet)
  * @param accZ   Vertical Z acceleration (when crazyflie is placed on its feet)
- *
- * @return True if the situation has been detected, otherwise false.
  */
-bool sitAwARTest(float accX, float accY, float accZ)
+void sitAwARTest(float accX, float accY, float accZ)
 {
   /* Check that there are no horizontal accelerations. At rest, these are 0. */
   if((fabs(accX) > SITAW_AR_THRESHOLD) || (fabs(accY) > SITAW_AR_THRESHOLD)) {
     /* If the X or Y accelerations are different than 0, the crazyflie is not at rest. */
     triggerReset(&sitAwARAccZ);
-    return(false);
   }
 
   /**
@@ -260,7 +275,7 @@ bool sitAwARTest(float accX, float accY, float accZ)
    * The vertical acceleration must be close to 1, but is allowed to oscillate slightly
    * around 1. Testing that the deviation from 1 stays within SITAW_AR_THRESHOLD.
    */
-  return(triggerTestValue(&sitAwARAccZ, fabs(accZ - 1)));
+  triggerTestValue(&sitAwARAccZ, fabs(accZ - 1));
 }
 
 /**
@@ -272,7 +287,9 @@ bool sitAwARDetected(void)
 {
   return sitAwARAccZ.released;
 }
+#endif
 
+#ifdef SITAW_TU_ENABLED
 /**
  * Initialize the Tumbled detection.
  *
@@ -280,42 +297,26 @@ bool sitAwARDetected(void)
  */
 void sitAwTuInit(void)
 {
-  triggerInit(&sitAwTuAngle, triggerFuncIsGE, SITAW_TU_THRESHOLD, SITAW_TU_TRIGGER_COUNT);
-  triggerActivate(&sitAwTuAngle, true);
+  triggerInit(&sitAwTuAcc, triggerFuncIsLE, SITAW_TU_ACC_THRESHOLD, SITAW_TU_ACC_TRIGGER_COUNT);
+  triggerActivate(&sitAwTuAcc, true);
 }
 
 /**
  * Test values for a Tumbled situation.
  *
- * A tumbled situation is considered identified when the roll or pitch has
- * exceeded +/- SITAW_TU_THRESHOLD degrees.
- *
- * For thresholds beyond +/- 90 degrees, this is only reported by the roll
- * value. The roll value is thus the only one of roll, pitch and yaw values
- * which can detect upside down situations.
+ * A tumbled situation is considered identified when accelerometer reports
+ * a negative value.
  *
  * Once a tumbled situation is identified, this can be used for instance to
  * cut the thrust to the motors, avoiding the crazyflie from running
- * propellers at significant thrust when accidentially crashing into walls
+ * propellers at significant thrust when accidentally crashing into walls
  * or the ground.
 
- * @param The actual roll in degrees. +180/-180 degrees means upside down.
- * @param The actual pitch in degrees. 0 degrees means horizontal.
- *
- * @return True if the situation has been detected, otherwise false.
+ * @param The current accelerometer reading in z direction
  */
-bool sitAwTuTest(float eulerRollActual, float eulerPitchActual)
+void sitAwTuTest(float accz)
 {
-  /*
-   * It is sufficient to use a single trigger object, we simply pass the
-   * greatest of the roll and pitch absolute values to the trigger object
-   * at any given time.
-   */
-  float fAbsRoll  = fabs(eulerRollActual);
-  float fAbsPitch = fabs(eulerPitchActual);
-
-  /* Only the roll value will report if the crazyflie is turning upside down. */
-  return(triggerTestValue(&sitAwTuAngle, fAbsRoll >= fAbsPitch ? fAbsRoll : fAbsPitch));
+  triggerTestValue(&sitAwTuAcc, accz);
 }
 
 /**
@@ -325,8 +326,9 @@ bool sitAwTuTest(float eulerRollActual, float eulerPitchActual)
  */
 bool sitAwTuDetected(void)
 {
-  return sitAwTuAngle.released;
+  return sitAwTuAcc.released;
 }
+#endif
 
 /**
  * Initialize the situation awareness subsystem.
