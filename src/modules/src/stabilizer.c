@@ -183,10 +183,7 @@ void stabilizerInit(StateEstimatorType estimator)
   stateEstimatorInit(estimator);
   controllerInit(ControllerTypeAny);
   powerDistributionInit();
-  if (estimator == kalmanEstimator)
-  {
-    sitAwInit();
-  }
+  sitAwInit();
   estimatorType = getStateEstimator();
   controllerType = getControllerType();
 
@@ -530,6 +527,7 @@ PARAM_GROUP_STOP(health)
 PARAM_GROUP_START(stabilizer)
 PARAM_ADD(PARAM_UINT8, estimator, &estimatorType)
 PARAM_ADD(PARAM_UINT8, controller, &controllerType)
+PARAM_ADD(PARAM_UINT8, stop, &emergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
 LOG_GROUP_START(health)

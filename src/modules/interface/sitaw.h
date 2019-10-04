@@ -32,12 +32,6 @@
 
 #include "stabilizer_types.h"
 
-bool sitAwFFTest(float accWZ, float accMag);
-bool sitAwFFDetected(void);
-bool sitAwARTest(float accX, float accY, float accZ);
-bool sitAwARDetected(void);
-bool sitAwTuTest(float eulerRollActual, float eulerPitchActual);
-bool sitAwTuDetected(void);
 void sitAwInit(void);
 void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
                                                const state_t *state);
@@ -57,8 +51,9 @@ void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
 #define SITAW_AR_TRIGGER_COUNT 500 /* The number of consecutive tests for At Rest to be detected. Configured for 250Hz testing. */
 
 /* Configuration options for the 'Tumbled' detection. */
-#define SITAW_TU_THRESHOLD 60      /* The minimum roll angle indicating a Tumbled situation. */
-#define SITAW_TU_TRIGGER_COUNT 15  /* The number of consecutive tests for Tumbled to be detected. Configured for 250Hz testing. */
+#define SITAW_TU_ACC_THRESHOLD (-0.5f)     /* The maximum acc.z value indicating a Tumbled situation. */
+#define SITAW_TU_ACC_TRIGGER_COUNT 15      /* The number of consecutive tests for Tumbled to be detected. Configured for 250Hz testing. */
+#define SITAW_TU_IN_FLIGHT_THRESHOLD 1000  /* Minimum summed motor PWM that means we are flying */
 
 /* LOG configurations. Enable these to be able to log detection in the cfclient. */
 #define SITAW_LOG_ENABLED            /* Uncomment to enable LOG framework. */
@@ -72,5 +67,15 @@ void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
 //#define SITAW_FF_PARAM_ENABLED     /* Uncomment to enable PARAM framework for the Free Fall detection. */
 //#define SITAW_AR_PARAM_ENABLED     /* Uncomment to enable PARAM framework for the At Rest detection. */
 //#define SITAW_TU_PARAM_ENABLED     /* Uncomment to enable PARAM framework for the Tumbled detection. */
+
+#ifdef SITAW_FF_ENABLED
+bool sitAwFFDetected(void);
+#endif
+#ifdef SITAW_AR_ENABLED
+bool sitAwARDetected(void);
+#endif
+#ifdef SITAW_TU_ENABLED
+bool sitAwTuDetected(void);
+#endif
 
 #endif
