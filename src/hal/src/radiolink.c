@@ -44,10 +44,14 @@
 #include "queuemonitor.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
+#define RADIOLINK_CTRP_QUEUE_SIZE (5)
 #define RADIO_ACTIVITY_TIMEOUT_MS (1000)
+
+#define RADIOLINK_P2P_QUEUE_SIZE (5)
 
 static xQueueHandle  txQueue;
 static xQueueHandle crtpPacketDelivery;
+static xQueueHandle p2pPacketDelivery;
 
 static bool isInit;
 
@@ -80,9 +84,10 @@ void radiolinkInit(void)
 
   txQueue = xQueueCreate(RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
-  crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
+  crtpPacketDelivery = xQueueCreate(RADIOLINK_CTRP_QUEUE_SIZE, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
-
+  p2pPacketDelivery = xQueueCreate(RADIOLINK_P2P_QUEUE_SIZE, sizeof(SyslinkPacket));
+  DEBUG_QUEUE_MONITOR_REGISTER(p2pPacketDelivery);
 
   ASSERT(crtpPacketDelivery);
 
@@ -170,6 +175,10 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   {
     //Extract RSSI sample sent from radio
     memcpy(&rssi, slp->data, sizeof(uint8_t)); //rssi will not change on disconnect
+  } else if (slp->type == SYSLINK_RADIO_P2P_BROADCAST)
+  {
+    xQueueSend(p2pPacketDelivery, &slp->length, 0);
+    ledseqRun(LINK_LED, seq_linkup);
   }
 
   isConnected = radiolinkIsConnected();
