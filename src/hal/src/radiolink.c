@@ -212,6 +212,22 @@ static int radiolinkSendCRTPPacket(CRTPPacket *p)
   return false;
 }
 
+bool radiolinkSendP2PPacketBroadcast(P2PPacket *p)
+{
+  static SyslinkPacket slp;
+
+  ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
+
+  slp.type = SYSLINK_RADIO_P2P_BROADCAST;
+  slp.length = p->size + 1;
+  memcpy(slp.data, p->raw, p->size + 1);
+
+  syslinkSendPacket(&slp);
+
+  return true;
+}
+
+
 struct crtpLinkOperations * radiolinkGetLink()
 {
   return &radiolinkOp;
