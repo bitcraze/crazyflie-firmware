@@ -336,10 +336,10 @@ endif
 all: bin/ bin/dep bin/vendor check_submodules build
 build:
 # Each target is in a different line, so they are executed one after the other even when the processor has multiple cores (when the -j option for the make command is > 1). See: https://www.gnu.org/software/make/manual/html_node/Parallel.html
-	@$(MAKE) -f $(CRAZYFLIE_BASE)/Makefile --no-print-directory clean_version CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
-	@$(MAKE) -f $(CRAZYFLIE_BASE)/Makefile --no-print-directory compile CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
-	@$(MAKE) -f $(CRAZYFLIE_BASE)/Makefile --no-print-directory print_version CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
-	@$(MAKE) -f $(CRAZYFLIE_BASE)/Makefile --no-print-directory size CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
+	@$(MAKE) --no-print-directory clean_version CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
+	@$(MAKE) --no-print-directory compile CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
+	@$(MAKE) --no-print-directory print_version CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
+	@$(MAKE) --no-print-directory size CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
 compile: $(PROG).hex $(PROG).bin $(PROG).dfu
 
 bin/:

@@ -149,13 +149,6 @@ separate folder with separate configurations.
 Both ```tools/make/config.mk``` and ```current_platform.mk``` are sourced from the current folder
 and not from the Crazyflie firmware folder.
 
-Using this method it is also possible to build a clean Crazyflie firmware directly from command line:
-```
-# Assuming the firmware is clonned in crazyflie-firmware/
-mkdir build && cd build
-make -f ../crazyflie-firmware/Makefile CRAZYFLIE_BASE=../crazyflie-firmware
-```
-
 # Make targets:
 ```
 all        : Shortcut for build
