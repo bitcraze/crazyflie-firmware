@@ -27,7 +27,7 @@ Crazyflie 2.0).
 Header
 ------
 
-Each packet has a 1 byte header and can carry up to 29 bytes data
+Each packet has a 1 byte header and can carry up to 31 bytes data
 payload. The header field has the following layout:
 
        7    6    5    4    3    2    1    0
@@ -57,9 +57,7 @@ Current port allocation:
 |  6      |    [Localization](/ctrp_localization/) |                   Packets related to localization|
 |  7     |     [Generic Setpoint](/ctrp_generic_setpoint/) |           Allows to send setpoint and control modes|
 |  13     |    Platform |                    Used for misc platform control, like debugging and power off| 
-
 |  14     |    Client-side debugging |  Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.| 
-
 |  15     |    Link layer     |              Used to control and query the communication link| 
 
 [comment]:/doc/crazyflie/crtp/platform
