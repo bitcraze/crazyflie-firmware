@@ -64,6 +64,7 @@ static uint8_t rssi;
 static bool isConnected;
 static uint32_t lastPacketTick;
 
+static volatile P2PCallback p2p_callback;
 
 static bool radiolinkIsConnected(void) {
   return (xTaskGetTickCount() - lastPacketTick) < M2T(RADIO_ACTIVITY_TIMEOUT_MS);
@@ -179,6 +180,17 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   {
     xQueueSend(p2pPacketDelivery, &slp->length, 0);
     ledseqRun(LINK_LED, seq_linkup);
+    P2PPacket p2pp;
+    p2pp.port=slp->data[0];
+    p2pp.rssi = slp->data[1];
+    memcpy(&p2pp.data[0], &slp->data[2],slp->length-2);
+    memcpy(&p2pp.raw[0], &slp->data[0],slp->length);
+    p2pp.size=slp->length;
+
+    if (p2p_callback)
+    {
+        p2p_callback(&p2pp);
+    }
   }
 
   isConnected = radiolinkIsConnected();
@@ -192,6 +204,11 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
   }
 
   return -1;
+}
+
+void p2pRegisterCB(P2PCallback cb)
+{
+    p2p_callback = cb;
 }
 
 static int radiolinkSendCRTPPacket(CRTPPacket *p)

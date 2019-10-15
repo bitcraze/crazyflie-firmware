@@ -46,6 +46,8 @@ typedef struct _P2PPacket
   };
 } __attribute__((packed)) P2PPacket;
 
+typedef void (*P2PCallback)(P2PPacket *);
+
 void radiolinkInit(void);
 bool radiolinkTest(void);
 void radiolinkSetChannel(uint8_t channel);
@@ -55,6 +57,7 @@ void radiolinkSetPowerDbm(int8_t powerDbm);
 void radiolinkSyslinkDispatch(SyslinkPacket *slp);
 struct crtpLinkOperations * radiolinkGetLink();
 bool radiolinkSendP2PPacketBroadcast(P2PPacket *p2pp);
+void p2pRegisterCB(P2PCallback cb);
 
 
 #endif //__RADIO_H__
