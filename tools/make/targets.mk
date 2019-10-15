@@ -13,7 +13,7 @@ endif
 
 target = @$(if $(QUIET), ,echo $($1_COMMAND$(VERBOSE)) ); @$($1_COMMAND)
 
-VTMPL_COMMAND=$(PYTHON2) tools/make/versionTemplate.py $< $@
+VTMPL_COMMAND=$(PYTHON2) $(CRAZYFLIE_BASE)/tools/make/versionTemplate.py --crazyflie-base $(CRAZYFLIE_BASE) $< $@
 #$(BIN)/$(lastword $(subst /, ,$@))
 VTMPL_COMMAND_SILENT="  VTMPL $@"
 %.c: %.vtpl
@@ -50,7 +50,7 @@ $(PROG).bin: $(PROG).elf
 	@$(if $(QUIET), ,echo $(BIN_COMMAND$(VERBOSE)) )
 	@$(BIN_COMMAND)
 
-DFU_COMMAND=$(PYTHON2) tools/make/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
+DFU_COMMAND=$(PYTHON2) $(CRAZYFLIE_BASE)/tools/make/dfu-convert.py -b $(LOAD_ADDRESS):$< $@
 DFU_COMMAND_SILENT="  DFUse $@"
 $(PROG).dfu: $(PROG).bin
 	@$(if $(QUIET), ,echo $(DFU_COMMAND$(VERBOSE)) )

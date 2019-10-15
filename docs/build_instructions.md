@@ -118,6 +118,37 @@ DEBUG=1
 CLOAD=0
 ```
 
+### Out of tree build
+
+By setting the Makefile variable ```CRAZYFLIE_BASE```, it is possible to build the Crazyflie
+from outside the project folder. This can be used to implement autonomous behaviour on
+top of the Crazyflie firmware by compiling external code in the firmware from an external
+repos.
+
+For example, if you have a deck driver file called ```push.c``` that creates a deck driver for
+the deck ```bcPush```. You can create a new git repos with ```crazyflie-firmware``` clonned as
+submodule and put ```push.c``` in a folder ```src```. The makefile to build a firmware starting
+your deck driver automatically will be:
+
+```make
+CRAZYFLIE_BASE=crazyflie-firmware
+
+CFLAGS += -DDECK_FORCE=bcPush
+
+VPATH += src/
+
+PROJ_OBJ += push.o
+
+include $(CRAZYFLIE_BASE)/Makefile
+```
+
+Note that ```CFLAGS += -DDECK_FORCE=bcPush``` is what would normally be added to ```config.mk```.
+Hence, this method also allow to create build configurations folder by building the firmware is a
+separate folder with separate configurations.
+
+Both ```tools/make/config.mk``` and ```current_platform.mk``` are sourced from the current folder
+and not from the Crazyflie firmware folder.
+
 # Make targets:
 ```
 all        : Shortcut for build

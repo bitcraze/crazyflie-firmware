@@ -1,10 +1,9 @@
 include obj.mk
 
-PROJ_ROOT=../../..
 BIN=$(PROJ_ROOT)/bin/vendor
 PROJ_BIN=$(PROJ_ROOT)/bin
-DSP_SRC=$(PROJ_ROOT)/vendor/CMSIS/CMSIS/DSP_Lib/Source
-DSP_INC=$(PROJ_ROOT)/vendor/CMSIS/CMSIS/Include
+DSP_SRC=$(CRAZYFLIE_BASE)/vendor/CMSIS/CMSIS/DSP_Lib/Source
+DSP_INC=$(CRAZYFLIE_BASE)/vendor/CMSIS/CMSIS/Include
 
 VPATH += $(BIN)
 VPATH += $(DSP_SRC)/BasicMathFunctions/
