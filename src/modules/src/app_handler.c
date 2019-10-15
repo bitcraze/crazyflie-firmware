@@ -59,4 +59,8 @@ static void appTask(void *param)
   systemWaitStart();
 
   appMain();
+
+  while(1) {
+    vTaskDelay(portMAX_DELAY);
+  }
 }
