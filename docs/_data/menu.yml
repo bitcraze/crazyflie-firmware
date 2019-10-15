@@ -11,6 +11,7 @@
   subs:
     - {page_id: deck}
     - {page_id: logparam}
+    - {page_id: app_layer}
 - title: Explanation Functionalities
   subs:
     - {page_id: sensor_to_control}

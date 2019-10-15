@@ -109,6 +109,16 @@ PROJ_OBJ += diskio_function_tests.o
 CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
+ifeq ($(APP), 1)
+CFLAGS += -DAPP_ENABLED=1
+endif
+ifdef APP_STACKSIZE
+CFLAGS += -DAPP_STACKSIZE=$(APP_STACKSIZE)
+endif
+ifdef APP_PRIORITY
+CFLAGS += -DAPP_PRIORITY=$(APP_PRIORITY)
+endif
+
 # Crazyflie sources
 VPATH += $(CRAZYFLIE_BASE)/src/init $(CRAZYFLIE_BASE)/src/hal/src $(CRAZYFLIE_BASE)/src/modules/src $(CRAZYFLIE_BASE)/src/utils/src $(CRAZYFLIE_BASE)/src/drivers/bosch/src $(CRAZYFLIE_BASE)/src/drivers/src $(CRAZYFLIE_BASE)/src/platform
 
@@ -150,7 +160,7 @@ PROJ_OBJ += vl53l1_register_funcs.o vl53l1_wait.o vl53l1_core_support.o
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o msp.o
 PROJ_OBJ += platformservice.o sound_cf2.o extrx.o sysload.o mem_cf2.o
-PROJ_OBJ += range.o
+PROJ_OBJ += range.o app_handler.o
 
 # Stabilizer modules
 PROJ_OBJ += commander.o crtp_commander.o crtp_commander_rpyt.o
