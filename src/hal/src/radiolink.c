@@ -51,7 +51,6 @@
 
 static xQueueHandle  txQueue;
 static xQueueHandle crtpPacketDelivery;
-static xQueueHandle p2pPacketDelivery;
 
 static bool isInit;
 
@@ -87,8 +86,6 @@ void radiolinkInit(void)
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
   crtpPacketDelivery = xQueueCreate(RADIOLINK_CTRP_QUEUE_SIZE, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
-  p2pPacketDelivery = xQueueCreate(RADIOLINK_P2P_QUEUE_SIZE, sizeof(SyslinkPacket));
-  DEBUG_QUEUE_MONITOR_REGISTER(p2pPacketDelivery);
 
   ASSERT(crtpPacketDelivery);
 
@@ -178,19 +175,14 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
     memcpy(&rssi, slp->data, sizeof(uint8_t)); //rssi will not change on disconnect
   } else if (slp->type == SYSLINK_RADIO_P2P_BROADCAST)
   {
-    xQueueSend(p2pPacketDelivery, &slp->length, 0);
     ledseqRun(LINK_LED, seq_linkup);
     P2PPacket p2pp;
     p2pp.port=slp->data[0];
     p2pp.rssi = slp->data[1];
     memcpy(&p2pp.data[0], &slp->data[2],slp->length-2);
-    memcpy(&p2pp.raw[0], &slp->data[0],slp->length);
     p2pp.size=slp->length;
-
     if (p2p_callback)
-    {
         p2p_callback(&p2pp);
-    }
   }
 
   isConnected = radiolinkIsConnected();
@@ -233,13 +225,14 @@ bool radiolinkSendP2PPacketBroadcast(P2PPacket *p)
 {
   static SyslinkPacket slp;
 
-  ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
+  ASSERT(p->size <= P2P_MAX_DATA_SIZE);
 
   slp.type = SYSLINK_RADIO_P2P_BROADCAST;
   slp.length = p->size + 1;
   memcpy(slp.data, p->raw, p->size + 1);
 
   syslinkSendPacket(&slp);
+  ledseqRun(LINK_DOWN_LED, seq_linkup);
 
   return true;
 }

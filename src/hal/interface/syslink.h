@@ -29,7 +29,7 @@
 
 #include <stdbool.h>
 
-#define SYSLINK_MTU 32
+#define SYSLINK_MTU 64
 
 #define CRTP_START_BYTE  0xAA
 #define SYSLINK_START_BYTE1 0xBC

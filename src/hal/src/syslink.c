@@ -44,7 +44,7 @@
 #include "ow.h"
 
 static bool isInit = false;
-static uint8_t sendBuffer[64];
+static uint8_t sendBuffer[SYSLINK_MTU + 6];
 
 static void syslinkRouteIncommingPacket(SyslinkPacket *slp);
 

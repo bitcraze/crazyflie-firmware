@@ -31,7 +31,7 @@
 #include <stdbool.h>
 #include "syslink.h"
 
-#define P2P_MAX_DATA_SIZE 61
+#define P2P_MAX_DATA_SIZE 60
 
 typedef struct _P2PPacket
 {
