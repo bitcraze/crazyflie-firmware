@@ -45,6 +45,15 @@
 #define PARAM_ERROR(...)
 #endif
 
+static const uint8_t typeLength[] = {
+  [PARAM_UINT8]  = 1,
+  [PARAM_UINT16] = 2,
+  [PARAM_UINT32] = 4,
+  [PARAM_INT8]   = 1,
+  [PARAM_INT16]  = 2,
+  [PARAM_INT32]  = 4,
+  [PARAM_FLOAT]  = 4,
+};
 
 #define TOC_CH 0
 #define READ_CH 1
@@ -532,3 +541,129 @@ static int variableGetIndex(int id)
 
   return i;
 }
+
+/* Public API to access param TOC from within the copter */
+int paramGetVarId(char* group, char* name)
+{
+  int i;
+  char * currgroup = "";
+
+  for(i=0; i<paramsLen; i++)
+  {
+    if (params[i].type & PARAM_GROUP) {
+      if (params[i].type & PARAM_START)
+        currgroup = params[i].name;
+    } if ((!strcmp(group, currgroup)) && (!strcmp(name, params[i].name)))
+      return i;
+  }
+
+  return -1;
+}
+
+int paramGetType(int varid)
+{
+  return params[varid].type;
+}
+
+void paramGetGroupAndName(int varid, char** group, char** name)
+{
+  char * currgroup = "";
+  *group = 0;
+  *name = 0;
+
+  for(int i=0; i<paramsLen; i++) {
+    if (params[i].type & PARAM_GROUP) {
+      if (params[i].type & PARAM_START) {
+        currgroup = params[i].name;
+      }
+    }
+
+    if (i == varid) {
+      *group = currgroup;
+      *name = params[i].name;
+      break;
+    }
+  }
+}
+
+void* paramGetAddress(int varid)
+{
+  return params[varid].address;
+}
+
+uint8_t paramVarSize(int type)
+{
+  return typeLength[type];
+}
+
+int paramGetInt(int varid)
+{
+  int valuei = 0;
+
+  ASSERT(varid >= 0);
+  DEBUG_PRINT("type: %d, %d, %d, %d, %d, %d\n",PARAM_UINT8 | PARAM_RONLY,PARAM_INT8,PARAM_UINT16,PARAM_INT16,PARAM_UINT32,PARAM_INT32);
+  DEBUG_PRINT("type: %s %d, %d\n",params[varid].name,params[varid].type,PARAM_UINT8);
+  switch(params[varid].type)
+  {
+    case PARAM_UINT8:
+      valuei = *(uint8_t *)params[varid].address;
+      break;
+    case PARAM_INT8:
+      valuei = *(int8_t *)params[varid].address;
+      break;
+    case PARAM_UINT16:
+      valuei = *(uint16_t *)params[varid].address;
+      break;
+    case PARAM_INT16:
+      valuei = *(int16_t *)params[varid].address;
+      break;
+    case PARAM_UINT32:
+      valuei = *(uint32_t *)params[varid].address;
+      break;
+    case PARAM_INT32:
+      valuei = *(int32_t *)params[varid].address;
+      break;
+    case PARAM_FLOAT:
+      valuei = *(float *)params[varid].address;
+      break;
+    case PARAM_UINT8 | PARAM_RONLY:
+      valuei = *(uint8_t *)params[varid].address;
+      break;
+    case PARAM_INT8 | PARAM_RONLY:
+      valuei = *(int8_t *)params[varid].address;
+      break;
+    case PARAM_UINT16 | PARAM_RONLY:
+      valuei = *(uint16_t *)params[varid].address;
+      break;
+    case PARAM_INT16 | PARAM_RONLY:
+      valuei = *(int16_t *)params[varid].address;
+      break;
+    case PARAM_UINT32 | PARAM_RONLY:
+      valuei = *(uint32_t *)params[varid].address;
+      break;
+    case PARAM_INT32 | PARAM_RONLY:
+      valuei = *(int32_t *)params[varid].address;
+      break;
+    case PARAM_FLOAT | PARAM_RONLY:
+      valuei = *(float *)params[varid].address;
+      break;
+  }
+
+  return valuei;
+}
+
+float paramGetFloat(int varid)
+{
+  ASSERT(varid >= 0);
+
+  if (params[varid].type == PARAM_FLOAT)
+    return *(float *)params[varid].address;
+
+  return paramGetInt(varid);
+}
+
+unsigned int paramGetUint(int varid)
+{
+  return (unsigned int)paramGetInt(varid);
+}
+

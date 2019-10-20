@@ -34,6 +34,16 @@
 void paramInit(void);
 bool paramTest(void);
 
+/* Internal access of param variables */
+int paramGetVarId(char* group, char* name);
+int paramGetType(int varid);
+void paramGetGroupAndName(int varid, char** group, char** name);
+void* paramGetAddress(int varid);
+uint8_t paramVarSize(int type);
+float paramGetFloat(int varid);
+int paramGetInt(int varid);
+unsigned int paramGetUint(int varid);
+
 /* Basic parameter structure */
 struct param_s {
   uint8_t type;
