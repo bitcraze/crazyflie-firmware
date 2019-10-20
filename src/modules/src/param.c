@@ -601,8 +601,7 @@ int paramGetInt(int varid)
   int valuei = 0;
 
   ASSERT(varid >= 0);
-  DEBUG_PRINT("type: %d, %d, %d, %d, %d, %d\n",PARAM_UINT8 | PARAM_RONLY,PARAM_INT8,PARAM_UINT16,PARAM_INT16,PARAM_UINT32,PARAM_INT32);
-  DEBUG_PRINT("type: %s %d, %d\n",params[varid].name,params[varid].type,PARAM_UINT8);
+
   switch(params[varid].type)
   {
     case PARAM_UINT8:
@@ -656,7 +655,7 @@ float paramGetFloat(int varid)
 {
   ASSERT(varid >= 0);
 
-  if (params[varid].type == PARAM_FLOAT)
+  if (params[varid].type == PARAM_FLOAT || params[varid].type == (PARAM_FLOAT | PARAM_RONLY))
     return *(float *)params[varid].address;
 
   return paramGetInt(varid);
