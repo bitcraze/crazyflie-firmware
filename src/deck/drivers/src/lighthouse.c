@@ -62,8 +62,8 @@
 #endif
 
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
-{.origin = {-0.542299, 3.152727, 1.958483, }, .mat = {{0.999975, -0.007080, -0.000000, }, {0.005645, 0.797195, 0.603696, }, {-0.004274, -0.603681, 0.797215, }, }},
-{.origin = {2.563488, 3.112367, -1.062398, }, .mat = {{0.034269, -0.647552, 0.761251, }, {-0.012392, 0.761364, 0.648206, }, {-0.999336, -0.031647, 0.018067, }, }},
+{.origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
+{.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 };
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
@@ -178,9 +178,9 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
 
         deltaLog = delta;
 
-        ext_pos.x -= position[2];
-        ext_pos.y -= position[0];
-        ext_pos.z += position[1];
+        ext_pos.x += position[0];
+        ext_pos.y += position[1];
+        ext_pos.z += position[2];
         sensorsUsed++;
 
         positionCount++;
