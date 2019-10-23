@@ -8,6 +8,13 @@ Currently peer to peer communication on the crazyflie is **in development**. Now
 messages in broadcast mode, and we are going to extend this to unicast. 
 
 ## Peer to Peer broadcast
+
+Make sure to compile the NRF software without bluetooth support! So:
+
+    make clean
+    make BLE=0
+    make cload BLE=0 
+
 #### Sending P2P broadcast
 
 
