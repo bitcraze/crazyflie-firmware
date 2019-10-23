@@ -9,7 +9,7 @@
  *
  * Code addapted from ashtuchkin's Vive DIY position sensor
  * see https://github.com/ashtuchkin/vive-diy-position-sensor/
- * 
+ *
  * Copyright (c) 2016 Alexander Shtuchkin
  * Copyright (C) 2018 Bitcraze AB
  *
@@ -54,8 +54,8 @@ static float vec_length(vec3d vec) {
 }
 
 static void calc_ray_vec(baseStationGeometry_t *bs, float angle1, float angle2, vec3d res, vec3d origin) {
-    vec3d a = {arm_cos_f32(angle1), 0, -arm_sin_f32(angle1)};  // Normal vector to X plane
-    vec3d b = {0, arm_cos_f32(angle2), arm_sin_f32(angle2)};   // Normal vector to Y plane
+    vec3d a = {arm_sin_f32(angle1), -arm_cos_f32(angle1), 0};  // Normal vector to X plane
+    vec3d b = {-arm_sin_f32(angle2), 0, arm_cos_f32(angle2)};  // Normal vector to Y plane
 
     vec3d ray = {};
     vec_cross_product(b, a, ray); // Intersection of two planes -> ray vector.

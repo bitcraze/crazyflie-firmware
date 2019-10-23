@@ -8,6 +8,7 @@
 
 import sys
 import openvr
+import numpy as np
 
 CENTER_AROUND_CONTROLLER = False
 
@@ -49,7 +50,7 @@ for i in range(openvr.k_unMaxTrackedDeviceCount):
     if poses[i].bPoseIsValid:
         device_class = vr.getTrackedDeviceClass(i)
         if (device_class == openvr.TrackedDeviceClass_TrackingReference):
-            
+
             mode = vr.getStringTrackedDeviceProperty(i, openvr.Prop_ModeLabel_String)
             try:
                 mode = mode.decode("utf-8")
@@ -69,25 +70,42 @@ for i in range(openvr.k_unMaxTrackedDeviceCount):
                 print("This script can only work with base station V1 (mode A, B or C). Exiting.")
                 sys.exit(1)
 
+# Rotation matrixes to convert to the CF coordinate system
+opencv_to_cf = np.array([
+    [0.0, 0.0, -1.0],
+    [-1.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+])
+
+cf_to_opencv = np.array([
+    [0.0, -1.0, 0.0],
+    [0.0, 0.0, 1.0],
+    [-1.0, 0.0, 0.0],
+])
+
+
 for pose in bs_poses:
     if pose is None:
         continue
 
     position = [pose[0][3] - offset[0], pose[1][3] - offset[1], pose[2][3] - offset[2]]
+    position_cf = np.dot(opencv_to_cf, position)
+
     rotation = [pose[0][:3], pose[1][:3], pose[2][:3]]
+    rotation_cf = np.dot(opencv_to_cf, np.dot(rotation, cf_to_opencv))
 
     print("{.origin = {", end='')
-    for i in position:
+    for i in position_cf:
         print("{:0.6f}, ".format(i), end='')
-    
+
     print("}, .mat = {", end='')
-    
-    for i in rotation:
+
+    for i in rotation_cf:
         print("{", end='')
         for j in i:
             print("{:0.6f}, ".format(j), end='')
         print("}, ", end='')
-    
+
     print("}},")
 
 openvr.shutdown()
