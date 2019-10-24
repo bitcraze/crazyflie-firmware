@@ -125,6 +125,9 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, flowMeasurement_t *flow, s
 // Measurements of TOF from laser sensor
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof);
 
+// Measurement of yaw error (outside measurement Vs current estimation)
+void kalmanCoreUpdateWithYawError(kalmanCoreData_t* this, float *error);
+
 /**
  * Primary Kalman filter functions
  *

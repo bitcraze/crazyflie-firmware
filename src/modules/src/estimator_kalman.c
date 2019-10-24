@@ -146,6 +146,13 @@ static inline bool stateEstimatorHasHeightPacket(heightMeasurement_t *height) {
   return (pdTRUE == xQueueReceive(heightDataQueue, height, 0));
 }
 
+static xQueueHandle yawErrorDataQueue;
+#define YAW_ERROR_QUEUE_LENGTH (10)
+
+static inline bool stateEstimatorHasYawErrorPacket(float *error) {
+  return (pdTRUE == xQueueReceive(yawErrorDataQueue, error, 0));
+}
+
 /**
  * Constants used in the estimator
  */
@@ -359,6 +366,13 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
     doneUpdate = true;
   }
 
+  float yawError = 0.0f;
+  while (stateEstimatorHasYawErrorPacket(&yawError))
+  {
+    kalmanCoreUpdateWithYawError(&coreData, &yawError);
+    doneUpdate = true;
+  }
+
   heightMeasurement_t height;
   while (stateEstimatorHasHeightPacket(&height))
   {
@@ -435,6 +449,7 @@ void estimatorKalmanInit(void) {
     flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
     tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
     heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
+    yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(float));
   }
   else
   {
@@ -527,6 +542,12 @@ bool estimatorKalmanEnqueueAbsoluteHeight(const heightMeasurement_t *height)
   // A distance (height) [m] to the ground along the z axis.
   ASSERT(isInit);
   return stateEstimatorEnqueueExternalMeasurement(heightDataQueue, (void *)height);
+}
+
+bool estimatorKalmanEnqueueYawError(const float error)
+{
+  ASSERT(isInit);
+  return stateEstimatorEnqueueExternalMeasurement(yawErrorDataQueue, (void *)&error);
 }
 
 bool estimatorKalmanTest(void)

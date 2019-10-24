@@ -23,6 +23,7 @@ typedef struct {
   bool (*estimatorEnqueueTOF)(const tofMeasurement_t *tof);
   bool (*estimatorEnqueueAbsoluteHeight)(const heightMeasurement_t *height);
   bool (*estimatorEnqueueFlow)(const flowMeasurement_t *flow);
+  bool (*estimatorEnqueueYawError)(const float error);
 } EstimatorFcns;
 
 #define NOT_IMPLEMENTED ((void*)0)
@@ -40,6 +41,7 @@ static EstimatorFcns estimatorFunctions[] = {
     .estimatorEnqueueTOF = NOT_IMPLEMENTED,
     .estimatorEnqueueAbsoluteHeight = NOT_IMPLEMENTED,
     .estimatorEnqueueFlow = NOT_IMPLEMENTED,
+    .estimatorEnqueueYawError = NOT_IMPLEMENTED,
   }, // Any estimator
   {
     .init = estimatorComplementaryInit,
@@ -53,6 +55,7 @@ static EstimatorFcns estimatorFunctions[] = {
     .estimatorEnqueueTOF = NOT_IMPLEMENTED,
     .estimatorEnqueueAbsoluteHeight = NOT_IMPLEMENTED,
     .estimatorEnqueueFlow = NOT_IMPLEMENTED,
+    .estimatorEnqueueYawError = NOT_IMPLEMENTED,
   },
   {
     .init = estimatorKalmanInit,
@@ -66,6 +69,7 @@ static EstimatorFcns estimatorFunctions[] = {
     .estimatorEnqueueTOF = estimatorKalmanEnqueueTOF,
     .estimatorEnqueueAbsoluteHeight = estimatorKalmanEnqueueAbsoluteHeight,
     .estimatorEnqueueFlow = estimatorKalmanEnqueueFlow,
+    .estimatorEnqueueYawError = estimatorKalmanEnqueueYawError,
     },
 };
 
@@ -116,6 +120,14 @@ const char* stateEstimatorGetName() {
 bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb) {
   if (estimatorFunctions[currentEstimator].estimatorEnqueueTDOA) {
     return estimatorFunctions[currentEstimator].estimatorEnqueueTDOA(uwb);
+  }
+
+  return false;
+}
+
+bool estimatorEnqueueYawError(const float error) {
+  if (estimatorFunctions[currentEstimator].estimatorEnqueueYawError) {
+    return estimatorFunctions[currentEstimator].estimatorEnqueueYawError(error);
   }
 
   return false;
