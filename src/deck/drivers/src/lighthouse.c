@@ -258,7 +258,7 @@ static void lighthouseTask(void *param)
 
           pulseProcessorApplyCalibration(&ppState, angles);
           estimatePose(angles);
-          pulseProcessorClear(angles, PULSE_PROCESSOR_N_SENSORS);
+          pulseProcessorClear(angles);
         }
       }
 

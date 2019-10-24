@@ -105,6 +105,5 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
  * @brief Clear result struct
  *
  * @param angles
- * @param sensorCount Number of sensors in the angles array
  */
-void pulseProcessorClear(pulseProcessorResult_t angles[], int sensorCount);
+void pulseProcessorClear(pulseProcessorResult_t angles[]);

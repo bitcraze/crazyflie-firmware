@@ -439,9 +439,8 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
  * @brief Clear result struct
  *
  * @param angles
- * @param sensorCount Number of sensors in the angles array
  */
-void pulseProcessorClear(pulseProcessorResult_t angles[], int sensorCount)
+void pulseProcessorClear(pulseProcessorResult_t angles[])
 {
-  memset(angles, 0, sizeof(pulseProcessorResult_t) * sensorCount);
+  memset(angles, 0, sizeof(pulseProcessorResult_t) * PULSE_PROCESSOR_N_SENSORS);
 }

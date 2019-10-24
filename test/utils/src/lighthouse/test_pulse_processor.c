@@ -526,12 +526,12 @@ void testThatIsNewSyncDoesNotMatchTimestampTooFarAway() {
 
 void testThatRsultStructIsCleared() {
   // Fixture
-  pulseProcessorResult_t angles[4];
+  pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
   angles[2].validCount = 4;
   angles[3].isAngleValid[1][0] = true;
 
   // Test
-  pulseProcessorClear(angles, 4);
+  pulseProcessorClear(angles);
 
   // Assert
   TEST_ASSERT_EQUAL_INT(0, angles[2].validCount);
