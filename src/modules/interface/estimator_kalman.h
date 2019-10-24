@@ -76,4 +76,9 @@ bool estimatorKalmanEnqueueYawError(const float error);
 
 void estimatorKalmanGetEstimatedPos(point_t* pos);
 
+/**
+ * Copies 9 floats representing the current state rotation matrix
+ */
+void estimatorKalmanGetEstimatedRot(float * rotationMatrix);
+
 #endif // __ESTIMATOR_KALMAN_H__

@@ -561,6 +561,10 @@ void estimatorKalmanGetEstimatedPos(point_t* pos) {
   pos->z = coreData.S[KC_STATE_Z];
 }
 
+void estimatorKalmanGetEstimatedRot(float * rotationMatrix) {
+  memcpy(rotationMatrix, coreData.R, 9*sizeof(float));
+}
+
 // Temporary development groups
 LOG_GROUP_START(kalman_states)
   LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
