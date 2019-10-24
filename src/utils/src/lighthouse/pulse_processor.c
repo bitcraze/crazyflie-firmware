@@ -91,10 +91,10 @@ TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int
 
 /**
  * @brief Get the Base Station Id
- * 
+ *
  * This function looks at the pulse position modulo FRAME_LENGTH in relation to
  * the latest sync0. Values ~0 means a Sync0 pulse, ~19200 means a Sync1.
- * 
+ *
  * @param state State of the pulse processor
  * @param timestamp Timestamp of the syn to process
  * @return 0 for Sync0, 1 for Sync1
@@ -169,7 +169,7 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
         int delta = TS_DIFF(state->sweeps[sensor].timestamp, state->currentSync);
         if (delta < FRAME_LENGTH) {
           float frameWidth = state->frameWidth[state->currentBaseStation][state->currentAxis];
-          
+
           if ((frameWidth < FRAME_WIDTH_MIN) || (frameWidth > FRAME_WIDTH_MAX)) {
             return false;
           }
@@ -340,7 +340,7 @@ TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], ui
   int nFound = 0;
   bool wasSweep = false;
   uint32_t foundTimes[2];
-  
+
   for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
     if (wasSweep && pulseHistory[i].width > SWEEP_MAX_WIDTH) {
       foundTimes[nFound] = pulseHistory[i].timestamp;
@@ -350,7 +350,7 @@ TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], ui
         break;
       }
     }
-    
+
     if (pulseHistory[i].width < SWEEP_MAX_WIDTH) {
       wasSweep = true;
     } else {
@@ -407,13 +407,13 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
 
   for (size_t i=1; i<nSyncTimes; i++) {
     int diff;
-    
+
     if (isWrapping && (syncTimes[i] < (TIMESTAMP_MAX/2))) {
       diff = ((syncTimes[i] + (1<<TIMESTAMP_BITWIDTH)) % FRAME_LENGTH) - reference;
     } else {
       diff = (syncTimes[i] % FRAME_LENGTH) - reference;
     }
-     
+
 
     if (diff < minDiff) {
       minDiff = diff;
@@ -430,7 +430,18 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
   }
 
   *syncTime = ((int)syncTimes[0] + ((int)differenceSum / (int)nSyncTimes)) & (TIMESTAMP_MAX);
-  
+
 
   return true;
+}
+
+/**
+ * @brief Clear result struct
+ *
+ * @param angles
+ * @param sensorCount Number of sensors in the angles array
+ */
+void pulseProcessorClear(pulseProcessorResult_t angles[], int sensorCount)
+{
+  memset(angles, 0, sizeof(pulseProcessorResult_t) * sensorCount);
 }

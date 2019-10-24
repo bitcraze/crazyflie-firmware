@@ -37,7 +37,7 @@ typedef struct ootxDecoderState_s {
   uint16_t currentWord;
 
   uint32_t crc32;
-  
+
   int bitInWord;
   int wordReceived;
   bool synchronized;
@@ -52,12 +52,12 @@ typedef struct ootxDecoderState_s {
 
 /**
  * @brief Process the next OOTX bit and indicate if a frame has been decoded
- * 
+ *
  * If a frame is decoded, this function returns true and the
  * frame is available in state->frame
- * 
+ *
  * Currently the CRC32 checksum of the frame is not checked!
- * 
+ *
  * @param state Pointer to the decoder state
  * @param data OOTX data bit, should be 0 or 1
  * @return true If a frame has been decoded (ie at the last bit of the frame)

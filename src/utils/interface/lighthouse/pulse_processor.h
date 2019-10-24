@@ -80,12 +80,13 @@ typedef struct pulseProcessor_s {
   ootxDecoderState_t ootxDecoder1;
 
   lighthouseCalibration_t bsCalibration0;
-  lighthouseCalibration_t bsCalibration1; 
+  lighthouseCalibration_t bsCalibration1;
 } pulseProcessor_t;
 
 typedef struct {
   float angles[2][2];
   float correctedAngles[2][2];
+  bool isAngleValid[2][2];
   int validCount;
 } pulseProcessorResult_t;
 
@@ -94,9 +95,16 @@ bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned in
 
 /**
  * @brief Apply calibration correction to all angles of all sensors
- * 
- * @param state 
- * @param angles 
+ *
+ * @param state
+ * @param angles
  */
 void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t angles[4]);
 
+/**
+ * @brief Clear result struct
+ *
+ * @param angles
+ * @param sensorCount Number of sensors in the angles array
+ */
+void pulseProcessorClear(pulseProcessorResult_t angles[], int sensorCount);

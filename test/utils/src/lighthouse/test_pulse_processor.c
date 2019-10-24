@@ -524,12 +524,26 @@ void testThatIsNewSyncDoesNotMatchTimestampTooFarAway() {
 }
 
 
+void testThatRsultStructIsCleared() {
+  // Fixture
+  pulseProcessorResult_t angles[4];
+  angles[2].validCount = 4;
+  angles[3].isAngleValid[1][0] = true;
+
+  // Test
+  pulseProcessorClear(angles, 4);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(0, angles[2].validCount);
+  TEST_ASSERT_FALSE(angles[3].isAngleValid[1][0]);
+}
+
 // Test helpers
 
 static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime)
 {
   uint32_t diff = actualSyncTime - expectedSyncTime;
-  
+
   TEST_ASSERT_LESS_THAN_MESSAGE(MAX_FRAME_LENGTH_NOISE, diff % FRAME_LENGTH, "Sync time out of bound");
 }
 

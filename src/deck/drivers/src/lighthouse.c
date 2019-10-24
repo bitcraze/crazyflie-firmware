@@ -166,7 +166,7 @@ static vec3d position;
 static positionMeasurement_t ext_pos;
 static float deltaLog;
 
-static void estimatePosition(pulseProcessorResult_t angles[]) {
+static void estimatePose(pulseProcessorResult_t angles[]) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
@@ -174,7 +174,7 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       if (angles[sensor].validCount == 4) {
-        lighthouseGeometryGetPosition(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta);
+        lighthouseGeometryGetPositionFromRayIntersection(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta);
 
         deltaLog = delta;
 
@@ -257,11 +257,8 @@ static void lighthouseTask(void *param)
           cycleCount++;
 
           pulseProcessorApplyCalibration(&ppState, angles);
-
-          estimatePosition(angles);
-          for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-            angles[sensor].validCount = 0;
-          }
+          estimatePose(angles);
+          pulseProcessorClear(angles, PULSE_PROCESSOR_N_SENSORS);
         }
       }
 
