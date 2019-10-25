@@ -52,6 +52,7 @@
 #include "lighthouse.h"
 
 #include "estimator.h"
+#include "estimator_kalman.h"
 
 #ifdef LH_FLASH_DECK
 #include "lh_flasher.h"
@@ -166,7 +167,7 @@ static vec3d position;
 static positionMeasurement_t ext_pos;
 static float deltaLog;
 
-static void estimatePose(pulseProcessorResult_t angles[]) {
+static void estimatePosition(pulseProcessorResult_t angles[]) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
@@ -197,6 +198,79 @@ static void estimatePose(pulseProcessorResult_t angles[]) {
   }
   ext_pos.stdDev = 0.01;
   estimatorEnqueuePosition(&ext_pos);
+}
+
+static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t angles[], baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
+  baseStationGeometry_t* baseStationGeometry = &baseStationGeometries[bs];
+
+  vec3d baseStationPos;
+  lighthouseGeometryGetBaseStationPosition(baseStationGeometry, baseStationPos);
+
+  vec3d rays[PULSE_PROCESSOR_N_SENSORS];
+  for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    lighthouseGeometryGetRay(baseStationGeometry, angles[sensor].correctedAngles[bs][0], angles[sensor].correctedAngles[bs][1], rays[sensor]);
+  }
+
+  // Intersection points of rays and the deck
+  vec3d intersectionPoints[PULSE_PROCESSOR_N_SENSORS];
+  for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    bool exists = lighthouseGeometryIntersectionPlaneVector(baseStationPos, rays[sensor], cfPos, n, intersectionPoints[sensor]);
+    if (! exists) {
+      return false;
+    }
+  }
+
+  // Calculate positions of sensors. Rotate relative postiions using the rotation matrix and add current position
+  vec3d sensorPoints[PULSE_PROCESSOR_N_SENSORS];
+  for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    lighthouseGeometryGetSensorPosition(cfPos, RR, sensor, sensorPoints[sensor]);
+  }
+
+  // Calculate diagonals (sensors 0 - 3 and 1 - 2) for intersection and sensor points
+  vec3d ipv1 = {intersectionPoints[3][0] - intersectionPoints[0][0], intersectionPoints[3][1] - intersectionPoints[0][1], intersectionPoints[3][2] - intersectionPoints[0][2]};
+  vec3d ipv2 = {intersectionPoints[2][0] - intersectionPoints[1][0], intersectionPoints[2][1] - intersectionPoints[1][1], intersectionPoints[2][2] - intersectionPoints[1][2]};
+  vec3d spv1 = {sensorPoints[3][0] - sensorPoints[0][0], sensorPoints[3][1] - sensorPoints[0][1], sensorPoints[3][2] - sensorPoints[0][2]};
+  vec3d spv2 = {sensorPoints[2][0] - sensorPoints[1][0], sensorPoints[2][1] - sensorPoints[1][1], sensorPoints[2][2] - sensorPoints[1][2]};
+
+  // Calculate yaw delta for the two diagonals and average
+  float yawDelta1, yawDelta2;
+  if (lighthouseGeometryYawDelta(ipv1, spv1, n, &yawDelta1) && lighthouseGeometryYawDelta(ipv2, spv2, n, &yawDelta2)) {
+    *yawDelta = (yawDelta1 + yawDelta2) / 2.0f;
+    return true;
+   } else {
+    *yawDelta = 0.0f;
+    return false;
+  }
+}
+
+static void estimateYaw(pulseProcessorResult_t angles[]) {
+  // TODO Most of these calculations should be moved into the estimator instead. It is a
+  // bit dirty to get the state from the kalman filer here and calculate the yaw error outside
+  // the estimator, but it will do for now.
+
+  // Get data from the current estimated state
+  point_t cfPosP;
+  estimatorKalmanGetEstimatedPos(&cfPosP);
+  vec3d cfPos = {cfPosP.x, cfPosP.y, cfPosP.z};
+
+  // Rotation matrix
+  float R[3][3];
+  estimatorKalmanGetEstimatedRot((float*)R);
+  arm_matrix_instance_f32 RR = {3, 3, (float*)R};
+
+  // Normal to the deck: (0, 0, 1), rotated using the rotation matrix
+  const vec3d n = {R[0][2], R[1][2], R[2][2]};
+
+  // Calculate yaw delta using only one base station for now
+  float yawDelta;
+  if (estimateYawDeltaOneBaseStation(0, angles, lighthouseBaseStationsGeometry, cfPos, n, &RR, &yawDelta)) {
+    estimatorEnqueueYawError(yawDelta);
+  }
+}
+
+static void estimatePose(pulseProcessorResult_t angles[]) {
+  estimatePosition(angles);
+  estimateYaw(angles);
 }
 
 static void lighthouseTask(void *param)

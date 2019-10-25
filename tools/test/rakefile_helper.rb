@@ -236,6 +236,10 @@ module RakefileHelpers
         end
       end
 
+      # build libs
+      lib_annotations = read_lib_annotations(test)
+      obj_list += add_lib_source_files(lib_annotations, test_defines)
+
       # Build the test runner (generate if configured to do so)
       test_base = File.basename(test, C_EXTENSION)
       runner_name = test_base + '_Runner.c'
@@ -308,6 +312,7 @@ module RakefileHelpers
     end
   end
 
+
   # Parse the arguments and find all defines that are passed in on the command line
   # Defines are part of compiler flags and start with -D, for instance -DMY_DEFINE
   # All compiler flags are passed in as one string
@@ -355,5 +360,41 @@ module RakefileHelpers
     end
 
     return false
+  end
+
+  # Annotation to add files for libraries
+  # When this annotation is used source files for libs are added to the build
+  # with the unit test so that they can be called and does not have to be
+  # replaced by mocks.
+  def read_lib_annotations(file)
+    annotation_str = '@BUILD_LIB'
+    libs = []
+
+    File.foreach( file ) do |line|
+      if line.include? annotation_str
+        tokens = line.split(' ')
+        index = tokens.index annotation_str
+
+        if tokens.length >= (index + 2)
+          libs << tokens[index + 1]
+        end
+      end
+    end
+
+    libs
+  end
+
+  def add_lib_source_files(libs, test_defines)
+    obj_list = []
+    libs.each do |lib|
+      puts 'Adding lib ' + lib
+
+      files = $cfg['compiler']['libs'][lib]
+      files.each do |src_file|
+        obj_list << compile(src_file, test_defines)
+      end
+    end
+
+    obj_list
   end
 end
