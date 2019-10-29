@@ -92,21 +92,21 @@ module RakefileHelpers
     return result
   end
 
-  def build_compiler_fields
+  def build_compiler_fields(extra_options=[])
     command  = tackit($cfg['compiler']['path'])
     if $cfg['compiler']['defines']['items'].nil?
       defines  = ''
     else
       defines  = squash($cfg['compiler']['defines']['prefix'], $cfg['compiler']['defines']['items'])
     end
-    options  = squash('', $cfg['compiler']['options'])
+    options  = squash('', $cfg['compiler']['options'] + extra_options)
     includes = squash($cfg['compiler']['includes']['prefix'], $cfg['compiler']['includes']['items'])
     includes = includes.gsub(/\\ /, ' ').gsub(/\\\"/, '"').gsub(/\\$/, '') # Remove trailing slashes (for IAR)
     return {:command => command, :defines => defines, :options => options, :includes => includes}
   end
 
-  def compile(file, defines=[])
-    compiler = build_compiler_fields
+  def compile(file, defines=[], extra_options=[])
+    compiler = build_compiler_fields(extra_options)
     cmd_str  = "#{compiler[:command]}#{compiler[:defines]}#{compiler[:options]}#{compiler[:includes]} #{file} " +
                "#{$cfg['compiler']['object_files']['prefix']}#{$cfg['compiler']['object_files']['destination']}"
     obj_file = "#{File.basename(file, C_EXTENSION)}#{$cfg['compiler']['object_files']['extension']}"
@@ -389,9 +389,10 @@ module RakefileHelpers
     libs.each do |lib|
       puts 'Adding lib ' + lib
 
-      files = $cfg['compiler']['libs'][lib]
+      files = $cfg['compiler']['libs'][lib]['files']
+      extra_options = $cfg['compiler']['libs'][lib]['extra_options']
       files.each do |src_file|
-        obj_list << compile(src_file, test_defines)
+        obj_list << compile(src_file, test_defines, extra_options=extra_options)
       end
     end
 

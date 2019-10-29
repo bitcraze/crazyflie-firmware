@@ -16,7 +16,7 @@ typedef struct ligthouseCalibration_s {
 
 /**
  * @brief Initialize calibration structure from basestation ootx frame
- * 
+ *
  * @param calib Calibration  object to initialize, calib->valid will be set to true
  * @param frame ootx frame received from the basestation
  */
@@ -24,9 +24,9 @@ void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct o
 
 /**
  * @brief Apply basestation calibration to the two received angles
- * 
+ *
  * Only applies calibration if valid is true.
- * 
+ *
  * @param calib Calibration object to use
  * @param rawAngles i/j raw angles measured
  * @param correctedAngles i/j corrected angles after applying calibration
