@@ -232,6 +232,9 @@ static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_mat
 static inline float arm_sqrt(float32_t in)
 { float pOut = 0; arm_status result = arm_sqrt_f32(in, &pOut); configASSERT(ARM_MATH_SUCCESS == result); return pOut; }
 
+static void readSensorData(sensorData_t* sensors, const control_t *control);
+static bool predictStateForward(uint32_t osTick);
+static bool updateQueuedMeasurments(const Axis3f *gyro);
 
 
 // --------------------------------------------------
@@ -250,6 +253,68 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   kalmanCoreDecoupleXY(&coreData);
 #endif
 
+  readSensorData(sensors, control);
+
+  // Run the system dynamics to predict the state forward.
+  if ((osTick - lastPrediction) >= configTICK_RATE_HZ / PREDICT_RATE) { // update at the PREDICT_RATE
+    if (predictStateForward(osTick)) {
+      lastPrediction = osTick;
+      doneUpdate = true;
+    }
+  }
+
+  /**
+   * Add process noise every loop, rather than every prediction
+   */
+  kalmanCoreAddProcessNoise(&coreData, (float)(osTick-lastPNUpdate)/configTICK_RATE_HZ);
+  lastPNUpdate = osTick;
+
+
+  /**
+   * Update the state estimate with the barometer measurements
+   */
+  // Accumulate the barometer measurements
+  if (useBaroUpdate) {
+    if ((osTick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
+        && baroAccumulatorCount > 0)
+    {
+      float baroAslAverage = baroAslAccumulator / baroAccumulatorCount;
+      baroAslAccumulator = 0;
+      baroAccumulatorCount = 0;
+
+      kalmanCoreUpdateWithBaro(&coreData, baroAslAverage, quadIsFlying);
+
+      lastBaroUpdate = osTick;
+      doneUpdate = true;
+    }
+  }
+
+  doneUpdate = doneUpdate || updateQueuedMeasurments(&sensors->gyro);
+
+  /**
+   * If an update has been made, the state is finalized:
+   * - the attitude error is moved into the body attitude quaternion,
+   * - the body attitude is converted into a rotation matrix for the next prediction, and
+   * - correctness of the covariance matrix is ensured
+   */
+
+  if (doneUpdate)
+  {
+    kalmanCoreFinalize(&coreData, osTick);
+    if (! kalmanSupervisorIsStateWithinBounds(&coreData)) {
+      coreData.resetEstimation = true;
+      DEBUG_PRINT("State out of bounds, resetting\n");
+    }
+  }
+
+  /**
+   * Finally, the internal state is externalized.
+   * This is done every round, since the external state includes some sensor data
+   */
+  kalmanCoreExternalizeState(&coreData, state, &sensors->acc, osTick);
+}
+
+static void readSensorData(sensorData_t* sensors, const control_t *control) {
   // Average the last IMU measurements. We do this because the prediction loop is
   // slower than the IMU loop, but the IMU information is required externally at
   // a higher rate (for body rate control).
@@ -271,86 +336,65 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   thrustAccumulator += control->thrust;
   thrustAccumulatorCount++;
 
-  // Run the system dynamics to predict the state forward.
-  if ((osTick-lastPrediction) >= configTICK_RATE_HZ/PREDICT_RATE // update at the PREDICT_RATE
-      && gyroAccumulatorCount > 0
-      && accAccumulatorCount > 0
-      && thrustAccumulatorCount > 0)
-  {
-    // gyro is in deg/sec but the estimator requires rad/sec
-    Axis3f gyroAverage;
-    gyroAverage.x = gyroAccumulator.x * DEG_TO_RAD / gyroAccumulatorCount;
-    gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
-    gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
-
-    // accelerometer is in Gs but the estimator requires ms^-2
-    Axis3f accAverage;
-    accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
-    accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
-    accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
-
-    // thrust is in grams, we need ms^-2
-    float thrustAverage = thrustAccumulator * CONTROL_TO_ACC / thrustAccumulatorCount;
-
-    accAccumulator = (Axis3f){.axis={0}};
-    accAccumulatorCount = 0;
-    gyroAccumulator = (Axis3f){.axis={0}};
-    gyroAccumulatorCount = 0;
-    thrustAccumulator = 0;
-    thrustAccumulatorCount = 0;
-
-
-    // TODO: Find a better check for whether the quad is flying
-    // Assume that the flight begins when the thrust is large enough and for now we never stop "flying".
-    if (thrustAverage > IN_FLIGHT_THRUST_THRESHOLD) {
-      lastFlightCmd = xTaskGetTickCount();
-      if (!quadIsFlying) {
-        takeoffTime = lastFlightCmd;
-      }
-    }
-    quadIsFlying = (xTaskGetTickCount()-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
-
-    float dt = (float)(osTick-lastPrediction)/configTICK_RATE_HZ;
-    kalmanCorePredict(&coreData, thrustAverage, &accAverage, &gyroAverage, dt, quadIsFlying);
-
-    lastPrediction = osTick;
-
-    doneUpdate = true;
-  }
-
-
-  /**
-   * Add process noise every loop, rather than every prediction
-   */
-  kalmanCoreAddProcessNoise(&coreData, (float)(osTick-lastPNUpdate)/configTICK_RATE_HZ);
-  lastPNUpdate = osTick;
-
-
-
-  /**
-   * Update the state estimate with the barometer measurements
-   */
-  // Accumulate the barometer measurements
+  // Average barometer data
   if (useBaroUpdate) {
     if (sensorsReadBaro(&sensors->baro)) {
       baroAslAccumulator += sensors->baro.asl;
       baroAccumulatorCount++;
     }
+  }
+}
 
-    if ((osTick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
-        && baroAccumulatorCount > 0)
-    {
-      float baroAslAverage = baroAslAccumulator / baroAccumulatorCount;
-      baroAslAccumulator = 0;
-      baroAccumulatorCount = 0;
-
-      kalmanCoreUpdateWithBaro(&coreData, baroAslAverage, quadIsFlying);
-
-      lastBaroUpdate = osTick;
-      doneUpdate = true;
-    }
+static bool predictStateForward(uint32_t osTick) {
+  if (gyroAccumulatorCount == 0
+      || accAccumulatorCount == 0
+      || thrustAccumulatorCount == 0)
+  {
+    return false;
   }
 
+  // gyro is in deg/sec but the estimator requires rad/sec
+  Axis3f gyroAverage;
+  gyroAverage.x = gyroAccumulator.x * DEG_TO_RAD / gyroAccumulatorCount;
+  gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
+  gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
+
+  // accelerometer is in Gs but the estimator requires ms^-2
+  Axis3f accAverage;
+  accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
+  accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
+  accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
+
+  // thrust is in grams, we need ms^-2
+  float thrustAverage = thrustAccumulator * CONTROL_TO_ACC / thrustAccumulatorCount;
+
+  accAccumulator = (Axis3f){.axis={0}};
+  accAccumulatorCount = 0;
+  gyroAccumulator = (Axis3f){.axis={0}};
+  gyroAccumulatorCount = 0;
+  thrustAccumulator = 0;
+  thrustAccumulatorCount = 0;
+
+
+  // TODO: Find a better check for whether the quad is flying
+  // Assume that the flight begins when the thrust is large enough and for now we never stop "flying".
+  if (thrustAverage > IN_FLIGHT_THRUST_THRESHOLD) {
+    lastFlightCmd = osTick;
+    if (!quadIsFlying) {
+      takeoffTime = lastFlightCmd;
+    }
+  }
+  quadIsFlying = (osTick-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
+
+  float dt = (float)(osTick-lastPrediction)/configTICK_RATE_HZ;
+  kalmanCorePredict(&coreData, thrustAverage, &accAverage, &gyroAverage, dt, quadIsFlying);
+
+  return true;
+}
+
+
+static bool updateQueuedMeasurments(const Axis3f *gyro) {
+  bool doneUpdate = false;
   /**
    * Sensor measurements can come in sporadically and faster than the stabilizer loop frequency,
    * we therefore consume all measurements since the last loop, rather than accumulating
@@ -408,33 +452,12 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   flowMeasurement_t flow;
   while (stateEstimatorHasFlowPacket(&flow))
   {
-    kalmanCoreUpdateWithFlow(&coreData, &flow, &sensors->gyro);
+    kalmanCoreUpdateWithFlow(&coreData, &flow, gyro);
     doneUpdate = true;
   }
 
-  /**
-   * If an update has been made, the state is finalized:
-   * - the attitude error is moved into the body attitude quaternion,
-   * - the body attitude is converted into a rotation matrix for the next prediction, and
-   * - correctness of the covariance matrix is ensured
-   */
-
-  if (doneUpdate)
-  {
-    kalmanCoreFinalize(&coreData, osTick);
-    if (! kalmanSupervisorIsStateWithinBounds(&coreData)) {
-      coreData.resetEstimation = true;
-      DEBUG_PRINT("State out of bounds, resetting\n");
-    }
-  }
-
-  /**
-   * Finally, the internal state is externalized.
-   * This is done every round, since the external state includes some sensor data
-   */
-  kalmanCoreExternalizeState(&coreData, state, &sensors->acc, osTick);
+  return doneUpdate;
 }
-
 
 void estimatorKalmanInit(void) {
   if (!isInit)
