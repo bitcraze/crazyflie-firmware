@@ -107,8 +107,8 @@ static void oaInit()
 
   isInit = true;
 
-  xTaskCreate(oaTask, "oa", 2*configMINIMAL_STACK_SIZE, NULL,
-              /*priority*/3, NULL);
+  xTaskCreate(oaTask, OA_DECK_TASK_NAME, 2*configMINIMAL_STACK_SIZE, NULL,
+              OA_DECK_TASK_PRI, NULL);
 }
 
 static bool oaTest()

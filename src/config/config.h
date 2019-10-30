@@ -85,6 +85,13 @@
 #define USDWRITE_TASK_PRI       0
 #define PCA9685_TASK_PRI        3
 #define CMD_HIGH_LEVEL_TASK_PRI 2
+#define BQ_OSD_TASK_PRI         1
+#define GTGPS_DECK_TASK_PRI     1
+#define LIGHTHOUSE_TASK_PRI     1
+#define LPS_DECK_TASK_PRI       5
+#define OA_DECK_TASK_PRI        3
+#define UART1_TEST_TASK_PRI     1
+#define UART2_TEST_TASK_PRI     1
 
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
@@ -123,6 +130,13 @@
 #define PCA9685_TASK_NAME       "PCA9685"
 #define CMD_HIGH_LEVEL_TASK_NAME "CMDHL"
 #define MULTIRANGER_TASK_NAME   "MR"
+#define BQ_OSD_TASK_NAME        "BQ_OSDTASK"
+#define GTGPS_DECK_TASK_NAME    "GTGPS"
+#define LIGHTHOUSE_TASK_NAME    "LH"
+#define LPS_DECK_TASK_NAME      "LPS"
+#define OA_DECK_TASK_NAME       "OA"
+#define UART1_TEST_TASK_NAME    "UART1TEST"
+#define UART2_TEST_TASK_NAME    "UART2TEST"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)

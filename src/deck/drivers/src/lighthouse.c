@@ -408,8 +408,8 @@ static void lighthouseInit(DeckInfo *info)
   uart1Init(230400);
   lhblInit(I2C1_DEV);
 
-  xTaskCreate(lighthouseTask, "LH",
-              2*configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
+  xTaskCreate(lighthouseTask, LIGHTHOUSE_TASK_NAME,
+              2*configMINIMAL_STACK_SIZE, NULL, LIGHTHOUSE_TASK_PRI, NULL);
 
   isInit = true;
 }

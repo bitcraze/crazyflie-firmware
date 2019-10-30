@@ -282,8 +282,8 @@ static void gtgpsInit(DeckInfo *info)
   DEBUG_PRINT("Enabling reading from GlobalTop GPS\n");
   uart1Init(9600);
 
-  xTaskCreate(gtgpsTask, "GTGPS",
-              configMINIMAL_STACK_SIZE, NULL, /*priority*/1, NULL);
+  xTaskCreate(gtgpsTask, GTGPS_DECK_TASK_NAME,
+              configMINIMAL_STACK_SIZE, NULL, GTGPS_DECK_TASK_PRI, NULL);
 
   isInit = true;
 }

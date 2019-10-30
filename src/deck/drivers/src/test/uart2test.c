@@ -50,7 +50,7 @@ static void uart2testInit(DeckInfo *info)
 
   uart2Init(115200);
 
-  xTaskCreate(uart2testTask, "UART2TEST", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+  xTaskCreate(uart2testTask, UART2_TEST_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, UART2_TEST_TASK_PRI, NULL);
 
   isInit = true;
 }
