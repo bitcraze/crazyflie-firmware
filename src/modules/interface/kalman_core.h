@@ -102,7 +102,7 @@ void kalmanCoreInit(kalmanCoreData_t* this);
 /*  - Measurement updates based on sensors */
 
 // Barometer
-void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, baro_t *baro, bool quadIsFlying);
+void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIsFlying);
 
 // Absolute height measurement along the room Z
 void kalmanCoreUpdateWithAbsoluteHeight(kalmanCoreData_t* this, heightMeasurement_t* height);
@@ -120,7 +120,7 @@ void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t 
 void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);
 
 // Measurements of flow (dnx, dny)
-void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, flowMeasurement_t *flow, sensorData_t *sensors);
+void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro);
 
 // Measurements of TOF from laser sensor
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof);
@@ -138,10 +138,10 @@ void kalmanCorePredict(kalmanCoreData_t* this, float thrust, Axis3f *acc, Axis3f
 void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt);
 
 /*  - Finalization to incorporate attitude error into body attitude */
-void kalmanCoreFinalize(kalmanCoreData_t* this, sensorData_t *sensors, uint32_t tick);
+void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick);
 
 /*  - Externalization to move the filter's internal state into the external state expected by other modules */
-void kalmanCoreExternalizeState(kalmanCoreData_t* this, state_t *state, sensorData_t *sensors, uint32_t tick);
+void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, const Axis3f *acc, uint32_t tick);
 
 void kalmanCoreDecoupleXY(kalmanCoreData_t* this);
 

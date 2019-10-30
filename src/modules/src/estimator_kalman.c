@@ -186,7 +186,6 @@ static inline bool stateEstimatorHasYawErrorPacket(float *error) {
  * - X, Y, Z: the quad's position in the global frame
  * - PX, PY, PZ: the quad's velocity in its body frame
  * - D0, D1, D2: attitude error
- * - SKEW: the skew from anchor system clock to quad clock
  *
  * For more information, refer to the paper
  */
@@ -204,7 +203,7 @@ static int32_t lastPNUpdate;
 static Axis3f accAccumulator;
 static float thrustAccumulator;
 static Axis3f gyroAccumulator;
-static baro_t baroAccumulator;
+static float baroAslAccumulator;
 static uint32_t accAccumulatorCount;
 static uint32_t thrustAccumulatorCount;
 static uint32_t gyroAccumulatorCount;
@@ -213,6 +212,12 @@ static bool quadIsFlying = false;
 static int32_t lastTDOAUpdate;
 static uint32_t lastFlightCmd;
 static uint32_t takeoffTime;
+
+#ifdef KALMAN_USE_BARO_UPDATE
+static const bool useBaroUpdate = true;
+#else
+static const bool useBaroUpdate = false;
+#endif
 
 /**
  * Supporting and utility functions
@@ -231,7 +236,6 @@ static inline float arm_sqrt(float32_t in)
 
 // --------------------------------------------------
 
-
 void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick)
 {
   // If the client (via a parameter update) triggers an estimator reset:
@@ -243,7 +247,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   uint32_t osTick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
 
 #ifdef KALMAN_DECOUPLE_XY
-  kalmanCoreDecoupleXY(this);
+  kalmanCoreDecoupleXY(&coreData);
 #endif
 
   // Average the last IMU measurements. We do this because the prediction loop is
@@ -274,31 +278,31 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
       && thrustAccumulatorCount > 0)
   {
     // gyro is in deg/sec but the estimator requires rad/sec
-    gyroAccumulator.x *= DEG_TO_RAD;
-    gyroAccumulator.y *= DEG_TO_RAD;
-    gyroAccumulator.z *= DEG_TO_RAD;
-
-    gyroAccumulator.x /= gyroAccumulatorCount;
-    gyroAccumulator.y /= gyroAccumulatorCount;
-    gyroAccumulator.z /= gyroAccumulatorCount;
+    Axis3f gyroAverage;
+    gyroAverage.x = gyroAccumulator.x * DEG_TO_RAD / gyroAccumulatorCount;
+    gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
+    gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
 
     // accelerometer is in Gs but the estimator requires ms^-2
-    accAccumulator.x *= GRAVITY_MAGNITUDE;
-    accAccumulator.y *= GRAVITY_MAGNITUDE;
-    accAccumulator.z *= GRAVITY_MAGNITUDE;
-
-    accAccumulator.x /= accAccumulatorCount;
-    accAccumulator.y /= accAccumulatorCount;
-    accAccumulator.z /= accAccumulatorCount;
+    Axis3f accAverage;
+    accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
+    accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
+    accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
 
     // thrust is in grams, we need ms^-2
-    thrustAccumulator *= CONTROL_TO_ACC;
+    float thrustAverage = thrustAccumulator * CONTROL_TO_ACC / thrustAccumulatorCount;
 
-    thrustAccumulator /= thrustAccumulatorCount;
+    accAccumulator = (Axis3f){.axis={0}};
+    accAccumulatorCount = 0;
+    gyroAccumulator = (Axis3f){.axis={0}};
+    gyroAccumulatorCount = 0;
+    thrustAccumulator = 0;
+    thrustAccumulatorCount = 0;
+
 
     // TODO: Find a better check for whether the quad is flying
     // Assume that the flight begins when the thrust is large enough and for now we never stop "flying".
-    if (thrustAccumulator > IN_FLIGHT_THRUST_THRESHOLD) {
+    if (thrustAverage > IN_FLIGHT_THRUST_THRESHOLD) {
       lastFlightCmd = xTaskGetTickCount();
       if (!quadIsFlying) {
         takeoffTime = lastFlightCmd;
@@ -307,16 +311,9 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
     quadIsFlying = (xTaskGetTickCount()-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
 
     float dt = (float)(osTick-lastPrediction)/configTICK_RATE_HZ;
-    kalmanCorePredict(&coreData, thrustAccumulator, &accAccumulator, &gyroAccumulator, dt, quadIsFlying);
+    kalmanCorePredict(&coreData, thrustAverage, &accAverage, &gyroAverage, dt, quadIsFlying);
 
     lastPrediction = osTick;
-
-    accAccumulator = (Axis3f){.axis={0}};
-    accAccumulatorCount = 0;
-    gyroAccumulator = (Axis3f){.axis={0}};
-    gyroAccumulatorCount = 0;
-    thrustAccumulator = 0;
-    thrustAccumulatorCount = 0;
 
     doneUpdate = true;
   }
@@ -334,24 +331,24 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
    * Update the state estimate with the barometer measurements
    */
   // Accumulate the barometer measurements
-  if (sensorsReadBaro(&sensors->baro)) {
-#ifdef KALMAN_USE_BARO_UPDATE
-    baroAccumulator.asl += sensors->baro.asl;
-    baroAccumulatorCount++;
-  }
+  if (useBaroUpdate) {
+    if (sensorsReadBaro(&sensors->baro)) {
+      baroAslAccumulator += sensors->baro.asl;
+      baroAccumulatorCount++;
+    }
 
-  if ((osTick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
-      && baroAccumulatorCount > 0)
-  {
-    baroAccumulator.asl /= baroAccumulatorCount;
+    if ((osTick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
+        && baroAccumulatorCount > 0)
+    {
+      float baroAslAverage = baroAslAccumulator / baroAccumulatorCount;
+      baroAslAccumulator = 0;
+      baroAccumulatorCount = 0;
 
-    kalmanCoreUpdateWithBaro(&coreData, &sensors->baro, quadIsFlying);
+      kalmanCoreUpdateWithBaro(&coreData, baroAslAverage, quadIsFlying);
 
-    baroAccumulator.asl = 0;
-    baroAccumulatorCount = 0;
-    lastBaroUpdate = osTick;
-    doneUpdate = true;
-#endif
+      lastBaroUpdate = osTick;
+      doneUpdate = true;
+    }
   }
 
   /**
@@ -411,7 +408,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   flowMeasurement_t flow;
   while (stateEstimatorHasFlowPacket(&flow))
   {
-    kalmanCoreUpdateWithFlow(&coreData, &flow, sensors);
+    kalmanCoreUpdateWithFlow(&coreData, &flow, &sensors->gyro);
     doneUpdate = true;
   }
 
@@ -424,7 +421,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
 
   if (doneUpdate)
   {
-    kalmanCoreFinalize(&coreData, sensors, osTick);
+    kalmanCoreFinalize(&coreData, osTick);
     if (! kalmanSupervisorIsStateWithinBounds(&coreData)) {
       coreData.resetEstimation = true;
       DEBUG_PRINT("State out of bounds, resetting\n");
@@ -435,7 +432,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
    * Finally, the internal state is externalized.
    * This is done every round, since the external state includes some sensor data
    */
-  kalmanCoreExternalizeState(&coreData, state, sensors, osTick);
+  kalmanCoreExternalizeState(&coreData, state, &sensors->acc, osTick);
 }
 
 
@@ -469,7 +466,7 @@ void estimatorKalmanInit(void) {
   accAccumulator = (Axis3f){.axis={0}};
   gyroAccumulator = (Axis3f){.axis={0}};
   thrustAccumulator = 0;
-  baroAccumulator.asl = 0;
+  baroAslAccumulator = 0;
 
   accAccumulatorCount = 0;
   gyroAccumulatorCount = 0;

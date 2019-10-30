@@ -90,7 +90,7 @@ static inline float arm_sqrt(float32_t in)
 
 
 #ifdef DEBUG_STATE_CHECK
-static void assertStateNotNaN(kalmanCoreData_t* this) {
+static void assertStateNotNaN(const kalmanCoreData_t* this) {
   if ((isnan(this->S[KC_STATE_X])) ||
       (isnan(this->S[KC_STATE_Y])) ||
       (isnan(this->S[KC_STATE_Z])) ||
@@ -119,7 +119,7 @@ static void assertStateNotNaN(kalmanCoreData_t* this) {
   }
 }
 #else
-static void assertStateNotNaN(kalmanCoreData_t* this)
+static void assertStateNotNaN(const kalmanCoreData_t* this)
 {
   return;
 }
@@ -288,7 +288,7 @@ static void scalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, fl
 }
 
 
-void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, baro_t *baro, bool quadIsFlying)
+void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIsFlying)
 {
   float h[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
@@ -297,10 +297,10 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, baro_t *baro, bool quadIsF
 
   if (!quadIsFlying || this->baroReferenceHeight < 1) {
     //TODO: maybe we could track the zero height as a state. Would be especially useful if UWB anchors had barometers.
-    this->baroReferenceHeight = baro->asl;
+    this->baroReferenceHeight = baroAsl;
   }
 
-  float meas = (baro->asl - this->baroReferenceHeight);
+  float meas = (baroAsl - this->baroReferenceHeight);
   scalarUpdate(this, &H, meas - this->S[KC_STATE_Z], measNoiseBaro);
 }
 
@@ -461,7 +461,7 @@ static float predictedNY;
 static float measuredNX;
 static float measuredNY;
 
-void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, flowMeasurement_t *flow, sensorData_t *sensors)
+void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
 {
   // Inclusion of flow measurements in the EKF done by two scalar updates
 
@@ -472,8 +472,8 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, flowMeasurement_t *flow, s
   float thetapix = DEG_TO_RAD * 4.2f;
   //~~~ Body rates ~~~
   // TODO check if this is feasible or if some filtering has to be done
-  float omegax_b = sensors->gyro.x * DEG_TO_RAD;
-  float omegay_b = sensors->gyro.y * DEG_TO_RAD;
+  float omegax_b = gyro->x * DEG_TO_RAD;
+  float omegay_b = gyro->y * DEG_TO_RAD;
 
   // ~~~ Moves the body velocity into the global coordinate system ~~~
   // [bar{x},bar{y},bar{z}]_G = R*[bar{x},bar{y},bar{z}]_B
@@ -839,7 +839,7 @@ void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt)
 
 
 
-void kalmanCoreFinalize(kalmanCoreData_t* this, sensorData_t *sensors, uint32_t tick)
+void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
 {
   // Matrix to rotate the attitude covariances once updated
   static float A[KC_STATE_DIM][KC_STATE_DIM];
@@ -953,7 +953,7 @@ void kalmanCoreFinalize(kalmanCoreData_t* this, sensorData_t *sensors, uint32_t 
   assertStateNotNaN(this);
 }
 
-void kalmanCoreExternalizeState(kalmanCoreData_t* this, state_t *state, sensorData_t *sensors, uint32_t tick)
+void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, const Axis3f *acc, uint32_t tick)
 {
   // position state is already in world frame
   state->position = (point_t){
@@ -976,9 +976,9 @@ void kalmanCoreExternalizeState(kalmanCoreData_t* this, state_t *state, sensorDa
   // Finally, note that these accelerations are in Gs, and not in m/s^2, hence - 1 for removing gravity
   state->acc = (acc_t){
       .timestamp = tick,
-      .x = this->R[0][0]*sensors->acc.x + this->R[0][1]*sensors->acc.y + this->R[0][2]*sensors->acc.z,
-      .y = this->R[1][0]*sensors->acc.x + this->R[1][1]*sensors->acc.y + this->R[1][2]*sensors->acc.z,
-      .z = this->R[2][0]*sensors->acc.x + this->R[2][1]*sensors->acc.y + this->R[2][2]*sensors->acc.z - 1
+      .x = this->R[0][0]*acc->x + this->R[0][1]*acc->y + this->R[0][2]*acc->z,
+      .y = this->R[1][0]*acc->x + this->R[1][1]*acc->y + this->R[1][2]*acc->z,
+      .z = this->R[2][0]*acc->x + this->R[2][1]*acc->y + this->R[2][2]*acc->z - 1
   };
 
   // convert the new attitude into Euler YPR
