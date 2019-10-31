@@ -39,9 +39,6 @@
 
 #include "imu.h"
 
-#include "zranger.h"
-#include "zranger2.h"
-
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
@@ -850,9 +847,6 @@ void sensorsBoschAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadAcc(&sensors->acc);
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
-  if (!zRangerReadRange(&sensors->zrange, tick)) {
-    zRanger2ReadRange(&sensors->zrange, tick);
-  }
 #ifdef LOG_SEC_IMU
   sensorsReadGyroSec(&sensors->gyroSec);
   sensorsReadAccSec(&sensors->accSec);

@@ -53,31 +53,31 @@ static struct selfState_s state = {
   .estimatedVZ = 0.0f,
 };
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, float dt, uint32_t tick, struct selfState_s* state);
+static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick, struct selfState_s* state);
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
 
-void positionEstimate(state_t* estimate, const sensorData_t* sensorData, float dt, uint32_t tick) {
-  positionEstimateInternal(estimate, sensorData, dt, tick, &state);
+void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick) {
+  positionEstimateInternal(estimate, sensorData, zrange, dt, tick, &state);
 }
 
 void positionUpdateVelocity(float accWZ, float dt) {
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, float dt, uint32_t tick, struct selfState_s* state) {
+static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick, struct selfState_s* state) {
   float filteredZ;
   static float prev_estimatedZ = 0;
   static bool surfaceFollowingMode = false;
 
-  if (sensorData->zrange.timestamp == tick) {
+  if (zrange->timestamp == tick) {
     surfaceFollowingMode = true;
   }
 
   if (surfaceFollowingMode) {
-    if (sensorData->zrange.timestamp == tick) {
+    if (zrange->timestamp == tick) {
       // IIR filter zrange
       filteredZ = (state->estAlphaZrange       ) * state->estimatedZ +
-                  (1.0f - state->estAlphaZrange) * sensorData->zrange.distance;
+                  (1.0f - state->estAlphaZrange) * zrange->distance;
       // Use zrange as base and add velocity changes.
       state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
     }

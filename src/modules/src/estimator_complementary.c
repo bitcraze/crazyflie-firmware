@@ -5,6 +5,9 @@
 #include "position_estimator.h"
 #include "sensors.h"
 
+#include "zranger.h"
+#include "zranger2.h"
+
 #define ATTITUDE_UPDATE_RATE RATE_250_HZ
 #define ATTITUDE_UPDATE_DT 1.0/ATTITUDE_UPDATE_RATE
 
@@ -52,6 +55,11 @@ void estimatorComplementary(state_t *state, sensorData_t *sensorData, control_t 
   }
 
   if (RATE_DO_EXECUTE(POS_UPDATE_RATE, tick)) {
-    positionEstimate(state, sensorData, POS_UPDATE_DT, tick);
+    zDistance_t zrange;
+
+    if (!zRangerReadRange(&zrange, tick)) {
+      zRanger2ReadRange(&zrange, tick);
+    }
+    positionEstimate(state, sensorData, &zrange, POS_UPDATE_DT, tick);
   }
 }

@@ -34,8 +34,6 @@
 #include "lps25h.h"
 #include "mpu6500.h"
 #include "ak8963.h"
-#include "zranger.h"
-#include "zranger2.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -194,9 +192,6 @@ void sensorsMpu9250Lps25hAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadAcc(&sensors->acc);
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
-  if (!zRangerReadRange(&sensors->zrange, tick)) {
-    zRanger2ReadRange(&sensors->zrange, tick);
-  }
   sensors->interruptTimestamp = sensorData.interruptTimestamp;
 }
 

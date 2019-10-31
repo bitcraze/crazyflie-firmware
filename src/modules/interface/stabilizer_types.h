@@ -138,7 +138,6 @@ typedef struct sensorData_s {
   Axis3f gyro;              // deg/s
   Axis3f mag;               // gauss
   baro_t baro;
-  zDistance_t zrange;
 #ifdef LOG_SEC_IMU
   Axis3f accSec;            // Gs
   Axis3f gyroSec;           // deg/s
