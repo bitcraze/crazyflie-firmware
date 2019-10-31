@@ -28,7 +28,7 @@
 
 #include "stabilizer_types.h"
 
-void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick);
+void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick);
 void positionUpdateVelocity(float accWZ, float dt);
 
 #endif /* POSITION_ESTIMATOR_H_ */

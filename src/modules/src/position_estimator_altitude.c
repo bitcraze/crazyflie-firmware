@@ -24,6 +24,11 @@
  * position_estimator_altitude.c: Altitude-only position estimator
  */
 
+#include "stm32f4xx.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "log.h"
 #include "param.h"
 #include "num.h"
@@ -53,31 +58,36 @@ static struct selfState_s state = {
   .estimatedVZ = 0.0f,
 };
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick, struct selfState_s* state);
+static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state);
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
 
-void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick) {
-  positionEstimateInternal(estimate, sensorData, zrange, dt, tick, &state);
+void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick) {
+  positionEstimateInternal(estimate, sensorData, tofMeasurement, dt, tick, &state);
 }
 
 void positionUpdateVelocity(float accWZ, float dt) {
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const zDistance_t* zrange, float dt, uint32_t tick, struct selfState_s* state) {
+static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state) {
   float filteredZ;
   static float prev_estimatedZ = 0;
   static bool surfaceFollowingMode = false;
 
-  if (zrange->timestamp == tick) {
+  const uint32_t MAX_SAMPLE_AGE = M2T(50);
+
+  uint32_t now = xTaskGetTickCount();
+  bool isSampleUseful = ((now - tofMeasurement->timestamp) <= MAX_SAMPLE_AGE);
+
+  if (isSampleUseful) {
     surfaceFollowingMode = true;
   }
 
   if (surfaceFollowingMode) {
-    if (zrange->timestamp == tick) {
+    if (isSampleUseful) {
       // IIR filter zrange
       filteredZ = (state->estAlphaZrange       ) * state->estimatedZ +
-                  (1.0f - state->estAlphaZrange) * zrange->distance;
+                  (1.0f - state->estAlphaZrange) * tofMeasurement->distance;
       // Use zrange as base and add velocity changes.
       state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
     }
@@ -94,14 +104,12 @@ static void positionEstimateInternal(state_t* estimate, const sensorData_t* sens
     state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
   }
 
-
   estimate->position.x = 0.0f;
   estimate->position.y = 0.0f;
   estimate->position.z = state->estimatedZ;
   estimate->velocity.z = (state->estimatedZ - prev_estimatedZ) / dt;
   state->estimatedVZ = estimate->velocity.z;
   prev_estimatedZ = state->estimatedZ;
-
 }
 
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state) {

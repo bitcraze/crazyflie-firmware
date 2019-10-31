@@ -481,7 +481,7 @@ void estimatorKalmanInit(void) {
   isInit = true;
 }
 
-static bool stateEstimatorEnqueueExternalMeasurement(xQueueHandle queue, void *measurement)
+static bool appendMeasurement(xQueueHandle queue, void *measurement)
 {
   portBASE_TYPE result;
   bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
@@ -502,52 +502,52 @@ static bool stateEstimatorEnqueueExternalMeasurement(xQueueHandle queue, void *m
 bool estimatorKalmanEnqueueTDOA(const tdoaMeasurement_t *uwb)
 {
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(tdoaDataQueue, (void *)uwb);
+  return appendMeasurement(tdoaDataQueue, (void *)uwb);
 }
 
 bool estimatorKalmanEnqueuePosition(const positionMeasurement_t *pos)
 {
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(posDataQueue, (void *)pos);
+  return appendMeasurement(posDataQueue, (void *)pos);
 }
 
 bool estimatorKalmanEnqueuePose(const poseMeasurement_t *pose)
 {
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(poseDataQueue, (void *)pose);
+  return appendMeasurement(poseDataQueue, (void *)pose);
 }
 
 bool estimatorKalmanEnqueueDistance(const distanceMeasurement_t *dist)
 {
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(distDataQueue, (void *)dist);
+  return appendMeasurement(distDataQueue, (void *)dist);
 }
 
 bool estimatorKalmanEnqueueFlow(const flowMeasurement_t *flow)
 {
   // A flow measurement (dnx,  dny) [accumulated pixels]
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(flowDataQueue, (void *)flow);
+  return appendMeasurement(flowDataQueue, (void *)flow);
 }
 
 bool estimatorKalmanEnqueueTOF(const tofMeasurement_t *tof)
 {
   // A distance (distance) [m] to the ground along the z_B axis.
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(tofDataQueue, (void *)tof);
+  return appendMeasurement(tofDataQueue, (void *)tof);
 }
 
 bool estimatorKalmanEnqueueAbsoluteHeight(const heightMeasurement_t *height)
 {
   // A distance (height) [m] to the ground along the z axis.
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(heightDataQueue, (void *)height);
+  return appendMeasurement(heightDataQueue, (void *)height);
 }
 
 bool estimatorKalmanEnqueueYawError(const float error)
 {
   ASSERT(isInit);
-  return stateEstimatorEnqueueExternalMeasurement(yawErrorDataQueue, (void *)&error);
+  return appendMeasurement(yawErrorDataQueue, (void *)&error);
 }
 
 bool estimatorKalmanTest(void)

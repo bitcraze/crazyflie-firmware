@@ -112,20 +112,6 @@ void zRangerTask(void* arg)
   }
 }
 
-bool zRangerReadRange(zDistance_t* zrange, const uint32_t tick)
-{
-  bool updated = false;
-
-  if (isInit) {
-    if (range_last != 0 && range_last < RANGE_OUTLIER_LIMIT) {
-      zrange->distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      zrange->timestamp = tick;
-      updated = true;
-    }
-  }
-  return updated;
-}
-
 static const DeckDriver zranger_deck = {
   .vid = 0xBC,
   .pid = 0x09,

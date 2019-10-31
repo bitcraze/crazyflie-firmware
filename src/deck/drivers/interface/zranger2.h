@@ -35,6 +35,4 @@ void zRanger2Init(DeckInfo* info);
 bool zRanger2Test(void);
 void zRanger2Task(void* arg);
 
-bool zRanger2ReadRange(zDistance_t* zrange, const uint32_t tick);
-
 #endif /* _ZRANGER2_H_ */
