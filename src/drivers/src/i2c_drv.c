@@ -368,7 +368,7 @@ void i2cdrvInit(I2cDrv* i2c)
 
 void i2cdrvCreateMessage(I2cMessage *message,
                       uint8_t  slaveAddress,
-                      uint8_t  direction,
+                      I2cDirection  direction,
                       uint32_t length,
                       uint8_t  *buffer)
 {
@@ -386,7 +386,7 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
                              uint8_t  slaveAddress,
                              bool IsInternal16,
                              uint16_t intAddress,
-                             uint8_t  direction,
+                             I2cDirection  direction,
                              uint32_t length,
                              uint8_t  *buffer)
 {
