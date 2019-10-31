@@ -41,16 +41,13 @@
 #include "zranger2.h"
 #include "vl53l1x.h"
 
-#include "stabilizer_types.h"
-
-#include "estimator.h"
 #include "cf_math.h"
 
 // Measurement noise model
-static float expPointA = 2.5f;
-static float expStdA = 0.0025f; // STD at elevation expPointA [m]
-static float expPointB = 4.0f;
-static float expStdB = 0.2f;    // STD at elevation expPointB [m]
+static const float expPointA = 2.5f;
+static const float expStdA = 0.0025f; // STD at elevation expPointA [m]
+static const float expPointB = 4.0f;
+static const float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
 
 #define RANGE_OUTLIER_LIMIT 5000 // the measured range is in [mm]
@@ -136,17 +133,13 @@ void zRanger2Task(void* arg)
     range_last = zRanger2GetMeasurementAndRestart(&dev);
     rangeSet(rangeDown, range_last / 1000.0f);
 
-    // check if range is feasible and push into the kalman filter
+    // check if range is feasible and push into the estimator
     // the sensor should not be able to measure >5 [m], and outliers typically
     // occur as >8 [m] measurements
-    if (getStateEstimator() == kalmanEstimator &&
-        range_last < RANGE_OUTLIER_LIMIT) {
-      // Form measurement
-      tofMeasurement_t tofData;
-      tofData.timestamp = xTaskGetTickCount();
-      tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
-      estimatorEnqueueTOF(&tofData);
+    if (range_last < RANGE_OUTLIER_LIMIT) {
+      float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
+      float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
+      rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
     }
   }
 }
