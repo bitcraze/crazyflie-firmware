@@ -52,12 +52,6 @@ void estimatorComplementary(state_t *state, sensorData_t *sensorData, control_t 
   }
 
   if (RATE_DO_EXECUTE(POS_UPDATE_RATE, tick)) {
-    // If position sensor data is preset, pass it throught
-    // FIXME: The position sensor shall be used as an input of the estimator
-    if (sensorData->position.timestamp) {
-      state->position = sensorData->position;
-    } else {
-      positionEstimate(state, sensorData, POS_UPDATE_DT, tick);
-    }
+    positionEstimate(state, sensorData, POS_UPDATE_DT, tick);
   }
 }
