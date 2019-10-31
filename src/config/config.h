@@ -92,6 +92,7 @@
 #define OA_DECK_TASK_PRI        3
 #define UART1_TEST_TASK_PRI     1
 #define UART2_TEST_TASK_PRI     1
+#define KALMAN_TASK_PRI         1
 
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
@@ -137,6 +138,7 @@
 #define OA_DECK_TASK_NAME       "OA"
 #define UART1_TEST_TASK_NAME    "UART1TEST"
 #define UART2_TEST_TASK_NAME    "UART2TEST"
+#define KALMAN_TASK_NAME        "KALMAN"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
