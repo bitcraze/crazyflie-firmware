@@ -95,7 +95,7 @@ static MeasData m;
 
 // Only use on 0-terminated strings!
 static int skip_to_next(char ** sp, const char ch) {
-  int steps;
+  int steps=0;
   while (ch != 0 && (**sp) != ch) {
     (*sp)++;
     steps++;
