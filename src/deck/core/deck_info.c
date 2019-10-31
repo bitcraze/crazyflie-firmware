@@ -226,15 +226,15 @@ static void enumerateDecks(void)
   // Add build-forced driver
   if (strlen(deck_force) > 0) {
     DEBUG_PRINT("DECK_FORCE=%s found\n", deck_force);
-  	//split deck_force into multiple, separated by colons, if available 
-    char delim[] = ":"; 
+  	//split deck_force into multiple, separated by colons, if available
+    char delim[] = ":";
 
-    char temp_deck_force[strlen(deck_force)]; 
-    strcpy(temp_deck_force, deck_force); 
-    char * token = strtok(temp_deck_force, delim); 
- 
-    while (token) { 
-      deck_force = token; 
+    char temp_deck_force[strlen(deck_force) + 1];
+    strcpy(temp_deck_force, deck_force);
+    char * token = strtok(temp_deck_force, delim);
+
+    while (token) {
+      deck_force = token;
 
       const DeckDriver *driver = deckFindDriverByName(deck_force);
       if (!driver) {
@@ -249,8 +249,8 @@ static void enumerateDecks(void)
           DEBUG_PRINT("WARNING: No room for compile-time forced driver\n");
         }
       }
-      token = strtok(NULL, delim); 
-	}
+      token = strtok(NULL, delim);
+    }
   }
 
   if (noError) {
