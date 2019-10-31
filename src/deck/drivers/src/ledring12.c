@@ -129,7 +129,7 @@ static const uint8_t whiteRing[][3] = {{32, 32, 32}, {8,8,8}, {2,2,2},
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                       };
-#endif 
+#endif
 
 #if NBR_LEDS > 12
 static const uint8_t blueRing[NBR_LEDS][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
@@ -143,7 +143,7 @@ static const uint8_t blueRing[][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
                                        BLACK, BLACK, BLACK,
                                        BLACK, BLACK, BLACK,
                                       };
-#endif 
+#endif
 
 // #if NBR_LEDS > 12
 // static const uint8_t greenRing[NBR_LEDS][3] = {{64, 255, 64}, {32,64,32}, {8,16,8},
@@ -157,7 +157,7 @@ static const uint8_t blueRing[][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                      };
-// #endif 
+// #endif
 
 // #if NBR_LEDS > 12
 // static const uint8_t redRing[NBR_LEDS][3] = {{64, 0, 0}, {16,0,0}, {8,0,0},
@@ -171,7 +171,7 @@ static const uint8_t blueRing[][3] = {{64, 64, 255}, {32,32,64}, {8,8,16},
 //                                       BLACK, BLACK, BLACK,
 //                                       BLACK, BLACK, BLACK,
 //                                      };
-// #endif 
+// #endif
 
 static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
 {
@@ -318,7 +318,7 @@ static void spinEffect2(uint8_t buffer[][3], bool reset)
   }
 
   COPY_COLOR(temp, buffer[(NBR_LEDS-1)]);
-  for (i=(NBR_LEDS-1); i>=0; i--) {
+  for (i=(NBR_LEDS-1); i>0; i--) {
     COPY_COLOR(buffer[i], buffer[i-1]);
   }
   COPY_COLOR(buffer[0], temp);
