@@ -65,10 +65,8 @@ void workerLoop()
     return;
 
   while (1)
-  {
-    xQueueReceive(workerQueue, &work, portMAX_DELAY);
-    
-    if (work.function)
+  { 
+    if (xQueueReceive(workerQueue, &work, portMAX_DELAY)== pdPASS && work.function)
       work.function(work.arg);
   }
 }
