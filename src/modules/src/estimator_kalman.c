@@ -289,14 +289,17 @@ static void kalmanTask(void* parameters) {
   systemWaitStart();
 
   uint32_t lastPrediction = xTaskGetTickCount();
+  uint32_t nextPrediction = xTaskGetTickCount();
   uint32_t lastPNUpdate = xTaskGetTickCount();
-  uint32_t lastBaroUpdate = xTaskGetTickCount();
+  uint32_t nextBaroUpdate = xTaskGetTickCount();
   uint32_t nextStatsUpdate = 0;
 
   while (true) {
     // Wake up when it is time for next prediction, unless we get queued meassurements
-    uint32_t timeout = (configTICK_RATE_HZ / PREDICT_RATE) - (xTaskGetTickCount() - lastPrediction);
-    xSemaphoreTake(measurementQueueSemaphore, timeout / portTICK_PERIOD_MS);
+    uint32_t maxSleepTics = nextPrediction - xTaskGetTickCount();
+    if (maxSleepTics > 0) {
+      xSemaphoreTake(measurementQueueSemaphore, maxSleepTics);
+    }
 
     // If the client triggers an estimator reset via parameter update
     if (coreData.resetEstimation) {
@@ -314,19 +317,21 @@ static void kalmanTask(void* parameters) {
   #endif
 
     // Run the system dynamics to predict the state forward.
-    if ((osTick - lastPrediction) >= configTICK_RATE_HZ / PREDICT_RATE) { // update at the PREDICT_RATE
-      float dt = (float)(osTick - lastPrediction) / configTICK_RATE_HZ;
+    if (osTick >= nextPrediction) { // update at the PREDICT_RATE
+      float dt = T2S(osTick - lastPrediction);
       if (predictStateForward(osTick, dt)) {
         lastPrediction = osTick;
         doneUpdate = true;
         statsCntInc(&statsPredictions);
       }
+
+      nextPrediction = osTick + S2T(1.0f / PREDICT_RATE);
     }
 
     /**
      * Add process noise every loop, rather than every prediction
      */
-    kalmanCoreAddProcessNoise(&coreData, (float)(osTick - lastPNUpdate) / configTICK_RATE_HZ);
+    kalmanCoreAddProcessNoise(&coreData, T2S(osTick - lastPNUpdate));
     lastPNUpdate = osTick;
 
     /**
@@ -334,7 +339,7 @@ static void kalmanTask(void* parameters) {
      */
     // Accumulate the barometer measurements
     if (useBaroUpdate) {
-      if ((osTick - lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
+      if (osTick > nextBaroUpdate // update at BARO_RATE
           && baroAccumulatorCount > 0)
       {
         xSemaphoreTake(dataMutex, portMAX_DELAY);
@@ -345,7 +350,7 @@ static void kalmanTask(void* parameters) {
 
         kalmanCoreUpdateWithBaro(&coreData, baroAslAverage, quadIsFlying);
 
-        lastBaroUpdate = osTick;
+        nextBaroUpdate = osTick + S2T(1.0f / BARO_RATE);
         doneUpdate = true;
 
         statsCntInc(&statsBaroUpdates);
