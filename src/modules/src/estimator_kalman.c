@@ -161,7 +161,7 @@ static inline bool stateEstimatorHasYawErrorPacket(float *error) {
 static SemaphoreHandle_t measurementQueueSemaphore;
 
 // Mutex to protect data that is shared between the task and
-// function called byt he stabilizer loop
+// functions called by the stabilizer loop
 static SemaphoreHandle_t dataMutex;
 
 
@@ -254,13 +254,38 @@ static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_mat
 static inline float arm_sqrt(float32_t in)
   { float pOut = 0; arm_status result = arm_sqrt_f32(in, &pOut); configASSERT(ARM_MATH_SUCCESS == result); return pOut; }
 
+static void kalmanTask(void* parameters);
 static bool predictStateForward(uint32_t osTick, float dt);
 static bool updateQueuedMeasurments(const Axis3f *gyro);
 
 
 // --------------------------------------------------
 
-void kalmanTask(void* parameters) {
+void estimatorKalmanTaskInit() {
+  distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
+  posDataQueue = xQueueCreate(POS_QUEUE_LENGTH, sizeof(positionMeasurement_t));
+  poseDataQueue = xQueueCreate(POSE_QUEUE_LENGTH, sizeof(poseMeasurement_t));
+  tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
+  flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
+  tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
+  heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
+  yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(float));
+
+  vSemaphoreCreateBinary(measurementQueueSemaphore);
+  xSemaphoreGive(measurementQueueSemaphore);
+
+  dataMutex = xSemaphoreCreateMutex();
+
+  xTaskCreate(kalmanTask, KALMAN_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL, KALMAN_TASK_PRI, NULL);
+
+  isInit = true;
+}
+
+bool estimatorKalmanTaskTest() {
+  return isInit;
+}
+
+static void kalmanTask(void* parameters) {
   systemWaitStart();
 
   uint32_t lastPrediction = xTaskGetTickCount();
@@ -539,27 +564,14 @@ static bool updateQueuedMeasurments(const Axis3f *gyro) {
 }
 
 void estimatorKalmanInit(void) {
-  if (!isInit)
-  {
-    distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
-    posDataQueue = xQueueCreate(POS_QUEUE_LENGTH, sizeof(positionMeasurement_t));
-    poseDataQueue = xQueueCreate(POSE_QUEUE_LENGTH, sizeof(poseMeasurement_t));
-    tdoaDataQueue = xQueueCreate(UWB_QUEUE_LENGTH, sizeof(tdoaMeasurement_t));
-    flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
-    tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
-    heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
-    yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(float));
-  }
-  else
-  {
-    xQueueReset(distDataQueue);
-    xQueueReset(posDataQueue);
-    xQueueReset(poseDataQueue);
-    xQueueReset(tdoaDataQueue);
-    xQueueReset(flowDataQueue);
-    xQueueReset(tofDataQueue);
-  }
+  xQueueReset(distDataQueue);
+  xQueueReset(posDataQueue);
+  xQueueReset(poseDataQueue);
+  xQueueReset(tdoaDataQueue);
+  xQueueReset(flowDataQueue);
+  xQueueReset(tofDataQueue);
 
+  xSemaphoreTake(dataMutex, portMAX_DELAY);
   accAccumulator = (Axis3f){.axis={0}};
   gyroAccumulator = (Axis3f){.axis={0}};
   thrustAccumulator = 0;
@@ -569,13 +581,9 @@ void estimatorKalmanInit(void) {
   gyroAccumulatorCount = 0;
   thrustAccumulatorCount = 0;
   baroAccumulatorCount = 0;
+  xSemaphoreGive(dataMutex);
 
   kalmanCoreInit(&coreData);
-
-  vSemaphoreCreateBinary(measurementQueueSemaphore);
-  xSemaphoreGive(measurementQueueSemaphore);
-
-  dataMutex = xSemaphoreCreateMutex();
 
   const uint32_t now_ms = T2M(xTaskGetTickCount());
   statsCntReset(&statsUpdates, now_ms);
@@ -584,11 +592,6 @@ void estimatorKalmanInit(void) {
   statsCntReset(&statsFinalize, now_ms);
   statsCntReset(&statsUMeasurementAppended, now_ms);
   statsCntReset(&statsUMeasurementNotAppended, now_ms);
-
-  xTaskCreate(kalmanTask, KALMAN_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
-                    KALMAN_TASK_PRI, NULL);
-
-  isInit = true;
 }
 
 static bool appendMeasurement(xQueueHandle queue, void *measurement)
