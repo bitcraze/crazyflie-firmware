@@ -38,12 +38,17 @@ void statsCntInc(statsCntRate_t* this) {
 }
 
 float statsCntRate(statsCntRate_t* this, const uint32_t now_ms) {
+    float result = 0.0f;
+
     const uint32_t dt_ms = now_ms - this->latestAverage_ms;
     if (dt_ms > 0) {
         const float oneSecond_ms = 1000.0f;
-        this->result = this->count * oneSecond_ms / dt_ms;
-        return this->result;
-    } else {
-        return 0.0f;
+        result = this->count * oneSecond_ms / dt_ms;
     }
+
+    this->count = 0;
+    this->result = result;
+    this->latestAverage_ms = now_ms;
+
+    return result;
 }

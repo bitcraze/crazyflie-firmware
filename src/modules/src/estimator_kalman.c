@@ -276,6 +276,14 @@ void estimatorKalmanTaskInit() {
 
   dataMutex = xSemaphoreCreateMutex();
 
+  const uint32_t now_ms = T2M(xTaskGetTickCount());
+  statsCntReset(&statsUpdates, now_ms);
+  statsCntReset(&statsPredictions, now_ms);
+  statsCntReset(&statsBaroUpdates, now_ms);
+  statsCntReset(&statsFinalize, now_ms);
+  statsCntReset(&statsUMeasurementAppended, now_ms);
+  statsCntReset(&statsUMeasurementNotAppended, now_ms);
+
   xTaskCreate(kalmanTask, KALMAN_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL, KALMAN_TASK_PRI, NULL);
 
   isInit = true;
@@ -589,14 +597,6 @@ void estimatorKalmanInit(void) {
   xSemaphoreGive(dataMutex);
 
   kalmanCoreInit(&coreData);
-
-  const uint32_t now_ms = T2M(xTaskGetTickCount());
-  statsCntReset(&statsUpdates, now_ms);
-  statsCntReset(&statsPredictions, now_ms);
-  statsCntReset(&statsBaroUpdates, now_ms);
-  statsCntReset(&statsFinalize, now_ms);
-  statsCntReset(&statsUMeasurementAppended, now_ms);
-  statsCntReset(&statsUMeasurementNotAppended, now_ms);
 }
 
 static bool appendMeasurement(xQueueHandle queue, void *measurement)

@@ -91,6 +91,8 @@ void testThatRateIsComputedWhenNoTimeHasPassed() {
       statsCntInc(&data);
   }
 
+  data.result = 47.11f;
+
   uint32_t now = resetTime;
   float expected = 0.0f;
 
@@ -101,3 +103,19 @@ void testThatRateIsComputedWhenNoTimeHasPassed() {
   TEST_ASSERT_EQUAL_FLOAT(expected, actual);
   TEST_ASSERT_EQUAL_FLOAT(expected, data.result);
 }
+
+void testThatCountersAreResetWhenRateIsComputed() {
+  // Fixture
+  statsCntInc(&data);
+
+  uint32_t dt_ms = 500;
+  uint32_t now = resetTime + dt_ms;
+
+  // Test
+  float actual = statsCntRate(&data, now);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(0, data.count);
+  TEST_ASSERT_EQUAL_UINT32(now, data.latestAverage_ms);
+}
+
