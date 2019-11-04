@@ -258,7 +258,7 @@ static void stabilizerTask(void* param)
     } else {
       // allow to update estimator dynamically
       if (getStateEstimator() != estimatorType) {
-        stateEstimatorInit(estimatorType);
+        stateEstimatorSwitchTo(estimatorType);
         estimatorType = getStateEstimator();
       }
       // allow to update controller dynamically
@@ -269,7 +269,7 @@ static void stabilizerTask(void* param)
 
       stateEstimator(&state, &sensorData, &control, tick);
       compressState();
-      
+
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 

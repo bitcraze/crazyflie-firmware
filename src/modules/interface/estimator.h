@@ -37,6 +37,7 @@ typedef enum {
 
 void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
+void stateEstimatorSwitchTo(StateEstimatorType estimator);
 void stateEstimator(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
 StateEstimatorType getStateEstimator(void);
 const char* stateEstimatorGetName();

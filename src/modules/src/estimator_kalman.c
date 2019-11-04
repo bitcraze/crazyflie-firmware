@@ -209,6 +209,8 @@ static kalmanCoreData_t coreData;
  */
 
 static bool isInit = false;
+static volatile bool isEstimatorActive = false;
+
 static Axis3f accAccumulator;
 static float thrustAccumulator;
 static Axis3f gyroAccumulator;
@@ -234,6 +236,7 @@ static statsCntRate_t statsFinalize;
 static statsCntRate_t statsUMeasurementAppended;
 static statsCntRate_t statsUMeasurementNotAppended;
 static void updateStats(uint32_t now_ms);
+static void blockWhileInactive();
 
 #ifdef KALMAN_USE_BARO_UPDATE
 static const bool useBaroUpdate = true;
@@ -261,6 +264,7 @@ static bool updateQueuedMeasurments(const Axis3f *gyro);
 
 // --------------------------------------------------
 
+// Called one time during system startup
 void estimatorKalmanTaskInit() {
   distDataQueue = xQueueCreate(DIST_QUEUE_LENGTH, sizeof(distanceMeasurement_t));
   posDataQueue = xQueueCreate(POS_QUEUE_LENGTH, sizeof(positionMeasurement_t));
@@ -284,6 +288,7 @@ void estimatorKalmanTaskInit() {
   statsCntReset(&statsUMeasurementAppended, now_ms);
   statsCntReset(&statsUMeasurementNotAppended, now_ms);
 
+  isEstimatorActive = false;
   xTaskCreate(kalmanTask, KALMAN_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL, KALMAN_TASK_PRI, NULL);
 
   isInit = true;
@@ -303,6 +308,8 @@ static void kalmanTask(void* parameters) {
   uint32_t nextStatsUpdate = 0;
 
   while (true) {
+    blockWhileInactive();
+
     // Wake up when it is time for next prediction, unless we get queued meassurements
     uint32_t maxSleepTics = nextPrediction - xTaskGetTickCount();
     if (maxSleepTics > 0) {
@@ -404,6 +411,12 @@ static void kalmanTask(void* parameters) {
       updateStats(T2M(osTick));
       nextStatsUpdate = osTick + M2T(1000);
     }
+  }
+}
+
+static void blockWhileInactive() {
+  while(! isEstimatorActive) {
+    vTaskDelay(M2T(300));
   }
 }
 
@@ -576,6 +589,7 @@ static bool updateQueuedMeasurments(const Axis3f *gyro) {
   return doneUpdate;
 }
 
+// Called when this estimator is activated
 void estimatorKalmanInit(void) {
   xQueueReset(distDataQueue);
   xQueueReset(posDataQueue);
@@ -597,6 +611,13 @@ void estimatorKalmanInit(void) {
   xSemaphoreGive(dataMutex);
 
   kalmanCoreInit(&coreData);
+
+  isEstimatorActive = true;
+}
+
+// Called when another estimator is activated, and this estimator no longer is the active estimator
+void estimatorKalmanDeinit(void) {
+  isEstimatorActive = false;
 }
 
 static bool appendMeasurement(xQueueHandle queue, void *measurement)
