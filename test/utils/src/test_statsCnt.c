@@ -112,7 +112,7 @@ void testThatCountersAreResetWhenRateIsComputed() {
   uint32_t now = resetTime + dt_ms;
 
   // Test
-  float actual = statsCntRate(&data, now);
+  statsCntRate(&data, now);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(0, data.count);
