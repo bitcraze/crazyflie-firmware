@@ -67,6 +67,8 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 };
 
+baseStationEulerAngles_t lighthouseBaseStationAngles[2];
+
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
 
@@ -283,6 +285,10 @@ static void lighthouseTask(void *param)
 
   int basestation;
   int axis;
+
+  // Get the eulerangles from the rotation matrix of the basestations
+  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
+  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
 
   systemWaitStart();
 

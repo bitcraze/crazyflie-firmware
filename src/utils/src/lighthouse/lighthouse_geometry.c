@@ -263,3 +263,36 @@ bool lighthouseGeometryYawDelta(const vec3d ipv, const vec3d spv, const vec3d n,
     *yawDelta = delta;
     return true;
 }
+
+/**
+ * @brief Get the roll, pitch, yaw angles of the basestation rotation matrix
+ * Note: the origin of the Crazyflie is set in the center of the deck
+ *
+ * @param baseStation - Geometry data for the base station (position and orientation)
+ */
+void lighthouseGeometryCalculateAnglesFromRotationMatrix(baseStationGeometry_t* baseStationGeometry, baseStationEulerAngles_t* baseStationEulerAngles) {
+
+   /*
+    * roll pitch yaw Rotation matrix
+    *
+    R = | R00 R01 R02 |
+        | R10 R11 R12 |
+        | R20 R21 R22 |
+        */
+
+  float32_t R00 = (float32_t)baseStationGeometry->mat[0][0];
+  float32_t R01 = (float32_t)baseStationGeometry->mat[0][1];
+  float32_t R02 = (float32_t)baseStationGeometry->mat[0][2];
+  float32_t R12 = (float32_t)baseStationGeometry->mat[1][2];
+  float32_t R22 = (float32_t)baseStationGeometry->mat[2][2];
+
+
+  float pitchBaseStation = asin(R02);
+  float yawBaseStation = -1.0*atan2(R01,R00);
+  float rollBaseStation = -1.0*atan2(R12,R22);
+
+  baseStationEulerAngles->roll=rollBaseStation;
+  baseStationEulerAngles->pitch=pitchBaseStation;
+  baseStationEulerAngles->yaw=yawBaseStation;
+
+}
