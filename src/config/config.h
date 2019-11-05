@@ -92,7 +92,7 @@
 #define OA_DECK_TASK_PRI        3
 #define UART1_TEST_TASK_PRI     1
 #define UART2_TEST_TASK_PRI     1
-#define KALMAN_TASK_PRI         1
+#define KALMAN_TASK_PRI         2
 
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
