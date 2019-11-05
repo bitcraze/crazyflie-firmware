@@ -63,7 +63,7 @@ static EstimatorFcns estimatorFunctions[] = {
   },
   {
     .init = estimatorKalmanInit,
-    .deinit = estimatorKalmanDeinit,
+    .deinit = NOT_IMPLEMENTED,
     .test = estimatorKalmanTest,
     .update = estimatorKalman,
     .name = "Kalman",

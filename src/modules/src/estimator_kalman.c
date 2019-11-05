@@ -157,8 +157,8 @@ static inline bool stateEstimatorHasYawErrorPacket(float *error) {
   return (pdTRUE == xQueueReceive(yawErrorDataQueue, error, 0));
 }
 
-// Semaphore to signal that measurement data has been queued
-static SemaphoreHandle_t measurementQueueSemaphore;
+// Semaphore to signal that we got data from the stabilzer loop to process
+static SemaphoreHandle_t runTaskSemaphore;
 
 // Mutex to protect data that is shared between the task and
 // functions called by the stabilizer loop
@@ -209,7 +209,6 @@ static kalmanCoreData_t coreData;
  */
 
 static bool isInit = false;
-static volatile bool isEstimatorActive = false;
 
 static Axis3f accAccumulator;
 static float thrustAccumulator;
@@ -236,7 +235,6 @@ static statsCntRate_t statsFinalize;
 static statsCntRate_t statsUMeasurementAppended;
 static statsCntRate_t statsUMeasurementNotAppended;
 static void updateStats(uint32_t now_ms);
-static void blockWhileInactive();
 
 #ifdef KALMAN_USE_BARO_UPDATE
 static const bool useBaroUpdate = true;
@@ -275,8 +273,7 @@ void estimatorKalmanTaskInit() {
   heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
   yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(float));
 
-  vSemaphoreCreateBinary(measurementQueueSemaphore);
-  xSemaphoreGive(measurementQueueSemaphore);
+  vSemaphoreCreateBinary(runTaskSemaphore);
 
   dataMutex = xSemaphoreCreateMutex();
 
@@ -288,7 +285,6 @@ void estimatorKalmanTaskInit() {
   statsCntReset(&statsUMeasurementAppended, now_ms);
   statsCntReset(&statsUMeasurementNotAppended, now_ms);
 
-  isEstimatorActive = false;
   xTaskCreate(kalmanTask, KALMAN_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL, KALMAN_TASK_PRI, NULL);
 
   isInit = true;
@@ -308,13 +304,7 @@ static void kalmanTask(void* parameters) {
   uint32_t nextStatsUpdate = 0;
 
   while (true) {
-    blockWhileInactive();
-
-    // Wake up when it is time for next prediction, unless we get queued meassurements
-    uint32_t maxSleepTics = nextPrediction - xTaskGetTickCount();
-    if (maxSleepTics > 0) {
-      xSemaphoreTake(measurementQueueSemaphore, maxSleepTics);
-    }
+    xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
 
     // If the client triggers an estimator reset via parameter update
     if (coreData.resetEstimation) {
@@ -346,8 +336,13 @@ static void kalmanTask(void* parameters) {
     /**
      * Add process noise every loop, rather than every prediction
      */
-    kalmanCoreAddProcessNoise(&coreData, T2S(osTick - lastPNUpdate));
-    lastPNUpdate = osTick;
+    {
+      float dt = T2S(osTick - lastPNUpdate);
+      if (dt > 0.0f) {
+        kalmanCoreAddProcessNoise(&coreData, dt);
+        lastPNUpdate = osTick;
+      }
+    }
 
     /**
      * Update the state estimate with the barometer measurements
@@ -414,12 +409,6 @@ static void kalmanTask(void* parameters) {
   }
 }
 
-static void blockWhileInactive() {
-  while(! isEstimatorActive) {
-    vTaskDelay(M2T(300));
-  }
-}
-
 static void updateStats(uint32_t now_ms) {
   statsCntRate(&statsUpdates, now_ms);
   statsCntRate(&statsPredictions, now_ms);
@@ -471,6 +460,8 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
   // Copy the latest state, calculated by the task
   memcpy(state, &taskEstimatorState, sizeof(state_t));
   xSemaphoreGive(dataMutex);
+
+  xSemaphoreGive(runTaskSemaphore);
 }
 
 static bool predictStateForward(uint32_t osTick, float dt) {
@@ -611,13 +602,6 @@ void estimatorKalmanInit(void) {
   xSemaphoreGive(dataMutex);
 
   kalmanCoreInit(&coreData);
-
-  isEstimatorActive = true;
-}
-
-// Called when another estimator is activated, and this estimator no longer is the active estimator
-void estimatorKalmanDeinit(void) {
-  isEstimatorActive = false;
 }
 
 static bool appendMeasurement(xQueueHandle queue, void *measurement)
@@ -628,14 +612,12 @@ static bool appendMeasurement(xQueueHandle queue, void *measurement)
   if (isInInterrupt) {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     result = xQueueSendFromISR(queue, measurement, &xHigherPriorityTaskWoken);
-    xSemaphoreGiveFromISR(measurementQueueSemaphore, &xHigherPriorityTaskWoken);
     if(xHigherPriorityTaskWoken == pdTRUE)
     {
       portYIELD();
     }
   } else {
     result = xQueueSend(queue, measurement, 0);
-    xSemaphoreGive(measurementQueueSemaphore);
   }
 
   if (result == pdTRUE) {

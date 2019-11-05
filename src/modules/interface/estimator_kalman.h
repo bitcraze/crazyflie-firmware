@@ -58,7 +58,6 @@
 #include "stabilizer_types.h"
 
 void estimatorKalmanInit(void);
-void estimatorKalmanDeinit();
 bool estimatorKalmanTest(void);
 void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
 
