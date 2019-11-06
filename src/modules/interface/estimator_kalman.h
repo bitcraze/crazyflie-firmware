@@ -75,7 +75,7 @@ bool estimatorKalmanEnqueueDistance(const distanceMeasurement_t *dist);
 bool estimatorKalmanEnqueueTOF(const tofMeasurement_t *tof);
 bool estimatorKalmanEnqueueAbsoluteHeight(const heightMeasurement_t *height);
 bool estimatorKalmanEnqueueFlow(const flowMeasurement_t *flow);
-bool estimatorKalmanEnqueueYawError(const float error);
+bool estimatorKalmanEnqueueYawError(const yawErrorMeasurement_t* error);
 
 void estimatorKalmanGetEstimatedPos(point_t* pos);
 

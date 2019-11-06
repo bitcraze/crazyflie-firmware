@@ -126,7 +126,7 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof);
 
 // Measurement of yaw error (outside measurement Vs current estimation)
-void kalmanCoreUpdateWithYawError(kalmanCoreData_t* this, float *error);
+void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t *error);
 
 /**
  * Primary Kalman filter functions

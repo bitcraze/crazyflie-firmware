@@ -25,7 +25,7 @@ typedef struct {
   bool (*estimatorEnqueueTOF)(const tofMeasurement_t *tof);
   bool (*estimatorEnqueueAbsoluteHeight)(const heightMeasurement_t *height);
   bool (*estimatorEnqueueFlow)(const flowMeasurement_t *flow);
-  bool (*estimatorEnqueueYawError)(const float error);
+  bool (*estimatorEnqueueYawError)(const yawErrorMeasurement_t *error);
 } EstimatorFcns;
 
 #define NOT_IMPLEMENTED ((void*)0)
@@ -77,7 +77,6 @@ static EstimatorFcns estimatorFunctions[] = {
     .estimatorEnqueueYawError = estimatorKalmanEnqueueYawError,
     },
 };
-
 
 void stateEstimatorInit(StateEstimatorType estimator) {
   stateEstimatorSwitchTo(estimator);
@@ -145,7 +144,7 @@ bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb) {
   return false;
 }
 
-bool estimatorEnqueueYawError(const float error) {
+bool estimatorEnqueueYawError(const yawErrorMeasurement_t* error) {
   if (estimatorFunctions[currentEstimator].estimatorEnqueueYawError) {
     return estimatorFunctions[currentEstimator].estimatorEnqueueYawError(error);
   }
@@ -200,4 +199,3 @@ bool estimatorEnqueueFlow(const flowMeasurement_t *flow) {
 
   return false;
 }
-

@@ -266,7 +266,8 @@ static void estimateYaw(pulseProcessorResult_t angles[]) {
   // Calculate yaw delta using only one base station for now
   float yawDelta;
   if (estimateYawDeltaOneBaseStation(0, angles, lighthouseBaseStationsGeometry, cfPos, n, &RR, &yawDelta)) {
-    estimatorEnqueueYawError(yawDelta);
+    yawErrorMeasurement_t yawDeltaMeasurement = {.yawError = yawDelta, .stdDev = 0.01};
+    estimatorEnqueueYawError(&yawDeltaMeasurement);
   }
 }
 

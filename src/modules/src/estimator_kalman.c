@@ -153,7 +153,8 @@ static inline bool stateEstimatorHasHeightPacket(heightMeasurement_t *height) {
 static xQueueHandle yawErrorDataQueue;
 #define YAW_ERROR_QUEUE_LENGTH (10)
 
-static inline bool stateEstimatorHasYawErrorPacket(float *error) {
+static inline bool stateEstimatorHasYawErrorPacket(yawErrorMeasurement_t *error)
+{
   return (pdTRUE == xQueueReceive(yawErrorDataQueue, error, 0));
 }
 
@@ -271,7 +272,7 @@ void estimatorKalmanTaskInit() {
   flowDataQueue = xQueueCreate(FLOW_QUEUE_LENGTH, sizeof(flowMeasurement_t));
   tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
   heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
-  yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(float));
+  yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(yawErrorMeasurement_t));
 
   vSemaphoreCreateBinary(runTaskSemaphore);
 
@@ -528,7 +529,7 @@ static bool updateQueuedMeasurments(const Axis3f *gyro) {
     doneUpdate = true;
   }
 
-  float yawError = 0.0f;
+  yawErrorMeasurement_t yawError;
   while (stateEstimatorHasYawErrorPacket(&yawError))
   {
     kalmanCoreUpdateWithYawError(&coreData, &yawError);
@@ -674,10 +675,10 @@ bool estimatorKalmanEnqueueAbsoluteHeight(const heightMeasurement_t *height)
   return appendMeasurement(heightDataQueue, (void *)height);
 }
 
-bool estimatorKalmanEnqueueYawError(const float error)
+bool estimatorKalmanEnqueueYawError(const yawErrorMeasurement_t* error)
 {
   ASSERT(isInit);
-  return appendMeasurement(yawErrorDataQueue, (void *)&error);
+  return appendMeasurement(yawErrorDataQueue, (void *)error);
 }
 
 bool estimatorKalmanTest(void)

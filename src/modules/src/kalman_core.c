@@ -556,13 +556,13 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
   }
 }
 
-void kalmanCoreUpdateWithYawError(kalmanCoreData_t* this, float *error)
+void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t *error)
 {
     float h[KC_STATE_DIM] = {0};
     arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
 
     h[KC_STATE_D2] = 1;
-    scalarUpdate(this, &H, this->S[KC_STATE_D2] - *error, 0.01);
+    scalarUpdate(this, &H, this->S[KC_STATE_D2] - error->yawError, error->stdDev);
 }
 
 void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)

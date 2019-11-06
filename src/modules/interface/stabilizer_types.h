@@ -232,6 +232,13 @@ typedef struct heightMeasurement_s {
   float stdDev;
 } heightMeasurement_t;
 
+/** Yaw error measurement */
+typedef struct {
+  uint32_t timestamp;
+  float yawError;
+  float stdDev;
+} yawErrorMeasurement_t;
+
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000
 #define RATE_500_HZ 500
