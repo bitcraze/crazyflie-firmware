@@ -565,6 +565,11 @@ void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t 
     scalarUpdate(this, &H, this->S[KC_STATE_D2] - error->yawError, error->stdDev);
 }
 
+void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles)
+{
+  // TODO krri
+}
+
 void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order

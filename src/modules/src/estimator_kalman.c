@@ -158,6 +158,14 @@ static inline bool stateEstimatorHasYawErrorPacket(yawErrorMeasurement_t *error)
   return (pdTRUE == xQueueReceive(yawErrorDataQueue, error, 0));
 }
 
+static xQueueHandle sweepAnglesDataQueue;
+#define SWEEP_ANGLES_QUEUE_LENGTH (10)
+
+static inline bool stateEstimatorHasSweepAnglesPacket(sweepAngleMeasurement_t *angles)
+{
+  return (pdTRUE == xQueueReceive(sweepAnglesDataQueue, angles, 0));
+}
+
 // Semaphore to signal that we got data from the stabilzer loop to process
 static SemaphoreHandle_t runTaskSemaphore;
 
@@ -273,6 +281,7 @@ void estimatorKalmanTaskInit() {
   tofDataQueue = xQueueCreate(TOF_QUEUE_LENGTH, sizeof(tofMeasurement_t));
   heightDataQueue = xQueueCreate(HEIGHT_QUEUE_LENGTH, sizeof(heightMeasurement_t));
   yawErrorDataQueue = xQueueCreate(YAW_ERROR_QUEUE_LENGTH, sizeof(yawErrorMeasurement_t));
+  sweepAnglesDataQueue = xQueueCreate(SWEEP_ANGLES_QUEUE_LENGTH, sizeof(sweepAngleMeasurement_t));
 
   vSemaphoreCreateBinary(runTaskSemaphore);
 
@@ -578,6 +587,13 @@ static bool updateQueuedMeasurments(const Axis3f *gyro) {
     doneUpdate = true;
   }
 
+  sweepAngleMeasurement_t angles;
+  while (stateEstimatorHasSweepAnglesPacket(&angles))
+  {
+    kalmanCoreUpdateWithSweepAngles(&coreData, &angles);
+    doneUpdate = true;
+  }
+
   return doneUpdate;
 }
 
@@ -679,6 +695,12 @@ bool estimatorKalmanEnqueueYawError(const yawErrorMeasurement_t* error)
 {
   ASSERT(isInit);
   return appendMeasurement(yawErrorDataQueue, (void *)error);
+}
+
+bool estimatorKalmanEnqueueSweepAngles(const sweepAngleMeasurement_t *angles)
+{
+  ASSERT(isInit);
+  return appendMeasurement(sweepAnglesDataQueue, (void *)&angles);
 }
 
 bool estimatorKalmanTest(void)
