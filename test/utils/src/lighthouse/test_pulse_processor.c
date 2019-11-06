@@ -535,7 +535,6 @@ void testThatRsultStructIsCleared() {
 
   // Assert
   TEST_ASSERT_EQUAL_INT(0, angles[2].validCount);
-  TEST_ASSERT_FALSE(angles[3].isAngleValid[1][0]);
 }
 
 // Test helpers
