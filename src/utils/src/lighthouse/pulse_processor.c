@@ -442,5 +442,7 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
  */
 void pulseProcessorClear(pulseProcessorResult_t angles[])
 {
-  memset(angles, 0, sizeof(pulseProcessorResult_t) * PULSE_PROCESSOR_N_SENSORS);
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    angles[sensor].validCount = 0;
+  }
 }
