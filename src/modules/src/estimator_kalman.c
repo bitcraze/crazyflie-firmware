@@ -700,7 +700,7 @@ bool estimatorKalmanEnqueueYawError(const yawErrorMeasurement_t* error)
 bool estimatorKalmanEnqueueSweepAngles(const sweepAngleMeasurement_t *angles)
 {
   ASSERT(isInit);
-  return appendMeasurement(sweepAnglesDataQueue, (void *)&angles);
+  return appendMeasurement(sweepAnglesDataQueue, (void *)angles);
 }
 
 bool estimatorKalmanTest(void)
