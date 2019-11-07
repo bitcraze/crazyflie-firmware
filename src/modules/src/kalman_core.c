@@ -567,7 +567,60 @@ void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t 
 
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles)
 {
-  // TODO krri
+    // Get rotation matrix and invert it (to get the global to local rotation matrix)
+    arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)angles->geometry.mat};
+    arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)angles->geometry.mat};
+    arm_mat_inverse_f32(&basestation_rotation_matrix,&basestation_rotation_matrix_inv);
+
+    // Get the current state values of the position of the crazyflie and calculate the difference between
+    // the base stations and the CF.
+    float pos_x =this->S[KC_STATE_X];;
+    float pos_y =this->S[KC_STATE_Y];;
+    float pos_z =this->S[KC_STATE_Z];;
+
+    float dx = pos_x - angles->geometry.origin[0];
+    float dy = pos_y - angles->geometry.origin[1];
+    float dz = pos_z - angles->geometry.origin[2];
+
+    // Rotate the difference in position to be relative to the basestation
+    vec3d position_diff = {dx, dy, dz};
+    vec3d position_diff_rotated = {0,0,0};
+    arm_matrix_instance_f32 vec_pos_diff = {3, 1, position_diff};
+    arm_matrix_instance_f32 vec_pos_diff_rot = {3, 1, position_diff_rotated};
+    arm_mat_mult_f32( &basestation_rotation_matrix_inv,&vec_pos_diff, &vec_pos_diff_rot);
+
+    float dx_rot = position_diff_rotated[0];
+    float dy_rot = position_diff_rotated[1];
+    float dz_rot = position_diff_rotated[2];
+
+    // Retrieve the measured sweepangles
+    float measuredSweepAngleHorizontal = angles->angleX;
+    float measuredSweepAngleVertical =angles->angleY;
+
+    // Get the predicted sweep angles based on the relative difference in position
+    float predictedSweepAngleHorizontal=0;
+    float predictedSweepAngleVertical=0;
+    if(dx_rot!=0)
+    {
+        predictedSweepAngleHorizontal = atan2(dy_rot,dx_rot);
+        predictedSweepAngleVertical = atan2(dz_rot,dx_rot);
+    }
+
+    // Input the measurement model of the H matrix
+    float h_hor[KC_STATE_DIM] = {0};
+    arm_matrix_instance_f32 H_hor = {1, KC_STATE_DIM, h_hor};
+    h_hor[KC_STATE_X] = dy_rot/(dx_rot*dx_rot + dy_rot*dy_rot);
+    h_hor[KC_STATE_Y] = dx_rot/(dx_rot*dx_rot + dy_rot*dy_rot);
+
+    float h_ver[KC_STATE_DIM] = {0};
+    arm_matrix_instance_f32 H_ver = {1, KC_STATE_DIM, h_ver};
+    h_ver[KC_STATE_X] = dz_rot/(dx_rot*dx_rot + dz_rot*dz_rot);
+    h_ver[KC_STATE_Z] = dx_rot/(dx_rot*dx_rot + dz_rot*dz_rot);
+
+    // Two scalar updates for both sweepangles
+    scalarUpdate(this, &H_hor, measuredSweepAngleHorizontal-predictedSweepAngleHorizontal, angles->stdDevX);
+    scalarUpdate(this, &H_ver, measuredSweepAngleVertical-predictedSweepAngleVertical, angles->stdDevY);
+
 }
 
 void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
