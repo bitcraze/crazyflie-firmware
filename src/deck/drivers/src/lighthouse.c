@@ -200,10 +200,24 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   }
   ext_pos.stdDev = 0.01;
   estimatorEnqueuePosition(&ext_pos);
+
+  // Experimental code for pushing sweep angles into the kalman filter
+  #if 0
+  sweepAngleMeasurement_t sweepAngles;
+  sweepAngles.angleX = angles[0].correctedAngles[0][0];
+  sweepAngles.angleY = angles[0].correctedAngles[0][1];
+  sweepAngles.stdDevX = 0.1;
+  sweepAngles.stdDevY = 0.1;
+  memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[0], sizeof(baseStationGeometry_t));
+  if (sweepAngles.angleX!=0&&sweepAngles.angleY!=0) {
+      estimatorEnqueueSweepAngles(&sweepAngles);
+  }
+  #endif
 }
 
 static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t angles[], baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
   baseStationGeometry_t* baseStationGeometry = &baseStationGeometries[bs];
+
 
   vec3d baseStationPos;
   lighthouseGeometryGetBaseStationPosition(baseStationGeometry, baseStationPos);
