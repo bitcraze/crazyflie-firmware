@@ -18,19 +18,19 @@ script:
 
   # Build cf2 with TDMA
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0" UNIT_TEST_STYLE=min
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0" UNIT_TEST_STYLE=min
 
   # Build cf2 with TDOA2 positioning mode
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA_ENABLE=1 UNIT_TEST_STYLE=min
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 LPS_TDOA_ENABLE=1 UNIT_TEST_STYLE=min
 
   # Build cf2 with TDOA3 positioning mode
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA3_ENABLE=1 UNIT_TEST_STYLE=min
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 LPS_TDOA3_ENABLE=1 UNIT_TEST_STYLE=min
 
   # Build cf2 with TDOA3 and all config options
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
-  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE" UNIT_TEST_STYLE=min
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE" UNIT_TEST_STYLE=min
 
   # Build the tag platform
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
