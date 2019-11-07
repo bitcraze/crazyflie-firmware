@@ -66,9 +66,9 @@ void commanderInit(void)
 void commanderSetSetpoint(setpoint_t *setpoint, int priority)
 {
   int currentPriority;
-  xQueuePeek(priorityQueue, &currentPriority, 0);
 
-  if (priority >= currentPriority) {
+
+  if (xQueuePeek(priorityQueue, &currentPriority, 0) == pdPass && priority >= currentPriority) {
     setpoint->timestamp = xTaskGetTickCount();
     // This is a potential race but without effect on functionality
     xQueueOverwrite(setpointQueue, setpoint);
