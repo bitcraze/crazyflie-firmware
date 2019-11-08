@@ -606,16 +606,42 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       float predictedSweepAngleHorizontal = atan2(dy_rot, dx_rot);
       float predictedSweepAngleVertical = atan2(dz_rot, dx_rot);
 
+
+      // Calculations for measurement model with rotation
+      /*float r00= bs_r_inv[0][0];
+      float r01= bs_r_inv[0][1];
+      float r02= bs_r_inv[0][2];
+      float r10= bs_r_inv[1][0];
+      float r11= bs_r_inv[1][1];
+      float r12= bs_r_inv[1][2];
+      float r20= bs_r_inv[2][0];
+      float r21= bs_r_inv[2][1];
+      float r22= bs_r_inv[2][2];
+
+      float temp1 = dx*r00+dy*r01+dz*r02;
+      float temp2 = dx*r10+dy*r11+dz*r12;
+      float temp3= dx*r20+dy*r21+dz*r22;*/
+
       // Input the measurement model of the H matrix
       float h_hor[KC_STATE_DIM] = {0};
       arm_matrix_instance_f32 H_hor = {1, KC_STATE_DIM, h_hor};
-      h_hor[KC_STATE_X] = dy_rot / (dx_rot * dx_rot + dy_rot * dy_rot);
+      h_hor[KC_STATE_X] = (-1*dy_rot) / (dx_rot * dx_rot + dy_rot * dy_rot);
       h_hor[KC_STATE_Y] = dx_rot / (dx_rot * dx_rot + dy_rot * dy_rot);
+
+      // Calculations for measurement model with rotation
+      /*h_hor[KC_STATE_X] = ((r10/temp1)-(temp2*r00)/(temp1*temp1))/((temp2*temp2)/(temp1*temp1)+1);
+      h_hor[KC_STATE_Y] = ((r11/temp1)-(temp2*r01)/(temp1*temp1))/((temp2*temp2)/(temp1*temp1)+1);
+      h_hor[KC_STATE_Z] =  ((r12/temp1)-(temp2*r02)/(temp1*temp1))/((temp2*temp2)/(temp1*temp1)+1);*/
 
       float h_ver[KC_STATE_DIM] = {0};
       arm_matrix_instance_f32 H_ver = {1, KC_STATE_DIM, h_ver};
-      h_ver[KC_STATE_X] = dz_rot / (dx_rot * dx_rot + dz_rot * dz_rot);
+      h_ver[KC_STATE_X] = (-1*dz_rot) / (dx_rot * dx_rot + dz_rot * dz_rot);
       h_ver[KC_STATE_Z] = dx_rot / (dx_rot * dx_rot + dz_rot * dz_rot);
+
+      /*h_hor[KC_STATE_X] = ((r20/temp1)-(temp3*r00)/(temp1*temp1))/((temp3*temp3)/(temp1*temp1)+1);
+      h_hor[KC_STATE_Y] = ((r21/temp1)-(temp3*r01)/(temp1*temp1))/((temp3*temp3)/(temp1*temp1)+1);
+      h_hor[KC_STATE_Z] = ((r22/temp1)-(temp3*r02)/(temp1*temp1))/((temp3*temp3)/(temp1*temp1)+1);*/
+
 
       // Two scalar updates for both sweepangles
       scalarUpdate(this, &H_hor, measuredSweepAngleHorizontal - predictedSweepAngleHorizontal, angles->stdDevX);

@@ -10,7 +10,6 @@ typedef float vec3d[vec3d_size];
 typedef struct baseStationGeometry_s {
   float origin[3];
   float mat[3][3];
-  float eulerAngles[3];
 } __attribute__((packed)) baseStationGeometry_t;
 
 typedef struct baseStationEulerAngles_s {
