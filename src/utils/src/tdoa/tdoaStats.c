@@ -34,43 +34,24 @@ Log statistics for the tdoa engine
 #define STATS_INTERVAL 500
 
 
-static void clearStats(tdoaStats_t* tdoaStats) {
-  tdoaStats->packetsReceived = 0;
-  tdoaStats->packetsToEstimator = 0;
-  tdoaStats->clockCorrectionCount = 0;
-  tdoaStats->contextHitCount = 0;
-  tdoaStats->contextMissCount = 0;
-  tdoaStats->timeIsGood = 0;
-  tdoaStats->suitableDataFound = 0;
-}
-
 void tdoaStatsInit(tdoaStats_t* tdoaStats, uint32_t now_ms) {
   memset(tdoaStats, 0, sizeof(tdoaStats_t));
   tdoaStats->remoteAnchorId = tdoaStats->newRemoteAnchorId = 1;
 
-  tdoaStats->packetsReceivedRate = 0;
-  tdoaStats->clockCorrectionRate = 0;
   tdoaStats->nextStatisticsTime = now_ms + STATS_INTERVAL;
   tdoaStats->previousStatisticsTime = 0;
 
-  clearStats(tdoaStats);
+  STATS_CNT_RATE_INIT(&tdoaStats->packetsReceived, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->packetsToEstimator, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->clockCorrectionCount, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->contextHitCount, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->contextMissCount, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->timeIsGood, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->suitableDataFound, STATS_INTERVAL);
 }
 
 void tdoaStatsUpdate(tdoaStats_t* tdoaStats, uint32_t now_ms) {
   if (now_ms > tdoaStats->nextStatisticsTime) {
-    float interval = now_ms - tdoaStats->previousStatisticsTime;
-    if (interval > 0.0f) {
-      tdoaStats->packetsReceivedRate = (uint16_t)(1000.0f * tdoaStats->packetsReceived / interval);
-      tdoaStats->packetsToEstimatorRate = (uint16_t)(1000.0f * tdoaStats->packetsToEstimator / interval);
-      tdoaStats->clockCorrectionRate = (uint16_t)(1000.0f * tdoaStats->clockCorrectionCount / interval);
-
-      tdoaStats->contextHitRate = (uint16_t)(1000.0f * tdoaStats->contextHitCount / interval);
-      tdoaStats->contextMissRate = (uint16_t)(1000.0f * tdoaStats->contextMissCount / interval);
-
-      tdoaStats->suitableDataFoundRate = (uint16_t)(1000.0f * tdoaStats->suitableDataFound / interval);
-      tdoaStats->timeIsGoodRate = (uint16_t)(1000.0f * tdoaStats->timeIsGood / interval);
-    }
-
     if (tdoaStats->anchorId != tdoaStats->newAnchorId) {
       tdoaStats->anchorId = tdoaStats->newAnchorId;
 
@@ -88,7 +69,6 @@ void tdoaStatsUpdate(tdoaStats_t* tdoaStats, uint32_t now_ms) {
       tdoaStats->tdoa = 0;
     }
 
-    clearStats(tdoaStats);
     tdoaStats->previousStatisticsTime = now_ms;
     tdoaStats->nextStatisticsTime = now_ms + STATS_INTERVAL;
   }

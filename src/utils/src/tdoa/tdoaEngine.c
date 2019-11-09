@@ -76,7 +76,7 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
   };
 
   if (tdoaStorageGetAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && tdoaStorageGetAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
-      stats->packetsToEstimator++;
+      STATS_CNT_RATE_EVENT(&stats->packetsToEstimator);
       engineState->sendTdoaToEstimator(&tdoa);
 
       uint8_t idA = tdoaStorageGetId(anchorACtx);
@@ -103,7 +103,7 @@ static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t 
     if (sampleIsReliable){
       if (tdoaStorageGetId(anchorCtx) == stats->anchorId) {
         stats->clockCorrection = tdoaStorageGetClockCorrection(anchorCtx);
-        stats->clockCorrectionCount++;
+        STATS_CNT_RATE_EVENT(&stats->clockCorrectionCount);
       }
     }
   }
@@ -165,20 +165,20 @@ static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext
 
 void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, const uint8_t anchorId, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx) {
   if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, anchorId, currentTime_ms, anchorCtx)) {
-    engineState->stats.contextHitCount++;
+    STATS_CNT_RATE_EVENT(&engineState->stats.contextHitCount);
   } else {
-    engineState->stats.contextMissCount++;
+    STATS_CNT_RATE_EVENT(&engineState->stats.contextMissCount);
   }
 }
 
 void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, &engineState->stats);
   if (timeIsGood) {
-    engineState->stats.timeIsGood++;
+    STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
     tdoaAnchorContext_t otherAnchorCtx;
     if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx)) {
-      engineState->stats.suitableDataFound++;
+      STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
       double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
       enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
     }

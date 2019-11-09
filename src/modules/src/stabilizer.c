@@ -49,6 +49,7 @@
 #include "estimator.h"
 #include "usddeck.h"
 #include "quatcompress.h"
+#include "statsCnt.h"
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -74,6 +75,8 @@ typedef enum { configureAcc, measureNoiseFloor, measureProp, testBattery, restar
 #else
   static TestState testState = testDone;
 #endif
+
+static statsCntRateLogger_t stabilizerRate;
 
 static struct {
   // position - mm
@@ -190,6 +193,8 @@ void stabilizerInit(StateEstimatorType estimator)
   xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
               STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
 
+  STATS_CNT_RATE_INIT(&stabilizerRate, 500);
+
   isInit = true;
 }
 
@@ -294,6 +299,7 @@ static void stabilizerTask(void* param)
     }
     calcSensorToOutputLatency(&sensorData);
     tick++;
+    STATS_CNT_RATE_EVENT(&stabilizerRate);
   }
 }
 
@@ -647,6 +653,8 @@ LOG_ADD(LOG_FLOAT, qx, &state.attitudeQuaternion.x)
 LOG_ADD(LOG_FLOAT, qy, &state.attitudeQuaternion.y)
 LOG_ADD(LOG_FLOAT, qz, &state.attitudeQuaternion.z)
 LOG_ADD(LOG_FLOAT, qw, &state.attitudeQuaternion.w)
+
+STATS_CNT_RATE_LOG_ADD(rtStab, &stabilizerRate)
 LOG_GROUP_STOP(stateEstimate)
 
 LOG_GROUP_START(stateEstimateZ)
@@ -672,4 +680,3 @@ LOG_GROUP_STOP(stateEstimateZ)
 LOG_GROUP_START(latency)
 LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(latency)
-
