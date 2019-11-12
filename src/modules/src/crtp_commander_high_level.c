@@ -64,6 +64,7 @@ enum TrajectoryLocation_e {
 
 enum TrajectoryType_e {
   TRAJECTORY_TYPE_POLY4D = 0, // struct poly4d, see pptraj.h
+  TRAJECTORY_TYPE_POLY4D_COMPRESSED = 1, // see pptraj_compressed.h
   // Future types might include versions without yaw
 };
 
@@ -90,6 +91,7 @@ static uint8_t group_mask;
 static struct vec pos; // last known setpoint (position [m])
 static float yaw; // last known setpoint yaw (yaw [rad])
 static struct piecewise_traj trajectory;
+static struct piecewise_traj_compressed  compressed_trajectory;
 
 // makes sure that we don't evaluate the trajectory while it is being changed
 static xSemaphoreHandle lockTraj;
@@ -381,6 +383,32 @@ int start_trajectory(const struct data_start_trajectory* data)
         }
         result = plan_start_trajectory(&planner, &trajectory, data->reversed);
         xSemaphoreGive(lockTraj);
+      } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
+          && trajDesc->trajectoryType == TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
+
+        if (data->timescale != 1 || data->reversed) {
+          result = ENOEXEC;
+        } else {
+          xSemaphoreTake(lockTraj, portMAX_DELAY);
+          float t = usecTimestamp() / 1e6;
+          piecewise_compressed_load(
+            &compressed_trajectory,
+            &trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset]
+          );
+          compressed_trajectory.t_begin = t;
+          if (data->relative) {
+            struct traj_eval traj_init = piecewise_compressed_eval(
+              &compressed_trajectory, compressed_trajectory.t_begin
+            );
+            struct vec shift_pos = vsub(pos, traj_init.pos);
+            compressed_trajectory.shift = shift_pos;
+          } else {
+            compressed_trajectory.shift = vzero();
+          }
+          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory);
+          xSemaphoreGive(lockTraj);
+        }
+
       }
     }
   }

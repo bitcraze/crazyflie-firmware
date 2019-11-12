@@ -40,6 +40,7 @@ Header file for planning state machine
 
 #include "math3d.h"
 #include "pptraj.h"
+#include "pptraj_compressed.h"
 
 enum trajectory_state
 {
@@ -48,11 +49,22 @@ enum trajectory_state
 	TRAJECTORY_STATE_LANDING         = 3,
 };
 
+enum trajectory_type
+{
+	TRAJECTORY_TYPE_PIECEWISE            = 0,
+	TRAJECTORY_TYPE_PIECEWISE_COMPRESSED = 1
+};
+
 struct planner
 {
 	enum trajectory_state state;	// current state
+	enum trajectory_type type;      // current type
 	bool reversed;					// true, if trajectory should be evaluated in reverse
-	const struct piecewise_traj* trajectory; // pointer to trajectory
+
+	union {
+		const struct piecewise_traj* trajectory; // pointer to trajectory
+		struct piecewise_traj_compressed* compressed_trajectory; // pointer to compressed trajectory
+	};
 
 	struct piecewise_traj planned_trajectory; // trajectory for on-board planning
 	struct poly4d pieces[1]; // the on-board planner requires a single piece, only
@@ -85,3 +97,6 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 
 // start trajectory
 int plan_start_trajectory(struct planner *p, const struct piecewise_traj* trajectory, bool reversed);
+
+// start compressed trajectory
+int plan_start_compressed_trajectory(struct planner *p, struct piecewise_traj_compressed* trajectory);

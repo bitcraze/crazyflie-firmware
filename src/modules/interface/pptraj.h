@@ -55,6 +55,9 @@ float polyval(float const p[PP_SIZE], float t);
 // construct a linear polynomial from p(0) = x0 to p(duration) = x1.
 void polylinear(float p[PP_SIZE], float duration, float x0, float x1);
 
+// construct a polynomial from Bezier curve control points
+void polybezier(float p[PP_SIZE], float duration, float* x, int dim);
+
 // plan a degree-5 polynomial with the given duration T,
 // and given initial/final position, velocity, and acceleration
 void poly5(float poly[PP_SIZE], float T,
