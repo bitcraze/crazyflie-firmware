@@ -5,37 +5,59 @@ page_id: p2p_api
 
 ## Introduction
 Currently peer to peer communication on the crazyflie is **in development**. Now an API is made available to send P2P 
-messages in broadcast mode, and we are going to extend this to unicast. 
+messages in broadcast mode, and we are going to extend this to unicast.
+
+P2P packets are sent and received on the same channel as the currently configured CRTP radio link. P2P packets are sent and received independently to regular CRTP packets. In order to allow for multiple appilication to use P2P communication at the same time a port number has been added to each packet, the intend being that independent service will use different P2P port. For the time being this port is not used by the API and keeping it to 0 unless otherwise needed is advised.
+
+Furthermore, P2P packets are only sent and received from the 2.4GHz internal Crazyflie radio independently of where the CRTP link is connect (ex. the CRTP link can be connecte over USB).
+
+The maximum data payload contained in a P2P packet is ```P2P_MAX_DATA_SIZE```. It is currently set to 60Bytes.
+
+## Using the P2P API
+Make sure to compile the NRF software without bluetooth support for P2P to work properly.
+You can do so by cloning the [crazyflie2-nrf-firmware](https://github.com/bitcraze/crazyflie2-nrf-firmware) and then compiling and flashing the firmware without bluetooth support:
+```bash
+cd crazyflie2-nrf-firmware
+make clean
+make BLE=0
+make cload BLE=0
+```
+Functions and structures are defined in the header file [src/hal/interface/radiolink.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/radiolink.h)
 
 ## Peer to Peer broadcast
 
-Make sure to compile the NRF software without bluetooth support! So:
-
-    make clean
-    make BLE=0
-    make cload BLE=0 
-
 #### Sending P2P broadcast
 
+From the STM, a packet can be sent using the ```radiolinkSendP2PPacketBroadcast``` function. For example:
 
-From the STM, a packet can be sent by the following function
- 
-    radiolinkSendP2PPacketBroadcast()
+```c
+static P2PPacket pk;
+pk.port = 0;
+pk.size = 11;
+memcpy(pk.data, "Hello World", 11);
+radiolinkSendP2PPacketBroadcast(&pk);
+```
 
-which exists in *src/hal/interface/radiolink.h*. Make sure that the packet port is 
-0x00 for now and that the packet data length does not exceed **60** entries.
+This function will trigger a single P2P packet to be transmitted by the radio.
+
 #### Receiving P2P broadcast
 
 If you want to receive packet in your function, you can register a callback with:
 
-    p2pRegisterCB(p2pcallbackHandler);
-
+```c
+p2pRegisterCB(p2pcallbackHandler);
+```
     
 with a function of the form of:
+```c
+void p2pcallbackHandler(P2PPacket *p)
+{
+  // p->port: P2P Port
+  // p->size: Payload size
+  // p->data: Payload data
+  // p->rssi: RSSI of the packet. 40 means -40dBm.
+}
+```
 
-	void p2pcallbackHandler(P2PPacket *p)
-	{
-        ...
-	
-	}
+The callback will be called by the task handling radio communication, it should then execute quickly (for example pushing data in a queue).
 
