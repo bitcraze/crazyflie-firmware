@@ -1,14 +1,28 @@
 /*
-
-Compressed piecewise polynomial trajectories for Crazyflie.
-
-Copyright (c) 2019 CollMot Robotics. All rights reserved.
-
-*/
-
-/*
-Header file for compressed piecewise polynomial trajectories
-*/
+ *    _____     ______  ___     __    ___       __        __  _
+ *   / ___/__  / / /  |/  /__  / /_  / _ \___  / /  ___  / /_(_)______
+ *  / /__/ _ \/ / / /|_/ / _ \/ __/ / , _/ _ \/ _ \/ _ \/ __/ / __(_-<
+ *  \___/\___/_/_/_/  /_/\___/\__/ /_/|_|\___/_.__/\___/\__/_/\__/___/
+ *
+ * Compressed piecewise polynomial trajectories for Crazyflie.
+ *
+ * Copyright (c) 2019 CollMot Robotics. All rights reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, in version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * pptraj_compressed.h - Header file for compressed piecewise polynomial
+ *                       trajectories
+ */
 
 #pragma once
 
