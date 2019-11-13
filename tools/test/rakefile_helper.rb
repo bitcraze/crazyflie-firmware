@@ -186,6 +186,8 @@ module RakefileHelpers
     test_files = find_test_files_in_args(args)
     output_style = find_output_style_in_args(args)
 
+    set_environment_vars($cfg['env'])
+
     # No file names found in the args, find all files that are unit test files
     if test_files.length == 0
       test_files = exclude_test_files(get_unit_test_files(), defines)
@@ -413,5 +415,10 @@ module RakefileHelpers
     end
 
     obj_list
+  end
+
+  def set_environment_vars(env_vars)
+    # puts "Setting env vars: " + env_vars.to_s
+    ENV.merge!(env_vars)
   end
 end

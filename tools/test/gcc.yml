@@ -100,6 +100,10 @@ unsupported:
 
 colour: true
 
+env:
+  # There seems to be problems on some platforms (on travis for instance) with LeakSanitizer that craches. Turn it off
+  'LSAN_OPTIONS' : 'detect_leaks=0'
+
 :cmock:
   :plugins:
     - :ignore_arg
