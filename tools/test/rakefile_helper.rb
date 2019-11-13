@@ -419,6 +419,8 @@ module RakefileHelpers
 
   def set_environment_vars(env_vars)
     # puts "Setting env vars: " + env_vars.to_s
-    ENV.merge!(env_vars)
+    env_vars.each do |key, val|
+      ENV[key] = val
+    end
   end
 end
