@@ -87,7 +87,7 @@
 #define CMD_HIGH_LEVEL_TASK_PRI 2
 #define BQ_OSD_TASK_PRI         1
 #define GTGPS_DECK_TASK_PRI     1
-#define LIGHTHOUSE_TASK_PRI     1
+#define LIGHTHOUSE_TASK_PRI     3
 #define LPS_DECK_TASK_PRI       5
 #define OA_DECK_TASK_PRI        3
 #define UART1_TEST_TASK_PRI     1

@@ -22,6 +22,6 @@ bool lighthouseGeometryGetPositionFromRayIntersection(baseStationGeometry_t base
 void lighthouseGeometryGetBaseStationPosition(baseStationGeometry_t* baseStationGeometry, vec3d baseStationPos);
 void lighthouseGeometryGetRay(const baseStationGeometry_t* baseStationGeometry, const float angle1, const float angle2, vec3d ray);
 bool lighthouseGeometryIntersectionPlaneVector(const vec3d linePoint, const vec3d lineVec, const vec3d planePoint, const vec3d PlaneNormal, vec3d intersectionPoint);
-void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_instance_f32 *R, const int sensor, vec3d pos);
+void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_instance_f32 *R, vec3d sensorPosition, vec3d pos);
 bool lighthouseGeometryYawDelta(const vec3d ipv, const vec3d spv, const vec3d n, float* yawDelta);
 void lighthouseGeometryCalculateAnglesFromRotationMatrix(baseStationGeometry_t* baseStationGeometry, baseStationEulerAngles_t* baseStationEulerAngles);

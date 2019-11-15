@@ -36,16 +36,6 @@
 
 #include "lighthouse_geometry.h"
 
-// Sensor positions on the deck
-#define SENSOR_POS_W (0.015f / 2.0f)
-#define SENSOR_POS_L (0.030f / 2.0f)
-static vec3d sensorDeckPositions[4] = {
-    {-SENSOR_POS_L, SENSOR_POS_W, 0.0},
-    {-SENSOR_POS_L, -SENSOR_POS_W, 0.0},
-    {SENSOR_POS_L, SENSOR_POS_W, 0.0},
-    {SENSOR_POS_L, -SENSOR_POS_W, 0.0},
-};
-
 static void vec_cross_product(const vec3d a, const vec3d b, vec3d res) {
     res[0] = a[1]*b[2] - a[2]*b[1];
     res[1] = a[2]*b[0] - a[0]*b[2];
@@ -206,11 +196,11 @@ bool lighthouseGeometryIntersectionPlaneVector(const vec3d linePoint, const vec3
  *
  * @param cfPos - Crazyflie position
  * @param R - Crazyflie rotation matrix
- * @param sensor - the sensor nr 0 - 4
+ * @param sensorPosition - the sensor position relative to the center of the Crazyflie
  * @param pos - (output) the position of the sensor
  */
-void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_instance_f32 *R, const int sensor, vec3d pos) {
-  arm_matrix_instance_f32 LOCAL_POS = {3, 1, sensorDeckPositions[sensor]};
+void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_instance_f32 *R, vec3d sensorPosition, vec3d pos) {
+  arm_matrix_instance_f32 LOCAL_POS = {3, 1, sensorPosition};
 
   vec3d rotatedPos = {0};
   arm_matrix_instance_f32 ROTATED_POS = {1, 3, rotatedPos};

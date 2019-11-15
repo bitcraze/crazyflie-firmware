@@ -133,6 +133,7 @@ void testThatNoIntersectionPointIsFoundForLineParallelToPlane() {
 void testThatSensorPositionIsTranslated() {
   // Fixture
   vec3d cfPos = {1, 2, 3};
+  vec3d sensorPos = {-0.015, -0.0075, 0.0};
 
   float r[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
   arm_matrix_instance_f32 R = {3, 3, (float*)r};
@@ -143,7 +144,7 @@ void testThatSensorPositionIsTranslated() {
   vec3d actual;
 
   // Test
-  lighthouseGeometryGetSensorPosition(cfPos, &R, 1, actual);
+  lighthouseGeometryGetSensorPosition(cfPos, &R, sensorPos, actual);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
@@ -152,6 +153,7 @@ void testThatSensorPositionIsTranslated() {
 void testThatSensorPositionIsRotated() {
   // Fixture
   vec3d cfPos = {1, 2, 3};
+  vec3d sensorPos = {-0.015, -0.0075, 0.0};
 
   // Rotate 90 degrees about the Y-axis
   float r[3][3] = {{0, 0, 1}, {0, 1, 0}, {-1, 0, 0}};
@@ -163,7 +165,7 @@ void testThatSensorPositionIsRotated() {
   vec3d actual;
 
   // Test
-  lighthouseGeometryGetSensorPosition(cfPos, &R, 1, actual);
+  lighthouseGeometryGetSensorPosition(cfPos, &R, sensorPos, actual);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);

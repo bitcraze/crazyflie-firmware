@@ -73,6 +73,16 @@ baseStationEulerAngles_t lighthouseBaseStationAngles[2];
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
 
+// Sensor positions on the deck
+#define SENSOR_POS_W (0.015f / 2.0f)
+#define SENSOR_POS_L (0.030f / 2.0f)
+static vec3d sensorDeckPositions[4] = {
+    {-SENSOR_POS_L, SENSOR_POS_W, 0.0},
+    {-SENSOR_POS_L, -SENSOR_POS_W, 0.0},
+    {SENSOR_POS_L, SENSOR_POS_W, 0.0},
+    {SENSOR_POS_L, -SENSOR_POS_W, 0.0},
+};
+
 static bool isInit = false;
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
@@ -146,6 +156,9 @@ static bool getFrame(frame_t *frame)
 static vec3d position;
 static positionMeasurement_t ext_pos;
 static float deltaLog;
+static int8_t maxs = 4;
+static int8_t oneBs = 0;
+static float std = 0.0004;
 
 static void estimatePosition(pulseProcessorResult_t angles[]) {
   memset(&ext_pos, 0, sizeof(ext_pos));
@@ -165,6 +178,33 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
         sensorsUsed++;
 
         STATS_CNT_RATE_EVENT(&positionRate);
+
+        // Experimental code for pushing sweep angles into the kalman filter
+        #if 0
+        if (sensor < maxs) {
+          sweepAngleMeasurement_t sweepAngles;
+          sweepAngles.stdDevX = std;
+          sweepAngles.stdDevY = std;
+
+          memcpy(sweepAngles.sensorPos, sensorDeckPositions[sensor], sizeof(vec3d));
+
+          sweepAngles.angleX = angles[sensor].correctedAngles[0][0];
+          sweepAngles.angleY = angles[sensor].correctedAngles[0][1];
+          memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[0], sizeof(baseStationGeometry_t));
+          if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
+              estimatorEnqueueSweepAngles(&sweepAngles);
+          }
+          if (!oneBs) {
+            sweepAngles.angleX = angles[sensor].correctedAngles[1][0];
+            sweepAngles.angleY = angles[sensor].correctedAngles[1][1];
+            memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[1], sizeof(baseStationGeometry_t));
+            if (sweepAngles.angleX !=0 && sweepAngles.angleY != 0) {
+                estimatorEnqueueSweepAngles(&sweepAngles);
+            }
+          }
+        }
+        #endif
+
       }
   }
 
@@ -178,19 +218,6 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   }
   ext_pos.stdDev = 0.01;
   estimatorEnqueuePosition(&ext_pos);
-
-  // Experimental code for pushing sweep angles into the kalman filter
-  #if 0
-  sweepAngleMeasurement_t sweepAngles;
-  sweepAngles.angleX = angles[0].correctedAngles[0][0];
-  sweepAngles.angleY = angles[0].correctedAngles[0][1];
-  sweepAngles.stdDevX = 0.1;
-  sweepAngles.stdDevY = 0.1;
-  memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[0], sizeof(baseStationGeometry_t));
-  if (sweepAngles.angleX!=0&&sweepAngles.angleY!=0) {
-      estimatorEnqueueSweepAngles(&sweepAngles);
-  }
-  #endif
 }
 
 static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t angles[], baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
@@ -217,7 +244,7 @@ static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorRes
   // Calculate positions of sensors. Rotate relative postiions using the rotation matrix and add current position
   vec3d sensorPoints[PULSE_PROCESSOR_N_SENSORS];
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    lighthouseGeometryGetSensorPosition(cfPos, RR, sensor, sensorPoints[sensor]);
+    lighthouseGeometryGetSensorPosition(cfPos, RR, sensorDeckPositions[sensor], sensorPoints[sensor]);
   }
 
   // Calculate diagonals (sensors 0 - 3 and 1 - 2) for intersection and sensor points
@@ -473,6 +500,13 @@ LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
 
 #endif // DISABLE_LIGHTHOUSE_DRIVER
+
+PARAM_GROUP_START(lh)
+PARAM_ADD(PARAM_INT8, maxs, &maxs)
+PARAM_ADD(PARAM_INT8, oneBs, &oneBs)
+PARAM_ADD(PARAM_FLOAT, std, &std)
+PARAM_GROUP_STOP(lh)
+
 
 PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bdLighthouse4, &isInit)

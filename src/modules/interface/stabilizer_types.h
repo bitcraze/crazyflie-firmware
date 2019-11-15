@@ -248,6 +248,7 @@ typedef struct {
   float angleY;
   float stdDevX;
   float stdDevY;
+  float sensorPos[3];
 } sweepAngleMeasurement_t;
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
