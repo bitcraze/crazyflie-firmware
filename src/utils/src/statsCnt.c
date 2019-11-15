@@ -22,33 +22,44 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * statsCnt.c - utitlity for logging counters
+ * statsCnt.c - utitlity for logging rates
  */
 
 #include "statsCnt.h"
+#include "debug.h"
 
-void statsCntReset(statsCntRate_t* this, const uint32_t now_ms) {
-    this->count = 0;
-    this->result = 0.0f;
-    this->latestAverage_ms = now_ms;
+
+void statsCntRateCounterInit(statsCntRateCounter_t* counter, uint32_t averagingIntervalMs) {
+    counter->intervalMs = averagingIntervalMs;
+    counter->count = 0;
+    counter->latestCount = 0;
+    counter->latestAveragingMs = 0;
+    counter->latestRate = 0.0f;
 }
 
-void statsCntInc(statsCntRate_t* this) {
-    this->count++;
-}
+float statsCntRateCounterUpdate(statsCntRateCounter_t* counter, uint32_t now_ms) {
+    uint32_t dt_ms = now_ms - counter->latestAveragingMs;
+    if (dt_ms > counter->intervalMs) {
+        float dt_s = dt_ms / 1000.0f;
+        float dv = counter->count - counter->latestCount;
 
-float statsCntRate(statsCntRate_t* this, const uint32_t now_ms) {
-    float result = 0.0f;
+        counter->latestRate = dv / dt_s;
 
-    const uint32_t dt_ms = now_ms - this->latestAverage_ms;
-    if (dt_ms > 0) {
-        const float oneSecond_ms = 1000.0f;
-        result = this->count * oneSecond_ms / dt_ms;
+        counter->latestCount = counter->count;
+        counter->latestAveragingMs = now_ms;
     }
 
-    this->count = 0;
-    this->result = result;
-    this->latestAverage_ms = now_ms;
+    return counter->latestRate;
+}
 
-    return result;
+void statsCntRateLoggerInit(statsCntRateLogger_t* logger, uint32_t averagingIntervalMs) {
+    statsCntRateCounterInit(&logger->rateCounter, averagingIntervalMs);
+
+    logger->logByFunction.data = (void*)logger;
+    logger->logByFunction.aquireFloat = statsCntRateLogHandler;
+}
+
+float statsCntRateLogHandler(uint32_t timestamp, void* data) {
+    statsCntRateLogger_t* logger = (statsCntRateLogger_t*)data;
+    return statsCntRateCounterUpdate(&logger->rateCounter, timestamp);
 }

@@ -130,3 +130,42 @@ Example:
 
 Note: The logging function is only called if the log is part of an active log configuration. It
 will be called (approximately) at the interval that is setup in the log configuration.
+
+### Logging rates
+
+A common usecase is to log rates (events / s) and there are a set of macros to simplify this task.
+
+The rate logger uses a struct to store data, it is called ```statsCntRateCounter_t``` and
+is initialize using the ```STATS_CNT_RATE_INIT```macro. The struct contains a counter, time
+information and the latest calculated rate. The initialization macro takes a parameter
+that specifies the update interval (in ms) and defines how often the rate (delta count / delta time)
+is calculated. The update interval should match the expected event rate to give meaningful results.
+
+To register an event, that is to increase the counter, use the ```STATS_CNT_RATE_EVENT```macro.
+
+Register the rate counter in a log group witht the ```STATS_CNT_RATE_LOG_ADD``` macro.
+
+Example:
+
+        static statsCntRateLogger_t myCounter;
+
+        void myInit() {
+            const uint32_t one_second = 1000;
+            STATS_CNT_RATE_INIT(&myCounter, one_second);
+        }
+
+        void theFcnThatIWantTheCallRateFor() {
+            ...
+            STATS_CNT_RATE_EVENT(&myCounter);
+            ...
+        }
+
+        LOG_GROUP_START(myGroup)
+            // The logging type is implicitly LOG_FLOAT
+            STATS_CNT_RATE_LOG_ADD(rtCall, &myCounter)
+        LOG_GROUP_STOP(myGroup)
+
+Note: The rate computation function is called from the logging framework with the interval
+specifed in the logging configuration. The rate, on the other hand, is calculated if the time since
+last computation exceeds the configured update time of the rate logger, and if the logging intervall
+is longer than the update intervall, updates will be done for each logging call.

@@ -30,92 +30,124 @@
 
 #include "unity.h"
 
-static const uint32_t resetTime = 1234;
-static statsCntRate_t data;
 
-void setUp(void) {
-  statsCntReset(&data, resetTime);
-}
-
-void tearDown(void) {}
-
-void testThatDataIsReset() {
+void testThatRateCounterIsInitialized() {
   // Fixture
-  data.count = 17;
-  data.result = 47.11f;
-  data.latestAverage_ms = 9876;
+  statsCntRateCounter_t sut = {
+    .count = 1,
+    .latestCount = 2,
+    .latestAveragingMs = 3,
+    .latestRate = 4.0f,
+    .intervalMs = 5,
+  };
 
   // Test
-  statsCntReset(&data, resetTime);
+  statsCntRateCounterInit(&sut, 4711);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT32(0, data.count);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, data.result);
-  TEST_ASSERT_EQUAL_UINT32(resetTime, data.latestAverage_ms);
+  TEST_ASSERT_EQUAL_UINT32(4711, sut.intervalMs);
+  TEST_ASSERT_EQUAL_UINT32(0, sut.count);
+  TEST_ASSERT_EQUAL_UINT32(0, sut.latestCount);
+  TEST_ASSERT_EQUAL_UINT32(0, sut.latestAveragingMs);
+  TEST_ASSERT_EQUAL_FLOAT(0.0, sut.latestRate);
+}
+
+void testThatRateIsComputedWhenTimeSinceLastComputationIsLongerThanTheInterval() {
+  // Fixture
+  uint32_t interval = 500;
+
+  statsCntRateCounter_t sut;
+  statsCntRateCounterInit(&sut, interval);
+
+  uint32_t firstCount = 100;
+  sut.count = firstCount;
+
+  uint32_t firstUpdate_ms = 1000;
+  statsCntRateCounterUpdate(&sut, firstUpdate_ms);
+
+  uint32_t dCount = 100;
+  sut.count = firstCount + dCount;
+
+  // Make sure dt is longer than the interval
+  uint32_t dt_ms = interval * 2;
+  uint32_t now = firstUpdate_ms + dt_ms;
+
+  float expected = dCount * 1000.0f / dt_ms;
+
+  // Test
+  float actual = statsCntRateCounterUpdate(&sut, now);
+
+  // Assert
+  TEST_ASSERT_EQUAL_FLOAT(expected, actual);
+  TEST_ASSERT_EQUAL_FLOAT(expected, sut.latestRate);
+}
+
+void testThatRateNotIsComputedWhenTimeSinceLastComputationIsLessThanTheInterval() {
+  // Fixture
+  uint32_t interval = 500;
+
+  statsCntRateCounter_t sut;
+  statsCntRateCounterInit(&sut, interval);
+
+  uint32_t firstCount = 100;
+  sut.count = firstCount;
+
+  uint32_t firstUpdate_ms = 1000;
+  float expected = statsCntRateCounterUpdate(&sut, firstUpdate_ms);
+
+  uint32_t dCount = 100;
+  sut.count = firstCount + dCount;
+
+  // Make sure dt is less than the interval
+  uint32_t dt_ms = interval - 1;
+  uint32_t now = firstUpdate_ms + dt_ms;
+
+  // Test
+  float actual = statsCntRateCounterUpdate(&sut, now);
+
+  // Assert
+  TEST_ASSERT_EQUAL_FLOAT(expected, actual);
+  TEST_ASSERT_EQUAL_FLOAT(expected, sut.latestRate);
+}
+
+void testThatRateLoggerIsInitialized() {
+  // Fixture
+  statsCntRateLogger_t sut = {
+    .logByFunction = {.data = 0, .aquireFloat = 0},
+    .rateCounter = {.latestAveragingMs = 3},
+  };
+
+  // Test
+  STATS_CNT_RATE_INIT(&sut, 4711);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(4711, sut.rateCounter.intervalMs);
+  TEST_ASSERT_EQUAL_PTR(&sut, sut.logByFunction.data);
+  TEST_ASSERT_EQUAL_PTR(statsCntRateLogHandler, sut.logByFunction.aquireFloat);
+}
+
+void testThatStatsCntRateLoggerCanBeCastToLogByFunction() {
+  // Fixture
+  statsCntRateLogger_t sut = {
+    .logByFunction = {.data = (void*)47, .aquireFloat = (logAcquireFloat)11},
+  };
+
+  // Test
+  logByFunction_t* actual = (logByFunction_t*)&sut;
+
+  // Assert
+  TEST_ASSERT_EQUAL_PTR(47, actual->data);
+  TEST_ASSERT_EQUAL_PTR(11, actual->aquireFloat);
 }
 
 void testThatCounterIsIncreased() {
   // Fixture
+  statsCntRateLogger_t sut;
+  STATS_CNT_RATE_INIT(&sut, 4711);
 
   // Test
-  statsCntInc(&data);
+  STATS_CNT_RATE_EVENT(&sut);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT32(1, data.count);
+  TEST_ASSERT_EQUAL_UINT32(1, sut.rateCounter.count);
 }
-
-void testThatRateIsComputed() {
-  // Fixture
-  int count = 10;
-  for (int i = 0; i < count; i++) {
-      statsCntInc(&data);
-  }
-
-  uint32_t dt_ms = 500;
-  uint32_t now = resetTime + dt_ms;
-
-  float expected = (float)count * 1000.0f / (float)dt_ms;
-
-  // Test
-  float actual = statsCntRate(&data, now);
-
-  // Assert
-  TEST_ASSERT_EQUAL_FLOAT(expected, actual);
-  TEST_ASSERT_EQUAL_FLOAT(expected, data.result);
-}
-
-void testThatRateIsComputedWhenNoTimeHasPassed() {
-  // Fixture
-  int count = 10;
-  for (int i = 0; i < count; i++) {
-      statsCntInc(&data);
-  }
-
-  data.result = 47.11f;
-
-  uint32_t now = resetTime;
-  float expected = 0.0f;
-
-  // Test
-  float actual = statsCntRate(&data, now);
-
-  // Assert
-  TEST_ASSERT_EQUAL_FLOAT(expected, actual);
-  TEST_ASSERT_EQUAL_FLOAT(expected, data.result);
-}
-
-void testThatCountersAreResetWhenRateIsComputed() {
-  // Fixture
-  statsCntInc(&data);
-
-  uint32_t dt_ms = 500;
-  uint32_t now = resetTime + dt_ms;
-
-  // Test
-  statsCntRate(&data, now);
-
-  // Assert
-  TEST_ASSERT_EQUAL_UINT32(0, data.count);
-  TEST_ASSERT_EQUAL_UINT32(now, data.latestAverage_ms);
-}
-
