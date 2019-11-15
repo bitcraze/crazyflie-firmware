@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2012-2019 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,6 +69,13 @@ static const uint8_t typeLength[] = {
   [LOG_FP16]   = 2,
 };
 
+#define TYPE_MASK (0x0f)
+
+typedef enum {
+  acqType_memory = 0,
+  acqType_function = 1,
+} acquisitionType_t;
+
 // Maximum log payload length (4 bytes are used for block id and timestamp)
 #define LOG_MAX_LEN 26
 
@@ -80,6 +87,7 @@ struct log_ops {
   uint8_t storageType : 4;
   uint8_t logType     : 4;
   void * variable;
+  acquisitionType_t acquisitionType;
 };
 
 struct log_block {
@@ -154,6 +162,7 @@ static int logDeleteBlock(int id);
 static int logStartBlock(int id, unsigned int period);
 static int logStopBlock(int id);
 static void logReset();
+static acquisitionType_t acquisitionTypeFromLogType(uint8_t logType);
 
 void logInit(void)
 {
@@ -290,7 +299,7 @@ void logTOCProcess(int command)
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM;
       p.data[1]=n;
-      p.data[2]=logs[ptr].type;
+      p.data[2]=logs[ptr].type & TYPE_MASK;
       p.size=3+2+strlen(group)+strlen(logs[ptr].name);
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+3, group, strlen(group)+1);
@@ -343,7 +352,7 @@ void logTOCProcess(int command)
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM_V2;
       memcpy(&p.data[1], &logId, 2);
-      p.data[3]=logs[ptr].type;
+      p.data[3]=logs[ptr].type & TYPE_MASK;
       p.size=4+2+strlen(group)+strlen(logs[ptr].name);
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+4, group, strlen(group)+1);
@@ -494,7 +503,7 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
     struct log_ops * ops;
     int varId;
 
-    if ((currentLength + typeLength[settings[i].logType&0x0F])>LOG_MAX_LEN) {
+    if ((currentLength + typeLength[settings[i].logType & TYPE_MASK])>LOG_MAX_LEN) {
       LOG_ERROR("Trying to append a full block. Block id %d.\n", id);
       return E2BIG;
     }
@@ -516,15 +525,17 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
       }
 
       ops->variable    = logs[varId].address;
-      ops->storageType = logs[varId].type;
-      ops->logType     = settings[i].logType&0x0F;
+      ops->storageType = logs[varId].type & TYPE_MASK;
+      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->acquisitionType = acquisitionTypeFromLogType(logs[varId].type);
 
       LOG_DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
     } else {                     //Memory variable
       //TODO: Check that the address is in ram
       ops->variable    = (void*)(&settings[i]+1);
-      ops->storageType = (settings[i].logType>>4)&0x0F;
-      ops->logType     = settings[i].logType&0x0F;
+      ops->storageType = (settings[i].logType>>4) & TYPE_MASK;
+      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->acquisitionType = acqType_memory;
       i += 2;
 
       LOG_DEBUG("Appended var addr 0x%x to block %d\n", (int)ops->variable, id);
@@ -560,7 +571,7 @@ static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
     struct log_ops * ops;
     int varId;
 
-    if ((currentLength + typeLength[settings[i].logType&0x0F])>LOG_MAX_LEN) {
+    if ((currentLength + typeLength[settings[i].logType & TYPE_MASK])>LOG_MAX_LEN) {
       LOG_ERROR("Trying to append a full block. Block id %d.\n", id);
       return E2BIG;
     }
@@ -582,15 +593,17 @@ static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
       }
 
       ops->variable    = logs[varId].address;
-      ops->storageType = logs[varId].type;
-      ops->logType     = settings[i].logType&0x0F;
+      ops->storageType = logs[varId].type & TYPE_MASK;
+      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->acquisitionType = acquisitionTypeFromLogType(logs[varId].type);
 
       LOG_DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
     } else {                     //Memory variable
       //TODO: Check that the address is in ram
       ops->variable    = (void*)(&settings[i]+1);
-      ops->storageType = (settings[i].logType>>4)&0x0F;
-      ops->logType     = settings[i].logType&0x0F;
+      ops->storageType = (settings[i].logType>>4) & TYPE_MASK;
+      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->acquisitionType = acqType_memory;
       i += 2;
 
       LOG_DEBUG("Appended var addr 0x%x to block %d\n", (int)ops->variable, id);
@@ -726,61 +739,93 @@ void logRunBlock(void * arg)
       case LOG_UINT8:
       {
         uint8_t v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->acquireUInt8(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(v));
+        }
         valuei = v;
         break;
       }
       case LOG_INT8:
       {
         int8_t v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->acquireInt8(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(v));
+        }
         valuei = v;
         break;
       }
       case LOG_UINT16:
       {
         uint16_t v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->acquireUInt16(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(v));
+        }
         valuei = v;
         break;
       }
       case LOG_INT16:
       {
         int16_t v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->acquireInt16(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(v));
+        }
         valuei = v;
         break;
       }
       case LOG_UINT32:
       {
         uint32_t v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->acquireUInt32(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(v));
+        }
         valuei = v;
         break;
       }
       case LOG_INT32:
       {
         int32_t v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->acquireInt32(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(v));
+        }
         valuei = v;
         break;
       }
       case LOG_FLOAT:
       {
         float v;
-        memcpy(&v, ops->variable, sizeof(v));
+        if (ops->acquisitionType == acqType_function) {
+          logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          v = logByFunction->aquireFloat(timestamp, logByFunction->data);
+        } else {
+          memcpy(&v, ops->variable, sizeof(valuef));
+        }
         valuei = v;
+        valuef = v;
         break;
       }
     }
 
     if (ops->logType == LOG_FLOAT || ops->logType == LOG_FP16)
     {
-      if (ops->storageType == LOG_FLOAT)
-      {
-        memcpy(&valuef, ops->variable, sizeof(valuef));
-      }
-      else
+      if (ops->storageType != LOG_FLOAT)
       {
         valuef = valuei;
       }
@@ -1011,4 +1056,12 @@ float logGetFloat(int varid)
 unsigned int logGetUint(int varid)
 {
   return (unsigned int)logGetInt(varid);
+}
+
+static acquisitionType_t acquisitionTypeFromLogType(uint8_t logType) {
+  if (logType & LOG_BY_FUNCTION) {
+    return acqType_function;
+  }
+
+  return acqType_memory;
 }

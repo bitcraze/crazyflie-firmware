@@ -1,13 +1,13 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2012-2019 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,14 +61,40 @@ struct log_s {
 #define LOG_FLOAT  7
 #define LOG_FP16   8
 
+typedef uint8_t (*logAcquireUInt8)(uint32_t timestamp, void* data);
+typedef uint16_t (*logAcquireUInt16)(uint32_t timestamp, void* data);
+typedef uint32_t (*logAcquireUInt32)(uint32_t timestamp, void* data);
+typedef int8_t (*logAcquireInt8)(uint32_t timestamp, void* data);
+typedef int16_t (*logAcquireInt16)(uint32_t timestamp, void* data);
+typedef int32_t (*logAcquireInt32)(uint32_t timestamp, void* data);
+typedef float (*logAcquireFloat)(uint32_t timestamp, void* data);
+
+typedef struct {
+  union {
+    logAcquireUInt8 acquireUInt8;
+    logAcquireUInt16 acquireUInt16;
+    logAcquireUInt32 acquireUInt32;
+    logAcquireInt8 acquireInt8;
+    logAcquireInt16 acquireInt16;
+    logAcquireInt32 acquireInt32;
+    logAcquireFloat aquireFloat;
+  };
+
+  void* data;
+} logByFunction_t;
+
 /* Internal defines */
 #define LOG_GROUP 0x80
+#define LOG_BY_FUNCTION 0x40
 #define LOG_START 1
 #define LOG_STOP  0
 
 /* Macros */
 #define LOG_ADD(TYPE, NAME, ADDRESS) \
    { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
+
+#define LOG_ADD_BY_FUNCTION(TYPE, NAME, ADDRESS) \
+   { .type = TYPE | LOG_BY_FUNCTION, .name = #NAME, .address = (void*)(ADDRESS), },
 
 #define LOG_ADD_GROUP(TYPE, NAME, ADDRESS) \
    { \

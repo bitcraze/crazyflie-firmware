@@ -6,8 +6,7 @@ page_id: logparam
 The aim of the logging and parameter framework is to easily be able to
 log data from the Crazyflie and to set variables during runtime.
 
-Table of content (TOC)
-----------------------
+## Table of content (TOC)
 
 The variables that are available for the logging/parameter framework is
 decided on compile-time for the Crazyflie firmware. Using C macros
@@ -59,8 +58,7 @@ log the *roll* variable in the *stabilizer* group it\'s access by
 *stabilizer.roll*. And if you would like to set the *effect* variable in
 the ring group it\'s accessed using *ring.effect*.
 
-Parameters
-----------
+## Parameters
 
 Using the parameter framework it\'s possible to both read and write
 variables in run-time, but note the following:
@@ -76,8 +74,7 @@ variables in run-time, but note the following:
 -   The reading or writing of a parameter can be done at any time once
     you are connected to the Crazyflie.
 
-Logging
--------
+## Logging
 
 The logging framework is used to log variables from the Crazyflie at a
 specific interval. Instead of triggering a reading of the variables at
@@ -102,3 +99,34 @@ Note that variables can be logged as different types from what they have
 been declared as in the firmware. I.e if a variable is declared as a
 uint32\_t you can log it as a uint8\_t (this is being done for the
 motors in the UI).
+
+### Logging using a function
+
+It is possible to use a function to acquire log values instead of
+reading from a memory location. The idea is to support more complec usecases
+where, for instance computations are required to produce the log value.
+
+The macro
+
+```LOG_ADD_BY_FUNCTION(TYPE, NAME, ADDRESS)```
+
+is used to add a log to a group. ```TYPE``` and ```NAME``` works the same way as for variable logging, but
+```ADDRESS``` should point at a logByFunction_t struct instead of a variable. The struct contains
+a function pointer to the function to call when acquiring data, as well as
+a void pointer with user data passed that is passed on in the function call.
+
+Example:
+
+        float myLogValueFunction(uint32_t timestamp, void* data) {
+            // Return the log value
+            return 47.11;
+        }
+
+        logByFunction_t myLogger = {.aquireFloat = myLogValueFunction, .data = 0};
+
+        LOG_GROUP_START(myGroup)
+        LOG_ADD_BY_FUNCTION(LOG_FLOAT, myLog, &myLogger)
+        LOG_GROUP_STOP(myGroup)
+
+Note: The logging function is only called if the log is part of an active log configuration. It
+will be called (approximately) at the interval that is setup in the log configuration.
