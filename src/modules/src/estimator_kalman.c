@@ -237,12 +237,13 @@ static Axis3f gyroSnapshot; // A snpashot of the latest gyro data, used by the t
 static Axis3f accSnapshot; // A snpashot of the latest acc data, used by the task
 
 // Statistics
-static statsCntRateLogger_t updateCounter;
-static statsCntRateLogger_t predictionCounter;
-static statsCntRateLogger_t baroUpdateCounter;
-static statsCntRateLogger_t finalizeCounter;
-static statsCntRateLogger_t measurementAppendedCounter;
-static statsCntRateLogger_t measurementNotAppendedCounter;
+static const uint32_t oneSecond = 1000;
+static STATS_CNT_RATE_DEFINE(updateCounter, oneSecond);
+static STATS_CNT_RATE_DEFINE(predictionCounter, oneSecond);
+static STATS_CNT_RATE_DEFINE(baroUpdateCounter, oneSecond);
+static STATS_CNT_RATE_DEFINE(finalizeCounter, oneSecond);
+static STATS_CNT_RATE_DEFINE(measurementAppendedCounter, oneSecond);
+static STATS_CNT_RATE_DEFINE(measurementNotAppendedCounter, oneSecond);
 
 #ifdef KALMAN_USE_BARO_UPDATE
 static const bool useBaroUpdate = true;
@@ -285,14 +286,6 @@ void estimatorKalmanTaskInit() {
   vSemaphoreCreateBinary(runTaskSemaphore);
 
   dataMutex = xSemaphoreCreateMutex();
-
-  const uint32_t one_second = 1000;
-  STATS_CNT_RATE_INIT(&updateCounter, one_second);
-  STATS_CNT_RATE_INIT(&predictionCounter, one_second);
-  STATS_CNT_RATE_INIT(&baroUpdateCounter, one_second);
-  STATS_CNT_RATE_INIT(&finalizeCounter, one_second);
-  STATS_CNT_RATE_INIT(&measurementAppendedCounter, one_second);
-  STATS_CNT_RATE_INIT(&measurementNotAppendedCounter, one_second);
 
   xTaskCreate(kalmanTask, KALMAN_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL, KALMAN_TASK_PRI, NULL);
 

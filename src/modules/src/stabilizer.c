@@ -76,7 +76,7 @@ typedef enum { configureAcc, measureNoiseFloor, measureProp, testBattery, restar
   static TestState testState = testDone;
 #endif
 
-static statsCntRateLogger_t stabilizerRate;
+static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
 
 static struct {
   // position - mm
@@ -192,8 +192,6 @@ void stabilizerInit(StateEstimatorType estimator)
 
   xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
               STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
-
-  STATS_CNT_RATE_INIT(&stabilizerRate, 500);
 
   isInit = true;
 }
@@ -586,6 +584,9 @@ LOG_ADD(LOG_FLOAT, roll, &state.attitude.roll)
 LOG_ADD(LOG_FLOAT, pitch, &state.attitude.pitch)
 LOG_ADD(LOG_FLOAT, yaw, &state.attitude.yaw)
 LOG_ADD(LOG_UINT16, thrust, &control.thrust)
+
+STATS_CNT_RATE_LOG_ADD(rtStab, &stabilizerRate)
+LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
 LOG_GROUP_START(acc)
@@ -653,8 +654,6 @@ LOG_ADD(LOG_FLOAT, qx, &state.attitudeQuaternion.x)
 LOG_ADD(LOG_FLOAT, qy, &state.attitudeQuaternion.y)
 LOG_ADD(LOG_FLOAT, qz, &state.attitudeQuaternion.z)
 LOG_ADD(LOG_FLOAT, qw, &state.attitudeQuaternion.w)
-
-STATS_CNT_RATE_LOG_ADD(rtStab, &stabilizerRate)
 LOG_GROUP_STOP(stateEstimate)
 
 LOG_GROUP_START(stateEstimateZ)
@@ -676,7 +675,3 @@ LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)   // angular velocity - 
 LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 LOG_GROUP_STOP(stateEstimateZ)
-
-LOG_GROUP_START(latency)
-LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
-LOG_GROUP_STOP(latency)

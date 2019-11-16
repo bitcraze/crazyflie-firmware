@@ -113,10 +113,11 @@ static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 // Stats
 static bool comSynchronized = false;
 
-static statsCntRateLogger_t serialFrameRate;
-static statsCntRateLogger_t frameRate;
-static statsCntRateLogger_t cycleRate;
-static statsCntRateLogger_t positionRate;
+static const uint32_t oneSecond = 1000;
+static STATS_CNT_RATE_DEFINE(serialFrameRate, oneSecond);
+static STATS_CNT_RATE_DEFINE(frameRate, oneSecond);
+static STATS_CNT_RATE_DEFINE(cycleRate, oneSecond);
+static STATS_CNT_RATE_DEFINE(positionRate, oneSecond);
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
@@ -281,12 +282,6 @@ static void lighthouseTask(void *param)
   // Get the eulerangles from the rotation matrix of the basestations
   lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
   lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
-
-  const uint32_t oneSecond = 1000;
-  STATS_CNT_RATE_INIT(&serialFrameRate, oneSecond);
-  STATS_CNT_RATE_INIT(&frameRate, oneSecond);
-  STATS_CNT_RATE_INIT(&cycleRate, oneSecond);
-  STATS_CNT_RATE_INIT(&positionRate, oneSecond);
 
   systemWaitStart();
 

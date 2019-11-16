@@ -80,6 +80,8 @@ typedef struct {
  */
 #define STATS_CNT_RATE_INIT(LOGGER, INTERVAL_MS) statsCntRateLoggerInit(LOGGER, INTERVAL_MS)
 
+#define STATS_CNT_RATE_DEFINE(NAME, INTERVAL_MS) statsCntRateLogger_t NAME = {.logByFunction = {.data = &NAME, .aquireFloat = statsCntRateLogHandler}, .rateCounter = {.intervalMs = (INTERVAL_MS), .count = 0, .latestCount = 0, .latestAveragingMs = 0, .latestRate = 0}}
+
 /**
  * @brief Macro to add an event to a statsCntRateLogger_t, that is to increase the internal counter
  *

@@ -31,6 +31,10 @@
 #include "unity.h"
 
 
+// Helpers
+void assertRateCounterIsInitialized(statsCntRateCounter_t* sut);
+void assertLoggerIsInitialized(statsCntRateLogger_t* sut);
+
 void testThatRateCounterIsInitialized() {
   // Fixture
   statsCntRateCounter_t sut = {
@@ -45,11 +49,7 @@ void testThatRateCounterIsInitialized() {
   statsCntRateCounterInit(&sut, 4711);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT32(4711, sut.intervalMs);
-  TEST_ASSERT_EQUAL_UINT32(0, sut.count);
-  TEST_ASSERT_EQUAL_UINT32(0, sut.latestCount);
-  TEST_ASSERT_EQUAL_UINT32(0, sut.latestAveragingMs);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, sut.latestRate);
+  assertRateCounterIsInitialized(&sut);
 }
 
 void testThatRateIsComputedWhenTimeSinceLastComputationIsLongerThanTheInterval() {
@@ -121,9 +121,16 @@ void testThatRateLoggerIsInitialized() {
   STATS_CNT_RATE_INIT(&sut, 4711);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT32(4711, sut.rateCounter.intervalMs);
-  TEST_ASSERT_EQUAL_PTR(&sut, sut.logByFunction.data);
-  TEST_ASSERT_EQUAL_PTR(statsCntRateLogHandler, sut.logByFunction.aquireFloat);
+  assertLoggerIsInitialized(&sut);
+}
+
+void testThatRateLoggerIsInitializedInline() {
+  // Fixture
+  // Test
+  STATS_CNT_RATE_DEFINE(sut, 4711);
+
+  // Assert
+  assertLoggerIsInitialized(&sut);
 }
 
 void testThatStatsCntRateLoggerCanBeCastToLogByFunction() {
@@ -150,4 +157,22 @@ void testThatCounterIsIncreased() {
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(1, sut.rateCounter.count);
+}
+
+
+// Helpers
+
+void assertRateCounterIsInitialized(statsCntRateCounter_t* sut) {
+  TEST_ASSERT_EQUAL_UINT32(4711, sut->intervalMs);
+  TEST_ASSERT_EQUAL_UINT32(0, sut->count);
+  TEST_ASSERT_EQUAL_UINT32(0, sut->latestCount);
+  TEST_ASSERT_EQUAL_UINT32(0, sut->latestAveragingMs);
+  TEST_ASSERT_EQUAL_FLOAT(0.0, sut->latestRate);
+}
+
+void assertLoggerIsInitialized(statsCntRateLogger_t* sut) {
+  TEST_ASSERT_EQUAL_PTR(sut, sut->logByFunction.data);
+  TEST_ASSERT_EQUAL_PTR(statsCntRateLogHandler, sut->logByFunction.aquireFloat);
+
+  assertRateCounterIsInitialized(&sut->rateCounter);
 }

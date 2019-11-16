@@ -141,16 +141,19 @@ information and the latest calculated rate. The initialization macro takes a par
 that specifies the update interval (in ms) and defines how often the rate (delta count / delta time)
 is calculated. The update interval should match the expected event rate to give meaningful results.
 
+With the ```STATS_CNT_RATE_DEFINE``` macro, the struct can be defined and initialized in one line.
+
 To register an event, that is to increase the counter, use the ```STATS_CNT_RATE_EVENT```macro.
 
 Register the rate counter in a log group witht the ```STATS_CNT_RATE_LOG_ADD``` macro.
 
 Example:
 
+        static const uint32_t one_second = 1000;
         static statsCntRateLogger_t myCounter;
+        static STATS_CNT_RATE_DEFINE(myOtherCounter, one_second);
 
         void myInit() {
-            const uint32_t one_second = 1000;
             STATS_CNT_RATE_INIT(&myCounter, one_second);
         }
 
@@ -158,11 +161,13 @@ Example:
             ...
             STATS_CNT_RATE_EVENT(&myCounter);
             ...
+            STATS_CNT_RATE_EVENT(&myOtherCounter);
         }
 
         LOG_GROUP_START(myGroup)
             // The logging type is implicitly LOG_FLOAT
             STATS_CNT_RATE_LOG_ADD(rtCall, &myCounter)
+            STATS_CNT_RATE_LOG_ADD(rtCall2, &myOtherCounter)
         LOG_GROUP_STOP(myGroup)
 
 Note: The rate computation function is called from the logging framework with the interval
