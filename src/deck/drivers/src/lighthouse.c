@@ -113,11 +113,11 @@ static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
 // Stats
 static bool comSynchronized = false;
 
-static const uint32_t oneSecond = 1000;
-static STATS_CNT_RATE_DEFINE(serialFrameRate, oneSecond);
-static STATS_CNT_RATE_DEFINE(frameRate, oneSecond);
-static STATS_CNT_RATE_DEFINE(cycleRate, oneSecond);
-static STATS_CNT_RATE_DEFINE(positionRate, oneSecond);
+#define ONE_SECOND 1000
+static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
