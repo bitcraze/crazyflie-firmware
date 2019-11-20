@@ -68,10 +68,17 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 };
 
-baseStationEulerAngles_t lighthouseBaseStationAngles[2];
-
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
+
+// Uncomment for experimental mode
+// #define FF_EXPERIMENTAL
+
+static bool isInit = false;
+
+#if DISABLE_LIGHTHOUSE_DRIVER == 0
+
+baseStationEulerAngles_t lighthouseBaseStationAngles[2];
 
 // Sensor positions on the deck
 #define SENSOR_POS_W (0.015f / 2.0f)
@@ -82,10 +89,6 @@ static vec3d sensorDeckPositions[4] = {
     {SENSOR_POS_L, SENSOR_POS_W, 0.0},
     {SENSOR_POS_L, -SENSOR_POS_W, 0.0},
 };
-
-static bool isInit = false;
-
-#if DISABLE_LIGHTHOUSE_DRIVER == 0
 
 #ifndef FORCE_FLASH
 #define FORCE_FLASH false
@@ -156,9 +159,12 @@ static bool getFrame(frame_t *frame)
 static vec3d position;
 static positionMeasurement_t ext_pos;
 static float deltaLog;
+
+#ifdef FF_EXPERIMENTAL
 static int8_t maxs = 4;
 static int8_t oneBs = 0;
 static float std = 0.0004;
+#endif
 
 static void estimatePosition(pulseProcessorResult_t angles[]) {
   memset(&ext_pos, 0, sizeof(ext_pos));
@@ -180,7 +186,7 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
         STATS_CNT_RATE_EVENT(&positionRate);
 
         // Experimental code for pushing sweep angles into the kalman filter
-        #if 0
+        #ifdef FF_EXPERIMENTAL
         if (sensor < maxs) {
           sweepAngleMeasurement_t sweepAngles;
           sweepAngles.stdDevX = std;
@@ -217,7 +223,9 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
     return;
   }
   ext_pos.stdDev = 0.01;
+  #ifndef FF_EXPERIMENTAL
   estimatorEnqueuePosition(&ext_pos);
+  #endif
 }
 
 static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t angles[], baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
@@ -501,11 +509,13 @@ LOG_GROUP_STOP(lighthouse)
 
 #endif // DISABLE_LIGHTHOUSE_DRIVER
 
+#ifdef FF_EXPERIMENTAL
 PARAM_GROUP_START(lh)
 PARAM_ADD(PARAM_INT8, maxs, &maxs)
 PARAM_ADD(PARAM_INT8, oneBs, &oneBs)
 PARAM_ADD(PARAM_FLOAT, std, &std)
 PARAM_GROUP_STOP(lh)
+#endif
 
 
 PARAM_GROUP_START(deck)
