@@ -101,34 +101,19 @@ static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, ve
     return true;
 }
 
-/**
- * @brief Find closest point between rays from two bases stations.
- *
- * @param baseStations - Geometry data for the two base statsions (position and orientation)
- * @param angles - array with 4 angles, two per base statsion, horizontal and vertical sweep angle
- * @param position - (output) the closest point between the rays
- * @param postion_delta - (output) the distance between the rays at the closest point
- */
-bool lighthouseGeometryGetPositionFromRayIntersection(baseStationGeometry_t baseStations[2], float angles[4], vec3d position, float *position_delta)
+bool lighthouseGeometryGetPositionFromRayIntersection(baseStationGeometry_t baseStations[2], float angles1[2], float angles2[2], vec3d position, float *position_delta)
 {
     static vec3d ray1, ray2, origin1, origin2;
 
-    lighthouseGeometryGetRay(&baseStations[0], angles[0], angles[1], ray1);
+    lighthouseGeometryGetRay(&baseStations[0], angles1[0], angles1[1], ray1);
     lighthouseGeometryGetBaseStationPosition(&baseStations[0], origin1);
 
-    lighthouseGeometryGetRay(&baseStations[1], angles[2], angles[3], ray2);
+    lighthouseGeometryGetRay(&baseStations[1], angles2[0], angles2[1], ray2);
     lighthouseGeometryGetBaseStationPosition(&baseStations[1], origin2);
 
     return intersect_lines(origin1, ray1, origin2, ray2, position, position_delta);
 }
 
-/**
- * @brief Get the base station position from the base station geometry in world reference frame. This position can be seen as the
- * point where the lazers originate from.
- *
- * @param baseStation - Geometry data for the base statsion (position and orientation)
- * @param baseStationPos - (output) the base station position
- */
 void lighthouseGeometryGetBaseStationPosition(baseStationGeometry_t* bs, vec3d baseStationPos) {
     // TODO: Make geometry adjustments within base station.
     vec3d rotated_origin_delta = {};
@@ -139,15 +124,6 @@ void lighthouseGeometryGetBaseStationPosition(baseStationGeometry_t* bs, vec3d b
     arm_add_f32(bs->origin, rotated_origin_delta, baseStationPos, vec3d_size);
 }
 
-/**
- * @brief Get a normalized vector representing the direction of a ray in world reference frame, based on
- * sweep angles and base station orientation.
- *
- * @param baseStation - Geometry data for the base statsion (position and orientation)
- * @param angle1 - horizontal sweep angle
- * @param angle2 - vertical sweep angle
- * @param ray - (output) the resulting normalized vector
- */
 void lighthouseGeometryGetRay(const baseStationGeometry_t* baseStationGeometry, const float angleH, const float angleV, vec3d ray) {
     vec3d a = {arm_sin_f32(angleH), -arm_cos_f32(angleH), 0};  // Normal vector to X plane
     vec3d b = {-arm_sin_f32(angleV), 0, arm_cos_f32(angleV)};  // Normal vector to Y plane
@@ -163,16 +139,6 @@ void lighthouseGeometryGetRay(const baseStationGeometry_t* baseStationGeometry, 
     arm_mat_mult_f32(&source_rotation_matrix, &ray_vec, &ray_rotated_vec);
 }
 
-/**
- * @brief Calculates the intersection point between a plane and a line
- *
- * @param linePoint - a point on the line
- * @param lineVec - a normalized vector in the direction of the line
- * @param planePoint - a point in the plane
- * @param PlaneNormal - the normal to the plane (normalized)
- * @param intersectionPoint - (output) the intersection point
- * @return true if an intersection exists
- */
 bool lighthouseGeometryIntersectionPlaneVector(const vec3d linePoint, const vec3d lineVec, const vec3d planePoint, const vec3d PlaneNormal, vec3d intersectionPoint) {
     float p = -vec_dot(lineVec, PlaneNormal);
     if (p == 0.0f) {
@@ -190,15 +156,6 @@ bool lighthouseGeometryIntersectionPlaneVector(const vec3d linePoint, const vec3
     return true;
 }
 
-/**
- * @brief Calculate the position of a sensor on the deck in world reference frame.
- * Note: the origin of the Crazyflie is set in the center of the deck
- *
- * @param cfPos - Crazyflie position
- * @param R - Crazyflie rotation matrix
- * @param sensorPosition - the sensor position relative to the center of the Crazyflie
- * @param pos - (output) the position of the sensor
- */
 void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_instance_f32 *R, vec3d sensorPosition, vec3d pos) {
   arm_matrix_instance_f32 LOCAL_POS = {3, 1, sensorPosition};
 
@@ -209,17 +166,6 @@ void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_ins
   vec_add(cfPos, rotatedPos, pos);
 }
 
-/**
- * @brief Calculate the angle between two vectors. The vectors are assumed to be in a plane defined by
- * a normal and represent the distance between intersection points and sensor points on a lighthouse deck.
- *
- * @param ipv - vector between intersection points
- * @param spv - vector between sensor points
- * @param n - normal to the plane (normalized)
- * @param yawDelta - (output) the angle between the vectors
- *
- * @return true if the angle could be calculated
-*/
 bool lighthouseGeometryYawDelta(const vec3d ipv, const vec3d spv, const vec3d n, float* yawDelta) {
     float spvn = vec_length(spv);
     float ipvn = vec_length(ipv);
@@ -254,12 +200,6 @@ bool lighthouseGeometryYawDelta(const vec3d ipv, const vec3d spv, const vec3d n,
     return true;
 }
 
-/**
- * @brief Get the roll, pitch, yaw angles of the basestation rotation matrix
- * Note: the origin of the Crazyflie is set in the center of the deck
- *
- * @param baseStation - Geometry data for the base station (position and orientation)
- */
 void lighthouseGeometryCalculateAnglesFromRotationMatrix(baseStationGeometry_t* baseStationGeometry, baseStationEulerAngles_t* baseStationEulerAngles) {
 
    /*

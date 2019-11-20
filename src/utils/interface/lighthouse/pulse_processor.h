@@ -7,10 +7,12 @@
 #include "ootx_decoder.h"
 #include "lighthouse_calibration.h"
 
+#define PULSE_PROCESSOR_N_SWEEPS 2
+#define PULSE_PROCESSOR_N_BASE_STATIONS 2
 #define PULSE_PROCESSOR_N_SENSORS 4
 #define PULSE_PROCESSOR_HISTORY_LENGTH 8
-#define TIMESTAMP_BITWIDTH 29
-#define TIMESTAMP_MAX ((1<<TIMESTAMP_BITWIDTH)-1)
+#define PULSE_PROCESSOR_TIMESTAMP_BITWIDTH 29
+#define PULSE_PROCESSOR_TIMESTAMP_MAX ((1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)-1)
 
 
 enum pulseClass_e {unknown, sync0, sync1, sweep};
@@ -84,14 +86,33 @@ typedef struct pulseProcessor_s {
 } pulseProcessor_t;
 
 typedef struct {
-  float angles[2][2];
-  float correctedAngles[2][2];
-  bool isAngleValid[2][2];
+  float angles[PULSE_PROCESSOR_N_SWEEPS];
+  float correctedAngles[PULSE_PROCESSOR_N_SWEEPS];
   int validCount;
+} pulseProcessorBaseStationMeasuremnt_t;
+
+typedef struct {
+  pulseProcessorBaseStationMeasuremnt_t baseStatonMeasurements[PULSE_PROCESSOR_N_BASE_STATIONS];
+} pulseProcessorSensorMeasurement_t;
+
+typedef struct {
+  pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
 } pulseProcessorResult_t;
 
-// If returns true, the angle, base station and direction are written
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis);
+/**
+ * @brief Process pulse data from the lighthouse
+ *
+ * @param state
+ * @param sensor
+ * @param timestamp
+ * @param width
+ * @param angles
+ * @param baseStation
+ * @param axis
+ * @return true, angle, base station and direction are written
+ * @return false, no valid result
+ */
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis);
 
 /**
  * @brief Apply calibration correction to all angles of all sensors
@@ -99,11 +120,11 @@ bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned in
  * @param state
  * @param angles
  */
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t angles[4]);
+void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles);
 
 /**
  * @brief Clear result struct
  *
  * @param angles
  */
-void pulseProcessorClear(pulseProcessorResult_t angles[]);
+void pulseProcessorClear(pulseProcessorResult_t* angles);

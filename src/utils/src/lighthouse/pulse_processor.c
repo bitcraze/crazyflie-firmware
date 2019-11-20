@@ -25,7 +25,7 @@
 // Utility functions and macros
 // #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
 static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
-  const uint32_t bitmask = (1 << TIMESTAMP_BITWIDTH) - 1;
+  const uint32_t bitmask = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1;
   return (x - y) & bitmask;
 }
 
@@ -73,7 +73,7 @@ static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
   return ((delta > SYNC_MAX_SEPARATION) && (delta < (FRAME_LENGTH - (2*SYNC_MAX_SEPARATION)))) || (width < SWEEP_MAX_WIDTH);
 }
 
-TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp, int width)
+TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp)
 {
   uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
   int deltaModulo = delta % FRAME_LENGTH;
@@ -160,7 +160,7 @@ static void resetSynchronization(pulseProcessor_t *state)
   state->synchronized = false;
 }
 
-static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t result[], int *baseStation, int *axis) {
+static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t* result, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
   if (state->sweepDataStored) {
@@ -180,8 +180,9 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
           *baseStation = state->currentBaseStation;
           *axis = state->currentAxis;
 
-          result[sensor].angles[state->currentBaseStation][state->currentAxis] = angle;
-          result[sensor].validCount++;
+          pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurements[sensor].baseStatonMeasurements[state->currentBaseStation];
+          bsMeasurement->angles[state->currentAxis] = angle;
+          bsMeasurement->validCount++;
 
           anglesMeasured = true;
         }
@@ -240,7 +241,7 @@ static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsig
 }
 
 TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
-  const uint32_t min = (1 << TIMESTAMP_BITWIDTH) - SENSOR_MAX_DISPERTION;
+  const uint32_t min = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - SENSOR_MAX_DISPERTION;
   const uint32_t max = SENSOR_MAX_DISPERTION;
 
   uint32_t diff = TS_DIFF(timestamp, lastSync);
@@ -261,11 +262,11 @@ static void printBSInfo(struct ootxDataFrame_s *frame)
   DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
 }
 
-static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
+static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
   if (isNewSync(timestamp, state->lastSync)) {
-    if (isSync(state, timestamp, width)) {
+    if (isSync(state, timestamp)) {
       anglesMeasured = processPreviousFrame(state, angles, baseStation, axis);
 
       // Receive OOTX data frame and initialize BS calibration when we get it
@@ -292,7 +293,7 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
   return anglesMeasured;
 }
 
-static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis) {
+static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
   if (isSweep(state, timestamp, width)) {
@@ -305,7 +306,7 @@ static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigne
 }
 
 
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t angles[], int *baseStation, int *axis)
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis)
 {
   bool anglesMeasured = false;
 
@@ -318,11 +319,14 @@ bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned in
   return anglesMeasured;
 }
 
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t angles[])
+void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles)
 {
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    lighthouseCalibrationApply(&state->bsCalibration0, angles[sensor].angles[0], angles[sensor].correctedAngles[0]);
-    lighthouseCalibrationApply(&state->bsCalibration1, angles[sensor].angles[1], angles[sensor].correctedAngles[1]);
+    pulseProcessorBaseStationMeasuremnt_t* bs0Measurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[0];
+    lighthouseCalibrationApply(&state->bsCalibration0, bs0Measurement->angles, bs0Measurement->correctedAngles);
+
+    pulseProcessorBaseStationMeasuremnt_t* bs1Measurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[1];
+    lighthouseCalibrationApply(&state->bsCalibration0, bs1Measurement->angles, bs1Measurement->correctedAngles);
   }
 }
 
@@ -386,20 +390,20 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
   }
 
   // Detect if samples are wrapping
-  // If the samples are wrapping, all samples bellow TIMESTAMP_MAX/2 will
+  // If the samples are wrapping, all samples bellow PULSE_PROCESSOR_TIMESTAMP_MAX/2 will
   // be pushed by (1<<TIMESTAMP_BITWIDTH) to correct the wrapping
   bool isWrapping = false;
   int wref = syncTimes[0];
   for (size_t i=0; i<nSyncTimes; i++) {
-    if (abs(wref - (int)syncTimes[i]) > (TIMESTAMP_MAX/2)) {
+    if (abs(wref - (int)syncTimes[i]) > (PULSE_PROCESSOR_TIMESTAMP_MAX/2)) {
       isWrapping = true;
     }
   }
 
   int32_t differenceSum = 0;
   int32_t reference = syncTimes[0] % FRAME_LENGTH;
-  if (isWrapping && syncTimes[0] < (TIMESTAMP_MAX/2)) {
-    reference = (syncTimes[0] + (1<<TIMESTAMP_BITWIDTH)) % FRAME_LENGTH;
+  if (isWrapping && syncTimes[0] < (PULSE_PROCESSOR_TIMESTAMP_MAX/2)) {
+    reference = (syncTimes[0] + (1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)) % FRAME_LENGTH;
   }
 
   int minDiff = INT32_MAX;
@@ -408,8 +412,8 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
   for (size_t i=1; i<nSyncTimes; i++) {
     int diff;
 
-    if (isWrapping && (syncTimes[i] < (TIMESTAMP_MAX/2))) {
-      diff = ((syncTimes[i] + (1<<TIMESTAMP_BITWIDTH)) % FRAME_LENGTH) - reference;
+    if (isWrapping && (syncTimes[i] < (PULSE_PROCESSOR_TIMESTAMP_MAX/2))) {
+      diff = ((syncTimes[i] + (1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)) % FRAME_LENGTH) - reference;
     } else {
       diff = (syncTimes[i] % FRAME_LENGTH) - reference;
     }
@@ -429,7 +433,7 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
     return false;
   }
 
-  *syncTime = ((int)syncTimes[0] + ((int)differenceSum / (int)nSyncTimes)) & (TIMESTAMP_MAX);
+  *syncTime = ((int)syncTimes[0] + ((int)differenceSum / (int)nSyncTimes)) & (PULSE_PROCESSOR_TIMESTAMP_MAX);
 
 
   return true;
@@ -440,9 +444,11 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
  *
  * @param angles
  */
-void pulseProcessorClear(pulseProcessorResult_t angles[])
+void pulseProcessorClear(pulseProcessorResult_t* angles)
 {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    angles[sensor].validCount = 0;
+    for (size_t bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; bs++) {
+      angles->sensorMeasurements[sensor].baseStatonMeasurements[bs].validCount = 0;
+    }
   }
 }

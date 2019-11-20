@@ -208,7 +208,6 @@ module RakefileHelpers
 
     # Supress logging of commands and all warningns in minimalistic output style
     $logCmd = true
-    puts 'output_style ' + output_style.to_s
     if output_style.include?('min')
       $cfg['compiler']['options'] << '-w'
       $logCmd = false
