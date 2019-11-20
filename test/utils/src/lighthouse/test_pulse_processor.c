@@ -521,7 +521,7 @@ void testThatRsultStructIsCleared() {
   angles.sensorMeasurements[2].baseStatonMeasurements[1].validCount = 2;
 
   // Test
-  pulseProcessorClear(&angles);
+  pulseProcessorClear(&angles, 1);
 
   // Assert
   TEST_ASSERT_EQUAL_INT(0, angles.sensorMeasurements[2].baseStatonMeasurements[1].validCount);

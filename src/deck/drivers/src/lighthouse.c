@@ -131,6 +131,8 @@ static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(estBs0Rate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(estBs1Rate, ONE_SECOND);
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
@@ -162,11 +164,11 @@ static float deltaLog;
 
 #ifdef FF_EXPERIMENTAL
 static int8_t maxs = 4;
-static int8_t oneBs = 0;
-static float std = 0.0004;
+static int8_t bsBitField = 3;
+static float sweepStd = 0.0004;
 #endif
 
-static void estimatePosition(pulseProcessorResult_t* angles) {
+static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
@@ -187,47 +189,52 @@ static void estimatePosition(pulseProcessorResult_t* angles) {
         sensorsUsed++;
 
         STATS_CNT_RATE_EVENT(&positionRate);
-
-        // Experimental code for pushing sweep angles into the kalman filter
-        #ifdef FF_EXPERIMENTAL
-        if (sensor < maxs) {
-          sweepAngleMeasurement_t sweepAngles;
-          sweepAngles.stdDevX = std;
-          sweepAngles.stdDevY = std;
-
-          memcpy(sweepAngles.sensorPos, sensorDeckPositions[sensor], sizeof(vec3d));
-
-          sweepAngles.angleX = bs0Measurement->correctedAngles[0];
-          sweepAngles.angleY = bs0Measurement->correctedAngles[1];
-          memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[0], sizeof(baseStationGeometry_t));
-          if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
-              estimatorEnqueueSweepAngles(&sweepAngles);
-          }
-          if (!oneBs) {
-            sweepAngles.angleX = bs1Measurement->correctedAngles[0];
-            sweepAngles.angleY = bs1Measurement->correctedAngles[1];
-            memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[1], sizeof(baseStationGeometry_t));
-            if (sweepAngles.angleX !=0 && sweepAngles.angleY != 0) {
-                estimatorEnqueueSweepAngles(&sweepAngles);
-            }
-          }
-        }
-        #endif
-
       }
   }
 
+  #ifndef FF_EXPERIMENTAL
   ext_pos.x /= sensorsUsed;
   ext_pos.y /= sensorsUsed;
   ext_pos.z /= sensorsUsed;
 
   // Make sure we feed sane data into the estimator
-  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
-    return;
+  if (isfinite(ext_pos.pos[0]) && isfinite(ext_pos.pos[1]) && isfinite(ext_pos.pos[2])) {
+    ext_pos.stdDev = 0.01;
+    estimatorEnqueuePosition(&ext_pos);
   }
-  ext_pos.stdDev = 0.01;
-  #ifndef FF_EXPERIMENTAL
-  estimatorEnqueuePosition(&ext_pos);
+  #endif
+
+
+  #ifdef FF_EXPERIMENTAL
+  // Experimental code for pushing sweep angles into the kalman filter
+
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
+    if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      if (sensor < maxs) {
+        if ((1 << baseStation) & bsBitField) {
+          sweepAngleMeasurement_t sweepAngles;
+          sweepAngles.stdDevX = sweepStd;
+          sweepAngles.stdDevY = sweepStd;
+
+          memcpy(sweepAngles.sensorPos, sensorDeckPositions[sensor], sizeof(vec3d));
+
+          sweepAngles.angleX = bsMeasurement->correctedAngles[0];
+          sweepAngles.angleY = bsMeasurement->correctedAngles[1];
+          memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[baseStation], sizeof(baseStationGeometry_t));
+          if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
+            estimatorEnqueueSweepAngles(&sweepAngles);
+
+            if (baseStation == 0) {
+              STATS_CNT_RATE_EVENT(&estBs0Rate);
+            } else {
+              STATS_CNT_RATE_EVENT(&estBs1Rate);
+            }
+          }
+        }
+      }
+    }
+  }
   #endif
 }
 
@@ -275,7 +282,7 @@ static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorRes
   }
 }
 
-static void estimateYaw(pulseProcessorResult_t* angles) {
+static void estimateYaw(pulseProcessorResult_t* angles, int baseStation) {
   // TODO Most of these calculations should be moved into the estimator instead. It is a
   // bit dirty to get the state from the kalman filer here and calculate the yaw error outside
   // the estimator, but it will do for now.
@@ -295,15 +302,15 @@ static void estimateYaw(pulseProcessorResult_t* angles) {
 
   // Calculate yaw delta using only one base station for now
   float yawDelta;
-  if (estimateYawDeltaOneBaseStation(0, angles, lighthouseBaseStationsGeometry, cfPos, n, &RR, &yawDelta)) {
+  if (estimateYawDeltaOneBaseStation(baseStation, angles, lighthouseBaseStationsGeometry, cfPos, n, &RR, &yawDelta)) {
     yawErrorMeasurement_t yawDeltaMeasurement = {.yawError = yawDelta, .stdDev = 0.01};
     estimatorEnqueueYawError(&yawDeltaMeasurement);
   }
 }
 
-static void estimatePose(pulseProcessorResult_t* angles) {
-  estimatePosition(angles);
-  estimateYaw(angles);
+static void estimatePose(pulseProcessorResult_t* angles, int baseStation) {
+  estimatePosition(angles, baseStation);
+  estimateYaw(angles, baseStation);
 }
 
 static void lighthouseTask(void *param)
@@ -364,12 +371,24 @@ static void lighthouseTask(void *param)
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
         STATS_CNT_RATE_EVENT(&frameRate);
-        if (basestation == 1 && axis == 1) {
+        if (axis == 1) {
           STATS_CNT_RATE_EVENT(&cycleRate);
 
-          pulseProcessorApplyCalibration(&ppState, &angles);
-          estimatePose(&angles);
-          pulseProcessorClear(&angles);
+          #ifndef FF_EXPERIMENTAL
+          if (basestation == 1) {
+            estimatePose(&angles, basestation);
+            pulseProcessorClear(&angles, 0);
+            pulseProcessorClear(&angles, 1);
+          }
+          #else
+          pulseProcessorApplyCalibration(&ppState, &angles, basestation);
+          estimatePose(&angles, basestation);
+          // pulseProcessorClear(&angles, basestation);
+          if (basestation == 1) {
+            pulseProcessorClear(&angles, 0);
+            pulseProcessorClear(&angles, 1);
+          }
+          #endif
         }
       }
 
@@ -495,6 +514,8 @@ STATS_CNT_RATE_LOG_ADD(serRt, &serialFrameRate)
 STATS_CNT_RATE_LOG_ADD(frmRt, &frameRate)
 STATS_CNT_RATE_LOG_ADD(cycleRt, &cycleRate)
 STATS_CNT_RATE_LOG_ADD(posRt, &positionRate)
+STATS_CNT_RATE_LOG_ADD(estBs0Rt, &estBs0Rate)
+STATS_CNT_RATE_LOG_ADD(estBs1Rt, &estBs1Rate)
 
 LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
 #if PULSE_PROCESSOR_N_SENSORS > 1
@@ -515,8 +536,8 @@ LOG_GROUP_STOP(lighthouse)
 #ifdef FF_EXPERIMENTAL
 PARAM_GROUP_START(lh)
 PARAM_ADD(PARAM_INT8, maxs, &maxs)
-PARAM_ADD(PARAM_INT8, oneBs, &oneBs)
-PARAM_ADD(PARAM_FLOAT, std, &std)
+PARAM_ADD(PARAM_INT8, bsBitField, &bsBitField)
+PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
 PARAM_GROUP_STOP(lh)
 #endif
 

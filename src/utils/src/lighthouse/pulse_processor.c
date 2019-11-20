@@ -271,15 +271,15 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
 
       // Receive OOTX data frame and initialize BS calibration when we get it
       if (anglesMeasured) {
-        if (!state->bsCalibration0.valid &&
+        if (!state->bsCalibration[0].valid &&
             ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->currentSync0Width))) {
           printBSInfo(&state->ootxDecoder0.frame);
-          lighthouseCalibrationInitFromFrame(&state->bsCalibration0, &state->ootxDecoder0.frame);
+          lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder0.frame);
         }
-        if (!state->bsCalibration1.valid &&
+        if (!state->bsCalibration[1].valid &&
             ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->currentSync1Width))) {
           printBSInfo(&state->ootxDecoder1.frame);
-          lighthouseCalibrationInitFromFrame(&state->bsCalibration1, &state->ootxDecoder1.frame);
+          lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder1.frame);
         }
       }
 
@@ -319,14 +319,11 @@ bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned in
   return anglesMeasured;
 }
 
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles)
+void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation)
 {
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    pulseProcessorBaseStationMeasuremnt_t* bs0Measurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[0];
-    lighthouseCalibrationApply(&state->bsCalibration0, bs0Measurement->angles, bs0Measurement->correctedAngles);
-
-    pulseProcessorBaseStationMeasuremnt_t* bs1Measurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[1];
-    lighthouseCalibrationApply(&state->bsCalibration0, bs1Measurement->angles, bs1Measurement->correctedAngles);
+    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
+    lighthouseCalibrationApply(&state->bsCalibration[baseStation], bsMeasurement->angles, bsMeasurement->correctedAngles);
   }
 }
 
@@ -444,11 +441,9 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
  *
  * @param angles
  */
-void pulseProcessorClear(pulseProcessorResult_t* angles)
+void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
 {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    for (size_t bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; bs++) {
-      angles->sensorMeasurements[sensor].baseStatonMeasurements[bs].validCount = 0;
-    }
+    angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation].validCount = 0;
   }
 }

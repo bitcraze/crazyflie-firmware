@@ -81,8 +81,7 @@ typedef struct pulseProcessor_s {
   ootxDecoderState_t ootxDecoder0;
   ootxDecoderState_t ootxDecoder1;
 
-  lighthouseCalibration_t bsCalibration0;
-  lighthouseCalibration_t bsCalibration1;
+  lighthouseCalibration_t bsCalibration[PULSE_PROCESSOR_N_BASE_STATIONS];
 } pulseProcessor_t;
 
 typedef struct {
@@ -115,16 +114,18 @@ typedef struct {
 bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis);
 
 /**
- * @brief Apply calibration correction to all angles of all sensors
+ * @brief Apply calibration correction to all angles of all sensors for a particular baseStation
  *
  * @param state
  * @param angles
+ * @param baseStation
  */
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles);
+void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 
 /**
  * @brief Clear result struct
  *
  * @param angles
+ * @param baseStation
  */
-void pulseProcessorClear(pulseProcessorResult_t* angles);
+void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation);
