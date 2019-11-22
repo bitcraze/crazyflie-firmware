@@ -159,16 +159,18 @@ static bool getFrame(frame_t *frame)
 }
 
 static vec3d position;
-static positionMeasurement_t ext_pos;
 static float deltaLog;
 
-#ifdef FF_EXPERIMENTAL
+#ifndef FF_EXPERIMENTAL
+static positionMeasurement_t ext_pos;
+#else
 static int8_t maxs = 4;
 static int8_t bsBitField = 3;
 static float sweepStd = 0.0004;
 #endif
 
 static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
+  #ifndef FF_EXPERIMENTAL
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
@@ -192,7 +194,6 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
       }
   }
 
-  #ifndef FF_EXPERIMENTAL
   ext_pos.x /= sensorsUsed;
   ext_pos.y /= sensorsUsed;
   ext_pos.z /= sensorsUsed;
@@ -202,12 +203,8 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
     ext_pos.stdDev = 0.01;
     estimatorEnqueuePosition(&ext_pos);
   }
-  #endif
-
-
-  #ifdef FF_EXPERIMENTAL
+  #else
   // Experimental code for pushing sweep angles into the kalman filter
-
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
     if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
@@ -371,25 +368,25 @@ static void lighthouseTask(void *param)
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
         STATS_CNT_RATE_EVENT(&frameRate);
+        #ifndef FF_EXPERIMENTAL
+        if (basestation == 1 && axis == 1) {
+          STATS_CNT_RATE_EVENT(&cycleRate);
+
+          pulseProcessorApplyCalibration(&ppState, &angles, 0);
+          pulseProcessorApplyCalibration(&ppState, &angles, 1);
+          estimatePose(&angles, 1);
+          pulseProcessorClear(&angles, 0);
+          pulseProcessorClear(&angles, 1);
+        }
+        #else
         if (axis == 1) {
           STATS_CNT_RATE_EVENT(&cycleRate);
 
-          #ifndef FF_EXPERIMENTAL
-          if (basestation == 1) {
-            estimatePose(&angles, basestation);
-            pulseProcessorClear(&angles, 0);
-            pulseProcessorClear(&angles, 1);
-          }
-          #else
           pulseProcessorApplyCalibration(&ppState, &angles, basestation);
           estimatePose(&angles, basestation);
-          // pulseProcessorClear(&angles, basestation);
-          if (basestation == 1) {
-            pulseProcessorClear(&angles, 0);
-            pulseProcessorClear(&angles, 1);
-          }
-          #endif
+          pulseProcessorClear(&angles, basestation);
         }
+        #endif
       }
 
       synchronized = getFrame(&frame);
