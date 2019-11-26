@@ -34,6 +34,10 @@
 
 #include <math.h>
 
+// Enable to use only phase for calibration. The more complex calibration does not
+// seem to give as good results as the simple one(!)
+#define USE_SIMPLE_CALIBRATION
+
 void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct ootxDataFrame_s *frame)
 {
   calib->axis[0].phase = frame->phase0;
@@ -51,6 +55,7 @@ void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct o
   calib->valid = true;
 }
 
+#ifndef USE_SIMPLE_CALIBRATION
 // Calibration function inspired from https://github.com/cnlohr/libsurvive/issues/18#issuecomment-386190279
 
 // Given a predicted sensor position in the lighthouse frame, predict the perturbed measurements
@@ -71,7 +76,6 @@ static void predict(const lighthouseCalibration_t* calib, float const* xy, float
   ang[1] = atanf(xy[1] - (tiltY + curveY * xy[0]) * xy[0]);
   ang[0] -= phaseX + gibmagX * sinf(ang[0] + gibphaseX);
   ang[1] -= phaseY + gibmagY * sinf(ang[1] + gibphaseY);
-
 }
 
 // Given the perturbed lighthouse angle, predict the ideal angle
@@ -89,13 +93,17 @@ static void correct(const lighthouseCalibration_t* calib, const float * angle, f
   corrected[0] = ideal[0];
   corrected[1] = ideal[1];
 }
+#endif
 
 void lighthouseCalibrationApply(lighthouseCalibration_t* calib, float rawAngles[2], float correctedAngles[2])
 {
   if (calib->valid) {
-    // correctedAngles[0] = rawAngles[0] + calib->axis[0].phase;
-    // correctedAngles[1] = rawAngles[1] + calib->axis[1].phase;
+    #ifdef USE_SIMPLE_CALIBRATION
+    correctedAngles[0] = rawAngles[0] + calib->axis[0].phase;
+    correctedAngles[1] = rawAngles[1] + calib->axis[1].phase;
+    #else
     correct(calib, rawAngles, correctedAngles);
+    #endif
   } else {
     correctedAngles[0] = rawAngles[0];
     correctedAngles[1] = rawAngles[1];
