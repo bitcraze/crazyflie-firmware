@@ -23,8 +23,8 @@ typedef struct {
 } pulseProcessorPulse_t;
 
 typedef enum {
-  sweepDirection_j = 0,
-  sweepDirection_k = 1
+  sweepDirection_x = 0,
+  sweepDirection_y = 1
 } SweepDirection;
 
 typedef enum {

@@ -99,7 +99,7 @@ TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp)
  * @param timestamp Timestamp of the syn to process
  * @return 0 for Sync0, 1 for Sync1
  */
-static int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp) {
+TESTABLE_STATIC int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp) {
   int baseStation = 0;
 
   uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
@@ -118,16 +118,16 @@ static int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp) {
 }
 
 static SweepDirection getAxis(int width) {
-  SweepDirection result = sweepDirection_j;
+  SweepDirection result = sweepDirection_x;
 
   if ((((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x01) != 0) {
-    result = sweepDirection_k;
+    result = sweepDirection_y;
   }
 
   return result;
 }
 
-static bool isSweepActiveThisFrame(int width) {
+TESTABLE_STATIC bool isSweepActiveThisFrame(int width) {
   return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x04) == 0;
 }
 
@@ -204,7 +204,7 @@ static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsig
     if (isSweepActiveThisFrame(width)) {
       state->prevSync = state->prevSync0;
     }
-    if (getAxis(width) == 0) {
+    if (getAxis(width) == sweepDirection_x) {
       state->prevSync0X = state->currentSync0X;
       state->currentSync0X = timestamp;
       state->frameWidth[0][0] = TS_DIFF(state->currentSync0X, state->prevSync0X);
@@ -220,7 +220,7 @@ static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsig
     if (isSweepActiveThisFrame(width)) {
       state->prevSync = state->prevSync1;
     }
-    if (getAxis(width) == 0) {
+    if (getAxis(width) == sweepDirection_x) {
       state->prevSync1X = state->currentSync1X;
       state->currentSync1X = timestamp;
       state->frameWidth[1][0] = TS_DIFF(state->currentSync1X, state->prevSync1X);

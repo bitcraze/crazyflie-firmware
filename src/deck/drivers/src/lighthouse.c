@@ -369,7 +369,7 @@ static void lighthouseTask(void *param)
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
         STATS_CNT_RATE_EVENT(&frameRate);
         #ifndef FF_EXPERIMENTAL
-        if (basestation == 1 && axis == 1) {
+        if (basestation == 1 && axis == sweepDirection_y) {
           STATS_CNT_RATE_EVENT(&cycleRate);
 
           pulseProcessorApplyCalibration(&ppState, &angles, 0);
@@ -379,7 +379,7 @@ static void lighthouseTask(void *param)
           pulseProcessorClear(&angles, 1);
         }
         #else
-        if (axis == 1) {
+        if (axis == sweepDirection_y) {
           STATS_CNT_RATE_EVENT(&cycleRate);
 
           pulseProcessorApplyCalibration(&ppState, &angles, basestation);

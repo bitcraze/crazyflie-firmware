@@ -22,14 +22,15 @@
 #define SWEEP 512
 #define LONG_SWEEP 1500
 
-
+// Helpers
 static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime);
 static void limitTimestamps(pulseProcessorPulse_t history[]);
 
 // Functions under test
 bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
 bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
-
+int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp);
+bool isSweepActiveThisFrame(int width);
 
 void setUp(void) {
 }
@@ -515,7 +516,7 @@ void testThatIsNewSyncDoesNotMatchTimestampTooFarAway() {
 }
 
 
-void testThatRsultStructIsCleared() {
+void testThatResultStructIsCleared() {
   // Fixture
   pulseProcessorResult_t angles;
   angles.sensorMeasurements[2].baseStatonMeasurements[1].validCount = 2;
@@ -527,7 +528,128 @@ void testThatRsultStructIsCleared() {
   TEST_ASSERT_EQUAL_INT(0, angles.sensorMeasurements[2].baseStatonMeasurements[1].validCount);
 }
 
-// Test helpers
+
+void testThatBs0IsReturnedWhenTimeStampIsOneFrameFromPreviousSync0() {
+  // Fixture
+  unsigned int baseTime = 100000;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 0;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatBs0IsReturnedWhenTimeStampIsSlightlyLessThanOneFrameFromPreviousSync0() {
+  // Fixture
+  unsigned int baseTime = 100000;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH - 10;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 0;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatBs0IsReturnedWhenTimeStampIsSlightlyMoreThanOneFrameFromPreviousSync0() {
+  // Fixture
+  unsigned int baseTime = 100000;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH + 10;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 0;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSyncSeparationFromPreviousSync0() {
+  // Fixture
+  unsigned int baseTime = 100000;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 1;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyLessThanSyncSeparationFromPreviousSync0() {
+  // Fixture
+  unsigned int baseTime = 100000;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION - 10;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 1;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyMoreThanSyncSeparationFromPreviousSync0() {
+  // Fixture
+  unsigned int baseTime = 100000;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION + 10;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 1;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatBs0IsReturnedWhenTimeStampWraps() {
+  // Fixture
+  unsigned int baseTime = -1;
+  unsigned int timeStamp = baseTime + FRAME_LENGTH;
+  pulseProcessor_t state = {.currentSync0 = baseTime};
+  int expected = 0;
+
+  // Test
+  int actual = getBaseStationId(&state, timeStamp);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(expected, actual);
+}
+
+void testThatSweepIsActive() {
+  // Fixture
+  unsigned int width = SYNC_BASE_WIDTH;
+
+  // Test
+  int actual = isSweepActiveThisFrame(width);
+
+  // Assert
+  TEST_ASSERT_TRUE(actual);
+}
+
+void testThatSweepIsNotActive() {
+  // Fixture
+  unsigned int width = SYNC_BASE_WIDTH + SYNC_DIVIDER * 4;
+
+  // Test
+  int actual = isSweepActiveThisFrame(width);
+
+  // Assert
+  TEST_ASSERT_FALSE(actual);
+}
+
+// Helpers
 
 static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime)
 {
