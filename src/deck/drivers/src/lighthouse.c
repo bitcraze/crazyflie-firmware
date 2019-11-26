@@ -127,12 +127,21 @@ static pulseProcessorResult_t angles;
 static bool comSynchronized = false;
 
 #define ONE_SECOND 1000
+#define HALF_SECOND 500
 static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
-static STATS_CNT_RATE_DEFINE(estBs0Rate, ONE_SECOND);
-static STATS_CNT_RATE_DEFINE(estBs1Rate, ONE_SECOND);
+
+static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
+static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
+#ifdef FF_EXPERIMENTAL
+static statsCntRateLogger_t* bsEstRates[2] = {&estBs0Rate, &estBs1Rate};
+#endif
+
+static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
+static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
+static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
@@ -221,12 +230,7 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
           memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[baseStation], sizeof(baseStationGeometry_t));
           if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
             estimatorEnqueueSweepAngles(&sweepAngles);
-
-            if (baseStation == 0) {
-              STATS_CNT_RATE_EVENT(&estBs0Rate);
-            } else {
-              STATS_CNT_RATE_EVENT(&estBs1Rate);
-            }
+            STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
           }
         }
       }
@@ -368,6 +372,7 @@ static void lighthouseTask(void *param)
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
         STATS_CNT_RATE_EVENT(&frameRate);
+        STATS_CNT_RATE_EVENT(bsRates[basestation]);
         #ifndef FF_EXPERIMENTAL
         if (basestation == 1 && axis == sweepDirection_y) {
           STATS_CNT_RATE_EVENT(&cycleRate);
@@ -513,6 +518,10 @@ STATS_CNT_RATE_LOG_ADD(cycleRt, &cycleRate)
 STATS_CNT_RATE_LOG_ADD(posRt, &positionRate)
 STATS_CNT_RATE_LOG_ADD(estBs0Rt, &estBs0Rate)
 STATS_CNT_RATE_LOG_ADD(estBs1Rt, &estBs1Rate)
+
+STATS_CNT_RATE_LOG_ADD(bs0Rt, &bs0Rate)
+STATS_CNT_RATE_LOG_ADD(bs1Rt, &bs1Rate)
+
 
 LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
 #if PULSE_PROCESSOR_N_SENSORS > 1
