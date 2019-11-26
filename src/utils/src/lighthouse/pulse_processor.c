@@ -13,7 +13,7 @@
 #define FRAME_LENGTH 400000    // 8.333ms
 #define SWEEP_MAX_WIDTH 1024   // 20us
 #define SYNC_DIVIDER 500
-#define SYNC_SEPARATION 19200
+#define SYNC_SEPARATION 20000
 #define SYNC_BASE_WIDTH (2500 + (SYNC_DIVIDER / 2))
 #define SYNC_MAX_SEPARATION 25000
 #define SENSOR_MAX_DISPERTION 20
@@ -219,6 +219,8 @@ static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsig
       state->currentSync1Y = timestamp;
       state->frameWidth[1][1] = TS_DIFF(state->currentSync1Y, prevSync1Y);
     }
+
+    state->currentSync0 = TS_DIFF(timestamp, SYNC_SEPARATION);
   }
 
   state->lastSync = timestamp;
