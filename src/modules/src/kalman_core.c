@@ -606,19 +606,12 @@ static void scalarUpdateForSweep(kalmanCoreData_t *this, float measuredSweepAngl
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles)
 {
     // Get rotation matrix and invert it (to get the global to local rotation matrix)
-    arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)angles->geometry.mat};
-
-    float bs_r_tmp[3][3];
-    memcpy(bs_r_tmp, (float32_t *)angles->geometry.mat, sizeof(bs_r_tmp));
-    arm_matrix_instance_f32 basestation_rotation_matrix_tmp = {3, 3, (float32_t *)bs_r_tmp};
-
-    float bs_r_inv[3][3];
-    arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)bs_r_inv};
-    arm_mat_inverse_f32(&basestation_rotation_matrix_tmp, &basestation_rotation_matrix_inv);
+    arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)angles->baseStationRot};
+    arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)angles->baseStationRotInv};
 
     // Rotate the sensor position using the CF roatation matrix, to rotate it to global coordinates
     arm_matrix_instance_f32 CF_ROT_MATRIX = {3, 3, (float32_t *)this->R};
-    arm_matrix_instance_f32 SENSOR_RELATVIVE_POS = {3, 1, angles->sensorPos};
+    arm_matrix_instance_f32 SENSOR_RELATVIVE_POS = {3, 1, (float32_t *)angles->sensorPos};
     vec3d sensor_relative_pos_glob = {0};
     arm_matrix_instance_f32 SENSOR_RELATVIVE_POS_GLOB = {3, 1, sensor_relative_pos_glob};
     mat_mult(&CF_ROT_MATRIX, &SENSOR_RELATVIVE_POS, &SENSOR_RELATVIVE_POS_GLOB);
@@ -629,9 +622,10 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
     float pos_z = this->S[KC_STATE_Z] + sensor_relative_pos_glob[2];
 
     // Calculate the difference between the base stations and the sensor on the CF.
-    float dx = pos_x - angles->geometry.origin[0];
-    float dy = pos_y - angles->geometry.origin[1];
-    float dz = pos_z - angles->geometry.origin[2];
+    const float* baseStationPos = *angles->baseStationPos;
+    float dx = pos_x - baseStationPos[0];
+    float dy = pos_y - baseStationPos[1];
+    float dz = pos_z - baseStationPos[2];
 
     // Rotate the difference in position to be relative to the basestation
     vec3d position_diff = {dx, dy, dz};
@@ -647,7 +641,6 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
     // Retrieve the measured sweepangles
     float measuredSweepAngleHorizontal = angles->angleX;
     float measuredSweepAngleVertical = angles->angleY;
-
 
     scalarUpdateForSweep(this, measuredSweepAngleHorizontal, dy_rot, dx_rot, KC_STATE_Y, angles->stdDevX, &basestation_rotation_matrix);
     scalarUpdateForSweep(this, measuredSweepAngleVertical, dz_rot, dx_rot, KC_STATE_Z, angles->stdDevY, &basestation_rotation_matrix);

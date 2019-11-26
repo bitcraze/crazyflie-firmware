@@ -6,10 +6,11 @@
 // Naive 3d vector type.
 #define vec3d_size 3
 typedef float vec3d[vec3d_size];
+typedef float mat3d[vec3d_size][vec3d_size];
 
 typedef struct baseStationGeometry_s {
-  float origin[3];
-  float mat[3][3];
+  vec3d origin;
+  mat3d mat;
 } __attribute__((packed)) baseStationGeometry_t;
 
 typedef struct baseStationEulerAngles_s {

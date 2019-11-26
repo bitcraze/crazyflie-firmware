@@ -79,6 +79,7 @@ static bool isInit = false;
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
 
 baseStationEulerAngles_t lighthouseBaseStationAngles[2];
+static mat3d baseStationInvertedRotationMatrixes[2];
 
 // Sensor positions on the deck
 #define SENSOR_POS_W (0.015f / 2.0f)
@@ -220,15 +221,19 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
       if (sensor < maxs) {
         if ((1 << baseStation) & bsBitField) {
           sweepAngleMeasurement_t sweepAngles;
-          sweepAngles.stdDevX = sweepStd;
-          sweepAngles.stdDevY = sweepStd;
-
-          memcpy(sweepAngles.sensorPos, sensorDeckPositions[sensor], sizeof(vec3d));
-
           sweepAngles.angleX = bsMeasurement->correctedAngles[0];
           sweepAngles.angleY = bsMeasurement->correctedAngles[1];
-          memcpy(&sweepAngles.geometry, &lighthouseBaseStationsGeometry[baseStation], sizeof(baseStationGeometry_t));
+
           if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
+            sweepAngles.stdDevX = sweepStd;
+            sweepAngles.stdDevY = sweepStd;
+
+            sweepAngles.sensorPos = &sensorDeckPositions[sensor];
+
+            sweepAngles.baseStationPos = &lighthouseBaseStationsGeometry[baseStation].origin;
+            sweepAngles.baseStationRot = &lighthouseBaseStationsGeometry[baseStation].mat;
+            sweepAngles.baseStationRotInv = &baseStationInvertedRotationMatrixes[baseStation];
+
             estimatorEnqueueSweepAngles(&sweepAngles);
             STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
           }
@@ -314,6 +319,17 @@ static void estimatePose(pulseProcessorResult_t* angles, int baseStation) {
   estimateYaw(angles, baseStation);
 }
 
+static void invertRotationMatrix(mat3d rot, mat3d inverted) {
+  // arm_mat_inverse_f32() alters the original matrix in the process, must make a copy to work from
+  float bs_r_tmp[3][3];
+  memcpy(bs_r_tmp, (float32_t *)rot, sizeof(bs_r_tmp));
+  arm_matrix_instance_f32 basestation_rotation_matrix_tmp = {3, 3, (float32_t *)bs_r_tmp};
+
+  arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)inverted};
+  arm_mat_inverse_f32(&basestation_rotation_matrix_tmp, &basestation_rotation_matrix_inv);
+}
+
+
 static void lighthouseTask(void *param)
 {
   bool synchronized = false;
@@ -328,6 +344,9 @@ static void lighthouseTask(void *param)
   // Get the eulerangles from the rotation matrix of the basestations
   lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
   lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
+
+  invertRotationMatrix(lighthouseBaseStationsGeometry[0].mat, baseStationInvertedRotationMatrixes[0]);
+  invertRotationMatrix(lighthouseBaseStationsGeometry[1].mat, baseStationInvertedRotationMatrixes[1]);
 
   systemWaitStart();
 
