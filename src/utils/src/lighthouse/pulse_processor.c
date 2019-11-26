@@ -47,10 +47,10 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
 
   // As soon as one of the history buffers is full, run the synchronization algorithm!
   if (state->pulseHistoryPtr[sensor] >= PULSE_PROCESSOR_HISTORY_LENGTH) {
-    static uint32_t syncTimes[PULSE_PROCESSOR_HISTORY_LENGTH];
+    static uint32_t syncTimes[PULSE_PROCESSOR_N_SENSORS];
     size_t nSyncTimes = 0;
 
-    for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
+    for (int i=0; i<PULSE_PROCESSOR_N_SENSORS; i++) {
       if (findSyncTime(state->pulseHistory[i], &syncTimes[nSyncTimes])) {
         nSyncTimes += 1;
       }
