@@ -13,3 +13,4 @@
 [submodule "src/lib/FreeRTOS"]
 	path = src/lib/FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
+	branch = V10.2.1-convergence-FreeRTOS-Source
