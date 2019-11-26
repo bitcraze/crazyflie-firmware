@@ -48,22 +48,14 @@ typedef struct pulseProcessor_s {
 
   // Sync pulse timestamps
   uint32_t currentSync;   // Sync currently used for sweep phase measurement
-  uint32_t prevSync;
   uint32_t currentSync0;  // Sync0 of the current frame
-  uint32_t prevSync0;
-  uint32_t currentSync1;  // Sync1 of the current frame
-  uint32_t prevSync1;
   uint32_t currentSync0Width;  // Width of sync0 in the current frame
   uint32_t currentSync1Width;  // Width of sync1 in the current frame
 
   uint32_t currentSync0X;
-  uint32_t prevSync0X;
   uint32_t currentSync0Y;
-  uint32_t prevSync0Y;
   uint32_t currentSync1X;
-  uint32_t prevSync1X;
   uint32_t currentSync1Y;
-  uint32_t prevSync1Y;
 
   float frameWidth[2][2];
 

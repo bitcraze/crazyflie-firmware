@@ -11,11 +11,11 @@
 // Decoding contants
 // Times are expressed in a 48MHz clock
 #define FRAME_LENGTH 400000    // 8.333ms
-#define SWEEP_MAX_WIDTH 1024    // 20us
-#define SYNC_BASE_WIDTH 2750
+#define SWEEP_MAX_WIDTH 1024   // 20us
 #define SYNC_DIVIDER 500
-#define SYNC_MAX_SEPARATION 25000   // More than 400us (400us is 19200)
 #define SYNC_SEPARATION 19200
+#define SYNC_BASE_WIDTH (2500 + (SYNC_DIVIDER / 2))
+#define SYNC_MAX_SEPARATION 25000
 #define SENSOR_MAX_DISPERTION 20
 #define MAX_FRAME_LENGTH_NOISE 800
 
@@ -58,7 +58,6 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
       if (getSystemSyncTime(syncTimes, nSyncTimes, &state->currentSync0)) {
         state->synchronized = true;
         state->lastSync = state->currentSync0;
-        state->currentSync1 = state->currentSync0 + SYNC_SEPARATION;
         break;
       }
     }
@@ -198,36 +197,27 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
 static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsigned int width) {
   int baseStation = getBaseStationId(state, timestamp);
   if (0 == baseStation) {
-    state->prevSync0 = state->currentSync0;
     state->currentSync0 = timestamp;
     state->currentSync0Width = width;
-    if (isSweepActiveThisFrame(width)) {
-      state->prevSync = state->prevSync0;
-    }
     if (getAxis(width) == sweepDirection_x) {
-      state->prevSync0X = state->currentSync0X;
+      uint32_t prevSync0X = state->currentSync0X;
       state->currentSync0X = timestamp;
-      state->frameWidth[0][0] = TS_DIFF(state->currentSync0X, state->prevSync0X);
+      state->frameWidth[0][0] = TS_DIFF(state->currentSync0X, prevSync0X);
     } else {
-      state->prevSync0Y = state->currentSync0Y;
+      uint32_t prevSync0Y = state->currentSync0Y;
       state->currentSync0Y = timestamp;
-      state->frameWidth[0][1] = TS_DIFF(state->currentSync0Y, state->prevSync0Y);
+      state->frameWidth[0][1] = TS_DIFF(state->currentSync0Y, prevSync0Y);
     }
   } else {
-    state->prevSync1 = state->currentSync1;
-    state->currentSync1 = timestamp;
     state->currentSync1Width = width;
-    if (isSweepActiveThisFrame(width)) {
-      state->prevSync = state->prevSync1;
-    }
     if (getAxis(width) == sweepDirection_x) {
-      state->prevSync1X = state->currentSync1X;
+      uint32_t prevSync1X = state->currentSync1X;
       state->currentSync1X = timestamp;
-      state->frameWidth[1][0] = TS_DIFF(state->currentSync1X, state->prevSync1X);
+      state->frameWidth[1][0] = TS_DIFF(state->currentSync1X, prevSync1X);
     } else {
-      state->prevSync1Y = state->currentSync1Y;
+      uint32_t prevSync1Y = state->currentSync1Y;
       state->currentSync1Y = timestamp;
-      state->frameWidth[1][1] = TS_DIFF(state->currentSync1Y, state->prevSync1Y);
+      state->frameWidth[1][1] = TS_DIFF(state->currentSync1Y, prevSync1Y);
     }
   }
 
