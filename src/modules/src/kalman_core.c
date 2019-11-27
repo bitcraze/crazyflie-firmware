@@ -606,12 +606,12 @@ static void scalarUpdateForSweep(kalmanCoreData_t *this, float measuredSweepAngl
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles)
 {
     // Get rotation matrix and invert it (to get the global to local rotation matrix)
-    arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)angles->baseStationRot};
-    arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)angles->baseStationRotInv};
+    arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)(*angles->baseStationRot)};
+    arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)(*angles->baseStationRotInv)};
 
     // Rotate the sensor position using the CF roatation matrix, to rotate it to global coordinates
     arm_matrix_instance_f32 CF_ROT_MATRIX = {3, 3, (float32_t *)this->R};
-    arm_matrix_instance_f32 SENSOR_RELATVIVE_POS = {3, 1, (float32_t *)angles->sensorPos};
+    arm_matrix_instance_f32 SENSOR_RELATVIVE_POS = {3, 1, *angles->sensorPos};
     vec3d sensor_relative_pos_glob = {0};
     arm_matrix_instance_f32 SENSOR_RELATVIVE_POS_GLOB = {3, 1, sensor_relative_pos_glob};
     mat_mult(&CF_ROT_MATRIX, &SENSOR_RELATVIVE_POS, &SENSOR_RELATVIVE_POS_GLOB);
