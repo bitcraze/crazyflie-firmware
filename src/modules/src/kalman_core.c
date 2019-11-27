@@ -76,8 +76,6 @@
 #endif
 
 
-static uint8_t roth = 1;
-
 /**
  * Supporting and utility functions
  */
@@ -579,31 +577,24 @@ static void scalarUpdateForSweep(kalmanCoreData_t *this, float measuredSweepAngl
     float angleError = measuredSweepAngle - predictedSweepAngle;
     if (outlierFilterValidateLighthouseSweep(&sweepOutlierFilterState, distanceToBs, angleError, tick)) {
       float n = (dx * dx + dp * dp);
-      float hx = -dp / n;
-      float hp = dx / n;
 
       float h[KC_STATE_DIM] = {0};
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
 
-      if (roth) {
-        // Rotate back to global coordinate system
-        vec3d h_b = {0, 0, 0};
-        arm_matrix_instance_f32 H_B = {3, 1, h_b};
-        h_b[KC_STATE_X] = -dp / n;
-        h_b[state_p] = dx / n;
+      // Rotate back to global coordinate system
+      vec3d h_b = {0, 0, 0};
+      arm_matrix_instance_f32 H_B = {3, 1, h_b};
+      h_b[KC_STATE_X] = -dp / n;
+      h_b[state_p] = dx / n;
 
-        vec3d h_g = {0, 0, 0};
-        arm_matrix_instance_f32 H_G = {3, 1, h_g};
+      vec3d h_g = {0, 0, 0};
+      arm_matrix_instance_f32 H_G = {3, 1, h_g};
 
-        mat_mult(R, &H_B, &H_G);
+      mat_mult(R, &H_B, &H_G);
 
-        h[KC_STATE_X] = h_g[0];
-        h[KC_STATE_Y] = h_g[1];
-        h[KC_STATE_Z] = h_g[2];
-      } else {
-        h[KC_STATE_X] = hx;
-        h[state_p] = hp;
-      }
+      h[KC_STATE_X] = h_g[0];
+      h[KC_STATE_Y] = h_g[1];
+      h[KC_STATE_Z] = h_g[2];
 
       scalarUpdate(this, &H, angleError, stdDev);
     }
@@ -613,8 +604,8 @@ static void scalarUpdateForSweep(kalmanCoreData_t *this, float measuredSweepAngl
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t tick)
 {
   // Get rotation matrix and invert it (to get the global to local rotation matrix)
-    arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)(*angles->baseStationRot)};
-    arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)(*angles->baseStationRotInv)};
+  arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)(*angles->baseStationRot)};
+  arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)(*angles->baseStationRotInv)};
 
   // Rotate the sensor position using the CF roatation matrix, to rotate it to global coordinates
   arm_matrix_instance_f32 CF_ROT_MATRIX = {3, 3, (float32_t *)this->R};
@@ -1145,5 +1136,4 @@ PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_FLOAT, initialY, &initialY)
   PARAM_ADD(PARAM_FLOAT, initialZ, &initialZ)
   PARAM_ADD(PARAM_FLOAT, initialYaw, &initialYaw)
-  PARAM_ADD(PARAM_UINT8, roth, &roth)
 PARAM_GROUP_STOP(kalman)

@@ -174,8 +174,6 @@ static float deltaLog;
 #ifndef FF_EXPERIMENTAL
 static positionMeasurement_t ext_pos;
 #else
-static int8_t maxs = 4;
-static int8_t bsBitField = 3;
 static float sweepStd = 0.0004;
 #endif
 
@@ -218,26 +216,22 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
     if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-      if (sensor < maxs) {
-        if ((1 << baseStation) & bsBitField) {
-          sweepAngleMeasurement_t sweepAngles;
-          sweepAngles.angleX = bsMeasurement->correctedAngles[0];
-          sweepAngles.angleY = bsMeasurement->correctedAngles[1];
+      sweepAngleMeasurement_t sweepAngles;
+      sweepAngles.angleX = bsMeasurement->correctedAngles[0];
+      sweepAngles.angleY = bsMeasurement->correctedAngles[1];
 
-          if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
-            sweepAngles.stdDevX = sweepStd;
-            sweepAngles.stdDevY = sweepStd;
+      if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
+        sweepAngles.stdDevX = sweepStd;
+        sweepAngles.stdDevY = sweepStd;
 
-            sweepAngles.sensorPos = &sensorDeckPositions[sensor];
+        sweepAngles.sensorPos = &sensorDeckPositions[sensor];
 
-            sweepAngles.baseStationPos = &lighthouseBaseStationsGeometry[baseStation].origin;
-            sweepAngles.baseStationRot = &lighthouseBaseStationsGeometry[baseStation].mat;
-            sweepAngles.baseStationRotInv = &baseStationInvertedRotationMatrixes[baseStation];
+        sweepAngles.baseStationPos = &lighthouseBaseStationsGeometry[baseStation].origin;
+        sweepAngles.baseStationRot = &lighthouseBaseStationsGeometry[baseStation].mat;
+        sweepAngles.baseStationRotInv = &baseStationInvertedRotationMatrixes[baseStation];
 
-            estimatorEnqueueSweepAngles(&sweepAngles);
-            STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-          }
-        }
+        estimatorEnqueueSweepAngles(&sweepAngles);
+        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }
     }
   }
@@ -560,8 +554,6 @@ LOG_GROUP_STOP(lighthouse)
 
 #ifdef FF_EXPERIMENTAL
 PARAM_GROUP_START(lh)
-PARAM_ADD(PARAM_INT8, maxs, &maxs)
-PARAM_ADD(PARAM_INT8, bsBitField, &bsBitField)
 PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
 PARAM_GROUP_STOP(lh)
 #endif
