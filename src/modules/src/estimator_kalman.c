@@ -266,7 +266,7 @@ static inline float arm_sqrt(float32_t in)
 
 static void kalmanTask(void* parameters);
 static bool predictStateForward(uint32_t osTick, float dt);
-static bool updateQueuedMeasurments(const Axis3f *gyro);
+static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick);
 
 
 // --------------------------------------------------
@@ -373,7 +373,7 @@ static void kalmanTask(void* parameters) {
       xSemaphoreTake(dataMutex, portMAX_DELAY);
       memcpy(&gyro, &gyroSnapshot, sizeof(gyro));
       xSemaphoreGive(dataMutex);
-      doneUpdate = doneUpdate || updateQueuedMeasurments(&gyro);
+      doneUpdate = doneUpdate || updateQueuedMeasurments(&gyro, osTick);
     }
 
     /**
@@ -501,7 +501,7 @@ static bool predictStateForward(uint32_t osTick, float dt) {
 }
 
 
-static bool updateQueuedMeasurments(const Axis3f *gyro) {
+static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
   bool doneUpdate = false;
   /**
    * Sensor measurements can come in sporadically and faster than the stabilizer loop frequency,
@@ -567,7 +567,7 @@ static bool updateQueuedMeasurments(const Axis3f *gyro) {
   sweepAngleMeasurement_t angles;
   while (stateEstimatorHasSweepAnglesPacket(&angles))
   {
-    kalmanCoreUpdateWithSweepAngles(&coreData, &angles);
+    kalmanCoreUpdateWithSweepAngles(&coreData, &angles, tick);
     doneUpdate = true;
   }
 

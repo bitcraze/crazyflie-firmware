@@ -165,6 +165,8 @@ static float initialQuaternion[4] = {0.0, 0.0, 0.0, 0.0};
 
 static uint32_t tdoaCount;
 
+static OutlierFilterLhState_t sweepOutlierFilterState;
+
 
 void kalmanCoreInit(kalmanCoreData_t* this) {
   tdoaCount = 0;
@@ -218,6 +220,8 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
   this->Pm.pData = (float*)this->P;
 
   this->baroReferenceHeight = 0.0;
+
+  outlierFilterReset(&sweepOutlierFilterState, 0);
 }
 
 static void scalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
@@ -568,82 +572,87 @@ void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t 
     scalarUpdate(this, &H, this->S[KC_STATE_D2] - error->yawError, error->stdDev);
 }
 
-static void scalarUpdateForSweep(kalmanCoreData_t *this, float measuredSweepAngle, float dp, float dx, kalmanCoreStateIdx_t state_p, float stdDev, arm_matrix_instance_f32* R) {
+static void scalarUpdateForSweep(kalmanCoreData_t *this, float measuredSweepAngle, float dp, float dx, kalmanCoreStateIdx_t state_p, float stdDev, arm_matrix_instance_f32* R, float distanceToBs, const uint32_t tick) {
   if(dx != 0) {
     float predictedSweepAngle = atan2(dp, dx);
 
-    float n = (dx * dx + dp * dp);
-    float hx = -dp / n;
-    float hp = dx / n;
+    float angleError = measuredSweepAngle - predictedSweepAngle;
+    if (outlierFilterValidateLighthouseSweep(&sweepOutlierFilterState, distanceToBs, angleError, tick)) {
+      float n = (dx * dx + dp * dp);
+      float hx = -dp / n;
+      float hp = dx / n;
 
-    float h[KC_STATE_DIM] = {0};
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+      float h[KC_STATE_DIM] = {0};
+      arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
 
-    if (roth) {
-      // Rotate back to global coordinate system
-      vec3d h_b = {0, 0, 0};
-      arm_matrix_instance_f32 H_B = {3, 1, h_b};
-      h_b[KC_STATE_X] = -dp / n;
-      h_b[state_p] = dx / n;
+      if (roth) {
+        // Rotate back to global coordinate system
+        vec3d h_b = {0, 0, 0};
+        arm_matrix_instance_f32 H_B = {3, 1, h_b};
+        h_b[KC_STATE_X] = -dp / n;
+        h_b[state_p] = dx / n;
 
-      vec3d h_g = {0, 0, 0};
-      arm_matrix_instance_f32 H_G = {3, 1, h_g};
+        vec3d h_g = {0, 0, 0};
+        arm_matrix_instance_f32 H_G = {3, 1, h_g};
 
-      mat_mult(R, &H_B, &H_G);
+        mat_mult(R, &H_B, &H_G);
 
-      h[KC_STATE_X] = h_g[0];
-      h[KC_STATE_Y] = h_g[1];
-      h[KC_STATE_Z] = h_g[2];
-    } else {
-      h[KC_STATE_X] = hx;
-      h[state_p] = hp;
+        h[KC_STATE_X] = h_g[0];
+        h[KC_STATE_Y] = h_g[1];
+        h[KC_STATE_Z] = h_g[2];
+      } else {
+        h[KC_STATE_X] = hx;
+        h[state_p] = hp;
+      }
+
+      scalarUpdate(this, &H, angleError, stdDev);
     }
-
-    scalarUpdate(this, &H, measuredSweepAngle - predictedSweepAngle, stdDev);
   }
 }
 
-void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles)
+void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t tick)
 {
-    // Get rotation matrix and invert it (to get the global to local rotation matrix)
+  // Get rotation matrix and invert it (to get the global to local rotation matrix)
     arm_matrix_instance_f32 basestation_rotation_matrix = {3, 3, (float32_t *)(*angles->baseStationRot)};
     arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)(*angles->baseStationRotInv)};
 
-    // Rotate the sensor position using the CF roatation matrix, to rotate it to global coordinates
-    arm_matrix_instance_f32 CF_ROT_MATRIX = {3, 3, (float32_t *)this->R};
-    arm_matrix_instance_f32 SENSOR_RELATVIVE_POS = {3, 1, *angles->sensorPos};
-    vec3d sensor_relative_pos_glob = {0};
-    arm_matrix_instance_f32 SENSOR_RELATVIVE_POS_GLOB = {3, 1, sensor_relative_pos_glob};
-    mat_mult(&CF_ROT_MATRIX, &SENSOR_RELATVIVE_POS, &SENSOR_RELATVIVE_POS_GLOB);
+  // Rotate the sensor position using the CF roatation matrix, to rotate it to global coordinates
+  arm_matrix_instance_f32 CF_ROT_MATRIX = {3, 3, (float32_t *)this->R};
+  arm_matrix_instance_f32 SENSOR_RELATVIVE_POS = {3, 1, *angles->sensorPos};
+  vec3d sensor_relative_pos_glob = {0};
+  arm_matrix_instance_f32 SENSOR_RELATVIVE_POS_GLOB = {3, 1, sensor_relative_pos_glob};
+  mat_mult(&CF_ROT_MATRIX, &SENSOR_RELATVIVE_POS, &SENSOR_RELATVIVE_POS_GLOB);
 
-    // Get the current state values of the position of the crazyflie and add the relative sensor pos
-    float pos_x = this->S[KC_STATE_X] + sensor_relative_pos_glob[0];
-    float pos_y = this->S[KC_STATE_Y] + sensor_relative_pos_glob[1];
-    float pos_z = this->S[KC_STATE_Z] + sensor_relative_pos_glob[2];
+  // Get the current state values of the position of the crazyflie and add the relative sensor pos
+  float pos_x = this->S[KC_STATE_X] + sensor_relative_pos_glob[0];
+  float pos_y = this->S[KC_STATE_Y] + sensor_relative_pos_glob[1];
+  float pos_z = this->S[KC_STATE_Z] + sensor_relative_pos_glob[2];
 
-    // Calculate the difference between the base stations and the sensor on the CF.
-    const float* baseStationPos = *angles->baseStationPos;
-    float dx = pos_x - baseStationPos[0];
-    float dy = pos_y - baseStationPos[1];
-    float dz = pos_z - baseStationPos[2];
+  // Calculate the difference between the base stations and the sensor on the CF.
+  const float* baseStationPos = *angles->baseStationPos;
+  float dx = pos_x - baseStationPos[0];
+  float dy = pos_y - baseStationPos[1];
+  float dz = pos_z - baseStationPos[2];
 
-    // Rotate the difference in position to be relative to the basestation
-    vec3d position_diff = {dx, dy, dz};
-    vec3d position_diff_rotated = {0, 0, 0};
-    arm_matrix_instance_f32 vec_pos_diff = {3, 1, position_diff};
-    arm_matrix_instance_f32 vec_pos_diff_rot = {3, 1, position_diff_rotated};
-    mat_mult(&basestation_rotation_matrix_inv, &vec_pos_diff, &vec_pos_diff_rot);
+  // Rotate the difference in position to be relative to the basestation
+  vec3d position_diff = {dx, dy, dz};
+  vec3d position_diff_rotated = {0, 0, 0};
+  arm_matrix_instance_f32 vec_pos_diff = {3, 1, position_diff};
+  arm_matrix_instance_f32 vec_pos_diff_rot = {3, 1, position_diff_rotated};
+  mat_mult(&basestation_rotation_matrix_inv, &vec_pos_diff, &vec_pos_diff_rot);
 
-    float dx_rot = position_diff_rotated[0];
-    float dy_rot = position_diff_rotated[1];
-    float dz_rot = position_diff_rotated[2];
+  float dx_rot = position_diff_rotated[0];
+  float dy_rot = position_diff_rotated[1];
+  float dz_rot = position_diff_rotated[2];
 
-    // Retrieve the measured sweepangles
-    float measuredSweepAngleHorizontal = angles->angleX;
-    float measuredSweepAngleVertical = angles->angleY;
+  // Retrieve the measured sweepangles
+  float measuredSweepAngleHorizontal = angles->angleX;
+  float measuredSweepAngleVertical = angles->angleY;
 
-    scalarUpdateForSweep(this, measuredSweepAngleHorizontal, dy_rot, dx_rot, KC_STATE_Y, angles->stdDevX, &basestation_rotation_matrix);
-    scalarUpdateForSweep(this, measuredSweepAngleVertical, dz_rot, dx_rot, KC_STATE_Z, angles->stdDevY, &basestation_rotation_matrix);
+  float distanceToBs = arm_sqrt(dx * dx + dy * dy + dz * dz);
+
+  scalarUpdateForSweep(this, measuredSweepAngleHorizontal, dy_rot, dx_rot, KC_STATE_Y, angles->stdDevX, &basestation_rotation_matrix, distanceToBs, tick);
+  scalarUpdateForSweep(this, measuredSweepAngleVertical, dz_rot, dx_rot, KC_STATE_Z, angles->stdDevY, &basestation_rotation_matrix, distanceToBs, tick);
 }
 
 void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
@@ -1118,6 +1127,10 @@ LOG_GROUP_START(kalman_pred)
   LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
   LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
 LOG_GROUP_STOP(kalman_pred)
+
+LOG_GROUP_START(outlierf)
+  LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
+LOG_GROUP_STOP(outlierf)
 
 PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_FLOAT, pNAcc_xy, &procNoiseAcc_xy)

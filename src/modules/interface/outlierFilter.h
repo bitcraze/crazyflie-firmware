@@ -5,9 +5,7 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * Crazyflie control firmware
- *
- * Copyright (C) 2011-2018 Bitcraze AB
+ * Copyright (C) 2011-2019 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * outlierFilter.h: Outlier rejection filter for the LPS system
+ * outlierFilter.h: Outlier rejection filter for the kalman filter
  */
 
 #ifndef __OUTLIER_FILTER_H__
@@ -32,6 +30,12 @@
 bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa);
 bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);
 
-void outlierFilterReset();
+typedef struct {
+    uint32_t openingTime;
+    int32_t openingWindow;
+} OutlierFilterLhState_t;
+bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t now);
+void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t now);
+
 
 #endif // __OUTLIER_FILTER_H__
