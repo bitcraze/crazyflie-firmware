@@ -361,13 +361,6 @@ void testThatFindSyncFailesWhenReceivingAnUnidentifiedPulseFirstInHistory()
 
 
 
-
-
-
-
-
-
-
 void testThatGetSystemSyncTimeReturnsTheAverageForGoodSyncData()
 {
   // Fixture

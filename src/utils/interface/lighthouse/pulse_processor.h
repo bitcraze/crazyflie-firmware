@@ -34,7 +34,8 @@ typedef enum {
 } SweepStorageState_t;
 
 typedef struct pulseProcessor_s {
-  bool synchronized;    // At true if we are currently syncthonized (ie. we have seen one short sweep)
+  bool synchronized;    // At true if we are currently syncthonized
+  int basestationsSynchronizedCount;
 
   // Synchronization state
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];

@@ -58,7 +58,8 @@ static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp,
 
     for (int i=0; i<PULSE_PROCESSOR_N_SENSORS; i++) {
       const int bsSyncsFound = findSyncTime(state->pulseHistory[i], &sync0Times[syncTimeCount]);
-      if (bsSyncsFound == 2) {
+      if (bsSyncsFound >= state->basestationsSynchronizedCount) {
+        state->basestationsSynchronizedCount = bsSyncsFound;
         syncTimeCount += 1;
       }
 
@@ -203,8 +204,7 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
   return anglesMeasured;
 }
 
-static void storeSyncData(pulseProcessor_t *state, unsigned int timestamp, unsigned int width) {
-  int baseStation = getBaseStationId(state, timestamp);
+static void storeSyncData(pulseProcessor_t *state, int baseStation, unsigned int timestamp, unsigned int width) {
   if (0 == baseStation) {
     state->currentSync0 = timestamp;
     state->currentSync0Width = width;
@@ -287,7 +287,13 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
         decodeAndApplyBaseStationCalibrationData(state);
       }
 
-      storeSyncData(state, timestamp, width);
+      int baseStation = getBaseStationId(state, timestamp);
+
+      if (baseStation == 1 && state->basestationsSynchronizedCount < 2) {
+        resetSynchronization(state);
+      } else {
+        storeSyncData(state, baseStation, timestamp, width);
+      }
     } else {
       // Expected a sync but something is wrong, re-synchronize.
       resetSynchronization(state);
