@@ -254,6 +254,19 @@ static void printBSInfo(struct ootxDataFrame_s *frame)
   DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
 }
 
+static void decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
+  if (!state->bsCalibration[0].valid &&
+      ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->currentSync0Width))) {
+    printBSInfo(&state->ootxDecoder0.frame);
+    lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder0.frame);
+  }
+  if (!state->bsCalibration[1].valid &&
+      ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->currentSync1Width))) {
+    printBSInfo(&state->ootxDecoder1.frame);
+    lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder1.frame);
+  }
+}
+
 static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
@@ -261,18 +274,8 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
     if (isSync(state, timestamp)) {
       anglesMeasured = processPreviousFrame(state, angles, baseStation, axis);
 
-      // Receive OOTX data frame and initialize BS calibration when we get it
       if (anglesMeasured) {
-        if (!state->bsCalibration[0].valid &&
-            ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->currentSync0Width))) {
-          printBSInfo(&state->ootxDecoder0.frame);
-          lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder0.frame);
-        }
-        if (!state->bsCalibration[1].valid &&
-            ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->currentSync1Width))) {
-          printBSInfo(&state->ootxDecoder1.frame);
-          lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder1.frame);
-        }
+        decodeAndApplyBaseStationCalibrationData(state);
       }
 
       storeSyncData(state, timestamp, width);

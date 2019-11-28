@@ -550,14 +550,13 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
 
-#endif // DISABLE_LIGHTHOUSE_DRIVER
-
 #ifdef FF_EXPERIMENTAL
 PARAM_GROUP_START(lh)
 PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
 PARAM_GROUP_STOP(lh)
 #endif
 
+#endif // DISABLE_LIGHTHOUSE_DRIVER
 
 PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bdLighthouse4, &isInit)
