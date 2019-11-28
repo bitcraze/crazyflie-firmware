@@ -12,10 +12,17 @@
 // Times are expressed in a 48MHz clock
 #define FRAME_LENGTH 400000    // 8.333ms
 #define SWEEP_MAX_WIDTH 1024   // 20us
+
 #define SYNC_DIVIDER 500
-#define SYNC_SEPARATION 20000
 #define SYNC_BASE_WIDTH (2500 + (SYNC_DIVIDER / 2))
-#define SYNC_MAX_SEPARATION 25000
+#define SYNC_MIN_WIDTH (2500 - SYNC_DIVIDER)
+#define SYNC_MAX_WIDTH (2500 + SYNC_DIVIDER * 8)
+
+#define SYNC_SEPARATION 20000
+#define SYNC_SEPARATION_MAX_DISPERSION 5000
+#define SYNC_MIN_SEPARATION (SYNC_SEPARATION - SYNC_SEPARATION_MAX_DISPERSION)
+#define SYNC_MAX_SEPARATION (SYNC_SEPARATION + SYNC_SEPARATION_MAX_DISPERSION)
+
 #define SENSOR_MAX_DISPERTION 20
 #define MAX_FRAME_LENGTH_NOISE 800
 
@@ -30,34 +37,36 @@ static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
 }
 
 
-
-TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
+TESTABLE_STATIC int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time);
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
 
 static void resetPulseHistory(pulseProcessor_t *state) {
-  memset(state->pulseHistoryPtr, 0, sizeof(state->pulseHistoryPtr));
+  memset(state->pulseHistoryIdx, 0, sizeof(state->pulseHistoryIdx));
 }
 
 static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp, uint32_t width)
 {
-  state->pulseHistory[sensor][state->pulseHistoryPtr[sensor]].timestamp = timestamp;
-  state->pulseHistory[sensor][state->pulseHistoryPtr[sensor]].width = width;
+  state->pulseHistory[sensor][state->pulseHistoryIdx[sensor]].timestamp = timestamp;
+  state->pulseHistory[sensor][state->pulseHistoryIdx[sensor]].width = width;
 
-  state->pulseHistoryPtr[sensor] += 1;
+  state->pulseHistoryIdx[sensor] += 1;
 
   // As soon as one of the history buffers is full, run the synchronization algorithm!
-  if (state->pulseHistoryPtr[sensor] >= PULSE_PROCESSOR_HISTORY_LENGTH) {
-    static uint32_t syncTimes[PULSE_PROCESSOR_N_SENSORS];
-    size_t nSyncTimes = 0;
+  if (state->pulseHistoryIdx[sensor] >= PULSE_PROCESSOR_HISTORY_LENGTH) {
+    static uint32_t sync0Times[PULSE_PROCESSOR_N_SENSORS];
+    size_t syncTimeCount = 0;
 
     for (int i=0; i<PULSE_PROCESSOR_N_SENSORS; i++) {
-      if (findSyncTime(state->pulseHistory[i], &syncTimes[nSyncTimes])) {
-        nSyncTimes += 1;
+      const int bsSyncsFound = findSyncTime(state->pulseHistory[i], &sync0Times[syncTimeCount]);
+      if (bsSyncsFound == 2) {
+        syncTimeCount += 1;
       }
 
-      if (getSystemSyncTime(syncTimes, nSyncTimes, &state->currentSync0)) {
+      uint32_t validSync0Time = 0;
+      if (getSystemSyncTime(sync0Times, syncTimeCount, &validSync0Time)) {
         state->synchronized = true;
-        state->lastSync = state->currentSync0;
+        state->currentSync0 = validSync0Time;
+        state->lastSync = validSync0Time;
         break;
       }
     }
@@ -322,43 +331,80 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
   }
 }
 
+static bool isPulseASync(const pulseProcessorPulse_t* pulse) {
+  return (pulse->width > SYNC_MIN_WIDTH) && (pulse->width < SYNC_MAX_WIDTH);
+}
+
+static bool isPulseASweep(const pulseProcessorPulse_t* pulse) {
+  return pulse->width < SWEEP_MAX_WIDTH;
+}
+
 
 /**
- * @brief Find the timestamp of a SYNC0 pulse detectable in pulseHistory
+ * @brief Find the timestamp of the first sync0 pulse in the pulseHistory. Supports one and two
+ * base stations.
  *
  * @param pulseHistory PULSE_PROCESSOR_HISTORY_LENGTH pulses
- * @param[out] foundSyncTime Timestamp of the fist Sync0 written in this variable
- * @return true if the Sync0 was found
- * @return false if no Sync0 found
+ * @param[out] sync0Time Timestamp of the first Sync0 written in this variable
+ * @return The nr of base stations with sync pulses that were found. 0 if no sync could be detected.
  */
-TESTABLE_STATIC bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime)
+TESTABLE_STATIC int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time)
 {
-  int nFound = 0;
-  bool wasSweep = false;
+  int nFoundSync0 = 0;
+  int nFoundSync1 = 0;
   uint32_t foundTimes[2];
 
-  for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
-    if (wasSweep && pulseHistory[i].width > SWEEP_MAX_WIDTH) {
-      foundTimes[nFound] = pulseHistory[i].timestamp;
+  bool wasPreviousPulseASweep = false;
+  if (isPulseASync(&pulseHistory[0])) {
+    wasPreviousPulseASweep = false;
+  } else if (isPulseASweep(&pulseHistory[0])) {
+    wasPreviousPulseASweep = true;
+  } else {
+    return 0;
+  }
 
-      nFound++;
-      if (nFound == 2) {
-        break;
+  for (int i=1; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
+    if (isPulseASync(&pulseHistory[i])) {
+      if (wasPreviousPulseASweep) {
+        foundTimes[nFoundSync0] = pulseHistory[i].timestamp;
+        nFoundSync0++;
+
+        if (nFoundSync0 == 2) {
+          break;
+        }
+      } else {
+        if (nFoundSync0 > 0) {
+          uint32_t syncSeparation = TS_DIFF(pulseHistory[i].timestamp, foundTimes[nFoundSync0 - 1]);
+          if (syncSeparation > SYNC_MIN_SEPARATION && syncSeparation < SYNC_MAX_SEPARATION) {
+            nFoundSync1++;
+          } else {
+            return 0;
+          }
+        }
       }
-    }
 
-    if (pulseHistory[i].width < SWEEP_MAX_WIDTH) {
-      wasSweep = true;
+      wasPreviousPulseASweep = false;
+    } else if (isPulseASweep(&pulseHistory[i])) {
+      wasPreviousPulseASweep = true;
     } else {
-      wasSweep = false;
+      return 0;
     }
   }
 
-  *foundSyncTime = foundTimes[0];
+  int result = 0;
+  if (nFoundSync0 == 2) {
+    uint32_t frameLength = TS_DIFF(foundTimes[1], foundTimes[0]);
+    bool isFrameLengthWithinBoundaries = (frameLength < (FRAME_LENGTH + MAX_FRAME_LENGTH_NOISE) && frameLength > (FRAME_LENGTH - MAX_FRAME_LENGTH_NOISE));
+    if (isFrameLengthWithinBoundaries) {
+      *sync0Time = foundTimes[0];
+      result = 1;
+      if (nFoundSync1 > 0) {
+        result = 2;
+      }
+    }
+  }
 
-  uint32_t delta = TS_DIFF(foundTimes[1], foundTimes[0]);
-
-  return (nFound == 2 && delta < (FRAME_LENGTH + MAX_FRAME_LENGTH_NOISE) && delta > (FRAME_LENGTH - MAX_FRAME_LENGTH_NOISE));
+  return result;
 }
 
 /**

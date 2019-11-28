@@ -12,13 +12,14 @@
 #define SWEEP_CENTER 192000    // 4ms
 #define SYNC_BASE_WIDTH 2750
 #define SYNC_DIVIDER 500
-#define SYNC_SEPARATION 19200
+#define SYNC_SEPARATION 20000
 #define MAX_FRAME_LENGTH_NOISE 400
 
 #define SYNC_X SYNC_BASE_WIDTH+(SYNC_DIVIDER * 0)
 #define SYNC_Y SYNC_BASE_WIDTH+(SYNC_DIVIDER * 1)
 #define SYNC_X_SKIP SYNC_BASE_WIDTH+(SYNC_DIVIDER * 4)
 #define SYNC_Y_SKIP SYNC_BASE_WIDTH+(SYNC_DIVIDER * 5)
+#define UN_IDENTFD (SWEEP_MAX_WIDTH + 17)
 #define SWEEP 512
 #define LONG_SWEEP 1500
 
@@ -27,7 +28,7 @@ static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uin
 static void limitTimestamps(pulseProcessorPulse_t history[]);
 
 // Functions under test
-bool findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *foundSyncTime);
+int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time);
 bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
 int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp);
 bool isSweepActiveThisFrame(int width);
@@ -53,10 +54,10 @@ void testThatFindSyncCanDetectSync0FromTwoBasestations()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(2, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
@@ -78,10 +79,10 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsMissaligned()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(2, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
@@ -103,10 +104,10 @@ void testThatFindSyncCanDetectSync0FromOneBasestation()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(1, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
@@ -128,10 +129,10 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithShortSpuriousSpike()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(2, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
@@ -153,10 +154,10 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithShortSpuriousSpike
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_FALSE(found);
+  TEST_ASSERT_EQUAL_INT32(0, found);
 }
 
 void testThatFindSyncCanDetectSync0FromTwoBasestationsWithNoisyPulseLength()
@@ -177,10 +178,10 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithNoisyPulseLength()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(2, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
@@ -202,10 +203,58 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithLongSweep()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_FALSE(found);
+  TEST_ASSERT_EQUAL_INT32(0, found);
+}
+
+void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithOneMissingMasterSync()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = FRAME_LENGTH;
+  pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (3*FRAME_LENGTH)+SWEEP_CENTER},
+  };
+  limitTimestamps(pulseHistory);
+
+  // Test
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT32(0, found);
+}
+
+void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithInvalidSyncSeparation()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = FRAME_LENGTH;
+  pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+(SYNC_SEPARATION*2)},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+  };
+  limitTimestamps(pulseHistory);
+
+  // Test
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT32(0, found);
 }
 
 void testThatFindSyncCanDetectSync0FromTwoBasestationsWithTimingNoise()
@@ -226,10 +275,10 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithTimingNoise()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(2, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
 
@@ -253,12 +302,71 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithTimestampWrapping()
   limitTimestamps(pulseHistory);
 
   // Test
-  bool found = findSyncTime(pulseHistory, &actualSyncTime);
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
 
   // Assert
-  TEST_ASSERT_TRUE(found);
+  TEST_ASSERT_EQUAL_INT32(2, found);
   assertSyncTimeIsMultipleOfFrameLength(expectedSyncTime, actualSyncTime);
 }
+
+void testThatFindSyncFailesWhenReceivingAnUnidentifiedPulse()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = FRAME_LENGTH;
+  pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = UN_IDENTFD,  .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+  };
+  limitTimestamps(pulseHistory);
+
+  // Test
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT32(0, found);
+}
+
+void testThatFindSyncFailesWhenReceivingAnUnidentifiedPulseFirstInHistory()
+{
+  // Fixture
+  uint32_t actualSyncTime = 0;
+  uint32_t expectedSyncTime = FRAME_LENGTH;
+  pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
+    {.width = UN_IDENTFD,  .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+  };
+  limitTimestamps(pulseHistory);
+
+  // Test
+  int found = findSyncTime(pulseHistory, &actualSyncTime);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT32(0, found);
+}
+
+
+
+
+
+
+
+
+
+
+
 
 void testThatGetSystemSyncTimeReturnsTheAverageForGoodSyncData()
 {
