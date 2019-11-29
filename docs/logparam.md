@@ -103,7 +103,7 @@ motors in the UI).
 ### Logging using a function
 
 It is possible to use a function to acquire log values instead of
-reading from a memory location. The idea is to support more complec usecases
+reading from a memory location. The idea is to support more complex use cases
 where, for instance computations are required to produce the log value.
 
 The macro
