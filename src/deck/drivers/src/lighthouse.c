@@ -71,9 +71,6 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
 
-// Uncomment for experimental mode
-// #define FF_EXPERIMENTAL
-
 static bool isInit = false;
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 0
@@ -136,9 +133,7 @@ static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
 
 static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
-#ifdef FF_EXPERIMENTAL
 static statsCntRateLogger_t* bsEstRates[2] = {&estBs0Rate, &estBs1Rate};
-#endif
 
 static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
@@ -171,14 +166,18 @@ static bool getFrame(frame_t *frame)
 static vec3d position;
 static float deltaLog;
 
-#ifndef FF_EXPERIMENTAL
 static positionMeasurement_t ext_pos;
-#else
 static float sweepStd = 0.0004;
-#endif
 
-static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
-  #ifndef FF_EXPERIMENTAL
+// Method used to estimate position
+// 0 = Position calculated outside the estimator using intersection point of beams.
+//     Yaw error calculated outside the estimator. Position and yaw error is pushed to the
+//     estimator as pre-calculated.
+// 1 = Sweep angles pushed into the estimator. Yaw error calculated outside the estimator
+//     and pushed to the estimator as a pre-calculated value.
+static uint8_t estimationMethod = 1;
+
+static void estimatePositionCrossingBeams(pulseProcessorResult_t* angles, int baseStation) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
@@ -211,8 +210,9 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
     ext_pos.stdDev = 0.01;
     estimatorEnqueuePosition(&ext_pos);
   }
-  #else
-  // Experimental code for pushing sweep angles into the kalman filter
+}
+
+static void estimatePositionSweeps(pulseProcessorResult_t* angles, int baseStation) {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
     if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
@@ -235,7 +235,6 @@ static void estimatePosition(pulseProcessorResult_t* angles, int baseStation) {
       }
     }
   }
-  #endif
 }
 
 static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t* angles, baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
@@ -308,8 +307,13 @@ static void estimateYaw(pulseProcessorResult_t* angles, int baseStation) {
   }
 }
 
-static void estimatePose(pulseProcessorResult_t* angles, int baseStation) {
-  estimatePosition(angles, baseStation);
+static void estimatePoseCrossingBeams(pulseProcessorResult_t* angles, int baseStation) {
+  estimatePositionCrossingBeams(angles, baseStation);
+  estimateYaw(angles, baseStation);
+}
+
+static void estimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation) {
+  estimatePositionSweeps(angles, baseStation);
   estimateYaw(angles, baseStation);
 }
 
@@ -323,6 +327,44 @@ static void invertRotationMatrix(mat3d rot, mat3d inverted) {
   arm_mat_inverse_f32(&basestation_rotation_matrix_tmp, &basestation_rotation_matrix_inv);
 }
 
+static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
+  if (basestation == 1 && axis == sweepDirection_y) {
+    STATS_CNT_RATE_EVENT(&cycleRate);
+
+    pulseProcessorApplyCalibration(appState, angles, 0);
+    pulseProcessorApplyCalibration(appState, angles, 1);
+
+    estimatePoseCrossingBeams(angles, 1);
+
+    pulseProcessorClear(angles, 0);
+    pulseProcessorClear(angles, 1);
+  }
+}
+
+static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
+  if (axis == sweepDirection_y) {
+    STATS_CNT_RATE_EVENT(&cycleRate);
+
+    pulseProcessorApplyCalibration(appState, angles, basestation);
+
+    estimatePoseSweeps(angles, basestation);
+
+    pulseProcessorClear(angles, basestation);
+  }
+}
+
+static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
+  switch(estimationMethod) {
+    case 0:
+      usePulseResultCrossingBeams(appState, angles, basestation, axis);
+      break;
+    case 1:
+      usePulseResultSweeps(appState, angles, basestation, axis);
+      break;
+    default:
+      break;
+  }
+}
 
 static void lighthouseTask(void *param)
 {
@@ -386,25 +428,7 @@ static void lighthouseTask(void *param)
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
         STATS_CNT_RATE_EVENT(&frameRate);
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
-        #ifndef FF_EXPERIMENTAL
-        if (basestation == 1 && axis == sweepDirection_y) {
-          STATS_CNT_RATE_EVENT(&cycleRate);
-
-          pulseProcessorApplyCalibration(&ppState, &angles, 0);
-          pulseProcessorApplyCalibration(&ppState, &angles, 1);
-          estimatePose(&angles, 1);
-          pulseProcessorClear(&angles, 0);
-          pulseProcessorClear(&angles, 1);
-        }
-        #else
-        if (axis == sweepDirection_y) {
-          STATS_CNT_RATE_EVENT(&cycleRate);
-
-          pulseProcessorApplyCalibration(&ppState, &angles, basestation);
-          estimatePose(&angles, basestation);
-          pulseProcessorClear(&angles, basestation);
-        }
-        #endif
+        usePulseResult(&ppState, &angles, basestation, axis);
       }
 
       synchronized = getFrame(&frame);
@@ -550,11 +574,10 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
 
-#ifdef FF_EXPERIMENTAL
-PARAM_GROUP_START(lh)
+PARAM_GROUP_START(lighthouse)
+PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
 PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
-PARAM_GROUP_STOP(lh)
-#endif
+PARAM_GROUP_STOP(lighthouse)
 
 #endif // DISABLE_LIGHTHOUSE_DRIVER
 
