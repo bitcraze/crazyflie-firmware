@@ -96,7 +96,7 @@ VPATH += $(LIB)/vl53l1/core/src
 VPATH += $(PORT)
 PORT_OBJ = port.o
 VPATH +=  $(FREERTOS)/portable/MemMang
-MEMMANG_OBJ = heap_4.o
+MEMMANG_OBJ ?= heap_4.o
 
 VPATH += $(FREERTOS)
 FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
