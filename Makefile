@@ -45,7 +45,7 @@ POWER_DISTRIBUTION ?= stock
 RTOS_DEBUG        ?= 0
 
 LIB = $(CRAZYFLIE_BASE)/src/lib
-FREERTOS = $(CRAZYFLIE_BASE)/src/lib/FreeRTOS
+FREERTOS = $(CRAZYFLIE_BASE)/vendor/FreeRTOS
 
 
 ############### CPU-specific build configuration ################
