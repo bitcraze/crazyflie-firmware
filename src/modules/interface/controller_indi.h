@@ -36,8 +36,6 @@
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
 
-#define PI 3.14159265358979323846f
-
 // these parameters are used in the filtering of the angular acceleration
 #define STABILIZATION_INDI_FILT_CUTOFF 8.0f
 
