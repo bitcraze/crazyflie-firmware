@@ -30,6 +30,7 @@
 #include "timers.h"
 
 #include "deck.h"
+#include "log.h"
 #include "param.h"
 #include "i2cdev.h"
 
@@ -38,17 +39,43 @@
 
 #define LED_COUNT 4
 
-#define MEM_ADR_LED 0x0
+#define MEM_ADR_LED 0x00
+#define MEM_ADR_MODE 0x01
+#define MEM_ADR_BUTTON_SENSOR 0x02
 #define MEM_ADR_VER 0x10
 
 static bool isInit = false;
 static bool isVerified = false;
+
 // currentId != requestedID at startup to make sure all IDs are initialized in the deck
 static uint8_t currentId[LED_COUNT] = {0xff, 0xff, 0xff, 0xff};
 static uint8_t requestedId[LED_COUNT] = {1, 3, 4, 2}; // 1 to 4, clockwise
 
+#define MODE_OFF 0
+#define MODE_ON 1
+#define MODE_MODULATED 2
+#define MODE_QUALISYS 3
+#define MODE_BUTTON_RESET 0xff
+
+static uint8_t currentDeckMode = MODE_QUALISYS;
+static uint8_t requestedDeckMode = MODE_QUALISYS;
+
+// The deck button and sensor data is polled when doPollDeckButtonSensor > 0. Used for production test.
+static uint8_t doPollDeckButtonSensor = 0;
+static uint8_t deckButtonSensorValue = 0;
+static uint32_t nextPollTime = 0;
+static const uint32_t pollIntervall = M2T(100);
+
 #define DECK_I2C_ADDRESS 0x2E
 #define VERSION_STRING_LEN 12
+
+enum version_e {
+  versionUndefined = 0,
+  version_0_A,
+  version_1_0,
+};
+
+enum version_e deckFwVersion = versionUndefined;
 
 static xTimerHandle timer;
 static char versionString[VERSION_STRING_LEN + 1];
@@ -75,26 +102,58 @@ static bool activeMarkerDeckTest() {
     return false;
   }
 
-  isVerified = (0 == strcmp("Qualisys0.A", versionString));
+  if (0 == strcmp("Qualisys0.A", versionString)) {
+    deckFwVersion = version_0_A;
+  } else if (0 == strcmp("Qualisys1.0", versionString)) {
+    deckFwVersion = version_1_0;
+  }
+
+  isVerified = (versionUndefined != deckFwVersion);
   if (! isVerified) {
-    DEBUG_PRINT("Incomaptible deck FW\n");
+    DEBUG_PRINT("Incompatible deck FW\n");
   }
 
   return isVerified;
 }
 
+static void handleIdUpdate() {
+  bool isDifferent = false;
+  for (int led = 0; led < LED_COUNT; led++) {
+    if (currentId[led] != requestedId[led]) {
+      isDifferent = true;
+      currentId[led] = requestedId[led];
+    }
+  }
+
+  if (isDifferent) {
+      i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
+  }
+}
+
+static void handleModeUpdate() {
+  if (currentDeckMode != requestedDeckMode) {
+    currentDeckMode = requestedDeckMode;
+    i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_MODE, 1, &currentDeckMode);
+  }
+}
+
+static void handleButtonSensorRead() {
+  if (doPollDeckButtonSensor) {
+    uint32_t now = xTaskGetTickCount();
+    if (now > nextPollTime) {
+      i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_BUTTON_SENSOR, 1, &deckButtonSensorValue);
+      nextPollTime = now + pollIntervall;
+    }
+  }
+}
+
 static void timerHandler(xTimerHandle timer) {
   if (isVerified) {
-    bool isDifferent = false;
-    for (int led = 0; led < LED_COUNT; led++) {
-      if (currentId[led] != requestedId[led]) {
-        isDifferent = true;
-        currentId[led] = requestedId[led];
-      }
-    }
+    handleIdUpdate();
 
-    if (isDifferent) {
-        i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
+    if (deckFwVersion >= version_1_0) {
+      handleModeUpdate();
+      handleButtonSensorRead();
     }
   }
 }
@@ -117,4 +176,10 @@ PARAM_ADD(PARAM_UINT8, front, &requestedId[0])
 PARAM_ADD(PARAM_UINT8, back, &requestedId[1])
 PARAM_ADD(PARAM_UINT8, left, &requestedId[2])
 PARAM_ADD(PARAM_UINT8, right, &requestedId[3])
+PARAM_ADD(PARAM_UINT8, mode, &requestedDeckMode)
+PARAM_ADD(PARAM_UINT8, poll, &doPollDeckButtonSensor)
 PARAM_GROUP_STOP(activeMarker)
+
+LOG_GROUP_START(activeMarker)
+LOG_ADD(LOG_UINT8, btSns, &deckButtonSensorValue)
+LOG_GROUP_STOP(activeMarker)
