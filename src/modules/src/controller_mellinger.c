@@ -93,6 +93,15 @@ static float i_error_m_z = 0;
 // Logging variables
 static struct vec z_axis_desired;
 
+static float cmd_thrust;
+static float cmd_roll;
+static float cmd_pitch;
+static float cmd_yaw;
+static float r_roll;
+static float r_pitch;
+static float r_yaw;
+static float accelz;
+
 void controllerMellingerReset(void)
 {
   i_error_x = 0;
@@ -285,14 +294,30 @@ void controllerMellinger(control_t *control, setpoint_t *setpoint,
     control->thrust = massThrust * current_thrust;
   }
 
+  cmd_thrust = control->thrust;
+  r_roll = radians(sensors->gyro.x);
+  r_pitch = -radians(sensors->gyro.y);
+  r_yaw = radians(sensors->gyro.z);
+  accelz = sensors->acc.z;
+
   if (control->thrust > 0) {
     control->roll = clamp(M.x, -32000, 32000);
     control->pitch = clamp(M.y, -32000, 32000);
     control->yaw = clamp(-M.z, -32000, 32000);
+
+    cmd_roll = control->roll;
+    cmd_pitch = control->pitch;
+    cmd_yaw = control->yaw;
+
   } else {
     control->roll = 0;
     control->pitch = 0;
     control->yaw = 0;
+
+    cmd_roll = control->roll;
+    cmd_pitch = control->pitch;
+    cmd_yaw = control->yaw;
+
     controllerMellingerReset();
   }
 }
@@ -320,6 +345,14 @@ PARAM_ADD(PARAM_FLOAT, i_range_m_z, &i_range_m_z)
 PARAM_GROUP_STOP(ctrlMel)
 
 LOG_GROUP_START(ctrlMel)
+LOG_ADD(LOG_FLOAT, cmd_thrust, &cmd_thrust)
+LOG_ADD(LOG_FLOAT, cmd_roll, &cmd_roll)
+LOG_ADD(LOG_FLOAT, cmd_pitch, &cmd_pitch)
+LOG_ADD(LOG_FLOAT, cmd_yaw, &cmd_yaw)
+LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
+LOG_ADD(LOG_FLOAT, accelz, &accelz)
 LOG_ADD(LOG_FLOAT, zdx, &z_axis_desired.x)
 LOG_ADD(LOG_FLOAT, zdy, &z_axis_desired.y)
 LOG_ADD(LOG_FLOAT, zdz, &z_axis_desired.z)

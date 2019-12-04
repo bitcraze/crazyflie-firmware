@@ -1,0 +1,13 @@
+500   # frequency
+100    # buffer size
+log   # file name
+1     # enable on startup (0/1)
+2     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
+controller.cmd_thrust
+controller.cmd_roll
+controller.cmd_pitch
+controller.cmd_yaw
+controller.r_roll
+controller.r_pitch
+controller.r_yaw
+controller.accelz
