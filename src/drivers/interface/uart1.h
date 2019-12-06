@@ -53,10 +53,19 @@
 #define UART1_GPIO_AF_TX       GPIO_AF_USART3
 #define UART1_GPIO_AF_RX       GPIO_AF_USART3
 
+typedef enum {
+    uart1ParityNone, uart1ParityEven, uart1ParityOdd
+} uart1Parity_t;
+
 /**
- * Initialize the UART.
+ * Initialize the UART with parity None
  */
 void uart1Init(const uint32_t baudrate);
+
+/**
+ * Initialize the UART with custom parity
+ */
+void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity);
 
 /**
  * Test the UART status.

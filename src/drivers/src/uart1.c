@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2019 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +104,11 @@ static void uart1DmaInit(void)
 #endif
 }
 
-void uart1Init(const uint32_t baudrate)
+void uart1Init(const uint32_t baudrate) {
+  uart1InitWithParity(baudrate, uart1ParityNone);
+}
+
+void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
 {
 
   USART_InitTypeDef USART_InitStructure;
@@ -134,9 +138,22 @@ void uart1Init(const uint32_t baudrate)
 
   USART_InitStructure.USART_BaudRate            = baudrate;
   USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
-  USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
+  if (parity == uart1ParityEven || parity == uart1ParityOdd) {
+    USART_InitStructure.USART_WordLength        = USART_WordLength_9b;
+  } else {
+    USART_InitStructure.USART_WordLength        = USART_WordLength_8b;
+  }
+  
   USART_InitStructure.USART_StopBits            = USART_StopBits_1;
-  USART_InitStructure.USART_Parity              = USART_Parity_No ;
+
+  if (parity == uart1ParityEven) {
+    USART_InitStructure.USART_Parity            = USART_Parity_Even;
+  } else if (parity == uart1ParityOdd) {
+    USART_InitStructure.USART_Parity            = USART_Parity_Odd;
+  } else {
+    USART_InitStructure.USART_Parity            = USART_Parity_No;
+  }
+  
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART1_TYPE, &USART_InitStructure);
 
