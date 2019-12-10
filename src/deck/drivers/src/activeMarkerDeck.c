@@ -70,6 +70,11 @@ static uint8_t doPollDeckButtonSensor = 0;
 static uint8_t deckButtonSensorValue = 0;
 static uint32_t nextPollTime = 0;
 static const uint32_t pollIntervall = M2T(100);
+static bool i2cOk = false;
+
+#ifdef ACTIVE_MARKER_DECK_TEST
+static bool activeMarkerDeckCanStart = false;
+#endif
 
 #define DECK_I2C_ADDRESS 0x2E
 #define VERSION_STRING_LEN 12
@@ -94,9 +99,11 @@ static void activeMarkerDeckInit(DeckInfo *info) {
   xTaskCreate(task, "activeMarkerDeck",
               configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
+#ifndef ACTIVE_MARKER_DECK_TEST
   memset(versionString, 0, VERSION_STRING_LEN + 1);
-  i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
   DEBUG_PRINT("Deck FW %s\n", versionString);
+#endif
 
   isInit = true;
 }
@@ -106,6 +113,7 @@ static bool activeMarkerDeckTest() {
     return false;
   }
 
+#ifndef ACTIVE_MARKER_DECK_TEST
   if (0 == strcmp("Qualisys0.A", versionString)) {
     deckFwVersion = version_0_A;
   } else if (0 == strcmp("Qualisys1.0", versionString)) {
@@ -116,6 +124,10 @@ static bool activeMarkerDeckTest() {
   if (! isVerified) {
     DEBUG_PRINT("Incompatible deck FW\n");
   }
+#else
+  isVerified = true;
+  deckFwVersion = version_1_0;
+#endif
 
   return isVerified;
 }
@@ -153,6 +165,13 @@ static void handleButtonSensorRead() {
 
 static void task(void *param) {
   systemWaitStart();
+
+#ifdef ACTIVE_MARKER_DECK_TEST
+  while (!activeMarkerDeckCanStart) {
+    vTaskDelay(100);
+  }
+  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+#endif
 
   while (1) {
     if (isVerified) {
@@ -194,8 +213,14 @@ PARAM_ADD(PARAM_UINT8, left, &requestedId[2])
 PARAM_ADD(PARAM_UINT8, right, &requestedId[3])
 PARAM_ADD(PARAM_UINT8, mode, &requestedDeckMode)
 PARAM_ADD(PARAM_UINT8, poll, &doPollDeckButtonSensor)
+
+#ifdef ACTIVE_MARKER_DECK_TEST
+PARAM_ADD(PARAM_UINT8, canStart, &activeMarkerDeckCanStart)
+#endif
+
 PARAM_GROUP_STOP(activeMarker)
 
 LOG_GROUP_START(activeMarker)
 LOG_ADD(LOG_UINT8, btSns, &deckButtonSensorValue)
+LOG_ADD(LOG_UINT8, i2cOk, &i2cOk)
 LOG_GROUP_STOP(activeMarker)
