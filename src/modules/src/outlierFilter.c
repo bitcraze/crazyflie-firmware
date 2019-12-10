@@ -103,11 +103,11 @@ bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float e
 }
 
 
-static const uint32_t lhTicksPerFrame = 1000 / 120;
-static const int32_t lhMinWindowTime = -2 * lhTicksPerFrame;
-static const int32_t lhMaxWindowTime = 5 * lhTicksPerFrame;
-static const int32_t lhBadSampleWindowChange = -lhTicksPerFrame;
-static const int32_t lhGoodSampleWindowChange = lhTicksPerFrame / 2;
+#define LH_TICKS_PER_FRAME (1000 / 120)
+static const int32_t lhMinWindowTime = -2 * LH_TICKS_PER_FRAME;
+static const int32_t lhMaxWindowTime = 5 * LH_TICKS_PER_FRAME;
+static const int32_t lhBadSampleWindowChange = -LH_TICKS_PER_FRAME;
+static const int32_t lhGoodSampleWindowChange = LH_TICKS_PER_FRAME / 2;
 static const float lhMaxError = 0.05f;
 
 void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t now) {
