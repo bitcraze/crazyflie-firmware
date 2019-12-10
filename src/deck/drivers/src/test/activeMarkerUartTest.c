@@ -21,8 +21,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * activeMarkerBootloaderTest.c: Production test for Active marker deck UART
- *                               bootloader
+ * activeMarkerUartTest.c: Production test for Active marker deck UART
+ *                               Uart
  */
 
 #include <stdbool.h>
@@ -36,7 +36,7 @@
 #include "deck.h"
 #include "uart1.h"
 
-#define DEBUG_MODULE "ActiveMarkerDeckBootTest"
+#define DEBUG_MODULE "ActiveMarkerDeckUartTest"
 
 #include "log.h"
 
@@ -52,14 +52,14 @@ static void task(void *param)
       trigger = false;
 
       DEBUG_PRINT("Sending...\n");
-      uart1Putchar(0x7f);
+      uart1Putchar(0x55);
 
       uint8_t answer;
       DEBUG_PRINT("Waiting...\n");
       if (uart1GetDataWithTimout(&answer)) {
         DEBUG_PRINT("Received %02x\n", (unsigned int)answer);
 
-        if (answer == 0x79) {
+        if (answer == 0xaa) {
           passed = true;
         }
       } else {
@@ -78,18 +78,18 @@ static void init(DeckInfo *info)
     return;
   }
 
-  DEBUG_PRINT("Initializing Active Marker deck bootloader test driver...\n");
+  DEBUG_PRINT("Initializing Active Marker deck Uart test driver...\n");
 
-  uart1InitWithParity(9600, uart1ParityEven);
+  uart1InitWithParity(115200, uart1ParityNone);
 
-  xTaskCreate(task, "amarkBootTest",
+  xTaskCreate(task, "amarkUartTest",
               configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
   isInit = true;
 }
 
 static const DeckDriver deckDriver = {
-  .name="activeMarkerBootloaderTest",
+  .name="activeMarkerUartTest",
 
   .init = init,
 };
@@ -97,10 +97,10 @@ static const DeckDriver deckDriver = {
 DECK_DRIVER(deckDriver);
 
 
-PARAM_GROUP_START(amarkBootTest)
+PARAM_GROUP_START(amarkUartTest)
 PARAM_ADD(PARAM_UINT8, trigger, &trigger)
-PARAM_GROUP_STOP(amarkBootTest)
+PARAM_GROUP_STOP(amarkUartTest)
 
-LOG_GROUP_START(amarkBootTest)
+LOG_GROUP_START(amarkUartTest)
 LOG_ADD(LOG_UINT8, passed, &passed)
-LOG_GROUP_STOP(amarkBootTest)
+LOG_GROUP_STOP(amarkUartTest)
