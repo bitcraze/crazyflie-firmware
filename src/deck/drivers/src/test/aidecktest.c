@@ -313,8 +313,8 @@ static bool aitdecktestTest()
 
   //     In GAP8, the command (GAP8_GPIO_MASK 0x04) should be removed from the mask so that it is like
   //     GAP8_GPIO_MASK again
-  //if (testOnGAP8(GAP8_GPIO_COMMAND|GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true){
-  if (true)
+  
+  if (testOnGAP8(GAP8_GPIO_COMMAND|GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true)
   {
 
     vTaskDelay(M2T(100));
@@ -328,9 +328,13 @@ static bool aitdecktestTest()
       testmask &= gpio_mask_result;
     }
   }
+  vTaskDelay(M2T(1000));
+
+
+  uint8_t not_mask = (~GAP8_GPIO_MASK) & 0X3F;
 
   // Send test for ~ GPIO mask to GAP8
-  if (testOnGAP8(GAP8_GPIO_COMMAND | ~GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true)
+  if (testOnGAP8(GAP8_GPIO_COMMAND | not_mask, GAP8_GPIO_MASK_EXPECTED) == true)
   {
     vTaskDelay(M2T(100));
     // Send test for ~ GPIO mask to NINA
@@ -338,11 +342,13 @@ static bool aitdecktestTest()
     {
       uint32_t gpio_mask_result = (uint32_t)0X3F << NINA_GAP8_GPIO_INV_POS;
       gpio_mask_result ^= 0x01FFFFF;
-      uint8_t not_mask = (~GAP8_GPIO_MASK) & 0X3F;
       gpio_mask_result |= (uint32_t)(gpio_mask ^ ((~GAP8_GPIO_MASK) & 0X3F)) << NINA_GAP8_GPIO_INV_POS;
       testmask &= gpio_mask_result;
     }
   }
+  
+  
+  vTaskDelay(M2T(1000));
 
   // Send test for Hyper flash to GAP8
   if (testOnGAP8(GAP8_HYPER_COMMAND, GAP8_HYPER_EXPECTED) == true)
@@ -350,7 +356,7 @@ static bool aitdecktestTest()
     testmask &= ~(1 << GAP8_HYPER_POS);
   }
 
-  vTaskDelay(M2T(100));
+  vTaskDelay(M2T(2000));
 
   // Send test for Camera to GAP8
   if (testOnGAP8(GAP8_CAMERA_COMMAND, GAP8_CAMERA_EXPECTED) == true)
@@ -358,7 +364,7 @@ static bool aitdecktestTest()
     testmask &= ~(1 << GAP8_CAMERA_POS);
   }
 
-  vTaskDelay(M2T(100));
+  vTaskDelay(M2T(3000));
 
   // Test I2C by GAP8 by reading the EEPROM for the address and magic number
   //       MAGIC               0x43427830
@@ -373,7 +379,7 @@ static bool aitdecktestTest()
 
   vTaskDelay(M2T(100));
 
-  // Test RST of GAP8 though NINA (not done on NINA yet)
+  // Test RST of GAP8 though NINA
   // (listen on GAP8 uart for hello)
   if (testOnNina(NINA_GAP8_RST_COMMAND, NINA_GAP8_RST_EXPECTED) == true)
   {
@@ -388,7 +394,7 @@ static bool aitdecktestTest()
 
   vTaskDelay(M2T(100));
 
-  // Test RST of both GAP8 and NINA by pulling reset
+  //Test RST of both GAP8 and NINA by pulling reset
   pinMode(DECK_GPIO_IO4, OUTPUT);
   digitalWrite(DECK_GPIO_IO4, LOW);
   vTaskDelay(150);
@@ -414,6 +420,7 @@ static bool aitdecktestTest()
   // Set all tests done
 
   DEBUG_PRINT("AI deck test: 0x%08X\r\n", testmask);
+  
 
   testdone = 1;
 
