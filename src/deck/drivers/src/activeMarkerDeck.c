@@ -198,8 +198,6 @@ static const DeckDriver deck_info = {
   .pid = 0x11,
   .name = "bcActiveM",
 
-  .usedGpio = DECK_USING_SDA | DECK_USING_SCL,
-
   .init = activeMarkerDeckInit,
   .test = activeMarkerDeckTest,
 };
