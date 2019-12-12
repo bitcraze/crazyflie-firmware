@@ -123,13 +123,13 @@ static bool testOnNina(const char command, const char expected)
 
   if (uart2GetDataWithTimout(&byte) == true)
   {
-    DEBUG_PRINT("Received: 0x%d\r\n", byte);
+    DEBUG_PRINT("[NINA] Received: 0x%02X\r\n", byte);
     if (byte == expected)
     {
       return true;
     }
   }
-  DEBUG_PRINT("Received timeout!\r\n");
+  DEBUG_PRINT("[NINA] Received timeout!\r\n");
   return false;
 }
 
@@ -140,7 +140,7 @@ static bool testOnNinaMask(const char command, char *byte)
 
   if (uart2GetDataWithTimout(byte) == true)
   {
-    DEBUG_PRINT("Received mask: 0x%d\r\n", *byte);
+    DEBUG_PRINT("Received mask: 0x%02X\r\n", *byte);
 
     return true;
   }
@@ -151,15 +151,21 @@ static bool testOnNinaMask(const char command, char *byte)
 static bool testOnGAP8(const char command, const char expected)
 {
   uint8_t byte;
+  uint8_t timeout_counter = 0;
 
   uart1Putchar(command);
 
-  if (uart1GetDataWithTimout(&byte) == true)
-  {
-    if (byte == expected)
+  while(timeout_counter < 5){
+    if (uart1GetDataWithTimout(&byte) == true)
     {
-      return true;
+      DEBUG_PRINT("[GAP8] Received: 0x%02X\r\n", byte);
+
+      if (byte == expected)
+      {
+        return true;
+      }
     }
+    timeout_counter++;
   }
 
   return false;
@@ -233,7 +239,7 @@ uint8_t testdone;               // Set to 1 when testing is completed
 #define GAP8_GPIO_MASK 0x15
 #define GAP8_GPIO_MASK_EXPECTED 0x01
 
-#define NINA_GAP8_GPIO_COMMAND 0x40
+#define NINA_GAP8_GPIO_COMMAND 0x04
 #define NINA_GAP8_GPIO_POS 0x03
 #define NINA_GAP8_GPIO_INV_POS 0x09
 
@@ -271,6 +277,9 @@ static bool aitdecktestTest()
   while (uart2GetDataWithTimout(&byte) == true)
     ;
 
+  while (uart1GetDataWithTimout(&byte) == true)
+    ;
+
   while (!testHasBeenTriggered)
   {
     // Send test for button low to NINA
@@ -289,7 +298,7 @@ static bool aitdecktestTest()
     testmask &= ~(1 << NINA_BOOT_HIGH_POS);
   }
 
-  vTaskDelay(M2T(100));
+
 
   if (testOnNina(NINA_BOOT_LOW_RESET, NINA_BOOT_LOW_RESET_EXPECTED) == true)
   {
@@ -307,7 +316,7 @@ static bool aitdecktestTest()
     }
   }
 
-  vTaskDelay(M2T(100));
+
 
   // Send test for GPIO mask to GAP8 (should be optimized to it's inveterd to neighbours)
 
@@ -317,7 +326,7 @@ static bool aitdecktestTest()
   if (testOnGAP8(GAP8_GPIO_COMMAND|GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true)
   {
 
-    vTaskDelay(M2T(100));
+    vTaskDelay(M2T(1000));
     // Send test for GPIO mask to NINA
     if (testOnNinaMask(NINA_GAP8_GPIO_COMMAND, &gpio_mask) == true)
     {
@@ -336,7 +345,7 @@ static bool aitdecktestTest()
   // Send test for ~ GPIO mask to GAP8
   if (testOnGAP8(GAP8_GPIO_COMMAND | not_mask, GAP8_GPIO_MASK_EXPECTED) == true)
   {
-    vTaskDelay(M2T(100));
+    vTaskDelay(M2T(1000));
     // Send test for ~ GPIO mask to NINA
     if (testOnNinaMask(NINA_GAP8_GPIO_COMMAND, &gpio_mask) == true)
     {
@@ -348,7 +357,7 @@ static bool aitdecktestTest()
   }
   
   
-  vTaskDelay(M2T(1000));
+
 
   // Send test for Hyper flash to GAP8
   if (testOnGAP8(GAP8_HYPER_COMMAND, GAP8_HYPER_EXPECTED) == true)
@@ -377,7 +386,7 @@ static bool aitdecktestTest()
   }
 
 
-  vTaskDelay(M2T(100));
+
 
   // Test RST of GAP8 though NINA
   // (listen on GAP8 uart for hello)
@@ -392,7 +401,7 @@ static bool aitdecktestTest()
     }
   }
 
-  vTaskDelay(M2T(100));
+
 
   //Test RST of both GAP8 and NINA by pulling reset
   pinMode(DECK_GPIO_IO4, OUTPUT);
