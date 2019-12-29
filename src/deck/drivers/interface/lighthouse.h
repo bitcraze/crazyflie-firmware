@@ -37,4 +37,10 @@
 
 extern baseStationGeometry_t lighthouseBaseStationsGeometry[2];
 
+/**
+ * @brief Call when the lighthouseBaseStationsGeometry data has been updated
+ * to recalculate cached data
+ */
+void lightHouseGeometryDataUpdated();
+
 #endif // __LIGHTHOUSE_H__

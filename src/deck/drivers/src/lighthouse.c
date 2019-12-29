@@ -73,7 +73,9 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 
 static bool isInit = false;
 
-#if DISABLE_LIGHTHOUSE_DRIVER == 0
+#if DISABLE_LIGHTHOUSE_DRIVER == 1
+  void lightHouseGeometryDataUpdated() { /* Empty by design */ }
+#else
 
 baseStationEulerAngles_t lighthouseBaseStationAngles[2];
 static mat3d baseStationInvertedRotationMatrixes[2];
@@ -366,6 +368,14 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
   }
 }
 
+void lightHouseGeometryDataUpdated() {
+  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
+  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
+
+  invertRotationMatrix(lighthouseBaseStationsGeometry[0].mat, baseStationInvertedRotationMatrixes[0]);
+  invertRotationMatrix(lighthouseBaseStationsGeometry[1].mat, baseStationInvertedRotationMatrixes[1]);
+}
+
 static void lighthouseTask(void *param)
 {
   bool synchronized = false;
@@ -377,12 +387,7 @@ static void lighthouseTask(void *param)
   int basestation;
   int axis;
 
-  // Get the eulerangles from the rotation matrix of the basestations
-  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
-  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
-
-  invertRotationMatrix(lighthouseBaseStationsGeometry[0].mat, baseStationInvertedRotationMatrixes[0]);
-  invertRotationMatrix(lighthouseBaseStationsGeometry[1].mat, baseStationInvertedRotationMatrixes[1]);
+  lightHouseGeometryDataUpdated();
 
   systemWaitStart();
 

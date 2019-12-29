@@ -549,6 +549,10 @@ void memWriteProcess()
         if ((memAddr + writeLen) <= sizeof(lighthouseBaseStationsGeometry)) {
           uint8_t* start = (uint8_t*)lighthouseBaseStationsGeometry;
           memcpy(start + memAddr, &p.data[5], writeLen);
+
+          lightHouseGeometryDataUpdated();
+
+
           status = STATUS_OK;
         } else {
           status = EIO;
