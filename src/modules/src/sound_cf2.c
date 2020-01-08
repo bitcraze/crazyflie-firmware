@@ -198,9 +198,9 @@ static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H}, {0, H},
     REPEAT}};
 static Melody valkyries = {.bpm = 140, .delay = 1, .notes = {{Gb3, Q}, {B3, Q},
-    {Gb3, S}, {B3, E},  {D4, Q}, {B3, Q}, {D4, Q}, {B3, S}, {D4, E}, {Gb4, Q},  
-    {D4, Q}, {Gb4, Q}, {D4, S}, {Gb4, E}, {A4, Q}, {A3, Q}, {D4, Q}, {A3, S},  
-    {D4, E}, {Gb4, H}, 
+    {Gb3, S}, {B3, E},  {D4, Q}, {B3, Q}, {D4, Q}, {B3, S}, {D4, E}, {Gb4, Q},
+    {D4, Q}, {Gb4, Q}, {D4, S}, {Gb4, E}, {A4, Q}, {A3, Q}, {D4, Q}, {A3, S},
+    {D4, E}, {Gb4, H},
     REPEAT}};
 
 typedef void (*BuzzerEffect)(uint32_t timer, uint32_t * mi, Melody * melody);
@@ -317,6 +317,7 @@ static EffectCall effects[] = {
 };
 
 static xTimerHandle timer;
+static StaticTimer_t timerBuffer;
 static uint32_t counter = 0;
 
 static void soundTimer(xTimerHandle timer)
@@ -343,7 +344,7 @@ void soundInit(void)
 
   neffect = sizeof(effects) / sizeof(effects[0]) - 1;
 
-  timer = xTimerCreate("SoundTimer", M2T(10), pdTRUE, NULL, soundTimer);
+  timer = xTimerCreateStatic("SoundTimer", M2T(10), pdTRUE, NULL, soundTimer, &timerBuffer);
   xTimerStart(timer, 100);
 
   isInit = true;

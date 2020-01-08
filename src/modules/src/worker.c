@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -31,6 +31,7 @@
 #include "task.h"
 #include "queue.h"
 #include "queuemonitor.h"
+#include "static_mem.h"
 
 #include "console.h"
 
@@ -42,13 +43,14 @@ struct worker_work {
 };
 
 static xQueueHandle workerQueue;
+STATIC_MEM_QUEUE_ALLOC(workerQueue, WORKER_QUEUE_LENGTH, sizeof(struct worker_work));
 
 void workerInit()
 {
   if (workerQueue)
     return;
 
-  workerQueue = xQueueCreate(WORKER_QUEUE_LENGTH, sizeof(struct worker_work));
+  workerQueue = STATIC_MEM_QUEUE_CREATE(workerQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(workerQueue);
 }
 
@@ -67,7 +69,7 @@ void workerLoop()
   while (1)
   {
     xQueueReceive(workerQueue, &work, portMAX_DELAY);
-    
+
     if (work.function)
       work.function(work.arg);
   }
@@ -76,15 +78,14 @@ void workerLoop()
 int workerSchedule(void (*function)(void*), void *arg)
 {
   struct worker_work work;
-  
+
   if (!function)
     return ENOEXEC;
-  
+
   work.function = function;
   work.arg = arg;
   if (xQueueSend(workerQueue, &work, 0) == pdFALSE)
     return ENOMEM;
 
-  return 0; 
+  return 0;
 }
-

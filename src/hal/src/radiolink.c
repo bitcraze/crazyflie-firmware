@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -42,6 +42,7 @@
 #include "led.h"
 #include "ledseq.h"
 #include "queuemonitor.h"
+#include "static_mem.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
 #define RADIOLINK_CTRP_QUEUE_SIZE (5)
@@ -50,7 +51,10 @@
 #define RADIOLINK_P2P_QUEUE_SIZE (5)
 
 static xQueueHandle  txQueue;
+STATIC_MEM_QUEUE_ALLOC(txQueue, RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
+
 static xQueueHandle crtpPacketDelivery;
+STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, RADIOLINK_CTRP_QUEUE_SIZE, sizeof(CRTPPacket));
 
 static bool isInit;
 
@@ -82,9 +86,9 @@ void radiolinkInit(void)
   if (isInit)
     return;
 
-  txQueue = xQueueCreate(RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
+  txQueue = STATIC_MEM_QUEUE_CREATE(txQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
-  crtpPacketDelivery = xQueueCreate(RADIOLINK_CTRP_QUEUE_SIZE, sizeof(CRTPPacket));
+  crtpPacketDelivery = STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
   ASSERT(crtpPacketDelivery);

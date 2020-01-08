@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -52,10 +52,12 @@ static taskData_t previousSnapshot[TASK_MAX_COUNT];
 static int taskTopIndex = 0;
 static uint32_t previousTotalRunTime = 0;
 
+static StaticTimer_t timerBuffer;
+
 void sysLoadInit() {
   ASSERT(!initialized);
 
-  xTimerHandle timer = xTimerCreate( "sysLoadMonitorTimer", TIMER_PERIOD, pdTRUE, NULL, timerHandler);
+  xTimerHandle timer = xTimerCreateStatic( "sysLoadMonitorTimer", TIMER_PERIOD, pdTRUE, NULL, timerHandler, &timerBuffer);
   xTimerStart(timer, 100);
 
   initialized = true;
@@ -104,7 +106,7 @@ static void timerHandler(xTimerHandle timer) {
       uint32_t taskRunTime = stats->ulRunTimeCounter;
       float load = f * (taskRunTime - previousTaskData->ulRunTimeCounter);
       DEBUG_PRINT("%.2f \t%u \t%s\n", (double)load, stats->usStackHighWaterMark, stats->pcTaskName);
-      
+
       previousTaskData->ulRunTimeCounter = taskRunTime;
     }
 

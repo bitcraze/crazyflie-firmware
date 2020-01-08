@@ -34,6 +34,7 @@
 #include "crtp_commander_high_level.h"
 
 #include "param.h"
+#include "static_mem.h"
 
 static bool isInit;
 const static setpoint_t nullSetpoint;
@@ -43,16 +44,18 @@ static uint32_t lastUpdate;
 static bool enableHighLevel = false;
 
 static QueueHandle_t setpointQueue;
+STATIC_MEM_QUEUE_ALLOC(setpointQueue, 1, sizeof(setpoint_t));
 static QueueHandle_t priorityQueue;
+STATIC_MEM_QUEUE_ALLOC(priorityQueue, 1, sizeof(int));
 
 /* Public functions */
 void commanderInit(void)
 {
-  setpointQueue = xQueueCreate(1, sizeof(setpoint_t));
+  setpointQueue = STATIC_MEM_QUEUE_CREATE(setpointQueue);
   ASSERT(setpointQueue);
   xQueueSend(setpointQueue, &nullSetpoint, 0);
 
-  priorityQueue = xQueueCreate(1, sizeof(int));
+  priorityQueue = STATIC_MEM_QUEUE_CREATE(priorityQueue);
   ASSERT(priorityQueue);
   xQueueSend(priorityQueue, &priorityDisable, 0);
 

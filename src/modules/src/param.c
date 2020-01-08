@@ -36,6 +36,7 @@
 #include "crc.h"
 #include "console.h"
 #include "debug.h"
+#include "static_mem.h"
 
 #if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
@@ -99,6 +100,8 @@ static CRTPPacket p;
 
 static bool isInit = false;
 
+STATIC_MEM_TASK_ALLOC(paramTask, PARAM_TASK_STACKSIZE);
+
 void paramInit(void)
 {
   int i;
@@ -147,8 +150,7 @@ void paramInit(void)
 
 
   //Start the param task
-	xTaskCreate(paramTask, PARAM_TASK_NAME,
-	            PARAM_TASK_STACKSIZE, NULL, PARAM_TASK_PRI, NULL);
+  STATIC_MEM_TASK_CREATE(paramTask, paramTask, PARAM_TASK_NAME, NULL, PARAM_TASK_PRI);
 
   //TODO: Handle stored parameters!
 
@@ -665,4 +667,3 @@ unsigned int paramGetUint(int varid)
 {
   return (unsigned int)paramGetInt(varid);
 }
-

@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -41,6 +41,7 @@
 #include "cfassert.h"
 #include "config.h"
 #include "nvicconf.h"
+#include "static_mem.h"
 
 /** This uart is conflicting with SPI2 DMA used in sensors_bmi088_spi_bmp388.c
  *  which is used in CF-Bolt. So for other products this can be enabled.
@@ -48,13 +49,16 @@
 //#define ENABLE_UART1_DMA
 
 static xQueueHandle uart1queue;
+STATIC_MEM_QUEUE_ALLOC(uart1queue, 64, sizeof(uint8_t));
 
 static bool isInit = false;
 static bool hasOverrun = false;
 
 #ifdef ENABLE_UART1_DMA
 static xSemaphoreHandle uartBusy;
+static StaticSemaphore_t uartBusyBuffer;
 static xSemaphoreHandle waitUntilSendDone;
+static StaticSemaphore_t waitUntilSendDoneBuffer;
 static DMA_InitTypeDef DMA_InitStructureShare;
 static uint8_t dmaBuffer[64];
 static bool    isUartDmaInitialized;
@@ -71,8 +75,8 @@ static void uart1DmaInit(void)
   NVIC_InitTypeDef NVIC_InitStructure;
 
   // initialize the FreeRTOS structures first, to prevent null pointers in interrupts
-  waitUntilSendDone = xSemaphoreCreateBinary(); // initialized as blocking
-  uartBusy = xSemaphoreCreateBinary(); // initialized as blocking
+  waitUntilSendDone = xSemaphoreCreateBinaryStatic(&waitUntilSendDoneBuffer); // initialized as blocking
+  uartBusy = xSemaphoreCreateBinaryStatic(&uartBusyBuffer); // initialized as blocking
   xSemaphoreGive(uartBusy); // but we give it because the uart isn't busy at initialization
 
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
@@ -143,7 +147,7 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   } else {
     USART_InitStructure.USART_WordLength        = USART_WordLength_8b;
   }
-  
+
   USART_InitStructure.USART_StopBits            = USART_StopBits_1;
 
   if (parity == uart1ParityEven) {
@@ -153,7 +157,7 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   } else {
     USART_InitStructure.USART_Parity            = USART_Parity_No;
   }
-  
+
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART1_TYPE, &USART_InitStructure);
 
@@ -165,13 +169,13 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  uart1queue = xQueueCreate(64, sizeof(uint8_t));
+  uart1queue = STATIC_MEM_QUEUE_CREATE(uart1queue);
 
   USART_ITConfig(UART1_TYPE, USART_IT_RXNE, ENABLE);
 
   //Enable UART
   USART_Cmd(UART1_TYPE, ENABLE);
-  
+
   USART_ITConfig(UART1_TYPE, USART_IT_RXNE, ENABLE);
 
   isInit = true;
@@ -238,7 +242,7 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
 int uart1Putchar(int ch)
 {
     uart1SendData(1, (uint8_t *)&ch);
-    
+
     return (unsigned char)ch;
 }
 

@@ -70,7 +70,9 @@ typedef struct
   uint32_t messageIndex;                //< Index of bytes sent/received
   uint32_t nbrOfretries;                //< Retries done
   SemaphoreHandle_t isBusFreeSemaphore; //< Semaphore to block during transaction.
-  SemaphoreHandle_t isBusFreeMutex;     //< Mutex to protect buss
+  StaticSemaphore_t isBusFreeSemaphoreBuffer;
+  SemaphoreHandle_t isBusFreeMutex;     //< Mutex to protect bus
+  StaticSemaphore_t isBusFreeMutexBuffer;
   DMA_InitTypeDef DMAStruct;            //< DMA configuration structure used during transfer setup.
 } I2cDrv;
 
@@ -131,4 +133,3 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
                              uint8_t  *buffer);
 
 #endif
-

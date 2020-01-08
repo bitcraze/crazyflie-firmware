@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -39,17 +39,20 @@
 #include "queue.h"
 #include "queuemonitor.h"
 #include "semphr.h"
+#include "static_mem.h"
 
 #include "usb.h"
 
 static bool isInit = false;
 static xQueueHandle crtpPacketDelivery;
+STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, 16, sizeof(CRTPPacket));
 static uint8_t sendBuffer[64];
 
 static int usblinkSendPacket(CRTPPacket *p);
 static int usblinkSetEnable(bool enable);
 static int usblinkReceiveCRTPPacket(CRTPPacket *p);
 
+STATIC_MEM_TASK_ALLOC(usblinkTask, USBLINK_TASK_STACKSIZE);
 
 static struct crtpLinkOperations usblinkOp =
 {
@@ -126,11 +129,10 @@ void usblinkInit()
   // Initialize the USB peripheral
   usbInit();
 
-  crtpPacketDelivery = xQueueCreate(16, sizeof(CRTPPacket));
+  STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
-  xTaskCreate(usblinkTask, USBLINK_TASK_NAME,
-              USBLINK_TASK_STACKSIZE, NULL, USBLINK_TASK_PRI, NULL);
+  STATIC_MEM_TASK_CREATE(usblinkTask, usblinkTask, USBLINK_TASK_NAME, NULL, USBLINK_TASK_PRI);
 
   isInit = true;
 }
@@ -144,4 +146,3 @@ struct crtpLinkOperations * usblinkGetLink()
 {
   return &usblinkOp;
 }
-

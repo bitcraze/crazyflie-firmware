@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -39,11 +39,15 @@
 #include "cfassert.h"
 #include "config.h"
 #include "nvicconf.h"
-
+#include "static_mem.h"
 
 static xQueueHandle uart2queue;
+STATIC_MEM_QUEUE_ALLOC(uart2queue, 64, sizeof(uint8_t));
+
 static xSemaphoreHandle uartBusy;
+static StaticSemaphore_t uartBusyBuffer;
 static xSemaphoreHandle waitUntilSendDone;
+static StaticSemaphore_t waitUntilSendDoneBuffer;
 
 static bool isInit = false;
 static bool hasOverrun = false;
@@ -97,8 +101,8 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitTypeDef NVIC_InitStructure;
 
   // initialize the FreeRTOS structures first, to prevent null pointers in interrupts
-  waitUntilSendDone = xSemaphoreCreateBinary(); // initialized as blocking
-  uartBusy = xSemaphoreCreateBinary(); // initialized as blocking
+  waitUntilSendDone = xSemaphoreCreateBinaryStatic(&waitUntilSendDoneBuffer); // initialized as blocking
+  uartBusy = xSemaphoreCreateBinaryStatic(&uartBusyBuffer); // initialized as blocking
   xSemaphoreGive(uartBusy); // but we give it because the uart isn't busy at initialization
 
   /* Enable GPIO and USART clock */
@@ -139,13 +143,13 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  uart2queue = xQueueCreate(64, sizeof(uint8_t));
+  uart2queue = STATIC_MEM_QUEUE_CREATE(uart2queue);
 
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
 
   //Enable UART
   USART_Cmd(UART2_TYPE, ENABLE);
-  
+
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
 
   isInit = true;
@@ -210,7 +214,7 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data)
 int uart2Putchar(int ch)
 {
     uart2SendData(1, (uint8_t *)&ch);
-    
+
     return (unsigned char)ch;
 }
 

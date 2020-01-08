@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -35,9 +35,10 @@
 #include "info.h"
 #include "version.h"
 #include "pm.h"
+#include "static_mem.h"
 
 //CPUID access
-static const unsigned int * CpuId = (unsigned int*)0x1FFFF7E8; 
+static const unsigned int * CpuId = (unsigned int*)0x1FFFF7E8;
 
 typedef enum {
   infoCopterNr = 0x00,
@@ -61,13 +62,13 @@ typedef enum {
   warningBattery = 0x00
 } warningId;
 
+STATIC_MEM_TASK_ALLOC(infoTask, INFO_TASK_STACKSIZE);
 
 void infoTask(void *param);
 
 void infoInit()
 {
-  xTaskCreate(infoTask, INFO_TASK_NAME,
-              INFO_TASK_STACKSIZE, NULL, INFO_TASK_PRI, NULL);
+  STATIC_MEM_TASK_CREATE(infoTask, infoTask, INFO_TASK_NAME, NULL, INFO_TASK_PRI);
   crtpInitTaskQueue(crtpInfo);
 }
 
@@ -91,59 +92,59 @@ void infoTask(void *param)
             p.data[1] = 0x90;
             p.data[2] = 0x00;   //Version 0.9.0 (Crazyflie)
             strcpy((char*)&p.data[3], "CrazyFlie");
-            
+
             p.size = 3+strlen("CrazyFlie");
             crtpSendPacket(&p);
           } else if (p.data[0] == infoVersion) {
             i=1;
-            
+
             strncpy((char*)&p.data[i], V_SLOCAL_REVISION, 31-i);
             i += strlen(V_SLOCAL_REVISION);
-            
+
             if (i<31) p.data[i++] = ',';
-            
+
             strncpy((char*)&p.data[i], V_SREVISION, 31-i);
             i += strlen(V_SREVISION);
-            
+
             if (i<31) p.data[i++] = ',';
-            
+
             strncpy((char*)&p.data[i], V_STAG, 31-i);
             i += strlen(V_STAG);
-            
+
             if (i<31) p.data[i++] = ',';
             if (i<31) p.data[i++] = V_MODIFIED?'M':'C';
-            
+
             p.size = (i<31)?i:31;
             crtpSendPacket(&p);
           } else if (p.data[0] == infoCpuId) {
             memcpy((char*)&p.data[1], (char*)CpuId, 12);
-            
+
             p.size = 13;
             crtpSendPacket(&p);
           }
-             
+
           break;
         case infoBatteryNr:
           if (p.data[0] == batteryVoltage)
           {
             float value = pmGetBatteryVoltage();
-            
+
             memcpy(&p.data[1], (char*)&value, 4);
-            
+
             p.size = 5;
             crtpSendPacket(&p);
           } else if (p.data[0] == batteryMax) {
             float value = pmGetBatteryVoltageMax();
-            
+
             memcpy(&p.data[1], (char*)&value, 4);
-            
+
             p.size = 5;
             crtpSendPacket(&p);
           } else if (p.data[0] == batteryMin) {
             float value = pmGetBatteryVoltageMin();
-            
+
             memcpy(&p.data[1], (char*)&value, 4);
-            
+
             p.size = 5;
             crtpSendPacket(&p);
           }
@@ -152,25 +153,24 @@ void infoTask(void *param)
           break;
       }
     }
-    
+
     // Send a warning message if the battery voltage drops under 3.3V
     // This is sent every 5 info transaction or every 5 seconds
     if (ctr++>5) {
       ctr=0;
-      
+
       if (pmGetBatteryVoltageMin() < INFO_BAT_WARNING)
       {
         float value = pmGetBatteryVoltage();
-        
+
         p.port = CRTP_PORT(0,8,3);
         p.data[0] = 0;
         memcpy(&p.data[1], (char*)&value, 4);
-        
+
         p.size = 5;
         crtpSendPacket(&p);
       }
     }
-    
+
   }
 }
-

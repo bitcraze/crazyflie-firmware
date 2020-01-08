@@ -54,6 +54,7 @@ such as: take-off, landing, polynomial trajectories.
 #include "planner.h"
 #include "log.h"
 #include "param.h"
+#include "static_mem.h"
 
 // Local types
 enum TrajectoryLocation_e {
@@ -95,6 +96,9 @@ static struct piecewise_traj_compressed  compressed_trajectory;
 
 // makes sure that we don't evaluate the trajectory while it is being changed
 static xSemaphoreHandle lockTraj;
+static StaticSemaphore_t lockTrajBuffer;
+
+STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE);
 
 // CRTP Packet definitions
 
@@ -188,10 +192,9 @@ void crtpCommanderHighLevelInit(void)
   plan_init(&planner);
 
   //Start the trajectory task
-  xTaskCreate(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_NAME,
-              CMD_HIGH_LEVEL_TASK_STACKSIZE, NULL, CMD_HIGH_LEVEL_TASK_PRI, NULL);
+  STATIC_MEM_TASK_CREATE(crtpCommanderHighLevelTask, crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_NAME, NULL, CMD_HIGH_LEVEL_TASK_PRI);
 
-  lockTraj = xSemaphoreCreateMutex();
+  lockTraj = xSemaphoreCreateMutexStatic(&lockTrajBuffer);
 
   pos = vzero();
   yaw = 0;
