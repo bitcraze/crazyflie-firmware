@@ -154,6 +154,8 @@ to exclude the API function. */
   }
 */
 
+#define configSUPPORT_STATIC_ALLOCATION 1
+
 // Queue monitoring
 #ifdef DEBUG_QUEUE_MONITOR
     #undef traceQUEUE_SEND
