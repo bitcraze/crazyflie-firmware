@@ -32,6 +32,10 @@ script:
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE" UNIT_TEST_STYLE=min
 
+  # Build Bigquad deck with all config options
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
+  - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 "EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM" UNIT_TEST_STYLE=min
+
   # Build the tag platform
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min
