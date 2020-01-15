@@ -43,6 +43,20 @@ bool controllerPidTest(void)
   return pass;
 }
 
+static float capAngle(float angle) {
+  float result = angle;
+
+  while (result > 180.0f) {
+    result -= 360.0f;
+  }
+
+  while (result < -180.0f) {
+    result += 360.0f;
+  }
+
+  return result;
+}
+
 void controllerPid(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
@@ -52,13 +66,11 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     // Rate-controled YAW is moving YAW angle setpoint
     if (setpoint->mode.yaw == modeVelocity) {
        attitudeDesired.yaw += setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT;
-      while (attitudeDesired.yaw > 180.0f)
-        attitudeDesired.yaw -= 360.0f;
-      while (attitudeDesired.yaw < -180.0f)
-        attitudeDesired.yaw += 360.0f;
     } else {
       attitudeDesired.yaw = setpoint->attitude.yaw;
     }
+
+    attitudeDesired.yaw = capAngle(attitudeDesired.yaw);
   }
 
   if (RATE_DO_EXECUTE(POSITION_RATE, tick)) {
