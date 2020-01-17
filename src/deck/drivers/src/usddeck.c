@@ -60,7 +60,8 @@
 #include "crc_bosch.h"
 
 // Hardware defines
-#define USD_CS_PIN    DECK_GPIO_IO4
+//#define USD_CS_PIN    DECK_GPIO_IO4
+#define USD_CS_PIN    DECK_GPIO_RX2
 
 typedef struct usdLogConfig_s {
   char filename[13];

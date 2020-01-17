@@ -180,11 +180,12 @@ static const I2cDef deckBusDef =
   .gpioAF             = GPIO_AF_I2C1,
   .dmaPerif           = RCC_AHB1Periph_DMA1,
   .dmaChannel         = DMA_Channel_1,
-  .dmaRxStream        = DMA1_Stream0,
-  .dmaRxIRQ           = DMA1_Stream0_IRQn,
-  .dmaRxTCFlag        = DMA_FLAG_TCIF0,
-  .dmaRxTEFlag        = DMA_FLAG_TEIF0,
+  .dmaRxStream        = DMA1_Stream5,
+  .dmaRxIRQ           = DMA1_Stream5_IRQn,
+  .dmaRxTCFlag        = DMA_FLAG_TCIF5,
+  .dmaRxTEFlag        = DMA_FLAG_TEIF5,
 };
+
 
 I2cDrv deckBus =
 {
@@ -641,7 +642,7 @@ void __attribute__((used)) I2C1_EV_IRQHandler(void)
   i2cdrvEventIsrHandler(&deckBus);
 }
 
-void __attribute__((used)) DMA1_Stream0_IRQHandler(void)
+void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
 {
   i2cdrvDmaIsrHandler(&deckBus);
 }

@@ -1173,6 +1173,7 @@ void __attribute__((used)) BMI088_SPI_TX_DMA_IRQHandler(void)
   }
 }
 
+/* Removed since conflicting when sd-card moved to SPI3
 void __attribute__((used)) BMI088_SPI_RX_DMA_IRQHandler(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -1198,6 +1199,7 @@ void __attribute__((used)) BMI088_SPI_RX_DMA_IRQHandler(void)
     portYIELD();
   }
 }
+*/
 
 PARAM_GROUP_START(imu_sensors)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
