@@ -129,7 +129,7 @@ void usblinkInit()
   // Initialize the USB peripheral
   usbInit();
 
-  STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
+  crtpPacketDelivery = STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
   STATIC_MEM_TASK_CREATE(usblinkTask, usblinkTask, USBLINK_TASK_NAME, NULL, USBLINK_TASK_PRI);
