@@ -40,14 +40,14 @@ implementation of planning state machine
 
 static struct traj_eval plan_eval(struct planner *p, float t);
 
-static void plan_takeoff_or_landing(struct planner *p, struct vec pos, float yaw, float height, float duration)
+static void plan_takeoff_or_landing(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration)
 {
-	struct vec takeoff_pos = pos;
-	takeoff_pos.z = height;
+	struct vec hover_pos = curr_pos;
+	hover_pos.z = hover_height;
 
 	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
-		pos,         yaw, vzero(), 0, vzero(),
-		takeoff_pos,   0, vzero(), 0, vzero());
+		curr_pos,  curr_yaw,  vzero(), 0, vzero(),
+		hover_pos, hover_yaw, vzero(), 0, vzero());
 }
 
 // ----------------- //
@@ -131,13 +131,13 @@ struct traj_eval plan_eval(struct planner *p, float t)
 	}
 }
 
-int plan_takeoff(struct planner *p, struct vec pos, float yaw, float height, float duration, float t)
+int plan_takeoff(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float t)
 {
 	if (p->state != TRAJECTORY_STATE_IDLE) {
 		return 1;
 	}
 
-	plan_takeoff_or_landing(p, pos, yaw, height, duration);
+	plan_takeoff_or_landing(p, curr_pos, curr_yaw, hover_height, hover_yaw, duration);
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_FLYING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
@@ -146,14 +146,14 @@ int plan_takeoff(struct planner *p, struct vec pos, float yaw, float height, flo
 	return 0;
 }
 
-int plan_land(struct planner *p, struct vec pos, float yaw, float height, float duration, float t)
+int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float t)
 {
 	if (   p->state == TRAJECTORY_STATE_IDLE
 		|| p->state == TRAJECTORY_STATE_LANDING) {
 		return 1;
 	}
 
-	plan_takeoff_or_landing(p, pos, yaw, height, duration);
+	plan_takeoff_or_landing(p, curr_pos, curr_yaw, hover_height, hover_yaw, duration);
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_LANDING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
