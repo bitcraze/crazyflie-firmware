@@ -31,9 +31,9 @@ static float bound_control_input = 32000.0f;
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
-static float roll_kp = 6.0f;
-static float pitch_kp = 6.0f;
-static float yaw_kp = 6.0f;
+static float roll_kp = 10.0f;
+static float pitch_kp = 10.0f;
+static float yaw_kp = 10.0f;
 
 static float r_roll;
 static float r_pitch;
@@ -228,14 +228,14 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		float attitude_error_q = radians(rateDesired.pitch) - stateAttitudeRatePitch;
 		float attitude_error_r = radians(rateDesired.yaw) - stateAttitudeRateYaw;
 
-		indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p
-				- indi.reference_acceleration.rate_p * body_rates.p;
+		indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p;
+				//- indi.reference_acceleration.rate_p * body_rates.p;
 
-		indi.angular_accel_ref.q = indi.reference_acceleration.err_q * attitude_error_q
-				- indi.reference_acceleration.rate_q * body_rates.q;
+		indi.angular_accel_ref.q = indi.reference_acceleration.err_q * attitude_error_q;
+				//- indi.reference_acceleration.rate_q * body_rates.q;
 
-		indi.angular_accel_ref.r = indi.reference_acceleration.err_r * attitude_error_r
-				- indi.reference_acceleration.rate_r * body_rates.r;
+		indi.angular_accel_ref.r = indi.reference_acceleration.err_r * attitude_error_r;
+				//- indi.reference_acceleration.rate_r * body_rates.r;
 
 		/*
 		 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
@@ -247,7 +247,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		//(they have significant inertia, see the paper mentioned in the header for more explanation)
 		indi.du.p = 1.0f / indi.g1.p * (indi.angular_accel_ref.p - indi.rate_d[0]);
 		indi.du.q = 1.0f / indi.g1.q * (indi.angular_accel_ref.q - indi.rate_d[1]);
-		indi.du.r = 1.0f / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate_d[2] + indi.g2 * indi.du.r);
+		indi.du.r = 1.0f / (indi.g1.r - indi.g2) * (indi.angular_accel_ref.r - indi.rate_d[2] - indi.g2 * indi.du.r);
 
 
 		/*

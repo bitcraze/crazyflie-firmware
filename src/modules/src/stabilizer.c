@@ -184,7 +184,7 @@ void stabilizerInit(StateEstimatorType estimator)
 
   sensorsInit();
   stateEstimatorInit(estimator);
-  controllerInit(ControllerTypeAny);
+  controllerInit(ControllerTypeINDI);
   powerDistributionInit();
   sitAwInit();
   estimatorType = getStateEstimator();
