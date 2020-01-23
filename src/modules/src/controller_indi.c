@@ -31,9 +31,9 @@ static float bound_control_input = 32000.0f;
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
-static float roll_kp = 10.0f;
-static float pitch_kp = 10.0f;
-static float yaw_kp = 10.0f;
+static float roll_kp = 3.0f;
+static float pitch_kp = 3.0f;
+static float yaw_kp = 3.0f;
 
 static float r_roll;
 static float r_pitch;
