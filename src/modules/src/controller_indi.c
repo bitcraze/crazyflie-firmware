@@ -34,6 +34,20 @@ static float actuatorThrust;
 static float roll_kp = 3.0f;
 static float pitch_kp = 3.0f;
 static float yaw_kp = 3.0f;
+/*
+static float velocity_x;
+static float velocity_y;
+static float velocity_z;
+*/
+/*
+static float position_x;
+static float position_y;
+static float position_z;
+*/
+//static float roll;
+//static float pitch;
+//static float yaw; 
+//static float thrust;
 
 static float r_roll;
 static float r_pitch;
@@ -299,6 +313,23 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	control->roll = indi.u_in.p;
 	control->pitch = indi.u_in.q;
 	control->yaw  = indi.u_in.r;
+
+	/*
+	velocity_x = state->velocity.x;
+	//velocity_y = state->velocity.y;
+	//velocity_z = state->velocity.z;
+	*/
+	/*
+	position_x = setpoint->velocity.x;
+	position_y = setpoint->velocity.y;
+	position_z = setpoint->velocity.z;
+	*/
+	/*
+	roll = setpoint->attitude.roll;
+	pitch = setpoint->attitude.pitch;
+	yaw = setpoint->attitude.yaw;
+	thrust = setpoint->thrust;
+	*/
 }
 
 PARAM_GROUP_START(ctrlINDI)
@@ -322,6 +353,9 @@ PARAM_ADD(PARAM_FLOAT, act_dyn_q, &indi.act_dyn.q)
 PARAM_ADD(PARAM_FLOAT, act_dyn_r, &indi.act_dyn.r)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
+//PARAM_ADD(PARAM_FLOAT, vel_x, &velocity_x)
+//PARAM_ADD(PARAM_FLOAT, vel_y, &velocity_y)
+//PARAM_ADD(PARAM_FLOAT, vel_z, &velocity_z)
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
@@ -345,4 +379,7 @@ LOG_ADD(LOG_FLOAT, ang_accel_ref.r, &indi.angular_accel_ref.r)
 LOG_ADD(LOG_FLOAT, rate_d[0], &indi.rate_d[0])
 LOG_ADD(LOG_FLOAT, rate_d[1], &indi.rate_d[1])
 LOG_ADD(LOG_FLOAT, rate_d[2], &indi.rate_d[2])
+//LOG_ADD(LOG_FLOAT, vel_x, &velocity_x)
+//LOG_ADD(LOG_FLOAT, vel_y, &velocity_y)
+//LOG_ADD(LOG_FLOAT, vel_z, &velocity_z)
 LOG_GROUP_STOP(ctrlINDI)
