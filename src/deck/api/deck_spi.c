@@ -37,11 +37,11 @@
 #include "config.h"
 #include "nvicconf.h"
 
-#define SPI                           SPI1
-#define SPI_CLK                       RCC_APB2Periph_SPI1
-#define SPI_CLK_INIT                  RCC_APB2PeriphClockCmd
-#define SPI_IRQ_HANDLER               SPI1_IRQHandler
-#define SPI_IRQn                      SPI1_IRQn
+#define SPI                     SPI1
+#define SPI_CLK                 RCC_APB2Periph_SPI1
+#define SPI_CLK_INIT            RCC_APB2PeriphClockCmd
+#define SPI_IRQ_HANDLER         SPI1_IRQHandler
+#define SPI_IRQn                SPI1_IRQn
 
 #define SPI_DMA_IRQ_PRIO        (NVIC_HIGH_PRI)
 #define SPI_DMA                 DMA2
@@ -60,64 +60,65 @@
 #define SPI_RX_DMA_CHANNEL      DMA_Channel_3
 #define SPI_RX_DMA_FLAG_TCIF    DMA_FLAG_TCIF0
 
-#define SPI_SCK_PIN                   GPIO_Pin_5
-#define SPI_SCK_GPIO_PORT             GPIOA
-#define SPI_SCK_GPIO_CLK              RCC_AHB1Periph_GPIOA
-#define SPI_SCK_SOURCE                GPIO_PinSource5
-#define SPI_SCK_AF                    GPIO_AF_SPI1
+#define SPI_SCK_PIN             GPIO_Pin_5
+#define SPI_SCK_GPIO_PORT       GPIOA
+#define SPI_SCK_GPIO_CLK        RCC_AHB1Periph_GPIOA
+#define SPI_SCK_SOURCE          GPIO_PinSource5
+#define SPI_SCK_AF              GPIO_AF_SPI1
 
-#define SPI_MISO_PIN                  GPIO_Pin_6
-#define SPI_MISO_GPIO_PORT            GPIOA
-#define SPI_MISO_GPIO_CLK             RCC_AHB1Periph_GPIOA
-#define SPI_MISO_SOURCE               GPIO_PinSource6
-#define SPI_MISO_AF                   GPIO_AF_SPI1
+#define SPI_MISO_PIN            GPIO_Pin_6
+#define SPI_MISO_GPIO_PORT      GPIOA
+#define SPI_MISO_GPIO_CLK       RCC_AHB1Periph_GPIOA
+#define SPI_MISO_SOURCE         GPIO_PinSource6
+#define SPI_MISO_AF             GPIO_AF_SPI1
 
-#define SPI_MOSI_PIN                  GPIO_Pin_7
-#define SPI_MOSI_GPIO_PORT            GPIOA
-#define SPI_MOSI_GPIO_CLK             RCC_AHB1Periph_GPIOA
-#define SPI_MOSI_SOURCE               GPIO_PinSource7
-#define SPI_MOSI_AF                   GPIO_AF_SPI1
+#define SPI_MOSI_PIN            GPIO_Pin_7
+#define SPI_MOSI_GPIO_PORT      GPIOA
+#define SPI_MOSI_GPIO_CLK       RCC_AHB1Periph_GPIOA
+#define SPI_MOSI_SOURCE         GPIO_PinSource7
+#define SPI_MOSI_AF             GPIO_AF_SPI1
 
-#define nSPI                           SPI3
-#define nSPI_CLK                       RCC_APB1Periph_SPI3
-#define nSPI_CLK_INIT                  RCC_APB1PeriphClockCmd
-#define nSPI_IRQ_HANDLER               SPI3_IRQHandler
-#define nSPI_IRQn                      SPI3_IRQn
+// Second SPI
+#define nSPI                    SPI3
+#define nSPI_CLK                RCC_APB1Periph_SPI3
+#define nSPI_CLK_INIT           RCC_APB1PeriphClockCmd
+#define nSPI_IRQ_HANDLER        SPI3_IRQHandler
+#define nSPI_IRQn               SPI3_IRQn
 
-#define nSPI_DMA_IRQ_PRIO        (NVIC_HIGH_PRI)
-#define nSPI_DMA                 DMA1
-#define nSPI_DMA_CLK             RCC_AHB1Periph_DMA1
-#define nSPI_DMA_CLK_INIT        RCC_AHB1PeriphClockCmd
+#define nSPI_DMA_IRQ_PRIO       (NVIC_HIGH_PRI)
+#define nSPI_DMA                DMA1
+#define nSPI_DMA_CLK            RCC_AHB1Periph_DMA1
+#define nSPI_DMA_CLK_INIT       RCC_AHB1PeriphClockCmd
 
-#define nSPI_TX_DMA_STREAM       DMA1_Stream7
-#define nSPI_TX_DMA_IRQ          DMA1_Stream7_IRQn
-#define nSPI_TX_DMA_IRQHandler   DMA1_Stream7_IRQHandler
-#define nSPI_TX_DMA_CHANNEL      DMA_Channel_0
-#define nSPI_TX_DMA_FLAG_TCIF    DMA_FLAG_TCIF7
+#define nSPI_TX_DMA_STREAM      DMA1_Stream7
+#define nSPI_TX_DMA_IRQ         DMA1_Stream7_IRQn
+#define nSPI_TX_DMA_IRQHandler  DMA1_Stream7_IRQHandler
+#define nSPI_TX_DMA_CHANNEL     DMA_Channel_0
+#define nSPI_TX_DMA_FLAG_TCIF   DMA_FLAG_TCIF7
 
-#define nSPI_RX_DMA_STREAM       DMA1_Stream0
-#define nSPI_RX_DMA_IRQ          DMA1_Stream0_IRQn
-#define nSPI_RX_DMA_IRQHandler   DMA1_Stream0_IRQHandler
-#define nSPI_RX_DMA_CHANNEL      DMA_Channel_0
-#define nSPI_RX_DMA_FLAG_TCIF    DMA_FLAG_TCIF0
+#define nSPI_RX_DMA_STREAM      DMA1_Stream0
+#define nSPI_RX_DMA_IRQ         DMA1_Stream0_IRQn
+#define nSPI_RX_DMA_IRQHandler  DMA1_Stream0_IRQHandler
+#define nSPI_RX_DMA_CHANNEL     DMA_Channel_0
+#define nSPI_RX_DMA_FLAG_TCIF   DMA_FLAG_TCIF0
 
-#define nSPI_SCK_PIN                   GPIO_Pin_10
-#define nSPI_SCK_GPIO_PORT             GPIOC
-#define nSPI_SCK_GPIO_CLK              RCC_AHB1Periph_GPIOC
-#define nSPI_SCK_SOURCE                GPIO_PinSource10
-#define nSPI_SCK_AF                    GPIO_AF_SPI3
+#define nSPI_SCK_PIN            GPIO_Pin_10
+#define nSPI_SCK_GPIO_PORT      GPIOC
+#define nSPI_SCK_GPIO_CLK       RCC_AHB1Periph_GPIOC
+#define nSPI_SCK_SOURCE         GPIO_PinSource10
+#define nSPI_SCK_AF             GPIO_AF_SPI3
 
-#define nSPI_MISO_PIN                  GPIO_Pin_11
-#define nSPI_MISO_GPIO_PORT            GPIOC
-#define nSPI_MISO_GPIO_CLK             RCC_AHB1Periph_GPIOC
-#define nSPI_MISO_SOURCE               GPIO_PinSource11
-#define nSPI_MISO_AF                   GPIO_AF_SPI3
+#define nSPI_MISO_PIN           GPIO_Pin_11
+#define nSPI_MISO_GPIO_PORT     GPIOC
+#define nSPI_MISO_GPIO_CLK      RCC_AHB1Periph_GPIOC
+#define nSPI_MISO_SOURCE        GPIO_PinSource11
+#define nSPI_MISO_AF            GPIO_AF_SPI3
 
-#define nSPI_MOSI_PIN                  GPIO_Pin_12
-#define nSPI_MOSI_GPIO_PORT            GPIOC
-#define nSPI_MOSI_GPIO_CLK             RCC_AHB1Periph_GPIOC
-#define nSPI_MOSI_SOURCE               GPIO_PinSource12
-#define nSPI_MOSI_AF                   GPIO_AF_SPI3
+#define nSPI_MOSI_PIN           GPIO_Pin_12
+#define nSPI_MOSI_GPIO_PORT     GPIOC
+#define nSPI_MOSI_GPIO_CLK      RCC_AHB1Periph_GPIOC
+#define nSPI_MOSI_SOURCE        GPIO_PinSource12
+#define nSPI_MOSI_AF            GPIO_AF_SPI3
 
 #define DUMMY_BYTE         0xA5
 
