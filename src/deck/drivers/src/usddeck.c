@@ -360,6 +360,7 @@ static void usdLogTask(void* prm)
 
   DEBUG_PRINT("wait for sensors\n");
 
+  systemWaitStart();
   /* wait until sensor calibration is done
    * (memory of bias calculation buffer is free again) */
   while(!sensorsAreCalibrated()) {
@@ -367,7 +368,7 @@ static void usdLogTask(void* prm)
   }
 
   usdLogConfig.varIds = pvPortMalloc(usdLogConfig.numSlots * sizeof(int));
-  DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
+  //DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
 
   // store logging variable ids
   {
@@ -413,12 +414,19 @@ static void usdLogTask(void* prm)
   }
 
   /* allocate memory for buffer */
-  DEBUG_PRINT("malloc buffer ...\n");
+  DEBUG_PRINT("malloc buffer %d bytes...", usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
   // vTaskDelay(10); // small delay to allow debug message to be send
   usdLogBufferStart =
       pvPortMalloc(usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
   usdLogBuffer = usdLogBufferStart;
-  DEBUG_PRINT("[OK].\n");
+  if (usdLogBufferStart)
+  {
+    DEBUG_PRINT("[OK].\n");
+  }
+  else
+  {
+    DEBUG_PRINT("[FAIL].\n");
+  }
   DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
 
   /* create queue to hand over pointer to usdLogData */
@@ -469,7 +477,7 @@ void usddeckTriggerLogging(void)
 
   /* trigger writing once there exists at least one queue item,
    * frequency will result itself */
-  if (queueMessagesWaiting) {
+  if (queueMessagesWaiting && xHandleWriteTask) {
     vTaskResume(xHandleWriteTask);
   }
   /* skip if queue is full, one slot will be spared as mutex */
