@@ -31,23 +31,28 @@ static float bound_control_input = 32000.0f;
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
 static float actuatorThrust;
-static float roll_kp = 3.0f;
-static float pitch_kp = 3.0f;
-static float yaw_kp = 3.0f;
-/*
+static float roll_kp = 10.0f;
+static float pitch_kp = 10.0f;
+static float yaw_kp = 10.0f;
+/* ev_tag */
 static float velocity_x;
 static float velocity_y;
 static float velocity_z;
-*/
+
 /*
 static float position_x;
 static float position_y;
 static float position_z;
 */
-//static float roll;
-//static float pitch;
-//static float yaw; 
-//static float thrust;
+
+static float roll;
+static float pitch;
+static float yawRt; 
+static float thrust;
+
+static float yawRateDes, yawState; 
+static float attYawError; 
+/* ev_tag */
 
 static float r_roll;
 static float r_pitch;
@@ -187,7 +192,16 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 		rateDesired.roll = roll_kp*(attitudeDesired.roll - state->attitude.roll);
 		rateDesired.pitch = pitch_kp*(attitudeDesired.pitch - state->attitude.pitch);
-		rateDesired.yaw = yaw_kp*(attitudeDesired.yaw - state->attitude.yaw);
+		//rateDesired.yaw = yaw_kp*(attitudeDesired.yaw - state->attitude.yaw);
+		attYawError = attitudeDesired.yaw - state->attitude.yaw;		
+		if (attYawError > 180.0f) {
+			attYawError = attYawError - 360.0f;
+		}
+		else if (attYawError < -180.0f) {
+			attYawError = attYawError + 360.0f;
+		}
+		rateDesired.yaw = yaw_kp*attYawError;
+
 
 		// For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint
 		// value. Also reset the PID to avoid error buildup, which can lead to unstable
@@ -314,22 +328,26 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	control->pitch = indi.u_in.q;
 	control->yaw  = indi.u_in.r;
 
+
+
 	/*
 	velocity_x = state->velocity.x;
-	//velocity_y = state->velocity.y;
-	//velocity_z = state->velocity.z;
+	velocity_y = state->velocity.y;
+	velocity_z = state->velocity.z;
 	*/
 	/*
 	position_x = setpoint->velocity.x;
 	position_y = setpoint->velocity.y;
 	position_z = setpoint->velocity.z;
 	*/
-	/*
+
+	yawRateDes = setpoint->attitudeRate.yaw;
+	yawState = state->attitude.yaw;
+
 	roll = setpoint->attitude.roll;
 	pitch = setpoint->attitude.pitch;
-	yaw = setpoint->attitude.yaw;
+	yawRt = setpoint->attitudeRate.yaw;
 	thrust = setpoint->thrust;
-	*/
 }
 
 PARAM_GROUP_START(ctrlINDI)
@@ -353,9 +371,6 @@ PARAM_ADD(PARAM_FLOAT, act_dyn_q, &indi.act_dyn.q)
 PARAM_ADD(PARAM_FLOAT, act_dyn_r, &indi.act_dyn.r)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
-//PARAM_ADD(PARAM_FLOAT, vel_x, &velocity_x)
-//PARAM_ADD(PARAM_FLOAT, vel_y, &velocity_y)
-//PARAM_ADD(PARAM_FLOAT, vel_z, &velocity_z)
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
@@ -379,7 +394,15 @@ LOG_ADD(LOG_FLOAT, ang_accel_ref.r, &indi.angular_accel_ref.r)
 LOG_ADD(LOG_FLOAT, rate_d[0], &indi.rate_d[0])
 LOG_ADD(LOG_FLOAT, rate_d[1], &indi.rate_d[1])
 LOG_ADD(LOG_FLOAT, rate_d[2], &indi.rate_d[2])
-//LOG_ADD(LOG_FLOAT, vel_x, &velocity_x)
-//LOG_ADD(LOG_FLOAT, vel_y, &velocity_y)
-//LOG_ADD(LOG_FLOAT, vel_z, &velocity_z)
+LOG_ADD(LOG_FLOAT, yawDes, &attitudeDesired.yaw)
+LOG_ADD(LOG_FLOAT, yawRateDes, &yawRateDes)
+LOG_ADD(LOG_FLOAT, yawState, &yawState)
+LOG_ADD(LOG_FLOAT, yawError, &attYawError)
+LOG_ADD(LOG_FLOAT, velX, &velocity_x)
+LOG_ADD(LOG_FLOAT, velY, &velocity_y)
+LOG_ADD(LOG_FLOAT, velZ, &velocity_z)
+LOG_ADD(LOG_FLOAT, roll, &roll)
+LOG_ADD(LOG_FLOAT, pitch, &pitch)
+LOG_ADD(LOG_FLOAT, yawRt, &yawRt)
+LOG_ADD(LOG_FLOAT, thrust, &thrust)
 LOG_GROUP_STOP(ctrlINDI)
