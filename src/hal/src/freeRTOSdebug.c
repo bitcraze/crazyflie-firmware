@@ -33,25 +33,30 @@
 #include "debug.h"
 #include "nvicconf.h"
 #include "led.h"
+#include "motors.h"
 
 uint32_t traceTickCount;
 
 void vApplicationMallocFailedHook( void )
 {
-	  portDISABLE_INTERRUPTS();
-	  DEBUG_PRINT("\nMalloc failed!\n");
-	  ledSet(ERR_LED1, 1);
-	  ledSet(ERR_LED2, 1);
-	  while(1);
+  portDISABLE_INTERRUPTS();
+  DEBUG_PRINT("\nMalloc failed!\n");
+  ledSet(ERR_LED1, 1);
+  ledSet(ERR_LED2, 1);
+  motorsDisable();
+  storeAssertTextData("Malloc failed");
+  while(1);
 }
 
-#if (configCHECK_FOR_STACK_OVERFLOW == 1)
+#if (configCHECK_FOR_STACK_OVERFLOW > 0)
 void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed portCHAR *pcTaskName)
 {
   portDISABLE_INTERRUPTS();
   DEBUG_PRINT("\nStack overflow!\n");
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
+  motorsDisable();
+  storeAssertTextData("Stack overflow");
   while(1);
 }
 #endif
