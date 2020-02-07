@@ -30,7 +30,7 @@
 #include "FreeRTOS.h"
 #include "cfassert.h"
 #include "led.h"
-#include "motors.h"
+#include "power_distribution.h"
 #include "debug.h"
 
 #define MAGIC_ASSERT_INDICATOR 0x2f8a001f
@@ -81,15 +81,10 @@ void assertFail(char *exp, char *file, int line)
   storeAssertFileData(file, line);
   DEBUG_PRINT("Assert failed %s:%d\n", file, line);
 
-  motorsSetRatio(MOTOR_M1, 0);
-  motorsSetRatio(MOTOR_M2, 0);
-  motorsSetRatio(MOTOR_M3, 0);
-  motorsSetRatio(MOTOR_M4, 0);
-
   ledClearAll();
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
-  motorsDisable();
+  powerStop();
 
   while (1);
 }
