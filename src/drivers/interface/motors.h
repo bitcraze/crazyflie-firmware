@@ -229,8 +229,6 @@ void motorsDeInit(const MotorPerifDef** motorMapSelect);
  */
 bool motorsTest(void);
 
-void motorsDisable(void);
-
 /**
  * Set the PWM ratio of the motor 'id'
  */
