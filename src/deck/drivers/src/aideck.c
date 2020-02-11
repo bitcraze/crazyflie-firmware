@@ -23,7 +23,7 @@
  *
  * aideck.c - Deck driver for the AIdeck
  */
-#define DEBUG_MODULE "AIDECK-TEST"
+#define DEBUG_MODULE "AIDECK"
 
 #include <stdint.h>
 #include <string.h>
@@ -47,65 +47,62 @@
 #include "uart1.h"
 #include "uart2.h"
 
-//#define DEBUG_PRINT_COM DEBUG_PRINT
-#define DEBUG_PRINT_COM(...)
+static bool isInit = false;
 
-static bool isInit;
-/*static void GAP8Task(void *param)
-{
-    systemWaitStart();
-    DEBUG_PRINT("STarting AI TAKS\n");
+//Uncomment when NINA printout read is desired from console
+//#define DEBUG_NINA_PRINT 
 
-    uint8_t byte;
-    while (1)
-    {
-        if (uart1GetDataWithTimout(&byte) == true)
-        {
-            DEBUG_PRINT_COM("[NINA] Received: 0x%02X\r\n", byte);
-        }
-    }
-}*/
 
+#ifdef DEBUG_NINA_PRINT
 static void NinaTask(void *param)
 {
     systemWaitStart();
-    DEBUG_PRINT("STarting AI TAKS\n");
+    vTaskDelay(M2T(1000));
+    DEBUG_PRINT("Starting reading out NINA debugging messages\n");
+    vTaskDelay(M2T(2000));
 
-    uint8_t byte;
-    while (1)
-    {
-        vTaskDelay(10);
-        DEBUG_PRINT("hello\n");
-
-        if (uart2GetDataWithTimout(&byte) == true)
-        {
-            DEBUG_PRINT("[NINA] Received: 0x%02X\r\n", byte);
-        }
-    }
-}
-static void aideckInit(DeckInfo *info)
-{
-    if (isInit)
-        return;
-
-    DEBUG_PRINT("Initialize AI-deck test\n");
-
-    // FOr the GAP8
-    uart1Init(115200);
-    // For the NINA
-    uart2Init(115200);
-
-        //Reset GAP8 and NINA to start with
+    // Pull the reset button to get a clean read out of the data
     pinMode(DECK_GPIO_IO4, OUTPUT);
     digitalWrite(DECK_GPIO_IO4, LOW);
     vTaskDelay(10);
     digitalWrite(DECK_GPIO_IO4, HIGH);
     pinMode(DECK_GPIO_IO4, INPUT_PULLUP);
 
-   /* xTaskCreate(GAP8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
-                AI_DECK_TASK_PRI, NULL);*/
+    // Read out the byte the NINA sends and immediately send it to the console.
+    uint8_t byte;
+    while (1)
+    {        
+        if (uart2GetDataWithTimout(&byte) == true)
+        {
+            consolePutchar(byte);     
+        }
+    }
+}
+#endif
+
+
+static void aideckInit(DeckInfo *info)
+{
+
+    DEBUG_PRINT("Initialize AI-deck driver\n");
+
+    if (isInit)
+        return;
+
+    // FOr the GAP8
+    uart1Init(115200);
+
+    #ifdef DEBUG_NINA_PRINT
+    // Initialize the UART for the NINA
+    uart2Init(115200);
+    // Initialize task for the NINA
     xTaskCreate(NinaTask, AI_DECK_NINA_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
                 AI_DECK_TASK_PRI, NULL);
+
+    #endif
+
+   /* xTaskCreate(GAP8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
+                AI_DECK_TASK_PRI, NULL);*/
 
     isInit = true;
 }
@@ -115,12 +112,12 @@ static void aideckInit(DeckInfo *info)
 static bool aideckTest()
 {
 
-
-
     return true;
 }
 
 static const DeckDriver aideck_deck = {
+    .vid = 0,
+    .pid = 0,
     .name = "bcAIDeck",
 
     .usedPeriph = 0,
