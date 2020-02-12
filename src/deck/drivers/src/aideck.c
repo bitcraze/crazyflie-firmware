@@ -48,6 +48,7 @@
 #include "uart2.h"
 
 static bool isInit = false;
+static uint8_t byte;
 
 //Uncomment when NINA printout read is desired from console
 //#define DEBUG_NINA_PRINT 
@@ -58,7 +59,7 @@ static void NinaTask(void *param)
 {
     systemWaitStart();
     vTaskDelay(M2T(1000));
-    DEBUG_PRINT("Starting reading out NINA debugging messages\n");
+    DEBUG_PRINT("Starting reading out NINA debugging messages:\n");
     vTaskDelay(M2T(2000));
 
     // Pull the reset button to get a clean read out of the data
@@ -80,19 +81,38 @@ static void NinaTask(void *param)
 }
 #endif
 
+static void Gap8Task(void *param)
+{
+    systemWaitStart();
+    vTaskDelay(M2T(1000));
+
+    // Pull the reset button to get a clean read out of the data
+    pinMode(DECK_GPIO_IO4, OUTPUT);
+    digitalWrite(DECK_GPIO_IO4, LOW);
+    vTaskDelay(10);
+    digitalWrite(DECK_GPIO_IO4, HIGH);
+    pinMode(DECK_GPIO_IO4, INPUT_PULLUP);
+
+    // Read out the byte the Gap8 sends and immediately send it to the console.
+    while (1)
+    {        
+        uart1GetDataWithTimout(&byte);
+    }
+}
 
 static void aideckInit(DeckInfo *info)
 {
 
-    DEBUG_PRINT("Initialize AI-deck driver\n");
-
     if (isInit)
         return;
 
-    // FOr the GAP8
+    // Intialize the UART for the GAP8
     uart1Init(115200);
+    // Initialize task for the GAP8
+    xTaskCreate(Gap8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
+                AI_DECK_TASK_PRI, NULL);
 
-    #ifdef DEBUG_NINA_PRINT
+#ifdef DEBUG_NINA_PRINT
     // Initialize the UART for the NINA
     uart2Init(115200);
     // Initialize task for the NINA
@@ -101,13 +121,9 @@ static void aideckInit(DeckInfo *info)
 
     #endif
 
-   /* xTaskCreate(GAP8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
-                AI_DECK_TASK_PRI, NULL);*/
-
+  
     isInit = true;
 }
-
-
 
 static bool aideckTest()
 {
@@ -126,5 +142,13 @@ static const DeckDriver aideck_deck = {
     .init = aideckInit,
     .test = aideckTest,
 };
+
+LOG_GROUP_START(aideck)
+LOG_ADD(LOG_UINT8, receivebyte, &byte)
+LOG_GROUP_STOP(aideck)
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcAIDeck, &isInit)
+PARAM_GROUP_STOP(deck)
 
 DECK_DRIVER(aideck_deck);
