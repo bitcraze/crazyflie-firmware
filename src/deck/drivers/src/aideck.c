@@ -51,8 +51,7 @@ static bool isInit = false;
 static uint8_t byte;
 
 //Uncomment when NINA printout read is desired from console
-//#define DEBUG_NINA_PRINT 
-
+//#define DEBUG_NINA_PRINT
 
 #ifdef DEBUG_NINA_PRINT
 static void NinaTask(void *param)
@@ -72,10 +71,10 @@ static void NinaTask(void *param)
     // Read out the byte the NINA sends and immediately send it to the console.
     uint8_t byte;
     while (1)
-    {        
+    {
         if (uart2GetDataWithTimout(&byte) == true)
         {
-            consolePutchar(byte);     
+            consolePutchar(byte);
         }
     }
 }
@@ -95,7 +94,7 @@ static void Gap8Task(void *param)
 
     // Read out the byte the Gap8 sends and immediately send it to the console.
     while (1)
-    {        
+    {
         uart1GetDataWithTimout(&byte);
     }
 }
@@ -119,9 +118,8 @@ static void aideckInit(DeckInfo *info)
     xTaskCreate(NinaTask, AI_DECK_NINA_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
                 AI_DECK_TASK_PRI, NULL);
 
-    #endif
+#endif
 
-  
     isInit = true;
 }
 
