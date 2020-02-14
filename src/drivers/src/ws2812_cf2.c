@@ -110,8 +110,8 @@ void ws2812Init(void)
 	/* DMA clock enable */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
-	/* DMA1 Channel2 Config */
-	DMA_DeInit(DMA1_Stream3);
+	/* DMA1 Channel5 Config TM */
+	DMA_DeInit(DMA1_Stream5);
 
   // USART TX DMA Channel Config
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR2;
@@ -129,21 +129,22 @@ void ws2812Init(void)
   DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
   DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
   DMA_InitStructure.DMA_Channel = DMA_Channel_5;
-	DMA_Init(DMA1_Stream3, &DMA_InitStructure);
+	DMA_Init(DMA1_Stream5, &DMA_InitStructure);
 
-  NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream3_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream5_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  DMA_ITConfig(DMA1_Stream3, DMA_IT_TC, ENABLE);
-  DMA_ITConfig(DMA1_Stream3, DMA_IT_HT, ENABLE);
+  vSemaphoreCreateBinary(allLedDone);
+
+  DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, ENABLE);
+  DMA_ITConfig(DMA1_Stream5, DMA_IT_HT, ENABLE);
 
 	/* TIM3 CC2 DMA Request enable */
 	TIM_DMACmd(TIM3, TIM_DMA_CC2, ENABLE);
 
-	vSemaphoreCreateBinary(allLedDone);
 
 }
 
@@ -196,8 +197,8 @@ void ws2812Send(uint8_t (*color)[3], uint16_t len)
             bzero(led_dma.end+(24*i), sizeof(led_dma.end));
     }
 
-	DMA1_Stream3->NDTR = sizeof(led_dma.buffer) / sizeof(led_dma.buffer[0]); // load number of bytes to be transferred
-	DMA_Cmd(DMA1_Stream3, ENABLE); 			// enable DMA channel 2
+	DMA1_Stream5->NDTR = sizeof(led_dma.buffer) / sizeof(led_dma.buffer[0]); // load number of bytes to be transferred
+	DMA_Cmd(DMA1_Stream5, ENABLE); 			// enable DMA channel 2
 	TIM_Cmd(TIM3, ENABLE);                      // Go!!!
 }
 
@@ -210,18 +211,18 @@ void ws2812DmaIsr(void)
     if (total_led == 0)
     {
       TIM_Cmd(TIM3, DISABLE);
-    	DMA_Cmd(DMA1_Stream3, DISABLE);
+    	DMA_Cmd(DMA1_Stream5, DISABLE);
     }
 
-    if (DMA_GetITStatus(DMA1_Stream3, DMA_IT_HTIF5))
+    if (DMA_GetITStatus(DMA1_Stream5, DMA_IT_HTIF5))
     {
-      DMA_ClearITPendingBit(DMA1_Stream3, DMA_IT_HTIF5);
+      DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_HTIF5);
       buffer = led_dma.begin;
     }
 
-    if (DMA_GetITStatus(DMA1_Stream3, DMA_IT_TCIF5))
+    if (DMA_GetITStatus(DMA1_Stream5, DMA_IT_TCIF5))
     {
-      DMA_ClearITPendingBit(DMA1_Stream3, DMA_IT_TCIF5);
+      DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
       buffer = led_dma.end;
     }
 
@@ -236,8 +237,15 @@ void ws2812DmaIsr(void)
       xSemaphoreGiveFromISR(allLedDone, &xHigherPriorityTaskWoken);
 
 	    TIM_Cmd(TIM3, DISABLE); 					// disable Timer 3
-	    DMA_Cmd(DMA1_Stream3, DISABLE); 			// disable DMA stream4
+	    DMA_Cmd(DMA1_Stream5, DISABLE); 			// disable DMA stream4
 
 	    total_led = 0;
     }
 }
+
+#ifndef USDDECK_USE_ALT_PINS_AND_SPI
+void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
+{
+  ws2812DmaIsr();
+}
+#endif

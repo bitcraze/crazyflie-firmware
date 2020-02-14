@@ -642,7 +642,11 @@ void __attribute__((used)) I2C1_EV_IRQHandler(void)
   i2cdrvEventIsrHandler(&deckBus);
 }
 
+#ifdef USDDECK_USE_ALT_PINS_AND_SPI
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
+#else
+void __attribute__((used)) DMA1_Stream0_IRQHandler(void)
+#endif
 {
   i2cdrvDmaIsrHandler(&deckBus);
 }

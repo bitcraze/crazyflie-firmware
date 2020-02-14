@@ -25,9 +25,7 @@
  */
 #include "exti.h"
 #include "led.h"
-#include "i2cdev.h"
-#include "ws2812.h"
-#include "power_distribution.h"
+#include "motors.h"
 #include "cfassert.h"
 
 #include "uart1.h"
@@ -200,9 +198,4 @@ void DONT_DISCARD UsageFault_Handler(void)
  */
 void DONT_DISCARD DebugMon_Handler(void)
 {
-}
-
-void DONT_DISCARD DMA1_Stream3_IRQHandler(void)
-{
-  ws2812DmaIsr();
 }

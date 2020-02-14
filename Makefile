@@ -186,6 +186,7 @@ PROJ_OBJ += deck_constants.o
 PROJ_OBJ += deck_digital.o
 PROJ_OBJ += deck_analog.o
 PROJ_OBJ += deck_spi.o
+PROJ_OBJ += deck_spi3.o
 
 # Decks
 PROJ_OBJ += bigquad.o

@@ -21,7 +21,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_spi.c - Deck-API SPI communication implementation
+ * deck_spi3.c - Deck-API SPI3 communication implementation. Mainly used so that
+ *               the uSD-deck can log e.g. the loco deck.
  */
 
 #include "deck.h"
@@ -37,47 +38,47 @@
 #include "config.h"
 #include "nvicconf.h"
 
-#define SPI                     SPI1
-#define SPI_CLK                 RCC_APB2Periph_SPI1
-#define SPI_CLK_INIT            RCC_APB2PeriphClockCmd
-#define SPI_IRQ_HANDLER         SPI1_IRQHandler
-#define SPI_IRQn                SPI1_IRQn
+// Alternative SPI
+#define SPI                    SPI3
+#define SPI_CLK                RCC_APB1Periph_SPI3
+#define SPI_CLK_INIT           RCC_APB1PeriphClockCmd
+#define SPI_IRQ_HANDLER        SPI3_IRQHandler
+#define SPI_IRQn               SPI3_IRQn
 
-#define SPI_DMA_IRQ_PRIO        (NVIC_HIGH_PRI)
-#define SPI_DMA                 DMA2
-#define SPI_DMA_CLK             RCC_AHB1Periph_DMA2
-#define SPI_DMA_CLK_INIT        RCC_AHB1PeriphClockCmd
+#define SPI_DMA_IRQ_PRIO       (NVIC_HIGH_PRI)
+#define SPI_DMA                DMA1
+#define SPI_DMA_CLK            RCC_AHB1Periph_DMA1
+#define SPI_DMA_CLK_INIT       RCC_AHB1PeriphClockCmd
 
-#define SPI_TX_DMA_STREAM       DMA2_Stream5
-#define SPI_TX_DMA_IRQ          DMA2_Stream5_IRQn
-#define SPI_TX_DMA_IRQHandler   DMA2_Stream5_IRQHandler
-#define SPI_TX_DMA_CHANNEL      DMA_Channel_3
-#define SPI_TX_DMA_FLAG_TCIF    DMA_FLAG_TCIF5
+#define SPI_TX_DMA_STREAM      DMA1_Stream7
+#define SPI_TX_DMA_IRQ         DMA1_Stream7_IRQn
+#define SPI_TX_DMA_IRQHandler  DMA1_Stream7_IRQHandler
+#define SPI_TX_DMA_CHANNEL     DMA_Channel_0
+#define SPI_TX_DMA_FLAG_TCIF   DMA_FLAG_TCIF7
 
-#define SPI_RX_DMA_STREAM       DMA2_Stream0
-#define SPI_RX_DMA_IRQ          DMA2_Stream0_IRQn
-#define SPI_RX_DMA_IRQHandler   DMA2_Stream0_IRQHandler
-#define SPI_RX_DMA_CHANNEL      DMA_Channel_3
-#define SPI_RX_DMA_FLAG_TCIF    DMA_FLAG_TCIF0
+#define SPI_RX_DMA_STREAM      DMA1_Stream0
+#define SPI_RX_DMA_IRQ         DMA1_Stream0_IRQn
+#define SPI_RX_DMA_IRQHandler  DMA1_Stream0_IRQHandler
+#define SPI_RX_DMA_CHANNEL     DMA_Channel_0
+#define SPI_RX_DMA_FLAG_TCIF   DMA_FLAG_TCIF0
 
-#define SPI_SCK_PIN             GPIO_Pin_5
-#define SPI_SCK_GPIO_PORT       GPIOA
-#define SPI_SCK_GPIO_CLK        RCC_AHB1Periph_GPIOA
-#define SPI_SCK_SOURCE          GPIO_PinSource5
-#define SPI_SCK_AF              GPIO_AF_SPI1
+#define SPI_SCK_PIN            GPIO_Pin_10
+#define SPI_SCK_GPIO_PORT      GPIOC
+#define SPI_SCK_GPIO_CLK       RCC_AHB1Periph_GPIOC
+#define SPI_SCK_SOURCE         GPIO_PinSource10
+#define SPI_SCK_AF             GPIO_AF_SPI3
 
-#define SPI_MISO_PIN            GPIO_Pin_6
-#define SPI_MISO_GPIO_PORT      GPIOA
-#define SPI_MISO_GPIO_CLK       RCC_AHB1Periph_GPIOA
-#define SPI_MISO_SOURCE         GPIO_PinSource6
-#define SPI_MISO_AF             GPIO_AF_SPI1
+#define SPI_MISO_PIN           GPIO_Pin_11
+#define SPI_MISO_GPIO_PORT     GPIOC
+#define SPI_MISO_GPIO_CLK      RCC_AHB1Periph_GPIOC
+#define SPI_MISO_SOURCE        GPIO_PinSource11
+#define SPI_MISO_AF            GPIO_AF_SPI3
 
-#define SPI_MOSI_PIN            GPIO_Pin_7
-#define SPI_MOSI_GPIO_PORT      GPIOA
-#define SPI_MOSI_GPIO_CLK       RCC_AHB1Periph_GPIOA
-#define SPI_MOSI_SOURCE         GPIO_PinSource7
-#define SPI_MOSI_AF             GPIO_AF_SPI1
-
+#define SPI_MOSI_PIN           GPIO_Pin_12
+#define SPI_MOSI_GPIO_PORT     GPIOC
+#define SPI_MOSI_GPIO_CLK      RCC_AHB1Periph_GPIOC
+#define SPI_MOSI_SOURCE        GPIO_PinSource12
+#define SPI_MOSI_AF            GPIO_AF_SPI3
 
 #define DUMMY_BYTE         0xA5
 
@@ -87,11 +88,11 @@ static SemaphoreHandle_t txComplete;
 static SemaphoreHandle_t rxComplete;
 static SemaphoreHandle_t spiMutex;
 
-static void spiDMAInit();
-static void spiConfigureWithSpeed(uint16_t baudRatePrescaler);
+// Mainly used of uSD deck that is patched to use alternative SPI
+static void spi3DMAInit();
+static void spi3ConfigureWithSpeed(uint16_t baudRatePrescaler);
 
-
-void spiBegin(void)
+void spi3Begin(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -136,15 +137,15 @@ void spiBegin(void)
   GPIO_Init(SPI_MISO_GPIO_PORT, &GPIO_InitStructure);
 
   /*!< SPI DMA Initialization */
-  spiDMAInit();
+  spi3DMAInit();
 
   /*!< SPI configuration */
-  spiConfigureWithSpeed(SPI_BAUDRATE_2MHZ);
+  spi3ConfigureWithSpeed(SPI_BAUDRATE_2MHZ);
 
   isInit = true;
 }
 
-static void spiDMAInit()
+static void spi3DMAInit()
 {
   DMA_InitTypeDef  DMA_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
@@ -188,7 +189,7 @@ static void spiDMAInit()
   NVIC_Init(&NVIC_InitStructure);
 }
 
-static void spiConfigureWithSpeed(uint16_t baudRatePrescaler)
+static void spi3ConfigureWithSpeed(uint16_t baudRatePrescaler)
 {
   SPI_InitTypeDef  SPI_InitStructure;
 
@@ -207,12 +208,12 @@ static void spiConfigureWithSpeed(uint16_t baudRatePrescaler)
   SPI_Init(SPI, &SPI_InitStructure);
 }
 
-bool spiTest(void)
+bool spi3Test(void)
 {
   return isInit;
 }
 
-bool spiExchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
+bool spi3Exchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
 {
   // DMA already configured, just need to set memory addresses
   SPI_TX_DMA_STREAM->M0AR = (uint32_t)data_tx;
@@ -226,7 +227,7 @@ bool spiExchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
   DMA_ITConfig(SPI_RX_DMA_STREAM, DMA_IT_TC, ENABLE);
 
   // Clear DMA Flags
-  DMA_ClearFlag(SPI_TX_DMA_STREAM, DMA_FLAG_FEIF5|DMA_FLAG_DMEIF5|DMA_FLAG_TEIF5|DMA_FLAG_HTIF5|DMA_FLAG_TCIF5);
+  DMA_ClearFlag(SPI_TX_DMA_STREAM, DMA_FLAG_FEIF7|DMA_FLAG_DMEIF7|DMA_FLAG_TEIF7|DMA_FLAG_HTIF7|DMA_FLAG_TCIF7);
   DMA_ClearFlag(SPI_RX_DMA_STREAM, DMA_FLAG_FEIF0|DMA_FLAG_DMEIF0|DMA_FLAG_TEIF0|DMA_FLAG_HTIF0|DMA_FLAG_TCIF0);
 
   // Enable DMA Streams
@@ -249,18 +250,18 @@ bool spiExchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
   return result;
 }
 
-void spiBeginTransaction(uint16_t baudRatePrescaler)
+void spi3BeginTransaction(uint16_t baudRatePrescaler)
 {
   xSemaphoreTake(spiMutex, portMAX_DELAY);
-  spiConfigureWithSpeed(baudRatePrescaler);
+  spi3ConfigureWithSpeed(baudRatePrescaler);
 }
 
-void spiEndTransaction()
+void spi3EndTransaction()
 {
   xSemaphoreGive(spiMutex);
 }
 
-
+#ifdef USDDECK_USE_ALT_PINS_AND_SPI
 void __attribute__((used)) SPI_TX_DMA_IRQHandler(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -312,3 +313,4 @@ void __attribute__((used)) SPI_RX_DMA_IRQHandler(void)
     portYIELD();
   }
 }
+#endif

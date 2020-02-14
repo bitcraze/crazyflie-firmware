@@ -21,30 +21,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_spi.h - Deck-API SPI communication header
+ * deck_spi3.h - Deck-API SPI3 communication header
  */
-#ifndef SPI_H_
-#define SPI_H_
+#ifndef SPI3_H_
+#define SPI3_H_
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
-// Based on 84MHz peripheral clock
-#define SPI_BAUDRATE_21MHZ  SPI_BaudRatePrescaler_4     // 21MHz
-#define SPI_BAUDRATE_12MHZ  SPI_BaudRatePrescaler_8     // 11.5MHz
-#define SPI_BAUDRATE_6MHZ   SPI_BaudRatePrescaler_16    // 5.25MHz
-#define SPI_BAUDRATE_3MHZ   SPI_BaudRatePrescaler_32    // 2.625MHz
-#define SPI_BAUDRATE_2MHZ   SPI_BaudRatePrescaler_64    // 1.3125MHz
+#define SPI3_BAUDRATE_21MHZ  SPI_BaudRatePrescaler_2     // 21MHz
+#define SPI3_BAUDRATE_12MHZ  SPI_BaudRatePrescaler_4     // 11.5MHz
+#define SPI3_BAUDRATE_6MHZ   SPI_BaudRatePrescaler_8    // 5.25MHz
+#define SPI3_BAUDRATE_3MHZ   SPI_BaudRatePrescaler_16    // 2.625MHz
+#define SPI3_BAUDRATE_2MHZ   SPI_BaudRatePrescaler_32    // 1.3125MHz
 
 /**
  * Initialize the SPI.
  */
-void spiBegin(void);
-void spiBeginTransaction(uint16_t baudRatePrescaler);
-void spiEndTransaction();
+void spi3Begin(void);
+void spi3BeginTransaction(uint16_t baudRatePrescaler);
+void spi3EndTransaction();
 
 /* Send the data_tx buffer and receive into the data_rx buffer */
-bool spiExchange(size_t length, const uint8_t *data_tx, uint8_t *data_rx);
+bool spi3Exchange(size_t length, const uint8_t *data_tx, uint8_t *data_rx);
 
-#endif /* SPI_H_ */
+#endif /* SPI3_H_ */
