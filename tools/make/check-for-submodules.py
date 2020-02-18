@@ -6,7 +6,7 @@ import sys
 # Get the status of the submodules from git. If any of the submodules start
 # with "-" then the module is not initalized. Issue a warning.
 
-result = check_output(["git", "submodule", "status"])
+result = str(check_output(["git", "submodule", "status"]))
 lines = result.split("\n")
 
 initialized = True
