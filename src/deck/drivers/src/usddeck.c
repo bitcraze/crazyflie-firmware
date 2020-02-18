@@ -330,7 +330,6 @@ static void usdInit(DeckInfo *info)
         DEBUG_PRINT("Config read [OK].\n");
         DEBUG_PRINT("Frequency: %dHz. Buffer size: %d\n",
                     usdLogConfig.frequency, usdLogConfig.bufferSize);
-        DEBUG_PRINT("Filename: %s\n", usdLogConfig.filename);
         DEBUG_PRINT("enOnStartup: %d. mode: %d\n", usdLogConfig.enableOnStartup, usdLogConfig.mode);
         DEBUG_PRINT("slots: %d, %d\n", usdLogConfig.numSlots, usdLogConfig.numBytes);
 
@@ -342,7 +341,7 @@ static void usdInit(DeckInfo *info)
         initSuccess = true;
         break;
       }
-      
+
       if (!initSuccess) {
           DEBUG_PRINT("Config read [FAIL].\n");
       }
@@ -597,6 +596,9 @@ static void usdWriteTask(void* usdLogQueue)
       /* try to create file */
       if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
           == FR_OK) {
+
+        DEBUG_PRINT("Filename: %s\n", usdLogConfig.filename);
+
         /* write dataset header */
         {
           uint8_t logWidth = 1 + usdLogConfig.numSlots;
@@ -696,6 +698,7 @@ static void usdWriteTask(void* usdLogQueue)
         xSemaphoreGive(logFileMutex);
       } else {
         f_mount(NULL, "", 0);
+        DEBUG_PRINT("Failed to open file: %s\n", usdLogConfig.filename);
         break;
       }
     }
