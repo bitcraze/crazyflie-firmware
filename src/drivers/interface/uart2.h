@@ -29,6 +29,10 @@
 #include <stdbool.h>
 #include "eprintf.h"
 
+#ifdef UART2_LINK_COMM
+#include "syslink.h"
+#endif
+
 #define UART2_DATA_TIMEOUT_MS    1000
 #define UART2_DATA_TIMEOUT_TICKS (UART2_DATA_TIMEOUT_MS / portTICK_RATE_MS)
 
@@ -65,13 +69,6 @@ void uart2Init(const uint32_t baudrate);
 bool uart2Test(void);
 
 /**
- * Read a byte of data from incoming queue with a timeout defined by UART2_DATA_TIMEOUT_MS
- * @param[out] c  Read byte
- * @return true if data, false if timeout was reached.
- */
-bool uart2GetDataWithTimout(uint8_t *c);
-
-/**
  * Sends raw data using a lock. Should be used from
  * exception functions and for debugging when a lot of data
  * should be transfered.
@@ -95,6 +92,23 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data);
  */
 int uart2Putchar(int ch);
 
+#ifdef UART2_LINK_COMM
+
+/**
+ * Get data from rx queue. Blocks until data is available.
+ * @param[out] slp Pointer to a complete syslink packet
+ */
+void uart2GetPacketBlocking(SyslinkPacket* slp);
+
+#else
+
+/**
+ * Read a byte of data from incoming queue with a timeout defined by UART2_DATA_TIMEOUT_MS
+ * @param[out] c  Read byte
+ * @return true if data, false if timeout was reached.
+ */
+bool uart2GetDataWithTimout(uint8_t *c);
+
 void uart2Getchar(char * ch);
 
 /**
@@ -104,6 +118,8 @@ void uart2Getchar(char * ch);
  * @return true if an overrun condition has happened
  */
 bool uart2DidOverrun();
+
+#endif
 
 /**
  * Uart printf macro that uses eprintf
