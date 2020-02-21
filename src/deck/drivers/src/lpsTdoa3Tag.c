@@ -48,7 +48,7 @@ The implementation must handle
 #include "task.h"
 
 #include "lpsTdoa3Tag.h"
-#include "tdoaEngine.h"
+#include "tdoaEngineInstance.h"
 #include "tdoaStats.h"
 #include "estimator.h"
 
@@ -100,9 +100,6 @@ static lpsLppShortPacket_t lppPacket;
 
 static bool rangingOk;
 
-static tdoaEngineState_t engineState;
-
-
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
 }
@@ -128,7 +125,7 @@ static int updateRemoteData(tdoaAnchorContext_t* anchorCtx, const void* payload)
         tdoaStorageSetTimeOfFlight(anchorCtx, remoteId, tof);
 
         uint8_t anchorId = tdoaStorageGetId(anchorCtx);
-        tdoaStats_t* stats = &engineState.stats;
+        tdoaStats_t* stats = &tdoaEngineState.stats;
         if (anchorId == stats->anchorId && remoteId == stats->remoteAnchorId) {
           stats->tof = (uint16_t)tof;
         }
@@ -168,7 +165,7 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
 }
 
 static void rxcallback(dwDevice_t *dev) {
-  tdoaStats_t* stats = &engineState.stats;
+  tdoaStats_t* stats = &tdoaEngineState.stats;
   STATS_CNT_RATE_EVENT(&stats->packetsReceived);
 
   int dataLength = dwGetDataLength(dev);
@@ -189,9 +186,9 @@ static void rxcallback(dwDevice_t *dev) {
     tdoaAnchorContext_t anchorCtx;
     uint32_t now_ms = T2M(xTaskGetTickCount());
 
-    tdoaEngineGetAnchorCtxForPacketProcessing(&engineState, anchorId, now_ms, &anchorCtx);
+    tdoaEngineGetAnchorCtxForPacketProcessing(&tdoaEngineState, anchorId, now_ms, &anchorCtx);
     int rangeDataLength = updateRemoteData(&anchorCtx, packet);
-    tdoaEngineProcessPacket(&engineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+    tdoaEngineProcessPacket(&tdoaEngineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
     tdoaStorageSetRxTxData(&anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
     handleLppPacket(dataLength, rangeDataLength, &rxPacket, &anchorCtx);
 
@@ -257,7 +254,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   }
 
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  tdoaStatsUpdate(&engineState.stats, now_ms);
+  tdoaStatsUpdate(&tdoaEngineState.stats, now_ms);
 
   return MAX_TIMEOUT;
 }
@@ -280,7 +277,7 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
   tdoaAnchorContext_t anchorCtx;
   uint32_t now_ms = T2M(xTaskGetTickCount());
 
-  bool contextFound = tdoaStorageGetAnchorCtx(engineState.anchorInfoArray, anchorId, now_ms, &anchorCtx);
+  bool contextFound = tdoaStorageGetAnchorCtx(tdoaEngineState.anchorInfoArray, anchorId, now_ms, &anchorCtx);
   if (contextFound) {
     tdoaStorageGetAnchorPosition(&anchorCtx, position);
     return true;
@@ -290,19 +287,19 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
 }
 
 static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
-  return tdoaStorageGetListOfAnchorIds(engineState.anchorInfoArray, unorderedAnchorList, maxListSize);
+  return tdoaStorageGetListOfAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList, maxListSize);
 }
 
 static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  return tdoaStorageGetListOfActiveAnchorIds(engineState.anchorInfoArray, unorderedAnchorList, maxListSize, now_ms);
+  return tdoaStorageGetListOfActiveAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList, maxListSize, now_ms);
 }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev) {
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  tdoaEngineInit(&engineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ);
+  tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ);
 
   #ifdef LPS_2D_POSITION_HEIGHT
   DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
@@ -332,20 +329,20 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
 
 
 LOG_GROUP_START(tdoa3)
-STATS_CNT_RATE_LOG_ADD(stRx, &engineState.stats.packetsReceived)
-STATS_CNT_RATE_LOG_ADD(stEst, &engineState.stats.packetsToEstimator)
-STATS_CNT_RATE_LOG_ADD(stTime, &engineState.stats.timeIsGood)
-STATS_CNT_RATE_LOG_ADD(stFound, &engineState.stats.suitableDataFound)
-STATS_CNT_RATE_LOG_ADD(stCc, &engineState.stats.clockCorrection)
-STATS_CNT_RATE_LOG_ADD(stHit, &engineState.stats.contextHitCount)
-STATS_CNT_RATE_LOG_ADD(stMiss, &engineState.stats.contextMissCount)
+STATS_CNT_RATE_LOG_ADD(stRx, &tdoaEngineState.stats.packetsReceived)
+STATS_CNT_RATE_LOG_ADD(stEst, &tdoaEngineState.stats.packetsToEstimator)
+STATS_CNT_RATE_LOG_ADD(stTime, &tdoaEngineState.stats.timeIsGood)
+STATS_CNT_RATE_LOG_ADD(stFound, &tdoaEngineState.stats.suitableDataFound)
+STATS_CNT_RATE_LOG_ADD(stCc, &tdoaEngineState.stats.clockCorrection)
+STATS_CNT_RATE_LOG_ADD(stHit, &tdoaEngineState.stats.contextHitCount)
+STATS_CNT_RATE_LOG_ADD(stMiss, &tdoaEngineState.stats.contextMissCount)
 
-LOG_ADD(LOG_FLOAT, cc, &engineState.stats.clockCorrection)
-LOG_ADD(LOG_UINT16, tof, &engineState.stats.tof)
-LOG_ADD(LOG_FLOAT, tdoa, &engineState.stats.tdoa)
+LOG_ADD(LOG_FLOAT, cc, &tdoaEngineState.stats.clockCorrection)
+LOG_ADD(LOG_UINT16, tof, &tdoaEngineState.stats.tof)
+LOG_ADD(LOG_FLOAT, tdoa, &tdoaEngineState.stats.tdoa)
 LOG_GROUP_STOP(tdoa3)
 
 PARAM_GROUP_START(tdoa3)
-PARAM_ADD(PARAM_UINT8, logId, &engineState.stats.newAnchorId)
-PARAM_ADD(PARAM_UINT8, logOthrId, &engineState.stats.newRemoteAnchorId)
+PARAM_ADD(PARAM_UINT8, logId, &tdoaEngineState.stats.newAnchorId)
+PARAM_ADD(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 PARAM_GROUP_STOP(tdoa3)

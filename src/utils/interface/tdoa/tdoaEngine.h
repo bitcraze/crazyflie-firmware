@@ -6,6 +6,11 @@
 
 typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
 
+typedef enum {
+  TdoaEngineMatchingAlgorithmNone = 0,
+  TdoaEngineMatchingAlgorithmRandom = 1,
+} tdoaEngineMatchingAlgorithm_t;
+
 typedef struct {
   // State
   tdaoAnchorInfoArray_t anchorInfoArray;
@@ -14,6 +19,14 @@ typedef struct {
   // Configuration
   tdoaEngineSendTdoaToEstimator sendTdoaToEstimator;
   double locodeckTsFreq;
+  tdoaEngineMatchingAlgorithm_t matchingAlgorithm;
+
+  // Matching algorithm data
+  struct {
+    uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
+    uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
+    uint8_t offset;
+  } matching;
 } tdoaEngineState_t;
 
 void tdoaEngineInit(tdoaEngineState_t* state, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq);
