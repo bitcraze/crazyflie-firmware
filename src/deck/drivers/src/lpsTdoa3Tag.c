@@ -58,8 +58,6 @@ The implementation must handle
 #define DEBUG_MODULE "TDOA3"
 #include "debug.h"
 #include "cfassert.h"
-#include "log.h"
-#include "param.h"
 
 // Positions for sent LPP packets
 #define LPS_TDOA3_TYPE 0
@@ -326,23 +324,3 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .getAnchorIdList = getAnchorIdList,
   .getActiveAnchorIdList = getActiveAnchorIdList,
 };
-
-
-LOG_GROUP_START(tdoa3)
-STATS_CNT_RATE_LOG_ADD(stRx, &tdoaEngineState.stats.packetsReceived)
-STATS_CNT_RATE_LOG_ADD(stEst, &tdoaEngineState.stats.packetsToEstimator)
-STATS_CNT_RATE_LOG_ADD(stTime, &tdoaEngineState.stats.timeIsGood)
-STATS_CNT_RATE_LOG_ADD(stFound, &tdoaEngineState.stats.suitableDataFound)
-STATS_CNT_RATE_LOG_ADD(stCc, &tdoaEngineState.stats.clockCorrection)
-STATS_CNT_RATE_LOG_ADD(stHit, &tdoaEngineState.stats.contextHitCount)
-STATS_CNT_RATE_LOG_ADD(stMiss, &tdoaEngineState.stats.contextMissCount)
-
-LOG_ADD(LOG_FLOAT, cc, &tdoaEngineState.stats.clockCorrection)
-LOG_ADD(LOG_UINT16, tof, &tdoaEngineState.stats.tof)
-LOG_ADD(LOG_FLOAT, tdoa, &tdoaEngineState.stats.tdoa)
-LOG_GROUP_STOP(tdoa3)
-
-PARAM_GROUP_START(tdoa3)
-PARAM_ADD(PARAM_UINT8, logId, &tdoaEngineState.stats.newAnchorId)
-PARAM_ADD(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
-PARAM_GROUP_STOP(tdoa3)
