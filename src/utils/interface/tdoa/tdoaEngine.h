@@ -8,7 +8,8 @@ typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement
 
 typedef enum {
   TdoaEngineMatchingAlgorithmNone = 0,
-  TdoaEngineMatchingAlgorithmRandom = 1,
+  TdoaEngineMatchingAlgorithmRandom,
+  TdoaEngineMatchingAlgorithmYoungest,
 } tdoaEngineMatchingAlgorithm_t;
 
 typedef struct {

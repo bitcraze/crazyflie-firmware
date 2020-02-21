@@ -135,10 +135,6 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
 }
 
 static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
-  if (tdoaStorageGetClockCorrection(anchorCtx) <= 0.0) {
-    return false;
-  }
-
   engineState->matching.offset++;
   int remoteCount = 0;
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
@@ -162,17 +158,55 @@ static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_
   return false;
 }
 
+static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
+    int remoteCount = 0;
+    tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
+
+    uint32_t now_ms = anchorCtx->currentTime_ms;
+    uint32_t youmgestUpdateTime = 0;
+    int bestId = -1;
+
+    for (int index = 0; index < remoteCount; index++) {
+      const uint8_t candidateAnchorId = engineState->matching.id[index];
+      if (tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
+        if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
+          uint32_t updateTime = otherAnchorCtx->anchorInfo->lastUpdateTime;
+          if (updateTime > youmgestUpdateTime) {
+            if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx)) {
+              youmgestUpdateTime = updateTime;
+              bestId = candidateAnchorId;
+            }
+          }
+        }
+      }
+    }
+
+    if (bestId >= 0) {
+      tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, bestId, now_ms, otherAnchorCtx);
+      return true;
+    }
+
+    otherAnchorCtx->anchorInfo = 0;
+    return false;
+}
+
 static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
   bool result = false;
 
-  switch(engineState->matchingAlgorithm) {
-    case TdoaEngineMatchingAlgorithmRandom:
-      result = matchRandomAnchor(engineState, otherAnchorCtx, anchorCtx);
-      break;
+  if (tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
+    switch(engineState->matchingAlgorithm) {
+      case TdoaEngineMatchingAlgorithmRandom:
+        result = matchRandomAnchor(engineState, otherAnchorCtx, anchorCtx);
+        break;
 
-    default:
-      // Do nothing
-      break;
+      case TdoaEngineMatchingAlgorithmYoungest:
+        result = matchYoungestAnchor(engineState, otherAnchorCtx, anchorCtx);
+        break;
+
+      default:
+        // Do nothing
+        break;
+    }
   }
 
   return result;

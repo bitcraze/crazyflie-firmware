@@ -49,4 +49,6 @@ LOG_GROUP_STOP(tdoaEngine)
 PARAM_GROUP_START(tdoaEngine)
 PARAM_ADD(PARAM_UINT8, logId, &tdoaEngineState.stats.newAnchorId)
 PARAM_ADD(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
+
+PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
 PARAM_GROUP_STOP(tdoaEngine)
