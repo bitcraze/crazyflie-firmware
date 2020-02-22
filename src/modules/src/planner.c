@@ -148,8 +148,7 @@ int plan_takeoff(struct planner *p, struct vec curr_pos, float curr_yaw, float h
 
 int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float t)
 {
-	if (   p->state == TRAJECTORY_STATE_IDLE
-		|| p->state == TRAJECTORY_STATE_LANDING) {
+	if (p->state == TRAJECTORY_STATE_LANDING) {
 		return 1;
 	}
 
@@ -162,20 +161,16 @@ int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hove
 	return 0;
 }
 
-int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hover_yaw, float duration, float t)
+int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool relative, struct vec hover_pos, float hover_yaw, float duration, float t)
 {
-	// allow in any state, i.e., can also be used to take-off or land
-
-	struct traj_eval setpoint = plan_current_goal(p, t);
-
 	if (relative) {
-		hover_pos = vadd(hover_pos, setpoint.pos);
-		hover_yaw += setpoint.yaw;
+		hover_pos = vadd(hover_pos, curr_eval->pos);
+		hover_yaw += curr_eval->yaw;
 	}
 
 	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
-		setpoint.pos, setpoint.yaw, setpoint.vel, setpoint.omega.z, setpoint.acc,
-		hover_pos,    hover_yaw,    vzero(),      0,                vzero());
+		curr_eval->pos, curr_eval->yaw, curr_eval->vel, curr_eval->omega.z, curr_eval->acc,
+		hover_pos,      hover_yaw,      vzero(),        0,                  vzero());
 
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_FLYING;
@@ -183,6 +178,12 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 	p->planned_trajectory.t_begin = t;
 	p->trajectory = &p->planned_trajectory;
 	return 0;
+}
+
+int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hover_yaw, float duration, float t)
+{
+	struct traj_eval setpoint = plan_current_goal(p, t);
+	return plan_go_to_from(p, &setpoint, relative, hover_pos, hover_yaw, duration, t);
 }
 
 int plan_start_trajectory( struct planner *p, const struct piecewise_traj* trajectory, bool reversed)

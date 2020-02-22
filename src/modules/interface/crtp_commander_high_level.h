@@ -60,8 +60,16 @@ void crtpCommanderHighLevelInit(void);
 // Retrieves the current setpoint
 void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state);
 
-// Tell the trajectory planner that it should cut power.
-// Should be used if an emergency is detected.
+// When flying sequences of high-level commands, the high-level commander uses
+// its own history of commands to determine the initial conditions of the next
+// trajectory it plans. However, when switching from a low-level streaming
+// setpoint mode to high-level, any past command history is invalid because of
+// the intervening low-level commands. Therefore, we must tell the high-level
+// commander what initial conditions to use for trajectory planning.
+void crtpCommanderHighLevelTellState(const state_t *state);
+
+// Send the trajectory planner to idle state, where it has no plan. Used when
+// switching from high-level to low-level commands, or for emergencies.
 void crtpCommanderHighLevelStop();
 
 // True if we have landed or emergency-stopped.
