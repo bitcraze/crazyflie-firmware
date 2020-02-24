@@ -179,7 +179,7 @@ static inline float vnorm1(struct vec v) {
 }
 
 //
-// comparisons
+// comparisons, including partial orderings
 //
 
 // compare two vectors for exact equality.
@@ -227,7 +227,7 @@ static inline struct vec vadd3(struct vec a, struct vec b, struct vec c) {
 // add 4 vectors.
 static inline struct vec vadd4(struct vec a, struct vec b, struct vec c, struct vec d) {
 	// TODO: make sure it compiles to optimal code
-	return vadd(vadd(vadd(a, b), c), d);
+	return vadd(vadd(a, b), vadd(c, d));
 }
 // subtract b and c from a.
 static inline struct vec vsub2(struct vec a, struct vec b, struct vec c) {
@@ -235,7 +235,7 @@ static inline struct vec vsub2(struct vec a, struct vec b, struct vec c) {
 }
 
 //
-// conversion to/from raw float and double arrays.
+// conversion to/from raw float and double arrays; array-like access.
 //
 
 // load a vector from a double array.
@@ -253,6 +253,10 @@ static inline struct vec vloadf(float const *f) {
 // store a vector into a float array.
 static inline void vstoref(struct vec v, float *f) {
 	f[0] = v.x; f[1] = v.y; f[2] = v.z;
+}
+// index a vector like a 3-element array.
+static inline float vindex(struct vec v, int i) {
+	return ((float const *)&v.x)[i];
 }
 
 
@@ -444,6 +448,46 @@ static inline void set_block33_rowmaj(float *block, int stride, struct mat33 con
 		block += stride;
 	}
 }
+
+//
+// special functions to ease the pain of writing vector math in C.
+//
+
+// add three matrices.
+static inline struct mat33 madd3(struct mat33 a, struct mat33 b, struct mat33 c) {
+	return madd(madd(a, b), c);
+}
+
+//
+// 3D rotation constructors & operators
+//
+
+// construct equivalent rotation matrix for axis-angle rotation.
+// assumes input axis is normalized, angle in radians.
+static inline struct mat33 maxisangle(struct vec axis, float angle) {
+	// Rodrigues formula
+	struct mat33 const K = mcrossmat(axis);
+	return madd3(
+		meye(),
+		mscl(sinf(angle), K),
+		mscl(1.0f - cosf(angle), mmul(K, K))
+	);
+}
+// rotation about x axis by given angle (radians)
+static inline struct mat33 mrotx(float angle) {
+	return maxisangle(mkvec(1.0f, 0.0f, 0.0f), angle);
+}
+// rotation about y axis by given angle (radians)
+static inline struct mat33 mroty(float angle) {
+	return maxisangle(mkvec(0.0f, 1.0f, 0.0f), angle);
+}
+// rotation about z axis by given angle (radians)
+static inline struct mat33 mrotz(float angle) {
+	return maxisangle(mkvec(0.0f, 0.0f, 1.0f), angle);
+}
+// TODO: these might be faster if written by hand,
+// but these are correct and the trig is probably the slow part anyway
+
 
 // Matrix TODO: inv, solve, eig, 9 floats ctor, axis-aligned rotations
 
