@@ -55,12 +55,12 @@ The implementation must handle
 
 #define MEASUREMENT_NOISE_STD 0.15f
 
-void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq) {
+void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
   tdoaStatsInit(&engineState->stats, now_ms);
   engineState->sendTdoaToEstimator = sendTdoaToEstimator;
   engineState->locodeckTsFreq = locodeckTsFreq;
-  engineState->matchingAlgorithm = TdoaEngineMatchingAlgorithmRandom;
+  engineState->matchingAlgorithm = matchingAlgorithm;
 
   engineState->matching.offset = 0;
 }

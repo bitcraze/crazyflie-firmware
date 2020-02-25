@@ -293,11 +293,9 @@ static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int ma
   return tdoaStorageGetListOfActiveAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList, maxListSize, now_ms);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 static void Initialize(dwDevice_t *dev) {
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ);
+  tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ, TdoaEngineMatchingAlgorithmRandom);
 
   #ifdef LPS_2D_POSITION_HEIGHT
   DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
@@ -309,7 +307,6 @@ static void Initialize(dwDevice_t *dev) {
 
   rangingOk = false;
 }
-#pragma GCC diagnostic pop
 
 static bool isRangingOk()
 {
