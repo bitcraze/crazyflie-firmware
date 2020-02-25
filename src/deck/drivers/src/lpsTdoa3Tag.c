@@ -179,7 +179,7 @@ static void rxcallback(dwDevice_t *dev) {
   const rangePacket3_t* packet = (rangePacket3_t*)rxPacket.payload;
   if (packet->header.type == PACKET_TYPE_TDOA3) {
     const int64_t txAn_in_cl_An = packet->header.txTimeStamp;;
-    const uint8_t seqNr = packet->header.seq;
+    const uint8_t seqNr = packet->header.seq & 0x7f;;
 
     tdoaAnchorContext_t anchorCtx;
     uint32_t now_ms = T2M(xTaskGetTickCount());
