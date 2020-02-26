@@ -30,7 +30,7 @@
 #include "log.h"
 #include "debug.h"
 
-#define BUCKET_ACCEPTANCE_LEVEL 2
+#define BUCKET_ACCEPTANCE_LEVEL 3
 #define MAX_BUCKET_FILL 10
 #define FILTER_CLOSE_DELAY_COUNT 30
 
