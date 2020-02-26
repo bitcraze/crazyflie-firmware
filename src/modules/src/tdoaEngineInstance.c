@@ -50,6 +50,8 @@ PARAM_GROUP_START(tdoaEngine)
 PARAM_ADD(PARAM_UINT8, logId, &tdoaEngineState.stats.newAnchorId)
 PARAM_ADD(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 
-// Not exposed by default since it is changed from inside the CF FW
-// PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
+// This variable should not be exposed as a parameter since it is changed from inside the CF FW.
+// It only happens when the LPS system mode is changed to TDoA2 or TDoA3 though, and as this is
+// not a frequent action, we chose to expose it anyway.
+PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
 PARAM_GROUP_STOP(tdoaEngine)
