@@ -100,6 +100,7 @@
 #define USBLINK_TASK_PRI        3
 #define ACTIVE_MARKER_TASK_PRI  3
 #define AI_DECK_TASK_PRI        3
+#define UART2_TASK_PRI          3
 
 // Not compiled
 #if 0
@@ -146,6 +147,7 @@
 #define ACTIVE_MARKER_TASK_NAME "ACTIVEMARKER-DECK"
 #define AI_DECK_GAP_TASK_NAME   "AI-DECK-GAP"
 #define AI_DECK_NINA_TASK_NAME  "AI-DECK-NINA"
+#define UART2_TASK_NAME         "UART2"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
@@ -176,6 +178,7 @@
 #define MULTIRANGER_TASK_STACKSIZE    (2 * configMINIMAL_STACK_SIZE)
 #define ACTIVEMARKER_TASK_STACKSIZE   configMINIMAL_STACK_SIZE
 #define AI_DECK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define UART2_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80
