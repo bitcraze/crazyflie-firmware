@@ -180,10 +180,17 @@ static const I2cDef deckBusDef =
   .gpioAF             = GPIO_AF_I2C1,
   .dmaPerif           = RCC_AHB1Periph_DMA1,
   .dmaChannel         = DMA_Channel_1,
+#ifdef USDDECK_USE_ALT_PINS_AND_SPI
   .dmaRxStream        = DMA1_Stream5,
   .dmaRxIRQ           = DMA1_Stream5_IRQn,
   .dmaRxTCFlag        = DMA_FLAG_TCIF5,
   .dmaRxTEFlag        = DMA_FLAG_TEIF5,
+#else
+  .dmaRxStream        = DMA1_Stream0,
+  .dmaRxIRQ           = DMA1_Stream0_IRQn,
+  .dmaRxTCFlag        = DMA_FLAG_TCIF0,
+  .dmaRxTEFlag        = DMA_FLAG_TEIF0,
+#endif
 };
 
 
