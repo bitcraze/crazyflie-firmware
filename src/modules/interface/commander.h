@@ -46,6 +46,13 @@ uint32_t commanderGetInactivityTime(void);
 void commanderSetSetpoint(setpoint_t *setpoint, int priority);
 int commanderGetActivePriority(void);
 
+/* Inform the commander that streaming setpoints are about to stop.
+ * Parameter controls the amount of time the last setpoint will remain valid.
+ * This gives the PC time to send the next command, e.g. with the high-level
+ * commander, before we enter timeout mode.
+ */
+void commanderNotifySetpointsStop(int remainValidMillisecs);
+
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state);
 
 #endif /* COMMANDER_H_ */
