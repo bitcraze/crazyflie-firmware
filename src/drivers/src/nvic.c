@@ -26,6 +26,7 @@
 #include "exti.h"
 #include "led.h"
 #include "motors.h"
+#include "power_distribution.h"
 #include "cfassert.h"
 
 #include "uart1.h"

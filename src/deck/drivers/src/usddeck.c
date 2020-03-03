@@ -434,7 +434,7 @@ static void usdLogTask(void* prm)
   }
 
   /* allocate memory for buffer */
-  DEBUG_PRINT("malloc buffer %d bytes...", usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
+  DEBUG_PRINT("malloc buffer %d bytes...\n", usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
   // vTaskDelay(10); // small delay to allow debug message to be send
   usdLogBufferStart =
       pvPortMalloc(usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
