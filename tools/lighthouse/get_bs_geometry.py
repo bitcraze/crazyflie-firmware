@@ -50,10 +50,12 @@ import cv2 as cv
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
+from cflib.crazyflie.mem import LighthouseBsGeometry
+from cflib.crazyflie.mem import MemoryElement
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crazyflie.syncLogger import SyncLogger
 
-def read_sensors(uri):
+def read_sensors(scf):
     logs = {
         'lighthouse.angle0x':   [0, 0, 0],
         'lighthouse.angle0y':   [0, 0, 1],
@@ -73,37 +75,32 @@ def read_sensors(uri):
         'lighthouse.angle1y_3': [1, 3, 1],
     }
 
-    # Only output errors from the logging framework
-    logging.basicConfig(level=logging.ERROR)
-    cflib.crtp.init_drivers(enable_debug_driver=False)
-
     storage = {}
-    cf = Crazyflie(rw_cache='./cache')
-    with SyncCrazyflie(uri, cf=cf) as scf:
-        confs = [
-            LogConfig(name='lh1', period_in_ms=10),
-            LogConfig(name='lh2', period_in_ms=10),
-            LogConfig(name='lh3', period_in_ms=10),
-        ]
 
-        # Set up log blocks
-        count = 0
-        floats_per_block = 6
-        for name in logs.keys():
-            confs[int(count / floats_per_block)].add_variable(name, 'float')
-            count += 1
+    confs = [
+        LogConfig(name='lh1', period_in_ms=10),
+        LogConfig(name='lh2', period_in_ms=10),
+        LogConfig(name='lh3', period_in_ms=10),
+    ]
 
-        # Read log data
-        with SyncLogger(cf, confs) as logger:
-            end_time = time.time() + 1.0
-            for log_entry in logger:
-                data = log_entry[1]
-                for log_name in data:
-                    if not log_name in storage:
-                        storage[log_name] = []
-                    storage[log_name].append(data[log_name])
-                if time.time() > end_time:
-                    break
+    # Set up log blocks
+    count = 0
+    floats_per_block = 6
+    for name in logs.keys():
+        confs[int(count / floats_per_block)].add_variable(name, 'float')
+        count += 1
+
+    # Read log data
+    with SyncLogger(scf, confs) as logger:
+        end_time = time.time() + 1.0
+        for log_entry in logger:
+            data = log_entry[1]
+            for log_name in data:
+                if not log_name in storage:
+                    storage[log_name] = []
+                storage[log_name].append(data[log_name])
+            if time.time() > end_time:
+                break
 
     # Average sensor data
     sensor_sweeps = np.zeros([2, 4, 2])
@@ -263,9 +260,7 @@ def estimate_geometry(sensor_sweeps, rvec_start, tvec_start):
     Rw_ocv, Tw_ocv = cam_to_world(rvec_est, tvec_est)
     return Rw_ocv, Tw_ocv
 
-def print_geo(geometry):
-    rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
-
+def print_geo(rotation_cf, position_cf):
     print("{.origin = {", end='')
     for i in position_cf:
         print("{:0.6f}, ".format(i), end='')
@@ -280,21 +275,68 @@ def print_geo(geometry):
 
     print("}},")
 
+class WriteMem:
+    def __init__(self, scf, bs1, bs2):
+        self.data_written = False
+
+        mems = scf.cf.mem.get_mems(MemoryElement.TYPE_LH)
+
+        count = len(mems)
+        if count != 1:
+            raise Exception('Unexpected nr of memories found:', count)
+
+        mems[0].geometry_data = [bs1, bs2]
+        mems[0].write_data(self._data_written)
+
+        while not self.data_written:
+            time.sleep(1)
+
+    def _data_written(self, mem, addr):
+        self.data_written = True
+        print('Data written')
+
+
+def upload_geo_data(scf, geometries):
+    bs1 = LighthouseBsGeometry()
+    bs1.rotation_matrix = geometries[0][0]
+    bs1.origin = geometries[0][1]
+
+    bs2 = LighthouseBsGeometry()
+    bs2.rotation_matrix = geometries[1][0]
+    bs2.origin = geometries[1][1]
+
+    WriteMem(scf, bs1, bs2)
+
 
 ##################################################
 
 parser = argparse.ArgumentParser()
 uri = "radio://0/80/2M"
 parser.add_argument("--uri", help="uri to use when connecting to the Crazyflie. Default: " + uri)
+parser.add_argument("--write", help="upload the calculated geo data to the Crazflie", action="store_true")
 args = parser.parse_args()
 if args.uri:
     uri = args.uri
 
-print("Reading sensor data...")
-sensor_sweeps_all = read_sensors(uri)
-print("Estimating position of base stations...")
-for bs in range(2):
-    sensor_sweeps = sensor_sweeps_all[bs]
-    rvec_start, tvec_start = calc_initial_estimate(sensor_sweeps)
-    geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
-    print_geo(geometry)
+# Only output errors from the logging framework
+logging.basicConfig(level=logging.ERROR)
+cflib.crtp.init_drivers(enable_debug_driver=False)
+
+cf = Crazyflie(rw_cache='./cache')
+with SyncCrazyflie(uri, cf=cf) as scf:
+    print("Reading sensor data...")
+    sensor_sweeps_all = read_sensors(scf)
+    print("Estimating position of base stations...")
+
+    geometries = []
+    for bs in range(2):
+        sensor_sweeps = sensor_sweeps_all[bs]
+        rvec_start, tvec_start = calc_initial_estimate(sensor_sweeps)
+        geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
+        rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
+        print_geo(rotation_cf, position_cf)
+        geometries.append([rotation_cf, position_cf])
+
+    if args.write:
+        print("Uploading geo data")
+        upload_geo_data(scf, geometries)
