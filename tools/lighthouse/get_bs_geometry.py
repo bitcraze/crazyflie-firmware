@@ -308,6 +308,13 @@ def upload_geo_data(scf, geometries):
     WriteMem(scf, bs1, bs2)
 
 
+def sanity_check(position_cf):
+    max_pos = 10.0
+    for coord in position_cf:
+        if (abs(coord) > max_pos):
+            raise Exception("Base station position seems to be unreasonable!")
+
+
 ##################################################
 
 parser = argparse.ArgumentParser()
@@ -335,6 +342,7 @@ with SyncCrazyflie(uri, cf=cf) as scf:
         geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
         rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
         print_geo(rotation_cf, position_cf)
+        sanity_check(position_cf)
         geometries.append([rotation_cf, position_cf])
 
     if args.write:
