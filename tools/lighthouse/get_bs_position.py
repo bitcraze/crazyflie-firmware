@@ -71,13 +71,13 @@ for i in range(openvr.k_unMaxTrackedDeviceCount):
                 sys.exit(1)
 
 # Rotation matrixes to convert to the CF coordinate system
-opencv_to_cf = np.array([
+openvr_to_cf = np.array([
     [0.0, 0.0, -1.0],
     [-1.0, 0.0, 0.0],
     [0.0, 1.0, 0.0],
 ])
 
-cf_to_opencv = np.array([
+cf_to_openvr = np.array([
     [0.0, -1.0, 0.0],
     [0.0, 0.0, 1.0],
     [-1.0, 0.0, 0.0],
@@ -89,10 +89,10 @@ for pose in bs_poses:
         continue
 
     position = [pose[0][3] - offset[0], pose[1][3] - offset[1], pose[2][3] - offset[2]]
-    position_cf = np.dot(opencv_to_cf, position)
+    position_cf = np.dot(openvr_to_cf, position)
 
     rotation = [pose[0][:3], pose[1][:3], pose[2][:3]]
-    rotation_cf = np.dot(opencv_to_cf, np.dot(rotation, cf_to_opencv))
+    rotation_cf = np.dot(openvr_to_cf, np.dot(rotation, cf_to_openvr))
 
     print("{.origin = {", end='')
     for i in position_cf:
