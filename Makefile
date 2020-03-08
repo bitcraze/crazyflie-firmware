@@ -109,6 +109,7 @@ PROJ_OBJ += diskio_function_tests.o
 CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
+APP = 1
 ifeq ($(APP), 1)
 CFLAGS += -DAPP_ENABLED=1
 endif

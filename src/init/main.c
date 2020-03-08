@@ -42,6 +42,7 @@
 /* ST includes */
 #include "stm32fxxx.h"
 
+
 int main() 
 {
   //Initialize the platform.
@@ -67,4 +68,6 @@ int main()
 
   return 0;
 }
+
+
 

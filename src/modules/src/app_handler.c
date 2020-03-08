@@ -25,7 +25,15 @@
 /* app_handler.c: App layer handling function implementation */
 
 #include <stdbool.h>
+#include <stdint.h>
 
+#include "motors.h"
+#include "bmi088_defs.h"
+#include "bmi088.h"
+#include "zranger2.h"
+#include "deck.h"
+#include "deck_core.h"
+#include "log.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -35,7 +43,7 @@
 #include "app.h"
 
 #ifndef APP_STACKSIZE
-#define APP_STACKSIZE 300
+#define APP_STACKSIZE 400
 #endif
 
 #ifndef APP_PRIORITY
@@ -47,6 +55,53 @@ static bool isInit = false;
 STATIC_MEM_TASK_ALLOC(appTask, APP_STACKSIZE);
 
 static void appTask(void *param);
+
+void appMain(){
+
+	//uint8_t y = 0;
+	//uint16_t len = 8;
+	unsigned long delay = 1*1000;
+	unsigned long thrust = 65536;//maximum thrust capable of the motors
+	
+//	for (int ix = 0; ix < 2; ix++){
+//		motorsTest();
+//		for (int ix2 = 0; ix2 < delay; ix2++);
+//	}
+	logInit();//gain access to log info
+
+	vTaskDelay(delay);
+
+	motorsInit(&motorMapDefaultBrushed[NBR_OF_MOTORS]);
+	vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));//FUNCTION OF FREERTOS
+	
+
+	vTaskDelay(M2T(delay));
+
+	deckInit();//Enables use of Decks
+	
+	struct deckInfo_s* z = (struct deckInfo_s *)deckInfo(0);//zranger deck struct
+
+	zRanger2Init(z);
+
+	int zRang = logGetVarId("range", "zrange");
+
+
+	while (1) {//testing the sensors
+		if (logGetUint(zRang) <300) {//if the drone is less than 300 mm off the ground the propellers spin
+			motorsSetRatio(0, .2*thrust);
+			motorsSetRatio(1, .2*thrust);
+			motorsSetRatio(2, .2*thrust);
+			motorsSetRatio(3, .2*thrust);
+		}
+	}
+
+	vTaskDelay(M2T(1*delay));//runs engines for delay milliseconds seconds
+	motorsSetRatio(0, 0);
+	motorsSetRatio(1, 0);
+	motorsSetRatio(2, 0);
+	motorsSetRatio(3, 0);
+	
+}
 
 void __attribute__((weak)) appInit()
 {

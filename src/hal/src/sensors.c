@@ -52,7 +52,7 @@
 #endif
 
 
-typedef struct {
+typedef struct sensorImplementation_s{
   SensorImplementation_t implements;
   void (*init)(void);
   bool (*test)(void);
@@ -222,4 +222,8 @@ static const sensorsImplementation_t* findImplementation(SensorImplementation_t 
   }
 
   return result;
+}
+
+const sensorsImplementation_t* __attribute__(()) getSensor(void) {
+  return activeImplementation;
 }
