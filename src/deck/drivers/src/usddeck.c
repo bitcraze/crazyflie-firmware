@@ -49,7 +49,6 @@
 
 #include "deck.h"
 #include "usddeck.h"
-#include "deck_spi.h"
 #include "system.h"
 #include "sensors.h"
 #include "debug.h"
@@ -60,7 +59,29 @@
 #include "crc_bosch.h"
 
 // Hardware defines
+#ifdef USDDECK_USE_ALT_PINS_AND_SPI
+#include "deck_spi3.h"
+#define USD_CS_PIN    DECK_GPIO_RX2
+
+#define SPI_BEGIN               spi3Begin
+#define USD_SPI_BAUDRATE_2MHZ   SPI3_BAUDRATE_2MHZ
+#define USD_SPI_BAUDRATE_21MHZ  SPI3_BAUDRATE_21MHZ
+#define SPI_EXCHANGE            spi3Exchange
+#define SPI_BEGIN_TRANSACTION   spi3BeginTransaction
+#define SPI_END_TRANSACTION     spi3EndTransaction
+
+
+#else
+#include "deck_spi.h"
 #define USD_CS_PIN    DECK_GPIO_IO4
+
+#define SPI_BEGIN               spiBegin
+#define USD_SPI_BAUDRATE_2MHZ   SPI_BAUDRATE_2MHZ
+#define USD_SPI_BAUDRATE_21MHZ  SPI_BAUDRATE_21MHZ
+#define SPI_EXCHANGE            spiExchange
+#define SPI_BEGIN_TRANSACTION   spiBeginTransaction
+#define SPI_END_TRANSACTION     spiEndTransaction
+#endif
 
 typedef struct usdLogConfig_s {
   char filename[13];
@@ -155,8 +176,8 @@ static DISKIO_LowLevelDriver_t fatDrv =
 /* Initialize MMC interface */
 static void initSpi(void)
 {
-  spiBegin();   /* Enable SPI function */
-  spiSpeed = SPI_BAUDRATE_2MHZ;
+  SPI_BEGIN();   /* Enable SPI function */
+  spiSpeed = USD_SPI_BAUDRATE_2MHZ;
 
   pinMode(USD_CS_PIN, OUTPUT);
   digitalWrite(USD_CS_PIN, 1);
@@ -166,12 +187,12 @@ static void initSpi(void)
 
 static void setSlowSpiMode(void)
 {
-  spiSpeed = SPI_BAUDRATE_2MHZ;
+  spiSpeed = USD_SPI_BAUDRATE_2MHZ;
 }
 
 static void setFastSpiMode(void)
 {
-  spiSpeed = SPI_BAUDRATE_21MHZ;
+  spiSpeed = USD_SPI_BAUDRATE_21MHZ;
 }
 
 /* Exchange a byte */
@@ -179,7 +200,7 @@ static BYTE xchgSpi(BYTE dat)
 {
   BYTE receive;
 
-  spiExchange(1, &dat, &receive);
+  SPI_EXCHANGE(1, &dat, &receive);
   return (BYTE)receive;
 }
 
@@ -187,13 +208,13 @@ static BYTE xchgSpi(BYTE dat)
 static void rcvrSpiMulti(BYTE *buff, UINT btr)
 {
   memset(exchangeBuff, 0xFFFFFFFF, btr);
-  spiExchange(btr, exchangeBuff, buff);
+  SPI_EXCHANGE(btr, exchangeBuff, buff);
 }
 
 /* Send multiple byte */
 static void xmitSpiMulti(const BYTE *buff, UINT btx)
 {
-  spiExchange(btx, buff, exchangeBuff);
+  SPI_EXCHANGE(btx, buff, exchangeBuff);
 }
 
 static void csHigh(void)
@@ -204,12 +225,12 @@ static void csHigh(void)
   // Moved here from fatfs_sd.c to handle bus release
   xchgSpi(0xFF);
 
-  spiEndTransaction();
+  SPI_END_TRANSACTION();
 }
 
 static void csLow(void)
 {
-  spiBeginTransaction(spiSpeed);
+  SPI_BEGIN_TRANSACTION(spiSpeed);
   digitalWrite(USD_CS_PIN, 0);
 }
 
@@ -359,6 +380,7 @@ static void usdLogTask(void* prm)
 
   DEBUG_PRINT("wait for sensors\n");
 
+  systemWaitStart();
   /* wait until sensor calibration is done
    * (memory of bias calculation buffer is free again) */
   while(!sensorsAreCalibrated()) {
@@ -366,7 +388,7 @@ static void usdLogTask(void* prm)
   }
 
   usdLogConfig.varIds = pvPortMalloc(usdLogConfig.numSlots * sizeof(int));
-  DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
+  //DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
 
   // store logging variable ids
   {
@@ -412,12 +434,19 @@ static void usdLogTask(void* prm)
   }
 
   /* allocate memory for buffer */
-  DEBUG_PRINT("malloc buffer ...\n");
+  DEBUG_PRINT("malloc buffer %d bytes...\n", usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
   // vTaskDelay(10); // small delay to allow debug message to be send
   usdLogBufferStart =
       pvPortMalloc(usdLogConfig.bufferSize * (4 + usdLogConfig.numBytes));
   usdLogBuffer = usdLogBufferStart;
-  DEBUG_PRINT("[OK].\n");
+  if (usdLogBufferStart)
+  {
+    DEBUG_PRINT("[OK].\n");
+  }
+  else
+  {
+    DEBUG_PRINT("[FAIL].\n");
+  }
   DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
 
   /* create queue to hand over pointer to usdLogData */
@@ -468,7 +497,7 @@ void usddeckTriggerLogging(void)
 
   /* trigger writing once there exists at least one queue item,
    * frequency will result itself */
-  if (queueMessagesWaiting) {
+  if (queueMessagesWaiting && xHandleWriteTask) {
     vTaskResume(xHandleWriteTask);
   }
   /* skip if queue is full, one slot will be spared as mutex */

@@ -64,6 +64,8 @@
 # Possible power are: +4, 0, -4, -8, -12, -16, -20, -30
 # CFLAGS += -DPLATFORM_NRF51_LOW_INTERFERENCE_TX_POWER_DBM="(-12)"
 
+## Set alternative pins for uSD-deck. Patch soldering required (CS->RX2(PA3), SCLK->TX1(PC10), MISO->RX1(PC11), MOSI->IO_4(PC12))
+# CFLAGS += -DUSDDECK_USE_ALT_PINS_AND_SPI
 
 ## Use J-Link as Debugger/flasher
 # OPENOCD_INTERFACE ?= interface/jlink.cfg

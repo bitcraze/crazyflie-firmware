@@ -110,7 +110,7 @@ void ws2812Init(void)
 	/* DMA clock enable */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
-	/* DMA1 Channel2 Config */
+	/* DMA1 Channel5 Config TM */
 	DMA_DeInit(DMA1_Stream5);
 
   // USART TX DMA Channel Config
@@ -137,13 +137,14 @@ void ws2812Init(void)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
+  vSemaphoreCreateBinary(allLedDone);
+
   DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, ENABLE);
   DMA_ITConfig(DMA1_Stream5, DMA_IT_HT, ENABLE);
 
 	/* TIM3 CC2 DMA Request enable */
 	TIM_DMACmd(TIM3, TIM_DMA_CC2, ENABLE);
 
-	vSemaphoreCreateBinary(allLedDone);
 
 }
 
@@ -241,3 +242,10 @@ void ws2812DmaIsr(void)
 	    total_led = 0;
     }
 }
+
+#ifndef USDDECK_USE_ALT_PINS_AND_SPI
+void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
+{
+  ws2812DmaIsr();
+}
+#endif
