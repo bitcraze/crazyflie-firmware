@@ -1,6 +1,6 @@
 ---
-title: Concole
-page_id: ctrp_concole
+title: Console
+page_id: ctrp_console
 ---
 
 This port is used as a one-way text console for printing text from the
@@ -21,5 +21,3 @@ following is fulfilled:
 -   The output buffer (of 31 bytes) is full
 -   A \"newline\" character has to be send (\\n and/or \\r)
 -   A flush command as been issued
-
-

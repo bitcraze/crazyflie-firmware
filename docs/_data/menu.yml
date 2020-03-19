@@ -1,8 +1,4 @@
 - page_id: home
-- title: Introduction
-  subs:
-    - {page_id: folder_description}
-    - {page_id: crazyflie-1-support}
 - title: Building and Flashing
   subs:
     - {page_id: build_instructions}
