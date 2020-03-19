@@ -5,7 +5,7 @@ page_id: howto
 
 This howto is going to describe step-by-step how to make and flash your
 first Crazyflie 2.X deck driver. See the deck [api documentation
-page](/deck/) for more information about the
+page](/userguides/deck/) for more information about the
 code.
 
 Development environment
@@ -127,7 +127,7 @@ Flash pages: 1024 | Page size: 1024 | Buffer pages: 10 | Start page: 16
 
 Flashing 1 of 1 to stm32 (fw): 161867 bytes (159 pages) ..........10..........10..........10..........10..........10..........10..........10..........10..........10..........10..........10..........10..........10..........10..........10.........9
 Reset in firmware mode ...
-$ 
+$
 ```
 
 Now you can connect your Crazyflie with the client and see your driver

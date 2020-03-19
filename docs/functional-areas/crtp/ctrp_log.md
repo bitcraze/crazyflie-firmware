@@ -4,7 +4,7 @@ page_id: ctrp_log
 ---
 
 For more information on how to use this and how this is implemented have
-a look [here](/logparam/).
+a look [here](/userguides/logparam/).
 
 State machines
 ==============
