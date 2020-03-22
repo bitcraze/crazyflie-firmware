@@ -34,7 +34,7 @@ PARAM_GROUP_STOP(ring)
 
 This will make the variables for roll/pitch/yaw/thrust available for the
 logging framework. These are the variables used to fill in the data in
-the [Python cfclient FlightTab](https://www.bitcraze.io/documentation/repository/crazyflie-clients-python/master/userguide_client/).
+the [Python cfclient FlightTab](https://www.bitcraze.io/documentation/repository/crazyflie-clients-python/master/userguides/userguide_client/).
 
     LOG_GROUP_START(stabilizer)
     LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
