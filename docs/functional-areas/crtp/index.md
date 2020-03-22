@@ -1,5 +1,5 @@
 ---
-title: Communication with the Crazyflie
+title: CRTP - Communication with the Crazyflie
 page_id: ctrp_index
 ---
 
