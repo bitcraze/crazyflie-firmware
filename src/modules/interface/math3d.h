@@ -28,6 +28,10 @@ SOFTWARE.
 #include <math.h>
 #include <stdbool.h>
 
+#ifdef CMATH3D_ASSERTS
+#include <assert.h>
+#endif
+
 #ifndef M_PI_F
 #define M_PI_F   (3.14159265358979323846f)
 #define M_1_PI_F (0.31830988618379067154f)
@@ -70,6 +74,12 @@ static inline struct vec vrepeat(float x) {
 // construct a zero-vector.
 static inline struct vec vzero(void) {
 	return vrepeat(0.0f);
+}
+// construct the i'th basis vector, i.e. vbasis(0) == (1, 0, 0).
+static inline struct vec vbasis(int i) {
+	float a[3] = {0.0f, 0.0f, 0.0f};
+	a[i] = 1.0f;
+	return mkvec(a[0], a[1], a[2]);
 }
 
 //
@@ -132,6 +142,14 @@ static inline float vdist(struct vec a, struct vec b) {
 // normalize a vector (make a unit vector).
 static inline struct vec vnormalize(struct vec v) {
 	return vdiv(v, vmag(v));
+}
+// clamp the Euclidean norm of a vector if it exceeds given maximum.
+static inline struct vec vclampnorm(struct vec v, float maxnorm) {
+	float const norm = vmag(v);
+	if (norm > maxnorm) {
+		return vscl(maxnorm / norm, v);
+	}
+	return v;
 }
 // vector cross product.
 static inline struct vec vcross(struct vec a, struct vec b) {
@@ -786,5 +804,95 @@ static inline struct quat qloadf(float const *f) {
 static inline void qstoref(struct quat q, float *f) {
 	f[0] = q.x; f[1] = q.y; f[2] = q.z; f[3] = q.w;
 }
+
+
+// ------------------------ convex sets in R^3 ---------------------------
+
+// project v onto the halfspace H = {x : a^T x <= b}, where a is a unit vector.
+// If v lies in H, returns v. Otherwise, returns the closest point, which
+// minimizes |x - v|_2, and will satisfy a^T x = b.
+static inline struct vec vprojecthalfspace(struct vec x, struct vec a_unit, float b) {
+	float ax = vdot(a_unit, x);
+	if (ax <= b) {
+		return x;
+	}
+	return vadd(x, vscl(b - ax, a_unit));
+}
+
+// test if v lies in the convex polytope defined by linear inequalities Ax <= b.
+// A: n x 3 matrix, row-major. Each row must have L2 norm of 1.
+// b: n vector.
+// tolerance: Allow violations up to Ax <= b + tolerance.
+static inline bool vinpolytope(struct vec v, float const A[], float const b[], int n, float tolerance)
+{
+	for (int i = 0; i < n; ++i) {
+		struct vec a = vloadf(A + 3 * i);
+		if (vdot(a, v) > b[i] + tolerance) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// Projects v onto the convex polytope defined by linear inequalities Ax <= b.
+// Returns argmin_{x: Ax <= b} |x - v|_2. Uses Diykstra's (not Dijkstra's!)
+// projection algorithm [1].
+//
+// Args:
+//   v: vector to project into the polytope.
+//   A: n x 3 matrix, row-major. Each row must have L2 norm of 1.
+//   b: n vector.
+//   work: n x 3 matrix. will be overwritten. input values are not used.
+//   tolerance: Halt once iterates satisfy |x_{k + 1} - x_k|_2 < tolerance.
+//     Roughly, but not actually, equivalent to allowing constraint violations
+//     up to Ax >= b + tolerance.
+//
+// Returns:
+//   The projection of v into the polytope.
+//
+// References:
+//   [1] Boyle, J. P., and Dykstra, R. L. (1986). A Method for Finding
+//       Projections onto the Intersection of Convex Sets in Hilbert Spaces.
+//       Lecture Notes in Statistics, 28–47. doi:10.1007/978-1-4613-9940-7_3
+//
+static inline struct vec vprojectpolytope(struct vec v, float const A[], float const b[], float work[], int n, float tolerance)
+{
+	// early bailout.
+	if (vinpolytope(v, A, b, n, tolerance)) {
+		return v;
+	}
+
+	#ifdef CMATH3D_ASSERTS
+	// check for normalized input.
+	for (int i = 0; i < n; ++i) {
+		struct vec a = vloadf(A + 3 * i);
+		assert(fabsf(vmag2(a) - 1.0f) < 1e-6f);
+	}
+	#endif
+
+	float *z = work;
+	for (int i = 0; i < 3 * n; ++i) {
+		z[i] = 0.0f;
+	}
+
+	float const tolerance2 = fsqr(tolerance);
+	struct vec x = v;
+
+	while (true) {
+		struct vec x_last_iter = x;
+		for (int i = 0; i < n; ++i) {
+			struct vec x_old = x;
+			struct vec ai = vloadf(A + 3 * i);
+			struct vec zi = vloadf(z + 3 * i);
+			x = vprojecthalfspace(vadd(x_old, zi), ai, b[i]);
+			struct vec zi_new = vadd3(x_old, zi, vneg(x));
+			vstoref(zi_new, z + 3 * i);
+		}
+		if (vdist2(x_last_iter, x) < tolerance2) {
+			return x;
+		}
+	}
+}
+
 
 // Overall TODO: lines? segments? planes? axis-aligned boxes? spheres?
