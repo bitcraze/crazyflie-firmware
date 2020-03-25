@@ -155,8 +155,7 @@ typedef union frame_u {
   char data[UART_FRAME_LENGTH];
 } __attribute__((packed)) frame_t;
 
-static bool getFrame(frame_t *frame)
-{
+static bool getUartFrameRaw(frame_t *frame) {
   int syncCounter = 0;
   for(int i=0; i<UART_FRAME_LENGTH; i++) {
     uart1Getchar(&frame->data[i]);
@@ -164,10 +163,24 @@ static bool getFrame(frame_t *frame)
       syncCounter += 1;
     }
   }
+
+  STATS_CNT_RATE_EVENT(&serialFrameRate);
+
   return (frame->isSyncFrame == 0 || (syncCounter==UART_FRAME_LENGTH));
 }
 
-static void waitForSynchFrame() {
+static bool getUartFrame(frame_t *frame) {
+  do {
+    bool isUartFrameValid = getUartFrameRaw(frame);
+    if (! isUartFrameValid) {
+      return false;
+    }
+  } while(frame->isSyncFrame != 0);
+
+  return true;
+}
+
+static void waitForUartSynchFrame() {
   char c;
   int syncCounter = 0;
   bool synchronized = false;
@@ -418,21 +431,14 @@ static void lighthouseTask(void *param)
 
   while(1) {
     memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
-    waitForSynchFrame();
+    waitForUartSynchFrame();
 
     comSynchronized = true;
     DEBUG_PRINT("Synchronized!\n");
 
     // Receive data until being desynchronized
-    isUartFrameValid = getFrame(&frame);
+    isUartFrameValid = getUartFrame(&frame);
     while(isUartFrameValid) {
-      if (frame.isSyncFrame != 0) {
-        isUartFrameValid = getFrame(&frame);
-        continue;
-      }
-
-      STATS_CNT_RATE_EVENT(&serialFrameRate);
-
       pulseWidth[frame.sensor] = frame.width;
 
       if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
@@ -441,7 +447,7 @@ static void lighthouseTask(void *param)
         usePulseResult(&ppState, &angles, basestation, axis);
       }
 
-      isUartFrameValid = getFrame(&frame);
+      isUartFrameValid = getUartFrame(&frame);
     }
 
     comSynchronized = false;
