@@ -143,26 +143,44 @@ static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
+#define UART_FRAME_LENGTH 7
+
 typedef union frame_u {
   struct {
     uint32_t timestamp:29;
     uint32_t sensor:3;
     uint16_t width;
-    uint8_t sync;
+    uint8_t isSyncFrame;
   } __attribute__((packed));
-  char data[7];
+  char data[UART_FRAME_LENGTH];
 } __attribute__((packed)) frame_t;
 
 static bool getFrame(frame_t *frame)
 {
   int syncCounter = 0;
-  for(int i=0; i<7; i++) {
+  for(int i=0; i<UART_FRAME_LENGTH; i++) {
     uart1Getchar(&frame->data[i]);
     if (frame->data[i] != 0) {
       syncCounter += 1;
     }
   }
-  return (frame->sync == 0 || (syncCounter==7));
+  return (frame->isSyncFrame == 0 || (syncCounter==UART_FRAME_LENGTH));
+}
+
+static void waitForSynchFrame() {
+  char c;
+  int syncCounter = 0;
+  bool synchronized = false;
+
+  while (!synchronized) {
+    uart1Getchar(&c);
+    if (c != 0) {
+      syncCounter += 1;
+    } else {
+      syncCounter = 0;
+    }
+    synchronized = (syncCounter == UART_FRAME_LENGTH);
+  }
 }
 
 static vec3d position;
@@ -378,9 +396,7 @@ void lightHouseGeometryDataUpdated() {
 
 static void lighthouseTask(void *param)
 {
-  bool synchronized = false;
-  int syncCounter = 0;
-  char c;
+  bool isUartFrameValid = false;
   static frame_t frame;
   static pulseProcessor_t ppState = {};
 
@@ -401,28 +417,17 @@ static void lighthouseTask(void *param)
   checkVersionAndBoot();
 
   while(1) {
-    // Synchronize
-    syncCounter = 0;
-    while (!synchronized) {
-
-      uart1Getchar(&c);
-      if (c != 0) {
-        syncCounter += 1;
-      } else {
-        syncCounter = 0;
-      }
-      synchronized = syncCounter == 7;
-    }
+    memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
+    waitForSynchFrame();
 
     comSynchronized = true;
     DEBUG_PRINT("Synchronized!\n");
 
     // Receive data until being desynchronized
-    synchronized = getFrame(&frame);
-    while(synchronized) {
-      if (frame.sync != 0) {
-        synchronized = getFrame(&frame);
-        memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
+    isUartFrameValid = getFrame(&frame);
+    while(isUartFrameValid) {
+      if (frame.isSyncFrame != 0) {
+        isUartFrameValid = getFrame(&frame);
         continue;
       }
 
@@ -436,12 +441,10 @@ static void lighthouseTask(void *param)
         usePulseResult(&ppState, &angles, basestation, axis);
       }
 
-      synchronized = getFrame(&frame);
-      if (frame.sync != 0) {
-        synchronized = getFrame(&frame);
-        continue;
-      }
+      isUartFrameValid = getFrame(&frame);
     }
+
+    comSynchronized = false;
   }
 }
 
