@@ -143,30 +143,46 @@ static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
-#define UART_FRAME_LENGTH 7
+#define UART_FRAME_LENGTH 12
 
-typedef union frame_u {
-  struct {
-    uint32_t timestamp:29;
-    uint32_t sensor:3;
-    uint16_t width;
-    uint8_t isSyncFrame;
-  } __attribute__((packed));
-  char data[UART_FRAME_LENGTH];
-} __attribute__((packed)) frame_t;
+typedef struct {
+  uint32_t timestamp;
+  uint32_t sensor;
+  uint16_t width;
+  bool isSyncFrame;
+
+
+} frame_t;
 
 static bool getUartFrameRaw(frame_t *frame) {
+  static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
-  for(int i=0; i<UART_FRAME_LENGTH; i++) {
-    uart1Getchar(&frame->data[i]);
-    if (frame->data[i] != 0) {
+
+  for(int i = 0; i < UART_FRAME_LENGTH; i++) {
+    uart1Getchar(&data[i]);
+    if (data[i] == 0xff) {
       syncCounter += 1;
     }
   }
 
+  memset(frame, 0, sizeof(*frame));
+
+  frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
+
+  frame->sensor = data[0] & 0x03;
+  memcpy(&frame->width, &data[1], 2);
+  memcpy(&frame->timestamp, &data[9], 3);
+
+  // The V4 FPGA binary runs at a lower clock rate, multiply by 2 to maintain compatibility.
+  frame->width *= 2;
+  frame->timestamp *= 2;
+
+  bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
+  bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
+
   STATS_CNT_RATE_EVENT(&serialFrameRate);
 
-  return (frame->isSyncFrame == 0 || (syncCounter==UART_FRAME_LENGTH));
+  return isFrameValid;
 }
 
 static bool getUartFrame(frame_t *frame) {
@@ -175,7 +191,7 @@ static bool getUartFrame(frame_t *frame) {
     if (! isUartFrameValid) {
       return false;
     }
-  } while(frame->isSyncFrame != 0);
+  } while(frame->isSyncFrame);
 
   return true;
 }
@@ -187,7 +203,7 @@ static void waitForUartSynchFrame() {
 
   while (!synchronized) {
     uart1Getchar(&c);
-    if (c != 0) {
+    if (c == 0xff) {
       syncCounter += 1;
     } else {
       syncCounter = 0;
@@ -494,6 +510,7 @@ static void checkVersionAndBoot()
     // Flash LH deck FW
     if (lhblFlashWriteFW((uint8_t*)bitstream, bitstreamSize)) {
       DEBUG_PRINT("FW updated [OK]\n");
+      deckVersion = embeddedVersion;
     } else {
       DEBUG_PRINT("FW updated [FAILED]\n");
     }
