@@ -257,7 +257,13 @@ void positionControllerINDI(const sensorData_t *sensors,
 	// Reference values, which are passed to the inner loop INDI (attitude controller)
 	refOuterINDI->x = indiOuter.attitude_c.phi;
 	refOuterINDI->y = indiOuter.attitude_c.theta;
-	refOuterINDI->z = indiOuter.T_incremented*arm;
+	// if arm is set to a nonzero value, controller increments
+	if (arm) {
+		refOuterINDI->z = indiOuter.T_incremented;
+	}
+	else {
+		refOuterINDI->z = 0;
+	} 
 
 }
 
