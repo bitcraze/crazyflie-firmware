@@ -33,6 +33,7 @@
 #include "param.h"
 #include "position_controller.h"
 #include "attitude_controller.h"
+#include "position_controller_indi.h"
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
 
