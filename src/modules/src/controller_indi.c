@@ -34,25 +34,8 @@ static float actuatorThrust;
 static float roll_kp = 5.0f;
 static float pitch_kp = 5.0f;
 static float yaw_kp = 5.0f;
-/* ev_tag */
-static float velocity_x;
-static float velocity_y;
-static float velocity_z;
 
-/*
-static float position_x;
-static float position_y;
-static float position_z;
-*/
-
-static float roll;
-static float pitch;
-static float yawRt; 
-static float thrust;
-
-static float yawRateDes, yawState; 
 static float attYawError; 
-/* ev_tag */
 
 static float r_roll;
 static float r_pitch;
@@ -257,13 +240,10 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		float attitude_error_r = radians(rateDesired.yaw) - stateAttitudeRateYaw;
 
 		indi.angular_accel_ref.p = indi.reference_acceleration.err_p * attitude_error_p;
-				//- indi.reference_acceleration.rate_p * body_rates.p;
 
 		indi.angular_accel_ref.q = indi.reference_acceleration.err_q * attitude_error_q;
-				//- indi.reference_acceleration.rate_q * body_rates.q;
 
 		indi.angular_accel_ref.r = indi.reference_acceleration.err_r * attitude_error_r;
-				//- indi.reference_acceleration.rate_r * body_rates.r;
 
 		/*
 		 * 5. Update the For each axis: delta_command = 1/control_effectiveness * (angular_acceleration_reference – angular_acceleration)
@@ -328,26 +308,6 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 	control->pitch = indi.u_in.q;
 	control->yaw  = indi.u_in.r;
 
-
-
-	/*
-	velocity_x = state->velocity.x;
-	velocity_y = state->velocity.y;
-	velocity_z = state->velocity.z;
-	*/
-	/*
-	position_x = setpoint->velocity.x;
-	position_y = setpoint->velocity.y;
-	position_z = setpoint->velocity.z;
-	*/
-
-	yawRateDes = setpoint->attitudeRate.yaw;
-	yawState = state->attitude.yaw;
-
-	roll = setpoint->attitude.roll;
-	pitch = setpoint->attitude.pitch;
-	yawRt = setpoint->attitudeRate.yaw;
-	thrust = setpoint->thrust;
 }
 
 PARAM_GROUP_START(ctrlINDI)
@@ -394,15 +354,4 @@ LOG_ADD(LOG_FLOAT, ang_accel_ref.r, &indi.angular_accel_ref.r)
 LOG_ADD(LOG_FLOAT, rate_d[0], &indi.rate_d[0])
 LOG_ADD(LOG_FLOAT, rate_d[1], &indi.rate_d[1])
 LOG_ADD(LOG_FLOAT, rate_d[2], &indi.rate_d[2])
-LOG_ADD(LOG_FLOAT, yawDes, &attitudeDesired.yaw)
-LOG_ADD(LOG_FLOAT, yawRateDes, &yawRateDes)
-LOG_ADD(LOG_FLOAT, yawState, &yawState)
-LOG_ADD(LOG_FLOAT, yawError, &attYawError)
-LOG_ADD(LOG_FLOAT, velX, &velocity_x)
-LOG_ADD(LOG_FLOAT, velY, &velocity_y)
-LOG_ADD(LOG_FLOAT, velZ, &velocity_z)
-LOG_ADD(LOG_FLOAT, roll, &roll)
-LOG_ADD(LOG_FLOAT, pitch, &pitch)
-LOG_ADD(LOG_FLOAT, yawRt, &yawRt)
-LOG_ADD(LOG_FLOAT, thrust, &thrust)
 LOG_GROUP_STOP(ctrlINDI)
