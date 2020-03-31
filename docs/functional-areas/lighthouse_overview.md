@@ -63,7 +63,7 @@ The output from the script should look something like:
         {.origin = {0.044224, 3.075050, 3.035368, }, .mat = {{-0.367098, 0.847259, -0.383915, }, {-0.658670, -0.528202, -0.535869, }, {-0.656805, 0.056157, 0.751967, }, }},{% endraw %}
 
 
-Copy the last two lines and, on the computer or virtual machine you use for Crazyflie development, paste them into the file 'src/deck/drivers/src/lighthouse.c'. They should replace the contents of lighthouseBaseStationsGeometry[].
+Copy the last two lines and, on the computer or virtual machine you use for Crazyflie development, paste them into the file 'src/modules/src/lighthouse/lighthouse_position_est.c'. They should replace the contents of lighthouseBaseStationsGeometry[].
 
         baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
             {% raw %}{.origin = {0.929796, -1.359615, 3.187089, }, .mat = {{-0.621841, -0.513463, -0.591329, }, {0.451725, -0.851970, 0.264749, }, {-0.639733, -0.102486, 0.761734, }, }},
@@ -72,7 +72,7 @@ Copy the last two lines and, on the computer or virtual machine you use for Craz
 
 The .origin part represents the position of each base station, while the .mat part is the orientation (rotation matrix). Check that the positions seems reasonable.
 
-Recompile and flash the firmware again. The Crazyflie is now ready to be used!
+Re-compile and flash the firmware again. The Crazyflie is now ready to be used!
 
 ### Startup position
 The Lighthouse deck has 4 receivers and can recover its orientation. The Crazyflie can be started in any orientation when using the lighthouse system.
