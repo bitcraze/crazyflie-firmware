@@ -7,21 +7,21 @@
 #include "mock_ootx_decoder.h"
 #include "mock_lighthouse_calibration.h"
 
-#define FRAME_LENGTH 400000    // 8.333ms
-#define SWEEP_MAX_WIDTH 1024    // 20us
-#define SWEEP_CENTER 192000    // 4ms
-#define SYNC_BASE_WIDTH 2750
-#define SYNC_DIVIDER 500
-#define SYNC_SEPARATION 20000
-#define MAX_FRAME_LENGTH_NOISE 400
+#define FRAME_LENGTH 200000    // 8.333ms
+#define SWEEP_MAX_WIDTH 512    // 20us
+#define SWEEP_CENTER 96000     // 4ms
+#define SYNC_BASE_WIDTH 1375
+#define SYNC_DIVIDER 250
+#define SYNC_SEPARATION 10000
+#define MAX_FRAME_LENGTH_NOISE 200
 
 #define SYNC_X SYNC_BASE_WIDTH+(SYNC_DIVIDER * 0)
 #define SYNC_Y SYNC_BASE_WIDTH+(SYNC_DIVIDER * 1)
 #define SYNC_X_SKIP SYNC_BASE_WIDTH+(SYNC_DIVIDER * 4)
 #define SYNC_Y_SKIP SYNC_BASE_WIDTH+(SYNC_DIVIDER * 5)
-#define UN_IDENTFD (SWEEP_MAX_WIDTH + 17)
-#define SWEEP 512
-#define LONG_SWEEP 1500
+#define UN_IDENTFD (SWEEP_MAX_WIDTH + 7)
+#define SWEEP 256
+#define LONG_SWEEP 750
 
 // Helpers
 static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime);
