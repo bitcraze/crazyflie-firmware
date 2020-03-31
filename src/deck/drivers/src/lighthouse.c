@@ -173,10 +173,6 @@ static bool getUartFrameRaw(frame_t *frame) {
   memcpy(&frame->width, &data[1], 2);
   memcpy(&frame->timestamp, &data[9], 3);
 
-  // The V4 FPGA binary runs at a lower clock rate, multiply by 2 to maintain compatibility.
-  frame->width *= 2;
-  frame->timestamp *= 2;
-
   bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
   bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
 
