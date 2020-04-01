@@ -46,13 +46,6 @@
 
 #include "test_support.h"
 
-#ifndef DISABLE_LIGHTHOUSE_DRIVER
-  #define DISABLE_LIGHTHOUSE_DRIVER 1
-#endif
-
-#if DISABLE_LIGHTHOUSE_DRIVER == 1
-#else
-
 
 static pulseProcessorResult_t angles;
 
@@ -274,5 +267,3 @@ LOG_GROUP_STOP(lighthouse)
 PARAM_GROUP_START(lighthouse)
 PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
 PARAM_GROUP_STOP(lighthouse)
-
-#endif // DISABLE_LIGHTHOUSE_DRIVER

@@ -40,13 +40,6 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 {.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 };
 
-#ifndef DISABLE_LIGHTHOUSE_DRIVER
-  #define DISABLE_LIGHTHOUSE_DRIVER 1
-#endif
-
-#if DISABLE_LIGHTHOUSE_DRIVER == 1
-  void lightHousePositionGeometryDataUpdated() { /* Empty by design */ }
-#else
 
 #define ONE_SECOND 1000
 #define HALF_SECOND 500
@@ -252,5 +245,3 @@ LOG_GROUP_STOP(lighthouse)
 PARAM_GROUP_START(lighthouse)
 PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
 PARAM_GROUP_STOP(lighthouse)
-
-#endif // DISABLE_LIGHTHOUSE_DRIVER

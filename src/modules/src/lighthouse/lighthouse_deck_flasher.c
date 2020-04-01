@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define DEBUG_MODULE "LHFL"
 #include "debug.h"
 #include "lh_bootloader.h"
 #include "lighthouse_deck_flasher.h"
@@ -52,6 +53,9 @@
 
 
 #if DISABLE_LIGHTHOUSE_DRIVER == 1
+void lighthouseDeckFlasherCheckVersionAndBoot() {
+    DEBUG_PRINT("No Lighthouse support in FW, deck not initialized\n");
+}
 #else
 
 #define STR2(x) #x
