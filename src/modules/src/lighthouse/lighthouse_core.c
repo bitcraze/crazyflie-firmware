@@ -90,7 +90,12 @@ static bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
 
   frame->sensor = data[0] & 0x03;
+  frame->channelFound = (data[0] & 0x80) == 0;
+  frame->channel = (data[0] >> 3) & 0x0f;
+  frame->slowbit = (data[0] >> 2) & 0x01;
   memcpy(&frame->width, &data[1], 2);
+  memcpy(&frame->offset, &data[3], 3);
+  memcpy(&frame->beamData, &data[6], 3);
   memcpy(&frame->timestamp, &data[9], 3);
 
   bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);

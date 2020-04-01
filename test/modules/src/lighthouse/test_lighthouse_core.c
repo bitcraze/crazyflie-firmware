@@ -118,10 +118,45 @@ void testThatWidthIsDecodedInUartFrame() {
 }
 
 
+void testThatOffsetIsDecodedInUartFrame() {
+  // Fixture
+  unsigned char sequence[] = {0, 0, 0, 3, 2, 1, 0, 0, 0, 0, 0, 0};
+  uint32_t expected = 0x10203;
+  uart1SetSequence(sequence, sizeof(sequence));
+
+  // Test
+  bool frameOk = getUartFrame(&frame);
+
+  // Assert
+  uint32_t actual = frame.offset;
+  TEST_ASSERT_EQUAL_UINT32(expected, actual);
+
+  // Verify the padding data was not affected
+  TEST_ASSERT_TRUE(frameOk)
+}
+
+
+void testThatBeamDataIsDecodedInUartFrame() {
+  // Fixture
+  unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 3, 2, 1, 0, 0, 0};
+  uint32_t expected = 0x10203;
+  uart1SetSequence(sequence, sizeof(sequence));
+
+  // Test
+  bool frameOk = getUartFrame(&frame);
+
+  // Assert
+  uint32_t actual = frame.beamData;
+  TEST_ASSERT_EQUAL_UINT32(expected, actual);
+
+  // Verify the padding data was not affected
+  TEST_ASSERT_TRUE(frameOk)
+}
+
 void testThatSensorIsDecodedInUartFrame() {
   // Fixture
-  unsigned char sequence[] = {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  uint8_t expected = 0x2;
+  unsigned char sequence[] = {3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  uint8_t expected = 0x3;
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
@@ -130,6 +165,61 @@ void testThatSensorIsDecodedInUartFrame() {
   // Assert
   uint32_t actual = frame.sensor;
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
+
+  // Verify we did not get data in other fields
+  TEST_ASSERT_TRUE(frame.channelFound);
+}
+
+void testThatLackOfChannelIsDecodedInUartFrame() {
+  // Fixture
+  unsigned char sequence[] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  uart1SetSequence(sequence, sizeof(sequence));
+
+  // Test
+  getUartFrame(&frame);
+
+  // Assert
+  TEST_ASSERT_FALSE(frame.channelFound);
+
+  // Verify we did not get data in other fields
+  TEST_ASSERT_EQUAL_UINT8(0, frame.channel);
+  TEST_ASSERT_FALSE(frame.slowbit);
+}
+
+
+void testThatChannelIsDecodedInUartFrame() {
+  // Fixture
+  unsigned char sequence[] = {0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  uint8_t expected = 0x0f;
+  uart1SetSequence(sequence, sizeof(sequence));
+
+  // Test
+  getUartFrame(&frame);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT8(expected, frame.channel);
+
+  // Verify we did not get data in other fields
+  TEST_ASSERT_TRUE(frame.channelFound);
+  TEST_ASSERT_FALSE(frame.slowbit);
+}
+
+
+void testThatSlowBitIsDecodedInUartFrame() {
+  // Fixture
+  unsigned char sequence[] = {0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  uint8_t expected = 0x0f;
+  uart1SetSequence(sequence, sizeof(sequence));
+
+  // Test
+  getUartFrame(&frame);
+
+  // Assert
+  TEST_ASSERT_TRUE(frame.slowbit);
+
+  // Verify we did not get data in other fields
+  TEST_ASSERT_TRUE(frame.channelFound);
+  TEST_ASSERT_EQUAL_UINT8(0, frame.channel);
 }
 
 // Test support ----------------------------------------------------------------------------------------------------
