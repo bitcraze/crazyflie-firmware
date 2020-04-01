@@ -90,6 +90,9 @@ typedef struct {
 #define LOG_STOP  0
 
 /* Macros */
+
+#ifndef UNIT_TEST_MODE
+
 #define LOG_ADD(TYPE, NAME, ADDRESS) \
    { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
 
@@ -100,21 +103,25 @@ typedef struct {
    { \
   .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
 
-// Fix to make unit tests run on MacOS
-#ifdef __APPLE__
-#define LOG_GROUP_START(NAME)  \
-  static const struct log_s __logs_##NAME[] __attribute__((section("__DATA,__.log." #NAME), used)) = { \
-  LOG_ADD_GROUP(LOG_GROUP | LOG_START, NAME, 0x0)
-#else
 #define LOG_GROUP_START(NAME)  \
   static const struct log_s __logs_##NAME[] __attribute__((section(".log." #NAME), used)) = { \
   LOG_ADD_GROUP(LOG_GROUP | LOG_START, NAME, 0x0)
-#endif
 
 //#define LOG_GROUP_START_SYNC(NAME, LOCK) LOG_ADD_GROUP(LOG_GROUP | LOG_START, NAME, LOCK);
 
 #define LOG_GROUP_STOP(NAME) \
   LOG_ADD_GROUP(LOG_GROUP | LOG_STOP, stop_##NAME, 0x0) \
   };
+
+#else // UNIT_TEST_MODE
+
+// Empty defines when running unit tests
+#define LOG_ADD(TYPE, NAME, ADDRESS)
+#define LOG_ADD_BY_FUNCTION(TYPE, NAME, ADDRESS)
+#define LOG_ADD_GROUP(TYPE, NAME, ADDRESS)
+#define LOG_GROUP_START(NAME)
+#define LOG_GROUP_STOP(NAME)
+
+#endif // UNIT_TEST_MODE
 
 #endif /* __LOG_H__ */
