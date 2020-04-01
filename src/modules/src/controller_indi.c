@@ -108,6 +108,21 @@ static inline void finite_difference_from_filter(float *output, Butterworth2LowP
 	}
 }
 
+static float capAngle(float angle) {
+  float result = angle;
+
+  while (result > 180.0f) {
+    result -= 360.0f;
+  }
+
+  while (result < -180.0f) {
+    result += 360.0f;
+  }
+
+  return result;
+}
+
+
 void controllerINDIInit(void)
 {
 	/*
@@ -201,12 +216,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		rateDesired.pitch = pitch_kp*(attitudeDesired.pitch - state->attitude.pitch);
 		//rateDesired.yaw = yaw_kp*(attitudeDesired.yaw - state->attitude.yaw);
 		attYawError = attitudeDesired.yaw - state->attitude.yaw;		
-		if (attYawError > 180.0f) {
-			attYawError = attYawError - 360.0f;
-		}
-		else if (attYawError < -180.0f) {
-			attYawError = attYawError + 360.0f;
-		}
+		attYawError = capAngle(attYawError);
 		rateDesired.yaw = yaw_kp*attYawError;
 
 
