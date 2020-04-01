@@ -27,4 +27,14 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
+typedef struct {
+  uint32_t timestamp;
+  uint32_t sensor;
+  uint16_t width;
+  bool isSyncFrame;
+} lighthouseUartFrame_t;
+
 void lighthouseCoreTask(void *param);

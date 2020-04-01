@@ -44,6 +44,7 @@
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
 
+#include "test_support.h"
 
 #ifndef DISABLE_LIGHTHOUSE_DRIVER
   #define DISABLE_LIGHTHOUSE_DRIVER 1
@@ -56,7 +57,7 @@
 static pulseProcessorResult_t angles;
 
 // Stats
-static bool comSynchronized = false;
+static bool uartSynchronized = false;
 
 #define ONE_SECOND 1000
 #define HALF_SECOND 500
@@ -72,22 +73,14 @@ static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 
 #define UART_FRAME_LENGTH 12
 
-typedef struct {
-  uint32_t timestamp;
-  uint32_t sensor;
-  uint16_t width;
-  bool isSyncFrame;
 
-
-} frame_t;
-
-static bool getUartFrameRaw(frame_t *frame) {
+static bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
 
   for(int i = 0; i < UART_FRAME_LENGTH; i++) {
     uart1Getchar(&data[i]);
-    if (data[i] == 0xff) {
+    if ((unsigned char)data[i] == 0xff) {
       syncCounter += 1;
     }
   }
@@ -108,7 +101,7 @@ static bool getUartFrameRaw(frame_t *frame) {
   return isFrameValid;
 }
 
-static bool getUartFrame(frame_t *frame) {
+TESTABLE_STATIC bool getUartFrame(lighthouseUartFrame_t *frame) {
   do {
     bool isUartFrameValid = getUartFrameRaw(frame);
     if (! isUartFrameValid) {
@@ -119,14 +112,14 @@ static bool getUartFrame(frame_t *frame) {
   return true;
 }
 
-static void waitForUartSynchFrame() {
+TESTABLE_STATIC void waitForUartSynchFrame() {
   char c;
   int syncCounter = 0;
   bool synchronized = false;
 
   while (!synchronized) {
     uart1Getchar(&c);
-    if (c == 0xff) {
+    if ((unsigned char)c == 0xff) {
       syncCounter += 1;
     } else {
       syncCounter = 0;
@@ -188,7 +181,7 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
 void lighthouseCoreTask(void *param)
 {
   bool isUartFrameValid = false;
-  static frame_t frame;
+  static lighthouseUartFrame_t frame;
   static pulseProcessor_t ppState = {};
 
   int basestation;
@@ -206,7 +199,7 @@ void lighthouseCoreTask(void *param)
     memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
     waitForUartSynchFrame();
 
-    comSynchronized = true;
+    uartSynchronized = true;
     DEBUG_PRINT("Synchronized!\n");
 
     // Receive data until being desynchronized
@@ -223,7 +216,7 @@ void lighthouseCoreTask(void *param)
       isUartFrameValid = getUartFrame(&frame);
     }
 
-    comSynchronized = false;
+    uartSynchronized = false;
   }
 }
 
@@ -270,7 +263,7 @@ LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 #endif
 
-LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
+LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 LOG_GROUP_STOP(lighthouse)
 
 PARAM_GROUP_START(lighthouse)
