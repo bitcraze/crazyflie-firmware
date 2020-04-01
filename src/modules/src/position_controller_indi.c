@@ -268,7 +268,7 @@ void positionControllerINDI(const sensorData_t *sensors,
 }
 
 
-PARAM_GROUP_START(INDI_Outer)
+PARAM_GROUP_START(posCtrlIndi)
 
 PARAM_ADD(PARAM_FLOAT, pos_set_x, &pos_set_x)
 PARAM_ADD(PARAM_FLOAT, pos_set_y, &pos_set_y)
@@ -280,11 +280,11 @@ PARAM_ADD(PARAM_FLOAT, K_xi_x, &K_xi_x)
 PARAM_ADD(PARAM_FLOAT, K_xi_y, &K_xi_y)
 PARAM_ADD(PARAM_FLOAT, K_xi_z, &K_xi_z)
 
-PARAM_GROUP_STOP(INDI_Outer)
+PARAM_GROUP_STOP(posCtrlIndi)
 
 
 
-LOG_GROUP_START(INDI_Outer)
+LOG_GROUP_START(posCtrlIndi)
 
 // Angular veocity
 LOG_ADD(LOG_FLOAT, gyr_p, &gyr_p)
@@ -351,4 +351,4 @@ LOG_ADD(LOG_FLOAT, T_incremented, &indiOuter.T_incremented)
 LOG_ADD(LOG_FLOAT, cmd_phi, &indiOuter.attitude_c.phi)
 LOG_ADD(LOG_FLOAT, cmd_theta, &indiOuter.attitude_c.theta)
 
-LOG_GROUP_STOP(INDI_Outer)
+LOG_GROUP_STOP(posCtrlIndi)

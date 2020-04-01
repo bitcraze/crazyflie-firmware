@@ -42,8 +42,8 @@ static float r_pitch;
 static float r_yaw;
 static float accelz;
 
-static vector_t refOuterINDI;		// Reference values from outer loop INDI
-static float outerLoopActive; 		// if 1, outer loop INDI is activated
+static vector_t refOuterINDI;				// Reference values from outer loop INDI
+static bool outerLoopActive = false ; 		// if 1, outer loop INDI is activated
 
 static struct IndiVariables indi = {
 		.g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
@@ -355,7 +355,7 @@ PARAM_ADD(PARAM_FLOAT, act_dyn_q, &indi.act_dyn.q)
 PARAM_ADD(PARAM_FLOAT, act_dyn_r, &indi.act_dyn.r)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
-PARAM_ADD(PARAM_FLOAT, outerLoopActive, &outerLoopActive)
+PARAM_ADD(PARAM_UINT8, outerLoopActive, &outerLoopActive)
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
