@@ -47,4 +47,15 @@ typedef struct {
   uint8_t slowbit;
 } lighthouseUartFrame_t;
 
+typedef struct {
+  int sampleCount;
+  int hitCount;
+} lighthouseBsIdentificationData_t;
+
+typedef enum {
+    lighthouseBsTypeUnknown = 0,
+    lighthouseBsTypeV1 = 1,
+    lighthouseBsTypeV2 = 2,
+} lighthouseBaseStationType_t;
+
 void lighthouseCoreTask(void *param);

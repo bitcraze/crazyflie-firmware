@@ -47,7 +47,10 @@
 #include "test_support.h"
 
 
+static lighthouseBaseStationType_t bsType = lighthouseBsTypeUnknown;
 static pulseProcessorResult_t angles;
+static lighthouseUartFrame_t frame;
+static lighthouseBsIdentificationData_t bsIdentificationData;
 
 // Stats
 static bool uartSynchronized = false;
@@ -63,9 +66,10 @@ static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
+static pulseProcessor_t ppState = {};
+
 
 #define UART_FRAME_LENGTH 12
-
 
 static bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
@@ -175,40 +179,83 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
   }
 }
 
+/**
+ * @brief Identify the type of base stations used in the system.
+ * There is not member of the UART frame data we can use to directly identify the type, but we can use statistical methods.
+ * The beamWord will vary for V2 base stations, while it will have the value 0x1ffff fairly offen for V1 base stations.
+ *
+ * @param frame
+ * @param state
+ * @return TESTABLE_STATIC identifyBaseStationType
+ */
+TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* state) {
+    const uint_fast32_t v1Indicator = 0x1ffff;
+    const int requiredIndicatorsForV1 = 6;
+    const int requiredSamplesForV2 = 20;
+    state->sampleCount++;
+    if (frame->beamData == v1Indicator) {
+        state->hitCount++;
+    }
+
+    if (state->hitCount >= requiredIndicatorsForV1) {
+        DEBUG_PRINT("Locking to V1 system\n");
+        return lighthouseBsTypeV1;
+    }
+
+    if (state->sampleCount >= requiredSamplesForV2) {
+        DEBUG_PRINT("Locking to V2 system\n");
+        return lighthouseBsTypeV2;
+    }
+
+    return lighthouseBsTypeUnknown;
+}
+
+static void processV1Frame(const lighthouseUartFrame_t* frame) {
+    int basestation;
+    int axis;
+
+    pulseWidth[frame->sensor] = frame->width;
+
+    if (pulseProcessorProcessPulse(&ppState, frame->sensor, frame->timestamp, frame->width, &angles, &basestation, &axis)) {
+    STATS_CNT_RATE_EVENT(&frameRate);
+    STATS_CNT_RATE_EVENT(bsRates[basestation]);
+    usePulseResult(&ppState, &angles, basestation, axis);
+    }
+}
+
+static void processV2Frame(const lighthouseUartFrame_t* frame) {
+    // TODO krri
+}
 
 void lighthouseCoreTask(void *param)
 {
   bool isUartFrameValid = false;
-  static lighthouseUartFrame_t frame;
-  static pulseProcessor_t ppState = {};
-
-  int basestation;
-  int axis;
 
   uart1Init(230400);
-
   lightHousePositionGeometryDataUpdated();
-
   systemWaitStart();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
 
+  memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
+
   while(1) {
     memset(pulseWidth, 0, sizeof(pulseWidth[0])*PULSE_PROCESSOR_N_SENSORS);
     waitForUartSynchFrame();
-
     uartSynchronized = true;
-    DEBUG_PRINT("Synchronized!\n");
 
-    // Receive data until being desynchronized
     isUartFrameValid = getUartFrame(&frame);
     while(isUartFrameValid) {
-      pulseWidth[frame.sensor] = frame.width;
-
-      if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
-        STATS_CNT_RATE_EVENT(&frameRate);
-        STATS_CNT_RATE_EVENT(bsRates[basestation]);
-        usePulseResult(&ppState, &angles, basestation, axis);
+      switch (bsType) {
+          case lighthouseBsTypeUnknown:
+            bsType = identifyBaseStationType(&frame, &bsIdentificationData);
+            break;
+          case lighthouseBsTypeV1:
+            processV1Frame(&frame);
+            break;
+          case lighthouseBsTypeV2:
+            processV2Frame(&frame);
+            break;
       }
 
       isUartFrameValid = getUartFrame(&frame);
@@ -251,15 +298,9 @@ STATS_CNT_RATE_LOG_ADD(bs0Rt, &bs0Rate)
 STATS_CNT_RATE_LOG_ADD(bs1Rt, &bs1Rate)
 
 LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
-#if PULSE_PROCESSOR_N_SENSORS > 1
 LOG_ADD(LOG_UINT16, width1, &pulseWidth[1])
-#endif
-#if PULSE_PROCESSOR_N_SENSORS > 2
 LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
-#endif
-#if PULSE_PROCESSOR_N_SENSORS > 3
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
-#endif
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 LOG_GROUP_STOP(lighthouse)
