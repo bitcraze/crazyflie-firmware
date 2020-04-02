@@ -12,6 +12,8 @@
 - title: Functional areas
   subs:
     - {page_id: sensor_to_control}
+    - {page_id: controllers}
+    - {page_id: state_estimators}
     - {page_id: ctrp_index}
     - {page_id: deck_memory_format}
     - {page_id: p2p_api}
