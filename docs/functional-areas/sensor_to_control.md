@@ -45,8 +45,12 @@ For more indepth information about how the state estimation is implemented in th
 
 State Controller
 ==========================
-COMING SOON!
+There are 3 controllers in the crazyflie
+* PID controller
+* INDI controller
+* Mellinger controller
 
+For more indepth information about how the controllers are implemented in the crazyflie firmware, please go to the [controllers page](/functional-areas/controllers/)
 
 Power Distribution
 =============
