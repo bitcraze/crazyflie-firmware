@@ -86,14 +86,14 @@ static bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
 
   frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
 
-  frame->sensor = data[0] & 0x03;
-  frame->channelFound = (data[0] & 0x80) == 0;
-  frame->channel = (data[0] >> 3) & 0x0f;
-  frame->slowbit = (data[0] >> 2) & 0x01;
-  memcpy(&frame->width, &data[1], 2);
-  memcpy(&frame->offset, &data[3], 3);
-  memcpy(&frame->beamData, &data[6], 3);
-  memcpy(&frame->timestamp, &data[9], 3);
+  frame->data.sensor = data[0] & 0x03;
+  frame->data.channelFound = (data[0] & 0x80) == 0;
+  frame->data.channel = (data[0] >> 3) & 0x0f;
+  frame->data.slowbit = (data[0] >> 2) & 0x01;
+  memcpy(&frame->data.width, &data[1], 2);
+  memcpy(&frame->data.offset, &data[3], 3);
+  memcpy(&frame->data.beamData, &data[6], 3);
+  memcpy(&frame->data.timestamp, &data[9], 3);
 
   bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
   bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
@@ -190,7 +190,7 @@ TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighth
     const int requiredIndicatorsForV1 = 6;
     const int requiredSamplesForV2 = 20;
     state->sampleCount++;
-    if (frame->beamData == v1Indicator) {
+    if (frame->data.beamData == v1Indicator) {
         state->hitCount++;
     }
 
@@ -211,9 +211,9 @@ static void processV1Frame(pulseProcessor_t *appState, pulseProcessorResult_t* a
     int basestation;
     int axis;
 
-    pulseWidth[frame->sensor] = frame->width;
+    pulseWidth[frame->data.sensor] = frame->data.width;
 
-    if (pulseProcessorProcessPulse(&ppState, frame->sensor, frame->timestamp, frame->width, angles, &basestation, &axis)) {
+    if (pulseProcessorProcessPulse(&ppState, &frame->data, angles, &basestation, &axis)) {
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
         usePulseResult(appState, angles, basestation, axis);
     }

@@ -344,14 +344,14 @@ static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigne
 }
 
 
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis)
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis)
 {
   bool anglesMeasured = false;
 
   if (!state->synchronized) {
-    synchronize(state, sensor, timestamp, width);
+    synchronize(state, frameData->sensor, frameData->timestamp, frameData->width);
   } else {
-    anglesMeasured = processWhenSynchronized(state, sensor, timestamp, width, angles, baseStation, axis);
+    anglesMeasured = processWhenSynchronized(state, frameData->sensor, frameData->timestamp, frameData->width, angles, baseStation, axis);
   }
 
   return anglesMeasured;

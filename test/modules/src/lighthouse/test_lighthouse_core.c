@@ -98,7 +98,7 @@ void testThatTimeStampIsDecodedInUartFrame() {
   getUartFrame(&frame);
 
   // Assert
-  uint32_t actual = frame.timestamp;
+  uint32_t actual = frame.data.timestamp;
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
@@ -113,7 +113,7 @@ void testThatWidthIsDecodedInUartFrame() {
   getUartFrame(&frame);
 
   // Assert
-  uint32_t actual = frame.width;
+  uint32_t actual = frame.data.width;
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
@@ -128,7 +128,7 @@ void testThatOffsetIsDecodedInUartFrame() {
   bool frameOk = getUartFrame(&frame);
 
   // Assert
-  uint32_t actual = frame.offset;
+  uint32_t actual = frame.data.offset;
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 
   // Verify the padding data was not affected
@@ -146,7 +146,7 @@ void testThatBeamDataIsDecodedInUartFrame() {
   bool frameOk = getUartFrame(&frame);
 
   // Assert
-  uint32_t actual = frame.beamData;
+  uint32_t actual = frame.data.beamData;
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 
   // Verify the padding data was not affected
@@ -163,11 +163,11 @@ void testThatSensorIsDecodedInUartFrame() {
   getUartFrame(&frame);
 
   // Assert
-  uint32_t actual = frame.sensor;
+  uint32_t actual = frame.data.sensor;
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 
   // Verify we did not get data in other fields
-  TEST_ASSERT_TRUE(frame.channelFound);
+  TEST_ASSERT_TRUE(frame.data.channelFound);
 }
 
 void testThatLackOfChannelIsDecodedInUartFrame() {
@@ -179,11 +179,11 @@ void testThatLackOfChannelIsDecodedInUartFrame() {
   getUartFrame(&frame);
 
   // Assert
-  TEST_ASSERT_FALSE(frame.channelFound);
+  TEST_ASSERT_FALSE(frame.data.channelFound);
 
   // Verify we did not get data in other fields
-  TEST_ASSERT_EQUAL_UINT8(0, frame.channel);
-  TEST_ASSERT_FALSE(frame.slowbit);
+  TEST_ASSERT_EQUAL_UINT8(0, frame.data.channel);
+  TEST_ASSERT_FALSE(frame.data.slowbit);
 }
 
 
@@ -197,11 +197,11 @@ void testThatChannelIsDecodedInUartFrame() {
   getUartFrame(&frame);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT8(expected, frame.channel);
+  TEST_ASSERT_EQUAL_UINT8(expected, frame.data.channel);
 
   // Verify we did not get data in other fields
-  TEST_ASSERT_TRUE(frame.channelFound);
-  TEST_ASSERT_FALSE(frame.slowbit);
+  TEST_ASSERT_TRUE(frame.data.channelFound);
+  TEST_ASSERT_FALSE(frame.data.slowbit);
 }
 
 
@@ -215,11 +215,11 @@ void testThatSlowBitIsDecodedInUartFrame() {
   getUartFrame(&frame);
 
   // Assert
-  TEST_ASSERT_TRUE(frame.slowbit);
+  TEST_ASSERT_TRUE(frame.data.slowbit);
 
   // Verify we did not get data in other fields
-  TEST_ASSERT_TRUE(frame.channelFound);
-  TEST_ASSERT_EQUAL_UINT8(0, frame.channel);
+  TEST_ASSERT_TRUE(frame.data.channelFound);
+  TEST_ASSERT_EQUAL_UINT8(0, frame.data.channel);
 }
 
 
@@ -244,7 +244,7 @@ void testThatBaseStationIdentificationFindsV1() {
   lighthouseBaseStationType_t expected = lighthouseBsTypeV1;
 
   // Test
-  frame.beamData = 0x1ffff;
+  frame.data.beamData = 0x1ffff;
 
   lighthouseBaseStationType_t actual = lighthouseBsTypeUnknown;
   for (int i = 0; (i < 30) && (actual == lighthouseBsTypeUnknown); i++) {
@@ -263,7 +263,7 @@ void testThatBaseStationIdentificationFindsV2() {
   lighthouseBaseStationType_t expected = lighthouseBsTypeV2;
 
   // Test
-  frame.beamData = 4711;
+  frame.data.beamData = 4711;
 
   lighthouseBaseStationType_t actual = lighthouseBsTypeUnknown;
   for (int i = 0; (i < 30) && (actual == lighthouseBsTypeUnknown); i++) {

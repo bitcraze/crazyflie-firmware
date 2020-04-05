@@ -30,21 +30,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "pulse_processor.h"
+
 typedef struct {
   bool isSyncFrame;
-  uint8_t sensor;
-
-  // V1 base station data --------
-  uint32_t timestamp;
-  uint16_t width;
-
-  // V2 base station data --------
-  uint32_t beamData;
-  uint32_t offset;
-  bool channelFound;
-  // Channel is zero indexed (0-15) here, while it is one indexed in the base station config (1 - 16)
-  uint8_t channel;
-  uint8_t slowbit;
+  pulseProcessorFrame_t data;
 } lighthouseUartFrame_t;
 
 typedef struct {

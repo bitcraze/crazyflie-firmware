@@ -119,20 +119,33 @@ typedef struct {
   pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
 } pulseProcessorResult_t;
 
+typedef struct {
+  uint8_t sensor;
+
+  // V1 base station data --------
+  uint32_t timestamp;
+  uint16_t width;
+
+  // V2 base station data --------
+  uint32_t beamData;
+  uint32_t offset;
+  bool channelFound;
+  // Channel is zero indexed (0-15) here, while it is one indexed in the base station config (1 - 16)
+  uint8_t channel;
+  uint8_t slowbit;
+} pulseProcessorFrame_t;
+
 /**
  * @brief Process pulse data from the lighthouse
  *
  * @param state
- * @param sensor
- * @param timestamp
- * @param width
- * @param angles
+ * @param frameData
  * @param baseStation
  * @param axis
- * @return true, angle, base station and direction are written
+ * @return true, angle, base station and axis are written
  * @return false, no valid result
  */
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis);
+bool pulseProcessorProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
 
 /**
  * @brief Apply calibration correction to all angles of all sensors for a particular baseStation
