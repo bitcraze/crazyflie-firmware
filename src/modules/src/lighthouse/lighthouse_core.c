@@ -141,11 +141,8 @@ static uint8_t estimationMethod = 1;
 
 
 static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
-  if (basestation == 1 && axis == sweepDirection_y) {
+  if (basestation == 1) {
     STATS_CNT_RATE_EVENT(&cycleRate);
-
-    pulseProcessorApplyCalibration(appState, angles, 0);
-    pulseProcessorApplyCalibration(appState, angles, 1);
 
     lighthousePositionEstimatePoseCrossingBeams(angles, 1);
 
@@ -155,27 +152,27 @@ static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcess
 }
 
 static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
-  if (axis == sweepDirection_y) {
-    STATS_CNT_RATE_EVENT(&cycleRate);
+  STATS_CNT_RATE_EVENT(&cycleRate);
 
-    pulseProcessorApplyCalibration(appState, angles, basestation);
+  lighthousePositionEstimatePoseSweeps(angles, basestation);
 
-    lighthousePositionEstimatePoseSweeps(angles, basestation);
-
-    pulseProcessorClear(angles, basestation);
-  }
+  pulseProcessorClear(angles, basestation);
 }
 
 static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
-  switch(estimationMethod) {
-    case 0:
-      usePulseResultCrossingBeams(appState, angles, basestation, axis);
-      break;
-    case 1:
-      usePulseResultSweeps(appState, angles, basestation, axis);
-      break;
-    default:
-      break;
+  if (axis == sweepDirection_y) {
+    pulseProcessorApplyCalibration(appState, angles, basestation);
+
+    switch(estimationMethod) {
+      case 0:
+        usePulseResultCrossingBeams(appState, angles, basestation, axis);
+        break;
+      case 1:
+        usePulseResultSweeps(appState, angles, basestation, axis);
+        break;
+      default:
+        break;
+    }
   }
 }
 
@@ -210,21 +207,20 @@ TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighth
     return lighthouseBsTypeUnknown;
 }
 
-static void processV1Frame(const lighthouseUartFrame_t* frame) {
+static void processV1Frame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
     int basestation;
     int axis;
 
     pulseWidth[frame->sensor] = frame->width;
 
-    if (pulseProcessorProcessPulse(&ppState, frame->sensor, frame->timestamp, frame->width, &angles, &basestation, &axis)) {
-    STATS_CNT_RATE_EVENT(&frameRate);
-    STATS_CNT_RATE_EVENT(bsRates[basestation]);
-    usePulseResult(&ppState, &angles, basestation, axis);
+    if (pulseProcessorProcessPulse(&ppState, frame->sensor, frame->timestamp, frame->width, angles, &basestation, &axis)) {
+        STATS_CNT_RATE_EVENT(bsRates[basestation]);
+        usePulseResult(appState, angles, basestation, axis);
     }
 }
 
-static void processV2Frame(const lighthouseUartFrame_t* frame) {
-    // TODO krri
+static void processV2Frame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
+    // TODO implement
 }
 
 void lighthouseCoreTask(void *param)
@@ -246,15 +242,17 @@ void lighthouseCoreTask(void *param)
 
     isUartFrameValid = getUartFrame(&frame);
     while(isUartFrameValid) {
+      STATS_CNT_RATE_EVENT(&frameRate);
+
       switch (bsType) {
           case lighthouseBsTypeUnknown:
             bsType = identifyBaseStationType(&frame, &bsIdentificationData);
             break;
           case lighthouseBsTypeV1:
-            processV1Frame(&frame);
+            processV1Frame(&ppState, &angles, &frame);
             break;
           case lighthouseBsTypeV2:
-            processV2Frame(&frame);
+            processV2Frame(&ppState, &angles, &frame);
             break;
       }
 
