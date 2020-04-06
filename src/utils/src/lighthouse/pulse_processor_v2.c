@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 - 2020 Bitcraze AB
+ * Copyright (C) 2020 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,29 +22,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * pulse_processor.c - pulse decoding for lighthouse V1 base stations
+ * pulse_processor_v2.c - pulse decoding for lighthouse V2 base stations
  *
  */
 
-#include "pulse_processor.h"
+#include "pulse_processor_v2.h"
 
+#include <string.h>
+#include <math.h>
+#include "test_support.h"
 
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation)
-{
-  for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
-    lighthouseCalibrationApply(&state->bsCalibration[baseStation], bsMeasurement->angles, bsMeasurement->correctedAngles);
-  }
-}
-
-/**
- * @brief Clear result struct
- *
- * @param angles
- */
-void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
-{
-  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation].validCount = 0;
-  }
+bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
+    // TODO krri
+    return false;
 }

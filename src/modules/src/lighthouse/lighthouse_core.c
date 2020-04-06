@@ -39,6 +39,8 @@
 #include "uart1.h"
 
 #include "pulse_processor.h"
+#include "pulse_processor_v1.h"
+#include "pulse_processor_v2.h"
 
 #include "lighthouse_deck_flasher.h"
 #include "lighthouse_position_est.h"
@@ -47,7 +49,6 @@
 #include "test_support.h"
 
 
-static lighthouseBaseStationType_t bsType = lighthouseBsTypeUnknown;
 static pulseProcessorResult_t angles;
 static lighthouseUartFrame_t frame;
 static lighthouseBsIdentificationData_t bsIdentificationData;
@@ -68,6 +69,7 @@ static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 static pulseProcessor_t ppState = {};
 
+pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 
 #define UART_FRAME_LENGTH 12
 
@@ -195,19 +197,37 @@ TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighth
     }
 
     if (state->hitCount >= requiredIndicatorsForV1) {
-        DEBUG_PRINT("Locking to V1 system\n");
         return lighthouseBsTypeV1;
     }
 
     if (state->sampleCount >= requiredSamplesForV2) {
-        DEBUG_PRINT("Locking to V2 system\n");
         return lighthouseBsTypeV2;
     }
 
     return lighthouseBsTypeUnknown;
 }
 
-static void processV1Frame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
+static pulseProcessorProcessPulse_t identifySystem(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* bsIdentificationData) {
+  pulseProcessorProcessPulse_t result = (void*)0;
+
+  switch (identifyBaseStationType(frame, bsIdentificationData)) {
+    case lighthouseBsTypeV1:
+      DEBUG_PRINT("Locking to V1 system\n");
+      result = pulseProcessorV1ProcessPulse;
+      break;
+    case lighthouseBsTypeV2:
+      DEBUG_PRINT("Locking to V2 system\n");
+      result = pulseProcessorV2ProcessPulse;
+      break;
+    default:
+      // Nothing here
+      break;
+  }
+
+  return result;
+}
+
+static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
     int basestation;
     int axis;
 
@@ -219,12 +239,7 @@ static void processV1Frame(pulseProcessor_t *appState, pulseProcessorResult_t* a
     }
 }
 
-static void processV2Frame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
-    // TODO implement
-}
-
-void lighthouseCoreTask(void *param)
-{
+void lighthouseCoreTask(void *param) {
   bool isUartFrameValid = false;
 
   uart1Init(230400);
@@ -244,16 +259,10 @@ void lighthouseCoreTask(void *param)
     while(isUartFrameValid) {
       STATS_CNT_RATE_EVENT(&frameRate);
 
-      switch (bsType) {
-          case lighthouseBsTypeUnknown:
-            bsType = identifyBaseStationType(&frame, &bsIdentificationData);
-            break;
-          case lighthouseBsTypeV1:
-            processV1Frame(&ppState, &angles, &frame);
-            break;
-          case lighthouseBsTypeV2:
-            processV2Frame(&ppState, &angles, &frame);
-            break;
+      if (pulseProcessorProcessPulse) {
+        processFrame(&ppState, &angles, &frame);
+      } else {
+        pulseProcessorProcessPulse = identifySystem(&frame, &bsIdentificationData);
       }
 
       isUartFrameValid = getUartFrame(&frame);

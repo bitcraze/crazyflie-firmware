@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 Bitcraze AB
+ * Copyright (C) 2019 - 2020 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,31 +62,41 @@ typedef enum {
 } SweepStorageState_t;
 
 typedef struct pulseProcessor_s {
-  bool synchronized;    // At true if we are currently syncthonized
-  int basestationsSynchronizedCount;
+  union {
+    // V1 bsee stations
+    struct {
+      bool synchronized;    // At true if we are currently syncthonized
+      int basestationsSynchronizedCount;
 
-  // Synchronization state
-  pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];
-  int pulseHistoryIdx[PULSE_PROCESSOR_N_SENSORS];
+      // Synchronization state
+      pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];
+      int pulseHistoryIdx[PULSE_PROCESSOR_N_SENSORS];
 
 
-  // Sync pulse timestamp estimation
-  uint32_t lastSync;        // Last sync seen
-  uint64_t currentSyncSum;  // Sum of the timestamps of all the close-together sync
-  int nSyncPulses;          // Number of sync pulses accumulated
+      // Sync pulse timestamp estimation
+      uint32_t lastSync;        // Last sync seen
+      uint64_t currentSyncSum;  // Sum of the timestamps of all the close-together sync
+      int nSyncPulses;          // Number of sync pulses accumulated
 
-  // Sync pulse timestamps
-  uint32_t currentSync;   // Sync currently used for sweep phase measurement
-  uint32_t currentSync0;  // Sync0 of the current frame
-  uint32_t currentSync0Width;  // Width of sync0 in the current frame
-  uint32_t currentSync1Width;  // Width of sync1 in the current frame
+      // Sync pulse timestamps
+      uint32_t currentSync;   // Sync currently used for sweep phase measurement
+      uint32_t currentSync0;  // Sync0 of the current frame
+      uint32_t currentSync0Width;  // Width of sync0 in the current frame
+      uint32_t currentSync1Width;  // Width of sync1 in the current frame
 
-  uint32_t currentSync0X;
-  uint32_t currentSync0Y;
-  uint32_t currentSync1X;
-  uint32_t currentSync1Y;
+      uint32_t currentSync0X;
+      uint32_t currentSync0Y;
+      uint32_t currentSync1X;
+      uint32_t currentSync1Y;
 
-  float frameWidth[2][2];
+      float frameWidth[2][2];
+      };
+
+    // V2 base stations
+    struct {
+      // TODO krri
+    };
+  };
 
   // Base station and axis of the current frame
   int currentBaseStation;
@@ -121,9 +131,9 @@ typedef struct {
 
 typedef struct {
   uint8_t sensor;
+  uint32_t timestamp;
 
   // V1 base station data --------
-  uint32_t timestamp;
   uint16_t width;
 
   // V2 base station data --------
@@ -136,7 +146,7 @@ typedef struct {
 } pulseProcessorFrame_t;
 
 /**
- * @brief Process pulse data from the lighthouse
+ * @brief Interface for processing of pulse data from the lighthouse
  *
  * @param state
  * @param frameData
@@ -145,7 +155,7 @@ typedef struct {
  * @return true, angle, base station and axis are written
  * @return false, no valid result
  */
-bool pulseProcessorProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
+typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
 
 /**
  * @brief Apply calibration correction to all angles of all sensors for a particular baseStation
