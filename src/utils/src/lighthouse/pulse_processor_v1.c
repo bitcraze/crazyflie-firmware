@@ -57,13 +57,6 @@
 #define FRAME_WIDTH_MIN 395000
 #define FRAME_WIDTH_MAX 405000
 
-// Utility functions and macros
-// #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
-static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
-  const uint32_t bitmask = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1;
-  return (x - y) & bitmask;
-}
-
 
 TESTABLE_STATIC int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time);
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);

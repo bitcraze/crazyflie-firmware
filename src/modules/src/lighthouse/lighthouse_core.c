@@ -97,6 +97,9 @@ static bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   memcpy(&frame->data.beamData, &data[6], 3);
   memcpy(&frame->data.timestamp, &data[9], 3);
 
+  // Offset is expressed in a 6 MHz clock, convert to the 24 MHz that is used for timestamps
+  frame->data.offset *= 4;
+
   bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
   bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
 

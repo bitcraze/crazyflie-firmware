@@ -123,7 +123,9 @@ void testThatWidthIsDecodedInUartFrame() {
 void testThatOffsetIsDecodedInUartFrame() {
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 3, 2, 1, 0, 0, 0, 0, 0, 0};
-  uint32_t expected = 0x10203;
+
+  // The offset is converted from a 6 MHz to 24 MHz clock when read
+  uint32_t expected = 0x10203 * 4;
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test

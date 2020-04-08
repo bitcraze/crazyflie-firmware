@@ -42,6 +42,13 @@
 #define PULSE_PROCESSOR_TIMESTAMP_BITWIDTH 24
 #define PULSE_PROCESSOR_TIMESTAMP_MAX ((1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)-1)
 
+// Utility functions and macros
+// #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
+inline static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
+  const uint32_t bitmask = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1;
+  return (x - y) & bitmask;
+}
+
 
 enum pulseClass_e {unknown, sync0, sync1, sweep};
 
@@ -61,9 +68,46 @@ typedef enum {
   sweepStorageStateError,
 } SweepStorageState_t;
 
+/**
+ * @brief Holds data for one sweep and one sensor.
+ *
+ */
+typedef struct {
+    uint32_t timestamp;
+    uint32_t offset;
+    uint8_t channel;
+    uint8_t slowbit;
+    bool channelFound; // Indicates if channel and slowbit are valid
+    bool isSet; // Indicates that the data in this struct has been set
+} pulseProcessorV2Pulse_t;
+
+typedef struct {
+    pulseProcessorV2Pulse_t sensors[PULSE_PROCESSOR_N_SENSORS];
+    uint32_t latestTimestamp;
+} pulseProcessorV2PulseWorkspace_t;
+
+/**
+ * @brief Holds derived data for one sweep through all sensors, derived from the pulses
+ *
+ */
+typedef struct {
+    uint32_t offset[PULSE_PROCESSOR_N_SENSORS];
+    uint32_t timestamp; // Timestamp of sensor 0
+    uint8_t channel;
+    uint8_t slowbit;
+} pulseProcessorV2SweepBlock_t;
+
+/**
+ * @brief Holds data for the sweeps of one base station
+ *
+ */
+typedef struct {
+    pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_SWEEPS];
+} pulseProcessorV2BaseStation_t;
+
 typedef struct pulseProcessor_s {
   union {
-    // V1 bsee stations
+    // V1 base stations
     struct {
       bool synchronized;    // At true if we are currently syncthonized
       int basestationsSynchronizedCount;
@@ -90,11 +134,15 @@ typedef struct pulseProcessor_s {
       uint32_t currentSync1Y;
 
       float frameWidth[2][2];
-      };
+    };
 
     // V2 base stations
     struct {
-      // TODO krri
+      // Raw data for the sensors
+      pulseProcessorV2PulseWorkspace_t pulseWorkspace;
+
+      // Refined data for multiple base stations
+      pulseProcessorV2SweepBlock_t blocksV2[PULSE_PROCESSOR_N_BASE_STATIONS];
     };
   };
 
@@ -139,10 +187,10 @@ typedef struct {
   // V2 base station data --------
   uint32_t beamData;
   uint32_t offset;
-  bool channelFound;
   // Channel is zero indexed (0-15) here, while it is one indexed in the base station config (1 - 16)
-  uint8_t channel;
-  uint8_t slowbit;
+  uint8_t channel; // Valid if channelFound is true
+  uint8_t slowbit; // Valid if channelFound is true
+  bool channelFound;
 } pulseProcessorFrame_t;
 
 /**
