@@ -116,9 +116,10 @@ void positionControllerINDIInit(void)
 }
 
 
-void positionControllerINDI(const sensorData_t *sensors, 
-	 						const state_t *state,
-	 						vector_t *refOuterINDI) { 
+void positionControllerINDI(const sensorData_t *sensors,
+                            setpoint_t *setpoint,
+                            const state_t *state, 
+                            vector_t *refOuterINDI){ 
 
 	// Read states (position, velocity)
 	posS_x = state->position.x;
@@ -131,13 +132,25 @@ void positionControllerINDI(const sensorData_t *sensors,
 	gyr_q = sensors->gyro.y;
 	gyr_r = sensors->gyro.z; 
 
+	// Read in velocity setpoints
+    velocityRef.x = setpoint->velocity.x;
+	velocityRef.y = -setpoint->velocity.y;
+    velocityRef.z = -setpoint->velocity.z;
+
 	// Position controller (Proportional)
-	positionRef.x = pos_set_x;
-	positionRef.y = pos_set_y;
-	positionRef.z = pos_set_z;
-	velocityRef.x = K_xi_x*(positionRef.x - posS_x);
-	velocityRef.y = K_xi_y*(positionRef.y - posS_y);
-	velocityRef.z = K_xi_z*(positionRef.z - posS_z);
+	if (setpoint->mode.x == modeAbs) {
+		positionRef.x = setpoint->position.x;
+		velocityRef.x = K_xi_x*(positionRef.x - posS_x);
+	}
+	if (setpoint->mode.y == modeAbs) {
+		positionRef.y = -setpoint->position.y;
+		velocityRef.y = K_xi_y*(positionRef.y - posS_y);
+	}
+	if (setpoint->mode.z == modeAbs) {
+		positionRef.z = -setpoint->position.z;
+		velocityRef.z = K_xi_z*(positionRef.z - posS_z);
+	}
+
 
 	// Velocity controller (Proportional)
 	indiOuter.linear_accel_ref.x = K_dxi_x*(velocityRef.x - velS_x);
@@ -255,14 +268,14 @@ void positionControllerINDI(const sensorData_t *sensors,
 	indiOuter.attitude_c.theta = clamp(indiOuter.attitude_c.theta, -10.0f, 10.0f);
 
 	// Reference values, which are passed to the inner loop INDI (attitude controller)
-	refOuterINDI->x = indiOuter.attitude_c.phi;
-	refOuterINDI->y = indiOuter.attitude_c.theta;
+	setpoint->attitude.roll= indiOuter.attitude_c.phi;
+	setpoint->attitude.pitch = indiOuter.attitude_c.theta;
 	// if arm is set to a nonzero value, controller increments
 	if (arm) {
-		refOuterINDI->z = indiOuter.T_incremented;
+		setpoint->thrust = indiOuter.T_incremented;
 	}
 	else {
-		refOuterINDI->z = 0;
+		setpoint->thrust = 0;
 	} 
 
 }
