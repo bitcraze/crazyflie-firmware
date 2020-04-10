@@ -17,6 +17,7 @@ should receive those inputs on a queue and perform the computation within
 its own task instead of blocking the radio task.
 In this example, we will set up the skeleton for such a new subsystem.
 
+
 Development environment
 -----------------------
 
@@ -32,6 +33,39 @@ For the rest of the howto you will work in the crazyflie-firmware
 project.
 
 
+Setting the task constants
+--------------------------
+
+Each task has a few constants that are stored globally in `config/config.h`.
+
+First, set the task priority. The FreeRTOS scheduler always prefers to run
+a higher-priority task. High priorities should be reserved for very
+time-sensitive tasks like the main stabilizer loop.
+
+In `config.h`, after the existing task priorities, add the line
+
+``` {.c}
+#define EXAMPLE_TASK_PRI        1
+```
+
+Next, each task has a name.
+In `config.h`, after the existing task names, add the line
+
+``` {.c}
+#define EXAMPLE_TASK_NAME       "EXAMPLE"
+```
+
+Finally, we must select a fixed size for the task's function call stack.
+`configMINIMAL_STACK_SIZE` gives a fairly small stack.
+Tasks that do lots of computation will almost certainly need larger stacks.
+
+In `config.h`, after the existing task stack sizes, add the line
+
+``` {.c}
+#define EXAMPLE_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+```
+
+
 Implementing the task
 ---------------------
 
@@ -43,6 +77,8 @@ new file `modules/src/example.c`.
 First, include the necessary system header files:
 
 ``` {.c}
+#include "config.h"
+#include "debug.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "static_mem.h"
@@ -68,14 +104,12 @@ STATIC_MEM_QUEUE_ALLOC(inputQueue, 1, sizeof(int));
 
 
 Next, we allocate the task call stack and other necessary memory for OS
-bookkeeping. Note that `configMINIMAL_STACK_SIZE` gives a fairly small stack.
-Tasks that do lots of computation will almost certainly need larger stacks.
-
+bookkeeping.
 The FreeRTOS task API requires that task functions take a `void *` argument.
 
 ``` {.c}
 static void exampleTask(void*);
-STATIC_MEM_TASK_ALLOC(exampleTask, configMINIMAL_STACK_SIZE);
+STATIC_MEM_TASK_ALLOC(exampleTask, EXAMPLE_TASK_STACKSIZE);
 ```
 
 ### Functions
@@ -83,6 +117,7 @@ STATIC_MEM_TASK_ALLOC(exampleTask, configMINIMAL_STACK_SIZE);
 Next, we implement the `Init()` function.
 This should contain all of the FreeRTOS allocations and initializations
 that need to last as long as the firmware is running.
+Note the use of the constants we defined in `config.h`.
 Later in this howto, we will need to edit another file to call the `Init()`.
 
 ``` {.c}
@@ -91,7 +126,7 @@ static bool isInit = false;
 void exampleTaskInit() {
   inputQueue = STATIC_MEM_QUEUE_CREATE(inputQueue);
   // TODO
-  STATIC_MEM_TASK_CREATE(exampleTask, exampleTask, KALMAN_TASK_NAME, NULL, KALMAN_TASK_PRI);
+  STATIC_MEM_TASK_CREATE(exampleTask, exampleTask, EXAMPLE_TASK_NAME, NULL, EXAMPLE_TASK_PRI);
   isInit = true;
 }
 ```
@@ -110,16 +145,18 @@ bool exampleTaskTest() {
 Now we come to the main task function.
 It is usually an infinite loop that waits on inputs from something.
 In our case, we wait on inputs from the queue.
-
-Our `xQueueReceive` call waits for up to 1000 ticks - one second.
-In cases where the task should do some work regardless of whether there is
-an input or not, call `xQueueReceive` with a timeout of 0 instead.
+Our `xQueueReceive` uses the special timeout value `portMAX_DELAY`, which means
+that the `xQueueReceive` call will (potentially) block forever and only return
+when the queue is not empty.
+Other tasks will use integer or zero timeout values
+if they have some work to do regardless of whether or not inputs are received.
 
 ``` {.c}
 static void exampleTask(void* parameters) {
+  DEBUG_PRINT("Example task main function is running!");
   while (true) {
     int input;
-    if (pdTRUE == xQueueReceive(inputQueue, &input, 1000)) {
+    if (pdTRUE == xQueueReceive(inputQueue, &input, portMAX_DELAY)) {
       // Respond to input here!
     }
   }
@@ -259,5 +296,5 @@ Reset in firmware mode ...
 $
 ```
 
-Since our task doesn't do anything, there is nothing to observe when running
-the new firmware.
+Now you can connect your Crazyflie with the client and see the 
+"Example task main function is running!" in the debug console.
