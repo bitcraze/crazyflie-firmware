@@ -26,3 +26,4 @@
     - {page_id: serial}
     - {page_id: openocd_gdb_debugging}
     - {page_id: unit_testing}
+    - {page_id: systemtask}
