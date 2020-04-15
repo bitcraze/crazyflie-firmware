@@ -186,19 +186,38 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 		// Switch between manual and automatic position control
 		if (setpoint->mode.z == modeDisable) {
-			if (outerLoopActive) {
-				// INDI position controller active, INDI attitude controller becomes inner loop
-				actuatorThrust = setpoint->thrust;
-			}
-			else {
 				// INDI position controller not active, INDI attitude controller is main loop
 				actuatorThrust = setpoint->thrust;
+		} else{
+			if (outerLoopActive) {
+				// INDI position controller active, INDI attitude controller becomes inner loop
+				actuatorThrust = refOuterINDI.z;
 			}
 		}
-		if (setpoint->mode.x == modeDisable || setpoint->mode.y == modeDisable) {
-			attitudeDesired.roll = setpoint->attitude.roll;
-			attitudeDesired.pitch = setpoint->attitude.pitch;
+		if (setpoint->mode.x == modeDisable) {
+
+				// INDI position controller not active, INDI attitude controller is main loop
+				attitudeDesired.roll = setpoint->attitude.roll;
+			
+		}else{
+			if (outerLoopActive) {
+				// INDI position controller active, INDI attitude controller becomes inner loop
+				attitudeDesired.roll = refOuterINDI.x;
+			}
 		}
+
+		if (setpoint->mode.y == modeDisable) {
+
+				// INDI position controller not active, INDI attitude controller is main loop
+				attitudeDesired.pitch = setpoint->attitude.pitch;
+			
+		}else{
+			if (outerLoopActive) {
+				// INDI position controller active, INDI attitude controller becomes inner loop
+				attitudeDesired.pitch = refOuterINDI.y;
+			}
+		}
+		
 
 //	    attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
 //	                                attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
