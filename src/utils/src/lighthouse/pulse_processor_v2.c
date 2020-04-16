@@ -84,7 +84,7 @@ TESTABLE_STATIC bool processBlock(const pulseProcessorV2PulseWorkspace_t* pulseW
         }
     }
 
-    if (channel_count != (PULSE_PROCESSOR_N_SENSORS - 1)) {
+    if (channel_count < 1) {
         // Channel is missing - discard
         return false;
     }

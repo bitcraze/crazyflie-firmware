@@ -84,10 +84,10 @@ void testThatProcessBlockFindsSlowbit() {
 
 void testThatProcessBlockRejectsMissingChannel() {
     // Fixture
-    uint8_t channel = 3;
-
-    setChannel(channel, 0);
     ws.sensors[0].channelFound = false;
+    ws.sensors[1].channelFound = false;
+    ws.sensors[2].channelFound = false;
+    ws.sensors[3].channelFound = false;
 
     // Test
     bool actual = processBlock(&ws, &block);
