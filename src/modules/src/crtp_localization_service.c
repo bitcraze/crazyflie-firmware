@@ -43,6 +43,8 @@
 #include "estimator.h"
 #include "quatcompress.h"
 
+#include "peer_localization.h"
+
 #define NBR_OF_RANGES_IN_PACKET   5
 #define DEFAULT_EMERGENCY_STOP_TIMEOUT (1 * RATE_MAIN_LOOP)
 
@@ -187,6 +189,13 @@ static void genericLocHandle(CRTPPacket* pk)
         tickOfLastPacket = xTaskGetTickCount();
         break;
       }
+      else {
+        ext_pos.x = item->x / 1000.0f;
+        ext_pos.y = item->y / 1000.0f;
+        ext_pos.z = item->z / 1000.0f;
+        ext_pos.stdDev = extPosStdDev;
+        peerLocalizationTellPosition(item->id, &ext_pos);
+      }
     }
   }
 }
@@ -196,14 +205,16 @@ static void extPositionPackedHandler(CRTPPacket* pk)
   uint8_t numItems = pk->size / sizeof(extPositionPackedItem);
   for (uint8_t i = 0; i < numItems; ++i) {
     const extPositionPackedItem* item = (const extPositionPackedItem*)&pk->data[i * sizeof(extPositionPackedItem)];
+    ext_pos.x = item->x / 1000.0f;
+    ext_pos.y = item->y / 1000.0f;
+    ext_pos.z = item->z / 1000.0f;
+    ext_pos.stdDev = extPosStdDev;
     if (item->id == my_id) {
-      ext_pos.x = item->x / 1000.0f;
-      ext_pos.y = item->y / 1000.0f;
-      ext_pos.z = item->z / 1000.0f;
-      ext_pos.stdDev = extPosStdDev;
       estimatorEnqueuePosition(&ext_pos);
       tickOfLastPacket = xTaskGetTickCount();
-      break;
+    }
+    else {
+      peerLocalizationTellPosition(item->id, &ext_pos);
     }
   }
 }
