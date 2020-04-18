@@ -31,7 +31,7 @@
 #include "lighthouse_geometry.h"
 
 
-extern baseStationGeometry_t lighthouseBaseStationsGeometry[2];
+extern baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
 
 /**
  * @brief Call when the lighthouseBaseStationsGeometry data has been updated

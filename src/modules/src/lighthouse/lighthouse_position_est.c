@@ -35,7 +35,7 @@
 
 #include "lighthouse_position_est.h"
 
-baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
+baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS]  = {
 {.origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
 {.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 };
@@ -46,19 +46,18 @@ baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
 static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
-static statsCntRateLogger_t* bsEstRates[2] = {&estBs0Rate, &estBs1Rate};
+static statsCntRateLogger_t* bsEstRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&estBs0Rate, &estBs1Rate};
 
-baseStationEulerAngles_t lighthouseBaseStationAngles[2];
-static mat3d baseStationInvertedRotationMatrixes[2];
+baseStationEulerAngles_t lighthouseBaseStationAngles[PULSE_PROCESSOR_N_BASE_STATIONS];
+static mat3d baseStationInvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 
 static void invertRotationMatrix(mat3d rot, mat3d inverted);
 
 void lightHousePositionGeometryDataUpdated() {
-  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0], &lighthouseBaseStationAngles[0]);
-  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1], &lighthouseBaseStationAngles[1]);
-
-  invertRotationMatrix(lighthouseBaseStationsGeometry[0].mat, baseStationInvertedRotationMatrixes[0]);
-  invertRotationMatrix(lighthouseBaseStationsGeometry[1].mat, baseStationInvertedRotationMatrixes[1]);
+  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[i], &lighthouseBaseStationAngles[i]);
+    invertRotationMatrix(lighthouseBaseStationsGeometry[i].mat, baseStationInvertedRotationMatrixes[i]);
+  }
 }
 
 

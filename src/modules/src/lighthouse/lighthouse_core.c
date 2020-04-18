@@ -64,7 +64,7 @@ static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 
 static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
-static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
+static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 static pulseProcessor_t ppState = {};
