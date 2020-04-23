@@ -68,6 +68,46 @@ typedef enum {
   sweepStorageStateError,
 } SweepStorageState_t;
 
+
+typedef struct {
+  bool synchronized;    // At true if we are currently syncthonized
+  int basestationsSynchronizedCount;
+
+  // Synchronization state
+  pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];
+  int pulseHistoryIdx[PULSE_PROCESSOR_N_SENSORS];
+
+
+  // Sync pulse timestamp estimation
+  uint32_t lastSync;        // Last sync seen
+  uint64_t currentSyncSum;  // Sum of the timestamps of all the close-together sync
+  int nSyncPulses;          // Number of sync pulses accumulated
+
+  // Sync pulse timestamps
+  uint32_t currentSync;   // Sync currently used for sweep phase measurement
+  uint32_t currentSync0;  // Sync0 of the current frame
+  uint32_t currentSync0Width;  // Width of sync0 in the current frame
+  uint32_t currentSync1Width;  // Width of sync1 in the current frame
+
+  uint32_t currentSync0X;
+  uint32_t currentSync0Y;
+  uint32_t currentSync1X;
+  uint32_t currentSync1Y;
+
+  float frameWidth[2][2];
+
+  // Base station and axis of the current frame
+  int currentBaseStation;
+  SweepDirection currentAxis;
+
+  // Sweep timestamps
+  struct {
+    uint32_t timestamp;
+    SweepStorageState_t state;
+  } sweeps[PULSE_PROCESSOR_N_SENSORS];
+  bool sweepDataStored;
+} pulseProcessorV1_t;
+
 /**
  * @brief Holds data for one sweep and one sensor.
  *
@@ -105,57 +145,24 @@ typedef struct {
     pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_SWEEPS];
 } pulseProcessorV2BaseStation_t;
 
+typedef struct {
+    // Raw data for the sensors
+  pulseProcessorV2PulseWorkspace_t pulseWorkspace;
+
+  // Refined data for multiple base stations
+  pulseProcessorV2SweepBlock_t blocksV2[PULSE_PROCESSOR_N_BASE_STATIONS];
+} pulseProcessorV2_t;
+
 typedef struct pulseProcessor_s {
   union {
-    // V1 base stations
     struct {
-      bool synchronized;    // At true if we are currently syncthonized
-      int basestationsSynchronizedCount;
-
-      // Synchronization state
-      pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];
-      int pulseHistoryIdx[PULSE_PROCESSOR_N_SENSORS];
-
-
-      // Sync pulse timestamp estimation
-      uint32_t lastSync;        // Last sync seen
-      uint64_t currentSyncSum;  // Sum of the timestamps of all the close-together sync
-      int nSyncPulses;          // Number of sync pulses accumulated
-
-      // Sync pulse timestamps
-      uint32_t currentSync;   // Sync currently used for sweep phase measurement
-      uint32_t currentSync0;  // Sync0 of the current frame
-      uint32_t currentSync0Width;  // Width of sync0 in the current frame
-      uint32_t currentSync1Width;  // Width of sync1 in the current frame
-
-      uint32_t currentSync0X;
-      uint32_t currentSync0Y;
-      uint32_t currentSync1X;
-      uint32_t currentSync1Y;
-
-      float frameWidth[2][2];
+      pulseProcessorV1_t v1;
     };
 
-    // V2 base stations
     struct {
-      // Raw data for the sensors
-      pulseProcessorV2PulseWorkspace_t pulseWorkspace;
-
-      // Refined data for multiple base stations
-      pulseProcessorV2SweepBlock_t blocksV2[PULSE_PROCESSOR_N_BASE_STATIONS];
+      pulseProcessorV2_t v2;
     };
   };
-
-  // Base station and axis of the current frame
-  int currentBaseStation;
-  SweepDirection currentAxis;
-
-  // Sweep timestamps
-  struct {
-    uint32_t timestamp;
-    SweepStorageState_t state;
-  } sweeps[PULSE_PROCESSOR_N_SENSORS];
-  bool sweepDataStored;
 
   ootxDecoderState_t ootxDecoder0;
   ootxDecoderState_t ootxDecoder1;

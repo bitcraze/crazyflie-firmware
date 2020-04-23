@@ -31,8 +31,9 @@ static void limitTimestamps(pulseProcessorPulse_t history[]);
 // Functions under test
 int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time);
 bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
-int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp);
+int getBaseStationId(pulseProcessorV1_t *stateV1, unsigned int timestamp);
 bool isSweepActiveThisFrame(int width);
+bool isSync(pulseProcessorV1_t *stateV1, unsigned int timestamp);
 
 void setUp(void) {
 }
@@ -438,12 +439,10 @@ void testThatGetSystemSyncTimeHandlesTimestampsWithWrapping()
   TEST_ASSERT_EQUAL(expectedSyncTime, actualSyncTime);
 }
 
-bool isSync(pulseProcessor_t *state, unsigned int timestamp);
-
 void testThatIsSyncFindsNextSync0()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + FRAME_LENGTH;
 
@@ -457,7 +456,7 @@ void testThatIsSyncFindsNextSync0()
 void testThatIsSyncFindsNextSync1()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION;
 
@@ -471,7 +470,7 @@ void testThatIsSyncFindsNextSync1()
 void testThatIsSyncFindsDistantSync1()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + (10*FRAME_LENGTH) + SYNC_SEPARATION;
 
@@ -485,7 +484,7 @@ void testThatIsSyncFindsDistantSync1()
 void testThatIsSyncReturnFalseOnSweep()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + FRAME_LENGTH + SWEEP_CENTER;
 
@@ -499,7 +498,7 @@ void testThatIsSyncReturnFalseOnSweep()
 void testThatIsSyncFindsSync0WithSomeNoise()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + FRAME_LENGTH - 10;
 
@@ -513,7 +512,7 @@ void testThatIsSyncFindsSync0WithSomeNoise()
 void testThatIsSyncFindsSync1WithSomeNoise()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION + 500;
 
@@ -528,7 +527,7 @@ void testThatIsSyncFindsSync1WithSomeNoise()
 void testThatIsSyncFindsSync0WithWrapping()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = PULSE_PROCESSOR_TIMESTAMP_MAX - (FRAME_LENGTH/2);
   uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH) & PULSE_PROCESSOR_TIMESTAMP_MAX;
 
@@ -542,7 +541,7 @@ void testThatIsSyncFindsSync0WithWrapping()
 void testThatIsSyncFindsSync1WithWrapping()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = PULSE_PROCESSOR_TIMESTAMP_MAX - (FRAME_LENGTH/2);;
   uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION) & PULSE_PROCESSOR_TIMESTAMP_MAX;;
 
@@ -556,7 +555,7 @@ void testThatIsSyncFindsSync1WithWrapping()
 void testThatIsSyncReturnsFalseIfSync1WasSync0AndTheRealSync0IsReceived()
 {
   // Fixture
-  pulseProcessor_t state = {0};
+  pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
   uint32_t timestamp = state.currentSync0 + FRAME_LENGTH - SYNC_SEPARATION;
 
@@ -621,7 +620,7 @@ void testThatBs0IsReturnedWhenTimeStampIsOneFrameFromPreviousSync0() {
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 0;
 
   // Test
@@ -635,7 +634,7 @@ void testThatBs0IsReturnedWhenTimeStampIsSlightlyLessThanOneFrameFromPreviousSyn
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH - 10;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 0;
 
   // Test
@@ -649,7 +648,7 @@ void testThatBs0IsReturnedWhenTimeStampIsSlightlyMoreThanOneFrameFromPreviousSyn
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + 10;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 0;
 
   // Test
@@ -663,7 +662,7 @@ void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSyncSeparationFromPreviousSy
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 1;
 
   // Test
@@ -677,7 +676,7 @@ void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyLessThanSyncSeparatio
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION - 10;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 1;
 
   // Test
@@ -691,7 +690,7 @@ void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyMoreThanSyncSeparatio
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION + 10;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 1;
 
   // Test
@@ -705,7 +704,7 @@ void testThatBs0IsReturnedWhenTimeStampWraps() {
   // Fixture
   unsigned int baseTime = -1;
   unsigned int timeStamp = baseTime + FRAME_LENGTH;
-  pulseProcessor_t state = {.currentSync0 = baseTime};
+  pulseProcessorV1_t state = {.currentSync0 = baseTime};
   int expected = 0;
 
   // Test

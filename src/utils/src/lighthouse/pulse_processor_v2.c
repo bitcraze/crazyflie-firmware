@@ -213,10 +213,10 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
 bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
     bool anglesMeasured = false;
     pulseProcessorV2SweepBlock_t block;
-    if (processFrame(frameData, &state->pulseWorkspace, &block)) {
+    if (processFrame(frameData, &state->v2.pulseWorkspace, &block)) {
         const uint8_t channel = block.channel;
         if (channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
-            pulseProcessorV2SweepBlock_t* previousBlock = &state->blocksV2[channel];
+            pulseProcessorV2SweepBlock_t* previousBlock = &state->v2.blocksV2[channel];
             if (isBlockPairGood(&block, previousBlock)) {
                 calculateAngles(&block, previousBlock, angles);
 

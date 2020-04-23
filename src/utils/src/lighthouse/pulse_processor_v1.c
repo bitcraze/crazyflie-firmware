@@ -61,51 +61,51 @@
 TESTABLE_STATIC int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time);
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
 
-static void resetPulseHistory(pulseProcessor_t *state) {
-  memset(state->pulseHistoryIdx, 0, sizeof(state->pulseHistoryIdx));
+static void resetPulseHistory(pulseProcessorV1_t *stateV1) {
+  memset(stateV1->pulseHistoryIdx, 0, sizeof(stateV1->pulseHistoryIdx));
 }
 
-static void synchronize(pulseProcessor_t *state, int sensor, uint32_t timestamp, uint32_t width)
+static void synchronize(pulseProcessorV1_t *stateV1, int sensor, uint32_t timestamp, uint32_t width)
 {
-  state->pulseHistory[sensor][state->pulseHistoryIdx[sensor]].timestamp = timestamp;
-  state->pulseHistory[sensor][state->pulseHistoryIdx[sensor]].width = width;
+  stateV1->pulseHistory[sensor][stateV1->pulseHistoryIdx[sensor]].timestamp = timestamp;
+  stateV1->pulseHistory[sensor][stateV1->pulseHistoryIdx[sensor]].width = width;
 
-  state->pulseHistoryIdx[sensor] += 1;
+  stateV1->pulseHistoryIdx[sensor] += 1;
 
   // As soon as one of the history buffers is full, run the synchronization algorithm!
-  if (state->pulseHistoryIdx[sensor] >= PULSE_PROCESSOR_HISTORY_LENGTH) {
+  if (stateV1->pulseHistoryIdx[sensor] >= PULSE_PROCESSOR_HISTORY_LENGTH) {
     static uint32_t sync0Times[PULSE_PROCESSOR_N_SENSORS];
     size_t syncTimeCount = 0;
 
     for (int i=0; i<PULSE_PROCESSOR_N_SENSORS; i++) {
-      const int bsSyncsFound = findSyncTime(state->pulseHistory[i], &sync0Times[syncTimeCount]);
-      if (bsSyncsFound >= state->basestationsSynchronizedCount) {
-        state->basestationsSynchronizedCount = bsSyncsFound;
+      const int bsSyncsFound = findSyncTime(stateV1->pulseHistory[i], &sync0Times[syncTimeCount]);
+      if (bsSyncsFound >= stateV1->basestationsSynchronizedCount) {
+        stateV1->basestationsSynchronizedCount = bsSyncsFound;
         syncTimeCount += 1;
       }
 
       uint32_t validSync0Time = 0;
       if (getSystemSyncTime(sync0Times, syncTimeCount, &validSync0Time)) {
-        state->synchronized = true;
-        state->currentSync0 = validSync0Time;
-        state->lastSync = validSync0Time;
+        stateV1->synchronized = true;
+        stateV1->currentSync0 = validSync0Time;
+        stateV1->lastSync = validSync0Time;
         break;
       }
     }
 
-    resetPulseHistory(state);
+    resetPulseHistory(stateV1);
   }
 }
 
-static bool isSweep(pulseProcessor_t *state, unsigned int timestamp, int width)
+static bool isSweep(pulseProcessorV1_t *stateV1, unsigned int timestamp, int width)
 {
-  uint32_t delta = TS_DIFF(timestamp, state->lastSync);
+  uint32_t delta = TS_DIFF(timestamp, stateV1->lastSync);
   return ((delta > SYNC_MAX_SEPARATION) && (delta < (FRAME_LENGTH - (2*SYNC_MAX_SEPARATION)))) || (width < SWEEP_MAX_WIDTH);
 }
 
-TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp)
+TESTABLE_STATIC bool isSync(pulseProcessorV1_t *stateV1, unsigned int timestamp)
 {
-  uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
+  uint32_t delta = TS_DIFF(timestamp, stateV1->currentSync0);
   int deltaModulo = delta % FRAME_LENGTH;
 
   // We expect a modulo close to 0, detect and handle wrapping around FRAME_LENGTH
@@ -129,10 +129,10 @@ TESTABLE_STATIC bool isSync(pulseProcessor_t *state, unsigned int timestamp)
  * @param timestamp Timestamp of the syn to process
  * @return 0 for Sync0, 1 for Sync1
  */
-TESTABLE_STATIC int getBaseStationId(pulseProcessor_t *state, unsigned int timestamp) {
+TESTABLE_STATIC int getBaseStationId(pulseProcessorV1_t *stateV1, unsigned int timestamp) {
   int baseStation = 0;
 
-  uint32_t delta = TS_DIFF(timestamp, state->currentSync0);
+  uint32_t delta = TS_DIFF(timestamp, stateV1->currentSync0);
   int deltaModulo = delta % FRAME_LENGTH;
 
   // We expect a modulo close to 0, detect and handle wrapping around FRAME_LENGTH
@@ -166,39 +166,38 @@ static int getOotxDataBit(int width)
   return (((width-SYNC_BASE_WIDTH)/SYNC_DIVIDER)&0x02) >> 1;
 }
 
-static void storeSweepData(pulseProcessor_t *state, int sensor, unsigned int timestamp) {
-  if (state->sweeps[sensor].state == sweepStorageStateWaiting) {
-    state->sweeps[sensor].timestamp = timestamp;
-    state->sweeps[sensor].state = sweepStorageStateValid;
+static void storeSweepData(pulseProcessorV1_t *stateV1, int sensor, unsigned int timestamp) {
+  if (stateV1->sweeps[sensor].state == sweepStorageStateWaiting) {
+    stateV1->sweeps[sensor].timestamp = timestamp;
+    stateV1->sweeps[sensor].state = sweepStorageStateValid;
   } else {
-    state->sweeps[sensor].state = sweepStorageStateError;
+    stateV1->sweeps[sensor].state = sweepStorageStateError;
   }
 
-  state->sweepDataStored = true;
+  stateV1->sweepDataStored = true;
 }
 
-static void resetSweepData(pulseProcessor_t *state) {
+static void resetSweepData(pulseProcessorV1_t *stateV1) {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    state->sweeps[sensor].state = sweepStorageStateWaiting;
+    stateV1->sweeps[sensor].state = sweepStorageStateWaiting;
   }
-  state->sweepDataStored = false;
+  stateV1->sweepDataStored = false;
 }
 
-static void resetSynchronization(pulseProcessor_t *state)
-{
-  resetSweepData(state);
-  state->synchronized = false;
+static void resetSynchronization(pulseProcessorV1_t *stateV1) {
+  resetSweepData(stateV1);
+  stateV1->synchronized = false;
 }
 
-static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t* result, int *baseStation, int *axis) {
+static bool processPreviousFrame(pulseProcessorV1_t *stateV1, pulseProcessorResult_t* result, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
-  if (state->sweepDataStored) {
+  if (stateV1->sweepDataStored) {
     for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-      if (state->sweeps[sensor].state == sweepStorageStateValid) {
-        int delta = TS_DIFF(state->sweeps[sensor].timestamp, state->currentSync);
+      if (stateV1->sweeps[sensor].state == sweepStorageStateValid) {
+        int delta = TS_DIFF(stateV1->sweeps[sensor].timestamp, stateV1->currentSync);
         if (delta < FRAME_LENGTH) {
-          float frameWidth = state->frameWidth[state->currentBaseStation][state->currentAxis];
+          float frameWidth = stateV1->frameWidth[stateV1->currentBaseStation][stateV1->currentAxis];
 
           if ((frameWidth < FRAME_WIDTH_MIN) || (frameWidth > FRAME_WIDTH_MAX)) {
             return false;
@@ -207,11 +206,11 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
           float center = frameWidth/4.0f;
           float angle = (delta - center)*2*(float)M_PI/frameWidth;
 
-          *baseStation = state->currentBaseStation;
-          *axis = state->currentAxis;
+          *baseStation = stateV1->currentBaseStation;
+          *axis = stateV1->currentAxis;
 
-          pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurements[sensor].baseStatonMeasurements[state->currentBaseStation];
-          bsMeasurement->angles[state->currentAxis] = angle;
+          pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurements[sensor].baseStatonMeasurements[stateV1->currentBaseStation];
+          bsMeasurement->angles[stateV1->currentAxis] = angle;
           bsMeasurement->validCount++;
 
           anglesMeasured = true;
@@ -219,46 +218,46 @@ static bool processPreviousFrame(pulseProcessor_t *state, pulseProcessorResult_t
       }
     }
 
-    resetSweepData(state);
+    resetSweepData(stateV1);
   }
 
   return anglesMeasured;
 }
 
-static void storeSyncData(pulseProcessor_t *state, int baseStation, unsigned int timestamp, unsigned int width) {
+static void storeSyncData(pulseProcessorV1_t *stateV1, int baseStation, unsigned int timestamp, unsigned int width) {
   if (0 == baseStation) {
-    state->currentSync0 = timestamp;
-    state->currentSync0Width = width;
+    stateV1->currentSync0 = timestamp;
+    stateV1->currentSync0Width = width;
     if (getAxis(width) == sweepDirection_x) {
-      uint32_t prevSync0X = state->currentSync0X;
-      state->currentSync0X = timestamp;
-      state->frameWidth[0][0] = TS_DIFF(state->currentSync0X, prevSync0X);
+      uint32_t prevSync0X = stateV1->currentSync0X;
+      stateV1->currentSync0X = timestamp;
+      stateV1->frameWidth[0][0] = TS_DIFF(stateV1->currentSync0X, prevSync0X);
     } else {
-      uint32_t prevSync0Y = state->currentSync0Y;
-      state->currentSync0Y = timestamp;
-      state->frameWidth[0][1] = TS_DIFF(state->currentSync0Y, prevSync0Y);
+      uint32_t prevSync0Y = stateV1->currentSync0Y;
+      stateV1->currentSync0Y = timestamp;
+      stateV1->frameWidth[0][1] = TS_DIFF(stateV1->currentSync0Y, prevSync0Y);
     }
   } else {
-    state->currentSync1Width = width;
+    stateV1->currentSync1Width = width;
     if (getAxis(width) == sweepDirection_x) {
-      uint32_t prevSync1X = state->currentSync1X;
-      state->currentSync1X = timestamp;
-      state->frameWidth[1][0] = TS_DIFF(state->currentSync1X, prevSync1X);
+      uint32_t prevSync1X = stateV1->currentSync1X;
+      stateV1->currentSync1X = timestamp;
+      stateV1->frameWidth[1][0] = TS_DIFF(stateV1->currentSync1X, prevSync1X);
     } else {
-      uint32_t prevSync1Y = state->currentSync1Y;
-      state->currentSync1Y = timestamp;
-      state->frameWidth[1][1] = TS_DIFF(state->currentSync1Y, prevSync1Y);
+      uint32_t prevSync1Y = stateV1->currentSync1Y;
+      stateV1->currentSync1Y = timestamp;
+      stateV1->frameWidth[1][1] = TS_DIFF(stateV1->currentSync1Y, prevSync1Y);
     }
 
-    state->currentSync0 = TS_DIFF(timestamp, SYNC_SEPARATION);
+    stateV1->currentSync0 = TS_DIFF(timestamp, SYNC_SEPARATION);
   }
 
-  state->lastSync = timestamp;
+  stateV1->lastSync = timestamp;
 
   if (isSweepActiveThisFrame(width)) {
-    state->currentBaseStation = baseStation;
-    state->currentAxis = getAxis(width);
-    state->currentSync = timestamp;
+    stateV1->currentBaseStation = baseStation;
+    stateV1->currentAxis = getAxis(width);
+    stateV1->currentSync = timestamp;
   }
 }
 
@@ -286,12 +285,12 @@ static void printBSInfo(struct ootxDataFrame_s *frame)
 
 static void decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
   if (!state->bsCalibration[0].valid &&
-      ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->currentSync0Width))) {
+      ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->v1.currentSync0Width))) {
     printBSInfo(&state->ootxDecoder0.frame);
     lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder0.frame);
   }
   if (!state->bsCalibration[1].valid &&
-      ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->currentSync1Width))) {
+      ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->v1.currentSync1Width))) {
     printBSInfo(&state->ootxDecoder1.frame);
     lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder1.frame);
   }
@@ -299,25 +298,26 @@ static void decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
 
 static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
   bool anglesMeasured = false;
+  pulseProcessorV1_t* stateV1 = &state->v1;
 
-  if (isNewSync(timestamp, state->lastSync)) {
-    if (isSync(state, timestamp)) {
-      anglesMeasured = processPreviousFrame(state, angles, baseStation, axis);
+  if (isNewSync(timestamp, stateV1->lastSync)) {
+    if (isSync(stateV1, timestamp)) {
+      anglesMeasured = processPreviousFrame(stateV1, angles, baseStation, axis);
 
       if (anglesMeasured) {
         decodeAndApplyBaseStationCalibrationData(state);
       }
 
-      int baseStation = getBaseStationId(state, timestamp);
+      int baseStation = getBaseStationId(stateV1, timestamp);
 
-      if (baseStation == 1 && state->basestationsSynchronizedCount < 2) {
-        resetSynchronization(state);
+      if (baseStation == 1 && stateV1->basestationsSynchronizedCount < 2) {
+        resetSynchronization(stateV1);
       } else {
-        storeSyncData(state, baseStation, timestamp, width);
+        storeSyncData(stateV1, baseStation, timestamp, width);
       }
     } else {
       // Expected a sync but something is wrong, re-synchronize.
-      resetSynchronization(state);
+      resetSynchronization(stateV1);
     }
   }
 
@@ -327,8 +327,8 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
 static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
-  if (isSweep(state, timestamp, width)) {
-    storeSweepData(state, sensor, timestamp);
+  if (isSweep(&state->v1, timestamp, width)) {
+    storeSweepData(&state->v1, sensor, timestamp);
   } else {
     anglesMeasured = processSync(state, timestamp, width, angles, baseStation, axis);
   }
@@ -341,8 +341,8 @@ bool pulseProcessorV1ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
 {
   bool anglesMeasured = false;
 
-  if (!state->synchronized) {
-    synchronize(state, frameData->sensor, frameData->timestamp, frameData->width);
+  if (!state->v1.synchronized) {
+    synchronize(&state->v1, frameData->sensor, frameData->timestamp, frameData->width);
   } else {
     anglesMeasured = processWhenSynchronized(state, frameData->sensor, frameData->timestamp, frameData->width, angles, baseStation, axis);
   }
