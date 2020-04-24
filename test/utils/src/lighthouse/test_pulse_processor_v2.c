@@ -472,18 +472,17 @@ void testThatOnlyOneSlowBitsPerRevolutionIsProcessed2() {
     TEST_ASSERT_EQUAL(1, nrOfCallsToOotxDecoderProcessBit);
 }
 
-// Disabled until the contents of the calibration data for LH2 has been investigated
-// void testThatFullSlowbitMessageIsPassedOnAsCalibrationData() {
-//     // Fixture
-//     ootxDecoderProcessBit_IgnoreAndReturn(true);
-//     lighthouseCalibrationInitFromFrame_Expect(&state.bsCalibration[SB_CHANNEL], &state.ootxDecoder[SB_CHANNEL].frame);
+void testThatFullSlowbitMessageIsPassedOnAsCalibrationData() {
+    // Fixture
+    ootxDecoderProcessBit_IgnoreAndReturn(true);
+    lighthouseCalibrationInitFromFrame_Expect(&state.bsCalibration[SB_CHANNEL], &state.ootxDecoder[SB_CHANNEL].frame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Assert
-//     // Verified in mocks
-// }
+    // Assert
+    // Verified in mocks
+}
 
 
 // Helpers ------------------------------------------------

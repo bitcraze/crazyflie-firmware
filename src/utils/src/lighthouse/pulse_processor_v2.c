@@ -253,11 +253,24 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
     return true;
 }
 
-// static void printBSInfo(struct ootxDataFrame_s *frame) {
-//   DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
+static void printBSInfo(struct ootxDataFrame_s *frame) {
+  DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
+//   DEBUG_PRINT("  tilt0: %f\n", (double)frame->tilt0);
 //   DEBUG_PRINT("  phase0: %f\n", (double)frame->phase0);
+//   DEBUG_PRINT("  curve0: %f\n", (double)frame->curve0);
+//   DEBUG_PRINT("  gibphase0: %f\n", (double)frame->gibphase0);
+//   DEBUG_PRINT("  gibmag0: %f\n", (double)frame->gibmag0);
+//   DEBUG_PRINT("  ogeephase0: %f\n", (double)frame->ogeephase0);
+//   DEBUG_PRINT("  ogeemag0: %f\n", (double)frame->ogeemag0);
+
+//   DEBUG_PRINT("  tilt1: %f\n", (double)frame->tilt1);
 //   DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
-// }
+//   DEBUG_PRINT("  curve1: %f\n", (double)frame->curve1);
+//   DEBUG_PRINT("  gibphase1: %f\n", (double)frame->gibphase1);
+//   DEBUG_PRINT("  gibmag1: %f\n", (double)frame->gibmag1);
+//   DEBUG_PRINT("  ogeephase1: %f\n", (double)frame->ogeephase1);
+//   DEBUG_PRINT("  ogeemag1: %f\n", (double)frame->ogeemag1);
+}
 
 TESTABLE_STATIC void handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData) {
     if (frameData->channelFound && frameData->channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
@@ -270,8 +283,8 @@ TESTABLE_STATIC void handleCalibrationData(pulseProcessor_t *state, const pulseP
                 if (TS_ABS_DIFF_LARGER_THAN(timestamp0, prevTimestamp0, MIN_TICKS_BETWEEN_SLOW_BITS)) {
                     bool fullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowbit);
                     if (fullMessage) {
-                    //     printBSInfo(&state->ootxDecoder[channel].frame);
-                    //     lighthouseCalibrationInitFromFrame(&state->bsCalibration[channel], &state->ootxDecoder[channel].frame);
+                        printBSInfo(&state->ootxDecoder[channel].frame);
+                        lighthouseCalibrationInitFromFrame(&state->bsCalibration[channel], &state->ootxDecoder[channel].frame);
                     }
                 }
 
@@ -306,6 +319,8 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
 }
 
 bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
-    handleCalibrationData(state, frameData);
+    // Calibration data disabled until we understand how to use it. Decoding seems to work though.
+    // handleCalibrationData(state, frameData);
+
     return handleAngles(state, frameData, angles, baseStation, axis);
 }
