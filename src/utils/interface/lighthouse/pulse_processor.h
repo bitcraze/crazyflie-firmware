@@ -195,6 +195,9 @@ typedef struct {
 
   // Latest block from each base station. Used to pair both blocks (sweeps) from one rotaion of the rotor.
   pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_BASE_STATIONS];
+
+  // Timestamp of the rotor zero position for the latest processed slowbit
+  uint32_t ootxTimestamps[PULSE_PROCESSOR_N_BASE_STATIONS];
 } pulseProcessorV2_t;
 
 typedef struct pulseProcessor_s {

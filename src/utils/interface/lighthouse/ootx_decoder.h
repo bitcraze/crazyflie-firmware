@@ -32,7 +32,7 @@
 #include <stdint.h>
 
 
-#define OOTX_MAX_FRAME_LENGTH 40
+#define OOTX_MAX_FRAME_LENGTH 43
 
 // Content from https://github.com/nairol/LighthouseRedox/blob/master/docs/Base%20Station.md#base-station-info-block
 struct ootxDataFrame_s {
@@ -56,6 +56,7 @@ struct ootxDataFrame_s {
   __fp16 gibmag1;
   uint8_t mode;
   uint8_t faults;
+  // TODO krri Add data for Lighthouse 2
 } __attribute__((packed));
 
 typedef struct ootxDecoderState_s {

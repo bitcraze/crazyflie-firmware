@@ -32,9 +32,11 @@
 #include <math.h>
 #include "math3d.h"
 #include "test_support.h"
+#include "debug.h"
 
 static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
 static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
+static const uint32_t MIN_TICKS_BETWEEN_SLOW_BITS = (887000 / 2) * 8 / 10; // 80 of one revolution
 
 static const uint8_t NO_CHANNEL = 0xff;
 static const int NO_SENSOR = -1;
@@ -251,7 +253,35 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
     return true;
 }
 
-bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
+// static void printBSInfo(struct ootxDataFrame_s *frame) {
+//   DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
+//   DEBUG_PRINT("  phase0: %f\n", (double)frame->phase0);
+//   DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
+// }
+
+TESTABLE_STATIC void handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData) {
+    if (frameData->channelFound && frameData->channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
+        const uint8_t channel = frameData->channel;
+        if (frameData->offset != NO_OFFSET) {
+            if (! state->bsCalibration[channel].valid) {
+                const uint32_t prevTimestamp0 = state->v2.ootxTimestamps[channel];
+                const uint32_t timestamp0 = TS_DIFF(frameData->timestamp, frameData->offset);
+
+                if (TS_ABS_DIFF_LARGER_THAN(timestamp0, prevTimestamp0, MIN_TICKS_BETWEEN_SLOW_BITS)) {
+                    bool fullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowbit);
+                    if (fullMessage) {
+                    //     printBSInfo(&state->ootxDecoder[channel].frame);
+                    //     lighthouseCalibrationInitFromFrame(&state->bsCalibration[channel], &state->ootxDecoder[channel].frame);
+                    }
+                }
+
+                state->v2.ootxTimestamps[channel] = timestamp0;
+            }
+        }
+    }
+}
+
+bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
     bool anglesMeasured = false;
     int nrOfBlocks = processFrame(frameData, &state->v2.pulseWorkspace, &state->v2.blockWorkspace);
     for (int i = 0; i < nrOfBlocks; i++) {
@@ -260,6 +290,7 @@ bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
         if (channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
             pulseProcessorV2SweepBlock_t* previousBlock = &state->v2.blocks[channel];
             if (isBlockPairGood(block, previousBlock)) {
+                // Emulate output from V1 pulse processor
                 calculateAngles(block, previousBlock, angles);
 
                 *baseStation = channel;
@@ -272,4 +303,9 @@ bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
     }
 
     return anglesMeasured;
+}
+
+bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
+    handleCalibrationData(state, frameData);
+    return handleAngles(state, frameData, angles, baseStation, axis);
 }
