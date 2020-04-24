@@ -7,16 +7,17 @@
 
 // Functions under test
 void clearWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
-bool processBlock(const pulseProcessorV2PulseWorkspace_t* pulseWorkspace, pulseProcessorV2SweepBlock_t* block);
-bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest, pulseProcessorV2SweepBlock_t* storage);
-
+bool storePulse(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
+void augmentFramesInWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
+bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], pulseProcessorV2SweepBlock_t* block);
+bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest, const pulseProcessorV2SweepBlock_t* storage);
 
 // Helpers
-static void allSensorsSet();
-static void setChannel(uint8_t channel, uint8_t slowbit);
-static void setOffset();
+static void addDefaultFrames();
+static void setChannel(uint8_t channel);
 static void setOffsetBase(uint32_t ts_base);
 static void setUpOkBlocks(pulseProcessorV2SweepBlock_t* newBlock, pulseProcessorV2SweepBlock_t* storageBlock);
+static void addFrameToWs(uint8_t sensor, uint32_t timestamp, uint32_t offset, bool channelFound, uint8_t channel);
 
 static pulseProcessorV2PulseWorkspace_t ws;
 static pulseProcessorV2SweepBlock_t block;
@@ -26,11 +27,20 @@ const uint32_t OFFSET_BASE = 100000;
 const uint32_t TIMESTAMP_BASE = 2000000;
 const uint32_t TIMESTAMP_STEP = 1000;
 
+const uint32_t A_TS = 4711;
+const uint32_t AN_OFFSET = 17;
+
+// The order the sensors are hit by the beam
+const uint8_t SWEEP_SENS_0 = 3;
+const uint8_t SWEEP_SENS_1 = 1;
+const uint8_t SWEEP_SENS_2 = 0;
+const uint8_t SWEEP_SENS_3 = 2;
+
 void setUp(void) {
     clearWorkspace(&ws);
-    allSensorsSet();
-    setChannel(0, 0);
-    setOffset();
+    addDefaultFrames();
+
+    block.channel = 0;
 }
 
 void testThatWorkspaceIsCleared() {
@@ -40,15 +50,106 @@ void testThatWorkspaceIsCleared() {
     clearWorkspace(&ws);
 
     // Assert
-    TEST_ASSERT_FALSE(ws.sensors[2].isSet);
+    TEST_ASSERT_EQUAL_INT(0, ws.slotsUsed);
+}
+
+void testThatAPulseIsStoredInTheWorkspace() {
+    // Fixture
+    clearWorkspace(&ws);
+
+    pulseProcessorFrame_t frame;
+
+    uint8_t expected = 7;
+    frame.channel = expected;
+
+    // Test
+    bool actual = storePulse(&frame, &ws);
+
+    // Assert
+    TEST_ASSERT_TRUE(actual);
+    TEST_ASSERT_EQUAL_INT(1, ws.slotsUsed);
+    TEST_ASSERT_EQUAL_UINT8(expected, ws.slots[0].channel);
+}
+
+void testThatAPulseIsRejectedWhenWorkspaceIsFull() {
+    // Fixture
+    clearWorkspace(&ws);
+
+    pulseProcessorFrame_t frame;
+
+    for (int i = 0; i < PULSE_PROCESSOR_N_WORKSPACE; i++) {
+        bool actual = storePulse(&frame, &ws);
+        TEST_ASSERT_TRUE(actual);
+    }
+
+    // Test
+    bool actual = storePulse(&frame, &ws);
+
+    // Assert
+    TEST_ASSERT_FALSE(actual);
+}
+
+void testThatCleanFramesAreAugmented() {
+    // Fixture
+    uint8_t expectedChan1 = 2;
+    uint8_t expectedChan2 = 5;
+
+    clearWorkspace(&ws);
+
+    addFrameToWs(0, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(1, A_TS, AN_OFFSET, true, expectedChan1);
+    addFrameToWs(2, A_TS, NO_OFFSET, true, expectedChan1);
+    addFrameToWs(3, A_TS, NO_OFFSET, true, expectedChan1);
+
+    addFrameToWs(0, A_TS, AN_OFFSET, false, 0);
+    addFrameToWs(1, A_TS, AN_OFFSET, true, expectedChan2);
+    addFrameToWs(2, A_TS, AN_OFFSET, true, expectedChan2);
+    addFrameToWs(3, A_TS, AN_OFFSET, true, expectedChan2);
+
+    // Test
+    augmentFramesInWorkspace(&ws);
+
+    // Assert
+    TEST_ASSERT_EQUAL_UINT8(expectedChan1, ws.slots[0].channel);
+    TEST_ASSERT_TRUE(ws.slots[0].channelFound);
+
+    TEST_ASSERT_EQUAL_UINT8(expectedChan2, ws.slots[4].channel);
+    TEST_ASSERT_TRUE(ws.slots[4].channelFound);
+}
+
+void testThatUnCleanFramesAreAugmented() {
+    // Fixture
+    uint8_t expectedChan1 = 2;
+    uint8_t expectedChan2 = 5;
+
+    clearWorkspace(&ws);
+
+    addFrameToWs(0, A_TS, AN_OFFSET, true, 1);
+    addFrameToWs(1, A_TS, AN_OFFSET, false, 0);
+    addFrameToWs(2, A_TS, AN_OFFSET, true, expectedChan1);
+    addFrameToWs(3, A_TS, AN_OFFSET, false, 0);
+
+    addFrameToWs(0, A_TS, AN_OFFSET, false, 0);
+    addFrameToWs(1, A_TS, AN_OFFSET, true, expectedChan2);
+    addFrameToWs(2, A_TS, AN_OFFSET, true, 1);
+    addFrameToWs(3, A_TS, AN_OFFSET, false, 0);
+
+    // Test
+    augmentFramesInWorkspace(&ws);
+
+    // Assert
+    TEST_ASSERT_EQUAL_UINT8(expectedChan1, ws.slots[1].channel);
+    TEST_ASSERT_FALSE(ws.slots[3].channelFound);
+    TEST_ASSERT_EQUAL_UINT8(expectedChan2, ws.slots[4].channel);
+    TEST_ASSERT_FALSE(ws.slots[7].channelFound);
 }
 
 void testThatProcessBlockRejectsMissingSensors() {
     // Fixture
-    ws.sensors[2].isSet = false;
+    ws.slots[2].sensor = SWEEP_SENS_0;
 
     // Test
-    bool actual = processBlock(&ws, &block);
+    bool actual = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
     TEST_ASSERT_FALSE(actual);
@@ -57,10 +158,10 @@ void testThatProcessBlockRejectsMissingSensors() {
 void testThatProcessBlockFindsChannel() {
     // Fixture
     uint8_t expected = 3;
-    setChannel(expected, 0);
+    setChannel(expected);
 
     // Test
-    bool ok = processBlock(&ws, &block);
+    bool ok = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
     uint8_t actual = block.channel;
@@ -68,29 +169,31 @@ void testThatProcessBlockFindsChannel() {
     TEST_ASSERT_TRUE(ok);
 }
 
-void testThatProcessBlockFindsSlowbit() {
+void testThatProcessBlockFindsChannelWhenSomeChannelsAreMissing() {
     // Fixture
-    uint8_t expected = 1;
-    setChannel(0, expected);
+    uint8_t expected = 3;
+    setChannel(expected);
+    ws.slots[2].channelFound = false;
+    ws.slots[3].channelFound = false;
 
     // Test
-    bool ok = processBlock(&ws, &block);
+    bool ok = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
-    uint8_t actual = block.slowbit;
+    uint8_t actual = block.channel;
     TEST_ASSERT_EQUAL_UINT8(expected, actual);
     TEST_ASSERT_TRUE(ok);
 }
 
-void testThatProcessBlockRejectsMissingChannel() {
+void testThatProcessBlockRejectsAllChannelsMissing() {
     // Fixture
-    ws.sensors[0].channelFound = false;
-    ws.sensors[1].channelFound = false;
-    ws.sensors[2].channelFound = false;
-    ws.sensors[3].channelFound = false;
+    ws.slots[0].channelFound = false;
+    ws.slots[1].channelFound = false;
+    ws.slots[2].channelFound = false;
+    ws.slots[3].channelFound = false;
 
     // Test
-    bool actual = processBlock(&ws, &block);
+    bool actual = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
     TEST_ASSERT_FALSE(actual);
@@ -100,25 +203,33 @@ void testThatProcessBlockRejectsMultipleChannels() {
     // Fixture
     uint8_t channel = 3;
 
-    setChannel(channel, 0);
-    ws.sensors[0].channel = channel + 1;
+    setChannel(channel);
+    ws.slots[0].channel = channel + 1;
 
     // Test
-    bool actual = processBlock(&ws, &block);
+    bool actual = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
     TEST_ASSERT_FALSE(actual);
 }
 
-void testThatProcessBlockRejectsMultipleSlowbits() {
+void testThatProcessBlockRejectsMisissingOffset() {
     // Fixture
-    uint8_t channel = 3;
-
-    setChannel(channel, 0);
-    ws.sensors[0].slowbit = 1;
+    ws.slots[1].offset = NO_OFFSET;
 
     // Test
-    bool actual = processBlock(&ws, &block);
+    bool actual = processWorkspaceBlock(&ws.slots[0], &block);
+
+    // Assert
+    TEST_ASSERT_FALSE(actual);
+}
+
+void testThatProcessBlockRejectsMultipleOffsets() {
+    // Fixture
+    ws.slots[0].offset = OFFSET_BASE;
+
+    // Test
+    bool actual = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
     TEST_ASSERT_FALSE(actual);
@@ -129,13 +240,13 @@ void testThatProcessBlockSetsOffsets() {
     setOffsetBase(TIMESTAMP_BASE);
 
     // Test
-    bool ok = processBlock(&ws, &block);
+    bool ok = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP, block.offset[0]);
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE, block.offset[1]);
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP, block.offset[2]);
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 2, block.offset[3]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP, block.offset[SWEEP_SENS_0]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE, block.offset[SWEEP_SENS_1]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP, block.offset[SWEEP_SENS_2]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 2, block.offset[SWEEP_SENS_3]);
 
     TEST_ASSERT_TRUE(ok);
 }
@@ -145,48 +256,28 @@ void testThatProcessBlockSetsOffsetsWhenTimeStampWraps() {
     setOffsetBase(0x00ffff00);
 
     // Test
-    bool ok = processBlock(&ws, &block);
+    bool ok = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP, block.offset[0]);
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE, block.offset[1]);
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP, block.offset[2]);
-    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 2, block.offset[3]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP, block.offset[SWEEP_SENS_0]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE, block.offset[SWEEP_SENS_1]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP, block.offset[SWEEP_SENS_2]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 2, block.offset[SWEEP_SENS_3]);
 
     TEST_ASSERT_TRUE(ok);
 }
 
-void testThatProcessBlockRejectsMisissingOffset() {
+
+void testThatProcessBlockSetsTimestampToStartOfRotation() {
     // Fixture
-    ws.sensors[1].offset = NO_OFFSET;
+    setOffsetBase(TIMESTAMP_BASE);
+    uint32_t expected = TIMESTAMP_BASE - OFFSET_BASE;
 
     // Test
-    bool actual = processBlock(&ws, &block);
+    bool ok = processWorkspaceBlock(&ws.slots[0], &block);
 
     // Assert
-    TEST_ASSERT_FALSE(actual);
-}
-
-void testThatProcessBlockRejectsMultipleOffsets() {
-    // Fixture
-    ws.sensors[0].offset = OFFSET_BASE;
-
-    // Test
-    bool actual = processBlock(&ws, &block);
-
-    // Assert
-    TEST_ASSERT_FALSE(actual);
-}
-
-void testThatProcessBlockSetsTimestampToSensor0Timestamp() {
-    // Fixture
-    uint32_t expected = TIMESTAMP_BASE + TIMESTAMP_STEP;
-
-    // Test
-    bool ok = processBlock(&ws, &block);
-
-    // Assert
-    uint32_t actual = block.timestamp;
+    uint32_t actual = block.timestamp0;
     TEST_ASSERT_EQUAL_UINT32(expected, actual);
     TEST_ASSERT_TRUE(ok);
 }
@@ -228,7 +319,7 @@ void testThatProcessBlockPairRejectsBlocksWhenTooLongApart() {
 
     setUpOkBlocks(&newBlock, &storageBlock);
 
-    newBlock.timestamp = 2000000;
+    newBlock.timestamp0 = newBlock.timestamp0 + 20;
 
     // Test
     bool actual = isBlockPairGood(&newBlock, &storageBlock);
@@ -237,65 +328,53 @@ void testThatProcessBlockPairRejectsBlocksWhenTooLongApart() {
     TEST_ASSERT_FALSE(actual);
 }
 
-void testThatProcessBlockPairRejectsBlocksWhenSweepsInWrongOrder() {
-    // Fixture
-    pulseProcessorV2SweepBlock_t newBlock;
-    pulseProcessorV2SweepBlock_t storageBlock;
-
-    setUpOkBlocks(&newBlock, &storageBlock);
-
-    newBlock.offset[0] = OFFSET_BASE;
-    storageBlock.offset[0] = OFFSET_BASE + 100000;
-
-    // Test
-    bool actual = isBlockPairGood(&newBlock, &storageBlock);
-
-    // Assert
-    TEST_ASSERT_FALSE(actual);
-}
 
 // Helpers ------------------------------------------------
 
-static void allSensorsSet() {
+static void addFrameToWs(uint8_t sensor, uint32_t timestamp, uint32_t offset, bool channelFound, uint8_t channel) {
+    pulseProcessorFrame_t frame;
+
+    frame.sensor = sensor;
+    frame.timestamp = timestamp;
+    frame.offset = offset;
+    frame.channelFound = channelFound;
+    frame.channel = channel;
+
+    storePulse(&frame, &ws);
+}
+
+static void addDefaultFrames() {
+    addFrameToWs(SWEEP_SENS_0, TIMESTAMP_STEP * 0, NO_OFFSET, true, 3);
+    addFrameToWs(SWEEP_SENS_1, TIMESTAMP_STEP * 1, OFFSET_BASE, true, 3);
+    addFrameToWs(SWEEP_SENS_2, TIMESTAMP_STEP * 2, NO_OFFSET, true, 3);
+    addFrameToWs(SWEEP_SENS_3, TIMESTAMP_STEP * 3, NO_OFFSET, true, 3);
+}
+
+static void setChannel(uint8_t channel) {
     for (int i = 0; i < PULSE_PROCESSOR_N_SENSORS; i++) {
-        ws.sensors[i].isSet = true;
+        ws.slots[i].channel = channel;
+        ws.slots[i].channelFound = true;
     }
-}
-
-static void setChannel(uint8_t channel, uint8_t slowbit) {
-    for (int i = 0; i < (PULSE_PROCESSOR_N_SENSORS - 1); i++) {
-        ws.sensors[i].channel = channel;
-        ws.sensors[i].slowbit = slowbit;
-        ws.sensors[i].channelFound = true;
-    }
-
-    ws.sensors[PULSE_PROCESSOR_N_SENSORS - 1].channel = 0;
-    ws.sensors[PULSE_PROCESSOR_N_SENSORS - 1].slowbit = 0;
-    ws.sensors[PULSE_PROCESSOR_N_SENSORS - 1].channelFound = false;
-}
-
-static void setOffset() {
-    setOffsetBase(TIMESTAMP_BASE);
 }
 
 static void setOffsetBase(uint32_t ts_base) {
-    ws.sensors[0].timestamp = ts_base + TIMESTAMP_STEP * 1;
-    ws.sensors[0].offset = NO_OFFSET;
+    ws.slots[0].timestamp = ts_base + TIMESTAMP_STEP * 1;
+    ws.slots[0].offset = NO_OFFSET;
 
-    ws.sensors[1].timestamp = ts_base;
-    ws.sensors[1].offset = OFFSET_BASE;
+    ws.slots[1].timestamp = ts_base;
+    ws.slots[1].offset = OFFSET_BASE;
 
-    ws.sensors[2].timestamp = ts_base - TIMESTAMP_STEP * 1;
-    ws.sensors[2].offset = NO_OFFSET;
+    ws.slots[2].timestamp = ts_base - TIMESTAMP_STEP * 1;
+    ws.slots[2].offset = NO_OFFSET;
 
-    ws.sensors[3].timestamp = ts_base + TIMESTAMP_STEP * 2;
-    ws.sensors[3].offset = NO_OFFSET;
+    ws.slots[3].timestamp = ts_base + TIMESTAMP_STEP * 2;
+    ws.slots[3].offset = NO_OFFSET;
 }
 
 static void setUpOkBlocks(pulseProcessorV2SweepBlock_t* newBlock, pulseProcessorV2SweepBlock_t* storageBlock) {
     storageBlock->channel = 1;
-    storageBlock->timestamp = 1000000;
+    storageBlock->timestamp0 = 1000000;
 
     newBlock->channel = 1;
-    newBlock->timestamp = 1150000;
+    newBlock->timestamp0 = 1000003;
 }

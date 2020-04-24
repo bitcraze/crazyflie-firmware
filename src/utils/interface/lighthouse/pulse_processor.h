@@ -38,17 +38,60 @@
 #define PULSE_PROCESSOR_N_SWEEPS 2
 #define PULSE_PROCESSOR_N_BASE_STATIONS 2
 #define PULSE_PROCESSOR_N_SENSORS 4
+#define PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS 2
+#define PULSE_PROCESSOR_N_WORKSPACE (PULSE_PROCESSOR_N_SENSORS * PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS)
+
 #define PULSE_PROCESSOR_HISTORY_LENGTH 8
 #define PULSE_PROCESSOR_TIMESTAMP_BITWIDTH 24
-#define PULSE_PROCESSOR_TIMESTAMP_MAX ((1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)-1)
+#define PULSE_PROCESSOR_TIMESTAMP_MAX ((1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1)
+#define PULSE_PROCESSOR_TIMESTAMP_BITMASK PULSE_PROCESSOR_TIMESTAMP_MAX
 
 // Utility functions and macros
-// #define TS_DIFF(X, Y) ((X-Y)&((1<<TIMESTAMP_BITWIDTH)-1))
-inline static uint32_t TS_DIFF(uint32_t x, uint32_t y) {
-  const uint32_t bitmask = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1;
-  return (x - y) & bitmask;
+
+/**
+ * @brief Difference of two timestamps, truncated to time stamp bit width (PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)
+ *
+ * @param x A timestamp
+ * @param y A teimstamp
+ * @return x - y, truncated
+ */
+inline static uint32_t TS_DIFF(const uint32_t x, const uint32_t y) {
+  return (x - y) & PULSE_PROCESSOR_TIMESTAMP_BITMASK;
 }
 
+/**
+ * @brief Check if abs(a - b) > limit. Works for timestampa where the bitwidth is PULSE_PROCESSOR_TIMESTAMP_BITWIDTH
+ *
+ * @param a A timestamp
+ * @param b A timestamp
+ * @param limit The minimum difference between a nd b
+ * @return true if abs(a - b) > limit
+ */
+inline static uint32_t TS_ABS_DIFF_LARGER_THAN(const uint32_t a, const uint32_t b, const uint32_t limit) {
+    return TS_DIFF(a + limit, b) > (limit * 2);
+}
+
+
+/**
+ * @brief Data for one pulse, detected by one sensor and decoded by the FPGA on the dack.
+ * Used both for lighthouse V1 and V2.
+ *
+ */
+typedef struct {
+  uint8_t sensor;
+  uint32_t timestamp;
+
+  // V1 base station data --------
+  uint16_t width;
+
+  // V2 base station data --------
+  uint32_t beamData;
+  uint32_t offset;
+  // Channel is zero indexed (0-15) here, while it is one indexed in the base station config (1 - 16)
+  uint8_t channel; // Valid if channelFound is true
+  uint8_t slowbit; // Valid if channelFound is true
+  bool channelFound;
+} pulseProcessorFrame_t;
 
 enum pulseClass_e {unknown, sync0, sync1, sweep};
 
@@ -69,6 +112,10 @@ typedef enum {
 } SweepStorageState_t;
 
 
+/**
+ * @brief Holds data for V1 base station decoding
+ *
+ */
 typedef struct {
   bool synchronized;    // At true if we are currently syncthonized
   int basestationsSynchronizedCount;
@@ -108,21 +155,15 @@ typedef struct {
   bool sweepDataStored;
 } pulseProcessorV1_t;
 
+
 /**
- * @brief Holds data for one sweep and one sensor.
+ * @brief Raw pulse data from the sensors. Data for pulses that are close in time and probably
+ * comes from the same sweep. May contain pulse data from multiple base stations.
  *
  */
 typedef struct {
-    uint32_t timestamp;
-    uint32_t offset;
-    uint8_t channel;
-    uint8_t slowbit;
-    bool channelFound; // Indicates if channel and slowbit are valid
-    bool isSet; // Indicates that the data in this struct has been set
-} pulseProcessorV2Pulse_t;
-
-typedef struct {
-    pulseProcessorV2Pulse_t sensors[PULSE_PROCESSOR_N_SENSORS];
+    pulseProcessorFrame_t slots[PULSE_PROCESSOR_N_WORKSPACE];
+    int slotsUsed;
     uint32_t latestTimestamp;
 } pulseProcessorV2PulseWorkspace_t;
 
@@ -132,25 +173,28 @@ typedef struct {
  */
 typedef struct {
     uint32_t offset[PULSE_PROCESSOR_N_SENSORS];
-    uint32_t timestamp; // Timestamp of sensor 0
+    uint32_t timestamp0; // Timestamp of when the rotor has offset 0 (0 degrees)
     uint8_t channel;
-    uint8_t slowbit;
 } pulseProcessorV2SweepBlock_t;
 
 /**
- * @brief Holds data for the sweeps of one base station
+ * @brief Blocks used when decoding the pulse workspace
  *
  */
 typedef struct {
-    pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_SWEEPS];
-} pulseProcessorV2BaseStation_t;
+    pulseProcessorV2SweepBlock_t blocks[PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS];
+} pulseProcessorV2BlockWorkspace_t;
 
+/**
+ * @brief Holds data for V2 base station decoding
+ *
+ */
 typedef struct {
-    // Raw data for the sensors
   pulseProcessorV2PulseWorkspace_t pulseWorkspace;
+  pulseProcessorV2BlockWorkspace_t blockWorkspace;
 
-  // Refined data for multiple base stations
-  pulseProcessorV2SweepBlock_t blocksV2[PULSE_PROCESSOR_N_BASE_STATIONS];
+  // Latest block from each base station. Used to pair both blocks (sweeps) from one rotaion of the rotor.
+  pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_BASE_STATIONS];
 } pulseProcessorV2_t;
 
 typedef struct pulseProcessor_s {
@@ -183,22 +227,6 @@ typedef struct {
 typedef struct {
   pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
 } pulseProcessorResult_t;
-
-typedef struct {
-  uint8_t sensor;
-  uint32_t timestamp;
-
-  // V1 base station data --------
-  uint16_t width;
-
-  // V2 base station data --------
-  uint32_t beamData;
-  uint32_t offset;
-  // Channel is zero indexed (0-15) here, while it is one indexed in the base station config (1 - 16)
-  uint8_t channel; // Valid if channelFound is true
-  uint8_t slowbit; // Valid if channelFound is true
-  bool channelFound;
-} pulseProcessorFrame_t;
 
 /**
  * @brief Interface for processing of pulse data from the lighthouse
