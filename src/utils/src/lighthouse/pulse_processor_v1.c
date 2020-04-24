@@ -285,14 +285,14 @@ static void printBSInfo(struct ootxDataFrame_s *frame)
 
 static void decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
   if (!state->bsCalibration[0].valid &&
-      ootxDecoderProcessBit(&state->ootxDecoder0, getOotxDataBit(state->v1.currentSync0Width))) {
-    printBSInfo(&state->ootxDecoder0.frame);
-    lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder0.frame);
+      ootxDecoderProcessBit(&state->ootxDecoder[0], getOotxDataBit(state->v1.currentSync0Width))) {
+    printBSInfo(&state->ootxDecoder[0].frame);
+    lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder[0].frame);
   }
   if (!state->bsCalibration[1].valid &&
-      ootxDecoderProcessBit(&state->ootxDecoder1, getOotxDataBit(state->v1.currentSync1Width))) {
-    printBSInfo(&state->ootxDecoder1.frame);
-    lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder1.frame);
+      ootxDecoderProcessBit(&state->ootxDecoder[1], getOotxDataBit(state->v1.currentSync1Width))) {
+    printBSInfo(&state->ootxDecoder[1].frame);
+    lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder[1].frame);
   }
 }
 

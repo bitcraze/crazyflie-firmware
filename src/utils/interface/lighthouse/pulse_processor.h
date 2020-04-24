@@ -208,9 +208,7 @@ typedef struct pulseProcessor_s {
     };
   };
 
-  ootxDecoderState_t ootxDecoder0;
-  ootxDecoderState_t ootxDecoder1;
-
+  ootxDecoderState_t ootxDecoder[PULSE_PROCESSOR_N_BASE_STATIONS];
   lighthouseCalibration_t bsCalibration[PULSE_PROCESSOR_N_BASE_STATIONS];
 } pulseProcessor_t;
 
