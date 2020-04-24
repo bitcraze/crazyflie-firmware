@@ -854,12 +854,24 @@ void sensorsBmi088SpiBmp388Init(void)
 bool sensorsBmi088SpiBmp388Test(void)
 {
   bool testStatus = true;
+  int8_t gyroResult = 0;
 
   if (!isInit)
-    {
-      DEBUG_PRINT("Uninitialized\n");
-      testStatus = false;
-    }
+  {
+    DEBUG_PRINT("Uninitialized\n");
+    testStatus = false;
+  }
+
+  bmi088_perform_gyro_selftest(&gyroResult, &bmi088Dev);
+  if (gyroResult == BMI088_SELFTEST_PASS)
+  {
+    DEBUG_PRINT("BMI088 gyro self-test [OK]\n");
+  }
+  else
+  {
+    DEBUG_PRINT("BMI088 gyro self-test [FAILED]\n");
+    testStatus = false;
+  }
 
   return testStatus;
 }
@@ -1063,7 +1075,33 @@ static bool sensorsFindBiasValue(BiasObj* bias)
 
 bool sensorsBmi088SpiBmp388ManufacturingTest(void)
 {
-  return true;
+  bool testStatus = true;
+  int8_t gyroResult = 0;
+  int8_t accResult = 0;
+
+  bmi088_perform_gyro_selftest(&gyroResult, &bmi088Dev);
+  if (gyroResult == BMI088_SELFTEST_PASS)
+  {
+    DEBUG_PRINT("BMI088 gyro self-test [OK]\n");
+  }
+  else
+  {
+    DEBUG_PRINT("BMI088 gyro self-test [FAILED]\n");
+    testStatus = false;
+  }
+
+  bmi088_perform_accel_selftest(&accResult, &bmi088Dev);
+  if (accResult == BMI088_SELFTEST_PASS)
+  {
+    DEBUG_PRINT("BMI088 acc self-test [OK]\n");
+  }
+  else
+  {
+    DEBUG_PRINT("BMI088 acc self-test [FAILED]\n");
+    testStatus = false;
+  }
+
+  return testStatus;
 }
 
 /**
