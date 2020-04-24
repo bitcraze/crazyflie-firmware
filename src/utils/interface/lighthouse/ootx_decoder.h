@@ -56,7 +56,12 @@ struct ootxDataFrame_s {
   __fp16 gibmag1;
   uint8_t mode;
   uint8_t faults;
-  // TODO krri Add data for Lighthouse 2
+
+  // Only used in LH 2 that uses a longer data block
+  __fp16 ogeephase0;
+  __fp16 ogeephase1;
+  __fp16 ogeemag0;
+  __fp16 ogeemag1;
 } __attribute__((packed));
 
 typedef struct ootxDecoderState_s {
