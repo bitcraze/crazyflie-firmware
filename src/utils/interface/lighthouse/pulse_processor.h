@@ -93,6 +93,12 @@ typedef struct {
   bool channelFound;
 } pulseProcessorFrame_t;
 
+typedef enum {
+    lighthouseBsTypeUnknown = 0,
+    lighthouseBsTypeV1 = 1,
+    lighthouseBsTypeV2 = 2,
+} lighthouseBaseStationType_t;
+
 enum pulseClass_e {unknown, sync0, sync1, sweep};
 
 typedef struct {
@@ -110,7 +116,6 @@ typedef enum {
   sweepStorageStateValid,
   sweepStorageStateError,
 } SweepStorageState_t;
-
 
 /**
  * @brief Holds data for V1 base station decoding
@@ -227,6 +232,7 @@ typedef struct {
 
 typedef struct {
   pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
+  lighthouseBaseStationType_t measurementType;
 } pulseProcessorResult_t;
 
 /**

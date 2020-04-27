@@ -34,14 +34,9 @@
 #include "test_support.h"
 #include "debug.h"
 
-// Calibration data disabled until we understand how to use it. Decoding seems to work though.
-#define USE_CALIBRATION_DATA 0
-
 static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
 static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
-#if USE_CALIBRATION_DATA
 static const uint32_t MIN_TICKS_BETWEEN_SLOW_BITS = (887000 / 2) * 8 / 10; // 80 of one revolution
-#endif
 
 static const uint8_t NO_CHANNEL = 0xff;
 static const int NO_SENSOR = -1;
@@ -221,13 +216,13 @@ static bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV
     return nrOfBlocks;
 }
 
-static void calculateAzimuthElevation(const float firstBeam, const float secondBeam, float* angles) {
+void pulseProcessorV2ConvertToV1Angles(const float v2Angle1, const float v2Angle2, float* v1Angles) {
     const float a120 = M_PI_F * 120.0f / 180.0f;
     const float tan_p_2 = 0.5773502691896258f;   // tan(60 / 2)
 
-    angles[0] = ((firstBeam + secondBeam) / 2.0f) - M_PI_F;
-    float beta = (secondBeam - firstBeam) - a120;
-    angles[1] = atan(sinf(beta / 2.0f) / tan_p_2);
+    v1Angles[0] = ((v2Angle1 + v2Angle2) / 2.0f) - M_PI_F;
+    float beta = (v2Angle2 - v2Angle1) - a120;
+    v1Angles[1] = atan(sinf(beta / 2.0f) / tan_p_2);
 }
 
 static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, const pulseProcessorV2SweepBlock_t* previousBlock, pulseProcessorResult_t* angles) {
@@ -241,8 +236,10 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         float firstBeam = firstOffset * 2 * M_PI_F / period;
         float secondBeam = secondOffset * 2 * M_PI_F / period;
 
-        calculateAzimuthElevation(firstBeam, secondBeam, angles->sensorMeasurements[i].baseStatonMeasurements[channel].angles);
-        angles->sensorMeasurements[i].baseStatonMeasurements[channel].validCount = 2;
+        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurements[i].baseStatonMeasurements[channel];
+        measurement->angles[0] = firstBeam;
+        measurement->angles[1] = secondBeam;
+        measurement->validCount = 2;
     }
 }
 
@@ -258,7 +255,6 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
     return true;
 }
 
-#if USE_CALIBRATION_DATA
 static void printBSInfo(struct ootxDataFrame_s *frame) {
   DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
 //   DEBUG_PRINT("  tilt0: %f\n", (double)frame->tilt0);
@@ -299,7 +295,6 @@ TESTABLE_STATIC void handleCalibrationData(pulseProcessor_t *state, const pulseP
         }
     }
 }
-#endif
 
 bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
     bool anglesMeasured = false;
@@ -310,11 +305,12 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
         if (channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
             pulseProcessorV2SweepBlock_t* previousBlock = &state->v2.blocks[channel];
             if (isBlockPairGood(block, previousBlock)) {
-                // Emulate output from V1 pulse processor
                 calculateAngles(block, previousBlock, angles);
 
                 *baseStation = channel;
                 *axis = sweepDirection_y;
+                angles->measurementType = lighthouseBsTypeV2;
+
                 anglesMeasured = true;
             } else {
                 memcpy(previousBlock, block, sizeof(pulseProcessorV2SweepBlock_t));
@@ -326,9 +322,6 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
 }
 
 bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
-    #if USE_CALIBRATION_DATA
     handleCalibrationData(state, frameData);
-    #endif
-
     return handleAngles(state, frameData, angles, baseStation, axis);
 }

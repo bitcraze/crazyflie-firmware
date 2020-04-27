@@ -46,3 +46,12 @@
  * @return false, no valid result
  */
 bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
+
+/**
+ * @brief Convert Lighthouse v2 angles to Lighthouse V1 angles
+ *
+ * @param v2Angle1 First LH V2 angle
+ * @param v2Angle2 Second LH V2 angle
+ * @param v1Angles The resulting V1 angles
+ */
+void pulseProcessorV2ConvertToV1Angles(const float v2Angle1, const float v2Angle2, float* v1Angles);

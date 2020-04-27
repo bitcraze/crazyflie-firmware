@@ -345,6 +345,7 @@ bool pulseProcessorV1ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
     synchronize(&state->v1, frameData->sensor, frameData->timestamp, frameData->width);
   } else {
     anglesMeasured = processWhenSynchronized(state, frameData->sensor, frameData->timestamp, frameData->width, angles, baseStation, axis);
+    angles->measurementType = lighthouseBsTypeV1;
   }
 
   return anglesMeasured;

@@ -15,7 +15,7 @@ bool storePulse(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWor
 void augmentFramesInWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
 bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], pulseProcessorV2SweepBlock_t* block);
 bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest, const pulseProcessorV2SweepBlock_t* storage);
-// void handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData);
+void handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData);
 
 // Helpers
 static void addDefaultFrames();
@@ -347,145 +347,143 @@ void testThatProcessBlockPairRejectsBlocksWhenTooLongApart() {
     TEST_ASSERT_FALSE(actual);
 }
 
-// Calibration data disabled until we understand how to use it.
+void testThatSlowBitIsProcessed() {
+    // Fixture
+    ootxDecoderProcessBit_ExpectAndReturn(&state.ootxDecoder[SB_CHANNEL], SB_BIT, false);
 
-// void testThatSlowBitIsProcessed() {
-//     // Fixture
-//     ootxDecoderProcessBit_ExpectAndReturn(&state.ootxDecoder[SB_CHANNEL], SB_BIT, false);
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    // Validated in mock
+}
 
-//     // Assert
-//     // Validated in mock
-// }
+void testThatSlowBitIsNotProcessedIfChannelIsMissing() {
+    // Fixture
+    slowbitFrame.channelFound = false;
 
-// void testThatSlowBitIsNotProcessedIfChannelIsMissing() {
-//     // Fixture
-//     slowbitFrame.channelFound = false;
+    setUpOotxDecoderProcessBitCallCounter();
 
-//     setUpOotxDecoderProcessBitCallCounter();
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatSlowBitIsNotProcessedIfChannelIsOutOfBounds() {
+    // Fixture
+    slowbitFrame.channel = PULSE_PROCESSOR_N_BASE_STATIONS + 1;
 
-// void testThatSlowBitIsNotProcessedIfChannelIsOutOfBounds() {
-//     // Fixture
-//     slowbitFrame.channel = PULSE_PROCESSOR_N_BASE_STATIONS + 1;
+    setUpOotxDecoderProcessBitCallCounter();
 
-//     setUpOotxDecoderProcessBitCallCounter();
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatSlowBitIsNotProcessedIfOffsetIsMissing() {
+    // Fixture
+    slowbitFrame.offset = NO_OFFSET;
 
-// void testThatSlowBitIsNotProcessedIfOffsetIsMissing() {
-//     // Fixture
-//     slowbitFrame.offset = NO_OFFSET;
+    setUpOotxDecoderProcessBitCallCounter();
 
-//     setUpOotxDecoderProcessBitCallCounter();
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatSlowBitIsNotProcessedIfThereAlreadyIsCalibrationData() {
+    // Fixture
+    state.bsCalibration[SB_CHANNEL].valid = true;
 
-// void testThatSlowBitIsNotProcessedIfThereAlreadyIsCalibrationData() {
-//     // Fixture
-//     state.bsCalibration[SB_CHANNEL].valid = true;
+    setUpOotxDecoderProcessBitCallCounter();
 
-//     setUpOotxDecoderProcessBitCallCounter();
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatMoreThanOneSlowBitIsProcessed() {
+    // Fixture
+    setUpOotxDecoderProcessBitCallCounter();
 
-// void testThatMoreThanOneSlowBitIsProcessed() {
-//     // Fixture
-//     setUpOotxDecoderProcessBitCallCounter();
+    uint32_t timestamp0 = 1000000;
+    slowbitFrame.offset = 10000;
 
-//     uint32_t timestamp0 = 1000000;
-//     slowbitFrame.offset = 10000;
+    // First Bit
+    slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset;
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // First Bit
-//     slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset;
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Second sweep
+    slowbitFrame.timestamp = slowbitFrame.timestamp + 959000 / 2;
 
-//     // Second sweep
-//     slowbitFrame.timestamp = slowbitFrame.timestamp + 959000 / 2;
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(2, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(2, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatOnlyOneSlowBitPerRevolutionIsProcessed1() {
+    // Fixture
+    setUpOotxDecoderProcessBitCallCounter();
 
-// void testThatOnlyOneSlowBitPerRevolutionIsProcessed1() {
-//     // Fixture
-//     setUpOotxDecoderProcessBitCallCounter();
+    uint32_t timestamp0 = 1000000;
+    // First Sweep
+    slowbitFrame.offset = 10000;
+    slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset + 3;
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     uint32_t timestamp0 = 1000000;
-//     // First Sweep
-//     slowbitFrame.offset = 10000;
-//     slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset + 3;
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Second sweep
+    slowbitFrame.offset = 200000;
+    slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset - 2;
 
-//     // Second sweep
-//     slowbitFrame.offset = 200000;
-//     slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset - 2;
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(1, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(1, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatOnlyOneSlowBitsPerRevolutionIsProcessed2() {
+    // Fixture
+    setUpOotxDecoderProcessBitCallCounter();
 
-// void testThatOnlyOneSlowBitsPerRevolutionIsProcessed2() {
-//     // Fixture
-//     setUpOotxDecoderProcessBitCallCounter();
+    uint32_t timestamp0 = 1000000;
+    // First Sweep
+    slowbitFrame.offset = 10000;
+    slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset - 3;
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     uint32_t timestamp0 = 1000000;
-//     // First Sweep
-//     slowbitFrame.offset = 10000;
-//     slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset - 3;
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Second sweep
+    slowbitFrame.offset = 200000;
+    slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset + 2;
 
-//     // Second sweep
-//     slowbitFrame.offset = 200000;
-//     slowbitFrame.timestamp = timestamp0 + slowbitFrame.offset + 2;
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
+    // Assert
+    TEST_ASSERT_EQUAL(1, nrOfCallsToOotxDecoderProcessBit);
+}
 
-//     // Assert
-//     TEST_ASSERT_EQUAL(1, nrOfCallsToOotxDecoderProcessBit);
-// }
+void testThatFullSlowbitMessageIsPassedOnAsCalibrationData() {
+    // Fixture
+    ootxDecoderProcessBit_IgnoreAndReturn(true);
+    lighthouseCalibrationInitFromFrame_Expect(&state.bsCalibration[SB_CHANNEL], &state.ootxDecoder[SB_CHANNEL].frame);
 
-// void testThatFullSlowbitMessageIsPassedOnAsCalibrationData() {
-//     // Fixture
-//     ootxDecoderProcessBit_IgnoreAndReturn(true);
-//     lighthouseCalibrationInitFromFrame_Expect(&state.bsCalibration[SB_CHANNEL], &state.ootxDecoder[SB_CHANNEL].frame);
+    // Test
+    handleCalibrationData(&state, &slowbitFrame);
 
-//     // Test
-//     handleCalibrationData(&state, &slowbitFrame);
-
-//     // Assert
-//     // Verified in mocks
-// }
+    // Assert
+    // Verified in mocks
+}
 
 
 // Helpers ------------------------------------------------

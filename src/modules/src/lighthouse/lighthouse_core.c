@@ -164,8 +164,21 @@ static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResul
   pulseProcessorClear(angles, basestation);
 }
 
+static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
+  for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; bs++) {
+      pulseProcessorBaseStationMeasuremnt_t* m = &angles->sensorMeasurements[sensor].baseStatonMeasurements[bs];
+      pulseProcessorV2ConvertToV1Angles(m->angles[0], m->angles[1], m->angles);
+    }
+  }
+}
+
 static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
   if (axis == sweepDirection_y) {
+    if (lighthouseBsTypeV2 == angles->measurementType) {
+      // Emulate V1 base stations for now, convert to V1 angles
+      convertV2AnglesToV1Angles(angles);
+    }
     pulseProcessorApplyCalibration(appState, angles, basestation);
 
     switch(estimationMethod) {
