@@ -34,9 +34,14 @@
 #include "test_support.h"
 #include "debug.h"
 
+// Calibration data disabled until we understand how to use it. Decoding seems to work though.
+#define USE_CALIBRATION_DATA 0
+
 static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
 static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
+#if USE_CALIBRATION_DATA
 static const uint32_t MIN_TICKS_BETWEEN_SLOW_BITS = (887000 / 2) * 8 / 10; // 80 of one revolution
+#endif
 
 static const uint8_t NO_CHANNEL = 0xff;
 static const int NO_SENSOR = -1;
@@ -253,6 +258,7 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
     return true;
 }
 
+#if USE_CALIBRATION_DATA
 static void printBSInfo(struct ootxDataFrame_s *frame) {
   DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
 //   DEBUG_PRINT("  tilt0: %f\n", (double)frame->tilt0);
@@ -293,6 +299,7 @@ TESTABLE_STATIC void handleCalibrationData(pulseProcessor_t *state, const pulseP
         }
     }
 }
+#endif
 
 bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
     bool anglesMeasured = false;
@@ -319,8 +326,9 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
 }
 
 bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
-    // Calibration data disabled until we understand how to use it. Decoding seems to work though.
-    // handleCalibrationData(state, frameData);
+    #if USE_CALIBRATION_DATA
+    handleCalibrationData(state, frameData);
+    #endif
 
     return handleAngles(state, frameData, angles, baseStation, axis);
 }
