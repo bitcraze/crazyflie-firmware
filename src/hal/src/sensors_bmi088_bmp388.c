@@ -218,9 +218,9 @@ static void bmi088_ms_delay(uint32_t period)
   vTaskDelay(M2T(period)); // Delay a while to let the device stabilize
 }
 
-static void sensorsGyroGet(Axis3i16* dataOut)
+static uint16_t sensorsGyroGet(Axis3i16* dataOut)
 {
-  bmi088_get_gyro_data((struct bmi088_sensor_data*)dataOut, &bmi088Dev);
+  return bmi088_get_gyro_data((struct bmi088_sensor_data*)dataOut, &bmi088Dev);
 }
 
 static void sensorsAccelGet(Axis3i16* dataOut)
@@ -557,18 +557,24 @@ void sensorsBmi088Bmp388Init(void)
   sensorsTaskInit();
 }
 
-// TODO: Implement proper test
-bool sensorsBmi088Bmp388Test(void)
+static bool gyroSelftest()
 {
   bool testStatus = true;
-  int8_t gyroResult = 0;
 
-  if (!isInit)
+  int i = 3;
+  uint16_t readResult = BMI088_OK;
+  do {
+    // For some reason it often doesn't work first time on the Roadrunner
+    readResult = sensorsGyroGet(&gyroRaw);
+  } while (readResult != BMI088_OK && i-- > 0);
+
+  if ((readResult != BMI088_OK) || (gyroRaw.x == 0 && gyroRaw.y == 0 && gyroRaw.z == 0))
   {
-    DEBUG_PRINT("Uninitialized\n");
+    DEBUG_PRINT("BMI088 gyro returning x=0 y=0 z=0 [FAILED]\n");
     testStatus = false;
   }
 
+  int8_t gyroResult = 0;
   bmi088_perform_gyro_selftest(&gyroResult, &bmi088Dev);
   if (gyroResult == BMI088_SELFTEST_PASS)
   {
@@ -577,6 +583,24 @@ bool sensorsBmi088Bmp388Test(void)
   else
   {
     DEBUG_PRINT("BMI088 gyro self-test [FAILED]\n");
+    testStatus = false;
+  }
+
+  return testStatus;
+}
+
+bool sensorsBmi088Bmp388Test(void)
+{
+  bool testStatus = true;
+
+  if (!isInit)
+  {
+    DEBUG_PRINT("Uninitialized\n");
+    testStatus = false;
+  }
+
+  if (! gyroSelftest())
+  {
     testStatus = false;
   }
 
@@ -782,22 +806,13 @@ static bool sensorsFindBiasValue(BiasObj* bias)
 
 bool sensorsBmi088Bmp388ManufacturingTest(void)
 {
-
   bool testStatus = true;
-  int8_t gyroResult = 0;
-  int8_t accResult = 0;
-
-  bmi088_perform_gyro_selftest(&gyroResult, &bmi088Dev);
-  if (gyroResult == BMI088_SELFTEST_PASS)
+  if (! gyroSelftest())
   {
-    DEBUG_PRINT("BMI088 gyro self-test [OK]\n");
-  }
-  else
-  {
-    DEBUG_PRINT("BMI088 gyro self-test [FAILED]\n");
     testStatus = false;
   }
 
+  int8_t accResult = 0;
   bmi088_perform_accel_selftest(&accResult, &bmi088Dev);
   if (accResult == BMI088_SELFTEST_PASS)
   {
