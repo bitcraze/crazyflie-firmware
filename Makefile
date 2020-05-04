@@ -167,7 +167,7 @@ PROJ_OBJ += range.o app_handler.o static_mem.o
 
 # Stabilizer modules
 PROJ_OBJ += commander.o crtp_commander.o crtp_commander_rpyt.o
-PROJ_OBJ += crtp_commander_generic.o crtp_localization_service.o
+PROJ_OBJ += crtp_commander_generic.o crtp_localization_service.o peer_localization.o
 PROJ_OBJ += attitude_pid_controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += position_estimator_altitude.o position_controller_pid.o position_controller_indi.o
 PROJ_OBJ += estimator.o estimator_complementary.o
