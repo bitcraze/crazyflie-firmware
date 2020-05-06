@@ -43,7 +43,7 @@
 #include "ledring12.h"
 #include "locodeck.h"
 #include "crtp_commander_high_level.h"
-#include "lighthouse.h"
+#include "lighthouse_position_est.h"
 #include "usddeck.h"
 
 #include "console.h"
@@ -594,7 +594,7 @@ static uint8_t handleLighthouseMemWrite(uint32_t memAddr, uint8_t writeLen, uint
     uint8_t* start = (uint8_t*)lighthouseBaseStationsGeometry;
     memcpy(start + memAddr, startOfData, writeLen);
 
-    lightHouseGeometryDataUpdated();
+    lightHousePositionGeometryDataUpdated();
 
     status = STATUS_OK;
   }

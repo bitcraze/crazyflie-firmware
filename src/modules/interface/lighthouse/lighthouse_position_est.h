@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018 Bitcraze AB
+ * Copyright (C) 2019 - 2020 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,23 +22,22 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * clockCorrectionEngine.h - utitlity for keeping track of clock drift
- * in UWB positioning system.
+ * lighthouse_position_est.h - position estimaton for the lighthouse system
  */
 
-#ifndef clockCorrectionEngine_h
-#define clockCorrectionEngine_h
+#pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
+#include "pulse_processor.h"
+#include "lighthouse_geometry.h"
 
-typedef struct {
-  double clockCorrection;
-  unsigned int clockCorrectionBucket;
-} clockCorrectionStorage_t;
 
-double clockCorrectionEngineGet(const clockCorrectionStorage_t* storage);
-double clockCorrectionEngineCalculate(const uint64_t new_t_in_cl_reference, const uint64_t old_t_in_cl_reference, const uint64_t new_t_in_cl_x, const uint64_t old_t_in_cl_x, const uint64_t mask);
-bool clockCorrectionEngineUpdate(clockCorrectionStorage_t* storage, const double clockCorrectionCandidate);
+extern baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
 
-#endif /* clockCorrectionEngine_h */
+/**
+ * @brief Call when the lighthouseBaseStationsGeometry data has been updated
+ * to recalculate cached data
+ */
+void lightHousePositionGeometryDataUpdated();
+
+void lighthousePositionEstimatePoseCrossingBeams(pulseProcessorResult_t* angles, int baseStation);
+void lighthousePositionEstimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation);

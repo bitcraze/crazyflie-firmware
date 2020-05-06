@@ -95,17 +95,16 @@ static void correct(const lighthouseCalibration_t* calib, const float * angle, f
 }
 #endif
 
-void lighthouseCalibrationApply(lighthouseCalibration_t* calib, float rawAngles[2], float correctedAngles[2])
-{
-  if (calib->valid) {
-    #ifdef USE_SIMPLE_CALIBRATION
-    correctedAngles[0] = rawAngles[0] + calib->axis[0].phase;
-    correctedAngles[1] = rawAngles[1] + calib->axis[1].phase;
-    #else
-    correct(calib, rawAngles, correctedAngles);
-    #endif
-  } else {
-    correctedAngles[0] = rawAngles[0];
-    correctedAngles[1] = rawAngles[1];
-  }
+void lighthouseCalibrationApply(const lighthouseCalibration_t* calib, const float rawAngles[2], float correctedAngles[2]) {
+  #ifdef USE_SIMPLE_CALIBRATION
+  correctedAngles[0] = rawAngles[0] + calib->axis[0].phase;
+  correctedAngles[1] = rawAngles[1] + calib->axis[1].phase;
+  #else
+  correct(calib, rawAngles, correctedAngles);
+  #endif
+}
+
+void lighthouseCalibrationApplyNothing(const float rawAngles[2], float correctedAngles[2]) {
+  correctedAngles[0] = rawAngles[0];
+  correctedAngles[1] = rawAngles[1];
 }

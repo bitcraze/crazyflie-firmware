@@ -33,14 +33,4 @@
 #ifndef __LIGHTHOUSE_H__
 #define __LIGHTHOUSE_H__
 
-#include "lighthouse_geometry.h"
-
-extern baseStationGeometry_t lighthouseBaseStationsGeometry[2];
-
-/**
- * @brief Call when the lighthouseBaseStationsGeometry data has been updated
- * to recalculate cached data
- */
-void lightHouseGeometryDataUpdated();
-
 #endif // __LIGHTHOUSE_H__

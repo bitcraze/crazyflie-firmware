@@ -25,10 +25,16 @@ void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct o
 /**
  * @brief Apply basestation calibration to the two received angles
  *
- * Only applies calibration if valid is true.
- *
  * @param calib Calibration object to use
  * @param rawAngles i/j raw angles measured
  * @param correctedAngles i/j corrected angles after applying calibration
  */
-void lighthouseCalibrationApply(lighthouseCalibration_t* calib, float rawAngles[2], float correctedAngles[2]);
+void lighthouseCalibrationApply(const lighthouseCalibration_t* calib, const float rawAngles[2], float correctedAngles[2]);
+
+/**
+ * @brief Apply no basestation calibration to the two received angles, that is copy the raw angles
+ *
+ * @param rawAngles i/j raw angles measured
+ * @param correctedAngles i/j will be same as the raw angles
+ */
+void lighthouseCalibrationApplyNothing(const float rawAngles[2], float correctedAngles[2]);

@@ -312,8 +312,8 @@ def sanity_check(position_cf):
     max_pos = 10.0
     for coord in position_cf:
         if (abs(coord) > max_pos):
-            raise Exception("Base station position seems to be unreasonable!")
-
+            return False
+    return True
 
 ##################################################
 
@@ -341,8 +341,13 @@ with SyncCrazyflie(uri, cf=cf) as scf:
         rvec_start, tvec_start = calc_initial_estimate(sensor_sweeps)
         geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
         rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
+
+        if not sanity_check(position_cf):
+            position_cf = [0, 0, 0]
+            rotation_cf = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+            print("Could not find valid solution for base station ", bs)
+
         print_geo(rotation_cf, position_cf)
-        sanity_check(position_cf)
         geometries.append([rotation_cf, position_cf])
 
     if args.write:

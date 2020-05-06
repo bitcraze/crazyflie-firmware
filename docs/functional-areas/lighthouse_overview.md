@@ -13,7 +13,7 @@ This page contains information on how to work with the deck during development.
 
 The lighthouse deck allows to use the HTC-Vive/SteamVR lighthouse tracking system to fly Crazyflies autonomously. The system works with one or two Lighthouse V1 base stations (two recommended).
 
-Your computer must have Python 3 64Bit installed and in the path in order to be able to run the required scripts. After everything is setup, the computer is not required anymore: the Crazyflie will autonomously estimate its position from the lighthouse signals.
+After everything is setup, the computer is not required anymore: the Crazyflie will autonomously estimate its position from the lighthouse signals.
 
 In order to setup the system you must also be able to compile a custom firmware for your Crazyflie and to program your Crazyflie 2.X. To do so you can follow the [Getting started with Crazyflie 2.X](https://www.bitcraze.io/getting-started-with-the-crazyflie-2-0/) and [Getting started with development](https://www.bitcraze.io/getting-started-with-development/) guides.
 
@@ -63,7 +63,7 @@ The output from the script should look something like:
         {.origin = {0.044224, 3.075050, 3.035368, }, .mat = {{-0.367098, 0.847259, -0.383915, }, {-0.658670, -0.528202, -0.535869, }, {-0.656805, 0.056157, 0.751967, }, }},{% endraw %}
 
 
-Copy the last two lines and, on the computer or virtual machine you use for Crazyflie development, paste them into the file 'src/deck/drivers/src/lighthouse.c'. They should replace the contents of lighthouseBaseStationsGeometry[].
+Copy the last two lines and, on the computer or virtual machine you use for Crazyflie development, paste them into the file 'src/modules/src/lighthouse/lighthouse_position_est.c'. They should replace the contents of lighthouseBaseStationsGeometry[].
 
         baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
             {% raw %}{.origin = {0.929796, -1.359615, 3.187089, }, .mat = {{-0.621841, -0.513463, -0.591329, }, {0.451725, -0.851970, 0.264749, }, {-0.639733, -0.102486, 0.761734, }, }},
@@ -72,7 +72,9 @@ Copy the last two lines and, on the computer or virtual machine you use for Craz
 
 The .origin part represents the position of each base station, while the .mat part is the orientation (rotation matrix). Check that the positions seems reasonable.
 
-Recompile and flash the firmware again. The Crazyflie is now ready to be used!
+Re-compile and flash the firmware again. The Crazyflie is now ready to be used!
+
+It is also possible to use the ```--write``` flag to write the geometry data to the Crazyflie via radio. Please note that the data is not stored permanently in the Crazyflie and will be gone when restarted.
 
 ### Startup position
 The Lighthouse deck has 4 receivers and can recover its orientation. The Crazyflie can be started in any orientation when using the lighthouse system.
@@ -101,3 +103,11 @@ The lighthouse deck is released in early access which means that there is a coup
 * Position/gemometry handling will be improved in the future.
 * Since the deck only has horizontal sensors, the angle at which the base-stations are seen cannot be too shallow. This means that you should fly at least 40cm bellow the base-stations and that the base-stations should be placed above the flight space. This is a hardware limitation of the current deck.
 * The Crazyflie currently only supports Vive base station V1. Base station V1 are limited to two base-station per system. Base-station V2 does not have this limitation and so allows to cover much larger space. Support for the base station V2 is currently being worked-on and should be available in a future firmware update.
+
+### Experimental base station V2 support
+
+There is limited and experimenatal support for V2 base stations.
+
+* 1 and 2 base stations are supported
+* The base stations must be configured to use channel 1 and 2
+* Calibration data is not read from the base stations and there might be fairly large errors in the angle calculations. For this reason it is likely that the crossing beam positioning method will work better than the default sweep method when using 2 base stations. Change by setting the ```lighthouse.method``` parameter to ```0```.

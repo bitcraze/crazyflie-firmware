@@ -1,10 +1,38 @@
+/**
+ * ,---------,       ____  _ __
+ * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
+ * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ *
+ * Crazyflie control firmware
+ *
+ * Copyright (C) 2019 Bitcraze AB
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, in version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ *
+ * ootx_decoder.h - lighthouse positioning ootx (slow) data receiver
+ *
+ */
+
 #pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
 
 
-#define OOTX_MAX_FRAME_LENGTH 40
+#define OOTX_MAX_FRAME_LENGTH 43
 
 // Content from https://github.com/nairol/LighthouseRedox/blob/master/docs/Base%20Station.md#base-station-info-block
 struct ootxDataFrame_s {
@@ -28,6 +56,12 @@ struct ootxDataFrame_s {
   __fp16 gibmag1;
   uint8_t mode;
   uint8_t faults;
+
+  // Only used in LH 2 that uses a longer data block
+  __fp16 ogeephase0;
+  __fp16 ogeephase1;
+  __fp16 ogeemag0;
+  __fp16 ogeemag1;
 } __attribute__((packed));
 
 typedef struct ootxDecoderState_s {
