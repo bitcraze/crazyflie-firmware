@@ -19,7 +19,7 @@ The most common way to flash is probably to use the Crazyradio.
 
 * Turn the Crazyflie off
 * Start the Crazyflie in bootloader mode by pressing the power button for 3 seconds. Both the blue LEDs will blink.
-* `make cload`
+* In your terminal, run `make cload`
 
 It will try to find a Crazyflie in bootloader mode and flash the binary to it.
 
@@ -27,9 +27,9 @@ Warning: if multiple Crazyflies within range are in bootloader mode the result i
 
 ### Automatically enter bootloader mode
 
-* Add the address of the crazyflie to the [`config.mk`](/building-and-flashing/configure_build/) file, for instance `CLOAD_CMDS = -w radio://0/80/2M´
+* Add the address of the crazyflie to the [`config.mk`](/building-and-flashing/configure_build/) file, for instance `CLOAD_CMDS = -w radio://0/80/2M`
 * Make sure the Crazyflie is on
-* `make cload`
+* In your terminal, run `make cload`
 
 It will connect to the Crazyflie with the specified address, put it in bootloader mode and flash the binary. This method is suitable for classroom situations.
 
@@ -44,6 +44,6 @@ You need:
 * The firmware has been built
 * The current working directory is the root of the frazyflie-firmware project
 
-Flash the binary:
+In your terminal, run
 
 `make flash`
