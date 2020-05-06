@@ -46,4 +46,4 @@ You need:
 
 Flash the binary:
 
-`make flash`
+`make flash`
