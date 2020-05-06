@@ -1,12 +1,12 @@
 ---
-title: Building Crazyflie 2.0 firmware
+title: Building Crazyflie 2.X firmware
 page_id: build_instructions
 ---
 
 ## Dependencies
 
 You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraze-vm),
-[the toolbelt](https://github.com/bitcraze/toolbelt) or 
+[the toolbelt](https://github.com/bitcraze/toolbelt) or
 install some ARM toolchain.
 
 ### Install a toolchain
@@ -69,7 +69,7 @@ This repository uses git submodules. Clone with the `--recursive` flag
 git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git
 ```
 
-If you already have cloned the repo without the `--recursive` option, you need to 
+If you already have cloned the repo without the `--recursive` option, you need to
 get the submodules manually
 
 ```bash
@@ -106,16 +106,6 @@ or with the toolbelt
 
 ```bash
 tb make PLATFORM=tag
-```
-
-
-### config.mk
-To create custom build options create a file called `config.mk` in the `tools/make/`
-folder and fill it with options. E.g. 
-```
-PLATFORM=CF2
-DEBUG=1
-CLOAD=0
 ```
 
 ### Out of tree build
@@ -158,12 +148,11 @@ clean_o    : Clean only the Objects files, keep the executables (ie .elf, .hex)
 clean      : Clean every compiled files
 mrproper   : Clean every compiled files and the classical editors backup files
 
-cload      : If the crazyflie-clients-python is placed on the same directory level and 
-             the Crazyradio/Crazyradio PA is inserted it will try to flash the firmware 
+cload      : If the crazyflie-clients-python is placed on the same directory level and
+             the Crazyradio/Crazyradio PA is inserted it will try to flash the firmware
              using the wireless bootloader.
 flash      : Flash .elf using OpenOCD
 halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD
 ```
-

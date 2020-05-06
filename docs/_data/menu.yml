@@ -2,6 +2,8 @@
 - title: Building and Flashing
   subs:
     - {page_id: build_instructions}
+    - {page_id: build_config}
+    - {page_id: flashing}
     - {page_id: dfu}
 - title: Userguides
   subs:
@@ -14,6 +16,7 @@
     - {page_id: sensor_to_control}
     - {page_id: controllers}
     - {page_id: state_estimators}
+    - {page_id: config_est_ctrl}
     - {page_id: ctrp_index}
     - {page_id: deck_memory_format}
     - {page_id: p2p_api}
