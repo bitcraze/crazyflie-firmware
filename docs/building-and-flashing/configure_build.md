@@ -1,5 +1,5 @@
 ---
-title: Configue the build
+title: Configure the build
 page_id: build_config
 ---
 
