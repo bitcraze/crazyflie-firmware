@@ -54,6 +54,7 @@
 #include "lpsTdoa2Tag.h"
 #include "lpsTdoa3Tag.h"
 #include "lpsTwrTag.h"
+#include "lpsTwrInCFs.h"
 
 
 #define CS_PIN DECK_GPIO_IO1
