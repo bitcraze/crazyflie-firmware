@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "imu_types.h"
-#include "lighthouse_geometry.h"
 
 /* Data structure used by the stabilizer subsystem.
  * All have a timestamp to be set when the data is calculated.
@@ -241,6 +240,13 @@ typedef struct {
 } yawErrorMeasurement_t;
 
 /** Sweep angle measurement */
+
+// Forward-declare math types from lighthouse_geometry.h to avoid transitive
+// dependency on arm_math.h. Necessary to allow compiling this file for PC,
+// which is useful for testing.
+typedef float vec3d[3];
+typedef float mat3d[3][3];
+
 typedef struct {
   uint32_t timestamp;
   vec3d* baseStationPos;
