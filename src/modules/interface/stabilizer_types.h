@@ -43,6 +43,11 @@ typedef struct attitude_s {
   float yaw;
 } attitude_t;
 
+/* vector */
+#define vec3d_size 3
+typedef float vec3d[vec3d_size];
+typedef float mat3d[vec3d_size][vec3d_size];
+
 /* x,y,z vector */
 struct vec3_s {
   uint32_t timestamp; // Timestamp when the data was computed
@@ -240,13 +245,6 @@ typedef struct {
 } yawErrorMeasurement_t;
 
 /** Sweep angle measurement */
-
-// Forward-declare math types from lighthouse_geometry.h to avoid transitive
-// dependency on arm_math.h. Necessary to allow compiling this file for PC,
-// which is useful for testing.
-typedef float vec3d[3];
-typedef float mat3d[3][3];
-
 typedef struct {
   uint32_t timestamp;
   vec3d* baseStationPos;

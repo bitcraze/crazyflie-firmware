@@ -2,11 +2,7 @@
 
 #include <stdbool.h>
 #include "arm_math.h"
-
-// Naive 3d vector type.
-#define vec3d_size 3
-typedef float vec3d[vec3d_size];
-typedef float mat3d[vec3d_size][vec3d_size];
+#include "stabilizer_types.h"
 
 typedef struct baseStationGeometry_s {
   vec3d origin;
