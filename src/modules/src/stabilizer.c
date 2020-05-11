@@ -45,6 +45,7 @@
 #include "sitaw.h"
 #include "controller.h"
 #include "power_distribution.h"
+#include "collision_avoidance.h"
 
 #include "estimator.h"
 #include "usddeck.h"

@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef CMATH3D_ASSERTS
 #include <assert.h>
@@ -63,7 +64,7 @@ static inline bool fcloseulps(float a, float b, int ulps) {
 	}
 	int ia = *((int *)&a);
 	int ib = *((int *)&b);
-	return abs(ia - ib) <= ulps;
+	return fabsf(ia - ib) <= ulps;
 }
 
 
@@ -871,7 +872,7 @@ static inline bool vinpolytope(struct vec v, float const A[], float const b[], i
 //     the ray intersects. The point (origin + s * direction) will satisfy the
 //     equation in that row with equality. If the ray intersects the polytope
 //     at an intersection of two or more faces, active_row will be an arbitrary
-//     member of the intersecting set.
+//     member of the intersecting set. Optional, can be NULL.
 //
 static inline float rayintersectpolytope(struct vec origin, struct vec direction, float const A[], float const b[], int n, int *active_row)
 {
@@ -902,7 +903,9 @@ static inline float rayintersectpolytope(struct vec origin, struct vec direction
 		}
 	}
 
-	*active_row = min_row;
+	if (active_row != NULL) {
+		*active_row = min_row;
+	}
 	return min_s;
 }
 

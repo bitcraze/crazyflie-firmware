@@ -26,6 +26,7 @@
 
 
 #include "position_controller_indi.h"
+#include "math3d.h"
 
 // Position controller gains
 float K_xi_x = 1.0f;
@@ -56,7 +57,7 @@ static struct IndiOuterVariables indiOuter = {
 void position_indi_init_filters(void)
 {
 	// tau = 1/(2*pi*Fc)
-	float tau = 1.0f / (2.0f * PI * indiOuter.filt_cutoff);
+	float tau = 1.0f / (2.0f * M_PI_F * indiOuter.filt_cutoff);
 	float tau_axis[3] = {tau, tau, tau};
 	float sample_time = 1.0f / ATTITUDE_RATE;
 	// Filtering of linear acceleration, attitude and thrust 
@@ -170,9 +171,9 @@ void positionControllerINDI(const sensorData_t *sensors,
 
 	// Actual attitude (in rad)
 	struct Angles att = {
-		.phi = indiOuter.attitude_f.phi/180*PI,
-		.theta = indiOuter.attitude_f.theta/180*PI,
-		.psi = indiOuter.attitude_f.psi/180*PI,
+		.phi = indiOuter.attitude_f.phi/180*M_PI_F,
+		.theta = indiOuter.attitude_f.theta/180*M_PI_F,
+		.psi = indiOuter.attitude_f.psi/180*M_PI_F,
 	};
 
 	// Compute transformation matrix from body frame (index B) into NED frame (index O)
@@ -254,8 +255,8 @@ void positionControllerINDI(const sensorData_t *sensors,
 		indiOuter.T_incremented = indiOuter.T_tilde + indiOuter.T_inner;
 
 	// Compute commanded attitude to the inner INDI
-	indiOuter.attitude_c.phi = indiOuter.attitude_f.phi + indiOuter.phi_tilde*180/PI;
-	indiOuter.attitude_c.theta = indiOuter.attitude_f.theta + indiOuter.theta_tilde*180/PI;	
+	indiOuter.attitude_c.phi = indiOuter.attitude_f.phi + indiOuter.phi_tilde*180/M_PI_F;
+	indiOuter.attitude_c.theta = indiOuter.attitude_f.theta + indiOuter.theta_tilde*180/M_PI_F;	
 
 	// Clamp commands
 	indiOuter.T_incremented = clamp(indiOuter.T_incremented, MIN_THRUST, MAX_THRUST);

@@ -24,6 +24,7 @@
  */
 
 #include "controller_indi.h"
+#include "math3d.h"
 
 static float thrust_threshold = 300.0f;
 static float bound_control_input = 32000.0f;
@@ -70,8 +71,8 @@ static inline void float_rates_zero(struct FloatRates *fr) {
 void indi_init_filters(void)
 {
 	// tau = 1/(2*pi*Fc)
-	float tau = 1.0f / (2.0f * PI * indi.filt_cutoff);
-	float tau_r = 1.0f / (2.0f * PI * indi.filt_cutoff_r);
+	float tau = 1.0f / (2.0f * M_PI_F * indi.filt_cutoff);
+	float tau_r = 1.0f / (2.0f * M_PI_F * indi.filt_cutoff_r);
 	float tau_axis[3] = {tau, tau, tau_r};
 	float sample_time = 1.0f / ATTITUDE_RATE;
 	// Filtering of gyroscope and actuators

@@ -4,12 +4,11 @@
 #include "task.h"
 #include "peer_localization.h"
 
-#define NUM_MAX_NEIGHBORS 10
 
 void peerLocalizationInit()
 {
-  //all other_positions[in].id will be set to zero due to static initialization.  
-  //If we ever switch to dynamic allocation, we need to set them to zero explicitly
+  // All other_positions[in].id will be set to zero due to static initialization.
+  // If we ever switch to dynamic allocation, we need to set them to zero explicitly.
 }
 
 bool peerLocalizationTest()
@@ -18,11 +17,11 @@ bool peerLocalizationTest()
 }
 
 // array of other's position
-static peerLocalizationOtherPosition_t other_positions[NUM_MAX_NEIGHBORS];
+static peerLocalizationOtherPosition_t other_positions[PEER_LOCALIZATION_MAX_NEIGHBORS];
 
 bool peerLocalizationTellPosition(int cfid, positionMeasurement_t const *pos)
 {
-  for (uint8_t i = 0; i < NUM_MAX_NEIGHBORS; ++i) {
+  for (uint8_t i = 0; i < PEER_LOCALIZATION_MAX_NEIGHBORS; ++i) {
     if (other_positions[i].id == 0 || other_positions[i].id == cfid) {
       other_positions[i].id = cfid;
       other_positions[i].pos.x = pos->x;
@@ -37,7 +36,7 @@ bool peerLocalizationTellPosition(int cfid, positionMeasurement_t const *pos)
 
 bool peerLocalizationIsIDActive(uint8_t cfid)
 {
-  for (uint8_t i = 0; i < NUM_MAX_NEIGHBORS; ++i) {
+  for (uint8_t i = 0; i < PEER_LOCALIZATION_MAX_NEIGHBORS; ++i) {
     if (other_positions[i].id == cfid) {
       return true;
     }
@@ -47,7 +46,7 @@ bool peerLocalizationIsIDActive(uint8_t cfid)
 
 peerLocalizationOtherPosition_t *peerLocalizationGetPositionByID(uint8_t cfid)
 {
-  for (uint8_t i = 0; i < NUM_MAX_NEIGHBORS; ++i) {
+  for (uint8_t i = 0; i < PEER_LOCALIZATION_MAX_NEIGHBORS; ++i) {
     if (other_positions[i].id == cfid) {
       return &other_positions[i];
     }
@@ -57,7 +56,8 @@ peerLocalizationOtherPosition_t *peerLocalizationGetPositionByID(uint8_t cfid)
 
 peerLocalizationOtherPosition_t *peerLocalizationGetPositionByIdx(uint8_t idx)
 {
-  if (idx < NUM_MAX_NEIGHBORS) {
+  // TODO: should we return NULL if the id == 0?
+  if (idx < PEER_LOCALIZATION_MAX_NEIGHBORS) {
     return &other_positions[idx];
   }
   return NULL;
