@@ -16,7 +16,6 @@ Add the options youu want, for instance:
 ```
 PLATFORM=CF2
 DEBUG=1
-CLOAD=0
 ```
 
 ## On the command line
