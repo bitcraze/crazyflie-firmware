@@ -24,6 +24,7 @@
  *
  */
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "crtp_commander.h"
 
