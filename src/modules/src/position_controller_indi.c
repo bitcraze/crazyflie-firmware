@@ -171,9 +171,9 @@ void positionControllerINDI(const sensorData_t *sensors,
 
 	// Actual attitude (in rad)
 	struct Angles att = {
-		.phi = indiOuter.attitude_f.phi/180*M_PI_F,
-		.theta = indiOuter.attitude_f.theta/180*M_PI_F,
-		.psi = indiOuter.attitude_f.psi/180*M_PI_F,
+		.phi = indiOuter.attitude_f.phi/180*PI,
+		.theta = indiOuter.attitude_f.theta/180*PI,
+		.psi = indiOuter.attitude_f.psi/180*PI,
 	};
 
 	// Compute transformation matrix from body frame (index B) into NED frame (index O)
@@ -256,11 +256,11 @@ void positionControllerINDI(const sensorData_t *sensors,
 
 	// Compute commanded attitude to the inner INDI
 	indiOuter.attitude_c.phi = indiOuter.attitude_f.phi + indiOuter.phi_tilde*180/M_PI_F;
-	indiOuter.attitude_c.theta = indiOuter.attitude_f.theta + indiOuter.theta_tilde*180/M_PI_F;	
+	indiOuter.attitude_c.theta = indiOuter.attitude_f.theta + indiOuter.theta_tilde*180/M_PI_F;
 
 	// Clamp commands
 	indiOuter.T_incremented = clamp(indiOuter.T_incremented, MIN_THRUST, MAX_THRUST);
-	indiOuter.attitude_c.phi = clamp(indiOuter.attitude_c.phi, -10.0f, 10.0f); 	
+	indiOuter.attitude_c.phi = clamp(indiOuter.attitude_c.phi, -10.0f, 10.0f);
 	indiOuter.attitude_c.theta = clamp(indiOuter.attitude_c.theta, -10.0f, 10.0f);
 
 	// Reference values, which are passed to the inner loop INDI (attitude controller)

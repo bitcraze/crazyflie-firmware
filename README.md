@@ -121,7 +121,6 @@ folder and fill it with options. E.g.
 ```
 PLATFORM=CF2
 DEBUG=1
-CLOAD=0
 ```
 More information can be found on the
 [Bitcraze wiki](http://wiki.bitcraze.io/projects:crazyflie2:index)

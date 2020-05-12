@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "imu_types.h"
-//#include "lighthouse_geometry.h"
 
 /* Data structure used by the stabilizer subsystem.
  * All have a timestamp to be set when the data is calculated.
@@ -43,6 +42,11 @@ typedef struct attitude_s {
   float pitch;
   float yaw;
 } attitude_t;
+
+/* vector */
+#define vec3d_size 3
+typedef float vec3d[vec3d_size];
+typedef float mat3d[vec3d_size][vec3d_size];
 
 /* x,y,z vector */
 struct vec3_s {
@@ -241,8 +245,6 @@ typedef struct {
 } yawErrorMeasurement_t;
 
 /** Sweep angle measurement */
-typedef float vec3d[3];
-typedef float mat3d[3][3];
 typedef struct {
   uint32_t timestamp;
   vec3d* baseStationPos;
