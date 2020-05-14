@@ -32,6 +32,7 @@ So the default settings in the Crazyflie firmware is the [proportional integral 
 
 
 Here is a block schematics of how the PID controllers are implemented.
+
 ![cascaded pid controller](/images/cascaded_pid_controller.png){:width="700"}
 
 Here are the different loops of the cascaded PID explained in more detail.
@@ -48,9 +49,9 @@ The absolute attitude PID controller is the outerloop of the attitude controller
 
 Check the implementation details in [attitude_pid_controller.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/attitude_pid_controller.c) in `attitudeControllerCorrectAttitudePID()`.
 
-### Position or Velocity Controller
+### Position and Velocity Controller
 
-The most outerloop of the cascaseded PID controller is the position/velocity controller. It receives position or velocity input from a commander which are handled on the same level in a OR-manner, since it is possible to set in the variable `setpoint_t` which  stabilization mode to use `stab_mode_t` (either position:  `modeAbs` or `modeVelocity`). These can be found in [stabilizer_types.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h). The control loop runs at 100 Hz.
+The most outerloop of the cascaded PID controller is the position and velocity controller. It receives position or velcoityinput from a commander which are handled, since it is possible to set in the variable `setpoint_t` which  stabilization mode to use `stab_mode_t` (either position:  `modeAbs` or `modeVelocity`). These can be found in [stabilizer_types.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h). The control loop runs at 100 Hz.
 
 Check the implementation details in Check the implementation details in [position_controller_pid.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/position_controller_pid.c) in `positionController()` and  `velocityController()`. 
 
