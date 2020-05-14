@@ -47,6 +47,7 @@
 #include "lighthouse_core.h"
 
 #include "test_support.h"
+#include "static_mem.h"
 
 
 static pulseProcessorResult_t angles;
@@ -67,7 +68,7 @@ static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
-static pulseProcessor_t ppState = {};
+NO_DMA_CCM_SAFE_ZERO_INIT static pulseProcessor_t ppState = {};
 
 pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 

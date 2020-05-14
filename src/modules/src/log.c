@@ -99,7 +99,7 @@ struct log_block {
 };
 
 static struct log_ops logOps[LOG_MAX_OPS];
-static struct log_block logBlocks[LOG_MAX_BLOCKS];
+NO_DMA_CCM_SAFE_ZERO_INIT static struct log_block logBlocks[LOG_MAX_BLOCKS];
 static xSemaphoreHandle logLock;
 static StaticSemaphore_t logLockBuffer;
 
@@ -167,7 +167,7 @@ static int logStopBlock(int id);
 static void logReset();
 static acquisitionType_t acquisitionTypeFromLogType(uint8_t logType);
 
-STATIC_MEM_TASK_ALLOC(logTask, LOG_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(logTask, LOG_TASK_STACKSIZE);
 
 void logInit(void)
 {

@@ -35,6 +35,7 @@
 #include "ow.h"
 #include "crc.h"
 #include "debug.h"
+#include "static_mem.h"
 
 #ifdef DEBUG
   #define DECK_INFO_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
@@ -43,7 +44,7 @@
 #endif
 
 static int count = 0;
-static DeckInfo deckInfos[DECK_MAX_COUNT];
+NO_DMA_CCM_SAFE_ZERO_INIT static DeckInfo deckInfos[DECK_MAX_COUNT];
 
 static void enumerateDecks(void);
 static void checkPeriphAndGpioConflicts(void);
