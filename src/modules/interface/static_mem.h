@@ -49,7 +49,11 @@
  * end up in the CCM. The current implementation puts is in CCM but
  * that might change later.
  */
-#define NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((section(".ccmbss")))
+#if defined(UNIT_TEST_MODE)
+  #define NO_DMA_CCM_SAFE_ZERO_INIT
+#else
+  #define NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((section(".ccmbss")))
+#endif
 
 /**
  * @brief Macro to force a variable to be placed in the CCM
@@ -63,7 +67,11 @@
  * to the variable when declared, this value will be silently ignored
  * without a warning!
  */
-#define FORCE_CCM_ZERO_INIT __attribute__((section(".ccmbss")))
+#if defined(UNIT_TEST_MODE)
+  #define FORCE_CCM_ZERO_INIT
+#else
+  #define FORCE_CCM_ZERO_INIT __attribute__((section(".ccmbss")))
+#endif
 
 
 /**
