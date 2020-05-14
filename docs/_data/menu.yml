@@ -17,7 +17,7 @@
     - {page_id: deck_memory_format}
     - {page_id: p2p_api}
     - {page_id: trajectory_formats}
-    - {page_id: light_house_overview}
+    - {page_id: lighthouse_overview}
     - {page_id: sensor_to_control}
     - {page_id: controllers}
     - {page_id: state_estimators}
@@ -31,3 +31,4 @@
     - {page_id: openocd_gdb_debugging}
     - {page_id: unit_testing}
     - {page_id: systemtask}
+    - {page_id: memory_management}
