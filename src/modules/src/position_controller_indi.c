@@ -171,9 +171,9 @@ void positionControllerINDI(const sensorData_t *sensors,
 
 	// Actual attitude (in rad)
 	struct Angles att = {
-		.phi = indiOuter.attitude_f.phi/180*PI,
-		.theta = indiOuter.attitude_f.theta/180*PI,
-		.psi = indiOuter.attitude_f.psi/180*PI,
+		.phi = indiOuter.attitude_f.phi/180*M_PI_F,
+		.theta = indiOuter.attitude_f.theta/180*M_PI_F,
+		.psi = indiOuter.attitude_f.psi/180*M_PI_F,
 	};
 
 	// Compute transformation matrix from body frame (index B) into NED frame (index O)
