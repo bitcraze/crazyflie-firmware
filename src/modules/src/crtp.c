@@ -80,8 +80,8 @@ static xQueueHandle queues[CRTP_NBR_OF_PORTS];
 static volatile CrtpCallback callbacks[CRTP_NBR_OF_PORTS];
 static void updateStats();
 
-STATIC_MEM_TASK_ALLOC(crtpTxTask, CRTP_TX_TASK_STACKSIZE);
-STATIC_MEM_TASK_ALLOC(crtpRxTask, CRTP_RX_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpTxTask, CRTP_TX_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpRxTask, CRTP_RX_TASK_STACKSIZE);
 
 void crtpInit(void)
 {

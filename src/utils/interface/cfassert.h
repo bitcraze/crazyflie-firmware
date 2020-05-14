@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -24,6 +24,7 @@
  * cfassert.h - Assert macro
  */
 
+#include "stm32fxxx.h"
 #include "console.h"
 
 #ifndef __CFASSERT_H__
@@ -40,6 +41,16 @@
 #endif
 
 #define ASSERT_FAILED() assertFail( "", __FILE__, __LINE__ )
+
+/**
+ * @brief Assert that verifies that a pointer is pointing at RAM memory that can be
+ * used for DMA transfers. There are two types of RAM in the Crazyflie and CCM
+ * does not work for DMA.
+ *
+ * @param[in] PTR : the pointer to verify
+ */
+#define ASSERT_DMA_SAFE(PTR) if ((uint32_t)(PTR) < (SRAM1_BASE)) assertFail( "", __FILE__, __LINE__ )
+
 
 /**
  * Assert handler function

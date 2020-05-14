@@ -1,9 +1,9 @@
 ---
-title: The Light house positioning system
-page_id: light_house_overview
+title: The Lighthouse positioning system
+page_id: lighthouse_overview
 ---
 
-The Lighthouse positioning system uses the HTC Vive base stations (aka Lighthouse) togeather with the Light house deck to achieve high precision positioning. The system is functional but still under development and in the Early access phase.
+The Lighthouse positioning system uses the HTC Vive base stations (aka Lighthouse) togeather with the Lighthouse deck to achieve high precision positioning. The system is functional but still under development and in the Early access phase.
 
 This page contains information on how to work with the deck during development.
 

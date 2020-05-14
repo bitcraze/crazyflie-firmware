@@ -64,8 +64,6 @@ SECTIONS
 
 	    . = ALIGN(4);
    	 _etext = .;
-	    /* This is used by the startup in order to initialize the .data secion */
-   	 /* _sidata = _etext; */
     } >FLASH
 
     .libc :
@@ -75,7 +73,6 @@ SECTIONS
       . = ALIGN(4);
 
       _elibc = .;
-      _sidata = _elibc;
     } >FLASH
 
     /* for some LPC devices, there is a FLASH patch to place at a specified address */
@@ -99,7 +96,8 @@ SECTIONS
     The program executes knowing that the data is in the RAM
     but the loader puts the initial values in the FLASH (inidata).
     It is one task of the startup to copy the initial values from FLASH to RAM. */
-    .data  : AT ( _sidata )
+
+    .data  :
     {
 	    . = ALIGN(4);
         /* This is used by the startup in order to initialize the .data secion */
@@ -112,8 +110,10 @@ SECTIONS
 	    . = ALIGN(4);
 	    /* This is used by the startup in order to initialize the .data secion */
    	 _edata = . ;
-    } >RAM
+    } >RAM AT> FLASH
 
+    /* The address where initialization data is stored in flash, used by the start up to copy init data from flash to RAM */
+    _sidata = LOADADDR(.data);
 
 
     /* This is the uninitialized data section. This memory is zeroed at start up */
@@ -132,6 +132,38 @@ SECTIONS
    	 _ebss = . ;
     } >RAM
 
+
+    /* This is the uninitialized data section for the CCM RAM. This memory is zeroed at start up */
+    .ccmbss (NOLOAD) :
+    {
+	    . = ALIGN(4);
+        /* This is used by the startup in order to initialize the .bss secion */
+        _sccmbss = .;
+        *(.ccmbss)
+        *(.ccmbss*)
+
+	    . = ALIGN(4);
+	    /* This is used by the startup in order to initialize the .bss secion */
+   	 _eccmbss = .;
+    } >CCMRAM
+
+    /* This is the initialized data section for the CCM RAM
+    The program executes knowing that the data is in the CCM RAM
+    but the loader puts the initial values in the FLASH.
+    It is one task of the startup to copy the initial values from FLASH to RAM. */
+    .ccmdata :
+    {
+        . = ALIGN(4);
+        _sccmdata = .;        /* create a global symbol at data start */
+        *(.ccmdata)
+        *(.ccmdata*)
+
+        . = ALIGN(4);
+        _eccmdata = .;        /* define a global symbol at data end */
+    } >CCMRAM AT> FLASH
+
+    /* The address where initialization data is stored in flash, used by the start up to copy init data from flash to RAM */
+    _siccmdata = LOADADDR(.ccmdata);
 
 
     /* This is uninitialized data that is NOT zeroed at start up. */

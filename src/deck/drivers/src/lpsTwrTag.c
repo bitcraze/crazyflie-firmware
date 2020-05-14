@@ -44,6 +44,7 @@
 #include "physicalConstants.h"
 #include "configblock.h"
 #include "lpsTdma.h"
+#include "static_mem.h"
 
 #define ANTENNA_OFFSET 154.6   // In meter
 
@@ -100,7 +101,7 @@ static lpsTwrAlgoOptions_t* options = &defaultOptions;
 // Outlier rejection
 #define RANGING_HISTORY_LENGTH 32
 #define OUTLIER_TH 4
-static struct {
+NO_DMA_CCM_SAFE_ZERO_INIT static struct {
   float32_t history[RANGING_HISTORY_LENGTH];
   size_t ptr;
 } rangingStats[LOCODECK_NR_OF_TWR_ANCHORS];

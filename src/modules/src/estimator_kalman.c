@@ -60,8 +60,6 @@
 #include "estimator_kalman.h"
 #include "kalman_supervisor.h"
 
-#include "stm32f4xx.h"
-
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
@@ -213,7 +211,7 @@ static StaticSemaphore_t dataMutexBuffer;
  * For more information, refer to the paper
  */
 
-static kalmanCoreData_t coreData;
+NO_DMA_CCM_SAFE_ZERO_INIT static kalmanCoreData_t coreData;
 
 /**
  * Internal variables. Note that static declaration results in default initialization (to 0)
@@ -270,7 +268,7 @@ static void kalmanTask(void* parameters);
 static bool predictStateForward(uint32_t osTick, float dt);
 static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick);
 
-STATIC_MEM_TASK_ALLOC(kalmanTask, 3 * configMINIMAL_STACK_SIZE);
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(kalmanTask, 3 * configMINIMAL_STACK_SIZE);
 
 // --------------------------------------------------
 

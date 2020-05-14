@@ -123,7 +123,7 @@ PLATFORM=CF2
 DEBUG=1
 ```
 More information can be found on the
-[Bitcraze wiki](http://wiki.bitcraze.io/projects:crazyflie2:index)
+[Bitcraze documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/)
 
 
 ```

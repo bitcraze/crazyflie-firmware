@@ -13,7 +13,9 @@ detect in the next time step.
 
 ![sensor](/images/sensors_to_motors.png){:width="700"}
 
-Sensors
+## Modules 
+
+### Sensors
 ==================
 Sensors are essential for the flight of a crazyflie. Here is a table with the sensors
  listed that the crazyflie eventually uses for state estimation:
@@ -34,8 +36,7 @@ Sensors are essential for the flight of a crazyflie. Here is a table with the se
 
 ***Time-difference of Arrival
 
-State Estimation
-=============
+### State Estimation
 
 There are 2 state estimators in the crazyflie:
 * Complementary Filter
@@ -43,8 +44,7 @@ There are 2 state estimators in the crazyflie:
 
 For more indepth information about how the state estimation is implemented in the crazyflie firmware, please go to the [state estimation page](/functional-areas/state_estimators/)
 
-State Controller
-==========================
+### State Controller
 There are 3 controllers in the crazyflie
 * PID controller
 * INDI controller
@@ -52,8 +52,13 @@ There are 3 controllers in the crazyflie
 
 For more indepth information about how the controllers are implemented in the crazyflie firmware, please go to the [controllers page](/functional-areas/controllers/)
 
-Power Distribution
-=============
+### Commander Framework
+An desired state can be handled by the setpoint structure in position or atitude, which can be set by the cflib or the highlevel commander
+
+For more indepth information about how the commander framework are implemented in the crazyflie firmware, please go to the [commander page](/functional-areas/commanders_setpoints/)
+
+### Power Distribution
+
 After the state controller has send out its commands, this is not the end of the line yet.
 The controllers send out their commands relating to their yaw, roll and pitch angles.
 How the motors should respond in order to adhere these attitude based commands depends on a few factors:
