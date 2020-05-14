@@ -171,7 +171,7 @@ Install the [extension](https://marketplace.visualstudio.com/items?itemName=maru
 
 Click on "Run", then "Add Configuration", then "Cortex Debug".
 
-![VS Code add configuration](/images/vscode_add_configuration.png)
+![VS Code add configuration](/images/vscode_add_configuration.webp)
 
 This should automatically create the needed "launch.json" file.
 
@@ -222,6 +222,6 @@ After all this, go to the Debug tab of VS Code (on the left sidebar, the icon wi
 
 If you followed everything, it should start running nicely and look a little something like this:
 
-![VS Code Cortex Debug](/images/vscode_cortex_debug)
+![VS Code Cortex Debug](/images/vscode_cortex_debug.webp)
 
 Notice the nice peripherals pane at the bottom, along with the variables pane at the top. Awesome, now you can code _and_ debug all within VS Code!
