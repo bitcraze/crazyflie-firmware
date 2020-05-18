@@ -105,13 +105,13 @@ crazyflie-firmware$ make
 (...)
   CC    hello.o
 (...)
-Crazyflie 2.0 build!
-Build 44:61f3d878233d (2015.08.1-44) MODIFIED
+Build for the CF2 platform!
+Build 22:f8243162f727 (2020.04 +22) MODIFIED
 Version extracted from git
 Crazyloader build!
-   text    data     bss     dec     hex filename
- 130660    1636   29828  162124   2794c cf2.elf
-rm version.c
+Flash |  218132/1032192 (21%),  814060 free | text: 213024, data: 5108, ccmdata: 0
+RAM   |   71564/131072  (55%),   59508 free | bss: 66456, data: 5108
+CCM   |   43528/65536   (66%),   22008 free | ccmbss: 43528, ccmdata: 0
 crazyflie-firmware$ make cload
 ../crazyflie-clients-python/bin/cfloader flash cf2.bin stm32-fw
 Restart the Crazyflie you want to bootload in the next
