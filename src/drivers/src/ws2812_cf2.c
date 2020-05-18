@@ -113,6 +113,7 @@ void ws2812Init(void)
 	/* DMA1 Channel5 Config TM */
 	DMA_DeInit(DMA1_Stream5);
 
+	ASSERT_DMA_SAFE(led_dma.buffer);
   // USART TX DMA Channel Config
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR2;
   DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)led_dma.buffer;    // this is the buffer memory

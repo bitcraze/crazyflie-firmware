@@ -40,7 +40,7 @@
 // HW defines
 #define PIEZO_TIM_PERIF       RCC_APB1Periph_TIM5
 #define PIEZO_TIM             TIM5
-#define PIEZO_TIM_DBG         DBGMCU_TIM2_STOP
+#define PIEZO_TIM_DBG         DBGMCU_TIM5_STOP
 #define PIEZO_TIM_SETCOMPARE  TIM_SetCompare2
 #define PIEZO_TIM_GETCAPTURE  TIM_GetCapture2
 

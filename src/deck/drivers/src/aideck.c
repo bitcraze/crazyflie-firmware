@@ -130,9 +130,9 @@ static bool aideckTest()
 }
 
 static const DeckDriver aideck_deck = {
-    .vid = 0,
-    .pid = 0,
-    .name = "bcAIDeck",
+    .vid = 0xBC,
+    .pid = 0x12,
+    .name = "bcAI",
 
     .usedPeriph = 0,
     .usedGpio = 0, // FIXME: Edit the used GPIOs

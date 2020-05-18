@@ -44,7 +44,7 @@ static bool isInit;
 
 #define TIM_PERIF       RCC_APB1Periph_TIM5
 #define TIM             TIM5
-#define TIM_DBG         DBGMCU_TIM2_STOP
+#define TIM_DBG         DBGMCU_TIM5_STOP
 #define TIM_SETCOMPARE  TIM_SetCompare2
 #define TIM_GETCAPTURE  TIM_GetCapture2
 

@@ -403,6 +403,10 @@ static bool aitdecktestTest()
       DEBUG_PRINT("NINA->GAP8 reset [FAILED]\r\n");
     }
   }
+  else
+  {
+    DEBUG_PRINT("NINA->GAP8 reset, NINA not responding. [FAILED]\r\n");
+  }
 
   //Test RST of both GAP8 and NINA by pulling reset
   pinMode(DECK_GPIO_IO4, OUTPUT);

@@ -65,6 +65,7 @@
 #include "param.h"
 #include "math3d.h"
 #include "debug.h"
+#include "static_mem.h"
 
 // #define DEBUG_STATE_CHECK
 
@@ -225,23 +226,23 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
 static void scalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
 {
   // The Kalman gain as a column vector
-  static float K[KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float K[KC_STATE_DIM];
   static arm_matrix_instance_f32 Km = {KC_STATE_DIM, 1, (float *)K};
 
   // Temporary matrices for the covariance updates
-  static float tmpNN1d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN1m = {KC_STATE_DIM, KC_STATE_DIM, tmpNN1d};
 
-  static float tmpNN2d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN2m = {KC_STATE_DIM, KC_STATE_DIM, tmpNN2d};
 
-  static float tmpNN3d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN3d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN3m = {KC_STATE_DIM, KC_STATE_DIM, tmpNN3d};
 
-  static float HTd[KC_STATE_DIM * 1];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float HTd[KC_STATE_DIM * 1];
   static arm_matrix_instance_f32 HTm = {KC_STATE_DIM, 1, HTd};
 
-  static float PHTd[KC_STATE_DIM * 1];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float PHTd[KC_STATE_DIM * 1];
   static arm_matrix_instance_f32 PHTm = {KC_STATE_DIM, 1, PHTd};
 
   ASSERT(Hm->numRows == 1);
@@ -670,14 +671,14 @@ void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axi
    */
 
   // The linearized update matrix
-  static float A[KC_STATE_DIM][KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float A[KC_STATE_DIM][KC_STATE_DIM];
   static arm_matrix_instance_f32 Am = { KC_STATE_DIM, KC_STATE_DIM, (float *)A}; // linearized dynamics for covariance update;
 
   // Temporary matrices for the covariance updates
-  static float tmpNN1d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN1m = { KC_STATE_DIM, KC_STATE_DIM, tmpNN1d};
 
-  static float tmpNN2d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN2m = { KC_STATE_DIM, KC_STATE_DIM, tmpNN2d};
 
   float dt2 = dt*dt;
@@ -923,14 +924,14 @@ void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt)
 void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
 {
   // Matrix to rotate the attitude covariances once updated
-  static float A[KC_STATE_DIM][KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float A[KC_STATE_DIM][KC_STATE_DIM];
   static arm_matrix_instance_f32 Am = {KC_STATE_DIM, KC_STATE_DIM, (float *)A};
 
   // Temporary matrices for the covariance updates
-  static float tmpNN1d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN1m = {KC_STATE_DIM, KC_STATE_DIM, tmpNN1d};
 
-  static float tmpNN2d[KC_STATE_DIM * KC_STATE_DIM];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[KC_STATE_DIM * KC_STATE_DIM];
   static arm_matrix_instance_f32 tmpNN2m = {KC_STATE_DIM, KC_STATE_DIM, tmpNN2d};
 
   // Incorporate the attitude error (Kalman filter state) with the attitude

@@ -57,6 +57,7 @@
 #include "log.h"
 #include "param.h"
 #include "crc_bosch.h"
+#include "static_mem.h"
 
 // Hardware defines
 #ifdef USDDECK_USE_ALT_PINS_AND_SPI
@@ -112,7 +113,7 @@ static void csLow(void);
 static void usdLogTask(void* prm);
 static void usdWriteTask(void* prm);
 
-static crc crcTable[256];
+NO_DMA_CCM_SAFE_ZERO_INIT static crc crcTable[256];
 
 static usdLogConfig_t usdLogConfig;
 
@@ -124,9 +125,9 @@ DWORD workBuff[512];  /* 2048 byte working buffer */
 #endif
 
 //Fatfs object
-static FATFS FatFs;
+NO_DMA_CCM_SAFE_ZERO_INIT static FATFS FatFs;
 //File object
-static FIL logFile;
+NO_DMA_CCM_SAFE_ZERO_INIT static FIL logFile;
 static SemaphoreHandle_t logFileMutex;
 
 static QueueHandle_t usdLogQueue;

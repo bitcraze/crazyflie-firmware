@@ -35,6 +35,7 @@
 #include "log.h"
 #include "param.h"
 #include "range.h"
+#include "static_mem.h"
 
 #include "i2cdev.h"
 #include "zranger.h"
@@ -55,7 +56,7 @@ static uint16_t range_last = 0;
 
 static bool isInit;
 
-static VL53L0xDev dev;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53L0xDev dev;
 
 void zRangerInit(DeckInfo* info)
 {

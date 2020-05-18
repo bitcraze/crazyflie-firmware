@@ -358,9 +358,9 @@ static bool evaluateTest(float low, float high, float value, uint8_t motor)
 static void testProps(sensorData_t *sensors)
 {
   static uint32_t i = 0;
-  static float accX[PROPTEST_NBR_OF_VARIANCE_VALUES];
-  static float accY[PROPTEST_NBR_OF_VARIANCE_VALUES];
-  static float accZ[PROPTEST_NBR_OF_VARIANCE_VALUES];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float accX[PROPTEST_NBR_OF_VARIANCE_VALUES];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float accY[PROPTEST_NBR_OF_VARIANCE_VALUES];
+  NO_DMA_CCM_SAFE_ZERO_INIT static float accZ[PROPTEST_NBR_OF_VARIANCE_VALUES];
   static float accVarXnf;
   static float accVarYnf;
   static float accVarZnf;
