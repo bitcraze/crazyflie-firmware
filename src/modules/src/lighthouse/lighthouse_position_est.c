@@ -28,6 +28,7 @@
 #include "stabilizer_types.h"
 #include "estimator.h"
 #include "estimator_kalman.h"
+#include "math.h"
 
 #include "log.h"
 #include "param.h"
@@ -54,6 +55,7 @@ baseStationEulerAngles_t lighthouseBaseStationAngles[PULSE_PROCESSOR_N_BASE_STAT
 static mat3d baseStationInvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 static mat3d lh1Rotor2RotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 static mat3d lh1Rotor2InvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
+static float tan_t_30 = 0.0f;
 
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
@@ -82,6 +84,10 @@ static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Ro
 
   arm_matrix_instance_f32 lh1Rotor2RotInverted_ = {3, 3, (float32_t *)lh1Rotor2RotInverted};
   arm_mat_trans_f32(&lh1Rotor2Rot_, &lh1Rotor2RotInverted_);
+
+  // The light planes in LH2 are tilted +- 30 degrees
+  const float t = M_PI / 6;
+  tan_t_30 = tanf(t);
 }
 
 
@@ -137,15 +143,16 @@ static void estimatePositionCrossingBeams(pulseProcessorResult_t* angles, int ba
   }
 }
 
-static void estimatePositionSweeps(pulseProcessorResult_t* angles, int baseStation) {
+static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseStation) {
+  sweepAngleMeasurement_t sweepInfo;
+  sweepInfo.stdDev = sweepStd;
+  sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
+  sweepInfo.tan_t = 0;
+
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation];
     if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-      sweepAngleMeasurement_t sweepInfo;
       sweepInfo.sensorPos = &sensorDeckPositions[sensor];
-      sweepInfo.stdDev = sweepStd;
-      sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
-      sweepInfo.tan_t = 0;
 
       sweepInfo.measuredSweepAngle = bsMeasurement->correctedAngles[0];
       if (sweepInfo.measuredSweepAngle != 0) {
@@ -165,6 +172,49 @@ static void estimatePositionSweeps(pulseProcessorResult_t* angles, int baseStati
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }
     }
+  }
+}
+
+static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseStation) {
+  sweepAngleMeasurement_t sweepInfo;
+  sweepInfo.stdDev = sweepStd;
+  sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
+  sweepInfo.rotorRot = &lighthouseBaseStationsGeometry[baseStation].mat;
+  sweepInfo.rotorRotInv = &baseStationInvertedRotationMatrixes[baseStation];
+
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation];
+    if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      sweepInfo.sensorPos = &sensorDeckPositions[sensor];
+
+      sweepInfo.measuredSweepAngle = bsMeasurement->angles[0];
+      if (sweepInfo.measuredSweepAngle != 0) {
+        sweepInfo.tan_t = -tan_t_30;
+        estimatorEnqueueSweepAngles(&sweepInfo);
+        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+      }
+
+      sweepInfo.measuredSweepAngle = bsMeasurement->angles[1];
+      if (sweepInfo.measuredSweepAngle != 0) {
+        sweepInfo.tan_t = tan_t_30;
+        estimatorEnqueueSweepAngles(&sweepInfo);
+        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+      }
+    }
+  }
+}
+
+static void estimatePositionSweeps(pulseProcessorResult_t* angles, int baseStation) {
+  switch(angles->measurementType) {
+    case lighthouseBsTypeV1:
+      estimatePositionSweepsLh1(angles, baseStation);
+      break;
+    case lighthouseBsTypeV2:
+      estimatePositionSweepsLh2(angles, baseStation);
+      break;
+    default:
+      // Do nothing
+      break;
   }
 }
 
