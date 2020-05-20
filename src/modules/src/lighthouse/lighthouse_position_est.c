@@ -49,26 +49,39 @@ static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsEstRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&estBs0Rate, &estBs1Rate};
 
 baseStationEulerAngles_t lighthouseBaseStationAngles[PULSE_PROCESSOR_N_BASE_STATIONS];
-static mat3d baseStationInvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 
-static void invertRotationMatrix(mat3d rot, mat3d inverted);
+// Pre calculated data used in state updates
+static mat3d baseStationInvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
+static mat3d lh1Rotor2RotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
+static mat3d lh1Rotor2InvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
+
+static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
 void lightHousePositionGeometryDataUpdated() {
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
     lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[i], &lighthouseBaseStationAngles[i]);
-    invertRotationMatrix(lighthouseBaseStationsGeometry[i].mat, baseStationInvertedRotationMatrixes[i]);
+    preProcessGeometryData(lighthouseBaseStationsGeometry[i].mat, baseStationInvertedRotationMatrixes[i], lh1Rotor2RotationMatrixes[i], lh1Rotor2InvertedRotationMatrixes[i]);
   }
 }
 
+static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted) {
+  // For a rotation matrix inverse and transpose is equal. Use transpose instead
+  arm_matrix_instance_f32 bsRot_ = {3, 3, (float32_t *)bsRot};
+  arm_matrix_instance_f32 bsRotInverted_ = {3, 3, (float32_t *)bsRotInverted};
+  arm_mat_trans_f32(&bsRot_, &bsRotInverted_);
 
-static void invertRotationMatrix(mat3d rot, mat3d inverted) {
-  // arm_mat_inverse_f32() alters the original matrix in the process, must make a copy to work from
-  float bs_r_tmp[3][3];
-  memcpy(bs_r_tmp, (float32_t *)rot, sizeof(bs_r_tmp));
-  arm_matrix_instance_f32 basestation_rotation_matrix_tmp = {3, 3, (float32_t *)bs_r_tmp};
+  // In a LH1 system, the axis of rotation of the second rotor is perpendicular to the first rotor
+  mat3d secondRotorInvertedR = {
+    {1, 0, 0},
+    {0, 0, -1},
+    {0, 1, 0}
+  };
+  arm_matrix_instance_f32 secondRotorInvertedR_ = {3, 3, (float32_t *)secondRotorInvertedR};
+  arm_matrix_instance_f32 lh1Rotor2Rot_ = {3, 3, (float32_t *)lh1Rotor2Rot};
+  arm_mat_mult_f32(&bsRot_, &secondRotorInvertedR_, &lh1Rotor2Rot_);
 
-  arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)inverted};
-  arm_mat_inverse_f32(&basestation_rotation_matrix_tmp, &basestation_rotation_matrix_inv);
+  arm_matrix_instance_f32 lh1Rotor2RotInverted_ = {3, 3, (float32_t *)lh1Rotor2RotInverted};
+  arm_mat_trans_f32(&lh1Rotor2Rot_, &lh1Rotor2RotInverted_);
 }
 
 
@@ -128,21 +141,27 @@ static void estimatePositionSweeps(pulseProcessorResult_t* angles, int baseStati
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
     if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-      sweepAngleMeasurement_t sweepAngles;
-      sweepAngles.angleX = bsMeasurement->correctedAngles[0];
-      sweepAngles.angleY = bsMeasurement->correctedAngles[1];
+      sweepAngleMeasurement_t sweepInfo;
+      sweepInfo.sensorPos = &sensorDeckPositions[sensor];
+      sweepInfo.stdDev = sweepStd;
+      sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
+      sweepInfo.tan_t = 0;
 
-      if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
-        sweepAngles.stdDevX = sweepStd;
-        sweepAngles.stdDevY = sweepStd;
+      sweepInfo.measuredSweepAngle = bsMeasurement->correctedAngles[0];
+      if (sweepInfo.measuredSweepAngle != 0) {
+        sweepInfo.rotorRot = &lighthouseBaseStationsGeometry[baseStation].mat;
+        sweepInfo.rotorRotInv = &baseStationInvertedRotationMatrixes[baseStation];
 
-        sweepAngles.sensorPos = &sensorDeckPositions[sensor];
+        estimatorEnqueueSweepAngles(&sweepInfo);
+        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+      }
 
-        sweepAngles.baseStationPos = &lighthouseBaseStationsGeometry[baseStation].origin;
-        sweepAngles.baseStationRot = &lighthouseBaseStationsGeometry[baseStation].mat;
-        sweepAngles.baseStationRotInv = &baseStationInvertedRotationMatrixes[baseStation];
+      sweepInfo.measuredSweepAngle = bsMeasurement->correctedAngles[1];
+      if (sweepInfo.measuredSweepAngle != 0) {
+        sweepInfo.rotorRot = &lh1Rotor2RotationMatrixes[baseStation];
+        sweepInfo.rotorRotInv = &lh1Rotor2InvertedRotationMatrixes[baseStation];
 
-        estimatorEnqueueSweepAngles(&sweepAngles);
+        estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }
     }

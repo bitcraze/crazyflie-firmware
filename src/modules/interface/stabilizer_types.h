@@ -247,14 +247,13 @@ typedef struct {
 /** Sweep angle measurement */
 typedef struct {
   uint32_t timestamp;
-  vec3d* baseStationPos;
-  mat3d* baseStationRot;     // Base station rotation matrix
-  mat3d* baseStationRotInv;  // Inverted base station rotation matrix
-  float angleX;
-  float angleY;
-  float stdDevX;
-  float stdDevY;
-  vec3d* sensorPos;
+  vec3d* sensorPos;          // Sensor position in the CF reference frame
+  vec3d* rotorPos;           // Pos of rotor origin in global reference frame
+  mat3d* rotorRot;           // Rotor rotation matrix
+  mat3d* rotorRotInv;        // Inverted rotor rotation matrix
+  float tan_t;               // t is the tilt angle of the light plane on the rotor
+  float measuredSweepAngle;
+  float stdDev;
 } sweepAngleMeasurement_t;
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
