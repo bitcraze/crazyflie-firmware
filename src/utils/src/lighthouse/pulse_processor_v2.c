@@ -235,7 +235,7 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         float firstBeam = (firstOffset * 2 * M_PI_F / period) - M_PI_F + M_PI_F / 3.0f;
         float secondBeam = (secondOffset * 2 * M_PI_F / period) - M_PI_F - M_PI_F / 3.0f;
 
-        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurements[i].baseStatonMeasurements[channel];
+        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurementsLh2[i].baseStatonMeasurements[channel];
         measurement->angles[0] = firstBeam;
         measurement->angles[1] = secondBeam;
         measurement->validCount = 2;

@@ -231,7 +231,8 @@ typedef struct {
 } pulseProcessorSensorMeasurement_t;
 
 typedef struct {
-  pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
+  pulseProcessorSensorMeasurement_t sensorMeasurementsLh1[PULSE_PROCESSOR_N_SENSORS];
+  pulseProcessorSensorMeasurement_t sensorMeasurementsLh2[PULSE_PROCESSOR_N_SENSORS];
   lighthouseBaseStationType_t measurementType;
 } pulseProcessorResult_t;
 
