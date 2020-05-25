@@ -208,6 +208,8 @@ static inline void i2cdrvRoughLoopDelay(uint32_t us)
 
 static void i2cdrvStartTransfer(I2cDrv *i2c)
 {
+  ASSERT_DMA_SAFE(i2c->txMessage.buffer);
+
   if (i2c->txMessage.direction == i2cRead)
   {
     i2c->DMAStruct.DMA_BufferSize = i2c->txMessage.messageLength;
@@ -380,6 +382,8 @@ void i2cdrvCreateMessage(I2cMessage *message,
                       uint32_t length,
                       uint8_t  *buffer)
 {
+  ASSERT_DMA_SAFE(buffer);
+
   message->slaveAddress = slaveAddress;
   message->direction = direction;
   message->isInternal16bit = false;
@@ -398,6 +402,8 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
                              uint32_t length,
                              uint8_t  *buffer)
 {
+  ASSERT_DMA_SAFE(buffer);
+
   message->slaveAddress = slaveAddress;
   message->direction = direction;
   message->isInternal16bit = IsInternal16;

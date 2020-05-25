@@ -133,6 +133,7 @@
 #define GYR_DIS_CS() GPIO_SetBits(BMI088_GYR_GPIO_CS_PORT, BMI088_GYR_GPIO_CS)
 
 /* Defines and buffers for full duplex SPI DMA transactions */
+/* The buffers must not be placed in CCM */
 #define SPI_MAX_DMA_TRANSACTION_SIZE    15
 static uint8_t spiTxBuffer[SPI_MAX_DMA_TRANSACTION_SIZE + 1];
 static uint8_t spiRxBuffer[SPI_MAX_DMA_TRANSACTION_SIZE + 1];

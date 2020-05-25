@@ -31,6 +31,7 @@
 #include "usbd_req.h"
 #include "usbd_ioreq.h"
 #include "usbd_desc.h"
+#include "static_mem.h"
 
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -99,7 +100,7 @@ __ALIGN_BEGIN uint32_t  USBD_cfg_status __ALIGN_END  = 0;
     #pragma data_alignment=4   
   #endif
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
-__ALIGN_BEGIN uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SIZ] __ALIGN_END ;
+NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SIZ] __ALIGN_END ;
 /**
   * @}
   */ 

@@ -215,6 +215,9 @@ bool spi3Test(void)
 
 bool spi3Exchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
 {
+  ASSERT_DMA_SAFE(data_tx);
+  ASSERT_DMA_SAFE(data_rx);
+
   // DMA already configured, just need to set memory addresses
   SPI_TX_DMA_STREAM->M0AR = (uint32_t)data_tx;
   SPI_TX_DMA_STREAM->NDTR = length;

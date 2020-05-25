@@ -46,7 +46,7 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
   const bool doApplyCalibration = calibrationData->valid && (lighthouseBsTypeV1 == angles->measurementType);
 
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
+    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation];
     if (doApplyCalibration) {
       lighthouseCalibrationApply(calibrationData, bsMeasurement->angles, bsMeasurement->correctedAngles);
     } else {
@@ -64,6 +64,7 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
 void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
 {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+    angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+    angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation].validCount = 0;
   }
 }

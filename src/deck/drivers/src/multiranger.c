@@ -34,6 +34,7 @@
 #include "pca95x4.h"
 #include "vl53l1x.h"
 #include "range.h"
+#include "static_mem.h"
 
 #include "i2cdev.h"
 
@@ -52,11 +53,11 @@ static bool isPassed = false;
 #define MR_PIN_LEFT   PCA95X4_P6
 #define MR_PIN_RIGHT  PCA95X4_P2
 
-static VL53L1_Dev_t devFront;
-static VL53L1_Dev_t devBack;
-static VL53L1_Dev_t devUp;
-static VL53L1_Dev_t devLeft;
-static VL53L1_Dev_t devRight;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devFront;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devBack;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
 static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {

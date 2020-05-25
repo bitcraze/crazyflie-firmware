@@ -209,7 +209,7 @@ static bool processPreviousFrame(pulseProcessorV1_t *stateV1, pulseProcessorResu
           *baseStation = stateV1->currentBaseStation;
           *axis = stateV1->currentAxis;
 
-          pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurements[sensor].baseStatonMeasurements[stateV1->currentBaseStation];
+          pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurementsLh1[sensor].baseStatonMeasurements[stateV1->currentBaseStation];
           bsMeasurement->angles[stateV1->currentAxis] = angle;
           bsMeasurement->validCount++;
 

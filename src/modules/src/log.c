@@ -98,7 +98,7 @@ struct log_block {
   struct log_ops * ops;
 };
 
-static struct log_ops logOps[LOG_MAX_OPS];
+NO_DMA_CCM_SAFE_ZERO_INIT static struct log_ops logOps[LOG_MAX_OPS];
 NO_DMA_CCM_SAFE_ZERO_INIT static struct log_block logBlocks[LOG_MAX_BLOCKS];
 static xSemaphoreHandle logLock;
 static StaticSemaphore_t logLockBuffer;

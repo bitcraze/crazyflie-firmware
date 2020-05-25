@@ -217,11 +217,10 @@ static bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV
 }
 
 void pulseProcessorV2ConvertToV1Angles(const float v2Angle1, const float v2Angle2, float* v1Angles) {
-    const float a120 = M_PI_F * 120.0f / 180.0f;
     const float tan_p_2 = 0.5773502691896258f;   // tan(60 / 2)
 
-    v1Angles[0] = ((v2Angle1 + v2Angle2) / 2.0f) - M_PI_F;
-    float beta = (v2Angle2 - v2Angle1) - a120;
+    v1Angles[0] = (v2Angle1 + v2Angle2) / 2.0f;
+    float beta = v2Angle2 - v2Angle1;
     v1Angles[1] = atan(sinf(beta / 2.0f) / tan_p_2);
 }
 
@@ -233,10 +232,10 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         uint32_t secondOffset = latestBlock->offset[i];
         uint32_t period = CYCLE_PERIODS[channel];
 
-        float firstBeam = firstOffset * 2 * M_PI_F / period;
-        float secondBeam = secondOffset * 2 * M_PI_F / period;
+        float firstBeam = (firstOffset * 2 * M_PI_F / period) - M_PI_F + M_PI_F / 3.0f;
+        float secondBeam = (secondOffset * 2 * M_PI_F / period) - M_PI_F - M_PI_F / 3.0f;
 
-        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurements[i].baseStatonMeasurements[channel];
+        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurementsLh2[i].baseStatonMeasurements[channel];
         measurement->angles[0] = firstBeam;
         measurement->angles[1] = secondBeam;
         measurement->validCount = 2;
