@@ -42,6 +42,8 @@ typedef struct collision_avoidance_params_s
   struct vec ellipsoidRadii;
 
   // The minimal and maximal corners of the bounding box in which we fly.
+  // These are applied to the Crazyflie's center point only;
+  // the ellipsoid collision volume is ignored.
   struct vec bboxMin;
   struct vec bboxMax;
 
@@ -82,9 +84,9 @@ typedef struct collision_avoidance_state_s
 // Mutates the setpoint.
 //
 // To facilitate compiling and testing on a PC, we take neighbor positions via
-// array instead of having the implementation call peer_localization functions
+// array instead of having the implementation call peer_localization.h functions
 // directly. On the other hand, we wish to use the minimum possible amount of
-// memory. Therefore, we allow the input and output arrays to overlap. If
+// memory. Therefore, we allow the input and workspace arrays to overlap. If
 // otherPositions == workspace, this function will still work correctly, but it
 // will overwrite the contents of otherPositions.
 //

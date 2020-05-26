@@ -148,6 +148,7 @@ void collisionAvoidanceUpdateSetpointCore(
     // Interpret the setpoint to mean "fly with this velocity".
 
     if (!vinpolytope(setPosRelativeProjected, A, B, nRows, inPolytopeTolerance)) {
+      // Recall that in velocity mode, setPosRelative is our current location.
       // If our current location is not within our cell, then we should forget
       // about the original goal velocity and try to move towards our cell.
       setVel = vclampnorm(setPosRelativeProjected, params->maxSpeed);
@@ -214,12 +215,12 @@ void collisionAvoidanceUpdateSetpointCore(
 static uint8_t collisionAvoidanceEnable = 0;
 
 static collision_avoidance_params_t params = {
-  .ellipsoidRadii = { .x = 0.125, .y = 0.125, .z = 0.75 },
+  .ellipsoidRadii = { .x = 0.125, .y = 0.125, .z = 0.375 },
   .bboxMin = { .x = -FLT_MAX, .y = -FLT_MAX, .z = -FLT_MAX },
   .bboxMax = { .x = FLT_MAX, .y = FLT_MAX, .z = FLT_MAX },
   .horizonSecs = 1.0f,
-  .maxSpeed = 5.0f,
-  .maxPeerLocAgeMillis = 5000,
+  .maxSpeed = 5.0f,  // Probably faster than desired in most applications.
+  .maxPeerLocAgeMillis = 5000,  // Probably longer than desired in most applications.
   .voronoiProjectionTolerance = 1e-4,
   .voronoiProjectionMaxIters = 100,
 };
@@ -252,11 +253,10 @@ void collisionAvoidanceUpdateSetpoint(
   for (int i = 0; i < PEER_LOCALIZATION_MAX_NEIGHBORS; ++i) {
 
     peerLocalizationOtherPosition_t const *otherPos = peerLocalizationGetPositionByIdx(i);
-    int age = time - otherPos->pos.timestamp;
 
     if (otherPos == NULL ||
         otherPos->id == 0 ||
-        (doAgeFilter && (age > params.maxPeerLocAgeMillis))) {
+        (doAgeFilter && (time - otherPos->pos.timestamp > params.maxPeerLocAgeMillis))) {
       continue;
     }
 
