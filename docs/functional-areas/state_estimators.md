@@ -3,11 +3,11 @@ title: State estimation
 page_id: state_estimators
 ---
 
-A state estimator turns sensor signals into an estimate of the state that the crazyflie is in. This is an essential part of crazyflie's stabilizing system, as explained in the [overview page](/functional-areas/sensor_to_control/). State estimation is really important in quadrotors (and robotics in general). The Crazyflie needs to first of all know in which angles it is at (roll, pitch, yaw). If it would be flying at a few degrees slanted in roll, the crazyflie would accelerate into that direction. Therefore the controller need to know an good estimate of current angles’ state and compensate for it. For a step higher in autonomy, a good position estimate becomes important too, since you would like it to move reliably from A to B.
+A state estimator turns sensor signals into an estimate of the state that the crazyflie is in. This is an essential part of crazyflie's stabilizing system, as explained in the [overview page](/docs/functional-areas/sensor_to_control.md). State estimation is really important in quadrotors (and robotics in general). The Crazyflie needs to first of all know in which angles it is at (roll, pitch, yaw). If it would be flying at a few degrees slanted in roll, the crazyflie would accelerate into that direction. Therefore the controller need to know an good estimate of current angles’ state and compensate for it. For a step higher in autonomy, a good position estimate becomes important too, since you would like it to move reliably from A to B.
 
 ## Complementary filter
 
-![complementary filter](/images/complementary_filter.png){:width="500"}
+![complementary filter](/docs/images/complementary_filter.png){:width="500"}
 
 The complementary filter is consider a very lightweight and efficient filter which in general only uses the IMU input of the gyroscope (angle rate) and the accelerator. The estimator has been extended to also include input of the ToF distance measurement of the [Zranger deck](https://store.bitcraze.io/collections/decks/products/z-ranger-deck-v2). The estimated output is the Crazyflie’s attitude (roll, pitch, yaw) and its altitude (in the z direction). These values can be used by the controller and are meant to be used for manual control. 
 
@@ -15,7 +15,7 @@ To checkout the implementation details, please checkout the firmware in [estimat
 
 ## Extended Kalman filter
 
-![extended kalman filter](/images/extended_kalman_filter.png){:width="500"}
+![extended kalman filter](/docs/images/extended_kalman_filter.png){:width="500"}
 
 The (extended) Kalman filter (EKF) is an step up in complexity compared to the complementary filter, as it accepts more sensor inputs of both internal and external sensors. It is an recursive filter that estimates the current state of the Crazyflie based on incoming measurements (in combination with a predicted standard deviation of the noise), the measurement model and the model of the system itself. 
 
@@ -38,7 +38,7 @@ This section will explain how the signals of the sensors are transformed to stat
 
 This illustration explains how the height from the VL53L1x sensor and flow from the PMW3901 sensor are combined to calculate velocity. This has been implemented by the work of [3] and can be found in [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core.c) in the function `kalmanCoreUpdateWithFlow()`.
 
-![flowdeck velocity](/images/flowdeck_velocity.png){:width="500"}
+![flowdeck velocity](/docs/images/flowdeck_velocity.png){:width="500"}
 
 #### Locodeck
 

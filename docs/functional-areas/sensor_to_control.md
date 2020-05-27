@@ -11,7 +11,7 @@ by power distribution. Ofcourse, the motors have an affect on how the
 crazyflie flies and that inderectly has an effect on what the sensors
 detect in the next time step.
 
-![sensor](/images/sensors_to_motors.png){:width="700"}
+![sensor](/docs/images/sensors_to_motors.png){:width="700"}
 
 ## Modules 
 
@@ -42,7 +42,7 @@ There are 2 state estimators in the crazyflie:
 * Complementary Filter
 * Extended Kalman Filter
 
-For more indepth information about how the state estimation is implemented in the crazyflie firmware, please go to the [state estimation page](/functional-areas/state_estimators/)
+For more indepth information about how the state estimation is implemented in the crazyflie firmware, please go to the [state estimation page](/docs/functional-areas/state_estimators.md)
 
 ### State Controller
 There are 3 controllers in the crazyflie
@@ -50,12 +50,12 @@ There are 3 controllers in the crazyflie
 * INDI controller
 * Mellinger controller
 
-For more indepth information about how the controllers are implemented in the crazyflie firmware, please go to the [controllers page](/functional-areas/controllers/)
+For more indepth information about how the controllers are implemented in the crazyflie firmware, please go to the [controllers page](/docs/functional-areas/controllers.md)
 
 ### Commander Framework
 An desired state can be handled by the setpoint structure in position or atitude, which can be set by the cflib or the highlevel commander
 
-For more indepth information about how the commander framework are implemented in the crazyflie firmware, please go to the [commander page](/functional-areas/commanders_setpoints/)
+For more indepth information about how the commander framework are implemented in the crazyflie firmware, please go to the [commander page](/docs/functional-areas/commanders_setpoints.md)
 
 ### Power Distribution
 
