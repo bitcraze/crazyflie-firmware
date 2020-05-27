@@ -76,13 +76,13 @@ Now input the following settings in the debug configurations:
 
 ##### Main
 
-![stm openocd main](/images/stm_openocd_main.png)
+![stm openocd main](/docs/images/stm_openocd_main.png)
 
 Insert the filepath to the cf2.elf file to _C/C++ Application_.
 
 ##### Debugger
 
-![stm openocd debug](/images/stm_openocd_debugger.png)
+![stm openocd debug](/docs/images/stm_openocd_debugger.png)
 
 check the following settings: OpenOCD setup -\> Config options: \<code\>
 -f interface/stlink-v2.cfg -f target/stm32f4x.cfg -c init -c targets
@@ -93,7 +93,7 @@ check the following settings: OpenOCD setup -\> Config options: \<code\>
 
 ##### Startup
 
-![stm openocd startup](/images/stm_openocd_startup.png)
+![stm openocd startup](/docs/images/stm_openocd_startup.png)
 
 ##### Hit Debug!
 
@@ -171,7 +171,7 @@ Install the [extension](https://marketplace.visualstudio.com/items?itemName=maru
 
 Click on "Run", then "Add Configuration", then "Cortex Debug".
 
-![VS Code add configuration](/images/vscode_add_configuration.webp)
+![VS Code add configuration](/docs/images/vscode_add_configuration.webp)
 
 This should automatically create the needed "launch.json" file.
 
@@ -222,6 +222,6 @@ After all this, go to the Debug tab of VS Code (on the left sidebar, the icon wi
 
 If you followed everything, it should start running nicely and look a little something like this:
 
-![VS Code Cortex Debug](/images/vscode_cortex_debug.webp)
+![VS Code Cortex Debug](/docs/images/vscode_cortex_debug.webp)
 
 Notice the nice peripherals pane at the bottom, along with the variables pane at the top. Awesome, now you can code _and_ debug all within VS Code!
