@@ -23,15 +23,15 @@ in two part:
 Content
 -------
 
-      1. Header     1 Byte 0xEB
+      1. Header         1 Byte 0xEB
       2. UsedPins       4 Bytes
-      3. VID        1 Byte
-      4. PID        1 Byte
-      5. crc        1 Byte CRC32[0] (LSB byte) from 1 to 4.
+      3. VID            1 Byte
+      4. PID            1 Byte
+      5. crc            1 Byte CRC32[0] (LSB byte) from 1 to 4.
       6. Version        1Byte, 0 for now
       7. DataLength     1 Byte (255 max data length…)
       8. key/value data <DataLength> bytes
-      9. crc        1 Byte CRC32[0] (LSB byte) from 6 to 8
+      9. crc            1 Byte CRC32[0] (LSB byte) from 6 to 8
 
 -   The header area is from 1 to 5.
 -   The key/value area is from 6 do 9
@@ -75,10 +75,11 @@ ignored.
 
 Elements have this format:
 
-
- | **Id**      | 1Byte|
- | **length**  | 1Byte|
- | **data**     |\<length\> Bytes|
+| **Element** | No. of Bytes |
+| --- | --- |
+| **Id**      | 1Byte|
+| **length**  | 1Byte|
+| **data**     |\<length\> Bytes|
 
 
 The following elements are defined:
