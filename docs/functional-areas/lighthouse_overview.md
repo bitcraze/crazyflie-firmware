@@ -15,7 +15,7 @@ The lighthouse deck allows to use the HTC-Vive/SteamVR lighthouse tracking syste
 
 After everything is setup, the computer is not required anymore: the Crazyflie will autonomously estimate its position from the lighthouse signals.
 
-In order to setup the system you must also be able to compile a custom firmware for your Crazyflie and to program your Crazyflie 2.X. To do so you can follow the [Getting started with Crazyflie 2.X](https://www.bitcraze.io/getting-started-with-the-crazyflie-2-0/) and [Getting started with development](https://www.bitcraze.io/getting-started-with-development/) guides.
+In order to setup the system you must also be able to compile a custom firmware for your Crazyflie and to program your Crazyflie 2.X. To do so you can follow the [Getting started with Crazyflie 2.X](https://www.bitcraze.io/documentation/tutorials/getting-started-with-crazyflie-2-x/) and [Getting started with development](https://www.bitcraze.io/documentation/tutorials/getting-started-with-development/) guides.
 
 ### Finding base station positions - configuring the system
 
@@ -40,6 +40,8 @@ Compile the Crazyflie firmware with lighthouse support and flash the Crazyflie. 
 make
 make cload
 ```
+
+See [configure_build.md](/docs/building-and-flashing/configure_build.md) for more information about the config.mk file.
 
 Mount the Lighthouse deck on the Crazyflie, and place it on the floor where you want your the origin of your coordinate system, and turn it on. The Crazyflie should be oriented in the direction you want the X-axis.
 
