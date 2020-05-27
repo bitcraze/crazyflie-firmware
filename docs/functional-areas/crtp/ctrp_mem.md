@@ -26,7 +26,7 @@ Getting information and reading/writing the memories is optional for the
 clients, but the -Crazyflie Python Client- always downloads information
 about the memories on connect.
 
-![ctrp mem](/images/ctrp_mem.png)
+![ctrp mem](/docs/images/ctrp_mem.png)
 
 Communication protocol
 ======================
@@ -163,7 +163,7 @@ not contain any command byte.
 The request from host to Crazyflie:
 
 |  Byte  | Field      | Value   |Length   |Comment|
-|  ------| -----------|  ------- -------- |-------------------------------------------------|
+|  ------| -----------|  -------| -------- |-------------------------------------------------|
 |  0     | MEM\_ID    |        | 1        |A memory id that is 0 \<= id \< NBR\_OF\_MEMS |
 |  1     | MEM\_ADDR  |         |4        |The address where the first byte should be read |
 |  5     | LEN         |        |1        |The number of bytes to be read |
@@ -180,10 +180,10 @@ length to be read is valid:
 
 Where the STATUS field is:
 
-  STATUS   Comment
-  -------- ---------
-  0        \...
-  1        \....
+ | STATUS  | Comment|
+ | --------| ---------|
+ | 0       | \...|
+ | 1       | \....|
 
 Example of reading LEN=0x0F bytes from MEM\_ID=0x01 MEM\_ADDR=0x0A
 

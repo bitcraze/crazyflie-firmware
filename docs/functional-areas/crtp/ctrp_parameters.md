@@ -143,7 +143,7 @@ The following misc commands are implemented:
 |  n-(n+1)       |  NULL           | 0|
 |  (n+1)-(n+m+1) |  name           | Name of the parameter|
 |  (n+m+2)       |  NULL           | 0|
-|  (n+m+3)       |  ERROR          | 0 if the parameter has been successfully written. Other code are taken from [errno C codes](http://www.virtsync.com/c-error-codes-include-errno). |
+|  (n+m+3)       |  ERROR          | 0 if the parameter has been successfully written. Other code are taken from [errno C codes](https://www-numi.fnal.gov/offline_software/srt_public_context/WebDocs/Errors/unix_system_errors.html). |
 
 
 *Group* and *name* are ascii strings of size respectively *n* and *m*.
