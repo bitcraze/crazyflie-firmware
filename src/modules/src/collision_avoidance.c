@@ -49,6 +49,36 @@ static struct vec3_s svec2vec(struct vec v)
   return vv;
 }
 
+// modifyFromInside: Controls behavior if the goal is within our cell but we
+// are still close to the wall behind the the goal. If true, add a proportional
+// sidestep. Otherwise, do not change the goal. True is intended for velocity
+// control modes.
+static struct vec sidestepGoal(
+  collision_avoidance_params_t const *params,
+  struct vec goal,
+  bool modifyIfInside,
+  float const A[], float const B[], float projectionWorkspace[], int nRows)
+{
+  float const rayScale = rayintersectpolytope(vzero(), goal, A, B, nRows, NULL);
+  if (rayScale >= 1.0f && !modifyIfInside) {
+    return goal;
+  }
+  float const distance = vmag(goal);
+  float const distFromWall = rayScale * distance;
+  if (distFromWall <= params->sidestepThreshold) {
+    struct vec sidestepDir = vcross(goal, mkvec(0.0f, 0.0f, 1.0f));
+    float const sidestepAmount = fsqr(1.0f - distFromWall / params->sidestepThreshold);
+    goal = vadd(goal, vscl(sidestepAmount, sidestepDir));
+  }
+  // Otherwise no sidestep, but still project
+  return vprojectpolytope(
+    goal,
+    A, B, projectionWorkspace, nRows,
+    params->voronoiProjectionTolerance,
+    params->voronoiProjectionMaxIters
+  );
+}
+
 void collisionAvoidanceUpdateSetpointCore(
   collision_avoidance_params_t const *params,
   collision_avoidance_state_t *collisionState,
@@ -105,88 +135,97 @@ void collisionAvoidanceUpdateSetpointCore(
   // Part 2: Use the constructed polytope to modify the setpoint.
   //
 
-  struct vec setPos = vec2svec(setpoint->position);
-  struct vec setVel = vec2svec(setpoint->velocity);
-  struct vec setPosRelative = vsub(setPos, ourPos);
-
-  // Since the polytope coordinates are centered on our current position,
-  // projecting the zero vector in velocity control mode is used to determine
-  // if we are inside our own buffered cell or not.
-  struct vec toProject = (setpoint->mode.x == modeVelocity) ? vzero() : setPosRelative;
-  struct vec setPosRelativeProjected = vprojectpolytope(
-    toProject,
-    A, B, projectionWorkspace, nRows,
-    params->voronoiProjectionTolerance,
-    params->voronoiProjectionMaxIters
-  );
-
   float const inPolytopeTolerance = 10.0f * params->voronoiProjectionTolerance;
 
-  if (!vinpolytope(setPosRelativeProjected, A, B, nRows, inPolytopeTolerance)) {
-    // If the projection algorithm failed to converge, then either
-    //   1) The problem is infeasible, or
-    //   2) The problem is somehow badly conditioned.
-    // Case 2) is still effectively infeasible -- we're in a real-time system
-    // with a fixed computation time budget, and we've already spent it.
-    //
-    // There's not a lot we can do if our buffered cell is empty. It means
-    // someone failed to stay within their cell in the past. We choose to stay
-    // a fixed position for as long as the cell is empty.
-    setVel = vzero();
-    if (!visnan(collisionState->lastFeasibleSetPosition)) {
-      setPos = collisionState->lastFeasibleSetPosition;
-    }
-    else {
-      // This case should never happen as long as collision avoidance is
-      // initialized in a collision-free state, but we do something reasonable
-      // just in case.
-      setPos = ourPos;
-      collisionState->lastFeasibleSetPosition = ourPos;
-    }
-  }
-  else if (setpoint->mode.x == modeVelocity) {
+  struct vec setPos = vec2svec(setpoint->position);
+  struct vec setVel = vec2svec(setpoint->velocity);
+
+  if (setpoint->mode.x == modeVelocity) {
     // Interpret the setpoint to mean "fly with this velocity".
 
-    if (!vinpolytope(setPosRelativeProjected, A, B, nRows, inPolytopeTolerance)) {
-      // Recall that in velocity mode, setPosRelative is our current location.
-      // If our current location is not within our cell, then we should forget
-      // about the original goal velocity and try to move towards our cell.
-      setVel = vclampnorm(setPosRelativeProjected, params->maxSpeed);
+    if (vinpolytope(vzero(), A, B, nRows, inPolytopeTolerance)) {
+      // Typical case - our current position is within our cell.
+      struct vec pseudoGoal = vscl(params->horizonSecs, setVel);
+      pseudoGoal = sidestepGoal(params, pseudoGoal, true, A, B, projectionWorkspace, nRows);
+      if (vinpolytope(pseudoGoal, A, B, nRows, inPolytopeTolerance)) {
+        setVel = vdiv(pseudoGoal, params->horizonSecs);
+      }
+      else {
+        // Projection failed to converge. Best we can do is stay still.
+        setVel = vzero();
+      }
     }
     else {
-      // Otherwise, if goal velocity would take us outside our cell during the
-      // planning horizon, clamp it.
-      float const scale = rayintersectpolytope(vzero(), setVel, A, B, nRows, NULL);
-      if (scale < 1.0f)  {
-        setVel = vscl(scale, setVel);
+      // Atypical case - our current position is not within our cell. Forget
+      // about the original goal velocity and try to move towards our cell.
+      struct vec nearestInCell = vprojectpolytope(
+        vzero(),
+        A, B, projectionWorkspace, nRows,
+        params->voronoiProjectionTolerance,
+        params->voronoiProjectionMaxIters
+      );
+      if (vinpolytope(nearestInCell, A, B, nRows, inPolytopeTolerance)) {
+        setVel = vclampnorm(nearestInCell, params->maxSpeed);
+      }
+      else {
+        // Projection failed to converge. Best we can do is stay still.
+        setVel = vzero();
       }
     }
     collisionState->lastFeasibleSetPosition = ourPos;
   }
-  else if (setpoint->mode.x == modeAbs && veq(setVel, vzero())) {
-    // Position, but no velocity. Interpret as waypoint, not trajectory
-    // tracking. "Go to this position and stop".
-    setPos = vadd(ourPos, setPosRelativeProjected);
-    collisionState->lastFeasibleSetPosition = setPos;
-  }
   else if (setpoint->mode.x == modeAbs) {
-    // Position with nonzero velocity. Interpret as trajectory tracking.
-    if (vneq(setPosRelative, setPosRelativeProjected)) {
-      // Set position is not within our cell. The situation has likely diverged
-      // from the original plan, and the nonzero velocity is probably pointing
-      // further away from our cell. Therefore, degrade to the v == 0 behavior.
-      setPos = vadd(ourPos, setPosRelativeProjected);
+
+    struct vec const setPosRelative = vsub(setPos, ourPos);
+    struct vec const setPosRelativeNew = sidestepGoal(
+      params, setPosRelative, false, A, B, projectionWorkspace, nRows);
+
+    if (!vinpolytope(setPosRelativeNew, A, B, nRows, inPolytopeTolerance)) {
+      // If the projection algorithm failed to converge, then either
+      //   1) The problem is infeasible, or
+      //   2) The problem is somehow badly conditioned.
+      // Case 2) is still effectively infeasible -- we're in a real-time system
+      // with a fixed computation time budget, and we've already spent it.
+      //
+      // There's not a lot we can do if our buffered cell is empty. It means
+      // someone failed to stay within their cell in the past. We choose to stay
+      // a fixed position for as long as the cell is empty.
       setVel = vzero();
+      if (!visnan(collisionState->lastFeasibleSetPosition)) {
+        setPos = collisionState->lastFeasibleSetPosition;
+      }
+      else {
+        // This case should never happen as long as collision avoidance is
+        // initialized in a collision-free state, but we do something reasonable
+        // just in case.
+        setPos = ourPos;
+        collisionState->lastFeasibleSetPosition = ourPos;
+      }
+    }
+    else if (veq(setVel, vzero())) {
+      // Position, but no velocity. Interpret as waypoint, not trajectory
+      // tracking. "Go to this position and stop".
+      setPos = vadd(ourPos, setPosRelativeNew);
     }
     else {
-      // Set position is within our cell. In case velocity would take us
-      // outside the cell within the planning horizon, scale it appropriately.
-      // See github issue #567 for more detailed discussion of this behavior.
-      float const scale = rayintersectpolytope(setPosRelative, setVel, A, B, nRows, NULL);
-      if (scale < 1.0f)  {
-        setVel = vscl(scale, setVel);
+      // Position with nonzero velocity. Interpret as trajectory tracking.
+      if (vneq(setPosRelative, setPosRelativeNew)) {
+        // Set position is not within our cell. The situation has likely diverged
+        // from the original plan, and the nonzero velocity is probably pointing
+        // further away from our cell. Therefore, degrade to the v == 0 behavior.
+        setPos = vadd(ourPos, setPosRelativeNew);
+        setVel = vzero();
       }
-      // leave setPos unchanged.
+      else {
+        // Set position is within our cell. In case velocity would take us
+        // outside the cell within the planning horizon, scale it appropriately.
+        // See github issue #567 for more detailed discussion of this behavior.
+        float const scale = rayintersectpolytope(setPosRelative, setVel, A, B, nRows, NULL);
+        if (scale < 1.0f)  {
+          setVel = vscl(scale, setVel);
+        }
+        // leave setPos unchanged.
+      }
     }
     collisionState->lastFeasibleSetPosition = setPos;
   }

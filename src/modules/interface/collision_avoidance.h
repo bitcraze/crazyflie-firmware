@@ -55,6 +55,13 @@ typedef struct collision_avoidance_params_s
   // loosely with an infinity-norm box, so be conservative.
   float maxSpeed;
 
+  // If the velocity ray from our position (in velocity mode) or the segment
+  // connecting our current position to goal position (in position mode)
+  // intersects a cell wall, and the intersection is within this distance,
+  // activate the "sidestep" heuristic and move to the right to avoid deadlock
+  // situations.
+  float sidestepThreshold;
+
   // If peer localization measurements are older than this, ignore them.
   // If negative, never ignore.
   int maxPeerLocAgeMillis;
