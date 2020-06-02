@@ -218,6 +218,11 @@ typedef struct pulseProcessor_s {
 
   ootxDecoderState_t ootxDecoder[PULSE_PROCESSOR_N_BASE_STATIONS];
   lighthouseCalibration_t bsCalibration[PULSE_PROCESSOR_N_BASE_STATIONS];
+
+  // Health check data
+  uint32_t healthFirstSensorTs;
+  uint8_t healthSensorBitField;
+  bool healthDetermined;
 } pulseProcessor_t;
 
 typedef struct {

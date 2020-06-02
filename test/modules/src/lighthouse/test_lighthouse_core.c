@@ -20,6 +20,8 @@ static char* uart1Sequence;
 static int uart1SequenceLength;
 static lighthouseUartFrame_t frame;
 
+// Dummy mock
+uint32_t xTaskGetTickCount() {return 0;}
 
 void setUp(void) {
     uart1SetSequence(emptySequence, 0);
