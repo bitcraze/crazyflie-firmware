@@ -104,6 +104,7 @@ static vec3d sensorDeckPositions[4] = {
 
 static positionMeasurement_t ext_pos;
 static float sweepStd = 0.0004;
+static float sweepStdLh2 = 0.001;
 
 static vec3d position;
 static float deltaLog;
@@ -177,7 +178,7 @@ static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseSt
 
 static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseStation) {
   sweepAngleMeasurement_t sweepInfo;
-  sweepInfo.stdDev = sweepStd;
+  sweepInfo.stdDev = sweepStdLh2;
   sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
   sweepInfo.rotorRot = &lighthouseBaseStationsGeometry[baseStation].mat;
   sweepInfo.rotorRotInv = &baseStationInvertedRotationMatrixes[baseStation];
@@ -312,4 +313,5 @@ LOG_GROUP_STOP(lighthouse)
 
 PARAM_GROUP_START(lighthouse)
 PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
+PARAM_ADD(PARAM_FLOAT, sweepStd2, &sweepStdLh2)
 PARAM_GROUP_STOP(lighthouse)
