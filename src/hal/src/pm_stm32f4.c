@@ -56,6 +56,9 @@ typedef struct _PmSyslinkInfo
   };
   float vBat;
   float chargeCurrent;
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+  float temp;
+#endif
 }  __attribute__((packed)) PmSyslinkInfo;
 
 static float    batteryVoltage;
@@ -70,6 +73,11 @@ static float    extBatVoltMultiplier;
 static float    extBatteryCurrent;
 static uint8_t  extBatCurrDeckPin;
 static float    extBatCurrAmpPerVolt;
+
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+// nRF51 internal temp
+static float    temp;
+#endif
 
 static uint32_t batteryLowTimeStamp;
 static uint32_t batteryCriticalLowTimeStamp;
@@ -188,6 +196,9 @@ void pmSyslinkUpdate(SyslinkPacket *slp)
   if (slp->type == SYSLINK_PM_BATTERY_STATE) {
     memcpy(&pmSyslinkInfo, &slp->data[0], sizeof(pmSyslinkInfo));
     pmSetBatteryVoltage(pmSyslinkInfo.vBat);
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+    temp = pmSyslinkInfo.temp;
+#endif
   }
 }
 
@@ -395,4 +406,7 @@ LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 LOG_ADD(LOG_INT8, state, &pmState)
 LOG_ADD(LOG_UINT8, batteryLevel, &batteryLevel)
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+LOG_ADD(LOG_FLOAT, temp, &temp)
+#endif
 LOG_GROUP_STOP(pm)

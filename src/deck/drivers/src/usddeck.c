@@ -125,9 +125,9 @@ DWORD workBuff[512];  /* 2048 byte working buffer */
 #endif
 
 //Fatfs object
-NO_DMA_CCM_SAFE_ZERO_INIT static FATFS FatFs;
+static FATFS FatFs;
 //File object
-NO_DMA_CCM_SAFE_ZERO_INIT static FIL logFile;
+static FIL logFile;
 static SemaphoreHandle_t logFileMutex;
 
 static QueueHandle_t usdLogQueue;
