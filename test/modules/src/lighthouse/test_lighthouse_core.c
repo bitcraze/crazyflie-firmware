@@ -57,12 +57,14 @@ void testThatUartSyncFramesAreSkipped() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  bool actual = getUartFrame(&frame);
+  do {
+    bool actual = getUartFrameRaw(&frame);
+    TEST_ASSERT_TRUE(actual);
+  } while(frame.isSyncFrame);
 
   // Assert
   int actualRead = uart1BytesRead;
   TEST_ASSERT_EQUAL(expectedRead, actualRead);
-  TEST_ASSERT_TRUE(actual);
 }
 
 
@@ -72,7 +74,7 @@ void testThatCorruptUartFramesAreDetectedWithOnesInFirstPadding() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  bool actual = getUartFrame(&frame);
+  bool actual = getUartFrameRaw(&frame);
 
   // Assert
   TEST_ASSERT_FALSE(actual);
@@ -85,7 +87,7 @@ void testThatCorruptUartFramesAreDetectedWithOnesInSecondPadding() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  bool actual = getUartFrame(&frame);
+  bool actual = getUartFrameRaw(&frame);
 
   // Assert
   TEST_ASSERT_FALSE(actual);
@@ -99,7 +101,7 @@ void testThatTimeStampIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  getUartFrame(&frame);
+  getUartFrameRaw(&frame);
 
   // Assert
   uint32_t actual = frame.data.timestamp;
@@ -114,7 +116,7 @@ void testThatWidthIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  getUartFrame(&frame);
+  getUartFrameRaw(&frame);
 
   // Assert
   uint32_t actual = frame.data.width;
@@ -131,7 +133,7 @@ void testThatOffsetIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  bool frameOk = getUartFrame(&frame);
+  bool frameOk = getUartFrameRaw(&frame);
 
   // Assert
   uint32_t actual = frame.data.offset;
@@ -149,7 +151,7 @@ void testThatBeamDataIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  bool frameOk = getUartFrame(&frame);
+  bool frameOk = getUartFrameRaw(&frame);
 
   // Assert
   uint32_t actual = frame.data.beamData;
@@ -166,7 +168,7 @@ void testThatSensorIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  getUartFrame(&frame);
+  getUartFrameRaw(&frame);
 
   // Assert
   uint32_t actual = frame.data.sensor;
@@ -182,7 +184,7 @@ void testThatLackOfChannelIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  getUartFrame(&frame);
+  getUartFrameRaw(&frame);
 
   // Assert
   TEST_ASSERT_FALSE(frame.data.channelFound);
@@ -200,7 +202,7 @@ void testThatChannelIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  getUartFrame(&frame);
+  getUartFrameRaw(&frame);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT8(expected, frame.data.channel);
@@ -218,7 +220,7 @@ void testThatSlowBitIsDecodedInUartFrame() {
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  getUartFrame(&frame);
+  getUartFrameRaw(&frame);
 
   // Assert
   TEST_ASSERT_TRUE(frame.data.slowbit);
