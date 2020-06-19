@@ -288,6 +288,7 @@ static bool processPreviousFrame(pulseProcessorV1_t *stateV1, pulseProcessorResu
           float center = frameWidth/4.0f;
           float angle = (delta - center)*2*(float)M_PI/frameWidth;
           bsMeasurement->angles[*axis] = angle;
+          bsMeasurement->timestampsHistory[*axis][0] = delta;
           bsMeasurement->validCount++;
           anglesMeasured = true;
         }
