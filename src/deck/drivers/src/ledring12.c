@@ -708,6 +708,29 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
 }
 
 /**
+ * An effect that shows the status of the lighthouse.
+ *
+ * Red means 0 angles, green means 16 angles (2 basestations x 4 crazyflie sensors x 2 sweeping directions).
+ */
+static void lightHouseEffect(uint8_t buffer[][3], bool reset)
+{
+  static int validAnglesId = -1;
+  
+  // lazy initialization of the logging variables
+  if (validAnglesId == -1) {
+    validAnglesId = logGetVarId("lighthouse", "validAngles");
+  }
+
+  uint16_t validAngles = logGetUint(validAnglesId);
+
+  for (int i = 0; i < NBR_LEDS; i++) {
+    buffer[i][0] = LIMIT(LINSCALE(0, 16, 100, 0, __builtin_popcount(validAngles))); // Red (small validAngles)
+    buffer[i][1] = LIMIT(LINSCALE(0, 16, 0, 100, __builtin_popcount(validAngles))); // Green (large validAngles)
+    buffer[i][2] = 0;
+  }
+}
+
+/**
  * An effect that shows the status of the location service.
  *
  * Red means bad, green means good.
@@ -776,6 +799,7 @@ Ledring12Effect effectsFct[] =
   fadeColorEffect,
   rssiEffect,
   locSrvStatus,
+  lightHouseEffect,
 };
 
 /********** Ring init and switching **********/

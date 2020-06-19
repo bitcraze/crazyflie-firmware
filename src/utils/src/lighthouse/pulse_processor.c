@@ -68,3 +68,17 @@ void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
     angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation].validCount = 0;
   }
 }
+
+/**
+ * @brief Clear result struct
+ *
+ * @param angles
+ */
+void pulseProcessorAllClear(pulseProcessorResult_t* angles)
+{
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+      angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+    }
+  }
+}
