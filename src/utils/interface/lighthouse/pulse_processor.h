@@ -36,6 +36,7 @@
 #include "lighthouse_calibration.h"
 
 #define PULSE_PROCESSOR_N_SWEEPS 2
+#define PULSE_PROCESSOR_N_SWEEPS_PER_FRAME 4
 #define PULSE_PROCESSOR_N_BASE_STATIONS 2
 #define PULSE_PROCESSOR_N_SENSORS 4
 #define PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS 2
@@ -155,6 +156,7 @@ typedef struct {
   // Sweep timestamps
   struct {
     uint32_t timestamp;
+    uint32_t timestamps[PULSE_PROCESSOR_N_SWEEPS_PER_FRAME];
     SweepStorageState_t state;
   } sweeps[PULSE_PROCESSOR_N_SENSORS];
   bool sweepDataStored;
@@ -228,6 +230,7 @@ typedef struct pulseProcessor_s {
 typedef struct {
   float angles[PULSE_PROCESSOR_N_SWEEPS];
   float correctedAngles[PULSE_PROCESSOR_N_SWEEPS];
+  uint32_t timestampsHistory[PULSE_PROCESSOR_N_SWEEPS][PULSE_PROCESSOR_N_SWEEPS_PER_FRAME];
   int validCount;
 } pulseProcessorBaseStationMeasuremnt_t;
 

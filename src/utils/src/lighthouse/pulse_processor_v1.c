@@ -167,9 +167,19 @@ static int getOotxDataBit(int width)
 }
 
 static void storeSweepData(pulseProcessorV1_t *stateV1, int sensor, unsigned int timestamp) {
-  if (stateV1->sweeps[sensor].state == sweepStorageStateWaiting) {
+  if (stateV1->sweeps[sensor].state == sweepStorageStateWaiting || stateV1->sweeps[sensor].state == sweepStorageStateValid) {
     stateV1->sweeps[sensor].timestamp = timestamp;
-    stateV1->sweeps[sensor].state = sweepStorageStateValid;
+    
+    int i=0;
+    while(i!=PULSE_PROCESSOR_N_SWEEPS_PER_FRAME && stateV1->sweeps[sensor].timestamps[i] != 0)
+      i++;
+
+    if(i!=PULSE_PROCESSOR_N_SWEEPS_PER_FRAME) { 
+      stateV1->sweeps[sensor].timestamps[i] = timestamp;
+      stateV1->sweeps[sensor].state = sweepStorageStateValid;
+    } else {
+      stateV1->sweeps[sensor].state = sweepStorageStateError;
+    }
   } else {
     stateV1->sweeps[sensor].state = sweepStorageStateError;
   }
@@ -179,6 +189,9 @@ static void storeSweepData(pulseProcessorV1_t *stateV1, int sensor, unsigned int
 
 static void resetSweepData(pulseProcessorV1_t *stateV1) {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    for(int i=0; i!= PULSE_PROCESSOR_N_SWEEPS_PER_FRAME; i++) {
+      stateV1->sweeps[sensor].timestamps[i] = 0;
+    }
     stateV1->sweeps[sensor].state = sweepStorageStateWaiting;
   }
   stateV1->sweepDataStored = false;
@@ -189,37 +202,100 @@ static void resetSynchronization(pulseProcessorV1_t *stateV1) {
   stateV1->synchronized = false;
 }
 
+static bool filterReflections(pulseProcessorV1_t *stateV1, pulseProcessorBaseStationMeasuremnt_t* bsMeasurement, int baseStation, int axis, size_t sensor) {
+  float frameWidth = stateV1->frameWidth[baseStation][axis];
+  
+  // Normally there should only be one sweep each frame.
+  // So multiple sweeps means reflection of he sweep.
+  // If we have previous data, use that to filter out the wrong sweeps.
+  int multipleSweeps = 0;
+  for(int i=0; i!=PULSE_PROCESSOR_N_SWEEPS_PER_FRAME; i++) {
+    if(stateV1->sweeps[sensor].timestamps[i] != 0) {
+      multipleSweeps++;
+    }
+  }
+  if(multipleSweeps <= 1) {
+    return true;
+  }
+
+  if(bsMeasurement->angles[axis] == 0) {
+    return false;
+  }
+
+  int closestTimestamp = 0;
+  float closestDiff = 0;
+  int closestI = 0;
+  for(int i=0; i!=PULSE_PROCESSOR_N_SWEEPS_PER_FRAME; i++) {
+    if(stateV1->sweeps[sensor].timestamps[i] != 0) {
+      uint32_t delta = TS_DIFF(stateV1->sweeps[sensor].timestamps[i], stateV1->currentSync);
+
+      bsMeasurement->timestampsHistory[axis][i] = delta;
+
+      if (delta < FRAME_LENGTH) {
+        float center = frameWidth/4.0f;
+        float angle = (delta - center)*2*(float)M_PI/frameWidth;
+        float diff = fabs(bsMeasurement->angles[axis]-angle);
+
+        if (closestTimestamp == 0 || closestDiff > diff) {
+          closestTimestamp = stateV1->sweeps[sensor].timestamps[i];
+          closestDiff = diff;
+          closestI = i;
+        }
+      }
+    }
+    else {
+      bsMeasurement->timestampsHistory[axis][i] = 0;
+    }
+  }
+
+  if (closestTimestamp != 0 && closestDiff < 0.1f) {
+    stateV1->sweeps[sensor].timestamp = closestTimestamp;
+
+    uint32_t swap = bsMeasurement->timestampsHistory[axis][closestI];
+    bsMeasurement->timestampsHistory[axis][closestI] = bsMeasurement->timestampsHistory[axis][0];
+    bsMeasurement->timestampsHistory[axis][0] = swap;
+    return true;
+  } 
+
+  // Maybe recalculate angles from another bs. So that we can pick it up when we lost it
+  // Or maybe keep the angle some x pulses, so that it can pick it up later of a single mismatch
+  //bsMeasurement->angles[state->currentAxis] = 0;
+  return false;
+}
+
 static bool processPreviousFrame(pulseProcessorV1_t *stateV1, pulseProcessorResult_t* result, int *baseStation, int *axis) {
   bool anglesMeasured = false;
 
   if (stateV1->sweepDataStored) {
+    float frameWidth = stateV1->frameWidth[stateV1->currentBaseStation][stateV1->currentAxis];
+    if ((frameWidth < FRAME_WIDTH_MIN) || (frameWidth > FRAME_WIDTH_MAX)) {
+      return false;
+    }
+
+    *baseStation = stateV1->currentBaseStation;
+    *axis = stateV1->currentAxis;
+
     for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       if (stateV1->sweeps[sensor].state == sweepStorageStateValid) {
+        pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurementsLh1[sensor].baseStatonMeasurements[*baseStation];
+        
+        if(!filterReflections(stateV1, bsMeasurement, *baseStation, *axis, sensor)) {
+          continue;
+        }
+
         int delta = TS_DIFF(stateV1->sweeps[sensor].timestamp, stateV1->currentSync);
         if (delta < FRAME_LENGTH) {
-          float frameWidth = stateV1->frameWidth[stateV1->currentBaseStation][stateV1->currentAxis];
-
-          if ((frameWidth < FRAME_WIDTH_MIN) || (frameWidth > FRAME_WIDTH_MAX)) {
-            return false;
-          }
-
           float center = frameWidth/4.0f;
           float angle = (delta - center)*2*(float)M_PI/frameWidth;
-
-          *baseStation = stateV1->currentBaseStation;
-          *axis = stateV1->currentAxis;
-
-          pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &result->sensorMeasurementsLh1[sensor].baseStatonMeasurements[stateV1->currentBaseStation];
-          bsMeasurement->angles[stateV1->currentAxis] = angle;
+          bsMeasurement->angles[*axis] = angle;
           bsMeasurement->validCount++;
-
           anglesMeasured = true;
         }
       }
     }
-
-    resetSweepData(stateV1);
   }
+
+  resetSweepData(stateV1);
 
   return anglesMeasured;
 }

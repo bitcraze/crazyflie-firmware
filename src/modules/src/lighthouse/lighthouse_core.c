@@ -196,10 +196,10 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
 
     switch(estimationMethod) {
       case 0:
-        usePulseResultCrossingBeams(appState, angles, basestation, axis);
+        usePulseResultCrossingBeams(appState, angles, basestation);
         break;
       case 1:
-        usePulseResultSweeps(appState, angles, basestation, axis);
+        usePulseResultSweeps(appState, angles, basestation);
         break;
       default:
         break;
@@ -359,6 +359,11 @@ LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
 LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[1])
 LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[0])
 LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[1])
+
+LOG_ADD(LOG_UINT32, time0x_0, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[0].timestampsHistory[1][0])
+LOG_ADD(LOG_UINT32, time0x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[0].timestampsHistory[1][1])
+LOG_ADD(LOG_UINT32, time0x_2, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[0].timestampsHistory[1][2])
+LOG_ADD(LOG_UINT32, time0x_3, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[0].timestampsHistory[1][3])
 
 STATS_CNT_RATE_LOG_ADD(serRt, &serialFrameRate)
 STATS_CNT_RATE_LOG_ADD(frmRt, &frameRate)
