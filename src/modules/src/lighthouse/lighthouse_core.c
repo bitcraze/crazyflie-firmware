@@ -196,10 +196,10 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
 
     switch(estimationMethod) {
       case 0:
-        usePulseResultCrossingBeams(appState, angles, basestation);
+        usePulseResultCrossingBeams(appState, angles, basestation, axis);
         break;
       case 1:
-        usePulseResultSweeps(appState, angles, basestation);
+        usePulseResultSweeps(appState, angles, basestation, axis);
         break;
       default:
         break;
