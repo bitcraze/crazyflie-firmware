@@ -44,6 +44,9 @@
 #include "pm.h"
 #include "log.h"
 
+#define DEBUG_MODULE "LED"
+#include "debug.h"
+
 static bool isInit = false;
 
 /*
@@ -99,6 +102,9 @@ static const uint8_t white[] = WHITE;
 static const uint8_t part_black[] = BLACK;
 
 uint8_t ledringmem[NBR_LEDS * 2];
+
+ledtimings ledringtimingsmem[3000];
+int timeEffectFPS = 25;
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -754,6 +760,62 @@ static void locSrvStatus(uint8_t buffer[][3], bool reset)
   }
 }
 
+static int timeEffectI = 0;
+static uint64_t timeEffectTime = 0;
+static void timeMemEffect(uint8_t buffer[][3], bool reset)
+{
+  int i;
+
+  // Start timer when going to this 
+  if (reset)
+  {
+    for (i=0; i<NBR_LEDS; i++) {
+      COPY_COLOR(buffer[i], part_black);
+    }
+
+    timeEffectTime = usecTimestamp() / 1000;
+    timeEffectI = 1;
+    DEBUG_PRINT("start: %lld\n", timeEffectTime);
+  }
+
+  // Stop when completed
+  ledtimings current = ledringtimingsmem[timeEffectI];
+  if(current.duration == 0 && current.color[0] == 0 && current.color[1] == 0) {
+    return;
+  }
+
+  // Get the proper index
+  uint64_t time = usecTimestamp() / 1000;
+  while(timeEffectTime + 1000/timeEffectFPS * current.duration < time) {
+    timeEffectTime += 1000/timeEffectFPS * current.duration;
+    timeEffectI++;
+
+    current = ledringtimingsmem[timeEffectI];
+
+    if(timeEffectI < 24)
+      DEBUG_PRINT("subset: %i %lld %lld\n", timeEffectI, timeEffectTime, timeEffectTime + 1000/timeEffectFPS * current.duration);
+
+    if(current.duration == 0 && current.color[0] == 0 && current.color[1] == 0) {
+      DEBUG_PRINT("stop: %lld\n", time);
+      return;
+    }
+  }
+
+  // Apply color
+  uint8_t R5, G6, B5;
+  // Convert from RGB565 to RGB888
+  R5 = current.color[0] >> 3;
+  G6 = ((current.color[0] & 0x07) << 3) | (current.color[1] >> 5);
+  B5 = current.color[1] & 0x1F;
+
+  for (i = 0; i < NBR_LEDS; i++)
+  {
+    buffer[i][0] = ((uint16_t)R5 * 527 + 23 ) >> 6;
+    buffer[i][1] = ((uint16_t)G6 * 259 + 33 ) >> 6;
+    buffer[i][2] = ((uint16_t)B5 * 527 + 23 ) >> 6;
+  }
+}
+
 /**************** Effect list ***************/
 
 
@@ -776,6 +838,7 @@ Ledring12Effect effectsFct[] =
   fadeColorEffect,
   rssiEffect,
   locSrvStatus,
+  timeMemEffect,
 };
 
 /********** Ring init and switching **********/
