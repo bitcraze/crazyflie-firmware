@@ -14,14 +14,6 @@ Furthermore, P2P packets are only sent and received from the 2.4GHz internal Cra
 The maximum data payload contained in a P2P packet is ```P2P_MAX_DATA_SIZE```. It is currently set to 60Bytes.
 
 ## Using the P2P API
-Make sure to compile the NRF software without bluetooth support for P2P to work properly.
-You can do so by cloning the [crazyflie2-nrf-firmware](https://github.com/bitcraze/crazyflie2-nrf-firmware) and then compiling and flashing the firmware without bluetooth support:
-```bash
-cd crazyflie2-nrf-firmware
-make clean
-make BLE=0
-make cload BLE=0
-```
 Functions and structures are defined in the header file [src/hal/interface/radiolink.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/radiolink.h)
 
 ## Peer to Peer broadcast
