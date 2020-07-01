@@ -81,10 +81,20 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 #define DEADBAND(a, b) ((a<b) ? 0:a)
 #define LINSCALE(domain_low, domain_high, codomain_low, codomain_high, value) ((codomain_high - codomain_low) / (domain_high - domain_low)) * (value - domain_low) + codomain_low
 #define SET_WHITE(dest, intensity) dest[0] = intensity; dest[1] = intensity; dest[2] = intensity;
+#define RGB565_TO_RGB888(dest, orig)                                           \
+  uint8_t R5, G6, B5;                                                          \
+  R5 = orig[0] >> 3;                                                           \
+  G6 = ((orig[0] & 0x07) << 3) | (orig[1] >> 5);                               \
+  B5 = orig[1] & 0x1F;                                                         \
+  dest[0] = ((uint16_t)R5 * 527 + 23) >> 6;                                    \
+  dest[1] = ((uint16_t)G6 * 259 + 33) >> 6;                                    \
+  dest[2] = ((uint16_t)B5 * 527 + 23) >> 6;
 
 #ifndef LEDRING_DEFAULT_EFFECT
 #define LEDRING_DEFAULT_EFFECT 6
 #endif
+
+#define LEDRING_TIME_MEM_SEC 1000 / 25
 
 static uint32_t effect = LEDRING_DEFAULT_EFFECT;
 static uint32_t neffect;
@@ -103,8 +113,7 @@ static const uint8_t part_black[] = BLACK;
 
 uint8_t ledringmem[NBR_LEDS * 2];
 
-ledtimings ledringtimingsmem[3000];
-int timeEffectFPS = 25;
+ledtimings ledringtimingsmem[LEDRING_TIME_MEM_SIZE];
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -760,60 +769,104 @@ static void locSrvStatus(uint8_t buffer[][3], bool reset)
   }
 }
 
+static bool isTimeMemDone(ledtimings current)
+{
+  return current.duration == 0 && current.color[0] == 0 &&
+         current.color[1] == 0;
+}
+
 static int timeEffectI = 0;
 static uint64_t timeEffectTime = 0;
-static void timeMemEffect(uint8_t buffer[][3], bool reset)
-{
-  int i;
+static uint8_t timeEffectPrevBuffer[NBR_LEDS][3];
+static float timeEffectRotation = 0;
 
-  // Start timer when going to this 
-  if (reset)
-  {
-    for (i=0; i<NBR_LEDS; i++) {
-      COPY_COLOR(buffer[i], part_black);
+static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
+{
+
+  // Start timer when going to this
+  if (reset) {
+    for (int i = 0; i < NBR_LEDS; i++) {
+      COPY_COLOR(timeEffectPrevBuffer[i], part_black);
+      COPY_COLOR(outputBuffer[i], part_black);
     }
 
+    timeEffectRotation = 0;
     timeEffectTime = usecTimestamp() / 1000;
     timeEffectI = 1;
-    DEBUG_PRINT("start: %lld\n", timeEffectTime);
   }
 
-  // Stop when completed
   ledtimings current = ledringtimingsmem[timeEffectI];
-  if(current.duration == 0 && current.color[0] == 0 && current.color[1] == 0) {
+
+  // Stop when completed
+  if (isTimeMemDone(current))
     return;
-  }
 
   // Get the proper index
   uint64_t time = usecTimestamp() / 1000;
-  while(timeEffectTime + 1000/timeEffectFPS * current.duration < time) {
-    timeEffectTime += 1000/timeEffectFPS * current.duration;
-    timeEffectI++;
+  while (timeEffectTime + LEDRING_TIME_MEM_SEC * current.duration < time) {
+    // Apply previous commands to the cache
+    uint8_t color[3];
+    RGB565_TO_RGB888(color, current.color)
 
+    if (current.leds == 0) {
+      for (int i = 0; i < NBR_LEDS; i++) {
+        COPY_COLOR(timeEffectPrevBuffer[i], color);
+      }
+    } else {
+      COPY_COLOR(timeEffectPrevBuffer[current.leds], color);
+    }
+
+    timeEffectRotation += current.duration / (current.rotate * 1000);
+
+    // Goto next effect
+    timeEffectTime += LEDRING_TIME_MEM_SEC * current.duration;
+    timeEffectI++;
     current = ledringtimingsmem[timeEffectI];
 
-    if(timeEffectI < 24)
-      DEBUG_PRINT("subset: %i %lld %lld\n", timeEffectI, timeEffectTime, timeEffectTime + 1000/timeEffectFPS * current.duration);
-
-    if(current.duration == 0 && current.color[0] == 0 && current.color[1] == 0) {
-      DEBUG_PRINT("stop: %lld\n", time);
+    if (isTimeMemDone(current))
       return;
+  }
+
+  // Apply the current effect
+  uint8_t color[3];
+  RGB565_TO_RGB888(color, current.color)
+  uint8_t currentBuffer[NBR_LEDS][3];
+  for (int i = 0; i < NBR_LEDS; i++) {
+    COPY_COLOR(currentBuffer[i], timeEffectPrevBuffer[i]);
+  }
+
+  if (current.fade) {
+    float percent =
+        (time - timeEffectTime) / (current.duration * LEDRING_TIME_MEM_SEC);
+    if (current.leds == 0)
+      for (int i = 0; i < NBR_LEDS; i++)
+        for (int j = 0; j < 3; j++)
+          currentBuffer[i][j] = (1.0f - percent) * timeEffectPrevBuffer[i][j] + percent * color[j];
+    else
+      for (int j = 0; j < 3; j++)
+        currentBuffer[current.leds][j] = (1.0f - percent) * timeEffectPrevBuffer[current.leds][j] + percent * color[j];
+  }
+  else {
+    if (current.leds == 0) {
+      for (int i = 0; i < NBR_LEDS; i++) {
+        COPY_COLOR(currentBuffer[i], color);
+      }
+    } else {
+      COPY_COLOR(currentBuffer[current.leds], color);
     }
   }
 
-  // Apply color
-  uint8_t R5, G6, B5;
-  // Convert from RGB565 to RGB888
-  R5 = current.color[0] >> 3;
-  G6 = ((current.color[0] & 0x07) << 3) | (current.color[1] >> 5);
-  B5 = current.color[1] & 0x1F;
+  float rotate = timeEffectRotation + (time - timeEffectTime) / (current.rotate * 1000);
+  int shift = rotate * NBR_LEDS;
+  float percentShift = rotate - shift;
+  shift = shift % NBR_LEDS;
 
-  for (i = 0; i < NBR_LEDS; i++)
-  {
-    buffer[i][0] = ((uint16_t)R5 * 527 + 23 ) >> 6;
-    buffer[i][1] = ((uint16_t)G6 * 259 + 33 ) >> 6;
-    buffer[i][2] = ((uint16_t)B5 * 527 + 23 ) >> 6;
-  }
+  // Output current leds
+  for (int i = 0; i < NBR_LEDS; i++)
+    for (int j = 0; j < 3; j++)
+      currentBuffer[(i+shift) % NBR_LEDS][j] = 
+        (1 - percentShift) * currentBuffer[i][j] + 
+        percentShift * currentBuffer[(i+1) % NBR_LEDS][j];
 }
 
 /**************** Effect list ***************/
