@@ -126,8 +126,8 @@ More information can be found on the
 [Bitcraze documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/)
 
 
-```
 # Make targets:
+
 ```
 all        : Shortcut for build
 compile    : Compile cflie.hex. WARNING: Do NOT update version.c
