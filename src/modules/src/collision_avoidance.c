@@ -128,7 +128,7 @@ void collisionAvoidanceUpdateSetpointCore(
 
     float boxMin = vindex(params->bboxMin, dim) - vindex(ourPos, dim);
     A[3 * (nOthers + dim + 3) + dim] = -1.0f;
-    B[nOthers + dim + 3] = fmaxf(-maxDist, -boxMin);
+    B[nOthers + dim + 3] = -fmaxf(-maxDist, boxMin);
   }
 
   //
