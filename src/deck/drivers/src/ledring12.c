@@ -43,6 +43,7 @@
 #include "param.h"
 #include "pm.h"
 #include "log.h"
+#include "pulse_processor.h"
 
 static bool isInit = false;
 
@@ -714,18 +715,11 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
  */
 static void lightHouseEffect(uint8_t buffer[][3], bool reset)
 {
-  static int validAnglesId = -1;
-  
-  // lazy initialization of the logging variables
-  if (validAnglesId == -1) {
-    validAnglesId = logGetVarId("lighthouse", "validAngles");
-  }
-
-  uint16_t validAngles = logGetUint(validAnglesId);
+  uint16_t validAngles = pulseProcessorAnglesQuality();
 
   for (int i = 0; i < NBR_LEDS; i++) {
-    buffer[i][0] = LIMIT(LINSCALE(0, 16, 100, 0, __builtin_popcount(validAngles))); // Red (small validAngles)
-    buffer[i][1] = LIMIT(LINSCALE(0, 16, 0, 100, __builtin_popcount(validAngles))); // Green (large validAngles)
+    buffer[i][0] = LIMIT(LINSCALE(0, 255, 100, 0, validAngles)); // Red (small validAngles)
+    buffer[i][1] = LIMIT(LINSCALE(0, 255, 0, 100, validAngles)); // Green (large validAngles)
     buffer[i][2] = 0;
   }
 }
