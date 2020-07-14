@@ -514,5 +514,5 @@ void pulseProcessorV1ProcessValidAngles(pulseProcessorResult_t* angles, int base
 }
 
 uint8_t pulseProcessorV1AnglesQuality() {
-  return __builtin_popcount(validAngles)*1.0/(PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS*PULSE_PROCESSOR_N_BASE_STATIONS);
+  return __builtin_popcount(validAngles)*1.0/(PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS*PULSE_PROCESSOR_N_BASE_STATIONS)*255;
 }

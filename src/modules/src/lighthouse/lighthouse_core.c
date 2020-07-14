@@ -314,7 +314,7 @@ void lighthouseCoreTask(void *param) {
           pulseProcessorAllClear(&angles);
       }
       // Now we are receiving items
-      else {    
+      else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT(&frameRate);
         
         deckHealthCheck(&ppState, &frame);
