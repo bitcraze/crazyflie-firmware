@@ -113,7 +113,7 @@ static const uint8_t part_black[] = BLACK;
 
 uint8_t ledringmem[NBR_LEDS * 2];
 
-ledtimings ledringtimingsmem[LEDRING_TIME_MEM_SIZE];
+ledtimings ledringtimingsmem;
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -769,7 +769,7 @@ static void locSrvStatus(uint8_t buffer[][3], bool reset)
   }
 }
 
-static bool isTimeMemDone(ledtimings current)
+static bool isTimeMemDone(ledtiming current)
 {
   return current.duration == 0 && current.color[0] == 0 &&
          current.color[1] == 0;
@@ -782,7 +782,6 @@ static float timeEffectRotation = 0;
 
 static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
 {
-
   // Start timer when going to this
   if (reset) {
     for (int i = 0; i < NBR_LEDS; i++) {
@@ -792,10 +791,10 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
 
     timeEffectRotation = 0;
     timeEffectTime = usecTimestamp() / 1000;
-    timeEffectI = 1;
+    timeEffectI = 0;
   }
-
-  ledtimings current = ledringtimingsmem[timeEffectI];
+  
+  ledtiming current = ledringtimingsmem.timings[timeEffectI];
 
   // Stop when completed
   if (isTimeMemDone(current))
@@ -816,12 +815,12 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
       COPY_COLOR(timeEffectPrevBuffer[current.leds], color);
     }
 
-    timeEffectRotation += current.duration / (current.rotate * 1000);
-
     // Goto next effect
+    if(current.rotate)
+      timeEffectRotation += 1.0f * current.duration * LEDRING_TIME_MEM_SEC / (current.rotate * 1000);
     timeEffectTime += LEDRING_TIME_MEM_SEC * current.duration;
     timeEffectI++;
-    current = ledringtimingsmem[timeEffectI];
+    current = ledringtimingsmem.timings[timeEffectI];
 
     if (isTimeMemDone(current))
       return;
@@ -836,8 +835,7 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
   }
 
   if (current.fade) {
-    float percent =
-        (time - timeEffectTime) / (current.duration * LEDRING_TIME_MEM_SEC);
+    float percent = 1.0 * (time - timeEffectTime) / (current.duration * LEDRING_TIME_MEM_SEC);
     if (current.leds == 0)
       for (int i = 0; i < NBR_LEDS; i++)
         for (int j = 0; j < 3; j++)
@@ -856,17 +854,21 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
     }
   }
 
-  float rotate = timeEffectRotation + (time - timeEffectTime) / (current.rotate * 1000);
+  float rotate = timeEffectRotation;
+  if(current.rotate) {
+    rotate += 1.0f * (time - timeEffectTime) / (current.rotate * 1000);
+  }
+  
   int shift = rotate * NBR_LEDS;
-  float percentShift = rotate - shift;
+  float percentShift = rotate * NBR_LEDS - shift;
   shift = shift % NBR_LEDS;
 
   // Output current leds
   for (int i = 0; i < NBR_LEDS; i++)
     for (int j = 0; j < 3; j++)
-      currentBuffer[(i+shift) % NBR_LEDS][j] = 
-        (1 - percentShift) * currentBuffer[i][j] + 
-        percentShift * currentBuffer[(i+1) % NBR_LEDS][j];
+      outputBuffer[(i+shift) % NBR_LEDS][j] = 
+        percentShift * currentBuffer[i][j] + 
+        (1-percentShift) * currentBuffer[(i+1) % NBR_LEDS][j];
 }
 
 /**************** Effect list ***************/
