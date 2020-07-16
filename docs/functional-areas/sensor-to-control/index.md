@@ -1,6 +1,6 @@
 ---
 title: Stabilizer Module
-page_id: index
+page_id: stabilizer_index
 ---
 
 This page is meant as an introduction and overview of the path from
