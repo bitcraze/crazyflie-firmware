@@ -3,7 +3,7 @@ title: Controllers in the Crazyflie
 page_id: controllers
 ---
 
-[go back to overview](/functional-areas/sensor-to-control/index)
+[go back to overview](/functional-areas/sensor-to-control/index/)
 
 Once the [state estimator](/functional-areas/sensor-to-control/state_estimators/) have outputed the current (estimated) situation of the crazyflie in position velocity and attitude, it is time for the controllers to keep it that way or to move the crazyflie into a new position based on a setpoint. This is an important part of the [stabilization system](/functional-areas/sensor-to-control/index/) in the crazyflie. 
 
@@ -48,7 +48,7 @@ Check the implementation details in [attitude_pid_controller.c](https://github.c
 
 ### Attitude PID controller
 
-The absolute attitude PID controller is the outerloop of the attitude controller. This takes in the estimated attitude of the [state estimator](/functional-areas/state_estimators/), and takes the error of the desired attitude setpoint to control the attitude of the Crazyflie. The output is desired attitude rate which is send to the attitude rate controller. The control loop runs at 500 Hz.
+The absolute attitude PID controller is the outerloop of the attitude controller. This takes in the estimated attitude of the [state estimator](/functional-areas/functional-areas/state_estimators/), and takes the error of the desired attitude setpoint to control the attitude of the Crazyflie. The output is desired attitude rate which is send to the attitude rate controller. The control loop runs at 500 Hz.
 
 Check the implementation details in [attitude_pid_controller.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/attitude_pid_controller.c) in `attitudeControllerCorrectAttitudePID()`.
 

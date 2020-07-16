@@ -3,7 +3,7 @@ title: State estimation
 page_id: state_estimators
 ---
 
-[go back to overview](/functional-areas/sensor-to-control/index)
+[go back to overview](/functional-areas/sensor-to-control/index/)
 
 
 A state estimator turns sensor signals into an estimate of the state that the crazyflie is in. This is an essential part of crazyflie's stabilizing system, as explained in the [overview page](/functional-areas/sensor-to-control/index). State estimation is really important in quadrotors (and robotics in general). The Crazyflie needs to first of all know in which angles it is at (roll, pitch, yaw). If it would be flying at a few degrees slanted in roll, the crazyflie would accelerate into that direction. Therefore the controller need to know an good estimate of current angles’ state and compensate for it. For a step higher in autonomy, a good position estimate becomes important too, since you would like it to move reliably from A to B.
