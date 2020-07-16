@@ -1,6 +1,6 @@
 ---
 title: Stabilizer Module
-page_id: sensor_to_control
+page_id: index
 ---
 
 This page is meant as an introduction and overview of the path from
