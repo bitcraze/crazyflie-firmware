@@ -4,7 +4,7 @@ page_id: controllers
 ---
 
 
-Once the [state estimator](/functional-areas/sensor-to-control/state_estimators/) have outputed the current (estimated) situation of the crazyflie in position velocity and attitude, it is time for the controllers to keep it that way or to move the crazyflie into a new position based on a setpoint. This is an important part of the [stabilization system](/functional-areas/sensor-to-control/index/) in the crazyflie. 
+Once the [state estimator](/functional-areas/sensor-to-control/state_estimators/) have outputed the current (estimated) situation of the crazyflie in position velocity and attitude, it is time for the controllers to keep it that way or to move the crazyflie into a new position based on a setpoint. This is an important part of the stabilization system in the crazyflie. 
 
  * [Overview of Control](#overview-of-control)
  * [Cascaded PID controller](#cascaded-pid-controller)
