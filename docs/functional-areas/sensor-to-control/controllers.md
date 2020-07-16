@@ -3,27 +3,30 @@ title: Controllers in the Crazyflie
 page_id: controllers
 ---
 
-Once the [state estimator](/functional-areas/state_estimators/) have outputed the current (estimated) situation of the crazyflie in position velocity and attitude, it is time for the controllers to keep it that way or to move the crazyflie into a new position based on a setpoint. This is an important part of the [stabilization system](/functional-areas/sensor_to_control/) in the crazyflie. 
+[go back to overview](/functional-areas/sensor-to-control/index)
 
-## Types of levels and control
+Once the [state estimator](/functional-areas/sensor-to-control/state_estimators/) have outputed the current (estimated) situation of the crazyflie in position velocity and attitude, it is time for the controllers to keep it that way or to move the crazyflie into a new position based on a setpoint. This is an important part of the [stabilization system](/functional-areas/sensor-to-control/index/) in the crazyflie. 
+
+ * [Overview of Control](#overview-of-control)
+ * [Cascaded PID controller](#cascaded-pid-controller)
+ * Mellinger Controller (TO DO)
+ * INDI Controller (TO DO)
+
+## Overview of control
 There are three levels to control in the crazyflie:
 * Attitude rate
 * Attitude absoluut
 * Position or velocity
 
 
-
-
-There are three controllers currently implemented in the crazyflie:
-* [proportional integral derivative (PID)](#cascaded-pid-controller)
-* [Incremental non-linear dynamic inversion (INDI)](#indi-controller)
-* [Mellinger controller](#mellinger-controller)
-
 Here is an overview of the types of controllers there are per level:
 
 ![controller overview](/images/controller_overview.png){:width="500"}
 
 We will now explain per controller how exactly they are being implemented in the [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware/).
+
+[go back to top](#)
+
 
 ## Cascaded PID controller
 
@@ -55,9 +58,7 @@ The most outerloop of the cascaded PID controller is the position and velocity c
 
 Check the implementation details in Check the implementation details in [position_controller_pid.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/position_controller_pid.c) in `positionController()` and  `velocityController()`. 
 
-## Mellinger Controller
-COMING SOON!
+[go back to top](#)
 
-## INDI controller
-COMING SOON!
+
 

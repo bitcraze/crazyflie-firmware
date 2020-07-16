@@ -1,40 +1,56 @@
 ---
-title: Sensor to control
+title: Stabilizer Module
 page_id: sensor_to_control
 ---
 
 This page is meant as an introduction and overview of the path from
-sensor acquisition to motor control. It will not go into detail but it
-mostly give a general outline of how the sensor measurements go to the 
+sensor acquisition to motor control,also called the stabilizer module. It will not go into detail but it mostly give a general outline of how the sensor measurements go to the 
 state estimators to the controllers and finally distributed to the motors
 by power distribution. Ofcourse, the motors have an affect on how the 
 crazyflie flies and that inderectly has an effect on what the sensors
 detect in the next time step.
 
+ * [Sensors](#sensors)
+ * [State Estimation](#state-estimation)
+ * [State Controller](#state-controller)
+ * [Configure estimators and control](#configuring-controllers-and-estimators)
+ * [Commander Framework](#commander-framework)
+ * [Power Distribution](#power-distribution)
+
+
+
+### Overview
+
 ![sensor](/images/sensors_to_motors.png){:width="700"}
 
 ## Modules 
 
+
 ### Sensors
-==================
-Sensors are essential for the flight of a crazyflie. Here is a table with the sensors
+
+Sensors are essential for the flight of a crazyflie. Here is selection of the sensors
  listed that the crazyflie eventually uses for state estimation:
 
-| Location | Type | Measurement | Unit | Sensor | driver |
-| -------- | ----- | ---------- | ----- | ----- | ---- |
-| On-board Sensors | Accelerometer | acceleration in body fixed coordinates | m/s2 | BMI088 | [sensors_bmi088_bmp388.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/src/sensors_bmi088_bmp388.c) |
-| " "  | Gyroscope | angle rate in roll pitch and yaw | rad/s | " " | " " |
-|  " "  | Pressure Sensor | Airpressure | mBar | BMP388 | " "|
-| Z-ranger v2 | ToF sensor* | Distance to a surface | milimeters | VL53L1x | [vl53l1x.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/drivers/src/vl53l1x.c)
-| Flowdeck v2** | Optical flow sensor | The detection movement of pixels | px per timesample |PMW3901 | [pmw3901.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/drivers/src/pmw3901.c)
-| LPS deck | Ultra Wide band | The Distance between two UWB modules or TDOA*** |meters|DWM1000| [locodeck.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/deck/drivers/src/locodeck.c)|
-| Lighthouse deck | IR receivers | Sweep angle of htc vive basestations | rad | TS4231 |  [lighthouse.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/deck/drivers/src/lighthouse.c)|
 
-*Time-of-Flight
+* [On-board Sensors](https://store.bitcraze.io/products/crazyflie-2-1)
+  * Accelerometer: acceleration in body fixed coordinates in m/s2 
+  * Gyroscope: angle rate in roll pitch and yaw (rad/s) 
+  * Pressure Sensor: Airpressure in mBar
+* [Flowdeck v2](https://store.bitcraze.io/products/flow-deck-v2) 
+  * ToF sensor*:  Distance to a surface in milimeters 
+  * Optical flow sensor:  The detection movement of pixels in px per timesample 
+* [Loco positioning deck](https://store.bitcraze.io//products/loco-positioning-deck):
+  * Ultra Wide band module: The distance between two UWB modules or TDOA*** in meters.
+* [Lighthouse deck](https://store.bitcraze.io/products/lighthouse-positioning-deck):
+  * IR receivers: Sweep angle of htc vive basestations in radians.
 
-**Also contains a laser-ranger
+<sub><sup>_*Time-of-Flight_</sup></sub>
 
-***Time-difference of Arrival
+<sub><sup>_**[Zranger v2](https://store.bitcraze.io/collections/decks/products/z-ranger-deck-v2) also contains a laser-ranger_</sup></sub>
+
+<sub><sup>_***Time-difference of Arrival_</sup></sub>
+
+[go back to top](#)
 
 ### State Estimation
 
@@ -42,7 +58,10 @@ There are 2 state estimators in the crazyflie:
 * Complementary Filter
 * Extended Kalman Filter
 
-For more indepth information about how the state estimation is implemented in the crazyflie firmware, please go to the [state estimation page](/functional-areas/state_estimators/)
+ Go to the [state estimation page](/functional-areas/sensor-to-control/state_estimators/) for more indepth information about how the state estimation is implemented in the crazyflie firmware.
+
+[go back to top](#)
+
 
 ### State Controller
 There are 3 controllers in the crazyflie
@@ -50,12 +69,23 @@ There are 3 controllers in the crazyflie
 * INDI controller
 * Mellinger controller
 
-For more indepth information about how the controllers are implemented in the crazyflie firmware, please go to the [controllers page](/functional-areas/controllers/)
+Go to the [controllers page](/functional-areas/sensor-to-control/controllers/), for more indepth information about how the controllers are implemented in the crazyflie firmware.
+
+[go back to top](#)
+
+
+### Configuring Controllers and Estimators
+Go to this [configuration page](/functional-areas/sensor-to-control/configure_estimator_controller/), if you would like to configure different controllers and estmators, 
+
+[go back to top](#)
+
 
 ### Commander Framework
-An desired state can be handled by the setpoint structure in position or atitude, which can be set by the cflib or the highlevel commander
+An desired state can be handled by the setpoint structure in position or atitude, which can be set by the cflib or the highlevel commander.
 
-For more indepth information about how the commander framework are implemented in the crazyflie firmware, please go to the [commander page](/functional-areas/commanders_setpoints/)
+Go to the [commander page](/functional-areas/sensor-to-control/commanders_setpoints/), for more indepth information about how the commander framework are implemented in the crazyflie firmware, please go 
+
+[go back to top](#)
 
 ### Power Distribution
 
@@ -69,3 +99,4 @@ How the motors should respond in order to adhere these attitude based commands d
     * **Explaination about this will come soon**
 
 
+[go back to top](#)
