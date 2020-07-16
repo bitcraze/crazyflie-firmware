@@ -2,7 +2,6 @@
 title: Configure estimator and controller
 page_id: config_est_ctrl
 ---
-[go back to overview](/functional-areas/sensor-to-control/index/)
 
 All the estimators and controllers are part of the standard firmware build and the active estimator and controller can be configured in runtime or compile time.
 

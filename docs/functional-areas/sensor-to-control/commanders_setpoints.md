@@ -3,7 +3,6 @@ title: The Commander Framework
 page_id: commanders_setpoints
 ---
 
-[go back to overview](/functional-areas/sensor-to-control/index/)
 
 This section will go into the commander framework, which handles the setpoint of the desired states, which the controllers will try to steer the estimated state to.
 
