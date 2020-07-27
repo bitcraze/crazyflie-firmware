@@ -83,9 +83,10 @@
 #define LH_ID           0x05
 #define TESTER_ID       0x06
 #define USD_ID          0x07
-#define OW_FIRST_ID     0x08
-#define LEDTIMINGSMEM_ID       0x09
-
+#define LEDTIMINGSMEM_ID       0x08
+// OW_FIRST_ID must be the last and highest ID,
+// insert new IDs above
+#define OW_FIRST_ID     0x09
 
 #define STATUS_OK 0
 
