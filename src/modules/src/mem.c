@@ -83,7 +83,10 @@
 #define LH_ID           0x05
 #define TESTER_ID       0x06
 #define USD_ID          0x07
-#define OW_FIRST_ID     0x08
+#define LEDTIMINGSMEM_ID       0x08
+// OW_FIRST_ID must be the last and highest ID,
+// insert new IDs above
+#define OW_FIRST_ID     0x09
 
 #define STATUS_OK 0
 
@@ -96,6 +99,7 @@
 #define MEM_TYPE_LH     0x14
 #define MEM_TYPE_TESTER 0x15
 #define MEM_TYPE_USD    0x16
+#define MEM_TYPE_LEDMEM 0x17
 
 #define MEM_LOCO_INFO             0x0000
 #define MEM_LOCO_ANCHOR_BASE      0x1000
@@ -127,6 +131,8 @@ static uint8_t handleEepromRead(uint32_t memAddr, uint8_t readLen, uint8_t* star
 static uint8_t handleEepromWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData);
 static uint8_t handleLedMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData);
 static uint8_t handleLedMemWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData);
+static uint8_t handleLedTimingsMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData);
+static uint8_t handleLedTimingsMemWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData);
 static uint8_t handleTrajectoryMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData);
 static uint8_t handleTrajectoryMemWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData);
 static uint8_t handleLighthouseMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData);
@@ -237,6 +243,9 @@ static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
     case LEDMEM_ID:
       createInfoResponseBody(p, MEM_TYPE_LED12, sizeof(ledringmem), noData);
       break;
+    case LEDTIMINGSMEM_ID:
+      createInfoResponseBody(p, MEM_TYPE_LEDMEM, sizeof(ledringtimingsmem.timings), noData);
+      break;
     case LOCO_ID:
       createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCO_MESSAGE_NR_OF_ANCHORS, noData);
       break;
@@ -296,6 +305,10 @@ static void memReadProcess(CRTPPacket* p) {
 
     case LEDMEM_ID:
       status = handleLedMemRead(memAddr, readLen, startOfData);
+      break;
+
+    case LEDTIMINGSMEM_ID:
+      status = handleLedTimingsMemRead(memAddr, readLen, startOfData);
       break;
 
     case LOCO_ID:
@@ -473,6 +486,10 @@ static void memWriteProcess(CRTPPacket* p) {
       status = handleLedMemWrite(memAddr, writeLen, startOfData);
       break;
 
+    case LEDTIMINGSMEM_ID:
+      status = handleLedTimingsMemWrite(memAddr, writeLen, startOfData);
+      break;
+
     case TRAJ_ID:
       status = handleTrajectoryMemWrite(memAddr, writeLen, startOfData);
       break;
@@ -569,6 +586,31 @@ static uint8_t handleTrajectoryMemWrite(uint32_t memAddr, uint8_t writeLen, uint
 
   if ((memAddr + writeLen) <= sizeof(trajectories_memory)) {
     memcpy(&(trajectories_memory[memAddr]), startOfData, writeLen);
+    status = STATUS_OK;
+  }
+
+  return status;
+}
+
+static uint8_t handleLedTimingsMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData) {
+  uint8_t status = EIO;
+
+  if (memAddr + readLen <= sizeof(ledringtimingsmem.timings)) {
+    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+    memcpy(startOfData, mem+memAddr, readLen);
+    status = STATUS_OK;
+  }
+
+  return status;
+}
+
+
+static uint8_t handleLedTimingsMemWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData) {
+  uint8_t status = EIO;
+
+  if ((memAddr + writeLen) <= sizeof(ledringtimingsmem.timings)) {
+    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+    memcpy(mem+memAddr, startOfData, writeLen);
     status = STATUS_OK;
   }
 
