@@ -43,6 +43,7 @@
 #include "param.h"
 #include "pm.h"
 #include "log.h"
+#include "pulse_processor.h"
 
 #define DEBUG_MODULE "LED"
 #include "debug.h"
@@ -723,6 +724,26 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
 }
 
 /**
+ * An effect that shows the status of the lighthouse.
+ *
+ * Red means 0 angles, green means 16 angles (2 basestations x 4 crazyflie sensors x 2 sweeping directions).
+ */
+static void lightHouseEffect(uint8_t buffer[][3], bool reset)
+{
+  #if DISABLE_LIGHTHOUSE_DRIVER == 1
+    uint16_t validAngles = 0;
+  #else
+    uint16_t validAngles = pulseProcessorAnglesQuality();
+  #endif
+
+  for (int i = 0; i < NBR_LEDS; i++) {
+    buffer[i][0] = LIMIT(LINSCALE(0.0f, 255.0f, 100.0f, 0.0f, validAngles)); // Red (small validAngles)
+    buffer[i][1] = LIMIT(LINSCALE(0.0f, 255.0f, 0.0f, 100.0f, validAngles)); // Green (large validAngles)
+    buffer[i][2] = 0;
+  }
+}
+
+/**
  * An effect that shows the status of the location service.
  *
  * Red means bad, green means good.
@@ -793,7 +814,7 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
     timeEffectTime = usecTimestamp() / 1000;
     timeEffectI = 0;
   }
-  
+
   ledtiming current = ledringtimingsmem.timings[timeEffectI];
 
   // Stop when completed
@@ -858,7 +879,7 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
   if(current.rotate) {
     rotate += 1.0f * (time - timeEffectTime) / (current.rotate * 1000);
   }
-  
+
   int shift = rotate * NBR_LEDS;
   float percentShift = rotate * NBR_LEDS - shift;
   shift = shift % NBR_LEDS;
@@ -866,8 +887,8 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
   // Output current leds
   for (int i = 0; i < NBR_LEDS; i++)
     for (int j = 0; j < 3; j++)
-      outputBuffer[(i+shift) % NBR_LEDS][j] = 
-        percentShift * currentBuffer[i][j] + 
+      outputBuffer[(i+shift) % NBR_LEDS][j] =
+        percentShift * currentBuffer[i][j] +
         (1-percentShift) * currentBuffer[(i+1) % NBR_LEDS][j];
 }
 
@@ -894,6 +915,7 @@ Ledring12Effect effectsFct[] =
   rssiEffect,
   locSrvStatus,
   timeMemEffect,
+  lightHouseEffect,
 };
 
 /********** Ring init and switching **********/

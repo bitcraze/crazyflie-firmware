@@ -206,6 +206,8 @@ typedef struct {
 } pulseProcessorV2_t;
 
 typedef struct pulseProcessor_s {
+  bool receivedBsSweep[PULSE_PROCESSOR_N_BASE_STATIONS];
+
   union {
     struct {
       pulseProcessorV1_t v1;
@@ -262,10 +264,33 @@ typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const puls
  */
 void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 
+void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation);
+
 /**
- * @brief Clear result struct
+ * @brief Clear the result struct for one base station when the data is processed and converted to measurements
  *
- * @param angles
- * @param baseStation
+ * @param angles The result struct to clear
+ * @param baseStation The base station
+ */
+void pulseProcessorProcessed(pulseProcessorResult_t* angles, int baseStation);
+
+/**
+ * @brief Clear the result struct for one base station when the sensor data invalidated
+ *
+ * @param angles The result struct to clear
+ * @param baseStation The base station
  */
 void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation);
+
+/**
+ * @brief Clear result struct when the sensor data is invalidated
+ *
+ * @param angles
+ */
+void pulseProcessorAllClear(pulseProcessorResult_t* angles);
+
+/**
+ * Get quality of angles reception of the basestations.
+ * 0 means no angles, 255 means reception of all angles of all axis of all basestations.
+ */
+uint8_t pulseProcessorAnglesQuality();
