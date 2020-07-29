@@ -68,7 +68,7 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
  */
 void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   // Repeated sweep from the same basestation. So in theory we did a cycle, so we should have had all basestations.
-  // If not, cleanup the basestation that we didn't receive. 
+  // If not, cleanup the basestation that we didn't receive.
   if(appState->receivedBsSweep[basestation]) {
     for(int bs=0; bs != PULSE_PROCESSOR_N_BASE_STATIONS; bs++){
       if(!appState->receivedBsSweep[bs]){
@@ -88,11 +88,16 @@ void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResul
  */
 void processValidAngles(pulseProcessorResult_t* angles, int baseStation)
 {
-  if (angles->measurementType == lighthouseBsTypeV1) {
-    pulseProcessorV1ProcessValidAngles(angles, baseStation);
-  }
-  else {
-    pulseProcessorV2ProcessValidAngles(angles, baseStation);
+  switch(angles->measurementType) {
+    case lighthouseBsTypeV1:
+      pulseProcessorV1ProcessValidAngles(angles, baseStation);
+      break;
+    case lighthouseBsTypeV2:
+      pulseProcessorV2ProcessValidAngles(angles, baseStation);
+      break;
+    default:
+      // Do nothing
+      break;
   }
 }
 

@@ -502,12 +502,12 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
   return true;
 }
 
-unsigned anglesMask = pow(2, PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS)-1;
-void pulseProcessorV1ProcessValidAngles(pulseProcessorResult_t* angles, int basestation) {  
+uint32_t anglesMask = (1 << (PULSE_PROCESSOR_N_SWEEPS * PULSE_PROCESSOR_N_SENSORS)) - 1;
+void pulseProcessorV1ProcessValidAngles(pulseProcessorResult_t* angles, int basestation) {
   validAngles &= ~(anglesMask << (basestation*PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS));
-  for(int sensor=0; sensor!=PULSE_PROCESSOR_N_SENSORS; sensor++) {       
+  for(int sensor=0; sensor!=PULSE_PROCESSOR_N_SENSORS; sensor++) {
     if(angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[basestation].validCount != 0) {
-      unsigned sensorBits = pow(2, angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[basestation].validCount)-1; 
+      uint32_t sensorBits = (1 << angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[basestation].validCount) - 1;
       validAngles |= sensorBits << (sensor*PULSE_PROCESSOR_N_SWEEPS + basestation*PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS);
     }
   }

@@ -5,6 +5,7 @@
 #include <string.h>
 #include "unity.h"
 
+#include "mock_pulse_processor.h"
 #include "mock_ootx_decoder.h"
 #include "mock_lighthouse_calibration.h"
 
