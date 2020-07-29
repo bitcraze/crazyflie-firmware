@@ -50,7 +50,7 @@ Current port allocation:
 | **Port** |  **Target**                                                       |          **Used for**|
 | ---------| ------------------------------------------------------------------| ----------------------------------------------------------------|
 |  0       | [Console](/docs/functional-areas/crtp/ctrp_console.md)                   | Read console text that is printed to the console on the Crazyflie using consoleprintf|
-|  2       | [Parameters](/docs/functional-areas/crtp/ctrp_parameters.md)             | Get/set parameters from the Crazyflie. Parameters are defined using a [macro in the Crazyflie source-code](/userguides/logparam/)|
+|  2       | [Parameters](/docs/functional-areas/crtp/ctrp_parameters.md)             | Get/set parameters from the Crazyflie. Parameters are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)|
 |  3       | [Commander](/docs/functional-areas/crtp/ctrp_commander.md)               | Sending control set-points for the roll/pitch/yaw/thrust regulators|
 |  4       | [Memory access](/docs/functional-areas/crtp/ctrp_mem.md)                 | Accessing non-volatile memories like 1-wire and I2C (only supported for Crazyflie 2.0)|
 |  5       | [Data logging](/docs/functional-areas/crtp/ctrp_log.md)                  | Set up log blocks with variables that will be sent back to the Crazyflie at a specified period. Log variables are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)|
