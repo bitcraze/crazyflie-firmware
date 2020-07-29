@@ -42,8 +42,6 @@ static const uint8_t NO_CHANNEL = 0xff;
 static const int NO_SENSOR = -1;
 static const uint32_t NO_OFFSET = 0;
 
-static uint16_t validAngles = 0;
-
 #define V2_N_CHANNELS 16
 
 // The cycle times come from the base stations and are expressed in a 48 MHz clock, we use 24 MHz clock hence the "/ 2".
@@ -327,17 +325,7 @@ bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
     return handleAngles(state, frameData, angles, baseStation, axis);
 }
 
-static const unsigned anglesMask = pow(2, PULSE_PROCESSOR_N_SENSORS)-1;
-void pulseProcessorV2ProcessValidAngles(pulseProcessorResult_t* angles, int basestation) {  
-  validAngles &= ~(anglesMask << (basestation*PULSE_PROCESSOR_N_SENSORS));
-  for(int sensor=0; sensor!=PULSE_PROCESSOR_N_SENSORS; sensor++) {       
-    if(angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[basestation].validCount == 2) {
-      unsigned sensorBits = pow(2, angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[basestation].validCount)-1; 
-      validAngles |= sensorBits << (sensor + basestation*PULSE_PROCESSOR_N_SENSORS);
-    }
-  }
-}
-
 uint8_t pulseProcessorV2AnglesQuality() {
-  return __builtin_popcount(validAngles)*1.0/(PULSE_PROCESSOR_N_SENSORS*PULSE_PROCESSOR_N_BASE_STATIONS);
+    // TODO krri Implement when LH2 is more mature
+    return 0;
 }

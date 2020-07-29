@@ -92,9 +92,6 @@ void processValidAngles(pulseProcessorResult_t* angles, int baseStation)
     case lighthouseBsTypeV1:
       pulseProcessorV1ProcessValidAngles(angles, baseStation);
       break;
-    case lighthouseBsTypeV2:
-      pulseProcessorV2ProcessValidAngles(angles, baseStation);
-      break;
     default:
       // Do nothing
       break;
