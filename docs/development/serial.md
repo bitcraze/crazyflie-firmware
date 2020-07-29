@@ -17,7 +17,7 @@ Windows
 The serial number is located just after \"5740\\\", in the following
 screen it starts by 41:
 
-![windows serial](/images/windows_serial.png){:width=500x}
+![windows serial](/docs/images/windows_serial.png){:width=500x}
 
 By right-clicking on the string you can copy it.
 
@@ -30,16 +30,16 @@ Open a terminal and type (ie. cop-paste) the following command:
 
 The Crazyflie serial is then displayed (here it starts by 41):
 
-![linux serial](/images/linux_serial.png)
+![linux serial](/docs/images/linux_serial.png)
 
 Mac OS X
 --------
 
 From the \"About this mac\" menu, click on \"System reports\...\"
 
-![mac serial](/images/mac_serial_about.png){:width=400px}
+![mac serial](/docs/images/mac_serial_about.png){:width=400px}
 
 Then click on \"USB\", locate the Crazyflie 2 and the serial number can
 be copied from there
 
-![mac serial 2](/images/mac_serial.png){:width=500px}
+![mac serial 2](/docs/images/mac_serial.png){:width=500px}
