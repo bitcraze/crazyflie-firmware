@@ -13,7 +13,7 @@ Crazyflie. The deck API is still in development, it will:
     (*not started yet*)
 
 If you want to get started you can follow the
-[howto](/development/howto/) to get your code
+[howto](/docs/development/howto.md) to get your code
 running.
 
 Deck drivers
