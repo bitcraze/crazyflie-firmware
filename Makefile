@@ -308,6 +308,9 @@ else
   CFLAGS += -Werror
 endif
 
+# Disable warnings for unaligned addresses in packed structs (added in GCC 9)
+CFLAGS += -Wno-address-of-packed-member
+
 ifeq ($(LTO), 1)
   CFLAGS += -flto
 endif
