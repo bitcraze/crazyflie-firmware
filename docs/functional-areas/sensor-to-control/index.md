@@ -58,7 +58,7 @@ There are 2 state estimators in the crazyflie:
 * Complementary Filter
 * Extended Kalman Filter
 
- Go to the [state estimation page](/docs/functional-areas/sensor-to-control/state_estimators.md) for more indepth information about how the state estimation is implemented in the crazyflie firmware.
+ Go to the [state estimation page](state_estimators.md) for more indepth information about how the state estimation is implemented in the crazyflie firmware.
 
 [go back to top](#)
 
@@ -69,13 +69,13 @@ There are 3 controllers in the crazyflie
 * INDI controller
 * Mellinger controller
 
-Go to the [controllers page](/docs/functional-areas/sensor-to-control/controllers.md), for more indepth information about how the controllers are implemented in the crazyflie firmware.
+Go to the [controllers page](controllers.md), for more indepth information about how the controllers are implemented in the crazyflie firmware.
 
 [go back to top](#)
 
 
 ### Configuring Controllers and Estimators
-Go to this [configuration page](/docs/functional-areas/sensor-to-control/configure_estimator_controller.md), if you would like to configure different controllers and estmators,
+Go to this [configuration page](configure_estimator_controller.md), if you would like to configure different controllers and estmators,
 
 [go back to top](#)
 
@@ -83,7 +83,7 @@ Go to this [configuration page](/docs/functional-areas/sensor-to-control/configu
 ### Commander Framework
 An desired state can be handled by the setpoint structure in position or atitude, which can be set by the cflib or the highlevel commander.
 
-Go to the [commander page](/docs/functional-areas/sensor-to-control/commanders_setpoints.md), for more indepth information about how the commander framework are implemented in the crazyflie firmware, please go
+Go to the [commander page](commanders_setpoints.md), for more indepth information about how the commander framework are implemented in the crazyflie firmware, please go
 
 [go back to top](#)
 
