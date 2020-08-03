@@ -1,6 +1,6 @@
 ---
 title: Commander
-page_id: ctrp_commander 
+page_id: crtp_commander
 ---
 
 The commander port is used to send control set-points for the

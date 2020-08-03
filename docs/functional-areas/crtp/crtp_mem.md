@@ -1,6 +1,6 @@
 ---
 title: Memory access
-page_id: ctrp_mem
+page_id: crtp_mem
 ---
 
 
@@ -26,7 +26,7 @@ Getting information and reading/writing the memories is optional for the
 clients, but the -Crazyflie Python Client- always downloads information
 about the memories on connect.
 
-![ctrp mem](/docs/images/ctrp_mem.png)
+![crtp mem](/docs/images/crtp_mem.png)
 
 Communication protocol
 ======================

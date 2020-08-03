@@ -1,6 +1,6 @@
 ---
 title: CRTP - Communication with the Crazyflie
-page_id: ctrp_index
+page_id: crtp_index
 ---
 
 For communicating with the Crazyflie we have implemented our own
@@ -49,13 +49,13 @@ Current port allocation:
 
 | **Port** |  **Target**                                  |          **Used for**|
 | ---------| ---------------------------------------------| ----------------------------------------------------------------|
-|  0       | [Console](ctrp_console.md)                   | Read console text that is printed to the console on the Crazyflie using consoleprintf|
-|  2       | [Parameters](ctrp_parameters.md)             | Get/set parameters from the Crazyflie. Parameters are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)|
-|  3       | [Commander](ctrp_commander.md)               | Sending control set-points for the roll/pitch/yaw/thrust regulators|
-|  4       | [Memory access](ctrp_mem.md)                 | Accessing non-volatile memories like 1-wire and I2C (only supported for Crazyflie 2.0)|
-|  5       | [Data logging](ctrp_log.md)                  | Set up log blocks with variables that will be sent back to the Crazyflie at a specified period. Log variables are defined using a [macro in the Crazyflie source-code](/docs/use
-|  6       | [Localization](ctrp_localization.md)         | Packets related to localization|
-|  7       | [Generic Setpoint](ctrp_generic_setpoint.md) | Allows to send setpoint and control modes|
+|  0       | [Console](crtp_console.md)                   | Read console text that is printed to the console on the Crazyflie using consoleprintf|
+|  2       | [Parameters](crtp_parameters.md)             | Get/set parameters from the Crazyflie. Parameters are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)|
+|  3       | [Commander](crtp_commander.md)               | Sending control set-points for the roll/pitch/yaw/thrust regulators|
+|  4       | [Memory access](crtp_mem.md)                 | Accessing non-volatile memories like 1-wire and I2C (only supported for Crazyflie 2.0)|
+|  5       | [Data logging](crtp_log.md)                  | Set up log blocks with variables that will be sent back to the Crazyflie at a specified period. Log variables are defined using a [macro in the Crazyflie source-code](/docs/use
+|  6       | [Localization](docs/crtp_localization.md)         | Packets related to localization|
+|  7       | [Generic Setpoint](crtp_generic_setpoint.md) | Allows to send setpoint and control modes|
 |  13      | Platform                                     | Used for misc platform control, like debugging and power off|
 |  14      | Client-side debugging                        | Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.|
 |  15      | Link layer                                   | Used to control and query the communication link|

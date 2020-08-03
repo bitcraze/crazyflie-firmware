@@ -1,6 +1,6 @@
 ---
 title: Logging
-page_id: ctrp_log
+page_id: crtp_log
 ---
 
 For more information on how to use this and how this is implemented have
@@ -12,7 +12,7 @@ State machines
 Downloading the Table Of Contents
 ---------------------------------
 
-![ctrp log](/docs/images/ctrp_log.png)
+![crtp log](/docs/images/crtp_log.png)
 
 Communication protocol
 ======================

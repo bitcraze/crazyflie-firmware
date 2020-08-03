@@ -1,6 +1,6 @@
 ---
 title: Console
-page_id: ctrp_console
+page_id: crtp_console
 ---
 
 This port is used as a one-way text console for printing text from the

@@ -13,7 +13,7 @@
     - {page_id: app_layer}
 - title: Functional areas
   subs:
-    - {page_id: ctrp_index}
+    - {page_id: crtp_index}
     - {page_id: stabilizer_index}
     - {page_id: deck_memory_format}
     - {page_id: p2p_api}

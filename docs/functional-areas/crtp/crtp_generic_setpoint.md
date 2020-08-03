@@ -1,6 +1,6 @@
 ---
 title: Generic Setpoint CRTP Port
-page_id: ctrp_generic_setpoint
+page_id: crtp_generic_setpoint
 ---
 
 
