@@ -5,7 +5,7 @@ page_id: active-marker-deck
 
 The Active Marker deck is mainly designed for [Qualisys mocap systems](https://www.qualisys.com/) and supports Qualisys Active markers, but it can also be used with other systems in a simplified mode. The deck has 4 arms with one IR LED on the tip of each arm and a light sensor in the center of the deck.
 
-The deck is configured using the [parameter sub system](/userguides/logparam/), for details on which parameter to use, see below.
+The deck is configured using the [parameter sub system](/docs/userguides/logparam.md), for details on which parameter to use, see below.
 
 ## Modes
 

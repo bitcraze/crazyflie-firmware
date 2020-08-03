@@ -9,7 +9,7 @@ Writing a new binary to the Crazyflie is called flashing (writing it to the flas
 
 The most common way to flash is probably to use the Crazyradio.
 
-### prerequisites
+### Prerequisites
 * A Crazyradio with drivers installed
 * [crazyflie-clients-python](https://github.com/bitcraze/crazyflie-clients-python) placed on the same directory level in the file tree
 * The firmware has been built
@@ -27,7 +27,7 @@ Warning: if multiple Crazyflies within range are in bootloader mode the result i
 
 ### Automatically enter bootloader mode
 
-* Add the address of the crazyflie to the [`config.mk`](/building-and-flashing/configure_build/) file, for instance `CLOAD_CMDS = -w radio://0/80/2M`
+* Add the address of the crazyflie to the [`config.mk`](/docs/building-and-flashing/configure_build.md) file, for instance `CLOAD_CMDS = -w radio://0/80/2M`
 * Make sure the Crazyflie is on
 * In your terminal, run `make cload`
 
@@ -40,7 +40,7 @@ Note: this method does not work if the Crazyflie does not start, for instance if
 You need:
 
 * An ST Link V2 Debugger
-* open ocd installed ([installation intructions](/development/openocd_gdb_debugging/))
+* open ocd installed ([installation intructions](/docs/development/openocd_gdb_debugging.md))
 * The firmware has been built
 * The current working directory is the root of the frazyflie-firmware project
 

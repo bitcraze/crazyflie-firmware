@@ -40,7 +40,7 @@ Compile the Crazyflie firmware with lighthouse support and flash the Crazyflie. 
 make
 make cload
 ```
-See [configure_build.md](/building-and-flashing/configure_build/) for more information about the config.mk file.
+See [configure_build.md](/docs/building-and-flashing/configure_build.md) for more information about the config.mk file.
 
 Mount the Lighthouse deck on the Crazyflie, and place it on the floor where you want your the origin of your coordinate system, and turn it on. The Crazyflie should be oriented in the direction you want the X-axis.
 
