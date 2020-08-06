@@ -60,6 +60,7 @@ float dpixelx_previous = 0;
 float dpixely_previous = 0;
 
 static uint8_t outlierCount = 0;
+static float stdFlow = 2.0f;
 
 static bool isInit1 = false;
 static bool isInit2 = false;
@@ -68,6 +69,13 @@ motionBurst_t currentMotion;
 
 // Disables pushing the flow measurement in the EKF
 static bool useFlowDisabled = false;
+
+// Turn on adaptive standard deviation for the kalman filter
+static bool useAdaptiveStd = false;
+
+// Set standard deviation flow 
+// (will not work if useAdaptiveStd is on)
+static float flowStdFixed = 2.0f;
 
 #define NCS_PIN DECK_GPIO_IO3
 
@@ -89,11 +97,25 @@ static void flowdeckTask(void *param)
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
 
-      // Form flow measurement struct and push into the EKF
-      flowMeasurement_t flowData;
-      flowData.stdDevX = 0.25;    // [pixels] should perhaps be made larger?
-      flowData.stdDevY = 0.25;    // [pixels] should perhaps be made larger?
-      flowData.dt = 0.01;
+    if (useAdaptiveStd)
+    {
+      // The standard deviation is fitted by measurements flying over low and high texture 
+      //   and looking at the amount of features
+      //   TODO Add motion detection frequency based on currentMotion.motion
+
+      float squal_f = (float)currentMotion.squal;
+      stdFlow =  -0.01257f * squal_f + 4.406f; 
+      if (stdFlow < 0.1f) stdFlow=0.1f;
+    } else {
+      stdFlow = flowStdFixed;
+    }
+
+
+    // Form flow measurement struct and push into the EKF
+    flowMeasurement_t flowData;
+    flowData.stdDevX = stdFlow;    
+    flowData.stdDevY = stdFlow;    
+    flowData.dt = 0.01;
 
 #if defined(USE_MA_SMOOTHING)
       // Use MA Smoothing
@@ -121,8 +143,8 @@ static void flowdeckTask(void *param)
       flowData.dpixelx = (float)accpx;
       flowData.dpixely = (float)accpy;
 #endif
-      // Push measurements into the estimator
-      if (!useFlowDisabled) {
+      // Push measurements into the estimator indicates no motion detection
+      if (!useFlowDisabled && currentMotion.motion == 0xB0) {
         estimatorEnqueueFlow(&flowData);
       }
     } else {
@@ -230,10 +252,14 @@ LOG_ADD(LOG_UINT8, maxRaw, &currentMotion.maxRawData)
 LOG_ADD(LOG_UINT8, minRaw, &currentMotion.minRawData)
 LOG_ADD(LOG_UINT8, Rawsum, &currentMotion.rawDataSum)
 LOG_ADD(LOG_UINT8, outlierCount, &outlierCount)
+LOG_ADD(LOG_UINT8, squal, &currentMotion.squal)
+LOG_ADD(LOG_FLOAT, std, &stdFlow)
 LOG_GROUP_STOP(motion)
 
 PARAM_GROUP_START(motion)
 PARAM_ADD(PARAM_UINT8, disable, &useFlowDisabled)
+PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
+PARAM_ADD(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
 PARAM_GROUP_STOP(motion)
 
 PARAM_GROUP_START(deck)
