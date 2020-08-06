@@ -143,7 +143,8 @@ static void flowdeckTask(void *param)
       flowData.dpixelx = (float)accpx;
       flowData.dpixely = (float)accpy;
 #endif
-      // Push measurements into the estimator indicates no motion detection
+      // Push measurements into the estimator if flow is not disabled
+      //    and the PMW flow sensor indicates motion detection
       if (!useFlowDisabled && currentMotion.motion == 0xB0) {
         estimatorEnqueueFlow(&flowData);
       }
