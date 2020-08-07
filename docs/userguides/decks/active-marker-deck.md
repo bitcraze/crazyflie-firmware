@@ -15,16 +15,28 @@ The deck mode is set with the ```activeMarker.mode``` parameter.
 | --------- | ----------- | ---------------------------- |
 | OFF       | 0           | Always off                   |
 | ON        | 1           | Always on                    |
-| MODULATED | 2           | Switching on/off             |
-| QUALISYS  | 3 (default) | Qualisys Active Marker mode |
+| MODULATED | 2           | Switching                    |
+| QUALISYS  | 3 (default) | Qualisys Active Marker mode  |
+
+### Off mode
+
+All marker LEDs are turned off
+
+### On mode
+
+The marker LEDs are turned on. The brightness of each LED is controlled by the [marker parameters](#maker-parameters) below, in the range 0 - 255.
 
 ### Modulated mode
 
-The LEDs are switched on and off at around 42 kHz (24 micro seconds cycle)
+The LEDs are switched on and off at around 42 kHz (24 micro seconds cycle). The brightness of the LEDs during the "on" part of the cycle is controlled by the [marker parameters](#maker-parameters) below, in the range 0 - 255.
 
 ### Qualisys mode
 
-In this mode the LEDs act as Actvive markers with IDs that are identified by the Qualisys system and used for better 6-dof identification and tracking. The markers are assigned default IDs at startup, but can easily be changed through parameters. The Qualisys sytems and the deck currently supports IDs in the range [0 - 170]
+In this mode the LEDs act as Actvive markers with IDs that are identified by the Qualisys system and used for better 6-dof identification and tracking. The IDs are controlled by the [marker parameters](#maker-parameters) below. The Qualisys sytems and the deck currently supports IDs in the range [0 - 170]
+
+## Marker parameters
+
+Each marker is associated with a parameters that is used to set brightness or id.
 
 | Marker position | parameter                | deafult value | type              |
 | --------------- | ------------------------ | ------------- | ----------------- |
