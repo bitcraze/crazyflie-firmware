@@ -24,15 +24,15 @@ All marker LEDs are turned off
 
 ### On mode
 
-The marker LEDs are turned on. The brightness of each LED is controlled by the [marker parameters](#maker-parameters) below, in the range 0 - 255.
+The marker LEDs are turned on. The brightness of each LED is controlled by the [marker parameters](#marker-parameters) below, in the range 0 - 255.
 
 ### Modulated mode
 
-The LEDs are switched on and off at around 42 kHz (24 micro seconds cycle). The brightness of the LEDs during the "on" part of the cycle is controlled by the [marker parameters](#maker-parameters) below, in the range 0 - 255.
+The LEDs are switched on and off at around 42 kHz (24 micro seconds cycle). The brightness of the LEDs during the "on" part of the cycle is controlled by the [marker parameters](#marker-parameters) below, in the range 0 - 255.
 
 ### Qualisys mode
 
-In this mode the LEDs act as Actvive markers with IDs that are identified by the Qualisys system and used for better 6-dof identification and tracking. The IDs are controlled by the [marker parameters](#maker-parameters) below. The Qualisys sytems and the deck currently supports IDs in the range [0 - 170]
+In this mode the LEDs act as Actvive markers with IDs that are identified by the Qualisys system and used for better 6-dof identification and tracking. The IDs are controlled by the [marker parameters](#marker-parameters) below. The Qualisys sytems and the deck currently supports IDs in the range [0 - 170]
 
 ## Marker parameters
 
