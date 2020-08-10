@@ -37,7 +37,8 @@ pip install opencv-python
 Compile the Crazyflie firmware with lighthouse support and flash the Crazyflie. For instance this can be done by adding ```CFLAGS += -DDISABLE_LIGHTHOUSE_DRIVER=0``` to your config.mk file, opening a terminal window and executing
 
 ```
-make
+make clean
+make all
 make cload
 ```
 See [configure_build.md](/docs/building-and-flashing/configure_build.md) for more information about the config.mk file.
