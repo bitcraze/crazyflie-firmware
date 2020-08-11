@@ -40,6 +40,7 @@
 
 #include "cf_math.h"
 
+#include "usec_time.h"
 #include <stdlib.h>
 
 #define AVERAGE_HISTORY_LENGTH 4
@@ -84,6 +85,9 @@ static void flowdeckTask(void *param)
 {
   systemWaitStart();
 
+  initUsecTimer();
+
+  uint64_t lastTime  = usecTimestamp();
   while(1) {
     vTaskDelay(10);
 
@@ -100,11 +104,14 @@ static void flowdeckTask(void *param)
     if (useAdaptiveStd)
     {
       // The standard deviation is fitted by measurements flying over low and high texture 
-      //   and looking at the amount of features
-      //   TODO Add motion detection frequency based on currentMotion.motion
+      //   and looking at the shutter time
+      float shutter_f = (float)currentMotion.shutter;
+      stdFlow=0.0007984f *shutter_f + 0.4335f;
 
-      float squal_f = (float)currentMotion.squal;
-      stdFlow =  -0.01257f * squal_f + 4.406f; 
+
+      // The formula with the amount of features instead
+      /*float squal_f = (float)currentMotion.squal;
+      stdFlow =  -0.01257f * squal_f + 4.406f; */
       if (stdFlow < 0.1f) stdFlow=0.1f;
     } else {
       stdFlow = flowStdFixed;
@@ -146,6 +153,8 @@ static void flowdeckTask(void *param)
       // Push measurements into the estimator if flow is not disabled
       //    and the PMW flow sensor indicates motion detection
       if (!useFlowDisabled && currentMotion.motion == 0xB0) {
+        flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
+        lastTime = usecTimestamp();
         estimatorEnqueueFlow(&flowData);
       }
     } else {
