@@ -14,7 +14,7 @@ Furthermore, P2P packets are only sent and received from the 2.4GHz internal Cra
 The maximum data payload contained in a P2P packet is ```P2P_MAX_DATA_SIZE```. It is currently set to 60Bytes.
 
 ## Using the P2P API
-Functions and structures are defined in the header file [src/hal/interface/radiolink.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/radiolink.h)
+Functions and structures are defined in the header file [src/hal/interface/radiolink.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/radiolink.h). There is also an [app layer example](https://github.com/bitcraze/crazyflie-firmware/tree/master/examples/app_peer_to_peer) available in the example folder of the repository.
 
 ## Peer to Peer broadcast
 
@@ -52,4 +52,6 @@ void p2pcallbackHandler(P2PPacket *p)
 ```
 
 The callback will be called by the task handling radio communication, it should then execute quickly (for example pushing data in a queue).
+
+
 
