@@ -3,7 +3,7 @@ title: Adding a new system task
 page_id: systemtask
 ---
 
-**First check out if you can use the [new app layer](/docs/userguides/app_layer/), which might be enough for your purpose already**
+**First check out if you can use the [new app layer](/docs/userguides/app_layer.md), which might be enough for your purpose already**
 
 
 This howto describes how to create a new system task.
