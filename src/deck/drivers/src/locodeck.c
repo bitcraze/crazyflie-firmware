@@ -61,18 +61,18 @@
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef LOCODECK_USE_ALT_PINS
   #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
-	#define GPIO_PIN_RESET 	DECK_GPIO_IO3
-	#define EXTI_PortSource EXTI_PortSourceGPIOB
-	#define EXTI_PinSource 	EXTI_PinSource5
-	#define EXTI_LineN 		  EXTI_Line5
-	#define EXTI_IRQChannel EXTI9_5_IRQn
+  #define GPIO_PIN_RESET 	DECK_GPIO_IO3
+  #define EXTI_PortSource EXTI_PortSourceGPIOB
+  #define EXTI_PinSource 	EXTI_PinSource5
+  #define EXTI_LineN 		  EXTI_Line5
+  #define EXTI_IRQChannel EXTI9_5_IRQn
 #else
   #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
-	#define GPIO_PIN_RESET 	DECK_GPIO_TX1
-	#define EXTI_PortSource EXTI_PortSourceGPIOC
-	#define EXTI_PinSource 	EXTI_PinSource11
-	#define EXTI_LineN 		  EXTI_Line11
-	#define EXTI_IRQChannel EXTI15_10_IRQn
+  #define GPIO_PIN_RESET 	DECK_GPIO_TX1
+  #define EXTI_PortSource EXTI_PortSourceGPIOC
+  #define EXTI_PinSource 	EXTI_PinSource11
+  #define EXTI_LineN 		  EXTI_Line11
+  #define EXTI_IRQChannel EXTI15_10_IRQn
 #endif
 
 
@@ -338,22 +338,22 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
 }
 
 #if LOCODECK_USE_ALT_PINS
-	void __attribute__((used)) EXTI5_Callback(void)
+  void __attribute__((used)) EXTI5_Callback(void)
 #else
-	void __attribute__((used)) EXTI11_Callback(void)
+  void __attribute__((used)) EXTI11_Callback(void)
 #endif
-	{
-	  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
+  {
+    portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
 
-	  NVIC_ClearPendingIRQ(EXTI_IRQChannel);
-	  EXTI_ClearITPendingBit(EXTI_LineN);
+    NVIC_ClearPendingIRQ(EXTI_IRQChannel);
+    EXTI_ClearITPendingBit(EXTI_LineN);
 
-	  //To unlock RadioTask
-	  xSemaphoreGiveFromISR(irqSemaphore, &xHigherPriorityTaskWoken);
+    //To unlock RadioTask
+    xSemaphoreGiveFromISR(irqSemaphore, &xHigherPriorityTaskWoken);
 
-	  if(xHigherPriorityTaskWoken)
-		portYIELD();
-	}
+    if(xHigherPriorityTaskWoken)
+    portYIELD();
+  }
 
 static void spiSetSpeed(dwDevice_t* dev, dwSpiSpeed_t speed)
 {
