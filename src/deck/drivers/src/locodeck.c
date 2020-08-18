@@ -60,20 +60,18 @@
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef LOCODECK_USE_ALT_PINS
-	#define GPIO_PIN_RESET 	GPIO_Pin_4
-	#define GPIO_PORT		GPIOB
   #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+	#define GPIO_PIN_RESET 	DECK_GPIO_IO3
 	#define EXTI_PortSource EXTI_PortSourceGPIOB
 	#define EXTI_PinSource 	EXTI_PinSource5
-	#define EXTI_LineN 		EXTI_Line5
+	#define EXTI_LineN 		  EXTI_Line5
 	#define EXTI_IRQChannel EXTI9_5_IRQn
 #else
-	#define GPIO_PIN_RESET 	GPIO_Pin_10
-	#define GPIO_PORT		GPIOC
   #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
+	#define GPIO_PIN_RESET 	DECK_GPIO_TX1
 	#define EXTI_PortSource EXTI_PortSourceGPIOC
 	#define EXTI_PinSource 	EXTI_PinSource11
-	#define EXTI_LineN 		EXTI_Line11
+	#define EXTI_LineN 		  EXTI_Line11
 	#define EXTI_IRQChannel EXTI15_10_IRQn
 #endif
 
@@ -386,7 +384,6 @@ static dwOps_t dwOps = {
 static void dwm1000Init(DeckInfo *info)
 {
   EXTI_InitTypeDef EXTI_InitStructure;
-  GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
 
   spiBegin();
@@ -400,21 +397,15 @@ static void dwm1000Init(DeckInfo *info)
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
 
-  // Init reset output
-  GPIO_InitStructure.GPIO_Pin = GPIO_PIN_RESET;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIO_PORT, &GPIO_InitStructure);
-
   // Init pins
   pinMode(CS_PIN, OUTPUT);
+  pinMode(GPIO_PIN_RESET, OUTPUT);
   pinMode(GPIO_PIN_IRQ, INPUT);
 
   // Reset the DW1000 chip
-  GPIO_WriteBit(GPIO_PORT, GPIO_PIN_RESET, 0);
+  digitalWrite(GPIO_PIN_RESET, 0);
   vTaskDelay(M2T(10));
-  GPIO_WriteBit(GPIO_PORT, GPIO_PIN_RESET, 1);
+  digitalWrite(GPIO_PIN_RESET, 1);
   vTaskDelay(M2T(10));
 
   // Initialize the driver
