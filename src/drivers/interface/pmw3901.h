@@ -28,6 +28,7 @@
 #define PMW3901_H_
 
 #include <stdint.h>
+#include "deck.h"
 
 typedef struct motionBurst_s {
   union {
@@ -62,7 +63,7 @@ typedef struct motionBurst_s {
  *
  * @return  true if init successful else false.
  */
-bool pmw3901Init(uint32_t csPin);
+bool pmw3901Init(const deckPin_t csPin);
 
 /**
  * Read the current accumulated motion.
@@ -70,7 +71,7 @@ bool pmw3901Init(uint32_t csPin);
  * @param csPin   Chip Select pin as defined in deck pinout driver.
  * @param motion  A filled in motionBurst_t structure with the latest motion information
  */
-void pmw3901ReadMotion(uint32_t csPin, motionBurst_t * motion);
+void pmw3901ReadMotion(const deckPin_t csPin, motionBurst_t * motion);
 
 
 #endif /* PMW3901_H_ */

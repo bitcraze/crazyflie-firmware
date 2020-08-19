@@ -28,11 +28,12 @@
 #define __DECK_DIGITAL_H__
 
 #include <stdint.h>
+#include "deck_constants.h"
 
-void pinMode(uint32_t pin, uint32_t mode);
+void pinMode(const deckPin_t pin, const uint32_t mode);
 
-void digitalWrite(uint32_t pin, uint32_t val);
+void digitalWrite(const deckPin_t pin, const uint32_t val);
 
-int digitalRead(uint32_t pin);
+int digitalRead(const deckPin_t pin);
 
 #endif

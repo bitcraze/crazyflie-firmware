@@ -61,18 +61,20 @@ typedef struct _PmSyslinkInfo
 #endif
 }  __attribute__((packed)) PmSyslinkInfo;
 
-static float    batteryVoltage;
-static uint16_t batteryVoltageMV;
-static float    batteryVoltageMin = 6.0;
-static float    batteryVoltageMax = 0.0;
+static float     batteryVoltage;
+static uint16_t  batteryVoltageMV;
+static float     batteryVoltageMin = 6.0;
+static float     batteryVoltageMax = 0.0;
 
-static float    extBatteryVoltage;
-static uint16_t extBatteryVoltageMV;
-static uint8_t  extBatVoltDeckPin;
-static float    extBatVoltMultiplier;
-static float    extBatteryCurrent;
-static uint8_t  extBatCurrDeckPin;
-static float    extBatCurrAmpPerVolt;
+static float     extBatteryVoltage;
+static uint16_t  extBatteryVoltageMV;
+static deckPin_t extBatVoltDeckPin;
+static bool      isExtBatVoltDeckPinSet = false;
+static float     extBatVoltMultiplier;
+static float     extBatteryCurrent;
+static deckPin_t extBatCurrDeckPin;
+static bool      isExtBatCurrDeckPinSet = false;
+static float     extBatCurrAmpPerVolt;
 
 #ifdef PM_SYSTLINK_INLCUDE_TEMP
 // nRF51 internal temp
@@ -236,9 +238,10 @@ PMStates pmUpdateState()
   return state;
 }
 
-void pmEnableExtBatteryCurrMeasuring(uint8_t pin, float ampPerVolt)
+void pmEnableExtBatteryCurrMeasuring(const deckPin_t pin, float ampPerVolt)
 {
   extBatCurrDeckPin = pin;
+  isExtBatCurrDeckPinSet = true;
   extBatCurrAmpPerVolt = ampPerVolt;
 }
 
@@ -246,7 +249,7 @@ float pmMeasureExtBatteryCurrent(void)
 {
   float current;
 
-  if (extBatCurrDeckPin)
+  if (isExtBatCurrDeckPinSet)
   {
     current = analogReadVoltage(extBatCurrDeckPin) * extBatCurrAmpPerVolt;
   }
@@ -258,9 +261,10 @@ float pmMeasureExtBatteryCurrent(void)
   return current;
 }
 
-void pmEnableExtBatteryVoltMeasuring(uint8_t pin, float multiplier)
+void pmEnableExtBatteryVoltMeasuring(const deckPin_t pin, float multiplier)
 {
   extBatVoltDeckPin = pin;
+  isExtBatVoltDeckPinSet = true;
   extBatVoltMultiplier = multiplier;
 }
 
@@ -268,7 +272,7 @@ float pmMeasureExtBatteryVoltage(void)
 {
   float voltage;
 
-  if (extBatVoltDeckPin)
+  if (isExtBatVoltDeckPinSet)
   {
     voltage = analogReadVoltage(extBatVoltDeckPin) * extBatVoltMultiplier;
   }

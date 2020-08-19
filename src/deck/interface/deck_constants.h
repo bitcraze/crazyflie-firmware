@@ -44,19 +44,25 @@
  * The Deck port GPIO pins, as named by the deck port / expansion port / expansion breakout documentation on bitcraze.io.
  * Sequenced according to the deckGPIOMapping struct, so that these can be used for lookup in the struct.
  */
-#define DECK_GPIO_RX1   1
-#define DECK_GPIO_TX1   2
-#define DECK_GPIO_SDA   3
-#define DECK_GPIO_SCL   4
-#define DECK_GPIO_IO1   5
-#define DECK_GPIO_IO2   6
-#define DECK_GPIO_IO3   7
-#define DECK_GPIO_IO4   8
-#define DECK_GPIO_TX2   9
-#define DECK_GPIO_RX2  10
-#define DECK_GPIO_SCK  11
-#define DECK_GPIO_MISO 12
-#define DECK_GPIO_MOSI 13
+
+// Type used to identify a pin in the deck API.
+// id is used as an index in the deckGPIOMapping array
+typedef struct {uint8_t id;} deckPin_t;
+
+extern const deckPin_t DECK_GPIO_RX1;
+extern const deckPin_t DECK_GPIO_TX1;
+extern const deckPin_t DECK_GPIO_SDA;
+extern const deckPin_t DECK_GPIO_SCL;
+extern const deckPin_t DECK_GPIO_IO1;
+extern const deckPin_t DECK_GPIO_IO2;
+extern const deckPin_t DECK_GPIO_IO3;
+extern const deckPin_t DECK_GPIO_IO4;
+extern const deckPin_t DECK_GPIO_TX2;
+extern const deckPin_t DECK_GPIO_RX2;
+extern const deckPin_t DECK_GPIO_SCK;
+extern const deckPin_t DECK_GPIO_MISO;
+extern const deckPin_t DECK_GPIO_MOSI;
+
 
 typedef const struct {
   uint32_t periph;

@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -29,6 +29,7 @@
 
 #include "adc.h"
 #include "syslink.h"
+#include "deck.h"
 
 #ifndef CRITICAL_LOW_VOLTAGE
   #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0f
@@ -141,7 +142,7 @@ bool pmIsDischarging(void);
 /**
  * Enable or disable external battery voltage measuring.
  */
-void pmEnableExtBatteryVoltMeasuring(uint8_t pin, float multiplier);
+void pmEnableExtBatteryVoltMeasuring(const deckPin_t pin, float multiplier);
 
 /**
  * Measure an external voltage.
@@ -151,7 +152,7 @@ float pmMeasureExtBatteryVoltage(void);
 /**
  * Enable or disable external battery current measuring.
  */
-void pmEnableExtBatteryCurrMeasuring(uint8_t pin, float ampPerVolt);
+void pmEnableExtBatteryCurrMeasuring(const deckPin_t pin, float ampPerVolt);
 
 /**
  * Measure an external current.
