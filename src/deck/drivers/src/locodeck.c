@@ -122,7 +122,7 @@ static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
 
 static bool isInit = false;
-static SemaphoreHandle_t irqSemaphore;
+static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 static dwDevice_t dwm_device;
 static dwDevice_t *dwm = &dwm_device;
@@ -271,7 +271,7 @@ static void uwbTask(void* parameters) {
     handleModeSwitch();
     xSemaphoreGive(algoSemaphore);
 
-    if (xSemaphoreTake(irqSemaphore, timeout / portTICK_PERIOD_MS)) {
+    if (ulTaskNotifyTake(pdTRUE, timeout / portTICK_PERIOD_MS) > 0) {
       do{
         xSemaphoreTake(algoSemaphore, portMAX_DELAY);
         dwHandleInterrupt(dwm);
@@ -348,8 +348,8 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
     NVIC_ClearPendingIRQ(EXTI_IRQChannel);
     EXTI_ClearITPendingBit(EXTI_LineN);
 
-    //To unlock RadioTask
-    xSemaphoreGiveFromISR(irqSemaphore, &xHigherPriorityTaskWoken);
+    // Unlock interrupt handling task
+    vTaskNotifyGiveFromISR(uwbTaskHandle, &xHigherPriorityTaskWoken);
 
     if(xHigherPriorityTaskWoken)
     portYIELD();
@@ -452,11 +452,10 @@ static void dwm1000Init(DeckInfo *info)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  vSemaphoreCreateBinary(irqSemaphore);
   algoSemaphore= xSemaphoreCreateMutex();
 
-  xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, 3*configMINIMAL_STACK_SIZE, NULL,
-                    LPS_DECK_TASK_PRI, NULL);
+  xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+                    LPS_DECK_TASK_PRI, &uwbTaskHandle);
 
   isInit = true;
 }
