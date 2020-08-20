@@ -71,7 +71,7 @@ void appMain()
 
     //Put a string in the payload
     char str[11]="Hello World";
-    memcpy(&p_reply.data[1], &str, sizeof(char)*6);
+    memcpy(&p_reply.data[1], &str, sizeof(char)*11);
 
     // Set the size, which is the amount of bytes the payload with ID and the string 
     p_reply.size=12;
