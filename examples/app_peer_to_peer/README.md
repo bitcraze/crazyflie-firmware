@@ -14,8 +14,5 @@ make
 make cload
 ```
 
-If you want to compile the application elsewhere in your machine, just make sure that this line in the Makefile points to the right location of the crazyflie-firmware repo:
-
-```
-CRAZYFLIE_BASE=../../../crazyflie-firmware
+If you want to compile the application elsewhere in your machine, make sure to update ```CRAZYFLIE_BASE``` in the **Makefile**.
 ```

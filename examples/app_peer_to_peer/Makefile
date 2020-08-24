@@ -6,5 +6,5 @@ APP_STACKSIZE=300
 VPATH += src/
 PROJ_OBJ += peer_to_peer.o
 
-CRAZYFLIE_BASE=../../../crazyflie-firmware
+CRAZYFLIE_BASE=../..
 include $(CRAZYFLIE_BASE)/Makefile
