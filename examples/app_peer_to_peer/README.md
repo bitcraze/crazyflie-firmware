@@ -21,4 +21,3 @@ make cload
 ```
 
 If you want to compile the application elsewhere in your machine, make sure to update ```CRAZYFLIE_BASE``` in the **Makefile**.
-```
