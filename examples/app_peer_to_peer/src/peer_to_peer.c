@@ -37,21 +37,26 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "debug.h"
-
 #include "radiolink.h"
 #include "configblock.h"
 
 #define DEBUG_MODULE "P2P"
+#include "debug.h"
+
+#define MESSAGE "hello world"
+#define MESSAGE_LENGHT 11
+
 
 void p2pcallbackHandler(P2PPacket *p)
 {
   // Parse the data from the other crazyflie and print it
   uint8_t other_id = p->data[0];
-  char msg[11];
-  memcpy(&msg, &p->data[1], sizeof(msg));
+  static char msg[MESSAGE_LENGHT + 1];
+  memcpy(&msg, &p->data[1], sizeof(char)*MESSAGE_LENGHT);
+  msg[MESSAGE_LENGHT] = 0;
   uint8_t rssi = p->rssi;
-  DEBUG_PRINT("[RSSI: -%d dBm] Message from CF nr. %d, %s\n",rssi, other_id, msg);
+
+  DEBUG_PRINT("[RSSI: -%d dBm] Message from CF nr. %d, %s\n", rssi, other_id, msg);
 }
 
 void appMain()
@@ -70,11 +75,11 @@ void appMain()
     p_reply.data[0]=my_id;
 
     //Put a string in the payload
-    char str[11]="Hello World";
-    memcpy(&p_reply.data[1], &str, sizeof(char)*11);
+    char *str="Hello World";
+    memcpy(&p_reply.data[1], str, sizeof(char)*MESSAGE_LENGHT);
 
     // Set the size, which is the amount of bytes the payload with ID and the string 
-    p_reply.size=12;
+    p_reply.size=sizeof(char)*MESSAGE_LENGHT+1;
 
     // Register the callback function so that the CF can receive packets as well.
     p2pRegisterCB(p2pcallbackHandler);
