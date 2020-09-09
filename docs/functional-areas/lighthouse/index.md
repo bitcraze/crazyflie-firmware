@@ -1,6 +1,8 @@
 ---
 title: The Lighthouse positioning system
 page_id: lh_overview
+redirects:
+  - /docs/functional-areas/lighthouse_overview/
 ---
 
 The Lighthouse positioning system uses the HTC Vive base stations (aka Lighthouse) togeather with the Lighthouse
