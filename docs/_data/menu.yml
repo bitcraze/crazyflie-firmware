@@ -18,7 +18,7 @@
     - {page_id: deck_memory_format}
     - {page_id: p2p_api}
     - {page_id: trajectory_formats}
-    - {page_id: lighthouse_overview}
+    - {page_id: lh_overview}
 - title: Development Instructions
   subs:
     - {page_id: starting_development}
