@@ -78,7 +78,7 @@
 ## TDoA3
 # LPS_TDOA3_ENABLE=1
 
-## TDaA 3 - experimental
+## TDoA 3 - experimental
 # Enable 2D positioning. The value (1.2) is the height that the tag will move at. Only use in TDoA 3
 # CFLAGS += -DLPS_2D_POSITION_HEIGHT=1.2
 
