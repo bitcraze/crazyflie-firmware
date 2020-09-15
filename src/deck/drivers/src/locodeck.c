@@ -48,6 +48,7 @@
 #include "param.h"
 #include "nvicconf.h"
 #include "estimator.h"
+#include "statsCnt.h"
 
 #include "locodeck.h"
 
@@ -130,6 +131,9 @@ static dwDevice_t *dwm = &dwm_device;
 static QueueHandle_t lppShortQueue;
 
 static uint32_t timeout;
+
+static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
+static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback(dwDevice_t *dev)
 {
@@ -322,6 +326,7 @@ static void spiWrite(dwDevice_t* dev, const void *header, size_t headerLength,
   spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
+  STATS_CNT_RATE_EVENT(&spiWriteCount);
 }
 
 static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
@@ -335,6 +340,7 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
   memcpy(data, spiRxBuffer+headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
+  STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
 #if LOCODECK_USE_ALT_PINS
@@ -513,6 +519,8 @@ LOG_GROUP_STOP(ranging)
 
 LOG_GROUP_START(loco)
 LOG_ADD(LOG_UINT8, mode, &algoOptions.currentRangingMode)
+STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
+STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
 LOG_GROUP_STOP(loco)
 
 PARAM_GROUP_START(loco)
