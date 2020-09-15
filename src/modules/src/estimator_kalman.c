@@ -245,6 +245,9 @@ static STATS_CNT_RATE_DEFINE(finalizeCounter, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(measurementAppendedCounter, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(measurementNotAppendedCounter, ONE_SECOND);
 
+#define WARNING_HOLD_BACK_TIME M2T(2000)
+static uint32_t warningBlockTime = 0;
+
 #ifdef KALMAN_USE_BARO_UPDATE
 static const bool useBaroUpdate = true;
 #else
@@ -390,7 +393,11 @@ static void kalmanTask(void* parameters) {
       STATS_CNT_RATE_EVENT(&finalizeCounter);
       if (! kalmanSupervisorIsStateWithinBounds(&coreData)) {
         coreData.resetEstimation = true;
-        DEBUG_PRINT("State out of bounds, resetting\n");
+
+        if (osTick > warningBlockTime) {
+          warningBlockTime = osTick + WARNING_HOLD_BACK_TIME;
+          DEBUG_PRINT("State out of bounds, resetting\n");
+        }
       }
     }
 
