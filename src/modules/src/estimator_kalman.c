@@ -73,6 +73,7 @@
 #include "physicalConstants.h"
 
 #include "statsCnt.h"
+#include "rateSupervisor.h"
 
 #define DEBUG_MODULE "ESTKALMAN"
 #include "debug.h"
@@ -245,6 +246,8 @@ static STATS_CNT_RATE_DEFINE(finalizeCounter, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(measurementAppendedCounter, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(measurementNotAppendedCounter, ONE_SECOND);
 
+static rateSupervisor_t rateSupervisorContext;
+
 #define WARNING_HOLD_BACK_TIME M2T(2000)
 static uint32_t warningBlockTime = 0;
 
@@ -308,6 +311,8 @@ static void kalmanTask(void* parameters) {
   uint32_t lastPNUpdate = xTaskGetTickCount();
   uint32_t nextBaroUpdate = xTaskGetTickCount();
 
+  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 99, 101, 1);
+
   while (true) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
 
@@ -336,6 +341,10 @@ static void kalmanTask(void* parameters) {
       }
 
       nextPrediction = osTick + S2T(1.0f / PREDICT_RATE);
+
+      if (!rateSupervisorValidate(&rateSupervisorContext, T2M(osTick))) {
+        DEBUG_PRINT("WARNING: Kalman prediction rate low (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+      }
     }
 
     /**

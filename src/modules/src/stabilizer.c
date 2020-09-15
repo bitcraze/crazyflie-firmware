@@ -51,6 +51,7 @@
 #include "quatcompress.h"
 #include "statsCnt.h"
 #include "static_mem.h"
+#include "rateSupervisor.h"
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -78,6 +79,7 @@ typedef enum { configureAcc, measureNoiseFloor, measureProp, testBattery, restar
 #endif
 
 static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
+static rateSupervisor_t rateSupervisorContext;
 
 static struct {
   // position - mm
@@ -237,12 +239,14 @@ static void stabilizerTask(void* param)
   DEBUG_PRINT("Wait for sensor calibration...\n");
 
   // Wait for sensors to be calibrated
-  lastWakeTime = xTaskGetTickCount ();
+  lastWakeTime = xTaskGetTickCount();
   while(!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
   // Initialize tick to something else then 0
   tick = 1;
+
+  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 999, 1001, 1);
 
   DEBUG_PRINT("Ready to fly.\n");
 
@@ -299,6 +303,10 @@ static void stabilizerTask(void* param)
     calcSensorToOutputLatency(&sensorData);
     tick++;
     STATS_CNT_RATE_EVENT(&stabilizerRate);
+
+    if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
+      DEBUG_PRINT("WARNING: stabilizer loop delayed (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+    }
   }
 }
 
