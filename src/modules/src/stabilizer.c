@@ -246,7 +246,7 @@ static void stabilizerTask(void* param)
   // Initialize tick to something else then 0
   tick = 1;
 
-  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 999, 1001, 1);
+  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
 
   DEBUG_PRINT("Ready to fly.\n");
 
@@ -305,7 +305,7 @@ static void stabilizerTask(void* param)
     STATS_CNT_RATE_EVENT(&stabilizerRate);
 
     if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
-      DEBUG_PRINT("WARNING: stabilizer loop delayed (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+      DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
     }
   }
 }
