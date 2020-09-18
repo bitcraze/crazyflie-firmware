@@ -19,4 +19,5 @@ The basics:
 
 Development related pages
  * [Terminology and definitions](/docs/functional-areas/lighthouse/terminology_definitions.md)
+ * [Conversion from LH2 angles to LH1](/docs/functional-areas/lighthouse/angle_conversion.md)
  * [Kalman estimator measurement model](/docs/functional-areas/lighthouse/kalman_measurement_model.md)
