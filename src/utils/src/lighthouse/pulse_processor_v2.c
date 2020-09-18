@@ -217,11 +217,10 @@ static bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV
 }
 
 void pulseProcessorV2ConvertToV1Angles(const float v2Angle1, const float v2Angle2, float* v1Angles) {
-    const float tan_p_2 = 0.5773502691896258f;   // tan(60 / 2)
+    const float tant = 0.5773502691896258f;   // tan(pi / 6)
 
     v1Angles[0] = (v2Angle1 + v2Angle2) / 2.0f;
-    float beta = v2Angle2 - v2Angle1;
-    v1Angles[1] = atan(sinf(beta / 2.0f) / tan_p_2);
+    v1Angles[1] = atan2f(sinf(v2Angle2 - v2Angle1), (tant * (cosf(v2Angle1) + cosf(v2Angle2))));
 }
 
 static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, const pulseProcessorV2SweepBlock_t* previousBlock, pulseProcessorResult_t* angles) {
