@@ -95,6 +95,7 @@
 #define UART1_TEST_TASK_PRI     1
 #define UART2_TEST_TASK_PRI     1
 #define KALMAN_TASK_PRI         2
+#define LEDSEQCMD_TASK_PRI      1
 
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
@@ -111,6 +112,7 @@
 
 // Task names
 #define SYSTEM_TASK_NAME        "SYSTEM"
+#define LEDSEQCMD_TASK_NAME     "LedSeqCmd"
 #define ADC_TASK_NAME           "ADC"
 #define PM_TASK_NAME            "PWRMGNT"
 #define CRTP_TX_TASK_NAME       "CRTP-TX"
@@ -151,6 +153,7 @@
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
+#define LEDSEQCMD_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
 #define PM_TASK_STACKSIZE             configMINIMAL_STACK_SIZE
 #define CRTP_TX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
