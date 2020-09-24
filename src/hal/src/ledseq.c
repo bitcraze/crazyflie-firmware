@@ -181,7 +181,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT static int activeSeq[LED_NUM];
 NO_DMA_CCM_SAFE_ZERO_INIT static xTimerHandle timer[LED_NUM];
 NO_DMA_CCM_SAFE_ZERO_INIT static StaticTimer_t timerBuffer[LED_NUM];
 
-static xSemaphoreHandle ledseqSem;
+static xSemaphoreHandle ledseqMutex;
 static xQueueHandle ledseqCmdQueue;
 
 static bool isInit = false;
@@ -210,7 +210,7 @@ void ledseqInit()
     timer[i] = xTimerCreateStatic("ledseqTimer", M2T(1000), pdFALSE, (void*)i, runLedseq, &timerBuffer[i]);
   }
 
-  ledseqSem = xSemaphoreCreateMutex();
+  ledseqMutex = xSemaphoreCreateMutex();
 
   ledseqCmdQueue = xQueueCreate(10, sizeof(struct ledseqCmd_s));
   xTaskCreate(lesdeqCmdTask, LEDSEQCMD_TASK_NAME, LEDSEQCMD_TASK_STACKSIZE, NULL, LEDSEQCMD_TASK_PRI, NULL);
@@ -273,10 +273,10 @@ void ledseqRunBlocking(led_t led, const ledseq_t *sequence)
 
   if(prio<0) return;
 
-  xSemaphoreTake(ledseqSem, portMAX_DELAY);
+  xSemaphoreTake(ledseqMutex, portMAX_DELAY);
   state[led][prio] = 0;  //Reset the seq. to its first step
   updateActive(led);
-  xSemaphoreGive(ledseqSem);
+  xSemaphoreGive(ledseqMutex);
 
   //Run the first step if the new seq is the active sequence
   if(activeSeq[led] == prio)
@@ -307,10 +307,10 @@ void ledseqStopBlocking(led_t led, const ledseq_t *sequence)
 
   if(prio<0) return;
 
-  xSemaphoreTake(ledseqSem, portMAX_DELAY);
+  xSemaphoreTake(ledseqMutex, portMAX_DELAY);
   state[led][prio] = LEDSEQ_STOP;  //Stop the seq.
   updateActive(led);
-  xSemaphoreGive(ledseqSem);
+  xSemaphoreGive(ledseqMutex);
 
   //Run the next active sequence (if any...)
   runLedseq(timer[led]);
@@ -338,7 +338,7 @@ static void runLedseq( xTimerHandle xTimer )
 
     state[led][prio]++;
 
-    xSemaphoreTake(ledseqSem, portMAX_DELAY);
+    xSemaphoreTake(ledseqMutex, portMAX_DELAY);
     switch(step->action)
     {
       case LEDSEQ_LOOP:
@@ -357,7 +357,7 @@ static void runLedseq( xTimerHandle xTimer )
         leave=true;
         break;
     }
-    xSemaphoreGive(ledseqSem);
+    xSemaphoreGive(ledseqMutex);
   }
 }
 

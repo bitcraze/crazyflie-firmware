@@ -54,6 +54,7 @@
 #include "debug.h"
 #include "led.h"
 
+#include "statsCnt.h"
 #include "log.h"
 #include "param.h"
 #include "crc_bosch.h"
@@ -107,11 +108,16 @@ static void setFastSpiMode(void);
 static BYTE xchgSpi(BYTE dat);
 static void rcvrSpiMulti(BYTE *buff, UINT btr);
 static void xmitSpiMulti(const BYTE *buff, UINT btx);
-static void csHigh(void);
+static void csHigh(BYTE doDummyClock);
 static void csLow(void);
+static void delayMs(UINT ms);
 
 static void usdLogTask(void* prm);
 static void usdWriteTask(void* prm);
+
+static STATS_CNT_RATE_DEFINE(spiWriteRate, 1000);
+static STATS_CNT_RATE_DEFINE(spiReadRate, 1000);
+static STATS_CNT_RATE_DEFINE(fatWriteRate, 1000);
 
 NO_DMA_CCM_SAFE_ZERO_INIT static crc crcTable[256];
 
@@ -153,6 +159,7 @@ static sdSpiContext_t sdSpiContext =
         .xmitSpiMulti = xmitSpiMulti,
         .csLow = csLow,
         .csHigh = csHigh,
+        .delayMs = delayMs,
 
         .stat = STA_NOINIT,
         .timer1 = 0,
@@ -201,6 +208,9 @@ static BYTE xchgSpi(BYTE dat)
 {
   BYTE receive;
 
+  STATS_CNT_RATE_EVENT(&spiReadRate);
+  STATS_CNT_RATE_EVENT(&spiWriteRate);
+
   SPI_EXCHANGE(1, &dat, &receive);
   return (BYTE)receive;
 }
@@ -208,6 +218,8 @@ static BYTE xchgSpi(BYTE dat)
 /* Receive multiple byte */
 static void rcvrSpiMulti(BYTE *buff, UINT btr)
 {
+  STATS_CNT_RATE_MULTI_EVENT(&spiReadRate, btr);
+
   memset(exchangeBuff, 0xFFFFFFFF, btr);
   SPI_EXCHANGE(btr, exchangeBuff, buff);
 }
@@ -215,16 +227,21 @@ static void rcvrSpiMulti(BYTE *buff, UINT btr)
 /* Send multiple byte */
 static void xmitSpiMulti(const BYTE *buff, UINT btx)
 {
+  STATS_CNT_RATE_MULTI_EVENT(&spiWriteRate, btx);
+
   SPI_EXCHANGE(btx, buff, exchangeBuff);
 }
 
-static void csHigh(void)
+static void csHigh(BYTE doDummyClock)
 {
   digitalWrite(USD_CS_PIN, 1);
 
   // Dummy clock (force DO hi-z for multiple slave SPI)
   // Moved here from fatfs_sd.c to handle bus release
-  xchgSpi(0xFF);
+  if (doDummyClock)
+  {
+    xchgSpi(0xFF);
+  }
 
   SPI_END_TRANSACTION();
 }
@@ -235,6 +252,10 @@ static void csLow(void)
   digitalWrite(USD_CS_PIN, 0);
 }
 
+static void delayMs(UINT ms)
+{
+  vTaskDelay(M2T(ms));
+}
 /********** FS helper function ***************/
 
 // reads a line and returns the string without any whitespace/comment
@@ -703,6 +724,7 @@ static void usdWriteTask(void* usdLogQueue)
               continue;
             }
             f_write(&logFile, &setsToWrite, 1, &bytesWritten);
+            STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
             do {
               /* receive data pointer from queue */
@@ -710,10 +732,12 @@ static void usdWriteTask(void* usdLogQueue)
               /* write binary data and point on next item */
               USD_WRITE(&logFile, usdLogQueuePtr,
                         4 + usdLogConfig.numBytes, &bytesWritten, crcValue, 0, crcTable)
+              STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             } while(--setsToWrite);
             /* final xor and negate crc value */
             crcValue = ~(crcValue^FINAL_XOR_VALUE);
             f_write(&logFile, &crcValue, 4, &bytesWritten);
+            STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             /* close file */
             f_close(&logFile);
           }
@@ -784,3 +808,10 @@ PARAM_GROUP_STOP(deck)
 PARAM_GROUP_START(usd)
 PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
 PARAM_GROUP_STOP(usd)
+
+LOG_GROUP_START(usd)
+STATS_CNT_RATE_LOG_ADD(spiWrBps, &spiWriteRate)
+STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
+STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
+LOG_GROUP_STOP(usd)
+
