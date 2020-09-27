@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -49,7 +49,7 @@ void vApplicationMallocFailedHook( void )
 }
 
 #if (configCHECK_FOR_STACK_OVERFLOW > 0)
-void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed portCHAR *pcTaskName)
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 {
   portDISABLE_INTERRUPTS();
   DEBUG_PRINT("\nStack overflow!\n");

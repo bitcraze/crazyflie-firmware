@@ -55,7 +55,7 @@
   #define MCU_ID_ADDRESS          0x1FFF7A10
   #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
   #ifndef FREERTOS_HEAP_SIZE
-    #define FREERTOS_HEAP_SIZE      20000
+    #define FREERTOS_HEAP_SIZE      30000
   #endif
   #define FREERTOS_MIN_STACK_SIZE 150       // M4-FPU register setup is bigger so stack needs to be bigger
   #define FREERTOS_MCU_CLOCK_HZ   168000000
@@ -90,11 +90,12 @@
 #define BQ_OSD_TASK_PRI         1
 #define GTGPS_DECK_TASK_PRI     1
 #define LIGHTHOUSE_TASK_PRI     3
-#define LPS_DECK_TASK_PRI       5
+#define LPS_DECK_TASK_PRI       3
 #define OA_DECK_TASK_PRI        3
 #define UART1_TEST_TASK_PRI     1
 #define UART2_TEST_TASK_PRI     1
 #define KALMAN_TASK_PRI         2
+#define LEDSEQCMD_TASK_PRI      1
 
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
@@ -111,6 +112,7 @@
 
 // Task names
 #define SYSTEM_TASK_NAME        "SYSTEM"
+#define LEDSEQCMD_TASK_NAME     "LEDSEQCMD"
 #define ADC_TASK_NAME           "ADC"
 #define PM_TASK_NAME            "PWRMGNT"
 #define CRTP_TX_TASK_NAME       "CRTP-TX"
@@ -151,19 +153,20 @@
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
+#define LEDSEQCMD_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define ADC_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
 #define PM_TASK_STACKSIZE             configMINIMAL_STACK_SIZE
 #define CRTP_TX_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define CRTP_RX_TASK_STACKSIZE        (2* configMINIMAL_STACK_SIZE)
 #define CRTP_RXTX_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
-#define LOG_TASK_STACKSIZE            configMINIMAL_STACK_SIZE
+#define LOG_TASK_STACKSIZE            (2 * configMINIMAL_STACK_SIZE)
 #define MEM_TASK_STACKSIZE            (2 * configMINIMAL_STACK_SIZE)
 #define PARAM_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
 #define SENSORS_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 #define STABILIZER_TASK_STACKSIZE     (3 * configMINIMAL_STACK_SIZE)
 #define NRF24LINK_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define ESKYLINK_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
-#define SYSLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
+#define SYSLINK_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 #define USBLINK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define PROXIMITY_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define EXTRX_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
@@ -172,7 +175,7 @@
 #define ZRANGER2_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
 #define FLOW_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 #define USDLOG_TASK_STACKSIZE         (2 * configMINIMAL_STACK_SIZE)
-#define USDWRITE_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
+#define USDWRITE_TASK_STACKSIZE       (3 * configMINIMAL_STACK_SIZE)
 #define PCA9685_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 #define CMD_HIGH_LEVEL_TASK_STACKSIZE (2 * configMINIMAL_STACK_SIZE)
 #define MULTIRANGER_TASK_STACKSIZE    (2 * configMINIMAL_STACK_SIZE)

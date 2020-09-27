@@ -61,8 +61,10 @@ void ledseqInit(void);
 bool ledseqTest(void);
 
 void ledseqEnable(bool enable);
-void ledseqRun(led_t led, const ledseq_t * sequence);
-void ledseqStop(led_t led, const ledseq_t * sequence);
+bool ledseqRun(led_t led, const ledseq_t * sequence);
+void ledseqRunBlocking(led_t led, const ledseq_t *sequence);
+bool ledseqStop(led_t led, const ledseq_t * sequence);
+void ledseqStopBlocking(led_t led, const ledseq_t *sequence);
 void ledseqSetTimes(ledseq_t *sequence, int32_t onTime, int32_t offTime);
 
 //Existing led sequences

@@ -27,6 +27,9 @@
  */
 
 #include "pulse_processor.h"
+#include "pulse_processor_v1.h"
+#include "pulse_processor_v2.h"
+#include "cf_math.h"
 
 
 /**
@@ -56,7 +59,47 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
 }
 
 /**
- * @brief Clear the result struct for one base station
+ * Clear angles information when we know that data became old when it wasn't updated anymore.
+ * For example when basestations or sensors are hidden for crazyflie
+ *
+ * @param appState State that contains the calibration data
+ * @param angles The raw and calibrated angles
+ * @param baseStation The base station in question
+ */
+void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
+  // Repeated sweep from the same basestation. So in theory we did a cycle, so we should have had all basestations.
+  // If not, cleanup the basestation that we didn't receive.
+  if(appState->receivedBsSweep[basestation]) {
+    for(int bs=0; bs != PULSE_PROCESSOR_N_BASE_STATIONS; bs++){
+      if(!appState->receivedBsSweep[bs]){
+        pulseProcessorClear(angles, bs);
+      }
+      appState->receivedBsSweep[bs] = false;
+    }
+  }
+  appState->receivedBsSweep[basestation] = true;
+}
+
+/**
+ * @brief Update the information about what angles and what basestations are having correct data
+ *
+ * @param angles The result struct to clear
+ * @param baseStation The base station
+ */
+void processValidAngles(pulseProcessorResult_t* angles, int baseStation)
+{
+  switch(angles->measurementType) {
+    case lighthouseBsTypeV1:
+      pulseProcessorV1ProcessValidAngles(angles, baseStation);
+      break;
+    default:
+      // Do nothing
+      break;
+  }
+}
+
+/**
+ * @brief Clear the result struct for one base station when the sensor data invalidated
  *
  * @param angles The result struct to clear
  * @param baseStation The base station
@@ -67,4 +110,41 @@ void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
     angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation].validCount = 0;
     angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation].validCount = 0;
   }
+  processValidAngles(angles, baseStation);
+}
+
+/**
+ * @brief Clear result struct when the sensor data is invalidated
+ *
+ * @param angles
+ */
+void pulseProcessorAllClear(pulseProcessorResult_t* angles)
+{
+  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+    for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+      angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+      angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+    }
+    processValidAngles(angles, baseStation);
+  }
+}
+
+/**
+ * @brief Clear the result struct for one base station when the data is processed and converted to measurements
+ *
+ * @param angles The result struct to clear
+ * @param baseStation The base station
+ */
+void pulseProcessorProcessed(pulseProcessorResult_t* angles, int baseStation)
+{
+  processValidAngles(angles, baseStation);
+
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+    angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation].validCount = 0;
+  }
+}
+
+uint8_t pulseProcessorAnglesQuality() {
+  return MAX(pulseProcessorV1AnglesQuality(), pulseProcessorV2AnglesQuality());
 }

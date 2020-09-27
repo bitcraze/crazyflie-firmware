@@ -48,6 +48,7 @@
 #include "param.h"
 #include "nvicconf.h"
 #include "estimator.h"
+#include "statsCnt.h"
 
 #include "locodeck.h"
 
@@ -60,21 +61,19 @@
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef LOCODECK_USE_ALT_PINS
-    #define GPIO_PIN_IRQ 	GPIO_Pin_5
-	#define GPIO_PIN_RESET 	GPIO_Pin_4
-	#define GPIO_PORT		GPIOB
-	#define EXTI_PortSource EXTI_PortSourceGPIOB
-	#define EXTI_PinSource 	EXTI_PinSource5
-	#define EXTI_LineN 		EXTI_Line5
-	#define EXTI_IRQChannel EXTI9_5_IRQn
+  #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+  #define GPIO_PIN_RESET 	DECK_GPIO_IO3
+  #define EXTI_PortSource EXTI_PortSourceGPIOB
+  #define EXTI_PinSource 	EXTI_PinSource5
+  #define EXTI_LineN 		  EXTI_Line5
+  #define EXTI_IRQChannel EXTI9_5_IRQn
 #else
-    #define GPIO_PIN_IRQ 	GPIO_Pin_11
-	#define GPIO_PIN_RESET 	GPIO_Pin_10
-	#define GPIO_PORT		GPIOC
-	#define EXTI_PortSource EXTI_PortSourceGPIOC
-	#define EXTI_PinSource 	EXTI_PinSource11
-	#define EXTI_LineN 		EXTI_Line11
-	#define EXTI_IRQChannel EXTI15_10_IRQn
+  #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
+  #define GPIO_PIN_RESET 	DECK_GPIO_TX1
+  #define EXTI_PortSource EXTI_PortSourceGPIOC
+  #define EXTI_PinSource 	EXTI_PinSource11
+  #define EXTI_LineN 		  EXTI_Line11
+  #define EXTI_IRQChannel EXTI15_10_IRQn
 #endif
 
 
@@ -124,7 +123,7 @@ static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
 
 static bool isInit = false;
-static SemaphoreHandle_t irqSemaphore;
+static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 static dwDevice_t dwm_device;
 static dwDevice_t *dwm = &dwm_device;
@@ -132,6 +131,9 @@ static dwDevice_t *dwm = &dwm_device;
 static QueueHandle_t lppShortQueue;
 
 static uint32_t timeout;
+
+static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
+static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback(dwDevice_t *dev)
 {
@@ -273,7 +275,7 @@ static void uwbTask(void* parameters) {
     handleModeSwitch();
     xSemaphoreGive(algoSemaphore);
 
-    if (xSemaphoreTake(irqSemaphore, timeout / portTICK_PERIOD_MS)) {
+    if (ulTaskNotifyTake(pdTRUE, timeout / portTICK_PERIOD_MS) > 0) {
       do{
         xSemaphoreTake(algoSemaphore, portMAX_DELAY);
         dwHandleInterrupt(dwm);
@@ -324,6 +326,7 @@ static void spiWrite(dwDevice_t* dev, const void *header, size_t headerLength,
   spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
+  STATS_CNT_RATE_EVENT(&spiWriteCount);
 }
 
 static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
@@ -337,25 +340,26 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
   memcpy(data, spiRxBuffer+headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
+  STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
 #if LOCODECK_USE_ALT_PINS
-	void __attribute__((used)) EXTI5_Callback(void)
+  void __attribute__((used)) EXTI5_Callback(void)
 #else
-	void __attribute__((used)) EXTI11_Callback(void)
+  void __attribute__((used)) EXTI11_Callback(void)
 #endif
-	{
-	  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
+  {
+    portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
 
-	  NVIC_ClearPendingIRQ(EXTI_IRQChannel);
-	  EXTI_ClearITPendingBit(EXTI_LineN);
+    NVIC_ClearPendingIRQ(EXTI_IRQChannel);
+    EXTI_ClearITPendingBit(EXTI_LineN);
 
-	  //To unlock RadioTask
-	  xSemaphoreGiveFromISR(irqSemaphore, &xHigherPriorityTaskWoken);
+    // Unlock interrupt handling task
+    vTaskNotifyGiveFromISR(uwbTaskHandle, &xHigherPriorityTaskWoken);
 
-	  if(xHigherPriorityTaskWoken)
-		portYIELD();
-	}
+    if(xHigherPriorityTaskWoken)
+    portYIELD();
+  }
 
 static void spiSetSpeed(dwDevice_t* dev, dwSpiSpeed_t speed)
 {
@@ -386,18 +390,11 @@ static dwOps_t dwOps = {
 static void dwm1000Init(DeckInfo *info)
 {
   EXTI_InitTypeDef EXTI_InitStructure;
-  GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
 
   spiBegin();
 
-  // Init IRQ input
-  bzero(&GPIO_InitStructure, sizeof(GPIO_InitStructure));
-  GPIO_InitStructure.GPIO_Pin = GPIO_PIN_IRQ;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  //GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
-  GPIO_Init(GPIO_PORT, &GPIO_InitStructure);
-
+  // Set up interrupt
   SYSCFG_EXTILineConfig(EXTI_PortSource, EXTI_PinSource);
 
   EXTI_InitStructure.EXTI_Line = EXTI_LineN;
@@ -406,20 +403,15 @@ static void dwm1000Init(DeckInfo *info)
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
 
-  // Init reset output
-  GPIO_InitStructure.GPIO_Pin = GPIO_PIN_RESET;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIO_PORT, &GPIO_InitStructure);
-
-  // Init CS pin
+  // Init pins
   pinMode(CS_PIN, OUTPUT);
+  pinMode(GPIO_PIN_RESET, OUTPUT);
+  pinMode(GPIO_PIN_IRQ, INPUT);
 
   // Reset the DW1000 chip
-  GPIO_WriteBit(GPIO_PORT, GPIO_PIN_RESET, 0);
+  digitalWrite(GPIO_PIN_RESET, 0);
   vTaskDelay(M2T(10));
-  GPIO_WriteBit(GPIO_PORT, GPIO_PIN_RESET, 1);
+  digitalWrite(GPIO_PIN_RESET, 1);
   vTaskDelay(M2T(10));
 
   // Initialize the driver
@@ -452,8 +444,14 @@ static void dwm1000Init(DeckInfo *info)
   #endif
 
   dwSetChannel(dwm, CHANNEL_2);
-  dwUseSmartPower(dwm, true);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
+
+  #ifdef LPS_FULL_TX_POWER
+  dwUseSmartPower(dwm, false);
+  dwSetTxPower(dwm, 0x1F1F1F1Ful);
+  #else
+  dwUseSmartPower(dwm, true);
+  #endif
 
   dwSetReceiveWaitTimeout(dwm, DEFAULT_RX_TIMEOUT);
 
@@ -466,11 +464,10 @@ static void dwm1000Init(DeckInfo *info)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  vSemaphoreCreateBinary(irqSemaphore);
   algoSemaphore= xSemaphoreCreateMutex();
 
-  xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, 3*configMINIMAL_STACK_SIZE, NULL,
-                    LPS_DECK_TASK_PRI, NULL);
+  xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+                    LPS_DECK_TASK_PRI, &uwbTaskHandle);
 
   isInit = true;
 }
@@ -522,6 +519,8 @@ LOG_GROUP_STOP(ranging)
 
 LOG_GROUP_START(loco)
 LOG_ADD(LOG_UINT8, mode, &algoOptions.currentRangingMode)
+STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
+STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
 LOG_GROUP_STOP(loco)
 
 PARAM_GROUP_START(loco)

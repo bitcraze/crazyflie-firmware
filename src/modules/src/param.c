@@ -667,3 +667,47 @@ unsigned int paramGetUint(int varid)
 {
   return (unsigned int)paramGetInt(varid);
 }
+
+void paramSetInt(int varid, int valuei)
+{
+   ASSERT(varid >= 0);
+
+  switch(params[varid].type)
+  {
+    case PARAM_UINT8:
+      *(uint8_t *)params[varid].address = (uint8_t) valuei;
+      break;
+    case PARAM_INT8:
+      *(int8_t *)params[varid].address = (int8_t) valuei;
+      break;
+    case PARAM_UINT16:
+      *(uint16_t *)params[varid].address = (uint16_t) valuei;
+      break;
+    case PARAM_INT16:
+      *(int16_t *)params[varid].address = (int16_t) valuei;
+      break;
+    case PARAM_UINT32:
+      *(uint32_t *)params[varid].address = (uint32_t) valuei;
+      break;
+    case PARAM_INT32:
+      *(int32_t *)params[varid].address = (int32_t) valuei;
+      break;
+    case PARAM_FLOAT:
+    // Todo: are floats handy to have here?
+      *(float *)params[varid].address = (float) valuei;
+
+      break;
+  }
+}
+
+void paramSetFloat(int varid, float valuef)
+{
+  ASSERT(varid >= 0);
+
+  if (params[varid].type == PARAM_FLOAT )
+      *(float *)params[varid].address = valuef;
+}
+
+
+
+

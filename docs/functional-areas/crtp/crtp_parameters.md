@@ -1,6 +1,6 @@
 ---
 title: Parameters
-page_id: ctrp_parameters 
+page_id: crtp_parameters
 ---
 
 The parameters system makes all the gettable and settable parameters of
@@ -56,7 +56,7 @@ The type is one byte describing the parameter type:
 
 |  Type code |  C type     | Python unpack |
 |  -----------| -----------| ---------------|
-| 0x08      |  uint8\_t   |  \'&lt;B \'| 
+| 0x08      |  uint8\_t   |  \'&lt;B \'|
 |  0x09      |  uint16\_t |  \'&lt;H\' |
 |  0x0A      |  uint32\_t |  \'&lt;L\' |
 |  0x0B      |  uint64\_t |  \'&lt;Q\' |
@@ -153,6 +153,3 @@ consistency.
 This command is useful to set a parameter without having to fetch the
 full TOC. It is enough to know the group, name and type of the parameter
 to write it.
-
-
-

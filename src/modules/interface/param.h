@@ -43,6 +43,9 @@ uint8_t paramVarSize(int type);
 float paramGetFloat(int varid);
 int paramGetInt(int varid);
 unsigned int paramGetUint(int varid);
+void paramSetInt(int varid, int valuei);
+void paramSetFloat(int varid, float valuef);
+
 
 /* Basic parameter structure */
 struct param_s {

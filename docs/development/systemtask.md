@@ -3,6 +3,9 @@ title: Adding a new system task
 page_id: systemtask
 ---
 
+**First check out if you can use the [new app layer](/docs/userguides/app_layer.md), which might be enough for your purpose already**
+
+
 This howto describes how to create a new system task.
 A FreeRTOS task is similar to a thread on a standard operating system.
 It has its own function call stack, and can be preempted by the RTOS scheduler.
@@ -16,6 +19,7 @@ significant computation in response to inputs such as CRTP radio messages, it
 should receive those inputs on a queue and perform the computation within
 its own task instead of blocking the radio task.
 In this example, we will set up the skeleton for such a new subsystem.
+
 
 
 Development environment

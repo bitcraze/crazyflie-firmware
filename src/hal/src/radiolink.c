@@ -45,7 +45,7 @@
 #include "static_mem.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
-#define RADIOLINK_CTRP_QUEUE_SIZE (5)
+#define RADIOLINK_CRTP_QUEUE_SIZE (5)
 #define RADIO_ACTIVITY_TIMEOUT_MS (1000)
 
 #define RADIOLINK_P2P_QUEUE_SIZE (5)
@@ -54,7 +54,7 @@ static xQueueHandle  txQueue;
 STATIC_MEM_QUEUE_ALLOC(txQueue, RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
 
 static xQueueHandle crtpPacketDelivery;
-STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, RADIOLINK_CTRP_QUEUE_SIZE, sizeof(CRTPPacket));
+STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, RADIOLINK_CRTP_QUEUE_SIZE, sizeof(CRTPPacket));
 
 static bool isInit;
 

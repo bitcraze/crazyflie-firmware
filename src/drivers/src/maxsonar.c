@@ -99,7 +99,7 @@ static uint32_t maxSonarGetAccuracyMB1040(uint32_t distance)
  *
  * @return The distance measurement in millimeters.
  */
-static uint32_t maxSonarReadDistanceMB1040AN(uint8_t pin, uint32_t *accuracy)
+static uint32_t maxSonarReadDistanceMB1040AN(const deckPin_t pin, uint32_t *accuracy)
 {
   /*
    * analogRead() returns a 12-bit (0-4095) value scaled to the range between GND (0V) and VREF.

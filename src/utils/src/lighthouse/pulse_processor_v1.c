@@ -57,6 +57,7 @@
 #define FRAME_WIDTH_MIN 395000
 #define FRAME_WIDTH_MAX 405000
 
+static uint16_t validAngles = 0;
 
 TESTABLE_STATIC int findSyncTime(const pulseProcessorPulse_t pulseHistory[], uint32_t *sync0Time);
 TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncTimes, uint32_t *syncTime);
@@ -343,6 +344,10 @@ bool pulseProcessorV1ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
 
   if (!state->v1.synchronized) {
     synchronize(&state->v1, frameData->sensor, frameData->timestamp, frameData->width);
+
+    if(!state->v1.synchronized) {
+      pulseProcessorAllClear(angles);
+    }
   } else {
     anglesMeasured = processWhenSynchronized(state, frameData->sensor, frameData->timestamp, frameData->width, angles, baseStation, axis);
     angles->measurementType = lighthouseBsTypeV1;
@@ -495,4 +500,19 @@ TESTABLE_STATIC bool getSystemSyncTime(const uint32_t syncTimes[], size_t nSyncT
 
 
   return true;
+}
+
+uint32_t anglesMask = (1 << (PULSE_PROCESSOR_N_SWEEPS * PULSE_PROCESSOR_N_SENSORS)) - 1;
+void pulseProcessorV1ProcessValidAngles(pulseProcessorResult_t* angles, int basestation) {
+  validAngles &= ~(anglesMask << (basestation*PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS));
+  for(int sensor=0; sensor!=PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    if(angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[basestation].validCount != 0) {
+      uint32_t sensorBits = (1 << angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[basestation].validCount) - 1;
+      validAngles |= sensorBits << (sensor*PULSE_PROCESSOR_N_SWEEPS + basestation*PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS);
+    }
+  }
+}
+
+uint8_t pulseProcessorV1AnglesQuality() {
+  return __builtin_popcount(validAngles)*1.0/(PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS*PULSE_PROCESSOR_N_BASE_STATIONS)*255;
 }

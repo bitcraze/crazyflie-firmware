@@ -1,6 +1,6 @@
 ---
 title: Memory access
-page_id: ctrp_mem 
+page_id: crtp_mem
 ---
 
 
@@ -26,7 +26,7 @@ Getting information and reading/writing the memories is optional for the
 clients, but the -Crazyflie Python Client- always downloads information
 about the memories on connect.
 
-![ctrp mem](/images/ctrp_mem.png)
+![crtp mem](/docs/images/crtp_mem.png)
 
 Communication protocol
 ======================
@@ -146,13 +146,13 @@ Reply from Crazyflie to host:
 
 Example of requesting a mass erase for a memory with MEM\_ID=2
 
-    Host-to-Crazyflie: <port/chan> 
-    Crazyflie-to-Host: <port/chan> 
+    Host-to-Crazyflie: <port/chan>
+    Crazyflie-to-Host: <port/chan>
 
 Example of
 
-    Host-to-Crazyflie: <port/chan> 
-    Crazyflie-to-Host: <port/chan> 
+    Host-to-Crazyflie: <port/chan>
+    Crazyflie-to-Host: <port/chan>
 
 Channel 1: Memory read
 ----------------------
@@ -188,7 +188,7 @@ Where the STATUS field is:
 Example of reading LEN=0x0F bytes from MEM\_ID=0x01 MEM\_ADDR=0x0A
 
     Host-to-Crazyflie: <port/chan> 0x01 0x0A 0x00 0x00 0x00 0x0F
-    Crazyflie-to-Host: <port/chan> 0x01 0x0A 0x00 0x00 0x00 0x00 0x01 0x09 0x62 0x63 0x4C 0x65 0x64 0x52 0x69 0x6E 0x67 0x02 0x01 0x62 0x55 
+    Crazyflie-to-Host: <port/chan> 0x01 0x0A 0x00 0x00 0x00 0x00 0x01 0x09 0x62 0x63 0x4C 0x65 0x64 0x52 0x69 0x6E 0x67 0x02 0x01 0x62 0x55
 
 Channel 2: Memory write
 -----------------------
@@ -221,5 +221,3 @@ Where the STATUS field is:
  | 1      |  \....|
 
 Example
-
-

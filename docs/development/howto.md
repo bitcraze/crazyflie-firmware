@@ -5,7 +5,7 @@ page_id: howto
 
 This howto is going to describe step-by-step how to make and flash your
 first Crazyflie 2.X deck driver. See the deck [api documentation
-page](/userguides/deck/) for more information about the
+page](/docs/userguides/decks/) for more information about the
 code.
 
 Development environment
@@ -133,4 +133,4 @@ $
 Now you can connect your Crazyflie with the client and see your driver
 in the console!
 
-![deck hello console](/images/deckhelloconsole.png){:align-center}
+![deck hello console](/docs/images/deckhelloconsole.png){:align-center}

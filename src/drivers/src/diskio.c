@@ -13,11 +13,11 @@
 #include "cfassert.h"
 
 ///* Make driver structure */
-DISKIO_LowLevelDriver_t FATFS_LowLevelDrivers[_VOLUMES];
+DISKIO_LowLevelDriver_t FATFS_LowLevelDrivers[FF_VOLUMES];
 
 void FATFS_AddDriver(DISKIO_LowLevelDriver_t* Driver, uint8_t driverVolume)
 {
-  ASSERT(driverVolume < _VOLUMES);
+  ASSERT(driverVolume < FF_VOLUMES);
   /* Add to structure */
   FATFS_LowLevelDrivers[driverVolume].disk_initialize = Driver->disk_initialize;
   FATFS_LowLevelDrivers[driverVolume].disk_status = Driver->disk_status;

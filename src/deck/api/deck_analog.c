@@ -80,31 +80,30 @@ static uint16_t analogReadChannel(uint8_t channel)
   return ADC_GetConversionValue(ADC2);
 }
 
-uint16_t analogRead(uint32_t pin)
+uint16_t analogRead(const deckPin_t pin)
 {
-  assert_param((pin >= 1) && (pin <= 13));
-  assert_param(deckGPIOMapping[pin-1].adcCh > -1);
+  assert_param(deckGPIOMapping[pin.id].adcCh > -1);
 
   /* Now set the GPIO pin to analog mode. */
 
   /* Enable clock for the peripheral of the pin.*/
-  RCC_AHB1PeriphClockCmd(deckGPIOMapping[pin-1].periph, ENABLE);
+  RCC_AHB1PeriphClockCmd(deckGPIOMapping[pin.id].periph, ENABLE);
 
   /* Populate structure with RESET values. */
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_StructInit(&GPIO_InitStructure);
 
   /* Initialise the GPIO pin to analog mode. */
-  GPIO_InitStructure.GPIO_Pin   = deckGPIOMapping[pin-1].pin;
+  GPIO_InitStructure.GPIO_Pin   = deckGPIOMapping[pin.id].pin;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
 
   /* TODO: Any settling time before we can do ADC after init on the GPIO pin? */
-  GPIO_Init(deckGPIOMapping[pin-1].port, &GPIO_InitStructure);
+  GPIO_Init(deckGPIOMapping[pin.id].port, &GPIO_InitStructure);
 
   /* Read the appropriate ADC channel. */
-  return analogReadChannel((uint8_t)deckGPIOMapping[pin-1].adcCh);
+  return analogReadChannel((uint8_t)deckGPIOMapping[pin.id].adcCh);
 }
 
 void analogReference(uint8_t type)
@@ -143,12 +142,11 @@ void analogReadResolution(uint8_t bits)
   ADC_Init(ADC2, &ADC_InitStructure);
 }
 
-float analogReadVoltage(uint32_t pin)
+float analogReadVoltage(const deckPin_t pin)
 {
   float voltage;
 
   voltage = analogRead(pin) * VREF / adcRange;
 
   return voltage;
-
 }

@@ -56,20 +56,30 @@ typedef struct _PmSyslinkInfo
   };
   float vBat;
   float chargeCurrent;
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+  float temp;
+#endif
 }  __attribute__((packed)) PmSyslinkInfo;
 
-static float    batteryVoltage;
-static uint16_t batteryVoltageMV;
-static float    batteryVoltageMin = 6.0;
-static float    batteryVoltageMax = 0.0;
+static float     batteryVoltage;
+static uint16_t  batteryVoltageMV;
+static float     batteryVoltageMin = 6.0;
+static float     batteryVoltageMax = 0.0;
 
-static float    extBatteryVoltage;
-static uint16_t extBatteryVoltageMV;
-static uint8_t  extBatVoltDeckPin;
-static float    extBatVoltMultiplier;
-static float    extBatteryCurrent;
-static uint8_t  extBatCurrDeckPin;
-static float    extBatCurrAmpPerVolt;
+static float     extBatteryVoltage;
+static uint16_t  extBatteryVoltageMV;
+static deckPin_t extBatVoltDeckPin;
+static bool      isExtBatVoltDeckPinSet = false;
+static float     extBatVoltMultiplier;
+static float     extBatteryCurrent;
+static deckPin_t extBatCurrDeckPin;
+static bool      isExtBatCurrDeckPinSet = false;
+static float     extBatCurrAmpPerVolt;
+
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+// nRF51 internal temp
+static float    temp;
+#endif
 
 static uint32_t batteryLowTimeStamp;
 static uint32_t batteryCriticalLowTimeStamp;
@@ -188,6 +198,9 @@ void pmSyslinkUpdate(SyslinkPacket *slp)
   if (slp->type == SYSLINK_PM_BATTERY_STATE) {
     memcpy(&pmSyslinkInfo, &slp->data[0], sizeof(pmSyslinkInfo));
     pmSetBatteryVoltage(pmSyslinkInfo.vBat);
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+    temp = pmSyslinkInfo.temp;
+#endif
   }
 }
 
@@ -225,9 +238,10 @@ PMStates pmUpdateState()
   return state;
 }
 
-void pmEnableExtBatteryCurrMeasuring(uint8_t pin, float ampPerVolt)
+void pmEnableExtBatteryCurrMeasuring(const deckPin_t pin, float ampPerVolt)
 {
   extBatCurrDeckPin = pin;
+  isExtBatCurrDeckPinSet = true;
   extBatCurrAmpPerVolt = ampPerVolt;
 }
 
@@ -235,7 +249,7 @@ float pmMeasureExtBatteryCurrent(void)
 {
   float current;
 
-  if (extBatCurrDeckPin)
+  if (isExtBatCurrDeckPinSet)
   {
     current = analogReadVoltage(extBatCurrDeckPin) * extBatCurrAmpPerVolt;
   }
@@ -247,9 +261,10 @@ float pmMeasureExtBatteryCurrent(void)
   return current;
 }
 
-void pmEnableExtBatteryVoltMeasuring(uint8_t pin, float multiplier)
+void pmEnableExtBatteryVoltMeasuring(const deckPin_t pin, float multiplier)
 {
   extBatVoltDeckPin = pin;
+  isExtBatVoltDeckPinSet = true;
   extBatVoltMultiplier = multiplier;
 }
 
@@ -257,7 +272,7 @@ float pmMeasureExtBatteryVoltage(void)
 {
   float voltage;
 
-  if (extBatVoltDeckPin)
+  if (isExtBatVoltDeckPinSet)
   {
     voltage = analogReadVoltage(extBatVoltDeckPin) * extBatVoltMultiplier;
   }
@@ -395,4 +410,7 @@ LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 LOG_ADD(LOG_INT8, state, &pmState)
 LOG_ADD(LOG_UINT8, batteryLevel, &batteryLevel)
+#ifdef PM_SYSTLINK_INLCUDE_TEMP
+LOG_ADD(LOG_FLOAT, temp, &temp)
+#endif
 LOG_GROUP_STOP(pm)

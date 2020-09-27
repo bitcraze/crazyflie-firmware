@@ -90,6 +90,14 @@ typedef struct {
 #define STATS_CNT_RATE_EVENT(LOGGER) ((LOGGER)->rateCounter.count++)
 
 /**
+ * @brief Macro to add CNT events to a statsCntRateLogger_t, that is to increase the internal counter with CNT
+ *
+ * @param LOGGER A pointer to a statsCntRateLogger_t
+ * @param CNT    Number of counts to add
+ */
+#define STATS_CNT_RATE_MULTI_EVENT(LOGGER, CNT) ((LOGGER)->rateCounter.count += CNT)
+
+/**
  * @brief Macro to add a statsCntRateLogger_t as a rate log. Used in a similar way as
  * LOG_ADD() in a LOG_GROUP_START() - LOG_GROUP_STOP() block
  *

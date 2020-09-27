@@ -5,7 +5,7 @@
 #ifndef __FATFS_SD_H__
 #define __FATFS_SD_H__
 
-#define SD_DISK_TIMER_PERIOD_MS 1
+#define SD_DISK_TIMER_PERIOD_MS 100
 
 #include "diskio.h"
 #include "integer.h"
@@ -17,13 +17,14 @@ typedef struct {
   BYTE (*xchgSpi) (BYTE dat);
   void (*rcvrSpiMulti) (BYTE *buff, UINT btr);
   void (*xmitSpiMulti) (const BYTE *buff, UINT btx);
-  void (*csHigh) (void);
+  void (*csHigh) (BYTE doDummyClock);
   void (*csLow) (void);
+  void (*delayMs) (UINT ms);
 
   volatile DSTATUS stat;
   BYTE cardType;
 
-  // 1kHz decrement timers stopped at zero (disk_timerproc())
+  // (Formally 1kHz) 10 Hz decrement timers stopped at zero (disk_timerproc())
   volatile UINT timer1;
   volatile UINT timer2;
 } sdSpiContext_t;

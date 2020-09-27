@@ -56,7 +56,7 @@ static uint16_t range_last = 0;
 
 static bool isInit;
 
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L0xDev dev;
+static VL53L0xDev dev;
 
 void zRangerInit(DeckInfo* info)
 {

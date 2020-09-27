@@ -28,42 +28,33 @@
 
 #include "stm32fxxx.h"
 
-void pinMode(uint32_t pin, uint32_t mode)
+void pinMode(const deckPin_t pin, const uint32_t mode)
 {
-  if (pin > 13) {
-    return;
-  }
-
-  RCC_AHB1PeriphClockCmd(deckGPIOMapping[pin-1].periph, ENABLE);
+  RCC_AHB1PeriphClockCmd(deckGPIOMapping[pin.id].periph, ENABLE);
 
   GPIO_InitTypeDef GPIO_InitStructure = {0};
 
-  GPIO_InitStructure.GPIO_Pin = deckGPIOMapping[pin-1].pin;
+  GPIO_InitStructure.GPIO_Pin = deckGPIOMapping[pin.id].pin;
   GPIO_InitStructure.GPIO_Mode = (mode == OUTPUT) ? GPIO_Mode_OUT:GPIO_Mode_IN;
   if (mode == OUTPUT) GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   if (mode == INPUT_PULLUP) GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   if (mode == INPUT_PULLDOWN) GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
-  GPIO_Init(deckGPIOMapping[pin-1].port, &GPIO_InitStructure);
+  GPIO_Init(deckGPIOMapping[pin.id].port, &GPIO_InitStructure);
 }
 
-void digitalWrite(uint32_t pin, uint32_t val)
+void digitalWrite(const deckPin_t pin, const uint32_t val)
 {
-  if (pin > 13) {
-    return;
+  BitAction action = Bit_RESET;
+  if (val) {
+    action = Bit_SET;
   }
 
-  if (val) val = Bit_SET;
-
-  GPIO_WriteBit(deckGPIOMapping[pin-1].port, deckGPIOMapping[pin-1].pin, val);
+  GPIO_WriteBit(deckGPIOMapping[pin.id].port, deckGPIOMapping[pin.id].pin, action);
 }
 
-int digitalRead(uint32_t pin)
+int digitalRead(const deckPin_t pin)
 {
-  if (pin > 13) {
-    return LOW;
-  }
-
-  int val = GPIO_ReadInputDataBit(deckGPIOMapping[pin-1].port, deckGPIOMapping[pin-1].pin);
+  int val = GPIO_ReadInputDataBit(deckGPIOMapping[pin.id].port, deckGPIOMapping[pin.id].pin);
   return (val==Bit_SET)?HIGH:LOW;
 }

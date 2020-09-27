@@ -159,6 +159,12 @@ const ledseq_t seq_testPassed[] = {
   {false, LEDSEQ_STOP},
 };
 
+struct ledseqCmd_s {
+  enum {run, stop} command;
+  led_t led;
+  const ledseq_t *sequence;
+};
+
 /* Led sequence handling machine implementation */
 #define SEQ_NUM (sizeof(sequences)/sizeof(sequences[0]))
 
@@ -175,10 +181,13 @@ NO_DMA_CCM_SAFE_ZERO_INIT static int activeSeq[LED_NUM];
 NO_DMA_CCM_SAFE_ZERO_INIT static xTimerHandle timer[LED_NUM];
 NO_DMA_CCM_SAFE_ZERO_INIT static StaticTimer_t timerBuffer[LED_NUM];
 
-static xSemaphoreHandle ledseqSem;
+static xSemaphoreHandle ledseqMutex;
+static xQueueHandle ledseqCmdQueue;
 
 static bool isInit = false;
 static bool ledseqEnabled = false;
+
+static void lesdeqCmdTask(void* param);
 
 void ledseqInit()
 {
@@ -201,9 +210,29 @@ void ledseqInit()
     timer[i] = xTimerCreateStatic("ledseqTimer", M2T(1000), pdFALSE, (void*)i, runLedseq, &timerBuffer[i]);
   }
 
-  vSemaphoreCreateBinary(ledseqSem);
+  ledseqMutex = xSemaphoreCreateMutex();
+
+  ledseqCmdQueue = xQueueCreate(10, sizeof(struct ledseqCmd_s));
+  xTaskCreate(lesdeqCmdTask, LEDSEQCMD_TASK_NAME, LEDSEQCMD_TASK_STACKSIZE, NULL, LEDSEQCMD_TASK_PRI, NULL);
 
   isInit = true;
+}
+
+static void lesdeqCmdTask(void* param)
+{
+  struct ledseqCmd_s command;
+  while(1) {
+    xQueueReceive(ledseqCmdQueue, &command, portMAX_DELAY);
+
+    switch(command.command) {
+      case run:
+        ledseqRunBlocking(command.led, command.sequence);
+        break;
+      case stop:
+        ledseqStopBlocking(command.led, command.sequence);
+        break;
+    }
+  }
 }
 
 bool ledseqTest(void)
@@ -226,16 +255,28 @@ void ledseqEnable(bool enable)
   ledseqEnabled = enable;
 }
 
-void ledseqRun(led_t led, const ledseq_t *sequence)
+bool ledseqRun(led_t led, const ledseq_t *sequence)
+{
+  struct ledseqCmd_s command;
+  command.command = run;
+  command.led = led;
+  command.sequence = sequence;
+  if (xQueueSend(ledseqCmdQueue, &command, 0) == pdPASS) {
+    return true;
+  }
+  return false;
+}
+
+void ledseqRunBlocking(led_t led, const ledseq_t *sequence)
 {
   int prio = getPrio(sequence);
 
   if(prio<0) return;
 
-  xSemaphoreTake(ledseqSem, portMAX_DELAY);
+  xSemaphoreTake(ledseqMutex, portMAX_DELAY);
   state[led][prio] = 0;  //Reset the seq. to its first step
   updateActive(led);
-  xSemaphoreGive(ledseqSem);
+  xSemaphoreGive(ledseqMutex);
 
   //Run the first step if the new seq is the active sequence
   if(activeSeq[led] == prio)
@@ -248,16 +289,28 @@ void ledseqSetTimes(ledseq_t *sequence, int32_t onTime, int32_t offTime)
   sequence[1].action = offTime;
 }
 
-void ledseqStop(led_t led, const ledseq_t *sequence)
+bool ledseqStop(led_t led, const ledseq_t *sequence)
+{
+  struct ledseqCmd_s command;
+  command.command = stop;
+  command.led = led;
+  command.sequence = sequence;
+  if (xQueueSend(ledseqCmdQueue, &command, 0) == pdPASS) {
+    return true;
+  }
+  return false;
+}
+
+void ledseqStopBlocking(led_t led, const ledseq_t *sequence)
 {
   int prio = getPrio(sequence);
 
   if(prio<0) return;
 
-  xSemaphoreTake(ledseqSem, portMAX_DELAY);
+  xSemaphoreTake(ledseqMutex, portMAX_DELAY);
   state[led][prio] = LEDSEQ_STOP;  //Stop the seq.
   updateActive(led);
-  xSemaphoreGive(ledseqSem);
+  xSemaphoreGive(ledseqMutex);
 
   //Run the next active sequence (if any...)
   runLedseq(timer[led]);
@@ -285,7 +338,7 @@ static void runLedseq( xTimerHandle xTimer )
 
     state[led][prio]++;
 
-    xSemaphoreTake(ledseqSem, portMAX_DELAY);
+    xSemaphoreTake(ledseqMutex, portMAX_DELAY);
     switch(step->action)
     {
       case LEDSEQ_LOOP:
@@ -304,7 +357,7 @@ static void runLedseq( xTimerHandle xTimer )
         leave=true;
         break;
     }
-    xSemaphoreGive(ledseqSem);
+    xSemaphoreGive(ledseqMutex);
   }
 }
 
