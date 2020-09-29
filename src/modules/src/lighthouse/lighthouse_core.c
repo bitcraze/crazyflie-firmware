@@ -75,7 +75,13 @@ static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rat
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 NO_DMA_CCM_SAFE_ZERO_INIT static pulseProcessor_t ppState = {};
 
+#if LIGHTHOUSE_FORCE_TYPE == 1
+pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
+#elif LIGHTHOUSE_FORCE_TYPE == 2
+pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
+#else
 pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
+#endif
 
 #define UART_FRAME_LENGTH 12
 
@@ -142,12 +148,12 @@ static uint8_t estimationMethod = 1;
 
 static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   pulseProcessorClearOutdated(appState, angles, basestation);
-  
+
   if (basestation == 1) {
     STATS_CNT_RATE_EVENT(&cycleRate);
 
     lighthousePositionEstimatePoseCrossingBeams(angles, 1);
-    
+
     pulseProcessorProcessed(angles, 0);
     pulseProcessorProcessed(angles, 1);
   }
@@ -156,11 +162,11 @@ static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcess
 
 static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   STATS_CNT_RATE_EVENT(&cycleRate);
- 
+
   pulseProcessorClearOutdated(appState, angles, basestation);
 
   lighthousePositionEstimatePoseSweeps(angles, basestation);
-  
+
   pulseProcessorProcessed(angles, basestation);
 }
 
@@ -310,13 +316,13 @@ void lighthouseCoreTask(void *param) {
 
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
-      if(frame.isSyncFrame && previousWasSyncFrame) { 
+      if(frame.isSyncFrame && previousWasSyncFrame) {
           pulseProcessorAllClear(&angles);
       }
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT(&frameRate);
-        
+
         deckHealthCheck(&ppState, &frame);
         if (pulseProcessorProcessPulse) {
           processFrame(&ppState, &angles, &frame);
