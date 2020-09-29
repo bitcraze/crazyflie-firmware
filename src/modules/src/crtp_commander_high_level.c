@@ -98,6 +98,10 @@ static struct piecewise_traj_compressed  compressed_trajectory;
 static xSemaphoreHandle lockTraj;
 static StaticSemaphore_t lockTrajBuffer;
 
+// safe default settings for takeoff and landing velocity
+static float defaultTakeoffVelocity = 0.5f;
+static float defaultLandingVelocity = 0.5f;
+
 STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE);
 
 // CRTP Packet definitions
@@ -431,7 +435,7 @@ int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
       height += pos.z;
     }
 
-    float velocity = data->velocity > 0 ? data->velocity : 0.5f;  /* safe default */
+    float velocity = data->velocity > 0 ? data->velocity : defaultTakeoffVelocity;
     float duration = fabsf(height - pos.z) / velocity;
     result = plan_takeoff(&planner, pos, yaw, height, hover_yaw, duration, t);
     xSemaphoreGive(lockTraj);
@@ -486,7 +490,7 @@ int land_with_velocity(const struct data_land_with_velocity* data)
       height = pos.z - height;
     }
 
-    float velocity = data->velocity > 0 ? data->velocity : 0.5f;  /* safe default */
+    float velocity = data->velocity > 0 ? data->velocity : defaultLandingVelocity;
     float duration = fabsf(height - pos.z) / velocity;
     result = plan_land(&planner, pos, yaw, height, hover_yaw, duration, t);
     xSemaphoreGive(lockTraj);
@@ -602,3 +606,8 @@ int define_trajectory(const struct data_define_trajectory* data)
   trajectory_descriptions[data->trajectoryId] = data->description;
   return 0;
 }
+
+PARAM_GROUP_START(hlCommander)
+PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
+PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)
+PARAM_GROUP_STOP(hlCommander)
