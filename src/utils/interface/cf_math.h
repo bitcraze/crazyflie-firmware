@@ -37,8 +37,51 @@
 #include "arm_math.h"
 #pragma GCC diagnostic pop
 
+#include "arm_math.h"
+#include "cfassert.h"
+
+
 #define DEG_TO_RAD (PI/180.0f)
 #define RAD_TO_DEG (180.0f/PI)
 
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
 #define MAX(a, b) ((b) > (a) ? (b) : (a))
+
+static inline void mat_trans(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst) {
+    ASSERT(ARM_MATH_SUCCESS == arm_mat_trans_f32(pSrc, pDst));
+}
+
+static inline void mat_inv(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst) {
+    ASSERT(ARM_MATH_SUCCESS == arm_mat_inverse_f32(pSrc, pDst));
+}
+
+static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_matrix_instance_f32 * pSrcB, arm_matrix_instance_f32 * pDst) {
+    ASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst));
+}
+
+static inline float arm_sqrt(float32_t in) {
+    float pOut = 0;
+    arm_status result = arm_sqrt_f32(in, &pOut);
+    ASSERT(ARM_MATH_SUCCESS == result);
+    return pOut;
+}
+
+static inline float limPos(float in) {
+  if (in < 0.0f) {
+    return 0.0f;
+  }
+
+  return in;
+}
+
+static inline float clip1(float a) {
+  if (a < -1.0f) {
+    return -1.0f;
+  }
+
+  if (a > 1.0f) {
+    return 1.0f;
+  }
+
+  return a;
+}

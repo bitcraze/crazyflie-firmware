@@ -165,7 +165,7 @@ static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResul
 
   pulseProcessorClearOutdated(appState, angles, basestation);
 
-  lighthousePositionEstimatePoseSweeps(angles, basestation);
+  lighthousePositionEstimatePoseSweeps(angles, basestation, &appState->bsCalibration[basestation]);
 
   pulseProcessorProcessed(angles, basestation);
 }
@@ -177,7 +177,7 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
       pulseProcessorBaseStationMeasuremnt_t* to = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[bs];
 
       if (2 == from->validCount) {
-        pulseProcessorV2ConvertToV1Angles(from->angles[0], from->angles[1], to->angles);
+        pulseProcessorV2ConvertToV1Angles(from->correctedAngles[0], from->correctedAngles[1], to->correctedAngles);
         to->validCount = from->validCount;
       } else {
         to->validCount = 0;
@@ -188,11 +188,11 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
 
 static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
   if (axis == sweepDirection_y) {
+    pulseProcessorApplyCalibration(appState, angles, basestation);
     if (lighthouseBsTypeV2 == angles->measurementType) {
       // Emulate V1 base stations for now, convert to V1 angles
       convertV2AnglesToV1Angles(angles);
     }
-    pulseProcessorApplyCalibration(appState, angles, basestation);
 
     switch(estimationMethod) {
       case 0:
@@ -369,6 +369,11 @@ LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
 LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[1])
 LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[0])
 LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[1])
+
+LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[1])
 
 STATS_CNT_RATE_LOG_ADD(serRt, &serialFrameRate)
 STATS_CNT_RATE_LOG_ADD(frmRt, &frameRate)
