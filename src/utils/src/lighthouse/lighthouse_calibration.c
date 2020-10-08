@@ -93,8 +93,8 @@ void lighthouseCalibrationApplyV1(const lighthouseCalibration_t* calib, const fl
 }
 
 static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
-  const float t30 = M_PI / 6;
-  static const float tan30 = tanf(t30);
+  const float t30 = (float)M_PI / 6.0f;
+  const float tan30 = 0.5773502691896258;  // const float tan30 = tanf(t30);
 
   const float a1 = ideal[0];
   const float a2 = ideal[1];
