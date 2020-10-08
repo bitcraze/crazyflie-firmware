@@ -68,9 +68,17 @@
 #include "static_mem.h"
 #include "peer_localization.h"
 
+#ifndef START_DISARMED
+#define ARM_INIT true
+#else
+#define ARM_INIT false
+#endif
+
 /* Private variable */
 static bool selftestPassed;
 static bool canFly;
+static bool armed = ARM_INIT;
+static bool forceArm;
 static bool isInit;
 
 STATIC_MEM_TASK_ALLOC(systemTask, SYSTEM_TASK_STACKSIZE);
@@ -271,6 +279,17 @@ bool systemCanFly(void)
   return canFly;
 }
 
+void systemSetArmed(bool val)
+{
+  armed = val;
+}
+
+bool systemIsArmed()
+{
+  
+  return armed || forceArm;
+}
+
 void vApplicationIdleHook( void )
 {
   static uint32_t tickOfLatestWatchdogReset = M2T(0);
@@ -299,10 +318,12 @@ PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
 PARAM_GROUP_STOP(cpu)
 
 PARAM_GROUP_START(system)
-PARAM_ADD(PARAM_INT8, selftestPassed, &selftestPassed)
+PARAM_ADD(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
+PARAM_ADD(PARAM_INT8, forceArm, &forceArm)
 PARAM_GROUP_STOP(sytem)
 
 /* Loggable variables */
 LOG_GROUP_START(sys)
 LOG_ADD(LOG_INT8, canfly, &canFly)
+LOG_ADD(LOG_INT8, armed, &armed)
 LOG_GROUP_STOP(sys)
