@@ -40,4 +40,4 @@ extern baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BA
 void lightHousePositionGeometryDataUpdated();
 
 void lighthousePositionEstimatePoseCrossingBeams(pulseProcessorResult_t* angles, int baseStation);
-void lighthousePositionEstimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation);
+void lighthousePositionEstimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation, const lighthouseCalibration_t* bsCalib);

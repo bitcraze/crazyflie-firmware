@@ -33,10 +33,7 @@
 #include "lighthouse_calibration.h"
 
 #include <math.h>
-
-// Enable to use only phase for calibration. The more complex calibration does not
-// seem to give as good results as the simple one(!)
-#define USE_SIMPLE_CALIBRATION
+#include "cf_math.h"
 
 void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct ootxDataFrame_s *frame)
 {
@@ -45,66 +42,120 @@ void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct o
   calib->axis[0].curve = frame->curve0;
   calib->axis[0].gibmag = frame->gibmag0;
   calib->axis[0].gibphase = frame->gibphase0;
+  calib->axis[0].ogeemag = frame->ogeemag0;
+  calib->axis[0].ogeephase = frame->ogeephase0;
 
   calib->axis[1].phase = frame->phase1;
   calib->axis[1].tilt = frame->tilt1;
   calib->axis[1].curve = frame->curve1;
   calib->axis[1].gibmag = frame->gibmag1;
   calib->axis[1].gibphase = frame->gibphase1;
+  calib->axis[1].ogeemag = frame->ogeemag1;
+  calib->axis[1].ogeephase = frame->ogeephase1;
 
   calib->valid = true;
 }
 
-#ifndef USE_SIMPLE_CALIBRATION
-// Calibration function inspired from https://github.com/cnlohr/libsurvive/issues/18#issuecomment-386190279
+static void idealToDistortedV1(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
+  const float ax = ideal[0];
+  const float ay = ideal[1];
 
-// Given a predicted sensor position in the lighthouse frame, predict the perturbed measurements
-static void predict(const lighthouseCalibration_t* calib, float const* xy, float* ang) {
-  float tiltX = calib->axis[0].tilt;
-  float phaseX = calib->axis[0].phase;
-  float curveX = calib->axis[0].curve;
-  float gibmagX = calib->axis[0].gibmag;
-  float gibphaseX = calib->axis[0].gibphase;
+  const float x = 1.0f;
+  const float y = tanf(ax);
+  const float z = tanf(ay);
 
-  float tiltY = calib->axis[1].tilt;
-  float phaseY = calib->axis[1].phase;
-  float curveY = calib->axis[1].curve;
-  float gibmagY = calib->axis[1].gibmag;
-  float gibphaseY = calib->axis[1].gibphase;
-
-  ang[0] = atanf(xy[0] - (tiltX + curveX * xy[1]) * xy[1]);
-  ang[1] = atanf(xy[1] - (tiltY + curveY * xy[0]) * xy[0]);
-  ang[0] -= phaseX + gibmagX * sinf(ang[0] + gibphaseX);
-  ang[1] -= phaseY + gibmagY * sinf(ang[1] + gibphaseY);
+  distorted[0] = lighthouseCalibrationMeasurementModelLh1(x, y, z, &calib->axis[0]);
+  distorted[1] = lighthouseCalibrationMeasurementModelLh1(x, z, -y, &calib->axis[1]);
 }
 
-// Given the perturbed lighthouse angle, predict the ideal angle
-static void correct(const lighthouseCalibration_t* calib, const float * angle, float * corrected) {
-  float ideal[2], pred[2], xy[2];
-  ideal[0] = angle[0];
-  ideal[1] = angle[1];
-  for (int i = 0; i < 10; i++) {
-    xy[0] = tanf(ideal[0]);
-    xy[1] = tanf(ideal[1]);
-    predict(calib, xy, pred);
-    ideal[0] += (angle[0] - pred[0]);
-    ideal[1] += (angle[1] - pred[1]);
+void lighthouseCalibrationApplyV1(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles) {
+  const double max_delta = 0.0005;
+
+  // Use distorted angle as a starting point
+  float* estmatedAngles = correctedAngles;
+  estmatedAngles[0] = rawAngles[0];
+  estmatedAngles[1] = rawAngles[1];
+
+  for (int i = 0; i < 5; i++) {
+    float currentDistortedAngles[2];
+    idealToDistortedV1(calib, estmatedAngles, currentDistortedAngles);
+
+    const float delta0 = rawAngles[0] - currentDistortedAngles[0];
+    const float delta1 = rawAngles[1] - currentDistortedAngles[1];
+
+    estmatedAngles[0] = estmatedAngles[0] + delta0;
+    estmatedAngles[1] = estmatedAngles[1] + delta1;
+
+    if (fabs((double)delta0) < max_delta && fabs((double)delta1) < max_delta) {
+      break;
+    }
   }
-  corrected[0] = ideal[0];
-  corrected[1] = ideal[1];
 }
-#endif
 
-void lighthouseCalibrationApply(const lighthouseCalibration_t* calib, const float rawAngles[2], float correctedAngles[2]) {
-  #ifdef USE_SIMPLE_CALIBRATION
-  correctedAngles[0] = rawAngles[0] + calib->axis[0].phase;
-  correctedAngles[1] = rawAngles[1] + calib->axis[1].phase;
-  #else
-  correct(calib, rawAngles, correctedAngles);
-  #endif
+static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
+  const float t30 = M_PI / 6;
+  static const float tan30 = tanf(t30);
+
+  const float a1 = ideal[0];
+  const float a2 = ideal[1];
+
+  const float x = 1.0f;
+  const float y = tanf((a2 + a1) / 2.0f);
+  const float z = sinf(a2 - a1) / (tan30 * (cosf(a2) + cosf(a1)));
+
+  distorted[0] = lighthouseCalibrationMeasurementModelLh2(x, y, z, -t30, &calib->axis[0]);
+  distorted[1] = lighthouseCalibrationMeasurementModelLh2(x, y, z, t30, &calib->axis[1]);
+}
+
+void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles) {
+  const double max_delta = 0.0005;
+
+  // Use distorted angle as a starting point
+  float* estmatedAngles = correctedAngles;
+  estmatedAngles[0] = rawAngles[0];
+  estmatedAngles[1] = rawAngles[1];
+
+  for (int i = 0; i < 5; i++) {
+    float currentDistortedAngles[2];
+    idealToDistortedV2(calib, estmatedAngles, currentDistortedAngles);
+
+    const float delta0 = rawAngles[0] - currentDistortedAngles[0];
+    const float delta1 = rawAngles[1] - currentDistortedAngles[1];
+
+    estmatedAngles[0] = estmatedAngles[0] + delta0;
+    estmatedAngles[1] = estmatedAngles[1] + delta1;
+
+    if (fabs((double)delta0) < max_delta && fabs((double)delta1) < max_delta) {
+      break;
+    }
+  }
 }
 
 void lighthouseCalibrationApplyNothing(const float rawAngles[2], float correctedAngles[2]) {
   correctedAngles[0] = rawAngles[0];
   correctedAngles[1] = rawAngles[1];
+}
+
+float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationAxis_t* calib) {
+  const float ax = atan2f(y, x);
+  const float ay = atan2f(z, x);
+  const float r = arm_sqrt(x * x + y * y);
+
+  const float compTilt = asinf(clip1(z * tanf(calib->tilt) / r));
+  const float compGib = -calib->gibmag * arm_sin_f32(ax + calib->gibphase);
+  const float compCurve = calib->curve * ay * ay;
+
+  return ax - (compTilt + calib->phase + compGib + compCurve);
+}
+
+float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationAxis_t* calib) {
+  const float ax = atan2f(y, x);
+  // const float ay = atan2f(z, x);
+  const float r = arm_sqrt(x * x + y * y);
+
+  const float base = ax + asinf(clip1(z * tanf(t - calib->tilt) / r));
+  const float compGib = -calib->gibmag * arm_cos_f32(ax + calib->gibphase);
+  // TODO krri Figure out how to use curve and ogee calibration parameters
+
+  return base - (calib->phase + compGib);
 }
