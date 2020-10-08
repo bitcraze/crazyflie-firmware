@@ -68,30 +68,6 @@ static void idealToDistortedV1(const lighthouseCalibration_t* calib, const float
   distorted[1] = lighthouseCalibrationMeasurementModelLh1(x, z, -y, &calib->axis[1]);
 }
 
-void lighthouseCalibrationApplyV1(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles) {
-  const double max_delta = 0.0005;
-
-  // Use distorted angle as a starting point
-  float* estmatedAngles = correctedAngles;
-  estmatedAngles[0] = rawAngles[0];
-  estmatedAngles[1] = rawAngles[1];
-
-  for (int i = 0; i < 5; i++) {
-    float currentDistortedAngles[2];
-    idealToDistortedV1(calib, estmatedAngles, currentDistortedAngles);
-
-    const float delta0 = rawAngles[0] - currentDistortedAngles[0];
-    const float delta1 = rawAngles[1] - currentDistortedAngles[1];
-
-    estmatedAngles[0] = estmatedAngles[0] + delta0;
-    estmatedAngles[1] = estmatedAngles[1] + delta1;
-
-    if (fabs((double)delta0) < max_delta && fabs((double)delta1) < max_delta) {
-      break;
-    }
-  }
-}
-
 static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
   const float t30 = (float)M_PI / 6.0f;
   const float tan30 = 0.5773502691896258;  // const float tan30 = tanf(t30);
@@ -107,7 +83,9 @@ static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float
   distorted[1] = lighthouseCalibrationMeasurementModelLh2(x, y, z, t30, &calib->axis[1]);
 }
 
-void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles) {
+typedef void (* idealToDistortedFcn_t)(const lighthouseCalibration_t* calib, const float* ideal, float* distorted);
+
+static void lighthouseCalibrationApply(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles, idealToDistortedFcn_t idealToDistorted) {
   const double max_delta = 0.0005;
 
   // Use distorted angle as a starting point
@@ -117,7 +95,7 @@ void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const fl
 
   for (int i = 0; i < 5; i++) {
     float currentDistortedAngles[2];
-    idealToDistortedV2(calib, estmatedAngles, currentDistortedAngles);
+    idealToDistorted(calib, estmatedAngles, currentDistortedAngles);
 
     const float delta0 = rawAngles[0] - currentDistortedAngles[0];
     const float delta1 = rawAngles[1] - currentDistortedAngles[1];
@@ -129,6 +107,14 @@ void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const fl
       break;
     }
   }
+}
+
+void lighthouseCalibrationApplyV1(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles) {
+  return lighthouseCalibrationApply(calib, rawAngles, correctedAngles, idealToDistortedV1);
+}
+
+void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles) {
+  return lighthouseCalibrationApply(calib, rawAngles, correctedAngles, idealToDistortedV2);
 }
 
 void lighthouseCalibrationApplyNothing(const float rawAngles[2], float correctedAngles[2]) {
