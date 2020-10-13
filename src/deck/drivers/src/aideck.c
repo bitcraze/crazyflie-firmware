@@ -72,7 +72,7 @@ static void NinaTask(void *param)
     uint8_t byte;
     while (1)
     {
-        if (uart2GetDataWithTimout(&byte) == true)
+        if (uart2GetDataWithDefaultTimeout(&byte) == true)
         {
             consolePutchar(byte);
         }
@@ -95,7 +95,7 @@ static void Gap8Task(void *param)
     // Read out the byte the Gap8 sends and immediately send it to the console.
     while (1)
     {
-        uart1GetDataWithTimout(&byte);
+        uart1GetDataWithDefaultTimeout(&byte);
     }
 }
 

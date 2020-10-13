@@ -186,15 +186,20 @@ bool uart1Test(void)
   return isInit;
 }
 
-bool uart1GetDataWithTimout(uint8_t *c)
+bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 {
-  if (xQueueReceive(uart1queue, c, UART1_DATA_TIMEOUT_TICKS) == pdTRUE)
+  if (xQueueReceive(uart1queue, c, timeoutTicks) == pdTRUE)
   {
     return true;
   }
 
   *c = 0;
   return false;
+}
+
+bool uart1GetDataWithDefaultTimeout(uint8_t *c)
+{
+  return uart1GetDataWithTimeout(c, UART1_DATA_TIMEOUT_TICKS);
 }
 
 void uart1SendData(uint32_t size, uint8_t* data)

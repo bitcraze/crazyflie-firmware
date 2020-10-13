@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -103,11 +103,19 @@ void uart2GetPacketBlocking(SyslinkPacket* slp);
 #else
 
 /**
+ * Read a byte of data from incoming queue with a timeout
+ * @param[out] c  Read byte
+ * @param[in] timeoutTicks The timeout in sys ticks
+ * @return true if data, false if timeout was reached.
+ */
+bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks);
+
+/**
  * Read a byte of data from incoming queue with a timeout defined by UART2_DATA_TIMEOUT_MS
  * @param[out] c  Read byte
  * @return true if data, false if timeout was reached.
  */
-bool uart2GetDataWithTimout(uint8_t *c);
+bool uart2GetDataWithDefaultTimeout(uint8_t *c);
 
 void uart2Getchar(char * ch);
 

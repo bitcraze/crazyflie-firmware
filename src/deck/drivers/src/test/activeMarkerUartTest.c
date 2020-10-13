@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -56,7 +56,7 @@ static void task(void *param)
 
       uint8_t answer;
       DEBUG_PRINT("Waiting...\n");
-      if (uart1GetDataWithTimout(&answer)) {
+      if (uart1GetDataWithDefaultTimeout(&answer)) {
         DEBUG_PRINT("Received %02x\n", (unsigned int)answer);
 
         if (answer == 0xaa) {
@@ -65,11 +65,11 @@ static void task(void *param)
       } else {
         DEBUG_PRINT("Timeout!!!\n");
       }
-      
+
     }
     vTaskDelay(M2T(100));
   }
-  
+
 }
 
 static void init(DeckInfo *info)

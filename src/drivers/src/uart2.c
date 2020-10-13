@@ -330,15 +330,20 @@ void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWo
 
 #else
 
-bool uart2GetDataWithTimout(uint8_t *c)
+bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 {
-  if (xQueueReceive(uart2queue, c, UART2_DATA_TIMEOUT_TICKS) == pdTRUE)
+  if (xQueueReceive(uart2queue, c, timeoutTicks) == pdTRUE)
   {
     return true;
   }
 
   *c = 0;
   return false;
+}
+
+bool uart2GetDataWithDefaultTimeout(uint8_t *c)
+{
+  return uart2GetDataWithTimeout(c, UART2_DATA_TIMEOUT_TICKS);
 }
 
 void uart2Getchar(char * ch)
