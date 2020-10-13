@@ -57,6 +57,8 @@ static bool isInit;
 static bool emergencyStop = false;
 static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
+static bool checkStops;
+
 #define PROPTEST_NBR_OF_VARIANCE_VALUES   100
 static bool startPropTest = false;
 
@@ -288,7 +290,8 @@ static void stabilizerTask(void* param)
 
       checkEmergencyStopTimeout();
 
-      if (emergencyStop) {
+      checkStops = systemIsArmed();
+      if (emergencyStop || (systemIsArmed() == false)) {
         powerStop();
       } else {
         powerDistribution(&control);
@@ -558,6 +561,7 @@ LOG_ADD(LOG_FLOAT, motorVarXM4, &accVarX[3])
 LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
 LOG_ADD(LOG_UINT8, motorPass, &motorPass)
 LOG_ADD(LOG_UINT16, motorTestCount, &motorTestCount)
+LOG_ADD(LOG_UINT8, checkStops, &checkStops)
 LOG_GROUP_STOP(health)
 
 LOG_GROUP_START(ctrltarget)

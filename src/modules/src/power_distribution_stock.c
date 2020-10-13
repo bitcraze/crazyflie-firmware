@@ -110,16 +110,16 @@ void powerDistribution(const control_t *control)
   }
   else
   {
-    if (control->thrust != 0 && motorPower.m1 < idleThrust) {
+    if (motorPower.m1 < idleThrust) {
       motorPower.m1 = idleThrust;
     }
-    if (control->thrust != 0 && motorPower.m2 < idleThrust) {
+    if (motorPower.m2 < idleThrust) {
       motorPower.m2 = idleThrust;
     }
-    if (control->thrust != 0 && motorPower.m3 < idleThrust) {
+    if (motorPower.m3 < idleThrust) {
       motorPower.m3 = idleThrust;
     }
-    if (control->thrust != 0 && motorPower.m4 < idleThrust) {
+    if (motorPower.m4 < idleThrust) {
       motorPower.m4 = idleThrust;
     }
 
