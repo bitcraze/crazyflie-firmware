@@ -80,6 +80,7 @@ typedef enum { configureAcc, measureNoiseFloor, measureProp, testBattery, restar
 
 static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
 static rateSupervisor_t rateSupervisorContext;
+static bool rateWarningDisplayed = false;
 
 static struct {
   // position - mm
@@ -305,7 +306,10 @@ static void stabilizerTask(void* param)
     STATS_CNT_RATE_EVENT(&stabilizerRate);
 
     if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
-      DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+      if (!rateWarningDisplayed) {
+        DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+        rateWarningDisplayed = true;
+      }
     }
   }
 }
