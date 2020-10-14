@@ -75,7 +75,13 @@ static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rat
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 NO_DMA_CCM_SAFE_ZERO_INIT static pulseProcessor_t ppState = {};
 
+#if LIGHTHOUSE_FORCE_TYPE == 1
+pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
+#elif LIGHTHOUSE_FORCE_TYPE == 2
+pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
+#else
 pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
+#endif
 
 #define UART_FRAME_LENGTH 12
 
@@ -142,12 +148,12 @@ static uint8_t estimationMethod = 1;
 
 static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   pulseProcessorClearOutdated(appState, angles, basestation);
-  
+
   if (basestation == 1) {
     STATS_CNT_RATE_EVENT(&cycleRate);
 
     lighthousePositionEstimatePoseCrossingBeams(angles, 1);
-    
+
     pulseProcessorProcessed(angles, 0);
     pulseProcessorProcessed(angles, 1);
   }
@@ -156,11 +162,11 @@ static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcess
 
 static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   STATS_CNT_RATE_EVENT(&cycleRate);
- 
+
   pulseProcessorClearOutdated(appState, angles, basestation);
 
-  lighthousePositionEstimatePoseSweeps(angles, basestation);
-  
+  lighthousePositionEstimatePoseSweeps(angles, basestation, &appState->bsCalibration[basestation]);
+
   pulseProcessorProcessed(angles, basestation);
 }
 
@@ -171,7 +177,7 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
       pulseProcessorBaseStationMeasuremnt_t* to = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[bs];
 
       if (2 == from->validCount) {
-        pulseProcessorV2ConvertToV1Angles(from->angles[0], from->angles[1], to->angles);
+        pulseProcessorV2ConvertToV1Angles(from->correctedAngles[0], from->correctedAngles[1], to->correctedAngles);
         to->validCount = from->validCount;
       } else {
         to->validCount = 0;
@@ -182,11 +188,11 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
 
 static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
   if (axis == sweepDirection_y) {
+    pulseProcessorApplyCalibration(appState, angles, basestation);
     if (lighthouseBsTypeV2 == angles->measurementType) {
       // Emulate V1 base stations for now, convert to V1 angles
       convertV2AnglesToV1Angles(angles);
     }
-    pulseProcessorApplyCalibration(appState, angles, basestation);
 
     switch(estimationMethod) {
       case 0:
@@ -310,13 +316,13 @@ void lighthouseCoreTask(void *param) {
 
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
-      if(frame.isSyncFrame && previousWasSyncFrame) { 
+      if(frame.isSyncFrame && previousWasSyncFrame) {
           pulseProcessorAllClear(&angles);
       }
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT(&frameRate);
-        
+
         deckHealthCheck(&ppState, &frame);
         if (pulseProcessorProcessPulse) {
           processFrame(&ppState, &angles, &frame);
@@ -363,6 +369,11 @@ LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
 LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[1])
 LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[0])
 LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[1])
+
+LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[1])
 
 STATS_CNT_RATE_LOG_ADD(serRt, &serialFrameRate)
 STATS_CNT_RATE_LOG_ADD(frmRt, &frameRate)

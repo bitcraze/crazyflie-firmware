@@ -76,7 +76,7 @@ static bool testOnNina(const uint8_t command, const uint8_t expected)
 
   uart2Putchar(command);
 
-  if (uart2GetDataWithTimout(&byte) == true)
+  if (uart2GetDataWithDefaultTimeout(&byte) == true)
   {
     DEBUG_PRINT_COM("[NINA] Received: 0x%02X\r\n", byte);
     if (byte == expected)
@@ -93,7 +93,7 @@ static bool testOnNinaMask(const uint8_t command, uint8_t *byte)
 
   uart2Putchar(command);
 
-  if (uart2GetDataWithTimout(byte) == true)
+  if (uart2GetDataWithDefaultTimeout(byte) == true)
   {
     DEBUG_PRINT_COM("Received mask: 0x%02X\r\n", *byte);
 
@@ -111,7 +111,7 @@ static bool testOnGAP8(const uint8_t command, const uint8_t expected)
   uart1Putchar(command);
 
   while(timeout_counter < 5){
-    if (uart1GetDataWithTimout(&byte) == true)
+    if (uart1GetDataWithDefaultTimeout(&byte) == true)
     {
       DEBUG_PRINT_COM("[GAP8] Received: 0x%02X\r\n", byte);
 
@@ -149,7 +149,7 @@ static bool testOnGAP8(const uint8_t command, const uint8_t expected)
  * 2 - GAP8_SPI_MOSI
  * 3 - NINA_GPIO_GAP8_IO
  * 4 - GAP8_SPI_CS0
- * 5 - GAP8_SPI_CLK 
+ * 5 - GAP8_SPI_CLK
  */
 
 /* GPIO list for 0xC0
@@ -235,10 +235,10 @@ static bool aitdecktestTest()
   // Wait for the NINA to start
   vTaskDelay(M2T(1000));
   // Empty the buffer from NINA
-  while (uart2GetDataWithTimout(&byte) == true)
+  while (uart2GetDataWithDefaultTimeout(&byte) == true)
     ;
 
-  while (uart1GetDataWithTimout(&byte) == true)
+  while (uart1GetDataWithDefaultTimeout(&byte) == true)
     ;
 
   while (!testHasBeenTriggered)
@@ -293,7 +293,7 @@ static bool aitdecktestTest()
 
   //     In GAP8, the command (GAP8_GPIO_MASK 0x04) should be removed from the mask so that it is like
   //     GAP8_GPIO_MASK again
-  
+
   if (testOnGAP8(GAP8_GPIO_COMMAND|GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true)
   {
 
@@ -344,8 +344,8 @@ static bool aitdecktestTest()
   {
     DEBUG_PRINT("Set GAP8 gpio not-mask [FAILED]\r\n");
   }
-  
-  
+
+
 
 
   // Send test for Hyper flash to GAP8
@@ -373,7 +373,7 @@ static bool aitdecktestTest()
   // Test I2C by GAP8 by reading the EEPROM for the address and magic number
   //       MAGIC               0x43427830
   //       EEPROM_I2C_ADDR     0x50
-  // NOTE: should be not be run at startup! 
+  // NOTE: should be not be run at startup!
 
   if (testOnGAP8(GAP8_I2C_COMMAND, GAP8_I2C_EXPECTED) == true)
   {
@@ -389,7 +389,7 @@ static bool aitdecktestTest()
   // (listen on GAP8 uart for hello)
   if (testOnNina(NINA_GAP8_RST_COMMAND, NINA_GAP8_RST_EXPECTED) == true)
   {
-    while (uart1GetDataWithTimout(&byte) == true)
+    while (uart1GetDataWithDefaultTimeout(&byte) == true)
     {
       if (byte == GAP8_INIT_CHAR)
       {
@@ -416,7 +416,7 @@ static bool aitdecktestTest()
   pinMode(DECK_GPIO_IO4, INPUT);
 
   // (listen on GAP8 and NINA uart for 0xbc)
-  while (uart2GetDataWithTimout(&byte) == true)
+  while (uart2GetDataWithDefaultTimeout(&byte) == true)
   {
     if (byte == NINA_INIT_CHAR)
     {
@@ -430,7 +430,7 @@ static bool aitdecktestTest()
     DEBUG_PRINT("NINA reset [FAILED]\r\n");
   }
 
-  while (uart1GetDataWithTimout(&byte) == true)
+  while (uart1GetDataWithDefaultTimeout(&byte) == true)
   {
     if (byte == GAP8_INIT_CHAR)
     {
@@ -446,7 +446,7 @@ static bool aitdecktestTest()
 
   // Set all tests done
   DEBUG_PRINT("AI deck test mask: 0x%08X\r\n", testmask);
-  
+
 
   testdone = 1;
 

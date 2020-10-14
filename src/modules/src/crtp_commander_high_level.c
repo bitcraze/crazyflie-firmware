@@ -98,6 +98,10 @@ static struct piecewise_traj_compressed  compressed_trajectory;
 static xSemaphoreHandle lockTraj;
 static StaticSemaphore_t lockTrajBuffer;
 
+// safe default settings for takeoff and landing velocity
+static float defaultTakeoffVelocity = 0.5f;
+static float defaultLandingVelocity = 0.5f;
+
 STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE);
 
 // CRTP Packet definitions
@@ -113,6 +117,8 @@ enum TrajectoryCommand_e {
   COMMAND_DEFINE_TRAJECTORY       = 6,
   COMMAND_TAKEOFF_2               = 7,
   COMMAND_LAND_2                  = 8,
+  COMMAND_TAKEOFF_WITH_VELOCITY   = 9,
+  COMMAND_LAND_WITH_VELOCITY      = 10,
 };
 
 struct data_set_group_mask {
@@ -136,6 +142,17 @@ struct data_takeoff_2 {
   float duration;           // s (time it should take until target height is reached)
 } __attribute__((packed));
 
+// vertical takeoff from current x-y position to given height, with prescribed
+// velocity
+struct data_takeoff_with_velocity {
+  uint8_t groupMask;        // mask for which CFs this should apply to
+  float height;             // m (absolute or relative)
+  bool heightIsRelative;    // If true, height is relative to the current height (positive pointing up)
+  float yaw;                // rad
+  bool useCurrentYaw;       // If true, use the current yaw (ignore the yaw parameter)
+  float velocity;           // m/sec (average velocity during takeoff)
+} __attribute__((packed));
+
 // vertical land from current x-y position to given height
 // Deprecated
 struct data_land {
@@ -151,6 +168,17 @@ struct data_land_2 {
   float yaw;                // rad
   bool useCurrentYaw;       // If true, use the current yaw (ignore the yaw parameter)
   float duration;           // s (time it should take until target height is reached)
+} __attribute__((packed));
+
+// vertical land from current x-y position to given height, with prescribed
+// velocity
+struct data_land_with_velocity {
+  uint8_t groupMask;        // mask for which CFs this should apply to
+  float height;             // m (absolute or relative)
+  bool heightIsRelative;    // If true, height is relative to the current height (positive pointing down)
+  float yaw;                // rad
+  bool useCurrentYaw;       // If true, use the current yaw (ignore the yaw parameter)
+  float velocity;           // m/s (average velocity during landing)
 } __attribute__((packed));
 
 // stops the current trajectory (turns off the motors)
@@ -192,6 +220,8 @@ static int takeoff(const struct data_takeoff* data);
 static int land(const struct data_land* data);
 static int takeoff2(const struct data_takeoff_2* data);
 static int land2(const struct data_land_2* data);
+static int takeoff_with_velocity(const struct data_takeoff_with_velocity* data);
+static int land_with_velocity(const struct data_land_with_velocity* data);
 static int stop(const struct data_stop* data);
 static int go_to(const struct data_go_to* data);
 static int start_trajectory(const struct data_start_trajectory* data);
@@ -321,6 +351,12 @@ void crtpCommanderHighLevelTask(void * prm)
       case COMMAND_LAND_2:
         ret = land2((const struct data_land_2*)&p.data[1]);
         break;
+      case COMMAND_TAKEOFF_WITH_VELOCITY:
+        ret = takeoff_with_velocity((const struct data_takeoff_with_velocity*)&p.data[1]);
+        break;
+      case COMMAND_LAND_WITH_VELOCITY:
+        ret = land_with_velocity((const struct data_land_with_velocity*)&p.data[1]);
+        break;
       case COMMAND_STOP:
         ret = stop((const struct data_stop*)&p.data[1]);
         break;
@@ -382,6 +418,31 @@ int takeoff2(const struct data_takeoff_2* data)
   return result;
 }
 
+int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
+{
+  int result = 0;
+  if (isInGroup(data->groupMask)) {
+    xSemaphoreTake(lockTraj, portMAX_DELAY);
+    float t = usecTimestamp() / 1e6;
+
+    float hover_yaw = data->yaw;
+    if (data->useCurrentYaw) {
+      hover_yaw = yaw;
+    }
+
+    float height = data->height;
+    if (data->heightIsRelative) {
+      height += pos.z;
+    }
+
+    float velocity = data->velocity > 0 ? data->velocity : defaultTakeoffVelocity;
+    float duration = fabsf(height - pos.z) / velocity;
+    result = plan_takeoff(&planner, pos, yaw, height, hover_yaw, duration, t);
+    xSemaphoreGive(lockTraj);
+  }
+  return result;
+}
+
 int land(const struct data_land* data)
 {
   int result = 0;
@@ -407,6 +468,31 @@ int land2(const struct data_land_2* data)
     }
 
     result = plan_land(&planner, pos, yaw, data->height, hover_yaw, data->duration, t);
+    xSemaphoreGive(lockTraj);
+  }
+  return result;
+}
+
+int land_with_velocity(const struct data_land_with_velocity* data)
+{
+  int result = 0;
+  if (isInGroup(data->groupMask)) {
+    xSemaphoreTake(lockTraj, portMAX_DELAY);
+    float t = usecTimestamp() / 1e6;
+
+    float hover_yaw = data->yaw;
+    if (data->useCurrentYaw) {
+      hover_yaw = yaw;
+    }
+
+    float height = data->height;
+    if (data->heightIsRelative) {
+      height = pos.z - height;
+    }
+
+    float velocity = data->velocity > 0 ? data->velocity : defaultLandingVelocity;
+    float duration = fabsf(height - pos.z) / velocity;
+    result = plan_land(&planner, pos, yaw, height, hover_yaw, duration, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -520,3 +606,8 @@ int define_trajectory(const struct data_define_trajectory* data)
   trajectory_descriptions[data->trajectoryId] = data->description;
   return 0;
 }
+
+PARAM_GROUP_START(hlCommander)
+PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
+PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)
+PARAM_GROUP_STOP(hlCommander)

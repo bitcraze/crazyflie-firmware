@@ -75,11 +75,19 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity);
 bool uart1Test(void);
 
 /**
+ * Read a byte of data from incoming queue with a timeout
+ * @param[out] c  Read byte
+ * @param[in] timeoutTicks The timeout in sys ticks
+ * @return true if data, false if timeout was reached.
+ */
+bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks);
+
+/**
  * Read a byte of data from incoming queue with a timeout defined by UART1_DATA_TIMEOUT_MS
  * @param[out] c  Read byte
  * @return true if data, false if timeout was reached.
  */
-bool uart1GetDataWithTimout(uint8_t *c);
+bool uart1GetDataWithDefaultTimeout(uint8_t *c);
 
 /**
  * Sends raw data using a lock. Should be used from
@@ -110,7 +118,7 @@ void uart1Getchar(char * ch);
 /**
  * Returns true if an overrun condition has happened since initialization or
  * since the last call to this function.
- * 
+ *
  * @return true if an overrun condition has happened
  */
 bool uart1DidOverrun();

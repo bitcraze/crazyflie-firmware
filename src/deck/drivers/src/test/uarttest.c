@@ -55,7 +55,7 @@ static bool uarttestRun()
   for (int i = 0; i < sizeof(testString) && status; i++)
   {
     uart1Putchar(testString[i]);
-    uart2GetDataWithTimout(&testChar);
+    uart2GetDataWithDefaultTimeout(&testChar);
     if (testChar != testString[i])
     {
       DEBUG_PRINT(" Uart1->Uart2 [FAIL]\n");
@@ -63,7 +63,7 @@ static bool uarttestRun()
     }
 
     uart2Putchar(testString[i]);
-    uart1GetDataWithTimout(&testChar);
+    uart1GetDataWithDefaultTimeout(&testChar);
     if (testChar != testString[i])
     {
       DEBUG_PRINT(" Uart2->Uart1 [FAIL]\n");
@@ -89,4 +89,3 @@ static const DeckDriver uarttest_deck = {
 };
 
 DECK_DRIVER(uarttest_deck);
-
