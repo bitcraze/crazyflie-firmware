@@ -187,7 +187,6 @@ static void genericLocHandle(CRTPPacket* pk)
         ext_pose.stdDevQuat = extQuatStdDev;
         estimatorEnqueuePose(&ext_pose);
         tickOfLastPacket = xTaskGetTickCount();
-        break;
       }
       else {
         ext_pos.x = item->x / 1000.0f;

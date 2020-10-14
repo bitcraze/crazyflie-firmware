@@ -28,7 +28,6 @@
 
 #include <float.h>
 #include <string.h>  // for memset
-#include <stdio.h>  // for debugging. TODO: remove
 
 #include "collision_avoidance.h"
 #include "peer_localization.h"
@@ -249,6 +248,7 @@ void collisionAvoidanceUpdateSetpointCore(
 #include "task.h"
 
 #include "param.h"
+#include "log.h"
 
 
 static uint8_t collisionAvoidanceEnable = 0;
@@ -258,15 +258,25 @@ static collision_avoidance_params_t params = {
   .bboxMin = { .x = -FLT_MAX, .y = -FLT_MAX, .z = -FLT_MAX },
   .bboxMax = { .x = FLT_MAX, .y = FLT_MAX, .z = FLT_MAX },
   .horizonSecs = 1.0f,
-  .maxSpeed = 5.0f,  // Probably faster than desired in most applications.
+  .maxSpeed = 0.5f,  // Fairly conservative.
+  .sidestepThreshold = 0.25f,
   .maxPeerLocAgeMillis = 5000,  // Probably longer than desired in most applications.
-  .voronoiProjectionTolerance = 1e-4,
+  .voronoiProjectionTolerance = 1e-5,
   .voronoiProjectionMaxIters = 100,
 };
 
 static collision_avoidance_state_t collisionState = {
   .lastFeasibleSetPosition = { .x = NAN, .y = NAN, .z = NAN },
 };
+
+void collisionAvoidanceInit()
+{
+}
+
+bool collisionAvoidanceTest()
+{
+  return true;
+}
 
 // Each face of the Voronoi cell is defined by a linear inequality a^T x <= b.
 // The algorithm for projecting a point into a convex polytope requires 3 more
@@ -275,9 +285,10 @@ static collision_avoidance_state_t collisionState = {
 #define MAX_CELL_ROWS (PEER_LOCALIZATION_MAX_NEIGHBORS + 6)
 static float workspace[7 * MAX_CELL_ROWS];
 
+static uint32_t latency = 0;
 
 void collisionAvoidanceUpdateSetpoint(
-  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state)
+  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state, uint32_t tick)
 {
   if (!collisionAvoidanceEnable) {
     return;
@@ -293,9 +304,11 @@ void collisionAvoidanceUpdateSetpoint(
 
     peerLocalizationOtherPosition_t const *otherPos = peerLocalizationGetPositionByIdx(i);
 
-    if (otherPos == NULL ||
-        otherPos->id == 0 ||
-        (doAgeFilter && (time - otherPos->pos.timestamp > params.maxPeerLocAgeMillis))) {
+    if (otherPos == NULL || otherPos->id == 0) {
+      continue;
+    }
+
+    if (doAgeFilter && (time - otherPos->pos.timestamp > params.maxPeerLocAgeMillis)) {
       continue;
     }
 
@@ -306,10 +319,16 @@ void collisionAvoidanceUpdateSetpoint(
   }
 
   collisionAvoidanceUpdateSetpointCore(&params, &collisionState, nOthers, workspace, workspace, setpoint, sensorData, state);
+
+  latency = xTaskGetTickCount() - time;
 }
 
+LOG_GROUP_START(colAv)
+  LOG_ADD(LOG_UINT32, latency, &latency)
+LOG_GROUP_STOP(colAv)
 
-PARAM_GROUP_START(collisionAvoidance)
+
+PARAM_GROUP_START(colAv)
 
 PARAM_ADD(PARAM_UINT8, enable, &collisionAvoidanceEnable)
 
@@ -327,11 +346,14 @@ PARAM_ADD(PARAM_FLOAT, bboxMaxZ, &params.bboxMax.z)
 
 PARAM_ADD(PARAM_FLOAT, horizon, &params.horizonSecs)
 PARAM_ADD(PARAM_FLOAT, maxSpeed, &params.maxSpeed)
+PARAM_ADD(PARAM_FLOAT, sidestepThrsh, &params.sidestepThreshold)
 PARAM_ADD(PARAM_INT32, maxPeerLocAge, &params.maxPeerLocAgeMillis)
+PARAM_ADD(PARAM_FLOAT, vorTol, &params.voronoiProjectionTolerance)
+PARAM_ADD(PARAM_INT32, vorIters, &params.voronoiProjectionMaxIters)
 
 // For now, leave out the parameters of the Voronoi projection algorithm.
 // They should probably be tuned once with experiments and then hard-coded.
 
-PARAM_GROUP_STOP(collisionAvoidance)
+PARAM_GROUP_STOP(colAv)
 
 #endif  // CRAZYFLIE_FW

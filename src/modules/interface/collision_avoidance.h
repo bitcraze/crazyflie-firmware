@@ -110,8 +110,12 @@ void collisionAvoidanceUpdateSetpointCore(
 // param system.
 #ifdef CRAZYFLIE_FW
 
+void collisionAvoidanceInit(void);
+bool collisionAvoidanceTest(void);
+
 void collisionAvoidanceUpdateSetpoint(
-  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state);
-#endif
+  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state, uint32_t tick);
+
+#endif // CRAZYFLIE_FW defined
 
 #endif //__COLLISION_AVOIDANCE_H__
