@@ -2,7 +2,7 @@
 
 #include "ootx_decoder.h"
 
-typedef struct {
+typedef struct lighthouseCalibrationAxis {
   float phase;
   float tilt;
   float curve;
