@@ -22,6 +22,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * collision_avoidance.h - Collision avoidance for multiple Crazyflies.
+ * Uses the buffered Voronoi collision avoidance algorithm:
+ *
+ *   Zhou, Dingjiang, et al. "Fast, on-line collision avoidance for dynamic
+ *   vehicles using buffered Voronoi cells." IEEE Robotics and Automation
+ *   Letters 2.2 (2017): 1047-1054.
  *
  * Original author: James A. Preiss, University of Southern California, 2020.
  */
@@ -32,6 +37,9 @@
 #include "math3d.h"
 #include "stabilizer_types.h"
 
+
+// Algorithm parameters. They can be changed online by the user,
+// but the algorithm will never mutate them.
 
 typedef struct collision_avoidance_params_s
 {
@@ -77,6 +85,8 @@ typedef struct collision_avoidance_params_s
 } collision_avoidance_params_t;
 
 
+// Mutable state of the algorithm.
+
 typedef struct collision_avoidance_state_s
 {
   // In case our Voronoi cell becomes empty, due to e.g. a disturbance, we will
@@ -88,7 +98,8 @@ typedef struct collision_avoidance_state_s
 } collision_avoidance_state_t;
 
 
-// Mutates the setpoint.
+// Main computational routine. Mutates the setpoint such that the new setpoint
+// respects the buffered Voronoi cell constraint.
 //
 // To facilitate compiling and testing on a PC, we take neighbor positions via
 // array instead of having the implementation call peer_localization.h functions
@@ -96,6 +107,18 @@ typedef struct collision_avoidance_state_s
 // memory. Therefore, we allow the input and workspace arrays to overlap. If
 // otherPositions == workspace, this function will still work correctly, but it
 // will overwrite the contents of otherPositions.
+//
+// Args:
+//   params: Algorithm parameters.
+//   collisionState: Algorithm mutable state.
+//   nOthers: Number of other Crazyflies in array arguments.
+//   otherPositons: [nOthers * 3] array of positions (meters).
+//   workspace: Space of no less than 7 * (nOthers + 6) floats. Used for
+//     temporary storage during computation. This can be the same address as
+//     otherPositions - otherPositions is copied into workspace immediately.
+//   setpoint: Setpoint from commander that will be mutated.
+//   sensorData: Not currently used, but kept for API similarity with sitAw.
+//   state: Current state estimate.
 //
 void collisionAvoidanceUpdateSetpointCore(
   collision_avoidance_params_t const *params,
@@ -113,6 +136,8 @@ void collisionAvoidanceUpdateSetpointCore(
 void collisionAvoidanceInit(void);
 bool collisionAvoidanceTest(void);
 
+// Wrapper that uses the peer localization system to construct the input arrays
+// for collisionAvoidanceUpdateSetpointCore.
 void collisionAvoidanceUpdateSetpoint(
   setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state, uint32_t tick);
 

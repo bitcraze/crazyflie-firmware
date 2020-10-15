@@ -48,10 +48,26 @@ static struct vec3_s svec2vec(struct vec v)
   return vv;
 }
 
-// modifyFromInside: Controls behavior if the goal is within our cell but we
-// are still close to the wall behind the the goal. If true, add a proportional
-// sidestep. Otherwise, do not change the goal. True is intended for velocity
-// control modes.
+// Computes a new goal position inside our buffered Voronoi cell.
+//
+// "Sidestep" dentoes a behavior to avoid deadlock when two robots are
+// instructed to swap positions. When they approach a head-on collision, both
+// will step to their right instead of stopping.
+//
+// Args:
+//   params: Algorithm parameters.
+//   goal: Goal position.
+//   modifyIfInside: Controls behavior when the goal is within our cell but the
+//     we are still close to the wall behind the the goal. In a position
+//     control mode, we should never modify the goal under this condition.
+//     However, in a velocity control mode, our best guess is that the velocity
+//     command will not change soon. Therefore, we are likely to hit that wall,
+//     so we should go ahead and begin the sidestep.
+//   A: LHS matrix for polytope inequality Ax <= B. Dimension [nRows * 3].
+//   B: RHS vector for polytope inequality Ax <= B. Dimension [nRows].
+//   projectionWorkspace: Additional scratch area. Dimension [nRows * 3].
+//   nRows: Number of rows in our cell polytope inequality.
+//
 static struct vec sidestepGoal(
   collision_avoidance_params_t const *params,
   struct vec goal,
@@ -254,7 +270,7 @@ void collisionAvoidanceUpdateSetpointCore(
 static uint8_t collisionAvoidanceEnable = 0;
 
 static collision_avoidance_params_t params = {
-  .ellipsoidRadii = { .x = 0.125, .y = 0.125, .z = 0.375 },
+  .ellipsoidRadii = { .x = 0.3, .y = 0.3, .z = 0.9 },
   .bboxMin = { .x = -FLT_MAX, .y = -FLT_MAX, .z = -FLT_MAX },
   .bboxMax = { .x = FLT_MAX, .y = FLT_MAX, .z = FLT_MAX },
   .horizonSecs = 1.0f,
@@ -285,6 +301,7 @@ bool collisionAvoidanceTest()
 #define MAX_CELL_ROWS (PEER_LOCALIZATION_MAX_NEIGHBORS + 6)
 static float workspace[7 * MAX_CELL_ROWS];
 
+// Latency counter for logging.
 static uint32_t latency = 0;
 
 void collisionAvoidanceUpdateSetpoint(
@@ -329,31 +346,26 @@ LOG_GROUP_STOP(colAv)
 
 
 PARAM_GROUP_START(colAv)
+  PARAM_ADD(PARAM_UINT8, enable, &collisionAvoidanceEnable)
 
-PARAM_ADD(PARAM_UINT8, enable, &collisionAvoidanceEnable)
+  PARAM_ADD(PARAM_FLOAT, ellipsoidX, &params.ellipsoidRadii.x)
+  PARAM_ADD(PARAM_FLOAT, ellipsoidY, &params.ellipsoidRadii.y)
+  PARAM_ADD(PARAM_FLOAT, ellipsoidZ, &params.ellipsoidRadii.z)
 
-PARAM_ADD(PARAM_FLOAT, ellipsoidX, &params.ellipsoidRadii.x)
-PARAM_ADD(PARAM_FLOAT, ellipsoidY, &params.ellipsoidRadii.y)
-PARAM_ADD(PARAM_FLOAT, ellipsoidZ, &params.ellipsoidRadii.z)
+  PARAM_ADD(PARAM_FLOAT, bboxMinX, &params.bboxMin.x)
+  PARAM_ADD(PARAM_FLOAT, bboxMinY, &params.bboxMin.y)
+  PARAM_ADD(PARAM_FLOAT, bboxMinZ, &params.bboxMin.z)
 
-PARAM_ADD(PARAM_FLOAT, bboxMinX, &params.bboxMin.x)
-PARAM_ADD(PARAM_FLOAT, bboxMinY, &params.bboxMin.y)
-PARAM_ADD(PARAM_FLOAT, bboxMinZ, &params.bboxMin.z)
+  PARAM_ADD(PARAM_FLOAT, bboxMaxX, &params.bboxMax.x)
+  PARAM_ADD(PARAM_FLOAT, bboxMaxY, &params.bboxMax.y)
+  PARAM_ADD(PARAM_FLOAT, bboxMaxZ, &params.bboxMax.z)
 
-PARAM_ADD(PARAM_FLOAT, bboxMaxX, &params.bboxMax.x)
-PARAM_ADD(PARAM_FLOAT, bboxMaxY, &params.bboxMax.y)
-PARAM_ADD(PARAM_FLOAT, bboxMaxZ, &params.bboxMax.z)
-
-PARAM_ADD(PARAM_FLOAT, horizon, &params.horizonSecs)
-PARAM_ADD(PARAM_FLOAT, maxSpeed, &params.maxSpeed)
-PARAM_ADD(PARAM_FLOAT, sidestepThrsh, &params.sidestepThreshold)
-PARAM_ADD(PARAM_INT32, maxPeerLocAge, &params.maxPeerLocAgeMillis)
-PARAM_ADD(PARAM_FLOAT, vorTol, &params.voronoiProjectionTolerance)
-PARAM_ADD(PARAM_INT32, vorIters, &params.voronoiProjectionMaxIters)
-
-// For now, leave out the parameters of the Voronoi projection algorithm.
-// They should probably be tuned once with experiments and then hard-coded.
-
+  PARAM_ADD(PARAM_FLOAT, horizon, &params.horizonSecs)
+  PARAM_ADD(PARAM_FLOAT, maxSpeed, &params.maxSpeed)
+  PARAM_ADD(PARAM_FLOAT, sidestepThrsh, &params.sidestepThreshold)
+  PARAM_ADD(PARAM_INT32, maxPeerLocAge, &params.maxPeerLocAgeMillis)
+  PARAM_ADD(PARAM_FLOAT, vorTol, &params.voronoiProjectionTolerance)
+  PARAM_ADD(PARAM_INT32, vorIters, &params.voronoiProjectionMaxIters)
 PARAM_GROUP_STOP(colAv)
 
 #endif  // CRAZYFLIE_FW

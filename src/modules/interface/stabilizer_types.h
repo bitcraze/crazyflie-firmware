@@ -246,7 +246,7 @@ typedef struct {
 
 /** Sweep angle measurement */
 // Forward declaration of lighthouse struct to avoid dependency.
-struct lighthouseCalibrationAxis;
+struct lighthouseCalibrationAxis_s;
 typedef struct {
   uint32_t timestamp;
   vec3d* sensorPos;          // Sensor position in the CF reference frame
@@ -257,7 +257,7 @@ typedef struct {
   float measuredSweepAngle;
   float stdDev;
   int baseStationType;       // Cast to lighthouseBaseStationType_t enum.
-  const struct lighthouseCalibrationAxis* calib;
+  const struct lighthouseCalibrationAxis_s* calib;
 } sweepAngleMeasurement_t;
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
