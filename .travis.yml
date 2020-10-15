@@ -43,3 +43,9 @@ script:
   # Build with the lighthouse driver
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 "EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0" UNIT_TEST_STYLE=min
+
+  # Build examples
+  - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_hello_world; make"
+  - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_api; make"
+  - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_peer_to_peer; make"
+  - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_push_demo; make"
