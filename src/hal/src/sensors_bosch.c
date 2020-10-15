@@ -539,7 +539,7 @@ static void sensorsTask(void *param)
             {
               // soundSetEffect(SND_CALIB);
               DEBUG_PRINT("Sensor calibration [OK].\n");
-              ledseqRun(SYS_LED, seq_calibrated);
+              ledseqRun(&seq_calibrated);
               allSensorsAreCalibrated= true;
             }
         }

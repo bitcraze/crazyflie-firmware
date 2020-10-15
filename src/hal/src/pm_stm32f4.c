@@ -333,26 +333,26 @@ void pmTask(void *param)
       switch (pmState)
       {
         case charged:
-          ledseqStop(CHG_LED, seq_charging);
-          ledseqRun(CHG_LED, seq_charged);
+          ledseqStop(&seq_charging);
+          ledseqRunBlocking(&seq_charged);
           soundSetEffect(SND_BAT_FULL);
           systemSetCanFly(false);
           break;
         case charging:
-          ledseqStop(LOWBAT_LED, seq_lowbat);
-          ledseqStop(CHG_LED, seq_charged);
-          ledseqRun(CHG_LED, seq_charging);
+          ledseqStop(&seq_lowbat);
+          ledseqStop(&seq_charged);
+          ledseqRunBlocking(&seq_charging);
           soundSetEffect(SND_USB_CONN);
           systemSetCanFly(false);
           break;
         case lowPower:
-          ledseqRun(LOWBAT_LED, seq_lowbat);
+          ledseqRunBlocking(&seq_lowbat);
           soundSetEffect(SND_BAT_LOW);
           systemSetCanFly(true);
           break;
         case battery:
-          ledseqStop(CHG_LED, seq_charging);
-          ledseqRun(CHG_LED, seq_charged);
+          ledseqRunBlocking(&seq_charging);
+          ledseqRun(&seq_charged);
           soundSetEffect(SND_USB_DISC);
           systemSetCanFly(true);
           break;
@@ -369,11 +369,9 @@ void pmTask(void *param)
         break;
       case charging:
         {
-          uint32_t onTime;
-
-          onTime = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) *
-                   (LEDSEQ_CHARGE_CYCLE_TIME_500MA / 10);
-          ledseqSetTimes(seq_charging, onTime, LEDSEQ_CHARGE_CYCLE_TIME_500MA - onTime);
+          // Charge level between 0.0 and 1.0
+          float chargeLevel = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) / 10.0f;
+          ledseqSetChargeLevel(chargeLevel);
         }
         break;
       case lowPower:

@@ -212,8 +212,8 @@ void systemTask(void *arg)
     selftestPassed = 1;
     systemStart();
     soundSetEffect(SND_STARTUP);
-    ledseqRun(SYS_LED, seq_alive);
-    ledseqRun(LINK_LED, seq_testPassed);
+    ledseqRun(&seq_alive);
+    ledseqRun(&seq_testPassed);
   }
   else
   {
@@ -222,7 +222,7 @@ void systemTask(void *arg)
     {
       while(1)
       {
-        ledseqRun(SYS_LED, seq_testPassed); //Red passed == not passed!
+        ledseqRun(&seq_testFailed);
         vTaskDelay(M2T(2000));
         // System can be forced to start by setting the param to 1 from the cfclient
         if (selftestPassed)
@@ -286,7 +286,7 @@ void systemSetArmed(bool val)
 
 bool systemIsArmed()
 {
-  
+
   return armed || forceArm;
 }
 
