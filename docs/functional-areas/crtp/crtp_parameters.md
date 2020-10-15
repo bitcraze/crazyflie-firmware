@@ -119,10 +119,9 @@ The following misc commands are implemented:
 |  Code  | Command|
 |  ------| ------------------------------------------------------|
 |  0x00  | [Set by name](#set-by-name)|
+|  0x01  | [Value updated](#value-updated)
 
 ### Set by name
-
-
 
 |  Byte             | Request fields   | Content|
 |  -----------------| ----------------| ---------------------------------------------|
@@ -136,8 +135,8 @@ The following misc commands are implemented:
 
 
 
- | Byte           | Answer fields  | Content|
- | ---------------| ---------------| ---------------------------------------------------|
+| Byte           | Answer fields  | Content|
+| ---------------| ---------------| ---------------------------------------------------|
 |  0             |  SET\_BY\_NAME  | 0x00|
 |  1-n           |  group          | Name of the group|
 |  n-(n+1)       |  NULL           | 0|
@@ -153,3 +152,16 @@ consistency.
 This command is useful to set a parameter without having to fetch the
 full TOC. It is enough to know the group, name and type of the parameter
 to write it.
+
+### Value updated
+
+There is no request packet for this message, it is only sent by the Crazyflie.
+
+| Byte           | Answer fields   | Content|
+| ---------------| ----------------| ---------------------------------------------------|
+|  0             |  VALUE\_UPDATED | 0x01                                               |
+|  1-2           |  ID             | ID of the parameter                                |
+|  3-\...        |value            |Value of the parameter. Size and format is described in the TOC|
+
+This packet is send by the Crazyflie when a parameters has been modified in the firmware.
+This can for example happen when an app is controlling the Crazyflie autonomously.
