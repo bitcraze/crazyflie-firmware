@@ -95,8 +95,8 @@ void appMain()
   uint16_t idFront = logGetVarId("range", "front");
   uint16_t idBack = logGetVarId("range", "back");
   
-  uint16_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
-  uint16_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
+  paramVarId_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
+  paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
 
 
   float factor = velMax/radius;
