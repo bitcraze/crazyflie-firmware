@@ -75,6 +75,12 @@ struct trajectoryDescription
   } trajectoryIdentifier;
 } __attribute__((packed));
 
+// allocate memory to store trajectories
+// 4k allows us to store 31 poly4d pieces
+// other (compressed) formats might be added in the future
+#define TRAJECTORY_MEMORY_SIZE 4096
+extern uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
+
 #define ALL_GROUPS 0
 
 // Global variables
@@ -717,6 +723,34 @@ void crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const cr
   };
 
   handleCommand(COMMAND_DEFINE_TRAJECTORY, (const uint8_t*)&data);
+}
+
+uint32_t crtpCommanderHighLevelTrajectoryMemSize()
+{
+  return sizeof(trajectories_memory);
+}
+
+bool crtpCommanderHighLevelWriteTrajectory(const uint32_t offset, const uint32_t length, const uint8_t* data)
+{
+  bool result = false;
+
+  if ((offset + length) <= sizeof(trajectories_memory)) {
+    memcpy(&(trajectories_memory[offset]), data, length);
+    result = true;
+  }
+
+  return result;
+}
+
+bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t length, uint8_t* destination)
+{
+  bool result = false;
+
+  if (offset + length <= sizeof(trajectories_memory) && memcpy(destination, &(trajectories_memory[offset]), length)) {
+    result = true;
+  }
+
+  return result;
 }
 
 PARAM_GROUP_START(hlCommander)

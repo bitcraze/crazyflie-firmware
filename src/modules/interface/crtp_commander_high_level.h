@@ -46,12 +46,6 @@ Header file for high-level commander that computes smooth setpoints based on hig
 
 #include "stabilizer_types.h"
 
-// allocate memory to store trajectories
-// 4k allows us to store 31 poly4d pieces
-// other (compressed) formats might be added in the future
-#define TRAJECTORY_MEMORY_SIZE 4096
-extern uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
-
 #define NUM_TRAJECTORY_DEFINITIONS 10
 
 typedef enum {
@@ -150,10 +144,40 @@ void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const flo
  *
  * @param trajectoryId The id of the trajectory
  * @param type         The type of trajectory that is stored in memory.
- * @param offset       offset in uploaded memory
+ * @param offset       offset in uploaded memory (bytes)
  * @param nPieces      Nr of pieces in the trajectory
  */
 void crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces);
 
+/**
+ * @brief Get the size of the allocated trajectory memory
+ *
+ * @return uint32_t The size of the trajectory memory in bytes
+ */
+uint32_t crtpCommanderHighLevelTrajectoryMemSize();
+
+/**
+ * @brief Copy trajectory data to the trajectory memeory. After the copy crtpCommanderHighLevelDefineTrajectory()
+ *        must be called before the trajectory can be used.
+ *
+ * @param offset    offset in uploaded memory (bytes)
+ * @param length    Length of the data (bytes) to copy to the trajectory memory
+ * @param data[in]  pointer to the trajectory data source
+ *
+ * @return true   If data was copied
+ * @return false  If data is too large
+ */
+bool crtpCommanderHighLevelWriteTrajectory(const uint32_t offset, const uint32_t length, const uint8_t* data);
+
+/**
+ * @brief Copy data from the trajectory memory.
+ *
+ * @param offset             Offset in the trajectory memory (bytes)
+ * @param length             Length of the data to copy
+ * @param destination [out]  Pointer to copy data to
+ * @return true              If data was copied
+ * @return false             If length is too large
+ */
+bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t length, uint8_t* destination);
 
 #endif /* CRTP_COMMANDER_HIGH_LEVEL_H_ */

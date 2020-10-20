@@ -250,7 +250,7 @@ static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
       createInfoResponseBody(p, MEM_TYPE_LOCO, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * LOCO_MESSAGE_NR_OF_ANCHORS, noData);
       break;
     case TRAJ_ID:
-      createInfoResponseBody(p, MEM_TYPE_TRAJ, sizeof(trajectories_memory), noData);
+      createInfoResponseBody(p, MEM_TYPE_TRAJ, crtpCommanderHighLevelTrajectoryMemSize(), noData);
       break;
     case LOCO2_ID:
       createInfoResponseBody(p, MEM_TYPE_LOCO2, MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256, noData);
@@ -573,8 +573,7 @@ static uint8_t handleLedMemWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* st
 static uint8_t handleTrajectoryMemRead(uint32_t memAddr, uint8_t readLen, uint8_t* startOfData) {
   uint8_t status = EIO;
 
-  if (memAddr + readLen <= sizeof(trajectories_memory) &&
-      memcpy(startOfData, &(trajectories_memory[memAddr]), readLen)) {
+  if (crtpCommanderHighLevelReadTrajectory(memAddr, readLen, startOfData)) {
     status = STATUS_OK;
   }
 
@@ -584,8 +583,7 @@ static uint8_t handleTrajectoryMemRead(uint32_t memAddr, uint8_t readLen, uint8_
 static uint8_t handleTrajectoryMemWrite(uint32_t memAddr, uint8_t writeLen, uint8_t* startOfData) {
   uint8_t status = EIO;
 
-  if ((memAddr + writeLen) <= sizeof(trajectories_memory)) {
-    memcpy(&(trajectories_memory[memAddr]), startOfData, writeLen);
+  if (crtpCommanderHighLevelWriteTrajectory(memAddr, writeLen, startOfData)) {
     status = STATUS_OK;
   }
 
