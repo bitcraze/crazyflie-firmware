@@ -27,5 +27,7 @@
 
 #pragma once
 
-void appRunHighLevelCommanderSquare();
 void appEnableHighLevelCommander();
+void appRunHighLevelCommanderFlySquare();
+void appDefineTrajectory();
+void appRunHighLevelCommanderFlyTrajectory();
