@@ -62,12 +62,6 @@ enum TrajectoryLocation_e {
   // Future features might include trajectories on flash or uSD card
 };
 
-enum TrajectoryType_e {
-  TRAJECTORY_TYPE_POLY4D = 0, // struct poly4d, see pptraj.h
-  TRAJECTORY_TYPE_POLY4D_COMPRESSED = 1, // see pptraj_compressed.h
-  // Future types might include versions without yaw
-};
-
 struct trajectoryDescription
 {
   uint8_t trajectoryLocation; // one of TrajectoryLocation_e
@@ -80,6 +74,8 @@ struct trajectoryDescription
     } __attribute__((packed)) mem; // if trajectoryLocation is TRAJECTORY_LOCATION_MEM
   } trajectoryIdentifier;
 } __attribute__((packed));
+
+#define ALL_GROUPS 0
 
 // Global variables
 uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
@@ -234,7 +230,7 @@ static struct vec state2vec(struct vec3_s v)
 }
 
 bool isInGroup(uint8_t g) {
-  return g == 0 || (g & group_mask) != 0;
+  return g == ALL_GROUPS || (g & group_mask) != 0;
 }
 
 void crtpCommanderHighLevelInit(void)
@@ -255,13 +251,6 @@ void crtpCommanderHighLevelInit(void)
   yaw = 0;
 
   isInit = true;
-}
-
-void crtpCommanderHighLevelStop()
-{
-  xSemaphoreTake(lockTraj, portMAX_DELAY);
-  plan_stop(&planner);
-  xSemaphoreGive(lockTraj);
 }
 
 bool crtpCommanderHighLevelIsStopped()
@@ -325,54 +314,62 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
   }
 }
 
+static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t* data)
+{
+  int ret = 0;
+
+  switch(command)
+  {
+    case COMMAND_SET_GROUP_MASK:
+      ret = set_group_mask((const struct data_set_group_mask*)data);
+      break;
+    case COMMAND_TAKEOFF:
+      ret = takeoff((const struct data_takeoff*)data);
+      break;
+    case COMMAND_LAND:
+      ret = land((const struct data_land*)data);
+      break;
+    case COMMAND_TAKEOFF_2:
+      ret = takeoff2((const struct data_takeoff_2*)data);
+      break;
+    case COMMAND_LAND_2:
+      ret = land2((const struct data_land_2*)data);
+      break;
+    case COMMAND_TAKEOFF_WITH_VELOCITY:
+      ret = takeoff_with_velocity((const struct data_takeoff_with_velocity*)data);
+      break;
+    case COMMAND_LAND_WITH_VELOCITY:
+      ret = land_with_velocity((const struct data_land_with_velocity*)data);
+      break;
+    case COMMAND_STOP:
+      ret = stop((const struct data_stop*)data);
+      break;
+    case COMMAND_GO_TO:
+      ret = go_to((const struct data_go_to*)data);
+      break;
+    case COMMAND_START_TRAJECTORY:
+      ret = start_trajectory((const struct data_start_trajectory*)data);
+      break;
+    case COMMAND_DEFINE_TRAJECTORY:
+      ret = define_trajectory((const struct data_define_trajectory*)data);
+      break;
+    default:
+      ret = ENOEXEC;
+      break;
+  }
+
+  return ret;
+}
+
 void crtpCommanderHighLevelTask(void * prm)
 {
-  int ret;
   CRTPPacket p;
   crtpInitTaskQueue(CRTP_PORT_SETPOINT_HL);
 
   while(1) {
     crtpReceivePacketBlock(CRTP_PORT_SETPOINT_HL, &p);
 
-    switch(p.data[0])
-    {
-      case COMMAND_SET_GROUP_MASK:
-        ret = set_group_mask((const struct data_set_group_mask*)&p.data[1]);
-        break;
-      case COMMAND_TAKEOFF:
-        ret = takeoff((const struct data_takeoff*)&p.data[1]);
-        break;
-      case COMMAND_LAND:
-        ret = land((const struct data_land*)&p.data[1]);
-        break;
-      case COMMAND_TAKEOFF_2:
-        ret = takeoff2((const struct data_takeoff_2*)&p.data[1]);
-        break;
-      case COMMAND_LAND_2:
-        ret = land2((const struct data_land_2*)&p.data[1]);
-        break;
-      case COMMAND_TAKEOFF_WITH_VELOCITY:
-        ret = takeoff_with_velocity((const struct data_takeoff_with_velocity*)&p.data[1]);
-        break;
-      case COMMAND_LAND_WITH_VELOCITY:
-        ret = land_with_velocity((const struct data_land_with_velocity*)&p.data[1]);
-        break;
-      case COMMAND_STOP:
-        ret = stop((const struct data_stop*)&p.data[1]);
-        break;
-      case COMMAND_GO_TO:
-        ret = go_to((const struct data_go_to*)&p.data[1]);
-        break;
-      case COMMAND_START_TRAJECTORY:
-        ret = start_trajectory((const struct data_start_trajectory*)&p.data[1]);
-        break;
-      case COMMAND_DEFINE_TRAJECTORY:
-        ret = define_trajectory((const struct data_define_trajectory*)&p.data[1]);
-        break;
-      default:
-        ret = ENOEXEC;
-        break;
-    }
+    int ret = handleCommand(p.data[0], &p.data[1]);
 
     //answer
     p.data[3] = ret;
@@ -543,7 +540,7 @@ int start_trajectory(const struct data_start_trajectory* data)
     if (data->trajectoryId < NUM_TRAJECTORY_DEFINITIONS) {
       struct trajectoryDescription* trajDesc = &trajectory_descriptions[data->trajectoryId];
       if (   trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
-          && trajDesc->trajectoryType == TRAJECTORY_TYPE_POLY4D) {
+          && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D) {
         xSemaphoreTake(lockTraj, portMAX_DELAY);
         float t = usecTimestamp() / 1e6;
         trajectory.t_begin = t;
@@ -567,7 +564,7 @@ int start_trajectory(const struct data_start_trajectory* data)
         result = plan_start_trajectory(&planner, &trajectory, data->reversed);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
-          && trajDesc->trajectoryType == TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
+          && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
 
         if (data->timescale != 1 || data->reversed) {
           result = ENOEXEC;
@@ -605,6 +602,121 @@ int define_trajectory(const struct data_define_trajectory* data)
   }
   trajectory_descriptions[data->trajectoryId] = data->description;
   return 0;
+}
+
+uint8_t* initCrtpPacket(CRTPPacket* packet, const enum TrajectoryCommand_e command)
+{
+  packet->port = CRTP_PORT_SETPOINT_HL;
+  packet->data[0] = command;
+  return &packet->data[1];
+}
+
+void crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float duration_s)
+{
+  struct data_takeoff_2 data =
+  {
+    .height = absoluteHeight_m,
+    .duration = duration_s,
+    .useCurrentYaw = true,
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
+{
+  struct data_takeoff_2 data =
+  {
+    .height = absoluteHeight_m,
+    .duration = duration_s,
+    .useCurrentYaw = false,
+    .yaw = yaw,
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelLand(const float absoluteHeight_m, const float duration_s)
+{
+  struct data_land_2 data =
+  {
+    .height = absoluteHeight_m,
+    .duration = duration_s,
+    .useCurrentYaw = true,
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
+{
+  struct data_land_2 data =
+  {
+    .height = absoluteHeight_m,
+    .duration = duration_s,
+    .useCurrentYaw = false,
+    .yaw = yaw,
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelStop()
+{
+  struct data_stop data =
+  {
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_STOP, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
+{
+  struct data_go_to data =
+  {
+    .x = x,
+    .y = y,
+    .z = z,
+    .yaw = yaw,
+    .duration = duration_s,
+    .relative = relative,
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed)
+{
+  struct data_start_trajectory data =
+  {
+    .trajectoryId = trajectoryId,
+    .timescale = timeScale,
+    .relative = relative,
+    .reversed = reversed,
+    .groupMask = ALL_GROUPS,
+  };
+
+  handleCommand(COMMAND_START_TRAJECTORY, (const uint8_t*)&data);
+}
+
+void crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces)
+{
+  struct data_define_trajectory data =
+  {
+    .trajectoryId = trajectoryId,
+    .description.trajectoryLocation = TRAJECTORY_LOCATION_MEM,
+    .description.trajectoryType = type,
+    .description.trajectoryIdentifier.mem.offset = offset,
+    .description.trajectoryIdentifier.mem.n_pieces = nPieces,
+  };
+
+  handleCommand(COMMAND_DEFINE_TRAJECTORY, (const uint8_t*)&data);
 }
 
 PARAM_GROUP_START(hlCommander)
