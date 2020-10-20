@@ -338,6 +338,12 @@ void lighthouseCoreTask(void *param) {
   }
 }
 
+void lightHouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs) {
+  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    ppState.bsCalibration[i] = calibs[i];
+  }
+}
+
 LOG_GROUP_START(lighthouse)
 LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQuality)
 

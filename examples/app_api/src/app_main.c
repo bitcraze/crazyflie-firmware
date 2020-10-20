@@ -42,12 +42,14 @@
 // Examples
 #include "app_ledseq.h"
 #include "app_high_level_commander.h"
+#include "app_lighthouse.h"
 
 #define DEBUG_MODULE "APPAPI"
 
 void appMain() {
   appRegisterLedSequence();
   appEnableHighLevelCommander();
+  appInitLighthouse();
 
   while(1) {
     vTaskDelay(M2T(3000));

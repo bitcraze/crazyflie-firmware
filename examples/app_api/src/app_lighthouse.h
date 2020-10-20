@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 - 2020 Bitcraze AB
+ * Copyright (C) 2020 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,31 +22,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * lighthouse_core.h - central part of the lighthouse positioning system
+ * app_lighthouse.h - lighthouse example
  */
 
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "pulse_processor.h"
-
-typedef struct {
-  bool isSyncFrame;
-  pulseProcessorFrame_t data;
-} lighthouseUartFrame_t;
-
-typedef struct {
-  int sampleCount;
-  int hitCount;
-} lighthouseBsIdentificationData_t;
-
-void lighthouseCoreTask(void *param);
-
-/**
- * @brief Set calibration data for the base stations of the system
- *
- * @param calibs An array with calibration data for PULSE_PROCESSOR_N_BASE_STATIONS base stations.
- */
-void lightHouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs);
+void appInitLighthouse();

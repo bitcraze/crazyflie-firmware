@@ -34,6 +34,13 @@
 extern baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
 
 /**
+ * @brief Set new base station geometry data
+ *
+ * @param geometries Pointer to an array of geomtry data with PULSE_PROCESSOR_N_BASE_STATIONS entries.
+ */
+void lightHousePositionSetGeometryData(const baseStationGeometry_t* geometries);
+
+/**
  * @brief Call when the lighthouseBaseStationsGeometry data has been updated
  * to recalculate cached data
  */
