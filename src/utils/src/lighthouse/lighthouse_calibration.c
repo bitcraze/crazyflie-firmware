@@ -34,6 +34,7 @@
 
 #include <math.h>
 #include "cf_math.h"
+#include "physicalConstants.h"
 
 void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct ootxDataFrame_s *frame)
 {
@@ -69,7 +70,7 @@ static void idealToDistortedV1(const lighthouseCalibration_t* calib, const float
 }
 
 static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
-  const float t30 = (float)M_PI / 6.0f;
+  const float t30 = M_PI_F / 6.0f;
   const float tan30 = 0.5773502691896258;  // const float tan30 = tanf(t30);
 
   const float a1 = ideal[0];

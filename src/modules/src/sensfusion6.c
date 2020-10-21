@@ -28,8 +28,7 @@
 #include "sensfusion6.h"
 #include "log.h"
 #include "param.h"
-
-#define M_PI_F ((float) M_PI)
+#include "physicalConstants.h"
 
 //#define MADWICK_QUATERNION_IMU
 

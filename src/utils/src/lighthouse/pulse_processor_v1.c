@@ -31,10 +31,7 @@
 #include <string.h>
 #include <math.h>
 #include "test_support.h"
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
+#include "physicalConstants.h"
 
 // Decoding contants
 // Times are expressed in a 24MHz clock
