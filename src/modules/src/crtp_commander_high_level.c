@@ -753,6 +753,11 @@ bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t 
   return result;
 }
 
+bool crtpCommanderHighLevelIsTrajectoryFinished() {
+  float t = usecTimestamp() / 1e6;
+  return plan_is_finished(&planner, t);
+}
+
 PARAM_GROUP_START(hlCommander)
 PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
 PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)

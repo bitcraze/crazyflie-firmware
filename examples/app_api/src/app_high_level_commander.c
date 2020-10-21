@@ -157,4 +157,5 @@ void callAllFunctionsForCi() {
   crtpCommanderHighLevelTrajectoryMemSize();
   crtpCommanderHighLevelWriteTrajectory(20, 10, dummyData);
   crtpCommanderHighLevelReadTrajectory(20, 10, dummyData);
+  crtpCommanderHighLevelIsTrajectoryFinished();
 }

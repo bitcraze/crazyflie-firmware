@@ -180,4 +180,12 @@ bool crtpCommanderHighLevelWriteTrajectory(const uint32_t offset, const uint32_t
  */
 bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t length, uint8_t* destination);
 
+/**
+ * @brief Query if the current trajectory has finished
+ *
+ * @return true   The trajectory has reached the end
+ * @return false  The trejectory is still running
+ */
+bool crtpCommanderHighLevelIsTrajectoryFinished();
+
 #endif /* CRTP_COMMANDER_HIGH_LEVEL_H_ */
