@@ -634,7 +634,7 @@ static uint8_t handleLighthouseMemWrite(uint32_t memAddr, uint8_t writeLen, uint
     uint8_t* start = (uint8_t*)lighthouseBaseStationsGeometry;
     memcpy(start + memAddr, startOfData, writeLen);
 
-    lightHousePositionGeometryDataUpdated();
+    lighthousePositionGeometryDataUpdated();
 
     status = STATUS_OK;
   }

@@ -49,4 +49,4 @@ void lighthouseCoreTask(void *param);
  *
  * @param calibs An array with calibration data for PULSE_PROCESSOR_N_BASE_STATIONS base stations.
  */
-void lightHouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs);
+void lighthouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs);

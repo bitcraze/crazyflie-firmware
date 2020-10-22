@@ -300,7 +300,7 @@ void lighthouseCoreTask(void *param) {
   bool isUartFrameValid = false;
 
   uart1Init(230400);
-  lightHousePositionGeometryDataUpdated();
+  lighthousePositionGeometryDataUpdated();
   systemWaitStart();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
@@ -338,7 +338,7 @@ void lighthouseCoreTask(void *param) {
   }
 }
 
-void lightHouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs) {
+void lighthouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs) {
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
     ppState.bsCalibration[i] = calibs[i];
   }

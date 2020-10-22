@@ -66,15 +66,15 @@ static mat3d lh1Rotor2InvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
-void lightHousePositionSetGeometryData(const baseStationGeometry_t* geometries) {
+void lighthousePositionSetGeometryData(const baseStationGeometry_t* geometries) {
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
     lighthouseBaseStationsGeometry[i] = geometries[i];
   }
 
-  lightHousePositionGeometryDataUpdated();
+  lighthousePositionGeometryDataUpdated();
 }
 
-void lightHousePositionGeometryDataUpdated() {
+void lighthousePositionGeometryDataUpdated() {
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
     lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[i], &lighthouseBaseStationAngles[i]);
     preProcessGeometryData(lighthouseBaseStationsGeometry[i].mat, baseStationInvertedRotationMatrixes[i], lh1Rotor2RotationMatrixes[i], lh1Rotor2InvertedRotationMatrixes[i]);

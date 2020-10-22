@@ -52,6 +52,6 @@ lighthouseCalibration_t sampleCalibrationData[PULSE_PROCESSOR_N_BASE_STATIONS] =
 };
 
 void appInitLighthouse() {
-  lightHousePositionSetGeometryData(sampleGeoData);
-  lightHouseCoreSetCalibrationData(sampleCalibrationData);
+  lighthousePositionSetGeometryData(sampleGeoData);
+  lighthouseCoreSetCalibrationData(sampleCalibrationData);
 }

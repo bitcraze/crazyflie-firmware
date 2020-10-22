@@ -728,7 +728,7 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
  *
  * Red means 0 angles, green means 16 angles (2 basestations x 4 crazyflie sensors x 2 sweeping directions).
  */
-static void lightHouseEffect(uint8_t buffer[][3], bool reset)
+static void lighthouseEffect(uint8_t buffer[][3], bool reset)
 {
   #if DISABLE_LIGHTHOUSE_DRIVER == 1
     uint16_t validAngles = 0;
@@ -915,7 +915,7 @@ Ledring12Effect effectsFct[] =
   rssiEffect,
   locSrvStatus,
   timeMemEffect,
-  lightHouseEffect,
+  lighthouseEffect,
 };
 
 /********** Ring init and switching **********/

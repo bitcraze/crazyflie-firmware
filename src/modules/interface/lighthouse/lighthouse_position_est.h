@@ -38,13 +38,13 @@ extern baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BA
  *
  * @param geometries Pointer to an array of geomtry data with PULSE_PROCESSOR_N_BASE_STATIONS entries.
  */
-void lightHousePositionSetGeometryData(const baseStationGeometry_t* geometries);
+void lighthousePositionSetGeometryData(const baseStationGeometry_t* geometries);
 
 /**
  * @brief Call when the lighthouseBaseStationsGeometry data has been updated
  * to recalculate cached data
  */
-void lightHousePositionGeometryDataUpdated();
+void lighthousePositionGeometryDataUpdated();
 
 void lighthousePositionEstimatePoseCrossingBeams(pulseProcessorResult_t* angles, int baseStation);
 void lighthousePositionEstimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation, const lighthouseCalibration_t* bsCalib);
