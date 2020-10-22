@@ -54,6 +54,6 @@ void appMain() {
   while(1) {
     vTaskDelay(M2T(3000));
     appRunLedSequence();
-    appRunHighLevelCommanderFlySquare();
+    // appRunHighLevelCommanderFlySquare();
   }
 }
