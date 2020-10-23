@@ -212,6 +212,10 @@ static void defineTrajectory() {
   crtpCommanderHighLevelDefineTrajectory(trajectoryId, CRTP_CHL_TRAJECTORY_TYPE_POLY4D, 0, polyCount);
 }
 
+static void defineLedSequence() {
+  ledseqRegisterSequence(&seq_lock);
+}
+
 void appMain() {
   if (isInit) {
     return;
@@ -247,6 +251,7 @@ void appMain() {
   setupLighthouse();
   enableHighlevelCommander();
   defineTrajectory();
+  defineLedSequence();
   resetLockData();
 
   isInit = true;
