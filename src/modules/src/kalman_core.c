@@ -68,6 +68,7 @@
 #include "static_mem.h"
 
 #include "lighthouse_calibration.h"
+#include "pulse_processor.h"
 
 // #define DEBUG_STATE_CHECK
 
