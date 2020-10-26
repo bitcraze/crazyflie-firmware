@@ -152,7 +152,7 @@ PROJ_OBJ += usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
-PROJ_OBJ += pm_$(CPU).o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
+PROJ_OBJ += pm_$(CPU).o syslink.o radiolink.o ow_syslink.o ow_common.o proximity.o usec_time.o
 PROJ_OBJ += sensors.o
 
 # libdw

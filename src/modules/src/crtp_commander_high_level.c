@@ -54,6 +54,7 @@ such as: take-off, landing, polynomial trajectories.
 #include "log.h"
 #include "param.h"
 #include "static_mem.h"
+#include "mem.h"
 
 // Local types
 enum TrajectoryLocation_e {
@@ -103,6 +104,17 @@ static StaticSemaphore_t lockTrajBuffer;
 // safe default settings for takeoff and landing velocity
 static float defaultTakeoffVelocity = 0.5f;
 static float defaultLandingVelocity = 0.5f;
+
+// Trajectory memory handling from the memory module
+static uint32_t handleMemGetSize(void) { return crtpCommanderHighLevelTrajectoryMemSize(); }
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static const MemoryHandlerDef_t memDef = {
+  .type = MEM_TYPE_TRAJ,
+  .getSize = handleMemGetSize,
+  .read = handleMemRead,
+  .write = handleMemWrite,
+};
 
 STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE);
 
@@ -245,6 +257,7 @@ void crtpCommanderHighLevelInit(void)
     return;
   }
 
+  memoryRegisterHandler(&memDef);
   plan_init(&planner);
 
   //Start the trajectory task
@@ -608,6 +621,14 @@ int define_trajectory(const struct data_define_trajectory* data)
   }
   trajectory_descriptions[data->trajectoryId] = data->description;
   return 0;
+}
+
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  return crtpCommanderHighLevelReadTrajectory(memAddr, readLen, buffer);
+}
+
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+  return crtpCommanderHighLevelWriteTrajectory(memAddr, writeLen, buffer);
 }
 
 uint8_t* initCrtpPacket(CRTPPacket* packet, const enum TrajectoryCommand_e command)

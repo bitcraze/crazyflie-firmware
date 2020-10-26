@@ -49,6 +49,7 @@
 #include "nvicconf.h"
 #include "estimator.h"
 #include "statsCnt.h"
+#include "mem.h"
 
 #include "locodeck.h"
 
@@ -135,6 +136,33 @@ static uint32_t timeout;
 static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
+// Memory read/write handling
+#define MEM_LOCO_INFO             0x0000
+#define MEM_LOCO_ANCHOR_BASE      0x1000
+#define MEM_LOCO_ANCHOR_PAGE_SIZE 0x0100
+#define MEM_LOCO_PAGE_LEN         (3 * sizeof(float) + 1)
+
+#define MEM_ANCHOR_ID_LIST_LENGTH 256
+
+#define MEM_LOCO2_ID_LIST          0x0000
+#define MEM_LOCO2_ACTIVE_LIST      0x1000
+#define MEM_LOCO2_ANCHOR_BASE      0x2000
+#define MEM_LOCO2_ANCHOR_PAGE_SIZE 0x0100
+#define MEM_LOCO2_PAGE_LEN         (3 * sizeof(float) + 1)
+
+static uint32_t handleMemGetSize(void) { return MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256; }
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest);
+static const MemoryHandlerDef_t memDef = {
+  .type = MEM_TYPE_LOCO2,
+  .getSize = handleMemGetSize,
+  .read = handleMemRead,
+  .write = 0, // Write is not supported
+};
+static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest, const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[]);
+static bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position);
+static uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
+static uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
+
 static void txCallback(dwDevice_t *dev)
 {
   timeout = algorithm->onEvent(dev, eventPacketSent);
@@ -149,10 +177,67 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
   timeout = algorithm->onEvent(dev, eventReceiveTimeout);
 }
 
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest) {
+  bool result = false;
+
+  static uint8_t unsortedAnchorList[MEM_ANCHOR_ID_LIST_LENGTH];
+
+  if (memAddr >= MEM_LOCO2_ID_LIST && memAddr < MEM_LOCO2_ACTIVE_LIST) {
+    uint8_t anchorCount = locoDeckGetAnchorIdList(unsortedAnchorList, MEM_ANCHOR_ID_LIST_LENGTH);
+    buildAnchorMemList(memAddr, readLen, dest, MEM_LOCO2_ID_LIST, anchorCount, unsortedAnchorList);
+    result = true;
+  } else if (memAddr >= MEM_LOCO2_ACTIVE_LIST && memAddr < MEM_LOCO2_ANCHOR_BASE) {
+    uint8_t anchorCount = locoDeckGetActiveAnchorIdList(unsortedAnchorList, MEM_ANCHOR_ID_LIST_LENGTH);
+    buildAnchorMemList(memAddr, readLen, dest, MEM_LOCO2_ACTIVE_LIST, anchorCount, unsortedAnchorList);
+    result = true;
+  } else {
+    if (memAddr >= MEM_LOCO2_ANCHOR_BASE) {
+      uint32_t pageAddress = memAddr - MEM_LOCO2_ANCHOR_BASE;
+      if ((pageAddress % MEM_LOCO2_ANCHOR_PAGE_SIZE) == 0 && MEM_LOCO2_PAGE_LEN == readLen) {
+        uint32_t anchorId = pageAddress / MEM_LOCO2_ANCHOR_PAGE_SIZE;
+
+        point_t position;
+        memset(&position, 0, sizeof(position));
+        locoDeckGetAnchorPosition(anchorId, &position);
+
+        float* destAsFloat = (float*)dest;
+        destAsFloat[0] = position.x;
+        destAsFloat[1] = position.y;
+        destAsFloat[2] = position.z;
+
+        bool hasBeenSet = (position.timestamp != 0);
+        dest[sizeof(float) * 3] = hasBeenSet;
+
+        result = true;
+      }
+    }
+  }
+
+  return result;
+}
+
+static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest, const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[]) {
+  for (int i = 0; i < readLen; i++) {
+    int address = memAddr + i;
+    int addressInPage = address - pageBase_address;
+    uint8_t val = 0;
+
+    if (addressInPage == 0) {
+      val = anchorCount;
+    } else {
+      int anchorIndex = addressInPage - 1;
+      if (anchorIndex < anchorCount) {
+        val = unsortedAnchorList[anchorIndex];
+      }
+    }
+
+    dest[i] = val;
+  }
+}
+
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
-// TODO krri Break the dependency, do not call directly from other modules into the deck driver
-bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
+static bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
 {
   if (!isInit) {
     return false;
@@ -166,8 +251,7 @@ bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
 
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
-// TODO krri Break the dependency, do not call directly from other modules into the deck driver
-uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+static uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
   if (!isInit) {
     return 0;
   }
@@ -180,8 +264,7 @@ uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxList
 
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
-// TODO krri Break the dependency, do not call directly from other modules into the deck driver
-uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+static uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
   if (!isInit) {
     return 0;
   }
@@ -456,6 +539,8 @@ static void dwm1000Init(DeckInfo *info)
   dwSetReceiveWaitTimeout(dwm, DEFAULT_RX_TIMEOUT);
 
   dwCommitConfiguration(dwm);
+
+  memoryRegisterHandler(&memDef);
 
   // Enable interrupt
   NVIC_InitStructure.NVIC_IRQChannel = EXTI_IRQChannel;

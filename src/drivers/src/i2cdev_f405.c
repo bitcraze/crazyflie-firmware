@@ -145,7 +145,7 @@ bool i2cdevWriteBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
   return status;
 }
 
-bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint16_t len, uint8_t *data)
+bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint16_t len, const uint8_t *data)
 {
   I2cMessage message;
 
@@ -155,7 +155,7 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint16_t len, uint8_t *data)
 }
 
 bool i2cdevWriteReg8(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
-                     uint16_t len, uint8_t *data)
+                     uint16_t len, const uint8_t *data)
 {
   I2cMessage message;
 
@@ -166,7 +166,7 @@ bool i2cdevWriteReg8(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
 }
 
 bool i2cdevWriteReg16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
-                      uint16_t len, uint8_t *data)
+                      uint16_t len, const uint8_t *data)
 {
   I2cMessage message;
 

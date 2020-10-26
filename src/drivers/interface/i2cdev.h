@@ -138,7 +138,7 @@ bool i2cdevReadBits(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
  *
  * @return TRUE if write was successful, otherwise FALSE.
  */
-bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint16_t len, uint8_t *data);
+bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint16_t len, const uint8_t *data);
 
 /**
  * Write bytes to an I2C peripheral
@@ -151,7 +151,7 @@ bool i2cdevWrite(I2C_Dev *dev, uint8_t devAddress, uint16_t len, uint8_t *data);
  * @return TRUE if write was successful, otherwise FALSE.
  */
 bool i2cdevWriteReg8(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
-                 uint16_t len, uint8_t *data);
+                 uint16_t len, const uint8_t *data);
 
 /**
  * Write bytes to an I2C peripheral with 16bit internal reg/mem address.
@@ -164,7 +164,7 @@ bool i2cdevWriteReg8(I2C_Dev *dev, uint8_t devAddress, uint8_t memAddress,
  * @return TRUE if write was successful, otherwise FALSE.
  */
 bool i2cdevWriteReg16(I2C_Dev *dev, uint8_t devAddress, uint16_t memAddress,
-                   uint16_t len, uint8_t *data);
+                   uint16_t len, const uint8_t *data);
 
 /**
  * Write a byte to an I2C peripheral

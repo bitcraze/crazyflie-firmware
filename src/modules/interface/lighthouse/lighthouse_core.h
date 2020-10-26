@@ -42,6 +42,7 @@ typedef struct {
   int hitCount;
 } lighthouseBsIdentificationData_t;
 
+void lighthouseCoreInit();
 void lighthouseCoreTask(void *param);
 
 /**

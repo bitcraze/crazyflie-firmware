@@ -111,7 +111,7 @@ void i2cdrvCreateMessage(I2cMessage *message,
                       uint8_t  slaveAddress,
                       I2cDirection  direction,
                       uint32_t length,
-                      uint8_t  *buffer);
+                      const uint8_t  *buffer);
 
 /**
  * Create a message to transfer with internal "reg" address. Will first do a write
@@ -130,6 +130,6 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
                              uint16_t intAddress,
                              I2cDirection  direction,
                              uint32_t length,
-                             uint8_t  *buffer);
+                             const uint8_t  *buffer);
 
 #endif

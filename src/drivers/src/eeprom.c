@@ -8,7 +8,7 @@
  * Crazyflie Firmware
  *
  * Copyright (C) 2011 Fabio Varesano <fvaresano@yahoo.it>
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2020 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,10 +36,21 @@
 #include "eeprom.h"
 #include "debug.h"
 #include "eprintf.h"
+#include "mem.h"
 
 #ifdef EEPROM_RUN_WRITE_READ_TEST
 static bool eepromTestWriteRead(void);
 #endif
+
+static uint32_t handleMemGetSize(void) { return EEPROM_SIZE; }
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static const MemoryHandlerDef_t memDef = {
+  .type = MEM_TYPE_EEPROM,
+  .getSize = handleMemGetSize,
+  .read = handleMemRead,
+  .write = handleMemWrite,
+};
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -47,8 +58,11 @@ static bool isInit;
 
 bool eepromInit(I2C_Dev *i2cPort)
 {
-  if (isInit)
+  if (isInit) {
     return true;
+  }
+
+  memoryRegisterHandler(&memDef);
 
   I2Cx = i2cPort;
   devAddr = EEPROM_I2C_ADDR;
@@ -136,7 +150,7 @@ bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len)
   return status;
 }
 
-bool eepromWriteBuffer(uint8_t* buffer, uint16_t writeAddr, uint16_t len)
+bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
 {
   bool status = true;
   uint16_t index;
@@ -159,4 +173,28 @@ bool eepromWritePage(uint8_t* buffer, uint16_t writeAddr)
 {
  //TODO: implement
   return false;
+}
+
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  bool result = false;
+
+  if (memAddr + readLen <= EEPROM_SIZE) {
+    if (eepromReadBuffer(buffer, memAddr, readLen)) {
+      result = true;
+    }
+  }
+
+  return result;
+}
+
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+  bool result = false;
+
+  if (memAddr + writeLen <= EEPROM_SIZE) {
+    if (eepromWriteBuffer(buffer, memAddr, writeLen)) {
+      result = true;
+    }
+  }
+
+  return result;
 }

@@ -75,7 +75,7 @@ bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len);
  *
  * @return True on success, else false.
  */
-bool eepromWriteBuffer(uint8_t* buffer, uint16_t writeAddr, uint16_t len);
+bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len);
 
 // TODO
 bool eepromWritePage(uint8_t* buffer, uint16_t writeAddr);
