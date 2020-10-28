@@ -179,10 +179,8 @@ static StaticSemaphore_t dataMutexBuffer;
  * Constants used in the estimator
  */
 
-#define CRAZYFLIE_WEIGHT_grams (27.0f)
-
 //thrust is thrust mapped for 65536 <==> 60 GRAMS!
-#define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/CRAZYFLIE_WEIGHT_grams/65536.0f)
+#define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/CF_MASS/65536.0f)
 
 
 /**

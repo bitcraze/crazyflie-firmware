@@ -24,8 +24,6 @@
  * ledring12.c: RGB Ring 12 Leds effects/driver
  */
 
-#include "ledring12.h"
-
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
@@ -37,18 +35,67 @@
 #include "FreeRTOS.h"
 #include "timers.h"
 
-#include "ledring12.h"
 #include "ws2812.h"
 #include "worker.h"
 #include "param.h"
 #include "pm.h"
 #include "log.h"
 #include "pulse_processor.h"
+#include "mem.h"
 
 #define DEBUG_MODULE "LED"
 #include "debug.h"
 
+#ifdef LED_RING_NBR_LEDS
+#define NBR_LEDS  LED_RING_NBR_LEDS
+#else
+#define NBR_LEDS  12
+#endif
+
+#ifndef LEDRING_TIME_MEM_SIZE
+#define LEDRING_TIME_MEM_SIZE 10
+#endif
+
+typedef struct __attribute__((packed)) timing {
+  uint8_t duration;       // How long this color should be show in parts of 1/25s. So 25 will show the color 1s, before going to the next color.
+  uint8_t color[2];       // What color should be shown in RGB565 format.
+  unsigned leds:4;        // What led should be show, 0 equals all leds.
+  bool fade:1;            // Fade from previous colour to this colour during the full duration.
+  unsigned rotate:3;      // Speed of the rotation, number of seconds per revolution
+} ledtiming;
+
+typedef struct timings {
+  uint32_t hash;          // Hash will later be used to check if the contents is already uploaded, so we don't reupload
+  ledtiming timings[LEDRING_TIME_MEM_SIZE];
+} ledtimings;
+
+static uint8_t ledringmem[NBR_LEDS * 2];
+static ledtimings ledringtimingsmem;
+
 static bool isInit = false;
+
+// Memory handler for ledringmem
+static uint32_t handleLedringmemGetSize(void) { return sizeof(ledringmem); }
+static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static const MemoryHandlerDef_t ledringmemDef = {
+  .type = MEM_TYPE_LED12,
+  .getSize = handleLedringmemGetSize,
+  .read = handleLedringmemRead,
+  .write = handleLedringmemWrite,
+};
+
+// Memory handler for timingmem
+static uint32_t handleTimingmemGetSize(void) { return sizeof(ledringtimingsmem); }
+static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static const MemoryHandlerDef_t timingmemDef = {
+  .type = MEM_TYPE_LEDMEM,
+  .getSize = handleTimingmemGetSize,
+  .read = handleTimingmemRead,
+  .write = handleTimingmemWrite,
+};
+
 
 /*
  * To add a new effect just add it as a static function with the prototype
@@ -111,10 +158,6 @@ static const uint8_t red[] = {0xFF, 0x00, 0x00};
 static const uint8_t blue[] = {0x00, 0x00, 0xFF};
 static const uint8_t white[] = WHITE;
 static const uint8_t part_black[] = BLACK;
-
-uint8_t ledringmem[NBR_LEDS * 2];
-
-ledtimings ledringtimingsmem;
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -728,7 +771,7 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
  *
  * Red means 0 angles, green means 16 angles (2 basestations x 4 crazyflie sensors x 2 sweeping directions).
  */
-static void lightHouseEffect(uint8_t buffer[][3], bool reset)
+static void lighthouseEffect(uint8_t buffer[][3], bool reset)
 {
   #if DISABLE_LIGHTHOUSE_DRIVER == 1
     uint16_t validAngles = 0;
@@ -915,7 +958,7 @@ Ledring12Effect effectsFct[] =
   rssiEffect,
   locSrvStatus,
   timeMemEffect,
-  lightHouseEffect,
+  lighthouseEffect,
 };
 
 /********** Ring init and switching **********/
@@ -970,11 +1013,61 @@ static void ledring12Init(DeckInfo *info)
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
 
+  memoryRegisterHandler(&ledringmemDef);
+  memoryRegisterHandler(&timingmemDef);
+
   isInit = true;
 
   timer = xTimerCreate( "ringTimer", M2T(50),
                                      pdTRUE, NULL, ledring12Timer );
   xTimerStart(timer, 100);
+}
+
+static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  bool result = false;
+
+  if (memAddr + readLen <= sizeof(ledringmem)) {
+      if (memcpy(buffer, &(ledringmem[memAddr]), readLen)) {
+          result = true;
+      }
+  }
+
+  return result;
+}
+
+static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+  bool result = false;
+
+  if ((memAddr + writeLen) <= sizeof(ledringmem)) {
+    memcpy(&(ledringmem[memAddr]), buffer, writeLen);
+    result = true;
+  }
+
+  return result;
+}
+
+static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  bool result = false;
+
+  if (memAddr + readLen <= sizeof(ledringtimingsmem.timings)) {
+    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+    memcpy(buffer, mem + memAddr, readLen);
+    result = true;
+  }
+
+  return result;
+}
+
+static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+  bool result = false;
+
+  if ((memAddr + writeLen) <= sizeof(ledringtimingsmem.timings)) {
+    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+    memcpy(mem+memAddr, buffer, writeLen);
+    result = true;
+  }
+
+  return result;
 }
 
 PARAM_GROUP_START(ring)

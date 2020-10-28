@@ -85,6 +85,10 @@ pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 
 #define UART_FRAME_LENGTH 12
 
+void lighthouseCoreInit() {
+  lighthousePositionEstInit();
+}
+
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
@@ -300,7 +304,6 @@ void lighthouseCoreTask(void *param) {
   bool isUartFrameValid = false;
 
   uart1Init(230400);
-  lightHousePositionGeometryDataUpdated();
   systemWaitStart();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
@@ -335,6 +338,12 @@ void lighthouseCoreTask(void *param) {
     }
 
     uartSynchronized = false;
+  }
+}
+
+void lighthouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs) {
+  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    ppState.bsCalibration[i] = calibs[i];
   }
 }
 

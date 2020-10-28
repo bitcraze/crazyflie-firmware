@@ -28,8 +28,7 @@
 #include <stdlib.h>
 
 #include "filter.h"
-
-#define M_PI_F (float)M_PI
+#include "physicalConstants.h"
 
 /**
  * IIR filter the samples.
@@ -108,4 +107,3 @@ float lpf2pReset(lpf2pData* lpfData, float sample)
   lpfData->delay_element_2 = dval;
   return lpf2pApply(lpfData, sample);
 }
-

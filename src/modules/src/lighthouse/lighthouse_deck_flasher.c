@@ -81,7 +81,7 @@ void lighthouseDeckFlasherCheckVersionAndBoot() {
     extern const int name ## Size; \
     static const __attribute__((used)) unsigned char* name = (unsigned char*) & incbin_ ## name ## _start; \
 
-INCBIN(bitstream, "blobs/lighthouse.bin");
+INCBIN(bitstream, BLOBS_LOC"lighthouse.bin");
 
 
 void lighthouseDeckFlasherCheckVersionAndBoot() {

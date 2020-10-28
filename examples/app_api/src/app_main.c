@@ -23,6 +23,8 @@
  *
  *
  * api_app.c - App layer application that ilustrates how to use functions in the API.
+ *             This app may not be possible to run, the intention is to show how to
+ *             use functions.
  */
 
 
@@ -39,14 +41,19 @@
 
 // Examples
 #include "app_ledseq.h"
+#include "app_high_level_commander.h"
+#include "app_lighthouse.h"
 
 #define DEBUG_MODULE "APPAPI"
 
 void appMain() {
   appRegisterLedSequence();
+  appEnableHighLevelCommander();
+  appInitLighthouse();
 
   while(1) {
     vTaskDelay(M2T(3000));
     appRunLedSequence();
+    // appRunHighLevelCommanderFlySquare();
   }
 }

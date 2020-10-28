@@ -380,7 +380,7 @@ void i2cdrvCreateMessage(I2cMessage *message,
                       uint8_t  slaveAddress,
                       I2cDirection  direction,
                       uint32_t length,
-                      uint8_t  *buffer)
+                      const uint8_t *buffer)
 {
   ASSERT_DMA_SAFE(buffer);
 
@@ -390,7 +390,7 @@ void i2cdrvCreateMessage(I2cMessage *message,
   message->internalAddress = I2C_NO_INTERNAL_ADDRESS;
   message->messageLength = length;
   message->status = i2cAck;
-  message->buffer = buffer;
+  message->buffer = (uint8_t *)buffer;
   message->nbrOfRetries = I2C_MAX_RETRIES;
 }
 
@@ -400,7 +400,7 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
                              uint16_t intAddress,
                              I2cDirection  direction,
                              uint32_t length,
-                             uint8_t  *buffer)
+                             const uint8_t  *buffer)
 {
   ASSERT_DMA_SAFE(buffer);
 
@@ -410,7 +410,7 @@ void i2cdrvCreateMessageIntAddr(I2cMessage *message,
   message->internalAddress = intAddress;
   message->messageLength = length;
   message->status = i2cAck;
-  message->buffer = buffer;
+  message->buffer = (uint8_t *)buffer;
   message->nbrOfRetries = I2C_MAX_RETRIES;
 }
 

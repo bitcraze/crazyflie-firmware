@@ -81,10 +81,6 @@ typedef struct {
   uint32_t nextSwitchTick;
 } lpsAlgoOptions_t;
 
-bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position);
-uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
-uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
-
 // Callbacks for uwb algorithms
 typedef struct uwbAlgorithm_s {
   void (*init)(dwDevice_t *dev);

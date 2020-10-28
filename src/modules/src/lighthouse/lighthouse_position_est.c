@@ -33,6 +33,7 @@
 #include "log.h"
 #include "param.h"
 #include "statsCnt.h"
+#include "mem.h"
 
 #include "lighthouse_position_est.h"
 
@@ -64,13 +65,66 @@ static mat3d baseStationInvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS
 static mat3d lh1Rotor2RotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 static mat3d lh1Rotor2InvertedRotationMatrixes[PULSE_PROCESSOR_N_BASE_STATIONS];
 
+static void lighthousePositionGeometryDataUpdated();
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
-void lightHousePositionGeometryDataUpdated() {
+
+// Gometry memory handling for the memory module
+static uint32_t handleMemGetSize(void) { return sizeof(lighthouseBaseStationsGeometry); }
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static const MemoryHandlerDef_t memDef = {
+  .type = MEM_TYPE_LH,
+  .getSize = handleMemGetSize,
+  .read = handleMemRead,
+  .write = handleMemWrite,
+};
+
+void lighthousePositionEstInit() {
+  lighthousePositionGeometryDataUpdated();
+  memoryRegisterHandler(&memDef);
+}
+
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  bool result = false;
+
+  if (memAddr + readLen <= sizeof(lighthouseBaseStationsGeometry)) {
+    uint8_t* start = (uint8_t*)lighthouseBaseStationsGeometry;
+    memcpy(buffer, start + memAddr, readLen);
+    result = true;
+  }
+
+  return result;
+}
+
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+  bool result = false;
+
+  if ((memAddr + writeLen) <= sizeof(lighthouseBaseStationsGeometry)) {
+    uint8_t* start = (uint8_t*)lighthouseBaseStationsGeometry;
+    memcpy(start + memAddr, buffer, writeLen);
+
+    lighthousePositionGeometryDataUpdated();
+
+    result = true;
+  }
+
+  return result;
+}
+
+static void lighthousePositionGeometryDataUpdated() {
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
     lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[i], &lighthouseBaseStationAngles[i]);
     preProcessGeometryData(lighthouseBaseStationsGeometry[i].mat, baseStationInvertedRotationMatrixes[i], lh1Rotor2RotationMatrixes[i], lh1Rotor2InvertedRotationMatrixes[i]);
   }
+}
+
+void lighthousePositionSetGeometryData(const baseStationGeometry_t* geometries) {
+  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    lighthouseBaseStationsGeometry[i] = geometries[i];
+  }
+
+  lighthousePositionGeometryDataUpdated();
 }
 
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted) {

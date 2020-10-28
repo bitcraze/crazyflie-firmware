@@ -59,6 +59,7 @@
 #include "param.h"
 #include "crc_bosch.h"
 #include "static_mem.h"
+#include "mem.h"
 
 // Hardware defines
 #ifdef USDDECK_USE_ALT_PINS_AND_SPI
@@ -146,6 +147,17 @@ static uint32_t lastFileSize = 0;
 
 static xTimerHandle timer;
 static void usdTimer(xTimerHandle timer);
+
+
+// Handling from the memory module
+static uint32_t handleMemGetSize(void) { return usddeckFileSize(); }
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static const MemoryHandlerDef_t memDef = {
+  .type = MEM_TYPE_USD,
+  .getSize = handleMemGetSize,
+  .read = handleMemRead,
+  .write = 0, // Write not supported
+};
 
 
 // Low lever driver functions
@@ -305,6 +317,8 @@ static bool initSuccess = false;
 static void usdInit(DeckInfo *info)
 {
   if (!isInit) {
+    memoryRegisterHandler(&memDef);
+
     logFileMutex = xSemaphoreCreateMutex();
     /* create driver structure */
     FATFS_AddDriver(&fatDrv, 0);
@@ -598,6 +612,18 @@ bool usddeckRead(uint32_t offset, uint8_t* buffer, uint16_t length)
   return result;
 }
 
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  bool result = false;
+
+  if (memAddr + readLen <= usddeckFileSize()) {
+    if (usddeckRead(memAddr, buffer, readLen)) {
+      result = true;
+    }
+  }
+
+  return result;
+}
+
 static void usdWriteTask(void* usdLogQueue)
 {
   /* necessary variables for f_write */
@@ -814,4 +840,3 @@ STATS_CNT_RATE_LOG_ADD(spiWrBps, &spiWriteRate)
 STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
 STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
 LOG_GROUP_STOP(usd)
-

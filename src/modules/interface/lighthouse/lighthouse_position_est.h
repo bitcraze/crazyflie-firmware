@@ -31,13 +31,14 @@
 #include "lighthouse_geometry.h"
 
 
-extern baseStationGeometry_t lighthouseBaseStationsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
+void lighthousePositionEstInit();
 
 /**
- * @brief Call when the lighthouseBaseStationsGeometry data has been updated
- * to recalculate cached data
+ * @brief Set new base station geometry data
+ *
+ * @param geometries Pointer to an array of geomtry data with PULSE_PROCESSOR_N_BASE_STATIONS entries.
  */
-void lightHousePositionGeometryDataUpdated();
+void lighthousePositionSetGeometryData(const baseStationGeometry_t* geometries);
 
 void lighthousePositionEstimatePoseCrossingBeams(pulseProcessorResult_t* angles, int baseStation);
 void lighthousePositionEstimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation, const lighthouseCalibration_t* bsCalib);

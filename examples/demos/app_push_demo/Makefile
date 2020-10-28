@@ -5,5 +5,5 @@ APP_STACKSIZE=300
 VPATH += src/
 PROJ_OBJ += push.o
 
-CRAZYFLIE_BASE=../..
+CRAZYFLIE_BASE=../../..
 include $(CRAZYFLIE_BASE)/Makefile

@@ -46,6 +46,7 @@ RTOS_DEBUG        ?= 0
 
 LIB = $(CRAZYFLIE_BASE)/src/lib
 FREERTOS = $(CRAZYFLIE_BASE)/vendor/FreeRTOS
+CFLAGS += -DBLOBS_LOC='"$(CRAZYFLIE_BASE)/blobs/"'
 
 # Communication Link
 UART2_LINK        ?= 0
@@ -151,7 +152,7 @@ PROJ_OBJ += usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
-PROJ_OBJ += pm_$(CPU).o syslink.o radiolink.o ow_syslink.o proximity.o usec_time.o
+PROJ_OBJ += pm_$(CPU).o syslink.o radiolink.o ow_syslink.o ow_common.o proximity.o usec_time.o
 PROJ_OBJ += sensors.o
 
 # libdw
@@ -177,6 +178,7 @@ PROJ_OBJ += estimator.o estimator_complementary.o
 PROJ_OBJ += controller.o controller_pid.o controller_mellinger.o controller_indi.o
 PROJ_OBJ += power_distribution_$(POWER_DISTRIBUTION).o
 PROJ_OBJ += estimator_kalman.o kalman_core.o kalman_supervisor.o
+PROJ_OBJ += collision_avoidance.o
 
 # High-Level Commander
 PROJ_OBJ += crtp_commander_high_level.o planner.o pptraj.o pptraj_compressed.o

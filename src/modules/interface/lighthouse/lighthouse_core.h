@@ -42,4 +42,12 @@ typedef struct {
   int hitCount;
 } lighthouseBsIdentificationData_t;
 
+void lighthouseCoreInit();
 void lighthouseCoreTask(void *param);
+
+/**
+ * @brief Set calibration data for the base stations of the system
+ *
+ * @param calibs An array with calibration data for PULSE_PROCESSOR_N_BASE_STATIONS base stations.
+ */
+void lighthouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs);
