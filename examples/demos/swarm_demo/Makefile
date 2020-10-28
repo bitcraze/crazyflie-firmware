@@ -4,7 +4,7 @@ APP=1
 APP_STACKSIZE=300
 
 ## Weight of the Crazyflie + Qi + Lighthouse deck
-CFLAGS += -DCF_MASS=36.0f
+CFLAGS += -DCF_MASS=0.036f
 
 ## To build with lighthouse support
 CFLAGS += -DDISABLE_LIGHTHOUSE_DRIVER=0
