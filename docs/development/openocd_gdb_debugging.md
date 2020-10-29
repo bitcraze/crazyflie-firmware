@@ -157,7 +157,7 @@ For the ARM GCC toolchain:
 ##### Ubuntu
 
     sudo apt-get install openocd
-    sudo apt-get install arm-none-eabi-gcc
+    sudo apt-get install gcc-arm-none-eabi
 
 ##### Mac OS
 
