@@ -597,7 +597,6 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
 
   const float r2 = x * x + y * y;
   const float r = arm_sqrt(r2);
-  const float z_tan_t = z * tan_t;
 
   float predictedSweepAngle = 0.0f;
   if (sweepInfo->baseStationType == lighthouseBsTypeV1) {
@@ -610,24 +609,29 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
 
   if (outlierFilterValidateLighthouseSweep(&sweepOutlierFilterState, r, error, tick)) {
     // Calculate H vector (in the rotor reference frame)
-    const float q = tan_t / arm_sqrt(limPos(r2 - z_tan_t * z_tan_t));
-    vec3d gr = {(-y - x * z * q) / r2, (x - y * z * q) / r2 , q};
+    const float z_tan_t = z * tan_t;
+    const float qNum = r2 - z_tan_t * z_tan_t;
+    // Avoid singularity
+    if (qNum > 0.0001f) {
+      const float q = tan_t / arm_sqrt(qNum);
+      vec3d gr = {(-y - x * z * q) / r2, (x - y * z * q) / r2 , q};
 
-    // gr is in the rotor reference frame, rotate back to the global
-    // reference frame using the rotor rotation matrix
-    vec3d g;
-    arm_matrix_instance_f32 gr_ = {3, 1, gr};
-    arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot)};
-    arm_matrix_instance_f32 g_ = {3, 1, g};
-    mat_mult(&Rr_, &gr_, &g_);
+      // gr is in the rotor reference frame, rotate back to the global
+      // reference frame using the rotor rotation matrix
+      vec3d g;
+      arm_matrix_instance_f32 gr_ = {3, 1, gr};
+      arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot)};
+      arm_matrix_instance_f32 g_ = {3, 1, g};
+      mat_mult(&Rr_, &gr_, &g_);
 
-    float h[KC_STATE_DIM] = {0};
-    h[KC_STATE_X] = g[0];
-    h[KC_STATE_Y] = g[1];
-    h[KC_STATE_Z] = g[2];
+      float h[KC_STATE_DIM] = {0};
+      h[KC_STATE_X] = g[0];
+      h[KC_STATE_Y] = g[1];
+      h[KC_STATE_Z] = g[2];
 
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-    scalarUpdate(this, &H, error, sweepInfo->stdDev);
+      arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+      scalarUpdate(this, &H, error, sweepInfo->stdDev);
+    }
   }
 }
 
