@@ -255,8 +255,8 @@ typedef struct {
   float t;                   // t is the tilt angle of the light plane on the rotor
   float measuredSweepAngle;
   float stdDev;
-  int baseStationType;       // Cast to lighthouseBaseStationType_t enum.
   const lighthouseCalibrationSweep_t* calib;
+  lighthouseCalibrationMeasurementModel_t calibrationMeasurementModel;
 } sweepAngleMeasurement_t;
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.

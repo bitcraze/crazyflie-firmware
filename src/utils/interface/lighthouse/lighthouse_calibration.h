@@ -53,14 +53,28 @@ void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const fl
 void lighthouseCalibrationApplyNothing(const float rawAngles[2], float correctedAngles[2]);
 
 /**
+ * @brief Generic function pointer type for a calibration measurement model.
+ *        Predict the measured sweep angle based on a position for a lighthouse rotor. The position is relative to the rotor reference frame.
+ * @param x meters
+ * @param y meters
+ * @param z meters
+ * @param t Tilt of the light plane in radians
+ * @param calib Calibration data for the rotor
+ * @return float The predicted uncompensated sweep angle of the rotor
+ *
+ */
+typedef float (*lighthouseCalibrationMeasurementModel_t)(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);
+
+/**
  * @brief Predict the measured sweep angle based on a position for a lighthouse 1 rotor. The position is relative to the rotor reference frame.
  * @param x meters
  * @param y meters
  * @param z meters
+ * @param t Tilt of the light plane in radians - not used in LH1, will always use 0
  * @param calib Calibration data for the rotor
  * @return float The predicted uncompensated sweep angle of the rotor
  */
-float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationSweep_t* calib);
+float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);
 
 /**
  * @brief Predict the measured sweep angle based on a position for a lighthouse 2 rotor. The position is relative to the rotor reference frame.

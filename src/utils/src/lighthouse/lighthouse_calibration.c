@@ -64,9 +64,10 @@ static void idealToDistortedV1(const lighthouseCalibration_t* calib, const float
   const float x = 1.0f;
   const float y = tanf(ax);
   const float z = tanf(ay);
+  const float tIgnore = 0.0f;
 
-  distorted[0] = lighthouseCalibrationMeasurementModelLh1(x, y, z, &calib->sweep[0]);
-  distorted[1] = lighthouseCalibrationMeasurementModelLh1(x, z, -y, &calib->sweep[1]);
+  distorted[0] = lighthouseCalibrationMeasurementModelLh1(x, y, z, tIgnore, &calib->sweep[0]);
+  distorted[1] = lighthouseCalibrationMeasurementModelLh1(x, z, -y, tIgnore, &calib->sweep[1]);
 }
 
 static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
@@ -123,7 +124,7 @@ void lighthouseCalibrationApplyNothing(const float rawAngles[2], float corrected
   correctedAngles[1] = rawAngles[1];
 }
 
-float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationSweep_t* calib) {
+float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib) {
   const float ax = atan2f(y, x);
   const float ay = atan2f(z, x);
   const float r = arm_sqrt(x * x + y * y);
