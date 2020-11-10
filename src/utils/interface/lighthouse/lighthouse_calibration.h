@@ -11,11 +11,11 @@ typedef struct {
   // Lh2 extra params
   float ogeemag;
   float ogeephase;
-} lighthouseCalibrationAxis_t;
+} lighthouseCalibrationSweep_t;
 
 typedef struct {
   bool valid;
-  lighthouseCalibrationAxis_t axis[2];
+  lighthouseCalibrationSweep_t sweep[2];
 } lighthouseCalibration_t;
 
 /**
@@ -60,7 +60,7 @@ void lighthouseCalibrationApplyNothing(const float rawAngles[2], float corrected
  * @param calib Calibration data for the rotor
  * @return float The predicted uncompensated sweep angle of the rotor
  */
-float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationAxis_t* calib);
+float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationSweep_t* calib);
 
 /**
  * @brief Predict the measured sweep angle based on a position for a lighthouse 2 rotor. The position is relative to the rotor reference frame.
@@ -71,4 +71,4 @@ float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, con
  * @param calib Calibration data for the rotor
  * @return float The predicted uncompensated sweep angle of the rotor
  */
-float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationAxis_t* calib);
+float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);

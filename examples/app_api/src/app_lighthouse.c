@@ -37,14 +37,14 @@ baseStationGeometry_t sampleGeoData[PULSE_PROCESSOR_N_BASE_STATIONS]  = {
 lighthouseCalibration_t sampleCalibrationData[PULSE_PROCESSOR_N_BASE_STATIONS] = {
   { // Base station 0
     .valid = true,
-    .axis = {
+    .sweep = {
       {.tilt = -0.047058, .phase = 0.0, .curve = 0.052215, .gibphase = 2.087890, .gibmag = -0.003913, .ogeephase = 0.433105, .ogeemag = -0.049285},
       {.tilt = 0.048065, .phase = -0.005336, .curve = 0.122375, .gibphase = 2.097656, .gibmag = -0.003883, .ogeephase = 0.631835, .ogeemag = -0.034851},
     },
   },
   { // Base station 1
     .valid = true,
-    .axis = {
+    .sweep = {
       {.tilt = -0.051208, .phase = 0.0, .curve = 0.011756, .gibphase = 2.136718, .gibmag = -0.006057, .ogeephase = 2.705078,},
       {.tilt = 0.045623, .phase = -0.004142, .curve = 0.104736, .gibphase = 2.349609, .gibmag = -0.003332, .ogeephase = 0.380859, .ogeemag = -0.240112,},
     },

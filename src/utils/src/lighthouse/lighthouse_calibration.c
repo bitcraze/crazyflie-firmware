@@ -38,21 +38,21 @@
 
 void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct ootxDataFrame_s *frame)
 {
-  calib->axis[0].phase = frame->phase0;
-  calib->axis[0].tilt = frame->tilt0;
-  calib->axis[0].curve = frame->curve0;
-  calib->axis[0].gibmag = frame->gibmag0;
-  calib->axis[0].gibphase = frame->gibphase0;
-  calib->axis[0].ogeemag = frame->ogeemag0;
-  calib->axis[0].ogeephase = frame->ogeephase0;
+  calib->sweep[0].phase = frame->phase0;
+  calib->sweep[0].tilt = frame->tilt0;
+  calib->sweep[0].curve = frame->curve0;
+  calib->sweep[0].gibmag = frame->gibmag0;
+  calib->sweep[0].gibphase = frame->gibphase0;
+  calib->sweep[0].ogeemag = frame->ogeemag0;
+  calib->sweep[0].ogeephase = frame->ogeephase0;
 
-  calib->axis[1].phase = frame->phase1;
-  calib->axis[1].tilt = frame->tilt1;
-  calib->axis[1].curve = frame->curve1;
-  calib->axis[1].gibmag = frame->gibmag1;
-  calib->axis[1].gibphase = frame->gibphase1;
-  calib->axis[1].ogeemag = frame->ogeemag1;
-  calib->axis[1].ogeephase = frame->ogeephase1;
+  calib->sweep[1].phase = frame->phase1;
+  calib->sweep[1].tilt = frame->tilt1;
+  calib->sweep[1].curve = frame->curve1;
+  calib->sweep[1].gibmag = frame->gibmag1;
+  calib->sweep[1].gibphase = frame->gibphase1;
+  calib->sweep[1].ogeemag = frame->ogeemag1;
+  calib->sweep[1].ogeephase = frame->ogeephase1;
 
   calib->valid = true;
 }
@@ -65,8 +65,8 @@ static void idealToDistortedV1(const lighthouseCalibration_t* calib, const float
   const float y = tanf(ax);
   const float z = tanf(ay);
 
-  distorted[0] = lighthouseCalibrationMeasurementModelLh1(x, y, z, &calib->axis[0]);
-  distorted[1] = lighthouseCalibrationMeasurementModelLh1(x, z, -y, &calib->axis[1]);
+  distorted[0] = lighthouseCalibrationMeasurementModelLh1(x, y, z, &calib->sweep[0]);
+  distorted[1] = lighthouseCalibrationMeasurementModelLh1(x, z, -y, &calib->sweep[1]);
 }
 
 static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float* ideal, float* distorted) {
@@ -80,8 +80,8 @@ static void idealToDistortedV2(const lighthouseCalibration_t* calib, const float
   const float y = tanf((a2 + a1) / 2.0f);
   const float z = sinf(a2 - a1) / (tan30 * (cosf(a2) + cosf(a1)));
 
-  distorted[0] = lighthouseCalibrationMeasurementModelLh2(x, y, z, -t30, &calib->axis[0]);
-  distorted[1] = lighthouseCalibrationMeasurementModelLh2(x, y, z, t30, &calib->axis[1]);
+  distorted[0] = lighthouseCalibrationMeasurementModelLh2(x, y, z, -t30, &calib->sweep[0]);
+  distorted[1] = lighthouseCalibrationMeasurementModelLh2(x, y, z, t30, &calib->sweep[1]);
 }
 
 typedef void (* idealToDistortedFcn_t)(const lighthouseCalibration_t* calib, const float* ideal, float* distorted);
@@ -123,7 +123,7 @@ void lighthouseCalibrationApplyNothing(const float rawAngles[2], float corrected
   correctedAngles[1] = rawAngles[1];
 }
 
-float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationAxis_t* calib) {
+float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, const float z, const lighthouseCalibrationSweep_t* calib) {
   const float ax = atan2f(y, x);
   const float ay = atan2f(z, x);
   const float r = arm_sqrt(x * x + y * y);
@@ -135,7 +135,7 @@ float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, con
   return ax - (compTilt + calib->phase + compGib + compCurve);
 }
 
-float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationAxis_t* calib) {
+float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib) {
   const float ax = atan2f(y, x);
   // const float ay = atan2f(z, x);
   const float r = arm_sqrt(x * x + y * y);

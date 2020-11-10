@@ -256,7 +256,7 @@ typedef struct {
   float measuredSweepAngle;
   float stdDev;
   int baseStationType;       // Cast to lighthouseBaseStationType_t enum.
-  const lighthouseCalibrationAxis_t* calib;
+  const lighthouseCalibrationSweep_t* calib;
 } sweepAngleMeasurement_t;
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.

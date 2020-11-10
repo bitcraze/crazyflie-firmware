@@ -107,9 +107,9 @@ typedef struct {
 } pulseProcessorPulse_t;
 
 typedef enum {
-  sweepDirection_x = 0,
-  sweepDirection_y = 1
-} SweepDirection;
+  sweepIdFirst = 0,  // The X sweep in LH 1
+  sweepIdSecond = 1  // The Y sweep in LH 1
+} SweepId_t;
 
 typedef enum {
   sweepStorageStateWaiting = 0,
@@ -150,7 +150,7 @@ typedef struct {
 
   // Base station and axis of the current frame
   int currentBaseStation;
-  SweepDirection currentAxis;
+  SweepId_t currentAxis;
 
   // Sweep timestamps
   struct {

@@ -217,7 +217,7 @@ static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseSt
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.rotorRot = &lighthouseBaseStationsGeometry[baseStation].mat;
         sweepInfo.rotorRotInv = &baseStationInvertedRotationMatrixes[baseStation];
-        sweepInfo.calib = &bsCalib->axis[0];
+        sweepInfo.calib = &bsCalib->sweep[0];
 
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
@@ -227,7 +227,7 @@ static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseSt
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.rotorRot = &lh1Rotor2RotationMatrixes[baseStation];
         sweepInfo.rotorRotInv = &lh1Rotor2InvertedRotationMatrixes[baseStation];
-        sweepInfo.calib = &bsCalib->axis[1];
+        sweepInfo.calib = &bsCalib->sweep[1];
 
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
@@ -252,7 +252,7 @@ static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseSt
       sweepInfo.measuredSweepAngle = bsMeasurement->angles[0];
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.t = -t30;
-        sweepInfo.calib = &bsCalib->axis[0];
+        sweepInfo.calib = &bsCalib->sweep[0];
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }
@@ -260,7 +260,7 @@ static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseSt
       sweepInfo.measuredSweepAngle = bsMeasurement->angles[1];
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.t = t30;
-        sweepInfo.calib = &bsCalib->axis[1];
+        sweepInfo.calib = &bsCalib->sweep[1];
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }
