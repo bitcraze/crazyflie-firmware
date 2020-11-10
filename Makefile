@@ -128,7 +128,7 @@ endif
 
 # Crazyflie sources
 VPATH += $(CRAZYFLIE_BASE)/src/init $(CRAZYFLIE_BASE)/src/hal/src $(CRAZYFLIE_BASE)/src/modules/src $(CRAZYFLIE_BASE)/src/modules/src/lighthouse $(CRAZYFLIE_BASE)/src/utils/src $(CRAZYFLIE_BASE)/src/drivers/bosch/src $(CRAZYFLIE_BASE)/src/drivers/src $(CRAZYFLIE_BASE)/src/platform
-
+VPATH += $(CRAZYFLIE_BASE)/src/utils/src/kve
 
 ############### Source files configuration ################
 
@@ -154,6 +154,7 @@ PROJ_OBJ += usb_bsp.o usblink.o usbd_desc.o usb.o
 PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ += pm_$(CPU).o syslink.o radiolink.o ow_syslink.o ow_common.o proximity.o usec_time.o
 PROJ_OBJ += sensors.o
+PROJ_OBJ += storage.o
 
 # libdw
 PROJ_OBJ += libdw1000.o libdw1000Spi.o
@@ -258,6 +259,7 @@ PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ += configblockeeprom.o crc_bosch.o
 PROJ_OBJ += sleepus.o statsCnt.o rateSupervisor.o
 PROJ_OBJ += lighthouse_core.o pulse_processor.o pulse_processor_v1.o pulse_processor_v2.o lighthouse_geometry.o ootx_decoder.o lighthouse_calibration.o lighthouse_deck_flasher.o lighthouse_position_est.o
+PROJ_OBJ += kve_storage.o kve.o
 
 ifeq ($(DEBUG_PRINT_ON_SEGGER_RTT), 1)
 VPATH += $(LIB)/Segger_RTT/RTT
