@@ -568,7 +568,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   // using the CF roatation matrix
   vec3d s;
   arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
-  arm_matrix_instance_f32 scf_ = {3, 1, *sweepInfo->sensorPos};
+  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
   arm_matrix_instance_f32 s_ = {3, 1, s};
   mat_mult(&Rcf_, &scf_, &s_);
 

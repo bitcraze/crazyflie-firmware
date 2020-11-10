@@ -34,6 +34,7 @@
 
 #include "ootx_decoder.h"
 #include "lighthouse_calibration.h"
+#include "lighthouse_geometry.h"
 
 #define PULSE_PROCESSOR_N_SWEEPS 2
 #define PULSE_PROCESSOR_N_BASE_STATIONS 2
@@ -220,6 +221,8 @@ typedef struct pulseProcessor_s {
 
   ootxDecoderState_t ootxDecoder[PULSE_PROCESSOR_N_BASE_STATIONS];
   lighthouseCalibration_t bsCalibration[PULSE_PROCESSOR_N_BASE_STATIONS];
+  baseStationGeometry_t bsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
+  baseStationGeometryCache_t bsGeoCache[PULSE_PROCESSOR_N_BASE_STATIONS];
 
   // Health check data
   uint32_t healthFirstSensorTs;
