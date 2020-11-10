@@ -43,13 +43,17 @@
 #define ASSERT_FAILED() assertFail( "", __FILE__, __LINE__ )
 
 /**
- * @brief Assert that verifies that a pointer is pointing at RAM memory that can be
+ * @brief Assert that verifies that a pointer is pointing at memory that can be
  * used for DMA transfers. There are two types of RAM in the Crazyflie and CCM
- * does not work for DMA.
+ * does not work for DMA. Flash and RAM can be accessed by the DMA.
  *
  * @param[in] PTR : the pointer to verify
  */
-#define ASSERT_DMA_SAFE(PTR) if ((uint32_t)(PTR) < (SRAM1_BASE)) assertFail( "", __FILE__, __LINE__ )
+#ifdef STM32F4XX
+#define ASSERT_DMA_SAFE(PTR) if (((uint32_t)(PTR) >= 0x10000000) && ((uint32_t)(PTR) <=  0x1000FFFF)) assertFail( "", __FILE__, __LINE__ )
+#else
+#define ASSERT_DMA_SAFE(PTR)
+#endif
 
 
 /**
