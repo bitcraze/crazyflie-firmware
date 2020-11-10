@@ -152,18 +152,53 @@ bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len)
 
 bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
 {
-  bool status = true;
-  uint16_t index;
+  bool status;
+
+  unsigned char pageBuffer[32];
+  int pageIndex = 0;
+  int bufferIndex = 0;
+  int leftToWrite = len;
+  uint16_t currentAddress = writeAddr;
+  uint16_t pageAddress = writeAddr;
 
   if ((uint32_t)writeAddr + len > EEPROM_SIZE)
   {
      return false;
   }
 
-  for (index = 0; index < len && status; index++)
-  {
-    status = i2cdevWrite16(I2Cx, devAddr, writeAddr + index, 1, &buffer[index]);
-    vTaskDelay(M2T(6));
+  while (leftToWrite > 0) {
+    do {
+      pageBuffer[pageIndex++] = buffer[bufferIndex++];
+      leftToWrite -= 1;
+      currentAddress += 1;
+    } while ((leftToWrite > 0) || (currentAddress % 32 == 0));
+
+    // Writing page
+    for (int retry = 0; retry < 10; retry++) {
+      status = i2cdevWrite16(I2Cx, devAddr, pageAddress, pageIndex, pageBuffer);
+      if (status) {
+        break;
+      }
+      vTaskDelay(M2T(6));
+    }
+    if (!status) {
+      return false;
+    }
+
+    // Waiting for page to be written
+    for (int retry = 0; retry < 30; retry++) {
+      uint8_t dummy;
+      status = i2cdevWrite(I2Cx, devAddr, 1, &dummy);
+
+      if (status) {
+        break;
+      }
+
+      vTaskDelay(M2T(1));
+    }
+    if (!status) {
+      return false;
+    }
   }
 
   return status;

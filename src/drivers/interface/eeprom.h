@@ -68,7 +68,7 @@ bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len);
 
 /**
  * Write data to the eeprom from a supplied buffer.
- * Currently very slow as id does single byte write.
+ * 
  * @param buffer  The buffer to read the data from
  * @param writeAddr  The start address to write to
  * @param len  Number of bytes to write
