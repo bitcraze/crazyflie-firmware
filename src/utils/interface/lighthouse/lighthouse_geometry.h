@@ -9,12 +9,6 @@ typedef struct baseStationGeometry_s {
   mat3d mat;
 } __attribute__((packed)) baseStationGeometry_t;
 
-typedef struct baseStationEulerAngles_s {
-  float roll;
-  float pitch;
-  float yaw;
-} baseStationEulerAngles_t;
-
 /**
  * @brief Find closest point between rays from two bases stations.
  *
@@ -81,11 +75,3 @@ void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_ins
  * @return true if the angle could be calculated
 */
 bool lighthouseGeometryYawDelta(const vec3d ipv, const vec3d spv, const vec3d n, float* yawDelta);
-
-/**
- * @brief Get the roll, pitch, yaw angles of the basestation rotation matrix
- * Note: the origin of the Crazyflie is set in the center of the deck
- *
- * @param baseStation - Geometry data for the base station (position and orientation)
- */
-void lighthouseGeometryCalculateAnglesFromRotationMatrix(baseStationGeometry_t* baseStationGeometry, baseStationEulerAngles_t* baseStationEulerAngles);

@@ -55,8 +55,6 @@ static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsEstRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&estBs0Rate, &estBs1Rate};
 
-baseStationEulerAngles_t lighthouseBaseStationAngles[PULSE_PROCESSOR_N_BASE_STATIONS];
-
 // The light planes in LH2 are tilted +- 30 degrees
 static const float t30 = M_PI / 6;
 
@@ -114,7 +112,6 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
 
 static void lighthousePositionGeometryDataUpdated() {
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
-    lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[i], &lighthouseBaseStationAngles[i]);
     preProcessGeometryData(lighthouseBaseStationsGeometry[i].mat, baseStationInvertedRotationMatrixes[i], lh1Rotor2RotationMatrixes[i], lh1Rotor2InvertedRotationMatrixes[i]);
   }
 }
