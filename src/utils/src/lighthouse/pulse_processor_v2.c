@@ -306,7 +306,7 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
                 calculateAngles(block, previousBlock, angles);
 
                 *baseStation = channel;
-                *axis = sweepDirection_y;
+                *axis = sweepIdSecond;
                 angles->measurementType = lighthouseBsTypeV2;
 
                 anglesMeasured = true;

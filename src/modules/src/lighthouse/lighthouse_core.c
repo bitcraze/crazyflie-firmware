@@ -190,8 +190,8 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
   }
 }
 
-static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
-  if (axis == sweepDirection_y) {
+static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int sweepId) {
+  if (sweepId == sweepIdSecond) {
     pulseProcessorApplyCalibration(appState, angles, basestation);
     if (lighthouseBsTypeV2 == angles->measurementType) {
       // Emulate V1 base stations for now, convert to V1 angles
@@ -262,13 +262,13 @@ static pulseProcessorProcessPulse_t identifySystem(const lighthouseUartFrame_t* 
 
 static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
     int basestation;
-    int axis;
+    int sweepId;
 
     pulseWidth[frame->data.sensor] = frame->data.width;
 
-    if (pulseProcessorProcessPulse(&ppState, &frame->data, angles, &basestation, &axis)) {
+    if (pulseProcessorProcessPulse(&ppState, &frame->data, angles, &basestation, &sweepId)) {
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
-        usePulseResult(appState, angles, basestation, axis);
+        usePulseResult(appState, angles, basestation, sweepId);
     }
 }
 

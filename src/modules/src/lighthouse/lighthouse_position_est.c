@@ -206,7 +206,7 @@ static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseSt
   sweepInfo.stdDev = sweepStd;
   sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
   sweepInfo.t = 0;
-  sweepInfo.baseStationType = lighthouseBsTypeV1;
+  sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh1;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation];
@@ -217,7 +217,7 @@ static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseSt
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.rotorRot = &lighthouseBaseStationsGeometry[baseStation].mat;
         sweepInfo.rotorRotInv = &baseStationInvertedRotationMatrixes[baseStation];
-        sweepInfo.calib = &bsCalib->axis[0];
+        sweepInfo.calib = &bsCalib->sweep[0];
 
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
@@ -227,7 +227,7 @@ static void estimatePositionSweepsLh1(pulseProcessorResult_t* angles, int baseSt
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.rotorRot = &lh1Rotor2RotationMatrixes[baseStation];
         sweepInfo.rotorRotInv = &lh1Rotor2InvertedRotationMatrixes[baseStation];
-        sweepInfo.calib = &bsCalib->axis[1];
+        sweepInfo.calib = &bsCalib->sweep[1];
 
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
@@ -242,7 +242,7 @@ static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseSt
   sweepInfo.rotorPos = &lighthouseBaseStationsGeometry[baseStation].origin;
   sweepInfo.rotorRot = &lighthouseBaseStationsGeometry[baseStation].mat;
   sweepInfo.rotorRotInv = &baseStationInvertedRotationMatrixes[baseStation];
-  sweepInfo.baseStationType = lighthouseBsTypeV2;
+  sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation];
@@ -252,7 +252,7 @@ static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseSt
       sweepInfo.measuredSweepAngle = bsMeasurement->angles[0];
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.t = -t30;
-        sweepInfo.calib = &bsCalib->axis[0];
+        sweepInfo.calib = &bsCalib->sweep[0];
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }
@@ -260,7 +260,7 @@ static void estimatePositionSweepsLh2(pulseProcessorResult_t* angles, int baseSt
       sweepInfo.measuredSweepAngle = bsMeasurement->angles[1];
       if (sweepInfo.measuredSweepAngle != 0) {
         sweepInfo.t = t30;
-        sweepInfo.calib = &bsCalib->axis[1];
+        sweepInfo.calib = &bsCalib->sweep[1];
         estimatorEnqueueSweepAngles(&sweepInfo);
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
       }

@@ -68,7 +68,6 @@
 #include "static_mem.h"
 
 #include "lighthouse_calibration.h"
-#include "pulse_processor.h"
 
 // #define DEBUG_STATE_CHECK
 
@@ -598,12 +597,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float r2 = x * x + y * y;
   const float r = arm_sqrt(r2);
 
-  float predictedSweepAngle = 0.0f;
-  if (sweepInfo->baseStationType == lighthouseBsTypeV1) {
-    predictedSweepAngle = lighthouseCalibrationMeasurementModelLh1(x, y, z, sweepInfo->calib);
-  } else {
-    predictedSweepAngle = lighthouseCalibrationMeasurementModelLh2(x, y, z, t, sweepInfo->calib);
-  }
+  const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t, sweepInfo->calib);
   const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
   const float error = measuredSweepAngle - predictedSweepAngle;
 

@@ -75,7 +75,7 @@ for line in lines:
 
         data[sweep][param] = value
 
-print('    .axis = {')
+print('    .sweep = {')
 for sweep, params in data.items():
     print('      {', end='')
     for param, value in params.items():
