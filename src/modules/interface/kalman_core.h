@@ -87,7 +87,7 @@ typedef struct {
   float R[3][3];
 
   // The covariance matrix
-  float P[KC_STATE_DIM][KC_STATE_DIM];
+  __attribute__((aligned(4))) float P[KC_STATE_DIM][KC_STATE_DIM];
   arm_matrix_instance_f32 Pm;
 
   // Indicates that the internal state is corrupt and should be reset

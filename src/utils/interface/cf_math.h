@@ -21,8 +21,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * Utilities to simplify unit testing
- *
  */
 
 #pragma once
@@ -37,7 +35,6 @@
 #include "arm_math.h"
 #pragma GCC diagnostic pop
 
-#include "arm_math.h"
 #include "cfassert.h"
 
 
@@ -47,23 +44,39 @@
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
 #define MAX(a, b) ((b) > (a) ? (b) : (a))
 
+// Matrix data must be aligned on 4 byte bundaries
+static inline void assert_aligned_4_bytes(const arm_matrix_instance_f32* matrix) {
+  const uint32_t address = (uint32_t)matrix->pData;
+  ASSERT((address & 0x3) == 0);
+}
+
 static inline void mat_trans(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst) {
-    ASSERT(ARM_MATH_SUCCESS == arm_mat_trans_f32(pSrc, pDst));
+  assert_aligned_4_bytes(pSrc);
+  assert_aligned_4_bytes(pDst);
+
+  ASSERT(ARM_MATH_SUCCESS == arm_mat_trans_f32(pSrc, pDst));
 }
 
 static inline void mat_inv(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst) {
-    ASSERT(ARM_MATH_SUCCESS == arm_mat_inverse_f32(pSrc, pDst));
+  assert_aligned_4_bytes(pSrc);
+  assert_aligned_4_bytes(pDst);
+
+  ASSERT(ARM_MATH_SUCCESS == arm_mat_inverse_f32(pSrc, pDst));
 }
 
 static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_matrix_instance_f32 * pSrcB, arm_matrix_instance_f32 * pDst) {
-    ASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst));
+  assert_aligned_4_bytes(pSrcA);
+  assert_aligned_4_bytes(pSrcB);
+  assert_aligned_4_bytes(pDst);
+
+  ASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst));
 }
 
 static inline float arm_sqrt(float32_t in) {
-    float pOut = 0;
-    arm_status result = arm_sqrt_f32(in, &pOut);
-    ASSERT(ARM_MATH_SUCCESS == result);
-    return pOut;
+  float pOut = 0;
+  arm_status result = arm_sqrt_f32(in, &pOut);
+  ASSERT(ARM_MATH_SUCCESS == result);
+  return pOut;
 }
 
 static inline float limPos(float in) {
