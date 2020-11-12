@@ -76,11 +76,15 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
   bool result = false;
 
   if (memAddr < calibStartAddr) {
-    if (memAddr + readLen <= sizeof(lighthouseCoreState.bsGeometry)) {
-      uint8_t* start = (uint8_t*)lighthouseCoreState.bsGeometry;
-      memcpy(buffer, start + memAddr, readLen);
+    uint32_t index = memAddr / pageSize;
+    uint32_t inPageAddr = memAddr % pageSize;
+    if (index < PULSE_PROCESSOR_N_BASE_STATIONS) {
+      if (inPageAddr + readLen <= sizeof(baseStationGeometry_t)) {
+        uint8_t* start = (uint8_t*)&lighthouseCoreState.bsGeometry[index];
+        memcpy(buffer, start + inPageAddr, readLen);
 
-      result = true;
+        result = true;
+      }
     }
   } else {
     uint32_t calibOffsetAddr = memAddr - calibStartAddr;
@@ -90,9 +94,9 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
       if (inPageAddr + readLen <= sizeof(lighthouseCalibration_t)) {
         uint8_t* start = (uint8_t*)&lighthouseCoreState.bsCalibration[index];
         memcpy(buffer, start + inPageAddr, readLen);
-    
+
         result = true;
-      } 
+      }
     }
   }
 
@@ -103,14 +107,16 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
   bool result = false;
 
   if (memAddr < calibStartAddr) {
-    if ((memAddr + writeLen) <= sizeof(lighthouseCoreState.bsGeometry)) {
-      uint8_t* start = (uint8_t*)lighthouseCoreState.bsGeometry;
-      memcpy(start + memAddr, buffer, writeLen);
+    uint32_t index = memAddr / pageSize;
+    uint32_t inPageAddr = memAddr % pageSize;
+    if (index < PULSE_PROCESSOR_N_BASE_STATIONS) {
+      if (inPageAddr + writeLen <= sizeof(baseStationGeometry_t)) {
+        uint8_t* start = (uint8_t*)&lighthouseCoreState.bsGeometry[index];
+        memcpy(start + inPageAddr, buffer, writeLen);
 
-      lighthousePositionGeometryDataUpdated();
-
-      result = true;
-      } 
+        result = true;
+      }
+    }
   } else {
     uint32_t calibOffsetAddr = memAddr - calibStartAddr;
     uint32_t index = calibOffsetAddr / pageSize;

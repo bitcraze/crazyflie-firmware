@@ -285,15 +285,26 @@ class WriteMem:
         if count != 1:
             raise Exception('Unexpected nr of memories found:', count)
 
-        mems[0].geometry_data = [bs1, bs2]
-        mems[0].write_data(self._data_written)
+        self.data_written = False
+        mems[0].write_geo_data(0, bs1, self._data_written,
+                               write_failed_cb=self._write_failed)
 
         while not self.data_written:
-            time.sleep(1)
+            time.sleep(0.2)
+
+        self.data_written = False
+        mems[0].write_geo_data(1, bs2, self._data_written,
+                               write_failed_cb=self._write_failed)
+
+        while not self.data_written:
+            time.sleep(0.2)
 
     def _data_written(self, mem, addr):
         self.data_written = True
         print('Data written')
+
+    def _write_failed(self, mem, addr):
+        raise Exception("Write failed")
 
 
 def upload_geo_data(scf, geometries):
