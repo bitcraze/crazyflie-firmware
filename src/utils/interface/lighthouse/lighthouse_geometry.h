@@ -5,14 +5,14 @@
 #include "stabilizer_types.h"
 
 typedef struct {
-  vec3d origin;
-  mat3d mat;
+  __attribute__((aligned(4))) vec3d origin;
+  __attribute__((aligned(4))) mat3d mat;
 } __attribute__((packed)) baseStationGeometry_t;
 
 typedef struct {
-  mat3d baseStationInvertedRotationMatrixes;
-  mat3d lh1Rotor2RotationMatrixes;
-  mat3d lh1Rotor2InvertedRotationMatrixes;
+  __attribute__((aligned(4))) mat3d baseStationInvertedRotationMatrixes;
+  __attribute__((aligned(4))) mat3d lh1Rotor2RotationMatrixes;
+  __attribute__((aligned(4))) mat3d lh1Rotor2InvertedRotationMatrixes;
 } baseStationGeometryCache_t;
 
 /**

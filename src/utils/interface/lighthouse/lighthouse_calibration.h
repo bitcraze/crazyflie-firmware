@@ -11,12 +11,12 @@ typedef struct {
   // Lh2 extra params
   float ogeemag;
   float ogeephase;
-} lighthouseCalibrationSweep_t;
+} __attribute__((packed)) lighthouseCalibrationSweep_t;
 
 typedef struct {
-  bool valid;
   lighthouseCalibrationSweep_t sweep[2];
-} lighthouseCalibration_t;
+  bool valid;
+} __attribute__((packed)) lighthouseCalibration_t;
 
 /**
  * @brief Initialize calibration structure from basestation ootx frame

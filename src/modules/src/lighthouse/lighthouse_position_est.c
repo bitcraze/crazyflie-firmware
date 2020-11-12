@@ -54,9 +54,10 @@ static const float t30 = M_PI / 6;
 static void lighthousePositionGeometryDataUpdated();
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
-
-// Gometry memory handling for the memory module
-static uint32_t handleMemGetSize(void) { return sizeof(lighthouseCoreState.bsGeometry); }
+// Geometry memory handling for the memory module
+static const uint32_t calibStartAddr = 0x1000;
+static const uint32_t pageSize = 0x100;
+static uint32_t handleMemGetSize(void) { return calibStartAddr + sizeof(lighthouseCoreState.bsCalibration); }
 static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
 static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t memDef = {
@@ -74,10 +75,25 @@ void lighthousePositionEstInit() {
 static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
-  if (memAddr + readLen <= sizeof(lighthouseCoreState.bsGeometry)) {
-    uint8_t* start = (uint8_t*)lighthouseCoreState.bsGeometry;
-    memcpy(buffer, start + memAddr, readLen);
-    result = true;
+  if (memAddr < calibStartAddr) {
+    if (memAddr + readLen <= sizeof(lighthouseCoreState.bsGeometry)) {
+      uint8_t* start = (uint8_t*)lighthouseCoreState.bsGeometry;
+      memcpy(buffer, start + memAddr, readLen);
+
+      result = true;
+    }
+  } else {
+    uint32_t calibOffsetAddr = memAddr - calibStartAddr;
+    uint32_t index = calibOffsetAddr / pageSize;
+    uint32_t inPageAddr = calibOffsetAddr % pageSize;
+    if (index < PULSE_PROCESSOR_N_BASE_STATIONS) {
+      if (inPageAddr + readLen <= sizeof(lighthouseCalibration_t)) {
+        uint8_t* start = (uint8_t*)&lighthouseCoreState.bsCalibration[index];
+        memcpy(buffer, start + inPageAddr, readLen);
+    
+        result = true;
+      } 
+    }
   }
 
   return result;
@@ -86,13 +102,27 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
 static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
-  if ((memAddr + writeLen) <= sizeof(lighthouseCoreState.bsGeometry)) {
-    uint8_t* start = (uint8_t*)lighthouseCoreState.bsGeometry;
-    memcpy(start + memAddr, buffer, writeLen);
+  if (memAddr < calibStartAddr) {
+    if ((memAddr + writeLen) <= sizeof(lighthouseCoreState.bsGeometry)) {
+      uint8_t* start = (uint8_t*)lighthouseCoreState.bsGeometry;
+      memcpy(start + memAddr, buffer, writeLen);
 
-    lighthousePositionGeometryDataUpdated();
+      lighthousePositionGeometryDataUpdated();
 
-    result = true;
+      result = true;
+      } 
+  } else {
+    uint32_t calibOffsetAddr = memAddr - calibStartAddr;
+    uint32_t index = calibOffsetAddr / pageSize;
+    uint32_t inPageAddr = calibOffsetAddr % pageSize;
+    if (index < PULSE_PROCESSOR_N_BASE_STATIONS) {
+      if (inPageAddr + writeLen <= sizeof(lighthouseCalibration_t)) {
+        uint8_t* start = (uint8_t*)&lighthouseCoreState.bsCalibration[index];
+        memcpy(start + inPageAddr, buffer, writeLen);
+
+        result = true;
+      }
+    }
   }
 
   return result;
