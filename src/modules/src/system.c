@@ -68,6 +68,7 @@
 #include "app.h"
 #include "static_mem.h"
 #include "peer_localization.h"
+#include "cfassert.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -207,6 +208,7 @@ void systemTask(void *arg)
   pass &= soundTest();
   pass &= memTest();
   pass &= watchdogNormalStartTest();
+  pass &= cfAssertNormalStartTest();
   pass &= peerLocalizationTest();
 
   //Start the firmware

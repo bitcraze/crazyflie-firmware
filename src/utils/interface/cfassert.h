@@ -89,4 +89,13 @@ void storeAssertHardfaultData(
  */
 void storeAssertTextData(const char *text);
 
+/**
+ * @brief Check for assert information to indicate that the system was restarted
+ * after a failed assert.
+ *
+ * @return true   If assert information exists
+ * @return false  If no assert information exists
+ */
+bool cfAssertNormalStartTest(void);
+
 #endif //__CFASSERT_H__

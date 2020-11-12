@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -37,7 +37,7 @@
 
 enum snapshotType_e
 {
-  SnapshotTypeInvalid = 0,
+  SnapshotTypeNone = 0,
   SnapshotTypeFile = 1,
   SnapshotTypeHardFault = 2,
   SnapshotTypeText = 3,
@@ -71,7 +71,7 @@ typedef struct SNAPSHOT_DATA {
 // reset (by the watch dog for instance)
 SNAPSHOT_DATA snapshot __attribute__((section(".nzds"))) = {
   .magicNumber = 0,
-  .type = SnapshotTypeInvalid,
+  .type = SnapshotTypeNone,
 };
 
 
@@ -86,7 +86,7 @@ void assertFail(char *exp, char *file, int line)
   ledSet(ERR_LED2, 1);
   powerStop();
 
-  while (1);
+  NVIC_SystemReset();
 }
 
 void storeAssertFileData(const char *file, int line)
@@ -126,6 +126,10 @@ void storeAssertTextData(const char *text)
   snapshot.text.text = text;
 }
 
+static void clearAssertData() {
+  snapshot.type = SnapshotTypeNone;
+}
+
 void printAssertSnapshotData()
 {
   if (MAGIC_ASSERT_INDICATOR == snapshot.magicNumber) {
@@ -156,5 +160,19 @@ void printAssertSnapshotData()
   }
 }
 
+static bool isAssertRegistered() {
+  return (MAGIC_ASSERT_INDICATOR == snapshot.magicNumber) && (snapshot.type != SnapshotTypeNone);
+}
 
+bool cfAssertNormalStartTest(void) {
+  bool wasNormalStart = true;
 
+	if (isAssertRegistered()) {
+		wasNormalStart = false;
+		DEBUG_PRINT("The system resumed after a failed assert [WARNING]\n");
+		printAssertSnapshotData();
+    clearAssertData();
+	}
+
+	return wasNormalStart;
+}

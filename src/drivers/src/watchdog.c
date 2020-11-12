@@ -27,9 +27,7 @@
 #define DEBUG_MODULE "SYS"
 
 #include "debug.h"
-
 #include "watchdog.h"
-#include "cfassert.h"
 
 
 bool watchdogNormalStartTest(void)
@@ -40,7 +38,6 @@ bool watchdogNormalStartTest(void)
 		RCC_ClearFlag();
 		wasNormalStart = false;
 		DEBUG_PRINT("The system resumed after watchdog timeout [WARNING]\n");
-		printAssertSnapshotData();
 	}
 
 	return wasNormalStart;
