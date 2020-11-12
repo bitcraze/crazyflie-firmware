@@ -42,7 +42,7 @@
 
 static bool isInit = false;
 
-// lighthouseBaseStationsGeometry has been moved to lighthouse_position_est.c
+// lighthouseBaseStationsGeometry has been moved to lighthouse_core.c
 
 static void lighthouseInit(DeckInfo *info)
 {
