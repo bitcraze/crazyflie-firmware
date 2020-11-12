@@ -174,8 +174,8 @@ static bool isCharging() { return logGetInt(logIdPmState) == charging; }
 static bool isLighthouseAvailable() { return logGetFloat(logIdlighthouseEstBs0Rt) >= 0.0f || logGetFloat(logIdlighthouseEstBs1Rt) >= 0.0f; }
 
 const baseStationGeometry_t lighthouseGeoData[PULSE_PROCESSOR_N_BASE_STATIONS]  = {
- {.origin = {-2.057947, 0.398319, 3.109704, }, .mat = {{0.807210, 0.002766, 0.590258, }, {0.067095, 0.993078, -0.096409, }, {-0.586439, 0.117426, 0.801437, }, }},
- {.origin = {0.866244, -2.566829, 3.132632, }, .mat = {{-0.043296, -0.997675, -0.052627, }, {0.766284, -0.066962, 0.639003, }, {-0.641042, -0.012661, 0.767401, }, }},
+ {.valid = true, .origin = {-2.057947, 0.398319, 3.109704, }, .mat = {{0.807210, 0.002766, 0.590258, }, {0.067095, 0.993078, -0.096409, }, {-0.586439, 0.117426, 0.801437, }, }},
+ {.valid = true, .origin = {0.866244, -2.566829, 3.132632, }, .mat = {{-0.043296, -0.997675, -0.052627, }, {0.766284, -0.066962, 0.639003, }, {-0.641042, -0.012661, 0.767401, }, }},
 };
 
 lighthouseCalibration_t lighthouseCalibrationData[PULSE_PROCESSOR_N_BASE_STATIONS] = {
@@ -202,8 +202,12 @@ static void enableHighlevelCommander() { paramSetInt(paramIdCommanderEnHighLevel
 static void useCrossingBeamPositioningMethod() { paramSetInt(paramIdLighthouseMethod, 0); }
 
 static void setupLighthouse() {
-  lighthousePositionSetGeometryData(lighthouseGeoData);
-  lighthouseCoreSetCalibrationData(lighthouseCalibrationData);
+  lighthousePositionSetGeometryData(0, &lighthouseGeoData[0]);
+  lighthousePositionSetGeometryData(1, &lighthouseGeoData[1]);
+
+  lighthouseCoreSetCalibrationData(0, &lighthouseCalibrationData[0]);
+  lighthouseCoreSetCalibrationData(1, &lighthouseCalibrationData[1]);
+
   useCrossingBeamPositioningMethod();
 }
 

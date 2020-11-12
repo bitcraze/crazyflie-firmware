@@ -52,7 +52,7 @@ static statsCntRateLogger_t* bsEstRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&est
 // The light planes in LH2 are tilted +- 30 degrees
 static const float t30 = M_PI / 6;
 
-static void lighthousePositionGeometryDataUpdated();
+static void lighthousePositionGeometryDataUpdated(const int baseStation);
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
 // Geometry memory handling for the memory module
@@ -69,7 +69,9 @@ static const MemoryHandlerDef_t memDef = {
 };
 
 void lighthousePositionEstInit() {
-  lighthousePositionGeometryDataUpdated();
+  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    lighthousePositionGeometryDataUpdated(i);
+  }
   memoryRegisterHandler(&memDef);
 }
 
@@ -112,8 +114,15 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
     uint32_t inPageAddr = memAddr % pageSize;
     if (index < PULSE_PROCESSOR_N_BASE_STATIONS) {
       if (inPageAddr + writeLen <= sizeof(baseStationGeometry_t)) {
+        // Mark the geometry as invalid since this write probably only will update part of it
+        // If this is the last write in this block, the valid flag will be part of the data and set appropriately
+        // This is based on the assumption that the writes are done in oder with increasing addresses
+        lighthouseCoreState.bsGeometry[index].valid = false;
+
         uint8_t* start = (uint8_t*)&lighthouseCoreState.bsGeometry[index];
         memcpy(start + inPageAddr, buffer, writeLen);
+
+        lighthousePositionGeometryDataUpdated(index);
 
         result = true;
       }
@@ -135,19 +144,18 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
   return result;
 }
 
-static void lighthousePositionGeometryDataUpdated() {
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
-    baseStationGeometryCache_t* cache =  &lighthouseCoreState.bsGeoCache[i];
-    preProcessGeometryData(lighthouseCoreState.bsGeometry[i].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
+static void lighthousePositionGeometryDataUpdated(const int baseStation) {
+  if (lighthouseCoreState.bsGeometry[baseStation].valid) {
+    baseStationGeometryCache_t* cache =  &lighthouseCoreState.bsGeoCache[baseStation];
+    preProcessGeometryData(lighthouseCoreState.bsGeometry[baseStation].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
   }
 }
 
-void lighthousePositionSetGeometryData(const baseStationGeometry_t* geometries) {
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
-    lighthouseCoreState.bsGeometry[i] = geometries[i];
+void lighthousePositionSetGeometryData(const uint8_t baseStation, const baseStationGeometry_t* geometry) {
+  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+    lighthouseCoreState.bsGeometry[baseStation] = *geometry;
+    lighthousePositionGeometryDataUpdated(baseStation);
   }
-
-  lighthousePositionGeometryDataUpdated();
 }
 
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted) {
@@ -382,13 +390,17 @@ static void estimateYaw(const pulseProcessor_t *state, pulseProcessorResult_t* a
 }
 
 void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
-  estimatePositionCrossingBeams(state, angles, baseStation);
-  estimateYaw(state, angles, baseStation);
+  if (state->bsGeometry[0].valid && state->bsGeometry[1].valid) {
+    estimatePositionCrossingBeams(state, angles, baseStation);
+    estimateYaw(state, angles, baseStation);
+  }
 }
 
 void lighthousePositionEstimatePoseSweeps(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
-  estimatePositionSweeps(state, angles, baseStation);
-  estimateYaw(state, angles, baseStation);
+  if (state->bsGeometry[baseStation].valid) {
+    estimatePositionSweeps(state, angles, baseStation);
+    estimateYaw(state, angles, baseStation);
+  }
 }
 
 

@@ -30,8 +30,8 @@
 #include "lighthouse_position_est.h"
 
 baseStationGeometry_t sampleGeoData[PULSE_PROCESSOR_N_BASE_STATIONS]  = {
-  {.origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
-  {.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
+  {.valid = true, .origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
+  {.valid = true, .origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 };
 
 lighthouseCalibration_t sampleCalibrationData[PULSE_PROCESSOR_N_BASE_STATIONS] = {
@@ -52,6 +52,8 @@ lighthouseCalibration_t sampleCalibrationData[PULSE_PROCESSOR_N_BASE_STATIONS] =
 };
 
 void appInitLighthouse() {
-  lighthousePositionSetGeometryData(sampleGeoData);
-  lighthouseCoreSetCalibrationData(sampleCalibrationData);
+  lighthousePositionSetGeometryData(0, &sampleGeoData[0]);
+  lighthousePositionSetGeometryData(1, &sampleGeoData[1]);
+  lighthouseCoreSetCalibrationData(0, &sampleCalibrationData[0]);
+  lighthouseCoreSetCalibrationData(1, &sampleCalibrationData[1]);
 }

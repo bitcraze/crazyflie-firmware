@@ -260,8 +260,13 @@ def estimate_geometry(sensor_sweeps, rvec_start, tvec_start):
     Rw_ocv, Tw_ocv = cam_to_world(rvec_est, tvec_est)
     return Rw_ocv, Tw_ocv
 
-def print_geo(rotation_cf, position_cf):
-    print("{.origin = {", end='')
+def print_geo(rotation_cf, position_cf, is_valid):
+    if is_valid:
+        valid_c = 'true'
+    else:
+        valid_c = 'false'
+
+    print('{.valid = ' + valid_c + ', .origin = {', end='')
     for i in position_cf:
         print("{:0.6f}, ".format(i), end='')
 
@@ -311,10 +316,12 @@ def upload_geo_data(scf, geometries):
     bs1 = LighthouseBsGeometry()
     bs1.rotation_matrix = geometries[0][0]
     bs1.origin = geometries[0][1]
+    bs1.valid = geometries[0][2]
 
     bs2 = LighthouseBsGeometry()
     bs2.rotation_matrix = geometries[1][0]
     bs2.origin = geometries[1][1]
+    bs2.valid = geometries[1][2]
 
     WriteMem(scf, bs1, bs2)
 
@@ -353,13 +360,14 @@ with SyncCrazyflie(uri, cf=cf) as scf:
         geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
         rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
 
-        if not sanity_check(position_cf):
+        is_valid = sanity_check(position_cf)
+        if not is_valid:
             position_cf = [0, 0, 0]
             rotation_cf = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
             print("Could not find valid solution for base station ", bs)
 
-        print_geo(rotation_cf, position_cf)
-        geometries.append([rotation_cf, position_cf])
+        print_geo(rotation_cf, position_cf, is_valid)
+        geometries.append([rotation_cf, position_cf, is_valid])
 
     if args.write:
         print("Uploading geo data")

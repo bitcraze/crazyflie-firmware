@@ -55,20 +55,21 @@ The output from the script should look something like:
         Connecting to radio://0/80/2M
         Connected to radio://0/80/2M
         Estimating position of base stations...
-        {% raw %}{.origin = {0.929796, -1.359615, 3.187089, }, .mat = {{-0.621841, -0.513463, -0.591329, }, {0.451725, -0.851970, 0.264749, }, {-0.639733, -0.102486, 0.761734, }, }},
-        {.origin = {0.044224, 3.075050, 3.035368, }, .mat = {{-0.367098, 0.847259, -0.383915, }, {-0.658670, -0.528202, -0.535869, }, {-0.656805, 0.056157, 0.751967, }, }},{% endraw %}
+        {% raw %}{.valid = true, .origin = {0.929796, -1.359615, 3.187089, }, .mat = {{-0.621841, -0.513463, -0.591329, }, {0.451725, -0.851970, 0.264749, }, {-0.639733, -0.102486, 0.761734, }, }},
+        {.valid = true, .origin = {0.044224, 3.075050, 3.035368, }, .mat = {{-0.367098, 0.847259, -0.383915, }, {-0.658670, -0.528202, -0.535869, }, {-0.656805, 0.056157, 0.751967, }, }},{% endraw %}
 
 
 Copy the last two lines and, on the computer or virtual machine you use for Crazyflie development, paste them into the file 'src/modules/src/lighthouse/lighthouse_core.c'. They should replace the contents of lighthouseCoreState.bsGeometry.
 
         {% raw %}NO_DMA_CCM_SAFE_ZERO_INIT pulseProcessor_t lighthouseCoreState = {
           .bsGeometry = {
-            {.origin = {0.929796, -1.359615, 3.187089, }, .mat = {{-0.621841, -0.513463, -0.591329, }, {0.451725, -0.851970, 0.264749, }, {-0.639733, -0.102486, 0.761734, }, }},
-            {.origin = {0.044224, 3.075050, 3.035368, }, .mat = {{-0.367098, 0.847259, -0.383915, }, {-0.658670, -0.528202, -0.535869, }, {-0.656805, 0.056157, 0.751967, }, }},
+            {.valid = true, .origin = {0.929796, -1.359615, 3.187089, }, .mat = {{-0.621841, -0.513463, -0.591329, }, {0.451725, -0.851970, 0.264749, }, {-0.639733, -0.102486, 0.761734, }, }},
+            {.valid = true, .origin = {0.044224, 3.075050, 3.035368, }, .mat = {{-0.367098, 0.847259, -0.383915, }, {-0.658670, -0.528202, -0.535869, }, {-0.656805, 0.056157, 0.751967, }, }},
           },
         };{% endraw %}
 
 The .origin part represents the position of each base station, while the .mat part is the orientation (rotation matrix). Check that the positions seems reasonable.
+.valid must be true, otherwise the sweeps from that base station will not be used when estimating the position.
 
 Re-compile and flash the firmware again. The Crazyflie is now ready to be used!
 

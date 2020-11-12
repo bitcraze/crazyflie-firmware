@@ -46,8 +46,9 @@ void lighthouseCoreInit();
 void lighthouseCoreTask(void *param);
 
 /**
- * @brief Set calibration data for the base stations of the system
+ * @brief Set calibration data for one base station of the system
  *
- * @param calibs An array with calibration data for PULSE_PROCESSOR_N_BASE_STATIONS base stations.
+ * @param baseStation   The id of the base station
+ * @param calibration   Pointer to calibration data
  */
-void lighthouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs);
+void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration);

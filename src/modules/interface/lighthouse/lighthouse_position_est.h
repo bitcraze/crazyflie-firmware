@@ -34,11 +34,12 @@
 void lighthousePositionEstInit();
 
 /**
- * @brief Set new base station geometry data
+ * @brief Set new geometry data for one base station
  *
- * @param geometries Pointer to an array of geomtry data with PULSE_PROCESSOR_N_BASE_STATIONS entries.
+ * @param baseStation   The id of the base station
+ * @param geometry      The geometry data
  */
-void lighthousePositionSetGeometryData(const baseStationGeometry_t* geometries);
+void lighthousePositionSetGeometryData(const uint8_t baseStation, const baseStationGeometry_t* geometry);
 
 void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 void lighthousePositionEstimatePoseSweeps(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);

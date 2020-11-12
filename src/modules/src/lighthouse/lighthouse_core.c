@@ -76,12 +76,12 @@ static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 NO_DMA_CCM_SAFE_ZERO_INIT pulseProcessor_t lighthouseCoreState = {
   .bsGeometry = {
     // Arena LH1
-    // {.origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
-    // {.origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
+    // {.valid = true, .origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
+    // {.valid = true, .origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
 
     // Arena LH2
-    {.origin = {-2.057947, 0.398319, 3.109704, }, .mat = {{0.807210, 0.002766, 0.590258, }, {0.067095, 0.993078, -0.096409, }, {-0.586439, 0.117426, 0.801437, }, }},
-    {.origin = {0.866244, -2.566829, 3.132632, }, .mat = {{-0.043296, -0.997675, -0.052627, }, {0.766284, -0.066962, 0.639003, }, {-0.641042, -0.012661, 0.767401, }, }},
+    {.valid = true, .origin = {-2.057947, 0.398319, 3.109704, }, .mat = {{0.807210, 0.002766, 0.590258, }, {0.067095, 0.993078, -0.096409, }, {-0.586439, 0.117426, 0.801437, }, }},
+    {.valid = true, .origin = {0.866244, -2.566829, 3.132632, }, .mat = {{-0.043296, -0.997675, -0.052627, }, {0.766284, -0.066962, 0.639003, }, {-0.641042, -0.012661, 0.767401, }, }},
   },
 
   // .bsCalibration = {
@@ -369,9 +369,9 @@ void lighthouseCoreTask(void *param) {
   }
 }
 
-void lighthouseCoreSetCalibrationData(const lighthouseCalibration_t* calibs) {
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
-    lighthouseCoreState.bsCalibration[i] = calibs[i];
+void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration) {
+  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+    lighthouseCoreState.bsCalibration[baseStation] = *calibration;
   }
 }
 

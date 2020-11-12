@@ -7,6 +7,7 @@
 typedef struct {
   __attribute__((aligned(4))) vec3d origin;
   __attribute__((aligned(4))) mat3d mat;
+  bool valid;
 } __attribute__((packed)) baseStationGeometry_t;
 
 typedef struct {
