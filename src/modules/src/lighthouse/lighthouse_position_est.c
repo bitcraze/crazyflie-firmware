@@ -29,6 +29,7 @@
 #include "estimator.h"
 #include "estimator_kalman.h"
 #include "math.h"
+#include "cf_math.h"
 
 #include "log.h"
 #include "param.h"
@@ -153,7 +154,7 @@ static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Ro
   // For a rotation matrix inverse and transpose is equal. Use transpose instead
   arm_matrix_instance_f32 bsRot_ = {3, 3, (float32_t *)bsRot};
   arm_matrix_instance_f32 bsRotInverted_ = {3, 3, (float32_t *)bsRotInverted};
-  arm_mat_trans_f32(&bsRot_, &bsRotInverted_);
+  mat_trans(&bsRot_, &bsRotInverted_);
 
   // In a LH1 system, the axis of rotation of the second rotor is perpendicular to the first rotor
   mat3d secondRotorInvertedR = {
@@ -163,10 +164,10 @@ static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Ro
   };
   arm_matrix_instance_f32 secondRotorInvertedR_ = {3, 3, (float32_t *)secondRotorInvertedR};
   arm_matrix_instance_f32 lh1Rotor2Rot_ = {3, 3, (float32_t *)lh1Rotor2Rot};
-  arm_mat_mult_f32(&bsRot_, &secondRotorInvertedR_, &lh1Rotor2Rot_);
+  mat_mult(&bsRot_, &secondRotorInvertedR_, &lh1Rotor2Rot_);
 
   arm_matrix_instance_f32 lh1Rotor2RotInverted_ = {3, 3, (float32_t *)lh1Rotor2RotInverted};
-  arm_mat_trans_f32(&lh1Rotor2Rot_, &lh1Rotor2RotInverted_);
+  mat_trans(&lh1Rotor2Rot_, &lh1Rotor2RotInverted_);
 }
 
 

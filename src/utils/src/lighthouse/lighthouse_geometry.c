@@ -35,6 +35,7 @@
  */
 
 #include "lighthouse_geometry.h"
+#include "cf_math.h"
 
 static void vec_cross_product(const vec3d a, const vec3d b, vec3d res) {
     res[0] = a[1]*b[2] - a[2]*b[1];
@@ -120,7 +121,7 @@ void lighthouseGeometryGetBaseStationPosition(const baseStationGeometry_t* bs, v
     //vec3d base_origin_delta = {-0.025f, -0.025f, 0.f};  // Rotors are slightly off center in base station.
     // arm_matrix_instance_f32 origin_vec = {3, 1, base_origin_delta};
     // arm_matrix_instance_f32 origin_rotated_vec = {3, 1, rotated_origin_delta};
-    // arm_mat_mult_f32(&source_rotation_matrix, &origin_vec, &origin_rotated_vec);
+    // mat_mult(&source_rotation_matrix, &origin_vec, &origin_rotated_vec);
     baseStationGeometry_t* bs_unconst = (baseStationGeometry_t*)bs;
     arm_add_f32(bs_unconst->origin, rotated_origin_delta, baseStationPos, vec3d_size);
 }
@@ -137,7 +138,7 @@ void lighthouseGeometryGetRay(const baseStationGeometry_t* baseStationGeometry, 
     arm_matrix_instance_f32 source_rotation_matrix = {3, 3, (float32_t *)baseStationGeometry->mat};
     arm_matrix_instance_f32 ray_vec = {3, 1, raw_ray};
     arm_matrix_instance_f32 ray_rotated_vec = {3, 1, ray};
-    arm_mat_mult_f32(&source_rotation_matrix, &ray_vec, &ray_rotated_vec);
+    mat_mult(&source_rotation_matrix, &ray_vec, &ray_rotated_vec);
 }
 
 bool lighthouseGeometryIntersectionPlaneVector(const vec3d linePoint, const vec3d lineVec, const vec3d planePoint, const vec3d PlaneNormal, vec3d intersectionPoint) {
