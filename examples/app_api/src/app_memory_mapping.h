@@ -22,40 +22,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * api_app.c - App layer application that ilustrates how to use functions in the API.
- *             This app may not be possible to run, the intention is to show how to
- *             use functions.
+ * app_memory_mapping.h - example of how to map memory to the memory subsystem
+ * that is accessable from a client
  */
 
+#pragma once
 
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-
-#include "app.h"
-
-#include "FreeRTOS.h"
-#include "task.h"
-
-#include "debug.h"
-
-// Examples
-#include "app_ledseq.h"
-#include "app_high_level_commander.h"
-#include "app_lighthouse.h"
-#include "app_memory_mapping.h"
-
-#define DEBUG_MODULE "APPAPI"
-
-void appMain() {
-  appRegisterLedSequence();
-  appEnableHighLevelCommander();
-  appInitLighthouse();
-  appRegisterMemory();
-
-  while(1) {
-    vTaskDelay(M2T(3000));
-    appRunLedSequence();
-    // appRunHighLevelCommanderFlySquare();
-  }
-}
+void appRegisterMemory();
