@@ -128,6 +128,13 @@ void crtpCommanderHighLevelStop();
 void crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative);
 
 /**
+ * @brief Returns whether the trajectory with the given ID is defined
+ *
+ * @param trajectoryId The id of the trajectory
+ */
+bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId);
+
+/**
  * @brief starts executing a specified trajectory
  *
  * @param trajectoryId id of the trajectory (previously defined by define_trajectory)
