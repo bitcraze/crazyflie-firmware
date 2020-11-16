@@ -24,7 +24,7 @@ The folowing Makefile variables can be used for configuration:
 
 ## Internal log and param system
 
-For the app-layer, it would be good to have access to log and/or parameter values and to set parameter values. This way, your app will be able to read out sensor data or to switch controller/estimator on air. To check out these functions, look at src/modules/interface/log.h or .../param.h for the internal access functions.
+For the app-layer, it would be good to have access to log and/or parameter values and to set parameter values. This way, your app will be able to read out sensor data or to switch controller/estimator on air. To check out these functions, look at src/modules/interface/log.h or .../param.h for the internal access functions. There is also an example to be found in /examples/app_internal_param_log/.
 
 ## LED sequences
 
