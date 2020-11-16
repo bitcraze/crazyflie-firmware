@@ -14,6 +14,103 @@ how to do this with IDE\'s and different environments.
 > This page requires our debug adapter and ST Link V2 Debugger! See
 > this page: [Debug adapter](https://wiki.bitcraze.io/projects:crazyflie2:debugadapter:index)
 
+## Debugging using VS Code
+
+Thanks to the [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) extension, it is now easily possible to debug ARM executables straight inside of VS Code!
+
+### Mac OS and Ubuntu
+
+#### Prerequisites
+
+First ensure that you have the ARM GCC toolchain and OpenOCD installed and in your path. To check, run:
+
+    which openocd
+    which arm-none-eabi-gcc
+
+The path to your OpenOCD binary and ARM GCC binary should output. If not, try installing them again.
+
+##### Ubuntu
+
+These steps have been tested on Ubuntu 20.04. The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architecture.
+
+    sudo apt-get install openocd
+    sudo apt-get install gcc-arm-none-eabi gdb-multiarch
+    sudo ln -s /usr/bin/gdb-multiarch /usr/local/bin/arm-none-eabi-gdb
+
+If you do not have vscode yet, the easiest way to install it on Ubuntu is via snap using 'Ubuntu Software' of by typing:
+
+    sudo snap install --classic code
+
+
+##### Mac OS
+
+    brew install open-ocd
+    brew tap PX4/homebrew-px
+    brew install arm-none-eabi-gcc
+
+### The Cortex Debug Extension
+
+Install the [extension](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) either by clicking "Install" on the web page, or by searching "Cortex Debug" in the Extensions tab of VS Code.
+
+Click on "Run", then "Add Configuration", then "Cortex Debug".
+
+![VS Code add configuration](/docs/images/vscode_add_configuration.webp)
+
+This should automatically create the needed "launch.json" file.
+
+### Configuring Cortex Debug
+
+Inside of the file, replace everything with the following:
+
+    {
+        // Use IntelliSense to learn about possible attributes.
+        // Hover to view descriptions of existing attributes.
+        // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Cortex Debug",
+                "cwd": "${workspaceRoot}",
+                "executable": "./cf2.elf",
+                "request": "launch",
+                "type": "cortex-debug",
+                "device": "STM32F405",
+                "svdFile": "STM32F405.svd",
+                "servertype": "openocd",
+                "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
+                "runToMain": true,
+                "preLaunchCommands": [
+                    "set mem inaccessible-by-default off",
+                    "enable breakpoint",
+                    "monitor reset"
+                ]
+            }
+        ]
+    }
+
+### Explaining the Cortex Debug configuration
+
+- "svdFile" refers to the necessary file for peripheral registers to show up nicely in the debug pane, all named and structured; we'll add it in the next step
+- "configFiles" refers to the files you need so that OpenOCD knows what device and interface you're using; it should already come with them
+- "runToMain" tells the GDB debug server to jump to main by default
+- "preLaunchCommands" specifies the commands for the GDB server to send before giving away control to you; the commands here mimic the options that the above tutorial for Eclipse specifies
+
+### Installing the SVD file
+
+Now for the SVD file: just download it from [here](https://raw.githubusercontent.com/posborne/cmsis-svd/master/data/STMicro/STM32F405.svd) and into your root directory. Make sure it has the exact name of "STM32F405.svd"!
+
+### Debugging!
+
+After all this, go to the Debug tab of VS Code (on the left sidebar, the icon with the little bug next to the play button), and hit that play button next to "Run"!
+
+If you followed everything, it should start running nicely and look a little something like this:
+
+![VS Code Cortex Debug](/docs/images/vscode_cortex_debug.webp)
+
+Notice the nice peripherals pane at the bottom, along with the variables pane at the top. Awesome, now you can code _and_ debug all within VS Code!
+
+---
+
 ## Debugging using eclipse
 
 ### Ubuntu
@@ -134,94 +231,3 @@ Run eclipse and choose work folder
 The rest is the same as for Linux. Make sure that the arm-none-eabi-gcc
 is properly installed and its path is configured in the _debug
 configurations_.
-
----
-
-## Debugging using VS Code
-
-For those of you who prefer using VS Code for everything, thanks to the [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) extension, it is now possible to debug ARM executables straight inside of VS Code!
-
-### Mac OS and Ubuntu
-
-#### Prerequisites
-
-First ensure that you have the ARM GCC toolchain and OpenOCD installed and in your path. To check, run:
-
-    which openocd
-    which arm-none-eabi-gcc
-
-The path to your OpenOCD binary and ARM GCC binary should output. If not, try installing them again.
-
-For the ARM GCC toolchain:
-
-##### Ubuntu
-
-    sudo apt-get install openocd
-    sudo apt-get install gcc-arm-none-eabi
-
-##### Mac OS
-
-    brew install open-ocd
-    brew tap PX4/homebrew-px
-    brew install arm-none-eabi-gcc
-
-### The Cortex Debug Extension
-
-Install the [extension](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) either by clicking "Install" on the web page, or by searching "Cortex Debug" in the Extensions tab of VS Code.
-
-Click on "Run", then "Add Configuration", then "Cortex Debug".
-
-![VS Code add configuration](/docs/images/vscode_add_configuration.webp)
-
-This should automatically create the needed "launch.json" file.
-
-### Configuring Cortex Debug
-
-Inside of the file, replace everything with the following:
-
-    {
-        // Use IntelliSense to learn about possible attributes.
-        // Hover to view descriptions of existing attributes.
-        // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Cortex Debug",
-                "cwd": "${workspaceRoot}",
-                "executable": "./cf2.elf",
-                "request": "launch",
-                "type": "cortex-debug",
-                "device": "STM32F405",
-                "svdFile": "STM32F405.svd",
-                "servertype": "openocd",
-                "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
-                "runToMain": true,
-                "preLaunchCommands": [
-                    "set mem inaccessible-by-default off",
-                    "enable breakpoint",
-                    "monitor reset"
-                ]
-            }
-        ]
-    }
-
-### Explaining the Cortex Debug configuration
-
-- "svdFile" refers to the necessary file for peripheral registers to show up nicely in the debug pane, all named and structured; we'll add it in the next step
-- "configFiles" refers to the files you need so that OpenOCD knows what device and interface you're using; it should already come with them
-- "runToMain" tells the GDB debug server to jump to main by default
-- "preLaunchCommands" specifies the commands for the GDB server to send before giving away control to you; the commands here mimic the options that the above tutorial for Eclipse specifies
-
-### Installing the SVD file
-
-Now for the SVD file: just download it from [here](https://raw.githubusercontent.com/posborne/cmsis-svd/master/data/STMicro/STM32F405.svd) and into your root directory. Make sure it has the exact name of "STM32F405.svd"!
-
-### Debugging!
-
-After all this, go to the Debug tab of VS Code (on the left sidebar, the icon with the little bug next to the play button), and hit that play button next to "Run"!
-
-If you followed everything, it should start running nicely and look a little something like this:
-
-![VS Code Cortex Debug](/docs/images/vscode_cortex_debug.webp)
-
-Notice the nice peripherals pane at the bottom, along with the variables pane at the top. Awesome, now you can code _and_ debug all within VS Code!
