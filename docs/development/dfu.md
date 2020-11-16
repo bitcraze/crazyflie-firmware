@@ -3,12 +3,17 @@ title: DFU update of the STM32F405
 page_id: dfu
 ---
 
-The DFU update mode should mainly be considered as a recovery mode in
-which you can load new firmware to the STM32F405 MCU. The OTA (Over The
-Air) update mode is much more convenient and it can also update the
+This page explains how to flash bin files over the micro usb connection.
+
+__The DFU update mode should mainly be considered as a recovery mode in
+which you can load new firmware to the STM32F405 MCU. Do not use it if you do not know what it is__
+
+The OTA (Over The
+Air) update mode is much more convenient and save and it can also update the
 nRF51 MCU at the same time.
 
-### Linux (Ubuntu)
+
+## Linux (Ubuntu)
 
 Install the dfu-util if you don\'t already have it with apt-get
 
@@ -30,29 +35,28 @@ With the STM32F405 in DFU mode you should be able to find it with lsusb
     Bus XXX Device XXX: ID 0483:df11 STMicroelectronics STM Device in DFU Mode
     ...
 
-**BIN file**
+### BIN firmware file DFU flashing
 
 Now the STM32F405 can be updated. Currently we only build binary files
 .bin and not .dfu files so we need to specify more things to dfu-util.
-If the Crazyflie 2.0 firmware was compiled with CLOAD=1 (default option)
-the binary should be flashed after the bootloader at address 0x08004000.
+If the Crazyflie 2.X firmware was compiled with CLOAD=1 (default option)
+the binary should be flashed _after the bootloader_ at address 0x08004000.
 
     sudo dfu-util -d 0483:df11 -a 0 -s 0x08004000 -D cflie.bin
 
-If the Crazyflie 2.0 firmware was compiled with CLOAD=0 the binary
-should be flashed in the beginning of the flash (address 0x08000000).
-WARNING, this will overwrite the radio-bootloader if it is there. You
-can however flash the bootloader back this same way with DFU.
+### BIN bootloader recovery
 
-    sudo dfu-util -d 0483:df11 -a 0 -s 0x08000000 -D cflie.bin
+If for some reason, the dfu-utils overflashed the bootloader by flashing the firmware on the wrong address, you can recover the bootloader by getting the [latest release bootloader bin file](https://github.com/bitcraze/crazyflie2-stm-bootloader/releases). The bootloader can then be correctly flashed by typing this in the terminal.
 
-**DFU file**
+    sudo dfu-util -d 0483:df11 -a 0 -s 0x08000000 -D cf2loader-1.0.bin
+
+### DFU file
 
 To flash with a .dfu file
 
     sudo dfu-util -d 0483:df11 -a 0 -D file.dfu
 
-**Output**
+### Output
 
 It takes a couple of seconds and the output should look something like
 this
