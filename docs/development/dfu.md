@@ -1,7 +1,10 @@
 ---
 title: DFU update of the STM32F405
 page_id: dfu
+redirect: 
+ - /docs/building-and-flashing/dfu/
 ---
+
 
 This page explains how to flash bin files over the micro usb connection.
 
