@@ -1,7 +1,7 @@
 ---
 title: DFU update of the STM32F405
 page_id: dfu
-redirect: 
+redirects:
  - /docs/building-and-flashing/dfu/
 ---
 
@@ -29,7 +29,7 @@ Now it is time to boot the STM32F405 in the DFU update mode
      3. Now hold down the push button (on/off) while inserting the USB cable in the Crazyflie 2.0
      4. Hold down the button for about 5 seconds until you reach the second blink rate (1Hz). Then you can release the button.
      5. The STM32F405 is now in DFU mode
-     
+
 
 With the STM32F405 in DFU mode you should be able to find it with lsusb
 
