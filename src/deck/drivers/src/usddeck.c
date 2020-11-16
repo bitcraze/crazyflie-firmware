@@ -546,7 +546,7 @@ void usddeckTriggerLogging(void)
   memcpy(usdLogBuffer, &ticks, 4);
   int offset = 4;
   for (int i = 0; i < usdLogConfig.numSlots; ++i) {
-    int varid = usdLogConfig.varIds[i];
+    logVarId_t varid = usdLogConfig.varIds[i];
     switch (logGetType(varid)) {
       case LOG_UINT8:
       case LOG_INT8:

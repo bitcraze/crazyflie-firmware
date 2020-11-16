@@ -74,15 +74,15 @@ static uint8_t trajectoryCount = 255;
 static uint8_t remainingTrajectories = 0;
 
 // Log and param ids
-static uint16_t logIdStateEstimateX;
-static uint16_t logIdStateEstimateY;
-static uint16_t logIdStateEstimateZ;
-static uint16_t logIdKalmanVarPX;
-static uint16_t logIdKalmanVarPY;
-static uint16_t logIdKalmanVarPZ;
-static uint16_t logIdPmState;
-static uint16_t logIdlighthouseEstBs0Rt;
-static uint16_t logIdlighthouseEstBs1Rt;
+static logVarId_t logIdStateEstimateX;
+static logVarId_t logIdStateEstimateY;
+static logVarId_t logIdStateEstimateZ;
+static logVarId_t logIdKalmanVarPX;
+static logVarId_t logIdKalmanVarPY;
+static logVarId_t logIdKalmanVarPZ;
+static logVarId_t logIdPmState;
+static logVarId_t logIdlighthouseEstBs0Rt;
+static logVarId_t logIdlighthouseEstBs1Rt;
 
 static paramVarId_t paramIdStabilizerController;
 static paramVarId_t paramIdCommanderEnHighLevel;

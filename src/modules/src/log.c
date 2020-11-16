@@ -960,9 +960,12 @@ static void logReset(void)
 }
 
 /* Public API to access log TOC from within the copter */
-int logGetVarId(char* group, char* name)
+static logVarId_t invalidVarId = 0xffffu;
+
+logVarId_t logGetVarId(char* group, char* name)
 {
   int i;
+  logVarId_t varId = invalidVarId;
   char * currgroup = "";
 
   for(i=0; i<logsLen; i++)
@@ -970,19 +973,21 @@ int logGetVarId(char* group, char* name)
     if (logs[i].type & LOG_GROUP) {
       if (logs[i].type & LOG_START)
         currgroup = logs[i].name;
-    } if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name)))
-      return i;
+    } if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name))) {
+      varId = (logVarId_t)i;
+      return varId;
+    }
   }
 
-  return -1;
+  return invalidVarId;
 }
 
-int logGetType(int varid)
+int logGetType(logVarId_t varid)
 {
   return logs[varid].type;
 }
 
-void logGetGroupAndName(int varid, char** group, char** name)
+void logGetGroupAndName(logVarId_t varid, char** group, char** name)
 {
   char * currgroup = "";
   *group = 0;
@@ -1003,7 +1008,7 @@ void logGetGroupAndName(int varid, char** group, char** name)
   }
 }
 
-void* logGetAddress(int varid)
+void* logGetAddress(logVarId_t varid)
 {
   return logs[varid].address;
 }
@@ -1013,11 +1018,11 @@ uint8_t logVarSize(int type)
   return typeLength[type];
 }
 
-int logGetInt(int varid)
+int logGetInt(logVarId_t varid)
 {
   int valuei = 0;
 
-  ASSERT(varid >= 0);
+  ASSERT(LOG_VARID_IS_VALID(varid));
 
   switch(logs[varid].type)
   {
@@ -1047,9 +1052,9 @@ int logGetInt(int varid)
   return valuei;
 }
 
-float logGetFloat(int varid)
+float logGetFloat(logVarId_t varid)
 {
-  ASSERT(varid >= 0);
+  ASSERT(LOG_VARID_IS_VALID(varid));
 
   if (logs[varid].type == LOG_FLOAT)
     return *(float *)logs[varid].address;
@@ -1057,7 +1062,7 @@ float logGetFloat(int varid)
   return logGetInt(varid);
 }
 
-unsigned int logGetUint(int varid)
+unsigned int logGetUint(logVarId_t varid)
 {
   return (unsigned int)logGetInt(varid);
 }

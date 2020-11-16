@@ -89,11 +89,11 @@ void appMain()
 
   vTaskDelay(M2T(3000));
 
-  uint16_t idUp = logGetVarId("range", "up");
-  uint16_t idLeft = logGetVarId("range", "left");
-  uint16_t idRight = logGetVarId("range", "right");
-  uint16_t idFront = logGetVarId("range", "front");
-  uint16_t idBack = logGetVarId("range", "back");
+  logVarId_t idUp = logGetVarId("range", "up");
+  logVarId_t idLeft = logGetVarId("range", "left");
+  logVarId_t idRight = logGetVarId("range", "right");
+  logVarId_t idFront = logGetVarId("range", "front");
+  logVarId_t idBack = logGetVarId("range", "back");
   
   paramVarId_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
   paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
