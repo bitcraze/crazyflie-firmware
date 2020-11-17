@@ -45,7 +45,13 @@
 
 #include "peer_localization.h"
 
+#include "num.h"
+
 #define NBR_OF_RANGES_IN_PACKET   5
+#define NBR_OF_SWEEPS_IN_PACKET   2
+#define NBR_OF_SENSOR_DIFFS_IN_PACKET   3
+#define NBR_OF_BASESTATIONS   2
+#define NBR_OF_
 #define DEFAULT_EMERGENCY_STOP_TIMEOUT (1 * RATE_MAIN_LOOP)
 
 typedef enum
@@ -64,6 +70,17 @@ typedef struct
     float range;
   } __attribute__((packed)) ranges[NBR_OF_RANGES_IN_PACKET];
 } __attribute__((packed)) rangePacket;
+
+typedef struct {
+  uint8_t type;
+  uint8_t basestation;
+  struct {
+  float sweep;
+    struct {
+      uint16_t angleDiff;
+    } __attribute__((packed)) angleDiffs [NBR_OF_SENSOR_DIFFS_IN_PACKET];
+  } __attribute__((packed)) sweeps [NBR_OF_SWEEPS_IN_PACKET];
+} __attribute__((packed)) anglePacket;
 
 // up to 4 items per CRTP packet
 typedef struct {
@@ -90,6 +107,9 @@ static poseMeasurement_t ext_pose;
 static CRTPPacket pkRange;
 static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
+
+static CRTPPacket LhAngle;
+static bool enableAngleStreamFloat = false;
 static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
 static bool isInit = false;
@@ -254,6 +274,35 @@ void locSrvSendRangeFloat(uint8_t id, float range)
   }
 }
 
+void locSrvSendAngleFloat(pulseProcessorResult_t* angles)
+{
+  anglePacket *ap = (anglePacket *)LhAngle.data;
+
+  if (enableAngleStreamFloat) {
+    for (uint8_t itb = 0; itb < NBR_OF_BASESTATIONS; itb++) { 
+      ap->basestation = itb;
+
+      for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
+        float angle_first_sensor =  angles->sensorMeasurementsLh1[0].baseStatonMeasurements[itb].correctedAngles[its];
+        ap->sweeps[its].sweep = angle_first_sensor;
+
+        for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
+          float angle_other_sensor = angles->sensorMeasurementsLh1[itd + 1].baseStatonMeasurements[itb].correctedAngles[its];
+          uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
+          ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
+        }   
+      }
+
+      ap->type = LH_ANGLE_STREAM;
+      LhAngle.port = CRTP_PORT_LOCALIZATION;
+      LhAngle.channel = GENERIC_TYPE;
+      LhAngle.size = sizeof(anglePacket);
+      crtpSendPacket(&LhAngle);
+    }
+  }
+}
+
+
 LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, X, &ext_pos.x)
   LOG_ADD(LOG_FLOAT, Y, &ext_pos.y)
@@ -266,6 +315,7 @@ LOG_GROUP_STOP(locSrvZ)
 
 PARAM_GROUP_START(locSrv)
   PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
+  PARAM_ADD(PARAM_UINT8, enAngleStreamFP32, &enableAngleStreamFloat)
   PARAM_ADD(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
   PARAM_ADD(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
 PARAM_GROUP_STOP(locSrv)
