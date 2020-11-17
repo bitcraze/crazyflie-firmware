@@ -718,6 +718,14 @@ void crtpCommanderHighLevelGoTo(const float x, const float y, const float z, con
   handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
 }
 
+bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId)
+{
+  return (
+    trajectoryId < NUM_TRAJECTORY_DEFINITIONS &&
+    trajectory_descriptions[trajectoryId].trajectoryLocation != TRAJECTORY_LOCATION_INVALID
+  );
+}
+
 void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed)
 {
   struct data_start_trajectory data =
