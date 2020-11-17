@@ -132,24 +132,60 @@ static void locSrvCrtpCB(CRTPPacket* pk)
   }
 }
 
-static void extPositionHandler(CRTPPacket* pk)
-{
+static void extPositionHandler(CRTPPacket* pk) {
   const struct CrtpExtPosition* data = (const struct CrtpExtPosition*)pk->data;
 
   ext_pos.x = data->x;
   ext_pos.y = data->y;
   ext_pos.z = data->z;
   ext_pos.stdDev = extPosStdDev;
+
   estimatorEnqueuePosition(&ext_pos);
   tickOfLastPacket = xTaskGetTickCount();
 }
 
-static void genericLocHandle(CRTPPacket* pk)
-{
-  uint8_t type = pk->data[0];
-  if (pk->size < 1) return;
+static void extPoseHandler(const CRTPPacket* pk) {
+  const struct CrtpExtPose* data = (const struct CrtpExtPose*)&pk->data[1];
 
-  if (type == LPS_SHORT_LPP_PACKET && pk->size >= 2) {
+  ext_pose.x = data->x;
+  ext_pose.y = data->y;
+  ext_pose.z = data->z;
+  ext_pose.quat.x = data->qx;
+  ext_pose.quat.y = data->qy;
+  ext_pose.quat.z = data->qz;
+  ext_pose.quat.w = data->qw;
+  ext_pose.stdDevPos = extPosStdDev;
+  ext_pose.stdDevQuat = extQuatStdDev;
+
+  estimatorEnqueuePose(&ext_pose);
+  tickOfLastPacket = xTaskGetTickCount();
+}
+
+static void extPosePackedHandler(const CRTPPacket* pk) {
+  uint8_t numItems = (pk->size - 1) / sizeof(extPosePackedItem);
+  for (uint8_t i = 0; i < numItems; ++i) {
+    const extPosePackedItem* item = (const extPosePackedItem*)&pk->data[1 + i * sizeof(extPosePackedItem)];
+    if (item->id == my_id) {
+      ext_pose.x = item->x / 1000.0f;
+      ext_pose.y = item->y / 1000.0f;
+      ext_pose.z = item->z / 1000.0f;
+      quatdecompress(item->quat, (float *)&ext_pose.quat.q0);
+      ext_pose.stdDevPos = extPosStdDev;
+      ext_pose.stdDevQuat = extQuatStdDev;
+      estimatorEnqueuePose(&ext_pose);
+      tickOfLastPacket = xTaskGetTickCount();
+    } else {
+      ext_pos.x = item->x / 1000.0f;
+      ext_pos.y = item->y / 1000.0f;
+      ext_pos.z = item->z / 1000.0f;
+      ext_pos.stdDev = extPosStdDev;
+      peerLocalizationTellPosition(item->id, &ext_pos);
+    }
+  }
+}
+
+static void lpsShortLppPacketHandler(CRTPPacket* pk) {
+  if (pk->size >= 2) {
     bool success = lpsSendLppShort(pk->data[1], &pk->data[2], pk->size-2);
 
     pk->port = CRTP_PORT_LOCALIZATION;
@@ -157,45 +193,33 @@ static void genericLocHandle(CRTPPacket* pk)
     pk->size = 3;
     pk->data[2] = success?1:0;
     crtpSendPacket(pk);
-  } else if (type == EMERGENCY_STOP) {
-    stabilizerSetEmergencyStop();
-  } else if (type == EMERGENCY_STOP_WATCHDOG) {
-    stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
-  } else if (type == EXT_POSE) {
-    const struct CrtpExtPose* data = (const struct CrtpExtPose*)&pk->data[1];
-    ext_pose.x = data->x;
-    ext_pose.y = data->y;
-    ext_pose.z = data->z;
-    ext_pose.quat.x = data->qx;
-    ext_pose.quat.y = data->qy;
-    ext_pose.quat.z = data->qz;
-    ext_pose.quat.w = data->qw;
-    ext_pose.stdDevPos = extPosStdDev;
-    ext_pose.stdDevQuat = extQuatStdDev;
-    estimatorEnqueuePose(&ext_pose);
-    tickOfLastPacket = xTaskGetTickCount();
-  } else if (type == EXT_POSE_PACKED) {
-    uint8_t numItems = (pk->size - 1) / sizeof(extPosePackedItem);
-    for (uint8_t i = 0; i < numItems; ++i) {
-      const extPosePackedItem* item = (const extPosePackedItem*)&pk->data[1 + i * sizeof(extPosePackedItem)];
-      if (item->id == my_id) {
-        ext_pose.x = item->x / 1000.0f;
-        ext_pose.y = item->y / 1000.0f;
-        ext_pose.z = item->z / 1000.0f;
-        quatdecompress(item->quat, (float *)&ext_pose.quat.q0);
-        ext_pose.stdDevPos = extPosStdDev;
-        ext_pose.stdDevQuat = extQuatStdDev;
-        estimatorEnqueuePose(&ext_pose);
-        tickOfLastPacket = xTaskGetTickCount();
-      }
-      else {
-        ext_pos.x = item->x / 1000.0f;
-        ext_pos.y = item->y / 1000.0f;
-        ext_pos.z = item->z / 1000.0f;
-        ext_pos.stdDev = extPosStdDev;
-        peerLocalizationTellPosition(item->id, &ext_pos);
-      }
-    }
+  }
+}
+
+static void genericLocHandle(CRTPPacket* pk)
+{
+  const uint8_t type = pk->data[0];
+  if (pk->size < 1) return;
+
+  switch (type) {
+    case LPS_SHORT_LPP_PACKET:
+      lpsShortLppPacketHandler(pk);
+      break;
+    case EMERGENCY_STOP:
+      stabilizerSetEmergencyStop();
+      break;
+    case EMERGENCY_STOP_WATCHDOG:
+      stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
+      break;
+    case EXT_POSE:
+      extPoseHandler(pk);
+      break;
+    case EXT_POSE_PACKED:
+      extPosePackedHandler(pk);
+      break;
+    default:
+      // Nothing here
+      break;
   }
 }
 
