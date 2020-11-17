@@ -116,6 +116,7 @@ void appDefineTrajectory() {
 
   crtpCommanderHighLevelWriteTrajectory(offset, sizeBytes, (uint8_t*)sequence);
   crtpCommanderHighLevelDefineTrajectory(trajectoryId, CRTP_CHL_TRAJECTORY_TYPE_POLY4D, offset, polyCount);
+  crtpCommanderHighLevelIsTrajectoryDefined(trajectoryId);
 }
 
 // State machine to fly the trajectory
