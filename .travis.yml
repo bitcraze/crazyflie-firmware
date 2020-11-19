@@ -44,9 +44,11 @@ script:
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/make clean
   - docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 "EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0" UNIT_TEST_STYLE=min
 
+  # Build app API
+  - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd app_api; make"
+
   # Build examples
   - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_hello_world; make"
-  - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_api; make"
   - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/app_peer_to_peer; make"
   - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/demos/app_push_demo; make"
   - docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd examples/demos/swarm_demo; make"
