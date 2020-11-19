@@ -77,6 +77,8 @@ void appMain() {
     crtpCommanderHighLevelWriteTrajectory(20, 10, dummyTrajectory);
     crtpCommanderHighLevelReadTrajectory(20, 10, dummyTrajectory);
     crtpCommanderHighLevelIsTrajectoryFinished();
+    crtpCommanderHighLevelTakeoffWithVelocity(1.0f, 1.0f, true);
+    crtpCommanderHighLevelLandWithVelocity(1.0f, 1.0f, true);
   }
 
   // LPS
