@@ -37,6 +37,8 @@
 #include "stabilizer_types.h"
 #include "stabilizer.h"
 #include "configblock.h"
+#include "worker.h"
+#include "lighthouse_core.h"
 
 #include "locodeck.h"
 
@@ -211,8 +213,51 @@ static void lpsShortLppPacketHandler(CRTPPacket* pk) {
     pk->port = CRTP_PORT_LOCALIZATION;
     pk->channel = GENERIC_TYPE;
     pk->size = 3;
+    pk->data[0] = LPS_SHORT_LPP_PACKET;
     pk->data[2] = success?1:0;
     crtpSendPacket(pk);
+  }
+}
+
+typedef union {
+  struct {
+    // A bit field indicating for which base stations to store geometry data
+    uint16_t geoDataBsField;
+    // A bit field indicating for which base stations to store calibration data
+    uint16_t calibrationDataBsField;
+  } __attribute__((packed));
+  uint32_t combinedField;
+} __attribute__((packed)) LhPersistArgs_t;
+
+static void lhPersistDataWorker(void* arg) {
+  LhPersistArgs_t* args = (LhPersistArgs_t*) &arg;
+
+  bool result = true;
+
+  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+    uint16_t mask = 1 << baseStation;
+    bool storeGeo = (args->geoDataBsField & mask) != 0;
+    bool storeCalibration = (args->calibrationDataBsField & mask) != 0;
+    if (! lighthouseCorePersistData(baseStation, storeGeo, storeCalibration)) {
+      result = false;
+      break;
+    }
+  }
+
+  CRTPPacket response = {
+    .port = CRTP_PORT_LOCALIZATION,
+    .channel = GENERIC_TYPE,
+    .size = 2,
+    .data = {LH_PERSIST_DATA, result}
+  };
+
+  crtpSendPacket(&response);
+}
+
+static void lhPersistDataHandler(CRTPPacket* pk) {
+  if (pk->size >= (1 + sizeof(LhPersistArgs_t))) {
+    LhPersistArgs_t* args = (LhPersistArgs_t*) &pk->data[1];
+    workerSchedule(lhPersistDataWorker, (void*)args->combinedField);
   }
 }
 
@@ -237,6 +282,9 @@ static void genericLocHandle(CRTPPacket* pk)
     case EXT_POSE_PACKED:
       extPosePackedHandler(pk);
       break;
+    case LH_PERSIST_DATA:
+      lhPersistDataHandler(pk);
+      break;
     default:
       // Nothing here
       break;
@@ -260,18 +308,6 @@ static void extPositionPackedHandler(CRTPPacket* pk)
       peerLocalizationTellPosition(item->id, &ext_pos);
     }
   }
-}
-
-void locSrvSendPacket(locsrv_t type, uint8_t *data, uint8_t length)
-{
-  CRTPPacket pk;
-
-  ASSERT(length < CRTP_MAX_DATA_SIZE);
-
-  pk.port = CRTP_PORT_LOCALIZATION;
-  pk.channel = GENERIC_TYPE;
-  memcpy(pk.data, data, length);
-  crtpSendPacket(&pk);
 }
 
 void locSrvSendRangeFloat(uint8_t id, float range)
@@ -313,7 +349,7 @@ void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
         float angle_other_sensor = angles->sensorMeasurementsLh1[itd + 1].baseStatonMeasurements[basestation].correctedAngles[its];
         uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
         ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
-      }   
+      }
     }
 
     ap->type = LH_ANGLE_STREAM;

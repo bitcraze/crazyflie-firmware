@@ -51,6 +51,8 @@
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
 
+#include "storage.h"
+
 #include "test_support.h"
 #include "static_mem.h"
 
@@ -113,6 +115,18 @@ pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 #endif
 
 #define UART_FRAME_LENGTH 12
+
+
+// Persistent storage
+#define STORAGE_KEY_GEO "lh/sys/0/geo/"
+#define STORAGE_KEY_CALIB "lh/sys/0/cal/"
+#define KEY_LEN 20
+
+static baseStationGeometry_t geoBuffer;
+TESTABLE_STATIC void initializeGeoDataFromStorage();
+static lighthouseCalibration_t calibBuffer;
+TESTABLE_STATIC void initializeCalibDataFromStorage();
+
 
 void lighthouseCoreInit() {
   lighthousePositionEstInit();
@@ -338,6 +352,11 @@ void lighthouseCoreTask(void *param) {
   uart1Init(230400);
   systemWaitStart();
 
+  // TODO krri Storage seems to be broken. Do not
+  // read from it until it is fixed
+  // initializeGeoDataFromStorage();
+  // initializeCalibDataFromStorage();
+
   lighthouseDeckFlasherCheckVersionAndBoot();
 
   memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
@@ -376,6 +395,60 @@ void lighthouseCoreTask(void *param) {
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration) {
   if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
     lighthouseCoreState.bsCalibration[baseStation] = *calibration;
+  }
+}
+
+static void generateStorageKey(char* buf, const char* base, const uint8_t baseStation) {
+  // TOOD make an implementation that supports baseStations with 2 digits
+  ASSERT(baseStation <= 9);
+
+  const int baseLen = strlen(base);
+  memcpy(buf, base, baseLen);
+  buf[baseLen] = '0' + baseStation;
+  buf[baseLen + 1] = '\0';
+}
+
+bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData) {
+  bool result = true;
+  char key[KEY_LEN];
+
+  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+    if (geoData) {
+      generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
+      result = result && storageStore(key, &lighthouseCoreState.bsGeometry[baseStation], sizeof(lighthouseCoreState.bsGeometry[baseStation]));
+    }
+    if (calibData) {
+      generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
+      result = result && storageStore(key, &lighthouseCoreState.bsCalibration[baseStation], sizeof(lighthouseCoreState.bsCalibration[baseStation]));
+    }
+  }
+
+  return result;
+}
+
+TESTABLE_STATIC void initializeGeoDataFromStorage() {
+  char key[KEY_LEN];
+
+  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+    generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
+    const size_t geoSize = sizeof(geoBuffer);
+    const size_t fetched = storageFetch(key, (void*)&geoBuffer, geoSize);
+    if (fetched == geoSize) {
+      lighthousePositionSetGeometryData(baseStation, &geoBuffer);
+    }
+  }
+}
+
+TESTABLE_STATIC void initializeCalibDataFromStorage() {
+  char key[KEY_LEN];
+
+  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+    generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
+    const size_t calibSize = sizeof(calibBuffer);
+    const size_t fetched = storageFetch(key, (void*)&calibBuffer, calibSize);
+    if (fetched == calibSize) {
+      lighthouseCoreSetCalibrationData(baseStation, &calibBuffer);
+    }
   }
 }
 

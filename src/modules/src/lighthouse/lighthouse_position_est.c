@@ -146,7 +146,7 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
 
 static void lighthousePositionGeometryDataUpdated(const int baseStation) {
   if (lighthouseCoreState.bsGeometry[baseStation].valid) {
-    baseStationGeometryCache_t* cache =  &lighthouseCoreState.bsGeoCache[baseStation];
+    baseStationGeometryCache_t* cache = &lighthouseCoreState.bsGeoCache[baseStation];
     preProcessGeometryData(lighthouseCoreState.bsGeometry[baseStation].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
   }
 }
