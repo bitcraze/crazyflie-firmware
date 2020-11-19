@@ -41,6 +41,7 @@
 #define DEBUG_MODULE "LH"
 #include "debug.h"
 #include "uart1.h"
+#include "crtp_localization_service.h"
 
 #include "pulse_processor.h"
 #include "pulse_processor_v1.h"
@@ -225,6 +226,9 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
       // Emulate V1 base stations for now, convert to V1 angles
       convertV2AnglesToV1Angles(angles);
     }
+
+    // Send measurement to the ground
+    locSrvSendLighthouseAngle(basestation, angles);
 
     switch(estimationMethod) {
       case 0:

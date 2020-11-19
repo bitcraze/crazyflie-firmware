@@ -109,7 +109,7 @@ static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 
 static CRTPPacket LhAngle;
-static bool enableAngleStreamFloat = false;
+static bool enableLighthouseAngleStream = false;
 static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
 static bool isInit = false;
@@ -298,31 +298,29 @@ void locSrvSendRangeFloat(uint8_t id, float range)
   }
 }
 
-void locSrvSendAngleFloat(pulseProcessorResult_t* angles)
+void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
 {
   anglePacket *ap = (anglePacket *)LhAngle.data;
 
-  if (enableAngleStreamFloat) {
-    for (uint8_t itb = 0; itb < NBR_OF_BASESTATIONS; itb++) { 
-      ap->basestation = itb;
+  if (enableLighthouseAngleStream) {
+    ap->basestation = basestation;
 
-      for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
-        float angle_first_sensor =  angles->sensorMeasurementsLh1[0].baseStatonMeasurements[itb].correctedAngles[its];
-        ap->sweeps[its].sweep = angle_first_sensor;
+    for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
+      float angle_first_sensor =  angles->sensorMeasurementsLh1[0].baseStatonMeasurements[basestation].correctedAngles[its];
+      ap->sweeps[its].sweep = angle_first_sensor;
 
-        for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
-          float angle_other_sensor = angles->sensorMeasurementsLh1[itd + 1].baseStatonMeasurements[itb].correctedAngles[its];
-          uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
-          ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
-        }   
-      }
-
-      ap->type = LH_ANGLE_STREAM;
-      LhAngle.port = CRTP_PORT_LOCALIZATION;
-      LhAngle.channel = GENERIC_TYPE;
-      LhAngle.size = sizeof(anglePacket);
-      crtpSendPacket(&LhAngle);
+      for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
+        float angle_other_sensor = angles->sensorMeasurementsLh1[itd + 1].baseStatonMeasurements[basestation].correctedAngles[its];
+        uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
+        ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
+      }   
     }
+
+    ap->type = LH_ANGLE_STREAM;
+    LhAngle.port = CRTP_PORT_LOCALIZATION;
+    LhAngle.channel = GENERIC_TYPE;
+    LhAngle.size = sizeof(anglePacket);
+    crtpSendPacket(&LhAngle);
   }
 }
 
@@ -339,7 +337,7 @@ LOG_GROUP_STOP(locSrvZ)
 
 PARAM_GROUP_START(locSrv)
   PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
-  PARAM_ADD(PARAM_UINT8, enAngleStreamFP32, &enableAngleStreamFloat)
+  PARAM_ADD(PARAM_UINT8, enAngleStreamFP32, &enableLighthouseAngleStream)
   PARAM_ADD(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
   PARAM_ADD(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
 PARAM_GROUP_STOP(locSrv)
