@@ -123,9 +123,9 @@ pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 #define KEY_LEN 20
 
 static baseStationGeometry_t geoBuffer;
-TESTABLE_STATIC void initializeGeoDataFromStorage();
+/* TESTABLE_STATIC */ void initializeGeoDataFromStorage();
 static lighthouseCalibration_t calibBuffer;
-TESTABLE_STATIC void initializeCalibDataFromStorage();
+/* TESTABLE_STATIC */ void initializeCalibDataFromStorage();
 
 
 void lighthouseCoreInit() {
@@ -426,7 +426,7 @@ bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, co
   return result;
 }
 
-TESTABLE_STATIC void initializeGeoDataFromStorage() {
+/* TESTABLE_STATIC */ void initializeGeoDataFromStorage() {
   char key[KEY_LEN];
 
   for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
@@ -439,7 +439,7 @@ TESTABLE_STATIC void initializeGeoDataFromStorage() {
   }
 }
 
-TESTABLE_STATIC void initializeCalibDataFromStorage() {
+/* TESTABLE_STATIC */ void initializeCalibDataFromStorage() {
   char key[KEY_LEN];
 
   for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
