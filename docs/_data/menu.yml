@@ -18,6 +18,7 @@
     - {page_id: p2p_api}
     - {page_id: trajectory_formats}
     - {page_id: lh_overview}
+    - {page_id: persistent_storage}
 - title: Development Instructions
   subs:
     - {page_id: starting_development}

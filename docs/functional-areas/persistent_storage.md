@@ -1,15 +1,35 @@
-# Embedded KV format
+---
+title: Persistent storage
+page_id: persistent_storage
+---
 
-The stored binary format is based on TLV (Type Lenght Value) but modified for the need of a dynamic storage.
+# Persistent storage
+
+The crazyflie has a persistent storage subsystem that is intended to be used for configuration and other rarely written data.
+The 7kB of the internal EEPROM is used for storage.
+Fetching data should be fairly fast, storing data can be very slow if the storage space needs to be defragmented/garbage collected.
+
+The API is documented in the [storage.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/storage.h).
+It currently only implements basic store/fetch/delete functions.
+The data stored are buffers and are stored and fetched using a key string.
+Care must be taken to not use generic keys in order to avoid collision.
+
+
+## Embedded KV format
+
+This is low level information about the format used to store data in the EEPROM.
+These information are not needed to use the storage api but can be useful if one want to modify or port the memory storage.
+
+The stored binary format is based on TLV (Type Length Value) but modified for the need of a dynamic storage.
 
 The format assumes it is working on a EEPROM since it does not implement a proper wear leveling.
 However, it can be noted that the format is already prepared to be used in flash allowing to append and discard entries without erasing the page: entries can be added and holes created by only writing zeros to a all-one memory. So, if modification are implemented using copy-on-write, this is effectively becoming a log-format and would fit a flash.
 
-## Basic format
+### Basic format
 
 Each KV couple is written as:
 
- - **Lenght** uint16_t: Lenght of the item, includes length, keylength, key and value.
+ - **Length** uint16_t: Length of the item, includes length, keylength, key and value.
  - **KeyLength** uint8_t: Length of the key
  - **Key** char*: Key
  - **Value** void*: Data buffer
