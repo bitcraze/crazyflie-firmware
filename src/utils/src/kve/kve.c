@@ -116,7 +116,7 @@ bool kveStore(kveMemory_t *kve, char* key, const void* buffer, size_t length) {
 
 size_t kveFetch(kveMemory_t *kve, const char* key, void* buffer, size_t bufferLength)
 {
-    uint16_t itemAddress = kveStorageFindItemByKey(kve, FIRST_ITEM_ADDRESS, key);
+    size_t itemAddress = kveStorageFindItemByKey(kve, FIRST_ITEM_ADDRESS, key);
 
     if (KVE_STORAGE_IS_VALID(itemAddress)) {
         kveItemHeader_t header = kveStorageGetItemInfo(kve, itemAddress);
@@ -128,7 +128,7 @@ size_t kveFetch(kveMemory_t *kve, const char* key, void* buffer, size_t bufferLe
 }
 
 bool kveDelete(kveMemory_t *kve, char* key) {
-    uint16_t itemAddress = kveStorageFindItemByKey(kve, FIRST_ITEM_ADDRESS, key);
+    size_t itemAddress = kveStorageFindItemByKey(kve, FIRST_ITEM_ADDRESS, key);
 
     if (KVE_STORAGE_IS_VALID(itemAddress)) {
         kveItemHeader_t itemInfo = kveStorageGetItemInfo(kve, itemAddress);
