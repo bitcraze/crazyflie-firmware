@@ -118,10 +118,13 @@ pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 
 
 // Persistent storage
+#define STORAGE_VERSION_KEY "lh/ver"
+#define CURRENT_STORAGE_VERSION "1"
 #define STORAGE_KEY_GEO "lh/sys/0/geo/"
 #define STORAGE_KEY_CALIB "lh/sys/0/cal/"
 #define KEY_LEN 20
 
+static void verifySetStorageVersion();
 static baseStationGeometry_t geoBuffer;
 TESTABLE_STATIC void initializeGeoDataFromStorage();
 static lighthouseCalibration_t calibBuffer;
@@ -352,6 +355,7 @@ void lighthouseCoreTask(void *param) {
   uart1Init(230400);
   systemWaitStart();
 
+  verifySetStorageVersion();
   initializeGeoDataFromStorage();
   initializeCalibDataFromStorage();
 
@@ -422,6 +426,22 @@ bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, co
   }
 
   return result;
+}
+
+static void verifySetStorageVersion() {
+  const int bufLen = 5;
+  char buffer[bufLen];
+
+  const size_t fetched = storageFetch(STORAGE_VERSION_KEY, buffer, bufLen);
+  if (fetched == 0) {
+    storageStore(STORAGE_VERSION_KEY, CURRENT_STORAGE_VERSION, strlen(CURRENT_STORAGE_VERSION) + 1);
+  } else {
+    if (strcmp(buffer, CURRENT_STORAGE_VERSION) != 0) {
+      // The storage format version is wrong! What to do?
+      // No need to handle until we bump the storage version, assert for now.
+      ASSERT_FAILED();
+    }
+  }
 }
 
 TESTABLE_STATIC void initializeGeoDataFromStorage() {
