@@ -45,6 +45,7 @@ typedef enum {
   CRTP_PORT_LOCALIZATION     = 0x06,
   CRTP_PORT_SETPOINT_GENERIC = 0x07,
   CRTP_PORT_SETPOINT_HL      = 0x08,
+  CRTP_PORT_EXTPOS_BRINGUP   = 0x0B,    // [Change]
   CRTP_PORT_PLATFORM         = 0x0D,
   CRTP_PORT_LINK             = 0x0F,
 } CRTPPort;

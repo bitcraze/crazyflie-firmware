@@ -113,6 +113,9 @@ void kalmanCoreUpdateWithPosition(kalmanCoreData_t* this, positionMeasurement_t 
 // Direct measurements of Crazyflie pose
 void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose);
 
+// [Change] Vicon measurments (with yaw estimation)
+void kalmanCoreUpdateWithPosVelYaw(kalmanCoreData_t* this, posvelyawMeasurement_t *pose);
+
 // Distance-to-point measurements
 void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t *d);
 

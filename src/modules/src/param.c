@@ -218,7 +218,7 @@ void paramTOCProcess(int command)
   switch (command)
   {
   case CMD_GET_INFO: //Get info packet about the param implementation
-    DEBUG_PRINT("Client uses old param API!\n");
+    // DEBUG_PRINT("Client uses old param API!\n");    // [CHANGE] using old crtp protocol, bypass the warning
     ptr = 0;
     group = "";
     p.header=CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);

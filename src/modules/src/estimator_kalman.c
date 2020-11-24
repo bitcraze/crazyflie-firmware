@@ -166,6 +166,15 @@ static inline bool stateEstimatorHasSweepAnglesPacket(sweepAngleMeasurement_t *a
   return (pdTRUE == xQueueReceive(sweepAnglesDataQueue, angles, 0));
 }
 
+// [CHANGE] yaw estimation. Direct measurements of Crazyflie position, velocity, and yaw
+static xQueueHandle posvelyawDataQueue;
+STATIC_MEM_QUEUE_ALLOC(posvelyawDataQueue, 10, sizeof(posvelyawMeasurement_t));
+
+static inline bool stateEstimatorHasPosVelYawMeasurement(posvelyawMeasurement_t *posvelyaw) {
+  return (pdTRUE == xQueueReceive(posvelyawDataQueue, posvelyaw, 0));
+}
+// ------------------------------------------------------------------ //
+
 // Semaphore to signal that we got data from the stabilzer loop to process
 static SemaphoreHandle_t runTaskSemaphore;
 
@@ -274,6 +283,8 @@ void estimatorKalmanTaskInit() {
   heightDataQueue = STATIC_MEM_QUEUE_CREATE(heightDataQueue);
   yawErrorDataQueue = STATIC_MEM_QUEUE_CREATE(yawErrorDataQueue);
   sweepAnglesDataQueue = STATIC_MEM_QUEUE_CREATE(sweepAnglesDataQueue);
+  //[CHANGE] Vicon measurements (with yaw estimation)
+  posvelyawDataQueue = STATIC_MEM_QUEUE_CREATE(posvelyawDataQueue);
 
   vSemaphoreCreateBinary(runTaskSemaphore);
 
@@ -409,6 +420,7 @@ static void kalmanTask(void* parameters) {
 
 void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick)
 {
+
   // This function is called from the stabilizer loop. It is important that this call returns
   // as quickly as possible. The dataMutex must only be locked short periods by the task.
   xSemaphoreTake(dataMutex, portMAX_DELAY);
@@ -552,6 +564,16 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
     doneUpdate = true;
   }
 
+  //[Change] Vicon measurements (with yaw estimation)
+  posvelyawMeasurement_t posvelyaw;
+  while (stateEstimatorHasPosVelYawMeasurement(&posvelyaw))
+  {
+      
+    kalmanCoreUpdateWithPosVelYaw(&coreData, &posvelyaw);
+    doneUpdate = true;
+  }
+  // ------------------------------------------------ //
+
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
@@ -642,6 +664,14 @@ bool estimatorKalmanEnqueuePose(const poseMeasurement_t *pose)
   ASSERT(isInit);
   return appendMeasurement(poseDataQueue, (void *)pose);
 }
+
+// [CHANGE] fuse Vicon measurements (with yaw estimation)
+bool estimatorKalmanEnqueuePosVelYaw(const posvelyawMeasurement_t *posvelyaw) 
+{
+  ASSERT(isInit);
+  return appendMeasurement(posvelyawDataQueue, (void *)posvelyaw); 
+}
+
 
 bool estimatorKalmanEnqueueDistance(const distanceMeasurement_t *dist)
 {

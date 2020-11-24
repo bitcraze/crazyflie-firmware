@@ -169,12 +169,12 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
   this->S[KC_STATE_X] = initialX;
   this->S[KC_STATE_Y] = initialY;
   this->S[KC_STATE_Z] = initialZ;
-//  this->S[KC_STATE_PX] = 0;
-//  this->S[KC_STATE_PY] = 0;
-//  this->S[KC_STATE_PZ] = 0;
-//  this->S[KC_STATE_D0] = 0;
-//  this->S[KC_STATE_D1] = 0;
-//  this->S[KC_STATE_D2] = 0;
+    //  this->S[KC_STATE_PX] = 0;
+    //  this->S[KC_STATE_PY] = 0;
+    //  this->S[KC_STATE_PZ] = 0;
+    //  this->S[KC_STATE_D0] = 0;
+    //  this->S[KC_STATE_D1] = 0;
+    //  this->S[KC_STATE_D2] = 0;
 
   // reset the attitude quaternion
   initialQuaternion[0] = arm_cos_f32(initialYaw / 2);
@@ -356,6 +356,56 @@ void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
     scalarUpdate(this, &H, err_quat.z, pose->stdDevQuat);
   }
 }
+
+//[Change] Add Vicon measurements
+void kalmanCoreUpdateWithPosVelYaw(kalmanCoreData_t* this, posvelyawMeasurement_t *posvelyaw)
+{
+	  // a direct measurement of states x, y, and z
+	  // do a scalar update for each state, since this should be faster than updating all together
+	  for (int i=0; i<3; i++) {
+	    float h[KC_STATE_DIM] = {0};
+	    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+	    h[KC_STATE_X+i] = 1;
+	    scalarUpdate(this, &H, posvelyaw->pos[i] - this->S[KC_STATE_X+i], posvelyaw->stdDev_pos);
+	  }
+
+	  // Measurement model of velocity as measured in world frame
+	  // v_w = R(P + omega^x x)
+	  for (int i=0; i<3; i++) {
+	    float h[KC_STATE_DIM] = {0};
+	    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+
+	    h[KC_STATE_PX] = this->R[i][0];
+	    h[KC_STATE_PY] = this->R[i][1];
+	    h[KC_STATE_PZ] = this->R[i][2];
+	    float pred_vel_w = this->R[i][0] * this->S[KC_STATE_PX] + this->R[i][1] * this->S[KC_STATE_PY] + this->R[i][2] * this->S[KC_STATE_PZ];
+
+	    scalarUpdate(this, &H, posvelyaw->vel[i] - pred_vel_w, posvelyaw->stdDev_vel);
+	  }
+
+	  // direct measurement of yaw (yaw error STATE_D2)
+	  float h[KC_STATE_DIM] = {0};
+	  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+	  h[KC_STATE_D2] = 1; // the Jacobian
+	  float pred_yaw = atan2f(2*(this->q[1]*this->q[2]+this->q[0]*this->q[3]) , this->q[0]*this->q[0] + this->q[1]*this->q[1] - this->q[2]*this->q[2] - this->q[3]*this->q[3]);
+	  float yaw_error = posvelyaw->yaw - pred_yaw;
+
+	  // wrap yaw_error between (-PI, PI]
+	  while (yaw_error > PI){
+		  yaw_error -= (float) 2.0 * PI;
+	  }
+
+	  while (yaw_error <= -PI){
+		  yaw_error += (float) 2.0 * PI;
+	  }
+
+	  // Add yaw measurement to Kalman filter if yaw estimate is valid (i.e., in (-PI, PI])
+	  if ((posvelyaw->yaw > -PI) && (posvelyaw->yaw <= PI)){
+		  scalarUpdate(this, &H, yaw_error, posvelyaw->stdDev_yaw);
+	  }
+}
+// ------------------------------------------------------------------------------------------------ //
+
 
 void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t *d)
 {

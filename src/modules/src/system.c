@@ -227,7 +227,7 @@ void systemTask(void *arg)
         // System can be forced to start by setting the param to 1 from the cfclient
         if (selftestPassed)
         {
-	        DEBUG_PRINT("Start forced.\n");
+	      DEBUG_PRINT("Start forced.\n");
           systemStart();
           break;
         }

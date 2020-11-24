@@ -29,9 +29,13 @@
 #include <stdint.h>
 #include "stabilizer_types.h"
 #include "crtp.h"
+// [CHANGE]
+#include "broadcast_data.h"
 
 void crtpCommanderInit(void);
 void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
 void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
+// [CHANGE]
+void bccrtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, crtp_setpoint_t* pk, uint8_t idx);   // broadcast commander function
 
 #endif /* CRTP_COMMANDER_H_ */

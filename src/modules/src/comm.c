@@ -39,7 +39,12 @@
 #include "usblink.h"
 #include "platformservice.h"
 #include "syslink.h"
+// [change]
+#ifdef BROADCAST_ENABLE
+#include "crtp_broadcast_service.h"
+#else
 #include "crtp_localization_service.h"
+#endif
 
 static bool isInit;
 
@@ -62,7 +67,13 @@ void commInit(void)
   platformserviceInit();
   logInit();
   paramInit();
-  locSrvInit();
+  //   locSrvInit();
+  // [Change]
+  #ifndef BROADCAST_ENABLE
+    locSrvInit();
+  #else
+    bcPosInit();
+  #endif
 
   //setup CRTP communication channel
   //TODO: check for USB first and prefer USB over radio

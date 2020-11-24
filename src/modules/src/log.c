@@ -261,7 +261,7 @@ void logTOCProcess(int command)
   switch (command)
   {
   case CMD_GET_INFO: //Get info packet about the log implementation
-    DEBUG_PRINT("Client uses old logging API!\n");
+    // DEBUG_PRINT("Client uses old logging API!\n");      // [CHANGE] using old crtp protocol now, bypass the warning
     LOG_DEBUG("Packet is TOC_GET_INFO\n");
     ptr = 0;
     group = "";

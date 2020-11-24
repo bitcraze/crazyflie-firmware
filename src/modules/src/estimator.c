@@ -27,6 +27,8 @@ typedef struct {
   bool (*estimatorEnqueueFlow)(const flowMeasurement_t *flow);
   bool (*estimatorEnqueueYawError)(const yawErrorMeasurement_t *error);
   bool (*estimatorEnqueueSweepAngles)(const sweepAngleMeasurement_t *angles);
+  // [Change] Vicon measurements
+  bool (*estimatorEnqueuePosVelYaw)(const posvelyawMeasurement_t *posvelyaw); 
 } EstimatorFcns;
 
 #define NOT_IMPLEMENTED ((void*)0)
@@ -47,6 +49,8 @@ static EstimatorFcns estimatorFunctions[] = {
         .estimatorEnqueueFlow = NOT_IMPLEMENTED,
         .estimatorEnqueueYawError = NOT_IMPLEMENTED,
         .estimatorEnqueueSweepAngles = NOT_IMPLEMENTED,
+        //[Change] Vicon measurements
+        .estimatorEnqueuePosVelYaw = NOT_IMPLEMENTED,
     }, // Any estimator
     {
         .init = estimatorComplementaryInit,
@@ -63,6 +67,8 @@ static EstimatorFcns estimatorFunctions[] = {
         .estimatorEnqueueFlow = NOT_IMPLEMENTED,
         .estimatorEnqueueYawError = NOT_IMPLEMENTED,
         .estimatorEnqueueSweepAngles = NOT_IMPLEMENTED,
+        //[Change] Vicon measurements
+        .estimatorEnqueuePosVelYaw = NOT_IMPLEMENTED,
     },
     {
         .init = estimatorKalmanInit,
@@ -79,6 +85,8 @@ static EstimatorFcns estimatorFunctions[] = {
         .estimatorEnqueueFlow = estimatorKalmanEnqueueFlow,
         .estimatorEnqueueYawError = estimatorKalmanEnqueueYawError,
         .estimatorEnqueueSweepAngles = estimatorKalmanEnqueueSweepAngles,
+        //[Change] Vicon measurements
+        .estimatorEnqueuePosVelYaw = estimatorKalmanEnqueuePosVelYaw,
     },
 };
 
@@ -171,6 +179,17 @@ bool estimatorEnqueuePose(const poseMeasurement_t *pose) {
 
   return false;
 }
+
+
+//[Change] Vicon measurements
+bool estimatorEnqueuePosVelYaw(const posvelyawMeasurement_t *posvelyaw){
+    if (estimatorFunctions[currentEstimator].estimatorEnqueuePosVelYaw) {
+      return estimatorFunctions[currentEstimator].estimatorEnqueuePosVelYaw(posvelyaw);
+    }
+
+  return false;
+}
+
 
 bool estimatorEnqueueDistance(const distanceMeasurement_t *dist) {
   if (estimatorFunctions[currentEstimator].estimatorEnqueueDistance) {

@@ -30,7 +30,14 @@
 #include "queue.h"
 
 #include "commander.h"
+// #include "crtp_commander.h"
+
+#ifdef BROADCAST_ENABLE
+#include "crtp_broadcast_service.h"
+#else
 #include "crtp_commander.h"
+#endif
+
 #include "crtp_commander_high_level.h"
 
 #include "cf_math.h"
@@ -61,9 +68,16 @@ void commanderInit(void)
   priorityQueue = STATIC_MEM_QUEUE_CREATE(priorityQueue);
   ASSERT(priorityQueue);
   xQueueSend(priorityQueue, &priorityDisable, 0);
+  // [CHANGE]
+  #ifdef BROADCAST_ENABLE
+    bcCmdInit();
+  #else
+    crtpCommanderInit();
+  #endif
+    crtpCommanderHighLevelInit();
 
-  crtpCommanderInit();
-  crtpCommanderHighLevelInit();
+//   crtpCommanderInit();
+//   crtpCommanderHighLevelInit();
   lastUpdate = xTaskGetTickCount();
 
   isInit = true;
@@ -102,7 +116,8 @@ void commanderNotifySetpointsStop(int remainValidMillisecs)
 
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
 {
-  xQueuePeek(setpointQueue, setpoint, 0);
+  // [Note]: copy the data in setpointQueue into setpoint buffer 
+  xQueuePeek(setpointQueue, setpoint, 0);  
   lastUpdate = setpoint->timestamp;
   uint32_t currentTime = xTaskGetTickCount();
 

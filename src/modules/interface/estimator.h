@@ -52,5 +52,7 @@ bool estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height);
 bool estimatorEnqueueFlow(const flowMeasurement_t *flow);
 bool estimatorEnqueueYawError(const yawErrorMeasurement_t *error);
 bool estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *angles);
+// [Change] Vicon measurements
+bool estimatorEnqueuePosVelYaw(const posvelyawMeasurement_t *posvelyaw); 
 
 #endif //__ESTIMATOR_H__

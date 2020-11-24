@@ -41,7 +41,15 @@
 
 #include "sensors.h"
 #include "commander.h"
+// #include "crtp_localization_service.h"   // is not used in the current firmware
+// [CHANGE]
+// note: BROADCAST_ENABLE is set in config.mk
+#ifdef BROADCAST_ENABLE
+#include "crtp_broadcast_service.h"
+#else
 #include "crtp_localization_service.h"
+#endif
+
 #include "sitaw.h"
 #include "controller.h"
 #include "power_distribution.h"
@@ -259,6 +267,14 @@ static void stabilizerTask(void* param)
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
+    
+    // [Change] get Vicon broadcast measurements
+    #ifdef BROADCAST_ENABLE
+    //    getExtPositionBC(&state);
+    //    getExtPosVelBC(&state); // 
+    getExtPosVelYawBC(&state); // we are currently here yaw estimation
+    #endif
+    // ----------------------------------------------------- //
 
     if (startPropTest != false) {
       // TODO: What happens with estimator when we run tests after startup?

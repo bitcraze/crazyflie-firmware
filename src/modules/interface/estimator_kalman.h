@@ -80,6 +80,9 @@ bool estimatorKalmanEnqueueSweepAngles(const sweepAngleMeasurement_t *angles);
 
 void estimatorKalmanGetEstimatedPos(point_t* pos);
 
+//[CHANGE] fuse Vicon measurements (with yaw estimation)
+bool estimatorKalmanEnqueuePosVelYaw(const posvelyawMeasurement_t * posvelyaw); 
+
 /**
  * Copies 9 floats representing the current state rotation matrix
  */

@@ -106,6 +106,76 @@ typedef struct positionMeasurement_s {
   float stdDev;
 } positionMeasurement_t;
 
+// [CHANGE] position + velocity meas.
+typedef struct posvelMeasurement_s {
+	union {
+	    struct {
+	      float x;
+	      float y;
+	      float z;
+	    };
+	    float pos[3];
+	  };
+	union {
+	    struct {
+	      float vx;
+	      float vy;
+	      float vz;
+	    };
+	    float vel[3];
+	  };
+  float stdDev_pos;
+  float stdDev_vel;
+} posvelMeasurement_t;
+
+
+// [CHANGE] yaw estimation
+typedef struct posvelyawMeasurement_s {
+	union {
+	    struct {
+	      float x;
+	      float y;
+	      float z;
+	    };
+	    float pos[3];
+	  };
+	union {
+	    struct {
+	      float vx;
+	      float vy;
+	      float vz;
+	    };
+	    float vel[3];
+	  };
+
+	union {
+	    struct {
+	      float yaw;
+	    };
+	    float euler[1];
+	  };
+
+  float stdDev_pos;
+  float stdDev_vel;
+  float stdDev_yaw;
+} posvelyawMeasurement_t;
+
+// [CHANGE]  position + yaw command
+typedef struct positionYawMeasurement_s {
+  union {
+    struct {
+      float x;
+      float y;
+      float z;
+    };
+    float pos[3];
+  };
+
+  float yaw;
+  float stdDev;
+} positionYawMeasurement_t;
+
+
 typedef struct poseMeasurement_s {
   union {
     struct {
@@ -192,6 +262,17 @@ typedef struct setpoint_s {
     stab_mode_t yaw;
     stab_mode_t quat;
   } mode;
+
+    // [change]
+    // Data from and for the new controller (mario: motion_primitive)
+    bool setEmergency;
+    bool resetEmergency;
+    uint8_t xmode, ymode, zmode;
+    float x[5];
+    float y[5];
+    float z[5];
+    float yaw[5];
+    float gamma[4][5];
 } setpoint_t;
 
 /** Estimate of position */
