@@ -27,7 +27,7 @@
 // Useful constants
 static const uint8_t base_address[] = {0,0,0,0,0,0,0xcf,0xbc};
 // [New]: Gloabl variable for the mode of the Agent. The default is TDoA4 
-int MODE = 4;                    // TDOA4, declared in lpsTdoa4Tag.h 
+int MODE = 3;                    // For tdoa3_plus, default mode is TDOA3 
 int AGENT_ID = 1;                // global variable for agent id
 // (mobile) Anchor context
 typedef struct {
@@ -99,9 +99,9 @@ typedef struct {
 // lppShortAnchorPos_s is defined in locodeck.h, here we define a new msg for TDoA4 
 // [New] lpp packet (transmission data): limitation is 11 float num
 struct lppShortAnchorPosition_s {
-    float position[3];
-    float quaternion[4];
-    float imu[6];
+    //   float position[3];
+    //   float quaternion[4];
+  float imu[6];
 } __attribute__((packed));
 // [New] Define a struct containing the info of remote "anchor" --> agent
 // global variable
@@ -697,15 +697,12 @@ static void setTxData(dwDevice_t *dev)
 
     struct lppShortAnchorPosition_s *pos = (struct lppShortAnchorPosition_s*) &txPacket.payload[rangePacketSize + LPP_PAYLOAD];
     /*------ Send the info. of interest--------*/
-    // test with dummy positions, quater, imu. For more agents and anchors, 
-    // LPP packet size will be limited
-    float dummy_pos[3] = {(float)AGENT_ID+(float)0.15, (float)AGENT_ID+(float)0.25, (float)AGENT_ID+(float)0.35};
-    float dummy_quater[4] = {(float)AGENT_ID+(float)0.015, (float)AGENT_ID+(float)0.025, (float)AGENT_ID+(float)0.035, (float)AGENT_ID+(float)0.045};
-    float dummy_imu[6] = {(float)AGENT_ID+(float)0.115, (float)AGENT_ID+(float)0.225, 
-                          (float)AGENT_ID+(float)0.335, (float)AGENT_ID+(float)0.445,
-                          (float)AGENT_ID+(float)0.555, (float)AGENT_ID+(float)0.665};
-    memcpy(pos->position, dummy_pos, 3 * sizeof(float));
-    memcpy(pos->quaternion, dummy_quater, 4 * sizeof(float));
+
+    float dummy_imu[6] = {(float)AGENT_ID+(float)0.11, (float)AGENT_ID+(float)0.22,
+                          (float)AGENT_ID+(float)0.33, (float)AGENT_ID+(float)0.44,
+                          (float)AGENT_ID+(float)0.55, (float)AGENT_ID+(float)0.66};
+    // memcpy(pos->position, dummy_pos, 3 * sizeof(float));
+    // memcpy(pos->quaternion, dummy_quater, 4 * sizeof(float));
     memcpy(pos->imu, dummy_imu, 6 * sizeof(float) );
     lppLength = 2 + sizeof(struct lppShortAnchorPosition_s);
 
