@@ -27,6 +27,7 @@ PLATFORM          ?= cf2
 LPS_TDMA_ENABLE   ?= 0
 LPS_TDOA_ENABLE   ?= 0
 LPS_TDOA3_ENABLE  ?= 0
+LPS_TDOA4_ENABLE  ?= 0    # [Change]
 BROADCAST_ENABLE  ?= 1    # [CHANGE]
 
 # Platform configuration handling
@@ -213,11 +214,14 @@ PROJ_OBJ += clockCorrectionEngine.o
 PROJ_OBJ += lpsTwrTag.o
 PROJ_OBJ += lpsTdoa2Tag.o
 PROJ_OBJ += lpsTdoa3Tag.o tdoaEngineInstance.o tdoaEngine.o tdoaStats.o tdoaStorage.o
+# [Change: binary file for tdoa4]
+PROJ_OBJ += lpsTdoa4Tag.o 
+
 PROJ_OBJ += outlierFilter.o
 PROJ_OBJ += flowdeck_v1v2.o
 PROJ_OBJ += oa.o
 PROJ_OBJ += multiranger.o
-PROJ_OBJ += lighthouse.o
+# PROJ_OBJ += lighthouse.o                // Not used now, comment out
 PROJ_OBJ += activeMarkerDeck.o
 
 # Uart2 Link for CRTP communication is not compatible with decks using uart2

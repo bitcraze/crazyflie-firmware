@@ -56,7 +56,8 @@
 #include "lpsTdoa2Tag.h"
 #include "lpsTdoa3Tag.h"
 #include "lpsTwrTag.h"
-
+//[Add]
+#include "lpsTdoa4Tag.h"
 
 #define CS_PIN DECK_GPIO_IO1
 
@@ -83,6 +84,9 @@
 
 #define ANTENNA_OFFSET 154.6   // In meter
 
+//[Change]
+#define LPS_TDOA4_ENABLE 1     // force to use tdoa4
+
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
 // combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
@@ -93,6 +97,8 @@ static lpsAlgoOptions_t algoOptions = {
   .userRequestedMode = lpsMode_TDoA2,
 #elif LPS_TDOA3_ENABLE
   .userRequestedMode = lpsMode_TDoA3,
+#elif LPS_TDOA4_ENABLE                                     // [Change]
+  .userRequestedMode = lpsMode_TDoA4,
 #elif defined(LPS_TWR_ENABLE)
   .userRequestedMode = lpsMode_TWR,
 #else
@@ -113,12 +119,15 @@ struct {
   [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
   [lpsMode_TDoA2] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA2"},
   [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA3"},
+  [lpsMode_TDoA4] = {.algorithm = &uwbTdoa4TagAlgorithm, .name="TDoA4"},   // [Change]
 };
 
 #if LPS_TDOA_ENABLE
 static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
 #elif LPS_TDOA3_ENABLE
 static uwbAlgorithm_t *algorithm = &uwbTdoa3TagAlgorithm;
+#elif LPS_TDOA4_ENABLE                                                     // [Change]
+static uwbAlgorithm_t *algorithm = &uwbTdoa4TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
@@ -355,6 +364,9 @@ static void uwbTask(void* parameters) {
 
   while(1) {
     xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+    // -- [Change] change the mode based on LPP packet -- //
+    algoOptions.userRequestedMode = switchAgentMode();
+    //----------------------------------------------------//
     handleModeSwitch();
     xSemaphoreGive(algoSemaphore);
 

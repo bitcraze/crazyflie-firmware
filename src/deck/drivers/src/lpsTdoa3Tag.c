@@ -58,6 +58,8 @@ The implementation must handle
 #define DEBUG_MODULE "TDOA3"
 #include "debug.h"
 #include "cfassert.h"
+// [Change]
+#include "lpsTdoa4Tag.h"
 
 // Positions for sent LPP packets
 #define LPS_TDOA3_TYPE 0
@@ -66,6 +68,21 @@ The implementation must handle
 #define PACKET_TYPE_TDOA3 0x30
 
 #define TDOA3_RECEIVE_TIMEOUT 10000
+
+// ----------- [Change] ----------- //
+// #define SHORT_LPP 0xF0
+// #define LPP_SHORT_MODE 0x03
+// #define LPP_SHORT_MODE_TWR 0x01
+// #define LPP_SHORT_MODE_TDOA2 0x02
+// #define LPP_SHORT_MODE_TDOA3 0x03
+// #define LPP_SHORT_MODE_TDOA4 0x04
+// struct lppShortMode_s {
+//   uint8_t mode;
+// } __attribute__((packed));
+
+static int Agent_Id;
+
+// ------------------------------- //
 
 typedef struct {
   uint8_t type;
@@ -162,6 +179,36 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
   }
 }
 
+//[New]: moved from lpp.c in anchor code
+// used for switch back to TDOA4
+static void lppHandleShortPacket(uint8_t *data, size_t length)
+{
+    if (length < 1) return;
+    int type  = data[0];
+
+    switch(type) {
+        case LPP_SHORT_MODE:
+        { // used to switch Agent mode
+            struct lppShortMode_s* modeInfo = (struct lppShortMode_s*)&data[1];
+            //   DEBUG_PRINT("Switch mode!!!!! \n");
+            //   // Set new mode
+            //   DEBUG_PRINT("MODE is %d\n",(int)modeInfo->mode);
+            //   DEBUG_PRINT("TDoA3 is %d\n",(int)LPP_SHORT_MODE_TDOA3);
+            if (modeInfo->mode == LPP_SHORT_MODE_TWR) {
+                MODE = lpsMode_TWR;
+            } else if (modeInfo->mode == LPP_SHORT_MODE_TDOA2) {
+                MODE = lpsMode_TDoA2;
+            } else if (modeInfo->mode == LPP_SHORT_MODE_TDOA3) {
+                // DEBUG_PRINT("Set mode to be tdoa3!!!!! \n");
+                MODE = lpsMode_TDoA3;
+            }else if (modeInfo->mode == LPP_SHORT_MODE_TDOA4) {
+                MODE = lpsMode_TDoA4;
+            }
+            break;
+        }
+    }
+}
+
 static void rxcallback(dwDevice_t *dev) {
   tdoaStats_t* stats = &tdoaEngineState.stats;
   STATS_CNT_RATE_EVENT(&stats->packetsReceived);
@@ -192,6 +239,16 @@ static void rxcallback(dwDevice_t *dev) {
 
     rangingOk = true;
   }
+  // [Change] switch mode back to TDOA4
+  else if(rxPacket.payload[0] == SHORT_LPP){
+        if ((int)rxPacket.destAddress == Agent_Id) {  // the lpp is sent to this Agent. 
+        // DEBUG_PRINT("Receive the correct Short LPP packet !!!!!!!!!!!!\n");
+        // testing switch time//
+        // xStart_s = T2M(xTaskGetTickCount());
+        lppHandleShortPacket(&rxPacket.payload[1], dataLength - MAC802154_HEADER_LENGTH - 1);
+        }
+  }
+
 }
 
 static void setRadioInReceiveMode(dwDevice_t *dev) {
@@ -304,6 +361,8 @@ static void Initialize(dwDevice_t *dev) {
   dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);
 
   dwCommitConfiguration(dev);
+  // [Change] give each drone an ID
+  Agent_Id = AGENT_ID;    // global variable, declared in lpsTdoa4Tag.h
 
   rangingOk = false;
 }
