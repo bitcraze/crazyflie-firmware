@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 #  ,---------,       ____  _ __
 #  |  ,-^-,  |      / __ )(_) /_______________ _____  ___
@@ -261,6 +261,7 @@ def estimate_geometry(sensor_sweeps, rvec_start, tvec_start):
     return Rw_ocv, Tw_ocv
 
 def print_geo(rotation_cf, position_cf, is_valid):
+    print('C-format')
     if is_valid:
         valid_c = 'true'
     else:
@@ -279,6 +280,19 @@ def print_geo(rotation_cf, position_cf, is_valid):
         print("}, ", end='')
 
     print("}},")
+
+    print()
+    print('python-format')
+    print('geo = LighthouseBsGeometry()')
+    print('geo.origin =', np.array2string(position_cf, separator=','))
+    print('geo.rotation_matrix = [', end='')
+    for row in rotation_cf:
+        print(np.array2string(row, separator=','), end='')
+        print(', ', end='')
+    print(']')
+    print('geo.valid =', is_valid)
+
+
 
 class WriteMem:
     def __init__(self, scf, bs1, bs2):
@@ -355,6 +369,7 @@ with SyncCrazyflie(uri, cf=cf) as scf:
 
     geometries = []
     for bs in range(2):
+        print("Base station ", bs)
         sensor_sweeps = sensor_sweeps_all[bs]
         rvec_start, tvec_start = calc_initial_estimate(sensor_sweeps)
         geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
@@ -362,12 +377,13 @@ with SyncCrazyflie(uri, cf=cf) as scf:
 
         is_valid = sanity_check(position_cf)
         if not is_valid:
-            position_cf = [0, 0, 0]
-            rotation_cf = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-            print("Could not find valid solution for base station ", bs)
+            position_cf = np.array([0, 0, 0])
+            rotation_cf = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            print("Warning: could not find valid solution")
 
         print_geo(rotation_cf, position_cf, is_valid)
         geometries.append([rotation_cf, position_cf, is_valid])
+        print()
 
     if args.write:
         print("Uploading geo data")

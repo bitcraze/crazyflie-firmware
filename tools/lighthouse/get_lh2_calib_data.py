@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 #  ,---------,       ____  _ __
 #  |  ,-^-,  |      / __ )(_) /_______________ _____  ___
@@ -26,7 +26,7 @@
 #  Get calibration data from a lighthouse 2 base station.
 #
 #  This script connects to a lighthouse base station and
-#  extracts the calibration parameters. The base station is serial device
+#  extracts the calibration parameters. The base station is a serial device
 #  when connected via USB.
 #
 #  Usage:
@@ -75,6 +75,7 @@ for line in lines:
 
         data[sweep][param] = value
 
+print('C-format')
 print('    .sweep = {')
 for sweep, params in data.items():
     print('      {', end='')
@@ -82,3 +83,11 @@ for sweep, params in data.items():
         print('.' + param + ' = ' + value + ', ', end='')
     print('},')
 print('    },')
+print('    .valid = true,')
+print()
+print('python-format')
+print('calib = LighthouseBsCalibration()')
+for sweep, params in data.items():
+    for param, value in params.items():
+        print('calib.sweeps[{}].{} = {}'.format(sweep, param, value))
+print('calib.valid = True')
