@@ -155,7 +155,6 @@ bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
   bool status;
 
   unsigned char pageBuffer[32];
-  int pageIndex = 0;
   int bufferIndex = 0;
   int leftToWrite = len;
   uint16_t currentAddress = writeAddr;
@@ -167,11 +166,13 @@ bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
   }
 
   while (leftToWrite > 0) {
+    int pageIndex = 0;
+    pageAddress = currentAddress;
     do {
       pageBuffer[pageIndex++] = buffer[bufferIndex++];
       leftToWrite -= 1;
       currentAddress += 1;
-    } while ((leftToWrite > 0) || (currentAddress % 32 == 0));
+    } while ((leftToWrite > 0) && (currentAddress % 32 != 0));
 
     // Writing page
     for (int retry = 0; retry < 10; retry++) {
