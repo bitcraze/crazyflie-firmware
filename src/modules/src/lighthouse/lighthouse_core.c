@@ -76,7 +76,7 @@ static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
-NO_DMA_CCM_SAFE_ZERO_INIT pulseProcessor_t lighthouseCoreState = {
+pulseProcessor_t lighthouseCoreState = {
   .bsGeometry = {
     // Arena LH1
     // {.valid = true, .origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
