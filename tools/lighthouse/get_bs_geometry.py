@@ -113,9 +113,9 @@ def read_sensors(scf: SyncCrazyflie):
                     measurements[basestation]["count"]
 
     # Reorganize data to be used by the geometry functions
-    sensor_sweeps = []
-    for bs in sorted(measurements):
-        sensor_sweeps.append([[0, 0], [0, 0], [0, 0], [0, 0]])
+    sensor_sweeps = {}
+    for bs in measurements:
+        sensor_sweeps[bs] = ([[0, 0], [0, 0], [0, 0], [0, 0]])
         for sensor in range(4):
             for axis in range(2):
                 sensor_sweeps[bs][sensor][axis] = \
@@ -383,9 +383,9 @@ with SyncCrazyflie(uri, cf=cf) as scf:
     print("Estimating position of base stations...")
 
     geometries = []
-    for bs in range(2):
-        print("Base station ", bs)
+    for bs in sorted(sensor_sweeps_all.keys()):
         sensor_sweeps = sensor_sweeps_all[bs]
+        print("Base station ", bs)
         rvec_start, tvec_start = calc_initial_estimate(sensor_sweeps)
         geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
         rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
