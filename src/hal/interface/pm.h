@@ -135,6 +135,22 @@ float pmGetBatteryVoltageMax(void);
 void pmBatteryUpdate(AdcGroup* adcValues);
 
 /**
+ * Returns true if the battery is below its low capacity threshold for an
+ * extended period of time.
+ */
+bool pmIsBatteryLow(void);
+
+/**
+ * Returns true if the charger is currently connected
+ */
+bool pmIsChargerConnected(void);
+
+/**
+ * Returns true if the battery is currently charging
+ */
+bool pmIsCharging(void);
+
+/**
  * Returns true if the battery is currently in use
  */
 bool pmIsDischarging(void);
