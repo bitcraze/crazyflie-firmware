@@ -728,7 +728,9 @@ void paramSetInt(paramVarId_t varid, int valuei)
       break;
   }
 
+#ifndef SILENT_PARAM_UPDATES
   crtpSendPacket(&pk);
+#endif
 }
 
 void paramSetFloat(paramVarId_t varid, float valuef)
@@ -748,5 +750,8 @@ void paramSetFloat(paramVarId_t varid, float valuef)
       memcpy(&pk.data[2], &valuef, 4);
       pk.size += 4;
   }
+
+#ifndef SILENT_PARAM_UPDATES
   crtpSendPacket(&pk);
+#endif
 }
