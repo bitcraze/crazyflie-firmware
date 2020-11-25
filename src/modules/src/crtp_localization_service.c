@@ -373,7 +373,7 @@ LOG_GROUP_STOP(locSrvZ)
 
 PARAM_GROUP_START(locSrv)
   PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
-  PARAM_ADD(PARAM_UINT8, enAngleStreamFP32, &enableLighthouseAngleStream)
+  PARAM_ADD(PARAM_UINT8, enLhAngleStream, &enableLighthouseAngleStream)
   PARAM_ADD(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
   PARAM_ADD(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
 PARAM_GROUP_STOP(locSrv)
