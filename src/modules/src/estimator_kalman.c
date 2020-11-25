@@ -206,8 +206,10 @@ static StaticSemaphore_t dataMutexBuffer;
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
 
-
-
+// ----------------------- Flags ----------------------- //
+static bool enable_UWB = false;
+static bool ROBUST = false; 
+// ----------------------------------------------------- //
 /**
  * Quadrocopter State
  *

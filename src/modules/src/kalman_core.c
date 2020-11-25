@@ -502,7 +502,10 @@ void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
   tdoaCount++;
 }
 
+// ------------------------ [Change] Robust Extended Kalman Filter ----------------------------- //
+// help functions
 
+// --------------------------------------------------------------------------------------------- //
 
 // TODO remove the temporary test variables (used for logging)
 static float predictedNX;

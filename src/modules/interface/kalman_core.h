@@ -122,6 +122,9 @@ void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t 
 // Measurements of a UWB Tx/Rx
 void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);
 
+// [Change] Define a new robust update EKF with tdoa measurements
+void kalmanCoreRobustUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);
+
 // Measurements of flow (dnx, dny)
 void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro);
 
