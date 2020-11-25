@@ -961,6 +961,45 @@ Ledring12Effect effectsFct[] =
   lighthouseEffect,
 };
 
+/********** Light signal overriding **********/
+
+static struct {
+  uint8_t trigger;
+  uint32_t triggeredAt;
+  uint8_t active;
+} lightSignal = { 0, 0, 0 };
+
+static void checkLightSignalTrigger(void)
+{
+  if (lightSignal.trigger)
+  {
+    lightSignal.active = 1;
+    lightSignal.triggeredAt = xTaskGetTickCount();
+    lightSignal.trigger = 0;
+  }
+}
+
+static void overrideWithLightSignal(uint8_t buffer[][3])
+{
+  uint8_t color;
+  uint32_t diffMsec;
+
+  if (lightSignal.active) {
+    diffMsec = T2M(xTaskGetTickCount() - lightSignal.triggeredAt);
+
+    if (diffMsec >= 1500) {
+      lightSignal.active = 0;
+      lightSignal.triggeredAt = 0;
+      color = 0;
+    } else {
+      diffMsec = diffMsec % 300;
+      color = (diffMsec <= 100) ? 255 : 0;
+    }
+
+    memset(buffer, color, NBR_LEDS * 3);
+  }
+}
+
 /********** Ring init and switching **********/
 static xTimerHandle timer;
 
@@ -985,6 +1024,7 @@ void ledring12Worker(void * data)
   current_effect = effect;
 
   effectsFct[current_effect](buffer, reset);
+  overrideWithLightSignal(buffer);
   ws2812Send(buffer, NBR_LEDS);
 }
 
@@ -993,6 +1033,7 @@ static void ledring12Timer(xTimerHandle timer)
   workerSchedule(ledring12Worker, NULL);
 
   setHeadlightsOn(headlightEnable);
+  checkLightSignalTrigger();
 }
 
 static void ledring12Init(DeckInfo *info)
@@ -1082,6 +1123,7 @@ PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
 PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
 PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
+PARAM_ADD(PARAM_UINT8, lightSignalTrigger, &lightSignal.trigger)
 PARAM_GROUP_STOP(ring)
 
 static const DeckDriver ledring12_deck = {
