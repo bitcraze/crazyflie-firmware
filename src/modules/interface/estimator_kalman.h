@@ -82,7 +82,8 @@ void estimatorKalmanGetEstimatedPos(point_t* pos);
 
 //[CHANGE] fuse Vicon measurements (with yaw estimation)
 bool estimatorKalmanEnqueuePosVelYaw(const posvelyawMeasurement_t * posvelyaw); 
-
+//[CHANGE] robsut tdoa updates
+bool estimatorKalmanEnqueueRobustTDOA(const tdoaMeasurement_t *uwb);
 /**
  * Copies 9 floats representing the current state rotation matrix
  */

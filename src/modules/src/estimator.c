@@ -29,6 +29,8 @@ typedef struct {
   bool (*estimatorEnqueueSweepAngles)(const sweepAngleMeasurement_t *angles);
   // [Change] Vicon measurements
   bool (*estimatorEnqueuePosVelYaw)(const posvelyawMeasurement_t *posvelyaw); 
+  // [Change] Robust TDOA update
+  bool (*estimatorEnqueueRobustTDOA)(const tdoaMeasurement_t *uwb);
 } EstimatorFcns;
 
 #define NOT_IMPLEMENTED ((void*)0)
@@ -51,6 +53,8 @@ static EstimatorFcns estimatorFunctions[] = {
         .estimatorEnqueueSweepAngles = NOT_IMPLEMENTED,
         //[Change] Vicon measurements
         .estimatorEnqueuePosVelYaw = NOT_IMPLEMENTED,
+        //[Change] robust TDOA meas.
+        .estimatorEnqueueRobustTDOA = NOT_IMPLEMENTED,
     }, // Any estimator
     {
         .init = estimatorComplementaryInit,
@@ -69,6 +73,8 @@ static EstimatorFcns estimatorFunctions[] = {
         .estimatorEnqueueSweepAngles = NOT_IMPLEMENTED,
         //[Change] Vicon measurements
         .estimatorEnqueuePosVelYaw = NOT_IMPLEMENTED,
+        //[Change] robust TDOA meas.
+        .estimatorEnqueueRobustTDOA = NOT_IMPLEMENTED,
     },
     {
         .init = estimatorKalmanInit,
@@ -87,6 +93,8 @@ static EstimatorFcns estimatorFunctions[] = {
         .estimatorEnqueueSweepAngles = estimatorKalmanEnqueueSweepAngles,
         //[Change] Vicon measurements
         .estimatorEnqueuePosVelYaw = estimatorKalmanEnqueuePosVelYaw,
+        //[Change] robust TDOA update
+        .estimatorEnqueueRobustTDOA = estimatorKalmanEnqueueRobustTDOA,
     },
 };
 
@@ -151,6 +159,14 @@ const char* stateEstimatorGetName() {
 bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb) {
   if (estimatorFunctions[currentEstimator].estimatorEnqueueTDOA) {
     return estimatorFunctions[currentEstimator].estimatorEnqueueTDOA(uwb);
+  }
+
+  return false;
+}
+//[Change] robust TDOA meas.
+bool estimatorEnqueueRobustTDOA(const tdoaMeasurement_t *uwb) {
+  if (estimatorFunctions[currentEstimator].estimatorEnqueueRobustTDOA) {
+    return estimatorFunctions[currentEstimator].estimatorEnqueueRobustTDOA(uwb);
   }
 
   return false;

@@ -59,6 +59,12 @@ static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_mat
     ASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst));
 }
 
+//[Change]
+static inline void mat_add(const arm_matrix_instance_f32 * pSrcA, const arm_matrix_instance_f32 * pSrcB, arm_matrix_instance_f32 * pDst)
+{ ASSERT(ARM_MATH_SUCCESS == arm_mat_add_f32(pSrcA, pSrcB, pDst)); }
+static inline void mat_scale(const arm_matrix_instance_f32 * pSrcA, float32_t scale, arm_matrix_instance_f32 * pDst)
+{ ASSERT(ARM_MATH_SUCCESS == arm_mat_scale_f32(pSrcA, scale, pDst)); }
+
 static inline float arm_sqrt(float32_t in) {
     float pOut = 0;
     arm_status result = arm_sqrt_f32(in, &pOut);

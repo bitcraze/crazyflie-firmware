@@ -54,5 +54,6 @@ bool estimatorEnqueueYawError(const yawErrorMeasurement_t *error);
 bool estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *angles);
 // [Change] Vicon measurements
 bool estimatorEnqueuePosVelYaw(const posvelyawMeasurement_t *posvelyaw); 
-
+// [Change] robust tdoa updates
+bool estimatorEnqueueRobustTDOA(const tdoaMeasurement_t *uwb);
 #endif //__ESTIMATOR_H__

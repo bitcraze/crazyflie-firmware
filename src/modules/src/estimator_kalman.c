@@ -207,8 +207,10 @@ static StaticSemaphore_t dataMutexBuffer;
 #define MIN_COVARIANCE (1e-6f)
 
 // ----------------------- Flags ----------------------- //
-static bool enable_UWB = false;
-static bool ROBUST = false; 
+static bool first_vicon = true;
+
+// static bool enable_UWB = false;
+static bool ROBUST = true; 
 // ----------------------------------------------------- //
 /**
  * Quadrocopter State
@@ -571,15 +573,28 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
   while (stateEstimatorHasPosVelYawMeasurement(&posvelyaw))
   {
       
-    kalmanCoreUpdateWithPosVelYaw(&coreData, &posvelyaw);
-    doneUpdate = true;
+     if (first_vicon){
+        coreData.resetEstimation = true;
+        first_vicon = false;
+    }else{
+        kalmanCoreUpdateWithPosVelYaw(&coreData, &posvelyaw);
+        doneUpdate = true;
+    }
   }
   // ------------------------------------------------ //
 
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
-    kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+      //[Change]
+    if(ROBUST){
+        // use robust update
+        kalmanCoreRobustUpdateWithTDOA(&coreData, &tdoa);
+    }
+    else{
+        // use conventional update
+        kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+    }
     doneUpdate = true;
   }
 
@@ -650,6 +665,12 @@ static bool appendMeasurement(xQueueHandle queue, void *measurement)
 }
 
 bool estimatorKalmanEnqueueTDOA(const tdoaMeasurement_t *uwb)
+{
+  ASSERT(isInit);
+  return appendMeasurement(tdoaDataQueue, (void *)uwb);
+}
+//[Change] robust TDOA update
+bool estimatorKalmanEnqueueRobustTDOA(const tdoaMeasurement_t *uwb)
 {
   ASSERT(isInit);
   return appendMeasurement(tdoaDataQueue, (void *)uwb);
