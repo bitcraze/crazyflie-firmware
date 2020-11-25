@@ -44,6 +44,7 @@
 #include "mem.h"
 #include "log.h"
 #include "param.h"
+#include "pm.h"
 
 
 #define DEBUG_MODULE "APPAPI"
@@ -113,5 +114,13 @@ void appMain() {
     paramGetUint(id);
     paramSetInt(id, 0);
     paramSetFloat(id, 0.0f);
+  }
+
+  // Power management
+  {
+    pmIsBatteryLow();
+    pmIsChargerConnected();
+    pmIsCharging();
+    pmIsDischarging();
   }
 }
