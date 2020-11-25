@@ -285,28 +285,20 @@ float pmMeasureExtBatteryVoltage(void)
 }
 
 bool pmIsBatteryLow(void) {
-  PMStates pmState;
-  pmState = pmUpdateState();
   return (pmState == lowPower);
 }
 
 bool pmIsChargerConnected(void) {
-  PMStates pmState;
-  pmState = pmUpdateState();
   return (pmState == charging) || (pmState == charged);
 }
 
 bool pmIsCharging(void) {
-  PMStates pmState;
-  pmState = pmUpdateState();
   return (pmState == charging);
 }
 
 // return true if battery discharging
 bool pmIsDischarging(void) {
-    PMStates pmState;
-    pmState = pmUpdateState();
-    return (pmState == lowPower )|| (pmState == battery);
+  return (pmState == lowPower) || (pmState == battery);
 }
 
 void pmTask(void *param)
