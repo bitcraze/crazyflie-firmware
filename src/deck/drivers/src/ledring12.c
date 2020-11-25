@@ -1123,8 +1123,11 @@ PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
 PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
 PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
-PARAM_ADD(PARAM_UINT8, lightSignalTrigger, &lightSignal.trigger)
 PARAM_GROUP_STOP(ring)
+
+PARAM_GROUP_START(system)
+PARAM_ADD(PARAM_UINT8, highlight, &lightSignal.trigger)
+PARAM_GROUP_STOP(system)
 
 static const DeckDriver ledring12_deck = {
   .vid = 0xBC,
