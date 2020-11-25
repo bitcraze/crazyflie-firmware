@@ -46,67 +46,80 @@ import math
 import time
 import numpy as np
 import cv2 as cv
+from threading import Semaphore
+import sys
 
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
-from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.mem import LighthouseBsGeometry
 from cflib.crazyflie.mem import MemoryElement
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
-from cflib.crazyflie.syncLogger import SyncLogger
 
-def read_sensors(scf):
-    logs = {
-        'lighthouse.angle0x':   [0, 0, 0],
-        'lighthouse.angle0y':   [0, 0, 1],
-        'lighthouse.angle0x_1': [0, 1, 0],
-        'lighthouse.angle0y_1': [0, 1, 1],
-        'lighthouse.angle0x_2': [0, 2, 0],
-        'lighthouse.angle0y_2': [0, 2, 1],
-        'lighthouse.angle0x_3': [0, 3, 0],
-        'lighthouse.angle0y_3': [0, 3, 1],
-        'lighthouse.angle1x':   [1, 0, 0],
-        'lighthouse.angle1y':   [1, 0, 1],
-        'lighthouse.angle1x_1': [1, 1, 0],
-        'lighthouse.angle1y_1': [1, 1, 1],
-        'lighthouse.angle1x_2': [1, 2, 0],
-        'lighthouse.angle1y_2': [1, 2, 1],
-        'lighthouse.angle1x_3': [1, 3, 0],
-        'lighthouse.angle1y_3': [1, 3, 1],
-    }
+# Number of sample to accumulate for the geometry calculation
+N_SAMPLE = 50
 
-    storage = {}
 
-    confs = [
-        LogConfig(name='lh1', period_in_ms=10),
-        LogConfig(name='lh2', period_in_ms=10),
-        LogConfig(name='lh3', period_in_ms=10),
-    ]
+def read_sensors(scf: SyncCrazyflie):
+    # Mutext released by the callback function when enough measurements have
+    # been accumulated
+    reading_finished = Semaphore(0)
 
-    # Set up log blocks
-    count = 0
-    floats_per_block = 6
-    for name in logs.keys():
-        confs[int(count / floats_per_block)].add_variable(name, 'float')
-        count += 1
+    measurements = {}
 
-    # Read log data
-    with SyncLogger(scf, confs) as logger:
-        end_time = time.time() + 1.0
-        for log_entry in logger:
-            data = log_entry[1]
-            for log_name in data:
-                if not log_name in storage:
-                    storage[log_name] = []
-                storage[log_name].append(data[log_name])
-            if time.time() > end_time:
-                break
+    # Callback accumulating measurements
+    def _loc_callback(pk):
+        if pk.type != scf.cf.loc.LH_ANGLE_STREAM:
+            return
 
-    # Average sensor data
-    sensor_sweeps = np.zeros([2, 4, 2])
-    for log_name, data in storage.items():
-        sensor_info = logs[log_name]
-        sensor_sweeps[sensor_info[0]][sensor_info[1]][sensor_info[2]] = np.average(data)
+        print(pk.data["basestation"], end='')
+        sys.stdout.flush()
+
+        if not pk.data["basestation"] in measurements:
+            measurements[pk.data["basestation"]] = {
+                "count": 1,
+                "sensors": [
+                    pk.data["x"],
+                    pk.data["y"]
+                ]
+            }
+        else:
+            for axis, axis_name in enumerate(['x', 'y']):
+                for sensor in range(4):
+                    measurements[pk.data["basestation"]]["sensors"][axis][sensor] += \
+                        pk.data[axis_name][sensor]
+
+            measurements[pk.data["basestation"]]["count"] += 1
+
+            if measurements[pk.data["basestation"]]["count"] > N_SAMPLE:
+                print()
+                reading_finished.release()
+
+    # Setup callback function and start streaming
+    scf.cf.loc.receivedLocationPacket.add_callback(_loc_callback)
+    scf.cf.param.set_value("locSrv.enLhAngleStream", 1)
+
+    # Wait for enough sample to be acquired
+    reading_finished.acquire()
+
+    # Stop streaming and disable callback function
+    scf.cf.param.set_value("locSrv.enLhAngleStream", 0)
+    scf.cf.loc.receivedLocationPacket.remove_callback(_loc_callback)
+
+    # Average the sum of measurements and generate t
+    for basestation in measurements:
+        for axis, axis_name in enumerate(['x', 'y']):
+            for sensor in range(4):
+                measurements[basestation]["sensors"][axis][sensor] /= \
+                    measurements[basestation]["count"]
+
+    # Reorganize data to be used by the geometry functions
+    sensor_sweeps = []
+    for bs in sorted(measurements):
+        sensor_sweeps.append([[0, 0], [0, 0], [0, 0], [0, 0]])
+        for sensor in range(4):
+            for axis in range(2):
+                sensor_sweeps[bs][sensor][axis] = \
+                    measurements[bs]["sensors"][axis][sensor]
 
     return sensor_sweeps
 
@@ -117,6 +130,7 @@ def hash_sensor_order(order):
     for i in range(4):
         hash += order[i] * 4 ** i
     return hash
+
 
 def estimate_yaw_to_base_station(sensor_sweeps):
     direction = {
@@ -260,6 +274,7 @@ def estimate_geometry(sensor_sweeps, rvec_start, tvec_start):
     Rw_ocv, Tw_ocv = cam_to_world(rvec_est, tvec_est)
     return Rw_ocv, Tw_ocv
 
+
 def print_geo(rotation_cf, position_cf, is_valid):
     print('C-format')
     if is_valid:
@@ -291,7 +306,6 @@ def print_geo(rotation_cf, position_cf, is_valid):
         print(', ', end='')
     print(']')
     print('geo.valid =', is_valid)
-
 
 
 class WriteMem:
@@ -348,6 +362,7 @@ def sanity_check(position_cf):
     return True
 
 ##################################################
+
 
 parser = argparse.ArgumentParser()
 uri = "radio://0/80/2M"
