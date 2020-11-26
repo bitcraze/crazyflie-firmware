@@ -60,7 +60,29 @@ static lpsTdoa2AlgoOptions_t defaultOptions = {
      0xbccf000000000006,
      0xbccf000000000007,
    },
+
+    // DSL-2020-1125
+    .anchorPosition = {
+        {timestamp: 1, x: -3.09, y: -4.06, z: 0.16},   // [-3.09011314 -4.06293724  0.16195958]
+
+        {timestamp: 1, x: -3.39, y: 3.86,  z: 3.11},   // [-3.39253512  3.85831068  3.11352295]
+
+        {timestamp: 1, x: 3.75,  y: 3.55,  z: 0.18},   // [ 3.7525203   3.55492649  0.17772486]
+
+        {timestamp: 1, x: 4.2,  y: -4.42, z: 3.33},    // [ 4.20000122 -4.41947649  3.33429954]
+
+        {timestamp: 1, x: -3.21, y: -4.56, z: 3.11},   // [-3.21206623 -4.5600674   3.11180124]
+
+        {timestamp: 1, x: 3.98,  y: -3.62, z: 0.16 },  // [ 3.98396529 -3.62012079  0.16028816] 
+
+        {timestamp: 1, x: 4.09 , y: 4.01,  z: 3.35},    // [ 4.09520078  4.00742024  3.35324013]
+
+        {timestamp: 1, x: -3.23, y: 3.35,  z: 0.17},   // [-3.23060301  3.35294728  0.17296781]
+    },
 };
+
+// Set a counter to reduce the TDoA update freqeuncy
+static int counter = 0;
 
 static lpsTdoa2AlgoOptions_t* options = &defaultOptions;
 
@@ -206,7 +228,15 @@ static bool rxcallback(dwDevice_t *dev) {
       tdoaAnchorContext_t anchorCtx;
       tdoaEngineGetAnchorCtxForPacketProcessing(&tdoaEngineState, anchor, now_ms, &anchorCtx);
       updateRemoteData(&anchorCtx, packet);
-      tdoaEngineProcessPacket(&tdoaEngineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+      //[change] compute tdoa meas. send to EKF
+      if (counter == 5){
+        tdoaEngineProcessPacket(&tdoaEngineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+        counter=0;   // reset counter
+      }else{
+        // drop the measurement 
+        counter++;
+      }
+
       tdoaStorageSetRxTxData(&anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
 
       logClockCorrection[anchor] = tdoaStorageGetClockCorrection(&anchorCtx);

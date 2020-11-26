@@ -53,7 +53,7 @@ The implementation must handle
 #include "clockCorrectionEngine.h"
 #include "physicalConstants.h"
 
-#define MEASUREMENT_NOISE_STD 0.15f
+#define MEASUREMENT_NOISE_STD 0.15f    
 
 void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
