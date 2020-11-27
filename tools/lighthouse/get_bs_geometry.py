@@ -309,9 +309,7 @@ def print_geo(rotation_cf, position_cf, is_valid):
 
 
 class WriteMem:
-    def __init__(self, scf, bs1, bs2):
-        self.data_written = False
-
+    def __init__(self, scf, bs, geo):
         mems = scf.cf.mem.get_mems(MemoryElement.TYPE_LH)
 
         count = len(mems)
@@ -319,18 +317,11 @@ class WriteMem:
             raise Exception('Unexpected nr of memories found:', count)
 
         self.data_written = False
-        mems[0].write_geo_data(0, bs1, self._data_written,
-                               write_failed_cb=self._write_failed)
+        mems[0].write_geo_data(bs, geo, self._data_written,
+                                write_failed_cb=self._write_failed)
 
         while not self.data_written:
-            time.sleep(0.2)
-
-        self.data_written = False
-        mems[0].write_geo_data(1, bs2, self._data_written,
-                               write_failed_cb=self._write_failed)
-
-        while not self.data_written:
-            time.sleep(0.2)
+            time.sleep(0.1)
 
     def _data_written(self, mem, addr):
         self.data_written = True
@@ -341,17 +332,13 @@ class WriteMem:
 
 
 def upload_geo_data(scf, geometries):
-    bs1 = LighthouseBsGeometry()
-    bs1.rotation_matrix = geometries[0][0]
-    bs1.origin = geometries[0][1]
-    bs1.valid = geometries[0][2]
+    for bs, data in geometries.items():
+        geo = LighthouseBsGeometry()
+        geo.rotation_matrix = data[0]
+        geo.origin = data[1]
+        geo.valid = data[2]
 
-    bs2 = LighthouseBsGeometry()
-    bs2.rotation_matrix = geometries[1][0]
-    bs2.origin = geometries[1][1]
-    bs2.valid = geometries[1][2]
-
-    WriteMem(scf, bs1, bs2)
+        WriteMem(scf, bs, geo)
 
 
 def sanity_check(position_cf):
@@ -382,7 +369,7 @@ with SyncCrazyflie(uri, cf=cf) as scf:
     sensor_sweeps_all = read_sensors(scf)
     print("Estimating position of base stations...")
 
-    geometries = []
+    geometries = {}
     for bs in sorted(sensor_sweeps_all.keys()):
         sensor_sweeps = sensor_sweeps_all[bs]
         print("Base station ", bs)
@@ -397,7 +384,7 @@ with SyncCrazyflie(uri, cf=cf) as scf:
             print("Warning: could not find valid solution")
 
         print_geo(rotation_cf, position_cf, is_valid)
-        geometries.append([rotation_cf, position_cf, is_valid])
+        geometries[bs] = [rotation_cf, position_cf, is_valid]
         print()
 
     if args.write:
