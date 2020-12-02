@@ -63,7 +63,13 @@
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef LOCODECK_USE_ALT_PINS
   #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+
+  #ifndef LOCODECK_ALT_PIN_RESET
   #define GPIO_PIN_RESET 	DECK_GPIO_IO3
+  #else
+  #define GPIO_PIN_RESET 	LOCODECK_ALT_PIN_RESET
+  #endif
+
   #define EXTI_PortSource EXTI_PortSourceGPIOB
   #define EXTI_PinSource 	EXTI_PinSource5
   #define EXTI_LineN 		  EXTI_Line5

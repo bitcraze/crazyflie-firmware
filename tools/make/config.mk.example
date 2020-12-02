@@ -59,6 +59,10 @@
 ## Set alternative pins for LOCO deck (IRQ=IO_2, RESET=IO_3, default are RX1 and TX1)
 # CFLAGS += -DLOCODECK_USE_ALT_PINS
 
+## Set other pin for reset on the LOCO deck. Only works when LOCODECK_USE_ALT_PINS is set.
+# For instance useful with Loco + Lighhouse + Flow decks where IO_3 collides with the Flow deck
+# CFLAGS += -DLOCODECK_ALT_PIN_RESET=DECK_GPIO_IO4
+
 ## Disable Low Interference Mode when using Loco Deck
 # CFLAGS += -DLOCODECK_NO_LOW_INTERFERENCE
 
