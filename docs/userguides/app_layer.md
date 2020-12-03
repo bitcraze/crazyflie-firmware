@@ -30,6 +30,14 @@ For the app-layer, it would be good to have access to log and/or parameter value
 
 It is possible to run LED sequences from the app layer to control the four LEDs on the Crazyflie and provide runtime information to the user. See the src/hal/interface/ledseq.h file for more information.
 
+## App channel: packet based communication between the Crazyflie and the Python lib
+
+The Appchannel API allows to communicate using radio packets with an app.
+The packets can contain anything of a size up to 31 bytes, the protocol is defined by the app.
+
+For more information about the API see the header file src/modules/interface/app_channel.h.
+An example of how to use the app channel is in examples/app_appchannel_test/
+
 ## Examples
 
 In the [example folder](https://github.com/bitcraze/crazyflie-firmware/tree/master/examples) of the crazyflie-firmware repository, there are several examples shown tha tuse the app layer, including a simple hello world example.

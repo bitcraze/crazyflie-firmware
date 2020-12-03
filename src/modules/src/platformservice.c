@@ -37,12 +37,14 @@
 #include "syslink.h"
 #include "version.h"
 #include "platform.h"
+#include "app_channel.h"
 
 static bool isInit=false;
 
 typedef enum {
   platformCommand   = 0x00,
   versionCommand    = 0x01,
+  appChannel        = 0x02,
 } Channel;
 
 typedef enum {
@@ -63,6 +65,8 @@ void platformserviceInit(void)
 {
   if (isInit)
     return;
+
+  appchannelInit();
 
   // Register a callback to service the Platform port
   crtpRegisterPortCB(CRTP_PORT_PLATFORM, platformserviceHandler);
@@ -85,6 +89,10 @@ void platformserviceHandler(CRTPPacket *p)
       break;
     case versionCommand:
       versionCommandProcess(p);
+      break;
+    case appChannel:
+      appchannelIncomingPacket(p);
+      break;
     default:
       break;
   }
@@ -104,6 +112,13 @@ static void platformCommandProcess(uint8_t command, uint8_t *data)
     default:
       break;
   }
+}
+
+void platformserviceSendAppchannelPacket(CRTPPacket *p)
+{
+  p->port = CRTP_PORT_PLATFORM;
+  p->channel = appChannel;
+  crtpSendPacket(p);
 }
 
 static void versionCommandProcess(CRTPPacket *p)

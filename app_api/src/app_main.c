@@ -45,6 +45,7 @@
 #include "log.h"
 #include "param.h"
 #include "pm.h"
+#include "app_channel.h"
 
 
 #define DEBUG_MODULE "APPAPI"
@@ -122,5 +123,13 @@ void appMain() {
     pmIsChargerConnected();
     pmIsCharging();
     pmIsDischarging();
+  }
+
+  // App-channel
+  {
+    char buffer[APPCHANNEL_MTU];
+    appchannelSendPacket("hello", 5);
+    appchannelReceivePacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER);
+    appchannelHasOverflowOccured();
   }
 }
