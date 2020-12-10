@@ -1019,14 +1019,14 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
     sumSq[1] += bias->buffer[i].y * bias->buffer[i].y;
     sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
   }
+  
+  meanOut->x = (float) sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = (float) sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = (float) sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
 
-  varOut->x = (sumSq[0] - ((int64_t)sum[0] * sum[0]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-  varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-  varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-
-  meanOut->x = (float)sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = (float)sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = (float)sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  varOut->x = sumSq[0] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->x * meanOut->x;
+  varOut->x = sumSq[1] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->y * meanOut->y;
+  varOut->x = sumSq[2] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->z * meanOut->z;
 }
 
 /**
