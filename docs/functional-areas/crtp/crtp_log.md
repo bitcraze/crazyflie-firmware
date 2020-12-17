@@ -143,7 +143,7 @@ programmed rate. The packet format is
             +----------+------------+---------//----------+
             | BLOCK_ID | TIME_STAMP | LOG VARIABLE VALUES |
             +----------+------------+---------//----------+
-    Length        1          3           0 to 28
+    Length        1          3           0 to 26
 
  | Byte  | Answer fields        | Content|
  | ------| --------------------- --------------------------------|
