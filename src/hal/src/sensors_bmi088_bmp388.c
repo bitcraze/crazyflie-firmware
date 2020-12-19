@@ -79,7 +79,7 @@
 #define SENSORS_NBR_OF_BIAS_SAMPLES  512
 
 // Variance threshold to take zero bias for gyro
-#define GYRO_VARIANCE_BASE              10000
+#define GYRO_VARIANCE_BASE              100
 #define GYRO_VARIANCE_THRESHOLD_X       (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Y       (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Z       (GYRO_VARIANCE_BASE)
@@ -786,7 +786,7 @@ static bool sensorsFindBiasValue(BiasObj* bias)
   if (bias->isBufferFilled)
   {
     sensorsCalculateVarianceAndMean(bias, &bias->variance, &bias->mean);
-
+    DEBUG_PRINT("vx: %f, vy: %f, vz: %f\n", (double)bias->variance.x, (double)bias->variance.y, (double)bias->variance.z);
     if (bias->variance.x < GYRO_VARIANCE_THRESHOLD_X &&
         bias->variance.y < GYRO_VARIANCE_THRESHOLD_Y &&
         bias->variance.z < GYRO_VARIANCE_THRESHOLD_Z &&

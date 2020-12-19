@@ -119,7 +119,7 @@
 #define SENSORS_NBR_OF_BIAS_SAMPLES  512
 
 // Variance threshold to take zero bias for gyro
-#define GYRO_VARIANCE_BASE              10000
+#define GYRO_VARIANCE_BASE              100
 #define GYRO_VARIANCE_THRESHOLD_X       (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Y       (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Z       (GYRO_VARIANCE_BASE)
