@@ -638,7 +638,7 @@ uint8_t* initCrtpPacket(CRTPPacket* packet, const enum TrajectoryCommand_e comma
   return &packet->data[1];
 }
 
-void crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float duration_s)
+int crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float duration_s)
 {
   struct data_takeoff_2 data =
   {
@@ -648,10 +648,10 @@ void crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float dur
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
+int crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
 {
   struct data_takeoff_2 data =
   {
@@ -662,10 +662,10 @@ void crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float 
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float velocity_m_s, bool relative)
+int crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float velocity_m_s, bool relative)
 {
   struct data_takeoff_with_velocity data =
   {
@@ -676,10 +676,10 @@ void crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_TAKEOFF_WITH_VELOCITY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_TAKEOFF_WITH_VELOCITY, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelLand(const float absoluteHeight_m, const float duration_s)
+int crtpCommanderHighLevelLand(const float absoluteHeight_m, const float duration_s)
 {
   struct data_land_2 data =
   {
@@ -689,10 +689,10 @@ void crtpCommanderHighLevelLand(const float absoluteHeight_m, const float durati
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelLandWithVelocity(const float height_m, const float velocity_m_s, bool relative)
+int crtpCommanderHighLevelLandWithVelocity(const float height_m, const float velocity_m_s, bool relative)
 {
   struct data_land_with_velocity data =
   {
@@ -703,10 +703,10 @@ void crtpCommanderHighLevelLandWithVelocity(const float height_m, const float ve
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_LAND_WITH_VELOCITY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_LAND_WITH_VELOCITY, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
+int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
 {
   struct data_land_2 data =
   {
@@ -717,20 +717,20 @@ void crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float dur
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelStop()
+int crtpCommanderHighLevelStop()
 {
   struct data_stop data =
   {
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_STOP, (const uint8_t*)&data);
+  return handleCommand(COMMAND_STOP, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
 {
   struct data_go_to data =
   {
@@ -743,7 +743,7 @@ void crtpCommanderHighLevelGoTo(const float x, const float y, const float z, con
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
+  return handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
 }
 
 bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId)
@@ -754,7 +754,7 @@ bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId)
   );
 }
 
-void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed)
+int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed)
 {
   struct data_start_trajectory data =
   {
@@ -765,10 +765,10 @@ void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const flo
     .groupMask = ALL_GROUPS,
   };
 
-  handleCommand(COMMAND_START_TRAJECTORY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_START_TRAJECTORY, (const uint8_t*)&data);
 }
 
-void crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces)
+int crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces)
 {
   struct data_define_trajectory data =
   {
@@ -779,7 +779,7 @@ void crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const cr
     .description.trajectoryIdentifier.mem.n_pieces = nPieces,
   };
 
-  handleCommand(COMMAND_DEFINE_TRAJECTORY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_DEFINE_TRAJECTORY, (const uint8_t*)&data);
 }
 
 uint32_t crtpCommanderHighLevelTrajectoryMemSize()
