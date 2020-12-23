@@ -78,8 +78,9 @@ bool crtpCommanderHighLevelIsStopped();
  *
  * @param absoluteHeight_m absolute target height (m)
  * @param duration_s       time it should take until target height is reached (s)
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float duration_s);
+int crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float duration_s);
 
 /**
  * @brief vertical takeoff from current x-y position to given absolute or relative
@@ -88,8 +89,9 @@ void crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float dur
  * @param height_m         absolute or relative target height (m)
  * @param velocity_m_s     takeoff velocity (m/s)
  * @param relative         whether the height is relative to the current position
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float velocity_m_s, bool relative);
+int crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float velocity_m_s, bool relative);
 
 
 /**
@@ -98,16 +100,18 @@ void crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float
  * @param absoluteHeight_m absolute target height (m)
  * @param duration_s       time it should take until target height is reached (s)
  * @param yaw              yaw (rad)
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s, const float yaw);
+int crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s, const float yaw);
 
 /**
  * @brief vertical land from current x-y position to given height
  *
  * @param absoluteHeight_m absolute target height (m)
  * @param duration_s       time it should take until target height is reached (s)
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelLand(const float absoluteHeight_m, const float duration_s);
+int crtpCommanderHighLevelLand(const float absoluteHeight_m, const float duration_s);
 
 /**
  * @brief vertical land from current x-y position to given absolute or relative
@@ -116,8 +120,9 @@ void crtpCommanderHighLevelLand(const float absoluteHeight_m, const float durati
  * @param height_m         absolute or relative target height (m)
  * @param velocity_m_s     landing velocity (m/s)
  * @param relative         whether the height is relative to the current position
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelLandWithVelocity(const float height_m, const float velocity_m_s, bool relative);
+int crtpCommanderHighLevelLandWithVelocity(const float height_m, const float velocity_m_s, bool relative);
 
 /**
  * @brief vertical land from current x-y position to given height
@@ -125,16 +130,21 @@ void crtpCommanderHighLevelLandWithVelocity(const float height_m, const float ve
  * @param absoluteHeight_m absolute target height (m)
  * @param duration_s       time it should take until target height is reached (s)
  * @param yaw              yaw (rad)
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw);
+int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw);
 
 /**
  * @brief stops the current trajectory (turns off the motors)
  *
- *        Send the trajectory planner to idle state, where it has no plan. Also used when
- *        switching from high-level to low-level commands, or for emergencies.
+ * Send the trajectory planner to idle state, where it has no plan. Also used when
+ * switching from high-level to low-level commands, or for emergencies.
+ *
+ * @return zero if the command succeeded, an error code otherwise. The function
+ * should never fail, but we provide the error code nevertheless for sake of
+ * consistency with the other high-level commander functions.
  */
-void crtpCommanderHighLevelStop();
+int crtpCommanderHighLevelStop();
 
 /**
  * @brief Go to an absolute or relative position
@@ -145,8 +155,9 @@ void crtpCommanderHighLevelStop();
  * @param yaw        yaw (rad)
  * @param duration_s time it should take to reach the position (s)
  * @param relative   true if x, y, z is relative to the current position
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative);
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative);
 
 /**
  * @brief Returns whether the trajectory with the given ID is defined
@@ -164,8 +175,9 @@ bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId);
  *                                  <1.0: faster
  * @param relative     set to True, if trajectory should be shifted to current setpoint
  * @param reversed     set to True, if trajectory should be executed in reverse
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed);
+int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed);
 
 /**
  * @brief Define a trajectory that has previously been uploaded to memory.
@@ -174,8 +186,9 @@ void crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const flo
  * @param type         The type of trajectory that is stored in memory.
  * @param offset       offset in uploaded memory (bytes)
  * @param nPieces      Nr of pieces in the trajectory
+ * @return zero if the command succeeded, an error code otherwise
  */
-void crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces);
+int crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces);
 
 /**
  * @brief Get the size of the allocated trajectory memory
