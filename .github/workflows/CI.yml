@@ -22,8 +22,65 @@ jobs:
 
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min
+  
+  tag:
+    runs-on: ubuntu-latest
 
-  examples:
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min
+  
+  all-flags:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: All features
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min    
+
+  features:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+        # Build cf2 with bosch sensors
+        - SENSORS=bosch
+        # Build cf2 with TDMA
+        - LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0"
+        # Build cf2 with TDOA2 positioning mode
+        - LPS_TDOA_ENABLE=1
+        # Build cf2 with TDOA3 positioning mode
+        - LPS_TDOA3_ENABLE=1
+        # Build cf2 with TDOA3 and all config options
+        - LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE -DLPS_FULL_TX_POWER"
+        # Build Bigquad deck with all config options
+        - \"EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM\"
+        # Build with the lighthouse driver
+        - \"EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0\"
+    env:
+      FEATURE: ${{ matrix.features }}
+    
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 ${{ env.FEATURE }} UNIT_TEST_STYLE=min
+
+  apps:
     runs-on: ubuntu-latest
 
     strategy:
