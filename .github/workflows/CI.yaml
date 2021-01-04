@@ -1,0 +1,38 @@
+# CI jobs
+
+name: CI
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  basic:
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min
+
+  examples:
+    strategy:
+      fail-fast: false
+    matrix:
+      example:
+        - app_api
+        - examples/app_hello_world
+        - examples/app_peer_to_peer
+        - examples/demos/app_push_demo
+        - examples/demos/swarm_demo
+    env:
+      EXAMPLE: ${{ matrix.example }}
+    
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE}; make -j$(nproc)"
