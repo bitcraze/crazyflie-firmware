@@ -65,9 +65,9 @@ jobs:
         # Build cf2 with TDOA3 and all config options
         - LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE -DLPS_FULL_TX_POWER"
         # Build Bigquad deck with all config options
-        - \"EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM\"
+        - "EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM"
         # Build with the lighthouse driver
-        - \"EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0\"
+        - "EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0"
     env:
       FEATURE: ${{ matrix.features }}
     
