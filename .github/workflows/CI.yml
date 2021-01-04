@@ -13,14 +13,19 @@ on:
 jobs:
   basic:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v2
+      with:
+        submodules: true
+
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min
 
   examples:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
@@ -36,5 +41,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v2
+      with:
+        submodules: true
+
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE}; make -j$(nproc)"
