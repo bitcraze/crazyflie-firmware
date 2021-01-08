@@ -371,7 +371,10 @@ static void kalmanTask(void* parameters) {
       xSemaphoreTake(dataMutex, portMAX_DELAY);
       memcpy(&gyro, &gyroSnapshot, sizeof(gyro));
       xSemaphoreGive(dataMutex);
-      doneUpdate = doneUpdate || updateQueuedMeasurments(&gyro, osTick);
+
+      if(updateQueuedMeasurments(&gyro, osTick)) {
+        doneUpdate = true;
+      }
     }
 
     /**
