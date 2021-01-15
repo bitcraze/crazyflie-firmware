@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "locodeck.h"
+#include "adhocdeck.h"
 
 // Packet format with compressed PAN and 64Bit addresses
 // Maximum 64 bytes payload
