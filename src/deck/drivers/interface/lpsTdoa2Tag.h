@@ -1,7 +1,7 @@
 #ifndef __LPS_TDOA2_TAG_H__
 #define __LPS_TDOA2_TAG_H__
 
-#include "locodeck.h"
+#include "adhocdeck.h"
 #include "libdw1000.h"
 
 #include "mac.h"
