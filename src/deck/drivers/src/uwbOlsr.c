@@ -14,6 +14,7 @@
 #include "olsrAlgo.h"
 #include "olsrStruct.h"
 #include "uwbOlsr.h"
+#include "endToEnd.h"
 
 
 
@@ -83,6 +84,18 @@ static void olsrRecvTaskInit(dwDevice_t *dev)
       DEBUG_PRINT_OLSR_SYSTEM("RECV TASK CREATE FAILD\n");
     }
 }
+static void olsrAppTaskInit()
+{
+  DEBUG_PRINT_OLSR_SYSTEM("START_OLSR_APP_TASK_INIT\n");
+  if(xTaskCreate(endToEndTask, "OLSR_APP", configMINIMAL_STACK_SIZE, NULL ,LPS_DECK_TASK_PRI, NULL)==pdPASS)
+    {
+      DEBUG_PRINT_OLSR_SYSTEM("OLSR_APP TASK CREATE SUCCESSFUL\n");
+    }
+  else
+    {
+      DEBUG_PRINT_OLSR_SYSTEM("OLSR_APP TASK CREATE FAILD\n");
+    } 
+}
 
 static void olsrTaskInit(dwDevice_t *dev)
 {
@@ -91,6 +104,7 @@ static void olsrTaskInit(dwDevice_t *dev)
     olsrTcTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
+    olsrAppTaskInit();
 }
 
 static void olsrInit(dwDevice_t *dev) 

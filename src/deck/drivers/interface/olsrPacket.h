@@ -91,6 +91,7 @@
 #define LINK_MESSAGE_MAX_NUM ((MESSAGE_PAYLOAD_MAX_SIZE-sizeof(olsrHelloMessageHeader_t))\
                               /sizeof(olsrLinkMessage_t)) 
 #define TC_PAYLOAD_MAX_NUM ((MESSAGE_PAYLOAD_MAX_SIZE-2)/sizeof(olsrTopologyMessageUint_t))
+#define DATA_PAYLOAD_MAX_NUM  MESSAGE_PAYLOAD_MAX_SIZE-sizeof(olsrDataMessageHeader_t)
 
 typedef struct{
     uint16_t m_packetLength;
@@ -163,5 +164,16 @@ typedef struct
   olsrTopologyMessageUint_t m_content[TC_PAYLOAD_MAX_NUM];
 } __attribute__((packed)) olsrTopologyMessage_t;
 
+//data
+typedef struct{
+    uint16_t m_sourcePort;
+    uint16_t m_destPort;
+    uint16_t m_seq;
+    uint16_t m_size;
+} __attribute__((packed)) olsrDataMessageHeader_t;
 
+typedef struct{
+    olsrDataMessageHeader_t  m_dataHeader;
+    uint8_t m_payload[DATA_PAYLOAD_MAX_NUM];
+} __attribute__((packed)) olsrDataMessage_t;
 #endif //__OLSR_PACKET_H__

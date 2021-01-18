@@ -219,7 +219,8 @@ PROJ_OBJ += uwbOlsr.o
 PROJ_OBJ += olsrAlgo.o
 PROJ_OBJ += olsrStruct.o
 PROJ_OBJ += adhocdeck.o
-
+PROJ_OBJ += adHocApp.o
+PROJ_OBJ += endToEnd.o
 # Uart2 Link for CRTP communication is not compatible with decks using uart2
 ifeq ($(UART2_LINK), 1)
 CFLAGS += -DUART2_LINK_COMM

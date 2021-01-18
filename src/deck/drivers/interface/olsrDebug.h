@@ -36,9 +36,10 @@
 #define DEBUG_OLSR_NEIGHBOR2
 #define DEBUG_OLSR_DUPLICATE
 #define DEBUG_OLSR_TOPOLOGY
-//#define DEBUG_OLSR_ROUTING
+#define DEBUG_OLSR_ROUTING
 #define DEBUG_OLSR_SET
 #define DEBUG_OLSR_FORWARD
+#define DEBUG_OLSR_APP
 
 #ifdef DEBUG_OLSR_SYSTEM
 #define DEBUG_PRINT_OLSR_SYSTEM(fmt, ...) DEBUG_PRINT("SYSTEM: "fmt,  ##__VA_ARGS__)
@@ -52,10 +53,17 @@
 #define DEBUG_PRINT_OLSR_SEND(fmt, ...)
 #endif
 
+
 #ifdef DEBUG_OLSR_RECEIVE
 #define DEBUG_PRINT_OLSR_RECEIVE(fmt, ...) DEBUG_PRINT("RECEIVE: "fmt,  ##__VA_ARGS__)
 #else
 #define DEBUG_PRINT_OLSR_RECEIVE(fmt, ...)
+#endif
+
+#ifdef DEBUG_OLSR_APP
+#define DEBUG_PRINT_OLSR_APP(fmt, ...) DEBUG_PRINT("APP: "fmt,  ##__VA_ARGS__)
+#else
+#define DEBUG_PRINT_OLSR_APP(fmt, ...)
 #endif
 
 #ifdef DEBUG_OLSR_HELLO

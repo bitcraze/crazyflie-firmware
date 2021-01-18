@@ -288,7 +288,7 @@ void olsrPrintLinkSet(olsrLinkSet_t *linkSet)
   while(it != -1)
     {
       olsrLinkSetItem_t tmp = linkSet->setData[it];
-      DEBUG_PRINT_OLSR_LINK("linkSet: localAddr is %d, neighborAddr is %d ,symtime is %d\n",tmp.data.m_localAddr,tmp.data.m_neighborAddr,tmp.data.m_symTime);
+      DEBUG_PRINT_OLSR_LINK("linkSet: localAddr is %u, neighborAddr is %u ,symtime is %u\n",tmp.data.m_localAddr,tmp.data.m_neighborAddr,tmp.data.m_symTime);
       it = tmp.next;
     }
 }
@@ -1041,6 +1041,20 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
     }
 }
 
+olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr)
+{
+  setIndex_t it = routingSet->fullQueueEntry;
+  while(it != -1)
+    {
+      olsrRoutingSetItem_t routeNode = routingSet->setData[it];
+      if(routeNode.data.m_destAddr == destAddr)
+        {
+          return routeNode.data.m_nextAddr;
+        }
+      it = routeNode.next;
+    }
+  return it;
+}
 
 /*
 ************************CommonFunctions********************

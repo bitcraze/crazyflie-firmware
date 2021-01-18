@@ -399,4 +399,6 @@ void olsrPrintDuplicateSet(olsrDuplicateSet_t *duplicateSet);
 void olsrRoutingSetInit(olsrRoutingSet_t *routingSet);
 
 bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple);
+
+olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr);
 #endif //__OLSR_STRUCT_H__

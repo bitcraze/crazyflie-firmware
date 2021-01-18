@@ -128,15 +128,9 @@ void olsrRxCallback(dwDevice_t *dev){
     #endif
     xQueueSend(g_olsrRecvQueue,&rxPacket,portMAX_DELAY);
 }
-//routing table compute
-void olsr_routing_table_compute(){
-    DEBUG_PRINT_OLSR_SYSTEM("ROUTING TABLE COMPUTE!\n");
-}
+
 //packet process
 
-void olsr_tc_forward(olsrMessage_t* tc_message){
-
-}
 void olsr_ts_process(const olsrMessage_t* ts_msg){
 
 }
@@ -675,6 +669,41 @@ void olsrProcessTc(const olsrMessage_t* tcMsg)
     }
 }
 
+void olsrProcessData(olsrMessage_t* msg)
+{
+  if(msg->m_messageHeader.m_relayAddress != myAddress)
+    {
+      return;
+    }
+  if(msg->m_messageHeader.m_destinationAddress == myAddress)
+    {
+      //up
+      olsrDataMessage_t* dataMsg = (olsrDataMessage_t *)msg->m_messagePayload;
+      if(adHocPortIsUsed(dataMsg->m_dataHeader.m_destPort))
+        {
+          adHocAddToQueue(dataMsg->m_dataHeader.m_destPort,dataMsg);
+        }
+      else
+        {
+          DEBUG_PRINT_OLSR_ROUTING("this port is not used in data Process\n");
+          return;
+        }
+    }
+  else
+    {
+      olsrAddr_t nextHop = olsrFindInRoutingTable(&olsrRoutingSet,msg->m_messageHeader.m_destinationAddress);
+      if(nextHop != -1)
+        {
+          msg->m_messageHeader.m_relayAddress = nextHop; 
+        }
+      else
+        {
+          DEBUG_PRINT_OLSR_ROUTING("can not find next hop\n");
+          return;
+        }
+      xQueueSend(g_olsrSendQueue,msg,portMAX_DELAY);
+    }
+}
 void forwardDefault(olsrMessage_t* olsrMessage, setIndex_t duplicateIndex)
 {
   olsrTime_t now = xTaskGetTickCount();
@@ -872,6 +901,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                 break;
             case DATA_MESSAGE:
                 DEBUG_PRINT_OLSR_RECEIVE("DATA_MESSAGE\n");
+                olsrProcessData((olsrMessage_t*)message);
                 break;
             case TS_MESSAGE:
                 DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE\n");
@@ -1031,6 +1061,42 @@ void olsrSendTc()
     }
   memcpy(msg.m_messagePayload,&tcMsg,2+pos*sizeof(olsrTopologyMessageUint_t));
   msg.m_messageHeader.m_messageSize+=(2+pos*sizeof(olsrTopologyMessageUint_t));
+  xQueueSend(g_olsrSendQueue,&msg,portMAX_DELAY);
+}
+
+void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
+                  olsrAddr_t destAddr, AdHocPort destPort,\
+                  uint16_t portSeq, uint8_t data[],uint8_t length)
+{
+  if(length>DATA_PAYLOAD_MAX_NUM) return;
+
+  olsrMessage_t msg;
+  msg.m_messageHeader.m_messageType = DATA_MESSAGE;
+  msg.m_messageHeader.m_vTime = OLSR_TOP_HOLD_TIME;
+  msg.m_messageHeader.m_messageSize = sizeof(olsrMessageHeader_t);
+  msg.m_messageHeader.m_originatorAddress = sourceAddr;
+  msg.m_messageHeader.m_destinationAddress = destAddr;
+
+  olsrAddr_t nextHop = olsrFindInRoutingTable(&olsrRoutingSet,destAddr);
+  if(nextHop == -1)
+    {
+      DEBUG_PRINT_OLSR_ROUTING("can not find next hop\n");
+      return;
+    }
+  msg.m_messageHeader.m_relayAddress = nextHop;  
+  msg.m_messageHeader.m_timeToLive = 0xff;
+  msg.m_messageHeader.m_hopCount = 0;
+  msg.m_messageHeader.m_messageSeq = getSeqNumber(); 
+
+  olsrDataMessage_t dataMsg;
+  dataMsg.m_dataHeader.m_sourcePort = sourcePort;
+  dataMsg.m_dataHeader.m_destPort =  destPort;
+  dataMsg.m_dataHeader.m_seq = portSeq;
+  dataMsg.m_dataHeader.m_size = sizeof(olsrDataMessageHeader_t)+length;
+  memcpy(dataMsg.m_payload,data,length);
+  memcpy(msg.m_messagePayload,&dataMsg,sizeof(olsrDataMessageHeader_t)+length);
+  msg.m_messageHeader.m_messageSize+=sizeof(olsrDataMessageHeader_t)+length;
+
   xQueueSend(g_olsrSendQueue,&msg,portMAX_DELAY);
 }
 
