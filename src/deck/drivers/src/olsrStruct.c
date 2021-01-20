@@ -1056,6 +1056,17 @@ olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAd
   return it;
 }
 
+void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet)
+{
+  setIndex_t it = routingSet->fullQueueEntry;
+  while(it != -1)
+    {
+      olsrRoutingSetItem_t routeNode = routingSet->setData[it];
+      DEBUG_PRINT_OLSR_ROUTING("Dest:%d,Next:%d.\n",routeNode.data.m_destAddr,routeNode.data.m_nextAddr);
+      it = routeNode.next;
+    } 
+}
+
 /*
 ************************CommonFunctions********************
 */

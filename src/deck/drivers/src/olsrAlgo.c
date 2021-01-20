@@ -612,6 +612,7 @@ void olsrPrintAll()
   olsrPrintMprSet(&olsrMprSet);
   olsrPrintTopologySet(&olsrTopologySet);
   olsrPrintMprSelectorSet(&olsrMprSelectorSet);
+  olsrPrintRoutingSet(&olsrRoutingSet);
   // olsrPrintDuplicateSet(&olsrDuplicateSet);
 }
 void olsrProcessHello(const olsrMessage_t* helloMsg)
@@ -928,8 +929,9 @@ void olsrPacketDispatch(const packet_t* rxPacket)
       index += messageHeader->m_messageSize;
       message += messageHeader->m_messageSize;
     }
+    olsrRoutingTableComputation();
     xSemaphoreGive(olsrAllSetLock);
-    // olsrRoutingTableComputation();
+    
 }
 
 /**
