@@ -1067,6 +1067,11 @@ void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet)
     } 
 }
 
+void olsrRoutingSetCopy(olsrRoutingSet_t *dest,olsrRoutingSet_t *source)
+{
+  memcpy(dest,source,sizeof(olsrRoutingSet_t));
+}
+
 /*
 ************************CommonFunctions********************
 */

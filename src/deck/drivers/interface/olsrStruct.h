@@ -403,4 +403,6 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
 olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr);
 
 void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet);
+
+void olsrRoutingSetCopy(olsrRoutingSet_t *dest,olsrRoutingSet_t *source);
 #endif //__OLSR_STRUCT_H__

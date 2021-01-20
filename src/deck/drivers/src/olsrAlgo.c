@@ -863,6 +863,7 @@ void olsrRoutingTableComputation()
           topologyIt = tmpTc.next;
         }
     }
+    olsrRoutingSetCopy(&olsrRoutingSet,&tmpRoutingSet);
 }
 void olsrPacketDispatch(const packet_t* rxPacket)
 {
