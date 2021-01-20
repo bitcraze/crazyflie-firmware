@@ -1180,7 +1180,7 @@ bool olsrNbTwoHopTupleTimerExpire()
   while(candidate != -1)
     {
       olsrTwoHopNeighborSetItem_t tmp = olsrTwoHopNeighborSet.setData[candidate];
-      DEBUG_PRINT_OLSR_NEIGHBOR2("ex:%ld,now:%ld\n",tmp.data.m_expirationTime,now);
+      // DEBUG_PRINT_OLSR_NEIGHBOR2("ex:%ld,now:%ld\n",tmp.data.m_expirationTime,now);
       if(tmp.data.m_expirationTime < now)
         {
           setIndex_t delItem = candidate;
@@ -1191,9 +1191,9 @@ bool olsrNbTwoHopTupleTimerExpire()
         }
       candidate = tmp.next;
     }
-  DEBUG_PRINT_OLSR_NEIGHBOR2("clear in expire\n");
+  // DEBUG_PRINT_OLSR_NEIGHBOR2("clear in expire\n");
   if(isChange){
-    DEBUG_PRINT_OLSR_NEIGHBOR2("cleared morethan one tuple\n");
+    // DEBUG_PRINT_OLSR_NEIGHBOR2("cleared morethan one tuple\n");
   }
   return isChange; 
 }
