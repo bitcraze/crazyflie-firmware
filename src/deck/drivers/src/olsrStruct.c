@@ -976,6 +976,7 @@ void olsrRoutingSetInit(olsrRoutingSet_t *routingSet)
   routingSet->setData[i].next = -1;
   routingSet->freeQueueEntry = 0;
   routingSet->fullQueueEntry = -1;
+  routingSet->size = 0;
 }
 
 static setIndex_t olsrRoutingSetMalloc(olsrRoutingSet_t *routingSet)
@@ -1008,6 +1009,7 @@ static bool olsrRoutingSetFree(olsrRoutingSet_t *routingSet, setIndex_t delItem)
       //insert to empty queue
       routingSet->setData[delItem].next = routingSet->freeQueueEntry;
       routingSet->freeQueueEntry = delItem;
+	  routingSet->size = routingSet->size - 1;
       return true;
     }
   else 
@@ -1020,6 +1022,7 @@ static bool olsrRoutingSetFree(olsrRoutingSet_t *routingSet, setIndex_t delItem)
               //insert to empty queue
               routingSet->setData[delItem].next = routingSet->freeQueueEntry;
               routingSet->freeQueueEntry = delItem;
+			  routingSet->size = routingSet->size - 1;
               return true;
             }
           pre = routingSet->setData[pre].next;
@@ -1033,6 +1036,7 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
   if(candidate != -1)
     {
       memcpy(&routingSet->setData[candidate].data,tuple,sizeof(olsrRoutingTuple_t));
+	  routingSet->size++;
       return true;
     }
   else
