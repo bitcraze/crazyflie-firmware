@@ -803,6 +803,154 @@ void olsrPrintPacket(const packet_t* rxPacket)
   }
   DEBUG_PRINT_OLSR_HELLO("leave PrintPacket function\n");
 }
+void olsrRoutingTableComputation2()
+{
+  olsrRoutingSet_t tmpRoutingSet;
+  olsrRoutingSetInit(&tmpRoutingSet);
+
+  setIndex_t neighborIt = olsrNeighborSet.fullQueueEntry;
+  while(neighborIt != -1)
+  {
+    if(olsrNeighborSet.setData[neighborIt].data.m_status == STATUS_SYM)
+    {
+      setIndex_t linkIt = olsrLinkSet.fullQueueEntry;
+      while(linkIt != -1)
+      {
+        if(olsrNeighborSet.setData[neighborIt].data.m_neighborAddr == olsrLinkSet.setData[linkIt].data.m_neighborAddr)
+        {
+          olsrRoutingTuple_t add;
+          add.m_destAddr = olsrLinkSet.setData[linkIt].data.m_neighborAddr;
+          add.m_distance = 1;
+          add.m_nextAddr = olsrLinkSet.setData[linkIt].data.m_neighborAddr;
+          olsrRoutingSetInsert(&tmpRoutingSet,&add);
+        }
+        linkIt = olsrLinkSet.setData[linkIt].next;
+      }
+    }
+    neighborIt = olsrNeighborSet.setData[neighborIt].next;
+  }
+
+  setIndex_t neighbor2It = olsrTwoHopNeighborSet.fullQueueEntry;
+  while(neighbor2It != -1)
+  {
+    bool is_n1 = false;
+    bool corresponds = false;
+
+    setIndex_t neighborIt = olsrNeighborSet.fullQueueEntry;
+    while(neighborIt != -1)
+    {
+      if(olsrNeighborSet.setData[neighborIt].data.m_neighborAddr == olsrTwoHopNeighborSet.setData[neighbor2It].data.m_twoHopNeighborAddr)
+      {
+        is_n1 = true;
+        break;
+      }
+      if(olsrNeighborSet.setData[neighborIt].data.m_neighborAddr == olsrTwoHopNeighborSet.setData[neighbor2It].data.m_neighborAddr 
+      && olsrNeighborSet.setData[neighborIt].data.m_willingness != WILL_NEVER)
+      {
+        corresponds = true;
+      }
+      neighborIt = olsrNeighborSet.setData[neighborIt].next;
+    }
+    if(is_n1)
+      continue;
+
+    if(!corresponds)
+      continue;
+
+
+    olsrRoutingTuple_t* route = NULL;
+    setIndex_t routingIt = tmpRoutingSet.fullQueueEntry;
+    while(routingIt != -1)
+    {
+      // Avoid processing twice the same...
+      if(tmpRoutingSet.setData[routingIt].data.m_destAddr == olsrTwoHopNeighborSet.setData[neighbor2It].data.m_twoHopNeighborAddr)
+      {
+        route = NULL;
+        break;
+      }
+
+      if(tmpRoutingSet.setData[routingIt].data.m_destAddr == olsrTwoHopNeighborSet.setData[neighbor2It].data.m_neighborAddr)
+      {
+        route = (olsrRoutingTuple_t*)(&(tmpRoutingSet.setData[routingIt].data));
+      }
+      routingIt = tmpRoutingSet.setData[routingIt].next;
+    }
+
+    if(!route)
+      continue;
+
+    olsrRoutingTuple_t add;
+    add.m_destAddr = olsrTwoHopNeighborSet.setData[neighbor2It].data.m_twoHopNeighborAddr;
+    add.m_nextAddr = route->m_nextAddr;
+    add.m_distance = 2;
+
+    olsrRoutingSetInsert(&tmpRoutingSet,&add);
+
+    neighbor2It = olsrTwoHopNeighborSet.setData[neighbor2It].next;
+
+  }
+
+
+  int h = 2;
+  bool something_inserted = true;
+  while(something_inserted)
+  {
+    const int old_size = tmpRoutingSet.size;
+
+
+    setIndex_t topologyIt = olsrTopologySet.fullQueueEntry;
+    while(topologyIt != -1)
+    {
+      bool exist1 = false;
+
+      setIndex_t routingIt = tmpRoutingSet.fullQueueEntry;
+      while(routingIt != -1)
+      {
+        if(tmpRoutingSet.setData[routingIt].data.m_destAddr == olsrTopologySet.setData[topologyIt].data.m_destAddr)
+        {
+          exist1 = true;
+          break;
+        }
+        routingIt = tmpRoutingSet.setData[routingIt].next;
+      }
+
+      if(exist1)
+        continue;
+
+      olsrRoutingTuple_t* route = NULL;
+      bool exist2 = false;
+      //setIndex_t routingIt = tmpRoutingSet.fullQueueEntry;
+      while(routingIt != -1)
+      {
+        if(tmpRoutingSet.setData[routingIt].data.m_destAddr == olsrTopologySet.setData[topologyIt].data.m_lastAddr
+        && tmpRoutingSet.setData[routingIt].data.m_distance == h)
+        {
+          route = (olsrRoutingTuple_t*)&(tmpRoutingSet.setData[routingIt].data);
+          exist2 = true;
+          break;
+        }
+        routingIt = tmpRoutingSet.setData[routingIt].next;
+      }
+
+      if(!exist2 || !route)
+        continue;
+
+      olsrRoutingTuple_t add;
+      add.m_destAddr = olsrTopologySet.setData[topologyIt].data.m_destAddr;
+      add.m_nextAddr = route->m_nextAddr;
+      add.m_distance = h + 1;
+
+      olsrRoutingSetInsert(&tmpRoutingSet,&add);
+      topologyIt = olsrTopologySet.setData[topologyIt].next;
+    }
+
+
+    h++;
+    something_inserted = tmpRoutingSet.size > old_size;
+  
+  }
+  olsrRoutingSetCopy(&olsrRoutingSet,&tmpRoutingSet);
+}
 void olsrRoutingTableComputation()
 {
   olsrRoutingSet_t tmpRoutingSet;
@@ -952,7 +1100,8 @@ void olsrPacketDispatch(const packet_t* rxPacket)
       message += messageHeader->m_messageSize;
     }
     olsrRoutingTableComputation();
-    xSemaphoreGive(olsrAllSetLock);
+	  olsrRoutingTableComputation2();
+  	xSemaphoreGive(olsrAllSetLock);
     
 }
 

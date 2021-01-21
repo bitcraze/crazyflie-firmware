@@ -208,6 +208,7 @@ typedef struct
   olsrRoutingSetItem_t setData[ROUTING_SET_SIZE];
   setIndex_t freeQueueEntry;
   setIndex_t fullQueueEntry;
+  int size;
 } olsrRoutingSet_t;
 
 
