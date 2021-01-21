@@ -98,6 +98,27 @@ static uint16_t getSeqNumber()
   xSemaphoreGive(olsrMessageSeqLock);
   return retVal;
 }
+void olsrPacketLossCallBack(dwDevice_t *dev)
+{
+    packet_t rxPacket;
+    static int count = 0;
+    static int notOlsr = 0;
+    DEBUG_PRINT_OLSR_SYSTEM("rxCallBack\n");
+    unsigned int dataLength = dwGetDataLength(dwm);
+    if(dataLength==0){
+        DEBUG_PRINT_OLSR_RECEIVE("DataLen=0!\n");
+				return;
+		}
+    memset(&rxPacket,0,sizeof(packet_t));
+    dwGetData(dwm,(uint8_t*)&rxPacket,dataLength);
+    if(rxPacket.fcf_s.type!=MAC802154_TYPE_OLSR){
+        // DEBUG_PRINT_OLSR_RECEIVE("Mac_T not OLSR!\n");
+        notOlsr++;
+				return;
+		}
+    count++;
+    DEBUG_PRINT_OLSR_SYSTEM("receive %d not olsr,ratio:%d/%d(count/seq)\n",notOlsr,count,rxPacket.seq);
+}
 void olsrRxCallback(dwDevice_t *dev){
     packet_t rxPacket;
     DEBUG_PRINT_OLSR_SYSTEM("rxCallBack\n");
@@ -1277,6 +1298,23 @@ void olsrTcTask(void *ptr)
 //       vTaskDelay(500);
 //     }
 // }
+void olsrPacketLossTask(void *ptr)
+{
+  packet_t txPacket = {0};
+  MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_OLSR);
+  while(1)
+    {
+      txPacket.seq++;
+      dwNewTransmit(dwm);
+      dwSetDefaults(dwm);
+      dwWaitForResponse(dwm, true);
+      dwReceivePermanently(dwm, true);
+      dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH);
+      dwStartTransmit(dwm);
+      vTaskDelay(20);
+    }  
+}
+
 void olsrSendTask(void *ptr)
 {
     bool hasOlsrMessageCache =false;
@@ -1304,7 +1342,6 @@ void olsrSendTask(void *ptr)
         writePosition += olsrMessageCache.m_messageHeader.m_messageSize;
 				if(olsrMessageCache.m_messageHeader.m_messageType==TS_MESSAGE) 
 						txPacket.fcf_s.reserved = 1;
-				DEBUG_PRINT_OLSR_SEND("MsgInC:%d,type:%d,size:%d,seq:%d\n", hasOlsrMessageCache, olsrMessageCache.m_messageHeader.m_messageType, olsrMessageCache.m_messageHeader.m_messageSize, olsrMessageCache.m_messageHeader.m_messageSeq);
       }
       ASSERT(writePosition-(uint8_t *)olsrPacket>sizeof(olsrPacketHeader_t));
       olsrPacket->m_packetHeader.m_packetLength = writePosition-(uint8_t *)olsrPacket;

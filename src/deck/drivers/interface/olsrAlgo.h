@@ -20,6 +20,8 @@ void olsrLinkTupleTimerExpireTask(void *ptr);
 void olsrNbTwoHopTupleTimerExpireTask(void *ptr);
 void olsrMprSelectorTupleTimerExpireTask(void *ptr);
 void olsrTopologyTupleTimerExpireTask(void *ptr);
+void olsrPacketLossTask(void *ptr);
+void olsrPacketLossCallBack(dwDevice_t *dev);
 void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,olsrAddr_t destAddr, AdHocPort destPort,uint16_t portSeq, uint8_t data[],uint8_t length);
 
 #endif //__OLSR_ALGO_H__
