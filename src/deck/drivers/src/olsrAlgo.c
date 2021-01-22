@@ -103,10 +103,8 @@ void olsrPacketLossCallBack(dwDevice_t *dev)
     packet_t rxPacket;
     static int count = 0;
     static int notOlsr = 0;
-    DEBUG_PRINT_OLSR_SYSTEM("rxCallBack\n");
     unsigned int dataLength = dwGetDataLength(dwm);
     if(dataLength==0){
-        DEBUG_PRINT_OLSR_RECEIVE("DataLen=0!\n");
 				return;
 		}
     memset(&rxPacket,0,sizeof(packet_t));
@@ -117,7 +115,9 @@ void olsrPacketLossCallBack(dwDevice_t *dev)
 				return;
 		}
     count++;
-    DEBUG_PRINT_OLSR_SYSTEM("receive %d not olsr,ratio:%d/%d(count/seq)\n",notOlsr,count,rxPacket.seq);
+    int p;
+    memcpy(&p,rxPacket.payload,sizeof(int));
+    DEBUG_PRINT_OLSR_RECEIVE("receive %d not olsr,success receive %d/%d(RecvcountGT,RecvCount)\n",notOlsr,count,p);
 }
 void olsrRxCallback(dwDevice_t *dev){
     packet_t rxPacket;
@@ -1451,16 +1451,20 @@ void olsrPacketLossTask(void *ptr)
 {
   packet_t txPacket = {0};
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_OLSR);
+  int countSend = 1;
   while(1)
     {
-      txPacket.seq++;
+
       dwNewTransmit(dwm);
       dwSetDefaults(dwm);
       dwWaitForResponse(dwm, true);
       dwReceivePermanently(dwm, true);
-      dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH);
+      memcpy(txPacket.payload,&countSend,sizeof(int));
+      dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH+4);
       dwStartTransmit(dwm);
-      vTaskDelay(20);
+      DEBUG_PRINT_OLSR_SEND("send %d packet\n",countSend);
+      countSend++;
+      vTaskDelay(50);
     }  
 }
 
