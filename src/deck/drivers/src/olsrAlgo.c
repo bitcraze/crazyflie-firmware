@@ -799,7 +799,7 @@ void olsrRoutingTableComputation()
   while(neighborIt != -1)
     {
       self.m_destAddr = olsrNeighborSet.setData[neighborIt].data.m_neighborAddr;
-      self.m_nextAddr = myAddress;
+      self.m_nextAddr = olsrNeighborSet.setData[neighborIt].data.m_neighborAddr;
       self.m_distance = 1;
       olsrRoutingSetInsert(&tmpRoutingSet,&self);
       neighborIt = olsrNeighborSet.setData[neighborIt].next;
