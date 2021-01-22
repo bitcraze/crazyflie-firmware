@@ -315,6 +315,8 @@ void pmTask(void *param)
   pmSetChargeState(charge500mA);
   systemWaitStart();
 
+  systemSetCanFly(true);
+
   while(1)
   {
     vTaskDelay(100);
