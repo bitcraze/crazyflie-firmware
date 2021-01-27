@@ -8,6 +8,7 @@
 #include "olsrAlgo.h"
 #include "olsrStruct.h"
 #include "olsrPacket.h"
+#include "adHocOnBoardSim.h"
 
 //const
 
@@ -45,6 +46,9 @@
 #define OLSR_MPR_NEIGH          2
 
 
+
+//
+#define OLSR_SIM 1
 
 static dwDevice_t* dwm;
 extern uint16_t myAddress;
@@ -1051,6 +1055,16 @@ void olsrPacketDispatch(const packet_t* rxPacket)
     {
       olsrMessageHeader_t* messageHeader = (olsrMessageHeader_t*)message;
       olsrMessageType_t type = messageHeader->m_messageType;
+
+      #ifdef OLSR_SIM
+
+      if(!checkItCanReceive(messageHeader->m_relayAddress,myAddress))
+        {
+          return ;
+        }
+
+      #endif
+
       if(type!=TS_MESSAGE&&(messageHeader->m_originatorAddress == myAddress ||messageHeader->m_timeToLive ==0))
         {
           index += messageHeader->m_messageSize;

@@ -15,7 +15,7 @@
 #include "olsrStruct.h"
 #include "uwbOlsr.h"
 #include "endToEnd.h"
-
+#include "adHocOnBoardSim.h"
 
 
 static void olsrStructInit(dwDevice_t *dev)
@@ -116,7 +116,8 @@ static void olsrTaskInit(dwDevice_t *dev)
     olsrTcTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
-    olsrAppTaskInit();
+    // olsrAppTaskInit();
+    initSimTopology();
 }
 
 static void olsrInit(dwDevice_t *dev) 
