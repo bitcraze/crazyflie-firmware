@@ -3,16 +3,19 @@
 #include "olsrDebug.h"
 #include "uwbOlsr.h"
 #define TOTAL_PACKET_NUM 200
-bool isSender;
-bool isReceiver;
+bool isSender = false;
+bool isReceiver = false;
 
 void endToEndTask()
 {
   adHocAppInit(ADHOC_PORT_END_TO_END_DELAY);
-  isSender = false;
-  isReceiver = true;
   int sendCount = 0;
   int recvCount = 0;
+  if(myAddress==7) {
+    isReceiver = true;
+  }else if(myAddress==14) {
+    isSender = true;
+  }
   if(isReceiver)
     {
       DEBUG_PRINT_OLSR_APP("Im Receiver!\n");
@@ -20,6 +23,10 @@ void endToEndTask()
   if(isSender)
     {
       DEBUG_PRINT_OLSR_APP("Im Sender!\n");
+    }
+  if(!isReceiver&&!isSender)
+    {
+       DEBUG_PRINT_OLSR_APP("Im Route!\n");
     }
   while(1)
     {

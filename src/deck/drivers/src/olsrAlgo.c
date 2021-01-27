@@ -61,8 +61,8 @@ static SemaphoreHandle_t olsrAllSetLock;
 //debugging, to be deleted
 //TODO delete testDataLength2send
 bool olsrMprSelectorTupleTimerExpire();
-bool  olsrLinkTupleClearExpire();
-bool  olsrNbTwoHopTupleTimerExpire();
+bool olsrLinkTupleClearExpire();
+bool olsrNbTwoHopTupleTimerExpire();
 bool olsrTopologyTupleTimerExpire();
 
 //rxcallback
@@ -1102,7 +1102,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
       message += messageHeader->m_messageSize;
     }
     olsrRoutingTableComputation();
-	  olsrRoutingTableComputation2();
+	  // olsrRoutingTableComputation2();
   	xSemaphoreGive(olsrAllSetLock);
     
 }

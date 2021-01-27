@@ -116,7 +116,7 @@ static void olsrTaskInit(dwDevice_t *dev)
     olsrTcTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
-    // olsrAppTaskInit();
+    olsrAppTaskInit();
 }
 
 static void olsrInit(dwDevice_t *dev) 
