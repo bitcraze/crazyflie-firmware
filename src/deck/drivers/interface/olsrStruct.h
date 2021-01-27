@@ -177,11 +177,41 @@ typedef struct
   dwTime_t m_timestamp;
 } olsrTimestampTuple_t;
 
+/*
++------+------+------+------+
+|  Rp  |  Tr  |  Rf  |      |
++------+------+------+------+
+|  Tp  |  Rr  |  Tf  |  Re  |
++------+------+------+------+
+*/
+typedef struct {
+  olsrAddr_t m_tsAddress; // neighbor address
+  // tick from dw1000
+  olsrTimestampTuple_t Rp;
+  olsrTimestampTuple_t Tp;
+  olsrTimestampTuple_t Rr;
+  olsrTimestampTuple_t Tr;
+  olsrTimestampTuple_t Rf;
+  olsrTimestampTuple_t Tf;
+  olsrTimestampTuple_t Re;
+  // tick from stm32
+  olsrTime_t m_period;
+  olsrTime_t m_nextDeliveryTime;
+  olsrTime_t m_expiration;
+  int16_t m_distance;
+} olsrRangingTuple_t;
+
 typedef struct 
 {
-  olsrTimestampTuple_t data;
+  olsrRangingTuple_t data;
   setIndex_t next;
-} olsrTimestampSetItem_t;
+} olsrRangingTableItem_t;
+
+typedef struct {
+  packet_t pkt;
+  olsrTimestampTuple_t ots;
+}packetWithTimestamp_t;
+
 /*
 *********************RoutingTable*************************
 */
@@ -271,10 +301,10 @@ typedef struct
 
 typedef struct
 {
-  olsrTimestampSetItem_t setData[TIMESTAMP_SET_SIZE];
+  olsrRangingTableItem_t setData[TIMESTAMP_SET_SIZE];
   setIndex_t freeQueueEntry;
   setIndex_t fullQueueEntry;
-} olsrTimestampSet_t;
+} olsrRangingTable_t;
 
 
 olsrTopologySet_t olsrTopologySet;
@@ -292,6 +322,8 @@ olsrMprSet_t olsrMprSet;
 olsrMprSelectorSet_t olsrMprSelectorSet;
 
 olsrRoutingSet_t olsrRoutingSet;
+
+olsrRangingTable_t olsrRangingTable;
 
 /*linkSet*/
 setIndex_t olsrInsertToLinkSet(olsrLinkSet_t *linkSet, const olsrLinkTuple_t *item);
@@ -406,4 +438,20 @@ olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAd
 void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet);
 
 void olsrRoutingSetCopy(olsrRoutingSet_t *dest,olsrRoutingSet_t *source);
+
+/*ranging table*/
+void olsrRangingTableInit(olsrRangingTable_t *rangingTable);
+
+bool olsrRangingTableInsert(olsrRangingTable_t *rangingTable, olsrRangingTuple_t *tuple);
+
+olsrAddr_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t addr);
+
+bool olsrDelRangingTupleByAddr(olsrRangingTable_t *rangingTable, setIndex_t addr);
+
+void olsrPrintRangingTable(olsrRangingTable_t *rangingTable);
+
+bool olsrRangingTableClearExpire(olsrRangingTable_t *rangingTable);
+
+void olsrSortRangingTable(olsrRangingTable_t *rangingTable);
+
 #endif //__OLSR_STRUCT_H__
