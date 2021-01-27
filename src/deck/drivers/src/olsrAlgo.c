@@ -1057,12 +1057,13 @@ void olsrPacketDispatch(const packet_t* rxPacket)
       olsrMessageType_t type = messageHeader->m_messageType;
 
       #ifdef OLSR_SIM
-
-      if(!checkItCanReceive(messageHeader->m_relayAddress,myAddress))
+      if(checkItCanReceive(messageHeader->m_relayAddress,myAddress)!=1)
         {
+          DEBUG_PRINT_OLSR_SIM("%d to %d is can not accept\n",messageHeader->m_relayAddress,myAddress);
+          xSemaphoreGive(olsrAllSetLock);
           return ;
         }
-
+        DEBUG_PRINT_OLSR_SIM("%d to %d is can  accept\n",messageHeader->m_relayAddress,myAddress);
       #endif
 
       if(type!=TS_MESSAGE&&(messageHeader->m_originatorAddress == myAddress ||messageHeader->m_timeToLive ==0))

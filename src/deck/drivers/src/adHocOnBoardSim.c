@@ -11,11 +11,11 @@
 */
 
 #define USE_NUM 5
+#define MAX_CF_NUM 40
 
 
-
-static olsrAddr_t adjMatrices[USE_NUM][USE_NUM] = {{0,1,0,0,1},{1,0,1,0,0},{0,1,0,1,0},{0,0,1,0,1},{1,0,0,1,0}};
-
+static bool adjMatrices[USE_NUM][USE_NUM] = {{0,1,0,0,1},{1,0,1,0,0},{0,1,0,1,0},{0,0,1,0,1},{1,0,0,1,0}};
+short hashTable[MAX_CF_NUM];
 void initSimTopology()
 {
     for(uint8_t i=0;i<MAX_CF_NUM;i++)
@@ -45,7 +45,7 @@ bool checkItCanReceive(olsrAddr_t from,olsrAddr_t to)
         DEBUG_PRINT_OLSR_SIM("may not init\n");
         return;
     }
-
+    DEBUG_PRINT_OLSR_SIM("found?%d\n",adjMatrices[fromId][toId]);
     return adjMatrices[fromId][toId];
 
 }
