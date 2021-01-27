@@ -40,11 +40,18 @@
 #define DEBUG_OLSR_SET
 #define DEBUG_OLSR_FORWARD
 #define DEBUG_OLSR_APP
+#define DEBUG_OLSR_SIM
 
 #ifdef DEBUG_OLSR_SYSTEM
 #define DEBUG_PRINT_OLSR_SYSTEM(fmt, ...) DEBUG_PRINT("SYSTEM: "fmt,  ##__VA_ARGS__)
 #else
 #define DEBUG_PRINT_OLSR_SYSTEM(fmt, ...)
+#endif
+
+#ifdef DEBUG_OLSR_SIM
+#define DEBUG_PRINT_OLSR_SIM(fmt, ...) DEBUG_PRINT("SIM: "fmt,  ##__VA_ARGS__)
+#else
+#define DEBUG_PRINT_OLSR_SIM(fmt, ...)
 #endif
 
 #ifdef DEBUG_OLSR_SEND
