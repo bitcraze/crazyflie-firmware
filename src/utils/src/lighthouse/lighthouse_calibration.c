@@ -31,6 +31,7 @@
  */
 
 #include "lighthouse_calibration.h"
+#include "ootx_decoder.h"
 
 #include <math.h>
 #include "cf_math.h"

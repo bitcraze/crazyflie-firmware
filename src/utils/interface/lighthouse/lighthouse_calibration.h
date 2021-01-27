@@ -1,6 +1,10 @@
 #pragma once
 
-#include "ootx_decoder.h"
+#include <stdbool.h>
+
+// Forward declaration from ootx_decoder.h. Avoid exposing __fp16 type, which
+// doesn't exist on x86, so this header can be compiled for Python bindings.
+struct ootxDataFrame_s;
 
 typedef struct {
   float phase;
