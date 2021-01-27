@@ -1183,7 +1183,7 @@ bool olsrDelRangingTupleByAddr(olsrRangingTable_t *rangingTable, setIndex_t addr
 bool olsrRangingTableClearExpire(olsrRangingTable_t *rangingTable) {
   setIndex_t next = -1;
   bool isChange = false;
-  for (setIndex_t i = rangingTable.fullQueueEntry; i != -1; i = next) {
+  for (setIndex_t i = rangingTable->fullQueueEntry; i != -1; i = next) {
     next = rangingTable->setData[i].next;
     if (rangingTable->setData[i].data.m_expiration <= xTaskGetTickCount()) {
       isChange = olsrDelRangingTupleByAddr(rangingTable, rangingTable->setData[i].data.m_tsAddress);

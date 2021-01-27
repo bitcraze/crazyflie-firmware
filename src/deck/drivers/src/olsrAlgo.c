@@ -1093,7 +1093,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                 break;
             case TS_MESSAGE:
                 DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE\n");
-                olsrProcessTs((olsrMessage_t*)olsr_message);
+                olsrProcessTs((olsrMessage_t*)message);
                 break;
             default:
                 DEBUG_PRINT_OLSR_RECEIVE("WRONG MESSAGE\n");

@@ -5,6 +5,7 @@
 #include <queue.h>
 #include"adhocdeck.h"
 #include <string.h>
+#include "mac.h"
 
 /*
 *********************Recv&SendQueue*************************
@@ -304,6 +305,7 @@ typedef struct
   olsrRangingTableItem_t setData[TIMESTAMP_SET_SIZE];
   setIndex_t freeQueueEntry;
   setIndex_t fullQueueEntry;
+  int size;
 } olsrRangingTable_t;
 
 
