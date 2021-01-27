@@ -168,6 +168,7 @@ typedef struct
 typedef struct{
     uint16_t m_sourcePort;
     uint16_t m_destPort;
+    olsrAddr_t m_nextHop;
     uint16_t m_seq;
     uint16_t m_size;
 } __attribute__((packed)) olsrDataMessageHeader_t;
