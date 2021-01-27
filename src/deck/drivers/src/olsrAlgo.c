@@ -695,6 +695,7 @@ void olsrProcessData(olsrMessage_t* msg)
 {
   if(msg->m_messageHeader.m_relayAddress != myAddress)
     {
+      DEBUG_PRINT_OLSR_ROUTING("m_relayAddress!=myAddress\n");
       return;
     }
   if(msg->m_messageHeader.m_destinationAddress == myAddress)
@@ -703,6 +704,7 @@ void olsrProcessData(olsrMessage_t* msg)
       olsrDataMessage_t* dataMsg = (olsrDataMessage_t *)msg->m_messagePayload;
       if(adHocPortIsUsed(dataMsg->m_dataHeader.m_destPort))
         {
+          DEBUG_PRINT_OLSR_ROUTING("add DataMessage to Queue\n");
           adHocAddToQueue(dataMsg->m_dataHeader.m_destPort,dataMsg);
         }
       else
@@ -1049,7 +1051,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
     {
       olsrMessageHeader_t* messageHeader = (olsrMessageHeader_t*)message;
       olsrMessageType_t type = messageHeader->m_messageType;
-      if(messageHeader->m_originatorAddress == myAddress ||messageHeader->m_timeToLive ==0)
+      if(type!=TS_MESSAGE&&(messageHeader->m_originatorAddress == myAddress ||messageHeader->m_timeToLive ==0))
         {
           index += messageHeader->m_messageSize;
           message += messageHeader->m_messageSize;

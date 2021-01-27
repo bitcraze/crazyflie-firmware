@@ -56,6 +56,7 @@ bool adHocAppInit(AdHocPort portId)
     { 
       portUsed[portId] = true;
       adHocInitTaskQueue(portId);
+      DEBUG_PRINT_OLSR_APP("Init Successful");
       return true;
     }
   else

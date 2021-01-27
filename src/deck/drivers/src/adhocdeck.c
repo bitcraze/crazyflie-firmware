@@ -105,8 +105,8 @@ static void txCallback(dwDevice_t *dev) {
 }
 
 static void rxCallback(dwDevice_t *dev) {
-  // olsrRxCallback(dev);
-  olsrPacketLossCallBack(dev);
+  olsrRxCallback(dev);
+  // olsrPacketLossCallBack(dev);
 }
 
 static void rxTimeoutCallback(dwDevice_t *dev) {
