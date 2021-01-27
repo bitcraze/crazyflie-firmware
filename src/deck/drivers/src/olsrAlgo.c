@@ -10,14 +10,20 @@
 #include "olsrPacket.h"
 #include "adHocOnBoardSim.h"
 
+#define ANTENNA_OFFSET 154.0   // In meter
 //const
+const int antennaDelay = (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0; // In radio tick
+
 
 #define OLSR_HELLO_INTERVAL 2000
 #define OLSR_NEIGHB_HOLD_TIME (3*OLSR_HELLO_INTERVAL)
 #define OLSR_TC_INTERVAL 5000
+#define TS_INTERVAL 200 //must be in range: 20 - 500
+#define TS_INTERVAL_MIN 20 //default 20
+#define TS_INTERVAL_MAX 500 //default 500
+#define TS_OTSPOOL_MAXSIZE (4*TS_INTERVAL_MAX/TS_INTERVAL)
 #define OLSR_TOP_HOLD_TIME (3*OLSR_TC_INTERVAL)
 #define OLSR_DUP_HOLD_TIME 10000
-#define TS_INTERVAL 1000
 #define OLSR_ROUTING_SET_HOLD_TIME 10000
 #define OLSR_DUP_CLEAR_INTERVAL 30000
 #define OLSR_LINK_CLEAR_INTERVAL 5000
@@ -61,6 +67,19 @@ static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
 
+static uint16_t idVelocityX;
+static uint16_t idVelocityY;
+static uint16_t idVelocityZ;
+static float velocity;
+static int16_t distanceTowards[10];
+int jitter = 0;
+
+int olsr_ts_otspool_idx = 0;
+olsrTimestampTuple_t olsr_ts_otspool[TS_OTSPOOL_MAXSIZE] = {0};
+packet_t txpacket = {0}; // todo : 如果命名为txPacket的话会和LpsTwrTag.c文件里面定义的static类型变量重名
+packetWithTimestamp_t rxPacketWts = {0};
+packet_t *rxPacket = &rxPacketWts.pkt;
+
 //TODO define packet and message struct once, save space
 //debugging, to be deleted
 //TODO delete testDataLength2send
@@ -102,41 +121,43 @@ static uint16_t getSeqNumber()
   xSemaphoreGive(olsrMessageSeqLock);
   return retVal;
 }
+
 void olsrPacketLossCallBack(dwDevice_t *dev)
 {
-    packet_t rxPacket;
+    //packet_t rxPacket;
     static int count = 0;
     static int notOlsr = 0;
     unsigned int dataLength = dwGetDataLength(dwm);
     if(dataLength==0){
 				return;
 		}
-    memset(&rxPacket,0,sizeof(packet_t));
-    dwGetData(dwm,(uint8_t*)&rxPacket,dataLength);
-    if(rxPacket.fcf_s.type!=MAC802154_TYPE_OLSR){
+    memset(rxPacket,0,sizeof(packet_t));
+    dwGetData(dwm,(uint8_t*)rxPacket,dataLength);
+    if(rxPacket->fcf_s.type!=MAC802154_TYPE_OLSR){
         // DEBUG_PRINT_OLSR_RECEIVE("Mac_T not OLSR!\n");
         notOlsr++;
 				return;
 		}
     count++;
     int p;
-    memcpy(&p,rxPacket.payload,sizeof(int));
+    memcpy(&p,&rxPacket->payload,sizeof(int));
     DEBUG_PRINT_OLSR_RECEIVE("receive %d not olsr,success receive %d/%d(RecvcountGT,RecvCount)\n",notOlsr,count,p);
 }
+
 void olsrRxCallback(dwDevice_t *dev){
-    packet_t rxPacket;
+    //packet_t rxPacket;
     DEBUG_PRINT_OLSR_SYSTEM("rxCallBack\n");
     unsigned int dataLength = dwGetDataLength(dwm);
     if(dataLength==0){
         DEBUG_PRINT_OLSR_RECEIVE("DataLen=0!\n");
 				return;
 		}
-    memset(&rxPacket,0,sizeof(packet_t));
-    dwGetData(dwm,(uint8_t*)&rxPacket,dataLength);
+    memset(rxPacket,0,sizeof(packet_t));
+    dwGetData(dwm,(uint8_t*)rxPacket,dataLength);
 		
     // DEBUG_PRINT_OLSR_RECEIVE("dataLength=%d\n", dataLength);
     // DEBUG_PRINT_OLSR_RECEIVE("fcf: %X\n", rxPacket.fcf);
-    if(rxPacket.fcf_s.type!=MAC802154_TYPE_OLSR){
+    if(rxPacket->fcf_s.type!=MAC802154_TYPE_OLSR){
         // DEBUG_PRINT_OLSR_RECEIVE("Mac_T not OLSR!\n");
 				return;
 		}
@@ -151,7 +172,25 @@ void olsrRxCallback(dwDevice_t *dev){
     u64=rxPacket.sourceAddress;
     DEBUG_PRINT_OLSR_RECEIVE("src: %X%X%X\n", u64>>32, u64, u64);
     #endif
-    xQueueSend(g_olsrRecvQueue,&rxPacket,portMAX_DELAY);
+    xQueueSend(g_olsrRecvQueue,rxPacket,portMAX_DELAY);
+}
+
+void olsrTxCallback(dwDevice_t *dev) {
+  DEBUG_PRINT_OLSR_SYSTEM("txCallBack\n");
+  if (txpacket.fcf_s.reserved != 1) {
+    return; // packet includes no ts message
+  }
+  olsrPacket_t *txOlsrPkt = (olsrPacket_t *) txpacket.payload;
+
+  dwTime_t departure = {.full = 0};
+  dwGetTransmitTimestamp(dev, &departure);
+  departure.full += (antennaDelay / 2);
+  //DEBUG_PRINT_OLSR_TS("departure=%2x%8lx\n", departure.high8, departure.low32);
+  olsr_ts_otspool_idx++;
+  olsr_ts_otspool_idx %= TS_OTSPOOL_MAXSIZE;
+  olsr_ts_otspool[olsr_ts_otspool_idx].m_seqenceNumber = txOlsrPkt->m_packetHeader.m_packetSeq;
+  olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp = departure;
+  DEBUG_PRINT_OLSR_SEND("otspool update [%d] with %d.\n", olsr_ts_otspool_idx, txOlsrPkt->m_packetHeader.m_packetSeq);
 }
 
 //packet process
@@ -1467,8 +1506,8 @@ void olsrTcTask(void *ptr)
 // }
 void olsrPacketLossTask(void *ptr)
 {
-  packet_t txPacket = {0};
-  MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_OLSR);
+  //packet_t txPacket = {0};
+  MAC80215_PACKET_INIT(txpacket, MAC802154_TYPE_OLSR);
   int countSend = 1;
   while(1)
     {
@@ -1477,8 +1516,8 @@ void olsrPacketLossTask(void *ptr)
       dwSetDefaults(dwm);
       dwWaitForResponse(dwm, true);
       dwReceivePermanently(dwm, true);
-      memcpy(txPacket.payload,&countSend,sizeof(int));
-      dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH+4);
+      memcpy(txpacket.payload,&countSend,sizeof(int));
+      dwSetData(dwm, (uint8_t *)&txpacket,MAC802154_HEADER_LENGTH+4);
       dwStartTransmit(dwm);
       DEBUG_PRINT_OLSR_SEND("send %d packet\n",countSend);
       countSend++;
@@ -1491,10 +1530,10 @@ void olsrSendTask(void *ptr)
     bool hasOlsrMessageCache =false;
 		TickType_t timeToWaitForSendQueue;
     olsrMessage_t olsrMessageCache = {0};
-    packet_t txPacket = {0};
-  	MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_OLSR);
+    //packet_t txPacket = {0};
+  	MAC80215_PACKET_INIT(txpacket, MAC802154_TYPE_OLSR);
     dwm = (dwDevice_t *)ptr;
-    olsrPacket_t *olsrPacket = (olsrPacket_t*)txPacket.payload;
+    olsrPacket_t *olsrPacket = (olsrPacket_t*)txpacket.payload;
     //task loop
     while(true){
       uint8_t *writePosition = olsrPacket->m_packetPayload;
@@ -1512,7 +1551,7 @@ void olsrSendTask(void *ptr)
         memcpy(writePosition,&olsrMessageCache,olsrMessageCache.m_messageHeader.m_messageSize);
         writePosition += olsrMessageCache.m_messageHeader.m_messageSize;
 				if(olsrMessageCache.m_messageHeader.m_messageType==TS_MESSAGE) 
-						txPacket.fcf_s.reserved = 1;
+						txpacket.fcf_s.reserved = 1;
       }
       ASSERT(writePosition-(uint8_t *)olsrPacket>sizeof(olsrPacketHeader_t));
       olsrPacket->m_packetHeader.m_packetLength = writePosition-(uint8_t *)olsrPacket;
@@ -1522,7 +1561,7 @@ void olsrSendTask(void *ptr)
       dwSetDefaults(dwm);
       dwWaitForResponse(dwm, true);
       dwReceivePermanently(dwm, true);
-      dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
+      dwSetData(dwm, (uint8_t *)&txpacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
       dwStartTransmit(dwm);
       DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
     }

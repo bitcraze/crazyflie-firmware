@@ -101,6 +101,7 @@ static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback(dwDevice_t *dev) {
+  olsrTxCallback(dev);
   return;
 }
 

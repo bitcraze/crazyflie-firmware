@@ -15,6 +15,7 @@ void olsrTcTask(void *ptr);
 void olsr_ts_task(void *ptr);
 void olsrDeviceInit(dwDevice_t *dev);
 void olsrRxCallback(dwDevice_t *dev);
+void olsrTxCallback(dwDevice_t *dev);
 void olsrDupTupleTimerExpireTask(void *ptr);
 void olsrLinkTupleTimerExpireTask(void *ptr);
 void olsrNbTwoHopTupleTimerExpireTask(void *ptr);

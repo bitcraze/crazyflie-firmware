@@ -169,7 +169,7 @@ typedef struct
   setIndex_t next;
 } olsrDuplicateSetItem_t;
 /*
-*********************TimestampSet*************************
+*********************RangingTable*************************
 */
 
 typedef struct 
