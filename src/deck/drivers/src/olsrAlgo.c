@@ -97,7 +97,7 @@ static void olsrSendQueueInit()
 }
 static void olsrRecvQueueInit()
 {
-  g_olsrRecvQueue = xQueueCreate(15,sizeof(packet_t));
+  g_olsrRecvQueue = xQueueCreate(15,sizeof(packetWithTimestamp_t));
   DEBUG_PRINT_OLSR_SYSTEM("RECV_QUEUE_INIT_SUCCESSFUL\n");
 }
 void olsrDeviceInit(dwDevice_t *dev){
