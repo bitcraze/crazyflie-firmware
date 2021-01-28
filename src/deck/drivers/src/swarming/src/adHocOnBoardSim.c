@@ -47,5 +47,4 @@ bool checkItCanReceive(olsrAddr_t from,olsrAddr_t to)
     }
     DEBUG_PRINT_OLSR_SIM("found?%d\n",adjMatrices[fromId][toId]);
     return adjMatrices[fromId][toId];
-
 }
