@@ -1045,6 +1045,7 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
     }
 }
 
+// todo : 应该返回setIndex_t类型
 olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr)
 {
   setIndex_t it = routingSet->fullQueueEntry;
@@ -1135,18 +1136,16 @@ static bool olsrRangingTableFree(olsrRangingTable_t *rangingTable, setIndex_t de
   return false;
 }
 
-bool olsrRangingTableInsert(olsrRangingTable_t *rangingTable, olsrRangingTuple_t *tuple) {
+setIndex_t olsrRangingTableInsert(olsrRangingTable_t *rangingTable, olsrRangingTuple_t *tuple) {
   setIndex_t candidate = olsrRangingTableMalloc(rangingTable);
   if (candidate != -1) {
     memcpy(&rangingTable->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
     rangingTable->size++;
-    return true;
-  } else {
-    return false;
   }
+  return candidate;
 }
 
-olsrAddr_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t addr) {
+setIndex_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t addr) {
   setIndex_t it = rangingTable->fullQueueEntry;
   while (it != -1) {
     olsrRangingTableItem_t rangingNode = rangingTable->setData[it];

@@ -444,11 +444,13 @@ void olsrRoutingSetCopy(olsrRoutingSet_t *dest,olsrRoutingSet_t *source);
 /*ranging table*/
 void olsrRangingTableInit(olsrRangingTable_t *rangingTable);
 
-bool olsrRangingTableInsert(olsrRangingTable_t *rangingTable, olsrRangingTuple_t *tuple);
+setIndex_t olsrRangingTableInsert(olsrRangingTable_t *rangingTable, olsrRangingTuple_t *tuple);
 
-olsrAddr_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t addr);
+setIndex_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t addr);
 
 bool olsrDelRangingTupleByAddr(olsrRangingTable_t *rangingTable, setIndex_t addr);
+
+void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple);
 
 void olsrPrintRangingTable(olsrRangingTable_t *rangingTable);
 
