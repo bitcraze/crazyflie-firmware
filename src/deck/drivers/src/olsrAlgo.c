@@ -240,6 +240,7 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
 }
 
 void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS){
+  DEBUG_PRINT_OLSR_TS("--olsrProcessTs--\n");
   olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) &tsMsg->m_messageHeader;
   olsrAddr_t peerSrcAddr = tsMessageHeader->m_originatorAddress;
   olsrAddr_t peerSpeed = tsMessageHeader->m_velocity;
@@ -276,11 +277,13 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     DEBUG_PRINT_OLSR_TS("find a now neighbor, addr is : %u \n", peerSrcAddr);
   }
   olsrRangingTuple_t *tuple = &olsrRangingTable.setData[peerIndex].data;
-
+  DEBUG_PRINT_OLSR_TS("--update field expiration--\n");
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
+  DEBUG_PRINT_OLSR_TS("--update the RangingTable Re, always store the newest rxOTS--\n");
   //update the RangingTable Re, always store the newest rxOTS
   tuple->Re = *rxOTS;
+  DEBUG_PRINT_OLSR_TS("--update field Tr or Rr--\n");
   //update field Tr or Rr
   if (tuple->Tr.m_timestamp.full == 0) {
     if (tuple->Rr.m_seqenceNumber == peerTxOTS.m_seqenceNumber) {
@@ -289,6 +292,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       tuple->Rr = *rxOTS;
     }
   }
+  DEBUG_PRINT_OLSR_TS("--update field Rf and Tf if peer_rxOTS has value--\n");
   //update field Rf and Tf if peer_rxOTS has value
   if (peerRxOTS.m_timestamp.full) {
     tuple->Rf = peerRxOTS;
@@ -299,6 +303,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       }
     }
   }
+  DEBUG_PRINT_OLSR_TS("--process RangingTable, compute, re-organize or doing nothing--\n");
   //process RangingTable, compute, re-organize or doing nothing
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     tuple->m_distance = olsrTsComputeDistance(tuple);
@@ -313,6 +318,8 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->Rr = tuple->Re;
     tuple->Tr.m_timestamp.full = 0;
   }
+  olsrPrintRangingTableTuple(tuple);
+  DEBUG_PRINT_OLSR_TS("--olsrProcessTsEnd--\n");
 }
 
 static void incrementAnsn()
@@ -1228,6 +1235,7 @@ void olsrPacketDispatch(const packetWithTimestamp_t * rxPacketWts)
           message += messageHeader->m_messageSize;
           continue;
         }
+      DEBUG_PRINT_OLSR_RECEIVE("process message, messageTYpe is : %d\n", messageHeader->m_messageType);
       bool doForward = true;
       setIndex_t duplicated = olsrFindInDuplicateSet(&olsrDuplicateSet,messageHeader->m_originatorAddress,\
                                                      messageHeader->m_messageSeq);
@@ -1448,10 +1456,11 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 }
 
 olsrTime_t olsrSendTs() {
+  DEBUG_PRINT_OLSR_TS("--olsrSendTs--\n");
   olsrMessage_t tsMsg = {0};
   olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(TS_INTERVAL_MAX) + TS_INTERVAL_MIN;
   olsrTimestampTuple_t *txOTS = olsr_ts_otspool + olsr_ts_otspool_idx;
-
+  DEBUG_PRINT_OLSR_TS("generate header\n");
   // generate header
   olsrTsMessageHeader_t *tsMsgHeader = (olsrTsMessageHeader_t *) &tsMsg.m_messageHeader;
   tsMsgHeader->m_messageType = TS_MESSAGE;
@@ -1466,7 +1475,7 @@ olsrTime_t olsrSendTs() {
   float velocityZ = logGetFloat(idVelocityZ);
   velocity = sqrt(pow(velocityX,2)+pow(velocityY,2)+pow(velocityZ,2));
   tsMsgHeader->m_velocity = (short) (velocity * 100);
-
+  DEBUG_PRINT_OLSR_TS("generate bodyunit\n");
   // generate bodyunit
   uint8_t *msgPtr = (uint8_t *) &tsMsg + sizeof(olsrTsMessageHeader_t);
   uint8_t *msgPtrEnd = (uint8_t *) &tsMsg + MESSAGE_MAX_LENGTH;
