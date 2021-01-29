@@ -9,6 +9,9 @@
 #include "olsrStruct.h"
 #include "olsrPacket.h"
 #include "adHocOnBoardSim.h"
+#include "log.h"
+#include "math.h"
+#include "stdlib.h"
 
 #define ANTENNA_OFFSET 154.0   // In meter
 //const
@@ -1340,6 +1343,52 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
   xQueueSend(g_olsrSendQueue,&msg,portMAX_DELAY);
 }
 
+olsrTime_t olsrSendTs() {
+  olsrMessage_t tsMsg = {0};
+  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(TS_INTERVAL_MAX) + TS_INTERVAL_MIN;
+  olsrTimestampTuple_t *txOTS = olsr_ts_otspool + olsr_ts_otspool_idx;
+
+  // generate header
+  olsrTsMessageHeader_t *tsMsgHeader = (olsrTsMessageHeader_t *) &tsMsg.m_messageHeader;
+  tsMsgHeader->m_messageType = TS_MESSAGE;
+  tsMsgHeader->m_messageSize = sizeof(olsrTsMessageHeader_t);
+  tsMsgHeader->m_originatorAddress = myAddress;
+  tsMsgHeader->m_messageSeq = getSeqNumber();
+  tsMsgHeader->m_dwTimeHigh8 = txOTS->m_timestamp.high8;
+  tsMsgHeader->m_dwTimeLow32 = txOTS->m_timestamp.low32;
+  tsMsgHeader->m_seq4TSsend = txOTS->m_seqenceNumber;
+  float velocityX = logGetFloat(idVelocityX);
+  float velocityY = logGetFloat(idVelocityY);
+  float velocityZ = logGetFloat(idVelocityZ);
+  velocity = sqrt(pow(velocityX,2)+pow(velocityY,2)+pow(velocityZ,2));
+  tsMsgHeader->m_velocity = (short) (velocity * 100);
+
+  // generate bodyunit
+  uint8_t *msgPtr = (uint8_t *) &tsMsg + sizeof(olsrTsMessageHeader_t);
+  uint8_t *msgPtrEnd = (uint8_t *) &tsMsg + MESSAGE_MAX_LENGTH;
+  olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr;
+  for (olsrRangingTableItem_t t = olsrRangingTable.setData[olsrRangingTable.fullQueueEntry]; t.next != -1; t = olsrRangingTable.setData[t.next]) {
+    if (t.data.m_nextDeliveryTime <= xTaskGetTickCount() + TS_INTERVAL_MIN && t.data.Re.m_timestamp.full) {
+      tsMsgBodyUnit->m_tsAddr = t.data.m_tsAddress;
+      tsMsgBodyUnit->m_sequence = t.data.Re.m_seqenceNumber;
+      tsMsgBodyUnit->m_dwTimeLow32 = t.data.Re.m_timestamp.low32;
+      tsMsgBodyUnit->m_dwTimeHigh8 = t.data.Re.m_timestamp.high8;
+      tsMsgHeader->m_messageSize += sizeof(olsrTsMessageBodyUnit_t);
+      tsMsgBodyUnit++;
+      t.data.Re.m_seqenceNumber = 0;
+      t.data.Re.m_timestamp.full = 0;
+    }
+    jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
+    jitter = 0;//TODO remove after debug
+    t.data.m_nextDeliveryTime = xTaskGetTickCount() + t.data.m_period + jitter;
+    if (t.data.m_nextDeliveryTime < nextSendTime) {
+      nextSendTime = t.data.m_nextDeliveryTime;
+    }
+    xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
+    return nextSendTime;
+  }
+}
+
 void olsrNeighborLoss(olsrAddr_t addr[],uint8_t length)
 {
   for(int i = 0; i < length; i++)
@@ -1533,6 +1582,22 @@ void olsrPacketLossTask(void *ptr)
       countSend++;
       vTaskDelay(50);
     }  
+}
+
+void olsrTsTask(void *ptr) {
+  idVelocityX = logGetVarId("stateEstimate", "vx");
+  idVelocityY = logGetVarId("stateEstimate", "vy");
+  idVelocityZ = logGetVarId("stateEstimate", "vz");
+  while (true) {
+    xSemaphoreTake(olsrAllSetLock, portMAX_DELAY);
+    olsrTime_t nextSendTime = olsrSendTs();
+    olsrTime_t currentTime = xTaskGetTickCount();
+    if (nextSendTime < currentTime + M2T(TS_INTERVAL_MIN)) {
+      nextSendTime = currentTime + M2T(TS_INTERVAL_MIN);
+    }
+    xSemaphoreGive(olsrAllSetLock);
+    vTaskDelay(nextSendTime - currentTime);
+  }
 }
 
 void olsrSendTask(void *ptr)

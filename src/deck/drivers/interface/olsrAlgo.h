@@ -12,7 +12,7 @@ void olsrHelloTask(void *ptr);
 void olsrSendTask(void *ptr);
 void olsrRecvTask(void *ptr);
 void olsrTcTask(void *ptr);
-void olsr_ts_task(void *ptr);
+void olsrTsTask(void *ptr);
 void olsrDeviceInit(dwDevice_t *dev);
 void olsrRxCallback(dwDevice_t *dev);
 void olsrTxCallback(dwDevice_t *dev);
