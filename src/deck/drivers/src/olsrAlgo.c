@@ -199,7 +199,7 @@ void olsrTxCallback(dwDevice_t *dev) {
   dwTime_t departure = {.full = 0};
   dwGetTransmitTimestamp(dev, &departure);
   departure.full += (antennaDelay / 2);
-  //DEBUG_PRINT_OLSR_TS("departure=%2x%8lx\n", departure.high8, departure.low32);
+  DEBUG_PRINT_OLSR_TS("departure=%2x%8x\n", departure.high8, departure.low32);
   olsr_ts_otspool_idx++;
   olsr_ts_otspool_idx %= TS_OTSPOOL_MAXSIZE;
   olsr_ts_otspool[olsr_ts_otspool_idx].m_seqenceNumber = txOlsrPkt->m_packetHeader.m_packetSeq;
@@ -1473,14 +1473,15 @@ olsrTime_t olsrSendTs() {
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
-  velocity = sqrt(pow(velocityX,2)+pow(velocityY,2)+pow(velocityZ,2));
+  velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   tsMsgHeader->m_velocity = (short) (velocity * 100);
   DEBUG_PRINT_OLSR_TS("generate bodyunit\n");
   // generate bodyunit
   uint8_t *msgPtr = (uint8_t *) &tsMsg + sizeof(olsrTsMessageHeader_t);
   uint8_t *msgPtrEnd = (uint8_t *) &tsMsg + MESSAGE_MAX_LENGTH;
   olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr;
-  for (olsrRangingTableItem_t* t = &olsrRangingTable.setData[olsrRangingTable.fullQueueEntry]; t->next != -1; t = &olsrRangingTable.setData[t->next]) {
+  for (olsrRangingTableItem_t *t = &olsrRangingTable.setData[olsrRangingTable.fullQueueEntry]; t->next != -1;
+       t = &olsrRangingTable.setData[t->next]) {
     if (tsMsgBodyUnit + 1 > msgPtrEnd) {
       break;
     }
@@ -1500,9 +1501,9 @@ olsrTime_t olsrSendTs() {
     if (t->data.m_nextDeliveryTime < nextSendTime) {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
-    xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
-    return nextSendTime;
   }
+  xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
+  return nextSendTime;
 }
 
 void olsrNeighborLoss(olsrAddr_t addr[],uint8_t length)
