@@ -253,19 +253,20 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   DEBUG_PRINT_OLSR_TS("Receive : addr=%d,seq=%d,p_txSeq=%d\n", peerSrcAddr, rxOTS->m_seqenceNumber, peerTxOTS.m_seqenceNumber);
 
   olsrTimestampTuple_t peerRxOTS = {0};
-  uint8_t *msgPtr = (uint8_t *) &tsMsg + sizeof(olsrTsMessageHeader_t);
-  uint8_t *msgPtrEnd = (uint8_t *) &tsMsg + tsMessageHeader->m_messageSize;
+  uint8_t *msgPtr = (uint8_t *) tsMsg + sizeof(olsrTsMessageHeader_t);
+  uint8_t *msgPtrEnd = (uint8_t *) tsMsg + tsMessageHeader->m_messageSize;
   for (olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr; tsMsgBodyUnit < msgPtrEnd;
        tsMsgBodyUnit++) {
     if (tsMsgBodyUnit->m_tsAddr != myAddress) {
       continue;
     }
+    DEBUG_PRINT_OLSR_TS("peerRxOTS init \n");
     peerRxOTS.m_seqenceNumber = tsMsgBodyUnit->m_sequence;
     peerRxOTS.m_timestamp.low32 = tsMsgBodyUnit->m_dwTimeLow32;
     peerRxOTS.m_timestamp.high8 = tsMsgBodyUnit->m_dwTimeHigh8;
     break;
   }
-  DEBUG_PRINT_OLSR_TS("peerRxOTS : seq:%d,high8:%2x,low32:%8x",peerRxOTS.m_seqenceNumber,peerRxOTS.m_timestamp.high8,peerRxOTS.m_timestamp.low32);
+  //DEBUG_PRINT_OLSR_TS("peerRxOTS : seq:%d,high8:%d,low32:%u \n",peerRxOTS.m_seqenceNumber,peerRxOTS.m_timestamp.high8,peerRxOTS.m_timestamp.low32);
   setIndex_t peerIndex = olsrFindInRangingTable(&olsrRangingTable, peerSrcAddr);
   if (peerIndex == -1) {
     olsrRangingTuple_t t;
@@ -277,6 +278,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     }
     DEBUG_PRINT_OLSR_TS("find a now neighbor, addr is : %u , table index is :%d\n", peerSrcAddr, peerIndex);
   }
+  DEBUG_PRINT_OLSR_TS("peer index is :%d \n", peerIndex);
   olsrRangingTuple_t *tuple = &olsrRangingTable.setData[peerIndex].data;
   DEBUG_PRINT_OLSR_TS("--update field expiration--\n");
   //update field expiration
