@@ -221,6 +221,7 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
 
   if (tprop_ctn < -100 || tprop_ctn > 900) {
+    DEBUG_PRINT_OLSR_TS("tprop_ctn < -100 || tprop_ctn > 900\n");
     olsrPrintRangingTableTuple(tuple);
   }
 
@@ -264,7 +265,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     peerRxOTS.m_timestamp.high8 = tsMsgBodyUnit->m_dwTimeHigh8;
     break;
   }
-
+  DEBUG_PRINT_OLSR_TS("peerRxOTS : seq:%d,high8:%2x,low32:%8x",peerRxOTS.m_seqenceNumber,peerRxOTS.m_timestamp.high8,peerRxOTS.m_timestamp.low32);
   setIndex_t peerIndex = olsrFindInRangingTable(&olsrRangingTable, peerSrcAddr);
   if (peerIndex == -1) {
     olsrRangingTuple_t t;
@@ -274,15 +275,17 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       // out of RangingTable size
       return;
     }
-    DEBUG_PRINT_OLSR_TS("find a now neighbor, addr is : %u \n", peerSrcAddr);
+    DEBUG_PRINT_OLSR_TS("find a now neighbor, addr is : %u , table index is :%d\n", peerSrcAddr, peerIndex);
   }
   olsrRangingTuple_t *tuple = &olsrRangingTable.setData[peerIndex].data;
   DEBUG_PRINT_OLSR_TS("--update field expiration--\n");
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
+  olsrPrintRangingTableTuple(tuple);
   DEBUG_PRINT_OLSR_TS("--update the RangingTable Re, always store the newest rxOTS--\n");
   //update the RangingTable Re, always store the newest rxOTS
   tuple->Re = *rxOTS;
+  olsrPrintRangingTableTuple(tuple);
   DEBUG_PRINT_OLSR_TS("--update field Tr or Rr--\n");
   //update field Tr or Rr
   if (tuple->Tr.m_timestamp.full == 0) {
@@ -292,6 +295,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       tuple->Rr = *rxOTS;
     }
   }
+  olsrPrintRangingTableTuple(tuple);
   DEBUG_PRINT_OLSR_TS("--update field Rf and Tf if peer_rxOTS has value--\n");
   //update field Rf and Tf if peer_rxOTS has value
   if (peerRxOTS.m_timestamp.full) {
@@ -303,6 +307,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       }
     }
   }
+  olsrPrintRangingTableTuple(tuple);
   DEBUG_PRINT_OLSR_TS("--process RangingTable, compute, re-organize or doing nothing--\n");
   //process RangingTable, compute, re-organize or doing nothing
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
@@ -317,6 +322,8 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->Tf.m_timestamp.full = 0;
     tuple->Rr = tuple->Re;
     tuple->Tr.m_timestamp.full = 0;
+  } else {
+    DEBUG_PRINT_OLSR_TS("unknown situation occurred!\n");
   }
   olsrPrintRangingTableTuple(tuple);
   DEBUG_PRINT_OLSR_TS("--olsrProcessTsEnd--\n");
