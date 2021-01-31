@@ -271,6 +271,9 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   if (peerIndex == -1) {
     olsrRangingTuple_t t;
     t.m_tsAddress = peerSrcAddr;
+    t.m_period = M2T(TS_INTERVAL);
+    t.m_nextDeliveryTime = xTaskGetTickCount() + t.m_period;
+    t.m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
     peerIndex = olsrRangingTableInsert(&olsrRangingTable, &t);
     if (peerIndex == -1) {
       // out of RangingTable size
@@ -1471,7 +1474,7 @@ olsrTime_t olsrSendTs() {
   olsrTimestampTuple_t *txOTS = olsr_ts_otspool + olsr_ts_otspool_idx;
   DEBUG_PRINT_OLSR_TS("generate header\n");
   // generate header
-  olsrTsMessageHeader_t *tsMsgHeader = (olsrTsMessageHeader_t *) &tsMsg.m_messageHeader;
+  olsrTsMessageHeader_t *tsMsgHeader = (olsrTsMessageHeader_t *) &tsMsg;
   tsMsgHeader->m_messageType = TS_MESSAGE;
   tsMsgHeader->m_messageSize = sizeof(olsrTsMessageHeader_t);
   tsMsgHeader->m_originatorAddress = myAddress;
