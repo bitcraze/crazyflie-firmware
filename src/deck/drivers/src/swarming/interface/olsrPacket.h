@@ -92,6 +92,7 @@
                               /sizeof(olsrLinkMessage_t)) 
 #define TC_PAYLOAD_MAX_NUM ((MESSAGE_PAYLOAD_MAX_SIZE-2)/sizeof(olsrTopologyMessageUint_t))
 #define DATA_PAYLOAD_MAX_NUM  MESSAGE_PAYLOAD_MAX_SIZE-sizeof(olsrDataMessageHeader_t)
+#define TS_PAYLOAD_MAX_NUM  9 //((MESSAGE_PAYLOAD_MAX_SIZE-sizeof(olsrTsMessageHeader_t))/sizeof(olsrTsMessageBodyUnit_t))
 
 typedef struct{
     uint16_t m_packetLength;
@@ -177,4 +178,28 @@ typedef struct{
     olsrDataMessageHeader_t  m_dataHeader;
     uint8_t m_payload[DATA_PAYLOAD_MAX_NUM];
 } __attribute__((packed)) olsrDataMessage_t;
+
+//time stamp (ts) message
+typedef struct {
+  olsrMessageType_t m_messageType; // 1 byte
+  uint16_t m_seq4TSsend; // 2 byte
+  uint16_t m_messageSize; // 2 byte
+  uint16_t m_originatorAddress; // 2 byte
+  uint32_t m_dwTimeLow32; // 4 byte
+  uint8_t m_dwTimeHigh8; // 1 byte
+  short m_velocity;//in cm 2 byte
+  uint16_t m_messageSeq; // 2 byte
+} __attribute__((packed)) olsrTsMessageHeader_t; // 16 byte
+
+typedef struct {
+  uint16_t m_tsAddr;
+  uint16_t m_sequence;
+  uint8_t m_dwTimeHigh8;
+  uint32_t m_dwTimeLow32;
+} __attribute__((packed)) olsrTsMessageBodyUnit_t; // 9 byte
+
+typedef struct {
+  olsrTsMessageHeader_t m_tsHeader;
+  olsrTsMessageBodyUnit_t m_neighborTime[TS_PAYLOAD_MAX_NUM];
+} __attribute__((packed)) olsrTsMessage_t;
 #endif //__OLSR_PACKET_H__

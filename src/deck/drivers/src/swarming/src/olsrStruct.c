@@ -1045,6 +1045,7 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
     }
 }
 
+// todo : 应该返回setIndex_t类型
 olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr)
 {
   setIndex_t it = routingSet->fullQueueEntry;
@@ -1076,6 +1077,158 @@ void olsrRoutingSetCopy(olsrRoutingSet_t *dest,olsrRoutingSet_t *source)
   memcpy(dest,source,sizeof(olsrRoutingSet_t));
 }
 
+/*
+************************RangingSetFunction********************
+*/
+
+void olsrRangingTableInit(olsrRangingTable_t *rangingTable) {
+  setIndex_t i;
+  for (i = 0; i < TIMESTAMP_SET_SIZE - 1; i++) {
+    rangingTable->setData[i].next = i + 1;
+  }
+  rangingTable->setData[i].next = -1;
+  rangingTable->freeQueueEntry = 0;
+  rangingTable->fullQueueEntry = -1;
+  rangingTable->size = 0;
+}
+
+static setIndex_t olsrRangingTableMalloc(olsrRangingTable_t *rangingTable) {
+  if (rangingTable->freeQueueEntry == -1) {
+    DEBUG_PRINT_OLSR_SET("Full of sets!!!! can not malloc!!!\n");
+    return -1;
+  } else {
+    setIndex_t candidate = rangingTable->freeQueueEntry;
+    rangingTable->freeQueueEntry = rangingTable->setData[candidate].next;
+    //insert to full queue
+    setIndex_t tmp = rangingTable->fullQueueEntry;
+    rangingTable->fullQueueEntry = candidate;
+    rangingTable->setData[candidate].next = tmp;
+    return candidate;
+  }
+}
+
+static bool olsrRangingTableFree(olsrRangingTable_t *rangingTable, setIndex_t delItem) {
+  if (-1 == delItem) {
+    return true;
+  }
+  //del from full queue
+  setIndex_t pre = rangingTable->fullQueueEntry;
+  if (delItem == pre) {
+    rangingTable->fullQueueEntry = rangingTable->setData[pre].next;
+    //insert to empty queue
+    rangingTable->setData[delItem].next = rangingTable->freeQueueEntry;
+    rangingTable->freeQueueEntry = delItem;
+    rangingTable->size = rangingTable->size - 1;
+    return true;
+  } else {
+    while (pre != -1) {
+      if (rangingTable->setData[pre].next == delItem) {
+        rangingTable->setData[pre].next = rangingTable->setData[delItem].next;
+        //insert to empty queue
+        rangingTable->setData[delItem].next = rangingTable->freeQueueEntry;
+        rangingTable->freeQueueEntry = delItem;
+        rangingTable->size = rangingTable->size - 1;
+        return true;
+      }
+      pre = rangingTable->setData[pre].next;
+    }
+  }
+  return false;
+}
+
+setIndex_t olsrRangingTableInsert(olsrRangingTable_t *rangingTable, olsrRangingTuple_t *tuple) {
+  setIndex_t candidate = olsrRangingTableMalloc(rangingTable);
+  if (candidate != -1) {
+    memcpy(&rangingTable->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
+    rangingTable->size++;
+  }
+  return candidate;
+}
+
+setIndex_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t addr) {
+  setIndex_t it = rangingTable->fullQueueEntry;
+  while (it != -1) {
+    olsrRangingTableItem_t rangingNode = rangingTable->setData[it];
+    if (rangingNode.data.m_tsAddress == addr) {
+      break;
+    }
+    it = rangingNode.next;
+  }
+  return it;
+}
+
+void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple) {
+  /*
++------+------+------+------+
+|  Rp  |  Tr  |  Rf  |      |
++------+------+------+------+
+|  Tp  |  Rr  |  Tf  |  Re  |
++------+------+------+------+
+*/
+  DEBUG_PRINT_OLSR_TS("Rp:%llu \t Tr:%llu\t Rf:%llu \t \n",
+                      tuple->Rp.m_timestamp.full,
+                      tuple->Tr.m_timestamp.full,
+                      tuple->Rf.m_timestamp.full);
+  DEBUG_PRINT_OLSR_TS("Tp:%llu \t Rr:%llu\t Tf:%llu \t Re:%llu \n",
+                      tuple->Tp.m_timestamp.full,
+                      tuple->Rr.m_timestamp.full,
+                      tuple->Tf.m_timestamp.full,
+                      tuple->Re.m_timestamp.full);
+}
+
+void olsrPrintRangingTable(olsrRangingTable_t *rangingTable) {
+  for (setIndex_t i = rangingTable->fullQueueEntry; i != -1; i = rangingTable->setData[i].next) {
+    olsrPrintRangingTableTuple(&rangingTable->setData[i].data);
+  }
+}
+
+bool olsrDelRangingTupleByAddr(olsrRangingTable_t *rangingTable, setIndex_t addr) {
+  return olsrRangingTableFree(rangingTable, addr);
+}
+
+bool olsrRangingTableClearExpire(olsrRangingTable_t *rangingTable) {
+  setIndex_t next = -1;
+  bool isChange = false;
+  for (setIndex_t i = rangingTable->fullQueueEntry; i != -1; i = next) {
+    next = rangingTable->setData[i].next;
+    if (rangingTable->setData[i].data.m_expiration <= xTaskGetTickCount()) {
+      isChange = olsrDelRangingTupleByAddr(rangingTable, rangingTable->setData[i].data.m_tsAddress);
+      if (isChange) {
+        DEBUG_PRINT_OLSR_TS("neighbor %u expiration occurred!\n", rangingTable->setData[i].data.m_tsAddress);
+      }
+    }
+  }
+  return isChange;
+}
+
+void olsrSortRangingTable(olsrRangingTable_t *rangingTable) {
+  if (rangingTable->fullQueueEntry == -1) {
+    return;
+  }
+  setIndex_t newHead = rangingTable->fullQueueEntry;
+  setIndex_t cur = rangingTable->setData[newHead].next;
+  rangingTable->setData[newHead].next = -1;
+  setIndex_t next = -1;
+  while (cur != -1) {
+    next = rangingTable->setData[cur].next;
+    if (rangingTable->setData[cur].data.m_nextDeliveryTime <= rangingTable->setData[newHead].data.m_nextDeliveryTime) {
+      rangingTable->setData[cur].next = newHead;
+      newHead = cur;
+    } else {
+      setIndex_t start = rangingTable->setData[newHead].next;
+      setIndex_t pre = newHead;
+      while (start != -1 && rangingTable->setData[cur].data.m_nextDeliveryTime
+          > rangingTable->setData[start].data.m_nextDeliveryTime) {
+        pre = start;
+        start = rangingTable->setData[start].next;
+      }
+      rangingTable->setData[cur].next = start;
+      rangingTable->setData[pre].next = cur;
+    }
+    cur = next;
+  }
+  rangingTable->fullQueueEntry = newHead;
+}
 /*
 ************************CommonFunctions********************
 */
@@ -1115,4 +1268,5 @@ void olsrStructInitAll(dwDevice_t *dev)
   olsrDuplicateSetInit(&olsrDuplicateSet);
   olsrMprSelectorSetInit(&olsrMprSelectorSet);
   olsrRoutingSetInit(&olsrRoutingSet);
+  olsrRangingTableInit(&olsrRangingTable);
 }

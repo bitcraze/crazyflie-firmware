@@ -48,10 +48,10 @@ static void olsrTcTaskInit() //TODO:修改stacksize
       DEBUG_PRINT_OLSR_SYSTEM("TC TASK CREATE FAILD\n");
     }
 }
-static void OLSR_TS_TASK_INIT()
+static void olsrTsTaskInit()
 {
   DEBUG_PRINT_OLSR_SYSTEM("START_OLSR_TS_TASK_INIT\n");
-  if(xTaskCreate(olsr_ts_task, "OLSR_TS", configMINIMAL_STACK_SIZE, NULL,LPS_DECK_TASK_PRI, NULL)==pdPASS)
+  if(xTaskCreate(olsrTsTask, "OLSR_TS", configMINIMAL_STACK_SIZE, NULL,LPS_DECK_TASK_PRI, NULL)==pdPASS)
     {
       DEBUG_PRINT_OLSR_SYSTEM("TS TASK CREATE SUCCESSFUL\n");
     }
@@ -112,12 +112,13 @@ static void olsrTaskInit(dwDevice_t *dev)
 {
     DEBUG_PRINT_OLSR_SYSTEM("TASK_INIT");
     // olsrPacketLossTaskInit();
-    olsrHelloTaskInit();
-    olsrTcTaskInit();
+    //olsrHelloTaskInit();
+    //olsrTcTaskInit();
+    olsrTsTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
     // olsrAppTaskInit();
-    initSimTopology();
+    //initSimTopology();
 }
 
 static void olsrInit(dwDevice_t *dev) 
