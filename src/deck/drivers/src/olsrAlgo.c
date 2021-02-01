@@ -255,7 +255,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   olsrTimestampTuple_t peerRxOTS = {0};
   uint8_t *msgPtr = (uint8_t *) tsMsg + sizeof(olsrTsMessageHeader_t);
   uint8_t *msgPtrEnd = (uint8_t *) tsMsg + tsMessageHeader->m_messageSize;
-  DEBUG_PRINT_OLSR_TS("msgPtr:%d, msgPtrEnd:%d, MessageSize:%d \n", msgPtr, msgPtrEnd, tsMessageHeader->m_messageSize);
+  //DEBUG_PRINT_OLSR_TS("msgPtr:%d, msgPtrEnd:%d, MessageSize:%d \n", msgPtr, msgPtrEnd, tsMessageHeader->m_messageSize);
   for (olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr; tsMsgBodyUnit < msgPtrEnd;
        tsMsgBodyUnit++) {
     if (tsMsgBodyUnit->m_tsAddr != myAddress) {
@@ -270,7 +270,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   }
   DEBUG_PRINT_OLSR_TS("peerRxOTS : seq:%d,high8:%d,low32:%u \n",peerRxOTS.m_seqenceNumber,peerRxOTS.m_timestamp.high8,peerRxOTS.m_timestamp.low32);
   setIndex_t peerIndex = olsrFindInRangingTable(&olsrRangingTable, peerSrcAddr);
-  DEBUG_PRINT_OLSR_TS("RangingTableSize : %d, peerSrcAddr : %d, peerIndex : %d \n", olsrRangingTable.size, peerSrcAddr, peerIndex);
+  //DEBUG_PRINT_OLSR_TS("RangingTableSize : %d, peerSrcAddr : %d, peerIndex : %d \n", olsrRangingTable.size, peerSrcAddr, peerIndex);
   olsrRangingTuple_t t;
   if (peerIndex == -1) {
     memset(&t, 0, sizeof(olsrRangingTuple_t));
@@ -290,11 +290,11 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   //DEBUG_PRINT_OLSR_TS("--update field expiration--\n");
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
-  olsrPrintRangingTableTuple(tuple);
+  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--update the RangingTable Re, always store the newest rxOTS--\n");
   //update the RangingTable Re, always store the newest rxOTS
   tuple->Re = *rxOTS;
-  olsrPrintRangingTableTuple(tuple);
+  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--update field Tr or Rr--\n");
   //update field Tr or Rr
   if (tuple->Tr.m_timestamp.full == 0) {
@@ -304,7 +304,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       tuple->Rr = *rxOTS;
     }
   }
-  olsrPrintRangingTableTuple(tuple);
+  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--update field Rf and Tf if peer_rxOTS has value--\n");
   //update field Rf and Tf if peer_rxOTS has value
   if (peerRxOTS.m_timestamp.full) {
@@ -316,7 +316,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       }
     }
   }
-  olsrPrintRangingTableTuple(tuple);
+  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--process RangingTable, compute, re-organize or doing nothing--\n");
   //process RangingTable, compute, re-organize or doing nothing
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
@@ -1476,7 +1476,6 @@ olsrTime_t olsrSendTs() {
   olsrMessage_t tsMsg = {0};
   olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(TS_INTERVAL_MAX) + TS_INTERVAL_MIN;
   olsrTimestampTuple_t *txOTS = olsr_ts_otspool + olsr_ts_otspool_idx;
-  DEBUG_PRINT_OLSR_TS("generate header\n");
   // generate header
   olsrTsMessageHeader_t *tsMsgHeader = (olsrTsMessageHeader_t *) &tsMsg;
   tsMsgHeader->m_messageType = TS_MESSAGE;
@@ -1491,14 +1490,11 @@ olsrTime_t olsrSendTs() {
   float velocityZ = logGetFloat(idVelocityZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   tsMsgHeader->m_velocity = (short) (velocity * 100);
-  DEBUG_PRINT_OLSR_TS("generate bodyunit\n");
   // generate bodyunit
   uint8_t *msgPtr = (uint8_t *) &tsMsg + sizeof(olsrTsMessageHeader_t);
   uint8_t *msgPtrEnd = (uint8_t *) &tsMsg + MESSAGE_MAX_LENGTH;
   int sendUnitNumber = 0;
-  DEBUG_PRINT_OLSR_TS("RangingTable size is : %d \n", olsrRangingTable.size);
   olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr;
-  DEBUG_PRINT_OLSR_TS("msgPtr:%d, msgPtrEnd:%d, tsMsgBodyUnit:%d \n", msgPtr, msgPtrEnd, tsMsgBodyUnit);
 
   //DEBUG_PRINT_OLSR_TS("Re: %llu \n", olsrRangingTable.setData[olsrRangingTable.fullQueueEntry].data.Re.m_timestamp.full);
   for (setIndex_t index = olsrRangingTable.fullQueueEntry; index != -1; index = olsrRangingTable.setData[index].next) {
@@ -1507,8 +1503,6 @@ olsrTime_t olsrSendTs() {
       DEBUG_PRINT_OLSR_TS("tsMsgBodyUnit + 1 > msgPtrEnd \n");
       break;
     }
-    DEBUG_PRINT_OLSR_TS("RE: %llu\n", t->data.Re.m_timestamp.full);
-    DEBUG_PRINT_OLSR_TS("next : %d, now: %d, min : %d\n", t->data.m_nextDeliveryTime, xTaskGetTickCount(), TS_INTERVAL_MIN);
 
     if (t->data.m_nextDeliveryTime <= xTaskGetTickCount() + TS_INTERVAL_MIN && t->data.Re.m_timestamp.full) {
       tsMsgBodyUnit->m_tsAddr = t->data.m_tsAddress;
@@ -1528,33 +1522,6 @@ olsrTime_t olsrSendTs() {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
   }
-//  for (olsrRangingTableItem_t *t = &olsrRangingTable.setData[olsrRangingTable.fullQueueEntry]; t->next != -1;
-//       t = &olsrRangingTable.setData[t->next]) {
-//    if (tsMsgBodyUnit + 1 > msgPtrEnd) {
-//      DEBUG_PRINT_OLSR_TS("tsMsgBodyUnit + 1 > msgPtrEnd \n");
-//      break;
-//    }
-//    DEBUG_PRINT_OLSR_TS("RE: %llu\n", t->data.Re.m_timestamp.full);
-//    DEBUG_PRINT_OLSR_TS("next : %d, now: %d, min : %d\n", t->data.m_nextDeliveryTime, xTaskGetTickCount(), TS_INTERVAL_MIN);
-//
-//    if (t->data.m_nextDeliveryTime <= xTaskGetTickCount() + TS_INTERVAL_MIN && t->data.Re.m_timestamp.full) {
-//      tsMsgBodyUnit->m_tsAddr = t->data.m_tsAddress;
-//      tsMsgBodyUnit->m_sequence = t->data.Re.m_seqenceNumber;
-//      tsMsgBodyUnit->m_dwTimeLow32 = t->data.Re.m_timestamp.low32;
-//      tsMsgBodyUnit->m_dwTimeHigh8 = t->data.Re.m_timestamp.high8;
-//      tsMsgHeader->m_messageSize += sizeof(olsrTsMessageBodyUnit_t);
-//      tsMsgBodyUnit++;
-//      t->data.Re.m_seqenceNumber = 0;
-//      t->data.Re.m_timestamp.full = 0;
-//      sendUnitNumber++;
-//    }
-//    jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
-//    jitter = 0;//TODO remove after debug
-//    t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period + jitter;
-//    if (t->data.m_nextDeliveryTime < nextSendTime) {
-//      nextSendTime = t->data.m_nextDeliveryTime;
-//    }
-//  }
   DEBUG_PRINT_OLSR_TS("totle send %d BodyUnit \n", sendUnitNumber);
   xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
   return nextSendTime;
@@ -1894,3 +1861,16 @@ void olsrRecvTask(void *ptr) {
     vTaskDelay(50);
   }
 }
+
+LOG_GROUP_START(TSranging)
+        LOG_ADD(LOG_INT16, distTo1, distanceTowards+1)
+        LOG_ADD(LOG_INT16, distTo2, distanceTowards+2)
+        LOG_ADD(LOG_INT16, distTo3, distanceTowards+3)
+        LOG_ADD(LOG_INT16, distTo4, distanceTowards+4)
+        LOG_ADD(LOG_INT16, distTo5, distanceTowards+5)
+        LOG_ADD(LOG_INT16, distTo6, distanceTowards+6)
+        LOG_ADD(LOG_INT16, distTo7, distanceTowards+7)
+        LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
+        LOG_ADD(LOG_INT16, distTo9, distanceTowards+9)
+        LOG_ADD(LOG_FLOAT, velocity, &velocity)
+LOG_GROUP_STOP(TSranging)
