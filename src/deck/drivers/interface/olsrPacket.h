@@ -185,8 +185,8 @@ typedef struct {
   uint16_t m_seq4TSsend; // 2 byte
   uint16_t m_messageSize; // 2 byte
   uint16_t m_originatorAddress; // 2 byte
-  uint8_t m_dwTimeHigh8; // 1 byte
   uint32_t m_dwTimeLow32; // 4 byte
+  uint8_t m_dwTimeHigh8; // 1 byte
   short m_velocity;//in cm 2 byte
   uint16_t m_messageSeq; // 2 byte
 } __attribute__((packed)) olsrTsMessageHeader_t; // 16 byte

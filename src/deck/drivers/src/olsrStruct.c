@@ -1158,11 +1158,18 @@ setIndex_t olsrFindInRangingTable(olsrRangingTable_t *rangingTable, olsrAddr_t a
 }
 
 void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple) {
-  DEBUG_PRINT_OLSR_TS("addr:%d, Rp:%llu,Tr:%llu,Rf:%llu,Tp:%llu,Rr:%llu,Tf:%llu,Re:%llu \n",
-                      tuple->m_tsAddress,
+  /*
++------+------+------+------+
+|  Rp  |  Tr  |  Rf  |      |
++------+------+------+------+
+|  Tp  |  Rr  |  Tf  |  Re  |
++------+------+------+------+
+*/
+  DEBUG_PRINT_OLSR_TS("Rp:%llu \t Tr:%llu\t Rf:%llu \t \n",
                       tuple->Rp.m_timestamp.full,
                       tuple->Tr.m_timestamp.full,
-                      tuple->Rf.m_timestamp.full,
+                      tuple->Rf.m_timestamp.full);
+  DEBUG_PRINT_OLSR_TS("Tp:%llu \t Rr:%llu\t Tf:%llu \t Re:%llu \n",
                       tuple->Tp.m_timestamp.full,
                       tuple->Rr.m_timestamp.full,
                       tuple->Tf.m_timestamp.full,

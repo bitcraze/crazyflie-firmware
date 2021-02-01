@@ -40,7 +40,7 @@
 #define DEBUG_OLSR_SET
 #define DEBUG_OLSR_FORWARD
 #define DEBUG_OLSR_APP
-#define DEBUG_OLSR_SIM
+//#define DEBUG_OLSR_SIM
 
 #ifdef DEBUG_OLSR_SYSTEM
 #define DEBUG_PRINT_OLSR_SYSTEM(fmt, ...) DEBUG_PRINT("SYSTEM: "fmt,  ##__VA_ARGS__)
