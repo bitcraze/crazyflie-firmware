@@ -25,6 +25,13 @@ static lighthouseUartFrame_t frame;
 
 extern pulseProcessor_t lighthouseCoreState;
 
+// Functions under test
+void waitForUartSynchFrame();
+bool getUartFrameRaw(lighthouseUartFrame_t *frame);
+lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* state);
+void initializeGeoDataFromStorage();
+initializeCalibDataFromStorage();
+
 // Dummy mock
 uint32_t xTaskGetTickCount() {return 0;}
 
