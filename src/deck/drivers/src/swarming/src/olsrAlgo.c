@@ -1,70 +1,28 @@
+#define DEBUG_MODULE "OLSR"
+
 #include "libdw1000.h"
 #include "FreeRTOS.h"
 #include <string.h>
 #include <semphr.h>
+#include <stdlib.h>
 #include "task.h"
+#include "log.h"
 #include "olsrDebug.h"
 #include "mac.h"
 #include "olsrAlgo.h"
 #include "olsrStruct.h"
 #include "olsrPacket.h"
 #include "adHocOnBoardSim.h"
-#include "log.h"
 #include "math.h"
-#include "stdlib.h"
 
 #define ANTENNA_OFFSET 154.0   // In meter
 //const
 const int antennaDelay = (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0; // In radio tick
 
-
-#define OLSR_HELLO_INTERVAL 2000
-#define OLSR_NEIGHB_HOLD_TIME (3*OLSR_HELLO_INTERVAL)
-#define OLSR_TC_INTERVAL 5000
-#define TS_INTERVAL 200 //must be in range: 20 - 500
-#define TS_INTERVAL_MIN 20 //default 20
-#define TS_INTERVAL_MAX 500 //default 500
-#define TS_OTSPOOL_MAXSIZE (4*TS_INTERVAL_MAX/TS_INTERVAL)
-#define OLSR_TOP_HOLD_TIME (3*OLSR_TC_INTERVAL)
-#define OLSR_DUP_HOLD_TIME 10000
-#define OLSR_ROUTING_SET_HOLD_TIME 10000
-#define OLSR_RANGING_TABLE_HOLD_TIME 10000
-#define OLSR_DUP_CLEAR_INTERVAL 30000
-#define OLSR_LINK_CLEAR_INTERVAL 5000
-#define OLSR_MPR_SELECTOR_CLEAR_INTERVAL 6000
-
-#define OLSR_NEIGHBOR2HOP_CLEAR_INTERVAL 5000
-
-#define OLSR_MS_CLEAR_INTERVAL 4000
-
-#define OLSR_TOP_CLEAR_INTERVAL 3000
-
-/// Unspecified link type.
-#define OLSR_UNSPEC_LINK        0
-/// Asymmetric link type.
-#define OLSR_ASYM_LINK          1
-/// Symmetric link type.
-#define OLSR_SYM_LINK           2
-/// Lost link type.
-#define OLSR_LOST_LINK          3
-
-/// Not neighbor type.
-#define OLSR_NOT_NEIGH          0
-/// Symmetric neighbor type.
-#define OLSR_SYM_NEIGH          1
-/// Asymmetric neighbor type.
-#define OLSR_MPR_NEIGH          2
-
-
-
-//
-#define OLSR_SIM 1
-#define MAX_TIMESTAMP 1099511627776 //2**40
-
 static dwDevice_t* dwm;
-extern uint16_t myAddress;
 static xQueueHandle g_olsrSendQueue;
 static xQueueHandle g_olsrRecvQueue;
+extern uint16_t myAddress;
 static uint16_t g_staticMessageSeq = 0;
 static uint16_t g_ansn = 0;
 static SemaphoreHandle_t olsrMessageSeqLock;
