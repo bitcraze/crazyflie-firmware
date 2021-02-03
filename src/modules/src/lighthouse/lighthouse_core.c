@@ -192,6 +192,16 @@ TESTABLE_STATIC void waitForUartSynchFrame() {
   }
 }
 
+void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green)
+{
+  uint8_t commandBuffer[2];
+  
+  commandBuffer[0] = 0x01;
+  commandBuffer[1] = (green<<4) | (orange<<2) | red;
+
+  uart1SendData(2, commandBuffer);
+}
+
 
 // Method used to estimate position
 // 0 = Position calculated outside the estimator using intersection point of beams.
@@ -376,6 +386,11 @@ void lighthouseCoreTask(void *param) {
   initializeCalibDataFromStorage();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
+
+  vTaskDelay(M2T(100));
+
+  // ToDo: LED should be set according to the current system state
+  lighthouseCoreSetLeds(lh_led_off, lh_led_slow_blink, lh_led_off);
 
   memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
 

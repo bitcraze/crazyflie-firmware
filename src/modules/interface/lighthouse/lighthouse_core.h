@@ -62,3 +62,20 @@ void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthous
  * @return true if data was stored
  */
 bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
+
+
+typedef enum {
+  lh_led_off = 0,
+  lh_led_slow_blink = 1,
+  lh_led_fast_blink = 2,
+  lh_led_on = 3,
+} lighthouseCoreLedState_t;
+
+/**
+ * @brief Set LEDs on the lighthouse deck
+ *
+ * @param red  State of the red LED
+ * @param orange State of the orange LED
+ * @param green State of the green LED
+ */
+void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green);
