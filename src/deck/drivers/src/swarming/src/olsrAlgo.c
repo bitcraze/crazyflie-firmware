@@ -23,9 +23,9 @@ static dwDevice_t* dwm;
 static xQueueHandle g_olsrSendQueue;
 static xQueueHandle g_olsrRecvQueue;
 extern uint16_t myAddress;
+static uint16_t g_staticPacketSeq = 0;
 static uint16_t g_staticMessageSeq = 0;
 static uint16_t g_ansn = 0;
-static SemaphoreHandle_t olsrMessageSeqLock;
 static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
@@ -65,7 +65,6 @@ static void olsrRecvQueueInit()
 }
 void olsrDeviceInit(dwDevice_t *dev){
   dwm = dev;
-  olsrMessageSeqLock = xSemaphoreCreateMutex();
   olsrAnsnLock = xSemaphoreCreateMutex();
   olsrAllSetLock = xSemaphoreCreateMutex();
   olsrSendQueueInit();
@@ -73,16 +72,20 @@ void olsrDeviceInit(dwDevice_t *dev){
   DEBUG_PRINT_OLSR_SYSTEM("Device init finish\n");
 }
 /**
- * @brief this function is used to get SeqNumber(Message global)
+ * @brief this function is used to get PacketSeqNumber(Packet global)
+ * @return uint16_t PacketSeqNumber(0->2^16-1)
+**/
+static uint16_t getPacketSeqNumber()
+{
+  return g_staticPacketSeq++;//quick access and return, no need to set lock
+}
+/**
+ * @brief this function is used to get MessageSeqNumber(Message global)
  * @return uint16_t MessageSeqNumber(0->2^16-1)
 **/
-static uint16_t getSeqNumber()
+static uint16_t getMessageSeqNumber()
 {
-  uint16_t retVal= 0;
-  xSemaphoreTake(olsrMessageSeqLock,portMAX_DELAY);
-  retVal = g_staticMessageSeq++;
-  xSemaphoreGive(olsrMessageSeqLock);
-  return retVal;
+  return g_staticMessageSeq++;//quick access and return, no need to set lock
 }
 
 void olsrPacketLossCallBack(dwDevice_t *dev)
@@ -1289,7 +1292,7 @@ void olsrSendHello()
   msg.m_messageHeader.m_relayAddress = myAddress;  
   msg.m_messageHeader.m_timeToLive = 0xff;
   msg.m_messageHeader.m_hopCount = 0;
-  msg.m_messageHeader.m_messageSeq = getSeqNumber();
+  msg.m_messageHeader.m_messageSeq = getMessageSeqNumber();
   //hello message
   olsrHelloMessage_t helloMessage;//84
   helloMessage.m_helloHeader.m_hTime = OLSR_HELLO_INTERVAL; //hello's header on packet
@@ -1384,7 +1387,7 @@ void olsrSendTc()
   msg.m_messageHeader.m_relayAddress = myAddress;  
   msg.m_messageHeader.m_timeToLive = 0xff;
   msg.m_messageHeader.m_hopCount = 0;
-  msg.m_messageHeader.m_messageSeq = getSeqNumber();
+  msg.m_messageHeader.m_messageSeq = getMessageSeqNumber();
 
   olsrTopologyMessage_t tcMsg;
   tcMsg.m_ansn = getAnsn();
@@ -1425,7 +1428,7 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
   msg.m_messageHeader.m_relayAddress = myAddress;  
   msg.m_messageHeader.m_timeToLive = 0xff;
   msg.m_messageHeader.m_hopCount = 0;
-  msg.m_messageHeader.m_messageSeq = getSeqNumber(); 
+  msg.m_messageHeader.m_messageSeq = getMessageSeqNumber(); 
 
   olsrDataMessage_t dataMsg;
   dataMsg.m_dataHeader.m_sourcePort = sourcePort;
@@ -1450,7 +1453,7 @@ olsrTime_t olsrSendTs() {
   tsMsgHeader->m_messageType = TS_MESSAGE;
   tsMsgHeader->m_messageSize = sizeof(olsrTsMessageHeader_t);
   tsMsgHeader->m_originatorAddress = myAddress;
-  tsMsgHeader->m_messageSeq = getSeqNumber();
+  tsMsgHeader->m_messageSeq = getMessageSeqNumber();
   tsMsgHeader->m_dwTimeHigh8 = txOTS->m_timestamp.high8;
   tsMsgHeader->m_dwTimeLow32 = txOTS->m_timestamp.low32;
   tsMsgHeader->m_seq4TSsend = txOTS->m_seqenceNumber;
@@ -1736,7 +1739,7 @@ void olsrSendTask(void *ptr)
       }
       ASSERT(writePosition-(uint8_t *)olsrPacket>sizeof(olsrPacketHeader_t));
       olsrPacket->m_packetHeader.m_packetLength = writePosition-(uint8_t *)olsrPacket;
-      olsrPacket->m_packetHeader.m_packetSeq = getSeqNumber();
+      olsrPacket->m_packetHeader.m_packetSeq = getPacketSeqNumber();
       //transmit
       dwNewTransmit(dwm);
       dwSetDefaults(dwm);
