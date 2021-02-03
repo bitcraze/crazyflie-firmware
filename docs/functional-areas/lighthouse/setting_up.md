@@ -112,6 +112,11 @@ The data can be stored in the Crazyflie using the persist_bs_data.py script or b
 ### Lighthouse V2
 
 1. Extract calibration data from the base stations, one at a time, by connecting them to a computer via USB and running get_lh2_calib_data.py
+1. Set the channels (sometimes called modes) of the base stations to 1 and 2. There are official tools that can be used, or you can do this when the base station is connected to USB by using a teminal program like ```screen``` or ```picocom```, the base station should be available as a device in ```/dev```.
+    1. In the terminal, press ```tab``` to get a list of commands
+    1. Type ```mode``` to see the current channel/mode
+    1. Type ```mode 1``` or ```mode 2``` to set it to the appropriate channel
+    1. Type ```param save``` to save the settings
 1. Make sure the base stations are mounted at apropriate positions, see the Steam VR documentation.
 1. Build and flash the firmware with lighthouse support
 1. Start the Crayzflie and put it on the floor, in the origin facing positive X
@@ -119,7 +124,6 @@ The data can be stored in the Crazyflie using the persist_bs_data.py script or b
 1. Run ```tools/lighthouse/get_bs_geometry.py --uri radio://0/80/2M --write``` with the appropriate uri for your Crazyflie
 1. The Crazyflie should now have all the data it needs to estimate its position!
 1. Modify the persist_bs_data.py script with the geometry data and run it to store the data in the Crazyflie permanent storage
-
 ## Startup position
 The Lighthouse deck has 4 receivers and can recover its orientation. The Crazyflie can be started in any orientation when using the lighthouse system.
 
