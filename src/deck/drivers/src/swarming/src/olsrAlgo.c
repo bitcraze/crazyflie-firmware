@@ -157,12 +157,11 @@ void olsrTxCallback(dwDevice_t *dev) {
   dwTime_t departure = {.full = 0};
   dwGetTransmitTimestamp(dev, &departure);
   departure.full += (antennaDelay / 2);
-  DEBUG_PRINT_OLSR_TS("departure=%2x%8x\n", departure.high8, departure.low32);
   olsr_ts_otspool_idx++;
   olsr_ts_otspool_idx %= TS_OTSPOOL_MAXSIZE;
   olsr_ts_otspool[olsr_ts_otspool_idx].m_seqenceNumber = txOlsrPkt->m_packetHeader.m_packetSeq;
   olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp = departure;
-  DEBUG_PRINT_OLSR_SEND("otspool update [%d] with %d.\n", olsr_ts_otspool_idx, txOlsrPkt->m_packetHeader.m_packetSeq);
+  //DEBUG_PRINT_OLSR_SEND("otspool update [%d] with %d.\n", olsr_ts_otspool_idx, txOlsrPkt->m_packetHeader.m_packetSeq);
 }
 
 //packet process
@@ -180,7 +179,7 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
 
   if (tprop_ctn < -100 || tprop_ctn > 900) {
     DEBUG_PRINT_OLSR_TS("tprop_ctn < -100 || tprop_ctn > 900\n");
-    olsrPrintRangingTableTuple(tuple);
+    //olsrPrintRangingTableTuple(tuple);
   }
 
   //update RangingTable
@@ -202,7 +201,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   DEBUG_PRINT_OLSR_TS("--olsrProcessTs--\n");
   olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) tsMsg;
   olsrAddr_t peerSrcAddr = tsMessageHeader->m_originatorAddress;
-  olsrAddr_t peerSpeed = tsMessageHeader->m_velocity;
+  olsrAddr_t peerSpeed = tsMessageHeader->m_velocity; //TODO Speed type uint16
 
   olsrTimestampTuple_t peerTxOTS = {0};
   peerTxOTS.m_seqenceNumber = tsMessageHeader->m_seq4TSsend;
@@ -248,11 +247,9 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   //DEBUG_PRINT_OLSR_TS("--update field expiration--\n");
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
-  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--update the RangingTable Re, always store the newest rxOTS--\n");
   //update the RangingTable Re, always store the newest rxOTS
   tuple->Re = *rxOTS;
-  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--update field Tr or Rr--\n");
   //update field Tr or Rr
   if (tuple->Tr.m_timestamp.full == 0) {
@@ -262,7 +259,6 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       tuple->Rr = *rxOTS;
     }
   }
-  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--update field Rf and Tf if peer_rxOTS has value--\n");
   //update field Rf and Tf if peer_rxOTS has value
   if (peerRxOTS.m_timestamp.full) {
@@ -274,9 +270,9 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       }
     }
   }
-  //olsrPrintRangingTableTuple(tuple);
   //DEBUG_PRINT_OLSR_TS("--process RangingTable, compute, re-organize or doing nothing--\n");
   //process RangingTable, compute, re-organize or doing nothing
+  olsrPrintRangingTableTuple(tuple);
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     tuple->m_distance = olsrTsComputeDistance(tuple);
     distanceTowards[tuple->m_tsAddress] = tuple->m_distance;
@@ -292,7 +288,6 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   } else {
     DEBUG_PRINT_OLSR_TS("unknown situation occurred!\n");
   }
-  olsrPrintRangingTableTuple(tuple);
   DEBUG_PRINT_OLSR_TS("--olsrProcessTsEnd--\n");
 }
 
@@ -907,43 +902,60 @@ void forwardDefault(olsrMessage_t* olsrMessage, setIndex_t duplicateIndex)
     }
 }
 //switch to tc|hello|ts process
-void olsrPrintPacket(const packet_t* rxPacket)
+void olsrPrintPacket(const packet_t* rxPacket, const char* msgStr)
 {
   olsrPacket_t* olsrPacket = (olsrPacket_t*)rxPacket->payload;
+  DEBUG_PRINT_OLSR_TS("%s: PrintPacket PktLen: %u, PktSeq: %u, \n",msgStr, olsrPacket->m_packetHeader.m_packetLength, olsrPacket->m_packetHeader.m_packetSeq);
   int lengthPacket = olsrPacket->m_packetHeader.m_packetLength;
-  DEBUG_PRINT_OLSR_HELLO("packet Length: %d\n",lengthPacket);
   void* olsrMessage = (void *)olsrPacket->m_packetPayload;
   unsigned int index = 4;
+  dwTime_t timestamp = {.full = 0};
   //TODO 一个packet里有俩个helloMessage
-  while(index < lengthPacket)
+  //while(index < lengthPacket)
   {
     olsrMessage_t *olsrIndex = (olsrMessage_t *)olsrMessage;
     if(olsrIndex->m_messageHeader.m_messageType==HELLO_MESSAGE)
       {
-        DEBUG_PRINT_OLSR_HELLO("hello msg from %d\n",olsrIndex->m_messageHeader.m_originatorAddress);
+        DEBUG_PRINT_OLSR_HELLO("%s: hello msg from %d\n",msgStr, olsrIndex->m_messageHeader.m_originatorAddress);
         olsrHelloMessage_t* helloMessage = (olsrHelloMessage_t *)olsrIndex->m_messagePayload;
         uint8_t length = helloMessage->m_helloHeader.m_linkMessageNumber;
-        DEBUG_PRINT_OLSR_HELLO("linkNumber:%d\n",length);
+        DEBUG_PRINT_OLSR_HELLO("%s: linkNumber:%d\n",msgStr, length);
         for(int i=0;i<length;i++)
           {
-            DEBUG_PRINT_OLSR_HELLO("link %d :addr:%d ,link code is %d\n",i,helloMessage->m_linkMessage[i].m_addresses,helloMessage->m_linkMessage[i].m_linkCode);
+            DEBUG_PRINT_OLSR_HELLO("%s: link %d :addr:%d ,link code is %d\n",msgStr, i,helloMessage->m_linkMessage[i].m_addresses,helloMessage->m_linkMessage[i].m_linkCode);
           }
         index+=(sizeof(olsrHelloMessageHeader_t) +length*sizeof(olsrLinkMessage_t)+16);
         olsrMessage+=(sizeof(olsrHelloMessageHeader_t) +length*sizeof(olsrLinkMessage_t)+16);
       }
     else if(olsrIndex->m_messageHeader.m_messageType==TC_MESSAGE)
       {
-        DEBUG_PRINT_OLSR_TC("this message is tc msg\n");
+        DEBUG_PRINT_OLSR_TC("%s: this message is tc msg\n", msgStr);
         olsrTopologyMessage_t *tcMessage = (olsrTopologyMessage_t *) olsrIndex->m_messagePayload;
         unsigned int count = (olsrIndex->m_messageHeader.m_messageSize- sizeof(olsrMessageHeader_t) - 2)/ \
                     sizeof(olsrTopologyMessageUint_t);
         for(int i = 0;i < count; i++)
           {
-            DEBUG_PRINT("%d: address %d .distance is %d",i,tcMessage->m_content[i].m_address,tcMessage->m_content[i].m_distance);
+            DEBUG_PRINT_OLSR_TC("%s: %d: address %d .distance is %d",msgStr, i,tcMessage->m_content[i].m_address,tcMessage->m_content[i].m_distance);
+          }
+		  }
+    else if(olsrIndex->m_messageHeader.m_messageType==TS_MESSAGE)
+      {
+				olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) &olsrIndex->m_messageHeader;
+        DEBUG_PRINT_OLSR_TS("%s: TS from %u (seq:%u) len %u, speed %d\n", msgStr, tsMessageHeader->m_originatorAddress, tsMessageHeader->m_messageSeq, tsMessageHeader->m_messageSize, tsMessageHeader->m_velocity);
+        vTaskDelay(5);
+				timestamp.high8=tsMessageHeader->m_dwTimeHigh8; 
+				timestamp.low32=tsMessageHeader->m_dwTimeLow32; 
+				DEBUG_PRINT_OLSR_TS("%s: Last sent timestamp: %llu (seq:%u)\n", msgStr, timestamp.full, tsMessageHeader->m_seq4TSsend);
+				uint8_t *msgPtr = (uint8_t *) olsrIndex->m_messagePayload + sizeof(olsrTsMessageHeader_t);
+				uint8_t *msgPtrEnd = (uint8_t *) olsrIndex->m_messagePayload + tsMessageHeader->m_messageSize;
+				for (olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr; tsMsgBodyUnit < msgPtrEnd; tsMsgBodyUnit++) 
+				  {
+				    timestamp.high8=tsMsgBodyUnit->m_dwTimeHigh8; 
+				    timestamp.low32=tsMsgBodyUnit->m_dwTimeLow32; 
+				    DEBUG_PRINT_OLSR_TS("%s: Peer %u (seq:%u), timestamp: %llu\n",msgStr, tsMsgBodyUnit->m_tsAddr, tsMsgBodyUnit->m_sequence, timestamp.full);
           }
       }
   }
-  DEBUG_PRINT_OLSR_HELLO("leave PrintPacket function\n");
 }
 void olsrRoutingTableComputation2()
 {
@@ -1178,7 +1190,7 @@ void olsrRoutingTableComputation()
 }
 void olsrPacketDispatch(const packetWithTimestamp_t * rxPacketWts)
 {
-  DEBUG_PRINT_OLSR_HELLO("PACKET_DISPATCH\n");  
+  DEBUG_PRINT_OLSR_RECEIVE("PACKET_DISPATCH\n");  
   //need to add a condition whether recvive a packet from self
   olsrTimestampTuple_t *rx_otimestamp = &rxPacketWts->ots;
   olsrPacket_t *olsrPacket = (olsrPacket_t *) rxPacket->payload;
@@ -1209,7 +1221,6 @@ void olsrPacketDispatch(const packetWithTimestamp_t * rxPacketWts)
           message += messageHeader->m_messageSize;
           continue;
         }
-      DEBUG_PRINT_OLSR_RECEIVE("process message, messageTYpe is : %d\n", messageHeader->m_messageType);
       bool doForward = true;
       setIndex_t duplicated = olsrFindInDuplicateSet(&olsrDuplicateSet,messageHeader->m_originatorAddress,\
                                                      messageHeader->m_messageSeq);
@@ -1480,7 +1491,6 @@ olsrTime_t olsrSendTs() {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
   }
-  DEBUG_PRINT_OLSR_TS("totle send %d BodyUnit \n", sendUnitNumber);
   xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
   return nextSendTime;
 }
@@ -1735,6 +1745,7 @@ void olsrSendTask(void *ptr)
       dwSetData(dwm, (uint8_t *)&txpacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
       dwStartTransmit(dwm);
       DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
+      olsrPrintPacket(&txpacket, "SEND");
     }
 }
 // packet_t dwPacket = {0};
@@ -1813,6 +1824,7 @@ void olsrRecvTask(void *ptr) {
 
     // DEBUG_PRINT_OLSR_RECEIVE("to take a packet from q\n");
     if (xQueueReceive(g_olsrRecvQueue, &rxPacketWts, 0) == pdTRUE) {
+      olsrPrintPacket(&rxPacketWts.pkt, "RECV");
       // DEBUG_PRINT_OLSR_RECEIVE("got a packet from q\n");
       olsrPacketDispatch(&rxPacketWts);
     }
