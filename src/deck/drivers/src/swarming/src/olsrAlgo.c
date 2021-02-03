@@ -945,12 +945,11 @@ void olsrPrintPacket(const packet_t* rxPacket, const char* msgStr)
       {
 				olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) &olsrIndex->m_messageHeader;
         DEBUG_PRINT_OLSR_TS("%s: TS from %u (seq:%u) len %u, speed %d\n", msgStr, tsMessageHeader->m_originatorAddress, tsMessageHeader->m_messageSeq, tsMessageHeader->m_messageSize, tsMessageHeader->m_velocity);
-        vTaskDelay(5);
 				timestamp.high8=tsMessageHeader->m_dwTimeHigh8; 
 				timestamp.low32=tsMessageHeader->m_dwTimeLow32; 
 				DEBUG_PRINT_OLSR_TS("%s: Last sent timestamp: %llu (seq:%u)\n", msgStr, timestamp.full, tsMessageHeader->m_seq4TSsend);
-				uint8_t *msgPtr = (uint8_t *) olsrIndex->m_messagePayload + sizeof(olsrTsMessageHeader_t);
-				uint8_t *msgPtrEnd = (uint8_t *) olsrIndex->m_messagePayload + tsMessageHeader->m_messageSize;
+				uint8_t *msgPtr = (uint8_t *) olsrIndex->m_messagePayload;
+				uint8_t *msgPtrEnd = (uint8_t *) olsrIndex + tsMessageHeader->m_messageSize;
 				for (olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr; tsMsgBodyUnit < msgPtrEnd; tsMsgBodyUnit++) 
 				  {
 				    timestamp.high8=tsMsgBodyUnit->m_dwTimeHigh8; 
