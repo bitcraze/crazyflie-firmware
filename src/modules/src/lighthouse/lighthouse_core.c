@@ -67,6 +67,7 @@ static bool uartSynchronized = false;
 
 #define ONE_SECOND 1000
 #define HALF_SECOND 500
+#define FIFTH_SECOND 200
 static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
@@ -74,6 +75,11 @@ static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
+
+static uint16_t baseStationVisibilityMapWs;
+static uint16_t baseStationVisibilityMap;
+static const uint32_t BASE_STATION_VISIBILITY_MAP_UPDATE_INTERVAL = FIFTH_SECOND;
+  static uint32_t nextUpdateTimeOfBaseStationVisibilityMap = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 pulseProcessor_t lighthouseCoreState = {
@@ -317,15 +323,16 @@ static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* ang
 
     if (pulseProcessorProcessPulse(appState, &frame->data, angles, &basestation, &sweepId)) {
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
+        baseStationVisibilityMapWs = baseStationVisibilityMapWs | (1 << basestation);
+
         usePulseResult(appState, angles, basestation, sweepId);
     }
 }
 
-static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFrame_t* frame) {
+static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFrame_t* frame, const uint32_t now_ms) {
   if (!appState->healthDetermined) {
-    const uint32_t now = xTaskGetTickCount();
     if (0 == appState->healthFirstSensorTs) {
-      appState->healthFirstSensorTs = now;
+      appState->healthFirstSensorTs = now_ms;
     }
 
     if (0x0f == appState->healthSensorBitField) {
@@ -334,7 +341,7 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
     } else {
       appState->healthSensorBitField |= (0x01 << frame->data.sensor);
 
-      if ((now - appState->healthFirstSensorTs) > MAX_WAIT_TIME_FOR_HEALTH_MS) {
+      if ((now_ms - appState->healthFirstSensorTs) > MAX_WAIT_TIME_FOR_HEALTH_MS) {
         appState->healthDetermined = true;
         DEBUG_PRINT("Warning: not getting data from all sensors\n");
         for (int i = 0; i < PULSE_PROCESSOR_N_SENSORS; i++) {
@@ -346,6 +353,15 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
         }
       }
     }
+  }
+}
+
+static void updateBaseStationVisibilityMap(const uint32_t now_ms) {
+  if (now_ms > nextUpdateTimeOfBaseStationVisibilityMap) {
+    baseStationVisibilityMap = baseStationVisibilityMapWs;
+    baseStationVisibilityMapWs = 0;
+
+    nextUpdateTimeOfBaseStationVisibilityMap = now_ms + BASE_STATION_VISIBILITY_MAP_UPDATE_INTERVAL;
   }
 }
 
@@ -371,6 +387,8 @@ void lighthouseCoreTask(void *param) {
     bool previousWasSyncFrame = false;
 
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
+      const uint32_t now_ms = T2M(xTaskGetTickCount());
+
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
       if(frame.isSyncFrame && previousWasSyncFrame) {
           pulseProcessorAllClear(&angles);
@@ -379,7 +397,7 @@ void lighthouseCoreTask(void *param) {
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT(&frameRate);
 
-        deckHealthCheck(&lighthouseCoreState, &frame);
+        deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         if (pulseProcessorProcessPulse) {
           processFrame(&lighthouseCoreState, &angles, &frame);
         } else {
@@ -388,6 +406,8 @@ void lighthouseCoreTask(void *param) {
       }
 
       previousWasSyncFrame = frame.isSyncFrame;
+
+      updateBaseStationVisibilityMap(now_ms);
     }
 
     uartSynchronized = false;
@@ -524,6 +544,8 @@ LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
+
+LOG_ADD(LOG_UINT16, bsVis, &baseStationVisibilityMap)
 LOG_GROUP_STOP(lighthouse)
 
 PARAM_GROUP_START(lighthouse)
