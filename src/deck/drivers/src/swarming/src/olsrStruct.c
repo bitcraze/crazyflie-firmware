@@ -1165,15 +1165,15 @@ void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple) {
 |  Tp  |  Rr  |  Tf  |  Re  |
 +------+------+------+------+
 */
-  DEBUG_PRINT_OLSR_TS("Rp:%llu\tTr:%llu\tRf:%llu\n",
-                      tuple->Rp.m_timestamp.full,
-                      tuple->Tr.m_timestamp.full,
-                      tuple->Rf.m_timestamp.full);
-  DEBUG_PRINT_OLSR_TS("Tp:%llu\tRr:%llu\tTf:%llu\tRe:%llu\n",
-                      tuple->Tp.m_timestamp.full,
-                      tuple->Rr.m_timestamp.full,
-                      tuple->Tf.m_timestamp.full,
-                      tuple->Re.m_timestamp.full);
+  DEBUG_PRINT_OLSR_TS("Rp:(%u)%llu\tTr:(%u)%llu\tRf:(%u)%llu\n",
+                      tuple->Rp.m_seqenceNumber, tuple->Rp.m_timestamp.full,
+                      tuple->Tr.m_seqenceNumber, tuple->Tr.m_timestamp.full,
+                      tuple->Rf.m_seqenceNumber, tuple->Rf.m_timestamp.full);
+  DEBUG_PRINT_OLSR_TS("Tp:(%u)%llu\tRr:(%u)%llu\tTf:(%u)%llu\tRe:(%u)%llu\n",
+                      tuple->Tp.m_seqenceNumber, tuple->Tp.m_timestamp.full,
+                      tuple->Rr.m_seqenceNumber, tuple->Rr.m_timestamp.full,
+                      tuple->Tf.m_seqenceNumber, tuple->Tf.m_timestamp.full,
+                      tuple->Re.m_seqenceNumber, tuple->Re.m_timestamp.full);
 }
 
 void olsrPrintRangingTable(olsrRangingTable_t *rangingTable) {

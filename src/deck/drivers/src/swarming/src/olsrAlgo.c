@@ -226,7 +226,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   }
   setIndex_t peerIndex = olsrFindInRangingTable(&olsrRangingTable, peerSrcAddr);
   olsrRangingTuple_t t;
-  if (peerIndex == -1) {
+  if (peerIndex == -1) {//init ranging table
     memset(&t, 0, sizeof(olsrRangingTuple_t));
     t.m_tsAddress = peerSrcAddr;
     t.m_period = M2T(TS_INTERVAL);
@@ -278,8 +278,6 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->Tf.m_timestamp.full = 0;
     tuple->Rr = tuple->Re;
     tuple->Tr.m_timestamp.full = 0;
-  } else {
-    DEBUG_PRINT_OLSR_TS("unknown situation occurred!\n");
   }
 }
 
@@ -1804,24 +1802,19 @@ void olsrSendTask(void *ptr)
 void olsrRecvTask(void *ptr) {
   DEBUG_PRINT_OLSR_RECEIVE("RECV TASK START\n");
   //packet_t recvPacket;
-  while (true) {
-//    // DEBUG_PRINT_OLSR_RECEIVE("to take a packet from q\n");
-//    if (xQueueReceive(g_olsrRecvQueue, &recvPacket, 0) == pdTRUE) {
-//      // DEBUG_PRINT_OLSR_RECEIVE("got a packet from q\n");
-//      olsrPacketDispatch(&recvPacket);
-//    }
-//    vTaskDelay(50);
-
-    // DEBUG_PRINT_OLSR_RECEIVE("to take a packet from q\n");
-    if (xQueueReceive(g_olsrRecvQueue, &rxPacketWts, 0) == pdTRUE) {
-      olsrPrintPacket(&rxPacketWts.pkt, "RECV");
-		  DEBUG_PRINT_OLSR_RECEIVE("Arrival timestamp %llu\n", rxPacketWts.ots.m_timestamp.full);
-      // DEBUG_PRINT_OLSR_RECEIVE("got a packet from q\n");
-      olsrPacketDispatch(&rxPacketWts);
-    }
-    vTaskDelay(50);
+  while(xQueueReceive(g_olsrRecvQueue,&rxPacketWts,portMAX_DELAY)){
+    DEBUG_PRINT_OLSR_SYSTEM("RECV FROM QUEUE\n");
+    olsrPrintPacket(&rxPacketWts.pkt, "RECV");
+		DEBUG_PRINT_OLSR_RECEIVE("Arrival timestamp %llu\n", rxPacketWts.ots.m_timestamp.full);
+    olsrPacketDispatch(&rxPacketWts);
   }
 }
+
+void olsr_recv_task(void *ptr){
+    DEBUG_PRINT_OLSR_SYSTEM("RECV TASK START\n");
+
+}
+
 
 LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_INT16, distTo1, distanceTowards+1)
