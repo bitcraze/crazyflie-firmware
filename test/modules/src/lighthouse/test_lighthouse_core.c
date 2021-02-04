@@ -32,8 +32,9 @@ lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t*
 void initializeGeoDataFromStorage();
 initializeCalibDataFromStorage();
 
-// Dummy mock
+// Dummy mocks
 uint32_t xTaskGetTickCount() {return 0;}
+void vTaskDelay(const uint32_t ignore) {}
 
 static int nrOfCallsToStorageFetchForCalib = 0;
 static size_t mockStorageFetchForCalib(char* key, void* buffer, size_t length, int cmock_num_calls);

@@ -64,6 +64,13 @@ static lighthouseUartFrame_t frame;
 static lighthouseBsIdentificationData_t bsIdentificationData;
 
 // Stats
+
+typedef enum uwbEvent_e {
+  statusNotReceiving = 0,
+  statusMissingData = 1,
+  statusToEstimator = 2,
+} lhSystemStatus_t;
+
 static bool uartSynchronized = false;
 
 #define ONE_SECOND 1000
@@ -77,10 +84,17 @@ static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
-static uint16_t baseStationVisibilityMapWs;
-static uint16_t baseStationVisibilityMap;
-static const uint32_t BASE_STATION_VISIBILITY_MAP_UPDATE_INTERVAL = FIFTH_SECOND;
-  static uint32_t nextUpdateTimeOfBaseStationVisibilityMap = 0;
+// Contains a bit map that indicates which base staions that are actively used, that is recevied
+// and has valid geo and calib dats
+static uint16_t baseStationActiveMapWs;
+static uint16_t baseStationActiveMap;
+
+// An overall system status indicating if data is sent to the estimator
+static lhSystemStatus_t systemStatus;
+static lhSystemStatus_t systemStatusWs;
+
+static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
+static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 pulseProcessor_t lighthouseCoreState = {
@@ -233,7 +247,7 @@ TESTABLE_STATIC void waitForUartSynchFrame() {
 void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green)
 {
   uint8_t commandBuffer[2];
-  
+
   commandBuffer[0] = 0x01;
   commandBuffer[1] = (green<<4) | (orange<<2) | red;
 
@@ -292,24 +306,35 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
 
 static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int sweepId) {
   if (sweepId == sweepIdSecond) {
-    pulseProcessorApplyCalibration(appState, angles, basestation);
-    if (lighthouseBsTypeV2 == angles->measurementType) {
-      // Emulate V1 base stations for now, convert to V1 angles
-      convertV2AnglesToV1Angles(angles);
+    const bool hasCalibrationData = pulseProcessorApplyCalibration(appState, angles, basestation);
+    const bool hasGeoData = appState->bsGeometry[basestation].valid;
+    if (hasCalibrationData && hasGeoData) {
+      if (lighthouseBsTypeV2 == angles->measurementType) {
+        // Emulate V1 base stations for now, convert to V1 angles
+        convertV2AnglesToV1Angles(angles);
+      }
+
+      // Send measurement to the ground
+      locSrvSendLighthouseAngle(basestation, angles);
+
+      baseStationActiveMapWs = baseStationActiveMapWs | (1 << basestation);
+
+      switch(estimationMethod) {
+        case 0:
+          usePulseResultCrossingBeams(appState, angles, basestation);
+          break;
+        case 1:
+          usePulseResultSweeps(appState, angles, basestation);
+          break;
+        default:
+          break;
+      }
     }
 
-    // Send measurement to the ground
-    locSrvSendLighthouseAngle(basestation, angles);
-
-    switch(estimationMethod) {
-      case 0:
-        usePulseResultCrossingBeams(appState, angles, basestation);
-        break;
-      case 1:
-        usePulseResultSweeps(appState, angles, basestation);
-        break;
-      default:
-        break;
+    if (baseStationActiveMapWs != 0) {
+      systemStatusWs = statusToEstimator;
+    } else {
+      systemStatusWs = statusMissingData;
     }
   }
 }
@@ -371,8 +396,6 @@ static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* ang
 
     if (pulseProcessorProcessPulse(appState, &frame->data, angles, &basestation, &sweepId)) {
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
-        baseStationVisibilityMapWs = baseStationVisibilityMapWs | (1 << basestation);
-
         usePulseResult(appState, angles, basestation, sweepId);
     }
 }
@@ -404,12 +427,15 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
   }
 }
 
-static void updateBaseStationVisibilityMap(const uint32_t now_ms) {
-  if (now_ms > nextUpdateTimeOfBaseStationVisibilityMap) {
-    baseStationVisibilityMap = baseStationVisibilityMapWs;
-    baseStationVisibilityMapWs = 0;
+static void updateSystemStatus(const uint32_t now_ms) {
+  if (now_ms > nextUpdateTimeOfSystemStatus) {
+    baseStationActiveMap = baseStationActiveMapWs;
+    baseStationActiveMapWs = 0;
 
-    nextUpdateTimeOfBaseStationVisibilityMap = now_ms + BASE_STATION_VISIBILITY_MAP_UPDATE_INTERVAL;
+    systemStatus = systemStatusWs;
+    systemStatusWs = statusNotReceiving;
+
+    nextUpdateTimeOfSystemStatus = now_ms + SYSTEM_STATUS_UPDATE_INTERVAL;
   }
 }
 
@@ -459,7 +485,7 @@ void lighthouseCoreTask(void *param) {
 
       previousWasSyncFrame = frame.isSyncFrame;
 
-      updateBaseStationVisibilityMap(now_ms);
+      updateSystemStatus(now_ms);
     }
 
     uartSynchronized = false;
@@ -597,7 +623,8 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 
-LOG_ADD(LOG_UINT16, bsVis, &baseStationVisibilityMap)
+LOG_ADD(LOG_UINT16, bsActive, &baseStationActiveMap)
+LOG_ADD(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
 PARAM_GROUP_START(lighthouse)
