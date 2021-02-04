@@ -75,7 +75,7 @@ static void olsrSendTaskInit(dwDevice_t *dev)
 static void olsrRecvTaskInit(dwDevice_t *dev)
 {
   DEBUG_PRINT_OLSR_SYSTEM("START_OLSR_RECV_TASK_INIT\n");
-  if(xTaskCreate(olsrRecvTask, "OLSR_RECV", 4*configMINIMAL_STACK_SIZE, dev,LPS_DECK_TASK_PRI, NULL)==pdPASS)
+  if(xTaskCreate(olsrRecvTask, "OLSR_RECV", 4*configMINIMAL_STACK_SIZE, dev,4, NULL)==pdPASS)
     {
       DEBUG_PRINT_OLSR_SYSTEM("RECV TASK CREATE SUCCESSFUL\n");
     }
