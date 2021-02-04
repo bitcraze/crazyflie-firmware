@@ -83,10 +83,15 @@ static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
-static uint16_t baseStationVisibilityMapWs;
-static uint16_t baseStationVisibilityMap;
+// Contains a bit map that indicates which base staions that are actively used, that is recevied
+// and has valid geo and calib dats
+static uint16_t baseStationActiveMapWs;
+static uint16_t baseStationActiveMap;
+
+// An overall system status indicating if data is sent to the estimator
 static lhSystemStatus_t systemStatus;
 static lhSystemStatus_t systemStatusWs;
+
 static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
 static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
@@ -274,7 +279,7 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
       // Send measurement to the ground
       locSrvSendLighthouseAngle(basestation, angles);
 
-      systemStatusWs = statusToEstimator;
+      baseStationActiveMapWs = baseStationActiveMapWs | (1 << basestation);
 
       switch(estimationMethod) {
         case 0:
@@ -286,10 +291,12 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
         default:
           break;
       }
+    }
+
+    if (baseStationActiveMapWs != 0) {
+      systemStatusWs = statusToEstimator;
     } else {
-      if (systemStatusWs != statusToEstimator) {
-        systemStatusWs = statusMissingData;
-      }
+      systemStatusWs = statusMissingData;
     }
   }
 }
@@ -351,8 +358,6 @@ static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* ang
 
     if (pulseProcessorProcessPulse(appState, &frame->data, angles, &basestation, &sweepId)) {
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
-        baseStationVisibilityMapWs = baseStationVisibilityMapWs | (1 << basestation);
-
         usePulseResult(appState, angles, basestation, sweepId);
     }
 }
@@ -386,8 +391,8 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
 
 static void updateSystemStatus(const uint32_t now_ms) {
   if (now_ms > nextUpdateTimeOfSystemStatus) {
-    baseStationVisibilityMap = baseStationVisibilityMapWs;
-    baseStationVisibilityMapWs = 0;
+    baseStationActiveMap = baseStationActiveMapWs;
+    baseStationActiveMapWs = 0;
 
     systemStatus = systemStatusWs;
     systemStatusWs = statusNotReceiving;
@@ -581,7 +586,7 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 
-LOG_ADD(LOG_UINT16, bsVis, &baseStationVisibilityMap)
+LOG_ADD(LOG_UINT16, bsActive, &baseStationActiveMap)
 LOG_ADD(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
