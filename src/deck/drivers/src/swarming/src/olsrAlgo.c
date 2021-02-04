@@ -205,6 +205,11 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   olsrAddr_t peerSrcAddr = tsMessageHeader->m_originatorAddress;
   olsrAddr_t peerSpeed = tsMessageHeader->m_velocity; //TODO Speed type uint16
 
+  if (rxOTS->m_timestamp.full < olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp.full) {
+    DEBUG_PRINT_OLSR_TS("ts out of date \n");
+    return;
+  }
+
   olsrTimestampTuple_t peerTxOTS = {0};
   peerTxOTS.m_seqenceNumber = tsMessageHeader->m_seq4TSsend;
   peerTxOTS.m_timestamp.low32 = tsMessageHeader->m_dwTimeLow32;
@@ -1736,69 +1741,6 @@ void olsrSendTask(void *ptr)
       DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
     }
 }
-// packet_t dwPacket = {0};
-// bool hasMessageCache = false;
-// olsrMessage_t olsrMessageCache = {0};
-// void olsrSendTask(void *ptr)
-// {
-//     //pointer initialize 
-//     //task loop
-//   memset(&olsrMessageCache,0,sizeof(olsrMessage_t));
-//   while(true)
-//     { 
-//       memset(&dwPacket,0,sizeof(packet_t));
-//       MAC80215_PACKET_INIT(dwPacket, MAC802154_TYPE_OLSR);
-//       olsrPacket_t *olsrPacket = (olsrPacket_t *)dwPacket.payload;
-//       olsrMessage_t *messages = (olsrMessage_t *)(olsrPacket->m_packetPayload);
-//       uint8_t *writePosition = (uint8_t *)messages;
-//       if(hasMessageCache)
-//         {
-//             configASSERT(olsrMessageCache.m_messageHeader.m_messageSize <= MESSAGE_MAX_LENGTH);
-//             memcpy(writePosition,&olsrMessageCache,olsrMessageCache.m_messageHeader.m_messageSize);
-//             writePosition += olsrMessageCache.m_messageHeader.m_messageSize;
-//             hasMessageCache = false;
-//         }
-//       while(xQueueReceive(g_olsrSendQueue, &olsrMessageCache, 0))
-//         {
-//           configASSERT(olsrMessageCache.m_messageHeader.m_messageSize <= MESSAGE_MAX_LENGTH);
-//           if(0==olsrMessageCache.m_messageHeader.m_timeToLive) break;
-//           if(writePosition+olsrMessageCache.m_messageHeader.m_messageSize-(uint8_t *)messages>MESSAGE_MAX_LENGTH)
-//             {
-//               hasMessageCache = true;
-//               DEBUG_PRINT_OLSR_SEND("break\n");
-//               break;
-//             }
-//           else
-//             {
-//               memcpy(writePosition,&olsrMessageCache,olsrMessageCache.m_messageHeader.m_messageSize);
-//               writePosition += (uint8_t)olsrMessageCache.m_messageHeader.m_messageSize;
-//             }
-//         }
-//       if(writePosition-(uint8_t *)olsrPacket==sizeof(olsrPacketHeader_t))
-//         {
-//           vTaskDelay(200);
-//           continue;
-//         }
-//       olsrPacket->m_packetHeader.m_packetLength = (uint16_t)(writePosition-(uint8_t *)olsrPacket);
-//           // olsrPacket_t *p = (olsrPacket_t *)dwPacket.payload;
-//           // olsrMessage_t *q = (olsrMessage_t *)p->m_packetPayload;
-//           // olsrHelloMessage_t *k = (olsrHelloMessage_t *)q->m_messagePayload;
-//           // DEBUG_PRINT_OLSR_SEND("last send legth %d\n",p->m_packetHeader.m_packetLength);
-//           // DEBUG_PRINT_OLSR_SEND("last send message length %d\n",q->m_messageHeader.m_messageSize);
-//           // DEBUG_PRINT_OLSR_SEND("last send HelloMsg usd leth %d\n",k->m_helloHeader.m_linkMessageNumber);
-//           //transmit
-//       DEBUG_PRINT_OLSR_SEND("when SEND\n");
-//       olsrPrintPacket(&dwPacket);
-//       dwNewTransmit(dwm);
-//       dwSetDefaults(dwm);
-//       dwWaitForResponse(dwm, true);
-//       dwReceivePermanently(dwm, true);
-//       dwSetData(dwm, (uint8_t *)&dwPacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
-//       dwStartTransmit(dwm);
-//       vTaskDelay(200);
-//       DEBUG_PRINT_OLSR_SEND("send successful\n");
-//     }
-// }
 void olsrRecvTask(void *ptr) {
   DEBUG_PRINT_OLSR_RECEIVE("RECV TASK START\n");
   //packet_t recvPacket;
