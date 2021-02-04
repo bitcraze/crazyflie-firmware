@@ -164,7 +164,7 @@ void olsrTxCallback(dwDevice_t *dev) {
   olsr_ts_otspool_idx %= TS_OTSPOOL_MAXSIZE;
   olsr_ts_otspool[olsr_ts_otspool_idx].m_seqenceNumber = txOlsrPkt->m_packetHeader.m_packetSeq;
   olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp = departure;
-  //DEBUG_PRINT_OLSR_SEND("otspool update [%d] with %d.\n", olsr_ts_otspool_idx, txOlsrPkt->m_packetHeader.m_packetSeq);
+  DEBUG_PRINT_OLSR_SEND("Departure timestamp for seq %u is %llu\n", txOlsrPkt->m_packetHeader.m_packetSeq, departure.full);
 }
 
 //packet process
@@ -201,7 +201,6 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
 }
 
 void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS){
-  DEBUG_PRINT_OLSR_TS("--olsrProcessTs--\n");
   olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) tsMsg;
   olsrAddr_t peerSrcAddr = tsMessageHeader->m_originatorAddress;
   olsrAddr_t peerSpeed = tsMessageHeader->m_velocity; //TODO Speed type uint16
@@ -210,7 +209,6 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   peerTxOTS.m_seqenceNumber = tsMessageHeader->m_seq4TSsend;
   peerTxOTS.m_timestamp.low32 = tsMessageHeader->m_dwTimeLow32;
   peerTxOTS.m_timestamp.high8 = tsMessageHeader->m_dwTimeHigh8;
-  DEBUG_PRINT_OLSR_TS("Receive : addr=%d,seq=%d,p_txSeq=%d\n", peerSrcAddr, rxOTS->m_seqenceNumber, peerTxOTS.m_seqenceNumber);
 
   olsrTimestampTuple_t peerRxOTS = {0};
   uint8_t *msgPtr = (uint8_t *) tsMsg + sizeof(olsrTsMessageHeader_t);
@@ -221,16 +219,12 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     if (tsMsgBodyUnit->m_tsAddr != myAddress) {
       continue;
     }
-    DEBUG_PRINT_OLSR_TS("peerRxOTS init \n");
     peerRxOTS.m_seqenceNumber = tsMsgBodyUnit->m_sequence;
     peerRxOTS.m_timestamp.low32 = tsMsgBodyUnit->m_dwTimeLow32;
     peerRxOTS.m_timestamp.high8 = tsMsgBodyUnit->m_dwTimeHigh8;
-    DEBUG_PRINT_OLSR_TS("RECV:p_rxAddr=%d,p_rxSeq=%d.\n",tsMsgBodyUnit->m_tsAddr, tsMsgBodyUnit->m_sequence);
     break;
   }
-  DEBUG_PRINT_OLSR_TS("peerRxOTS : seq:%d,high8:%d,low32:%u \n",peerRxOTS.m_seqenceNumber,peerRxOTS.m_timestamp.high8,peerRxOTS.m_timestamp.low32);
   setIndex_t peerIndex = olsrFindInRangingTable(&olsrRangingTable, peerSrcAddr);
-  //DEBUG_PRINT_OLSR_TS("RangingTableSize : %d, peerSrcAddr : %d, peerIndex : %d \n", olsrRangingTable.size, peerSrcAddr, peerIndex);
   olsrRangingTuple_t t;
   if (peerIndex == -1) {
     memset(&t, 0, sizeof(olsrRangingTuple_t));
@@ -243,17 +237,12 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       // out of RangingTable size
       return;
     }
-    DEBUG_PRINT_OLSR_TS("find a now neighbor, addr is : %u , table index is :%d\n", peerSrcAddr, peerIndex);
   }
-  DEBUG_PRINT_OLSR_TS("peer index is :%d \n", peerIndex);
   olsrRangingTuple_t *tuple = &olsrRangingTable.setData[peerIndex].data;
-  //DEBUG_PRINT_OLSR_TS("--update field expiration--\n");
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
-  //DEBUG_PRINT_OLSR_TS("--update the RangingTable Re, always store the newest rxOTS--\n");
   //update the RangingTable Re, always store the newest rxOTS
   tuple->Re = *rxOTS;
-  //DEBUG_PRINT_OLSR_TS("--update field Tr or Rr--\n");
   //update field Tr or Rr
   if (tuple->Tr.m_timestamp.full == 0) {
     if (tuple->Rr.m_seqenceNumber == peerTxOTS.m_seqenceNumber) {
@@ -262,7 +251,6 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       tuple->Rr = *rxOTS;
     }
   }
-  //DEBUG_PRINT_OLSR_TS("--update field Rf and Tf if peer_rxOTS has value--\n");
   //update field Rf and Tf if peer_rxOTS has value
   if (peerRxOTS.m_timestamp.full) {
     tuple->Rf = peerRxOTS;
@@ -273,13 +261,15 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
       }
     }
   }
-  //DEBUG_PRINT_OLSR_TS("--process RangingTable, compute, re-organize or doing nothing--\n");
   //process RangingTable, compute, re-organize or doing nothing
   olsrPrintRangingTableTuple(tuple);
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     tuple->m_distance = olsrTsComputeDistance(tuple);
     distanceTowards[tuple->m_tsAddress] = tuple->m_distance;
-    DEBUG_PRINT_OLSR_TS("Ranging distance computed=%d\n", tuple->m_distance);
+		if (tuple->m_distance>1000 || tuple->m_distance<-100)
+				DEBUG_PRINT_OLSR_TS("Ranging distance \t\t\t\t\t\tcomputed=%d\n", tuple->m_distance);
+		else
+				DEBUG_PRINT_OLSR_TS("Ranging distance computed=%d\n", tuple->m_distance);
   } else if (tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     DEBUG_PRINT_OLSR_TS("Rangingtable move left\n");
     tuple->Rp = tuple->Rf;
@@ -291,7 +281,6 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   } else {
     DEBUG_PRINT_OLSR_TS("unknown situation occurred!\n");
   }
-  DEBUG_PRINT_OLSR_TS("--olsrProcessTsEnd--\n");
 }
 
 static void incrementAnsn()
@@ -1443,7 +1432,6 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 }
 
 olsrTime_t olsrSendTs() {
-  DEBUG_PRINT_OLSR_TS("--olsrSendTs--\n");
   olsrMessage_t tsMsg = {0};
   olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(TS_INTERVAL_MAX) + TS_INTERVAL_MIN;
   olsrTimestampTuple_t *txOTS = olsr_ts_otspool + olsr_ts_otspool_idx;
@@ -1739,6 +1727,7 @@ void olsrSendTask(void *ptr)
       ASSERT(writePosition-(uint8_t *)olsrPacket>sizeof(olsrPacketHeader_t));
       olsrPacket->m_packetHeader.m_packetLength = writePosition-(uint8_t *)olsrPacket;
       olsrPacket->m_packetHeader.m_packetSeq = getPacketSeqNumber();
+      olsrPrintPacket(&txpacket, "SEND");
       //transmit
       dwNewTransmit(dwm);
       dwSetDefaults(dwm);
@@ -1747,7 +1736,6 @@ void olsrSendTask(void *ptr)
       dwSetData(dwm, (uint8_t *)&txpacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
       dwStartTransmit(dwm);
       DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
-      olsrPrintPacket(&txpacket, "SEND");
     }
 }
 // packet_t dwPacket = {0};
@@ -1827,6 +1815,7 @@ void olsrRecvTask(void *ptr) {
     // DEBUG_PRINT_OLSR_RECEIVE("to take a packet from q\n");
     if (xQueueReceive(g_olsrRecvQueue, &rxPacketWts, 0) == pdTRUE) {
       olsrPrintPacket(&rxPacketWts.pkt, "RECV");
+		  DEBUG_PRINT_OLSR_RECEIVE("Arrival timestamp %llu\n", rxPacketWts.ots.m_timestamp.full);
       // DEBUG_PRINT_OLSR_RECEIVE("got a packet from q\n");
       olsrPacketDispatch(&rxPacketWts);
     }
