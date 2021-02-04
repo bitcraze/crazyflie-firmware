@@ -28,6 +28,7 @@
 #include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "timers.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -136,9 +137,46 @@ TESTABLE_STATIC void initializeGeoDataFromStorage();
 static lighthouseCalibration_t calibBuffer;
 TESTABLE_STATIC void initializeCalibDataFromStorage();
 
+// LED timer
+static xTimerHandle timer;
+static StaticTimer_t timerBuffer;
+static uint8_t dummy_status = 0;
+static uint8_t ledInternalStatus = 2;
+
+static void ledTimer(xTimerHandle timer)
+{
+  switch (dummy_status)
+  {
+    case 0:
+      if(ledInternalStatus != dummy_status)
+      {
+        lighthouseCoreSetLeds(lh_led_on, lh_led_off, lh_led_off);
+        ledInternalStatus = dummy_status;
+      }
+      break;
+    case 1: 
+      if(ledInternalStatus != dummy_status)
+      {
+        lighthouseCoreSetLeds(lh_led_off, lh_led_on, lh_led_off);
+        ledInternalStatus = dummy_status;
+      }
+      break;
+    case 2:
+      if(ledInternalStatus != dummy_status)
+      {
+        lighthouseCoreSetLeds(lh_led_off, lh_led_off, lh_led_on);
+        ledInternalStatus = dummy_status;
+      }
+      break;
+    default:
+      ASSERT(false);
+  } 
+}
 
 void lighthouseCoreInit() {
   lighthousePositionEstInit();
+  timer = xTimerCreateStatic("ledTimer", M2T(FIFTH_SECOND), pdTRUE,
+    NULL, ledTimer, &timerBuffer);
 }
 
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
@@ -389,8 +427,7 @@ void lighthouseCoreTask(void *param) {
 
   vTaskDelay(M2T(100));
 
-  // ToDo: LED should be set according to the current system state
-  lighthouseCoreSetLeds(lh_led_off, lh_led_slow_blink, lh_led_off);
+  xTimerStart(timer, M2T(0));
 
   memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
 
