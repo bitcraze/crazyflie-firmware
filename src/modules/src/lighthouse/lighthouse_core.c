@@ -154,32 +154,31 @@ TESTABLE_STATIC void initializeCalibDataFromStorage();
 // LED timer
 static xTimerHandle timer;
 static StaticTimer_t timerBuffer;
-static uint8_t dummy_status = 0;
 static uint8_t ledInternalStatus = 2;
 
 static void ledTimer(xTimerHandle timer)
 {
-  switch (dummy_status)
+  switch (systemStatus)
   {
     case 0:
-      if(ledInternalStatus != dummy_status)
+      if(ledInternalStatus != systemStatus)
       {
         lighthouseCoreSetLeds(lh_led_on, lh_led_off, lh_led_off);
-        ledInternalStatus = dummy_status;
+        ledInternalStatus = systemStatus;
       }
       break;
     case 1: 
-      if(ledInternalStatus != dummy_status)
+      if(ledInternalStatus != systemStatus)
       {
         lighthouseCoreSetLeds(lh_led_off, lh_led_on, lh_led_off);
-        ledInternalStatus = dummy_status;
+        ledInternalStatus = systemStatus;
       }
       break;
     case 2:
-      if(ledInternalStatus != dummy_status)
+      if(ledInternalStatus != systemStatus)
       {
         lighthouseCoreSetLeds(lh_led_off, lh_led_off, lh_led_on);
-        ledInternalStatus = dummy_status;
+        ledInternalStatus = systemStatus;
       }
       break;
     default:
