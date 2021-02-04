@@ -40,7 +40,7 @@
  * @param angles The raw and calibrated angles
  * @param baseStation The base station in question
  */
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation){
+bool pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation){
   const lighthouseCalibration_t* calibrationData = &state->bsCalibration[baseStation];
   const bool doApplyCalibration = calibrationData->valid;
 
@@ -61,6 +61,8 @@ void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
       lighthouseCalibrationApplyNothing(bsMeasurement->angles, bsMeasurement->correctedAngles);
     }
   }
+
+  return doApplyCalibration;
 }
 
 /**

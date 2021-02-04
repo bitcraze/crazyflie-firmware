@@ -264,8 +264,11 @@ typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const puls
  * @param state
  * @param angles
  * @param baseStation
+ *
+ * @return true, calibration data has been applied
+ * @return false, calibration data is missing
  */
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
+bool pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 
 void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation);
 
