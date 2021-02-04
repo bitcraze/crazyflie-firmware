@@ -29,8 +29,9 @@ static uint16_t g_ansn = 0;
 static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
-static int g_ts_error_count = 0;
+static int g_ts_receive_error_count = 0;
 static int g_ts_receive_count = 0;
+static int g_ts_compute_error = 0;
 static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
@@ -184,6 +185,7 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
   if (tprop_ctn < -100 || tprop_ctn > 900) {
     DEBUG_PRINT_OLSR_TS("tprop_ctn < -100 || tprop_ctn > 900\n");
     //olsrPrintRangingTableTuple(tuple);
+    g_ts_compute_error++;
   }
 
   //update RangingTable
@@ -208,7 +210,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   g_ts_receive_count++;
   if (rxOTS->m_timestamp.full < olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp.full) {
     DEBUG_PRINT_OLSR_TS("ts out of date \n");
-    g_ts_error_count++;
+    g_ts_receive_error_count++;
     return;
   }
 
@@ -1771,9 +1773,7 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
         LOG_ADD(LOG_INT16, distTo9, distanceTowards+9)
         LOG_ADD(LOG_FLOAT, velocity, &velocity)
-LOG_GROUP_STOP(TSranging)
-
-LOG_GROUP_START(TS_ERROR_COUNT)
         LOG_ADD(LOG_INT16, total, &g_ts_receive_count)
-        LOG_ADD(LOG_INT16, error, &g_ts_error_count)
+        LOG_ADD(LOG_INT16, error, &g_ts_receive_error_count)
+        LOG_ADD(LOG_INT16, compute_error, &g_ts_compute_error )
 LOG_GROUP_STOP(TSranging)
