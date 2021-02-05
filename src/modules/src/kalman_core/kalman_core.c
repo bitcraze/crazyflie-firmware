@@ -58,17 +58,14 @@
 #include "kalman_core.h"
 #include "cfassert.h"
 
-#include "outlierFilter.h"
 #include "physicalConstants.h"
 
-#include "log.h"
 #include "param.h"
 #include "math3d.h"
 #include "debug.h"
 #include "static_mem.h"
 
 #include "lighthouse_calibration.h"
-
 // #define DEBUG_STATE_CHECK
 
 // the reversion of pitch and roll to zero
@@ -154,14 +151,8 @@ static float initialYaw = 0.0;
 // Quaternion used for initial yaw
 static float initialQuaternion[4] = {0.0, 0.0, 0.0, 0.0};
 
-static uint32_t tdoaCount;
-
-static OutlierFilterLhState_t sweepOutlierFilterState;
-
 
 void kalmanCoreInit(kalmanCoreData_t* this) {
-  tdoaCount = 0;
-
   // Reset all data to 0 (like upon system reset)
   memset(this, 0, sizeof(kalmanCoreData_t));
 
@@ -211,11 +202,9 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
   this->Pm.pData = (float*)this->P;
 
   this->baroReferenceHeight = 0.0;
-
-  outlierFilterReset(&sweepOutlierFilterState, 0);
 }
 
-static void scalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
+void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
 {
   // The Kalman gain as a column vector
   NO_DMA_CCM_SAFE_ZERO_INIT static float K[KC_STATE_DIM];
@@ -299,334 +288,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIs
   }
 
   float meas = (baroAsl - this->baroReferenceHeight);
-  scalarUpdate(this, &H, meas - this->S[KC_STATE_Z], measNoiseBaro);
-}
-
-void kalmanCoreUpdateWithAbsoluteHeight(kalmanCoreData_t* this, heightMeasurement_t* height) {
-  float h[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-  h[KC_STATE_Z] = 1;
-  scalarUpdate(this, &H, height->height - this->S[KC_STATE_Z], height->stdDev);
-}
-
-void kalmanCoreUpdateWithPosition(kalmanCoreData_t* this, positionMeasurement_t *xyz)
-{
-  // a direct measurement of states x, y, and z
-  // do a scalar update for each state, since this should be faster than updating all together
-  for (int i=0; i<3; i++) {
-    float h[KC_STATE_DIM] = {0};
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-    h[KC_STATE_X+i] = 1;
-    scalarUpdate(this, &H, xyz->pos[i] - this->S[KC_STATE_X+i], xyz->stdDev);
-  }
-}
-
-void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
-{
-  // a direct measurement of states x, y, and z, and orientation
-  // do a scalar update for each state, since this should be faster than updating all together
-  for (int i=0; i<3; i++) {
-    float h[KC_STATE_DIM] = {0};
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-    h[KC_STATE_X+i] = 1;
-    scalarUpdate(this, &H, pose->pos[i] - this->S[KC_STATE_X+i], pose->stdDevPos);
-  }
-
-  // compute orientation error
-  struct quat const q_ekf = mkquat(this->q[1], this->q[2], this->q[3], this->q[0]);
-  struct quat const q_measured = mkquat(pose->quat.x, pose->quat.y, pose->quat.z, pose->quat.w);
-  struct quat const q_residual = qqmul(qinv(q_ekf), q_measured);
-  // small angle approximation, see eq. 141 in http://mars.cs.umn.edu/tr/reports/Trawny05b.pdf
-  struct vec const err_quat = vscl(2.0f / q_residual.w, quatimagpart(q_residual));
-
-  // do a scalar update for each state
-  {
-    float h[KC_STATE_DIM] = {0};
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-    h[KC_STATE_D0] = 1;
-    scalarUpdate(this, &H, err_quat.x, pose->stdDevQuat);
-    h[KC_STATE_D0] = 0;
-
-    h[KC_STATE_D1] = 1;
-    scalarUpdate(this, &H, err_quat.y, pose->stdDevQuat);
-    h[KC_STATE_D1] = 0;
-
-    h[KC_STATE_D2] = 1;
-    scalarUpdate(this, &H, err_quat.z, pose->stdDevQuat);
-  }
-}
-
-void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t *d)
-{
-  // a measurement of distance to point (x, y, z)
-  float h[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-
-  float dx = this->S[KC_STATE_X] - d->x;
-  float dy = this->S[KC_STATE_Y] - d->y;
-  float dz = this->S[KC_STATE_Z] - d->z;
-
-  float measuredDistance = d->distance;
-
-  float predictedDistance = arm_sqrt(powf(dx, 2) + powf(dy, 2) + powf(dz, 2));
-  if (predictedDistance != 0.0f)
-  {
-    // The measurement is: z = sqrt(dx^2 + dy^2 + dz^2). The derivative dz/dX gives h.
-    h[KC_STATE_X] = dx/predictedDistance;
-    h[KC_STATE_Y] = dy/predictedDistance;
-    h[KC_STATE_Z] = dz/predictedDistance;
-  }
-  else
-  {
-    // Avoid divide by zero
-    h[KC_STATE_X] = 1.0f;
-    h[KC_STATE_Y] = 0.0f;
-    h[KC_STATE_Z] = 0.0f;
-  }
-
-  scalarUpdate(this, &H, measuredDistance-predictedDistance, d->stdDev);
-}
-
-
-void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
-{
-  if (tdoaCount >= 100)
-  {
-    /**
-     * Measurement equation:
-     * dR = dT + d1 - d0
-     */
-
-    float measurement = tdoa->distanceDiff;
-
-    // predict based on current state
-    float x = this->S[KC_STATE_X];
-    float y = this->S[KC_STATE_Y];
-    float z = this->S[KC_STATE_Z];
-
-    float x1 = tdoa->anchorPosition[1].x, y1 = tdoa->anchorPosition[1].y, z1 = tdoa->anchorPosition[1].z;
-    float x0 = tdoa->anchorPosition[0].x, y0 = tdoa->anchorPosition[0].y, z0 = tdoa->anchorPosition[0].z;
-
-    float dx1 = x - x1;
-    float dy1 = y - y1;
-    float dz1 = z - z1;
-
-    float dy0 = y - y0;
-    float dx0 = x - x0;
-    float dz0 = z - z0;
-
-    float d1 = sqrtf(powf(dx1, 2) + powf(dy1, 2) + powf(dz1, 2));
-    float d0 = sqrtf(powf(dx0, 2) + powf(dy0, 2) + powf(dz0, 2));
-
-    float predicted = d1 - d0;
-    float error = measurement - predicted;
-
-    float h[KC_STATE_DIM] = {0};
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-
-    if ((d0 != 0.0f) && (d1 != 0.0f)) {
-      h[KC_STATE_X] = (dx1 / d1 - dx0 / d0);
-      h[KC_STATE_Y] = (dy1 / d1 - dy0 / d0);
-      h[KC_STATE_Z] = (dz1 / d1 - dz0 / d0);
-
-      vector_t jacobian = {
-        .x = h[KC_STATE_X],
-        .y = h[KC_STATE_Y],
-        .z = h[KC_STATE_Z],
-      };
-
-      point_t estimatedPosition = {
-        .x = this->S[KC_STATE_X],
-        .y = this->S[KC_STATE_Y],
-        .z = this->S[KC_STATE_Z],
-      };
-
-      bool sampleIsGood = outlierFilterValidateTdoaSteps(tdoa, error, &jacobian, &estimatedPosition);
-      if (sampleIsGood) {
-        scalarUpdate(this, &H, error, tdoa->stdDev);
-      }
-    }
-  }
-
-  tdoaCount++;
-}
-
-
-
-// TODO remove the temporary test variables (used for logging)
-static float predictedNX;
-static float predictedNY;
-static float measuredNX;
-static float measuredNY;
-
-void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
-{
-  // Inclusion of flow measurements in the EKF done by two scalar updates
-
-  // ~~~ Camera constants ~~~
-  // The angle of aperture is guessed from the raw data register and thankfully look to be symmetric
-  float Npix = 30.0;                      // [pixels] (same in x and y)
-  //float thetapix = DEG_TO_RAD * 4.0f;     // [rad]    (same in x and y)
-  float thetapix = DEG_TO_RAD * 4.2f;
-  //~~~ Body rates ~~~
-  // TODO check if this is feasible or if some filtering has to be done
-  float omegax_b = gyro->x * DEG_TO_RAD;
-  float omegay_b = gyro->y * DEG_TO_RAD;
-
-  // ~~~ Moves the body velocity into the global coordinate system ~~~
-  // [bar{x},bar{y},bar{z}]_G = R*[bar{x},bar{y},bar{z}]_B
-  //
-  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
-  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
-  //
-  // where \hat{} denotes a basis vector, \dot{} denotes a derivative and
-  // _G and _B refer to the global/body coordinate systems.
-
-  // Modification 1
-  //dx_g = R[0][0] * S[KC_STATE_PX] + R[0][1] * S[KC_STATE_PY] + R[0][2] * S[KC_STATE_PZ];
-  //dy_g = R[1][0] * S[KC_STATE_PX] + R[1][1] * S[KC_STATE_PY] + R[1][2] * S[KC_STATE_PZ];
-
-
-  float dx_g = this->S[KC_STATE_PX];
-  float dy_g = this->S[KC_STATE_PY];
-  float z_g = 0.0;
-  // Saturate elevation in prediction and correction to avoid singularities
-  if ( this->S[KC_STATE_Z] < 0.1f ) {
-      z_g = 0.1;
-  } else {
-      z_g = this->S[KC_STATE_Z];
-  }
-
-  // ~~~ X velocity prediction and update ~~~
-  // predics the number of accumulated pixels in the x-direction
-  float omegaFactor = 1.25f;
-  float hx[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 Hx = {1, KC_STATE_DIM, hx};
-  predictedNX = (flow->dt * Npix / thetapix ) * ((dx_g * this->R[2][2] / z_g) - omegaFactor * omegay_b);
-  measuredNX = flow->dpixelx;
-
-  // derive measurement equation with respect to dx (and z?)
-  hx[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dx_g) / (-z_g * z_g));
-  hx[KC_STATE_PX] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
-
-  //First update
-  scalarUpdate(this, &Hx, measuredNX-predictedNX, flow->stdDevX);
-
-  // ~~~ Y velocity prediction and update ~~~
-  float hy[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 Hy = {1, KC_STATE_DIM, hy};
-  predictedNY = (flow->dt * Npix / thetapix ) * ((dy_g * this->R[2][2] / z_g) + omegaFactor * omegax_b);
-  measuredNY = flow->dpixely;
-
-  // derive measurement equation with respect to dy (and z?)
-  hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
-  hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
-
-  // Second update
-  scalarUpdate(this, &Hy, measuredNY-predictedNY, flow->stdDevY);
-}
-
-
-void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
-{
-  // Updates the filter with a measured distance in the zb direction using the
-  float h[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-
-  // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
-  if (fabs(this->R[2][2]) > 0.1 && this->R[2][2] > 0){
-    float angle = fabsf(acosf(this->R[2][2])) - DEG_TO_RAD * (15.0f / 2.0f);
-    if (angle < 0.0f) {
-      angle = 0.0f;
-    }
-    //float predictedDistance = S[KC_STATE_Z] / cosf(angle);
-    float predictedDistance = this->S[KC_STATE_Z] / this->R[2][2];
-    float measuredDistance = tof->distance; // [m]
-
-    //Measurement equation
-    //
-    // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
-    h[KC_STATE_Z] = 1 / this->R[2][2];
-    //h[KC_STATE_Z] = 1 / cosf(angle);
-
-    // Scalar update
-    scalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
-  }
-}
-
-void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t *error)
-{
-    float h[KC_STATE_DIM] = {0};
-    arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-
-    h[KC_STATE_D2] = 1;
-    scalarUpdate(this, &H, this->S[KC_STATE_D2] - error->yawError, error->stdDev);
-}
-
-void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t tick) {
-  // Rotate the sensor position from CF reference frame to global reference frame,
-  // using the CF roatation matrix
-  vec3d s;
-  arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
-  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
-  arm_matrix_instance_f32 s_ = {3, 1, s};
-  mat_mult(&Rcf_, &scf_, &s_);
-
-  // Get the current state values of the position of the crazyflie (global reference frame) and add the relative sensor pos
-  vec3d pcf = {this->S[KC_STATE_X] + s[0], this->S[KC_STATE_Y] + s[1], this->S[KC_STATE_Z] + s[2]};
-
-  // Calculate the difference between the rotor and the sensor on the CF (global reference frame)
-  const vec3d* pr = sweepInfo->rotorPos;
-  vec3d stmp = {pcf[0] - (*pr)[0], pcf[1] - (*pr)[1], pcf[2] - (*pr)[2]};
-  arm_matrix_instance_f32 stmp_ = {3, 1, stmp};
-
-  // Rotate the difference in position to the rotor reference frame,
-  // using the rotor inverse rotation matrix
-  vec3d sr;
-  arm_matrix_instance_f32 Rr_inv_ = {3, 3, (float32_t *)(*sweepInfo->rotorRotInv)};
-  arm_matrix_instance_f32 sr_ = {3, 1, sr};
-  mat_mult(&Rr_inv_, &stmp_, &sr_);
-
-  // The following computations are in the rotor refernece frame
-  const float x = sr[0];
-  const float y = sr[1];
-  const float z = sr[2];
-  const float t = sweepInfo->t;
-  const float tan_t = tanf(t);
-
-  const float r2 = x * x + y * y;
-  const float r = arm_sqrt(r2);
-
-  const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t, sweepInfo->calib);
-  const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
-  const float error = measuredSweepAngle - predictedSweepAngle;
-
-  if (outlierFilterValidateLighthouseSweep(&sweepOutlierFilterState, r, error, tick)) {
-    // Calculate H vector (in the rotor reference frame)
-    const float z_tan_t = z * tan_t;
-    const float qNum = r2 - z_tan_t * z_tan_t;
-    // Avoid singularity
-    if (qNum > 0.0001f) {
-      const float q = tan_t / arm_sqrt(qNum);
-      vec3d gr = {(-y - x * z * q) / r2, (x - y * z * q) / r2 , q};
-
-      // gr is in the rotor reference frame, rotate back to the global
-      // reference frame using the rotor rotation matrix
-      vec3d g;
-      arm_matrix_instance_f32 gr_ = {3, 1, gr};
-      arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot)};
-      arm_matrix_instance_f32 g_ = {3, 1, g};
-      mat_mult(&Rr_, &gr_, &g_);
-
-      float h[KC_STATE_DIM] = {0};
-      h[KC_STATE_X] = g[0];
-      h[KC_STATE_Y] = g[1];
-      h[KC_STATE_Z] = g[2];
-
-      arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-      scalarUpdate(this, &H, error, sweepInfo->stdDev);
-    }
-  }
+  kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], measNoiseBaro);
 }
 
 void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
@@ -1093,18 +755,6 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
   decoupleState(this, KC_STATE_Y);
   decoupleState(this, KC_STATE_PY);
 }
-
-// Stock log groups
-LOG_GROUP_START(kalman_pred)
-  LOG_ADD(LOG_FLOAT, predNX, &predictedNX)
-  LOG_ADD(LOG_FLOAT, predNY, &predictedNY)
-  LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
-  LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
-LOG_GROUP_STOP(kalman_pred)
-
-LOG_GROUP_START(outlierf)
-  LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
-LOG_GROUP_STOP(outlierf)
 
 PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_FLOAT, pNAcc_xy, &procNoiseAcc_xy)
