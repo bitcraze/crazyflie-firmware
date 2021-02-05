@@ -196,6 +196,14 @@
 #define PROPELLER_BALANCE_TEST_THRESHOLD  2.5f
 
 /**
+ * \def BAT_LOADING_SAG_THESHOLD
+ * This is the threshold for a battery and connector to pass. It loads the power path by spinning all 4 motors
+ * and measure the voltage sag. The threshold is very experimental and dependent on stock configuration. It is
+ * fairly constant over the battery voltage range but testing with fully changed battery is best.
+ */
+#define BAT_LOADING_SAG_THRESHOLD  0.95f
+
+/**
  * \def ACTIVATE_AUTO_SHUTDOWN
  * Will automatically shot of system if no radio activity
  */
