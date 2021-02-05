@@ -271,7 +271,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     }
   }
   //process RangingTable, compute, re-organize or doing nothing
-  olsrPrintRangingTableTuple(tuple);
+  //olsrPrintRangingTableTuple(tuple);
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     tuple->m_distance = olsrTsComputeDistance(tuple);
     distanceTowards[tuple->m_tsAddress] = tuple->m_distance;
@@ -1703,54 +1703,55 @@ void olsrTsTask(void *ptr) {
   }
 }
 
-void olsrSendTask(void *ptr)
-{
-    bool hasOlsrMessageCache =false;
-		TickType_t timeToWaitForSendQueue;
-    olsrMessage_t olsrMessageCache = {0};
-    //packet_t txPacket = {0};
-  	MAC80215_PACKET_INIT(txpacket, MAC802154_TYPE_OLSR);
-    dwm = (dwDevice_t *)ptr;
-    olsrPacket_t *olsrPacket = (olsrPacket_t*)txpacket.payload;
-    //task loop
-    while(true){
-      uint8_t *writePosition = olsrPacket->m_packetPayload;
-		  timeToWaitForSendQueue = portMAX_DELAY;
-      while(hasOlsrMessageCache || xQueueReceive(g_olsrSendQueue, &olsrMessageCache, timeToWaitForSendQueue)){
-				timeToWaitForSendQueue = 0;
-        hasOlsrMessageCache = false;
-        configASSERT(olsrMessageCache.m_messageHeader.m_messageSize <= MESSAGE_MAX_LENGTH);
-        if(olsrMessageCache.m_messageHeader.m_messageType!=TS_MESSAGE && 0==olsrMessageCache.m_messageHeader.m_timeToLive) 
-          continue;
-        if((writePosition-olsrPacket->m_packetPayload)+olsrMessageCache.m_messageHeader.m_messageSize>MESSAGE_MAX_LENGTH){
-          hasOlsrMessageCache = true;
-          break;
-        }
-        memcpy(writePosition,&olsrMessageCache,olsrMessageCache.m_messageHeader.m_messageSize);
-        writePosition += olsrMessageCache.m_messageHeader.m_messageSize;
-				if(olsrMessageCache.m_messageHeader.m_messageType==TS_MESSAGE) 
-						txpacket.fcf_s.reserved = 1;
+void olsrSendTask(void *ptr) {
+  bool hasOlsrMessageCache = false;
+  TickType_t timeToWaitForSendQueue;
+  olsrMessage_t olsrMessageCache = {0};
+  //packet_t txPacket = {0};
+  MAC80215_PACKET_INIT(txpacket, MAC802154_TYPE_OLSR);
+  dwm = (dwDevice_t *) ptr;
+  olsrPacket_t *olsrPacket = (olsrPacket_t *) txpacket.payload;
+  //task loop
+  while (true) {
+    uint8_t *writePosition = olsrPacket->m_packetPayload;
+    timeToWaitForSendQueue = portMAX_DELAY;
+    while (hasOlsrMessageCache || xQueueReceive(g_olsrSendQueue, &olsrMessageCache, timeToWaitForSendQueue)) {
+      timeToWaitForSendQueue = 0;
+      hasOlsrMessageCache = false;
+      configASSERT(olsrMessageCache.m_messageHeader.m_messageSize <= MESSAGE_MAX_LENGTH);
+      if (olsrMessageCache.m_messageHeader.m_messageType != TS_MESSAGE
+          && 0 == olsrMessageCache.m_messageHeader.m_timeToLive)
+        continue;
+      if ((writePosition - olsrPacket->m_packetPayload) + olsrMessageCache.m_messageHeader.m_messageSize
+          > MESSAGE_MAX_LENGTH) {
+        hasOlsrMessageCache = true;
+        break;
       }
-      ASSERT(writePosition-(uint8_t *)olsrPacket>sizeof(olsrPacketHeader_t));
-      olsrPacket->m_packetHeader.m_packetLength = writePosition-(uint8_t *)olsrPacket;
-      olsrPacket->m_packetHeader.m_packetSeq = getPacketSeqNumber();
-      olsrPrintPacket(&txpacket, "SEND");
-      //transmit
-      dwNewTransmit(dwm);
-      dwSetDefaults(dwm);
-      dwWaitForResponse(dwm, true);
-      dwReceivePermanently(dwm, true);
-      dwSetData(dwm, (uint8_t *)&txpacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
-      dwStartTransmit(dwm);
-      DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
+      memcpy(writePosition, &olsrMessageCache, olsrMessageCache.m_messageHeader.m_messageSize);
+      writePosition += olsrMessageCache.m_messageHeader.m_messageSize;
+      if (olsrMessageCache.m_messageHeader.m_messageType == TS_MESSAGE)
+        txpacket.fcf_s.reserved = 1;
     }
+    ASSERT(writePosition - (uint8_t *) olsrPacket > sizeof(olsrPacketHeader_t));
+    olsrPacket->m_packetHeader.m_packetLength = writePosition - (uint8_t *) olsrPacket;
+    olsrPacket->m_packetHeader.m_packetSeq = getPacketSeqNumber();
+    //olsrPrintPacket(&txpacket, "SEND");
+    //transmit
+    dwNewTransmit(dwm);
+    dwSetDefaults(dwm);
+    dwWaitForResponse(dwm, true);
+    dwReceivePermanently(dwm, true);
+    dwSetData(dwm, (uint8_t *) &txpacket, MAC802154_HEADER_LENGTH + olsrPacket->m_packetHeader.m_packetLength);
+    dwStartTransmit(dwm);
+    DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n", MAC802154_HEADER_LENGTH + olsrPacket->m_packetHeader.m_packetLength);
+  }
 }
 void olsrRecvTask(void *ptr) {
   DEBUG_PRINT_OLSR_RECEIVE("RECV TASK START\n");
   //packet_t recvPacket;
   while(xQueueReceive(g_olsrRecvQueue,&rxPacketWts,portMAX_DELAY)){
     DEBUG_PRINT_OLSR_SYSTEM("RECV FROM QUEUE\n");
-    olsrPrintPacket(&rxPacketWts.pkt, "RECV");
+    //olsrPrintPacket(&rxPacketWts.pkt, "RECV");
 		DEBUG_PRINT_OLSR_RECEIVE("Arrival timestamp %llu\n", rxPacketWts.ots.m_timestamp.full);
     olsrPacketDispatch(&rxPacketWts);
   }

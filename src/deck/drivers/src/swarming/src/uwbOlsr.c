@@ -112,13 +112,13 @@ static void olsrTaskInit(dwDevice_t *dev)
 {
     DEBUG_PRINT_OLSR_SYSTEM("TASK_INIT");
     // olsrPacketLossTaskInit();
-    //olsrHelloTaskInit();
-    //olsrTcTaskInit();
+    olsrHelloTaskInit();
+    olsrTcTaskInit();
     olsrTsTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
     // olsrAppTaskInit();
-    //initSimTopology();
+    initSimTopology();
 }
 
 static void olsrInit(dwDevice_t *dev) 

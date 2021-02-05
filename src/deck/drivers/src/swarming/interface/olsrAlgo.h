@@ -7,7 +7,7 @@
 #define OLSR_HELLO_INTERVAL 2000
 #define OLSR_NEIGHB_HOLD_TIME (3*OLSR_HELLO_INTERVAL)
 #define OLSR_TC_INTERVAL 5000
-#define TS_INTERVAL 200 //must be in range: 20 - 500
+#define TS_INTERVAL 20 //must be in range: 20 - 500
 #define TS_INTERVAL_MIN 20 //default 20
 #define TS_INTERVAL_MAX 500 //default 500
 #define TS_OTSPOOL_MAXSIZE (4*TS_INTERVAL_MAX/TS_INTERVAL)
