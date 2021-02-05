@@ -220,6 +220,7 @@ void healthRunTests(sensorData_t *sensors)
   {
     if (i == 0)
     {
+      batteryPass = 0;
       minLoadedVoltage = idleVoltage = pmGetBatteryVoltage();
     }
     if (i == 1)
@@ -263,11 +264,13 @@ void healthRunTests(sensorData_t *sensors)
     {
       DEBUG_PRINT("Battery sag during load test (%.2f > %.2f) [FAILED].\n", (double)batterySag,
                   (double)(BAT_LOADING_SAG_THRESHOLD));
+      batteryPass = 0;
     }
     else
     {
       DEBUG_PRINT("Idle:%.2fV sag: %.2fV (< %.2fV) [OK]\n", (double)idleVoltage,
                   (double)(batterySag), (double)(BAT_LOADING_SAG_THRESHOLD));
+      batteryPass = 1;
     }
     testState = testDone;
   }
