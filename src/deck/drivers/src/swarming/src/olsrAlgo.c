@@ -1461,10 +1461,14 @@ olsrTime_t olsrSendTs() {
   uint8_t *msgPtrEnd = (uint8_t *) &tsMsg + MESSAGE_MAX_LENGTH;
   int sendUnitNumber = 0;
   olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr;
-  DEBUG_PRINT_OLSR_TS("before clear expire, table size : %d \n", olsrRangingTable.size);
+  //DEBUG_PRINT_OLSR_TS("before clear expire, table size : %d \n", olsrRangingTable.size);
   olsrRangingTableClearExpire(&olsrRangingTable);
-  DEBUG_PRINT_OLSR_TS("after clear expire, table size : %d \n", olsrRangingTable.size);
-//  olsrSortRangingTable(&olsrRangingTable);
+  //DEBUG_PRINT_OLSR_TS("after clear expire, table size : %d \n", olsrRangingTable.size);
+  DEBUG_PRINT_OLSR_TS("before sort rangingtable \n");
+  olsrPrintRangingTable(&olsrRangingTable);
+  olsrSortRangingTable(&olsrRangingTable);
+  DEBUG_PRINT_OLSR_TS("after sort rangingtable \n");
+  olsrPrintRangingTable(&olsrRangingTable);
   //DEBUG_PRINT_OLSR_TS("Re: %llu \n", olsrRangingTable.setData[olsrRangingTable.fullQueueEntry].data.Re.m_timestamp.full);
   for (setIndex_t index = olsrRangingTable.fullQueueEntry; index != -1; index = olsrRangingTable.setData[index].next) {
     olsrRangingTableItem_t *t = &olsrRangingTable.setData[index];
@@ -1485,7 +1489,7 @@ olsrTime_t olsrSendTs() {
       sendUnitNumber++;
     }
     jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
-    jitter = 0;//TODO remove after debug
+//    jitter = 0;//TODO remove after debug
     t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period + jitter;
     if (t->data.m_nextDeliveryTime < nextSendTime) {
       nextSendTime = t->data.m_nextDeliveryTime;
