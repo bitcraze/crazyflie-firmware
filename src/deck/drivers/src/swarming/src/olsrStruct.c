@@ -1187,16 +1187,22 @@ bool olsrDelRangingTupleByAddr(olsrRangingTable_t *rangingTable, setIndex_t addr
 }
 
 bool olsrRangingTableClearExpire(olsrRangingTable_t *rangingTable) {
-  setIndex_t next = -1;
+  setIndex_t candidate = rangingTable->fullQueueEntry;
+  olsrTime_t now = xTaskGetTickCount();
   bool isChange = false;
-  for (setIndex_t i = rangingTable->fullQueueEntry; i != -1; i = next) {
-    next = rangingTable->setData[i].next;
-    if (rangingTable->setData[i].data.m_expiration <= xTaskGetTickCount()) {
-      isChange = olsrDelRangingTupleByAddr(rangingTable, rangingTable->setData[i].data.m_tsAddress);
-      if (isChange) {
-        DEBUG_PRINT_OLSR_TS("neighbor %u expiration occurred!\n", rangingTable->setData[i].data.m_tsAddress);
-      }
+  while(candidate != -1)
+  {
+    olsrRangingTableItem_t tmp = rangingTable->setData[candidate];
+    if(tmp.data.m_expiration < now)
+    {
+      setIndex_t nextIt = tmp.next;
+      DEBUG_PRINT_OLSR_TS("neighbor %u expiration occurred!\n", rangingTable->setData[candidate].data.m_tsAddress);
+      olsrRangingTableFree(rangingTable, candidate);
+      candidate = nextIt;
+      isChange = true;
+      continue;
     }
+    candidate = tmp.next;
   }
   return isChange;
 }
