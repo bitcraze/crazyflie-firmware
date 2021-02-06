@@ -6,24 +6,26 @@
 // Use to set up expectations for one call to kalmanCoreScalarUpdate(). This helper does not support multiple calls.
 
 // Storage for expected values
-static const kalmanCoreData_t* kcsus_expectedThis;
-static float kcsus_expectedHm[KC_STATE_DIM];
-static float kcsus_expectedError;
-static float kcsus_expectedStdMeasNoise;
+const kalmanCoreData_t* kcsus_expectedThis;
+float kcsus_expectedHm[KC_STATE_DIM];
+float kcsus_expectedError;
+float kcsus_expectedStdMeasNoise;
+float kcsus_scalarUpadateWasCalled;
 
-static void mock_kalmanCoreScalarUpdate_callback(kalmanCoreData_t* actualThis, arm_matrix_instance_f32* actualHm, float actualError, float actualStdMeasNoise, int cmock_num_calls);
+void mock_kalmanCoreScalarUpdate_callback(kalmanCoreData_t* actualThis, arm_matrix_instance_f32* actualHm, float actualError, float actualStdMeasNoise, int cmock_num_calls);
 
 // Inti the mock with default (unlikely) values
-static void initKalmanCoreScalarUpdateExpectationsSingleCall() {
+void initKalmanCoreScalarUpdateExpectationsSingleCall() {
   kcsus_expectedThis = (void*)0;
   memset(kcsus_expectedHm, 0, sizeof(kcsus_expectedHm));
   kcsus_expectedError = 1234567890.0f;
   kcsus_expectedStdMeasNoise = 987654321.0f;
+  kcsus_scalarUpadateWasCalled = false;
 }
 
 // Call this fkn to set expected values for the mock
 // Note: expectedHm is a pure c float vector, not arm_matrix_instance_f32 to make life somple.
-static void setKalmanCoreScalarUpdateExpectationsSingleCall(const kalmanCoreData_t* expectedThis, const float* expectedHm, const float expectedError, const float expectedStdMeasNoise) {
+void setKalmanCoreScalarUpdateExpectationsSingleCall(const kalmanCoreData_t* expectedThis, const float* expectedHm, const float expectedError, const float expectedStdMeasNoise) {
   kcsus_expectedThis = expectedThis;
   memcpy(kcsus_expectedHm, expectedHm, sizeof(kcsus_expectedHm));
   kcsus_expectedError = expectedError;
@@ -33,7 +35,8 @@ static void setKalmanCoreScalarUpdateExpectationsSingleCall(const kalmanCoreData
 }
 
 // Callback doing the validation work
-static void mock_kalmanCoreScalarUpdate_callback(kalmanCoreData_t* actualThis, arm_matrix_instance_f32* actualHm, float actualError, float actualStdMeasNoise, int cmock_num_calls) {
+void mock_kalmanCoreScalarUpdate_callback(kalmanCoreData_t* actualThis, arm_matrix_instance_f32* actualHm, float actualError, float actualStdMeasNoise, int cmock_num_calls) {
+  kcsus_scalarUpadateWasCalled = true;
   TEST_ASSERT_EQUAL_INT_MESSAGE(0, cmock_num_calls, "Only expect one call");
   TEST_ASSERT_EQUAL_PTR_MESSAGE(kcsus_expectedThis, actualThis, "Unexpected this pointer");
 
@@ -46,4 +49,12 @@ static void mock_kalmanCoreScalarUpdate_callback(kalmanCoreData_t* actualThis, a
 
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(kcsus_expectedError, actualError, "Unexpected value of error");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(kcsus_expectedStdMeasNoise, actualStdMeasNoise, "Unexpected value of stdMeasNoise");
+}
+
+void assertScalarUpdateWasCalled() {
+  TEST_ASSERT_TRUE_MESSAGE(kcsus_scalarUpadateWasCalled, "kalmanCoreScalarUpdate() was never called");
+}
+
+void assertScalarUpdateWasNotCalled() {
+  TEST_ASSERT_FALSE_MESSAGE(kcsus_scalarUpadateWasCalled, "kalmanCoreScalarUpdate() got an unexpected call");
 }

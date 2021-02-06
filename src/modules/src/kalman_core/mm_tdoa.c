@@ -25,9 +25,10 @@
 
 #include "mm_tdoa.h"
 #include "outlierFilter.h"
+#include "test_support.h"
 
 // TODO krri What is this used for? Do we still need it?
-static uint32_t tdoaCount = 0;
+TESTABLE_STATIC uint32_t tdoaCount = 0;
 
 void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
 {
