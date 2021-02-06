@@ -181,11 +181,12 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
   diff1 = tRound1 - tReply1;
   diff2 = tRound2 - tReply2;
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
-
+  bool isErrorOccurred = false;
   if (tprop_ctn < -100 || tprop_ctn > 900) {
     DEBUG_PRINT_OLSR_TS("tprop_ctn < -100 || tprop_ctn > 900\n");
     //olsrPrintRangingTableTuple(tuple);
     g_ts_compute_error++;
+    isErrorOccurred = true;
   }
 
   //update RangingTable
@@ -200,6 +201,9 @@ int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
   tuple->Tf.m_timestamp.full = 0;
   tuple->Rr = tuple->Re;
   tuple->Tr.m_timestamp.full = 0;
+  if (isErrorOccurred) {
+    return tuple->m_distance;
+  }
   return (int16_t) tprop_ctn * 0.4691763978616; //in centimeter
 }
 
