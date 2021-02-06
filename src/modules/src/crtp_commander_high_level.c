@@ -393,7 +393,7 @@ void crtpCommanderHighLevelTask(void * prm)
     //answer
     p.data[3] = ret;
     p.size = 4;
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
   }
 }
 
