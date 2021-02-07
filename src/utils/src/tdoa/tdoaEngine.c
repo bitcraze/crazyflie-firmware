@@ -65,11 +65,6 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->matching.offset = 0;
 }
 
-#define TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
-static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
-  return fullTimeStamp & TRUNCATE_TO_ANCHOR_TS_BITMAP;
-}
-
 static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff, tdoaEngineState_t* engineState) {
   tdoaStats_t* stats = &engineState->stats;
 
@@ -101,7 +96,7 @@ static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t 
   const int64_t latest_txAn_in_cl_An = tdoaStorageGetTxTime(anchorCtx);
 
   if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
-    double clockCorrectionCandidate = clockCorrectionEngineCalculate(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TRUNCATE_TO_ANCHOR_TS_BITMAP);
+    double clockCorrectionCandidate = clockCorrectionEngineCalculate(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP);
     sampleIsReliable = clockCorrectionEngineUpdate(tdoaStorageGetClockCorrectionStorage(anchorCtx), clockCorrectionCandidate);
 
     if (sampleIsReliable){
@@ -124,8 +119,8 @@ static int64_t calcTDoA(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnc
 
   const int64_t rxAr_by_T_in_cl_T = tdoaStorageGetRxTime(otherAnchorCtx);
 
-  const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
-  const int64_t timeDiffOfArrival_in_cl_T =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) - delta_txAr_to_txAn_in_cl_An  * clockCorrection;
+  const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + tdoaEngineTruncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
+  const int64_t timeDiffOfArrival_in_cl_T =  tdoaEngineTruncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) - delta_txAr_to_txAn_in_cl_An  * clockCorrection;
 
   return timeDiffOfArrival_in_cl_T;
 }
