@@ -37,7 +37,7 @@ void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t
 void tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const bool doExcludeId, const uint8_t excludedId);
 
 #define TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
-inline uint64_t tdoaEngineTruncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
+static inline uint64_t tdoaEngineTruncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP;
 }
 
