@@ -571,8 +571,13 @@ TESTABLE_STATIC void initializeCalibDataFromStorage() {
   }
 }
 
+static uint8_t pulseProcessorAnglesQualityLogger(uint32_t timestamp, void* ignored) {
+  return pulseProcessorAnglesQuality();
+}
+static logByFunction_t pulseProcessorAnglesQualityLoggerDef = {.acquireUInt8 = pulseProcessorAnglesQualityLogger, .data = 0};
+
 LOG_GROUP_START(lighthouse)
-LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQuality)
+LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQualityLoggerDef)
 
 LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[0])
 LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[1])
