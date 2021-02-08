@@ -271,20 +271,27 @@ static uint8_t  usbd_cf_SOF (void *pdev)
   */
 static uint8_t  usbd_cf_DataOut (void *pdev, uint8_t epnum)
 {
+  uint8_t result;
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   /* Get the received data buffer and update the counter */
   inPacket.size = ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
 
-  xQueueSendFromISR(usbDataRx, &inPacket, &xHigherPriorityTaskWoken);
+  if (xQueueSendFromISR(usbDataRx, &inPacket, &xHigherPriorityTaskWoken) == pdTRUE) {
+    result = USBD_OK;
+  } else {
+    result = USBD_BUSY;
+  }
 
-  /* Prepare Out endpoint to receive next packet */
-  DCD_EP_PrepareRx(pdev,
-                   OUT_EP,
-                   (uint8_t*)(inPacket.data),
-                   USB_RX_TX_PACKET_SIZE);
+  if (!xQueueIsQueueFullFromISR(usbDataRx)) {
+    /* Prepare Out endpoint to receive next packet */
+    DCD_EP_PrepareRx(pdev,
+                     OUT_EP,
+                     (uint8_t*)(inPacket.data),
+                     USB_RX_TX_PACKET_SIZE);
+  }
 
-  return USBD_OK;
+  return result;
 }
 
 /**
@@ -397,6 +404,18 @@ bool usbGetDataBlocking(USBPacket *in)
 {
   while (xQueueReceive(usbDataRx, in, portMAX_DELAY) != pdTRUE)
     ; // Don't return until we get some data on the USB
+
+  // TO DISCUSS:
+  // 1. Is it safe to call this function here, given that usbGetDataBlocking
+  //    is called from a different task?
+  // 2. Is it OK to call this uncondtionally, i.e., even if the queue might
+  //    not have been full?
+  /* Prepare Out endpoint to receive next packet */
+  DCD_EP_PrepareRx(&USB_OTG_dev,
+                   OUT_EP,
+                   (uint8_t*)(inPacket.data),
+                   USB_RX_TX_PACKET_SIZE);
+
   return true;
 }
 
