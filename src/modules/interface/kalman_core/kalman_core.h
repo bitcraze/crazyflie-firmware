@@ -51,8 +51,7 @@
  * ============================================================================
  */
 
-#ifndef __KALMAN_CORE_H__
-#define __KALMAN_CORE_H__
+#pragma once
 
 #include "cf_math.h"
 #include "stabilizer_types.h"
@@ -104,33 +103,6 @@ void kalmanCoreInit(kalmanCoreData_t* this);
 // Barometer
 void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIsFlying);
 
-// Absolute height measurement along the room Z
-void kalmanCoreUpdateWithAbsoluteHeight(kalmanCoreData_t* this, heightMeasurement_t* height);
-
-// Direct measurements of Crazyflie position
-void kalmanCoreUpdateWithPosition(kalmanCoreData_t* this, positionMeasurement_t *xyz);
-
-// Direct measurements of Crazyflie pose
-void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose);
-
-// Distance-to-point measurements
-void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t *d);
-
-// Measurements of a UWB Tx/Rx
-void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);
-
-// Measurements of flow (dnx, dny)
-void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro);
-
-// Measurements of TOF from laser sensor
-void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof);
-
-// Measurement of yaw error (outside measurement Vs current estimation)
-void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t *error);
-
-// Measurement of sweep angles from a Lighthouse base station
-void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t tick);
-
 /**
  * Primary Kalman filter functions
  *
@@ -148,4 +120,4 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 
 void kalmanCoreDecoupleXY(kalmanCoreData_t* this);
 
-#endif // __KALMAN_CORE_H__
+void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise);

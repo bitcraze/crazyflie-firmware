@@ -102,6 +102,8 @@
 #define ACTIVE_MARKER_TASK_PRI  3
 #define AI_DECK_TASK_PRI        3
 #define UART2_TASK_PRI          3
+#define CRTP_SRV_TASK_PRI       0
+#define PLATFORM_SRV_TASK_PRI   0
 
 // Not compiled
 #if 0
@@ -150,6 +152,8 @@
 #define AI_DECK_GAP_TASK_NAME   "AI-DECK-GAP"
 #define AI_DECK_NINA_TASK_NAME  "AI-DECK-NINA"
 #define UART2_TASK_NAME         "UART2"
+#define CRTP_SRV_TASK_NAME      "CRTP-SRV"
+#define PLATFORM_SRV_TASK_NAME  "PLATFORM-SRV"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
@@ -182,6 +186,8 @@
 #define ACTIVEMARKER_TASK_STACKSIZE   configMINIMAL_STACK_SIZE
 #define AI_DECK_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 #define UART2_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
+#define CRTP_SRV_TASK_STACKSIZE       configMINIMAL_STACK_SIZE
+#define PLATFORM_SRV_TASK_STACKSIZE   configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80
@@ -194,6 +200,14 @@
  * when the propeller is spinning.
  */
 #define PROPELLER_BALANCE_TEST_THRESHOLD  2.5f
+
+/**
+ * \def BAT_LOADING_SAG_THESHOLD
+ * This is the threshold for a battery and connector to pass. It loads the power path by spinning all 4 motors
+ * and measure the voltage sag. The threshold is very experimental and dependent on stock configuration. It is
+ * fairly constant over the battery voltage range but testing with fully changed battery is best.
+ */
+#define BAT_LOADING_SAG_THRESHOLD  0.95f
 
 /**
  * \def ACTIVATE_AUTO_SHUTDOWN

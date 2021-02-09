@@ -154,27 +154,27 @@ TESTABLE_STATIC void initializeCalibDataFromStorage();
 // LED timer
 static xTimerHandle timer;
 static StaticTimer_t timerBuffer;
-static uint8_t ledInternalStatus = 2;
+static lhSystemStatus_t ledInternalStatus = statusToEstimator;
 
 static void ledTimer(xTimerHandle timer)
 {
   switch (systemStatus)
   {
-    case 0:
-      if(ledInternalStatus != systemStatus)
-      {
-        lighthouseCoreSetLeds(lh_led_on, lh_led_off, lh_led_off);
-        ledInternalStatus = systemStatus;
-      }
-      break;
-    case 1: 
+    case statusNotReceiving:
       if(ledInternalStatus != systemStatus)
       {
         lighthouseCoreSetLeds(lh_led_off, lh_led_on, lh_led_off);
         ledInternalStatus = systemStatus;
       }
       break;
-    case 2:
+    case statusMissingData: 
+      if(ledInternalStatus != systemStatus)
+      {
+        lighthouseCoreSetLeds(lh_led_off, lh_led_slow_blink, lh_led_off);
+        ledInternalStatus = systemStatus;
+      }
+      break;
+    case statusToEstimator:
       if(ledInternalStatus != systemStatus)
       {
         lighthouseCoreSetLeds(lh_led_off, lh_led_off, lh_led_on);
@@ -571,8 +571,13 @@ TESTABLE_STATIC void initializeCalibDataFromStorage() {
   }
 }
 
+static uint8_t pulseProcessorAnglesQualityLogger(uint32_t timestamp, void* ignored) {
+  return pulseProcessorAnglesQuality();
+}
+static logByFunction_t pulseProcessorAnglesQualityLoggerDef = {.acquireUInt8 = pulseProcessorAnglesQualityLogger, .data = 0};
+
 LOG_GROUP_START(lighthouse)
-LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQuality)
+LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQualityLoggerDef)
 
 LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[0])
 LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[1])
