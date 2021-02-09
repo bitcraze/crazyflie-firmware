@@ -79,3 +79,5 @@ typedef enum {
  * @param green State of the green LED
  */
 void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green);
+
+void ledTimer();

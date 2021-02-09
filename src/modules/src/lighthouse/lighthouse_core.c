@@ -28,7 +28,6 @@
 #include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "timers.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -92,6 +91,7 @@ static uint16_t baseStationActiveMap;
 // An overall system status indicating if data is sent to the estimator
 static lhSystemStatus_t systemStatus;
 static lhSystemStatus_t systemStatusWs;
+static lhSystemStatus_t ledInternalStatus = statusToEstimator;
 
 static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
 static uint32_t nextUpdateTimeOfSystemStatus = 0;
@@ -150,46 +150,43 @@ static baseStationGeometry_t geoBuffer;
 TESTABLE_STATIC void initializeGeoDataFromStorage();
 static lighthouseCalibration_t calibBuffer;
 TESTABLE_STATIC void initializeCalibDataFromStorage();
+static bool deckIsFlashed = false;
 
-// LED timer
-static xTimerHandle timer;
-static StaticTimer_t timerBuffer;
-static lhSystemStatus_t ledInternalStatus = statusToEstimator;
-
-static void ledTimer(xTimerHandle timer)
-{
-  switch (systemStatus)
-  {
-    case statusNotReceiving:
-      if(ledInternalStatus != systemStatus)
-      {
-        lighthouseCoreSetLeds(lh_led_off, lh_led_on, lh_led_off);
-        ledInternalStatus = systemStatus;
-      }
-      break;
-    case statusMissingData: 
-      if(ledInternalStatus != systemStatus)
-      {
-        lighthouseCoreSetLeds(lh_led_off, lh_led_slow_blink, lh_led_off);
-        ledInternalStatus = systemStatus;
-      }
-      break;
-    case statusToEstimator:
-      if(ledInternalStatus != systemStatus)
-      {
-        lighthouseCoreSetLeds(lh_led_off, lh_led_off, lh_led_on);
-        ledInternalStatus = systemStatus;
-      }
-      break;
-    default:
-      ASSERT(false);
-  } 
-}
 
 void lighthouseCoreInit() {
   lighthousePositionEstInit();
-  timer = xTimerCreateStatic("ledTimer", M2T(FIFTH_SECOND), pdTRUE,
-    NULL, ledTimer, &timerBuffer);
+}
+
+void ledTimer()
+{
+  if (deckIsFlashed){
+    switch (systemStatus)
+    {
+      case statusNotReceiving:
+        if(ledInternalStatus != systemStatus)
+        {
+          lighthouseCoreSetLeds(lh_led_off, lh_led_on, lh_led_off);
+          ledInternalStatus = systemStatus;
+        }
+        break;
+      case statusMissingData: 
+        if(ledInternalStatus != systemStatus)
+        {
+          lighthouseCoreSetLeds(lh_led_off, lh_led_slow_blink, lh_led_off);
+          ledInternalStatus = systemStatus;
+        }
+        break;
+      case statusToEstimator:
+        if(ledInternalStatus != systemStatus)
+        {
+          lighthouseCoreSetLeds(lh_led_off, lh_led_off, lh_led_on);
+          ledInternalStatus = systemStatus;
+        }
+        break;
+      default:
+        ASSERT(false);
+    } 
+  }
 }
 
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
@@ -449,10 +446,10 @@ void lighthouseCoreTask(void *param) {
   initializeCalibDataFromStorage();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
+  deckIsFlashed = true;
+
 
   vTaskDelay(M2T(100));
-
-  xTimerStart(timer, M2T(0));
 
   memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
 

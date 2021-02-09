@@ -35,7 +35,7 @@ initializeCalibDataFromStorage();
 // Dummy mocks timer
 uint32_t xTaskGetTickCount() {return 0;}
 void vTaskDelay(const uint32_t ignore) {}
-struct tmrTimerControl; 
+/*struct tmrTimerControl; 
 typedef struct tmrTimerControl * TimerHandle_t;
 int timerBuffer;
 int timer;
@@ -50,7 +50,9 @@ short xTimerGenericCommand( TimerHandle_t xTimer,
                                   const short xCommandID,
                                   const uint32_t xOptionalValue,
                                   short * const pxHigherPriorityTaskWoken,
-                                  const uint32_t xTicksToWait ) {return 0;}
+                                  const uint32_t xTicksToWait ) {return 0;}*/
+void initLedTimer() {}
+void startLedTimer() {}
 
 
 static int nrOfCallsToStorageFetchForCalib = 0;
