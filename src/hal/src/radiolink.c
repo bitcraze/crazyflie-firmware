@@ -43,6 +43,7 @@
 #include "ledseq.h"
 #include "queuemonitor.h"
 #include "static_mem.h"
+#include "cfassert.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
 #define RADIOLINK_CRTP_QUEUE_SIZE (5)
@@ -159,8 +160,8 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
-    // Block, since we should never drop a packet
-    xQueueSend(crtpPacketDelivery, &slp->length, portMAX_DELAY);
+    // Assert that we are not dopping any packets
+    ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
     ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
