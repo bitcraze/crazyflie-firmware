@@ -35,23 +35,6 @@ initializeCalibDataFromStorage();
 // Dummy mocks timer
 uint32_t xTaskGetTickCount() {return 0;}
 void vTaskDelay(const uint32_t ignore) {}
-struct tmrTimerControl; 
-typedef struct tmrTimerControl * TimerHandle_t;
-int timerBuffer;
-int timer;
-void xTimerStart(int ignore, uint32_t ignore1 ) {}
-int xTimerCreateStatic( const char * const pcTimerName, 
-                                    uint32_t xTimerPeriodInTicks,
-                                    const unsigned long uxAutoReload,
-                                    void * const pvTimerID,
-                                    int ignore1,
-                                    int ignore2) {return 0;}
-short xTimerGenericCommand( TimerHandle_t xTimer,
-                                  const short xCommandID,
-                                  const uint32_t xOptionalValue,
-                                  short * const pxHigherPriorityTaskWoken,
-                                  const uint32_t xTicksToWait ) {return 0;}
-
 
 static int nrOfCallsToStorageFetchForCalib = 0;
 static size_t mockStorageFetchForCalib(char* key, void* buffer, size_t length, int cmock_num_calls);
