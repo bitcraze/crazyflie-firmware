@@ -507,6 +507,42 @@ void testThatRemoteRxTimeReplacesTheOldestEntryWhenStorageIsFull() {
   TEST_ASSERT_EQUAL_INT64(0, actualReplaced);
 }
 
+void testThatRemoteRxTimeAndSequenceNumberIsReturned() {
+  // Fixture
+  tdoaAnchorContext_t context;
+  tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
+
+  const uint8_t remoteAnchor = 17;
+  const uint8_t expectedRemoteSeqNr = 13;
+  const int64_t expectedRemoteRxTime = 4711;
+  tdoaStorageSetRemoteRxTime(&context, remoteAnchor, expectedRemoteRxTime, expectedRemoteSeqNr);
+
+  // Test
+  int64_t actualRxTime = 0l;
+  uint8_t actualSeqNr = 0;
+  bool actual = tdoaStorageGetRemoteRxTimeSeqNr(&context, remoteAnchor, &actualRxTime, &actualSeqNr);
+
+  // Assert
+  TEST_ASSERT_TRUE(actual);
+  TEST_ASSERT_EQUAL_INT64(expectedRemoteRxTime, actualRxTime);
+  TEST_ASSERT_EQUAL_INT8(expectedRemoteSeqNr, actualSeqNr);
+}
+
+void testThatRemoteRxTimeAndSequenceNumberIsNotReturnedWhenNotInList() {
+  // Fixture
+  tdoaAnchorContext_t context;
+  tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
+
+  const uint8_t remoteAnchor = 17;
+
+  // Test
+  int64_t actualRxTime = 0l;
+  uint8_t actualSeqNr = 0;
+  bool actual = tdoaStorageGetRemoteRxTimeSeqNr(&context, remoteAnchor, &actualRxTime, &actualSeqNr);
+
+  // Assert
+  TEST_ASSERT_FALSE(actual);
+}
 
 void testThatAListOfSequenceNumbersAndIdsOfRemoteAnchorsIsReturned() {
   // Fixture

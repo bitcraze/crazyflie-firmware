@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,11 +29,12 @@
 
 /* FreeRtos includes */
 #include "FreeRTOS.h"
+#include "task.h"
 
 #include "crtp.h"
 #include "crtpservice.h"
+#include "static_mem.h"
 
-static bool isInit=false;
 
 typedef enum {
   linkEcho   = 0x00,
@@ -41,15 +42,19 @@ typedef enum {
   linkSink   = 0x02,
 } LinkNbr;
 
-void crtpserviceHandler(CRTPPacket *p);
+
+static bool isInit=false;
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpSrvTask, CRTP_SRV_TASK_STACKSIZE);
+
+static void crtpSrvTask(void*);
 
 void crtpserviceInit(void)
 {
   if (isInit)
     return;
 
-  // Register a callback to service the Link port
-  crtpRegisterPortCB(CRTP_PORT_LINK, crtpserviceHandler);
+  //Start the task
+  STATIC_MEM_TASK_CREATE(crtpSrvTask, crtpSrvTask, CRTP_SRV_TASK_NAME, NULL, CRTP_SRV_TASK_PRI);
 
   isInit = true;
 }
@@ -59,23 +64,31 @@ bool crtpserviceTest(void)
   return isInit;
 }
 
-void crtpserviceHandler(CRTPPacket *p)
+static void crtpSrvTask(void* prm)
 {
-  switch (p->channel)
-  {
-    case linkEcho:
-      crtpSendPacket(p);
-      break;
-    case linkSource:
-      p->size = CRTP_MAX_DATA_SIZE;
-      bzero(p->data, CRTP_MAX_DATA_SIZE);
-      strcpy((char*)p->data, "Bitcraze Crazyflie");
-      crtpSendPacket(p);
-      break;
-    case linkSink:
-      /* Ignore packet */
-      break;
-    default:
-      break;
+  static CRTPPacket p;
+
+  crtpInitTaskQueue(CRTP_PORT_LINK);
+
+  while(1) {
+    crtpReceivePacketBlock(CRTP_PORT_LINK, &p);
+
+    switch (p.channel)
+    {
+      case linkEcho:
+        crtpSendPacketBlock(&p);
+        break;
+      case linkSource:
+        p.size = CRTP_MAX_DATA_SIZE;
+        bzero(p.data, CRTP_MAX_DATA_SIZE);
+        strcpy((char*)p.data, "Bitcraze Crazyflie");
+        crtpSendPacketBlock(&p);
+        break;
+      case linkSink:
+        /* Ignore packet */
+        break;
+      default:
+        break;
+    }
   }
 }
