@@ -367,7 +367,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     else
     {
       rxState = waitForFirstStart; //Checksum error
-      IF_DEBUG_ASSERT(0);
+      ASSERT(0);
     }
     break;
   case waitForChksum2:
@@ -380,13 +380,13 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       }
       else
       {
-        IF_DEBUG_ASSERT(0); // Queue overflow
+        ASSERT(0); // Queue overflow
       }
     }
     else
     {
       rxState = waitForFirstStart; //Checksum error
-      IF_DEBUG_ASSERT(0);
+      ASSERT(0);
     }
     rxState = waitForFirstStart;
     break;
