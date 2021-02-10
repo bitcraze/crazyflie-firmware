@@ -8,7 +8,7 @@
 #
 #  Crazyflie control firmware
 #
-#  Copyright (C) 2020 Bitcraze AB
+#  Copyright (C) 2020 - 2021 Bitcraze AB
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -54,6 +54,9 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.mem import LighthouseBsGeometry
 from cflib.crazyflie.mem import MemoryElement
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
+from cflib.localization.lighthouse_bs_geo import LighthouseBsGeoEstimator
+from cflib.localization.lighthouse_bs_vector import LighthouseBsVector
+
 
 # Number of sample to accumulate for the geometry calculation
 N_SAMPLE = 50
@@ -113,167 +116,16 @@ def read_sensors(scf: SyncCrazyflie):
                     measurements[basestation]["count"]
 
     # Reorganize data to be used by the geometry functions
-    sensor_sweeps = {}
+    sensor_vectors = {}
     for bs in measurements:
-        sensor_sweeps[bs] = ([[0, 0], [0, 0], [0, 0], [0, 0]])
+        sensor_vectors[bs] = ([None, None, None, None])
         for sensor in range(4):
-            for axis in range(2):
-                sensor_sweeps[bs][sensor][axis] = \
-                    measurements[bs]["sensors"][axis][sensor]
+            horiz_angle = measurements[bs]["sensors"][0][sensor]
+            vertical_angle = measurements[bs]["sensors"][1][sensor]
+            bs_vector = LighthouseBsVector(horiz_angle, vertical_angle)
+            sensor_vectors[bs][sensor] = bs_vector
 
-    return sensor_sweeps
-
-
-# Create a hash from a vector with sensor ids
-def hash_sensor_order(order):
-    hash = 0
-    for i in range(4):
-        hash += order[i] * 4 ** i
-    return hash
-
-
-def estimate_yaw_to_base_station(sensor_sweeps):
-    direction = {
-        hash_sensor_order([2, 0, 1, 3]): math.radians(0),
-        hash_sensor_order([2, 0, 3, 1]): math.radians(25),
-        hash_sensor_order([2, 3, 0, 1]): math.radians(65),
-        hash_sensor_order([3, 2, 0, 1]): math.radians(90),
-        hash_sensor_order([3, 2, 1, 0]): math.radians(115),
-        hash_sensor_order([3, 1, 2, 0]): math.radians(155),
-        hash_sensor_order([1, 3, 2, 0]): math.radians(180),
-        hash_sensor_order([1, 3, 0, 2]): math.radians(205),
-        hash_sensor_order([1, 0, 3, 2]): math.radians(245),
-        hash_sensor_order([0, 1, 3, 2]): math.radians(270),
-        hash_sensor_order([0, 1, 2, 3]): math.radians(295),
-        hash_sensor_order([0, 2, 1, 3]): math.radians(335),
-    }
-
-    # Assume bs is faicing slighly downwards and fairly horizontal
-    # Sort sensors in the order they are hit by the horizontal sweep
-    # and use the order to figure out roughly the direction to the
-    # base station
-    sweeps_x = {0: sensor_sweeps[0][0], 1: sensor_sweeps[1][0], 2: sensor_sweeps[2][0], 3: sensor_sweeps[3][0]}
-    ordered_map = {k: v for k, v in sorted(sweeps_x.items(), key=lambda item: item[1])}
-    sensor_order = list(ordered_map.keys())
-
-    # The base station is roughly in this direction, in CF (world) coordinates
-    return direction[hash_sensor_order(sensor_order)]
-
-
-def generate_initial_estimate(bs_direction):
-    # Base station height
-    bs_h = 2
-    # Distance to base station along the floor
-    bs_fd = 3
-    # Distance to base station
-    bs_dist = math.sqrt(bs_h ** 2 + bs_fd ** 2)
-    elevation = math.atan2(bs_h, bs_fd)
-
-    # Initial position of the CF in camera coordinate system, open cv style
-    tvec_start = np.array([0, 0, bs_dist])
-
-    # Calculate rotation matrix
-    d_c = math.cos(-bs_direction + math.pi)
-    d_s = math.sin(-bs_direction + math.pi)
-    R_rot_y = np.array([
-        [d_c, 0.0, d_s],
-        [0.0, 1.0, 0.0],
-        [-d_s, 0.0, d_c],
-    ])
-
-    e_c = math.cos(elevation)
-    e_s = math.sin(elevation)
-    R_rot_x = np.array([
-        [1.0, 0.0, 0.0],
-        [0.0, e_c, -e_s],
-        [0.0, e_s, e_c],
-    ])
-
-    R = np.dot(R_rot_x, R_rot_y)
-    rvec_start, _ = cv.Rodrigues(R)
-
-    return rvec_start, tvec_start
-
-
-def calc_initial_estimate(sensor_sweeps):
-    yaw = estimate_yaw_to_base_station(sensor_sweeps)
-    return generate_initial_estimate(yaw)
-
-
-def cam_to_world(rvec_c, tvec_c):
-    R_c, _ = cv.Rodrigues(rvec_c)
-    R_w = np.linalg.inv(R_c)
-    tvec_w = -np.matmul(R_w, tvec_c)
-    return R_w, tvec_w
-
-
-def opencv_to_cf(R_cv, t_cv):
-    R_opencv_to_cf = np.array([
-        [0.0, 0.0, 1.0],
-        [-1.0, 0.0, 0.0],
-        [0.0, -1.0, 0.0],
-    ])
-
-    R_cf_to_opencv = np.array([
-        [0.0, -1.0, 0.0],
-        [0.0, 0.0, -1.0],
-        [1.0, 0.0, 0.0],
-    ])
-
-    t_cf = np.dot(R_opencv_to_cf, t_cv)
-    R_cf = np.dot(R_opencv_to_cf, np.dot(R_cv, R_cf_to_opencv))
-
-    return R_cf, t_cf
-
-
-def estimate_geometry(sensor_sweeps, rvec_start, tvec_start):
-    sensor_distance_width = 0.015
-    sensor_distance_length = 0.03
-
-    # Sensor positions in world coordinates, open cv style
-    lighthouse_3d = np.float32(
-        [
-            [-sensor_distance_width / 2, 0, -sensor_distance_length / 2],
-            [sensor_distance_width / 2, 0, -sensor_distance_length / 2],
-            [-sensor_distance_width / 2, 0, sensor_distance_length / 2],
-            [sensor_distance_width / 2, 0, sensor_distance_length / 2]
-        ])
-
-    # Sensors as seen by the "camera"
-    lighthouse_image_projection = np.float32(
-        [
-            [-math.tan(sensor_sweeps[0][0]), -math.tan(sensor_sweeps[0][1])],
-            [-math.tan(sensor_sweeps[1][0]), -math.tan(sensor_sweeps[1][1])],
-            [-math.tan(sensor_sweeps[2][0]), -math.tan(sensor_sweeps[2][1])],
-            [-math.tan(sensor_sweeps[3][0]), -math.tan(sensor_sweeps[3][1])]
-        ])
-
-    # Camera matrix
-    K = np.float64(
-        [
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0]
-        ])
-
-    dist_coef = np.zeros(4)
-
-    _ret, rvec_est, tvec_est = cv.solvePnP(
-        lighthouse_3d,
-        lighthouse_image_projection,
-        K,
-        dist_coef,
-        flags=cv.SOLVEPNP_ITERATIVE,
-        rvec=rvec_start,
-        tvec=tvec_start,
-        useExtrinsicGuess=True)
-
-    if not _ret:
-        raise Exception("No solution found")
-
-    Rw_ocv, Tw_ocv = cam_to_world(rvec_est, tvec_est)
-    return Rw_ocv, Tw_ocv
-
+    return sensor_vectors
 
 def print_geo(rotation_cf, position_cf, is_valid):
     print('C-format')
@@ -341,13 +193,6 @@ def upload_geo_data(scf, geometries):
         WriteMem(scf, bs, geo)
 
 
-def sanity_check(position_cf):
-    max_pos = 10.0
-    for coord in position_cf:
-        if (abs(coord) > max_pos):
-            return False
-    return True
-
 ##################################################
 
 
@@ -366,18 +211,18 @@ cflib.crtp.init_drivers(enable_debug_driver=False)
 cf = Crazyflie(rw_cache='./cache')
 with SyncCrazyflie(uri, cf=cf) as scf:
     print("Reading sensor data...")
-    sensor_sweeps_all = read_sensors(scf)
+    sensor_vectors_all = read_sensors(scf)
     print("Estimating position of base stations...")
 
     geometries = {}
-    for bs in sorted(sensor_sweeps_all.keys()):
-        sensor_sweeps = sensor_sweeps_all[bs]
+    estimator = LighthouseBsGeoEstimator()
+    for bs in sorted(sensor_vectors_all.keys()):
+        sensor_vectors = sensor_vectors_all[bs]
         print("Base station ", bs)
-        rvec_start, tvec_start = calc_initial_estimate(sensor_sweeps)
-        geometry = estimate_geometry(sensor_sweeps, rvec_start, tvec_start)
-        rotation_cf, position_cf = opencv_to_cf(geometry[0], geometry[1])
 
-        is_valid = sanity_check(position_cf)
+        rotation_cf, position_cf = estimator.estimate_geometry(sensor_vectors)
+
+        is_valid = estimator.sanity_check_result(position_cf)
         if not is_valid:
             position_cf = np.array([0, 0, 0])
             rotation_cf = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
