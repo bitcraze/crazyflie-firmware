@@ -76,6 +76,7 @@ static void crtpSrvTask(void* prm)
     switch (p.channel)
     {
       case linkEcho:
+        vTaskDelay(M2T(100));
         crtpSendPacketBlock(&p);
         break;
       case linkSource:
