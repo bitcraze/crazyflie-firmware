@@ -53,6 +53,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALI
 
 static bool isInit = false;
 static bool doingTransfer = false;
+static bool rxStopped = true;
 
 // This should probably be reduced to a CRTP packet size
 static xQueueHandle usbDataRx;
@@ -158,6 +159,9 @@ static void resetUSB(void) {
   }
 
   USB_OTG_FlushTxFifo(&USB_OTG_dev, IN_EP);
+
+  rxStopped = true;
+  doingTransfer = false;
 }
 
 static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
@@ -165,6 +169,14 @@ static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
   command = req->wIndex;
   if (command == 0x01) {
     crtpSetLink(usblinkGetLink());
+
+    if (rxStopped && !xQueueIsQueueFullFromISR(usbDataRx)) {
+      DCD_EP_PrepareRx(&USB_OTG_dev,
+                      OUT_EP,
+                      (uint8_t*)(inPacket.data),
+                      USB_RX_TX_PACKET_SIZE);
+      rxStopped = false;
+    }
   } else {
     crtpSetLink(radiolinkGetLink());
   }
@@ -192,6 +204,7 @@ static uint8_t  usbd_cf_Init (void  *pdev,
                    OUT_EP,
                    (uint8_t*)(inPacket.data),
                    USB_RX_TX_PACKET_SIZE);
+  rxStopped = false;
 
   return USBD_OK;
 }
@@ -289,6 +302,9 @@ static uint8_t  usbd_cf_DataOut (void *pdev, uint8_t epnum)
                      OUT_EP,
                      (uint8_t*)(inPacket.data),
                      USB_RX_TX_PACKET_SIZE);
+    rxStopped = false;
+  } else {
+    rxStopped = true;
   }
 
   return result;
@@ -405,16 +421,17 @@ bool usbGetDataBlocking(USBPacket *in)
   while (xQueueReceive(usbDataRx, in, portMAX_DELAY) != pdTRUE)
     ; // Don't return until we get some data on the USB
 
-  // TO DISCUSS:
-  // 1. Is it safe to call this function here, given that usbGetDataBlocking
-  //    is called from a different task?
-  // 2. Is it OK to call this uncondtionally, i.e., even if the queue might
-  //    not have been full?
-  /* Prepare Out endpoint to receive next packet */
-  DCD_EP_PrepareRx(&USB_OTG_dev,
-                   OUT_EP,
-                   (uint8_t*)(inPacket.data),
-                   USB_RX_TX_PACKET_SIZE);
+  // Disabling USB interrupt to make sure we can check and re-enable the endpoint
+  // if it is not currently accepting data (ie. can happen if the RX queue was full)
+  NVIC_DisableIRQ(OTG_FS_IRQn);
+  if (rxStopped) {
+    DCD_EP_PrepareRx(&USB_OTG_dev,
+                    OUT_EP,
+                    (uint8_t*)(inPacket.data),
+                    USB_RX_TX_PACKET_SIZE);
+    rxStopped = false;
+  }
+  NVIC_EnableIRQ(OTG_FS_IRQn);
 
   return true;
 }
