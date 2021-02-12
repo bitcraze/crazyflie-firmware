@@ -34,6 +34,7 @@
 #include "crtp.h"
 #include "crtpservice.h"
 #include "static_mem.h"
+#include "param.h"
 
 
 typedef enum {
@@ -44,6 +45,7 @@ typedef enum {
 
 
 static bool isInit=false;
+static uint16_t echoDelay=0;
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpSrvTask, CRTP_SRV_TASK_STACKSIZE);
 
 static void crtpSrvTask(void*);
@@ -76,6 +78,9 @@ static void crtpSrvTask(void* prm)
     switch (p.channel)
     {
       case linkEcho:
+        if (echoDelay > 0) {
+          vTaskDelay(M2T(echoDelay));
+        }
         crtpSendPacketBlock(&p);
         break;
       case linkSource:
@@ -92,3 +97,7 @@ static void crtpSrvTask(void* prm)
     }
   }
 }
+
+PARAM_GROUP_START(crtpsrv)
+PARAM_ADD(PARAM_UINT16, echoDelay, &echoDelay)
+PARAM_GROUP_STOP(crtpsrv)
