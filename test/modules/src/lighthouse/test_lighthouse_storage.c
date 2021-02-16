@@ -9,6 +9,7 @@
 #include "mock_lighthouse_calibration.h"
 #include "mock_lighthouse_core.h"
 #include "mock_pulse_processor.h"
+#include "mock_worker.h"
 
 #include <stdbool.h>
 

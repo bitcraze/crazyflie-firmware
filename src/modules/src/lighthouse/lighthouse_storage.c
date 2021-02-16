@@ -30,9 +30,13 @@
 #include "lighthouse_state.h"
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
+#include "worker.h"
 
 #include "test_support.h"
 #include "cfassert.h"
+
+#define DEBUG_MODULE "LH_STORE"
+#include "debug.h"
 
 // Persistent storage
 #define STORAGE_VERSION_KEY "lh/ver"
@@ -71,6 +75,22 @@ bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData,
   }
 
   return result;
+}
+
+static void lhPersistDataWorker(void* arg) {
+  uint8_t baseStation = (uint32_t)arg;
+
+  const bool storeGeo = false;
+  const bool storeCalibration = true;
+  if (! lighthouseStoragePersistData(baseStation, storeGeo, storeCalibration)) {
+    DEBUG_PRINT("WARNING: Failed to persist calibration data for base station %i\n", baseStation);
+  }
+}
+
+void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation) {
+  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+    workerSchedule(lhPersistDataWorker, (void*)(uint32_t)baseStation);
+  }
 }
 
 void lighthouseStorageVerifySetStorageVersion() {

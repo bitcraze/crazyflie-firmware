@@ -29,7 +29,9 @@
 #include <stdint.h>
 
 /**
- * @brief Copy current data in RAM to permanent storage
+ * @brief Copy current data in RAM for one base station to permanent storage.
+ *        Note: persisting data may take a long time, this function should
+ *        not be used if the task must not be locked.
  *
  * @param baseStation  The base station id to store data for
  * @param geoData      If true, write geometry data for the base station
@@ -37,6 +39,29 @@
  * @return true if data was stored
  */
 bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
+
+/**
+ * @brief Copy current calibration data for one base station in RAM to permanent storage.
+ *        This function runns as a worker and will return imediatley.
+ *
+ * @param baseStation  The base station id to store calibration data for
+ */
+void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation);
+
+/**
+ * @brief Verify that the version nr of the permanent storage is correct. If the
+ *        version is not correct, this function will assert and halt the crazyflie.
+ */
 void lighthouseStorageVerifySetStorageVersion();
+
+/**
+ * @brief Load geometry data from the permanent storage, used at start up.
+ *
+ */
 void lighthouseStorageInitializeGeoDataFromStorage();
+
+/**
+ * @brief Load calibration data from the permanent storage, used at start up.
+ *
+ */
 void lighthouseStorageInitializeCalibDataFromStorage();
