@@ -110,35 +110,7 @@ static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
 static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
-pulseProcessor_t lighthouseCoreState = {
-  // .bsGeometry = {
-    // Arena LH1
-    // {.valid = true, .origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
-    // {.valid = true, .origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
-
-    // Arena LH2
-    // {.valid = true, .origin = {-2.057947, 0.398319, 3.109704, }, .mat = {{0.807210, 0.002766, 0.590258, }, {0.067095, 0.993078, -0.096409, }, {-0.586439, 0.117426, 0.801437, }, }},
-    // {.valid = true, .origin = {0.866244, -2.566829, 3.132632, }, .mat = {{-0.043296, -0.997675, -0.052627, }, {0.766284, -0.066962, 0.639003, }, {-0.641042, -0.012661, 0.767401, }, }},
-  // },
-
-  // .bsCalibration = {
-  //   // Arena LH2
-  //   { // Base station 0
-  //     .valid = true,
-  //     .sweep = {
-  //       {.tilt = -0.047058, .phase = 0.0, .curve = 0.052215, .gibphase = 2.087890, .gibmag = -0.003913, .ogeephase = 0.433105, .ogeemag = -0.049285},
-  //       {.tilt = 0.048065, .phase = -0.005336, .curve = 0.122375, .gibphase = 2.097656, .gibmag = -0.003883, .ogeephase = 0.631835, .ogeemag = -0.034851},
-  //     },
-  //   },
-  //   { // Base station 1
-  //     .valid = true,
-  //     .sweep = {
-  //       {.tilt = -0.051208, .phase = 0.0, .curve = 0.011756, .gibphase = 2.136718, .gibmag = -0.006057, .ogeephase = 2.705078,},
-  //       {.tilt = 0.045623, .phase = -0.004142, .curve = 0.104736, .gibphase = 2.349609, .gibmag = -0.003332, .ogeephase = 0.380859, .ogeemag = -0.240112,},
-  //     },
-  //   },
-  // }
-};
+NO_DMA_CCM_SAFE_ZERO_INIT pulseProcessor_t lighthouseCoreState;
 
 #if LIGHTHOUSE_FORCE_TYPE == 1
 pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
