@@ -8,6 +8,7 @@
 #include "mock_pulse_processor_v2.h"
 #include "mock_lighthouse_deck_flasher.h"
 #include "mock_lighthouse_position_est.h"
+#include "mock_lighthouse_calibration.h"
 #include "mock_uart1.h"
 #include "mock_statsCnt.h"
 #include "mock_storage.h"
