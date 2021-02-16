@@ -53,17 +53,6 @@ void lighthouseCoreTask(void *param);
  */
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration);
 
-/**
- * @brief Copy current data in RAM to permanent storage
- *
- * @param baseStation  The base station id to store data for
- * @param geoData      If true, write geometry data for the base station
- * @param calibData    if true, write calibration data for the base station
- * @return true if data was stored
- */
-bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
-
-
 typedef enum {
   lh_led_off = 0,
   lh_led_slow_blink = 1,
@@ -80,4 +69,4 @@ typedef enum {
  */
 void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green);
 
-void ledTimer();
+void lighthouseCoreLedTimer();

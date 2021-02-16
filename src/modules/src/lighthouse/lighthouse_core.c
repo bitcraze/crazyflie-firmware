@@ -51,7 +51,7 @@
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
 
-#include "storage.h"
+#include "lighthouse_storage.h"
 
 #include "test_support.h"
 #include "static_mem.h"
@@ -151,18 +151,6 @@ pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 #define UART_FRAME_LENGTH 12
 
 
-// Persistent storage
-#define STORAGE_VERSION_KEY "lh/ver"
-#define CURRENT_STORAGE_VERSION "1"
-#define STORAGE_KEY_GEO "lh/sys/0/geo/"
-#define STORAGE_KEY_CALIB "lh/sys/0/cal/"
-#define KEY_LEN 20
-
-static void verifySetStorageVersion();
-static baseStationGeometry_t geoBuffer;
-TESTABLE_STATIC void initializeGeoDataFromStorage();
-static lighthouseCalibration_t calibBuffer;
-TESTABLE_STATIC void initializeCalibDataFromStorage();
 static bool deckIsFlashed = false;
 
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
@@ -179,7 +167,7 @@ void lighthouseCoreInit() {
   lighthousePositionEstInit();
 }
 
-void ledTimer()
+void lighthouseCoreLedTimer()
 {
   if (deckIsFlashed){
     switch (systemStatus)
@@ -514,9 +502,9 @@ void lighthouseCoreTask(void *param) {
   uart1Init(230400);
   systemWaitStart();
 
-  verifySetStorageVersion();
-  initializeGeoDataFromStorage();
-  initializeCalibDataFromStorage();
+  lighthouseStorageVerifySetStorageVersion();
+  lighthouseStorageInitializeGeoDataFromStorage();
+  lighthouseStorageInitializeCalibDataFromStorage();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
   deckIsFlashed = true;
@@ -565,80 +553,6 @@ void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthous
   if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
     lighthouseCoreState.bsCalibration[baseStation] = *calibration;
     lighthousePositionCalibrationDataWritten(baseStation);
-  }
-}
-
-static void generateStorageKey(char* buf, const char* base, const uint8_t baseStation) {
-  // TOOD make an implementation that supports baseStations with 2 digits
-  ASSERT(baseStation <= 9);
-
-  const int baseLen = strlen(base);
-  memcpy(buf, base, baseLen);
-  buf[baseLen] = '0' + baseStation;
-  buf[baseLen + 1] = '\0';
-}
-
-bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData) {
-  bool result = true;
-  char key[KEY_LEN];
-
-  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
-    if (geoData) {
-      generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
-      result = result && storageStore(key, &lighthouseCoreState.bsGeometry[baseStation], sizeof(lighthouseCoreState.bsGeometry[baseStation]));
-    }
-    if (calibData) {
-      generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
-      result = result && storageStore(key, &lighthouseCoreState.bsCalibration[baseStation], sizeof(lighthouseCoreState.bsCalibration[baseStation]));
-    }
-  }
-
-  return result;
-}
-
-static void verifySetStorageVersion() {
-  const int bufLen = 5;
-  char buffer[bufLen];
-
-  const size_t fetched = storageFetch(STORAGE_VERSION_KEY, buffer, bufLen);
-  if (fetched == 0) {
-    storageStore(STORAGE_VERSION_KEY, CURRENT_STORAGE_VERSION, strlen(CURRENT_STORAGE_VERSION) + 1);
-  } else {
-    if (strcmp(buffer, CURRENT_STORAGE_VERSION) != 0) {
-      // The storage format version is wrong! What to do?
-      // No need to handle until we bump the storage version, assert for now.
-      ASSERT_FAILED();
-    }
-  }
-}
-
-TESTABLE_STATIC void initializeGeoDataFromStorage() {
-  char key[KEY_LEN];
-
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
-    if (!lighthouseCoreState.bsGeometry[baseStation].valid) {
-      generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
-      const size_t geoSize = sizeof(geoBuffer);
-      const size_t fetched = storageFetch(key, (void*)&geoBuffer, geoSize);
-      if (fetched == geoSize) {
-        lighthousePositionSetGeometryData(baseStation, &geoBuffer);
-      }
-    }
-  }
-}
-
-TESTABLE_STATIC void initializeCalibDataFromStorage() {
-  char key[KEY_LEN];
-
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
-    if (!lighthouseCoreState.bsCalibration[baseStation].valid) {
-      generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
-      const size_t calibSize = sizeof(calibBuffer);
-      const size_t fetched = storageFetch(key, (void*)&calibBuffer, calibSize);
-      if (fetched == calibSize) {
-        lighthouseCoreSetCalibrationData(baseStation, &calibBuffer);
-      }
-    }
   }
 }
 
