@@ -84,14 +84,22 @@ static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
 
-// A bit map that indicates which base staions that are received
+// A bitmap that indicates which base staions that are received
 static uint16_t baseStationReceivedMapWs;
 static uint16_t baseStationReceivedMap;
 
-// A bit map that indicates which base staions that are actively used in the estimation process, that is recevied
+// A bitmap that indicates which base staions that are actively used in the estimation process, that is recevied
 // and has valid geo and calib data
 static uint16_t baseStationActiveMapWs;
 static uint16_t baseStationActiveMap;
+
+// A bitmap that indicates which base stations that have received calibration data that was differnt to what was stored in memory
+static uint16_t baseStationCalibUpdatedMap;
+
+// A bitmap that indicates which base stations that have received calibration data that is identical to what was stored in memory
+static uint16_t baseStationCalibConfirmedMap;
+
+static uint8_t calibStatusReset;
 
 // An overall system status indicating if data is sent to the estimator
 static lhSystemStatus_t systemStatus;
@@ -157,6 +165,15 @@ static lighthouseCalibration_t calibBuffer;
 TESTABLE_STATIC void initializeCalibDataFromStorage();
 static bool deckIsFlashed = false;
 
+static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
+  const uint16_t mask = (1 << index);
+
+  if (value) {
+    *bitmap |= mask;
+  } else {
+    *bitmap &= ~mask;
+  }
+}
 
 void lighthouseCoreInit() {
   lighthousePositionEstInit();
@@ -377,11 +394,31 @@ TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighth
 static void useCalibrationData(pulseProcessor_t *appState) {
   for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
     if (appState->ootxDecoder[baseStation].isFullyDecoded) {
-      if (! appState->bsCalibration[baseStation].valid) {
+
+      lighthouseCalibration_t newData;
+      lighthouseCalibrationInitFromFrame(&newData, &appState->ootxDecoder[baseStation].frame);
+
+      const uint16_t mask = (1 << baseStation);
+
+
+      const bool isDataIdentical = (0 == memcmp(&newData, &appState->bsCalibration[baseStation], sizeof(newData)));
+      bool updatedFlag = false;
+      bool confirmedFlag = false;
+      if (isDataIdentical) {
+        if ((baseStationCalibUpdatedMap & mask) == 0) {
+          confirmedFlag = true;
+        } else {
+          updatedFlag = true;
+        }
+      } else {
         DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation);
-        lighthouseCalibrationInitFromFrame(&appState->bsCalibration[baseStation], &appState->ootxDecoder[baseStation].frame);
-        lighthousePositionCalibrationDataWritten(baseStation);
+        lighthouseCoreSetCalibrationData(baseStation, &newData);
+
+        updatedFlag = true;
       }
+
+      modifyBit(&baseStationCalibUpdatedMap, baseStation, updatedFlag);
+      modifyBit(&baseStationCalibConfirmedMap, baseStation, confirmedFlag);
     }
   }
 }
@@ -460,6 +497,12 @@ static void updateSystemStatus(const uint32_t now_ms) {
 
     systemStatus = systemStatusWs;
     systemStatusWs = statusNotReceiving;
+
+    if (calibStatusReset) {
+      calibStatusReset = 0;
+      baseStationCalibConfirmedMap = 0;
+      baseStationCalibUpdatedMap = 0;
+    }
 
     nextUpdateTimeOfSystemStatus = now_ms + SYSTEM_STATUS_UPDATE_INTERVAL;
   }
@@ -657,10 +700,13 @@ LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 
 LOG_ADD(LOG_UINT16, bsReceive, &baseStationReceivedMap)
 LOG_ADD(LOG_UINT16, bsActive, &baseStationActiveMap)
+LOG_ADD(LOG_UINT16, bsCalUd, &baseStationCalibUpdatedMap)
+LOG_ADD(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
 
 LOG_ADD(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
 PARAM_GROUP_START(lighthouse)
 PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
+PARAM_ADD(PARAM_UINT8, bsCalibReset, &calibStatusReset)
 PARAM_GROUP_STOP(lighthouse)

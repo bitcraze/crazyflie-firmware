@@ -444,8 +444,8 @@ LOG_ADD(LOG_FLOAT, z, &position[2])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
-LOG_ADD(LOG_UINT16, bsGeo, &baseStationGeoValidMap)
-LOG_ADD(LOG_UINT16, bsCalibVal, &baseStationCalibValidMap)
+LOG_ADD(LOG_UINT16, bsGeoVal, &baseStationGeoValidMap)
+LOG_ADD(LOG_UINT16, bsCalVal, &baseStationCalibValidMap)
 
 LOG_GROUP_STOP(lighthouse)
 
