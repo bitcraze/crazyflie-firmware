@@ -401,6 +401,7 @@ void testInitializationOfCalibIsDoneFromStorage() {
 
   for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
     storageFetch_StubWithCallback(mockStorageFetchForCalib);
+    lighthousePositionCalibrationDataWritten_Expect(i);
   }
 
   // Test

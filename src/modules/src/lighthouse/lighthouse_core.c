@@ -380,6 +380,7 @@ static void useCalibrationData(pulseProcessor_t *appState) {
       if (! appState->bsCalibration[baseStation].valid) {
         DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation);
         lighthouseCalibrationInitFromFrame(&appState->bsCalibration[baseStation], &appState->ootxDecoder[baseStation].frame);
+        lighthousePositionCalibrationDataWritten(baseStation);
       }
     }
   }
@@ -520,6 +521,7 @@ void lighthouseCoreTask(void *param) {
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration) {
   if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
     lighthouseCoreState.bsCalibration[baseStation] = *calibration;
+    lighthousePositionCalibrationDataWritten(baseStation);
   }
 }
 
