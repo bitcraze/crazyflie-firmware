@@ -88,16 +88,16 @@ static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rat
 static uint16_t baseStationReceivedMapWs;
 static uint16_t baseStationReceivedMap;
 
-// A bitmap that indicates which base staions that are actively used in the estimation process, that is recevied
-// and has valid geo and calib data
+// A bitmap that indicates which base staions that are actively used in the estimation process, that is receiving sweeps
+// as well a has valid geo and calib data
 static uint16_t baseStationActiveMapWs;
 static uint16_t baseStationActiveMap;
 
-// A bitmap that indicates which base stations that have received calibration data that was differnt to what was stored in memory
-static uint16_t baseStationCalibUpdatedMap;
-
-// A bitmap that indicates which base stations that have received calibration data that is identical to what was stored in memory
+// A bitmap that indicates which base stations that have received calibration data over the air
 static uint16_t baseStationCalibConfirmedMap;
+
+// A bitmap that indicates which base stations that have received calibration data that was different to what was stored in memory
+static uint16_t baseStationCalibUpdatedMap;
 
 static uint8_t calibStatusReset;
 
@@ -354,32 +354,19 @@ TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighth
 static void useCalibrationData(pulseProcessor_t *appState) {
   for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
     if (appState->ootxDecoder[baseStation].isFullyDecoded) {
-
       lighthouseCalibration_t newData;
       lighthouseCalibrationInitFromFrame(&newData, &appState->ootxDecoder[baseStation].frame);
 
-      const uint16_t mask = (1 << baseStation);
-
+      modifyBit(&baseStationCalibConfirmedMap, baseStation, true);
 
       const bool isDataIdentical = (0 == memcmp(&newData, &appState->bsCalibration[baseStation], sizeof(newData)));
-      bool updatedFlag = false;
-      bool confirmedFlag = false;
-      if (isDataIdentical) {
-        if ((baseStationCalibUpdatedMap & mask) == 0) {
-          confirmedFlag = true;
-        } else {
-          updatedFlag = true;
-        }
-      } else {
+      if (! isDataIdentical) {
         DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation);
         lighthouseCoreSetCalibrationData(baseStation, &newData);
         lighthouseStoragePersistCalibDataBackground(baseStation);
 
-        updatedFlag = true;
+        modifyBit(&baseStationCalibUpdatedMap, baseStation, true);
       }
-
-      modifyBit(&baseStationCalibUpdatedMap, baseStation, updatedFlag);
-      modifyBit(&baseStationCalibConfirmedMap, baseStation, confirmedFlag);
     }
   }
 }
@@ -461,7 +448,6 @@ static void updateSystemStatus(const uint32_t now_ms) {
 
     if (calibStatusReset) {
       calibStatusReset = 0;
-      baseStationCalibConfirmedMap = 0;
       baseStationCalibUpdatedMap = 0;
     }
 
