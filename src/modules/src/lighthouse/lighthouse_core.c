@@ -110,7 +110,7 @@ static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
 static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
-NO_DMA_CCM_SAFE_ZERO_INIT pulseProcessor_t lighthouseCoreState;
+pulseProcessor_t lighthouseCoreState;
 
 #if LIGHTHOUSE_FORCE_TYPE == 1
 pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
