@@ -41,7 +41,7 @@
 #include "config.h"
 #include "crtp.h"
 #include "log.h"
-#include "crc.h"
+#include "crc32.h"
 #include "worker.h"
 #include "num.h"
 
@@ -205,7 +205,7 @@ void logInit(void)
       memcpy(&p.data[5], logs[i].name, strlen(logs[i].name));
       len += strlen(logs[i].name);
     }
-    logsCrc = crcSlow(p.data, len);
+    logsCrc = crc32CalculateBuffer(p.data, len);
   }
 
   // Big lock that protects the log datastructures

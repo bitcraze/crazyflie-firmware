@@ -257,9 +257,9 @@ PROJ_OBJ += exptestBolt.o
 
 
 # Utilities
-PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
+PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc32.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
-PROJ_OBJ += configblockeeprom.o crc_bosch.o
+PROJ_OBJ += configblockeeprom.o
 PROJ_OBJ += sleepus.o statsCnt.o rateSupervisor.o
 PROJ_OBJ += lighthouse_core.o pulse_processor.o pulse_processor_v1.o pulse_processor_v2.o lighthouse_geometry.o ootx_decoder.o lighthouse_calibration.o lighthouse_deck_flasher.o lighthouse_position_est.o lighthouse_storage.o
 PROJ_OBJ += kve_storage.o kve.o

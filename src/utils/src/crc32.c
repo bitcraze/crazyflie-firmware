@@ -1,4 +1,32 @@
+/*
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
+ * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ *
+ * Crazyflie control firmware
+ *
+ * Copyright (C) 2011-2012 Bitcraze AB
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, in version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * crc.c - CRC32 implementation
+ */
+
 /**
+ * Core calculation code is:
+ * 
  * Copyright (C) 2017 Bosch Sensortec GmbH
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,68 +68,106 @@
  * patent rights of the copyright holder.
  */
 
-#include "crc_bosch.h"
+#include "crc32.h"
+
+#include <stdbool.h>
+
+#include "static_mem.h"
+
+#define POLYNOMIAL              0xEDB88320
+#define CHECK_VALUE             0xCBF43926
+#define INITIAL_REMAINDER       0xFFFFFFFF
+#define FINAL_XOR_VALUE         0xFFFFFFFF
+#define RESIDUE                 0xDEBB20e3
+
+// Internal functions
+static uint32_t crcByByte(const uint8_t* message, uint32_t bytesToProcess,
+              uint32_t remainder, uint32_t* crcTable);
+static uint32_t crcByByte(const uint8_t* message, uint32_t bytesToProcess,
+              uint32_t remainder, uint32_t* crcTable);
+static void crcTableInit(uint32_t* crcTable);
+
+NO_DMA_CCM_SAFE_ZERO_INIT static uint32_t crcTable[256];
+static bool crcTableInitialized = false;
+
+// *** Public API ***
+
+void crc32ContextInit(crc32Context_t *context)
+{
+  // Lazy static ...
+  if (crcTableInitialized == false) {
+    // initialize crcTable
+    crcTableInit(crcTable);
+    crcTableInitialized = true;
+  }
+
+  context->remainder = INITIAL_REMAINDER;
+}
+
+void crc32Update(crc32Context_t *context, const void* data, size_t size)
+{
+  context->remainder = crcByByte(data, size, context->remainder, crcTable);
+}
+
+uint32_t crc32Out(const crc32Context_t *context)
+{
+  return context->remainder ^ FINAL_XOR_VALUE;
+}
+
+uint32_t crc32CalculateBuffer(const void* buffer, size_t size)
+{
+  crc32Context_t ctx;
+
+  crc32ContextInit(&ctx);
+  crc32Update(&ctx, buffer, size);
+  return crc32Out(&ctx);
+}
+
+// *** Core calculation from Bosh ***
 
 /* bit-wise crc calculation */
-crc crcByBit(const uint8_t* message, uint32_t bytesToProcess,
-             crc remainder, crc finalxor)
+static uint32_t crcByBit(const uint8_t* message, uint32_t bytesToProcess,
+             uint32_t remainder)
 {
   for (unsigned int byte = 0; byte < bytesToProcess; ++byte)
     {
-#if REFLECT
       remainder ^= *(message+byte);
-#else
-      remainder ^= ( *(message+byte) << (WIDTH - 8) );
-#endif
 
       for(uint8_t bit = 8; bit > 0; --bit)
         {
-#if REFLECT
           /* reflect is realized by mirroring algorithm
            * LSB is first to be processed */
           if (remainder & 1)
             remainder = (remainder >> 1) ^ POLYNOMIAL;
           else
             remainder = (remainder >> 1);
-#else
-          /* MSB is first to be processed */
-          if (remainder & TOPBIT)
-            remainder = (remainder << 1) ^ POLYNOMIAL;
-          else
-            remainder = (remainder << 1);
-#endif
         }
     }
-  return (remainder ^ finalxor);
+  return remainder;
 }
 
 /* byte-wise crc calculation, requires an initialized crcTable
  * this is factor 8 faster and should be used if multiple crcs
  * have to be calculated */
-crc crcByByte(const uint8_t* message, uint32_t bytesToProcess,
-              crc remainder, crc finalxor, crc* crcTable)
+static uint32_t crcByByte(const uint8_t* message, uint32_t bytesToProcess,
+              uint32_t remainder, uint32_t* crcTable)
 {
-  static uint8_t data;
+  uint8_t data;
   for (int byte = 0; byte < bytesToProcess; ++byte)
     {
-#if REFLECT
       data = (*(message+byte) ^ remainder);
       remainder = *(crcTable+data) ^ (remainder >> 8);
-#else
-      data = ( *(message+byte) ^ (remainder >> (WIDTH - 8)) );
-      remainder = *(crcTable+data) ^ (remainder << 8);
-#endif
     }
-  return (remainder ^ finalxor);
+  return remainder;
 }
 
 /* creates a lookup-table which is necessary for the crcByByte function */
-void crcTableInit(crc* crcTable)
+static void crcTableInit(uint32_t* crcTable)
 {
   uint8_t dividend = ~0;
   /* fill the table by bit-wise calculations of checksums
    * for each possible dividend */
   do {
-      *(crcTable+dividend) = crcByBit(&dividend, 1, 0, 0);
+      *(crcTable+dividend) = crcByBit(&dividend, 1, 0);
   } while(dividend-- > 0);
 }
