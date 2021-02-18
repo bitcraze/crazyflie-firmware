@@ -359,8 +359,8 @@ static void useCalibrationData(pulseProcessor_t *appState) {
 
       modifyBit(&baseStationCalibConfirmedMap, baseStation, true);
 
-      const bool isDataIdentical = (0 == memcmp(&newData, &appState->bsCalibration[baseStation], sizeof(newData)));
-      if (! isDataIdentical) {
+      const bool isDataDifferent = (newData.uid != appState->bsCalibration[baseStation].uid);
+      if (isDataDifferent) {
         DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation);
         lighthouseCoreSetCalibrationData(baseStation, &newData);
         lighthouseStoragePersistCalibDataBackground(baseStation);
