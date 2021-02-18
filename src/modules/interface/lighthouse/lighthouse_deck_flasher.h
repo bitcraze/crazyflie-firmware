@@ -28,4 +28,4 @@
 
 #pragma once
 
-void lighthouseDeckFlasherCheckVersionAndBoot();
+bool lighthouseDeckFlasherCheckVersionAndBoot();

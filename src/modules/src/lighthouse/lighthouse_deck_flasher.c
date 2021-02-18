@@ -33,58 +33,17 @@
 #include "debug.h"
 #include "lh_bootloader.h"
 #include "lighthouse_deck_flasher.h"
+#include "crc32.h"
 
 #ifdef LH_FLASH_BOOTLOADER
 #include "lh_flasher.h"
 #endif
 
-
-// Uncomment if you want to force the Crazyflie to reflash the FPGA binary to the deck at each startup
-// #define FORCE_FLASH_FPGA true
-
-#ifndef FORCE_FLASH_FPGA
-#define FORCE_FLASH_FPGA false
-#endif
+#define BITSTREAM_CRC 0xe2889216
+#define BITSTREAM_SIZE 104092
 
 
-#ifndef DISABLE_LIGHTHOUSE_DRIVER
-  #define DISABLE_LIGHTHOUSE_DRIVER 1
-#endif
-
-
-#if DISABLE_LIGHTHOUSE_DRIVER == 1
-void lighthouseDeckFlasherCheckVersionAndBoot() {
-    DEBUG_PRINT("No Lighthouse support in FW, deck not initialized\n");
-}
-#else
-
-#define STR2(x) #x
-#define STR(x) STR2(x)
-
-#define INCBIN(name, file) \
-    __asm__(".section .rodata\n" \
-            ".global incbin_" STR(name) "_start\n" \
-            ".align 4\n" \
-            "incbin_" STR(name) "_start:\n" \
-            ".incbin \"" file "\"\n" \
-            \
-            ".global incbin_" STR(name) "_end\n" \
-            ".align 1\n" \
-            "incbin_" STR(name) "_end:\n" \
-            ".byte 0\n" \
-            ".align 4\n" \
-            STR(name) "Size:\n" \
-            ".int incbin_" STR(name) "_end - incbin_" STR(name) "_start\n" \
-    ); \
-    extern const __attribute__((aligned(4))) void* incbin_ ## name ## _start; \
-    extern const void* incbin_ ## name ## _end; \
-    extern const int name ## Size; \
-    static const __attribute__((used)) unsigned char* name = (unsigned char*) & incbin_ ## name ## _start; \
-
-INCBIN(bitstream, BLOBS_LOC"lighthouse.bin");
-
-
-void lighthouseDeckFlasherCheckVersionAndBoot() {
+bool lighthouseDeckFlasherCheckVersionAndBoot() {
   lhblInit(I2C1_DEV);
 
   #ifdef LH_FLASH_BOOTLOADER
@@ -94,51 +53,45 @@ void lighthouseDeckFlasherCheckVersionAndBoot() {
   #endif
 
   uint8_t bootloaderVersion = 0;
-  lhblGetVersion(&bootloaderVersion);
+  if (lhblGetVersion(&bootloaderVersion) == false) {
+    DEBUG_PRINT("Cannot communicate with lighthouse bootloader, aborting!\n");
+    return false;
+  }
   DEBUG_PRINT("Lighthouse bootloader version: %d\n", bootloaderVersion);
 
   // Wakeup mem
   lhblFlashWakeup();
   vTaskDelay(M2T(1));
 
-  // Checking the bitstreams are identical
-  // Also decoding bitstream version for console
+  // Decoding bitstream version for console
   static char deckBitstream[65];
   lhblFlashRead(LH_FW_ADDR, 64, (uint8_t*)deckBitstream);
   deckBitstream[64] = 0;
   int deckVersion = strtol(&deckBitstream[2], NULL, 10);
-  int embeddedVersion = strtol((char*)&bitstream[2], NULL, 10);
 
-  bool identical = true;
-  for (int i=0; i<=bitstreamSize; i+=64) {
-    int length = ((i+64)<bitstreamSize)?64:bitstreamSize-i;
+  // Checking that the bitstream has the right checksum
+  crc32Context_t crcContext;
+  crc32ContextInit(&crcContext);
+
+  for (int i=0; i<=BITSTREAM_SIZE; i+=64) {
+    int length = ((i+64)<BITSTREAM_SIZE)?64:BITSTREAM_SIZE-i;
     lhblFlashRead(LH_FW_ADDR + i, length, (uint8_t*)deckBitstream);
-    if (memcmp(deckBitstream, &bitstream[i], length)) {
-      DEBUG_PRINT("Fail comparing firmware\n");
-      identical = false;
-      break;
-    }
+    crc32Update(&crcContext, deckBitstream, length);
   }
 
-  if (identical == false || FORCE_FLASH_FPGA) {
-    DEBUG_PRINT("Deck has version %d and we embeed version %d\n", deckVersion, embeddedVersion);
-    DEBUG_PRINT("Updating deck with embedded version!\n");
-
-    // Erase LH deck FW
-    lhblFlashEraseFirmware();
-
-    // Flash LH deck FW
-    if (lhblFlashWriteFW((uint8_t*)bitstream, bitstreamSize)) {
-      DEBUG_PRINT("FW updated [OK]\n");
-      deckVersion = embeddedVersion;
-    } else {
-      DEBUG_PRINT("FW updated [FAILED]\n");
-    }
-  }
+  uint32_t crc = crc32Out(&crcContext);
+  bool pass = crc == BITSTREAM_CRC;
+  DEBUG_PRINT("Bitstream CRC32: %x %s\n", (int)crc, pass?"[PASS]":"[FAIL]");
 
   // Launch LH deck FW
-  DEBUG_PRINT("Firmware version %d verified, booting deck!\n", deckVersion);
-  lhblBootToFW();
+  if (pass) {
+    DEBUG_PRINT("Firmware version %d verified, booting deck!\n", deckVersion);
+    lhblBootToFW();
+  } else {
+    DEBUG_PRINT("The deck bitstream does not match the required bitstream.\n");
+    DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", BITSTREAM_SIZE, BITSTREAM_CRC);
+    DEBUG_PRINT("Leaving the deck in bootloader mode ...\n");
+  }
+  
+  return pass;
 }
-
-#endif

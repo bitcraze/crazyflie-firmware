@@ -39,10 +39,6 @@ Clone (or download) the [crazyflie-firmware](https://github.com/bitcraze/crazyfl
 git clone https://github.com/bitcraze/crazyflie-firmware
 ```
 
-### Enable lighthouse support
-
-To compile the firmware with lighthouse support, use the ```DISABLE_LIGHTHOUSE_DRIVER=0``` compile flag. For instance this can be done by adding ```CFLAGS += -DDISABLE_LIGHTHOUSE_DRIVER=0``` to your config.mk file.
-
 ### System identification
 
 The Crayflie will make an educated guess in run time based on the light signals it receives to decide if the system uses lighthouse V1 or V2 base stations. Unfortunately this sometimes fails, and a better option is to comile the firmware with a compile flag to force it to V1 or V2 instead. Add ```CFLAGS += -DLIGHTHOUSE_FORCE_TYPE=1``` or ```CFLAGS += -DLIGHTHOUSE_FORCE_TYPE=2``` depending on your system.
