@@ -124,6 +124,7 @@ calib0.sweeps[1].gibphase = 2.367835
 calib0.sweeps[1].gibmag = 0.004907
 calib0.sweeps[1].ogeephase = 1.900456
 calib0.sweeps[1].ogeemag = -0.457289
+calib0.uid = 0x3C65D22F
 calib0.valid = True
 
 calib1 = LighthouseBsCalibration()
@@ -141,6 +142,7 @@ calib1.sweeps[1].gibphase = 1.727613
 calib1.sweeps[1].gibmag = -0.005642
 calib1.sweeps[1].ogeephase = 2.586835
 calib1.sweeps[1].ogeemag = 0.117884
+calib1.uid = 0x34C2AD7E
 calib1.valid = True
 
 
