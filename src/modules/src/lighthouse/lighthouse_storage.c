@@ -83,7 +83,7 @@ static void lhPersistDataWorker(void* arg) {
   const bool storeGeo = false;
   const bool storeCalibration = true;
   if (! lighthouseStoragePersistData(baseStation, storeGeo, storeCalibration)) {
-    DEBUG_PRINT("WARNING: Failed to persist calibration data for base station %i\n", baseStation);
+    DEBUG_PRINT("WARNING: Failed to persist calibration data for base station %i\n", baseStation + 1);
   }
 }
 

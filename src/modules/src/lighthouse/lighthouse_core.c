@@ -363,7 +363,7 @@ static void useCalibrationData(pulseProcessor_t *appState) {
       const bool currentCalibDataValid = currentCalibData->valid;
       const bool isDataDifferent = ((newData.uid != currentCalibData->uid) || (newData.valid != currentCalibDataValid));
       if (isDataDifferent) {
-        DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation);
+        DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation + 1);
         lighthouseCoreSetCalibrationData(baseStation, &newData);
         lighthouseStoragePersistCalibDataBackground(baseStation);
 
