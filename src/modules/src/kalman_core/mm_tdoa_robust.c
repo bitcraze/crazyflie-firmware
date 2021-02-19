@@ -49,13 +49,13 @@ static void Cholesky_Decomposition(int n, float matrix[n][n],  float lower[n][n]
 
 // Weight function for GM Robust cost function
 static void GM_UWB(float e, float * GM_e){
-    float sigma = 2.0;                        // param1: 2.0,   param2: 2.5
+    float sigma = 2.0;                        
     float GM_dn = sigma + e*e;
     *GM_e = (sigma * sigma)/(GM_dn * GM_dn);
 }
 
 static void GM_state(float e, float * GM_e){
-    float sigma = 1.5;                        // param1: 1.5
+    float sigma = 1.5;                        
     float GM_dn = sigma + e*e;
     *GM_e = (sigma * sigma)/(GM_dn * GM_dn);
 }
