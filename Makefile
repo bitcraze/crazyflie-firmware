@@ -183,6 +183,7 @@ PROJ_OBJ += collision_avoidance.o health.o
 # Kalman estimator
 PROJ_OBJ += estimator_kalman.o kalman_core.o kalman_supervisor.o
 PROJ_OBJ += mm_distance.o mm_absolute_height.o mm_position.o mm_pose.o mm_tdoa.o mm_flow.o mm_tof.o mm_yaw_error.o mm_sweep_angles.o
+PROJ_OBJ += mm_tdoa_robust.o
 
 # High-Level Commander
 PROJ_OBJ += crtp_commander_high_level.o planner.o pptraj.o pptraj_compressed.o
