@@ -57,11 +57,6 @@
 #define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
 #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
-// Compensate thrust depending on battery voltage so it will produce about the same
-// amount of thrust independent of the battery voltage. Based on thrust measurement.
-// Not applied for brushless motor setup.
-#define ENABLE_THRUST_BAT_COMPENSATED
-
 //#define ENABLE_ONESHOT125
 
 #ifdef ENABLE_ONESHOT125

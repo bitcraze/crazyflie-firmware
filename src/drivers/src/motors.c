@@ -41,6 +41,7 @@
 
 //Logging includes
 #include "log.h"
+#include "param.h"
 
 static uint16_t motorsBLConvBitsTo16(uint16_t bits);
 static uint16_t motorsBLConv16ToBits(uint16_t bits);
@@ -62,6 +63,11 @@ const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
 static bool isInit = false;
+
+// Compensate thrust depending on battery voltage so it will produce about the same
+// amount of thrust independent of the battery voltage. Based on thrust measurement.
+// Not applied for brushless motor setup.
+static uint8_t batCompensation = true;
 
 /* Private functions */
 
@@ -230,19 +236,19 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
 
     ratio = ithrust;
 
-  #ifdef ENABLE_THRUST_BAT_COMPENSATED
     if (motorMap[id]->drvType == BRUSHED)
     {
-      float thrust = ((float)ithrust / 65536.0f) * 60;
-      float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
-      float supply_voltage = pmGetBatteryVoltage();
-      float percentage = volts / supply_voltage;
-      percentage = percentage > 1.0f ? 1.0f : percentage;
-      ratio = percentage * UINT16_MAX;
+      if (batCompensation) {
+        float thrust = ((float)ithrust / 65536.0f) * 60;
+        float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
+        float supply_voltage = pmGetBatteryVoltage();
+        float percentage = volts / supply_voltage;
+        percentage = percentage > 1.0f ? 1.0f : percentage;
+        ratio = percentage * UINT16_MAX;
+      }
       motor_ratios[id] = ratio;
-
     }
-  #endif
+
     if (motorMap[id]->drvType == BRUSHLESS)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
@@ -330,3 +336,7 @@ LOG_ADD(LOG_UINT32, m2_pwm, &motor_ratios[1])
 LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
 LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
 LOG_GROUP_STOP(pwm)
+
+PARAM_GROUP_START(motor)
+PARAM_ADD(PARAM_UINT8, batCompensation, &batCompensation)
+PARAM_GROUP_STOP(motor)
