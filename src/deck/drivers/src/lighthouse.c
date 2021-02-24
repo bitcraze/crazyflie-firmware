@@ -72,15 +72,16 @@ static void ledTimerHandle(xTimerHandle timer) {
   lighthouseCoreLedTimer();
 }
 
-static void newFwBlockReceived(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer) {
+static bool write_firmware(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer) {
   // TODO krri write block to flash
+  return false;
 }
 
 static const DeckFwUpdateDef_t fwUpdateDef = {
   // TODO krri set values
   .requiredSize = 1234,
   .requiredHash = 9876,
-  .updateFcn = newFwBlockReceived,
+  .write = write_firmware,
 };
 
 static const DeckDriver lighthouse_deck = {

@@ -34,6 +34,7 @@
 #include "lh_bootloader.h"
 #include "lighthouse_deck_flasher.h"
 #include "crc32.h"
+#include "mem.h"
 
 #ifdef LH_FLASH_BOOTLOADER
 #include "lh_flasher.h"
@@ -42,6 +43,22 @@
 #define BITSTREAM_CRC 0xe2889216
 #define BITSTREAM_SIZE 104092
 
+static uint32_t getFirmwareSize(void);
+static bool readFirmware(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool writeFirmware(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+
+static const MemoryHandlerDef_t flasherMemory = {
+  .type = MEM_TYPE_DECK_FW,
+  .getSize = getFirmwareSize,
+  .read = readFirmware,
+  .write = writeFirmware,
+};
+
+void lighthouseDeckFlasherInit()
+{
+  // Register access to the flash in the memory subsystem
+  memoryRegisterHandler(&flasherMemory);
+}
 
 bool lighthouseDeckFlasherCheckVersionAndBoot() {
   lhblInit(I2C1_DEV);
@@ -94,4 +111,19 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
   }
   
   return pass;
+}
+
+static uint32_t getFirmwareSize(void)
+{
+  return 256*1024;
+}
+
+static bool readFirmware(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer)
+{
+  return lhblFlashRead(LH_FW_ADDR + memAddr, readLen, buffer);
+}
+
+static bool writeFirmware(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
+{
+  return false;
 }

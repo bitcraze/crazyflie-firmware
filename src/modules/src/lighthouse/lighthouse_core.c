@@ -136,6 +136,7 @@ static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
 }
 
 void lighthouseCoreInit() {
+  lighthouseDeckFlasherInit();
   lighthousePositionEstInit();
 }
 

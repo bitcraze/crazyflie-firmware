@@ -28,4 +28,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
+void lighthouseDeckFlasherInit();
+
 bool lighthouseDeckFlasherCheckVersionAndBoot();

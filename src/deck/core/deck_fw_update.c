@@ -109,6 +109,8 @@ TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen
         index += bytesToUse;
     }
 
+    // ToDo: call the read function for the deck if this is called within a deck address space
+
     return true;
 }
 
@@ -118,7 +120,7 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
     if (deckInf) {
         if (deckInf->driver->fwUpdate) {
             const uint32_t uploadAddress = deckNr * DECK_FW_MAX_SIZE;
-            deckInf->driver->fwUpdate->updateFcn(memAddr - uploadAddress, writeLen, buffer);
+            deckInf->driver->fwUpdate->write(memAddr - uploadAddress, writeLen, buffer);
         }
     }
 

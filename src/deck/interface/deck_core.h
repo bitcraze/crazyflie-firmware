@@ -144,11 +144,26 @@ typedef struct deckInfo_s {
 /**
  * @brief Definition of function that is called when a block of a new firmware is uploaded to the deck.
  * The upload will be done in small but continouse pieces.
- * @param vAddr: the address for this block in the virtual deck address space starting at 0
- * @param len: length of the block
- * @param buffer: a buffer with a part of the firmware
+ * @param address: Address where the buffer should be written. The start of the firmware is at address 0.
+ * @param len: Buffer length
+ * @param buffer: Buffer to write in the firmware memory
+ * 
+ * @return True if the buffer could be written successully, false otherwise (if the deck if not in bootloader
+ *         mode for example)
  */
-typedef void (deckFwUpdateFcn)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer);
+typedef bool (deckFwWrite)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer);
+
+/**
+ * @brief Definition of function to read the firmware
+ * 
+ * @param addr: Address where the data should be read. The start of the firmware is at address 0.
+ * @param len: Length to read.
+ * @param buffer: Buffer where to output the data
+ * 
+ * @return True if the buffer could be read successully, false otherwise (if the deck if not in bootloader
+ *         mode for example)
+ */
+typedef bool (deckFwRead)(const uint32_t vAddr, const uint8_t len, uint8_t* buffer);
 
 /**
  * @brief This struct defines the firmware required by the deck and the function
@@ -159,8 +174,9 @@ typedef struct deckFwUpdateDef_s {
   uint32_t requiredHash;
   uint32_t requiredSize;
 
-  // Function that will be called when new firmware is uploaded to the deck.
-  deckFwUpdateFcn* updateFcn;
+  // Function that will be called when new firmware is uploaded to or downloaded from the deck.
+  deckFwWrite* write;
+  deckFwRead* read;
 } DeckFwUpdateDef_t;
 
 int deckCount(void);
