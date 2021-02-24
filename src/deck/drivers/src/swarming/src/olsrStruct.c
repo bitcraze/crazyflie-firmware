@@ -1046,7 +1046,7 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
 }
 
 // todo : 应该返回setIndex_t类型
-olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr)
+setIndex_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr)
 {
   setIndex_t it = routingSet->fullQueueEntry;
   while(it != -1)
@@ -1054,7 +1054,7 @@ olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAd
       olsrRoutingSetItem_t routeNode = routingSet->setData[it];
       if(routeNode.data.m_destAddr == destAddr)
         {
-          return routeNode.data.m_nextAddr;
+          return it;
         }
       it = routeNode.next;
     }

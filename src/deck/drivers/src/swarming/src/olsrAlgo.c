@@ -853,10 +853,10 @@ void olsrProcessData(olsrMessage_t* msg)
     }
   else
     {
-      olsrAddr_t nextHop = olsrFindInRoutingTable(&olsrRoutingSet,msg->m_messageHeader.m_destinationAddress);
-      if(nextHop != -1)
+      setIndex_t nextHopIndex = olsrFindInRoutingTable(&olsrRoutingSet,msg->m_messageHeader.m_destinationAddress);
+      if(nextHopIndex != -1)
         {
-          dataMsg->m_dataHeader.m_nextHop = nextHop; 
+          dataMsg->m_dataHeader.m_nextHop = olsrRoutingSet.setData[nextHopIndex].data.m_nextAddr; 
         }
       else
         {
@@ -1418,8 +1418,8 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
   msg.m_messageHeader.m_originatorAddress = sourceAddr;
   msg.m_messageHeader.m_destinationAddress = destAddr;
 
-  olsrAddr_t nextHop = olsrFindInRoutingTable(&olsrRoutingSet,destAddr);
-  if(nextHop == -1)
+  setIndex_t nextHopIndex = olsrFindInRoutingTable(&olsrRoutingSet,destAddr);
+  if(nextHopIndex == -1)
     {
       DEBUG_PRINT_OLSR_ROUTING("can not find next hop\n");
       return;
@@ -1431,7 +1431,7 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 
   olsrDataMessage_t dataMsg;
   dataMsg.m_dataHeader.m_sourcePort = sourcePort;
-  dataMsg.m_dataHeader.m_nextHop = nextHop;
+  dataMsg.m_dataHeader.m_nextHop = olsrRoutingSet.setData[nextHopIndex].data.m_nextAddr;
   dataMsg.m_dataHeader.m_destPort =  destPort;
   dataMsg.m_dataHeader.m_seq = portSeq;
   dataMsg.m_dataHeader.m_size = sizeof(olsrDataMessageHeader_t)+length;

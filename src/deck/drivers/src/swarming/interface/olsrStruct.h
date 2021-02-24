@@ -435,7 +435,7 @@ void olsrRoutingSetInit(olsrRoutingSet_t *routingSet);
 
 bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple);
 
-olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr);
+setIndex_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr);
 
 void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet);
 
