@@ -30,7 +30,8 @@
  * lighthouse.h: lighthouse tracking system receiver
  */
 
-#ifndef __LIGHTHOUSE_H__
-#define __LIGHTHOUSE_H__
+#pragma once
 
-#endif // __LIGHTHOUSE_H__
+
+#define LIGHTHOUSE_BITSTREAM_CRC 0xe2889216
+#define LIGHTHOUSE_BITSTREAM_SIZE 104092
