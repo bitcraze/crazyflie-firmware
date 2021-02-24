@@ -28,6 +28,8 @@ compiler:
       - 'vendor/libdw1000/inc/'
       - 'src/deck/drivers/interface/'
       - 'src/deck/drivers/src/'
+      - 'src/deck/core/'
+      - 'src/deck/interface/'
       - 'src/utils/interface/'
       - 'src/utils/interface/tdoa/'
       - 'src/utils/interface/lighthouse/'

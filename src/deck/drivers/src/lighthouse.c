@@ -72,6 +72,17 @@ static void ledTimerHandle(xTimerHandle timer) {
   lighthouseCoreLedTimer();
 }
 
+static void newFwBlockReceived(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer) {
+  // TODO krri write block to flash
+}
+
+static const DeckFwUpdateDef_t fwUpdateDef = {
+  // TODO krri set values
+  .requiredSize = 1234,
+  .requiredHash = 9876,
+  .updateFcn = newFwBlockReceived,
+};
+
 static const DeckDriver lighthouse_deck = {
   .vid = 0xBC,
   .pid = 0x10,
@@ -79,6 +90,8 @@ static const DeckDriver lighthouse_deck = {
 
   .usedGpio = 0,  // FIXME: set the used pins
   .requiredEstimator = kalmanEstimator,
+
+  .fwUpdate = &fwUpdateDef,
 
   .init = lighthouseInit,
 };

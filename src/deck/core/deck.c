@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "deck.h"
+#include "deck_fw_update.h"
 #include "debug.h"
 
 #ifdef DEBUG
@@ -43,6 +44,7 @@ void deckInit()
 {
   deckDriverCount();
   deckInfoInit();
+  deckFwUpdateInit();
 
   int nDecks;
   int i;

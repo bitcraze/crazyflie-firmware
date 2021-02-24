@@ -80,6 +80,7 @@ bool deckTest(void);
 #define DECK_USING_MOSI (1<<12)
 
 struct deckInfo_s;
+struct deckFwUpdate_s;
 
 /* Structure definition and registering macro */
 typedef struct deck_driver {
@@ -95,6 +96,9 @@ typedef struct deck_driver {
   /* Required system properties */
   StateEstimatorType requiredEstimator;
   bool requiredLowInterferenceRadioMode;
+
+  /* Firmware/binary update definition. Set to zero if the deck does not have a flash memory to update. */
+  const struct deckFwUpdateDef_s* fwUpdate;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
@@ -136,6 +140,28 @@ typedef struct deckInfo_s {
   TlvArea tlv;
   const DeckDriver *driver;
 } DeckInfo;
+
+/**
+ * @brief Definition of function that is called when a block of a new firmware is uploaded to the deck.
+ * The upload will be done in small but continouse pieces.
+ * @param vAddr: the address for this block in the virtual deck address space starting at 0
+ * @param len: length of the block
+ * @param buffer: a buffer with a part of the firmware
+ */
+typedef void (deckFwUpdateFcn)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer);
+
+/**
+ * @brief This struct defines the firmware required by the deck and the function
+ * to use to flash new firmware to the deck.
+ */
+typedef struct deckFwUpdateDef_s {
+  // Definition of the required firmware for the deck
+  uint32_t requiredHash;
+  uint32_t requiredSize;
+
+  // Function that will be called when new firmware is uploaded to the deck.
+  deckFwUpdateFcn* updateFcn;
+} DeckFwUpdateDef_t;
 
 int deckCount(void);
 
