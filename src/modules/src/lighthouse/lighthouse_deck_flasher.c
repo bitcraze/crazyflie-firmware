@@ -28,6 +28,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define DEBUG_MODULE "LHFL"
 #include "debug.h"
@@ -38,6 +39,9 @@
 #include "crc32.h"
 #include "mem.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #ifdef LH_FLASH_BOOTLOADER
 #include "lh_flasher.h"
 #endif
@@ -45,7 +49,7 @@
 static bool inBootloaderMode = true;
 
 bool lighthouseDeckFlasherCheckVersionAndBoot() {
-  lhblInit(I2C1_DEV);
+  lhblInit();
 
   #ifdef LH_FLASH_BOOTLOADER
   // Flash deck bootloader using SPI (factory and recovery flashing)
@@ -107,7 +111,48 @@ bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, ui
   }
 }
 
+#include <stdio.h>
+
 bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
 {
-  return false;
+  bool pass;
+  if (memAddr == 0) {
+    pass = lhblFlashEraseFirmware();
+
+    if (pass == false) {
+      return false;
+    }
+  }
+
+  uint32_t address = LH_FW_ADDR + memAddr;
+
+  // This function can be called with a buffer spanning 2 pages
+  // Try to find the first byte of the second page if this is the case
+  int pageSplit = 0;
+  for (int i=0; i<writeLen; i++) {
+    if (((address + i) & 0x0ff) == 0) {
+      pageSplit = i;
+      break;
+    }
+  }
+  
+  printf("pagesplit: %d\n", pageSplit);
+
+  // Flashing first page
+  if (pageSplit > 0) {
+    printf("First call: %d\n", pageSplit);
+    pass = lhblFlashWritePage(address, pageSplit, buffer);
+
+    if (pass == false) {
+      return pass;
+    }
+  }
+
+  // Flashing second page if necessary
+  if ((writeLen-pageSplit) > 0) {
+    printf("Second call: %d\n", writeLen-pageSplit);
+    pass = lhblFlashWritePage(address+pageSplit, writeLen-pageSplit, &buffer[pageSplit]);
+  }
+
+  return pass;
 }
