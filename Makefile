@@ -188,7 +188,7 @@ PROJ_OBJ += mm_distance.o mm_absolute_height.o mm_position.o mm_pose.o mm_tdoa.o
 PROJ_OBJ += crtp_commander_high_level.o planner.o pptraj.o pptraj_compressed.o
 
 # Deck Core
-PROJ_OBJ += deck.o deck_info.o deck_drivers.o deck_test.o deck_fw_update.o
+PROJ_OBJ += deck.o deck_info.o deck_drivers.o deck_test.o deck_memory.o
 
 # Deck API
 PROJ_OBJ += deck_constants.o

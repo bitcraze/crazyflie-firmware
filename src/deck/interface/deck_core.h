@@ -151,8 +151,7 @@ typedef struct deckInfo_s {
  * @return True if the buffer could be written successully, false otherwise (if the deck if not in bootloader
  *         mode for example)
  */
-typedef bool (deckFwWrite)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer);
-// TODO krri rename
+typedef bool (deckMemoryWrite)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer);
 
 /**
  * @brief Definition of function to read the firmware
@@ -164,8 +163,7 @@ typedef bool (deckFwWrite)(const uint32_t vAddr, const uint8_t len, const uint8_
  * @return True if the buffer could be read successully, false otherwise (if the deck if not in bootloader
  *         mode for example)
  */
-typedef bool (deckFwRead)(const uint32_t vAddr, const uint8_t len, uint8_t* buffer);
-// TODO krri rename
+typedef bool (deckMemoryRead)(const uint32_t vAddr, const uint8_t len, uint8_t* buffer);
 
 #define DECK_MEMORY_MASK_STARTED 1
 #define DECK_MEMORY_MASK_UPGRADE_REQUIRED 2
@@ -183,9 +181,11 @@ typedef uint8_t (deckMemoryProperties)();
  * to use to flash new firmware to the deck.
  */
 typedef struct deckMemDef_s {
-  // Function that will be called when new firmware is uploaded to or downloaded from the deck.
-  deckFwWrite* write;
-  deckFwRead* read;
+  // Functions that will be called to read or write to the deck memory.
+  deckMemoryWrite* write;
+  deckMemoryRead* read;
+
+  // Function to query properties of the deck memory
   deckMemoryProperties* properties;
 
   // True if the deck supports FW upgrades

@@ -79,12 +79,14 @@ static uint8_t memoryPropertiesQuery() {
 }
 
 static const DeckMemDef_t memoryDef = {
-  // TODO krri set values
-  .requiredSize = 1234,
-  .requiredHash = 9876,
   .write = lighthouseDeckFlasherWrite,
   .read = lighthouseDeckFlasherRead,
   .properties = memoryPropertiesQuery,
+  .supportsUpgrade = true,
+
+  // TODO krri set values
+  .requiredSize = 1234,
+  .requiredHash = 9876,
 };
 
 static const DeckDriver lighthouse_deck = {

@@ -22,7 +22,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * deck_fw_update.h - interface for updating firmware and binary data on decks
+ * deck_memory.h - interface for reading/writing deck memory and updating
+ *                 firmware and binary data on decks, using the memory
+ *                 subsystem.
  *
  */
 
@@ -31,4 +33,4 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-void deckFwUpdateInit();
+void deckMemoryInit();

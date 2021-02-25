@@ -22,21 +22,22 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * deck_fw_update.c - implements functionality for updating firmware
- *                    and binary data in decks.
+ * deck_memory.c - implements functionality for reading and writing deck memory
+ *                 using the memory subsystem, including updating firmware
+ *                 and binary data in decks.
  *
  */
 
 #include <string.h>
-#include "deck_fw_update.h"
+#include "deck_memory.h"
 #include "deck_core.h"
 #include "mem.h"
 #include "test_support.h"
 
 
-static const uint32_t DECK_FW_MAX_SIZE = 0x10000000;
+static const uint32_t DECK_MEM_MAX_SIZE = 0x10000000;
 
-static uint32_t handleMemGetSize(void) { return DECK_FW_MAX_SIZE * (DECK_MAX_COUNT + 1); }
+static uint32_t handleMemGetSize(void) { return DECK_MEM_MAX_SIZE * (DECK_MAX_COUNT + 1); }
 TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
 TESTABLE_STATIC bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t memoryDef = {
@@ -97,13 +98,13 @@ static uint8_t populateBitfield(const DeckMemDef_t* memDef) {
     return result;
 }
 
-static void populateDeckFwInfo(uint8_t buffer[], const uint8_t deckNr) {
+static void populateDeckMemoryInfo(uint8_t buffer[], const uint8_t deckNr) {
     DeckInfo* info = deckInfo(deckNr);
     memset(buffer, 0, DECK_MEMORY_INFO_SIZE);
 
     const DeckMemDef_t* deckMemDef = info->driver->memoryDef;
     if (deckMemDef) {
-        uint32_t baseAddress = (deckNr + 1) * DECK_FW_MAX_SIZE;
+        uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE;
 
         buffer[OFFS_BITFIELD] = populateBitfield(deckMemDef);
         memcpy(&buffer[OFFS_REQ_HASH], &deckMemDef->requiredHash, 4);
@@ -132,8 +133,8 @@ static bool handleInfoSectionRead(const uint32_t memAddr, const uint8_t readLen,
             break;
         }
 
-        uint8_t fwInfo[DECK_MEMORY_INFO_SIZE];
-        populateDeckFwInfo(fwInfo, deckNr);
+        uint8_t deckMemoryInfo[DECK_MEMORY_INFO_SIZE];
+        populateDeckMemoryInfo(deckMemoryInfo, deckNr);
 
         int startAddrOfThisInfo = deckNr * DECK_MEMORY_INFO_SIZE + 1;
         int firstByteToUse = memAddr + index - startAddrOfThisInfo;
@@ -143,7 +144,7 @@ static bool handleInfoSectionRead(const uint32_t memAddr, const uint8_t readLen,
             bytesToUse = bytesLeft;
         }
 
-        memcpy(buffer + index, (uint8_t*)(&fwInfo) + firstByteToUse, bytesToUse);
+        memcpy(buffer + index, (uint8_t*)(&deckMemoryInfo) + firstByteToUse, bytesToUse);
         bytesLeft -= bytesToUse;
         index += bytesToUse;
     }
@@ -158,7 +159,7 @@ static bool handleDeckSectionRead(const uint32_t memAddr, const uint8_t readLen,
     const DeckMemDef_t* deckMemDef = info->driver->memoryDef;
     if (deckMemDef) {
         if (deckMemDef->read) {
-            uint32_t baseAddress = (deckNr + 1) * DECK_FW_MAX_SIZE;
+            uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE;
             uint32_t deckAddress = memAddr - baseAddress;
             result = deckMemDef->read(deckAddress, readLen, buffer);
         }
@@ -174,7 +175,7 @@ static bool handleDeckSectionWrite(const uint32_t memAddr, const uint8_t writeLe
     const DeckMemDef_t* deckMemDef = info->driver->memoryDef;
     if (deckMemDef) {
         if (deckMemDef->write) {
-            uint32_t baseAddress = (deckNr + 1) * DECK_FW_MAX_SIZE;
+            uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE;
             uint32_t deckAddress = memAddr - baseAddress;
             result = deckMemDef->write(deckAddress, writeLen, buffer);
         }
@@ -189,7 +190,7 @@ TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen
 
     // Assume the buffer is fully within one section. It may not be true, but unlikely
     // and not an important use case to support
-    const uint32_t section = memAddr / DECK_FW_MAX_SIZE;
+    const uint32_t section = memAddr / DECK_MEM_MAX_SIZE;
     if (section == 0) {
         result = handleInfoSectionRead(memAddr, readLen, buffer, nrOfDecks);
     } else {
@@ -207,7 +208,7 @@ TESTABLE_STATIC bool handleMemWrite(const uint32_t memAddr, const uint8_t writeL
 
     // Assume the buffer is fully within one section. It may not be true, but unlikely
     // and not an important use case to support
-    const uint32_t section = memAddr / DECK_FW_MAX_SIZE;
+    const uint32_t section = memAddr / DECK_MEM_MAX_SIZE;
     if (section > 0) {
         int nrOfDecks = deckCount();
         int deckNr = section - 1;
@@ -219,6 +220,6 @@ TESTABLE_STATIC bool handleMemWrite(const uint32_t memAddr, const uint8_t writeL
     return result;
 }
 
-void deckFwUpdateInit() {
+void deckMemoryInit() {
     memoryRegisterHandler(&memoryDef);
 }

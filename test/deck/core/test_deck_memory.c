@@ -1,5 +1,5 @@
-// File under test deck_fw_update.c
-#include "deck_fw_update.h"
+// File under test deck_memory.c
+#include "deck_memory.h"
 
 #include "unity.h"
 #include "mock_deck_core.h"
