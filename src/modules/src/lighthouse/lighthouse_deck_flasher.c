@@ -31,6 +31,8 @@
 
 #define DEBUG_MODULE "LHFL"
 #include "debug.h"
+
+#include "lighthouse.h"
 #include "lh_bootloader.h"
 #include "lighthouse_deck_flasher.h"
 #include "crc32.h"
@@ -40,25 +42,7 @@
 #include "lh_flasher.h"
 #endif
 
-#define BITSTREAM_CRC 0xe2889216
-#define BITSTREAM_SIZE 104092
-
-static uint32_t getFirmwareSize(void);
-static bool readFirmware(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool writeFirmware(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
-
-static const MemoryHandlerDef_t flasherMemory = {
-  .type = MEM_TYPE_DECK_FW,
-  .getSize = getFirmwareSize,
-  .read = readFirmware,
-  .write = writeFirmware,
-};
-
-void lighthouseDeckFlasherInit()
-{
-  // Register access to the flash in the memory subsystem
-  memoryRegisterHandler(&flasherMemory);
-}
+static bool inBootloaderMode = true;
 
 bool lighthouseDeckFlasherCheckVersionAndBoot() {
   lhblInit(I2C1_DEV);
@@ -90,40 +74,40 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
   crc32Context_t crcContext;
   crc32ContextInit(&crcContext);
 
-  for (int i=0; i<=BITSTREAM_SIZE; i+=64) {
-    int length = ((i+64)<BITSTREAM_SIZE)?64:BITSTREAM_SIZE-i;
+  for (int i=0; i<=LIGHTHOUSE_BITSTREAM_SIZE; i+=64) {
+    int length = ((i+64)<LIGHTHOUSE_BITSTREAM_SIZE)?64:LIGHTHOUSE_BITSTREAM_SIZE-i;
     lhblFlashRead(LH_FW_ADDR + i, length, (uint8_t*)deckBitstream);
     crc32Update(&crcContext, deckBitstream, length);
   }
 
   uint32_t crc = crc32Out(&crcContext);
-  bool pass = crc == BITSTREAM_CRC;
+  bool pass = crc == LIGHTHOUSE_BITSTREAM_CRC;
   DEBUG_PRINT("Bitstream CRC32: %x %s\n", (int)crc, pass?"[PASS]":"[FAIL]");
 
   // Launch LH deck FW
   if (pass) {
     DEBUG_PRINT("Firmware version %d verified, booting deck!\n", deckVersion);
     lhblBootToFW();
+    inBootloaderMode = false;
   } else {
     DEBUG_PRINT("The deck bitstream does not match the required bitstream.\n");
-    DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", BITSTREAM_SIZE, BITSTREAM_CRC);
+    DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", LIGHTHOUSE_BITSTREAM_SIZE, LIGHTHOUSE_BITSTREAM_CRC);
     DEBUG_PRINT("Leaving the deck in bootloader mode ...\n");
   }
   
   return pass;
 }
 
-static uint32_t getFirmwareSize(void)
+bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer)
 {
-  return 256*1024;
+  if (inBootloaderMode) {
+    return lhblFlashRead(LH_FW_ADDR + memAddr, readLen, buffer);
+  } else {
+    return false;
+  }
 }
 
-static bool readFirmware(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer)
-{
-  return lhblFlashRead(LH_FW_ADDR + memAddr, readLen, buffer);
-}
-
-static bool writeFirmware(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
+bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
 {
   return false;
 }

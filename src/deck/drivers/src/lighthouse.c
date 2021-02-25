@@ -40,6 +40,7 @@
 #include "timers.h"
 
 #include "lighthouse_core.h"
+#include "lighthouse_deck_flasher.h"
 
 // LED timer
 static StaticTimer_t timerBuffer;
@@ -72,16 +73,12 @@ static void ledTimerHandle(xTimerHandle timer) {
   lighthouseCoreLedTimer();
 }
 
-static bool write_firmware(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer) {
-  // TODO krri write block to flash
-  return false;
-}
-
 static const DeckFwUpdateDef_t fwUpdateDef = {
   // TODO krri set values
   .requiredSize = 1234,
   .requiredHash = 9876,
-  .write = write_firmware,
+  .write = lighthouseDeckFlasherWrite,
+  .read = lighthouseDeckFlasherRead,
 };
 
 static const DeckDriver lighthouse_deck = {
