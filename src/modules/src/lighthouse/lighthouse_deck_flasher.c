@@ -34,6 +34,7 @@
 #include "debug.h"
 
 #include "lighthouse.h"
+#include "deck_core.h"
 #include "lh_bootloader.h"
 #include "lighthouse_deck_flasher.h"
 #include "crc32.h"
@@ -47,6 +48,7 @@
 #endif
 
 static bool inBootloaderMode = true;
+static bool hasStarted = false;
 
 bool lighthouseDeckFlasherCheckVersionAndBoot() {
   lhblInit();
@@ -98,7 +100,9 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
     DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", LIGHTHOUSE_BITSTREAM_SIZE, LIGHTHOUSE_BITSTREAM_CRC);
     DEBUG_PRINT("Leaving the deck in bootloader mode ...\n");
   }
-  
+
+  hasStarted = true;
+
   return pass;
 }
 
@@ -135,7 +139,7 @@ bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, 
       break;
     }
   }
-  
+
   printf("pagesplit: %d\n", pageSplit);
 
   // Flashing first page
@@ -155,4 +159,18 @@ bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, 
   }
 
   return pass;
+}
+
+uint8_t lighthouseDeckFlasherPropertiesQuery() {
+  uint8_t result = 0;
+
+  if (hasStarted) {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
+
+  if (inBootloaderMode) {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE | DECK_MEMORY_MASK_UPGRADE_REQUIRED;
+  }
+
+  return result;
 }

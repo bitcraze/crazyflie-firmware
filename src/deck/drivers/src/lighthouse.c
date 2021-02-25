@@ -39,6 +39,7 @@
 #include "task.h"
 #include "timers.h"
 
+#include "lighthouse.h"
 #include "lighthouse_core.h"
 #include "lighthouse_deck_flasher.h"
 
@@ -73,20 +74,14 @@ static void ledTimerHandle(xTimerHandle timer) {
   lighthouseCoreLedTimer();
 }
 
-static uint8_t memoryPropertiesQuery() {
-  // TODO krri implement
-  return 0;
-}
-
 static const DeckMemDef_t memoryDef = {
   .write = lighthouseDeckFlasherWrite,
   .read = lighthouseDeckFlasherRead,
-  .properties = memoryPropertiesQuery,
+  .properties = lighthouseDeckFlasherPropertiesQuery,
   .supportsUpgrade = true,
 
-  // TODO krri set values
-  .requiredSize = 1234,
-  .requiredHash = 9876,
+  .requiredSize = LIGHTHOUSE_BITSTREAM_SIZE,
+  .requiredHash = LIGHTHOUSE_BITSTREAM_CRC,
 };
 
 static const DeckDriver lighthouse_deck = {
