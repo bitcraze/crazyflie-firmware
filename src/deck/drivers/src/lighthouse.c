@@ -73,12 +73,18 @@ static void ledTimerHandle(xTimerHandle timer) {
   lighthouseCoreLedTimer();
 }
 
-static const DeckFwUpdateDef_t fwUpdateDef = {
+static uint8_t memoryPropertiesQuery() {
+  // TODO krri implement
+  return 0;
+}
+
+static const DeckMemDef_t memoryDef = {
   // TODO krri set values
   .requiredSize = 1234,
   .requiredHash = 9876,
   .write = lighthouseDeckFlasherWrite,
   .read = lighthouseDeckFlasherRead,
+  .properties = memoryPropertiesQuery,
 };
 
 static const DeckDriver lighthouse_deck = {
@@ -89,7 +95,7 @@ static const DeckDriver lighthouse_deck = {
   .usedGpio = 0,  // FIXME: set the used pins
   .requiredEstimator = kalmanEstimator,
 
-  .fwUpdate = &fwUpdateDef,
+  .memoryDef = &memoryDef,
 
   .init = lighthouseInit,
 };

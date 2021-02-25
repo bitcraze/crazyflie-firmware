@@ -63,13 +63,13 @@ Addresses relative to the deck memory info base address
 
 ### Deck memory info bit field
 
-| Bit | Property          | 0                                              | 1                                                                 |
-|-----|-------------------|------------------------------------------------|-------------------------------------------------------------------|
-| 0   | Is valid          | no deck is installed and no more data in the record is valid | a deck is installed and the data is valid           |
-| 1   | Is started        | the deck is in start up mode, data is not reliable           | deck has started, data is reliable                  |
-| 3   | Supports write    | write not supported                            | memory is writeable                                               |
-| 2   | Supports read     | read not supported                             | memory is readable                                                |
-| 4   | Supports upgrade  | no upgradable firmware                         | firmware upgrades possible                                        |
-| 5   | Upgrade required  | the firmware is up to date                     | the firmware needs to be upgraded                                 |
-| 6   | Bootloader active | the deck is running FW                         | the deck is in bootloader mode, ready to receive FW               |
-| 7   | Reserved          |                                                |                                                                   |
+| Bit | Property          | 0                                                          | 1                                                   |
+|-----|-------------------|------------------------------------------------------------|-----------------------------------------------------|
+| 0   | Is valid          | no deck is installed or does not support memory operations | a deck is installed and the data is valid           |
+| 1   | Is started        | the deck is in start up mode, data is not reliable yet     | deck has started, data is reliable                  |
+| 3   | Supports write    | write not supported                                        | memory is writeable                                 |
+| 2   | Supports read     | read not supported                                         | memory is readable                                  |
+| 4   | Supports upgrade  | no upgradable firmware                                     | firmware upgrades possible                          |
+| 5   | Upgrade required  | the firmware is up to date                                 | the firmware needs to be upgraded                   |
+| 6   | Bootloader active | the deck is running FW                                     | the deck is in bootloader mode, ready to receive FW |
+| 7   | Reserved          |                                                            |                                                     |
