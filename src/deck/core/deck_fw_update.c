@@ -40,7 +40,7 @@ static uint32_t handleMemGetSize(void) { return 0x1000000; }
 TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
 static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t memDef = {
-  .type = MEM_TYPE_DECK_FW,
+  .type = MEM_TYPE_DECK_MEM,
   .getSize = handleMemGetSize,
   .read = handleMemRead,
   .write = handleMemWrite,
