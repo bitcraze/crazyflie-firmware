@@ -283,14 +283,13 @@ void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm
     for (int i=0; i<KC_STATE_DIM; i++){
         this->S[i] = this->S[i] + Km->pData[i] * error;
     }
-    // ====== COVARIANCE UPDATE ======
-    mat_mult(Km, Hm, &tmpNN1m);      // KH,  the Kalman Gain and H are the updated Kalman Gain and H 
-    //  I-KH
-    mat_scale(&tmpNN1m, -1.0f, &tmpNN1m);
+    // ====== COVARIANCE UPDATE ====== //
+    mat_mult(Km, Hm, &tmpNN1m);                 // KH,  the Kalman Gain and H are the updated Kalman Gain and H 
+    mat_scale(&tmpNN1m, -1.0f, &tmpNN1m);       //  I-KH
     for (int i=0; i<KC_STATE_DIM; i++) { tmpNN1d[i][i] = 1.0f + tmpNN1d[i][i]; } 
     float Ppo[KC_STATE_DIM][KC_STATE_DIM]={0};
     arm_matrix_instance_f32 Ppom = {KC_STATE_DIM, KC_STATE_DIM, (float *)Ppo};
-    mat_mult(&tmpNN1m, P_w_m, &Ppom);      // Pm = (I-KH)*P_w_m
+    mat_mult(&tmpNN1m, P_w_m, &Ppom);          // Pm = (I-KH)*P_w_m
     matrixcopy(KC_STATE_DIM, KC_STATE_DIM, this->P, Ppo);
 
     assertStateNotNaN(this);
