@@ -37,8 +37,6 @@
 
 #include "usec_time.h"
 
-#define TICK_PER_US (FREERTOS_MCU_CLOCK_HZ / (8 * 1e6))
-
 static bool isInit = false;
 
 void sleepus(uint32_t us)

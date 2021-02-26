@@ -82,10 +82,9 @@ static uint16_t m3rpm;
 static uint16_t m4rpm;
 
 
-bool rpmInit(void)
+static void rpmInit(DeckInfo *info)
 {
   int i;
-  bool status = true;
   isInit = true;
 
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -154,8 +153,6 @@ bool rpmInit(void)
   TIM_ITConfig(TIM3, TIM_IT_CC1, ENABLE);
   TIM_ITConfig(TIM3, TIM_IT_CC2, ENABLE);
   TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
-
-  return status;
 }
 
 static uint16_t calcRPM(uint32_t t1, uint32_t t2)

@@ -38,10 +38,11 @@
 #include "deck.h"
 #include "param.h"
 #include "log.h"
+#include "sleepus.h"
 
-// Hardware defines
+// Hardware defines (also update deck driver below!)
 #define CLK_PIN    DECK_GPIO_IO1
-#define DAT_PIN    DECK_GPIO_IO2
+#define DAT_PIN    DECK_GPIO_IO4
 
 static bool isInit;
 static int32_t rawWeight;
@@ -51,7 +52,7 @@ static bool enable = true;
 static float a = 4.22852802e-05;
 static float b = -2.21784688e+01;
 
-static xTimerHandle timer;
+static void loadcellTask(void* prm);
 
 static enum hx711_gain
 {
@@ -66,12 +67,6 @@ static bool hx711_is_ready(void);
 static int32_t hx711_read(void);
 // static void hx711_power_down(void);
 static void hx711_power_up(void);
-
-static void delayMicroseconds(uint32_t us)
-{
-  uint64_t start = usecTimestamp();
-  while (usecTimestamp() - start < us);
-}
 
 static void hx711_init(void)
 {
@@ -114,25 +109,27 @@ static int32_t hx711_read(void)
   // The result is that all subsequent bits read by shiftIn() will read back as 1,
   // corrupting the value returned by read().
 
-  portDISABLE_INTERRUPTS();
+  // Since we use a high-priority task, we do not need to actually disable the interrupt
+
+  // portDISABLE_INTERRUPTS();
 
   // Pulse the clock pin 24 times to read the data.
   for (int i = 0; i < 24; ++i) {
     digitalWrite(CLK_PIN, HIGH);
     value |= digitalRead(DAT_PIN) << (24 - i);
     digitalWrite(CLK_PIN, LOW);
-    delayMicroseconds(1);
+    sleepus(1);
   }
 
   // Set the channel and the gain factor for the next reading using the clock pin.
   for (int i = 0; i < gain; ++i) {
     digitalWrite(CLK_PIN, HIGH);
-    delayMicroseconds(1);
+    sleepus(1);
     digitalWrite(CLK_PIN, LOW);
-    delayMicroseconds(1);
+    sleepus(1);
   }
 
-  portENABLE_INTERRUPTS();
+  // portENABLE_INTERRUPTS();
 
   // Replicate the most significant bit to pad out a 32-bit signed integer
   if (value & (1<<24)) {
@@ -152,14 +149,6 @@ static void hx711_power_up(void)
   digitalWrite(CLK_PIN, LOW);
 }
 
-static void loadcellTimer(xTimerHandle timer)
-{
-  if (enable && hx711_is_ready()) {
-    rawWeight = hx711_read();
-    weight = a * rawWeight + b;
-  }
-}
-
 static void loadcellInit(DeckInfo *info)
 {
   if (isInit) {
@@ -169,19 +158,35 @@ static void loadcellInit(DeckInfo *info)
   gain = GAIN128;
   hx711_init();
 
-  timer = xTimerCreate( "loadcellTimer", M2T(10),
-                                     pdTRUE, NULL, loadcellTimer );
-  xTimerStart(timer, 100);
+  // Create a task with very high priority to reduce risk that we get
+  // invalid data
+  xTaskCreate(loadcellTask, "LOADCELL",
+              configMINIMAL_STACK_SIZE, NULL,
+              /*priority*/6, NULL);
 
   isInit = true;
 }
 
+static void loadcellTask(void* prm)
+{
+  TickType_t lastWakeTime = xTaskGetTickCount();
+
+  while(1) {
+    vTaskDelayUntil(&lastWakeTime, F2T(100));
+
+    if (enable && hx711_is_ready()) {
+      rawWeight = hx711_read();
+      weight = a * rawWeight + b;
+    }
+  }
+}
+
 static const DeckDriver loadcell_deck = {
-  .vid = 0xBC,
-  .pid = 0xD0,
+  .vid = 0x00,
+  .pid = 0x00,
   .name = "bcLoadcell",
 
-  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2,
+  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_4,
 
   .init = loadcellInit,
 };
