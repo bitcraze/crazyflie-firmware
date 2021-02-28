@@ -1,38 +1,44 @@
-/*-------------------------------------------*/
-/* Integer type definitions for FatFs module */
-/*-------------------------------------------*/
+/*-------------------------------------------*
+ * Integer type definitions for FatFs module *
+ *-------------------------------------------*/
 
 #ifndef _FF_INTEGER
 #define _FF_INTEGER
 
-#ifdef _WIN32	/* FatFs development platform */
+/* Integer types used for FatFs API */
+
+#ifdef _WIN32
 
 #include <windows.h>
-#include <tchar.h>
 typedef unsigned __int64 QWORD;
 
+#else
 
-#else			/* Embedded platform */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__cplusplus)
 
-/* These types MUST be 16-bit or 32-bit */
-typedef int				INT;
-typedef unsigned int	UINT;
+#include <stdint.h>
+typedef uint8_t   BYTE; /* MUST be 8-bit */
+typedef uint16_t  WORD; /* MUST be 16-bit */
+typedef uint32_t DWORD; /* MUST be 32-bit */
+typedef uint64_t QWORD; /* MUST be 64-bit */
 
-/* This type MUST be 8-bit */
-typedef unsigned char	BYTE;
+#else
 
-/* These types MUST be 16-bit */
-typedef short			SHORT;
-typedef unsigned short	WORD;
-typedef unsigned short	WCHAR;
-
-/* These types MUST be 32-bit */
-typedef long			LONG;
-typedef unsigned long	DWORD;
-
-/* This type MUST be 64-bit (Remove this for C89 compatibility) */
-typedef unsigned long long QWORD;
+typedef unsigned char       BYTE; /* MUST be 8-bit */
+typedef unsigned short      WORD; /* MUST be 16-bit */
+typedef unsigned long      DWORD; /* MUST be 32-bit */
+/* No QWORD because 'unsigned long long' not part of ANSI C89 / ISO C90 */
+#define FF_QWORD_UNSUPPORTED
 
 #endif
 
+typedef WORD WCHAR; /* UTF-16 character type */
+
+typedef          short SHORT;
+typedef          int     INT;
+typedef unsigned int    UINT;
+typedef          long   LONG;
+
 #endif
+
+#endif /* _FF_INTEGER */
