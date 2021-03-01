@@ -219,7 +219,8 @@ PROJ_OBJ += oa.o
 PROJ_OBJ += multiranger.o
 PROJ_OBJ += lighthouse.o
 PROJ_OBJ += activeMarkerDeck.o
-PROJ_OBJ += loadcell.o
+# PROJ_OBJ += loadcell.o
+PROJ_OBJ += loadcell_nau7802.o
 PROJ_OBJ += rpm.o
 
 # Uart2 Link for CRTP communication is not compatible with decks using uart2
