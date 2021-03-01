@@ -33,6 +33,7 @@
 #include "deck.h"
 #include "log.h"
 #include "param.h"
+#include "eventtrigger.h"
 #include "i2cdev.h"
 
 #define DEBUG_MODULE "ACTIVE_MARKER"
@@ -71,6 +72,9 @@ static uint8_t deckButtonSensorValue = 0;
 static uint32_t nextPollTime = 0;
 static const uint32_t pollIntervall = M2T(100);
 static bool i2cOk = false;
+
+// defines eventTrigger_activeMarkerModeChanged
+EVENTTRIGGER(activeMarkerModeChanged, uint8, mode)
 
 #ifdef ACTIVE_MARKER_DECK_TEST
 static bool activeMarkerDeckCanStart = false;
@@ -150,6 +154,9 @@ static void handleModeUpdate() {
   if (currentDeckMode != requestedDeckMode) {
     currentDeckMode = requestedDeckMode;
     i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_MODE, 1, &currentDeckMode);
+
+    eventTrigger_activeMarkerModeChanged_payload.mode = currentDeckMode;
+    eventTrigger(&eventTrigger_activeMarkerModeChanged);
   }
 }
 
