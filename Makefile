@@ -370,8 +370,23 @@ ifeq ($(SHELL),/bin/sh)
   COL_RESET=\033[m
 endif
 
-#################### Targets ###############################
+# This define n-thing is a standard hack to get newlines in GNU Make.
+define n
 
+
+endef
+
+# Make sure that the submodules are up to date.
+# Check if there are any files in the vendor directories, if not warn the user.
+ifeq ($(wildcard $(CRAZYFLIE_BASE)/vendor/*/*),)
+  $(error $n                                                                   \
+    The submodules does not seem to be present, consider fetching them by:$n   \
+      $$ git submodule init$n                                                  \
+      $$ git submodule update$n                                                \
+  )
+endif
+
+#################### Targets ###############################
 
 all: bin/ bin/dep bin/vendor check_submodules build
 build:
