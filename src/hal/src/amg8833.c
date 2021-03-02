@@ -43,7 +43,6 @@ bool begin(AMG8833_Dev_t *dev, I2C_Dev *I2Cx)
   // Set I2C parameters
   dev->I2Cx = I2Cx;
   dev->devAddr = AMG88xx_ADDRESS;
-  bool i2c_complete = i2cdevInit(dev->I2Cx);
   // Enter normal mode
   bool mode_selected = write8(dev, AMG88xx_PCTL, AMG88xx_NORMAL_MODE);
   // Software reset
@@ -53,7 +52,7 @@ bool begin(AMG8833_Dev_t *dev, I2C_Dev *I2Cx)
   //set to 10 FPS
   bool fps_set = write8(dev, AMG88xx_FPSC, (AMG88xx_FPS_10 & 0x01));
   vTaskDelay(M2T(10));
-  return i2c_complete && mode_selected && software_resetted &&
+  return mode_selected && software_resetted &&
     interrupts_set && fps_set;
 }
 
