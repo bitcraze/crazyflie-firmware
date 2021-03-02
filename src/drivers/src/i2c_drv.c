@@ -238,43 +238,7 @@ static void i2cNotifyClient(I2cDrv* i2c)
 
 static void i2cdrvTryToRestartBus(I2cDrv* i2c)
 {
-  i2cdrvInitBus(i2c);
-}
-
-static void i2cdrvDmaSetupBus(I2cDrv* i2c)
-{
-
-  NVIC_InitTypeDef NVIC_InitStructure;
-
-  RCC_AHB1PeriphClockCmd(i2c->def->dmaPerif, ENABLE);
-
-  // RX DMA Channel Config
-  i2c->DMAStruct.DMA_Channel = i2c->def->dmaChannel;
-  i2c->DMAStruct.DMA_PeripheralBaseAddr = (uint32_t)&i2c->def->i2cPort->DR;
-  i2c->DMAStruct.DMA_Memory0BaseAddr = 0;
-  i2c->DMAStruct.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  i2c->DMAStruct.DMA_BufferSize = 0;
-  i2c->DMAStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  i2c->DMAStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  i2c->DMAStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  i2c->DMAStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  i2c->DMAStruct.DMA_Mode = DMA_Mode_Normal;
-  i2c->DMAStruct.DMA_Priority = DMA_Priority_High;
-  i2c->DMAStruct.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  i2c->DMAStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
-  i2c->DMAStruct.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  i2c->DMAStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-
-  NVIC_InitStructure.NVIC_IRQChannel = i2c->def->dmaRxIRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-}
-
-static void i2cdrvInitBus(I2cDrv* i2c)
-{
-  I2C_InitTypeDef  I2C_InitStructure;
+  I2C_InitTypeDef I2C_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -329,6 +293,42 @@ static void i2cdrvInitBus(I2cDrv* i2c)
   NVIC_Init(&NVIC_InitStructure);
 
   i2cdrvDmaSetupBus(i2c);
+}
+
+static void i2cdrvDmaSetupBus(I2cDrv* i2c)
+{
+
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  RCC_AHB1PeriphClockCmd(i2c->def->dmaPerif, ENABLE);
+
+  // RX DMA Channel Config
+  i2c->DMAStruct.DMA_Channel = i2c->def->dmaChannel;
+  i2c->DMAStruct.DMA_PeripheralBaseAddr = (uint32_t)&i2c->def->i2cPort->DR;
+  i2c->DMAStruct.DMA_Memory0BaseAddr = 0;
+  i2c->DMAStruct.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  i2c->DMAStruct.DMA_BufferSize = 0;
+  i2c->DMAStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  i2c->DMAStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  i2c->DMAStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  i2c->DMAStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  i2c->DMAStruct.DMA_Mode = DMA_Mode_Normal;
+  i2c->DMAStruct.DMA_Priority = DMA_Priority_High;
+  i2c->DMAStruct.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  i2c->DMAStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+  i2c->DMAStruct.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  i2c->DMAStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+
+  NVIC_InitStructure.NVIC_IRQChannel = i2c->def->dmaRxIRQ;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+static void i2cdrvInitBus(I2cDrv* i2c)
+{
+  i2cdrvTryToRestartBus(i2c);
 
   i2c->isBusFreeSemaphore = xSemaphoreCreateBinaryStatic(&i2c->isBusFreeSemaphoreBuffer);
   i2c->isBusFreeMutex = xSemaphoreCreateMutexStatic(&i2c->isBusFreeMutexBuffer);
