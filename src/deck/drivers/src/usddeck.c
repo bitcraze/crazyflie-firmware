@@ -59,6 +59,7 @@
 #include "crc32.h"
 #include "static_mem.h"
 #include "mem.h"
+#include "eventtrigger.h"
 
 // Hardware defines
 #ifdef USDDECK_USE_ALT_PINS_AND_SPI
@@ -97,6 +98,9 @@ typedef struct usdLogConfig_s {
   logVarId_t varIds[MAX_USD_LOG_VARIABLES];
   bool enableOnStartup;
   enum usddeckLoggingMode_e mode;
+
+  uint32_t numEventtriggers;
+  bool hasFixedFrequencyEvent;
 } usdLogConfig_t;
 
 
@@ -338,6 +342,40 @@ static void usdInit(DeckInfo *info)
   isInit = true;
 }
 
+static void usddeckEventtriggerCallback(const eventtrigger *event)
+{
+  uint32_t ticks = xTaskGetTickCount();
+  xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+
+  // trigger writing once there is some data
+  if (logBufferReadPtr < logBufferWritePtr && xHandleWriteTask)
+  {
+    vTaskResume(xHandleWriteTask);
+  }
+
+  int dataSize = 2 + 4 + event->payloadSize;
+
+  // if we reach the end of the buffer, start from the beginning again
+  if (logBufferWritePtr + dataSize >= logBuffer + usdLogConfig.bufferSize)
+  {
+    logBufferWritePtr = logBuffer;
+  }
+
+  // only write if we have enough space
+  if (logBufferReadPtr < logBufferWritePtr + dataSize)
+  {
+    /* write data into buffer */
+    uint16_t event_id = eventtriggerGetId(event);
+    memcpy(logBufferWritePtr, &event_id, sizeof(event_id));
+    logBufferWritePtr += sizeof(event_id);
+    memcpy(logBufferWritePtr, &ticks, 4);
+    logBufferWritePtr += 4;
+    memcpy(logBufferWritePtr, event->payload, event->payloadSize);
+    logBufferWritePtr += event->payloadSize;
+  }
+  xSemaphoreGive(logBufferMutex);
+}
+
 static void usdLogTask(void* prm)
 {
   TickType_t lastWakeTime = xTaskGetTickCount();
@@ -387,11 +425,15 @@ static void usdLogTask(void* prm)
       usdLogConfig.enableOnStartup = strtol(line, &endptr, 10);
 
       // loop over event triggers "on:<name>"
+      usdLogConfig.hasFixedFrequencyEvent = false;
+      usdLogConfig.numEventtriggers = 0;
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
       while (line) {
         if (strncmp(line, "on:", 3) == 0) {
           // special mode for non-event-based logging
-          if (strcmp(&line[3], "fixedFrequency") == 0) {
+          if (strcmp(&line[3], "fixedFrequency") == 0
+              && !usdLogConfig.hasFixedFrequencyEvent) {
+            usdLogConfig.hasFixedFrequencyEvent = true;
             // frequency
             line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
             if (!line) break;
@@ -428,11 +470,22 @@ static void usdLogTask(void* prm)
               usdLogConfig.numBytes += logVarSize(logGetType(varid));
             }
           } else {
-            // TODO: handle event triggers
+            // handle event triggers
+            eventtrigger *et = eventtriggerGetByName(&line[3]);
+            if (et) {
+              eventtriggerEnable(et, eventtriggerHandler_USD, true);
+              ++usdLogConfig.numEventtriggers;
+            } else {
+              DEBUG_PRINT("Unknown event %s\n", &line[3]);
+            }
+            // TODO: read additional log variables
+            line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
           }
         }
       }
       f_close(&logFile);
+
+      eventtriggerRegisterCallback(eventtriggerHandler_USD, &usddeckEventtriggerCallback);
 
       DEBUG_PRINT("Config read [OK].\n");
       // DEBUG_PRINT("Frequency: %d Hz. Buffer size: %d\n",
@@ -530,7 +583,7 @@ void usddeckTriggerLogging(void)
   // only write if we have enough space
   if (logBufferReadPtr < logBufferWritePtr + dataSize) {
     /* write data into buffer */
-    uint16_t event_id = 0;
+    uint16_t event_id = 0xFFFF;
     memcpy(logBufferWritePtr, &event_id, sizeof(event_id));
     logBufferWritePtr += sizeof(event_id);
     memcpy(logBufferWritePtr, &ticks, 4);
@@ -677,10 +730,64 @@ static void usdWriteTask(void* prm)
         uint16_t version = 1;
         usdWriteData(&version, sizeof(version));
 
-        uint16_t numEventTypes = 1;
+        uint16_t numEventTypes = usdLogConfig.numEventtriggers;
+        if (usdLogConfig.hasFixedFrequencyEvent) {
+          ++numEventTypes;
+        }
         usdWriteData(&numEventTypes, sizeof(numEventTypes));
 
-        for (uint16_t eventId = 0; eventId < numEventTypes; ++eventId) {
+        for (uint16_t id = 0; ; ++id) {
+          eventtrigger* et = eventtriggerGetById(id);
+          if (!et) {
+            break;
+          }
+          DEBUG_PRINT("eteM %d\n", et->enableMask);
+          // if (et->enableMask & (1<<eventtriggerHandler_USD)) {
+          if (true) {
+            // write header for each enabled event
+            usdWriteData(&id, sizeof(id));
+            usdWriteData(et->name, strlen(et->name) + 1);
+            uint16_t numVariables = et->numPayloadVariables;
+            usdWriteData(&numVariables, sizeof(numVariables));
+
+            for (int i = 0; i < numVariables; ++i)
+            {
+              usdWriteData(et->payloadDesc[i].name, strlen(et->payloadDesc[i].name));
+              usdWriteData("(", 1);
+              char typeChar;
+              switch (et->payloadDesc[i].type)
+              {
+              case eventtriggerType_uint8:
+                typeChar = 'B';
+                break;
+              case eventtriggerType_int8:
+                typeChar = 'b';
+                break;
+              case eventtriggerType_uint16:
+                typeChar = 'H';
+                break;
+              case eventtriggerType_int16:
+                typeChar = 'h';
+                break;
+              case eventtriggerType_uint32:
+                typeChar = 'I';
+                break;
+              case eventtriggerType_int32:
+                typeChar = 'i';
+                break;
+              case eventtriggerType_float:
+                typeChar = 'f';
+                break;
+              default:
+                ASSERT(false);
+              }
+              usdWriteData(&typeChar, 1);
+              usdWriteData(")", 2);
+            }
+          }
+        }
+        if (usdLogConfig.hasFixedFrequencyEvent) {
+          uint16_t eventId = 0xFFFF;
           usdWriteData(&eventId, sizeof(eventId));
           usdWriteData("fixedFrequency", strlen("fixedFrequency") + 1);
           uint16_t numVariables = usdLogConfig.numSlots;

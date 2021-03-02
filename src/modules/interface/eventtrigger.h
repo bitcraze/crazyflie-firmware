@@ -56,6 +56,7 @@ typedef struct eventtrigger_s
     uint8_t numPayloadVariables;
     void *payload;
     uint8_t payloadSize;
+    uint8_t enableMask;
 } eventtrigger;
 
 /* Example Use Case
@@ -79,6 +80,7 @@ static const eventtrigger myEventTrigger = {
     .numPayloadVariables = sizeof(__eventTriggerPayloadDesc__myEvent__) / sizeof(eventtriggerPayloadDesc),
     .payload = &__eventTriggerPayload__myEvent__,
     .payloadSize = sizeof(__eventTriggerPayload__myEvent__),
+    .enableMask = 0,
 };
 */
 
@@ -121,31 +123,32 @@ EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
         .name = #NAME,                              \
     }
 
-#define _EVENTTRIGGER_NON_EMPTY(NAME, ...)                                          \
-    static struct                                                                   \
-    {                                                                               \
-        CALL_MACRO_FOR_EACH_PAIR(_EVENTTRIGGER_ENTRY_PACKED, ##__VA_ARGS__)         \
-    } __attribute__((packed)) eventTrigger_##NAME##_payload;                        \
-    static const eventtriggerPayloadDesc __eventTriggerPayloadDesc__##NAME##__[] =  \
-    {                                                                               \
-        CALL_MACRO_FOR_EACH_PAIR(_EVENTTRIGGER_ENTRY_DESCRIPTION, ##__VA_ARGS__)    \
-    };                                                                              \
-    static const eventtrigger eventTrigger_##NAME = {                               \
-        .name = #NAME,                                                              \
-        .payloadDesc = __eventTriggerPayloadDesc__##NAME##__,                       \
-        .numPayloadVariables = sizeof(__eventTriggerPayloadDesc__##NAME##__) /      \
-                                sizeof(eventtriggerPayloadDesc),                    \
-        .payload = &eventTrigger_##NAME##_payload,                                  \
-        .payloadSize = sizeof(eventTrigger_##NAME##_payload),                       \
+#define _EVENTTRIGGER_NON_EMPTY(NAME, ...)                                                             \
+    static struct                                                                                      \
+    {                                                                                                  \
+        CALL_MACRO_FOR_EACH_PAIR(_EVENTTRIGGER_ENTRY_PACKED, ##__VA_ARGS__)                            \
+    } __attribute__((packed)) eventTrigger_##NAME##_payload;                                           \
+    static const eventtriggerPayloadDesc __eventTriggerPayloadDesc__##NAME##__[] =                     \
+        {                                                                                              \
+            CALL_MACRO_FOR_EACH_PAIR(_EVENTTRIGGER_ENTRY_DESCRIPTION, ##__VA_ARGS__)};                 \
+    static eventtrigger eventTrigger_##NAME __attribute__((section(".eventtrigger." #NAME), used)) = { \
+        .name = #NAME,                                                                                 \
+        .payloadDesc = __eventTriggerPayloadDesc__##NAME##__,                                          \
+        .numPayloadVariables = sizeof(__eventTriggerPayloadDesc__##NAME##__) /                         \
+                               sizeof(eventtriggerPayloadDesc),                                        \
+        .payload = &eventTrigger_##NAME##_payload,                                                     \
+        .payloadSize = sizeof(eventTrigger_##NAME##_payload),                                          \
+        .enableMask = 0,                                                                               \
     };
 
-#define _EVENTTRIGGER_EMPTY(NAME)                                                   \
-    static const eventtrigger eventTrigger_##NAME = {                               \
-        .name = #NAME,                                                              \
-        .payloadDesc = NULL,                                                        \
-        .numPayloadVariables = 0,                                                   \
-        .payload = NULL,                                                            \
-        .payloadSize = 0,                                                           \
+#define _EVENTTRIGGER_EMPTY(NAME)                                                                      \
+    static eventtrigger eventTrigger_##NAME __attribute__((section(".eventtrigger." #NAME), used)) = { \
+        .name = #NAME,                                                                                 \
+        .payloadDesc = NULL,                                                                           \
+        .numPayloadVariables = 0,                                                                      \
+        .payload = NULL,                                                                               \
+        .payloadSize = 0,                                                                              \
+        .enableMask = 0,                                                                               \
     };
 
 #define EVENTTRIGGER(NAME, ...) \
@@ -158,14 +161,38 @@ EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
 
 #endif // UNIT_TEST_MODE
 
-/* Public API */
+/* Functions and associated data structures */
+
+typedef void (*eventtriggerCallback)(const eventtrigger *);
+
+enum eventtriggerHandler_e
+{
+    eventtriggerHandler_USD = 0,
+    eventtriggerHandler_Count
+};
+
+/** Get the eventtrigger id from a pointer
+ * 
+ * @param event Pointer to the event
+ * @return A unique id 0...numEvents-1 for the event
+ */
+uint16_t eventtriggerGetId(const eventtrigger *event);
+
+/** Get the eventtrigger pointer from an event id
+ * 
+ * @param id unique id of the event
+ * @return A pointer to the eventtrigger data structure, or NULL if no such eventtrigger exists
+ */
+eventtrigger *eventtriggerGetById(uint16_t id);
 
 /** Get the eventtrigger pointer from an event name
  * 
  * @param name Name of the event
  * @return A pointer to the eventtrigger data structure, or NULL if no such eventtrigger exists
  */
-const eventtrigger* eventtriggerGetByName(const char *name);
+eventtrigger* eventtriggerGetByName(const char *name);
+
+
 
 /** Trigger the specified event
  * 
@@ -174,5 +201,23 @@ const eventtrigger* eventtriggerGetByName(const char *name);
  * event->payload should be filled beforehand with metadata about the event
  */
 void eventTrigger(const eventtrigger *event);
+
+/** Register a callback that will be called for enabled events
+ * 
+ * @param handler unique type of the handler that this callback is for
+ * @param cb function pointer to the callback
+ * 
+ * The handler allows multiple event handlers to be triggered by the same event.
+ * The callback is only called for enabled events.
+ */
+void eventtriggerRegisterCallback(enum eventtriggerHandler_e handler, eventtriggerCallback cb);
+
+/** Enable/disable a specific event
+ * 
+ * @param event Pointer to the event to be enabled/disabled
+ * @param handler unique type of the handler that wants to receive callbacks for this event
+ * @param enable True if this event should be enabled, false otherwise
+ */
+void eventtriggerEnable(eventtrigger *event, enum eventtriggerHandler_e handler, bool enable);
 
 #endif /* __EVENTTRIGGER_H__ */

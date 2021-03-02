@@ -23,15 +23,69 @@
  *
  * eventtrigger.c - Event triggers to mark important system events with payloads
  */
+#include <string.h>
 
 #include "eventtrigger.h"
 
-const eventtrigger* eventtriggerGetByName(const char *name)
+#include "debug.h"
+
+static eventtriggerCallback callbacks[eventtriggerHandler_Count] = {0};
+
+/* Symbols set by the linker script */
+extern eventtrigger _eventtrigger_start;
+extern eventtrigger _eventtrigger_stop;
+
+uint16_t eventtriggerGetId(const eventtrigger *event)
 {
+    // const eventtrigger* start = &_eventtrigger_start;
+    return event - &_eventtrigger_start;
+    return 0;
+}
+
+eventtrigger *eventtriggerGetById(uint16_t id)
+{
+    eventtrigger *result = &_eventtrigger_start;
+    int numEventtriggers = &_eventtrigger_stop - &_eventtrigger_start;
+    if (id < numEventtriggers) {
+        return &result[id];
+    }
+    return 0;
+}
+
+eventtrigger* eventtriggerGetByName(const char *name)
+{
+    eventtrigger* result = &_eventtrigger_start;
+    int numEventtriggers = &_eventtrigger_stop - &_eventtrigger_start;
+    DEBUG_PRINT("net %d\n", numEventtriggers);
+    for (int i = 0; i < numEventtriggers; ++i) {
+        if (strcmp(result[i].name, name) == 0) {
+            return &result[i];
+        }
+    }
     return 0;
 }
 
 void eventTrigger(const eventtrigger *event)
 {
+    if (event->enableMask) {
+        for (int i = 0; i < eventtriggerHandler_Count; ++i) {
+            if (callbacks[i] && event->enableMask & (1 << i)) {
+                callbacks[i](event);
+            }
+        }
+    }
+}
 
+void eventtriggerRegisterCallback(enum eventtriggerHandler_e handler, eventtriggerCallback cb)
+{
+    callbacks[handler] = cb;
+}
+
+void eventtriggerEnable(eventtrigger *event, enum eventtriggerHandler_e handler, bool enable)
+{
+    if (enable) {
+        event->enableMask |= (1 << handler);
+    } else {
+        event->enableMask &= ~(1 << handler);
+    }
 }
