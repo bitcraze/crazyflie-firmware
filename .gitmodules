@@ -1,16 +1,15 @@
-[submodule "vendor/libdw1000"]
-	path = vendor/libdw1000
-	url = https://github.com/bitcraze/libdw1000
-[submodule "vendor/unity"]
-	path = vendor/unity
-	url = https://github.com/throwtheswitch/unity.git
+[submodule "vendor/CMSIS"]
+	path = vendor/CMSIS
+	url = https://github.com/ARM-software/CMSIS.git
+[submodule "vendor/FreeRTOS"]
+	path = vendor/FreeRTOS
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
 [submodule "vendor/cmock"]
 	path = vendor/cmock
 	url = https://github.com/throwtheswitch/cmock.git
-[submodule "vendor/CMSIS"]
-	path = vendor/CMSIS
-	url = https://github.com/ARM-software/CMSIS
-[submodule "vendor/FreeRTOS"]
-	path = vendor/FreeRTOS
-	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
-	branch = V10.2.1-convergence-FreeRTOS-Source
+[submodule "vendor/libdw1000"]
+	path = vendor/libdw1000
+	url = https://github.com/bitcraze/libdw1000.git
+[submodule "vendor/unity"]
+	path = vendor/unity
+	url = https://github.com/throwtheswitch/unity.git
