@@ -47,6 +47,10 @@
 #include "lh_flasher.h"
 #endif
 
+#define READ_BUFFER_LENGTH 64
+// We read the version string in the read buffer and we need one byte for null termination
+#define VERSION_STRING_MAX_LENGTH (READ_BUFFER_LENGTH - 1)
+
 static bool inBootloaderMode = true;
 static bool hasStarted = false;
 
@@ -71,17 +75,17 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
   vTaskDelay(M2T(1));
 
   // Decoding bitstream version for console
-  static char deckBitstream[65];
-  lhblFlashRead(LH_FW_ADDR, 64, (uint8_t*)deckBitstream);
-  deckBitstream[64] = 0;
+  static char deckBitstream[READ_BUFFER_LENGTH];
+  lhblFlashRead(LH_FW_ADDR, VERSION_STRING_MAX_LENGTH, (uint8_t*)deckBitstream);
+  deckBitstream[VERSION_STRING_MAX_LENGTH] = 0;
   int deckVersion = strtol(&deckBitstream[2], NULL, 10);
 
   // Checking that the bitstream has the right checksum
   crc32Context_t crcContext;
   crc32ContextInit(&crcContext);
 
-  for (int i=0; i<=LIGHTHOUSE_BITSTREAM_SIZE; i+=64) {
-    int length = ((i+64)<LIGHTHOUSE_BITSTREAM_SIZE)?64:LIGHTHOUSE_BITSTREAM_SIZE-i;
+  for (int i=0; i<=LIGHTHOUSE_BITSTREAM_SIZE; i+=READ_BUFFER_LENGTH) {
+    int length = ((i + READ_BUFFER_LENGTH) < LIGHTHOUSE_BITSTREAM_SIZE)?READ_BUFFER_LENGTH:LIGHTHOUSE_BITSTREAM_SIZE-i;
     lhblFlashRead(LH_FW_ADDR + i, length, (uint8_t*)deckBitstream);
     crc32Update(&crcContext, deckBitstream, length);
   }
@@ -115,8 +119,6 @@ bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, ui
   }
 }
 
-#include <stdio.h>
-
 bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
 {
   bool pass;
@@ -140,11 +142,8 @@ bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, 
     }
   }
 
-  printf("pagesplit: %d\n", pageSplit);
-
   // Flashing first page
   if (pageSplit > 0) {
-    printf("First call: %d\n", pageSplit);
     pass = lhblFlashWritePage(address, pageSplit, buffer);
 
     if (pass == false) {
@@ -154,7 +153,6 @@ bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, 
 
   // Flashing second page if necessary
   if ((writeLen-pageSplit) > 0) {
-    printf("Second call: %d\n", writeLen-pageSplit);
     pass = lhblFlashWritePage(address+pageSplit, writeLen-pageSplit, &buffer[pageSplit]);
   }
 
