@@ -341,7 +341,7 @@ static void i2cdrvdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uin
   sleepus(I2CDEV_CLK_TS);
   GPIO_ResetBits(portSDA, pinSDA);
   sleepus(I2CDEV_CLK_TS);
-  GPIO_ResetBits(portSDA, pinSDA);
+  GPIO_ResetBits(portSCL, pinSCL);
   sleepus(I2CDEV_CLK_TS);
 
   /* Set data and clock high and wait for any clock stretching to finish. */
