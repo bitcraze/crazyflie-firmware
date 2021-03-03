@@ -13,6 +13,7 @@
 - title: Functional areas
   subs:
     - {page_id: crtp_index}
+    - {page_id: memory_subsystem}
     - {page_id: stabilizer_index}
     - {page_id: deck_memory_format}
     - {page_id: p2p_api}

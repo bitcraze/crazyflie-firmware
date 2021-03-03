@@ -249,14 +249,16 @@ typedef struct {
 /**
  * @brief Interface for processing of pulse data from the lighthouse
  *
- * @param state
- * @param frameData
- * @param baseStation
- * @param axis
+ * @param state               The current pulse processing state
+ * @param frameData           The frame of pulse data to process
+ * @param angles              The resulting angle information that was extracted from the frameData. Valid if this function returns true.
+ * @param baseStation         The channel (base station) that the frame originates from. Valid if this function returns true.
+ * @param axis                The axis (first of second sweep) represented by the frame. Valid if this function returns true.
+ * @param calibDataIsDecoded  True if there is one or more blocks of calibration data that have been decoded.
  * @return true, angle, base station and axis are written
  * @return false, no valid result
  */
-typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
+typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded);
 
 /**
  * @brief Apply calibration correction to all angles of all sensors for a particular baseStation

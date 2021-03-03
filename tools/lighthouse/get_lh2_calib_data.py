@@ -8,7 +8,7 @@
 #
 #  Crazyflie control firmware
 #
-#  Copyright (C) 2020 Bitcraze AB
+#  Copyright (C) 2020-2021 Bitcraze AB
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -56,15 +56,23 @@ print ('Connecting to ' + dev)
 ser = serial.Serial(dev, timeout=0.4)
 sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
 
-# Request fcal parameters
-sio.write("\r\nparam list fcal\r\n")
+# Request id
+sio.write("\r\nid\r\n")
 sio.flush()
-lines = sio.readlines()
+id_lines = sio.readlines()
+
+# Parse id
+uid = id_lines[3].split(': ')[1].strip()
+
+# Request fcal parameters
+sio.write("param list fcal\r\n")
+sio.flush()
+fcal_lines = sio.readlines()
 ser.close()
 
 # Parse data
 data = {'0': {}, '1': {}}
-for line in lines:
+for line in fcal_lines:
     if line.startswith('fcal.'):
         parts = line.split()
         subs = parts[0].split('.')
@@ -83,6 +91,7 @@ for sweep, params in data.items():
         print('.' + param + ' = ' + value + ', ', end='')
     print('},')
 print('    },')
+print('    .uid = 0x' + uid + ',')
 print('    .valid = true,')
 print()
 print('python-format')
@@ -90,4 +99,5 @@ print('calib = LighthouseBsCalibration()')
 for sweep, params in data.items():
     for param, value in params.items():
         print('calib.sweeps[{}].{} = {}'.format(sweep, param, value))
+print('calib.uid = 0x' + uid)
 print('calib.valid = True')

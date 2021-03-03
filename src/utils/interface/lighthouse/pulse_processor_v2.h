@@ -45,7 +45,7 @@
  * @return true, angle, base station and axis are written
  * @return false, no valid result
  */
-bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
+bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded);
 
 /**
  * @brief Convert Lighthouse v2 angles to Lighthouse V1 angles

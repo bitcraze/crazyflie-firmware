@@ -51,7 +51,7 @@
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
 
-#include "storage.h"
+#include "lighthouse_storage.h"
 
 #include "test_support.h"
 #include "static_mem.h"
@@ -83,10 +83,23 @@ static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
-// Contains a bit map that indicates which base staions that are actively used, that is recevied
-// and has valid geo and calib dats
+
+// A bitmap that indicates which base staions that are received
+static uint16_t baseStationReceivedMapWs;
+static uint16_t baseStationReceivedMap;
+
+// A bitmap that indicates which base staions that are actively used in the estimation process, that is receiving sweeps
+// as well a has valid geo and calib data
 static uint16_t baseStationActiveMapWs;
 static uint16_t baseStationActiveMap;
+
+// A bitmap that indicates which base stations that have received calibration data over the air
+static uint16_t baseStationCalibConfirmedMap;
+
+// A bitmap that indicates which base stations that have received calibration data that was different to what was stored in memory
+static uint16_t baseStationCalibUpdatedMap;
+
+static uint8_t calibStatusReset;
 
 // An overall system status indicating if data is sent to the estimator
 static lhSystemStatus_t systemStatus;
@@ -97,35 +110,7 @@ static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
 static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
-pulseProcessor_t lighthouseCoreState = {
-  // .bsGeometry = {
-    // Arena LH1
-    // {.valid = true, .origin = {-1.958483,  0.542299,  3.152727, }, .mat = {{0.79721498, -0.004274, 0.60368103, }, {0.0, 0.99997503, 0.00708, }, {-0.60369599, -0.005645, 0.79719502, }, }},
-    // {.valid = true, .origin = {1.062398, -2.563488,  3.112367, }, .mat = {{0.018067, -0.999336, 0.031647, }, {0.76125097, 0.034269, 0.64755201, }, {-0.648206, 0.012392, 0.76136398, }, }},
-
-    // Arena LH2
-    // {.valid = true, .origin = {-2.057947, 0.398319, 3.109704, }, .mat = {{0.807210, 0.002766, 0.590258, }, {0.067095, 0.993078, -0.096409, }, {-0.586439, 0.117426, 0.801437, }, }},
-    // {.valid = true, .origin = {0.866244, -2.566829, 3.132632, }, .mat = {{-0.043296, -0.997675, -0.052627, }, {0.766284, -0.066962, 0.639003, }, {-0.641042, -0.012661, 0.767401, }, }},
-  // },
-
-  // .bsCalibration = {
-  //   // Arena LH2
-  //   { // Base station 0
-  //     .valid = true,
-  //     .sweep = {
-  //       {.tilt = -0.047058, .phase = 0.0, .curve = 0.052215, .gibphase = 2.087890, .gibmag = -0.003913, .ogeephase = 0.433105, .ogeemag = -0.049285},
-  //       {.tilt = 0.048065, .phase = -0.005336, .curve = 0.122375, .gibphase = 2.097656, .gibmag = -0.003883, .ogeephase = 0.631835, .ogeemag = -0.034851},
-  //     },
-  //   },
-  //   { // Base station 1
-  //     .valid = true,
-  //     .sweep = {
-  //       {.tilt = -0.051208, .phase = 0.0, .curve = 0.011756, .gibphase = 2.136718, .gibmag = -0.006057, .ogeephase = 2.705078,},
-  //       {.tilt = 0.045623, .phase = -0.004142, .curve = 0.104736, .gibphase = 2.349609, .gibmag = -0.003332, .ogeephase = 0.380859, .ogeemag = -0.240112,},
-  //     },
-  //   },
-  // }
-};
+pulseProcessor_t lighthouseCoreState;
 
 #if LIGHTHOUSE_FORCE_TYPE == 1
 pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
@@ -138,26 +123,23 @@ pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
 #define UART_FRAME_LENGTH 12
 
 
-// Persistent storage
-#define STORAGE_VERSION_KEY "lh/ver"
-#define CURRENT_STORAGE_VERSION "1"
-#define STORAGE_KEY_GEO "lh/sys/0/geo/"
-#define STORAGE_KEY_CALIB "lh/sys/0/cal/"
-#define KEY_LEN 20
-
-static void verifySetStorageVersion();
-static baseStationGeometry_t geoBuffer;
-TESTABLE_STATIC void initializeGeoDataFromStorage();
-static lighthouseCalibration_t calibBuffer;
-TESTABLE_STATIC void initializeCalibDataFromStorage();
 static bool deckIsFlashed = false;
 
+static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
+  const uint16_t mask = (1 << index);
+
+  if (value) {
+    *bitmap |= mask;
+  } else {
+    *bitmap &= ~mask;
+  }
+}
 
 void lighthouseCoreInit() {
   lighthousePositionEstInit();
 }
 
-void ledTimer()
+void lighthouseCoreLedTimer()
 {
   if (deckIsFlashed){
     switch (systemStatus)
@@ -169,7 +151,7 @@ void ledTimer()
           ledInternalStatus = systemStatus;
         }
         break;
-      case statusMissingData: 
+      case statusMissingData:
         if(ledInternalStatus != systemStatus)
         {
           lighthouseCoreSetLeds(lh_led_off, lh_led_slow_blink, lh_led_off);
@@ -185,7 +167,7 @@ void ledTimer()
         break;
       default:
         ASSERT(false);
-    } 
+    }
   }
 }
 
@@ -301,10 +283,12 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
 }
 
 static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int sweepId) {
+  const uint16_t basestationBitMap = (1 << basestation);
+  baseStationReceivedMapWs |= basestationBitMap;
+
   if (sweepId == sweepIdSecond) {
     const bool hasCalibrationData = pulseProcessorApplyCalibration(appState, angles, basestation);
-    const bool hasGeoData = appState->bsGeometry[basestation].valid;
-    if (hasCalibrationData && hasGeoData) {
+    if (hasCalibrationData) {
       if (lighthouseBsTypeV2 == angles->measurementType) {
         // Emulate V1 base stations for now, convert to V1 angles
         convertV2AnglesToV1Angles(angles);
@@ -313,17 +297,20 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
       // Send measurement to the ground
       locSrvSendLighthouseAngle(basestation, angles);
 
-      baseStationActiveMapWs = baseStationActiveMapWs | (1 << basestation);
+      const bool hasGeoData = appState->bsGeometry[basestation].valid;
+      if (hasGeoData) {
+        baseStationActiveMapWs |= basestationBitMap;
 
-      switch(estimationMethod) {
-        case 0:
-          usePulseResultCrossingBeams(appState, angles, basestation);
-          break;
-        case 1:
-          usePulseResultSweeps(appState, angles, basestation);
-          break;
-        default:
-          break;
+        switch(estimationMethod) {
+          case 0:
+            usePulseResultCrossingBeams(appState, angles, basestation);
+            break;
+          case 1:
+            usePulseResultSweeps(appState, angles, basestation);
+            break;
+          default:
+            break;
+        }
       }
     }
 
@@ -364,6 +351,28 @@ TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighth
     return lighthouseBsTypeUnknown;
 }
 
+static void useCalibrationData(pulseProcessor_t *appState) {
+  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+    if (appState->ootxDecoder[baseStation].isFullyDecoded) {
+      lighthouseCalibration_t newData;
+      lighthouseCalibrationInitFromFrame(&newData, &appState->ootxDecoder[baseStation].frame);
+
+      modifyBit(&baseStationCalibConfirmedMap, baseStation, true);
+
+      lighthouseCalibration_t* currentCalibData = &appState->bsCalibration[baseStation];
+      const bool currentCalibDataValid = currentCalibData->valid;
+      const bool isDataDifferent = ((newData.uid != currentCalibData->uid) || (newData.valid != currentCalibDataValid));
+      if (isDataDifferent) {
+        DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation + 1);
+        lighthouseCoreSetCalibrationData(baseStation, &newData);
+        lighthouseStoragePersistCalibDataBackground(baseStation);
+
+        modifyBit(&baseStationCalibUpdatedMap, baseStation, currentCalibDataValid);
+      }
+    }
+  }
+}
+
 static pulseProcessorProcessPulse_t identifySystem(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* bsIdentificationData) {
   pulseProcessorProcessPulse_t result = (void*)0;
 
@@ -387,12 +396,17 @@ static pulseProcessorProcessPulse_t identifySystem(const lighthouseUartFrame_t* 
 static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
     int basestation;
     int sweepId;
+    bool calibDataIsDecoded = false;
 
     pulseWidth[frame->data.sensor] = frame->data.width;
 
-    if (pulseProcessorProcessPulse(appState, &frame->data, angles, &basestation, &sweepId)) {
+    if (pulseProcessorProcessPulse(appState, &frame->data, angles, &basestation, &sweepId, &calibDataIsDecoded)) {
         STATS_CNT_RATE_EVENT(bsRates[basestation]);
         usePulseResult(appState, angles, basestation, sweepId);
+    }
+
+    if (calibDataIsDecoded) {
+      useCalibrationData(appState);
     }
 }
 
@@ -425,11 +439,19 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
 
 static void updateSystemStatus(const uint32_t now_ms) {
   if (now_ms > nextUpdateTimeOfSystemStatus) {
+    baseStationReceivedMap = baseStationReceivedMapWs;
+    baseStationReceivedMapWs = 0;
+
     baseStationActiveMap = baseStationActiveMapWs;
     baseStationActiveMapWs = 0;
 
     systemStatus = systemStatusWs;
     systemStatusWs = statusNotReceiving;
+
+    if (calibStatusReset) {
+      calibStatusReset = 0;
+      baseStationCalibUpdatedMap = 0;
+    }
 
     nextUpdateTimeOfSystemStatus = now_ms + SYSTEM_STATUS_UPDATE_INTERVAL;
   }
@@ -441,9 +463,9 @@ void lighthouseCoreTask(void *param) {
   uart1Init(230400);
   systemWaitStart();
 
-  verifySetStorageVersion();
-  initializeGeoDataFromStorage();
-  initializeCalibDataFromStorage();
+  lighthouseStorageVerifySetStorageVersion();
+  lighthouseStorageInitializeGeoDataFromStorage();
+  lighthouseStorageInitializeCalibDataFromStorage();
 
   lighthouseDeckFlasherCheckVersionAndBoot();
   deckIsFlashed = true;
@@ -491,80 +513,7 @@ void lighthouseCoreTask(void *param) {
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration) {
   if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
     lighthouseCoreState.bsCalibration[baseStation] = *calibration;
-  }
-}
-
-static void generateStorageKey(char* buf, const char* base, const uint8_t baseStation) {
-  // TOOD make an implementation that supports baseStations with 2 digits
-  ASSERT(baseStation <= 9);
-
-  const int baseLen = strlen(base);
-  memcpy(buf, base, baseLen);
-  buf[baseLen] = '0' + baseStation;
-  buf[baseLen + 1] = '\0';
-}
-
-bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData) {
-  bool result = true;
-  char key[KEY_LEN];
-
-  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
-    if (geoData) {
-      generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
-      result = result && storageStore(key, &lighthouseCoreState.bsGeometry[baseStation], sizeof(lighthouseCoreState.bsGeometry[baseStation]));
-    }
-    if (calibData) {
-      generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
-      result = result && storageStore(key, &lighthouseCoreState.bsCalibration[baseStation], sizeof(lighthouseCoreState.bsCalibration[baseStation]));
-    }
-  }
-
-  return result;
-}
-
-static void verifySetStorageVersion() {
-  const int bufLen = 5;
-  char buffer[bufLen];
-
-  const size_t fetched = storageFetch(STORAGE_VERSION_KEY, buffer, bufLen);
-  if (fetched == 0) {
-    storageStore(STORAGE_VERSION_KEY, CURRENT_STORAGE_VERSION, strlen(CURRENT_STORAGE_VERSION) + 1);
-  } else {
-    if (strcmp(buffer, CURRENT_STORAGE_VERSION) != 0) {
-      // The storage format version is wrong! What to do?
-      // No need to handle until we bump the storage version, assert for now.
-      ASSERT_FAILED();
-    }
-  }
-}
-
-TESTABLE_STATIC void initializeGeoDataFromStorage() {
-  char key[KEY_LEN];
-
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
-    if (!lighthouseCoreState.bsGeometry[baseStation].valid) {
-      generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
-      const size_t geoSize = sizeof(geoBuffer);
-      const size_t fetched = storageFetch(key, (void*)&geoBuffer, geoSize);
-      if (fetched == geoSize) {
-        lighthousePositionSetGeometryData(baseStation, &geoBuffer);
-      }
-    }
-  }
-}
-
-TESTABLE_STATIC void initializeCalibDataFromStorage() {
-  char key[KEY_LEN];
-
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
-    if (!lighthouseCoreState.bsCalibration[baseStation].valid) {
-      generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
-      const size_t calibSize = sizeof(calibBuffer);
-      const size_t fetched = storageFetch(key, (void*)&calibBuffer, calibSize);
-      if (fetched == calibSize) {
-        lighthouseCoreSetCalibrationData(baseStation, &calibBuffer);
-      }
-    }
+    lighthousePositionCalibrationDataWritten(baseStation);
   }
 }
 
@@ -624,10 +573,15 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 
+LOG_ADD(LOG_UINT16, bsReceive, &baseStationReceivedMap)
 LOG_ADD(LOG_UINT16, bsActive, &baseStationActiveMap)
+LOG_ADD(LOG_UINT16, bsCalUd, &baseStationCalibUpdatedMap)
+LOG_ADD(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
+
 LOG_ADD(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
 PARAM_GROUP_START(lighthouse)
 PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
+PARAM_ADD(PARAM_UINT8, bsCalibReset, &calibStatusReset)
 PARAM_GROUP_STOP(lighthouse)

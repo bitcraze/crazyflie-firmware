@@ -43,7 +43,7 @@ uint16_t betole(uint16_t value)
 
 // Frame format described there: https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md#ootx-frame
 bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
-{ 
+{
   data &= 1;
 
   // Synchronization finder
@@ -53,6 +53,7 @@ bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
     state->wordReceived = 0;
     state->rxState = rxLength;
     // DEBUG_PRINT("Synchronized!\n");
+    state->isFullyDecoded = false;
     return false;
   }
   if (data == 0) {
@@ -68,6 +69,7 @@ bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
       if (data == 0) {
         // DEBUG_PRINT("Unsynchronized!\n");
         state->synchronized = false;
+        state->isFullyDecoded = false;
         return false;
       }
       state->bitInWord = 0;
@@ -76,8 +78,10 @@ bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
       // TODO: Check CRC!
       if (state->rxState == rxDone) {
         state->synchronized = false;
+        state->isFullyDecoded = true;
         return true;
       } else {
+        state->isFullyDecoded = false;
         return false;
       }
     }
@@ -93,6 +97,7 @@ bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
           // DEBUG_PRINT("Length %0d\n", state->frameLength);
           if (state->frameLength > OOTX_MAX_FRAME_LENGTH) {
             state->synchronized = false;
+            state->isFullyDecoded = false;
             return false;
           }
           state->rxState = rxData;
@@ -119,5 +124,6 @@ bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
       }
     }
   }
+  state->isFullyDecoded = false;
   return false;
 }

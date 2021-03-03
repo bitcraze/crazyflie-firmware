@@ -34,69 +34,30 @@
 
 
 import logging
-import time
+from threading import Event
 
 import cflib.crtp  # noqa
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.mem import LighthouseBsCalibration
 from cflib.crazyflie.mem import LighthouseBsGeometry
-from cflib.crazyflie.mem import MemoryElement
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
+from cflib.localization import LighthouseConfigWriter
 
-uri = 'radio://0/30'
+uri = 'radio://0/80'
 
 
 class WriteMem:
     def __init__(self, uri, geos, calibs):
-        self.data_written = False
-        self.result_received = False
+        self._event = Event()
 
         with SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache')) as scf:
-            mems = scf.cf.mem.get_mems(MemoryElement.TYPE_LH)
+            writer = LighthouseConfigWriter(scf.cf, nr_of_base_stations=2)
+            writer.write_and_store_config(self._data_written, geos=geos, calibs=calibs)
+            self._event.wait()
 
-            count = len(mems)
-            if count != 1:
-                raise Exception('Unexpected nr of memories found:', count)
-
-            lh_mem = mems[0]
-
-            for bs, geo in geos.items():
-                self.data_written = False
-                print('Write geoetry', bs, 'to RAM')
-                lh_mem.write_geo_data(bs, geo, self._data_written, write_failed_cb=self._data_failed)
-
-                while not self.data_written:
-                    time.sleep(0.1)
-
-            for bs, calib in calibs.items():
-                self.data_written = False
-                print('Write calibration', bs, 'to RAM')
-                lh_mem.write_calib_data(bs, calib, self._data_written, write_failed_cb=self._data_failed)
-
-                while not self.data_written:
-                    time.sleep(0.1)
-
-            print('Persist data')
-            scf.cf.loc.receivedLocationPacket.add_callback(self._data_persisted)
-            scf.cf.loc.send_lh_persist_data_packet(list(range(16)), list(range(16)))
-
-            while not self.result_received:
-                time.sleep(0.1)
-
-
-    def _data_written(self, mem, addr):
-        self.data_written = True
-
-    def _data_failed(self, mem, addr):
-        raise Exception('Write to RAM failed')
-
-    def _data_persisted(self, data):
-        if (data.data):
-            print('Data persisted')
-        else:
-            raise Exception("Write to storage failed")
-
-        self.result_received = True
+    def _data_written(self, sucess):
+        print('Data written')
+        self._event.set()
 
 
 geo0 = LighthouseBsGeometry()
@@ -124,6 +85,7 @@ calib0.sweeps[1].gibphase = 2.367835
 calib0.sweeps[1].gibmag = 0.004907
 calib0.sweeps[1].ogeephase = 1.900456
 calib0.sweeps[1].ogeemag = -0.457289
+calib0.uid = 0x3C65D22F
 calib0.valid = True
 
 calib1 = LighthouseBsCalibration()
@@ -141,6 +103,7 @@ calib1.sweeps[1].gibphase = 1.727613
 calib1.sweeps[1].gibmag = -0.005642
 calib1.sweeps[1].ogeephase = 2.586835
 calib1.sweeps[1].ogeemag = 0.117884
+calib1.uid = 0x34C2AD7E
 calib1.valid = True
 
 

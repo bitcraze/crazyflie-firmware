@@ -33,7 +33,7 @@
 #include "config.h"
 #include "crtp.h"
 #include "param.h"
-#include "crc.h"
+#include "crc32.h"
 #include "console.h"
 #include "debug.h"
 #include "static_mem.h"
@@ -140,7 +140,7 @@ void paramInit(void)
       memcpy(&p.data[5], params[i].name, strlen(params[i].name));
       len += strlen(params[i].name);
     }
-    paramsCrc = crcSlow(p.data, len);
+    paramsCrc = crc32CalculateBuffer(p.data, len);
   }
 
   for (i=0; i<paramsLen; i++)

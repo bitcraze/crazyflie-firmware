@@ -15,7 +15,7 @@ bool storePulse(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWor
 void augmentFramesInWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
 bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], pulseProcessorV2SweepBlock_t* block);
 bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest, const pulseProcessorV2SweepBlock_t* storage);
-void handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData);
+bool handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData);
 
 // Helpers
 static void addDefaultFrames();
@@ -397,19 +397,6 @@ void testThatSlowBitIsNotProcessedIfOffsetIsMissing() {
     TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
 }
 
-void testThatSlowBitIsNotProcessedIfThereAlreadyIsCalibrationData() {
-    // Fixture
-    state.bsCalibration[SB_CHANNEL].valid = true;
-
-    setUpOotxDecoderProcessBitCallCounter();
-
-    // Test
-    handleCalibrationData(&state, &slowbitFrame);
-
-    // Assert
-    TEST_ASSERT_EQUAL(0, nrOfCallsToOotxDecoderProcessBit);
-}
-
 void testThatMoreThanOneSlowBitIsProcessed() {
     // Fixture
     setUpOotxDecoderProcessBitCallCounter();
@@ -473,16 +460,26 @@ void testThatOnlyOneSlowBitsPerRevolutionIsProcessed2() {
     TEST_ASSERT_EQUAL(1, nrOfCallsToOotxDecoderProcessBit);
 }
 
-void testThatFullSlowbitMessageIsPassedOnAsCalibrationData() {
+void testThatFullSlowbitMessageIsReported() {
     // Fixture
     ootxDecoderProcessBit_IgnoreAndReturn(true);
-    lighthouseCalibrationInitFromFrame_Expect(&state.bsCalibration[SB_CHANNEL], &state.ootxDecoder[SB_CHANNEL].frame);
 
     // Test
-    handleCalibrationData(&state, &slowbitFrame);
+    bool actual = handleCalibrationData(&state, &slowbitFrame);
 
     // Assert
-    // Verified in mocks
+    TEST_ASSERT_TRUE(actual);
+}
+
+void testThatNonFullSlowbitMessageIsNotReported() {
+    // Fixture
+    ootxDecoderProcessBit_IgnoreAndReturn(false);
+
+    // Test
+    bool actual = handleCalibrationData(&state, &slowbitFrame);
+
+    // Assert
+    TEST_ASSERT_FALSE(actual);
 }
 
 

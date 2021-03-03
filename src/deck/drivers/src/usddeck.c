@@ -57,7 +57,7 @@
 #include "statsCnt.h"
 #include "log.h"
 #include "param.h"
-#include "crc_bosch.h"
+#include "crc32.h"
 #include "static_mem.h"
 #include "mem.h"
 
@@ -98,9 +98,9 @@ typedef struct usdLogConfig_s {
   enum usddeckLoggingMode_e mode;
 } usdLogConfig_t;
 
-#define USD_WRITE(FILE, MESSAGE, BYTES, BYTES_WRITTEN, CRC_VALUE, CRC_FINALXOR, CRC_TABLE) \
+#define USD_WRITE(FILE, MESSAGE, BYTES, BYTES_WRITTEN, CRC_CONTEXT) \
   f_write(FILE, MESSAGE, BYTES, BYTES_WRITTEN); \
-  CRC_VALUE = crcByByte(MESSAGE, BYTES, CRC_VALUE, CRC_FINALXOR, CRC_TABLE);
+  crc32Update(CRC_CONTEXT, MESSAGE, BYTES);
 
 // FATFS low lever driver functions.
 static void initSpi(void);
@@ -119,8 +119,6 @@ static void usdWriteTask(void* prm);
 static STATS_CNT_RATE_DEFINE(spiWriteRate, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadRate, 1000);
 static STATS_CNT_RATE_DEFINE(fatWriteRate, 1000);
-
-NO_DMA_CCM_SAFE_ZERO_INIT static crc crcTable[256];
 
 static usdLogConfig_t usdLogConfig;
 
@@ -630,9 +628,9 @@ static void usdWriteTask(void* usdLogQueue)
   unsigned int bytesWritten;
   uint8_t setsToWrite = 0;
 
-  /* iniatialize crc and create lookup-table */
-  crc crcValue;
-  crcTableInit(crcTable);
+  /* iniatialize crc */
+  crc32Context_t crcContext;
+  crc32ContextInit(&crcContext);
 
   /* create and start timer for card control timing */
   timer = xTimerCreate("usdTimer", M2T(SD_DISK_TIMER_PERIOD_MS),
@@ -680,10 +678,10 @@ static void usdWriteTask(void* usdLogQueue)
         {
           uint8_t logWidth = 1 + usdLogConfig.numSlots;
           f_write(&logFile, &logWidth, 1, &bytesWritten);
-          crcValue = crcByByte(&logWidth, 1, INITIAL_REMAINDER, 0, crcTable);
+          crc32Update(&crcContext, &logWidth, 1);
         }
         USD_WRITE(&logFile, (uint8_t*)"tick(I),", 8, &bytesWritten,
-                  crcValue, 0, crcTable)
+                  &crcContext);
 
         for (int i = 0; i < usdLogConfig.numSlots; ++i) {
           char* group;
@@ -691,13 +689,13 @@ static void usdWriteTask(void* usdLogQueue)
           int varid = usdLogConfig.varIds[i];
           logGetGroupAndName(varid, &group, &name);
           USD_WRITE(&logFile, (uint8_t*)group, strlen(group), &bytesWritten,
-            crcValue, 0, crcTable)
+            &crcContext);
           USD_WRITE(&logFile, (uint8_t*)".", 1, &bytesWritten,
-            crcValue, 0, crcTable)
+            &crcContext);
           USD_WRITE(&logFile, (uint8_t*)name, strlen(name), &bytesWritten,
-            crcValue, 0, crcTable)
+            &crcContext);
           USD_WRITE(&logFile, (uint8_t*)"(", 1, &bytesWritten,
-                      crcValue, 0, crcTable)
+                      &crcContext);
           char typeChar;
           switch (logGetType(varid)) {
             case LOG_UINT8:
@@ -725,14 +723,14 @@ static void usdWriteTask(void* usdLogQueue)
               ASSERT(false);
           }
           USD_WRITE(&logFile, (uint8_t*)&typeChar, 1, &bytesWritten,
-                      crcValue, 0, crcTable)
+                      &crcContext)
           USD_WRITE(&logFile, (uint8_t*)"),", 2, &bytesWritten,
-                      crcValue, 0, crcTable)
+                      &crcContext)
         }
 
         /* negate crc value */
-        crcValue = ~(crcValue^FINAL_XOR_VALUE);
-        f_write(&logFile, &crcValue, 4, &bytesWritten);
+        uint32_t crcValueNegated = ~crc32Out(&crcContext);
+        f_write(&logFile, &crcValueNegated, 4, &bytesWritten);
         f_close(&logFile);
 
         uint8_t* usdLogQueuePtr;
@@ -751,18 +749,19 @@ static void usdWriteTask(void* usdLogQueue)
             }
             f_write(&logFile, &setsToWrite, 1, &bytesWritten);
             STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
-            crcValue = crcByByte(&setsToWrite, 1, INITIAL_REMAINDER, 0, crcTable);
+            crc32ContextInit(&crcContext);
+            crc32Update(&crcContext, &setsToWrite, 1);
             do {
               /* receive data pointer from queue */
               xQueueReceive(usdLogQueue, &usdLogQueuePtr, 0);
               /* write binary data and point on next item */
               USD_WRITE(&logFile, usdLogQueuePtr,
-                        4 + usdLogConfig.numBytes, &bytesWritten, crcValue, 0, crcTable)
+                        4 + usdLogConfig.numBytes, &bytesWritten, &crcContext)
               STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             } while(--setsToWrite);
-            /* final xor and negate crc value */
-            crcValue = ~(crcValue^FINAL_XOR_VALUE);
-            f_write(&logFile, &crcValue, 4, &bytesWritten);
+            /* negate crc value */
+            uint32_t crcValueNegated = ~crc32Out(&crcContext);
+            f_write(&logFile, &crcValueNegated, 4, &bytesWritten);
             STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             /* close file */
             f_close(&logFile);

@@ -274,27 +274,20 @@ TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
 #define DEBUG_PRINT printf
 #endif
 
-static void printBSInfo(struct ootxDataFrame_s *frame)
-{
-  DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
-  DEBUG_PRINT("  phase0: %f\n", (double)frame->phase0);
-  DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
+static bool decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
+  bool isDecoded = false;
+
+  if (ootxDecoderProcessBit(&state->ootxDecoder[0], getOotxDataBit(state->v1.currentSync0Width))) {
+    isDecoded = true;
+  }
+  if (ootxDecoderProcessBit(&state->ootxDecoder[1], getOotxDataBit(state->v1.currentSync1Width))) {
+    isDecoded = true;
+  }
+
+  return isDecoded;
 }
 
-static void decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
-  if (!state->bsCalibration[0].valid &&
-      ootxDecoderProcessBit(&state->ootxDecoder[0], getOotxDataBit(state->v1.currentSync0Width))) {
-    printBSInfo(&state->ootxDecoder[0].frame);
-    lighthouseCalibrationInitFromFrame(&state->bsCalibration[0], &state->ootxDecoder[0].frame);
-  }
-  if (!state->bsCalibration[1].valid &&
-      ootxDecoderProcessBit(&state->ootxDecoder[1], getOotxDataBit(state->v1.currentSync1Width))) {
-    printBSInfo(&state->ootxDecoder[1].frame);
-    lighthouseCalibrationInitFromFrame(&state->bsCalibration[1], &state->ootxDecoder[1].frame);
-  }
-}
-
-static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
+static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded) {
   bool anglesMeasured = false;
   pulseProcessorV1_t* stateV1 = &state->v1;
 
@@ -303,7 +296,7 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
       anglesMeasured = processPreviousFrame(stateV1, angles, baseStation, axis);
 
       if (anglesMeasured) {
-        decodeAndApplyBaseStationCalibrationData(state);
+        *calibDataIsDecoded = decodeAndApplyBaseStationCalibrationData(state);
       }
 
       int baseStation = getBaseStationId(stateV1, timestamp);
@@ -322,20 +315,19 @@ static bool processSync(pulseProcessor_t *state, unsigned int timestamp, unsigne
   return anglesMeasured;
 }
 
-static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
+static bool processWhenSynchronized(pulseProcessor_t *state, int sensor, unsigned int timestamp, unsigned int width, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded) {
   bool anglesMeasured = false;
 
   if (isSweep(&state->v1, timestamp, width)) {
     storeSweepData(&state->v1, sensor, timestamp);
   } else {
-    anglesMeasured = processSync(state, timestamp, width, angles, baseStation, axis);
+    anglesMeasured = processSync(state, timestamp, width, angles, baseStation, axis, calibDataIsDecoded);
   }
 
   return anglesMeasured;
 }
 
-
-bool pulseProcessorV1ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis)
+bool pulseProcessorV1ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded)
 {
   bool anglesMeasured = false;
 
@@ -346,7 +338,7 @@ bool pulseProcessorV1ProcessPulse(pulseProcessor_t *state, const pulseProcessorF
       pulseProcessorAllClear(angles);
     }
   } else {
-    anglesMeasured = processWhenSynchronized(state, frameData->sensor, frameData->timestamp, frameData->width, angles, baseStation, axis);
+    anglesMeasured = processWhenSynchronized(state, frameData->sensor, frameData->timestamp, frameData->width, angles, baseStation, axis, calibDataIsDecoded);
     angles->measurementType = lighthouseBsTypeV1;
   }
 
