@@ -106,7 +106,6 @@ bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8)
 {
   dev->I2Cx = I2Cx;
   dev->devAddr = VL53L0X_DEFAULT_ADDRESS;
-  i2cdevInit(dev->I2Cx);
 
   dev->io_timeout = 0;
   dev->did_timeout = 0;

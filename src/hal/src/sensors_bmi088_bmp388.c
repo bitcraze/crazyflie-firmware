@@ -549,8 +549,6 @@ void sensorsBmi088Bmp388Init(void)
       return;
     }
 
-  i2cdevInit(I2C3_DEV);
-
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();
   sensorsInterruptInit();
