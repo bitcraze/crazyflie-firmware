@@ -102,7 +102,6 @@
 bstdr_ret_t bstdr_comm_init(void)
 {
 	/**< Communication initialization --Optional!*/
-	i2cdevInit(I2C1_DEV);
 	return (bstdr_ret_t)0;
 }
 

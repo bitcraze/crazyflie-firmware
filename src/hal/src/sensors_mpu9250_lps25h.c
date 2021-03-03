@@ -334,7 +334,6 @@ static void sensorsDeviceInit(void)
   // Wait for sensors to startup
   while (xTaskGetTickCount() < 1000);
 
-  i2cdevInit(I2C3_DEV);
   mpu6500Init(I2C3_DEV);
   if (mpu6500TestConnection() == true)
   {
