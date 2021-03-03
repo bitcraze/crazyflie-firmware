@@ -69,6 +69,7 @@
 #include "static_mem.h"
 #include "peer_localization.h"
 #include "cfassert.h"
+#include "i2cdev.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -174,6 +175,10 @@ void systemTask(void *arg)
 #ifdef ENABLE_UART2
   uart2Init(115200);
 #endif
+
+  initUsecTimer();
+  i2cdevInit(I2C3_DEV);
+  i2cdevInit(I2C1_DEV);
 
   //Init the high-levels modules
   systemInit();

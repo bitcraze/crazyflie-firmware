@@ -58,7 +58,6 @@ bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
 
   pdev->I2Cx = I2Cx;
   pdev->devAddr = VL53L1X_DEFAULT_ADDRESS;
-  i2cdevInit(pdev->I2Cx);
 
   /* Move initialized sensor to a new I2C address */
   int newAddress;
