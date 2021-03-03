@@ -82,7 +82,7 @@ ST_OBJ += usb_core.o usb_dcd_int.o usb_dcd.o
 ST_OBJ += usbd_ioreq.o usbd_req.o usbd_core.o
 
 PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
-CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__TARGET_FPU_VFP -mfp16-format=ieee
+CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
 
 #Flags required by the ST library
 CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
@@ -376,8 +376,23 @@ ifeq ($(SHELL),/bin/sh)
   COL_RESET=\033[m
 endif
 
-#################### Targets ###############################
+# This define n-thing is a standard hack to get newlines in GNU Make.
+define n
 
+
+endef
+
+# Make sure that the submodules are up to date.
+# Check if there are any files in the vendor directories, if not warn the user.
+ifeq ($(wildcard $(CRAZYFLIE_BASE)/vendor/*/*),)
+  $(error $n                                                                   \
+    The submodules does not seem to be present, consider fetching them by:$n   \
+      $$ git submodule init$n                                                  \
+      $$ git submodule update$n                                                \
+  )
+endif
+
+#################### Targets ###############################
 
 all: bin/ bin/dep bin/vendor check_submodules build
 build:

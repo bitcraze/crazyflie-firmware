@@ -729,8 +729,8 @@ static void usdWriteTask(void* usdLogQueue)
         }
 
         /* negate crc value */
-        uint32_t crcValue = crc32Out(&crcContext);
-        f_write(&logFile, &crcValue, 4, &bytesWritten);
+        uint32_t crcValueNegated = ~crc32Out(&crcContext);
+        f_write(&logFile, &crcValueNegated, 4, &bytesWritten);
         f_close(&logFile);
 
         uint8_t* usdLogQueuePtr;
@@ -759,9 +759,9 @@ static void usdWriteTask(void* usdLogQueue)
                         4 + usdLogConfig.numBytes, &bytesWritten, &crcContext)
               STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             } while(--setsToWrite);
-            /* final xor and negate crc value */
-            uint32_t crcValue = crc32Out(&crcContext);
-            f_write(&logFile, &crcValue, 4, &bytesWritten);
+            /* negate crc value */
+            uint32_t crcValueNegated = ~crc32Out(&crcContext);
+            f_write(&logFile, &crcValueNegated, 4, &bytesWritten);
             STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
             /* close file */
             f_close(&logFile);

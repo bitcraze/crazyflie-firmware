@@ -104,10 +104,6 @@ static uint16_t dutyToDuration(float duty)
 
 bool pca9685init(int addr, float pwmFreq)
 {
-  if (!i2cdevInit(I2C1_DEV)) {
-    return false;
-  }
-
   // initial state is sleeping.
   // must be asleep to set PWM freq.
 
