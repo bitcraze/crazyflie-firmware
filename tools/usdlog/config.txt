@@ -1,25 +1,14 @@
-250   # frequency
-50    # buffer size
+1     # version
+512   # buffer size in bytes
 log   # file name
-1     # enable on startup (0/1)
-2     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
-acc.x
-acc.y
-acc.z
-gyro.x
-gyro.y
+0     # enable on startup (0/1)
+on:fixedFrequency
+100     # frequency
+1     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
 gyro.z
-baro.asl
-baro.temp
-baro.pressure
-mag.x
-mag.y
-mag.z
-stabilizer.roll
-stabilizer.pitch
-stabilizer.yaw
-stabilizer.thrust
-ctrltarget.roll
-ctrltarget.pitch
-ctrltarget.yaw
-range.zrange
+lighthouse.x
+lighthouse.y
+lighthouse.z
+lighthouse.delta
+lighthouse.sensorsUsed
+on:activeMarkerModeChanged
