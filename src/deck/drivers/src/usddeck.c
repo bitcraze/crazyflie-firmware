@@ -109,6 +109,86 @@ typedef struct usdLogConfig_s {
   usdLogEventConfig_t eventConfigs[MAX_USD_LOG_EVENTS];
 } usdLogConfig_t;
 
+typedef struct usdLogStats_s {
+  uint32_t eventsRequested;
+  uint32_t eventsWritten;
+} usdLogStats_t;
+
+// Ring buffer
+typedef struct ringBuffer_s {
+  uint8_t* buffer;        // pointer to buffer
+  uint16_t capacity;      // total capacity of buffer
+  uint16_t size;          // used size of buffer
+  uint8_t* readPtr;       // pointer for read/pop
+  uint8_t* writePtr;      // pointer for write/push
+  uint16_t popSize;       // size for ongoing pop operation
+} ringBuffer_t;
+
+void ringBuffer_init(ringBuffer_t* b, uint8_t *buffer, uint16_t capacity)
+{
+  b->buffer = buffer;
+  b->capacity = capacity;
+  b->size = 0;
+  b->readPtr = buffer;
+  b->writePtr = buffer;
+  b->popSize = 0;
+}
+
+void ringBuffer_reset(ringBuffer_t *b)
+{
+  b->size = 0;
+  b->readPtr = b->buffer;
+  b->writePtr = b->buffer;
+  b->popSize = 0;
+}
+
+uint16_t ringBuffer_availableSpace(const ringBuffer_t* b)
+{
+  return b->capacity - b->size;
+}
+
+bool ringBuffer_push(ringBuffer_t* b, const void* data, uint16_t size)
+{
+  if (ringBuffer_availableSpace(b) < size) {
+    return false;
+  }
+  const uint8_t* dataTyped = (const uint8_t*)data;
+  for (uint16_t i = 0; i < size; ++i) {
+    *(b->writePtr) = dataTyped[i];
+    ++b->writePtr;
+    if (b->writePtr ==  b->buffer + b->capacity) {
+      b->writePtr = b->buffer;
+    }
+  }
+  b->size += size;
+  return true;
+}
+
+bool ringBuffer_pop_start(ringBuffer_t* b, const uint8_t** buf, uint16_t* size)
+{
+  if (b->size == 0) {
+    return false;
+  }
+
+  *buf = b->readPtr;
+  if (b->writePtr > b->readPtr) {
+    // writer did not wrap around yet
+    *size = b->writePtr - b->readPtr;
+    b->readPtr = b->writePtr;
+  } else {
+    // wrap around -> read until end of buffer, only
+    *size = b->buffer + b->capacity - b->readPtr;
+    b->readPtr = b->buffer;
+  }
+  b->popSize = *size;
+  return true;
+}
+
+void ringBuffer_pop_done(ringBuffer_t *b)
+{
+  b->size -= b->popSize;
+  b->popSize = 0;
+}
 
 // FATFS low lever driver functions.
 static void initSpi(void);
@@ -129,6 +209,7 @@ static STATS_CNT_RATE_DEFINE(spiReadRate, 1000);
 static STATS_CNT_RATE_DEFINE(fatWriteRate, 1000);
 
 static usdLogConfig_t usdLogConfig;
+static usdLogStats_t usdLogStats;
 
 static BYTE exchangeBuff[512];
 static uint16_t spiSpeed;
@@ -144,9 +225,9 @@ static FIL logFile;
 static SemaphoreHandle_t logFileMutex;
 
 static SemaphoreHandle_t logBufferMutex;
-static uint8_t* logBuffer;
-static uint8_t* logBufferReadPtr;
-static uint8_t* logBufferWritePtr;
+static ringBuffer_t logBuffer;
+// static uint8_t *logBufferReadPtr;
+// static uint8_t* logBufferWritePtr;
 static TaskHandle_t xHandleWriteTask;
 
 static bool enableLogging;
@@ -350,36 +431,29 @@ static void usdInit(DeckInfo *info)
 
 static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t* payload, uint8_t payloadSize)
 {
-  DEBUG_PRINT("w %d\n", cfg->eventId);
   uint32_t ticks = xTaskGetTickCount();
+
+  ++usdLogStats.eventsRequested;
+
   xSemaphoreTake(logBufferMutex, portMAX_DELAY);
 
   // trigger writing once there is some data
-  if (logBufferReadPtr < logBufferWritePtr && xHandleWriteTask)
+  if (logBuffer.size > 0 && xHandleWriteTask)
   {
     vTaskResume(xHandleWriteTask);
   }
 
   int dataSize = 2 + 4 + payloadSize + cfg->numBytes;
 
-  // if we reach the end of the buffer, start from the beginning again
-  if (logBufferWritePtr + dataSize >= logBuffer + usdLogConfig.bufferSize)
-  {
-    logBufferWritePtr = logBuffer;
-  }
-
   // only write if we have enough space
-  if (logBufferReadPtr < logBufferWritePtr + dataSize)
+  if (ringBuffer_availableSpace(&logBuffer) >= dataSize)
   {
     /* write data into buffer */
     uint16_t event_id = cfg->eventId;
-    memcpy(logBufferWritePtr, &event_id, sizeof(event_id));
-    logBufferWritePtr += sizeof(event_id);
-    memcpy(logBufferWritePtr, &ticks, 4);
-    logBufferWritePtr += 4;
+    ringBuffer_push(&logBuffer, &event_id, sizeof(event_id));
+    ringBuffer_push(&logBuffer, &ticks, 4);
     if (payloadSize) {
-      memcpy(logBufferWritePtr, payload, payloadSize);
-      logBufferWritePtr += payloadSize;
+      ringBuffer_push(&logBuffer, payload, payloadSize);
     }
 
     for (int i = 0; i < cfg->numVars; ++i)
@@ -390,29 +464,27 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
       case LOG_UINT8:
       case LOG_INT8:
       {
-        memcpy(logBufferWritePtr, logGetAddress(varid), sizeof(uint8_t));
-        logBufferWritePtr += sizeof(uint8_t);
+        ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint8_t));
         break;
       }
       case LOG_UINT16:
       case LOG_INT16:
       {
-        memcpy(logBufferWritePtr, logGetAddress(varid), sizeof(uint16_t));
-        logBufferWritePtr += sizeof(uint16_t);
+        ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint16_t));
         break;
       }
       case LOG_UINT32:
       case LOG_INT32:
       case LOG_FLOAT:
       {
-        memcpy(logBufferWritePtr, logGetAddress(varid), sizeof(uint32_t));
-        logBufferWritePtr += sizeof(uint32_t);
+        ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint32_t));
         break;
       }
       default:
         ASSERT(false);
       }
     }
+    ++usdLogStats.eventsWritten;
   }
   xSemaphoreGive(logBufferMutex);
 }
@@ -420,7 +492,6 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
 static void usddeckEventtriggerCallback(const eventtrigger *event)
 {
   uint16_t eventId = eventtriggerGetId(event);
-  DEBUG_PRINT("event %d\n", eventId);
   for (uint8_t i = 0; i < usdLogConfig.numEventConfigs; ++i) {
     if (usdLogConfig.eventConfigs[i].eventId == eventId) {
       usddeckWriteEventData(&usdLogConfig.eventConfigs[i], event->payload, event->payloadSize);
@@ -561,10 +632,8 @@ static void usdLogTask(void* prm)
     /* allocate memory for buffer */
     DEBUG_PRINT("malloc buffer %d bytes ", usdLogConfig.bufferSize);
     // vTaskDelay(10); // small delay to allow debug message to be send
-    logBuffer = pvPortMalloc(usdLogConfig.bufferSize);
-    logBufferReadPtr = logBuffer;
-    logBufferWritePtr = logBuffer;
-    if (logBuffer)
+    uint8_t* logBufferData = pvPortMalloc(usdLogConfig.bufferSize);
+    if (logBufferData)
     {
       DEBUG_PRINT("[OK].\n");
     }
@@ -573,6 +642,7 @@ static void usdLogTask(void* prm)
       DEBUG_PRINT("[FAIL].\n");
       break;
     }
+    ringBuffer_init(&logBuffer, logBufferData, usdLogConfig.bufferSize);
 
     /* create queue to hand over pointer to usdLogData */
     // usdLogQueue = xQueueCreate(usdLogConfig.queueSize, sizeof(uint8_t*));
@@ -694,10 +764,13 @@ static void usdWriteTask(void* prm)
   {
     vTaskSuspend(NULL);
     if (enableLogging) {
+      // reset stats
+      usdLogStats.eventsRequested = 0;
+      usdLogStats.eventsWritten = 0;
+
       // reset the buffer
       xSemaphoreTake(logBufferMutex, portMAX_DELAY);
-      logBufferReadPtr = logBuffer;
-      logBufferWritePtr = logBuffer;
+      ringBuffer_reset(&logBuffer);
       xSemaphoreGive(logBufferMutex);
 
       xSemaphoreTake(logFileMutex, portMAX_DELAY);
@@ -838,13 +911,21 @@ static void usdWriteTask(void* prm)
           /* sleep */
           vTaskSuspend(NULL);
 
-          xSemaphoreTake(logBufferMutex, portMAX_DELAY);
           // check if we have anything to write
-          if (logBufferReadPtr < logBufferWritePtr) {
-            usdWriteData(logBufferReadPtr, logBufferWritePtr - logBufferReadPtr);
-            logBufferReadPtr = logBufferWritePtr;
-          }
+          xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+          const uint8_t* buf;
+          uint16_t size;
+          bool hasData = ringBuffer_pop_start(&logBuffer, &buf, &size);
           xSemaphoreGive(logBufferMutex);
+          
+          // execute the actual write operation
+          if (hasData) {
+            usdWriteData(buf, size);
+
+            xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+            ringBuffer_pop_done(&logBuffer);
+            xSemaphoreGive(logBufferMutex);
+          }
         }
         // write CRC
         uint32_t crcValue = crc32Out(&crcContext);
@@ -859,7 +940,11 @@ static void usdWriteTask(void* prm)
           lastFileSize = info.fsize;
         }
 
-        DEBUG_PRINT("Wrote %ld B to: %s\n", lastFileSize, usdLogConfig.filename);
+        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n", 
+          lastFileSize,
+          usdLogConfig.filename,
+          usdLogStats.eventsWritten,
+          usdLogStats.eventsRequested);
 
         xSemaphoreGive(logFileMutex);
       } else {
