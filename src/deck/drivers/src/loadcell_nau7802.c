@@ -218,12 +218,12 @@ static void loadcellInit(DeckInfo *info)
 
   isInit = true;
 
-  i2cdevInit(I2C1_DEV);
-
+  sleepus(1000 * 1000);
   // isInit &= nau7802_reset();
   uint8_t revision;
   isInit &= nau7802_revision(&revision);
   DEBUG_PRINT("bla %d %d\n", isInit, revision);
+
 
   // // Create a task with very high priority to reduce risk that we get
   // // invalid data
