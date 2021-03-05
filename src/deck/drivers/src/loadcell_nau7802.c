@@ -331,13 +331,13 @@ bool nau7802_revision(uint8_t* revision)
 
 static void loadcellInit(DeckInfo *info)
 {
-  if (isInit) {
-    return;
-  }
+  // if (isInit) {
+    // return;
+  // }
 
   isInit = true;
 
-  // sleepus(1000 * 1000);
+  sleepus(1000 * 1000);
   // isInit &= nau7802_reset();
   // uint8_t revision;
   // isInit &= nau7802_revision(&revision);
@@ -345,10 +345,11 @@ static void loadcellInit(DeckInfo *info)
 
   if (true) {
 
-    isInit &= nau7802_reset();
-    DEBUG_PRINT("Reset [%d]\n", isInit);
     isInit &= nau7802_powerUp();
     DEBUG_PRINT("Power up [%d]\n", isInit);
+
+    isInit &= nau7802_reset();
+    DEBUG_PRINT("Reset [%d]\n", isInit);
     isInit &= nau7802_setLDO(NAU7802_LDO_2V7);
     DEBUG_PRINT("LDO [%d]\n", isInit);
     isInit &= nau7802_setGain(NAU7802_GAIN_128);

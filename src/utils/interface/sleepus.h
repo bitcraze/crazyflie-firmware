@@ -26,6 +26,6 @@
 #ifndef __SLEEPNS_H__
 #define __SLEEPNS_H__
 
-void sleepus(uint32_t ns);
+void sleepus(uint32_t us);
 
 #endif // __SLEEPNS_H__
