@@ -54,7 +54,7 @@ static float a = 4.22852802e-05;
 static float b = -2.21784688e+01;
 
 
-// static void loadcellTask(void* prm);
+static void loadcellTask(void* prm);
 
 ////////////////////////////
 
@@ -193,6 +193,7 @@ typedef enum
   NAU7802_CAL_FAILURE = 2,
 } NAU7802_Cal_Status;
 
+//Resets all registers to Power Of Defaults
 bool nau7802_reset()
 {
   bool result = true;
@@ -202,9 +203,119 @@ bool nau7802_reset()
   return result;
 }
 
+//Power up digital and analog sections of scale
+bool nau7802_powerUp()
+{
+  bool result = true;
+  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
+  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
+
+  //Wait for Power Up bit to be set - takes approximately 200us
+  for (int i = 0; i < 200; ++i) {
+    uint8_t bit;
+    result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUR, &bit);
+    if (result && bit) {
+      return true;
+    }
+    sleepus(1);
+  }
+  return false;
+}
+
+//Set the onboard Low-Drop-Out voltage regulator to a given value
+bool nau7802_setLDO(NAU7802_LDO_Values ldoValue)
+{
+  bool result = true;
+  //Set the value of the LDO
+  result &= i2cdevWriteBits(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, 3, 3, ldoValue);
+  //Enable the internal LDO
+  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_AVDDS, 1);
+  return result;
+}
+
+//Set the gain
+bool nau7802_setGain(NAU7802_Gain_Values gainValue)
+{
+  bool result = true;
+  result &= i2cdevWriteBits(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, 0, 3, gainValue);
+  return result;
+}
+
+//Set the readings per second
+bool nau7802_setSampleRate(NAU7802_SPS_Values rate)
+{
+  bool result = true;
+  result &= i2cdevWriteBits(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, 4, 3, rate);
+  return result;
+}
+
+//Check calibration status.
+NAU7802_Cal_Status nau7802_calAFEStatus()
+{
+  bool result = true;
+  uint8_t bit;
+  result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, &bit);
+  if (result && bit) {
+    return NAU7802_CAL_IN_PROGRESS;
+  }
+  result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CAL_ERROR, &bit);
+  if (result && bit) {
+    return NAU7802_CAL_FAILURE;
+  }
+
+  if (result) {
+    // Calibration passed
+    return NAU7802_CAL_SUCCESS;
+  }
+  return NAU7802_CAL_FAILURE;
+}
+
+//Calibrate analog front end of system. Returns true if CAL_ERR bit is 0 (no error)
+//Takes approximately 344ms to calibrate; wait up to 1000ms.
+//It is recommended that the AFE be re-calibrated any time the gain, SPS, or channel number is changed.
+bool nau7802_calibrateAFE()
+{
+  bool result = true;
+  //Begin asynchronous calibration of the analog front end.
+  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, 1);
+
+  for (int i = 0; i < 1000; ++i) {
+    if (nau7802_calAFEStatus() == NAU7802_CAL_SUCCESS) {
+      return true;
+    }
+    vTaskDelay(M2T(1));
+  }
+  return false;
+}
+
+//Returns true if Cycle Ready bit is set (conversion is complete)
+bool nau7802_hasMeasurement()
+{
+  bool result = true;
+  uint8_t bit;
+  result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_CR, &bit);
+  return result && bit;
+}
+
+//Returns 24-bit reading
+//Assumes CR Cycle Ready bit (ADC conversion complete) has been checked to be 1
+bool nau7802_getMeasurement(int32_t* measurement)
+{
+  bool result = true;
+  uint32_t valueRaw;
+  result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&valueRaw);
+  // recover the sign
+  int32_t valueShifted = (int32_t)(valueRaw << 8);
+  *measurement = (valueShifted >> 8);
+  return result;
+}
+
 bool nau7802_revision(uint8_t* revision)
 {
-  return i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_DEVICE_REV, revision);
+  bool result = true;
+  result &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_DEVICE_REV, revision);
+  *revision = *revision & 0x0F;
+  return result;
 }
 
 /////////////////////////////
@@ -216,37 +327,52 @@ static void loadcellInit(DeckInfo *info)
     return;
   }
 
-  isInit = true;
 
-  sleepus(1000 * 1000);
+  // sleepus(1000 * 1000);
   // isInit &= nau7802_reset();
-  uint8_t revision;
-  isInit &= nau7802_revision(&revision);
-  DEBUG_PRINT("bla %d %d\n", isInit, revision);
+  // uint8_t revision;
+  // isInit &= nau7802_revision(&revision);
+  // DEBUG_PRINT("bla %d %d\n", isInit, revision);
 
+  if (true) {
 
-  // // Create a task with very high priority to reduce risk that we get
-  // // invalid data
-  // xTaskCreate(loadcellTask, "LOADCELL",
-  //             configMINIMAL_STACK_SIZE, NULL,
-  //             /*priority*/6, NULL);
+    isInit &= nau7802_reset();
+    isInit &= nau7802_powerUp();
+    isInit &= nau7802_setLDO(NAU7802_LDO_3V3);
+    isInit &= nau7802_setGain(NAU7802_GAIN_128);
+    isInit &= nau7802_setSampleRate(NAU7802_SPS_80);
+    // Turn off CLK_CHP. From 9.1 power on sequencing.
+    isInit &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADC, 0x30);
+    // Enable 330pF decoupling cap on chan 2. From 9.14 application circuit note.
+    isInit &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN, 1);
+    isInit &= nau7802_calibrateAFE();
 
+  }
+
+  if (isInit) {
+    // Create a task
+    xTaskCreate(loadcellTask, "LOADCELL",
+                configMINIMAL_STACK_SIZE, NULL,
+                /*priority*/0, NULL);
+  }
+
+  isInit = true;
   // isInit = true;
 }
 
-// static void loadcellTask(void* prm)
-// {
-//   TickType_t lastWakeTime = xTaskGetTickCount();
+static void loadcellTask(void* prm)
+{
+  TickType_t lastWakeTime = xTaskGetTickCount();
 
-//   while(1) {
-//     vTaskDelayUntil(&lastWakeTime, F2T(100));
+  while(1) {
+    vTaskDelayUntil(&lastWakeTime, F2T(100));
 
-//     if (enable && hx711_is_ready()) {
-//       rawWeight = hx711_read();
-//       weight = a * rawWeight + b;
-//     }
-//   }
-// }
+    if (enable && nau7802_hasMeasurement()) {
+      nau7802_getMeasurement(&rawWeight);
+      weight = a * rawWeight + b;
+    }
+  }
+}
 
 static const DeckDriver loadcell_deck = {
   .vid = 0x00,
