@@ -207,8 +207,11 @@ bool nau7802_reset()
 bool nau7802_powerUp()
 {
   bool result = true;
-  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
-  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
+
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, 0x06); //(PU analog and PU digital)
+
+//  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
+//  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
 
   //Wait for Power Up bit to be set - takes approximately 200us
   for (int i = 0; i < 200; ++i) {
@@ -302,11 +305,16 @@ bool nau7802_hasMeasurement()
 bool nau7802_getMeasurement(int32_t* measurement)
 {
   bool result = true;
-  uint32_t valueRaw;
+
+  uint8_t valueRaw[3];
   result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&valueRaw);
   // recover the sign
-  int32_t valueShifted = (int32_t)(valueRaw << 8);
-  *measurement = (valueShifted >> 8);
+  int32_t valueShifted = (int32_t)(valueRaw[2] << 16) |
+                                  (valueRaw[1] << 8)  |
+                                  (valueRaw[0] << 0);
+  if ((int8_t)valueRaw[2] < 0) *measurement = -valueShifted;
+  else *measurement = valueShifted;
+
   return result;
 }
 
@@ -327,6 +335,7 @@ static void loadcellInit(DeckInfo *info)
     return;
   }
 
+  isInit = true;
 
   // sleepus(1000 * 1000);
   // isInit &= nau7802_reset();
@@ -337,27 +346,32 @@ static void loadcellInit(DeckInfo *info)
   if (true) {
 
     isInit &= nau7802_reset();
+    DEBUG_PRINT("Reset [%d]\n", isInit);
     isInit &= nau7802_powerUp();
-    isInit &= nau7802_setLDO(NAU7802_LDO_3V3);
+    DEBUG_PRINT("Power up [%d]\n", isInit);
+    isInit &= nau7802_setLDO(NAU7802_LDO_2V7);
+    DEBUG_PRINT("LDO [%d]\n", isInit);
     isInit &= nau7802_setGain(NAU7802_GAIN_128);
+    DEBUG_PRINT("Gain [%d]\n", isInit);
     isInit &= nau7802_setSampleRate(NAU7802_SPS_80);
+    DEBUG_PRINT("Sample rate [%d]\n", isInit);
     // Turn off CLK_CHP. From 9.1 power on sequencing.
     isInit &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADC, 0x30);
+    DEBUG_PRINT("CLK_CHP [%d]\n", isInit);
     // Enable 330pF decoupling cap on chan 2. From 9.14 application circuit note.
     isInit &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN, 1);
+    DEBUG_PRINT("CAP [%d]\n", isInit);
     isInit &= nau7802_calibrateAFE();
+    DEBUG_PRINT("Cal [%d]\n", isInit);
 
   }
 
-  if (isInit) {
+  if (1) {
     // Create a task
     xTaskCreate(loadcellTask, "LOADCELL",
                 configMINIMAL_STACK_SIZE, NULL,
-                /*priority*/0, NULL);
+                /*priority*/1, NULL);
   }
-
-  isInit = true;
-  // isInit = true;
 }
 
 static void loadcellTask(void* prm)
