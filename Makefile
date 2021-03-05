@@ -36,7 +36,7 @@ include $(CRAZYFLIE_BASE)/tools/make/platform.mk
 CFLAGS += -DCRAZYFLIE_FW
 
 # Branch specific changes
-CFLAGS += -DDECK_FORCE=bcLoadcell:bcRpm
+CFLAGS += -DDECK_FORCE=bcLoadcell
 
 ######### Stabilizer configuration ##########
 ## These are set by the platform (see tools/make/platforms/*.mk), can be overwritten here
@@ -221,7 +221,7 @@ PROJ_OBJ += lighthouse.o
 PROJ_OBJ += activeMarkerDeck.o
 # PROJ_OBJ += loadcell.o
 PROJ_OBJ += loadcell_nau7802.o
-PROJ_OBJ += rpm.o
+#PROJ_OBJ += rpm.o
 
 # Uart2 Link for CRTP communication is not compatible with decks using uart2
 ifeq ($(UART2_LINK), 1)
