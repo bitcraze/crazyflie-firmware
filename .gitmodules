@@ -1,6 +1,6 @@
 [submodule "vendor/CMSIS"]
 	path = vendor/CMSIS
-	url = https://github.com/ARM-software/CMSIS.git
+	url = https://github.com/ARM-software/CMSIS_5.git
 [submodule "vendor/FreeRTOS"]
 	path = vendor/FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
