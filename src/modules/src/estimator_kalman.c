@@ -573,13 +573,6 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
-    kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
-    doneUpdate = true;
-  }
-
-  flowMeasurement_t flow;
-  while (stateEstimatorHasFlowPacket(&flow))
-  {
     if(ROBUST){
         // robust KF update with TDOA measurements   
         kalmanCoreRobustUpdateWithTDOA(&coreData, &tdoa);
@@ -587,6 +580,14 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
         // standard KF update
         kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
     }
+    // kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+    doneUpdate = true;
+  }
+
+  flowMeasurement_t flow;
+  while (stateEstimatorHasFlowPacket(&flow))
+  {
+    kalmanCoreUpdateWithFlow(&coreData, &flow, gyro);
     doneUpdate = true;
   }
 

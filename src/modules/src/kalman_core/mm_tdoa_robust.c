@@ -44,7 +44,7 @@ static void Cholesky_Decomposition(int n, float matrix[n][n],  float lower[n][n]
 /* Weight function for GM Robust cost function
  * General guidelines for hyperparameter tuning: 
  * For a given measurement error e, decreasing the sigma of the GM weight function will set a
- * smaller weights to this error e. Then, the variance of this measurement will increase, indicating 
+ * smaller weight to this error e. Then, the variance of this measurement will increase, indicating 
  * a large measurement uncertainty. 
  * Intuitively, a small sigma means you trust the measurements more.
 */
