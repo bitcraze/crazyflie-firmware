@@ -580,7 +580,6 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
         // standard KF update
         kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
     }
-    // kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
     doneUpdate = true;
   }
 
