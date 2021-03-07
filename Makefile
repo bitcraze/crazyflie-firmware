@@ -1,5 +1,5 @@
 # CrazyFlie's Makefile
-# Copyright (c) 2011,2012 Bitcraze AB
+# Copyright (c) 2011-2021 Bitcraze AB
 # This Makefile compiles all the object file to ./bin/ and the resulting firmware
 # image in ./cfX.elf and ./cfX.bin
 
@@ -138,7 +138,7 @@ PROJ_OBJ += platform.o platform_utils.o platform_$(PLATFORM).o platform_$(CPU).o
 
 # Drivers
 PROJ_OBJ += exti.o nvic.o motors.o
-PROJ_OBJ += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o i2c_drv.o
+PROJ_OBJ += led.o mpu6500.o i2cdev.o ws2812_cf2.o lps25h.o i2c_drv.o
 PROJ_OBJ += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 PROJ_OBJ += cppm.o
