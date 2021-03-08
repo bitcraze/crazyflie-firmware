@@ -76,7 +76,7 @@ def decode(filename):
             result[event['name']][v].append(d)
         result[event['name']]["timestamp"].append(timestamp)
 
-        print(event_id, timestamp, eventData)
+        # print(event_id, timestamp, eventData)
 
     return result
 
