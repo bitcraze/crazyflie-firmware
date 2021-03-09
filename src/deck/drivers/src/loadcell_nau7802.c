@@ -306,14 +306,18 @@ bool nau7802_getMeasurement(int32_t* measurement)
 {
   bool result = true;
 
-  uint8_t valueRaw[3];
-  result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&valueRaw);
+  uint8_t data[3];
+  result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&data);
+  // DEBUG_PRINT("M: %d %d, %d, %d\n", result, data[0], data[1], data[2]);
+
+  int32_t valueRaw = ((int32_t)data[0] << 16) |
+                      ((int32_t)data[1] << 8) |
+                      ((int32_t)data[2] << 0);
   // recover the sign
-  int32_t valueShifted = (int32_t)(valueRaw[2] << 16) |
-                                  (valueRaw[1] << 8)  |
-                                  (valueRaw[0] << 0);
-  if ((int8_t)valueRaw[2] < 0) *measurement = -valueShifted;
-  else *measurement = valueShifted;
+  int32_t valueShifted = (valueRaw << 8);
+  int32_t value = (valueShifted >> 8);
+
+  *measurement = value;
 
   return result;
 }
@@ -337,19 +341,20 @@ static void loadcellInit(DeckInfo *info)
 
   isInit = true;
 
-  sleepus(1000 * 1000);
+  // sleepus(1000 * 1000);
   // isInit &= nau7802_reset();
-  // uint8_t revision;
-  // isInit &= nau7802_revision(&revision);
-  // DEBUG_PRINT("bla %d %d\n", isInit, revision);
 
   if (true) {
 
     isInit &= nau7802_powerUp();
     DEBUG_PRINT("Power up [%d]\n", isInit);
 
-    isInit &= nau7802_reset();
-    DEBUG_PRINT("Reset [%d]\n", isInit);
+    uint8_t revision;
+    isInit &= nau7802_revision(&revision);
+    DEBUG_PRINT("revision [%d]: %d\n", isInit, revision);
+
+    // isInit &= nau7802_reset();
+    // DEBUG_PRINT("Reset [%d]\n", isInit);
     isInit &= nau7802_setLDO(NAU7802_LDO_2V7);
     DEBUG_PRINT("LDO [%d]\n", isInit);
     isInit &= nau7802_setGain(NAU7802_GAIN_128);
