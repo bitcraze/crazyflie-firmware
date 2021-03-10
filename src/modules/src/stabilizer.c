@@ -44,6 +44,7 @@
 #include "controller.h"
 #include "power_distribution.h"
 #include "health.h"
+#include "supervisor.h"
 
 #include "estimator.h"
 #include "usddeck.h"
@@ -254,6 +255,12 @@ static void stabilizerTask(void* param)
       controller(&control, &setpoint, &sensorData, &state, tick);
 
       checkEmergencyStopTimeout();
+
+      //
+      // The supervisor module keeps track of Crazyflie state such as if
+      // we are ok to fly, or if the Crazyflie is in flight.
+      //
+      supervisorUpdate();
 
       if (emergencyStop) {
         powerStop();
