@@ -41,7 +41,7 @@ bool logTest(void);
  * Should be fetched with logGetVarId(). This is to be considered as an
  * opaque type, internal structure might change.
  * 
- * Use LOG_VARID_IS_VALID() to check if the ID is valid.
+ * Use logVarIdIsValid() to check if the ID is valid.
  */
 typedef uint16_t logVarId_t;
 
@@ -49,7 +49,7 @@ typedef uint16_t logVarId_t;
  * 
  * @param group Group name of the variable
  * @param name Name of the variable
- * @return The variable ID or an invalid ID. Use LOG_VARID_IS_VALID() to check validity.
+ * @return The variable ID or an invalid ID. Use logVarIdIsValid() to check validity.
  */
 logVarId_t logGetVarId(char* group, char* name);
 
@@ -58,7 +58,9 @@ logVarId_t logGetVarId(char* group, char* name);
  * @param varId variable ID, returned by logGetLogId()
  * @return true if the variable ID is valid, false otherwise.
  */
-#define LOG_VARID_IS_VALID(varId) (varId != 0xffffu)
+static inline bool logVarIdIsValid(logVarId_t varId) {
+  return varId != 0xffffu;
+}
 
 /** Return the logging type
  * 

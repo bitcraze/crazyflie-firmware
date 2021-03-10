@@ -45,24 +45,31 @@ SECTIONS
         *(.fini)
         *(.eh_frame)
 
-        /* Parameters and log system datas */
+        /* Parameters */
         . = ALIGN(4);
         _param_start = .;
         KEEP(*(.param))
         KEEP(*(.param.*))
         _param_stop = .;
+        /* Logging */
         . = ALIGN(4);
         _log_start = .;
         KEEP(*(.log))
         KEEP(*(.log.*))
         _log_stop = .;
+        /* Decks */
+	    . = ALIGN(4);
         _deckDriver_start = .;
         KEEP(*(.deckDriver));
         KEEP(*(.deckDriver.*));
         _deckDriver_stop = .;
-
-
+        /* Event Triggers */
 	    . = ALIGN(4);
+        _eventtrigger_start = .;
+        KEEP(*(.eventtrigger));
+        KEEP(*(.eventtrigger.*));
+        _eventtrigger_stop = .;
+
    	 _etext = .;
     } >FLASH
 
