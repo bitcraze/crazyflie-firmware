@@ -19,6 +19,8 @@
 #include "test_support.h"
      
 #define MAX_ITER (2) // maximum iteration is set to 2. 
+#define UPPER_BOUND (100)
+#define LOWER_BOUND (-100)
 
 // Cholesky Decomposition for a nxn psd matrix (from scratch)
 // Reference: https://www.geeksforgeeks.org/cholesky-decomposition-matrix-decomposition/
@@ -168,6 +170,24 @@ void kalmanCoreRobustUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *t
                 else{ 
                     e_y = error_iter / R_chol;
                 }
+                // Make sure P_chol, lower trangular matrix, is numerically stable              
+                for (int col=0; col<KC_STATE_DIM; col++) {
+                    for (int row=col; row<KC_STATE_DIM; row++) {
+                        if (isnan(P_chol[row][col]) || P_chol[row][col] > UPPER_BOUND) {
+                            P_chol[row][col] = UPPER_BOUND;
+                        } else if(row!=col && P_chol[row][col] < LOWER_BOUND){
+                            P_chol[row][col] = LOWER_BOUND;
+                        } else if(row==col && P_chol[row][col]<0.0f){
+                            P_chol[row][col] = 0.0f;
+                        } 
+                    }
+                }
+                // Matrix inversion is numerically sensitive.
+                // Add small values on the diagonal of P_chol to avoid numerical problems.
+                float dummy_value = 1e-9f;
+                for (int k=0; k<KC_STATE_DIM; k++){
+                    P_chol[k][k] = P_chol[k][k] + dummy_value;
+                }
                 // keep P_chol
                 matrixcopy(KC_STATE_DIM, KC_STATE_DIM, tmp1, P_chol);
                 mat_inv(&tmp1m, &Pc_inv_m);                            // Pc_inv_m = inv(Pc_m) = inv(P_chol)
@@ -179,8 +199,8 @@ void kalmanCoreRobustUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *t
                     wx_inv[state_k][state_k] = (float)1.0 / wx_inv[state_k][state_k];
                 }
                 // rescale covariance matrix P 
-                mat_mult(&Pc_m, &wx_invm, &Pc_w_invm);                // Pc_w_invm = P_c.dot(linalg.inv(w_x))
-                mat_mult(&Pc_w_invm, &Pc_tran_m, &P_w_m);             // P_w_m = Pc_w_invm.dot(Pc_tran_m) = P_c.dot(linalg.inv(w_x)).dot(P_c.T)
+                mat_mult(&Pc_m, &wx_invm, &Pc_w_invm);                // Pc_w_invm = P_chol.dot(linalg.inv(w_x))
+                mat_mult(&Pc_w_invm, &Pc_tran_m, &P_w_m);             // P_w_m = Pc_w_invm.dot(Pc_tran_m) = P_chol.dot(linalg.inv(w_x)).dot(P_chol.T)
                 // rescale R matrix                 
                 float w_y=0.0;      float R_w = 0.0f;
                 GM_UWB(e_y, &w_y);                                    // compute the weighted measurement error: w_y
