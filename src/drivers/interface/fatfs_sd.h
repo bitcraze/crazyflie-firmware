@@ -1,14 +1,12 @@
 /*-----------------------------------------------------------------------/
-/  Low level disk interface modlue include file   (C)ChaN, 2013          /
+/  Low level disk interface module include file   (C)ChaN, 2013          /
 /-----------------------------------------------------------------------*/
 
-#ifndef __FATFS_SD_H__
-#define __FATFS_SD_H__
+#pragma once
 
 #define SD_DISK_TIMER_PERIOD_MS 100
 
 #include "diskio.h"
-#include "integer.h"
 
 typedef struct {
   void (*initSpi) (void);
@@ -29,5 +27,10 @@ typedef struct {
   volatile UINT timer2;
 } sdSpiContext_t;
 
-#endif // __FATFS_SD_H__
-
+/* Drivers function declarations */
+DSTATUS SD_disk_initialize(void *);
+DSTATUS SD_disk_status(void *);
+DRESULT SD_disk_ioctl(BYTE cmd, void *buff, void *);
+DRESULT SD_disk_read(BYTE *buff, DWORD sector, UINT count, void *);
+DRESULT SD_disk_write(const BYTE *buff, DWORD sector, UINT count, void *);
+void SD_disk_timerproc(void *);
