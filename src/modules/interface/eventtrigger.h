@@ -41,6 +41,7 @@ enum eventtriggerType_e {
     eventtriggerType_int32  = 6,
     eventtriggerType_float  = 7,
 };
+typedef float float_t;
 
 typedef struct eventtriggerPayloadDesc_s
 {
@@ -84,6 +85,12 @@ static const eventtrigger myEventTrigger = {
 /* The same code above can be generated using the following macro:
 
 EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
+
+To debug/develop the macros, a good way is to create a new file "etdbg.c" with the following content
+and then execute "gcc -E etdbg.c":
+
+#include "src/modules/interface/eventtrigger.h"
+EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
 */
 
 #ifndef UNIT_TEST_MODE
@@ -118,7 +125,7 @@ EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
     {                                               \
         .type = eventtriggerType_##TYPE,            \
         .name = #NAME,                              \
-    }
+    },
 
 #define _EVENTTRIGGER_NON_EMPTY(NAME, ...)                                                                      \
     static struct                                                                                               \

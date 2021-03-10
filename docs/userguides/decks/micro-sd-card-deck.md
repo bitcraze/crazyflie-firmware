@@ -40,7 +40,7 @@ on:myEvent2
 ```
 
 The config file supports logging of [log variables](/docs/userguides/logparam.md) as well as [event triggers](/docs/userguides/eventtrigger.md).
-For the fixed frequency logging, the frequency is an integer value in Hertz, for example 250 means that a data block is written every 4ms. The buffer size is used to decouple the writing to the card and the data logging. Higher frequencies require a larger buffer, otherwise some data might be lost. The Crazyflie console will report after the log file is closed how many events had to be discarded because of insufficient buffer size:
+For the fixed frequency logging, the frequency is an integer value in Hertz, for example 250 means that a data block is written every 4ms. The buffer size is used to decouple the writing to the card and the data logging. Higher frequencies require a larger buffer, otherwise some data might be lost. The Crazyflie console will show how many events had to be discarded due to insufficient buffer size:
 ```
 uSD: Wrote 161378 B to: log00 (2237 of 2237 events)
 ``` 
@@ -48,7 +48,30 @@ In general, logging 10 variables with 1kHz works well with a buffer of 512 Bytes
 
 The file name should be 10 characters or less and a running number is appended automatically (e.g., if the file name is log, there will be files log00, log01, log02 etc.). The log entries are the names of logging variables in the firmware.
 
-The `config.txt` file will be read only once on startup, therefore make sure that the µSD-Card is inserted before power up. If everything seems to be fine a µSD-task will be created and buffer space will be allocated. If malloc fails crazyflie will stuck with LED M1 and M4 glowing. Data logging starts automatically after sensor calibration if `enable on startup` in `config.txt` was set to 1. Otherwise, logging can be started by setting the `usd.logging` parameter to 1. The logfiles will be enumerated in ascending order from 00-99 to allow multiple logs without the need of creating new config files. Just reset the Crazyflie to start a new file. Logging needs to be explicitly stopped by setting the `usd.logging` parameter to 0, which protects the logfile data with a CRC32. For performance reasons the logfile is a binary file and we provide a [helper script](/tools/usdlog/cfusdlog.py) to decode the data:
+The `config.txt` file will be read only once on startup, therefore make sure that the µSD-Card is inserted before power up. If everything seems to be fine a µSD-task will be created and buffer space will be allocated. If malloc fails the Crazyflie will be stuck with LED M1 and M4 glowing. Data logging starts automatically after sensor calibration if `enable on startup` in `config.txt` was set to 1. Otherwise, logging can be started by setting the `usd.logging` parameter to 1. The logfiles will be enumerated in ascending order from 00-99 to allow multiple logs without the need of creating new config files. Just reset the Crazyflie to start a new file. Logging needs to be explicitly stopped by setting the `usd.logging` parameter to 0, which protects the logfile data with a CRC32.
+
+## Data Analysis
+
+For performance reasons the logfile is a binary file, using the following format:
+
+```
+uint8_t 0xBC header
+uint16_t version
+uint16_t num_event_types
+for each event type:
+   uint16_t event_id
+   eventName<null>
+   uint16_t num_variables
+   varname1(vartype1)<null>varname2(vartype2)<null>...<null>varnameN(vartypeN)<null>
+for each event:
+   uint16_t event_id
+   uint32_t timestamp (FreeRTOS ticks in ms)
+   data (length defined by TOC event type)
+```
+
+Here, the vartype is a singe character and we support a subset of the ones defined [here](https://docs.python.org/3/library/struct.html#format-characters).
+
+We provide a [helper script](/tools/usdlog/cfusdlog.py) to decode the data:
 
 ```
 import cfusdlog

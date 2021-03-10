@@ -26,8 +26,10 @@ Internally, the macro generates code that declares several static variables. Det
 Once the event trigger is defined, it can be triggered anywhere in the source code of the same *.c file:
 
 ``` {.c}
+// set the payload
 eventTrigger_myEvent_payload.var1 = some_value_related_to_the_event;
 eventTrigger_myEvent_payload.var2 = another_value_related_to_the_event;
+// trigger the event
 eventTrigger(&eventTrigger_myEvent);
 ```
 
