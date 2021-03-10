@@ -40,7 +40,6 @@
 #include "sensors.h"
 #include "commander.h"
 #include "crtp_localization_service.h"
-#include "sitaw.h"
 #include "controller.h"
 #include "power_distribution.h"
 #include "health.h"
@@ -166,7 +165,6 @@ void stabilizerInit(StateEstimatorType estimator)
   stateEstimatorInit(estimator);
   controllerInit(ControllerTypeAny);
   powerDistributionInit();
-  sitAwInit();
   estimatorType = getStateEstimator();
   controllerType = getControllerType();
 
@@ -250,8 +248,6 @@ static void stabilizerTask(void* param)
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
-      sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
-
       controller(&control, &setpoint, &sensorData, &state, tick);
 
       checkEmergencyStopTimeout();
@@ -260,7 +256,7 @@ static void stabilizerTask(void* param)
       // The supervisor module keeps track of Crazyflie state such as if
       // we are ok to fly, or if the Crazyflie is in flight.
       //
-      supervisorUpdate();
+      supervisorUpdate(&sensorData);
 
       if (emergencyStop) {
         powerStop();

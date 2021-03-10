@@ -26,7 +26,10 @@
 
 #pragma once
 
-void supervisorUpdate(void);
+#include "stabilizer_types.h"
+
+void supervisorUpdate(const sensorData_t *data);
 
 bool supervisorCanFly(void);
 bool supervisorIsFlying(void);
+bool supervisorIsTumbled(void);
