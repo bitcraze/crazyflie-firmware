@@ -85,8 +85,6 @@ static void flowdeckTask(void *param)
 {
   systemWaitStart();
 
-  initUsecTimer();
-
   uint64_t lastTime  = usecTimestamp();
   while(1) {
     vTaskDelay(10);
