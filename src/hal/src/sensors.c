@@ -35,12 +35,8 @@
 #define xstr(s) str(s)
 #define str(s) #s
 
-#ifdef SENSOR_INCLUDED_BMI088_BMP388
+#if defined(SENSOR_INCLUDED_BMI088_BMP388) || defined(SENSOR_INCLUDED_BMI088_SPI_BMP388)
   #include "sensors_bmi088_bmp388.h"
-#endif
-
-#ifdef SENSOR_INCLUDED_BMI088_SPI_BMP388
-  #include "sensors_bmi088_spi_bmp388.h"
 #endif
 
 #ifdef SENSOR_INCLUDED_MPU9250_LPS25H
@@ -77,7 +73,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
 #ifdef SENSOR_INCLUDED_BMI088_BMP388
   {
     .implements = SensorImplementation_bmi088_bmp388,
-    .init = sensorsBmi088Bmp388Init,
+    .init = sensorsBmi088Bmp388Init_I2C,
     .test = sensorsBmi088Bmp388Test,
     .areCalibrated = sensorsBmi088Bmp388AreCalibrated,
     .manufacturingTest = sensorsBmi088Bmp388ManufacturingTest,
@@ -94,18 +90,18 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
 #ifdef SENSOR_INCLUDED_BMI088_SPI_BMP388
   {
     .implements = SensorImplementation_bmi088_spi_bmp388,
-    .init = sensorsBmi088SpiBmp388Init,
-    .test = sensorsBmi088SpiBmp388Test,
-    .areCalibrated = sensorsBmi088SpiBmp388AreCalibrated,
-    .manufacturingTest = sensorsBmi088SpiBmp388ManufacturingTest,
-    .acquire = sensorsBmi088SpiBmp388Acquire,
-    .waitDataReady = sensorsBmi088SpiBmp388WaitDataReady,
-    .readGyro = sensorsBmi088SpiBmp388ReadGyro,
-    .readAcc = sensorsBmi088SpiBmp388ReadAcc,
-    .readMag = sensorsBmi088SpiBmp388ReadMag,
-    .readBaro = sensorsBmi088SpiBmp388ReadBaro,
-    .setAccMode = sensorsBmi088SpiBmp388SetAccMode,
-    .dataAvailableCallback = sensorsBmi088SpiBmp388DataAvailableCallback,
+    .init = sensorsBmi088Bmp388Init_SPI,
+    .test = sensorsBmi088Bmp388Test,
+    .areCalibrated = sensorsBmi088Bmp388AreCalibrated,
+    .manufacturingTest = sensorsBmi088Bmp388ManufacturingTest,
+    .acquire = sensorsBmi088Bmp388Acquire,
+    .waitDataReady = sensorsBmi088Bmp388WaitDataReady,
+    .readGyro = sensorsBmi088Bmp388ReadGyro,
+    .readAcc = sensorsBmi088Bmp388ReadAcc,
+    .readMag = sensorsBmi088Bmp388ReadMag,
+    .readBaro = sensorsBmi088Bmp388ReadBaro,
+    .setAccMode = sensorsBmi088Bmp388SetAccMode,
+    .dataAvailableCallback = sensorsBmi088Bmp388DataAvailableCallback,
   },
 #endif
 #ifdef SENSOR_INCLUDED_MPU9250_LPS25H
