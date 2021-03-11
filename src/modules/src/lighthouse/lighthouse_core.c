@@ -112,13 +112,9 @@ static uint32_t nextUpdateTimeOfSystemStatus = 0;
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 pulseProcessor_t lighthouseCoreState;
 
-#if LIGHTHOUSE_FORCE_TYPE == 1
-pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
-#elif LIGHTHOUSE_FORCE_TYPE == 2
-pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
-#else
-pulseProcessorProcessPulse_t pulseProcessorProcessPulse = (void*)0;
-#endif
+static lighthouseBaseStationType_t systemType = lighthouseBsTypeV2;
+static lighthouseBaseStationType_t previousSystemType = lighthouseBsTypeV2;
+static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
 
 #define UART_FRAME_LENGTH 12
 
@@ -136,6 +132,7 @@ static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
 }
 
 void lighthouseCoreInit() {
+  lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
 }
 
@@ -169,6 +166,39 @@ void lighthouseCoreLedTimer()
         ASSERT(false);
     }
   }
+}
+
+static void lighthouseUpdateSystemType() {
+  // Switch to new pulse processor
+  switch(systemType) {
+    case lighthouseBsTypeV1:
+      pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
+      break;
+    case lighthouseBsTypeV2:
+      pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
+      break;
+    default:
+      // Do nothing if the type is not in range, stay on the previous processor
+      return;
+  }
+
+  if (previousSystemType != systemType) {
+    previousSystemType = systemType;
+
+    // Clear state
+    memset(&lighthouseCoreState, 0, sizeof(lighthouseCoreState));
+
+    // Store new system type
+    lighthouseStoragePersistSystemType(systemType);
+  }
+  
+}
+
+void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
+{
+  systemType = type;
+  previousSystemType = type;
+  lighthouseUpdateSystemType();
 }
 
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
@@ -322,35 +352,6 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
   }
 }
 
-/**
- * @brief Identify the type of base stations used in the system.
- * There is not member of the UART frame data we can use to directly identify the type, but we can use statistical methods.
- * The beamWord will vary for V2 base stations, while it will have the value 0x1ffff fairly offen for V1 base stations.
- *
- * @param frame
- * @param state
- * @return TESTABLE_STATIC identifyBaseStationType
- */
-TESTABLE_STATIC lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* state) {
-    const uint32_t v1Indicator = 0x1ffff;
-    const int requiredIndicatorsForV1 = 6;
-    const int requiredSamplesForV2 = 20;
-    state->sampleCount++;
-    if (frame->data.beamData == v1Indicator) {
-        state->hitCount++;
-    }
-
-    if (state->hitCount >= requiredIndicatorsForV1) {
-        return lighthouseBsTypeV1;
-    }
-
-    if (state->sampleCount >= requiredSamplesForV2) {
-        return lighthouseBsTypeV2;
-    }
-
-    return lighthouseBsTypeUnknown;
-}
-
 static void useCalibrationData(pulseProcessor_t *appState) {
   for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
     if (appState->ootxDecoder[baseStation].isFullyDecoded) {
@@ -371,26 +372,6 @@ static void useCalibrationData(pulseProcessor_t *appState) {
       }
     }
   }
-}
-
-static pulseProcessorProcessPulse_t identifySystem(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* bsIdentificationData) {
-  pulseProcessorProcessPulse_t result = (void*)0;
-
-  switch (identifyBaseStationType(frame, bsIdentificationData)) {
-    case lighthouseBsTypeV1:
-      DEBUG_PRINT("Locking to V1 system\n");
-      result = pulseProcessorV1ProcessPulse;
-      break;
-    case lighthouseBsTypeV2:
-      DEBUG_PRINT("Locking to V2 system\n");
-      result = pulseProcessorV2ProcessPulse;
-      break;
-    default:
-      // Nothing here
-      break;
-  }
-
-  return result;
 }
 
 static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
@@ -494,10 +475,9 @@ void lighthouseCoreTask(void *param) {
         STATS_CNT_RATE_EVENT(&frameRate);
 
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
+        lighthouseUpdateSystemType();
         if (pulseProcessorProcessPulse) {
           processFrame(&lighthouseCoreState, &angles, &frame);
-        } else {
-          pulseProcessorProcessPulse = identifySystem(&frame, &bsIdentificationData);
         }
       }
 
@@ -584,4 +564,5 @@ LOG_GROUP_STOP(lighthouse)
 PARAM_GROUP_START(lighthouse)
 PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
 PARAM_ADD(PARAM_UINT8, bsCalibReset, &calibStatusReset)
+PARAM_ADD(PARAM_UINT8, systemType, &systemType)
 PARAM_GROUP_STOP(lighthouse)

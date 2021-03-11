@@ -28,6 +28,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "pulse_processor.h"
+
 /**
  * @brief Copy current data in RAM for one base station to permanent storage.
  *        Note: persisting data may take a long time, this function should
@@ -49,6 +51,13 @@ bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData,
 void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation);
 
 /**
+ * @brief Save system type in storage
+ * 
+ * @param type System type to store
+ */
+void lighthouseStoragePersistSystemType(lighthouseBaseStationType_t type);
+
+/**
  * @brief Verify that the version nr of the permanent storage is correct. If the
  *        version is not correct, this function will assert and halt the crazyflie.
  */
@@ -65,3 +74,9 @@ void lighthouseStorageInitializeGeoDataFromStorage();
  *
  */
 void lighthouseStorageInitializeCalibDataFromStorage();
+
+/**
+ * @brief Fetch system type from storage and set it in ligthouseCore
+ * 
+ */
+void lighthouseStorageInitializeSystemTypeFromStorage();
