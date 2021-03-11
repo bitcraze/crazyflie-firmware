@@ -57,7 +57,7 @@ static uint8_t currentId[LED_COUNT] = {0xff, 0xff, 0xff, 0xff};
 static uint8_t requestedId[LED_COUNT] = {1, 3, 4, 2}; // 1 to 4, clockwise
 
 #define MODE_OFF 0
-#define MODE_ON 1
+#define MODE_PWM 1
 #define MODE_MODULATED 2
 #define MODE_QUALISYS 3
 #define MODE_UART_TEST 0xff
