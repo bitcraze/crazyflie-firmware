@@ -180,7 +180,6 @@ static void lighthouseUpdateSystemType() {
     default:
       // Do nothing if the type is not in range, stay on the previous processor
       return;
-      break;
   }
 
   if (previousSystemType != systemType) {
