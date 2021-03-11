@@ -21,12 +21,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * sitaw.h - shim to keep API of sitAwTuDetected
+ * supervisor.h - Keep track of system state
  */
 
 #pragma once
 
-#pragma message "sitAwTuDetected is deprecated, consider switching to supervisorIsTumbled!"
+#include "stabilizer_types.h"
 
-#include "supervisor.h"
-#define sitAwTuDetected supervisorIsTumbled
+void supervisorUpdate(const sensorData_t *data);
+
+bool supervisorCanFly(void);
+bool supervisorIsFlying(void);
+bool supervisorIsTumbled(void);
