@@ -556,6 +556,7 @@ void sensorsBmi088Bmp388Init_SPI(void)
       return;
     }
 
+    DEBUG_PRINT("BMI088: Using SPI interface.\n");
     sensorsBmi088_SPI_deviceInit(&bmi088Dev);
     sensorsBmi088Bmp388Init();
 }
@@ -567,6 +568,7 @@ void sensorsBmi088Bmp388Init_I2C(void)
     return;
   }
 
+  DEBUG_PRINT("BMI088: Using I2C interface.\n");
   sensorsBmi088_I2C_deviceInit(&bmi088Dev);
   sensorsBmi088Bmp388Init();
 }
