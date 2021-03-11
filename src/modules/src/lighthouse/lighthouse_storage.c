@@ -43,6 +43,7 @@
 #define CURRENT_STORAGE_VERSION "1"
 #define STORAGE_KEY_GEO "lh/sys/0/geo/"
 #define STORAGE_KEY_CALIB "lh/sys/0/cal/"
+#define STORAGE_KEY_SYSTEM_TYPE "lh/sys/0/type"
 #define KEY_LEN 20
 
 static baseStationGeometry_t geoBuffer;
@@ -93,6 +94,10 @@ void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation) {
   }
 }
 
+void lighthouseStoragePersistSystemType(lighthouseBaseStationType_t type) {
+  storageStore(STORAGE_KEY_SYSTEM_TYPE, &type, sizeof(type));
+}
+
 void lighthouseStorageVerifySetStorageVersion() {
   const int bufLen = 5;
   char buffer[bufLen];
@@ -137,4 +142,14 @@ void lighthouseStorageInitializeCalibDataFromStorage() {
       }
     }
   }
+}
+
+void lighthouseStorageInitializeSystemTypeFromStorage() {
+  lighthouseBaseStationType_t type;
+  const size_t typeSize = sizeof(lighthouseBaseStationType_t);
+  const size_t fetched = storageFetch(STORAGE_KEY_SYSTEM_TYPE, &type, sizeof(type));
+
+  if (fetched == typeSize) {
+    lighthouseCoreSetSystemType(type);
+  } 
 }
