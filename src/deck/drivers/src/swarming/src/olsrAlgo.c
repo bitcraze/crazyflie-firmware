@@ -36,7 +36,7 @@ static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
 static float velocity;
-static int16_t distanceTowards[10];
+static int16_t distanceTowards[50];
 int jitter = 0;
 
 int olsr_ts_otspool_idx = 0;
