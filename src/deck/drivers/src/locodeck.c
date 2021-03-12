@@ -73,14 +73,12 @@
   #define EXTI_PortSource EXTI_PortSourceGPIOB
   #define EXTI_PinSource 	EXTI_PinSource5
   #define EXTI_LineN 		  EXTI_Line5
-  #define EXTI_IRQChannel EXTI9_5_IRQn
 #else
   #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
   #define GPIO_PIN_RESET 	DECK_GPIO_TX1
   #define EXTI_PortSource EXTI_PortSourceGPIOC
   #define EXTI_PinSource 	EXTI_PinSource11
   #define EXTI_LineN 		  EXTI_Line11
-  #define EXTI_IRQChannel EXTI15_10_IRQn
 #endif
 
 
@@ -434,7 +432,6 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
   {
     portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
 
-    NVIC_ClearPendingIRQ(EXTI_IRQChannel);
     EXTI_ClearITPendingBit(EXTI_LineN);
 
     // Unlock interrupt handling task
@@ -473,7 +470,6 @@ static dwOps_t dwOps = {
 static void dwm1000Init(DeckInfo *info)
 {
   EXTI_InitTypeDef EXTI_InitStructure;
-  NVIC_InitTypeDef NVIC_InitStructure;
 
   spiBegin();
 
@@ -542,12 +538,12 @@ static void dwm1000Init(DeckInfo *info)
 
   memoryRegisterHandler(&memDef);
 
-  // Enable interrupt
-  NVIC_InitStructure.NVIC_IRQChannel = EXTI_IRQChannel;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_VERY_HIGH_PRI;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
+  // // Enable interrupt
+  // NVIC_InitStructure.NVIC_IRQChannel = EXTI_IRQChannel;
+  // NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_VERY_HIGH_PRI;
+  // NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  // NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  // NVIC_Init(&NVIC_InitStructure);
 
   algoSemaphore= xSemaphoreCreateMutex();
 
