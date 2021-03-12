@@ -43,16 +43,22 @@
 #include "sleepus.h"
 #include "debug.h"
 
+// Hardware defines (also update deck driver below!)
 #define DECK_I2C_ADDRESS 0x2A
+#define DATA_READY_PIN DECK_GPIO_IO1
 
 static bool isInit;
 static int32_t rawWeight;
 static float weight;
-static bool enable = true;
 
 static float a = 4.22852802e-05;
 static float b = -2.21784688e+01;
 
+static uint8_t sampleRateDesired = 0;
+static uint8_t sampleRate = 0;
+
+static xSemaphoreHandle dataReady;
+static StaticSemaphore_t dataReadyBuffer;
 
 static void loadcellTask(void* prm);
 
@@ -209,12 +215,13 @@ bool nau7802_powerUp()
   bool result = true;
 
   result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, 0x06); //(PU analog and PU digital)
+  DEBUG_PRINT("pu %d\n", result);
 
 //  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
 //  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
 
   //Wait for Power Up bit to be set - takes approximately 200us
-  for (int i = 0; i < 200; ++i) {
+  for (int i = 0; i < 500; ++i) {
     uint8_t bit;
     result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUR, &bit);
     if (result && bit) {
@@ -332,6 +339,34 @@ bool nau7802_revision(uint8_t* revision)
 
 /////////////////////////////
 
+static void setupDataReadyInterrupt(void)
+{
+  pinMode(DATA_READY_PIN, INPUT);
+
+  dataReady = xSemaphoreCreateBinaryStatic(&dataReadyBuffer);
+
+  // TODO: EXTI_PortSourceGPIOB and EXTI_PinSource8 should be part of deckGPIOMapping!
+  SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource8);
+
+  EXTI_InitTypeDef EXTI_InitStructure;
+  EXTI_InitStructure.EXTI_Line = EXTI_Line8;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  // portDISABLE_INTERRUPTS();
+  EXTI_Init(&EXTI_InitStructure);
+  // EXTI_ClearITPendingBit(EXTI_Line15);
+  // portENABLE_INTERRUPTS();
+}
+
+void __attribute__((used)) EXTI8_Callback(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  xSemaphoreGiveFromISR(dataReady, &xHigherPriorityTaskWoken);
+  if (xHigherPriorityTaskWoken) {
+    portYIELD();
+  }
+}
 
 static void loadcellInit(DeckInfo *info)
 {
@@ -346,6 +381,9 @@ static void loadcellInit(DeckInfo *info)
 
   if (true) {
 
+    // isInit &= nau7802_reset();
+    // DEBUG_PRINT("Reset [%d]\n", isInit);
+
     isInit &= nau7802_powerUp();
     DEBUG_PRINT("Power up [%d]\n", isInit);
 
@@ -353,13 +391,11 @@ static void loadcellInit(DeckInfo *info)
     isInit &= nau7802_revision(&revision);
     DEBUG_PRINT("revision [%d]: %d\n", isInit, revision);
 
-    // isInit &= nau7802_reset();
-    // DEBUG_PRINT("Reset [%d]\n", isInit);
     isInit &= nau7802_setLDO(NAU7802_LDO_2V7);
     DEBUG_PRINT("LDO [%d]\n", isInit);
     isInit &= nau7802_setGain(NAU7802_GAIN_128);
     DEBUG_PRINT("Gain [%d]\n", isInit);
-    isInit &= nau7802_setSampleRate(NAU7802_SPS_80);
+    isInit &= nau7802_setSampleRate(NAU7802_SPS_10);
     DEBUG_PRINT("Sample rate [%d]\n", isInit);
     // Turn off CLK_CHP. From 9.1 power on sequencing.
     isInit &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADC, 0x30);
@@ -372,6 +408,9 @@ static void loadcellInit(DeckInfo *info)
 
   }
 
+  // Set up Interrupt
+  setupDataReadyInterrupt();
+
   if (1) {
     // Create a task
     xTaskCreate(loadcellTask, "LOADCELL",
@@ -382,24 +421,66 @@ static void loadcellInit(DeckInfo *info)
 
 static void loadcellTask(void* prm)
 {
-  TickType_t lastWakeTime = xTaskGetTickCount();
+  // TickType_t lastWakeTime = xTaskGetTickCount();
 
-  while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(100));
+  // while (1)
+  // {
+  //   vTaskDelayUntil(&lastWakeTime, F2T(20));
+  //   int rdy = digitalRead(DATA_READY_PIN);
+  //   if (rdy) {
+  //       int32_t measurement;
+  //       bool result = nau7802_getMeasurement(&measurement);
+  //       DEBUG_PRINT("m %d %ld\n", result, measurement);
+  //   } else {
+  //     DEBUG_PRINT("p %d\n", rdy);
+  //   }
 
-    if (enable && nau7802_hasMeasurement()) {
-      nau7802_getMeasurement(&rawWeight);
-      weight = a * rawWeight + b;
+  // }
+
+    while (1) {
+      BaseType_t semResult = xSemaphoreTake(dataReady, M2T(500));
+      if (semResult == pdTRUE || digitalRead(DATA_READY_PIN))
+      {
+        int32_t measurement;
+        bool result = nau7802_getMeasurement(&measurement);
+        if (result) {
+          rawWeight = measurement;
+          weight = a * rawWeight + b;
+        }
+      }
+      if (sampleRate != sampleRateDesired) {
+        switch (sampleRateDesired) {
+          case NAU7802_SPS_320:
+          case NAU7802_SPS_80:
+          case NAU7802_SPS_40:
+          case NAU7802_SPS_20:
+          case NAU7802_SPS_10:
+            {
+              bool result = nau7802_setSampleRate(sampleRateDesired);
+              if (result) {
+                DEBUG_PRINT("switched sample rate!\n");
+              }
+            }
+            break;
+          default:
+            DEBUG_PRINT("Unknown sample rate!\n");
+            break;
+        }
+        sampleRate = sampleRateDesired;
+      }
+
+
     }
   }
-}
 
 static const DeckDriver loadcell_deck = {
-  .vid = 0x00,
-  .pid = 0x00,
-  .name = "bcLoadcell",
+    .vid = 0x00,
+    .pid = 0x00,
+    .name = "bcLoadcell",
 
-  .init = loadcellInit,
+    .usedGpio = DECK_USING_IO_1,
+
+    .init = loadcellInit,
 };
 
 DECK_DRIVER(loadcell_deck);
@@ -409,9 +490,9 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLoadcell, &isInit)
 PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(loadcell)
-PARAM_ADD(PARAM_UINT8, enable, &enable)
 PARAM_ADD(PARAM_FLOAT, a, &a)
 PARAM_ADD(PARAM_FLOAT, b, &b)
+PARAM_ADD(PARAM_UINT8, sampleRate, &sampleRateDesired)
 PARAM_GROUP_STOP(loadcell)
 
 LOG_GROUP_START(loadcell)
