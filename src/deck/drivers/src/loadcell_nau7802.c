@@ -42,6 +42,7 @@
 #include "i2cdev.h"
 #include "sleepus.h"
 #include "debug.h"
+#include "statsCnt.h"
 
 // Hardware defines (also update deck driver below!)
 #define DECK_I2C_ADDRESS 0x2A
@@ -51,11 +52,16 @@ static bool isInit;
 static int32_t rawWeight;
 static float weight;
 
-static float a = 4.22852802e-05;
-static float b = -2.21784688e+01;
+static float a[2];
+static float b[2];
+// static uint8_t currentChannel = 0;
 
 static uint8_t sampleRateDesired = 0;
 static uint8_t sampleRate = 0;
+static uint8_t channelDesired = 0;
+static uint8_t channel = 0;
+
+static STATS_CNT_RATE_DEFINE(rate, 1000);
 
 static xSemaphoreHandle dataReady;
 static StaticSemaphore_t dataReadyBuffer;
@@ -63,6 +69,14 @@ static StaticSemaphore_t dataReadyBuffer;
 static void loadcellTask(void* prm);
 
 ////////////////////////////
+
+typedef struct
+{
+  uint8_t pu_ctrl;
+  uint8_t ctrl1;
+  uint8_t ctrl2;
+} nau7802_t;
+static nau7802_t nau7802;
 
 //Register Map
 typedef enum
@@ -199,29 +213,37 @@ typedef enum
   NAU7802_CAL_FAILURE = 2,
 } NAU7802_Cal_Status;
 
-//Resets all registers to Power Of Defaults
-bool nau7802_reset()
+void nau7802_init(nau7802_t* ctx)
 {
-  bool result = true;
-  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 1);
-  sleepus(1);
-  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 0);
-  return result;
+  ctx->pu_ctrl = 0;
+  ctx->ctrl1 = 0;
+  ctx->ctrl2 = 0;
 }
 
+// //Resets all registers to Power Of Defaults
+// bool nau7802_reset(nau7802_t *ctx)
+// {
+//   bool result = true;
+//   result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 1);
+//   sleepus(1);
+//   result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 0);
+//   return result;
+// }
+
 //Power up digital and analog sections of scale
-bool nau7802_powerUp()
+bool nau7802_powerUp(nau7802_t *ctx)
 {
   bool result = true;
 
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, 0x06); //(PU analog and PU digital)
+  ctx->pu_ctrl = 0x06; //(PU analog and PU digital)
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, ctx->pu_ctrl);
   DEBUG_PRINT("pu %d\n", result);
 
 //  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
 //  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
 
   //Wait for Power Up bit to be set - takes approximately 200us
-  for (int i = 0; i < 500; ++i) {
+  for (int i = 0; i < 200; ++i) {
     uint8_t bit;
     result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUR, &bit);
     if (result && bit) {
@@ -233,34 +255,53 @@ bool nau7802_powerUp()
 }
 
 //Set the onboard Low-Drop-Out voltage regulator to a given value
-bool nau7802_setLDO(NAU7802_LDO_Values ldoValue)
+bool nau7802_setLDO(nau7802_t *ctx, NAU7802_LDO_Values ldoValue)
 {
   bool result = true;
   //Set the value of the LDO
-  result &= i2cdevWriteBits(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, 3, 3, ldoValue);
+  ctx->ctrl1 &= 0b11000111;    //Clear LDO bits
+  ctx->ctrl1 |= ldoValue << 3; //Mask in new LDO bits
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, ctx->ctrl1);
   //Enable the internal LDO
-  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_AVDDS, 1);
+  DEBUG_PRINT("l1 %d\n", ctx->pu_ctrl);
+  ctx->pu_ctrl |= (1 << NAU7802_PU_CTRL_AVDDS);
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, ctx->pu_ctrl);
+  DEBUG_PRINT("l2 %d\n", ctx->pu_ctrl);
   return result;
 }
 
 //Set the gain
-bool nau7802_setGain(NAU7802_Gain_Values gainValue)
+bool nau7802_setGain(nau7802_t *ctx, NAU7802_Gain_Values gainValue)
 {
   bool result = true;
-  result &= i2cdevWriteBits(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, 0, 3, gainValue);
+  ctx->ctrl1 &= 0b11111000; //Clear gain bits
+  ctx->ctrl1 |= gainValue;  //Mask in new bits
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, ctx->ctrl1);
   return result;
 }
 
 //Set the readings per second
-bool nau7802_setSampleRate(NAU7802_SPS_Values rate)
+bool nau7802_setSampleRate(nau7802_t* ctx, NAU7802_SPS_Values rate)
 {
   bool result = true;
-  result &= i2cdevWriteBits(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, 4, 3, rate);
+  ctx->ctrl2 &= 0b10001111; // Clear CRS bits
+  ctx->ctrl2 |= rate << 4;  //Mask in new CRS bits
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, ctx->ctrl2);
+  return result;
+}
+
+//Set channel
+bool nau7802_setChannel(nau7802_t *ctx, NAU7802_Channels channel)
+{
+  bool result = true;
+  ctx->ctrl2 &= 0b01111111; // Clear CHS bits
+  ctx->ctrl2 |= channel << 7;  //Mask in new CHS bits
+  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, ctx->ctrl2);
   return result;
 }
 
 //Check calibration status.
-NAU7802_Cal_Status nau7802_calAFEStatus()
+NAU7802_Cal_Status nau7802_calAFEStatus(nau7802_t *ctx)
 {
   bool result = true;
   uint8_t bit;
@@ -283,14 +324,14 @@ NAU7802_Cal_Status nau7802_calAFEStatus()
 //Calibrate analog front end of system. Returns true if CAL_ERR bit is 0 (no error)
 //Takes approximately 344ms to calibrate; wait up to 1000ms.
 //It is recommended that the AFE be re-calibrated any time the gain, SPS, or channel number is changed.
-bool nau7802_calibrateAFE()
+bool nau7802_calibrateAFE(nau7802_t *ctx)
 {
   bool result = true;
   //Begin asynchronous calibration of the analog front end.
   result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, 1);
 
   for (int i = 0; i < 1000; ++i) {
-    if (nau7802_calAFEStatus() == NAU7802_CAL_SUCCESS) {
+    if (nau7802_calAFEStatus(ctx) == NAU7802_CAL_SUCCESS) {
       return true;
     }
     vTaskDelay(M2T(1));
@@ -299,7 +340,7 @@ bool nau7802_calibrateAFE()
 }
 
 //Returns true if Cycle Ready bit is set (conversion is complete)
-bool nau7802_hasMeasurement()
+bool nau7802_hasMeasurement(nau7802_t *ctx)
 {
   bool result = true;
   uint8_t bit;
@@ -309,7 +350,7 @@ bool nau7802_hasMeasurement()
 
 //Returns 24-bit reading
 //Assumes CR Cycle Ready bit (ADC conversion complete) has been checked to be 1
-bool nau7802_getMeasurement(int32_t* measurement)
+bool nau7802_getMeasurement(nau7802_t *ctx, int32_t *measurement)
 {
   bool result = true;
 
@@ -329,7 +370,7 @@ bool nau7802_getMeasurement(int32_t* measurement)
   return result;
 }
 
-bool nau7802_revision(uint8_t* revision)
+bool nau7802_revision(nau7802_t *ctx, uint8_t *revision)
 {
   bool result = true;
   result &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_DEVICE_REV, revision);
@@ -381,21 +422,22 @@ static void loadcellInit(DeckInfo *info)
 
   if (true) {
 
+    nau7802_init(&nau7802);
     // isInit &= nau7802_reset();
     // DEBUG_PRINT("Reset [%d]\n", isInit);
 
-    isInit &= nau7802_powerUp();
+    isInit &= nau7802_powerUp(&nau7802);
     DEBUG_PRINT("Power up [%d]\n", isInit);
 
     uint8_t revision;
-    isInit &= nau7802_revision(&revision);
+    isInit &= nau7802_revision(&nau7802, & revision);
     DEBUG_PRINT("revision [%d]: %d\n", isInit, revision);
 
-    isInit &= nau7802_setLDO(NAU7802_LDO_2V7);
+    isInit &= nau7802_setLDO(&nau7802, NAU7802_LDO_2V7);
     DEBUG_PRINT("LDO [%d]\n", isInit);
-    isInit &= nau7802_setGain(NAU7802_GAIN_128);
+    isInit &= nau7802_setGain(&nau7802, NAU7802_GAIN_128);
     DEBUG_PRINT("Gain [%d]\n", isInit);
-    isInit &= nau7802_setSampleRate(NAU7802_SPS_10);
+    isInit &= nau7802_setSampleRate(&nau7802, NAU7802_SPS_10);
     DEBUG_PRINT("Sample rate [%d]\n", isInit);
     // Turn off CLK_CHP. From 9.1 power on sequencing.
     isInit &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADC, 0x30);
@@ -403,9 +445,17 @@ static void loadcellInit(DeckInfo *info)
     // Enable 330pF decoupling cap on chan 2. From 9.14 application circuit note.
     isInit &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN, 1);
     DEBUG_PRINT("CAP [%d]\n", isInit);
-    isInit &= nau7802_calibrateAFE();
+    // calibrate
+    isInit &= nau7802_calibrateAFE(&nau7802);
     DEBUG_PRINT("Cal [%d]\n", isInit);
 
+    uint8_t v;
+    isInit &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, &v);
+    DEBUG_PRINT("puctrl: %d\n", v);
+    isInit &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, &v);
+    DEBUG_PRINT("ctrl1: %d\n", v);
+    isInit &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, &v);
+    DEBUG_PRINT("ctrl2: %d\n", v);
   }
 
   // Set up Interrupt
@@ -421,57 +471,70 @@ static void loadcellInit(DeckInfo *info)
 
 static void loadcellTask(void* prm)
 {
-  // TickType_t lastWakeTime = xTaskGetTickCount();
+  while (1) {
+    BaseType_t semResult = xSemaphoreTake(dataReady, M2T(500));
+    if (semResult == pdTRUE || digitalRead(DATA_READY_PIN))
+    {
+      int32_t measurement;
+      bool result = nau7802_getMeasurement(&nau7802, &measurement);
+      if (result) {
+        rawWeight = measurement;
+        weight = a[channel] * rawWeight + b[channel];
+        // currentChannel = (currentChannel + 1) % 2;
+        // nau7802_setChannel(&nau7802, currentChannel);
 
-  // while (1)
-  // {
-  //   vTaskDelayUntil(&lastWakeTime, F2T(20));
-  //   int rdy = digitalRead(DATA_READY_PIN);
-  //   if (rdy) {
-  //       int32_t measurement;
-  //       bool result = nau7802_getMeasurement(&measurement);
-  //       DEBUG_PRINT("m %d %ld\n", result, measurement);
-  //   } else {
-  //     DEBUG_PRINT("p %d\n", rdy);
-  //   }
+        // nau7802.pu_ctrl |= (1 << NAU7802_PU_CTRL_CS);
+        // i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, nau7802.pu_ctrl);
 
-  // }
+        // nau7802.ctrl2 &= 0b11101111; // Clear CS bit
+        // i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, nau7802.pu_ctrl);
 
-    while (1) {
-      BaseType_t semResult = xSemaphoreTake(dataReady, M2T(500));
-      if (semResult == pdTRUE || digitalRead(DATA_READY_PIN))
-      {
-        int32_t measurement;
-        bool result = nau7802_getMeasurement(&measurement);
-        if (result) {
-          rawWeight = measurement;
-          weight = a * rawWeight + b;
-        }
+        STATS_CNT_RATE_EVENT(&rate);
       }
-      if (sampleRate != sampleRateDesired) {
-        switch (sampleRateDesired) {
-          case NAU7802_SPS_320:
-          case NAU7802_SPS_80:
-          case NAU7802_SPS_40:
-          case NAU7802_SPS_20:
-          case NAU7802_SPS_10:
-            {
-              bool result = nau7802_setSampleRate(sampleRateDesired);
-              if (result) {
-                DEBUG_PRINT("switched sample rate!\n");
-              }
-            }
-            break;
-          default:
-            DEBUG_PRINT("Unknown sample rate!\n");
-            break;
-        }
-        sampleRate = sampleRateDesired;
-      }
-
-
     }
+    if (sampleRate != sampleRateDesired) {
+      switch (sampleRateDesired) {
+        case NAU7802_SPS_320:
+        case NAU7802_SPS_80:
+        case NAU7802_SPS_40:
+        case NAU7802_SPS_20:
+        case NAU7802_SPS_10:
+          {
+            bool result = nau7802_setSampleRate(&nau7802, sampleRateDesired);
+            if (result) {
+              DEBUG_PRINT("switched sample rate!\n");
+            }
+          }
+          break;
+        default:
+          DEBUG_PRINT("Unknown sample rate!\n");
+          break;
+      }
+      sampleRate = sampleRateDesired;
+    }
+    if (channel != channelDesired) {
+      switch (channelDesired) {
+        case NAU7802_CHANNEL_1:
+        case NAU7802_CHANNEL_2:
+          {
+            bool result = nau7802_setChannel(&nau7802, channelDesired);
+            result &= nau7802_calibrateAFE(&nau7802);
+            if (result)
+            {
+              DEBUG_PRINT("switched and calibrated channel!\n");
+            }
+          }
+          break;
+        default:
+          DEBUG_PRINT("Unknown channel!\n");
+          break;
+      }
+      channel = channelDesired;
+    }
+
+
   }
+}
 
 static const DeckDriver loadcell_deck = {
     .vid = 0x00,
@@ -490,12 +553,15 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLoadcell, &isInit)
 PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(loadcell)
-PARAM_ADD(PARAM_FLOAT, a, &a)
-PARAM_ADD(PARAM_FLOAT, b, &b)
+PARAM_ADD(PARAM_FLOAT, a, &a[0])
+PARAM_ADD(PARAM_FLOAT, b, &b[0])
 PARAM_ADD(PARAM_UINT8, sampleRate, &sampleRateDesired)
+PARAM_ADD(PARAM_UINT8, channel, &channelDesired)
 PARAM_GROUP_STOP(loadcell)
 
 LOG_GROUP_START(loadcell)
 LOG_ADD(LOG_INT32, rawWeight, &rawWeight)
 LOG_ADD(LOG_FLOAT, weight, &weight)
+
+STATS_CNT_RATE_LOG_ADD(rate, &rate)
 LOG_GROUP_STOP(loadcell)
