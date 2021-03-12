@@ -167,7 +167,7 @@ static uint16_t calcRPM(uint32_t t1, uint32_t t2)
 void __attribute__((used)) TIM5_IRQHandler(void)
 {
   static int updateM1Cnt = 2;
-  static int updateM2Cnt = 2;
+  static int updateM4Cnt = 2;
   uint16_t ccVal;
 
   //Motor1
@@ -194,7 +194,7 @@ void __attribute__((used)) TIM5_IRQHandler(void)
     updateM1Cnt = 2;
   }
 
-  //Motor2
+  //Motor4
   if(TIM_GetITStatus(TIM5, TIM_IT_CC4) == SET)
   {
     /* Clear TIM5 Capture compare interrupt pending bit */
@@ -208,14 +208,14 @@ void __attribute__((used)) TIM5_IRQHandler(void)
     }
 
     if (ccVal > lastcc4Val)
-      m2Time[m2cnt & 0x01] = ccVal - lastcc4Val;
+      m4Time[m4cnt & 0x01] = ccVal - lastcc4Val;
     else
-      m2Time[m2cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc4Val);
+      m4Time[m4cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc4Val);
 
     lastcc4Val = ccVal;
-    m2cnt++;
-    m2rpm = calcRPM(m2Time[0], m2Time[1]);
-    updateM2Cnt = 2;
+    m4cnt++;
+    m4rpm = calcRPM(m4Time[0], m4Time[1]);
+    updateM4Cnt = 2;
   }
 
   if(TIM_GetITStatus(TIM5, TIM_IT_Update) == SET)
@@ -225,20 +225,20 @@ void __attribute__((used)) TIM5_IRQHandler(void)
     {
       m1rpm = 0;
     }
-    if (--updateM2Cnt < 0)
+    if (--updateM4Cnt < 0)
     {
-      m2rpm = 0;
+      m4rpm = 0;
     }
   }
 }
 
 void __attribute__((used)) TIM3_IRQHandler(void)
 {
+  static int updateM2Cnt = 2;
   static int updateM3Cnt = 2;
-  static int updateM4Cnt = 2;
   uint16_t ccVal;
 
-  //Motor3
+  //Motor2
   if(TIM_GetITStatus(TIM3, TIM_IT_CC1) == SET)
   {
     /* Clear TIM3 Capture compare interrupt pending bit */
@@ -252,20 +252,20 @@ void __attribute__((used)) TIM3_IRQHandler(void)
     }
 
     if (ccVal > lastcc1Val)
-      m3Time[m3cnt & 0x01] = ccVal - lastcc1Val;
+      m2Time[m2cnt & 0x01] = ccVal - lastcc1Val;
     else
-      m3Time[m3cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc1Val);
+      m2Time[m2cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc1Val);
 
     lastcc1Val = ccVal;
-    m3cnt++;
-    m3rpm = calcRPM(m3Time[0], m3Time[1]);
-    updateM3Cnt = 2;
+    m2cnt++;
+    m2rpm = calcRPM(m2Time[0], m2Time[1]);
+    updateM2Cnt = 2;
 
-//    rpmPutchar((m3Time >> 8) & 0x00FF);
-//    rpmPutchar(m3Time & 0x00FF);
+//    rpmPutchar((m2Time >> 8) & 0x00FF);
+//    rpmPutchar(m2Time & 0x00FF);
   }
 
-  //Motor4
+  //Motor3
   if(TIM_GetITStatus(TIM3, TIM_IT_CC2) == SET)
   {
     /* Clear TIM3 Capture compare interrupt pending bit */
@@ -279,29 +279,29 @@ void __attribute__((used)) TIM3_IRQHandler(void)
     }
 
     if (ccVal > lastcc2Val)
-      m4Time[m4cnt & 0x01] = ccVal - lastcc2Val;
+      m3Time[m3cnt & 0x01] = ccVal - lastcc2Val;
     else
-      m4Time[m4cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc2Val);
+      m3Time[m3cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc2Val);
 
     lastcc2Val = ccVal;
-    m4cnt++;
-    m4rpm = calcRPM(m4Time[0], m4Time[1]);
-    updateM4Cnt = 2;
+    m3cnt++;
+    m3rpm = calcRPM(m3Time[0], m3Time[1]);
+    updateM3Cnt = 2;
 
-//    rpmPutchar((m4rpm >> 8) & 0x00FF);
-//    rpmPutchar(m4rpm & 0x00FF);
+//    rpmPutchar((m3rpm >> 8) & 0x00FF);
+//    rpmPutchar(m3rpm & 0x00FF);
   }
 
   if(TIM_GetITStatus(TIM3, TIM_IT_Update) == SET)
   {
     TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+    if (--updateM2Cnt < 0)
+    {
+      m2rpm = 0;
+    }
     if (--updateM3Cnt < 0)
     {
       m3rpm = 0;
-    }
-    if (--updateM4Cnt < 0)
-    {
-      m4rpm = 0;
     }
   }
 }
