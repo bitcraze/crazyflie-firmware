@@ -91,36 +91,42 @@ bool extiTest(void)
 
 void __attribute__((used)) EXTI0_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI0_IRQn);
   EXTI_ClearITPendingBit(EXTI_Line0);
   EXTI0_Callback();
 }
 
 void __attribute__((used)) EXTI1_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI1_IRQn);
   EXTI_ClearITPendingBit(EXTI_Line1);
   EXTI1_Callback();
 }
 
 void __attribute__((used)) EXTI2_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI2_IRQn);
   EXTI_ClearITPendingBit(EXTI_Line2);
   EXTI2_Callback();
 }
 
 void __attribute__((used)) EXTI3_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI3_IRQn);
   EXTI_ClearITPendingBit(EXTI_Line3);
   EXTI3_Callback();
 }
 
 void __attribute__((used)) EXTI4_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI4_IRQn);
   EXTI_ClearITPendingBit(EXTI_Line4);
   EXTI4_Callback();
 }
 
 void __attribute__((used)) EXTI9_5_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI9_5_IRQn);
   if (EXTI_GetITStatus(EXTI_Line5) == SET) {
     EXTI_ClearITPendingBit(EXTI_Line5);
     EXTI5_Callback();
@@ -149,6 +155,7 @@ void __attribute__((used)) EXTI9_5_IRQHandler(void)
 
 void __attribute__((used)) EXTI15_10_IRQHandler(void)
 {
+  NVIC_ClearPendingIRQ(EXTI15_10_IRQn);
   if (EXTI_GetITStatus(EXTI_Line10) == SET) {
     EXTI_ClearITPendingBit(EXTI_Line10);
     EXTI10_Callback();
