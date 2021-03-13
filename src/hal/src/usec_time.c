@@ -24,10 +24,9 @@
  *
  * usec_time.c - microsecond-resolution timer and timestamps.
  */
-
 #include <stdbool.h>
-
 #include "usec_time.h"
+#include "cfassert.h"
 
 #include "nvicconf.h"
 #include "stm32fxxx.h"
