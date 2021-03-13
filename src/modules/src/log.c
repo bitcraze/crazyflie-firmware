@@ -1033,7 +1033,7 @@ int logGetInt(logVarId_t varid)
 {
   int valuei = 0;
 
-  ASSERT(LOG_VARID_IS_VALID(varid));
+  ASSERT(logVarIdIsValid(varid));
 
   switch(logs[varid].type)
   {
@@ -1065,7 +1065,7 @@ int logGetInt(logVarId_t varid)
 
 float logGetFloat(logVarId_t varid)
 {
-  ASSERT(LOG_VARID_IS_VALID(varid));
+  ASSERT(logVarIdIsValid(varid));
 
   if (logs[varid].type == LOG_FLOAT)
     return *(float *)logs[varid].address;
