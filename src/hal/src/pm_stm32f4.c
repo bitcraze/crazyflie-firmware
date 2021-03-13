@@ -319,8 +319,6 @@ void pmTask(void *param)
   pmSetChargeState(charge500mA);
   systemWaitStart();
 
-  systemSetCanFly(true);
-
   while(1)
   {
     vTaskDelay(100);
@@ -351,28 +349,23 @@ void pmTask(void *param)
           ledseqStop(&seq_charging);
           ledseqRunBlocking(&seq_charged);
           soundSetEffect(SND_BAT_FULL);
-          systemSetCanFly(false);
           break;
         case charging:
           ledseqStop(&seq_lowbat);
           ledseqStop(&seq_charged);
           ledseqRunBlocking(&seq_charging);
           soundSetEffect(SND_USB_CONN);
-          systemSetCanFly(false);
           break;
         case lowPower:
           ledseqRunBlocking(&seq_lowbat);
           soundSetEffect(SND_BAT_LOW);
-          systemSetCanFly(true);
           break;
         case battery:
           ledseqRunBlocking(&seq_charging);
           ledseqRun(&seq_charged);
           soundSetEffect(SND_USB_DISC);
-          systemSetCanFly(true);
           break;
         default:
-          systemSetCanFly(true);
           break;
       }
       pmStateOld = pmState;

@@ -53,6 +53,13 @@ void lighthouseCoreTask(void *param);
  */
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration);
 
+/**
+ * @brief Set system type
+ *
+ * @param type System type
+ */
+void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type);
+
 typedef enum {
   lh_led_off = 0,
   lh_led_slow_blink = 1,

@@ -66,12 +66,6 @@ static const MemoryHandlerDef_t memDef = {
   .write = handleMemWrite,
 };
 
-
-// A bitmap indicating which base stations that has valid geo data
-static uint16_t baseStationGeoValidMap;
-// A bitmap indicating which base stations that have valid calibration data
-static uint16_t baseStationCalibValidMap;
-
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
   const uint16_t mask = (1 << index);
 
@@ -167,7 +161,7 @@ static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const
 
 void lighthousePositionCalibrationDataWritten(const uint8_t baseStation) {
   if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
-    modifyBit(&baseStationCalibValidMap, baseStation, lighthouseCoreState.bsCalibration[baseStation].valid);
+    modifyBit(&lighthouseCoreState.baseStationCalibValidMap, baseStation, lighthouseCoreState.bsCalibration[baseStation].valid);
   }
 }
 
@@ -177,7 +171,7 @@ static void lighthousePositionGeometryDataUpdated(const int baseStation) {
     preProcessGeometryData(lighthouseCoreState.bsGeometry[baseStation].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
   }
 
-  modifyBit(&baseStationGeoValidMap, baseStation, lighthouseCoreState.bsGeometry[baseStation].valid);
+  modifyBit(&lighthouseCoreState.baseStationGeoValidMap, baseStation, lighthouseCoreState.bsGeometry[baseStation].valid);
 }
 
 void lighthousePositionSetGeometryData(const uint8_t baseStation, const baseStationGeometry_t* geometry) {
@@ -444,8 +438,8 @@ LOG_ADD(LOG_FLOAT, z, &position[2])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
-LOG_ADD(LOG_UINT16, bsGeoVal, &baseStationGeoValidMap)
-LOG_ADD(LOG_UINT16, bsCalVal, &baseStationCalibValidMap)
+LOG_ADD(LOG_UINT16, bsGeoVal, &lighthouseCoreState.baseStationGeoValidMap)
+LOG_ADD(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
 
 LOG_GROUP_STOP(lighthouse)
 

@@ -246,58 +246,6 @@ void testThatSlowBitIsDecodedInUartFrame() {
   TEST_ASSERT_EQUAL_UINT8(0, frame.data.channel);
 }
 
-
-void testThatBaseStationIdentificationReturnsUnknownType() {
-  // Fixture
-  lighthouseBsIdentificationData_t bsIdentificationData;
-  memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
-  lighthouseBaseStationType_t expected = lighthouseBsTypeUnknown;
-
-  // Test
-  lighthouseBaseStationType_t actual = identifyBaseStationType(&frame, &bsIdentificationData);
-
-  // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
-}
-
-
-void testThatBaseStationIdentificationFindsV1() {
-  // Fixture
-  lighthouseBsIdentificationData_t bsIdentificationData;
-  memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
-  lighthouseBaseStationType_t expected = lighthouseBsTypeV1;
-
-  // Test
-  frame.data.beamData = 0x1ffff;
-
-  lighthouseBaseStationType_t actual = lighthouseBsTypeUnknown;
-  for (int i = 0; (i < 30) && (actual == lighthouseBsTypeUnknown); i++) {
-      actual = identifyBaseStationType(&frame, &bsIdentificationData);
-  }
-
-  // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
-}
-
-
-void testThatBaseStationIdentificationFindsV2() {
-  // Fixture
-  lighthouseBsIdentificationData_t bsIdentificationData;
-  memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
-  lighthouseBaseStationType_t expected = lighthouseBsTypeV2;
-
-  // Test
-  frame.data.beamData = 4711;
-
-  lighthouseBaseStationType_t actual = lighthouseBsTypeUnknown;
-  for (int i = 0; (i < 30) && (actual == lighthouseBsTypeUnknown); i++) {
-      actual = identifyBaseStationType(&frame, &bsIdentificationData);
-  }
-
-  // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
-}
-
 // Test support ----------------------------------------------------------------------------------------------------
 
 static void uart1ReadCallback(char* ch, int cmock_num_calls) {
