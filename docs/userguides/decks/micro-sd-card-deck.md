@@ -71,7 +71,7 @@ for each event:
 
 Here, the vartype is a singe character and we support a subset of the ones defined [here](https://docs.python.org/3/library/struct.html#format-characters).
 
-We provide a [helper script](/tools/usdlog/cfusdlog.py) to decode the data:
+We provide a [helper script](https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/cfusdlog.py) to decode the data:
 
 ```
 import cfusdlog
