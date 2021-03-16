@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,15 +23,12 @@
  *
  * estimator_complementary.h - Complementary estimator interfaced
  */
-#ifndef __ESTIMATOR_COMPLEMENTARY_H__
-#define __ESTIMATOR_COMPLEMENTARY_H__
+#pragma once
 
 #include "stabilizer_types.h"
 
 void estimatorComplementaryInit(void);
 bool estimatorComplementaryTest(void);
-void estimatorComplementary(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
+void estimatorComplementary(state_t *state, sensorData_t *sensors, const uint32_t tick);
 
 bool estimatorComplementaryEnqueueTOF(const tofMeasurement_t *tof);
-
-#endif //__ESTIMATOR_COMPLEMENTARY_H__

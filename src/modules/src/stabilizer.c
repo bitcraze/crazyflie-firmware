@@ -242,7 +242,7 @@ static void stabilizerTask(void* param)
         controllerType = getControllerType();
       }
 
-      stateEstimator(&state, &sensorData, &control, tick);
+      stateEstimator(&state, &sensorData, tick);
       compressState();
 
       commanderGetSetpoint(&setpoint, &state);
