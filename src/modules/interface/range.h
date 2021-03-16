@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,8 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * ranges.h: Centralize range measurements for different directions
- *           and make them available as log
+ */
+
+/**
+ * @file ranges.h: Centralize range measurements for different directions
+ *                 and make them available as log
+ * 
+ * @see multiranger.c
  */
 
 #pragma once

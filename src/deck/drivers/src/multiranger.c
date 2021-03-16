@@ -5,7 +5,6 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * LPS node firmware.
  *
  * Copyright 2018, Bitcraze AB
  *
@@ -14,15 +13,18 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Foobar is distributed in the hope that it will be useful,
+ * Crazyflie firmware is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with the firmware.  If not, see <http://www.gnu.org/licenses/>.
  */
-/* multiranger.c: Multiranger deck driver */
+
+/** @file multiranger.c
+    @brief Multiranger deck driver 
+*/
 #include "deck.h"
 #include "param.h"
 
@@ -82,6 +84,23 @@ static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
     return range;
 }
 
+/**
+ * @brief Continously gather measurements from the multiranger deck 
+ * 
+ * RTOS-task to continously gather measurents in all directions from the 
+ * multideck range sensor. Uses rangeSet() from range.h to store the measurements
+ * in memory. 
+ * 
+ * If you want to access measurements e.g. for your own appTask(), use rangeGet().  
+ * 
+ * @param *param
+ * 
+ * @return void
+ * 
+ * @see rangeSet
+ * @see rangeGet
+ *  
+ */
 static void mrTask(void *param)
 {
     VL53L1_Error status = VL53L1_ERROR_NONE;
