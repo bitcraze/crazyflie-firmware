@@ -11,8 +11,16 @@
 /
 /-------------------------------------------------------------------------*/
 
+#include "ff.h"
 #include "diskio.h"
 #include "fatfs_sd.h"
+
+/* MMC card type flags (MMC_GET_TYPE) */
+#define CT_MMC 0x01              /* MMC ver 3 */
+#define CT_SD1 0x02              /* SD ver 1 */
+#define CT_SD2 0x04              /* SD ver 2 */
+#define CT_SDC (CT_SD1 | CT_SD2) /* SD */
+#define CT_BLOCK 0x08            /* Block addressing */
 
 // MMC/SD command
 #define CMD0    (0)       // GO_IDLE_STATE
@@ -540,7 +548,7 @@ DRESULT SD_disk_ioctl(BYTE cmd, void* buff, void* usrOps) {
         }
         break;
 
-      case CTRL_ERASE_SECTOR :
+      case CTRL_TRIM :
         // Erase a block of sectors (used when _USE_ERASE == 1)
         // Check if the card is SDC
         if (!(context->cardType & CT_SDC)) {
