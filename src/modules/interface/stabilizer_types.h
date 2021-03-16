@@ -259,6 +259,25 @@ typedef struct {
   lighthouseCalibrationMeasurementModel_t calibrationMeasurementModel;
 } sweepAngleMeasurement_t;
 
+/** gyroscope measurement */
+typedef struct
+{
+  Axis3f gyro; // deg/s, for legacy reasons
+} gyroscopeMeasurement_t;
+
+/** accelerometer measurement */
+typedef struct
+{
+  Axis3f acc; // Gs, for legacy reasons
+} accelerationMeasurement_t;
+
+/** barometer measurement */
+typedef struct
+{
+  baro_t baro; // for legacy reasons
+} barometerMeasurement_t;
+
+
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000
 #define RATE_500_HZ 500

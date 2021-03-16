@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2018 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@
 #include "sound.h"
 #include "filter.h"
 #include "static_mem.h"
+#include "estimator.h"
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -211,6 +212,8 @@ bool sensorsMpu9250Lps25hAreCalibrated() {
 
 static void sensorsTask(void *param)
 {
+  measurement_t measurement;
+
   systemWaitStart();
 
   sensorsSetupSlaveRead();
@@ -238,7 +241,14 @@ static void sensorsTask(void *param)
                   SENSORS_MPU6500_BUFF_LEN + SENSORS_MAG_BUFF_LEN : SENSORS_MPU6500_BUFF_LEN]));
       }
 
+      measurement.type = MeasurementTypeAcceleration;
+      measurement.data.acceleration.acc = sensorData.acc;
+      estimatorEnqueue(&measurement);
       xQueueOverwrite(accelerometerDataQueue, &sensorData.acc);
+
+      measurement.type = MeasurementTypeGyroscope;
+      measurement.data.gyroscope.gyro = sensorData.gyro;
+      estimatorEnqueue(&measurement);
       xQueueOverwrite(gyroDataQueue, &sensorData.gyro);
       if (isMagnetometerPresent)
       {
@@ -246,6 +256,9 @@ static void sensorsTask(void *param)
       }
       if (isBarometerPresent)
       {
+        measurement.type = MeasurementTypeBarometer;
+        measurement.data.barometer.baro = sensorData.baro;
+        estimatorEnqueue(&measurement);
         xQueueOverwrite(barometerDataQueue, &sensorData.baro);
       }
 

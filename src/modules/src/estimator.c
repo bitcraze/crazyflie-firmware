@@ -1,3 +1,7 @@
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "static_mem.h"
+
 #define DEBUG_MODULE "ESTIMATOR"
 #include "debug.h"
 
@@ -5,9 +9,22 @@
 #include "estimator.h"
 #include "estimator_complementary.h"
 #include "estimator_kalman.h"
+#include "log.h"
+#include "statsCnt.h"
+
 
 #define DEFAULT_ESTIMATOR complementaryEstimator
 static StateEstimatorType currentEstimator = anyEstimator;
+
+
+#define MEASUREMENTS_QUEUE_SIZE (20)
+static xQueueHandle measurementsQueue;
+STATIC_MEM_QUEUE_ALLOC(measurementsQueue, MEASUREMENTS_QUEUE_SIZE, sizeof(measurement_t));
+
+// Statistics
+#define ONE_SECOND 1000
+static STATS_CNT_RATE_DEFINE(measurementAppendedCounter, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(measurementNotAppendedCounter, ONE_SECOND);
 
 static void initEstimator(const StateEstimatorType estimator);
 static void deinitEstimator(const StateEstimatorType estimator);
@@ -16,17 +33,8 @@ typedef struct {
   void (*init)(void);
   void (*deinit)(void);
   bool (*test)(void);
-  void (*update)(state_t *state, sensorData_t *sensors, const uint32_t tick);
+  void (*update)(state_t *state, const uint32_t tick);
   const char* name;
-  bool (*estimatorEnqueueTDOA)(const tdoaMeasurement_t *uwb);
-  bool (*estimatorEnqueuePosition)(const positionMeasurement_t *pos);
-  bool (*estimatorEnqueuePose)(const poseMeasurement_t *pose);
-  bool (*estimatorEnqueueDistance)(const distanceMeasurement_t *dist);
-  bool (*estimatorEnqueueTOF)(const tofMeasurement_t *tof);
-  bool (*estimatorEnqueueAbsoluteHeight)(const heightMeasurement_t *height);
-  bool (*estimatorEnqueueFlow)(const flowMeasurement_t *flow);
-  bool (*estimatorEnqueueYawError)(const yawErrorMeasurement_t *error);
-  bool (*estimatorEnqueueSweepAngles)(const sweepAngleMeasurement_t *angles);
 } EstimatorFcns;
 
 #define NOT_IMPLEMENTED ((void*)0)
@@ -38,15 +46,6 @@ static EstimatorFcns estimatorFunctions[] = {
         .test = NOT_IMPLEMENTED,
         .update = NOT_IMPLEMENTED,
         .name = "None",
-        .estimatorEnqueueTDOA = NOT_IMPLEMENTED,
-        .estimatorEnqueuePosition = NOT_IMPLEMENTED,
-        .estimatorEnqueuePose = NOT_IMPLEMENTED,
-        .estimatorEnqueueDistance = NOT_IMPLEMENTED,
-        .estimatorEnqueueTOF = NOT_IMPLEMENTED,
-        .estimatorEnqueueAbsoluteHeight = NOT_IMPLEMENTED,
-        .estimatorEnqueueFlow = NOT_IMPLEMENTED,
-        .estimatorEnqueueYawError = NOT_IMPLEMENTED,
-        .estimatorEnqueueSweepAngles = NOT_IMPLEMENTED,
     }, // Any estimator
     {
         .init = estimatorComplementaryInit,
@@ -54,15 +53,6 @@ static EstimatorFcns estimatorFunctions[] = {
         .test = estimatorComplementaryTest,
         .update = estimatorComplementary,
         .name = "Complementary",
-        .estimatorEnqueueTDOA = NOT_IMPLEMENTED,
-        .estimatorEnqueuePosition = NOT_IMPLEMENTED,
-        .estimatorEnqueuePose = NOT_IMPLEMENTED,
-        .estimatorEnqueueDistance = NOT_IMPLEMENTED,
-        .estimatorEnqueueTOF = estimatorComplementaryEnqueueTOF,
-        .estimatorEnqueueAbsoluteHeight = NOT_IMPLEMENTED,
-        .estimatorEnqueueFlow = NOT_IMPLEMENTED,
-        .estimatorEnqueueYawError = NOT_IMPLEMENTED,
-        .estimatorEnqueueSweepAngles = NOT_IMPLEMENTED,
     },
     {
         .init = estimatorKalmanInit,
@@ -70,19 +60,11 @@ static EstimatorFcns estimatorFunctions[] = {
         .test = estimatorKalmanTest,
         .update = estimatorKalman,
         .name = "Kalman",
-        .estimatorEnqueueTDOA = estimatorKalmanEnqueueTDOA,
-        .estimatorEnqueuePosition = estimatorKalmanEnqueuePosition,
-        .estimatorEnqueuePose = estimatorKalmanEnqueuePose,
-        .estimatorEnqueueDistance = estimatorKalmanEnqueueDistance,
-        .estimatorEnqueueTOF = estimatorKalmanEnqueueTOF,
-        .estimatorEnqueueAbsoluteHeight = estimatorKalmanEnqueueAbsoluteHeight,
-        .estimatorEnqueueFlow = estimatorKalmanEnqueueFlow,
-        .estimatorEnqueueYawError = estimatorKalmanEnqueueYawError,
-        .estimatorEnqueueSweepAngles = estimatorKalmanEnqueueSweepAngles,
     },
 };
 
 void stateEstimatorInit(StateEstimatorType estimator) {
+  measurementsQueue = STATIC_MEM_QUEUE_CREATE(measurementsQueue);
   stateEstimatorSwitchTo(estimator);
 }
 
@@ -131,8 +113,8 @@ bool stateEstimatorTest(void) {
   return estimatorFunctions[currentEstimator].test();
 }
 
-void stateEstimator(state_t *state, sensorData_t *sensors, const uint32_t tick) {
-  estimatorFunctions[currentEstimator].update(state, sensors, tick);
+void stateEstimator(state_t *state, const uint32_t tick) {
+  estimatorFunctions[currentEstimator].update(state, tick);
 }
 
 const char* stateEstimatorGetName() {
@@ -140,74 +122,35 @@ const char* stateEstimatorGetName() {
 }
 
 
-bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueTDOA) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueTDOA(uwb);
+void estimatorEnqueue(const measurement_t *measurement) {
+  if (!measurementsQueue) {
+    return;
   }
 
-  return false;
-}
-
-bool estimatorEnqueueYawError(const yawErrorMeasurement_t* error) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueYawError) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueYawError(error);
+  portBASE_TYPE result;
+  bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
+  if (isInInterrupt) {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+    result = xQueueSendFromISR(measurementsQueue, measurement, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+      portYIELD();
+    }
+  } else {
+    result = xQueueSend(measurementsQueue, measurement, 0);
   }
 
-  return false;
-}
-
-bool estimatorEnqueuePosition(const positionMeasurement_t *pos) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueuePosition) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueuePosition(pos);
+  if (result == pdTRUE) {
+    STATS_CNT_RATE_EVENT(&measurementAppendedCounter);
+  } else {
+    STATS_CNT_RATE_EVENT(&measurementNotAppendedCounter);
   }
-
-  return false;
 }
 
-bool estimatorEnqueuePose(const poseMeasurement_t *pose) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueuePose) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueuePose(pose);
-  }
-
-  return false;
+bool estimatorDequeue(measurement_t *measurement) {
+  return pdTRUE == xQueueReceive(measurementsQueue, measurement, 0);
 }
 
-bool estimatorEnqueueDistance(const distanceMeasurement_t *dist) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueDistance) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueDistance(dist);
-  }
-
-  return false;
-}
-
-bool estimatorEnqueueTOF(const tofMeasurement_t *tof) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueTOF) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueTOF(tof);
-  }
-
-  return false;
-}
-
-bool estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueAbsoluteHeight) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueAbsoluteHeight(height);
-  }
-
-  return false;
-}
-
-bool estimatorEnqueueFlow(const flowMeasurement_t *flow) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueFlow) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueFlow(flow);
-  }
-
-  return false;
-}
-
-bool estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *angles) {
-  if (estimatorFunctions[currentEstimator].estimatorEnqueueSweepAngles) {
-    return estimatorFunctions[currentEstimator].estimatorEnqueueSweepAngles(angles);
-  }
-
-  return false;
-}
+LOG_GROUP_START(estimator)
+  STATS_CNT_RATE_LOG_ADD(rtApnd, &measurementAppendedCounter)
+  STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
+LOG_GROUP_STOP(estimator)
