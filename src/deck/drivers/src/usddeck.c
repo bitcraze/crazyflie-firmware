@@ -44,6 +44,7 @@
 #include "semphr.h"
 
 #include "ff.h"
+#include "diskio.h"
 #include "fatfs_sd.h"
 
 #include "deck.h"
@@ -266,16 +267,6 @@ static sdSpiContext_t sdSpiContext =
         .timer2 = 0
     };
 
-static DISKIO_LowLevelDriver_t fatDrv =
-    {
-        SD_disk_initialize,
-        SD_disk_status,
-        SD_disk_ioctl,
-        SD_disk_write,
-        SD_disk_read,
-        &sdSpiContext,
-    };
-
 
 /*-----------------------------------------------------------------------*/
 /* FATFS SPI controls (Platform dependent)                               */
@@ -355,6 +346,47 @@ static void delayMs(UINT ms)
 {
   vTaskDelay(M2T(ms));
 }
+
+/* FatFS Disk Interface */
+DSTATUS disk_initialize(BYTE pdrv)
+{
+    return SD_disk_initialize(&sdSpiContext);
+}
+
+DSTATUS disk_status(BYTE pdrv)
+{
+  return SD_disk_status(&sdSpiContext);
+}
+
+DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count)
+{
+  return SD_disk_read(buff, sector, count, &sdSpiContext);
+}
+
+DRESULT disk_write(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count)
+{
+  return SD_disk_write(buff, sector, count, &sdSpiContext);
+}
+
+DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void *buff)
+{
+  return SD_disk_ioctl(cmd, buff, &sdSpiContext);
+}
+
+/*-----------------------------------------------------------------------*/
+/* Get time for fatfs for files                                          */
+/*-----------------------------------------------------------------------*/
+__attribute__((weak)) DWORD get_fattime(void)
+{
+  /* Returns current time packed into a DWORD variable */
+  return ((DWORD)(2016 - 1980) << 25) /* Year 2016 */
+         | ((DWORD)1 << 21)           /* Month 1 */
+         | ((DWORD)1 << 16)           /* Mday 1 */
+         | ((DWORD)0 << 11)           /* Hour 0 */
+         | ((DWORD)0 << 5)            /* Min 0 */
+         | ((DWORD)0 >> 1);           /* Sec 0 */
+}
+
 /********** FS helper function ***************/
 
 // reads a line and returns the string without any whitespace/comment
@@ -408,9 +440,6 @@ static void usdInit(DeckInfo *info)
 
     logFileMutex = xSemaphoreCreateMutex();
     logBufferMutex = xSemaphoreCreateMutex();
-    /* create driver structure */
-    FATFS_AddDriver(&fatDrv, 0);
-    vTaskDelay(M2T(100));
     /* try to mount drives before creating the tasks */
     if (f_mount(&FatFs, "", 1) == FR_OK) {
       DEBUG_PRINT("mount SD-Card [OK].\n");
