@@ -13,7 +13,8 @@ branch off from the 2017.06 tag.
 
 You'll need to use either the [Crazyflie VM](https://wiki.bitcraze.io/projects:virtualmachine:index),
 [the toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) or
-install some ARM toolchain.
+install some ARM toolchain. If you want to compile additional documentation from the code, you'll need
+to install [doxygen](https://www.doxygen.nl/index.html).
 
 ### Install a toolchain
 
@@ -190,3 +191,16 @@ image (bitcraze/builder) that contains all tools needed. All scripts in the
 tools/build directory are intended to be run in the image. The
 [toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) makes it
 easy to run the tool scripts.
+
+# Documentation
+
+You can generate documentation from the code using doxygen. On Ubuntu, install
+it via
+
+        sudo apt install doxygen
+
+Then run
+
+        make doc
+
+You can configure the level of detail of the documentation in crazyflie-firmware.doxy.

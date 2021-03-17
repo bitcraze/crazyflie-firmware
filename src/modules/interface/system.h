@@ -21,7 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * system.h - Top level module header file
+ */
+
+/**
+ * @file system.h 
+ * @brief Top level module header file
  */
 
 #ifndef __SYSTEM_H__

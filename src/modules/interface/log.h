@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -20,8 +20,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * log.h - Dynamic log system
+ */
+
+/**
+ * @file log.h 
+ * @brief Dynamic log system
+ * 
+ * Example of use: let's take the multiranger deck. It logs to the log group 'range'. This group contains
+ * measurements for 'up', 'left' etc. You can see what groups and variables are defined in the respective modules;
+ * in the case of the multiranger deck you find the log group definition in file range.c
+ * 
+ * To read data from the log, you first need to get the numeric ID of the variable and then read the 
+ * item using its type-specific getter; because ranges are uints in this case we use logGetUInt():
+ * 
+ *      uint16_t idUp = logGetVarId("range", "up");
+ *      uint16_t upDistance = logGetUint(idUp);
+ * 
+ * The easiest way to get a list of all the available log groups and variables given a hardware configuration
+ * of your flie (e.g. depending on the decks attached) is to connect the flie to the PC client. It contains a 
+ * tab where all logging is on display.
+ * 
  */
 
 #ifndef __LOG_H__

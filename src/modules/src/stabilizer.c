@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -23,6 +23,11 @@
  *
  *
  */
+
+ /**
+  * @file stabilizer.c
+  * @brief 
+  */
 #define DEBUG_MODULE "STAB"
 
 #include <math.h>
@@ -228,7 +233,10 @@ static void checkEmergencyStopTimeout()
   }
 }
 
-/* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
+/**
+ * @brief  
+ *
+ * The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
  */

@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __                           
  * +------+      / __ )(_) /_______________ _____  ___ 
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,6 +21,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
+ */
+
+/**
+ * @file platform.h
+ * @brief Hardware manager for the crazyflie platform - motors and sensors
+ *
+ * 
+ * BMI088 IMU   
+ * BMP388 air pressure
+ * MPU9250_LPS25H Nine-Axis (Gyro + Accelerometer + Compass)
+ * BOSCH 
+ *   BMI055 accelerometer
+ *   BMI160 6 axis IMU
+ *   BMM150 magnetometer
+ *   BMP3 pressure sensor
  */
 
 #ifndef PLATFORM_H_

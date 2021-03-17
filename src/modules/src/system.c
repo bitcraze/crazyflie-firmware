@@ -21,8 +21,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * system.c - Top level module implementation
  */
+
+ /**
+ * @file system.c
+ * @brief Top level module implementation
+ *
+ * @defgroup modules
+ * @ingroup modules
+ */
+
 #define DEBUG_MODULE "SYS"
 
 #include <stdbool.h>
@@ -157,6 +165,16 @@ bool systemTest()
 
 /* Private functions implementation */
 
+/**
+ * Main system task
+ *
+ * Initializes all other RTOS tasks of the firmware. Gives semaphore canStartMutex 
+ * to signal that all self-tests have passed and that all modules have initialized and
+ * started up.
+ *
+ * @see main()
+ * @see systemStart()
+ */ 
 void systemTask(void *arg)
 {
   bool pass = true;
@@ -175,7 +193,7 @@ void systemTask(void *arg)
   uart2Init(115200);
 #endif
 
-  //Init the high-levels modules
+  //Init the high-level modules
   systemInit();
   commInit();
   commanderInit();

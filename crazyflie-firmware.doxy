@@ -1,7 +1,8 @@
 # Doxyfile 1.8.17
 
-# This file describes the settings to be used by the documentation system
-# doxygen (www.doxygen.org) for a project.
+# This file describes the settings to be used by doxygen (www.doxygen.org) 
+# for auto-generation of documentation from firmware sources for the 
+# crazyflie.
 #
 # All text after a double hash (##) is considered a comment and is placed in
 # front of the TAG it is preceding.
@@ -51,7 +52,7 @@ PROJECT_BRIEF          =
 # pixels and the maximum width should not exceed 200 pixels. Doxygen will copy
 # the logo to the output directory.
 
-PROJECT_LOGO           =
+PROJECT_LOGO           = docs/images/logo.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is
@@ -762,7 +763,7 @@ CITE_BIB_FILES         =
 # messages are off.
 # The default value is: NO.
 
-QUIET                  = NO
+QUIET                  = YES
 
 # The WARNINGS tag can be used to turn on/off the warning messages that are
 # generated to standard error (stderr) by doxygen. If WARNINGS is set to YES
@@ -918,9 +919,10 @@ RECURSIVE              = YES
 # run.
 
 EXCLUDE                = vendor \
-			 bin \
- 			 blobs \
-			 src/lib
+			             bin \
+ 			             blobs \
+			             src/lib \
+                         src/drivers/bosch 
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -936,7 +938,11 @@ EXCLUDE_SYMLINKS       = NO
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       =
+EXCLUDE_PATTERNS       = */src/hal/interface/usb*_*.h \
+                         */src/hal/interface/usbd_*.h \
+                         */src/hal/src/usb*_*.c \
+                         */src/config/stm32f10x_conf.h \
+                         */src/lib/STM*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the

@@ -21,8 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_ow.c - Functions to decode the decks oneWire memory content
  */
+
+ /**
+  * @file deck_info.c 
+  * @brief Functions to decode the decks oneWire memory content
+  */
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -76,6 +80,14 @@ void deckInfoInit()
   isInit = true;
 }
 
+/**
+ * @brief Return the number of decks found
+ *
+ * The number of decks is determined in enumerateDecks(). The count includes the 
+ * drivers for decks forced at compile time.
+ *
+ * @see enumerateDecks()
+ */
 int deckCount(void)
 {
   return count;

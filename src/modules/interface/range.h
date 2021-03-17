@@ -24,10 +24,11 @@
  */
 
 /**
- * @file ranges.h: Centralize range measurements for different directions
- *                 and make them available as log
+ * @file range.h
+ * @brief Centralize range measurements for different directions and make them available as log entries
  * 
  * @see multiranger.c
+ * @see log.h
  */
 
 #pragma once

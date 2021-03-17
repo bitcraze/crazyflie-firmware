@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -20,8 +20,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file deck.c 
+ * @brief Deck subsystem main entry points
  *
- * deck.c - Deck subsystem main entry points
+ *
+ * @defgroup decks
+ * @ingroup decks
  */
 
 #define DEBUG_MODULE "DECK_CORE"
@@ -39,6 +46,13 @@
 
 extern void deckInfoInit();
 
+/**
+ * @brief Initialize drivers for all decks found during startup
+ *
+ * Initializes all decks found via enumerateDecks().
+ *
+ * @see enumerateDecks()
+ */
 void deckInit()
 {
   deckDriverCount();
