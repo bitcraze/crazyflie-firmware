@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018 Bitcraze AB
+ * Copyright (C) 2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +21,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
+ *
+ * sensors_bmi088_i2c.c: I2C backend for the bmi088 sensor
  */
 
-#ifndef __SENSORS_BMI088SPI_BMP388_H__
-#define __SENSORS_BMI088SPI_BMP388_H__
+#include "bmi088.h"
+#include "i2cdev.h"
+#include "bstdr_types.h"
 
-#include "sensors.h"
+#include "sensors_bmi088_common.h"
 
-void sensorsBmi088SpiBmp388Init(void);
-bool sensorsBmi088SpiBmp388Test(void);
-bool sensorsBmi088SpiBmp388AreCalibrated(void);
-bool sensorsBmi088SpiBmp388ManufacturingTest(void);
-void sensorsBmi088SpiBmp388Acquire(sensorData_t *sensors, const uint32_t tick);
-void sensorsBmi088SpiBmp388WaitDataReady(void);
-bool sensorsBmi088SpiBmp388ReadGyro(Axis3f *gyro);
-bool sensorsBmi088SpiBmp388ReadAcc(Axis3f *acc);
-bool sensorsBmi088SpiBmp388ReadMag(Axis3f *mag);
-bool sensorsBmi088SpiBmp388ReadBaro(baro_t *baro);
-void sensorsBmi088SpiBmp388SetAccMode(accModes accMode);
-void sensorsBmi088SpiBmp388DataAvailableCallback(void);
-
-#endif // __SENSORS_BMI088SPI_BMP388_H__
+void sensorsBmi088_I2C_deviceInit(struct bmi088_dev *device)
+{
+  device->accel_id = BMI088_ACCEL_I2C_ADDR_PRIMARY;
+  device->gyro_id = BMI088_GYRO_I2C_ADDR_SECONDARY;
+  device->interface = BMI088_I2C_INTF;
+  device->read = bmi088_burst_read;
+  device->write = bmi088_burst_write;
+  device->delay_ms = bmi088_ms_delay;
+}
