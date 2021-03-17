@@ -84,26 +84,28 @@ static const eventtrigger myEventTrigger = {
 
 /* The same code above can be generated using the following macro:
 
-EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
+EVENTTRIGGER(myEvent, uint8, var1, uint32, var2)
 
 To debug/develop the macros, a good way is to create a new file "etdbg.c" with the following content
 and then execute "gcc -E etdbg.c":
 
 #include "src/modules/interface/eventtrigger.h"
-EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
+EVENTTRIGGER(myEvent, uint8, var1, uint32, var2)
 */
 
 #ifndef UNIT_TEST_MODE
 
 /* Macro magic, see https://codecraft.co/2014/11/25/variadic-macros-tricks/ */
-#define _GET_NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, N, ...) N
+#define _GET_NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, N, ...) N
 #define _fe_0(_call, ...)
 #define _fe_2(_call, k, v, ...) _call(k, v) _fe_0(_call, __VA_ARGS__)
 #define _fe_4(_call, k, v, ...) _call(k, v) _fe_2(_call, __VA_ARGS__)
 #define _fe_6(_call, k, v, ...) _call(k, v) _fe_4(_call, __VA_ARGS__)
 #define _fe_8(_call, k, v, ...) _call(k, v) _fe_6(_call, __VA_ARGS__)
+#define _fe_10(_call, k, v, ...) _call(k, v) _fe_8(_call, __VA_ARGS__)
 #define CALL_MACRO_FOR_EACH_PAIR(x, ...)                \
     _GET_NTH_ARG("ignored", ##__VA_ARGS__,              \
+    _fe_10, _invalid_,                                   \
     _fe_8, _invalid_,                                   \
     _fe_6, _invalid_,                                   \
     _fe_4, _invalid_,                                   \
@@ -112,6 +114,7 @@ EVENTTRIGGER(myEvent, UINT8, var1, UINT32, var2)
     (x, ##__VA_ARGS__)
 #define CALL_MACRO_IF_EMPTY(TRUE_MACRO, FALSE_MACRO, NAME, ...) \
     _GET_NTH_ARG("ignored", ##__VA_ARGS__,                      \
+        TRUE_MACRO, _invalid_,                                  \
         TRUE_MACRO, _invalid_,                                  \
         TRUE_MACRO, _invalid_,                                  \
         TRUE_MACRO, _invalid_,                                  \
