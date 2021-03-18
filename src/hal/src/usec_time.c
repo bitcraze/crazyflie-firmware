@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2013 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +24,22 @@
  *
  * usec_time.c - microsecond-resolution timer and timestamps.
  */
-
+#include <stdbool.h>
 #include "usec_time.h"
+#include "cfassert.h"
 
 #include "nvicconf.h"
 #include "stm32fxxx.h"
 
+static bool isInit = false;
 static uint32_t usecTimerHighCount;
 
 void initUsecTimer(void)
 {
+  if (isInit) {
+    return;
+  }
+
   usecTimerHighCount = 0;
 
   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -61,10 +67,14 @@ void initUsecTimer(void)
   DBGMCU_APB1PeriphConfig(DBGMCU_TIM7_STOP, ENABLE);
   TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);
   TIM_Cmd(TIM7, ENABLE);
+
+  isInit = true;
 }
 
 uint64_t usecTimestamp(void)
 {
+  IF_DEBUG_ASSERT(isInit);
+
   uint32_t high0;
   __atomic_load(&usecTimerHighCount, &high0, __ATOMIC_SEQ_CST);
   uint32_t low = TIM7->CNT;

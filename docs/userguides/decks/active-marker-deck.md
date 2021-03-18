@@ -11,20 +11,20 @@ The deck is configured using the [parameter sub system](/docs/userguides/logpara
 
 The deck mode is set with the ```activeMarker.mode``` parameter.
 
-| Mode      | value       | coment                       |
+| Mode      | value       | comment                      |
 | --------- | ----------- | ---------------------------- |
 | OFF       | 0           | Always off                   |
-| ON        | 1           | Always on                    |
+| PWM       | 1           | Always on, PWM modulated     |
 | MODULATED | 2           | Switching                    |
 | QUALISYS  | 3 (default) | Qualisys Active Marker mode  |
 
 ### Off mode
 
-All marker LEDs are turned off
+All marker LEDs are turned off.
 
-### On mode
+### PWM mode
 
-The marker LEDs are turned on. The brightness of each LED is controlled by the [marker parameters](#marker-parameters) below, in the range 0 - 255.
+The marker LEDs are turned on and PWM modulated. The brightness of each LED is controlled by the [marker parameters](#marker-parameters) below, in the range 0 - 255.
 
 ### Modulated mode
 
@@ -32,13 +32,13 @@ The LEDs are switched on and off at around 42 kHz (24 micro seconds cycle). The 
 
 ### Qualisys mode
 
-In this mode the LEDs act as Actvive markers with IDs that are identified by the Qualisys system and used for better 6-dof identification and tracking. The IDs are controlled by the [marker parameters](#marker-parameters) below. The Qualisys sytems and the deck currently supports IDs in the range [0 - 170]
+In this mode the LEDs act as Active markers with IDs that are identified by the Qualisys system and used for better 6-dof identification and tracking. The IDs are controlled by the [marker parameters](#marker-parameters) below. The Qualisys systems and the deck currently supports IDs in the range [0 - 170]
 
 ## Marker parameters
 
 Each marker is associated with a parameters that is used to set brightness or id.
 
-| Marker position | parameter                | deafult value | type              |
+| Marker position | parameter                | default value | type              |
 | --------------- | ------------------------ | ------------- | ----------------- |
 | Front           | ```activeMarker.front``` |  1            | ```PARAM_UINT8``` |
 | Right           | ```activeMarker.right``` |  2            | ```PARAM_UINT8``` |

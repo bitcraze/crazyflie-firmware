@@ -47,6 +47,7 @@
 #include "i2c_drv.h"
 #include "config.h"
 #include "nvicconf.h"
+#include "sleepus.h"
 
 //DEBUG
 #ifdef I2CDRV_DEBUG_LOG_EVENTS
@@ -65,23 +66,15 @@
 #define I2C_MAX_RETRIES         2
 #define I2C_MESSAGE_TIMEOUT     M2T(1000)
 
-// Delay is approx 0.06us per loop @168Mhz
-#define I2CDEV_LOOPS_PER_US  17
-#define I2CDEV_LOOPS_PER_MS  (16789) // measured
-
-// Defines to unlock bus
-#define I2CDEV_CLK_TS (10 * I2CDEV_LOOPS_PER_US)
-#define GPIO_WAIT_FOR_HIGH(gpio, pin, timeoutcycles)\
-  {\
-    int i = timeoutcycles;\
-    while(GPIO_ReadInputDataBit(gpio, pin) == Bit_RESET && i--);\
+// Helpers to unlock bus
+#define I2CDEV_CLK_TS (10)
+static void gpioWaitForHigh(GPIO_TypeDef *gpio, uint16_t pin, uint16_t timeout_us)
+{
+  uint64_t start = usecTimestamp();
+  while (GPIO_ReadInputDataBit(gpio, pin) == Bit_RESET && usecTimestamp() - start <= timeout_us)
+  {
   }
-
-#define GPIO_WAIT_FOR_LOW(gpio, pin, timeoutcycles) \
-  {\
-    int i = timeoutcycles;\
-    while(GPIO_ReadInputDataBit(gpio, pin) == Bit_SET && i--);\
-  }
+}
 
 
 #ifdef I2CDRV_DEBUG_LOG_EVENTS
@@ -107,10 +100,6 @@ static void i2cdrvStartTransfer(I2cDrv *i2c);
  * Try to restart a hanged buss
  */
 static void i2cdrvTryToRestartBus(I2cDrv* i2c);
-/**
- * Rough spin loop delay.
- */
-static inline void i2cdrvRoughLoopDelay(uint32_t us) __attribute__((optimize("O2")));
 /**
  * Unlocks the i2c bus if needed.
  */
@@ -200,12 +189,6 @@ I2cDrv deckBus =
 };
 
 
-static inline void i2cdrvRoughLoopDelay(uint32_t us)
-{
-  volatile uint32_t delay = 0;
-  for(delay = 0; delay < I2CDEV_LOOPS_PER_US * us; ++delay) { };
-}
-
 static void i2cdrvStartTransfer(I2cDrv *i2c)
 {
   ASSERT_DMA_SAFE(i2c->txMessage.buffer);
@@ -238,43 +221,7 @@ static void i2cNotifyClient(I2cDrv* i2c)
 
 static void i2cdrvTryToRestartBus(I2cDrv* i2c)
 {
-  i2cdrvInitBus(i2c);
-}
-
-static void i2cdrvDmaSetupBus(I2cDrv* i2c)
-{
-
-  NVIC_InitTypeDef NVIC_InitStructure;
-
-  RCC_AHB1PeriphClockCmd(i2c->def->dmaPerif, ENABLE);
-
-  // RX DMA Channel Config
-  i2c->DMAStruct.DMA_Channel = i2c->def->dmaChannel;
-  i2c->DMAStruct.DMA_PeripheralBaseAddr = (uint32_t)&i2c->def->i2cPort->DR;
-  i2c->DMAStruct.DMA_Memory0BaseAddr = 0;
-  i2c->DMAStruct.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  i2c->DMAStruct.DMA_BufferSize = 0;
-  i2c->DMAStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  i2c->DMAStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  i2c->DMAStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  i2c->DMAStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  i2c->DMAStruct.DMA_Mode = DMA_Mode_Normal;
-  i2c->DMAStruct.DMA_Priority = DMA_Priority_High;
-  i2c->DMAStruct.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  i2c->DMAStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
-  i2c->DMAStruct.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  i2c->DMAStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-
-  NVIC_InitStructure.NVIC_IRQChannel = i2c->def->dmaRxIRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-}
-
-static void i2cdrvInitBus(I2cDrv* i2c)
-{
-  I2C_InitTypeDef  I2C_InitStructure;
+  I2C_InitTypeDef I2C_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -329,6 +276,42 @@ static void i2cdrvInitBus(I2cDrv* i2c)
   NVIC_Init(&NVIC_InitStructure);
 
   i2cdrvDmaSetupBus(i2c);
+}
+
+static void i2cdrvDmaSetupBus(I2cDrv* i2c)
+{
+
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  RCC_AHB1PeriphClockCmd(i2c->def->dmaPerif, ENABLE);
+
+  // RX DMA Channel Config
+  i2c->DMAStruct.DMA_Channel = i2c->def->dmaChannel;
+  i2c->DMAStruct.DMA_PeripheralBaseAddr = (uint32_t)&i2c->def->i2cPort->DR;
+  i2c->DMAStruct.DMA_Memory0BaseAddr = 0;
+  i2c->DMAStruct.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  i2c->DMAStruct.DMA_BufferSize = 0;
+  i2c->DMAStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  i2c->DMAStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  i2c->DMAStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  i2c->DMAStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  i2c->DMAStruct.DMA_Mode = DMA_Mode_Normal;
+  i2c->DMAStruct.DMA_Priority = DMA_Priority_High;
+  i2c->DMAStruct.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  i2c->DMAStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+  i2c->DMAStruct.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  i2c->DMAStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+
+  NVIC_InitStructure.NVIC_IRQChannel = i2c->def->dmaRxIRQ;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+static void i2cdrvInitBus(I2cDrv* i2c)
+{
+  i2cdrvTryToRestartBus(i2c);
 
   i2c->isBusFreeSemaphore = xSemaphoreCreateBinaryStatic(&i2c->isBusFreeSemaphoreBuffer);
   i2c->isBusFreeMutex = xSemaphoreCreateMutexStatic(&i2c->isBusFreeMutexBuffer);
@@ -343,30 +326,30 @@ static void i2cdrvdevUnlockBus(GPIO_TypeDef* portSCL, GPIO_TypeDef* portSDA, uin
     /* Set clock high */
     GPIO_SetBits(portSCL, pinSCL);
     /* Wait for any clock stretching to finish. */
-    GPIO_WAIT_FOR_HIGH(portSCL, pinSCL, 10 * I2CDEV_LOOPS_PER_MS);
-    i2cdrvRoughLoopDelay(I2CDEV_CLK_TS);
+    gpioWaitForHigh(portSCL, pinSCL, 10 * 1000);
+    sleepus(I2CDEV_CLK_TS);
 
     /* Generate a clock cycle */
     GPIO_ResetBits(portSCL, pinSCL);
-    i2cdrvRoughLoopDelay(I2CDEV_CLK_TS);
+    sleepus(I2CDEV_CLK_TS);
     GPIO_SetBits(portSCL, pinSCL);
-    i2cdrvRoughLoopDelay(I2CDEV_CLK_TS);
+    sleepus(I2CDEV_CLK_TS);
   }
 
   /* Generate a start then stop condition */
   GPIO_SetBits(portSCL, pinSCL);
-  i2cdrvRoughLoopDelay(I2CDEV_CLK_TS);
+  sleepus(I2CDEV_CLK_TS);
   GPIO_ResetBits(portSDA, pinSDA);
-  i2cdrvRoughLoopDelay(I2CDEV_CLK_TS);
-  GPIO_ResetBits(portSDA, pinSDA);
-  i2cdrvRoughLoopDelay(I2CDEV_CLK_TS);
+  sleepus(I2CDEV_CLK_TS);
+  GPIO_ResetBits(portSCL, pinSCL);
+  sleepus(I2CDEV_CLK_TS);
 
   /* Set data and clock high and wait for any clock stretching to finish. */
   GPIO_SetBits(portSDA, pinSDA);
   GPIO_SetBits(portSCL, pinSCL);
-  GPIO_WAIT_FOR_HIGH(portSCL, pinSCL, 10 * I2CDEV_LOOPS_PER_MS);
+  gpioWaitForHigh(portSCL, pinSCL, 10 * 1000);
   /* Wait for data to be high */
-  GPIO_WAIT_FOR_HIGH(portSDA, pinSDA, 10 * I2CDEV_LOOPS_PER_MS);
+  gpioWaitForHigh(portSDA, pinSDA, 10 * 1000);
 }
 
 //-----------------------------------------------------------

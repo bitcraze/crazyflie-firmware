@@ -7,7 +7,7 @@ CPU=stm32f4
 
 ######### Sensors configuration ##########
 CFLAGS += -DSENSOR_INCLUDED_BMI088_BMP388
-PROJ_OBJ += sensors_bmi088_bmp388.o
+PROJ_OBJ += sensors_bmi088_bmp388.o sensors_bmi088_i2c.o
 
 ######### Stabilizer configuration ##########
 ESTIMATOR          ?= any

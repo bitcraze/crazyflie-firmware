@@ -108,7 +108,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIs
  *
  * The filter progresses as:
  *  - Predicting the current state forward */
-void kalmanCorePredict(kalmanCoreData_t* this, float thrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying);
+void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying);
 
 void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt);
 

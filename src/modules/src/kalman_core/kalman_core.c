@@ -291,7 +291,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIs
   kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], measNoiseBaro);
 }
 
-void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
+void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order
    * to push the covariance forward.
@@ -442,10 +442,7 @@ void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axi
 
   if (quadIsFlying) // only acceleration in z direction
   {
-    // TODO: In the next lines, can either use cmdThrust/mass, or acc->z. Need to test which is more reliable.
-    // cmdThrust's error comes from poorly calibrated mass, and inexact cmdThrust -> thrust map
-    // acc->z's error comes from measurement noise and accelerometer scaling
-    // float zacc = cmdThrust;
+    // Use accelerometer and not commanded thrust, as this has proper physical units
     zacc = acc->z;
 
     // position updates in the body frame (will be rotated to inertial frame)
