@@ -35,6 +35,7 @@
 #include "param.h"
 #include "statsCnt.h"
 #include "mem.h"
+#include "eventtrigger.h"
 
 #include "lighthouse_position_est.h"
 #include "lighthouse_geometry.h"
@@ -221,6 +222,8 @@ static vec3d position;
 static vec3d positionLog;
 static float deltaLog;
 
+EVENTTRIGGER(lhCrossingBeam, float, x, float, y, float, z, float, delta)
+
 static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   uint8_t sensorsUsed = 0;
@@ -256,6 +259,12 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
     ext_pos.x /= sensorsUsed;
     ext_pos.y /= sensorsUsed;
     ext_pos.z /= sensorsUsed;
+
+    eventTrigger_lhCrossingBeam_payload.x = ext_pos.x;
+    eventTrigger_lhCrossingBeam_payload.y = ext_pos.y;
+    eventTrigger_lhCrossingBeam_payload.z = ext_pos.z;
+    eventTrigger_lhCrossingBeam_payload.delta = deltaLog;
+    eventTrigger(&eventTrigger_lhCrossingBeam);
 
     positionLog[0] = ext_pos.x;
     positionLog[1] = ext_pos.y;

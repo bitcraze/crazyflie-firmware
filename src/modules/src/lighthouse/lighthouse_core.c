@@ -55,6 +55,7 @@
 
 #include "test_support.h"
 #include "static_mem.h"
+#include "eventtrigger.h"
 
 static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 
@@ -120,6 +121,10 @@ static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV
 
 
 static bool deckIsFlashed = false;
+
+// Events
+EVENTTRIGGER(lhAngle, uint8, sensor, uint8, basestation, uint8, sweep, float, angle, float, correctedAngle)
+EVENTTRIGGER(lhUartFrame, uint8, sensor, uint8, basestation, uint32, offset, uint32, timestampFPGA, uint32, timestamp2FPGA)
 
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
   const uint16_t mask = (1 << index);
@@ -251,6 +256,19 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
     pllOffset = (augmentedClock / MS_TO_FPGA_CLK) - now_ms;
     frame->data.timestamp2 = (uint32_t)augmentedClock;
   }
+
+  if (isFrameValid 
+      && !frame->isSyncFrame 
+      // && frame->data.channelFound
+      && (frame->data.channel < PULSE_PROCESSOR_N_BASE_STATIONS || !frame->data.channelFound)) {
+    eventTrigger_lhUartFrame_payload.sensor = frame->data.sensor;
+    eventTrigger_lhUartFrame_payload.basestation = frame->data.channelFound ? frame->data.channel : PULSE_PROCESSOR_N_BASE_STATIONS;
+    eventTrigger_lhUartFrame_payload.offset = frame->data.offset;
+    eventTrigger_lhUartFrame_payload.timestampFPGA = frame->data.timestamp;
+    eventTrigger_lhUartFrame_payload.timestamp2FPGA = frame->data.timestamp2;
+    eventTrigger(&eventTrigger_lhUartFrame);
+  }
+
   STATS_CNT_RATE_EVENT(&serialFrameRate);
 
   return isFrameValid;
@@ -346,6 +364,31 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
 
       // Send measurement to the ground
       locSrvSendLighthouseAngle(basestation, angles);
+
+      // Send events
+      const pulseProcessorSensorMeasurement_t* sensorMeasurements = 0;
+      if (angles->measurementType == lighthouseBsTypeV1) {
+        sensorMeasurements = angles->sensorMeasurementsLh1;
+      } else if (angles->measurementType == lighthouseBsTypeV2) {
+        sensorMeasurements = angles->sensorMeasurementsLh2;
+      }
+
+      if (sensorMeasurements) {
+        for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+          for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; bs++) {
+            for (int sweep = 0; sweep < PULSE_PROCESSOR_N_SWEEPS; sweep++) {
+              if (sweep < sensorMeasurements[sensor].baseStatonMeasurements[bs].validCount) {
+                eventTrigger_lhAngle_payload.sensor = sensor;
+                eventTrigger_lhAngle_payload.basestation = bs;
+                eventTrigger_lhAngle_payload.sweep = sweep;
+                eventTrigger_lhAngle_payload.angle = sensorMeasurements[sensor].baseStatonMeasurements[bs].angles[sweep];
+                eventTrigger_lhAngle_payload.correctedAngle = sensorMeasurements[sensor].baseStatonMeasurements[bs].correctedAngles[sweep];
+                eventTrigger(&eventTrigger_lhAngle);
+              }
+            }
+          }
+        }
+      }
 
       const bool hasGeoData = appState->bsGeometry[basestation].valid;
       if (hasGeoData) {
