@@ -26,6 +26,9 @@
 /**
  * @file system.h 
  * @brief Top level module header file
+ *
+ * @ingroup system
+ *
  */
 
 #ifndef __SYSTEM_H__

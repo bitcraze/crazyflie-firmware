@@ -27,8 +27,7 @@
  * @file system.c
  * @brief Top level module implementation
  *
- * @defgroup modules
- * @ingroup modules
+ * @ingroup system
  */
 
 #define DEBUG_MODULE "SYS"

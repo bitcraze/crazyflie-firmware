@@ -27,6 +27,7 @@
  * @file platform.h
  * @brief Hardware manager for the crazyflie platform - motors and sensors
  *
+ * @ingroup system
  * 
  * BMI088 IMU   
  * BMP388 air pressure

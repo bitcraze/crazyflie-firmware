@@ -20,8 +20,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file deck_drivers.c 
+ * @brief Deck drivers loading and handling
  *
- * deck_drivers.c - Deck drivers loading and handling
+ * @ingroup decks
+ *
  */
 
 #define DEBUG_MODULE "DECK_DRIVERS"

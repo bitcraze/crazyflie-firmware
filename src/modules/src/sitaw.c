@@ -21,7 +21,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * sitAw.h - Implementation of situation awareness.
+ */
+
+ /**
+ * @file sitAw.c 
+ * @brief Implementation of situation awareness.
+ *
+ * @see trigger.c
+ *
+ * @ingroup modules
  */
 
 #include <stddef.h>
@@ -102,6 +110,26 @@ static void sitAwARTest(float accX, float accY, float accZ);
 static void sitAwTuTest(float accz);
 #endif
 
+/**
+ * @brief Check for tumbling, free fall or at rest 
+ *
+ * Depending on compiler flags such as SITAW_ENABLED and SITAW_FF_ENABLED,
+ * this function uses the sensor data provided by the stabilizer to check for 
+ * tumbling, free fall or at rest conditions of the crazyflie.
+ *
+ * It is with this function call that sensor readings enter into the situational 
+ * awareness check. See also sitAwUpdateSetpoint() called in the stabilizer.
+ *
+ * @param sensorData 
+ * @param state 
+ *
+ * @see sitAwFFTest
+ * @see sitAwTuTest
+ * @see sitAwARTest
+ *
+ * @see sitAwUpdateSetpoint
+ * @see stabilizerTask
+ */
 static void sitAwPostStateUpdateCallOut(const sensorData_t *sensorData,
                                         const state_t *state)
 {
@@ -177,7 +205,7 @@ void sitAwUpdateSetpoint(setpoint_t *setpoint, const sensorData_t *sensorData,
 /**
  * Initialize the Free Fall detection.
  *
- * See the sitAwFFTest() function for details.
+ * @see sitAwFFTest() for details.
  */
 void sitAwFFInit(void)
 {

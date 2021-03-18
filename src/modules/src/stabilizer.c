@@ -234,11 +234,22 @@ static void checkEmergencyStopTimeout()
 }
 
 /**
- * @brief  
+ * @brief Main control loop from reading sensors to providing new thrust commands 
+ *
+ * Roughly, we acquire sensor data, estimate the flies' state, get the next control/setpoint
+ * input, and set new thrust commands. If necessary/activated, commanded setpoints are
+ * modified by collision avoidance or situational awareness.
  *
  * The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
+ *
+ * @see sensorsAcquire
+ * @see stateEstimator
+ * @see controller
+ * 
+ * @see sitAwUpdateSetpoint       situational awareness for free fall, tumbling or rest
+ * @see collisionAvoidanceUpdateSetpoint    collision avoidance for multiple crazyflies
  */
 
 static void stabilizerTask(void* param)

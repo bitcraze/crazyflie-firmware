@@ -24,7 +24,13 @@
 
  /**
  * @file main.c 
- * @brief Containing the main function.
+ * @brief Contains the main function that initializes all tasks and starts the scheduler.
+ *
+ * @defgroup modules
+ * @defgroup decks
+ * @defgroup system
+ *
+ * @ingroup system
  */
 
 /** @mainpage Crazyflie firmware documentation
@@ -34,7 +40,51 @@
  *
  *  [Documentation start page](https://www.bitcraze.io/documentation/start/)
  *
+ *  [Firmware documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/)
+ *
  *  [Other components of the ecosystem](https://www.bitcraze.io/documentation/repository/)
+ *
+ * 
+ *
+ * Reader's guide to the firmware
+ * ------------------------------
+ *
+ * If you are completely new to the firmware, we recommend you take a look at the following
+ * main parts of the system first: 
+ *
+ *      systemTask()
+ *      stabilizerTask()
+ *      
+ * The guiding principle is that systemTask() calls initializers that create further RTOS tasks
+ * such as the stabilizerTask(), sensors, radio communication etc. Once all tasks are created, 
+ * systemTask calls all routines for self-test. If tests pass, systemTask() starts the 
+ * system by giving the semaphore canStartMutex - unlocking all tasks.  
+ *
+ * If you are new to embedded multitasking with FreeRTOS, check out a book such as
+ * "Hands-On RTOS with Microcontrollers" by B Amos.
+ *
+ * Building applications on top of the firmware
+ * --------------------------------------------
+ * 
+ * The easiest way to extend the firmware with your own applications or to make an autonomous
+ * robot is the app layer that allows to separate your control logic from the lower levels of
+ * the system. Check out appInit() and appTask() and the [documentation on the app layer here]
+ * (https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/userguides/app_layer/).
+ *
+ *
+ * The path from sensor aquisition to the Python running on your notebook
+ * ----------------------------------------------------------------------
+ *
+ * If you want to follow the flow of data from sensor readings all the way to your desktop or
+ * notebook computer, you could use the multiranger deck as an example.
+ *
+ * Check out mrTask() in multiranger.c -- this is the RTOS task regularly querying the hardware driver
+ * for updated raw sensor readings. mrTask() uses rangeSet() in range.c to make the readings available.
+ * range.c also defines the log group 'range' into which the readings are copied and hence made
+ * available for the [logging system](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/userguides/logparam/). 
+ * As soon as a variable is logged and registered in the logging systems' table of contents, the 
+ * logTask() continously sends its content via crazyradio. 
+ *
  *
  */
 

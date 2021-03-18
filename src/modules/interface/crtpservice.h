@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __                           
  * +------+      / __ )(_) /_______________ _____  ___ 
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,7 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * link.h - Used to send/receive link packats
+ */
+/**
+ * @file crtpservice.h
+ * @brief Send and receive packets using the crazyflie real time protocol
  */
 
 #ifndef __CRTPSERVICE_H__

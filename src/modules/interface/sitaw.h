@@ -20,9 +20,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * sitaw.h - Interface to situation awareness.
  */
+
+ /**
+  * @file sitaw.h 
+  * @brief Interface to situational awareness
+  *
+  *   Detect free fall, at rest and tumbling
+  *
+  * @ingroup modules
+  */
 
 #ifndef __SITAW_H__
 #define __SITAW_H__

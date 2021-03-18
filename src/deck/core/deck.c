@@ -27,7 +27,6 @@
  * @brief Deck subsystem main entry points
  *
  *
- * @defgroup decks
  * @ingroup decks
  */
 
