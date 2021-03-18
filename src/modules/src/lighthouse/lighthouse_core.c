@@ -448,7 +448,12 @@ void lighthouseCoreTask(void *param) {
   lighthouseStorageInitializeGeoDataFromStorage();
   lighthouseStorageInitializeCalibDataFromStorage();
 
-  lighthouseDeckFlasherCheckVersionAndBoot();
+  if (lighthouseDeckFlasherCheckVersionAndBoot() == false) {
+    DEBUG_PRINT("FPGA not booted. Lighthouse disabled!\n");
+    while(1) {
+      vTaskDelay(portMAX_DELAY);
+    }
+  }
   deckIsFlashed = true;
 
 

@@ -39,7 +39,9 @@
 #include "task.h"
 #include "timers.h"
 
+#include "lighthouse.h"
 #include "lighthouse_core.h"
+#include "lighthouse_deck_flasher.h"
 
 // LED timer
 static StaticTimer_t timerBuffer;
@@ -72,6 +74,16 @@ static void ledTimerHandle(xTimerHandle timer) {
   lighthouseCoreLedTimer();
 }
 
+static const DeckMemDef_t memoryDef = {
+  .write = lighthouseDeckFlasherWrite,
+  .read = lighthouseDeckFlasherRead,
+  .properties = lighthouseDeckFlasherPropertiesQuery,
+  .supportsUpgrade = true,
+
+  .requiredSize = LIGHTHOUSE_BITSTREAM_SIZE,
+  .requiredHash = LIGHTHOUSE_BITSTREAM_CRC,
+};
+
 static const DeckDriver lighthouse_deck = {
   .vid = 0xBC,
   .pid = 0x10,
@@ -79,6 +91,8 @@ static const DeckDriver lighthouse_deck = {
 
   .usedGpio = 0,  // FIXME: set the used pins
   .requiredEstimator = kalmanEstimator,
+
+  .memoryDef = &memoryDef,
 
   .init = lighthouseInit,
 };

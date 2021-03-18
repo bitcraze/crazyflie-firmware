@@ -10,18 +10,18 @@ LPS system. There is no write functionality.
 
 | Address              | Type        | Description                                                                |
 |----------------------|-------------|----------------------------------------------------------------------------|
-| 0x0000               | uint8       | n = number of anchors in the system                                        |
-| 0x0001 - 0x0000 + n  | uint8       | unordered list of anchor ids in the system                                 |
-|                      |             |                                                                            |
-| 0x1000               | uint8       | na = number of active anchors in the system                                |
-| 0x1001 - 0x1000 + na | uint8       | unordered list of anchor ids for the anchors in the system that are active |
-|                      |             |                                                                            |
-| 0x2000               | Anchor data | Data for anchor id 0 (if available)                                        |
-| 0x2100               | Anchor data | Data for anchor id 1 (if available)                                        |
-| ...                  | Anchor data |                                                                            |
-| 0x2000 + 0x100 * i   | Anchor data | Data for anchor id i (if available)                                        |
-| ...                  | Anchor data |                                                                            |
-| 0x11F00              | Anchor data | Data for anchor id 255 (if available)                                      |
+| 0x0000               | uint8       | number of anchors in the system (n)                                        |
+| 0x0001 - 0x0000 + n  | uint8       | unordered list of anchor ids in the system                                 |
+|                      |             |                                                                            |
+| 0x1000               | uint8       | number of active anchors in the system (na)                                |
+| 0x1001 - 0x1000 + na | uint8       | unordered list of anchor ids for the anchors in the system that are active |
+|                      |             |                                                                            |
+| 0x2000               | Anchor data | Data for anchor id 0 (if available)                                        |
+| 0x2100               | Anchor data | Data for anchor id 1 (if available)                                        |
+| ...                  | Anchor data |                                                                            |
+| 0x2000 + 0x100 * i   | Anchor data | Data for anchor id i (if available)                                        |
+| ...                  | Anchor data |                                                                            |
+| 0x11F00              | Anchor data | Data for anchor id 255 (if available)                                      |
 
 ### Anchor data memory layout
 

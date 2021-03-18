@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2020 Bitcraze AB
+ * Copyright (C) 2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * lighthouse_deck_flasher.h - handles flashing of FPGA binaries on the
- * Lighthouse deck
+ * deck_memory.h - interface for reading/writing deck memory and updating
+ *                 firmware and binary data on decks, using the memory
+ *                 subsystem.
+ *
  */
 
 #pragma once
@@ -31,10 +33,4 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-bool lighthouseDeckFlasherCheckVersionAndBoot();
-
-bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-
-bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
-
-uint8_t lighthouseDeckFlasherPropertiesQuery();
+void deckMemoryInit();
