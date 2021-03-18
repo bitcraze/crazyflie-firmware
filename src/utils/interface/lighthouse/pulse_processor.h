@@ -82,6 +82,7 @@ typedef struct {
   uint8_t sensor;
   uint32_t timestamp;
   uint64_t stmTimestamp; // usecTimer timestamp when frame was received
+  uint32_t timestamp2;
 
   // V1 base station data --------
   uint16_t width;

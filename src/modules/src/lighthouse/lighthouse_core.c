@@ -232,6 +232,25 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
   bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
 
+  // Augment ts to 32 bits
+  static uint32_t pllOffset = 0;
+  if (isFrameValid && !frame->isSyncFrame)
+  {
+    const uint32_t MS_TO_FPGA_CLK = 24000;
+    uint32_t now_ms = T2M(xTaskGetTickCount());
+    uint64_t estFpgaClock = (now_ms + pllOffset) * MS_TO_FPGA_CLK;
+    uint32_t estTimestamp = estFpgaClock & 0x00ffffff;
+    // Diff as 24 bits
+    uint32_t diff = (frame->data.timestamp - estTimestamp) & 0x00ffffff;
+    // Convert to 32 bits signed
+    if (diff & 0x00800000)
+    {
+      diff |= 0xff000000;
+    }
+    uint64_t augmentedClock = estFpgaClock + (int32_t)diff;
+    pllOffset = (augmentedClock / MS_TO_FPGA_CLK) - now_ms;
+    frame->data.timestamp2 = (uint32_t)augmentedClock;
+  }
   STATS_CNT_RATE_EVENT(&serialFrameRate);
 
   return isFrameValid;
