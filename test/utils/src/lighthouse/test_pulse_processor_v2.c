@@ -7,6 +7,8 @@
 
 #include "mock_ootx_decoder.h"
 #include "mock_lighthouse_calibration.h"
+#include "mock_usec_time.h"
+#include "mock_pulse_processor.h"
 
 
 // Functions under test
