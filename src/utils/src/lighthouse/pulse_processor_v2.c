@@ -52,6 +52,21 @@ static const uint32_t CYCLE_PERIODS[V2_N_CHANNELS] = {
     907000 / 2, 901000 / 2, 893000 / 2, 887000 / 2
 };
 
+static inline uint32_t cyclePeriodToMicroseconds(uint32_t cyclePeriod) {
+    return cyclePeriod / 24;
+}
+
+// Reset angles after fixed period to avoid using stale data
+static void clearStaleAnglesAfterTimeout(pulseProcessorResult_t *angles) {
+    uint64_t timestamp = usecTimestamp();
+    for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; ++bs) {
+        uint64_t elapsed_us = timestamp - angles->lastUsecTimestamp[bs];
+        if (elapsed_us > cyclePeriodToMicroseconds(CYCLE_PERIODS[bs])) {
+            pulseProcessorClear(angles, bs);
+        }
+    }
+}
+
 TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], pulseProcessorV2SweepBlock_t* block) {
     // Check we have data for all sensors
     uint8_t sensorMask = 0;
@@ -239,6 +254,7 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         measurement->angles[1] = secondBeam;
         measurement->validCount = 2;
     }
+    angles->lastUsecTimestamp[channel] = usecTimestamp();
 }
 
 TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest, const pulseProcessorV2SweepBlock_t* storage) {
@@ -275,6 +291,9 @@ TESTABLE_STATIC bool handleCalibrationData(pulseProcessor_t *state, const pulseP
 
 bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
     bool anglesMeasured = false;
+
+    clearStaleAnglesAfterTimeout(angles);
+
     int nrOfBlocks = processFrame(frameData, &state->v2.pulseWorkspace, &state->v2.blockWorkspace);
     for (int i = 0; i < nrOfBlocks; i++) {
         const pulseProcessorV2SweepBlock_t* block = &state->v2.blockWorkspace.blocks[i];
