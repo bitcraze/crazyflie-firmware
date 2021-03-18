@@ -121,3 +121,5 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 void kalmanCoreDecoupleXY(kalmanCoreData_t* this);
 
 void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise);
+
+void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error);

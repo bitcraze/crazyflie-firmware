@@ -87,6 +87,8 @@
 #include "mm_yaw_error.h"
 #include "mm_sweep_angles.h"
 
+#include "mm_tdoa_robust.h"
+
 #define DEBUG_MODULE "ESTKALMAN"
 #include "debug.h"
 
@@ -197,7 +199,9 @@ static StaticSemaphore_t dataMutexBuffer;
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
 
-
+// Use the robust TDoA implementation, off by default but can be turned on through a parameter.
+// The robust tdoa uses around 17% CPU VS 8% for normal TDoA
+static bool robustTdoa = false;
 
 /**
  * Quadrocopter State
@@ -537,7 +541,13 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
-    kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+    if(robustTdoa){
+        // robust KF update with TDOA measurements
+        kalmanCoreRobustUpdateWithTDOA(&coreData, &tdoa);
+    }else{
+        // standard KF update
+        kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+    }
     doneUpdate = true;
   }
 
@@ -729,4 +739,5 @@ LOG_GROUP_STOP(outlierf)
 PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
   PARAM_ADD(PARAM_UINT8, quadIsFlying, &quadIsFlying)
+  PARAM_ADD(PARAM_UINT8, robustTdoa, &robustTdoa)
 PARAM_GROUP_STOP(kalman)
