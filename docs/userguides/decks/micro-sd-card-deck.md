@@ -52,7 +52,7 @@ The `config.txt` file will be read only once on startup, therefore make sure tha
 
 ## Data Analysis
 
-For performance reasons the logfile is a binary file, using the following format:
+For performance reasons the logfile is a binary file, using the following format (version 2):
 
 ```
 uint8_t 0xBC header
@@ -65,7 +65,7 @@ for each event type:
    varname1(vartype1)<null>varname2(vartype2)<null>...<null>varnameN(vartypeN)<null>
 for each event:
    uint16_t event_id
-   uint32_t timestamp (FreeRTOS ticks in ms)
+   uint64_t timestamp (in microseconds)
    data (length defined by TOC event type)
 ```
 
