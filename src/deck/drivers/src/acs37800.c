@@ -33,12 +33,12 @@
 #include "timers.h"
 
 #include "debug.h"
+#include "system.h"
 #include "deck.h"
 #include "param.h"
 #include "log.h"
 #include "sleepus.h"
 #include "i2cdev.h"
-#include "system.h"
 
 
 // EEPROM
@@ -71,19 +71,28 @@
 #define ACS_I2C_ADDR        0x7F
 #define ACS_ACCESS_CODE     0x4F70656E
 
+
+/**
+ * The magic scale factors that are measured and does not correspond at all to the datasheet...
+ */
 #define SCALE_V             (27.23f)
-#define SCALE_I             (618.51f)
+#define SCALE_I             (17.03f)
 
 
 static bool isInit;
 static uint32_t viBatRaw;
-static uint32_t vavgBatRaw;
+static uint32_t viBatRMS;
+static uint32_t vavgBatRMS;
 static float vBat;
+static float vBatRMS;
 static float vavgBat;
 static float iBat;
+static float iBatRMS;
 static float iavgBat;
 static uint32_t pBatRaw;
 static float pBat;
+
+static uint16_t currZtrim, currZtrimOld;
 
 static void asc37800Task(void* prm);
 
@@ -163,7 +172,7 @@ static void ascFindAndSetAddress(void)
   uint8_t startAddr;
   uint32_t dummy = 0;
 
-  for (startAddr = 96; startAddr <= 127; startAddr++)
+  for (startAddr = 96; startAddr <= 110; startAddr++)
   {
     bool isReplying = i2cdevWrite(I2C1_DEV, startAddr, 1, (uint8_t *)&dummy);
 
@@ -173,8 +182,12 @@ static void ascFindAndSetAddress(void)
       dummy = ACS_ACCESS_CODE;
       i2cdevWriteReg8(I2C1_DEV, startAddr, ACSREG_ACCESS_CODE, 4, (uint8_t *)&dummy);
       // EEPROM: write and lock i2c address to 0x7F;
+      i2cdevReadReg8(I2C1_DEV, startAddr, ACSREG_E_IO_SEL, 4, (uint8_t *)&dummy);
+      DEBUG_PRINT("ACS37800 A:0x%.2X R:0x%.2X:%X\n", (unsigned int)startAddr, (unsigned int)ACSREG_E_IO_SEL, (unsigned int)dummy);
+
       dummy = (0x7F << 2) | (0x01 << 9);
       i2cdevWriteReg8(I2C1_DEV, startAddr, ACSREG_E_IO_SEL, 4, (uint8_t *)&dummy);
+      vTaskDelay(M2T(10));
 
       DEBUG_PRINT("ACS37800 found on: %d. Setting address to 0x7E. Power cycle needed!\n", startAddr);
     }
@@ -205,9 +218,11 @@ static void asc37800Init(DeckInfo *info)
   asc37800Write32(ACSREG_S_IO_SEL, (1 << 24) | (32 << 14) | (0x01 << 9) |  (0x7F << 2));
   // Set current and voltage for averaging and keep device specific (trim) settings.
   asc37800Read32(ACSREG_S_TRIM, &val);
+  currZtrim = currZtrimOld = val & 0xFF;
   asc37800Write32(ACSREG_S_TRIM, (val | (0 << 23) | (1 << 22)));
-  // Set average to 100 samples.
-  asc37800Write32(ACSREG_S_OFFS_AVG, ((100 << 7) | (100 << 0)));
+//  asc37800Write32(ACSREG_S_TRIM, ((0 << 23) | (1 << 22) | 20));
+  // Set average to 10 samples. (ASC37800 sample rate 1khz)
+  asc37800Write32(ACSREG_S_OFFS_AVG, ((10 << 7) | (10 << 0)));
 
   DEBUG_PRINT("---------------\n");
   for (int reg = 0x0B; reg <= 0x0F; reg++)
@@ -215,9 +230,9 @@ static void asc37800Init(DeckInfo *info)
     bool res;
 
     res = asc37800Read32(reg, &val);
-    DEBUG_PRINT("%d:R:0x%.2X:%lX\n", res, reg, val);
+    DEBUG_PRINT("%d:R:0x%.2X:%X\n", (unsigned int)res, (unsigned int)reg, (unsigned int)val);
     res = asc37800Read32(reg+0x10, &val);
-    DEBUG_PRINT("%d:R:0x%.2X:%lX\n\n", res, reg+0x10, val);
+    DEBUG_PRINT("%d:R:0x%.2X:%X\n\n", (unsigned int)res, (unsigned int)reg+0x10, (unsigned int)val);
   }
 
 
@@ -237,15 +252,29 @@ static void asc37800Task(void* prm)
   while(1) {
     vTaskDelayUntil(&lastWakeTime, M2T(10));
 
-    asc37800Read32(ACSREG_I_V_RMS, &viBatRaw);
+    asc37800Read32(ACSREG_I_V_CODES, &viBatRaw);
+    asc37800Read32(ACSREG_I_V_RMS, &viBatRMS);
     asc37800Read32(ACSREG_P_ACTIVE, &pBatRaw);
-    asc37800Read32(ACSREG_VRMS_AVGS, &vavgBatRaw);
+    asc37800Read32(ACSREG_VRMS_AVGS, &vavgBatRMS);
 
-    vBat = convertUnsignedFixedPoint((viBatRaw & 0xFFFF), 16, 16);
+    vBat = convertUnsignedFixedPoint((viBatRaw & 0xFFFF), 15, 16);
     iBat = convertSignedFixedPoint((viBatRaw >> 16 & 0xFFFF), 15, 16);
-    vavgBat = convertSignedFixedPoint((vavgBatRaw & 0xFFFF), 15, 16);
-    iavgBat = convertSignedFixedPoint((vavgBatRaw >> 16 & 0xFFFF), 15, 16);
+    vBatRMS = SCALE_V * convertUnsignedFixedPoint((viBatRMS & 0xFFFF), 16, 16);
+    iBatRMS = SCALE_I * convertSignedFixedPoint((viBatRMS >> 16 & 0xFFFF), 16, 16);
+    vavgBat = SCALE_V * convertSignedFixedPoint((vavgBatRMS & 0xFFFF), 16, 16);
+    iavgBat = SCALE_I * convertSignedFixedPoint((vavgBatRMS >> 16 & 0xFFFF), 16, 16);
     pBat = convertSignedFixedPoint((pBatRaw & 0xFFFF), 15, 16);
+
+    if (currZtrimOld != currZtrim)
+    {
+      uint32_t val;
+      asc37800Read32(ACSREG_S_TRIM, &val);
+      DEBUG_PRINT("%X ->", (unsigned int)val);
+      val = (val & 0xFFFFFE00) | currZtrim;
+      DEBUG_PRINT("%X\n ", (unsigned int)val);
+      asc37800Write32(ACSREG_S_TRIM, val);
+      currZtrimOld = currZtrim;
+    }
 
 //    DEBUG_PRINT("V: %.3f I: %.3f P: %.3f\n", vBat, iBat, pBat);
 //    DEBUG_PRINT("V: %f\tI: %f\tP: %f\n", vBat, iBat, pBat);
@@ -270,12 +299,15 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcACS37800, &isInit)
 PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(asc37800)
+PARAM_ADD(PARAM_UINT16, currZtrim, &currZtrim)
 PARAM_GROUP_STOP(asc37800)
 
 LOG_GROUP_START(asc37800)
 LOG_ADD(LOG_FLOAT, v, &vBat)
+LOG_ADD(LOG_FLOAT, vRMS, &vBatRMS)
 LOG_ADD(LOG_FLOAT, v_avg, &vavgBat)
 LOG_ADD(LOG_FLOAT, i, &iBat)
+LOG_ADD(LOG_FLOAT, iRMS, &iBatRMS)
 LOG_ADD(LOG_FLOAT, i_avg, &iavgBat)
 LOG_ADD(LOG_FLOAT, p, &pBat)
 LOG_GROUP_STOP(asc37800)

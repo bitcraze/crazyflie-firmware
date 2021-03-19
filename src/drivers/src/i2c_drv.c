@@ -58,7 +58,7 @@
 #define I2C_DEFAULT_SENSORS_CLOCK_SPEED             400000
 
 // Definition of eeprom and deck I2C buss
-#define I2C_DEFAULT_DECK_CLOCK_SPEED                100000
+#define I2C_DEFAULT_DECK_CLOCK_SPEED                400000
 
 // Misc constants.
 #define I2C_NO_BLOCK				    0
@@ -610,21 +610,20 @@ static void i2cdrvClearDMA(I2cDrv* i2c)
 
 static void i2cdrvDmaIsrHandler(I2cDrv* i2c)
 {
-  if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Tranasfer complete
-  {
-    i2cdrvClearDMA(i2c);
-    i2cNotifyClient(i2c);
-    // Are there any other messages to transact?
-    i2cTryNextMessage(i2c);
-  }
   if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTEFlag)) // Transfer error
   {
     DMA_ClearITPendingBit(i2c->def->dmaRxStream, i2c->def->dmaRxTEFlag);
     //TODO: Best thing we could do?
     i2c->txMessage.status = i2cNack;
-    i2cNotifyClient(i2c);
-    i2cTryNextMessage(i2c);
   }
+  if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Tranasfer complete
+  {
+    i2c->txMessage.status = i2cAck;
+  }
+  i2cdrvClearDMA(i2c);
+  i2cNotifyClient(i2c);
+  // Are there any other messages to transact?
+  i2cTryNextMessage(i2c);
 }
 
 
