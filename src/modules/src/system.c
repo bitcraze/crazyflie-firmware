@@ -201,23 +201,38 @@ void systemTask(void *arg)
 #endif
 
   //Test the modules
+  DEBUG_PRINT("About to run tests in system.c (one fail causes the following to fail).\n");
   pass &= systemTest();
+  DEBUG_PRINT("system %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= configblockTest();
+  DEBUG_PRINT("configblock %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= storageTest();
+  DEBUG_PRINT("storage %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= commTest();
+  DEBUG_PRINT("comm %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= commanderTest();
+  DEBUG_PRINT("commander %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= stabilizerTest();
+  DEBUG_PRINT("stabilizer %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= estimatorKalmanTaskTest();
+  DEBUG_PRINT("estimatorKalmanTask %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= deckTest();
+  DEBUG_PRINT("deck %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= soundTest();
+  DEBUG_PRINT("sound %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= memTest();
+  DEBUG_PRINT("mem %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= watchdogNormalStartTest();
+  DEBUG_PRINT("watchdogNormalStart %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= cfAssertNormalStartTest();
+  DEBUG_PRINT("cfAssertNormalStart %s\n", pass ? "[OK]" : "[FAIL]");
   pass &= peerLocalizationTest();
+  DEBUG_PRINT("peerLocalization %s\n", pass ? "[OK]" : "[FAIL]");
 
   //Start the firmware
   if(pass)
   {
+    DEBUG_PRINT("Self test passed!\n");
     selftestPassed = 1;
     systemStart();
     soundSetEffect(SND_STARTUP);
