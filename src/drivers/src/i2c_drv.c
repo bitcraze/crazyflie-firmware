@@ -498,6 +498,7 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
       // Enable the Transfer Complete interrupt
       DMA_ITConfig(i2c->def->dmaRxStream, DMA_IT_TC | DMA_IT_TE, ENABLE);
       I2C_DMACmd(i2c->def->i2cPort, ENABLE); // Enable before ADDR clear
+      DMA_Cmd(i2c->def->dmaRxStream, ENABLE); // Workaround for emulation...
 
       __DMB();                         // Make sure instructions (clear address) are in correct order
       SR2 = i2c->def->i2cPort->SR2;    // clear ADDR
