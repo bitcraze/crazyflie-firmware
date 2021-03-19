@@ -38,6 +38,7 @@
 #include "log.h"
 #include "sleepus.h"
 #include "i2cdev.h"
+#include "system.h"
 
 
 // EEPROM
@@ -149,30 +150,29 @@ float convertSignedFixedPoint(uint32_t inputValue, uint16_t binaryPoint, uint16_
 
 static bool asc37800Read32(uint8_t reg, uint32_t *data32)
 {
-  i2cdevReadReg8(I2C1_DEV, ACS_I2C_ADDR, reg, 4, (uint8_t *)data32);
+  return i2cdevReadReg8(I2C1_DEV, ACS_I2C_ADDR, reg, 4, (uint8_t *)data32);
 }
 
 static bool asc37800Write32(uint8_t reg, uint32_t data32)
 {
-  i2cdevWriteReg8(I2C1_DEV, ACS_I2C_ADDR, reg, 4, (uint8_t *)&data32);
+  return i2cdevWriteReg8(I2C1_DEV, ACS_I2C_ADDR, reg, 4, (uint8_t *)&data32);
 }
 
-static bool ascFindAndSetAddress(void)
+static void ascFindAndSetAddress(void)
 {
   uint8_t startAddr;
   uint32_t dummy = 0;
-  bool isRepying;
 
   for (startAddr = 96; startAddr <= 127; startAddr++)
   {
-    isRepying = i2cdevWrite(I2C1_DEV, startAddr, 1, (uint8_t *)&dummy);
+    bool isReplying = i2cdevWrite(I2C1_DEV, startAddr, 1, (uint8_t *)&dummy);
 
-    if (isRepying)
+    if (isReplying)
     {
       // Unlock EEPROM
       dummy = ACS_ACCESS_CODE;
       i2cdevWriteReg8(I2C1_DEV, startAddr, ACSREG_ACCESS_CODE, 4, (uint8_t *)&dummy);
-      // EERPOM: write and lock i2c address to 0x7F;
+      // EEPROM: write and lock i2c address to 0x7F;
       dummy = (0x7F << 2) | (0x01 << 9);
       i2cdevWriteReg8(I2C1_DEV, startAddr, ACSREG_E_IO_SEL, 4, (uint8_t *)&dummy);
 
@@ -215,9 +215,9 @@ static void asc37800Init(DeckInfo *info)
     bool res;
 
     res = asc37800Read32(reg, &val);
-    DEBUG_PRINT("%d:R:0x%.2X:%X\n", res, reg, val);
+    DEBUG_PRINT("%d:R:0x%.2X:%lX\n", res, reg, val);
     res = asc37800Read32(reg+0x10, &val);
-    DEBUG_PRINT("%d:R:0x%.2X:%X\n\n", res, reg+0x10, val);
+    DEBUG_PRINT("%d:R:0x%.2X:%lX\n\n", res, reg+0x10, val);
   }
 
 
