@@ -824,6 +824,9 @@ void olsrProcessTc(const olsrMessage_t* tcMsg)
           topologyTuple.m_seqenceNumber = ansn;
           topologyTuple.m_expirationTime = now + tcMsg->m_messageHeader.m_vTime;
           topologyTuple.m_distance = tcBody->m_content[i].m_distance;
+          #ifdef USER_ROUTING
+          topologyTuple.m_weight = tcBody->m_content[i].m_weight;
+          #endif
           addTopologyTuple(&olsrTopologySet,&topologyTuple);
         }
     }
@@ -904,6 +907,24 @@ void forwardDefault(olsrMessage_t* olsrMessage, setIndex_t duplicateIndex)
       addDuplicateTuple(&olsrDuplicateSet, &newDup);
     }
 }
+#ifdef USER_ROUTING
+float distanceToPacketLoss(int16_t distance)
+{
+  if(distance<=0) return 0;
+  if(distance>=1000) return 1;
+  float res = 1.0;
+  
+  return res*distance/1000;
+}
+int16_t getDistanceFromAddr(olsrAddr_t addr)
+{
+ #ifdef DISTANCE_SIM
+ return getDistanceFromOnboardSim(myAddress,addr);
+ #else
+ return distanceTowards[addr];
+ #endif
+}
+#endif
 //switch to tc|hello|ts process
 void olsrPrintPacket(const packet_t* rxPacket, const char* msgStr)
 {
@@ -938,7 +959,7 @@ void olsrPrintPacket(const packet_t* rxPacket, const char* msgStr)
                     sizeof(olsrTopologyMessageUint_t);
         for(int i = 0;i < count; i++)
           {
-            DEBUG_PRINT_OLSR_TC("%s: %d: address %d .distance is %d",msgStr, i,tcMessage->m_content[i].m_address,tcMessage->m_content[i].m_distance);
+            DEBUG_PRINT_OLSR_TC("%s: %d: address %d .distance is %d\n",msgStr, i,tcMessage->m_content[i].m_address,tcMessage->m_content[i].m_distance);
           }
 		  }
     else if(olsrIndex->m_messageHeader.m_messageType==TS_MESSAGE)
@@ -1115,7 +1136,11 @@ void olsrRoutingTableComputation()
   olsrTime_t now = xTaskGetTickCount();
   olsrRoutingTuple_t self;
   self.m_destAddr = myAddress;
+#ifdef USER_ROUTING
+  self.m_weight = 1;
+#else
   self.m_distance = 0;
+#endif
   self.m_nextAddr = myAddress;
   self.m_expirationTime = now + OLSR_ROUTING_SET_HOLD_TIME;
   olsrRoutingSetInsert(&tmpRoutingSet,&self);
@@ -1125,7 +1150,13 @@ void olsrRoutingTableComputation()
     {
       self.m_destAddr = olsrNeighborSet.setData[neighborIt].data.m_neighborAddr;
       self.m_nextAddr = olsrNeighborSet.setData[neighborIt].data.m_neighborAddr;
+    #ifdef USER_ROUTING
+      int16_t distTmp = getDistanceFromAddr(self.m_destAddr);
+      self.m_weight = 1 - distanceToPacketLoss(distTmp);
+      // DEBUG_PRINT_OLSR_ROUTING("%d to %d's distance is %d\n",myAddress,self.m_destAddr,distTmp);
+    #else
       self.m_distance = 1;
+    #endif
       olsrRoutingSetInsert(&tmpRoutingSet,&self);
       neighborIt = olsrNeighborSet.setData[neighborIt].next;
     }
@@ -1143,13 +1174,21 @@ void olsrRoutingTableComputation()
           setIndex_t routingIt = tmpRoutingSet.fullQueueEntry;
           setIndex_t routeCanLinkToTc = -1;
           bool isFound = false;
+          #ifdef USER_ROUTING
+          olsrWeight_t weightTmp = 0;
+          #else
           olsrDist_t length = 0;
+          #endif
           while(routingIt != -1)
             {
               if(tmpRoutingSet.setData[routingIt].data.m_destAddr == tmpTc.data.m_lastAddr)
                 {
                   isFound = true;
+                  #ifdef USER_ROUTING
+                  weightTmp = tmpRoutingSet.setData[routingIt].data.m_weight*tmpTc.data.m_weight;
+                  #else
                   length = tmpRoutingSet.setData[routingIt].data.m_distance + tmpTc.data.m_distance;
+                  #endif
                   routeCanLinkToTc = routingIt;
                   break;
                 }
@@ -1167,21 +1206,36 @@ void olsrRoutingTableComputation()
               if(tmpRoutingSet.setData[routingIt].data.m_destAddr == tmpTc.data.m_destAddr)
                 {
                   isFoundOldRoute = true;
+                  #ifdef USER_ROUTING
+                  if(tmpRoutingSet.setData[routingIt].data.m_weight < weightTmp)
+                    {
+                      tmpRoutingSet.setData[routingIt].data.m_weight = weightTmp;
+                      tmpRoutingSet.setData[routingIt].data.m_nextAddr = tmpRoutingSet.setData[routeCanLinkToTc].data.m_nextAddr;
+                      somethingChanged = true;
+                    }
+                  #else
                   if(tmpRoutingSet.setData[routingIt].data.m_distance > length)
                     {
                       tmpRoutingSet.setData[routingIt].data.m_distance = length;
                       tmpRoutingSet.setData[routingIt].data.m_nextAddr = tmpRoutingSet.setData[routeCanLinkToTc].data.m_nextAddr;
                       somethingChanged = true;
                     }
+                  #endif
                   break;
                 }
               routingIt = tmpRoutingSet.setData[routingIt].next;
             }
           if(!isFoundOldRoute)
             {
+              #ifdef USER_ROUTING
+              self.m_destAddr = tmpTc.data.m_destAddr;
+              self.m_weight = weightTmp;
+              self.m_nextAddr = tmpRoutingSet.setData[routeCanLinkToTc].data.m_nextAddr;
+              #else
               self.m_destAddr = tmpTc.data.m_destAddr;
               self.m_distance = length;
               self.m_nextAddr = tmpRoutingSet.setData[routeCanLinkToTc].data.m_nextAddr;
+              #endif
               olsrRoutingSetInsert(&tmpRoutingSet,&self);
               somethingChanged = true;
             }
@@ -1397,7 +1451,12 @@ void olsrSendTc()
     {
       olsrMprSelectorSetItem_t tmp = olsrMprSelectorSet.setData[mprSelectorIt];
       tcMsg.m_content[pos].m_address = tmp.data.m_addr;
+      #ifdef USER_ROUTING
+      tcMsg.m_content[pos].m_distance = getDistanceFromAddr(tmp.data.m_addr);
+      tcMsg.m_content[pos++].m_weight = 1- distanceToPacketLoss(getDistanceFromAddr(tmp.data.m_addr));
+      #else
       tcMsg.m_content[pos++].m_distance = 1;
+      #endif
       mprSelectorIt = tmp.next;
     }
   memcpy(msg.m_messagePayload,&tcMsg,2+pos*sizeof(olsrTopologyMessageUint_t));

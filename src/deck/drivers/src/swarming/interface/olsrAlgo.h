@@ -41,8 +41,10 @@
 /// Asymmetric neighbor type.
 #define OLSR_MPR_NEIGH          2
 
-//
-#define OLSR_SIM 1
+//simulation
+#define OLSR_SIM
+#define DISTANCE_SIM
+
 #define MAX_TIMESTAMP 1099511627776 //2**40
 
 // void olsr_hello_task(void *ptr);

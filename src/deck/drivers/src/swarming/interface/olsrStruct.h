@@ -6,7 +6,7 @@
 #include"adhocdeck.h"
 #include <string.h>
 #include "mac.h"
-
+#define USER_ROUTING
 /*
 *********************Recv&SendQueue*************************
 */
@@ -20,6 +20,10 @@ typedef portTickType olsrTime_t;
 typedef uint16_t olsrAddr_t;
 typedef short olsrDist_t;
 typedef short setIndex_t;
+
+#ifdef USER_ROUTING
+typedef float olsrWeight_t;
+#endif
 
 #define TOPOLOGY_SET_SIZE 30
 #define LINK_SET_SIZE 30
@@ -142,7 +146,11 @@ typedef struct
   olsrAddr_t m_destAddr;
   olsrAddr_t m_lastAddr;
   uint16_t m_seqenceNumber;
+
   olsrDist_t m_distance;
+  #ifdef USER_ROUTING
+  olsrWeight_t m_weight;
+  #endif
   olsrTime_t m_expirationTime;
 } olsrTopologyTuple_t;
 
@@ -221,6 +229,9 @@ typedef struct
   olsrAddr_t m_destAddr;
   olsrAddr_t m_nextAddr;
   olsrDist_t m_distance;
+  #ifdef USER_ROUTING
+  olsrWeight_t m_weight;
+  #endif
   olsrTime_t m_expirationTime;
 } olsrRoutingTuple_t;
 

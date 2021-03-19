@@ -10,4 +10,5 @@ bool checkItCanReceive(olsrAddr_t from,olsrAddr_t to);
 
 short hashTable[MAX_CF_NUM];
 
+int16_t getDistanceFromOnboardSim(olsrAddr_t from,olsrAddr_t to);
 #endif

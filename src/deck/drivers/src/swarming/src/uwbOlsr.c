@@ -114,7 +114,7 @@ static void olsrTaskInit(dwDevice_t *dev)
     // olsrPacketLossTaskInit();
     olsrHelloTaskInit();
     olsrTcTaskInit();
-    olsrTsTaskInit();
+    // olsrTsTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
     // olsrAppTaskInit();

@@ -157,6 +157,10 @@ typedef struct
 {
     olsrAddr_t m_address;
     olsrDist_t m_distance;
+    #ifdef USER_ROUTING
+    olsrWeight_t m_weight;
+    #endif
+
 } __attribute__((packed)) olsrTopologyMessageUint_t;
 
 typedef struct 

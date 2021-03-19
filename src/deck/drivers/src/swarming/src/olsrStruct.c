@@ -162,7 +162,7 @@ void olsrPrintTopologySet(olsrTopologySet_t *topologyset)
   while(candidate != -1)
     {
       olsrTopologySetItem_t tmp = topologyset->setData[candidate];
-      DEBUG_PRINT_OLSR_TOPOLOGY("TOPOLOGYSET: last:%d,dest:%d\n",tmp.data.m_lastAddr,tmp.data.m_destAddr);
+      DEBUG_PRINT_OLSR_TOPOLOGY("TOPOLOGYSET: last:%d,dest:%d,weight%f\n",tmp.data.m_lastAddr,tmp.data.m_destAddr,tmp.data.m_weight);
       candidate = tmp.next;
     }
 }
@@ -1067,7 +1067,7 @@ void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet)
   while(it != -1)
     {
       olsrRoutingSetItem_t routeNode = routingSet->setData[it];
-      DEBUG_PRINT_OLSR_ROUTING("Dest:%d,Next:%d.\n",routeNode.data.m_destAddr,routeNode.data.m_nextAddr);
+      DEBUG_PRINT_OLSR_ROUTING("Dest:%d,Next:%d,weight%f\n",routeNode.data.m_destAddr,routeNode.data.m_nextAddr,routeNode.data.m_weight);
       it = routeNode.next;
     } 
 }
