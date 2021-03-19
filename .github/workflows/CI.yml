@@ -69,9 +69,6 @@ jobs:
         # Build Bigquad deck with all config options
         - >
           "EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM"
-        # Build with the lighthouse driver
-        - >
-          "EXTRA_CFLAGS=-DDISABLE_LIGHTHOUSE_DRIVER=0"
     env:
       FEATURE: ${{ matrix.features }}
     

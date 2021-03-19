@@ -137,7 +137,7 @@ static float measNoiseBaro = 2.0f; // meters
 static float measNoiseGyro_rollpitch = 0.1f; // radians per second
 static float measNoiseGyro_yaw = 0.1f; // radians per second
 
-static float initialX = 0.0;
+static float initialX = 1.5;
 static float initialY = 0.0;
 static float initialZ = 0.0;
 
@@ -274,6 +274,42 @@ void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm,
   assertStateNotNaN(this);
 }
 
+void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error)
+{
+    // kalman filter update with weighted covariance matrix P_w_m, kalman gain Km, and innovation error 
+    // Temporary matrices for the covariance updates 
+    static float tmpNN1d[KC_STATE_DIM][KC_STATE_DIM];
+    static arm_matrix_instance_f32 tmpNN1m = {KC_STATE_DIM, KC_STATE_DIM, (float *)tmpNN1d};
+    for (int i=0; i<KC_STATE_DIM; i++){
+        this->S[i] = this->S[i] + Km->pData[i] * error;
+    }
+    // ====== COVARIANCE UPDATE ====== //
+    mat_mult(Km, Hm, &tmpNN1m);                 // KH,  the Kalman Gain and H are the updated Kalman Gain and H 
+    mat_scale(&tmpNN1m, -1.0f, &tmpNN1m);       //  I-KH
+    for (int i=0; i<KC_STATE_DIM; i++) { tmpNN1d[i][i] = 1.0f + tmpNN1d[i][i]; } 
+    float Ppo[KC_STATE_DIM][KC_STATE_DIM]={0};
+    arm_matrix_instance_f32 Ppom = {KC_STATE_DIM, KC_STATE_DIM, (float *)Ppo};
+    mat_mult(&tmpNN1m, P_w_m, &Ppom);          // Pm = (I-KH)*P_w_m
+    matrixcopy(KC_STATE_DIM, KC_STATE_DIM, this->P, Ppo);
+
+    assertStateNotNaN(this);
+
+    for (int i=0; i<KC_STATE_DIM; i++) {
+        for (int j=i; j<KC_STATE_DIM; j++) {
+        float p = 0.5f*this->P[i][j] + 0.5f*this->P[j][i];
+        if (isnan(p) || p > MAX_COVARIANCE) {
+            this->P[i][j] = this->P[j][i] = MAX_COVARIANCE;
+        } else if ( i==j && p < MIN_COVARIANCE ) {
+            this->P[i][j] = this->P[j][i] = MIN_COVARIANCE;
+        } else {
+            this->P[i][j] = this->P[j][i] = p;
+            }
+        }
+    }
+    assertStateNotNaN(this);
+
+}
+
 
 void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIsFlying)
 {
@@ -291,7 +327,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIs
   kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], measNoiseBaro);
 }
 
-void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
+void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order
    * to push the covariance forward.
@@ -442,10 +478,7 @@ void kalmanCorePredict(kalmanCoreData_t* this, float cmdThrust, Axis3f *acc, Axi
 
   if (quadIsFlying) // only acceleration in z direction
   {
-    // TODO: In the next lines, can either use cmdThrust/mass, or acc->z. Need to test which is more reliable.
-    // cmdThrust's error comes from poorly calibrated mass, and inexact cmdThrust -> thrust map
-    // acc->z's error comes from measurement noise and accelerometer scaling
-    // float zacc = cmdThrust;
+    // Use accelerometer and not commanded thrust, as this has proper physical units
     zacc = acc->z;
 
     // position updates in the body frame (will be rotated to inertial frame)

@@ -44,6 +44,7 @@
 #include "semphr.h"
 
 #include "ff.h"
+#include "diskio.h"
 #include "fatfs_sd.h"
 
 #include "deck.h"
@@ -266,16 +267,6 @@ static sdSpiContext_t sdSpiContext =
         .timer2 = 0
     };
 
-static DISKIO_LowLevelDriver_t fatDrv =
-    {
-        SD_disk_initialize,
-        SD_disk_status,
-        SD_disk_ioctl,
-        SD_disk_write,
-        SD_disk_read,
-        &sdSpiContext,
-    };
-
 
 /*-----------------------------------------------------------------------*/
 /* FATFS SPI controls (Platform dependent)                               */
@@ -355,6 +346,47 @@ static void delayMs(UINT ms)
 {
   vTaskDelay(M2T(ms));
 }
+
+/* FatFS Disk Interface */
+DSTATUS disk_initialize(BYTE pdrv)
+{
+    return SD_disk_initialize(&sdSpiContext);
+}
+
+DSTATUS disk_status(BYTE pdrv)
+{
+  return SD_disk_status(&sdSpiContext);
+}
+
+DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count)
+{
+  return SD_disk_read(buff, sector, count, &sdSpiContext);
+}
+
+DRESULT disk_write(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count)
+{
+  return SD_disk_write(buff, sector, count, &sdSpiContext);
+}
+
+DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void *buff)
+{
+  return SD_disk_ioctl(cmd, buff, &sdSpiContext);
+}
+
+/*-----------------------------------------------------------------------*/
+/* Get time for fatfs for files                                          */
+/*-----------------------------------------------------------------------*/
+__attribute__((weak)) DWORD get_fattime(void)
+{
+  /* Returns current time packed into a DWORD variable */
+  return ((DWORD)(2016 - 1980) << 25) /* Year 2016 */
+         | ((DWORD)1 << 21)           /* Month 1 */
+         | ((DWORD)1 << 16)           /* Mday 1 */
+         | ((DWORD)0 << 11)           /* Hour 0 */
+         | ((DWORD)0 << 5)            /* Min 0 */
+         | ((DWORD)0 >> 1);           /* Sec 0 */
+}
+
 /********** FS helper function ***************/
 
 // reads a line and returns the string without any whitespace/comment
@@ -408,9 +440,6 @@ static void usdInit(DeckInfo *info)
 
     logFileMutex = xSemaphoreCreateMutex();
     logBufferMutex = xSemaphoreCreateMutex();
-    /* create driver structure */
-    FATFS_AddDriver(&fatDrv, 0);
-    vTaskDelay(M2T(100));
     /* try to mount drives before creating the tasks */
     if (f_mount(&FatFs, "", 1) == FR_OK) {
       DEBUG_PRINT("mount SD-Card [OK].\n");
@@ -428,7 +457,11 @@ static void usdInit(DeckInfo *info)
 
 static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t* payload, uint8_t payloadSize)
 {
-  uint32_t ticks = xTaskGetTickCount();
+  uint64_t ticks = usecTimestamp();
+
+  if (!enableLogging) {
+    return;
+  }
 
   ++usdLogStats.eventsRequested;
 
@@ -446,7 +479,7 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
     /* write data into buffer */
     uint16_t event_id = cfg->eventId;
     ringBuffer_push(&logBuffer, &event_id, sizeof(event_id));
-    ringBuffer_push(&logBuffer, &ticks, 4);
+    ringBuffer_push(&logBuffer, &ticks, sizeof(ticks));
     if (payloadSize) {
       ringBuffer_push(&logBuffer, payload, payloadSize);
     }
@@ -646,7 +679,7 @@ static void usdLogTask(void* prm)
         vTaskResume(xHandleWriteTask);
       }
 
-      if (enableLogging && usdLogConfig.mode == usddeckLoggingMode_Asyncronous) {
+      if (enableLogging && usdLogConfig.mode == usddeckLoggingMode_Asynchronous) {
         usddeckTriggerLogging();
       }
       lastEnableLogging = enableLogging;
@@ -787,7 +820,7 @@ static void usdWriteTask(void* prm)
         uint8_t magic = 0xBC;
         usdWriteData(&magic, sizeof(magic));
         
-        uint16_t version = 1;
+        uint16_t version = 2;
         usdWriteData(&version, sizeof(version));
 
         uint16_t numEventTypes = usdLogConfig.numEventConfigs;
@@ -902,6 +935,21 @@ static void usdWriteTask(void* prm)
             xSemaphoreGive(logBufferMutex);
           }
         }
+        // write everything that's still in the buffer
+        xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+        while (true) {
+          const uint8_t *buf;
+          uint16_t size;
+          bool hasData = ringBuffer_pop_start(&logBuffer, &buf, &size);
+          if (hasData) {
+            usdWriteData(buf, size);
+            ringBuffer_pop_done(&logBuffer);
+          } else {
+            break;
+          }
+        }
+        xSemaphoreGive(logBufferMutex);
+
         // write CRC
         uint32_t crcValue = crc32Out(&crcContext);
         usdWriteData(&crcValue, sizeof(crcValue));
@@ -978,6 +1026,7 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
 PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(usd)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
 PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
 PARAM_GROUP_STOP(usd)
 

@@ -1,13 +1,13 @@
 /**
- *    ||          ____  _ __
- * +------+      / __ )(_) /_______________ _____  ___
- * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
- * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
- *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ * ,---------,       ____  _ __
+ * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
+ * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2021 Bitcraze AB
+ * Copyright (C) 2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +21,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * estimator_complementary.h - Complementary estimator interfaced
+ *
+ * deck_memory.h - interface for reading/writing deck memory and updating
+ *                 firmware and binary data on decks, using the memory
+ *                 subsystem.
+ *
  */
+
 #pragma once
 
-#include "stabilizer_types.h"
+#include <stdbool.h>
+#include <stdint.h>
 
-void estimatorComplementaryInit(void);
-bool estimatorComplementaryTest(void);
-void estimatorComplementary(state_t *state, sensorData_t *sensors, const uint32_t tick);
-
-bool estimatorComplementaryEnqueueTOF(const tofMeasurement_t *tof);
+void deckMemoryInit();

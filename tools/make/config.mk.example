@@ -102,9 +102,6 @@
 ## SDCard test configuration ------------------------------------
 # FATFS_DISKIO_TESTS  = 1	# Set to 1 to enable FatFS diskio function tests. Erases card.
 
-## To build with lighthouse support
-# CFLAGS += -DDISABLE_LIGHTHOUSE_DRIVER=0
-
 ## Brushless handling
 # Start disarmed, needs to be armed before being able to fly
 # CFLAGS += -DSTART_DISARMED

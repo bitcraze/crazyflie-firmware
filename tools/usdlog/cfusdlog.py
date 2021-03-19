@@ -31,8 +31,8 @@ def decode(filename):
 
     # check version
     version, num_event_types = struct.unpack('HH', data[1:5])
-    if version != 1:
-        print("Unsupported version!")
+    if version != 1 and version != 2:
+        print("Unsupported version!", version)
         return
 
     result = dict()
@@ -65,8 +65,13 @@ def decode(filename):
             }
 
     while idx < len(data) - 4:
-        event_id, timestamp, = struct.unpack('<HI', data[idx:idx+6])
-        idx += 6
+        if version == 1:
+            event_id, timestamp, = struct.unpack('<HI', data[idx:idx+6])
+            idx += 6
+        elif version == 2:
+            event_id, timestamp, = struct.unpack('<HQ', data[idx:idx+10])
+            timestamp = timestamp / 1000.0
+            idx += 10
         event = event_by_id[event_id]
         fmtStr = event['fmtStr']
         eventData = struct.unpack(fmtStr, data[idx:idx+event['numBytes']])

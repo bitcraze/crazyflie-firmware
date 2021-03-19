@@ -33,3 +33,4 @@ initiated from a client.
 * [uSD card - MEM_TYPE_USD](MEM_TYPE_USD.md)
 * [LED ring timing - MEM_TYPE_LEDMEM](MEM_TYPE_LEDMEM.md)
 * [Generic application memory - MEM_TYPE_APP](MEM_TYPE_APP.md)
+* [Deck memory - MEM_TYPE_DECK_MEM](MEM_TYPE_DECK_MEM.md)

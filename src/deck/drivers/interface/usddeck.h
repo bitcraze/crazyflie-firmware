@@ -8,7 +8,7 @@ enum usddeckLoggingMode_e
 {
   usddeckLoggingMode_Disabled = 0,
   usddeckLoggingMode_SynchronousStabilizer,
-  usddeckLoggingMode_Asyncronous,
+  usddeckLoggingMode_Asynchronous,
 };
 
 // returns true if logging is enabled

@@ -21,7 +21,7 @@ EVENTTRIGGER(myEvent, uint8, var1, float var2)
 ```
 
 The EVENTTRIGGER macro is variadic, i.e. it can take a varying number of arguments. It is also valid to have a event trigger without any payload.
-Internally, the macro generates code that declares several static variables. Details can be found in [eventtrigger.h](/src/modules/interface/eventtrigger.h).
+Internally, the macro generates code that declares several static variables. Details can be found in [eventtrigger.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/eventtrigger.h).
 
 Once the event trigger is defined, it can be triggered anywhere in the source code of the same *.c file:
 
