@@ -109,4 +109,6 @@ def system_id(filenames, validations=[]):
     print("e01: " + str(reg.coef_[1]))
     print("score = " + str(reg.score(Input, maxThrust)))
 
-system_id(["cf3_1.csv", "cf3_2.csv"], validations=["cf3_1.csv", "cf3_2.csv"])
+
+system_id(["data_max_thrust_brushless01.csv", "data_max_thrust_brushless03.csv"],
+          validations=["data_max_thrust_brushless01.csv"])

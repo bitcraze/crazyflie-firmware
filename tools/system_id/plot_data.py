@@ -13,28 +13,28 @@ if __name__ == '__main__':
     vbat = data[:,2]        # V, battery voltage, 
     rpm = np.mean(data[:,3:7],axis=1) # average over all motors
 
-    # fig,ax = plt.subplots(2)
+    fig,ax = plt.subplots(2)
 
-    # ax[0].plot(data[:,4] - data[:,3], label='M2-M1')
-    # ax[0].plot(data[:,5] - data[:,3], label='M3-M1')
-    # ax[0].plot(data[:,6] - data[:,3], label='M4-M1')
-    # ax[0].set_xlabel('Time')
-    # ax[0].set_ylabel('Relative RPM')
-    # ax[0].legend()
+    ax[0].plot(data[:,4] - data[:,3], label='M2-M1')
+    ax[0].plot(data[:,5] - data[:,3], label='M3-M1')
+    ax[0].plot(data[:,6] - data[:,3], label='M4-M1')
+    ax[0].set_xlabel('Time')
+    ax[0].set_ylabel('Relative RPM')
+    ax[0].legend()
 
-    # ax[1].plot(rpm, thrust)
-    # ax[1].set_xlabel('RPM')
-    # ax[1].set_ylabel('Thrust [g]')
+    ax[1].plot(rpm, thrust)
+    ax[1].set_xlabel('RPM')
+    ax[1].set_ylabel('Thrust [g]')
 
-    # z = np.polyfit(rpm, thrust, 2)
-    # p = np.poly1d(z)
+    z = np.polyfit(rpm, thrust, 2)
+    p = np.poly1d(z)
 
-    # xp = np.linspace(np.min(rpm), np.max(rpm), 100)
+    xp = np.linspace(np.min(rpm), np.max(rpm), 100)
 
-    # ax[1].plot(xp, p(xp), '--')
-    # ax[1].set_title("thrust [g] = {} * rpm^2 + {} * rpm + {}".format(z[0], z[1], z[2]))
+    ax[1].plot(xp, p(xp), '--')
+    ax[1].set_title("thrust [g] = {} * rpm^2 + {} * rpm + {}".format(z[0], z[1], z[2]))
 
-    # plt.show()
+    plt.show()
 
     fig, ax = plt.subplots()
 

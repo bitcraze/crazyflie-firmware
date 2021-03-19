@@ -121,7 +121,7 @@ class CollectData:
 
     def _ramp_motors(self):
         thrust_mult = 1
-        thrust_step = 100
+        thrust_step = 200
         time_step = 0.1
         thrust = 0
         pitch = 0
@@ -137,10 +137,12 @@ class CollectData:
         self._cf.param.set_value('motor.batCompensation', 0)
         self._cf.param.set_value('motorPowerSet.m1', 0)
         self._cf.param.set_value('motorPowerSet.enable', 2)
+        self._cf.param.set_value('system.forceArm', 1)
 
         while self.is_connected: #thrust >= 0:
             thrust += thrust_step * thrust_mult
             if thrust >= 65536 or thrust < 0:
+            # if thrust >= 20000 or thrust < 0:
                 thrust_mult *= -1
                 thrust += thrust_step * thrust_mult
             print(thrust)

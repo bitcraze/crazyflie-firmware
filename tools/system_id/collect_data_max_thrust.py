@@ -1,18 +1,18 @@
 """
 Example that uses a load cell to measure thrust using different RPMs
 """
+import argparse
 import logging
 import time
-from threading import Timer
 from threading import Thread
 import numpy as np
+import yaml
 
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.localization import Localization
 
-import calibScale
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
@@ -140,10 +140,11 @@ class CollectData:
         self._cf.param.set_value('motor.batCompensation', 0)
         self._cf.param.set_value('motorPowerSet.m1', 0)
         self._cf.param.set_value('motorPowerSet.enable', 2)
+        self._cf.param.set_value('system.forceArm', 1)
 
         while self.is_connected: #thrust >= 0:
             # randomply sample PWM
-            thrust = int(np.random.uniform(30000, 65535))
+            thrust = int(np.random.uniform(15000, 65535))
             measurements = self._measure(thrust)
             # print(measurements)
             achievedThrust = np.mean(measurements[:,0])
@@ -176,22 +177,24 @@ class CollectData:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--calibration", default="calibration.yaml", help="Input file containing the calibration")
+    parser.add_argument("--uri", default="radio://0/42/2M/E7E7E7E7E7", help="URI of Crazyflie")
+    args = parser.parse_args()
+
+    # Only output errors from the logging framework
+    logging.basicConfig(level=logging.ERROR)
+
     # Initialize the low-level drivers (don't list the debug drivers)
     cflib.crtp.init_drivers(enable_debug_driver=False)
 
-    uri = "radio://0/42/2M/E7E7E7E7E7"
-
-    # # calibrate the scale
-    # le = calibScale.CalibScale(uri)
-
-    # while not le.is_connected:
-    #     time.sleep(0.1)
-
-    # a, b = le.measure()
-    a,b = 0.0006567048912693716, -25.86591793553
+    with open(args.calibration, 'r') as f:
+        r = yaml.safe_load(f)
+        a = r['a']
+        b = r['b']
 
     # collect data
-    le = CollectData(uri, a, b)
+    le = CollectData(args.uri, a, b)
 
     # The Crazyflie lib doesn't contain anything to keep the application alive,
     # so this is where your application should do something. In our case we

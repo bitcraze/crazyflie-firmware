@@ -40,22 +40,23 @@ u_pred = np.array(u_pred)
 
 fig, ax1 = plt.subplots()
 
-# ax1.plot((data[:,0] - data[0,0])/1e3, data[:,1], 'b', label="Load cell")
-# ax2 = ax1.twinx()
-# ax2.plot((data[:,0] - data[0,0])/1e3, data[:,2], 'g', label="PWM")
+ax1.plot((data[:,0] - data[0,0])/1e3, data[:,1], 'b', label="Load cell")
+ax2 = ax1.twinx()
+ax2.plot((data[:,0] - data[0,0])/1e3, data[:,2], 'g', label="PWM")
 
 # ax1.plot((data[:,0] - data[0,0])/1e3, u_pred, 'r', label="Prediction")
 
-ax1.plot((data[:,0] - data[0,0])/1e3, data[:,1], 'b', label="Load cell")
+# ax1.plot((data[:,0] - data[0,0])/1e3, data[:,1], 'b', label="Load cell")
 
-# compute f desired from pwm
-f_des = []
-for i in range(0, data.shape[0]):
-	f_des.append(pwm2force(data[i,2], data[i,3]) * 4)
-f_des = np.array(f_des)
+# # compute f desired from pwm
+# f_des = []
+# for i in range(0, data.shape[0]):
+# 	f_des.append(pwm2force(data[i,2], data[i,3]) * 4)
+# f_des = np.array(f_des)
 
-ax1.plot((data[:,0] - data[0,0])/1e3, f_des, 'g', label="Desired")
-ax1.plot((data[:,0] - data[0,0])/1e3, u_pred, 'r', label="Prediction")
+# ax1.plot((data[:,0] - data[0,0])/1e3, f_des, 'g', label="Desired")
+# ax1.plot((data[:,0] - data[0,0])/1e3, u_pred, 'r', label="Prediction")
+# ax1.plot((data[:, 0] - data[0, 0])/1e3, data[:, 2], 'r', label="PWM")
 
 
 ax1.legend()

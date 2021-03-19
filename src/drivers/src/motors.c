@@ -246,7 +246,6 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
         percentage = percentage > 1.0f ? 1.0f : percentage;
         ratio = percentage * UINT16_MAX;
       }
-      motor_ratios[id] = ratio;
     }
 
     if (motorMap[id]->drvType == BRUSHLESS)
@@ -257,6 +256,7 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
     }
+    motor_ratios[id] = ratio;
   }
 }
 
