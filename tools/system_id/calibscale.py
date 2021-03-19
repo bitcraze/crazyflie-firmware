@@ -1,10 +1,10 @@
 """
-Example that uses a load cell to measure thrust using different RPMs
+Calibrate load cell
 """
+import argparse
 import logging
 import time
-# from threading import Timer
-# from threading import Thread
+import yaml
 
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
@@ -13,8 +13,6 @@ from cflib.crazyflie.log import LogConfig
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Only output errors from the logging framework
-logging.basicConfig(level=logging.ERROR)
 
 class CalibScale:
     def __init__(self, link_uri):
@@ -121,11 +119,27 @@ class CalibScale:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", default="calibration.yaml", help="Output file containing the calibration")
+    parser.add_argument("--uri", default="radio://0/42/2M/E7E7E7E7E7", help="URI of Crazyflie")
+    args = parser.parse_args()
+
+    # Only output errors from the logging framework
+    logging.basicConfig(level=logging.ERROR)
+    
     # Initialize the low-level drivers (don't list the debug drivers)
     cflib.crtp.init_drivers(enable_debug_driver=False)
-    le = CalibScale("radio://0/42/2M/E7E7E7E7E7")
+    le = CalibScale(args.uri)
 
     while not le.is_connected:
         time.sleep(0.1)
 
-    print(le.measure())
+    a,b = le.measure()
+    result = dict()
+    result['a'] = a
+    result['b'] = b
+
+    with open(args.output, 'w') as yaml_file:
+        yaml.dump(result, yaml_file)
+
+

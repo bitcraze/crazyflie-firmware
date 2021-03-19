@@ -155,15 +155,15 @@ if __name__ == '__main__':
 
     uri = "radio://0/42/2M/E7E7E7E7E7"
 
-    # # calibrate the scale
-    # le = calibScale.CalibScale(uri)
+    # calibrate the scale
+    le = calibScale.CalibScale(uri)
 
-    # while not le.is_connected:
-    #     time.sleep(0.1)
+    while not le.is_connected:
+        time.sleep(0.1)
 
-    # a, b = le.measure()
+    a, b = le.measure()
 
-    a, b = 0.0006567048912693716, -25.86591793553
+    # a, b = 0.0006567048912693716, -25.86591793553
 
     # collect data
     le = CollectData(uri, a, b)

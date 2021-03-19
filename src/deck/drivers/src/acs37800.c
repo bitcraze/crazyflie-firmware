@@ -75,7 +75,7 @@
 /**
  * The magic scale factors that are measured and does not correspond at all to the datasheet...
  */
-#define SCALE_V             (27.23f)
+#define SCALE_V             (24.85f)
 #define SCALE_I             (17.03f)
 
 

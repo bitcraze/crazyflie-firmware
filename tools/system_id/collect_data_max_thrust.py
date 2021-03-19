@@ -57,7 +57,7 @@ class CollectData:
         self._cf.param.set_value('loadcell.b', str(self.calib_b))
 
         self._file = open("data.csv", "w+")
-        self._file.write("thrust[g],pwm,vbat[V],maxThrust[g],maxThrustVbat[V]\n");
+        self._file.write("thrust[g],pwm,vbat[V],maxThrust[g],maxThrustVbat[V],rpm\n");
 
         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='data', period_in_ms=10)
@@ -181,14 +181,14 @@ if __name__ == '__main__':
 
     uri = "radio://0/42/2M/E7E7E7E7E7"
 
-    # calibrate the scale
-    le = calibScale.CalibScale(uri)
+    # # calibrate the scale
+    # le = calibScale.CalibScale(uri)
 
-    while not le.is_connected:
-        time.sleep(0.1)
+    # while not le.is_connected:
+    #     time.sleep(0.1)
 
-    a, b = le.measure()
-    # a,b = 4.046543357726483e-05, -29.212331441036078
+    # a, b = le.measure()
+    a,b = 0.0006567048912693716, -25.86591793553
 
     # collect data
     le = CollectData(uri, a, b)
