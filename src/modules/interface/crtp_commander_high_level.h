@@ -32,9 +32,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/*
-Header file for high-level commander that computes smooth setpoints based on high-level inputs.
-*/
+/**
+ * @file crtp_commander_high_level.h
+ * @brief High-level commander that computes smooth setpoints based on high-level inputs.
+ *
+ * @ingroup modules
+ */
 
 #ifndef CRTP_COMMANDER_HIGH_LEVEL_H_
 #define CRTP_COMMANDER_HIGH_LEVEL_H_

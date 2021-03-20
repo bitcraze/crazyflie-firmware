@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,7 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * mem.h - Memory sub system
+ */
+/**
+ * @file mem.h 
+ * @brief Memory management for different subsystems of the firmware
+ *
+ * @see MemoryType_t
  */
 
 #pragma once

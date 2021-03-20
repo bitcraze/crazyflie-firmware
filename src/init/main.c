@@ -26,14 +26,16 @@
  * @file main.c 
  * @brief Contains the main function that initializes all tasks and starts the scheduler.
  *
+ * @ingroup system
+ *
+ * @defgroup appLayer         app layer to easily build higher-level apps on top of the firmware
+ * @defgroup flightControl    flight path planning, position control
  * @defgroup modules          high level functionalities and logging
  * @defgroup decks            expansion decks
- * @defgroup system           hardware drivers, operating system, platform 
- * @defgroup crtp             crazyradio
- * @defgroup flightControl    flight path planning, position control
  * @defgroup stateEstimation  state estimation, flight stabilization
+ * @defgroup system           hardware, drivers, operating system, platform
+ * @defgroup crtp             crazyradio
  *
- * @ingroup system
  */
 
 /** @mainpage Crazyflie firmware documentation
@@ -52,8 +54,8 @@
  * Reader's guide to the firmware
  * ------------------------------
  *
- * If you are completely new to the firmware, we recommend you take a look at the following
- * main parts of the system first: 
+ * If you are completely new to the firmware, and you would like an overview, we recommend you take 
+ * a look at the following main parts of the system first: 
  *
  *      systemTask()
  *      stabilizerTask()
@@ -74,16 +76,16 @@
  * the system. Check out appInit() and appTask() and the [documentation on the app layer here]
  * (https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/userguides/app_layer/).
  *
- * If you're interested in higher-level planning, check out the _trajectory planner_ in planner.h.
- * The firmware also contains functionality for _on-board collision avoidance_ between two or more
- * crazyflies -- see collision_avoidance.h. The module sitaw.h provides _situational awareness for
- * tumbling, free fall or at rest_ based on IMU data.
+ * If you're interested in higher-level planning, check out the __trajectory planner__ in planner.h.
+ * The firmware also contains functionality for __on-board collision avoidance__ between two or more
+ * crazyflies -- see collision_avoidance.h. The module sitaw.h provides __situational awareness for
+ * tumbling, free fall or at rest__ based on IMU data.
  *
  * The path from sensor aquisition to the Python running on your notebook
  * ----------------------------------------------------------------------
  *
  * If you want to follow the flow of data from sensor readings all the way to your desktop or
- * notebook computer, you could use the multiranger deck as an example.
+ * notebook computer, we recommend you use the multiranger deck as an example.
  *
  * Check out mrTask() in multiranger.c -- this is the RTOS task regularly querying the hardware driver
  * for updated raw sensor readings. mrTask() uses rangeSet() in range.c to make the readings available.
@@ -91,6 +93,15 @@
  * available for the [logging system](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/userguides/logparam/). 
  * As soon as a variable is logged and registered in the logging systems' table of contents, the 
  * logTask() continously sends its content via crazyradio. 
+ *
+ * Interesting projects that found their way into the firmware
+ * -----------------------------------------------------------
+ * 
+ * The firmware has grown functionality not least thanks to a great ecosystem of control software.
+ * It might be helpful to know how some components came to be:
+ *
+ *  - Crazyswarm 
+ *  - ... 
  *
  *
  */

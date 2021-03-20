@@ -22,7 +22,13 @@
  * You should have received a copy of the GNU General Public License
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
-/* app.h: App layer API */
+
+/**
+ * @file app.h
+ * @brief App layer API
+ * @ingroup appLayer
+ */
+ 
 #pragma once
 
 /**
@@ -32,11 +38,19 @@
  * that creates a task and calls appMain() when the system is started.
  * 
  * Implementation can be overwriten.
+ *
+ * @see appMain()
+ * @see systemInit()
  */
 void appInit();
 
 /**
- * app main function, called when the Crazyflie has started from within a task created
+ * App main function, called when the Crazyflie has started from within a task created
  * by appInit().
+ *
+ * This is where your app code goes.
+ *
+ * @see appInit()
+ * @see appTask()
  */
 void appMain();

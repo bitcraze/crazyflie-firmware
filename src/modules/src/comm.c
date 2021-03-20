@@ -20,8 +20,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+ /**
+ * @file comm.c
+ * @brief High level communication module
  *
- * comm.c - High level communication module
+ * @ingroup system
+ *
+ * @see crtp.h
+ *
  */
 
 #include <stdbool.h>

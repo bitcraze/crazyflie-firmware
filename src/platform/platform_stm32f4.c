@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,7 +21,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * Platform functionality for platforms using the STM32
+ * 
+ *
+ */
+
+ /**
+ * @file platform_stm32f4.c
+ * @brief Platform functionality for platforms using the STM32
+ *
+ * @ingroup system
  *
  */
 

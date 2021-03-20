@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __  ______
  * +------+      / __ )(_) /_/ ____/_________ _____  ___
  * | 0xBC |     / __  / / __/ /    / ___/ __ `/_  / / _	\
@@ -21,6 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
+ */
+
+/**
+ * @file crtp_localization_service.h
+ * @brief xyz
+ *
+ * @ingroup crtp
  */
 
 #ifndef _CRTP_LOCALIZATION_SERVICE_H_
