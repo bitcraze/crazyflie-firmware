@@ -72,13 +72,6 @@
 #define ACS_ACCESS_CODE     0x4F70656E
 
 
-/**
- * The magic scale factors that are measured and does not correspond at all to the datasheet...
- */
-#define SCALE_V             (24.85f)
-#define SCALE_I             (17.03f)
-
-
 static bool isInit;
 static uint32_t viBatRaw;
 static uint32_t viBatRMS;
@@ -90,7 +83,9 @@ static float iBat;
 static float iBatRMS;
 static float iavgBat;
 static uint32_t pBatRaw;
+static uint32_t pavgBatRaw;
 static float pBat;
+static float pavgBat;
 
 static uint16_t currZtrim, currZtrimOld;
 
@@ -216,11 +211,10 @@ static void asc37800Init(DeckInfo *info)
 
   // Enable bypass in shadow reg and set N to 32.
   asc37800Write32(ACSREG_S_IO_SEL, (1 << 24) | (32 << 14) | (0x01 << 9) |  (0x7F << 2));
-  // Set current and voltage for averaging and keep device specific (trim) settings.
+  // Set current and power for averaging and keep device specific (trim) settings.
   asc37800Read32(ACSREG_S_TRIM, &val);
   currZtrim = currZtrimOld = val & 0xFF;
-  asc37800Write32(ACSREG_S_TRIM, (val | (0 << 23) | (1 << 22)));
-//  asc37800Write32(ACSREG_S_TRIM, ((0 << 23) | (1 << 22) | 20));
+  asc37800Write32(ACSREG_S_TRIM, (val | (1 << 23) | (1 << 22)));
   // Set average to 10 samples. (ASC37800 sample rate 1khz)
   asc37800Write32(ACSREG_S_OFFS_AVG, ((10 << 7) | (10 << 0)));
 
@@ -254,16 +248,18 @@ static void asc37800Task(void* prm)
 
     asc37800Read32(ACSREG_I_V_CODES, &viBatRaw);
     asc37800Read32(ACSREG_I_V_RMS, &viBatRMS);
-    asc37800Read32(ACSREG_P_ACTIVE, &pBatRaw);
     asc37800Read32(ACSREG_VRMS_AVGS, &vavgBatRMS);
+    asc37800Read32(ACSREG_P_INSTANT, &pBatRaw);
+    asc37800Read32(ACSREG_P_ACT_AVGS, &pavgBatRaw);
 
-    vBat = convertUnsignedFixedPoint((viBatRaw & 0xFFFF), 15, 16);
-    iBat = convertSignedFixedPoint((viBatRaw >> 16 & 0xFFFF), 15, 16);
-    vBatRMS = SCALE_V * convertUnsignedFixedPoint((viBatRMS & 0xFFFF), 16, 16);
-    iBatRMS = SCALE_I * convertSignedFixedPoint((viBatRMS >> 16 & 0xFFFF), 16, 16);
-    vavgBat = SCALE_V * convertSignedFixedPoint((vavgBatRMS & 0xFFFF), 16, 16);
-    iavgBat = SCALE_I * convertSignedFixedPoint((vavgBatRMS >> 16 & 0xFFFF), 16, 16);
-    pBat = convertSignedFixedPoint((pBatRaw & 0xFFFF), 15, 16);
+    vBat = (int16_t)(viBatRaw & 0xFFFF) / 27500.0 * 0.250 * 92;
+    iBat = (int16_t)(viBatRaw >> 16 & 0xFFFF) / 27500.0 * 30.0;
+    vBatRMS = (uint16_t)(viBatRMS & 0xFFFF) / 55000.0 * 0.250 * 92;
+    iBatRMS = (uint16_t)(viBatRMS >> 16 & 0xFFFF) / 55000.0 * 30.0;
+    vavgBat = (uint16_t)(vavgBatRMS & 0xFFFF) / 55000.0 * 0.250 * 92;
+    iavgBat = (uint16_t)(vavgBatRMS >> 16 & 0xFFFF) / 55000.0 * 30.0;
+    pBat = (int16_t)(pBatRaw & 0xFFFF) / 3.08 * 92 / 1000.0;
+    pavgBat = (int16_t)(pavgBatRaw & 0xFFFF) / 3.08 * 92 / 1000.0;
 
     if (currZtrimOld != currZtrim)
     {
@@ -310,4 +306,5 @@ LOG_ADD(LOG_FLOAT, i, &iBat)
 LOG_ADD(LOG_FLOAT, iRMS, &iBatRMS)
 LOG_ADD(LOG_FLOAT, i_avg, &iavgBat)
 LOG_ADD(LOG_FLOAT, p, &pBat)
+LOG_ADD(LOG_FLOAT, p_avg, &pavgBat)
 LOG_GROUP_STOP(asc37800)
