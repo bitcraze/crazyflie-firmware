@@ -24,8 +24,10 @@ current_platform.mk
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache
+
 /.vs
 /Debug
 docs/auto
-
 firmware.code-workspace
+Debug/crazyflie-firmware.vcxprojAssemblyReference.cache
+
