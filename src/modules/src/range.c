@@ -23,7 +23,7 @@
  */
 
 /**
- * @file ranges.c
+ * @file range.c
  * @brief Centralize range measurements for different directions and make them available as log entries
  */
 

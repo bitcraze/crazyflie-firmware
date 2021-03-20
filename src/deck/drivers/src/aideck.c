@@ -22,8 +22,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** @file aideck.c Deck driver for the AIdeck
+/** @file aideck.c 
+ *  @brief Deck driver for the AIdeck
  * 
+ *  @ingroup decks
  */
 
 #define DEBUG_MODULE "AIDECK"

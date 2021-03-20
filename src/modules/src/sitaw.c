@@ -25,7 +25,7 @@
 
  /**
  * @file sitAw.c 
- * @brief Implementation of situation awareness.
+ * @brief Situation awareness for free fall, tumbling and at-rest
  *
  * @see trigger.c
  *

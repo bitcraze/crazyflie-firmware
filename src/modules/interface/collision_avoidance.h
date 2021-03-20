@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -20,8 +20,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file collision_avoidance.h 
+ * @brief Collision avoidance for multiple Crazyflies
  *
- * collision_avoidance.h - Collision avoidance for multiple Crazyflies.
  * Uses the buffered Voronoi collision avoidance algorithm:
  *
  *   Zhou, Dingjiang, et al. "Fast, on-line collision avoidance for dynamic
@@ -29,6 +33,9 @@
  *   Letters 2.2 (2017): 1047-1054.
  *
  * Original author: James A. Preiss, University of Southern California, 2020.
+ *
+ * @ingroup modules
+ *
  */
 #ifndef __COLLISION_AVOIDANCE_H__
 #define __COLLISION_AVOIDANCE_H__
@@ -38,9 +45,11 @@
 #include "stabilizer_types.h"
 
 
-// Algorithm parameters. They can be changed online by the user,
-// but the algorithm will never mutate them.
-
+/**
+ * @typedef collision_avoidance_params_s 
+ * Algorithm parameters. They can be changed online by the user,
+ * but the algorithm will never mutate them.
+ */
 typedef struct collision_avoidance_params_s
 {
   // The Crazyflie's boundary for collision checking is a tall ellipsoid.

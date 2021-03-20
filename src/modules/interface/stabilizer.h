@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -20,8 +20,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file stabilizer.h
+ * @brief Orchestrates stabiliziation
  *
- * stabilizer.h: Stabilizer orchestrator
+ * 
  */
 #ifndef STABILIZER_H_
 #define STABILIZER_H_

@@ -25,7 +25,7 @@
 
  /**
   * @file deck_info.c 
-  * @brief Functions to decode the decks oneWire memory content
+  * @brief Functions to decode the decks' oneWire memory content.
   */
 
 #include <stdlib.h>

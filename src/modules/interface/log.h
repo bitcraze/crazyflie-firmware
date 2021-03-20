@@ -25,6 +25,8 @@
 /**
  * @file log.h 
  * @brief Dynamic log system
+ * @ingroup modules
+ *
  * 
  * Example of use: let's take the multiranger deck. It logs to the log group 'range'. This group contains
  * measurements for 'up', 'left' etc. You can see what groups and variables are defined in the respective modules;

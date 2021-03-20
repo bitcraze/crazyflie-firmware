@@ -26,9 +26,12 @@
  * @file main.c 
  * @brief Contains the main function that initializes all tasks and starts the scheduler.
  *
- * @defgroup modules
- * @defgroup decks
- * @defgroup system
+ * @defgroup modules          high level functionalities and logging
+ * @defgroup decks            expansion decks
+ * @defgroup system           hardware drivers, operating system, platform 
+ * @defgroup crtp             crazyradio
+ * @defgroup flightControl    flight path planning, position control
+ * @defgroup stateEstimation  state estimation, flight stabilization
  *
  * @ingroup system
  */
@@ -71,6 +74,10 @@
  * the system. Check out appInit() and appTask() and the [documentation on the app layer here]
  * (https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/userguides/app_layer/).
  *
+ * If you're interested in higher-level planning, check out the _trajectory planner_ in planner.h.
+ * The firmware also contains functionality for _on-board collision avoidance_ between two or more
+ * crazyflies -- see collision_avoidance.h. The module sitaw.h provides _situational awareness for
+ * tumbling, free fall or at rest_ based on IMU data.
  *
  * The path from sensor aquisition to the Python running on your notebook
  * ----------------------------------------------------------------------

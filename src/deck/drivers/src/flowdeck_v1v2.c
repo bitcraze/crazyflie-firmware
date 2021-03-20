@@ -22,7 +22,24 @@
  * You should have received a copy of the GNU General Public License
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
-/* flowdeck.c: Flow deck driver */
+
+/**
+ * @file flowdeck.c
+ * @brief Flow deck driver 
+ *
+ * Note that the flow deck contains two sensors: the VL53L1 tof distance sensor
+ * to get z-axis distances to the ground; and the PMW3901 motion capture sensor
+ * to sense motion along the x-y plane.
+ *
+ * The VL53L1 is run by the driver in zranger2.c; check out the log group defined
+ * in range.c to access its measurements.
+ *
+ * The PMW3901 is run by the driver in this file; its measurements are stored in 
+ * the log group 'motion' defined here.
+ *
+ * @see range.c
+ * @see zranger2.c
+ */
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -207,6 +224,7 @@ static const DeckDriver flowdeck1_deck = {
 };
 
 DECK_DRIVER(flowdeck1_deck);
+
 
 static void flowdeck2Init()
 {

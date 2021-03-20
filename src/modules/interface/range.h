@@ -27,7 +27,16 @@
  * @file range.h
  * @brief Centralize range measurements for different directions and make them available as log entries
  * 
+ * This module bundles a variety of distance measurements from different decks and sensors into a single
+ * API and log group:
+ *
+ *  - multiranger deck distance up, left, front, right, back
+ *  - flowdeck's distance-to-ground    
+ *  - zranger deck distance-to-ground
+ *
  * @see multiranger.c
+ * @see flowdeck_v1v2.c
+ * @see zranger2.c
  * @see log.h
  */
 

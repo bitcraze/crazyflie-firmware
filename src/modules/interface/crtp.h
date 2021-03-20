@@ -1,4 +1,4 @@
-/**
+/*
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -21,7 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * crtp.h - CrazyRealtimeTransferProtocol stack
+ */
+
+/**
+ * @file crtp.h
+ * @brief CrazyRealtimeTransferProtocol stack
+ *
+ * @ingroup crtp
  */
 
 #ifndef CRTP_H_

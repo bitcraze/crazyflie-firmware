@@ -24,9 +24,11 @@
 
  /**
   * @file sitaw.h 
-  * @brief Interface to situational awareness
+  * @brief Detect free fall, tumbling and at-rest
   *
-  *   Detect free fall, at rest and tumbling
+  * Situational awareness driven by the on-board IMU sensor. When activated, you can 'throw' your 
+  * crazyflie into the air and the motors will automatically start to stabilize the flie! Ok, be
+  * reasonable how you throw it ;-).
   *
   * @ingroup modules
   */

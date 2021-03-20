@@ -20,8 +20,20 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file   platform_cf2.c
+ * @brief  Platform functionality for the CF2 platform
  *
- * Platform functionality for the CF2 platform
+ * The platform is the basic hardware/sensor configuration for a crazyflie 2.
+ * Check out the type platformConfig_t to see the different platforms - from 
+ * the Crazyflie 2 to Crazyflie bolt.
+ *
+ * @ingroup system
+ *
+ * @see platformInit()
+ * @see platformConfig_t
  */
 
 #define DEBUG_MODULE "PLATFORM"
@@ -33,6 +45,14 @@
 #include "nvic.h"
 #include "debug.h"
 
+/**
+ * @brief List of platform configurations of the Crazyflie 2 platform
+ *
+ * Contains information on sensor outfits, antenna positioning,
+ * the motor map etc. 
+ *
+ * @see platformConfig_t
+ */
 static platformConfig_t configs[] = {
   {
     .deviceType = "CF20",

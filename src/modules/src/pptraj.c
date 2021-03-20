@@ -32,10 +32,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/*
-implementation of piecewise polynomial trajectories
-See Daniel Mellinger, Vijay Kumar: "Minimum snap trajectory generation and control for quadrotors". ICRA 2011: 2520-2525
-*/
+/**
+ * @file pptraj.c
+ * @brief Implementation of piecewise polynomial trajectories
+ *
+ * This module is mainly thought to go together with the [Crazyswarm project](https://github.com/USC-ACTLab/crazyswarm).
+ * See Daniel Mellinger, Vijay Kumar: "Minimum snap trajectory generation and control for quadrotors". ICRA 2011: 2520-2525 
+ *
+ * @ingroup modules
+ */
 
 #include "pptraj.h"
 

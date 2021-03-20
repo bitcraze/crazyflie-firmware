@@ -32,9 +32,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/*
-Header file for planning state machine
-*/
+/**
+ * @file planner.h
+ * @brief Planning state machine
+ * 
+ * 
+ * @ingroup flightControl
+ *
+ */
 
 #pragma once
 
