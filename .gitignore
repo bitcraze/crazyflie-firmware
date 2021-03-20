@@ -24,3 +24,9 @@ current_platform.mk
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache
+
+docs/auto/html/
+
+.vs/
+
+Debug/crazyflie-firmware.vcxprojAssemblyReference.cache
