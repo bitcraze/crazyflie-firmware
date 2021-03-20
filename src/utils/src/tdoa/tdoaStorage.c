@@ -192,19 +192,34 @@ double tdoaStorageGetClockCorrection(const tdoaAnchorContext_t* anchorCtx) {
 }
 
 int64_t tdoaStorageGetRemoteRxTime(const tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor) {
+  int64_t rxTime;
+  uint8_t seqNr;
+
+  const bool foundAnchor = tdoaStorageGetRemoteRxTimeSeqNr(anchorCtx, remoteAnchor, &rxTime, &seqNr);
+  if (foundAnchor) {
+    return rxTime;
+  }
+
+  return 0;
+}
+
+bool tdoaStorageGetRemoteRxTimeSeqNr(const tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, int64_t* rxTime, uint8_t* seqNr) {
   const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
+  bool result = false;
 
   for (int i = 0; i < REMOTE_ANCHOR_DATA_COUNT; i++) {
     if (remoteAnchor == anchorInfo->remoteAnchorData[i].id) {
       uint32_t now = anchorCtx->currentTime_ms;
       if (anchorInfo->remoteAnchorData[i].endOfLife > now) {
-        return anchorInfo->remoteAnchorData[i].rxTime;
+        *rxTime = anchorInfo->remoteAnchorData[i].rxTime;
+        *seqNr = anchorInfo->remoteAnchorData[i].seqNr;
+        result = true;
       }
       break;
     }
   }
 
-  return 0;
+  return result;
 }
 
 void tdoaStorageSetRemoteRxTime(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr) {

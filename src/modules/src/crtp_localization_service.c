@@ -38,7 +38,7 @@
 #include "stabilizer.h"
 #include "configblock.h"
 #include "worker.h"
-#include "lighthouse_core.h"
+#include "lighthouse_storage.h"
 
 #include "locodeck.h"
 
@@ -215,6 +215,7 @@ static void lpsShortLppPacketHandler(CRTPPacket* pk) {
     pk->size = 3;
     pk->data[0] = LPS_SHORT_LPP_PACKET;
     pk->data[2] = success?1:0;
+    // This is best effort, i.e. the blocking version is not needed
     crtpSendPacket(pk);
   }
 }
@@ -238,7 +239,7 @@ static void lhPersistDataWorker(void* arg) {
     uint16_t mask = 1 << baseStation;
     bool storeGeo = (args->geoDataBsField & mask) != 0;
     bool storeCalibration = (args->calibrationDataBsField & mask) != 0;
-    if (! lighthouseCorePersistData(baseStation, storeGeo, storeCalibration)) {
+    if (! lighthouseStoragePersistData(baseStation, storeGeo, storeCalibration)) {
       result = false;
       break;
     }
@@ -251,7 +252,7 @@ static void lhPersistDataWorker(void* arg) {
     .data = {LH_PERSIST_DATA, result}
   };
 
-  crtpSendPacket(&response);
+  crtpSendPacketBlock(&response);
 }
 
 static void lhPersistDataHandler(CRTPPacket* pk) {
@@ -328,6 +329,7 @@ void locSrvSendRangeFloat(uint8_t id, float range)
       pkRange.port = CRTP_PORT_LOCALIZATION;
       pkRange.channel = GENERIC_TYPE;
       pkRange.size = sizeof(rangePacket);
+      // This is best effort, i.e. the blocking version is not needed
       crtpSendPacket(&pkRange);
       rangeIndex = 0;
     }
@@ -356,6 +358,7 @@ void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
     LhAngle.port = CRTP_PORT_LOCALIZATION;
     LhAngle.channel = GENERIC_TYPE;
     LhAngle.size = sizeof(anglePacket);
+    // This is best effort, i.e. the blocking version is not needed
     crtpSendPacket(&LhAngle);
   }
 }

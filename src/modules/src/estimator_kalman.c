@@ -71,9 +71,23 @@
 #include "log.h"
 #include "param.h"
 #include "physicalConstants.h"
+#include "supervisor.h"
 
 #include "statsCnt.h"
 #include "rateSupervisor.h"
+
+// Measurement models
+#include "mm_distance.h"
+#include "mm_absolute_height.h"
+#include "mm_position.h"
+#include "mm_pose.h"
+#include "mm_tdoa.h"
+#include "mm_flow.h"
+#include "mm_tof.h"
+#include "mm_yaw_error.h"
+#include "mm_sweep_angles.h"
+
+#include "mm_tdoa_robust.h"
 
 #define DEBUG_MODULE "ESTKALMAN"
 #include "debug.h"
@@ -176,28 +190,18 @@ static StaticSemaphore_t dataMutexBuffer;
 
 
 /**
- * Constants used in the estimator
- */
-
-//thrust is thrust mapped for 65536 <==> 60 GRAMS!
-#define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/(CF_MASS*1000.0f)/65536.0f)
-
-
-/**
  * Tuning parameters
  */
 #define PREDICT_RATE RATE_100_HZ // this is slower than the IMU update rate of 500Hz
 #define BARO_RATE RATE_25_HZ
 
-// the point at which the dynamics change from stationary to flying
-#define IN_FLIGHT_THRUST_THRESHOLD (GRAVITY_MAGNITUDE*0.1f)
-#define IN_FLIGHT_TIME_THRESHOLD (500)
-
 // The bounds on the covariance, these shouldn't be hit, but sometimes are... why?
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
 
-
+// Use the robust TDoA implementation, off by default but can be turned on through a parameter.
+// The robust tdoa uses around 17% CPU VS 8% for normal TDoA
+static bool robustTdoa = false;
 
 /**
  * Quadrocopter State
@@ -219,16 +223,14 @@ NO_DMA_CCM_SAFE_ZERO_INIT static kalmanCoreData_t coreData;
 static bool isInit = false;
 
 static Axis3f accAccumulator;
-static float thrustAccumulator;
 static Axis3f gyroAccumulator;
 static float baroAslAccumulator;
 static uint32_t accAccumulatorCount;
-static uint32_t thrustAccumulatorCount;
 static uint32_t gyroAccumulatorCount;
 static uint32_t baroAccumulatorCount;
 static bool quadIsFlying = false;
-static uint32_t lastFlightCmd;
-static uint32_t takeoffTime;
+
+static OutlierFilterLhState_t sweepOutlierFilterState;
 
 // Data used to enable the task and stabilizer loop to run with minimal locking
 static state_t taskEstimatorState; // The estimator state produced by the task, copied to the stabilzer when needed.
@@ -410,7 +412,7 @@ static void kalmanTask(void* parameters) {
   }
 }
 
-void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick)
+void estimatorKalman(state_t *state, sensorData_t *sensors, const uint32_t tick)
 {
   // This function is called from the stabilizer loop. It is important that this call returns
   // as quickly as possible. The dataMutex must only be locked short periods by the task.
@@ -433,10 +435,6 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
     gyroAccumulatorCount++;
   }
 
-  // Average the thrust command from the last time steps, generated externally by the controller
-  thrustAccumulator += control->thrust;
-  thrustAccumulatorCount++;
-
   // Average barometer data
   if (useBaroUpdate) {
     if (sensorsReadBaro(&sensors->baro)) {
@@ -458,8 +456,7 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, control_t *control, 
 
 static bool predictStateForward(uint32_t osTick, float dt) {
   if (gyroAccumulatorCount == 0
-      || accAccumulatorCount == 0
-      || thrustAccumulatorCount == 0)
+      || accAccumulatorCount == 0)
   {
     return false;
   }
@@ -478,29 +475,15 @@ static bool predictStateForward(uint32_t osTick, float dt) {
   accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
   accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
 
-  // thrust is in grams, we need ms^-2
-  float thrustAverage = thrustAccumulator * CONTROL_TO_ACC / thrustAccumulatorCount;
-
   accAccumulator = (Axis3f){.axis={0}};
   accAccumulatorCount = 0;
   gyroAccumulator = (Axis3f){.axis={0}};
   gyroAccumulatorCount = 0;
-  thrustAccumulator = 0;
-  thrustAccumulatorCount = 0;
 
   xSemaphoreGive(dataMutex);
 
-  // TODO: Find a better check for whether the quad is flying
-  // Assume that the flight begins when the thrust is large enough and for now we never stop "flying".
-  if (thrustAverage > IN_FLIGHT_THRUST_THRESHOLD) {
-    lastFlightCmd = osTick;
-    if (!quadIsFlying) {
-      takeoffTime = lastFlightCmd;
-    }
-  }
-  quadIsFlying = (osTick-lastFlightCmd) < IN_FLIGHT_TIME_THRESHOLD;
-
-  kalmanCorePredict(&coreData, thrustAverage, &accAverage, &gyroAverage, dt, quadIsFlying);
+  quadIsFlying = supervisorIsFlying();
+  kalmanCorePredict(&coreData, &accAverage, &gyroAverage, dt, quadIsFlying);
 
   return true;
 }
@@ -558,7 +541,13 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
   tdoaMeasurement_t tdoa;
   while (stateEstimatorHasTDOAPacket(&tdoa))
   {
-    kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+    if(robustTdoa){
+        // robust KF update with TDOA measurements
+        kalmanCoreRobustUpdateWithTDOA(&coreData, &tdoa);
+    }else{
+        // standard KF update
+        kalmanCoreUpdateWithTDOA(&coreData, &tdoa);
+    }
     doneUpdate = true;
   }
 
@@ -572,7 +561,7 @@ static bool updateQueuedMeasurments(const Axis3f *gyro, const uint32_t tick) {
   sweepAngleMeasurement_t angles;
   while (stateEstimatorHasSweepAnglesPacket(&angles))
   {
-    kalmanCoreUpdateWithSweepAngles(&coreData, &angles, tick);
+    kalmanCoreUpdateWithSweepAngles(&coreData, &angles, tick, &sweepOutlierFilterState);
     doneUpdate = true;
   }
 
@@ -591,14 +580,14 @@ void estimatorKalmanInit(void) {
   xSemaphoreTake(dataMutex, portMAX_DELAY);
   accAccumulator = (Axis3f){.axis={0}};
   gyroAccumulator = (Axis3f){.axis={0}};
-  thrustAccumulator = 0;
   baroAslAccumulator = 0;
 
   accAccumulatorCount = 0;
   gyroAccumulatorCount = 0;
-  thrustAccumulatorCount = 0;
   baroAccumulatorCount = 0;
   xSemaphoreGive(dataMutex);
+
+  outlierFilterReset(&sweepOutlierFilterState, 0);
 
   kalmanCoreInit(&coreData);
 }
@@ -743,7 +732,12 @@ LOG_GROUP_START(kalman)
   STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
 LOG_GROUP_STOP(kalman)
 
+LOG_GROUP_START(outlierf)
+  LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
+LOG_GROUP_STOP(outlierf)
+
 PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
   PARAM_ADD(PARAM_UINT8, quadIsFlying, &quadIsFlying)
+  PARAM_ADD(PARAM_UINT8, robustTdoa, &robustTdoa)
 PARAM_GROUP_STOP(kalman)

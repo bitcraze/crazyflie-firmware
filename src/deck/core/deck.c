@@ -35,6 +35,7 @@
 #include <string.h>
 
 #include "deck.h"
+#include "deck_memory.h"
 #include "debug.h"
 
 #ifdef DEBUG
@@ -56,6 +57,7 @@ void deckInit()
 {
   deckDriverCount();
   deckInfoInit();
+  deckMemoryInit();
 
   int nDecks;
   int i;

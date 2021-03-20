@@ -77,6 +77,7 @@ typedef struct ootxDecoderState_s {
   bool synchronized;
   int nZeros;
   enum {rxLength, rxData, rxCrc0, rxCrc1, rxDone} rxState;
+  bool isFullyDecoded;
 
   union {
     uint16_t data[(OOTX_MAX_FRAME_LENGTH+1) / 2];

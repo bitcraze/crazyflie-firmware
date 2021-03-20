@@ -15,6 +15,7 @@ typedef struct {
 
 typedef struct {
   lighthouseCalibrationSweep_t sweep[2];
+  uint32_t uid;
   bool valid;
 } __attribute__((packed)) lighthouseCalibration_t;
 

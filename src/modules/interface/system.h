@@ -45,8 +45,6 @@ void systemLaunch(void);
 
 void systemStart();
 void systemWaitStart(void);
-void systemSetCanFly(bool val);
-bool systemCanFly(void);
 void systemSetArmed(bool val);
 bool systemIsArmed();
 

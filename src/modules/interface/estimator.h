@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,7 @@
  *
  * @ingroup stateEstimation
  */
-#ifndef __ESTIMATOR_H__
-#define __ESTIMATOR_H__
+#pragma once
 
 #include "stabilizer_types.h"
 
@@ -43,7 +42,7 @@ typedef enum {
 void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
-void stateEstimator(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
+void stateEstimator(state_t *state, sensorData_t *sensors, const uint32_t tick);
 StateEstimatorType getStateEstimator(void);
 const char* stateEstimatorGetName();
 
@@ -57,5 +56,3 @@ bool estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height);
 bool estimatorEnqueueFlow(const flowMeasurement_t *flow);
 bool estimatorEnqueueYawError(const yawErrorMeasurement_t *error);
 bool estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *angles);
-
-#endif //__ESTIMATOR_H__

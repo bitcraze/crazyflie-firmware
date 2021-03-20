@@ -50,7 +50,7 @@ static uint8_t sendBuffer[64];
 
 static int usblinkSendPacket(CRTPPacket *p);
 static int usblinkSetEnable(bool enable);
-static int usblinkReceiveCRTPPacket(CRTPPacket *p);
+static int usblinkReceivePacket(CRTPPacket *p);
 
 STATIC_MEM_TASK_ALLOC(usblinkTask, USBLINK_TASK_STACKSIZE);
 
@@ -58,7 +58,7 @@ static struct crtpLinkOperations usblinkOp =
 {
   .setEnable         = usblinkSetEnable,
   .sendPacket        = usblinkSendPacket,
-  .receivePacket     = usblinkReceiveCRTPPacket,
+  .receivePacket     = usblinkReceivePacket,
 };
 
 /* Radio task handles the CRTP packet transfers as well as the radio link
@@ -76,12 +76,12 @@ static void usblinkTask(void *param)
     p.size = usbIn.size - 1;
     memcpy(&p.raw, usbIn.data, usbIn.size);
     // This queuing will copy a CRTP packet size from usbIn
-    ASSERT(xQueueSend(crtpPacketDelivery, &p, 0) == pdTRUE);
+    xQueueSend(crtpPacketDelivery, &p, portMAX_DELAY);
   }
 
 }
 
-static int usblinkReceiveCRTPPacket(CRTPPacket *p)
+static int usblinkReceivePacket(CRTPPacket *p)
 {
   if (xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
   {

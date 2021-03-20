@@ -98,3 +98,24 @@ static inline float clip1(float a) {
 
   return a;
 }
+
+static inline void mat_scale(const arm_matrix_instance_f32 * pSrcA, float32_t scale, arm_matrix_instance_f32 * pDst)
+{ ASSERT(ARM_MATH_SUCCESS == arm_mat_scale_f32(pSrcA, scale, pDst)); }
+
+// copy float matrix
+static inline void matrixcopy(int ROW, int COLUMN, float destmat[ROW][COLUMN], float srcmat[ROW][COLUMN]){
+    //TODO: check the dimension of the matrices
+    for (int i=0; i<ROW; i++){
+        for(int j=0; j<COLUMN; j++){
+            destmat[i][j] = srcmat[i][j];
+        }
+    }
+}
+
+// copy float vector
+static inline void vectorcopy(int DIM, float destVec[DIM], float srcVec[DIM]){
+    //TODO: check the dimension of the vector
+    for (int i=0; i<DIM; i++){
+        destVec[i] = srcVec[i];
+    }
+}

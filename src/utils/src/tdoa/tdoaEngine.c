@@ -65,11 +65,6 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->matching.offset = 0;
 }
 
-#define TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
-static uint64_t truncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
-  return fullTimeStamp & TRUNCATE_TO_ANCHOR_TS_BITMAP;
-}
-
 static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff, tdoaEngineState_t* engineState) {
   tdoaStats_t* stats = &engineState->stats;
 
@@ -101,7 +96,7 @@ static bool updateClockCorrection(tdoaAnchorContext_t* anchorCtx, const int64_t 
   const int64_t latest_txAn_in_cl_An = tdoaStorageGetTxTime(anchorCtx);
 
   if (latest_rxAn_by_T_in_cl_T != 0 && latest_txAn_in_cl_An != 0) {
-    double clockCorrectionCandidate = clockCorrectionEngineCalculate(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TRUNCATE_TO_ANCHOR_TS_BITMAP);
+    double clockCorrectionCandidate = clockCorrectionEngineCalculate(rxAn_by_T_in_cl_T, latest_rxAn_by_T_in_cl_T, txAn_in_cl_An, latest_txAn_in_cl_An, TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP);
     sampleIsReliable = clockCorrectionEngineUpdate(tdoaStorageGetClockCorrectionStorage(anchorCtx), clockCorrectionCandidate);
 
     if (sampleIsReliable){
@@ -124,8 +119,8 @@ static int64_t calcTDoA(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnc
 
   const int64_t rxAr_by_T_in_cl_T = tdoaStorageGetRxTime(otherAnchorCtx);
 
-  const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + truncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
-  const int64_t timeDiffOfArrival_in_cl_T =  truncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) - delta_txAr_to_txAn_in_cl_An  * clockCorrection;
+  const int64_t delta_txAr_to_txAn_in_cl_An = (tof_Ar_to_An_in_cl_An + tdoaEngineTruncateToAnchorTimeStamp(txAn_in_cl_An - rxAr_by_An_in_cl_An));
+  const int64_t timeDiffOfArrival_in_cl_T =  tdoaEngineTruncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T) - delta_txAr_to_txAn_in_cl_An  * clockCorrection;
 
   return timeDiffOfArrival_in_cl_T;
 }
@@ -135,7 +130,7 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
   return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
 }
 
-static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
+static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
   engineState->matching.offset++;
   int remoteCount = 0;
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
@@ -148,9 +143,11 @@ static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_
   for (int i = engineState->matching.offset; i < (remoteCount + engineState->matching.offset); i++) {
     uint8_t index = i % remoteCount;
     const uint8_t candidateAnchorId = engineState->matching.id[index];
-    if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
-      if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
-        return true;
+    if (!doExcludeId || (excludedId != candidateAnchorId)) {
+      if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
+        if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
+          return true;
+        }
       }
     }
   }
@@ -159,7 +156,7 @@ static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_
   return false;
 }
 
-static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
+static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
     int remoteCount = 0;
     tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
 
@@ -169,13 +166,15 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContex
 
     for (int index = 0; index < remoteCount; index++) {
       const uint8_t candidateAnchorId = engineState->matching.id[index];
-      if (tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
-        if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
-          uint32_t updateTime = otherAnchorCtx->anchorInfo->lastUpdateTime;
-          if (updateTime > youmgestUpdateTime) {
-            if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx)) {
-              youmgestUpdateTime = updateTime;
-              bestId = candidateAnchorId;
+      if (!doExcludeId || (excludedId != candidateAnchorId)) {
+        if (tdoaStorageGetTimeOfFlight(anchorCtx, candidateAnchorId)) {
+          if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
+            uint32_t updateTime = otherAnchorCtx->anchorInfo->lastUpdateTime;
+            if (updateTime > youmgestUpdateTime) {
+              if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx)) {
+                youmgestUpdateTime = updateTime;
+                bestId = candidateAnchorId;
+              }
             }
           }
         }
@@ -191,17 +190,17 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContex
     return false;
 }
 
-static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx) {
+static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
   bool result = false;
 
   if (tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
     switch(engineState->matchingAlgorithm) {
       case TdoaEngineMatchingAlgorithmRandom:
-        result = matchRandomAnchor(engineState, otherAnchorCtx, anchorCtx);
+        result = matchRandomAnchor(engineState, otherAnchorCtx, anchorCtx, doExcludeId, excludedId);
         break;
 
       case TdoaEngineMatchingAlgorithmYoungest:
-        result = matchYoungestAnchor(engineState, otherAnchorCtx, anchorCtx);
+        result = matchYoungestAnchor(engineState, otherAnchorCtx, anchorCtx, doExcludeId, excludedId);
         break;
 
       default:
@@ -222,12 +221,16 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
 }
 
 void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
+  tdoaEngineProcessPacketFiltered(engineState, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, false, 0);
+}
+
+void tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const bool doExcludeId, const uint8_t excludedId) {
   bool timeIsGood = updateClockCorrection(anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, &engineState->stats);
   if (timeIsGood) {
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
     tdoaAnchorContext_t otherAnchorCtx;
-    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx)) {
+    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId)) {
       STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
       double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
       enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);

@@ -52,6 +52,21 @@ static const uint32_t CYCLE_PERIODS[V2_N_CHANNELS] = {
     907000 / 2, 901000 / 2, 893000 / 2, 887000 / 2
 };
 
+static inline uint32_t cyclePeriodToMicroseconds(uint32_t cyclePeriod) {
+    return cyclePeriod / 24;
+}
+
+// Reset angles after fixed period to avoid using stale data
+static void clearStaleAnglesAfterTimeout(pulseProcessorResult_t *angles) {
+    uint64_t timestamp = usecTimestamp();
+    for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; ++bs) {
+        uint64_t elapsed_us = timestamp - angles->lastUsecTimestamp[bs];
+        if (elapsed_us > cyclePeriodToMicroseconds(CYCLE_PERIODS[bs])) {
+            pulseProcessorClear(angles, bs);
+        }
+    }
+}
+
 TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], pulseProcessorV2SweepBlock_t* block) {
     // Check we have data for all sensors
     uint8_t sensorMask = 0;
@@ -239,6 +254,7 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         measurement->angles[1] = secondBeam;
         measurement->validCount = 2;
     }
+    angles->lastUsecTimestamp[channel] = usecTimestamp();
 }
 
 TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest, const pulseProcessorV2SweepBlock_t* storage) {
@@ -253,49 +269,31 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
     return true;
 }
 
-static void printBSInfo(struct ootxDataFrame_s *frame) {
-  DEBUG_PRINT("Got calibration from %08X\n", (unsigned int)frame->id);
-//   DEBUG_PRINT("  tilt0: %f\n", (double)frame->tilt0);
-//   DEBUG_PRINT("  phase0: %f\n", (double)frame->phase0);
-//   DEBUG_PRINT("  curve0: %f\n", (double)frame->curve0);
-//   DEBUG_PRINT("  gibphase0: %f\n", (double)frame->gibphase0);
-//   DEBUG_PRINT("  gibmag0: %f\n", (double)frame->gibmag0);
-//   DEBUG_PRINT("  ogeephase0: %f\n", (double)frame->ogeephase0);
-//   DEBUG_PRINT("  ogeemag0: %f\n", (double)frame->ogeemag0);
+TESTABLE_STATIC bool handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData) {
+    bool isFullMessage = false;
 
-//   DEBUG_PRINT("  tilt1: %f\n", (double)frame->tilt1);
-//   DEBUG_PRINT("  phase1: %f\n", (double)frame->phase1);
-//   DEBUG_PRINT("  curve1: %f\n", (double)frame->curve1);
-//   DEBUG_PRINT("  gibphase1: %f\n", (double)frame->gibphase1);
-//   DEBUG_PRINT("  gibmag1: %f\n", (double)frame->gibmag1);
-//   DEBUG_PRINT("  ogeephase1: %f\n", (double)frame->ogeephase1);
-//   DEBUG_PRINT("  ogeemag1: %f\n", (double)frame->ogeemag1);
-}
-
-TESTABLE_STATIC void handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData) {
     if (frameData->channelFound && frameData->channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
         const uint8_t channel = frameData->channel;
         if (frameData->offset != NO_OFFSET) {
-            if (! state->bsCalibration[channel].valid) {
-                const uint32_t prevTimestamp0 = state->v2.ootxTimestamps[channel];
-                const uint32_t timestamp0 = TS_DIFF(frameData->timestamp, frameData->offset);
+            const uint32_t prevTimestamp0 = state->v2.ootxTimestamps[channel];
+            const uint32_t timestamp0 = TS_DIFF(frameData->timestamp, frameData->offset);
 
-                if (TS_ABS_DIFF_LARGER_THAN(timestamp0, prevTimestamp0, MIN_TICKS_BETWEEN_SLOW_BITS)) {
-                    bool fullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowbit);
-                    if (fullMessage) {
-                        printBSInfo(&state->ootxDecoder[channel].frame);
-                        lighthouseCalibrationInitFromFrame(&state->bsCalibration[channel], &state->ootxDecoder[channel].frame);
-                    }
-                }
-
-                state->v2.ootxTimestamps[channel] = timestamp0;
+            if (TS_ABS_DIFF_LARGER_THAN(timestamp0, prevTimestamp0, MIN_TICKS_BETWEEN_SLOW_BITS)) {
+                isFullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowbit);
             }
+
+            state->v2.ootxTimestamps[channel] = timestamp0;
         }
     }
+
+    return isFullMessage;
 }
 
 bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
     bool anglesMeasured = false;
+
+    clearStaleAnglesAfterTimeout(angles);
+
     int nrOfBlocks = processFrame(frameData, &state->v2.pulseWorkspace, &state->v2.blockWorkspace);
     for (int i = 0; i < nrOfBlocks; i++) {
         const pulseProcessorV2SweepBlock_t* block = &state->v2.blockWorkspace.blocks[i];
@@ -319,8 +317,8 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
     return anglesMeasured;
 }
 
-bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis) {
-    handleCalibrationData(state, frameData);
+bool pulseProcessorV2ProcessPulse(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded) {
+    *calibDataIsDecoded = handleCalibrationData(state, frameData);
     return handleAngles(state, frameData, angles, baseStation, axis);
 }
 

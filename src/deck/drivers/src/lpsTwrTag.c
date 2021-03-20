@@ -46,8 +46,6 @@
 #include "lpsTdma.h"
 #include "static_mem.h"
 
-#define ANTENNA_OFFSET 154.6   // In meter
-
 // Config
 static lpsTwrAlgoOptions_t defaultOptions = {
    .tagAddress = 0xbccf000000000008,
@@ -65,7 +63,7 @@ static lpsTwrAlgoOptions_t defaultOptions = {
      0xbccf000000000007,
  #endif
    },
-   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
+   .antennaDelay = LOCODECK_ANTENNA_DELAY,
    .rangingFailedThreshold = 6,
 
    .combinedAnchorPositionOk = false,

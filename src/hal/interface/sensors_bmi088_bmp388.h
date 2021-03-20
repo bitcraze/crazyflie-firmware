@@ -28,7 +28,8 @@
 
 #include "sensors.h"
 
-void sensorsBmi088Bmp388Init(void);
+void sensorsBmi088Bmp388Init_I2C(void);
+void sensorsBmi088Bmp388Init_SPI(void);
 bool sensorsBmi088Bmp388Test(void);
 bool sensorsBmi088Bmp388AreCalibrated(void);
 bool sensorsBmi088Bmp388ManufacturingTest(void);

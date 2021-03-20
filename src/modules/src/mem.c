@@ -180,14 +180,14 @@ static void memSettingsProcess(CRTPPacket* p) {
   switch (p->data[0]) {
     case MEM_CMD_GET_NBR:
       createNbrResponse(p);
-      crtpSendPacket(p);
+      crtpSendPacketBlock(p);
       break;
 
     case MEM_CMD_GET_INFO:
       {
         uint8_t memId = p->data[1];
         createInfoResponse(p, memId);
-        crtpSendPacket(p);
+        crtpSendPacketBlock(p);
       }
       break;
 
@@ -263,7 +263,7 @@ static void memReadProcess(CRTPPacket* p) {
     p->size = 6;
   }
 
-  crtpSendPacket(p);
+  crtpSendPacketBlock(p);
 }
 
 static void memWriteProcess(CRTPPacket* p) {
@@ -292,7 +292,7 @@ static void memWriteProcess(CRTPPacket* p) {
   p->data[5] = result ? STATUS_OK : EIO;
   p->size = 6;
 
-  crtpSendPacket(p);
+  crtpSendPacketBlock(p);
 }
 
 /**
