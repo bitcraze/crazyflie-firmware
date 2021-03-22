@@ -472,7 +472,7 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
     vTaskResume(xHandleWriteTask);
   }
 
-  int dataSize = 2 + 4 + payloadSize + cfg->numBytes;
+  int dataSize = sizeof(cfg->eventId) + sizeof(ticks) + payloadSize + cfg->numBytes;
 
   // only write if we have enough space
   if (ringBuffer_availableSpace(&logBuffer) >= dataSize) {
