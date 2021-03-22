@@ -220,7 +220,6 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   memset(frame, 0, sizeof(*frame));
 
   frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
-  frame->data.stmTimestamp = usecTimestamp();
 
   frame->data.sensor = data[0] & 0x03;
   frame->data.channelFound = (data[0] & 0x80) == 0;

@@ -81,7 +81,6 @@ inline static uint32_t TS_ABS_DIFF_LARGER_THAN(const uint32_t a, const uint32_t 
 typedef struct {
   uint8_t sensor;
   uint32_t timestamp;
-  uint64_t stmTimestamp; // usecTimer timestamp when frame was received
   uint32_t timestamp2;
 
   // V1 base station data --------
@@ -172,7 +171,6 @@ typedef struct {
     pulseProcessorFrame_t slots[PULSE_PROCESSOR_N_WORKSPACE];
     int slotsUsed;
     uint32_t latestTimestamp;
-    uint64_t latestStmTimestamp;
 } pulseProcessorV2PulseWorkspace_t;
 
 /**

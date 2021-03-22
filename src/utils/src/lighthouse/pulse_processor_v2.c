@@ -34,9 +34,7 @@
 #include "test_support.h"
 #include "debug.h"
 
-// ticks in 24 MHz clock, i.e. 1tick = 41.66 ns
-static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000; // 417 us
-static const uint32_t MAX_MICROSECONDS_SENSOR_TO_SENSOR = 500000; // the 24bit sensor counter will overflow after about 0.7s
+static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
 static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
 static const uint32_t MIN_TICKS_BETWEEN_SLOW_BITS = (887000 / 2) * 8 / 10; // 80 of one revolution
 
@@ -218,15 +216,13 @@ static bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV
     int nrOfBlocks = 0;
 
     // Sensor timestamps may arrive in the wrong order, we need an abs() when checking the diff
-    const bool isFirstFrameInNewWorkspace = TS_ABS_DIFF_LARGER_THAN(frameData->timestamp, pulseWorkspace->latestTimestamp, MAX_TICKS_SENSOR_TO_SENSOR) 
-        || llabs(frameData->stmTimestamp - pulseWorkspace->latestStmTimestamp) > MAX_MICROSECONDS_SENSOR_TO_SENSOR;
+    const bool isFirstFrameInNewWorkspace = TS_ABS_DIFF_LARGER_THAN(frameData->timestamp, pulseWorkspace->latestTimestamp, MAX_TICKS_SENSOR_TO_SENSOR);
     if (isFirstFrameInNewWorkspace) {
         nrOfBlocks = processWorkspace(pulseWorkspace, blockWorkspace);
         clearWorkspace(pulseWorkspace);
     }
 
     pulseWorkspace->latestTimestamp = frameData->timestamp;
-    pulseWorkspace->latestStmTimestamp = frameData->stmTimestamp;
 
     if (! storePulse(frameData, pulseWorkspace)) {
         clearWorkspace(pulseWorkspace);
