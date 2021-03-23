@@ -1,12 +1,12 @@
 ---
-title: Building Crazyflie 2.X firmware
-page_id: build_instructions
+title: Building and Flashing
+page_id: build
 ---
 
 ## Dependencies
 
-You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraze-vm),
-[the toolbelt](https://github.com/bitcraze/toolbelt) or
+You'll need to use either the [Crazyflie VM](https://wiki.bitcraze.io/projects:virtualmachine:index),
+[the toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) or
 install some ARM toolchain.
 
 ### Install a toolchain
@@ -19,7 +19,7 @@ brew install gcc-arm-none-eabi
 
 #### Debian/Ubuntu
 
-Tested on Ubuntu 14.04 64b, Ubuntu 16.04 64b, and Ubuntu 18.04 64b:
+Tested on Ubuntu 14.04 64b/16.04 64b/18.04 64b/20.04 64b/20.10 64b:
 
 For Ubuntu 14.04 :
 
@@ -29,7 +29,7 @@ sudo apt-get update
 sudo apt-get install libnewlib-arm-none-eabi
 ```
 
-For Ubuntu 16.04 and Ubuntu 18.04:
+For Ubuntu 16.04 and 18.04:
 
 ```bash
 sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
@@ -37,7 +37,11 @@ sudo apt-get update
 sudo apt install gcc-arm-embedded
 ```
 
-Note: Do not use the `gcc-arm-none-eabi` package that is part of the Ubuntu repository as this is outdated.
+For Ubuntu 20.04 and 20.10:
+
+```bash
+sudo apt-get install make gcc-arm-none-eabi
+```
 
 #### Arch Linux
 
@@ -108,38 +112,20 @@ or with the toolbelt
 tb make PLATFORM=tag
 ```
 
-### Out of tree build
 
-By setting the Makefile variable ```CRAZYFLIE_BASE```, it is possible to build the Crazyflie
-from outside the project folder. This can be used to implement autonomous behaviour on
-top of the Crazyflie firmware by compiling external code in the firmware from an external
-repos.
-
-For example, if you have a deck driver file called ```push.c``` that creates a deck driver for
-the deck ```bcPush```. You can create a new git repos with ```crazyflie-firmware``` clonned as
-submodule and put ```push.c``` in a folder ```src```. The makefile to build a firmware starting
-your deck driver automatically will be:
-
-```make
-CRAZYFLIE_BASE=crazyflie-firmware
-
-CFLAGS += -DDECK_FORCE=bcPush
-
-VPATH += src/
-
-PROJ_OBJ += push.o
-
-include $(CRAZYFLIE_BASE)/Makefile
+### config.mk
+To create custom build options create a file called `config.mk` in the `tools/make/`
+folder and fill it with options. E.g.
 ```
+PLATFORM=CF2
+DEBUG=1
+```
+More information can be found on the
+[Bitcraze documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/)
 
-Note that ```CFLAGS += -DDECK_FORCE=bcPush``` is what would normally be added to ```config.mk```.
-Hence, this method also allow to create build configurations folder by building the firmware is a
-separate folder with separate configurations.
-
-Both ```tools/make/config.mk``` and ```current_platform.mk``` are sourced from the current folder
-and not from the Crazyflie firmware folder.
 
 # Make targets:
+
 ```
 all        : Shortcut for build
 compile    : Compile cflie.hex. WARNING: Do NOT update version.c
@@ -156,3 +142,45 @@ halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD
 ```
+
+# Unit testing
+
+## Running all unit tests
+
+With the environment set up locally
+
+        make unit
+
+with the docker builder image and the toolbelt
+
+        tb make unit
+
+## Running one unit test
+
+When working with one specific file it is often convenient to run only one unit test
+
+       make unit FILES=test/utils/src/test_num.c
+
+or with the toolbelt
+
+       tb make unit FILES=test/utils/src/test_num.c
+
+## Running unit tests with specific build settings
+
+Defines are managed by make and are passed on to the unit test code. Use the
+normal ways of configuring make when running tests. For instance to run test
+for Crazyflie 1
+
+      make unit LPS_TDOA_ENABLE=1
+
+## Dependencies
+
+Frameworks for unit testing and mocking are pulled in as git submodules.
+
+The testing framework uses ruby and rake to generate and run code.
+
+To minimize the need for installations and configuration, use the docker builder
+image (bitcraze/builder) that contains all tools needed. All scripts in the
+tools/build directory are intended to be run in the image. The
+[toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) makes it
+easy to run the tool scripts.
