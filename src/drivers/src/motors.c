@@ -48,7 +48,7 @@ static uint16_t motorsBLConv16ToBits(uint16_t bits);
 static uint16_t motorsConvBitsTo16(uint16_t bits);
 static uint16_t motorsConv16ToBits(uint16_t bits);
 
-uint32_t motor_ratios[] = {0, 0, 0, 0};
+uint16_t motor_ratios[] = {0, 0, 0, 0};
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
@@ -331,10 +331,10 @@ void motorsPlayMelody(uint16_t *notes)
   } while (duration != 0);
 }
 LOG_GROUP_START(pwm)
-LOG_ADD(LOG_UINT32, m1_pwm, &motor_ratios[0])
-LOG_ADD(LOG_UINT32, m2_pwm, &motor_ratios[1])
-LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
-LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
+LOG_ADD(LOG_UINT16, m1_pwm, &motor_ratios[0])
+LOG_ADD(LOG_UINT16, m2_pwm, &motor_ratios[1])
+LOG_ADD(LOG_UINT16, m3_pwm, &motor_ratios[2])
+LOG_ADD(LOG_UINT16, m4_pwm, &motor_ratios[3])
 LOG_GROUP_STOP(pwm)
 
 PARAM_GROUP_START(motor)

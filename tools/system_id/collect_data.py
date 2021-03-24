@@ -55,7 +55,7 @@ class CollectData:
         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='data', period_in_ms=10)
         self._lg_stab.add_variable('loadcell.weight', 'float')
-        self._lg_stab.add_variable('pwm.m1_pwm', 'uint32_t')
+        self._lg_stab.add_variable('pwm.m1_pwm', 'uint16_t')
         self._lg_stab.add_variable('pm.vbatMV', 'uint16_t')
         self._lg_stab.add_variable('rpm.m1', 'uint16_t')
         self._lg_stab.add_variable('rpm.m2', 'uint16_t')
