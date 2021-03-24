@@ -50,7 +50,7 @@ class CollectData:
         self._cf.param.set_value('loadcell.b', str(self.calib_b))
 
         self._file = open("data.csv", "w+")
-        self._file.write("weight[g],pwm,vbat[V],rpm1,rpm2,rpm3,rpm4,v[V],i[A]\n");
+        self._file.write("weight[g],pwm,vbat[V],rpm1,rpm2,rpm3,rpm4,v[V],i[A],p[W]\n");
 
         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='data', period_in_ms=10)
@@ -61,8 +61,9 @@ class CollectData:
         self._lg_stab.add_variable('rpm.m2', 'uint16_t')
         self._lg_stab.add_variable('rpm.m3', 'uint16_t')
         self._lg_stab.add_variable('rpm.m4', 'uint16_t')
-        self._lg_stab.add_variable('asc37800.v_avg', 'float')
-        self._lg_stab.add_variable('asc37800.i_avg', 'float')
+        self._lg_stab.add_variable('asc37800.v_mV', 'int16_t')
+        self._lg_stab.add_variable('asc37800.i_mA', 'int16_t')
+        self._lg_stab.add_variable('asc37800.p_mW', 'int16_t')
 
         # Adding the configuration cannot be done until a Crazyflie is
         # connected, since we need to check that the variables we
@@ -92,7 +93,7 @@ class CollectData:
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
         print('[%d][%s]: %s' % (timestamp, logconf.name, data))
-        self._file.write("{},{},{},{},{},{},{},{},{}\n".format(
+        self._file.write("{},{},{},{},{},{},{},{},{},{}\n".format(
             data['loadcell.weight'],
             data['pwm.m1_pwm'],
             data['pm.vbatMV']/ 1000,
@@ -100,8 +101,9 @@ class CollectData:
             data['rpm.m2'],
             data['rpm.m3'],
             data['rpm.m4'],
-            data['asc37800.v_avg'],
-            data['asc37800.i_avg']))
+            data['asc37800.v_mV']/ 1000,
+            data['asc37800.i_mA']/ 1000,
+            data['asc37800.p_mW']/ 1000))
 
     def _connection_failed(self, link_uri, msg):
         """Callback when connection initial connection fails (i.e no Crazyflie
@@ -121,7 +123,7 @@ class CollectData:
 
     def _ramp_motors(self):
         thrust_mult = 1
-        thrust_step = 200
+        thrust_step = 500
         time_step = 0.1
         thrust = 0
         pitch = 0

@@ -41,6 +41,14 @@
 #include "i2cdev.h"
 
 
+#define I_RANGE           30.0f // Sensor amp range
+#define V_DIVIDER         92  // (91k + 1k) / 1k
+#define ADC_RANGE         0.250f
+#define CODES_HALF_RANGE  27500.0f
+#define CODES_FULL_RANGE  55000.0f
+#define MILLW_TO_WATT     1000.0f
+#define LSB_PER_MILLWATT  3.08f
+
 // EEPROM
 #define ACSREG_E_TRIM         0x0B
 #define ACSREG_E_OFFS_AVG     0x0C
@@ -78,7 +86,7 @@ static uint32_t viBatRMS;
 static uint32_t vavgBatRMS;
 static float vBat;
 static float vBatRMS;
-static float vavgBat;
+//static float vavgBat;
 static float iBat;
 static float iBatRMS;
 static float iavgBat;
@@ -86,8 +94,14 @@ static uint32_t pBatRaw;
 static uint32_t pavgBatRaw;
 static float pBat;
 static float pavgBat;
+// "milli" representation to save logging bits
+static int16_t vBatMV;
+static int16_t iBatMA;
+static int16_t pBatMW;
+
 
 static uint16_t currZtrim, currZtrimOld;
+static uint8_t writeTrim;
 
 static void asc37800Task(void* prm);
 
@@ -252,15 +266,20 @@ static void asc37800Task(void* prm)
     asc37800Read32(ACSREG_P_INSTANT, &pBatRaw);
     asc37800Read32(ACSREG_P_ACT_AVGS, &pavgBatRaw);
 
-    vBat = (int16_t)(viBatRaw & 0xFFFF) / 27500.0 * 0.250 * 92;
-    iBat = (int16_t)(viBatRaw >> 16 & 0xFFFF) / 27500.0 * 30.0;
-    vBatRMS = (uint16_t)(viBatRMS & 0xFFFF) / 55000.0 * 0.250 * 92;
-    iBatRMS = (uint16_t)(viBatRMS >> 16 & 0xFFFF) / 55000.0 * 30.0;
-    vavgBat = (uint16_t)(vavgBatRMS & 0xFFFF) / 55000.0 * 0.250 * 92;
-    iavgBat = (uint16_t)(vavgBatRMS >> 16 & 0xFFFF) / 55000.0 * 30.0;
-    pBat = (int16_t)(pBatRaw & 0xFFFF) / 3.08 * 92 / 1000.0;
-    pavgBat = (int16_t)(pavgBatRaw & 0xFFFF) / 3.08 * 92 / 1000.0;
+    vBat = (int16_t)(viBatRaw & 0xFFFF) / CODES_HALF_RANGE * ADC_RANGE * V_DIVIDER;
+    iBat = (int16_t)(viBatRaw >> 16 & 0xFFFF) / CODES_HALF_RANGE * I_RANGE;
+    vBatRMS = (uint16_t)(viBatRMS & 0xFFFF) / CODES_FULL_RANGE * ADC_RANGE * V_DIVIDER;
+    iBatRMS = (uint16_t)(viBatRMS >> 16 & 0xFFFF) / CODES_FULL_RANGE * I_RANGE;
+//    vavgBat = (uint16_t)(vavgBatRMS & 0xFFFF) / CODES_FULL_RANGE * ADC_RANGE * V_DIVIDER;
+    iavgBat = (uint16_t)(vavgBatRMS >> 16 & 0xFFFF) / CODES_FULL_RANGE * I_RANGE;
+    pBat = (int16_t)(pBatRaw & 0xFFFF) / LSB_PER_MILLWATT * V_DIVIDER / MILLW_TO_WATT;
+    pavgBat = (int16_t)(pavgBatRaw & 0xFFFF) / LSB_PER_MILLWATT * V_DIVIDER / MILLW_TO_WATT;
 
+    vBatMV = (int16_t)(vBatRMS * 1000);
+    iBatMA = (int16_t)(iavgBat * 1000);
+    pBatMW = (int16_t)(pavgBat * 1000);
+
+    // Code so tuning can be done through cfclient parameters
     if (currZtrimOld != currZtrim)
     {
       uint32_t val;
@@ -270,6 +289,21 @@ static void asc37800Task(void* prm)
       DEBUG_PRINT("%X\n ", (unsigned int)val);
       asc37800Write32(ACSREG_S_TRIM, val);
       currZtrimOld = currZtrim;
+    }
+
+    if (writeTrim != 0)
+    {
+      uint32_t val;
+      writeTrim = 0;
+      // Enable EEPROM Writing
+      asc37800Write32(ACSREG_ACCESS_CODE, ACS_ACCESS_CODE);
+      asc37800Read32(ACSREG_S_TRIM, &val);
+      DEBUG_PRINT("EEPROM write: %X", (unsigned int)val);
+      // Write trim reg to EEPROM
+      asc37800Write32(ACSREG_E_TRIM, val);
+      vTaskDelay(M2T(10));
+      // Disable access
+      asc37800Write32(ACSREG_ACCESS_CODE, 0);
     }
 
 //    DEBUG_PRINT("V: %.3f I: %.3f P: %.3f\n", vBat, iBat, pBat);
@@ -296,15 +330,18 @@ PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(asc37800)
 PARAM_ADD(PARAM_UINT16, currZtrim, &currZtrim)
+PARAM_ADD(PARAM_UINT8, writeTrim, &writeTrim)
 PARAM_GROUP_STOP(asc37800)
 
 LOG_GROUP_START(asc37800)
 LOG_ADD(LOG_FLOAT, v, &vBat)
 LOG_ADD(LOG_FLOAT, vRMS, &vBatRMS)
-LOG_ADD(LOG_FLOAT, v_avg, &vavgBat)
+LOG_ADD(LOG_INT16, v_mV, &vBatMV)
 LOG_ADD(LOG_FLOAT, i, &iBat)
 LOG_ADD(LOG_FLOAT, iRMS, &iBatRMS)
 LOG_ADD(LOG_FLOAT, i_avg, &iavgBat)
+LOG_ADD(LOG_INT16, i_mA, &iBatMA)
 LOG_ADD(LOG_FLOAT, p, &pBat)
 LOG_ADD(LOG_FLOAT, p_avg, &pavgBat)
+LOG_ADD(LOG_INT16, p_mW, &pBatMW)
 LOG_GROUP_STOP(asc37800)
