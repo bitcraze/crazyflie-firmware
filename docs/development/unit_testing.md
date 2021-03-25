@@ -7,7 +7,8 @@ page_id: unit_testing
 
 Frameworks for unit testing and mocking are pulled in as git submodules.
 
-The testing framework uses ruby and rake to generate and run code. 
+The testing framework uses ruby and `rake` as well as `libasan` (AddressSanitizer) to generate and run code.
+If you run the tests on your own machine you will have to install them.
 
 To minimize the need for installations and configuration, use the docker builder
 image (bitcraze/builder) that contains all tools needed. All scripts in the 
