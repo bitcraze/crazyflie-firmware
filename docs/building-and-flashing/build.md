@@ -168,7 +168,7 @@ Warning: if multiple Crazyflies within range are in bootloader mode the result i
 
 ### Automatically enter bootloader mode
 
-* Add the address of the crazyflie to the [`config.mk`](/docs/building-and-flashing/configure_build.md) file, for instance `CLOAD_CMDS = -w radio://0/80/2M`
+* Add the address of the crazyflie to the [`config.mk`](#configmk) file, for instance `CLOAD_CMDS = -w radio://0/80/2M`
 * Make sure the Crazyflie is on
 * In your terminal, run `make cload`
 

@@ -45,7 +45,7 @@ The PID controller is the default controller.
 
 ### Setting at compile time
 
-It is possible to force the use of a specific controller at compile time by setting `CONTROLLER`, see [Configure the build](/docs/building-and-flashing/configure_build.md).
+It is possible to force the use of a specific controller at compile time by setting `CONTROLLER`, see [Configure the build](/docs/building-and-flashing/build.md/#configmk).
 
 Example:
 
