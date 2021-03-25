@@ -40,7 +40,7 @@ project.
 Setting the task constants
 --------------------------
 
-Each task has a few constants that are stored globally in `config/config.h`.
+Each task has a few constants that are stored globally in `src/config/config.h`.
 
 First, set the task priority. The FreeRTOS scheduler always prefers to run
 a higher-priority task. High priorities should be reserved for very
@@ -75,7 +75,7 @@ Implementing the task
 
 High level tasks (those that do not directly talk to hardware) usually go in
 the `modules` directory. We will walk through the sections needed in a
-new file `modules/src/example.c`.
+new file `src/modules/src/example.c`.
 
 
 First, include the necessary system header files:
@@ -201,11 +201,10 @@ Writing the public interface
 
 Subsystems should expose a public interface to other parts of the firmware
 that hide implementation details as much as is practical.
-We create the new file in `modules/interface/example.h`:
+We create the new file in `src/modules/interface/example.h`:
 
 ``` {.c}
-#ifndef __EXAMPLE_TASK_H__
-#define __EXAMPLE_TASK_H__
+#pragma once
 
 #include <stdbool.h>
 
@@ -213,8 +212,6 @@ void exampleTaskInit();
 bool exampleTaskTest();
 
 void exampleTaskEnqueueInput(int value);
-
-#endif // __EXAMPLE_TASK_H__
 ```
 
 In a real task, make sure to comment the public API thoroughly.
@@ -223,7 +220,7 @@ In a real task, make sure to comment the public API thoroughly.
 Initializing the task
 ---------------------
 
-In `modules/src/system.c`, make the following changes.
+In `src/modules/src/system.c`, make the following changes.
 
 Include the header for our new task:
 
