@@ -3,9 +3,7 @@ title: Lighthouse limitations
 page_id: lh_limitations
 ---
 
-The lighthouse deck is released in early access which means that there is a couple of limitation you should be aware of:
-
-* Since the deck only has horizontal sensors, the angle at which the base-stations are seen cannot be too shallow. This means that you should fly at least 40cm bellow the base-stations and that the base-stations should be placed above the flight space. This is a hardware limitation of the current deck.
+One limitation of the lighthouse deck is that since the deck only has horizontal sensors, the angle at which the base-stations are seen cannot be too shallow. This means that you should fly at least 40cm bellow the base-stations and that the base-stations should be placed above the flight space.
 
 ## State of the base station V2 support
 
