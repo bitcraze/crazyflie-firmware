@@ -23,7 +23,7 @@ Some decks require the kalman estimator and it is automatically activated when o
 
 ### Setting default estimator at compile time
 
-It is possible to force the use of a specific estimator at compile time by setting `ESTIMATOR`, see [Configure the build](/docs/building-and-flashing/configure_build.md).
+It is possible to force the use of a specific estimator at compile time by setting `ESTIMATOR`, see [Configure the build](/docs/building-and-flashing/build.md/#configmk).
 
 Example:
 
