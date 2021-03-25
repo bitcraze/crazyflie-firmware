@@ -16,7 +16,7 @@ The Crayzflie needs two pieces of system information to be able to estimate its 
 The calibration data describes slight imperfections in the the manufacturing of the base stations. The calibration data is measured in the factory and is stored in each base station. The calibration data is required to calculate the angles with a high level of accuracy.
 
 The geometry data describes the position and orientation of the base stations and is needed to understand how the measured angles relate to the global reference frame.
-The geometry data is calculated by the client using raw angles measured by the Crazyflie.
+The geometry data is calculated by the client using raw angles corrected by calibration data.
 
 Calibration and geometry data is stored in the Crazyflie to make it possible to take off and use the lighthouse system imediate after reboot.
 
