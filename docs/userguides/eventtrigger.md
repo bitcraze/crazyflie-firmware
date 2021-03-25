@@ -17,7 +17,7 @@ In order to add a new event trigger named `myEvent` with a payload of two variab
 #include "eventtrigger.h"
 
 // declares eventTrigger_myEvent and eventTrigger_myEvent_payload
-EVENTTRIGGER(myEvent, uint8, var1, float var2)
+EVENTTRIGGER(myEvent, uint8, var1, float, var2)
 ```
 
 The EVENTTRIGGER macro is variadic, i.e. it can take a varying number of arguments. It is also valid to have a event trigger without any payload.
