@@ -27,6 +27,7 @@ static uint16_t g_staticPacketSeq = 0;
 static uint16_t g_staticMessageSeq = 0;
 static uint16_t g_ansn = 0;
 static SemaphoreHandle_t olsrAnsnLock;
+static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
 static int g_ts_receive_error_count = 0;
 static int g_ts_receive_count = 0;
