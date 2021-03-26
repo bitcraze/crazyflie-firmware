@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2016-2021 Bitcraze AB
+ * Copyright (C) 2021 Bitcraze AB
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -568,7 +568,13 @@ static const DeckDriver dwm1000_deck = {
   .pid = 0x06,
   .name = "bcDWM1000",
 
-  .usedGpio = 0,  // FIXME: set the used pins
+#ifdef LOCODEC_USE_ALT_PINS
+  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
+#else
+   // (PC10/PC11 is UART1 TX/RX)
+  .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,
+#endif
+  .usedPeriph = DECK_USING_SPI,
   .requiredEstimator = kalmanEstimator,
   #ifdef LOCODECK_NO_LOW_INTERFERENCE
   .requiredLowInterferenceRadioMode = false,
