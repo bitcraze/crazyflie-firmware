@@ -11,9 +11,9 @@ void endToEndTask()
   adHocAppInit(ADHOC_PORT_END_TO_END_DELAY);
   int sendCount = 0;
   int recvCount = 0;
-  if(myAddress==7) {
+  if(myAddress==24) {
     isReceiver = true;
-  }else if(myAddress==14) {
+  }else if(myAddress==12) {
     isSender = true;
   }
   if(isReceiver)
@@ -32,8 +32,8 @@ void endToEndTask()
     {
       if(isSender&&sendCount<TOTAL_PACKET_NUM)
         {
-          olsrSendData(myAddress,ADHOC_PORT_END_TO_END_DELAY,7,ADHOC_PORT_END_TO_END_DELAY,0,NULL,0);
-          sendCount--;
+          olsrSendData(myAddress,ADHOC_PORT_END_TO_END_DELAY,24,ADHOC_PORT_END_TO_END_DELAY,0,NULL,0);
+          sendCount++;
         }
       if(isReceiver)
         {

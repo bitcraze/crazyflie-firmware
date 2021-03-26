@@ -162,7 +162,7 @@ void olsrPrintTopologySet(olsrTopologySet_t *topologyset)
   while(candidate != -1)
     {
       olsrTopologySetItem_t tmp = topologyset->setData[candidate];
-      DEBUG_PRINT_OLSR_TOPOLOGY("TOPOLOGYSET: last:%d,dest:%d,weight%f\n",tmp.data.m_lastAddr,tmp.data.m_destAddr,tmp.data.m_weight);
+      DEBUG_PRINT_OLSR_TOPOLOGY("TOPOLOGYSET: last:%d,dest:%d,weight:%f\n",tmp.data.m_lastAddr,tmp.data.m_destAddr,tmp.data.m_weight);
       candidate = tmp.next;
     }
 }

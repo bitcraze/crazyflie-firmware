@@ -98,7 +98,7 @@ static void olsrPacketLossTaskInit()
 static void olsrAppTaskInit()
 {
   DEBUG_PRINT_OLSR_SYSTEM("START_OLSR_APP_TASK_INIT\n");
-  if(xTaskCreate(endToEndTask, "OLSR_APP", configMINIMAL_STACK_SIZE, NULL ,LPS_DECK_TASK_PRI, NULL)==pdPASS)
+  if(xTaskCreate(endToEndTask, "OLSR_APP", 2*configMINIMAL_STACK_SIZE, NULL ,LPS_DECK_TASK_PRI, NULL)==pdPASS)
     {
       DEBUG_PRINT_OLSR_SYSTEM("OLSR_APP TASK CREATE SUCCESSFUL\n");
     }
@@ -114,11 +114,11 @@ static void olsrTaskInit(dwDevice_t *dev)
     // olsrPacketLossTaskInit();
     olsrHelloTaskInit();
     olsrTcTaskInit();
-    // olsrTsTaskInit();
+    olsrTsTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
-    // olsrAppTaskInit();
-    initSimTopology();
+    olsrAppTaskInit();
+    // initSimTopology();
 }
 
 static void olsrInit(dwDevice_t *dev) 

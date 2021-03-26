@@ -42,8 +42,8 @@
 #define OLSR_MPR_NEIGH          2
 
 //simulation
-#define OLSR_SIM
-#define DISTANCE_SIM
+// #define OLSR_SIM
+// #define DISTANCE_SIM
 
 #define MAX_TIMESTAMP 1099511627776 //2**40
 

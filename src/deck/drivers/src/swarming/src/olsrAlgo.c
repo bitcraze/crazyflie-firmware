@@ -27,7 +27,6 @@ static uint16_t g_staticPacketSeq = 0;
 static uint16_t g_staticMessageSeq = 0;
 static uint16_t g_ansn = 0;
 static SemaphoreHandle_t olsrAnsnLock;
-static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
 static int g_ts_receive_error_count = 0;
 static int g_ts_receive_count = 0;
@@ -1152,6 +1151,7 @@ void olsrRoutingTableComputation()
       self.m_nextAddr = olsrNeighborSet.setData[neighborIt].data.m_neighborAddr;
     #ifdef USER_ROUTING
       int16_t distTmp = getDistanceFromAddr(self.m_destAddr);
+     
       self.m_weight = 1 - distanceToPacketLoss(distTmp);
       // DEBUG_PRINT_OLSR_ROUTING("%d to %d's distance is %d\n",myAddress,self.m_destAddr,distTmp);
     #else
