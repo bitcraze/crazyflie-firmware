@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018-2020 Bitcraze AB
+ * Copyright (C) 2018-2021 Bitcraze AB
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -89,7 +89,8 @@ static const DeckDriver lighthouse_deck = {
   .pid = 0x10,
   .name = "bcLighthouse4",
 
-  .usedGpio = 0,  // FIXME: set the used pins
+  .usedGpio = 0,
+  .usedPeriph = DECK_USING_UART1 | DECK_USING_I2C,
   .requiredEstimator = kalmanEstimator,
 
   .memoryDef = &memoryDef,
