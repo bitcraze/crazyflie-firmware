@@ -7,7 +7,7 @@
  *
  * LPS node firmware.
  *
- * Copyright 2017, Bitcraze AB
+ * Copyright 2021, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -197,8 +197,8 @@ static const DeckDriver flowdeck1_deck = {
   .vid = 0xBC,
   .pid = 0x0A,
   .name = "bcFlow",
-
-  .usedGpio = 0,  // FIXME: set the used pins
+  .usedGpio = DECK_USING_IO_3,
+  .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
   .requiredEstimator = kalmanEstimator,
 
   .init = flowdeck1Init,
@@ -244,7 +244,8 @@ static const DeckDriver flowdeck2_deck = {
   .pid = 0x0F,
   .name = "bcFlow2",
 
-  .usedGpio = 0,  // FIXME: set the used pins
+  .usedGpio = DECK_USING_IO_3,
+  .usedPeriph = DECK_USING_I2C, DECK_USING_SPI,
   .requiredEstimator = kalmanEstimator,
 
   .init = flowdeck2Init,
