@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2016 Bitcraze AB
+ * Copyright (C) 2016-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +23,9 @@
  *
  *
  */
-#ifndef POSITION_ESTIMATOR_H_
-#define POSITION_ESTIMATOR_H_
+#pragma once
 
 #include "stabilizer_types.h"
 
-void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick);
+void positionEstimate(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick);
 void positionUpdateVelocity(float accWZ, float dt);
-
-#endif /* POSITION_ESTIMATOR_H_ */

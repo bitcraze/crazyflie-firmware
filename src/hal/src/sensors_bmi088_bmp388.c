@@ -51,6 +51,7 @@
 #include "bmp3.h"
 #include "bstdr_types.h"
 #include "static_mem.h"
+#include "estimator.h"
 
 #include "sensors_bmi088_common.h"
 
@@ -278,6 +279,7 @@ static void sensorsTask(void *param)
   systemWaitStart();
 
   Axis3f accScaled;
+  measurement_t measurement;
   /* wait an additional second the keep bus free
    * this is only required by the z-ranger, since the
    * configuration will be done after system start-up */
@@ -308,12 +310,20 @@ static void sensorsTask(void *param)
       sensorData.gyro.z =  (gyroRaw.z - gyroBias.z) * SENSORS_BMI088_DEG_PER_LSB_CFG;
       applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensorData.gyro);
 
-      /* Acelerometer */
+      measurement.type = MeasurementTypeGyroscope;
+      measurement.data.gyroscope.gyro = sensorData.gyro;
+      estimatorEnqueue(&measurement);
+
+      /* Accelerometer */
       accScaled.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       accScaled.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       accScaled.z = accelRaw.z * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
+
+      measurement.type = MeasurementTypeAcceleration;
+      measurement.data.acceleration.acc = sensorData.acc;
+      estimatorEnqueue(&measurement);
     }
 
     if (isBarometerPresent)
@@ -327,6 +337,11 @@ static void sensorsTask(void *param)
         /* Temperature and Pressure data are read and stored in the bmp3_data instance */
         bmp3_get_sensor_data(sensor_comp, &data, &bmp388Dev);
         sensorsScaleBaro(baro388, data.pressure, data.temperature);
+
+        measurement.type = MeasurementTypeBarometer;
+        measurement.data.barometer.baro = sensorData.baro;
+        estimatorEnqueue(&measurement);
+
         baroMeasDelay = baroMeasDelayMin;
       }
     }

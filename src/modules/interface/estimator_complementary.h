@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * estimator_complementary.h - Complementary estimator interfaced
+ * estimator_complementary.h - Complementary estimator interface
  */
 #pragma once
 
@@ -29,6 +29,6 @@
 
 void estimatorComplementaryInit(void);
 bool estimatorComplementaryTest(void);
-void estimatorComplementary(state_t *state, sensorData_t *sensors, const uint32_t tick);
+void estimatorComplementary(state_t *state, const uint32_t tick);
 
 bool estimatorComplementaryEnqueueTOF(const tofMeasurement_t *tof);

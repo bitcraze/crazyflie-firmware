@@ -237,10 +237,11 @@ static void stabilizerTask(void* param)
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
+    
+    // update sensorData struct (for logging variables)
+    sensorsAcquire(&sensorData, tick);
 
-    if (healthShallWeRunTest())
-    {
-      sensorsAcquire(&sensorData, tick);
+    if (healthShallWeRunTest()) {
       healthRunTests(&sensorData);
     } else {
       // allow to update estimator dynamically
@@ -254,7 +255,7 @@ static void stabilizerTask(void* param)
         controllerType = getControllerType();
       }
 
-      stateEstimator(&state, &sensorData, tick);
+      stateEstimator(&state, tick);
       compressState();
 
       commanderGetSetpoint(&setpoint, &state);
