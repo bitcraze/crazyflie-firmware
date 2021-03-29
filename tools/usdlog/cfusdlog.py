@@ -2,9 +2,10 @@
 """
 Helper to decode binary logged sensor data from crazyflie2 with uSD-Card-Deck
 """
+import argparse
 from zlib import crc32
 import struct
-import argparse
+import numpy as np
 
 # extract null-terminated string
 def _get_name(data, idx):
@@ -79,6 +80,16 @@ def decode(filename):
         for v,d in zip(event['variables'], eventData):
             result[event['name']][v].append(d)
         result[event['name']]["timestamp"].append(timestamp)
+
+    # remove keys that had no data
+    for event_name in list(result.keys()):
+        if len(result[event_name]['timestamp']) == 0:
+            del result[event_name]
+
+    # convert to numpy arrays
+    for event_name in result.keys():
+        for var_name in result[event_name]:
+            result[event_name][var_name] = np.array(result[event_name][var_name])
 
     return result
 

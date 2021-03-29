@@ -19,8 +19,8 @@ locSrv.qy
 locSrv.qz
 locSrv.qw
 on:estDistance
-range.zrange
 on:estTOF
+range.zrange
 on:estAbsoluteHeight
 on:estFlow
 motion.deltaX
