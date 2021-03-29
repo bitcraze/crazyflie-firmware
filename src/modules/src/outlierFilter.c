@@ -147,7 +147,7 @@ bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const fl
 
 
 static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa) {
-  float anchorDistanceSq = distanceSq(&tdoa->anchorPosition[0], &tdoa->anchorPosition[1]);
+  float anchorDistanceSq = distanceSq(&tdoa->anchorPositions[0], &tdoa->anchorPositions[1]);
   float distanceDiffSq = sq(tdoa->distanceDiff);
   return (distanceDiffSq < anchorDistanceSq);
 }

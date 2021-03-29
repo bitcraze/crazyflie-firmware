@@ -257,7 +257,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   return MAX_TIMEOUT;
 }
 
-static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement, const uint8_t idA, const uint8_t idB) {
+static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   estimatorEnqueueTDOA(tdoaMeasurement);
 
   #ifdef LPS_2D_POSITION_HEIGHT
