@@ -572,6 +572,7 @@ static void usdLogTask(void* prm)
       // loop over event triggers "on:<name>"
       usdLogConfig.numEventConfigs = 0;
       usdLogConfig.fixedFrequencyEventIdx = MAX_USD_LOG_EVENTS;
+      usdLogConfig.frequency = 10; // use non-zero default value for task loop below
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
       while (line && usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS) {
         usdLogEventConfig_t* cfg = &usdLogConfig.eventConfigs[usdLogConfig.numEventConfigs];
