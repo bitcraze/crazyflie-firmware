@@ -121,7 +121,7 @@ static dwTime_t final_rx;
 
 static packet_t txPacket;
 static volatile uint8_t curr_seq = 0;
-static int current_anchor = 0;
+static uint8_t current_anchor = 0;
 
 static bool ranging_complete = false;
 static bool lpp_transaction = false;
@@ -256,6 +256,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         dist.x = options->anchorPosition[current_anchor].x;
         dist.y = options->anchorPosition[current_anchor].y;
         dist.z = options->anchorPosition[current_anchor].z;
+        dist.anchorId = current_anchor;
         dist.stdDev = 0.25;
         estimatorEnqueueDistance(&dist);
       }

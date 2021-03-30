@@ -72,8 +72,8 @@ void kalmanCoreRobustUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *t
     float y = this->S[KC_STATE_Y];   
     float z = this->S[KC_STATE_Z];
 
-    float x1 = tdoa->anchorPosition[1].x, y1 = tdoa->anchorPosition[1].y, z1 = tdoa->anchorPosition[1].z;
-    float x0 = tdoa->anchorPosition[0].x, y0 = tdoa->anchorPosition[0].y, z0 = tdoa->anchorPosition[0].z;
+    float x1 = tdoa->anchorPositions[1].x, y1 = tdoa->anchorPositions[1].y, z1 = tdoa->anchorPositions[1].z;
+    float x0 = tdoa->anchorPositions[0].x, y0 = tdoa->anchorPositions[0].y, z0 = tdoa->anchorPositions[0].z;
 
     float dx1 = x - x1;   float  dy1 = y - y1;   float dz1 = z - z1;
     float dx0 = x - x0;   float  dy0 = y - y0;   float dz0 = z - z0;

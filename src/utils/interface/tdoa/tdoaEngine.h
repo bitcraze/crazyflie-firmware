@@ -4,7 +4,7 @@
 #include "tdoaStorage.h"
 #include "tdoaStats.h"
 
-typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement, const uint8_t idA, const uint8_t idB);
+typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
 
 typedef enum {
   TdoaEngineMatchingAlgorithmNone = 0,

@@ -14,13 +14,13 @@ uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t* this);
 
 void setUp(void) {
   // TDoA filter
-  tdoa.anchorPosition[0].x = 1.0;
-  tdoa.anchorPosition[0].y = 1.0;
-  tdoa.anchorPosition[0].z = 1.0;
+  tdoa.anchorPositions[0].x = 1.0;
+  tdoa.anchorPositions[0].y = 1.0;
+  tdoa.anchorPositions[0].z = 1.0;
 
-  tdoa.anchorPosition[1].x = 5.0;
-  tdoa.anchorPosition[1].y = 1.0;
-  tdoa.anchorPosition[1].z = 1.0;
+  tdoa.anchorPositions[1].x = 5.0;
+  tdoa.anchorPositions[1].y = 1.0;
+  tdoa.anchorPositions[1].z = 1.0;
 
   tdoa.distanceDiff = 0.0;
 }
