@@ -91,7 +91,7 @@
 
 #define DEBUG_MODULE "ESTKALMAN"
 #include "debug.h"
-
+#include "sensfusion6.h"
 
 // #define KALMAN_USE_BARO_UPDATE
 
@@ -405,7 +405,7 @@ static void kalmanTask(void* parameters) {
      * This is done every round, since the external state includes some sensor data
      */
     xSemaphoreTake(dataMutex, portMAX_DELAY);
-    kalmanCoreExternalizeState(&coreData, &taskEstimatorState, &accSnapshot, osTick);
+    kalmanCoreExternalizeState(&coreData, &taskEstimatorState, &accSnapshot, &gyroSnapshot, osTick); // adjusted to only update position & velocity
     xSemaphoreGive(dataMutex);
 
     STATS_CNT_RATE_EVENT(&updateCounter);
@@ -422,16 +422,16 @@ void estimatorKalman(state_t *state, sensorData_t *sensors, const uint32_t tick)
   // slower than the IMU loop, but the IMU information is required externally at
   // a higher rate (for body rate control).
   if (sensorsReadAcc(&sensors->acc)) {
-    accAccumulator.x += sensors->acc.x;
-    accAccumulator.y += sensors->acc.y;
-    accAccumulator.z += sensors->acc.z;
+    accAccumulator.x += -sensors->acc.z;
+    accAccumulator.y += -sensors->acc.y;
+    accAccumulator.z += -sensors->acc.x;
     accAccumulatorCount++;
   }
 
   if (sensorsReadGyro(&sensors->gyro)) {
-    gyroAccumulator.x += sensors->gyro.x;
-    gyroAccumulator.y += sensors->gyro.y;
-    gyroAccumulator.z += sensors->gyro.z;
+    gyroAccumulator.x += -sensors->gyro.z;
+    gyroAccumulator.y += -sensors->gyro.y;
+    gyroAccumulator.z += -sensors->gyro.x;
     gyroAccumulatorCount++;
   }
 
@@ -590,6 +590,8 @@ void estimatorKalmanInit(void) {
   outlierFilterReset(&sweepOutlierFilterState, 0);
 
   kalmanCoreInit(&coreData);
+
+  sensfusion6Init();
 }
 
 static bool appendMeasurement(xQueueHandle queue, void *measurement)
@@ -676,7 +678,7 @@ bool estimatorKalmanEnqueueSweepAngles(const sweepAngleMeasurement_t *angles)
 
 bool estimatorKalmanTest(void)
 {
-  return isInit;
+  return (isInit & sensfusion6Test());
 }
 
 void estimatorKalmanGetEstimatedPos(point_t* pos) {

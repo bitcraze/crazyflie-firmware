@@ -12,6 +12,7 @@
 #include "math3d.h"
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
+#define YAW_MAX_DELTA    45.0f
 
 static bool tiltCompensationEnabled = false;
 
@@ -27,6 +28,8 @@ static float r_roll;
 static float r_pitch;
 static float r_yaw;
 static float accelz;
+
+bool flying = 0;
 
 void controllerPidInit(void)
 {
@@ -65,7 +68,20 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     // Rate-controled YAW is moving YAW angle setpoint
     if (setpoint->mode.yaw == modeVelocity) {
-       attitudeDesired.yaw += setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT;
+      attitudeDesired.yaw = capAngle(attitudeDesired.yaw + setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT);
+      float delta = capAngle(attitudeDesired.yaw-state->attitude.yaw);
+       
+      #ifdef YAW_MAX_DELTA
+      // keep the yaw setpoint within +/- YAW_MAX_DELTA from the current yaw
+        if (delta > YAW_MAX_DELTA)
+        {
+          attitudeDesired.yaw = state->attitude.yaw + YAW_MAX_DELTA;
+        }
+        else if (delta < -YAW_MAX_DELTA)
+        {
+          attitudeDesired.yaw = state->attitude.yaw - YAW_MAX_DELTA;
+        }
+      #endif
     } else {
       attitudeDesired.yaw = setpoint->attitude.yaw;
     }
@@ -104,7 +120,7 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     }
 
     // TODO: Investigate possibility to subtract gyro drift.
-    attitudeControllerCorrectRatePID(sensors->gyro.x, -sensors->gyro.y, sensors->gyro.z,
+    attitudeControllerCorrectRatePID(-sensors->gyro.z, sensors->gyro.y, -sensors->gyro.x, // opposite pitch sign due to legacy coordinate frame
                              rateDesired.roll, rateDesired.pitch, rateDesired.yaw);
 
     attitudeControllerGetActuatorOutput(&control->roll,
@@ -117,10 +133,10 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     cmd_roll = control->roll;
     cmd_pitch = control->pitch;
     cmd_yaw = control->yaw;
-    r_roll = radians(sensors->gyro.x);
-    r_pitch = -radians(sensors->gyro.y);
-    r_yaw = radians(sensors->gyro.z);
-    accelz = sensors->acc.z;
+    r_roll = -radians(sensors->gyro.z);
+    r_pitch = radians(sensors->gyro.y); // opposite pitch sign due to legacy CF2 frame
+    r_yaw = -radians(sensors->gyro.x);
+    accelz = -sensors->acc.x;
   }
 
   if (tiltCompensationEnabled)
@@ -144,12 +160,23 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     cmd_pitch = control->pitch;
     cmd_yaw = control->yaw;
 
+    if (flying == 1) 
+    { 
+      positionControllerInit();
+      flying = 0;
+    }
+    
     attitudeControllerResetAllPID();
     positionControllerResetAllPID();
 
     // Reset the calculated YAW angle for rate control
     attitudeDesired.yaw = state->attitude.yaw;
   }
+  else
+  {
+    flying = 1;
+  }
+  
 }
 
 

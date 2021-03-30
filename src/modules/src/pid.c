@@ -66,12 +66,16 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     output += pid->outP;
 
     float deriv = (pid->error - pid->prevError) / pid->dt;
-    if (pid->enableDFilter)
-    {
-      pid->deriv = lpf2pApply(&pid->dFilter, deriv);
-    } else {
-      pid->deriv = deriv;
-    }
+    
+    // filter out too large changes, e.g. when yaw goes from -180deg to 180deg
+    if (fabs(pid->error - pid->prevError) > 180) deriv = 0;
+
+    // if (pid->enableDFilter)
+    // {
+    //   pid->deriv = lpf2pApply(&pid->dFilter, deriv);
+    // } else {
+    pid->deriv = deriv;
+    // }
     if (isnan(pid->deriv)) {
       pid->deriv = 0;
     }
@@ -88,6 +92,12 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
 
     pid->outI = pid->ki * pid->integ;
     output += pid->outI;
+
+    // Filter the total PID output
+    if (pid->enableDFilter)
+    {
+      output = lpf2pApply(&pid->dFilter, output);
+    }
 
     // Constrain the total PID output (unless the outputLimit is zero)
     if(pid->outputLimit != 0)

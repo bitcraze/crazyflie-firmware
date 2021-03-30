@@ -15,5 +15,5 @@ CONTROLLER         ?= Any # one of Any, PID, Mellinger, INDI
 POWER_DISTRIBUTION ?= stock
 
 ######### COMPILE FLAGS ##########
-CFLAGS += -DDECK_FORCE=bcDWM1000
+# CFLAGS += -DDECK_FORCE=bcDWM1000 # define moved to config.mk
 CFLAGS += -DSENSORS_IGNORE_BAROMETER_FAIL

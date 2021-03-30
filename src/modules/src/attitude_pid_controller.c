@@ -31,12 +31,23 @@
 #include "pid.h"
 #include "param.h"
 #include "log.h"
+#include "commander.h"
 
 #define ATTITUDE_LPF_CUTOFF_FREQ      15.0f
 #define ATTITUDE_LPF_ENABLE false
-#define ATTITUDE_RATE_LPF_CUTOFF_FREQ 30.0f
-#define ATTITUDE_RATE_LPF_ENABLE false
+#define ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ 12.5f
+#define ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ 12.5f
+#define ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ 5.0f
+#define ATTITUDE_RATE_LPF_ENABLE true
+#define ATTITUDE_RATE_FF_YAW 220.0f
 
+bool attFiltEnable = ATTITUDE_LPF_ENABLE;
+bool rateFiltEnable = ATTITUDE_RATE_LPF_ENABLE;
+float attFiltCutoff = ATTITUDE_LPF_CUTOFF_FREQ;
+float omxFiltCutoff = ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ;
+float omyFiltCutoff = ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ;
+float omzFiltCutoff = ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ;
+float yawFeedForw = ATTITUDE_RATE_FF_YAW;
 
 static inline int16_t saturateSignedInt16(float in)
 {
@@ -67,24 +78,24 @@ void attitudeControllerInit(const float updateDt)
   if(isInit)
     return;
 
-  //TODO: get parameters from configuration manager instead
+  //TODO: get parameters from configuration manager instead - now (partly) implemented
   pidInit(&pidRollRate,  0, PID_ROLL_RATE_KP,  PID_ROLL_RATE_KI,  PID_ROLL_RATE_KD,
-      updateDt, ATTITUDE_RATE, ATTITUDE_RATE_LPF_CUTOFF_FREQ, ATTITUDE_RATE_LPF_ENABLE);
+      updateDt, ATTITUDE_RATE, omxFiltCutoff, rateFiltEnable);
   pidInit(&pidPitchRate, 0, PID_PITCH_RATE_KP, PID_PITCH_RATE_KI, PID_PITCH_RATE_KD,
-      updateDt, ATTITUDE_RATE, ATTITUDE_RATE_LPF_CUTOFF_FREQ, ATTITUDE_RATE_LPF_ENABLE);
+      updateDt, ATTITUDE_RATE, omyFiltCutoff, rateFiltEnable);
   pidInit(&pidYawRate,   0, PID_YAW_RATE_KP,   PID_YAW_RATE_KI,   PID_YAW_RATE_KD,
-      updateDt, ATTITUDE_RATE, ATTITUDE_RATE_LPF_CUTOFF_FREQ, ATTITUDE_RATE_LPF_ENABLE);
+      updateDt, ATTITUDE_RATE, omzFiltCutoff, rateFiltEnable);
 
   pidSetIntegralLimit(&pidRollRate,  PID_ROLL_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitchRate, PID_PITCH_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYawRate,   PID_YAW_RATE_INTEGRATION_LIMIT);
 
   pidInit(&pidRoll,  0, PID_ROLL_KP,  PID_ROLL_KI,  PID_ROLL_KD,  updateDt,
-      ATTITUDE_RATE, ATTITUDE_LPF_CUTOFF_FREQ, ATTITUDE_LPF_ENABLE);
+      ATTITUDE_RATE, attFiltCutoff, attFiltEnable);
   pidInit(&pidPitch, 0, PID_PITCH_KP, PID_PITCH_KI, PID_PITCH_KD, updateDt,
-      ATTITUDE_RATE, ATTITUDE_LPF_CUTOFF_FREQ, ATTITUDE_LPF_ENABLE);
+      ATTITUDE_RATE, attFiltCutoff, attFiltEnable);
   pidInit(&pidYaw,   0, PID_YAW_KP,   PID_YAW_KI,   PID_YAW_KD,   updateDt,
-      ATTITUDE_RATE, ATTITUDE_LPF_CUTOFF_FREQ, ATTITUDE_LPF_ENABLE);
+      ATTITUDE_RATE, attFiltCutoff, attFiltEnable);
 
   pidSetIntegralLimit(&pidRoll,  PID_ROLL_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitch, PID_PITCH_INTEGRATION_LIMIT);
@@ -109,7 +120,13 @@ void attitudeControllerCorrectRatePID(
   pitchOutput = saturateSignedInt16(pidUpdate(&pidPitchRate, pitchRateActual, true));
 
   pidSetDesired(&pidYawRate, yawRateDesired);
-  yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, true));
+
+  // there is probably a more elegant way to get the yaw rate setpoint...
+  static setpoint_t setpoint;
+  static state_t state;
+  commanderGetSetpoint(&setpoint, &state);
+  // adding a feedforward term
+  yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, true) + yawFeedForw*setpoint.attitudeRate.yaw);
 }
 
 void attitudeControllerCorrectAttitudePID(
@@ -196,6 +213,7 @@ PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitch.kd)
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYaw.kp)
 PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYaw.ki)
 PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
+PARAM_ADD(PARAM_FLOAT, yawFeedForw, &yawFeedForw)
 PARAM_GROUP_STOP(pid_attitude)
 
 PARAM_GROUP_START(pid_rate)
@@ -209,3 +227,12 @@ PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
 PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
 PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYawRate.kd)
 PARAM_GROUP_STOP(pid_rate)
+
+PARAM_GROUP_START(attFilt)
+PARAM_ADD(PARAM_INT8, attFiltEn, &attFiltEnable)
+PARAM_ADD(PARAM_FLOAT, attFiltCut, &attFiltCutoff)
+PARAM_ADD(PARAM_INT8, rateFiltEn, &rateFiltEnable)
+PARAM_ADD(PARAM_FLOAT, omxFiltCut, &omxFiltCutoff)
+PARAM_ADD(PARAM_FLOAT, omyFiltCut, &omyFiltCutoff)
+PARAM_ADD(PARAM_FLOAT, omzFiltCut, &omzFiltCutoff)
+PARAM_GROUP_STOP(attFilt)

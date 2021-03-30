@@ -72,8 +72,8 @@ void estimatorComplementary(state_t *state, sensorData_t *sensorData, const uint
 {
   sensorsAcquire(sensorData, tick); // Read sensors at full rate (1000Hz)
   if (RATE_DO_EXECUTE(ATTITUDE_UPDATE_RATE, tick)) {
-    sensfusion6UpdateQ(sensorData->gyro.x, sensorData->gyro.y, sensorData->gyro.z,
-                       sensorData->acc.x, sensorData->acc.y, sensorData->acc.z,
+    sensfusion6UpdateQ(-sensorData->gyro.z, -sensorData->gyro.y, -sensorData->gyro.x,
+                       -sensorData->acc.z, -sensorData->acc.y, -sensorData->acc.x,
                        ATTITUDE_UPDATE_DT);
 
     // Save attitude, adjusted for the legacy CF2 body coordinate system
@@ -87,9 +87,9 @@ void estimatorComplementary(state_t *state, sensorData_t *sensorData, const uint
       &state->attitudeQuaternion.z,
       &state->attitudeQuaternion.w);
 
-    state->acc.z = sensfusion6GetAccZWithoutGravity(sensorData->acc.x,
-                                                    sensorData->acc.y,
-                                                    sensorData->acc.z);
+    state->acc.z = sensfusion6GetAccZWithoutGravity(-sensorData->acc.z,
+                                                    -sensorData->acc.y,
+                                                    -sensorData->acc.x);
 
     positionUpdateVelocity(state->acc.z, ATTITUDE_UPDATE_DT);
   }

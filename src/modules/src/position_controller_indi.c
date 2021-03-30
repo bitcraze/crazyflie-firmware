@@ -125,9 +125,9 @@ void positionControllerINDI(const sensorData_t *sensors,
 	velS_x = state->velocity.x;
 	velS_y = -state->velocity.y;
 	velS_z = -state->velocity.z;
-	gyr_p = sensors->gyro.x;
-	gyr_q = sensors->gyro.y;
-	gyr_r = sensors->gyro.z; 
+	gyr_p = -sensors->gyro.z;
+	gyr_q = -sensors->gyro.y;
+	gyr_r = -sensors->gyro.x; 
 
 	// Read in velocity setpoints
     velocityRef.x = setpoint->velocity.x;
@@ -155,9 +155,9 @@ void positionControllerINDI(const sensorData_t *sensors,
 
 	// Acceleration controller (INDI)
 	// Read lin. acceleration (Body-fixed) obtained from sensors CHECKED
-	indiOuter.linear_accel_s.x = (sensors->acc.x)*9.81f;
-	indiOuter.linear_accel_s.y = (-sensors->acc.y)*9.81f;
-	indiOuter.linear_accel_s.z = (-sensors->acc.z)*9.81f;
+	indiOuter.linear_accel_s.x = (-sensors->acc.z)*9.81f;
+	indiOuter.linear_accel_s.y = (sensors->acc.y)*9.81f; // opposite sign due to legacy CF2 frame (?)
+	indiOuter.linear_accel_s.z = (sensors->acc.x)*9.81f;
 
 	// Filter lin. acceleration 
 	filter_ddxi(indiOuter.ddxi, &indiOuter.linear_accel_s, &indiOuter.linear_accel_f);
