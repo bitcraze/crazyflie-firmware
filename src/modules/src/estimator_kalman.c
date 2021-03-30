@@ -89,6 +89,7 @@
 #include "mm_sweep_angles.h"
 
 #include "mm_tdoa_robust.h"
+#include "mm_distance_robust.h"
 
 #define DEBUG_MODULE "ESTKALMAN"
 #include "debug.h"
@@ -114,8 +115,9 @@ static StaticSemaphore_t dataMutexBuffer;
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
 
-// Use the robust TDoA implementation, off by default but can be turned on through a parameter.
-// The robust tdoa uses around 17% CPU VS 8% for normal TDoA
+// Use the robust implementations of TWR and TDoA, off by default but can be turned on through a parameter.
+// The robust implementations use around 10% more CPU VS the standard flavours
+static bool robustTwr = false;
 static bool robustTdoa = false;
 
 /**
@@ -360,7 +362,13 @@ static bool updateQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypeDistance:
-        kalmanCoreUpdateWithDistance(&coreData, &m.data.distance);
+        if(robustTwr){
+            // robust KF update with UWB TWR measurements
+            kalmanCoreRobustUpdateWithDistance(&coreData, &m.data.distance);
+        }else{
+            // standard KF update
+            kalmanCoreUpdateWithDistance(&coreData, &m.data.distance);
+        }
         doneUpdate = true;
         break;
       case MeasurementTypeTOF:
@@ -478,4 +486,5 @@ PARAM_GROUP_START(kalman)
   PARAM_ADD(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
   PARAM_ADD(PARAM_UINT8, quadIsFlying, &quadIsFlying)
   PARAM_ADD(PARAM_UINT8, robustTdoa, &robustTdoa)
+  PARAM_ADD(PARAM_UINT8, robustTwr, &robustTwr)
 PARAM_GROUP_STOP(kalman)
