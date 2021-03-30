@@ -972,9 +972,10 @@ logVarId_t logGetVarId(char* group, char* name)
   for(i=0; i<logsLen; i++)
   {
     if (logs[i].type & LOG_GROUP) {
-      if (logs[i].type & LOG_START)
+      if (logs[i].type & LOG_START) {
         currgroup = logs[i].name;
-    } if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name))) {
+      }
+    } else if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name))) {
       varId = (logVarId_t)i;
       return varId;
     }
