@@ -36,18 +36,6 @@
 // See header for API comments.
 
 
-// We must convert from stabilizer types to cmath3d types to get the library of
-// math operations.
-static struct vec vec2svec(struct vec3_s v)
-{
-  return mkvec(v.x, v.y, v.z);
-}
-static struct vec3_s svec2vec(struct vec v)
-{
-  struct vec3_s vv = { .x = v.x, .y = v.y, .z = v.z, };
-  return vv;
-}
-
 // Computes a new goal position inside our buffered Voronoi cell.
 //
 // "Sidestep" dentoes a behavior to avoid deadlock when two robots are
@@ -114,7 +102,7 @@ void collisionAvoidanceUpdateSetpointCore(
   // Compute the cell in a stretched coordinate system for downwash awareness.
   // See header for details.
   struct vec const radiiInv = veltrecip(params->ellipsoidRadii);
-  struct vec const ourPos = vec2svec(state->position);
+  struct vec const ourPos = state->position;
 
   // We could do some optimizations here to reduce the number of rows, like
   // leave out very far away neighbors. It would help the average case
@@ -152,8 +140,8 @@ void collisionAvoidanceUpdateSetpointCore(
 
   float const inPolytopeTolerance = 10.0f * params->voronoiProjectionTolerance;
 
-  struct vec setPos = vec2svec(setpoint->position);
-  struct vec setVel = vec2svec(setpoint->velocity);
+  struct vec setPos = setpoint->position;
+  struct vec setVel = setpoint->velocity;
 
   if (setpoint->mode.x == modeVelocity) {
     // Interpret the setpoint to mean "fly with this velocity".
@@ -248,8 +236,8 @@ void collisionAvoidanceUpdateSetpointCore(
     // Unsupported control mode, do nothing.
   }
 
-  setpoint->position = svec2vec(setPos);
-  setpoint->velocity = svec2vec(setVel);
+  setpoint->position = setPos;
+  setpoint->velocity = setVel;
 }
 
 

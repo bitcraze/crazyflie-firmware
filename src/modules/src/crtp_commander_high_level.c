@@ -242,11 +242,6 @@ static int start_trajectory(const struct data_start_trajectory* data);
 static int define_trajectory(const struct data_define_trajectory* data);
 
 // Helper functions
-static struct vec state2vec(struct vec3_s v)
-{
-  return mkvec(v.x, v.y, v.z);
-}
-
 bool isInGroup(uint8_t g) {
   return g == ALL_GROUPS || (g & group_mask) != 0;
 }
@@ -280,8 +275,8 @@ bool crtpCommanderHighLevelIsStopped()
 void crtpCommanderHighLevelTellState(const state_t *state)
 {
   xSemaphoreTake(lockTraj, portMAX_DELAY);
-  pos = state2vec(state->position);
-  vel = state2vec(state->velocity);
+  pos = state->position;
+  vel = state->velocity;
   yaw = radians(state->attitude.yaw);
   xSemaphoreGive(lockTraj);
 }
@@ -299,8 +294,8 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
 
   // if we are on the ground, update the last setpoint with the current state estimate
   if (plan_is_stopped(&planner)) {
-    pos = state2vec(state->position);
-    vel = state2vec(state->velocity);
+    pos = state->position;
+    vel = state->velocity;
     yaw = radians(state->attitude.yaw);
   }
 

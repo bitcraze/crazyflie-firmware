@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * imu_types.h - Types used by IMU and releted functions.
+ * imu_types.h - Types used by IMU and related functions.
  */
-#ifndef IMU_TYPES_H_
-#define IMU_TYPES_H_
+#pragma once
 
  typedef union {
    struct {
@@ -62,5 +61,3 @@
    };
    float axis[3];
  } Axis3f;
-
-#endif /* IMU_TYPES_H_ */

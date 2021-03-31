@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include "imu_types.h"
 #include "lighthouse_calibration.h"
+#include "math3d.h"
 
 /* Data structure used by the stabilizer subsystem.
  * All have a timestamp to be set when the data is calculated.
@@ -46,17 +47,10 @@ typedef struct {
 typedef float vec3d[vec3d_size];
 typedef float mat3d[vec3d_size][vec3d_size];
 
-/* x,y,z vector */
-struct vec3_s {
-  float x;
-  float y;
-  float z;
-};
-
-typedef struct vec3_s vector_t;
-typedef struct vec3_s point_t;
-typedef struct vec3_s velocity_t;
-typedef struct vec3_s acc_t;
+typedef struct vec vector_t;
+typedef struct vec point_t;
+typedef struct vec velocity_t;
+typedef struct vec acc_t;
 
 /* Orientation as a quaternion */
 typedef struct {
