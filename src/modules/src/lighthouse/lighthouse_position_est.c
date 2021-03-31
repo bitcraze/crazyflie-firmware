@@ -187,22 +187,15 @@ void lighthousePositionSetGeometryData(const uint8_t baseStation, const baseStat
 
 static void preProcessGeometryData(const mat33_t* bsRot, mat33_t* bsRotInverted, mat33_t* lh1Rotor2Rot, mat33_t* lh1Rotor2RotInverted) {
   // For a rotation matrix inverse and transpose is equal. Use transpose instead
-  arm_matrix_instance_f32 bsRot_ = {3, 3, (float32_t *)bsRot};
-  arm_matrix_instance_f32 bsRotInverted_ = {3, 3, (float32_t *)bsRotInverted->m};
-  mat_trans(&bsRot_, &bsRotInverted_);
+  *bsRotInverted = mtranspose(*bsRot);
 
   // In a LH1 system, the axis of rotation of the second rotor is perpendicular to the first rotor
-  float secondRotorInvertedR[3][3] = {
-    {1, 0, 0},
-    {0, 0, -1},
-    {0, 1, 0}
-  };
-  arm_matrix_instance_f32 secondRotorInvertedR_ = {3, 3, (float32_t *)secondRotorInvertedR};
-  arm_matrix_instance_f32 lh1Rotor2Rot_ = {3, 3, (float32_t *)lh1Rotor2Rot->m};
-  mat_mult(&bsRot_, &secondRotorInvertedR_, &lh1Rotor2Rot_);
-
-  arm_matrix_instance_f32 lh1Rotor2RotInverted_ = {3, 3, (float32_t *)lh1Rotor2RotInverted->m};
-  mat_trans(&lh1Rotor2Rot_, &lh1Rotor2RotInverted_);
+  mat33_t secondRotorInvertedR = {.m = {
+      {1, 0, 0},
+      {0, 0, -1},
+      {0, 1, 0}}};
+  *lh1Rotor2Rot = mmul(*bsRot, secondRotorInvertedR);
+  *lh1Rotor2RotInverted = mtranspose(*lh1Rotor2Rot);
 }
 
 

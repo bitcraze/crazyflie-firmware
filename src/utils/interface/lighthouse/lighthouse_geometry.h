@@ -11,9 +11,9 @@ typedef struct {
 } __attribute__((packed)) baseStationGeometry_t;
 
 typedef struct {
-  __attribute__((aligned(4))) mat33_t baseStationInvertedRotationMatrixes;
-  __attribute__((aligned(4))) mat33_t lh1Rotor2RotationMatrixes;
-  __attribute__((aligned(4))) mat33_t lh1Rotor2InvertedRotationMatrixes;
+  mat33_t baseStationInvertedRotationMatrixes;
+  mat33_t lh1Rotor2RotationMatrixes;
+  mat33_t lh1Rotor2InvertedRotationMatrixes;
 } baseStationGeometryCache_t;
 
 /**
