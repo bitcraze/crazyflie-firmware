@@ -53,22 +53,7 @@ typedef struct vec velocity_t;
 typedef struct vec acc_t;
 
 /* Orientation as a quaternion */
-typedef struct {
-  union {
-    struct {
-      float q0;
-      float q1;
-      float q2;
-      float q3;
-    };
-    struct {
-      float x;
-      float y;
-      float z;
-      float w;
-    };
-  };
-} quaternion_t;
+typedef struct quat quaternion_t;
 
 typedef enum {
   MeasurementSourceLocationService  = 0,

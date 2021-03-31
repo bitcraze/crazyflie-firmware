@@ -39,7 +39,7 @@ void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
 
   // compute orientation error
   struct quat const q_ekf = mkquat(this->q[1], this->q[2], this->q[3], this->q[0]);
-  struct quat const q_measured = mkquat(pose->quat.x, pose->quat.y, pose->quat.z, pose->quat.w);
+  struct quat const q_measured = pose->quat;
   struct quat const q_residual = qqmul(qinv(q_ekf), q_measured);
   // small angle approximation, see eq. 141 in http://mars.cs.umn.edu/tr/reports/Trawny05b.pdf
   struct vec const err_quat = vscl(2.0f / q_residual.w, quatimagpart(q_residual));

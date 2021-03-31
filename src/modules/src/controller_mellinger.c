@@ -187,13 +187,13 @@ void controllerMellinger(control_t *control, setpoint_t *setpoint,
   } else if (setpoint->mode.yaw == modeAbs) {
     desiredYaw = setpoint->attitude.yaw;
   } else if (setpoint->mode.quat == modeAbs) {
-    struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+    struct quat setpoint_quat = setpoint->attitudeQuaternion;
     struct vec rpy = quat2rpy(setpoint_quat);
     desiredYaw = degrees(rpy.z);
   }
 
   // Z-Axis [zB]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  struct quat q = state->attitudeQuaternion;
   struct mat33 R = quat2rotmat(q);
   z_axis = mcolumn(R, 2);
 
