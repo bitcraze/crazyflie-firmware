@@ -34,6 +34,7 @@ typedef struct {
   clockCorrectionStorage_t clockCorrectionStorage;
 
   point_t position; // The coordinates of the anchor
+  uint32_t positionUpdateTime; // time when the position of this anchor was updated last time
 
   tdoaTimeOfFlight_t tof[TOF_PER_ANCHOR_COUNT];
   tdoaRemoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];

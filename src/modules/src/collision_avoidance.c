@@ -325,7 +325,7 @@ void collisionAvoidanceUpdateSetpoint(
       continue;
     }
 
-    if (doAgeFilter && (time - otherPos->pos.timestamp > params.maxPeerLocAgeMillis)) {
+    if (doAgeFilter && (time - otherPos->timestamp > params.maxPeerLocAgeMillis)) {
       continue;
     }
 

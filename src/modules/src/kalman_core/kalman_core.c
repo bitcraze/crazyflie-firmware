@@ -716,7 +716,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 {
   // position state is already in world frame
   state->position = (point_t){
-      .timestamp = tick,
       .x = this->S[KC_STATE_X],
       .y = this->S[KC_STATE_Y],
       .z = this->S[KC_STATE_Z]
@@ -724,7 +723,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 
   // velocity is in body frame and needs to be rotated to world frame
   state->velocity = (velocity_t){
-      .timestamp = tick,
       .x = this->R[0][0]*this->S[KC_STATE_PX] + this->R[0][1]*this->S[KC_STATE_PY] + this->R[0][2]*this->S[KC_STATE_PZ],
       .y = this->R[1][0]*this->S[KC_STATE_PX] + this->R[1][1]*this->S[KC_STATE_PY] + this->R[1][2]*this->S[KC_STATE_PZ],
       .z = this->R[2][0]*this->S[KC_STATE_PX] + this->R[2][1]*this->S[KC_STATE_PY] + this->R[2][2]*this->S[KC_STATE_PZ]
@@ -734,7 +732,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
   // Furthermore, the legacy code requires acc.z to be acceleration without gravity.
   // Finally, note that these accelerations are in Gs, and not in m/s^2, hence - 1 for removing gravity
   state->acc = (acc_t){
-      .timestamp = tick,
       .x = this->R[0][0]*acc->x + this->R[0][1]*acc->y + this->R[0][2]*acc->z,
       .y = this->R[1][0]*acc->x + this->R[1][1]*acc->y + this->R[1][2]*acc->z,
       .z = this->R[2][0]*acc->x + this->R[2][1]*acc->y + this->R[2][2]*acc->z - 1
@@ -747,7 +744,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 
   // Save attitude, adjusted for the legacy CF2 body coordinate system
   state->attitude = (attitude_t){
-      .timestamp = tick,
       .roll = roll*RAD_TO_DEG,
       .pitch = -pitch*RAD_TO_DEG,
       .yaw = yaw*RAD_TO_DEG
@@ -756,7 +752,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
   // Save quaternion, hopefully one day this could be used in a better controller.
   // Note that this is not adjusted for the legacy coordinate system
   state->attitudeQuaternion = (quaternion_t){
-      .timestamp = tick,
       .w = this->q[0],
       .x = this->q[1],
       .y = this->q[2],

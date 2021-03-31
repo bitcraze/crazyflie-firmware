@@ -27,7 +27,7 @@ bool peerLocalizationTellPosition(int cfid, positionMeasurement_t const *pos)
       other_positions[i].pos.x = pos->x;
       other_positions[i].pos.y = pos->y;
       other_positions[i].pos.z = pos->z;
-      other_positions[i].pos.timestamp = xTaskGetTickCount();
+      other_positions[i].timestamp = xTaskGetTickCount();
       return true;
     }
   }

@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * stabilizer.h: Stabilizer orchestrator
+ * stabilizer_types.h: Commonly used types for the stabilizer
  */
-#ifndef __STABILIZER_TYPES_H__
-#define __STABILIZER_TYPES_H__
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -36,9 +35,7 @@
  */
 
 /** Attitude in euler angle form */
-typedef struct attitude_s {
-  uint32_t timestamp;  // Timestamp when the data was computed
-
+typedef struct {
   float roll;
   float pitch;
   float yaw;
@@ -51,8 +48,6 @@ typedef float mat3d[vec3d_size][vec3d_size];
 
 /* x,y,z vector */
 struct vec3_s {
-  uint32_t timestamp; // Timestamp when the data was computed
-
   float x;
   float y;
   float z;
@@ -64,9 +59,7 @@ typedef struct vec3_s velocity_t;
 typedef struct vec3_s acc_t;
 
 /* Orientation as a quaternion */
-typedef struct quaternion_s {
-  uint32_t timestamp;
-
+typedef struct {
   union {
     struct {
       float q0;
@@ -88,20 +81,20 @@ typedef enum {
   MeasurementSourceLighthouse       = 1,
 } measurementSource_t;
 
-typedef struct tdoaMeasurement_s {
+typedef struct {
   point_t anchorPositions[2];
   uint8_t anchorIds[2];
   float distanceDiff;
   float stdDev;
 } tdoaMeasurement_t;
 
-typedef struct baro_s {
+typedef struct {
   float pressure;           // mbar
   float temperature;        // degree Celcius
   float asl;                // m (ASL = altitude above sea level)
 } baro_t;
 
-typedef struct positionMeasurement_s {
+typedef struct {
   union {
     struct {
       float x;
@@ -114,7 +107,7 @@ typedef struct positionMeasurement_s {
   measurementSource_t source;
 } positionMeasurement_t;
 
-typedef struct poseMeasurement_s {
+typedef struct {
   union {
     struct {
       float x;
@@ -128,7 +121,7 @@ typedef struct poseMeasurement_s {
   float stdDevQuat;
 } poseMeasurement_t;
 
-typedef struct distanceMeasurement_s {
+typedef struct {
   union {
     struct {
       float x;
@@ -142,12 +135,11 @@ typedef struct distanceMeasurement_s {
   float stdDev;
 } distanceMeasurement_t;
 
-typedef struct zDistance_s {
-  uint32_t timestamp;
+typedef struct {
   float distance;           // m
 } zDistance_t;
 
-typedef struct sensorData_s {
+typedef struct {
   Axis3f acc;               // Gs
   Axis3f gyro;              // deg/s
   Axis3f mag;               // gauss
@@ -159,7 +151,7 @@ typedef struct sensorData_s {
   uint64_t interruptTimestamp;
 } sensorData_t;
 
-typedef struct state_s {
+typedef struct {
   attitude_t attitude;      // deg (legacy CF2 body coordinate system, where pitch is inverted)
   quaternion_t attitudeQuaternion;
   point_t position;         // m
@@ -167,20 +159,20 @@ typedef struct state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
 } state_t;
 
-typedef struct control_s {
+typedef struct {
   int16_t roll;
   int16_t pitch;
   int16_t yaw;
   float thrust;
 } control_t;
 
-typedef enum mode_e {
+typedef enum {
   modeDisable = 0,
   modeAbs,
   modeVelocity
 } stab_mode_t;
 
-typedef struct setpoint_s {
+typedef struct {
   uint32_t timestamp;
 
   attitude_t attitude;      // deg
@@ -204,21 +196,12 @@ typedef struct setpoint_s {
 } setpoint_t;
 
 /** Estimate of position */
-typedef struct estimate_s {
-  uint32_t timestamp; // Timestamp when the data was computed
-
+typedef struct {
   point_t position;
 } estimate_t;
 
-/** Setpoint for althold */
-typedef struct setpointZ_s {
-  float z;
-  bool isUpdate; // True = small update of setpoint, false = completely new
-} setpointZ_t;
-
 /** Flow measurement**/
-typedef struct flowMeasurement_s {
-  uint32_t timestamp;
+typedef struct {
   union {
     struct {
       float dpixelx;  // Accumulated pixel count x
@@ -240,22 +223,19 @@ typedef struct tofMeasurement_s {
 } tofMeasurement_t;
 
 /** Absolute height measurement */
-typedef struct heightMeasurement_s {
-  uint32_t timestamp;
+typedef struct {
   float height;
   float stdDev;
 } heightMeasurement_t;
 
 /** Yaw error measurement */
 typedef struct {
-  uint32_t timestamp;
   float yawError;
   float stdDev;
 } yawErrorMeasurement_t;
 
 /** Sweep angle measurement */
 typedef struct {
-  uint32_t timestamp;
   const vec3d* sensorPos;    // Sensor position in the CF reference frame
   const vec3d* rotorPos;     // Pos of rotor origin in global reference frame
   const mat3d* rotorRot;     // Rotor rotation matrix
@@ -271,20 +251,17 @@ typedef struct {
 } sweepAngleMeasurement_t;
 
 /** gyroscope measurement */
-typedef struct
-{
+typedef struct {
   Axis3f gyro; // deg/s, for legacy reasons
 } gyroscopeMeasurement_t;
 
 /** accelerometer measurement */
-typedef struct
-{
+typedef struct {
   Axis3f acc; // Gs, for legacy reasons
 } accelerationMeasurement_t;
 
 /** barometer measurement */
-typedef struct
-{
+typedef struct {
   baro_t baro; // for legacy reasons
 } barometerMeasurement_t;
 
@@ -302,5 +279,3 @@ typedef struct
 #define POSITION_RATE RATE_100_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
-
-#endif

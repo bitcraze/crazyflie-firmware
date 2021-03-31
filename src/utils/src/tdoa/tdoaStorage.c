@@ -156,8 +156,7 @@ bool tdoaStorageGetAnchorPosition(const tdoaAnchorContext_t* anchorCtx, point_t*
 
   int32_t validCreationTime = now - ANCHOR_POSITION_VALIDITY_PERIOD;
   const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
-  if ((int32_t)anchorInfo->position.timestamp > validCreationTime) {
-    position->timestamp = anchorInfo->position.timestamp;
+  if ((int32_t)anchorInfo->positionUpdateTime > validCreationTime) {
     position->x = anchorInfo->position.x;
     position->y = anchorInfo->position.y;
     position->z = anchorInfo->position.z;
@@ -171,7 +170,7 @@ void tdoaStorageSetAnchorPosition(tdoaAnchorContext_t* anchorCtx, const float x,
   uint32_t now = anchorCtx->currentTime_ms;
   tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
 
-  anchorInfo->position.timestamp = now;
+  anchorInfo->positionUpdateTime = now;
   anchorInfo->position.x = x;
   anchorInfo->position.y = y;
   anchorInfo->position.z = z;

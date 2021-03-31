@@ -21,7 +21,8 @@ bool peerLocalizationTest();
 
 typedef struct peerLocalizationOtherPosition_s {
   uint8_t id;  // CF id
-  point_t pos; // position and timestamp (millisecs)
+  point_t pos; // position
+  uint32_t timestamp; // ticks/millisecs
 } peerLocalizationOtherPosition_t;
 
 // Tell the peer localization system the position of another Crazyflie.

@@ -198,14 +198,13 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
 
         point_t position;
         memset(&position, 0, sizeof(position));
-        locoDeckGetAnchorPosition(anchorId, &position);
+        bool hasBeenSet = locoDeckGetAnchorPosition(anchorId, &position);
 
         float* destAsFloat = (float*)dest;
         destAsFloat[0] = position.x;
         destAsFloat[1] = position.y;
         destAsFloat[2] = position.z;
 
-        bool hasBeenSet = (position.timestamp != 0);
         dest[sizeof(float) * 3] = hasBeenSet;
 
         result = true;

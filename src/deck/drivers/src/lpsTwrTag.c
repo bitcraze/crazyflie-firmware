@@ -249,7 +249,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 
       rangingOk = true;
 
-      if ((options->combinedAnchorPositionOk || options->anchorPosition[current_anchor].timestamp) &&
+      if ((options->combinedAnchorPositionOk || options->anchorPositionValid[current_anchor]) &&
           (diff < (OUTLIER_TH*stddev))) {
         distanceMeasurement_t dist;
         dist.distance = state.distance[current_anchor];
@@ -434,7 +434,7 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
   return MAX_TIMEOUT;
 }
 
-// Loco Posisioning Protocol (LPP) handling
+// Loco Positioning Protocol (LPP) handling
 static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data)
 {
   uint8_t type = data[0];
@@ -442,7 +442,7 @@ static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data)
   if (type == LPP_SHORT_ANCHORPOS) {
     if (srcId < LOCODECK_NR_OF_TWR_ANCHORS) {
       struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
-      options->anchorPosition[srcId].timestamp = xTaskGetTickCount();
+      options->anchorPositionValid[srcId] = true;
       options->anchorPosition[srcId].x = newpos->x;
       options->anchorPosition[srcId].y = newpos->y;
       options->anchorPosition[srcId].z = newpos->z;

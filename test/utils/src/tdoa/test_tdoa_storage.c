@@ -324,7 +324,7 @@ void testThatAnchorPositionIsSetAndGet() {
   TEST_ASSERT_EQUAL_FLOAT(expectedX, actual.x);
   TEST_ASSERT_EQUAL_FLOAT(expectedY, actual.y);
   TEST_ASSERT_EQUAL_FLOAT(expectedZ, actual.z);
-  TEST_ASSERT_EQUAL_UINT32(expectedTime, actual.timestamp);
+  TEST_ASSERT_EQUAL_UINT32(expectedTime, context.anchorInfo->positionUpdateTime);
 }
 
 

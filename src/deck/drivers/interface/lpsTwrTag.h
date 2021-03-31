@@ -50,6 +50,7 @@ typedef struct {
 
    // TWR data
   point_t anchorPosition[LOCODECK_NR_OF_TWR_ANCHORS];
+  bool anchorPositionValid[LOCODECK_NR_OF_TWR_ANCHORS];
   bool combinedAnchorPositionOk;
 
   // TWR-TDMA options
