@@ -29,7 +29,7 @@ void testThatBaseStationPositionIsExtracted() {
 
 void testThatRayIsCalculatedFromNonRotatedBaseStation() {
   // Fixture
-  baseStationGeometry_t bsGeo = {.mat = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+  baseStationGeometry_t bsGeo = {.mat = {.m = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}};
 
   float angle1 = 0.0f;
   float angle2 = 0.0f;
@@ -49,7 +49,7 @@ void testThatRayIsCalculatedFromRotatedBaseStation() {
 
   // Rotation about Y-axis
   float rotY = 0.1;
-  baseStationGeometry_t bsGeo = {.mat = {{cos(rotY), 0, sin(rotY)}, {0, 1, 0}, {-sin(rotY), 0, cos(rotY)}}};
+  baseStationGeometry_t bsGeo = {.mat = {.m = {{cos(rotY), 0, sin(rotY)}, {0, 1, 0}, {-sin(rotY), 0, cos(rotY)}}}};
 
   float angle1 = 0.0f;
   float angle2 = 0.0f;
@@ -66,7 +66,7 @@ void testThatRayIsCalculatedFromRotatedBaseStation() {
 
 void testThatRayIsCalculatedFromNonRotatedBaseStationWithHorizontalSweepAngle() {
   // Fixture
-  baseStationGeometry_t bsGeo = {.mat = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+  baseStationGeometry_t bsGeo = {.mat = {.m = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}};
 
   float angle1 = 0.1f;
   float angle2 = 0.0f;
@@ -83,7 +83,7 @@ void testThatRayIsCalculatedFromNonRotatedBaseStationWithHorizontalSweepAngle() 
 
 void testThatRayIsCalculatedFromNonRotatedBaseStationWithVerticalSweepAngle() {
   // Fixture
-  baseStationGeometry_t bsGeo = {.mat = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+  baseStationGeometry_t bsGeo = {.mat = {.m = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}};
 
   float angle1 = 0.0f;
   float angle2 = 0.1f;

@@ -6,14 +6,14 @@
 
 typedef struct {
   __attribute__((aligned(4))) vec3d origin;
-  __attribute__((aligned(4))) mat3d mat;
+  __attribute__((aligned(4))) mat33_t mat;
   bool valid;
 } __attribute__((packed)) baseStationGeometry_t;
 
 typedef struct {
-  __attribute__((aligned(4))) mat3d baseStationInvertedRotationMatrixes;
-  __attribute__((aligned(4))) mat3d lh1Rotor2RotationMatrixes;
-  __attribute__((aligned(4))) mat3d lh1Rotor2InvertedRotationMatrixes;
+  __attribute__((aligned(4))) mat33_t baseStationInvertedRotationMatrixes;
+  __attribute__((aligned(4))) mat33_t lh1Rotor2RotationMatrixes;
+  __attribute__((aligned(4))) mat33_t lh1Rotor2InvertedRotationMatrixes;
 } baseStationGeometryCache_t;
 
 /**

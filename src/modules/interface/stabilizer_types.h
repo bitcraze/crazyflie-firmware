@@ -45,7 +45,7 @@ typedef struct {
 /* vector */
 #define vec3d_size 3
 typedef float vec3d[vec3d_size];
-typedef float mat3d[vec3d_size][vec3d_size];
+typedef struct mat33 mat33_t;
 
 typedef struct vec vector_t;
 typedef struct vec point_t;
@@ -232,8 +232,8 @@ typedef struct {
 typedef struct {
   const vec3d* sensorPos;    // Sensor position in the CF reference frame
   const vec3d* rotorPos;     // Pos of rotor origin in global reference frame
-  const mat3d* rotorRot;     // Rotor rotation matrix
-  const mat3d* rotorRotInv;  // Inverted rotor rotation matrix
+  const mat33_t* rotorRot;     // Rotor rotation matrix
+  const mat33_t* rotorRotInv;  // Inverted rotor rotation matrix
   uint8_t sensorId;
   uint8_t basestationId;
   uint8_t sweepId;

@@ -51,7 +51,7 @@ static statsCntRateLogger_t* bsEstRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&est
 static const float t30 = M_PI / 6;
 
 static void lighthousePositionGeometryDataUpdated(const int baseStation);
-static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
+static void preProcessGeometryData(const mat33_t* bsRot, mat33_t* bsRotInverted, mat33_t* lh1Rotor2Rot, mat33_t* lh1Rotor2RotInverted);
 
 // Geometry memory handling for the memory module
 static const uint32_t calibStartAddr = 0x1000;
@@ -168,7 +168,11 @@ void lighthousePositionCalibrationDataWritten(const uint8_t baseStation) {
 static void lighthousePositionGeometryDataUpdated(const int baseStation) {
   if (lighthouseCoreState.bsGeometry[baseStation].valid) {
     baseStationGeometryCache_t* cache = &lighthouseCoreState.bsGeoCache[baseStation];
-    preProcessGeometryData(lighthouseCoreState.bsGeometry[baseStation].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
+    preProcessGeometryData(
+      &lighthouseCoreState.bsGeometry[baseStation].mat,
+      &cache->baseStationInvertedRotationMatrixes,
+      &cache->lh1Rotor2RotationMatrixes,
+      &cache->lh1Rotor2InvertedRotationMatrixes);
   }
 
   modifyBit(&lighthouseCoreState.baseStationGeoValidMap, baseStation, lighthouseCoreState.bsGeometry[baseStation].valid);
@@ -181,23 +185,23 @@ void lighthousePositionSetGeometryData(const uint8_t baseStation, const baseStat
   }
 }
 
-static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted) {
+static void preProcessGeometryData(const mat33_t* bsRot, mat33_t* bsRotInverted, mat33_t* lh1Rotor2Rot, mat33_t* lh1Rotor2RotInverted) {
   // For a rotation matrix inverse and transpose is equal. Use transpose instead
   arm_matrix_instance_f32 bsRot_ = {3, 3, (float32_t *)bsRot};
-  arm_matrix_instance_f32 bsRotInverted_ = {3, 3, (float32_t *)bsRotInverted};
+  arm_matrix_instance_f32 bsRotInverted_ = {3, 3, (float32_t *)bsRotInverted->m};
   mat_trans(&bsRot_, &bsRotInverted_);
 
   // In a LH1 system, the axis of rotation of the second rotor is perpendicular to the first rotor
-  mat3d secondRotorInvertedR = {
+  float secondRotorInvertedR[3][3] = {
     {1, 0, 0},
     {0, 0, -1},
     {0, 1, 0}
   };
   arm_matrix_instance_f32 secondRotorInvertedR_ = {3, 3, (float32_t *)secondRotorInvertedR};
-  arm_matrix_instance_f32 lh1Rotor2Rot_ = {3, 3, (float32_t *)lh1Rotor2Rot};
+  arm_matrix_instance_f32 lh1Rotor2Rot_ = {3, 3, (float32_t *)lh1Rotor2Rot->m};
   mat_mult(&bsRot_, &secondRotorInvertedR_, &lh1Rotor2Rot_);
 
-  arm_matrix_instance_f32 lh1Rotor2RotInverted_ = {3, 3, (float32_t *)lh1Rotor2RotInverted};
+  arm_matrix_instance_f32 lh1Rotor2RotInverted_ = {3, 3, (float32_t *)lh1Rotor2RotInverted->m};
   mat_trans(&lh1Rotor2Rot_, &lh1Rotor2RotInverted_);
 }
 

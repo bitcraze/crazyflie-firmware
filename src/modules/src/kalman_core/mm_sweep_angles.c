@@ -47,7 +47,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   // Rotate the difference in position to the rotor reference frame,
   // using the rotor inverse rotation matrix
   vec3d sr;
-  arm_matrix_instance_f32 Rr_inv_ = {3, 3, (float32_t *)(*sweepInfo->rotorRotInv)};
+  arm_matrix_instance_f32 Rr_inv_ = {3, 3, (float32_t *)(*sweepInfo->rotorRotInv->m)};
   arm_matrix_instance_f32 sr_ = {3, 1, sr};
   mat_mult(&Rr_inv_, &stmp_, &sr_);
 
@@ -78,7 +78,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       // reference frame using the rotor rotation matrix
       vec3d g;
       arm_matrix_instance_f32 gr_ = {3, 1, gr};
-      arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot)};
+      arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot->m)};
       arm_matrix_instance_f32 g_ = {3, 1, g};
       mat_mult(&Rr_, &gr_, &g_);
 

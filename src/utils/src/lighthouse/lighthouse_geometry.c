@@ -135,7 +135,7 @@ void lighthouseGeometryGetRay(const baseStationGeometry_t* baseStationGeometry, 
     float len = vec_length(raw_ray);
     arm_scale_f32(raw_ray, 1 / len, raw_ray, vec3d_size); // Normalize raw ray length.
 
-    arm_matrix_instance_f32 source_rotation_matrix = {3, 3, (float32_t *)baseStationGeometry->mat};
+    arm_matrix_instance_f32 source_rotation_matrix = {3, 3, (float32_t *)baseStationGeometry->mat.m};
     arm_matrix_instance_f32 ray_vec = {3, 1, raw_ray};
     arm_matrix_instance_f32 ray_rotated_vec = {3, 1, ray};
     mat_mult(&source_rotation_matrix, &ray_vec, &ray_rotated_vec);
