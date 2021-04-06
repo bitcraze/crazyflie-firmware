@@ -90,7 +90,7 @@ static const DeckDriver lighthouse_deck = {
   .name = "bcLighthouse4",
 
   .usedGpio = 0,
-  .usedPeriph = DECK_USING_UART1 | DECK_USING_I2C,
+  .usedPeriph = DECK_USING_UART1,
   .requiredEstimator = kalmanEstimator,
 
   .memoryDef = &memoryDef,
