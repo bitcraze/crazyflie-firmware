@@ -1033,8 +1033,8 @@ static const DeckDriver usd_deck = {
     .vid = 0xBC,
     .pid = 0x08,
     .name = "bcUSD",
-    .usedGpio = DECK_USING_MISO|DECK_USING_MOSI|DECK_USING_SCK|DECK_USING_IO_4,
-    .usedPeriph = DECK_USING_SPI,
+    .usedGpio = DECK_USING_IO_4,
+    .usedPeriph = DECK_USING_SPI | DECK_USING_SPI,
     .init = usdInit,
     .test = usdTest,
 };
