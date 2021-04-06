@@ -78,7 +78,7 @@ typedef struct deck_driver {
   char *name;
 
   /*
-   * Periphreal and Gpio used _dirrectly_ by the driver.
+   * Peripheral and Gpio used _directly_ by the driver.
    *
    * Include the pin in usedGpio if it's used directly by the driver, do not
    * add the pin to usedGpio if it used as part of a peripheral.
