@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,7 +84,7 @@ static const DeckDriver uart2test_deck = {
 //  .pid = 0x08,
   .name = "bcUart2Test",
 
-  .usedPeriph = 0,
+  .usedPeriph = DECK_USING_UART2,
   .usedGpio = 0,
   .init = uart2testInit,
   .test = uart2testTest,
