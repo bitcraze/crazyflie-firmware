@@ -115,7 +115,8 @@ static const DeckDriver bigquad_deck = {
   .name = "bcBigQuad",
 
   .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,
-  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_PB4 | DECK_USING_PB5 | DECK_USING_PA7,
+  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_IO_3 |
+              DECK_USING_IO_2 | DECK_USING_PA7,
   .init = bigquadInit,
   .test = bigquadTest,
 };
