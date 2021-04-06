@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -289,7 +289,7 @@ static const DeckDriver exptestbolt_deck = {
   .pid = 0xFD,
   .name = "bcBoltTest",
 
-  .usedGpio = 0,               // FIXME: Edit the used GPIOs
+  .usedGpio = 0xFFFFFFFF,
 
   .test = exptestRun,
 };
