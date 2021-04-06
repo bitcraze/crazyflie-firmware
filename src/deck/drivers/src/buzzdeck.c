@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2015 BitCraze AB
+ * Copyright (C) 2021 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,8 +69,8 @@ static const DeckDriver buzzer_deck = {
   .pid = 0x04,
   .name = "bcBuzzer",
 
-  .usedPeriph = DECK_USING_TIMER5,
-  .usedGpio = DECK_USING_TX2 | DECK_USING_RX2,
+  .usedPeriph = DECK_USING_TIMER5 | DECK_USING_UART2,
+  .usedGpio = 0,
 
   .init = buzzDeckInit,
 };
