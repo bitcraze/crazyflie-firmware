@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -196,7 +196,9 @@ static const DeckDriver exptestRR_deck = {
   .pid = 0xFE,
   .name = "bcExpTestRR",
 
-  .usedGpio = 0,               // FIXME: Edit the used GPIOs
+  .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_IO_2 |
+              DECK_USING_IO_3 | DECK_USING_IO_4, DECK_USING_PB6 |
+              DECK_USING_PB7,
 
   .test = exptestRRRun,
 };
