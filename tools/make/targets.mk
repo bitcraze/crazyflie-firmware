@@ -11,6 +11,8 @@ ifeq ($(V),0)
   QUIET=1
 endif
 
+-include $(CRAZYFLIE_BASE)/tools/make/rust.mk
+
 target = @$(if $(QUIET), ,echo $($1_COMMAND$(VERBOSE)) ); @$($1_COMMAND)
 
 VTMPL_COMMAND=$(PYTHON) $(CRAZYFLIE_BASE)/tools/make/versionTemplate.py --crazyflie-base $(CRAZYFLIE_BASE) $< $@
