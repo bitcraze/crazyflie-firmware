@@ -41,4 +41,4 @@ In your code:
 
 ### Run test
 
-To run the tests please have a look at the [readme test documentation](https://github.com/bitcraze/crazyflie-firmware#unit-testing).
+To run the tests please have a look at the [unit test documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/unit_testing/).
