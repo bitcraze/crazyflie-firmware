@@ -353,9 +353,16 @@ void velocityControllerInBody(float* thrust, attitude_t *attitude, setpoint_t *s
   this.pidVZ.pid.outputLimit = (UINT16_MAX / 2 / thrustScale);
   //this.pidVZ.pid.outputLimit = (this.thrustBase - this.thrustMin) / thrustScale;
 
+  float cosyaw = cosf(state->attitude.yaw * (float)M_PI / 180.0f);
+  float sinyaw = sinf(state->attitude.yaw * (float)M_PI / 180.0f);
+  float state_body_vx = state->velocity.x * cosyaw + state->velocity.y * sinyaw;
+  float state_body_vy = -state->velocity.x * sinyaw + state->velocity.y * cosyaw;
+
   // Roll and Pitch
-  attitude->pitch = -runPid(state->velocity.x, &this.pidVX, setpoint->velocity.x, DT) - kFFx*setpoint->velocity.x;
-  attitude->roll = -runPid(state->velocity.y, &this.pidVY, setpoint->velocity.y, DT) - kFFy*setpoint->velocity.y;
+  attitude->pitch = -runPid(state_body_vx, &this.pidVX, setpoint->velocity.x, DT) - kFFx*setpoint->velocity.x;
+  attitude->roll = -runPid(state_body_vy, &this.pidVY, setpoint->velocity.y, DT) - kFFy*setpoint->velocity.y;
+
+
 
   attitude->roll  = constrain(attitude->roll,  -rLimit, rLimit);
   attitude->pitch = constrain(attitude->pitch, -pLimit, pLimit);
