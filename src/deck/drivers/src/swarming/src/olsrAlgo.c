@@ -57,12 +57,12 @@ bool olsrTopologyTupleTimerExpire();
 
 static void olsrSendQueueInit()
 {
-  g_olsrSendQueue = xQueueCreate(15,sizeof(olsrMessage_t));
+  g_olsrSendQueue = xQueueCreate(8,sizeof(olsrMessage_t));
   DEBUG_PRINT_OLSR_SYSTEM("SEND_QUEUE_INIT_SUCCESSFUL\n");
 }
 static void olsrRecvQueueInit()
 {
-  g_olsrRecvQueue = xQueueCreate(15,sizeof(packetWithTimestamp_t));
+  g_olsrRecvQueue = xQueueCreate(8,sizeof(packetWithTimestamp_t));
   DEBUG_PRINT_OLSR_SYSTEM("RECV_QUEUE_INIT_SUCCESSFUL\n");
 }
 void olsrDeviceInit(dwDevice_t *dev){
