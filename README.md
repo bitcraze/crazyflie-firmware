@@ -9,7 +9,7 @@ to play with the Crazyflie 1.0 and modify the code, please clone this repo and
 branch off from the 2017.06 tag.
 
 ## Building and Flashing
-See the [building and flashing instructions](docs/building-and-flashing/build.md) in the github docs folder.
+See the [building and flashing instructions](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/building-and-flashing/build/) in the github docs folder.
 
 
 ## Official Documentation
