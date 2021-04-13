@@ -28,4 +28,13 @@
 
 #pragma once
 
-void lighthouseDeckFlasherCheckVersionAndBoot();
+#include <stdbool.h>
+#include <stdint.h>
+
+bool lighthouseDeckFlasherCheckVersionAndBoot();
+
+bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+
+bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+
+uint8_t lighthouseDeckFlasherPropertiesQuery();

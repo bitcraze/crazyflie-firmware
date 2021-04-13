@@ -95,7 +95,6 @@ typedef struct {
 } pulseProcessorFrame_t;
 
 typedef enum {
-    lighthouseBsTypeUnknown = 0,
     lighthouseBsTypeV1 = 1,
     lighthouseBsTypeV2 = 2,
 } lighthouseBaseStationType_t;
@@ -228,6 +227,11 @@ typedef struct pulseProcessor_s {
   uint32_t healthFirstSensorTs;
   uint8_t healthSensorBitField;
   bool healthDetermined;
+
+  // A bitmap indicating which base stations that has valid geo data
+  uint16_t baseStationGeoValidMap;
+  // A bitmap indicating which base stations that have valid calibration data
+  uint16_t baseStationCalibValidMap;
 } pulseProcessor_t;
 
 typedef struct {
@@ -244,19 +248,22 @@ typedef struct {
   pulseProcessorSensorMeasurement_t sensorMeasurementsLh1[PULSE_PROCESSOR_N_SENSORS];
   pulseProcessorSensorMeasurement_t sensorMeasurementsLh2[PULSE_PROCESSOR_N_SENSORS];
   lighthouseBaseStationType_t measurementType;
+  uint64_t lastUsecTimestamp[PULSE_PROCESSOR_N_BASE_STATIONS];
 } pulseProcessorResult_t;
 
 /**
  * @brief Interface for processing of pulse data from the lighthouse
  *
- * @param state
- * @param frameData
- * @param baseStation
- * @param axis
+ * @param state               The current pulse processing state
+ * @param frameData           The frame of pulse data to process
+ * @param angles              The resulting angle information that was extracted from the frameData. Valid if this function returns true.
+ * @param baseStation         The channel (base station) that the frame originates from. Valid if this function returns true.
+ * @param axis                The axis (first of second sweep) represented by the frame. Valid if this function returns true.
+ * @param calibDataIsDecoded  True if there is one or more blocks of calibration data that have been decoded.
  * @return true, angle, base station and axis are written
  * @return false, no valid result
  */
-typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis);
+typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded);
 
 /**
  * @brief Apply calibration correction to all angles of all sensors for a particular baseStation
@@ -264,8 +271,11 @@ typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const puls
  * @param state
  * @param angles
  * @param baseStation
+ *
+ * @return true, calibration data has been applied
+ * @return false, calibration data is missing
  */
-void pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
+bool pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 
 void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation);
 

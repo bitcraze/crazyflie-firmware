@@ -149,7 +149,11 @@ static void pmSetBatteryVoltage(float voltage)
 static void pmSystemShutdown(void)
 {
 #ifdef ACTIVATE_AUTO_SHUTDOWN
-//TODO: Implement syslink call to shutdown
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_PM_ONOFF_SWITCHOFF;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
 #endif
 }
 
@@ -345,28 +349,23 @@ void pmTask(void *param)
           ledseqStop(&seq_charging);
           ledseqRunBlocking(&seq_charged);
           soundSetEffect(SND_BAT_FULL);
-          systemSetCanFly(false);
           break;
         case charging:
           ledseqStop(&seq_lowbat);
           ledseqStop(&seq_charged);
           ledseqRunBlocking(&seq_charging);
           soundSetEffect(SND_USB_CONN);
-          systemSetCanFly(false);
           break;
         case lowPower:
           ledseqRunBlocking(&seq_lowbat);
           soundSetEffect(SND_BAT_LOW);
-          systemSetCanFly(true);
           break;
         case battery:
           ledseqRunBlocking(&seq_charging);
           ledseqRun(&seq_charged);
           soundSetEffect(SND_USB_DISC);
-          systemSetCanFly(true);
           break;
         default:
-          systemSetCanFly(true);
           break;
       }
       pmStateOld = pmState;

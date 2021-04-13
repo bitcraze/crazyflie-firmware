@@ -274,7 +274,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 }
 
 
-static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement, const uint8_t idA, const uint8_t idB) {
+static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   estimatorEnqueueTDOA(tdoaMeasurement);
 
   #ifdef LPS_2D_POSITION_HEIGHT
@@ -287,6 +287,8 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement, cons
   estimatorEnqueueAbsoluteHeight(&heightData);
   #endif
 
+  const uint8_t idA = tdoaMeasurement->anchorIds[0];
+  const uint8_t idB = tdoaMeasurement->anchorIds[1];
   if (isConsecutiveIds(idA, idB)) {
     logUwbTdoaDistDiff[idB] = tdoaMeasurement->distanceDiff;
   }

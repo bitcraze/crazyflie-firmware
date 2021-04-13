@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2012-2021 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,9 +23,7 @@
  *
  * sleepus.h: Micro second sleep
  */
-#ifndef __SLEEPNS_H__
-#define __SLEEPNS_H__
+#pragma once
+#include <stdint.h>
 
-void sleepus(uint32_t ns);
-
-#endif // __SLEEPNS_H__
+void sleepus(uint32_t us);

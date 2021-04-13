@@ -69,6 +69,7 @@
 #include "static_mem.h"
 #include "peer_localization.h"
 #include "cfassert.h"
+#include "i2cdev.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -78,7 +79,6 @@
 
 /* Private variable */
 static bool selftestPassed;
-static bool canFly;
 static bool armed = ARM_INIT;
 static bool forceArm;
 static bool isInit;
@@ -174,6 +174,10 @@ void systemTask(void *arg)
 #ifdef ENABLE_UART2
   uart2Init(115200);
 #endif
+
+  initUsecTimer();
+  i2cdevInit(I2C3_DEV);
+  i2cdevInit(I2C1_DEV);
 
   //Init the high-levels modules
   systemInit();
@@ -274,16 +278,6 @@ void systemWaitStart(void)
   xSemaphoreGive(canStartMutex);
 }
 
-void systemSetCanFly(bool val)
-{
-  canFly = val;
-}
-
-bool systemCanFly(void)
-{
-  return canFly;
-}
-
 void systemSetArmed(bool val)
 {
   armed = val;
@@ -329,6 +323,5 @@ PARAM_GROUP_STOP(sytem)
 
 /* Loggable variables */
 LOG_GROUP_START(sys)
-LOG_ADD(LOG_INT8, canfly, &canFly)
 LOG_ADD(LOG_INT8, armed, &armed)
 LOG_GROUP_STOP(sys)

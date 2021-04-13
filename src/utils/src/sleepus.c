@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2012-2021 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,32 +23,12 @@
  *
  * sleepus.h: Micro second sleep
  */
-#include <stdint.h>
-#include <stdbool.h>
-
 #include "sleepus.h"
-
-#include "config.h"
-
-#include "stm32f4xx.h"
-
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "usec_time.h"
-
-#define TICK_PER_US (FREERTOS_MCU_CLOCK_HZ / (8 * 1e6))
-
-static bool isInit = false;
 
 void sleepus(uint32_t us)
 {
-  if (!isInit) {
-    initUsecTimer();
-    isInit = true;
-  }
-
   uint64_t start = usecTimestamp();
-
-  while ((start+us) > usecTimestamp());
+  while ((start+us) > usecTimestamp()) {
+  }
 }

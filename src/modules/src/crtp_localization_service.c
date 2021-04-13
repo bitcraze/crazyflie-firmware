@@ -38,7 +38,7 @@
 #include "stabilizer.h"
 #include "configblock.h"
 #include "worker.h"
-#include "lighthouse_core.h"
+#include "lighthouse_storage.h"
 
 #include "adhocdeck.h"
 
@@ -154,6 +154,13 @@ static void locSrvCrtpCB(CRTPPacket* pk)
   }
 }
 
+static void updateLogFromExtPos()
+{
+  ext_pose.x = ext_pos.x;
+  ext_pose.y = ext_pos.y;
+  ext_pose.z = ext_pos.z;
+}
+
 static void extPositionHandler(CRTPPacket* pk) {
   const struct CrtpExtPosition* data = (const struct CrtpExtPosition*)pk->data;
 
@@ -161,6 +168,8 @@ static void extPositionHandler(CRTPPacket* pk) {
   ext_pos.y = data->y;
   ext_pos.z = data->z;
   ext_pos.stdDev = extPosStdDev;
+  ext_pos.source = MeasurementSourceLocationService;
+  updateLogFromExtPos();
 
   estimatorEnqueuePosition(&ext_pos);
   tickOfLastPacket = xTaskGetTickCount();
@@ -215,6 +224,7 @@ static void lpsShortLppPacketHandler(CRTPPacket* pk) {
     pk->size = 3;
     pk->data[0] = LPS_SHORT_LPP_PACKET;
     pk->data[2] = success?1:0;
+    // This is best effort, i.e. the blocking version is not needed
     crtpSendPacket(pk);
   }
 }
@@ -238,7 +248,7 @@ static void lhPersistDataWorker(void* arg) {
     uint16_t mask = 1 << baseStation;
     bool storeGeo = (args->geoDataBsField & mask) != 0;
     bool storeCalibration = (args->calibrationDataBsField & mask) != 0;
-    if (! lighthouseCorePersistData(baseStation, storeGeo, storeCalibration)) {
+    if (! lighthouseStoragePersistData(baseStation, storeGeo, storeCalibration)) {
       result = false;
       break;
     }
@@ -251,7 +261,7 @@ static void lhPersistDataWorker(void* arg) {
     .data = {LH_PERSIST_DATA, result}
   };
 
-  crtpSendPacket(&response);
+  crtpSendPacketBlock(&response);
 }
 
 static void lhPersistDataHandler(CRTPPacket* pk) {
@@ -300,7 +310,9 @@ static void extPositionPackedHandler(CRTPPacket* pk)
     ext_pos.y = item->y / 1000.0f;
     ext_pos.z = item->z / 1000.0f;
     ext_pos.stdDev = extPosStdDev;
+    ext_pos.source = MeasurementSourceLocationService;
     if (item->id == my_id) {
+      updateLogFromExtPos();
       estimatorEnqueuePosition(&ext_pos);
       tickOfLastPacket = xTaskGetTickCount();
     }
@@ -328,6 +340,7 @@ void locSrvSendRangeFloat(uint8_t id, float range)
       pkRange.port = CRTP_PORT_LOCALIZATION;
       pkRange.channel = GENERIC_TYPE;
       pkRange.size = sizeof(rangePacket);
+      // This is best effort, i.e. the blocking version is not needed
       crtpSendPacket(&pkRange);
       rangeIndex = 0;
     }
@@ -356,16 +369,27 @@ void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
     LhAngle.port = CRTP_PORT_LOCALIZATION;
     LhAngle.channel = GENERIC_TYPE;
     LhAngle.size = sizeof(anglePacket);
+    // This is best effort, i.e. the blocking version is not needed
     crtpSendPacket(&LhAngle);
   }
 }
 
-
+// This logging group is deprecated
 LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, X, &ext_pos.x)
   LOG_ADD(LOG_FLOAT, Y, &ext_pos.y)
   LOG_ADD(LOG_FLOAT, Z, &ext_pos.z)
 LOG_GROUP_STOP(ext_pos)
+
+LOG_GROUP_START(locSrv)
+  LOG_ADD(LOG_FLOAT, x, &ext_pose.x)
+  LOG_ADD(LOG_FLOAT, y, &ext_pose.y)
+  LOG_ADD(LOG_FLOAT, z, &ext_pose.z)
+  LOG_ADD(LOG_FLOAT, qx, &ext_pose.quat.x)
+  LOG_ADD(LOG_FLOAT, qy, &ext_pose.quat.y)
+  LOG_ADD(LOG_FLOAT, qz, &ext_pose.quat.z)
+  LOG_ADD(LOG_FLOAT, qw, &ext_pose.quat.w)
+LOG_GROUP_STOP(locSrv)
 
 LOG_GROUP_START(locSrvZ)
   LOG_ADD(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)

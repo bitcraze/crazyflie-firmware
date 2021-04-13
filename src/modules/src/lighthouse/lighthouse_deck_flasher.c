@@ -28,64 +28,34 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define DEBUG_MODULE "LHFL"
 #include "debug.h"
+
+#include "lighthouse.h"
+#include "deck_core.h"
 #include "lh_bootloader.h"
 #include "lighthouse_deck_flasher.h"
+#include "crc32.h"
+#include "mem.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
 
 #ifdef LH_FLASH_BOOTLOADER
 #include "lh_flasher.h"
 #endif
 
+#define READ_BUFFER_LENGTH 64
+// We read the version string in the read buffer and we need one byte for null termination
+#define VERSION_STRING_MAX_LENGTH (READ_BUFFER_LENGTH - 1)
 
-// Uncomment if you want to force the Crazyflie to reflash the FPGA binary to the deck at each startup
-// #define FORCE_FLASH_FPGA true
+static bool inBootloaderMode = true;
+static bool hasStarted = false;
 
-#ifndef FORCE_FLASH_FPGA
-#define FORCE_FLASH_FPGA false
-#endif
-
-
-#ifndef DISABLE_LIGHTHOUSE_DRIVER
-  #define DISABLE_LIGHTHOUSE_DRIVER 1
-#endif
-
-
-#if DISABLE_LIGHTHOUSE_DRIVER == 1
-void lighthouseDeckFlasherCheckVersionAndBoot() {
-    DEBUG_PRINT("No Lighthouse support in FW, deck not initialized\n");
-}
-#else
-
-#define STR2(x) #x
-#define STR(x) STR2(x)
-
-#define INCBIN(name, file) \
-    __asm__(".section .rodata\n" \
-            ".global incbin_" STR(name) "_start\n" \
-            ".align 4\n" \
-            "incbin_" STR(name) "_start:\n" \
-            ".incbin \"" file "\"\n" \
-            \
-            ".global incbin_" STR(name) "_end\n" \
-            ".align 1\n" \
-            "incbin_" STR(name) "_end:\n" \
-            ".byte 0\n" \
-            ".align 4\n" \
-            STR(name) "Size:\n" \
-            ".int incbin_" STR(name) "_end - incbin_" STR(name) "_start\n" \
-    ); \
-    extern const __attribute__((aligned(4))) void* incbin_ ## name ## _start; \
-    extern const void* incbin_ ## name ## _end; \
-    extern const int name ## Size; \
-    static const __attribute__((used)) unsigned char* name = (unsigned char*) & incbin_ ## name ## _start; \
-
-INCBIN(bitstream, BLOBS_LOC"lighthouse.bin");
-
-
-void lighthouseDeckFlasherCheckVersionAndBoot() {
-  lhblInit(I2C1_DEV);
+bool lighthouseDeckFlasherCheckVersionAndBoot() {
+  lhblInit();
 
   #ifdef LH_FLASH_BOOTLOADER
   // Flash deck bootloader using SPI (factory and recovery flashing)
@@ -94,51 +64,111 @@ void lighthouseDeckFlasherCheckVersionAndBoot() {
   #endif
 
   uint8_t bootloaderVersion = 0;
-  lhblGetVersion(&bootloaderVersion);
+  if (lhblGetVersion(&bootloaderVersion) == false) {
+    DEBUG_PRINT("Cannot communicate with lighthouse bootloader, aborting!\n");
+    return false;
+  }
   DEBUG_PRINT("Lighthouse bootloader version: %d\n", bootloaderVersion);
 
   // Wakeup mem
   lhblFlashWakeup();
   vTaskDelay(M2T(1));
 
-  // Checking the bitstreams are identical
-  // Also decoding bitstream version for console
-  static char deckBitstream[65];
-  lhblFlashRead(LH_FW_ADDR, 64, (uint8_t*)deckBitstream);
-  deckBitstream[64] = 0;
+  // Decoding bitstream version for console
+  static char deckBitstream[READ_BUFFER_LENGTH];
+  lhblFlashRead(LH_FW_ADDR, VERSION_STRING_MAX_LENGTH, (uint8_t*)deckBitstream);
+  deckBitstream[VERSION_STRING_MAX_LENGTH] = 0;
   int deckVersion = strtol(&deckBitstream[2], NULL, 10);
-  int embeddedVersion = strtol((char*)&bitstream[2], NULL, 10);
 
-  bool identical = true;
-  for (int i=0; i<=bitstreamSize; i+=64) {
-    int length = ((i+64)<bitstreamSize)?64:bitstreamSize-i;
+  // Checking that the bitstream has the right checksum
+  crc32Context_t crcContext;
+  crc32ContextInit(&crcContext);
+
+  for (int i=0; i<=LIGHTHOUSE_BITSTREAM_SIZE; i+=READ_BUFFER_LENGTH) {
+    int length = ((i + READ_BUFFER_LENGTH) < LIGHTHOUSE_BITSTREAM_SIZE)?READ_BUFFER_LENGTH:LIGHTHOUSE_BITSTREAM_SIZE-i;
     lhblFlashRead(LH_FW_ADDR + i, length, (uint8_t*)deckBitstream);
-    if (memcmp(deckBitstream, &bitstream[i], length)) {
-      DEBUG_PRINT("Fail comparing firmware\n");
-      identical = false;
+    crc32Update(&crcContext, deckBitstream, length);
+  }
+
+  uint32_t crc = crc32Out(&crcContext);
+  bool pass = crc == LIGHTHOUSE_BITSTREAM_CRC;
+  DEBUG_PRINT("Bitstream CRC32: %x %s\n", (int)crc, pass?"[PASS]":"[FAIL]");
+
+  // Launch LH deck FW
+  if (pass) {
+    DEBUG_PRINT("Firmware version %d verified, booting deck!\n", deckVersion);
+    lhblBootToFW();
+    inBootloaderMode = false;
+  } else {
+    DEBUG_PRINT("The deck bitstream does not match the required bitstream.\n");
+    DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", LIGHTHOUSE_BITSTREAM_SIZE, LIGHTHOUSE_BITSTREAM_CRC);
+    DEBUG_PRINT("Leaving the deck in bootloader mode ...\n");
+  }
+
+  hasStarted = true;
+
+  return pass;
+}
+
+bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer)
+{
+  if (inBootloaderMode) {
+    return lhblFlashRead(LH_FW_ADDR + memAddr, readLen, buffer);
+  } else {
+    return false;
+  }
+}
+
+bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
+{
+  bool pass;
+  if (memAddr == 0) {
+    pass = lhblFlashEraseFirmware();
+
+    if (pass == false) {
+      return false;
+    }
+  }
+
+  uint32_t address = LH_FW_ADDR + memAddr;
+
+  // This function can be called with a buffer spanning 2 pages
+  // Try to find the first byte of the second page if this is the case
+  int pageSplit = 0;
+  for (int i=0; i<writeLen; i++) {
+    if (((address + i) & 0x0ff) == 0) {
+      pageSplit = i;
       break;
     }
   }
 
-  if (identical == false || FORCE_FLASH_FPGA) {
-    DEBUG_PRINT("Deck has version %d and we embeed version %d\n", deckVersion, embeddedVersion);
-    DEBUG_PRINT("Updating deck with embedded version!\n");
+  // Flashing first page
+  if (pageSplit > 0) {
+    pass = lhblFlashWritePage(address, pageSplit, buffer);
 
-    // Erase LH deck FW
-    lhblFlashEraseFirmware();
-
-    // Flash LH deck FW
-    if (lhblFlashWriteFW((uint8_t*)bitstream, bitstreamSize)) {
-      DEBUG_PRINT("FW updated [OK]\n");
-      deckVersion = embeddedVersion;
-    } else {
-      DEBUG_PRINT("FW updated [FAILED]\n");
+    if (pass == false) {
+      return pass;
     }
   }
 
-  // Launch LH deck FW
-  DEBUG_PRINT("Firmware version %d verified, booting deck!\n", deckVersion);
-  lhblBootToFW();
+  // Flashing second page if necessary
+  if ((writeLen-pageSplit) > 0) {
+    pass = lhblFlashWritePage(address+pageSplit, writeLen-pageSplit, &buffer[pageSplit]);
+  }
+
+  return pass;
 }
 
-#endif
+uint8_t lighthouseDeckFlasherPropertiesQuery() {
+  uint8_t result = 0;
+
+  if (hasStarted) {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
+
+  if (inBootloaderMode) {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE | DECK_MEMORY_MASK_UPGRADE_REQUIRED;
+  }
+
+  return result;
+}

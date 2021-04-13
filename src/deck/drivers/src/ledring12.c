@@ -773,11 +773,7 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
  */
 static void lighthouseEffect(uint8_t buffer[][3], bool reset)
 {
-  #if DISABLE_LIGHTHOUSE_DRIVER == 1
-    uint16_t validAngles = 0;
-  #else
-    uint16_t validAngles = pulseProcessorAnglesQuality();
-  #endif
+  uint16_t validAngles = pulseProcessorAnglesQuality();
 
   for (int i = 0; i < NBR_LEDS; i++) {
     buffer[i][0] = LIMIT(LINSCALE(0.0f, 255.0f, 100.0f, 0.0f, validAngles)); // Red (small validAngles)

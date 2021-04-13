@@ -58,18 +58,18 @@ static struct selfState_s state = {
   .estimatedVZ = 0.0f,
 };
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state);
+static void positionEstimateInternal(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state);
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
 
-void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick) {
-  positionEstimateInternal(estimate, sensorData, tofMeasurement, dt, tick, &state);
+void positionEstimate(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick) {
+  positionEstimateInternal(estimate, baro, tofMeasurement, dt, tick, &state);
 }
 
 void positionUpdateVelocity(float accWZ, float dt) {
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state) {
+static void positionEstimateInternal(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state) {
   float filteredZ;
   static float prev_estimatedZ = 0;
   static bool surfaceFollowingMode = false;
@@ -94,11 +94,11 @@ static void positionEstimateInternal(state_t* estimate, const sensorData_t* sens
   } else {
     // FIXME: A bit of an hack to init IIR filter
     if (state->estimatedZ == 0.0f) {
-      filteredZ = sensorData->baro.asl;
+      filteredZ = baro->asl;
     } else {
       // IIR filter asl
       filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
-                  (1.0f - state->estAlphaAsl) * sensorData->baro.asl;
+                  (1.0f - state->estAlphaAsl) * baro->asl;
     }
     // Use asl as base and add velocity changes.
     state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);

@@ -40,4 +40,4 @@ An example of how to use the app channel is in examples/app_appchannel_test/
 
 ## Examples
 
-In the [example folder](https://github.com/bitcraze/crazyflie-firmware/tree/master/examples) of the crazyflie-firmware repository, there are several examples shown tha tuse the app layer, including a simple hello world example.
+In the [example folder](https://github.com/bitcraze/crazyflie-firmware/tree/master/examples) of the crazyflie-firmware repository, there are several examples showing how to use the app layer, including a simple hello world example.

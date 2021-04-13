@@ -51,6 +51,9 @@
 #include "bmp3.h"
 #include "bstdr_types.h"
 #include "static_mem.h"
+#include "estimator.h"
+
+#include "sensors_bmi088_common.h"
 
 #define GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
 
@@ -172,7 +175,7 @@ STATIC_MEM_TASK_ALLOC(sensorsTask, SENSORS_TASK_STACKSIZE);
  *
  * @return Zero if successful, otherwise an error code
  */
-static bstdr_ret_t bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+bstdr_ret_t bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
 {
   /**< Burst read code comes here */
   if (i2cdevReadReg8(I2C3_DEV, dev_id, reg_addr, (uint16_t) len, reg_data))
@@ -192,7 +195,7 @@ static bstdr_ret_t bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *
  *
  * @return Zero if successful, otherwise an error code
  */
-static bstdr_ret_t bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
+bstdr_ret_t bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
 {
   /**< Burst write code comes here */
   if (i2cdevWriteReg8(I2C3_DEV, dev_id,reg_addr,(uint16_t) len, reg_data))
@@ -212,7 +215,7 @@ static bstdr_ret_t bmi088_burst_write(uint8_t dev_id, uint8_t reg_addr, uint8_t 
  *
  * @return None
  */
-static void bmi088_ms_delay(uint32_t period)
+void bmi088_ms_delay(uint32_t period)
 {
   /**< Delay code comes */
   vTaskDelay(M2T(period)); // Delay a while to let the device stabilize
@@ -276,6 +279,7 @@ static void sensorsTask(void *param)
   systemWaitStart();
 
   Axis3f accScaled;
+  measurement_t measurement;
   /* wait an additional second the keep bus free
    * this is only required by the z-ranger, since the
    * configuration will be done after system start-up */
@@ -306,12 +310,20 @@ static void sensorsTask(void *param)
       sensorData.gyro.z =  (gyroRaw.z - gyroBias.z) * SENSORS_BMI088_DEG_PER_LSB_CFG;
       applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensorData.gyro);
 
-      /* Acelerometer */
+      measurement.type = MeasurementTypeGyroscope;
+      measurement.data.gyroscope.gyro = sensorData.gyro;
+      estimatorEnqueue(&measurement);
+
+      /* Accelerometer */
       accScaled.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       accScaled.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       accScaled.z = accelRaw.z * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
+
+      measurement.type = MeasurementTypeAcceleration;
+      measurement.data.acceleration.acc = sensorData.acc;
+      estimatorEnqueue(&measurement);
     }
 
     if (isBarometerPresent)
@@ -325,6 +337,11 @@ static void sensorsTask(void *param)
         /* Temperature and Pressure data are read and stored in the bmp3_data instance */
         bmp3_get_sensor_data(sensor_comp, &data, &bmp388Dev);
         sensorsScaleBaro(baro388, data.pressure, data.temperature);
+
+        measurement.type = MeasurementTypeBarometer;
+        measurement.data.barometer.baro = sensorData.baro;
+        estimatorEnqueue(&measurement);
+
         baroMeasDelay = baroMeasDelayMin;
       }
     }
@@ -355,13 +372,10 @@ static void sensorsDeviceInit(void)
   // Wait for sensors to startup
   vTaskDelay(M2T(SENSORS_STARTUP_TIME_MS));
 
-  /* BMI088 */
-  bmi088Dev.accel_id = BMI088_ACCEL_I2C_ADDR_PRIMARY;
-  bmi088Dev.gyro_id = BMI088_GYRO_I2C_ADDR_SECONDARY;
-  bmi088Dev.interface = BMI088_I2C_INTF;
-  bmi088Dev.read = bmi088_burst_read;
-  bmi088Dev.write = bmi088_burst_write;
-  bmi088Dev.delay_ms = bmi088_ms_delay;
+  /* BMI088
+   * The bmi088Dev structure should have been filled in by the backend
+   * (i2c/spi) drivers at this point.
+  */
 
   /* BMI088 GYRO */
   rslt = bmi088_gyro_init(&bmi088Dev); // initialize the device
@@ -369,7 +383,7 @@ static void sensorsDeviceInit(void)
   {
     struct bmi088_int_cfg intConfig;
 
-    DEBUG_PRINT("BMI088 Gyro I2C connection [OK].\n");
+    DEBUG_PRINT("BMI088 Gyro connection [OK].\n");
     /* set power mode of gyro */
     bmi088Dev.gyro_cfg.power = BMI088_GYRO_PM_NORMAL;
     rslt |= bmi088_set_gyro_power_mode(&bmi088Dev);
@@ -394,7 +408,7 @@ static void sensorsDeviceInit(void)
   else
   {
 #ifndef SENSORS_IGNORE_IMU_FAIL
-    DEBUG_PRINT("BMI088 Gyro I2C connection [FAIL]\n");
+    DEBUG_PRINT("BMI088 Gyro connection [FAIL]\n");
     isInit = false;
 #endif
   }
@@ -406,7 +420,7 @@ static void sensorsDeviceInit(void)
   rslt = bmi088_accel_init(&bmi088Dev); // initialize the device
   if (rslt == BSTDR_OK)
   {
-    DEBUG_PRINT("BMI088 Accel I2C connection [OK]\n");
+    DEBUG_PRINT("BMI088 Accel connection [OK]\n");
     /* set power mode of accel */
     bmi088Dev.accel_cfg.power = BMI088_ACCEL_PM_ACTIVE;
     rslt |= bmi088_set_accel_power_mode(&bmi088Dev);
@@ -424,7 +438,7 @@ static void sensorsDeviceInit(void)
   else
   {
 #ifndef SENSORS_IGNORE_IMU_FAIL
-    DEBUG_PRINT("BMI088 Accel I2C connection [FAIL]\n");
+    DEBUG_PRINT("BMI088 Accel connection [FAIL]\n");
     isInit = false;
 #endif
   }
@@ -542,19 +556,36 @@ static void sensorsInterruptInit(void)
   portENABLE_INTERRUPTS();
 }
 
-void sensorsBmi088Bmp388Init(void)
+static void sensorsBmi088Bmp388Init(void)
+{
+  sensorsBiasObjInit(&gyroBiasRunning);
+  sensorsDeviceInit();
+  sensorsInterruptInit();
+  sensorsTaskInit();
+}
+
+void sensorsBmi088Bmp388Init_SPI(void)
 {
   if (isInit)
     {
       return;
     }
 
-  i2cdevInit(I2C3_DEV);
+    DEBUG_PRINT("BMI088: Using SPI interface.\n");
+    sensorsBmi088_SPI_deviceInit(&bmi088Dev);
+    sensorsBmi088Bmp388Init();
+}
 
-  sensorsBiasObjInit(&gyroBiasRunning);
-  sensorsDeviceInit();
-  sensorsInterruptInit();
-  sensorsTaskInit();
+void sensorsBmi088Bmp388Init_I2C(void)
+{
+  if (isInit)
+  {
+    return;
+  }
+
+  DEBUG_PRINT("BMI088: Using I2C interface.\n");
+  sensorsBmi088_I2C_deviceInit(&bmi088Dev);
+  sensorsBmi088Bmp388Init();
 }
 
 static bool gyroSelftest()

@@ -54,11 +54,26 @@ void lighthouseCoreTask(void *param);
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration);
 
 /**
- * @brief Copy current data in RAM to permanent storage
+ * @brief Set system type
  *
- * @param baseStation  The base station id to store data for
- * @param geoData      If true, write geometry data for the base station
- * @param calibData    if true, write calibration data for the base station
- * @return true if data was stored
+ * @param type System type
  */
-bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
+void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type);
+
+typedef enum {
+  lh_led_off = 0,
+  lh_led_slow_blink = 1,
+  lh_led_fast_blink = 2,
+  lh_led_on = 3,
+} lighthouseCoreLedState_t;
+
+/**
+ * @brief Set LEDs on the lighthouse deck
+ *
+ * @param red  State of the red LED
+ * @param orange State of the orange LED
+ * @param green State of the green LED
+ */
+void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green);
+
+void lighthouseCoreLedTimer();

@@ -41,7 +41,7 @@
 #include "config.h"
 #include "crtp.h"
 #include "log.h"
-#include "crc.h"
+#include "crc32.h"
 #include "worker.h"
 #include "num.h"
 
@@ -205,7 +205,7 @@ void logInit(void)
       memcpy(&p.data[5], logs[i].name, strlen(logs[i].name));
       len += strlen(logs[i].name);
     }
-    logsCrc = crcSlow(p.data, len);
+    logsCrc = crc32CalculateBuffer(p.data, len);
   }
 
   // Big lock that protects the log datastructures
@@ -276,7 +276,7 @@ void logTOCProcess(int command)
     memcpy(&p.data[2], &logsCrc, 4);
     p.data[6]=LOG_MAX_BLOCKS;
     p.data[7]=LOG_MAX_OPS;
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
     break;
   case CMD_GET_ITEM:  //Get log variable
     LOG_DEBUG("Packet is TOC_GET_ITEM Id: %d\n", p.data[1]);
@@ -308,13 +308,13 @@ void logTOCProcess(int command)
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+3, group, strlen(group)+1);
       memcpy(p.data+3+strlen(group)+1, logs[ptr].name, strlen(logs[ptr].name)+1);
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     } else {
       LOG_DEBUG("    Index out of range!");
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM;
       p.size=1;
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     }
     break;
   case CMD_GET_INFO_V2: //Get info packet about the log implementation
@@ -328,7 +328,7 @@ void logTOCProcess(int command)
     memcpy(&p.data[3], &logsCrc, 4);
     p.data[7]=LOG_MAX_BLOCKS;
     p.data[8]=LOG_MAX_OPS;
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
     break;
   case CMD_GET_ITEM_V2:  //Get log variable
     memcpy(&logId, &p.data[1], 2);
@@ -361,13 +361,13 @@ void logTOCProcess(int command)
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+4, group, strlen(group)+1);
       memcpy(p.data+4+strlen(group)+1, logs[ptr].name, strlen(logs[ptr].name)+1);
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     } else {
       LOG_DEBUG("    Index out of range!");
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM_V2;
       p.size=1;
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     }
     break;
   }
@@ -417,7 +417,7 @@ void logControlProcess()
   //Commands answer
   p.data[2] = ret;
   p.size = 3;
-  crtpSendPacket(&p);
+  crtpSendPacketBlock(&p);
 }
 
 static int logCreateBlock(unsigned char id, struct ops_setting * settings, int len)
@@ -865,6 +865,7 @@ void logRunBlock(void * arg)
   }
   else
   {
+    // No need to block here, since logging is not guaranteed
     crtpSendPacket(&pk);
   }
 }
@@ -971,9 +972,10 @@ logVarId_t logGetVarId(char* group, char* name)
   for(i=0; i<logsLen; i++)
   {
     if (logs[i].type & LOG_GROUP) {
-      if (logs[i].type & LOG_START)
+      if (logs[i].type & LOG_START) {
         currgroup = logs[i].name;
-    } if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name))) {
+      }
+    } else if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name))) {
       varId = (logVarId_t)i;
       return varId;
     }
@@ -1022,7 +1024,7 @@ int logGetInt(logVarId_t varid)
 {
   int valuei = 0;
 
-  ASSERT(LOG_VARID_IS_VALID(varid));
+  ASSERT(logVarIdIsValid(varid));
 
   switch(logs[varid].type)
   {
@@ -1054,7 +1056,7 @@ int logGetInt(logVarId_t varid)
 
 float logGetFloat(logVarId_t varid)
 {
-  ASSERT(LOG_VARID_IS_VALID(varid));
+  ASSERT(logVarIdIsValid(varid));
 
   if (logs[varid].type == LOG_FLOAT)
     return *(float *)logs[varid].address;

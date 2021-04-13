@@ -83,8 +83,14 @@ typedef struct quaternion_s {
   };
 } quaternion_t;
 
+typedef enum {
+  MeasurementSourceLocationService  = 0,
+  MeasurementSourceLighthouse       = 1,
+} measurementSource_t;
+
 typedef struct tdoaMeasurement_s {
-  point_t anchorPosition[2];
+  point_t anchorPositions[2];
+  uint8_t anchorIds[2];
   float distanceDiff;
   float stdDev;
 } tdoaMeasurement_t;
@@ -105,6 +111,7 @@ typedef struct positionMeasurement_s {
     float pos[3];
   };
   float stdDev;
+  measurementSource_t source;
 } positionMeasurement_t;
 
 typedef struct poseMeasurement_s {
@@ -130,6 +137,7 @@ typedef struct distanceMeasurement_s {
     };
     float pos[3];
   };
+  uint8_t anchorId;
   float distance;
   float stdDev;
 } distanceMeasurement_t;
@@ -252,12 +260,34 @@ typedef struct {
   const vec3d* rotorPos;     // Pos of rotor origin in global reference frame
   const mat3d* rotorRot;     // Rotor rotation matrix
   const mat3d* rotorRotInv;  // Inverted rotor rotation matrix
+  uint8_t sensorId;
+  uint8_t basestationId;
+  uint8_t sweepId;
   float t;                   // t is the tilt angle of the light plane on the rotor
   float measuredSweepAngle;
   float stdDev;
   const lighthouseCalibrationSweep_t* calib;
   lighthouseCalibrationMeasurementModel_t calibrationMeasurementModel;
 } sweepAngleMeasurement_t;
+
+/** gyroscope measurement */
+typedef struct
+{
+  Axis3f gyro; // deg/s, for legacy reasons
+} gyroscopeMeasurement_t;
+
+/** accelerometer measurement */
+typedef struct
+{
+  Axis3f acc; // Gs, for legacy reasons
+} accelerationMeasurement_t;
+
+/** barometer measurement */
+typedef struct
+{
+  baro_t baro; // for legacy reasons
+} barometerMeasurement_t;
+
 
 // Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000

@@ -33,7 +33,7 @@
 #include "config.h"
 #include "crtp.h"
 #include "param.h"
-#include "crc.h"
+#include "crc32.h"
 #include "console.h"
 #include "debug.h"
 #include "static_mem.h"
@@ -140,7 +140,7 @@ void paramInit(void)
       memcpy(&p.data[5], params[i].name, strlen(params[i].name));
       len += strlen(params[i].name);
     }
-    paramsCrc = crcSlow(p.data, len);
+    paramsCrc = crc32CalculateBuffer(p.data, len);
   }
 
   for (i=0; i<paramsLen; i++)
@@ -202,7 +202,7 @@ void paramTask(void * prm)
 
         p.data[1+strlen(group)+1+strlen(name)+1] = error;
         p.size = 1+strlen(group)+1+strlen(name)+1+1;
-        crtpSendPacket(&p);
+        crtpSendPacketBlock(&p);
       }
     }
 	}
@@ -230,7 +230,7 @@ void paramTOCProcess(int command)
       p.data[1]=255;
     }
     memcpy(&p.data[2], &paramsCrc, 4);
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
     break;
   case CMD_GET_ITEM:  //Get param variable
     for (ptr=0; ptr<paramsLen; ptr++) //Ptr points a group
@@ -260,12 +260,12 @@ void paramTOCProcess(int command)
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+3, group, strlen(group)+1);
       memcpy(p.data+3+strlen(group)+1, params[ptr].name, strlen(params[ptr].name)+1);
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     } else {
       p.header=CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);
       p.data[0]=CMD_GET_ITEM;
       p.size=1;
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     }
     break;
   case CMD_GET_INFO_V2: //Get info packet about the param implementation
@@ -276,7 +276,7 @@ void paramTOCProcess(int command)
     p.data[0]=CMD_GET_INFO_V2;
     memcpy(&p.data[1], &paramsCount, 2);
     memcpy(&p.data[3], &paramsCrc, 4);
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
     useV2 = true;
     break;
   case CMD_GET_ITEM_V2:  //Get param variable
@@ -308,12 +308,12 @@ void paramTOCProcess(int command)
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+4, group, strlen(group)+1);
       memcpy(p.data+4+strlen(group)+1, params[ptr].name, strlen(params[ptr].name)+1);
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     } else {
       p.header=CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);
       p.data[0]=CMD_GET_ITEM_V2;
       p.size=1;
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
     }
     break;
   }
@@ -334,7 +334,7 @@ static void paramWriteProcess()
       p.data[2] = ENOENT;
       p.size = 3;
 
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
       return;
     }
 
@@ -357,7 +357,7 @@ static void paramWriteProcess()
         break;
     }
 
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
   } else {
     int ident = p.data[0];
     void* valptr = &p.data[1];
@@ -371,7 +371,7 @@ static void paramWriteProcess()
       p.data[2] = ENOENT;
       p.size = 3;
 
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
       return;
     }
 
@@ -394,7 +394,7 @@ static void paramWriteProcess()
         break;
     }
 
-    crtpSendPacket(&p);
+    crtpSendPacketBlock(&p);
   }
 }
 
@@ -460,7 +460,7 @@ static void paramReadProcess()
       p.data[2] = ENOENT;
       p.size = 3;
 
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
       return;
     }
 
@@ -495,7 +495,7 @@ static void paramReadProcess()
       p.data[2] = ENOENT;
       p.size = 3;
 
-      crtpSendPacket(&p);
+      crtpSendPacketBlock(&p);
       return;
     }
 
@@ -521,7 +521,7 @@ static void paramReadProcess()
     }
   }
 
-  crtpSendPacket(&p);
+  crtpSendPacketBlock(&p);
 }
 
 static int variableGetIndex(int id)
@@ -729,7 +729,7 @@ void paramSetInt(paramVarId_t varid, int valuei)
   }
 
 #ifndef SILENT_PARAM_UPDATES
-  crtpSendPacket(&pk);
+  crtpSendPacketBlock(&pk);
 #endif
 }
 
@@ -752,6 +752,6 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   }
 
 #ifndef SILENT_PARAM_UPDATES
-  crtpSendPacket(&pk);
+  crtpSendPacketBlock(&pk);
 #endif
 }

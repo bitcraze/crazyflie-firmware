@@ -59,6 +59,29 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
+static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
+{
+  bool status;
+
+  // Bring up VL53 by releasing XSHUT
+  pca95x4SetOutput(pca95pin);
+  // Let VL53 boot
+  vTaskDelay(M2T(2));
+  // Init VL53
+  if (vl53l1xInit(pdev, I2C1_DEV))
+  {
+      DEBUG_PRINT("Init %s sensor [OK]\n", name);
+      status = true;
+  }
+  else
+  {
+      DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
+      status = false;
+  }
+
+  return status;
+}
+
 static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
     VL53L1_Error status = VL53L1_ERROR_NONE;
@@ -151,60 +174,11 @@ static bool mrTest()
 
     isPassed = isInit;
 
-    pca95x4SetOutput(MR_PIN_FRONT);
-    if (vl53l1xInit(&devFront, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init front sensor [OK]\n");
-    }
-    else
-    {
-        DEBUG_PRINT("Init front sensor [FAIL]\n");
-        isPassed = false;
-    }
-
-    pca95x4SetOutput(MR_PIN_BACK);
-    if (vl53l1xInit(&devBack, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init back sensor [OK]\n");
-    }
-    else
-    {
-        DEBUG_PRINT("Init back sensor [FAIL]\n");
-        isPassed = false;
-    }
-
-    pca95x4SetOutput(MR_PIN_UP);
-    if (vl53l1xInit(&devUp, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init up sensor [OK]\n");
-    }
-    else
-    {
-        DEBUG_PRINT("Init up sensor [FAIL]\n");
-        isPassed = false;
-    }
-
-    pca95x4SetOutput(MR_PIN_LEFT);
-    if (vl53l1xInit(&devLeft, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init left sensor [OK]\n");
-    }
-    else
-    {
-        DEBUG_PRINT("Init left sensor [FAIL]\n");
-        isPassed = false;
-    }
-
-    pca95x4SetOutput(MR_PIN_RIGHT);
-    if (vl53l1xInit(&devRight, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init right sensor [OK]\n");
-    }
-    else
-    {
-        DEBUG_PRINT("Init right sensor [FAIL]\n");
-        isPassed = false;
-    }
+    isPassed &= mrInitSensor(&devFront, MR_PIN_FRONT, "front");
+    isPassed &= mrInitSensor(&devBack, MR_PIN_BACK, "back");
+    isPassed &= mrInitSensor(&devUp, MR_PIN_UP, "up");
+    isPassed &= mrInitSensor(&devLeft, MR_PIN_LEFT, "left");
+    isPassed &= mrInitSensor(&devRight, MR_PIN_RIGHT, "right");
 
     isTested = true;
 

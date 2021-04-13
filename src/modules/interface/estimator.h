@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,7 @@
  *
  * estimator.h - State estimator interface
  */
-#ifndef __ESTIMATOR_H__
-#define __ESTIMATOR_H__
+#pragma once
 
 #include "stabilizer_types.h"
 
@@ -35,22 +34,123 @@ typedef enum {
   StateEstimatorTypeCount,
 } StateEstimatorType;
 
+typedef enum {
+  MeasurementTypeTDOA,
+  MeasurementTypePosition,
+  MeasurementTypePose,
+  MeasurementTypeDistance,
+  MeasurementTypeTOF,
+  MeasurementTypeAbsoluteHeight,
+  MeasurementTypeFlow,
+  MeasurementTypeYawError,
+  MeasurementTypeSweepAngle,
+  MeasurementTypeGyroscope,
+  MeasurementTypeAcceleration,
+  MeasurementTypeBarometer,
+} MeasurementType;
+
+typedef struct
+{
+  MeasurementType type;
+  union
+  {
+    tdoaMeasurement_t tdoa;
+    positionMeasurement_t position;
+    poseMeasurement_t pose;
+    distanceMeasurement_t distance;
+    tofMeasurement_t tof;
+    heightMeasurement_t height;
+    flowMeasurement_t flow;
+    yawErrorMeasurement_t yawError;
+    sweepAngleMeasurement_t sweepAngle;
+    gyroscopeMeasurement_t gyroscope;
+    accelerationMeasurement_t acceleration;
+    barometerMeasurement_t barometer;
+  } data;
+} measurement_t;
+
 void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
-void stateEstimator(state_t *state, sensorData_t *sensors, control_t *control, const uint32_t tick);
+void stateEstimator(state_t *state, const uint32_t tick);
 StateEstimatorType getStateEstimator(void);
 const char* stateEstimatorGetName();
 
-// Support to incorporate additional sensors into the state estimate via the following functions:
-bool estimatorEnqueueTDOA(const tdoaMeasurement_t *uwb);
-bool estimatorEnqueuePosition(const positionMeasurement_t *pos);
-bool estimatorEnqueuePose(const poseMeasurement_t *pose);
-bool estimatorEnqueueDistance(const distanceMeasurement_t *dist);
-bool estimatorEnqueueTOF(const tofMeasurement_t *tof);
-bool estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height);
-bool estimatorEnqueueFlow(const flowMeasurement_t *flow);
-bool estimatorEnqueueYawError(const yawErrorMeasurement_t *error);
-bool estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *angles);
+// Support to incorporate additional sensors into the state estimate via the following functions
+void estimatorEnqueue(const measurement_t *measurement);
 
-#endif //__ESTIMATOR_H__
+// These helper functions simplify the caller code, but cause additional memory copies
+static inline void estimatorEnqueueTDOA(const tdoaMeasurement_t *tdoa)
+{
+  measurement_t m;
+  m.type = MeasurementTypeTDOA;
+  m.data.tdoa = *tdoa;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueuePosition(const positionMeasurement_t *position)
+{
+  measurement_t m;
+  m.type = MeasurementTypePosition;
+  m.data.position = *position;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueuePose(const poseMeasurement_t *pose)
+{
+  measurement_t m;
+  m.type = MeasurementTypePose;
+  m.data.pose = *pose;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueueDistance(const distanceMeasurement_t *distance)
+{
+  measurement_t m;
+  m.type = MeasurementTypeDistance;
+  m.data.distance = *distance;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueueTOF(const tofMeasurement_t *tof)
+{
+  measurement_t m;
+  m.type = MeasurementTypeTOF;
+  m.data.tof = *tof;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueueAbsoluteHeight(const heightMeasurement_t *height)
+{
+  measurement_t m;
+  m.type = MeasurementTypeAbsoluteHeight;
+  m.data.height = *height;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueueFlow(const flowMeasurement_t *flow)
+{
+  measurement_t m;
+  m.type = MeasurementTypeFlow;
+  m.data.flow = *flow;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueueYawError(const yawErrorMeasurement_t *yawError)
+{
+  measurement_t m;
+  m.type = MeasurementTypeYawError;
+  m.data.yawError = *yawError;
+  estimatorEnqueue(&m);
+}
+
+static inline void estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *sweepAngle)
+{
+  measurement_t m;
+  m.type = MeasurementTypeSweepAngle;
+  m.data.sweepAngle = *sweepAngle;
+  estimatorEnqueue(&m);
+}
+
+// Helper function for state estimators
+bool estimatorDequeue(measurement_t *measurement);

@@ -180,18 +180,20 @@ const baseStationGeometry_t lighthouseGeoData[PULSE_PROCESSOR_N_BASE_STATIONS]  
 
 lighthouseCalibration_t lighthouseCalibrationData[PULSE_PROCESSOR_N_BASE_STATIONS] = {
   { // Base station 0
-    .valid = true,
     .sweep = {
-      {.tilt = -0.047058, .phase = 0.0, .curve = 0.052215, .gibphase = 2.087890, .gibmag = -0.003913, .ogeephase = 0.433105, .ogeemag = -0.049285},
-      {.tilt = 0.048065, .phase = -0.005336, .curve = 0.122375, .gibphase = 2.097656, .gibmag = -0.003883, .ogeephase = 0.631835, .ogeemag = -0.034851},
+      {.tilt = -0.047353, .phase = 0.000000, .curve = 0.478887, .gibphase = 1.023093, .gibmag = 0.005071, .ogeephase = 1.136886, .ogeemag = -0.520102, },
+      {.tilt = 0.049104, .phase = -0.006642, .curve = 0.675827, .gibphase = 2.367835, .gibmag = 0.004907, .ogeephase = 1.900456, .ogeemag = -0.457289, },
     },
+    .uid = 0x3C65D22F,
+    .valid = true,
   },
   { // Base station 1
-    .valid = true,
     .sweep = {
-      {.tilt = -0.051208, .phase = 0.0, .curve = 0.011756, .gibphase = 2.136718, .gibmag = -0.006057, .ogeephase = 2.705078,},
-      {.tilt = 0.045623, .phase = -0.004142, .curve = 0.104736, .gibphase = 2.349609, .gibmag = -0.003332, .ogeephase = 0.380859, .ogeemag = -0.240112,},
+      {.tilt = -0.048959, .phase = 0.000000, .curve = 0.144913, .gibphase = 1.288635, .gibmag = -0.005397, .ogeephase = 2.004001, .ogeemag = 0.033096, },
+      {.tilt = 0.047509, .phase = -0.004676, .curve = 0.374379, .gibphase = 1.727613, .gibmag = -0.005642, .ogeephase = 2.586835, .ogeemag = 0.117884, },
     },
+    .uid = 0x34C2AD7E,
+    .valid = true,
   },
 };
 
