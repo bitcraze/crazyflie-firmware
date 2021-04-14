@@ -43,15 +43,6 @@ bool deckTest(void);
 
 /***** Driver TOC definitions ******/
 
-/* Used peripherals */
-#define DECK_USING_UART1   (1<<0)
-#define DECK_USING_UART2   (1<<1)
-#define DECK_USING_SPI     (1<<2)
-#define DECK_USING_TIMER3  (1<<3)
-#define DECK_USING_TIMER5  (1<<4)
-#define DECK_USING_TIMER14 (1<<5)
-#define DECK_USING_I2C     (1<<6)
-
 /* Used GPIO */
 #define DECK_USING_PC11 (1<<0)
 #define DECK_USING_PC10 (1<<1)
@@ -66,6 +57,16 @@ bool deckTest(void);
 #define DECK_USING_PA5  (1<<10)
 #define DECK_USING_PA6  (1<<11)
 #define DECK_USING_PA7  (1<<12)
+
+
+/* Used peripherals */
+#define DECK_USING_UART1   (DECK_USING_PC10 | DECK_USING_PC11)
+#define DECK_USING_UART2   (DECK_USING_PA2  | DECK_USING_PA3)
+#define DECK_USING_SPI     (DECK_USING_PA5  | DECK_USING_PA6 | DECK_USING_PA7)
+#define DECK_USING_I2C     (DECK_USING_PB6  | DECK_USING_PB7)
+#define DECK_USING_TIMER3  (1 << 13)
+#define DECK_USING_TIMER5  (1 << 14)
+#define DECK_USING_TIMER14 (1 << 15)
 
 struct deckInfo_s;
 struct deckFwUpdate_s;
