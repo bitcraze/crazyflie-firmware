@@ -11,7 +11,7 @@
 
 // variables
 static float ref_distance_from_wall = 0.0f;
-static float max_speed = 0.5f;
+static float max_speed = 0.2f;
 static float max_rate = 0.5f;
 static float direction = 1.0f;
 static float first_run = false;

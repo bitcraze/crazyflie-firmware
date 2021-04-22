@@ -46,7 +46,9 @@
 #include "wallfollowing_multiranger_onboard.h"
 
 
-#define DEBUG_MODULE "PUSH"
+#define DEBUG_MODULE "WALLFOLLOWING"
+
+bool goLeft = false;
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
 {
@@ -75,14 +77,20 @@ typedef enum {
 
 static State state = idle;
 
+static int state_wf = 0;
+
 static const uint16_t unlockThLow = 100;
 static const uint16_t unlockThHigh = 300;
 static const uint16_t stoppedTh = 500;
 
 
-static const float height_sp = 0.2f;
+static const float height_sp = 0.5f;
+static const uint16_t radius = 300;
 
-static float vel_x_cmd, vel_y_cmd, vel_w_cmd;
+
+static float vel_x_cmd = 0.0f;
+static float vel_y_cmd = 0.0f;
+static float vel_w_cmd = 0.0f;
 
 
 #define MAX(a,b) ((a>b)?a:b)
@@ -95,7 +103,8 @@ void appMain()
   vTaskDelay(M2T(3000));
 
   logVarId_t idUp = logGetVarId("range", "up");
-  //logVarId_t idLeft = logGetVarId("range", "left");
+  logVarId_t idLeft = logGetVarId("range", "left");
+
   logVarId_t idRight = logGetVarId("range", "right");
   logVarId_t idFront = logGetVarId("range", "front");
   //logVarId_t idBack = logGetVarId("range", "back");
@@ -104,12 +113,10 @@ void appMain()
   paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
 
   logVarId_t idStabilizerYaw = logGetVarId("stabilizer", "yaw");
-
-
-
-
+  logVarId_t idHeightEstimate = logGetVarId("stateEstimate", "z");
 
   //DEBUG_PRINT("%i", idUp);
+  wall_follower_init(0.5, 0.5, 1);
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
@@ -121,26 +128,46 @@ void appMain()
     uint8_t multirangerInit = paramGetUint(idMultiranger);
 
     uint16_t up = logGetUint(idUp);
+    float heightEstimate = logGetFloat(idHeightEstimate);
 
     if (state == unlocked) {
 
       float front_range = (float)logGetUint(idFront) / 1000.0f;
-      float right_range = (float)logGetUint(idRight) / 1000.0f;
-      //float left_range = (float)logGetUint(idLeft) / 1000.0f;
+      float side_range;
+      if(goLeft)
+        side_range = (float)logGetUint(idRight) / 1000.0f;
+      else
+        side_range = (float)logGetUint(idLeft) / 1000.0f;
       //float back_range = (float)logGetUint(idBack) / 1000.0f;
 
       float heading_deg = logGetFloat(idStabilizerYaw);
       float heading_rad = heading_deg * (float)M_PI / 180.0f;
+      uint16_t up_o = radius - MIN(up, radius);
 
-      /*DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
-      DEBUG_PRINT("f=%i, b=%i, fo=%f, bo=%f, vel=%f\n", front_o, back_o, f_comp, b_comp, velFront);
-      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);*/
+      float height = height_sp - up_o/1000.0f;
 
       if (1) {
-        state = wall_follower(&vel_x_cmd, &vel_y_cmd, &vel_w_cmd, front_range, right_range, heading_rad, 1);
-        setHoverSetpoint(&setpoint, vel_x_cmd, vel_y_cmd, height_sp, vel_w_cmd);
-
+          vel_x_cmd = 0.0f;
+          vel_y_cmd = 0.0f;
+          float vel_w_cmd_convert=0.0f;
+        if (heightEstimate > 0.4f)
+        {
+          int direction;
+          if(goLeft)
+            direction = 1;
+          else
+            direction = -1;
+          state_wf = wall_follower(&vel_x_cmd, &vel_y_cmd, &vel_w_cmd, front_range, side_range, heading_rad, direction);
+          DEBUG_PRINT("state %i\n",state_wf);
+          vel_w_cmd_convert = vel_w_cmd * 180.0f / (float)M_PI;
+        }
+        setHoverSetpoint(&setpoint, vel_x_cmd, vel_y_cmd, height, vel_w_cmd_convert);
         commanderSetSetpoint(&setpoint, 3);
+      }
+
+      if (height < 0.2f) {
+        state = stopping;
+        DEBUG_PRINT("X\n");
       }
 
     } else {
@@ -168,3 +195,6 @@ void appMain()
     }
   }
 }
+PARAM_GROUP_START(app)
+PARAM_ADD(PARAM_UINT8, goLeft, &goLeft)
+PARAM_GROUP_STOP(app)
