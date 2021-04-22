@@ -190,7 +190,7 @@ void appMain()
       commanderSetSetpoint(&setpoint, 3);
 
       // Handling stopping with hand above the crazyflie
-      if (heightEstimate < height_sp - 0.2f) {
+      if (height_cmd < height_sp - 0.2f) {
         state = stopping;
         DEBUG_PRINT("X\n");
       }
