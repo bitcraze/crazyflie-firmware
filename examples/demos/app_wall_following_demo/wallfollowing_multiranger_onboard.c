@@ -3,6 +3,18 @@
  *
  *  Created on: Aug 7, 2018
  *      Author: knmcguire
+
+The same wallfollowing strategy was used in the following paper:
+
+ @article{mcguire2019minimal,
+  title={Minimal navigation solution for a swarm of tiny flying robots to explore an unknown environment},
+  author={McGuire, KN and De Wagter, Christophe and Tuyls, Karl and Kappen, HJ and de Croon, Guido CHE},
+  journal={Science Robotics},
+  volume={4},
+  number={35},
+  year={2019},
+  publisher={Science Robotics}
+
  */
 
 #include "wallfollowing_multiranger_onboard.h"
