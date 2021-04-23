@@ -55,6 +55,7 @@
 #include "log.h"
 #include "param.h"
 #include <math.h>
+#include "usec_time.h"
 
 #include "wallfollowing_multiranger_onboard.h"
 
@@ -191,7 +192,8 @@ void appMain()
         }
 
         // The wall-following state machine which outputs velocity commands
-        stateInnerLoop = wallFollower(&cmdVelX, &cmdVelY, &cmdAngWRad, frontRange, sideRange, estYawRad, direction);
+        float timeNow = usecTimestamp() / 1e6;
+        stateInnerLoop = wallFollower(&cmdVelX, &cmdVelY, &cmdAngWRad, frontRange, sideRange, estYawRad, direction, timeNow);
         cmdAngWDeg = cmdAngWRad * 180.0f / (float)M_PI;
       }
       // Turn velocity commands into setpoints and send it to the commander

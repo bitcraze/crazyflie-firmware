@@ -19,7 +19,6 @@ The same wallfollowing strategy was used in the following paper:
 
 #include "wallfollowing_multiranger_onboard.h"
 #include <math.h>
-#include "usec_time.h"
 
 // variables
 static float refDistanceFromWall = 0.0f;
@@ -33,6 +32,7 @@ static bool aroundCornerBackTrack = false;
 static float stateStartTime;
 
 static StateWF stateWF = forward;
+float timeNow = 0.0f;
 
 void wallFollowerInit(float refDistanceFromWallNew, float maxForwardSpeed_ref, StateWF initState)
 {
@@ -152,8 +152,7 @@ static void commandTurnAndAdjust(float *cmdVelY, float *cmdAngW, float rate, flo
 
 static StateWF transition(StateWF newState)
 {
-  float t = usecTimestamp() / 1e6;
-  stateStartTime = t;
+  stateStartTime = timeNow;
   return newState;
 }
 
@@ -163,12 +162,12 @@ void adjustDistanceWall(float distanceWallNew)
 }
 
 StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float frontRange, float sideRange, float currentHeading,
-                     int directionTurn)
+                     int directionTurn, float timeOuter)
 {
 
   direction = directionTurn;
 
-  float now = usecTimestamp() / 1e6;
+  timeNow = timeOuter;
 
   if (firstRun)
   {
@@ -289,7 +288,7 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
     break;
 
   case turnToAlignToWall:
-    if (now - stateStartTime < 1.0f)
+    if (timeNow - stateStartTime < 1.0f)
     {
       commandHover(&cmdVelXTemp, &cmdVelYTemp, &cmdAngWTemp);
     }

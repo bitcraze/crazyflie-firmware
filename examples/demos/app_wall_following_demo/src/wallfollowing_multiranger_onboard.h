@@ -23,7 +23,7 @@ typedef enum
 } StateWF;
 
 StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float frontRange, float sideRange, float currentHeading,
-                     int directionTurn);
+                     int directionTurn, float timeOuter);
 
 void adjustDistanceWall(float distanceWallNew);
 
