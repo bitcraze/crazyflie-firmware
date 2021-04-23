@@ -10,7 +10,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum {
+typedef enum
+{
     forward,
     hover,
     turnToFindWall,
@@ -22,7 +23,7 @@ typedef enum {
 } StateWF;
 
 StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float frontRange, float sideRange, float currentHeading,
-                  int directionTurn);
+                     int directionTurn);
 
 void adjustDistanceWall(float distanceWallNew);
 
