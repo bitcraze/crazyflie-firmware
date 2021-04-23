@@ -75,37 +75,36 @@ static void setVelocitySetpoint(setpoint_t *setpoint, float vx, float vy, float 
   setpoint->velocity_body = true;
 }
 
+// States
 typedef enum {
     idle,
     lowUnlock,
     unlocked,
     stopping
-} State;
+} StateOuterLoop;
 
-// States of the outer state machine (Locking and onlocking)
-static State state = idle;
 
-// States of the inner state machine (Wall following: wallfollowing_multiranger.c)
-static int state_wf = 0;
+StateOuterLoop stateOuterLoop = idle;
+StateWF stateInnerLoop = forward;
 
-// Handling the unlocking procedure of the top sensor of the multiranger
+// Thresholds for the unlocking procedure of the top sensor of the multiranger
 static const uint16_t unlockThLow = 100;
 static const uint16_t unlockThHigh = 300;
 static const uint16_t stoppedTh = 500;
 
 // Handling the height setpoint
-static const float height_sp = 0.5f;
+static const float spHeight = 0.5f;
 static const uint16_t radius = 300;
 
 // Some wallfollowing parameters and logging
 bool goLeft = false;
-float distance_to_wall = 0.5f;
-float max_speed = 0.5f;
-float init_wf_state = 1; // start with going forward
+float distanceToWall = 0.5f;
+float maxForwardSpeed = 0.5f;
 
-float vel_x_cmd = 0.0f;
-float vel_y_cmd = 0.0f;
-float vel_w_cmd = 0.0f;
+float cmdVelX = 0.0f;
+float cmdVelY = 0.0f;
+float cmdAngWRad = 0.0f;
+float cmdAngWDeg=0.0f;
 
 #define MAX(a,b) ((a>b)?a:b)
 #define MIN(a,b) ((a<b)?a:b)
@@ -128,10 +127,12 @@ void appMain()
   paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
   
   // Initialize the wall follower state machine
-  wall_follower_init(distance_to_wall, max_speed, init_wf_state);
+  wallFollowerInit(distanceToWall, maxForwardSpeed, stateInnerLoop);
 
   // Intialize the setpoint structure
-  static setpoint_t setpoint;
+  setpoint_t setpoint;
+
+
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
@@ -149,77 +150,75 @@ void appMain()
     float heightEstimate = logGetFloat(idHeightEstimate);
 
     // If the crazyflie is unlocked by the hand, continue with state machine
-    if (state == unlocked) {
+    if (stateOuterLoop== unlocked) {
 
       // Get all multiranger values
-      float front_range = (float)logGetUint(idFront) / 1000.0f;
-      float side_range;
-      if(goLeft)
-        side_range = (float)logGetUint(idRight) / 1000.0f;
-      else
-        side_range = (float)logGetUint(idLeft) / 1000.0f;
+      float frontRange = (float)logGetUint(idFront) / 1000.0f;
+      float sideRange;
+      if(goLeft){
+        sideRange = (float)logGetUint(idRight) / 1000.0f;
+      } else {
+        sideRange = (float)logGetUint(idLeft) / 1000.0f;
+      }
 
       // Get the heading and convert it to rad
-      float heading_deg = logGetFloat(idStabilizerYaw);
-      float heading_rad = heading_deg * (float)M_PI / 180.0f;
+      float estYawDeg = logGetFloat(idStabilizerYaw);
+      float estYawRad = estYawDeg * (float)M_PI / 180.0f;
 
       //Adjust height based on up ranger input
       uint16_t up_o = radius - MIN(up, radius);
-      float height_cmd = height_sp - up_o/1000.0f;
+      float cmdHeight = spHeight - up_o/1000.0f;
 
-      vel_x_cmd = 0.0f;
-      vel_y_cmd = 0.0f;
-      vel_w_cmd = 0.0f;
-      float vel_w_cmd_convert=0.0f;
+      cmdVelX = 0.0f;
+      cmdVelY = 0.0f;
+      cmdAngWRad = 0.0f;
+      cmdAngWDeg=0.0f;
 
       // Only go to the state machine if the crazyflie has reached a certain height
-      if (heightEstimate > height_sp - 0.1f)
+      if (heightEstimate > spHeight - 0.1f)
       {
         // Set the wall following direction
         int direction;
-        if(goLeft) direction = 1; else direction = -1;
+        if(goLeft){ direction = 1; } else { direction = -1;}
 
         // The wall-following state machine which outputs velocity commands
-        state_wf = wall_follower(&vel_x_cmd, &vel_y_cmd, &vel_w_cmd, front_range, side_range, heading_rad, direction);
-        vel_w_cmd_convert = vel_w_cmd * 180.0f / (float)M_PI;
-        //DEBUG_PRINT("state %i\n",state_wf);
+        stateInnerLoop = wallFollower(&cmdVelX, &cmdVelY, &cmdAngWRad, frontRange, sideRange, estYawRad, direction);
+        cmdAngWDeg = cmdAngWRad * 180.0f / (float)M_PI;
 
       }
       // Turn velocity commands into setpoints and send it to the commander
-      setVelocitySetpoint(&setpoint, vel_x_cmd, vel_y_cmd, height_cmd, vel_w_cmd_convert);
+      setVelocitySetpoint(&setpoint, cmdVelX, cmdVelY, cmdHeight, cmdAngWDeg);
       commanderSetSetpoint(&setpoint, 3);
 
       // Handling stopping with hand above the crazyflie
-      if (height_cmd < height_sp - 0.2f) {
-        state = stopping;
+      if (cmdHeight < spHeight - 0.2f) {
+        stateOuterLoop = stopping;
         DEBUG_PRINT("X\n");
       }
 
     } else {
       
       // Handeling locking and unlocking
-
-
-      if (state == stopping && up > stoppedTh) {
+      if (stateOuterLoop== stopping && up > stoppedTh) {
         DEBUG_PRINT("%i", up);
-        state = idle;
+        stateOuterLoop = idle;
         DEBUG_PRINT("S\n");
       }
 
       // If the up multiranger is activated for the first time, prepare to be unlocked
-      if (up < unlockThLow && state == idle && up > 0.001f) {
+      if (up < unlockThLow && stateOuterLoop == idle && up > 0.001f) {
         DEBUG_PRINT("Waiting for hand to be removed!\n");
-        state = lowUnlock;
+        stateOuterLoop = lowUnlock;
       }
       
       // Unlock CF if hand above is removed, and if the positioningdeckand multiranger deck is initalized.
-      if (up > unlockThHigh && state == lowUnlock && positioningInit && multirangerInit) {
+      if (up > unlockThHigh && stateOuterLoop == lowUnlock && positioningInit && multirangerInit) {
         DEBUG_PRINT("Unlocked!\n");
-        state = unlocked;
+        stateOuterLoop = unlocked;
       }
       
       // Stop the crazyflie with idle or stopping state
-      if (state == idle || state == stopping) {
+      if (stateOuterLoop == idle || stateOuterLoop == stopping) {
         memset(&setpoint, 0, sizeof(setpoint_t));
         commanderSetSetpoint(&setpoint, 3);
       }
@@ -230,14 +229,14 @@ void appMain()
 
 PARAM_GROUP_START(app)
 PARAM_ADD(PARAM_UINT8, goLeft, &goLeft)
-PARAM_ADD(PARAM_FLOAT, distanceWall, &distance_to_wall)
-PARAM_ADD(PARAM_FLOAT, maxSpeed,  &max_speed)
+PARAM_ADD(PARAM_FLOAT, distanceWall, &distanceToWall)
+PARAM_ADD(PARAM_FLOAT, maxSpeed,  &maxForwardSpeed)
 PARAM_GROUP_STOP(app)
 
 LOG_GROUP_START(app)
-LOG_ADD(LOG_FLOAT, vel_x_cmd, &vel_x_cmd)
-LOG_ADD(LOG_FLOAT, vel_y_cmd, &vel_y_cmd)
-LOG_ADD(LOG_FLOAT, vel_w_cmd, &vel_w_cmd)
-LOG_ADD(LOG_UINT8, state_wf, &state_wf)
-LOG_ADD(LOG_UINT8, state, &state)
+LOG_ADD(LOG_FLOAT, cmdVelX, &cmdVelX)
+LOG_ADD(LOG_FLOAT, cmdVelY, &cmdVelY)
+LOG_ADD(LOG_FLOAT, cmdAngWRad, &cmdAngWRad)
+LOG_ADD(LOG_UINT8, stateInnerLoop, &stateInnerLoop)
+LOG_ADD(LOG_UINT8, stateOuterLoop, &stateOuterLoop)
 LOG_GROUP_STOP(app)

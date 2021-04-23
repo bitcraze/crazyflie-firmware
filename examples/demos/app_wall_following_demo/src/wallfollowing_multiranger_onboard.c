@@ -22,23 +22,24 @@ The same wallfollowing strategy was used in the following paper:
 #include "usec_time.h"
 
 // variables
-static float ref_distance_from_wall = 0.0f;
-static float max_speed = 0.2f;
-static float max_rate = 0.5f;
+static float refDistanceFromWall = 0.0f;
+static float maxForwardSpeed = 0.2f;
+static float maxTurnRate = 0.5f;
 static float direction = 1.0f;
-static float first_run = false;
-static int state = 1;
-float state_start_time;
+static float firstRun = false;
+static float prevHeading = 0.0f;
+static float wallAngle = 0.0f;
+static bool aroundCornerBackTrack = false;
+static float stateStartTime;
 
+static StateWF stateWF = forward;
 
-
-void wall_follower_init(float new_ref_distance_from_wall, float max_speed_ref, int init_state)
+void wallFollowerInit(float refDistanceFromWallNew, float maxForwardSpeed_ref, StateWF initState)
 {
-  ref_distance_from_wall = new_ref_distance_from_wall;
-  max_speed = max_speed_ref;
-  first_run = true;
-  state = init_state;
-
+  refDistanceFromWall = refDistanceFromWallNew;
+  maxForwardSpeed = maxForwardSpeed_ref;
+  firstRun = true;
+  stateWF= initState;
 }
 
 // Static helper functions
@@ -53,7 +54,6 @@ static bool logicIsCloseTo(float real_value, float checked_value, float margin)
 
 static float wraptopi(float number)
 {
-
   if (number > (float)M_PI) {
     return (number - (float)(2 * M_PI));
   } else if (number < (float)(-1 * M_PI)) {
@@ -61,195 +61,180 @@ static float wraptopi(float number)
   } else {
     return (number);
   }
-
 }
-
 
 // Static command functions
-static void commandTurn(float *vel_x, float *vel_w, float ref_rate)
+static void commandTurn(float *cmdVelX, float *cmdAngW, float ref_rate)
 {
-  *vel_x = 0.0f;
-  *vel_w = direction * ref_rate;
+  *cmdVelX = 0.0f;
+  *cmdAngW = direction * ref_rate;
 
 }
 
-static void commandAlignCorner(float *vel_y, float *vel_w, float ref_rate, float range,
+static void commandAlignCorner(float *cmdVelY, float *cmdAngW, float ref_rate, float range,
                                float wanted_distance_from_corner)
 {
 
   if (range > wanted_distance_from_corner + 0.3f) {
-    *vel_w = direction * ref_rate;
-    *vel_y = 0;
+    *cmdAngW = direction * ref_rate;
+    *cmdVelY = 0;
 
   } else {
     if (range > wanted_distance_from_corner) {
-      *vel_y = direction * (-1.0f * max_speed / 3.0f);
+      *cmdVelY = direction * (-1.0f * maxForwardSpeed / 3.0f);
     } else {
-      *vel_y = direction * (max_speed / 3.9f);
+      *cmdVelY = direction * (maxForwardSpeed / 3.9f);
     }
-    *vel_w = 0;
+    *cmdAngW = 0;
   }
-
-
 }
 
-static void commandHover(float *vel_x, float *vel_y, float *vel_w)
+static void commandHover(float *cmdVelX, float *cmdVelY, float *cmdAngW)
 {
-  *vel_x = 0.0f;
-  *vel_y = 0.0f;
-  *vel_w = 0.0f;
+  *cmdVelX = 0.0f;
+  *cmdVelY = 0.0f;
+  *cmdAngW = 0.0f;
 }
 
-static void commandForwardAlongWall(float *vel_x, float *vel_y, float range)
+static void commandForwardAlongWall(float *cmdVelX, float *cmdVelY, float range)
 {
-  *vel_x = max_speed;
-  bool check_distance_wall = logicIsCloseTo(ref_distance_from_wall, range, 0.1f);
-  *vel_y = 0;
+  *cmdVelX = maxForwardSpeed;
+  bool check_distance_wall = logicIsCloseTo(refDistanceFromWall, range, 0.1f);
+  *cmdVelY = 0;
   if (!check_distance_wall) {
-    if (range > ref_distance_from_wall) {
-      *vel_y = direction * (-1.0f * max_speed / 2.0f);
+    if (range > refDistanceFromWall) {
+      *cmdVelY = direction * (-1.0f * maxForwardSpeed / 2.0f);
     } else {
-      *vel_y = direction * (max_speed / 2.0f);
+      *cmdVelY = direction * (maxForwardSpeed / 2.0f);
     }
   }
 }
 
-static void commandTurnAroundCornerAndAdjust(float *vel_x, float *vel_y, float *vel_w, float radius, float range)
+static void commandTurnAroundCornerAndAdjust(float *cmdVelX, float *cmdVelY, float *cmdAngW, float radius, float range)
 {
-  *vel_x = max_speed;
-  *vel_w = direction * (-1 * (*vel_x) / radius);
-  bool check_distance_to_wall = logicIsCloseTo(ref_distance_from_wall, range, 0.1f);
+  *cmdVelX = maxForwardSpeed;
+  *cmdAngW = direction * (-1 * (*cmdVelX) / radius);
+  bool check_distance_to_wall = logicIsCloseTo(refDistanceFromWall, range, 0.1f);
   if (!check_distance_to_wall) {
-    if (range > ref_distance_from_wall) {
-      *vel_y = direction * (-1.0f * max_speed / 3.0f);
-
+    if (range > refDistanceFromWall) {
+      *cmdVelY = direction * (-1.0f * maxForwardSpeed / 3.0f);
+    }    else {
+      *cmdVelY = direction * (maxForwardSpeed / 3.0f);
     }
-
-    else {
-      *vel_y = direction * (max_speed / 3.0f);
-
-    }
-
   }
 }
 
-static void commandTurnAndAdjust(float *vel_y, float *vel_w, float rate, float range)
+static void commandTurnAndAdjust(float *cmdVelY, float *cmdAngW, float rate, float range)
 {
-  *vel_w = direction * rate;
-  *vel_y = 0.0f;
+  *cmdAngW = direction * rate;
+  *cmdVelY = 0.0f;
 
 }
 
-static int transition(int new_state)
+static StateWF transition(StateWF newState)
 {
   float t =  usecTimestamp() / 1e6;
-  state_start_time = t;
-  return new_state;
+  stateStartTime = t;
+  return newState;
 }
 
-void adjustDistanceWall(float distance_wall_new)
+void adjustDistanceWall(float distanceWallNew)
 {
-  ref_distance_from_wall = distance_wall_new;
+  refDistanceFromWall = distanceWallNew;
 }
 
-int wall_follower(float *vel_x, float *vel_y, float *vel_w, float front_range, float side_range, float current_heading,
-                  int direction_turn)
+StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float frontRange, float sideRange, float currentHeading,
+                  int directionTurn)
 {
 
+  direction = directionTurn;
 
-  direction = direction_turn;
-  static float previous_heading = 0.0f;
-  static float angle = 0.0f;
-  static bool around_corner_go_back = false;
   float now = usecTimestamp() / 1e6;
 
-  if (first_run) {
-    previous_heading = current_heading;
-    //  around_corner_first_turn = false;
-    around_corner_go_back = false;
-    first_run = false;
+  if (firstRun) {
+    prevHeading = currentHeading;
+    aroundCornerBackTrack = false;
+    firstRun = false;
   }
-
-
-  /***********************************************************
-   * State definitions
-   ***********************************************************/
-  // 1 = forward
-  // 2 = hover
-  // 3 = turn_to_find_wall
-  // 4 = turn_to_allign_to_wall
-  // 5 = forward along wall
-  // 6 = rotate_around_wall
-  // 7 = rotate_in_corner
-  // 8 = find corner
 
   /***********************************************************
   * Handle state transitions
   ***********************************************************/
+  switch (stateWF){
+   
+    case forward:
+      if (frontRange < refDistanceFromWall + 0.2f) {
+        stateWF= transition(turnToFindWall);
+      }
+      break;
 
-  if (state == 1) {     //FORWARD
-    if (front_range < ref_distance_from_wall + 0.2f) {
-      state = transition(3);
-    }
-  } else if (state == 2) {  // HOVER
+    case hover:
+      break;
 
-  } else if (state == 3) { // TURN_TO_FIND_WALL
-    // check if wall is found
-    bool side_range_check = side_range < ref_distance_from_wall / (float)cos(0.78f) + 0.2f;
-    bool front_range_check = front_range < ref_distance_from_wall / (float)cos(0.78f) + 0.2f;
-    if (side_range_check && front_range_check) {
-      previous_heading = current_heading;
-      angle = direction * (1.57f - (float)atan(front_range / side_range) + 0.1f);
-      state = transition(4); // go to turn_to_allign_to_wall
-    }
-    if (side_range < 1.0f && front_range > 2.0f) {
-      //  around_corner_first_turn = true;
-      around_corner_go_back = false;
-      previous_heading = current_heading;
-      state = transition(8); // go to rotate_around_wall
-    }
-  } else if (state == 4) { //TURN_TO_ALLIGN_TO_WALL
-    bool allign_wall_check = logicIsCloseTo(wraptopi(current_heading - previous_heading), angle, 0.1f);
-    if (allign_wall_check) {
-      // prev_side_range = side_range;
-      state = transition(5);
-    }
-  } else if (state == 5) {  //FORWARD_ALONG_WALL
+    case turnToFindWall: ;
+      // check if wall is found
+      bool sideRangeCheck = sideRange < (refDistanceFromWall / (float)cos(0.78f) + 0.2f);
+      bool frontRangeCheck = frontRange < (refDistanceFromWall / (float)cos(0.78f) + 0.2f);
 
-    // If side range is out of reach,
-    //    end of the wall is reached
-    if (side_range > ref_distance_from_wall + 0.3f) {
-      //  around_corner_first_turn = true;
-      state = transition(8);
-    }
-    // If front range is small
-    //    then corner is reached
-    if (front_range < ref_distance_from_wall + 0.2f) {
-      previous_heading = current_heading;
-      state = transition(7);
-    }
+      if (sideRangeCheck && frontRangeCheck) {
+        prevHeading = currentHeading;
+        wallAngle = direction * (1.57f - (float)atan(frontRange / sideRange) + 0.1f);
+        stateWF= transition(turnToAlignToWall); 
+      }
+      if (sideRange < 1.0f && frontRange > 2.0f) {
+        //  around_corner_first_turn = true;
+        aroundCornerBackTrack = false;
+        prevHeading = currentHeading;
+        stateWF= transition(findCorner); 
+      }
+      break;
 
-  } else if (state == 6) {  //ROTATE_AROUND_WALL
-    if (front_range < ref_distance_from_wall + 0.2f) {
-      state = transition(3);
-    }
+    case turnToAlignToWall: ;
+      bool alignWallCheck = logicIsCloseTo(wraptopi(currentHeading - prevHeading), wallAngle, 0.1f);
+      if (alignWallCheck) {
+        // prev_sideRange = sideRange;
+        stateWF= transition(forwardAlongWall);
+      }
+      break;
 
+    case forwardAlongWall:
+      // If side range is out of reach,
+      //    end of the wall is reached
+      if (sideRange > refDistanceFromWall + 0.3f) {
+        //  around_corner_first_turn = true;
+        stateWF= transition(findCorner);
+      }
+      // If front range is small
+      //    then corner is reached
+      if (frontRange < refDistanceFromWall + 0.2f) {
+        prevHeading = currentHeading;
+        stateWF= transition(rotateInCorner);
+      }
+      break;
 
-  } else if (state == 7) {   //ROTATE_IN_CORNER
-    // Check if heading goes over 0.8 rad
-    bool check_heading_corner = logicIsCloseTo(fabs(wraptopi(current_heading - previous_heading)), 0.8f, 0.1f);
-    if (check_heading_corner) {
-      state = transition(3);
-    }
+    case rotateAroundWall:
+      if (frontRange < refDistanceFromWall + 0.2f) {
+        stateWF= transition(turnToFindWall);
+      }
+      break;
 
-  } else if (state == 8) {   //FIND_CORNER
-    if (side_range <= ref_distance_from_wall) {
-      state = transition(6);
-    }
+    case rotateInCorner: ;
+      // Check if heading goes over 0.8 rad
+      bool checkHeadingCorner = logicIsCloseTo(fabs(wraptopi(currentHeading - prevHeading)), 0.8f, 0.1f);
+      if (checkHeadingCorner) {
+        stateWF= transition(turnToFindWall);
+      }
+      break;
 
-  }
+    case findCorner:
+      if (sideRange <= refDistanceFromWall) {
+        stateWF= transition(rotateAroundWall);
+      }
+      break;
 
-  else {
+    default:
+      stateWF= transition(hover);
+
   }
 
 
@@ -257,87 +242,88 @@ int wall_follower(float *vel_x, float *vel_y, float *vel_w, float front_range, f
    * Handle state actions
    ***********************************************************/
 
-  float temp_vel_x = 0.0f;
-  float temp_vel_y = 0.0f;
-  float temp_vel_w = 0.0f;
+  float cmdVelXTemp = 0.0f;
+  float cmdVelYTemp = 0.0f;
+  float cmdAngWTemp = 0.0f;
 
-  if (state == 1) {      //FORWARD
-    temp_vel_x = max_speed;
-    temp_vel_y = 0.0f;
-    temp_vel_w = 0.0f;
+  switch(stateWF){
+    case forward:
+      cmdVelXTemp = maxForwardSpeed;
+      cmdVelYTemp = 0.0f;
+      cmdAngWTemp = 0.0f;
+      break;
 
-  } else if (state == 2) {  // HOVER
-    commandHover(&temp_vel_x, &temp_vel_y, &temp_vel_w);
+    case hover:
+      commandHover(&cmdVelXTemp, &cmdVelYTemp, &cmdAngWTemp);
+      break;
 
+    case turnToFindWall:
+      commandTurn(&cmdVelXTemp, &cmdAngWTemp, maxTurnRate);
+      cmdVelYTemp = 0.0f;
+      break;
 
-  } else if (state == 3) { // TURN_TO_FIND_WALL
-    commandTurn(&temp_vel_x, &temp_vel_w, max_rate);
-    temp_vel_y = 0.0f;
-
-  } else if (state == 4) { //TURN_TO_ALLIGN_TO_WALL
-
-
-
-    if (now - state_start_time < 1.0f)
-    {
-      commandHover(&temp_vel_x, &temp_vel_y, &temp_vel_w);
-    } else { // then turn again
-      commandTurn(&temp_vel_x, &temp_vel_w, max_rate);
-      temp_vel_y = 0.0f;
-    }
-
-  } else if (state == 5) {  //FORWARD_ALONG_WALL
-    commandForwardAlongWall(&temp_vel_x, &temp_vel_y, side_range);
-    temp_vel_w = 0.0f;
-
-    //commandForwardAlongWallHeadingSine(&temp_vel_x, &temp_vel_y,&temp_vel_w, side_range);
-
-  } else if (state == 6) {  //ROTATE_AROUND_WALL
-    // If first time around corner
-    //first try to find the corner again
-
-    // if side range is larger than prefered distance from wall
-    if (side_range > ref_distance_from_wall + 0.5f) {
-
-      // check if scanning has already occured
-      if (wraptopi(fabs(current_heading - previous_heading)) > 0.8f) {
-        around_corner_go_back = true;
+    case turnToAlignToWall:
+      if (now - stateStartTime < 1.0f)
+      {
+        commandHover(&cmdVelXTemp, &cmdVelYTemp, &cmdAngWTemp);
+      } else { // then turn again
+        commandTurn(&cmdVelXTemp, &cmdAngWTemp, maxTurnRate);
+        cmdVelYTemp = 0.0f;
       }
-      // turn and adjust distnace to corner from that point
-      if (around_corner_go_back) {
-        // go back if it already went into one direction
-        commandTurnAndAdjust(&temp_vel_y, &temp_vel_w, -1 * max_rate, side_range);
-        temp_vel_x = 0.0f;
+      break;
+
+    case forwardAlongWall:
+      commandForwardAlongWall(&cmdVelXTemp, &cmdVelYTemp, sideRange);
+      cmdAngWTemp = 0.0f;
+      break;
+
+    case rotateAroundWall:
+      // If first time around corner
+      //first try to find the corner again
+
+      // if side range is larger than prefered distance from wall
+      if (sideRange > refDistanceFromWall + 0.5f) {
+
+        // check if scanning has already occured
+        if (wraptopi(fabs(currentHeading - prevHeading)) > 0.8f) {
+          aroundCornerBackTrack = true;
+        }
+        // turn and adjust distnace to corner from that point
+        if (aroundCornerBackTrack) {
+          // go back if it already went into one direction
+          commandTurnAndAdjust(&cmdVelYTemp, &cmdAngWTemp, -1 * maxTurnRate, sideRange);
+          cmdVelXTemp = 0.0f;
+        } else {
+          commandTurnAndAdjust(&cmdVelYTemp, &cmdAngWTemp, maxTurnRate, sideRange);
+          cmdVelXTemp = 0.0f;
+        }
       } else {
-        commandTurnAndAdjust(&temp_vel_y, &temp_vel_w, max_rate, side_range);
-        temp_vel_x = 0.0f;
+        // continue to turn around corner
+        prevHeading = currentHeading;
+        aroundCornerBackTrack = false;
+        commandTurnAroundCornerAndAdjust(&cmdVelXTemp, &cmdVelYTemp, &cmdAngWTemp, refDistanceFromWall, sideRange);
       }
-    } else {
-      // continue to turn around corner
-      previous_heading = current_heading;
-      around_corner_go_back = false;
-      commandTurnAroundCornerAndAdjust(&temp_vel_x, &temp_vel_y, &temp_vel_w, ref_distance_from_wall, side_range);
-    }
+      break;
 
-  } else if (state == 7) {     //ROTATE_IN_CORNER
-    commandTurn(&temp_vel_x, &temp_vel_w, max_rate);
-    temp_vel_y = 0.0f;
+    case rotateInCorner:
+      commandTurn(&cmdVelXTemp, &cmdAngWTemp, maxTurnRate);
+      cmdVelYTemp = 0.0f;
+      break;
 
-  } else if (state == 8) { //FIND_CORNER
-    commandAlignCorner(&temp_vel_y, &temp_vel_w, -1 * max_rate, side_range, ref_distance_from_wall);
-    temp_vel_x = 0.0f;
+    case findCorner:
+      commandAlignCorner(&cmdVelYTemp, &cmdAngWTemp, -1 * maxTurnRate, sideRange, refDistanceFromWall);
+      cmdVelXTemp = 0.0f;
+      break;
+  
+    default:
+      //State does not exist so hover!!
+      commandHover(&cmdVelXTemp, &cmdVelYTemp, &cmdAngWTemp);
   }
+  
+  *cmdVelX = cmdVelXTemp;
+  *cmdVelY = cmdVelYTemp;
+  *cmdAngW = cmdAngWTemp;
 
-  else {
-    //State does not exist so hover!!
-    commandHover(&temp_vel_x, &temp_vel_y, &temp_vel_w);
-  }
-
-
-  *vel_x = temp_vel_x;
-  *vel_y = temp_vel_y;
-  *vel_w = temp_vel_w;
-
-  return state;
+  return stateWF;
 
 }

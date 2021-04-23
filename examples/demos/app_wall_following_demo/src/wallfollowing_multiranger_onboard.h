@@ -10,10 +10,21 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-int wall_follower(float *vel_x, float *vel_y, float *vel_w, float front_range, float side_range, float current_heading,
-                  int direction_turn);
+typedef enum {
+    forward,
+    hover,
+    turnToFindWall,
+    turnToAlignToWall,
+    forwardAlongWall,
+    rotateAroundWall,
+    rotateInCorner,
+    findCorner
+} StateWF;
 
-void adjustDistanceWall(float distance_wall_new);
+StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float frontRange, float sideRange, float currentHeading,
+                  int directionTurn);
 
-void wall_follower_init(float new_ref_distance_from_wall, float max_speed_ref, int init_state);
+void adjustDistanceWall(float distanceWallNew);
+
+void wallFollowerInit(float refDistanceFromWallNew, float maxForwardSpeed_ref, StateWF initState);
 #endif /* SRC_WALLFOLLOWING_MULTIRANGER_ONBOARD_H_ */
