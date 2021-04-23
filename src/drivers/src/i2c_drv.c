@@ -499,6 +499,13 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
       DMA_ITConfig(i2c->def->dmaRxStream, DMA_IT_TC | DMA_IT_TE, ENABLE);
       I2C_DMACmd(i2c->def->i2cPort, ENABLE); // Enable before ADDR clear
 
+      // Workaround to enable DMA for Renode simulation.
+      // The I2C uses the DMA for reading, but the Renode implementation lacks some functionality
+      // and for a message to be read the DMA needs to be enabled manually.
+      // Without setting this bit the I2C reading fails.
+      // With added functionality it should be possible to remove.
+      DMA_Cmd(i2c->def->dmaRxStream, ENABLE); // Workaround
+
       __DMB();                         // Make sure instructions (clear address) are in correct order
       SR2 = i2c->def->i2cPort->SR2;    // clear ADDR
     }

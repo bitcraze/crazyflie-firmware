@@ -154,6 +154,13 @@ static void locSrvCrtpCB(CRTPPacket* pk)
   }
 }
 
+static void updateLogFromExtPos()
+{
+  ext_pose.x = ext_pos.x;
+  ext_pose.y = ext_pos.y;
+  ext_pose.z = ext_pos.z;
+}
+
 static void extPositionHandler(CRTPPacket* pk) {
   const struct CrtpExtPosition* data = (const struct CrtpExtPosition*)pk->data;
 
@@ -161,6 +168,8 @@ static void extPositionHandler(CRTPPacket* pk) {
   ext_pos.y = data->y;
   ext_pos.z = data->z;
   ext_pos.stdDev = extPosStdDev;
+  ext_pos.source = MeasurementSourceLocationService;
+  updateLogFromExtPos();
 
   estimatorEnqueuePosition(&ext_pos);
   tickOfLastPacket = xTaskGetTickCount();
@@ -301,7 +310,9 @@ static void extPositionPackedHandler(CRTPPacket* pk)
     ext_pos.y = item->y / 1000.0f;
     ext_pos.z = item->z / 1000.0f;
     ext_pos.stdDev = extPosStdDev;
+    ext_pos.source = MeasurementSourceLocationService;
     if (item->id == my_id) {
+      updateLogFromExtPos();
       estimatorEnqueuePosition(&ext_pos);
       tickOfLastPacket = xTaskGetTickCount();
     }
@@ -363,12 +374,22 @@ void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
   }
 }
 
-
+// This logging group is deprecated
 LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, X, &ext_pos.x)
   LOG_ADD(LOG_FLOAT, Y, &ext_pos.y)
   LOG_ADD(LOG_FLOAT, Z, &ext_pos.z)
 LOG_GROUP_STOP(ext_pos)
+
+LOG_GROUP_START(locSrv)
+  LOG_ADD(LOG_FLOAT, x, &ext_pose.x)
+  LOG_ADD(LOG_FLOAT, y, &ext_pose.y)
+  LOG_ADD(LOG_FLOAT, z, &ext_pose.z)
+  LOG_ADD(LOG_FLOAT, qx, &ext_pose.quat.x)
+  LOG_ADD(LOG_FLOAT, qy, &ext_pose.quat.y)
+  LOG_ADD(LOG_FLOAT, qz, &ext_pose.quat.z)
+  LOG_ADD(LOG_FLOAT, qw, &ext_pose.quat.w)
+LOG_GROUP_STOP(locSrv)
 
 LOG_GROUP_START(locSrvZ)
   LOG_ADD(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)

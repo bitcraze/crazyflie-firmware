@@ -118,6 +118,8 @@ static bool handleInfoSectionRead(const uint32_t memAddr, const uint8_t readLen,
     uint32_t index = 0;
     uint8_t bytesLeft = readLen;
 
+    memset(buffer, 0, readLen);
+
     // First byte is the version
     if (0 == (memAddr + index) && bytesLeft > 0) {
         buffer[index] = VERSION;

@@ -25,8 +25,8 @@ project.
 Writing the driver
 ------------------
 
-Deck drivers are in the deck/driver/src folder. Create this file named
-hello.c in the deck/driver/src folder:
+Deck drivers are in the src/deck/drivers/src folder. Create this file named
+hello.c in the src/deck/drivers/src folder:
 
 ``` {.c}
 #define DEBUG_MODULE "HelloDeck"
@@ -94,7 +94,7 @@ Now the last step is to compile and flash your new firmware. Launch the
 following commands in a shell:
 
 ``` {.bash}
-crazyflie-firmware$ make
+crazyflie-firmware$ make clean && make
 crazyflie-firmware$ make cload
 ```
 

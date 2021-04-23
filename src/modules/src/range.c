@@ -48,13 +48,12 @@ float rangeGet(rangeDirection_t direction)
   return ranges[direction];
 }
 
-bool rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp) {
+void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp) {
   tofMeasurement_t tofData;
   tofData.timestamp = timeStamp;
   tofData.distance = distance;
   tofData.stdDev = stdDev;
-
-  return estimatorEnqueueTOF(&tofData);
+  estimatorEnqueueTOF(&tofData);
 }
 
 LOG_GROUP_START(range)

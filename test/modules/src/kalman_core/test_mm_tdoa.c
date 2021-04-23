@@ -42,7 +42,7 @@ void testThatScalarUpdateIsCalledInSimpleCase() {
   expectedHm[KC_STATE_Z] = 0.0;
 
   tdoaMeasurement_t measurement = {
-    .anchorPosition = {
+    .anchorPositions = {
       {.x = -1.0, .y = 0.0, .z = 0.0},
       {.x = 1.0, .y = 0.0, .z = 0.0},
     },
@@ -68,7 +68,7 @@ void testThatSampleWhereDroneIsInSamePositionAsAnchorIsIgnored() {
   this.S[KC_STATE_Z] = 0.0;
 
   tdoaMeasurement_t measurement = {
-    .anchorPosition = {
+    .anchorPositions = {
       {.x = -1.0, .y = 0.0, .z = 0.0},
       {.x = 1.0, .y = 0.0, .z = 0.0},
     },
@@ -91,7 +91,7 @@ void testThatScalarUpdateIsNotCalledWhenTheOutlierFilterIsBlocking() {
   this.S[KC_STATE_Z] = 0.0;
 
   tdoaMeasurement_t measurement = {
-    .anchorPosition = {
+    .anchorPositions = {
       {.x = -1.0, .y = 0.0, .z = 0.0},
       {.x = 1.0, .y = 0.0, .z = 0.0},
     },

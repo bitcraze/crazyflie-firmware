@@ -87,8 +87,8 @@
 #define SPI_END_TRANSACTION     spiEndTransaction
 #endif
 
-#define MAX_USD_LOG_VARIABLES_PER_EVENT   (50)
-#define MAX_USD_LOG_EVENTS                (10)
+#define MAX_USD_LOG_VARIABLES_PER_EVENT   (20)
+#define MAX_USD_LOG_EVENTS                (20)
 #define FIXED_FREQUENCY_EVENT_ID          (0xFFFF)
 #define FIXED_FREQUENCY_EVENT_NAME        "fixedFrequency"
 
@@ -572,9 +572,11 @@ static void usdLogTask(void* prm)
       // loop over event triggers "on:<name>"
       usdLogConfig.numEventConfigs = 0;
       usdLogConfig.fixedFrequencyEventIdx = MAX_USD_LOG_EVENTS;
+      usdLogConfig.frequency = 10; // use non-zero default value for task loop below
+      usdLogEventConfig_t *cfg = &usdLogConfig.eventConfigs[0];
+      const char* eventName = 0;
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-      while (line && usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS) {
-        usdLogEventConfig_t* cfg = &usdLogConfig.eventConfigs[usdLogConfig.numEventConfigs];
+      while (line) {
         if (strncmp(line, "on:", 3) == 0) {
           // special mode for non-event-based logging
           if (strcmp(&line[3], FIXED_FREQUENCY_EVENT_NAME) == 0) {
@@ -587,12 +589,14 @@ static void usdLogTask(void* prm)
             if (!line) break;
             usdLogConfig.mode = strtol(line, &endptr, 10);
             cfg->eventId = FIXED_FREQUENCY_EVENT_ID;
+            eventName = FIXED_FREQUENCY_EVENT_NAME;
             usdLogConfig.fixedFrequencyEventIdx = usdLogConfig.numEventConfigs;
           } else {
             // handle event triggers
             const eventtrigger *et = eventtriggerGetByName(&line[3]);
             if (et) {
               cfg->eventId = eventtriggerGetId(et);
+              eventName = et->name;
             } else {
               DEBUG_PRINT("Unknown event %s\n", &line[3]);
               line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
@@ -603,7 +607,7 @@ static void usdLogTask(void* prm)
           // Add log variables
           cfg->numVars = 0;
           cfg->numBytes = 0;
-          while (cfg->numVars < MAX_USD_LOG_VARIABLES_PER_EVENT) {
+          while (true) {
             line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
             if (!line || strncmp(line, "on:", 3) == 0)
               break;
@@ -622,11 +626,24 @@ static void usdLogTask(void* prm)
               DEBUG_PRINT("Unknown log variable %s.%s\n", group, name);
               continue;
             }
-            cfg->varIds[cfg->numVars] = varid;
-            ++cfg->numVars;
-            cfg->numBytes += logVarSize(logGetType(varid));
+            if (cfg->numVars < MAX_USD_LOG_VARIABLES_PER_EVENT) {
+              cfg->varIds[cfg->numVars] = varid;
+              ++cfg->numVars;
+              cfg->numBytes += logVarSize(logGetType(varid));
+            } else {
+              DEBUG_PRINT("Skip log variable %s: %s.%s (out of storage)\n", eventName, group, name);
+              continue;
+            }
           }
-          ++usdLogConfig.numEventConfigs;
+          if (usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS - 1) {
+            ++usdLogConfig.numEventConfigs;
+            cfg = &usdLogConfig.eventConfigs[usdLogConfig.numEventConfigs];
+          } else {
+            DEBUG_PRINT("Skip config after event %s (out of storage)\n", eventName);
+            break;
+          }
+        } else {
+          line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
         }
       }
       f_close(&logFile);

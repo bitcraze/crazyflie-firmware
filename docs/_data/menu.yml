@@ -1,9 +1,7 @@
 - page_id: home
 - title: Building and Flashing
   subs:
-    - {page_id: build_instructions}
-    - {page_id: build_config}
-    - {page_id: flashing}
+    - {page_id: build}
 - title: Userguides
   subs:
     - {page_id: deck}

@@ -137,7 +137,7 @@ static float measNoiseBaro = 2.0f; // meters
 static float measNoiseGyro_rollpitch = 0.1f; // radians per second
 static float measNoiseGyro_yaw = 0.1f; // radians per second
 
-static float initialX = 1.5;
+static float initialX = 0.0;
 static float initialY = 0.0;
 static float initialZ = 0.0;
 

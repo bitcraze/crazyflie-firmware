@@ -1,0 +1,39 @@
+1     # version
+2048  # buffer size in bytes
+log   # file name
+0     # enable on startup (0/1)
+on:estTDOA
+on:estPosition
+locSrv.x
+locSrv.y
+locSrv.z
+lighthouse.x
+lighthouse.y
+lighthouse.z
+on:estPose
+locSrv.x
+locSrv.y
+locSrv.z
+locSrv.qx
+locSrv.qy
+locSrv.qz
+locSrv.qw
+on:estDistance
+on:estTOF
+range.zrange
+on:estAbsoluteHeight
+on:estFlow
+motion.deltaX
+motion.deltaY
+on:estYawError
+on:estSweepAngle
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estBarometer
+baro.asl

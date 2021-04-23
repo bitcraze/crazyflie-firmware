@@ -9,7 +9,7 @@ The Lighthouse positioning system uses the HTC Vive base stations (aka Lighthous
 deck to achieve high precision positioning.
 
 The basics:
- * [Setting up](/docs/functional-areas/lighthouse/setting_up.md)
+ * [System overview](/docs/functional-areas/lighthouse/system_overview.md)
  * [Limitations](/docs/functional-areas/lighthouse/limitations.md)
  * [Positioning methods](/docs/functional-areas/lighthouse/positioning_methods.md)
 

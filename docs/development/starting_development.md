@@ -15,6 +15,13 @@ machine \"Update all projects\" script. For Crazyflie 2.X make sure the current 
     ~$ cd projects/crazyflie-firmware/
     crazyflie-firmware$ git checkout master
 
+And make sure the `submodules` are up-to-date.
+
+```
+crazyflie-firmware$ git submodule init
+crazyflie-firmware$ git submodule update
+```
+
 Then make the firmware.
 
 For **Crazyflie 2.X**:
@@ -45,9 +52,3 @@ programming cable
 ```
     crazyflie-firmware$ make flash
 ```
-
-#### Command line
-From command line the flash make target flashed the firmware using
-programming cable
-
-    make flash

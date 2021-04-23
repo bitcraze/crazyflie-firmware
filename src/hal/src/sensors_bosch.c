@@ -61,6 +61,7 @@
 #include "bmp3.h"
 #include "bstdr_comm_support.h"
 #include "static_mem.h"
+#include "estimator.h"
 
 #define SENSORS_READ_RATE_HZ            1000
 #define SENSORS_STARTUP_TIME_MS         1000
@@ -484,6 +485,8 @@ sensorsAccelCalibrate(BiasObj* accel, BiasObj* gyro, uint8_t type) {
 
 static void sensorsTask(void *param)
 {
+  measurement_t measurement;
+
   systemWaitStart();
 
   uint32_t lastWakeTime = xTaskGetTickCount();
@@ -644,10 +647,23 @@ static void sensorsTask(void *param)
             {
               bmp280_read_pressure_temperature(&v_pres_u32, &v_temp_s32);
               sensorsScaleBaro(baro280, (float)v_pres_u32, (float)v_temp_s32/100.0f);
+
+              measurement.type = MeasurementTypeBarometer;
+              measurement.data.barometer.baro = sensors.baro;
+              estimatorEnqueue(&measurement);
+
               baroMeasDelay = baroMeasDelayMin;
             }
         }
+
+      measurement.type = MeasurementTypeAcceleration;
+      measurement.data.acceleration.acc = sensors.acc;
+      estimatorEnqueue(&measurement);
       xQueueOverwrite(accelPrimDataQueue, &sensors.acc);
+
+      measurement.type = MeasurementTypeGyroscope;
+      measurement.data.gyroscope.gyro = sensors.gyro;
+      estimatorEnqueue(&measurement);
       xQueueOverwrite(gyroPrimDataQueue, &sensors.gyro);
 
 #ifdef LOG_SEC_IMU

@@ -73,7 +73,7 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
     .distanceDiff = distanceDiff
   };
 
-  if (tdoaStorageGetAnchorPosition(anchorACtx, &tdoa.anchorPosition[0]) && tdoaStorageGetAnchorPosition(anchorBCtx, &tdoa.anchorPosition[1])) {
+  if (tdoaStorageGetAnchorPosition(anchorACtx, &tdoa.anchorPositions[0]) && tdoaStorageGetAnchorPosition(anchorBCtx, &tdoa.anchorPositions[1])) {
     STATS_CNT_RATE_EVENT(&stats->packetsToEstimator);
 
     uint8_t idA = tdoaStorageGetId(anchorACtx);
@@ -84,8 +84,10 @@ static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorC
     if (idB == stats->anchorId && idA == stats->remoteAnchorId) {
       stats->tdoa = -distanceDiff;
     }
+    tdoa.anchorIds[0] = idA;
+    tdoa.anchorIds[1] = idB;
 
-    engineState->sendTdoaToEstimator(&tdoa, idA, idB);
+    engineState->sendTdoaToEstimator(&tdoa);
   }
 }
 

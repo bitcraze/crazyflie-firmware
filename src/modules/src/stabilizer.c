@@ -59,9 +59,7 @@ static bool isInit;
 static bool emergencyStop = false;
 static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
-static bool checkStops;
-
-uint32_t inToOutLatency;
+static uint32_t inToOutLatency;
 
 // State variables for the stabilizer
 static setpoint_t setpoint;
@@ -237,10 +235,11 @@ static void stabilizerTask(void* param)
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
+    
+    // update sensorData struct (for logging variables)
+    sensorsAcquire(&sensorData, tick);
 
-    if (healthShallWeRunTest())
-    {
-      sensorsAcquire(&sensorData, tick);
+    if (healthShallWeRunTest()) {
       healthRunTests(&sensorData);
     } else {
       // allow to update estimator dynamically
@@ -254,7 +253,7 @@ static void stabilizerTask(void* param)
         controllerType = getControllerType();
       }
 
-      stateEstimator(&state, &sensorData, tick);
+      stateEstimator(&state, tick);
       compressState();
 
       commanderGetSetpoint(&setpoint, &state);
@@ -272,7 +271,6 @@ static void stabilizerTask(void* param)
       //
       supervisorUpdate(&sensorData);
 
-      checkStops = systemIsArmed();
       if (emergencyStop || (systemIsArmed() == false)) {
         powerStop();
       } else {
