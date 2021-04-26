@@ -30,6 +30,11 @@ static float prevHeading = 0.0f;
 static float wallAngle = 0.0f;
 static bool aroundCornerBackTrack = false;
 static float stateStartTime;
+static float rangerValueBuffer = 0.2f;
+static float angleValueBuffer = 0.1f;
+static float rangerThresholdLost = 0.3f;
+static const float inCornerAngle = 0.8f;
+static const float waitForMeasurementSeconds = 1.0f;
 
 static StateWF stateWF = forward;
 float timeNow = 0.0f;
@@ -95,7 +100,7 @@ static void commandAlignCorner(float *cmdVelY, float *cmdAngW, float ref_rate, f
     }
     else
     {
-      *cmdVelY = direction * (maxForwardSpeed / 3.9f);
+      *cmdVelY = direction * (maxForwardSpeed / 3.0f);
     }
     *cmdAngW = 0;
   }
@@ -183,7 +188,7 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
   {
 
   case forward:
-    if (frontRange < refDistanceFromWall + 0.2f)
+    if (frontRange < refDistanceFromWall + rangerValueBuffer)
     {
       stateWF = transition(turnToFindWall);
     }
@@ -194,16 +199,17 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
 
   case turnToFindWall:;
     // check if wall is found
-    bool sideRangeCheck = sideRange < (refDistanceFromWall / (float)cos(0.78f) + 0.2f);
-    bool frontRangeCheck = frontRange < (refDistanceFromWall / (float)cos(0.78f) + 0.2f);
+    bool sideRangeCheck = sideRange < (refDistanceFromWall / (float)cos(0.78f) + rangerValueBuffer);
+    bool frontRangeCheck = frontRange < (refDistanceFromWall / (float)cos(0.78f) + rangerValueBuffer);
 
     if (sideRangeCheck && frontRangeCheck)
     {
       prevHeading = currentHeading;
-      wallAngle = direction * (1.57f - (float)atan(frontRange / sideRange) + 0.1f);
+      wallAngle = direction * (1.57f - (float)atan(frontRange / sideRange) + angleValueBuffer);
       stateWF = transition(turnToAlignToWall);
     }
-    if (sideRange < 1.0f && frontRange > 2.0f)
+    // If went too far in heading
+    if (sideRange < refDistanceFromWall + rangerValueBuffer && frontRange > refDistanceFromWall + rangerThresholdLost)
     {
       aroundCornerBackTrack = false;
       prevHeading = currentHeading;
@@ -212,7 +218,7 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
     break;
 
   case turnToAlignToWall:;
-    bool alignWallCheck = logicIsCloseTo(wraptopi(currentHeading - prevHeading), wallAngle, 0.1f);
+    bool alignWallCheck = logicIsCloseTo(wraptopi(currentHeading - prevHeading), wallAngle, angleValueBuffer);
     if (alignWallCheck)
     {
       stateWF = transition(forwardAlongWall);
@@ -222,13 +228,13 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
   case forwardAlongWall:
     // If side range is out of reach,
     //    end of the wall is reached
-    if (sideRange > refDistanceFromWall + 0.3f)
+    if (sideRange > refDistanceFromWall + rangerThresholdLost)
     {
       stateWF = transition(findCorner);
     }
     // If front range is small
     //    then corner is reached
-    if (frontRange < refDistanceFromWall + 0.2f)
+    if (frontRange < refDistanceFromWall + rangerValueBuffer)
     {
       prevHeading = currentHeading;
       stateWF = transition(rotateInCorner);
@@ -236,7 +242,7 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
     break;
 
   case rotateAroundWall:
-    if (frontRange < refDistanceFromWall + 0.2f)
+    if (frontRange < refDistanceFromWall + rangerValueBuffer)
     {
       stateWF = transition(turnToFindWall);
     }
@@ -244,7 +250,7 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
 
   case rotateInCorner:;
     // Check if heading goes over 0.8 rad
-    bool checkHeadingCorner = logicIsCloseTo(fabs(wraptopi(currentHeading - prevHeading)), 0.8f, 0.1f);
+    bool checkHeadingCorner = logicIsCloseTo(fabs(wraptopi(currentHeading - prevHeading)), inCornerAngle, angleValueBuffer);
     if (checkHeadingCorner)
     {
       stateWF = transition(turnToFindWall);
@@ -288,7 +294,7 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
     break;
 
   case turnToAlignToWall:
-    if (timeNow - stateStartTime < 1.0f)
+    if (timeNow - stateStartTime < waitForMeasurementSeconds)
     {
       commandHover(&cmdVelXTemp, &cmdVelYTemp, &cmdAngWTemp);
     }
@@ -309,11 +315,11 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
     //first try to find the corner again
 
     // if side range is larger than prefered distance from wall
-    if (sideRange > refDistanceFromWall + 0.5f)
+    if (sideRange > refDistanceFromWall + rangerThresholdLost)
     {
 
       // check if scanning has already occured
-      if (wraptopi(fabs(currentHeading - prevHeading)) > 0.8f)
+      if (wraptopi(fabs(currentHeading - prevHeading)) > inCornerAngle)
       {
         aroundCornerBackTrack = true;
       }
