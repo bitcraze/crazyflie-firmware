@@ -95,6 +95,7 @@ struct log_block {
   int id;
   xTimerHandle timer;
   StaticTimer_t timerBuffer;
+  uint32_t droppedPackets;
   struct log_ops * ops;
 };
 
@@ -866,7 +867,14 @@ void logRunBlock(void * arg)
   else
   {
     // No need to block here, since logging is not guaranteed
-    crtpSendPacket(&pk);
+    if (!crtpSendPacket(&pk))
+    {
+      if (blk->droppedPackets++ % 100 == 0)
+      {
+        DEBUG_PRINT("WARNING: LOG packets drop detected (%lu packets lost)\n",
+                    blk->droppedPackets);
+      }
+    }
   }
 }
 
