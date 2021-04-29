@@ -9,7 +9,9 @@ The microSD card deck allows to attach a micro SD card to the Crazyflie for read
 
 The specification of the deck can be found in the [wiki](https://wiki.bitcraze.io/projects:crazyflie2:expansionboards:microsd).
 
-## Filesystem
+## File system
+
+The SD-card used in the deck must be formatted as a FAT32 file system (exFAT does not work).
 
 We use [FatFS](http://elm-chan.org/fsw/ff/00index_e.html) as the file system handler. Have a look at the API and examples on the FatFS site fore usage information.
 
@@ -43,7 +45,7 @@ The config file supports logging of [log variables](/docs/userguides/logparam.md
 For the fixed frequency logging, the frequency is an integer value in Hertz, for example 250 means that a data block is written every 4ms. The buffer size is used to decouple the writing to the card and the data logging. Higher frequencies require a larger buffer, otherwise some data might be lost. The Crazyflie console will show how many events had to be discarded due to insufficient buffer size:
 ```
 uSD: Wrote 161378 B to: log00 (2237 of 2237 events)
-``` 
+```
 In general, logging 10 variables with 1kHz works well with a buffer of 512 Bytes. But you may have to try around a bit to get feeling on what is possible.
 
 The file name should be 10 characters or less and a running number is appended automatically (e.g., if the file name is log, there will be files log00, log01, log02 etc.). The log entries are the names of logging variables in the firmware.
