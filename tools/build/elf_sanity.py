@@ -1,3 +1,4 @@
+import argparse
 import struct
 import sys
 
@@ -8,6 +9,27 @@ PARAM_NAME_MAXLEN = 25
 PARAM_SIZE = 12
 PARAM_GROUP = 0x1 << 7
 PARAM_START = 0x1
+
+parameters = {}
+
+
+param_type_to_str_dict = {
+    0x0 | 0x0 << 2 | 0x1 << 3: 'PARAM_UINT8',
+    0x0 | 0x0 << 2 | 0x0 << 3: 'PARAM_INT8',
+    0x1 | 0x0 << 2 | 0x1 << 3: 'PARAM_UIN16',
+    0x1 | 0x0 << 2 | 0x0 << 3: 'PARAM_INT16',
+    0x2 | 0x0 << 2 | 0x1 << 3: 'PARAM_UINT32',
+    0x2 | 0x0 << 2 | 0x0 << 3: 'PARAM_INT32',
+    0x2 | 0x1 << 2 | 0x0 << 3: 'PARAM_FLOAT'
+}
+
+
+def param_type_to_str(t: int) -> str:
+    read_only = str()
+    if t & (1 << 6):  # PARAM_RONLY set
+        read_only = ' | PARAM_RONLY'
+
+    return '{:12}{}'.format(param_type_to_str_dict[t & ~(1 << 6)], read_only)
 
 
 def process_file(filename):
@@ -44,8 +66,6 @@ def check_params(stream):
     offset = get_offset_of_symbol(elf, '_param_start')
     stop_offset = get_offset_of_symbol(elf, '_param_stop')
 
-    parameters = {}
-
     while offset < stop_offset:
         elf.stream.seek(offset)
         #
@@ -80,7 +100,7 @@ def check_params(stream):
                 print('duplicate parameter detected: %s' % name)
                 sys.exit(1)
             else:
-                parameters[name] = name
+                parameters[name] = t
 
             if len(name) > PARAM_NAME_MAXLEN:
                 print('name of param to long (%s > %d)' %
@@ -91,7 +111,14 @@ def check_params(stream):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        process_file(sys.argv[1])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--list-params', action='store_true')
+    parser.add_argument('filename', nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+
+    if args.filename:
+        process_file(args.filename[0])
+        for key in sorted(parameters.keys()):
+            print('{:25}\t{}'.format(key, param_type_to_str(parameters[key])))
     else:
         sys.exit(1)
