@@ -5,14 +5,6 @@ import sys
 from elftools.elf.elffile import ELFFile
 
 
-PARAM_NAME_MAXLEN = 25
-PARAM_SIZE = 12
-PARAM_GROUP = 0x1 << 7
-PARAM_START = 0x1
-
-parameters = {}
-
-
 param_type_to_str_dict = {
     0x0 | 0x0 << 2 | 0x1 << 3: 'PARAM_UINT8',
     0x0 | 0x0 << 2 | 0x0 << 3: 'PARAM_INT8',
@@ -32,9 +24,39 @@ def param_type_to_str(t: int) -> str:
     return '{:12}{}'.format(param_type_to_str_dict[t & ~(1 << 6)], read_only)
 
 
-def process_file(filename):
+log_type_to_str_dict = {
+    0x1: 'LOG_UINT8',
+    0x2: 'LOG_INT8',
+    0x3: 'LOG_UIN16',
+    0x4: 'LOG_INT16',
+    0x5: 'LOG_UINT32',
+    0x6: 'LOG_INT32',
+    0x7: 'LOG_FLOAT',
+    0x8: 'LOG_FP16'
+}
+
+
+def log_type_to_str(t: int) -> str:
+    by_function = str()
+    if t & (1 << 6):  # BY_FUNCTION set
+        by_function = ' | BY_FUNCTION'
+
+    return '{:12}{}'.format(log_type_to_str_dict[t & ~(1 << 6)], by_function)
+
+
+def process_file(filename, list_params: bool, list_logs: bool):
     with open(filename, 'rb') as f:
-        check_params(f)
+        parameters = check_structs(f, 'param')
+        if list_params:
+            for key in sorted(parameters.keys()):
+                t = parameters[key]
+                print('{:25}\t{}'.format(key, param_type_to_str(t)))
+
+        logs = check_structs(f, 'log')
+        if list_logs:
+            for key in sorted(logs.keys()):
+                t = logs[key]
+                print('{:25}\t{}'.format(key, log_type_to_str(t)))
 
 
 def get_offset_of(elf, addr):
@@ -61,16 +83,22 @@ def get_offset_of_symbol(elf, name):
     return get_offset_of(elf, sym['st_value'])
 
 
-def check_params(stream):
+def check_structs(stream, what: str) -> dict:
     elf = ELFFile(stream)
-    offset = get_offset_of_symbol(elf, '_param_start')
-    stop_offset = get_offset_of_symbol(elf, '_param_stop')
+    offset = get_offset_of_symbol(elf, '_{}_start'.format(what))
+    stop_offset = get_offset_of_symbol(elf, '_{}_stop'.format(what))
+
+    name_type_dict = {}
+    name_maxlen = 25
+    struct_len = 12
+    group_bit = 0x1 << 7
+    start_bit = 0x1
 
     while offset < stop_offset:
         elf.stream.seek(offset)
         #
-        # Parsing a parameter, first unpack the param_s struct:
-        # struct param_s {
+        # Parsing log or param, first unpack the struct:
+        # struct [param_s|log_s] {
         #   uint8_t type;
         #   char * name;
         #   void * address;
@@ -78,7 +106,7 @@ def check_params(stream):
         #
         # We want the type and the name.
         #
-        buffer = elf.stream.read(PARAM_SIZE)
+        buffer = elf.stream.read(struct_len)
         t, addr = struct.unpack('@Bxxxixxxx', buffer)
         #
         # Next, convert address of name to offset in elf
@@ -92,33 +120,32 @@ def check_params(stream):
         #
         # Check if this is start of a group
         #
-        if t & PARAM_GROUP != 0 and t & PARAM_START != 0:
+        if t & group_bit != 0 and t & start_bit != 0:
             current_group = name
-        elif t & PARAM_GROUP == 0:
+        elif t & group_bit == 0:
             name = '%s.%s' % (current_group, name)
-            if name in parameters:
+            if name in name_type_dict:
                 print('duplicate parameter detected: %s' % name)
                 sys.exit(1)
             else:
-                parameters[name] = t
+                name_type_dict[name] = t
 
-            if len(name) > PARAM_NAME_MAXLEN:
-                print('name of param to long (%s > %d)' %
-                      (name, PARAM_NAME_MAXLEN))
+            if len(name) > name_maxlen:
+                print('name too long (%s > %d)' % (name, name_maxlen))
                 sys.exit(1)
 
-        offset += PARAM_SIZE
+        offset += struct_len
+    return name_type_dict
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--list-params', action='store_true')
+    parser.add_argument('--list-logs', action='store_true')
     parser.add_argument('filename', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if args.filename:
-        process_file(args.filename[0])
-        for key in sorted(parameters.keys()):
-            print('{:25}\t{}'.format(key, param_type_to_str(parameters[key])))
+        process_file(args.filename[0], args.list_params, args.list_logs)
     else:
         sys.exit(1)
