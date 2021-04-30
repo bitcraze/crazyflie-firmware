@@ -76,6 +76,15 @@ static EstimatorFcns estimatorFunctions[] = {
         .update = estimatorKalman,
         .name = "Kalman",
     },
+#ifdef EXTERNAL_ESTIMATOR
+    {
+        .init = estimatorExternalInit,
+        .deinit = NOT_IMPLEMENTED,
+        .test = estimatorExternalTest,
+        .update = estimatorExternal,
+        .name = "external",
+    },
+#endif
 };
 
 void stateEstimatorInit(StateEstimatorType estimator) {
