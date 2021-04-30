@@ -142,14 +142,15 @@ def check_structs(stream, what: str) -> dict:
             name = '%s.%s' % (current_group, name)
             if name in name_type_dict:
                 print('%sDuplicate parameter detected!%s (%s)' %
-                      (Colors.RED, Colors.END, name))
+                      (Colors.RED, Colors.END, name), file=sys.stderr)
                 sys.exit(1)
             else:
                 name_type_dict[name] = t
 
             if len(name) > name_maxlen:
                 print('%sName too long!%s (%s > %d)' %
-                      (Colors.RED, Colors.END, name, name_maxlen))
+                      (Colors.RED, Colors.END, name, name_maxlen),
+                      file=sys.stderr)
                 sys.exit(1)
 
         offset += struct_len
