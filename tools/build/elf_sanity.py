@@ -2,7 +2,18 @@ import argparse
 import struct
 import sys
 
-from elftools.elf.elffile import ELFFile
+try:
+    from elftools.elf.elffile import ELFFile
+except ImportError:
+    print('pytelftools missing, install to run this script', file=sys.stderr)
+    print('https://github.com/eliben/pyelftools#installing', file=sys.stderr)
+    sys.exit(1)
+
+
+class Colors:
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    END = '\033[0m'
 
 
 param_type_to_str_dict = {
@@ -57,6 +68,10 @@ def process_file(filename, list_params: bool, list_logs: bool):
             for key in sorted(logs.keys()):
                 t = logs[key]
                 print('{:25}\t{}'.format(key, log_type_to_str(t)))
+
+        n_logs = Colors.GREEN + str(len(logs.keys())) + Colors.END
+        n_params = Colors.BLUE + str(len(parameters.keys())) + Colors.END
+        print('{} parameters and {} log vars in elf'.format(n_params, n_logs))
 
 
 def get_offset_of(elf, addr):
