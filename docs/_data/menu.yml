@@ -29,3 +29,4 @@
     - {page_id: systemtask}
     - {page_id: memory_management}
     - {page_id: dfu}
+    - {page_id: oot}
