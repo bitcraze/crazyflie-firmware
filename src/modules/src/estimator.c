@@ -9,6 +9,7 @@
 #include "estimator.h"
 #include "estimator_complementary.h"
 #include "estimator_kalman.h"
+#include "estimator_out_of_tree.h"
 #include "log.h"
 #include "statsCnt.h"
 #include "eventtrigger.h"
@@ -78,11 +79,11 @@ static EstimatorFcns estimatorFunctions[] = {
     },
 #ifdef OOT_ESTIMATOR
     {
-        .init = estimatorExternalInit,
+        .init = estimatorOutOfTreeInit,
         .deinit = NOT_IMPLEMENTED,
-        .test = estimatorExternalTest,
-        .update = estimatorExternal,
-        .name = "external",
+        .test = estimatorOutOfTreeTest,
+        .update = estimatorOutOfTree,
+        .name = "OutOfTree",
     },
 #endif
 };
