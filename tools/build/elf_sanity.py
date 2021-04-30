@@ -11,6 +11,7 @@ except ImportError:
 
 
 class Colors:
+    RED = '\033[91m'
     BLUE = '\033[94m'
     GREEN = '\033[92m'
     END = '\033[0m'
@@ -140,13 +141,15 @@ def check_structs(stream, what: str) -> dict:
         elif t & group_bit == 0:
             name = '%s.%s' % (current_group, name)
             if name in name_type_dict:
-                print('duplicate parameter detected: %s' % name)
+                print('%sDuplicate parameter detected!%s (%s)' %
+                      (Colors.RED, Colors.END, name))
                 sys.exit(1)
             else:
                 name_type_dict[name] = t
 
             if len(name) > name_maxlen:
-                print('name too long (%s > %d)' % (name, name_maxlen))
+                print('%sName too long!%s (%s > %d)' %
+                      (Colors.RED, Colors.END, name, name_maxlen))
                 sys.exit(1)
 
         offset += struct_len
