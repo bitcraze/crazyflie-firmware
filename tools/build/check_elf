@@ -2,7 +2,4 @@
 set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
-${scriptDir}/test "${@}"
-${scriptDir}/make "${@}"
-${scriptDir}/check_elf
+python3 ${scriptDir}/elf_sanity.py ${scriptDir}/../../*.elf
