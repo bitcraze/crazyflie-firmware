@@ -135,7 +135,7 @@ static uint16_t motorsCompensateBatteryVoltage(uint16_t ithrust)
   float supply_voltage = pmGetBatteryVoltage();
   float percentage = volts / supply_voltage;
   percentage = percentage > 1.0f ? 1.0f : percentage;
-  return (uint16_t) percentage * UINT16_MAX;
+  return percentage * UINT16_MAX;
 }
 
 /* Public functions */
