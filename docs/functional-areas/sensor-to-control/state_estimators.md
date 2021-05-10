@@ -50,7 +50,7 @@ This section will explain how the signals of the sensors are transformed to stat
 
 * [Flowdeck Measurement Model](#flowdeck-measurement-model)
 * Locodeck Measurement Model (TODO)
-* Lighthouse Measurement Model (TODO)
+* [Lighthouse Measurement Model](/docs/functional-areas/lighthouse/kalman_measurement_model.md)
 
 
 #### Flowdeck Measurement Model
