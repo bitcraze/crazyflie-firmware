@@ -41,9 +41,7 @@
 /// Asymmetric neighbor type.
 #define OLSR_MPR_NEIGH          2
 
-//simulation
-// #define OLSR_SIM
-// #define DISTANCE_SIM
+
 
 #define MAX_TIMESTAMP 1099511627776 //2**40
 
@@ -66,5 +64,6 @@ void olsrTopologyTupleTimerExpireTask(void *ptr);
 void olsrPacketLossTask(void *ptr);
 void olsrPacketLossCallBack(dwDevice_t *dev);
 void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,olsrAddr_t destAddr, AdHocPort destPort,uint16_t portSeq, uint8_t data[],uint8_t length);
-
+olsrWeight_t distanceToWeight(int16_t distance);
+int16_t getDistanceFromAddr(olsrAddr_t addr);
 #endif //__OLSR_ALGO_H__

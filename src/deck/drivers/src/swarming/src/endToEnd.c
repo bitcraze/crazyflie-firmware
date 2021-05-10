@@ -3,11 +3,12 @@
 #include "olsrDebug.h"
 #include "uwbOlsr.h"
 #include "log.h"
-#define SENDER_ADDRESS 28
+#define SENDER_ADDRESS 14
 #define RECEIVER_ADDRESS 29
 #define TOTAL_PACKET_NUM 1000
 bool isSender = false;
 bool isReceiver = false;
+bool isRouter = false;
 float receiveRate = 0.0;
 
 void endToEndTask()
@@ -19,6 +20,8 @@ void endToEndTask()
     isReceiver = true;
   }else if(myAddress==SENDER_ADDRESS) {
     isSender = true;
+  }else{
+    isRouter = true;
   }
   if(isReceiver)
     {
@@ -28,7 +31,7 @@ void endToEndTask()
     {
       DEBUG_PRINT_OLSR_APP("Im Sender!\n");
     }
-  if(!isReceiver&&!isSender)
+  if(isRouter)
     {
       DEBUG_PRINT_OLSR_APP("Im Route!\n");
     }
@@ -40,6 +43,7 @@ void endToEndTask()
         {
           olsrSendData(myAddress,ADHOC_PORT_END_TO_END_DELAY,RECEIVER_ADDRESS,ADHOC_PORT_END_TO_END_DELAY,seq++,NULL,0);
           sendCount++;
+          vTaskDelay(500);
         }
       if(isReceiver)
         {
@@ -50,9 +54,13 @@ void endToEndTask()
             firstSeq = msg.m_dataHeader.m_seq;
           receiveRate = recvCount * 100.0 / (msg.m_dataHeader.m_seq - firstSeq + 1);
           DEBUG_PRINT_OLSR_APP("Recv: %d; Seq: %d; Rate: %.2f.\n", recvCount, msg.m_dataHeader.m_seq, receiveRate);
+          vTaskDelay(500);
+        }
+      if(isRouter)
+        {
+          vTaskDelay(500);
         }
         // DEBUG_PRINT_OLSR_APP("recv pack:%d\n",recvCount);
-        vTaskDelay(500);
     }
 
 }   

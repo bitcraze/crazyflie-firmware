@@ -620,7 +620,11 @@ void olsrPrintTwoHopNeighborSet(olsrTwoHopNeighborSet_t *twoHopNeighborSet)
   while (candidate != -1)
   {
     olsrTwoHopNeighborSetItem_t tmp = twoHopNeighborSet->setData[candidate];
+    #ifdef USER_ROUTING
+    DEBUG_PRINT_OLSR_NEIGHBOR2("2HopNeighborSet: neighbor:%d ,2hopNeighbor: %d,weight:%f\n",tmp.data.m_neighborAddr,tmp.data.m_twoHopNeighborAddr,tmp.data.m_weight);
+    #else
     DEBUG_PRINT_OLSR_NEIGHBOR2("2HopNeighborSet: neighbor:%d ,2hopNeighbor: %d\n",tmp.data.m_neighborAddr,tmp.data.m_twoHopNeighborAddr);
+    #endif
     candidate = tmp.next;
   }
 }
@@ -1067,7 +1071,7 @@ void olsrPrintRoutingSet(olsrRoutingSet_t *routingSet)
   while(it != -1)
     {
       olsrRoutingSetItem_t routeNode = routingSet->setData[it];
-      DEBUG_PRINT_OLSR_ROUTING("Dest:%d,Next:%d,weight%f\n",routeNode.data.m_destAddr,routeNode.data.m_nextAddr,routeNode.data.m_weight);
+      DEBUG_PRINT_OLSR_APP("Dest:%d,Next:%d,weight%f\n",routeNode.data.m_destAddr,routeNode.data.m_nextAddr,routeNode.data.m_weight);
       it = routeNode.next;
     } 
 }

@@ -72,6 +72,9 @@ typedef struct
 {
   olsrAddr_t m_neighborAddr;
   olsrAddr_t m_twoHopNeighborAddr;
+#ifdef USER_ROUTING
+  olsrWeight_t m_weight;
+#endif
   olsrTime_t m_expirationTime; //need fix name
 } olsrTwoHopNeighborTuple_t;
 

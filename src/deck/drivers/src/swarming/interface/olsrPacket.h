@@ -144,6 +144,9 @@ typedef struct{
     uint8_t m_linkCode;
     uint8_t m_reserved;
     uint16_t m_addressUsedSize;
+#ifdef USER_ROUTING
+    olsrWeight_t m_weight;
+#endif
     olsrAddr_t m_addresses; //this item may be vector if multi-interface support is needed.
 } __attribute__((packed)) olsrLinkMessage_t; //6
 
