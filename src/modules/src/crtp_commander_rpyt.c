@@ -72,6 +72,7 @@ static RPYType stabilizationModePitch = ANGLE; // Current stabilization type of 
 static RPYType stabilizationModeYaw   = RATE;  // Current stabilization type of yaw (rate or angle)
 
 static YawModeType yawMode = DEFAULT_YAW_MODE; // Yaw mode configuration
+static bool carefreeResetFront;             // Reset what is front in carefree mode
 
 static bool thrustLocked = true;
 static bool altHoldMode = false;
@@ -221,6 +222,7 @@ PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
 PARAM_ADD(PARAM_UINT8, poshold, &posHoldMode)
 PARAM_ADD(PARAM_UINT8, posSet, &posSetMode)
 PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
+PARAM_ADD(PARAM_UINT8, yawRst, &carefreeResetFront)
 PARAM_ADD(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
 PARAM_ADD(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
 PARAM_ADD(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)

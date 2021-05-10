@@ -244,6 +244,7 @@ static void melodyplayer(uint32_t counter, uint32_t * mi, Melody * m) {
   }
 }
 
+static uint8_t static_ratio = 0;
 static uint16_t static_freq = 4000;
 static void bypass(uint32_t counter, uint32_t * mi, Melody * melody)
 {
@@ -367,4 +368,5 @@ PARAM_GROUP_START(sound)
 PARAM_ADD(PARAM_UINT8, effect, &user_effect)
 PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
 PARAM_ADD(PARAM_UINT16, freq, &static_freq)
+PARAM_ADD(PARAM_UINT8, ratio, &static_ratio)
 PARAM_GROUP_STOP(sound)
