@@ -252,7 +252,6 @@ static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
 }
 
 static uint8_t solidRed=20, solidGreen=20, solidBlue=20;
-static float glowstep = 0.05;
 static void solidColorEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
@@ -1114,7 +1113,6 @@ PARAM_ADD(PARAM_UINT8, solidRed, &solidRed)
 PARAM_ADD(PARAM_UINT8, solidGreen, &solidGreen)
 PARAM_ADD(PARAM_UINT8, solidBlue, &solidBlue)
 PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
-PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
 PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
 PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)

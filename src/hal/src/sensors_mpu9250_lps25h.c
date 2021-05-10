@@ -935,12 +935,12 @@ LOG_GROUP_STOP(gyro)
 #endif
 
 PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isMagnetometerPresent)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isBarometerPresent) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, AK8963, &isMagnetometerPresent)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, LPS25H, &isBarometerPresent)
 PARAM_GROUP_STOP(imu_sensors)
 
 PARAM_GROUP_START(imu_tests)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MPU6500, &isMpu6500TestPassed)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isAK8963TestPassed)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isLPS25HTestPassed) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, AK8963, &isAK8963TestPassed)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, LPS25H, &isLPS25HTestPassed)
 PARAM_GROUP_STOP(imu_tests)
