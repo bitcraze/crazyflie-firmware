@@ -146,6 +146,8 @@ struct param_s {
 #define PARAM_VARIABLE (0x00<<7)
 #define PARAM_GROUP    (0x01<<7)
 
+#define PARAM_CORE (1<<5)
+
 #define PARAM_RONLY (1<<6)
 
 #define PARAM_START 1
@@ -168,6 +170,9 @@ struct param_s {
 
 #define PARAM_ADD(TYPE, NAME, ADDRESS) \
    { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
+
+#define PARAM_ADD_CORE(TYPE, NAME, ADDRESS) \
+  PARAM_ADD(TYPE | PARAM_CORE, NAME, ADDRESS)
 
 #define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS) \
    { \
