@@ -155,6 +155,7 @@ typedef struct {
 } logByFunction_t;
 
 /* Internal defines */
+#define LOG_CORE 0x20
 #define LOG_GROUP 0x80
 #define LOG_BY_FUNCTION 0x40
 #define LOG_START 1
@@ -166,6 +167,9 @@ typedef struct {
 
 #define LOG_ADD(TYPE, NAME, ADDRESS) \
    { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
+
+#define LOG_ADD_CORE(TYPE, NAME, ADDRESS) \
+  LOG_ADD(TYPE | LOG_CORE, NAME, ADDRESS)
 
 #define LOG_ADD_BY_FUNCTION(TYPE, NAME, ADDRESS) \
    { .type = TYPE | LOG_BY_FUNCTION, .name = #NAME, .address = (void*)(ADDRESS), },
