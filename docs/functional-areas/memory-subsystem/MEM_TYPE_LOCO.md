@@ -1,5 +1,5 @@
 ---
-title: LPS system 1 - MEM_TYPE_LOCO
+title: Loco Positioning System 1 - MEM_TYPE_LOCO
 page_id: mem_type_loco
 ---
 
