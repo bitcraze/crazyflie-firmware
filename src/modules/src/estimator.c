@@ -78,11 +78,11 @@ static EstimatorFcns estimatorFunctions[] = {
     },
 #ifdef OOT_ESTIMATOR
     {
-        .init = estimatorExternalInit,
+        .init = estimatorOutOfTreeInit,
         .deinit = NOT_IMPLEMENTED,
-        .test = estimatorExternalTest,
-        .update = estimatorExternal,
-        .name = "external",
+        .test = estimatorOutOfTreeTest,
+        .update = estimatorOutOfTree,
+        .name = "OutOfTree",
     },
 #endif
 };
