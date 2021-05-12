@@ -63,7 +63,6 @@
 #include "sound.h"
 #include "sysload.h"
 #include "estimator_kalman.h"
-#include "estimator_out_of_tree.h"
 #include "deck.h"
 #include "extrx.h"
 #include "app.h"
