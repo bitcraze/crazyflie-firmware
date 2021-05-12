@@ -21,9 +21,9 @@ CRAZYFLIE_BASE=[LOCATION OF THE CRAZYFLIE FIRMWARE]
 include $(CRAZYFLIE_BASE)/Makefile
 ```  
 
-in estimator_out_of_tree.c in the src folder you will just need to make sure that the following functions are filled:
+in [your_estimator_out_of_tree].c in the src folder you will just need to make sure that the following functions are filled:
 
-* ```estimatorOutOfTreeInit```
+* ```init = estimatorOutOfTreeInit```
 * ```test = estimatorOutOfTreeTest```
 * ```update = estimatorOutOfTree```
 * ```name = "OOT```
