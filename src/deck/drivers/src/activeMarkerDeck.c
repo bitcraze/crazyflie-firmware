@@ -258,8 +258,8 @@ PARAM_ADD_CORE(PARAM_UINT8, right, &requestedId[3])
 /**
  * @brief Off(0), pwm(1), modulated(2) or qualisys(3)
  *
- * Mode       | value         |     comment
- * ___________|_______________|_______________________________
+ *    Mode    |    Value      |         Comment
+ * -----------|---------------|-------------------------------
  * OFF        |   0           |    Always off
  * PWM        |   1           |    Always on, PWM modulated
  * MODULATED  |   2           |    Switching
