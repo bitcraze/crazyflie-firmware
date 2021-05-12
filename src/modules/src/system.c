@@ -349,12 +349,35 @@ void vApplicationIdleHook( void )
 #endif
 }
 
-/*System parameters (mostly for test, should be removed from here) */
+/** @addtogroup cpu
+ *
+ * This parameter group contain read-only parameters pertaining to the CPU
+ * in the Crazyflie.
+ *
+ * These could be used to identify an unique quad.
+ */
 PARAM_GROUP_START(cpu)
-PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS+0)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS+4)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
+
+/**
+ * @brief Size in kB of the device flash memory
+ */
+PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
+
+/**
+ * @brief Byte `0 - 3` of device unique id
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS+0)
+
+/**
+ * @brief Byte `4 - 7` of device unique id
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS+4)
+
+/**
+ * @brief Byte `8 - 11` of device unique id
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
+
 PARAM_GROUP_STOP(cpu)
 
 PARAM_GROUP_START(system)
