@@ -186,11 +186,7 @@ void systemTask(void *arg)
   commanderInit();
 
   StateEstimatorType estimator = anyEstimator;
-  #ifdef OOT_ESTIMATOR
-  estimatorOutOfTreeTaskInit();
-  #else
   estimatorKalmanTaskInit();
-  #endif
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
@@ -231,18 +227,10 @@ void systemTask(void *arg)
     pass = false;
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
-
-  #ifdef OOT_ESTIMATOR
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
-  #else
-  if (estimatorOutOfTreeTaskTest() == false) {
-    pass = false;
-    DEBUG_PRINT("estimatorOutOfTreeTask [FAIL]\n");
-  }
-  #endif
   if (deckTest() == false) {
     pass = false;
     DEBUG_PRINT("deck [FAIL]\n");

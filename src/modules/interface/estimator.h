@@ -154,3 +154,9 @@ static inline void estimatorEnqueueSweepAngles(const sweepAngleMeasurement_t *sw
 
 // Helper function for state estimators
 bool estimatorDequeue(measurement_t *measurement);
+
+#ifdef OOT_ESTIMATOR
+void estimatorOutOfTreeInit(void);
+bool estimatorOutOfTreeTest(void);
+void estimatorOutOfTree(state_t *state, const uint32_t tick);
+#endif
