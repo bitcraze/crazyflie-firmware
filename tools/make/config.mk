@@ -6,6 +6,8 @@
 # DEFAULT_ESTIMATOR = kalman # only works when positioning system is available
 POWER_DISTRIBUTION = nimble_FD_PCB
 
+CFLAGS += -DPOWER_MOTORS_AT_STARTUP
+
 CFLAGS += -DMOTOR_M2_STARTUP=32767
 CFLAGS += -DMOTOR_M3_STARTUP=32767
 

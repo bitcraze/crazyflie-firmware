@@ -172,7 +172,9 @@ void stabilizerInit(StateEstimatorType estimator)
   sensorsInit();
   stateEstimatorInit(estimator);
   controllerInit(ControllerTypeAny);
+#ifndef POWER_MOTORS_AT_STARTUP
   powerDistributionInit();
+#endif 
   collisionAvoidanceInit();
   estimatorType = getStateEstimator();
   controllerType = getControllerType();

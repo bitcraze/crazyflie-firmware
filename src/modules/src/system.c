@@ -71,6 +71,10 @@
 #include "cfassert.h"
 #include "i2cdev.h"
 
+#ifdef POWER_MOTORS_AT_STARTUP
+    #include "power_distribution.h"
+#endif
+
 #ifndef START_DISARMED
 #define ARM_INIT true
 #else
@@ -186,6 +190,10 @@ void systemTask(void *arg)
 
   StateEstimatorType estimator = anyEstimator;
   estimatorKalmanTaskInit();
+#ifdef POWER_MOTORS_AT_STARTUP // needed to bring power to the FD PCB before the decks are initialized
+  DEBUG_PRINT("Motors powered at startup\n");
+  powerDistributionInit();
+#endif 
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
