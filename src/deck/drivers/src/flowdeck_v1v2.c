@@ -264,10 +264,23 @@ LOG_ADD(LOG_UINT8, squal, &currentMotion.squal)
 LOG_ADD(LOG_FLOAT, std, &stdFlow)
 LOG_GROUP_STOP(motion)
 
+/**
+ * Settings and parameters for handling of the flowdecks
+ * measurments
+ */
 PARAM_GROUP_START(motion)
+/**
+ * @brief Nonzero to turn on adaptive standard devivation estimation (default: 0)
+ */
 PARAM_ADD(PARAM_UINT8, disable, &useFlowDisabled)
+/**
+ * @brief Nonzero to not push the flow measurement in the EKF (default: 0)
+ */
 PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
-PARAM_ADD(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
+/**
+ * @brief Set standard devivation flow measurement (default: 2.0f)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
 PARAM_GROUP_STOP(motion)
 
 PARAM_GROUP_START(deck)
