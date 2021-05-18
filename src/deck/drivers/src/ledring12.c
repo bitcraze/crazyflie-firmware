@@ -1143,22 +1143,22 @@ PARAM_ADD_CORE(PARAM_UINT8, effect, &effect)
 PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
 
 /**
- * @brief Intensity of Red for Solid color effect
+ * @brief Intensity of Red for Solid color effect (default: 20)
  */
 PARAM_ADD_CORE(PARAM_UINT8, solidRed, &solidRed)
 
 /**
- * @brief Intensity of Green for solid color effect
+ * @brief Intensity of Green for solid color effect (default: 20)
  */
 PARAM_ADD_CORE(PARAM_UINT8, solidGreen, &solidGreen)
 
 /**
- * @brief Intensity of Blue for solid color effect
+ * @brief Intensity of Blue for solid color effect (default: 20)
  */
 PARAM_ADD_CORE(PARAM_UINT8, solidBlue, &solidBlue)
 
 /**
- * @brief Enable headlights
+ * @brief Nonzero to Enable headlights (default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, headlightEnable, &headlightEnable)
 
