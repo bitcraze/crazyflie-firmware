@@ -215,13 +215,60 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   }
 }
 
-// Params for flight modes
+/**
+ * @addtogroup flightmode
+ *
+ * There are 2 levels to control, which is:
+ *   Position (X, Y, Z)
+ *   Attitude (pitch, roll, yaw or in quaternions)
+ *
+ * These can be controlled in different modes, namely:
+ *   Absolute mode
+ *   Velocity mode
+ *   Disabled
+ *
+ * These parameters have impact on which level and mode to use.
+ */
 PARAM_GROUP_START(flightmode)
-PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
-PARAM_ADD(PARAM_UINT8, poshold, &posHoldMode)
-PARAM_ADD(PARAM_UINT8, posSet, &posSetMode)
-PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
-PARAM_ADD(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
-PARAM_ADD(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
-PARAM_ADD(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
+
+/**
+ * @brief Keeps the quad at its current altitude automatically
+ *
+ * Thrust control becomes height velocity control.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, althold, &altHoldMode)
+
+/**
+ * @brief Keeps the quad at its current 3D position
+ *
+ * Pitch/Roll/Thrust control becomes X/Y/Z velocity control.
+ * X and U
+ */
+PARAM_ADD_CORE(PARAM_UINT8, poshold, &posHoldMode)
+
+/**
+ * @brief Set to nonzero to select absolute mode for positioning
+ */
+PARAM_ADD_CORE(PARAM_UINT8, posSet, &posSetMode)
+
+/**
+ * @brief Carefree(0), plusmode(1), xmode(2)
+*/
+PARAM_ADD_CORE(PARAM_UINT8, yawMode, &yawMode)
+
+/**
+ * Stabilization type for roll: rate(0) or angle(1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
+
+/**
+ * Stabilization type for pitch: rate(0) or angle(1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
+
+/**
+ * Stabilization type for yaw: rate(0) or angle(1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
+
 PARAM_GROUP_STOP(flightmode)
