@@ -1136,8 +1136,6 @@ static const DeckDriver ledring12_deck = {
 
 DECK_DRIVER(ledring12_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

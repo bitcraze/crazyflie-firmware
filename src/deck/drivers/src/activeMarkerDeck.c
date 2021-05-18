@@ -197,7 +197,7 @@ static void task(void *param) {
 
     vTaskDelay(M2T(delay));
   }
-  
+
 }
 
 static const DeckDriver deck_info = {
@@ -211,7 +211,7 @@ static const DeckDriver deck_info = {
 
 DECK_DRIVER(deck_info);
 
-/** @addtogroup activeMarker
+/**
  *
  * The Active Marker deck is mainly designed for Qualisys mocap systems and
  * supports Qualisys Active markers, but it can also be used with other systems
@@ -293,8 +293,7 @@ PARAM_ADD(PARAM_UINT8, canStart, &activeMarkerDeckCanStart)
 
 PARAM_GROUP_STOP(activeMarker)
 
-/** @addtogroup deck
- *
+/**
  * The deck parameter group tells us which decks are connected.
  * There is one parameter per official deck and the parameter is nonzero if the
  * deck is connected.

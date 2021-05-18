@@ -815,8 +815,7 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
   return plan_is_finished(&planner, t);
 }
 
-/** @addtogroup hlCommander
- *
+/**
  * computes smooth setpoints based on high-level inputs such as: take-off,
  * landing, polynomial trajectories.
  */

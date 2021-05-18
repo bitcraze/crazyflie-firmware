@@ -74,7 +74,7 @@ static bool useFlowDisabled = false;
 // Turn on adaptive standard deviation for the kalman filter
 static bool useAdaptiveStd = false;
 
-// Set standard deviation flow 
+// Set standard deviation flow
 // (will not work if useAdaptiveStd is on)
 static float flowStdFixed = 2.0f;
 
@@ -101,7 +101,7 @@ static void flowdeckTask(void *param)
 
     if (useAdaptiveStd)
     {
-      // The standard deviation is fitted by measurements flying over low and high texture 
+      // The standard deviation is fitted by measurements flying over low and high texture
       //   and looking at the shutter time
       float shutter_f = (float)currentMotion.shutter;
       stdFlow=0.0007984f *shutter_f + 0.4335f;
@@ -118,8 +118,8 @@ static void flowdeckTask(void *param)
 
     // Form flow measurement struct and push into the EKF
     flowMeasurement_t flowData;
-    flowData.stdDevX = stdFlow;    
-    flowData.stdDevY = stdFlow;    
+    flowData.stdDevX = stdFlow;
+    flowData.stdDevY = stdFlow;
     flowData.dt = 0.01;
 
 #if defined(USE_MA_SMOOTHING)
@@ -270,8 +270,6 @@ PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
 PARAM_ADD(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
 PARAM_GROUP_STOP(motion)
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

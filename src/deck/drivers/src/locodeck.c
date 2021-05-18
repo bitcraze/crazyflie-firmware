@@ -582,8 +582,6 @@ static const DeckDriver dwm1000_deck = {
 
 DECK_DRIVER(dwm1000_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

@@ -71,8 +71,6 @@ static const DeckDriver cppm_deck = {
 
 DECK_DRIVER(cppm_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcCPPM, &isInit)

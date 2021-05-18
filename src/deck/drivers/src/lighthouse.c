@@ -100,8 +100,6 @@ static const DeckDriver lighthouse_deck = {
 
 DECK_DRIVER(lighthouse_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

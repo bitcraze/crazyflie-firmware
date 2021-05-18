@@ -77,8 +77,6 @@ static const DeckDriver buzzer_deck = {
 
 DECK_DRIVER(buzzer_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

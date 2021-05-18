@@ -836,7 +836,7 @@ static void usdWriteTask(void* prm)
         // write header
         uint8_t magic = 0xBC;
         usdWriteData(&magic, sizeof(magic));
-        
+
         uint16_t version = 2;
         usdWriteData(&version, sizeof(version));
 
@@ -942,7 +942,7 @@ static void usdWriteTask(void* prm)
           uint16_t size;
           bool hasData = ringBuffer_pop_start(&logBuffer, &buf, &size);
           xSemaphoreGive(logBufferMutex);
-          
+
           // execute the actual write operation
           if (hasData) {
             usdWriteData(buf, size);
@@ -980,7 +980,7 @@ static void usdWriteTask(void* prm)
           lastFileSize = info.fsize;
         }
 
-        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n", 
+        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n",
           lastFileSize,
           usdLogConfig.filename,
           usdLogStats.eventsWritten,
@@ -1038,8 +1038,6 @@ static const DeckDriver usd_deck = {
 
 DECK_DRIVER(usd_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

@@ -482,8 +482,7 @@ LOG_GROUP_START(outlierf)
   LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
 LOG_GROUP_STOP(outlierf)
 
-/** @addtogroup kalman
- *
+/**
  * Tuning parameters for the Extended Kalman Filter (EKF)
  *     estimator
  */

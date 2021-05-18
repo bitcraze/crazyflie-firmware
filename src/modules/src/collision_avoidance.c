@@ -345,8 +345,7 @@ LOG_GROUP_START(colAv)
 LOG_GROUP_STOP(colAv)
 
 
-/** @addtogroup colAv
- *
+/**
  * Onboard collision avoidance algorithm.
  * Positions of other Crazyflies on the same radio channel are obtained from
  * peer localization service. Collision avoidance uses the buffered Voronoi

@@ -349,8 +349,7 @@ void vApplicationIdleHook( void )
 #endif
 }
 
-/** @addtogroup cpu
- *
+/**
  * This parameter group contain read-only parameters pertaining to the CPU
  * in the Crazyflie.
  *

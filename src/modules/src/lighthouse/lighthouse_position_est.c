@@ -472,9 +472,6 @@ LOG_ADD(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
 
 LOG_GROUP_STOP(lighthouse)
 
-/** @addtogroup lighthouse
- *
- */
 PARAM_GROUP_START(lighthouse)
 /**
  * @brief Standard deviation Sweep angles Lighthouse V1

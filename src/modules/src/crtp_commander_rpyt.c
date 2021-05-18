@@ -216,8 +216,6 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 }
 
 /**
- * @addtogroup flightmode
- *
  * There are 2 levels to control, which is:
  *   Position (X, Y, Z)
  *   Attitude (pitch, roll, yaw or in quaternions)

@@ -125,8 +125,6 @@ static const DeckDriver zranger_deck = {
 
 DECK_DRIVER(zranger_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

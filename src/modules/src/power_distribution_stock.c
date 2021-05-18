@@ -130,8 +130,7 @@ void powerDistribution(const control_t *control)
   }
 }
 
-/** @addtogroup motorPowerSet
- *
+/**
  * Override power distribution to motors.
  */
 PARAM_GROUP_START(motorPowerSet)

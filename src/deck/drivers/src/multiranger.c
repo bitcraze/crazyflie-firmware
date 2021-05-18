@@ -198,8 +198,6 @@ static const DeckDriver multiranger_deck = {
 
 DECK_DRIVER(multiranger_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

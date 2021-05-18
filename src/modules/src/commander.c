@@ -152,7 +152,7 @@ int commanderGetActivePriority(void)
   return priority;
 }
 
-/** @addtogroup commander
+/**
  *
  * The high level commander handles the setpoints from within the firmware
  * based on a predefined trajectory. This was merged as part of the

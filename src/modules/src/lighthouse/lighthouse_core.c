@@ -191,7 +191,7 @@ static void lighthouseUpdateSystemType() {
     // Store new system type
     lighthouseStoragePersistSystemType(systemType);
   }
-  
+
 }
 
 void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
@@ -570,8 +570,7 @@ LOG_ADD(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
 LOG_ADD(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
-/** @addtogroup lighthouse
- *
+/**
  * Parameters and settings for the Lighthouse positioning system
  */
 PARAM_GROUP_START(lighthouse)

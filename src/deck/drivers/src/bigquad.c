@@ -122,8 +122,6 @@ static const DeckDriver bigquad_deck = {
 
 DECK_DRIVER(bigquad_deck);
 
-/** @addtogroup deck
-*/
 PARAM_GROUP_START(deck)
 
 /**

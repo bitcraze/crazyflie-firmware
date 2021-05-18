@@ -308,8 +308,6 @@ void healthRunTests(sensorData_t *sensors)
 }
 
 /**
- * @addtogroup health
- *
  * Health modules that is trying to find problems such as unbalanced
  * propellers or a bad power path/battery.
  */

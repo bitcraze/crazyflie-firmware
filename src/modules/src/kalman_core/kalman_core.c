@@ -276,17 +276,17 @@ void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm,
 
 void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error)
 {
-    // kalman filter update with weighted covariance matrix P_w_m, kalman gain Km, and innovation error 
-    // Temporary matrices for the covariance updates 
+    // kalman filter update with weighted covariance matrix P_w_m, kalman gain Km, and innovation error
+    // Temporary matrices for the covariance updates
     static float tmpNN1d[KC_STATE_DIM][KC_STATE_DIM];
     static arm_matrix_instance_f32 tmpNN1m = {KC_STATE_DIM, KC_STATE_DIM, (float *)tmpNN1d};
     for (int i=0; i<KC_STATE_DIM; i++){
         this->S[i] = this->S[i] + Km->pData[i] * error;
     }
     // ====== COVARIANCE UPDATE ====== //
-    mat_mult(Km, Hm, &tmpNN1m);                 // KH,  the Kalman Gain and H are the updated Kalman Gain and H 
+    mat_mult(Km, Hm, &tmpNN1m);                 // KH,  the Kalman Gain and H are the updated Kalman Gain and H
     mat_scale(&tmpNN1m, -1.0f, &tmpNN1m);       //  I-KH
-    for (int i=0; i<KC_STATE_DIM; i++) { tmpNN1d[i][i] = 1.0f + tmpNN1d[i][i]; } 
+    for (int i=0; i<KC_STATE_DIM; i++) { tmpNN1d[i][i] = 1.0f + tmpNN1d[i][i]; }
     float Ppo[KC_STATE_DIM][KC_STATE_DIM]={0};
     arm_matrix_instance_f32 Ppom = {KC_STATE_DIM, KC_STATE_DIM, (float *)Ppo};
     mat_mult(&tmpNN1m, P_w_m, &Ppom);          // Pm = (I-KH)*P_w_m
@@ -789,9 +789,6 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
   decoupleState(this, KC_STATE_PY);
 }
 
-/** @addtogroup kalman
- *
- */
 PARAM_GROUP_START(kalman)
 /**
  * @brief Process noise for x and y acceleration
