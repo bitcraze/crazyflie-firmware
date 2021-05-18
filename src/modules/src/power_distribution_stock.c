@@ -130,12 +130,37 @@ void powerDistribution(const control_t *control)
   }
 }
 
+/** @addtogroup motorPowerSet
+ *
+ * Override power distribution to motors.
+ */
 PARAM_GROUP_START(motorPowerSet)
-PARAM_ADD(PARAM_UINT8, enable, &motorSetEnable)
-PARAM_ADD(PARAM_UINT16, m1, &motorPowerSet.m1)
-PARAM_ADD(PARAM_UINT16, m2, &motorPowerSet.m2)
-PARAM_ADD(PARAM_UINT16, m3, &motorPowerSet.m3)
-PARAM_ADD(PARAM_UINT16, m4, &motorPowerSet.m4)
+
+/**
+ * @brief Nonzero to override controller with set values
+ */
+PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
+
+/**
+ * @brief motor power for m1: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m1, &motorPowerSet.m1)
+
+/**
+ * @brief motor power for m2: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m2, &motorPowerSet.m2)
+
+/**
+ * @brief motor power for m3: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m3, &motorPowerSet.m3)
+
+/**
+ * @brief motor power for m4: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet.m4)
+
 PARAM_GROUP_STOP(motorPowerSet)
 
 PARAM_GROUP_START(powerDist)
