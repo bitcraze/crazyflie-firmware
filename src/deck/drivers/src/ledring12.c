@@ -1106,16 +1106,75 @@ static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen,
   return result;
 }
 
+/**
+ * The LED ring expansion deck contains two powerful front-facing white LEDs
+ * and 12 bottom-facing RGB individually addressable LEDs (it uses the same
+ * LEDs as used in the NeoPixel products by Adafruit).
+ *
+ * The deck is designed to be installed as the last deck on the bottom of the
+ * quad. It does not have pass-through holes for the expansion port connector.
+ */
 PARAM_GROUP_START(ring)
-PARAM_ADD(PARAM_UINT8, effect, &effect)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
-PARAM_ADD(PARAM_UINT8, solidRed, &solidRed)
-PARAM_ADD(PARAM_UINT8, solidGreen, &solidGreen)
-PARAM_ADD(PARAM_UINT8, solidBlue, &solidBlue)
-PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
+
+/**
+ * @brief Id of effect to use (default: 6)
+ *
+ * Id | Effect
+ * -----------
+ * 0  | Off
+ * 1  | White spinner
+ * 2  | Color spinner
+ * 3  | Tilt
+ * 4  | Brightness
+ * 5  | Color spinner 2
+ * 6  | Double spinner
+ * 7  | Solid color effect
+ * 8  | Factory test
+ * 9  | Battery status
+ * 10 | Boat lights
+ * 11 | Alert
+ * 12 | Gravity
+ */
+PARAM_ADD_CORE(PARAM_UINT8, effect, &effect)
+
+/**
+ * @brief Number of effects available
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
+
+/**
+ * @brief Intensity of Red for Solid color effect
+ */
+PARAM_ADD_CORE(PARAM_UINT8, solidRed, &solidRed)
+
+/**
+ * @brief Intensity of Green for solid color effect
+ */
+PARAM_ADD_CORE(PARAM_UINT8, solidGreen, &solidGreen)
+
+/**
+ * @brief Intensity of Blue for solid color effect
+ */
+PARAM_ADD_CORE(PARAM_UINT8, solidBlue, &solidBlue)
+
+/**
+ * @brief Enable headlights
+ */
+PARAM_ADD_CORE(PARAM_UINT8, headlightEnable, &headlightEnable)
+
 PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
+
+/**
+ * @brief Color to fade to for Fade color effect
+ *
+ * Encoded as:
+ *
+ *   bit 32                                 0
+ *        00000000 RRRRRRRR GGGGGGGG BBBBBBBB
+ */
 PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
+
 PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
 PARAM_GROUP_STOP(ring)
 
