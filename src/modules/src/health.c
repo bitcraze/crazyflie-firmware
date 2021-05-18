@@ -307,9 +307,24 @@ void healthRunTests(sensorData_t *sensors)
   }
 }
 
+/**
+ * @addtogroup health
+ *
+ * Health modules that is trying to find problems such as unbalanced
+ * propellers or a bad power path/battery.
+ */
 PARAM_GROUP_START(health)
-PARAM_ADD(PARAM_UINT8, startPropTest, &startPropTest)
-PARAM_ADD(PARAM_UINT8, startBatTest, &startBatTest)
+
+/**
+ * @brief Set nonzero to initiate test of propellers
+ */
+PARAM_ADD_CORE(PARAM_UINT8, startPropTest, &startPropTest)
+
+/**
+ * @brief Set nonzero to initiate test of battery
+ */
+PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
+
 PARAM_GROUP_STOP(health)
 
 LOG_GROUP_START(health)
