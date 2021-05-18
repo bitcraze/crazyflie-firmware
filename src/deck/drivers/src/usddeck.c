@@ -1047,9 +1047,19 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
+/**
+ * The micro SD card deck is used for on-board logging of data to a micro SD card.
+ */
 PARAM_GROUP_START(usd)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
-PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
+/**
+ * @brief Non zero if logging is possible, 0 indicates there might be a problem with the logging configuration.
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
+
+/**
+ * @brief Controls if logging to the SD-card is active. Set to 1 to start logging, set to 0 to stop logging (default).
+ */
+PARAM_ADD_CORE(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
 PARAM_GROUP_STOP(usd)
 
 LOG_GROUP_START(usd)
