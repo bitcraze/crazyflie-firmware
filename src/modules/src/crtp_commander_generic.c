@@ -399,13 +399,43 @@ void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   }
 }
 
-// Params for generic CRTP handlers
-
-// CPPM Emulation commander
+/**
+ * The CPPM (Combined Pulse Position Modulation) commander packet contains
+ * an emulation of CPPM channels transmitted in a CRTP packet that can be sent
+ * from e.g. a RC Transmitter. Often running custom firmware such as Deviation.
+ *
+ * Channels have a range of 1000-2000 with a midpoint of 1500
+ * Supports the ordinary RPYT channels plus up to MAX_AUX_RC_CHANNELS auxiliary channels.
+ * Auxiliary channels are optional and transmitters do not have to transmit all the data
+ * unless a given channel is actually in use (numAuxChannels must be set accordingly)
+ *
+ * Current aux channel assignments:
+ * - AuxChannel0: set high to enable self-leveling, low to disable
+ *
+ * The scaling can be configured using the parameters, setting the maximum
+ * angle/rate output given a maximum stick input (1000 or 2000).
+ */
 PARAM_GROUP_START(cmdrCPPM)
+
+/**
+ * @brief Config of max roll rate at max stick input [DPS] (default: 720)
+ */
 PARAM_ADD(PARAM_FLOAT, rateRoll, &s_CppmEmuRollMaxRateDps)
+/**
+ * @brief Config of max pitch rate at max stick input [DPS] (default: 720)
+ */
 PARAM_ADD(PARAM_FLOAT, ratePitch, &s_CppmEmuPitchMaxRateDps)
-PARAM_ADD(PARAM_FLOAT, rateYaw, &s_CppmEmuYawMaxRateDps)
-PARAM_ADD(PARAM_FLOAT, angRoll, &s_CppmEmuRollMaxAngleDeg)
+/**
+ * @brief Config of max pitch angle at max stick input [DEG] (default: 50)
+ */
 PARAM_ADD(PARAM_FLOAT, angPitch, &s_CppmEmuPitchMaxAngleDeg)
+/**
+ * @brief Config of max roll angle at max stick input [DEG] (default: 50)
+ */
+PARAM_ADD(PARAM_FLOAT, angRoll, &s_CppmEmuRollMaxAngleDeg)
+/**
+ * @brief Config of max yaw rate at max stick input [DPS] (default: 400)
+ */
+PARAM_ADD(PARAM_FLOAT, rateYaw, &s_CppmEmuYawMaxRateDps)
+
 PARAM_GROUP_STOP(cmdrCPPM)
