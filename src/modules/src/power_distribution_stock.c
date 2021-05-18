@@ -162,7 +162,17 @@ PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet.m4)
 
 PARAM_GROUP_STOP(motorPowerSet)
 
+/**
+ * Power distribution parameters
+ */
 PARAM_GROUP_START(powerDist)
+/**
+ * @brief Motor thrust to set at idle (default: 0)
+ *
+ * This is often needed for brushless motors as
+ * it takes time to start up the motor. Then a
+ * common value is between 3000 - 6000.
+ */
 PARAM_ADD(PARAM_UINT32, idleThrust, &idleThrust)
 PARAM_GROUP_STOP(powerDist)
 
