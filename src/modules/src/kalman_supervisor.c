@@ -56,7 +56,18 @@ bool kalmanSupervisorIsStateWithinBounds(const kalmanCoreData_t* this) {
   return true;
 }
 
+/** @addtogroup kalman
+ *
+ */
 PARAM_GROUP_START(kalman)
-  PARAM_ADD(PARAM_FLOAT, maxPos, &maxPosition)
-  PARAM_ADD(PARAM_FLOAT, maxVel, &maxVelocity)
+/**
+ * @brief Maximum accepted coordinate before kalman supervisor 
+ * resets estimator
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, maxPos, &maxPosition)
+  /**
+ * @brief Maximum accepted velocity before kalman supervisor 
+ * resets estimator
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, maxVel, &maxVelocity)
 PARAM_GROUP_STOP(kalman)
