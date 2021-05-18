@@ -293,8 +293,19 @@ PARAM_ADD(PARAM_UINT8, canStart, &activeMarkerDeckCanStart)
 
 PARAM_GROUP_STOP(activeMarker)
 
+/** @addtogroup deck
+ *
+ * The deck parameter group tells us which decks are connected.
+ * There is one parameter per official deck and the parameter is nonzero if the
+ * deck is connected.
+ */
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcActiveMarker, &isInit)
+
+/**
+ * @brief Nonzero if [Active Marker deck](https://www.bitcraze.io/products/active-marker-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcActiveMarker, &isInit)
+
 PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(activeMarker)

@@ -145,8 +145,15 @@ LOG_GROUP_START(aideck)
 LOG_ADD(LOG_UINT8, receivebyte, &byte)
 LOG_GROUP_STOP(aideck)
 
+/** @addtogroup deck
+*/
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcAIDeck, &isInit)
+
+/**
+ * @brief Nonzero if [AI deck](https://store.bitcraze.io/collections/decks/products/ai-deck-1-1) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcAIDeck, &isInit)
+
 PARAM_GROUP_STOP(deck)
 
 DECK_DRIVER(aideck_deck);

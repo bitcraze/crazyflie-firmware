@@ -1136,6 +1136,13 @@ static const DeckDriver ledring12_deck = {
 
 DECK_DRIVER(ledring12_deck);
 
+/** @addtogroup deck
+*/
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLedRing, &isInit)
+
+/**
+ * @brief Nonzero if [LED-ring deck](https://store.bitcraze.io/collections/decks/products/led-ring-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLedRing, &isInit)
+
 PARAM_GROUP_STOP(deck)

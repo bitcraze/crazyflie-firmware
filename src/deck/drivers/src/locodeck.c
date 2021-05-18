@@ -582,8 +582,15 @@ static const DeckDriver dwm1000_deck = {
 
 DECK_DRIVER(dwm1000_deck);
 
+/** @addtogroup deck
+*/
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+
+/**
+ * @brief Nonzero if [Loco positioning deck](https://store.bitcraze.io/collections/decks/products/loco-positioning-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+
 PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(ranging)

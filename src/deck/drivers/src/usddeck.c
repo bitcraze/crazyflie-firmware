@@ -1038,8 +1038,15 @@ static const DeckDriver usd_deck = {
 
 DECK_DRIVER(usd_deck);
 
+/** @addtogroup deck
+*/
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
+
+/**
+ * @brief Nonzero if [SD-card deck](https://store.bitcraze.io/collections/decks/products/sd-card-deck) is attached
+*/
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
+
 PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(usd)

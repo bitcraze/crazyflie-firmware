@@ -270,7 +270,18 @@ PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
 PARAM_ADD(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
 PARAM_GROUP_STOP(motion)
 
+/** @addtogroup deck
+*/
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcFlow, &isInit1)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcFlow2, &isInit2)
+
+/**
+ * @brief Nonzero if Flow deck v1 is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow, &isInit1)
+
+/**
+ * @brief Nonzero if [Flow deck v2](https://store.bitcraze.io/collections/decks/products/flow-deck-v2) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow2, &isInit2)
+
 PARAM_GROUP_STOP(deck)

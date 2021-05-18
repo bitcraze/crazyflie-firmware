@@ -77,6 +77,13 @@ static const DeckDriver buzzer_deck = {
 
 DECK_DRIVER(buzzer_deck);
 
+/** @addtogroup deck
+*/
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &isInit)
+
+/**
+ * @brief Nonzero if [Buzzer deck](https://store.bitcraze.io/collections/decks/products/buzzer-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &isInit)
+
 PARAM_GROUP_STOP(deck)
