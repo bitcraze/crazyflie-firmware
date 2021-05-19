@@ -363,8 +363,41 @@ void soundSetFreq(uint32_t freq) {
 
 }
 
+/**
+ * The buzzer deck contains a low profile piezo buzzer.
+ */
 PARAM_GROUP_START(sound)
-PARAM_ADD(PARAM_UINT8, effect, &user_effect)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
-PARAM_ADD(PARAM_UINT16, freq, &static_freq)
+
+/**
+ * @brief Id of effect to use (default: 0)
+ *
+ * Id | Effect
+ * -----------
+ * 0  | Off
+ * 1  | Factory test
+ * 2  | USB connected
+ * 3  | USB disconnected
+ * 4  | Charging done
+ * 5  | Low battery
+ * 6  | Startup
+ * 7  | Calibrated
+ * 8  | Range slow
+ * 9  | Range fast
+ * 10 | Star Wars Imperial March
+ * 11 | Bypass
+ * 12 | Siren
+ * 13 | Tilt quad to play sound
+ */
+PARAM_ADD_CORE(PARAM_UINT8, effect, &user_effect)
+
+/**
+ * @brief Number of effects available
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
+
+/**
+ * @brief Frequency to use for Bypass effect
+ */
+PARAM_ADD_CORE(PARAM_UINT16, freq, &static_freq)
+
 PARAM_GROUP_STOP(sound)
