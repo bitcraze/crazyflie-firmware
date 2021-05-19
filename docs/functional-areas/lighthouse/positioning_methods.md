@@ -33,5 +33,5 @@ One base station is enough to estimate the position using this method, but more 
 
 ## Ground truth
 
-To use the lighthouse positioning as a ground truth measurement for your research, you should put ```LIGHTHOUSE_AS_GROUNDTRUTH = 1``` in your config.mk.
+To use the lighthouse positioning as a ground truth measurement for your research, you should put ```CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH``` in your config.mk.
  This will default the position estimator for lighthouse to be crossing beam (which you should not change), and you will be able to get the X, Y, Z position from the logs ```lighthouse.x/.y/.z```
