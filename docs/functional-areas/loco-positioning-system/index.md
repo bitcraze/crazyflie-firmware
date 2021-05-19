@@ -19,7 +19,7 @@ In TWR, the UWB tag mounted on the Crazyflie communicates with fixed UWB anchors
 
 $$d_i = \sqrt{(x-x_i)^2 +(y-y_i)^2 + (z-z_i)^2}$$,
 
-where $(x, y, z)$ is the position of the Crazyflie and $(x_i, y_i, z_i)$ is the position of the fixed anchor i. For the conventional extended Kalman filter, we have
+where $$(x, y, z)$$ is the position of the Crazyflie and $$(x_i, y_i, z_i)$$ is the position of the fixed anchor i. For the conventional extended Kalman filter, we have
 
 $$g_x = (x-x_i) / d_i$$
 
@@ -40,7 +40,7 @@ The TDoA measurement model is as follows:
 
 $$d_{ij} = d_j - d_i = \sqrt{(x-x_j)^2 +(y-y_j)^2 + (z-z_j)^2} - \sqrt{(x-x_i)^2 +(y-y_i)^2 + (z-z_i)^2}$$,
 
-where $(x, y, z)$ is the position of the Crazyflie and $(x_i, y_i, z_i)$ and $(x_j, y_j, z_j)$ are the positions of fixed anchor i and j, respectively. For the conventional extended Kalman filter, we have
+where $$(x, y, z)$$ is the position of the Crazyflie and $$(x_i, y_i, z_i)$$ and $$(x_j, y_j, z_j)$$ are the positions of fixed anchor i and j, respectively. For the conventional extended Kalman filter, we have
 
 $$g_x = (x-x_j) / d_j - (x-x_i) / d_i$$
 
@@ -61,15 +61,15 @@ From the Bayesian maximum a posteriori perspective, the Kalman filter state esti
 
 ![equation](/docs/images/rkf-eq1.png)
 
-Therein, $x_k$ and $y_k$ are the system state and measurements at timestep k, $P_k$ and $R_k$ denote the prior covariance and measurement covariance, respectively. Through Cholesky factorization of $P_k$ and $R_k$, the original optimization problem is equivalent to:
+Therein, $$x_k$$ and $$y_k$$ are the system state and measurements at timestep k, $$P_k$$ and $$R_k$$ denote the prior covariance and measurement covariance, respectively. Through Cholesky factorization of $$P_k$$ and $$R_k$    $, the original optimization problem is equivalent to:
 
 ![equation](/docs/images/rkf-eq2.png)
 
-where $e_{x,k,i}$ and $e_{y,k,i}$ are the elements of $e_{x,k}$ and $e_{y,k}$. To reduce the influence of outliers, we incorporate a robust cost function into the Kalman filter framework as follows:
+where $$e_{x,k,i}$$ and $$e_{y,k,i}$$ are the elements of $$e_{x,k}$$ and $$e_{y,k}$$. To reduce the influence of outliers, we incorporate a robust cost function into the Kalman filter framework as follows:
 
 ![equation](/docs/images/rkf-eq3.png)
 
-where $\rho()$ could be any robust function (e.g., G-M, SC-DCS, Huber, Cauchy, etc.)
+where $$\rho()$$ could be any robust function (e.g., G-M, SC-DCS, Huber, Cauchy, etc.)
 
 By introducing a weight function for the process and measurement uncertainties---with e as input---we can translate the optimization problem into an Iterative Reweight Least-Square (IRLS) problem. Then, the optimal posterior estimate can be computed through iteratively solving the least-square problem using the robust weights computed from the previous solution. In our implementation, we use the G-M robust cost function and the maximum iteration is set to be two for computational frugality. Then, we call the function `kalmanCoreUpdateWithPKE()` in [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core/kalman_core.c) with the weighted covariance matrix $P_w_m$, kalman gain Km, and innovation error to update the states and covariance matrix.
 
