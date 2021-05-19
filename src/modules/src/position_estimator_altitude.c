@@ -58,10 +58,10 @@ static struct selfState_s state = {
   .estimatedVZ = 0.0f,
 };
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state);
+static void positionEstimateInternal(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state);
 static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
 
-void positionEstimate(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick) {
+void positionEstimate(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick) {
   positionEstimateInternal(estimate, sensorData, tofMeasurement, dt, tick, &state);
 }
 
@@ -69,7 +69,7 @@ void positionUpdateVelocity(float accWZ, float dt) {
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(state_t* estimate, const sensorData_t* sensorData, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state) {
+static void positionEstimateInternal(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick, struct selfState_s* state) {
   static float filteredZ = 0.0;
   static float ground = 0.0;
   static float prev_estimatedZ = 0.0;
@@ -96,20 +96,20 @@ static void positionEstimateInternal(state_t* estimate, const sensorData_t* sens
   // } else {
     // FIXME: A bit of an hack to init IIR filter
     if (baro_init == 0) {
-      if (sensorData->baro.asl == 0.0f)
+      if (baro->asl == 0.0f)
       {
         filteredZ = 0.0;
         ground = 0.0;
       } else {
-        ground = sensorData->baro.asl;
-        filteredZ = sensorData->baro.asl - ground;
+        ground = baro->asl;
+        filteredZ = baro->asl - ground;
         baro_init = 1;
       }
     } 
     if (baro_init == 1) {
       // IIR filter asl
       filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
-                  (1.0f - state->estAlphaAsl) * (sensorData->baro.asl - ground);
+                  (1.0f - state->estAlphaAsl) * (baro->asl - ground);
     }
     // Use asl as base and add velocity changes.
     state->estimatedZ = filteredZ; // + (state->velocityFactor * state->velocityZ * dt);
