@@ -371,7 +371,7 @@ PARAM_GROUP_START(colAv)
   /**
    * @brief Nonzero to enable collision avoidance
    *
-   * Used to enable or disable the collion avoidance module.
+   * Used to enable or disable the collision avoidance module.
    */
   PARAM_ADD_CORE(PARAM_UINT8, enable, &collisionAvoidanceEnable)
 
