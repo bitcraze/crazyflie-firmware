@@ -601,6 +601,63 @@ STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
 STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
 LOG_GROUP_STOP(loco)
 
+/**
+ * The Loco Positioning System implements three different positioning modes:
+ * - Two Way Ranging (TWR)
+ * - Time Difference of Arrival 2 (TDoA 2)
+ * - Time Difference of Arrival 3 (TDoA 3)
+ *
+ * ### TWR mode
+ * In this mode, the tag pings the anchors in sequence, this allows it to
+ * measure the distance between the tag and the anchors. Using this information
+ * a theoretical minimum of 4 Anchors is required to calculate the 3D position
+ * of a Tag, but a more realistic number is 6 to add redundancy and accuracy.
+ * This mode is the most accurate mode and also works when the tag or quad
+ * leaves the space delimited by the anchors. The tag is actively communicating
+ * with the anchors in a time slotted fashion and in this mode only one tag or
+ * quad can be positioned with a maximum of 8 anchors.
+ *
+ * ### TDoA 2 mode
+ * In TDoA 2 mode, the anchor system is continuously sending synchronization
+ * packets. A tag listening to these packets can calculate the relative
+ * distance to two anchors by measuring the time difference of arrival of the
+ * packets. From the TDoA information it is possible to calculate the 3D
+ * position in space. In this mode the tag is only passively listening, so new
+ * tags do not add any load to the system which makes it possible to position
+ * any number of tags or quads simultaneously. This makes it a perfect
+ * mode for swarming.
+ *
+ * Compared to TWR, TDoA 2 is more restrictive when it comes to the space where
+ * positioning works, ideally the tag should be within, or very close to,
+ * the space delimited by the anchor system. This means that TDoA 2 works best
+ * with 8 anchors placed in the corners of the flying space. In this space the
+ * accuracy and precision is comparable to TWR.
+
+ * In this mode the anchor system is time slotted and synchronized and the
+ * number of anchors is limited to 8.
+ *
+ * ### TDoA 3 mode
+ * The TDoA 3 mode has many similarities with TDoA 2 and supports any number
+ * of tags or quads. The main difference is that the time slotted scheme of
+ * TDoA 2 has been replaced by a randomized transmission schedule which makes
+ * it possible to add more anchors. By adding more anchors the system can be
+ * scaled to larger spaces or span multiple rooms without line of sight between
+ * all anchors. It also makes it more robust and can handle loss or addition of
+ * anchors dynamically. The estimated position in this mode might be slightly
+ * more noisy compared to TDoA 2.
+ */
 PARAM_GROUP_START(loco)
+
+/**
+ * @brief The Loco positioning mode to use (default: 0)
+ *
+ * Value | Mode
+ * --------------
+ *   0   | Auto
+ *   1   | TWR
+ *   2   | TDoA 2
+ *   3   | TDoA 3
+ */
 PARAM_ADD(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
+
 PARAM_GROUP_STOP(loco)
