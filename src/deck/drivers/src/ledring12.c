@@ -1179,7 +1179,11 @@ PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
 PARAM_GROUP_STOP(ring)
 
 PARAM_GROUP_START(system)
-PARAM_ADD(PARAM_UINT8, highlight, &lightSignal.trigger)
+
+/**
+ * @brief Highlight quad in swarm by flashing LEDs of LED ring deck
+ */
+PARAM_ADD_CORE(PARAM_UINT8, highlight, &lightSignal.trigger)
 PARAM_GROUP_STOP(system)
 
 static const DeckDriver ledring12_deck = {

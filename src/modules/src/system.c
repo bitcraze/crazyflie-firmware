@@ -380,8 +380,17 @@ PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
 PARAM_GROUP_STOP(cpu)
 
 PARAM_GROUP_START(system)
-PARAM_ADD(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
+
+/**
+ * @brief All tests passed when booting
+ */
+PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
+
+/**
+ * @brief Set tp nonzero to force system to be armed
+ */
 PARAM_ADD(PARAM_INT8, forceArm, &forceArm)
+
 PARAM_GROUP_STOP(sytem)
 
 /* Loggable variables */
