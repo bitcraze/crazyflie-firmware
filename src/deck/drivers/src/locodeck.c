@@ -658,6 +658,6 @@ PARAM_GROUP_START(loco)
  *   2   | TDoA 2
  *   3   | TDoA 3
  */
-PARAM_ADD(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
+PARAM_ADD_CORE(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
 
 PARAM_GROUP_STOP(loco)
