@@ -110,4 +110,4 @@
 
 ## Lighthouse handling
 # If lighthouse will need to act as a ground truth (so not entered in the kalman filter)
-# LIGHTHOUSE_AS_GROUNDTRUTH = 1
+# CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH
