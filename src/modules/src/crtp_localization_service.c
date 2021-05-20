@@ -402,17 +402,17 @@ PARAM_GROUP_START(locSrv)
 /**
  * @brief Enable CRTP stream of Loco node distance
  */
-  PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
+  PARAM_ADD_CORE(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
 /**
  * @brief Enable CRTP stream of Lighthouse sweep angles
  */
-  PARAM_ADD(PARAM_UINT8, enLhAngleStream, &enableLighthouseAngleStream)
+  PARAM_ADD_CORE(PARAM_UINT8, enLhAngleStream, &enableLighthouseAngleStream)
 /**
  * @brief Standard deviation of external position
  */
-  PARAM_ADD(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
+  PARAM_ADD_CORE(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
   /**
  * @brief Standard deviation of the quarternion data to kalman filter
  */
-  PARAM_ADD(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
+  PARAM_ADD_CORE(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
 PARAM_GROUP_STOP(locSrv)
