@@ -142,9 +142,9 @@ PARAM_ADD(PARAM_FLOAT, velFactor, &state.velocityFactor)
 /**
  * @brief Blendning factor to avoid accumulate error
  */
-PARAM_ADD_CORE(PARAM_FLOAT, velZAlpha, &state.velZAlpha)
+PARAM_ADD(PARAM_FLOAT, velZAlpha, &state.velZAlpha)
 /**
  * @brief Vertical acceleration deadband
  */
-PARAM_ADD(PARAM_FLOAT, vAccDeadband, &state.vAccDeadband)
+PARAM_ADD_CORE(PARAM_FLOAT, vAccDeadband, &state.vAccDeadband)
 PARAM_GROUP_STOP(posEstAlt)
