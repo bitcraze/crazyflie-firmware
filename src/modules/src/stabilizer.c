@@ -235,7 +235,7 @@ static void stabilizerTask(void* param)
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
-    
+
     // update sensorData struct (for logging variables)
     sensorsAcquire(&sensorData, tick);
 
@@ -374,9 +374,24 @@ STATS_CNT_RATE_LOG_ADD(rtStab, &stabilizerRate)
 LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
+/**
+ * Log group for accelerometer data from the IMU
+ */
 LOG_GROUP_START(acc)
+
+/**
+ * @brief Acceleration in X [Gs]
+ */
 LOG_ADD(LOG_FLOAT, x, &sensorData.acc.x)
+
+/**
+ * @brief Acceleration in Y [Gs]
+ */
 LOG_ADD(LOG_FLOAT, y, &sensorData.acc.y)
+
+/**
+ * @brief Acceleration in Z [Gs]
+ */
 LOG_ADD(LOG_FLOAT, z, &sensorData.acc.z)
 LOG_GROUP_STOP(acc)
 
