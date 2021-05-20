@@ -518,22 +518,22 @@ LOG_ADD(LOG_FLOAT, pressure, &sensorData.baro.pressure)
 LOG_GROUP_STOP(baro)
 
 /**
- * Log group for gyroscopes
+ * Log group for gyroscopes.
  */
 LOG_GROUP_START(gyro)
 
 /**
- * @brief Angular velocity (rotation) around the X-axis [deg/s]
+ * @brief Angular velocity (rotation) around the X-axis, after filtering [deg/s]
  */
 LOG_ADD(LOG_FLOAT, x, &sensorData.gyro.x)
 
 /**
- * @brief Angular velocity (rotation) around the Y-axis [deg/s]
+ * @brief Angular velocity (rotation) around the Y-axis, after filtering [deg/s]
  */
 LOG_ADD(LOG_FLOAT, y, &sensorData.gyro.y)
 
 /**
- * @brief Angular velocity (rotation) around the Z-axis [deg/s]
+ * @brief Angular velocity (rotation) around the Z-axis, after filtering [deg/s]
  */
 LOG_ADD(LOG_FLOAT, z, &sensorData.gyro.z)
 LOG_GROUP_STOP(gyro)
@@ -547,11 +547,22 @@ LOG_GROUP_STOP(gyroSec)
 #endif
 
 /**
- * Log group for magnetometer
+ * Log group for magnetometer.
+ *
+ * Currently only present on Crazyflie 2.0
  */
 LOG_GROUP_START(mag)
+/**
+ * @brief Magnetometer X axis, after filtering [gauss]
+ */
 LOG_ADD(LOG_FLOAT, x, &sensorData.mag.x)
+/**
+ * @brief Magnetometer Y axis, after filtering [gauss]
+ */
 LOG_ADD(LOG_FLOAT, y, &sensorData.mag.y)
+/**
+ * @brief Magnetometer Z axis, after filtering [gauss]
+ */
 LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
