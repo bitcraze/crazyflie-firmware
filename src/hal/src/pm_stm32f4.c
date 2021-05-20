@@ -407,16 +407,46 @@ void pmTask(void *param)
   }
 }
 
+/**
+ * Power management log variables.
+ */
 LOG_GROUP_START(pm)
+/**
+ * @brief Battery voltage [V]
+ */
 LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+/**
+ * @brief Battery voltage [mV]
+ */
 LOG_ADD(LOG_UINT16, vbatMV, &batteryVoltageMV)
+/**
+ * @brief BigQuad external voltage measurement [V]
+ */
 LOG_ADD(LOG_FLOAT, extVbat, &extBatteryVoltage)
+/**
+ * @brief BigQuad external voltage measurement [mV]
+ */
 LOG_ADD(LOG_UINT16, extVbatMV, &extBatteryVoltageMV)
+/**
+ * @brief BigQuad external current measurement [V]
+ */
 LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
+/**
+ * @brief Battery charge current [A]
+ */
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
+/**
+ * @brief PM state [battery=0, charging=1, charged=2, lowPower=3, shutDown=4]
+ */
 LOG_ADD(LOG_INT8, state, &pmState)
+/**
+ * @brief Battery charge level [%]
+ */
 LOG_ADD(LOG_UINT8, batteryLevel, &batteryLevel)
-#ifdef PM_SYSTLINK_INLCUDE_TEMP
+#ifdef PM_SYSTLINK_INCLUDE_TEMP
+/**
+ * @brief Temperature from nrf51 [degrees]
+ */
 LOG_ADD(LOG_FLOAT, temp, &temp)
 #endif
 LOG_GROUP_STOP(pm)
