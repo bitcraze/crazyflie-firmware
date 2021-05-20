@@ -281,28 +281,28 @@ PARAM_GROUP_START(posCtrlIndi)
 /**
  * @brief INDI position controller X propertional gain
  */
-PARAM_ADD_CORE(PARAM_FLOAT, K_xi_x, &K_xi_x)
+PARAM_ADD(PARAM_FLOAT, K_xi_x, &K_xi_x)
 /**
  * @brief INDI position controller Y propertional gain
  */
-PARAM_ADD_CORE(PARAM_FLOAT, K_xi_y, &K_xi_y)
+PARAM_ADD(PARAM_FLOAT, K_xi_y, &K_xi_y)
 /**
  * @brief INDI position controller Z propertional gain
  */
-PARAM_ADD_CORE(PARAM_FLOAT, K_xi_z, &K_xi_z)
+PARAM_ADD(PARAM_FLOAT, K_xi_z, &K_xi_z)
 
 /**
  * @brief INDI velocity controller X propertional gain
  */
-PARAM_ADD_CORE(PARAM_FLOAT, K_dxi_x, &K_dxi_x)
+PARAM_ADD(PARAM_FLOAT, K_dxi_x, &K_dxi_x)
 /**
  * @brief INDI velocity controller Y propertional gain
  */
-PARAM_ADD_CORE(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
+PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
 /**
  * @brief INDI velocity controller Z propertional gain
  */
-PARAM_ADD_CORE(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
+PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
 
 PARAM_GROUP_STOP(posCtrlIndi)
 
