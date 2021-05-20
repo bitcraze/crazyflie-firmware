@@ -276,17 +276,17 @@ void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm,
 
 void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error)
 {
-    // kalman filter update with weighted covariance matrix P_w_m, kalman gain Km, and innovation error 
-    // Temporary matrices for the covariance updates 
+    // kalman filter update with weighted covariance matrix P_w_m, kalman gain Km, and innovation error
+    // Temporary matrices for the covariance updates
     static float tmpNN1d[KC_STATE_DIM][KC_STATE_DIM];
     static arm_matrix_instance_f32 tmpNN1m = {KC_STATE_DIM, KC_STATE_DIM, (float *)tmpNN1d};
     for (int i=0; i<KC_STATE_DIM; i++){
         this->S[i] = this->S[i] + Km->pData[i] * error;
     }
     // ====== COVARIANCE UPDATE ====== //
-    mat_mult(Km, Hm, &tmpNN1m);                 // KH,  the Kalman Gain and H are the updated Kalman Gain and H 
+    mat_mult(Km, Hm, &tmpNN1m);                 // KH,  the Kalman Gain and H are the updated Kalman Gain and H
     mat_scale(&tmpNN1m, -1.0f, &tmpNN1m);       //  I-KH
-    for (int i=0; i<KC_STATE_DIM; i++) { tmpNN1d[i][i] = 1.0f + tmpNN1d[i][i]; } 
+    for (int i=0; i<KC_STATE_DIM; i++) { tmpNN1d[i][i] = 1.0f + tmpNN1d[i][i]; }
     float Ppo[KC_STATE_DIM][KC_STATE_DIM]={0};
     arm_matrix_instance_f32 Ppom = {KC_STATE_DIM, KC_STATE_DIM, (float *)Ppo};
     mat_mult(&tmpNN1m, P_w_m, &Ppom);          // Pm = (I-KH)*P_w_m
@@ -790,16 +790,52 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
 }
 
 PARAM_GROUP_START(kalman)
-  PARAM_ADD(PARAM_FLOAT, pNAcc_xy, &procNoiseAcc_xy)
-  PARAM_ADD(PARAM_FLOAT, pNAcc_z, &procNoiseAcc_z)
-  PARAM_ADD(PARAM_FLOAT, pNVel, &procNoiseVel)
-  PARAM_ADD(PARAM_FLOAT, pNPos, &procNoisePos)
-  PARAM_ADD(PARAM_FLOAT, pNAtt, &procNoiseAtt)
-  PARAM_ADD(PARAM_FLOAT, mNBaro, &measNoiseBaro)
-  PARAM_ADD(PARAM_FLOAT, mNGyro_rollpitch, &measNoiseGyro_rollpitch)
-  PARAM_ADD(PARAM_FLOAT, mNGyro_yaw, &measNoiseGyro_yaw)
-  PARAM_ADD(PARAM_FLOAT, initialX, &initialX)
-  PARAM_ADD(PARAM_FLOAT, initialY, &initialY)
-  PARAM_ADD(PARAM_FLOAT, initialZ, &initialZ)
-  PARAM_ADD(PARAM_FLOAT, initialYaw, &initialYaw)
+/**
+ * @brief Process noise for x and y acceleration
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNAcc_xy, &procNoiseAcc_xy)
+ /**
+ * @brief Process noise for z acceleration
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNAcc_z, &procNoiseAcc_z)
+ /**
+ * @brief Process noise for velocity
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNVel, &procNoiseVel)
+ /**
+ * @brief Process noise for position
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNPos, &procNoisePos)
+ /**
+ * @brief Process noise for attitude
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNAtt, &procNoiseAtt)
+ /**
+ * @brief Measurement noise for barometer
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, mNBaro, &measNoiseBaro)
+ /**
+ * @brief Measurement Noise for roll/pitch gyros
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, mNGyro_rollpitch, &measNoiseGyro_rollpitch)
+ /**
+ * @brief Measurement Noise for yaw gyro
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, mNGyro_yaw, &measNoiseGyro_yaw)
+ /**
+ * @brief Initial X after reset [m]
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, initialX, &initialX)
+ /**
+ * @brief Initial Y after reset [m]
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, initialY, &initialY)
+ /**
+ * @brief Initial Z after reset [m]
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, initialZ, &initialZ)
+ /**
+ * @brief Initial Yaw after reset [rad]
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, initialYaw, &initialYaw)
 PARAM_GROUP_STOP(kalman)

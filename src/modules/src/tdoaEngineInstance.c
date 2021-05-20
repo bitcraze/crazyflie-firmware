@@ -46,10 +46,18 @@ LOG_ADD(LOG_UINT16, tof, &tdoaEngineState.stats.tof)
 LOG_ADD(LOG_FLOAT, tdoa, &tdoaEngineState.stats.tdoa)
 LOG_GROUP_STOP(tdoaEngine)
 
-
+/**
+ * The TDoA engine processes TDoA data from the Loco Positioning System.
+ */
 PARAM_GROUP_START(tdoaEngine)
-PARAM_ADD(PARAM_UINT8, logId, &tdoaEngineState.stats.newAnchorId)
-PARAM_ADD(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
+/**
+ * @brief Id of anchor used for logging, primary anchor.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, logId, &tdoaEngineState.stats.newAnchorId)
+/**
+ * @brief Id of anchor used for logging, secondary anchor.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 
 // This variable should not be exposed as a parameter since it is changed from inside the CF FW.
 // It only happens when the LPS system mode is changed to TDoA2 or TDoA3 though, and as this is

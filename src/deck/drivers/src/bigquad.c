@@ -123,6 +123,11 @@ static const DeckDriver bigquad_deck = {
 DECK_DRIVER(bigquad_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
+
+/**
+ * @brief Nonzero if [BigQuad deck](https://www.bitcraze.io/products/bigquad-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
+
 PARAM_GROUP_STOP(deck)
 #endif // ENABLE_BQ_DECK

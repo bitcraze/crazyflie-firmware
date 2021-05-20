@@ -836,7 +836,7 @@ static void usdWriteTask(void* prm)
         // write header
         uint8_t magic = 0xBC;
         usdWriteData(&magic, sizeof(magic));
-        
+
         uint16_t version = 2;
         usdWriteData(&version, sizeof(version));
 
@@ -942,7 +942,7 @@ static void usdWriteTask(void* prm)
           uint16_t size;
           bool hasData = ringBuffer_pop_start(&logBuffer, &buf, &size);
           xSemaphoreGive(logBufferMutex);
-          
+
           // execute the actual write operation
           if (hasData) {
             usdWriteData(buf, size);
@@ -980,7 +980,7 @@ static void usdWriteTask(void* prm)
           lastFileSize = info.fsize;
         }
 
-        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n", 
+        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n",
           lastFileSize,
           usdLogConfig.filename,
           usdLogStats.eventsWritten,
@@ -1039,12 +1039,27 @@ static const DeckDriver usd_deck = {
 DECK_DRIVER(usd_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
+
+/**
+ * @brief Nonzero if [SD-card deck](https://store.bitcraze.io/collections/decks/products/sd-card-deck) is attached
+*/
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
+
 PARAM_GROUP_STOP(deck)
 
+/**
+ * The micro SD card deck is used for on-board logging of data to a micro SD card.
+ */
 PARAM_GROUP_START(usd)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
-PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
+/**
+ * @brief Non zero if logging is possible, 0 indicates there might be a problem with the logging configuration.
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
+
+/**
+ * @brief Controls if logging to the SD-card is active. Set to 1 to start logging, set to 0 to stop logging (default).
+ */
+PARAM_ADD_CORE(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
 PARAM_GROUP_STOP(usd)
 
 LOG_GROUP_START(usd)

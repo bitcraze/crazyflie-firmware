@@ -186,26 +186,90 @@ LOG_ADD(LOG_FLOAT, yaw_outI, &pidYawRate.outI)
 LOG_ADD(LOG_FLOAT, yaw_outD, &pidYawRate.outD)
 LOG_GROUP_STOP(pid_rate)
 
+/**
+ * Tuning settings for the gains of the PID
+ * controller for the attitude of the Crazyflie which consists
+ * of the Yaw Pitch and Roll 
+ */
 PARAM_GROUP_START(pid_attitude)
+/**
+ * @brief Propertional gain for the PID roll controller
+ */
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRoll.kp)
+/**
+ * @brief Intergral gain for the PID roll controller
+ */
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
+/**
+ * @brief Derivative gain for the PID roll controller
+ */
 PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRoll.kd)
+/**
+ * @brief Propertional gain for the PID pitch controller
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitch.kp)
+/**
+ * @brief Intergral gain for the PID pitch controller
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitch.ki)
+/**
+ * @brief Derivative gain for the PID pitch controller
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitch.kd)
+/**
+ * @brief Propertional gain for the PID yaw controller
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYaw.kp)
+/**
+ * @brief Intergral gain for the PID yaw controller
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYaw.ki)
+/**
+ * @brief Derivative gain for the PID yaw controller
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
 PARAM_GROUP_STOP(pid_attitude)
 
+/**
+ * Tuning settings for the gains of the PID
+ * controller for the rate angels of the Crazyflie which consists
+ * of the Yaw Pitch and Roll rates 
+ */
 PARAM_GROUP_START(pid_rate)
+/**
+ * @brief Propertional gain for the PID roll rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
+/**
+ * @brief Intergral gain for the PID roll rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
+/**
+ * @brief Derivative gain for the PID roll rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
+/**
+ * @brief Propertional gain for the PID pitch rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitchRate.kp)
+/**
+ * @brief Intergral gain for the PID pitch rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
+/**
+ * @brief Derivative gain for the PID pitch rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitchRate.kd)
+/**
+ * @brief Propertional gain for the PID yaw rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
+/**
+ * @brief Intergral gain for the PID yaw rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
+/**
+ * @brief Derivative gain for the PID yaw rate controller
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYawRate.kd)
 PARAM_GROUP_STOP(pid_rate)

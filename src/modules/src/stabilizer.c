@@ -313,10 +313,23 @@ void stabilizerSetEmergencyStopTimeout(int timeout)
   emergencyStopTimeout = timeout;
 }
 
+/**
+ * Parameters to set the estimator and controller type
+ * for the stabilizer module, or to do an emergency stop
+ */
 PARAM_GROUP_START(stabilizer)
-PARAM_ADD(PARAM_UINT8, estimator, &estimatorType)
-PARAM_ADD(PARAM_UINT8, controller, &controllerType)
-PARAM_ADD(PARAM_UINT8, stop, &emergencyStop)
+/**
+ * @brief Estimator type Any(0), complementary(1), kalman(2) (Default: 1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
+/**
+ * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3) (Default: 1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
+/**
+ * @brief If set to nonzero will turn of power
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
 LOG_GROUP_START(ctrltarget)

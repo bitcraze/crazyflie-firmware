@@ -270,17 +270,38 @@ void positionControllerINDI(const sensorData_t *sensors,
 
 }
 
-
+/**
+ * Tuning settings for the gains of the INDI
+ * controller for the position and velocity
+ * of the Crazyflie in the X, Y and Z direction in the global
+ * coordinate system.
+ */
 PARAM_GROUP_START(posCtrlIndi)
 
-// Position controller gain
+/**
+ * @brief INDI position controller X propertional gain
+ */
 PARAM_ADD(PARAM_FLOAT, K_xi_x, &K_xi_x)
+/**
+ * @brief INDI position controller Y propertional gain
+ */
 PARAM_ADD(PARAM_FLOAT, K_xi_y, &K_xi_y)
+/**
+ * @brief INDI position controller Z propertional gain
+ */
 PARAM_ADD(PARAM_FLOAT, K_xi_z, &K_xi_z)
 
-// Velocity Controller gain
+/**
+ * @brief INDI velocity controller X propertional gain
+ */
 PARAM_ADD(PARAM_FLOAT, K_dxi_x, &K_dxi_x)
+/**
+ * @brief INDI velocity controller Y propertional gain
+ */
 PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
+/**
+ * @brief INDI velocity controller Z propertional gain
+ */
 PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
 
 PARAM_GROUP_STOP(posCtrlIndi)

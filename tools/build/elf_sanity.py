@@ -17,6 +17,8 @@ class Colors:
     END = '\033[0m'
 
 
+CORE = 0x20
+
 param_type_to_str_dict = {
     0x0 | 0x0 << 2 | 0x1 << 3: 'PARAM_UINT8',
     0x0 | 0x0 << 2 | 0x0 << 3: 'PARAM_INT8',
@@ -29,11 +31,17 @@ param_type_to_str_dict = {
 
 
 def param_type_to_str(t: int) -> str:
-    read_only = str()
-    if t & (1 << 6):  # PARAM_RONLY set
-        read_only = ' | PARAM_RONLY'
+    extra = str()
 
-    return '{:12}{}'.format(param_type_to_str_dict[t & ~(1 << 6)], read_only)
+    if t & (1 << 5):  # PARAM_CORE set
+        extra = ' | PARAM_CORE'
+
+    if t & (1 << 6):  # PARAM_RONLY set
+        extra += ' | PARAM_RONLY'
+
+    int_type = t & ~(1 << 5 | 1 << 6)
+
+    return '{:12}{}'.format(param_type_to_str_dict[int_type], extra)
 
 
 log_type_to_str_dict = {
@@ -49,22 +57,28 @@ log_type_to_str_dict = {
 
 
 def log_type_to_str(t: int) -> str:
-    by_function = str()
+    extra = str()
+
+    if t & (1 << 5):  # LOG_CORE set
+        extra = ' | LOG_CORE'
+
     if t & (1 << 6):  # BY_FUNCTION set
-        by_function = ' | BY_FUNCTION'
+        extra += ' | BY_FUNCTION'
 
-    return '{:12}{}'.format(log_type_to_str_dict[t & ~(1 << 6)], by_function)
+    int_type = t & ~(1 << 5 | 1 << 6)
+
+    return '{:12}{}'.format(log_type_to_str_dict[int_type], extra)
 
 
-def process_file(filename, list_params: bool, list_logs: bool):
+def process_file(filename, list_params: bool, list_logs: bool, core: bool):
     with open(filename, 'rb') as f:
-        parameters = check_structs(f, 'param')
+        parameters = check_structs(f, 'param', core)
         if list_params:
             for key in sorted(parameters.keys()):
                 t = parameters[key]
                 print('{:25}\t{}'.format(key, param_type_to_str(t)))
 
-        logs = check_structs(f, 'log')
+        logs = check_structs(f, 'log', core)
         if list_logs:
             for key in sorted(logs.keys()):
                 t = logs[key]
@@ -99,7 +113,7 @@ def get_offset_of_symbol(elf, name):
     return get_offset_of(elf, sym['st_value'])
 
 
-def check_structs(stream, what: str) -> dict:
+def check_structs(stream, what: str, core: bool) -> dict:
     elf = ELFFile(stream)
     offset = get_offset_of_symbol(elf, '_{}_start'.format(what))
     stop_offset = get_offset_of_symbol(elf, '_{}_stop'.format(what))
@@ -145,7 +159,11 @@ def check_structs(stream, what: str) -> dict:
                       (Colors.RED, Colors.END, name), file=sys.stderr)
                 sys.exit(1)
             else:
-                name_type_dict[name] = t
+                #
+                # If core only is specified we check if the core flag is set
+                #
+                if not core or (t & CORE) != 0:
+                    name_type_dict[name] = t
 
             if len(name) > name_maxlen:
                 print('%sName too long!%s (%s > %d)' %
@@ -161,10 +179,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--list-params', action='store_true')
     parser.add_argument('--list-logs', action='store_true')
+    parser.add_argument('--core', action='store_true')
     parser.add_argument('filename', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if args.filename:
-        process_file(args.filename[0], args.list_params, args.list_logs)
+        process_file(args.filename[0], args.list_params, args.list_logs, args.core)
     else:
         sys.exit(1)

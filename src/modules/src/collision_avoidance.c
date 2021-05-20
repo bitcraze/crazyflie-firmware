@@ -345,12 +345,50 @@ LOG_GROUP_START(colAv)
 LOG_GROUP_STOP(colAv)
 
 
+/**
+ * Onboard collision avoidance algorithm.
+ * Positions of other Crazyflies on the same radio channel are obtained from
+ * peer localization service. Collision avoidance uses the buffered Voronoi
+ * collision avoidance (BVCA) method [1]. Collision avoidance is enabled via
+ * this parameter system, so no new radio packet is needed.
+ *
+ * The Crazyflie's boundary for collision checking is a tall ellipsoid.
+ * this accounts for the downwash effect: Due to the fast-moving stream of
+ * air produced by the rotors, the safe distance to pass underneath another
+ * rotorcraft is much further than the safe distance to pass to the side.
+ * The radii of the ellipsoid can be set by using the parameters below.
+ *
+ * The Mellinger controller does not work with collision avoidance as of now,
+ * because it does not behave gracefully when the setpoint is far from the
+ * current position. However, the PID controller handles it well.
+ *
+ * [1] Zhou, Dingjiang, et al. "Fast, on-line collision avoidance for dynamic
+ * vehicles using buffered voronoi cells." IEEE Robotics and Automation
+ * Letters 2.2 (2017): 1047-1054.
+ */
 PARAM_GROUP_START(colAv)
-  PARAM_ADD(PARAM_UINT8, enable, &collisionAvoidanceEnable)
 
-  PARAM_ADD(PARAM_FLOAT, ellipsoidX, &params.ellipsoidRadii.x)
-  PARAM_ADD(PARAM_FLOAT, ellipsoidY, &params.ellipsoidRadii.y)
-  PARAM_ADD(PARAM_FLOAT, ellipsoidZ, &params.ellipsoidRadii.z)
+  /**
+   * @brief Nonzero to enable collision avoidance
+   *
+   * Used to enable or disable the collision avoidance module.
+   */
+  PARAM_ADD_CORE(PARAM_UINT8, enable, &collisionAvoidanceEnable)
+
+  /**
+   * @brief The x radius of the ellipsoid collision volume
+  */
+  PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidX, &params.ellipsoidRadii.x)
+
+  /**
+   * @brief The y radius of the ellipsoid collision volume
+  */
+  PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidY, &params.ellipsoidRadii.y)
+
+  /**
+   * @brief The z radius of the ellipsoid collision volume
+  */
+  PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidZ, &params.ellipsoidRadii.z)
 
   PARAM_ADD(PARAM_FLOAT, bboxMinX, &params.bboxMin.x)
   PARAM_ADD(PARAM_FLOAT, bboxMinY, &params.bboxMin.y)

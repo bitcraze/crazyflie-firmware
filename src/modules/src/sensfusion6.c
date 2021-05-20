@@ -327,12 +327,27 @@ LOG_GROUP_START(sensfusion6)
   LOG_ADD(LOG_UINT8, isCalibrated, &isCalibrated)
 LOG_GROUP_STOP(sensfusion6)
 
+/**
+ * Sensor fusion is the process of combining sensory data or data derived from
+ * disparate sources such that the resulting information has less uncertainty
+ * than would be possible when these sources were used individually.
+ *
+ * The sensfusion6 module uses an 3 axis accelerometer and a 3 axis gyro to get
+ * accurate attitude measurements.
+ */
 PARAM_GROUP_START(sensfusion6)
 #ifdef MADWICK_QUATERNION_IMU
 PARAM_ADD(PARAM_FLOAT, beta, &beta)
 #else // MAHONY_QUATERNION_IMU
-PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
-PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
+/**
+ * @brief Integral gain (default: 0.002)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, kp, &twoKp)
+
+/**
+ * @brief Propotional gain (default: 0.8)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, ki, &twoKi)
 #endif
 PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
 PARAM_GROUP_STOP(sensfusion6)

@@ -815,7 +815,20 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
   return plan_is_finished(&planner, t);
 }
 
+/**
+ * computes smooth setpoints based on high-level inputs such as: take-off,
+ * landing, polynomial trajectories.
+ */
 PARAM_GROUP_START(hlCommander)
-PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
-PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)
+
+/**
+ * @brief Default take off velocity (m/s)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
+
+/**
+ * @brief Default landing velocity (m/s)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
+
 PARAM_GROUP_STOP(hlCommander)

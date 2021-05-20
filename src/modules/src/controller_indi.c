@@ -356,27 +356,94 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 }
 
+/**
+ * Tuning settings for INDI controller for the attitude
+ * and accelerations of the Crazyflie
+ */
 PARAM_GROUP_START(ctrlINDI)
+/**
+ * @brief INDI Minimum thrust threshold 
+ */
 PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
+/**
+ * @brief INDI bounding for control input 
+ */
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
+/**
+ * @brief INDI  Attitude Roll control Propertional Gain
+ */
 PARAM_ADD(PARAM_FLOAT, roll_kp, &roll_kp)
+/**
+ * @brief INDI Attitude Pitch control Propertional Gain
+ */
 PARAM_ADD(PARAM_FLOAT, pitch_kp, &pitch_kp)
+/**
+ * @brief INDI Attitude Yaw control Propertional Gain
+ */
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &yaw_kp)
+/**
+ * @brief INDI Controller effectiveness G1 p
+ */
 PARAM_ADD(PARAM_FLOAT, g1_p, &indi.g1.p)
+/**
+ * @brief INDI Controller effectiveness G1 q
+ */
 PARAM_ADD(PARAM_FLOAT, g1_q, &indi.g1.q)
+/**
+ * @brief INDI Controller effectiveness G1 r
+ */
 PARAM_ADD(PARAM_FLOAT, g1_r, &indi.g1.r)
+/**
+ * @brief INDI Controller effectiveness G2
+ */
 PARAM_ADD(PARAM_FLOAT, g2, &indi.g2)
+/**
+ * @brief INDI Error acceleration for attitude control p
+ */
 PARAM_ADD(PARAM_FLOAT, ref_err_p, &indi.reference_acceleration.err_p)
+/**
+ * @brief INDI Error acceleration for attitude control q
+ */
 PARAM_ADD(PARAM_FLOAT, ref_err_q, &indi.reference_acceleration.err_q)
+/**
+ * @brief INDI Error acceleration for attitude control r
+ */
 PARAM_ADD(PARAM_FLOAT, ref_err_r, &indi.reference_acceleration.err_r)
+/**
+ * @brief INDI Reference acceleration for attitude control p
+ */
 PARAM_ADD(PARAM_FLOAT, ref_rate_p, &indi.reference_acceleration.rate_p)
+/**
+ * @brief INDI Reference acceleration for attitude control q
+ */
 PARAM_ADD(PARAM_FLOAT, ref_rate_q, &indi.reference_acceleration.rate_q)
+/**
+ * @brief INDI Reference acceleration for attitude control r
+ */
 PARAM_ADD(PARAM_FLOAT, ref_rate_r, &indi.reference_acceleration.rate_r)
+/**
+ * @brief INDI actuator dynamics parameter p
+ */
 PARAM_ADD(PARAM_FLOAT, act_dyn_p, &indi.act_dyn.p)
+/**
+ * @brief INDI actuator dynamics parameter q
+ */
 PARAM_ADD(PARAM_FLOAT, act_dyn_q, &indi.act_dyn.q)
+/**
+ * @brief INDI actuator dynamics parameter r
+ */
 PARAM_ADD(PARAM_FLOAT, act_dyn_r, &indi.act_dyn.r)
+/**
+ * @brief INDI Filtering for the raw angular rates
+ */
 PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
+/**
+ * @brief INDI Filtering for the raw angular rates
+ */
 PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
+/**
+ * @brief Activate INDI for position control 
+ */
 PARAM_ADD(PARAM_UINT8, outerLoopActive, &outerLoopActive)
 PARAM_GROUP_STOP(ctrlINDI)
 

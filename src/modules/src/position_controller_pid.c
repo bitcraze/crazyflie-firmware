@@ -265,41 +265,120 @@ LOG_ADD(LOG_FLOAT, VZd, &this.pidVZ.pid.outD)
 
 LOG_GROUP_STOP(posCtl)
 
+/**
+ * Tuning settings for the gains of the PID
+ * controller for the velocity of the Crazyflie ¨
+ * in the X, Y and Z direction in the body fixed
+ * coordinate system.
+ */
 PARAM_GROUP_START(velCtlPid)
-
+/**
+ * @brief Propertional gain for the velocity PID in the body X direction
+ */
 PARAM_ADD(PARAM_FLOAT, vxKp, &this.pidVX.pid.kp)
+/**
+ * @brief Intergral gain for the velocity PID in the body X direction
+ */
 PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
+/**
+ * @brief Derivative gain for the velocity PID in the body X direction
+ */
 PARAM_ADD(PARAM_FLOAT, vxKd, &this.pidVX.pid.kd)
 
+/**
+ * @brief Propertional gain for the velocity PID in the body Y direction
+ */
 PARAM_ADD(PARAM_FLOAT, vyKp, &this.pidVY.pid.kp)
+/**
+ * @brief Intergral gain for the velocity PID in the body Y direction
+ */
 PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
+/**
+ * @brief Derivative gain for the velocity PID in the body Y direction
+ */
 PARAM_ADD(PARAM_FLOAT, vyKd, &this.pidVY.pid.kd)
 
+/**
+ * @brief Propertional gain for the velocity PID in the body Z direction
+ */
 PARAM_ADD(PARAM_FLOAT, vzKp, &this.pidVZ.pid.kp)
+/**
+ * @brief Intergral gain for the velocity PID in the body Z direction
+ */
 PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
+/**
+ * @brief Derivative gain for the velocity PID in the body Z direction
+ */
 PARAM_ADD(PARAM_FLOAT, vzKd, &this.pidVZ.pid.kd)
 
 PARAM_GROUP_STOP(velCtlPid)
 
+/**
+ * Tuning settings for the gains of the PID
+ * controller for the position of the Crazyflie ¨
+ * in the X, Y and Z direction in the global
+ * coordinate system.
+ */
 PARAM_GROUP_START(posCtlPid)
-
+/**
+ * @brief Propertional gain for the position PID in the global X direction
+ */
 PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.pid.kp)
+/**
+ * @brief Propertional gain for the position PID in the global X direction
+ */
 PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
+/**
+ * @brief Derivative gain for the position PID in the global X direction
+ */
 PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.pid.kd)
 
+/**
+ * @brief Propertional gain for the position PID in the global Y direction
+ */
 PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.pid.kp)
+/**
+ * @brief Intergral gain for the position PID in the global Y direction
+ */
 PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
+/**
+ * @brief Derivative gain for the position PID in the global Y direction
+ */
 PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.pid.kd)
 
+/**
+ * @brief Propertional gain for the position PID in the global Z direction
+ */
 PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.pid.kp)
+/**
+ * @brief Intergral gain for the position PID in the global Z direction
+ */
 PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.pid.ki)
+/**
+ * @brief Derivative gain for the position PID in the global Z direction
+ */
 PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.pid.kd)
 
+/**
+ * @brief Approx. thrust needed for hover
+ */
 PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
+/**
+ * @brief Min. thrust value to output
+ */
 PARAM_ADD(PARAM_UINT16, thrustMin, &this.thrustMin)
 
+/**
+ * @brief Roll/Pitch absolute limit
+ */
 PARAM_ADD(PARAM_FLOAT, rpLimit,  &rpLimit)
+/**
+ * @brief Maximum X/Y velocity
+ */
 PARAM_ADD(PARAM_FLOAT, xyVelMax, &xyVelMax)
+/**
+ * @brief Maximum Z Velocity
+ */
 PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
 
 PARAM_GROUP_STOP(posCtlPid)

@@ -482,9 +482,22 @@ LOG_GROUP_START(outlierf)
   LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
 LOG_GROUP_STOP(outlierf)
 
+/**
+ * Tuning parameters for the Extended Kalman Filter (EKF)
+ *     estimator
+ */
 PARAM_GROUP_START(kalman)
-  PARAM_ADD(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
+/**
+ * @brief Reset the kalman estimator
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
   PARAM_ADD(PARAM_UINT8, quadIsFlying, &quadIsFlying)
-  PARAM_ADD(PARAM_UINT8, robustTdoa, &robustTdoa)
-  PARAM_ADD(PARAM_UINT8, robustTwr, &robustTwr)
+/**
+ * @brief Nonzero to use robust TDOA method (default: 0)
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, robustTdoa, &robustTdoa)
+/**
+ * @brief Nonzero to use robust TWR method (default: 0)
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, robustTwr, &robustTwr)
 PARAM_GROUP_STOP(kalman)

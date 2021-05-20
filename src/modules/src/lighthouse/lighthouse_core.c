@@ -191,7 +191,7 @@ static void lighthouseUpdateSystemType() {
     // Store new system type
     lighthouseStoragePersistSystemType(systemType);
   }
-  
+
 }
 
 void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
@@ -570,8 +570,21 @@ LOG_ADD(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
 LOG_ADD(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
+/**
+ * Parameters and settings for the Lighthouse positioning system
+ */
 PARAM_GROUP_START(lighthouse)
-PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
-PARAM_ADD(PARAM_UINT8, bsCalibReset, &calibStatusReset)
-PARAM_ADD(PARAM_UINT8, systemType, &systemType)
+/**
+ * @brief Estimation Method: 0:CrossingBeam,  1:Sweep in EKF (default: 1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, method, &estimationMethod)
+/**
+ * @brief Reset calibration data status
+ */
+PARAM_ADD_CORE(PARAM_UINT8, bsCalibReset, &calibStatusReset)
+/**
+ * @brief Lighthouse basestation version: 1: LighthouseV1, 2:LighthouseV2
+ *  (default: 2)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, systemType, &systemType)
 PARAM_GROUP_STOP(lighthouse)

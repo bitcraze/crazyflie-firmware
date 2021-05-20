@@ -126,5 +126,10 @@ static const DeckDriver zranger_deck = {
 DECK_DRIVER(zranger_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
+
+/**
+ * @brief Nonzero if [Z-ranger deck](https://store.bitcraze.io/collections/decks/products/z-ranger-deck) is attached
+*/
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
+
 PARAM_GROUP_STOP(deck)
