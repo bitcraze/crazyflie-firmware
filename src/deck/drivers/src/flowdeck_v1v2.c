@@ -272,7 +272,7 @@ PARAM_GROUP_START(motion)
 /**
  * @brief Nonzero to not push the flow measurement in the EKF (default: 0)
  */
-PARAM_ADD_CORE(PARAM_UINT8, disable, &useFlowDisabled)
+PARAM_ADD(PARAM_UINT8, disable, &useFlowDisabled)
 /**
  * @brief Nonzero to turn on adaptive standard devivation estimation (default: 0)
  */
