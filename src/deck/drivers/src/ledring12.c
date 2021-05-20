@@ -1193,7 +1193,10 @@ PARAM_GROUP_STOP(ring)
 PARAM_GROUP_START(system)
 
 /**
- * @brief Highlight quad in swarm by flashing LEDs of LED ring deck
+ * @brief Highlight quad
+ *
+ * Uses functionality available, such as LEDs to highlight a quad, useful for
+ * swarms.
  */
 PARAM_ADD_CORE(PARAM_UINT8, highlight, &lightSignal.trigger)
 PARAM_GROUP_STOP(system)
