@@ -1162,8 +1162,16 @@ PARAM_ADD_CORE(PARAM_UINT8, solidBlue, &solidBlue)
  */
 PARAM_ADD_CORE(PARAM_UINT8, headlightEnable, &headlightEnable)
 
-PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
-PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
+/**
+ * @brief At what volt the Battery effect indicates empty
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, emptyCharge, &emptyCharge)
+
+
+/**
+ * @brief At what volt the battery effect indicates full
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, fullCharge, &fullCharge)
 
 /**
  * @brief Color to fade to for Fade color effect
@@ -1173,9 +1181,13 @@ PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
  *   bit 32                                 0
  *        00000000 RRRRRRRR GGGGGGGG BBBBBBBB
  */
-PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
+PARAM_ADD_CORE(PARAM_UINT32, fadeColor, &fadeColor)
 
-PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
+/**
+ * @brief The time for face effect to complete
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, fadeTime, &fadeTime)
+
 PARAM_GROUP_STOP(ring)
 
 PARAM_GROUP_START(system)
