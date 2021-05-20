@@ -252,7 +252,7 @@ PARAM_ADD_CORE(PARAM_UINT8, posSet, &posSetMode)
 /**
  * @brief Carefree(0), plusmode(1), xmode(2)
 */
-PARAM_ADD_CORE(PARAM_UINT8, yawMode, &yawMode)
+PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
 
 /**
  * Stabilization type for roll: rate(0) or angle(1)
