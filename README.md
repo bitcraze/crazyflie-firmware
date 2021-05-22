@@ -1,22 +1,33 @@
-# Crazyflie Firmware  [![CI](https://github.com/bitcraze/crazyflie-firmware/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-firmware/actions?query=workflow%3ACI)
+English | [中文](./README.zh-CN.md)
+## ✨Introduction
+This repo contains the source code of [*Swarm Ranging Protocol*](http://twinhorse.net/papers/SZLLW-INFOCOM21p.pdf), a UWB ranging protocol for dynamic and dense swarm of robots and devices.
 
-This project contains the source code for the firmware used in the Crazyflie range of platforms, including the Crazyflie 2.X and the Roadrunner.
+This repo is forked from the [Official Firmware](https://github.com/bitcraze/crazyflie-firmware) and all our work is stored in the `crazyflie-firmware/src/deck/drivers/src/swarming` folder.
 
-### Crazyflie 1.0 support
+## 🔨Build
 
-The 2017.06 release was the last release with Crazyflie 1.0 support. If you want
-to play with the Crazyflie 1.0 and modify the code, please clone this repo and
-branch off from the 2017.06 tag.
+Clone this repository.
 
-## Building and Flashing
-See the [building and flashing instructions](docs/building-and-flashing/build.md) in the github docs folder.
+```
+git clone --recursive https://github.com/SEU-NetSI/crazyflie-firmware.git
+```
 
+Go to the `swarming` folder.
 
-## Official Documentation
+```
+cd crazyflie-firmware/src/deck/drivers/src/swarming
+```
 
-Check out the [Bitcraze crazyflie-firmware documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/) on our website.
+Build the firmware.
 
+```
+make clean
+make
+```
 
-## License
+Flash the **cf2.bin**.
 
-The code is licensed under LGPL-3.0
+```
+cfloader flash path/to/cf2.bin stm32-fw
+```
+
