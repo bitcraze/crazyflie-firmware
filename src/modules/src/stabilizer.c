@@ -457,13 +457,38 @@ LOG_ADD(LOG_INT16, ay, &setpointCompressed.ay)
 LOG_ADD(LOG_INT16, az, &setpointCompressed.az)
 LOG_GROUP_STOP(ctrltargetZ)
 
+/**
+ * Logs to set the estimator and controller type
+ * for the stabilizer module
+ */
 LOG_GROUP_START(stabilizer)
+/**
+ * @brief Estimated roll
+ *   Note: Same as stateEstimate.roll
+ */
 LOG_ADD(LOG_FLOAT, roll, &state.attitude.roll)
+/**
+ * @brief Estimated pitch
+ *   Note: Same as stateEstimate.pitch
+ */
 LOG_ADD(LOG_FLOAT, pitch, &state.attitude.pitch)
+/**
+ * @brief Estimated yaw
+ *   Note: same as stateEstimate.yaw
+ */
 LOG_ADD(LOG_FLOAT, yaw, &state.attitude.yaw)
+/**
+ * @brief Current thrust
+ */
 LOG_ADD(LOG_FLOAT, thrust, &control.thrust)
-
+/**
+ * @brief Rate of stabilizer loop
+ */
 STATS_CNT_RATE_LOG_ADD(rtStab, &stabilizerRate)
+/**
+ * @brief Latency from sampling of sensor to motor output
+ *    Note: Used for debugging but could also be used as a system test 
+ */
 LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
