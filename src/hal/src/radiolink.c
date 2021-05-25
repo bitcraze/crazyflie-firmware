@@ -256,6 +256,6 @@ static int radiolinkSetEnable(bool enable)
 }
 
 LOG_GROUP_START(radio)
-LOG_ADD(LOG_UINT8, rssi, &rssi)
-LOG_ADD(LOG_UINT8, isConnected, &isConnected)
+LOG_ADD_CORE(LOG_UINT8, rssi, &rssi)
+LOG_ADD_CORE(LOG_UINT8, isConnected, &isConnected)
 LOG_GROUP_STOP(radio)
