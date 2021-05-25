@@ -325,17 +325,54 @@ PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
 
 PARAM_GROUP_STOP(health)
 
+/**
+ * Logging of the result from the health checks.
+ */
 LOG_GROUP_START(health)
+/**
+ * @brief Variance test result of accel. axis X on motor 1
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM1, &accVarX[0])
+/**
+ * @brief Variance test result of accel. axis Y on motor 1
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM1, &accVarY[0])
+/**
+ * @brief Variance test result of accel. axis X on motor 2
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM2, &accVarX[1])
+/**
+ * @brief Variance test result of accel. axis Y on motor 2
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM2, &accVarY[1])
+/**
+ * @brief Variance test result of accel. axis X on motor 3
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM3, &accVarX[2])
+/**
+ * @brief Variance test result of accel. axis Y on motor 3
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM3, &accVarY[2])
+/**
+ * @brief Variance test result of accel. axis X on motor 4
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM4, &accVarX[3])
+/**
+ * @brief Variance test result of accel. axis Y on motor 4
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
-LOG_ADD(LOG_UINT8, motorPass, &motorPass)
+/**
+ * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 ...]
+ */
+LOG_ADD_CORE(LOG_UINT8, motorPass, &motorPass)
+/**
+ * @brief Battery voltage sag test result. [V]
+ */
 LOG_ADD(LOG_FLOAT, batterySag, &batterySag)
-LOG_ADD(LOG_UINT8, batteryPass, &batteryPass)
+/**
+ * @brief Battery test result. Nonzero if OK.
+ */
+LOG_ADD_CORE(LOG_UINT8, batteryPass, &batteryPass)
+// Not useful other then for debugging. Remove
 LOG_ADD(LOG_UINT16, motorTestCount, &motorTestCount)
 LOG_GROUP_STOP(health)

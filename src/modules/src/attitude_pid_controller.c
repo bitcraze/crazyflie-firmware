@@ -162,27 +162,87 @@ void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t*
   *yaw = yawOutput;
 }
 
+/**
+ *  Log variables of attitude PID controller
+ */ 
 LOG_GROUP_START(pid_attitude)
+/**
+ * @brief Propertional output roll
+ */
 LOG_ADD(LOG_FLOAT, roll_outP, &pidRoll.outP)
+/**
+ * @brief Integral output roll
+ */
 LOG_ADD(LOG_FLOAT, roll_outI, &pidRoll.outI)
+/**
+ * @brief Derivative output roll
+ */
 LOG_ADD(LOG_FLOAT, roll_outD, &pidRoll.outD)
+/**
+ * @brief Propertional output pitch
+ */
 LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitch.outP)
+/**
+ * @brief Intergral output pitch
+ */
 LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitch.outI)
+/**
+ * @brief Derivative output pitch
+ */
 LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitch.outD)
+/**
+ * @brief Propertional output yaw
+ */
 LOG_ADD(LOG_FLOAT, yaw_outP, &pidYaw.outP)
+/**
+ * @brief Intergal output yaw
+ */
 LOG_ADD(LOG_FLOAT, yaw_outI, &pidYaw.outI)
+/**
+ * @brief Derivative output yaw
+ */
 LOG_ADD(LOG_FLOAT, yaw_outD, &pidYaw.outD)
 LOG_GROUP_STOP(pid_attitude)
 
+/**
+ *  Log variables of attitude rate PID controller
+ */
 LOG_GROUP_START(pid_rate)
+/**
+ * @brief Propertional output roll rate
+ */
 LOG_ADD(LOG_FLOAT, roll_outP, &pidRollRate.outP)
+/**
+ * @brief Intergral output roll rate
+ */
 LOG_ADD(LOG_FLOAT, roll_outI, &pidRollRate.outI)
+/**
+ * @brief Derivative output roll rate
+ */
 LOG_ADD(LOG_FLOAT, roll_outD, &pidRollRate.outD)
+/**
+ * @brief Propertional output pitch rate
+ */
 LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitchRate.outP)
+/**
+ * @brief Intergral output pitch rate
+ */
 LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitchRate.outI)
+/**
+ * @brief Derivative output pitch rate
+ */
 LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitchRate.outD)
+/**
+ * @brief Propertional output yaw rate
+ */
 LOG_ADD(LOG_FLOAT, yaw_outP, &pidYawRate.outP)
+/**
+ * @brief Intergral output yaw rate
+ */
 LOG_ADD(LOG_FLOAT, yaw_outI, &pidYawRate.outI)
+/**
+ * @brief Derivative output yaw rate
+ */
 LOG_ADD(LOG_FLOAT, yaw_outD, &pidYawRate.outD)
 LOG_GROUP_STOP(pid_rate)
 

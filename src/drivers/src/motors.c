@@ -374,9 +374,24 @@ void motorsPlayMelody(uint16_t *notes)
     motorsPlayTone(note, duration);
   } while (duration != 0);
 }
+/**
+ * Logging variables of the motors PWM output
+ */
 LOG_GROUP_START(pwm)
+/**
+ * @brief Current motor 1 PWM output
+ */ 
 LOG_ADD(LOG_UINT32, m1_pwm, &motor_ratios[0])
+/**
+ * @brief Current motor 2 PWM output
+ */ 
 LOG_ADD(LOG_UINT32, m2_pwm, &motor_ratios[1])
+/**
+ * @brief Current motor 3 PWM output
+ */ 
 LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
+/**
+ * @brief Current motor 4 PWM output
+ */ 
 LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
 LOG_GROUP_STOP(pwm)

@@ -233,34 +233,106 @@ void positionControllerResetAllPID()
   pidReset(&this.pidVZ.pid);
 }
 
+/**
+ * Log variables of the PID position controller
+ * Note: rename to posCtrlPID ?
+ */
 LOG_GROUP_START(posCtl)
 
+/**
+ * @brief PID controller target desired velocity x [m/s]
+ * Note: Same as stabilizer log
+ */
 LOG_ADD(LOG_FLOAT, targetVX, &this.pidVX.pid.desired)
+/**
+ * @brief PID controller target desired velocity y [m/s]
+ * Note: Same as stabilizer log
+ */
 LOG_ADD(LOG_FLOAT, targetVY, &this.pidVY.pid.desired)
+/**
+ * @brief PID controller target desired velocity z [m/s]
+ * Note: Same as stabilizer log
+ */
 LOG_ADD(LOG_FLOAT, targetVZ, &this.pidVZ.pid.desired)
-
+/**
+ * @brief PID controller target desired position x [m]
+ * Note: Same as stabilizer log
+ */
 LOG_ADD(LOG_FLOAT, targetX, &this.pidX.pid.desired)
+/**
+ * @brief PID controller target desired position y [m]
+ * Note: Same as stabilizer log
+ */
 LOG_ADD(LOG_FLOAT, targetY, &this.pidY.pid.desired)
+/**
+ * @brief PID controller target desired position z [m]
+ * Note: Same as stabilizer log
+ */
 LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.pid.desired)
 
+/**
+ * @brief PID propertional output position x
+ */
 LOG_ADD(LOG_FLOAT, Xp, &this.pidX.pid.outP)
+/**
+ * @brief PID Intergral output position x
+ */
 LOG_ADD(LOG_FLOAT, Xi, &this.pidX.pid.outI)
+/**
+ * @brief PID Derivative output position x
+ */
 LOG_ADD(LOG_FLOAT, Xd, &this.pidX.pid.outD)
 
+/**
+ * @brief PID propertional output position y
+ */
 LOG_ADD(LOG_FLOAT, Yp, &this.pidY.pid.outP)
+/**
+ * @brief PID Intergral output position y
+ */
 LOG_ADD(LOG_FLOAT, Yi, &this.pidY.pid.outI)
+/**
+ * @brief PID Derivative output position y
+ */
 LOG_ADD(LOG_FLOAT, Yd, &this.pidY.pid.outD)
 
+/**
+ * @brief PID propertional output position z
+ */
 LOG_ADD(LOG_FLOAT, Zp, &this.pidZ.pid.outP)
+/**
+ * @brief PID Intergral output position z
+ */
 LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
+/**
+ * @brief PID derivative output position z
+ */
 LOG_ADD(LOG_FLOAT, Zd, &this.pidZ.pid.outD)
 
+/**
+ * @brief PID propertional output velocity x
+ */
 LOG_ADD(LOG_FLOAT, VXp, &this.pidVX.pid.outP)
+/**
+ * @brief PID intergral output velocity x
+ */
 LOG_ADD(LOG_FLOAT, VXi, &this.pidVX.pid.outI)
+/**
+ * @brief PID derivative output velocity x
+ */
 LOG_ADD(LOG_FLOAT, VXd, &this.pidVX.pid.outD)
 
+/**
+ * @brief PID propertional output velocity z
+ */
 LOG_ADD(LOG_FLOAT, VZp, &this.pidVZ.pid.outP)
+/**
+ * @brief PID intergral output velocity z
+ */
 LOG_ADD(LOG_FLOAT, VZi, &this.pidVZ.pid.outI)
+/**
+ * @brief PID intrgral output velocity z
+ */
 LOG_ADD(LOG_FLOAT, VZd, &this.pidVZ.pid.outD)
 
 LOG_GROUP_STOP(posCtl)

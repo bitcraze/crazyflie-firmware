@@ -461,14 +461,14 @@ STATS_CNT_RATE_LOG_ADD(posRt, &positionRate)
 STATS_CNT_RATE_LOG_ADD(estBs0Rt, &estBs0Rate)
 STATS_CNT_RATE_LOG_ADD(estBs1Rt, &estBs1Rate)
 
-LOG_ADD(LOG_FLOAT, x, &positionLog[0])
-LOG_ADD(LOG_FLOAT, y, &positionLog[1])
-LOG_ADD(LOG_FLOAT, z, &positionLog[2])
+LOG_ADD_CORE(LOG_FLOAT, x, &positionLog[0])
+LOG_ADD_CORE(LOG_FLOAT, y, &positionLog[1])
+LOG_ADD_CORE(LOG_FLOAT, z, &positionLog[2])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
-LOG_ADD(LOG_UINT16, bsGeoVal, &lighthouseCoreState.baseStationGeoValidMap)
-LOG_ADD(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
+LOG_ADD_CORE(LOG_UINT16, bsGeoVal, &lighthouseCoreState.baseStationGeoValidMap)
+LOG_ADD_CORE(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
 
 LOG_GROUP_STOP(lighthouse)
 

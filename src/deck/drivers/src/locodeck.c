@@ -585,7 +585,7 @@ DECK_DRIVER(dwm1000_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Loco positioning deck](https://store.bitcraze.io/collections/decks/products/loco-positioning-deck) is attached
+ * @brief Nonzero if [Loco positioning deck](https://store.bitcraze.io/products/loco-positioning-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
 
@@ -595,8 +595,22 @@ LOG_GROUP_START(ranging)
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
 LOG_GROUP_STOP(ranging)
 
+/**
+ * Log group for basic information about the Loco Positioning System
+ */
 LOG_GROUP_START(loco)
-LOG_ADD(LOG_UINT8, mode, &algoOptions.currentRangingMode)
+
+/**
+ * @brief The current mode of the Loco Positionning system
+ *
+* Value | Mode
+ * --------------
+ *   1   | TWR
+ *   2   | TDoA 2
+ *   3   | TDoA 3
+ */
+LOG_ADD_CORE(LOG_UINT8, mode, &algoOptions.currentRangingMode)
+
 STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
 STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
 LOG_GROUP_STOP(loco)

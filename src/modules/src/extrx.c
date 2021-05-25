@@ -177,14 +177,42 @@ static void extRxDecodeSpektrum(void)
 
 /* Loggable variables */
 #ifdef ENABLE_EXTRX_LOG
+/**
+ * External receiver (RX) log group. This contains received raw
+ * channel data as well as RPTY data after it has been converted.
+ */
 LOG_GROUP_START(extrx)
+/**
+ * @brief External RX received channel 0 value
+ */
 LOG_ADD(LOG_UINT16, ch0, &ch[0])
+/**
+ * @brief External RX received channel 1 value
+ */
 LOG_ADD(LOG_UINT16, ch1, &ch[1])
+/**
+ * @brief External RX received channel 2 value
+ */
 LOG_ADD(LOG_UINT16, ch2, &ch[2])
+/**
+ * @brief External RX received channel 3 value
+ */
 LOG_ADD(LOG_UINT16, ch3, &ch[3])
+/**
+ * @brief External RX channel converted to thrust
+ */
 LOG_ADD(LOG_UINT16, thrust, &extrxSetpoint.thrust)
+/**
+ * @brief External RX channel converted to roll
+ */
 LOG_ADD(LOG_FLOAT, roll, &extrxSetpoint.attitude.roll)
+/**
+ * @brief External RX channel converted to pitch
+ */
 LOG_ADD(LOG_FLOAT, pitch, &extrxSetpoint.attitude.pitch)
+/**
+ * @brief External RX channel converted to yaw
+ */
 LOG_ADD(LOG_FLOAT, yaw, &extrxSetpoint.attitude.yaw)
 LOG_GROUP_STOP(extrx)
 #endif

@@ -124,8 +124,20 @@ void supervisorUpdate(const sensorData_t *data)
   canFly = canFlyCheck();
 }
 
+/**
+ *  System loggable variables to check different system states.
+ */
 LOG_GROUP_START(sys)
-LOG_ADD(LOG_UINT8, canfly, &canFly)
-LOG_ADD(LOG_UINT8, isFlying, &isFlying)
-LOG_ADD(LOG_UINT8, isTumbled, &isTumbled)
+/**
+ * @brief If nonzero if system is ready to fly.
+ */
+LOG_ADD_CORE(LOG_UINT8, canfly, &canFly)
+/**
+ * @brief Nonzero if the system think it is flying
+ */
+LOG_ADD_CORE(LOG_UINT8, isFlying, &isFlying)
+/**
+ * @brief Nonzero if the system think it is tumbled/crashed
+ */
+LOG_ADD_CORE(LOG_UINT8, isTumbled, &isTumbled)
 LOG_GROUP_STOP(sys)
