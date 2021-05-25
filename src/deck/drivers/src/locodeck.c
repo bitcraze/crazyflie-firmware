@@ -609,7 +609,7 @@ LOG_GROUP_START(loco)
  *   2   | TDoA 2
  *   3   | TDoA 3
  */
-LOG_ADD(LOG_UINT8, mode, &algoOptions.currentRangingMode)
+LOG_ADD_CORE(LOG_UINT8, mode, &algoOptions.currentRangingMode)
 
 STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
 STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
