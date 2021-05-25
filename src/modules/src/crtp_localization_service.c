@@ -422,7 +422,7 @@ LOG_GROUP_START(locSrvZ)
 /**
  * @brief time when data was received last (ms/ticks)
  */ 
-  LOG_ADD(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)
+  LOG_ADD_CORE(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)
 LOG_GROUP_STOP(locSrvZ)
 
 /**
