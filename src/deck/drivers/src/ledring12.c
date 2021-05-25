@@ -673,7 +673,18 @@ static float currentFadeTime = 0.5;
 
 #include "log.h"
 
+/**
+ * The logs for the LED ring expansion deck contains two powerful front-facing white LEDs
+ * and 12 bottom-facing RGB individually addressable LEDs (it uses the same
+ * LEDs as used in the NeoPixel products by Adafruit).
+ *
+ * The deck is designed to be installed as the last deck on the bottom of the
+ * quad. It does not have pass-through holes for the expansion port connector.
+ */
 LOG_GROUP_START(ring)
+/**
+ * @brief Current fade time of fade color effect
+ */ 
 LOG_ADD(LOG_FLOAT, fadeTime, &currentFadeTime)
 LOG_GROUP_STOP(ring)
 
