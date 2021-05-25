@@ -71,7 +71,9 @@ STATS_CNT_RATE_LOG_ADD(stCc, &tdoaEngineState.stats.clockCorrectionCount)
 STATS_CNT_RATE_LOG_ADD(stHit, &tdoaEngineState.stats.contextHitCount)
 
 /**
- * @brief Rate of misses when looking up anchor contexts for packets [1/s]. If this number is high, the CF is receiving packets from more anchors than can be stored in the TDoA storage.
+ * @brief Rate of misses when looking up anchor contexts for packets [1/s].
+ *
+ * If this number is high, the CF is receiving packets from more anchors than can be stored in the TDoA storage.
  */
 STATS_CNT_RATE_LOG_ADD(stMiss, &tdoaEngineState.stats.contextMissCount)
 
@@ -81,12 +83,16 @@ STATS_CNT_RATE_LOG_ADD(stMiss, &tdoaEngineState.stats.contextMissCount)
 LOG_ADD(LOG_FLOAT, cc, &tdoaEngineState.stats.clockCorrection)
 
 /**
- * @brief The Time Of Flight from anchor A to anchor B (including antenna delay), as measured by anchor A [UWB radio ticks]. A is selected using the tdoaEngine.logId parameter and B is selected by tdoaEngine.logOthrId.
+ * @brief The Time Of Flight from anchor A to anchor B (including antenna delay), as measured by anchor A [UWB radio ticks].
+ *
+ * A is selected using the tdoaEngine.logId parameter and B is selected by tdoaEngine.logOthrId.
  */
 LOG_ADD(LOG_UINT16, tof, &tdoaEngineState.stats.tof)
 
 /**
- * @brief The difference in distance to anchor A and B, as measured by the Crazyflie [m]. A is selected using the tdoaEngine.logId parameter and B is selected by tdoaEngine.logOthrId.
+ * @brief The difference in distance to anchor A and B, as measured by the Crazyflie [m].
+ *
+ * A is selected using the tdoaEngine.logId parameter and B is selected by tdoaEngine.logOthrId.
  */
 LOG_ADD(LOG_FLOAT, tdoa, &tdoaEngineState.stats.tdoa)
 LOG_GROUP_STOP(tdoaEngine)

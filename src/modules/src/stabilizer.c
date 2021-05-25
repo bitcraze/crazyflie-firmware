@@ -578,17 +578,17 @@ LOG_GROUP_STOP(controller)
 LOG_GROUP_START(stateEstimate)
 
 /**
- * @brief The position of the Crazyflie in the global reference frame, X [m]
+ * @brief The estimated position of the platform in the global reference frame, X [m]
  */
 LOG_ADD(LOG_FLOAT, x, &state.position.x)
 
 /**
- * @brief The position of the Crazyflie in the global reference frame, Y [m]
+ * @brief The estimated position of the platform in the global reference frame, Y [m]
  */
 LOG_ADD(LOG_FLOAT, y, &state.position.y)
 
 /**
- * @brief The position of the Crazyflie in the global reference frame, Z [m]
+ * @brief The estimated position of the platform in the global reference frame, Z [m]
  */
 LOG_ADD(LOG_FLOAT, z, &state.position.z)
 

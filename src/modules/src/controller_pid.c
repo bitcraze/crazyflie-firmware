@@ -153,12 +153,12 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
 }
 
 /**
- * Logging variables for the command and reference signals for the 
+ * Logging variables for the command and reference signals for the
  * altitude PID controller
  */
 LOG_GROUP_START(controller)
 /**
- * @brief Trust command
+ * @brief Thrust command
  */
 LOG_ADD(LOG_FLOAT, cmd_thrust, &cmd_thrust)
 /**

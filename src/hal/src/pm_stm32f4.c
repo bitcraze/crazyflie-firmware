@@ -436,7 +436,15 @@ LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)
  */
 LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 /**
- * @brief PM state [battery=0, charging=1, charged=2, lowPower=3, shutDown=4]
+ * @brief State of power management
+ *
+ * State | Meaning
+ * ------------------
+ * 0     | Battery
+ * 1     | Charging
+ * 2     | Charged
+ * 3     | Low power
+ * 4     | Shutdown
  */
 LOG_ADD(LOG_INT8, state, &pmState)
 /**
