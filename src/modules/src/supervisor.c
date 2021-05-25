@@ -131,13 +131,13 @@ LOG_GROUP_START(sys)
 /**
  * @brief If nonzero if system is ready to fly.
  */
-LOG_ADD(LOG_UINT8, canfly, &canFly)
+LOG_ADD_CORE(LOG_UINT8, canfly, &canFly)
 /**
  * @brief Nonzero if the system think it is flying
  */
-LOG_ADD(LOG_UINT8, isFlying, &isFlying)
+LOG_ADD_CORE(LOG_UINT8, isFlying, &isFlying)
 /**
  * @brief Nonzero if the system think it is tumbled/crashed
  */
-LOG_ADD(LOG_UINT8, isTumbled, &isTumbled)
+LOG_ADD_CORE(LOG_UINT8, isTumbled, &isTumbled)
 LOG_GROUP_STOP(sys)
