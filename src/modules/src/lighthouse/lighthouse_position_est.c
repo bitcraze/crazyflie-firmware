@@ -265,7 +265,7 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
     if (isfinite(ext_pos.pos[0]) && isfinite(ext_pos.pos[1]) && isfinite(ext_pos.pos[2])) {
       ext_pos.stdDev = 0.01;
       ext_pos.source = MeasurementSourceLighthouse;
-  #ifdef LIGHTHOUSE_AS_GROUNDTRUTH
+  #ifndef LIGHTHOUSE_AS_GROUNDTRUTH
       estimatorEnqueuePosition(&ext_pos);
   #endif
     }
