@@ -550,17 +550,17 @@ LOG_GROUP_START(gyro)
 /**
  * @brief Angular velocity (rotation) around the X-axis, after filtering [deg/s]
  */
-LOG_ADD(LOG_FLOAT, x, &sensorData.gyro.x)
+LOG_ADD_CORE(LOG_FLOAT, x, &sensorData.gyro.x)
 
 /**
  * @brief Angular velocity (rotation) around the Y-axis, after filtering [deg/s]
  */
-LOG_ADD(LOG_FLOAT, y, &sensorData.gyro.y)
+LOG_ADD_CORE(LOG_FLOAT, y, &sensorData.gyro.y)
 
 /**
  * @brief Angular velocity (rotation) around the Z-axis, after filtering [deg/s]
  */
-LOG_ADD(LOG_FLOAT, z, &sensorData.gyro.z)
+LOG_ADD_CORE(LOG_FLOAT, z, &sensorData.gyro.z)
 LOG_GROUP_STOP(gyro)
 
 #ifdef LOG_SEC_IMU
