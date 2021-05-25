@@ -343,62 +343,62 @@ LOG_GROUP_START(ctrltarget)
 /**
  * @brief Desired position X [m]
  */
-LOG_ADD(LOG_FLOAT, x, &setpoint.position.x)
+LOG_ADD_CORE(LOG_FLOAT, x, &setpoint.position.x)
 
 /**
  * @brief Desired position Y [m]
  */
-LOG_ADD(LOG_FLOAT, y, &setpoint.position.y)
+LOG_ADD_CORE(LOG_FLOAT, y, &setpoint.position.y)
 
 /**
  * @brief Desired position X [m]
  */
-LOG_ADD(LOG_FLOAT, z, &setpoint.position.z)
+LOG_ADD_CORE(LOG_FLOAT, z, &setpoint.position.z)
 
 /**
  * @brief Desired velocity X [m/s]
  */
-LOG_ADD(LOG_FLOAT, vx, &setpoint.velocity.x)
+LOG_ADD_CORE(LOG_FLOAT, vx, &setpoint.velocity.x)
 
 /**
  * @brief Desired velocity Y [m/s]
  */
-LOG_ADD(LOG_FLOAT, vy, &setpoint.velocity.y)
+LOG_ADD_CORE(LOG_FLOAT, vy, &setpoint.velocity.y)
 
 /**
  * @brief Desired velocity Z [m/s]
  */
-LOG_ADD(LOG_FLOAT, vz, &setpoint.velocity.z)
+LOG_ADD_CORE(LOG_FLOAT, vz, &setpoint.velocity.z)
 
 /**
  * @brief Desired acceleration X [m/s^2]
  */
-LOG_ADD(LOG_FLOAT, ax, &setpoint.acceleration.x)
+LOG_ADD_CORE(LOG_FLOAT, ax, &setpoint.acceleration.x)
 
 /**
  * @brief Desired acceleration Y [m/s^2]
  */
-LOG_ADD(LOG_FLOAT, ay, &setpoint.acceleration.y)
+LOG_ADD_CORE(LOG_FLOAT, ay, &setpoint.acceleration.y)
 
 /**
  * @brief Desired acceleration Z [m/s^2]
  */
-LOG_ADD(LOG_FLOAT, az, &setpoint.acceleration.z)
+LOG_ADD_CORE(LOG_FLOAT, az, &setpoint.acceleration.z)
 
 /**
  * @brief Desired attitude, roll [deg]
  */
-LOG_ADD(LOG_FLOAT, roll, &setpoint.attitude.roll)
+LOG_ADD_CORE(LOG_FLOAT, roll, &setpoint.attitude.roll)
 
 /**
  * @brief Desired attitude, pitch [deg]
  */
-LOG_ADD(LOG_FLOAT, pitch, &setpoint.attitude.pitch)
+LOG_ADD_CORE(LOG_FLOAT, pitch, &setpoint.attitude.pitch)
 
 /**
  * @brief Desired attitude rate, yaw rate [deg/s]
  */
-LOG_ADD(LOG_FLOAT, yaw, &setpoint.attitudeRate.yaw)
+LOG_ADD_CORE(LOG_FLOAT, yaw, &setpoint.attitudeRate.yaw)
 LOG_GROUP_STOP(ctrltarget)
 
 /**
