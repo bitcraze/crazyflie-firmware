@@ -676,6 +676,7 @@ static float currentFadeTime = 0.5;
 LOG_GROUP_START(ring)
 LOG_ADD(LOG_FLOAT, fadeTime, &currentFadeTime)
 LOG_GROUP_STOP(ring)
+
 static void fadeColorEffect(uint8_t buffer[][3], bool reset)
 {
   static float currentRed = 255;
