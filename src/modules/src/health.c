@@ -364,7 +364,7 @@ LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
 /**
  * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 ...]
  */
-LOG_ADD(LOG_UINT8, motorPass, &motorPass)
+LOG_ADD_CORE(LOG_UINT8, motorPass, &motorPass)
 /**
  * @brief Battery voltage sag test result. [V]
  */
@@ -372,7 +372,7 @@ LOG_ADD(LOG_FLOAT, batterySag, &batterySag)
 /**
  * @brief Battery test result. Nonzero if OK.
  */
-LOG_ADD(LOG_UINT8, batteryPass, &batteryPass)
+LOG_ADD_CORE(LOG_UINT8, batteryPass, &batteryPass)
 // Not useful other then for debugging. Remove
 LOG_ADD(LOG_UINT16, motorTestCount, &motorTestCount)
 LOG_GROUP_STOP(health)
