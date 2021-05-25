@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_ltdc.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
   *          functionalities of the LTDC controller (LTDC) peripheral:
   *           + Initialization and configuration
@@ -38,16 +38,16 @@
           (++) If needed, configure the default color and the blending factors 
                respectively in the LTDC_LxDCCR and LTDC_LxBFCR registers 
 
-          (++) If needed, Dithering and color keying can be be enabled respectively 
+          (++) If needed, Dithering and color keying can be enabled respectively 
                in the LTDC_GCR and LTDC_LxCKCR registers. It can be also enabled 
                on the fly.    
         (#) Enable Layer1/2 and if needed the CLUT in the LTDC_LxCR register 
   
         (#) Reload the shadow registers to active register through 
             the LTDC_SRCR register.
-          -@- All layer parameters can be be modified on the fly except the CLUT. 
+          -@- All layer parameters can be modified on the fly except the CLUT. 
               The new configuration has to be either reloaded immediately 
-              or during vertical blanking period by configuring the LTDC_SRCR register.              
+              or during vertical blanking period by configuring the LTDC_SRCR register.
         (#) Call the LTDC_Cmd() to enable the LTDC controller.
 
     @endverbatim
@@ -55,16 +55,22 @@
   ******************************************************************************
   * @attention
   *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
+  * You may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at:
+  *
+  *        http://www.st.com/software_license_agreement_liberty_v2
+  *
+  * Unless required by applicable law or agreed to in writing, software 
+  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  *
   ******************************************************************************
-  */ 
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_ltdc.h"
@@ -680,7 +686,7 @@ void LTDC_CLUTInit(LTDC_Layer_TypeDef* LTDC_Layerx, LTDC_CLUT_InitTypeDef* LTDC_
 
 void LTDC_CLUTStructInit(LTDC_CLUT_InitTypeDef* LTDC_CLUT_InitStruct)
 {
-  /*!< Initialize the CLUT adress and RGB values */
+  /*!< Initialize the CLUT address and RGB values */
   LTDC_CLUT_InitStruct->LTDC_CLUTAdress = 0x00;
   LTDC_CLUT_InitStruct->LTDC_BlueValue = 0x00;
   LTDC_CLUT_InitStruct->LTDC_GreenValue = 0x00;

@@ -2,10 +2,10 @@
   ******************************************************************************
   * @file    stm32f4xx_cryp.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
-  *          functionalities of the  Cryptographic processor (CRYP) peripheral:           
+  *          functionalities of the  Cryptographic processor (CRYP) peripheral:
   *           + Initialization and Configuration functions
   *           + Data treatment functions 
   *           + Context swapping functions     
@@ -20,7 +20,7 @@
    (#) Enable the CRYP controller clock using 
        RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_CRYP, ENABLE); function.
   
-   (#) Initialise the CRYP using CRYP_Init(), CRYP_KeyInit() and if needed 
+   (#) Initialize the CRYP using CRYP_Init(), CRYP_KeyInit() and if needed 
        CRYP_IVInit(). 
   
    (#) Flush the IN and OUT FIFOs by using CRYP_FIFOFlush() function.
@@ -143,7 +143,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -590,12 +590,12 @@ ErrorStatus CRYP_SaveContext(CRYP_Context* CRYP_ContextSave,
 
 /**
   * @brief  Restores the CRYP peripheral Context.
-  * @note   Since teh DMA transfer is stopped in CRYP_SaveContext() function,
+  * @note   Since the DMA transfer is stopped in CRYP_SaveContext() function,
   *         after restoring the context, you have to enable the DMA again (if the
   *         DMA was previously used).  
   * @param  CRYP_ContextRestore: pointer to a CRYP_Context structure that contains
   *         the repository for saved context.
-  * @note   The data that were saved during context saving must be rewrited into
+  * @note   The data that were saved during context saving must be rewritten into
   *         the IN FIFO.
   * @retval None
   */

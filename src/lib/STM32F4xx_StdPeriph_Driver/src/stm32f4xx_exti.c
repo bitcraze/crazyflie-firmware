@@ -2,33 +2,33 @@
   ******************************************************************************
   * @file    stm32f4xx_exti.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
-  *          functionalities of the EXTI peripheral:           
+  *          functionalities of the EXTI peripheral:
   *           + Initialization and Configuration
   *           + Interrupts and flags management
   *
 @verbatim  
 
- ===================================================================
-                       ##### EXTI features #####
- ===================================================================
+ ===============================================================================
+                              ##### EXTI features #####
+ ===============================================================================
 
  [..] External interrupt/event lines are mapped as following:
    (#) All available GPIO pins are connected to the 16 external 
        interrupt/event lines from EXTI0 to EXTI15.
    (#) EXTI line 16 is connected to the PVD Output
    (#) EXTI line 17 is connected to the RTC Alarm event
-   (#) EXTI line 18 is connected to the USB OTG FS Wakeup from suspend event                                    
+   (#) EXTI line 18 is connected to the USB OTG FS Wakeup from suspend event
    (#) EXTI line 19 is connected to the Ethernet Wakeup event
    (#) EXTI line 20 is connected to the USB OTG HS (configured in FS) Wakeup event 
-   (#) EXTI line 21 is connected to the RTC Tamper and Time Stamp events                                               
+   (#) EXTI line 21 is connected to the RTC Tamper and Time Stamp events
    (#) EXTI line 22 is connected to the RTC Wakeup event
-          
-          
-                ##### How to use this driver #####
- ===================================================================  
+   (#) EXTI line 23 is connected to the LPTIM Wakeup event 
+
+                       ##### How to use this driver #####
+ ===============================================================================
  
  [..] In order to use an I/O pin as an external interrupt source, follow steps 
       below:
@@ -41,13 +41,13 @@
  [..]     
    (@) SYSCFG APB clock must be enabled to get write access to SYSCFG_EXTICRx
        registers using RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-            
-@endverbatim                  
+
+@endverbatim
   *
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@
 @verbatim   
  ===============================================================================
              ##### Initialization and Configuration functions #####
- ===============================================================================  
+ ===============================================================================
 
 @endverbatim
   * @{
@@ -212,7 +212,7 @@ void EXTI_GenerateSWInterrupt(uint32_t EXTI_Line)
 @verbatim   
  ===============================================================================
              ##### Interrupts and flags management functions #####
- ===============================================================================  
+ ===============================================================================
 
 @endverbatim
   * @{
