@@ -414,7 +414,7 @@ LOG_GROUP_START(pm)
 /**
  * @brief Battery voltage [V]
  */
-LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
+LOG_ADD_CORE(LOG_FLOAT, vbat, &batteryVoltage)
 /**
  * @brief Battery voltage [mV]
  */
@@ -446,11 +446,11 @@ LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
  * 3     | Low power
  * 4     | Shutdown
  */
-LOG_ADD(LOG_INT8, state, &pmState)
+LOG_ADD_CORE(LOG_INT8, state, &pmState)
 /**
  * @brief Battery charge level [%]
  */
-LOG_ADD(LOG_UINT8, batteryLevel, &batteryLevel)
+LOG_ADD_CORE(LOG_UINT8, batteryLevel, &batteryLevel)
 #ifdef PM_SYSTLINK_INCLUDE_TEMP
 /**
  * @brief Temperature from nrf51 [degrees]
