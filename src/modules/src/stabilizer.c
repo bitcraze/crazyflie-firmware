@@ -500,17 +500,17 @@ LOG_GROUP_START(acc)
 /**
  * @brief Acceleration in X [Gs]
  */
-LOG_ADD(LOG_FLOAT, x, &sensorData.acc.x)
+LOG_ADD_CORE(LOG_FLOAT, x, &sensorData.acc.x)
 
 /**
  * @brief Acceleration in Y [Gs]
  */
-LOG_ADD(LOG_FLOAT, y, &sensorData.acc.y)
+LOG_ADD_CORE(LOG_FLOAT, y, &sensorData.acc.y)
 
 /**
  * @brief Acceleration in Z [Gs]
  */
-LOG_ADD(LOG_FLOAT, z, &sensorData.acc.z)
+LOG_ADD_CORE(LOG_FLOAT, z, &sensorData.acc.z)
 LOG_GROUP_STOP(acc)
 
 #ifdef LOG_SEC_IMU
