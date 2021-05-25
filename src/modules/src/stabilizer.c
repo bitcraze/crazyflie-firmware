@@ -529,7 +529,7 @@ LOG_GROUP_START(baro)
 /**
  * @brief Altitude above Sea Level [m]
  */
-LOG_ADD(LOG_FLOAT, asl, &sensorData.baro.asl)
+LOG_ADD_CORE(LOG_FLOAT, asl, &sensorData.baro.asl)
 
 /**
  * @brief Temperature [degrees Celsius]
@@ -539,7 +539,7 @@ LOG_ADD(LOG_FLOAT, temp, &sensorData.baro.temperature)
 /**
  * @brief Air preassure [mbar]
  */
-LOG_ADD(LOG_FLOAT, pressure, &sensorData.baro.pressure)
+LOG_ADD_CORE(LOG_FLOAT, pressure, &sensorData.baro.pressure)
 LOG_GROUP_STOP(baro)
 
 /**
