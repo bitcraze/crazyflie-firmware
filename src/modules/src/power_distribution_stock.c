@@ -183,17 +183,17 @@ LOG_GROUP_START(motor)
 /**
  * @brief Motor power (PWM value) for M1 [0 - UINT16_MAX]
  */
-LOG_ADD(LOG_UINT32, m1, &motorPower.m1)
+LOG_ADD_CORE(LOG_UINT32, m1, &motorPower.m1)
 /**
  * @brief Motor power (PWM value) for M2 [0 - UINT16_MAX]
  */
-LOG_ADD(LOG_UINT32, m2, &motorPower.m2)
+LOG_ADD_CORE(LOG_UINT32, m2, &motorPower.m2)
 /**
  * @brief Motor power (PWM value) for M3 [0 - UINT16_MAX]
  */
-LOG_ADD(LOG_UINT32, m3, &motorPower.m3)
+LOG_ADD_CORE(LOG_UINT32, m3, &motorPower.m3)
 /**
  * @brief Motor power (PWM value) for M4 [0 - UINT16_MAX]
  */
-LOG_ADD(LOG_UINT32, m4, &motorPower.m4)
+LOG_ADD_CORE(LOG_UINT32, m4, &motorPower.m4)
 LOG_GROUP_STOP(motor)
