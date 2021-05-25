@@ -770,7 +770,7 @@ LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
  *
  * The lowest bit mapps to base station channel 1 and the highest to channel 16.
  */
-LOG_ADD(LOG_UINT16, bsReceive, &baseStationReceivedMap)
+LOG_ADD_CORE(LOG_UINT16, bsReceive, &baseStationReceivedMap)
 
 /**
  * @brief Bit field indicating which base stations that are providing useful data to the estimator.
@@ -779,21 +779,21 @@ LOG_ADD(LOG_UINT16, bsReceive, &baseStationReceivedMap)
  *
  * The lowest bit mapps to base station channel 1 and the highest to channel 16.
  */
-LOG_ADD(LOG_UINT16, bsActive, &baseStationActiveMap)
+LOG_ADD_CORE(LOG_UINT16, bsActive, &baseStationActiveMap)
 
 /**
  * @brief Bit field that indicates which base stations that have received calibration data that was different to what was stored in memory
  *
  * The lowest bit mapps to base station channel 1 and the highest to channel 16.
  */
-LOG_ADD(LOG_UINT16, bsCalUd, &baseStationCalibUpdatedMap)
+LOG_ADD_CORE(LOG_UINT16, bsCalUd, &baseStationCalibUpdatedMap)
 
 /**
  * @brief Bit field that indicates which base stations that have received calibration data over the air
  *
  * The lowest bit mapps to base station channel 1 and the highest to channel 16.
  */
-LOG_ADD(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
+LOG_ADD_CORE(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
 
 /**
  * @brief Overall status of the lighthouse system
@@ -805,7 +805,7 @@ LOG_ADD(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
  * 2     | Base station data is sent to the state estimator
  *
  */
-LOG_ADD(LOG_UINT8, status, &systemStatus)
+LOG_ADD_CORE(LOG_UINT8, status, &systemStatus)
 LOG_GROUP_STOP(lighthouse)
 
 /**
