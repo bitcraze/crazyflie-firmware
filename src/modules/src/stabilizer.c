@@ -580,15 +580,15 @@ LOG_GROUP_START(mag)
 /**
  * @brief Magnetometer X axis, after filtering [gauss]
  */
-LOG_ADD(LOG_FLOAT, x, &sensorData.mag.x)
+LOG_ADD_CORE(LOG_FLOAT, x, &sensorData.mag.x)
 /**
  * @brief Magnetometer Y axis, after filtering [gauss]
  */
-LOG_ADD(LOG_FLOAT, y, &sensorData.mag.y)
+LOG_ADD_CORE(LOG_FLOAT, y, &sensorData.mag.y)
 /**
  * @brief Magnetometer Z axis, after filtering [gauss]
  */
-LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
+LOG_ADD_CORE(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(controller)
