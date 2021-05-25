@@ -388,31 +388,31 @@ LOG_GROUP_START(locSrv)
 /**
  * @brief Position X measurement from external system 
  */ 
-  LOG_ADD(LOG_FLOAT, x, &ext_pose.x)
+  LOG_ADD_CORE(LOG_FLOAT, x, &ext_pose.x)
 /**
  * @brief Position Y measurement from external system 
  */ 
-  LOG_ADD(LOG_FLOAT, y, &ext_pose.y)
+  LOG_ADD_CORE(LOG_FLOAT, y, &ext_pose.y)
 /**
  * @brief Position Z measurement from external system
  */ 
-  LOG_ADD(LOG_FLOAT, z, &ext_pose.z)
+  LOG_ADD_CORE(LOG_FLOAT, z, &ext_pose.z)
 /**
  * @brief Quaternion x meas from an external system
  */ 
-  LOG_ADD(LOG_FLOAT, qx, &ext_pose.quat.x)
+  LOG_ADD_CORE(LOG_FLOAT, qx, &ext_pose.quat.x)
 /**
  * @brief Quaternion y meas from an external system
  */ 
-  LOG_ADD(LOG_FLOAT, qy, &ext_pose.quat.y)
+  LOG_ADD_CORE(LOG_FLOAT, qy, &ext_pose.quat.y)
 /**
  * @brief Quaternion z meas from an external system
  */ 
-  LOG_ADD(LOG_FLOAT, qz, &ext_pose.quat.z)
+  LOG_ADD_CORE(LOG_FLOAT, qz, &ext_pose.quat.z)
 /**
  * @brief Quaternion w meas from an external system
  */ 
-  LOG_ADD(LOG_FLOAT, qw, &ext_pose.quat.w)
+  LOG_ADD_CORE(LOG_FLOAT, qw, &ext_pose.quat.w)
 LOG_GROUP_STOP(locSrv)
 
 /**
