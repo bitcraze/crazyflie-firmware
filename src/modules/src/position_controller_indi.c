@@ -39,6 +39,9 @@ float K_dxi_z = 5.0f;
 // Thrust mapping parameter
 float K_thr = 0.00024730f;
 
+//Clamping value roll and pitch command
+float pq_clamp = 10.0f;
+
 static float posS_x, posS_y, posS_z;			// Current position
 static float velS_x, velS_y, velS_z;			// Current velocity
 static float gyr_p, gyr_q, gyr_r;				// Current rates
@@ -125,9 +128,6 @@ void positionControllerINDI(const sensorData_t *sensors,
 	velS_x = state->velocity.x;
 	velS_y = -state->velocity.y;
 	velS_z = -state->velocity.z;
-	gyr_p = sensors->gyro.x;
-	gyr_q = sensors->gyro.y;
-	gyr_r = sensors->gyro.z; 
 
 	// Read in velocity setpoints
     velocityRef.x = setpoint->velocity.x;
@@ -162,18 +162,18 @@ void positionControllerINDI(const sensorData_t *sensors,
 	// Filter lin. acceleration 
 	filter_ddxi(indiOuter.ddxi, &indiOuter.linear_accel_s, &indiOuter.linear_accel_f);
 
-	// Obtain actual attitude values (in deg)
-	indiOuter.attitude_s.phi = state->attitude.roll; 
-	indiOuter.attitude_s.theta = state->attitude.pitch;
-	indiOuter.attitude_s.psi = -state->attitude.yaw;
+	// Obtain actual attitude values (in rad)
+	indiOuter.attitude_s.phi = radians(state->attitude.roll); 
+	indiOuter.attitude_s.theta = radians(state->attitude.pitch);
+	indiOuter.attitude_s.psi = -radians(state->attitude.yaw);
 	filter_ang(indiOuter.ang, &indiOuter.attitude_s, &indiOuter.attitude_f);
 
 
 	// Actual attitude (in rad)
 	struct Angles att = {
-		.phi = indiOuter.attitude_f.phi/180*M_PI_F,
-		.theta = indiOuter.attitude_f.theta/180*M_PI_F,
-		.psi = indiOuter.attitude_f.psi/180*M_PI_F,
+		.phi = indiOuter.attitude_f.phi,
+		.theta = indiOuter.attitude_f.theta,
+		.psi = indiOuter.attitude_f.psi,
 	};
 
 	// Compute transformation matrix from body frame (index B) into NED frame (index O)
@@ -193,12 +193,12 @@ void positionControllerINDI(const sensorData_t *sensors,
 	// Elements of the G matrix (see publication for more information) 
 	// ("-" because T points in neg. z-direction, "*9.81" because T/m=a=g, 
 	// negative psi to account for wrong coordinate frame in the implementation of the inner loop)
-	float g11 = (cosf(att.phi)*sinf(-att.psi) - sinf(att.phi)*sinf(att.theta)*cosf(-att.psi))*(-9.81f);
-	float g12 = (cosf(att.phi)*cosf(-att.theta)*cosf(-att.psi))*(-9.81f);
-	float g13 = (sinf(att.phi)*sinf(-att.psi) + cosf(att.phi)*sinf(att.theta)*cosf(-att.psi));
-	float g21 = (-cosf(att.phi)*cosf(-att.psi) - sinf(att.phi)*sinf(att.theta)*sinf(-att.psi))*(-9.81f);
-	float g22 = (cosf(att.phi)*cosf(att.theta)*sinf(-att.psi))*(-9.81f);
-	float g23 = (-sinf(att.phi)*cosf(-att.psi) + cosf(att.phi)*sinf(att.theta)*sinf(-att.psi));
+	float g11 = (cosf(att.phi)*sinf(att.psi) - sinf(att.phi)*sinf(att.theta)*cosf(att.psi))*(-9.81f);
+	float g12 = (cosf(att.phi)*cosf(att.theta)*cosf(att.psi))*(-9.81f);
+	float g13 = (sinf(att.phi)*sinf(att.psi) + cosf(att.phi)*sinf(att.theta)*cosf(att.psi));
+	float g21 = (-cosf(att.phi)*cosf(att.psi) - sinf(att.phi)*sinf(att.theta)*sinf(att.psi))*(-9.81f);
+	float g22 = (cosf(att.phi)*cosf(att.theta)*sinf(att.psi))*(-9.81f);
+	float g23 = (-sinf(att.phi)*cosf(att.psi) + cosf(att.phi)*sinf(att.theta)*sinf(att.psi));
 	float g31 = (-sinf(att.phi)*cosf(att.theta))*(-9.81f);
 	float g32 = (-cosf(att.phi)*sinf(att.theta))*(-9.81f);
 	float g33 = (cosf(att.phi)*cosf(att.theta));
@@ -252,22 +252,21 @@ void positionControllerINDI(const sensorData_t *sensors,
 	indiOuter.T_inner = indiOuter.T_inner + indiOuter.act_dyn_posINDI*(indiOuter.T_inner_f - indiOuter.T_inner); 
 
 	// Compute trust that goes into the inner loop
-		indiOuter.T_incremented = indiOuter.T_tilde + indiOuter.T_inner;
+	indiOuter.T_incremented = indiOuter.T_tilde + indiOuter.T_inner;
 
 	// Compute commanded attitude to the inner INDI
-	indiOuter.attitude_c.phi = indiOuter.attitude_f.phi + indiOuter.phi_tilde*180/M_PI_F;
-	indiOuter.attitude_c.theta = indiOuter.attitude_f.theta + indiOuter.theta_tilde*180/M_PI_F;
+	indiOuter.attitude_c.phi = indiOuter.attitude_f.phi + indiOuter.phi_tilde;
+	indiOuter.attitude_c.theta = indiOuter.attitude_f.theta + indiOuter.theta_tilde;
 
 	// Clamp commands
 	indiOuter.T_incremented = clamp(indiOuter.T_incremented, MIN_THRUST, MAX_THRUST);
-	indiOuter.attitude_c.phi = clamp(indiOuter.attitude_c.phi, -10.0f, 10.0f);
-	indiOuter.attitude_c.theta = clamp(indiOuter.attitude_c.theta, -10.0f, 10.0f);
+	indiOuter.attitude_c.phi = clamp(indiOuter.attitude_c.phi, -radians(pq_clamp), radians(pq_clamp));
+	indiOuter.attitude_c.theta = clamp(indiOuter.attitude_c.theta, -radians(pq_clamp), radians(pq_clamp));
 
 	// Reference values, which are passed to the inner loop INDI (attitude controller)
 	refOuterINDI->x = indiOuter.attitude_c.phi;
 	refOuterINDI->y = indiOuter.attitude_c.theta;
 	refOuterINDI->z = indiOuter.T_incremented;
-
 }
 
 /**
@@ -303,10 +302,12 @@ PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
  * @brief INDI velocity controller Z propertional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
+/**
+ * @brief Clamping value for the INDI roll and pitch command to inner loop [degrees]
+ */
+PARAM_ADD(PARAM_FLOAT, pq_clamping, &pq_clamp)
 
 PARAM_GROUP_STOP(posCtrlIndi)
-
-
 
 LOG_GROUP_START(posCtrlIndi)
 
