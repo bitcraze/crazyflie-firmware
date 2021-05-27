@@ -44,7 +44,6 @@ float pq_clamp = 10.0f;
 
 static float posS_x, posS_y, posS_z;			// Current position
 static float velS_x, velS_y, velS_z;			// Current velocity
-static float gyr_p, gyr_q, gyr_r;				// Current rates
 
 // Reference values
 static struct Vectr positionRef; 
@@ -302,8 +301,9 @@ PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
  * @brief INDI velocity controller Z propertional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
+
 /**
- * @brief Clamping value for the INDI roll and pitch command to inner loop [degrees]
+ * @brief INDI Clamping value for the INDI roll and pitch command to inner loop [degrees]
  */
 PARAM_ADD(PARAM_FLOAT, pq_clamping, &pq_clamp)
 
@@ -311,64 +311,169 @@ PARAM_GROUP_STOP(posCtrlIndi)
 
 LOG_GROUP_START(posCtrlIndi)
 
-// Angular veocity
-LOG_ADD(LOG_FLOAT, gyr_p, &gyr_p)
-LOG_ADD(LOG_FLOAT, gyr_q, &gyr_q)
-LOG_ADD(LOG_FLOAT, gyr_r, &gyr_r)
-
+/**
+ * @brief INDI position reference input x [m]
+ */
 LOG_ADD(LOG_FLOAT, posRef_x, &positionRef.x)
+/**
+ * @brief INDI position reference input y [m]
+ */
 LOG_ADD(LOG_FLOAT, posRef_y, &positionRef.y)
+/**
+ * @brief INDI position reference input z [m]
+ */
 LOG_ADD(LOG_FLOAT, posRef_z, &positionRef.z)
 
-// Velocity
+/**
+ * @brief INDI current velocity x [m/s]
+ */
 LOG_ADD(LOG_FLOAT, velS_x, &velS_x)
+/**
+ * @brief INDI current velocity y [m/s]
+ */
 LOG_ADD(LOG_FLOAT, velS_y, &velS_y)
+/**
+ * @brief INDI current velocity z [m/s]
+ */
 LOG_ADD(LOG_FLOAT, velS_z, &velS_z)
 
+/**
+ * @brief INDI velocity reference input x [m/s]
+ */
 LOG_ADD(LOG_FLOAT, velRef_x, &velocityRef.x)
+/**
+ * @brief INDI velocity reference input y [m/s]
+ */
 LOG_ADD(LOG_FLOAT, velRef_y, &velocityRef.y)
+/**
+ * @brief INDI velocity reference input z [m/s]
+ */
 LOG_ADD(LOG_FLOAT, velRef_z, &velocityRef.z)
 
-// Attitude
+/**
+ * @brief INDI current attitude roll angle [rad]
+ */
 LOG_ADD(LOG_FLOAT, angS_roll, &indiOuter.attitude_s.phi)
+/**
+ * @brief INDI current attitude pitch angle [rad]
+ */
 LOG_ADD(LOG_FLOAT, angS_pitch, &indiOuter.attitude_s.theta)
+/**
+ * @brief INDI current attitude yaw angle [rad]
+ */
 LOG_ADD(LOG_FLOAT, angS_yaw, &indiOuter.attitude_s.psi)
 
+/**
+ * @brief INDI current attitude roll angle filtered (8 Hz low-pass) [rad]
+ */
 LOG_ADD(LOG_FLOAT, angF_roll, &indiOuter.attitude_f.phi)
+/**
+ * @brief INDI current attitude pitch angle filtered (8 Hz low-pass) [rad]
+ */
 LOG_ADD(LOG_FLOAT, angF_pitch, &indiOuter.attitude_f.theta)
+/**
+ * @brief INDI current attitude yaw angle filtered (8 Hz low-pass) [rad]
+ */
 LOG_ADD(LOG_FLOAT, angF_yaw, &indiOuter.attitude_f.psi)
 
-// Acceleration
+/**
+ * @brief INDI linear acceleration reference input x [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accRef_x, &indiOuter.linear_accel_ref.x)
+/**
+ * @brief INDI linear acceleration reference input y [m/s^2], NED frame 
+ */
 LOG_ADD(LOG_FLOAT, accRef_y, &indiOuter.linear_accel_ref.y)
+/**
+ * @brief INDI linear acceleration reference input z [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accRef_z, &indiOuter.linear_accel_ref.z)
 
+/**
+ * @brief INDI current linear acceleration measurement x [m/s^2], body frame
+ */
 LOG_ADD(LOG_FLOAT, accS_x, &indiOuter.linear_accel_s.x)
+/**
+ * @brief INDI current linear acceleration measurement z [m/s^2], body frame
+ */
 LOG_ADD(LOG_FLOAT, accS_y, &indiOuter.linear_accel_s.y)
+/**
+ * @brief INDI current linear acceleration measurement z [m/s^2], body frame
+ */
 LOG_ADD(LOG_FLOAT, accS_z, &indiOuter.linear_accel_s.z)
 
+/**
+ * @brief INDI current linear acceleration measurement filtered (8 Hz low-pass) x [m/s^2], body frame
+ */
 LOG_ADD(LOG_FLOAT, accF_x, &indiOuter.linear_accel_f.x)
+/**
+ * @brief INDI current linear acceleration measurement filtered (8 Hz low-pass) y [m/s^2], body frame
+ */
 LOG_ADD(LOG_FLOAT, accF_y, &indiOuter.linear_accel_f.y)
+/**
+ * @brief INDI current linear acceleration measurement filtered (8 Hz low-pass) z [m/s^2], body frame
+ */
 LOG_ADD(LOG_FLOAT, accF_z, &indiOuter.linear_accel_f.z)
 
+/**
+ * @brief INDI current linear acceleration measurement filtered (8 Hz low-pass) and rotated x [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accFT_x, &indiOuter.linear_accel_ft.x)
+/**
+ * @brief INDI current linear acceleration measurement filtered (8 Hz low-pass) and rotated y [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accFT_y, &indiOuter.linear_accel_ft.y)
+/**
+ * @brief INDI current linear acceleration measurement filtered (8 Hz low-pass) and rotated z [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accFT_z, &indiOuter.linear_accel_ft.z)
 
+/**
+ * @brief INDI linear acceleration error x [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accErr_x, &indiOuter.linear_accel_err.x)
+/**
+ * @brief INDI linear acceleration error y [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accErr_y, &indiOuter.linear_accel_err.y)
+/**
+ * @brief INDI linear acceleration error z [m/s^2], NED frame
+ */
 LOG_ADD(LOG_FLOAT, accErr_z, &indiOuter.linear_accel_err.z)
 
-// INDI outer loop variables
+/**
+ * @brief INDI roll angle command increment [rad]
+ */
 LOG_ADD(LOG_FLOAT, phi_tilde, &indiOuter.phi_tilde)
+/**
+ * @brief INDI pitch angle command increment [rad]
+ */
 LOG_ADD(LOG_FLOAT, theta_tilde, &indiOuter.theta_tilde)
+/**
+ * @brief INDI thrust command increment [motor units]
+ */
 LOG_ADD(LOG_FLOAT, T_tilde, &indiOuter.T_tilde)
 
+/**
+ * @brief INDI final previous thrust command, filtered with low-pass and passed through actuator dynamics
+ */
 LOG_ADD(LOG_FLOAT, T_inner, &indiOuter.T_inner)
-LOG_ADD(LOG_FLOAT, T_inner_f, &indiOuter.T_inner_f)
-LOG_ADD(LOG_FLOAT, T_incremented, &indiOuter.T_incremented)
+/**
+ * @brief INDI previous thrust command filtered (8 Hz low-pass) [motor units]
+ */
 
+LOG_ADD(LOG_FLOAT, T_inner_f, &indiOuter.T_inner_f)
+/**
+ * @brief INDI motor thrust command provided to inner loop [motor units]
+ */
+LOG_ADD(LOG_FLOAT, T_incremented, &indiOuter.T_incremented)
+/**
+ * @brief INDI roll angle command to inner loop [rad]
+ */
 LOG_ADD(LOG_FLOAT, cmd_phi, &indiOuter.attitude_c.phi)
+/**
+ * @brief INDI pitch angle command to inner loop [rad]
+ */
 LOG_ADD(LOG_FLOAT, cmd_theta, &indiOuter.attitude_c.theta)
 
 LOG_GROUP_STOP(posCtrlIndi)

@@ -338,41 +338,44 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
  */
 PARAM_GROUP_START(ctrlINDI)
 /**
- * @brief INDI Minimum thrust threshold 
+ * @brief INDI Minimum thrust threshold [motor units]
  */
 PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
 /**
- * @brief INDI bounding for control input 
+ * @brief INDI bounding for control input [motor units]
  */
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
+
 /**
- * @brief INDI Controller effeciveness G1 p
+ * @brief INDI Controller effeciveness G1 p 
  */
 PARAM_ADD(PARAM_FLOAT, g1_p, &indi.g1.p)
 /**
- * @brief INDI Controller effectiveness G1 q
+ * @brief INDI Controller effectiveness G1 q 
  */
 PARAM_ADD(PARAM_FLOAT, g1_q, &indi.g1.q)
 /**
- * @brief INDI Controller effectiveness G1 r
+ * @brief INDI Controller effectiveness G1 r 
  */
 PARAM_ADD(PARAM_FLOAT, g1_r, &indi.g1.r)
 /**
- * @brief INDI Controller effectiveness G2
+ * @brief INDI Controller effectiveness G2 
  */
 PARAM_ADD(PARAM_FLOAT, g2, &indi.g2)
+
 /**
- * @brief INDI proportional gain, attitude error p
+ * @brief INDI proportional gain, attitude error p 
  */
 PARAM_ADD(PARAM_FLOAT, ref_err_p, &indi.reference_acceleration.err_p)
 /**
- * @brief INDI proportional gain, attitude error q
+ * @brief INDI proportional gain, attitude error q 
  */
 PARAM_ADD(PARAM_FLOAT, ref_err_q, &indi.reference_acceleration.err_q)
 /**
  * @brief INDI proportional gain, attitude error r
  */
 PARAM_ADD(PARAM_FLOAT, ref_err_r, &indi.reference_acceleration.err_r)
+
 /**
  * @brief INDI proportional gain, attitude rate error p
  */
@@ -385,6 +388,7 @@ PARAM_ADD(PARAM_FLOAT, ref_rate_q, &indi.reference_acceleration.rate_q)
  * @brief INDI proportional gain, attitude rate error r
  */
 PARAM_ADD(PARAM_FLOAT, ref_rate_r, &indi.reference_acceleration.rate_r)
+
 /**
  * @brief INDI actuator dynamics parameter p
  */
@@ -397,51 +401,143 @@ PARAM_ADD(PARAM_FLOAT, act_dyn_q, &indi.act_dyn.q)
  * @brief INDI actuator dynamics parameter r
  */
 PARAM_ADD(PARAM_FLOAT, act_dyn_r, &indi.act_dyn.r)
+
 /**
- * @brief INDI Filtering for the raw angular rates
+ * @brief INDI Filtering for the raw angular rates [Hz]
  */
 PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
 /**
- * @brief INDI Filtering for the raw angular rates
+ * @brief INDI Filtering for the raw angular rates [Hz]
  */
 PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
+
 /**
  * @brief Activate INDI for position control 
  */
 PARAM_ADD(PARAM_UINT8, outerLoopActive, &outerLoopActive)
+
 PARAM_GROUP_STOP(ctrlINDI)
 
 LOG_GROUP_START(ctrlINDI)
+/**
+ * @brief INDI Thrust motor command [motor units]
+ */
 LOG_ADD(LOG_FLOAT, cmd_thrust, &indi.thrust)
+/**
+ * @brief INDI Roll motor command [motor units]
+ */
 LOG_ADD(LOG_FLOAT, cmd_roll, &indi.u_in.p)
+/**
+ * @brief INDI Pitch motor command [motor units]
+ */
 LOG_ADD(LOG_FLOAT, cmd_pitch, &indi.u_in.q)
+/**
+ * @brief INDI Yaw motor command [motor units]
+ */
 LOG_ADD(LOG_FLOAT, cmd_yaw, &indi.u_in.r)
-LOG_ADD(LOG_FLOAT, r_roll, &body_rates.p) //Unfiltered body rates, Gyroscope measurements
+
+/**
+ * @brief INDI unfiltered Gyroscope roll rate measurement (only factory filter and 2 pole low-pass filter) [rad/s]
+ */
+LOG_ADD(LOG_FLOAT, r_roll, &body_rates.p)
+/**
+ * @brief INDI unfiltered Gyroscope pitch rate measurement (only factory filter and 2 pole low-pass filter) [rad/s]
+ */
 LOG_ADD(LOG_FLOAT, r_pitch, &body_rates.p)
+/**
+ * @brief INDI unfiltered Gyroscope yaw rate measurement (only factory filter and 2 pole low-pass filter) [rad/s]
+ */
 LOG_ADD(LOG_FLOAT, r_yaw, &body_rates.p)
+
+/**
+ * @brief INDI roll motor command propagated through motor dynamics [motor units]
+ */
 LOG_ADD(LOG_FLOAT, u_act_dyn_p, &indi.u_act_dyn.p)
+/**
+ * @brief INDI pitch motor command propagated through motor dynamics [motor units]
+ */
 LOG_ADD(LOG_FLOAT, u_act_dyn_q, &indi.u_act_dyn.q)
+/**
+ * @brief INDI yaw motor command propagated through motor dynamics [motor units]
+ */
 LOG_ADD(LOG_FLOAT, u_act_dyn_r, &indi.u_act_dyn.r)
+
+/**
+ * @brief INDI roll motor command increment [motor units]
+ */
 LOG_ADD(LOG_FLOAT, du_p, &indi.du.p)
+/**
+ * @brief INDI pitch motor command increment [motor units]
+ */
 LOG_ADD(LOG_FLOAT, du_q, &indi.du.q)
+/**
+ * @brief INDI yaw motor command increment [motor units]
+ */
 LOG_ADD(LOG_FLOAT, du_r, &indi.du.r)
+
+/**
+ * @brief INDI reference angular acceleration roll (sometimes named virtual input in INDI papers) [rad/s^2]
+ */
 LOG_ADD(LOG_FLOAT, ang_accel_ref_p, &indi.angular_accel_ref.p)
+/**
+ * @brief INDI reference angular acceleration pitch (sometimes named virtual input in INDI papers) [rad/s^2]
+ */
 LOG_ADD(LOG_FLOAT, ang_accel_ref_q, &indi.angular_accel_ref.q)
+/**
+ * @brief INDI reference angular acceleration yaw (sometimes named virtual input in INDI papers) [rad/s^2]
+ */
 LOG_ADD(LOG_FLOAT, ang_accel_ref_r, &indi.angular_accel_ref.r)
-LOG_ADD(LOG_FLOAT, rate_d[0], &indi.rate_d[0]) //Derived angular acceleration, from the filtered Gyroscope measurements.
+
+/**
+ * @brief INDI derived angular acceleration from filtered gyroscope measurement, roll [rad/s^2]
+ */
+LOG_ADD(LOG_FLOAT, rate_d[0], &indi.rate_d[0])
+/**
+ * @brief INDI derived angular acceleration from filtered gyroscope measurement, pitch [rad/s^2]
+ */
 LOG_ADD(LOG_FLOAT, rate_d[1], &indi.rate_d[1])
+/**
+ * @brief INDI derived angular acceleration from filtered gyroscope measurement, yaw [rad/s^2]
+ */
 LOG_ADD(LOG_FLOAT, rate_d[2], &indi.rate_d[2])
 
+/**
+ * @brief INDI filtered (8Hz low-pass) roll motor input from previous time step [motor units]
+ */
 LOG_ADD(LOG_FLOAT, uf_p, &indi.u[0].o[0])
+/**
+ * @brief INDI filtered (8Hz low-pass) pitch motor input from previous time step [motor units]
+ */
 LOG_ADD(LOG_FLOAT, uf_q, &indi.u[1].o[0])
+/**
+ * @brief INDI filtered (8Hz low-pass) yaw motor input from previous time step [motor units]
+ */
 LOG_ADD(LOG_FLOAT, uf_r, &indi.u[2].o[0])
 
-LOG_ADD(LOG_FLOAT, Omega_f_p, &indi.rate[0].o[0]) //Filtered body rates, Gyroscope measurements 
-LOG_ADD(LOG_FLOAT, Omega_f_q, &indi.rate[1].o[0]) 
+/**
+ * @brief INDI filtered gyroscope measurement (8Hz low-pass), roll [rad/s]
+ */
+LOG_ADD(LOG_FLOAT, Omega_f_p, &indi.rate[0].o[0])
+/**
+ * @brief INDI filtered gyroscope measurement (8Hz low-pass), pitch [rad/s]
+ */
+LOG_ADD(LOG_FLOAT, Omega_f_q, &indi.rate[1].o[0])
+/**
+ * @brief INDI filtered gyroscope measurement (8Hz low-pass), yaw [rad/s]
+ */
 LOG_ADD(LOG_FLOAT, Omega_f_r, &indi.rate[2].o[0])
 
+/**
+ * @brief INDI desired attitude angle from outer loop, roll [rad]
+ */
 LOG_ADD(LOG_FLOAT, n_p, &attitudeDesired.roll)
+/**
+ * @brief INDI desired attitude angle from outer loop, pitch [rad]
+ */
 LOG_ADD(LOG_FLOAT, n_q, &attitudeDesired.pitch)
+/**
+ * @brief INDI desired attitude angle from outer loop, yaw [rad]
+ */
 LOG_ADD(LOG_FLOAT, n_r, &attitudeDesired.yaw)
 
 LOG_GROUP_STOP(ctrlINDI)
