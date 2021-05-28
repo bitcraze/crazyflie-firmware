@@ -34,7 +34,7 @@ static attitude_t rateDesired;
 static float actuatorThrust;
 struct FloatRates body_rates;
 static vector_t refOuterINDI;				// Reference values from outer loop INDI
-static bool outerLoopActive = false ; 		// if 1, outer loop INDI is activated
+static bool outerLoopActive = true ; 		// if 1, outer loop INDI is activated
 
 static struct IndiVariables indi = {
 		.g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
