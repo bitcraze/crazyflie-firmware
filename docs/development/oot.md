@@ -12,7 +12,7 @@ Technically the app layer is an example of an out of tree build. Follow the [app
 In a seperate folder make a Makefile which contain the following content:
 
 ```
-OOT_ESTIMATOR = 1
+CFLAGS += -DOOT_ESTIMATOR
 
 VPATH += src/
 PROJ_OBJ += estimator_out_of_tree.o
