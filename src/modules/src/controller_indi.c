@@ -336,6 +336,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
  * Tuning settings for INDI controller for the attitude
  * and accelerations of the Crazyflie
  */
+
 PARAM_GROUP_START(ctrlINDI)
 /**
  * @brief INDI Minimum thrust threshold [motor units]

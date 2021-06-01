@@ -154,7 +154,7 @@ The most common way to flash is probably to use the Crazyradio.
 * A Crazyradio with drivers installed
 * [crazyflie-clients-python](https://github.com/bitcraze/crazyflie-clients-python) placed on the same directory level in the file tree
 * The firmware has been built
-* The current working directory is the root of the frazyflie-firmware project
+* The current working directory is the root of the crazyflie-firmware project
 
 ### Manually entering bootloader mode
 
@@ -183,7 +183,7 @@ You need:
 * An ST Link V2 Debugger
 * open ocd installed ([installation intructions](/docs/development/openocd_gdb_debugging.md))
 * The firmware has been built
-* The current working directory is the root of the frazyflie-firmware project
+* The current working directory is the root of the crazyflie-firmware project
 
 In your terminal, run
 
