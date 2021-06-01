@@ -665,7 +665,10 @@ float paramGetFloat(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  if (params[varid.ptr].type == PARAM_FLOAT || params[varid.ptr].type == (PARAM_FLOAT | PARAM_RONLY))
+  if (params[varid.ptr].type & PARAM_RONLY)
+    return;
+
+  if ((params[varid.ptr].type & PARAM_BYTES_MASK) == PARAM_FLOAT)
     return *(float *)params[varid.ptr].address;
 
   return paramGetInt(varid);
@@ -747,7 +750,10 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size=3;
 
-  if (params[varid.ptr].type == PARAM_FLOAT ) {
+  if (params[varid.ptr].type & PARAM_RONLY)
+    return;
+
+  if ((params[varid.ptr].type & PARAM_BYTES_MASK) == PARAM_FLOAT) {
       *(float *)params[varid.ptr].address = valuef;
 
       memcpy(&pk.data[2], &valuef, 4);
