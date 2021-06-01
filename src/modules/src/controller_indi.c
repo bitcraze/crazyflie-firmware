@@ -370,15 +370,15 @@ PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
  */
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
 /**
- * @brief INDI  Attitude Roll control Propertional Gain
+ * @brief INDI  Attitude Roll control proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, roll_kp, &roll_kp)
 /**
- * @brief INDI Attitude Pitch control Propertional Gain
+ * @brief INDI Attitude Pitch control proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, pitch_kp, &pitch_kp)
 /**
- * @brief INDI Attitude Yaw control Propertional Gain
+ * @brief INDI Attitude Yaw control proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &yaw_kp)
 /**

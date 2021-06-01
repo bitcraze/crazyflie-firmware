@@ -271,11 +271,11 @@ LOG_ADD(LOG_FLOAT, targetY, &this.pidY.pid.desired)
 LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.pid.desired)
 
 /**
- * @brief PID propertional output position x
+ * @brief PID proportional output position x
  */
 LOG_ADD(LOG_FLOAT, Xp, &this.pidX.pid.outP)
 /**
- * @brief PID Intergral output position x
+ * @brief PID Integral output position x
  */
 LOG_ADD(LOG_FLOAT, Xi, &this.pidX.pid.outI)
 /**
@@ -284,11 +284,11 @@ LOG_ADD(LOG_FLOAT, Xi, &this.pidX.pid.outI)
 LOG_ADD(LOG_FLOAT, Xd, &this.pidX.pid.outD)
 
 /**
- * @brief PID propertional output position y
+ * @brief PID proportional output position y
  */
 LOG_ADD(LOG_FLOAT, Yp, &this.pidY.pid.outP)
 /**
- * @brief PID Intergral output position y
+ * @brief PID Integral output position y
  */
 LOG_ADD(LOG_FLOAT, Yi, &this.pidY.pid.outI)
 /**
@@ -297,11 +297,11 @@ LOG_ADD(LOG_FLOAT, Yi, &this.pidY.pid.outI)
 LOG_ADD(LOG_FLOAT, Yd, &this.pidY.pid.outD)
 
 /**
- * @brief PID propertional output position z
+ * @brief PID proportional output position z
  */
 LOG_ADD(LOG_FLOAT, Zp, &this.pidZ.pid.outP)
 /**
- * @brief PID Intergral output position z
+ * @brief PID Integral output position z
  */
 LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
 /**
@@ -310,11 +310,11 @@ LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
 LOG_ADD(LOG_FLOAT, Zd, &this.pidZ.pid.outD)
 
 /**
- * @brief PID propertional output velocity x
+ * @brief PID proportional output velocity x
  */
 LOG_ADD(LOG_FLOAT, VXp, &this.pidVX.pid.outP)
 /**
- * @brief PID intergral output velocity x
+ * @brief PID integral output velocity x
  */
 LOG_ADD(LOG_FLOAT, VXi, &this.pidVX.pid.outI)
 /**
@@ -323,11 +323,11 @@ LOG_ADD(LOG_FLOAT, VXi, &this.pidVX.pid.outI)
 LOG_ADD(LOG_FLOAT, VXd, &this.pidVX.pid.outD)
 
 /**
- * @brief PID propertional output velocity z
+ * @brief PID proportional output velocity z
  */
 LOG_ADD(LOG_FLOAT, VZp, &this.pidVZ.pid.outP)
 /**
- * @brief PID intergral output velocity z
+ * @brief PID integral output velocity z
  */
 LOG_ADD(LOG_FLOAT, VZi, &this.pidVZ.pid.outI)
 /**
@@ -345,11 +345,11 @@ LOG_GROUP_STOP(posCtl)
  */
 PARAM_GROUP_START(velCtlPid)
 /**
- * @brief Propertional gain for the velocity PID in the body X direction
+ * @brief Proportional gain for the velocity PID in the body X direction
  */
 PARAM_ADD(PARAM_FLOAT, vxKp, &this.pidVX.pid.kp)
 /**
- * @brief Intergral gain for the velocity PID in the body X direction
+ * @brief Integral gain for the velocity PID in the body X direction
  */
 PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
 /**
@@ -358,11 +358,11 @@ PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
 PARAM_ADD(PARAM_FLOAT, vxKd, &this.pidVX.pid.kd)
 
 /**
- * @brief Propertional gain for the velocity PID in the body Y direction
+ * @brief Proportional gain for the velocity PID in the body Y direction
  */
 PARAM_ADD(PARAM_FLOAT, vyKp, &this.pidVY.pid.kp)
 /**
- * @brief Intergral gain for the velocity PID in the body Y direction
+ * @brief Integral gain for the velocity PID in the body Y direction
  */
 PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
 /**
@@ -371,11 +371,11 @@ PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
 PARAM_ADD(PARAM_FLOAT, vyKd, &this.pidVY.pid.kd)
 
 /**
- * @brief Propertional gain for the velocity PID in the body Z direction
+ * @brief Proportional gain for the velocity PID in the body Z direction
  */
 PARAM_ADD(PARAM_FLOAT, vzKp, &this.pidVZ.pid.kp)
 /**
- * @brief Intergral gain for the velocity PID in the body Z direction
+ * @brief Integral gain for the velocity PID in the body Z direction
  */
 PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
 /**
@@ -393,11 +393,11 @@ PARAM_GROUP_STOP(velCtlPid)
  */
 PARAM_GROUP_START(posCtlPid)
 /**
- * @brief Propertional gain for the position PID in the global X direction
+ * @brief Proportional gain for the position PID in the global X direction
  */
 PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.pid.kp)
 /**
- * @brief Propertional gain for the position PID in the global X direction
+ * @brief Proportional gain for the position PID in the global X direction
  */
 PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
 /**
@@ -406,11 +406,11 @@ PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
 PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.pid.kd)
 
 /**
- * @brief Propertional gain for the position PID in the global Y direction
+ * @brief Proportional gain for the position PID in the global Y direction
  */
 PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.pid.kp)
 /**
- * @brief Intergral gain for the position PID in the global Y direction
+ * @brief Integral gain for the position PID in the global Y direction
  */
 PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
 /**
@@ -419,11 +419,11 @@ PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
 PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.pid.kd)
 
 /**
- * @brief Propertional gain for the position PID in the global Z direction
+ * @brief Proportional gain for the position PID in the global Z direction
  */
 PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.pid.kp)
 /**
- * @brief Intergral gain for the position PID in the global Z direction
+ * @brief Integral gain for the position PID in the global Z direction
  */
 PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.pid.ki)
 /**

@@ -167,7 +167,7 @@ void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t*
  */ 
 LOG_GROUP_START(pid_attitude)
 /**
- * @brief Propertional output roll
+ * @brief Proportional output roll
  */
 LOG_ADD(LOG_FLOAT, roll_outP, &pidRoll.outP)
 /**
@@ -179,11 +179,11 @@ LOG_ADD(LOG_FLOAT, roll_outI, &pidRoll.outI)
  */
 LOG_ADD(LOG_FLOAT, roll_outD, &pidRoll.outD)
 /**
- * @brief Propertional output pitch
+ * @brief Proportional output pitch
  */
 LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitch.outP)
 /**
- * @brief Intergral output pitch
+ * @brief Integral output pitch
  */
 LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitch.outI)
 /**
@@ -191,7 +191,7 @@ LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitch.outI)
  */
 LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitch.outD)
 /**
- * @brief Propertional output yaw
+ * @brief Proportional output yaw
  */
 LOG_ADD(LOG_FLOAT, yaw_outP, &pidYaw.outP)
 /**
@@ -209,11 +209,11 @@ LOG_GROUP_STOP(pid_attitude)
  */
 LOG_GROUP_START(pid_rate)
 /**
- * @brief Propertional output roll rate
+ * @brief Proportional output roll rate
  */
 LOG_ADD(LOG_FLOAT, roll_outP, &pidRollRate.outP)
 /**
- * @brief Intergral output roll rate
+ * @brief Integral output roll rate
  */
 LOG_ADD(LOG_FLOAT, roll_outI, &pidRollRate.outI)
 /**
@@ -221,11 +221,11 @@ LOG_ADD(LOG_FLOAT, roll_outI, &pidRollRate.outI)
  */
 LOG_ADD(LOG_FLOAT, roll_outD, &pidRollRate.outD)
 /**
- * @brief Propertional output pitch rate
+ * @brief Proportional output pitch rate
  */
 LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitchRate.outP)
 /**
- * @brief Intergral output pitch rate
+ * @brief Integral output pitch rate
  */
 LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitchRate.outI)
 /**
@@ -233,11 +233,11 @@ LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitchRate.outI)
  */
 LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitchRate.outD)
 /**
- * @brief Propertional output yaw rate
+ * @brief Proportional output yaw rate
  */
 LOG_ADD(LOG_FLOAT, yaw_outP, &pidYawRate.outP)
 /**
- * @brief Intergral output yaw rate
+ * @brief Integral output yaw rate
  */
 LOG_ADD(LOG_FLOAT, yaw_outI, &pidYawRate.outI)
 /**
@@ -253,11 +253,11 @@ LOG_GROUP_STOP(pid_rate)
  */
 PARAM_GROUP_START(pid_attitude)
 /**
- * @brief Propertional gain for the PID roll controller
+ * @brief Proportional gain for the PID roll controller
  */
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRoll.kp)
 /**
- * @brief Intergral gain for the PID roll controller
+ * @brief Integral gain for the PID roll controller
  */
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
 /**
@@ -265,11 +265,11 @@ PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
  */
 PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRoll.kd)
 /**
- * @brief Propertional gain for the PID pitch controller
+ * @brief Proportional gain for the PID pitch controller
  */
 PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitch.kp)
 /**
- * @brief Intergral gain for the PID pitch controller
+ * @brief Integral gain for the PID pitch controller
  */
 PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitch.ki)
 /**
@@ -277,11 +277,11 @@ PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitch.ki)
  */
 PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitch.kd)
 /**
- * @brief Propertional gain for the PID yaw controller
+ * @brief Proportional gain for the PID yaw controller
  */
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYaw.kp)
 /**
- * @brief Intergral gain for the PID yaw controller
+ * @brief Integral gain for the PID yaw controller
  */
 PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYaw.ki)
 /**
@@ -291,17 +291,16 @@ PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
 PARAM_GROUP_STOP(pid_attitude)
 
 /**
- * Tuning settings for the gains of the PID
- * controller for the rate angels of the Crazyflie which consists
- * of the Yaw Pitch and Roll rates 
+ * Tuning settings for the gains of the PID controller for the rate angles of
+ * the Crazyflie, which consists of the yaw, pitch and roll rates 
  */
 PARAM_GROUP_START(pid_rate)
 /**
- * @brief Propertional gain for the PID roll rate controller
+ * @brief Proportional gain for the PID roll rate controller
  */
 PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
 /**
- * @brief Intergral gain for the PID roll rate controller
+ * @brief Integral gain for the PID roll rate controller
  */
 PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
 /**
@@ -309,11 +308,11 @@ PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
  */
 PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
 /**
- * @brief Propertional gain for the PID pitch rate controller
+ * @brief Proportional gain for the PID pitch rate controller
  */
 PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitchRate.kp)
 /**
- * @brief Intergral gain for the PID pitch rate controller
+ * @brief Integral gain for the PID pitch rate controller
  */
 PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
 /**
@@ -321,11 +320,11 @@ PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
  */
 PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitchRate.kd)
 /**
- * @brief Propertional gain for the PID yaw rate controller
+ * @brief Proportional gain for the PID yaw rate controller
  */
 PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
 /**
- * @brief Intergral gain for the PID yaw rate controller
+ * @brief Integral gain for the PID yaw rate controller
  */
 PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
 /**

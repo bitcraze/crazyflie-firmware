@@ -279,28 +279,28 @@ void positionControllerINDI(const sensorData_t *sensors,
 PARAM_GROUP_START(posCtrlIndi)
 
 /**
- * @brief INDI position controller X propertional gain
+ * @brief INDI position controller X proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_xi_x, &K_xi_x)
 /**
- * @brief INDI position controller Y propertional gain
+ * @brief INDI position controller Y proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_xi_y, &K_xi_y)
 /**
- * @brief INDI position controller Z propertional gain
+ * @brief INDI position controller Z proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_xi_z, &K_xi_z)
 
 /**
- * @brief INDI velocity controller X propertional gain
+ * @brief INDI velocity controller X proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_dxi_x, &K_dxi_x)
 /**
- * @brief INDI velocity controller Y propertional gain
+ * @brief INDI velocity controller Y proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
 /**
- * @brief INDI velocity controller Z propertional gain
+ * @brief INDI velocity controller Z proportional gain
  */
 PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
 
