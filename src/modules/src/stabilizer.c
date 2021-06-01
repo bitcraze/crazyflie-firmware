@@ -327,7 +327,7 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
- * @brief If set to nonzero will turn of power
+ * @brief If set to nonzero will turn off power
  */
 PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 PARAM_GROUP_STOP(stabilizer)
