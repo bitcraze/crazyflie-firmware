@@ -665,9 +665,6 @@ float paramGetFloat(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  if (params[varid.ptr].type & PARAM_RONLY)
-    return;
-
   if ((params[varid.ptr].type & PARAM_BYTES_MASK) == PARAM_FLOAT)
     return *(float *)params[varid.ptr].address;
 
