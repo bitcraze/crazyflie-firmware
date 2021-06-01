@@ -612,7 +612,7 @@ int paramGetInt(paramVarId_t varid)
 
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  switch(params[varid.ptr].type)
+  switch(params[varid.ptr].type & PARAM_BYTES_MASK)
   {
     case PARAM_UINT8:
       valuei = *(uint8_t *)params[varid.ptr].address;
@@ -687,7 +687,10 @@ void paramSetInt(paramVarId_t varid, int valuei)
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size=3;
 
-  switch(params[varid.ptr].type)
+  if (params[varid.ptr].type & PARAM_RONLY)
+    return;
+
+  switch(params[varid.ptr].type & PARAM_BYTES_MASK)
   {
     case PARAM_UINT8:
       *(uint8_t *)params[varid.ptr].address = (uint8_t) valuei;
