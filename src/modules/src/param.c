@@ -612,7 +612,7 @@ int paramGetInt(paramVarId_t varid)
 
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  switch(params[varid.ptr].type)
+  switch(params[varid.ptr].type & (~(PARAM_CORE | PARAM_RONLY)))
   {
     case PARAM_UINT8:
       valuei = *(uint8_t *)params[varid.ptr].address;
@@ -635,27 +635,6 @@ int paramGetInt(paramVarId_t varid)
     case PARAM_FLOAT:
       valuei = *(float *)params[varid.ptr].address;
       break;
-    case PARAM_UINT8 | PARAM_RONLY:
-      valuei = *(uint8_t *)params[varid.ptr].address;
-      break;
-    case PARAM_INT8 | PARAM_RONLY:
-      valuei = *(int8_t *)params[varid.ptr].address;
-      break;
-    case PARAM_UINT16 | PARAM_RONLY:
-      valuei = *(uint16_t *)params[varid.ptr].address;
-      break;
-    case PARAM_INT16 | PARAM_RONLY:
-      valuei = *(int16_t *)params[varid.ptr].address;
-      break;
-    case PARAM_UINT32 | PARAM_RONLY:
-      valuei = *(uint32_t *)params[varid.ptr].address;
-      break;
-    case PARAM_INT32 | PARAM_RONLY:
-      valuei = *(int32_t *)params[varid.ptr].address;
-      break;
-    case PARAM_FLOAT | PARAM_RONLY:
-      valuei = *(float *)params[varid.ptr].address;
-      break;
   }
 
   return valuei;
@@ -665,7 +644,7 @@ float paramGetFloat(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  if (params[varid.ptr].type == PARAM_FLOAT || params[varid.ptr].type == (PARAM_FLOAT | PARAM_RONLY))
+  if ((params[varid.ptr].type & (~(PARAM_CORE | PARAM_RONLY))) == PARAM_FLOAT)
     return *(float *)params[varid.ptr].address;
 
   return paramGetInt(varid);
@@ -687,7 +666,7 @@ void paramSetInt(paramVarId_t varid, int valuei)
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size=3;
 
-  switch(params[varid.ptr].type)
+  switch(params[varid.ptr].type & (~PARAM_CORE))
   {
     case PARAM_UINT8:
       *(uint8_t *)params[varid.ptr].address = (uint8_t) valuei;
@@ -744,7 +723,7 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size=3;
 
-  if (params[varid.ptr].type == PARAM_FLOAT ) {
+  if ((params[varid.ptr].type & (~PARAM_CORE)) == PARAM_FLOAT) {
       *(float *)params[varid.ptr].address = valuef;
 
       memcpy(&pk.data[2], &valuef, 4);
