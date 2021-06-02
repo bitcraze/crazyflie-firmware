@@ -347,20 +347,41 @@ LOG_GROUP_STOP(colAv)
 
 /**
  * Onboard collision avoidance algorithm.
- * Positions of other Crazyflies on the same radio channel are obtained from
- * peer localization service. Collision avoidance uses the buffered Voronoi
- * collision avoidance (BVCA) method [1]. Collision avoidance is enabled via
- * this parameter system, so no new radio packet is needed.
  *
- * The Crazyflie's boundary for collision checking is a tall ellipsoid.
- * this accounts for the downwash effect: Due to the fast-moving stream of
- * air produced by the rotors, the safe distance to pass underneath another
- * rotorcraft is much further than the safe distance to pass to the side.
- * The radii of the ellipsoid can be set by using the parameters below.
+ * Buffered Voronoi collision avoidance (BVCA) is a reactive multi-robot
+ * collision avoidance method [1]. It is suitable for scenarios with low to
+ * medium spatial contention -- i.e., when the robots generally do not
+ * interfere with each other, but might occasionally cross paths.
  *
- * The Mellinger controller does not work with collision avoidance as of now,
- * because it does not behave gracefully when the setpoint is far from the
- * current position. However, the PID controller handles it well.
+ * We obtain the positions of neighbors **on the same radio channel** from the
+ * peer_localization.h module. We then compute our Voronoi cell: the set of 3D
+ * points that are closer to us than to any neighbor. We shrink (buffer) the
+ * cell to account for the Crazyflie's size. We are free to move within our
+ * buffered Voronoi cell, but cannot leave it.
+ *
+ * BVCA acts by modifying the setpoints sent from the commander to the
+ * controller. The new setpoint will be as close as possible to the original
+ * while respecting the buffered Voronoi cell constraint. Our motion within the
+ * cell also depends on a planning horizon (longer horizon will lead to more
+ * conservative behavior) and a maximum speed. The commander and controller do
+ * not need to know if BVCA is enabled. 
+ *
+ * BVCA does not attempt to smooth the modified setpoints, so the output may be
+ * discontinuous or far from the current robot state. The controller must be
+ * able to handle this kind of input. Currently, **only the PID controller** is
+ * confirmed to work with BVCA. High-gain controllers like Mellinger may become
+ * unstable.
+ *
+ * The volume for collision checking is a tall ellipsoid. This accounts for the
+ * downwash effect: Due to the fast-moving stream of air produced by the
+ * rotors, the safe distance to pass underneath another rotorcraft is much
+ * further than the safe distance to pass to the side. The radii of the
+ * ellipsoid can be set by using the parameters below.
+ *
+ * A bounding box may be specified, for example when using a motion capture
+ * system. The box is applied to the Crazyflie's center point only; the
+ * ellipsoid collision volume is ignored. The box can be set to +/- infinity if
+ * the flight space is unbounded.
  *
  * [1] Zhou, Dingjiang, et al. "Fast, on-line collision avoidance for dynamic
  * vehicles using buffered voronoi cells." IEEE Robotics and Automation
