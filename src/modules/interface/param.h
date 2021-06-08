@@ -199,4 +199,11 @@ struct param_s {
 
 #endif // UNIT_TEST_MODE
 
+/** @brief Core parameters
+ *
+ * The core parameters are considered part of the official API and are guaranteed
+ * to be stable over time.
+ *
+ * @defgroup PARAM_CORE_GROUP */
+
 #endif /* __PARAM_H__ */

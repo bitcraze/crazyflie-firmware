@@ -2062,11 +2062,11 @@ INCLUDE_FILE_PATTERNS  =
 
 PREDEFINED             = "__attribute__(x)=" \
                          "LOG_ADD(TYPE, NAME, ADDRESS)=TYPE NAME;" \
-                         "LOG_ADD_CORE(TYPE, NAME, ADDRESS)=/** @@ingroup LOG_CORE */ TYPE NAME;" \
+                         "LOG_ADD_CORE(TYPE, NAME, ADDRESS)=/** @@ingroup LOG_CORE_GROUP */ TYPE NAME;" \
                          "LOG_GROUP_START(NAME)=class fake_log_class_##NAME {" \
                          "LOG_GROUP_STOP(NAME)=};" \
                          "PARAM_ADD(TYPE, NAME, ADDRESS)=TYPE NAME;" \
-                         "PARAM_ADD_CORE(TYPE, NAME, ADDRESS)=/** @@ingroup PARM_CORE */ TYPE NAME;" \
+                         "PARAM_ADD_CORE(TYPE, NAME, ADDRESS)=/** @@ingroup PARAM_CORE_GROUP */ TYPE NAME;" \
                          "PARAM_GROUP_START(NAME)=class fake_param_class_##NAME {" \
                          "PARAM_GROUP_STOP(NAME)=};"
 
