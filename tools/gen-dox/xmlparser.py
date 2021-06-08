@@ -3,132 +3,169 @@ import xml.etree.ElementTree as ET
 # Runs this directly from the crazyflie firmware directory with python tools/gen-dox/xmlparser
 # Make sure there are XML docs to parse! check the readme
 
-log_groups = []
 
-# Get the index file
-tree = ET.parse('generated/dox/xml/index.xml')
-root = tree.getroot()
-
-for compound in root.findall('compound'):
-    filename = compound.attrib['refid']
-    
-    #Go through all the log classes in 
-    if 'fake__log__class__' in filename:
-        print(filename)
-        full_filename = filename + '.xml'
-        tree = ET.parse('generated/dox/xml/' + full_filename)
-        root = tree.getroot()
-
-        # log group name
-        for compounddef in root.findall('.//compounddef'):
-            print('LOG GROUP NAME')
-            compoundname = compounddef.find('compoundname')
-            log_group_name_fake = compoundname.text
-            log_group_name = log_group_name_fake.replace('fake_log_class_','')
-            descrp = compounddef.find('detaileddescription/para')
-            if descrp != None:
-                log_group_description = descrp.text
-            else:
-                log_group_description = ''
+def create_log_markdown():
+    log_groups = parse_xml('logs')
+    create_markdown('logs', log_groups)
 
 
-        log_group_info = [log_group_name, log_group_description]
-        print('LOG VARIABLES')
+def create_param_markdown():
+    param_groups = parse_xml('params')
+    create_markdown('params', param_groups)
 
-        log_variables = []
-        # Variable name
-        for memberdef in root.findall('.//memberdef'):
-            #name
-            name = memberdef.find('name')
-            log_name = name.text
-            id_definition = memberdef.attrib['id']
-            core = False
-            if 'LOG__CORE__GROUP' in id_definition:
-                core = True
-            #description
-            descrp = memberdef.find('briefdescription/para')
-            if descrp != None:
-                description = descrp.text
-            else:
-                description = ''
-            #type
-            typevar = memberdef.find('type/ref')
-            type_variable = typevar.text;
-            #location and line
-            location = memberdef.find('location')
-            file_location =location.attrib['file']
-            line_location =location.attrib['line']
-            # core variable
+def parse_xml(doc_type):
+
+    groups_info_storage = []
+    search_string = ''
+    if doc_type == 'logs':
+        search_string = 'fake__log__class__'
+        replace_string = 'fake_log_class_'
+        core_string = 'LOG__CORE__GROUP'
+    elif doc_type == 'params':
+        search_string = 'fake__param__class__'
+        replace_string = 'fake_param_class_'
+        core_string = 'PARAM__CORE__GROUP'
+    else:
+        print('group type does not exist!')
+        return None
 
 
-            log_variable = [log_name, core, description, type_variable,file_location, line_location]
-            log_variables.append(log_variable)
-            print(log_variable)
+    # Get the index file
+    tree = ET.parse('generated/dox/xml/index.xml')
+    root = tree.getroot()
 
-        full_log_group_info = [log_group_info, log_variables]
-        print(full_log_group_info)
+    for compound in root.findall('compound'):
+        filename = compound.attrib['refid']
         
-        log_groups.append(full_log_group_info)
+        #Go through all the log classes in 
+        if search_string in filename:
+            full_filename = filename + '.xml'
+            tree = ET.parse('generated/dox/xml/' + full_filename)
+            root = tree.getroot()
 
-f = open("logs.md", "w")
-f.write('# Logging groups and variables\n')
-f.write('## Index\n')
-first_letter = ''
+            # log group name
+            for compounddef in root.findall('.//compounddef'):
+                compoundname = compounddef.find('compoundname')
+                group_name_fake = compoundname.text
+                group_name = group_name_fake.replace(replace_string,'')
+                descrp = compounddef.find('detaileddescription/para')
+                if descrp != None:
+                    group_description = descrp.text
+                else:
+                    group_description = ''
 
-for full_log_group_info in log_groups:
-    log_group_info = full_log_group_info[0]
-    log_group_name = log_group_info[0]
-    if first_letter != log_group_name[0]:
-        first_letter = log_group_name[0]
-        f.write('## ' + first_letter + '\n')
 
-    f.write('* [' +log_group_name+'](#'+log_group_name+')\n')
+            group_info = [group_name, group_description]
 
-for full_log_group_info in log_groups:
-    log_group_info = full_log_group_info[0]
-    log_group_name = log_group_info[0]
-    f.write('\n---\n')
+            info_variables = []
+            # Variable name
+            for memberdef in root.findall('.//memberdef'):
+                #name
+                name = memberdef.find('name')
+                variable_name = name.text
+                id_definition = memberdef.attrib['id']
+                is_variable_core = False
+                if core_string in id_definition:
+                    is_variable_core = True
+                #description
+                descrp = memberdef.find('briefdescription/para')
+                if descrp != None:
+                    description = descrp.text
+                else:
+                    description = ''
+                #type
+                typevar = memberdef.find('type/ref')
+                type_variable = typevar.text;
+                #location and line
+                location = memberdef.find('location')
+                file_location =location.attrib['file']
+                line_location =location.attrib['line']
 
-    f.write('[back to log index](#index) \n\n')
-    f.write('## '+log_group_name + '\n')
 
-    log_group_description = log_group_info[1]
-    f.write(log_group_description + '\n')
+                info_variable = [variable_name, is_variable_core, description, type_variable,file_location, line_location]
+                info_variables.append(info_variable)
 
-    f.write('### Core Log variables\n')
+            full_group_info = [group_info, info_variables]
+            
+            groups_info_storage.append(full_group_info)
 
-    log_variables = full_log_group_info[1]
-    string_dev_variable = ''
-    dev_variables = []
-    core_variable_exist = False
-    dev_variables_exist = False
-    for log_variable in log_variables:
-        print(log_variable)
-        log_name = log_variable[0] 
-        core = log_variable[1] 
-        description = log_variable[2] 
-        type_variable= log_variable[3] 
-        file_location= log_variable[4] 
-        line_location= log_variable[5]
+    return groups_info_storage
 
-        print(type(type_variable), type(log_name))
-        string_variable_info = ('* ' +  type_variable + ' **' + log_name + '** \n' + 
-        '   * ' + description+ '\n' + 
-        '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
-        file_location +'#L'+line_location+')\n')
 
-        if core:
-            f.write(string_variable_info)
-            core_variable_exist = True
-        else:
-            string_dev_variable = string_dev_variable + string_variable_info
-            dev_variables_exist = True
+def create_markdown(doc_type, groups_info_storage):
 
-    if core_variable_exist == False:
-        f.write('### *No core log variables* \n')
+    markdown_file_name = doc_type + '.md'
+    f = open(markdown_file_name, 'w')
+    if doc_type == 'logs':
+        f.write('# Logging groups and variables\n')
+    elif doc_type == 'params':
+        f.write('# Parameter groups and variables\n')
+    else:
+        print('group type does not exist!')
+        return None
+        
+    f.write('## Index\n')
+    first_letter = ''
 
-    if dev_variables_exist:
-        f.write('### Dev log variables\n')
-        f.write(string_dev_variable)
-    
-f.close()
+    for full_group_info in groups_info_storage:
+        group_info = full_group_info[0]
+        group_name = group_info[0]
+        if first_letter != group_name[0]:
+            first_letter = group_name[0]
+            f.write('## ' + first_letter + '\n')
+
+        f.write('* [' +group_name+'](#'+group_name+')\n')
+
+    for full_group_info in groups_info_storage:
+        group_info = full_group_info[0]
+        group_name = group_info[0]
+        f.write('\n---\n')
+
+        f.write('[back to log index](#index) \n\n')
+        f.write('## '+group_name + '\n')
+
+        group_description = group_info[1]
+        f.write(group_description + '\n')
+
+        f.write('### Core Log variables\n')
+
+        info_variables = full_group_info[1]
+        string_dev_variable = ''
+        dev_variables = []
+        core_variable_exist_in_group = False
+        dev_variables_exist_in_group= False
+        for info_variable in info_variables:
+            variable_name = info_variable[0] 
+            is_variable_core = info_variable[1] 
+            description = info_variable[2] 
+            type_variable= info_variable[3] 
+            file_location= info_variable[4] 
+            line_location= info_variable[5]
+
+            string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
+            '   * ' + description+ '\n' + 
+            '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+            file_location +'#L'+line_location+')\n')
+
+            if is_variable_core:
+                f.write(string_variable_info)
+                core_variable_exist_in_group= True
+            else:
+                string_dev_variable = string_dev_variable + string_variable_info
+                dev_variables_exist_in_group= True
+
+        if core_variable_exist_in_group== False:
+            f.write('### *No core log variables* \n')
+
+        if dev_variables_exist_in_group:
+            f.write('### Dev log variables\n')
+            f.write(string_dev_variable)
+        
+    f.close()
+
+if __name__ == '__main__':
+
+    print('Create Logging API Markdown files')
+    create_log_markdown()
+    print('Create Parameter API Markdown files')
+    create_param_markdown()
