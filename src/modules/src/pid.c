@@ -62,11 +62,15 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
         pid->error = pid->desired - measured;
     }
 
+    /*if ((pid->error > 0 && pid->prevError < 0) || (pid->error < 0 && pid->prevError > 0)) {
+        pid->integ = 0;
+    }*/
+
     pid->outP = pid->kp * pid->error;
     output += pid->outP;
 
     float deriv = (pid->error - pid->prevError) / pid->dt;
-    if (pid->enableDFilter)
+    /*if (pid->enableDFilter)
     {
       pid->deriv = lpf2pApply(&pid->dFilter, deriv);
     } else {
@@ -74,11 +78,14 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     }
     if (isnan(pid->deriv)) {
       pid->deriv = 0;
-    }
+    }*/
+    pid->deriv = deriv;
     pid->outD = pid->kd * pid->deriv;
     output += pid->outD;
 
-    pid->integ += pid->error * pid->dt;
+    
+
+    pid->integ += pid->error * pid->ki * pid->dt;
 
     // Constrain the integral (unless the iLimit is zero)
     if(pid->iLimit != 0)
@@ -86,9 +93,20 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     	pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
     }
 
-    pid->outI = pid->ki * pid->integ;
+    pid->outI = pid->integ;
     output += pid->outI;
 
+    if (pid->enableDFilter)
+    {
+        output = lpf2pApply(&pid->dFilter, output);
+    }
+    else {
+        output = output;
+    }
+    if (isnan(output)) {
+        output = 0;
+    }
+    
     // Constrain the total PID output (unless the outputLimit is zero)
     if(pid->outputLimit != 0)
     {

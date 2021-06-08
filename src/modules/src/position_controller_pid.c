@@ -34,6 +34,8 @@
 #include "num.h"
 #include "position_controller.h"
 
+#include "debug.h"
+
 struct pidInit_s {
   float kp;
   float ki;
@@ -72,6 +74,9 @@ static float zVelMax  = 1.0f;
 static float velMaxOverhead = 1.10f;
 static const float thrustScale = 1000.0f;
 
+//higher cutoff frequency for the Z velocity to compensate for the higher barometer influence (more noisy signal)
+static float vzfcut = 0.3f;
+
 #define DT (float)(1.0f/POSITION_RATE)
 #define POSITION_LPF_CUTOFF_FREQ 20.0f
 #define POSITION_LPF_ENABLE true
@@ -98,10 +103,11 @@ static struct this_s this = {
 
   .pidVZ = {
     .init = {
-      .kp = 25,
-      .ki = 15,
-      .kd = 0,
+      .kp = 0.5,  //25
+      .ki = 4,  //15
+      .kd = 2,  //0
     },
+
     .pid.dt = DT,
   },
 
@@ -132,7 +138,7 @@ static struct this_s this = {
     .pid.dt = DT,
   },
 
-  .thrustBase = 36000,
+  .thrustBase = 37650,
   .thrustMin  = 20000,
 };
 #endif
@@ -151,7 +157,8 @@ void positionControllerInit()
   pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.init.kp, this.pidVY.init.ki, this.pidVY.init.kd,
       this.pidVY.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
   pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.init.kp, this.pidVZ.init.ki, this.pidVZ.init.kd,
-      this.pidVZ.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+      this.pidVZ.pid.dt, POSITION_RATE, vzfcut, POSITION_LPF_ENABLE);
+  
 }
 
 static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt) {
@@ -380,5 +387,7 @@ PARAM_ADD(PARAM_FLOAT, xyVelMax, &xyVelMax)
  * @brief Maximum Z Velocity
  */
 PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
+
+PARAM_ADD(PARAM_FLOAT, vzfcut, &vzfcut)
 
 PARAM_GROUP_STOP(posCtlPid)

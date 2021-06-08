@@ -103,7 +103,7 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
     newEstimator = DEFAULT_ESTIMATOR;
   }
 
-  StateEstimatorType forcedEstimator = ESTIMATOR_NAME;
+  StateEstimatorType forcedEstimator = complementaryEstimator;
   if (forcedEstimator != anyEstimator) {
     DEBUG_PRINT("Estimator type forced\n");
     newEstimator = forcedEstimator;

@@ -51,7 +51,7 @@ static struct selfState_s state = {
   .estimatedZ = 0.0f,
   .velocityZ = 0.0f,
   .estAlphaZrange = 0.90f,
-  .estAlphaAsl = 0.997f,
+  .estAlphaAsl = 0.900f,
   .velocityFactor = 1.0f,
   .vAccDeadband = 0.04f,
   .velZAlpha = 0.995f,
@@ -101,7 +101,7 @@ static void positionEstimateInternal(state_t* estimate, const baro_t* baro, cons
                   (1.0f - state->estAlphaAsl) * baro->asl;
     }
     // Use asl as base and add velocity changes.
-    state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+    state->estimatedZ = filteredZ;// +(state->velocityFactor * state->velocityZ * dt);
   }
 
   estimate->position.x = 0.0f;

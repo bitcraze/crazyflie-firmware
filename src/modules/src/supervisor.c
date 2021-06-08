@@ -33,6 +33,10 @@
 #include "pm.h"
 #include "stabilizer.h"
 #include "supervisor.h"
+#include "position_controller.h"
+
+#include "debug.h"
+
 
 /* Minimum summed motor PWM that means we are flying */
 #define SUPERVISOR_FLIGHT_THRESHOLD 1000
@@ -115,6 +119,10 @@ static bool isTumbledCheck(const sensorData_t *data)
 void supervisorUpdate(const sensorData_t *data)
 {
   isFlying = isFlyingCheck();
+
+  if (!isFlying) {
+      positionControllerInit(); 
+  }
 
   isTumbled = isTumbledCheck(data);
   if (isTumbled && isFlying) {
