@@ -94,17 +94,23 @@ def parse_xml(doc_type):
 
 def create_markdown(doc_type, groups_info_storage):
 
-    markdown_file_name = doc_type + '.md'
+    markdown_file_name = 'docs/api/'+doc_type + '.md'
     f = open(markdown_file_name, 'w')
+
+    f.write('---\n')
     if doc_type == 'logs':
-        f.write('# Logging groups and variables\n')
+        f.write('title: Logging groups and variables\n')
     elif doc_type == 'params':
-        f.write('# Parameter groups and variables\n')
+        f.write('title: Parameter groups and variables\n')
     else:
         print('group type does not exist!')
         return None
+
+    f.write('page_id: ' +doc_type + '\n')
+    f.write('---\n')
+
         
-    f.write('## Index\n')
+    f.write('## Index\n\n')
     first_letter = ''
 
     for full_group_info in groups_info_storage:
@@ -112,9 +118,10 @@ def create_markdown(doc_type, groups_info_storage):
         group_name = group_info[0]
         if first_letter != group_name[0]:
             first_letter = group_name[0]
-            f.write('## ' + first_letter + '\n')
+            f.write('\n')
+            f.write('### ' + first_letter + '\n')
 
-        f.write('* [' +group_name+'](#'+group_name+')\n')
+        f.write('* [' +group_name+'](#'+group_name.lower()+')\n')
 
     for full_group_info in groups_info_storage:
         group_info = full_group_info[0]
@@ -142,10 +149,17 @@ def create_markdown(doc_type, groups_info_storage):
             file_location= info_variable[4] 
             line_location= info_variable[5]
 
-            string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
-            '   * ' + description+ '\n' + 
-            '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
-            file_location +'#L'+line_location+')\n')
+            string_variable_info = ''
+            if len(description)>0:
+                string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
+                '   * ' + description+ '\n' + 
+                '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+                file_location +'#L'+line_location+')\n')
+            else:
+                string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
+                '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+                file_location +'#L'+line_location+')\n')
+                
 
             if is_variable_core:
                 f.write(string_variable_info)
@@ -155,7 +169,7 @@ def create_markdown(doc_type, groups_info_storage):
                 dev_variables_exist_in_group= True
 
         if core_variable_exist_in_group== False:
-            f.write('### *No core log variables* \n')
+            f.write(' *No core log variables* \n')
 
         if dev_variables_exist_in_group:
             f.write('### Dev log variables\n')
