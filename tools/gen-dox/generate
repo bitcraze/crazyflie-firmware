@@ -2,6 +2,9 @@
 set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+doxDir=$scriptDir/../../generated/dox
+xmlDir=$doxDir/xml
 
-mkdir -p $scriptDir/../../generated/dox
+mkdir -p $doxDir
+[ -d "$xmlDir" ] && rm -r $xmlDir
 doxygen tools/gen-dox/Doxyfile
