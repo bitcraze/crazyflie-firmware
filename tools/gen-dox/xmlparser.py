@@ -73,6 +73,12 @@ def parse_xml(doc_type):
                     description = descrp.text
                 else:
                     description = ''
+
+                big_descrp = memberdef.find('detaileddescription/para')
+                if big_descrp != None:
+                    big_description = big_descrp.text
+                else:
+                    big_description = ''
                 #type
                 typevar = memberdef.find('type/ref')
                 type_variable = typevar.text;
@@ -82,7 +88,7 @@ def parse_xml(doc_type):
                 line_location =location.attrib['line']
 
 
-                info_variable = [variable_name, is_variable_core, description, type_variable,file_location, line_location]
+                info_variable = [variable_name, is_variable_core, description, type_variable,file_location, line_location, big_description]
                 info_variables.append(info_variable)
 
             full_group_info = [group_info, info_variables]
@@ -128,19 +134,24 @@ def create_markdown(doc_type, groups_info_storage):
         group_name = group_info[0]
         f.write('\n---\n')
 
-        f.write('[back to log index](#index) \n\n')
+        f.write('[back to group index](#index) \n\n')
         f.write('## '+group_name + '\n')
 
         group_description = group_info[1]
         f.write(group_description + '\n')
 
-        f.write('### Core Log variables\n')
+        f.write('### Variables\n\n')
 
         info_variables = full_group_info[1]
-        string_dev_variable = ''
+        string_big_descriptions = ''
         dev_variables = []
         core_variable_exist_in_group = False
         dev_variables_exist_in_group= False
+
+        table_start_string = (' | Name | Core | Type | Description | \n' +
+        ' | ------------- | ------------- | ----- |----- |\n')
+        f.write(table_start_string)
+
         for info_variable in info_variables:
             variable_name = info_variable[0] 
             is_variable_core = info_variable[1] 
@@ -148,8 +159,44 @@ def create_markdown(doc_type, groups_info_storage):
             type_variable= info_variable[3] 
             file_location= info_variable[4] 
             line_location= info_variable[5]
+            big_description = info_variable[6]
 
             string_variable_info = ''
+            full_name = group_name + '.' + variable_name
+            full_name_nodot =  group_name + variable_name
+            full_name_url = '['+full_name+'](#'+full_name_nodot.lower()+')'
+
+
+            core_indication_string = ''
+            if is_variable_core:
+                core_indication_string = 'Core'
+
+            string_variable_info = (' | '+full_name_url+' | '+ core_indication_string+ ' | ' + type_variable + ' |'
+             + description + ' |\n')
+            f.write(string_variable_info)
+
+
+            if big_description == None:
+                big_description = ''
+
+            
+            if len(description) >0:
+                description = '*'+description.rstrip()+'*'
+
+            
+    
+
+            string_big_description = ('#### **'+ full_name + '**\n \n ' +
+            '[' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+            file_location +'#L'+line_location+')\n \n' +
+            description + '\n\n'+
+            big_description+'\n')
+
+            string_big_descriptions = string_big_descriptions +string_big_description
+
+
+
+            '''
             if len(description)>0:
                 string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
                 '   * ' + description+ '\n' + 
@@ -159,7 +206,6 @@ def create_markdown(doc_type, groups_info_storage):
                 string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
                 '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
                 file_location +'#L'+line_location+')\n')
-                
 
             if is_variable_core:
                 f.write(string_variable_info)
@@ -173,7 +219,13 @@ def create_markdown(doc_type, groups_info_storage):
 
         if dev_variables_exist_in_group:
             f.write('### Dev log variables\n')
-            f.write(string_dev_variable)
+            f.write(string_dev_variable)'''
+            
+        f.write('\n')
+        f.write('### Detailed Variable Information\n')  
+
+        f.write(string_big_descriptions)
+
         
     f.close()
 
