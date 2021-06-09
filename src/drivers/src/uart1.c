@@ -280,7 +280,7 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
 }
 #endif
 
-void __attribute__((used)) USART3_IRQHandler(void)
+void __attribute__((used)) USART3_IRQHandler_not_used(void)
 {
   if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
   {

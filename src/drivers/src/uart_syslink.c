@@ -56,7 +56,7 @@ static StaticSemaphore_t waitUntilSendDoneBuffer;
 static xSemaphoreHandle uartBusy;
 static StaticSemaphore_t uartBusyBuffer;
 static xQueueHandle syslinkPacketDelivery;
-STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 8, sizeof(SyslinkPacket));
+STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 32, sizeof(SyslinkPacket));
 
 static uint8_t dmaBuffer[64];
 static uint8_t *outDataIsr;
@@ -199,6 +199,16 @@ void uartslkInit(void)
 bool uartslkTest(void)
 {
   return isInit;
+}
+
+void uartslkPauseRx(void)
+{
+  NVIC_DisableIRQ(EXTI4_IRQn);
+}
+
+void uartslkResumeRx(void)
+{
+  NVIC_EnableIRQ(EXTI4_IRQn);
 }
 
 void uartslkGetPacketBlocking(SyslinkPacket* packet)
@@ -370,7 +380,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
         // Only assert if debugger is not connected
-        ASSERT(0);
+//        ASSERT(0);
       }
     }
     break;
@@ -385,18 +395,18 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
         // Only assert if debugger is not connected
-        ASSERT(0); // Queue overflow
+//        ASSERT(0); // Queue overflow
       }
     }
     else
     {
       rxState = waitForFirstStart; //Checksum error
-      ASSERT(0);
+      //ASSERT(0);
     }
     rxState = waitForFirstStart;
     break;
   default:
-    ASSERT(0);
+    //ASSERT(0);
     break;
   }
 }

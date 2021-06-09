@@ -258,6 +258,29 @@ bool motorsTest(void);
  * Stops all the motors.
  */
 void motorsStop();
+/*
+ * Enable PWM output for all motors
+ */
+void motorsEnablePWM(void);
+
+/**
+ * Disable PWM output for all motors
+ */
+void motorsDisablePWM(void);
+
+void motorsEnablePassthough(uint32_t id);
+
+void motorsESCSetInput(uint32_t id);
+
+void motorsESCSetOutput(uint32_t id);
+
+void motorsESCSetHi(uint32_t id);
+
+void motorsESCSetLo(uint32_t id);
+
+int motorsESCIsHi(uint32_t id);
+
+int motorsESCIsLo(uint32_t id);
 
 /**
  * Set the PWM ratio of the motor 'id'

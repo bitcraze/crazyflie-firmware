@@ -111,6 +111,22 @@ static uint16_t motorsConv16ToBits(uint16_t bits)
   return ((bits) >> (16 - MOTORS_PWM_BITS) & ((1 << MOTORS_PWM_BITS) - 1));
 }
 
+GPIO_InitTypeDef GPIO_PassthroughInput =
+{
+    .GPIO_Mode = GPIO_Mode_IN,
+    .GPIO_Speed = GPIO_Speed_2MHz,
+    .GPIO_OType = GPIO_OType_PP,
+    .GPIO_PuPd = GPIO_PuPd_UP
+};
+
+GPIO_InitTypeDef GPIO_PassthroughOutput =
+{
+    .GPIO_Mode = GPIO_Mode_OUT,
+    .GPIO_Speed = GPIO_Speed_2MHz,
+    .GPIO_OType = GPIO_OType_PP,
+    .GPIO_PuPd = GPIO_PuPd_UP
+};
+
 // We have data that maps PWM to thrust at different supply voltage levels.
 // However, it is not the PWM that drives the motors but the voltage and
 // amps (= power). With the PWM it is possible to simulate different
@@ -350,6 +366,70 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
     }
   }
+}
+
+void motorsEnablePWM(void)
+{
+  for (int i = 0; i < NBR_OF_MOTORS; i++)
+  {
+    TIM_CtrlPWMOutputs(motorMap[i]->tim, ENABLE);
+  }
+}
+
+void motorsDisablePWM(void)
+{
+  for (int i = 0; i < NBR_OF_MOTORS; i++)
+  {
+    TIM_CtrlPWMOutputs(motorMap[i]->tim, DISABLE);
+  }
+}
+
+void motorsEnablePassthough(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+
+  TIM_CtrlPWMOutputs(motorMap[id]->tim, DISABLE);
+
+  motorsESCSetInput(id);
+  motorsESCSetHi(id);
+}
+
+void motorsESCSetInput(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+  GPIO_PassthroughInput.GPIO_Pin = motorMap[id]->gpioPin;
+  GPIO_Init(motorMap[id]->gpioPort, &GPIO_PassthroughInput);
+}
+
+void motorsESCSetOutput(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+  GPIO_PassthroughOutput.GPIO_Pin = motorMap[id]->gpioPin;
+  GPIO_Init(motorMap[id]->gpioPort, &GPIO_PassthroughOutput);
+}
+
+void motorsESCSetHi(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+  GPIO_WriteBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin, Bit_SET);
+}
+
+void motorsESCSetLo(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+  GPIO_WriteBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin, Bit_RESET);
+}
+
+int motorsESCIsHi(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+  return GPIO_ReadInputDataBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin) != Bit_RESET;
+}
+
+int motorsESCIsLo(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+  return GPIO_ReadInputDataBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin) == Bit_RESET;
 }
 
 int motorsGetRatio(uint32_t id)

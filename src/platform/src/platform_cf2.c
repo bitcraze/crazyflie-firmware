@@ -49,7 +49,7 @@ static platformConfig_t configs[] = {
     .deviceTypeName = "Crazyflie 2.1",
     .sensorImplementation = SensorImplementation_bmi088_bmp388,
     .physicalLayoutAntennasAreClose = false,
-    .motorMap = motorMapDefaultBrushed,
+    .motorMap = motorMapBoltBrushless,
   },
 #endif
 };
