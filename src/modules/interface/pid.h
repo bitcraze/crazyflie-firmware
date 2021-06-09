@@ -120,6 +120,17 @@ void pidSetIntegralLimit(PidObject* pid, const float limit);
 void pidReset(PidObject* pid);
 
 /**
+ * Reset the Dfilter and set cutoff frequency
+ * 
+ * @param[out] pid   A pointer to the pid object to initialize.
+ * @param[in] samplingRate Frequency the update will be called
+ * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
+ * @param[in] enableDFilter Enable setting for the D lowpass filter
+
+*/
+void filterReset(PidObject* pid, const float samplingRate, const float cutoffFreq, bool enableDFilter);
+
+/**
  * Update the PID parameters.
  *
  * @param[in] pid         A pointer to the pid object.

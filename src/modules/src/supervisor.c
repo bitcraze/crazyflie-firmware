@@ -121,7 +121,8 @@ void supervisorUpdate(const sensorData_t *data)
   isFlying = isFlyingCheck();
 
   if (!isFlying) {
-      positionControllerInit(); 
+    positionControllerResetAllPID();
+    positionControllerResetAllfilters();
   }
 
   isTumbled = isTumbledCheck(data);

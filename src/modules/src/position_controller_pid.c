@@ -103,9 +103,9 @@ static struct this_s this = {
 
   .pidVZ = {
     .init = {
-      .kp = 0.5,  //25
-      .ki = 4,  //15
-      .kd = 2,  //0
+      .kp = 3.0f,  //25
+      .ki = 4.0f,  //15
+      .kd = 1.5f,  //0
     },
 
     .pid.dt = DT,
@@ -142,6 +142,7 @@ static struct this_s this = {
   .thrustMin  = 20000,
 };
 #endif
+
 
 void positionControllerInit()
 {
@@ -240,6 +241,15 @@ void positionControllerResetAllPID()
   pidReset(&this.pidVZ.pid);
 }
 
+void positionControllerResetAllfilters() {
+  filterReset(&this.pidX.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidY.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidZ.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidVX.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidVY.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidVZ.pid, POSITION_RATE, vzfcut, POSITION_LPF_ENABLE);
+}
+
 LOG_GROUP_START(posCtl)
 
 LOG_ADD(LOG_FLOAT, targetVX, &this.pidVX.pid.desired)
@@ -318,6 +328,8 @@ PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
  */
 PARAM_ADD(PARAM_FLOAT, vzKd, &this.pidVZ.pid.kd)
 
+PARAM_ADD(PARAM_FLOAT, vzfcut, &vzfcut)
+
 PARAM_GROUP_STOP(velCtlPid)
 
 /**
@@ -387,7 +399,5 @@ PARAM_ADD(PARAM_FLOAT, xyVelMax, &xyVelMax)
  * @brief Maximum Z Velocity
  */
 PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
-
-PARAM_ADD(PARAM_FLOAT, vzfcut, &vzfcut)
 
 PARAM_GROUP_STOP(posCtlPid)

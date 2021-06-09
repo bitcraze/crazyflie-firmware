@@ -140,7 +140,8 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   if (altHoldMode) {
     if (!modeSet) {
         modeSet = true;
-        positionControllerInit();
+        positionControllerResetAllPID();
+        positionControllerResetAllfilters();
     }
     setpoint->thrust = 0;
     setpoint->mode.z = modeVelocity;
