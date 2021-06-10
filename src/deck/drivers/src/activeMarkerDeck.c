@@ -301,7 +301,7 @@ PARAM_GROUP_STOP(activeMarker)
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Active Marker deck](https://www.bitcraze.io/products/active-marker-deck) is attached
+ * @brief Nonzero if [Active Marker deck](%https://www.bitcraze.io/products/active-marker-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcActiveMarker, &isInit)
 

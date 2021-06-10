@@ -160,7 +160,7 @@ DECK_DRIVER(zranger2_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Z-ranger deck v2](https://store.bitcraze.io/collections/decks/products/z-ranger-deck-v2) is attached
+ * @brief Nonzero if [Z-ranger deck v2](%https://store.bitcraze.io/collections/decks/products/z-ranger-deck-v2) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcZRanger2, &isInit)
 

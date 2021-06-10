@@ -125,7 +125,7 @@ DECK_DRIVER(bigquad_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [BigQuad deck](https://www.bitcraze.io/products/bigquad-deck) is attached
+ * @brief Nonzero if [BigQuad deck](%https://www.bitcraze.io/products/bigquad-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
 

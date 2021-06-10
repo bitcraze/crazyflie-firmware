@@ -585,7 +585,7 @@ DECK_DRIVER(dwm1000_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Loco positioning deck](https://store.bitcraze.io/products/loco-positioning-deck) is attached
+ * @brief Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
 

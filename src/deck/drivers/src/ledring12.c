@@ -684,7 +684,7 @@ static float currentFadeTime = 0.5;
 LOG_GROUP_START(ring)
 /**
  * @brief Current fade time of fade color effect
- */ 
+ */
 LOG_ADD(LOG_FLOAT, fadeTime, &currentFadeTime)
 LOG_GROUP_STOP(ring)
 
@@ -1229,7 +1229,7 @@ DECK_DRIVER(ledring12_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [LED-ring deck](https://store.bitcraze.io/collections/decks/products/led-ring-deck) is attached
+ * @brief Nonzero if [LED-ring deck](%https://store.bitcraze.io/collections/decks/products/led-ring-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLedRing, &isInit)
 
