@@ -30,6 +30,15 @@ def parse_xml(doc_type):
         return None
 
 
+            #input file
+    fin = open("generated/dox/xml/index.xml", "rt")
+    fout = open("generated/dox/xml/index.xml", "wt")
+    for line in fin:
+        fout.write(line.replace('<linebreak/>', '\n'))
+    fin.close()
+    fout.close()
+
+
     # Get the index file
     tree = ET.parse('generated/dox/xml/index.xml')
     root = tree.getroot()
@@ -190,7 +199,7 @@ def create_markdown(doc_type, groups_info_storage):
             '[' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
             file_location +'#L'+line_location+')\n \n' +
             description + '\n\n'+
-            big_description+'\n')
+            big_description+'\n\n')
 
             string_big_descriptions = string_big_descriptions +string_big_description
 
