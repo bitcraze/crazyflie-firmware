@@ -120,7 +120,7 @@ void supervisorUpdate(const sensorData_t *data)
 {
   isFlying = isFlyingCheck();
 
-  if (!isFlying) {
+  if (!isFlying) {  //Reset filter and PID values while not in flight
     positionControllerResetAllPID();
     positionControllerResetAllfilters();
   }

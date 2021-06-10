@@ -97,7 +97,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
   pid->outI = pid->integ * pid->ki;
   output += pid->outI;
   
-
+  //filter complete output instead of only D component to compensate for increased noise from increased barometer influence
   if (pid->enableDFilter)
   {
     output = lpf2pApply(&pid->dFilter, output);
