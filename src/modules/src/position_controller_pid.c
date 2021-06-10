@@ -75,7 +75,7 @@ static float velMaxOverhead = 1.10f;
 static const float thrustScale = 1000.0f;
 
 //higher cutoff frequency for the Z velocity to compensate for the higher barometer influence (more noisy signal)
-static float vzfcut = 0.3f;
+static float vzfcut = 0.75f;
 
 #define DT (float)(1.0f/POSITION_RATE)
 #define POSITION_LPF_CUTOFF_FREQ 20.0f
@@ -104,7 +104,7 @@ static struct this_s this = {
   .pidVZ = {
     .init = {
       .kp = 3.0f,  //25
-      .ki = 4.0f,  //15
+      .ki = 1.0f,  //15
       .kd = 1.5f,  //0
     },
 
