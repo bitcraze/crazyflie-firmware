@@ -7,3 +7,5 @@ Crazyflie expansion decks add new sensors and functionality to the Crazyflie. Th
 
 * [Active Marker deck](/docs/userguides/decks/active-marker-deck.md)
 * [Micro-SD card deck](/docs/userguides/decks/micro-sd-card-deck.md)
+* [Buzzer deck](/docs/userguides/decks/buzzer-deck.md)
+
