@@ -438,13 +438,13 @@ LOG_ADD(LOG_FLOAT, chargeCurrent, &pmSyslinkInfo.chargeCurrent)
 /**
  * @brief State of power management
  *
- * State | Meaning
- * ------------------
- * 0     | Battery
- * 1     | Charging
- * 2     | Charged
- * 3     | Low power
- * 4     | Shutdown
+ * | State | Meaning   | \n
+ * | -     | -         | \n
+ * | 0     | Battery   | \n
+ * | 1     | Charging  | \n
+ * | 2     | Charged   | \n
+ * | 3     | Low power | \n
+ * | 4     | Shutdown  | \n
  */
 LOG_ADD_CORE(LOG_INT8, state, &pmState)
 /**
