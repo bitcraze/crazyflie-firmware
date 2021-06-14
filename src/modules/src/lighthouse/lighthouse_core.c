@@ -520,50 +520,50 @@ LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQualityLoggerDe
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the primary base station
- * - It is the first sweep
+ * | Base station type | V1 |\n
+ * | Base station | primary |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[0])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the primary base station
- * - It is the second sweep
+ * | Base station type | V1 |\n
+ * | Base station | primary |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[1])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the secondary base station
- * - It is the first sweep
+ * | Base station type | V1 |\n
+ * | Base station | secondary |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[1].angles[0])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the secondary base station
- * - It is the second sweep
+ * | Base station type | V1 |\n
+ * | Base station | secondary |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[1].angles[1])
 
 /**
  * @brief The V1 angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the primary base station
- * - It is the first sweep
+ * | Base station type | V1 |\n
+ * | Base station | primary |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
@@ -572,10 +572,10 @@ LOG_ADD(LOG_FLOAT, angle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
 /**
  * @brief The V1 angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the primary base station
- * - It is the second sweep
+ * | Base station type | V1 |\n
+ * | Base station | primary |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
@@ -584,10 +584,10 @@ LOG_ADD(LOG_FLOAT, angle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
 /**
  * @brief The angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the secondary base station
- * - It is the first sweep
+ * | Base station type | V1 |\n
+ * | Base station | secondary |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
@@ -596,10 +596,10 @@ LOG_ADD(LOG_FLOAT, angle1x, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
 /**
  * @brief The angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the secondary base station
- * - It is the second sweep
+ * | Base station type | V1 |\n
+ * | Base station | secondary |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
@@ -608,10 +608,10 @@ LOG_ADD(LOG_FLOAT, angle1y, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
 /**
  * @brief The angle received by sensor 1, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the primary base station
- * - It is the first sweep
+ * | Base station type | V1 |\n
+ * | Base station | primary |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 1 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
@@ -620,10 +620,10 @@ LOG_ADD(LOG_FLOAT, angle0x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasure
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the primary base station
- * - It is the second sweep
+ * | Base station type | V1 |\n
+ * | Base station | primary |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 1 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
@@ -632,10 +632,10 @@ LOG_ADD(LOG_FLOAT, angle0y_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasure
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the secondary base station
- * - It is the first sweep
+ * | Base station type | V1 |\n
+ * | Base station | secondary |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 1 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
@@ -644,10 +644,10 @@ LOG_ADD(LOG_FLOAT, angle1x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasure
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V1
- * - It is the secondary base station
- * - It is the second sweep
+ * | Base station type | V1 |\n
+ * | Base station | secondary |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 1 |\n\n
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
@@ -666,80 +666,80 @@ LOG_ADD(LOG_FLOAT, angle1y_3, &angles.sensorMeasurementsLh1[3].baseStatonMeasure
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 1
- * - It is the first sweep
+ * | Base station type | V2 |\n
+ * | Channel | 1 |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[0])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 1
- * - It is the second sweep
+ * | Base station type | V2 |\n
+ * | Channel | 1 |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[1])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 2
- * - It is the first sweep
+ * | Base station type | V2 |\n
+ * | Channel | 2 |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[0])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 2
- * - It is the second sweep
+ * | Base station type | V2 |\n
+ * | Channel | 2 |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[1])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 1
- * - It is the first sweep
+ * | Base station type | V2 |\n
+ * | Channel | 1 |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 1
- * - It is the second sweep
+ * | Base station type | V2 |\n
+ * | Channel | 1 |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 2
- * - It is the first sweep
+ * | Base station type | V2 |\n
+ * | Channel | 2 |\n
+ * | Sweep | 1 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[0])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
  *
- * where:
- * - The Base station is of type V2
- * - The base station channel is 2
- * - It is the second sweep
+ * | Base station type | V2 |\n
+ * | Channel | 2 |\n
+ * | Sweep | 2 |\n
+ * | Sensor | 0 |\n
  */
 LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[1])
 
@@ -798,11 +798,11 @@ LOG_ADD_CORE(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
 /**
  * @brief Overall status of the lighthouse system
  *
- * Value | Meaning
- * ---------------
- * 0     | No lighthouse base stations are recevied
- * 1     | One or more base stations are received but geometry or callibration data is missing
- * 2     | Base station data is sent to the state estimator
+ * | Value | Meaning                                                                             |\n
+ * | -     | -                                                                                   |\n
+ * | 0     | No lighthouse base stations are recevied                                            |\n
+ * | 1     | One or more base stations are received but geometry or callibration data is missing |\n
+ * | 2     | Base station data is sent to the state estimator                                    |\n
  *
  */
 LOG_ADD_CORE(LOG_UINT8, status, &systemStatus)

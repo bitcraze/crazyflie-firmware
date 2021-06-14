@@ -31,3 +31,7 @@
     - {page_id: memory_management}
     - {page_id: dfu}
     - {page_id: oot}
+- title: Auto-generated API Documentation
+  subs:
+    - {page_id: logs}
+    - {page_id: params}

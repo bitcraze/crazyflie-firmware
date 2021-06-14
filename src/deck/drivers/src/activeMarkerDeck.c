@@ -258,26 +258,30 @@ PARAM_ADD_CORE(PARAM_UINT8, right, &requestedId[3])
 /**
  * @brief Off(0), pwm(1), modulated(2) or qualisys(3)
  *
- *    Mode    |    Value      |         Comment
- * -----------|---------------|-------------------------------
- * OFF        |   0           |    Always off
- * PWM        |   1           |    Always on, PWM modulated
- * MODULATED  |   2           |    Switching
- * QUALISYS   |   3 (default) |    Qualisys Active Marker mode
+ * |    Mode    |    Value      |         Comment                | \n
+ * | -          | -             | -                              | \n
+ * | OFF        |   0           |    Always off                  | \n
+ * | PWM        |   1           |    Always on, PWM modulated    | \n
+ * | MODULATED  |   2           |    Switching                   | \n
+ * | QUALISYS   |   3 (default) |    Qualisys Active Marker mode | \n
  *
  * ### Off mode
+ *
  * All marker LEDs are turned off.
  *
  * ### PWM mode
+ *
  * The marker LEDs are turned on and PWM modulated. The brightness of each LED
  * is controlled by the marker parameters below, in the range 0 - 255.
  *
  * ### Modulated mode
+ *
  * The LEDs are switched on and off at around 42 kHz (24 micro seconds cycle).
  * The brightness of the LEDs during the “on” part of the cycle is controlled
  * by the marker parameters below, in the range 0 - 255.
  *
  * ### Qualisys mode
+ *
  * In this mode the LEDs act as Active markers with IDs that are identified by
  * the Qualisys system and used for better 6-dof identification and tracking.
  * The IDs are controlled by the marker parameters. The Qualisys systems
@@ -301,7 +305,7 @@ PARAM_GROUP_STOP(activeMarker)
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Active Marker deck](https://www.bitcraze.io/products/active-marker-deck) is attached
+ * @brief Nonzero if [Active Marker deck](%https://www.bitcraze.io/products/active-marker-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcActiveMarker, &isInit)
 

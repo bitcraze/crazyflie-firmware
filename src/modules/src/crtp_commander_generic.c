@@ -410,7 +410,7 @@ void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
  * unless a given channel is actually in use (numAuxChannels must be set accordingly)
  *
  * Current aux channel assignments:
- * - AuxChannel0: set high to enable self-leveling, low to disable
+ *  AuxChannel0: set high to enable self-leveling, low to disable
  *
  * The scaling can be configured using the parameters, setting the maximum
  * angle/rate output given a maximum stick input (1000 or 2000).

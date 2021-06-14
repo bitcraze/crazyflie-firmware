@@ -684,7 +684,7 @@ static float currentFadeTime = 0.5;
 LOG_GROUP_START(ring)
 /**
  * @brief Current fade time of fade color effect
- */ 
+ */
 LOG_ADD(LOG_FLOAT, fadeTime, &currentFadeTime)
 LOG_GROUP_STOP(ring)
 
@@ -1131,21 +1131,21 @@ PARAM_GROUP_START(ring)
 /**
  * @brief Id of effect to use (default: 6)
  *
- * Id | Effect
- * -----------
- * 0  | Off
- * 1  | White spinner
- * 2  | Color spinner
- * 3  | Tilt
- * 4  | Brightness
- * 5  | Color spinner 2
- * 6  | Double spinner
- * 7  | Solid color effect
- * 8  | Factory test
- * 9  | Battery status
- * 10 | Boat lights
- * 11 | Alert
- * 12 | Gravity
+ * | Id | Effect              | \n
+ * | -  | -                   | \n
+ * | 0  | Off                 | \n
+ * | 1  | White spinner       | \n
+ * | 2  | Color spinner       | \n
+ * | 3  | Tilt                | \n
+ * | 4  | Brightness          | \n
+ * | 5  | Color spinner 2     | \n
+ * | 6  | Double spinner      | \n
+ * | 7  | Solid color effect  | \n
+ * | 8  | Factory test        | \n
+ * | 9  | Battery status      | \n
+ * | 10 | Boat lights         | \n
+ * | 11 | Alert               | \n
+ * | 12 | Gravity             | \n
  */
 PARAM_ADD_CORE(PARAM_UINT8, effect, &effect)
 
@@ -1229,7 +1229,7 @@ DECK_DRIVER(ledring12_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [LED-ring deck](https://store.bitcraze.io/collections/decks/products/led-ring-deck) is attached
+ * @brief Nonzero if [LED-ring deck](%https://store.bitcraze.io/collections/decks/products/led-ring-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLedRing, &isInit)
 

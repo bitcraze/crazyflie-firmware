@@ -216,14 +216,9 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 }
 
 /**
- * There are 2 levels to control, which is:
- *   Position (X, Y, Z)
- *   Attitude (pitch, roll, yaw or in quaternions)
+ * There are 2 levels to control: Position (X, Y, Z) and Attitude (pitch, roll, yaw or in quaternions)
  *
- * These can be controlled in different modes, namely:
- *   Absolute mode
- *   Velocity mode
- *   Disabled
+ * These can be controlled in different modes: Absolute mode, Velocity mode or Disabled
  *
  * These parameters have impact on which level and mode to use.
  */

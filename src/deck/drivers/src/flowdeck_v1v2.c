@@ -253,7 +253,7 @@ DECK_DRIVER(flowdeck2_deck);
 
 /**
  * Logging variables of the motion sensor of the flowdeck
- */ 
+ */
 LOG_GROUP_START(motion)
 /**
  * @brief True if motion occured since the last measurement
@@ -288,7 +288,7 @@ LOG_ADD(LOG_UINT8, Rawsum, &currentMotion.rawDataSum)
  */
 LOG_ADD(LOG_UINT8, outlierCount, &outlierCount)
 /**
- * @brief Count of surface feature 
+ * @brief Count of surface feature
  */
 LOG_ADD(LOG_UINT8, squal, &currentMotion.squal)
 /**
@@ -324,7 +324,7 @@ PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow, &isInit1)
 
 /**
- * @brief Nonzero if [Flow deck v2](https://store.bitcraze.io/collections/decks/products/flow-deck-v2) is attached
+ * @brief Nonzero if [Flow deck v2](%https://store.bitcraze.io/collections/decks/products/flow-deck-v2) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow2, &isInit2)
 

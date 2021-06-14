@@ -585,7 +585,7 @@ DECK_DRIVER(dwm1000_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Loco positioning deck](https://store.bitcraze.io/products/loco-positioning-deck) is attached
+ * @brief Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
 
@@ -603,11 +603,11 @@ LOG_GROUP_START(loco)
 /**
  * @brief The current mode of the Loco Positionning system
  *
-* Value | Mode
- * --------------
- *   1   | TWR
- *   2   | TDoA 2
- *   3   | TDoA 3
+ * | Value | Mode   | \n
+ * | -     | -      | \n
+ * |   1   | TWR    | \n
+ * |   2   | TDoA 2 | \n
+ * |   3   | TDoA 3 | \n
  */
 LOG_ADD_CORE(LOG_UINT8, mode, &algoOptions.currentRangingMode)
 
@@ -617,11 +617,10 @@ LOG_GROUP_STOP(loco)
 
 /**
  * The Loco Positioning System implements three different positioning modes:
- * - Two Way Ranging (TWR)
- * - Time Difference of Arrival 2 (TDoA 2)
- * - Time Difference of Arrival 3 (TDoA 3)
+ * Two Way Ranging (TWR), Time Difference of Arrival 2 (TDoA 2) and Time Difference of Arrival 3 (TDoA 3)
  *
  * ### TWR mode
+ *
  * In this mode, the tag pings the anchors in sequence, this allows it to
  * measure the distance between the tag and the anchors. Using this information
  * a theoretical minimum of 4 Anchors is required to calculate the 3D position
@@ -632,6 +631,7 @@ LOG_GROUP_STOP(loco)
  * quad can be positioned with a maximum of 8 anchors.
  *
  * ### TDoA 2 mode
+ *
  * In TDoA 2 mode, the anchor system is continuously sending synchronization
  * packets. A tag listening to these packets can calculate the relative
  * distance to two anchors by measuring the time difference of arrival of the
@@ -651,6 +651,7 @@ LOG_GROUP_STOP(loco)
  * number of anchors is limited to 8.
  *
  * ### TDoA 3 mode
+ *
  * The TDoA 3 mode has many similarities with TDoA 2 and supports any number
  * of tags or quads. The main difference is that the time slotted scheme of
  * TDoA 2 has been replaced by a randomized transmission schedule which makes
@@ -665,12 +666,12 @@ PARAM_GROUP_START(loco)
 /**
  * @brief The Loco positioning mode to use (default: 0)
  *
- * Value | Mode
- * --------------
- *   0   | Auto
- *   1   | TWR
- *   2   | TDoA 2
- *   3   | TDoA 3
+ * | Value | Mode   |\n
+ * | -     | -      |\n
+ * |   0   | Auto   |\n
+ * |   1   | TWR    |\n
+ * |   2   | TDoA 2 |\n
+ * |   3   | TDoA 3 |\n
  */
 PARAM_ADD_CORE(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
 

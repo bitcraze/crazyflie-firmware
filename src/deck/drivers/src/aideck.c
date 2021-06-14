@@ -150,7 +150,7 @@ LOG_GROUP_STOP(aideck)
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [AI deck](https://store.bitcraze.io/collections/decks/products/ai-deck-1-1) is attached
+ * @brief Nonzero if [AI deck](%https://store.bitcraze.io/collections/decks/products/ai-deck-1-1) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcAIDeck, &isInit)
 

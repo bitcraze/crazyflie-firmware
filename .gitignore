@@ -19,8 +19,9 @@ tags
 
 current_platform.mk
 
-/generated-test/**
+/generated/**
 **/__pycache__/**
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache
+docs/api

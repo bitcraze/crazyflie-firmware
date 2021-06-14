@@ -201,7 +201,7 @@ DECK_DRIVER(multiranger_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Multi-ranger deck](https://store.bitcraze.io/collections/decks/products/multi-ranger-deck) is attached
+ * @brief Nonzero if [Multi-ranger deck](%https://store.bitcraze.io/collections/decks/products/multi-ranger-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
 
