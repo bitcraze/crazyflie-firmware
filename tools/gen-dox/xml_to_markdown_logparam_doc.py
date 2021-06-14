@@ -25,6 +25,8 @@ def pre_process_xml(xml):
     # The xml we get from doxygen contains some un-orthodox elements that we handle before we parse the xml
     if xml.find('<itemizedlist>') != -1:
         raise ValueError("The xml contains <itemizedlist> which is not supported in log/param documentation. It is probably caused by a list created using '-'.")
+    if xml.find('<ulink') != -1:
+        raise ValueError("The xml contains <ulink> which is not supported in log/param documentation. It is probably caused by a link, prepend the URL with '%'.")
 
     return xml.replace('<linebreak/>', "")
 
