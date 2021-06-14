@@ -7,9 +7,9 @@ xmlDir=$doxDir/xml
 apiDocsDir=$scriptDir/../../docs/api
 
 # Generate xml from the source code
-# mkdir -p $doxDir
-# [ -d "$xmlDir" ] && rm -r $xmlDir
-# doxygen tools/gen-dox/Doxyfile
+mkdir -p $doxDir
+[ -d "$xmlDir" ] && rm -r $xmlDir
+doxygen tools/gen-dox/Doxyfile
 
 # Generate markdown from the xml
 [ -d "$apiDir" ] && rm -r $apiDocsDir
