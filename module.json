@@ -1,8 +1,9 @@
 {
-  "version": "1.0",
-  "environmentReq": [
-    "arm-none-eabi"
-  ],
+  "version": "2.0",
+  "environmentReqs": {
+    "build": ["arm-none-eabi"],
+    "build-docs": ["doxygen"]
+  },
   "artifacts": {
     "file": [
       {
