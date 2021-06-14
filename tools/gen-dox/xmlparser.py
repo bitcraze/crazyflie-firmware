@@ -1,19 +1,20 @@
 import xml.etree.ElementTree as ET
+import sys
 
 # Runs this directly from the crazyflie firmware directory with python tools/gen-dox/xmlparser
 # Make sure there are XML docs to parse! check the readme
 
 
-def create_log_markdown():
-    log_groups = parse_xml('logs')
-    create_markdown('logs', log_groups)
+def create_log_markdown(xml_dir, api_doc_dir):
+    log_groups = parse_xml('logs', xml_dir)
+    create_markdown('logs', log_groups, api_doc_dir)
 
 
-def create_param_markdown():
-    param_groups = parse_xml('params')
-    create_markdown('params', param_groups)
+def create_param_markdown(xml_dir, api_doc_dir):
+    param_groups = parse_xml('params', xml_dir)
+    create_markdown('params', param_groups, api_doc_dir)
 
-def parse_xml(doc_type):
+def parse_xml(doc_type, xml_dir):
 
     groups_info_storage = []
     search_string = ''
@@ -31,7 +32,7 @@ def parse_xml(doc_type):
 
 
             #input file
-    fin = open("generated/dox/xml/index.xml", "rt")
+    fin = open(xml_dir + 'index.xml', "rt")
     
     #fout = open("generated/dox/xml/index.xml", "wt")
     #for line in fin:
@@ -51,7 +52,7 @@ def parse_xml(doc_type):
         #Go through all the log classes in 
         if search_string in filename:
             full_filename = filename + '.xml'
-            tree = ET.parse('generated/dox/xml/' + full_filename)
+            tree = ET.parse(xml_dir + full_filename)
             root = tree.getroot()
 
             # log group name
@@ -114,9 +115,9 @@ def parse_xml(doc_type):
     return groups_info_storage
 
 
-def create_markdown(doc_type, groups_info_storage):
+def create_markdown(doc_type, groups_info_storage, api_doc_dir):
 
-    markdown_file_name = 'docs/api/'+doc_type + '.md'
+    markdown_file_name = api_doc_dir+doc_type + '.md'
     f = open(markdown_file_name, 'w')
 
     f.write('---\n')
@@ -247,7 +248,20 @@ def create_markdown(doc_type, groups_info_storage):
 
 if __name__ == '__main__':
 
+    if(len(sys.argv)!=3):
+        raise ValueError("Need two arguments!")
+    
+    xml_dir = sys.argv[1]
+    api_doc_dir = sys.argv[2]
+
     print('Create Logging API Markdown files')
-    create_log_markdown()
+    create_log_markdown(xml_dir, api_doc_dir)
     print('Create Parameter API Markdown files')
-    create_param_markdown()
+    create_param_markdown(xml_dir, api_doc_dir)
+  
+    
+
+
+
+    
+
