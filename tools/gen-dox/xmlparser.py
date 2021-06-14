@@ -32,16 +32,18 @@ def parse_xml(doc_type):
 
             #input file
     fin = open("generated/dox/xml/index.xml", "rt")
-    fout = open("generated/dox/xml/index.xml", "wt")
-    for line in fin:
-        fout.write(line.replace('<linebreak/>', '\n'))
-    fin.close()
-    fout.close()
+    
+    #fout = open("generated/dox/xml/index.xml", "wt")
+    #for line in fin:
+    #fout.write(line.replace('<linebreak/>', '\n'))
+    #fin.close()
+    #fout.close()
 
 
     # Get the index file
-    tree = ET.parse('generated/dox/xml/index.xml')
-    root = tree.getroot()
+    root = ET.fromstring(fin.read())
+    #tree = ET.parse('generated/dox/xml/index.xml')
+    #root = tree.getroot()
 
     for compound in root.findall('compound'):
         filename = compound.attrib['refid']
@@ -57,9 +59,13 @@ def parse_xml(doc_type):
                 compoundname = compounddef.find('compoundname')
                 group_name_fake = compoundname.text
                 group_name = group_name_fake.replace(replace_string,'')
-                descrp = compounddef.find('detaileddescription/para')
+                descrp = compounddef.findall('detaileddescription/para')
+                group_description = ''
                 if descrp != None:
-                    group_description = descrp.text
+                    for para in descrp:
+                        if para.text != None:
+                            group_description = group_description + '\n\n' + para.text
+
                 else:
                     group_description = ''
 
@@ -83,11 +89,12 @@ def parse_xml(doc_type):
                 else:
                     description = ''
 
-                big_descrp = memberdef.find('detaileddescription/para')
+                big_descrp = memberdef.findall('detaileddescription/para')
+                big_description = ''
                 if big_descrp != None:
-                    big_description = big_descrp.text
-                else:
-                    big_description = ''
+                    for para in big_descrp:
+                        if para.text != None:
+                            big_description = big_description + '\n\n' + para.text
                 #type
                 typevar = memberdef.find('type/ref')
                 type_variable = typevar.text;
