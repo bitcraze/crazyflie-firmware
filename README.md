@@ -16,12 +16,15 @@ See the [building and flashing instructions](https://www.bitcraze.io/documentati
 
 Check out the [Bitcraze crazyflie-firmware documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/) on our website.
 
-
 ## Generated documentation
 
-Generate API documentation
+The easiest way to generate the API documentation is to use the [toolbelt](https://github.com/bitcraze/toolbelt)
 
-docker run --rm -it -v $PWD:/module bitcraze/web-builder tools/gen-dox/generate
+```tb build-docs```
+
+and to view it in a web page
+
+```tb docs```
 
 ## License
 
