@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 import sys
+import os
 
 # Runs this directly from the crazyflie firmware directory with python tools/gen-dox/xmlparser
 # Make sure there are XML docs to parse! check the readme
@@ -32,8 +33,8 @@ def parse_xml(doc_type, xml_dir):
 
 
             #input file
-    fin = open(xml_dir + 'index.xml', "rt")
-    
+    fin = open(os.path.join(xml_dir, 'index.xml'), "rt")
+
     #fout = open("generated/dox/xml/index.xml", "wt")
     #for line in fin:
     #fout.write(line.replace('<linebreak/>', '\n'))
@@ -48,11 +49,11 @@ def parse_xml(doc_type, xml_dir):
 
     for compound in root.findall('compound'):
         filename = compound.attrib['refid']
-        
-        #Go through all the log classes in 
+
+        #Go through all the log classes in
         if search_string in filename:
             full_filename = filename + '.xml'
-            tree = ET.parse(xml_dir + full_filename)
+            tree = ET.parse(os.path.join(xml_dir, full_filename))
             root = tree.getroot()
 
             # log group name
@@ -109,7 +110,7 @@ def parse_xml(doc_type, xml_dir):
                 info_variables.append(info_variable)
 
             full_group_info = [group_info, info_variables]
-            
+
             groups_info_storage.append(full_group_info)
 
     return groups_info_storage
@@ -117,7 +118,7 @@ def parse_xml(doc_type, xml_dir):
 
 def create_markdown(doc_type, groups_info_storage, api_doc_dir):
 
-    markdown_file_name = api_doc_dir+doc_type + '.md'
+    markdown_file_name = os.path.join(api_doc_dir, doc_type + '.md')
     f = open(markdown_file_name, 'w')
 
     f.write('---\n')
@@ -132,7 +133,7 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
     f.write('page_id: ' +doc_type + '\n')
     f.write('---\n')
 
-        
+
     f.write('## Index\n\n')
     first_letter = ''
 
@@ -170,11 +171,11 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
         f.write(table_start_string)
 
         for info_variable in info_variables:
-            variable_name = info_variable[0] 
-            is_variable_core = info_variable[1] 
-            description = info_variable[2] 
-            type_variable= info_variable[3] 
-            file_location= info_variable[4] 
+            variable_name = info_variable[0]
+            is_variable_core = info_variable[1]
+            description = info_variable[2]
+            type_variable= info_variable[3]
+            file_location= info_variable[4]
             line_location= info_variable[5]
             big_description = info_variable[6]
 
@@ -196,15 +197,15 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
             if big_description == None:
                 big_description = ''
 
-            
+
             if len(description) >0:
                 description = '*'+description.rstrip()+'*'
 
-            
-    
+
+
 
             string_big_description = ('#### **'+ full_name + '**\n \n ' +
-            '[' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+            '[' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' +
             file_location +'#L'+line_location+')\n \n' +
             description + '\n\n'+
             big_description+'\n\n')
@@ -215,13 +216,13 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
 
             '''
             if len(description)>0:
-                string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
-                '   * ' + description+ '\n' + 
-                '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+                string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' +
+                '   * ' + description+ '\n' +
+                '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' +
                 file_location +'#L'+line_location+')\n')
             else:
-                string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' + 
-                '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' + 
+                string_variable_info = ('* ' +  type_variable + ' **' + variable_name + '** \n' +
+                '   * [' + file_location + ' (L'+line_location+')](https://github.com/bitcraze/crazyflie-firmware/blob/master/' +
                 file_location +'#L'+line_location+')\n')
 
             if is_variable_core:
@@ -237,20 +238,20 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
         if dev_variables_exist_in_group:
             f.write('### Dev log variables\n')
             f.write(string_dev_variable)'''
-            
+
         f.write('\n')
-        f.write('### Detailed Variable Information\n')  
+        f.write('### Detailed Variable Information\n')
 
         f.write(string_big_descriptions)
 
-        
+
     f.close()
 
 if __name__ == '__main__':
 
     if(len(sys.argv)!=3):
         raise ValueError("Need two arguments!")
-    
+
     xml_dir = sys.argv[1]
     api_doc_dir = sys.argv[2]
 
@@ -258,10 +259,3 @@ if __name__ == '__main__':
     create_log_markdown(xml_dir, api_doc_dir)
     print('Create Parameter API Markdown files')
     create_param_markdown(xml_dir, api_doc_dir)
-  
-    
-
-
-
-    
-
