@@ -32,3 +32,5 @@ docs/.jekyll-cache
 *.json
 *.sqlite
 
+*.ipch
+*.suo

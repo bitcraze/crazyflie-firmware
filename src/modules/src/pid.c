@@ -77,10 +77,11 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
   } else {
     pid->deriv = deriv;
   }*/
+  pid->deriv = deriv;
   if (isnan(pid->deriv)) {
     pid->deriv = 0;
   }
-  pid->deriv = deriv;
+ 
   pid->outD = pid->kd * pid->deriv;
   output += pid->outD;
 
