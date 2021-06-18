@@ -31,6 +31,7 @@
 #include "commander.h"
 #include "crtp.h"
 #include "param.h"
+#include "debug.h"
 #include "FreeRTOS.h"
 #include "num.h"
 #include "position_controller.h"
@@ -79,6 +80,8 @@ static bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
 static bool modeSet = false;
+static bool takeoff = false;
+static int takeoffCounter = 0;
 
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
@@ -138,15 +141,28 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   }
 
   if (altHoldMode) {
-    if (!modeSet)              //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
+    if (!modeSet) {             //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
         modeSet = true;
         positionControllerResetAllPID();
         positionControllerResetAllfilters();
+        takeoff = true;
     }
     setpoint->thrust = 0;
     setpoint->mode.z = modeVelocity;
 
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
+    if (takeoff) {
+      takeoffCounter++;
+      if (takeoffCounter >= 10) {
+        setpoint->velocity.z += 0.5f;
+      }
+      if (takeoffCounter >= 150) {
+        positionControllerResetAllPID();
+        positionControllerResetAllfilters();
+        takeoff = false;
+        takeoffCounter = 0;
+      }
+    }
   } else {
     setpoint->mode.z = modeDisable;
     modeSet = false;
