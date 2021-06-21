@@ -885,6 +885,9 @@ static void usdWriteTask(void* prm)
               case eventtriggerType_float:
                 typeChar = 'f';
                 break;
+              case eventtrigerType_fp16:
+                typeChar = 'e';
+                break;
               default:
                 ASSERT(false);
               }
