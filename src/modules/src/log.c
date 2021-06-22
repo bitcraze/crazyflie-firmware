@@ -994,7 +994,7 @@ logVarId_t logGetVarId(char* group, char* name)
 
 int logGetType(logVarId_t varid)
 {
-  return logs[varid].type;
+  return logs[varid].type & TYPE_MASK;
 }
 
 void logGetGroupAndName(logVarId_t varid, char** group, char** name)
@@ -1034,7 +1034,7 @@ int logGetInt(logVarId_t varid)
 
   ASSERT(logVarIdIsValid(varid));
 
-  switch(logs[varid].type)
+  switch(logs[varid].type & TYPE_MASK)
   {
     case LOG_UINT8:
       valuei = *(uint8_t *)logs[varid].address;
@@ -1066,7 +1066,7 @@ float logGetFloat(logVarId_t varid)
 {
   ASSERT(logVarIdIsValid(varid));
 
-  if (logs[varid].type == LOG_FLOAT)
+  if ((logs[varid].type & TYPE_MASK) == LOG_FLOAT)
     return *(float *)logs[varid].address;
 
   return logGetInt(varid);
