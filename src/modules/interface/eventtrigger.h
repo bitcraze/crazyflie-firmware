@@ -40,6 +40,7 @@ enum eventtriggerType_e {
     eventtriggerType_int16  = 5,
     eventtriggerType_int32  = 6,
     eventtriggerType_float  = 7,
+    eventtrigerType_fp16    = 8,
 };
 typedef float float_t;
 
