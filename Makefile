@@ -13,7 +13,7 @@ CFLAGS += $(EXTRA_CFLAGS)
 
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
-OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_INTERFACE ?= interface/stlink.cfg
 OPENOCD_CMDS      ?=
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON            ?= python3
@@ -59,7 +59,7 @@ PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
 LINKER_DIR = $(CRAZYFLIE_BASE)/tools/make/F405/linker
 ST_OBJ_DIR  = $(CRAZYFLIE_BASE)/tools/make/F405
 
-OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
+OPENOCD_TARGET    ?= target/stm32f4x.cfg
 
 
 # St Lib
@@ -467,9 +467,13 @@ openocd:
 trace:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
 
+rtt:
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets \
+	           -c "rtt setup 0x20000000 262144 \"SEGGER RTT\"" -c "rtt start" -c "rtt server start 2000 0"
+
 gdb: $(PROG).elf
 	$(GDB) -ex "target remote localhost:3333" -ex "monitor reset halt" $^
-
+  
 erase:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c "stm32f4x mass_erase 0" -c shutdown
 

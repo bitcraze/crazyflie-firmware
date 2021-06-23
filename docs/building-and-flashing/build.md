@@ -141,6 +141,8 @@ flash      : Flash .elf using OpenOCD
 halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD
+rtt        : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SEGGER_RTT=1" 
+             and the console is visible over TCP on port 2000 "telnet localhost 2000".
 ```
 
 # Flashing
@@ -180,7 +182,7 @@ Note: this method does not work if the Crazyflie does not start, for instance if
 
 You need:
 
-* An ST Link V2 Debugger
+* An ST Link V2 or V3 Debugger
 * open ocd installed ([installation intructions](/docs/development/openocd_gdb_debugging.md))
 * The firmware has been built
 * The current working directory is the root of the crazyflie-firmware project
@@ -188,7 +190,6 @@ You need:
 In your terminal, run
 
 `make flash`
-
 
 # Unit testing
 
