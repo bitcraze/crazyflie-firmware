@@ -156,9 +156,9 @@ int commanderGetActivePriority(void)
  *
  * The high level commander handles the setpoints from within the firmware
  * based on a predefined trajectory. This was merged as part of the
- * [Crazyswarm](https://crazyswarm.readthedocs.io/en/latest/) project of the
- * [USC ACT lab](https://act.usc.edu/) (see this
- * [blogpost](https://www.bitcraze.io/2018/02/merging-crazyswarm-functionality-into-the-official-crazyflie-firmware/)).
+ * [Crazyswarm](%https://crazyswarm.readthedocs.io/en/latest/) project of the
+ * [USC ACT lab](%https://act.usc.edu/) (see this
+ * [blogpost](%https://www.bitcraze.io/2018/02/merging-crazyswarm-functionality-into-the-official-crazyflie-firmware/)).
  * The high-level commander uses a planner to generate smooth trajectories
  * based on actions like ‘take off’, ‘go to’ or ‘land’ with 7th order
  * polynomials. The planner generates a group of setpoints, which will be

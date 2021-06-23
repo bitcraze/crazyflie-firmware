@@ -885,6 +885,9 @@ static void usdWriteTask(void* prm)
               case eventtriggerType_float:
                 typeChar = 'f';
                 break;
+              case eventtrigerType_fp16:
+                typeChar = 'e';
+                break;
               default:
                 ASSERT(false);
               }
@@ -1041,7 +1044,7 @@ DECK_DRIVER(usd_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [SD-card deck](https://store.bitcraze.io/collections/decks/products/sd-card-deck) is attached
+ * @brief Nonzero if [SD-card deck](%https://store.bitcraze.io/collections/decks/products/sd-card-deck) is attached
 */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
 
@@ -1062,8 +1065,20 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
 PARAM_ADD_CORE(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
 PARAM_GROUP_STOP(usd)
 
+/**
+ * Micro-SD related log variables for debug purposes mainly.
+ */
 LOG_GROUP_START(usd)
+/**
+ * @brief SPI write rate (includes overhead) [bytes/s]
+ */
 STATS_CNT_RATE_LOG_ADD(spiWrBps, &spiWriteRate)
+/**
+ * @brief SPI read rate (includes overhead) [bytes/s]
+ */
 STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
+/**
+ * @brief Data write rate to the SD card [bytes/s]
+ */
 STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
 LOG_GROUP_STOP(usd)

@@ -251,16 +251,49 @@ static const DeckDriver flowdeck2_deck = {
 
 DECK_DRIVER(flowdeck2_deck);
 
+/**
+ * Logging variables of the motion sensor of the flowdeck
+ */
 LOG_GROUP_START(motion)
+/**
+ * @brief True if motion occured since the last measurement
+ */
 LOG_ADD(LOG_UINT8, motion, &currentMotion.motion)
+/**
+ * @brief Flow X  measurment  [flow/fr]
+ */
 LOG_ADD(LOG_INT16, deltaX, &currentMotion.deltaX)
+/**
+ * @brief Flow Y measurement [flow/fr]
+ */
 LOG_ADD(LOG_INT16, deltaY, &currentMotion.deltaY)
+/**
+ * @brief Shutter time [clock cycles]
+ */
 LOG_ADD(LOG_UINT16, shutter, &currentMotion.shutter)
+/**
+ * @brief Maximum raw data value in frame
+ */
 LOG_ADD(LOG_UINT8, maxRaw, &currentMotion.maxRawData)
+/**
+ * @brief Minimum raw data value in frame
+ */
 LOG_ADD(LOG_UINT8, minRaw, &currentMotion.minRawData)
+/**
+ * @brief Avarage raw data value
+ */
 LOG_ADD(LOG_UINT8, Rawsum, &currentMotion.rawDataSum)
+/**
+ * @brief Counted flow outliers exluded from the estimator
+ */
 LOG_ADD(LOG_UINT8, outlierCount, &outlierCount)
+/**
+ * @brief Count of surface feature
+ */
 LOG_ADD(LOG_UINT8, squal, &currentMotion.squal)
+/**
+ * @brief Standard deviation of flow measurement
+ */
 LOG_ADD(LOG_FLOAT, std, &stdFlow)
 LOG_GROUP_STOP(motion)
 
@@ -291,7 +324,7 @@ PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow, &isInit1)
 
 /**
- * @brief Nonzero if [Flow deck v2](https://store.bitcraze.io/collections/decks/products/flow-deck-v2) is attached
+ * @brief Nonzero if [Flow deck v2](%https://store.bitcraze.io/collections/decks/products/flow-deck-v2) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow2, &isInit2)
 

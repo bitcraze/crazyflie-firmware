@@ -80,7 +80,7 @@ DECK_DRIVER(buzzer_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Buzzer deck](https://store.bitcraze.io/collections/decks/products/buzzer-deck) is attached
+ * @brief Nonzero if [Buzzer deck](%https://store.bitcraze.io/collections/decks/products/buzzer-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &isInit)
 

@@ -371,22 +371,22 @@ PARAM_GROUP_START(sound)
 /**
  * @brief Id of effect to use (default: 0)
  *
- * Id | Effect
- * -----------
- * 0  | Off
- * 1  | Factory test
- * 2  | USB connected
- * 3  | USB disconnected
- * 4  | Charging done
- * 5  | Low battery
- * 6  | Startup
- * 7  | Calibrated
- * 8  | Range slow
- * 9  | Range fast
- * 10 | Star Wars Imperial March
- * 11 | Bypass
- * 12 | Siren
- * 13 | Tilt quad to play sound
+ * | Id | Effect                    | \n
+ * | -  | -                         | \n
+ * | 0  | Off                       | \n
+ * | 1  | Factory test              | \n
+ * | 2  | USB connected             | \n
+ * | 3  | USB disconnected          | \n
+ * | 4  | Charging done             | \n
+ * | 5  | Low battery               | \n
+ * | 6  | Startup                   | \n
+ * | 7  | Calibrated                | \n
+ * | 8  | Range slow                | \n
+ * | 9  | Range fast                | \n
+ * | 10 | Star Wars Imperial March  | \n
+ * | 11 | Bypass                    | \n
+ * | 12 | Siren                     | \n
+ * | 13 | Tilt quad to play sound   | \n
  */
 PARAM_ADD_CORE(PARAM_UINT8, effect, &user_effect)
 

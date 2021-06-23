@@ -200,4 +200,11 @@ typedef struct {
 
 #endif // UNIT_TEST_MODE
 
+/** @brief Core log variables
+ *
+ * The core log variables are considered part of the official API and are guaranteed
+ * to be stable over time.
+ *
+ * @defgroup LOG_CORE_GROUP */
+
 #endif /* __LOG_H__ */

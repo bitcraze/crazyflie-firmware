@@ -103,7 +103,7 @@ DECK_DRIVER(lighthouse_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Lighthouse positioning deck](https://store.bitcraze.io/collections/decks/products/lighthouse-positioning-deck) is attached
+ * @brief Nonzero if [Lighthouse positioning deck](%https://store.bitcraze.io/collections/decks/products/lighthouse-positioning-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthouse4, &isInit)
 

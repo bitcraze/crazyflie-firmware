@@ -265,7 +265,7 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
     if (isfinite(ext_pos.pos[0]) && isfinite(ext_pos.pos[1]) && isfinite(ext_pos.pos[2])) {
       ext_pos.stdDev = 0.01;
       ext_pos.source = MeasurementSourceLighthouse;
-  #ifdef LIGHTHOUSE_AS_GROUNDTRUTH
+  #ifndef LIGHTHOUSE_AS_GROUNDTRUTH
       estimatorEnqueuePosition(&ext_pos);
   #endif
     }
@@ -461,14 +461,14 @@ STATS_CNT_RATE_LOG_ADD(posRt, &positionRate)
 STATS_CNT_RATE_LOG_ADD(estBs0Rt, &estBs0Rate)
 STATS_CNT_RATE_LOG_ADD(estBs1Rt, &estBs1Rate)
 
-LOG_ADD(LOG_FLOAT, x, &positionLog[0])
-LOG_ADD(LOG_FLOAT, y, &positionLog[1])
-LOG_ADD(LOG_FLOAT, z, &positionLog[2])
+LOG_ADD_CORE(LOG_FLOAT, x, &positionLog[0])
+LOG_ADD_CORE(LOG_FLOAT, y, &positionLog[1])
+LOG_ADD_CORE(LOG_FLOAT, z, &positionLog[2])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
-LOG_ADD(LOG_UINT16, bsGeoVal, &lighthouseCoreState.baseStationGeoValidMap)
-LOG_ADD(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
+LOG_ADD_CORE(LOG_UINT16, bsGeoVal, &lighthouseCoreState.baseStationGeoValidMap)
+LOG_ADD_CORE(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
 
 LOG_GROUP_STOP(lighthouse)
 

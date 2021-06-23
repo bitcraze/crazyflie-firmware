@@ -19,18 +19,11 @@ tags
 
 current_platform.mk
 
-/generated-test/**
+/generated/**
 **/__pycache__/**
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache
-.vs/CMake Overview
-*.db
-*.db-shm
-*.db-wal
-*.opendb
-*.json
-*.sqlite
 
-*.ipch
-*.suo
+docs/api
+

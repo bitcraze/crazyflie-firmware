@@ -387,13 +387,18 @@ PARAM_GROUP_START(system)
 PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
 
 /**
- * @brief Set tp nonzero to force system to be armed
+ * @brief Set to nonzero to force system to be armed
  */
 PARAM_ADD(PARAM_INT8, forceArm, &forceArm)
 
 PARAM_GROUP_STOP(sytem)
 
-/* Loggable variables */
+/**
+ *  System loggable variables to check different system states.
+ */
 LOG_GROUP_START(sys)
+/**
+ * @brief If zero, arming system is preventing motors to start
+ */
 LOG_ADD(LOG_INT8, armed, &armed)
 LOG_GROUP_STOP(sys)

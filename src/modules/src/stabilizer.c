@@ -235,7 +235,7 @@ static void stabilizerTask(void* param)
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
-    
+
     // update sensorData struct (for logging variables)
     sensorsAcquire(&sensorData, tick);
 
@@ -327,57 +327,190 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
- * @brief If set to nonzero will turn of power
+ * @brief If set to nonzero will turn off power
  */
 PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
+
+/**
+ * Log group for the current controller target
+ *
+ * Note: all members may not be updated depending on how the system is used
+ */
 LOG_GROUP_START(ctrltarget)
-LOG_ADD(LOG_FLOAT, x, &setpoint.position.x)
-LOG_ADD(LOG_FLOAT, y, &setpoint.position.y)
-LOG_ADD(LOG_FLOAT, z, &setpoint.position.z)
 
-LOG_ADD(LOG_FLOAT, vx, &setpoint.velocity.x)
-LOG_ADD(LOG_FLOAT, vy, &setpoint.velocity.y)
-LOG_ADD(LOG_FLOAT, vz, &setpoint.velocity.z)
+/**
+ * @brief Desired position X [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, x, &setpoint.position.x)
 
-LOG_ADD(LOG_FLOAT, ax, &setpoint.acceleration.x)
-LOG_ADD(LOG_FLOAT, ay, &setpoint.acceleration.y)
-LOG_ADD(LOG_FLOAT, az, &setpoint.acceleration.z)
+/**
+ * @brief Desired position Y [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, y, &setpoint.position.y)
 
-LOG_ADD(LOG_FLOAT, roll, &setpoint.attitude.roll)
-LOG_ADD(LOG_FLOAT, pitch, &setpoint.attitude.pitch)
-LOG_ADD(LOG_FLOAT, yaw, &setpoint.attitudeRate.yaw)
+/**
+ * @brief Desired position X [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, z, &setpoint.position.z)
+
+/**
+ * @brief Desired velocity X [m/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, vx, &setpoint.velocity.x)
+
+/**
+ * @brief Desired velocity Y [m/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, vy, &setpoint.velocity.y)
+
+/**
+ * @brief Desired velocity Z [m/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, vz, &setpoint.velocity.z)
+
+/**
+ * @brief Desired acceleration X [m/s^2]
+ */
+LOG_ADD_CORE(LOG_FLOAT, ax, &setpoint.acceleration.x)
+
+/**
+ * @brief Desired acceleration Y [m/s^2]
+ */
+LOG_ADD_CORE(LOG_FLOAT, ay, &setpoint.acceleration.y)
+
+/**
+ * @brief Desired acceleration Z [m/s^2]
+ */
+LOG_ADD_CORE(LOG_FLOAT, az, &setpoint.acceleration.z)
+
+/**
+ * @brief Desired attitude, roll [deg]
+ */
+LOG_ADD_CORE(LOG_FLOAT, roll, &setpoint.attitude.roll)
+
+/**
+ * @brief Desired attitude, pitch [deg]
+ */
+LOG_ADD_CORE(LOG_FLOAT, pitch, &setpoint.attitude.pitch)
+
+/**
+ * @brief Desired attitude rate, yaw rate [deg/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, yaw, &setpoint.attitudeRate.yaw)
 LOG_GROUP_STOP(ctrltarget)
 
+/**
+ * Log group for the current controller target, compressed format.
+ * This flavour of the controller target logs are defined with types
+ * that use less space and makes it possible to add more logs to a
+ * log configuration.
+ *
+ * Note: all members may not be updated depending on how the system is used
+ */
+
 LOG_GROUP_START(ctrltargetZ)
-LOG_ADD(LOG_INT16, x, &setpointCompressed.x)   // position - mm
+/**
+ * @brief Desired position X [mm]
+ */
+LOG_ADD(LOG_INT16, x, &setpointCompressed.x)
+
+/**
+ * @brief Desired position Y [mm]
+ */
 LOG_ADD(LOG_INT16, y, &setpointCompressed.y)
+
+/**
+ * @brief Desired position Z [mm]
+ */
 LOG_ADD(LOG_INT16, z, &setpointCompressed.z)
 
-LOG_ADD(LOG_INT16, vx, &setpointCompressed.vx) // velocity - mm / sec
+/**
+ * @brief Desired velocity X [mm/s]
+ */
+LOG_ADD(LOG_INT16, vx, &setpointCompressed.vx)
+
+/**
+ * @brief Desired velocity Y [mm/s]
+ */
 LOG_ADD(LOG_INT16, vy, &setpointCompressed.vy)
+
+/**
+ * @brief Desired velocity Z [mm/s]
+ */
 LOG_ADD(LOG_INT16, vz, &setpointCompressed.vz)
 
-LOG_ADD(LOG_INT16, ax, &setpointCompressed.ax) // acceleration - mm / sec^2
+/**
+ * @brief Desired acceleration X [mm/s^2]
+ */
+LOG_ADD(LOG_INT16, ax, &setpointCompressed.ax)
+
+/**
+ * @brief Desired acceleration Y [mm/s^2]
+ */
 LOG_ADD(LOG_INT16, ay, &setpointCompressed.ay)
+
+/**
+ * @brief Desired acceleration Z [mm/s^2]
+ */
 LOG_ADD(LOG_INT16, az, &setpointCompressed.az)
 LOG_GROUP_STOP(ctrltargetZ)
 
+/**
+ * Logs to set the estimator and controller type
+ * for the stabilizer module
+ */
 LOG_GROUP_START(stabilizer)
+/**
+ * @brief Estimated roll
+ *   Note: Same as stateEstimate.roll
+ */
 LOG_ADD(LOG_FLOAT, roll, &state.attitude.roll)
+/**
+ * @brief Estimated pitch
+ *   Note: Same as stateEstimate.pitch
+ */
 LOG_ADD(LOG_FLOAT, pitch, &state.attitude.pitch)
+/**
+ * @brief Estimated yaw
+ *   Note: same as stateEstimate.yaw
+ */
 LOG_ADD(LOG_FLOAT, yaw, &state.attitude.yaw)
+/**
+ * @brief Current thrust
+ */
 LOG_ADD(LOG_FLOAT, thrust, &control.thrust)
-
+/**
+ * @brief Rate of stabilizer loop
+ */
 STATS_CNT_RATE_LOG_ADD(rtStab, &stabilizerRate)
+/**
+ * @brief Latency from sampling of sensor to motor output
+ *    Note: Used for debugging but could also be used as a system test
+ */
 LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
+/**
+ * Log group for accelerometer data
+ */
 LOG_GROUP_START(acc)
-LOG_ADD(LOG_FLOAT, x, &sensorData.acc.x)
-LOG_ADD(LOG_FLOAT, y, &sensorData.acc.y)
-LOG_ADD(LOG_FLOAT, z, &sensorData.acc.z)
+
+/**
+ * @brief Acceleration in X [Gs]
+ */
+LOG_ADD_CORE(LOG_FLOAT, x, &sensorData.acc.x)
+
+/**
+ * @brief Acceleration in Y [Gs]
+ */
+LOG_ADD_CORE(LOG_FLOAT, y, &sensorData.acc.y)
+
+/**
+ * @brief Acceleration in Z [Gs]
+ */
+LOG_ADD_CORE(LOG_FLOAT, z, &sensorData.acc.z)
 LOG_GROUP_STOP(acc)
 
 #ifdef LOG_SEC_IMU
@@ -388,16 +521,46 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.accSec.z)
 LOG_GROUP_STOP(accSec)
 #endif
 
+/**
+ * Log group for the barometer
+ */
 LOG_GROUP_START(baro)
-LOG_ADD(LOG_FLOAT, asl, &sensorData.baro.asl)
+
+/**
+ * @brief Altitude above Sea Level [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, asl, &sensorData.baro.asl)
+
+/**
+ * @brief Temperature [degrees Celsius]
+ */
 LOG_ADD(LOG_FLOAT, temp, &sensorData.baro.temperature)
-LOG_ADD(LOG_FLOAT, pressure, &sensorData.baro.pressure)
+
+/**
+ * @brief Air preassure [mbar]
+ */
+LOG_ADD_CORE(LOG_FLOAT, pressure, &sensorData.baro.pressure)
 LOG_GROUP_STOP(baro)
 
+/**
+ * Log group for gyroscopes.
+ */
 LOG_GROUP_START(gyro)
-LOG_ADD(LOG_FLOAT, x, &sensorData.gyro.x)
-LOG_ADD(LOG_FLOAT, y, &sensorData.gyro.y)
-LOG_ADD(LOG_FLOAT, z, &sensorData.gyro.z)
+
+/**
+ * @brief Angular velocity (rotation) around the X-axis, after filtering [deg/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, x, &sensorData.gyro.x)
+
+/**
+ * @brief Angular velocity (rotation) around the Y-axis, after filtering [deg/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, y, &sensorData.gyro.y)
+
+/**
+ * @brief Angular velocity (rotation) around the Z-axis, after filtering [deg/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, z, &sensorData.gyro.z)
 LOG_GROUP_STOP(gyro)
 
 #ifdef LOG_SEC_IMU
@@ -408,55 +571,189 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.gyroSec.z)
 LOG_GROUP_STOP(gyroSec)
 #endif
 
+/**
+ * Log group for magnetometer.
+ *
+ * Currently only present on Crazyflie 2.0
+ */
 LOG_GROUP_START(mag)
-LOG_ADD(LOG_FLOAT, x, &sensorData.mag.x)
-LOG_ADD(LOG_FLOAT, y, &sensorData.mag.y)
-LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
+/**
+ * @brief Magnetometer X axis, after filtering [gauss]
+ */
+LOG_ADD_CORE(LOG_FLOAT, x, &sensorData.mag.x)
+/**
+ * @brief Magnetometer Y axis, after filtering [gauss]
+ */
+LOG_ADD_CORE(LOG_FLOAT, y, &sensorData.mag.y)
+/**
+ * @brief Magnetometer Z axis, after filtering [gauss]
+ */
+LOG_ADD_CORE(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
 
+/**
+ * Log group for the state estimator, the currently estimated state of the platform.
+ *
+ * Note: all values may not be updated depending on which estimator that is used.
+ */
 LOG_GROUP_START(stateEstimate)
-LOG_ADD(LOG_FLOAT, x, &state.position.x)
-LOG_ADD(LOG_FLOAT, y, &state.position.y)
-LOG_ADD(LOG_FLOAT, z, &state.position.z)
 
-LOG_ADD(LOG_FLOAT, vx, &state.velocity.x)
-LOG_ADD(LOG_FLOAT, vy, &state.velocity.y)
-LOG_ADD(LOG_FLOAT, vz, &state.velocity.z)
+/**
+ * @brief The estimated position of the platform in the global reference frame, X [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, x, &state.position.x)
 
-LOG_ADD(LOG_FLOAT, ax, &state.acc.x)
-LOG_ADD(LOG_FLOAT, ay, &state.acc.y)
-LOG_ADD(LOG_FLOAT, az, &state.acc.z)
+/**
+ * @brief The estimated position of the platform in the global reference frame, Y [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, y, &state.position.y)
 
-LOG_ADD(LOG_FLOAT, roll, &state.attitude.roll)
-LOG_ADD(LOG_FLOAT, pitch, &state.attitude.pitch)
-LOG_ADD(LOG_FLOAT, yaw, &state.attitude.yaw)
+/**
+ * @brief The estimated position of the platform in the global reference frame, Z [m]
+ */
+LOG_ADD_CORE(LOG_FLOAT, z, &state.position.z)
 
-LOG_ADD(LOG_FLOAT, qx, &state.attitudeQuaternion.x)
-LOG_ADD(LOG_FLOAT, qy, &state.attitudeQuaternion.y)
-LOG_ADD(LOG_FLOAT, qz, &state.attitudeQuaternion.z)
-LOG_ADD(LOG_FLOAT, qw, &state.attitudeQuaternion.w)
+/**
+ * @brief The velocity of the Crazyflie in the global reference frame, X [m/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, vx, &state.velocity.x)
+
+/**
+ * @brief The velocity of the Crazyflie in the global reference frame, Y [m/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, vy, &state.velocity.y)
+
+/**
+ * @brief The velocity of the Crazyflie in the global reference frame, Z [m/s]
+ */
+LOG_ADD_CORE(LOG_FLOAT, vz, &state.velocity.z)
+
+/**
+ * @brief The acceleration of the Crazyflie in the global reference frame, X [Gs]
+ */
+LOG_ADD_CORE(LOG_FLOAT, ax, &state.acc.x)
+
+/**
+ * @brief The acceleration of the Crazyflie in the global reference frame, Y [Gs]
+ */
+LOG_ADD_CORE(LOG_FLOAT, ay, &state.acc.y)
+
+/**
+ * @brief The acceleration of the Crazyflie in the global reference frame, without considering gravity, Z [Gs]
+ */
+LOG_ADD_CORE(LOG_FLOAT, az, &state.acc.z)
+
+/**
+ * @brief Attitude, roll angle [deg]
+ */
+LOG_ADD_CORE(LOG_FLOAT, roll, &state.attitude.roll)
+
+/**
+ * @brief Attitude, pitch angle (legacy CF2 body coordinate system, where pitch is inverted) [deg]
+ */
+LOG_ADD_CORE(LOG_FLOAT, pitch, &state.attitude.pitch)
+
+/**
+ * @brief Attitude, yaw angle [deg]
+ */
+LOG_ADD_CORE(LOG_FLOAT, yaw, &state.attitude.yaw)
+
+/**
+ * @brief Attitude as a quaternion, x
+ */
+LOG_ADD_CORE(LOG_FLOAT, qx, &state.attitudeQuaternion.x)
+
+/**
+ * @brief Attitude as a quaternion, y
+ */
+LOG_ADD_CORE(LOG_FLOAT, qy, &state.attitudeQuaternion.y)
+
+/**
+ * @brief Attitude as a quaternion, z
+ */
+LOG_ADD_CORE(LOG_FLOAT, qz, &state.attitudeQuaternion.z)
+
+/**
+ * @brief Attitude as a quaternion, w
+ */
+LOG_ADD_CORE(LOG_FLOAT, qw, &state.attitudeQuaternion.w)
 LOG_GROUP_STOP(stateEstimate)
 
+/**
+ * Log group for the state estimator, compressed format. This flavour of the
+ * estimator logs are defined with types that use less space and makes it possible to
+ * add more logs to a log configuration.
+ *
+ * Note: all values may not be updated depending on which estimator that is used.
+ */
 LOG_GROUP_START(stateEstimateZ)
-LOG_ADD(LOG_INT16, x, &stateCompressed.x)                 // position - mm
+
+/**
+ * @brief The position of the Crazyflie in the global reference frame, X [mm]
+ */
+LOG_ADD(LOG_INT16, x, &stateCompressed.x)
+
+/**
+ * @brief The position of the Crazyflie in the global reference frame, Y [mm]
+ */
 LOG_ADD(LOG_INT16, y, &stateCompressed.y)
+
+/**
+ * @brief The position of the Crazyflie in the global reference frame, Z [mm]
+ */
 LOG_ADD(LOG_INT16, z, &stateCompressed.z)
 
-LOG_ADD(LOG_INT16, vx, &stateCompressed.vx)               // velocity - mm / sec
+/**
+ * @brief The velocity of the Crazyflie in the global reference frame, X [mm/s]
+ */
+LOG_ADD(LOG_INT16, vx, &stateCompressed.vx)
+
+/**
+ * @brief The velocity of the Crazyflie in the global reference frame, Y [mm/s]
+ */
 LOG_ADD(LOG_INT16, vy, &stateCompressed.vy)
+
+/**
+ * @brief The velocity of the Crazyflie in the global reference frame, Z [mm/s]
+ */
 LOG_ADD(LOG_INT16, vz, &stateCompressed.vz)
 
-LOG_ADD(LOG_INT16, ax, &stateCompressed.ax)               // acceleration - mm / sec^2
+/**
+ * @brief The acceleration of the Crazyflie in the global reference frame, X [mm/s]
+ */
+LOG_ADD(LOG_INT16, ax, &stateCompressed.ax)
+
+/**
+ * @brief The acceleration of the Crazyflie in the global reference frame, Y [mm/s]
+ */
 LOG_ADD(LOG_INT16, ay, &stateCompressed.ay)
+
+/**
+ * @brief The acceleration of the Crazyflie in the global reference frame, including gravity, Z [mm/s]
+ */
 LOG_ADD(LOG_INT16, az, &stateCompressed.az)
 
-LOG_ADD(LOG_UINT32, quat, &stateCompressed.quat)           // compressed quaternion, see quatcompress.h
+/**
+ * @brief Attitude as a compressed quaternion, see see quatcompress.h for details
+ */
+LOG_ADD(LOG_UINT32, quat, &stateCompressed.quat)
 
-LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)   // angular velocity - milliradians / sec
+/**
+ * @brief Roll rate (angular velocity) [milliradians / sec]
+ */
+LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)
+
+/**
+ * @brief Pitch rate (angular velocity) [milliradians / sec]
+ */
 LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
+
+/**
+ * @brief Yaw rate (angular velocity) [milliradians / sec]
+ */
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 LOG_GROUP_STOP(stateEstimateZ)
