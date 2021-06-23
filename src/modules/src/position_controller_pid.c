@@ -74,7 +74,9 @@ static const float thrustScale = 1000.0f;
 
 #define DT (float)(1.0f/POSITION_RATE)
 #define POSITION_LPF_CUTOFF_FREQ 20.0f
+#define ZVELOCITY_LPF_CUTOFF_FREQ 0.7f
 #define POSITION_LPF_ENABLE true
+
 
 #ifndef UNIT_TEST
 static struct this_s this = {
@@ -98,9 +100,9 @@ static struct this_s this = {
 
   .pidVZ = {
     .init = {
-      .kp = 25,
-      .ki = 15,
-      .kd = 0,
+      .kp = 3.0f,
+      .ki = 1.0f,
+      .kd = 1.5f, //kd can be lowered for improved stability, but results in slower response time.
     },
     .pid.dt = DT,
   },
@@ -132,7 +134,7 @@ static struct this_s this = {
     .pid.dt = DT,
   },
 
-  .thrustBase = 36000,
+  .thrustBase = 38000,
   .thrustMin  = 20000,
 };
 #endif
@@ -151,7 +153,7 @@ void positionControllerInit()
   pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.init.kp, this.pidVY.init.ki, this.pidVY.init.kd,
       this.pidVY.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
   pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.init.kp, this.pidVZ.init.ki, this.pidVZ.init.kd,
-      this.pidVZ.pid.dt, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+      this.pidVZ.pid.dt, POSITION_RATE, ZVELOCITY_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
 }
 
 static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt) {
@@ -231,6 +233,15 @@ void positionControllerResetAllPID()
   pidReset(&this.pidVX.pid);
   pidReset(&this.pidVY.pid);
   pidReset(&this.pidVZ.pid);
+}
+
+void positionControllerResetAllfilters() {
+  filterReset(&this.pidX.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidY.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidZ.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidVX.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidVY.pid, POSITION_RATE, POSITION_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
+  filterReset(&this.pidVZ.pid, POSITION_RATE, ZVELOCITY_LPF_CUTOFF_FREQ, POSITION_LPF_ENABLE);
 }
 
 /**
