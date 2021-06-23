@@ -201,7 +201,7 @@ static void kalmanTask(void* parameters) {
   uint32_t nextPrediction = xTaskGetTickCount();
   uint32_t lastPNUpdate = xTaskGetTickCount();
 
-  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 99, 101, 1);
+  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), ONE_SECOND, PREDICT_RATE - 1, PREDICT_RATE + 1, 1);
 
   while (true) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
@@ -453,7 +453,7 @@ void estimatorKalmanGetEstimatedRot(float * rotationMatrix) {
 LOG_GROUP_START(kalman)
 /**
  * @brief Nonzero if the drone is in flight
- * 
+ *
  *  Note: This is the same as sys.flying. Perhaps remove this one?
  */
   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
