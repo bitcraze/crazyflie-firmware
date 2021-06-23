@@ -176,13 +176,9 @@ void paramTask(void * prm)
     else if (p.channel == READ_CH)
       paramReadProcess();
     else if (p.channel == WRITE_CH) {
-      //DEBUG_PRINT(p.data);
-      DEBUG_PRINT("received write. \n");
       paramWriteProcess();
     }
     else if (p.channel==MISC_CH) {
-      DEBUG_PRINT("received misc. \n");
-      //DEBUG_PRINT(((char*)p.data).toString());
       if (p.data[0] == MISC_SETBYNAME) {
         int i, nzero = 0;
         char *group;
@@ -191,55 +187,19 @@ void paramTask(void * prm)
         void * valPtr;
         int error;
 
-        //receivedCounter++;
     // If the packet contains at least 2 zeros in the first 28 bytes
     // The packet decoding algorithm will not crash
         for (i=0; i<CRTP_MAX_DATA_SIZE; i++) {
           if (p.data[i] == '\0') nzero++;
         }
-        //DEBUG_PRINT((char*)&p.data);
         if (nzero < 2) return;
 
         group = (char*)&p.data[1];
         name = (char*)&p.data[1+strlen(group)+1];
         type = p.data[1+strlen(group)+1+strlen(name)+1];
-
-        //DEBUG_PRINT("Array: ");
-        //for (int i = 0; i < sizeof(p.data) / sizeof(p.data[0]);i++) {
-        //  uint8_t x = p.data[i];
-        //  x = x + 48;
-          //DEBUG_PRINT((char *)&x);
-          //DEBUG_PRINT("\n");
-        //}
-
-        //uint8_t test = type + 48;
         valPtr = &p.data[1+strlen(group)+1+strlen(name)+2];
-        //DEBUG_PRINT("\ngroup: ");
-        //DEBUG_PRINT(group);
-        //DEBUG_PRINT("\nName: ");
-        //DEBUG_PRINT(name);
-        //DEBUG_PRINT("\nType: ");
-        //DEBUG_PRINT((char *)&test);
-        //DEBUG_PRINT("\n");
-        //DEBUG_PRINT(type);
-        //DEBUG_PRINT(*valPtr);
         error = paramWriteByNameProcess(group, name, type, valPtr);
-        switch (error) {
-          case 2:
-            DEBUG_PRINT("ENOENT\n");
-            break;
-          case 22:
-            DEBUG_PRINT("EINVAL\n");
-            break;
-          case 13:
-            DEBUG_PRINT("EACCES\n");
-            break;
-          case 0:
-            DEBUG_PRINT("OK\n");
-            break;
-        }
-        //char x = error + '0';
-        //DEBUG_PRINT((char*)x);
+
         p.data[1+strlen(group)+1+strlen(name)+1] = error;
         p.size = 1+strlen(group)+1+strlen(name)+1+1;
         crtpSendPacketBlock(&p);
@@ -463,9 +423,6 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
   }
 
   if (type != params[ptr].type) {
-    DEBUG_PRINT("paramtype: ");
-    DEBUG_PRINT((char *)&params[ptr].type);
-    DEBUG_PRINT("\n");
     return EINVAL;
   }
 

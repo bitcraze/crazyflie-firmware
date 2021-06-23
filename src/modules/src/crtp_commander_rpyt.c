@@ -145,24 +145,11 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
         modeSet = true;
         positionControllerResetAllPID();
         positionControllerResetAllfilters();
-        takeoff = true;
     }
     setpoint->thrust = 0;
     setpoint->mode.z = modeVelocity;
 
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
-    if (takeoff) {
-      takeoffCounter++;
-      if (takeoffCounter >= 10) {
-        setpoint->velocity.z += 0.5f;
-      }
-      if (takeoffCounter >= 150) {
-        positionControllerResetAllPID();
-        positionControllerResetAllfilters();
-        takeoff = false;
-        takeoffCounter = 0;
-      }
-    }
   } else {
     setpoint->mode.z = modeDisable;
     modeSet = false;

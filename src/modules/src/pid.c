@@ -63,9 +63,6 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     pid->error = pid->desired - measured;
   }
 
-  /*if ((pid->error > 0 && pid->prevError < 0) || (pid->error < 0 && pid->prevError > 0)) {
-    pid->integ = 0;
-  }*/
 
   pid->outP = pid->kp * pid->error;
   output += pid->outP;
