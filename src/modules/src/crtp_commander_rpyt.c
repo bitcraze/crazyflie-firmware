@@ -80,8 +80,6 @@ static bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
 static bool modeSet = false;
-static bool takeoff = false;
-static int takeoffCounter = 0;
 
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
