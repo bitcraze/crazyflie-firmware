@@ -198,6 +198,6 @@ void pidSetDt(PidObject* pid, const float dt);
  * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
  * @param[in] enableDFilter Enable setting for the D lowpass filter
 */
-void filterReset(PidObject* pid, const float samplingRate, const float cutoffFreq, bool enableDFilter)
+void filterReset(PidObject* pid, const float samplingRate, const float cutoffFreq, bool enableDFilter);
 
 #endif /* PID_H_ */
