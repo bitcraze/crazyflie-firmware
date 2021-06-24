@@ -56,6 +56,8 @@
 #include "test_support.h"
 #include "static_mem.h"
 
+#include "lighthouse_transmit.h"
+
 static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 
 static pulseProcessorResult_t angles;
@@ -206,7 +208,9 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   int syncCounter = 0;
 
   for(int i = 0; i < UART_FRAME_LENGTH; i++) {
-    uart1Getchar(&data[i]);
+    while(!uart1GetDataWithTimeout((uint8_t*)&data[i], 2)) {
+      lighthouseTransmitProcessTimeout();      
+    }
     if ((unsigned char)data[i] == 0xff) {
       syncCounter += 1;
     }
@@ -482,7 +486,8 @@ void lighthouseCoreTask(void *param) {
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT(&frameRate);
-
+	lighthouseTransmitProcessFrame(&frame);
+	
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
         if (pulseProcessorProcessPulse) {
