@@ -184,6 +184,7 @@ static bool flowdeck1Test()
 {
   if (!isInit1) {
     DEBUG_PRINT("Error while initializing the PMW3901 sensor\n");
+    return false;
   }
 
   // Test the VL53L0 driver
@@ -229,6 +230,7 @@ static bool flowdeck2Test()
 {
   if (!isInit2) {
     DEBUG_PRINT("Error while initializing the PMW3901 sensor\n");
+    return false;
   }
 
   // Test the VL53L1 driver
