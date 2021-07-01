@@ -70,7 +70,7 @@ static const uint8_t typeLength[] = {
   [LOG_FP16]   = 2,
 };
 
-#define TYPE_MASK (0x0f)
+#define LOG_TYPE_MASK (0x0f)
 
 typedef enum {
   acqType_memory = 0,
@@ -304,7 +304,7 @@ void logTOCProcess(int command)
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM;
       p.data[1]=n;
-      p.data[2]=logs[ptr].type & TYPE_MASK;
+      p.data[2]=logGetType(ptr);
       p.size=3+2+strlen(group)+strlen(logs[ptr].name);
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+3, group, strlen(group)+1);
@@ -357,7 +357,7 @@ void logTOCProcess(int command)
       p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
       p.data[0]=CMD_GET_ITEM_V2;
       memcpy(&p.data[1], &logId, 2);
-      p.data[3]=logs[ptr].type & TYPE_MASK;
+      p.data[3]=logGetType(ptr);
       p.size=4+2+strlen(group)+strlen(logs[ptr].name);
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+4, group, strlen(group)+1);
@@ -508,7 +508,7 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
     struct log_ops * ops;
     int varId;
 
-    if ((currentLength + typeLength[settings[i].logType & TYPE_MASK])>LOG_MAX_LEN) {
+    if ((currentLength + typeLength[settings[i].logType & LOG_TYPE_MASK])>LOG_MAX_LEN) {
       LOG_ERROR("Trying to append a full block. Block id %d.\n", id);
       return E2BIG;
     }
@@ -530,16 +530,16 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
       }
 
       ops->variable    = logs[varId].address;
-      ops->storageType = logs[varId].type & TYPE_MASK;
-      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->storageType = logGetType(varId);
+      ops->logType     = settings[i].logType & LOG_TYPE_MASK;
       ops->acquisitionType = acquisitionTypeFromLogType(logs[varId].type);
 
       LOG_DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
     } else {                     //Memory variable
       //TODO: Check that the address is in ram
       ops->variable    = (void*)(&settings[i]+1);
-      ops->storageType = (settings[i].logType>>4) & TYPE_MASK;
-      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->storageType = (settings[i].logType>>4) & LOG_TYPE_MASK;
+      ops->logType     = settings[i].logType & LOG_TYPE_MASK;
       ops->acquisitionType = acqType_memory;
       i += 2;
 
@@ -576,7 +576,7 @@ static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
     struct log_ops * ops;
     int varId;
 
-    if ((currentLength + typeLength[settings[i].logType & TYPE_MASK])>LOG_MAX_LEN) {
+    if ((currentLength + typeLength[settings[i].logType & LOG_TYPE_MASK])>LOG_MAX_LEN) {
       LOG_ERROR("Trying to append a full block. Block id %d.\n", id);
       return E2BIG;
     }
@@ -598,16 +598,16 @@ static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
       }
 
       ops->variable    = logs[varId].address;
-      ops->storageType = logs[varId].type & TYPE_MASK;
-      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->storageType = logGetType(varId);
+      ops->logType     = settings[i].logType & LOG_TYPE_MASK;
       ops->acquisitionType = acquisitionTypeFromLogType(logs[varId].type);
 
       LOG_DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
     } else {                     //Memory variable
       //TODO: Check that the address is in ram
       ops->variable    = (void*)(&settings[i]+1);
-      ops->storageType = (settings[i].logType>>4) & TYPE_MASK;
-      ops->logType     = settings[i].logType & TYPE_MASK;
+      ops->storageType = (settings[i].logType>>4) & LOG_TYPE_MASK;
+      ops->logType     = settings[i].logType & LOG_TYPE_MASK;
       ops->acquisitionType = acqType_memory;
       i += 2;
 
@@ -992,9 +992,9 @@ logVarId_t logGetVarId(char* group, char* name)
   return invalidVarId;
 }
 
-int logGetType(logVarId_t varid)
+inline int logGetType(logVarId_t varid)
 {
-  return logs[varid].type;
+  return logs[varid].type & LOG_TYPE_MASK;
 }
 
 void logGetGroupAndName(logVarId_t varid, char** group, char** name)
@@ -1034,7 +1034,7 @@ int logGetInt(logVarId_t varid)
 
   ASSERT(logVarIdIsValid(varid));
 
-  switch(logs[varid].type)
+  switch(logGetType(varid))
   {
     case LOG_UINT8:
       valuei = *(uint8_t *)logs[varid].address;
@@ -1066,7 +1066,7 @@ float logGetFloat(logVarId_t varid)
 {
   ASSERT(logVarIdIsValid(varid));
 
-  if (logs[varid].type == LOG_FLOAT)
+  if (logGetType(varid) == LOG_FLOAT)
     return *(float *)logs[varid].address;
 
   return logGetInt(varid);
