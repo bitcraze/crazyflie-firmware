@@ -493,7 +493,7 @@ LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
 /**
- * Log group for accelerometer sensor measurement
+ * Log group for accelerometer sensor measurement. Compensated for a miss-aligned by gravity at startup.
  */
 LOG_GROUP_START(acc)
 
