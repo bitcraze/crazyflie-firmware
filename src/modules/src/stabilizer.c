@@ -493,7 +493,7 @@ LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
 /**
- * Log group for accelerometer data
+ * Log group for accelerometer sensor measurement
  */
 LOG_GROUP_START(acc)
 
