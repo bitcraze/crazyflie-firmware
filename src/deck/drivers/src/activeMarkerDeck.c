@@ -265,6 +265,7 @@ PARAM_ADD_CORE(PARAM_UINT8, right, &requestedId[3])
  * | MODULATED  |   2           |    Switching                   | \n
  * | QUALISYS   |   3 (default) |    Qualisys Active Marker mode | \n
  *
+ * 	
  * ### Off mode
  *
  * All marker LEDs are turned off.

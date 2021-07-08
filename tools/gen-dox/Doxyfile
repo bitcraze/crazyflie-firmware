@@ -2061,6 +2061,7 @@ INCLUDE_FILE_PATTERNS  =
 # comments on log and param definitions.
 
 PREDEFINED             = "__attribute__(x)=" \
+                         "Note=" \
                          "LOG_ADD(TYPE, NAME, ADDRESS)=TYPE NAME;" \
                          "LOG_ADD_BY_FUNCTION(TYPE, NAME, ADDRESS)=TYPE NAME;" \
                          "STATS_CNT_RATE_LOG_ADD(NAME, LOGGER)=LOG_FLOAT NAME;" \
