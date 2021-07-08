@@ -6,6 +6,7 @@
 #include "mock_pulse_processor.h"
 #include "mock_pulse_processor_v1.h"
 #include "mock_pulse_processor_v2.h"
+#include "mock_lighthouse_transmit.h"
 #include "mock_lighthouse_deck_flasher.h"
 #include "mock_lighthouse_position_est.h"
 #include "mock_lighthouse_calibration.h"
@@ -247,7 +248,6 @@ void testThatSlowBitIsDecodedInUartFrame() {
 }
 
 // Test support ----------------------------------------------------------------------------------------------------
-
 static void uart1ReadCallback(char* ch, int cmock_num_calls) {
     if (uart1BytesRead >= uart1SequenceLength) {
         TEST_FAIL_MESSAGE("Too many bytes read from uart1");
@@ -257,10 +257,16 @@ static void uart1ReadCallback(char* ch, int cmock_num_calls) {
     uart1BytesRead++;
 }
 
+static bool uart1GetDataWithTimeoutCallback(char* ch, const uint32_t timeoutTicks, int cmock_num_calls) {
+    uart1ReadCallback(ch, cmock_num_calls);
+    return true;
+}
+
 static void uart1SetSequence(char* sequence, int length) {
     uart1BytesRead = 0;
     uart1Sequence = sequence;
     uart1SequenceLength = length;
 
     uart1Getchar_StubWithCallback(uart1ReadCallback);
+    uart1GetDataWithTimeout_StubWithCallback(uart1GetDataWithTimeoutCallback);
 }
