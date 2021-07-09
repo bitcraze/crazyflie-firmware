@@ -106,21 +106,25 @@ LOG_GROUP_START(kalman_pred)
 
 /**
  * @brief Flow sensor predicted dx  [pixels/frame]
+ * 
  *  note: rename to kalmanMM.flowX?
  */
   LOG_ADD(LOG_FLOAT, predNX, &predictedNX)
 /**
  * @brief Flow sensor predicted dy  [pixels/frame]
+ * 
  *  note: rename to kalmanMM.flowY?
  */
   LOG_ADD(LOG_FLOAT, predNY, &predictedNY)
 /**
  * @brief Flow sensor measured dx  [pixels/frame]
+ * 
  *  note: This is the same as motion.deltaX, so perhaps remove this?
  */
   LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
 /**
  * @brief Flow sensor measured dy  [pixels/frame]
+ * 
  *  note: This is the same as motion.deltaY, so perhaps remove this?
  */
   LOG_ADD(LOG_FLOAT, measNY, &measuredNY)

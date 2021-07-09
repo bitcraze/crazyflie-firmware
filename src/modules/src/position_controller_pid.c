@@ -235,37 +235,44 @@ void positionControllerResetAllPID()
 
 /**
  * Log variables of the PID position controller
+ * 
  * Note: rename to posCtrlPID ?
  */
 LOG_GROUP_START(posCtl)
 
 /**
  * @brief PID controller target desired velocity x [m/s]
+ * 
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetVX, &this.pidVX.pid.desired)
 /**
  * @brief PID controller target desired velocity y [m/s]
+ * 
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetVY, &this.pidVY.pid.desired)
 /**
  * @brief PID controller target desired velocity z [m/s]
+ * 
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetVZ, &this.pidVZ.pid.desired)
 /**
  * @brief PID controller target desired position x [m]
+ * 
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetX, &this.pidX.pid.desired)
 /**
  * @brief PID controller target desired position y [m]
+ * 
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetY, &this.pidY.pid.desired)
 /**
  * @brief PID controller target desired position z [m]
+ * 
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.pid.desired)
