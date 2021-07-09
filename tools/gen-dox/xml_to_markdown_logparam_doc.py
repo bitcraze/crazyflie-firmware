@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import json
 import sys
 import os
 
@@ -215,6 +216,31 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
 
     f.close()
 
+
+def create_json(xml_dir: str, api_doc_dir: str):
+    groups = dict()
+    groups['params'] = parse_xml('params', xml_dir)
+    groups['logs'] = parse_xml('logs', xml_dir)
+
+    json_file = os.path.join(api_doc_dir, 'log_param_doc.json')
+    with open(json_file, 'w') as f:
+        json_out = dict()
+        for key, group in groups.items():
+            json_out[key] = dict()
+
+            for info in group:
+                group_info = info[0]
+                json_out[key][group_info[0]] = {
+                    'desc': group_info[1],
+                    'variables': dict((var[0], {
+                        'core': var[1],
+                        'short_desc': var[2],
+                        'type': var[3],
+                        'desc': var[6]
+                    }) for var in info[1])
+                }
+        f.write(json.dumps(json_out))
+
 if __name__ == '__main__':
 
     if(len(sys.argv) != 3):
@@ -227,3 +253,6 @@ if __name__ == '__main__':
     create_log_markdown(xml_dir, api_doc_dir)
     print('Create Parameter API Markdown files')
     create_param_markdown(xml_dir, api_doc_dir)
+
+    print('Create JSON file')
+    create_json(xml_dir, api_doc_dir)
