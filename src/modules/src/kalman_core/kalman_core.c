@@ -121,6 +121,9 @@ static void assertStateNotNaN(const kalmanCoreData_t* this)
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
 
+// Small number epsilon, to prevent dividing by zero
+#define EPS (1e-6f)
+
 // Initial variances, uncertain of position, but know we're stationary and roughly flat
 static const float stdDevInitialPosition_xy = 100;
 static const float stdDevInitialPosition_z = 1;
@@ -531,7 +534,7 @@ void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float 
   float dtwz = dt*gyro->z;
 
   // compute the quaternion values in [w,x,y,z] order
-  float angle = arm_sqrt(dtwx*dtwx + dtwy*dtwy + dtwz*dtwz);
+  float angle = arm_sqrt(dtwx*dtwx + dtwy*dtwy + dtwz*dtwz) + EPS;
   float ca = arm_cos_f32(angle/2.0f);
   float sa = arm_sin_f32(angle/2.0f);
   float dq[4] = {ca , sa*dtwx/angle , sa*dtwy/angle , sa*dtwz/angle};
@@ -557,7 +560,7 @@ void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float 
   }
 
   // normalize and store the result
-  float norm = arm_sqrt(tmpq0*tmpq0 + tmpq1*tmpq1 + tmpq2*tmpq2 + tmpq3*tmpq3);
+  float norm = arm_sqrt(tmpq0*tmpq0 + tmpq1*tmpq1 + tmpq2*tmpq2 + tmpq3*tmpq3) + EPS;
   this->q[0] = tmpq0/norm; this->q[1] = tmpq1/norm; this->q[2] = tmpq2/norm; this->q[3] = tmpq3/norm;
   assertStateNotNaN(this);
 }
@@ -619,7 +622,7 @@ void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
   // Move attitude error into attitude if any of the angle errors are large enough
   if ((fabsf(v0) > 0.1e-3f || fabsf(v1) > 0.1e-3f || fabsf(v2) > 0.1e-3f) && (fabsf(v0) < 10 && fabsf(v1) < 10 && fabsf(v2) < 10))
   {
-    float angle = arm_sqrt(v0*v0 + v1*v1 + v2*v2);
+    float angle = arm_sqrt(v0*v0 + v1*v1 + v2*v2) + EPS;
     float ca = arm_cos_f32(angle / 2.0f);
     float sa = arm_sin_f32(angle / 2.0f);
     float dq[4] = {ca, sa * v0 / angle, sa * v1 / angle, sa * v2 / angle};
@@ -631,7 +634,7 @@ void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
     float tmpq3 = dq[3] * this->q[0] + dq[2] * this->q[1] - dq[1] * this->q[2] + dq[0] * this->q[3];
 
     // normalize and store the result
-    float norm = arm_sqrt(tmpq0 * tmpq0 + tmpq1 * tmpq1 + tmpq2 * tmpq2 + tmpq3 * tmpq3);
+    float norm = arm_sqrt(tmpq0 * tmpq0 + tmpq1 * tmpq1 + tmpq2 * tmpq2 + tmpq3 * tmpq3) + EPS;
     this->q[0] = tmpq0 / norm;
     this->q[1] = tmpq1 / norm;
     this->q[2] = tmpq2 / norm;
