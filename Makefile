@@ -359,7 +359,7 @@ ifeq ($(LTO), 1)
 endif
 
 #Program name
-PROG = $(PLATFORM)
+PROG ?= $(PLATFORM)
 #Where to compile the .o
 BIN = bin
 VPATH += $(BIN)
