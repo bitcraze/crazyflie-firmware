@@ -139,6 +139,9 @@ bool healthShallWeRunTest(void)
 
 void healthRunTests(sensorData_t *sensors)
 {
+  const MotorHealthTestDef* healthTestSettings;
+  int32_t sampleIndex;
+
   /* Propeller test */
   if (testState == configureAcc)
   {
@@ -167,15 +170,17 @@ void healthRunTests(sensorData_t *sensors)
                   (double)accVarXnf + (double)accVarYnf, (double)accVarZnf);
       testState = measureProp;
     }
-
   }
   else if (testState == measureProp)
   {
-    if (i < PROPTEST_NBR_OF_VARIANCE_VALUES)
+    healthTestSettings = motorsGetHealthTestSettings(motorToTest);
+
+    sampleIndex = ((int32_t) i) - healthTestSettings->varianceMeasurementStartMsec;
+    if (sampleIndex >= 0 && sampleIndex < PROPTEST_NBR_OF_VARIANCE_VALUES)
     {
-      accX[i] = sensors->acc.x;
-      accY[i] = sensors->acc.y;
-      accZ[i] = sensors->acc.z;
+      accX[sampleIndex] = sensors->acc.x;
+      accY[sampleIndex] = sensors->acc.y;
+      accZ[sampleIndex] = sensors->acc.z;
       if (pmGetBatteryVoltage() < minSingleLoadedVoltage[motorToTest])
       {
         minSingleLoadedVoltage[motorToTest] = pmGetBatteryVoltage();
@@ -183,15 +188,7 @@ void healthRunTests(sensorData_t *sensors)
     }
     i++;
 
-    if (i == 1)
-    {
-      motorsSetRatio(motorToTest, 0xFFFF);
-    }
-    else if (i == 50)
-    {
-      motorsSetRatio(motorToTest, 0);
-    }
-    else if (i == PROPTEST_NBR_OF_VARIANCE_VALUES)
+    if (sampleIndex == PROPTEST_NBR_OF_VARIANCE_VALUES)
     {
       accVarX[motorToTest] = variance(accX, PROPTEST_NBR_OF_VARIANCE_VALUES);
       accVarY[motorToTest] = variance(accY, PROPTEST_NBR_OF_VARIANCE_VALUES);
@@ -202,7 +199,16 @@ void healthRunTests(sensorData_t *sensors)
                    (double)accVarZ[motorToTest],
                    (double)(idleVoltage - minSingleLoadedVoltage[motorToTest]));
     }
-    else if (i >= 1000)
+
+    if (i == 1 && healthTestSettings->onPeriodMsec > 0)
+    {
+      motorsSetRatio(motorToTest, healthTestSettings->onPeriodPWMRatio);
+    }
+    else if (i == healthTestSettings->onPeriodMsec)
+    {
+      motorsSetRatio(motorToTest, 0);
+    }
+    else if (i >= healthTestSettings->onPeriodMsec + healthTestSettings->offPeriodMsec)
     {
       i = 0;
       motorToTest++;
