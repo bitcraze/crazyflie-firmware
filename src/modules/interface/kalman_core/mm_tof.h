@@ -29,3 +29,9 @@
 
 // Measurements of TOF from laser sensor
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof);
+
+// Kalman update using the TOF from downward laser sensor and F (floor height estimate)
+void kalmanCoreUpdateWithTofUsingF(kalmanCoreData_t* this, tofMeasurement_t *tof);
+
+// Kalman update using the TOF from upward laser sensor and R (roof height estimate)
+void kalmanCoreUpdateWithUpTofUsingR(kalmanCoreData_t* this, tofMeasurement_t *tof);

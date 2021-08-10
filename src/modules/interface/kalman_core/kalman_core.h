@@ -59,7 +59,7 @@
 // Indexes to access the quad's state, stored as a column vector
 typedef enum
 {
-  KC_STATE_X, KC_STATE_Y, KC_STATE_Z, KC_STATE_PX, KC_STATE_PY, KC_STATE_PZ, KC_STATE_D0, KC_STATE_D1, KC_STATE_D2, KC_STATE_DIM
+  KC_STATE_X, KC_STATE_Y, KC_STATE_Z, KC_STATE_PX, KC_STATE_PY, KC_STATE_PZ, KC_STATE_D0, KC_STATE_D1, KC_STATE_D2, KC_STATE_F, KC_STATE_R, KC_STATE_DIM
 } kalmanCoreStateIdx_t;
 
 
@@ -74,6 +74,10 @@ typedef struct {
    * - D0, D1, D2: attitude error
    *
    * For more information, refer to the paper
+   * 
+   * Add two states for better z estimation using range measurements:
+   * - F: Estimated distance from the starting z position to what is below the CF
+   * - R: Estimated distance from the starting z position to the current roof above the CF
    */
   float S[KC_STATE_DIM];
 
@@ -93,6 +97,9 @@ typedef struct {
   bool resetEstimation;
 
   float baroReferenceHeight;
+
+  // Flag to signal if R (roof height estimate) has been intialized
+  bool stateRInitialized;
 } kalmanCoreData_t;
 
 

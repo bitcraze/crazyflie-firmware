@@ -61,3 +61,12 @@ float rangeGet(rangeDirection_t direction);
  * @param timeStamp The time when the range was sampled (in sys ticks)
  */
 void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp);
+
+/**
+ * Enqueue a upward range measurement for distance to the roof in the current estimator.
+ *
+ * @param distance Distance to the roof (m)
+ * @param stdDev The standard deviation of the range sample
+ * @param timeStamp The time when the range was sampled (in sys ticks)
+ */
+void rangeEnqueueUpRangeInEstimator(float distance, float stdDev, uint32_t timeStamp); 

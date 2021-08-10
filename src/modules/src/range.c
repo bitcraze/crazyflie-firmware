@@ -56,6 +56,14 @@ void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t tim
   estimatorEnqueueTOF(&tofData);
 }
 
+void rangeEnqueueUpRangeInEstimator(float distance, float stdDev, uint32_t timeStamp) {
+  tofMeasurement_t tofData;
+  tofData.timestamp = timeStamp;
+  tofData.distance = distance;
+  tofData.stdDev = stdDev;
+  estimatorEnqueueUpTOF(&tofData);
+}
+
 /**
  * Log group for the multi ranger and Z-ranger decks
  */

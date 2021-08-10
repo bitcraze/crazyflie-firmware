@@ -99,6 +99,74 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   kalmanCoreScalarUpdate(this, &Hy, measuredNY-predictedNY, flow->stdDevY);
 }
 
+void kalmanCoreUpdateWithFlowUsingF(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
+{
+  // Inclusion of flow measurements in the EKF done by two scalar updates
+
+  // ~~~ Camera constants ~~~
+  // The angle of aperture is guessed from the raw data register and thankfully look to be symmetric
+  float Npix = 30.0;                      // [pixels] (same in x and y)
+  //float thetapix = DEG_TO_RAD * 4.0f;     // [rad]    (same in x and y)
+  float thetapix = DEG_TO_RAD * 4.2f;
+  //~~~ Body rates ~~~
+  // TODO check if this is feasible or if some filtering has to be done
+  float omegax_b = gyro->x * DEG_TO_RAD;
+  float omegay_b = gyro->y * DEG_TO_RAD;
+
+  // ~~~ Moves the body velocity into the global coordinate system ~~~
+  // [bar{x},bar{y},bar{z}]_G = R*[bar{x},bar{y},bar{z}]_B
+  //
+  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
+  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
+  //
+  // where \hat{} denotes a basis vector, \dot{} denotes a derivative and
+  // _G and _B refer to the global/body coordinate systems.
+
+  // Modification 1
+  //dx_g = R[0][0] * S[KC_STATE_PX] + R[0][1] * S[KC_STATE_PY] + R[0][2] * S[KC_STATE_PZ];
+  //dy_g = R[1][0] * S[KC_STATE_PX] + R[1][1] * S[KC_STATE_PY] + R[1][2] * S[KC_STATE_PZ];
+
+
+  float dx_g = this->S[KC_STATE_PX];
+  float dy_g = this->S[KC_STATE_PY];
+  float z_g = (this->S[KC_STATE_Z] - this->S[KC_STATE_F]);
+  // Saturate elevation in prediction and correction to avoid singularities
+  if ( z_g < 0.1f ) {
+      z_g = 0.1;
+  }
+
+  // ~~~ X velocity prediction and update ~~~
+  // predicts the number of accumulated pixels in the x-direction
+  float omegaFactor = 1.25f;
+  float hx[KC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 Hx = {1, KC_STATE_DIM, hx};
+  predictedNX = (flow->dt * Npix / thetapix ) * ((dx_g * this->R[2][2] / z_g) - omegaFactor * omegay_b);
+  measuredNX = flow->dpixelx;
+
+  // derive measurement equation with respect to dx (not z and f since it caused some bad behaviour)
+
+  hx[KC_STATE_PX] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
+  //hx[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dx_g) / (-z_g * z_g));
+  //hx[KC_STATE_F] = - hx[KC_STATE_Z];
+  
+  //First update
+  kalmanCoreScalarUpdate(this, &Hx, measuredNX-predictedNX, flow->stdDevX);
+
+  // ~~~ Y velocity prediction and update ~~~
+  float hy[KC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 Hy = {1, KC_STATE_DIM, hy};
+  predictedNY = (flow->dt * Npix / thetapix ) * ((dy_g * this->R[2][2] / z_g) + omegaFactor * omegax_b);
+  measuredNY = flow->dpixely;
+
+  // derive measurement equation with respect to dy (not z and f since it caused some bad behaviour)
+  hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
+  //hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
+  //hy[KC_STATE_F] = - hy[KC_STATE_Z];
+
+  // Second update
+  kalmanCoreScalarUpdate(this, &Hy, measuredNY-predictedNY, flow->stdDevY);
+}
+
 /**
  * Predicted and measured values of the X and Y direction of the flowdeck
  */

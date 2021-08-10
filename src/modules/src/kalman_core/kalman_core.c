@@ -131,6 +131,11 @@ static const float stdDevInitialVelocity = 0.01;
 static const float stdDevInitialAttitude_rollpitch = 0.01;
 static const float stdDevInitialAttitude_yaw = 0.01;
 
+static const float stdDevInitialF = 0; // initialF is almost true by definition 
+static const float stdDevInitialR = 0;
+static float procNoiseF = 0; // This could be tuned to some other value, but it seems natural for it to be 0
+static float procNoiseR = 0; // This could be tuned to some other value, but it seems natural for it to be 0
+
 static float procNoiseAcc_xy = 0.5f;
 static float procNoiseAcc_z = 1.0f;
 static float procNoiseVel = 0;
@@ -143,6 +148,9 @@ static float measNoiseGyro_yaw = 0.1f; // radians per second
 static float initialX = 0.0;
 static float initialY = 0.0;
 static float initialZ = 0.0;
+
+static float initialF = 0.0;
+static float initialR = -1.0; // It does not matter since it is overwritten on the first range up measurement (as long as stateRInitialized is set to false).
 
 // Initial yaw of the Crazyflie in radians.
 // 0 --- facing positive X
@@ -168,6 +176,11 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
 //  this->S[KC_STATE_D0] = 0;
 //  this->S[KC_STATE_D1] = 0;
 //  this->S[KC_STATE_D2] = 0;
+  
+  this->S[KC_STATE_F] = initialF;
+  this->S[KC_STATE_R] = initialR;
+  // This is set to false so that the first range up measurement will become the initial value 
+  this->stateRInitialized = false;
 
   // reset the attitude quaternion
   initialQuaternion[0] = arm_cos_f32(initialYaw / 2);
@@ -199,6 +212,9 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
   this->P[KC_STATE_D0][KC_STATE_D0] = powf(stdDevInitialAttitude_rollpitch, 2);
   this->P[KC_STATE_D1][KC_STATE_D1] = powf(stdDevInitialAttitude_rollpitch, 2);
   this->P[KC_STATE_D2][KC_STATE_D2] = powf(stdDevInitialAttitude_yaw, 2);
+
+  this->P[KC_STATE_F][KC_STATE_F] = powf(stdDevInitialF, 2);
+  this->P[KC_STATE_R][KC_STATE_R] = powf(stdDevInitialR, 2);
 
   this->Pm.numRows = KC_STATE_DIM;
   this->Pm.numCols = KC_STATE_DIM;
@@ -379,6 +395,9 @@ void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float 
   A[KC_STATE_D0][KC_STATE_D0] = 1;
   A[KC_STATE_D1][KC_STATE_D1] = 1;
   A[KC_STATE_D2][KC_STATE_D2] = 1;
+
+  A[KC_STATE_F][KC_STATE_F] = 1;
+  A[KC_STATE_R][KC_STATE_R] = 1;
 
   // position from body-frame velocity
   A[KC_STATE_X][KC_STATE_PX] = this->R[0][0]*dt;
@@ -581,6 +600,9 @@ void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt)
     this->P[KC_STATE_D0][KC_STATE_D0] += powf(measNoiseGyro_rollpitch * dt + procNoiseAtt, 2);
     this->P[KC_STATE_D1][KC_STATE_D1] += powf(measNoiseGyro_rollpitch * dt + procNoiseAtt, 2);
     this->P[KC_STATE_D2][KC_STATE_D2] += powf(measNoiseGyro_yaw * dt + procNoiseAtt, 2);
+
+    this->P[KC_STATE_F][KC_STATE_F] += powf(procNoiseF, 2);
+    this->P[KC_STATE_R][KC_STATE_R] += powf(procNoiseR, 2);
   }
 
   for (int i=0; i<KC_STATE_DIM; i++) {
@@ -662,6 +684,9 @@ void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
     A[KC_STATE_PX][KC_STATE_PX] = 1;
     A[KC_STATE_PY][KC_STATE_PY] = 1;
     A[KC_STATE_PZ][KC_STATE_PZ] = 1;
+
+    A[KC_STATE_F][KC_STATE_F] = 1;
+    A[KC_STATE_R][KC_STATE_R] = 1;
 
     A[KC_STATE_D0][KC_STATE_D0] =  1 - d1*d1/2 - d2*d2/2;
     A[KC_STATE_D0][KC_STATE_D1] =  d2 + d0*d1/2;
@@ -814,6 +839,14 @@ PARAM_GROUP_START(kalman)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, pNAtt, &procNoiseAtt)
  /**
+ * @brief Process noise for F (floor height)
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNF, &procNoiseF)
+ /**
+ * @brief Process noise for R (roof height)
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pNR, &procNoiseR)
+ /**
  * @brief Measurement noise for barometer
  */
   PARAM_ADD_CORE(PARAM_FLOAT, mNBaro, &measNoiseBaro)
@@ -841,4 +874,12 @@ PARAM_GROUP_START(kalman)
  * @brief Initial Yaw after reset [rad]
  */
   PARAM_ADD_CORE(PARAM_FLOAT, initialYaw, &initialYaw)
+ /**
+ * @brief Initial F (floor height) after reset [m]
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, initialF, &initialF)
+ /**
+ * @brief Initial R (roof height) after reset [m] (does not really matter since the first range up measurement after reset is used to initialize)
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, initialR, &initialR)
 PARAM_GROUP_STOP(kalman)
