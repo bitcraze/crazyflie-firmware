@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import json
 import sys
 import os
 
@@ -15,11 +16,13 @@ def create_param_markdown(xml_dir, api_doc_dir):
     param_groups = parse_xml('params', xml_dir)
     create_markdown('params', param_groups, api_doc_dir)
 
+
 def read_and_parse_xml(file_name):
     with open(file_name, 'rt') as file:
         xml = file.read()
         pre_processed_xml = pre_process_xml(xml)
         return ET.fromstring(pre_processed_xml)
+
 
 def pre_process_xml(xml):
     # The xml we get from doxygen contains some un-orthodox elements that we handle before we parse the xml
@@ -30,22 +33,26 @@ def pre_process_xml(xml):
 
     return xml.replace('<linebreak/>', "")
 
+
 def merge_paras(paras, separator):
     parts = []
-    if paras != None:
+    if paras is not None:
         for para in paras:
-            if para.text != None:
+            if para.text is not None:
                 parts.append(para.text)
 
     return separator.join(parts)
+
 
 def get_brief_description(element):
     paras = element.findall('briefdescription/para')
     return merge_paras(paras, ' ')
 
+
 def get_detailed_description(element):
     paras = element.findall('detaileddescription/para')
     return merge_paras(paras, '\n\n')
+
 
 def parse_xml(doc_type, xml_dir):
     groups_info_storage = []
@@ -108,12 +115,13 @@ def extract_memberdefs(root, core_string):
 
         type_variable = memberdef.find('type/ref').text
 
-        #location and line
+        # location and line
         location = memberdef.find('location')
         file_location = location.attrib['file']
         line_location = location.attrib['line']
 
-        info_variable = [variable_name, is_variable_core, brief_description, type_variable,file_location, line_location, detaild_description]
+        info_variable = [variable_name, is_variable_core, brief_description,
+                         type_variable, file_location, line_location, detaild_description]
         info_variables.append(info_variable)
 
     return info_variables
@@ -132,9 +140,8 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
         print('group type does not exist!')
         return None
 
-    f.write('page_id: ' +doc_type + '\n')
+    f.write('page_id: ' + doc_type + '\n')
     f.write('---\n')
-
 
     f.write('## Index\n\n')
     first_letter = ''
@@ -147,7 +154,7 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
             f.write('\n')
             f.write('### ' + first_letter + '\n')
 
-        f.write('* [' +group_name+'](#'+group_name.lower()+')\n')
+        f.write('* [' + group_name + '](#' + group_name.lower() + ')\n')
 
     for full_group_info in groups_info_storage:
         group_info = full_group_info[0]
@@ -155,7 +162,7 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
         f.write('\n---\n')
 
         f.write('[back to group index](#index) \n\n')
-        f.write('## '+ group_name + '\n')
+        f.write('## ' + group_name + '\n')
 
         group_description = group_info[1]
         f.write(group_description + '\n')
@@ -165,25 +172,24 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
         info_variables = full_group_info[1]
         string_detailed_descriptions = ''
 
-        table_start_string = (' | Name | Core | Type | Description | \n' +
-        ' | ------------- | ------------- | ----- |----- |\n')
+        table_start_string = (' | Name | Core | Type | Description | \n' + ' | ------------- | ------------- | ----- |----- |\n')
         f.write(table_start_string)
 
         for info_variable in info_variables:
             variable_name = info_variable[0]
             is_variable_core = info_variable[1]
             brief_description = info_variable[2]
-            type_variable= info_variable[3]
-            file_location= info_variable[4]
-            line_location= info_variable[5]
+            type_variable = info_variable[3]
+            file_location = info_variable[4]
+            line_location = info_variable[5]
             detailed_description = info_variable[6]
 
-            if detailed_description == None:
+            if detailed_description is None:
                 detailed_description = ''
 
             string_variable_info = ''
             full_name = group_name + '.' + variable_name
-            full_name_nodot =  group_name + variable_name
+            full_name_nodot = group_name + variable_name
             full_name_url = '[' + full_name + '](#' + full_name_nodot.lower() + ')'
 
             core_indication_string = ''
@@ -208,12 +214,36 @@ def create_markdown(doc_type, groups_info_storage, api_doc_dir):
 
         f.write(string_detailed_descriptions)
 
-
     f.close()
+
+
+def create_json(xml_dir: str, api_doc_dir: str):
+    groups = dict()
+    groups['params'] = parse_xml('params', xml_dir)
+    groups['logs'] = parse_xml('logs', xml_dir)
+
+    json_file = os.path.join(api_doc_dir, 'log_param_doc.json')
+    with open(json_file, 'w') as f:
+        json_out = dict()
+        for key, group in groups.items():
+            json_out[key] = dict()
+
+            for info in group:
+                group_info = info[0]
+                json_out[key][group_info[0]] = {
+                    'desc': group_info[1],
+                    'variables': dict((var[0], {
+                        'core': var[1],
+                        'short_desc': var[2],
+                        'type': var[3],
+                        'desc': var[6]
+                    }) for var in info[1])
+                }
+        f.write(json.dumps(json_out))
 
 if __name__ == '__main__':
 
-    if(len(sys.argv)!=3):
+    if(len(sys.argv) != 3):
         raise ValueError("Need two arguments!")
 
     xml_dir = sys.argv[1]
@@ -223,3 +253,6 @@ if __name__ == '__main__':
     create_log_markdown(xml_dir, api_doc_dir)
     print('Create Parameter API Markdown files')
     create_param_markdown(xml_dir, api_doc_dir)
+
+    print('Create JSON file')
+    create_json(xml_dir, api_doc_dir)
