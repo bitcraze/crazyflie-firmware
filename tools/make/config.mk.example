@@ -111,3 +111,8 @@
 ## Lighthouse handling
 # If lighthouse will need to act as a ground truth (so not entered in the kalman filter)
 # CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH
+
+## Euler angles defining nonstandard IMU orientation on the airframe (in degrees)
+# CFLAGS += -DIMU_PHI=0.0f
+# CFLAGS += -DIMU_THETA=0.0f
+# CFLAGS += -DIMU_PSI=0.0f

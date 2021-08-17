@@ -47,7 +47,6 @@
   #include "sensors_bosch.h"
 #endif
 
-
 typedef struct {
   SensorImplementation_t implements;
   void (*init)(void);
