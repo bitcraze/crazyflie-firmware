@@ -269,11 +269,20 @@ static void checkPeriphAndGpioConflicts(void)
 
   for (int i = 0; i < count; i++)
   {
-    if (usedPeriph & deckInfos[i].driver->usedPeriph) {
-      DEBUG_PRINT("ERROR: Driver Periph usage conflicts with a "
-                  "previously enumerated deck driver. No decks will be "
-                  "initialized!\n");
-      noError = false;
+    uint32_t matchPeriph = usedPeriph & deckInfos[i].driver->usedPeriph;
+    if (matchPeriph != 0) {
+      //
+      // Here we know that two decks share a periph, that is only ok if it is a
+      // bus. So, we check if the matching periphs contain a non-bus peripheral
+      // by ANDing with the inverse of a mask made up with all bus peripherals.
+      //
+      uint32_t bus_mask = ~(DECK_USING_I2C | DECK_USING_SPI);
+      if ((matchPeriph & bus_mask) != 0) {
+        DEBUG_PRINT("ERROR: Driver Periph usage conflicts with a "
+                    "previously enumerated deck driver. No decks will be "
+                    "initialized!\n");
+        noError = false;
+      }
     }
 
     if (usedGpio & deckInfos[i].driver->usedGpio) {
