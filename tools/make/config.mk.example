@@ -111,3 +111,6 @@
 ## Lighthouse handling
 # If lighthouse will need to act as a ground truth (so not entered in the kalman filter)
 # CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH
+
+## Keep the yaw setpoint within +/- YAW_MAX_DELTA from the current heading
+# CFLAGS += -DYAW_MAX_DELTA=45.0f
