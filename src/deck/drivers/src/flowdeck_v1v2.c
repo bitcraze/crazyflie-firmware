@@ -245,7 +245,7 @@ static const DeckDriver flowdeck2_deck = {
   .name = "bcFlow2",
 
   .usedGpio = DECK_USING_IO_3,
-  .usedPeriph = DECK_USING_I2C, DECK_USING_SPI,
+  .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
   .requiredEstimator = kalmanEstimator,
 
   .init = flowdeck2Init,
