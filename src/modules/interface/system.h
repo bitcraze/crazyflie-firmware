@@ -41,4 +41,6 @@ void systemWaitStart(void);
 void systemSetArmed(bool val);
 bool systemIsArmed();
 
+void systemRequestShutdown();
+
 #endif //__SYSTEM_H__

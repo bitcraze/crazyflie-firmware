@@ -46,6 +46,7 @@
 #include "param.h"
 #include "pm.h"
 #include "app_channel.h"
+#include "system.h"
 
 
 #define DEBUG_MODULE "APPAPI"
@@ -131,5 +132,10 @@ void appMain() {
     appchannelSendPacket("hello", 5);
     appchannelReceivePacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER);
     appchannelHasOverflowOccured();
+  }
+
+  // System
+  {
+    systemRequestShutdown();
   }
 }
