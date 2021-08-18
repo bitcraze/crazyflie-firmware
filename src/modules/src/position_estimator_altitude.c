@@ -51,11 +51,7 @@ static struct selfState_s state = {
   .estimatedZ = 0.0f,
   .velocityZ = 0.0f,
   .estAlphaZrange = 0.90f,
-  #ifdef IMPROVED_BARO_Z_HOLD
-    .estAlphaAsl = 0.90f,
-  #else
-    .estAlphaAsl = 0.997f,
-  #endif
+  .estAlphaAsl = 0.90f,
   .velocityFactor = 1.0f,
   .vAccDeadband = 0.04f,
   .velZAlpha = 0.995f,
