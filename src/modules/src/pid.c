@@ -25,6 +25,10 @@
  * pid.c - implementation of the PID regulator
  */
 
+#ifdef IMPROVED_BARO_Z_HOLD
+#define PID_FILTER_ALL
+#endif
+
 #include "pid.h"
 #include "num.h"
 #include <math.h>
@@ -66,7 +70,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     output += pid->outP;
 
     float deriv = (pid->error - pid->prevError) / pid->dt;
-    #ifdef IMPROVED_BARO_Z_HOLD
+    #ifdef PID_FILTER_ALL
       pid->deriv = deriv;
     #else
       if (pid->enableDFilter){
@@ -93,7 +97,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     pid->outI = pid->ki * pid->integ;
     output += pid->outI;
     
-    #ifdef IMPROVED_BARO_Z_HOLD
+    #ifdef PID_FILTER_ALL
       //filter complete output instead of only D component to compensate for increased noise from increased barometer influence
       if (pid->enableDFilter)
       {
