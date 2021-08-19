@@ -111,3 +111,6 @@
 ## Lighthouse handling
 # If lighthouse will need to act as a ground truth (so not entered in the kalman filter)
 # CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH
+
+## Control position and velocity in body-aligned axes instead of global axes (for PID controller only)
+# CFLAGS += -DPOSITION_CONTROL_PID_IN_BODY=true
