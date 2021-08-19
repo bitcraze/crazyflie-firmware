@@ -156,7 +156,9 @@ static float ctheta = cosf(IMU_THETA * (float) M_PI / 180);
 static float spsi   = sinf(IMU_PSI * (float) M_PI / 180);
 static float cpsi   = cosf(IMU_PSI * (float) M_PI / 180);
 
-static float R[3][3];// Pre-calculated values for accelerometer alignment
+static float R[3][3];
+
+// Pre-calculated values for accelerometer alignment
 static float cosPitch;
 static float sinPitch;
 static float cosRoll;
