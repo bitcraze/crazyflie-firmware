@@ -172,14 +172,14 @@ void positionControllerInit()
   pidInit(&this.pidY.pid, this.pidY.setpoint, this.pidY.init.kp, this.pidY.init.ki, this.pidY.init.kd,
       this.pidY.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
   pidInit(&this.pidZ.pid, this.pidZ.setpoint, this.pidZ.init.kp, this.pidZ.init.ki, this.pidZ.init.kd,
-      this.pidZ.pid.dt, POSITION_RATE, posFiltCutoff, posZFiltEnable);
+      this.pidZ.pid.dt, POSITION_RATE, posZFiltCutoff, posZFiltEnable);
 
   pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.init.kp, this.pidVX.init.ki, this.pidVX.init.kd,
       this.pidVX.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
   pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.init.kp, this.pidVY.init.ki, this.pidVY.init.kd,
       this.pidVY.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
   pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.init.kp, this.pidVZ.init.ki, this.pidVZ.init.kd,
-      this.pidVZ.pid.dt, POSITION_RATE, velFiltCutoff, velZFiltEnable);
+      this.pidVZ.pid.dt, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
 
   
   if (POSITION_CONTROL_PID_IN_BODY) {
