@@ -52,6 +52,8 @@
 static bool startPropTest = false;
 static bool startBatTest = false;
 
+static uint16_t propTestPWMRatio = 0;
+
 static uint32_t i = 0;
 NO_DMA_CCM_SAFE_ZERO_INIT static float accX[PROPTEST_NBR_OF_VARIANCE_VALUES];
 NO_DMA_CCM_SAFE_ZERO_INIT static float accY[PROPTEST_NBR_OF_VARIANCE_VALUES];
@@ -202,7 +204,7 @@ void healthRunTests(sensorData_t *sensors)
 
     if (i == 1 && healthTestSettings->onPeriodMsec > 0)
     {
-      motorsSetRatio(motorToTest, healthTestSettings->onPeriodPWMRatio);
+      motorsSetRatio(motorToTest, propTestPWMRatio > 0 ? propTestPWMRatio : healthTestSettings->onPeriodPWMRatio);
     }
     else if (i == healthTestSettings->onPeriodMsec)
     {
@@ -328,6 +330,11 @@ PARAM_ADD_CORE(PARAM_UINT8, startPropTest, &startPropTest)
  * @brief Set nonzero to initiate test of battery
  */
 PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
+
+/**
+ * @brief PWM ratio to use when testing propellers. Required for brushless motors.
+ */
+PARAM_ADD_CORE(PARAM_UINT16, propTestPWMRatio, &propTestPWMRatio)
 
 PARAM_GROUP_STOP(health)
 

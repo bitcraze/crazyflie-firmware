@@ -72,7 +72,7 @@ const MotorHealthTestDef brushlessMotorHealthTestSettings = {
   /* onPeriodMsec = */ 2000,
   /* offPeriodMsec = */ 1000,
   /* varianceMeasurementStartMsec = */ 1000,
-  /* onPeriodPWMRatio = */ 0x2700,
+  /* onPeriodPWMRatio = */ 0 /* user must set health.propTestPWMRatio explicitly */
 };
 
 const MotorHealthTestDef unknownMotorHealthTestSettings = {
