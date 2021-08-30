@@ -61,6 +61,27 @@ const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
+const MotorHealthTestDef brushedMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 50,
+  /* offPeriodMsec = */ 950,
+  /* varianceMeasurementStartMsec = */ 0,
+  /* onPeriodPWMRatio = */ 0xFFFF,
+};
+
+const MotorHealthTestDef brushlessMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 2000,
+  /* offPeriodMsec = */ 1000,
+  /* varianceMeasurementStartMsec = */ 1000,
+  /* onPeriodPWMRatio = */ 0 /* user must set health.propTestPWMRatio explicitly */
+};
+
+const MotorHealthTestDef unknownMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 0,
+  /* offPeriodMseec = */ 0,
+  /* varianceMeasurementStartMsec = */ 0,
+  /* onPeriodPWMRatio = */ 0
+};
+
 static bool isInit = false;
 
 /* Private functions */
@@ -374,6 +395,27 @@ void motorsPlayMelody(uint16_t *notes)
     motorsPlayTone(note, duration);
   } while (duration != 0);
 }
+
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
+{
+  if (id >= NBR_OF_MOTORS)
+  {
+    return &unknownMotorHealthTestSettings;
+  }
+  else if (motorMap[id]->drvType == BRUSHLESS)
+  {
+    return &brushlessMotorHealthTestSettings;
+  }
+  else if (motorMap[id]->drvType == BRUSHED)
+  {
+    return &brushedMotorHealthTestSettings;
+  }
+  else
+  {
+    return &unknownMotorHealthTestSettings;
+  }
+}
+
 /**
  * Logging variables of the motors PWM output
  */

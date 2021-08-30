@@ -283,15 +283,16 @@ static void stabilizerTask(void* param)
           && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
         usddeckTriggerLogging();
       }
-    }
-    calcSensorToOutputLatency(&sensorData);
-    tick++;
-    STATS_CNT_RATE_EVENT(&stabilizerRate);
 
-    if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
-      if (!rateWarningDisplayed) {
-        DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
-        rateWarningDisplayed = true;
+      calcSensorToOutputLatency(&sensorData);
+      tick++;
+      STATS_CNT_RATE_EVENT(&stabilizerRate);
+
+      if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
+        if (!rateWarningDisplayed) {
+          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+          rateWarningDisplayed = true;
+        }
       }
     }
   }
