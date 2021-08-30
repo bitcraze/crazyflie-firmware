@@ -35,12 +35,6 @@ include $(CRAZYFLIE_BASE)/tools/make/platform.mk
 
 CFLAGS += -DCRAZYFLIE_FW
 
-######### Stabilizer configuration ##########
-## These are set by the platform (see tools/make/platforms/*.mk), can be overwritten here
-ESTIMATOR          ?= any
-CONTROLLER         ?= Any # one of Any, PID, Mellinger, INDI
-POWER_DISTRIBUTION ?= stock
-
 #OpenOCD conf
 RTOS_DEBUG        ?= 0
 
