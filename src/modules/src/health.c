@@ -159,6 +159,11 @@ void healthRunTests(sensorData_t *sensors)
     minSingleLoadedVoltage[MOTOR_M2] = minLoadedVoltage;
     minSingleLoadedVoltage[MOTOR_M3] = minLoadedVoltage;
     minSingleLoadedVoltage[MOTOR_M4] = minLoadedVoltage;
+    // Make sure motors are stopped first.
+    motorsSetRatio(MOTOR_M1, 0);
+    motorsSetRatio(MOTOR_M2, 0);
+    motorsSetRatio(MOTOR_M3, 0);
+    motorsSetRatio(MOTOR_M4, 0);
   }
   if (testState == measureNoiseFloor)
   {
@@ -336,7 +341,7 @@ PARAM_ADD_CORE(PARAM_UINT8, startPropTest, &startPropTest)
 PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
 
 /**
- * @brief PWM ratio to use when testing propellers. Required for brushless motors.
+ * @brief PWM ratio to use when testing propellers. Required for brushless motors. [0 - UINT16_MAX]
  */
 PARAM_ADD_CORE(PARAM_UINT16, propTestPWMRatio, &propTestPWMRatio)
 
