@@ -112,6 +112,15 @@ or with the toolbelt
 tb make PLATFORM=tag
 ```
 
+### Platform specific options
+In `cf2.mk` or `tag.mk` in the `tools/make/` folder you can find additional compile options, for example which ESTIMATOR or CONTROLLER to use as default.
+
+```
+######### Stabilizer configuration ##########
+ESTIMATOR          ?= any
+CONTROLLER         ?= Any # one of Any, PID, Mellinger, INDI
+POWER_DISTRIBUTION ?= stock
+```
 
 ### config.mk
 To create custom build options create a file called `config.mk` in the `tools/make/`
