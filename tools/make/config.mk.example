@@ -113,3 +113,7 @@
 ## Lighthouse handling
 # If lighthouse will need to act as a ground truth (so not entered in the kalman filter)
 # CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH
+
+## Improved altitude hold complementary filter
+# CFLAGS += -DIMPROVED_BARO_Z_HOLD
+

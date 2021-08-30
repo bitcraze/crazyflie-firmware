@@ -149,11 +149,7 @@ static void pmSetBatteryVoltage(float voltage)
 static void pmSystemShutdown(void)
 {
 #ifdef ACTIVATE_AUTO_SHUTDOWN
-  SyslinkPacket slp;
-
-  slp.type = SYSLINK_PM_ONOFF_SWITCHOFF;
-  slp.length = 0;
-  syslinkSendPacket(&slp);
+  systemRequestShutdown();
 #endif
 }
 

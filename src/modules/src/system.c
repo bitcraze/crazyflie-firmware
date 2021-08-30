@@ -330,6 +330,15 @@ bool systemIsArmed()
   return armed || forceArm;
 }
 
+void systemRequestShutdown()
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_PM_ONOFF_SWITCHOFF;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
+}
+
 void vApplicationIdleHook( void )
 {
   static uint32_t tickOfLatestWatchdogReset = M2T(0);
