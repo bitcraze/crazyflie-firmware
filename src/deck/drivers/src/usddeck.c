@@ -1062,7 +1062,7 @@ PARAM_GROUP_STOP(deck)
  * The SD-card used in the deck must be formatted as a FAT32 file system
  * (exFAT does not work).
  *
- * We use [FatFS](%http://elm-chan.org/fsw/ff/00index_e.html) as the file
+ * We use [FatFS](http://elm-chan.org/fsw/ff/00index_e.html) as the file
  * system handler. Have a look at the API and examples on the FatFS site for
  * usage information.
  *
@@ -1075,7 +1075,7 @@ PARAM_GROUP_STOP(deck)
  * Without any changes to `usddeck.c` there's a data logging functionality
  * implemented. It can be enabled and configured by placing a config file on
  * the µSD-Card. The file is a simple text file and an example is available
- * [config.txt](%https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/config.txt).
+ * [config.txt](https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/config.txt).
  * The file format is as follows:
  *
  * ```
@@ -1085,7 +1085,7 @@ PARAM_GROUP_STOP(deck)
  * 0     # enable on startup (0/1)
  * on:fixedFrequency
  * 100     # frequency in Hz
- * 1       # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
+ * 1     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
  * log entry 1
  * log entry 2
  * log entry 3
@@ -1151,9 +1151,9 @@ PARAM_GROUP_STOP(deck)
  * ```
  *
  * Here, the vartype is a singe character and we support a subset of the ones
- * defined [here](%https://docs.python.org/3/library/struct.html#format-characters).
+ * defined [here](https://docs.python.org/3/library/struct.html#format-characters).
  *
- * We provide a [helper script](%https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/cfusdlog.py)
+ * We provide a [helper script](https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/cfusdlog.py)
  * to decode the data:
  *
  * ```
@@ -1162,7 +1162,7 @@ PARAM_GROUP_STOP(deck)
  * ```
  *
  * where fileName is a file from the µSD-Card. For convenience there is also
- * an [example.py](%https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/example.py)
+ * an [example.py](https://github.com/bitcraze/crazyflie-firmware/blob/master/tools/usdlog/example.py)
  * which shows how to access and plot the data.
  */
 PARAM_GROUP_START(usd)

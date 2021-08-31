@@ -372,7 +372,7 @@ void soundSetFreq(uint32_t freq) {
  * are already a few melodies pre-programmed that you can use.
  *
  * Changing the sounds requires modifications to the firmware. The code for the
- * sounds is located in [sound_cf.c](%https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/sound_cf2.c)
+ * sounds is located in [sound_cf.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/sound_cf2.c)
  */
 PARAM_GROUP_START(sound)
 
