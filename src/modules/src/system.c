@@ -83,6 +83,8 @@ static bool armed = ARM_INIT;
 static bool forceArm;
 static bool isInit;
 
+static char nrf_version[16];
+
 STATIC_MEM_TASK_ALLOC(systemTask, SYSTEM_TASK_STACKSIZE);
 
 /* System wide synchronisation */
@@ -199,6 +201,8 @@ void systemTask(void *arg)
 #ifdef PROXIMITY_ENABLED
   proximityInit();
 #endif
+
+  systemRequestNRFVersion();
 
   //Test the modules
   DEBUG_PRINT("About to run tests in system.c.\n");
@@ -337,6 +341,29 @@ void systemRequestShutdown()
   slp.type = SYSLINK_PM_ONOFF_SWITCHOFF;
   slp.length = 0;
   syslinkSendPacket(&slp);
+}
+
+void systemRequestNRFVersion()
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_SYS_NRF_VERSION;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
+}
+
+void systemSyslinkReceive(SyslinkPacket *slp)
+{
+  if (slp->type == SYSLINK_SYS_NRF_VERSION)
+  {
+    size_t len = slp->length - 2;
+
+    if (sizeof(nrf_version) - 1 <=  len) {
+      len = sizeof(nrf_version) - 1;
+    }
+    memcpy(&nrf_version, &slp->data[0], len);
+    DEBUG_PRINT("NRF51 version: %s\n", nrf_version);
+  }
 }
 
 void vApplicationIdleHook( void )

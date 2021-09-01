@@ -43,6 +43,7 @@
 #include "pm.h"
 #include "ow.h"
 #include "static_mem.h"
+#include "system.h"
 
 #ifdef UART2_LINK_COMM
 #include "uart2.h"
@@ -101,6 +102,9 @@ static void syslinkRouteIncommingPacket(SyslinkPacket *slp)
       break;
     case SYSLINK_OW_GROUP:
       owSyslinkRecieve(slp);
+      break;
+    case SYSLINK_SYS_GROUP:
+      systemSyslinkReceive(slp);
       break;
     default:
       DEBUG_PRINT("Unknown packet:%X.\n", slp->type);

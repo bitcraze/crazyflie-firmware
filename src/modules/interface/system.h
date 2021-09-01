@@ -42,5 +42,7 @@ void systemSetArmed(bool val);
 bool systemIsArmed();
 
 void systemRequestShutdown();
+void systemRequestNRFVersion();
+void systemSyslinkReceive();
 
 #endif //__SYSTEM_H__
