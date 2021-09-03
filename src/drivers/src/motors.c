@@ -228,10 +228,6 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     // Configure Output Compare for PWM
     motorMap[i]->ocInit(motorMap[i]->tim, &TIM_OCInitStructure);
     motorMap[i]->preloadConfig(motorMap[i]->tim, TIM_OCPreload_Enable);
-
-    MOTORS_TIM_DBG_CFG(motorMap[i]->timDbgStop, ENABLE);
-    //Enable the timer PWM outputs
-    TIM_CtrlPWMOutputs(motorMap[i]->tim, ENABLE);
   }
 
   // Start the timers
