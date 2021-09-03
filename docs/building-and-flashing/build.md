@@ -73,6 +73,8 @@ This repository uses git submodules. Clone with the `--recursive` flag
 git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git
 ```
 
+**Note** Make sure there are no spaces in the folder structure leading up to the repository (example: _/a/path/with/no/spaces/crazyflie-firmware/_ vs _a/path with spaces/crazyflie-firmware/_). Our build system can not handle file system paths with spaces in them, and compilation will fail.
+
 If you already have cloned the repo without the `--recursive` option, you need to
 get the submodules manually
 
