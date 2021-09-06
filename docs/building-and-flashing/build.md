@@ -11,6 +11,10 @@ install some ARM toolchain.
 
 ### Install a toolchain
 
+### Toolchain and compiler version policy
+Our policy for toolchain is to follow what is available in the oldest [Ubuntu Long Term Support release](https://wiki.ubuntu.com/Releases) and treat that as the oldest supported version. At the time of writing this (September 6 2021) the oldest LTS release is 18.04. And in Ubuntu 18.04 (bionic) the version of gcc-arm-none-eabi is 6.3.
+
+This means that if the firmware can not be compiled using gcc 6.3, **or anything newer**, it should be considered a bug.
 #### OS X
 ```bash
 brew tap PX4/homebrew-px4
@@ -19,17 +23,7 @@ brew install gcc-arm-none-eabi
 
 #### Debian/Ubuntu
 
-Tested on Ubuntu 14.04 64b/16.04 64b/18.04 64b/20.04 64b/20.10 64b:
-
-For Ubuntu 14.04 :
-
-```bash
-sudo add-apt-repository ppa:terry.guo/gcc-arm-embedded
-sudo apt-get update
-sudo apt-get install libnewlib-arm-none-eabi
-```
-
-For Ubuntu 16.04 and 18.04:
+For Ubuntu 18.04:
 
 ```bash
 sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
