@@ -41,6 +41,7 @@
 #include "sound.h"
 #include "deck.h"
 #include "static_mem.h"
+#include "worker.h"
 
 typedef struct _PmSyslinkInfo
 {
@@ -193,6 +194,53 @@ float pmGetBatteryVoltageMax(void)
   return batteryVoltageMax;
 }
 
+/*
+ * When a module wants to register a callback to be called on shutdown they
+ * call pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t),
+ * with a function they which to be run at shutdown. We currently support
+ * GRACEFUL_SHUTDOWN_MAX_CALLBACKS number of callbacks to be registred.
+ */
+#define GRACEFUL_SHUTDOWN_MAX_CALLBACKS 5
+static int graceful_shutdown_callbacks_index;
+static graceful_shutdown_callback_t graceful_shutdown_callbacks[GRACEFUL_SHUTDOWN_MAX_CALLBACKS];
+
+/*
+ * Please take care in your callback, do not take to long time the nrf
+ * will not wait for you, it will shutdown.
+ */
+bool pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb)
+{
+  // To many registered allready! Increase limit if you think you are important
+  // enough!
+  if (graceful_shutdown_callbacks_index >= GRACEFUL_SHUTDOWN_MAX_CALLBACKS) {
+    return false;
+  }
+
+  graceful_shutdown_callbacks[graceful_shutdown_callbacks_index] = cb;
+  graceful_shutdown_callbacks_index += 1;
+
+  return true;
+}
+
+/*
+ * Iterate through all registered shutdown callbacks and call them one after
+ * the other, when all is done, send the ACK back to nrf to allow power off.
+ */
+static void pmGracefulShutdown()
+{
+  for (int i = 0; i < graceful_shutdown_callbacks_index; i++) {
+    graceful_shutdown_callback_t callback = graceful_shutdown_callbacks[i];
+
+    callback();
+  }
+
+  SyslinkPacket slp = {
+    .type = SYSLINK_PM_SHUTDOWN_ACK,
+  };
+
+  syslinkSendPacket(&slp);
+}
+
 void pmSyslinkUpdate(SyslinkPacket *slp)
 {
   if (slp->type == SYSLINK_PM_BATTERY_STATE) {
@@ -201,6 +249,8 @@ void pmSyslinkUpdate(SyslinkPacket *slp)
 #ifdef PM_SYSTLINK_INLCUDE_TEMP
     temp = pmSyslinkInfo.temp;
 #endif
+  } else if (slp->type == SYSLINK_PM_SHUTDOWN_REQUEST) {
+    workerSchedule(pmGracefulShutdown, NULL);
   }
 }
 

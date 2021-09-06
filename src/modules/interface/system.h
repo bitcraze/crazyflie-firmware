@@ -30,8 +30,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef void (*graceful_shutdown_callback_t)();
-
 void systemInit(void);
 bool systemTest(void);
 
@@ -46,7 +44,5 @@ bool systemIsArmed();
 void systemRequestShutdown();
 void systemRequestNRFVersion();
 void systemSyslinkReceive();
-
-bool systemRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb);
 
 #endif //__SYSTEM_H__
