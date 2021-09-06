@@ -352,58 +352,10 @@ void systemRequestNRFVersion()
   syslinkSendPacket(&slp);
 }
 
-/*
- * When a module wants to register a callback to be called on shutdown they
- * call systemRegisterGracefulShutdownCallback(graceful_shutdown_callback_t),
- * with a function they which to be run at shutdown. We currently support
- * GRACEFUL_SHUTDOWN_MAX_CALLBACKS number of callbacks to be registred.
- */
-#define GRACEFUL_SHUTDOWN_MAX_CALLBACKS 5
-static uint8_t graceful_shutdown_callbacks_index;
-static graceful_shutdown_callback_t graceful_shutdown_callbacks[GRACEFUL_SHUTDOWN_MAX_CALLBACKS];
-
-/*
- * Please take care in your callback, do not take to long time the nrf
- * will not wait for you, it will shutdown.
- */
-bool systemRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb)
-{
-  // To many registered allready! Increase limit if you think you are important
-  // enough!
-  if (graceful_shutdown_callbacks_index >= GRACEFUL_SHUTDOWN_MAX_CALLBACKS) {
-    return false;
-  }
-
-  graceful_shutdown_callbacks[graceful_shutdown_callbacks_index] = cb;
-  graceful_shutdown_callbacks_index += 1;
-
-  return true;
-}
-
-/*
- * Iterate through all registered shutdown callbacks and call them one after
- * the other, when all is done, send the ACK back to nrf to allow power off.
- */
-void systemGracefulShutdown()
-{
-  for (int i = 0; i < graceful_shutdown_callbacks_index; i++) {
-    graceful_shutdown_callback_t callback = graceful_shutdown_callbacks[i];
-
-    callback();
-  }
-
-  SyslinkPacket slp = {
-    .type = SYSLINK_SYS_SHUTDOWN_ACK,
-  };
-
-  syslinkSendPacket(&slp);
-}
-
 void systemSyslinkReceive(SyslinkPacket *slp)
 {
-  switch (slp->type)
+  if (slp->type == SYSLINK_SYS_NRF_VERSION)
   {
-  case SYSLINK_SYS_NRF_VERSION:{
     size_t len = slp->length - 2;
 
     if (sizeof(nrf_version) - 1 <=  len) {
@@ -411,11 +363,6 @@ void systemSyslinkReceive(SyslinkPacket *slp)
     }
     memcpy(&nrf_version, &slp->data[0], len);
     DEBUG_PRINT("NRF51 version: %s\n", nrf_version);
-  } break;
-
-  case SYSLINK_SYS_SHUTDOWN_REQUEST:
-    systemGracefulShutdown();
-    break;
   }
 }
 
