@@ -258,17 +258,17 @@ PARAM_ADD_CORE(PARAM_UINT8, posSet, &posSetMode)
 PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
 
 /**
- * Stabilization type for roll: rate(0) or angle(1)
+ * @brief Stabilization type for roll: rate(0) or angle(1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
 
 /**
- * Stabilization type for pitch: rate(0) or angle(1)
+ * @brief Stabilization type for pitch: rate(0) or angle(1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
 
 /**
- * Stabilization type for yaw: rate(0) or angle(1)
+ * @brief Stabilization type for yaw: rate(0) or angle(1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
 
