@@ -151,9 +151,22 @@ static uint16_t motorsConv16ToBits(uint16_t bits)
 // Voltage needed with the Supply voltage.
 static uint16_t motorsCompensateBatteryVoltage(uint16_t ithrust)
 {
+  float supply_voltage = pmGetBatteryVoltage();
+  /*
+   * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
+   * discharged.
+   * 
+   * A suiteble sanity check for disabiling the voltage compensation would be
+   * under 2V. That would suggest a damaged battery. This protects against
+   * rushing the motors on bugs and invalid voltage levels.
+   */
+  if (supply_voltage < 2.0f)
+  {
+    return ithrust;
+  }
+
   float thrust = ((float) ithrust / 65536.0f) * 60;
   float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
-  float supply_voltage = pmGetBatteryVoltage();
   float percentage = volts / supply_voltage;
   percentage = percentage > 1.0f ? 1.0f : percentage;
   return percentage * UINT16_MAX;
