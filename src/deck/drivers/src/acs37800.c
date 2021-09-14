@@ -317,7 +317,7 @@ static const DeckDriver asc37800_deck = {
   .pid = 0x00,
   .name = "bcACS37800",
 
-  .usedGpio = DECK_USING_SCL | DECK_USING_SDA,
+  .usedGpio = DECK_USING_I2C,
 
   .init = asc37800Init,
 };
