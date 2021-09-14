@@ -211,6 +211,13 @@ typedef struct
   void (*preloadConfig)(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload);
 } MotorPerifDef;
 
+typedef struct {
+  uint16_t onPeriodMsec;
+  uint16_t offPeriodMsec;
+  uint16_t varianceMeasurementStartMsec;
+  uint16_t onPeriodPWMRatio;
+} MotorHealthTestDef;
+
 /**
  * Motor mapping configurations
  */
@@ -267,6 +274,12 @@ void motorsTestTask(void* params);
  *     motorsBeep(false, 0, 0); *
  * */
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
+
+/**
+ * Retrieve the health test settings of the given motor. This allows us to use
+ * different health test timings and PWM ratios for brushed and brushless motors.
+ */
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
 
 #endif /* __MOTORS_H__ */
 

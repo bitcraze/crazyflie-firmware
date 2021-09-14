@@ -33,6 +33,7 @@
 #include "param.h"
 #include "FreeRTOS.h"
 #include "num.h"
+#include "position_controller.h"
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
@@ -72,12 +73,12 @@ static RPYType stabilizationModePitch = ANGLE; // Current stabilization type of 
 static RPYType stabilizationModeYaw   = RATE;  // Current stabilization type of yaw (rate or angle)
 
 static YawModeType yawMode = DEFAULT_YAW_MODE; // Yaw mode configuration
-static bool carefreeResetFront;             // Reset what is front in carefree mode
 
 static bool thrustLocked = true;
 static bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
+static bool modeSet = false;
 
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
@@ -137,12 +138,18 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   }
 
   if (altHoldMode) {
+    if (!modeSet) {             //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
+      modeSet = true;
+      positionControllerResetAllPID();
+      positionControllerResetAllfilters();
+    }
     setpoint->thrust = 0;
     setpoint->mode.z = modeVelocity;
 
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
   } else {
     setpoint->mode.z = modeDisable;
+    modeSet = false;
   }
 
   // roll/pitch
@@ -216,14 +223,53 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   }
 }
 
-// Params for flight modes
+/**
+ * There are 2 levels to control: Position (X, Y, Z) and Attitude (pitch, roll, yaw or in quaternions)
+ *
+ * These can be controlled in different modes: Absolute mode, Velocity mode or Disabled
+ *
+ * These parameters have impact on which level and mode to use.
+ */
 PARAM_GROUP_START(flightmode)
-PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
-PARAM_ADD(PARAM_UINT8, poshold, &posHoldMode)
-PARAM_ADD(PARAM_UINT8, posSet, &posSetMode)
+
+/**
+ * @brief Keeps the quad at its current altitude automatically
+ *
+ * Thrust control becomes height velocity control.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, althold, &altHoldMode)
+
+/**
+ * @brief Keeps the quad at its current 3D position
+ *
+ * Pitch/Roll/Thrust control becomes X/Y/Z velocity control.
+ * X and U
+ */
+PARAM_ADD_CORE(PARAM_UINT8, poshold, &posHoldMode)
+
+/**
+ * @brief Set to nonzero to select absolute mode for positioning
+ */
+PARAM_ADD_CORE(PARAM_UINT8, posSet, &posSetMode)
+
+/**
+ * @brief Carefree(0), plusmode(1), xmode(2)
+*/
 PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
-PARAM_ADD(PARAM_UINT8, yawRst, &carefreeResetFront)
-PARAM_ADD(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
-PARAM_ADD(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
-PARAM_ADD(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
+
+/**
+ * @brief Stabilization type for roll: rate(0) or angle(1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
+
+/**
+ * @brief Stabilization type for pitch: rate(0) or angle(1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
+
+/**
+ * @brief Stabilization type for yaw: rate(0) or angle(1)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
+
 PARAM_GROUP_STOP(flightmode)

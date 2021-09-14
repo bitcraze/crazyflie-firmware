@@ -244,7 +244,6 @@ static void melodyplayer(uint32_t counter, uint32_t * mi, Melody * m) {
   }
 }
 
-static uint8_t static_ratio = 0;
 static uint16_t static_freq = 4000;
 static void bypass(uint32_t counter, uint32_t * mi, Melody * melody)
 {
@@ -364,9 +363,41 @@ void soundSetFreq(uint32_t freq) {
 
 }
 
+/**
+ * The buzzer deck contains a low profile piezo buzzer.
+ */
 PARAM_GROUP_START(sound)
-PARAM_ADD(PARAM_UINT8, effect, &user_effect)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
-PARAM_ADD(PARAM_UINT16, freq, &static_freq)
-PARAM_ADD(PARAM_UINT8, ratio, &static_ratio)
+
+/**
+ * @brief Id of effect to use (default: 0)
+ *
+ * | Id | Effect                    | \n
+ * | -  | -                         | \n
+ * | 0  | Off                       | \n
+ * | 1  | Factory test              | \n
+ * | 2  | USB connected             | \n
+ * | 3  | USB disconnected          | \n
+ * | 4  | Charging done             | \n
+ * | 5  | Low battery               | \n
+ * | 6  | Startup                   | \n
+ * | 7  | Calibrated                | \n
+ * | 8  | Range slow                | \n
+ * | 9  | Range fast                | \n
+ * | 10 | Star Wars Imperial March  | \n
+ * | 11 | Bypass                    | \n
+ * | 12 | Siren                     | \n
+ * | 13 | Tilt quad to play sound   | \n
+ */
+PARAM_ADD_CORE(PARAM_UINT8, effect, &user_effect)
+
+/**
+ * @brief Number of effects available
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
+
+/**
+ * @brief Frequency to use for Bypass effect
+ */
+PARAM_ADD_CORE(PARAM_UINT16, freq, &static_freq)
+
 PARAM_GROUP_STOP(sound)

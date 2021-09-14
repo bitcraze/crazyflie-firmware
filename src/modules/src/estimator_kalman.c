@@ -201,7 +201,7 @@ static void kalmanTask(void* parameters) {
   uint32_t nextPrediction = xTaskGetTickCount();
   uint32_t lastPNUpdate = xTaskGetTickCount();
 
-  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 99, 101, 1);
+  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), ONE_SECOND, PREDICT_RATE - 1, PREDICT_RATE + 1, 1);
 
   while (true) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
@@ -447,34 +447,127 @@ void estimatorKalmanGetEstimatedRot(float * rotationMatrix) {
   memcpy(rotationMatrix, coreData.R, 9*sizeof(float));
 }
 
-// Stock log groups
+/**
+ * Variables and results from the Extended Kalman Filter
+ */
 LOG_GROUP_START(kalman)
+/**
+ * @brief Nonzero if the drone is in flight
+ *
+ *  Note: This is the same as sys.flying. Perhaps remove this one?
+ */
   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
+  /**
+ * @brief State position in the global frame x
+ * 
+ *   Note: This is similar to stateEstimate.x.
+ */
   LOG_ADD(LOG_FLOAT, stateX, &coreData.S[KC_STATE_X])
+ /**
+ * @brief State position in the global frame y
+ * 
+ *  Note: This is similar to stateEstimate.y
+ */
   LOG_ADD(LOG_FLOAT, stateY, &coreData.S[KC_STATE_Y])
+ /**
+ * @brief State position in the global frame z
+ * 
+ *  Note: This is similar to stateEstimate.z
+ */
   LOG_ADD(LOG_FLOAT, stateZ, &coreData.S[KC_STATE_Z])
+  /**
+ * @brief State position in the global frame PX
+ * 
+ *  Note: This is similar to stateEstimate.x
+ */
   LOG_ADD(LOG_FLOAT, statePX, &coreData.S[KC_STATE_PX])
+  /**
+  * @brief State velocity in its body frame y
+  * 
+  *  Note: This should be part of stateEstimate
+  */
   LOG_ADD(LOG_FLOAT, statePY, &coreData.S[KC_STATE_PY])
+  /**
+  * @brief State velocity in its body frame z
+  * 
+  *  Note: This should be part of stateEstimate
+  */
   LOG_ADD(LOG_FLOAT, statePZ, &coreData.S[KC_STATE_PZ])
+  /**
+  * @brief State attitude error roll
+  */
   LOG_ADD(LOG_FLOAT, stateD0, &coreData.S[KC_STATE_D0])
+  /**
+  * @brief State attitude error pitch
+  */
   LOG_ADD(LOG_FLOAT, stateD1, &coreData.S[KC_STATE_D1])
+  /**
+  * @brief State attitude error yaw
+  */
   LOG_ADD(LOG_FLOAT, stateD2, &coreData.S[KC_STATE_D2])
+  /**
+  * @brief Covariance matrix position x
+  */
   LOG_ADD(LOG_FLOAT, varX, &coreData.P[KC_STATE_X][KC_STATE_X])
+  /**
+  * @brief Covariance matrix position y
+  */
   LOG_ADD(LOG_FLOAT, varY, &coreData.P[KC_STATE_Y][KC_STATE_Y])
+  /**
+  * @brief Covariance matrix position z
+  */
   LOG_ADD(LOG_FLOAT, varZ, &coreData.P[KC_STATE_Z][KC_STATE_Z])
+  /**
+  * @brief Covariance matrix velocity x
+  */
   LOG_ADD(LOG_FLOAT, varPX, &coreData.P[KC_STATE_PX][KC_STATE_PX])
+  /**
+  * @brief Covariance matrix velocity y
+  */
   LOG_ADD(LOG_FLOAT, varPY, &coreData.P[KC_STATE_PY][KC_STATE_PY])
+  /**
+  * @brief Covariance matrix velocity z
+  */
   LOG_ADD(LOG_FLOAT, varPZ, &coreData.P[KC_STATE_PZ][KC_STATE_PZ])
+  /**
+  * @brief Covariance matrix attitude error roll
+  */
   LOG_ADD(LOG_FLOAT, varD0, &coreData.P[KC_STATE_D0][KC_STATE_D0])
+  /**
+  * @brief Covariance matrix attitude error pitch
+  */
   LOG_ADD(LOG_FLOAT, varD1, &coreData.P[KC_STATE_D1][KC_STATE_D1])
+  /**
+  * @brief Covariance matrix attitude error yaw
+  */
   LOG_ADD(LOG_FLOAT, varD2, &coreData.P[KC_STATE_D2][KC_STATE_D2])
+  /**
+  * @brief Estimated Attitude quarternion w
+  */
   LOG_ADD(LOG_FLOAT, q0, &coreData.q[0])
+  /**
+  * @brief Estimated Attitude quarternion x
+  */
   LOG_ADD(LOG_FLOAT, q1, &coreData.q[1])
+  /**
+  * @brief Estimated Attitude quarternion y
+  */
   LOG_ADD(LOG_FLOAT, q2, &coreData.q[2])
+  /**
+  * @brief Estimated Attitude quarternion z
+  */
   LOG_ADD(LOG_FLOAT, q3, &coreData.q[3])
-
+  /**
+  * @brief Statistics rate of update step
+  */
   STATS_CNT_RATE_LOG_ADD(rtUpdate, &updateCounter)
+  /**
+  * @brief Statistics rate of prediction step
+  */
   STATS_CNT_RATE_LOG_ADD(rtPred, &predictionCounter)
+  /**
+  * @brief Statistics rate full estimation step
+  */
   STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
 LOG_GROUP_STOP(kalman)
 
@@ -482,9 +575,22 @@ LOG_GROUP_START(outlierf)
   LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
 LOG_GROUP_STOP(outlierf)
 
+/**
+ * Tuning parameters for the Extended Kalman Filter (EKF)
+ *     estimator
+ */
 PARAM_GROUP_START(kalman)
-  PARAM_ADD(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
+/**
+ * @brief Reset the kalman estimator
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, resetEstimation, &coreData.resetEstimation)
   PARAM_ADD(PARAM_UINT8, quadIsFlying, &quadIsFlying)
-  PARAM_ADD(PARAM_UINT8, robustTdoa, &robustTdoa)
-  PARAM_ADD(PARAM_UINT8, robustTwr, &robustTwr)
+/**
+ * @brief Nonzero to use robust TDOA method (default: 0)
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, robustTdoa, &robustTdoa)
+/**
+ * @brief Nonzero to use robust TWR method (default: 0)
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, robustTwr, &robustTwr)
 PARAM_GROUP_STOP(kalman)

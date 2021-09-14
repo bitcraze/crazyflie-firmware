@@ -1,10 +1,10 @@
 ---
-title: LPS system 2 - MEM_TYPE_LOCO2
+title: Loco Positioning System 2 - MEM_TYPE_LOCO2
 page_id: mem_type_loco2
 ---
 
-The Loco Positioning System memory implementation provides means to read informatino about the
-LPS system. There is no write functionality.
+The Loco Positioning System memory implementation provides means to read information about the
+Loco Positioning System. There is no write functionality.
 
 ## Memory layout
 

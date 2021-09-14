@@ -3,8 +3,8 @@ compiler:
   path: gcc
   source_path:     &source_path 'src/'
   unit_tests_path: &unit_tests_path 'test/**/'
-  mocks_path:      &mocks_path 'generated-test/mocks/'
-  build_path:      &build_path 'generated-test/build/'
+  mocks_path:      &mocks_path 'generated/test/mocks/'
+  build_path:      &build_path 'generated/test/build/'
   options:
     - '-c'
     - '-Wall'

@@ -56,11 +56,37 @@ void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t tim
   estimatorEnqueueTOF(&tofData);
 }
 
+/**
+ * Log group for the multi ranger and Z-ranger decks
+ */
 LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, front, &ranges[rangeFront])
-LOG_ADD(LOG_UINT16, back, &ranges[rangeBack])
-LOG_ADD(LOG_UINT16, up, &ranges[rangeUp])
-LOG_ADD(LOG_UINT16, left, &ranges[rangeLeft])
-LOG_ADD(LOG_UINT16, right, &ranges[rangeRight])
-LOG_ADD(LOG_UINT16, zrange, &ranges[rangeDown])
+/**
+ * @brief Distance from the front sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, front, &ranges[rangeFront])
+
+/**
+ * @brief Distance from the back sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, back, &ranges[rangeBack])
+
+/**
+ * @brief Distance from the top sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, up, &ranges[rangeUp])
+
+/**
+ * @brief Distance from the left sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, left, &ranges[rangeLeft])
+
+/**
+ * @brief Distance from the right sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, right, &ranges[rangeRight])
+
+/**
+ * @brief Distance from the Z-ranger (bottom) sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, zrange, &ranges[rangeDown])
 LOG_GROUP_STOP(range)

@@ -1,25 +1,18 @@
 /** 
- * The robust M-estimation-based Kalman filter is originally implemented as a part of the work in
- * the below-cited paper. 
- * 
- * "Learning-based Bias Correction for Time Difference of Arrival Ultra-wideband Localization of 
- *  Resource-constrained Mobile Robots"
+ * This robust M-estimation-based Kalman filter was originally implemented in
+ * work by the Dynamic Systems Lab (DSL) at the University of Toronto
+ * Institute for Aerospace Studies (UTIAS) and the Vector Institute for
+ * Artificial Intelligence, Toronto, ON, Canada.
  *
- * Academic citation would be appreciated.
+ * It can be cited as:
+   @ARTICLE{Zhao2021Learningbased,
+    author={Zhao, Wenda and Panerati, Jacopo and Schoellig, Angela P.},
+    title={Learning-based Bias Correction for Time Difference of Arrival
+           Ultra-wideband Localization of Resource-constrained Mobile Robots},
+    journal={IEEE Robotics and Automation Letters},
+    year={2021},
+    publisher={IEEE}}
  *
- * BIBTEX ENTRIES:
-      @ARTICLE{WendaBiasLearning2021,
-      author={Wenda Zhao, Jacopo Panerati, and Angela P. Schoellig},
-      title={Learning-based Bias Correction for Time Difference of Arrival Ultra-wideband Localization of 
-             Resource-constrained Mobile Robots},
-      journal={IEEE Robotics and Automation Letters},
-      year={2021},
-      publisher={IEEE}
- *
- * The authors are with the Dynamic Systems Lab, Institute for Aerospace Studies,
- * University of Toronto, Canada, and affiliated with the Vector Institute for Artificial
- * Intelligence in Toronto. 
- * ============================================================================
  */
 
 #pragma once

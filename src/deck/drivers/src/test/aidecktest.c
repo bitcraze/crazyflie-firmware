@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -456,8 +456,8 @@ static bool aitdecktestTest()
 static const DeckDriver aitest_deck = {
     .name = "bcAIDeckTest",
 
-    .usedPeriph = 0,
-    .usedGpio = 0, // FIXME: Edit the used GPIOs
+    .usedPeriph = DECK_USING_UART1,
+    .usedGpio = DECK_USING_IO_4,
 
     .init = aitdecktestInit,
     .test = aitdecktestTest,

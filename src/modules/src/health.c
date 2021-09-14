@@ -47,10 +47,16 @@
 
 #include "static_mem.h"
 
+#ifndef DEFAULT_PROP_TEST_PWM_RATIO
+#  define DEFAULT_PROP_TEST_PWM_RATIO 0
+#endif
+
 #define PROPTEST_NBR_OF_VARIANCE_VALUES   100
 
 static bool startPropTest = false;
 static bool startBatTest = false;
+
+static uint16_t propTestPWMRatio = DEFAULT_PROP_TEST_PWM_RATIO;
 
 static uint32_t i = 0;
 NO_DMA_CCM_SAFE_ZERO_INIT static float accX[PROPTEST_NBR_OF_VARIANCE_VALUES];
@@ -139,6 +145,9 @@ bool healthShallWeRunTest(void)
 
 void healthRunTests(sensorData_t *sensors)
 {
+  const MotorHealthTestDef* healthTestSettings;
+  int32_t sampleIndex;
+
   /* Propeller test */
   if (testState == configureAcc)
   {
@@ -150,6 +159,11 @@ void healthRunTests(sensorData_t *sensors)
     minSingleLoadedVoltage[MOTOR_M2] = minLoadedVoltage;
     minSingleLoadedVoltage[MOTOR_M3] = minLoadedVoltage;
     minSingleLoadedVoltage[MOTOR_M4] = minLoadedVoltage;
+    // Make sure motors are stopped first.
+    motorsSetRatio(MOTOR_M1, 0);
+    motorsSetRatio(MOTOR_M2, 0);
+    motorsSetRatio(MOTOR_M3, 0);
+    motorsSetRatio(MOTOR_M4, 0);
   }
   if (testState == measureNoiseFloor)
   {
@@ -167,15 +181,17 @@ void healthRunTests(sensorData_t *sensors)
                   (double)accVarXnf + (double)accVarYnf, (double)accVarZnf);
       testState = measureProp;
     }
-
   }
   else if (testState == measureProp)
   {
-    if (i < PROPTEST_NBR_OF_VARIANCE_VALUES)
+    healthTestSettings = motorsGetHealthTestSettings(motorToTest);
+
+    sampleIndex = ((int32_t) i) - healthTestSettings->varianceMeasurementStartMsec;
+    if (sampleIndex >= 0 && sampleIndex < PROPTEST_NBR_OF_VARIANCE_VALUES)
     {
-      accX[i] = sensors->acc.x;
-      accY[i] = sensors->acc.y;
-      accZ[i] = sensors->acc.z;
+      accX[sampleIndex] = sensors->acc.x;
+      accY[sampleIndex] = sensors->acc.y;
+      accZ[sampleIndex] = sensors->acc.z;
       if (pmGetBatteryVoltage() < minSingleLoadedVoltage[motorToTest])
       {
         minSingleLoadedVoltage[motorToTest] = pmGetBatteryVoltage();
@@ -183,15 +199,7 @@ void healthRunTests(sensorData_t *sensors)
     }
     i++;
 
-    if (i == 1)
-    {
-      motorsSetRatio(motorToTest, 0xFFFF);
-    }
-    else if (i == 50)
-    {
-      motorsSetRatio(motorToTest, 0);
-    }
-    else if (i == PROPTEST_NBR_OF_VARIANCE_VALUES)
+    if (sampleIndex == PROPTEST_NBR_OF_VARIANCE_VALUES)
     {
       accVarX[motorToTest] = variance(accX, PROPTEST_NBR_OF_VARIANCE_VALUES);
       accVarY[motorToTest] = variance(accY, PROPTEST_NBR_OF_VARIANCE_VALUES);
@@ -202,7 +210,16 @@ void healthRunTests(sensorData_t *sensors)
                    (double)accVarZ[motorToTest],
                    (double)(idleVoltage - minSingleLoadedVoltage[motorToTest]));
     }
-    else if (i >= 1000)
+
+    if (i == 1 && healthTestSettings->onPeriodMsec > 0)
+    {
+      motorsSetRatio(motorToTest, propTestPWMRatio > 0 ? propTestPWMRatio : healthTestSettings->onPeriodPWMRatio);
+    }
+    else if (i == healthTestSettings->onPeriodMsec)
+    {
+      motorsSetRatio(motorToTest, 0);
+    }
+    else if (i >= healthTestSettings->onPeriodMsec + healthTestSettings->offPeriodMsec)
     {
       i = 0;
       motorToTest++;
@@ -307,22 +324,77 @@ void healthRunTests(sensorData_t *sensors)
   }
 }
 
+/**
+ * Health modules that is trying to find problems such as unbalanced
+ * propellers or a bad power path/battery.
+ */
 PARAM_GROUP_START(health)
-PARAM_ADD(PARAM_UINT8, startPropTest, &startPropTest)
-PARAM_ADD(PARAM_UINT8, startBatTest, &startBatTest)
+
+/**
+ * @brief Set nonzero to initiate test of propellers
+ */
+PARAM_ADD_CORE(PARAM_UINT8, startPropTest, &startPropTest)
+
+/**
+ * @brief Set nonzero to initiate test of battery
+ */
+PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
+
+/**
+ * @brief PWM ratio to use when testing propellers. Required for brushless motors. [0 - UINT16_MAX]
+ */
+PARAM_ADD_CORE(PARAM_UINT16, propTestPWMRatio, &propTestPWMRatio)
+
 PARAM_GROUP_STOP(health)
 
+/**
+ * Logging of the result from the health checks.
+ */
 LOG_GROUP_START(health)
+/**
+ * @brief Variance test result of accel. axis X on motor 1
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM1, &accVarX[0])
+/**
+ * @brief Variance test result of accel. axis Y on motor 1
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM1, &accVarY[0])
+/**
+ * @brief Variance test result of accel. axis X on motor 2
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM2, &accVarX[1])
+/**
+ * @brief Variance test result of accel. axis Y on motor 2
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM2, &accVarY[1])
+/**
+ * @brief Variance test result of accel. axis X on motor 3
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM3, &accVarX[2])
+/**
+ * @brief Variance test result of accel. axis Y on motor 3
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM3, &accVarY[2])
+/**
+ * @brief Variance test result of accel. axis X on motor 4
+ */
 LOG_ADD(LOG_FLOAT, motorVarXM4, &accVarX[3])
+/**
+ * @brief Variance test result of accel. axis Y on motor 4
+ */
 LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
-LOG_ADD(LOG_UINT8, motorPass, &motorPass)
+/**
+ * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 ...]
+ */
+LOG_ADD_CORE(LOG_UINT8, motorPass, &motorPass)
+/**
+ * @brief Battery voltage sag test result. [V]
+ */
 LOG_ADD(LOG_FLOAT, batterySag, &batterySag)
-LOG_ADD(LOG_UINT8, batteryPass, &batteryPass)
+/**
+ * @brief Battery test result. Nonzero if OK.
+ */
+LOG_ADD_CORE(LOG_UINT8, batteryPass, &batteryPass)
+// Not useful other then for debugging. Remove
 LOG_ADD(LOG_UINT16, motorTestCount, &motorTestCount)
 LOG_GROUP_STOP(health)

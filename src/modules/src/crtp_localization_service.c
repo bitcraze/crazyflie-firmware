@@ -381,23 +381,68 @@ LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, Z, &ext_pos.z)
 LOG_GROUP_STOP(ext_pos)
 
+/**
+ * Logging variables for (external) positioning data stream through ctrp
+ */ 
 LOG_GROUP_START(locSrv)
-  LOG_ADD(LOG_FLOAT, x, &ext_pose.x)
-  LOG_ADD(LOG_FLOAT, y, &ext_pose.y)
-  LOG_ADD(LOG_FLOAT, z, &ext_pose.z)
-  LOG_ADD(LOG_FLOAT, qx, &ext_pose.quat.x)
-  LOG_ADD(LOG_FLOAT, qy, &ext_pose.quat.y)
-  LOG_ADD(LOG_FLOAT, qz, &ext_pose.quat.z)
-  LOG_ADD(LOG_FLOAT, qw, &ext_pose.quat.w)
+/**
+ * @brief Position X measurement from external system 
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, x, &ext_pose.x)
+/**
+ * @brief Position Y measurement from external system 
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, y, &ext_pose.y)
+/**
+ * @brief Position Z measurement from external system
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, z, &ext_pose.z)
+/**
+ * @brief Quaternion x meas from an external system
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, qx, &ext_pose.quat.x)
+/**
+ * @brief Quaternion y meas from an external system
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, qy, &ext_pose.quat.y)
+/**
+ * @brief Quaternion z meas from an external system
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, qz, &ext_pose.quat.z)
+/**
+ * @brief Quaternion w meas from an external system
+ */ 
+  LOG_ADD_CORE(LOG_FLOAT, qw, &ext_pose.quat.w)
 LOG_GROUP_STOP(locSrv)
 
+/**
+ * Logging variables for (external) positioning data stream through Compressed
+ */ 
 LOG_GROUP_START(locSrvZ)
-  LOG_ADD(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)
+/**
+ * @brief time when data was received last (ms/ticks)
+ */ 
+  LOG_ADD_CORE(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)
 LOG_GROUP_STOP(locSrvZ)
 
+/**
+ * Service parameters for (external) positioning data stream through ctrp
+ */
 PARAM_GROUP_START(locSrv)
-  PARAM_ADD(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
-  PARAM_ADD(PARAM_UINT8, enLhAngleStream, &enableLighthouseAngleStream)
-  PARAM_ADD(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
-  PARAM_ADD(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
+/**
+ * @brief Enable CRTP stream of Loco node distance
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, enRangeStreamFP32, &enableRangeStreamFloat)
+/**
+ * @brief Enable CRTP stream of Lighthouse sweep angles
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, enLhAngleStream, &enableLighthouseAngleStream)
+/**
+ * @brief Standard deviation of external position
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
+  /**
+ * @brief Standard deviation of the quarternion data to kalman filter
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, extQuatStdDev, &extQuatStdDev)
 PARAM_GROUP_STOP(locSrv)

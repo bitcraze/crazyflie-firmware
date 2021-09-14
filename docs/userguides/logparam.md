@@ -13,20 +13,36 @@ decided on compile-time for the Crazyflie firmware. Using C macros
 variables can be made available to the framework below are two examples,
 one for parameters and one for logging.
 
-This will make the variables used to control the [LED-ring
-expansion](https://wiki.bitcraze.io/projects:crazyflie2:expansionboards:ledring) available as
+A parameter or logging variable that is created with `PARAM_ADD_CORE` or `LOG_ADD_CORE` is considered stable API and will with a very high likelihood be available a cross firmware versions. All core parameters and logging variables must have documentation associated with it. See below for examples of the documentation syntax.
+
+This will make the parameters used to control the [LED-ring
+expansion](https://www.bitcraze.io/products/led-ring-deck/) available as
 parameters. Note that they have different types and that *neffect* is
 read-only.
 
 ``` {.c}
+/**
+ * [Documenation for the ring group ...]
+ */
 PARAM_GROUP_START(ring)
-PARAM_ADD(PARAM_UINT8, effect, &effect)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
-PARAM_ADD(PARAM_UINT8, solidRed, &solidRed)
-PARAM_ADD(PARAM_UINT8, solidGreen, &solidGreen)
-PARAM_ADD(PARAM_UINT8, solidBlue, &solidBlue)
-PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
-PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
+
+/**
+ * @brief [Documentation for the parameter below ...]
+ */
+PARAM_ADD_CORE(PARAM_UINT8, effect, &effect)
+
+/**
+ * @brief [Documentation for the parameter effect ...]
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
+
+/**
+ * @brief [Documentation for the parameter effect ...]
+ */
+PARAM_ADD_CORE(PARAM_UINT8, solidRed, &solidRed)
+
+[...]
+
 PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
 PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
 PARAM_GROUP_STOP(ring)
@@ -36,11 +52,31 @@ This will make the variables for roll/pitch/yaw/thrust available for the
 logging framework. These are the variables used to fill in the data in
 the [Python cfclient FlightTab](https://www.bitcraze.io/documentation/repository/crazyflie-clients-python/master/userguides/userguide_client/).
 
+    /**
+     * [Documentation for the stabilizer group ...]
+     */
     LOG_GROUP_START(stabilizer)
-    LOG_ADD(LOG_FLOAT, roll, &eulerRollActual)
-    LOG_ADD(LOG_FLOAT, pitch, &eulerPitchActual)
-    LOG_ADD(LOG_FLOAT, yaw, &eulerYawActual)
-    LOG_ADD(LOG_UINT16, thrust, &actuatorThrust)
+
+    /**
+     * @brief [Documentation for variable below ...]
+     */
+    LOG_ADD_CORE(LOG_FLOAT, roll, &eulerRollActual)
+
+    /**
+     * @brief [Documentation for variable below ...]
+     */
+    LOG_ADD_CORE(LOG_FLOAT, pitch, &eulerPitchActual)
+
+    /**
+     * @brief [Documentation for variable below ...]
+     */
+    LOG_ADD_CORE(LOG_FLOAT, yaw, &eulerYawActual)
+
+     /**
+     * @brief [Documentation for variable below ...]
+     */
+    LOG_ADD_CORE(LOG_UINT16, thrust, &actuatorThrust)
+
     LOG_GROUP_STOP(stabilizer)
 
 During the compilation a table of content (TOC) is created that holds

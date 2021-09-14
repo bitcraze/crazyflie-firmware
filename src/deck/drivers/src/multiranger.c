@@ -7,7 +7,7 @@
  *
  * LPS node firmware.
  *
- * Copyright 2018, Bitcraze AB
+ * Copyright 2021, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -190,7 +190,8 @@ static const DeckDriver multiranger_deck = {
     .pid = 0x0C,
     .name = "bcMultiranger",
 
-    .usedGpio = 0, // FIXME: set the used pins
+    .usedGpio = 0,
+    .usedPeriph = DECK_USING_I2C,
 
     .init = mrInit,
     .test = mrTest,
@@ -199,5 +200,10 @@ static const DeckDriver multiranger_deck = {
 DECK_DRIVER(multiranger_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
+
+/**
+ * @brief Nonzero if [Multi-ranger deck](%https://store.bitcraze.io/collections/decks/products/multi-ranger-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
+
 PARAM_GROUP_STOP(deck)

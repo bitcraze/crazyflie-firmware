@@ -107,3 +107,13 @@
 # CFLAGS += -DSTART_DISARMED
 # IDLE motor drive when armed, 0 = 0%, 65535 = 100% (the motors runs as long as the Crazyflie is armed)
 # CFLAGS += -DDEFAULT_IDLE_THRUST=5000
+# Default PWM ratio to use when testing the propellers
+# CFLAGS += -DDEFAULT_PROP_TEST_PWM_RATIO=10000
+
+## Lighthouse handling
+# If lighthouse will need to act as a ground truth (so not entered in the kalman filter)
+# CFLAGS += -DLIGHTHOUSE_AS_GROUNDTRUTH
+
+## Improved altitude hold complementary filter
+# CFLAGS += -DIMPROVED_BARO_Z_HOLD
+

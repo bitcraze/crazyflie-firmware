@@ -51,7 +51,7 @@ static struct selfState_s state = {
   .estimatedZ = 0.0f,
   .velocityZ = 0.0f,
   .estAlphaZrange = 0.90f,
-  .estAlphaAsl = 0.997f,
+  .estAlphaAsl = 0.90f,
   .velocityFactor = 1.0f,
   .vAccDeadband = 0.04f,
   .velZAlpha = 0.995f,
@@ -100,8 +100,12 @@ static void positionEstimateInternal(state_t* estimate, const baro_t* baro, cons
       filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
                   (1.0f - state->estAlphaAsl) * baro->asl;
     }
-    // Use asl as base and add velocity changes.
-    state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+    #ifdef IMPROVED_BARO_Z_HOLD
+      state->estimatedZ = filteredZ;
+    #else
+      // Use asl as base and add velocity changes.
+      state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+    #endif
   }
 
   estimate->position.x = 0.0f;
@@ -123,10 +127,28 @@ LOG_ADD(LOG_FLOAT, estVZ, &state.estimatedVZ)
 LOG_ADD(LOG_FLOAT, velocityZ, &state.velocityZ)
 LOG_GROUP_STOP(posEstAlt)
 
+/**
+ * Tuning setttings for the altititude estimator/filtering
+ */
 PARAM_GROUP_START(posEstAlt)
-PARAM_ADD(PARAM_FLOAT, estAlphaAsl, &state.estAlphaAsl)
-PARAM_ADD(PARAM_FLOAT, estAlphaZr, &state.estAlphaZrange)
+/**
+ * @brief parameter alpha IIR Filter above sea level/true altitude (baro)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, estAlphaAsl, &state.estAlphaAsl)
+/**
+ * @brief parameter alpha IIR Filter Height  (zranger)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, estAlphaZr, &state.estAlphaZrange)
+/**
+ * @brief Multiplying factor for adding velocity
+ */
 PARAM_ADD(PARAM_FLOAT, velFactor, &state.velocityFactor)
+/**
+ * @brief Blendning factor to avoid accumulate error
+ */
 PARAM_ADD(PARAM_FLOAT, velZAlpha, &state.velZAlpha)
-PARAM_ADD(PARAM_FLOAT, vAccDeadband, &state.vAccDeadband)
+/**
+ * @brief Vertical acceleration deadband
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, vAccDeadband, &state.vAccDeadband)
 PARAM_GROUP_STOP(posEstAlt)

@@ -934,13 +934,41 @@ LOG_ADD(LOG_FLOAT, zVariance, &gyroBiasRunning.variance.z)
 LOG_GROUP_STOP(gyro)
 #endif
 
+/**
+ * An inertial measurement unit (IMU) is an electronic device that measures and
+ * reports a body's specific force, angular rate, and sometimes the orientation
+ * of the body, using a combination of accelerometers, gyroscopes, and
+ * sometimes magnetometers.
+ */
 PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isMagnetometerPresent)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isBarometerPresent) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
+
+/**
+ * @brief Nonzero if AK8963 magnetometer is present
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, AK8963, &isMagnetometerPresent)
+
+/**
+ * @brief Nonzero if LPS25H barometer is present
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, LPS25H, &isBarometerPresent)
+
 PARAM_GROUP_STOP(imu_sensors)
 
 PARAM_GROUP_START(imu_tests)
+
+/**
+ * @brief Nonzero if the MPU6500 self-test passes
+ */
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MPU6500, &isMpu6500TestPassed)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, HMC5883L, &isAK8963TestPassed)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, MS5611, &isLPS25HTestPassed) // TODO: Rename MS5611 to LPS25H. Client needs to be updated at the same time.
+
+/**
+ * @brief Nonzero if the AK8963 self-test passes
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, AK8963, &isAK8963TestPassed)
+
+/**
+ * @brief Nonzero if the LPS25H self-test passes
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, LPS25H, &isLPS25HTestPassed)
+
 PARAM_GROUP_STOP(imu_tests)

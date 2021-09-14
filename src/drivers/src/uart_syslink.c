@@ -367,7 +367,11 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     else
     {
       rxState = waitForFirstStart; //Checksum error
-      ASSERT(0);
+      if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
+      {
+        // Only assert if debugger is not connected
+        ASSERT(0);
+      }
     }
     break;
   case waitForChksum2:
@@ -378,8 +382,9 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       {
         xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
       }
-      else
+      else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
+        // Only assert if debugger is not connected
         ASSERT(0); // Queue overflow
       }
     }

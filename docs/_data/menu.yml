@@ -18,6 +18,7 @@
     - {page_id: p2p_api}
     - {page_id: trajectory_formats}
     - {page_id: lh_overview}
+    - {page_id: loco_positioning}
     - {page_id: persistent_storage}
 - title: Development Instructions
   subs:
@@ -29,3 +30,8 @@
     - {page_id: systemtask}
     - {page_id: memory_management}
     - {page_id: dfu}
+    - {page_id: oot}
+- title: Auto-generated API Documentation
+  subs:
+    - {page_id: logs}
+    - {page_id: params}

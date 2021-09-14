@@ -43,41 +43,30 @@ bool deckTest(void);
 
 /***** Driver TOC definitions ******/
 
-/* Used peripherals */
-#define DECK_USING_UART1   (1<<0)
-#define DECK_USING_UART2   (1<<1)
-#define DECK_USING_SPI     (1<<2)
-#define DECK_USING_TIMER3  (1<<3)
-#define DECK_USING_TIMER5  (1<<4)
-#define DECK_USING_TIMER14 (1<<5)
-
 /* Used GPIO */
 #define DECK_USING_PC11 (1<<0)
-#define DECK_USING_RX1  (1<<0)
 #define DECK_USING_PC10 (1<<1)
-#define DECK_USING_TX1  (1<<1)
 #define DECK_USING_PB7  (1<<2)
-#define DECK_USING_SDA  (1<<2)
 #define DECK_USING_PB6  (1<<3)
-#define DECK_USING_SCL  (1<<3)
-#define DECK_USING_PB8  (1<<4)
 #define DECK_USING_IO_1 (1<<4)
-#define DECK_USING_PB5  (1<<5)
 #define DECK_USING_IO_2 (1<<5)
-#define DECK_USING_PB4  (1<<6)
 #define DECK_USING_IO_3 (1<<6)
-#define DECK_USING_PC12 (1<<7)
 #define DECK_USING_IO_4 (1<<7)
 #define DECK_USING_PA2  (1<<8)
-#define DECK_USING_TX2  (1<<8)
 #define DECK_USING_PA3  (1<<9)
-#define DECK_USING_RX2  (1<<9)
 #define DECK_USING_PA5  (1<<10)
-#define DECK_USING_SCK  (1<<10)
 #define DECK_USING_PA6  (1<<11)
-#define DECK_USING_MISO (1<<11)
 #define DECK_USING_PA7  (1<<12)
-#define DECK_USING_MOSI (1<<12)
+
+
+/* Used peripherals */
+#define DECK_USING_UART1   (DECK_USING_PC10 | DECK_USING_PC11)
+#define DECK_USING_UART2   (DECK_USING_PA2  | DECK_USING_PA3)
+#define DECK_USING_SPI     (DECK_USING_PA5  | DECK_USING_PA6 | DECK_USING_PA7)
+#define DECK_USING_I2C     (DECK_USING_PB6  | DECK_USING_PB7)
+#define DECK_USING_TIMER3  (1 << 13)
+#define DECK_USING_TIMER5  (1 << 14)
+#define DECK_USING_TIMER14 (1 << 15)
 
 struct deckInfo_s;
 struct deckFwUpdate_s;
@@ -89,7 +78,17 @@ typedef struct deck_driver {
   uint8_t pid;
   char *name;
 
-  /* Periphreal and Gpio used _dirrectly_ by the driver */
+  /*
+   * Peripheral and Gpio used _directly_ by the driver.
+   *
+   * Include the pin in usedGpio if it's used directly by the driver, do not
+   * add the pin to usedGpio if it used as part of a peripheral.
+   *
+   * For example: If a deck driver uses SPI we add DECK_USING_SPI to
+   * usedPeriph. If the deck uses the MOSI, MISO or SCK pins for other stuff
+   * than SPI it would have to specify DECK_USING_[PA7|PA6|PA5].
+   *
+   */
   uint32_t usedPeriph;
   uint32_t usedGpio;
 

@@ -62,6 +62,27 @@ const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
+const MotorHealthTestDef brushedMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 50,
+  /* offPeriodMsec = */ 950,
+  /* varianceMeasurementStartMsec = */ 0,
+  /* onPeriodPWMRatio = */ 0xFFFF,
+};
+
+const MotorHealthTestDef brushlessMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 2000,
+  /* offPeriodMsec = */ 1000,
+  /* varianceMeasurementStartMsec = */ 1000,
+  /* onPeriodPWMRatio = */ 0 /* user must set health.propTestPWMRatio explicitly */
+};
+
+const MotorHealthTestDef unknownMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 0,
+  /* offPeriodMseec = */ 0,
+  /* varianceMeasurementStartMsec = */ 0,
+  /* onPeriodPWMRatio = */ 0
+};
+
 static bool isInit = false;
 
 // Compensate thrust depending on battery voltage so it will produce about the same
@@ -89,6 +110,72 @@ static uint16_t motorsConvBitsTo16(uint16_t bits)
 static uint16_t motorsConv16ToBits(uint16_t bits)
 {
   return ((bits) >> (16 - MOTORS_PWM_BITS) & ((1 << MOTORS_PWM_BITS) - 1));
+}
+
+// We have data that maps PWM to thrust at different supply voltage levels.
+// However, it is not the PWM that drives the motors but the voltage and
+// amps (= power). With the PWM it is possible to simulate different
+// voltage levels. The assumption is that the voltage used will be an
+// procentage of the supply voltage, we assume that 50% PWM will result in
+// 50% voltage.
+//
+//  Thrust (g)    Supply Voltage    PWM (%)     Voltage needed
+//  0.0           4.01              0           0
+//  1.6           3.98              6.25        0.24875
+//  4.8           3.95              12.25       0.49375
+//  7.9           3.82              18.75       0.735
+//  10.9          3.88              25          0.97
+//  13.9          3.84              31.25       1.2
+//  17.3          3.80              37.5        1.425
+//  21.0          3.76              43.25       1.6262
+//  24.4          3.71              50          1.855
+//  28.6          3.67              56.25       2.06438
+//  32.8          3.65              62.5        2.28125
+//  37.3          3.62              68.75       2.48875
+//  41.7          3.56              75          2.67
+//  46.0          3.48              81.25       2.8275
+//  51.9          3.40              87.5        2.975
+//  57.9          3.30              93.75       3.09375
+//
+// To get Voltage needed from wanted thrust we can get the quadratic
+// polyfit coefficients using GNU octave:
+//
+// thrust = [0.0 1.6 4.8 7.9 10.9 13.9 17.3 21.0 ...
+//           24.4 28.6 32.8 37.3 41.7 46.0 51.9 57.9]
+//
+// volts  = [0.0 0.24875 0.49375 0.735 0.97 1.2 1.425 1.6262 1.855 ...
+//           2.064375 2.28125 2.48875 2.67 2.8275 2.975 3.09375]
+//
+// p = polyfit(thrust, volts, 2)
+//
+// => p = -0.00062390   0.08835522   0.06865956
+//
+// We will not use the contant term, since we want zero thrust to equal
+// zero PWM.
+//
+// And to get the PWM as a percentage we would need to divide the
+// Voltage needed with the Supply voltage.
+static uint16_t motorsCompensateBatteryVoltage(uint16_t ithrust)
+{
+  float supply_voltage = pmGetBatteryVoltage();
+  /*
+   * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
+   * discharged.
+   * 
+   * A suiteble sanity check for disabiling the voltage compensation would be
+   * under 2V. That would suggest a damaged battery. This protects against
+   * rushing the motors on bugs and invalid voltage levels.
+   */
+  if (supply_voltage < 2.0f)
+  {
+    return ithrust;
+  }
+
+  float thrust = ((float) ithrust / 65536.0f) * 60;
+  float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
+  float percentage = volts / supply_voltage;
+  percentage = percentage > 1.0f ? 1.0f : percentage;
+  return percentage * UINT16_MAX;
 }
 
 /* Public functions */
@@ -160,10 +247,6 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     // Configure Output Compare for PWM
     motorMap[i]->ocInit(motorMap[i]->tim, &TIM_OCInitStructure);
     motorMap[i]->preloadConfig(motorMap[i]->tim, TIM_OCPreload_Enable);
-
-    MOTORS_TIM_DBG_CFG(motorMap[i]->timDbgStop, ENABLE);
-    //Enable the timer PWM outputs
-    TIM_CtrlPWMOutputs(motorMap[i]->tim, ENABLE);
   }
 
   // Start the timers
@@ -239,12 +322,10 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     if (motorMap[id]->drvType == BRUSHED)
     {
       if (batCompensation) {
-        float thrust = ((float)ithrust / 65536.0f) * 60;
-        float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
-        float supply_voltage = pmGetBatteryVoltage();
-        float percentage = volts / supply_voltage;
-        percentage = percentage > 1.0f ? 1.0f : percentage;
-        ratio = percentage * UINT16_MAX;
+      // To make sure we provide the correct PWM given current supply voltage
+      // from the battery, we do calculations based on measurements of PWM,
+      // voltage and thrust. See comment at function definition for details.
+      ratio = motorsCompensateBatteryVoltage(ithrust);
       }
     }
 
@@ -330,10 +411,46 @@ void motorsPlayMelody(uint16_t *notes)
     motorsPlayTone(note, duration);
   } while (duration != 0);
 }
+
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
+{
+  if (id >= NBR_OF_MOTORS)
+  {
+    return &unknownMotorHealthTestSettings;
+  }
+  else if (motorMap[id]->drvType == BRUSHLESS)
+  {
+    return &brushlessMotorHealthTestSettings;
+  }
+  else if (motorMap[id]->drvType == BRUSHED)
+  {
+    return &brushedMotorHealthTestSettings;
+  }
+  else
+  {
+    return &unknownMotorHealthTestSettings;
+  }
+}
+
+/**
+ * Logging variables of the motors PWM output
+ */
 LOG_GROUP_START(pwm)
+/**
+ * @brief Current motor 1 PWM output
+ */ 
 LOG_ADD(LOG_UINT16, m1_pwm, &motor_ratios[0])
+/**
+ * @brief Current motor 2 PWM output
+ */ 
 LOG_ADD(LOG_UINT16, m2_pwm, &motor_ratios[1])
+/**
+ * @brief Current motor 3 PWM output
+ */ 
 LOG_ADD(LOG_UINT16, m3_pwm, &motor_ratios[2])
+/**
+ * @brief Current motor 4 PWM output
+ */ 
 LOG_ADD(LOG_UINT16, m4_pwm, &motor_ratios[3])
 LOG_GROUP_STOP(pwm)
 
