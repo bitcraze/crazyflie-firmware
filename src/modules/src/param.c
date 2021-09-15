@@ -422,7 +422,7 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
     return ENOENT;
   }
 
-  if (type != params[ptr].type) {
+  if (type != (params[ptr].type & (~(PARAM_CORE | PARAM_RONLY)))) {
     return EINVAL;
   }
 
