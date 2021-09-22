@@ -58,6 +58,7 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp);
 struct crtpLinkOperations * radiolinkGetLink();
 bool radiolinkSendP2PPacketBroadcast(P2PPacket *p2pp);
 void p2pRegisterCB(P2PCallback cb);
-
+int linkGetFreeTxQueuePackets(void);
+int linkResetTxQueuePackets(void);
 
 #endif //__RADIO_H__

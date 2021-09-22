@@ -74,6 +74,16 @@ static bool radiolinkIsConnected(void) {
   return (xTaskGetTickCount() - lastPacketTick) < M2T(RADIO_ACTIVITY_TIMEOUT_MS);
 }
 
+int linkGetFreeTxQueuePackets(void)
+{
+  return (RADIOLINK_TX_QUEUE_SIZE - uxQueueMessagesWaiting(txQueue));
+}
+
+int linkResetTxQueuePackets(void)
+{
+  return xQueueReset(txQueue);
+}
+
 static struct crtpLinkOperations radiolinkOp =
 {
   .setEnable         = radiolinkSetEnable,
