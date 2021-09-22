@@ -1146,6 +1146,12 @@ PARAM_GROUP_START(ring)
  * | 10 | Boat lights         | \n
  * | 11 | Alert               | \n
  * | 12 | Gravity             | \n
+ * | 13 | Virtual Memory      | \n
+ * | 14 | Fade color          | \n
+ * | 15 | Communication Signal Strength                | \n
+ * | 16 | Status Localization Service| \n
+ * | 17 | LED timing from memory       | \n
+ * | 18 | Lighthouse  Positioning      | \n
  */
 PARAM_ADD_CORE(PARAM_UINT8, effect, &effect)
 
