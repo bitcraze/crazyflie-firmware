@@ -54,7 +54,7 @@
 
 #define CPPM_TIM_PRESCALER           (84 - 1) // TIM14 clock running at sysclk/2. Will give 1us tick.
 
-#define CPPM_MIN_PPM_USEC            1150
+#define CPPM_MIN_PPM_USEC            1100
 #define CPPM_MAX_PPM_USEC            1900
 
 static xQueueHandle captureQueue;
@@ -120,7 +120,7 @@ void cppmClearQueue(void)
   xQueueReset(captureQueue);
 }
 
-float cppmConvert2Float(uint16_t timestamp, float min, float max)
+float cppmConvert2Float(uint16_t timestamp, float min, float max, float deadband)
 {
   if (timestamp < CPPM_MIN_PPM_USEC)
   {
@@ -131,8 +131,29 @@ float cppmConvert2Float(uint16_t timestamp, float min, float max)
     timestamp = CPPM_MAX_PPM_USEC;
   }
 
-  float scale = (float)(timestamp - CPPM_MIN_PPM_USEC) / (float)(CPPM_MAX_PPM_USEC - CPPM_MIN_PPM_USEC);
-
+  float scale_raw = (float)(timestamp - CPPM_MIN_PPM_USEC) / (float)(CPPM_MAX_PPM_USEC - CPPM_MIN_PPM_USEC);
+  float scale;
+  if (deadband == 0)
+  {
+    scale = scale_raw;
+  }
+  else
+  {
+    if (scale_raw < (0.5f - deadband/2) )
+    {
+      scale = scale_raw / (1.f - deadband);
+    }
+    else if (scale_raw > (0.5f + deadband/2) )
+    {
+      scale = (scale_raw - deadband) / (1.f - deadband);
+    }
+    else
+    {
+      scale = 0.5f;
+    }
+    
+  }
+  
   return min + ((max - min) * scale);
 }
 
