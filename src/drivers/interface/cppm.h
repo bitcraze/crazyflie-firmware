@@ -35,7 +35,7 @@ void cppmClearQueue(void);
 
 int cppmGetTimestamp(uint16_t *timestamp);
 
-float cppmConvert2Float(uint16_t timestamp, float min, float max);
+float cppmConvert2Float(uint16_t timestamp, float min, float max, float deadband);
 
 uint16_t cppmConvert2uint16(uint16_t timestamp);
 
