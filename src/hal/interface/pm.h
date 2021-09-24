@@ -101,6 +101,8 @@ typedef enum
   USBWallAdapter,
 } PMUSBPower;
 
+typedef void (*graceful_shutdown_callback_t)();
+
 void pmInit(void);
 
 bool pmTest(void);
@@ -174,5 +176,10 @@ void pmEnableExtBatteryCurrMeasuring(const deckPin_t pin, float ampPerVolt);
  * Measure an external current.
  */
 float pmMeasureExtBatteryCurrent(void);
+
+/**
+ * Register a callback to be run when the NRF51 signals shutdown
+ */
+bool pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb);
 
 #endif /* PM_H_ */

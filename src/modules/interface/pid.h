@@ -189,4 +189,16 @@ void pidSetKd(PidObject* pid, const float kd);
  * @param[in] dt    Delta time
  */
 void pidSetDt(PidObject* pid, const float dt);
+
+/**
+ * Reset the Dfilter and set cutoff frequency
+ *
+ * @param[out] pid   A pointer to the pid object to initialize.
+ * @param[in] samplingRate Frequency the update will be called
+ * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
+ * @param[in] enableDFilter Enable setting for the D lowpass filter
+*/
+void filterReset(PidObject* pid, const float samplingRate, const float cutoffFreq, bool enableDFilter);
+
 #endif /* PID_H_ */
+  

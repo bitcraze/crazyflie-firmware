@@ -33,6 +33,7 @@
 #include "param.h"
 #include "FreeRTOS.h"
 #include "num.h"
+#include "position_controller.h"
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
@@ -77,6 +78,7 @@ static bool thrustLocked = true;
 static bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
+static bool modeSet = false;
 
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
@@ -136,12 +138,18 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   }
 
   if (altHoldMode) {
+    if (!modeSet) {             //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
+      modeSet = true;
+      positionControllerResetAllPID();
+      positionControllerResetAllfilters();
+    }
     setpoint->thrust = 0;
     setpoint->mode.z = modeVelocity;
 
     setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
   } else {
     setpoint->mode.z = modeDisable;
+    modeSet = false;
   }
 
   // roll/pitch
@@ -250,17 +258,17 @@ PARAM_ADD_CORE(PARAM_UINT8, posSet, &posSetMode)
 PARAM_ADD(PARAM_UINT8, yawMode, &yawMode)
 
 /**
- * Stabilization type for roll: rate(0) or angle(1)
+ * @brief Stabilization type for roll: rate(0) or angle(1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stabModeRoll, &stabilizationModeRoll)
 
 /**
- * Stabilization type for pitch: rate(0) or angle(1)
+ * @brief Stabilization type for pitch: rate(0) or angle(1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stabModePitch, &stabilizationModePitch)
 
 /**
- * Stabilization type for yaw: rate(0) or angle(1)
+ * @brief Stabilization type for yaw: rate(0) or angle(1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stabModeYaw, &stabilizationModeYaw)
 
