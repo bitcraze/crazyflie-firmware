@@ -35,3 +35,10 @@ docs/.jekyll-cache
 docs/api/logs.md_raw
 docs/api/params.md_raw
 docs/api/log_param_doc.json
+docs/api
+
+include/generated/*.h
+include/config/*.conf
+**/*.o
+**/*.cmd
+*.elf

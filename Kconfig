@@ -1,0 +1,87 @@
+mainmenu "Crazyflie Platform Configuration"
+
+menu "Build and compiler options"
+
+config CROSS_COMPILE
+	string "Cross-compiler tool prefix"
+    default "arm-none-eabi-"
+	help
+	  Same as running 'make CROSS_COMPILE=prefix-' but stored for
+	  default make runs in this application build directory.  You don't
+	  need to set this unless you want the configured application build
+	  directory to select the cross-compiler automatically.
+
+config DEBUG
+    bool "Enable debug build"
+    default n
+    help
+        Enable debug symbols and extra output from firnware.
+
+endmenu
+
+menu "Platform configuration"
+
+choice
+	prompt "Platform to build"
+	default CONFIG_PLATFORM_CF2
+
+config PLATFORM_BOLT
+    bool "Build for Bolt"
+
+config PLATFORM_CF2
+    bool "Build for CF2"
+
+config PLATFORM_TAG
+    bool "Build for the roadrunner"
+
+endchoice
+
+endmenu
+
+menu "Sensor configuration"
+
+config SENSORS_MPU9250_LPS25H
+    bool "Support for mpu9250 and lps25h sensors"
+    default y
+    help
+      Include support for the Bosch bmi088 inertial and bmp388
+      barometric sensors
+
+config SENSORS_BMI088_BMP388
+    bool "Support for bmi088 and bmp388 sensors"
+    default y
+    help
+      Include support for the Bosch bmi088 inertial and bmp388
+      barometric sensors
+
+config SENSORS_IGNORE_BAROMETER_FAIL
+    bool "Ignore failure from barometer"
+    default n
+
+config SENSORS_BMI088_SPI
+    bool "Support for SPI communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default y
+    help
+      Include support using SPI with the Bosch bmi088 inertial sensor
+
+config SENSORS_BMI088_I2C
+    bool "Support for I2C communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default y
+    help
+      Include support using I2C with the Bosch bmi088 inertial sensor
+
+config SENSORS_BOSCH
+    bool "Include Bosch sensors"
+    default n
+
+endmenu
+
+menu "Deck configuration"
+
+config DECK_FORCE
+    string "Force a deck"
+    default ""
+
+endmenu

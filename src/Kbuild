@@ -1,0 +1,8 @@
+obj-y += deck/
+obj-y += drivers/
+obj-y += hal/
+obj-y += init/
+obj-y += lib/
+obj-y += modules/
+obj-y += platform/
+obj-y += utils/

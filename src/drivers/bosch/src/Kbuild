@@ -1,0 +1,10 @@
+obj-y += bmi055_accel.o
+obj-y += bmi055_gyro.o
+obj-y += bmi088_accel.o
+obj-y += bmi088_fifo.o
+obj-y += bmi088_gyro.o
+obj-y += bmi160.o
+obj-y += bmm150.o
+obj-y += bmp280.o
+obj-y += bmp3.o
+obj-y += bstdr_comm_support.o

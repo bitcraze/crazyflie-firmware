@@ -1,0 +1,6 @@
+obj-$(CONFIG_PLATFORM_BOLT) += platform_bolt.o
+obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
+obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
+obj-y += platform.o
+obj-y += platform_stm32f4.o
+obj-y += platform_utils.o
