@@ -25,14 +25,19 @@ choice
 	prompt "Platform to build"
 	default CONFIG_PLATFORM_CF2
 
-config PLATFORM_BOLT
-    bool "Build for Bolt"
-
 config PLATFORM_CF2
     bool "Build for CF2"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_MPU9250_LPS25H
+
+config PLATFORM_BOLT
+    bool "Build for Bolt"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_SPI
 
 config PLATFORM_TAG
     bool "Build for the roadrunner"
+    select SENSORS_BMI088_BMP388
 
 endchoice
 
@@ -42,46 +47,60 @@ menu "Sensor configuration"
 
 config SENSORS_MPU9250_LPS25H
     bool "Support for mpu9250 and lps25h sensors"
-    default y
+    default n
     help
-      Include support for the Bosch bmi088 inertial and bmp388
-      barometric sensors
+    Include support for the Bosch bmi088 inertial and bmp388
+    barometric sensors
 
 config SENSORS_BMI088_BMP388
     bool "Support for bmi088 and bmp388 sensors"
-    default y
-    help
-      Include support for the Bosch bmi088 inertial and bmp388
-      barometric sensors
-
-config SENSORS_IGNORE_BAROMETER_FAIL
-    bool "Ignore failure from barometer"
     default n
-
-config SENSORS_BMI088_SPI
-    bool "Support for SPI communincation with the bmi088 sensor"
-    depends on SENSORS_BMI088_BMP388
-    default y
+    select SENSORS_BMI088_I2C
     help
-      Include support using SPI with the Bosch bmi088 inertial sensor
-
-config SENSORS_BMI088_I2C
-    bool "Support for I2C communincation with the bmi088 sensor"
-    depends on SENSORS_BMI088_BMP388
-    default y
-    help
-      Include support using I2C with the Bosch bmi088 inertial sensor
+    Include support for the Bosch bmi088 inertial and bmp388
+    barometric sensors
 
 config SENSORS_BOSCH
     bool "Include Bosch sensors"
     default n
 
+config SENSORS_IGNORE_BAROMETER_FAIL
+    bool "Ignore failure from barometer"
+    depends on SENSORS_BMI088_BMP388
+    default n
+
+config SENSORS_BMI088_SPI
+    bool "Support for SPI communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default n
+    help
+        Include support using SPI with the Bosch bmi088 inertial sensor
+
+config SENSORS_BMI088_I2C
+    bool "Support for I2C communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default n
+    help
+        Include support using I2C with the Bosch bmi088 inertial sensor
+
 endmenu
 
-menu "Deck configuration"
+menu "Expansion deck configuration"
 
 config DECK_FORCE
-    string "Force a deck"
-    default ""
+    string "Force load specified custom deck driver"
+    default "none"
+    help
+      A colon seperated list of custom drivers to force load or "none".
+
+source src/deck/drivers/src/Kconfig
+
+endmenu
+
+source "src/modules/src/Kconfig"
+
+menu "App layer configuration"
+source "app_api/Kconfig"
+source "examples/Kconfig"
 
 endmenu

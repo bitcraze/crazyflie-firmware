@@ -275,9 +275,6 @@ KBUILD_CFLAGS   := -Wall -Wmissing-braces \
 		   -std=gnu11 -DCRAZYFLIE_FW $(INCLUDES)
 
 KBUILD_AFLAGS_KERNEL :=
-KBUILD_CFLAGS_KERNEL := -DESTIMATOR_NAME=anyEstimator -DCONTROLLER_NAME=ControllerTypeAny \
-			-DSENSOR_INCLUDED_MPU9250_LPS25H -DSENSOR_INCLUDED_BMI088_BMP388  \
-			-DSENSOR_INCLUDED_BMI088_SPI_BMP388 
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 
 KERNELVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
@@ -416,7 +413,7 @@ ifeq ($(dot-config),1)
 -include include/config/auto.conf.cmd
 
 # To avoid any implicit rule to kick in, define an empty command
-$(KCONFIG_CONFIG) include/config/auto.conf.cmd: ;
+include/config/auto.conf.cmd: ;
 
 # If .config is newer than include/config/auto.conf, someone tinkered
 # with it and forgot to run make oldconfig.
@@ -443,16 +440,6 @@ ARCH_AFLAGS :=
 -include arch/$(ARCH)/Makefile
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
-
-ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
-else
-ifdef CONFIG_PROFILE_ALL_BRANCHES
-KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,)
-else
-KBUILD_CFLAGS   += -Os
-endif
-endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
@@ -528,7 +515,7 @@ KBUILD_CFLAGS   += $(call cc-option,-Werror=implicit-int)
 KBUILD_CFLAGS   += $(call cc-option,-Werror=date-time)
 
 # enforce correct pointer usage
-KBUILD_CFLAGS   += $(call cc-option,-Werror=incompatible-pointer-types)
+# KBUILD_CFLAGS   += $(call cc-option,-Werror=incompatible-pointer-types)
 
 # use the deterministic mode of AR if available
 KBUILD_ARFLAGS := $(call ar-option,D)

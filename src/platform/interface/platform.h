@@ -29,23 +29,25 @@
 #include <stdbool.h>
 #include "motors.h"
 
+#include "autoconf.h"
+
 #define PLATFORM_DEVICE_TYPE_STRING_MAX_LEN (32 + 1)
 #define PLATFORM_DEVICE_TYPE_MAX_LEN (4 + 1)
 
 typedef enum {
-  #ifdef SENSOR_INCLUDED_BMI088_BMP388
+  #ifdef CONFIG_SENSORS_BMI088_BMP388
   SensorImplementation_bmi088_bmp388,
   #endif
 
-  #ifdef SENSOR_INCLUDED_BMI088_SPI_BMP388
+  #ifdef CONFIG_SENSORS_BMI088_SPI
   SensorImplementation_bmi088_spi_bmp388,
   #endif
 
-  #ifdef SENSOR_INCLUDED_MPU9250_LPS25H
+  #ifdef CONFIG_SENSORS_MPU9250_LPS25H
   SensorImplementation_mpu9250_lps25h,
   #endif
 
-  #ifdef SENSOR_INCLUDED_BOSCH
+  #ifdef CONFIG_SENSORS_BOSCH
   SensorImplementation_bosch,
   #endif
 

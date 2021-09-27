@@ -260,12 +260,10 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   estimatorEnqueueTDOA(tdoaMeasurement);
 
-  #ifdef LPS_2D_POSITION_HEIGHT
-  // If LPS_2D_POSITION_HEIGHT is defined we assume that we are doing 2D positioning.
-  // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
+  #ifdef CONFIG_DECK_LOCO_2D_POSITION
   heightMeasurement_t heightData;
   heightData.timestamp = xTaskGetTickCount();
-  heightData.height = LPS_2D_POSITION_HEIGHT;
+  heightData.height = atof(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT);
   heightData.stdDev = 0.0001;
   estimatorEnqueueAbsoluteHeight(&heightData);
   #endif
@@ -297,8 +295,9 @@ static void Initialize(dwDevice_t *dev) {
   uint32_t now_ms = T2M(xTaskGetTickCount());
   tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ, TdoaEngineMatchingAlgorithmRandom);
 
-  #ifdef LPS_2D_POSITION_HEIGHT
-  DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
+  #ifdef CONFIG_DECK_LOCO_2D_POSITION
+  DEBUG_PRINT("2D positioning enabled at %f m height\n",
+              atof(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT));
   #endif
 
   dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);

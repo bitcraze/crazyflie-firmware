@@ -1,0 +1,1 @@
+obj-$(CONFIG_EXAMPLE_APP_HELLO_WORLD) += src/

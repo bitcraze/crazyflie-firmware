@@ -36,6 +36,7 @@
 #include "debug.h"
 
 static platformConfig_t configs[] = {
+#ifdef CONFIG_SENSORS_BMI088_SPI
   {  // Old ID of Crazyflie Bolt
     .deviceType = "RZ10",
     .deviceTypeName = "Crazyflie Bolt",
@@ -50,6 +51,7 @@ static platformConfig_t configs[] = {
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBoltBrushless,
   }
+#endif
 };
 
 const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs) {

@@ -1,0 +1,8 @@
+obj-$(CONFIG_EXAMPLE_APP_APPCHANNEL)            += app_appchannel_test/
+obj-$(CONFIG_EXAMPLE_APP_HELLO_WORLD)           += app_hello_world/
+obj-$(CONFIG_EXAMPLE_APP_INTERNAL_PARAM_LOG)    += app_internal_param_log/
+obj-$(CONFIG_EXAMPLE_APP_PEER_TO_PEER)          += app_peer_to_peer/
+
+obj-$(CONFIG_EXAMPLE_DEMO_PUSH)             += demos/app_push_demo/
+obj-$(CONFIG_EXAMPLE_DEMO_WALL_FOLLOWING)   += demos/app_wall_following_demo/
+obj-$(CONFIG_EXAMPLE_DEMO_SWARM)            += demos/swarm_demo/

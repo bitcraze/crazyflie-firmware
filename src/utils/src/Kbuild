@@ -5,7 +5,17 @@ obj-y += cpuid.o
 obj-y += crc32.o
 obj-y += debug.o
 obj-y += eprintf.o
+
+### Add rules for handling generated version.c
+
 obj-y += version.o
+version-objs := version_gen.o
+
+src/utils/src/version_gen.c: src/utils/src/version.vtpl
+	$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
+
+###
+
 obj-y += filter.o
 obj-y += FreeRTOS-openocd.o
 obj-y += kve/kve.o

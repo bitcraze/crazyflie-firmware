@@ -29,7 +29,6 @@ FREERTOS = $(srctree)/vendor/FreeRTOS
 PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
 LIB = $(srctree)/src/lib
 PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
-PROG = cf2
 LINKER_DIR = $(srctree)/tools/make/F405/linker
 
 LDFLAGS += --specs=nosys.specs --specs=nano.specs $(PROCESSOR)
@@ -61,11 +60,11 @@ INCLUDES += -I$(srctree)/include/generated
 objs-y += src
 objs-y += vendor
 
+objs-y += app_api
+objs-y += examples
+
 # This is for building libmath_arm.a
 libs-y += vendor
-
-PLATFORM  ?= cf2
-PROG ?= $(PLATFORM)
 
 MEM_SIZE_FLASH_K = 1008
 MEM_SIZE_RAM_K = 128
@@ -73,29 +72,33 @@ MEM_SIZE_CCM_K = 64
 
 -include include/config/auto.conf
 
-ifeq ($(CONFIG_PLATFORM_CF2),y)
-PLATFORM="CF2 platform"
-endif
-
 ifeq ($(CONFIG_PLATFORM_TAG),y)
-PLATFORM="Tag platform"
+PLATFORM = tag
+all: tag_config
 endif
 
-ifdef CONFIG_DEBUG
-ARCH_CFLAGS	+= -Os -Wconversion
+PLATFORM  ?= cf2
+PROG ?= $(PLATFORM)
+
+ifeq ($(CONFIG_DEBUG),y)
+ARCH_CFLAGS	+= -O0 -Wconversion
 else
-ARCH_CFLAGS   += -Os -Werror
+ARCH_CFLAGS += -Os -Werror
 endif
 
-all: src/utils/src/version.c $(PROG).hex $(PROG).bin
+.config:
+	$(warning No '.config' detected: generating defconfig)
+	@$(MAKE) -C $(srctree) defconfig
+
+all: $(PROG).hex $(PROG).bin .config
 	@echo "Build for the $(PLATFORM)!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
 
-include tools/make/targets.mk
+tag_config:
+	$(MAKE) tag_defconfig
 
-check_config:
-	[ -e .config ] || $(MAKE) -C $(srctree) defconfig
+include tools/make/targets.mk
 
 size:
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
@@ -108,6 +111,10 @@ ifeq ($(CLOAD), 1)
 else
 	@echo "Only cload build can be bootloaded. Launch build and cload with CLOAD=1"
 endif
+
+unit:
+# The flag "-DUNITY_INCLUDE_DOUBLE" allows comparison of double values in Unity. See: https://stackoverflow.com/a/37790196
+	rake unit "DEFINES=$(ARCH_CFLAGS) -DUNITY_INCLUDE_DOUBLE" "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
 
 #Flash the stm.
 flash:
@@ -171,6 +178,3 @@ test_python: bindings_python
 	$(PYTHON) -m pytest test_python
 
 .PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_verify cload size print_version clean_version bindings_python
-# Some special handling for the version c.file
-src/utils/src/version.c: src/utils/src/version.vtpl
-	$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@

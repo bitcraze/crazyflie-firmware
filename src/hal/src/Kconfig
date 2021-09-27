@@ -1,0 +1,9 @@
+menu "IMU sensor configuration"
+
+config SENSORS_BMI088_BMP388
+    bool "Support for bmi088 and bmp388 sensors"
+    help
+      Include support for the Bosch bmi088 inertial and bmp388
+      barometric sensors
+
+endmenu
