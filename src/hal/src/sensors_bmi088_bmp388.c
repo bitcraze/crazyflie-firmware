@@ -145,6 +145,16 @@ static void applyAxis3fLpf(lpf2pData *data, Axis3f* in);
 static bool isBarometerPresent = false;
 static uint8_t baroMeasDelayMin = SENSORS_DELAY_BARO;
 
+// Precalculated values for IMU alignment
+static float sphi   = sinf(IMU_PHI * (float) M_PI / 180);
+static float cphi   = cosf(IMU_PHI * (float) M_PI / 180);
+static float stheta = sinf(IMU_THETA * (float) M_PI / 180);
+static float ctheta = cosf(IMU_THETA * (float) M_PI / 180);
+static float spsi   = sinf(IMU_PSI * (float) M_PI / 180);
+static float cpsi   = cosf(IMU_PSI * (float) M_PI / 180);
+
+static float R[3][3];
+
 // Pre-calculated values for accelerometer alignment
 static float cosPitch;
 static float sinPitch;
@@ -162,6 +172,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
 static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj* bias);
+static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out);
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
 
 STATIC_MEM_TASK_ALLOC(sensorsTask, SENSORS_TASK_STACKSIZE);
@@ -278,6 +289,8 @@ static void sensorsTask(void *param)
 {
   systemWaitStart();
 
+  Axis3f gyroScaledIMU;
+  Axis3f accScaledIMU;
   Axis3f accScaled;
   measurement_t measurement;
   /* wait an additional second the keep bus free
@@ -304,20 +317,23 @@ static void sensorsTask(void *param)
       {
          processAccScale(accelRaw.x, accelRaw.y, accelRaw.z);
       }
+
       /* Gyro */
-      sensorData.gyro.x =  (gyroRaw.x - gyroBias.x) * SENSORS_BMI088_DEG_PER_LSB_CFG;
-      sensorData.gyro.y =  (gyroRaw.y - gyroBias.y) * SENSORS_BMI088_DEG_PER_LSB_CFG;
-      sensorData.gyro.z =  (gyroRaw.z - gyroBias.z) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      gyroScaledIMU.x =  (gyroRaw.x - gyroBias.x) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      gyroScaledIMU.y =  (gyroRaw.y - gyroBias.y) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      gyroScaledIMU.z =  (gyroRaw.z - gyroBias.z) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      sensorsAlignToAirframe(&gyroScaledIMU, &sensorData.gyro);
       applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensorData.gyro);
 
       measurement.type = MeasurementTypeGyroscope;
       measurement.data.gyroscope.gyro = sensorData.gyro;
       estimatorEnqueue(&measurement);
-
-      /* Accelerometer */
-      accScaled.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
-      accScaled.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
-      accScaled.z = accelRaw.z * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      
+      /* Acelerometer */
+      accScaledIMU.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      accScaledIMU.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      accScaledIMU.z = accelRaw.z * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      sensorsAlignToAirframe(&accScaledIMU, &accScaled);
       sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
 
@@ -856,6 +872,26 @@ bool sensorsBmi088Bmp388ManufacturingTest(void)
   }
 
   return testStatus;
+}
+
+/**
+ * Align the sensors to the Airframe axes
+ */
+static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
+{
+  R[0][0] = ctheta * cpsi;
+  R[0][1] = ctheta * spsi;
+  R[0][2] = -stheta;
+  R[1][0] = sphi * stheta * cpsi - cphi * spsi;
+  R[1][1] = sphi * stheta * spsi + cphi * cpsi;
+  R[1][2] = sphi * ctheta;
+  R[2][0] = cphi * stheta * cpsi + sphi * spsi;
+  R[2][1] = cphi * stheta * spsi - sphi * cpsi;
+  R[2][2] = cphi * ctheta;
+
+  out->x = in->x*R[0][0] + in->y*R[0][1] + in->z*R[0][2];
+  out->y = in->x*R[1][0] + in->y*R[1][1] + in->z*R[1][2];
+  out->z = in->x*R[2][0] + in->y*R[2][1] + in->z*R[2][2];
 }
 
 /**
