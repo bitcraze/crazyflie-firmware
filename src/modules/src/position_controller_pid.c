@@ -75,7 +75,6 @@ static float xBodyVelMax = 1.0f; // in-body control
 static float yBodyVelMax = 1.0f;
 static float zVelMax  = 1.0f;
 static float velMaxOverhead = 1.10f;
-
 static const float thrustScale = 1000.0f;
 
 // Feedforward gains
@@ -102,7 +101,11 @@ float velFiltCutoff = 20.0f;
 bool posZFiltEnable = true;
 bool velZFiltEnable = true;
 float posZFiltCutoff = 20.0f;
-float velZFiltCutoff = 20.0f;
+#ifdef IMPROVED_BARO_Z_HOLD
+  float velZFiltCutoff = 0.7f;
+#else
+  float velZFiltCutoff = 20.0f;
+#endif
 
 #ifndef UNIT_TEST
 static struct this_s this = {
@@ -123,16 +126,25 @@ static struct this_s this = {
     },
     .pid.dt = DT,
   },
-
-  .pidVZ = {
-    .init = {
-      .kp = 25.0f,
-      .ki = 15.0f,
-      .kd = 0.0f,
+  #ifdef IMPROVED_BARO_Z_HOLD
+    .pidVZ = {
+      .init = {
+        .kp = 3.0f,
+        .ki = 1.0f,
+        .kd = 1.5f, //kd can be lowered for improved stability, but results in slower response time.
+      },
+      .pid.dt = DT,
     },
-    .pid.dt = DT,
-  },
-
+  #else
+    .pidVZ = {
+      .init = {
+        .kp = 25.0f,
+        .ki = 15.0f,
+        .kd = 0,
+      },
+      .pid.dt = DT,
+    },
+  #endif
   .pidX = {
     .init = {
       .kp = 2.0f,
@@ -159,8 +171,11 @@ static struct this_s this = {
     },
     .pid.dt = DT,
   },
-
-  .thrustBase = 36000,
+  #ifdef IMPROVED_BARO_Z_HOLD
+    .thrustBase = 38000,
+  #else
+    .thrustBase = 36000,
+  #endif
   .thrustMin  = 20000,
 };
 #endif
@@ -357,6 +372,20 @@ void positionControllerResetAllPID()
   pidReset(&this.pidVZ.pid);
 }
 
+void positionControllerResetAllfilters() {
+  filterReset(&this.pidX.pid, POSITION_RATE, posFiltCutoff, posFiltEnable);
+  filterReset(&this.pidY.pid, POSITION_RATE, posFiltCutoff, posFiltEnable);
+  filterReset(&this.pidZ.pid, POSITION_RATE, posZFiltCutoff, posZFiltEnable);
+  filterReset(&this.pidVX.pid, POSITION_RATE, velFiltCutoff, velFiltEnable);
+  filterReset(&this.pidVY.pid, POSITION_RATE, velFiltCutoff, velFiltEnable);
+  filterReset(&this.pidVZ.pid, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
+}
+
+/**
+ * Log variables of the PID position controller
+ * 
+ * Note: rename to posCtrlPID ?
+ */
 LOG_GROUP_START(posCtl)
 
 /**

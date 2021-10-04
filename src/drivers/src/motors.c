@@ -61,6 +61,27 @@ const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
+const MotorHealthTestDef brushedMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 50,
+  /* offPeriodMsec = */ 950,
+  /* varianceMeasurementStartMsec = */ 0,
+  /* onPeriodPWMRatio = */ 0xFFFF,
+};
+
+const MotorHealthTestDef brushlessMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 2000,
+  /* offPeriodMsec = */ 1000,
+  /* varianceMeasurementStartMsec = */ 1000,
+  /* onPeriodPWMRatio = */ 0 /* user must set health.propTestPWMRatio explicitly */
+};
+
+const MotorHealthTestDef unknownMotorHealthTestSettings = {
+  /* onPeriodMsec = */ 0,
+  /* offPeriodMseec = */ 0,
+  /* varianceMeasurementStartMsec = */ 0,
+  /* onPeriodPWMRatio = */ 0
+};
+
 static bool isInit = false;
 
 /* Private functions */
@@ -130,9 +151,22 @@ static uint16_t motorsConv16ToBits(uint16_t bits)
 // Voltage needed with the Supply voltage.
 static uint16_t motorsCompensateBatteryVoltage(uint16_t ithrust)
 {
+  float supply_voltage = pmGetBatteryVoltage();
+  /*
+   * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
+   * discharged.
+   * 
+   * A suiteble sanity check for disabiling the voltage compensation would be
+   * under 2V. That would suggest a damaged battery. This protects against
+   * rushing the motors on bugs and invalid voltage levels.
+   */
+  if (supply_voltage < 2.0f)
+  {
+    return ithrust;
+  }
+
   float thrust = ((float) ithrust / 65536.0f) * 60;
   float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
-  float supply_voltage = pmGetBatteryVoltage();
   float percentage = volts / supply_voltage;
   percentage = percentage > 1.0f ? 1.0f : percentage;
   return percentage * UINT16_MAX;
@@ -207,10 +241,6 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     // Configure Output Compare for PWM
     motorMap[i]->ocInit(motorMap[i]->tim, &TIM_OCInitStructure);
     motorMap[i]->preloadConfig(motorMap[i]->tim, TIM_OCPreload_Enable);
-
-    MOTORS_TIM_DBG_CFG(motorMap[i]->timDbgStop, ENABLE);
-    //Enable the timer PWM outputs
-    TIM_CtrlPWMOutputs(motorMap[i]->tim, ENABLE);
   }
 
   // Start the timers
@@ -374,6 +404,27 @@ void motorsPlayMelody(uint16_t *notes)
     motorsPlayTone(note, duration);
   } while (duration != 0);
 }
+
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
+{
+  if (id >= NBR_OF_MOTORS)
+  {
+    return &unknownMotorHealthTestSettings;
+  }
+  else if (motorMap[id]->drvType == BRUSHLESS)
+  {
+    return &brushlessMotorHealthTestSettings;
+  }
+  else if (motorMap[id]->drvType == BRUSHED)
+  {
+    return &brushedMotorHealthTestSettings;
+  }
+  else
+  {
+    return &unknownMotorHealthTestSettings;
+  }
+}
+
 /**
  * Logging variables of the motors PWM output
  */
