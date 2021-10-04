@@ -26,13 +26,22 @@ def read_and_parse_xml(file_name):
 
 def pre_process_xml(xml):
     # The xml we get from doxygen contains some un-orthodox elements that we handle before we parse the xml
-    if xml.find('<itemizedlist>') != -1:
-        raise ValueError("The xml contains <itemizedlist> which is not supported in log/param documentation. It is probably caused by a list created using '-'.")
-    if xml.find('<ulink') != -1:
-        raise ValueError("The xml contains <ulink> which is not supported in log/param documentation. It is probably caused by a link, prepend the URL with '%'.")
+    itemized_result = xml.find('<itemizedlist>')
+    if itemized_result != -1:
+        related_text = extract_related_text(xml, itemized_result, 50, 100)
+        raise ValueError("The xml contains <itemizedlist> which is not supported in log/param documentation. It is probably caused by a list created using '-'. Excerpt: >>>" + related_text + "<<<")
+
+    ulink_result = xml.find('<ulink')
+    if ulink_result != -1:
+        related_text = extract_related_text(xml, ulink_result, 50, 100)
+        raise ValueError("The xml contains <ulink> which is not supported in log/param documentation. It is probably caused by a link, please prepend the URL with '%'. Excerpt: >>>" + related_text + "<<<")
 
     return xml.replace('<linebreak/>', "")
 
+def extract_related_text(xml, position, pre, post):
+    start = max(0, position - pre)
+    end = position + post
+    return xml[start:end]
 
 def merge_paras(paras, separator):
     parts = []

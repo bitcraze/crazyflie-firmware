@@ -49,18 +49,33 @@
 
 #define EXTRX_NR_CHANNELS  8
 
-#define EXTRX_CH_TRUST     2
-#define EXTRX_CH_ROLL      0
-#define EXTRX_CH_PITCH     1
-#define EXTRX_CH_YAW       3
+#ifdef EXTRX_TAER
+  #define EXTRX_CH_THRUST     0
+  #define EXTRX_CH_ROLL      1
+  #define EXTRX_CH_PITCH     2
+  #define EXTRX_CH_YAW       3
 
-#define EXTRX_SIGN_ROLL    (-1)
-#define EXTRX_SIGN_PITCH   (-1)
-#define EXTRX_SIGN_YAW     (-1)
+  #define EXTRX_SIGN_ROLL    (1)
+  #define EXTRX_SIGN_PITCH   (-1)
+  #define EXTRX_SIGN_YAW     (-1)
+#else // default is AETR, like in BetaFlight
+  #define EXTRX_CH_THRUST     2
+  #define EXTRX_CH_ROLL      0
+  #define EXTRX_CH_PITCH     1
+  #define EXTRX_CH_YAW       3
+
+  #define EXTRX_SIGN_ROLL    (1)
+  #define EXTRX_SIGN_PITCH   (-1)
+  #define EXTRX_SIGN_YAW     (-1)
+#endif
 
 #define EXTRX_SCALE_ROLL   (40.0f)
 #define EXTRX_SCALE_PITCH  (40.0f)
-#define EXTRX_SCALE_YAW    (400.0f)
+#define EXTRX_SCALE_YAW    (200.0f)
+
+#define EXTRX_DEADBAND_ROLL (0.05f)
+#define EXTRX_DEADBAND_PITCH (0.05f)
+#define EXTRX_DEADBAND_YAW (0.05f)
 
 static setpoint_t extrxSetpoint;
 static uint16_t ch[EXTRX_NR_CHANNELS];
@@ -80,6 +95,12 @@ void extRxInit(void)
 
 #ifdef ENABLE_CPPM
   cppmInit();
+  #ifdef EXTRX_TAER
+    DEBUG_PRINT("CPPM initialized, expecting TAER channel mapping\n");
+  #else
+    DEBUG_PRINT("CPPM initialized, expecting AETR channel mapping\n");
+  #endif
+
 #endif
 
 #ifdef ENABLE_SPEKTRUM
@@ -94,6 +115,7 @@ static void extRxTask(void *param)
 
   //Wait for the system to be fully started
   systemWaitStart();
+  DEBUG_PRINT("CPPM Task Started\n");
 
   while (true)
   {
@@ -103,10 +125,10 @@ static void extRxTask(void *param)
 
 static void extRxDecodeChannels(void)
 {
-  extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_TRUST]);
-  extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
-  extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
-  extrxSetpoint.attitude.yaw = EXTRX_SIGN_YAW * cppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
+  extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
+  extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * EXTRX_SCALE_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -1, 1, EXTRX_DEADBAND_ROLL);
+  extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * EXTRX_SCALE_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -1, 1, EXTRX_DEADBAND_PITCH);
+  extrxSetpoint.attitudeRate.yaw = EXTRX_SIGN_YAW * EXTRX_SCALE_YAW *cppmConvert2Float(ch[EXTRX_CH_YAW], -1, 1, EXTRX_DEADBAND_YAW);
   commanderSetSetpoint(&extrxSetpoint, COMMANDER_PRIORITY_EXTRX);
 }
 

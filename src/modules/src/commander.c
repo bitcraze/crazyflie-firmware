@@ -38,6 +38,9 @@
 #include "static_mem.h"
 
 static bool isInit;
+// Static structs are zero-initialized, so nullSetpoint corresponds to
+// modeDisable for all stab_mode_t members and zero for all physical values.
+// In other words, the controller should cut power upon recieving it.
 const static setpoint_t nullSetpoint;
 static setpoint_t tempSetpoint;
 static state_t lastState;
