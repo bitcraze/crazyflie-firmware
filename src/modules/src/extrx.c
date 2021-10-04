@@ -85,11 +85,13 @@
 
 #define EXTRX_SWITCH_MIN_CNT 5 // number of identical subsequent switch states before the switch variable is changed
 
+bool extRxArm = false;
+bool extRxAltHold = false;
+  
 #ifndef EXTRX_ARMING
   #define EXTRX_ARMING    false
 #endif
 #if EXTRX_ARMING
-  bool extRxArm = false;
   bool extRxArmPrev = false;
   int8_t arm_cnt = 0;
 #endif
@@ -100,7 +102,6 @@
 #if EXTRX_ALT_HOLD
   #define EXTRX_DEADBAND_ZVEL  (0.25f)
   bool extRxAltHoldPrev = false;
-  bool extRxAltHold = false;
   int8_t altHold_cnt = 0;
 #endif
 
