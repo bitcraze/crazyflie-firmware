@@ -32,6 +32,7 @@
 #include "task.h"
 
 #include "led.h"
+#include "syslink.h"
 
 static GPIO_TypeDef* led_port[] =
 {
@@ -40,6 +41,7 @@ static GPIO_TypeDef* led_port[] =
   [LED_RED_L] = LED_GPIO_PORT,
   [LED_GREEN_R] = LED_GPIO_PORT,
   [LED_RED_R] = LED_GPIO_PORT,
+  [LED_BLUE_NRF] = 0,
 };
 static unsigned int led_pin[] =
 {
@@ -48,6 +50,7 @@ static unsigned int led_pin[] =
   [LED_RED_L]   = LED_GPIO_RED_L,
   [LED_GREEN_R] = LED_GPIO_GREEN_R,
   [LED_RED_R]   = LED_GPIO_RED_R,
+  [LED_BLUE_NRF] = 0,
 };
 static int led_polarity[] =
 {
@@ -56,6 +59,7 @@ static int led_polarity[] =
   [LED_RED_L]   = LED_POL_RED_L,
   [LED_GREEN_R] = LED_POL_GREEN_R,
   [LED_RED_R]   = LED_POL_RED_R,
+  [LED_BLUE_NRF] = LED_POL_POS,
 };
 
 static bool isInit = false;
@@ -103,7 +107,10 @@ bool ledTest(void)
   vTaskDelay(M2T(250));
 
   // LED test end
-  ledClearAll();
+  ledSet(LED_GREEN_L, 0);
+  ledSet(LED_GREEN_R, 0);
+  ledSet(LED_RED_L, 0);
+  ledSet(LED_RED_R, 0);
   ledSet(LED_BLUE_L, 1);
 
   return isInit;
@@ -138,10 +145,29 @@ void ledSet(led_t led, bool value)
   if (led_polarity[led]==LED_POL_NEG)
     value = !value;
   
-  if(value)
-    GPIO_SetBits(led_port[led], led_pin[led]);
+  if (led == LED_BLUE_NRF && isSyslinkUp())
+  {
+    SyslinkPacket slp;
+    slp.type = value ? SYSLINK_PM_LED_ON : SYSLINK_PM_LED_OFF;
+    slp.length = 0;
+    syslinkSendPacket(&slp);
+  }
   else
-    GPIO_ResetBits(led_port[led], led_pin[led]); 
+  {
+    if(value)
+      GPIO_SetBits(led_port[led], led_pin[led]);
+    else
+      GPIO_ResetBits(led_port[led], led_pin[led]);
+  }
+}
+
+void ledSetFault(void)
+{
+  ledSet(LED_GREEN_L, 0);
+  ledSet(LED_GREEN_R, 0);
+  ledSet(LED_RED_L, 1);
+  ledSet(LED_RED_R, 1);
+  ledSet(LED_BLUE_L, 0);
 }
 
 
