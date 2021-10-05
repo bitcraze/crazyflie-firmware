@@ -566,21 +566,7 @@ int start_trajectory(const struct data_start_trajectory* data)
         trajectory.timescale = data->timescale;
         trajectory.n_pieces = trajDesc->trajectoryIdentifier.mem.n_pieces;
         trajectory.pieces = (struct poly4d*)&trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
-        if (data->relative) {
-          trajectory.shift = vzero();
-          struct traj_eval traj_init;
-          if (data->reversed) {
-            traj_init = piecewise_eval_reversed(&trajectory, trajectory.t_begin);
-          }
-          else {
-            traj_init = piecewise_eval(&trajectory, trajectory.t_begin);
-          }
-          struct vec shift_pos = vsub(pos, traj_init.pos);
-          trajectory.shift = shift_pos;
-        } else {
-          trajectory.shift = vzero();
-        }
-        result = plan_start_trajectory(&planner, &trajectory, data->reversed);
+        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, pos);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
           && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
@@ -595,16 +581,7 @@ int start_trajectory(const struct data_start_trajectory* data)
             &trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset]
           );
           compressed_trajectory.t_begin = t;
-          if (data->relative) {
-            struct traj_eval traj_init = piecewise_compressed_eval(
-              &compressed_trajectory, compressed_trajectory.t_begin
-            );
-            struct vec shift_pos = vsub(pos, traj_init.pos);
-            compressed_trajectory.shift = shift_pos;
-          } else {
-            compressed_trajectory.shift = vzero();
-          }
-          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory);
+          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relative, pos);
           xSemaphoreGive(lockTraj);
         }
 
