@@ -159,7 +159,7 @@ The most common way to flash is probably to use the Crazyradio.
 
 ### Prerequisites
 * A Crazyradio with drivers installed
-* [crazyflie-clients-python](https://github.com/bitcraze/crazyflie-clients-python) placed on the same directory level in the file tree
+* [Crazyflie Client installed](/documentation/repository/crazyflie-clients-python/master/installation/install/) with Python's pip (so not by Snap (Ubuntu) or the .exe (Windows))
 * The firmware has been built
 * The current working directory is the root of the crazyflie-firmware project
 
@@ -167,7 +167,11 @@ The most common way to flash is probably to use the Crazyradio.
 
 * Turn the Crazyflie off
 * Start the Crazyflie in bootloader mode by pressing the power button for 3 seconds. Both the blue LEDs will blink.
-* In your terminal, run `make cload`
+* In your terminal, run 
+
+```bash
+make cload
+```
 
 It will try to find a Crazyflie in bootloader mode and flash the binary to it.
 
