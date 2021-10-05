@@ -21,6 +21,7 @@ current_platform.mk
 
 /generated/**
 **/__pycache__/**
+**/*.pyc
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache

@@ -1,0 +1,42 @@
+name: Python Bindings CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04, ubuntu-20.04, macos-latest]
+        python:
+          - python-version: "3.7"
+            python-cmd: python3
+          - python-version: "2.7"
+            python-cmd: python2
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Conda
+      uses: conda-incubator/setup-miniconda@v2.0.0
+      with:
+        channels: conda-forge,defaults
+        mamba-version: "*"
+        python-version: ${{ matrix.python.python-version }}
+        environment-file: test/bindings/environment.yml
+        activate-environment: cfbindings
+
+    - name: Build
+      shell: bash -l {0}
+      run: |
+        cd bindings
+        CF_PYTHON=${{ matrix.python.python-cmd }} make
+
+    - name: Test
+      shell: bash -l {0}
+      run: |
+        PYTHONPATH=bindings ${{ matrix.python.python-cmd }} -m pytest test/bindings

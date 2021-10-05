@@ -1,0 +1,10 @@
+name: cfbindings
+dependencies:
+  - numpy
+  - matplotlib
+  - vispy
+  - pyyaml
+  - swig
+  - pyqt
+  - pytest
+  - scipy
