@@ -33,6 +33,7 @@
 
 #include "led.h"
 #include "syslink.h"
+#include "param.h"
 
 static GPIO_TypeDef* led_port[] =
 {
@@ -62,7 +63,19 @@ static int led_polarity[] =
   [LED_BLUE_NRF] = LED_POL_POS,
 };
 
-static bool isInit = false;
+static bool isInit = 0;
+static bool enableBitmaskControl;
+static uint8_t ledBitmask;
+
+static void ledBitmaskCallback(void)
+{
+  enableBitmaskControl = (ledBitmask & (1<<7)) != 0;
+
+  for (int i = 0; i < LED_NUM; i++)
+  {
+    ledSetOverride(i, ledBitmask & (1<<i));
+  }
+}
 
 //Initialize the green led pin as output
 void ledInit()
@@ -90,6 +103,7 @@ void ledInit()
     ledSet(i, 0);
   }
 
+  enableBitmaskControl = false;
   isInit = true;
 }
 
@@ -139,12 +153,21 @@ void ledSetAll(void)
 }
 void ledSet(led_t led, bool value)
 {
+  if (!enableBitmaskControl)
+  {
+    ledSetOverride(led, value);
+  }
+}
+
+
+void ledSetOverride(led_t led, bool value)
+{
   if (led>LED_NUM)
     return;
 
   if (led_polarity[led]==LED_POL_NEG)
     value = !value;
-  
+
   if (led == LED_BLUE_NRF && isSyslinkUp())
   {
     SyslinkPacket slp;
@@ -170,4 +193,11 @@ void ledSetFault(void)
   ledSet(LED_BLUE_L, 0);
 }
 
+PARAM_GROUP_START(led)
+/**
+ * @brief Set to nonzero to force system to be armed
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bitmask, &ledBitmask, &ledBitmaskCallback)
+
+PARAM_GROUP_STOP(led)
 

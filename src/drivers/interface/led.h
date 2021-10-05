@@ -71,10 +71,11 @@ void ledSetAll(void);
 // Procedures to set the status of the LEDs
 void ledSet(led_t led, bool value);
 
+// Lowest level procedures to set the status of the LEDs
+void ledSetOverride(led_t led, bool value);
+
 // Shoes fault pattern (2 Red ON, 2 Green and Blue OFF)
 void ledSetFault(void);
-
-void ledTask(void *param);
 
 //Legacy functions
 #define ledSetRed(VALUE) ledSet(LED_RED, VALUE)

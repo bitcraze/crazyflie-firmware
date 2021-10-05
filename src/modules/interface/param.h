@@ -129,6 +129,7 @@ struct param_s {
   uint8_t type;
   char * name;
   void * address;
+  void (*callback)(void);
 };
 
 #define PARAM_BYTES_MASK 0x03
@@ -145,6 +146,8 @@ struct param_s {
 
 #define PARAM_VARIABLE (0x00<<7)
 #define PARAM_GROUP    (0x01<<7)
+
+#define PARAM_CALLBACK (1<<4)
 
 #define PARAM_CORE (1<<5)
 
@@ -173,6 +176,9 @@ struct param_s {
 
 #define PARAM_ADD_CORE(TYPE, NAME, ADDRESS) \
   PARAM_ADD(TYPE | PARAM_CORE, NAME, ADDRESS)
+
+#define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+   { .type = TYPE | PARAM_CALLBACK, .name = #NAME, .address = (void*)(ADDRESS), .callback = (void *)CALLBACK, },
 
 #define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS) \
    { \
