@@ -129,8 +129,8 @@ void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
   UART_PRINT("DFSR = %x\n", (*((volatile unsigned int *)(0xE000ED30))));
   UART_PRINT("AFSR = %x\n", (*((volatile unsigned int *)(0xE000ED3C))));
 
-  ledSetFault();
   powerStop();
+  ledShowFaultPattern();
 
   storeAssertHardfaultData(
     stacked_r0,
@@ -150,7 +150,7 @@ void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
 void DONT_DISCARD MemManage_Handler(void)
 {
   /* Go to infinite loop when Memory Manage exception occurs */
-  ledSetFault();
+  ledShowFaultPattern();
   powerStop();
 
   storeAssertTextData("MemManage");
@@ -164,8 +164,8 @@ void DONT_DISCARD MemManage_Handler(void)
 void DONT_DISCARD BusFault_Handler(void)
 {
   /* Go to infinite loop when Bus Fault exception occurs */
-  ledSetFault();
   powerStop();
+  ledShowFaultPattern();
 
   storeAssertTextData("BusFault");
   while (1)
@@ -178,8 +178,8 @@ void DONT_DISCARD BusFault_Handler(void)
 void DONT_DISCARD UsageFault_Handler(void)
 {
   /* Go to infinite loop when Usage Fault exception occurs */
-  ledSetFault();
   powerStop();
+  ledShowFaultPattern();
 
   storeAssertTextData("UsageFault");
   while (1)

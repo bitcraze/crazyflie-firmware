@@ -172,16 +172,20 @@ struct param_s {
 #ifndef UNIT_TEST_MODE
 
 #define PARAM_ADD(TYPE, NAME, ADDRESS) \
-   { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
+  { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
+
+// The callback notification function will run from the param task, it should not block and should run quickly.
+#define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+  { .type = TYPE | PARAM_CALLBACK, .name = #NAME, .address = (void*)(ADDRESS), .callback = (void *)CALLBACK, },
 
 #define PARAM_ADD_CORE(TYPE, NAME, ADDRESS) \
   PARAM_ADD(TYPE | PARAM_CORE, NAME, ADDRESS)
 
-#define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
-   { .type = TYPE | PARAM_CALLBACK, .name = #NAME, .address = (void*)(ADDRESS), .callback = (void *)CALLBACK, },
+#define PARAM_ADD_CORE_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+  PARAM_ADD_WITH_CALLBACK(TYPE | PARAM_CORE, NAME, ADDRESS, CALLBACK)
 
 #define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS) \
-   { \
+  { \
   .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
 
 #define PARAM_GROUP_START(NAME)  \

@@ -35,6 +35,8 @@
 #include "syslink.h"
 #include "param.h"
 
+#define LED_ENABLE_BITMASK_BIT    7
+
 static GPIO_TypeDef* led_port[] =
 {
   [LED_BLUE_L] = LED_GPIO_PORT_BLUE,
@@ -64,20 +66,77 @@ static int led_polarity[] =
 };
 
 static bool isInit = 0;
-static bool enableBitmaskControl;
-static uint8_t ledBitmask;
+static uint8_t ledControlBitmask;
+static uint8_t ledLastState[LED_NUM];
+ledSwitch_t ledSwitchState;
 
-static void ledBitmaskCallback(void)
+static void ledRestoreSavedState(void)
 {
-  enableBitmaskControl = (ledBitmask & (1<<7)) != 0;
-
   for (int i = 0; i < LED_NUM; i++)
   {
-    ledSetOverride(i, ledBitmask & (1<<i));
+    ledSet(i, ledLastState[i]);
   }
 }
 
-//Initialize the green led pin as output
+static void ledSetForce(led_t led, bool value)
+{
+  if (led>LED_NUM)
+    return;
+
+  if (led_polarity[led]==LED_POL_NEG)
+    value = !value;
+
+  if (led == LED_BLUE_NRF && isSyslinkUp())
+  {
+    SyslinkPacket slp;
+    slp.type = value ? SYSLINK_PM_LED_ON : SYSLINK_PM_LED_OFF;
+    slp.length = 0;
+    syslinkSendPacket(&slp);
+  }
+  else
+  {
+    if(value)
+      GPIO_SetBits(led_port[led], led_pin[led]);
+    else
+      GPIO_ResetBits(led_port[led], led_pin[led]);
+  }
+}
+
+static void ledSetSwitch(ledSwitch_t ledSwitch)
+{
+  if (ledSwitchState != ledSwitch)
+  {
+    ledSwitchState = ledSwitch;
+    switch (ledSwitch)
+    {
+      case LED_LEDSEQ:
+        ledRestoreSavedState();
+        break;
+      case LED_PARAM_BITMASK:
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+static void ledBitmaskParamCallback(void)
+{
+
+  if (ledControlBitmask & (1 << LED_ENABLE_BITMASK_BIT))
+  {
+    ledSetSwitch(LED_PARAM_BITMASK);
+    for (int i = 0; i < LED_NUM; i++)
+    {
+      ledSetForce(i, ledControlBitmask & (1<<i));
+    }
+  }
+  else
+  {
+    ledSetSwitch(LED_LEDSEQ);
+  }
+}
+
 void ledInit()
 {
   int i;
@@ -103,7 +162,7 @@ void ledInit()
     ledSet(i, 0);
   }
 
-  enableBitmaskControl = false;
+  ledSwitchState = LED_LEDSEQ;
   isInit = true;
 }
 
@@ -126,6 +185,7 @@ bool ledTest(void)
   ledSet(LED_RED_L, 0);
   ledSet(LED_RED_R, 0);
   ledSet(LED_BLUE_L, 1);
+  ledSet(LED_BLUE_NRF, 1);
 
   return isInit;
 }
@@ -153,38 +213,16 @@ void ledSetAll(void)
 }
 void ledSet(led_t led, bool value)
 {
-  if (!enableBitmaskControl)
+  ASSERT(led < LED_NUM);
+  if (ledSwitchState == LED_LEDSEQ)
   {
-    ledSetOverride(led, value);
+    ledSetForce(led, value);
   }
+
+  ledLastState[led] = value;
 }
 
-
-void ledSetOverride(led_t led, bool value)
-{
-  if (led>LED_NUM)
-    return;
-
-  if (led_polarity[led]==LED_POL_NEG)
-    value = !value;
-
-  if (led == LED_BLUE_NRF && isSyslinkUp())
-  {
-    SyslinkPacket slp;
-    slp.type = value ? SYSLINK_PM_LED_ON : SYSLINK_PM_LED_OFF;
-    slp.length = 0;
-    syslinkSendPacket(&slp);
-  }
-  else
-  {
-    if(value)
-      GPIO_SetBits(led_port[led], led_pin[led]);
-    else
-      GPIO_ResetBits(led_port[led], led_pin[led]);
-  }
-}
-
-void ledSetFault(void)
+void ledShowFaultPattern(void)
 {
   ledSet(LED_GREEN_L, 0);
   ledSet(LED_GREEN_R, 0);
@@ -195,9 +233,10 @@ void ledSetFault(void)
 
 PARAM_GROUP_START(led)
 /**
- * @brief Set to nonzero to force system to be armed
+ * @brief Control onboard LEDs using a bitmask. Enabling it will override the led sequencer.
+ * | 7:ENABLE | 6:N/A | 5:BLUE_R | 4:RED_R | 3:GREEN_R | 2:RED_L | 1:GREEN_L | 0:BLUE_L |
  */
-PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bitmask, &ledBitmask, &ledBitmaskCallback)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bitmask, &ledControlBitmask, &ledBitmaskParamCallback)
 
 PARAM_GROUP_STOP(led)
 

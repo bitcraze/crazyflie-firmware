@@ -58,6 +58,7 @@
 #define LED_NUM 6
 
 typedef enum {LED_BLUE_L = 0, LED_GREEN_L, LED_RED_L, LED_GREEN_R, LED_RED_R, LED_BLUE_NRF} led_t;
+typedef enum { LED_LEDSEQ, LED_PARAM_BITMASK } ledSwitch_t;
 
 void ledInit();
 bool ledTest();
@@ -71,11 +72,8 @@ void ledSetAll(void);
 // Procedures to set the status of the LEDs
 void ledSet(led_t led, bool value);
 
-// Lowest level procedures to set the status of the LEDs
-void ledSetOverride(led_t led, bool value);
-
 // Shoes fault pattern (2 Red ON, 2 Green and Blue OFF)
-void ledSetFault(void);
+void ledShowFaultPattern(void);
 
 //Legacy functions
 #define ledSetRed(VALUE) ledSet(LED_RED, VALUE)
