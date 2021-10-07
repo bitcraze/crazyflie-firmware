@@ -5,81 +5,12 @@
 
 %{
 #define SWIG_FILE_WITH_INIT
-#include "collision_avoidance.h"
 #include "math3d.h"
-#include "pptraj.h"
-#include "planner.h"
-#include "stabilizer_types.h"
 %}
 
-%include "collision_avoidance.h"
 %include "math3d.h"
-%include "pptraj.h"
-%include "planner.h"
-%include "stabilizer_types.h"
-
-%include "numpy.i"
-
-
-%init %{
-    import_array()
-%}
-
-%apply (int DIM1, float* IN_ARRAY1) {(int nOthers, float const *otherPositions)}
 
 %inline %{
-void poly4d_set(struct poly4d *poly, int dim, int coef, float val)
-{
-    poly->p[dim][coef] = val;
-}
-float poly4d_get(struct poly4d *poly, int dim, int coef)
-{
-    return poly->p[dim][coef];
-}
-struct poly4d* pp_get_piece(struct piecewise_traj *pp, int i)
-{
-    return &pp->pieces[i];
-}
-struct poly4d* malloc_poly4d(int size)
-{
-    return (struct poly4d*)malloc(sizeof(struct poly4d) * size);
-}
-
-struct vec vec2svec(struct vec3_s v)
-{
-  return mkvec(v.x, v.y, v.z);
-}
-
-struct vec3_s svec2vec(struct vec v)
-{
-  struct vec3_s vv = { .x = v.x, .y = v.y, .z = v.z, };
-  return vv;
-}
-
-void collisionAvoidanceUpdateSetpointWrap(
-  collision_avoidance_params_t const *params,
-  collision_avoidance_state_t *collisionState,
-  int nOthers,
-  float const *otherPositions,
-  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state)
-{
-    nOthers /= 3;
-    float *workspace = malloc(sizeof(float) * 7 * (nOthers + 6));
-    collisionAvoidanceUpdateSetpointCore(
-        params,
-        collisionState,
-        nOthers,
-        otherPositions,
-        workspace,
-        setpoint, sensorData, state
-    );
-    free(workspace);
-}
-%}
-
-
-%pythoncode %{
-import numpy as np
 %}
 
 #define COPY_CTOR(structname) \
@@ -132,8 +63,4 @@ structname(struct structname const *x) { \
         def __sub__(self, other):
             return _cffirmware.vsub(self, other)
     %}
-};
-
-%extend traj_eval {
-    COPY_CTOR(traj_eval)
 };
