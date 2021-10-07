@@ -358,6 +358,11 @@ static void paramWriteProcess()
     }
 
     crtpSendPacketBlock(&p);
+
+    if (params[id].callback) {
+      params[id].callback();
+    }
+
   } else {
     int ident = p.data[0];
     void* valptr = &p.data[1];

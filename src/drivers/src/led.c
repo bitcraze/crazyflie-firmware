@@ -32,6 +32,10 @@
 #include "task.h"
 
 #include "led.h"
+#include "syslink.h"
+#include "param.h"
+
+#define LED_ENABLE_BITMASK_BIT    7
 
 static GPIO_TypeDef* led_port[] =
 {
@@ -40,6 +44,7 @@ static GPIO_TypeDef* led_port[] =
   [LED_RED_L] = LED_GPIO_PORT,
   [LED_GREEN_R] = LED_GPIO_PORT,
   [LED_RED_R] = LED_GPIO_PORT,
+  [LED_BLUE_NRF] = 0,
 };
 static unsigned int led_pin[] =
 {
@@ -48,6 +53,7 @@ static unsigned int led_pin[] =
   [LED_RED_L]   = LED_GPIO_RED_L,
   [LED_GREEN_R] = LED_GPIO_GREEN_R,
   [LED_RED_R]   = LED_GPIO_RED_R,
+  [LED_BLUE_NRF] = 0,
 };
 static int led_polarity[] =
 {
@@ -56,11 +62,89 @@ static int led_polarity[] =
   [LED_RED_L]   = LED_POL_RED_L,
   [LED_GREEN_R] = LED_POL_GREEN_R,
   [LED_RED_R]   = LED_POL_RED_R,
+  [LED_BLUE_NRF] = LED_POL_POS,
 };
 
-static bool isInit = false;
+static bool isInit = 0;
+static uint8_t ledControlBitmask;
+static uint8_t ledLastState[LED_NUM];
+ledSwitch_t ledSwitchState;
 
-//Initialize the green led pin as output
+static void ledRestoreSavedState(void)
+{
+  for (int i = 0; i < LED_NUM; i++)
+  {
+    ledSet(i, ledLastState[i]);
+  }
+}
+
+static void ledSetForce(led_t led, bool value)
+{
+  if (led > LED_NUM)
+  {
+    return;
+  }
+
+  if (led_polarity[led] == LED_POL_NEG)
+  {
+    value = !value;
+  }
+
+  if (led == LED_BLUE_NRF && isSyslinkUp())
+  {
+    SyslinkPacket slp;
+    slp.type = value ? SYSLINK_PM_LED_ON : SYSLINK_PM_LED_OFF;
+    slp.length = 0;
+    syslinkSendPacket(&slp);
+  }
+  else
+  {
+    if (value)
+    {
+      GPIO_SetBits(led_port[led], led_pin[led]);
+    }
+    else
+    {
+      GPIO_ResetBits(led_port[led], led_pin[led]);
+    }
+  }
+}
+
+static void ledSetSwitch(ledSwitch_t ledSwitch)
+{
+  if (ledSwitchState != ledSwitch)
+  {
+    ledSwitchState = ledSwitch;
+    switch (ledSwitch)
+    {
+      case LED_LEDSEQ:
+        ledRestoreSavedState();
+        break;
+      case LED_PARAM_BITMASK:
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+static void ledBitmaskParamCallback(void)
+{
+
+  if (ledControlBitmask & (1 << LED_ENABLE_BITMASK_BIT))
+  {
+    ledSetSwitch(LED_PARAM_BITMASK);
+    for (int i = 0; i < LED_NUM; i++)
+    {
+      ledSetForce(i, ledControlBitmask & (1<<i));
+    }
+  }
+  else
+  {
+    ledSetSwitch(LED_LEDSEQ);
+  }
+}
+
 void ledInit()
 {
   int i;
@@ -86,6 +170,7 @@ void ledInit()
     ledSet(i, 0);
   }
 
+  ledSwitchState = LED_LEDSEQ;
   isInit = true;
 }
 
@@ -103,8 +188,12 @@ bool ledTest(void)
   vTaskDelay(M2T(250));
 
   // LED test end
-  ledClearAll();
+  ledSet(LED_GREEN_L, 0);
+  ledSet(LED_GREEN_R, 0);
+  ledSet(LED_RED_L, 0);
+  ledSet(LED_RED_R, 0);
   ledSet(LED_BLUE_L, 1);
+  ledSet(LED_BLUE_NRF, 1);
 
   return isInit;
 }
@@ -132,16 +221,30 @@ void ledSetAll(void)
 }
 void ledSet(led_t led, bool value)
 {
-  if (led>LED_NUM)
-    return;
+  ASSERT(led < LED_NUM);
+  if (ledSwitchState == LED_LEDSEQ)
+  {
+    ledSetForce(led, value);
+  }
 
-  if (led_polarity[led]==LED_POL_NEG)
-    value = !value;
-  
-  if(value)
-    GPIO_SetBits(led_port[led], led_pin[led]);
-  else
-    GPIO_ResetBits(led_port[led], led_pin[led]); 
+  ledLastState[led] = value;
 }
 
+void ledShowFaultPattern(void)
+{
+  ledSet(LED_GREEN_L, 0);
+  ledSet(LED_GREEN_R, 0);
+  ledSet(LED_RED_L, 1);
+  ledSet(LED_RED_R, 1);
+  ledSet(LED_BLUE_L, 0);
+}
+
+PARAM_GROUP_START(led)
+/**
+ * @brief Control onboard LEDs using a bitmask. Enabling it will override the led sequencer.
+ * | 7:ENABLE | 6:N/A | 5:BLUE_R | 4:RED_R | 3:GREEN_R | 2:RED_L | 1:GREEN_L | 0:BLUE_L |
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bitmask, &ledControlBitmask, &ledBitmaskParamCallback)
+
+PARAM_GROUP_STOP(led)
 

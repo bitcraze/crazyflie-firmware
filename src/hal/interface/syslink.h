@@ -59,6 +59,8 @@
 #define SYSLINK_PM_BATTERY_AUTOUPDATE 0x14
 #define SYSLINK_PM_SHUTDOWN_REQUEST   0x15
 #define SYSLINK_PM_SHUTDOWN_ACK       0x16
+#define SYSLINK_PM_LED_ON             0x17
+#define SYSLINK_PM_LED_OFF            0x18
 
 #define SYSLINK_OW_GROUP    0x20
 #define SYSLINK_OW_SCAN     0x20
@@ -90,6 +92,7 @@ typedef enum
 
 void syslinkInit();
 bool syslinkTest();
+bool isSyslinkUp();
 int syslinkSendPacket(SyslinkPacket *slp);
 
 #endif

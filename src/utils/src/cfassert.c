@@ -81,10 +81,8 @@ void assertFail(char *exp, char *file, int line)
   storeAssertFileData(file, line);
   DEBUG_PRINT("Assert failed %s:%d\n", file, line);
 
-  ledClearAll();
-  ledSet(ERR_LED1, 1);
-  ledSet(ERR_LED2, 1);
   powerStop();
+  ledShowFaultPattern();
 
   NVIC_SystemReset();
 }

@@ -109,6 +109,9 @@ variables in run-time, but note the following:
     logging framework.
 -   The reading or writing of a parameter can be done at any time once
     you are connected to the Crazyflie.
+-   if the PARAM_CALLBACK type is set, to get notified that it has
+    changed, tha callback will run from the param task. It should 
+    not block and not take to long.
 
 ## Logging
 
@@ -210,3 +213,21 @@ Note: The rate computation function is called from the logging framework with th
 specifed in the logging configuration. The rate, on the other hand, is calculated if the time since
 last computation exceeds the configured update time of the rate logger, and if the logging intervall
 is longer than the update intervall, updates will be done for each logging call.
+
+### Parameter callback function to get notifed when a parameter has been updated.
+
+Using the macro `PARAM_ADD_WITH_CALLBACK` it is possible to register a callback function that will be called
+when the parameter gets updated. This callback will run from the parameter task so it is important to not 
+block in this callback or make it run for too long.
+
+Example:
+         void myCallbackFunction(void)
+         {
+            // The parameter has been updated before the callback and the new parameter value can be used
+            digitalWrite(DECK_GPIO_IO1, pinValue);
+         }
+         
+         ...
+         
+         PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setIO1pin, &pinValue, &myCallbackFunction)
+

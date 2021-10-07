@@ -120,24 +120,36 @@ def check_structs(stream, what: str, core: bool) -> dict:
 
     name_type_dict = {}
     name_maxlen = 25
-    struct_len = 12
     group_bit = 0x1 << 7
     start_bit = 0x1
+    if what == 'log':
+        struct_len = 12
+    else:
+        struct_len = 16
 
     while offset < stop_offset:
         elf.stream.seek(offset)
         #
         # Parsing log or param, first unpack the struct:
-        # struct [param_s|log_s] {
+        # struct [log_s] {
         #   uint8_t type;
         #   char * name;
         #   void * address;
+        # };
+        # struct [param_s] {
+        #   uint8_t type;
+        #   char * name;
+        #   void * address;
+        #   void * callback;
         # };
         #
         # We want the type and the name.
         #
         buffer = elf.stream.read(struct_len)
-        t, addr = struct.unpack('@Bxxxixxxx', buffer)
+        if what == 'log':
+            t, addr = struct.unpack('@Bxxxixxxx', buffer)
+        else:
+            t, addr = struct.unpack('@Bxxxixxxxxxxx', buffer)
         #
         # Next, convert address of name to offset in elf
         #
