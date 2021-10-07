@@ -159,7 +159,7 @@ The most common way to flash is probably to use the Crazyradio.
 
 ### Prerequisites
 * A Crazyradio with drivers installed
-* [Crazyflie Client installed](/documentation/repository/crazyflie-clients-python/master/installation/install/) with Python's pip (so not by Snap (Ubuntu) or the .exe (Windows))
+* [Crazyflie Client installed](https://github.com/bitcraze/crazyflie-clients-python) with Python's pip (so not by Snap (Ubuntu) or the .exe (Windows))
 * The firmware has been built
 * The current working directory is the root of the crazyflie-firmware project
 
