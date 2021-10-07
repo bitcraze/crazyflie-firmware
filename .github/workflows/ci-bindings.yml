@@ -30,4 +30,6 @@ jobs:
     - name: Build Bindings
       shell: bash -l {0}
       run: |
+        git submodule init
+        git submodule update
         make bindings_python
