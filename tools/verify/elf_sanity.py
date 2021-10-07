@@ -39,7 +39,10 @@ def param_type_to_str(t: int) -> str:
     if t & (1 << 6):  # PARAM_RONLY set
         extra += ' | PARAM_RONLY'
 
-    int_type = t & ~(1 << 5 | 1 << 6)
+    if t & (1 << 4):  # PARAM_CALLBACK set
+        extra += ' | PARAM_CALLBACK'
+
+    int_type = t & ~(1 << 5 | 1 << 6 | 1 << 4)
 
     return '{:12}{}'.format(param_type_to_str_dict[int_type], extra)
 
