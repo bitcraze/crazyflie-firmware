@@ -8,11 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04, ubuntu-20.04, macos-latest]
-        python:
-          - python-version: "3.7"
-            python-cmd: python3
-          - python-version: "2.7"
-            python-cmd: python2
+        python-version: ["2.7", "3.7"]
 
     runs-on: ${{ matrix.os }}
 
@@ -21,22 +17,23 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Conda
-      uses: conda-incubator/setup-miniconda@v2.0.0
+    - name: Install Python
+      uses: actions/setup-python@v2
       with:
-        channels: conda-forge,defaults
-        mamba-version: "*"
-        python-version: ${{ matrix.python.python-version }}
-        environment-file: test/bindings/environment.yml
-        activate-environment: cfbindings
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Python Packages
+      shell: bash -l {0}
+      run: |
+        python -m pip install numpy pyyaml pytest scipy
 
     - name: Build
       shell: bash -l {0}
       run: |
         cd bindings
-        CF_PYTHON=${{ matrix.python.python-cmd }} make
+        CF_PYTHON=python make
 
     - name: Test
       shell: bash -l {0}
       run: |
-        PYTHONPATH=bindings ${{ matrix.python.python-cmd }} -m pytest test/bindings
+        PYTHONPATH=bindings python -m pytest test/bindings
