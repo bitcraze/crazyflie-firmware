@@ -22,18 +22,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Python Packages
-      shell: bash -l {0}
-      run: |
-        python -m pip install numpy pyyaml pytest scipy
+    # - name: Install Python Packages
+    #   shell: bash -l {0}
+    #   run: |
+    #     python -m pip install numpy pyyaml pytest scipy
 
-    - name: Build
+    - name: Build Bindings
       shell: bash -l {0}
       run: |
-        cd bindings
-        CF_PYTHON=python make
-
-    - name: Test
-      shell: bash -l {0}
-      run: |
-        PYTHONPATH=bindings python -m pytest test/bindings
+        make bindings_python

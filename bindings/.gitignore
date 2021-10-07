@@ -1,5 +1,0 @@
-cffirmware.py
-cffirmware_wrap.c
-*.so
-__pycache__
-build

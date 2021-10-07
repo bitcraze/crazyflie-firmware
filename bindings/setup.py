@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 
-fw_dir = ".."
+fw_dir = "."
 include = [
     os.path.join(fw_dir, "src/modules/interface"),
     os.path.join(fw_dir, "src/hal/interface"),
@@ -25,7 +25,7 @@ fw_sources = [os.path.join(fw_dir, "src/modules/src", mod) for mod in modules]
 cffirmware = Extension(
     "_cffirmware",
     include_dirs=include,
-    sources=fw_sources + ["cffirmware_wrap.c"],
+    sources=fw_sources + ["bin/cffirmware_wrap.c"],
     extra_compile_args=[
         "-O3",
         # One Lighthouse header uses ARM's half-precision float, but we don't
