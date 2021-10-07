@@ -80,11 +80,15 @@ static void ledRestoreSavedState(void)
 
 static void ledSetForce(led_t led, bool value)
 {
-  if (led>LED_NUM)
+  if (led > LED_NUM)
+  {
     return;
+  }
 
-  if (led_polarity[led]==LED_POL_NEG)
+  if (led_polarity[led] == LED_POL_NEG)
+  {
     value = !value;
+  }
 
   if (led == LED_BLUE_NRF && isSyslinkUp())
   {
@@ -95,10 +99,14 @@ static void ledSetForce(led_t led, bool value)
   }
   else
   {
-    if(value)
+    if (value)
+    {
       GPIO_SetBits(led_port[led], led_pin[led]);
+    }
     else
+    {
       GPIO_ResetBits(led_port[led], led_pin[led]);
+    }
   }
 }
 

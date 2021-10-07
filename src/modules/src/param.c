@@ -359,7 +359,7 @@ static void paramWriteProcess()
 
     crtpSendPacketBlock(&p);
 
-    if ((params[id].type & PARAM_CALLBACK) && params[id].callback) {
+    if (params[id].callback) {
       params[id].callback();
     }
 

@@ -109,9 +109,9 @@ variables in run-time, but note the following:
     logging framework.
 -   The reading or writing of a parameter can be done at any time once
     you are connected to the Crazyflie.
--   If the callback parameter version is used to get notified that it has
-    changed, it will run from the param task, it should not block and should 
-    run quickly.
+-   if the PARAM_CALLBACK type is set, to get notified that it has
+    changed, tha callback will run from the param task. It should 
+    not block and not take to long.
 
 ## Logging
 
