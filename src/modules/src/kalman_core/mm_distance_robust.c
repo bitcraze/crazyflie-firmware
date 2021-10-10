@@ -117,10 +117,10 @@ void kalmanCoreRobustUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurem
     static arm_matrix_instance_f32 x_errm = {KC_STATE_DIM, 1, x_err};
     static float X_state[KC_STATE_DIM] = {0.0};
     float P_iter[KC_STATE_DIM][KC_STATE_DIM];
-    matrixcopy(KC_STATE_DIM, KC_STATE_DIM, P_iter,this->P);   // init P_iter as P_prior
+    memcpy(P_iter, this->P, sizeof(P_iter));
 
     float R_iter = d->stdDev * d->stdDev;                     // measurement covariance
-    vectorcopy(KC_STATE_DIM, X_state, this->S);               // copy Xpr to X_State and then update in each iterations
+    memcpy(X_state, this->S, sizeof(X_state));
 
     // ---------------------- Start iteration ----------------------- //
     for (int iter = 0; iter < MAX_ITER; iter++){
@@ -179,7 +179,7 @@ void kalmanCoreRobustUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurem
             P_chol[k][k] = P_chol[k][k] + dummy_value;
         }
         // keep P_chol
-        matrixcopy(KC_STATE_DIM, KC_STATE_DIM, tmp1, P_chol);
+        memcpy(tmp1, P_chol, sizeof(tmp1));
         mat_inv(&tmp1m, &Pc_inv_m);                            // Pc_inv_m = inv(Pc_m) = inv(P_chol)
         mat_mult(&Pc_inv_m, &x_errm, &e_x_m);                  // e_x_m = Pc_inv_m.dot(x_errm) 
 
@@ -221,7 +221,7 @@ void kalmanCoreRobustUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurem
             X_state[i] = this->S[i] + x_err[i];       // convert to nominal state
         }
         // update P_iter matrix and R matrix for next iteration
-        matrixcopy(KC_STATE_DIM, KC_STATE_DIM, P_iter, P_w);
+        memcpy(P_iter, P_w, sizeof(P_iter));
         R_iter = R_w;
     }
 
