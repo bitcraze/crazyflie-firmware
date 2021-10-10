@@ -60,9 +60,7 @@
 
 #include "physicalConstants.h"
 
-#include "param.h"
 #include "math3d.h"
-#include "debug.h"
 #include "static_mem.h"
 
 #include "lighthouse_calibration.h"
@@ -124,44 +122,44 @@ static void assertStateNotNaN(const kalmanCoreData_t* this)
 // Small number epsilon, to prevent dividing by zero
 #define EPS (1e-6f)
 
-// Initial variances, uncertain of position, but know we're stationary and roughly flat
-static const float stdDevInitialPosition_xy = 100;
-static const float stdDevInitialPosition_z = 1;
-static const float stdDevInitialVelocity = 0.01;
-static const float stdDevInitialAttitude_rollpitch = 0.01;
-static const float stdDevInitialAttitude_yaw = 0.01;
+void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
+{
+  // Initial variances, uncertain of position, but know we're stationary and roughly flat
+  params->stdDevInitialPosition_xy = 100;
+  params->stdDevInitialPosition_z = 1;
+  params->stdDevInitialVelocity = 0.01;
+  params->stdDevInitialAttitude_rollpitch = 0.01;
+  params->stdDevInitialAttitude_yaw = 0.01;
 
-static float procNoiseAcc_xy = 0.5f;
-static float procNoiseAcc_z = 1.0f;
-static float procNoiseVel = 0;
-static float procNoisePos = 0;
-static float procNoiseAtt = 0;
-static float measNoiseBaro = 2.0f; // meters
-static float measNoiseGyro_rollpitch = 0.1f; // radians per second
-static float measNoiseGyro_yaw = 0.1f; // radians per second
+  params->procNoiseAcc_xy = 0.5f;
+  params->procNoiseAcc_z = 1.0f;
+  params->procNoiseVel = 0;
+  params->procNoisePos = 0;
+  params->procNoiseAtt = 0;
+  params->measNoiseBaro = 2.0f;           // meters
+  params->measNoiseGyro_rollpitch = 0.1f; // radians per second
+  params->measNoiseGyro_yaw = 0.1f;       // radians per second
 
-static float initialX = 0.0;
-static float initialY = 0.0;
-static float initialZ = 0.0;
+  params->initialX = 0.0;
+  params->initialY = 0.0;
+  params->initialZ = 0.0;
 
-// Initial yaw of the Crazyflie in radians.
-// 0 --- facing positive X
-// PI / 2 --- facing positive Y
-// PI --- facing negative X
-// 3 * PI / 2 --- facing negative Y
-static float initialYaw = 0.0;
+  // Initial yaw of the Crazyflie in radians.
+  // 0 --- facing positive X
+  // PI / 2 --- facing positive Y
+  // PI --- facing negative X
+  // 3 * PI / 2 --- facing negative Y
+  params->initialYaw = 0.0;
+}
 
-// Quaternion used for initial yaw
-static float initialQuaternion[4] = {0.0, 0.0, 0.0, 0.0};
-
-
-void kalmanCoreInit(kalmanCoreData_t* this) {
+void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params)
+{
   // Reset all data to 0 (like upon system reset)
   memset(this, 0, sizeof(kalmanCoreData_t));
 
-  this->S[KC_STATE_X] = initialX;
-  this->S[KC_STATE_Y] = initialY;
-  this->S[KC_STATE_Z] = initialZ;
+  this->S[KC_STATE_X] = params->initialX;
+  this->S[KC_STATE_Y] = params->initialY;
+  this->S[KC_STATE_Z] = params->initialZ;
 //  this->S[KC_STATE_PX] = 0;
 //  this->S[KC_STATE_PY] = 0;
 //  this->S[KC_STATE_PZ] = 0;
@@ -170,11 +168,11 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
 //  this->S[KC_STATE_D2] = 0;
 
   // reset the attitude quaternion
-  initialQuaternion[0] = arm_cos_f32(initialYaw / 2);
-  initialQuaternion[1] = 0.0;
-  initialQuaternion[2] = 0.0;
-  initialQuaternion[3] = arm_sin_f32(initialYaw / 2);
-  for (int i = 0; i < 4; i++) { this->q[i] = initialQuaternion[i]; }
+  this->initialQuaternion[0] = arm_cos_f32(params->initialYaw / 2);
+  this->initialQuaternion[1] = 0.0;
+  this->initialQuaternion[2] = 0.0;
+  this->initialQuaternion[3] = arm_sin_f32(params->initialYaw / 2);
+  for (int i = 0; i < 4; i++) { this->q[i] = this->initialQuaternion[i]; }
 
   // then set the initial rotation matrix to the identity. This only affects
   // the first prediction step, since in the finalization, after shifting
@@ -188,17 +186,17 @@ void kalmanCoreInit(kalmanCoreData_t* this) {
   }
 
   // initialize state variances
-  this->P[KC_STATE_X][KC_STATE_X]  = powf(stdDevInitialPosition_xy, 2);
-  this->P[KC_STATE_Y][KC_STATE_Y]  = powf(stdDevInitialPosition_xy, 2);
-  this->P[KC_STATE_Z][KC_STATE_Z]  = powf(stdDevInitialPosition_z, 2);
+  this->P[KC_STATE_X][KC_STATE_X]  = powf(params->stdDevInitialPosition_xy, 2);
+  this->P[KC_STATE_Y][KC_STATE_Y]  = powf(params->stdDevInitialPosition_xy, 2);
+  this->P[KC_STATE_Z][KC_STATE_Z]  = powf(params->stdDevInitialPosition_z, 2);
 
-  this->P[KC_STATE_PX][KC_STATE_PX] = powf(stdDevInitialVelocity, 2);
-  this->P[KC_STATE_PY][KC_STATE_PY] = powf(stdDevInitialVelocity, 2);
-  this->P[KC_STATE_PZ][KC_STATE_PZ] = powf(stdDevInitialVelocity, 2);
+  this->P[KC_STATE_PX][KC_STATE_PX] = powf(params->stdDevInitialVelocity, 2);
+  this->P[KC_STATE_PY][KC_STATE_PY] = powf(params->stdDevInitialVelocity, 2);
+  this->P[KC_STATE_PZ][KC_STATE_PZ] = powf(params->stdDevInitialVelocity, 2);
 
-  this->P[KC_STATE_D0][KC_STATE_D0] = powf(stdDevInitialAttitude_rollpitch, 2);
-  this->P[KC_STATE_D1][KC_STATE_D1] = powf(stdDevInitialAttitude_rollpitch, 2);
-  this->P[KC_STATE_D2][KC_STATE_D2] = powf(stdDevInitialAttitude_yaw, 2);
+  this->P[KC_STATE_D0][KC_STATE_D0] = powf(params->stdDevInitialAttitude_rollpitch, 2);
+  this->P[KC_STATE_D1][KC_STATE_D1] = powf(params->stdDevInitialAttitude_rollpitch, 2);
+  this->P[KC_STATE_D2][KC_STATE_D2] = powf(params->stdDevInitialAttitude_yaw, 2);
 
   this->Pm.numRows = KC_STATE_DIM;
   this->Pm.numCols = KC_STATE_DIM;
@@ -313,8 +311,7 @@ void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm
 
 }
 
-
-void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIsFlying)
+void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float baroAsl, bool quadIsFlying)
 {
   float h[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
@@ -327,10 +324,10 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIs
   }
 
   float meas = (baroAsl - this->baroReferenceHeight);
-  kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], measNoiseBaro);
+  kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], params->measNoiseBaro);
 }
 
-void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
+void kalmanCorePredict(kalmanCoreData_t* this, const kalmanCoreParams_t * params, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order
    * to push the covariance forward.
@@ -553,10 +550,10 @@ void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float 
   if (! quadIsFlying) {
     float keep = 1.0f - ROLLPITCH_ZERO_REVERSION;
 
-    tmpq0 = keep * tmpq0 + ROLLPITCH_ZERO_REVERSION * initialQuaternion[0];
-    tmpq1 = keep * tmpq1 + ROLLPITCH_ZERO_REVERSION * initialQuaternion[1];
-    tmpq2 = keep * tmpq2 + ROLLPITCH_ZERO_REVERSION * initialQuaternion[2];
-    tmpq3 = keep * tmpq3 + ROLLPITCH_ZERO_REVERSION * initialQuaternion[3];
+    tmpq0 = keep * tmpq0 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[0];
+    tmpq1 = keep * tmpq1 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[1];
+    tmpq2 = keep * tmpq2 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[2];
+    tmpq3 = keep * tmpq3 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[3];
   }
 
   // normalize and store the result
@@ -565,22 +562,21 @@ void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float 
   assertStateNotNaN(this);
 }
 
-
-void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt)
+void kalmanCoreAddProcessNoise(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float dt)
 {
   if (dt>0)
   {
-    this->P[KC_STATE_X][KC_STATE_X] += powf(procNoiseAcc_xy*dt*dt + procNoiseVel*dt + procNoisePos, 2);  // add process noise on position
-    this->P[KC_STATE_Y][KC_STATE_Y] += powf(procNoiseAcc_xy*dt*dt + procNoiseVel*dt + procNoisePos, 2);  // add process noise on position
-    this->P[KC_STATE_Z][KC_STATE_Z] += powf(procNoiseAcc_z*dt*dt + procNoiseVel*dt + procNoisePos, 2);  // add process noise on position
+    this->P[KC_STATE_X][KC_STATE_X] += powf(params->procNoiseAcc_xy*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
+    this->P[KC_STATE_Y][KC_STATE_Y] += powf(params->procNoiseAcc_xy*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
+    this->P[KC_STATE_Z][KC_STATE_Z] += powf(params->procNoiseAcc_z*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
 
-    this->P[KC_STATE_PX][KC_STATE_PX] += powf(procNoiseAcc_xy*dt + procNoiseVel, 2); // add process noise on velocity
-    this->P[KC_STATE_PY][KC_STATE_PY] += powf(procNoiseAcc_xy*dt + procNoiseVel, 2); // add process noise on velocity
-    this->P[KC_STATE_PZ][KC_STATE_PZ] += powf(procNoiseAcc_z*dt + procNoiseVel, 2); // add process noise on velocity
+    this->P[KC_STATE_PX][KC_STATE_PX] += powf(params->procNoiseAcc_xy*dt + params->procNoiseVel, 2); // add process noise on velocity
+    this->P[KC_STATE_PY][KC_STATE_PY] += powf(params->procNoiseAcc_xy*dt + params->procNoiseVel, 2); // add process noise on velocity
+    this->P[KC_STATE_PZ][KC_STATE_PZ] += powf(params->procNoiseAcc_z*dt + params->procNoiseVel, 2); // add process noise on velocity
 
-    this->P[KC_STATE_D0][KC_STATE_D0] += powf(measNoiseGyro_rollpitch * dt + procNoiseAtt, 2);
-    this->P[KC_STATE_D1][KC_STATE_D1] += powf(measNoiseGyro_rollpitch * dt + procNoiseAtt, 2);
-    this->P[KC_STATE_D2][KC_STATE_D2] += powf(measNoiseGyro_yaw * dt + procNoiseAtt, 2);
+    this->P[KC_STATE_D0][KC_STATE_D0] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
+    this->P[KC_STATE_D1][KC_STATE_D1] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
+    this->P[KC_STATE_D2][KC_STATE_D2] += powf(params->measNoiseGyro_yaw * dt + params->procNoiseAtt, 2);
   }
 
   for (int i=0; i<KC_STATE_DIM; i++) {
@@ -791,54 +787,3 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
   decoupleState(this, KC_STATE_Y);
   decoupleState(this, KC_STATE_PY);
 }
-
-PARAM_GROUP_START(kalman)
-/**
- * @brief Process noise for x and y acceleration
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pNAcc_xy, &procNoiseAcc_xy)
- /**
- * @brief Process noise for z acceleration
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pNAcc_z, &procNoiseAcc_z)
- /**
- * @brief Process noise for velocity
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pNVel, &procNoiseVel)
- /**
- * @brief Process noise for position
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pNPos, &procNoisePos)
- /**
- * @brief Process noise for attitude
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pNAtt, &procNoiseAtt)
- /**
- * @brief Measurement noise for barometer
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, mNBaro, &measNoiseBaro)
- /**
- * @brief Measurement Noise for roll/pitch gyros
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, mNGyro_rollpitch, &measNoiseGyro_rollpitch)
- /**
- * @brief Measurement Noise for yaw gyro
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, mNGyro_yaw, &measNoiseGyro_yaw)
- /**
- * @brief Initial X after reset [m]
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, initialX, &initialX)
- /**
- * @brief Initial Y after reset [m]
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, initialY, &initialY)
- /**
- * @brief Initial Z after reset [m]
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, initialZ, &initialZ)
- /**
- * @brief Initial Yaw after reset [rad]
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, initialYaw, &initialYaw)
-PARAM_GROUP_STOP(kalman)
