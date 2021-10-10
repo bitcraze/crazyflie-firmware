@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018 Bitcraze AB
+ * Copyright (C) 2018-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,14 +54,16 @@ static inline void mat_trans(const arm_matrix_instance_f32 * pSrc, arm_matrix_in
   assert_aligned_4_bytes(pSrc);
   assert_aligned_4_bytes(pDst);
 
-  ASSERT(ARM_MATH_SUCCESS == arm_mat_trans_f32(pSrc, pDst));
+  arm_status result = arm_mat_trans_f32(pSrc, pDst);
+  ASSERT(ARM_MATH_SUCCESS == result);
 }
 
 static inline void mat_inv(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst) {
   assert_aligned_4_bytes(pSrc);
   assert_aligned_4_bytes(pDst);
 
-  ASSERT(ARM_MATH_SUCCESS == arm_mat_inverse_f32(pSrc, pDst));
+  arm_status result = arm_mat_inverse_f32(pSrc, pDst);
+  ASSERT(ARM_MATH_SUCCESS == result);
 }
 
 static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_matrix_instance_f32 * pSrcB, arm_matrix_instance_f32 * pDst) {
@@ -69,7 +71,8 @@ static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_mat
   assert_aligned_4_bytes(pSrcB);
   assert_aligned_4_bytes(pDst);
 
-  ASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst));
+  arm_status result = arm_mat_mult_f32(pSrcA, pSrcB, pDst);
+  ASSERT(ARM_MATH_SUCCESS == result);
 }
 
 static inline float arm_sqrt(float32_t in) {
@@ -99,8 +102,10 @@ static inline float clip1(float a) {
   return a;
 }
 
-static inline void mat_scale(const arm_matrix_instance_f32 * pSrcA, float32_t scale, arm_matrix_instance_f32 * pDst)
-{ ASSERT(ARM_MATH_SUCCESS == arm_mat_scale_f32(pSrcA, scale, pDst)); }
+static inline void mat_scale(const arm_matrix_instance_f32 * pSrcA, float32_t scale, arm_matrix_instance_f32 * pDst) {
+  arm_status result = arm_mat_scale_f32(pSrcA, scale, pDst);
+  ASSERT(ARM_MATH_SUCCESS == result);
+}
 
 // copy float matrix
 static inline void matrixcopy(int ROW, int COLUMN, float destmat[ROW][COLUMN], float srcmat[ROW][COLUMN]){
