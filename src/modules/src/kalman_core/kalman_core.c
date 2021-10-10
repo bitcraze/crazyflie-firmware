@@ -291,7 +291,7 @@ void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm
     float Ppo[KC_STATE_DIM][KC_STATE_DIM]={0};
     arm_matrix_instance_f32 Ppom = {KC_STATE_DIM, KC_STATE_DIM, (float *)Ppo};
     mat_mult(&tmpNN1m, P_w_m, &Ppom);          // Pm = (I-KH)*P_w_m
-    matrixcopy(KC_STATE_DIM, KC_STATE_DIM, this->P, Ppo);
+    memcpy(this->P, Ppo, sizeof(this->P));
 
     assertStateNotNaN(this);
 
