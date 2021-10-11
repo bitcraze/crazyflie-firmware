@@ -80,7 +80,6 @@ struct trajectoryDescription
 // 4k allows us to store 31 poly4d pieces
 // other (compressed) formats might be added in the future
 #define TRAJECTORY_MEMORY_SIZE 4096
-extern uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
 
 #define ALL_GROUPS 0
 
