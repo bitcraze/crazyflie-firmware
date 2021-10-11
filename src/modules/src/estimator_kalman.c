@@ -624,11 +624,11 @@ PARAM_GROUP_START(kalman)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, mNBaro, &coreParams.measNoiseBaro)
   /**
- * @brief Measurement Noise for roll/pitch gyros
+ * @brief Measurement noise for roll/pitch gyros
  */
   PARAM_ADD_CORE(PARAM_FLOAT, mNGyro_rollpitch, &coreParams.measNoiseGyro_rollpitch)
   /**
- * @brief Measurement Noise for yaw gyro
+ * @brief Measurement noise for yaw gyro
  */
   PARAM_ADD_CORE(PARAM_FLOAT, mNGyro_yaw, &coreParams.measNoiseGyro_yaw)
   /**
@@ -644,7 +644,7 @@ PARAM_GROUP_START(kalman)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, initialZ, &coreParams.initialZ)
   /**
- * @brief Initial Yaw after reset [rad]
+ * @brief Initial yaw after reset [rad]
  */
   PARAM_ADD_CORE(PARAM_FLOAT, initialYaw, &coreParams.initialYaw)
 PARAM_GROUP_STOP(kalman)
