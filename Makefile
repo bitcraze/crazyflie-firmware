@@ -316,6 +316,12 @@ endif
 # Disable warnings for unaligned addresses in packed structs (added in GCC 9)
 CFLAGS += -Wno-address-of-packed-member
 
+# Disable warnings for incorrectly detected region size (added in GCC 11)
+# The compiler is not detecting properly GPIO structure size
+CFLAGS += -Wno-array-bounds
+CFLAGS += -Wno-stringop-overread
+CFLAGS += -Wno-stringop-overflow
+
 ifeq ($(LTO), 1)
   CFLAGS += -flto
 endif
