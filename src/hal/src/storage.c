@@ -148,7 +148,7 @@ bool storageTest()
   return pass;
 }
 
-bool storageStore(char* key, const void* buffer, size_t length)
+bool storageStore(const char* key, const void* buffer, size_t length)
 {
   if (!isInit) {
     return false;
@@ -163,7 +163,7 @@ bool storageStore(char* key, const void* buffer, size_t length)
   return result;
 }
 
-size_t storageFetch(char *key, void* buffer, size_t length)
+size_t storageFetch(const char *key, void* buffer, size_t length)
 {
   if (!isInit) {
     return 0;
@@ -178,7 +178,7 @@ size_t storageFetch(char *key, void* buffer, size_t length)
   return result;
 }
 
-bool storageDelete(char* key)
+bool storageDelete(const char* key)
 {
   if (!isInit) {
     return false;

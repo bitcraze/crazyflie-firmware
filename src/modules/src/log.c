@@ -971,7 +971,7 @@ static void logReset(void)
 /* Public API to access log TOC from within the copter */
 static logVarId_t invalidVarId = 0xffffu;
 
-logVarId_t logGetVarId(char* group, char* name)
+logVarId_t logGetVarId(const char* group, const char* name)
 {
   int i;
   logVarId_t varId = invalidVarId;

@@ -89,7 +89,7 @@ void kveDefrag(kveMemory_t *kve) {
     }
 }
 
-bool kveStore(kveMemory_t *kve, char* key, const void* buffer, size_t length) {
+bool kveStore(kveMemory_t *kve, const char* key, const void* buffer, size_t length) {
     size_t itemAddress;
 
     // Search if the key is already present in the table
@@ -127,7 +127,7 @@ size_t kveFetch(kveMemory_t *kve, const char* key, void* buffer, size_t bufferLe
     return 0;
 }
 
-bool kveDelete(kveMemory_t *kve, char* key) {
+bool kveDelete(kveMemory_t *kve, const char* key) {
     size_t itemAddress = kveStorageFindItemByKey(kve, FIRST_ITEM_ADDRESS, key);
 
     if (KVE_STORAGE_IS_VALID(itemAddress)) {

@@ -553,7 +553,7 @@ static int variableGetIndex(int id)
 /* Public API to access param TOC from within the copter */
 static paramVarId_t invalidVarId = {0xffffu, 0xffffu};
 
-paramVarId_t paramGetVarId(char* group, char* name)
+paramVarId_t paramGetVarId(const char* group, const char* name)
 {
   int ptr;
   int id = 0;

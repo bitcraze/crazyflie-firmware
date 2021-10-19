@@ -51,7 +51,7 @@ typedef uint16_t logVarId_t;
  * @param name Name of the variable
  * @return The variable ID or an invalid ID. Use logVarIdIsValid() to check validity.
  */
-logVarId_t logGetVarId(char* group, char* name);
+logVarId_t logGetVarId(const char* group, const char* name);
 
 /** Check variable ID validity
  *

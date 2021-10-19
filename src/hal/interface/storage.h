@@ -62,7 +62,7 @@ bool storageTest();
  * 
  * @return true in case of success, false otherwise.
  */
-bool storageStore(char* key, const void* buffer, size_t length);
+bool storageStore(const char* key, const void* buffer, size_t length);
 
 /**
  * Fetch a buffer from the memory at some key.
@@ -75,7 +75,7 @@ bool storageStore(char* key, const void* buffer, size_t length);
  *         receiving buffer, and the length of the data in memory. If the key is not found
  *         this function returns 0.
  */
-size_t storageFetch(char *key, void* buffer, size_t length);
+size_t storageFetch(const char *key, void* buffer, size_t length);
 
 /**
  * Deletes and entry from the storage.
@@ -84,4 +84,4 @@ size_t storageFetch(char *key, void* buffer, size_t length);
  * 
  * @return true in case of success. false if the key was not found or if an error occured.
  */
-bool storageDelete(char* key);
+bool storageDelete(const char* key);
