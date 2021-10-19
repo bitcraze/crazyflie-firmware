@@ -54,7 +54,7 @@ typedef struct paramVarId_s {
  * @param name Name of the variable
  * @return The variable ID or an invalid ID. Use PARAM_VARID_IS_VALID() to check validity.
  */
-paramVarId_t paramGetVarId(char* group, char* name);
+paramVarId_t paramGetVarId(const char* group, const char* name);
 
 /** Check variable ID validity
  *
