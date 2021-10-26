@@ -34,31 +34,69 @@
 #define APPCHANNEL_MTU (31)
 
 /**
- * Send an app-channel packet
- * 
+ * Send an app-channel packet - deprecated, use appchannelSendDataPacketBlock() instead
+ *
  * The maximum buffer size that can be sent is define in APPCHANNEL_MTU.
  * If the length of the buffer is longer than that, the packet will be cropped
  * to send only the APPCHANNEL_MTU first bytes.
- * 
+ *
  * This function can block if there is no more space in the Crazyflie TX queue.
  * This is very unlikely to happen when CRTP is connected but can happen when the
  * connection is not active.
- * 
+ *
  * @param data Pointer to the data buffer to be sent
  * @param length Length of the data buffer to send
- * 
+ *
  * \app_api
  */
 void appchannelSendPacket(void* data, size_t length);
 
 /**
- * Receive an app-channel packet
- * 
+ * Send an app-channel packet
+ *
+ * The maximum buffer size that can be sent is define in APPCHANNEL_MTU.
+ * If the length of the buffer is longer than that, the packet will be cropped
+ * to send only the APPCHANNEL_MTU first bytes.
+ *
+ * This function can block if there is no more space in the Crazyflie TX queue.
+ * This is very unlikely to happen when CRTP is connected but can happen when the
+ * connection is not active.
+ *
+ * @param data Pointer to the data buffer to be sent
+ * @param length Length of the data buffer to send
+ *
+ * \app_api
+ */
+void appchannelSendDataPacketBlock(void* data, size_t length);
+
+/**
+ * Send an app-channel packet
+ *
+ * The maximum buffer size that can be sent is define in APPCHANNEL_MTU.
+ * If the length of the buffer is longer than that, the packet will be cropped
+ * to send only the APPCHANNEL_MTU first bytes.
+ *
+ * This function is non-blocking and may discard the packet if there is no more
+ * space in the Crazyflie TX queue. This is very unlikely to happen when CRTP
+ * is connected but can happen when the connection is not active.
+ *
+ * @param data Pointer to the data buffer to be sent
+ * @param length Length of the data buffer to send
+ *
+ * @return pdTRUE if the item was successfully posted, otherwise errQUEUE_FULL.
+ *
+ * \app_api
+ */
+int appchannelSendDataPacket(void* data, size_t length);
+
+/**
+ * Receive an app-channel packet - deprecated, use appchannelReceiveDataPacket() instead
+ *
  * If the data received is longer than max_length, the data will be silently cropped and only
  * the fist "max_length" bytes of the packet will be copied in the buffer.
- * 
+ *
  * The maximum length packet possible to be received is APPCHANNEL_MTU bytes long.
- * 
+ *
  * @param buffer Data buffer where the packet content will be copied
  * @param max_length Maximum length of the data to be received, ie. length of the data buffer
  * @param timeout_ms Time to wait for a packet in millisecond. A value of 0 will make the
@@ -70,13 +108,31 @@ void appchannelSendPacket(void* data, size_t length);
 size_t appchannelReceivePacket(void* buffer, size_t max_length, int timeout_ms);
 
 /**
+ * Receive an app-channel packet
+ *
+ * If the data received is longer than max_length, the data will be silently cropped and only
+ * the fist "max_length" bytes of the packet will be copied in the buffer.
+ *
+ * The maximum length packet possible to be received is APPCHANNEL_MTU bytes long.
+ *
+ * @param buffer Data buffer where the packet content will be copied
+ * @param max_length Maximum length of the data to be received, ie. length of the data buffer
+ * @param timeout_ms Time to wait for a packet in millisecond. A value of 0 will make the
+ *                   function non blocking, only reporting a packet is one is already in the
+ *                   receive queue. A value of APPCHANNEL_WAIT_FOREVER make the funciton block
+ *                   infinitly until a packet is received.
+ * @return 0 if no packet has been received. The data length of the packet received.
+ */
+size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_ms);
+
+/**
  * Returns if an overflow has occured in the receive queue
- * 
+ *
  * The app-channel received packets are put in a queue. It is expected that the app is
- * regularly calling appchannelReceivePacket() to get the packets from the receive queue.
+ * regularly calling appchannelReceiveDataPacket() to get the packets from the receive queue.
  * If that is not the case, the queue can overflow and this function allows the app to know
  * about it. The overflow flag is being reset by this call.
- * 
+ *
  * @return true if an overflow has occured in the receive queue.
  */
 bool appchannelHasOverflowOccured();
@@ -86,11 +142,11 @@ bool appchannelHasOverflowOccured();
 // should not be called from an app
 
 /**
- * 
+ *
  */
 void appchannelInit();
 
 /**
- * 
+ *
  */
 void appchannelIncomingPacket(CRTPPacket *p);

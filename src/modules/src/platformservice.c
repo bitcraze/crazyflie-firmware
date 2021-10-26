@@ -125,11 +125,18 @@ static void platformCommandProcess(uint8_t command, uint8_t *data)
   }
 }
 
-void platformserviceSendAppchannelPacket(CRTPPacket *p)
+int platformserviceSendAppchannelPacket(CRTPPacket *p)
 {
   p->port = CRTP_PORT_PLATFORM;
   p->channel = appChannel;
-  crtpSendPacketBlock(p);
+  return crtpSendPacket(p);
+}
+
+int platformserviceSendAppchannelPacketBlock(CRTPPacket *p)
+{
+  p->port = CRTP_PORT_PLATFORM;
+  p->channel = appChannel;
+  return crtpSendPacketBlock(p);
 }
 
 static void versionCommandProcess(CRTPPacket *p)
