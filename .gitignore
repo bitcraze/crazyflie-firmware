@@ -25,6 +25,6 @@ current_platform.mk
 docs/.jekyll-metadata
 docs/.jekyll-cache
 
-docs/api/logs_generated.md
-docs/api/params_generated.md
+docs/api/logs.md_raw
+docs/api/params.md_raw
 docs/api/log_param_doc.json

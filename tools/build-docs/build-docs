@@ -14,4 +14,4 @@ doxygen tools/gen-dox/Doxyfile
 # Generate markdown from the xml
 [ -d "$apiDir" ] && rm -r $apiDocsDir
 mkdir -p $apiDocsDir
-python3 $scriptDir/../gen-dox/xml_to_markdown_logparam_doc.py $xmlDir $apiDocsDir logs_generated.md params_generated.md
+python3 $scriptDir/../gen-dox/xml_to_markdown_logparam_doc.py $xmlDir $apiDocsDir logs.md_raw params.md_raw
