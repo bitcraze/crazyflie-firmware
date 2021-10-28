@@ -7,14 +7,15 @@ import os
 # Make sure there are XML docs to parse! check the readme
 
 
-def create_log_markdown(xml_dir, api_doc_dir):
+
+def create_log_markdown(xml_dir, api_doc_dir, file_name):
     log_groups = parse_xml('logs', xml_dir)
-    create_markdown('logs', log_groups, api_doc_dir)
+    create_markdown(file_name, log_groups, api_doc_dir)
 
 
-def create_param_markdown(xml_dir, api_doc_dir):
+def create_param_markdown(xml_dir, api_doc_dir, file_name):
     param_groups = parse_xml('params', xml_dir)
-    create_markdown('params', param_groups, api_doc_dir)
+    create_markdown(file_name, param_groups, api_doc_dir)
 
 
 def read_and_parse_xml(file_name):
@@ -136,21 +137,9 @@ def extract_memberdefs(root, core_string):
     return info_variables
 
 
-def create_markdown(doc_type, groups_info_storage, api_doc_dir):
-    markdown_file_name = os.path.join(api_doc_dir, doc_type + '.md')
-    f = open(markdown_file_name, 'w')
-
-    f.write('---\n')
-    if doc_type == 'logs':
-        f.write('title: Logging groups and variables\n')
-    elif doc_type == 'params':
-        f.write('title: Parameter groups and variables\n')
-    else:
-        print('group type does not exist!')
-        return None
-
-    f.write('page_id: ' + doc_type + '\n')
-    f.write('---\n')
+def create_markdown(file_name, groups_info_storage, api_doc_dir):
+    full_path = os.path.join(api_doc_dir, file_name)
+    f = open(full_path, 'w')
 
     f.write('## Index\n\n')
     first_letter = ''
@@ -252,16 +241,19 @@ def create_json(xml_dir: str, api_doc_dir: str):
 
 if __name__ == '__main__':
 
-    if(len(sys.argv) != 3):
-        raise ValueError("Need two arguments!")
+    if(len(sys.argv) != 5):
+        raise ValueError("Need four arguments!")
 
     xml_dir = sys.argv[1]
     api_doc_dir = sys.argv[2]
+    logs_md_file_name = sys.argv[3]
+    params_md_file_name = sys.argv[4]
 
     print('Create Logging API Markdown files')
-    create_log_markdown(xml_dir, api_doc_dir)
+    create_log_markdown(xml_dir, api_doc_dir, logs_md_file_name)
     print('Create Parameter API Markdown files')
-    create_param_markdown(xml_dir, api_doc_dir)
+    create_param_markdown(xml_dir, api_doc_dir, params_md_file_name)
 
     print('Create JSON file')
+    # Note: The json file is used by the python client build
     create_json(xml_dir, api_doc_dir)

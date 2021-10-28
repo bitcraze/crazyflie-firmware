@@ -22,6 +22,9 @@ current_platform.mk
 /generated/**
 **/__pycache__/**
 
-/docs/.jekyll-metadata
+docs/.jekyll-metadata
 docs/.jekyll-cache
-docs/api
+
+docs/api/logs_generated.md
+docs/api/params_generated.md
+docs/api/log_param_doc.json
