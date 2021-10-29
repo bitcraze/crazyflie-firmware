@@ -1,5 +1,6 @@
 """Compiles the cffirmware C extension."""
 
+import distutils.command.build
 from distutils.core import setup, Extension
 import os
 
@@ -22,4 +23,15 @@ cffirmware = Extension(
     ],
 )
 
-setup(name="cffirmware", version="1.0", ext_modules=[cffirmware])
+# Override build command to specify custom "build" directory
+class BuildCommand(distutils.command.build.build):
+    def initialize_options(self):
+        distutils.command.build.build.initialize_options(self)
+        self.build_base = "bin"
+
+setup(
+    name="cffirmware",
+    version="1.0",
+    cmdclass={"build": BuildCommand},
+    ext_modules=[cffirmware]
+)
