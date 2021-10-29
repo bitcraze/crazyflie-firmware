@@ -186,22 +186,49 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 	return plan_go_to_from(p, &setpoint, relative, hover_pos, hover_yaw, duration, t);
 }
 
-int plan_start_trajectory( struct planner *p, const struct piecewise_traj* trajectory, bool reversed)
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from)
 {
 	p->reversed = reversed;
 	p->state = TRAJECTORY_STATE_FLYING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
 	p->trajectory = trajectory;
 
+	if (relative) {
+		struct traj_eval traj_init;
+		trajectory->shift = vzero();
+		if (reversed) {
+			traj_init = piecewise_eval_reversed(trajectory, trajectory->t_begin);
+		}
+		else {
+			traj_init = piecewise_eval(trajectory, trajectory->t_begin);
+		}
+		struct vec shift_pos = vsub(start_from, traj_init.pos);
+		trajectory->shift = shift_pos;
+	}
+	else {
+		trajectory->shift = vzero();
+	}
+
 	return 0;
 }
 
-int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_compressed* trajectory)
+int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_compressed* trajectory, bool relative, struct vec start_from)
 {
 	p->reversed = 0;
 	p->state = TRAJECTORY_STATE_FLYING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE_COMPRESSED;
 	p->compressed_trajectory = trajectory;
+
+	if (relative) {
+		trajectory->shift = vzero();
+		struct traj_eval traj_init = piecewise_compressed_eval(
+			trajectory, trajectory->t_begin
+		);
+		struct vec shift_pos = vsub(start_from, traj_init.pos);
+		trajectory->shift = shift_pos;
+	} else {
+		trajectory->shift = vzero();
+	}
 
 	return 0;
 }
