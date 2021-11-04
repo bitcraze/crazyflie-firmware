@@ -96,8 +96,12 @@ typedef struct deck_driver {
   StateEstimatorType requiredEstimator;
   bool requiredLowInterferenceRadioMode;
 
-  // Deck memory access definition
+  // Deck memory access definitions
   const struct deckMemDef_s* memoryDef;
+
+  // Have an option to present a secondary memory area for instance for decks
+  // two firmwares.
+  const struct deckMemDef_s* memoryDefSecondary;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
@@ -195,6 +199,8 @@ typedef struct deckMemDef_s {
   // TOOD krri rename to length?
   uint32_t requiredSize;
 
+  // Optional id, if non-null will be added to the name as [drivername:id]
+  const char *id;
 } DeckMemDef_t;
 
 int deckCount(void);
