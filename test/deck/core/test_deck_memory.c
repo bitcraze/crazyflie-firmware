@@ -33,7 +33,7 @@ DeckInfo stockInfo;
 
 
 // Constants
-#define SIZE_ONE_DECK 0x20
+#define SIZE_ONE_DECK 0x40
 #define MAX_NR_DECKS 4
 #define BUF_SIZE (SIZE_ONE_DECK * MAX_NR_DECKS)
 uint8_t buffer[BUF_SIZE];
