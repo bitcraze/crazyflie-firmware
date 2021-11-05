@@ -19,7 +19,7 @@ uint8_t stockDeckPropertiesFcn() { return stockDeckProperties; }
 uint32_t read_vAddr;
 uint8_t read_len;
 bool read_isCalled;
-bool mockRead(const uint32_t vAddr, const uint8_t len, uint8_t* buffer) { read_isCalled = true; read_vAddr = vAddr; read_len = len; return true; }
+bool mockRead(const uint32_t vAddr, const uint8_t len, uint8_t* buffer) { read_isCalled = true; if (!read_vAddr) read_vAddr = vAddr; read_len += len; return true; }
 
 uint32_t write_vAddr;
 uint8_t write_len;
@@ -53,6 +53,26 @@ const uint8_t MASK_SUPPORTS_UPGRADE  = 16;
 const uint8_t MASK_UPGRADE_REQUIRED  = 32;
 const uint8_t MASK_BOOTLOADER_ACTIVE = 64;
 
+// emulate the size the CRTP protocol will enforce
+#define READ_CHUNK_SIZE 20
+
+bool handleMemReadWrapper(uint32_t memAddr, size_t len, uint8_t *buffer)
+{
+    size_t bytesRead = 0;
+
+    while (bytesRead < len) {
+        size_t readLen = len - bytesRead;
+        if (readLen > READ_CHUNK_SIZE) {
+            readLen = READ_CHUNK_SIZE;
+        }
+        if (!handleMemRead(memAddr + bytesRead, readLen, buffer + bytesRead)) {
+            return false;
+        }
+        bytesRead += readLen;
+    }
+
+    return true;
+}
 
 void setUp() {
     memset(buffer, 0, BUF_SIZE);
@@ -80,10 +100,10 @@ void setUp() {
 
 void testFirstByteIsVersion() {
     // Fixture
-    deckCount_ExpectAndReturn(0);
+    deckCount_IgnoreAndReturn(0);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(1, buffer[0]);
@@ -91,10 +111,10 @@ void testFirstByteIsVersion() {
 
 void testNoInstalledDecks() {
     // Fixture
-    deckCount_ExpectAndReturn(0);
+    deckCount_IgnoreAndReturn(0);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0, buffer[DECK_0]);
@@ -108,12 +128,12 @@ void testTwoDecskWithoutMemorySupport() {
     DeckDriver driverNoMem = { .memoryDef = 0 };
     DeckInfo deckNoMem = { .driver = &driverNoMem };
 
-    deckCount_ExpectAndReturn(2);
+    deckCount_IgnoreAndReturn(2);
     deckInfo_ExpectAndReturn(0, &deckNoMem);
-    deckInfo_ExpectAndReturn(1, &deckNoMem);
+    deckInfo_IgnoreAndReturn(&deckNoMem);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0, buffer[DECK_0]);
@@ -126,11 +146,11 @@ void testOneDeckReadSupported() {
     // Fixture
     stockMemDef.read = mockRead;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_READ, buffer[DECK_0]);
@@ -140,11 +160,11 @@ void testOneDeckWriteSupported() {
     // Fixture
     stockMemDef.write = mockWrite;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_WRITE, buffer[DECK_0]);
@@ -155,11 +175,11 @@ void testOneDeckUpgradeupported() {
     stockMemDef.write = mockWrite;
     stockMemDef.supportsUpgrade = true;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_WRITE | MASK_SUPPORTS_UPGRADE, buffer[DECK_0]);
@@ -169,11 +189,11 @@ void testOneDeckStarted() {
     // Fixture
     stockDeckProperties = DECK_MEMORY_MASK_STARTED;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_IS_STARTED, buffer[DECK_0]);
@@ -183,11 +203,11 @@ void testOneDeckRequiresUpgrade() {
     // Fixture
     stockDeckProperties = DECK_MEMORY_MASK_UPGRADE_REQUIRED;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_UPGRADE_REQUIRED, buffer[DECK_0]);
@@ -197,11 +217,11 @@ void testOneDeckInBootloaderMode() {
     // Fixture
     stockDeckProperties = DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_BOOTLOADER_ACTIVE, buffer[DECK_0]);
@@ -211,11 +231,11 @@ void testOneDeckRequiredHash() {
     // Fixture
     stockMemDef.requiredHash = 0x12345678;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0x78, buffer[DECK_0 + 1]);
@@ -228,11 +248,11 @@ void testOneDeckRequiredLength() {
     // Fixture
     stockMemDef.requiredSize = 0x12345678;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0x78, buffer[DECK_0 + 5]);
@@ -243,14 +263,13 @@ void testOneDeckRequiredLength() {
 
 void testBaseAddressSecondDeck() {
     // Fixture
-    deckCount_ExpectAndReturn(2);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
-    deckInfo_ExpectAndReturn(1, &stockInfo);
+    deckCount_IgnoreAndReturn(2);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     uint32_t expected = DECK_MEM_SIZE * 2;
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemReadWrapper(0, BUF_SIZE, buffer);
 
     // Assert
     uint32_t actual = 0;
@@ -263,11 +282,11 @@ void testReadOfFiveFirstBytes() {
     // Fixture
     stockMemDef.requiredHash = 0x12345678;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(0, 5, buffer);
+    handleMemReadWrapper(0, 5, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(1, buffer[0]);      // Version
@@ -281,11 +300,11 @@ void testReadNotFromZero() {
     // Fixture
     stockMemDef.requiredHash = 0x12345678;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(3, 2, buffer);
+    handleMemReadWrapper(3, 2, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT32(0x56, buffer[0]);  // Required hash
@@ -296,11 +315,11 @@ void testReadOfFiveFirstBytesFromThirdDeck() {
     // Fixture
     stockMemDef.requiredHash = 0x12345678;
 
-    deckCount_ExpectAndReturn(3);
-    deckInfo_ExpectAndReturn(2, &stockInfo);
+    deckCount_IgnoreAndReturn(3);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(DECK_2, 5, buffer);
+    handleMemReadWrapper(DECK_2, 5, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT32(1, buffer[0]);     // valid bit
@@ -317,12 +336,12 @@ void testReadPartOfSecondAndThirdDeck() {
 
     stockMemDef.requiredHash = 0x12345678;
 
-    deckCount_ExpectAndReturn(3);
-    deckInfo_ExpectAndReturn(1, &deckNoMem);
-    deckInfo_ExpectAndReturn(2, &stockInfo);
+    deckCount_IgnoreAndReturn(3);
+    deckInfo_IgnoreAndReturn(&deckNoMem);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    handleMemRead(DECK_2 - 1, 5, buffer);
+    handleMemReadWrapper(DECK_2 - 1, 5, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT32(0, buffer[0]);     // last byte of deck 2
@@ -336,11 +355,11 @@ void testReadFromDeck() {
     // Fixture
     stockMemDef.read = mockRead;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_SIZE + 100, 30, buffer);
+    bool actual = handleMemReadWrapper(DECK_MEM_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(read_isCalled);
@@ -353,11 +372,11 @@ void testReadFromDeckWithoutReadFunction() {
     // Fixture
     stockMemDef.read = 0;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_SIZE + 100, 30, buffer);
+    bool actual = handleMemReadWrapper(DECK_MEM_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_FALSE(read_isCalled);
@@ -366,10 +385,10 @@ void testReadFromDeckWithoutReadFunction() {
 
 void testReadFromNonExistingDeck() {
     // Fixture
-    deckCount_ExpectAndReturn(0);
+    deckCount_IgnoreAndReturn(0);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_SIZE + 100, 30, buffer);
+    bool actual = handleMemReadWrapper(DECK_MEM_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_FALSE(read_isCalled);
@@ -380,8 +399,8 @@ void testWriteToDeck() {
     // Fixture
     stockMemDef.write = mockWrite;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
     bool actual = handleMemWrite(DECK_MEM_SIZE + 100, 30, buffer);
@@ -397,8 +416,8 @@ void testWriteToDeckWithoutWriteFunction() {
     // Fixture
     stockMemDef.write = 0;
 
-    deckCount_ExpectAndReturn(1);
-    deckInfo_ExpectAndReturn(0, &stockInfo);
+    deckCount_IgnoreAndReturn(1);
+    deckInfo_IgnoreAndReturn(&stockInfo);
 
     // Test
     bool actual = handleMemWrite(DECK_MEM_SIZE + 100, 30, buffer);
@@ -410,7 +429,7 @@ void testWriteToDeckWithoutWriteFunction() {
 
 void testWriteToNonExistingDeck() {
     // Fixture
-    deckCount_ExpectAndReturn(0);
+    deckCount_IgnoreAndReturn(0);
 
     // Test
     bool actual = handleMemWrite(DECK_MEM_SIZE + 100, 30, buffer);
