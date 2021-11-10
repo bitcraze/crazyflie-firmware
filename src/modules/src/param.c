@@ -37,6 +37,7 @@
 #include "console.h"
 #include "debug.h"
 #include "static_mem.h"
+#include "storage.h"
 
 #if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
@@ -70,8 +71,14 @@ static const uint8_t typeLength[] = {
 #define CMD_GET_ITEM_V2 2 // version 2: up to 16k entries
 #define CMD_GET_INFO_V2 3 // version 2: up to 16k entries
 
-#define MISC_SETBYNAME 0
-#define MISC_VALUE_UPDATED 1
+#define MISC_SETBYNAME            0
+#define MISC_VALUE_UPDATED        1
+
+#define MISC_GET_EXTENDED_TYPE    2
+#define MISC_PERSISTENT_STORE     3
+#define MISC_PERSISTENT_GET_STATE 4
+#define MISC_PERSISTENT_CLEAR     5
+#define PERSISTENT_PREFIX_STRING "prm/"
 
 //Private functions
 static void paramTask(void * prm);
@@ -87,6 +94,13 @@ static void paramWriteProcess();
 static void paramReadProcess();
 static int variableGetIndex(int id);
 static char paramWriteByNameProcess(char* group, char* name, int type, void *valptr);
+
+static void paramSetByName();
+static void paramGetExtendedType();
+static void paramPersistentStore();
+static void paramPersistentGetState();
+static void paramPersistentClear();
+
 
 //Pointer to the parameters list and length of it
 static struct param_s * params;
@@ -160,6 +174,16 @@ void paramInit(void)
 
 bool paramTest(void)
 {
+
+//  p.data[0] = 0x00;
+//  p.data[1] = 0x00;
+//  p.data[2] = 0x00;
+//  p.data[3] = 0x00;
+//  paramGetExtendedType();
+//  paramPersistentStore();
+//  paramPersistentGetState();
+//  paramPersistentClear();
+
   return isInit;
 }
 
@@ -177,32 +201,24 @@ void paramTask(void * prm)
 		else if (p.channel==WRITE_CH)
 		  paramWriteProcess();
     else if (p.channel==MISC_CH) {
-      if (p.data[0] == MISC_SETBYNAME) {
-        int i, nzero = 0;
-        char *group;
-        char *name;
-        uint8_t type;
-        void * valPtr;
-        int error;
-
-        // If the packet contains at least 2 zeros in the first 28 bytes
-        // The packet decoding algorithm will not crash
-        for (i=0; i<CRTP_MAX_DATA_SIZE; i++) {
-          if (p.data[i] == '\0') nzero++;
-        }
-
-        if (nzero < 2) return;
-
-        group = (char*)&p.data[1];
-        name = (char*)&p.data[1+strlen(group)+1];
-        type = p.data[1+strlen(group)+1+strlen(name)+1];
-        valPtr = &p.data[1+strlen(group)+1+strlen(name)+2];
-
-        error = paramWriteByNameProcess(group, name, type, valPtr);
-
-        p.data[1+strlen(group)+1+strlen(name)+1] = error;
-        p.size = 1+strlen(group)+1+strlen(name)+1+1;
-        crtpSendPacketBlock(&p);
+      switch (p.data[0]) {
+        case MISC_SETBYNAME:
+          paramSetByName();
+          break;
+        case MISC_GET_EXTENDED_TYPE:
+          paramGetExtendedType();
+          break;
+        case MISC_PERSISTENT_STORE:
+          paramPersistentStore();
+          break;
+        case MISC_PERSISTENT_GET_STATE:
+          paramPersistentGetState();
+          break;
+        case MISC_PERSISTENT_CLEAR:
+          paramPersistentClear();
+          break;
+        default:
+          break;
       }
     }
 	}
@@ -225,9 +241,9 @@ void paramTOCProcess(int command)
     p.size=6;
     p.data[0]=CMD_GET_INFO;
     if (paramsCount < 255) {
-      p.data[1]=paramsCount;
+      p.data[1] = (uint8_t)paramsCount;
     } else {
-      p.data[1]=255;
+      p.data[1] = 255;
     }
     memcpy(&p.data[2], &paramsCrc, 4);
     crtpSendPacketBlock(&p);
@@ -303,8 +319,8 @@ void paramTOCProcess(int command)
       p.header=CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);
       p.data[0]=CMD_GET_ITEM_V2;
       memcpy(&p.data[1], &paramId, 2);
-      p.data[3]=params[ptr].type;
-      p.size=4+2+strlen(group)+strlen(params[ptr].name);
+      p.data[3] = params[ptr].type;
+      p.size = 4 + 2 + strlen(group) + strlen(params[ptr].name);
       ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
       memcpy(p.data+4, group, strlen(group)+1);
       memcpy(p.data+4+strlen(group)+1, params[ptr].name, strlen(params[ptr].name)+1);
@@ -322,15 +338,15 @@ void paramTOCProcess(int command)
 static void paramWriteProcess()
 {
   if (useV2) {
-    uint16_t ident;
-    memcpy(&ident, &p.data[0], 2);
+    uint16_t id;
+    memcpy(&id, &p.data[0], 2);
 
     void* valptr = &p.data[2];
-    int id;
+    int index;
 
-    id = variableGetIndex(ident);
+    index = variableGetIndex(id);
 
-    if (id<0) {
+    if (index < 0) {
       p.data[2] = ENOENT;
       p.size = 3;
 
@@ -338,41 +354,41 @@ static void paramWriteProcess()
       return;
     }
 
-    if (params[id].type & PARAM_RONLY)
+    if (params[index].type & PARAM_RONLY)
       return;
 
-    switch (params[id].type & PARAM_BYTES_MASK)
+    switch (params[index].type & PARAM_BYTES_MASK)
     {
     case PARAM_1BYTE:
-      *(uint8_t*)params[id].address = *(uint8_t*)valptr;
+      *(uint8_t*)params[index].address = *(uint8_t*)valptr;
       break;
       case PARAM_2BYTES:
-        *(uint16_t*)params[id].address = *(uint16_t*)valptr;
+        *(uint16_t*)params[index].address = *(uint16_t*)valptr;
         break;
     case PARAM_4BYTES:
-        *(uint32_t*)params[id].address = *(uint32_t*)valptr;
+        *(uint32_t*)params[index].address = *(uint32_t*)valptr;
         break;
     case PARAM_8BYTES:
-        *(uint64_t*)params[id].address = *(uint64_t*)valptr;
+        *(uint64_t*)params[index].address = *(uint64_t*)valptr;
         break;
     }
 
     crtpSendPacketBlock(&p);
 
-    if (params[id].callback) {
-      params[id].callback();
+    if (params[index].callback) {
+      params[index].callback();
     }
 
   } else {
-    int ident = p.data[0];
+    int id = p.data[0];
     void* valptr = &p.data[1];
-    int id;
+    int index;
 
-    id = variableGetIndex(ident);
+    index = variableGetIndex(id);
 
-    if (id<0) {
+    if (index<0) {
       p.data[0] = -1;
-      p.data[1] = ident;
+      p.data[1] = id;
       p.data[2] = ENOENT;
       p.size = 3;
 
@@ -380,22 +396,22 @@ static void paramWriteProcess()
       return;
     }
 
-  	if (params[id].type & PARAM_RONLY)
+  	if (params[index].type & PARAM_RONLY)
   		return;
 
-    switch (params[id].type & PARAM_BYTES_MASK)
+    switch (params[index].type & PARAM_BYTES_MASK)
     {
    	case PARAM_1BYTE:
-   		*(uint8_t*)params[id].address = *(uint8_t*)valptr;
+   		*(uint8_t*)params[index].address = *(uint8_t*)valptr;
    		break;
       case PARAM_2BYTES:
-    	  *(uint16_t*)params[id].address = *(uint16_t*)valptr;
+    	  *(uint16_t*)params[index].address = *(uint16_t*)valptr;
         break;
    	case PARAM_4BYTES:
-        *(uint32_t*)params[id].address = *(uint32_t*)valptr;
+        *(uint32_t*)params[index].address = *(uint32_t*)valptr;
         break;
    	case PARAM_8BYTES:
-        *(uint64_t*)params[id].address = *(uint64_t*)valptr;
+        *(uint64_t*)params[index].address = *(uint64_t*)valptr;
         break;
     }
 
@@ -404,50 +420,50 @@ static void paramWriteProcess()
 }
 
 static char paramWriteByNameProcess(char* group, char* name, int type, void *valptr) {
-  int ptr;
+  int index;
   char *pgroup = "";
 
-  for (ptr=0; ptr<paramsLen; ptr++) //Ptr points a group
+  for (index = 0; index < paramsLen; index++) //Ptr points a group
   {
-    if (params[ptr].type & PARAM_GROUP)
+    if (params[index].type & PARAM_GROUP)
     {
-      if (params[ptr].type & PARAM_START)
-        pgroup = params[ptr].name;
+      if (params[index].type & PARAM_START)
+        pgroup = params[index].name;
       else
         pgroup = "";
     }
     else                          //Ptr points a variable
     {
-      if (!strcmp(params[ptr].name, name) && !strcmp(pgroup, group))
+      if (!strcmp(params[index].name, name) && !strcmp(pgroup, group))
         break;
     }
   }
 
-  if (ptr >= paramsLen) {
+  if (index >= paramsLen) {
     return ENOENT;
   }
 
-  if (type != (params[ptr].type & (~(PARAM_CORE | PARAM_RONLY)))) {
+  if (type != (params[index].type & (~(PARAM_CORE | PARAM_RONLY)))) {
     return EINVAL;
   }
 
-  if (params[ptr].type & PARAM_RONLY) {
+  if (params[index].type & PARAM_RONLY) {
     return EACCES;
   }
 
-  switch (params[ptr].type & PARAM_BYTES_MASK)
+  switch (params[index].type & PARAM_BYTES_MASK)
   {
  	case PARAM_1BYTE:
- 		*(uint8_t*)params[ptr].address = *(uint8_t*)valptr;
+ 		*(uint8_t*)params[index].address = *(uint8_t*)valptr;
  		break;
     case PARAM_2BYTES:
-  	  *(uint16_t*)params[ptr].address = *(uint16_t*)valptr;
+  	  *(uint16_t*)params[index].address = *(uint16_t*)valptr;
       break;
  	case PARAM_4BYTES:
-      *(uint32_t*)params[ptr].address = *(uint32_t*)valptr;
+      *(uint32_t*)params[index].address = *(uint32_t*)valptr;
       break;
  	case PARAM_8BYTES:
-      *(uint64_t*)params[ptr].address = *(uint64_t*)valptr;
+      *(uint64_t*)params[index].address = *(uint64_t*)valptr;
       break;
   }
 
@@ -457,11 +473,11 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
 static void paramReadProcess()
 {
   if (useV2) {
-    uint16_t ident;
-    memcpy(&ident, &p.data[0], 2);
-    int id = variableGetIndex(ident);
+    uint16_t id;
+    memcpy(&id, &p.data[0], 2);
+    int index = variableGetIndex(id);
 
-    if (id<0) {
+    if (index<0) {
       p.data[2] = ENOENT;
       p.size = 3;
 
@@ -470,33 +486,33 @@ static void paramReadProcess()
     }
 
     p.data[2] = 0;
-    switch (params[id].type & PARAM_BYTES_MASK)
+    switch (params[index].type & PARAM_BYTES_MASK)
     {
-    case PARAM_1BYTE:
-        memcpy(&p.data[3], params[id].address, sizeof(uint8_t));
+      case PARAM_1BYTE:
+        memcpy(&p.data[3], params[index].address, sizeof(uint8_t));
         p.size = 3+sizeof(uint8_t);
         break;
       break;
       case PARAM_2BYTES:
-        memcpy(&p.data[3], params[id].address, sizeof(uint16_t));
+        memcpy(&p.data[3], params[index].address, sizeof(uint16_t));
         p.size = 3+sizeof(uint16_t);
         break;
       case PARAM_4BYTES:
-        memcpy(&p.data[3], params[id].address, sizeof(uint32_t));
+        memcpy(&p.data[3], params[index].address, sizeof(uint32_t));
         p.size = 3+sizeof(uint32_t);
         break;
       case PARAM_8BYTES:
-        memcpy(&p.data[3], params[id].address, sizeof(uint64_t));
+        memcpy(&p.data[3], params[index].address, sizeof(uint64_t));
         p.size = 3+sizeof(uint64_t);
         break;
     }
   } else {
-    uint8_t ident = p.data[0];
-    int id = variableGetIndex(ident);
+    uint8_t id = p.data[0];
+    int index = variableGetIndex(id);
 
-    if (id<0) {
+    if (index < 0) {
       p.data[0] = -1;
-      p.data[1] = ident;
+      p.data[1] = id;
       p.data[2] = ENOENT;
       p.size = 3;
 
@@ -504,23 +520,23 @@ static void paramReadProcess()
       return;
     }
 
-    switch (params[id].type & PARAM_BYTES_MASK)
+    switch (params[index].type & PARAM_BYTES_MASK)
     {
-   	case PARAM_1BYTE:
-     		memcpy(&p.data[1], params[id].address, sizeof(uint8_t));
+      case PARAM_1BYTE:
+     		memcpy(&p.data[1], params[index].address, sizeof(uint8_t));
      		p.size = 1+sizeof(uint8_t);
      		break;
    		break;
       case PARAM_2BYTES:
-     		memcpy(&p.data[1], params[id].address, sizeof(uint16_t));
+     		memcpy(&p.data[1], params[index].address, sizeof(uint16_t));
      		p.size = 1+sizeof(uint16_t);
      		break;
       case PARAM_4BYTES:
-        memcpy(&p.data[1], params[id].address, sizeof(uint32_t));
+        memcpy(&p.data[1], params[index].address, sizeof(uint32_t));
      		p.size = 1+sizeof(uint32_t);
      		break;
    	  case PARAM_8BYTES:
-        memcpy(&p.data[1], params[id].address, sizeof(uint64_t));
+        memcpy(&p.data[1], params[index].address, sizeof(uint64_t));
      		p.size = 1+sizeof(uint64_t);
      		break;
     }
@@ -532,19 +548,20 @@ static void paramReadProcess()
 static int variableGetIndex(int id)
 {
   int i;
-  int n=0;
+  int n = 0;
 
-  for (i=0; i<paramsLen; i++)
+  for (i = 0; i < paramsLen; i++)
   {
     if(!(params[i].type & PARAM_GROUP))
     {
-      if(n==id)
+      if(n == id) {
         break;
+      }
       n++;
     }
   }
 
-  if (i>=paramsLen)
+  if (i >= paramsLen)
     return -1;
 
   return i;
@@ -555,23 +572,23 @@ static paramVarId_t invalidVarId = {0xffffu, 0xffffu};
 
 paramVarId_t paramGetVarId(const char* group, const char* name)
 {
-  int ptr;
-  int id = 0;
+  uint16_t index;
+  uint16_t id = 0;
   paramVarId_t varId = invalidVarId;
   char * currgroup = "";
 
-  for(ptr=0; ptr<paramsLen; ptr++)
+  for(index = 0; index < paramsLen; index++)
   {
-    if (params[ptr].type & PARAM_GROUP) {
-      if (params[ptr].type & PARAM_START) {
-        currgroup = params[ptr].name;
+    if (params[index].type & PARAM_GROUP) {
+      if (params[index].type & PARAM_START) {
+        currgroup = params[index].name;
       }
     } else {
       id += 1;
     }
     
-    if ((!strcmp(group, currgroup)) && (!strcmp(name, params[ptr].name))) {
-      varId.ptr = ptr;
+    if ((!strcmp(group, currgroup)) && (!strcmp(name, params[index].name))) {
+      varId.index = index;
       varId.id = id - 1;
       return varId;
     }
@@ -582,7 +599,7 @@ paramVarId_t paramGetVarId(const char* group, const char* name)
 
 int paramGetType(paramVarId_t varid)
 {
-  return params[varid.ptr].type;
+  return params[varid.index].type;
 }
 
 void paramGetGroupAndName(paramVarId_t varid, char** group, char** name)
@@ -591,16 +608,16 @@ void paramGetGroupAndName(paramVarId_t varid, char** group, char** name)
   *group = 0;
   *name = 0;
 
-  for(int i=0; i<paramsLen; i++) {
-    if (params[i].type & PARAM_GROUP) {
-      if (params[i].type & PARAM_START) {
-        currgroup = params[i].name;
+  for(int index = 0; index < paramsLen; index++) {
+    if (params[index].type & PARAM_GROUP) {
+      if (params[index].type & PARAM_START) {
+        currgroup = params[index].name;
       }
     }
 
-    if (i == varid.ptr) {
+    if (index == varid.index) {
       *group = currgroup;
-      *name = params[i].name;
+      *name = params[index].name;
       break;
     }
   }
@@ -617,28 +634,28 @@ int paramGetInt(paramVarId_t varid)
 
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  switch(params[varid.ptr].type & (~(PARAM_CORE | PARAM_RONLY)))
+  switch(params[varid.index].type & (~(PARAM_CORE | PARAM_RONLY)))
   {
     case PARAM_UINT8:
-      valuei = *(uint8_t *)params[varid.ptr].address;
+      valuei = *(uint8_t *)params[varid.index].address;
       break;
     case PARAM_INT8:
-      valuei = *(int8_t *)params[varid.ptr].address;
+      valuei = *(int8_t *)params[varid.index].address;
       break;
     case PARAM_UINT16:
-      valuei = *(uint16_t *)params[varid.ptr].address;
+      valuei = *(uint16_t *)params[varid.index].address;
       break;
     case PARAM_INT16:
-      valuei = *(int16_t *)params[varid.ptr].address;
+      valuei = *(int16_t *)params[varid.index].address;
       break;
     case PARAM_UINT32:
-      valuei = *(uint32_t *)params[varid.ptr].address;
+      valuei = *(uint32_t *)params[varid.index].address;
       break;
     case PARAM_INT32:
-      valuei = *(int32_t *)params[varid.ptr].address;
+      valuei = *(int32_t *)params[varid.index].address;
       break;
     case PARAM_FLOAT:
-      valuei = *(float *)params[varid.ptr].address;
+      valuei = *(float *)params[varid.index].address;
       break;
   }
 
@@ -649,10 +666,10 @@ float paramGetFloat(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  if ((params[varid.ptr].type & (~(PARAM_CORE | PARAM_RONLY))) == PARAM_FLOAT)
-    return *(float *)params[varid.ptr].address;
+  if ((params[varid.index].type & (~(PARAM_CORE | PARAM_RONLY))) == PARAM_FLOAT)
+    return *(float *)params[varid.index].address;
 
-  return paramGetInt(varid);
+  return (float)paramGetInt(varid);
 }
 
 unsigned int paramGetUint(paramVarId_t varid)
@@ -669,43 +686,43 @@ void paramSetInt(paramVarId_t varid, int valuei)
   pk.data[0] = MISC_VALUE_UPDATED;
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size=3;
+  pk.size = 3;
 
-  switch(params[varid.ptr].type & (~PARAM_CORE))
+  switch(params[varid.index].type & (~PARAM_CORE))
   {
     case PARAM_UINT8:
-      *(uint8_t *)params[varid.ptr].address = (uint8_t) valuei;
+      *(uint8_t *)params[varid.index].address = (uint8_t) valuei;
       memcpy(&pk.data[2], &valuei, 1);
       pk.size += 1;
       break;
     case PARAM_INT8:
-      *(int8_t *)params[varid.ptr].address = (int8_t) valuei;
+      *(int8_t *)params[varid.index].address = (int8_t) valuei;
       memcpy(&pk.data[2], &valuei, 1);
       pk.size += 1;
       break;
     case PARAM_UINT16:
-      *(uint16_t *)params[varid.ptr].address = (uint16_t) valuei;
+      *(uint16_t *)params[varid.index].address = (uint16_t) valuei;
       memcpy(&pk.data[2], &valuei, 2);
       pk.size += 2;
       break;
     case PARAM_INT16:
-      *(int16_t *)params[varid.ptr].address = (int16_t) valuei;
+      *(int16_t *)params[varid.index].address = (int16_t) valuei;
       memcpy(&pk.data[2], &valuei, 2);
       pk.size += 2;
       break;
     case PARAM_UINT32:
-      *(uint32_t *)params[varid.ptr].address = (uint32_t) valuei;
+      *(uint32_t *)params[varid.index].address = (uint32_t) valuei;
       memcpy(&pk.data[2], &valuei, 4);
       pk.size += 4;
       break;
     case PARAM_INT32:
-      *(int32_t *)params[varid.ptr].address = (int32_t) valuei;
+      *(int32_t *)params[varid.index].address = (int32_t) valuei;
       memcpy(&pk.data[2], &valuei, 4);
       pk.size += 4;
       break;
     case PARAM_FLOAT:
     // Todo: are floats handy to have here?
-      *(float *)params[varid.ptr].address = (float) valuei;
+      *(float *)params[varid.index].address = (float) valuei;
       memcpy(&pk.data[2], &valuei, 4);
       pk.size += 4;
 
@@ -728,8 +745,8 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size=3;
 
-  if ((params[varid.ptr].type & (~PARAM_CORE)) == PARAM_FLOAT) {
-      *(float *)params[varid.ptr].address = valuef;
+  if ((params[varid.index].type & (~PARAM_CORE)) == PARAM_FLOAT) {
+      *(float *)params[varid.index].address = valuef;
 
       memcpy(&pk.data[2], &valuef, 4);
       pk.size += 4;
@@ -739,3 +756,229 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   crtpSendPacketBlock(&pk);
 #endif
 }
+
+static void paramSetByName()
+{
+  int i, nzero = 0;
+  char *group;
+  char *name;
+  uint8_t type;
+  void * valPtr;
+  int error;
+
+  // If the packet contains at least 2 zeros in the first 28 bytes
+  // The packet decoding algorithm will not crash
+  for (i = 0; i < CRTP_MAX_DATA_SIZE; i++) {
+    if (p.data[i] == '\0') nzero++;
+  }
+
+  if (nzero < 2) return;
+
+  group = (char*)&p.data[1];
+  name = (char*)&p.data[1 + strlen(group) + 1];
+  type = p.data[1 + strlen(group) + 1 + strlen(name) + 1];
+  valPtr = &p.data[1 + strlen(group) + 1 + strlen(name) + 2];
+
+  error = paramWriteByNameProcess(group, name, type, valPtr);
+
+  p.data[1 + strlen(group) + 1 + strlen(name) + 1] = error;
+  p.size = 1 + strlen(group) + 1 + strlen(name) + 1 + 1;
+  crtpSendPacketBlock(&p);
+
+}
+
+#define KEY_LEN 30  // FIXME
+
+static void paramGetExtendedType()
+{
+  int index;
+  uint16_t id;
+
+  memcpy(&id, &p.data[1], 2);
+  index = variableGetIndex(id);
+
+  if (index < 0 || !(params[index].type | PARAM_EXTENDED)) {
+    p.data[3] = ENOENT;
+    p.size = 4;
+    crtpSendPacketBlock(&p);
+    return;
+  }
+
+  p.data[3] = params[index].extended_type;
+  p.size = 4;
+
+  crtpSendPacketBlock(&p);
+}
+
+
+static void paramPersistentStore()
+{
+  int index;
+  char *group;
+  char *name;
+  uint16_t id;
+  bool result = true;
+  paramVarId_t paramId;
+
+  memcpy(&id, &p.data[1], 2);
+  index = variableGetIndex(id);
+
+  if (index < 0 || !params[index].getter) {
+    p.data[3] = ENOENT;
+    p.size = 4;
+    crtpSendPacketBlock(&p);
+    return;
+  }
+
+  paramId.index = (uint16_t)index;
+  paramGetGroupAndName(paramId, &group, &name);
+
+  // Assemble key string, e.g. "prm/pid_rate.kp"
+  char key[KEY_LEN] = {0};
+  strcpy(&key, PERSISTENT_PREFIX_STRING);
+  strcat(&key, group);
+  strcat(&key, ".");
+  strcat(&key, name);
+
+  switch (params[index].type & PARAM_BYTES_MASK) {
+    case PARAM_1BYTE:
+      result = storageStore(key, params[index].address, 1);
+      break;
+    case PARAM_2BYTES:
+      result = storageStore(key, params[index].address, 2);
+      break;
+    case PARAM_4BYTES:
+      result = storageStore(key, params[index].address, 4);
+      break;
+    case PARAM_8BYTES:
+      result = storageStore(key, params[index].address, 8);
+      break;
+  }
+
+  p.data[3] = result ? 0: ENOENT;
+  p.size = 4;
+  crtpSendPacketBlock(&p);
+}
+
+static void paramPersistentGetState()
+{
+  int index;
+  char *group;
+  char *name;
+  uint16_t id;
+  paramVarId_t paramId;
+  uint8_t value[8];
+
+  memcpy(&id, &p.data[1], 2);
+  index = variableGetIndex(id);
+
+  if (index < 0 || !params[index].getter) {
+    p.data[3] = ENOENT;
+    p.size = 4;
+
+    crtpSendPacketBlock(&p);
+    return;
+  }
+
+  paramId.index = index;
+  paramGetGroupAndName(paramId, &group, &name);
+
+  // Assemble key string, e.g. "prm/pid_rate.kp"
+  uint8_t key[KEY_LEN] = {0};
+  strcpy(&key, PERSISTENT_PREFIX_STRING);
+  strcat(&key, group);
+  strcat(&key, ".");
+  strcat(&key, name);
+
+  if (storageFetch(key, &value, 8)) {
+    p.data[3] = params[index].extended_type;
+    p.size = 4;
+    switch (params[index].type & PARAM_BYTES_MASK)
+    {
+      case PARAM_1BYTE:
+        memcpy(&p.data[4], &value, sizeof(uint8_t));
+        memcpy(&p.data[5], params[index].getter(), sizeof(uint8_t));
+        p.size += 2 * sizeof(uint8_t);
+        break;
+      break;
+      case PARAM_2BYTES:
+        memcpy(&p.data[4], &value, sizeof(uint16_t));
+        memcpy(&p.data[6], params[index].getter(), sizeof(uint16_t));
+        p.size += 2 * sizeof(uint16_t);
+        break;
+      case PARAM_4BYTES:
+        memcpy(&p.data[4], &value, sizeof(uint32_t));
+        memcpy(&p.data[8], params[index].getter(), sizeof(uint32_t));
+        p.size += 2 * sizeof(uint32_t);
+        break;
+      case PARAM_8BYTES:
+        memcpy(&p.data[4], &value, sizeof(uint64_t));
+        memcpy(&p.data[12], params[index].getter(), sizeof(uint64_t));
+        p.size += 2 * sizeof(uint64_t);
+        break;
+    }
+  } else {
+    p.data[3] = 0; // Value is not stored
+    p.size = 4;
+    switch (params[index].type & PARAM_BYTES_MASK)
+    {
+      case PARAM_1BYTE:
+        memcpy(&p.data[5], params[index].getter(), sizeof(uint8_t));
+        p.size += sizeof(uint8_t);
+        break;
+      break;
+      case PARAM_2BYTES:
+        memcpy(&p.data[6], params[index].getter(), sizeof(uint16_t));
+        p.size += sizeof(uint16_t);
+        break;
+      case PARAM_4BYTES:
+        memcpy(&p.data[8], params[index].getter(), sizeof(uint32_t));
+        p.size += sizeof(uint32_t);
+        break;
+      case PARAM_8BYTES:
+        memcpy(&p.data[12], params[index].getter(), sizeof(uint64_t));
+        p.size += sizeof(uint64_t);
+        break;
+    }
+  }
+
+  crtpSendPacketBlock(&p);
+}
+
+static void paramPersistentClear()
+{
+  int index;
+  char *group;
+  char *name;
+  uint16_t id;
+  bool result = true;
+  paramVarId_t paramId;
+
+  memcpy(&id, &p.data[1], 2);
+  index = variableGetIndex(id);
+
+  if (index < 0) {
+    p.data[3] = ENOENT;
+    p.size = 4;
+
+    crtpSendPacketBlock(&p);
+    return;
+  }
+
+  paramId.index = (uint16_t)index;
+  paramGetGroupAndName(paramId, &group, &name);
+
+  // Assemble key string, e.g. "prm/pid_rate.kp"
+  char key[KEY_LEN] = {0};
+  strcpy(&key, PERSISTENT_PREFIX_STRING);
+  strcat(&key, group);
+  strcat(&key, ".");
+  strcat(&key, name);
+
+  result = storageDelete(key);
+
+  p.data[3] = result ? 0: ENOENT;
+  p.size = 4;
+  crtpSendPacketBlock(&p);
+}
+

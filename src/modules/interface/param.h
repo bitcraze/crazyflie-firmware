@@ -45,7 +45,7 @@ bool paramTest(void);
  */
 typedef struct paramVarId_s {
   uint16_t id;
-  uint16_t ptr;
+  uint16_t index;
 } __attribute__((packed)) paramVarId_t;
 
 /** Get the varId from group and name of variable
@@ -127,10 +127,18 @@ void paramSetFloat(paramVarId_t varid, float valuef);
 /* Basic parameter structure */
 struct param_s {
   uint8_t type;
+  uint8_t extended_type;
   char * name;
   void * address;
   void (*callback)(void);
+  void * (*getter)(void);
 };
+
+typedef uint8_t * (*paramGetterUInt8)(void);
+typedef uint16_t * (*paramGetterUInt16)(void);
+typedef uint32_t * (*paramGetterUInt32)(void);
+typedef uint64_t * (*paramGetterUInt64)(void);
+typedef float * (*paramGetterFloat)(void);
 
 #define PARAM_BYTES_MASK 0x03
 #define PARAM_1BYTE  0x00
@@ -147,7 +155,7 @@ struct param_s {
 #define PARAM_VARIABLE (0x00<<7)
 #define PARAM_GROUP    (0x01<<7)
 
-//#define PARAM_UNUSED (1<<4)
+#define PARAM_EXTENDED (1<<4)
 
 #define PARAM_CORE (1<<5)
 
@@ -157,6 +165,9 @@ struct param_s {
 #define PARAM_STOP  0
 
 #define PARAM_SYNC 0x02
+
+// Extended type bits
+#define PARAM_PERSISTENT (1 << 8)
 
 // User-friendly macros
 #define PARAM_UINT8 (PARAM_1BYTE | PARAM_TYPE_INT | PARAM_UNSIGNED)
@@ -172,11 +183,16 @@ struct param_s {
 #ifndef UNIT_TEST_MODE
 
 #define PARAM_ADD(TYPE, NAME, ADDRESS) \
-  { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), .callback = 0, },
+  PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, 0)
 
 // The callback notification function will run from the param task, it should not block and should run quickly.
 #define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
-  { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), .callback = (void *)CALLBACK, },
+    { .type = ((TYPE) <= 0xFF) ? (TYPE) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
+      .extended_type = (((TYPE) & 0xFF00) >> 8), \
+      .name = #NAME, \
+      .address = (void*)(ADDRESS), \
+      .callback = (void *)CALLBACK, \
+      .getter = 0, },
 
 #define PARAM_ADD_CORE(TYPE, NAME, ADDRESS) \
   PARAM_ADD(TYPE | PARAM_CORE, NAME, ADDRESS)
@@ -184,9 +200,17 @@ struct param_s {
 #define PARAM_ADD_CORE_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
   PARAM_ADD_WITH_CALLBACK(TYPE | PARAM_CORE, NAME, ADDRESS, CALLBACK)
 
+#define PARAM_ADD_PERSISTENT(TYPE, NAME, ADDRESS, DEFAULT_GETTER) \
+    { .type = ((TYPE) <= 0xFF) ? (TYPE) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
+      .extended_type = (((PARAM_PERSISTENT) & 0xFF00) >> 8), \
+      .name = #NAME, \
+      .address = (void*)(ADDRESS), \
+      .callback = 0, \
+      .getter = (void *)DEFAULT_GETTER, },
+
 #define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS) \
   { \
-  .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), .callback = 0, },
+  .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), .callback = 0, .getter = 0, },
 
 #define PARAM_GROUP_START(NAME)  \
   static const struct param_s __params_##NAME[] __attribute__((section(".param." #NAME), used)) = { \
