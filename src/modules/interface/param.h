@@ -30,6 +30,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <crtp.h>
+
 /* Public functions */
 void paramInit(void);
 bool paramTest(void);
@@ -182,20 +184,37 @@ typedef float * (*paramGetterFloat)(void);
 
 #define PARAM_FLOAT (PARAM_4BYTES | PARAM_TYPE_FLOAT | PARAM_SIGNED)
 
+// CRTP
+#define TOC_CH 0
+#define READ_CH 1
+#define WRITE_CH 2
+#define MISC_CH 3
+// CRTP Misc
+#define MISC_SETBYNAME            0
+#define MISC_VALUE_UPDATED        1
+#define MISC_GET_EXTENDED_TYPE    2
+#define MISC_PERSISTENT_STORE     3
+#define MISC_PERSISTENT_GET_STATE 4
+#define MISC_PERSISTENT_CLEAR     5
+#define PERSISTENT_PREFIX_STRING "prm/"
+
 /* Macros */
 #ifndef UNIT_TEST_MODE
 
-#define PARAM_ADD(TYPE, NAME, ADDRESS) \
-  PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, 0)
-
-// The callback notification function will run from the param task, it should not block and should run quickly.
-#define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+#define PARAM_ADD_FULL(TYPE, NAME, ADDRESS, CALLBACK, DEFAULT_GETTER) \
     { .type = ((TYPE) <= 0xFF) ? (TYPE) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
-      .extended_type = (((TYPE) & 0xFF00) >> 8), \
+      .extended_type = (((PARAM_PERSISTENT) & 0xFF00) >> 8), \
       .name = #NAME, \
       .address = (void*)(ADDRESS), \
       .callback = (void *)CALLBACK, \
-      .getter = 0, },
+      .getter = (void *)DEFAULT_GETTER, },
+
+#define PARAM_ADD(TYPE, NAME, ADDRESS) \
+    PARAM_ADD_FULL(TYPE, NAME, ADDRESS, 0, 0)
+
+// The callback notification function will run from the param task, it should not block and should run quickly.
+#define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+    PARAM_ADD_FULL(TYPE, NAME, ADDRESS, CALLBACK, 0)
 
 #define PARAM_ADD_CORE(TYPE, NAME, ADDRESS) \
   PARAM_ADD(TYPE | PARAM_CORE, NAME, ADDRESS)
@@ -204,12 +223,7 @@ typedef float * (*paramGetterFloat)(void);
   PARAM_ADD_WITH_CALLBACK(TYPE | PARAM_CORE, NAME, ADDRESS, CALLBACK)
 
 #define PARAM_ADD_PERSISTENT(TYPE, NAME, ADDRESS, DEFAULT_GETTER) \
-    { .type = ((TYPE) <= 0xFF) ? (TYPE) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
-      .extended_type = (((PARAM_PERSISTENT) & 0xFF00) >> 8), \
-      .name = #NAME, \
-      .address = (void*)(ADDRESS), \
-      .callback = 0, \
-      .getter = (void *)DEFAULT_GETTER, },
+    PARAM_ADD_FULL(TYPE | PARAM_EXTENDED, NAME, ADDRESS, 0, DEFAULT_GETTER)
 
 #define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS) \
   { \
@@ -242,5 +256,18 @@ typedef float * (*paramGetterFloat)(void);
  * to be stable over time.
  *
  * @defgroup PARAM_CORE_GROUP */
+
+
+void paramLogicInit();
+//The following two function SHALL NOT be called outside paramTask!
+void paramWriteProcess(CRTPPacket *p);
+void paramReadProcess(CRTPPacket *p);
+void paramTOCProcess(CRTPPacket *p, int command);
+
+void paramSetByName(CRTPPacket *p);
+void paramGetExtendedType(CRTPPacket *p);
+void paramPersistentStore(CRTPPacket *p);
+void paramPersistentGetState(CRTPPacket *p);
+void paramPersistentClear(CRTPPacket *p);
 
 #endif /* __PARAM_H__ */
