@@ -117,6 +117,46 @@ static bool isInit = false;
 
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(paramTask, PARAM_TASK_STACKSIZE);
 
+// _sdata is from linker script and points to start of data section
+extern int _sdata;
+extern int _edata;
+// sidata is from linker script and points to start of initialization data flash section
+extern int _sidata;
+// _stext is from linker script and points to start of flash section
+extern int _stext;
+extern int _etext;
+static const uint64_t dummyZero64 = 0;
+
+static void * paramGetDefault(int index)
+{
+  uint32_t valueRelative;
+  uint32_t address;
+  void *ptrDefaultValue;
+
+  address = (uint32_t)(params[index].address);
+
+  // Is variable in data section?
+  if (address >= (uint32_t)&_sdata &&
+      address <= (uint32_t)&_edata)
+  {
+    valueRelative =  address - (uint32_t)&_sdata;
+    ptrDefaultValue = (void *)((uint32_t)&_sidata + valueRelative);
+  }
+  // Is variable in flash section?
+  else if (address >= (uint32_t)&_stext &&
+           address <= (uint32_t)&_etext)
+  {
+    ptrDefaultValue = (void *)(address);
+  }
+  // It is zero
+  else
+  {
+    ptrDefaultValue = (void *)&dummyZero64;
+  }
+
+  return ptrDefaultValue;
+}
+
 void paramInit(void)
 {
   int i;
@@ -183,6 +223,8 @@ bool paramTest(void)
 //  paramPersistentStore();
 //  paramPersistentGetState();
 //  paramPersistentClear();
+
+//  paramGetDefault(1);
 
   return isInit;
 }
@@ -797,7 +839,7 @@ static void paramGetExtendedType()
   memcpy(&id, &p.data[1], 2);
   index = variableGetIndex(id);
 
-  if (index < 0 || !(params[index].type | PARAM_EXTENDED)) {
+  if (index < 0 || !(params[index].type & PARAM_EXTENDED)) {
     p.data[3] = ENOENT;
     p.size = 4;
     crtpSendPacketBlock(&p);
@@ -823,7 +865,7 @@ static void paramPersistentStore()
   memcpy(&id, &p.data[1], 2);
   index = variableGetIndex(id);
 
-  if (index < 0 || !params[index].getter) {
+  if (index < 0) {
     p.data[3] = ENOENT;
     p.size = 4;
     crtpSendPacketBlock(&p);
@@ -835,10 +877,10 @@ static void paramPersistentStore()
 
   // Assemble key string, e.g. "prm/pid_rate.kp"
   char key[KEY_LEN] = {0};
-  strcpy(&key, PERSISTENT_PREFIX_STRING);
-  strcat(&key, group);
-  strcat(&key, ".");
-  strcat(&key, name);
+  strcpy(key, PERSISTENT_PREFIX_STRING);
+  strcat(key, group);
+  strcat(key, ".");
+  strcat(key, name);
 
   switch (params[index].type & PARAM_BYTES_MASK) {
     case PARAM_1BYTE:
@@ -865,6 +907,7 @@ static void paramPersistentGetState()
   int index;
   char *group;
   char *name;
+  size_t varSize = 0;
   uint16_t id;
   paramVarId_t paramId;
   uint8_t value[8];
@@ -872,76 +915,97 @@ static void paramPersistentGetState()
   memcpy(&id, &p.data[1], 2);
   index = variableGetIndex(id);
 
-  if (index < 0 || !params[index].getter) {
+  if (index < 0) {
     p.data[3] = ENOENT;
     p.size = 4;
-
     crtpSendPacketBlock(&p);
     return;
   }
 
-  paramId.index = index;
+  paramId.index = (uint16_t)index;
   paramGetGroupAndName(paramId, &group, &name);
 
   // Assemble key string, e.g. "prm/pid_rate.kp"
-  uint8_t key[KEY_LEN] = {0};
-  strcpy(&key, PERSISTENT_PREFIX_STRING);
-  strcat(&key, group);
-  strcat(&key, ".");
-  strcat(&key, name);
+  char key[KEY_LEN] = {0};
+  strcpy(key, PERSISTENT_PREFIX_STRING);
+  strcat(key, group);
+  strcat(key, ".");
+  strcat(key, name);
 
   if (storageFetch(key, &value, 8)) {
-    p.data[3] = params[index].extended_type;
+    p.data[3] = PARAM_PERSISTENT_STORED; // Value is stored
     p.size = 4;
-    switch (params[index].type & PARAM_BYTES_MASK)
-    {
+    switch (params[index].type & PARAM_BYTES_MASK) {
       case PARAM_1BYTE:
-        memcpy(&p.data[4], &value, sizeof(uint8_t));
-        memcpy(&p.data[5], params[index].getter(), sizeof(uint8_t));
-        p.size += 2 * sizeof(uint8_t);
+        memcpy(&p.data[4], params[index].getter(), sizeof(uint8_t));
+        memcpy(&p.data[5], &value, sizeof(uint8_t));
+        varSize = 2 * sizeof(uint8_t);
         break;
       break;
       case PARAM_2BYTES:
-        memcpy(&p.data[4], &value, sizeof(uint16_t));
-        memcpy(&p.data[6], params[index].getter(), sizeof(uint16_t));
-        p.size += 2 * sizeof(uint16_t);
+        memcpy(&p.data[4], params[index].getter(), sizeof(uint16_t));
+        memcpy(&p.data[6], &value, sizeof(uint16_t));
+        varSize =  2 * sizeof(uint16_t);
         break;
       case PARAM_4BYTES:
-        memcpy(&p.data[4], &value, sizeof(uint32_t));
-        memcpy(&p.data[8], params[index].getter(), sizeof(uint32_t));
-        p.size += 2 * sizeof(uint32_t);
+        memcpy(&p.data[4], params[index].getter(), sizeof(uint32_t));
+        memcpy(&p.data[8], &value, sizeof(uint32_t));
+        varSize = 2 * sizeof(uint32_t);
         break;
       case PARAM_8BYTES:
-        memcpy(&p.data[4], &value, sizeof(uint64_t));
-        memcpy(&p.data[12], params[index].getter(), sizeof(uint64_t));
-        p.size += 2 * sizeof(uint64_t);
+        memcpy(&p.data[4], params[index].getter(), sizeof(uint64_t));
+        memcpy(&p.data[12], &value, sizeof(uint64_t));
+        varSize = 2 * sizeof(uint64_t);
         break;
     }
   } else {
-    p.data[3] = 0; // Value is not stored
+    p.data[3] = PARAM_PERSISTENT_NOT_STORED; // Value is not stored
     p.size = 4;
-    switch (params[index].type & PARAM_BYTES_MASK)
+    if (params[index].getter)
     {
-      case PARAM_1BYTE:
-        memcpy(&p.data[5], params[index].getter(), sizeof(uint8_t));
-        p.size += sizeof(uint8_t);
+      switch (params[index].type & PARAM_BYTES_MASK) {
+        case PARAM_1BYTE:
+          memcpy(&p.data[5], params[index].getter(), sizeof(uint8_t));
+          varSize = sizeof(uint8_t);
+          break;
         break;
-      break;
-      case PARAM_2BYTES:
-        memcpy(&p.data[6], params[index].getter(), sizeof(uint16_t));
-        p.size += sizeof(uint16_t);
+        case PARAM_2BYTES:
+          memcpy(&p.data[6], params[index].getter(), sizeof(uint16_t));
+          varSize = sizeof(uint16_t);
+          break;
+        case PARAM_4BYTES:
+          memcpy(&p.data[8], params[index].getter(), sizeof(uint32_t));
+          varSize = sizeof(uint32_t);
+          break;
+        case PARAM_8BYTES:
+          memcpy(&p.data[12], params[index].getter(), sizeof(uint64_t));
+          varSize = sizeof(uint64_t);
+          break;
+      }
+    } else {
+      switch (params[index].type & PARAM_BYTES_MASK) {
+        case PARAM_1BYTE:
+          memcpy(&p.data[5], paramGetDefault(index), sizeof(uint8_t));
+          varSize = sizeof(uint8_t);
+          break;
         break;
-      case PARAM_4BYTES:
-        memcpy(&p.data[8], params[index].getter(), sizeof(uint32_t));
-        p.size += sizeof(uint32_t);
-        break;
-      case PARAM_8BYTES:
-        memcpy(&p.data[12], params[index].getter(), sizeof(uint64_t));
-        p.size += sizeof(uint64_t);
-        break;
+        case PARAM_2BYTES:
+          memcpy(&p.data[6], paramGetDefault(index), sizeof(uint16_t));
+          varSize = sizeof(uint16_t);
+          break;
+        case PARAM_4BYTES:
+          memcpy(&p.data[8], paramGetDefault(index), sizeof(uint32_t));
+          varSize = sizeof(uint32_t);
+          break;
+        case PARAM_8BYTES:
+          memcpy(&p.data[12], paramGetDefault(index), sizeof(uint64_t));
+          varSize = sizeof(uint64_t);
+          break;
+      }
     }
   }
 
+  p.size = p.size + (uint8_t)(varSize & 0xFF);
   crtpSendPacketBlock(&p);
 }
 
@@ -970,10 +1034,10 @@ static void paramPersistentClear()
 
   // Assemble key string, e.g. "prm/pid_rate.kp"
   char key[KEY_LEN] = {0};
-  strcpy(&key, PERSISTENT_PREFIX_STRING);
-  strcat(&key, group);
-  strcat(&key, ".");
-  strcat(&key, name);
+  strcpy(key, PERSISTENT_PREFIX_STRING);
+  strcat(key, group);
+  strcat(key, ".");
+  strcat(key, name);
 
   result = storageDelete(key);
 

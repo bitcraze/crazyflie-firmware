@@ -133,7 +133,7 @@ bool storageTest()
   DEBUG_PRINT("Storage check %s.\n", pass?"[OK]":"[FAIL]");
 
   if (!pass) {
-    DEBUG_PRINT("Reformating storage ...\n");
+    DEBUG_PRINT("Reformatting storage ...\n");
 
     kveFormat(&kve);
 

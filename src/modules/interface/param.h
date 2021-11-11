@@ -169,6 +169,9 @@ typedef float * (*paramGetterFloat)(void);
 // Extended type bits
 #define PARAM_PERSISTENT (1 << 8)
 
+#define PARAM_PERSISTENT_STORED      1
+#define PARAM_PERSISTENT_NOT_STORED  0
+
 // User-friendly macros
 #define PARAM_UINT8 (PARAM_1BYTE | PARAM_TYPE_INT | PARAM_UNSIGNED)
 #define PARAM_INT8  (PARAM_1BYTE | PARAM_TYPE_INT | PARAM_SIGNED)
