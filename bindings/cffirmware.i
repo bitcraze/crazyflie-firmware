@@ -13,6 +13,10 @@
 %inline %{
 %}
 
+%pythoncode %{
+import numpy as np
+%}
+
 #define COPY_CTOR(structname) \
 structname(struct structname const *x) { \
     struct structname *y = malloc(sizeof(struct structname)); \
