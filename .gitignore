@@ -12,6 +12,8 @@ tools/make/config.mk
 cflie.*
 version.c
 tags
+*cffirmware*.so
+cffirmware.py
 
 /cf2.*
 /tag.*
@@ -21,6 +23,7 @@ current_platform.mk
 
 /generated/**
 **/__pycache__/**
+**/*.pyc
 
 docs/.jekyll-metadata
 docs/.jekyll-cache
