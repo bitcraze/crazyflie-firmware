@@ -226,7 +226,35 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP =
 };
 
 // Bolt M2, PB11, TIM2_CH4, Brushless config
-static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP =
+//static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP =
+
+// Bolt M2, PB10, TIM2_CH3, Brushless config
+static const MotorPerifDef BOLT_M2_BL =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_10,
+    .gpioPinSource = GPIO_PinSource10,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM2,
+    .gpioPowerswitchPerif = RCC_AHB1Periph_GPIOB,
+    .gpioPowerswitchPort  = GPIOB,
+    .gpioPowerswitchPin   = GPIO_Pin_12,
+    .timPerif      = RCC_APB1Periph_TIM2,
+    .tim           = TIM2,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM2_STOP,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare3,
+    .getCompare    = TIM_GetCapture3,
+    .ocInit        = TIM_OC3Init,
+    .preloadConfig = TIM_OC3PreloadConfig,
+};
+
+// Bolt Rev.F M2, PB11, TIM2_CH4, Brushless config
+static const MotorPerifDef BOLT_M2_REVF_BL =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -614,5 +642,16 @@ const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS] =
   &MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP,
   &MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP,
   &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP
+};
+
+/**
+ * Brushless motors mapped to the Bolt Rev.F PWM outputs.
+ */
+const MotorPerifDef* motorMapBoltRevFBrushless[NBR_OF_MOTORS] =
+{
+  &BOLT_M1_BL,
+  &BOLT_M2_REVF_BL,
+  &BOLT_M3_BL,
+  &BOLT_M4_REVF_BL
 };
 
