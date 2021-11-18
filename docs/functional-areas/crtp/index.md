@@ -15,14 +15,6 @@ Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x`, the
 
 The Crayzyflie communication is implemented as a stack of independent layers:
 
-<<<<<<< HEAD
-Currently CRTP is supported over Crazyradio and USB.
-
- | Carrier          | Supports|
- | -----------------| -------------------|
- | Crazyradio (PA)  | Crazyflie 1.0/2.X|
- | USB              | Crazyflie 2.X|
-=======
     +-------------------+
     +     Subsystems    +   <- Log/Param/Commander/...
     +-------------------+
@@ -45,7 +37,6 @@ Currently CRTP is supported over Crazyradio and USB.
    packets to different functionalities.
  - **Subsystems** implements the Crazyflie functionalities that can be
    controlled over CRTP. There is one *port* assigned to each *subsystem*.
->>>>>>> 476ea687 (Improve CRTP  documentation index)
 
 
 ## Link implementations
@@ -105,13 +96,8 @@ its handling on the ground.
 | ---------| ---------------------------------------------| ----------------------------------------------------------------|
 |  0       | [Console](crtp_console.md)                   | Read console text that is printed to the console on the Crazyflie using consoleprintf|
 |  2       | [Parameters](crtp_parameters.md)             | Get/set parameters from the Crazyflie. Parameters are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)|
-<<<<<<< HEAD
-|  3       | [Commander](crtp_commander.md)               | Sending control set-points for the roll/pitch/yaw/thrust regulators|
-|  4       | [Memory access](crtp_mem.md)                 | Accessing non-volatile memories like 1-wire and I2C |
-=======
 |  3       | [Commander](crtp_commander.md)               | Sending low level (instantaneous) control set-points for the roll/pitch/yaw/thrust regulators|
 |  4       | [Memory access](crtp_mem.md)                 | Memory access for physical memories and register-mapped functionalities |
->>>>>>> 476ea687 (Improve CRTP  documentation index)
 |  5       | [Data logging](crtp_log.md)                  | Set up log blocks with variables that will be sent back to the Crazyflie at a specified period. Log variables are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)
 |  6       | [Localization](crtp_localization.md)         | Packets related to localization|
 |  7       | [Generic Setpoint](crtp_generic_setpoint.md) | Generic instantaneous setpoints (ie. position control and more) |
