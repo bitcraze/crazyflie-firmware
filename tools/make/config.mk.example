@@ -125,3 +125,6 @@
 # CFLAGS += -DIMU_PHI=0.0f
 # CFLAGS += -DIMU_THETA=0.0f
 # CFLAGS += -DIMU_PSI=0.0f
+
+## Keep the yaw setpoint within +/- YAW_MAX_DELTA from the current heading
+# CFLAGS += -DYAW_MAX_DELTA=45.0f
