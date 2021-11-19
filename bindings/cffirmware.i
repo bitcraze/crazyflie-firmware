@@ -6,11 +6,35 @@
 %{
 #define SWIG_FILE_WITH_INIT
 #include "math3d.h"
+#include "pptraj.h"
+#include "planner.h"
 %}
 
 %include "math3d.h"
+%include "pptraj.h"
+%include "planner.h"
 
 %inline %{
+struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
+{
+    return &pp->pieces[i];
+}
+void poly4d_set(struct poly4d *poly, int dim, int coef, float val)
+{
+    poly->p[dim][coef] = val;
+}
+float poly4d_get(struct poly4d *poly, int dim, int coef)
+{
+    return poly->p[dim][coef];
+}
+struct poly4d* poly4d_malloc(int size)
+{
+    return (struct poly4d*)malloc(sizeof(struct poly4d) * size);
+}
+void poly4d_free(struct poly4d *p)
+{
+    free(p);
+}
 %}
 
 %pythoncode %{
