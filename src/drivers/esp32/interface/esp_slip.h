@@ -45,3 +45,23 @@
 #define CHANGE_BAUDRATE 0x0f
 #define SPI_ATTACH 0x0d
 
+
+typedef struct
+{
+  uint8_t direction;
+  uint8_t command;
+  uint16_t dataSize;
+  uint32_t checksum;
+} __attribute__((packed)) esp_slip_send_packet;
+
+typedef struct
+{
+  uint8_t direction;
+  uint8_t command;
+  uint16_t dataSize;
+  uint32_t value; // only for READ_REG command
+  uint8_t data[256];
+  uint8_t status;
+  uint8_t error;
+} __attribute__((packed)) esp_slip_receive_packet;
+
