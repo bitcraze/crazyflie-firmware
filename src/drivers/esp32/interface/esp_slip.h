@@ -74,3 +74,16 @@ typedef struct
   uint8_t error;
 } __attribute__((packed)) esp_slip_receive_packet;
 
+/**
+* @brief Called to send a SLIP packet to the ESP, and receive the response.
+*
+* @param *sendBuffer Pointer to the to be sent buffer
+* @param *receiverPacket Pointer to receiver packet struct, which will be filled with the response
+* @param *senderPacket Pointer to sender packet struct, which will be used to fill the send buffer header
+* @param sendBufferFunction Function pointer to the function that sends the buffer (split into pages) to the ESP
+* @param getDataWithTimeoutFunction Function pointer to the function that receives data (byte by byte) from the ESP
+* @param timeoutTicks Number of ticks to wait for a response from the ESP
+*
+* @return true if ESP responds with a status byte indicating success.
+**/
+bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks);

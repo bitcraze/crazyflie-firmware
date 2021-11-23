@@ -303,3 +303,13 @@ static void clearUart2Buffer(coms_getDataWithTimeout_t getDataWithTimeout)
   }
   return;
 }
+
+bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
+{
+  clearUart2Buffer(getDataWithTimeout);
+  assembleBuffer(sendBuffer, senderPacket);
+
+  sendSlipPacket(sendSize, sendBuffer, sendBufferFunction);
+
+  return receivePacket(receiverPacket, senderPacket, getDataWithTimeout, timeoutTicks);
+}
