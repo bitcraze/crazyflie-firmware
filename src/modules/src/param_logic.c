@@ -69,9 +69,15 @@ static int variableGetIndex(int id);
 static char paramWriteByNameProcess(char* group, char* name, int type, void *valptr);
 
 
+#ifndef UNIT_TEST_MODE
 //These are set by the Linker
 extern struct param_s _param_start;
 extern struct param_s _param_stop;
+#else
+//When placed in ram for testing
+extern struct param_s *_param_start;
+extern struct param_s *_param_stop;
+#endif
 
 
 //Pointer to the parameters list and length of it
@@ -870,40 +876,40 @@ void paramPersistentGetState(CRTPPacket *p)
     {
       switch (params[index].type & PARAM_BYTES_MASK) {
         case PARAM_1BYTE:
-          memcpy(&p->data[5], params[index].getter(), sizeof(uint8_t));
+          memcpy(&p->data[4], params[index].getter(), sizeof(uint8_t));
           varSize = sizeof(uint8_t);
           break;
         break;
         case PARAM_2BYTES:
-          memcpy(&p->data[6], params[index].getter(), sizeof(uint16_t));
+          memcpy(&p->data[4], params[index].getter(), sizeof(uint16_t));
           varSize = sizeof(uint16_t);
           break;
         case PARAM_4BYTES:
-          memcpy(&p->data[8], params[index].getter(), sizeof(uint32_t));
+          memcpy(&p->data[4], params[index].getter(), sizeof(uint32_t));
           varSize = sizeof(uint32_t);
           break;
         case PARAM_8BYTES:
-          memcpy(&p->data[12], params[index].getter(), sizeof(uint64_t));
+          memcpy(&p->data[4], params[index].getter(), sizeof(uint64_t));
           varSize = sizeof(uint64_t);
           break;
       }
     } else {
       switch (params[index].type & PARAM_BYTES_MASK) {
         case PARAM_1BYTE:
-          memcpy(&p->data[5], paramGetDefault(index), sizeof(uint8_t));
+          memcpy(&p->data[4], paramGetDefault(index), sizeof(uint8_t));
           varSize = sizeof(uint8_t);
           break;
         break;
         case PARAM_2BYTES:
-          memcpy(&p->data[6], paramGetDefault(index), sizeof(uint16_t));
+          memcpy(&p->data[4], paramGetDefault(index), sizeof(uint16_t));
           varSize = sizeof(uint16_t);
           break;
         case PARAM_4BYTES:
-          memcpy(&p->data[8], paramGetDefault(index), sizeof(uint32_t));
+          memcpy(&p->data[4], paramGetDefault(index), sizeof(uint32_t));
           varSize = sizeof(uint32_t);
           break;
         case PARAM_8BYTES:
-          memcpy(&p->data[12], paramGetDefault(index), sizeof(uint64_t));
+          memcpy(&p->data[4], paramGetDefault(index), sizeof(uint64_t));
           varSize = sizeof(uint64_t);
           break;
       }
