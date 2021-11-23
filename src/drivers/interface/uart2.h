@@ -41,6 +41,7 @@
 #define ENABLE_UART2_RCC       RCC_APB1PeriphClockCmd
 #define UART2_IRQ              USART2_IRQn
 
+#define UART2_DMA_BUFFER_SIZE 128
 #define UART2_DMA_IRQ           DMA1_Stream6_IRQn
 #define UART2_DMA_IT_TC         DMA_IT_TC4
 #define UART2_DMA_STREAM        DMA1_Stream6
