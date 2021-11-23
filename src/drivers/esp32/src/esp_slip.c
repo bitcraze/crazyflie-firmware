@@ -45,6 +45,39 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *sende
   return checksum;
 }
 
+static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendBufferFn)
+{
+  uint32_t i;
+  static uint8_t dmaSendBuffer[UART2_DMA_BUFFER_SIZE];
+  uint32_t dmaSendSize = 0;
+
+  for (i = 0; i < size; i++)
+  {
+    if ((data[i] == 0xC0 && i != 0 && i != size - 1) || (data[i] == 0xDB && i != 0 && i != size - 1))
+    {
+      for (int j = 0; j < 2; j++)
+      {
+        j == 0 ? (dmaSendBuffer[dmaSendSize] = 0xDB) : data[i] == 0xC0 ? (dmaSendBuffer[dmaSendSize] = 0xDC)
+                                                                       : (dmaSendBuffer[dmaSendSize] = 0xDD);
+        dmaSendSize += 1;
+      }
+    }
+    else
+    {
+      dmaSendBuffer[dmaSendSize] = data[i];
+      dmaSendSize += 1;
+    }
+    if (dmaSendSize >= (UART2_DMA_BUFFER_SIZE - 2))
+    {
+      sendBufferFn(dmaSendSize, &dmaSendBuffer[0]);
+      dmaSendSize = 0;
+    }
+  }
+  if (dmaSendSize)
+  {
+    sendBufferFn(dmaSendSize, &dmaSendBuffer[0]);
+  }
+}
 static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
 {
   sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
