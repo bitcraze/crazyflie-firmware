@@ -45,6 +45,9 @@
 #define CHANGE_BAUDRATE 0x0f
 #define SPI_ATTACH 0x0d
 
+typedef void (*coms_sendbuffer_t)(uint32_t size, uint8_t *data);
+typedef bool (*coms_getDataWithTimeout_t)(uint8_t *c, const uint32_t timeoutTicks);
+
 
 typedef struct
 {
