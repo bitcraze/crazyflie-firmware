@@ -106,3 +106,14 @@ static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPack
 
   sendBuffer[9 + senderPacket->dataSize] = 0xC0;
 }
+
+static void clearUart2Buffer(coms_getDataWithTimeout_t getDataWithTimeout)
+{
+  uint8_t c;
+  bool success = true;
+  while (success)
+  {
+    success = getDataWithTimeout(&c, 1);
+  }
+  return;
+}
