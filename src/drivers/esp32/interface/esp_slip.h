@@ -33,3 +33,15 @@
 
 #define ESP_MTU 4000
 
+/* Commands */
+#define DIR_CMD 0x00
+#define FLASH_BEGIN 0x02
+#define FLASH_DATA 0x03
+#define FLASH_END 0x04
+#define SYNC 0x08
+#define SPI_FLASH_MD5 0x13
+#define ERASE_FLASH 0xd0
+#define READ_FLASH 0xd2
+#define CHANGE_BAUDRATE 0x0f
+#define SPI_ATTACH 0x0d
+
