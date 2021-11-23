@@ -33,6 +33,8 @@
 
 #define ESP_OVERHEAD_LEN 8
 
+static uint32_t sendSize;
+
 static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
 {
   uint8_t checksum = 0xEF; // seed
@@ -41,4 +43,33 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *sende
     checksum ^= sendBuffer[9 + 16 + i];
   }
   return checksum;
+}
+
+static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
+{
+  sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
+
+  sendBuffer[0] = 0xC0;
+  sendBuffer[1] = DIR_CMD;
+  sendBuffer[2] = senderPacket->command;
+  sendBuffer[3] = (uint8_t)((senderPacket->dataSize >> 0) & 0x000000FF);
+  sendBuffer[4] = (uint8_t)((senderPacket->dataSize >> 8) & 0x000000FF);
+
+  if (senderPacket->command == FLASH_DATA) // or MEM_DATA
+  {
+    uint32_t checksum = (uint32_t)generateChecksum(sendBuffer, senderPacket);
+    sendBuffer[5] = (uint8_t)((checksum >> 0) & 0x000000FF);
+    sendBuffer[6] = (uint8_t)((checksum >> 8) & 0x000000FF);
+    sendBuffer[7] = (uint8_t)((checksum >> 16) & 0x000000FF);
+    sendBuffer[8] = (uint8_t)((checksum >> 24) & 0x000000FF);
+  }
+  else
+  {
+    sendBuffer[5] = 0x00;
+    sendBuffer[6] = 0x00;
+    sendBuffer[7] = 0x00;
+    sendBuffer[8] = 0x00;
+  }
+
+  sendBuffer[9 + senderPacket->dataSize] = 0xC0;
 }
