@@ -33,3 +33,12 @@
 
 #define ESP_OVERHEAD_LEN 8
 
+static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
+{
+  uint8_t checksum = 0xEF; // seed
+  for (int i = 0; i < senderPacket->dataSize - 16; i++)
+  {
+    checksum ^= sendBuffer[9 + 16 + i];
+  }
+  return checksum;
+}
