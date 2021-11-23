@@ -48,6 +48,12 @@
 typedef void (*coms_sendbuffer_t)(uint32_t size, uint8_t *data);
 typedef bool (*coms_getDataWithTimeout_t)(uint8_t *c, const uint32_t timeoutTicks);
 
+typedef enum
+{
+  SLIP_DECODING,
+  SLIP_SUCCESS,
+  SLIP_ERROR
+} slipDecoderStatus_t;
 
 typedef struct
 {
