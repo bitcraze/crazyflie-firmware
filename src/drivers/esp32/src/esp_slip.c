@@ -30,3 +30,6 @@
 
 #include "esp_slip.h"
 #include "uart2.h"
+
+#define ESP_OVERHEAD_LEN 8
+
