@@ -236,6 +236,34 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *
   return decoderStatus;
 }
 
+static bool receivePacket(esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
+{
+  uint8_t c;
+  uint8_t numberOfUartTimeouts = 0;
+  receiverPacket->status = 1;
+  receiverPacket->command = 0;
+  receiverPacket->dataSize = 0;
+  receiverPacket->value = 0;
+
+  slipDecoderStatus_t packetReceivedStatus = SLIP_DECODING;
+
+  espblReceiveState = receiveStart;
+  while (packetReceivedStatus == SLIP_DECODING && numberOfUartTimeouts < 1)
+  {
+    if (getDataWithTimeout(&c, timeoutTicks))
+    {
+      packetReceivedStatus = decodeSlipPacket(c, receiverPacket, senderPacket);
+    }
+    else
+    {
+      numberOfUartTimeouts += 1;
+    }
+  }
+
+  const uint8_t statusOk = 0;
+  return statusOk == receiverPacket->status && packetReceivedStatus == SLIP_SUCCESS;
+}
+
 static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
 {
   sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
