@@ -33,6 +33,26 @@
 
 #define ESP_OVERHEAD_LEN 8
 
+typedef enum
+{
+  receiveStart,
+  receiveDirection,
+  receiveCommand,
+  receiveSize,
+  receiveValue,
+  receiveData,
+  receiveEnd,
+  error,
+} ESPblReceiveState;
+static ESPblReceiveState espblReceiveState = receiveStart;
+
+static uint8_t slipSize[2];
+static uint8_t slipValue[4];
+static uint8_t slipDataIndex = 0;
+static uint8_t slipSizeIndex = 0;
+static uint8_t slipValueIndex = 0;
+static bool inEscapeSequence = false;
+
 static uint32_t sendSize;
 
 static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
@@ -78,6 +98,144 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendB
     sendBufferFn(dmaSendSize, &dmaSendBuffer[0]);
   }
 }
+
+static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket)
+{
+
+  slipDecoderStatus_t decoderStatus = SLIP_DECODING;
+  switch (espblReceiveState)
+  {
+  case receiveStart:
+    receiverPacket->status = 1;
+    espblReceiveState = (c == 0xC0) ? receiveDirection : receiveStart;
+    break;
+  case receiveDirection:
+    if (c == 0x01)
+    {
+      espblReceiveState = receiveCommand;
+    }
+    else
+    {
+      espblReceiveState = error;
+      decoderStatus = SLIP_ERROR;
+    }
+    break;
+  case receiveCommand:
+    receiverPacket->command = c;
+    slipSizeIndex = 0;
+    if (c == senderPacket->command)
+    {
+      espblReceiveState = receiveSize;
+    }
+    else
+    {
+      espblReceiveState = error;
+      decoderStatus = SLIP_ERROR;
+    }
+    break;
+  case receiveSize:
+    slipSize[slipSizeIndex] = c;
+    if (slipSizeIndex == 1)
+    {
+      receiverPacket->dataSize = ((uint16_t)slipSize[0] + ((uint16_t)slipSize[1] << 8));
+      slipValueIndex = 0;
+      if (receiverPacket->dataSize > 0 && receiverPacket->dataSize < ESP_MTU)
+      {
+        espblReceiveState = receiveValue;
+      }
+      else
+      {
+        espblReceiveState = error;
+        decoderStatus = SLIP_ERROR;
+      }
+    }
+    slipSizeIndex++;
+    break;
+  case receiveValue: // only used for READ_REG
+    slipValue[slipValueIndex] = c;
+    if (slipValueIndex == 3)
+    {
+      receiverPacket->value = ((uint32_t)slipValue[0] + ((uint32_t)slipValue[1] << 8) + ((uint32_t)slipValue[2] << 16) + ((uint32_t)slipValue[3] << 24));
+      slipDataIndex = 0;
+      inEscapeSequence = false;
+      espblReceiveState = receiveData;
+    }
+    slipValueIndex++;
+    break;
+  case receiveData:
+  {
+    const uint16_t payloadSize = receiverPacket->dataSize - 4;
+    if (slipDataIndex < payloadSize)
+    {
+      if (c == 0xDB)
+      {
+        inEscapeSequence = true;
+      }
+      else if (inEscapeSequence)
+      {
+        inEscapeSequence = false;
+        if (c == 0xDC)
+        {
+          receiverPacket->data[slipDataIndex] = 0xC0;
+          slipDataIndex++;
+        }
+        else if (c == 0xDD)
+        {
+          receiverPacket->data[slipDataIndex] = 0xDB;
+          slipDataIndex++;
+        }
+        else
+        {
+          espblReceiveState = error;
+        }
+      }
+      else
+      {
+        receiverPacket->data[slipDataIndex] = c;
+        slipDataIndex++;
+      }
+    }
+    else
+    {
+      if (slipDataIndex == payloadSize)
+      {
+        receiverPacket->status = c;
+      }
+      if (slipDataIndex == payloadSize + 1)
+      {
+        receiverPacket->error = c;
+      }
+      if (slipDataIndex == payloadSize + 3)
+      {
+        espblReceiveState = receiveEnd;
+      }
+      slipDataIndex++;
+    }
+  }
+  break;
+
+  case receiveEnd:
+    if (c == 0xC0)
+    {
+      espblReceiveState = receiveStart;
+      decoderStatus = SLIP_SUCCESS;
+    }
+    else
+    {
+      espblReceiveState = error;
+      decoderStatus = SLIP_ERROR;
+    }
+    break;
+
+  case error:
+    decoderStatus = SLIP_ERROR;
+    break;
+  default:
+    break;
+  }
+  return decoderStatus;
+}
+
 static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
 {
   sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
