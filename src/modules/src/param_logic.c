@@ -29,6 +29,7 @@
 #include "config.h"
 #include "crtp.h"
 #include "param.h"
+#include "param_logic.h"
 #include "crc32.h"
 #include "console.h"
 #include "debug.h"
@@ -82,8 +83,6 @@ static uint16_t paramsCount = 0;
 // This is set to true, if a client uses TOC_CH in V2
 static bool useV2 = false;
 
-static bool isInit = false;
-
 // _sdata is from linker script and points to start of data section
 extern int _sdata;
 extern int _edata;
@@ -131,9 +130,13 @@ void paramLogicInit(void)
   int groupLength = 0;
   uint8_t buf[30];
 
+#ifndef UNIT_TEST_MODE
   params = &_param_start;
   paramsLen = &_param_stop - &_param_start;
-
+#else
+  params = _param_start;
+  paramsLen = _param_stop - _param_start;
+#endif
   // Calculate a hash of the toc by chaining description of each elements
   paramsCrc = 0;
   for (int i=0; i<paramsLen; i++)
@@ -285,7 +288,7 @@ void paramWriteProcess(CRTPPacket *p)
     uint16_t id;
     memcpy(&id, &p->data[0], 2);
 
-    void* valptr = p->data[2];
+    void* valptr = &p->data[2];
     int index;
 
     index = variableGetIndex(id);
@@ -325,7 +328,7 @@ void paramWriteProcess(CRTPPacket *p)
 
   } else {
     int id = p->data[0];
-    void* valptr = p->data[1];
+    void* valptr = &p->data[1];
     int index;
 
     index = variableGetIndex(id);
@@ -718,10 +721,10 @@ void paramSetByName(CRTPPacket *p)
 
   if (nzero < 2) return;
 
-  group = (char*)p->data[1];
-  name = (char*)p->data[1 + strlen(group) + 1];
+  group = (char*)&p->data[1];
+  name = (char*)&p->data[1 + strlen(group) + 1];
   type = p->data[1 + strlen(group) + 1 + strlen(name) + 1];
-  valPtr = p->data[1 + strlen(group) + 1 + strlen(name) + 2];
+  valPtr = &p->data[1 + strlen(group) + 1 + strlen(name) + 2];
 
   error = paramWriteByNameProcess(group, name, type, valPtr);
 

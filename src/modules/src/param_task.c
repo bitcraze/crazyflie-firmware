@@ -30,7 +30,7 @@
 
 #include "config.h"
 #include "crtp.h"
-#include "param.h"
+#include "param_logic.h"
 #include "debug.h"
 #include "static_mem.h"
 

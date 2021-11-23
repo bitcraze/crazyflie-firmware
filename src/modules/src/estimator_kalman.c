@@ -71,6 +71,7 @@
 #include "system.h"
 #include "log.h"
 #include "param.h"
+#include "param_logic.h"
 #include "physicalConstants.h"
 #include "supervisor.h"
 
