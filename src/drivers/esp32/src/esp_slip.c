@@ -67,8 +67,8 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *sende
 static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendBufferFn, uint32_t txBufferSize)
 {
   uint32_t i;
-  uint8_t dmaSendBuffer[txBufferSize];
-  uint32_t dmaSendSize = 0;
+  uint8_t sendBuffer[txBufferSize];
+  uint32_t sendSize = 0;
 
   for (i = 0; i < size; i++)
   {
@@ -76,25 +76,25 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendB
     {
       for (int j = 0; j < 2; j++)
       {
-        j == 0 ? (dmaSendBuffer[dmaSendSize] = 0xDB) : data[i] == SLIP_START_STOP_BYTE ? (dmaSendBuffer[dmaSendSize] = 0xDC)
-                                                                       : (dmaSendBuffer[dmaSendSize] = 0xDD);
-        dmaSendSize += 1;
+        j == 0 ? (sendBuffer[sendSize] = 0xDB) : data[i] == SLIP_START_STOP_BYTE ? (sendBuffer[sendSize] = 0xDC)
+                                                                                 : (sendBuffer[sendSize] = 0xDD);
+        sendSize += 1;
       }
     }
     else
     {
-      dmaSendBuffer[dmaSendSize] = data[i];
-      dmaSendSize += 1;
+      sendBuffer[sendSize] = data[i];
+      sendSize += 1;
     }
-    if (dmaSendSize >= (txBufferSize - 2))
+    if (sendSize >= (txBufferSize - 2))
     {
-      sendBufferFn(dmaSendSize, &dmaSendBuffer[0]);
-      dmaSendSize = 0;
+      sendBufferFn(sendSize, &sendBuffer[0]);
+      sendSize = 0;
     }
   }
-  if (dmaSendSize)
+  if (sendSize)
   {
-    sendBufferFn(dmaSendSize, &dmaSendBuffer[0]);
+    sendBufferFn(sendSize, &sendBuffer[0]);
   }
 }
 
@@ -238,7 +238,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *
 static bool receivePacket(esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
 {
   uint8_t c;
-  uint8_t numberOfUartTimeouts = 0;
+  uint8_t numberOfTimeouts = 0;
   receiverPacket->status = 1;
   receiverPacket->command = 0;
   receiverPacket->dataSize = 0;
@@ -247,7 +247,7 @@ static bool receivePacket(esp_slip_receive_packet *receiverPacket, esp_slip_send
   slipDecoderStatus_t packetReceivedStatus = SLIP_DECODING;
 
   espblReceiveState = receiveStart;
-  while (packetReceivedStatus == SLIP_DECODING && numberOfUartTimeouts < 1)
+  while (packetReceivedStatus == SLIP_DECODING && numberOfTimeouts < 1)
   {
     if (getDataWithTimeout(&c, timeoutTicks))
     {
@@ -255,7 +255,7 @@ static bool receivePacket(esp_slip_receive_packet *receiverPacket, esp_slip_send
     }
     else
     {
-      numberOfUartTimeouts += 1;
+      numberOfTimeouts += 1;
     }
   }
 
@@ -292,7 +292,7 @@ static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPack
   sendBuffer[9 + senderPacket->dataSize] = SLIP_START_STOP_BYTE;
 }
 
-static void clearUart2Buffer(coms_getDataWithTimeout_t getDataWithTimeout)
+static void flushTxBuffer(coms_getDataWithTimeout_t getDataWithTimeout)
 {
   uint8_t c;
   bool success = true;
@@ -305,7 +305,7 @@ static void clearUart2Buffer(coms_getDataWithTimeout_t getDataWithTimeout)
 
 bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize)
 {
-  clearUart2Buffer(getDataWithTimeout);
+  flushTxBuffer(getDataWithTimeout);
   assembleBuffer(sendBuffer, senderPacket);
 
   sendSlipPacket(sendSize, sendBuffer, sendBufferFunction, txBufferSize);
