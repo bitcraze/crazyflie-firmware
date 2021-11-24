@@ -32,6 +32,7 @@
 #include <stdint.h>
 
 #define ESP_MTU 4000
+#define TX_BUFFER_SIZE 128
 
 /* Commands */
 #define DIR_CMD 0x00
@@ -88,4 +89,4 @@ typedef struct
 *
 * @return true if ESP responds with a status byte indicating success.
 **/
-bool espSlipExchange(uint8_t *sendBuffer, espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket, espSlipSendBuffer_t sendBufferFunction, espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize);
+bool espSlipExchange(uint8_t *sendBuffer, espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket, espSlipSendBuffer_t sendBufferFunction, espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks);
