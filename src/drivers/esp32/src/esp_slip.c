@@ -54,7 +54,7 @@ static bool inEscapeSequence = false;
 
 static uint32_t sendSize;
 
-static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
+static uint8_t generateChecksum(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacket)
 {
   uint8_t checksum = 0xEF; // seed
   for (int i = 0; i < senderPacket->dataSize - 16; i++)
@@ -64,7 +64,7 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *sende
   return checksum;
 }
 
-static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendBufferFn, uint32_t txBufferSize)
+static void sendSlipPacket(uint32_t size, uint8_t *data, espSlipSendBuffer_t sendBufferFn, uint32_t txBufferSize)
 {
   uint32_t i;
   uint8_t sendBuffer[txBufferSize];
@@ -98,7 +98,7 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendB
   }
 }
 
-static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket)
+static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket)
 {
 
   slipDecoderStatus_t decoderStatus = SLIP_DECODING;
@@ -235,7 +235,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *
   return decoderStatus;
 }
 
-static bool receivePacket(esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
+static bool receivePacket(espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket, espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
 {
   uint8_t c;
   uint8_t numberOfTimeouts = 0;
@@ -263,7 +263,7 @@ static bool receivePacket(esp_slip_receive_packet *receiverPacket, esp_slip_send
   return statusOk == receiverPacket->status && packetReceivedStatus == SLIP_SUCCESS;
 }
 
-static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPacket)
+static void assembleBuffer(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacket)
 {
   sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
 
@@ -292,7 +292,7 @@ static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPack
   sendBuffer[9 + senderPacket->dataSize] = SLIP_START_STOP_BYTE;
 }
 
-static void flushTxBuffer(coms_getDataWithTimeout_t getDataWithTimeout)
+static void flushTxBuffer(espSlipGetDataWithTimeout_t getDataWithTimeout)
 {
   uint8_t c;
   bool success = true;
@@ -303,7 +303,7 @@ static void flushTxBuffer(coms_getDataWithTimeout_t getDataWithTimeout)
   return;
 }
 
-bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize)
+bool espSlipExchange(uint8_t *sendBuffer, espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket, espSlipSendBuffer_t sendBufferFunction, espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize)
 {
   flushTxBuffer(getDataWithTimeout);
   assembleBuffer(sendBuffer, senderPacket);

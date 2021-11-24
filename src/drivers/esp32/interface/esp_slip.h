@@ -47,8 +47,8 @@
 
 #define SLIP_START_STOP_BYTE 0xc0
 
-typedef void (*coms_sendbuffer_t)(uint32_t size, uint8_t *data);
-typedef bool (*coms_getDataWithTimeout_t)(uint8_t *c, const uint32_t timeoutTicks);
+typedef void (*espSlipSendBuffer_t)(uint32_t size, uint8_t *data);
+typedef bool (*espSlipGetDataWithTimeout_t)(uint8_t *c, const uint32_t timeoutTicks);
 
 typedef enum
 {
@@ -63,7 +63,7 @@ typedef struct
   uint8_t command;
   uint16_t dataSize;
   uint32_t checksum;
-} __attribute__((packed)) esp_slip_send_packet;
+} __attribute__((packed)) espSlipSendPacket_t;
 
 typedef struct
 {
@@ -74,7 +74,7 @@ typedef struct
   uint8_t data[256];
   uint8_t status;
   uint8_t error;
-} __attribute__((packed)) esp_slip_receive_packet;
+} __attribute__((packed)) espSlipReceivePacket_t;
 
 /**
 * @brief Called to send a SLIP packet to the ESP, and receive the response.
@@ -88,4 +88,4 @@ typedef struct
 *
 * @return true if ESP responds with a status byte indicating success.
 **/
-bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize);
+bool espSlipExchange(uint8_t *sendBuffer, espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket, espSlipSendBuffer_t sendBufferFunction, espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize);
