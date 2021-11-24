@@ -66,7 +66,7 @@ uint16_t kveStorageWriteHole(kveMemory_t *kve, size_t address, size_t full_lengt
   kve->write(address, &header, sizeof(header));
   kve->flush();
 
-  return full_length;   
+  return full_length;
 }
 
 uint16_t kveStorageWriteEnd(kveMemory_t *kve, size_t address) {
@@ -98,7 +98,7 @@ void kveStorageMoveMemory(kveMemory_t *kve, size_t sourceAddress, size_t destina
 }
 
 size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * key) {
-    char searchBuffer[255];
+    static char searchBuffer[255];
     size_t currentAddress = address;
     uint16_t length;
     uint8_t keyLength;
@@ -188,7 +188,7 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
         if (header.key_length != 0) {
             return currentAddress;
         }
-        
+
         currentAddress += header.full_length;
     }
 
@@ -198,7 +198,7 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
 kveItemHeader_t kveStorageGetItemInfo(kveMemory_t *kve, size_t address)
 {
   kveItemHeader_t header;
-  
+
   kve->read(address, &header, sizeof(header));
 
   return header;
