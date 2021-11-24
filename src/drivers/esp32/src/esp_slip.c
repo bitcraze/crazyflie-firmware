@@ -29,7 +29,6 @@
 #include <string.h>
 
 #include "esp_slip.h"
-#include "uart2.h"
 
 #define ESP_OVERHEAD_LEN 8
 
@@ -65,10 +64,10 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, esp_slip_send_packet *sende
   return checksum;
 }
 
-static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendBufferFn)
+static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendBufferFn, uint32_t txBufferSize)
 {
   uint32_t i;
-  static uint8_t dmaSendBuffer[UART2_DMA_BUFFER_SIZE];
+  uint8_t dmaSendBuffer[txBufferSize];
   uint32_t dmaSendSize = 0;
 
   for (i = 0; i < size; i++)
@@ -87,7 +86,7 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendB
       dmaSendBuffer[dmaSendSize] = data[i];
       dmaSendSize += 1;
     }
-    if (dmaSendSize >= (UART2_DMA_BUFFER_SIZE - 2))
+    if (dmaSendSize >= (txBufferSize - 2))
     {
       sendBufferFn(dmaSendSize, &dmaSendBuffer[0]);
       dmaSendSize = 0;
@@ -304,12 +303,12 @@ static void clearUart2Buffer(coms_getDataWithTimeout_t getDataWithTimeout)
   return;
 }
 
-bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
+bool espSlipExchange(uint8_t *sendBuffer, esp_slip_receive_packet *receiverPacket, esp_slip_send_packet *senderPacket, coms_sendbuffer_t sendBufferFunction, coms_getDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks, uint32_t txBufferSize)
 {
   clearUart2Buffer(getDataWithTimeout);
   assembleBuffer(sendBuffer, senderPacket);
 
-  sendSlipPacket(sendSize, sendBuffer, sendBufferFunction);
+  sendSlipPacket(sendSize, sendBuffer, sendBufferFunction, txBufferSize);
 
   return receivePacket(receiverPacket, senderPacket, getDataWithTimeout, timeoutTicks);
 }
