@@ -98,7 +98,7 @@ void kveStorageMoveMemory(kveMemory_t *kve, size_t sourceAddress, size_t destina
 }
 
 size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * key) {
-    char searchBuffer[255];
+    static char searchBuffer[255];
     size_t currentAddress = address;
     uint16_t length;
     uint8_t keyLength;
