@@ -108,6 +108,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
     receiverPacket->status = 1;
     espblReceiveState = (c == SLIP_START_STOP_BYTE) ? receiveDirection : receiveStart;
     break;
+
   case receiveDirection:
     if (c == 0x01)
     {
@@ -119,6 +120,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
       decoderStatus = SLIP_ERROR;
     }
     break;
+
   case receiveCommand:
     receiverPacket->command = c;
     slipSizeIndex = 0;
@@ -132,6 +134,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
       decoderStatus = SLIP_ERROR;
     }
     break;
+
   case receiveSize:
     slipSize[slipSizeIndex] = c;
     if (slipSizeIndex == 1)
@@ -150,6 +153,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
     }
     slipSizeIndex++;
     break;
+
   case receiveValue: // only used for READ_REG
     slipValue[slipValueIndex] = c;
     if (slipValueIndex == 3)
@@ -161,6 +165,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
     }
     slipValueIndex++;
     break;
+
   case receiveData:
   {
     const uint16_t payloadSize = receiverPacket->dataSize - 4;
