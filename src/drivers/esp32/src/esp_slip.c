@@ -72,11 +72,11 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, coms_sendbuffer_t sendB
 
   for (i = 0; i < size; i++)
   {
-    if ((data[i] == 0xC0 && i != 0 && i != size - 1) || (data[i] == 0xDB && i != 0 && i != size - 1))
+    if ((data[i] == SLIP_START_STOP_BYTE && i != 0 && i != size - 1) || (data[i] == 0xDB && i != 0 && i != size - 1))
     {
       for (int j = 0; j < 2; j++)
       {
-        j == 0 ? (dmaSendBuffer[dmaSendSize] = 0xDB) : data[i] == 0xC0 ? (dmaSendBuffer[dmaSendSize] = 0xDC)
+        j == 0 ? (dmaSendBuffer[dmaSendSize] = 0xDB) : data[i] == SLIP_START_STOP_BYTE ? (dmaSendBuffer[dmaSendSize] = 0xDC)
                                                                        : (dmaSendBuffer[dmaSendSize] = 0xDD);
         dmaSendSize += 1;
       }
@@ -106,7 +106,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *
   {
   case receiveStart:
     receiverPacket->status = 1;
-    espblReceiveState = (c == 0xC0) ? receiveDirection : receiveStart;
+    espblReceiveState = (c == SLIP_START_STOP_BYTE) ? receiveDirection : receiveStart;
     break;
   case receiveDirection:
     if (c == 0x01)
@@ -175,7 +175,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *
         inEscapeSequence = false;
         if (c == 0xDC)
         {
-          receiverPacket->data[slipDataIndex] = 0xC0;
+          receiverPacket->data[slipDataIndex] = SLIP_START_STOP_BYTE;
           slipDataIndex++;
         }
         else if (c == 0xDD)
@@ -214,7 +214,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, esp_slip_receive_packet *
   break;
 
   case receiveEnd:
-    if (c == 0xC0)
+    if (c == SLIP_START_STOP_BYTE)
     {
       espblReceiveState = receiveStart;
       decoderStatus = SLIP_SUCCESS;
@@ -267,7 +267,7 @@ static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPack
 {
   sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
 
-  sendBuffer[0] = 0xC0;
+  sendBuffer[0] = SLIP_START_STOP_BYTE;
   sendBuffer[1] = DIR_CMD;
   sendBuffer[2] = senderPacket->command;
   sendBuffer[3] = (uint8_t)((senderPacket->dataSize >> 0) & 0x000000FF);
@@ -289,7 +289,7 @@ static void assembleBuffer(uint8_t *sendBuffer, esp_slip_send_packet *senderPack
     sendBuffer[8] = 0x00;
   }
 
-  sendBuffer[9 + senderPacket->dataSize] = 0xC0;
+  sendBuffer[9 + senderPacket->dataSize] = SLIP_START_STOP_BYTE;
 }
 
 static void clearUart2Buffer(coms_getDataWithTimeout_t getDataWithTimeout)
