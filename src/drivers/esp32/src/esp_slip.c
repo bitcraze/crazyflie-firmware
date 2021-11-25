@@ -76,8 +76,21 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, espSlipSendBuffer_t sen
     {
       for (int j = 0; j < 2; j++)
       {
-        j == 0 ? (sendBuffer[sendSize] = 0xDB) : data[i] == SLIP_START_STOP_BYTE ? (sendBuffer[sendSize] = 0xDC)
-                                                                                 : (sendBuffer[sendSize] = 0xDD);
+        if (j == 0)
+        {
+          sendBuffer[sendSize] = 0xDB;
+        }
+        else
+        {
+          if (data[i] == SLIP_START_STOP_BYTE)
+          {
+            sendBuffer[sendSize] = 0xDC;
+          }
+          else
+          {
+            sendBuffer[sendSize] = 0xDD;
+          }
+        }
         sendSize += 1;
       }
     }
