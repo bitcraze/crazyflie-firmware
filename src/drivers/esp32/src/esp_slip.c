@@ -59,7 +59,7 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, espSlipSendPacket_t *sender
   uint8_t checksum = 0xEF; // seed
   for (int i = 0; i < senderPacket->dataSize - 16; i++)
   {
-    checksum ^= sendBuffer[9 + 16 + i];
+    checksum ^= sendBuffer[25 + i]; // Calculate bytewise XOR checksum. Actual data payload starts at index 25.
   }
   return checksum;
 }
@@ -158,7 +158,9 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
     slipValue[slipValueIndex] = c;
     if (slipValueIndex == 3)
     {
-      receiverPacket->value = ((uint32_t)slipValue[0] + ((uint32_t)slipValue[1] << 8) + ((uint32_t)slipValue[2] << 16) + ((uint32_t)slipValue[3] << 24));
+      //
+      // Bit shifting to pack the four received 8-bit values into a 32-bit value.
+      //
       slipDataIndex = 0;
       inEscapeSequence = false;
       espblReceiveState = receiveData;
@@ -270,7 +272,7 @@ static bool receivePacket(espSlipReceivePacket_t *receiverPacket, espSlipSendPac
 
 static void assembleBuffer(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacket)
 {
-  sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2;
+  sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2; // + 2 to account for the start and stop bytes
 
   sendBuffer[0] = SLIP_START_STOP_BYTE;
   sendBuffer[1] = DIR_CMD;
