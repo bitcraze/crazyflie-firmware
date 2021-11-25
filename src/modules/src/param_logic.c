@@ -424,9 +424,8 @@ void paramReadProcess(CRTPPacket *p)
     crtpSendPacketBlock(p);
     return;
   }
-
   p->data[2] = 0;
-  p->size += paramGet(index, &p->data[3]);
+  p->size = 3 + paramGet(index, &p->data[3]);
 
   crtpSendPacketBlock(p);
 }
