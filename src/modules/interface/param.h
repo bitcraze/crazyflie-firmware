@@ -54,6 +54,7 @@ typedef float * (*paramGetterFloat)(void);
 #define PARAM_4BYTES 0x02
 #define PARAM_8BYTES 0x03
 
+#define PARAM_TYPE_MASK   0x0F
 #define PARAM_TYPE_INT   (0x00<<2)
 #define PARAM_TYPE_FLOAT (0x01<<2)
 
@@ -143,7 +144,7 @@ typedef float * (*paramGetterFloat)(void);
 #ifndef UNIT_TEST_MODE
 
 #define PARAM_GROUP_START(NAME)  \
-  static const struct param_s __params_##NAME[] __attribute__((section(".param." #NAME), used)) = { \
+  static struct param_s __params_##NAME[] __attribute__((section(".param." #NAME), used)) = { \
   PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
 
 #else // UNIT_TEST_MODE

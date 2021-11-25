@@ -1153,7 +1153,7 @@ PARAM_GROUP_START(ring)
  * | 17 | LED timing from memory        | \n
  * | 18 | Lighthouse  Positioning       | \n
  */
-PARAM_ADD_CORE(PARAM_UINT8, effect, &effect)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, effect, &effect)
 
 /**
  * @brief Number of effects available
