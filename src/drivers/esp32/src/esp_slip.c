@@ -296,7 +296,7 @@ static void assembleBuffer(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacke
   sendBuffer[3] = (uint8_t)((senderPacket->dataSize >> 0) & 0x000000FF);
   sendBuffer[4] = (uint8_t)((senderPacket->dataSize >> 8) & 0x000000FF);
 
-  if (senderPacket->command == FLASH_DATA) // or MEM_DATA
+  if (senderPacket->command == FLASH_DATA)
   {
     uint32_t checksum = (uint32_t)generateChecksum(sendBuffer, senderPacket);
     sendBuffer[5] = (uint8_t)((checksum >> 0) & 0x000000FF);
