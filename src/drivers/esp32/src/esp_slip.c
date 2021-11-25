@@ -318,11 +318,11 @@ static void assembleBuffer(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacke
 static void flushTxBuffer(espSlipGetDataWithTimeout_t getDataWithTimeout)
 {
   uint8_t c;
-  bool success = true;
-  while (success)
+  bool success;
+  do
   {
     success = getDataWithTimeout(&c, 1);
-  }
+  } while (success);
   return;
 }
 
