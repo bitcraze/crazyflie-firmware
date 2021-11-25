@@ -174,6 +174,8 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
       //
       // Bit shifting to pack the four received 8-bit values into a 32-bit value.
       //
+      receiverPacket->value = (uint32_t)slipValue[0] + ((uint32_t)slipValue[1] << 8);
+      receiverPacket->value += ((uint32_t)slipValue[2] << 16) + ((uint32_t)slipValue[3] << 24);
       slipDataIndex = 0;
       inEscapeSequence = false;
       espblReceiveState = receiveData;
@@ -255,7 +257,8 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
   return decoderStatus;
 }
 
-static bool receivePacket(espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket, espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
+static bool receivePacket(espSlipReceivePacket_t *receiverPacket, espSlipSendPacket_t *senderPacket,
+                          espSlipGetDataWithTimeout_t getDataWithTimeout, uint32_t timeoutTicks)
 {
   uint8_t c;
   uint8_t numberOfTimeouts = 0;
