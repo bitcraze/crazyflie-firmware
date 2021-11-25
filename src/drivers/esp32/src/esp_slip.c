@@ -47,9 +47,9 @@ static ESPblReceiveState espblReceiveState = receiveStart;
 
 static uint8_t slipSize[2];
 static uint8_t slipValue[4];
-static uint8_t slipDataIndex = 0;
-static uint8_t slipSizeIndex = 0;
-static uint8_t slipValueIndex = 0;
+static uint8_t slipDataIndex;
+static uint8_t slipSizeIndex;
+static uint8_t slipValueIndex;
 static bool inEscapeSequence = false;
 
 static uint32_t sendSize;
