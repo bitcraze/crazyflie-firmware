@@ -32,7 +32,7 @@
 #include <stdint.h>
 
 #define ESP_MTU 4000
-#define TX_BUFFER_SIZE 128
+#define ESP_SLIP_TX_BUFFER_SIZE 128
 
 /* Commands */
 #define DIR_CMD 0x00

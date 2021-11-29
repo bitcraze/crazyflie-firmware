@@ -67,7 +67,7 @@ static uint8_t generateChecksum(uint8_t *sendBuffer, espSlipSendPacket_t *sender
 static void sendSlipPacket(uint32_t size, uint8_t *data, espSlipSendBuffer_t sendBufferFn)
 {
   uint32_t i;
-  static uint8_t sendBuffer[TX_BUFFER_SIZE];
+  static uint8_t sendBuffer[ESP_SLIP_TX_BUFFER_SIZE];
   uint32_t sendSize = 0;
 
   for (i = 0; i < size; i++)
@@ -99,7 +99,7 @@ static void sendSlipPacket(uint32_t size, uint8_t *data, espSlipSendBuffer_t sen
       sendBuffer[sendSize] = data[i];
       sendSize += 1;
     }
-    if (sendSize >= (TX_BUFFER_SIZE - 2))
+    if (sendSize >= (ESP_SLIP_TX_BUFFER_SIZE - 2))
     {
       sendBufferFn(sendSize, &sendBuffer[0]);
       sendSize = 0;
