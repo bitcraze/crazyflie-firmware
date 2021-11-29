@@ -41,6 +41,8 @@
 #warning "ESP SLIP transmission buffer size must be smaller than or equal to UART2 DMA buffer size"
 #endif
 
+#define ESP_SLIP_DATA_START_INDEX 9
+
 static espSlipSendPacket_t senderPacket;
 static espSlipReceivePacket_t receiverPacket;
 
@@ -62,10 +64,10 @@ bool espRomBootloaderSync(uint8_t *sendBuffer)
 {
   senderPacket.command = SYNC;
   senderPacket.dataSize = 0x24;
-  sendBuffer[9 + 0] = 0x07;
-  sendBuffer[9 + 1] = 0x07;
-  sendBuffer[9 + 2] = 0x12;
-  sendBuffer[9 + 3] = 0x20;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 0] = 0x07;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 1] = 0x07;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 2] = 0x12;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 3] = 0x20;
   for (int i = 0; i < 32; i++)
   {
     sendBuffer[9 + 4 + i] = 0x55;
@@ -89,14 +91,14 @@ bool espRomBootloaderSpiAttach(uint8_t *sendBuffer)
 {
   senderPacket.command = SPI_ATTACH;
   senderPacket.dataSize = 0x4;
-  sendBuffer[9 + 0] = 0x00;
-  sendBuffer[9 + 1] = 0x00;
-  sendBuffer[9 + 2] = 0x00;
-  sendBuffer[9 + 3] = 0x00;
-  sendBuffer[9 + 4] = 0x00;
-  sendBuffer[9 + 5] = 0x00;
-  sendBuffer[9 + 6] = 0x00;
-  sendBuffer[9 + 7] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 0] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 1] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 2] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 3] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 4] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 5] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 6] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 7] = 0x00;
 
   return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
 }
@@ -105,24 +107,25 @@ bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPacket
 {
   senderPacket.command = FLASH_BEGIN;
   senderPacket.dataSize = 0x10;
-  sendBuffer[9 + 0] = (uint8_t)((firmwareSize >> 0) & 0x000000FF);
-  sendBuffer[9 + 1] = (uint8_t)((firmwareSize >> 8) & 0x000000FF);
-  sendBuffer[9 + 2] = (uint8_t)((firmwareSize >> 16) & 0x000000FF);
-  sendBuffer[9 + 3] = (uint8_t)((firmwareSize >> 24) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 0] = (uint8_t)((firmwareSize >> 0) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 1] = (uint8_t)((firmwareSize >> 8) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 2] = (uint8_t)((firmwareSize >> 16) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 3] = (uint8_t)((firmwareSize >> 24) & 0x000000FF);
 
-  sendBuffer[9 + 4] = (uint8_t)((numberOfDataPackets >> 0) & 0x000000FF);
-  sendBuffer[9 + 5] = (uint8_t)((numberOfDataPackets >> 8) & 0x000000FF);
-  sendBuffer[9 + 6] = (uint8_t)((numberOfDataPackets >> 16) & 0x000000FF);
-  sendBuffer[9 + 7] = (uint8_t)((numberOfDataPackets >> 24) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 4] = (uint8_t)((numberOfDataPackets >> 0) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 5] = (uint8_t)((numberOfDataPackets >> 8) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 6] = (uint8_t)((numberOfDataPackets >> 16) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 7] = (uint8_t)((numberOfDataPackets >> 24) & 0x000000FF);
 
-  sendBuffer[9 + 8] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
-  sendBuffer[9 + 9] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
-  sendBuffer[9 + 10] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
-  sendBuffer[9 + 11] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
-  sendBuffer[9 + 12] = (uint8_t)((flashOffset >> 0) & 0x000000FF);
-  sendBuffer[9 + 13] = (uint8_t)((flashOffset >> 8) & 0x000000FF);
-  sendBuffer[9 + 14] = (uint8_t)((flashOffset >> 16) & 0x000000FF);
-  sendBuffer[9 + 15] = (uint8_t)((flashOffset >> 24) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 8] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 9] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 10] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 11] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
+
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 12] = (uint8_t)((flashOffset >> 0) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 13] = (uint8_t)((flashOffset >> 8) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 14] = (uint8_t)((flashOffset >> 16) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 15] = (uint8_t)((flashOffset >> 24) & 0x000000FF);
 
   return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 10000);
 }
@@ -132,24 +135,22 @@ bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint
   senderPacket.command = FLASH_DATA;
   senderPacket.dataSize = ESP_MTU + 16; // set data size to the data size including the additional header
 
-  sendBuffer[9 + 0] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
-  sendBuffer[9 + 1] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
-  sendBuffer[9 + 2] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
-  sendBuffer[9 + 3] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
-
-  sendBuffer[9 + 4] = (uint8_t)((sequenceNumber >> 0) & 0x000000FF);
-  sendBuffer[9 + 5] = (uint8_t)((sequenceNumber >> 8) & 0x000000FF);
-  sendBuffer[9 + 6] = (uint8_t)((sequenceNumber >> 16) & 0x000000FF);
-  sendBuffer[9 + 7] = (uint8_t)((sequenceNumber >> 24) & 0x000000FF);
-
-  sendBuffer[9 + 8] = 0x00;
-  sendBuffer[9 + 9] = 0x00;
-  sendBuffer[9 + 10] = 0x00;
-  sendBuffer[9 + 11] = 0x00;
-  sendBuffer[9 + 12] = 0x00;
-  sendBuffer[9 + 13] = 0x00;
-  sendBuffer[9 + 14] = 0x00;
-  sendBuffer[9 + 15] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 0] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 1] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 2] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 3] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 4] = (uint8_t)((sequenceNumber >> 0) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 5] = (uint8_t)((sequenceNumber >> 8) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 6] = (uint8_t)((sequenceNumber >> 16) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 7] = (uint8_t)((sequenceNumber >> 24) & 0x000000FF);
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 8] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 9] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 10] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 11] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 12] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 13] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 14] = 0x00;
+  sendBuffer[ESP_SLIP_DATA_START_INDEX + 15] = 0x00;
 
   if (flashDataSize < ESP_MTU)
   {
