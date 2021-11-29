@@ -37,6 +37,9 @@
 #include "task.h"
 #include "uart2.h"
 
+static espSlipSendPacket_t senderPacket;
+static espSlipReceivePacket_t receiverPacket;
+
 void espRomBootloaderInit()
 {
   pinMode(DECK_GPIO_IO1, OUTPUT);
