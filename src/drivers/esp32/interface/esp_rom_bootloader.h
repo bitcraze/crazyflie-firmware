@@ -47,6 +47,18 @@
 bool espRomBootloaderSync(uint8_t *sendBuffer);
 
 /**
+* @brief Called to initialize the flashing with the ESP.
+*
+* @param *sendBuffer Pointer to a buffer used to construct the flash begin packet. Can be left empty.
+* @param numberOfDataPackets The number of data packets that will be sent
+* @param firmwareSize The total to be flashed size
+* @param flashOffset The offset in flash where flashing will start
+*
+* @return true if flash begin command was accepted by ESP, false otherwise.
+**/
+bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPackets, uint32_t firmwareSize, uint32_t flashOffset);
+
+/**
 * @brief Called to attach the SPI memory to the ESP. Must be called before issuing any flash command.
 *
 * @param *sendBuffer Pointer to a buffer used to construct the spi attach packet. Can be left empty.

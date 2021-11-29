@@ -97,3 +97,29 @@ bool espRomBootloaderSpiAttach(uint8_t *sendBuffer)
   return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
 }
 
+bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPackets, uint32_t firmwareSize, uint32_t flashOffset)
+{
+  senderPacket.command = FLASH_BEGIN;
+  senderPacket.dataSize = 0x10;
+  sendBuffer[9 + 0] = (uint8_t)((firmwareSize >> 0) & 0x000000FF);
+  sendBuffer[9 + 1] = (uint8_t)((firmwareSize >> 8) & 0x000000FF);
+  sendBuffer[9 + 2] = (uint8_t)((firmwareSize >> 16) & 0x000000FF);
+  sendBuffer[9 + 3] = (uint8_t)((firmwareSize >> 24) & 0x000000FF);
+
+  sendBuffer[9 + 4] = (uint8_t)((numberOfDataPackets >> 0) & 0x000000FF);
+  sendBuffer[9 + 5] = (uint8_t)((numberOfDataPackets >> 8) & 0x000000FF);
+  sendBuffer[9 + 6] = (uint8_t)((numberOfDataPackets >> 16) & 0x000000FF);
+  sendBuffer[9 + 7] = (uint8_t)((numberOfDataPackets >> 24) & 0x000000FF);
+
+  sendBuffer[9 + 8] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
+  sendBuffer[9 + 9] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
+  sendBuffer[9 + 10] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
+  sendBuffer[9 + 11] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
+  sendBuffer[9 + 12] = (uint8_t)((flashOffset >> 0) & 0x000000FF);
+  sendBuffer[9 + 13] = (uint8_t)((flashOffset >> 8) & 0x000000FF);
+  sendBuffer[9 + 14] = (uint8_t)((flashOffset >> 16) & 0x000000FF);
+  sendBuffer[9 + 15] = (uint8_t)((flashOffset >> 24) & 0x000000FF);
+
+  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 10000);
+}
+
