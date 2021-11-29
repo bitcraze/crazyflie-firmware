@@ -26,7 +26,7 @@
  *  
  */
 
-#define DEBUG_MODULE "ESPROMBL"
+#define DEBUG_MODULE "ESP_ROM_BL"
 
 #include <string.h>
 

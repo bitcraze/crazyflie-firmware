@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG_MODULE "ESPFL"
+#define DEBUG_MODULE "ESP_FLASHER"
 #include "debug.h"
 
 #include "FreeRTOS.h"
@@ -63,12 +63,12 @@ bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const u
     espRomBootloaderInit();
     if (!espRomBootloaderSync(&sendBuffer[0]))
     {
-      DEBUG_PRINT("Sync failed\n");
+      DEBUG_PRINT("Write failed - cannot sync with bootloader\n");
       return false;
     }
     if (!espRomBootloaderSpiAttach(&sendBuffer[0]))
     {
-      DEBUG_PRINT("SPI attach failed\n");
+      DEBUG_PRINT("Write failed - cannot attach SPI flash\n");
       return false;
     }
 

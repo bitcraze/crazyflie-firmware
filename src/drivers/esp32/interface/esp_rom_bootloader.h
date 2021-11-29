@@ -72,7 +72,7 @@ bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint
 /**
 * @brief Called to attach the SPI memory to the ESP. Must be called before issuing any flash command.
 *
-* @param *sendBuffer Pointer to a buffer used to construct the spi attach packet. Can be left empty.
+* @param sendBuffer Buffer used to construct the SPI attach packet. Can be left empty.
 *
 * @return true if SPI was succesfully attached to ESP, false otherwise.
 **/
