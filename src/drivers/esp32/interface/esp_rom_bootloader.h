@@ -47,6 +47,15 @@
 bool espRomBootloaderSync(uint8_t *sendBuffer);
 
 /**
+* @brief Called to attach the SPI memory to the ESP. Must be called before issuing any flash command.
+*
+* @param *sendBuffer Pointer to a buffer used to construct the spi attach packet. Can be left empty.
+*
+* @return true if SPI was succesfully attached to ESP, false otherwise.
+**/
+bool espRomBootloaderSpiAttach(uint8_t *sendBuffer);
+
+/**
 * @brief Called to reboot the ESP into bootloader mode.
 **/
 void espRomBootloaderInit();

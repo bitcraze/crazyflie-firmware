@@ -80,3 +80,20 @@ bool espRomBootloaderSync(uint8_t *sendBuffer)
 
   return sync;
 }
+
+bool espRomBootloaderSpiAttach(uint8_t *sendBuffer)
+{
+  senderPacket.command = SPI_ATTACH;
+  senderPacket.dataSize = 0x4;
+  sendBuffer[9 + 0] = 0x00;
+  sendBuffer[9 + 1] = 0x00;
+  sendBuffer[9 + 2] = 0x00;
+  sendBuffer[9 + 3] = 0x00;
+  sendBuffer[9 + 4] = 0x00;
+  sendBuffer[9 + 5] = 0x00;
+  sendBuffer[9 + 6] = 0x00;
+  sendBuffer[9 + 7] = 0x00;
+
+  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
+}
+
