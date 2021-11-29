@@ -30,3 +30,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
+/**
+* @brief Dummy function that can be adapted to verify firmware checksum before booting ESP32.
+*
+**/
+bool espDeckFlasherCheckVersionAndBoot();
