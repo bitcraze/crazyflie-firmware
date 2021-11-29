@@ -37,4 +37,15 @@
 **/
 bool espDeckFlasherCheckVersionAndBoot();
 
+/**
+* @brief Repeatedly called upon arrival of a data packet from the radio when flashing the ESP from the cfclient with zip.
+*
+* @param memAddr The address in memory where the data should be written.
+* @param writeLen The length of the data to write.
+* @param *buffer Pointer to the data to write.
+*
+* @return true if the data was written successfully, false otherwise.
+**/
+bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer);
+
 uint8_t espDeckFlasherPropertiesQuery();
