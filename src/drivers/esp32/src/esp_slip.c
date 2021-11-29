@@ -30,8 +30,6 @@
 
 #include "esp_slip.h"
 
-#define ESP_OVERHEAD_LEN 8
-
 typedef enum
 {
   receiveStart,
@@ -57,7 +55,7 @@ static uint32_t sendSize;
 static uint8_t generateChecksum(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacket)
 {
   uint8_t checksum = 0xEF; // seed
-  for (int i = 0; i < senderPacket->dataSize - 16; i++)
+  for (int i = 0; i < senderPacket->dataSize - ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN; i++)
   {
     checksum ^= sendBuffer[25 + i]; // Calculate bytewise XOR checksum. Actual data payload starts at index 25.
   }
@@ -288,7 +286,7 @@ static bool receivePacket(espSlipReceivePacket_t *receiverPacket, espSlipSendPac
 
 static void assembleBuffer(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacket)
 {
-  sendSize = senderPacket->dataSize + ESP_OVERHEAD_LEN + 2; // + 2 to account for the start and stop bytes
+  sendSize = senderPacket->dataSize + ESP_SLIP_OVERHEAD_LEN + 2; // + 2 to account for the start and stop bytes
 
   sendBuffer[0] = SLIP_START_STOP_BYTE;
   sendBuffer[1] = DIR_CMD;

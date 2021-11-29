@@ -51,7 +51,7 @@ bool espDeckFlasherCheckVersionAndBoot()
 
 static uint32_t sequenceNumber;
 static uint32_t numberOfDataPackets;
-static uint8_t sendBuffer[ESP_MTU + 10 + 16];
+static uint8_t sendBuffer[ESP_MTU + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + 2]; // + 2 to account for start and stop bytes 0xC0
 static uint8_t overshoot;
 static uint32_t sendBufferIndex;
 
@@ -72,10 +72,9 @@ bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const u
       return false;
     }
 
-    numberOfDataPackets = (((ESP_BITSTREAM_SIZE - 1) / ESP_MTU) + ((ESP_BITSTREAM_SIZE / ESP_MTU) < 0 ? 0 : 1)) >> 0;
-    DEBUG_PRINT("Will send %lu data packets\n", numberOfDataPackets);
+    numberOfDataPackets = (((ESP_BITSTREAM_SIZE - 1) / ESP_MTU) + ((ESP_BITSTREAM_SIZE / ESP_MTU) < 0 ? 0 : 1)) >> 0; // Division of bitstream size and MTU rounded up to nearest integer
 
-    if (!espRomBootloaderFlashBegin(&sendBuffer[0], numberOfDataPackets, ESP_BITSTREAM_SIZE, ESP_FW_ADDRESS)) // placeholder erase size
+    if (!espRomBootloaderFlashBegin(&sendBuffer[0], numberOfDataPackets, ESP_BITSTREAM_SIZE, ESP_FW_ADDRESS))
     {
       DEBUG_PRINT("Failed to start flashing\n");
       return 0;
@@ -88,17 +87,25 @@ bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const u
   if (sendBufferIndex + writeLen >= ESP_MTU)
   {
     overshoot = sendBufferIndex + writeLen - ESP_MTU;
-    memcpy(&sendBuffer[9 + 16 + sendBufferIndex], buffer, writeLen - overshoot);
+    memcpy(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + sendBufferIndex], buffer, writeLen - overshoot); // + 1 to account for start byte 0xC0
     sendBufferIndex += writeLen - overshoot;
   }
   else
   {
-    memcpy(&sendBuffer[9 + 16 + sendBufferIndex], buffer, writeLen);
+    memcpy(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + sendBufferIndex], buffer, writeLen);
     sendBufferIndex += writeLen;
   }
 
   // send buffer if full
-  if (sendBufferIndex == ESP_MTU || ((sequenceNumber == numberOfDataPackets - 1) && (sendBufferIndex == ESP_BITSTREAM_SIZE % ESP_MTU)))
+  const bool sendBufferFull = (sendBufferIndex == ESP_MTU);
+  const bool lastPacket = (sequenceNumber == numberOfDataPackets - 1);
+  bool lastPacketFull;
+  if (lastPacket)
+  {
+    lastPacketFull = (sendBufferIndex == ESP_BITSTREAM_SIZE % ESP_MTU);
+  }
+
+  if (sendBufferFull || (lastPacket && lastPacketFull))
   {
     if (!espRomBootloaderFlashData(&sendBuffer[0], sendBufferIndex, sequenceNumber))
     {
@@ -113,7 +120,7 @@ bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const u
     // put overshoot into send buffer for next send & update sendBufferIndex
     if (overshoot)
     {
-      memcpy(&sendBuffer[9 + 16 + 0], &buffer[writeLen - overshoot], overshoot);
+      memcpy(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + 0], &buffer[writeLen - overshoot], overshoot);
       sendBufferIndex = overshoot;
       overshoot = 0;
     }
@@ -126,7 +133,7 @@ bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const u
     sequenceNumber++;
 
     // if very last radio packet triggered overshoot, send padded carry buffer
-    if (((sequenceNumber == numberOfDataPackets - 1) && (sendBufferIndex == ESP_BITSTREAM_SIZE % ESP_MTU)))
+    if ((lastPacket && lastPacketFull))
     {
 
       if (!espRomBootloaderFlashData(&sendBuffer[0], sendBufferIndex, sequenceNumber))

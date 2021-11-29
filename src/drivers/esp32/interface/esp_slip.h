@@ -33,6 +33,8 @@
 
 #define ESP_MTU 4000
 #define ESP_SLIP_TX_BUFFER_SIZE 128
+#define ESP_SLIP_OVERHEAD_LEN 8
+#define ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN 16 // to account for additional overhead in the SLIP packet while flashing data
 
 /* Commands */
 #define DIR_CMD 0x00
