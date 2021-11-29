@@ -37,6 +37,10 @@
 #include "task.h"
 #include "uart2.h"
 
+#if UART2_DMA_BUFFER_SIZE < ESP_SLIP_TX_BUFFER_SIZE
+#warning "ESP SLIP transmission buffer size must be smaller than or equal to UART2 DMA buffer size"
+#endif
+
 static espSlipSendPacket_t senderPacket;
 static espSlipReceivePacket_t receiverPacket;
 
