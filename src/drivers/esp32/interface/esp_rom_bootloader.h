@@ -59,6 +59,17 @@ bool espRomBootloaderSync(uint8_t *sendBuffer);
 bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPackets, uint32_t firmwareSize, uint32_t flashOffset);
 
 /**
+* @brief Called to flash a packet onto the ESP.
+*
+* @param *sendBuffer Pointer to a buffer used to construct the slip packet. Must contain actual to be flashed data.
+* @param flashDataSize Size of the current data packet
+* @param sequenceNumber The sequence number of the current data packet, indicates this is the nth packet
+*
+* @return true if data was succesfully flashed to ESP, false otherwise.
+**/
+bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint32_t sequenceNumber);
+
+/**
 * @brief Called to attach the SPI memory to the ESP. Must be called before issuing any flash command.
 *
 * @param *sendBuffer Pointer to a buffer used to construct the spi attach packet. Can be left empty.

@@ -123,3 +123,35 @@ bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPacket
   return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 10000);
 }
 
+bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint32_t sequenceNumber)
+{
+  senderPacket.command = FLASH_DATA;
+  senderPacket.dataSize = ESP_MTU + 16; // set data size to the data size including the additional header
+
+  sendBuffer[9 + 0] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
+  sendBuffer[9 + 1] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
+  sendBuffer[9 + 2] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
+  sendBuffer[9 + 3] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
+
+  sendBuffer[9 + 4] = (uint8_t)((sequenceNumber >> 0) & 0x000000FF);
+  sendBuffer[9 + 5] = (uint8_t)((sequenceNumber >> 8) & 0x000000FF);
+  sendBuffer[9 + 6] = (uint8_t)((sequenceNumber >> 16) & 0x000000FF);
+  sendBuffer[9 + 7] = (uint8_t)((sequenceNumber >> 24) & 0x000000FF);
+
+  sendBuffer[9 + 8] = 0x00;
+  sendBuffer[9 + 9] = 0x00;
+  sendBuffer[9 + 10] = 0x00;
+  sendBuffer[9 + 11] = 0x00;
+  sendBuffer[9 + 12] = 0x00;
+  sendBuffer[9 + 13] = 0x00;
+  sendBuffer[9 + 14] = 0x00;
+  sendBuffer[9 + 15] = 0x00;
+
+  if (flashDataSize < ESP_MTU)
+  {
+    // pad the data with 0xFF
+    memset(&sendBuffer[9 + 16 + flashDataSize], 0xFF, ESP_MTU - flashDataSize);
+  }
+
+  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
+}
