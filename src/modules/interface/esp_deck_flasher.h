@@ -36,3 +36,5 @@
 *
 **/
 bool espDeckFlasherCheckVersionAndBoot();
+
+uint8_t espDeckFlasherPropertiesQuery();

@@ -40,6 +40,7 @@
 #include "esp_rom_bootloader.h"
 #include "uart2.h"
 
+static bool inBootloaderMode = true;
 static bool hasStarted = false;
 
 bool espDeckFlasherCheckVersionAndBoot()
@@ -48,3 +49,19 @@ bool espDeckFlasherCheckVersionAndBoot()
   return true;
 }
 
+uint8_t espDeckFlasherPropertiesQuery()
+{
+  uint8_t result = 0;
+
+  if (hasStarted)
+  {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
+
+  if (inBootloaderMode)
+  {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE | DECK_MEMORY_MASK_UPGRADE_REQUIRED;
+  }
+
+  return result;
+}
