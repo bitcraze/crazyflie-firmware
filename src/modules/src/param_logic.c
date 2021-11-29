@@ -128,10 +128,10 @@ static void * paramGetDefault(int index)
 
 /**
  * Set param with [index] to data
- * 
+ *
  * @param index  The param index
  * @param data  The variable data
- * 
+ *
  * @return number of bytes set
  **/
 static int paramSet(uint16_t index, void *data)
@@ -161,10 +161,10 @@ static int paramSet(uint16_t index, void *data)
 
 /**
  * Get param with [index]
- * 
+ *
  * @param index  The param index
  * @param data  The variable data
- * 
+ *
  * @return number of bytes read
  **/
 static int paramGet(uint16_t index, void *data)
@@ -194,7 +194,7 @@ static int paramGet(uint16_t index, void *data)
 
 /**
  * Get param on [index] length in bytes
- * 
+ *
  * @return number of bytes
  **/
 static int paramGetLen(uint16_t index)
@@ -471,7 +471,7 @@ paramVarId_t paramGetVarId(const char* group, const char* name)
     } else {
       id += 1;
     }
-    
+
     if ((!strcmp(group, currgroup)) && (!strcmp(name, params[index].name))) {
       varId.index = index;
       varId.id = id - 1;
@@ -633,15 +633,27 @@ void paramGetExtendedType(CRTPPacket *p)
   crtpSendPacketBlock(p);
 }
 
+static void generateStorageKey(const uint16_t index, char key[KEY_LEN])
+{
+  char *group;
+  char *name;
+  paramVarId_t paramId;
+
+  paramId.index = (uint16_t)index;
+  paramGetGroupAndName(paramId, &group, &name);
+
+  // Assemble key string, e.g. "prm/pid_rate.kp"
+  strcpy(key, PERSISTENT_PREFIX_STRING);
+  strcat(key, group);
+  strcat(key, ".");
+  strcat(key, name);
+}
 
 void paramPersistentStore(CRTPPacket *p)
 {
   int index;
-  char *group;
-  char *name;
   uint16_t id;
   bool result = true;
-  paramVarId_t paramId;
 
   memcpy(&id, &p->data[1], 2);
   index = variableGetIndex(id);
@@ -653,15 +665,8 @@ void paramPersistentStore(CRTPPacket *p)
     return;
   }
 
-  paramId.index = (uint16_t)index;
-  paramGetGroupAndName(paramId, &group, &name);
-
-  // Assemble key string, e.g. "prm/pid_rate.kp"
   char key[KEY_LEN] = {0};
-  strcpy(key, PERSISTENT_PREFIX_STRING);
-  strcat(key, group);
-  strcat(key, ".");
-  strcat(key, name);
+  generateStorageKey(index, key);
 
   result = storageStore(key, params[index].address, paramGetLen(index));
 
@@ -673,12 +678,9 @@ void paramPersistentStore(CRTPPacket *p)
 void paramPersistentGetState(CRTPPacket *p)
 {
   int index;
-  char *group;
-  char *name;
   uint8_t paramLen;
   size_t varSize = 0;
   uint16_t id;
-  paramVarId_t paramId;
   uint8_t value[8];
 
   memcpy(&id, &p->data[1], 2);
@@ -691,27 +693,19 @@ void paramPersistentGetState(CRTPPacket *p)
     return;
   }
 
-  paramId.index = (uint16_t)index;
-  paramGetGroupAndName(paramId, &group, &name);
-
-
-  // Assemble key string, e.g. "prm/pid_rate.kp"
   char key[KEY_LEN] = {0};
-  strcpy(key, PERSISTENT_PREFIX_STRING);
-  strcat(key, group);
-  strcat(key, ".");
-  strcat(key, name);
+  generateStorageKey(index, key);
 
   paramLen = paramGetLen(index);
 
   if (storageFetch(key, &value, paramLen)) { // Value is stored
-    p->data[3] = PARAM_PERSISTENT_STORED; 
+    p->data[3] = PARAM_PERSISTENT_STORED;
     p->size = 4;
     memcpy(&p->data[4], &value, paramLen);
     varSize = paramLen;
-    p->size +=  paramLen;
+    p->size += paramLen;
   } else { // Value is not stored
-    p->data[3] = PARAM_PERSISTENT_NOT_STORED; 
+    p->data[3] = PARAM_PERSISTENT_NOT_STORED;
     p->size = 4;
   }
   // Add default value
@@ -730,11 +724,8 @@ void paramPersistentGetState(CRTPPacket *p)
 void paramPersistentClear(CRTPPacket *p)
 {
   int index;
-  char *group;
-  char *name;
   uint16_t id;
   bool result = true;
-  paramVarId_t paramId;
 
   memcpy(&id, &p->data[1], 2);
   index = variableGetIndex(id);
@@ -746,15 +737,9 @@ void paramPersistentClear(CRTPPacket *p)
     return;
   }
 
-  paramId.index = (uint16_t)index;
-  paramGetGroupAndName(paramId, &group, &name);
-
   // Assemble key string, e.g. "prm/pid_rate.kp"
   char key[KEY_LEN] = {0};
-  strcpy(key, PERSISTENT_PREFIX_STRING);
-  strcat(key, group);
-  strcat(key, ".");
-  strcat(key, name);
+  generateStorageKey(index, key);
 
   result = storageDelete(key);
 
@@ -762,4 +747,3 @@ void paramPersistentClear(CRTPPacket *p)
   p->size = 4;
   crtpSendPacketBlock(p);
 }
-
