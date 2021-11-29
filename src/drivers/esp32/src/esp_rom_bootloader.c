@@ -54,3 +54,29 @@ void espRomBootloaderInit()
   pinMode(DECK_GPIO_IO1, INPUT_PULLUP);
 }
 
+bool espRomBootloaderSync(uint8_t *sendBuffer)
+{
+  senderPacket.command = SYNC;
+  senderPacket.dataSize = 0x24;
+  sendBuffer[9 + 0] = 0x07;
+  sendBuffer[9 + 1] = 0x07;
+  sendBuffer[9 + 2] = 0x12;
+  sendBuffer[9 + 3] = 0x20;
+  for (int i = 0; i < 32; i++)
+  {
+    sendBuffer[9 + 4 + i] = 0x55;
+  }
+
+  bool sync = false;
+  for (int i = 0; i < 10 && !sync; i++) // max 10 sync attempts
+  {
+    sync = espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
+  }
+
+  //
+  // ESP32 responds multiple times upon succesful SYNC. Wait until all responses are received, so they can be cleared before next transmission.
+  //
+  vTaskDelay(M2T(100));
+
+  return sync;
+}

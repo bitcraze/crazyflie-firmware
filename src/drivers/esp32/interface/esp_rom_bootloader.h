@@ -38,6 +38,15 @@
 #define ESP_FW_ADDRESS 0x10000
 
 /**
+* @brief Called to sync with the bootloader. Allows the ESP to automatically configure the baud rate.
+*
+* @param *sendBuffer Pointer to a buffer used to construct the sync packet. Can be left empty.
+*
+* @return true if sync was successful, false otherwise.
+**/
+bool espRomBootloaderSync(uint8_t *sendBuffer);
+
+/**
 * @brief Called to reboot the ESP into bootloader mode.
 **/
 void espRomBootloaderInit();
