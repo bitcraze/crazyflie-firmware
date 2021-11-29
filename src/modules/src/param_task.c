@@ -49,7 +49,7 @@ static bool isInit = false;
 
 static CRTPPacket p;
 
-STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(paramTask, PARAM_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC(paramTask, PARAM_TASK_STACKSIZE);
 
 
 void paramInit(void)
@@ -116,4 +116,3 @@ void paramTask(void * prm)
     }
 	}
 }
-
