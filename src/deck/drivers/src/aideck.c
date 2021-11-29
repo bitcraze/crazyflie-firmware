@@ -56,7 +56,6 @@ static uint8_t byte;
 static void NinaTask(void *param)
 {
   systemWaitStart();
-  vTaskDelay(M2T(3000));
   if (espDeckFlasherCheckVersionAndBoot() == false)
   {
     DEBUG_PRINT("ESP32 not booted.");
