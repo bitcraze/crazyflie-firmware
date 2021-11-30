@@ -27,9 +27,6 @@
 #pragma once
 
 #include <stdbool.h>
-#include <stdint.h>
-
-#include <crtp.h>
 
 /* Public functions */
 void paramInit(void);

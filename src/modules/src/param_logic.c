@@ -27,14 +27,11 @@
 #include <errno.h>
 
 #include "config.h"
-#include "crtp.h"
-#include "param.h"
 #include "param_logic.h"
-#include "crc32.h"
-#include "console.h"
-#include "debug.h"
-#include "static_mem.h"
 #include "storage.h"
+#include "crc32.h"
+#include "debug.h"
+#include "cfassert.h"
 
 #if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)

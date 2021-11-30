@@ -29,7 +29,7 @@
 #include "task.h"
 
 #include "config.h"
-#include "crtp.h"
+#include "param_task.h"
 #include "param_logic.h"
 #include "debug.h"
 #include "static_mem.h"
@@ -70,16 +70,6 @@ void paramInit(void)
 
 bool paramTest(void)
 {
-
-//  p.data[0] = 0x00;
-//  p.data[1] = 0x00;
-//  p.data[2] = 0x00;
-//  p.data[3] = 0x00;
-//  paramGetExtendedType(&p);
-//  paramPersistentStore(&p);
-//  paramPersistentGetState(&p);
-//  paramPersistentClear(&p);
-
   return isInit;
 }
 

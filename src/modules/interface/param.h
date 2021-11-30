@@ -28,8 +28,6 @@
 
 #include <stdint.h>
 
-#include <crtp.h>
-
 /* Basic parameter structure */
 struct param_s {
   uint8_t type;
