@@ -63,6 +63,7 @@ static const uint8_t typeLength[] = {
 #define CMD_GET_ITEM_V2 2 // version 2: up to 16k entries
 #define CMD_GET_INFO_V2 3 // version 2: up to 16k entries
 
+#define PERSISTENT_PREFIX_STRING "prm/"
 
 //Private functions
 static int variableGetIndex(int id);
@@ -761,4 +762,21 @@ void paramPersistentClear(CRTPPacket *p)
   p->data[3] = result ? 0: ENOENT;
   p->size = 4;
   crtpSendPacketBlock(p);
+}
+
+static bool persistentParamFromStorage(const char *key, void *buffer, size_t length)
+{
+  //
+  // The key is of format "prm/group.name", we need group and name.
+  //
+  char *completeName = (char *) key + strlen(PERSISTENT_PREFIX_STRING);
+  paramVarId_t varId = paramGetVarIdFromComplete(completeName);
+  paramSet(varId.index, buffer);
+
+  return true;
+}
+
+void paramLogicStorageInit()
+{
+  storageForeach(PERSISTENT_PREFIX_STRING, persistentParamFromStorage);
 }

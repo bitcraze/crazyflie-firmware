@@ -138,9 +138,17 @@ void paramSetInt(paramVarId_t varid, int valuei);
  */
 void paramSetFloat(paramVarId_t varid, float valuef);
 
-
+/**
+ * @brief Initialize the parameter subsystem
+ */
 void paramLogicInit();
-//The following two function SHALL NOT be called outside paramTask!
+
+/**
+ * @brief Read parameter values from persistent storage
+ */
+void paramLogicStorageInit();
+
+// The following functions SHALL NOT be called outside paramTask!
 void paramWriteProcess(CRTPPacket *p);
 void paramReadProcess(CRTPPacket *p);
 void paramTOCProcess(CRTPPacket *p, int command);

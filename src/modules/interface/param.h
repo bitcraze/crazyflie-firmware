@@ -101,7 +101,6 @@ typedef float * (*paramGetterFloat)(void);
 #define MISC_PERSISTENT_STORE     3
 #define MISC_PERSISTENT_GET_STATE 4
 #define MISC_PERSISTENT_CLEAR     5
-#define PERSISTENT_PREFIX_STRING "prm/"
 
 /* Macros */
 
