@@ -455,6 +455,22 @@ static int variableGetIndex(int id)
 /* Public API to access param TOC from within the copter */
 static paramVarId_t invalidVarId = {0xffffu, 0xffffu};
 
+paramVarId_t paramGetVarIdFromComplete(const char* completeName)
+{
+  char group[32] = { 0, };
+
+  char *dot = strchr(completeName, '.');
+  if (!dot) {
+    return invalidVarId;
+  }
+
+  size_t group_len = dot - completeName;
+  memcpy(group, completeName, group_len);
+  char *name = (char *) (dot + 1);
+
+  return paramGetVarId(group, name);
+}
+
 paramVarId_t paramGetVarId(const char* group, const char* name)
 {
   uint16_t index;

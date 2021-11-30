@@ -55,6 +55,13 @@ typedef struct paramVarId_s {
  */
 paramVarId_t paramGetVarId(const char* group, const char* name);
 
+/** Get the varId from complete name of variable
+ *
+ * @param completeName Complete  name of the variable
+ * @return The variable ID or an invalid ID. Use PARAM_VARID_IS_VALID() to check validity.
+ */
+paramVarId_t paramGetVarIdFromComplete(const char* completeName);
+
 /** Check variable ID validity
  *
  * @param varId variable ID, returned by paramGetVarId()
