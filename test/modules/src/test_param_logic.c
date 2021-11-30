@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 
 #include "unity.h"
 
@@ -31,7 +32,14 @@ static int8_t myInt8 = 0;
 static int16_t myInt16 = 0;
 static int32_t myInt32 = 0;
 static int32_t myPersistent = 0;
+static int8_t myShortPersistent = 0;
 static float myFloat = 0.0f;
+
+// Storage fetch mock
+static int32_t* fetchMockBuffer = 0;
+static size_t fetchMockBufferLength = 0;
+static char* fetchMockExpectedKey = "";
+
 
 PARAM_GROUP_START(myGroup)
 PARAM_ADD(PARAM_UINT8, myUint8, &myUint8)
@@ -42,6 +50,7 @@ PARAM_ADD(PARAM_INT16, myInt16, &myInt16)
 PARAM_ADD(PARAM_INT32, myInt32, &myInt32)
 PARAM_ADD(PARAM_FLOAT, myFloat, &myFloat)
 PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, myPersistent, &myPersistent)
+PARAM_ADD_CORE(PARAM_INT8 | PARAM_PERSISTENT, myShortPersistent, &myShortPersistent)
 PARAM_GROUP_STOP(myGroup)
 
 CRTPPacket replyPk;
@@ -56,6 +65,12 @@ static int crtpReply(CRTPPacket* p, int cmock_num_calls)
 void setUp(void) {
   _param_start = __params_myGroup;
   _param_stop = _param_start + (sizeof(__params_myGroup) / sizeof(struct param_s));
+
+  // Set up storage fetch mock
+  fetchMockBuffer = 0;
+  fetchMockBufferLength = 0;
+  fetchMockExpectedKey = "";
+
   paramLogicInit();
 }
 
@@ -284,11 +299,18 @@ void testWriteProcessUint8(void) {
 
 static size_t storageFetchMockFunc(const char *key, void* buffer, size_t length)
 {
-  int32_t expected = 0xBCBCBCBC;
-  memcpy(buffer, &expected, length);
+  TEST_ASSERT_EQUAL_STRING(fetchMockExpectedKey, key);
+  size_t cpyLen = length;
+  if (fetchMockBufferLength < length) {
+    cpyLen = fetchMockBufferLength;
+  }
+
+  memcpy(buffer, fetchMockBuffer, cpyLen);
+
+  return cpyLen;
 }
 
-void testPersistentGetState(void) {
+void testPersistentGetStateWithStoredParameter(void) {
   // Fixture
   CRTPPacket testPk;
 
@@ -299,21 +321,121 @@ void testPersistentGetState(void) {
   testPk.data[2] = (varid.id >> 8) & 0xffu;
 
   crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  uint32_t storageBuffer = 0x01020304;
+  fetchMockBuffer = &storageBuffer;
+  fetchMockBufferLength = 4;
+  fetchMockExpectedKey = "prm/myGroup.myPersistent";
   storageFetch_StubWithCallback(storageFetchMockFunc);
+
   // Test
   paramPersistentGetState(&testPk);
 
   // Assert
+  testPk.size = 12;
   testPk.data[3] = PARAM_PERSISTENT_STORED;
-  // Value should be 0
-  testPk.data[4] = 0xBC;
-  testPk.data[5] = 0xBC;
-  testPk.data[6] = 0xBC;
-  testPk.data[7] = 0xBC;
-  // Default value should be 0
-  testPk.data[8] = 0;
-  testPk.data[9] = 0;
-  testPk.data[10] = 0;
-  testPk.data[11] = 0;
-  TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], 12);
+
+  // Default value should be 0. Can not be tested in unit test.
+  testPk.data[4] = 0;
+  testPk.data[5] = 0;
+  testPk.data[6] = 0;
+  testPk.data[7] = 0;
+
+  testPk.data[8] = 0x04;
+  testPk.data[9] = 0x03;
+  testPk.data[10] = 0x02;
+  testPk.data[11] = 0x01;
+
+  TEST_ASSERT_EQUAL_UINT8(testPk.size, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
+}
+
+void testPersistentGetStateWithShortStoredParameter(void) {
+  // Fixture
+  CRTPPacket testPk;
+
+  paramVarId_t varid = paramGetVarId("myGroup", "myShortPersistent");
+
+  testPk.data[0] = 0;
+  testPk.data[1] = varid.id & 0xffu;
+  testPk.data[2] = (varid.id >> 8) & 0xffu;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  uint32_t storageBuffer = 0x17;
+  fetchMockBuffer = &storageBuffer;
+  fetchMockBufferLength = 1;
+  fetchMockExpectedKey = "prm/myGroup.myShortPersistent";
+  storageFetch_StubWithCallback(storageFetchMockFunc);
+
+  // Test
+  paramPersistentGetState(&testPk);
+
+  // Assert
+  testPk.size = 6;
+
+  testPk.data[3] = PARAM_PERSISTENT_STORED;
+
+  // Default value should be 0. Can not be tested in unit test.
+  testPk.data[4] = 0;
+
+  testPk.data[5] = 0x17;
+  TEST_ASSERT_EQUAL_UINT8(testPk.size, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
+}
+
+void testPersistentGetStateWithoutStoredParameter(void) {
+  // Fixture
+  CRTPPacket testPk;
+
+  paramVarId_t varid = paramGetVarId("myGroup", "myPersistent");
+
+  testPk.data[0] = 0;
+  testPk.data[1] = varid.id & 0xffu;
+  testPk.data[2] = (varid.id >> 8) & 0xffu;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  fetchMockBufferLength = 0;
+  fetchMockExpectedKey = "prm/myGroup.myPersistent";
+  storageFetch_StubWithCallback(storageFetchMockFunc);
+
+  // Test
+  paramPersistentGetState(&testPk);
+
+  // Assert
+  testPk.size = 8;
+
+  testPk.data[3] = PARAM_PERSISTENT_NOT_STORED;
+
+  // Default value should be 0. Can not be tested in unit test.
+  testPk.data[4] = 0;
+  testPk.data[5] = 0;
+  testPk.data[6] = 0;
+  testPk.data[7] = 0;
+  TEST_ASSERT_EQUAL_UINT8(testPk.size, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
+}
+
+
+void testPersistentGetStateWithNonExistingParameter(void) {
+  // Fixture
+  CRTPPacket testPk;
+
+  testPk.data[0] = 0;
+  testPk.data[1] = 0x47;
+  testPk.data[2] = 0x11;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramPersistentGetState(&testPk);
+
+  // Assert
+  testPk.size = 4;
+
+  testPk.data[3] = ENOENT;
+
+  TEST_ASSERT_EQUAL_UINT8(testPk.size, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
 }

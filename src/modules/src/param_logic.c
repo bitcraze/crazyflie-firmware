@@ -677,16 +677,13 @@ void paramPersistentStore(CRTPPacket *p)
 
 void paramPersistentGetState(CRTPPacket *p)
 {
-  int index;
-  uint8_t paramLen;
-  size_t varSize = 0;
   uint16_t id;
-  uint8_t value[8];
 
   memcpy(&id, &p->data[1], 2);
-  index = variableGetIndex(id);
+  int index = variableGetIndex(id);
 
-  if (index < 0) {
+  const bool doesParamExist = (index >= 0);
+  if (! doesParamExist) {
     p->data[3] = ENOENT;
     p->size = 4;
     crtpSendPacketBlock(p);
@@ -696,28 +693,30 @@ void paramPersistentGetState(CRTPPacket *p)
   char key[KEY_LEN] = {0};
   generateStorageKey(index, key);
 
-  paramLen = paramGetLen(index);
+  uint8_t paramLen = paramGetLen(index);
 
-  if (storageFetch(key, &value, paramLen)) { // Value is stored
-    p->data[3] = PARAM_PERSISTENT_STORED;
-    p->size = 4;
-    memcpy(&p->data[4], &value, paramLen);
-    varSize = paramLen;
-    p->size += paramLen;
-  } else { // Value is not stored
-    p->data[3] = PARAM_PERSISTENT_NOT_STORED;
-    p->size = 4;
-  }
+  // First part of data use 4 bytes
+  p->size = 4;
+
   // Add default value
   if (params[index].getter) {
-    memcpy(&p->data[4+varSize], params[index].getter(), paramLen);
-    varSize = paramLen;
+    memcpy(&p->data[p->size], params[index].getter(), paramLen);
   } else {
-    memcpy(&p->data[4+varSize], paramGetDefault(index), paramLen);
-    varSize = paramLen;
+    memcpy(&p->data[p->size], paramGetDefault(index), paramLen);
+  }
+  p->size += paramLen;
+
+  // Add stored value if avialable
+  uint8_t value[8];
+  const bool isValueStored = (storageFetch(key, &value, paramLen) > 0);
+  if (isValueStored) {
+    p->data[3] = PARAM_PERSISTENT_STORED;
+    memcpy(&p->data[p->size], &value, paramLen);
+    p->size += paramLen;
+  } else {
+    p->data[3] = PARAM_PERSISTENT_NOT_STORED;
   }
 
-  p->size = p->size + (uint8_t)(varSize & 0xFF);
   crtpSendPacketBlock(p);
 }
 
