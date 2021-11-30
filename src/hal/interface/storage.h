@@ -79,9 +79,21 @@ size_t storageFetch(const char *key, void* buffer, size_t length);
 
 /**
  * Deletes and entry from the storage.
- * 
+ *
  * @param[key] Null terminated string for the key. Its length must be between 1 and 255.
- * 
+ *
  * @return true in case of success. false if the key was not found or if an error occured.
  */
 bool storageDelete(const char* key);
+
+// A user function that can be supplied to storageForeach, see below
+typedef bool (*storageFunc_t)(const char *key, void *buffer, size_t length);
+
+/**
+ * Call the function func for each storage that matches the key prefix.
+ *
+ * @param[prefix] Null terminated string for the key prefix. Its length must be between 1 and 255.
+ *
+ * @return true in case of success.
+ */
+bool storageForeach(const char* prefix, storageFunc_t func);

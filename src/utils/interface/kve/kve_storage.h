@@ -109,3 +109,5 @@ size_t kveStorageGetBufferLength(kveItemHeader_t header);
 size_t kveStorageGetKey(kveMemory_t *kve, size_t address, kveItemHeader_t header, char* key, size_t maxLength);
 
 size_t kveStorageGetBuffer(kveMemory_t *kve, size_t address, kveItemHeader_t header, void* buffer, size_t maxLength);
+
+size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address, const char *prefix, char *keyBuffer, size_t *itemAddress);
