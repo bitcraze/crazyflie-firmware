@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * param_logic.h - Crazy parameter system header file for the logic.
+ * param.h - Crazy parameter system header file.
  */
 
-#ifndef __PARAM_H__
-#define __PARAM_H__
+#pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #include <crtp.h>
@@ -155,5 +153,3 @@ typedef float * (*paramGetterFloat)(void);
   PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
 
 #endif // UNIT_TEST_MODE
-
-#endif /* __PARAM_H__ */
