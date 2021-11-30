@@ -18,5 +18,5 @@ def test_takeoff():
 
     # Assert
     state = cffirmware.plan_current_goal(planner, duration)
-    assert np.allclose(np.array([0, 0, 1.0]), state.pos)
+    assert np.allclose(np.array([0, 0, targetHeight]), state.pos)
     assert np.allclose(np.array([0, 0, 0.0]), state.vel)
