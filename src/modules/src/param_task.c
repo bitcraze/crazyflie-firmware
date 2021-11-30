@@ -33,6 +33,9 @@
 #include "param_logic.h"
 #include "debug.h"
 #include "static_mem.h"
+#include "storage.h"
+
+#include <string.h>
 
 #if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
@@ -46,11 +49,27 @@
 static void paramTask(void * prm);
 
 static bool isInit = false;
-
 static CRTPPacket p;
 
 STATIC_MEM_TASK_ALLOC(paramTask, PARAM_TASK_STACKSIZE);
 
+
+static bool persistentParamFromStorage(const char *key, void *buffer, size_t length)
+{
+  //
+  // The key is of format "prm/group.name", we need group and name.
+  //
+  char *completeName = (char *) key + strlen(PERSISTENT_PREFIX_STRING);
+  paramVarId_t varId = paramGetVarIdFromComplete(completeName);
+  paramSet(varId.index, buffer);
+
+  return true;
+}
+
+static void paramStorageInit()
+{
+  storageForeach("prm/", persistentParamFromStorage);
+}
 
 void paramInit(void)
 {
@@ -58,6 +77,7 @@ void paramInit(void)
     return;
 
   paramLogicInit();
+  paramStorageInit();
 
   //Start the param task
   STATIC_MEM_TASK_CREATE(paramTask, paramTask, PARAM_TASK_NAME, NULL, PARAM_TASK_PRI);
