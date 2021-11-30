@@ -134,7 +134,7 @@ static void * paramGetDefault(int index)
  *
  * @return number of bytes set
  **/
-static int paramSet(uint16_t index, void *data)
+int paramSet(uint16_t index, void *data)
 {
   int paramLength = 0;
 
