@@ -768,7 +768,10 @@ static bool persistentParamFromStorage(const char *key, void *buffer, size_t len
   //
   char *completeName = (char *) key + strlen(PERSISTENT_PREFIX_STRING);
   paramVarId_t varId = paramGetVarIdFromComplete(completeName);
-  paramSet(varId.index, buffer);
+
+  if (PARAM_VARID_IS_VALID(varId)) {
+    paramSet(varId.index, buffer);
+  }
 
   return true;
 }
