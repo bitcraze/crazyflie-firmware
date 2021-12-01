@@ -125,7 +125,7 @@ void testThatMoveMemoryDoesMoveAnItem() {
 
   // Test
   kveStorageMoveMemory(&kveMemory, address, newAddress, itemSize);
-  
+
   // Assert
   TEST_ASSERT_EQUAL_MEMORY(expectedItemInMemory, &memory[newAddress], itemSize);
 }
@@ -140,7 +140,7 @@ void testThatFindItemByKeyFindsAnItem() {
 
   // Test
   size_t found_address = kveStorageFindItemByKey(&kveMemory, 0, "world");
-  
+
   // Assert
   TEST_ASSERT_EQUAL(world_address, found_address);
 }
@@ -155,13 +155,55 @@ void testThatFindItemByKeyDoNotFindAnItemWhenSearchingAfterIt() {
   kveStorageWriteItem(&kveMemory, world_address, "world", "hello", 5);
   kveStorageWriteEnd(&kveMemory, end_address);
 
-
   // Test
   size_t found_address = kveStorageFindItemByKey(&kveMemory, world_address, "hello");
-  
+
   // Assert
   TEST_ASSERT_FALSE(KVE_STORAGE_IS_VALID(found_address));
 }
+
+void testThatFindItemByPrefixFindsAnItem() {
+  // Fixture
+  size_t hello_address = 0;
+  size_t world_address = 17;
+
+  kveStorageWriteItem(&kveMemory, hello_address, "pre/hello", "world", 5);
+  kveStorageWriteItem(&kveMemory, world_address, "pre/world", "hello", 5);
+
+  size_t foundAdr = 0;
+  char foundKey[] = "qwertyqwertyqwertyqwerty";
+
+  // Test
+  size_t size = kveStorageFindItemByPrefix(&kveMemory, 0, "pre/", foundKey, &foundAdr);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(hello_address, foundAdr);
+  TEST_ASSERT_EQUAL_STRING("pre/hello", foundKey);
+  TEST_ASSERT_EQUAL_UINT32(17, size);
+}
+
+void testThatFindItemByPrefixFindsNextItem() {
+  // Fixture
+  size_t hello_address = 0;
+  size_t world_address = 17;
+
+  kveStorageWriteItem(&kveMemory, hello_address, "pre/hello", "world", 5);
+  kveStorageWriteItem(&kveMemory, world_address, "pre/world", "hello", 5);
+
+  size_t foundAdr = 0;
+  char foundKey[] = "qwertyqwertyqwertyqwerty";
+  size_t size = kveStorageFindItemByPrefix(&kveMemory, 0, "pre/", foundKey, &foundAdr);
+
+  // Test
+  size = kveStorageFindItemByPrefix(&kveMemory, foundAdr + size, "pre/", foundKey, &foundAdr);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(world_address, foundAdr);
+  TEST_ASSERT_EQUAL_STRING("pre/world", foundKey);
+  TEST_ASSERT_EQUAL_UINT32(17, size);
+}
+
+
 
 void testThatFindEndFindsTheEnd() {
   // Fixture
@@ -175,7 +217,7 @@ void testThatFindEndFindsTheEnd() {
 
   // Test
   size_t found_address = kveStorageFindEnd(&kveMemory, 0);
-  
+
   // Assert
   TEST_ASSERT_EQUAL(end_address, found_address);
 }
@@ -190,7 +232,7 @@ void testThatFindEndReturnInvalidAddressIfNoEnd() {
 
   // Test
   size_t found_address = kveStorageFindEnd(&kveMemory, 0);
-  
+
   // Assert
   TEST_ASSERT_FALSE(KVE_STORAGE_IS_VALID(found_address));
 }
@@ -207,7 +249,7 @@ void testThatFindNextItemFindsTheNextItem() {
 
   // Test
   size_t found_address = kveStorageFindNextItem(&kveMemory, hello_address);
-  
+
   // Assert
   TEST_ASSERT_EQUAL(world_address, found_address);
 }
@@ -224,7 +266,7 @@ void testThatFindNextItemReturnInvalidAddressIfNoMoreItem() {
 
   // Test
   size_t found_address = kveStorageFindNextItem(&kveMemory, world_address);
-  
+
   // Assert
   TEST_ASSERT_FALSE(KVE_STORAGE_IS_VALID(found_address));
 }
@@ -244,7 +286,7 @@ void testThatFindNextItemJumpsOverHoles() {
 
   // Test
   size_t found_address = kveStorageFindNextItem(&kveMemory, hello_address);
-  
+
   // Assert
   TEST_ASSERT_EQUAL(world_address, found_address);
 }

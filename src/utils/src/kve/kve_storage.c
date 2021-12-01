@@ -155,6 +155,7 @@ size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
             kve->read(currentAddress + 3, &searchBuffer, keyLength);
             if (!memcmp(prefix, searchBuffer, searchedKeyLength)) {
                 memcpy(keyBuffer, searchBuffer, keyLength);
+                keyBuffer[keyLength] = 0;
                 *itemAddress = currentAddress;
                 return length;
             }
