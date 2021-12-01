@@ -28,6 +28,9 @@
 
 #include <stdint.h>
 
+// Include param_logic.h for backwards compatibility in apps
+#include "param_logic.h"
+
 /* Basic parameter structure */
 struct param_s {
   uint8_t type;
