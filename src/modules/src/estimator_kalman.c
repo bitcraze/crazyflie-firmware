@@ -70,7 +70,7 @@
 #include "estimator_kalman.h"
 #include "system.h"
 #include "log.h"
-#include "param_logic.h"
+#include "param.h"
 #include "physicalConstants.h"
 #include "supervisor.h"
 
