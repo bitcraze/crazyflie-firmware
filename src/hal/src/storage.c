@@ -36,6 +36,8 @@
 #include "i2cdev.h"
 #include "eeprom.h"
 
+#include <string.h>
+
 #define TRACE_MEMORY_ACCESS 0
 
 #if !TRACE_MEMORY_ACCESS
@@ -133,7 +135,7 @@ bool storageTest()
   DEBUG_PRINT("Storage check %s.\n", pass?"[OK]":"[FAIL]");
 
   if (!pass) {
-    DEBUG_PRINT("Reformating storage ...\n");
+    DEBUG_PRINT("Reformatting storage ...\n");
 
     kveFormat(&kve);
 
@@ -161,6 +163,22 @@ bool storageStore(const char* key, const void* buffer, size_t length)
   xSemaphoreGive(storageMutex);
 
   return result;
+}
+
+
+bool storageForeach(const char *prefix, storageFunc_t func)
+{
+   if (!isInit) {
+    return 0;
+  }
+
+  xSemaphoreTake(storageMutex, portMAX_DELAY);
+
+  bool success = kveForeach(&kve, prefix, func);
+
+  xSemaphoreGive(storageMutex);
+
+  return success;
 }
 
 size_t storageFetch(const char *key, void* buffer, size_t length)

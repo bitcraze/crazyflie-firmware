@@ -127,6 +127,47 @@ size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * ke
     return SIZE_MAX;
 }
 
+// Find the first item from `address` with a key that has an overlapping
+// prefix with the one we supply.
+// We return the itemsize using return, and we return the key and itemAddress
+// using out-argumetns.
+size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
+                                  const char *prefix, char *keyBuffer,
+                                  size_t *itemAddress)
+{
+    static char searchBuffer[255];
+    size_t currentAddress = address;
+    uint16_t length;
+    uint8_t keyLength;
+    uint8_t searchedKeyLength = strlen(prefix);
+
+    while (currentAddress < (kve->memorySize - 3)) {
+        kve->read(currentAddress, searchBuffer, 3);
+        length = searchBuffer[0] + (searchBuffer[1]<<8);
+        keyLength = searchBuffer[2];
+
+        if (length == END_TAG) {
+            *itemAddress = SIZE_MAX;
+            return SIZE_MAX;
+        }
+
+        if (keyLength >= searchedKeyLength) {
+            kve->read(currentAddress + 3, &searchBuffer, keyLength);
+            if (!memcmp(prefix, searchBuffer, searchedKeyLength)) {
+                memcpy(keyBuffer, searchBuffer, keyLength);
+                keyBuffer[keyLength] = 0;
+                *itemAddress = currentAddress;
+                return length;
+            }
+        }
+
+        currentAddress += length;
+    }
+
+    *itemAddress = SIZE_MAX;
+    return SIZE_MAX;
+}
+
 size_t kveStorageFindEnd(kveMemory_t *kve, size_t address) {
     size_t currentAddress = address;
     kveItemHeader_t header;

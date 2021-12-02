@@ -32,6 +32,7 @@ SECTIONS
     .text :
     {
 	    . = ALIGN(4);
+      _stext = .;
 
         *(.text)                   /* remaining code */
         *(.text.*)                 /* remaining code */
@@ -44,7 +45,7 @@ SECTIONS
         *(.init)
         *(.fini)
         *(.eh_frame)
-
+        
         /* Parameters */
         . = ALIGN(4);
         _param_start = .;

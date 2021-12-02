@@ -465,37 +465,37 @@ LOG_GROUP_START(kalman)
   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
   /**
  * @brief State position in the global frame x
- * 
+ *
  *   Note: This is similar to stateEstimate.x.
  */
   LOG_ADD(LOG_FLOAT, stateX, &coreData.S[KC_STATE_X])
  /**
  * @brief State position in the global frame y
- * 
+ *
  *  Note: This is similar to stateEstimate.y
  */
   LOG_ADD(LOG_FLOAT, stateY, &coreData.S[KC_STATE_Y])
  /**
  * @brief State position in the global frame z
- * 
+ *
  *  Note: This is similar to stateEstimate.z
  */
   LOG_ADD(LOG_FLOAT, stateZ, &coreData.S[KC_STATE_Z])
   /**
  * @brief State position in the global frame PX
- * 
+ *
  *  Note: This is similar to stateEstimate.x
  */
   LOG_ADD(LOG_FLOAT, statePX, &coreData.S[KC_STATE_PX])
   /**
   * @brief State velocity in its body frame y
-  * 
+  *
   *  Note: This should be part of stateEstimate
   */
   LOG_ADD(LOG_FLOAT, statePY, &coreData.S[KC_STATE_PY])
   /**
   * @brief State velocity in its body frame z
-  * 
+  *
   *  Note: This should be part of stateEstimate
   */
   LOG_ADD(LOG_FLOAT, statePZ, &coreData.S[KC_STATE_PZ])

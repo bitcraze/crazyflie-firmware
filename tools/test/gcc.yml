@@ -15,6 +15,7 @@ compiler:
     - '-std=c11'
     - '-pedantic'
     - '-O0'
+    - '-g3'
     - '-fsanitize=address'
     - '-fno-omit-frame-pointer'
   includes:

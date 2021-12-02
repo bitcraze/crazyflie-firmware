@@ -125,7 +125,7 @@ def check_structs(stream, what: str, core: bool) -> dict:
     if what == 'log':
         struct_len = 12
     else:
-        struct_len = 16
+        struct_len = 20
 
     while offset < stop_offset:
         elf.stream.seek(offset)
@@ -136,11 +136,14 @@ def check_structs(stream, what: str, core: bool) -> dict:
         #   char * name;
         #   void * address;
         # };
+        #
         # struct [param_s] {
         #   uint8_t type;
+        #   uint8_t extended_type;
         #   char * name;
         #   void * address;
         #   void * callback;
+        #   void * getter;
         # };
         #
         # We want the type and the name.
@@ -149,7 +152,8 @@ def check_structs(stream, what: str, core: bool) -> dict:
         if what == 'log':
             t, addr = struct.unpack('@Bxxxixxxx', buffer)
         else:
-            t, addr = struct.unpack('@Bxxxixxxxxxxx', buffer)
+            t, addr = struct.unpack('@Bxxxixxxxxxxxxxxx', buffer)
+
         #
         # Next, convert address of name to offset in elf
         #

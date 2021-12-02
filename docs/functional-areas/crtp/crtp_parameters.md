@@ -16,8 +16,7 @@ parameters:
 |  2   |   2        | [Parameter write](#parameter-write)|
 |  2   |   3        | [Misc. commands](#misc-commands)|
 
-TOC access
-----------
+## TOC access
 
 These messages permit to access the parameters table of content. The
 first byte of the message is a message ID, three messages ID are
@@ -68,9 +67,7 @@ The type is one byte describing the parameter type:
 |  0x06      |  float     |  \'&lt;f\' |
 |  0x07      |  double    |  \'&lt;d\' |
 
-Parameter read
---------------
-
+## Parameter read
 
 
  | Byte  | Request fields  | Content
@@ -89,10 +86,7 @@ Parameter read
 The read request is a simple packet on channel 1. Crazyflie answers with
 the value.
 
-Parameter write
----------------
-
-
+## Parameter write
 
  | Byte    | Request fields   |Content|
  | --------| ---------------- |---------------------------------------------------------|
@@ -111,15 +105,18 @@ Parameter write
 The write request is a simple packet on channel 2. Crazyflie sends back
 the parameter value as an acknowledgement.
 
-Misc. commands
---------------
+## Misc. commands
 
 The following misc commands are implemented:
 
-|  Code  | Command|
+|  Code  | Command                                               |
 |  ------| ------------------------------------------------------|
-|  0x00  | [Set by name](#set-by-name)|
-|  0x01  | [Value updated](#value-updated)
+|  0x00  | [Set by name](#set-by-name)                           |
+|  0x01  | [Value updated](#value-updated)                       |
+|  0x02  | [Get extended type](#get-extended-type)               |
+|  0x03  | [Persistent store](#persistent-store)                 |
+|  0x04  | [Persistent get state](#persistent-get-state)         |
+|  0x05  | [Persistent clear](#persistent-clear)                 |
 
 ### Set by name
 
@@ -165,3 +162,77 @@ There is no request packet for this message, it is only sent by the Crazyflie.
 
 This packet is send by the Crazyflie when a parameters has been modified in the firmware.
 This can for example happen when an app is controlling the Crazyflie autonomously.
+
+### Get extended type
+
+Get the extended type of a parameter.
+
+| Byte       | Request fields   | Content                          |
+| -----------| -----------------| ---------------------------------|
+| 0          | PERSISTENT_GET_EXTENDED_TYPE | 0x02                             |
+| 1-2        | ID               | ID of the parameter              |
+
+| Byte       | Answer fields    | Content                          |
+| -----------| -----------------| ---------------------------------|
+| 0          | PERSISTENT_GET_EXTENDED_TYPE | 0x02                             |
+| 1-2        | ID               | ID of the parameter              |
+| 3          | Extended type    | A bit field of extended types, see below |
+
+The extended type describes extended properties of the parameter. Currently only one extended type is available.
+
+| Value      | Exended type     | Description |
+|------------|------------------|-------------|
+| 0x01       | PERSISTENT       | The parameter can be stored in persistent memory |
+
+### Persistent store
+
+Store the current value of a parameter to persistent storage. The parameter will be set to this value.
+after reboot.
+
+| Byte       | Request fields   | Content                          |
+| -----------| -----------------| ---------------------------------|
+| 0          | PERSISTENT_STORE | 0x03                             |
+| 1-2        | ID               | ID of the parameter              |
+
+| Byte       | Answer fields    | Content                          |
+| -----------| -----------------| ---------------------------------|
+| 0          | PERSISTENT_STORE | 0x03                             |
+| 1-2        | ID               | ID of the parameter              |
+| 3          | result           | 0x00 == success<br>0x02 (ENOENT) == parameter ID does not exist |
+
+### Persistent get state
+
+Get the persistence state of a parameter.
+
+| Byte        | Request fields       | Content                           |
+| ------------| ---------------------| ----------------------------------|
+| 0           | PERSISTENT_GET_STATE | 0x04                              |
+| 1-2         | ID                   | ID of the parameter               |
+
+| Byte        | Answer fields        | Content                           |
+| ------------| ---------------------| ----------------------------------|
+| 0           | PERSISTENT_GET_STATE | 0x04                              |
+| 1-2         | ID                   | ID of the parameter               |
+| 3           | result               | 0x00 == parameter is not stored (use default value)<br>0x01 == parameter is stored<br>0x02 (ENOENT) == parameter ID does not exist  |
+| 4 + ts      | default value        | The default value that is used if no value is stored in persistent memory |
+| 4 + ts + ts | [stored value]       | The stored value, if it is stored |
+
+ts == the type size, described in the TOC
+
+If the result is an error (0x02) the packet is terminated after 4 bytes.
+
+
+### Persistent clear
+
+Clear the persistent data for a parameter. After reboot the parameter will be set to the default value.
+
+| Byte       | Request fields   | Content                          |
+| -----------| -----------------| ---------------------------------|
+| 0          | PERSISTENT_CLEAR | 0x05                             |
+| 1-2        | ID               | ID of the parameter              |
+
+| Byte       | Answer fields    | Content                          |
+| -----------| -----------------| ---------------------------------|
+| 0          | PERSISTENT_CLEAR | 0x05                             |
+| 1-2        | ID               | ID of the parameter              |
+| 3          | result           | 0x00 == success<br>0x02 (ENOENT) == parameter ID does not exist or other error |

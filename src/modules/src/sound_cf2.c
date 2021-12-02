@@ -388,7 +388,7 @@ PARAM_GROUP_START(sound)
  * | 12 | Siren                     | \n
  * | 13 | Tilt quad to play sound   | \n
  */
-PARAM_ADD_CORE(PARAM_UINT8, effect, &user_effect)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, effect, &user_effect)
 
 /**
  * @brief Number of effects available
