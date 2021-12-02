@@ -123,7 +123,8 @@ def extract_memberdefs(root, core_string):
         brief_description = get_brief_description(memberdef)
         detaild_description = get_detailed_description(memberdef)
 
-        type_variable = memberdef.find('type/ref').text
+        type_refs_texts = map(lambda type_ref: type_ref.text, memberdef.findall('type/ref'))
+        type_variable = ", ".join(type_refs_texts)
 
         # location and line
         location = memberdef.find('location')
