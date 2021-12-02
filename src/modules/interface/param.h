@@ -150,3 +150,11 @@ typedef float * (*paramGetterFloat)(void);
   PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
 
 #endif // UNIT_TEST_MODE
+
+// Do not remove! This definition is used by doxygen to generate parameter documentation.
+/** @brief Core parameters
+ *
+ * The core parameters are considered part of the official API and are guaranteed
+ * to be stable over time.
+ *
+ * @defgroup PARAM_CORE_GROUP */

@@ -200,6 +200,7 @@ typedef struct {
 
 #endif // UNIT_TEST_MODE
 
+// Do not remove! This definition is used by doxygen to generate log documentation.
 /** @brief Core log variables
  *
  * The core log variables are considered part of the official API and are guaranteed
