@@ -8,11 +8,13 @@
 #include "math3d.h"
 #include "pptraj.h"
 #include "planner.h"
+#include "stabilizer_types.h"
 %}
 
 %include "math3d.h"
 %include "pptraj.h"
 %include "planner.h"
+%include "stabilizer_types.h"
 
 %inline %{
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)

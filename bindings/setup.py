@@ -7,6 +7,8 @@ import os
 fw_dir = "."
 include = [
     os.path.join(fw_dir, "src/modules/interface"),
+    os.path.join(fw_dir, "src/hal/interface"),
+    os.path.join(fw_dir, "src/utils/interface/lighthouse"),
 ]
 
 modules = [
