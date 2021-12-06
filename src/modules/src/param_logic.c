@@ -396,7 +396,7 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
     return ENOENT;
   }
 
-  if (type != (params[index].type & (~(PARAM_CORE | PARAM_RONLY)))) {
+  if (type != (params[index].type & (~(PARAM_CORE | PARAM_RONLY | PARAM_EXTENDED)))) {
     return EINVAL;
   }
 
