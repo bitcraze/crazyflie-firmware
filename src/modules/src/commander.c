@@ -41,13 +41,11 @@ static bool isInit;
 // Static structs are zero-initialized, so nullSetpoint corresponds to
 // modeDisable for all stab_mode_t members and zero for all physical values.
 // In other words, the controller should cut power upon recieving it.
-const static setpoint_t nullSetpoint;
-static setpoint_t tempSetpoint;
+const setpoint_t nullSetpoint;
 static state_t lastState;
 const static int priorityDisable = COMMANDER_PRIORITY_DISABLE;
 
 static uint32_t lastUpdate;
-static bool enableHighLevel = false;
 
 static QueueHandle_t setpointQueue;
 STATIC_MEM_QUEUE_ALLOC(setpointQueue, 1, sizeof(setpoint_t));
@@ -84,23 +82,19 @@ void commanderSetSetpoint(setpoint_t *setpoint, int priority)
     // This is a potential race but without effect on functionality
     xQueueOverwrite(setpointQueue, setpoint);
     xQueueOverwrite(priorityQueue, &priority);
-    // Send the high-level planner to idle so it will forget its current state
-    // and start over if we switch from low-level to high-level in the future.
-    crtpCommanderHighLevelStop();
+    if (priority > COMMANDER_PRIORITY_HIGHLEVEL) {
+      // Disable the high-level planner so it will forget its current state and
+      // start over if we switch from low-level to high-level in the future.
+      crtpCommanderHighLevelDisable();
+    }
   }
 }
 
-void commanderNotifySetpointsStop(int remainValidMillisecs)
+void commanderRelaxPriority()
 {
-  uint32_t currentTime = xTaskGetTickCount();
-  int timeSetback = MIN(
-    COMMANDER_WDT_TIMEOUT_SHUTDOWN - M2T(remainValidMillisecs),
-    currentTime
-  );
-  xQueuePeek(setpointQueue, &tempSetpoint, 0);
-  tempSetpoint.timestamp = currentTime - timeSetback;
-  xQueueOverwrite(setpointQueue, &tempSetpoint);
   crtpCommanderHighLevelTellState(&lastState);
+  int priority = COMMANDER_PRIORITY_LOWEST;
+  xQueueOverwrite(priorityQueue, &priority);
 }
 
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
@@ -110,12 +104,7 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
   uint32_t currentTime = xTaskGetTickCount();
 
   if ((currentTime - setpoint->timestamp) > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
-    if (enableHighLevel) {
-      crtpCommanderHighLevelGetSetpoint(setpoint, state);
-    }
-    if (!enableHighLevel || crtpCommanderHighLevelIsStopped()) {
-      memcpy(setpoint, &nullSetpoint, sizeof(nullSetpoint));
-    }
+    memcpy(setpoint, &nullSetpoint, sizeof(nullSetpoint));
   } else if ((currentTime - setpoint->timestamp) > COMMANDER_WDT_TIMEOUT_STABILIZE) {
     xQueueOverwrite(priorityQueue, &priorityDisable);
     // Leveling ...
@@ -154,30 +143,3 @@ int commanderGetActivePriority(void)
 
   return priority;
 }
-
-/**
- *
- * The high level commander handles the setpoints from within the firmware
- * based on a predefined trajectory. This was merged as part of the
- * [Crazyswarm](%https://crazyswarm.readthedocs.io/en/latest/) project of the
- * [USC ACT lab](%https://act.usc.edu/) (see this
- * [blogpost](%https://www.bitcraze.io/2018/02/merging-crazyswarm-functionality-into-the-official-crazyflie-firmware/)).
- * The high-level commander uses a planner to generate smooth trajectories
- * based on actions like ‘take off’, ‘go to’ or ‘land’ with 7th order
- * polynomials. The planner generates a group of setpoints, which will be
- * handled by the High level commander and send one by one to the commander
- * framework.
- *
- * It is also possible to upload your own custom trajectory to the memory of
- * the Crazyflie, which you can try out with the script
- * `examples/autonomous_sequence_high_level of.py` in the Crazyflie python
- * library repository.
- */
-PARAM_GROUP_START(commander)
-
-/**
- *  @brief Enable high level commander
- */
-PARAM_ADD_CORE(PARAM_UINT8, enHighLevel, &enableHighLevel)
-
-PARAM_GROUP_STOP(commander)
