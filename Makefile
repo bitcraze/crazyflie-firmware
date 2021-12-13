@@ -100,7 +100,7 @@ VPATH +=  $(FREERTOS)/portable/MemMang
 MEMMANG_OBJ ?= heap_4.o
 
 VPATH += $(FREERTOS)
-FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
+FREERTOS_OBJ = list.o tasks.o queue.o timers.o event_groups.o $(MEMMANG_OBJ)
 
 #FatFS
 VPATH += $(LIB)/FatFS
