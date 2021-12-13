@@ -25,6 +25,9 @@ current_platform.mk
 **/__pycache__/**
 **/*.pyc
 
+bindings/build/*
+bindings/cffirmware_wrap.c
+
 docs/.jekyll-metadata
 docs/.jekyll-cache
 
