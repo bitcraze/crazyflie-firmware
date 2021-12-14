@@ -298,8 +298,12 @@ int crtpCommanderHighLevelDisable()
   return 0;
 }
 
-bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state)
+bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, uint32_t tick)
 {
+  if (!RATE_DO_EXECUTE(RATE_HL_COMMANDER, tick)) {
+    return false;
+  }
+
   xSemaphoreTake(lockTraj, portMAX_DELAY);
   float t = usecTimestamp() / 1e6;
   struct traj_eval ev = plan_current_goal(&planner, t);
