@@ -89,6 +89,11 @@ struct trajectoryDescription
 uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
 static struct trajectoryDescription trajectory_descriptions[NUM_TRAJECTORY_DEFINITIONS];
 
+// Static structs are zero-initialized, so nullSetpoint corresponds to
+// modeDisable for all stab_mode_t members and zero for all physical values.
+// In other words, the controller should cut power upon recieving it.
+const static setpoint_t nullSetpoint;
+
 static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;

@@ -41,7 +41,7 @@ static bool isInit;
 // Static structs are zero-initialized, so nullSetpoint corresponds to
 // modeDisable for all stab_mode_t members and zero for all physical values.
 // In other words, the controller should cut power upon recieving it.
-const setpoint_t nullSetpoint;
+const static setpoint_t nullSetpoint;
 static state_t lastState;
 const static int priorityDisable = COMMANDER_PRIORITY_DISABLE;
 

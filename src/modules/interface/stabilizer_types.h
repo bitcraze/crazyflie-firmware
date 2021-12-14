@@ -203,9 +203,6 @@ typedef struct setpoint_s {
   } mode;
 } setpoint_t;
 
-// A setpoint value that causes the motors to stop.
-extern setpoint_t const nullSetpoint;
-
 /** Estimate of position */
 typedef struct estimate_s {
   uint32_t timestamp; // Timestamp when the data was computed
