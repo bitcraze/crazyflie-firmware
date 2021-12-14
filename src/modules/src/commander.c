@@ -46,6 +46,7 @@ static state_t lastState;
 const static int priorityDisable = COMMANDER_PRIORITY_DISABLE;
 
 static uint32_t lastUpdate;
+static bool enableHighLevel = false;
 
 static QueueHandle_t setpointQueue;
 STATIC_MEM_QUEUE_ALLOC(setpointQueue, 1, sizeof(setpoint_t));
@@ -143,3 +144,30 @@ int commanderGetActivePriority(void)
 
   return priority;
 }
+
+/**
+ *
+ * The high level commander handles the setpoints from within the firmware
+ * based on a predefined trajectory. This was merged as part of the
+ * [Crazyswarm](%https://crazyswarm.readthedocs.io/en/latest/) project of the
+ * [USC ACT lab](%https://act.usc.edu/) (see this
+ * [blogpost](%https://www.bitcraze.io/2018/02/merging-crazyswarm-functionality-into-the-official-crazyflie-firmware/)).
+ * The high-level commander uses a planner to generate smooth trajectories
+ * based on actions like ‘take off’, ‘go to’ or ‘land’ with 7th order
+ * polynomials. The planner generates a group of setpoints, which will be
+ * handled by the High level commander and send one by one to the commander
+ * framework.
+ *
+ * It is also possible to upload your own custom trajectory to the memory of
+ * the Crazyflie, which you can try out with the script
+ * `examples/autonomous_sequence_high_level of.py` in the Crazyflie python
+ * library repository.
+ */
+PARAM_GROUP_START(commander)
+
+/**
+ *  @brief Enable high level commander
+ */
+PARAM_ADD_CORE(PARAM_UINT8, enHighLevel, &enableHighLevel)
+
+PARAM_GROUP_STOP(commander)
