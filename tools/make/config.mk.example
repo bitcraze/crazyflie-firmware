@@ -117,8 +117,11 @@
 ## Improved altitude hold complementary filter
 # CFLAGS += -DIMPROVED_BARO_Z_HOLD
 
-## External CPPM receiver on PA7
+## External CPPM receiver (by default on PA7/MOSI)
 # CFLAGS += -DDECK_FORCE=bcCPPM # force the CCPM deck if not using BigQuad
+# CFLAGS += -DCPPM_USE_PA2 # use alternative pins for CPPM: PA2(TX2), PA3(RX2), PB4(IO_3), PB5(IO_2) or PB8(IO_1)
+# CFLAGS += -DEXTRX_ALT_HOLD # enable altitude hold with external Rx
+# CFLAGS += -DEXTRX_ARMING # enable arming with external Rx (setup via "Brushless handling" compile flags)
 # CFLAGS += -DEXTRX_TAER # use TAER channel mapping instead of the default AETR - Aileron(Roll), Elevator(Pitch), Thrust, Rudder(Yaw)
 
 ## Euler angles defining nonstandard IMU orientation on the airframe (in degrees)

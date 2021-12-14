@@ -69,6 +69,12 @@
   #define EXTRX_SIGN_YAW     (-1)
 #endif
 
+#define EXTRX_CH_ALTHOLD   4
+#define EXTRX_CH_ARM       5
+
+#define EXTRX_SIGN_ALTHOLD   (-1)
+#define EXTRX_SIGN_ARM       (-1)
+
 #define EXTRX_SCALE_ROLL   (40.0f)
 #define EXTRX_SCALE_PITCH  (40.0f)
 #define EXTRX_SCALE_YAW    (200.0f)
@@ -77,12 +83,36 @@
 #define EXTRX_DEADBAND_PITCH (0.05f)
 #define EXTRX_DEADBAND_YAW (0.05f)
 
+#define EXTRX_SWITCH_MIN_CNT 5 // number of identical subsequent switch states before the switch variable is changed
+
+bool extRxArm = false;
+bool extRxAltHold = false;
+  
+#ifndef EXTRX_ARMING
+  #define EXTRX_ARMING    false
+#endif
+#if EXTRX_ARMING
+  bool extRxArmPrev = false;
+  int8_t arm_cnt = 0;
+#endif
+
+#ifndef EXTRX_ALT_HOLD
+  #define EXTRX_ALT_HOLD    false
+#endif
+#if EXTRX_ALT_HOLD
+  #define EXTRX_DEADBAND_ZVEL  (0.25f)
+  bool extRxAltHoldPrev = false;
+  int8_t altHold_cnt = 0;
+#endif
+
+
 static setpoint_t extrxSetpoint;
-static uint16_t ch[EXTRX_NR_CHANNELS];
+static uint16_t ch[EXTRX_NR_CHANNELS] = {0};
 
 static void extRxTask(void *param);
 static void extRxDecodeCppm(void);
 static void extRxDecodeChannels(void);
+
 
 STATIC_MEM_TASK_ALLOC(extRxTask, EXTRX_TASK_STACKSIZE);
 
@@ -125,10 +155,73 @@ static void extRxTask(void *param)
 
 static void extRxDecodeChannels(void)
 {
+  
+  #if EXTRX_ARMING
+  if (EXTRX_SIGN_ARM * cppmConvert2Float(ch[EXTRX_CH_ARM], -1, 1, 0.0) > 0.5f) // channel needs to be 75% or more to work correctly with 2/3 way switches
+  {
+    if (arm_cnt < EXTRX_SWITCH_MIN_CNT) arm_cnt++;
+    else extRxArm = true;
+    
+    if (extRxArmPrev != extRxArm)
+    {
+      DEBUG_PRINT("Engines armed\n");
+      systemSetArmed(extRxArm);
+    }
+  }
+  else
+  {
+    if (arm_cnt > 0) arm_cnt--;
+    else extRxArm = false;
+
+    if (extRxArmPrev != extRxArm)
+    {
+      DEBUG_PRINT("Engines unarmed\n");
+      systemSetArmed(extRxArm);
+    }
+  }
+
+  extRxArmPrev = extRxArm;
+  #endif
+
+  #if EXTRX_ALT_HOLD
+  if (EXTRX_SIGN_ALTHOLD * cppmConvert2Float(ch[EXTRX_CH_ALTHOLD], -1, 1, 0.0) > 0.5f)
+  {
+    if (altHold_cnt < EXTRX_SWITCH_MIN_CNT) altHold_cnt++;
+    else extRxAltHold=true;
+
+    if (extRxAltHoldPrev != extRxAltHold) DEBUG_PRINT("Althold mode ON\n");
+  }
+  else
+  {
+    if (altHold_cnt > 0) altHold_cnt--;
+    else extRxAltHold=false;
+
+    if (extRxAltHoldPrev != extRxAltHold) DEBUG_PRINT("Althold mode OFF\n");
+  }
+
+  if (extRxAltHold) 
+  {
+    extrxSetpoint.thrust = 0;
+    extrxSetpoint.mode.z = modeVelocity;
+
+    extrxSetpoint.velocity.z = cppmConvert2Float(ch[EXTRX_CH_THRUST], -1, 1, EXTRX_DEADBAND_ZVEL);
+  } 
+  else 
+  {
+    extrxSetpoint.mode.z = modeDisable;
+    extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
+  }
+  
+  extRxAltHoldPrev = extRxAltHold;
+  #else
+  extrxSetpoint.mode.z = modeDisable;
   extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
+  #endif
+  
   extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * EXTRX_SCALE_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -1, 1, EXTRX_DEADBAND_ROLL);
   extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * EXTRX_SCALE_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -1, 1, EXTRX_DEADBAND_PITCH);
   extrxSetpoint.attitudeRate.yaw = EXTRX_SIGN_YAW * EXTRX_SCALE_YAW *cppmConvert2Float(ch[EXTRX_CH_YAW], -1, 1, EXTRX_DEADBAND_YAW);
+
   commanderSetSetpoint(&extrxSetpoint, COMMANDER_PRIORITY_EXTRX);
 }
 
@@ -201,9 +294,9 @@ static void extRxDecodeSpektrum(void)
 #ifdef ENABLE_EXTRX_LOG
 /**
  * External receiver (RX) log group. This contains received raw
- * channel data as well as RPTY data after it has been converted.
+ * channel data
  */
-LOG_GROUP_START(extrx)
+LOG_GROUP_START(extrx_raw)
 /**
  * @brief External RX received channel 0 value
  */
@@ -221,20 +314,56 @@ LOG_ADD(LOG_UINT16, ch2, &ch[2])
  */
 LOG_ADD(LOG_UINT16, ch3, &ch[3])
 /**
- * @brief External RX channel converted to thrust
+ * @brief External RX received channel 4 value
  */
-LOG_ADD(LOG_UINT16, thrust, &extrxSetpoint.thrust)
+LOG_ADD(LOG_UINT16, ch4, &ch[4])
 /**
- * @brief External RX channel converted to roll
+ * @brief External RX received channel 5 value
+ */
+LOG_ADD(LOG_UINT16, ch5, &ch[5])
+/**
+ * @brief External RX received channel 6 value
+ */
+LOG_ADD(LOG_UINT16, ch6, &ch[6])
+/**
+ * @brief External RX received channel 7 value
+ */
+LOG_ADD(LOG_UINT16, ch7, &ch[7])
+LOG_GROUP_STOP(extrx_raw)
+
+/**
+ * External receiver (RX) log group. This contains setpoints for 
+ * thrust, roll, pitch, yaw rate, z velocity, and arming and 
+ * altitude-hold signals
+ */
+LOG_GROUP_START(extrx)
+/**
+ * @brief External RX thrust
+ */
+LOG_ADD(LOG_FLOAT, thrust, &extrxSetpoint.thrust)
+/**
+ * @brief External RX roll setpoint
  */
 LOG_ADD(LOG_FLOAT, roll, &extrxSetpoint.attitude.roll)
 /**
- * @brief External RX channel converted to pitch
+ * @brief External RX pitch setpoint
  */
 LOG_ADD(LOG_FLOAT, pitch, &extrxSetpoint.attitude.pitch)
 /**
- * @brief External RX channel converted to yaw
+ * @brief External RX yaw rate setpoint
  */
-LOG_ADD(LOG_FLOAT, yaw, &extrxSetpoint.attitude.yaw)
+LOG_ADD(LOG_FLOAT, yawRate, &extrxSetpoint.attitudeRate.yaw)
+/**
+ * @brief External RX z-velocity setpoint
+ */
+LOG_ADD(LOG_FLOAT, zVel, &extrxSetpoint.velocity.z)
+/**
+ * @brief External RX Altitude Hold signal
+ */
+LOG_ADD(LOG_UINT8, AltHold, &extRxAltHold)
+/**
+ * @brief External RX Arming signal
+ */
+LOG_ADD(LOG_UINT8, Arm, &extRxArm)
 LOG_GROUP_STOP(extrx)
 #endif

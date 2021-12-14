@@ -66,6 +66,7 @@ bool deckTest(void);
 #define DECK_USING_I2C     (DECK_USING_PB6  | DECK_USING_PB7)
 #define DECK_USING_TIMER3  (1 << 13)
 #define DECK_USING_TIMER5  (1 << 14)
+#define DECK_USING_TIMER10 (1 << 16)
 #define DECK_USING_TIMER14 (1 << 15)
 
 struct deckInfo_s;
