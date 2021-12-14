@@ -27,34 +27,80 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * aideck.h: AI-deck interface
+ * aideck.h: AI-deck/CPX interface
  */
 
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
 
+<<<<<<< HEAD
 #include "routing_info.h"
 
 #define ESP_BITSTREAM_SIZE 610576
+=======
+>>>>>>> bff7d26b (Cleaned up and implemented new routing header)
 #define AIDECK_UART_TRANSPORT_MTU 100
 
-typedef struct {
-    uint8_t start; // Should be 0xFF
-    uint8_t length; // Length of data
-    uint8_t data[AIDECK_UART_TRANSPORT_MTU];
-} __attribute__((packed)) uart_transport_packet_t;
+typedef enum {
+  STM32 = 1,
+  ESP32 = 2,
+  HOST = 3,
+  GAP8 = 4
+} __attribute__((packed)) CPXTarget_t;
+
+typedef enum {
+  SYSTEM = 1,
+  CONSOLE = 2,
+  CRTP = 3,
+  WIFI_CTRL = 4,
+  APP = 5,
+  TEST = 0x0E,
+  BOOTLOADER = 0x0F,
+} __attribute__((packed)) CPXFunction_t;
 
 typedef struct {
-    uint8_t start; // Should be 0xFF
-    uint8_t length; // Length of data - 2
-    routable_packet_header_t route;
-    uint8_t data[AIDECK_UART_TRANSPORT_MTU - 2];
-} __attribute__((packed)) aideckRoutablePacket_t;
+  CPXTarget_t destination : 4;
+  CPXTarget_t source : 4;
+  CPXFunction_t function;
+} __attribute__((packed)) CPXRouting_t;
 
-// These are for your own stuff, where your own protocol can be implemented
-void aideckSendBlocking(aideckRoutablePacket_t *packet);
-void aideckReceiveBlocking(aideckRoutablePacket_t *packet);
+typedef struct {
+    CPXRouting_t route;
+    uint8_t data[AIDECK_UART_TRANSPORT_MTU-2];
+} __attribute__((packed)) CPXPacket_t;
 
-bool aideckSend(aideckRoutablePacket_t *packet, unsigned int timeoutInMS);
-bool aideckReceive(aideckRoutablePacket_t *packet, unsigned int timeoutInMS);
+/**
+ * @brief Receive a CPX packet from the ESP32
+ * 
+ * This function will block until a packet is availale from CPX. The
+ * function will return all packets routed to the STM32.
+ * 
+ * @param packet received packet will be stored here
+ * @return uint32_t size of the data in the packet
+ */
+uint32_t cpxReceivePacketBlocking(CPXPacket_t * packet);
+
+/**
+ * @brief Send a CPX packet to the ESP32
+ * 
+ * This will send a packet to the ESP32 to be routed using CPX. This
+ * will block until the packet can be queued up for sending.
+ * 
+ * @param packet packet to be sent
+ * @param size size of data in packet
+ */
+void cpxSendPacketBlocking(CPXPacket_t * packet, uint32_t size);
+
+/**
+ * @brief Send a CPX packet to the ESP32
+ * 
+ * This will send a packet to the ESP32 to be routed using CPX.
+ * 
+ * @param packet packet to be sent
+ * @param size size of data in packet
+ * @param timeoutInMS timeout before giving up if packet cannot be queued
+ * @return true if package could be queued for sending
+ * @return false if package could not be queued for sending within timeout
+ */
+bool cpxSendPacket(CPXPacket_t * packet, uint32_t size, uint32_t timeoutInMS);
