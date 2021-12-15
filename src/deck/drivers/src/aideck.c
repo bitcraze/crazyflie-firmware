@@ -58,21 +58,38 @@
 static bool isInit = false;
 static uint8_t byte;
 
+#define UART_TRANSPORT_HEADER_SIZE (2)
+
 #define ESP_TX_QUEUE_LENGTH 4
 #define ESP_RX_QUEUE_LENGTH 4
 
+static xQueueHandle espTxQueue;
+static xQueueHandle espRxQueue;
+
+// These structs are used when sending/receiving data
 typedef struct
 {
   uint8_t start;  // Should be 0xFF
   uint8_t length; // Length of data
   uint8_t data[AIDECK_UART_TRANSPORT_MTU];
 } __attribute__((packed)) uart_transport_packet_t;
-
-static xQueueHandle espTxQueue;
-static xQueueHandle espRxQueue;
-
 static uart_transport_packet_t espTxp;
 static uart_transport_packet_t espRxp;
+
+// These structs are used before/after sending/receiving though the queues
+// to the user
+typedef struct
+{
+  uint8_t start;  // Should be 0xFF
+  uint8_t length; // Length data from cpxDst
+  uint8_t cpxDst : 4;
+  uint8_t cpxSrc : 4;
+  uint8_t cpxFunc;
+  uint8_t data[AIDECK_UART_TRANSPORT_MTU - CPX_HEADER_SIZE];
+} __attribute__((packed)) uart_transport_with_routing_packet_t;
+
+static uart_transport_with_routing_packet_t cpxTxp;
+static uart_transport_with_routing_packet_t cpxRxp;
 
 static EventGroupHandle_t evGroup;
 #define ESP_CTS_EVENT (1 << 0)
@@ -165,7 +182,7 @@ static void ESP_TX(void *param)
         }
       } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
       espTxp.start = 0xFF;
-      uart2SendData(espTxp.length + 2, (uint8_t *)&espTxp);
+      uart2SendData((uint32_t) espTxp.length + UART_TRANSPORT_HEADER_SIZE, (uint8_t *)&espTxp);
     }
   }
 }
@@ -182,33 +199,49 @@ static void Gap8Task(void *param)
   }
 }
 
-static uart_transport_packet_t cpxTxp;
-static uart_transport_packet_t cpxRxp;
-
 uint32_t cpxReceivePacketBlocking(CPXPacket_t *packet)
 {
   uint32_t size;
   xQueueReceive(espRxQueue, &cpxRxp, portMAX_DELAY);
-  size = cpxRxp.length;
-  memcpy(&packet->route, cpxRxp.data, size);
+  size = (uint32_t) cpxRxp.length - CPX_HEADER_SIZE;
+  packet->route.destination = cpxRxp.cpxDst;
+  packet->route.source = cpxRxp.cpxSrc;
+  packet->route.function = cpxRxp.cpxFunc;
+  memcpy(packet->data, cpxRxp.data, size);
   return size;
 }
 
 void cpxSendPacketBlocking(CPXPacket_t *packet, uint32_t size)
 {
-  uint32_t wireLength = size + sizeof(CPXRouting_t);
-  cpxTxp.length = wireLength;
-  memcpy(cpxTxp.data, &packet->route, wireLength);
+  ASSERT((packet->route.destination >> 4) == 0);
+  ASSERT((packet->route.source >> 4) == 0);
+  ASSERT((packet->route.function >> 8) == 0);
+  ASSERT(size <= AIDECK_UART_TRANSPORT_MTU - CPX_HEADER_SIZE);
+
+  cpxTxp.length = (uint8_t) size + CPX_HEADER_SIZE;
+  cpxTxp.cpxDst = packet->route.destination;
+  cpxTxp.cpxSrc = packet->route.source;
+  cpxTxp.cpxFunc = packet->route.function;
+  memcpy(cpxTxp.data, &packet->data, size);
+
   xQueueSend(espTxQueue, &cpxTxp, (TickType_t)portMAX_DELAY);
   xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
 }
 
 bool cpxSendPacket(CPXPacket_t *packet, uint32_t size, uint32_t timeoutInMS)
 {
+  ASSERT((packet->route.destination >> 4) == 0);
+  ASSERT((packet->route.source >> 4) == 0);
+  ASSERT((packet->route.function >> 8) == 0);
+  ASSERT(size <= AIDECK_UART_TRANSPORT_MTU - CPX_HEADER_SIZE);
+
   bool packageWasSent = false;
-  uint32_t wireLength = size + sizeof(CPXRouting_t);
-  cpxTxp.length = wireLength;
-  memcpy(cpxTxp.data, &packet->route, wireLength);
+  cpxTxp.length = (uint8_t) size + CPX_HEADER_SIZE;
+  cpxTxp.cpxDst = packet->route.destination;
+  cpxTxp.cpxSrc = packet->route.source;
+  cpxTxp.cpxFunc = packet->route.function;
+  memcpy(cpxTxp.data, &packet->data, size);
+
   if (xQueueSend(espTxQueue, &cpxTxp, M2T(timeoutInMS)) == pdTRUE)
   {
     xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
