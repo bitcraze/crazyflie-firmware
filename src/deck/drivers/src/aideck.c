@@ -146,9 +146,6 @@ static void ESP_TX(void *param)
       {
         uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
       }
-      if ((evBits & ESP_TXQ_EVENT) == ESP_TXQ_EVENT)
-      {
-      }
     }
 
     if (uxQueueMessagesWaiting(espTxQueue) > 0)
