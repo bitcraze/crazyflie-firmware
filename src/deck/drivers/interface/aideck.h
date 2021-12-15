@@ -42,6 +42,7 @@
 >>>>>>> bff7d26b (Cleaned up and implemented new routing header)
 #define AIDECK_UART_TRANSPORT_MTU 100
 
+// No values in this enum can be larger than 0xF (15)
 typedef enum {
   STM32 = 1,
   ESP32 = 2,
@@ -49,6 +50,7 @@ typedef enum {
   GAP8 = 4
 } __attribute__((packed)) CPXTarget_t;
 
+// No values in this enum can be larger than 0xFF (255)
 typedef enum {
   SYSTEM = 1,
   CONSOLE = 2,
