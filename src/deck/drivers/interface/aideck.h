@@ -34,13 +34,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-<<<<<<< HEAD
-#include "routing_info.h"
-
 #define ESP_BITSTREAM_SIZE 610576
-=======
->>>>>>> bff7d26b (Cleaned up and implemented new routing header)
-#define AIDECK_UART_TRANSPORT_MTU 100
+#define AIDECK_UART_TRANSPORT_MTU (100)
+#define CPX_HEADER_SIZE           (2)
 
 // No values in this enum can be larger than 0xF (15)
 typedef enum {
@@ -48,7 +44,7 @@ typedef enum {
   ESP32 = 2,
   HOST = 3,
   GAP8 = 4
-} __attribute__((packed)) CPXTarget_t;
+} CPXTarget_t;
 
 // No values in this enum can be larger than 0xFF (255)
 typedef enum {
@@ -59,18 +55,18 @@ typedef enum {
   APP = 5,
   TEST = 0x0E,
   BOOTLOADER = 0x0F,
-} __attribute__((packed)) CPXFunction_t;
+} CPXFunction_t;
 
 typedef struct {
-  CPXTarget_t destination : 4;
-  CPXTarget_t source : 4;
+  CPXTarget_t destination;
+  CPXTarget_t source;
   CPXFunction_t function;
-} __attribute__((packed)) CPXRouting_t;
+} CPXRouting_t;
 
 typedef struct {
     CPXRouting_t route;
     uint8_t data[AIDECK_UART_TRANSPORT_MTU-2];
-} __attribute__((packed)) CPXPacket_t;
+} CPXPacket_t;
 
 /**
  * @brief Receive a CPX packet from the ESP32
