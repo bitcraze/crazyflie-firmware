@@ -188,8 +188,8 @@ static uart_transport_packet_t cpxRxp;
 uint32_t cpxReceivePacketBlocking(CPXPacket_t *packet)
 {
   uint32_t size;
-  xQueueSend(espRxQueue, &cpxRxp, portMAX_DELAY);
-  size = cpxRxp.length - sizeof(CPXRouting_t);
+  xQueueReceive(espRxQueue, &cpxRxp, portMAX_DELAY);
+  size = cpxRxp.length;
   memcpy(&packet->route, cpxRxp.data, size);
   return size;
 }
@@ -199,7 +199,7 @@ void cpxSendPacketBlocking(CPXPacket_t *packet, uint32_t size)
   uint32_t wireLength = size + sizeof(CPXRouting_t);
   cpxTxp.length = wireLength;
   memcpy(cpxTxp.data, &packet->route, wireLength);
-  xQueueSend(espTxQueue, packet, (TickType_t)portMAX_DELAY);
+  xQueueSend(espTxQueue, &cpxTxp, (TickType_t)portMAX_DELAY);
   xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
 }
 
@@ -209,7 +209,7 @@ bool cpxSendPacket(CPXPacket_t *packet, uint32_t size, uint32_t timeoutInMS)
   uint32_t wireLength = size + sizeof(CPXRouting_t);
   cpxTxp.length = wireLength;
   memcpy(cpxTxp.data, &packet->route, wireLength);
-  if (xQueueSend(espTxQueue, packet, M2T(timeoutInMS)) == pdTRUE)
+  if (xQueueSend(espTxQueue, &cpxTxp, M2T(timeoutInMS)) == pdTRUE)
   {
     xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
     packageWasSent = true;
