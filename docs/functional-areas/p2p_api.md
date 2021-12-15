@@ -4,7 +4,7 @@ page_id: p2p_api
 ---
 
 ## Introduction
-Currently peer to peer communication on the crazyflie is **in development**. Now an API is made available to send P2P 
+Currently peer to peer communication on the crazyflie is **in development**. Now an API is made available to send P2P
 messages in broadcast mode, and we are going to extend this to unicast.
 
 P2P packets are sent and received on the same channel as the currently configured CRTP radio link. P2P packets are sent and received independently to regular CRTP packets. In order to allow for multiple appilication to use P2P communication at the same time a port number has been added to each packet, the intend being that independent service will use different P2P port. For the time being this port is not used by the API and keeping it to 0 unless otherwise needed is advised.
@@ -13,6 +13,24 @@ Furthermore, P2P packets are only sent and received from the 2.4GHz internal Cra
 
 The maximum data payload contained in a P2P packet is ```P2P_MAX_DATA_SIZE```. It is currently set to 60Bytes.
 
+## Radio communication consideration
+By default when using CRTP from a Crazyradio PA, for instance using the crazyflie-lib-python to communicate with a Crazyflie it will be sending pretty much non-stop by design. In order to give some air-time for P2P packets you should use the query `rate_limit=` when using P2P and Crazyradio PA at the same time.
+
+Example, to limit the radio polling rate to 100Hz you would set the URI in a way similar to this:
+
+```Python
+URI = 'radio://0/80/2M/E7E7E7E7E7?rate_limit=100'
+
+[...]
+
+if __name__ == '__main__':
+    # Initialize the low-level drivers
+    cflib.crtp.init_drivers()
+
+    with SyncCrazyflie(URI, cf=Crazyflie(rw_cache='./cache')) as scf:
+        cf = scf.cf
+    [...]
+```
 ## Using the P2P API
 Functions and structures are defined in the header file [src/hal/interface/radiolink.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/radiolink.h). There is also an [app layer example](https://github.com/bitcraze/crazyflie-firmware/tree/master/examples/app_peer_to_peer) available in the example folder of the repository.
 
