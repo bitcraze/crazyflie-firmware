@@ -64,10 +64,9 @@ enum trajectory_type
 
 struct planner
 {
-	// Not stored as enum to ensure fixed size for logging.
-	uint8_t state;              // current state
-	enum trajectory_type type;  // current type
-	bool reversed;              // true, if trajectory should be evaluated in reverse
+	enum trajectory_state state;	// current state
+	enum trajectory_type type;      // current type
+	bool reversed;					// true, if trajectory should be evaluated in reverse
 
 	union {
 		const struct piecewise_traj* trajectory; // pointer to trajectory
