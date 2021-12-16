@@ -821,10 +821,6 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
   return plan_is_finished(&planner, t);
 }
 
-LOG_GROUP_START(hlCommander)
-LOG_ADD(LOG_UINT8, pstate, &planner.state)
-LOG_GROUP_STOP(hlCommander)
-
 /**
  * computes smooth setpoints based on high-level inputs such as: take-off,
  * landing, polynomial trajectories.
