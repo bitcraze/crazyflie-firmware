@@ -229,7 +229,7 @@ PARAM_GROUP_START(activeMarker)
  * In Qualisys mode the front LED act as an Active marker with IDs that are
  * in the range 0 - 170.
  */
-PARAM_ADD_CORE(PARAM_UINT8, front, &requestedId[0])
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, front, &requestedId[0])
 
 /**
  * @brief Qualisys id of marker for back (default: 3)
@@ -237,7 +237,7 @@ PARAM_ADD_CORE(PARAM_UINT8, front, &requestedId[0])
  * In Qualisys mode the back LED act as an Active marker with IDs that are
  * in the range 0 - 170.
  */
-PARAM_ADD_CORE(PARAM_UINT8, back, &requestedId[1])
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, back, &requestedId[1])
 
 /**
  * @brief Qualisys id of marker for left (default: 4)
@@ -245,7 +245,7 @@ PARAM_ADD_CORE(PARAM_UINT8, back, &requestedId[1])
  * In Qualisys mode the left LED act as an Active marker with IDs that are
  * in the range 0 - 170.
  */
-PARAM_ADD_CORE(PARAM_UINT8, left, &requestedId[2])
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, left, &requestedId[2])
 
 /**
  * @brief Qualisys id of marker for right (default: 2)
@@ -253,7 +253,7 @@ PARAM_ADD_CORE(PARAM_UINT8, left, &requestedId[2])
  * In Qualisys mode the right LED act as an Active marker with IDs that are
  * in the range 0 - 170.
  */
-PARAM_ADD_CORE(PARAM_UINT8, right, &requestedId[3])
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, right, &requestedId[3])
 
 /**
  * @brief Off(0), pwm(1), modulated(2) or qualisys(3)
@@ -265,7 +265,7 @@ PARAM_ADD_CORE(PARAM_UINT8, right, &requestedId[3])
  * | MODULATED  |   2           |    Switching                   | \n
  * | QUALISYS   |   3 (default) |    Qualisys Active Marker mode | \n
  *
- * 	
+ *
  * ### Off mode
  *
  * All marker LEDs are turned off.
@@ -288,7 +288,7 @@ PARAM_ADD_CORE(PARAM_UINT8, right, &requestedId[3])
  * The IDs are controlled by the marker parameters. The Qualisys systems
  * and the deck currently supports IDs in the range [0 - 170]
  */
-PARAM_ADD_CORE(PARAM_UINT8, mode, &requestedDeckMode)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, mode, &requestedDeckMode)
 
 PARAM_ADD(PARAM_UINT8, poll, &doPollDeckButtonSensor)
 
