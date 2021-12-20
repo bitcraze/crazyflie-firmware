@@ -102,6 +102,7 @@ typedef float * (*paramGetterFloat)(void);
 #define MISC_PERSISTENT_STORE     3
 #define MISC_PERSISTENT_GET_STATE 4
 #define MISC_PERSISTENT_CLEAR     5
+#define MISC_GET_DEFAULT_VALUE    6
 
 /* Macros */
 

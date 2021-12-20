@@ -103,6 +103,9 @@ void paramTask(void * prm)
         case MISC_PERSISTENT_CLEAR:
           paramPersistentClear(&p);
           break;
+        case MISC_GET_DEFAULT_VALUE:
+          paramGetDefaultValue(&p);
+          break;
         default:
           break;
       }
