@@ -689,6 +689,32 @@ void paramPersistentStore(CRTPPacket *p)
   crtpSendPacketBlock(p);
 }
 
+void paramGetDefaultValue(CRTPPacket *p)
+{
+  uint16_t id;
+
+  memcpy(&id, &p->data[1], sizeof(id));
+  int index = variableGetIndex(id);
+
+  const bool doesParamExist = (index >= 0);
+  if (!doesParamExist) {
+    p->data[3] = ENOENT;
+    p->size = 4;
+    crtpSendPacketBlock(p);
+    return;
+  }
+
+  // Add default value
+  uint8_t paramLen = paramGetLen(index);
+  if (params[index].getter) {
+    memcpy(&p->data[3], params[index].getter(), paramLen);
+  } else {
+    memcpy(&p->data[3], paramGetDefault(index), paramLen);
+  }
+  p->size = 3 + paramLen;
+  crtpSendPacketBlock(p);
+}
+
 void paramPersistentGetState(CRTPPacket *p)
 {
   uint16_t id;
