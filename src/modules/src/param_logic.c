@@ -697,7 +697,8 @@ void paramGetDefaultValue(CRTPPacket *p)
   int index = variableGetIndex(id);
 
   const bool doesParamExist = (index >= 0);
-  if (!doesParamExist) {
+  // Read-only parameters have no default value
+  if (!doesParamExist || params[index].type & PARAM_RONLY) {
     p->data[3] = ENOENT;
     p->size = 4;
     crtpSendPacketBlock(p);
