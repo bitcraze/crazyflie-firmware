@@ -63,7 +63,7 @@
 #define SENSORS_READ_MAG_HZ             20
 #define SENSORS_DELAY_BARO              (SENSORS_READ_RATE_HZ/SENSORS_READ_BARO_HZ)
 #define SENSORS_DELAY_MAG               (SENSORS_READ_RATE_HZ/SENSORS_READ_MAG_HZ)
-
+#define SENSORS_MAX_DIFF_TICK_MEAS      S2T(1)
 #define SENSORS_BMI088_GYRO_FS_CFG      BMI088_GYRO_RANGE_2000_DPS
 #define SENSORS_BMI088_DEG_PER_LSB_CFG  (2.0f *2000.0f) / 65536.0f
 
@@ -293,6 +293,7 @@ static void sensorsTask(void *param)
   Axis3f accScaledIMU;
   Axis3f accScaled;
   measurement_t measurement;
+  int32_t tickLastMeasurement = xTaskGetTickCount();
   /* wait an additional second the keep bus free
    * this is only required by the z-ranger, since the
    * configuration will be done after system start-up */
@@ -340,6 +341,12 @@ static void sensorsTask(void *param)
       measurement.type = MeasurementTypeAcceleration;
       measurement.data.acceleration.acc = sensorData.acc;
       estimatorEnqueue(&measurement);
+      tickLastMeasurement = xTaskGetTickCount();
+    } 
+    else
+    {
+      DEBUG_PRINT("To long between IMU measurements\n");
+      ASSERT((tickLastMeasurement - xTaskGetTickCount()) > SENSORS_MAX_DIFF_TICK_MEAS);
     }
 
     if (isBarometerPresent)
