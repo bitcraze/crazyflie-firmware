@@ -316,6 +316,7 @@ else
 endif
 
 # Disable warnings for unaligned addresses in packed structs (added in GCC 9)
+# First check if compiler version is correct
 GCCVERSIONGTE9 := $(shell expr `arm-none-eabi-gcc -dumpversion | cut -f1 -d.` \>= 9)
 ifeq "$(GCCVERSIONGTE9)" "1"
 CFLAGS += -Wno-address-of-packed-member
