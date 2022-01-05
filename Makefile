@@ -320,7 +320,9 @@ CFLAGS += -Wno-address-of-packed-member
 
 # Disable warnings for incorrectly detected region size (added in GCC 11)
 # The compiler is not detecting properly GPIO structure size
-
+#
+# First check if compiler version is equal or greater than 11, since these flags give errors
+# for earlier versions of gcc
 GCCVERSIONGTE11 := $(shell expr `arm-none-eabi-gcc -dumpversion | cut -f1 -d.` \>= 11)
 
 ifeq "$(GCCVERSIONGTE11)" "1"
