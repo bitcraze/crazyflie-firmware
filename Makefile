@@ -320,9 +320,14 @@ CFLAGS += -Wno-address-of-packed-member
 
 # Disable warnings for incorrectly detected region size (added in GCC 11)
 # The compiler is not detecting properly GPIO structure size
+
+GCCVERSIONGTE11 := $(shell expr `arm-none-eabi-gcc -dumpversion | cut -f1 -d.` \>= 11)
+
+ifeq "$(GCCVERSIONGTE11)" "1"
 CFLAGS += -Wno-array-bounds
 CFLAGS += -Wno-stringop-overread
 CFLAGS += -Wno-stringop-overflow
+endif
 
 ifeq ($(LTO), 1)
   CFLAGS += -flto
