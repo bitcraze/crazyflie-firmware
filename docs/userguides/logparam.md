@@ -8,10 +8,10 @@ log data from the Crazyflie and to set variables during runtime.
 
 ## Table of content (TOC)
 
-The variables that are available for the logging/parameter framework is
-decided on compile-time for the Crazyflie firmware. Using C macros
-variables can be made available to the framework below are two examples,
-one for parameters and one for logging.
+The variables that are available for the logging/parameter framework are
+defined at compile-time for the Crazyflie firmware. C macros are used to define
+which variables that should be available to the framework. Below are two examples,
+one for a parameter and one for logging.
 
 A parameter or logging variable that is created with `PARAM_ADD_CORE` or `LOG_ADD_CORE` is considered stable API and will with a very high likelihood be available a cross firmware versions. All core parameters and logging variables must have documentation associated with it. See below for examples of the documentation syntax.
 
@@ -110,8 +110,21 @@ variables in run-time, but note the following:
 -   The reading or writing of a parameter can be done at any time once
     you are connected to the Crazyflie.
 -   if the PARAM_CALLBACK type is set, to get notified that it has
-    changed, tha callback will run from the param task. It should 
+    changed, tha callback will run from the param task. It should
     not block and not take to long.
+
+### Persistent parameters
+
+Is is possible to mark a parameter to be persistent. In this case, the value
+can be stored in persistent memory, which means the associated variable
+automatically will be set to this value after a re-boot.
+
+To store a new value for a parameter, the new value must first be set and
+secondly, stored in persistent memory.
+
+To mark a parameter as persistent, use the `PARAM_PERSISTENT` constant:
+
+    PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, myParam, &myVariable)
 
 ## Logging
 
@@ -217,7 +230,7 @@ is longer than the update intervall, updates will be done for each logging call.
 ### Parameter callback function to get notifed when a parameter has been updated.
 
 Using the macro `PARAM_ADD_WITH_CALLBACK` it is possible to register a callback function that will be called
-when the parameter gets updated. This callback will run from the parameter task so it is important to not 
+when the parameter gets updated. This callback will run from the parameter task so it is important to not
 block in this callback or make it run for too long.
 
 Example:
@@ -226,8 +239,7 @@ Example:
             // The parameter has been updated before the callback and the new parameter value can be used
             digitalWrite(DECK_GPIO_IO1, pinValue);
          }
-         
-         ...
-         
-         PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setIO1pin, &pinValue, &myCallbackFunction)
 
+         ...
+
+         PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setIO1pin, &pinValue, &myCallbackFunction)
