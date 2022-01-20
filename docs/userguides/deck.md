@@ -4,13 +4,7 @@ page_id: deck
 ---
 
 The Deck API allows to easily communicates with decks installed on the
-Crazyflie. The deck API is still in development, it will:
-
--   Enumerates installed Deck and initialize drivers (*pretty much
-    done*)
--   Provides easy to use arduino-like API to access (*started*)
--   Optionally provides a task to run in (arduino-like setup and loop)
-    (*not started yet*)
+Crazyflie.
 
 If you want to get started you can follow the
 [howto](/docs/development/howto.md) to get your code

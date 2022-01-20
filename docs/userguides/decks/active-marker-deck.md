@@ -7,6 +7,9 @@ The Active Marker deck is mainly designed for [Qualisys mocap systems](https://w
 
 The deck is configured using the [parameter sub system](/docs/userguides/logparam.md), for details on which parameter to use, see below.
 
+The mode and marker parameters are [persistent](/docs/userguides/logparam.md#persistent-parameters) which means it is possible to store them in the
+Crazyflie and get the same values after a re-boot. This adds an "identity" in QTM to the Crazyflie device, even if the active marker deck is replaced.
+
 ## Modes
 
 The deck mode is set with the ```activeMarker.mode``` parameter.
