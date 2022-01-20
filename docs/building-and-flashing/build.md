@@ -81,7 +81,7 @@ git submodule update
 
 ## Compiling
 
-### Crazyflie 2.X
+### Crazyflie 2.X and Crazyflie Bolt
 
 This is the default build so just running ```make``` is enough or:
 ```bash
@@ -146,7 +146,7 @@ flash      : Flash .elf using OpenOCD
 halt       : Halt the target using OpenOCD
 reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD
-rtt        : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SEGGER_RTT=1" 
+rtt        : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SEGGER_RTT=1"
              and the console is visible over TCP on port 2000 "telnet localhost 2000".
 ```
 
@@ -167,7 +167,7 @@ The most common way to flash is probably to use the Crazyradio.
 
 * Turn the Crazyflie off
 * Start the Crazyflie in bootloader mode by pressing the power button for 3 seconds. Both the blue LEDs will blink.
-* In your terminal, run 
+* In your terminal, run
 
 ```bash
 make cload

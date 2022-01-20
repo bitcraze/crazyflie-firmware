@@ -13,7 +13,7 @@ To measure the RPM we used optical switches that we connected to a prototype boa
 ![rpm board](/docs/images/rpm-board.jpg)
 
 ## Measuring the thrust
-To measure the thrust we built a simple test fixture. We use a precision scale to measure the thrust. It is done by letting a weight hold the Crazyflie 2.0 down that is standing the scale. The lift generated will show up on the scale as the total weight gets lighter. We glued a prototype expansion board to a bottle which we could attach the Crazyflie 2.0 to. It is not a perfect fixture but shouldn't be too far off.
+To measure the thrust we built a simple test fixture. We use a precision scale to measure the thrust. It is done by letting a weight hold the Crazyflie 2.X down that is standing the scale. The lift generated will show up on the scale as the total weight gets lighter. We glued a prototype expansion board to a bottle which we could attach the Crazyflie 2.X to. It is not a perfect fixture but shouldn't be too far off.
 
 ![cf2 thrust fixture](/docs/images/cf2_thrust_fixture.jpg)
 
@@ -27,24 +27,24 @@ The firmware was adjusted to increase the trust from 0% to 93.75% in 16 steps. E
 
 | Amps | Thrust (g) | Voltage | PWM (%) | Average RPM |
 |---|---|---|---|---|
-| 0.24 | 0.0 | 4.01 | 0 | 0 | 
-| 0.37 | 1.6 | 3.98 | 6.25 | 4485 | 
-| 0.56 | 4.8 | 3.95 | 12.5 | 7570 | 
-| 0.75 | 7.9 | 3.92 | 18.75 | 9374 | 
-| 0.94 | 10.9 | 3.88 | 25 | 10885 | 
-| 1.15 | 13.9 | 3.84 | 31.25 | 12277 | 
-| 1.37 | 17.3 | 3.80 | 37.5 | 13522 | 
-| 1.59 | 21.0 | 3.76 | 43.25 | 14691 | 
-| 1.83 | 24.4 | 3.71 | 50| 15924 | 
-| 2.11 | 28.6 | 3.67 | 56.25 | 17174 | 
-| 2.39 | 32.8 | 3.65 | 62.5 | 18179 | 
-| 2.71 | 37.3 | 3.62 | 68.75 | 19397 | 
-| 3.06 | 41.7 | 3.56 | 75 | 20539 | 
-| 3.46 | 46.0 | 3.48 | 81.25 | 21692 | 
-| 3.88 | 51.9 | 3.40 | 87.5 | 22598 | 
+| 0.24 | 0.0 | 4.01 | 0 | 0 |
+| 0.37 | 1.6 | 3.98 | 6.25 | 4485 |
+| 0.56 | 4.8 | 3.95 | 12.5 | 7570 |
+| 0.75 | 7.9 | 3.92 | 18.75 | 9374 |
+| 0.94 | 10.9 | 3.88 | 25 | 10885 |
+| 1.15 | 13.9 | 3.84 | 31.25 | 12277 |
+| 1.37 | 17.3 | 3.80 | 37.5 | 13522 |
+| 1.59 | 21.0 | 3.76 | 43.25 | 14691 |
+| 1.83 | 24.4 | 3.71 | 50| 15924 |
+| 2.11 | 28.6 | 3.67 | 56.25 | 17174 |
+| 2.39 | 32.8 | 3.65 | 62.5 | 18179 |
+| 2.71 | 37.3 | 3.62 | 68.75 | 19397 |
+| 3.06 | 41.7 | 3.56 | 75 | 20539 |
+| 3.46 | 46.0 | 3.48 | 81.25 | 21692 |
+| 3.88 | 51.9 | 3.40 | 87.5 | 22598 |
 | 4.44 | 57.9 | 3.30 | 93.75 | 23882 |
 
-## Observations 
+## Observations
 As can be seen in the graph both then RPM and voltage vs. thrust is quadratic while the Power vs. thrust is linear. Also from the figures one can see that at 93.75% PWM the trust is about 58g. Using the values some interesting plots can be made. Like estimated flight time vs. battery capacity.
 
 ![flight time capacity](/docs/images/flighttime_capacity.png)
