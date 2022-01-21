@@ -6,15 +6,15 @@ page_id: crtp_mem
 
 Memory access is not used for the [Crazyflie Nano
 Quadcopter](https://wiki.bitcraze.io/projects:crazyflie:index), it\'s currently only implemented
-in the Crazyflie 2.0. Using the memory access gives the possibility to:
+in the Crazyflie 2.X. Using the memory access gives the possibility to:
 
 -   Get information about which memories are available
 -   Read/write/erase memories
 
 Currently the following memories are supported:
 
--   Crazyflie 2.0 onboard EEPROM
--   Crazyflie 2.0 expansion board 1-wire memories
+-   Crazyflie 2.X onboard EEPROM
+-   Crazyflie 2.X expansion board 1-wire memories
 
 There\'s more information available for how the EEPROM is structured and
 how the 1-wire memories work and are structured.

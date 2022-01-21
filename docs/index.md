@@ -7,12 +7,11 @@ This project contains the documentation of the source code for the firmware used
 
 ## The Crazyflie 2.X family
 
-This firmware suports the Crazyflie 2.X range of platforms, currently including:
-
-* The Crazyflie 2.0
-* The Crazyflie 2.1
-* The Crazyflie Bolt
-* The Roadrunner
+This firmware suports the Crazyflie 2.X range of devices, currently including:
+* The Crazyflie 2.0 (`cf2` platform)
+* The Crazyflie 2.1 (`cf2` platform)
+* The Crazyflie Bolt (`cf2` platform)
+* The Roadrunner (`tag` platform)
 
 ### Crazyflie 1.0
 

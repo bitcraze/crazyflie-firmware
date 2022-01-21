@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * storage.c: Key/Buffer persistant storage
+ * storage.c: Key/Buffer persistent storage
  *
  */
 
@@ -47,7 +47,7 @@
 
 // Memory organization
 
-// Low level memory access 
+// Low level memory access
 
 // ToDo: Shall we handle partition elsewhere?
 #define KVE_PARTITION_START (1024)

@@ -37,7 +37,7 @@ hello.c in the src/deck/drivers/src folder:
 
 static void helloInit()
 {
-  DEBUG_PRINT("Hello Crazyflie 2.0 deck world!\n");
+  DEBUG_PRINT("Hello Crazyflie 2.1 deck world!\n");
 }
 
 static bool helloTest()
