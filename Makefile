@@ -277,7 +277,8 @@ OBJ = $(FREERTOS_OBJ) $(PORT_OBJ) $(ST_OBJ) $(PROJ_OBJ) $(APP_OBJ) $(CRT0)
 ############### Compilation configuration ################
 AS = $(CROSS_COMPILE)as
 CC = $(CROSS_COMPILE)gcc
-LD = $(CROSS_COMPILE)gcc
+CXX = $(CROSS_COMPILE)g++
+LD = $(CROSS_COMPILE)g++
 SIZE = $(CROSS_COMPILE)size
 OBJCOPY = $(CROSS_COMPILE)objcopy
 GDB = $(CROSS_COMPILE)gdb
@@ -332,8 +333,12 @@ CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_NAME=$(ESTIMATOR)Estimator -DCONTROLLER
 
 CFLAGS += $(PROCESSOR) $(INCLUDES)
 
+CXXFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 $(INCLUDES)
+
+CXXFLAGS += -std=c++17 -Werror
 
 CFLAGS += -Wall -Wmissing-braces -fno-strict-aliasing $(C_PROFILE) -std=gnu11
+CXXFLAGS += -Wall -Wmissing-braces -fno-strict-aliasing
 # CFLAGS += -O0 -Wmissing-braces -fno-strict-aliasing $(C_PROFILE) -std=gnu11 #Use this compiler during debugger, as it has a different optimizer so you can better track variables
 # Compiler flags to generate dependency files:
 CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
@@ -341,7 +346,6 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 CFLAGS += -ffunction-sections -fdata-sections
 # Prevent promoting floats to doubles
 CFLAGS += -Wdouble-promotion
-
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
 LDFLAGS += --specs=nosys.specs --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
