@@ -1030,6 +1030,11 @@ void ledring12Worker(void * data)
   }
   current_effect = effect;
 
+  if (current_effect > neffect) {
+    current_effect = 0;
+    DEBUG_PRINT("Bad value for effect (> neffect)\n");
+  }
+
   effectsFct[current_effect](buffer, reset);
   overrideWithLightSignal(buffer);
   ws2812Send(buffer, NBR_LEDS);
