@@ -95,6 +95,26 @@
   #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
   #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
+#elif defined(CONFIG_MOTORS_ESC_PROTOCOL_DSHOT)
+/**
+ * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * brushed motors connected they can turn on at full speed when it is powered on!
+ *
+ */
+//  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 150000) // 150kHz bitrate DHSOT150
+  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 300000) // 300kHz bitrate DHSOT300
+//  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 600000) // 600kHz bitrate DHSOT600
+  #define MOTORS_BL_PWM_PRESCALE       (0)
+  #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
+  #define MOTORS_TIM_VALUE_FOR_0       (uint16_t)(MOTORS_BL_PWM_PERIOD * 0.37425)
+  #define MOTORS_TIM_VALUE_FOR_1       (uint16_t)(MOTORS_BL_PWM_PERIOD * 0.7485)
+  #define DSHOT_FRAME_SIZE             16
+  #define DSHOT_DMA_BUFFER_SIZE        17 /* With zero ending  */
+  #define DSHOT_MIN_THROTTLE           48
+  #define DSHOT_MAX_THROTTLE           2047
+  #define DSHOT_RANGE                  (DSHOT_MAX_THROTTLE - DSHOT_MIN_THROTTLE)
+
+  #define MOTORS_BL_PWM_CNT_FOR_HIGH   1
 #else
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
@@ -187,7 +207,8 @@
 typedef enum
 {
   BRUSHED,
-  BRUSHLESS
+  BRUSHLESS,
+  BRUSHLESS_DSHOT,
 } motorsDrvType;
 
 typedef struct
@@ -208,6 +229,11 @@ typedef struct
   uint32_t      timDbgStop;
   uint32_t      timPeriod;
   uint16_t      timPrescaler;
+  DMA_Stream_TypeDef *DMA_stream;
+  uint32_t      DMA_Channel;
+  uint32_t      DMA_PerifAddr;
+  uint16_t      TIM_DMASource;
+  uint8_t       DMA_IRQChannel;
   /* Function pointers */
   void (*setCompare)(TIM_TypeDef* TIMx, uint32_t Compare);
   uint32_t (*getCompare)(TIM_TypeDef* TIMx);
@@ -281,6 +307,11 @@ void motorsESCSetLo(uint32_t id);
 int motorsESCIsHi(uint32_t id);
 
 int motorsESCIsLo(uint32_t id);
+
+/**
+ * Send DSHOT for all motors at once. Must be prepared first with motorsPrepareDshot()
+ */
+void motorsBurstDshot();
 
 /**
  * Set the PWM ratio of the motor 'id'

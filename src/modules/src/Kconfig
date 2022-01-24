@@ -75,6 +75,9 @@ choice
 	config MOTORS_ESC_PROTOCOL_ONESHOT42
 	    bool "OneShot42"
 
+  config MOTORS_ESC_PROTOCOL_DSHOT
+      bool "Digital DSHOT protocol"
+
 endchoice
 
 config MOTORS_START_DISARMED

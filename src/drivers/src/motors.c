@@ -36,7 +36,8 @@
 #include "motors.h"
 #include "pm.h"
 #include "debug.h"
-
+#include "nvicconf.h"
+#include "usec_time.h"
 //FreeRTOS includes
 #include "task.h"
 
@@ -44,15 +45,26 @@
 #include "log.h"
 #include "param.h"
 
+
 static uint16_t motorsBLConvBitsTo16(uint16_t bits);
 static uint16_t motorsBLConv16ToBits(uint16_t bits);
 static uint16_t motorsConvBitsTo16(uint16_t bits);
 static uint16_t motorsConv16ToBits(uint16_t bits);
 
+<<<<<<< HEAD
 static bool motorSetEnable = false;
 static uint32_t motorPower[] = {0, 0, 0, 0};    // user-requested PWM signals
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
+=======
+uint32_t motor_ratios[] = {0, 0, 0, 0};
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+static DMA_InitTypeDef DMA_InitStructureShare;
+// Memory buffer for DSHOT bits
+static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
+static void motorsDshotDMASetup();
+#endif
+>>>>>>> Initial DSHOT implementation.
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
@@ -88,6 +100,8 @@ const MotorHealthTestDef unknownMotorHealthTestSettings = {
 };
 
 static bool isInit = false;
+static uint64_t lastCycleTime;
+static uint32_t cycleTime;
 
 /* Private functions */
 
@@ -236,7 +250,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     // Configure the GPIO for the timer output
     GPIO_StructInit(&GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Mode = MOTORS_GPIO_MODE;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
     GPIO_InitStructure.GPIO_OType = motorMap[i]->gpioOType;
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
@@ -263,7 +277,9 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     motorMap[i]->ocInit(motorMap[i]->tim, &TIM_OCInitStructure);
     motorMap[i]->preloadConfig(motorMap[i]->tim, TIM_OCPreload_Enable);
   }
-
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+  motorsDshotDMASetup();
+#endif
   // Start the timers
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
@@ -332,6 +348,121 @@ void motorsStop()
   motorsSetRatio(MOTOR_M4, 0);
 }
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+static void motorsDshotDMASetup()
+{
+  NVIC_InitTypeDef NVIC_InitStructure;
+  /* configure DMA */
+  /* DMA clock enable */
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+
+  // Preparation of common things in DMA setup struct
+  //DMA_InitStructureShare.DMA_Channel = DMA_Channel_5;
+  //DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR2;
+  //DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)led_dma.buffer;    // this is the buffer memory
+  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  DMA_InitStructureShare.DMA_BufferSize = DSHOT_DMA_BUFFER_SIZE;
+  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+
+  for (int i = 0; i < NBR_OF_MOTORS; i++)
+  {
+    NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+  }
+}
+static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
+{
+  uint16_t dshotBits;
+  bool dshot_telemetry = false;
+  uint16_t dshotRatio;
+
+  ASSERT(id < NBR_OF_MOTORS);
+
+  // Scale 16 -> 11 bits
+  dshotRatio = (ratio >> 5);
+  // Remove command area of DSHOT
+  if (dshotRatio < (DSHOT_MIN_THROTTLE - 1))
+  {
+    dshotRatio = 0;
+  }
+
+//  if (id == 0 || id==2 || id==3)
+  {
+    dshotBits = (dshotRatio << 1) | (dshot_telemetry ? 1 : 0);
+
+    // compute checksum
+    unsigned cs = 0;
+    unsigned csData = dshotBits;
+
+    for (int i = 0; i < 3; i++)
+    {
+          cs ^=  csData; // xor data by nibbles
+          csData >>= 4;
+    }
+
+    cs &= 0xf;
+    dshotBits = (dshotBits << 4) | cs;
+
+    for(int i = 0; i < DSHOT_FRAME_SIZE; i++)
+    {
+//        dshotDmaBuffer[id][i] = (i+1)*3;
+      dshotDmaBuffer[id][i] = (dshotBits & 0x8000) ? MOTORS_TIM_VALUE_FOR_1 : MOTORS_TIM_VALUE_FOR_0;
+      dshotBits <<= 1;
+    }
+    dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
+
+    // Wait for DMA to be free
+//    while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE);
+
+    // Setup DMA Stream. TODO optimize reloading
+//    DMA_DeInit(motorMap[id]->DMA_stream); // To clear pending flags
+    DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
+    DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
+    DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
+    DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
+
+    DMA_ITConfig(motorMap[id]->DMA_stream, DMA_IT_TC, ENABLE);
+  }
+}
+
+void motorsBurstDshot()
+{
+//  for (int i = 0; i < NBR_OF_MOTORS; i++)
+//  {
+//    /* Enable TIM DMA Requests */
+//    TIM_DMACmd(motorMap[i]->tim, motorMap[i]->TIM_DMASource, ENABLE);
+//    /* Enable DMA TIM Stream */
+//    DMA_Cmd(motorMap[i]->DMA_stream, ENABLE);
+//  }
+    /* Enable TIM DMA Requests M2*/
+    TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
+//    DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
+    /* Enable TIM DMA Requests M3*/
+    TIM_DMACmd(motorMap[2]->tim, motorMap[2]->TIM_DMASource, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[2]->DMA_stream, ENABLE);
+    /* Enable TIM DMA Requests M4*/
+    TIM_DMACmd(motorMap[3]->tim, motorMap[3]->TIM_DMASource, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
+}
+#endif
+
+
 // Ithrust is thrust mapped for 65536 <==> 60 grams
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
@@ -361,9 +492,24 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
     }
+    else if (motorMap[id]->drvType == BRUSHLESS_DSHOT)
+    {
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+      motorsPrepareDshot(id, ratio);
+#else
+      motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
+#endif
+    }
     else
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
+    }
+
+    if (id == MOTOR_M1)
+    {
+      uint64_t currTime = usecTimestamp();
+      cycleTime = currTime - lastCycleTime;
+      lastCycleTime = currTime;
     }
   }
 }
@@ -523,6 +669,38 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
   }
 }
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+void __attribute__((used)) DMA1_Stream1_IRQHandler(void)
+{
+  TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
+  DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
+}
+void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
+{
+  TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
+  DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
+}
+void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
+{
+  TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
+  DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
+  /* Enable TIM DMA Requests M2*/
+  TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
+  /* Enable DMA TIM Stream */
+  DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
+}
+void __attribute__((used)) DMA1_Stream7_IRQHandler(void)
+{
+  TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
+  DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
+}
+#endif
+
+
 /**
  * Override power distribution to motors.
  */
@@ -598,4 +776,8 @@ LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
  * @brief Current motor 4 PWM output
  */ 
 LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
+/**
+ * @brief Cycle time of M1 output in microseconds
+ */
+LOG_ADD(LOG_UINT32, cycletime, &cycleTime)
 LOG_GROUP_STOP(pwm)

@@ -85,6 +85,9 @@ void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
   if (motorPower->m4 < idleThrust) {
     motorPower->m4 = idleThrust;
   }
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+  motorsBurstDshot();
+#endif
 }
 
 /**

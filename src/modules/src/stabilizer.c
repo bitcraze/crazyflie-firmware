@@ -280,7 +280,7 @@ static void stabilizerTask(void* param)
       // The supervisor module keeps track of Crazyflie state such as if
       // we are ok to fly, or if the Crazyflie is in flight.
       //
-      supervisorUpdate(&sensorData);
+      //supervisorUpdate(&sensorData);
 
       if (emergencyStop || (systemIsArmed() == false)) {
         motorsStop();
