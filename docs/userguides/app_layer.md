@@ -10,13 +10,13 @@ This is still an experimental functionalities but the intention is to eventually
 
 ## App entry-point
 
-When compiling the Crazyflie with `APP=1` writen either in the Makefile or in `tools/make/config.mk` the firmware will call a function `void appMain()` from a task after the startup sequence has completed.
+When compiling the Crazyflie with `APP=1` written either in the Makefile or in `tools/make/config.mk` the firmware will call a function `void appMain()` from a task after the startup sequence has completed.
 This function should not return.
 
-If you want more control, you can define a function `void appInit()`. `appInit()` will be called by the firmware during initialisation, no task will be created and so `appMain()` will not be automatically called.
+If you want more control, you can define a function `void appInit()`. `appInit()` will be called by the firmware during initialization, no task will be created and so `appMain()` will not be automatically called.
 This function must return to allow the Crazyflie initialization sequence to continue.
 
-The folowing Makefile variables can be used for configuration:
+The following Makefile variables can be used for configuration:
 
  - **APP**: Set to '1' to enable the app entry-point
  - **APP_STACKSIZE**: Set the task stack size in 32bit word (4 Bytes). The default is 300 (1.2KBytes)

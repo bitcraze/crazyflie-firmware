@@ -56,7 +56,7 @@ DECK_DRIVER(myled_driver);
 -   Init is called on all initialized driver and then test is called.
 -   The init and test functions are both optional (we have some board
     with only init and event some with only test). If absent just remove
-    the *.init* or *.test* initialisation.
+    the *.init* or *.test* initialization.
 -   In this mode no task are created so to run some code at regular
     intervale the code needs to deal with freeRtos or with the other
     parts of the Crazyflie code.
@@ -72,7 +72,7 @@ PROJ_OBJ += myled.o
 
 The deck driver will be initialized only if a deck is connected with the
 right OW memory content. During development it is possible to force the
-initialisation of a deck by adding a define in
+initialization of a deck by adding a define in
 `tools/make/config.mk`:
 
 ``` {.make}
