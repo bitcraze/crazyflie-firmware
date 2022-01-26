@@ -26,7 +26,7 @@ The following Makefile variables can be used for configuration:
 
 For the app-layer, it would be good to have access to log and/or parameter values and to set parameter values. This way, your app will be able to read out sensor data or to switch controller/estimator on air. To check out these functions, look at `src/modules/interface/log.h` or `.../param.h` for the internal access functions. There is also an example to be found in `/examples/app_internal_param_log/`.
 
-Check which Logs and Params you can use by checking out the [log group and variable](/docs/api/logs/) and the [parameter group and variable documentation](/docs/api/params/).
+Check which Logs and Params you can use by checking out the [log group and variable](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/api/logs/) and the [parameter group and variable documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/api/params/).
 
 ## LED sequences
 
