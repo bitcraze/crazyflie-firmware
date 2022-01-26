@@ -73,7 +73,7 @@ PROJ_OBJ += myled.o
 The deck driver will be initialized only if a deck is connected with the
 right OW memory content. During development it is possible to force the
 initialisation of a deck by adding a define in
-\`\`\`tools/make/config.mk\`\`\`:
+`tools/make/config.mk`:
 
 ``` {.make}
 CFLAGS += -DDECK_FORCE=meMyled
