@@ -122,7 +122,7 @@ of the segment. This can result in significant space savings if the trajectory
 consists mostly of linear segments and cubic Bézier curves, especially if the
 yaw does not change, or if the movement mostly occurs in the X-Y, X-Z or Y-Z
 plane. Note that cubic Bézier curves are enough to ensure C0, C1 and C2
-continuity (inposition, velocity and acceleration) for the trajectories.
+continuity (in position, velocity and acceleration) for the trajectories.
 
 Internally, whenever the high-level commander starts processing a trajectory
 segment that is encoded using the compressed representation, it converts the
