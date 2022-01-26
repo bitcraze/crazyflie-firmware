@@ -88,6 +88,16 @@ bool plan_is_stopped(struct planner *p)
 	return p->state == TRAJECTORY_STATE_IDLE;
 }
 
+void plan_disable(struct planner *p)
+{
+	p->state = TRAJECTORY_STATE_DISABLED;
+}
+
+bool plan_is_disabled(struct planner *p)
+{
+	return p->state == TRAJECTORY_STATE_DISABLED;
+}
+
 struct traj_eval plan_current_goal(struct planner *p, float t)
 {
 	switch (p->state) {
