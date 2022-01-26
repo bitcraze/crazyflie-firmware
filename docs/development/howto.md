@@ -5,7 +5,7 @@ page_id: howto
 
 This howto is going to describe step-by-step how to make and flash your
 first Crazyflie 2.X deck driver. See the deck [api documentation
-page](/docs/userguides/decks/) for more information about the
+page](/docs/userguides/deck/) for more information about the
 code.
 
 Development environment
@@ -68,7 +68,7 @@ Enabling the driver
 -------------------
 
 Decks can have a memory that contains its name. In our case the hello
-driver would be initialised only when a deck identified as \"myHello\"
+driver would be initialized only when a deck identified as \"myHello\"
 is installed on the Crazyflie. For development purpose it is possible to
 force enabling a deck driver with a compile flag. To do so create the
 file tools/make/config.mk with the content:
