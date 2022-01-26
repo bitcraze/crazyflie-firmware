@@ -54,7 +54,7 @@ As already explained before: The high level commander handles the setpoints from
 There are four main ways to interact with the commander framework from the [python library](https://github.com/bitcraze/crazyflie-lib-python)/.
 
 * **autonomousSequence.py**: Send setpoints directly using the Commander class from the Crazyflie object.
-* **motion_commander_demo.py**: The MotionCommander class exposes a simplified API and sends velocity setpoints continuously based on the methods called.
+* **motion_commander_demo.py**: The MotionCommander class exposes a simplified API and sends velocity set-points continuously based on the methods called.
 * **autonomous_sequence_high_level.py**: Use the high level commander directly using the HighLevelCommander class on the Crazyflie object.
 * **position_commander_demo.py**: Use the PositionHlCommander class for a simplified API to send commands to the high level commander.
 
