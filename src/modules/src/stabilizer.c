@@ -249,6 +249,7 @@ static void stabilizerTask(void* param)
       }
       // allow to update controller dynamically
       if (getControllerType() != controllerType) {
+        control.controlMode = controlModeLegacy;
         controllerInit(controllerType);
         controllerType = getControllerType();
       }

@@ -259,6 +259,12 @@ bool motorsTest(void);
  */
 void motorsSetRatio(uint32_t id, uint16_t ratio);
 
+// computes maximum thrust in grams given the current battery state
+float motorsGetMaxThrust();
+
+// set thrust for motor (in grams)
+void motorsSetThrust(uint32_t id, float thrust);
+
 /**
  * Get the PWM ratio of the motor 'id'. Return -1 if wrong ID.
  */

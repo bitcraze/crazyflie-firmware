@@ -35,6 +35,11 @@
 #include "num.h"
 #include "quatcompress.h"
 #include "FreeRTOS.h"
+#include "eventtrigger.h"
+
+
+EVENTTRIGGER(cmdFullState)
+
 
 /* The generic commander format contains a packet type and data that has to be
  * decoded into a setpoint_t structure. The aim is to make it future-proof
@@ -338,6 +343,8 @@ static void fullStateDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
   setpoint->mode.roll = modeDisable;
   setpoint->mode.pitch = modeDisable;
   setpoint->mode.yaw = modeDisable;
+
+  eventTrigger(&eventTrigger_cmdFullState);
 }
 
 /* positionDecoder

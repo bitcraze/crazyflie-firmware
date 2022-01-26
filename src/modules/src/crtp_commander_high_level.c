@@ -104,6 +104,8 @@ static StaticSemaphore_t lockTrajBuffer;
 static float defaultTakeoffVelocity = 0.5f;
 static float defaultLandingVelocity = 0.5f;
 
+static float yawrate = 0.0f;
+
 // Trajectory memory handling from the memory module
 static uint32_t handleMemGetSize(void) { return crtpCommanderHighLevelTrajectoryMemSize(); }
 static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
@@ -328,7 +330,14 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     // store the last setpoint
     pos = ev.pos;
     vel = ev.vel;
-    yaw = ev.yaw;
+
+    if (yawrate != 0) {
+      yaw += yawrate * 0.001f;
+      setpoint->attitude.yaw = degrees(yaw);
+      setpoint->attitudeRate.yaw = degrees(yawrate);
+    } else {
+      yaw = ev.yaw;
+    }
   }
 }
 
@@ -806,5 +815,8 @@ PARAM_ADD_CORE(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
  * @brief Default landing velocity (m/s)
  */
 PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
+
+
+PARAM_ADD(PARAM_FLOAT, yawrate, &yawrate)
 
 PARAM_GROUP_STOP(hlCommander)

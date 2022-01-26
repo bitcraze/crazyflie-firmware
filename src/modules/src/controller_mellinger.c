@@ -101,6 +101,10 @@ static float r_pitch;
 static float r_yaw;
 static float accelz;
 
+static struct vec r_error;
+static struct vec v_error;
+static struct vec eR, ew;
+
 void controllerMellingerReset(void)
 {
   i_error_x = 0;
@@ -126,15 +130,15 @@ void controllerMellinger(control_t *control, setpoint_t *setpoint,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-  struct vec r_error;
-  struct vec v_error;
+  // struct vec r_error;
+  // struct vec v_error;
   struct vec target_thrust;
   struct vec z_axis;
   float current_thrust;
   struct vec x_axis_desired;
   struct vec y_axis_desired;
   struct vec x_c_des;
-  struct vec eR, ew, M;
+  struct vec /*eR, ew,*/ M;
   float dt;
   float desiredYaw = 0; //deg
 
@@ -358,4 +362,20 @@ LOG_ADD(LOG_FLOAT, zdz, &z_axis_desired.z)
 LOG_ADD(LOG_FLOAT, i_err_x, &i_error_x)
 LOG_ADD(LOG_FLOAT, i_err_y, &i_error_y)
 LOG_ADD(LOG_FLOAT, i_err_z, &i_error_z)
+
+LOG_ADD(LOG_FLOAT, ep_x, &r_error.x)
+LOG_ADD(LOG_FLOAT, ep_y, &r_error.y)
+LOG_ADD(LOG_FLOAT, ep_z, &r_error.z)
+
+LOG_ADD(LOG_FLOAT, ev_x, &v_error.x)
+LOG_ADD(LOG_FLOAT, ev_y, &v_error.y)
+LOG_ADD(LOG_FLOAT, ev_z, &v_error.z)
+
+LOG_ADD(LOG_FLOAT, eR_x, &eR.x)
+LOG_ADD(LOG_FLOAT, eR_y, &eR.y)
+LOG_ADD(LOG_FLOAT, eR_z, &eR.z)
+
+LOG_ADD(LOG_FLOAT, ew_x, &ew.x)
+LOG_ADD(LOG_FLOAT, ew_y, &ew.y)
+LOG_ADD(LOG_FLOAT, ew_z, &ew.z)
 LOG_GROUP_STOP(ctrlMel)
