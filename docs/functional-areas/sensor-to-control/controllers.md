@@ -12,11 +12,11 @@ Once the [state estimator](/docs/functional-areas/sensor-to-control/state_estima
  * INDI Controller (TO DO)
 
 ## Overview of control
-There are three levels to control in the crazyflie:
+There are four levels to control in the Crazyflie:
 * Attitude rate
-* Attitude absoluut
-* Position or velocity
-
+* Attitude absolute
+* Velocity
+* Position
 
 Here is an overview of the types of controllers there are per level:
 
@@ -24,7 +24,6 @@ Here is an overview of the types of controllers there are per level:
 
 We will now explain per controller how exactly they are being implemented in the [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware/).
 
-[go back to top](#)
 
 
 ## Cascaded PID controller
@@ -41,20 +40,19 @@ Here are the different loops of the cascaded PID explained in more detail.
 
 ### Attitude Rate PID controller
 
-The attitude rate PID controller is the one that directly controls the attitude rate. It resieves almost directly the gyroscope rates (through a bit of filtering first) takes the error between the desired attitude rate as input. This output the commands that is send directly to the power distribution ([power_distribution_stock.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/power_distribution_stock.c)). The control loop runs at 500 Hz.
+The attitude rate PID controller is the one that directly controls the attitude rate. It receives almost directly the gyroscope rates (through a bit of filtering first) takes the error between the desired attitude rate as input. This output the commands that is send directly to the power distribution `power_distribution_stock.c`. The control loop runs at 500 Hz.
 
-Check the implementation details in [attitude_pid_controller.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/attitude_pid_controller.c) in `attitudeControllerCorrectRatePID()`.
+Check the implementation details in `attitude_pid_controller.c` in `attitudeControllerCorrectRatePID()`.
 
 ### Attitude PID controller
 
-The absolute attitude PID controller is the outerloop of the attitude controller. This takes in the estimated attitude of the [state estimator](/docs/functional-areas/sensor-to-control/state_estimators.md), and takes the error of the desired attitude setpoint to control the attitude of the Crazyflie. The output is desired attitude rate which is send to the attitude rate controller. The control loop runs at 500 Hz.
+The absolute attitude PID controller is the outer-loop of the attitude controller. This takes in the estimated attitude of the `state estimator`, and takes the error of the desired attitude set-point to control the attitude of the Crazyflie. The output is desired attitude rate which is send to the attitude rate controller. The control loop runs at 500 Hz.
 
-Check the implementation details in [attitude_pid_controller.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/attitude_pid_controller.c) in `attitudeControllerCorrectAttitudePID()`.
+Check the implementation details in `attitude_pid_controller.c` in `attitudeControllerCorrectAttitudePID()`.
 
 ### Position and Velocity Controller
 
-The most outerloop of the cascaded PID controller is the position and velocity controller. It receives position or velcoityinput from a commander which are handled, since it is possible to set in the variable `setpoint_t` which  stabilization mode to use `stab_mode_t` (either position:  `modeAbs` or `modeVelocity`). These can be found in [stabilizer_types.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h). The control loop runs at 100 Hz.
+The most outer-loop of the cascaded PID controller is the position and velocity controller. It receives position or velocity input from a commander which are handled, since it is possible to set in the variable `setpoint_t` which  stabilization mode to use `stab_mode_t` (either position:  `modeAbs` or `modeVelocity`). These can be found in `stabilizer_types.h`. The control loop runs at 100 Hz.
 
-Check the implementation details in Check the implementation details in [position_controller_pid.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/position_controller_pid.c) in `positionController()` and  `velocityController()`.
+Check the implementation details in Check the implementation details in `position_controller_pid.c` in `positionController()` and  `velocityController()`.
 
-[go back to top](#)

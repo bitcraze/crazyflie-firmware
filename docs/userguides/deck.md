@@ -95,9 +95,30 @@ typedef struct deck_driver {
   uint8_t pid;
   char *name;
 
-  /* Periphreal and Gpio used _dirrectly_ by the driver */
+  /*
+   * Peripheral and Gpio used _directly_ by the driver.
+   *
+   * Include the pin in usedGpio if it's used directly by the driver, do not
+   * add the pin to usedGpio if it used as part of a peripheral.
+   *
+   * For example: If a deck driver uses SPI we add DECK_USING_SPI to
+   * usedPeriph. If the deck uses the MOSI, MISO or SCK pins for other stuff
+   * than SPI it would have to specify DECK_USING_[PA7|PA6|PA5].
+   *
+   */
   uint32_t usedPeriph;
   uint32_t usedGpio;
+
+  /* Required system properties */
+  StateEstimatorType requiredEstimator;
+  bool requiredLowInterferenceRadioMode;
+
+  // Deck memory access definitions
+  const struct deckMemDef_s* memoryDef;
+
+  // Have an option to present a secondary memory area for instance for decks
+  // two firmwares.
+  const struct deckMemDef_s* memoryDefSecondary;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
