@@ -11,7 +11,7 @@ read real-time values etc\...). On this page, you can find examples on
 how debug the STM32 from VS Code and Eclipse. Debugging the nRF51 chip requires a [different configuration](https://www.bitcraze.io/documentation/repository/crazyflie2-nrf-firmware/master/development/starting_development/), but an otherwise identical set-up.
 
 > **_NOTE:_**
-> Debugging requires our [debug adapter](https://wiki.bitcraze.io/projects:crazyflie2:debugadapter:index) and an ST Link V2 Debugger or similar.
+> Debugging requires our [debug adapter](https://www.bitcraze.io/products/debug-adapter-kit/) and an ST Link V2 Debugger or similar.
 
 ## Debugging in VS Code
 

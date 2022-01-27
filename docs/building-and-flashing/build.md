@@ -5,8 +5,8 @@ page_id: build
 
 ## Dependencies
 
-You'll need to use either the [Crazyflie VM](https://wiki.bitcraze.io/projects:virtualmachine:index),
-[the toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) or
+You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraze-vm),
+[the toolbelt](https://github.com/bitcraze/toolbelt) or
 install some ARM toolchain.
 
 ### Install a toolchain
@@ -239,5 +239,5 @@ The testing framework uses ruby and rake to generate and run code.
 To minimize the need for installations and configuration, use the docker builder
 image (bitcraze/builder) that contains all tools needed. All scripts in the
 tools/build directory are intended to be run in the image. The
-[toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) makes it
+[toolbelt](https://github.com/bitcraze/toolbelt) makes it
 easy to run the tool scripts.
