@@ -3,7 +3,7 @@ title: Unit testing
 page_id: unit_testing
 ---
 
-## Dependencies
+### Dependencies
 
 Frameworks for unit testing and mocking are pulled in as git submodules.
 
@@ -13,7 +13,7 @@ If you run the tests on your own machine you will have to install them.
 To minimize the need for installations and configuration, use the docker builder
 image (bitcraze/builder) that contains all tools needed. All scripts in the 
 tools/build directory are intended to be run in the image. The 
-[toolbelt](https://wiki.bitcraze.io/projects:dockerbuilderimage:index) makes it
+[toolbelt](https://github.com/bitcraze/toolbelt) makes it
 easy to run the tool scripts.
 
 
