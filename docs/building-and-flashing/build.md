@@ -45,19 +45,26 @@ sudo pacman -S community/arm-none-eabi-gcc community/arm-none-eabi-gdb community
 
 #### Windows
 
-The GCC ARM Embedded toolchain for Windows is available at [launchpad.net](https://launchpad.net/gcc-arm-embedded/+download). Download the zip archive rather than the executable installer. There are a few different systems for running UNIX-style shells and build systems on Windows; the instructions below are for [Cygwin](https://www.cygwin.com/).
+The supported way to build the Crazyflie on Windows is to use the Windows Subsystem for Linux (WSL) on Windows 10+.
+This means that developement happens in a Linux environment.
+Flashing is handled by installing Python and the Crazyflie client on Windows launched from linux.
 
-Install Cygwin with [setup-x86_64.exe](https://www.cygwin.com/setup-x86_64.exe). Use the standard `C:\cygwin64` installation directory and install at least the `make` and `git` packages.
+To get started you need to [enable WSL and install an Ubuntu system](https://docs.microsoft.com/en-us/windows/wsl/install).
+This can be done by opening `power shell` as administrator and typing:
 
-Download the latest `gcc-arm-none-eabi-*-win32.zip` archive from [launchpad.net](https://launchpad.net/gcc-arm-embedded/+download). Create the directory `C:\cygwin64\opt\gcc-arm-none-eabi` and extract the contents of the zip file to it.
-
-Launch a Cygwin terminal and run the following to append to your `~/.bashrc` file:
-```bash
-echo '[[ $PATH == */opt/gcc-arm-none-eabi/bin* ]] || export PATH=/opt/gcc-arm-none-eabi/bin:$PATH' >>~/.bashrc
-source ~/.bashrc
+```
+wsl --install
 ```
 
-Verify the toolchain installation with `arm-none-eabi-gcc --version`
+Then follow the [install instruction for Ubuntu 20.04](#debianubuntu) above to install the required build dependencies.
+
+For [flashing](#flashing) you need to install Python and the client **on Windows**.
+When installing Python, the checkbox to add python to the Path should be checked and then the client can be installed with pip in a `powershell` or `cmd` window:
+```
+pip.exe install cfclient
+```
+
+The Crazyflie makefile will automatically use the Windows python when running in WSL.
 
 ### Cloning
 
@@ -155,11 +162,12 @@ Writing a new binary to the Crazyflie is called flashing (writing it to the flas
 
 ## Using Crazyradio
 
-The most common way to flash is probably to use the Crazyradio.
+The supported way to flash when developping for the Crazyflie is to use the Crazyradio and the radio bootloader.
 
 ### Prerequisites
 * A Crazyradio with drivers installed
 * [Crazyflie Client installed](https://github.com/bitcraze/crazyflie-clients-python) with Python's pip (so not by Snap (Ubuntu) or the .exe (Windows))
+  * Note than when developping in WSL on Windows, the client needs to be installed on Windows. See the [Windows build instruction](#windows) above.
 * The firmware has been built
 * The current working directory is the root of the crazyflie-firmware project
 
