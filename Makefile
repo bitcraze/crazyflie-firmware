@@ -20,7 +20,6 @@ PYTHON            ?= python3
 DFU_UTIL          ?= dfu-util
 CLOAD             ?= 1
 DEBUG             ?= 0
-CLOAD_SCRIPT      ?= python3 -m cfloader
 CLOAD_CMDS        ?=
 CLOAD_ARGS        ?=
 PLATFORM          ?= cf2
@@ -28,6 +27,12 @@ LPS_TDMA_ENABLE   ?= 0
 LPS_TDOA_ENABLE   ?= 0
 LPS_TDOA3_ENABLE  ?= 0
 
+# Cload is handled in a special way on windows in WSL to use the Windows python interpreter
+ifdef WSL_DISTRO_NAME
+CLOAD_SCRIPT      ?= python.exe -m cfloader
+else
+CLOAD_SCRIPT      ?= python3 -m cfloader
+endif
 
 # Platform configuration handling
 -include current_platform.mk
