@@ -10,6 +10,7 @@ CRAZYFLIE_BASE ?= ./
 -include tools/make/config.mk
 
 CFLAGS += $(EXTRA_CFLAGS)
+CXXFLAGS += $(EXTRA_CFLAGS)
 
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
@@ -34,6 +35,7 @@ LPS_TDOA3_ENABLE  ?= 0
 include $(CRAZYFLIE_BASE)/tools/make/platform.mk
 
 CFLAGS += -DCRAZYFLIE_FW
+CXXFLAGS += -DCRAZYFLIE_FW
 
 #OpenOCD conf
 RTOS_DEBUG        ?= 0
@@ -41,6 +43,7 @@ RTOS_DEBUG        ?= 0
 LIB = $(CRAZYFLIE_BASE)/src/lib
 FREERTOS = $(CRAZYFLIE_BASE)/vendor/FreeRTOS
 CFLAGS += -DBLOBS_LOC='"$(CRAZYFLIE_BASE)/blobs/"'
+CXXFLAGS += -DBLOBS_LOCK='"$(CRAZYFLIE_BASE)/blobs/"'
 
 # Communication Link
 UART2_LINK        ?= 0
@@ -74,9 +77,11 @@ ST_OBJ += usbd_ioreq.o usbd_req.o usbd_core.o
 
 PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
+CXXFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
 
 #Flags required by the ST library
 CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
+CXXFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
 
 LOAD_ADDRESS_stm32f4 = 0x8000000
 LOAD_ADDRESS_CLOAD_stm32f4 = 0x8004000
@@ -108,16 +113,20 @@ PROJ_OBJ += ff.o ffunicode.o fatfs_sd.o
 ifeq ($(FATFS_DISKIO_TESTS), 1)
 PROJ_OBJ += diskio_function_tests.o
 CFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
+CXXFLAGS += -DUSD_RUN_DISKIO_FUNCTION_TESTS
 endif
 
 ifeq ($(APP), 1)
 CFLAGS += -DAPP_ENABLED=1
+CXXFLAGS += -DAPP_ENABLED=1
 endif
 ifdef APP_STACKSIZE
 CFLAGS += -DAPP_STACKSIZE=$(APP_STACKSIZE)
+CXXFLAGS += -DAPP_STACKSIZE=$(APP_STACKSIZE)
 endif
 ifdef APP_PRIORITY
 CFLAGS += -DAPP_PRIORITY=$(APP_PRIORITY)
+CXXFLAGS += -DAPP_PRIORITY=$(APP_PRIORITY)
 endif
 
 # Crazyflie sources
@@ -217,29 +226,35 @@ PROJ_OBJ += activeMarkerDeck.o
 # Uart2 Link for CRTP communication is not compatible with decks using uart2
 ifeq ($(UART2_LINK), 1)
 CFLAGS += -DUART2_LINK_COMM
+CXXFLAGS += -DUART2_LINK_COMM
 else
 PROJ_OBJ += aideck.o
 endif
 
 ifeq ($(LPS_TDOA_ENABLE), 1)
 CFLAGS += -DLPS_TDOA_ENABLE
+CXXFLAGS += -DLPS_TDOA_ENABLE
 endif
 
 ifeq ($(LPS_TDOA3_ENABLE), 1)
 CFLAGS += -DLPS_TDOA3_ENABLE
+CXXFLAGS += -DLPS_TDOA3_ENABLE
 endif
 
 ifeq ($(LPS_TDMA_ENABLE), 1)
 CFLAGS += -DLPS_TDMA_ENABLE
+CXXFLAGS += -DLPS_TDMA_ENABLE
 endif
 
 ifdef SENSORS
 SENSORS_UPPER = $(shell echo $(SENSORS) | tr a-z A-Z)
 CFLAGS += -DSENSORS_FORCE=SensorImplementation_$(SENSORS)
+CXXFLAGS += -DSENSORS_FORCE=SensorIMplementation_$(SENSORS)
 
 # Add sensor file to the build if needed
 ifeq (,$(findstring DSENSOR_INCLUDED_$(SENSORS_UPPER),$(CFLAGS)))
 CFLAGS += -DSENSOR_INCLUDED_$(SENSORS_UPPER)
+CXXFLAGS += -DSENSOR_INCLUDED_$(SENSORS_UPPER)
 PROJ_OBJ += sensors_$(SENSORS).o
 endif
 endif
@@ -267,6 +282,7 @@ VPATH += $(LIB)/Segger_RTT/RTT
 INCLUDES += -I$(LIB)/Segger_RTT/RTT
 PROJ_OBJ += SEGGER_RTT.o SEGGER_RTT_printf.o
 CFLAGS += -DDEBUG_PRINT_ON_SEGGER_RTT
+CXXFLAGS += -DDEBUG_PRINT_ON_SEGGER_RTT
 endif
 
 # Libs
@@ -304,16 +320,20 @@ INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
 INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
 
 CFLAGS += -g3
+CXXFLAGS += -g3
 ifeq ($(DEBUG), 1)
-  CFLAGS += -O0 -DDEBUG
+  CFLAGS += -Og -DDEBUG
+	CXXFLAGS += -Og -DDEBUG
 
   # Prevent silent errors when converting between types (requires explicit casting)
   CFLAGS += -Wconversion
+	CXXFLAGS += -Wconversion
 else
   CFLAGS += -Os
 
   # Fail on warnings
   CFLAGS += -Werror
+	CXXFLAGS += -Werror
 endif
 
 # Disable warnings for unaligned addresses in packed structs (added in GCC 9)
@@ -327,11 +347,14 @@ CFLAGS += -Wno-stringop-overflow
 
 ifeq ($(LTO), 1)
   CFLAGS += -flto
+	CXXFLAGS += -flto
 endif
 
 CFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_NAME=$(ESTIMATOR)Estimator -DCONTROLLER_NAME=ControllerType$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
+CXXFLAGS += -DBOARD_REV_$(REV) -DESTIMATOR_NAME=$(ESTIMATOR)Estimator -DCONTROLLER_NAME=ControllerType$(CONTROLLER) -DPOWER_DISTRIBUTION_TYPE_$(POWER_DISTRIBUTION)
 
 CFLAGS += $(PROCESSOR) $(INCLUDES)
+CXXFLAGS += $(PROCESSOR) $(INCLUDES)
 
 CXXFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 $(INCLUDES)
 
@@ -363,6 +386,8 @@ endif
 ifeq ($(LTO), 1)
   LDFLAGS += -Os -flto -fuse-linker-plugin
 endif
+
+CXXFLAGS += -fuse-ld=gold
 
 #Program name
 PROG ?= $(PLATFORM)
