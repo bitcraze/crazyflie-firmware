@@ -10,6 +10,7 @@ CRAZYFLIE_BASE ?= ./
 -include tools/make/config.mk
 
 CFLAGS += $(EXTRA_CFLAGS)
+CXXFLAGS += $(EXTRA_CFLAGS)
 
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
@@ -248,7 +249,7 @@ endif
 ifdef SENSORS
 SENSORS_UPPER = $(shell echo $(SENSORS) | tr a-z A-Z)
 CFLAGS += -DSENSORS_FORCE=SensorImplementation_$(SENSORS)
-CXXFLAGS += -DSENSOR_FORCE=SensorIMplementation_$(SENSORS)
+CXXFLAGS += -DSENSORS_FORCE=SensorIMplementation_$(SENSORS)
 
 # Add sensor file to the build if needed
 ifeq (,$(findstring DSENSOR_INCLUDED_$(SENSORS_UPPER),$(CFLAGS)))
@@ -385,6 +386,8 @@ endif
 ifeq ($(LTO), 1)
   LDFLAGS += -Os -flto -fuse-linker-plugin
 endif
+
+CXXFLAGS += -fuse-ld=gold
 
 #Program name
 PROG ?= $(PLATFORM)
