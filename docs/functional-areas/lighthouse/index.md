@@ -5,7 +5,7 @@ redirects:
   - /docs/functional-areas/lighthouse_overview/
 ---
 
-The Lighthouse positioning system uses the HTC Vive base stations (aka Lighthouse) togeather with the Lighthouse
+The Lighthouse positioning system uses the HTC Vive base stations (aka Lighthouse) together with the Lighthouse
 deck to achieve high precision positioning.
 
 The basics:
@@ -13,7 +13,7 @@ The basics:
  * [Limitations](/docs/functional-areas/lighthouse/limitations.md)
  * [Positioning methods](/docs/functional-areas/lighthouse/positioning_methods.md)
 
-Development related pages
+Development related pages:
  * [Terminology and definitions](/docs/functional-areas/lighthouse/terminology_definitions.md)
  * [Kalman estimator measurement model](/docs/functional-areas/lighthouse/kalman_measurement_model.md)
  * [Converting between LH1 and LH2 angles](/docs/functional-areas/lighthouse/angle_conversion.md)

@@ -31,7 +31,7 @@ The H vector is
 
 $$H = (g_x, g_y, g_z, 0, 0, 0, 0, 0, 0)$$.
 
-Then, we call the function `kalmanCoreScalarUpdate()` in [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core/kalman_core.c) to update the states and covariance matrix.
+Then, we call the function `kalmanCoreScalarUpdate()` in `kalman_core.c` to update the states and covariance matrix.
 
 ### Time-difference-of-arrival (TDoA)
 In TDoA, UWB tags receive signals from anchors passively and compute the difference in distance beween two anchors as TDoA measurements. Since in TDoA scheme, UWB tags only listen to the messages from anchors, a TDoA-based localization system allows a theoretically unlimited number of robots to localize themselves with a small number of fixed anchors. However, TDoA measurements are more noisy than TWR measurements, leading to a less accurate localization performance. Two types of TDoA protocols ([TDoA2](https://www.bitcraze.io/documentation/repository/lps-node-firmware/master/protocols/tdoa2_protocol/) and [TDoA3](https://www.bitcraze.io/documentation/repository/lps-node-firmware/master/protocols/tdoa3_protocol/)) are implemented in LPS system. The main difference between the two TDoA protocols is that TDoA3 protocol achieves the scalability at the cost of localization accuracy. The readers are refer to [TDoA2 VS TDoA3](https://www.bitcraze.io/documentation/repository/lps-node-firmware/master/functional-areas/tdoa2-vs-tdoa3/) for detailed information.
@@ -52,10 +52,10 @@ The H vector is
 
 $$H = (g_x, g_y, g_z, 0, 0, 0, 0, 0, 0)$$.
 
-Then, we call the function `kalmanCoreScalarUpdate()` in [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core/kalman_core.c) to update the states and covariance matrix.
+Then, we call the function `kalmanCoreScalarUpdate()` in `kalman_core.c` to update the states and covariance matrix.
 
 ### M-estimation based robust Kalman filter
-UWB radio signal suffers from outlier measurements caused by radio multi-path reflection and non-line-of-sight propagation. The large erroneous measurements often deteriorate the accuracy of UWB localization. The conventional Kalman filter is sensitive to measurement outliers due to its intrinsic minimum mean-square-error (MMSE) criterion. Here, we provide a robust estiamtion approach based on M-estimation robust cost function. We will explain the general idea of the robust Kalman filter and readers are encouraged to look into the firmware [mm_distance_robust](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core/mm_distance_robust.c) and [mm_tdoa_robust](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core/mm_tdoa_robust.c). The implementation is based on paper [1] and please read the paper for implementation details.
+UWB radio signal suffers from outlier measurements caused by radio multi-path reflection and non-line-of-sight propagation. The large erroneous measurements often deteriorate the accuracy of UWB localization. The conventional Kalman filter is sensitive to measurement outliers due to its intrinsic minimum mean-square-error (MMSE) criterion. Here, we provide a robust estiamtion approach based on M-estimation robust cost function. We will explain the general idea of the robust Kalman filter and readers are encouraged to look into the firmware `mm_distance_robust.c` and `mm_tdoa_robust.c`. The implementation is based on paper [1] and please read the paper for implementation details.
 
 From the Bayesian maximum a posteriori perspective, the Kalman filter state estimation framework can be derived by solving the following minimization problem:
 
@@ -71,9 +71,9 @@ where $$e_{x,k,i}$$ and $$e_{y,k,i}$$ are the elements of $$e_{x,k}$$ and $$e_{y
 
 where $$\rho()$$ could be any robust function (e.g., G-M, SC-DCS, Huber, Cauchy, etc.)
 
-By introducing a weight function for the process and measurement uncertainties---with e as input---we can translate the optimization problem into an Iterative Reweight Least-Square (IRLS) problem. Then, the optimal posterior estimate can be computed through iteratively solving the least-square problem using the robust weights computed from the previous solution. In our implementation, we use the G-M robust cost function and the maximum iteration is set to be two for computational frugality. Then, we call the function `kalmanCoreUpdateWithPKE()` in [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core/kalman_core.c) with the weighted covariance matrix $P_w_m$, kalman gain Km, and innovation error to update the states and covariance matrix.
+By introducing a weight function for the process and measurement uncertainties---with e as input---we can translate the optimization problem into an Iterative Reweight Least-Square (IRLS) problem. Then, the optimal posterior estimate can be computed through iteratively solving the least-square problem using the robust weights computed from the previous solution. In our implementation, we use the G-M robust cost function and the maximum iteration is set to be two for computational frugality. Then, we call the function `kalmanCoreUpdateWithPKE()` in `kalman_core.c` with the weighted covariance matrix $$P_{w_m}$$, kalman gain Km, and innovation error to update the states and covariance matrix.
 
-This functionality can be turned on through setting a parameter (robustTwr or robustTdoa) in [estimator_kalman.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/estimator_kalman.c).
+This functionality can be turned on through setting a parameter (kalman.robustTwr or kalman.robustTdoa).
 
 ## References
 [1] Zhao, Wenda, Jacopo Panerati, and Angela P. Schoellig. "Learning-based Bias Correction for Time Difference of Arrival Ultra-wideband Localization of Resource-constrained Mobile Robots." IEEE Robotics and Automation Letters 6, no. 2 (2021): 3639-3646.

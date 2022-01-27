@@ -17,9 +17,9 @@ A state estimator turns sensor signals into an estimate of the state that the cr
 
 The complementary filter is consider a very lightweight and efficient filter which in general only uses the IMU input of the gyroscope (angle rate) and the accelerator. The estimator has been extended to also include input of the ToF distance measurement of the [Zranger deck](https://store.bitcraze.io/collections/decks/products/z-ranger-deck-v2). The estimated output is the Crazyflie’s attitude (roll, pitch, yaw) and its altitude (in the z direction). These values can be used by the controller and are meant to be used for manual control.
 
-To checkout the implementation details, please checkout the firmware in [estimator_complementary.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/estimator_complementary.c) and [sensfusion6.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/sensfusion6.c). The complementary filter is set as the default state estimator on the Crazyflie firmware, unless a deck is mounted that requires the kalman filter.
+To checkout the implementation details, please checkout the firmware in `estimator_complementary.c` and `sensfusion6.c`. The complementary filter is set as the default state estimator on the Crazyflie firmware, unless a deck is mounted that requires the Extended Kalman filter.
 
-[go back to top](#)
+
 
 ## Extended Kalman filter
 
@@ -29,38 +29,28 @@ The (extended) Kalman filter (EKF) is an step up in complexity compared to the c
 
 We will not go into detail on this but we encourage people to learn more about EKFs by reading up some material like [this](https://idsc.ethz.ch/education/lectures/recursive-estimation.html).
 
-Because of more state estimation possibilities, we prefer the EKF for certain decks that can provide information for **full pose estimation** (position/velocity + attitude). These are the:
+Because of more state estimation possibilities, we prefer the EKF for certain decks that can provide information for **full pose estimation** (position/velocity + attitude). These are the: [Flowdeck v2](https://store.bitcraze.io/collections/decks/products/flow-deck-v2), [Loco positioning deck](https://store.bitcraze.io/collections/positioning/products/loco-positioning-deck), [Lighthouse deck](https://store.bitcraze.io/products/lighthouse-positioning-deck), Mocap deck [passive](https://store.bitcraze.io/products/motion-capture-marker-deck) / [active](https://store.bitcraze.io/products/active-marker-deck). The estimator preferences of these decks are set in their [deck api](/docs/userguides/deck.md).
 
- * [Flowdeck v2](https://store.bitcraze.io/collections/decks/products/flow-deck-v2)
- * [Loco positioning deck](https://store.bitcraze.io/collections/positioning/products/loco-positioning-deck)
- * [Lighthouse deck](https://store.bitcraze.io/products/lighthouse-positioning-deck).
- * Mocap deck [passive](https://store.bitcraze.io/products/motion-capture-marker-deck) or [active](https://store.bitcraze.io/products/active-marker-deck)
-
- When the `DeckDriver` is initialized in the [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware/), for these decks the variable `.requiredEstimator` is set to `kalmanEstimator`. This says that the firmware should not use the default complementary filter but the EKF instead.
-
-Here we will explain a couple of important elements that are essential to the implementation, however we do encourage people to also look into the code [estimator_kalman.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/estimator_kalman.c) and [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core.c). Also read the papers of [1] and [2] for implementation details.
+Here we will explain a couple of important elements that are essential to the implementation, however we do encourage people to also look into the code `estimator_kalman.c` and `kalman_core.c`. Also read the papers of [1] and [2] for implementation details.
 
 ### Kalman supervisor
 
-The Kalman filter has an supervisor that resets the state estimation if the values get out of bounds. This can be found here in [kalman_supervisor.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_supervisor.c).
+The Kalman filter has an supervisor that resets the state estimation if the values get out of bounds. This can be found here in `kalman_supervisor.c`.
 
 ### Measurement Models
 
 This section will explain how the signals of the sensors are transformed to state estimates. These equations are the base of the measurement models of the EKF.
 
 * [Flowdeck Measurement Model](#flowdeck-measurement-model)
-* Locodeck Measurement Model (TODO)
+* [Locodeck Measurement Model](/docs/functional-areas/loco-positioning-system/index.md)
 * [Lighthouse Measurement Model](/docs/functional-areas/lighthouse/kalman_measurement_model.md)
 
 
 #### Flowdeck Measurement Model
 
-This illustration explains how the height from the VL53L1x sensor and flow from the PMW3901 sensor are combined to calculate velocity. This has been implemented by the work of [3] and can be found in [kalman_core.c](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/src/kalman_core.c) in the function `kalmanCoreUpdateWithFlow()`.
+This illustration explains how the height from the VL53L1x sensor and flow from the PMW3901 sensor are combined to calculate velocity. This has been implemented by the work of [3] and can be found in `kalman_core.c` in the function `kalmanCoreUpdateWithFlow()`.
 
 ![flowdeck velocity](/docs/images/flowdeck_velocity.png){:width="500"}
-
-
-[go back to top](#)
 
 
 ## References

@@ -6,9 +6,9 @@ page_id: oot
 It is possible to have an out-of-tree build of parts of the crazyflie firmware. This enables developers to work on elements without worrrying about merging it with the full code base. 
 
 # App layer.
-Technically the app layer is an example of an out of tree build. Follow the [app layer intructions](/docs/userguides/app_layer.md) for this.
+Technically the app layer is an example of an out of tree build. Follow the [app layer instructions](/docs/userguides/app_layer.md) for this.
 
-# OOT extimators
+# OOT estimators
 In a seperate folder make a Makefile which contain the following content:
 
 ```

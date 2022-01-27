@@ -3,7 +3,7 @@ title: Lighthouse kalman measurment model
 page_id: lh_measurement_model
 ---
 
-This page describes the generalized measurement model used for the lighthouse in the kalman state estimator.
+This page describes the generalized measurement model used for the lighthouse in the Kalman state estimator.
 
 In the measurement model we want to get from a sensor position $$\vec{s}$$ to rotation angle $$\alpha$$.
 The first step is to calculate the sensor position in the rotor reference frame.

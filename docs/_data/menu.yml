@@ -5,7 +5,6 @@
 - title: Userguides
   subs:
     - {page_id: deck}
-    - {page_id: decks-index}
     - {page_id: logparam}
     - {page_id: eventtrigger}
     - {page_id: app_layer}
