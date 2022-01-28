@@ -1,5 +1,46 @@
 %module cffirmware
 
+%include "stdint.i"
+%include "cpointer.i"
+%include "carrays.i"
+// %typemap(in) float[ANY] (float temp[$1_dim0]) {
+//   int i;
+//   if (!PySequence_Check($input)) {
+//     PyErr_SetString(PyExc_ValueError, "Expected a sequence");
+//     SWIG_fail;
+//   }
+//   if (PySequence_Length($input) != $1_dim0) {
+//     PyErr_SetString(PyExc_ValueError, "Size mismatch. Expected $1_dim0 elements");
+//     SWIG_fail;
+//   }
+//   for (i = 0; i < $1_dim0; i++) {
+//     PyObject *o = PySequence_GetItem($input, i);
+//     if (PyNumber_Check(o)) {
+//       temp[i] = (float) PyFloat_AsDouble(o);
+//     } else {
+//       PyErr_SetString(PyExc_ValueError, "Sequence elements must be numbers");      
+//       SWIG_fail;
+//     }
+//   }
+//   $1 = temp;
+// }
+
+%typemap(memberin) float [ANY] {
+  int i;
+  for (i = 0; i < $1_dim0; i++) {
+      $1[i] = $input[i];
+  }
+}
+
+%typemap(out) float [ANY] {
+  int i;
+  $result = PyList_New($1_dim0);
+  for (i = 0; i < $1_dim0; i++) {
+    PyObject *o = PyFloat_FromDouble((double) $1[i]);
+    PyList_SetItem($result,i,o);
+  }
+}
+
 // ignore GNU specific compiler attributes
 #define __attribute__(x)
 
@@ -9,14 +50,18 @@
 #include "pptraj.h"
 #include "planner.h"
 #include "stabilizer_types.h"
+#include "imu_types.h"
 #include "collision_avoidance.h"
+#include "controller_sjc.h"
 %}
 
 %include "math3d.h"
 %include "pptraj.h"
 %include "planner.h"
 %include "stabilizer_types.h"
+%include "imu_types.h"
 %include "collision_avoidance.h"
+%include "controller_sjc.h"
 
 %inline %{
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)

@@ -15,7 +15,8 @@ modules = [
     "pptraj.c",
     "pptraj_compressed.c",
     "planner.c",
-    "collision_avoidance.c"
+    "collision_avoidance.c",
+    "controller_sjc.c",
 ]
 fw_sources = [os.path.join(fw_dir, "src/modules/src", mod) for mod in modules]
 

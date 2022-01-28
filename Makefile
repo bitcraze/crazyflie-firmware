@@ -382,15 +382,15 @@ define n
 
 endef
 
-# Make sure that the submodules are up to date.
-# Check if there are any files in the vendor directories, if not warn the user.
-ifeq ($(wildcard $(CRAZYFLIE_BASE)/vendor/*/*),)
-  $(error $n                                                                   \
-    The submodules does not seem to be present, consider fetching them by:$n   \
-      $$ git submodule init$n                                                  \
-      $$ git submodule update$n                                                \
-  )
-endif
+# # Make sure that the submodules are up to date.
+# # Check if there are any files in the vendor directories, if not warn the user.
+# ifeq ($(wildcard $(CRAZYFLIE_BASE)/vendor/*/*),)
+#   $(error $n                                                                   \
+#     The submodules does not seem to be present, consider fetching them by:$n   \
+#       $$ git submodule init$n                                                  \
+#       $$ git submodule update$n                                                \
+#   )
+# endif
 
 #################### Targets ###############################
 
@@ -503,7 +503,7 @@ bindings_python: bindings/setup.py bin/cffirmware_wrap.c $(MOD_SRC)/*.c
 	$(PYTHON) bindings/setup.py build_ext --inplace
 
 bin/cffirmware_wrap.c cffirmware.py: bindings/cffirmware.i $(MOD_INC)/*.h
-	swig -python -I$(MOD_INC) -o bin/cffirmware_wrap.c bindings/cffirmware.i
+	swig -python -I$(MOD_INC) -I$(CRAZYFLIE_BASE)/src/hal/interface -o bin/cffirmware_wrap.c bindings/cffirmware.i
 	mv bin/cffirmware.py cffirmware.py
 
 test_python: bindings_python
