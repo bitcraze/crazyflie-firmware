@@ -70,7 +70,7 @@
 #include "peer_localization.h"
 #include "cfassert.h"
 #include "i2cdev.h"
-#include "../../../../embedded-firmware/src/include/ccommunication_manager.h"
+#include "../../../../shared-firmware/include/components/ccommunication_manager.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -139,7 +139,7 @@ void systemInit(void)
   pmInit();
   buzzerInit();
   peerLocalizationInit();
-	communicationManagerInit();
+  communicationManagerInit();
 
 #ifdef APP_ENABLED
   appInit();
@@ -156,7 +156,7 @@ bool systemTest()
   pass &= pmTest();
   pass &= workerTest();
   pass &= buzzerTest();
-	pass &= communicationManagerTest();
+  pass &= communicationManagerTest();
   return pass;
 }
 
