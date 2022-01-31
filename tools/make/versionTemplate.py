@@ -28,16 +28,13 @@ def check_output(*args):
 
 
 def extract_information_from_git(base):
-    revision = check_output(["git", "-C", base, "rev-parse", "HEAD"]).strip()
-
-    version['revision'] = revision[0:12]
-    version['irevision0'] = "0x" + revision[0:8]
-    version['irevision1'] = "0x" + revision[8:12]
+    version['revision'] = "Dream Team"
+    version['irevision0'] = "0x" + "FFFF"
+    version['irevision1'] = "0x" + "FFFF"
     version['productionRelease'] = 'false'
 
     try:
-        identify = check_output(
-            ["git", "-C", base, "describe", "--abbrev=12", "--tags", "HEAD"])
+        identify = "DreamTeam-V1"
         identify = identify.split('-')
 
         if len(identify) > 2:
@@ -59,17 +56,9 @@ def extract_information_from_git(base):
     if version['local_revision'] != '0':
         version['tag'] = version['tag'] + ' +' + version['local_revision']
 
-    branch = check_output(
-        ["git", "-C", base, "rev-parse", "--abbrev-ref", "HEAD"]).strip()
-    version['branch'] = branch
+    version['branch'] = "Final Version"
 
-    subprocess.call(["git", "-C", base, "update-index", "-q", "--refresh"])
-    changes = check_output(
-        ["git", "-C", base, "diff-index", "--name-only", "HEAD", "--"]).strip()
-    if len(changes):
-        version['modified'] = 'true'
-    else:
-        version['modified'] = 'false'
+    version['modified'] = 'false'
 
 
 def extract_information_from_build_info_file():
