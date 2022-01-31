@@ -423,7 +423,7 @@ endif
 
 #################### Targets ###############################
 
-all: bin/ bin/dep bin/vendor check_submodules build
+all: bin/ bin/dep bin/vendor build
 build:
 # Each target is in a different line, so they are executed one after the other even when the processor has multiple cores (when the -j option for the make command is > 1). See: https://www.gnu.org/software/make/manual/html_node/Parallel.html
 	@$(MAKE) --no-print-directory clean_version CRAZYFLIE_BASE=$(CRAZYFLIE_BASE)
@@ -512,9 +512,6 @@ erase:
 prep:
 	@$(CC) $(CFLAGS) -dM -E - < /dev/null
 
-check_submodules:
-	@cd $(CRAZYFLIE_BASE); $(PYTHON) tools/make/check-for-submodules.py
-
 include $(CRAZYFLIE_BASE)/tools/make/targets.mk
 
 #include dependencies
@@ -538,4 +535,4 @@ bin/cffirmware_wrap.c cffirmware.py: bindings/cffirmware.i $(MOD_INC)/*.h
 test_python: bindings_python
 	$(PYTHON) -m pytest test_python
 
-.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_verify cload size print_version clean_version bindings_python
+.PHONY: all clean build compile unit prep erase flash trace openocd gdb halt reset flash_dfu flash_verify cload size clean_version bindings_python
