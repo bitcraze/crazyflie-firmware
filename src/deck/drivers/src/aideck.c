@@ -196,6 +196,7 @@ static void Gap8Task(void *param)
   while (1)
   {
     uart1GetDataWithDefaultTimeout(&byte);
+    consolePutchar(byte);
   }
 }
 
