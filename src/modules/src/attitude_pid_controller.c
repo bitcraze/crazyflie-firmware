@@ -298,37 +298,37 @@ PARAM_GROUP_START(pid_rate)
 /**
  * @brief Proportional gain for the PID roll rate controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, roll_kp, &pidRollRate.kp)
 /**
  * @brief Integral gain for the PID roll rate controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, roll_ki, &pidRollRate.ki)
 /**
  * @brief Derivative gain for the PID roll rate controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, roll_kd, &pidRollRate.kd)
 /**
  * @brief Proportional gain for the PID pitch rate controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitchRate.kp)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, pitch_kp, &pidPitchRate.kp)
 /**
  * @brief Integral gain for the PID pitch rate controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, pitch_ki, &pidPitchRate.ki)
 /**
  * @brief Derivative gain for the PID pitch rate controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitchRate.kd)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, pitch_kd, &pidPitchRate.kd)
 /**
  * @brief Proportional gain for the PID yaw rate controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, yaw_kp, &pidYawRate.kp)
 /**
  * @brief Integral gain for the PID yaw rate controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, yaw_ki, &pidYawRate.ki)
 /**
  * @brief Derivative gain for the PID yaw rate controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYawRate.kd)
+PARAM_ADD(PARAM_FLOAT|PARAM_PERSISTENT, yaw_kd, &pidYawRate.kd)
 PARAM_GROUP_STOP(pid_rate)
