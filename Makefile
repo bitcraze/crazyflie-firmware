@@ -168,7 +168,7 @@ MOD_INC = $(srctree)/src/modules/interface
 MOD_SRC = $(srctree)/src/modules/src
 
 bindings_python: bindings/setup.py bin/cffirmware_wrap.c $(MOD_SRC)/*.c
-	$(PYTHON) bindings/setup.py build_ext --inplace
+	CC=$(HOSTCC) LDFLAGS=$(HOSTLDFLAGS) $(PYTHON) bindings/setup.py build_ext --inplace
 
 bin/cffirmware_wrap.c cffirmware.py: bindings/cffirmware.i $(MOD_INC)/*.h
 	swig -python -I$(MOD_INC) -o bin/cffirmware_wrap.c bindings/cffirmware.i
