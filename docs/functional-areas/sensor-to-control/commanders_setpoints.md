@@ -19,7 +19,7 @@ The commander module handles the incoming setpoints from several sources (src/mo
 
 It is important to realize that the commander module also checks how long ago a setpoint has been received. If it has been a little while (defined by threshold `COMMANDER_WDT_TIMEOUT_STABILIZE` in commander.c), it will set the attitude angles to 0 on order to keep the Crazyflie stabilized. If this takes longer than `COMMANDER_WDT_TIMEOUT_SHUTDOWN`, a null set-point will be given which will result in the Crazyflie shutting down its motors and fall from the sky. This won’t happen if you are using the high level commander.
 
-## Set-point Structure
+## Setpoint Structure
 
 
 In order to understand the commander module, you must be able to comprehend the set-point structure. The specific implementation can be found in src/modules/interface/stabilizer_types.h as setpoint_t in the Crazyflie firmware.
