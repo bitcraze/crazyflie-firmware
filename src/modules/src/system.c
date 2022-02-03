@@ -425,7 +425,7 @@ PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
 /**
  * @brief Set to nonzero to force system to be armed
  */
-PARAM_ADD(PARAM_INT8, forceArm, &forceArm)
+PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
 
 PARAM_GROUP_STOP(sytem)
 
