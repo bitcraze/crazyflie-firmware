@@ -380,12 +380,12 @@ PARAM_ADD(PARAM_FLOAT, beta, &beta)
 /**
  * @brief Integral gain (default: 0.002)
  */
-PARAM_ADD_CORE(PARAM_FLOAT, kp, &twoKp)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, kp, &twoKp)
 
 /**
  * @brief Propotional gain (default: 0.8)
  */
-PARAM_ADD_CORE(PARAM_FLOAT, ki, &twoKi)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, ki, &twoKi)
 #endif
 PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
 PARAM_GROUP_STOP(sensfusion6)
