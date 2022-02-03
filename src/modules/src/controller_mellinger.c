@@ -340,7 +340,7 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, ki_m_xy, &ki_m_xy)
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, ki_m_z, &ki_m_z)
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, kd_omega_rp, &kd_omega_rp)
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_m_xy, &i_range_m_xy)
-PARAM_ADD(PARAM_FLOAT, | PARAM_PERSISTENT i_range_m_z, &i_range_m_z)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_m_z, &i_range_m_z)
 PARAM_GROUP_STOP(ctrlMel)
 
 LOG_GROUP_START(ctrlMel)
