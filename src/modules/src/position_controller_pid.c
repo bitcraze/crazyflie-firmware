@@ -411,49 +411,49 @@ PARAM_GROUP_START(velCtlPid)
 /**
  * @brief Proportional gain for the velocity PID in the body-yaw-aligned X direction
  */
-PARAM_ADD(PARAM_FLOAT, vxKp, &this.pidVX.pid.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vxKp, &this.pidVX.pid.kp)
 /**
  * @brief Integral gain for the velocity PID in the body-yaw-aligned X direction
  */
-PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vxKi, &this.pidVX.pid.ki)
 /**
  * @brief Derivative gain for the velocity PID in the body-yaw-aligned X direction
  */
-PARAM_ADD(PARAM_FLOAT, vxKd, &this.pidVX.pid.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vxKd, &this.pidVX.pid.kd)
 
 /**
  * @brief Proportional gain for the velocity PID in the body-yaw-aligned Y direction
  */
-PARAM_ADD(PARAM_FLOAT, vyKp, &this.pidVY.pid.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vyKp, &this.pidVY.pid.kp)
 /**
  * @brief Integral gain for the velocity PID in the body-yaw-aligned Y direction
  */
-PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vyKi, &this.pidVY.pid.ki)
 /**
  * @brief Derivative gain for the velocity PID in the body-yaw-aligned Y direction
  */
-PARAM_ADD(PARAM_FLOAT, vyKd, &this.pidVY.pid.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vyKd, &this.pidVY.pid.kd)
 
 /**
  * @brief Proportional gain for the velocity PID in the global Z direction
  */
-PARAM_ADD(PARAM_FLOAT, vzKp, &this.pidVZ.pid.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vzKp, &this.pidVZ.pid.kp)
 /**
  * @brief Integral gain for the velocity PID in the global Z direction
  */
-PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vzKi, &this.pidVZ.pid.ki)
 /**
  * @brief Derivative gain for the velocity PID in the global Z direction
  */
-PARAM_ADD(PARAM_FLOAT, vzKd, &this.pidVZ.pid.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vzKd, &this.pidVZ.pid.kd)
 /**
  * @brief Feed-forward gain for the velocity PID in the body-yaw-aligned X direction (in degrees per m/s)
  */
-PARAM_ADD(PARAM_FLOAT, vxKFF, &kFFx)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vxKFF, &kFFx)
 /**
  * @brief Feed-forward gain for the velocity PID in the body-yaw-aligned Y direction (in degrees per m/s)
  */
-PARAM_ADD(PARAM_FLOAT, vyKFF, &kFFy)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vyKFF, &kFFy)
 
 PARAM_GROUP_STOP(velCtlPid)
 
@@ -466,70 +466,70 @@ PARAM_GROUP_START(posCtlPid)
 /**
  * @brief Proportional gain for the position PID in the body-yaw-aligned X direction
  */
-PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.pid.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, xKp, &this.pidX.pid.kp)
 /**
  * @brief Proportional gain for the position PID in the body-yaw-aligned X direction
  */
-PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, xKi, &this.pidX.pid.ki)
 /**
  * @brief Derivative gain for the position PID in the body-yaw-aligned X direction
  */
-PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.pid.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, xKd, &this.pidX.pid.kd)
 
 /**
  * @brief Proportional gain for the position PID in the body-yaw-aligned Y direction
  */
-PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.pid.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yKp, &this.pidY.pid.kp)
 /**
  * @brief Integral gain for the position PID in the body-yaw-aligned Y direction
  */
-PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yKi, &this.pidY.pid.ki)
 /**
  * @brief Derivative gain for the position PID in the body-yaw-aligned Y direction
  */
-PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.pid.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yKd, &this.pidY.pid.kd)
 
 /**
  * @brief Proportional gain for the position PID in the global Z direction
  */
-PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.pid.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, zKp, &this.pidZ.pid.kp)
 /**
  * @brief Integral gain for the position PID in the global Z direction
  */
-PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.pid.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, zKi, &this.pidZ.pid.ki)
 /**
  * @brief Derivative gain for the position PID in the global Z direction
  */
-PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.pid.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, zKd, &this.pidZ.pid.kd)
 
 /**
  * @brief Approx. thrust needed for hover
  */
-PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, thrustBase, &this.thrustBase)
 /**
  * @brief Min. thrust value to output
  */
-PARAM_ADD(PARAM_UINT16, thrustMin, &this.thrustMin)
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, thrustMin, &this.thrustMin)
 
 /**
  * @brief Roll absolute limit
  */
-PARAM_ADD(PARAM_FLOAT, rLimit,  &rLimit)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, rLimit,  &rLimit)
 /**
  * @brief Pitch absolute limit
  */
-PARAM_ADD(PARAM_FLOAT, pLimit,  &pLimit)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pLimit,  &pLimit)
 /**
  * @brief Maximum body-yaw-aligned X velocity
  */
-PARAM_ADD(PARAM_FLOAT, xVelMax, &xVelMax)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, xVelMax, &xVelMax)
 /**
  * @brief Maximum body-yaw-aligned Y velocity
  */
-PARAM_ADD(PARAM_FLOAT, yVelMax, &yVelMax)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yVelMax, &yVelMax)
 /**
  * @brief Maximum Z Velocity
  */
-PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, zVelMax,  &zVelMax)
 
 PARAM_GROUP_STOP(posCtlPid)
