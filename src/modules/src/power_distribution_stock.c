@@ -173,7 +173,7 @@ PARAM_GROUP_START(powerDist)
  * it takes time to start up the motor. Then a
  * common value is between 3000 - 6000.
  */
-PARAM_ADD_CORE(PARAM_UINT32, idleThrust, &idleThrust)
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_PERSISTENT, idleThrust, &idleThrust)
 PARAM_GROUP_STOP(powerDist)
 
 /**
