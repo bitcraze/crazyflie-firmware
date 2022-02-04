@@ -61,7 +61,7 @@ objs-y += src
 objs-y += vendor
 
 objs-y += app_api
-objs-y += examples
+objs-y += $(OOT)
 
 # This is for building libmath_arm.a
 libs-y += vendor
@@ -86,14 +86,19 @@ else
 ARCH_CFLAGS += -Os -Werror
 endif
 
-.config:
+KCONFIG_CONFIG	?= .config
+
+$(KCONFIG_CONFIG):
 	$(warning No '.config' detected: generating defconfig)
 	@$(MAKE) -C $(srctree) defconfig
 
-all: $(PROG).hex $(PROG).bin .config
+all: $(PROG).hex $(PROG).bin $(KCONFIG_CONFIG)
 	@echo "Build for the $(PLATFORM)!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
+
+oot-config: $(KCONFIG_CONFIG)
+	[ ! -e "$(OOT_CONFIG)" ] || ./scripts/kconfig/merge_config.sh $(OOT_CONFIG)
 
 tag_config:
 	$(MAKE) tag_defconfig

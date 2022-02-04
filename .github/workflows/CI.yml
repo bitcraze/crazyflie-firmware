@@ -100,6 +100,8 @@ jobs:
         - loco_tdoa3_all.conf
         # Build Bigquad deck with all config options
         - bigquad.conf
+        # Build API test app layer app
+        - app_api.conf
     env:
       CONF: ${{ matrix.features }}
     
@@ -120,7 +122,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-        - app_api
         - examples/app_hello_world
         - examples/app_peer_to_peer
         - examples/demos/app_push_demo
@@ -135,7 +136,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./scripts/kconfig/merge_config.sh ${EXAMPLE}/config configs/defconfig && make -j 12"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE} && make && cd -"
 
   kbuild-targets:
     runs-on: ubuntu-latest

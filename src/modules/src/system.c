@@ -139,7 +139,7 @@ void systemInit(void)
   buzzerInit();
   peerLocalizationInit();
 
-#ifdef APP_ENABLED
+#ifdef CONFIG_APP_ENABLE
   appInit();
 #endif
 

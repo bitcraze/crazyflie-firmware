@@ -76,7 +76,7 @@ static EstimatorFcns estimatorFunctions[] = {
         .update = estimatorKalman,
         .name = "Kalman",
     },
-#ifdef OOT_ESTIMATOR
+#ifdef CONFIG_ESTIMATOR_OOT
     {
         .init = estimatorOutOfTreeInit,
         .deinit = NOT_IMPLEMENTED,

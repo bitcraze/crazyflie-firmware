@@ -47,4 +47,8 @@ config ESTIMATOR_COMPLEMENTARY
 
 endchoice
 
+config ESTIMATOR_OOT
+	bool "Out-of-tree estimator"
+	default n
+
 endmenu

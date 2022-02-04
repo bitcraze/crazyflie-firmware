@@ -1,1 +1,1 @@
-obj-$(CONFIG_EXAMPLE_APP_INTERNAL_PARAM_LOG) += src/
+obj-y += src/

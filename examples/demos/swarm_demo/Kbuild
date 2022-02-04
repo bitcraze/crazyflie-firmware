@@ -1,1 +1,1 @@
-obj-$(CONFIG_EXAMPLE_DEMO_SWARM) += app.o
+obj-y += app.o

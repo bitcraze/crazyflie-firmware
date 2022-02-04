@@ -1,1 +1,1 @@
-obj-$(CONFIG_EXAMPLE_DEMO_WALL_FOLLOWING) += src/
+obj-y += src/

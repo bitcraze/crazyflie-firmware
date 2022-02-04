@@ -10,17 +10,55 @@ This is still an experimental functionalities but the intention is to eventually
 
 ## App entry-point
 
-When compiling the Crazyflie with `APP=1` written either in the Makefile or in `tools/make/config.mk` the firmware will call a function `void appMain()` from a task after the startup sequence has completed.
-This function should not return.
+When compiling the Crazyflie with `CONFIG_APP_ENABLE=y` the firmware will call a function `void appMain()` from a task after the startup sequence has completed. This function should not return.
 
 If you want more control, you can define a function `void appInit()`. `appInit()` will be called by the firmware during initialization, no task will be created and so `appMain()` will not be automatically called.
 This function must return to allow the Crazyflie initialization sequence to continue.
 
-The following Makefile variables can be used for configuration:
+The following `Makefile` and out-of-tree config can be used to build an app.
+For more information see the documentation for [out-of-tree build](/docs/development/oot.md).
 
- - **APP**: Set to '1' to enable the app entry-point
- - **APP_STACKSIZE**: Set the task stack size in 32bit word (4 Bytes). The default is 300 (1.2KBytes)
- - **APP_PRIORITY**: Set the task priority between 0 and 5. Default is 0 (same as IDLE).
+```Makefile
+# The firmware uses the Kbuild build system. There are 'Kbuild' files in this
+# example that outlays what needs to be built. (check src/Kbuild).
+#
+# The firmware is configured using options in Kconfig files, the
+# values of these end up in the .config file in the firmware directory.
+#
+# By setting the OOT_CONFIG (it is '$(PWD)/oot-config' by default) environment
+# variable you can provide a custom configuration. It is important that you
+# enable the app-layer. See app-config in this directory for example.
+
+#
+# We want to execute the main Makefile for the firmware project,
+# it will handle the build for us.
+#
+CRAZYFLIE_BASE := ../..
+
+#
+# We override the default OOT_CONFIG here, we could also name our config
+# to oot-config and that would be the default.
+#
+OOT_CONFIG := $(PWD)/app-config
+
+include $(CRAZYFLIE_BASE)/tools/make/oot.mk
+```
+
+Where `app-config` is:
+
+```Kconfig
+CONFIG_APP_ENABLE=y
+CONFIG_APP_PRIORITY=0
+CONFIG_APP_STACKSIZE=300
+```
+
+Your source file should be defined in a `Kbuild` file, like:
+
+```Makefile
+obj-y += your-app.o
+```
+
+You can look at the applications in the `examples/` folder of the firmware repository.
 
 ## Internal log and param system
 

@@ -85,6 +85,34 @@ config SENSORS_BMI088_I2C
 
 endmenu
 
+menu "App layer configuration"
+
+source "app_api/Kconfig"
+
+config APP_ENABLE
+    bool "Enable app entry point"
+    default n
+    help
+      When enabled the firmware will call a function void appMain() from a
+      task after the startup sequence has completed. This function should not
+      return.
+
+config APP_STACKSIZE
+    int "Set the task stack size"
+    depends on APP_ENABLE
+    default 300
+    help
+      Size is in 32bit word (4 Bytes). The default is 300 (1.2KBytes)
+
+config APP_PRIORITY
+    int "Set the task priority"
+    depends on APP_ENABLE
+    default 0
+    help
+      Set the task priority between 0 and 5. Default is 0 (same as IDLE).
+
+endmenu
+
 menu "Expansion deck configuration"
 
 config DECK_FORCE
@@ -98,9 +126,3 @@ source src/deck/drivers/src/Kconfig
 endmenu
 
 source "src/modules/src/Kconfig"
-
-menu "App layer configuration"
-source "app_api/Kconfig"
-source "examples/Kconfig"
-
-endmenu
