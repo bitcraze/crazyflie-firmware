@@ -58,10 +58,10 @@ DECK_DRIVER(helloDriver);
 Adding the driver to the build
 ------------------------------
 
-Add this to the Makefile, after the line \'\# Decks\':
+Add this to the `Kbuild` file in `src/deck/drivers/src/`:
 
 ``` {.make}
-PROJ_OBJ += hello.o
+obj-y += hello.o
 ```
 
 Enabling the driver
@@ -70,20 +70,15 @@ Enabling the driver
 Decks can have a memory that contains its name. In our case the hello
 driver would be initialized only when a deck identified as \"myHello\"
 is installed on the Crazyflie. For development purpose it is possible to
-force enabling a deck driver with a compile flag. To do so create the
-file tools/make/config.mk with the content:
+force enabling a deck driver with a compile flag. To do so set the
+`CONFIG_DECK_FORCE` config option to `myHello` in your `.config` either
+by hand or using `make menuconfig`.
 
-``` {.make}
-CFLAGS += -DDECK_FORCE=myHello
-
-DEBUG=1
-```
-
-DEBUG=1 allows to get more information from the Crazyflie console when
+`CONFIG_DEBUG=y` allows to get more information from the Crazyflie console when
 it starts. Debug should not be enabled if you intend to fly the
 Crazyflie out of the lab (it disables the watchdog).
 
-**Note** Each time you modify config.mk you
+**Note** Each time you modify your `.config` you
 should recompile the full firmware by cleaning up the build folder with
 \'make clean\'
 
