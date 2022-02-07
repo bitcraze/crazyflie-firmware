@@ -85,6 +85,7 @@ void appMain() {
   }
 
   // LPS
+  #ifdef CONFIG_DECK_LOCO
   {
     point_t position;
     uint8_t unorderedAnchorList[5];
@@ -93,6 +94,7 @@ void appMain() {
     locoDeckGetAnchorIdList(unorderedAnchorList, 5);
     locoDeckGetActiveAnchorIdList(unorderedAnchorList, 5);
   }
+  #endif
 
   // Memory sub system
   {
