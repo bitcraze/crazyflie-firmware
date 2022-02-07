@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * attitude_pid_controller.c: Attitude controler using PID correctors
+ * attitude_pid_controller.c: Attitude controller using PID correctors
  */
 #include <stdbool.h>
 
@@ -255,39 +255,39 @@ PARAM_GROUP_START(pid_attitude)
 /**
  * @brief Proportional gain for the PID roll controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRoll.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kp, &pidRoll.kp)
 /**
  * @brief Integral gain for the PID roll controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_ki, &pidRoll.ki)
 /**
  * @brief Derivative gain for the PID roll controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRoll.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kd, &pidRoll.kd)
 /**
  * @brief Proportional gain for the PID pitch controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitch.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kp, &pidPitch.kp)
 /**
  * @brief Integral gain for the PID pitch controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitch.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_ki, &pidPitch.ki)
 /**
  * @brief Derivative gain for the PID pitch controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitch.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kd, &pidPitch.kd)
 /**
  * @brief Proportional gain for the PID yaw controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYaw.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kp, &pidYaw.kp)
 /**
  * @brief Integral gain for the PID yaw controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYaw.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_ki, &pidYaw.ki)
 /**
  * @brief Derivative gain for the PID yaw controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kd, &pidYaw.kd)
 PARAM_GROUP_STOP(pid_attitude)
 
 /**
@@ -298,37 +298,37 @@ PARAM_GROUP_START(pid_rate)
 /**
  * @brief Proportional gain for the PID roll rate controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kp, &pidRollRate.kp)
 /**
  * @brief Integral gain for the PID roll rate controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_ki, &pidRollRate.ki)
 /**
  * @brief Derivative gain for the PID roll rate controller
  */
-PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kd, &pidRollRate.kd)
 /**
  * @brief Proportional gain for the PID pitch rate controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitchRate.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kp, &pidPitchRate.kp)
 /**
  * @brief Integral gain for the PID pitch rate controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_ki, &pidPitchRate.ki)
 /**
  * @brief Derivative gain for the PID pitch rate controller
  */
-PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitchRate.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kd, &pidPitchRate.kd)
 /**
  * @brief Proportional gain for the PID yaw rate controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kp, &pidYawRate.kp)
 /**
  * @brief Integral gain for the PID yaw rate controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_ki, &pidYawRate.ki)
 /**
  * @brief Derivative gain for the PID yaw rate controller
  */
-PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYawRate.kd)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kd, &pidYawRate.kd)
 PARAM_GROUP_STOP(pid_rate)
