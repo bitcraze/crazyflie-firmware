@@ -1,7 +1,7 @@
 # Make configuration for the Crazyflie 2 platform
 
-PLATFORM_HELP_cf2 = The Crazyflie2 platform, includes the Crazyflie 2.0 and the Crazyflie 2.1
-PLATFORM_NAME_cf2 = CF2 platform
+PLATFORM_HELP_bolt = The Crazyflie Bolt platform, includes the Crazyflie Bolt
+PLATFORM_NAME_bolt = Bolt platform
 
 CPU=stm32f4
 

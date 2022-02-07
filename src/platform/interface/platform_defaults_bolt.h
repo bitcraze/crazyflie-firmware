@@ -22,19 +22,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * platform_defaults.h - platform specific default values
+ * platform_defaults_bolt.h - platform specific default values for the bolt platform
  */
 
 #pragma once
 
-#define __INCLUDED_FROM_PLATFORM_DEFAULTS__
+#ifndef __INCLUDED_FROM_PLATFORM_DEFAULTS__
+    #pragma GCC error "Do not include this file directly, include platform_defaults.h instead."
+#endif
 
-#ifdef PLATFORM_CF2
-    #include "platform_defaults_cf2.h"
-#endif
-#ifdef PLATFORM_BOLT
-    #include "platform_defaults_bolt.h"
-#endif
-#ifdef PLATFORM_TAG
-    #include "platform_defaults_tag.h"
-#endif
+// Defines for default values in the bolt platform
+
+// #define EXAMPLE_DEFAULT_VALUE 0.8

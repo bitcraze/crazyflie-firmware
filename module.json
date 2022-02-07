@@ -22,6 +22,9 @@
     "cf2": [
       "PLATFORM=cf2"
     ],
+    "bolt": [
+      "PLATFORM=bolt"
+    ],
     "tag": [
       "PLATFORM=tag"
     ]
