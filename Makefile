@@ -126,7 +126,7 @@ CFLAGS += -DAPP_PRIORITY=$(APP_PRIORITY)
 endif
 
 # Crazyflie sources
-VPATH += $(CRAZYFLIE_BASE)/src/init $(CRAZYFLIE_BASE)/src/hal/src $(CRAZYFLIE_BASE)/src/modules/src $(CRAZYFLIE_BASE)/src/modules/src/lighthouse $(CRAZYFLIE_BASE)/src/modules/src/kalman_core $(CRAZYFLIE_BASE)/src/utils/src $(CRAZYFLIE_BASE)/src/drivers/bosch/src $(CRAZYFLIE_BASE)/src/drivers/src $(CRAZYFLIE_BASE)/src/platform $(CRAZYFLIE_BASE)/src/drivers/esp32/src
+VPATH += $(CRAZYFLIE_BASE)/src/init $(CRAZYFLIE_BASE)/src/hal/src $(CRAZYFLIE_BASE)/src/modules/src $(CRAZYFLIE_BASE)/src/modules/src/lighthouse $(CRAZYFLIE_BASE)/src/modules/src/kalman_core $(CRAZYFLIE_BASE)/src/utils/src $(CRAZYFLIE_BASE)/src/drivers/bosch/src $(CRAZYFLIE_BASE)/src/drivers/src $(CRAZYFLIE_BASE)/src/platform/src $(CRAZYFLIE_BASE)/src/drivers/esp32/src
 VPATH += $(CRAZYFLIE_BASE)/src/utils/src/kve
 
 ############### Source files configuration ################
@@ -292,7 +292,7 @@ INCLUDES += -I$(CRAZYFLIE_BASE)/vendor/libdw1000/inc
 INCLUDES += -I$(FREERTOS)/include -I$(PORT)
 
 INCLUDES += -I$(CRAZYFLIE_BASE)/src/config
-INCLUDES += -I$(CRAZYFLIE_BASE)/src/platform
+INCLUDES += -I$(CRAZYFLIE_BASE)/src/platform/interface
 
 INCLUDES += -I$(CRAZYFLIE_BASE)/src/deck/interface -I$(CRAZYFLIE_BASE)/src/deck/drivers/interface
 INCLUDES += -I$(CRAZYFLIE_BASE)/src/drivers/interface -I$(CRAZYFLIE_BASE)/src/drivers/bosch/interface -I$(CRAZYFLIE_BASE)/src/drivers/esp32/interface
@@ -480,7 +480,7 @@ rtt:
 
 gdb: $(PROG).elf
 	$(GDB) -ex "target remote localhost:3333" -ex "monitor reset halt" $^
-  
+
 erase:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c "stm32f4x mass_erase 0" -c shutdown
 
