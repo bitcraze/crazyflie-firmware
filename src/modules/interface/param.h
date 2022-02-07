@@ -131,8 +131,6 @@ typedef float * (*paramGetterFloat)(void);
   { \
   .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), .callback = 0, .getter = 0, },
 
-//#define PARAM_GROUP_START_SYNC(NAME, LOCK) PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, LOCK);
-
 #define PARAM_GROUP_STOP(NAME) \
   PARAM_ADD_GROUP(PARAM_GROUP | PARAM_STOP, stop_##NAME, 0x0) \
   };
