@@ -1,13 +1,13 @@
 /**
- *    ||          ____  _ __
- * +------+      / __ )(_) /_______________ _____  ___
- * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
- * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
- *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ * ,---------,       ____  _ __
+ * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
+ * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2018 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * Platform functionality for the CF2 platform
+ *
+ * platform_bolt.c - platform functionality for the Crazyflie Bolt
  */
+
 
 #define DEBUG_MODULE "PLATFORM"
 
