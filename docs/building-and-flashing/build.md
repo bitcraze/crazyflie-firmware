@@ -128,6 +128,9 @@ tb make PLATFORM=tag
 ```
 
 ### Platform specific options
+
+Read more about platforms in the [platform section.](/docs/userguides/platform.md)
+
 In `cf2.mk` or `tag.mk` in the `tools/make/` folder you can find additional compile options, for example which ESTIMATOR or CONTROLLER to use as default.
 
 ```

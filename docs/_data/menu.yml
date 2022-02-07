@@ -8,6 +8,7 @@
     - {page_id: logparam}
     - {page_id: eventtrigger}
     - {page_id: app_layer}
+    - {page_id: platform}
 - title: Functional areas
   subs:
     - {page_id: crtp_index}
