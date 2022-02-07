@@ -28,7 +28,25 @@ jobs:
       with:
         name: cf2-${{ github.sha }}
         path: cf2.bin
-  
+
+  bolt:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=bolt UNIT_TEST_STYLE=min
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2.1.4
+      with:
+        name: bolt-${{ github.sha }}
+        path: bolt.bin
+
   tag:
     runs-on: ubuntu-latest
 
@@ -46,7 +64,7 @@ jobs:
       with:
         name: tag-${{ github.sha }}
         path: tag.bin
-  
+
   all-flags:
     runs-on: ubuntu-latest
     needs: cf2
@@ -58,7 +76,7 @@ jobs:
         submodules: true
 
     - name: All features
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min    
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min
 
   features:
     runs-on: ubuntu-latest
@@ -83,7 +101,7 @@ jobs:
           "EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM"
     env:
       FEATURE: ${{ matrix.features }}
-    
+
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v2
@@ -108,7 +126,7 @@ jobs:
         - examples/demos/swarm_demo
     env:
       EXAMPLE: ${{ matrix.example }}
-    
+
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v2

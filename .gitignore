@@ -17,6 +17,7 @@ cffirmware.py
 
 /cf2.*
 /tag.*
+/bolt.*
 *.gch
 
 current_platform.mk

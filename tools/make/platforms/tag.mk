@@ -1,6 +1,6 @@
 # Make configuration for the Tag platform
 
-PLATFORM_HELP_tag = Tag platform, includes Roadrunner
+PLATFORM_HELP_tag = The Tag platform, includes the Roadrunner
 PLATFORM_NAME_tag = Tag platform
 
 CPU=stm32f4

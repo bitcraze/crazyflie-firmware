@@ -88,7 +88,7 @@ git submodule update
 
 ## Compiling
 
-### Crazyflie 2.X and Crazyflie Bolt
+### Crazyflie 2.X
 
 This is the default build so just running ```make``` is enough or:
 ```bash
@@ -101,6 +101,18 @@ or with the toolbelt
 tb make PLATFORM=cf2
 ```
 
+### Crazyflie Bolt
+
+Use the ```bolt``` platform
+```bash
+make PLATFORM=bolt
+```
+
+or with the toolbelt
+
+```bash
+tb make PLATFORM=bolt
+```
 ### Roadrunner
 
 Use the ```tag``` platform
