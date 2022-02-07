@@ -36,7 +36,7 @@
 #include "debug.h"
 
 static platformConfig_t configs[] = {
-  {  // Old ID of Crzyflie Bolt
+  {  // Old ID of Crazyflie Bolt
     .deviceType = "RZ10",
     .deviceTypeName = "Crazyflie Bolt",
     .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
