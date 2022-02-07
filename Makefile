@@ -38,6 +38,9 @@ endif
 -include current_platform.mk
 include $(CRAZYFLIE_BASE)/tools/make/platform.mk
 
+# Create a define for the platform (upper case), for instance PLATFORM_CF2
+CFLAGS += -DPLATFORM_$(shell echo $(PLATFORM) | tr a-z A-Z)=1
+
 CFLAGS += -DCRAZYFLIE_FW
 
 #OpenOCD conf
