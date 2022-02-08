@@ -109,51 +109,7 @@ scripts/kconfig/conf  --defconfig Kconfig
 #
 ```
 
-### Customize the firmware
-The Crazyflie firmware uses a version of the [*KBuild*](https://www.kernel.org/doc/html/latest/kbuild/index.html) build system. Similar to what the [Linux Kernel](https://www.kernel.org/) or the [Busybox project](https://busybox.net/) uses.
-
-What to build is determined by a configuration file, which is named `.config` and resides in the root of the firmware repository. If you only type `make` in a fresh repository the build system will generate the default config. You can inspect it by going, for instance:
-
-```bash
-$ less .config
-#
-# Automatically generated file; DO NOT EDIT.
-# Crazyflie Platform Configuration
-#
-
-#
-# Build and compiler options
-#
-CONFIG_CROSS_COMPILE="arm-none-eabi-"
-# CONFIG_DEBUG is not set
-
-#
-# Platform configuration
-#
-CONFIG_PLATFORM_CF2=y
-# CONFIG_PLATFORM_TAG is not set
-
-#
-# Sensor configuration
-#
-CONFIG_SENSORS_MPU9250_LPS25H=y
-CONFIG_SENSORS_BMI088_BMP388=y
-[...]
-```
-
-If you want to customize your build you can use the menuconfig by typing:
-
-``` bash
-$ make menuconfig
-```
-This will drop you into a terminal based user interface where you can configure and customize what will be included in the firmware. Please note: this is not at all required in order to use the Crazyflie, and you sort of need to know what you are doing. To get an idea of how it will look, please see the images below.
-
-![Main menu of menuconfig](/docs/images/kbuild1.png)
-
-![Configuring deck drivers](/docs/images/kbuild2.png)
-
-
-### Bolt, Roadrunner and additional configs
+### Bolt and Roadrunner
 We have some ready-to-go config files in the `configs/` directory. So, for example, if you want to build the Roadrunner (tag) you can go:
 
 ```bash
@@ -168,21 +124,16 @@ $ make bolt_defconfig
 $ make -j 12
 ```
 
-### Platform specific options
 
-Read more about platforms in the [platform section.](/docs/userguides/platform.md)
+### Customize the firmware with kbuild (Advanced)
+
+
+**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above. You can still configure and change the firmware without kbuild. 
+
+Please go to [these instructions](/docs/development/kbuild.md) to learn how to use the menuconfig.
 
 # Make targets
 
-## Noteable Kbuild targets
-```
-menuconfig      : Open up a terminal user interface to set configuration options
-defconfig       : Generate a `.config` with the default configuration options
-tag_defconfig   : Merge configuration options from `configs/tag_defconfig` with default
-allyesconfig    : Generate a `.config` with the all configuration options enabled
-allnoconfig     : Generate a `.config` with the all configuration options disabled
-randconfig      : Generate a `.config` with random valid values to all configuration options
-```
 
 
 ## General targets
@@ -203,6 +154,16 @@ reset      : Reset the target using OpenOCD
 openocd    : Launch OpenOCD
 rtt        : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SEGGER_RTT=1"
              and the console is visible over TCP on port 2000 "telnet localhost 2000".
+```
+
+## Noteable Kbuild targets
+```
+menuconfig      : Open up a terminal user interface to set configuration options
+defconfig       : Generate a `.config` with the default configuration options
+tag_defconfig   : Merge configuration options from `configs/tag_defconfig` with default
+allyesconfig    : Generate a `.config` with the all configuration options enabled
+allnoconfig     : Generate a `.config` with the all configuration options disabled
+randconfig      : Generate a `.config` with random valid values to all configuration options
 ```
 
 # Flashing

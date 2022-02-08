@@ -32,6 +32,7 @@
     - {page_id: memory_management}
     - {page_id: dfu}
     - {page_id: oot}
+    - {page_id: kbuild}
 - title: Auto-generated API Documentation
   subs:
     - {page_id: logs}
