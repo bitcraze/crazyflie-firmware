@@ -65,6 +65,7 @@ config DECK_CPPM
 config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"
     default y
+    select ESTIMATOR_KALMAN_ENABLE
     help
       The Flow deck gives the Crazyflie 2.X the ability to understand
       when it’s moving in any direction. The VL53L1x ToF sensor measures
@@ -93,6 +94,7 @@ config DECK_LEDRING
 config DECK_LIGHTHOUSE
     bool "Support the Lighthouse positioning deck"
     default y
+    select ESTIMATOR_KALMAN_ENABLE
     help
       With Crazyflie and the Lighthouse positioning deck, high precision
       autonomous flight becomes available for everyone. The Lighthouse
@@ -104,6 +106,7 @@ config DECK_LIGHTHOUSE
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
+    select ESTIMATOR_KALMAN_ENABLE
     help
       The Loco Positioning deck  is a Tag in a Loco Positioning system
       and measures the distances to Anchors. The distances are used to

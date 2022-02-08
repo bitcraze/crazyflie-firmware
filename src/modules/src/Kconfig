@@ -26,6 +26,12 @@ config CONTROLLER_MELLINGER
 
 endchoice
 
+config ESTIMATOR_KALMAN_ENABLE
+	bool "Enable Kalman Estimator"
+	default y
+	help
+	  Enable the Kalman (EKF) estimator.
+
 choice
 	prompt "Default estimator"
 	default CONFIG_ESTIMATOR_ANY
@@ -37,6 +43,7 @@ config ESTIMATOR_ANY
 
 config ESTIMATOR_KALMAN
 	bool "Kalman estimator"
+	depends on ESTIMATOR_KALMAN_ENABLE
 	help
 	  Use the (extended) Kalman filter (EKF) estimator as default
 

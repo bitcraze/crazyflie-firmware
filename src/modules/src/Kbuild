@@ -19,12 +19,12 @@ obj-y += crtp.o
 obj-y += crtpservice.o
 obj-y += esp_deck_flasher.o
 obj-y += estimator_complementary.o
-obj-y += estimator_kalman.o
+obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += estimator_kalman.o
 obj-y += estimator.o
 obj-y += eventtrigger.o
 obj-y += extrx.o
 obj-y += health.o
-obj-y += kalman_supervisor.o
+obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_supervisor.o
 obj-y += log.o
 obj-y += mem.o
 obj-y += msp.o
@@ -54,7 +54,7 @@ obj-y += tdoaEngineInstance.o
 obj-y += worker.o
 
 # Kalman core
-obj-y += kalman_core/
+obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
 
 # Lighthouse
 obj-y += lighthouse/

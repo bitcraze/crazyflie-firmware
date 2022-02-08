@@ -25,12 +25,15 @@
  */
 #pragma once
 
+#include "autoconf.h"
 #include "stabilizer_types.h"
 
 typedef enum {
   anyEstimator = 0,
   complementaryEstimator,
+#ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   kalmanEstimator,
+#endif
 #ifdef CONFIG_ESTIMATOR_OOT
   OutOfTreeEstimator,
 #endif

@@ -70,6 +70,7 @@
 #include "peer_localization.h"
 #include "cfassert.h"
 #include "i2cdev.h"
+#include "autoconf.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -187,7 +188,11 @@ void systemTask(void *arg)
   commanderInit();
 
   StateEstimatorType estimator = anyEstimator;
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();
+  #endif
+
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
@@ -230,10 +235,14 @@ void systemTask(void *arg)
     pass = false;
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
+  #endif
+
   if (deckTest() == false) {
     pass = false;
     DEBUG_PRINT("deck [FAIL]\n");
