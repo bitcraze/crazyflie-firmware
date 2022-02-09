@@ -43,3 +43,4 @@ include/config/**
 **/*.cmd
 **/*.a
 *.elf
+src/utils/src/version_gen.c
