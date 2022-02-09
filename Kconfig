@@ -19,6 +19,7 @@ config DEBUG
 
 config DEBUG_QUEUE_MONITOR
     bool "Enable debug queue monitoring"
+    depends on DEBUG
     default n
     help
         Enable the queue monitoring functionality.

@@ -29,6 +29,7 @@
 
 
 #include "FreeRTOS.h"
+#include "autoconf.h"
 
 #ifdef CONFIG_DEBUG_QUEUE_MONITOR
   #include "queue.h"
