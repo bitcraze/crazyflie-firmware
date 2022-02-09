@@ -30,7 +30,7 @@
 
 #include "FreeRTOS.h"
 
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
   #include "queue.h"
 
   void queueMonitorInit();
@@ -41,6 +41,6 @@
   void qmRegisterQueue(xQueueHandle* xQueue, char* fileName, char* queueName);
 #else
   #define DEBUG_QUEUE_MONITOR_REGISTER(queue)
-#endif // DEBUG_QUEUE_MONITOR
+#endif // CONFIG_DEBUG_QUEUE_MONITOR
 
 #endif // __QUEUE_MONITOR_H__

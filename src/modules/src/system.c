@@ -167,7 +167,7 @@ void systemTask(void *arg)
   ledInit();
   ledSet(CHG_LED, 1);
 
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
   queueMonitorInit();
 #endif
 

@@ -1,6 +1,6 @@
 mainmenu "Crazyflie Platform Configuration"
 
-menu "Build and compiler options"
+menu "Build and debug options"
 
 config CROSS_COMPILE
 	string "Cross-compiler tool prefix"
@@ -15,7 +15,13 @@ config DEBUG
     bool "Enable debug build"
     default n
     help
-        Enable debug symbols and extra output from firnware.
+        Enable debug symbols and extra output from firmware.
+
+config DEBUG_QUEUE_MONITOR
+    bool "Enable debug queue monitoring"
+    default n
+    help
+        Enable the queue monitoring functionality.
 
 endmenu
 
