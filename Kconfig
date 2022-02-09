@@ -11,12 +11,6 @@ config CROSS_COMPILE
 	  need to set this unless you want the configured application build
 	  directory to select the cross-compiler automatically.
 
-config BUILD_OUTPUT
-    string "Output directory for build artifacts"
-    default "build"
-    help
-      Where the build system will place object files from the build.
-
 config DEBUG
     bool "Enable debug build"
     default n
