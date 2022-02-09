@@ -53,7 +53,7 @@ INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
 INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
-INCLUDES += -I$(CONFIG_BUILD_OUTPUT)/include/generated
+INCLUDES += -Iinclude
 
 # Here we tell Kbuild where to look for Kbuild files which will tell the
 # buildsystem which sources to build
@@ -71,6 +71,8 @@ MEM_SIZE_CCM_K = 64
 
 # Make sure object files end up in build/
 KBUILD_OUTPUT ?= $(abspath $(CONFIG_BUILD_OUTPUT))
+
+KCONFIG_AUTOHEADER := $(srctree)/include/autoconf.h
 
 ifeq ($(CONFIG_PLATFORM_TAG),y)
 PLATFORM = tag
