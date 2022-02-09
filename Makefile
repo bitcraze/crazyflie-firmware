@@ -5,7 +5,7 @@ OPENOCD_CMDS      ?=
 
 # Cload is handled in a special way on windows in WSL to use the Windows python interpreter
 ifdef WSL_DISTRO_NAME
-PYTHON      ?= python.exe
+PYTHON      := python.exe
 else
 PYTHON      ?= python3
 endif
