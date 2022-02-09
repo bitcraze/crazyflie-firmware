@@ -74,7 +74,10 @@ MEM_SIZE_CCM_K = 64
 
 ifeq ($(CONFIG_PLATFORM_TAG),y)
 PLATFORM = tag
-all: tag_config
+endif
+
+ifeq ($(CONFIG_PLATFORM_BOLT), y)
+PLATFORM = bolt
 endif
 
 PLATFORM  ?= cf2
@@ -99,9 +102,6 @@ all: $(PROG).hex $(PROG).bin $(KCONFIG_CONFIG)
 
 oot-config: $(KCONFIG_CONFIG)
 	[ ! -e "$(OOT_CONFIG)" ] || ./scripts/kconfig/merge_config.sh $(OOT_CONFIG)
-
-tag_config:
-	$(MAKE) tag_defconfig
 
 include tools/make/targets.mk
 
@@ -166,7 +166,7 @@ check_submodules:
 	@cd $(srctree); $(PYTHON) tools/make/check-for-submodules.py
 
 # Give control over to Kbuild
--include Makefile.kbuild
+-include tools/kbuild/Makefile.kbuild
 
 # Python bindings
 MOD_INC = $(srctree)/src/modules/interface
