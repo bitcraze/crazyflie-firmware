@@ -99,7 +99,7 @@ all: $(PROG).hex $(PROG).bin
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
 
 oot-config:
-	[ ! -e "$(OOT_CONFIG)" ] || ./scripts/kconfig/merge_config.sh $(OOT_CONFIG)
+	[ ! -e "$(OOT_CONFIG)" ] || $(srctree)/scripts/kconfig/merge_config.sh $(OOT_CONFIG)
 
 include tools/make/targets.mk
 
