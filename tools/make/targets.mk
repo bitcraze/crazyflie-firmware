@@ -62,7 +62,7 @@ clean_o: clean_version
 	@$(if $(QUIET), ,echo $(CLEAN_O_COMMAND$(VERBOSE)) )
 	@$(CLEAN_O_COMMAND)
 
-CLEAN_COMMAND=rm -f $(PROG).elf $(PROG).hex $(PROG).bin $(PROG).dfu $(PROG).map $(PROG).py _cf*.so $(BIN)/dep/*.d $(BIN)/*.o $(BIN)/*.c
+CLEAN_COMMAND=rm -f *.elf *.hex *.bin *.dfu *.map *.py _cf*.so
 CLEAN_COMMAND_SILENT="  CLEAN"
 clean_cf:
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )

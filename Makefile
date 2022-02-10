@@ -53,7 +53,7 @@ INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
 INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
-INCLUDES += -I$(srctree)/include/generated
+INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
 
 # Here we tell Kbuild where to look for Kbuild files which will tell the
 # buildsystem which sources to build
@@ -63,14 +63,13 @@ objs-y += vendor
 objs-y += app_api
 objs-y += $(OOT)
 
-# This is for building libmath_arm.a
-libs-y += vendor
-
 MEM_SIZE_FLASH_K = 1008
 MEM_SIZE_RAM_K = 128
 MEM_SIZE_CCM_K = 64
 
--include include/config/auto.conf
+KBUILD_OUTPUT ?= build
+
+-include $(KBUILD_OUTPUT)/include/config/auto.conf
 
 ifeq ($(CONFIG_PLATFORM_TAG),y)
 PLATFORM = tag
@@ -91,16 +90,15 @@ endif
 
 KCONFIG_CONFIG	?= .config
 
-$(KCONFIG_CONFIG):
-	$(warning No '.config' detected: generating defconfig)
-	@$(MAKE) -C $(srctree) defconfig
 
-all: $(PROG).hex $(PROG).bin $(KCONFIG_CONFIG)
+_all:
+
+all: $(PROG).hex $(PROG).bin
 	@echo "Build for the $(PLATFORM)!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
 
-oot-config: $(KCONFIG_CONFIG)
+oot-config:
 	[ ! -e "$(OOT_CONFIG)" ] || ./scripts/kconfig/merge_config.sh $(OOT_CONFIG)
 
 include tools/make/targets.mk

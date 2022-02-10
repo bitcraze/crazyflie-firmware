@@ -90,23 +90,18 @@ $ git submodule update
 
 ### Building the default firmware
 
-This is the default build so just running `make` is enough.
-
-or with the toolbelt
-
-```bash
-$ tb make
-```
-
-If you have made changes to configuration and want to make sure you are building the *default* firmware you can go:
+Before you can build the firmware, you will need to configure it. To get the default configuration you can write:
 
 ```bash
 $ make defconfig
 $ make -j 12
-scripts/kconfig/conf  --defconfig Kconfig
-#
-# configuration written to .config
-#
+```
+
+or with the toolbelt:
+
+```bash
+$ tb make defconfig
+$ tb make
 ```
 
 ### Bolt and Roadrunner

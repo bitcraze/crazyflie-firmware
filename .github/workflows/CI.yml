@@ -21,7 +21,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4

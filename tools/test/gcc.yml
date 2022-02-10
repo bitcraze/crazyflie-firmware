@@ -24,7 +24,7 @@ compiler:
       - *source_path
       - *unit_tests_path
       - *mocks_path
-      - 'include/generated'
+      - 'build/include/generated'
       - 'src/config'
       - 'src/deck/drivers/interface/'
       - 'src/deck/drivers/src/'
