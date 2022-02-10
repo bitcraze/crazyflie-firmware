@@ -166,12 +166,14 @@ check_submodules:
 # Give control over to Kbuild
 -include tools/kbuild/Makefile.kbuild
 
+
+ifeq ($(KBUILD_SRC),)
 # Python bindings
-MOD_INC = $(srctree)/src/modules/interface
-MOD_SRC = $(srctree)/src/modules/src
+MOD_INC = src/modules/interface
+MOD_SRC = src/modules/src
 
 bindings_python: bindings/setup.py bin/cffirmware_wrap.c $(MOD_SRC)/*.c
-	CC=$(HOSTCC) LDFLAGS=$(HOSTLDFLAGS) $(PYTHON) bindings/setup.py build_ext --inplace
+	$(PYTHON) bindings/setup.py build_ext --inplace
 
 bin/cffirmware_wrap.c cffirmware.py: bindings/cffirmware.i $(MOD_INC)/*.h
 	swig -python -I$(MOD_INC) -o bin/cffirmware_wrap.c bindings/cffirmware.i
@@ -179,5 +181,6 @@ bin/cffirmware_wrap.c cffirmware.py: bindings/cffirmware.i $(MOD_INC)/*.h
 
 test_python: bindings_python
 	$(PYTHON) -m pytest test_python
+endif
 
 .PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_verify cload size print_version clean_version bindings_python
