@@ -15,8 +15,9 @@ OOT_ARGS ?= -C $(CRAZYFLIE_BASE) OOT=$(OOT) OOT_CONFIG=$(OOT_CONFIG)
 .PHONY: all clean
 
 all:
-	$(MAKE) $(OOT_ARGS) oot-config
-	$(MAKE) $(OOT_ARGS) -j 12
+	$(MAKE) KBUILD_OUTPUT=$(OOT)/build $(OOT_ARGS) defconfig
+	$(MAKE) KBUILD_OUTPUT=$(OOT)/build $(OOT_ARGS) oot-config
+	$(MAKE) KBUILD_OUTPUT=$(OOT)/build $(OOT_ARGS) -j 12
 
 clean:
 	$(MAKE) $(OOT_ARGS) clean
