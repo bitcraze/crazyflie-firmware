@@ -41,16 +41,16 @@
  * with the highest priority is run.
  */
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <led.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-#define LEDSEQ_CHARGE_CYCLE_TIME_500MA  1000
-#define LEDSEQ_CHARGE_CYCLE_TIME_MAX    500
-//Led sequence action
+#define LEDSEQ_CHARGE_CYCLE_TIME_500MA 1000
+#define LEDSEQ_CHARGE_CYCLE_TIME_MAX 500
+// Led sequence action
 #define LEDSEQ_WAITMS(X) (X)
-#define LEDSEQ_STOP      -1
-#define LEDSEQ_LOOP      -2
+#define LEDSEQ_STOP -1
+#define LEDSEQ_LOOP -2
 
 typedef struct {
   bool value;
@@ -58,10 +58,10 @@ typedef struct {
 } ledseqStep_t;
 
 typedef struct ledseqContext_s {
-  ledseqStep_t* const sequence;
+  ledseqStep_t* sequence;
   struct ledseqContext_s* nextContext;
   int state;
-  const led_t led;
+  led_t led;
 } ledseqContext_t;
 
 // Public API
@@ -87,7 +87,8 @@ void ledseqEnable(bool enable);
 void ledseqRegisterSequence(ledseqContext_t* context);
 
 /**
- * @brief Run a LED sequence. This function is non-blocking any may fail to start the sequence.
+ * @brief Run a LED sequence. This function is non-blocking any may fail to
+ * start the sequence.
  *
  * @param context The context for the sequence to start
  * @return true If the sequence was started
@@ -104,7 +105,8 @@ bool ledseqRun(ledseqContext_t* context);
 void ledseqRunBlocking(ledseqContext_t* context);
 
 /**
- * @brief Stop a LED sequence. This function is non-blocking any may fail to stop the sequence.
+ * @brief Stop a LED sequence. This function is non-blocking any may fail to
+ * stop the sequence.
  *
  * @param context The context for the sequence to stop
  * @return true If the sequence was stopped
