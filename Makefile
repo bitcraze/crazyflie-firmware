@@ -88,9 +88,6 @@ else
 ARCH_CFLAGS += -Os -Werror
 endif
 
-KCONFIG_CONFIG	?= .config
-
-
 _all:
 
 all: $(PROG).hex $(PROG).bin
