@@ -36,10 +36,18 @@ CONFIG_SENSORS_BMI088_BMP388=y
 
 If you want to customize your build you can use the menuconfig by typing:
 
-``` bash
+```bash
 $ make menuconfig
 ```
-This will drop you into a terminal based user interface where you can configure and customize what will be included in the firmware. o get an idea of how it will look, please see the images below.
+
+This will drop you into a terminal based user interface where you can configure and customize what will be included in the firmware.
+To use this you need to have some extra packages installed on your system, the equivelent of the following Ubuntu packages:
+
+```bash
+$ sudo apt install build-essential libncurses5-dev
+```
+
+To get an idea of how `menuconfig` will look, please see the images below.
 
 ![Main menu of menuconfig](/docs/images/kbuild1.png)
 
