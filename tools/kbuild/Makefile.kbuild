@@ -552,7 +552,7 @@ firmware-libs	:= $(patsubst %,%/lib.a, $(libs-y))
 firmware-all	:= $(firmware-objs) $(firmware-libs)
 
 quiet_cmd_firmware = LD      $@
-      cmd_firmware = $(LD) $(image_LDFLAGS) $(LDFLAGS) $(firmware-objs) $(firmware-libs) -lm -o $@.elf
+      cmd_firmware = $(LD) $(image_LDFLAGS) $(LDFLAGS) $(firmware-objs) $(firmware-libs) -o $@.elf
 
 firmware: $(firmware-all) FORCE
 	+$(call if_changed,firmware)
