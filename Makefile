@@ -161,7 +161,8 @@ flash_verify:
                  -c "verify_image $(PROG).bin $(LOAD_ADDRESS) bin" -c "reset run" -c shutdown
 
 flash_dfu:
-	$(DFU_UTIL) -a 0 -D $(PROG).dfu
+	$(PYTHON) tools/make/usb-bootloader.py
+	$(DFU_UTIL) -d 0483:df11 -a 0 -D $(PROG).dfu -s :leave
 
 #STM utility targets
 halt:

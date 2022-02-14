@@ -1,5 +1,6 @@
 obj-y += app_channel.o
 obj-$(CONFIG_APP_ENABLE) += app_handler.o
+obj-y += bootloader.o
 obj-y += attitude_pid_controller.o
 obj-y += collision_avoidance.o
 obj-y += collision_avoidance.o
