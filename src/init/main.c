@@ -42,8 +42,12 @@
 /* ST includes */
 #include "stm32fxxx.h"
 
+#include "bootloader.h"
+
 int main() 
 {
+  check_enter_bootloader();
+
   //Initialize the platform.
   int err = platformInit();
   if (err != 0) {

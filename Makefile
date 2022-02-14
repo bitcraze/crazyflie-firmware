@@ -168,7 +168,7 @@ PROJ_OBJ += vl53l1_api_calibration.o vl53l1_api_debug.o vl53l1_api_preset_modes.
 PROJ_OBJ += vl53l1_register_funcs.o vl53l1_wait.o vl53l1_core_support.o
 
 # Modules
-PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param_task.o param_logic.o
+PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param_task.o param_logic.o bootloader.o
 PROJ_OBJ += log.o worker.o queuemonitor.o msp.o
 PROJ_OBJ += platformservice.o sound_cf2.o extrx.o sysload.o mem.o
 PROJ_OBJ += range.o app_handler.o static_mem.o app_channel.o
@@ -462,7 +462,8 @@ flash_verify:
                  -c "verify_image $(PROG).bin $(LOAD_ADDRESS) bin" -c "reset run" -c shutdown
 
 flash_dfu:
-	$(DFU_UTIL) -a 0 -D $(PROG).dfu
+	$(PYTHON) tools/make/usb-bootloader.py
+	$(DFU_UTIL) -d 0483:df11 -a 0 -D $(PROG).dfu -s :leave
 
 #STM utility targets
 halt:
