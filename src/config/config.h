@@ -46,7 +46,7 @@
 #include "trace.h"
 #include "usec_time.h"
 
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION 5
 
 #ifdef STM32F4XX
   #define QUAD_FORMATION_X
