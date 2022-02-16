@@ -57,8 +57,8 @@ The Crayzyflie communication is implemented as a stack of independent layers:
 
 There is currently two actively supported link implementation. They are
 documented on their own thread:
- - [The radio link]() implements CRTP link over nRF24 compatible radios
- - [The USB link]() implements CRTP link over USB to the Crazylfie 2.x USB port 
+ - The radio link implements CRTP link over nRF24 compatible radios
+ - The USB link implements CRTP link over USB to the Crazylfie 2.x USB port 
 
 ### Packet ordering and real-time support
 

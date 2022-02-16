@@ -64,7 +64,7 @@ Answer:
 | 1    | Version |
 
 Returns the CRTP protocol version. See the
-[protocl versioning and stability guarantee](index.md#protocol-version-and-stability-guarantee) documentation for more
+[protocol versioning and stability guarantee](index.md#protocol-version-and-stability-guarantee) documentation for more
 information.
 
 ### Get firmware version
