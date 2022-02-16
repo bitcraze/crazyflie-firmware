@@ -11,6 +11,20 @@ data packets that are used to communicate with the Crazyflie.
 
 Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x`, the
 `Crazyflie Bolt` and the `Roadrunner`.
+
+## Protocol version and stability guarantee
+
+In order to allow for improvement and breaking change the protocol is versioned.
+The version is available using the [getProtocolVersion](crtp_platform#get-protocol-version) packet.
+
+The version is currently 5.
+
+When removing functionality from the protocol, packet will be depreciated for at least one version before being removed.
+Depreciated functionality prints a Warning in the [console](crtp_console). This rule allows for the Crazyflie firmware
+to evolve and remove old functionalities when needed and for a client or lib to have some compatibility guarantee.
+For example if a client support the protocol version 5, it is guarantee to work with version 6 but should likely
+not accept to connect a Crazyflie on version 7 of the protocol.
+
 ## Communication stack
 
 The Crayzyflie communication is implemented as a stack of independent layers:
@@ -101,7 +115,7 @@ its handling on the ground.
 |  5       | [Data logging](crtp_log.md)                  | Set up log blocks with variables that will be sent back to the Crazyflie at a specified period. Log variables are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)
 |  6       | [Localization](crtp_localization.md)         | Packets related to localization|
 |  7       | [Generic Setpoint](crtp_generic_setpoint.md) | Generic instantaneous setpoints (ie. position control and more) |
-|  13      | Platform                                     | Used for misc platform control, like debugging and power off |
+|  13      | [Platform](crtp_platform.md)                 | Used for misc platform control, like debugging and power off |
 |  14      | Client-side debugging                        | Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.|
 |  15      | Link layer                                   | Low level link-related service. For example *echo* to ping the Crazyflie |
 
