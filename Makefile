@@ -71,6 +71,16 @@ KBUILD_OUTPUT ?= build
 
 -include $(KBUILD_OUTPUT)/include/config/auto.conf
 
+#
+# Special hack to handle float define. Kconfig has no float values
+# so we use string. To avoid having to do atof in code we instead
+# catch it here and convert to an, unquoted, float define.
+#
+ifneq ($(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT),)
+unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT))
+ARCH_CFLAGS += -DDECK_LOCO_2D_POSITION_HEIGHT=$(unquoted)
+endif
+
 ifeq ($(CONFIG_PLATFORM_TAG),y)
 PLATFORM = tag
 endif

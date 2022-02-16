@@ -164,6 +164,10 @@ config DECK_LOCO_2D_POSITION
   depends on DECK_LOCO && (DECK_LOCO_ALGORITHM_TDOA3 || DECK_LOCO_ALGORITHM_TDOA2)
   default n
 
+#
+# Kconfig does not support float, we use a string here and fix it up in the
+# Makefile.
+#
 config DECK_LOCO_2D_POSITION_HEIGHT
   string "The height (Z) that the tag will be located at"
   depends on DECK_LOCO_2D_POSITION

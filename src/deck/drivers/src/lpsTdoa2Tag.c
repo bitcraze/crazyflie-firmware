@@ -282,7 +282,7 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   #ifdef CONFIG_DECK_LOCO_2D_POSITION
   heightMeasurement_t heightData;
   heightData.timestamp = xTaskGetTickCount();
-  heightData.height = atof(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT);
+  heightData.height = DECK_LOCO_2D_POSITION_HEIGHT;
   heightData.stdDev = 0.0001;
   estimatorEnqueueAbsoluteHeight(&heightData);
   #endif

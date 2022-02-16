@@ -264,7 +264,7 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   #ifdef CONFIG_DECK_LOCO_2D_POSITION
   heightMeasurement_t heightData;
   heightData.timestamp = xTaskGetTickCount();
-  heightData.height = atof(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT);
+  heightData.height = DECK_LOCO_2D_POSITION_HEIGHT;
   heightData.stdDev = 0.0001;
   estimatorEnqueueAbsoluteHeight(&heightData);
   #endif
@@ -297,8 +297,7 @@ static void Initialize(dwDevice_t *dev) {
   tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ, TdoaEngineMatchingAlgorithmRandom);
 
   #ifdef CONFIG_DECK_LOCO_2D_POSITION
-  DEBUG_PRINT("2D positioning enabled at %f m height\n",
-              atof(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT));
+  DEBUG_PRINT("2D positioning enabled at %f m height\n", DECK_LOCO_2D_POSITION_HEIGHT);
   #endif
 
   dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);
