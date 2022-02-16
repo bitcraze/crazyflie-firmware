@@ -117,7 +117,7 @@ its handling on the ground.
 |  7       | [Generic Setpoint](crtp_generic_setpoint.md) | Generic instantaneous setpoints (ie. position control and more) |
 |  13      | [Platform](crtp_platform.md)                 | Used for misc platform control, like debugging and power off |
 |  14      | Client-side debugging                        | Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.|
-|  15      | Link layer                                   | Low level link-related service. For example *echo* to ping the Crazyflie |
+|  15      | [Link layer](crtp_link.md)                   | Low level link-related service. For example *echo* to ping the Crazyflie |
 
 Connection procedure
 --------------------

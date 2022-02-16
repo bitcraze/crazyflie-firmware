@@ -64,7 +64,7 @@ Answer:
 | 1    | Version |
 
 Returns the CRTP protocol version. See the
-[protocl versioning and stability guarantee](../#protocol-version-and-stability-guarantee) documentation for more
+[protocl versioning and stability guarantee](index.md#protocol-version-and-stability-guarantee) documentation for more
 information.
 
 ### Get firmware version
@@ -114,4 +114,4 @@ Returns a String representation of the device type the firmware is running on. T
 
 The app channel is intended to be used by user apps on the Crazyflie and on the ground to exchange data. Every packet
 sent and received from the app channel (port:channel) (13:2) will be available through the
-[app channel API](/docs/userguides/app_layer/#app-channel-packet-based-communication-between-the-crazyflie-and-the-python-lib).
+[app channel API](/docs/userguides/app_layer.md#app-channel-packet-based-communication-between-the-crazyflie-and-the-python-lib).
