@@ -29,12 +29,12 @@
 
 #define __INCLUDED_FROM_PLATFORM_DEFAULTS__
 
-#ifdef PLATFORM_CF2
+#ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
 #endif
-#ifdef PLATFORM_BOLT
+#ifdef CONFIG_PLATFORM_BOLT
     #include "platform_defaults_bolt.h"
 #endif
-#ifdef PLATFORM_TAG
+#ifdef CONFIG_PLATFORM_TAG
     #include "platform_defaults_tag.h"
 #endif

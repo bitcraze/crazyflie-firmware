@@ -1,0 +1,135 @@
+mainmenu "Crazyflie Platform Configuration"
+
+menu "Build and debug options"
+
+config CROSS_COMPILE
+	string "Cross-compiler tool prefix"
+    default "arm-none-eabi-"
+	help
+	  Same as running 'make CROSS_COMPILE=prefix-' but stored for
+	  default make runs in this application build directory.  You don't
+	  need to set this unless you want the configured application build
+	  directory to select the cross-compiler automatically.
+
+config DEBUG
+    bool "Enable debug build"
+    default n
+    help
+        Enable debug symbols and extra output from firmware.
+
+config DEBUG_QUEUE_MONITOR
+    bool "Enable debug queue monitoring"
+    depends on DEBUG
+    default n
+    help
+        Enable the queue monitoring functionality.
+
+endmenu
+
+menu "Platform configuration"
+
+choice
+	prompt "Platform to build"
+	default CONFIG_PLATFORM_CF2
+
+config PLATFORM_CF2
+    bool "Build for CF2"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_MPU9250_LPS25H
+
+config PLATFORM_BOLT
+    bool "Build for Bolt"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_SPI
+
+config PLATFORM_TAG
+    bool "Build for the roadrunner"
+    select SENSORS_BMI088_BMP388
+
+endchoice
+
+endmenu
+
+menu "Sensor configuration"
+
+config SENSORS_MPU9250_LPS25H
+    bool "Support for mpu9250 and lps25h sensors"
+    default n
+    help
+    Include support for the Bosch bmi088 inertial and bmp388
+    barometric sensors
+
+config SENSORS_BMI088_BMP388
+    bool "Support for bmi088 and bmp388 sensors"
+    default n
+    select SENSORS_BMI088_I2C
+    help
+    Include support for the Bosch bmi088 inertial and bmp388
+    barometric sensors
+
+config SENSORS_BOSCH
+    bool "Include Bosch sensors"
+    default n
+
+config SENSORS_IGNORE_BAROMETER_FAIL
+    bool "Ignore failure from barometer"
+    depends on SENSORS_BMI088_BMP388
+    default n
+
+config SENSORS_BMI088_SPI
+    bool "Support for SPI communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default n
+    help
+        Include support using SPI with the Bosch bmi088 inertial sensor
+
+config SENSORS_BMI088_I2C
+    bool "Support for I2C communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default n
+    help
+        Include support using I2C with the Bosch bmi088 inertial sensor
+
+endmenu
+
+menu "App layer configuration"
+
+source "app_api/Kconfig"
+
+config APP_ENABLE
+    bool "Enable app entry point"
+    default n
+    help
+      When enabled the firmware will call a function void appMain() from a
+      task after the startup sequence has completed. This function should not
+      return.
+
+config APP_STACKSIZE
+    int "Set the task stack size"
+    depends on APP_ENABLE
+    default 300
+    help
+      Size is in 32bit word (4 Bytes). The default is 300 (1.2KBytes)
+
+config APP_PRIORITY
+    int "Set the task priority"
+    depends on APP_ENABLE
+    default 0
+    help
+      Set the task priority between 0 and 5. Default is 0 (same as IDLE).
+
+endmenu
+
+menu "Expansion deck configuration"
+
+config DECK_FORCE
+    string "Force load specified custom deck driver"
+    default "none"
+    help
+      A colon seperated list of custom drivers to force load or "none".
+
+source src/deck/drivers/src/Kconfig
+
+endmenu
+
+source "src/modules/src/Kconfig"

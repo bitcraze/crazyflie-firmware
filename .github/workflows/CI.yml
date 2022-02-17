@@ -21,7 +21,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
@@ -39,7 +39,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=bolt UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make bolt_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
@@ -57,7 +57,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
@@ -76,7 +76,7 @@ jobs:
         submodules: true
 
     - name: All features
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=cf2 CONFIG_DEBUG=y "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DSENSORS_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min"
 
   features:
     runs-on: ubuntu-latest
@@ -87,21 +87,24 @@ jobs:
       matrix:
         features:
         # Build cf2 with bosch sensors
-        - SENSORS=bosch
+        - bosch.conf
         # Build cf2 with TDMA
-        - LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0"
+        - loco_tdma.conf
         # Build cf2 with TDOA2 positioning mode
-        - LPS_TDOA_ENABLE=1
+        - loco_tdoa2.conf
+        #- LPS_TDOA_ENABLE=1
         # Build cf2 with TDOA3 positioning mode
-        - LPS_TDOA3_ENABLE=1
+        - loco_tdoa3.conf
+        #- LPS_TDOA3_ENABLE=1
         # Build cf2 with TDOA3 and all config options
-        - LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE -DLPS_FULL_TX_POWER"
+        - loco_tdoa3_all.conf
         # Build Bigquad deck with all config options
-        - >
-          "EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM"
+        - bigquad.conf
+        # Build API test app layer app
+        - app_api.conf
     env:
-      FEATURE: ${{ matrix.features }}
-
+      CONF: ${{ matrix.features }}
+    
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v2
@@ -109,7 +112,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 ${{ env.FEATURE }} UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./scripts/kconfig/merge_config.sh configs/${CONF} configs/defconfig && make -j 12"
 
   apps:
     runs-on: ubuntu-latest
@@ -119,7 +122,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-        - app_api
         - examples/app_hello_world
         - examples/app_peer_to_peer
         - examples/demos/app_push_demo
@@ -134,4 +136,28 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE}; make -j$(nproc)"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE} && make && cd -"
+
+  kbuild-targets:
+    runs-on: ubuntu-latest
+    needs: cf2
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+        - allyesconfig
+        - allnoconfig
+        - randconfig
+
+    env:
+      TARGET: ${{ matrix.target }}
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} && make -j 12"

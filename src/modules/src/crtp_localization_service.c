@@ -217,8 +217,11 @@ static void extPosePackedHandler(const CRTPPacket* pk) {
 
 static void lpsShortLppPacketHandler(CRTPPacket* pk) {
   if (pk->size >= 2) {
+#ifdef CONFIG_LPS_DECK_LOCO
     bool success = lpsSendLppShort(pk->data[1], &pk->data[2], pk->size-2);
-
+#else
+    bool success = false;
+#endif
     pk->port = CRTP_PORT_LOCALIZATION;
     pk->channel = GENERIC_TYPE;
     pk->size = 3;

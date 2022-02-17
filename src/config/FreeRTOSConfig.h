@@ -157,13 +157,13 @@ to exclude the API function. */
 #define configSUPPORT_STATIC_ALLOCATION 1
 
 // Queue monitoring
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
     #undef traceQUEUE_SEND
     #undef traceQUEUE_SEND_FAILED
     #define traceQUEUE_SEND(xQueue) qm_traceQUEUE_SEND(xQueue)
     void qm_traceQUEUE_SEND(void* xQueue);
     #define traceQUEUE_SEND_FAILED(xQueue) qm_traceQUEUE_SEND_FAILED(xQueue)
     void qm_traceQUEUE_SEND_FAILED(void* xQueue);
-#endif // DEBUG_QUEUE_MONITOR
+#endif // CONFIG_DEBUG_QUEUE_MONITOR
 
 #endif /* FREERTOS_CONFIG_H */

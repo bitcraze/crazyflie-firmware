@@ -34,6 +34,7 @@
 #include "debug.h"
 
 static platformConfig_t configs[] = {
+#ifdef CONFIG_SENSORS_MPU9250_LPS25H
   {
     .deviceType = "CF20",
     .deviceTypeName = "Crazyflie 2.0",
@@ -41,6 +42,8 @@ static platformConfig_t configs[] = {
     .physicalLayoutAntennasAreClose = true,
     .motorMap = motorMapDefaultBrushed,
   },
+#endif
+#ifdef CONFIG_SENSORS_BMI088_BMP388
   {
     .deviceType = "CF21",
     .deviceTypeName = "Crazyflie 2.1",
@@ -48,6 +51,7 @@ static platformConfig_t configs[] = {
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapDefaultBrushed,
   },
+#endif
 };
 
 const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs) {

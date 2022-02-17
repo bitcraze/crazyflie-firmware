@@ -62,22 +62,18 @@ DECK_DRIVER(myled_driver);
     parts of the Crazyflie code.
 
 To compile the driver, place it in deck/drivers/src/ and add it to the
-Makefile:
+Kbuild file:
 
 ``` {.make}
-PROJ_OBJ += myled.o
+obj-y += myled.o
 ```
 
 ### Forcing initialization of a driver
 
 The deck driver will be initialized only if a deck is connected with the
 right OW memory content. During development it is possible to force the
-initialization of a deck by adding a define in
-`tools/make/config.mk`:
-
-``` {.make}
-CFLAGS += -DDECK_FORCE=meMyled
-```
+initialization of a deck by setting the `CONFIG_DECK_FORCE` config option
+to `meMyled` in your `.config` either by hand or using `make menuconfig`.
 
 ### Driver declaration API
 

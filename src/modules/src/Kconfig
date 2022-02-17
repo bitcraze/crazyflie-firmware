@@ -1,0 +1,61 @@
+menu "Controllers and Estimators"
+
+choice
+	prompt "Default controller"
+	default CONFIG_CONTROLLER_ANY
+
+config CONTROLLER_ANY
+	bool "Any Controller"
+	help
+	  Do not care which controller is used, if any
+
+config CONTROLLER_PID
+	bool "PID controller"
+	help
+	  Use the PID (proportional–integral–derivative) controller as default
+
+config CONTROLLER_INDI
+	bool "INDI controller"
+	help
+	  Use the INDI (Incremental non-linear dynamic inversion) controller as default
+
+config CONTROLLER_MELLINGER
+	bool "Mellinger controller"
+	help
+	  Use the Mellinger controller as default
+
+endchoice
+
+config ESTIMATOR_KALMAN_ENABLE
+	bool "Enable Kalman Estimator"
+	default y
+	help
+	  Enable the Kalman (EKF) estimator.
+
+choice
+	prompt "Default estimator"
+	default CONFIG_ESTIMATOR_ANY
+
+config ESTIMATOR_ANY
+	bool "Any Estimator"
+	help
+	  Do not care which estimator is used, if any
+
+config ESTIMATOR_KALMAN
+	bool "Kalman estimator"
+	depends on ESTIMATOR_KALMAN_ENABLE
+	help
+	  Use the (extended) Kalman filter (EKF) estimator as default
+
+config ESTIMATOR_COMPLEMENTARY
+	bool "Complementary estimator"
+	help
+	  Use the lightweight complementary estimator as default
+
+endchoice
+
+config ESTIMATOR_OOT
+	bool "Out-of-tree estimator"
+	default n
+
+endmenu

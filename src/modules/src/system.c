@@ -70,6 +70,7 @@
 #include "peer_localization.h"
 #include "cfassert.h"
 #include "i2cdev.h"
+#include "autoconf.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -139,7 +140,7 @@ void systemInit(void)
   buzzerInit();
   peerLocalizationInit();
 
-#ifdef APP_ENABLED
+#ifdef CONFIG_APP_ENABLE
   appInit();
 #endif
 
@@ -166,7 +167,7 @@ void systemTask(void *arg)
   ledInit();
   ledSet(CHG_LED, 1);
 
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
   queueMonitorInit();
 #endif
 
@@ -187,7 +188,11 @@ void systemTask(void *arg)
   commanderInit();
 
   StateEstimatorType estimator = anyEstimator;
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();
+  #endif
+
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
@@ -230,10 +235,14 @@ void systemTask(void *arg)
     pass = false;
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
+  #endif
+
   if (deckTest() == false) {
     pass = false;
     DEBUG_PRINT("deck [FAIL]\n");
