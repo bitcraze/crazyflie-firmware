@@ -91,11 +91,11 @@
 
 static lpsAlgoOptions_t algoOptions = {
   // .userRequestedMode is the wanted algorithm, available as a parameter
-#if CONFIG_DECK_LOCO_ALGORITHM_TDOA2
+#if defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA2)
   .userRequestedMode = lpsMode_TDoA2,
-#elif CONFIG_DECK_LOCO_ALGORITHM_TDOA3
+#elif defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA3)
   .userRequestedMode = lpsMode_TDoA3,
-#elif CONFIG_DECK_LOCO_ALGORITHM_TWR
+#elif defined(CONFIG_DECK_LOCO_ALGORITHM_TWR)
   .userRequestedMode = lpsMode_TWR,
 #else
   .userRequestedMode = lpsMode_auto,
@@ -117,9 +117,9 @@ struct {
   [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA3"},
 };
 
-#if CONFIG_DECK_LOCO_ALGORITHM_TDOA2
+#if defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA2)
 static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
-#elif CONFIG_DECK_LOCO_ALGORITHM_TDOA3
+#elif defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA3)
 static uwbAlgorithm_t *algorithm = &uwbTdoa3TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
