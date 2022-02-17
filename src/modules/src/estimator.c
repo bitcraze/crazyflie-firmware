@@ -69,7 +69,7 @@ static EstimatorFcns estimatorFunctions[] = {
         .update = estimatorComplementary,
         .name = "Complementary",
     },
-#ifdef CONFIG_ESTIMATOR_KALMNAN_ENABLE
+#ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
     {
         .init = estimatorKalmanInit,
         .deinit = NOT_IMPLEMENTED,
