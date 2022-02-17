@@ -23,7 +23,7 @@ Some decks require the Kalman estimator and it is automatically activated when o
 
 ### Setting default estimator at compile time
 
-It is possible to force the use of a specific estimator at compile time by setting `ESTIMATOR`, see [Configure the build](/docs/building-and-flashing/build.md/#configmk).
+It is possible to force the use of a specific estimator at compile time by setting `ESTIMATOR`, see [Configure the build in kbuild](/docs/development/kbuild.md).
 
 Example:
 
@@ -45,7 +45,7 @@ The PID controller is the default controller.
 
 ### Setting at compile time
 
-It is possible to force the use of a specific controller at compile time by setting `CONTROLLER`, see [Configure the build](/docs/building-and-flashing/build.md/#configmk).
+It is possible to force the use of a specific controller at compile time by setting `CONTROLLER`, see [Configure the build in kbuild](/docs/development/kbuild.md).
 
 Example:
 
