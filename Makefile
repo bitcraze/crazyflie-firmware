@@ -19,7 +19,7 @@ CLOAD_ARGS        ?=
 ARCH := stm32f4
 SRCARCH := stm32f4
 
-ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
 ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
 ARCH_CFLAGS += -Wno-address-of-packed-member -Wno-array-bounds -Wno-stringop-overread
 ARCH_CFLAGS += -Wno-stringop-overflow
