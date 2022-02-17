@@ -66,6 +66,8 @@ config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"
     default y
     select ESTIMATOR_KALMAN_ENABLE
+    select DECK_ZRANGER
+    select DECK_ZRANGER2
     help
       The Flow deck gives the Crazyflie 2.X the ability to understand
       when it’s moving in any direction. The VL53L1x ToF sensor measures
