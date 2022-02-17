@@ -54,10 +54,7 @@ static StateEstimatorType requiredEstimator = anyEstimator;
 static bool registerRequiredEstimator(StateEstimatorType estimator);
 static bool requiredLowInterferenceRadioMode = false;
 
-#define xstr(s) str(s)
-#define str(s) #s
-
-static char* deck_force = xstr(CONFIG_DECK_FORCE);
+static char* deck_force = CONFIG_DECK_FORCE;
 
 void deckInfoInit()
 {
