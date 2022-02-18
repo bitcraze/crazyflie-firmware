@@ -215,6 +215,8 @@ void ws2812DmaIsr(void)
     	DMA_Cmd(DMA1_Stream5, DISABLE);
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     if (DMA_GetITStatus(DMA1_Stream5, DMA_IT_HTIF5))
     {
       DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_HTIF5);
@@ -226,6 +228,7 @@ void ws2812DmaIsr(void)
       DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
       buffer = led_dma.end;
     }
+#pragma GCC diagnostic pop
 
     for(i=0; (i<LED_PER_HALF) && (current_led<total_led+2); i++, current_led++) {
       if (current_led<total_led)
