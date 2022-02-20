@@ -67,6 +67,13 @@ MEM_SIZE_FLASH_K = 1008
 MEM_SIZE_RAM_K = 128
 MEM_SIZE_CCM_K = 64
 
+
+#
+# Make sure Kbuild use our config that hinders some configs from being enabled
+# on allyesconfig or randconfig.
+#
+export KCONFIG_ALLCONFIG ?= configs/all.config
+
 KBUILD_OUTPUT ?= build
 
 -include $(KBUILD_OUTPUT)/include/config/auto.conf
