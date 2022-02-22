@@ -63,10 +63,11 @@ config IMU_MADGWICK_QUATERNION
         See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 
 config IMU_MAYHONY_QUATERNION
-    bool "Madgwick's implementation of Mayhony"
+    bool "Mayhony IMU algorithm"
     help
-        Use Madgwick's implementation of Robert Mayhony's so called
-        DCM filter, see: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
+        Use Mayhony's algorithm from the paper:
+        Nonlinear Complementary Filters on the Special Orthogonal Group
+        See: https://ieeexplore.ieee.org/document/4608934
 
 endchoice
 
