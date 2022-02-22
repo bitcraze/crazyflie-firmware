@@ -59,23 +59,21 @@ void tearDown(void) {
 
 void testSetupKve(void) {
   // Fixture
-  bool expected = true;
   // Test
   bool actual = kveCheck(&kve);
 
   // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
+  TEST_ASSERT_EQUAL(true, actual);
 }
 
 void testFetchEmpty(void) {
   // Fixture
-  bool expected = false;
   uint8_t buffer[8];
   // Test
   bool actual = kveFetch(&kve, "testEmpty", buffer, 8);
 
   // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
+  TEST_ASSERT_EQUAL(false, actual);
 }
 
 void testStoreAndReadFirstKeyValue(void) {
@@ -88,7 +86,7 @@ void testStoreAndReadFirstKeyValue(void) {
   bool actualStore = kveStore(&kve, "testEmpty", &u32Store, sizeof(uint32_t));
   int actualRead = kveFetch(&kve, "testEmpty", &u32Read, sizeof(uint32_t));
 
-  printf("size:%i\n", actualRead);
+//  printf("size:%i\n", actualRead);
 
   // Assert
   TEST_ASSERT_EQUAL(expectedStore, actualStore);
@@ -96,50 +94,87 @@ void testStoreAndReadFirstKeyValue(void) {
   TEST_ASSERT_EQUAL_UINT32(u32Store, u32Read);
 }
 
-static bool fromStorage(const char *key, void *buffer, size_t length)
+static bool fromStorageOneKey(const char *key, void *buffer, size_t length)
 {
-  uint8_t *byteBuf = (uint8_t *)buffer;
-  printf("%s:%i:", key, (int)length);
 
-  for (int i = 0; i < (int)length; i++)
-  {
-    printf("%.2X", byteBuf[i]);
-  }
-  printf("\n");
+  TEST_ASSERT_EQUAL_STRING("prm/testEmpty", key);
+
+//  uint8_t *byteBuf = (uint8_t *)buffer;
+//  printf("%s:%i:", key, (int)length);
+//
+//  for (int i = 0; i < (int)length; i++)
+//  {
+//    printf("%.2X", byteBuf[i]);
+//  }
+//  printf("\n");
 
   return true;
 }
 
 void testPrintStored(void) {
   // Fixture
-  bool expected = true;
   uint32_t u32Store = 0xBEAF;
 
   // Test
-  bool actualStore = kveStore(&kve, "testEmpty", &u32Store, sizeof(uint32_t));
-  bool actual = kveForeach(&kve, "", fromStorage);
+  bool actualStore = kveStore(&kve, "prm/testEmpty", &u32Store, sizeof(uint32_t));
 
   // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
+  bool actual = kveForeach(&kve, "prm/", fromStorageOneKey);
+  TEST_ASSERT_EQUAL(true, actual);
 }
 
-void testStoreUntilMemoryIsFull(void) {
-  // Fixture
+static void fillKveMemory(void)
+{
   int i;
   char keyString[30];
-  bool expected = true;
   // Fill memory
   for (i = 0; i < (KVE_PARTITION_LENGTH / 10); i++)
   {
     sprintf(keyString, "prm/test.value%i", i);
-    if (kveStore(&kve, keyString, &i, sizeof(i)))
+    if (!kveStore(&kve, keyString, &i, sizeof(i)))
     {
       break;
     }
   }
+  //printf("Nr stored:%i\n", i);
+}
 
-  printf("Nr stored:%i\n", i);
+void testStoreWhenMemoryIsFull(void) {
+  // Fixture
+  bool expected = false;
+  uint32_t u32Store = 0xBEAF;
+  // Fill memory
+  fillKveMemory();
   // Test
-
+  bool actual = kveStore(&kve, "prm/full", &u32Store, sizeof(uint32_t));
   // Assert
+  TEST_ASSERT_EQUAL(expected, actual);
+}
+
+void testRemoveAndStoreWhenMemoryIsFull(void) {
+  // Fixture
+  uint32_t u32Store = 0xBEAF;
+  // Fill memory
+  fillKveMemory();
+  // Test
+  bool actualDelete = kveDelete(&kve, "prm/test.value10");
+  bool actualStore =  kveStore(&kve,  "prm/test.hole10", &u32Store, sizeof(uint32_t));
+  // Assert
+  TEST_ASSERT_EQUAL(true, actualDelete);
+  TEST_ASSERT_EQUAL(true, actualStore);
+}
+
+void testRemoveAndStoreBiggerWhenMemoryIsFull(void) {
+  // Fixture
+  uint32_t u32Store = 0xBEAF;
+  // Fill memory
+  fillKveMemory();
+  // Test
+  bool actualFull =  kveStore(&kve,  "prm/full", &u32Store, sizeof(uint32_t));
+  bool actualDelete = kveDelete(&kve, "prm/test.value1");
+  bool actualStore =  kveStore(&kve,  "prm/test.bigger1000", &u32Store, sizeof(uint32_t));
+  // Assert
+  TEST_ASSERT_EQUAL(false, actualFull);
+  TEST_ASSERT_EQUAL(true, actualDelete);
+  TEST_ASSERT_EQUAL(false, actualStore);
 }
