@@ -97,6 +97,8 @@ void testStoreAndReadFirstKeyValue(void) {
 static bool fromStorageOneKey(const char *key, void *buffer, size_t length)
 {
 
+  (void)length;
+  (void)buffer;
   TEST_ASSERT_EQUAL_STRING("prm/testEmpty", key);
 
 //  uint8_t *byteBuf = (uint8_t *)buffer;
@@ -120,6 +122,7 @@ void testPrintStored(void) {
 
   // Assert
   bool actual = kveForeach(&kve, "prm/", fromStorageOneKey);
+  TEST_ASSERT_EQUAL(true, actualStore);
   TEST_ASSERT_EQUAL(true, actual);
 }
 
