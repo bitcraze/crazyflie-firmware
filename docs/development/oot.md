@@ -34,7 +34,7 @@ And `oot.mk` also expects `$(CRAZYFLIE_BASE)` to be set to the path to the `craz
 The `Kbuild` file in the `$(OOT)` folder should point out your source files:
 
 ```Makefile
-obj-y += your_estimator_out_of_tree.c
+obj-y += your_estimator_out_of_tree.o
 ```
 
 It can also add point out another folder where the code resides:
@@ -42,6 +42,8 @@ It can also add point out another folder where the code resides:
 ```Makefile
 obj-y += src/
 ```
+
+And since you are providing a config file by way of `$(OOT_CONFIG)` you do not need to run any make command to create a config like `make menuconfig` or `make defconfig`. Just a simple `make` will suffice.
 # OOT estimators
 The `config` file needs to enable ESTIMATOR_OOT, and can also set other config options:
 
