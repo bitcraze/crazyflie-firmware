@@ -11,6 +11,7 @@ config DECK_ACTIVE_MARKER
 config DECK_AI
     bool "Support the AI deck"
     default y
+    depends on !DEBUG_PRINT_ON_UART1
     help
       The AI-deck 1.1 extends the computational capabilities and will
       enable complex artificial intelligence-based workloads to run
@@ -33,6 +34,7 @@ config DECK_BIGQUAD
 config DECK_BIGQUAD_ENABLE
   bool "Enable Bigquad deck capabilities"
   depends on DECK_BIGQUAD
+  depends on !DEBUG_PRINT_ON_UART1
   default n
 
 config DECK_BIGQUAD_ENABLE_OSD
@@ -80,6 +82,7 @@ config DECK_FLOW
 config DECK_GTGPS
     bool "Support the GPS prototype deck (obosolete)"
     default n
+    depends on !DEBUG_PRINT_ON_UART1
     help
       GPS prototype deck, not active nor in production.
 
@@ -96,6 +99,7 @@ config DECK_LEDRING
 config DECK_LIGHTHOUSE
     bool "Support the Lighthouse positioning deck"
     default y
+    depends on !DEBUG_PRINT_ON_UART1
     select ESTIMATOR_KALMAN_ENABLE
     help
       With Crazyflie and the Lighthouse positioning deck, high precision

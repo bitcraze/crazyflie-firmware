@@ -76,7 +76,7 @@ jobs:
         submodules: true
 
     - name: All features
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=cf2 CONFIG_DEBUG=y "EXTRA_CFLAGS=-DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=cf2 CONFIG_DEBUG=y "EXTRA_CFLAGS=-DOW_WRITE_TEST -DOW_READ_TEST -DENABLE_UART2"  UNIT_TEST_STYLE=min"
 
   features:
     runs-on: ubuntu-latest
