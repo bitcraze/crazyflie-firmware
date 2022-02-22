@@ -119,9 +119,6 @@ all: $(PROG).hex $(PROG).bin
 		ln -sf $(KBUILD_OUTPUT)/$$f $(srctree)/$$(basename $$f); \
 	done
 
-oot-config:
-	[ ! -e "$(OOT_CONFIG)" ] || $(srctree)/scripts/kconfig/merge_config.sh $(OOT_CONFIG)
-
 include tools/make/targets.mk
 
 size:

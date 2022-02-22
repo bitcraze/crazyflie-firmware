@@ -67,5 +67,5 @@ CLEAN_COMMAND_SILENT="  CLEAN"
 clean_cf:
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
 	@$(CLEAN_COMMAND)
-	@rm $(srctree)/$(PROG).*
+	@rm -f $(srctree)/$(PROG).*
 	
