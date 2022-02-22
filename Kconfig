@@ -50,6 +50,27 @@ endchoice
 
 endmenu
 
+menu "IMU configuration"
+
+choice
+    prompt "IMU algorithm"
+    default IMU_MAYHONY_QUATERNION
+
+config IMU_MADGWICK_QUATERNION
+    bool "Madgwick's AHRS and IMU algorithms"
+    help
+        Use Madgwick's IMU and AHRS algorithms.
+        See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
+
+config IMU_MAYHONY_QUATERNION
+    bool "Madgwick's implementation of Mayhony"
+    help
+        Use Madgwick's implementation of Robert Mayhony's so called
+        DCM filter, see: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
+
+endchoice
+
+endmenu
 menu "Sensor configuration"
 
 config SENSORS_MPU9250_LPS25H
