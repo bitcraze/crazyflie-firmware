@@ -47,6 +47,61 @@ static kveMemory_t kve = {
   .flush = flush,
 };
 
+static bool fromStorageOneKey(const char *key, void *buffer, size_t length)
+{
+
+  (void)length;
+  (void)buffer;
+  TEST_ASSERT_EQUAL_STRING("prm/testEmpty", key);
+
+// For debug printing
+//  uint8_t *byteBuf = (uint8_t *)buffer;
+//  printf("%s:%i:", key, (int)length);
+//
+//  for (int i = 0; i < (int)length; i++)
+//  {
+//    printf("%.2X", byteBuf[i]);
+//  }
+//  printf("\n");
+
+  return true;
+}
+
+static bool fromFullStorageAllKeys(const char *key, void *buffer, size_t length)
+{
+  static uint32_t i = 0;
+  (void)length;
+  (void)buffer;
+  char keyString[30];
+
+// For debug printing
+//  uint8_t *byteBuf = (uint8_t *)buffer;
+//  printf("%s:%i\n", key, (int)length);
+
+  sprintf(keyString, "prm/test.value%i", i++);
+  TEST_ASSERT_EQUAL_STRING(keyString, key);
+
+  return true;
+}
+
+static void fillKveMemory(void)
+{
+  int i;
+  char keyString[30];
+  // Fill memory
+  for (i = 0; i < (KVE_PARTITION_LENGTH / 10); i++)
+  {
+    sprintf(keyString, "prm/test.value%i", i);
+    if (!kveStore(&kve, keyString, &i, sizeof(i)))
+    {
+      break;
+    }
+  }
+  //printf("Nr stored:%i\n", i);
+}
+
+//-----------------------------Test cases -------------------------------- //
+
 void setUp(void) {
   // The full memory is initialized to zero
   memset(kveData, 0, KVE_PARTITION_LENGTH);
@@ -94,26 +149,7 @@ void testStoreAndReadFirstKeyValue(void) {
   TEST_ASSERT_EQUAL_UINT32(u32Store, u32Read);
 }
 
-static bool fromStorageOneKey(const char *key, void *buffer, size_t length)
-{
-
-  (void)length;
-  (void)buffer;
-  TEST_ASSERT_EQUAL_STRING("prm/testEmpty", key);
-
-//  uint8_t *byteBuf = (uint8_t *)buffer;
-//  printf("%s:%i:", key, (int)length);
-//
-//  for (int i = 0; i < (int)length; i++)
-//  {
-//    printf("%.2X", byteBuf[i]);
-//  }
-//  printf("\n");
-
-  return true;
-}
-
-void testPrintStored(void) {
+void testOneStoredForEach(void) {
   // Fixture
   uint32_t u32Store = 0xBEAF;
 
@@ -121,25 +157,21 @@ void testPrintStored(void) {
   bool actualStore = kveStore(&kve, "prm/testEmpty", &u32Store, sizeof(uint32_t));
 
   // Assert
-  bool actual = kveForeach(&kve, "prm/", fromStorageOneKey);
+  bool actual = kveForeach(&kve, "", fromStorageOneKey);
   TEST_ASSERT_EQUAL(true, actualStore);
   TEST_ASSERT_EQUAL(true, actual);
 }
 
-static void fillKveMemory(void)
-{
-  int i;
-  char keyString[30];
+void testFullStorageForEach(void) {
+  // Fixture
+  uint32_t u32Store = 0xBEAF;
   // Fill memory
-  for (i = 0; i < (KVE_PARTITION_LENGTH / 10); i++)
-  {
-    sprintf(keyString, "prm/test.value%i", i);
-    if (!kveStore(&kve, keyString, &i, sizeof(i)))
-    {
-      break;
-    }
-  }
-  //printf("Nr stored:%i\n", i);
+  fillKveMemory();
+
+  // Test
+  // Assert
+  bool actual = kveForeach(&kve, "", fromFullStorageAllKeys);
+  TEST_ASSERT_EQUAL(true, actual);
 }
 
 void testStoreWhenMemoryIsFull(void) {
