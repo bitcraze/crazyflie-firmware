@@ -42,6 +42,7 @@
 #include "log.h"
 #include "pulse_processor.h"
 #include "mem.h"
+#include "autoconf.h"
 
 #define DEBUG_MODULE "LED"
 #include "debug.h"
