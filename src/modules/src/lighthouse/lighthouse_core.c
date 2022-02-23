@@ -273,7 +273,7 @@ void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_
 //     estimator as pre-calculated.
 // 1 = Sweep angles pushed into the estimator. Yaw error calculated outside the estimator
 //     and pushed to the estimator as a pre-calculated value.
-#ifdef LIGHTHOUSE_AS_GROUNDTRUTH
+#ifdef CONFIG_LIGHTHOUSE_AS_GROUNDTRUTH
 static uint8_t estimationMethod = 0;
 #else
 static uint8_t estimationMethod = 1;
