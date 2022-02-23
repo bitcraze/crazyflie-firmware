@@ -40,6 +40,14 @@ config DEBUG_PRINT_ON_UART1
       deck documentation on https://www.bitcraze.io/ for more information about
       pin allocation.
 
+config LIGHTHOUSE_AS_GROUNDTRUTH
+    bool "Use Lighthouse system as groundtruth"
+    default n
+    help
+      Use the lighthouse system as a groundtruth. This will also switch the
+      estimation method to the crossing beam position estimate and you can 
+      read out the positioning from the loggin lighthouse.x/.y/.z
+
 endmenu
 
 menu "Platform configuration"
