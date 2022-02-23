@@ -32,6 +32,7 @@
 #include "crc32.h"
 #include "debug.h"
 #include "cfassert.h"
+#include "autoconf.h"
 
 #if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
