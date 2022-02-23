@@ -66,7 +66,7 @@ Inside of the file, replace everything with the following:
             {
                 "name": "STM32 Debug",
                 "cwd": "${workspaceRoot}",
-                "executable": "./cf2.elf",
+                "executable": "./build/cf2.elf",
                 "request": "launch",
                 "type": "cortex-debug",
                 "device": "STM32F405",
