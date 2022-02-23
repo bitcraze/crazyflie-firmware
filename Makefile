@@ -1,6 +1,6 @@
 
 OPENOCD           ?= openocd
-OPENOCD_INTERFACE ?= interface/stlink.cfg
+OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
 OPENOCD_TARGET    ?= target/stm32f4x.cfg
 OPENOCD_CMDS      ?=
 
