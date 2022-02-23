@@ -190,7 +190,6 @@ $(obj)/%.o: $(src)/%.c $(objtool_obj) FORCE
 	$(call cmd,force_checksrc)
 	$(call if_changed_rule,cc_o_c)
 
-# Built-in and composite module parts
 $(obj)/%.o: $(src)/%.cc $(objtool_obj) FORCE
 	$(call cmd,force_checksrc)
 	$(call if_changed_rule,cxx_o_cpp)
