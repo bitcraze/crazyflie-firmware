@@ -109,6 +109,16 @@ config DECK_LIGHTHOUSE
       precision positioning. The deck has 4 receivers which gives the
       full pose of the Crazyflie.
 
+config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+    bool "Use Lighthouse system as groundtruth"
+    depends on DECK_LIGHTHOUSE
+    default n
+    help
+      Use the lighthouse system as a groundtruth. This will also switch the
+      estimation method to the crossing beam position estimate and not send the
+      position to the kalman estimator and you can 
+      read out the positioning from the loggin lighthouse.x.y.z
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
