@@ -37,7 +37,7 @@ static size_t write(size_t address, const void* data, size_t length)
 
 static void flush(void)
 {
-  // NOP for now, lets fix the EEPROM write first!
+  // Not valid for RAM memory implementation.
 }
 
 static kveMemory_t kve = {
