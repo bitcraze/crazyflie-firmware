@@ -36,8 +36,9 @@ config DEBUG_PRINT_ON_UART1
     default n
     help
       Switch output of DEBUG_PRINT from radio to UART1 with 115200 baudrate.
-      Note! This will interfere with several expansion decks, see:
-      https://www.bitcraze.io/documentation/system/platform/cf2-expansiondecks/#deck-pin-allocation
+      Note! This will interfere with several expansion decks, see the expansion
+      deck documentation on https://www.bitcraze.io/ for more information about
+      pin allocation.
 
 endmenu
 
