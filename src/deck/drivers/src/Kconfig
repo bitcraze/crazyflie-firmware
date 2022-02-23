@@ -141,6 +141,7 @@ endchoice
 
 config DECK_LOCO_FULL_TX_POWER
   bool "Full TX power"
+  depends on DECK_LOCO
   default n
 
 config DECK_LOCO_LONGER_RANGE
