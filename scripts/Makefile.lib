@@ -70,8 +70,10 @@ _c_flags       = $(filter-out $(CFLAGS_REMOVE_$(basetarget).o), $(orig_c_flags))
 orig_a_flags   = $(KBUILD_CPPFLAGS) $(KBUILD_AFLAGS) $(KBUILD_SUBDIR_ASFLAGS) \
                  $(asflags-y) $(AFLAGS_$(basetarget).o)
 _a_flags       = $(filter-out $(AFLAGS_REMOVE_$(basetarget).o), $(orig_a_flags))
-_cpp_flags     = $(KBUILD_CPPFLAGS) $(cppflags-y) $(CPPFLAGS_$(@F))
+_cpp_flags     = $(KBUILD_CPPFLAGS)  $(KBUILD_CFLAGS) $(cppflags-y) $(CPPFLAGS_$(@F))
 
+# Remove all non c++ compatible flags
+_cpp_flags     := $(filter-out -Wno-pointer-sign -Werror=implicit-int -std=gnu11,$(_cpp_flags))
 
 # If building the kernel in a separate objtree expand all occurrences
 # of -Idir to -I$(srctree)/dir except for absolute paths (starting with '/').
