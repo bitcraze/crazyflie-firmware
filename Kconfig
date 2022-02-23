@@ -24,6 +24,13 @@ config DEBUG_QUEUE_MONITOR
     help
         Enable the queue monitoring functionality.
 
+config DEBUG_ENABLE_LED_MORSE
+    bool "Enable blinking morse sequence with LEDs"
+    default n
+    help
+      If enabled makes it possible to define LED sequences in form of the DOT,
+      DASH, GAP, LETTER_GAP and WORD_GAP parts of Morse code.
+
 endmenu
 
 menu "Platform configuration"
