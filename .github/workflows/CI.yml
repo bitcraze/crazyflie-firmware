@@ -112,7 +112,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./scripts/kconfig/merge_config.sh configs/${CONF} configs/defconfig && make -j 12"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./scripts/kconfig/merge_config.sh configs/${CONF} configs/defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
   apps:
     runs-on: ubuntu-latest
@@ -160,4 +160,4 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} && make -j 12"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} &&  ./tools/build/build UNIT_TEST_STYLE=min"
