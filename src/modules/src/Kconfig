@@ -59,3 +59,14 @@ config ESTIMATOR_OOT
 	default n
 
 endmenu
+
+menu "Parameter subsystem"
+
+config PARAM_SILENT_UPDATES
+    bool "Silent parameter updates"
+    default n
+    help
+      Do not send CRTP packets when a parameter is updated
+
+endmenu
+
