@@ -70,7 +70,7 @@ menu "IMU configuration"
 
 choice
     prompt "IMU algorithm"
-    default IMU_MAYHONY_QUATERNION
+    default IMU_MAHONY_QUATERNION
 
 config IMU_MADGWICK_QUATERNION
     bool "Madgwick's AHRS and IMU algorithms"
@@ -78,10 +78,10 @@ config IMU_MADGWICK_QUATERNION
         Use Madgwick's IMU and AHRS algorithms.
         See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 
-config IMU_MAYHONY_QUATERNION
-    bool "Mayhony IMU algorithm"
+config IMU_MAHONY_QUATERNION
+    bool "Mahony IMU algorithm"
     help
-        Use Mayhony's algorithm from the paper:
+        Use Mahony's algorithm from the paper:
         Nonlinear Complementary Filters on the Special Orthogonal Group
         See: https://ieeexplore.ieee.org/document/4608934
 
