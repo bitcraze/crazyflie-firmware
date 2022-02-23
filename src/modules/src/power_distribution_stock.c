@@ -34,6 +34,7 @@
 #include "platform.h"
 #include "motors.h"
 #include "debug.h"
+#include "autoconf.h"
 
 static bool motorSetEnable = false;
 
@@ -51,11 +52,11 @@ static struct {
   uint16_t m4;
 } motorPowerSet;
 
-#ifndef DEFAULT_IDLE_THRUST
-#define DEFAULT_IDLE_THRUST 0
+#ifndef MOTORS_DEFAULT_IDLE_THRUST
+#define MOTORS_DEFAULT_IDLE_THRUST 0
 #endif
 
-static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
+static uint32_t idleThrust = MOTORS_DEFAULT_IDLE_THRUST;
 
 void powerDistributionInit(void)
 {
