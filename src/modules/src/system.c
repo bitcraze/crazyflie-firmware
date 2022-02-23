@@ -174,9 +174,6 @@ void systemTask(void *arg)
 #ifdef CONFIG_DEBUG_PRINT_ON_UART1
   uart1Init(115200);
 #endif
-#ifdef ENABLE_UART2
-  uart2Init(115200);
-#endif
 
   initUsecTimer();
   i2cdevInit(I2C3_DEV);
