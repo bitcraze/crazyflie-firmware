@@ -72,7 +72,7 @@
 #include "i2cdev.h"
 #include "autoconf.h"
 
-#ifndef START_DISARMED
+#ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
 #else
 #define ARM_INIT false
