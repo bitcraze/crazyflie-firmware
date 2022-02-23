@@ -93,6 +93,22 @@ config DECK_LEDRING
       control from your computer. Two additional strong front facing
       LEDs that can be switched on and off, act as headlights.
 
+config DECK_LEDRING_DEFAULT_EFFECT
+    int "Default light effect to use on the LED ring"
+    depends on DECK_LEDRING
+    default 6
+    help
+      Index of the default light effect that the LED ring should use
+      after boot. Use zero to turn off the LEDs when booting.
+
+config DECK_LEDRING_NBR_LEDS
+    int "Number of LEDs to use on the LED ring"
+    depends on DECK_LEDRING
+    default 12
+    help
+      Number of LEDs to use on the LED ring. Values larger than 12
+      require a customized LED ring deck.
+
 config DECK_LIGHTHOUSE
     bool "Support the Lighthouse positioning deck"
     default y
