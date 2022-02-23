@@ -24,10 +24,11 @@ This will make the crazyflie-firmware build system look for a `Kbuild` file in y
 
 The following variables are understood by `oot.mk`:
 
-| Variable     | Function                                            | Default                                               |
-| --------     | --------------------------------------------------- | ----------------------------------------------------- |
-| `OOT`        | Specify where your code (`Kbuild file`) is located. | `$(PWD)` (Your current directory)                     |
-| `OOT_CONFIG` | Location of your OOT specific `Kconfig` file, will be merged with the default config. | `$(OOT)/oot-config` |
+| Variable      | Function                                            | Default                                               |
+| --------      | --------------------------------------------------- | ----------------------------------------------------- |
+| `OOT`         | Specify where your code (`Kbuild file`) is located. | `$(PWD)` (Your current directory)                     |
+| `OOT_CONFIG`  | Location of your OOT specific `Kconfig` file, will be merged with the default config. | `$(OOT)/oot-config` |
+| `EXTRA_CFLAGS`| Extra CFLAGS needed by your app                     | Empty.
 
 And `oot.mk` also expects `$(CRAZYFLIE_BASE)` to be set to the path to the `crazyflie-firmware` repository.
 
