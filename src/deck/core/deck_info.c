@@ -37,6 +37,8 @@
 #include "debug.h"
 #include "static_mem.h"
 
+#include "autoconf.h"
+
 #ifdef CONFIG_DEBUG
   #define DECK_INFO_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
 #else
@@ -86,7 +88,7 @@ DeckInfo * deckInfo(int i)
 // Dummy driver for decks that do not have a driver implemented
 static const DeckDriver dummyDriver;
 
-#ifndef IGNORE_OW_DECKS
+#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
 static const DeckDriver * findDriver(DeckInfo *deck)
 {
   char name[30];
@@ -131,7 +133,7 @@ void printDeckInfo(DeckInfo *info)
   }
 }
 
-#ifndef IGNORE_OW_DECKS
+#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
 static bool infoDecode(DeckInfo * info)
 {
   uint8_t crcHeader;
@@ -183,7 +185,7 @@ static void enumerateDecks(void)
     nDecks = 0;
   }
 
-#ifndef IGNORE_OW_DECKS
+#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
   for (int i = 0; i < nDecks; i++)
   {
     DECK_INFO_DBG_PRINT("Enumerating deck %i\n", i);
