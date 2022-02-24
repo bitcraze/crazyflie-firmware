@@ -1,9 +1,25 @@
-menu "IMU sensor configuration"
+menu "Power management configuration"
 
-config SENSORS_BMI088_BMP388
-    bool "Support for bmi088 and bmp388 sensors"
+#
+# Kconfig does not support float, we use strings here and fix them up in the
+# Makefile.
+#
+config PM_BAT_LOW_VOLTAGE
+    string "Low voltage threshold in volts"
+    default 3.2
     help
-        Include support for the Bosch bmi088 inertial and bmp388
-        barometric sensors
+        The power management subsystem will enter the "low voltage" state when
+        the battery voltage is below this threshold for a prolonged period of
+        time. The length of this period is configured in the code; see
+        hal/interface/pm.h
+
+config PM_BAT_CRITICAL_LOW_VOLTAGE
+    string "Critical low voltage threshold in volts"
+    default 3.0
+    help
+        The power management subsystem will shut the system down when the
+        battery voltage is below this threshold for a prolonged period of
+        time. The length of this period is configured in the code; see
+        hal/interface/pm.h
 
 endmenu

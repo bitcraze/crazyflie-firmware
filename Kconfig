@@ -96,6 +96,7 @@ config IMU_MAHONY_QUATERNION
 endchoice
 
 endmenu
+
 menu "Sensor configuration"
 
 config SENSORS_MPU9250_LPS25H
@@ -137,6 +138,8 @@ config SENSORS_BMI088_I2C
         Include support using I2C with the Bosch bmi088 inertial sensor
 
 endmenu
+
+source src/hal/src/Kconfig
 
 menu "App layer configuration"
 

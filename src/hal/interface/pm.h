@@ -31,22 +31,16 @@
 #include "syslink.h"
 #include "deck.h"
 
-#ifndef CRITICAL_LOW_VOLTAGE
-  #define PM_BAT_CRITICAL_LOW_VOLTAGE   3.0f
-#else
-  #define PM_BAT_CRITICAL_LOW_VOLTAGE   CRITICAL_LOW_VOLTAGE
-#endif
+// PM_BAT_LOW_VOLTAGE and PM_BAT_CRITICAL_LOW_VOLTAGE are now defined by the
+// Makefile. Do not use CONFIG_PM_BAT_CRITICAL_LOW_VOLTAGE and
+// CONFIG_PM_BAT_LOW_VOLTAGE as those are strings.
+
 #ifndef CRITICAL_LOW_TIMEOUT
   #define PM_BAT_CRITICAL_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec default
 #else
   #define PM_BAT_CRITICAL_LOW_TIMEOUT   CRITICAL_LOW_TIMEOUT
 #endif
 
-#ifndef LOW_VOLTAGE
-  #define PM_BAT_LOW_VOLTAGE   3.2f
-#else
-  #define PM_BAT_LOW_VOLTAGE   LOW_VOLTAGE
-#endif
 #ifndef LOW_TIMEOUT
   #define PM_BAT_LOW_TIMEOUT   M2T(1000 * 5) // 5 sec default
 #else
