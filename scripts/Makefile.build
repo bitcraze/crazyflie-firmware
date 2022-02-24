@@ -135,6 +135,9 @@ quiet_cmd_cc_o_c = CC $(quiet_modtag)  $@
 
 cmd_cc_o_c = $(CC) $(c_flags) -c -o $@ $<
 
+cmd_cxx_o_cpp = $(CXX)  $(cxx_flags) -c -o $@ $<
+quiet_cmd_cxx_o_cpp = CXX $(quiet_modtag) $@
+
 ifdef CONFIG_STACK_VALIDATION
 ifneq ($(SKIP_STACK_VALIDATION),1)
 
@@ -158,6 +161,12 @@ objtool_obj = $(if $(patsubst y%,, \
 endif # SKIP_STACK_VALIDATION
 endif # CONFIG_STACK_VALIDATION
 
+define rule_cxx_o_cpp
+	$(call echo-cmd,checksrc) $(cmd_checksrc)			  \
+	$(call cmd_and_fixdep,cxx_o_cpp)				  \
+	$(cmd_objtool)
+endef
+
 define rule_cc_o_c
 	$(call echo-cmd,checksrc) $(cmd_checksrc)			  \
 	$(call cmd_and_fixdep,cc_o_c)					  \
@@ -180,6 +189,14 @@ endif
 $(obj)/%.o: $(src)/%.c $(objtool_obj) FORCE
 	$(call cmd,force_checksrc)
 	$(call if_changed_rule,cc_o_c)
+
+$(obj)/%.o: $(src)/%.cc $(objtool_obj) FORCE
+	$(call cmd,force_checksrc)
+	$(call if_changed_rule,cxx_o_cpp)
+
+$(obj)/%.o: $(src)/%.cpp $(objtool_obj) FORCE
+	$(call cmd,force_checksrc)
+	$(call if_changed_rule,cxx_o_cpp)
 
 quiet_cmd_cc_lst_c = MKLST   $@
       cmd_cc_lst_c = $(CC) $(c_flags) -g -c -o $*.o $< && \

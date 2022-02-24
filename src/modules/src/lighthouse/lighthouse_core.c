@@ -37,6 +37,7 @@
 #include "log.h"
 #include "param.h"
 #include "statsCnt.h"
+#include "autoconf.h"
 
 #define DEBUG_MODULE "LH"
 #include "debug.h"
@@ -273,7 +274,7 @@ void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_
 //     estimator as pre-calculated.
 // 1 = Sweep angles pushed into the estimator. Yaw error calculated outside the estimator
 //     and pushed to the estimator as a pre-calculated value.
-#ifdef LIGHTHOUSE_AS_GROUNDTRUTH
+#ifdef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
 static uint8_t estimationMethod = 0;
 #else
 static uint8_t estimationMethod = 1;

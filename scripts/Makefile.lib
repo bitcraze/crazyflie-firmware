@@ -70,14 +70,17 @@ _c_flags       = $(filter-out $(CFLAGS_REMOVE_$(basetarget).o), $(orig_c_flags))
 orig_a_flags   = $(KBUILD_CPPFLAGS) $(KBUILD_AFLAGS) $(KBUILD_SUBDIR_ASFLAGS) \
                  $(asflags-y) $(AFLAGS_$(basetarget).o)
 _a_flags       = $(filter-out $(AFLAGS_REMOVE_$(basetarget).o), $(orig_a_flags))
-_cpp_flags     = $(KBUILD_CPPFLAGS) $(cppflags-y) $(CPPFLAGS_$(@F))
+_cpp_flags     = $(KBUILD_CPPFLAGS)  $(KBUILD_CFLAGS) $(cppflags-y) $(CPPFLAGS_$(@F))
 
+# Remove all non c++ compatible flags
+_cxx_flags     := $(filter-out -Wno-pointer-sign -Werror=implicit-int -std=gnu11,$(_c_flags))
 
 # If building the kernel in a separate objtree expand all occurrences
 # of -Idir to -I$(srctree)/dir except for absolute paths (starting with '/').
 
 ifeq ($(KBUILD_SRC),)
 __c_flags	= $(_c_flags)
+__cxx_flags	= $(_cxx_flags)
 __a_flags	= $(_a_flags)
 __cpp_flags     = $(_cpp_flags)
 else
@@ -87,12 +90,16 @@ else
 #   and locates generated .h files
 # FIXME: Replace both with specific CFLAGS* statements in the makefiles
 __c_flags	= $(call addtree,-I$(obj)) $(call flags,_c_flags)
+__cxx_flags	=                          $(call flags,_cxx_flags)
 __a_flags	=                          $(call flags,_a_flags)
 __cpp_flags     =                          $(call flags,_cpp_flags)
 endif
 
 c_flags        = -Wp,-MD,$(depfile) $(NOSTDINC_FLAGS) $(MYAPPINCLUDE)     \
 		 $(__c_flags) $(modkern_cflags)
+
+cxx_flags      = -Wp,-MD,$(depfile) $(NOSTDINC_FLAGS) $(MYAPPINCLUDE)     \
+		 $(__cxx_flags) $(modkern_cflags)
 
 a_flags        = -Wp,-MD,$(depfile) $(NOSTDINC_FLAGS) $(MYAPPINCLUDE)     \
 		 $(__a_flags) $(modkern_aflags)

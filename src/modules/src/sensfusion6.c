@@ -172,7 +172,7 @@ static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float
   qz *= recipNorm;
 }
 #else
-// Madgwick's implementation of Mayhony's AHRS algorithm.
+// Madgwick's implementation of Mahony's AHRS algorithm.
 // See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
 // Date     Author      Notes

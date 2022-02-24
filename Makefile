@@ -1,7 +1,12 @@
 
 OPENOCD           ?= openocd
-OPENOCD_INTERFACE ?= interface/stlink.cfg
+OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_TARGET    ?= target/stm32f4x.cfg
 OPENOCD_CMDS      ?=
+
+CPU                        = stm32f4
+LOAD_ADDRESS_stm32f4       = 0x8000000
+LOAD_ADDRESS_CLOAD_stm32f4 = 0x8004000
 
 # Cload is handled in a special way on windows in WSL to use the Windows python interpreter
 ifdef WSL_DISTRO_NAME
@@ -131,6 +136,13 @@ ifeq ($(CLOAD), 1)
 	$(CLOAD_SCRIPT) $(CLOAD_CMDS) flash $(CLOAD_ARGS) $(PROG).bin stm32-fw
 else
 	@echo "Only cload build can be bootloaded. Launch build and cload with CLOAD=1"
+endif
+
+# Flags required by the ST library
+ifeq ($(CLOAD), 1)
+  LOAD_ADDRESS = $(LOAD_ADDRESS_CLOAD_$(CPU))
+else
+  LOAD_ADDRESS = $(LOAD_ADDRESS_$(CPU))
 endif
 
 unit:

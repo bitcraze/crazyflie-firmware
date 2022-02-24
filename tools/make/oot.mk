@@ -10,7 +10,7 @@ OOT ?= $(PWD)
 #
 OOT_CONFIG ?= $(OOT)/oot-config
 
-OOT_ARGS ?= -C $(CRAZYFLIE_BASE) OOT=$(OOT)
+OOT_ARGS ?= -C $(CRAZYFLIE_BASE) OOT=$(OOT) EXTRA_CFLAGS=$(EXTRA_CFLAGS)
 
 .PHONY: all clean
 

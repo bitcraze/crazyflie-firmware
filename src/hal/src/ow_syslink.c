@@ -42,15 +42,6 @@ static bool owDataIsValid;
 
 static bool owSyslinkTransfer(uint8_t type, uint8_t length);
 
-#ifdef OW_WRITE_TEST
-static uint8_t bqtestData[] =
-{
-  0xEB, 0x00, 0x00, 0x00, 0x00, 0xBC, 0xFE, 0x3C, 0x00, 0x0D, 0x01, 0x08,
-  0x62, 0x63, 0x42, 0x51, 0x74, 0x65, 0x73, 0x74, 0x02, 0x01, 0x61, 0x70
-};
-#endif
-
-
 void owInit()
 {
   syslinkInit();
@@ -91,32 +82,6 @@ bool owTest()
       DEBUG_PRINT("Mem:%d Getinfo [FAILED].\n", nOwIter);
     }
   }
-
-#ifdef OW_READ_TEST
-  {
-    static uint8_t testbuf[129];
-
-    if (owRead(0, 0, OW_MAX_SIZE, testbuf))
-    {
-      for (nOwIter = 0; nOwIter < OW_MAX_SIZE; nOwIter++)
-      {
-        consolePrintf("%X ", testbuf[nOwIter]);
-        testbuf[nOwIter] = nOwIter;
-      }
-      consolePrintf("\n");
-    }
-  }
-#endif
-#ifdef OW_WRITE_TEST
-  if (owWrite(0, 0, sizeof(bqtestData), bqtestData))
-  {
-    DEBUG_PRINT("Write [OK].\n");
-  }
-  else
-  {
-    DEBUG_PRINT("Write [FAIL].\n");
-  }
-#endif
 
   return owCommonTest();
 }

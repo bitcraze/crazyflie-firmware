@@ -135,7 +135,7 @@ size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
                                   const char *prefix, char *keyBuffer,
                                   size_t *itemAddress)
 {
-    static char searchBuffer[255];
+    static uint8_t searchBuffer[255];
     size_t currentAddress = address;
     uint16_t length;
     uint8_t keyLength;

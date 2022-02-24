@@ -11,6 +11,7 @@ config DECK_ACTIVE_MARKER
 config DECK_AI
     bool "Support the AI deck"
     default y
+    depends on !DEBUG_PRINT_ON_UART1
     help
         The AI-deck 1.1 extends the computational capabilities and will
         enable complex artificial intelligence-based workloads to run
@@ -33,6 +34,7 @@ config DECK_BIGQUAD
 config DECK_BIGQUAD_ENABLE
     bool "Enable Bigquad deck capabilities"
     depends on DECK_BIGQUAD
+    depends on !DEBUG_PRINT_ON_UART1
     default n
 
 config DECK_BIGQUAD_ENABLE_OSD
@@ -80,6 +82,7 @@ config DECK_FLOW
 config DECK_GTGPS
     bool "Support the GPS prototype deck (obsolete)"
     default n
+    depends on !DEBUG_PRINT_ON_UART1
     help
         GPS prototype deck, not active nor in production.
 
@@ -112,6 +115,7 @@ config DECK_LEDRING_NBR_LEDS
 config DECK_LIGHTHOUSE
     bool "Support the Lighthouse positioning deck"
     default y
+    depends on !DEBUG_PRINT_ON_UART1
     select ESTIMATOR_KALMAN_ENABLE
     help
         With Crazyflie and the Lighthouse positioning deck, high precision
@@ -120,6 +124,16 @@ config DECK_LIGHTHOUSE
         SteamVR Base Station 2.0 (aka Lighthouse V2) to achieve high
         precision positioning. The deck has 4 receivers which gives the
         full pose of the Crazyflie.
+
+config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+    bool "Use Lighthouse system as groundtruth"
+    depends on DECK_LIGHTHOUSE
+    default n
+    help
+      Use the lighthouse system as a groundtruth. This will also switch the
+      estimation method to the crossing beam position estimate and not send the
+      position to the kalman estimator and you can 
+      read out the positioning from the loggin lighthouse.x.y.z
 
 config DECK_LOCO
     bool "Support the Loco positioning deck"
@@ -153,6 +167,7 @@ endchoice
 
 config DECK_LOCO_FULL_TX_POWER
     bool "Full TX power"
+    depends on DECK_LOCO
     default n
 
 config DECK_LOCO_LONGER_RANGE

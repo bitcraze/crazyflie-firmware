@@ -35,6 +35,7 @@
 #include "param.h"
 #include "statsCnt.h"
 #include "mem.h"
+#include "autoconf.h"
 
 #include "lighthouse_position_est.h"
 #include "lighthouse_geometry.h"
@@ -265,7 +266,7 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
     if (isfinite(ext_pos.pos[0]) && isfinite(ext_pos.pos[1]) && isfinite(ext_pos.pos[2])) {
       ext_pos.stdDev = 0.01;
       ext_pos.source = MeasurementSourceLighthouse;
-  #ifndef LIGHTHOUSE_AS_GROUNDTRUTH
+  #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
       estimatorEnqueuePosition(&ext_pos);
   #endif
     }
