@@ -34,6 +34,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
+#include "autoconf.h"
 #include "cfassert.h"
 #include "config.h"
 #include "nvicconf.h"
@@ -264,7 +265,7 @@ void spi3EndTransaction()
   xSemaphoreGive(spiMutex);
 }
 
-#ifdef USDDECK_USE_ALT_PINS_AND_SPI
+#ifdef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
 void __attribute__((used)) SPI_TX_DMA_IRQHandler(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
