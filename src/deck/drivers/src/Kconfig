@@ -131,6 +131,14 @@ config DECK_LOCO
       on-board of the Crazyflie and there is no need for an external
       computer for position estimation.
 
+  config DECK_LOCO_NR_OF_ANCHORS
+  int "The number of anchors in use"
+  default 8
+  depends on DECK_LOCO
+  help
+    The number of anchors in your Loco setup. See documentation on
+    https://www.bitcraze.io/ for more details.
+
 choice
   prompt "Algorithm to use"
   depends on DECK_LOCO
