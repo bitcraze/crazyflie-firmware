@@ -3,13 +3,13 @@ mainmenu "Crazyflie Platform Configuration"
 menu "Build and debug options"
 
 config CROSS_COMPILE
-	string "Cross-compiler tool prefix"
+    string "Cross-compiler tool prefix"
     default "arm-none-eabi-"
-	help
-	  Same as running 'make CROSS_COMPILE=prefix-' but stored for
-	  default make runs in this application build directory.  You don't
-	  need to set this unless you want the configured application build
-	  directory to select the cross-compiler automatically.
+    help
+        Same as running 'make CROSS_COMPILE=prefix-' but stored for
+        default make runs in this application build directory.  You don't
+        need to set this unless you want the configured application build
+        directory to select the cross-compiler automatically.
 
 config DEBUG
     bool "Enable debug build"
@@ -28,16 +28,16 @@ config DEBUG_ENABLE_LED_MORSE
     bool "Enable blinking morse sequence with LEDs"
     default n
     help
-      If enabled makes it possible to define LED sequences in form of the DOT,
-      DASH, GAP, LETTER_GAP and WORD_GAP parts of Morse code.
+        If enabled makes it possible to define LED sequences in form of the DOT,
+        DASH, GAP, LETTER_GAP and WORD_GAP parts of Morse code.
 
 endmenu
 
 menu "Platform configuration"
 
 choice
-	prompt "Platform to build"
-	default CONFIG_PLATFORM_CF2
+    prompt "Platform to build"
+    default CONFIG_PLATFORM_CF2
 
 config PLATFORM_CF2
     bool "Build for CF2"
@@ -85,16 +85,16 @@ config SENSORS_MPU9250_LPS25H
     bool "Support for mpu9250 and lps25h sensors"
     default n
     help
-    Include support for the Bosch bmi088 inertial and bmp388
-    barometric sensors
+        Include support for the Bosch bmi088 inertial and bmp388
+        barometric sensors
 
 config SENSORS_BMI088_BMP388
     bool "Support for bmi088 and bmp388 sensors"
     default n
     select SENSORS_BMI088_I2C
     help
-    Include support for the Bosch bmi088 inertial and bmp388
-    barometric sensors
+        Include support for the Bosch bmi088 inertial and bmp388
+        barometric sensors
 
 config SENSORS_BOSCH
     bool "Include Bosch sensors"
@@ -129,23 +129,23 @@ config APP_ENABLE
     bool "Enable app entry point"
     default n
     help
-      When enabled the firmware will call a function void appMain() from a
-      task after the startup sequence has completed. This function should not
-      return.
+        When enabled the firmware will call a function void appMain() from a
+        task after the startup sequence has completed. This function should not
+        return.
 
 config APP_STACKSIZE
     int "Set the task stack size"
     depends on APP_ENABLE
     default 300
     help
-      Size is in 32bit word (4 Bytes). The default is 300 (1.2KBytes)
+        Size is in 32bit word (4 Bytes). The default is 300 (1.2KBytes)
 
 config APP_PRIORITY
     int "Set the task priority"
     depends on APP_ENABLE
     default 0
     help
-      Set the task priority between 0 and 5. Default is 0 (same as IDLE).
+        Set the task priority between 0 and 5. Default is 0 (same as IDLE).
 
 endmenu
 
@@ -155,7 +155,7 @@ config DECK_FORCE
     string "Force load specified custom deck driver"
     default "none"
     help
-      A colon seperated list of custom drivers to force load or "none".
+        A colon seperated list of custom drivers to force load or "none".
 
 source src/deck/drivers/src/Kconfig
 
