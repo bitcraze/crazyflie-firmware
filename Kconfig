@@ -40,6 +40,14 @@ config DEBUG_PRINT_ON_UART1
       deck documentation on https://www.bitcraze.io/ for more information about
       pin allocation.
 
+config DEBUG_DECK_IGNORE_OW
+    bool "Do not enumerate OW based expansion decks"
+    default n
+    help
+      Do not enumerate decks discovered by OneWire memory. This might be useful
+      if one deck memory is very wrong. One could use the Crazyflie as a
+      passive onewire memory writer.
+
 endmenu
 
 menu "Platform configuration"
