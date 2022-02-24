@@ -102,7 +102,9 @@ config DECK_LEDRING_DEFAULT_EFFECT
     default 6
     help
         Index of the default light effect that the LED ring should use
-        after boot. Use zero to turn off the LEDs when booting.
+        after boot. Use zero to turn off the LEDs when booting. For more
+        information about the LED ring effects see the parameter documentation
+        on https://www.bitcraze.io/
 
 config DECK_LEDRING_NBR_LEDS
     int "Number of LEDs to use on the LED ring"
