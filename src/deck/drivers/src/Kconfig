@@ -219,6 +219,14 @@ config DECK_USD
       (or any other firmware code) to implement usecases that requires
       the use of files.
 
+config DECK_USD_USE_ALT_PINS_AND_SPI
+  bool "Use alternate SPI and alternate CS pin"
+  default n
+  depends on DECK_USD
+  help
+    Use DECK_GPIO_RX2 for CS and SPI3 for spi, this requires
+    some hardware intervention.
+
 config DECK_ZRANGER
     bool "Support the Z-ranger deck V1 (discontinued)"
     default n

@@ -49,6 +49,8 @@
 #include "nvicconf.h"
 #include "sleepus.h"
 
+#include "autoconf.h"
+
 //DEBUG
 #ifdef I2CDRV_DEBUG_LOG_EVENTS
 #include "usec_time.h"
@@ -169,7 +171,7 @@ static const I2cDef deckBusDef =
   .gpioAF             = GPIO_AF_I2C1,
   .dmaPerif           = RCC_AHB1Periph_DMA1,
   .dmaChannel         = DMA_Channel_1,
-#ifdef USDDECK_USE_ALT_PINS_AND_SPI
+#ifdef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
   .dmaRxStream        = DMA1_Stream5,
   .dmaRxIRQ           = DMA1_Stream5_IRQn,
   .dmaRxTCFlag        = DMA_FLAG_TCIF5,
@@ -645,7 +647,7 @@ void __attribute__((used)) I2C1_EV_IRQHandler(void)
   i2cdrvEventIsrHandler(&deckBus);
 }
 
-#ifdef USDDECK_USE_ALT_PINS_AND_SPI
+#ifdef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
 #else
 void __attribute__((used)) DMA1_Stream0_IRQHandler(void)

@@ -35,6 +35,8 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
+#include "autoconf.h"
+
 //#define TIM1_CCR1_Address 0x40012C34	// physical memory address of Timer 3 CCR1 register
 
 static TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -247,7 +249,7 @@ void ws2812DmaIsr(void)
     }
 }
 
-#ifndef USDDECK_USE_ALT_PINS_AND_SPI
+#ifndef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
 {
   ws2812DmaIsr();
