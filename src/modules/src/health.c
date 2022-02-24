@@ -48,10 +48,6 @@
 
 #include "static_mem.h"
 
-#ifndef CONFIG_MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
-#  define CONFIG_MOTORS_DEFAULT_PROP_TEST_PWM_RATIO 0
-#endif
-
 #define PROPTEST_NBR_OF_VARIANCE_VALUES   100
 
 static bool startPropTest = false;

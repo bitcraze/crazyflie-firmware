@@ -47,11 +47,7 @@
 #define DEBUG_MODULE "LED"
 #include "debug.h"
 
-#ifdef CONFIG_DECK_LEDRING_NBR_LEDS
 #define NBR_LEDS  CONFIG_DECK_LEDRING_NBR_LEDS
-#else
-#define NBR_LEDS  12
-#endif
 
 #ifndef LEDRING_TIME_MEM_SIZE
 #define LEDRING_TIME_MEM_SIZE 10
@@ -139,11 +135,7 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
   dest[1] = ((uint16_t)G6 * 259 + 33) >> 6;                                    \
   dest[2] = ((uint16_t)B5 * 527 + 23) >> 6;
 
-#ifdef CONFIG_DECK_LEDRING_DEFAULT_EFFECT
-#  define LEDRING_DEFAULT_EFFECT CONFIG_DECK_LEDRING_DEFAULT_EFFECT
-#else
-#  define LEDRING_DEFAULT_EFFECT 6
-#endif
+#define LEDRING_DEFAULT_EFFECT CONFIG_DECK_LEDRING_DEFAULT_EFFECT
 
 #define LEDRING_TIME_MEM_SEC 1000 / 25
 

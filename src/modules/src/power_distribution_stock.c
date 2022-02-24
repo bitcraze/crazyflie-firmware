@@ -52,11 +52,7 @@ static struct {
   uint16_t m4;
 } motorPowerSet;
 
-#ifndef MOTORS_DEFAULT_IDLE_THRUST
-#define MOTORS_DEFAULT_IDLE_THRUST 0
-#endif
-
-static uint32_t idleThrust = MOTORS_DEFAULT_IDLE_THRUST;
+static uint32_t idleThrust = CONFIG_MOTORS_DEFAULT_IDLE_THRUST;
 
 void powerDistributionInit(void)
 {
