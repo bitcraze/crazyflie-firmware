@@ -62,6 +62,21 @@ endmenu
 
 menu "Motor configuration"
 
+choice
+    prompt "ESC protocol"
+    default MOTORS_ESC_PROTOCOL_STANDARD_PWM
+
+	config MOTORS_ESC_PROTOCOL_STANDARD_PWM
+	    bool "Standard PWM"
+
+	config MOTORS_ESC_PROTOCOL_ONESHOT125
+	    bool "OneShot125"
+
+	config MOTORS_ESC_PROTOCOL_ONESHOT42
+	    bool "OneShot42"
+
+endchoice
+
 config MOTORS_START_DISARMED
     bool "Set disarmed state after boot"
     default n
