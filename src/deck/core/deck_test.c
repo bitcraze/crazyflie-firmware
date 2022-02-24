@@ -31,6 +31,8 @@
 #include "deck_test.h"
 #include "debug.h"
 
+#define STATUS_EVAL (*status)
+
 void decktestEval(bool result, char *failString, bool *status)
 {
   if (STATUS_EVAL)
