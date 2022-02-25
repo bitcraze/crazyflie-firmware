@@ -22,4 +22,14 @@ config PM_BAT_CRITICAL_LOW_VOLTAGE
         time. The length of this period is configured in the code; see
         hal/interface/pm.h
 
+config PM_DISABLE_CHARGER_DETECTION
+    bool "Disable charger detection"
+    default n
+    help
+        Use this setting on boards without a charger circuit that may
+        incorrectly report that a charger is connected. Enabling this setting
+        will force the firmware to assume that no charger is connected and the
+        drone is not charging, even if the syslink info from the nRF51 chip
+        tells otherwise.
+
 endmenu

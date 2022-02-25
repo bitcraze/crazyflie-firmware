@@ -42,6 +42,7 @@
 #include "deck.h"
 #include "static_mem.h"
 #include "worker.h"
+#include "autoconf.h"
 
 typedef struct _PmSyslinkInfo
 {
@@ -265,6 +266,14 @@ PMStates pmUpdateState()
   bool isCharging = pmSyslinkInfo.chg;
   bool isPgood = pmSyslinkInfo.pgood;
   uint32_t batteryLowTime;
+
+#ifdef CONFIG_PM_DISABLE_CHARGER_DETECTION
+  /* This branch may be enabled when the hardware incorrectly reports that a
+   * charger is connected even when it isn't (e.g., if the board has no charger
+   * at all). */
+  isPgood = false;
+  isCharging = false;
+#endif
 
   batteryLowTime = xTaskGetTickCount() - batteryLowTimeStamp;
 
