@@ -46,3 +46,6 @@ An identifier is stored in the physical hardware of each device, which is ued to
 | bolt     | Crazyflie Bolt 1.0 (CB10)                   |
 | tag      | Roadrunner 1.0 (RR10)                       |
 |----------|---------------------------------------------|
+
+## Creating your own platform
+It is possible to create your own platform! To do so follow the guide in the [development docs](create_platform.md).

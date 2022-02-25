@@ -33,6 +33,7 @@
     - {page_id: dfu}
     - {page_id: oot}
     - {page_id: kbuild}
+    - {page_id: create_platform}
 - title: Auto-generated API Documentation
   subs:
     - {page_id: logs}
