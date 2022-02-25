@@ -48,6 +48,7 @@
 #include "debug.h"
 
 #define NBR_LEDS  CONFIG_DECK_LEDRING_NBR_LEDS
+#define DIMMER    CONFIG_DECK_LEDRING_DIMMER
 
 #ifndef LEDRING_TIME_MEM_SIZE
 #define LEDRING_TIME_MEM_SIZE 10
@@ -1032,6 +1033,15 @@ void ledring12Worker(void * data)
 
   effectsFct[current_effect](buffer, reset);
   overrideWithLightSignal(buffer);
+
+  if (DIMMER) {
+    for (uint8_t i = 0; i < NBR_LEDS; i++) {
+      for (uint8_t j = 0; j < 3; j++) {
+        buffer[i][j] = buffer[i][j] >> DIMMER;
+      }
+    }
+  }
+
   ws2812Send(buffer, NBR_LEDS);
 }
 
