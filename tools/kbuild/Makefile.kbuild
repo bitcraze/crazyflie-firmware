@@ -245,7 +245,13 @@ include scripts/Kbuild.include
 
 # Make variables (CC, etc...)
 AS		= $(CROSS_COMPILE)as
-LD		= $(CROSS_COMPILE)gcc
+
+ifndef ($(OOT_USES_CXX),)
+LD      = $(CROSS_COMPILE)g++
+else
+LD      = $(CROSS_COMPILE)gcc
+endif
+
 CC		= $(CROSS_COMPILE)gcc
 CXX		= $(CROSS_COMPILE)g++
 CPP		= $(CC) -E

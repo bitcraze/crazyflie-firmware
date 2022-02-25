@@ -12,6 +12,10 @@ OOT_CONFIG ?= $(OOT)/oot-config
 
 OOT_ARGS ?= -C $(CRAZYFLIE_BASE) OOT=$(OOT) EXTRA_CFLAGS=$(EXTRA_CFLAGS)
 
+ifneq ($(OOT_USES_CXX),)
+OOT_ARGS += OOT_USES_CXX=1
+endif
+
 .PHONY: all clean
 
 all:
