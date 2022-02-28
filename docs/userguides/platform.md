@@ -48,4 +48,4 @@ An identifier is stored in the physical hardware of each device, which is ued to
 |----------|---------------------------------------------|
 
 ## Creating your own platform
-It is possible to create your own platform! To do so follow the guide in the [development docs](create_platform.md).
+It is possible to create your own platform! To do so follow the guide in the [development docs](/docs/development/create_platform).
