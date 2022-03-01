@@ -36,12 +36,19 @@
 #include "pm.h"
 #include "led.h"
 #include "log.h"
+#include "param.h"
 #include "ledseq.h"
 #include "commander.h"
 #include "sound.h"
 #include "deck.h"
 #include "static_mem.h"
 #include "worker.h"
+#include "platform_defaults.h"
+
+// Conversion to ticks
+#define PM_BAT_CRITICAL_LOW_TIMEOUT   M2T(1000 * DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC)
+#define PM_BAT_LOW_TIMEOUT            M2T(1000 * DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC)
+#define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * DEFAULT_SYSTEM_SHUTDOWN_TIMEOUT_MIN)
 
 typedef struct _PmSyslinkInfo
 {
@@ -77,6 +84,11 @@ static deckPin_t extBatCurrDeckPin;
 static bool      isExtBatCurrDeckPinSet = false;
 static float     extBatCurrAmpPerVolt;
 
+// Limits
+static float     batteryCriticalLowVoltage = DEFAULT_BAT_CRITICAL_LOW_VOLTAGE;
+static float     batteryLowVoltage = DEFAULT_BAT_BAT_LOW_VOLTAGE;
+
+
 #ifdef PM_SYSTLINK_INLCUDE_TEMP
 // nRF51 internal temp
 static float    temp;
@@ -92,7 +104,7 @@ static uint8_t batteryLevel;
 
 static void pmSetBatteryVoltage(float voltage);
 
-const static float bat671723HS25C[10] =
+const static float LiPoTypicalChargeCurve[10] =
 {
   3.00, // 00%
   3.78, // 10%
@@ -162,15 +174,15 @@ static int32_t pmBatteryChargeFromVoltage(float voltage)
 {
   int charge = 0;
 
-  if (voltage < bat671723HS25C[0])
+  if (voltage < LiPoTypicalChargeCurve[0])
   {
     return 0;
   }
-  if (voltage > bat671723HS25C[9])
+  if (voltage > LiPoTypicalChargeCurve[9])
   {
     return 9;
   }
-  while (voltage >  bat671723HS25C[charge])
+  while (voltage >  LiPoTypicalChargeCurve[charge])
   {
     charge++;
   }
@@ -375,11 +387,11 @@ void pmTask(void *param)
     extBatteryCurrent = pmMeasureExtBatteryCurrent();
     batteryLevel = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) * 10;
 
-    if (pmGetBatteryVoltage() > PM_BAT_LOW_VOLTAGE)
+    if (pmGetBatteryVoltage() > batteryLowVoltage)
     {
       batteryLowTimeStamp = tickCount;
     }
-    if (pmGetBatteryVoltage() > PM_BAT_CRITICAL_LOW_VOLTAGE)
+    if (pmGetBatteryVoltage() > batteryCriticalLowVoltage)
     {
       batteryCriticalLowTimeStamp = tickCount;
     }
@@ -504,3 +516,16 @@ LOG_ADD_CORE(LOG_UINT8, batteryLevel, &batteryLevel)
 LOG_ADD(LOG_FLOAT, temp, &temp)
 #endif
 LOG_GROUP_STOP(pm)
+
+PARAM_GROUP_START(pm)
+/**
+ * @brief At what voltage power management will indicate low battery.
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, LowVoltage, &batteryCriticalLowVoltage)
+/**
+ * @brief At what voltage power management will indicate critical low battery.
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, CriticalLowVoltage, &batteryCriticalLowVoltage)
+
+PARAM_GROUP_STOP(pm)
+
