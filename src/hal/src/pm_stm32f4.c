@@ -45,7 +45,7 @@
 #include "worker.h"
 #include "platform_defaults.h"
 
-// Conversion to ticks
+// Battery time limit conversions to ticks
 #define PM_BAT_CRITICAL_LOW_TIMEOUT   M2T(1000 * DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC)
 #define PM_BAT_LOW_TIMEOUT            M2T(1000 * DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC)
 #define PM_SYSTEM_SHUTDOWN_TIMEOUT    M2T(1000 * 60 * DEFAULT_SYSTEM_SHUTDOWN_TIMEOUT_MIN)
@@ -86,7 +86,7 @@ static float     extBatCurrAmpPerVolt;
 
 // Limits
 static float     batteryCriticalLowVoltage = DEFAULT_BAT_CRITICAL_LOW_VOLTAGE;
-static float     batteryLowVoltage = DEFAULT_BAT_BAT_LOW_VOLTAGE;
+static float     batteryLowVoltage = DEFAULT_BAT_LOW_VOLTAGE;
 
 
 #ifdef PM_SYSTLINK_INLCUDE_TEMP
@@ -161,7 +161,7 @@ static void pmSetBatteryVoltage(float voltage)
  */
 static void pmSystemShutdown(void)
 {
-#ifdef ACTIVATE_AUTO_SHUTDOWN
+#ifdef CONFIG_PM_AUTO_SHUTDOWN
   systemRequestShutdown();
 #endif
 }
@@ -517,15 +517,18 @@ LOG_ADD(LOG_FLOAT, temp, &temp)
 #endif
 LOG_GROUP_STOP(pm)
 
+/**
+ * Power management parameters.
+ */
 PARAM_GROUP_START(pm)
 /**
  * @brief At what voltage power management will indicate low battery.
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, LowVoltage, &batteryCriticalLowVoltage)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, LowVoltage, &batteryLowVoltage)
 /**
  * @brief At what voltage power management will indicate critical low battery.
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, CriticalLowVoltage, &batteryCriticalLowVoltage)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, CriticalLowVoltage, &batteryCriticalLowVoltage)
 
 PARAM_GROUP_STOP(pm)
 

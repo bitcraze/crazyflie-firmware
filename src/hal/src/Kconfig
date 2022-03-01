@@ -1,25 +1,12 @@
 menu "Power management configuration"
 
-#
-# Kconfig does not support float, we use strings here and fix them up in the
-# Makefile.
-#
-config PM_BAT_LOW_VOLTAGE
-    string "Low voltage threshold in volts"
-    default 3.2
+config PM_AUTO_SHUTDOWN
+    bool "Enable automatic shutdown"
+    default n
     help
-        The power management subsystem will enter the "low voltage" state when
-        the battery voltage is below this threshold for a prolonged period of
-        time. The length of this period is configured in the code; see
-        hal/interface/pm.h
-
-config PM_BAT_CRITICAL_LOW_VOLTAGE
-    string "Critical low voltage threshold in volts"
-    default 3.0
-    help
-        The power management subsystem will shut the system down when the
-        battery voltage is below this threshold for a prolonged period of
-        time. The length of this period is configured in the code; see
-        hal/interface/pm.h
+        The power management subsystem can automatically shutdown the system.
+        The shutdown time in minutes is defined in platform_defaults_* for
+        the specific platform and is the time since the last radio communication
+        occured.
 
 endmenu
