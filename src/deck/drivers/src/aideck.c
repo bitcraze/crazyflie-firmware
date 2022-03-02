@@ -82,8 +82,10 @@ typedef struct
 {
   uint8_t start;  // Should be 0xFF
   uint8_t length; // Length data from cpxDst
-  uint8_t cpxDst : 4;
-  uint8_t cpxSrc : 4;
+  uint8_t cpxDst : 3;
+  uint8_t cpxSrc : 3;
+  bool lastPacket : 1;
+  bool reserved : 1;  
   uint8_t cpxFunc;
   uint8_t data[AIDECK_UART_TRANSPORT_MTU - CPX_HEADER_SIZE];
 } __attribute__((packed)) uart_transport_with_routing_packet_t;
