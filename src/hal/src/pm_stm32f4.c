@@ -524,11 +524,11 @@ PARAM_GROUP_START(pm)
 /**
  * @brief At what voltage power management will indicate low battery.
  */
-PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, LowVoltage, &batteryLowVoltage)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, lowVoltage, &batteryLowVoltage)
 /**
  * @brief At what voltage power management will indicate critical low battery.
  */
-PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, CriticalLowVoltage, &batteryCriticalLowVoltage)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, criticalLowVoltage, &batteryCriticalLowVoltage)
 
 PARAM_GROUP_STOP(pm)
 
