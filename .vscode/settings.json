@@ -3,13 +3,5 @@
         "**/generated": true,
         "**/node_modules": true,
         "**/bower_components": true
-    },
-    "files.associations": {
-        "array": "c",
-        "deque": "c",
-        "vector": "c",
-        "string_view": "c",
-        "crtp_localization_service.h": "c",
-        "queuemonitor.h": "c"
     }
 }
