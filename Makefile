@@ -92,10 +92,6 @@ ifneq ($(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT),)
 unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT))
 ARCH_CFLAGS += -DDECK_LOCO_2D_POSITION_HEIGHT=$(unquoted)
 endif
-unquoted = $(patsubst "%",%,$(CONFIG_PM_BAT_LOW_VOLTAGE))
-ARCH_CFLAGS += -DPM_BAT_LOW_VOLTAGE=$(unquoted)f
-unquoted = $(patsubst "%",%,$(CONFIG_PM_BAT_CRITICAL_LOW_VOLTAGE))
-ARCH_CFLAGS += -DPM_BAT_CRITICAL_LOW_VOLTAGE=$(unquoted)f
 
 ifeq ($(CONFIG_PLATFORM_TAG),y)
 PLATFORM = tag

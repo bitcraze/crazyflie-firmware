@@ -211,12 +211,6 @@
 #define BAT_LOADING_SAG_THRESHOLD  0.95f
 
 /**
- * \def ACTIVATE_AUTO_SHUTDOWN
- * Will automatically shot of system if no radio activity
- */
-//#define ACTIVATE_AUTO_SHUTDOWN
-
-/**
  * \def ACTIVATE_STARTUP_SOUND
  * Playes a startup melody using the motors and PWM modulation
  */

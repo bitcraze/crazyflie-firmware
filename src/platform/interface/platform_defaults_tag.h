@@ -33,4 +33,11 @@
 
 // Defines for default values in the tag platform
 
-// #define EXAMPLE_DEFAULT_VALUE 0.8
+// Default values for battery limits
+#define DEFAULT_BAT_LOW_VOLTAGE                   3.2f
+#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          3.0f
+#define DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC   5
+
+// Default value for system shutdown in minutes after radio silence.
+// Requires kbuild config ENABLE_AUTO_SHUTDOWN to be activated.
+#define DEFAULT_SYSTEM_SHUTDOWN_TIMEOUT_MIN       5
