@@ -229,19 +229,19 @@ static void Gap8Task(void *param)
   }
 }
 
-static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t txp) {
+static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp) {
   ASSERT((packet->route.destination >> 4) == 0);
   ASSERT((packet->route.source >> 4) == 0);
   ASSERT((packet->route.function >> 8) == 0);
   ASSERT(packet->dataLength <= AIDECK_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
 
-  txp.payloadLength = packet->dataLength + CPX_ROUTING_PACKED_SIZE;
-  txp.routablePayload.route.destination = packet->route.destination;
-  txp.routablePayload.route.source = packet->route.source;
-  txp.routablePayload.route.lastPacket = packet->route.lastPacket;
-  txp.routablePayload.route.function = packet->route.function;
-  memcpy(txp.routablePayload.data, &packet->data, packet->dataLength);
-  txp.payload[txp.payloadLength] = calcCrc(&txp);
+  txp->payloadLength = packet->dataLength + CPX_ROUTING_PACKED_SIZE;
+  txp->routablePayload.route.destination = packet->route.destination;
+  txp->routablePayload.route.source = packet->route.source;
+  txp->routablePayload.route.lastPacket = packet->route.lastPacket;
+  txp->routablePayload.route.function = packet->route.function;
+  memcpy(txp->routablePayload.data, &packet->data, packet->dataLength);
+  txp->payload[txp->payloadLength] = calcCrc(txp);
 }
 
 void cpxReceivePacketBlocking(CPXPacket_t *packet)
@@ -260,7 +260,7 @@ void cpxReceivePacketBlocking(CPXPacket_t *packet)
 void cpxSendPacketBlocking(const CPXPacket_t *packet)
 {
   // TODO krri Not reentrant safe!
-  assemblePacket(packet, cpxTxp);
+  assemblePacket(packet, &cpxTxp);
   xQueueSend(espTxQueue, &cpxTxp, portMAX_DELAY);
   xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
 }
@@ -268,7 +268,7 @@ void cpxSendPacketBlocking(const CPXPacket_t *packet)
 bool cpxSendPacket(const CPXPacket_t *packet, uint32_t timeoutInMS)
 {
   // TODO krri Not reentrant safe!
-  assemblePacket(packet, cpxTxp);
+  assemblePacket(packet, &cpxTxp);
 
   bool packetWasSent = false;
   if (xQueueSend(espTxQueue, &cpxTxp, M2T(timeoutInMS)) == pdTRUE)
