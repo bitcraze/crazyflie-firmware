@@ -19,6 +19,39 @@ config DECK_AI
         navigation capabilities. The ESP32 adds WiFi connectivity with
         the possibility to stream images as well as handling control.
 
+choice
+  prompt "WiFi setup at startup"
+  depends on DECK_AI
+  default DECK_AI_WIFI_NO_SETUP
+  help
+    Select if, and how, the WiFi should be set up with on the AI-deck
+
+  config DECK_AI_WIFI_NO_SETUP
+      bool "No initial WiFi setup"
+
+  config DECK_AI_WIFI_SETUP_AP
+      bool "Act as Access Point"
+
+  config DECK_AI_WIFI_SETUP_STA
+      bool "Connect to a WiFi network"
+endchoice
+
+menu "Credentials for connecting to another access-point"
+    depends on DECK_AI  
+    depends on DECK_AI_WIFI_SETUP_STA
+    config DECK_AI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the AI-deck to connect to at startup
+
+    config DECK_AI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password
+endmenu   
+
 config DECK_BIGQUAD
     bool "Support the BigQuad deck"
     default y
