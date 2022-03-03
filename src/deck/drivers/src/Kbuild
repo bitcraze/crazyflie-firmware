@@ -1,5 +1,6 @@
 obj-$(CONFIG_DECK_ACTIVE_MARKER) += activeMarkerDeck.o
 obj-$(CONFIG_DECK_AI)            += aideck.o
+obj-$(CONFIG_DECK_AI)            += aideck-router.o
 obj-$(CONFIG_DECK_BIGQUAD)       += bigquad.o
 obj-$(CONFIG_DECK_BUZZ)          += buzzdeck.o
 obj-$(CONFIG_DECK_CPPM)          += cppmdeck.o

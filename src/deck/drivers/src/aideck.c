@@ -54,6 +54,7 @@
 #include "system.h"
 
 #include "aideck.h"
+#include "aideck-router.h"
 
 static bool isInit = false;
 static uint8_t byte;
@@ -317,6 +318,8 @@ static void aideckInit(DeckInfo *info)
   // Release reset for GAP8/ESP32
   digitalWrite(DECK_GPIO_IO4, HIGH);
   pinMode(DECK_GPIO_IO4, INPUT_PULLUP);
+
+  aideckRouterInit();
 
   isInit = true;
 }
