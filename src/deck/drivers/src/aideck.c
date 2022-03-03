@@ -99,16 +99,15 @@ typedef struct {
 
 // Used when sending/receiving data on the UART
 static uart_transport_packet_t espTxp;
+static CPXPacket_t cpxTxp;
 static uart_transport_packet_t espRxp;
-
-// Used when adding/popping to queue from applications
-static uart_transport_packet_t cpxTxp;
-static uart_transport_packet_t cpxRxp;
 
 static EventGroupHandle_t evGroup;
 #define ESP_CTS_EVENT (1 << 0)
 #define ESP_CTR_EVENT (1 << 1)
 #define ESP_TXQ_EVENT (1 << 2)
+
+static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp);
 
 static uint8_t calcCrc(const uart_transport_packet_t* packet) {
   const uint8_t* start = (const uint8_t*)&packet;
@@ -198,7 +197,8 @@ static void ESP_TX(void *param)
     if (uxQueueMessagesWaiting(espTxQueue) > 0)
     {
       // Dequeue and wait for either CTS or CTR
-      xQueueReceive(espTxQueue, &espTxp, 0);
+      xQueueReceive(espTxQueue, &cpxTxp, 0);
+      assemblePacket(&cpxTxp, &espTxp);
       do
       {
         evBits = xEventGroupWaitBits(evGroup,
@@ -247,6 +247,8 @@ static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * 
 
 void cpxReceivePacketBlocking(CPXPacket_t *packet)
 {
+  static uart_transport_packet_t cpxRxp;
+
   xQueueReceive(espRxQueue, &cpxRxp, portMAX_DELAY);
 
   packet->dataLength = (uint32_t) cpxRxp.payloadLength - CPX_ROUTING_PACKED_SIZE;
@@ -260,19 +262,14 @@ void cpxReceivePacketBlocking(CPXPacket_t *packet)
 
 void cpxSendPacketBlocking(const CPXPacket_t *packet)
 {
-  // TODO krri Not reentrant safe!
-  assemblePacket(packet, &cpxTxp);
-  xQueueSend(espTxQueue, &cpxTxp, portMAX_DELAY);
+  xQueueSend(espTxQueue, packet, portMAX_DELAY);
   xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
 }
 
 bool cpxSendPacket(const CPXPacket_t *packet, uint32_t timeoutInMS)
 {
-  // TODO krri Not reentrant safe!
-  assemblePacket(packet, &cpxTxp);
-
   bool packetWasSent = false;
-  if (xQueueSend(espTxQueue, &cpxTxp, M2T(timeoutInMS)) == pdTRUE)
+  if (xQueueSend(espTxQueue, packet, M2T(timeoutInMS)) == pdTRUE)
   {
     xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
     packetWasSent = true;
@@ -297,7 +294,7 @@ static void aideckInit(DeckInfo *info)
   xTaskCreate(Gap8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
               AI_DECK_TASK_PRI, NULL);
 
-  espTxQueue = xQueueCreate(ESP_TX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
+  espTxQueue = xQueueCreate(ESP_TX_QUEUE_LENGTH, sizeof(CPXPacket_t));
   espRxQueue = xQueueCreate(ESP_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
 
   evGroup = xEventGroupCreate();
