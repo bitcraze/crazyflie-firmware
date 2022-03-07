@@ -38,6 +38,8 @@ docs/api/log_param_doc.json
 docs/api
 
 build/
+# To avoid that /tools/build is ignored
+!/tools/*
 
 **/*.o
 **/*.cmd

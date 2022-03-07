@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -e
+
+# Use this script to make an app, mainly intended for the toolbelt
+#
+# The scipt taks one requierd argument, which is the path to the app to build (must be in the source tree)
+# Optional aguments can be added that will be passed on to make.
+#
+# "tb make_app <path/to/app>" behaves as calling "make" in the directory where the app is located, meaning that any
+# arguments for make can just be appended.
+#
+# Eamples:
+# tb make_app examples/app_hello_world -j8
+# tb make_app examples/app_hello_world clean
+
+scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+app_path="$1"
+make_args="${@: 2}"
+
+cd ${app_path}
+make ${make_args}
+cd -
