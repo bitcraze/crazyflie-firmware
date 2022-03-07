@@ -146,6 +146,19 @@ config DECK_LEDRING_NBR_LEDS
         Number of LEDs to use on the LED ring. Values larger than 12
         require a customized LED ring deck.
 
+config DECK_LEDRING_DIMMER
+    int "Limit LED ring brightness"
+    depends on DECK_LEDRING
+    range 0 8
+    default 0
+    help
+        Use this setting to reduce the maximum brightness of the LED ring
+        when the LEDs and the motors would draw too much power if the LEDs
+        are operated at peak brightness. Zero means not to limit the
+        brightness of the LED ring. 1 means to shift the RGB values to the
+        right by 1 bit (i.e. dividing each RGB component by 2), 2 means to
+        shift by 2 bits (dividing by 4) and so on.
+
 config DECK_LIGHTHOUSE
     bool "Support the Lighthouse positioning deck"
     default y
