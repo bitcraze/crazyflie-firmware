@@ -91,7 +91,7 @@ jobs:
         - app_api.conf
     env:
       CONF: ${{ matrix.features }}
-    
+
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v2
@@ -124,7 +124,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE} && make && cd -"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/make_app ${EXAMPLE}"
 
   kbuild-targets:
     runs-on: ubuntu-latest
