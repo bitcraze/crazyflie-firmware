@@ -110,7 +110,7 @@ static EventGroupHandle_t evGroup;
 static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp);
 
 static uint8_t calcCrc(const uart_transport_packet_t* packet) {
-  const uint8_t* start = (const uint8_t*)&packet;
+  const uint8_t* start = (const uint8_t*) packet;
   const uint8_t* end = &packet->payload[packet->payloadLength];
 
   uint8_t crc = 0;
@@ -198,6 +198,7 @@ static void ESP_TX(void *param)
     {
       // Dequeue and wait for either CTS or CTR
       xQueueReceive(espTxQueue, &cpxTxp, 0);
+      espTxp.start = 0xFF;
       assemblePacket(&cpxTxp, &espTxp);
       do
       {
@@ -211,7 +212,6 @@ static void ESP_TX(void *param)
           uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
         }
       } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
-      espTxp.start = 0xFF;
       uart2SendData((uint32_t) espTxp.payloadLength + UART_META_LENGTH, (uint8_t *)&espTxp);
     }
   }
@@ -257,7 +257,6 @@ void cpxReceivePacketBlocking(CPXPacket_t *packet)
   packet->route.function = cpxRxp.routablePayload.route.function;
   packet->route.lastPacket = cpxRxp.routablePayload.route.lastPacket;
   memcpy(&packet->data, cpxRxp.routablePayload.data, packet->dataLength);
-  ASSERT(cpxRxp.payload[cpxRxp.payloadLength] == calcCrc(&cpxRxp));
 }
 
 void cpxSendPacketBlocking(const CPXPacket_t *packet)
