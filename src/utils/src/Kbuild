@@ -6,6 +6,10 @@ obj-y += crc32.o
 obj-y += debug.o
 obj-y += eprintf.o
 
+### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
+obj-y += abort.o
+obj-y += malloc.o
+
 ### Add rules for handling generated version.c
 
 obj-y += version.o

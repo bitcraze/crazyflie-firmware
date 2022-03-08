@@ -20,4 +20,9 @@ CRAZYFLIE_BASE := ../..
 #
 OOT_CONFIG := $(PWD)/app-config
 
+#
+# Indicate that the out-of-tree build should use a C++ linker
+#
+OOT_USES_CXX := 1
+
 include $(CRAZYFLIE_BASE)/tools/make/oot.mk
