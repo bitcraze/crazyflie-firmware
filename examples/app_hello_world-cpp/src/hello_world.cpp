@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <cassert>
+#include <string>
+
 extern "C"
 {
   #include "app.h"
@@ -43,9 +46,22 @@ extern "C"
 
 #define DEBUG_MODULE "HELLOWORLD"
 
+class MyClass {
+  public:
+    int myNum;
+    std::string myString;
+};
+
 void appMain()
 {
   DEBUG_PRINT("Waiting for activation ...\n");
+
+  MyClass *cl = new MyClass();
+  DEBUG_PRINT("MyClass has a num: %d\n", cl->myNum);
+
+  /* make sure that the assertion is not simple enough to be optimized away
+   * by the compiler */
+  assert(cl->myNum + cl->myString.size() == 0);
 
   while(1) {
     vTaskDelay(M2T(2000));
