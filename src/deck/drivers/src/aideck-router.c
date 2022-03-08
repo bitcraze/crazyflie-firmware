@@ -98,7 +98,6 @@ static void setupWiFi() {
 
   cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_WIFI_CTRL, &cpxTx.route);
 
-#ifdef CONFIG_DECK_AI_WIFI_SETUP_STA
   cpxTx.data[0] = WIFI_SET_SSID_CMD; // Set SSID
   memcpy(&cpxTx.data[1], CONFIG_DECK_AI_SSID, sizeof(CONFIG_DECK_AI_SSID));
   cpxTx.dataLength = sizeof(CONFIG_DECK_AI_SSID);
@@ -108,7 +107,6 @@ static void setupWiFi() {
   memcpy(&cpxTx.data[1], CONFIG_DECK_AI_PASSWORD, sizeof(CONFIG_DECK_AI_PASSWORD));
   cpxTx.dataLength = sizeof(CONFIG_DECK_AI_PASSWORD);
   cpxSendPacketBlocking(&cpxTx);
-#endif
 
   cpxTx.data[0] = WIFI_CONNECT_CMD; // Connect wifi
 #ifdef CONFIG_DECK_AI_WIFI_SETUP_STA

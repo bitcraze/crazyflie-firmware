@@ -36,9 +36,9 @@ choice
       bool "Connect to a WiFi network"
 endchoice
 
-menu "Credentials for connecting to another access-point"
+menu "Credentials for access-point"
     depends on DECK_AI  
-    depends on DECK_AI_WIFI_SETUP_STA
+    depends on !DECK_AI_WIFI_NO_SETUP
     config DECK_AI_SSID
         string "WiFi SSID"
         default "myssid"
