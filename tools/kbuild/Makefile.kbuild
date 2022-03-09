@@ -256,6 +256,10 @@ OBJCOPY	= $(CROSS_COMPILE)objcopy
 OBJDUMP	= $(CROSS_COMPILE)objdump
 SIZE    = $(CROSS_COMPILE)size
 
+ifneq ($(OOT_USES_CXX),)
+LD		= $(CROSS_COMPILE)g++
+endif
+
 AWK		= awk
 PERL	= perl
 PYTHON	= python3
@@ -556,6 +560,10 @@ firmware-dirs	:= $(objs-y)
 firmware-objs	:= $(patsubst %,%/built-in.o, $(objs-y))
 firmware-libs	:= $(patsubst %,%/lib.a, $(libs-y))
 firmware-all	:= $(firmware-objs) $(firmware-libs)
+
+ifneq ($(OOT_USES_CXX),)
+	firmware-libs += -lstdc++
+endif
 
 quiet_cmd_firmware = LD      $@
       cmd_firmware = $(LD) $(image_LDFLAGS) $(LDFLAGS) $(firmware-objs) $(firmware-libs) -lm -o $@.elf
