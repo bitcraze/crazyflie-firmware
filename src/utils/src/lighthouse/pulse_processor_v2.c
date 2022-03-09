@@ -151,14 +151,19 @@ TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], 
 TESTABLE_STATIC void augmentFramesInWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace) {
     const int slotsUsed = pulseWorkspace->slotsUsed;
 
-    for (int i = 0; i < slotsUsed - 1; i++) {
-        pulseProcessorFrame_t* previousFrame = &pulseWorkspace->slots[i];
-        const pulseProcessorFrame_t* frame = &pulseWorkspace->slots[i + 1];
-        if (! previousFrame->channelFound) {
-            if (frame->channelFound) {
-                previousFrame->channel = frame->channel;
-                previousFrame->channelFound = frame->channelFound;
-                i++;
+    bool channelIsKnown = false;
+    uint8_t channel = 0;
+
+    for (int i = slotsUsed - 1; i >= 0; i--) {
+        pulseProcessorFrame_t* frame = &pulseWorkspace->slots[i];
+
+        if (frame->channelFound) {
+            channel = frame->channel;
+            channelIsKnown = true;
+        } else {
+            if (channelIsKnown) {
+                frame->channel = channel;
+                frame->channelFound = true;
             }
         }
     }
@@ -212,7 +217,7 @@ TESTABLE_STATIC void clearWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorks
     pulseWorkspace->slotsUsed = 0;
 }
 
-static bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace, pulseProcessorV2BlockWorkspace_t* blockWorkspace) {
+TESTABLE_STATIC bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace, pulseProcessorV2BlockWorkspace_t* blockWorkspace) {
     int nrOfBlocks = 0;
 
     // Sensor timestamps may arrive in the wrong order, we need an abs() when checking the diff
