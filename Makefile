@@ -8,16 +8,17 @@ CPU                        = stm32f4
 LOAD_ADDRESS_stm32f4       = 0x8000000
 LOAD_ADDRESS_CLOAD_stm32f4 = 0x8004000
 
+PYTHON            ?= python3
+
 # Cload is handled in a special way on windows in WSL to use the Windows python interpreter
 ifdef WSL_DISTRO_NAME
-PYTHON      := python.exe
+CLOAD_SCRIPT      ?= python.exe -m cfloader
 else
-PYTHON      ?= python3
+CLOAD_SCRIPT      ?= $(PYTHON) -m cfloader
 endif
 
 DFU_UTIL          ?= dfu-util
 
-CLOAD_SCRIPT      ?= $(PYTHON) -m cfloader
 CLOAD_CMDS        ?=
 CLOAD_ARGS        ?=
 
