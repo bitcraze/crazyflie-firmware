@@ -9,7 +9,7 @@ WARNING: This is experimental functionality and may change over time, it is poss
 
 2 base stations cover around 4x4 meters of flying space and if it was possible to add more base stations larger flying
 spaces could be used. The lighthouse positioning system currently supports only 2 base stations, but most of the code
-is (more or less) in reality working with up to 16. This guid will outline the necessary steps to set up a larger
+is (more or less) in reality working with up to 16. This guide will outline the necessary steps to set up a larger
 system. Please first consult the ["Getting started with the Lighthouse system"](https://www.bitcraze.io/documentation/tutorials/getting-started-with-lighthouse/)
 guide on our web to get a good understanding of basic use.
 
@@ -34,8 +34,10 @@ channel is changed.
 and it can not be used for larger systems. Instead you should run the `examples/lighthouse/multi_bs_geometry_estimation.py`
 script in the [`crazyflie-lib-python` repository](https://github.com/bitcraze/crazyflie-lib-python). The script
 will display instructions and the end result will be an estimated system geometry that is written to the Crazyflie.
-6. The system is not ready to use! You can connect to the Crazyflie and open the Lighthouse tab to see a 3D rendering
+6. The system is now ready to use! You can connect to the Crazyflie and open the Lighthouse tab to see a 3D rendering
 of base stations and the Crazyflie position. Note: The client only shows the full status of the 2 first base stations.
+7. Give us feedback! We still need more testing, especially for the initial position estimation. So please
+let us know if you've tested it and how it worked.
 
 Enjoy!
 
