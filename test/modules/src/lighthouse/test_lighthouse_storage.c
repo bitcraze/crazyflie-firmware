@@ -88,7 +88,7 @@ void testInitializationOfGeoIsDoneFromStorage() {
   int geoSize = sizeof(baseStationGeometry_t);
   const void* ignored = 0;
 
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, geoSize, geoSize);
     storageFetch_IgnoreArg_key();
     storageFetch_IgnoreArg_buffer();
@@ -120,7 +120,7 @@ void testInitializationOfCalibIsDoneFromStorage() {
   int calibSize = sizeof(lighthouseCalibration_t);
   const void* ignored = 0;
 
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, calibSize, calibSize);
     storageFetch_IgnoreArg_key();
     storageFetch_IgnoreArg_buffer();

@@ -49,6 +49,8 @@
 
 #include "num.h"
 
+#include "autoconf.h"
+
 #define NBR_OF_RANGES_IN_PACKET   5
 #define NBR_OF_SWEEPS_IN_PACKET   2
 #define NBR_OF_SENSOR_DIFFS_IN_PACKET   3
@@ -247,7 +249,7 @@ static void lhPersistDataWorker(void* arg) {
 
   bool result = true;
 
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+  for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     uint16_t mask = 1 << baseStation;
     bool storeGeo = (args->geoDataBsField & mask) != 0;
     bool storeCalibration = (args->calibrationDataBsField & mask) != 0;

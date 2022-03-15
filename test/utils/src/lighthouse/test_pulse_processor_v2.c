@@ -440,7 +440,7 @@ void testThatSlowBitIsNotProcessedIfChannelIsMissing() {
 
 void testThatSlowBitIsNotProcessedIfChannelIsOutOfBounds() {
     // Fixture
-    slowbitFrame.channel = PULSE_PROCESSOR_N_BASE_STATIONS + 1;
+    slowbitFrame.channel = CONFIG_DECK_LIGHTHOUSE_MAX_N_BS + 1;
 
     setUpOotxDecoderProcessBitCallCounter();
 
@@ -680,7 +680,7 @@ static void setUpSlowbitFrame(){
 }
 
 static void clearSlowbitState() {
-    for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
         state.v2.ootxTimestamps[i] = 0;
         state.bsCalibration[i].valid = false;
     }
