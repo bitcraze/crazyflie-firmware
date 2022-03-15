@@ -301,6 +301,31 @@ static const MotorPerifDef BOLT_M4_BL =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
+// Bolt 1.1 M4, PB10, TIM2_CH3, Brushless config
+static const MotorPerifDef BOLT11_M4_BL =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_10,
+    .gpioPinSource = GPIO_PinSource10,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM2,
+    .gpioPowerswitchPerif = RCC_AHB1Periph_GPIOC,
+    .gpioPowerswitchPort  = GPIOC,
+    .gpioPowerswitchPin   = GPIO_Pin_15,
+    .timPerif      = RCC_APB1Periph_TIM2,
+    .tim           = TIM2,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM2_STOP,
+    .timPeriod     = MOTORS_BL_PWM_PERIOD,
+    .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare3,
+    .getCompare    = TIM_GetCapture3,
+    .ocInit        = TIM_OC3Init,
+    .preloadConfig = TIM_OC3PreloadConfig,
+};
+
 // Deck TX2, PA2, TIM2_CH3
 static const MotorPerifDef DECK_TX2_TIM2 =
 {
@@ -579,5 +604,16 @@ const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS] =
   &BOLT_M2_BL,
   &BOLT_M3_BL,
   &BOLT_M4_BL
+};
+
+/**
+ * Brushless motors mapped to the Bolt 1.1 PWM outputs.
+ */
+const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS] =
+{
+  &BOLT_M1_BL,
+  &BOLT_M2_BL,
+  &BOLT_M3_BL,
+  &BOLT11_M4_BL
 };
 
