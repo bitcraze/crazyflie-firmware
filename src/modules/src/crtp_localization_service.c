@@ -38,7 +38,10 @@
 #include "stabilizer.h"
 #include "configblock.h"
 #include "worker.h"
+
+#ifdef CONFIG_DECK_LIGHTHOUSE
 #include "lighthouse_storage.h"
+#endif
 
 #include "locodeck.h"
 
@@ -112,7 +115,9 @@ static CRTPPacket pkRange;
 static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 
+#ifdef CONFIG_DECK_LIGHTHOUSE
 static CRTPPacket LhAngle;
+#endif
 static bool enableLighthouseAngleStream = false;
 static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
@@ -245,6 +250,7 @@ typedef union {
 } __attribute__((packed)) LhPersistArgs_t;
 
 static void lhPersistDataWorker(void* arg) {
+#ifdef CONFIG_DECK_LIGHTHOUSE
   LhPersistArgs_t* args = (LhPersistArgs_t*) &arg;
 
   bool result = true;
@@ -258,7 +264,9 @@ static void lhPersistDataWorker(void* arg) {
       break;
     }
   }
-
+#else
+  bool result = false;
+#endif
   CRTPPacket response = {
     .port = CRTP_PORT_LOCALIZATION,
     .channel = GENERIC_TYPE,
@@ -352,6 +360,7 @@ void locSrvSendRangeFloat(uint8_t id, float range)
   }
 }
 
+#ifdef CONFIG_DECK_LIGHTHOUSE
 void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
 {
   anglePacket *ap = (anglePacket *)LhAngle.data;
@@ -378,6 +387,7 @@ void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
     crtpSendPacket(&LhAngle);
   }
 }
+#endif
 
 // This logging group is deprecated
 LOG_GROUP_START(ext_pos)
