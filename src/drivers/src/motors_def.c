@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * motors.c - Motor driver
+ * motors_def.c - Mapping and configuration of motor outputs
  *
- * This code mainly interfacing the PWM peripheral lib of ST.
  */
-// Connector M1, PA1, TIM2_CH2
-static const MotorPerifDef CONN_M1 =
+// CF2.X connector M1, PA1, TIM2_CH2
+static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHED =
 {
     .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -47,8 +46,8 @@ static const MotorPerifDef CONN_M1 =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
-// Connector M2, PB11, TIM2_CH4
-static const MotorPerifDef CONN_M2 =
+// CF2.X connector M2, PB11, TIM2_CH4
+static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHED =
 {
     .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -69,8 +68,8 @@ static const MotorPerifDef CONN_M2 =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// Connector M3, PA15, TIM2_CH1
-static const MotorPerifDef CONN_M3 =
+// CF2.X connector M3, PA15, TIM2_CH1
+static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHED =
 {
     .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -91,8 +90,8 @@ static const MotorPerifDef CONN_M3 =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// Connector M4, PB9, TIM4_CH4
-static const MotorPerifDef CONN_M4 =
+// CF2.X connector M4, PB9, TIM4_CH4
+static const MotorPerifDef MOTORS_PB9_TIM4_CH4_BRUSHED =
 {
     .drvType       = BRUSHED,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -113,8 +112,8 @@ static const MotorPerifDef CONN_M4 =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// Connector M1, PA1, TIM2_CH2, Brushless config, inversed
-static const MotorPerifDef CONN_M1_BL_INV =
+// CF2.X connector M1, PA1, TIM2_CH2, Brushless config, inversed
+static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -135,8 +134,8 @@ static const MotorPerifDef CONN_M1_BL_INV =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
-// Connector M2, PB11, TIM2_CH4, Brushless config, inversed
-static const MotorPerifDef CONN_M2_BL_INV =
+// CF2.X connector M2, PB11, TIM2_CH4, Brushless config, inversed
+static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -157,8 +156,8 @@ static const MotorPerifDef CONN_M2_BL_INV =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// Connector M3, PA15, TIM2_CH1, Brushless config, inversed
-static const MotorPerifDef CONN_M3_BL_INV =
+// CF2.X connector M3, PA15, TIM2_CH1, Brushless config, inversed
+static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -179,8 +178,8 @@ static const MotorPerifDef CONN_M3_BL_INV =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// Connector M4, PB9, TIM4_CH4, Brushless config, inversed
-static const MotorPerifDef CONN_M4_BL_INV =
+// CF2.X connector M4, PB9, TIM4_CH4, Brushless config, inversed
+static const MotorPerifDef MOTORS_PB9_TIM4_CH4_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -202,7 +201,7 @@ static const MotorPerifDef CONN_M4_BL_INV =
 };
 
 // Bolt M1, PA1, TIM2_CH2, Brushless config
-static const MotorPerifDef BOLT_M1_BL =
+static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -227,7 +226,7 @@ static const MotorPerifDef BOLT_M1_BL =
 };
 
 // Bolt M2, PB11, TIM2_CH4, Brushless config
-static const MotorPerifDef BOLT_M2_BL =
+static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -252,7 +251,7 @@ static const MotorPerifDef BOLT_M2_BL =
 };
 
 // Bolt M3, PA15, TIM2_CH1, Brushless config
-static const MotorPerifDef BOLT_M3_BL =
+static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -277,7 +276,7 @@ static const MotorPerifDef BOLT_M3_BL =
 };
 
 // Bolt M4, PB9, TIM4_CH4, Brushless config
-static const MotorPerifDef BOLT_M4_BL =
+static const MotorPerifDef MOTORS_PB9_TIM4_CH4_BRUSHLESS_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -302,7 +301,7 @@ static const MotorPerifDef BOLT_M4_BL =
 };
 
 // Bolt 1.1 M4, PB10, TIM2_CH3, Brushless config
-static const MotorPerifDef BOLT11_M4_BL =
+static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -327,7 +326,7 @@ static const MotorPerifDef BOLT11_M4_BL =
 };
 
 // Deck TX2, PA2, TIM2_CH3
-static const MotorPerifDef DECK_TX2_TIM2 =
+static const MotorPerifDef MOTORS_PA2_TIM2_CH3_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -349,7 +348,7 @@ static const MotorPerifDef DECK_TX2_TIM2 =
 };
 
 // Deck TX2, PA2, TIM5_CH3
-static const MotorPerifDef DECK_TX2_TIM5 =
+static const MotorPerifDef MOTORS_PA2_TIM5_CH3_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -371,7 +370,7 @@ static const MotorPerifDef DECK_TX2_TIM5 =
 };
 
 // Deck RX2, PA3, TIM2_CH4
-static const MotorPerifDef DECK_RX2_TIM2 =
+static const MotorPerifDef MOTORS_PA3_TIM2_CH4_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -393,7 +392,7 @@ static const MotorPerifDef DECK_RX2_TIM2 =
 };
 
 // Deck RX2, PA3, TIM5_CH4
-static const MotorPerifDef DECK_RX2_TIM5 =
+static const MotorPerifDef MOTORS_PA3_TIM5_CH4_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -415,7 +414,7 @@ static const MotorPerifDef DECK_RX2_TIM5 =
 };
 
 // Deck IO1, PB8, TIM4_CH3
-static const MotorPerifDef DECK_IO1_TIM4 =
+static const MotorPerifDef MOTORS_PB8_TIM4_CH3_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -437,7 +436,7 @@ static const MotorPerifDef DECK_IO1_TIM4 =
 };
 
 // Deck IO2, PB5, TIM3_CH2
-static const MotorPerifDef DECK_IO2 =
+static const MotorPerifDef MOTORS_PB5_TIM3_CH2_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -459,7 +458,7 @@ static const MotorPerifDef DECK_IO2 =
 };
 
 // Deck IO3, PB4, TIM3_CH1
-static const MotorPerifDef DECK_IO3 =
+static const MotorPerifDef MOTORS_PB4_TIM2_CH1_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -481,7 +480,7 @@ static const MotorPerifDef DECK_IO3 =
 };
 
 // Deck SCK, PA5, TIM2_CH1
-static const MotorPerifDef DECK_SCK =
+static const MotorPerifDef MOTORS_PA5_TIM2_CH1_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -503,7 +502,7 @@ static const MotorPerifDef DECK_SCK =
 };
 
 // Deck MISO, PA6, TIM3_CH1
-static const MotorPerifDef DECK_MISO =
+static const MotorPerifDef MOTORS_PA6_TIM3_CH1_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -525,7 +524,7 @@ static const MotorPerifDef DECK_MISO =
 };
 
 // Deck MOSI, PA7, TIM14_CH1
-static const MotorPerifDef DECK_MOSI =
+static const MotorPerifDef MOTORS_PA7_TIM14_CH1_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOA,
@@ -548,14 +547,14 @@ static const MotorPerifDef DECK_MOSI =
 
 /**
  * Mapping for Tags that don't have motors.
- * Actually same mapping as for CF2 but the pins are not connected.
+ * Actually same mapping as for CF2 but the pins are not physically connected.
  */
 const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS] =
 {
-  &CONN_M1,
-  &CONN_M2,
-  &CONN_M3,
-  &CONN_M4
+  &MOTORS_PA1_TIM2_CH2_BRUSHED,
+  &MOTORS_PB11_TIM2_CH4_BRUSHED,
+  &MOTORS_PA15_TIM2_CH1_BRUSHED,
+  &MOTORS_PB9_TIM4_CH4_BRUSHED
 };
 
 /**
@@ -563,10 +562,10 @@ const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
 {
-  &CONN_M1,
-  &CONN_M2,
-  &CONN_M3,
-  &CONN_M4
+  &MOTORS_PA1_TIM2_CH2_BRUSHED,
+  &MOTORS_PB11_TIM2_CH4_BRUSHED,
+  &MOTORS_PA15_TIM2_CH1_BRUSHED,
+  &MOTORS_PB9_TIM4_CH4_BRUSHED
 };
 
 /**
@@ -578,10 +577,10 @@ const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
 {
-  &DECK_TX2_TIM2,
-  &DECK_IO3,
-  &DECK_IO2,
-  &DECK_RX2_TIM2
+  &MOTORS_PA2_TIM2_CH3_BRUSHLESS_OD,
+  &MOTORS_PB4_TIM2_CH1_BRUSHLESS_OD,
+  &MOTORS_PB5_TIM3_CH2_BRUSHLESS_OD,
+  &MOTORS_PA3_TIM2_CH4_BRUSHLESS_OD
 };
 
 /**
@@ -589,10 +588,10 @@ const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS] =
 {
-  &CONN_M1_BL_INV,
-  &CONN_M2_BL_INV,
-  &CONN_M3_BL_INV,
-  &CONN_M4_BL_INV
+  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_INV_PP,
+  &MOTORS_PB11_TIM2_CH4_BRUSHLESS_INV_PP,
+  &MOTORS_PA15_TIM2_CH1_BRUSHLESS_INV_PP,
+  &MOTORS_PB9_TIM4_CH4_BRUSHLESS_INV_PP
 };
 
 /**
@@ -600,10 +599,10 @@ const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS] =
 {
-  &BOLT_M1_BL,
-  &BOLT_M2_BL,
-  &BOLT_M3_BL,
-  &BOLT_M4_BL
+  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,
+  &MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP,
+  &MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP,
+  &MOTORS_PB9_TIM4_CH4_BRUSHLESS_PP
 };
 
 /**
@@ -611,9 +610,9 @@ const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS] =
  */
 const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS] =
 {
-  &BOLT_M1_BL,
-  &BOLT_M2_BL,
-  &BOLT_M3_BL,
-  &BOLT11_M4_BL
+  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,
+  &MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP,
+  &MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP,
+  &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP
 };
 

@@ -1,3 +1,4 @@
+
 /**
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
@@ -53,7 +54,7 @@ void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 
-#include "motors_def_cf2.c"
+#include "motors_def.c"
 
 const MotorPerifDef** motorMap;  /* Current map configuration */
 
