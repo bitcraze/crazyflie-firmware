@@ -26,37 +26,36 @@
  * ledseq.c - LED sequence handler
  */
 
-#include <stdbool.h>
-
 #include "ledseq.h"
 
+#include <stdbool.h>
+
 #include "FreeRTOS.h"
-#include "timers.h"
+#include "led.h"
 #include "semphr.h"
 #include "static_mem.h"
-
-#include "led.h"
+#include "timers.h"
 
 #ifdef CALIBRATED_LED_MORSE
-  #define DOT 100
-  #define DASH (3 * DOT)
-  #define GAP DOT
-  #define LETTER_GAP (3 * DOT)
-  #define WORD_GAP (7 * DOT)
-#endif // #ifdef CALIBRATED_LED_MORSE
+#define DOT 100
+#define DASH (3 * DOT)
+#define GAP DOT
+#define LETTER_GAP (3 * DOT)
+#define WORD_GAP (7 * DOT)
+#endif  // #ifdef CALIBRATED_LED_MORSE
 
-#define LEDSEQ_CHARGE_CYCLE_TIME_500MA  1000
-#define LEDSEQ_CHARGE_CYCLE_TIME_MAX    500
+#define LEDSEQ_CHARGE_CYCLE_TIME_500MA 1000
+#define LEDSEQ_CHARGE_CYCLE_TIME_MAX 500
 
 /* Led sequences */
 ledseqStep_t seq_lowbat_def[] = {
-  { true, LEDSEQ_WAITMS(1000)},
-  {    0, LEDSEQ_LOOP},
+    {true, LEDSEQ_WAITMS(1000)},
+    {0, LEDSEQ_LOOP},
 };
 
 ledseqContext_t seq_lowbat = {
-  .sequence = seq_lowbat_def,
-  .led = LOWBAT_LED,
+    .sequence = seq_lowbat_def,
+    .led = LOWBAT_LED,
 };
 
 #define NO_CONTEXT 0
@@ -64,114 +63,107 @@ ledseqContext_t* sequences = NO_CONTEXT;
 
 ledseqStep_t seq_calibrated_def[] = {
 #ifndef CALIBRATED_LED_MORSE
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(450)},
-  {    0, LEDSEQ_LOOP},
+    {true, LEDSEQ_WAITMS(50)},
+    {false, LEDSEQ_WAITMS(450)},
+    {0, LEDSEQ_LOOP},
 #else
-  { true, LEDSEQ_WAITMS(DASH)},
-  {false, LEDSEQ_WAITMS(GAP)},
-  { true, LEDSEQ_WAITMS(DOT)},
-  {false, LEDSEQ_WAITMS(GAP)},
-  { true, LEDSEQ_WAITMS(DASH)},
-  {false, LEDSEQ_WAITMS(GAP)},
-  { true, LEDSEQ_WAITMS(DOT)},
-  {false, LEDSEQ_WAITMS(LETTER_GAP)},
-  { true, LEDSEQ_WAITMS(DOT)},
-  {false, LEDSEQ_WAITMS(GAP)},
-  { true, LEDSEQ_WAITMS(DOT)},
-  {false, LEDSEQ_WAITMS(GAP)},
-  { true, LEDSEQ_WAITMS(DASH)},
-  {false, LEDSEQ_WAITMS(GAP)},
-  { true, LEDSEQ_WAITMS(DOT)},
-  {false, LEDSEQ_WAITMS(WORD_GAP)},
-  {    0, LEDSEQ_LOOP},
-#endif // ifndef CALIBRATED_LED_MORSE
+    {true, LEDSEQ_WAITMS(DASH)},
+    {false, LEDSEQ_WAITMS(GAP)},
+    {true, LEDSEQ_WAITMS(DOT)},
+    {false, LEDSEQ_WAITMS(GAP)},
+    {true, LEDSEQ_WAITMS(DASH)},
+    {false, LEDSEQ_WAITMS(GAP)},
+    {true, LEDSEQ_WAITMS(DOT)},
+    {false, LEDSEQ_WAITMS(LETTER_GAP)},
+    {true, LEDSEQ_WAITMS(DOT)},
+    {false, LEDSEQ_WAITMS(GAP)},
+    {true, LEDSEQ_WAITMS(DOT)},
+    {false, LEDSEQ_WAITMS(GAP)},
+    {true, LEDSEQ_WAITMS(DASH)},
+    {false, LEDSEQ_WAITMS(GAP)},
+    {true, LEDSEQ_WAITMS(DOT)},
+    {false, LEDSEQ_WAITMS(WORD_GAP)},
+    {0, LEDSEQ_LOOP},
+#endif  // ifndef CALIBRATED_LED_MORSE
 };
 
 ledseqContext_t seq_calibrated = {
-  .sequence = seq_calibrated_def,
-  .led = SYS_LED,
+    .sequence = seq_calibrated_def,
+    .led = SYS_LED,
 };
 
 ledseqStep_t seq_alive_def[] = {
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(1950)},
-  {    0, LEDSEQ_LOOP},
+    {true, LEDSEQ_WAITMS(50)},
+    {false, LEDSEQ_WAITMS(1950)},
+    {0, LEDSEQ_LOOP},
 };
 
 ledseqContext_t seq_alive = {
-  .sequence = seq_alive_def,
-  .led = SYS_LED,
+    .sequence = seq_alive_def,
+    .led = SYS_LED,
 };
 
 ledseqStep_t seq_linkup_def[] = {
-  { true, LEDSEQ_WAITMS(1)},
-  {false, LEDSEQ_WAITMS(0)},
-  {    0, LEDSEQ_STOP},
+    {true, LEDSEQ_WAITMS(1)},
+    {false, LEDSEQ_WAITMS(0)},
+    {0, LEDSEQ_STOP},
 };
 
 ledseqContext_t seq_linkUp = {
-  .sequence = seq_linkup_def,
-  .led = LINK_LED,
+    .sequence = seq_linkup_def,
+    .led = LINK_LED,
 };
 
 ledseqContext_t seq_linkDown = {
-  .sequence = seq_linkup_def,
-  .led = LINK_DOWN_LED,
+    .sequence = seq_linkup_def,
+    .led = LINK_DOWN_LED,
 };
 
 ledseqStep_t seq_charged_def[] = {
-  { true, LEDSEQ_WAITMS(1000)},
-  {    0, LEDSEQ_LOOP},
+    {true, LEDSEQ_WAITMS(1000)},
+    {0, LEDSEQ_LOOP},
 };
 
 ledseqContext_t seq_charged = {
-  .sequence = seq_charged_def,
-  .led = CHG_LED,
+    .sequence = seq_charged_def,
+    .led = CHG_LED,
 };
 
 ledseqStep_t seq_charging_def[] = {
-  { true, LEDSEQ_WAITMS(200)},
-  {false, LEDSEQ_WAITMS(800)},
-  {    0, LEDSEQ_LOOP},
+    {true, LEDSEQ_WAITMS(200)},
+    {false, LEDSEQ_WAITMS(800)},
+    {0, LEDSEQ_LOOP},
 };
 
 ledseqContext_t seq_charging = {
-  .sequence = seq_charging_def,
-  .led = CHG_LED,
+    .sequence = seq_charging_def,
+    .led = CHG_LED,
 };
 
 ledseqStep_t seq_testPassed_def[] = {
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  { true, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_WAITMS(50)},
-  {false, LEDSEQ_STOP},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {true, LEDSEQ_WAITMS(50)}, {false, LEDSEQ_WAITMS(50)},
+    {false, LEDSEQ_STOP},
 };
 
 ledseqContext_t seq_testPassed = {
-  .sequence = seq_testPassed_def,
-  .led = LINK_LED,
+    .sequence = seq_testPassed_def,
+    .led = LINK_LED,
 };
 
 ledseqContext_t seq_testFailed = {
-  .sequence = seq_testPassed_def,
-  .led = SYS_LED,
+    .sequence = seq_testPassed_def,
+    .led = SYS_LED,
 };
 
 struct ledseqCmd_s {
-  enum {run, stop} command;
-  ledseqContext_t *sequence;
+  enum { run, stop } command;
+  ledseqContext_t* sequence;
 };
 
 /* Led sequence handling machine implementation */
@@ -192,47 +184,49 @@ static bool ledseqEnabled = false;
 static void lesdeqCmdTask(void* param);
 
 void ledseqInit() {
-  if(isInit) {
+  if (isInit) {
     return;
   }
 
   ledInit();
 
   /* Led sequence priority */
-  ledseqRegisterSequence(&seq_testPassed);
-  ledseqRegisterSequence(&seq_testFailed);
+  // ledseqRegisterSequence(&seq_testPassed);
+  // ledseqRegisterSequence(&seq_testFailed);
   ledseqRegisterSequence(&seq_lowbat);
-  ledseqRegisterSequence(&seq_charged);
-  ledseqRegisterSequence(&seq_charging);
-  ledseqRegisterSequence(&seq_calibrated);
+  // ledseqRegisterSequence(&seq_charged);
+  // ledseqRegisterSequence(&seq_charging);
+  // ledseqRegisterSequence(&seq_calibrated);
   ledseqRegisterSequence(&seq_alive);
-  ledseqRegisterSequence(&seq_linkUp);
-  ledseqRegisterSequence(&seq_linkDown);
+  // ledseqRegisterSequence(&seq_linkUp);
+  // ledseqRegisterSequence(&seq_linkDown);
 
-  //Initialise the sequences state
-  for(int i=0; i<LED_NUM; i++) {
+  // Initialise the sequences state
+  for (int i = 0; i < LED_NUM; i++) {
     activeSeq[i] = 0;
   }
 
-  //Init the soft timers that runs the led sequences for each leds
-  for(int i=0; i<LED_NUM; i++) {
-    timer[i] = xTimerCreateStatic("ledseqTimer", M2T(1000), pdFALSE, (void*)i, runLedseq, &timerBuffer[i]);
+  // Init the soft timers that runs the led sequences for each leds
+  for (int i = 0; i < LED_NUM; i++) {
+    timer[i] = xTimerCreateStatic("ledseqTimer", M2T(1000), pdFALSE, (void*)i,
+                                  runLedseq, &timerBuffer[i]);
   }
 
   ledseqMutex = xSemaphoreCreateMutex();
 
   ledseqCmdQueue = xQueueCreate(10, sizeof(struct ledseqCmd_s));
-  xTaskCreate(lesdeqCmdTask, LEDSEQCMD_TASK_NAME, LEDSEQCMD_TASK_STACKSIZE, NULL, LEDSEQCMD_TASK_PRI, NULL);
+  xTaskCreate(lesdeqCmdTask, LEDSEQCMD_TASK_NAME, LEDSEQCMD_TASK_STACKSIZE,
+              NULL, LEDSEQCMD_TASK_PRI, NULL);
 
   isInit = true;
 }
 
 static void lesdeqCmdTask(void* param) {
   struct ledseqCmd_s command;
-  while(1) {
+  while (1) {
     xQueueReceive(ledseqCmdQueue, &command, portMAX_DELAY);
 
-    switch(command.command) {
+    switch (command.command) {
       case run:
         ledseqRunBlocking(command.sequence);
         break;
@@ -247,21 +241,19 @@ bool ledseqTest(void) {
   bool status;
 
   status = isInit & ledTest();
-  #ifdef TURN_OFF_LEDS
+#ifdef TURN_OFF_LEDS
   ledseqEnable(false);
   ledSet(LED_BLUE_L, 0);
-  #else
+#else
   ledseqEnable(true);
-  #endif
+#endif
 
   return status;
 }
 
-void ledseqEnable(bool enable) {
-  ledseqEnabled = enable;
-}
+void ledseqEnable(bool enable) { ledseqEnabled = enable; }
 
-bool ledseqRun(ledseqContext_t *context) {
+bool ledseqRun(ledseqContext_t* context) {
   struct ledseqCmd_s command;
   command.command = run;
   command.sequence = context;
@@ -271,16 +263,16 @@ bool ledseqRun(ledseqContext_t *context) {
   return false;
 }
 
-void ledseqRunBlocking(ledseqContext_t *context) {
+void ledseqRunBlocking(ledseqContext_t* context) {
   const led_t led = context->led;
 
   xSemaphoreTake(ledseqMutex, portMAX_DELAY);
-  context->state = 0;  //Reset the seq. to its first step
+  context->state = 0;  // Reset the seq. to its first step
   updateActive(led);
   xSemaphoreGive(ledseqMutex);
 
   // Run the first step if the new seq is the active sequence
-  if(activeSeq[led] == context) {
+  if (activeSeq[led] == context) {
     runLedseq(timer[led]);
   }
 }
@@ -293,7 +285,7 @@ void ledseqSetChargeLevel(const float chargeLevel) {
   seq_charging.sequence[1].action = offTime;
 }
 
-bool ledseqStop(ledseqContext_t *context) {
+bool ledseqStop(ledseqContext_t* context) {
   struct ledseqCmd_s command;
   command.command = stop;
   command.sequence = context;
@@ -303,22 +295,22 @@ bool ledseqStop(ledseqContext_t *context) {
   return false;
 }
 
-void ledseqStopBlocking(ledseqContext_t *context) {
+void ledseqStopBlocking(ledseqContext_t* context) {
   const led_t led = context->led;
 
   xSemaphoreTake(ledseqMutex, portMAX_DELAY);
-  context->state = LEDSEQ_STOP;  //Stop the seq.
+  context->state = LEDSEQ_STOP;  // Stop the seq.
   updateActive(led);
   xSemaphoreGive(ledseqMutex);
 
-  //Run the next active sequence (if any...)
+  // Run the next active sequence (if any...)
   runLedseq(timer[led]);
 }
 
 /* Center of the led sequence machine. This function is executed by the FreeRTOS
  * timers and runs the sequences
  */
-static void runLedseq( xTimerHandle xTimer ) {
+static void runLedseq(xTimerHandle xTimer) {
   if (!ledseqEnabled) {
     return;
   }
@@ -330,7 +322,7 @@ static void runLedseq( xTimerHandle xTimer ) {
   }
 
   bool leave = false;
-  while(!leave) {
+  while (!leave) {
     if (context->state == LEDSEQ_STOP) {
       return;
     }
@@ -341,7 +333,7 @@ static void runLedseq( xTimerHandle xTimer ) {
     context->state++;
     led_t led = context->led;
 
-    switch(step->action) {
+    switch (step->action) {
       case LEDSEQ_LOOP:
         context->state = 0;
         break;
@@ -349,7 +341,7 @@ static void runLedseq( xTimerHandle xTimer ) {
         context->state = LEDSEQ_STOP;
         updateActive(led);
         break;
-      default:  //The step is a LED action and a time
+      default:  // The step is a LED action and a time
         ledSet(led, step->value);
         if (step->action == 0) {
           break;
@@ -394,7 +386,8 @@ static void updateActive(led_t led) {
   activeSeq[led] = NO_CONTEXT;
   ledSet(led, false);
 
-  for (ledseqContext_t* sequence = sequences; sequence != 0; sequence = sequence->nextContext) {
+  for (ledseqContext_t* sequence = sequences; sequence != 0;
+       sequence = sequence->nextContext) {
     if (sequence->led == led && sequence->state != LEDSEQ_STOP) {
       activeSeq[led] = sequence;
       break;
