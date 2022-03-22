@@ -6,6 +6,13 @@ on:
 jobs:
   cf2:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platforms: [cf2, tag, bolt]
+      env:
+        PLATFORM_TYPE: ${{ matrix.platforms }}
   
     steps:
     - name: Checkout Repo
@@ -14,7 +21,7 @@ jobs:
         submodules: true
 
     - name: Build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=${PLATFORM_TYPE} UNIT_TEST_STYLE=min"
 
     - name: Create Release
       id: create_release
@@ -33,6 +40,6 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: cf2.bin
-        asset_name: cf2.bin
+        asset_path: ${PLATFORM_TYPE}.bin
+        asset_name: ${PLATFORM_TYPE}.bin
         asset_content_type: application/octet-stream
