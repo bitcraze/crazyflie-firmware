@@ -181,6 +181,11 @@ typedef bool (deckMemoryRead)(const uint32_t vAddr, const uint8_t len, uint8_t* 
 typedef uint8_t (deckMemoryProperties)();
 
 /**
+ * @brief Definition of function to execute a command
+ */
+typedef void (deckMemoryCommandCallback)();
+
+/**
  * @brief This struct defines the firmware required by the deck and the function
  * to use to flash new firmware to the deck.
  */
@@ -197,11 +202,14 @@ typedef struct deckMemDef_s {
 
   // Definition of the required firmware for the deck (if supported)
   uint32_t requiredHash;
-  // TOOD krri rename to length?
   uint32_t requiredSize;
 
   // Optional id, if non-null will be added to the name as [drivername:id]
   const char *id;
+
+  // Commands
+  deckMemoryCommandCallback* commandResetToFw;
+  deckMemoryCommandCallback* commandResetToBootloader;
 } DeckMemDef_t;
 
 int deckCount(void);

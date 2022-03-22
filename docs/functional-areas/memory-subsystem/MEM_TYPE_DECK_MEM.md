@@ -17,7 +17,7 @@ Data in the `Deck memory info` record should only be used if both the `Is Valid`
 bits are set.
 
 A deck driver may implement read and/or write operations to data on a deck, a camera deck could for
-instance proved image data through a memory read operation. The deck driver can freely choose the addresses
+instance provide image data through a memory read operation. The deck driver can freely choose the addresses
 where data is mapped. From a client point of view the address will be relative to the base address of the deck,
 the base address is acquired by a client from the information section.
 
@@ -29,26 +29,34 @@ The firmware that is required by a deck is uniquely identified through the tuple
 Some decks have two hardware devices that requires two firmwares and memory mappings, like the AI deck with the ESP and
 the GAP8 modules. For this purpose the system supports two mappings per deck.
 
+A deck may support commands, currently two flavors are available: reset to firmware and to bootloader. The deck signals
+the availability of the commands in the info bit fields.
+
+Some decks can not be reset to bootloader mode by a client and will automatically be set in bootloader mode when the
+Crazyflie detects that the deck firmware is incompatible with the Crazyflie firmware.
+
+
 ## Memory layout
 
-| Address                            | Type         | Description                                              |
-|------------------------------------|--------------|----------------------------------------------------------|
-| 0x0000                             | Info section | Information on installed decks and the mapping to memory |
-| deck 1, main mem base address      | raw memory   | Mapped to address 0 in the main memory on deck 1         |
-| deck 1, secondary mem base address | raw memory   | Mapped to address 0 in the secondary memory on deck 1    |
-| deck 2, main mem base address      | raw memory   | Mapped to address 0 in the main memory on deck 2         |
-| deck 2, secondary mem base address | raw memory   | Mapped to address 0 in the secondary memory on deck 2    |
-| deck 3, main mem base address      | raw memory   | Mapped to address 0 in the main memory on deck 3         |
-| deck 3, secondary mem base address | raw memory   | Mapped to address 0 in the secondary memory on deck 3    |
-| deck 4, main mem base address      | raw memory   | Mapped to address 0 in the main memory on deck 4         |
-| deck 4, secondary mem base address | raw memory   | Mapped to address 0 in the secondary memory on deck 4    |
+| Address                            | Type            | Description                                              |
+|------------------------------------|-----------------|----------------------------------------------------------|
+| 0x0000                             | Info section    | Information on installed decks and the mapping to memory |
+| 0x1000                             | Command section | Commands sent to the decks for control                   |
+| deck 1, main mem base address      | raw memory      | Mapped to address 0 in the main memory on deck 1         |
+| deck 1, secondary mem base address | raw memory      | Mapped to address 0 in the secondary memory on deck 1    |
+| deck 2, main mem base address      | raw memory      | Mapped to address 0 in the main memory on deck 2         |
+| deck 2, secondary mem base address | raw memory      | Mapped to address 0 in the secondary memory on deck 2    |
+| deck 3, main mem base address      | raw memory      | Mapped to address 0 in the main memory on deck 3         |
+| deck 3, secondary mem base address | raw memory      | Mapped to address 0 in the secondary memory on deck 3    |
+| deck 4, main mem base address      | raw memory      | Mapped to address 0 in the main memory on deck 4         |
+| deck 4, secondary mem base address | raw memory      | Mapped to address 0 in the secondary memory on deck 4    |
 
 
 ### Info section memory layout
 
 | Address | Type             | Description                              |
 |---------|------------------|------------------------------------------|
-| 0x0000  | uint8            | Version, currently 2                     |
+| 0x0000  | uint8            | Version, currently 3x                     |
 | 0x0001  | Deck memory info | Information for deck 1, main memory      |
 | 0x0021  | Deck memory info | Information for deck 1, secondary memory |
 | 0x0041  | Deck memory info | Information for deck 2, main memory      |
@@ -63,28 +71,67 @@ the GAP8 modules. For this purpose the system supports two mappings per deck.
 
 Addresses relative to the deck memory info base address
 
+| Address | Type        | Description                                                         |
+|---------|-------------|---------------------------------------------------------------------|
+| 0x0000  | uint8       | Bit field 1 describing the properties of the deck memory, see below |
+| 0x0001  | uint8       | Bit field 2 describing the properties of the deck memory, see below |
+| 0x0002  | uint32      | required hash - the hash for the reuired firmware                   |
+| 0x0006  | uint32      | required length - the length of the required firmware               |
+| 0x000A  | uint32      | base address - the start address of the deck memory                 |
+| 0x000E  | uint8\[19\] | name - zero terminated string, max 18 bytes in total.               |
+
+
+### Deck memory info bit fields
+
+Bit field 1:
+
+| Bit | Property                | 0                                                          | 1                                                   |
+|-----|-------------------------|------------------------------------------------------------|-----------------------------------------------------|
+| 0   | Is valid                | no deck is installed or does not support memory operations | a deck is installed and the data is valid           |
+| 1   | Is started              | the deck is in start up mode, data is not reliable yet     | deck has started, data is reliable                  |
+| 2   | Supports read           | read not supported                                         | memory is readable                                  |
+| 3   | Supports write          | write not supported                                        | memory is writeable                                 |
+| 4   | Supports upgrade        | no upgradable firmware                                     | firmware upgrades possible                          |
+| 5   | Upgrade required        | the firmware is up to date                                 | the firmware must be be upgraded                    |
+| 6   | Bootloader active       | the deck is running FW                                     | the deck is in bootloader mode, ready to receive FW |
+| 7   | Reserved                |                                                            |                                                     |
+
+Bit field 2:
+
+| Bit | Property                | 0                                                          | 1                                                   |
+|-----|-------------------------|------------------------------------------------------------|-----------------------------------------------------|
+| 0   | Can reset deck          | the deck does not support the reset command                | the deck supports the reset command                 |
+| 1   | Can reset to bootloader | the deck does not support reset to bootloader mode         | the deck supports reset to bootloader mode          |
+| 2-7 | Reserved                |                                                            |                                                     |
+
+### Command section memory layout
+
+| Address | Type                     | Description                               |
+|---------|--------------------------|-------------------------------------------|
+| 0x1000  | Deck memory command data | Command data for deck 1, main memory      |
+| 0x1020  | Deck memory command data | Command data for deck 1, secondary memory |
+| 0x1040  | Deck memory command data | Command data for deck 2, main memory      |
+| 0x1060  | Deck memory command data | Command data for deck 2, secondary memory |
+| 0x1080  | Deck memory command data | Command data for deck 3, main memory      |
+| 0x10A0  | Deck memory command data | Command data for deck 3, secondary memory |
+| 0x10C0  | Deck memory command data | Command data for deck 4, main memory      |
+| 0x10E0  | Deck memory command data | Command data for deck 4, secondary memory |
+
+### Deck memory command data memory layout
+
+Addresses relative to the deck memory command data base address
+
 | Address | Type        | Description                                                        |
 |---------|-------------|--------------------------------------------------------------------|
-| 0x0000  | uint8       | A bitfield describing the properties of the deck memory, see below |
-| 0x0001  | uint32      | required hash - the hash for the reuired firmware                  |
-| 0x0005  | uint32      | required length - the length of the required firmware              |
-| 0x0009  | uint32      | base address - the start address of the deck memory                |
-| 0x000D  | uint8\[19\] | name - zero terminated string, max 19 bytes in total.              |
+| 0x0000  | uint32      | Size of binary that will be written to flash                       |
+| 0x0004  | uint8       | A bit field representing commands                                  |
 
+### Deck memory command bit field
 
-### Deck memory info bit field
-
-| Bit | Property          | 0                                                          | 1                                                   |
-|-----|-------------------|------------------------------------------------------------|-----------------------------------------------------|
-| 0   | Is valid          | no deck is installed or does not support memory operations | a deck is installed and the data is valid           |
-| 1   | Is started        | the deck is in start up mode, data is not reliable yet     | deck has started, data is reliable                  |
-| 3   | Supports write    | write not supported                                        | memory is writeable                                 |
-| 2   | Supports read     | read not supported                                         | memory is readable                                  |
-| 4   | Supports upgrade  | no upgradable firmware                                     | firmware upgrades possible                          |
-| 5   | Upgrade required  | the firmware is up to date                                 | the firmware needs to be upgraded                   |
-| 6   | Bootloader active | the deck is running FW                                     | the deck is in bootloader mode, ready to receive FW |
-| 7   | Reserved          |                                                            |                                                     |
-
+| Bit | Command                    | 0         | 1                                   |
+|-----|----------------------------|-----------|-------------------------------------|
+| 0   | Reset device to firmware   | no action | reset the device                    |
+| 1   | Reset device to bootloader | no action | reset the device to bootloader mode |
 
 ## Using deck memory in a deck driver
 
