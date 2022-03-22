@@ -22,12 +22,10 @@ at the same time.
 to the desired number of base stations. Note: more base stations use more RAM. Build the code and flash it to the
 Crazyflie, see the documentation in this repo for instructions on building and flashing.
 4. Acquire calibration data from all the base stations in the system. The Crazyflie gets the calibration data from the
-base stations through the light sweeps and this process takes from 20 seconds and up. When data is received there is
-a notification in the client consol log, and data is stored in the persistent memory in the Crazyflie. First connect
-the Crazyflie to the client and open the consol log. Put the Crazyflie where a base station is clearly visible and wait
-for a message in the consol log that tells you calibration data was received. Note: this message is only displayed for
-base stations that are not already stored in memory. If more than 2 base stations are visible at the same time, the process
-may take longer and it might be a good idea to hold the Crazyflie closer to one base station at a time.
+base stations through the light sweeps and this process takes from 20 seconds and up. If more than 2 base stations are
+visible at the same time, the process may take longer and it might be a good idea to hold the Crazyflie closer to one
+base station at a time. Use the Lighthouse tab in the crazyflie client and the base station status matrix to see for which
+base stations the Crazyflie has received calibration data.
 As the calibration data is stored in the Crazyflie, it is only necessary to do this for new base stations or when the
 channel is changed.
 5. Estimate system geometry. The geometry estimation functionality in the client only works for 1 or 2 base stations
