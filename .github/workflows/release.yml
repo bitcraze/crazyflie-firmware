@@ -25,6 +25,7 @@ jobs:
         path: release_url.txt       
 
   upload:
+    name: Upload Binaries to release
     needs: [release]
     runs-on: ubuntu-latest
     strategy:
@@ -53,7 +54,7 @@ jobs:
         echo ::set-output name=upload_url::$value
       
     - name: Upload ${{ matrix.platforms }} bin
-        uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -63,7 +64,7 @@ jobs:
         asset_content_type: application/octet-stream
 
     - name: Upload ${{ matrix.platforms }} dfu
-        uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
