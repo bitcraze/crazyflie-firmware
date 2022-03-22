@@ -53,12 +53,22 @@ jobs:
         value=`cat release_url/release_url.txt`
         echo ::set-output name=upload_url::$value
       
-    - name: Upload ${PLATFORM_TYPE} bin
+    - name: Upload ${{ matrix.platforms }} bin
         uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ${PLATFORM_TYPE}-${{ github.ref }}.bin
-        asset_name: ${PLATFORM_TYPE}-${{ github.ref }}.bin
+        asset_path: ${{ matrix.platforms }}-${{ github.ref }}.bin
+        asset_name: ${{ matrix.platforms }}-${{ github.ref }}.bin
+        asset_content_type: application/octet-stream
+
+    - name: Upload ${{ matrix.platforms }} dfu
+        uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ${{ matrix.platforms }}-${{ github.ref }}.dfu
+        asset_name: ${{ matrix.platforms }}-${{ github.ref }}.dfu
         asset_content_type: application/octet-stream
