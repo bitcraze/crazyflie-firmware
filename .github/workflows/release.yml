@@ -21,3 +21,35 @@ jobs:
       with:
         name: cf2-${{ github.ref_name }}
         path: cf2.bin
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        draft: true
+        prerelease: true
+
+    - name: Upload CF2 bin
+        uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: cf2.bin
+        asset_name: cf2.bin
+        asset_content_type: application/bin
+
+    - name: Upload CF2 dfu
+        uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: cf2.dfu
+        asset_name: cf2.dfu
+        asset_content_type: application/dfu
+
