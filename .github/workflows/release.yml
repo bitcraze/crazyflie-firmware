@@ -1,28 +1,11 @@
-name: Release and push to github
-
 on:
   workflow_dispatch:
 
 jobs:
-  cf2:
+  release:
+    name: Create Release on Github
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        platforms: [cf2, tag, bolt]
-      env:
-        PLATFORM_TYPE: ${{ matrix.platforms }}
-  
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: Build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=${PLATFORM_TYPE} UNIT_TEST_STYLE=min"
-
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -33,13 +16,49 @@ jobs:
         release_name: ${{ github.ref }}
         draft: true
         prerelease: true
+    - name: Release URL on file
+      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+    - name: Save Release URL File For Uploading Files
+      uses: actions/upload-artifact@v1
+      with:
+        name: release_url
+        path: release_url.txt       
 
-    - name: Upload CF2 bin
+  upload:
+    needs: [release]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platforms: [cf2, tag, bolt]
+  
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
+
+    - name: Load Release URL File from release job
+      uses: actions/download-artifact@v1
+      with:
+        name: release_url
+
+    - name: Get Release File Name & Upload URL
+      id: get_release_info
+      run: |
+        echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
+        value=`cat release_url/release_url.txt`
+        echo ::set-output name=upload_url::$value
+      
+    - name: Upload ${PLATFORM_TYPE} bin
         uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${PLATFORM_TYPE}.bin
-        asset_name: ${PLATFORM_TYPE}.bin
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ${PLATFORM_TYPE}-${{ github.ref }}.bin
+        asset_name: ${PLATFORM_TYPE}-${{ github.ref }}.bin
         asset_content_type: application/octet-stream
