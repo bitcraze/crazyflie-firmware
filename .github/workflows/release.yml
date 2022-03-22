@@ -58,7 +58,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ${{ matrix.platforms }}-${{ github.ref }}.bin
+        asset_path: ${{ matrix.platforms }}.bin
         asset_name: ${{ matrix.platforms }}-${{ github.ref }}.bin
         asset_content_type: application/octet-stream
 
@@ -68,6 +68,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ${{ matrix.platforms }}-${{ github.ref }}.dfu
+        asset_path: ${{ matrix.platforms }}.dfu
         asset_name: ${{ matrix.platforms }}-${{ github.ref }}.dfu
         asset_content_type: application/octet-stream
