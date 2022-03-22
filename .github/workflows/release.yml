@@ -5,13 +5,19 @@ on:
 
 jobs:
   cf2:
-   runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
   
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-        with:
-          submodules: true
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
 
-      - name: build
-        run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2.1.4
+      with:
+        name: cf2-${{ github.ref_name }}
+        path: cf2.bin
