@@ -245,8 +245,10 @@ static bool handleDeckSectionRead(const uint32_t memAddr, const uint8_t readLen,
 
 static void handleCommandForDevice(const DeckMemDef_t* memoryDef, const uint32_t adr, const uint8_t value) {
     if (adr < COMMAND_BITFIELD_ADR) {
-        uint8_t* newFwSizePtr = (uint8_t*)&memoryDef->newFwSize;
-        newFwSizePtr[adr] = value;
+        if (memoryDef->newFwSizeP) {
+            uint8_t* newFwSizePtr = (uint8_t*)memoryDef->newFwSizeP;
+            newFwSizePtr[adr] = value;
+        }
     }
     else if (adr == COMMAND_BITFIELD_ADR) {
         if (value & DECK_MEMORY_MASK_COMMAND_RESET_TO_FW && memoryDef->commandResetToFw) {
@@ -295,7 +297,7 @@ static bool handleDeckSectionWrite(const uint32_t memAddr, const uint8_t writeLe
         if (deckMemDef->write) {
             uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE + selector * DECK_MEM_MAX_SIZE;
             uint32_t deckAddress = memAddr - baseAddress;
-            result = deckMemDef->write(deckAddress, writeLen, buffer);
+            result = deckMemDef->write(deckAddress, writeLen, buffer, deckMemDef);
         }
     }
 

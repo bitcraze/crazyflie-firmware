@@ -27,7 +27,8 @@ bool mockRead(const uint32_t vAddr, const uint8_t len, uint8_t* buffer) { read_i
 uint32_t write_vAddr;
 uint8_t write_len;
 bool write_isCalled;
-bool mockWrite(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer) { write_isCalled = true; write_vAddr = vAddr; write_len = len; return true; }
+const DeckMemDef_t* write_memDef;
+bool mockWrite(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer, const DeckMemDef_t* memDef) { write_isCalled = true; write_vAddr = vAddr; write_len = len; write_memDef = memDef; return true; }
 
 bool command_isCalled;
 void mockCommand() {command_isCalled = true;}
@@ -123,6 +124,7 @@ void setUp() {
     write_isCalled = false;
     write_vAddr = 0;
     write_len = 0;
+    write_memDef = 0;
 
     command_isCalled = false;
 }
@@ -348,13 +350,29 @@ void testOneDeckPrimaryFlashBinarySize() {
     deckCount_ExpectAndReturn(1);
     // Called 4 times, use Ignore
     deckInfo_IgnoreAndReturn(&stockInfo);
+    uint32_t actual = 0;
+    stockPrimaryMemDef.newFwSizeP = &actual;
     uint32_t expected = 0x12345678;
 
     // Test
     handleMemWrite(DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&expected);
 
     // Assert
-    TEST_ASSERT_EQUAL_UINT32(expected, stockPrimaryMemDef.newFwSize);
+    TEST_ASSERT_EQUAL_UINT32(expected, actual);
+}
+
+void testOneDeckPrimaryFlashBinarySizeNoReceptorSet() {
+    // Fixture
+    deckCount_ExpectAndReturn(1);
+    // Called 4 times, use Ignore
+    deckInfo_IgnoreAndReturn(&stockInfo);
+    uint32_t someData = 4711;
+
+    // Test
+    handleMemWrite(DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&someData);
+
+    // Assert
+    // Not testable, but would write to invalid address
 }
 
 void testOneDeckSecondaryInfoNotSetByPrimary() {
@@ -604,6 +622,21 @@ void testWriteToSecondaryDeckMemory() {
     TEST_ASSERT_EQUAL_UINT32(100, write_vAddr);
     TEST_ASSERT_EQUAL_UINT8(30, write_len);
     TEST_ASSERT_TRUE(actual)
+}
+
+void testWriteToSecondaryDeckMemoryPassesInMemDef() {
+    // Fixture
+    stockSecondaryMemDef.write = mockWrite;
+    stockDriver.memoryDefSecondary = &stockSecondaryMemDef;
+
+    deckCount_ExpectAndReturn(1);
+    deckInfo_ExpectAndReturn(0, &stockInfo);
+
+    // Test
+    handleMemWrite(DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
+
+    // Assert
+    TEST_ASSERT_EQUAL_PTR(stockDriver.memoryDefSecondary, write_memDef);
 }
 
 void testWriteToDeckWithoutWriteFunction() {

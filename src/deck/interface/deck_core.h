@@ -71,6 +71,7 @@ bool deckTest(void);
 
 struct deckInfo_s;
 struct deckFwUpdate_s;
+typedef struct deckMemDef_s deckMemDef_t;
 
 /* Structure definition and registering macro */
 typedef struct deck_driver {
@@ -100,8 +101,7 @@ typedef struct deck_driver {
   // Deck memory access definitions
   const struct deckMemDef_s* memoryDef;
 
-  // Have an option to present a secondary memory area for instance for decks
-  // two firmwares.
+  // Secondary memory area for instance for decks with two firmwares.
   const struct deckMemDef_s* memoryDefSecondary;
 
   /* Init and test functions */
@@ -151,11 +151,12 @@ typedef struct deckInfo_s {
  * @param address: Address where the buffer should be written. The start of the firmware is at address 0.
  * @param len: Buffer length
  * @param buffer: Buffer to write in the firmware memory
+ * @param memDef: The memory def for the device the write is related to
  *
- * @return True if the buffer could be written successully, false otherwise (if the deck if not in bootloader
+ * @return True if the buffer could be written successfully, false otherwise (if the deck is not in bootloader
  *         mode for example)
  */
-typedef bool (deckMemoryWrite)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer);
+typedef bool (deckMemoryWrite)(const uint32_t vAddr, const uint8_t len, const uint8_t* buffer, const struct deckMemDef_s* memDef);
 
 /**
  * @brief Definition of function to read the firmware
@@ -200,9 +201,9 @@ typedef struct deckMemDef_s {
   // Set to true if the deck supports FW upgrades
   bool supportsUpgrade;
 
-  // The size of a new FW to be flashed to the device (if supported)
-  // This member is updated by the cfloader during flashing and should be considered read-only
-  uint32_t newFwSize;
+  // A pointer to a uint32_t that holds the size of a new FW to be flashed to the device (if supported)
+  // Updated by the cfloader during flashing and should be considered read-only
+  uint32_t* newFwSizeP;
 
   // Definition of the required firmware for the deck (if supported)
   uint32_t requiredHash;

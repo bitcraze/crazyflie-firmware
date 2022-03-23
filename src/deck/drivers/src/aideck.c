@@ -59,6 +59,10 @@
 static bool isInit = false;
 static uint8_t byte;
 
+// TODO krri
+#define GAP8_BITSTREAM_SIZE (1234)
+#define GAP8_BITSTREAM_CRC (9876)
+
 #define ESP_TX_QUEUE_LENGTH 4
 #define ESP_RX_QUEUE_LENGTH 4
 
@@ -265,10 +269,10 @@ void cpxSendPacketBlocking(const CPXPacket_t *packet)
   xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
 }
 
-bool cpxSendPacket(const CPXPacket_t *packet, uint32_t timeoutInMS)
+bool cpxSendPacket(const CPXPacket_t *packet, uint32_t timeout)
 {
   bool packetWasSent = false;
-  if (xQueueSend(espTxQueue, packet, M2T(timeoutInMS)) == pdTRUE)
+  if (xQueueSend(espTxQueue, packet, timeout) == pdTRUE)
   {
     xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
     packetWasSent = true;
@@ -282,6 +286,36 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
     route->function = function;
     route->lastPacket = true;
 }
+
+static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef) {
+  // static CPXPacket_t cpxTxPacket;
+
+  // cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_BOOTLOADER, &cpxTxPacket.route);
+
+  // ASSERT(writeLen <= AIDECK_UART_PAYLOAD_MTU);
+  // memcpy(&cpxTxPacket.data, buffer, writeLen);
+  // cpxTxPacket.dataLength = writeLen;
+
+  // bool sentOk = cpxSendPacket(&cpxTxPacket, portMAX_DELAY);
+  // ASSERT(sentOk);
+
+  if (memAddr == 0) {
+    DEBUG_PRINT("Flashing! size=%ld\n", *memDef->newFwSizeP);
+  }
+
+  return true;
+}
+
+static void resetToBootloader() {
+  DEBUG_PRINT("Reset to bootloader\n");
+}
+
+static uint8_t gap8DeckFlasherPropertiesQuery()
+{
+  uint8_t result = DECK_MEMORY_MASK_STARTED;
+  return result;
+}
+
 
 static void aideckInit(DeckInfo *info)
 {
@@ -326,14 +360,32 @@ static bool aideckTest()
   return true;
 }
 
-static const DeckMemDef_t memoryDef = {
+static uint32_t espNewFlashSize;
+static const DeckMemDef_t espMemoryDef = {
     .write = espDeckFlasherWrite,
     .read = 0,
     .properties = espDeckFlasherPropertiesQuery,
     .supportsUpgrade = true,
+    .id = "esp",
+    .newFwSizeP = &espNewFlashSize,
 
     .requiredSize = ESP_BITSTREAM_SIZE,
     // .requiredHash = ESP_BITSTREAM_CRC,
+};
+
+static uint32_t gap8NewFlashSize;
+static const DeckMemDef_t gap8MemoryDef = {
+    .write = gap8DeckFlasherWrite,
+    .read = 0,
+    .properties = gap8DeckFlasherPropertiesQuery,
+    .supportsUpgrade = true,
+    .id = "gap8",
+    .newFwSizeP = &gap8NewFlashSize,
+
+    // .requiredSize = GAP8_BITSTREAM_SIZE,
+    // .requiredHash = GAP8_BITSTREAM_CRC,
+
+    .commandResetToBootloader = resetToBootloader,
 };
 
 static const DeckDriver aideck_deck = {
@@ -344,7 +396,8 @@ static const DeckDriver aideck_deck = {
     .usedGpio = DECK_USING_IO_4,
     .usedPeriph = DECK_USING_UART1,
 
-    .memoryDef = &memoryDef,
+    .memoryDef = &espMemoryDef,
+    .memoryDefSecondary = &gap8MemoryDef,
 
     .init = aideckInit,
     .test = aideckTest,

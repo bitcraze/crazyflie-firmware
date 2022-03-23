@@ -23,7 +23,7 @@
  *
  * @file esp_deck_flasher.h
  * Handles flashing of binaries on the ESP32
- *  
+ *
  */
 
 #pragma once
@@ -46,6 +46,6 @@ bool espDeckFlasherCheckVersionAndBoot();
 *
 * @return true if the data was written successfully, false otherwise.
 **/
-bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer);
+bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef);
 
 uint8_t espDeckFlasherPropertiesQuery();

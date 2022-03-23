@@ -23,7 +23,7 @@
  *
  * @file esp_deck_flasher.c
  * Handles flashing of binaries on the ESP32
- *  
+ *
  */
 
 #include <stdbool.h>
@@ -55,7 +55,7 @@ static uint8_t sendBuffer[ESP_MTU + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_
 static uint8_t overshoot;
 static uint32_t sendBufferIndex;
 
-bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer)
+bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef)
 {
   if (memAddr == 0)
   {
