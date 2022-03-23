@@ -197,8 +197,12 @@ typedef struct deckMemDef_s {
   // Function to query properties of the deck memory
   deckMemoryProperties* properties;
 
-  // True if the deck supports FW upgrades
+  // Set to true if the deck supports FW upgrades
   bool supportsUpgrade;
+
+  // The size of a new FW to be flashed to the device (if supported)
+  // This member is updated by the cfloader during flashing and should be considered read-only
+  uint32_t newFwSize;
 
   // Definition of the required firmware for the deck (if supported)
   uint32_t requiredHash;
@@ -207,7 +211,7 @@ typedef struct deckMemDef_s {
   // Optional id, if non-null will be added to the name as [drivername:id]
   const char *id;
 
-  // Commands
+  // Optional command callbacks
   deckMemoryCommandCallback* commandResetToFw;
   deckMemoryCommandCallback* commandResetToBootloader;
 } DeckMemDef_t;

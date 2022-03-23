@@ -244,7 +244,11 @@ static bool handleDeckSectionRead(const uint32_t memAddr, const uint8_t readLen,
 }
 
 static void handleCommandForDevice(const DeckMemDef_t* memoryDef, const uint32_t adr, const uint8_t value) {
-    if (adr == COMMAND_BITFIELD_ADR) {
+    if (adr < COMMAND_BITFIELD_ADR) {
+        uint8_t* newFwSizePtr = (uint8_t*)&memoryDef->newFwSize;
+        newFwSizePtr[adr] = value;
+    }
+    else if (adr == COMMAND_BITFIELD_ADR) {
         if (value & DECK_MEMORY_MASK_COMMAND_RESET_TO_FW && memoryDef->commandResetToFw) {
             memoryDef->commandResetToFw();
         }
@@ -259,11 +263,11 @@ static bool handleCommandSectionWrite(const uint32_t memAddr, const uint8_t writ
         uint32_t adr = memAddr + i;
         if (adr >= COMMAND_BASE_ADR) {
             uint32_t relAdr = adr - COMMAND_BASE_ADR;
-            uint32_t deckNr = relAdr / (DECK_MEMORY_COMMAND_SIZE * 2);
-            uint32_t selector = (relAdr / DECK_MEMORY_COMMAND_SIZE) % 2;
+            int deckNr = relAdr / (DECK_MEMORY_COMMAND_SIZE * 2);
             if (deckNr < nrOfDecks) {
                 const DeckInfo* info = deckInfo(deckNr);
                 uint32_t commandAdr = relAdr % DECK_MEMORY_COMMAND_SIZE;
+                uint32_t selector = (relAdr / DECK_MEMORY_COMMAND_SIZE) % 2;
                 uint8_t value = buffer[i];
                 if (selector == 0) {
                     handleCommandForDevice(info->driver->memoryDef, commandAdr, value);

@@ -306,10 +306,9 @@ void testOneDeckPrimaryResetToFw() {
     uint8_t commandBitField = MASK_RESET_TO_FW;
 
     // Test
-    bool actual = handleMemWrite(DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
+    handleMemWrite(DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
 
     // Assert
-    TEST_ASSERT_TRUE(actual);
     TEST_ASSERT_TRUE(command_isCalled);
 }
 
@@ -323,14 +322,13 @@ void testSecondDeckSecondaryResetToBootloader() {
     uint8_t commandBitField = MASK_RESET_TO_BOOTLOADER;
 
     // Test
-    bool actual = handleMemWrite(DECK_1_CMD_SECONDARY + COMMAND_ADR, 1, &commandBitField);
+    handleMemWrite(DECK_1_CMD_SECONDARY + COMMAND_ADR, 1, &commandBitField);
 
     // Assert
-    TEST_ASSERT_TRUE(actual);
     TEST_ASSERT_TRUE(command_isCalled);
 }
 
-void testCommandForUninstalledDeck() {
+void testCommandForNonExistingDeck() {
     // Fixture
     stockPrimaryMemDef.commandResetToFw = mockCommand;
 
@@ -341,12 +339,23 @@ void testCommandForUninstalledDeck() {
     bool actual = handleMemWrite(DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
 
     // Assert
-    TEST_ASSERT_TRUE(actual);
+    TEST_ASSERT_TRUE(actual); // Always true, regardless of "bad" address/data
     TEST_ASSERT_FALSE(command_isCalled);
 }
 
-// TODO krri test binary length
+void testOneDeckPrimaryFlashBinarySize() {
+    // Fixture
+    deckCount_ExpectAndReturn(1);
+    // Called 4 times, use Ignore
+    deckInfo_IgnoreAndReturn(&stockInfo);
+    uint32_t expected = 0x12345678;
 
+    // Test
+    handleMemWrite(DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&expected);
+
+    // Assert
+    TEST_ASSERT_EQUAL_UINT32(expected, stockPrimaryMemDef.newFwSize);
+}
 
 void testOneDeckSecondaryInfoNotSetByPrimary() {
     // Fixture
