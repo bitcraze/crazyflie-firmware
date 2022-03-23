@@ -129,7 +129,7 @@ GPIO_InitTypeDef GPIO_PassthroughInput =
 {
     .GPIO_Mode = GPIO_Mode_IN,
     .GPIO_Speed = GPIO_Speed_2MHz,
-    .GPIO_OType = GPIO_OType_PP,
+    .GPIO_OType = GPIO_OType_OD,
     .GPIO_PuPd = GPIO_PuPd_UP
 };
 
@@ -551,6 +551,7 @@ void motorsESCSetOutput(uint32_t id)
 {
   ASSERT(id < NBR_OF_MOTORS);
   GPIO_PassthroughOutput.GPIO_Pin = motorMap[id]->gpioPin;
+  GPIO_PassthroughOutput.GPIO_OType = motorMap[id]->gpioOType;
   GPIO_Init(motorMap[id]->gpioPort, &GPIO_PassthroughOutput);
 }
 
