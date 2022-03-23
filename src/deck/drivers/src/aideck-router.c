@@ -42,6 +42,8 @@
 
 #include "aideck.h"
 #include "aideck-router.h"
+#include "cpxlink.h"
+#include "crtp.h"
 
 #define WIFI_SET_SSID_CMD         0x10
 #define WIFI_SET_KEY_CMD          0x11
@@ -54,7 +56,13 @@
 #define WIFI_AP_CONNECTED_CMD     0x31
 #define WIFI_CLIENT_CONNECTED_CMD 0x32
 
+#define CPX_ENABLE_CRTP_BRIDGE    0x10
+
 static CPXPacket_t cpxRx;
+static CPXPacket_t cpxCrtpTx;
+static CRTPPacket crtpRx;
+
+static xQueueHandle cpxCrtpRxQueue;
 
 static void cxpRxTest(void *param)
 {
@@ -62,7 +70,7 @@ static void cxpRxTest(void *param)
   while (1) {
     cpxReceivePacketBlocking(&cpxRx);
 
-    DEBUG_PRINT("CPX RX: Message from [0x%02X] to function [0x%02X] (size=%u)\n", cpxRx.route.source, cpxRx.route.function, cpxRx.dataLength);
+    //DEBUG_PRINT("CPX RX: Message from [0x%02X] to function [0x%02X] (size=%u)\n", cpxRx.route.source, cpxRx.route.function, cpxRx.dataLength);
 
     if (cpxRx.route.source == CPX_T_ESP32) {
       switch(cpxRx.route.function) {
@@ -82,7 +90,38 @@ static void cxpRxTest(void *param)
           DEBUG_PRINT("Not handling function [0x%02X]\n", cpxRx.route.function);
       }
     }
+
+    if (cpxRx.route.function == CPX_F_SYSTEM) {
+      if (cpxRx.data[0] == CPX_ENABLE_CRTP_BRIDGE) {
+        if (cpxRx.data[1] == 0x00) {
+          crtpSetLink(radiolinkGetLink());
+          DEBUG_PRINT("Disable CPX <> CRTP bridge\n");
+        } else {
+          crtpSetLink(cpxlinkGetLink());
+          DEBUG_PRINT("Enable CPX <> CRTP bridge\n");
+        }
+      }
+    }
+
+    if (cpxRx.route.function == CPX_F_CRTP) {
+      crtpRx.size = cpxRx.dataLength - 1;
+      crtpRx.header = cpxRx.data[0];
+      memcpy(crtpRx.data, &cpxRx.data[1], cpxRx.dataLength - 1);
+      xQueueSend(cpxCrtpRxQueue, &crtpRx, portMAX_DELAY);
+    }
   }
+}
+
+int aideckReceiveCRTPPacket(CRTPPacket * inPacket) {
+  return xQueueReceive(cpxCrtpRxQueue, inPacket, M2T(100));
+}
+
+int aideckSendCRTPPacket(CRTPPacket * outPacket) {
+  cpxInitRoute(CPX_T_STM32, CPX_T_HOST, CPX_F_CRTP, &cpxCrtpTx.route);
+  memcpy(&cpxCrtpTx.data, outPacket->raw, outPacket->size + 1);
+  cpxCrtpTx.dataLength = outPacket->size + 1;
+  cpxSendPacket(&cpxCrtpTx, 100);
+  return outPacket->size; // ?!
 }
 
 #ifndef CONFIG_DECK_AI_WIFI_NO_SETUP
@@ -123,6 +162,8 @@ static void setupWiFi() {
 void aideckRouterInit(void) {
   xTaskCreate(cxpRxTest, "CPX Router RX", configMINIMAL_STACK_SIZE, NULL,
               AI_DECK_TASK_PRI, NULL);
+
+  cpxCrtpRxQueue = xQueueCreate(5, sizeof(CRTPPacket));
 
 #ifdef CONFIG_DECK_AI_WIFI_NO_SETUP
   DEBUG_PRINT("Not setting up WiFi\n");

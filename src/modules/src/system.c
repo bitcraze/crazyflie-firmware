@@ -71,6 +71,9 @@
 #include "cfassert.h"
 #include "i2cdev.h"
 #include "autoconf.h"
+#ifdef CONFIG_DECK_AI
+  #include "cpxlink.h"
+#endif
 
 #ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
@@ -112,6 +115,9 @@ void systemInit(void)
 
   usblinkInit();
   sysLoadInit();
+#ifdef CONFIG_DECK_AI
+  cpxlinkInit();
+#endif
 
   /* Initialized here so that DEBUG_PRINT (buffered) can be used early */
   debugInit();
