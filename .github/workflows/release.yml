@@ -1,6 +1,6 @@
-# CI jobs
+# Release jobs
 
-name: CI
+name: Release
 
 on:
   workflow_dispatch:
