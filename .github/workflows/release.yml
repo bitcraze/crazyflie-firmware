@@ -64,5 +64,5 @@ jobs:
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
         asset_path: ${{ matrix.platforms }}.bin
-        asset_name: ${{ matrix.platforms }}-${{ github.ref }}.bin
+        asset_name: ${{ matrix.platforms }}-${GITHUB_REF##*/}.bin
         asset_content_type: application/octet-stream
