@@ -54,5 +54,5 @@ Check the implementation details in `attitude_pid_controller.c` in `attitudeCont
 
 The most outer-loop of the cascaded PID controller is the position and velocity controller. It receives position or velocity input from a commander which are handled, since it is possible to set in the variable `setpoint_t` which  stabilization mode to use `stab_mode_t` (either position:  `modeAbs` or `modeVelocity`). These can be found in `stabilizer_types.h`. The control loop runs at 100 Hz.
 
-Check the implementation details in Check the implementation details in `position_controller_pid.c` in `positionController()` and  `velocityController()`.
+Check the implementation details in `position_controller_pid.c` in `positionController()` and  `velocityController()`.
 
