@@ -59,12 +59,15 @@ jobs:
         
     - name: Get the version 
       id: get_release_version 
-      run: echo ::set-output name=release_version::${github.ref/refs\/tags\//}
+      env: 
+        GITHUB_REF : ${{ github.ref }}
+      run: echo ::set-output name=release_version::${GITHUB_REF/refs\/tags\//}
       
     - name: Upload ${{ matrix.platforms }} bin
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REF: ${github.ref]}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
         asset_path: ${{ matrix.platforms }}.bin
