@@ -93,14 +93,14 @@ $ git submodule update
 Before you can build the firmware, you will need to configure it. To get the default configuration you can write:
 
 ```bash
-$ make defconfig
+$ make cf2_defconfig
 $ make -j 12
 ```
 
 or with the toolbelt:
 
 ```bash
-$ tb make defconfig
+$ tb make cf2_defconfig
 $ tb make
 ```
 
