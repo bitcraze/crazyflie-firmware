@@ -44,7 +44,7 @@ jobs:
         submodules: true
 
     - name: Build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platforms }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
 
     - name: Load Release URL File from release job
       uses: actions/download-artifact@v1
