@@ -225,7 +225,7 @@ static void Gap8Task(void *param)
   // Read out the byte the Gap8 sends and immediately send it to the console.
   while (1)
   {
-    uart1GetDataWithDefaultTimeout(&byte);
+    uart1GetDataWithTimeout(&byte, portMAX_DELAY);
     consolePutchar(byte);
   }
 }
