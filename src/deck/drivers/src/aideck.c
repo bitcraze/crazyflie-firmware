@@ -83,6 +83,20 @@ typedef struct {
   CPXFunction_t function : 8;
 } __attribute__((packed)) CPXRoutingPacked_t;
 
+typedef struct {
+  uint8_t cmd;
+  uint32_t startAddress;
+  uint32_t writeSize;
+} __attribute__((packed)) GAP8BlCmdPacket_t;
+
+typedef struct {
+  uint8_t cmd;
+} __attribute__((packed)) ESP32SysPacket_t;
+
+#define GAP8_BL_CMD_START_WRITE (0x02)
+
+#define ESP32_SYS_CMD_RESET_GAP8 (0x10)
+
 #define CPX_ROUTING_PACKED_SIZE (sizeof(CPXRoutingPacked_t))
 
 typedef struct {
@@ -287,32 +301,86 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
     route->lastPacket = true;
 }
 
+static CPXPacket_t bootPacket;
+
+#define FLASH_BUFFER_SIZE 64
+static uint8_t flashBuffer[FLASH_BUFFER_SIZE];
+static int flashBufferIndex = 0;
+
 static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef) {
-  // static CPXPacket_t cpxTxPacket;
 
-  // cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_BOOTLOADER, &cpxTxPacket.route);
-
-  // ASSERT(writeLen <= AIDECK_UART_PAYLOAD_MTU);
-  // memcpy(&cpxTxPacket.data, buffer, writeLen);
-  // cpxTxPacket.dataLength = writeLen;
-
-  // bool sentOk = cpxSendPacket(&cpxTxPacket, portMAX_DELAY);
-  // ASSERT(sentOk);
+  cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_BOOTLOADER, &bootPacket.route);
 
   if (memAddr == 0) {
-    DEBUG_PRINT("Flashing! size=%ld\n", *memDef->newFwSizeP);
+    GAP8BlCmdPacket_t * gap8BlPacket = bootPacket.data;
+
+    gap8BlPacket->cmd = GAP8_BL_CMD_START_WRITE;
+    gap8BlPacket->startAddress = 0x40000;
+    gap8BlPacket->writeSize = *(memDef->newFwSizeP);
+    bootPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
+    cpxSendPacketBlocking(&bootPacket);
+  }
+
+  // The GAP8 can only flash data in multiples of 4 bytes,
+  // buffering will guard against this and also speed things up.
+  // The full binary that will be flashed is multiple of 4. 
+
+  uint32_t sizeLeftToBufferFull = sizeof(flashBuffer) - flashBufferIndex;
+  uint32_t sizeAbleToBuffer = sizeLeftToBufferFull < writeLen ? sizeLeftToBufferFull : writeLen;
+  uint32_t lastAddressToWrite = memAddr + sizeAbleToBuffer;
+
+  memcpy(&flashBuffer[flashBufferIndex], buffer, sizeAbleToBuffer);
+  flashBufferIndex += sizeAbleToBuffer;
+
+  if (flashBufferIndex == sizeof(flashBuffer) || lastAddressToWrite == *(memDef->newFwSizeP)) {
+    memcpy(&bootPacket.data, flashBuffer, flashBufferIndex);
+    bootPacket.dataLength = flashBufferIndex;
+    
+    cpxSendPacketBlocking(&bootPacket);
+
+    flashBufferIndex = 0;
+    int sizeLeftToBuffer = writeLen - sizeLeftToBufferFull;
+    if (sizeLeftToBuffer > 0) {
+      memcpy(&flashBuffer[flashBufferIndex], &buffer[sizeLeftToBufferFull], sizeLeftToBuffer);
+      flashBufferIndex += sizeLeftToBuffer;
+    }
   }
 
   return true;
 }
 
+static bool isInBootloader = false;
+
+static void resetToFW() {
+  DEBUG_PRINT("Reset to FW\n");
+}
+
 static void resetToBootloader() {
-  DEBUG_PRINT("Reset to bootloader\n");
+  cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_SYSTEM, &bootPacket.route);
+
+  ESP32SysPacket_t * esp32SysPacket = &bootPacket.data;
+
+  esp32SysPacket->cmd = ESP32_SYS_CMD_RESET_GAP8;
+  bootPacket.dataLength = sizeof(ESP32SysPacket_t);
+  
+  cpxSendPacketBlocking(&bootPacket);
+  // This should be handled on RX on CPX instead
+  vTaskDelay(100);
+  isInBootloader = true;
 }
 
 static uint8_t gap8DeckFlasherPropertiesQuery()
 {
-  uint8_t result = DECK_MEMORY_MASK_STARTED;
+  uint8_t result = 0;
+
+  if (isInit) {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
+
+  if (isInBootloader) {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
+  }
+
   return result;
 }
 
