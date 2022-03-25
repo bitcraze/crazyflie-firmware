@@ -74,15 +74,15 @@ PidObject pidRoll = {
 };
 
 PidObject pidPitch = {
-  .kp = PID_ROLL_KP,
-  .ki = PID_ROLL_KI,
-  .kd = PID_ROLL_KD,
+  .kp = PID_PITCH_KP,
+  .ki = PID_PITCH_KI,
+  .kd = PID_PITCH_KD,
 };
 
 PidObject pidYaw = {
-  .kp = PID_ROLL_KP,
-  .ki = PID_ROLL_KI,
-  .kd = PID_ROLL_KD,
+  .kp = PID_YAW_KP,
+  .ki = PID_YAW_KI,
+  .kd = PID_YAW_KD,
 };
 
 static int16_t rollOutput;
