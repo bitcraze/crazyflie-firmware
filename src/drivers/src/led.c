@@ -239,10 +239,16 @@ void ledShowFaultPattern(void)
   ledSet(LED_BLUE_L, 0);
 }
 
+/**
+ * Parameters governing the onboard LEDs
+ * */
 PARAM_GROUP_START(led)
 /**
  * @brief Control onboard LEDs using a bitmask. Enabling it will override the led sequencer.
+ *
+ * ```
  * | 7:ENABLE | 6:N/A | 5:BLUE_R | 4:RED_R | 3:GREEN_R | 2:RED_L | 1:GREEN_L | 0:BLUE_L |
+ * ```
  */
 PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bitmask, &ledControlBitmask, &ledBitmaskParamCallback)
 

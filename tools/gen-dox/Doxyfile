@@ -291,7 +291,7 @@ OPTIMIZE_OUTPUT_VHDL   = NO
 # Note that for custom extensions you also need to set FILE_PATTERNS otherwise
 # the files are not read by doxygen.
 
-EXTENSION_MAPPING      =
+EXTENSION_MAPPING      = vtpl=C
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -817,6 +817,7 @@ INPUT_ENCODING         = UTF-8
 
 FILE_PATTERNS          = *.c \
                          *.h \
+                         *.vtpl \
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -2069,7 +2070,9 @@ PREDEFINED             = "__attribute__(x)=" \
                          "LOG_GROUP_START(NAME)=class fake_log_class_##NAME {" \
                          "LOG_GROUP_STOP(NAME)=};" \
                          "PARAM_ADD(TYPE, NAME, ADDRESS)=TYPE NAME;" \
+                         "PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS)=TYPE NAME;" \
                          "PARAM_ADD_CORE(TYPE, NAME, ADDRESS)=/** @@ingroup PARAM_CORE_GROUP */ TYPE NAME;" \
+                         "PARAM_ADD_CORE_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK)=/** @@ingroup PARAM_CORE_GROUP */ TYPE NAME;" \
                          "PARAM_GROUP_START(NAME)=class fake_param_class_##NAME {" \
                          "PARAM_GROUP_STOP(NAME)=};"
 

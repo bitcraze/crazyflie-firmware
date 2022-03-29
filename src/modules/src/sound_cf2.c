@@ -35,6 +35,7 @@
 #include "timers.h"
 
 #include "config.h"
+#include "debug.h"
 #include "param.h"
 #include "log.h"
 #include "sound.h"
@@ -328,6 +329,11 @@ static void soundTimer(xTimerHandle timer)
     effect = sys_effect;
   } else {
     effect = user_effect;
+  }
+
+  if (effect > neffect) {
+    DEBUG_PRINT("Bad value for effect (> neffect)\n");
+    effect = SND_OFF;
   }
 
   if (effects[effect].call != 0) {

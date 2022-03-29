@@ -23,7 +23,7 @@
  *
  *
  * hello_world.c - App layer application of a simple hello world debug print every
- *   2 seconds.  
+ *   2 seconds.
  */
 
 
@@ -35,6 +35,8 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+
+#include "headerInOtherDir.h"
 
 #include "debug.h"
 

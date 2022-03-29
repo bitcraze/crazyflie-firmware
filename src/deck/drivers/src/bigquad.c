@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "stm32fxxx.h"
+#include "autoconf.h"
 #include "config.h"
 #include "motors.h"
 #include "debug.h"
@@ -47,12 +48,12 @@
 #define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
 #define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
 
-#ifdef ENABLE_BQ_DECK
+#ifdef CONFIG_DECK_BIGQUAD_ENABLE
 
 //Hardware configuration
 static bool isInit;
 
-#ifdef BQ_DECK_ENABLE_OSD
+#ifdef CONFIG_DECK_BIGQUAD_ENABLE_OSD
 static MspObject s_MspObject;
 
 static void osdTask(void *param)
@@ -70,7 +71,7 @@ static void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
 {
   uart1SendData(bufferLen, pBuffer);
 }
-#endif // BQ_DECK_ENABLE_OSD
+#endif // CONFIG_DECK_BIGQUAD_ENABLE_OSD
 
 
 static void bigquadInit(DeckInfo *info)
@@ -82,12 +83,12 @@ static void bigquadInit(DeckInfo *info)
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
   extRxInit();
-#ifdef BQ_DECK_ENABLE_PM
+#ifdef CONFIG_DECK_BIGQUAD_ENABLE_PM
   pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
   pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_CURR_PIN, BIGQUAD_BAT_AMP_PER_VOLT);
 #endif
 
-#ifdef BQ_DECK_ENABLE_OSD
+#ifdef CONFIG_DECK_BIGQUAD_ENABLE_OSD
   uart1Init(115200);
   mspInit(&s_MspObject, osdResponseCallback);
   xTaskCreate(osdTask, BQ_OSD_TASK_NAME,
@@ -131,4 +132,4 @@ PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
 
 PARAM_GROUP_STOP(deck)
-#endif // ENABLE_BQ_DECK
+#endif // CONFIG_DECK_BIGQUAD_ENABLE

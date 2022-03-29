@@ -31,13 +31,7 @@
 #include "deck_test.h"
 #include "debug.h"
 
-
-#ifndef DECK_TEST_PRINT_ALL_FAILED
-  #define STATUS_EVAL (*status)
-#else
-  #define STATUS_EVAL 1
-#endif
-
+#define STATUS_EVAL (*status)
 
 void decktestEval(bool result, char *failString, bool *status)
 {

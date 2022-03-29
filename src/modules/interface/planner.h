@@ -38,15 +38,22 @@ Header file for planning state machine
 
 #pragma once
 
+#include <stdint.h>
+
 #include "math3d.h"
 #include "pptraj.h"
 #include "pptraj_compressed.h"
 
 enum trajectory_state
 {
+	// Motors off.
 	TRAJECTORY_STATE_IDLE            = 0,
+	// Follow a trajectory, then hover at its endpoint.
 	TRAJECTORY_STATE_FLYING          = 1,
+	// Follow a trajectory, but cut motors when it ends.
 	TRAJECTORY_STATE_LANDING         = 3,
+	// Not producing setpoints but also not wanting motors off.
+	TRAJECTORY_STATE_DISABLED        = 4,
 };
 
 enum trajectory_type
@@ -82,6 +89,15 @@ void plan_stop(struct planner *p);
 // currently this is true at startup before we take off,
 // and also after an emergency stop.
 bool plan_is_stopped(struct planner *p);
+
+// disable the planner.
+// subsequently, plan_is_disabled(p) will return true,
+// and it is no longer valid to call plan_current_goal(p).
+void plan_disable(struct planner *p);
+
+// query if the planner is disabled.
+// currently this is true when preempted by low-level commands.
+bool plan_is_disabled(struct planner *p);
 
 // get the planner's current goal.
 struct traj_eval plan_current_goal(struct planner *p, float t);

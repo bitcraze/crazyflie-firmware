@@ -47,7 +47,6 @@ such as: take-off, landing, polynomial trajectories.
 #include "task.h"
 #include "semphr.h"
 
-// Crazyswarm includes
 #include "crtp.h"
 #include "crtp_commander_high_level.h"
 #include "planner.h"
@@ -55,6 +54,9 @@ such as: take-off, landing, polynomial trajectories.
 #include "param.h"
 #include "static_mem.h"
 #include "mem.h"
+#include "commander.h"
+#include "stabilizer_types.h"
+#include "stabilizer.h"
 
 // Local types
 enum TrajectoryLocation_e {
@@ -86,6 +88,11 @@ struct trajectoryDescription
 // Global variables
 uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
 static struct trajectoryDescription trajectory_descriptions[NUM_TRAJECTORY_DEFINITIONS];
+
+// Static structs are zero-initialized, so nullSetpoint corresponds to
+// modeDisable for all stab_mode_t members and zero for all physical values.
+// In other words, the controller should cut power upon recieving it.
+const static setpoint_t nullSetpoint;
 
 static bool isInit = false;
 static struct planner planner;
@@ -287,25 +294,41 @@ void crtpCommanderHighLevelTellState(const state_t *state)
   xSemaphoreGive(lockTraj);
 }
 
-void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state)
+int crtpCommanderHighLevelDisable()
 {
+  plan_disable(&planner);
+  return 0;
+}
+
+bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, uint32_t tick)
+{
+  if (!RATE_DO_EXECUTE(RATE_HL_COMMANDER, tick)) {
+    return false;
+  }
+
   xSemaphoreTake(lockTraj, portMAX_DELAY);
   float t = usecTimestamp() / 1e6;
   struct traj_eval ev = plan_current_goal(&planner, t);
-  if (!is_traj_eval_valid(&ev)) {
-    // programming error
-    plan_stop(&planner);
-  }
   xSemaphoreGive(lockTraj);
 
-  // if we are on the ground, update the last setpoint with the current state estimate
-  if (plan_is_stopped(&planner)) {
+  // If we are not actively following a trajectory, then update the "last
+  // setpoint" values with the current state estimate, so we have the right
+  // initial conditions for future trajectory planning.
+  if (plan_is_disabled(&planner) || plan_is_stopped(&planner)) {
     pos = state2vec(state->position);
     vel = state2vec(state->velocity);
     yaw = radians(state->attitude.yaw);
+    if (plan_is_stopped(&planner)) {
+      // Return a null setpoint - when the HLcommander is stopped, it wants the
+      // motors to be off. Only reason they should be spinning is if the
+      // HLcommander has been preempted by a streaming setpoint command.
+      *setpoint = nullSetpoint;
+      return true;
+    }
+    // Otherwise, do not mutate the setpoint.
+    return false;
   }
-
-  if (is_traj_eval_valid(&ev)) {
+  else if (is_traj_eval_valid(&ev)) {
     setpoint->position.x = ev.pos.x;
     setpoint->position.y = ev.pos.y;
     setpoint->position.z = ev.pos.z;
@@ -338,6 +361,12 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     } else {
       yaw = ev.yaw;
     }
+    return true;
+  }
+  else {
+    // Not disabled or stopped but invalid eval indicates a programming error.
+    plan_disable(&planner);
+    return false;
   }
 }
 
@@ -546,7 +575,7 @@ int go_to(const struct data_go_to* data)
     struct vec hover_pos = mkvec(data->x, data->y, data->z);
     xSemaphoreTake(lockTraj, portMAX_DELAY);
     float t = usecTimestamp() / 1e6;
-    if (plan_is_stopped(&planner)) {
+    if (plan_is_disabled(&planner) || plan_is_stopped(&planner)) {
       ev.pos = pos;
       ev.vel = vel;
       ev.yaw = yaw;

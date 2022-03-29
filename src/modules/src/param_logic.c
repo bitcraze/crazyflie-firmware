@@ -32,6 +32,7 @@
 #include "crc32.h"
 #include "debug.h"
 #include "cfassert.h"
+#include "autoconf.h"
 
 #if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
@@ -566,7 +567,7 @@ void paramSetInt(paramVarId_t varid, int valuei)
 
   pk.size += paramSet(varid.index, (void *)&valuei);
 
-#ifndef SILENT_PARAM_UPDATES
+#ifndef CONFIG_PARAM_SILENT_UPDATES
   crtpSendPacketBlock(&pk);
 #endif
 }
@@ -589,7 +590,7 @@ void paramSetFloat(paramVarId_t varid, float valuef)
       pk.size += 4;
   }
 
-#ifndef SILENT_PARAM_UPDATES
+#ifndef CONFIG_PARAM_SILENT_UPDATES
   crtpSendPacketBlock(&pk);
 #endif
 }

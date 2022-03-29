@@ -26,6 +26,13 @@ and to view it in a web page
 
 ```tb docs```
 
+## Contribute
+Go to the [contribute page](https://www.bitcraze.io/contribute/) on our website to learn more.
+
+### Test code for contribution
+
+To run the tests please have a look at the [unit test documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/unit_testing/).
+
 ## License
 
 The code is licensed under LGPL-3.0

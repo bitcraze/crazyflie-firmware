@@ -514,7 +514,7 @@ static void sensorsDeviceInit(void)
   }
   else
   {
-#ifndef SENSORS_IGNORE_BAROMETER_FAIL
+#ifndef CONFIG_SENSORS_IGNORE_BAROMETER_FAIL
     DEBUG_PRINT("BMP388 I2C connection [FAIL]\n");
     isInit = false;
     return;

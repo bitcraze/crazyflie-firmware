@@ -56,28 +56,24 @@ DECK_DRIVER(myled_driver);
 -   Init is called on all initialized driver and then test is called.
 -   The init and test functions are both optional (we have some board
     with only init and event some with only test). If absent just remove
-    the *.init* or *.test* initialisation.
+    the *.init* or *.test* initialization.
 -   In this mode no task are created so to run some code at regular
     intervale the code needs to deal with freeRtos or with the other
     parts of the Crazyflie code.
 
 To compile the driver, place it in deck/drivers/src/ and add it to the
-Makefile:
+Kbuild file:
 
 ``` {.make}
-PROJ_OBJ += myled.o
+obj-y += myled.o
 ```
 
 ### Forcing initialization of a driver
 
 The deck driver will be initialized only if a deck is connected with the
 right OW memory content. During development it is possible to force the
-initialisation of a deck by adding a define in
-\`\`\`tools/make/config.mk\`\`\`:
-
-``` {.make}
-CFLAGS += -DDECK_FORCE=meMyled
-```
+initialization of a deck by setting the `CONFIG_DECK_FORCE` config option
+to `meMyled` in your `.config` either by hand or using `make menuconfig`.
 
 ### Driver declaration API
 
@@ -95,9 +91,30 @@ typedef struct deck_driver {
   uint8_t pid;
   char *name;
 
-  /* Periphreal and Gpio used _dirrectly_ by the driver */
+  /*
+   * Peripheral and Gpio used _directly_ by the driver.
+   *
+   * Include the pin in usedGpio if it's used directly by the driver, do not
+   * add the pin to usedGpio if it used as part of a peripheral.
+   *
+   * For example: If a deck driver uses SPI we add DECK_USING_SPI to
+   * usedPeriph. If the deck uses the MOSI, MISO or SCK pins for other stuff
+   * than SPI it would have to specify DECK_USING_[PA7|PA6|PA5].
+   *
+   */
   uint32_t usedPeriph;
   uint32_t usedGpio;
+
+  /* Required system properties */
+  StateEstimatorType requiredEstimator;
+  bool requiredLowInterferenceRadioMode;
+
+  // Deck memory access definitions
+  const struct deckMemDef_s* memoryDef;
+
+  // Have an option to present a secondary memory area for instance for decks
+  // two firmwares.
+  const struct deckMemDef_s* memoryDefSecondary;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);

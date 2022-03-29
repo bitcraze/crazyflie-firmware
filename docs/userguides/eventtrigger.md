@@ -39,5 +39,5 @@ should not be part of it.
 
 ## Using Event Triggers
 
-Currently, the only backend for event triggers is the uSD-card deck. You can find a description of how to configure
-and analyze the events in its [documentation](/docs/userguides/decks/micro-sd-card-deck.md).
+Currently, the only backend for event triggers is the **uSD-card deck**. You can find a description of how to configure
+and analyze the events on the usage tab of [the uSD-card deck product page](https://www.bitcraze.io/products/micro-sd-card-deck/).

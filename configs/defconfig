@@ -1,0 +1,1 @@
+CONFIG_CROSS_COMPILE="arm-none-eabi-"

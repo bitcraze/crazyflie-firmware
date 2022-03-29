@@ -17,6 +17,7 @@ cffirmware.py
 
 /cf2.*
 /tag.*
+/bolt.*
 *.gch
 
 current_platform.mk
@@ -34,3 +35,14 @@ docs/.jekyll-cache
 docs/api/logs.md_raw
 docs/api/params.md_raw
 docs/api/log_param_doc.json
+docs/api
+
+build/
+# To avoid that /tools/build is ignored
+!/tools/*
+
+**/*.o
+**/*.cmd
+**/*.a
+*.elf
+src/utils/src/version_gen.c

@@ -46,7 +46,7 @@
 #include "trace.h"
 #include "usec_time.h"
 
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION 5
 
 #ifdef STM32F4XX
   #define QUAD_FORMATION_X
@@ -209,12 +209,6 @@
  * fairly constant over the battery voltage range but testing with fully changed battery is best.
  */
 #define BAT_LOADING_SAG_THRESHOLD  0.95f
-
-/**
- * \def ACTIVATE_AUTO_SHUTDOWN
- * Will automatically shot of system if no radio activity
- */
-//#define ACTIVATE_AUTO_SHUTDOWN
 
 /**
  * \def ACTIVATE_STARTUP_SOUND

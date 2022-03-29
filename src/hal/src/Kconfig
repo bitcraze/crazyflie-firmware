@@ -1,0 +1,12 @@
+menu "Power management configuration"
+
+config PM_AUTO_SHUTDOWN
+    bool "Enable automatic shutdown"
+    default n
+    help
+        The power management subsystem can automatically shutdown the system.
+        The shutdown time in minutes is defined in platform_defaults_* for
+        the specific platform and is the time since the last radio communication
+        occured.
+
+endmenu

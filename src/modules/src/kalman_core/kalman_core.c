@@ -67,7 +67,7 @@
 // #define DEBUG_STATE_CHECK
 
 // the reversion of pitch and roll to zero
-#ifdef LPS_2D_POSITION_HEIGHT
+#ifdef CONFIG_DECK_LOCO_2D_POSITION
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
 #else
 #define ROLLPITCH_ZERO_REVERSION (0.001f)

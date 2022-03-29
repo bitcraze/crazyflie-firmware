@@ -13,6 +13,7 @@
 
 // Functions under test
 void clearWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
+int processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace, pulseProcessorV2BlockWorkspace_t* blockWorkspace);
 bool storePulse(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
 void augmentFramesInWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace);
 bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], pulseProcessorV2SweepBlock_t* block);
@@ -28,10 +29,12 @@ static void addFrameToWs(uint8_t sensor, uint32_t timestamp, uint32_t offset, bo
 static void setUpOotxDecoderProcessBitCallCounter();
 static void setUpSlowbitFrame();
 static void clearSlowbitState();
+static void validateProcessFrame(int expectedNrOfBlocks, uint8_t sensor, uint32_t timestamp, uint32_t offset, uint8_t channel, bool channelFound);
 
 static pulseProcessor_t state;
 static pulseProcessorV2PulseWorkspace_t ws;
 static pulseProcessorV2SweepBlock_t block;
+static pulseProcessorV2BlockWorkspace_t blockWorkspace;
 
 static pulseProcessorFrame_t slowbitFrame;
 static int nrOfCallsToOotxDecoderProcessBit;
@@ -138,6 +141,42 @@ void testThatCleanFramesAreAugmented() {
     TEST_ASSERT_TRUE(ws.slots[4].channelFound);
 }
 
+void testThatMultipleFramesAreAugmented() {
+    // Fixture
+    uint8_t expectedChan1 = 2;
+    uint8_t expectedChan2 = 5;
+
+    clearWorkspace(&ws);
+
+    addFrameToWs(0, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(1, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(2, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(3, A_TS, AN_OFFSET, true, expectedChan1);
+
+    addFrameToWs(0, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(1, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(2, A_TS, NO_OFFSET, false, 0);
+    addFrameToWs(3, A_TS, AN_OFFSET, true, expectedChan2);
+
+    // Test
+    augmentFramesInWorkspace(&ws);
+
+    // Assert
+    TEST_ASSERT_EQUAL_UINT8(expectedChan1, ws.slots[0].channel);
+    TEST_ASSERT_TRUE(ws.slots[0].channelFound);
+    TEST_ASSERT_EQUAL_UINT8(expectedChan1, ws.slots[1].channel);
+    TEST_ASSERT_TRUE(ws.slots[1].channelFound);
+    TEST_ASSERT_EQUAL_UINT8(expectedChan1, ws.slots[2].channel);
+    TEST_ASSERT_TRUE(ws.slots[2].channelFound);
+
+    TEST_ASSERT_EQUAL_UINT8(expectedChan2, ws.slots[4].channel);
+    TEST_ASSERT_TRUE(ws.slots[4].channelFound);
+    TEST_ASSERT_EQUAL_UINT8(expectedChan2, ws.slots[5].channel);
+    TEST_ASSERT_TRUE(ws.slots[5].channelFound);
+    TEST_ASSERT_EQUAL_UINT8(expectedChan2, ws.slots[6].channel);
+    TEST_ASSERT_TRUE(ws.slots[6].channelFound);
+}
+
 void testThatUnCleanFramesAreAugmented() {
     // Fixture
     uint8_t expectedChan1 = 2;
@@ -160,7 +199,7 @@ void testThatUnCleanFramesAreAugmented() {
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(expectedChan1, ws.slots[1].channel);
-    TEST_ASSERT_FALSE(ws.slots[3].channelFound);
+    TEST_ASSERT_TRUE(ws.slots[3].channelFound);
     TEST_ASSERT_EQUAL_UINT8(expectedChan2, ws.slots[4].channel);
     TEST_ASSERT_FALSE(ws.slots[7].channelFound);
 }
@@ -268,6 +307,32 @@ void testThatProcessBlockSetsOffsets() {
     TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE, block.offset[SWEEP_SENS_1]);
     TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP, block.offset[SWEEP_SENS_2]);
     TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 2, block.offset[SWEEP_SENS_3]);
+
+    TEST_ASSERT_TRUE(ok);
+}
+
+
+// Sensor: 1  TS:c53a8f  Width: 10f  Chan: None  offset:     0  BeamWord:10b2c
+// Sensor: 3  TS:c53a79  Width: 125  Chan: None  offset:     0  BeamWord:1a42c
+// Sensor: 2  TS:c53cbb  Width: 11e  Chan: 2(1)  offset: 44731  BeamWord:1409a
+// Sensor: 0  TS:c53cd4  Width: 11e  Chan: 2(1)  offset:     0  BeamWord:0269a
+
+void testThatProcessBlockSetsOffsetsWithOffsetOnThirdFrame() {
+    // Fixture
+    clearWorkspace(&ws);
+    addFrameToWs(SWEEP_SENS_0, OFFSET_BASE + TIMESTAMP_STEP * 0, NO_OFFSET, true, 3);
+    addFrameToWs(SWEEP_SENS_1, OFFSET_BASE + TIMESTAMP_STEP * 1, NO_OFFSET, true, 3);
+    addFrameToWs(SWEEP_SENS_2, OFFSET_BASE + TIMESTAMP_STEP * 2, OFFSET_BASE, true, 3);
+    addFrameToWs(SWEEP_SENS_3, OFFSET_BASE + TIMESTAMP_STEP * 3, NO_OFFSET, true, 3);
+
+    // Test
+    bool ok = processWorkspaceBlock(&ws.slots[0], &block);
+
+    // Assert
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP * 2, block.offset[SWEEP_SENS_0]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE - TIMESTAMP_STEP * 1, block.offset[SWEEP_SENS_1]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 0, block.offset[SWEEP_SENS_2]);
+    TEST_ASSERT_EQUAL_UINT32(OFFSET_BASE + TIMESTAMP_STEP * 1, block.offset[SWEEP_SENS_3]);
 
     TEST_ASSERT_TRUE(ok);
 }
@@ -484,8 +549,68 @@ void testThatNonFullSlowbitMessageIsNotReported() {
     TEST_ASSERT_FALSE(actual);
 }
 
+// Recording with one base station in a random orientation
+void testRecordedSequence1Bs_1() {
+    // Fixture
+    clearWorkspace(&ws);
+
+    // Test and assert
+    validateProcessFrame(0, 0, 2156620, 0,      0, false);
+    validateProcessFrame(0, 2, 2156972, 165916, 0, true);
+    validateProcessFrame(0, 1, 2157193, 0,      0, true);
+    validateProcessFrame(0, 3, 2157561, 0,      0, true);
+
+    validateProcessFrame(1, 2, 2290186, 0,      0, false);
+    validateProcessFrame(0, 0, 2290608, 299556, 0, true);
+    validateProcessFrame(0, 3, 2290750, 0,      0, true);
+    validateProcessFrame(0, 1, 2291154, 0,      0, true);
+
+    validateProcessFrame(1, 0, 2635114, 0,      0, false);
+    validateProcessFrame(0, 2, 2635466, 165920, 0, true);
+    validateProcessFrame(0, 1, 2635687, 0,      0, true);
+    validateProcessFrame(0, 3, 2636051, 0,      0, true);
+
+    validateProcessFrame(1, 2, 2768686, 0,      0, false);
+    validateProcessFrame(0, 0, 2769102, 299556, 0, true);
+    validateProcessFrame(0, 3, 2769244, 0,      0, true);
+    validateProcessFrame(0, 1, 2769648, 0,      0, true);
+}
+
+void testIssue901Data() {
+    // Fixture
+    clearWorkspace(&ws);
+
+    // Test and assert
+    validateProcessFrame(0, 1, 0xc53a8f, 0,      0, false);
+    validateProcessFrame(0, 3, 0xc53a79, 0,      0, false);
+    validateProcessFrame(0, 2, 0xc53cbb, 44731,  0, true);
+    validateProcessFrame(0, 0, 0xc53cd4, 0,      0, true);
+
+    // Fake data from now on
+    validateProcessFrame(1, 1, 0xc53a8f + 130000, 0,      0, false);
+    validateProcessFrame(0, 3, 0xc53a79 + 130000, 0,      0, false);
+    validateProcessFrame(0, 2, 0xc53cbb + 130000, 44731,  0, true);
+    validateProcessFrame(0, 0, 0xc53cd4 + 130000, 0,      0, true);
+}
+
+
 
 // Helpers ------------------------------------------------
+
+static void validateProcessFrame(int expectedNrOfBlocks, uint8_t sensor, uint32_t timestamp, uint32_t offset, uint8_t channel, bool channelFound) {
+    pulseProcessorFrame_t frameData;
+    frameData.sensor = sensor;
+    frameData.timestamp = timestamp;
+    frameData.offset = offset;
+    frameData.channel = channel;
+    frameData.channelFound = channelFound;
+
+    int actual = processFrame(&frameData, &ws, &blockWorkspace);
+
+    char errorMsg[200];
+    sprintf(errorMsg, "Failed for timestamp=%ul", timestamp);
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(expectedNrOfBlocks, actual, errorMsg);
+}
 
 static void addFrameToWs(uint8_t sensor, uint32_t timestamp, uint32_t offset, bool channelFound, uint8_t channel) {
     pulseProcessorFrame_t frame;

@@ -27,7 +27,7 @@ Then make the firmware.
 For **Crazyflie 2.X**:
 
 ```
-crazyflie-firmware$ make PLATFORM=cf2
+crazyflie-firmware$ make
 (...)
   DFUse cf2.dfu
 Build for the CF2 platform!

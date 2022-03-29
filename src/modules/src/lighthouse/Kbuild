@@ -1,0 +1,5 @@
+obj-y += lighthouse_core.o
+obj-y += lighthouse_deck_flasher.o
+obj-y += lighthouse_position_est.o
+obj-y += lighthouse_storage.o
+obj-y += lighthouse_transmit.o

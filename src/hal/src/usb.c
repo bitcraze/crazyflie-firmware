@@ -48,6 +48,8 @@
 #include "crtp.h"
 #include "static_mem.h"
 
+#include "bootloader.h"
+
 
 NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
 
@@ -177,6 +179,10 @@ static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
                       USB_RX_TX_PACKET_SIZE);
       rxStopped = false;
     }
+  } else if(command == 0x02){
+    //restart system and transition to DFU bootloader mode
+    //enter bootloader specific to STM32f4xx
+    enter_bootloader(0, 0x00000000);
   } else {
     crtpSetLink(radiolinkGetLink());
   }

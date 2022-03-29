@@ -32,12 +32,6 @@ CCS_COMMAND_SILENT="  CCS   $@"
 	@$(if $(QUIET), ,echo $(CCS_COMMAND$(VERBOSE)) )
 	@$(CCS_COMMAND)
 
-LD_COMMAND=$(LD) $(LDFLAGS) $(foreach o,$(OBJ),$(BIN)/$(o)) -lm -o $@
-LD_COMMAND_SILENT="  LD    $@"
-$(PROG).elf: $(OBJ)
-	@$(if $(QUIET), ,echo $(LD_COMMAND$(VERBOSE)) )
-	@$(LD_COMMAND)
-
 HEX_COMMAND=$(OBJCOPY) $< -O ihex $@
 HEX_COMMAND_SILENT="  COPY  $@"
 $(PROG).hex: $(PROG).elf
@@ -68,14 +62,10 @@ clean_o: clean_version
 	@$(if $(QUIET), ,echo $(CLEAN_O_COMMAND$(VERBOSE)) )
 	@$(CLEAN_O_COMMAND)
 
-CLEAN_COMMAND=rm -f cf*.elf cf*.hex cf*.bin cf*.dfu cf*.map cf*.py _cf*.so $(BIN)/dep/*.d $(BIN)/*.o $(BIN)/*.c
+CLEAN_COMMAND=rm -f *.elf *.hex *.bin *.dfu *.map *.py _cf*.so
 CLEAN_COMMAND_SILENT="  CLEAN"
-clean:
+clean_cf:
 	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
 	@$(CLEAN_COMMAND)
-
-MRPROPER_COMMAND=rm -f current_platform.mk *~ hal/src/*~ hal/interface/*~ tasks/src/*~ tasks/inc/*~ utils/src/*~ utils/inc/*~ tools/make/*~; rm -rf bin/dep/*.d $(BIN)/*.a $(BIN)/vendor/*.o
-MRPROPER_COMMAND_SILENT="  MRPROPER"
-mrproper: clean
-	@$(if $(QUIET), ,echo $(MRPROPER_COMMAND$(VERBOSE)) )
-	@$(MRPROPER_COMMAND)
+	@rm -f $(srctree)/$(PROG).*
+	

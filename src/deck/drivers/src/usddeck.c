@@ -63,8 +63,10 @@
 #include "mem.h"
 #include "eventtrigger.h"
 
+#include "autoconf.h"
+
 // Hardware defines
-#ifdef USDDECK_USE_ALT_PINS_AND_SPI
+#ifdef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
 #include "deck_spi3.h"
 #define USD_CS_PIN    DECK_GPIO_RX2
 

@@ -41,6 +41,7 @@
 
 #include "sensors.h"
 #include "commander.h"
+#include "crtp_commander_high_level.h"
 #include "crtp_localization_service.h"
 #include "controller.h"
 #include "power_distribution.h"
@@ -66,6 +67,8 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
+// For scratch storage - never logged or passed to other subsystems.
+static setpoint_t tempSetpoint;
 
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
@@ -257,6 +260,10 @@ static void stabilizerTask(void* param)
       stateEstimator(&state, tick);
       compressState();
 
+      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
+        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
+      }
+
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
@@ -278,13 +285,14 @@ static void stabilizerTask(void* param)
         powerDistribution(&control);
       }
 
+#ifdef CONFIG_DECK_USD
       // Log data to uSD card if configured
-      if (   usddeckLoggingEnabled()
+      if (usddeckLoggingEnabled()
           && usddeckLoggingMode() == usddeckLoggingMode_SynchronousStabilizer
           && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
         usddeckTriggerLogging();
       }
-
+#endif
       calcSensorToOutputLatency(&sensorData);
       tick++;
       STATS_CNT_RATE_EVENT(&stabilizerRate);

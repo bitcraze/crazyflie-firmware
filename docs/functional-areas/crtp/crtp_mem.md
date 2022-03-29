@@ -4,9 +4,7 @@ page_id: crtp_mem
 ---
 
 
-Memory access is not used for the [Crazyflie Nano
-Quadcopter](https://wiki.bitcraze.io/projects:crazyflie:index), it\'s currently only implemented
-in the Crazyflie 2.X. Using the memory access gives the possibility to:
+Using the memory access gives the possibility to:
 
 -   Get information about which memories are available
 -   Read/write/erase memories
