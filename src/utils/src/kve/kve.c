@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+
+
 #define VERSION_ADDRESS (0)
 #define FIRST_ITEM_ADDRESS (1)
 
@@ -89,7 +91,7 @@ void kveDefrag(kveMemory_t *kve) {
     }
 }
 
-bool kveStore(kveMemory_t *kve, char* key, const void* buffer, size_t length) {
+bool kveStore(kveMemory_t *kve, const char* key, const void* buffer, size_t length) {
     size_t itemAddress;
 
     // Search if the key is already present in the table
@@ -113,6 +115,45 @@ bool kveStore(kveMemory_t *kve, char* key, const void* buffer, size_t length) {
     return true;
 }
 
+//
+// We will use the function kveStorageFindItemByPrefix to find the first item
+// with a key that matches our prefix.
+// The function will return the size of that item, which we can use to then
+// look for the next item that after that that matches our prefix.
+//
+// The function kveStorageFindItemByPrefix also gives us the key and item
+// address as out-arguments, which we can use as arguments to the supplied
+// user function that will be run for each item found.
+//
+// We keep going until we get an invalid address back, which mean we have
+// reached the end.
+//
+bool kveForeach(kveMemory_t *kve, const char *prefix, kveFunc_t func)
+{
+    static char keyBuffer[64] = { 0, };
+    size_t itemAddress;
+    size_t itemSize = kveStorageFindItemByPrefix(kve, FIRST_ITEM_ADDRESS, prefix, keyBuffer, &itemAddress);
+
+    while (KVE_STORAGE_IS_VALID(itemAddress)) {
+        const int bufferLength = 8;
+        char buffer[bufferLength];
+
+        kveItemHeader_t header = kveStorageGetItemInfo(kve, itemAddress);
+        const size_t storeSize = header.full_length - header.key_length - sizeof(header);
+        size_t readLength = min(storeSize, bufferLength);
+
+        if (kveStorageGetBuffer(kve, itemAddress, header, buffer, readLength)) {
+            if (!func((const char *) keyBuffer, buffer, readLength)) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+        itemSize = kveStorageFindItemByPrefix(kve, itemAddress + itemSize, prefix, keyBuffer, &itemAddress);
+    }
+    return true;
+}
+
 
 size_t kveFetch(kveMemory_t *kve, const char* key, void* buffer, size_t bufferLength)
 {
@@ -127,7 +168,7 @@ size_t kveFetch(kveMemory_t *kve, const char* key, void* buffer, size_t bufferLe
     return 0;
 }
 
-bool kveDelete(kveMemory_t *kve, char* key) {
+bool kveDelete(kveMemory_t *kve, const char* key) {
     size_t itemAddress = kveStorageFindItemByKey(kve, FIRST_ITEM_ADDRESS, key);
 
     if (KVE_STORAGE_IS_VALID(itemAddress)) {

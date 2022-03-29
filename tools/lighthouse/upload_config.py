@@ -27,7 +27,7 @@
 #
 #  This script reads geometry and calibration data from a system configuration
 #  file, usually created from the client. The data is uploaded to a crazyflie and
-#  written to the data to persistant memory to make it available after
+#  written to the data to persistent memory to make it available after
 #  re-boot.
 #
 #  This functionality can also be executed from the client, but this

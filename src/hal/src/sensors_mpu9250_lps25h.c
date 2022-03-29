@@ -52,12 +52,6 @@
 #include "static_mem.h"
 #include "estimator.h"
 
-/**
- * Enable 250Hz digital LPF mode. However does not work with
- * multiple slave reading through MPU9250 (MAG and BARO), only single for some reason.
- */
-//#define SENSORS_MPU6500_DLPF_256HZ
-
 #define SENSORS_ENABLE_PRESSURE_LPS25H
 //#define GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
 
@@ -89,7 +83,7 @@
 // Number of samples used in variance calculation. Changing this effects the threshold
 #define SENSORS_NBR_OF_BIAS_SAMPLES     1024
 // Variance threshold to take zero bias for gyro
-#define GYRO_VARIANCE_BASE          5000
+#define GYRO_VARIANCE_BASE          50
 #define GYRO_VARIANCE_THRESHOLD_X   (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Y   (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Z   (GYRO_VARIANCE_BASE)
@@ -148,6 +142,16 @@ static bool isMpu6500TestPassed = false;
 static bool isAK8963TestPassed = false;
 static bool isLPS25HTestPassed = false;
 
+// Precalculated values for IMU alignment
+static float sphi   = sinf(IMU_PHI * (float) M_PI / 180);
+static float cphi   = cosf(IMU_PHI * (float) M_PI / 180);
+static float stheta = sinf(IMU_THETA * (float) M_PI / 180);
+static float ctheta = cosf(IMU_THETA * (float) M_PI / 180);
+static float spsi   = sinf(IMU_PSI * (float) M_PI / 180);
+static float cpsi   = cosf(IMU_PSI * (float) M_PI / 180);
+
+static float R[3][3];
+
 // Pre-calculated values for accelerometer alignment
 static float cosPitch;
 static float sinPitch;
@@ -173,6 +177,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
 static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj* bias);
+static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out);
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
 
 STATIC_MEM_TASK_ALLOC(sensorsTask, SENSORS_TASK_STACKSIZE);
@@ -307,6 +312,8 @@ void processMagnetometerMeasurements(const uint8_t *buffer)
 
 void processAccGyroMeasurements(const uint8_t *buffer)
 {
+  Axis3f gyroScaledIMU;
+  Axis3f accScaledIMU;
   Axis3f accScaled;
   // Note the ordering to correct the rotated 90º IMU coordinate system
   accelRaw.y = (((int16_t) buffer[0]) << 8) | buffer[1];
@@ -327,14 +334,16 @@ void processAccGyroMeasurements(const uint8_t *buffer)
      processAccScale(accelRaw.x, accelRaw.y, accelRaw.z);
   }
 
-  sensorData.gyro.x = -(gyroRaw.x - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
-  sensorData.gyro.y =  (gyroRaw.y - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
-  sensorData.gyro.z =  (gyroRaw.z - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
+  gyroScaledIMU.x = -(gyroRaw.x - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
+  gyroScaledIMU.y =  (gyroRaw.y - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
+  gyroScaledIMU.z =  (gyroRaw.z - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
+  sensorsAlignToAirframe(&gyroScaledIMU, &sensorData.gyro);
   applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensorData.gyro);
 
-  accScaled.x = -(accelRaw.x) * SENSORS_G_PER_LSB_CFG / accScale;
-  accScaled.y =  (accelRaw.y) * SENSORS_G_PER_LSB_CFG / accScale;
-  accScaled.z =  (accelRaw.z) * SENSORS_G_PER_LSB_CFG / accScale;
+  accScaledIMU.x = -(accelRaw.x) * SENSORS_G_PER_LSB_CFG / accScale;
+  accScaledIMU.y =  (accelRaw.y) * SENSORS_G_PER_LSB_CFG / accScale;
+  accScaledIMU.z =  (accelRaw.z) * SENSORS_G_PER_LSB_CFG / accScale;
+  sensorsAlignToAirframe(&accScaledIMU, &accScaled);
   sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
   applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
 }
@@ -380,13 +389,6 @@ static void sensorsDeviceInit(void)
   // Set accelerometer digital low-pass bandwidth
   mpu6500SetAccelDLPF(MPU6500_ACCEL_DLPF_BW_41);
 
-#if SENSORS_MPU6500_DLPF_256HZ
-  // 256Hz digital low-pass filter only works with little vibrations
-  // Set output rate (15): 8000 / (1 + 7) = 1000Hz
-  mpu6500SetRate(7);
-  // Set digital low-pass bandwidth
-  mpu6500SetDLPFMode(MPU6500_DLPF_BW_256);
-#else
   // To low DLPF bandwidth might cause instability and decrease agility
   // but it works well for handling vibrations and unbalanced propellers
   // Set output rate (1): 1000 / (1 + 0) = 1000Hz
@@ -399,7 +401,6 @@ static void sensorsDeviceInit(void)
     lpf2pInit(&gyroLpf[i], 1000, GYRO_LPF_CUTOFF_FREQ);
     lpf2pInit(&accLpf[i],  1000, ACCEL_LPF_CUTOFF_FREQ);
   }
-#endif
 
 
 #ifdef SENSORS_ENABLE_MAG_AK8963
@@ -441,14 +442,7 @@ static void sensorsDeviceInit(void)
 static void sensorsSetupSlaveRead(void)
 {
   // Now begin to set up the slaves
-#ifdef SENSORS_MPU6500_DLPF_256HZ
-  // As noted in registersheet 4.4: "Data should be sampled at or above sample rate;
-  // SMPLRT_DIV is only used for 1kHz internal sampling." Slowest update rate is then 500Hz.
-  mpu6500SetSlave4MasterDelay(15); // read slaves at 500Hz = (8000Hz / (1 + 15))
-#else
   mpu6500SetSlave4MasterDelay(9); // read slaves at 100Hz = (500Hz / (1 + 4))
-#endif
-
   mpu6500SetI2CBypassEnabled(false);
   mpu6500SetWaitForExternalSensorEnabled(true); // the slave data isn't so important for the state estimation
   mpu6500SetInterruptMode(0); // active high
@@ -722,13 +716,14 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
     sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
   }
 
-  varOut->x = (sumSq[0] - ((int64_t)sum[0] * sum[0]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-  varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-  varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / SENSORS_NBR_OF_BIAS_SAMPLES);
+  
+  meanOut->x = (float) sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = (float) sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = (float) sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
 
-  meanOut->x = (float)sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = (float)sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = (float)sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  varOut->x = sumSq[0] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->x * meanOut->x;
+  varOut->y = sumSq[1] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->y * meanOut->y;
+  varOut->z = sumSq[2] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->z * meanOut->z;
 }
 
 /**
@@ -867,6 +862,26 @@ void __attribute__((used)) EXTI13_Callback(void)
   {
     portYIELD();
   }
+}
+
+/**
+ * Align the sensors to the Airframe axes
+ */
+static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
+{
+  R[0][0] = ctheta * cpsi;
+  R[0][1] = ctheta * spsi;
+  R[0][2] = -stheta;
+  R[1][0] = sphi * stheta * cpsi - cphi * spsi;
+  R[1][1] = sphi * stheta * spsi + cphi * cpsi;
+  R[1][2] = sphi * ctheta;
+  R[2][0] = cphi * stheta * cpsi + sphi * spsi;
+  R[2][1] = cphi * stheta * spsi - sphi * cpsi;
+  R[2][2] = cphi * ctheta;
+
+  out->x = in->x*R[0][0] + in->y*R[0][1] + in->z*R[0][2];
+  out->y = in->x*R[1][0] + in->y*R[1][1] + in->z*R[1][2];
+  out->z = in->x*R[2][0] + in->y*R[2][1] + in->z*R[2][2];
 }
 
 /**

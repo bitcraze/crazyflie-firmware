@@ -1,13 +1,13 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ void platformserviceInit(void);
 
 bool platformserviceTest(void);
 
-void platformserviceSendAppchannelPacket(CRTPPacket *p);
+int platformserviceSendAppchannelPacket(CRTPPacket *p);
+int platformserviceSendAppchannelPacketBlock(CRTPPacket *p);
 
 #endif /* __PLATFORMSERVICE_H__ */
-

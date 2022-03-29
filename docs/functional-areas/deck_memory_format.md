@@ -1,9 +1,9 @@
 ---
 title: Deck memory format
-page_id: deck_memory_format 
+page_id: deck_memory_format
 ---
 
-The OneWire (OW) memory contained in all Crazyflie 2.0 decks is used to
+The OneWire (OW) memory contained in all Crazyflie 2.X decks is used to
 detect the boards connected in order to:
 
 -   Decide if it is safe to start the system.

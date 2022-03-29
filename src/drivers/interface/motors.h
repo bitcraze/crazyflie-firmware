@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
+#include "autoconf.h"
 /* ST includes */
 #include "stm32fxxx.h"
 
@@ -57,9 +58,7 @@
 #define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
 #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
-//#define ENABLE_ONESHOT125
-
-#ifdef ENABLE_ONESHOT125
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
 /**
  * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
@@ -75,7 +74,7 @@
   #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
   #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
-#elif defined(ENABLE_ONESHOT42)
+#elif defined(CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT42)
 /**
  * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
@@ -93,7 +92,7 @@
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 #else
 /**
- * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
  *
  * Generates a PWM wave (50 - 400 Hz update rate with 1-2 ms high pulse) using the timer. That way we can use the same
@@ -226,6 +225,7 @@ extern const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS];
+extern const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS];
 
 /**
  * Test sound tones

@@ -53,7 +53,7 @@ static StaticSemaphore_t waitUntilSendDoneBuffer;
 static bool isInit = false;
 
 static DMA_InitTypeDef DMA_InitStructureShare;
-static uint8_t dmaBuffer[128];
+static uint8_t dmaBuffer[UART2_DMA_BUFFER_SIZE];
 static bool    isUartDmaInitialized;
 static uint32_t initialDMACount;
 
@@ -239,7 +239,7 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data)
 
 int uart2Putchar(int ch)
 {
-    uart2SendData(1, (uint8_t *)&ch);
+  uart2SendData(1, (uint8_t *)&ch);
 
     return (unsigned char)ch;
 }

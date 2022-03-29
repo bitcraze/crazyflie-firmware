@@ -66,6 +66,7 @@ bool deckTest(void);
 #define DECK_USING_I2C     (DECK_USING_PB6  | DECK_USING_PB7)
 #define DECK_USING_TIMER3  (1 << 13)
 #define DECK_USING_TIMER5  (1 << 14)
+#define DECK_USING_TIMER10 (1 << 16)
 #define DECK_USING_TIMER14 (1 << 15)
 
 struct deckInfo_s;
@@ -96,8 +97,12 @@ typedef struct deck_driver {
   StateEstimatorType requiredEstimator;
   bool requiredLowInterferenceRadioMode;
 
-  // Deck memory access definition
+  // Deck memory access definitions
   const struct deckMemDef_s* memoryDef;
+
+  // Have an option to present a secondary memory area for instance for decks
+  // two firmwares.
+  const struct deckMemDef_s* memoryDefSecondary;
 
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
@@ -195,6 +200,8 @@ typedef struct deckMemDef_s {
   // TOOD krri rename to length?
   uint32_t requiredSize;
 
+  // Optional id, if non-null will be added to the name as [drivername:id]
+  const char *id;
 } DeckMemDef_t;
 
 int deckCount(void);

@@ -31,19 +31,21 @@
 #include "platform.h"
 #include "debug.h"
 
+#include "autoconf.h"
+
 // https://gcc.gnu.org/onlinedocs/cpp/Stringizing.html
 #define xstr(s) str(s)
 #define str(s) #s
 
-#if defined(SENSOR_INCLUDED_BMI088_BMP388) || defined(SENSOR_INCLUDED_BMI088_SPI_BMP388)
+#if defined(CONFIG_SENSORS_BMI088_BMP388) || defined(CONFIG_SENSORS_BMI088_SPI)
   #include "sensors_bmi088_bmp388.h"
 #endif
 
-#ifdef SENSOR_INCLUDED_MPU9250_LPS25H
+#ifdef CONFIG_SENSORS_MPU9250_LPS25H
   #include "sensors_mpu9250_lps25h.h"
 #endif
 
-#ifdef SENSOR_INCLUDED_BOSCH
+#ifdef CONFIG_SENSORS_BOSCH
   #include "sensors_bosch.h"
 #endif
 
@@ -70,7 +72,7 @@ static void nullFunction(void) {}
 #pragma GCC diagnostic pop
 
 static const sensorsImplementation_t sensorImplementations[SensorImplementation_COUNT] = {
-#ifdef SENSOR_INCLUDED_BMI088_BMP388
+#ifdef CONFIG_SENSORS_BMI088_BMP388
   {
     .implements = SensorImplementation_bmi088_bmp388,
     .init = sensorsBmi088Bmp388Init_I2C,
@@ -87,7 +89,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .dataAvailableCallback = sensorsBmi088Bmp388DataAvailableCallback,
   },
 #endif
-#ifdef SENSOR_INCLUDED_BMI088_SPI_BMP388
+#ifdef CONFIG_SENSORS_BMI088_SPI
   {
     .implements = SensorImplementation_bmi088_spi_bmp388,
     .init = sensorsBmi088Bmp388Init_SPI,
@@ -104,7 +106,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .dataAvailableCallback = sensorsBmi088Bmp388DataAvailableCallback,
   },
 #endif
-#ifdef SENSOR_INCLUDED_MPU9250_LPS25H
+#ifdef CONFIG_SENSORS_MPU9250_LPS25H
   {
     .implements = SensorImplementation_mpu9250_lps25h,
     .init = sensorsMpu9250Lps25hInit,
@@ -121,7 +123,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .dataAvailableCallback = nullFunction,
   },
 #endif
-#ifdef SENSOR_INCLUDED_BOSCH
+#ifdef CONFIG_SENSORS_BOSCH
   {
     .implements = SensorImplementation_bosch,
     .init = sensorsBoschInit,

@@ -30,16 +30,16 @@
 #include "param.h"
 #include "physicalConstants.h"
 
-//#define MADWICK_QUATERNION_IMU
+#include "autoconf.h"
 
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
   #define BETA_DEF     0.01f    // 2 * proportional gain
 #else // MAHONY_QUATERNION_IMU
     #define TWO_KP_DEF  (2.0f * 0.4f) // 2 * proportional gain
     #define TWO_KI_DEF  (2.0f * 0.001f) // 2 * integral gain
 #endif
 
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
   float beta = BETA_DEF;     // 2 * proportional gain (Kp)
 #else // MAHONY_QUATERNION_IMU
   float twoKp = TWO_KP_DEF;    // 2 * proportional gain (Kp)
@@ -96,7 +96,7 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
   }
 }
 
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
 // Implementation of Madgwick's IMU and AHRS algorithms.
 // See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
@@ -171,8 +171,8 @@ static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float
   qy *= recipNorm;
   qz *= recipNorm;
 }
-#else // MAHONY_QUATERNION_IMU
-// Madgwick's implementation of Mayhony's AHRS algorithm.
+#else
+// Madgwick's implementation of Mahony's AHRS algorithm.
 // See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
 // Date     Author      Notes
@@ -374,18 +374,18 @@ LOG_GROUP_STOP(sensfusion6)
  * accurate attitude measurements.
  */
 PARAM_GROUP_START(sensfusion6)
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
 PARAM_ADD(PARAM_FLOAT, beta, &beta)
 #else // MAHONY_QUATERNION_IMU
 /**
  * @brief Integral gain (default: 0.002)
  */
-PARAM_ADD_CORE(PARAM_FLOAT, kp, &twoKp)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, kp, &twoKp)
 
 /**
  * @brief Propotional gain (default: 0.8)
  */
-PARAM_ADD_CORE(PARAM_FLOAT, ki, &twoKi)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, ki, &twoKi)
 #endif
 PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
 PARAM_GROUP_STOP(sensfusion6)

@@ -35,6 +35,7 @@
 #include "timers.h"
 
 #include "config.h"
+#include "debug.h"
 #include "param.h"
 #include "log.h"
 #include "sound.h"
@@ -330,6 +331,11 @@ static void soundTimer(xTimerHandle timer)
     effect = user_effect;
   }
 
+  if (effect > neffect) {
+    DEBUG_PRINT("Bad value for effect (> neffect)\n");
+    effect = SND_OFF;
+  }
+
   if (effects[effect].call != 0) {
     effects[effect].call(counter * 10, &effects[effect].mi, effects[effect].melody);
   }
@@ -388,7 +394,7 @@ PARAM_GROUP_START(sound)
  * | 12 | Siren                     | \n
  * | 13 | Tilt quad to play sound   | \n
  */
-PARAM_ADD_CORE(PARAM_UINT8, effect, &user_effect)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, effect, &user_effect)
 
 /**
  * @brief Number of effects available

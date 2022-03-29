@@ -26,7 +26,7 @@
 #  Persist geometry and calibration data in the Crazyflie storage.
 #
 #  This script uploads geometry and calibration data to a crazyflie and
-#  writes the data to persistant memory to make it available after
+#  writes the data to persistent memory to make it available after
 #  re-boot.
 #
 #  This script is a temporary solution until there is support

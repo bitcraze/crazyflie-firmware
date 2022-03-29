@@ -1,0 +1,2 @@
+obj-y += esp_rom_bootloader.o
+obj-y += esp_slip.o

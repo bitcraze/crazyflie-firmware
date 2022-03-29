@@ -65,7 +65,20 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     // Rate-controled YAW is moving YAW angle setpoint
     if (setpoint->mode.yaw == modeVelocity) {
-       attitudeDesired.yaw += setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT;
+      attitudeDesired.yaw = capAngle(attitudeDesired.yaw + setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT);
+       
+      #ifdef YAW_MAX_DELTA
+      float delta = capAngle(attitudeDesired.yaw-state->attitude.yaw);
+      // keep the yaw setpoint within +/- YAW_MAX_DELTA from the current yaw
+        if (delta > YAW_MAX_DELTA)
+        {
+          attitudeDesired.yaw = state->attitude.yaw + YAW_MAX_DELTA;
+        }
+        else if (delta < -YAW_MAX_DELTA)
+        {
+          attitudeDesired.yaw = state->attitude.yaw - YAW_MAX_DELTA;
+        }
+      #endif
     } else {
       attitudeDesired.yaw = setpoint->attitude.yaw;
     }

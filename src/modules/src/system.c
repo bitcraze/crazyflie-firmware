@@ -70,8 +70,9 @@
 #include "peer_localization.h"
 #include "cfassert.h"
 #include "i2cdev.h"
+#include "autoconf.h"
 
-#ifndef START_DISARMED
+#ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
 #else
 #define ARM_INIT false
@@ -139,7 +140,7 @@ void systemInit(void)
   buzzerInit();
   peerLocalizationInit();
 
-#ifdef APP_ENABLED
+#ifdef CONFIG_APP_ENABLE
   appInit();
 #endif
 
@@ -166,15 +167,12 @@ void systemTask(void *arg)
   ledInit();
   ledSet(CHG_LED, 1);
 
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
   queueMonitorInit();
 #endif
 
-#ifdef ENABLE_UART1
-  uart1Init(9600);
-#endif
-#ifdef ENABLE_UART2
-  uart2Init(115200);
+#ifdef CONFIG_DEBUG_PRINT_ON_UART1
+  uart1Init(115200);
 #endif
 
   initUsecTimer();
@@ -187,7 +185,11 @@ void systemTask(void *arg)
   commanderInit();
 
   StateEstimatorType estimator = anyEstimator;
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();
+  #endif
+
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
@@ -230,10 +232,14 @@ void systemTask(void *arg)
     pass = false;
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
+  #endif
+
   if (deckTest() == false) {
     pass = false;
     DEBUG_PRINT("deck [FAIL]\n");
@@ -425,7 +431,7 @@ PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
 /**
  * @brief Set to nonzero to force system to be armed
  */
-PARAM_ADD(PARAM_INT8, forceArm, &forceArm)
+PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
 
 PARAM_GROUP_STOP(sytem)
 

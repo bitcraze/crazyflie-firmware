@@ -46,7 +46,7 @@
 #include "trace.h"
 #include "usec_time.h"
 
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION 5
 
 #ifdef STM32F4XX
   #define QUAD_FORMATION_X
@@ -150,7 +150,8 @@
 #define KALMAN_TASK_NAME        "KALMAN"
 #define ACTIVE_MARKER_TASK_NAME "ACTIVEMARKER-DECK"
 #define AI_DECK_GAP_TASK_NAME   "AI-DECK-GAP"
-#define AI_DECK_NINA_TASK_NAME  "AI-DECK-NINA"
+#define AIDECK_ESP_TX_TASK_NAME "AI-DECK ESP TX"
+#define AIDECK_ESP_RX_TASK_NAME "AI-DECK ESP RX"
 #define UART2_TASK_NAME         "UART2"
 #define CRTP_SRV_TASK_NAME      "CRTP-SRV"
 #define PLATFORM_SRV_TASK_NAME  "PLATFORM-SRV"
@@ -165,7 +166,7 @@
 #define CRTP_RXTX_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
 #define LOG_TASK_STACKSIZE            (2 * configMINIMAL_STACK_SIZE)
 #define MEM_TASK_STACKSIZE            (2 * configMINIMAL_STACK_SIZE)
-#define PARAM_TASK_STACKSIZE          configMINIMAL_STACK_SIZE
+#define PARAM_TASK_STACKSIZE          (2 * configMINIMAL_STACK_SIZE)
 #define SENSORS_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 #define STABILIZER_TASK_STACKSIZE     (3 * configMINIMAL_STACK_SIZE)
 #define NRF24LINK_TASK_STACKSIZE      configMINIMAL_STACK_SIZE
@@ -208,12 +209,6 @@
  * fairly constant over the battery voltage range but testing with fully changed battery is best.
  */
 #define BAT_LOADING_SAG_THRESHOLD  0.95f
-
-/**
- * \def ACTIVATE_AUTO_SHUTDOWN
- * Will automatically shot of system if no radio activity
- */
-//#define ACTIVATE_AUTO_SHUTDOWN
 
 /**
  * \def ACTIVATE_STARTUP_SOUND

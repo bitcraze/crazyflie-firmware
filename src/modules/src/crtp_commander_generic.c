@@ -420,22 +420,22 @@ PARAM_GROUP_START(cmdrCPPM)
 /**
  * @brief Config of max roll rate at max stick input [DPS] (default: 720)
  */
-PARAM_ADD(PARAM_FLOAT, rateRoll, &s_CppmEmuRollMaxRateDps)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, rateRoll, &s_CppmEmuRollMaxRateDps)
 /**
  * @brief Config of max pitch rate at max stick input [DPS] (default: 720)
  */
-PARAM_ADD(PARAM_FLOAT, ratePitch, &s_CppmEmuPitchMaxRateDps)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, ratePitch, &s_CppmEmuPitchMaxRateDps)
 /**
  * @brief Config of max pitch angle at max stick input [DEG] (default: 50)
  */
-PARAM_ADD(PARAM_FLOAT, angPitch, &s_CppmEmuPitchMaxAngleDeg)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, angPitch, &s_CppmEmuPitchMaxAngleDeg)
 /**
  * @brief Config of max roll angle at max stick input [DEG] (default: 50)
  */
-PARAM_ADD(PARAM_FLOAT, angRoll, &s_CppmEmuRollMaxAngleDeg)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, angRoll, &s_CppmEmuRollMaxAngleDeg)
 /**
  * @brief Config of max yaw rate at max stick input [DPS] (default: 400)
  */
-PARAM_ADD(PARAM_FLOAT, rateYaw, &s_CppmEmuYawMaxRateDps)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, rateYaw, &s_CppmEmuYawMaxRateDps)
 
 PARAM_GROUP_STOP(cmdrCPPM)

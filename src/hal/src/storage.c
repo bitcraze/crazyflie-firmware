@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * storage.c: Key/Buffer persistant storage
+ * storage.c: Key/Buffer persistent storage
  *
  */
 
@@ -36,6 +36,8 @@
 #include "i2cdev.h"
 #include "eeprom.h"
 
+#include <string.h>
+
 #define TRACE_MEMORY_ACCESS 0
 
 #if !TRACE_MEMORY_ACCESS
@@ -45,7 +47,7 @@
 
 // Memory organization
 
-// Low level memory access 
+// Low level memory access
 
 // ToDo: Shall we handle partition elsewhere?
 #define KVE_PARTITION_START (1024)
@@ -133,7 +135,7 @@ bool storageTest()
   DEBUG_PRINT("Storage check %s.\n", pass?"[OK]":"[FAIL]");
 
   if (!pass) {
-    DEBUG_PRINT("Reformating storage ...\n");
+    DEBUG_PRINT("Reformatting storage ...\n");
 
     kveFormat(&kve);
 
@@ -148,7 +150,7 @@ bool storageTest()
   return pass;
 }
 
-bool storageStore(char* key, const void* buffer, size_t length)
+bool storageStore(const char* key, const void* buffer, size_t length)
 {
   if (!isInit) {
     return false;
@@ -163,7 +165,23 @@ bool storageStore(char* key, const void* buffer, size_t length)
   return result;
 }
 
-size_t storageFetch(char *key, void* buffer, size_t length)
+
+bool storageForeach(const char *prefix, storageFunc_t func)
+{
+   if (!isInit) {
+    return 0;
+  }
+
+  xSemaphoreTake(storageMutex, portMAX_DELAY);
+
+  bool success = kveForeach(&kve, prefix, func);
+
+  xSemaphoreGive(storageMutex);
+
+  return success;
+}
+
+size_t storageFetch(const char *key, void* buffer, size_t length)
 {
   if (!isInit) {
     return 0;
@@ -178,7 +196,7 @@ size_t storageFetch(char *key, void* buffer, size_t length)
   return result;
 }
 
-bool storageDelete(char* key)
+bool storageDelete(const char* key)
 {
   if (!isInit) {
     return false;

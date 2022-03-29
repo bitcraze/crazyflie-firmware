@@ -8,21 +8,21 @@ log data from the Crazyflie and to set variables during runtime.
 
 ## Table of content (TOC)
 
-The variables that are available for the logging/parameter framework is
-decided on compile-time for the Crazyflie firmware. Using C macros
-variables can be made available to the framework below are two examples,
-one for parameters and one for logging.
+The variables that are available for the logging/parameter framework are
+defined at compile-time for the Crazyflie firmware. C macros are used to define
+which variables that should be available to the framework. 
 
-A parameter or logging variable that is created with `PARAM_ADD_CORE` or `LOG_ADD_CORE` is considered stable API and will with a very high likelihood be available a cross firmware versions. All core parameters and logging variables must have documentation associated with it. See below for examples of the documentation syntax.
+A parameter or logging variable that is created with `PARAM_ADD_CORE` or `LOG_ADD_CORE` is considered stable API and will with a very high likelihood be available a cross firmware versions. All core parameters and logging variables must have documentation associated with it. None-core, development, parameter and logging variables should be indicated with only `PARAM_ADD` and `LOG_ADD`, which should indicate that no guarantee is given that this values will stay in later versions. See below for examples of the documentation syntax.
 
-This will make the parameters used to control the [LED-ring
+Below are two examples,
+one for a parameter and one for logging. This will make the parameters used to control the [LED-ring
 expansion](https://www.bitcraze.io/products/led-ring-deck/) available as
 parameters. Note that they have different types and that *neffect* is
 read-only.
 
 ``` {.c}
 /**
- * [Documenation for the ring group ...]
+ * [Documentation for the ring group ...]
  */
 PARAM_GROUP_START(ring)
 
@@ -81,27 +81,27 @@ the [Python cfclient FlightTab](https://www.bitcraze.io/documentation/repository
 
 During the compilation a table of content (TOC) is created that holds
 all the available variables together with the type and access
-restrictions. There\'s one TOC for each framework, one for logging and
+restrictions. There's one TOC for each framework, one for logging and
 one for parameters. When the client connects it will download the TOC to
-know which variables can be used. It\'s then easy to use the [Python
-API](https://github.com/bitcraze/crazyflie-lib-python) ([or another
-API](https://wiki.bitcraze.io/doc:crazyflie:api:community) for accessing them.
+know which variables can be used. It's then easy to use the [Python
+API](https://www.bitcraze.io/documentation/repository/crazyflie-lib-python/master/api/cflib/) ([or another
+API](https://www.bitcraze.io/support/external-projects/)) for accessing them.
 
 All the variables have a name and belong to a group. So in the examples
-above there\'s two groups defined: *ring* and *stabilizer*. To refer to
+above there's two groups defined: *ring* and *stabilizer*. To refer to
 a variable use the naming convention *group.name*. If you would like to
-log the *roll* variable in the *stabilizer* group it\'s access by
+log the *roll* variable in the *stabilizer* group it's access by
 *stabilizer.roll*. And if you would like to set the *effect* variable in
-the ring group it\'s accessed using *ring.effect*.
+the ring group it's accessed using *ring.effect*.
 
 ## Parameters
 
-Using the parameter framework it\'s possible to both read and write
+Using the parameter framework it's possible to both read and write
 variables in run-time, but note the following:
 
--   There\'s no thread protection on reading/writing. Since the
+-   There's no thread protection on reading/writing. Since the
     architecture is 32bit and the largest parameter you can have is
-    32bit it\'s safe to write one variable. But if you write a group of
+    32bit it's safe to write one variable. But if you write a group of
     variables that should be used together (like PID parameters) you
     might end up in trouble.
 -   Only use the parameter framework to read variables that are set
@@ -109,6 +109,22 @@ variables in run-time, but note the following:
     logging framework.
 -   The reading or writing of a parameter can be done at any time once
     you are connected to the Crazyflie.
+-   if the PARAM_CALLBACK type is set, to get notified that it has
+    changed, tha callback will run from the param task. It should
+    not block and not take to long.
+
+### Persistent parameters
+
+Is is possible to mark a parameter to be persistent. In this case, the value
+can be stored in persistent memory, which means the associated variable
+automatically will be set to this value after a re-boot.
+
+To store a new value for a parameter, the new value must first be set and
+secondly, stored in persistent memory.
+
+To mark a parameter as persistent, use the `PARAM_PERSISTENT` constant:
+
+    PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, myParam, &myVariable)
 
 ## Logging
 
@@ -120,14 +136,14 @@ After the host has connected to a Crazyflie and downloaded the TOC it
 will be possible to setup one of these configurations. Once the
 configuration is set up and started the Crazyflie will start pushing
 data to the host. A configuration can be stopped and re-started again.
-Since there\'s a finite amount of memory a configuration can be deleted
+Since there's a finite amount of memory a configuration can be deleted
 to make room for new ones.
 
 Note the following for the logging framework:
 
 -   Once a Crazyflie is connected you can set up new logging
-    configurations. It\'s only possible to create/start/stop/remove
-    configurations that\'s already created.
+    configurations. It's only possible to create/start/stop/remove
+    configurations that's already created.
 -   The interval for a logging configuration is specified in 10th of
     milliseconds.
 
@@ -210,3 +226,21 @@ Note: The rate computation function is called from the logging framework with th
 specifed in the logging configuration. The rate, on the other hand, is calculated if the time since
 last computation exceeds the configured update time of the rate logger, and if the logging intervall
 is longer than the update intervall, updates will be done for each logging call.
+
+### Parameter callback function to get notifed when a parameter has been updated.
+
+Using the macro `PARAM_ADD_WITH_CALLBACK` it is possible to register a callback function that will be called
+when the parameter gets updated. This callback will run from the parameter task so it is important to not
+block in this callback or make it run for too long.
+
+Example:
+
+         void myCallbackFunction(void)
+         {
+            // The parameter has been updated before the callback and the new parameter value can be used
+            digitalWrite(DECK_GPIO_IO1, pinValue);
+         }
+
+         ...
+
+         PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setIO1pin, &pinValue, &myCallbackFunction)

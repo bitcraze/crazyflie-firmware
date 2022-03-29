@@ -139,6 +139,12 @@ bool syslinkTest()
   return isInit;
 }
 
+bool isSyslinkUp()
+{
+  return isInit;
+}
+
+
 int syslinkSendPacket(SyslinkPacket *slp)
 {
   int i = 0;

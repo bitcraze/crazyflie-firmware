@@ -41,6 +41,7 @@
 #include "task.h"
 #include "queue.h"
 
+#include "autoconf.h"
 #include "deck.h"
 #include "system.h"
 #include "debug.h"
@@ -90,11 +91,11 @@
 
 static lpsAlgoOptions_t algoOptions = {
   // .userRequestedMode is the wanted algorithm, available as a parameter
-#if LPS_TDOA_ENABLE
+#if defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA2)
   .userRequestedMode = lpsMode_TDoA2,
-#elif LPS_TDOA3_ENABLE
+#elif defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA3)
   .userRequestedMode = lpsMode_TDoA3,
-#elif defined(LPS_TWR_ENABLE)
+#elif defined(CONFIG_DECK_LOCO_ALGORITHM_TWR)
   .userRequestedMode = lpsMode_TWR,
 #else
   .userRequestedMode = lpsMode_auto,
@@ -116,9 +117,9 @@ struct {
   [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA3"},
 };
 
-#if LPS_TDOA_ENABLE
+#if defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA2)
 static uwbAlgorithm_t *algorithm = &uwbTdoa2TagAlgorithm;
-#elif LPS_TDOA3_ENABLE
+#elif defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA3)
 static uwbAlgorithm_t *algorithm = &uwbTdoa3TagAlgorithm;
 #else
 static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
@@ -515,7 +516,7 @@ static void dwm1000Init(DeckInfo *info)
   dwSetDefaults(dwm);
 
 
-  #ifdef LPS_LONGER_RANGE
+  #ifdef CONFIG_DECK_LOCO_LONGER_RANGE
   dwEnableMode(dwm, MODE_SHORTDATA_MID_ACCURACY);
   #else
   dwEnableMode(dwm, MODE_SHORTDATA_FAST_ACCURACY);
@@ -524,7 +525,7 @@ static void dwm1000Init(DeckInfo *info)
   dwSetChannel(dwm, CHANNEL_2);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
-  #ifdef LPS_FULL_TX_POWER
+  #ifdef CONFIG_DECK_LOCO_FULL_TX_POWER
   dwUseSmartPower(dwm, false);
   dwSetTxPower(dwm, 0x1F1F1F1Ful);
   #else

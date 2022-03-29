@@ -1,0 +1,320 @@
+config DECK_ACTIVE_MARKER
+    bool "Support the Active marker deck"
+    default y
+    help
+        The Active marker deck together with Qualisys QTM gives you long
+        distance and solid tracking. Thanks to the 4 high-power LEDs you
+        can set up to 4 different IDs giving you the possibility to uniqly
+        identify a large number of rigid bodies, without the need of many
+        reflective markers.
+    
+config DECK_AI
+    bool "Support the AI deck"
+    default y
+    depends on !DEBUG_PRINT_ON_UART1
+    help
+        The AI-deck 1.1 extends the computational capabilities and will
+        enable complex artificial intelligence-based workloads to run
+        onboard, with the possibility to achieve fully autonomous
+        navigation capabilities. The ESP32 adds WiFi connectivity with
+        the possibility to stream images as well as handling control.
+
+choice
+  prompt "WiFi setup at startup"
+  depends on DECK_AI
+  default DECK_AI_WIFI_NO_SETUP
+  help
+    Select if, and how, the WiFi should be set up with on the AI-deck
+
+  config DECK_AI_WIFI_NO_SETUP
+      bool "No initial WiFi setup"
+
+  config DECK_AI_WIFI_SETUP_AP
+      bool "Act as Access Point"
+
+  config DECK_AI_WIFI_SETUP_STA
+      bool "Connect to a WiFi network"
+endchoice
+
+menu "Credentials for access-point"
+    depends on DECK_AI  
+    depends on !DECK_AI_WIFI_NO_SETUP
+    config DECK_AI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the AI-deck to connect to at startup
+
+    config DECK_AI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password
+endmenu   
+
+config DECK_BIGQUAD
+    bool "Support the BigQuad deck"
+    default y
+    help
+        With the BigQuad deck you can transform your Crazyflie 2.X to a
+        bigger quad by connecting external Electronic speed controllers
+        (ESCs) to the breakout connectors on the deck. The autodetection
+        of the deck makes this transformation possible to do in seconds.
+        The deck also contains breakout header connectors for additional
+        accessories such as external receiver (CPPM input) and GPS.
+        It can also monitor battery voltage and current.
+
+config DECK_BIGQUAD_ENABLE
+    bool "Enable Bigquad deck capabilities"
+    depends on DECK_BIGQUAD
+    default n
+
+config DECK_BIGQUAD_ENABLE_OSD
+    depends on DECK_BIGQUAD_ENABLE
+    bool "Enable Bigquad deck OSD"
+    default n
+
+config DECK_BIGQUAD_ENABLE_PM
+    depends on DECK_BIGQUAD_ENABLE
+    bool "Enable Bigquad deck PM"
+    default n
+
+config DECK_BUZZ
+    bool "Support the Buzzer deck"
+    default y
+    help
+        Sometimes LED feedback isn’t enough, like when you’re flying
+        around in a lab and living room. With the Buzzer deck you’ll get
+        audio feedback on system events, like low battery or charging
+        completed. Or why not create your own melodies that will play
+        while you’re buzzing around. If you’re tapped out on creativity
+        there are already a few melodies pre-programmed that you can use.
+
+config DECK_CPPM
+    bool "Support the CPPM deck (obsolete)"
+    default n
+    help
+      Combined PPM / PPM-Sum driver.
+
+config DECK_FLOW
+    bool "Support the Flow (v1 and v2) deck"
+    default y
+    select ESTIMATOR_KALMAN_ENABLE
+    select DECK_ZRANGER
+    select DECK_ZRANGER2
+    help
+        The Flow deck gives the Crazyflie 2.X the ability to understand
+        when it’s moving in any direction. The VL53L1x ToF sensor measures
+        the distance to the ground with high precision and the PMW3901
+        optical flow sensor measures movements in relation to the ground.
+        This creates a flying 3D robot that can be pre-programmed to fly
+        distances in any direction or act as an aid for beginners where
+        it creates a very stable flying platform.
+
+config DECK_GTGPS
+    bool "Support the GPS prototype deck (obsolete)"
+    default n
+    depends on !DEBUG_PRINT_ON_UART1
+    help
+        GPS prototype deck, not active nor in production.
+
+config DECK_LEDRING
+    bool "Support the LED-ring deck"
+    default y
+    help
+        Light up the dark with custom patterns using the Crazyflie 2.1
+        LED-ring expansion board. Featuring 12 strong RGB LEDs facing
+        downwards, you can create custom patterns in firmware that you
+        control from your computer. Two additional strong front facing
+        LEDs that can be switched on and off, act as headlights.
+
+config DECK_LEDRING_DEFAULT_EFFECT
+    int "Default light effect to use on the LED ring"
+    depends on DECK_LEDRING
+    default 6
+    help
+        Index of the default light effect that the LED ring should use
+        after boot. Use zero to turn off the LEDs when booting. For more
+        information about the LED ring effects see the parameter documentation
+        on https://www.bitcraze.io/
+
+config DECK_LEDRING_NBR_LEDS
+    int "Number of LEDs to use on the LED ring"
+    depends on DECK_LEDRING
+    default 12
+    help
+        Number of LEDs to use on the LED ring. Values larger than 12
+        require a customized LED ring deck.
+
+config DECK_LEDRING_DIMMER
+    int "Limit LED ring brightness"
+    depends on DECK_LEDRING
+    range 0 8
+    default 0
+    help
+        Use this setting to reduce the maximum brightness of the LED ring
+        when the LEDs and the motors would draw too much power if the LEDs
+        are operated at peak brightness. Zero means not to limit the
+        brightness of the LED ring. 1 means to shift the RGB values to the
+        right by 1 bit (i.e. dividing each RGB component by 2), 2 means to
+        shift by 2 bits (dividing by 4) and so on.
+
+config DECK_LIGHTHOUSE
+    bool "Support the Lighthouse positioning deck"
+    default y
+    depends on !DEBUG_PRINT_ON_UART1
+    select ESTIMATOR_KALMAN_ENABLE
+    help
+        With Crazyflie and the Lighthouse positioning deck, high precision
+        autonomous flight becomes available for everyone. The Lighthouse
+        deck uses the HTC Vive base stations (aka Lighthouse V1) or
+        SteamVR Base Station 2.0 (aka Lighthouse V2) to achieve high
+        precision positioning. The deck has 4 receivers which gives the
+        full pose of the Crazyflie.
+
+config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+    bool "Use Lighthouse system as groundtruth"
+    depends on DECK_LIGHTHOUSE
+    default n
+    help
+        Use the lighthouse system as a groundtruth. This will also switch the
+        estimation method to the crossing beam position estimate and not send the
+        position to the kalman estimator and you can 
+        read out the positioning from the loggin lighthouse.x.y.z
+
+config DECK_LOCO
+    bool "Support the Loco positioning deck"
+    default y
+    select ESTIMATOR_KALMAN_ENABLE
+    help
+        The Loco Positioning deck is a Tag in a Loco Positioning system
+        and measures the distances to Anchors. The distances are used to
+        estimate the absolute position of the Crazyflie 2.X in the room,
+        which can be used for autonomous flight. The position is calculated
+        on-board of the Crazyflie and there is no need for an external
+        computer for position estimation.
+
+  config DECK_LOCO_NR_OF_ANCHORS
+  int "The number of anchors in use"
+  default 8
+  depends on DECK_LOCO
+  help
+      The number of anchors in your Loco setup. See documentation on
+      https://www.bitcraze.io/ for more details.
+
+choice
+    prompt "Algorithm to use"
+    depends on DECK_LOCO
+    default DECK_LOCO_ALGORITHM_AUTO
+
+    config DECK_LOCO_ALGORITHM_AUTO
+        bool "Let the system decide for you"
+
+    config DECK_LOCO_ALGORITHM_TWR
+        bool "Use the Two Way Ranging algorithm"
+
+    config DECK_LOCO_ALGORITHM_TDOA2
+        bool "Use the Time Difference of Arrival (2) algorithm"
+
+    config DECK_LOCO_ALGORITHM_TDOA3
+        bool "Use the Time Difference of Arrival (3) algorithm"
+endchoice
+
+config DECK_LOCO_FULL_TX_POWER
+    bool "Full TX power"
+    default n
+
+config DECK_LOCO_LONGER_RANGE
+    bool "Longer range mode"
+    depends on DECK_LOCO_ALGORITHM_TDOA3
+    default n
+    help
+        Note that anchors need to be built with support for this as well
+
+config DECK_LOCO_TDMA
+    bool "Use Time Division Multiple Access"
+    depends on DECK_LOCO_ALGORITHM_TWR
+    default n
+
+config DECK_LOCO_TDMA_SLOTS
+    int "Number of slots bits for TDMA"
+    depends on DECK_LOCO_TDMA
+    default 1
+
+config DECK_LOCO_TDMA_SLOT
+    int "TDMA slot"
+    depends on DECK_LOCO_TDMA
+    default 0
+
+config DECK_LOCO_2D_POSITION
+    bool "If set we assume we are doing 2D positioning"
+    depends on DECK_LOCO && (DECK_LOCO_ALGORITHM_TDOA3 || DECK_LOCO_ALGORITHM_TDOA2)
+    default n
+
+#
+# Kconfig does not support float, we use a string here and fix it up in the
+# Makefile.
+#
+config DECK_LOCO_2D_POSITION_HEIGHT
+    string "The height (Z) that the tag will be located at"
+    depends on DECK_LOCO_2D_POSITION
+    default 1.2
+
+config DECK_MULTIRANGER
+    bool "Support the Multi-ranger deck"
+    default y
+    help
+        The Multi-ranger deck  gives the Crazyflie 2.X the ability to
+        detect objects around it. This is done by measuring the distance
+        to objects in the following 5 directions: front/back/left/right/up
+        with mm precision up to 4 meters.
+
+config DECK_OA
+    bool "Support the Obstacle avoidance deck (obsolete)"
+    default y
+    help
+        Codename: Obstacle Avoidance driver, obsolete deck.
+
+config DECK_USD
+    bool "Support the Micro SD card deck"
+    default y
+    help
+        The Micro SD card deck adds a Micro SD card reader to the Crazyflie
+        and makes it possible to read and write files to the SD-card.
+        The standard firmware has support for high speed logging (up to 1 kHz)
+        to the SD-card which can record data at rates that are higher than
+        what can be transfered via radio in real time. When the recoding
+        is finished the SD-card can be moved to a computer for data analyses.
+        It is also possible to access the file system from applications
+        (or any other firmware code) to implement usecases that requires
+        the use of files.
+
+config DECK_USD_USE_ALT_PINS_AND_SPI
+  bool "Use alternate SPI and alternate CS pin"
+  default n
+  depends on DECK_USD
+  help
+      Changes the DECK_GPIO_RX2 for CS and SPI3 for spi.
+      This requires hardware changes on the deck.
+      Check out for instructions on the micro SD card deck
+      product page on https://www.bitcraze.io/
+
+config DECK_ZRANGER
+    bool "Support the Z-ranger deck V1 (discontinued)"
+    default n
+    help
+        The Z-ranger deck uses a laser sensor to measure the distance to
+        the ground. The deck enables the Crazyflie to automatically maintain
+        a constant distance to the objects under it when flying in automatic
+        mode. Over a floor it will stay on the same height, but will follow
+        the flow of a stair case up or down when going on adventures.
+
+config DECK_ZRANGER2
+    bool "Support the Z-ranger deck V2"
+    default y
+    help
+        The Z-ranger deck V2 uses a laser sensor to measure the distance to
+        the ground. The deck enables the Crazyflie to automatically maintain
+        a constant distance to the objects under it when flying in automatic
+        mode. Over a floor it will stay on the same height, but will follow
+        the flow of a stair case up or down when going on adventures.

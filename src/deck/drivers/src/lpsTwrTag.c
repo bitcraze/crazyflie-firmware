@@ -455,7 +455,7 @@ static void updateTagTdmaSlot(lpsTwrAlgoOptions_t * options)
   if (options->tdmaSlot < 0) {
     uint64_t radioAddress = configblockGetRadioAddress();
     int nslot = 1;
-    for (int i=0; i<TDMA_NSLOTS_BITS; i++) {
+    for (int i=0; i<CONFIG_DECK_LOCO_TDMA_SLOTS; i++) {
       nslot *= 2;
     }
     options->tdmaSlot = radioAddress % nslot;

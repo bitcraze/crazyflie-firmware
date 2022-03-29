@@ -35,23 +35,25 @@
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
-#define COMMANDER_PRIORITY_DISABLE 0
-#define COMMANDER_PRIORITY_CRTP    1
-#define COMMANDER_PRIORITY_EXTRX   2
+#define COMMANDER_PRIORITY_DISABLE   0
+// Keep a macro for lowest non-disabled priority, regardless of source, in case
+// some day there is a priority lower than the high-level commander.
+#define COMMANDER_PRIORITY_LOWEST    1
+#define COMMANDER_PRIORITY_HIGHLEVEL 1
+#define COMMANDER_PRIORITY_CRTP      2
+#define COMMANDER_PRIORITY_EXTRX     3
 
 void commanderInit(void);
 bool commanderTest(void);
 uint32_t commanderGetInactivityTime(void);
 
+// Arg `setpoint` cannot be const; the commander will mutate its timestamp.
 void commanderSetSetpoint(setpoint_t *setpoint, int priority);
 int commanderGetActivePriority(void);
 
-/* Inform the commander that streaming setpoints are about to stop.
- * Parameter controls the amount of time the last setpoint will remain valid.
- * This gives the PC time to send the next command, e.g. with the high-level
- * commander, before we enter timeout mode.
- */
-void commanderNotifySetpointsStop(int remainValidMillisecs);
+// Sets the priority of the current setpoint to the lowest non-disabled value,
+// so any new setpoint regardless of source will overwrite it.
+void commanderRelaxPriority(void);
 
 void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state);
 

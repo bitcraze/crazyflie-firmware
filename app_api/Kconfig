@@ -1,0 +1,5 @@
+config APP_API_TEST
+    bool "Build API test application"
+    default n
+    help
+       Builds an application that uses all app layer API.

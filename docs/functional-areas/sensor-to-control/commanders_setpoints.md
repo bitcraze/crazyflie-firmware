@@ -17,14 +17,12 @@ This section will go into the commander framework, which handles the setpoint of
 
 The commander module handles the incoming setpoints from several sources (src/modules/src/commander.c in the [firmware](https://github.com/bitcraze/crazyflie-firmware)). A setpoint can be set directly, either through a python script using the [cflib](https://github.com/bitcraze/crazyflie-lib-python)/ [cfclient](https://github.com/bitcraze/crazyflie-clients-python) or [the app layer](/docs/userguides/app_layer.md) (blue pathways in the figure), or by the high-level commander module (purple pathway). The High-level commander in turn, can be controlled remotely from the python library or from inside the Crazyflie.
 
-It is important to realize that the commander module also checks how long ago a setpoint has been received. If it has been a little while (defined by threshold `COMMANDER_WDT_TIMEOUT_STABILIZE` in commander.c), it will set the attitude angles to 0 on order to keep the Crazyflie stabilized. If this takes longer than `COMMANDER_WDT_TIMEOUT_SHUTDOWN`, a null setpoint will be given which will result in the Crazyflie shutting down its motors and fall from the sky. This won’t happen if you are using the high level commander.
-
-[go back to top](#)
+It is important to realize that the commander module also checks how long ago a setpoint has been received. If it has been a little while (defined by threshold `COMMANDER_WDT_TIMEOUT_STABILIZE` in commander.c), it will set the attitude angles to 0 on order to keep the Crazyflie stabilized. If this takes longer than `COMMANDER_WDT_TIMEOUT_SHUTDOWN`, a null set-point will be given which will result in the Crazyflie shutting down its motors and fall from the sky. This won’t happen if you are using the high level commander.
 
 ## Setpoint Structure
 
 
-In order to understand the commander module, you must be able to comprehend the setpoint structure. The specific implementation can be found in src/modules/interface/stabilizer_types.h as setpoint_t in the Crazyflie firmware.
+In order to understand the commander module, you must be able to comprehend the set-point structure. The specific implementation can be found in src/modules/interface/stabilizer_types.h as setpoint_t in the Crazyflie firmware.
 
 There are 2 levels to control, which is:
 
@@ -40,26 +38,23 @@ These can be controlled in different modes, namely:
 ![commander framework](/docs/images/setpoint_structure.png){:width="700"}
 
 
-So if absolute position control is desired (go to point (1,0,1) in x,y,z), the controller will obey values given setpoint.position.xyz if setpoint.mode.xyz is set to modeAbs. If you rather want to control velocity (go 0.5 m/s in the x-direction), the controller will listen to the values given in setpoint.velocity.xyz if setpoint.mode.xyz is set to modeVel. All the attitude setpoint modes will be set then to disabled (modeDisabled). If only the attitude should be controlled, then all the position modes are set to modeDisabled. This happens for instance when you are controlling the crazyflie with a controller through the cfclient in attitude mode.
+So if absolute position control is desired (go to point (1,0,1) in x,y,z), the controller will obey values given setpoint.position.xyz if setpoint.mode.xyz is set to modeAbs. If you rather want to control velocity (go 0.5 m/s in the x-direction), the controller will listen to the values given in setpoint.velocity.xyz if setpoint.mode.xyz is set to modeVel. All the attitude setpoint modes will be set then to disabled (modeDisabled). If only the attitude should be controlled, then all the position modes are set to modeDisabled. This happens for instance when you are controlling the Crazyflie with a controller through the [cfclient](https://www.bitcraze.io/documentation/repository/crazyflie-clients-python/master/) in attitude mode.
 
-[go back to top](#)
 
 
 ## High Level Commander
 
 ![high level commander](/docs/images/high_level_commander.png){:width="700"}
 
-As already explained before: The high level commander handles the setpoints from within the firmware based on a predefined trajectory. This was merged as part of the [Crazyswarm](https://crazyswarm.readthedocs.io/en/latest/) project of the [USC ACT lab](https://act.usc.edu/). The high-level commander uses a planner to generate smooth trajectories based on actions like ‘take off’, ‘go to’ or ‘land’ with 7th order polynomials. The planner generates a group of setpoints, which will be handled by the High level commander and send one by one to the commander framework.
+As already explained before: The high level commander handles the setpoints from within the firmware based on a predefined trajectory. This was merged as part of the [Crazyswarm](https://crazyswarm.readthedocs.io/en/latest/) project of the [USC ACT lab](https://act.usc.edu/). The high-level commander uses a planner to generate smooth trajectories based on actions like ‘take off’, ‘go to’ or ‘land’ with 7th order polynomials. The planner generates a group of set-points, which will be handled by the High level commander and send one by one to the commander framework.
 
-[go back to top](#)
 
 ## Support in the python lib (CFLib)
 
 There are four main ways to interact with the commander framework from the [python library](https://github.com/bitcraze/crazyflie-lib-python)/.
 
 * **autonomousSequence.py**: Send setpoints directly using the Commander class from the Crazyflie object.
-* **motion_commander_demo.py**: The MotionCommander class exposes a simplified API and sends velocity setpoints continuously based on the methods called.
+* **motion_commander_demo.py**: The MotionCommander class exposes a simplified API and sends velocity set-points continuously based on the methods called.
 * **autonomous_sequence_high_level.py**: Use the high level commander directly using the HighLevelCommander class on the Crazyflie object.
 * **position_commander_demo.py**: Use the PositionHlCommander class for a simplified API to send commands to the high level commander.
 
-[go back to top](#)

@@ -5,11 +5,11 @@ page_id: persistent_storage
 
 # Persistent storage
 
-The crazyflie has a persistent storage subsystem that is intended to be used for configuration and other rarely written data.
+The Crazyflie has a persistent storage subsystem that is intended to be used for configuration and other rarely written data.
 The 7kB of the internal EEPROM is used for storage.
 Fetching data should be fairly fast, storing data can be very slow if the storage space needs to be defragmented/garbage collected.
 
-The API is documented in the [storage.h](https://github.com/bitcraze/crazyflie-firmware/blob/master/src/hal/interface/storage.h).
+The API is documented in the `storage.h`.
 It currently only implements basic store/fetch/delete functions.
 The data stored are buffers and are stored and fetched using a key string.
 Care must be taken to not use generic keys in order to avoid collision.
@@ -34,15 +34,15 @@ Each KV couple is written as:
  - **Key** char*: Key
  - **Value** void*: Data buffer
 
-KV couples are writen one after each other. If one KV is at memory position *n*, the next one will be at memory position *n + length*.
+KV couples are written one after each other. If one KV is at memory position *n*, the next one will be at memory position *n + length*.
 
 If the key has a length of 0, it indicates a hole and the length indicates
 the offset to the next entry.
 
-A lenght of 0xffff means the end of the table.
+A length of 0xffff means the end of the table.
 
 Holes are created when an entry is deleted or modified entries.
 
 New entries can be added either at the end of the table or in a hole that can fit the new buffer.
 
-When there is no more space for new entries, the memory should be defragmented by moving all items into the holes, packing all the items at the begining of the table.
+When there is no more space for new entries, the memory should be defragmented by moving all items into the holes, packing all the items at the beginning of the table.

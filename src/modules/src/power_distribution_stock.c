@@ -34,6 +34,7 @@
 #include "platform.h"
 #include "motors.h"
 #include "debug.h"
+#include "autoconf.h"
 
 // 0 - disable
 // 1 - individual motor power
@@ -54,8 +55,10 @@ static struct {
   uint16_t m4;
 } motorPowerSet;
 
-#ifndef DEFAULT_IDLE_THRUST
-#define DEFAULT_IDLE_THRUST 0
+#ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
+#  define DEFAULT_IDLE_THRUST 0
+#else
+#  define DEFAULT_IDLE_THRUST CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #endif
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
@@ -181,7 +184,7 @@ PARAM_GROUP_START(powerDist)
  * it takes time to start up the motor. Then a
  * common value is between 3000 - 6000.
  */
-PARAM_ADD_CORE(PARAM_UINT32, idleThrust, &idleThrust)
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_PERSISTENT, idleThrust, &idleThrust)
 PARAM_GROUP_STOP(powerDist)
 
 /**
