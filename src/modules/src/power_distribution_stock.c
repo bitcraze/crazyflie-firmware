@@ -37,7 +37,10 @@
 #include "debug.h"
 #include "autoconf.h"
 
-static bool motorSetEnable = false;
+// 0 - disable
+// 1 - individual motor power
+// 2 - all motors use m1 variable setting
+static uint8_t motorSetEnable = 0;
 static uint8_t saturationStatus = 0;
 
 enum saturationBits
@@ -125,6 +128,21 @@ static void powerDistributionLegacy(const control_t *control)
     motorPower.m4 =  limitThrust(control->thrust + control->roll -
                                control->yaw);
   #endif
+
+  if (motorSetEnable == 1)
+  {
+    motorsSetRatio(MOTOR_M1, motorPowerSet.m1);
+    motorsSetRatio(MOTOR_M2, motorPowerSet.m2);
+    motorsSetRatio(MOTOR_M3, motorPowerSet.m3);
+    motorsSetRatio(MOTOR_M4, motorPowerSet.m4);
+  } else if (motorSetEnable == 2) {
+    motorsSetRatio(MOTOR_M1, motorPowerSet.m1);
+    motorsSetRatio(MOTOR_M2, motorPowerSet.m1);
+    motorsSetRatio(MOTOR_M3, motorPowerSet.m1);
+    motorsSetRatio(MOTOR_M4, motorPowerSet.m1);
+  }
+  else
+  {
     if (motorPower.m1 < idleThrust) {
       motorPower.m1 = idleThrust;
     }
@@ -142,6 +160,7 @@ static void powerDistributionLegacy(const control_t *control)
     motorsSetRatio(MOTOR_M2, motorPower.m2);
     motorsSetRatio(MOTOR_M3, motorPower.m3);
     motorsSetRatio(MOTOR_M4, motorPower.m4);
+  }
 }
 
 static void powerDistributionForceTorque(const control_t *control)

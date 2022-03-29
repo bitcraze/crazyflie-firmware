@@ -64,7 +64,7 @@ static uint16_t motorsBLConv16ToBits(uint16_t bits);
 static uint16_t motorsConvBitsTo16(uint16_t bits);
 static uint16_t motorsConv16ToBits(uint16_t bits);
 
-uint32_t motor_ratios[] = {0, 0, 0, 0};
+uint16_t motor_ratios[] = {0, 0, 0, 0};
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
@@ -100,6 +100,11 @@ const MotorHealthTestDef unknownMotorHealthTestSettings = {
 };
 
 static bool isInit = false;
+
+// Compensate thrust depending on battery voltage so it will produce about the same
+// amount of thrust independent of the battery voltage. Based on thrust measurement.
+// Not applied for brushless motor setup.
+static uint8_t batCompensation = true;
 
 /* Private functions */
 
@@ -349,16 +354,17 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
 
     ratio = ithrust;
 
-  #ifdef ENABLE_THRUST_BAT_COMPENSATED
-    if (motorMap[id]->drvType == BRUSHED)
+    if (batCompensation)
     {
-      // To make sure we provide the correct PWM given current supply voltage
-      // from the battery, we do calculations based on measurements of PWM,
-      // voltage and thrust. See comment at function definition for details.
-      ratio = motorsCompensateBatteryVoltage(ithrust);
-      motor_ratios[id] = ratio;
+      if (motorMap[id]->drvType == BRUSHED)
+      {
+        // To make sure we provide the correct PWM given current supply voltage
+        // from the battery, we do calculations based on measurements of PWM,
+        // voltage and thrust. See comment at function definition for details.
+        ratio = motorsCompensateBatteryVoltage(ithrust);
+        motor_ratios[id] = ratio;
+      }
     }
-  #endif
     if (motorMap[id]->drvType == BRUSHLESS)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
@@ -503,19 +509,19 @@ LOG_GROUP_START(pwm)
 /**
  * @brief Current motor 1 PWM output
  */ 
-LOG_ADD(LOG_UINT32, m1_pwm, &motor_ratios[0])
+LOG_ADD(LOG_UINT16, m1_pwm, &motor_ratios[0])
 /**
  * @brief Current motor 2 PWM output
  */ 
-LOG_ADD(LOG_UINT32, m2_pwm, &motor_ratios[1])
+LOG_ADD(LOG_UINT16, m2_pwm, &motor_ratios[1])
 /**
  * @brief Current motor 3 PWM output
  */ 
-LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
+LOG_ADD(LOG_UINT16, m3_pwm, &motor_ratios[2])
 /**
  * @brief Current motor 4 PWM output
  */ 
-LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
+LOG_ADD(LOG_UINT16, m4_pwm, &motor_ratios[3])
 
 LOG_ADD(LOG_FLOAT, maxThrust, &maxThrust)
 LOG_GROUP_STOP(pwm)

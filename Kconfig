@@ -173,7 +173,7 @@ menu "Expansion deck configuration"
 
 config DECK_FORCE
     string "Force load specified custom deck driver"
-    default "none"
+    default "bcLoadcell:bcRpm:bcACS37800"
     help
         A colon seperated list of custom drivers to force load or "none".
 
