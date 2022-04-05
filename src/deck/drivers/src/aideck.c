@@ -312,7 +312,7 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
   cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_BOOTLOADER, &bootPacket.route);
 
   if (memAddr == 0) {
-    GAP8BlCmdPacket_t * gap8BlPacket = bootPacket.data;
+    GAP8BlCmdPacket_t* gap8BlPacket = (GAP8BlCmdPacket_t*)bootPacket.data;
 
     gap8BlPacket->cmd = GAP8_BL_CMD_START_WRITE;
     gap8BlPacket->startAddress = 0x40000;
@@ -323,7 +323,7 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
 
   // The GAP8 can only flash data in multiples of 4 bytes,
   // buffering will guard against this and also speed things up.
-  // The full binary that will be flashed is multiple of 4. 
+  // The full binary that will be flashed is multiple of 4.
 
   uint32_t sizeLeftToBufferFull = sizeof(flashBuffer) - flashBufferIndex;
   uint32_t sizeAbleToBuffer = sizeLeftToBufferFull < writeLen ? sizeLeftToBufferFull : writeLen;
@@ -335,7 +335,7 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
   if (flashBufferIndex == sizeof(flashBuffer) || lastAddressToWrite == *(memDef->newFwSizeP)) {
     memcpy(&bootPacket.data, flashBuffer, flashBufferIndex);
     bootPacket.dataLength = flashBufferIndex;
-    
+
     cpxSendPacketBlocking(&bootPacket);
 
     flashBufferIndex = 0;
@@ -351,18 +351,14 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
 
 static bool isInBootloader = false;
 
-static void resetToFW() {
-  DEBUG_PRINT("Reset to FW\n");
-}
-
 static void resetToBootloader() {
   cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_SYSTEM, &bootPacket.route);
 
-  ESP32SysPacket_t * esp32SysPacket = &bootPacket.data;
+  ESP32SysPacket_t* esp32SysPacket = (ESP32SysPacket_t*)bootPacket.data;
 
   esp32SysPacket->cmd = ESP32_SYS_CMD_RESET_GAP8;
   bootPacket.dataLength = sizeof(ESP32SysPacket_t);
-  
+
   cpxSendPacketBlocking(&bootPacket);
   // This should be handled on RX on CPX instead
   vTaskDelay(100);
