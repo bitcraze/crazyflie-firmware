@@ -1,0 +1,74 @@
+# Release jobs
+
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Create Release on Github
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        draft: true
+        prerelease: true
+    - name: Release URL on file
+      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+    - name: Save Release URL File For Uploading Files
+      uses: actions/upload-artifact@v1
+      with:
+        name: release_url
+        path: release_url.txt       
+
+  upload:
+    name: Upload Binaries to release
+    needs: [release]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platforms: [cf2, tag, bolt]
+  
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platforms }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
+
+    - name: Load Release URL File from release job
+      uses: actions/download-artifact@v1
+      with:
+        name: release_url
+
+    - name: Get Release File Name & Upload URL
+      id: get_release_info
+      run: |
+        value=`cat release_url/release_url.txt`
+        echo ::set-output name=upload_url::$value
+        
+    - name: Get the version 
+      id: get_release_version 
+      env: 
+        GITHUB_REF : ${{ github.ref }}
+      run: echo ::set-output name=release_version::${GITHUB_REF/refs\/tags\//}
+      
+    - name: Upload ${{ matrix.platforms }} bin
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ${{ matrix.platforms }}.bin
+        asset_name: ${{ matrix.platforms }}-${{ steps.get_release_version.outputs.release_version }}.bin
+        asset_content_type: application/octet-stream

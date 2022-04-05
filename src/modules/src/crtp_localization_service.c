@@ -217,7 +217,7 @@ static void extPosePackedHandler(const CRTPPacket* pk) {
 
 static void lpsShortLppPacketHandler(CRTPPacket* pk) {
   if (pk->size >= 2) {
-#ifdef CONFIG_LPS_DECK_LOCO
+#ifdef CONFIG_DECK_LOCO
     bool success = lpsSendLppShort(pk->data[1], &pk->data[2], pk->size-2);
 #else
     bool success = false;
@@ -386,45 +386,45 @@ LOG_GROUP_STOP(ext_pos)
 
 /**
  * Logging variables for (external) positioning data stream through ctrp
- */ 
+ */
 LOG_GROUP_START(locSrv)
 /**
- * @brief Position X measurement from external system 
- */ 
+ * @brief Position X measurement from external system
+ */
   LOG_ADD_CORE(LOG_FLOAT, x, &ext_pose.x)
 /**
- * @brief Position Y measurement from external system 
- */ 
+ * @brief Position Y measurement from external system
+ */
   LOG_ADD_CORE(LOG_FLOAT, y, &ext_pose.y)
 /**
  * @brief Position Z measurement from external system
- */ 
+ */
   LOG_ADD_CORE(LOG_FLOAT, z, &ext_pose.z)
 /**
  * @brief Quaternion x meas from an external system
- */ 
+ */
   LOG_ADD_CORE(LOG_FLOAT, qx, &ext_pose.quat.x)
 /**
  * @brief Quaternion y meas from an external system
- */ 
+ */
   LOG_ADD_CORE(LOG_FLOAT, qy, &ext_pose.quat.y)
 /**
  * @brief Quaternion z meas from an external system
- */ 
+ */
   LOG_ADD_CORE(LOG_FLOAT, qz, &ext_pose.quat.z)
 /**
  * @brief Quaternion w meas from an external system
- */ 
+ */
   LOG_ADD_CORE(LOG_FLOAT, qw, &ext_pose.quat.w)
 LOG_GROUP_STOP(locSrv)
 
 /**
  * Logging variables for (external) positioning data stream through Compressed
- */ 
+ */
 LOG_GROUP_START(locSrvZ)
 /**
  * @brief time when data was received last (ms/ticks)
- */ 
+ */
   LOG_ADD_CORE(LOG_UINT16, tick, &tickOfLastPacket)  // time when data was received last (ms/ticks)
 LOG_GROUP_STOP(locSrvZ)
 
