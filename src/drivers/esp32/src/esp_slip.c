@@ -23,7 +23,7 @@
  *
  * @file esp_slip.c
  * Protocol for assembling, sending, receiving and decoding SLIP packets to/from the ESP32 ROM bootloader
- *  
+ *
  */
 
 #include <string.h>
@@ -152,7 +152,7 @@ static slipDecoderStatus_t decodeSlipPacket(uint8_t c, espSlipReceivePacket_t *r
     {
       receiverPacket->dataSize = ((uint16_t)slipSize[0] + ((uint16_t)slipSize[1] << 8));
       slipValueIndex = 0;
-      if (receiverPacket->dataSize > 0 && receiverPacket->dataSize < ESP_MTU)
+      if (receiverPacket->dataSize > 0 && receiverPacket->dataSize < ESP_SLIP_MTU)
       {
         espblReceiveState = receiveValue;
       }
@@ -281,7 +281,7 @@ static bool receivePacket(espSlipReceivePacket_t *receiverPacket, espSlipSendPac
   }
 
   const uint8_t statusOk = 0;
-  return statusOk == receiverPacket->status && packetReceivedStatus == SLIP_SUCCESS;
+  return packetReceivedStatus == SLIP_SUCCESS && statusOk == receiverPacket->status;
 }
 
 static void assembleBuffer(uint8_t *sendBuffer, espSlipSendPacket_t *senderPacket)

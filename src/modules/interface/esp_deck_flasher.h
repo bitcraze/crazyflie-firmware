@@ -31,11 +31,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/**
-* @brief Dummy function that can be adapted to verify firmware checksum before booting ESP32. An MD5 checksum can be calculated by the ESP32 ROM bootloader and verified with a hard-coded checksum here.
-*
-**/
-bool espDeckFlasherCheckVersionAndBoot();
+// Written by deck memory sub system before flashing
+extern uint32_t espDeckFlasherNewBinarySize;
 
 /**
 * @brief Repeatedly called upon arrival of a data packet from the radio when flashing the ESP from the cfclient with zip.

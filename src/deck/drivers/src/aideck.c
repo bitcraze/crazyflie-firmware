@@ -59,16 +59,11 @@
 static bool isInit = false;
 static uint8_t byte;
 
-// TODO krri
-#define GAP8_BITSTREAM_SIZE (1234)
-#define GAP8_BITSTREAM_CRC (9876)
-
 #define ESP_TX_QUEUE_LENGTH 4
 #define ESP_RX_QUEUE_LENGTH 4
 
 static xQueueHandle espTxQueue;
 static xQueueHandle espRxQueue;
-
 
 // Length of start + payloadLength
 #define UART_HEADER_LENGTH 2
@@ -127,6 +122,38 @@ static EventGroupHandle_t evGroup;
 
 static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp);
 
+
+typedef enum {
+  ESP_MODE_NORMAL,
+  ESP_MODE_PREPARE_FOR_BOOTLOADER,
+  ESP_MODE_BOOTLOADER,
+} EspMode_t;
+
+EspMode_t espMode = ESP_MODE_NORMAL;
+const uint32_t espUartReadMaxWait = M2T(100);
+
+// This function gets data from the UART that is connected to the ESP.
+// The default behavior is to wait until data arrives, but it can be terminated when the ESP is set to boot loader mode.
+// In this case the function will be NOPed and block forever.
+static void getDataFromEspUart(uint8_t *c) {
+  bool readSuccess = false;
+  while(!readSuccess) {
+    if (ESP_MODE_NORMAL == espMode) {
+      readSuccess = uart2GetDataWithTimeout(c, espUartReadMaxWait);
+    } else {
+      vTaskDelay(M2T(100000));
+    }
+  }
+}
+
+// This function sends data to the UART that is connected to the ESP.
+// It will be NOPed if the ESP is set in boot loader mode.
+static void sendDataToEspUart(uint32_t size, uint8_t* data) {
+  if (ESP_MODE_NORMAL == espMode) {
+    uart2SendData(size, data);
+  }
+}
+
 static uint8_t calcCrc(const uart_transport_packet_t* packet) {
   const uint8_t* start = (const uint8_t*) packet;
   const uint8_t* end = &packet->payload[packet->payloadLength];
@@ -148,10 +175,10 @@ static void ESP_RX(void *param)
     // Wait for start!
     do
     {
-      uart2GetDataWithTimeout(&espRxp.start, (TickType_t)portMAX_DELAY);
+      getDataFromEspUart(&espRxp.start);
     } while (espRxp.start != 0xFF);
 
-    uart2GetDataWithTimeout(&espRxp.payloadLength, (TickType_t)portMAX_DELAY);
+    getDataFromEspUart(&espRxp.payloadLength);
 
     if (espRxp.payloadLength == 0)
     {
@@ -161,11 +188,11 @@ static void ESP_RX(void *param)
     {
       for (int i = 0; i < espRxp.payloadLength; i++)
       {
-        uart2GetDataWithTimeout(&espRxp.payload[i], (TickType_t)portMAX_DELAY);
+        getDataFromEspUart(&espRxp.payload[i]);
       }
 
       uint8_t crc;
-      uart2GetDataWithTimeout(&crc, (TickType_t)portMAX_DELAY);
+      getDataFromEspUart(&crc);
       ASSERT(crc == calcCrc(&espRxp));
 
       xQueueSend(espRxQueue, &espRxp, portMAX_DELAY);
@@ -190,7 +217,7 @@ static void ESP_TX(void *param)
   // Sync with ESP32 so both are in CTS
   do
   {
-    uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
+    sendDataToEspUart(sizeof(ctr), (uint8_t *)&ctr);
     vTaskDelay(100);
     evBits = xEventGroupGetBits(evGroup);
   } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
@@ -208,7 +235,7 @@ static void ESP_TX(void *param)
                                    portMAX_DELAY);
       if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT)
       {
-        uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
+        sendDataToEspUart(sizeof(ctr), (uint8_t *)&ctr);
       }
     }
 
@@ -227,10 +254,10 @@ static void ESP_TX(void *param)
                                      portMAX_DELAY);
         if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT)
         {
-          uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
+          sendDataToEspUart(sizeof(ctr), (uint8_t *)&ctr);
         }
       } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
-      uart2SendData((uint32_t) espTxp.payloadLength + UART_META_LENGTH, (uint8_t *)&espTxp);
+      sendDataToEspUart((uint32_t) espTxp.payloadLength + UART_META_LENGTH, (uint8_t *)&espTxp);
     }
   }
 }
@@ -349,9 +376,10 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
   return true;
 }
 
-static bool isInBootloader = false;
 
-static void resetToBootloader() {
+static bool isGap8InBootloaderMode = false;
+
+static void resetGap8ToBootloader() {
   cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_SYSTEM, &bootPacket.route);
 
   ESP32SysPacket_t* esp32SysPacket = (ESP32SysPacket_t*)bootPacket.data;
@@ -362,7 +390,7 @@ static void resetToBootloader() {
   cpxSendPacketBlocking(&bootPacket);
   // This should be handled on RX on CPX instead
   vTaskDelay(100);
-  isInBootloader = true;
+  isGap8InBootloaderMode = true;
 }
 
 static uint8_t gap8DeckFlasherPropertiesQuery()
@@ -373,7 +401,50 @@ static uint8_t gap8DeckFlasherPropertiesQuery()
     result |= DECK_MEMORY_MASK_STARTED;
   }
 
-  if (isInBootloader) {
+  if (isGap8InBootloaderMode) {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
+  }
+
+  return result;
+}
+
+static void resetEspToBootloader() {
+  espMode = ESP_MODE_PREPARE_FOR_BOOTLOADER;
+
+  // Give the UART some time to terminate any pending operations
+  vTaskDelay(espUartReadMaxWait * 2);
+
+  // Set ESP in reset
+  pinMode(DECK_GPIO_IO4, OUTPUT);
+  digitalWrite(DECK_GPIO_IO4, LOW);
+
+  // Signal to go to bootloader mode after reset
+  pinMode(DECK_GPIO_IO1, OUTPUT);
+  digitalWrite(DECK_GPIO_IO1, LOW);
+  vTaskDelay(M2T(10));
+
+  // Release reset
+  digitalWrite(DECK_GPIO_IO4, HIGH);
+  pinMode(DECK_GPIO_IO4, INPUT_PULLUP);
+
+  // Release pin
+  vTaskDelay(M2T(100));
+  pinMode(DECK_GPIO_IO1, INPUT);
+
+  espMode = ESP_MODE_BOOTLOADER;
+}
+
+uint8_t espDeckFlasherPropertiesQuery()
+{
+  uint8_t result = 0;
+
+  if (isInit)
+  {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
+
+  if (ESP_MODE_BOOTLOADER == espMode)
+  {
     result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
   }
 
@@ -381,9 +452,9 @@ static uint8_t gap8DeckFlasherPropertiesQuery()
 }
 
 
+
 static void aideckInit(DeckInfo *info)
 {
-
   if (isInit)
     return;
 
@@ -424,17 +495,15 @@ static bool aideckTest()
   return true;
 }
 
-static uint32_t espNewFlashSize;
 static const DeckMemDef_t espMemoryDef = {
     .write = espDeckFlasherWrite,
     .read = 0,
     .properties = espDeckFlasherPropertiesQuery,
     .supportsUpgrade = true,
     .id = "esp",
-    .newFwSizeP = &espNewFlashSize,
+    .newFwSizeP = &espDeckFlasherNewBinarySize,
 
-    .requiredSize = ESP_BITSTREAM_SIZE,
-    // .requiredHash = ESP_BITSTREAM_CRC,
+    .commandResetToBootloader = resetEspToBootloader,
 };
 
 static uint32_t gap8NewFlashSize;
@@ -446,10 +515,7 @@ static const DeckMemDef_t gap8MemoryDef = {
     .id = "gap8",
     .newFwSizeP = &gap8NewFlashSize,
 
-    // .requiredSize = GAP8_BITSTREAM_SIZE,
-    // .requiredHash = GAP8_BITSTREAM_CRC,
-
-    .commandResetToBootloader = resetToBootloader,
+    .commandResetToBootloader = resetGap8ToBootloader,
 };
 
 static const DeckDriver aideck_deck = {
