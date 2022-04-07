@@ -226,7 +226,7 @@ static void Gap8Task(void *param)
   while (1)
   {
     uart1GetDataWithTimeout(&byte, portMAX_DELAY);
-    consolePutchar(byte);
+    //consolePutchar(byte);
   }
 }
 
