@@ -49,16 +49,19 @@
 
 static bool isInit = false;
 
+static bool clientIsConnected = false;
+
 static int cpxlinkSendPacket(CRTPPacket *p);
 static int cpxlinkSetEnable(bool enable);
 static int cpxlinkReceivePacket(CRTPPacket *p);
-
+static bool cpxlinkIsConnected(void);
 
 static struct crtpLinkOperations cpxlinkOp =
 {
   .setEnable         = cpxlinkSetEnable,
   .sendPacket        = cpxlinkSendPacket,
   .receivePacket     = cpxlinkReceivePacket,
+  .isConnected       = cpxlinkIsConnected
 };
 
 static int cpxlinkReceivePacket(CRTPPacket *p)
@@ -84,6 +87,10 @@ static int cpxlinkSetEnable(bool enable)
   return 0;
 }
 
+static bool cpxlinkIsConnected(void) {
+  return clientIsConnected;
+}
+
 void cpxlinkInit()
 {
   if(isInit)
@@ -95,6 +102,10 @@ void cpxlinkInit()
 bool cpxlinkTest()
 {
   return isInit;
+}
+
+void cpxLinkSetClientConnected(bool isConnected) {
+  clientIsConnected = isConnected;
 }
 
 struct crtpLinkOperations * cpxlinkGetLink()

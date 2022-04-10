@@ -44,6 +44,7 @@
 #include "aideck-router.h"
 #include "cpxlink.h"
 #include "crtp.h"
+#include "cpxlink.h"
 
 #define WIFI_SET_SSID_CMD         0x10
 #define WIFI_SET_KEY_CMD          0x11
@@ -83,7 +84,8 @@ static void cxpRxTest(void *param)
                           cpxRx.data[4]);
           }
           if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
-            DEBUG_PRINT("WiFi client connected\n");
+            DEBUG_PRINT("WiFi client connected=%d\n", cpxRx.data[1]);
+            cpxLinkSetClientConnected(cpxRx.data[1] == 1);
           }
           break;
         default:

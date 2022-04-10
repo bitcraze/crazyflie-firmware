@@ -36,6 +36,7 @@
 
 void cpxlinkInit();
 bool cpxlinkTest();
+void cpxLinkSetClientConnected(bool isConnected);
 struct crtpLinkOperations * cpxblinkGetLink();
 
 #endif
