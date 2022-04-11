@@ -217,7 +217,7 @@ static void ESP_TX(void *param)
   }
 }
 
-static void Gap8Task(void *param)
+/*static void Gap8Task(void *param)
 {
   systemWaitStart();
   vTaskDelay(M2T(1000));
@@ -228,7 +228,7 @@ static void Gap8Task(void *param)
     uart1GetDataWithDefaultTimeout(&byte);
     consolePutchar(byte);
   }
-}
+}*/
 
 static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp) {
   ASSERT((packet->route.destination >> 4) == 0);
@@ -290,8 +290,8 @@ static void aideckInit(DeckInfo *info)
     return;
 
   // Initialize task for the GAP8
-  xTaskCreate(Gap8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
-              AI_DECK_TASK_PRI, NULL);
+  /*xTaskCreate(Gap8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
+              AI_DECK_TASK_PRI, NULL);*/
 
   espTxQueue = xQueueCreate(ESP_TX_QUEUE_LENGTH, sizeof(CPXPacket_t));
   espRxQueue = xQueueCreate(ESP_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
@@ -302,7 +302,7 @@ static void aideckInit(DeckInfo *info)
   pinMode(DECK_GPIO_IO4, OUTPUT);
   digitalWrite(DECK_GPIO_IO4, LOW);
   //Initialize UARTs while GAP8/ESP32 is held in reset
-  uart1Init(115200);
+  //uart1Init(115200);
   uart2Init(115200);
 
   // Initialize task for the ESP while it's held in reset
@@ -342,7 +342,7 @@ static const DeckDriver aideck_deck = {
     .name = "bcAI",
 
     .usedGpio = DECK_USING_IO_4,
-    .usedPeriph = DECK_USING_UART1,
+    //.usedPeriph = DECK_USING_UART1,
 
     .memoryDef = &memoryDef,
 
