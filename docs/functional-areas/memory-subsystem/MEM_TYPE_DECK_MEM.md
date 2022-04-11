@@ -56,7 +56,7 @@ Crazyflie detects that the deck firmware is incompatible with the Crazyflie firm
 
 | Address | Type             | Description                              |
 |---------|------------------|------------------------------------------|
-| 0x0000  | uint8            | Version, currently 3x                     |
+| 0x0000  | uint8            | Version, currently 3                     |
 | 0x0001  | Deck memory info | Information for deck 1, main memory      |
 | 0x0021  | Deck memory info | Information for deck 1, secondary memory |
 | 0x0041  | Deck memory info | Information for deck 2, main memory      |

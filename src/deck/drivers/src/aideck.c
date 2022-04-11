@@ -141,7 +141,7 @@ static void getDataFromEspUart(uint8_t *c) {
     if (ESP_MODE_NORMAL == espMode) {
       readSuccess = uart2GetDataWithTimeout(c, espUartReadMaxWait);
     } else {
-      vTaskDelay(M2T(100000));
+      vTaskDelay(portMAX_DELAY);
     }
   }
 }
