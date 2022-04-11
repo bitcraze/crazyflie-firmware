@@ -100,7 +100,7 @@
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
 #define ACTIVE_MARKER_TASK_PRI  3
-#define AI_DECK_TASK_PRI        3
+#define AI_DECK_TASK_PRI        1
 #define UART2_TASK_PRI          3
 #define CRTP_SRV_TASK_PRI       0
 #define PLATFORM_SRV_TASK_PRI   0

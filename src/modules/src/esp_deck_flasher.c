@@ -23,7 +23,7 @@
  *
  * @file esp_deck_flasher.c
  * Handles flashing of binaries on the ESP32
- *  
+ *
  */
 
 #include <stdbool.h>
@@ -40,122 +40,95 @@
 #include "esp_rom_bootloader.h"
 #include "uart2.h"
 
-static bool inBootloaderMode = true;
-static bool hasStarted = false;
 
-bool espDeckFlasherCheckVersionAndBoot()
-{
-  hasStarted = true;
-  return true;
-}
+uint32_t espDeckFlasherNewBinarySize = 0;
 
 static uint32_t sequenceNumber;
-static uint32_t numberOfDataPackets;
-static uint8_t sendBuffer[ESP_MTU + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + 2]; // + 2 to account for start and stop bytes 0xC0
+static uint32_t numberOfFlashBuffers;
+static uint8_t sendBuffer[ESP_SLIP_DATA_START + ESP_SLIP_MTU + ESP_SLIP_STOP_CODE_LEN];
 static uint8_t overshoot;
 static uint32_t sendBufferIndex;
 
-bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer)
-{
-  if (memAddr == 0)
-  {
-    uart2Init(115200);
-    espRomBootloaderInit();
-    if (!espRomBootloaderSync(&sendBuffer[0]))
-    {
-      DEBUG_PRINT("Write failed - cannot sync with bootloader\n");
-      return false;
-    }
-    if (!espRomBootloaderSpiAttach(&sendBuffer[0]))
-    {
-      DEBUG_PRINT("Write failed - cannot attach SPI flash\n");
-      return false;
-    }
 
-    numberOfDataPackets = (((ESP_BITSTREAM_SIZE - 1) / ESP_MTU) + ((ESP_BITSTREAM_SIZE / ESP_MTU) < 0 ? 0 : 1)) >> 0; // Division of bitstream size and MTU rounded up to nearest integer
-
-    if (!espRomBootloaderFlashBegin(&sendBuffer[0], numberOfDataPackets, ESP_BITSTREAM_SIZE, ESP_FW_ADDRESS))
-    {
-      DEBUG_PRINT("Failed to start flashing\n");
-      return 0;
-    }
-    sequenceNumber = 0;
-    sendBufferIndex = 0;
+static bool initialize() {
+  if (!espRomBootloaderSync(&sendBuffer[0])){
+    DEBUG_PRINT("Write failed - cannot sync with bootloader\n");
+    return false;
   }
 
-  // assemble buffer until full
-  if (sendBufferIndex + writeLen >= ESP_MTU)
-  {
-    overshoot = sendBufferIndex + writeLen - ESP_MTU;
-    memcpy(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + sendBufferIndex], buffer, writeLen - overshoot); // + 1 to account for start byte 0xC0
-    sendBufferIndex += writeLen - overshoot;
-  }
-  else
-  {
-    memcpy(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + sendBufferIndex], buffer, writeLen);
-    sendBufferIndex += writeLen;
+  if (!espRomBootloaderSpiAttach(&sendBuffer[0])){
+    DEBUG_PRINT("Write failed - cannot attach SPI flash\n");
+    return false;
   }
 
-  // send buffer if full
-  const bool sendBufferFull = (sendBufferIndex == ESP_MTU);
-  const bool lastPacket = (sequenceNumber == numberOfDataPackets - 1);
-  bool lastPacketFull = lastPacket && (sendBufferIndex == ESP_BITSTREAM_SIZE % ESP_MTU);
-
-  if (sendBufferFull || (lastPacket && lastPacketFull))
-  {
-    if (!espRomBootloaderFlashData(&sendBuffer[0], sendBufferIndex, sequenceNumber))
-    {
-      DEBUG_PRINT("Flash write failed\n");
-      return false;
-    }
-    else
-    {
-      DEBUG_PRINT("Flash write successful\n");
-    }
-
-    // put overshoot into send buffer for next send & update sendBufferIndex
-    if (overshoot)
-    {
-      memcpy(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + 0], &buffer[writeLen - overshoot], overshoot);
-      sendBufferIndex = overshoot;
-      overshoot = 0;
-    }
-    else
-    {
-      sendBufferIndex = 0;
-    }
-
-    // increment sequence number
-    sequenceNumber++;
-
-    // if very last radio packet triggered overshoot, send padded carry buffer
-    if ((lastPacket && lastPacketFull))
-    {
-
-      if (!espRomBootloaderFlashData(&sendBuffer[0], sendBufferIndex, sequenceNumber))
-      {
-        DEBUG_PRINT("Flash write failed\n");
-        return false;
-      }
-    }
+  numberOfFlashBuffers = 1 + (espDeckFlasherNewBinarySize - 1) / ESP_SLIP_MTU;
+  // It should be possible to send the actual binary size to the ESP but we get flashing errors sometimes for
+  // the last (smaller) buffer. Solve it by sending full buffers.
+  const uint32_t quantizedSize = numberOfFlashBuffers * ESP_SLIP_MTU;
+  if (!espRomBootloaderFlashBegin(&sendBuffer[0], numberOfFlashBuffers, quantizedSize, ESP_FW_ADDRESS)) {
+    DEBUG_PRINT("Failed to start flashing\n");
+    return false;
   }
+
+  sequenceNumber = 0;
+  sendBufferIndex = 0;
 
   return true;
 }
 
-uint8_t espDeckFlasherPropertiesQuery()
-{
-  uint8_t result = 0;
+static void appendToSendBuffer(const uint8_t writeLen, const uint8_t *buffer) {
+  const uint32_t tail = ESP_SLIP_DATA_START + sendBufferIndex;
 
-  if (hasStarted)
-  {
-    result |= DECK_MEMORY_MASK_STARTED;
+  const uint32_t newIndex = sendBufferIndex + writeLen;
+  if (newIndex <= ESP_SLIP_MTU) {
+    memcpy(&sendBuffer[tail], buffer, writeLen);
+    sendBufferIndex = newIndex;
+  } else {
+    overshoot = newIndex - ESP_SLIP_MTU;
+    memcpy(&sendBuffer[tail], buffer, writeLen - overshoot);
+    sendBufferIndex = ESP_SLIP_MTU;
+  }
+}
+
+static void appendOvershootToSendBuffer(const uint8_t writeLen, const uint8_t *buffer) {
+  // put overshoot into send buffer for next send & update sendBufferIndex
+  if (overshoot) {
+    memcpy(&sendBuffer[ESP_SLIP_DATA_START], &buffer[writeLen - overshoot], overshoot);
+    sendBufferIndex = overshoot;
+    overshoot = 0;
+  }
+}
+
+
+bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef) {
+  if (memAddr == 0) {
+    if (!initialize()) {
+      return false;
+    }
   }
 
-  if (inBootloaderMode)
-  {
-    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE | DECK_MEMORY_MASK_UPGRADE_REQUIRED;
+  appendToSendBuffer(writeLen, buffer);
+
+  const bool isSendBufferFull = (sendBufferIndex == ESP_SLIP_MTU);
+  if (isSendBufferFull) {
+    if (!espRomBootloaderFlashData(sendBuffer, sendBufferIndex, sequenceNumber)) {
+      DEBUG_PRINT("Flash write failed\n");
+      return false;
+    }
+    sendBufferIndex = 0;
+    sequenceNumber++;
+
+    appendOvershootToSendBuffer(writeLen, buffer);
   }
 
-  return result;
+  // If this is the last radio packet and we have a half full flash buffer, send it (with padding) to the ESP
+  const bool isLastPacket = ((memAddr + writeLen) == espDeckFlasherNewBinarySize);
+  if (isLastPacket && sendBufferIndex) {
+    if (!espRomBootloaderFlashData(sendBuffer, sendBufferIndex, sequenceNumber)) {
+      DEBUG_PRINT("Flash write failed\n");
+      return false;
+    }
+  }
+
+  return true;
 }

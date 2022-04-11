@@ -52,27 +52,40 @@ typedef enum {
     MEM_SECONDARY = 1
 } MemSelector;
 
-static const uint8_t VERSION = 2;
+static const uint8_t VERSION = 3;
 
 static const int DECK_MEMORY_INFO_SIZE = 0x20;
 
-static const int OFFS_BITFIELD = 0x00;
-static const int OFFS_REQ_HASH = 0x01;
-static const int OFFS_REQ_LEN = 0x05;
-static const int OFFS_BASE_ADDR = 0x09;
-static const int OFFS_NAME = 0x0D;
+static const int OFFS_BITFIELD1 = 0x00;
+static const int OFFS_BITFIELD2 = 0x01;
+static const int OFFS_REQ_HASH = 0x02;
+static const int OFFS_REQ_LEN = 0x06;
+static const int OFFS_BASE_ADDR = 0x0A;
+static const int OFFS_NAME = 0x0E;
 
-static const int NAME_LEN_EX_ZERO_TREM = 18;
+static const int NAME_LEN_EX_ZERO_TREM = 17;
 
-static const uint8_t MASK_IS_VALID          = 1;
-static const uint8_t MASK_IS_STARTED        = 2;
-static const uint8_t MASK_SUPPORTS_READ     = 4;
-static const uint8_t MASK_SUPPORTS_WRITE    = 8;
-static const uint8_t MASK_SUPPORTS_UPGRADE  = 16;
-static const uint8_t MASK_UPGRADE_REQUIRED  = 32;
-static const uint8_t MASK_BOOTLOADER_ACTIVE = 64;
+static const uint8_t MASK_IS_VALID                = 1;
+static const uint8_t MASK_IS_STARTED              = 2;
+static const uint8_t MASK_SUPPORTS_READ           = 4;
+static const uint8_t MASK_SUPPORTS_WRITE          = 8;
+static const uint8_t MASK_SUPPORTS_UPGRADE        = 16;
+static const uint8_t MASK_UPGRADE_REQUIRED        = 32;
+static const uint8_t MASK_BOOTLOADER_ACTIVE       = 64;
 
-static uint8_t populateBitfield(const DeckMemDef_t* memDef) {
+static const uint32_t COMMAND_BASE_ADR = 0x1000;
+static const uint32_t DECK_MEMORY_COMMAND_SIZE = 0x20;
+
+static const uint8_t DECK_MEMORY_MASK_SUPPORTS_RESET_TO_FW         = 1;
+static const uint8_t DECK_MEMORY_MASK_SUPPORTS_RESET_TO_BOOTLOADER = 2;
+
+static const uint8_t DECK_MEMORY_MASK_COMMAND_RESET_TO_FW         = 1;
+static const uint8_t DECK_MEMORY_MASK_COMMAND_RESET_TO_BOOTLOADER = 2;
+
+static const uint32_t COMMAND_BITFIELD_ADR = 0x4;
+
+
+static uint8_t populateBitfield1(const DeckMemDef_t* memDef) {
     uint8_t result = MASK_IS_VALID;
 
     const uint8_t properties = memDef->properties();
@@ -103,12 +116,27 @@ static uint8_t populateBitfield(const DeckMemDef_t* memDef) {
     return result;
 }
 
+static uint8_t populateBitfield2(const DeckMemDef_t* memDef) {
+    uint8_t result = 0;
+
+    if (memDef->commandResetToFw) {
+        result |= DECK_MEMORY_MASK_SUPPORTS_RESET_TO_FW;
+    }
+
+    if (memDef->commandResetToBootloader) {
+        result |= DECK_MEMORY_MASK_SUPPORTS_RESET_TO_BOOTLOADER;
+    }
+
+    return result;
+}
+
 static void populateDeckMemoryInfoBuffer(const DeckMemDef_t *deckMemDef,
                                          const char *name,
                                          uint32_t baseAddress,
                                          uint8_t buffer[])
 {
-    buffer[OFFS_BITFIELD] = populateBitfield(deckMemDef);
+    buffer[OFFS_BITFIELD1] = populateBitfield1(deckMemDef);
+    buffer[OFFS_BITFIELD2] = populateBitfield2(deckMemDef);
     memcpy(&buffer[OFFS_REQ_HASH], &deckMemDef->requiredHash, 4);
     memcpy(&buffer[OFFS_REQ_LEN], &deckMemDef->requiredSize, 4);
     memcpy(&buffer[OFFS_BASE_ADDR], &baseAddress, 4);
@@ -215,6 +243,46 @@ static bool handleDeckSectionRead(const uint32_t memAddr, const uint8_t readLen,
     return result;
 }
 
+static void handleCommandForDevice(const DeckMemDef_t* memoryDef, const uint32_t adr, const uint8_t value) {
+    if (adr < COMMAND_BITFIELD_ADR) {
+        if (memoryDef->newFwSizeP) {
+            uint8_t* newFwSizePtr = (uint8_t*)memoryDef->newFwSizeP;
+            newFwSizePtr[adr] = value;
+        }
+    }
+    else if (adr == COMMAND_BITFIELD_ADR) {
+        if (value & DECK_MEMORY_MASK_COMMAND_RESET_TO_FW && memoryDef->commandResetToFw) {
+            memoryDef->commandResetToFw();
+        }
+        if (value & DECK_MEMORY_MASK_COMMAND_RESET_TO_BOOTLOADER && memoryDef->commandResetToBootloader) {
+            memoryDef->commandResetToBootloader();
+        }
+    }
+}
+
+static bool handleCommandSectionWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const int nrOfDecks) {
+    for (uint32_t i = 0; i < writeLen; i++) {
+        uint32_t adr = memAddr + i;
+        if (adr >= COMMAND_BASE_ADR) {
+            uint32_t relAdr = adr - COMMAND_BASE_ADR;
+            int deckNr = relAdr / (DECK_MEMORY_COMMAND_SIZE * 2);
+            if (deckNr < nrOfDecks) {
+                const DeckInfo* info = deckInfo(deckNr);
+                uint32_t commandAdr = relAdr % DECK_MEMORY_COMMAND_SIZE;
+                uint32_t selector = (relAdr / DECK_MEMORY_COMMAND_SIZE) % 2;
+                uint8_t value = buffer[i];
+                if (selector == 0) {
+                    handleCommandForDevice(info->driver->memoryDef, commandAdr, value);
+                } else {
+                    handleCommandForDevice(info->driver->memoryDefSecondary, commandAdr, value);
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
 static bool handleDeckSectionWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const int deckNr, const MemSelector selector) {
     bool result = false;
 
@@ -229,7 +297,7 @@ static bool handleDeckSectionWrite(const uint32_t memAddr, const uint8_t writeLe
         if (deckMemDef->write) {
             uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE + selector * DECK_MEM_MAX_SIZE;
             uint32_t deckAddress = memAddr - baseAddress;
-            result = deckMemDef->write(deckAddress, writeLen, buffer);
+            result = deckMemDef->write(deckAddress, writeLen, buffer, deckMemDef);
         }
     }
 
@@ -258,12 +326,14 @@ TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen
 
 TESTABLE_STATIC bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
     bool result = false;
+    int nrOfDecks = deckCount();
 
     // Assume the buffer is fully within one section. It may not be true, but unlikely
     // and not an important use case to support
     const uint32_t section = memAddr / DECK_MEM_MAX_SIZE;
-    if (section > 0) {
-        int nrOfDecks = deckCount();
+    if (section == 0) {
+        result = handleCommandSectionWrite(memAddr, writeLen, buffer, nrOfDecks);
+    } else {
         MemSelector selector = (section - 1) % 2;
         int deckNr = (section - 1) / 2;
         if (deckNr < nrOfDecks * 2) {

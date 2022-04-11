@@ -34,8 +34,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define ESP_BITSTREAM_SIZE 610576
-#define AIDECK_UART_TRANSPORT_MTU (100)
+#define AIDECK_UART_TRANSPORT_MTU 100
+#define AIDECK_UART_META_DATA_SIZE 2
+#define AIDECK_UART_PAYLOAD_MTU (AIDECK_UART_TRANSPORT_MTU - AIDECK_UART_META_DATA_SIZE)
 
 // This enum is used to identify source and destination for CPX routing information
 typedef enum {
@@ -65,7 +66,7 @@ typedef struct {
 typedef struct {
   CPXRouting_t route;
   uint16_t dataLength;
-  uint8_t data[AIDECK_UART_TRANSPORT_MTU-2];
+  uint8_t data[AIDECK_UART_PAYLOAD_MTU];
 } CPXPacket_t;
 
 /**
@@ -94,11 +95,11 @@ void cpxSendPacketBlocking(const CPXPacket_t * packet);
  * This will send a packet to the ESP32 to be routed using CPX.
  *
  * @param packet packet to be sent
- * @param timeoutInMS timeout before giving up if packet cannot be queued
+ * @param timeout timeout before giving up if packet cannot be queued
  * @return true if package could be queued for sending
  * @return false if package could not be queued for sending within timeout
  */
-bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeoutInMS);
+bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
 
 /**
  * @brief Initialize CPX routing data.
