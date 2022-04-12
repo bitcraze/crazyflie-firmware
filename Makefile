@@ -216,3 +216,4 @@ test_python: bindings_python
 endif
 
 .PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_verify cload size print_version clean_version bindings_python
+
