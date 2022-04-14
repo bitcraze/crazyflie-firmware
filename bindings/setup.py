@@ -22,7 +22,7 @@ fw_sources = [os.path.join(fw_dir, "src/modules/src", mod) for mod in modules]
 cffirmware = Extension(
     "_cffirmware",
     include_dirs=include,
-    sources=fw_sources + ["bin/cffirmware_wrap.c"],
+    sources=fw_sources + ["build/cffirmware_wrap.c"],
     extra_compile_args=[
         "-O3",
         # The following flags are also used for compiling the actual firmware
@@ -35,7 +35,7 @@ cffirmware = Extension(
 class BuildCommand(distutils.command.build.build):
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
-        self.build_base = "bin"
+        self.build_base = "build"
 
 setup(
     name="cffirmware",
