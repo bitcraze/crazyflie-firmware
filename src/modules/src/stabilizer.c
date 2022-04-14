@@ -36,6 +36,7 @@
 #include "debug.h"
 #include "motors.h"
 #include "pm.h"
+#include "platform.h"
 
 #include "stabilizer.h"
 
@@ -67,6 +68,7 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
+static motors_thrust_t motorPower;
 // For scratch storage - never logged or passed to other subsystems.
 static setpoint_t tempSetpoint;
 
@@ -174,6 +176,7 @@ void stabilizerInit(StateEstimatorType estimator)
   stateEstimatorInit(estimator);
   controllerInit(ControllerTypeAny);
   powerDistributionInit();
+  motorsInit(platformConfigGetMotorMapping());
   collisionAvoidanceInit();
   estimatorType = getStateEstimator();
   controllerType = getControllerType();
@@ -191,6 +194,7 @@ bool stabilizerTest(void)
   pass &= stateEstimatorTest();
   pass &= controllerTest();
   pass &= powerDistributionTest();
+  pass &= motorsTest();
   pass &= collisionAvoidanceTest();
 
   return pass;
@@ -279,9 +283,13 @@ static void stabilizerTask(void* param)
       supervisorUpdate(&sensorData);
 
       if (emergencyStop || (systemIsArmed() == false)) {
-        powerStop();
+        motorsStop();
       } else {
-        powerDistribution(&control);
+        powerDistribution(&motorPower, &control);
+        motorsSetRatio(MOTOR_M1, motorPower.m1);
+        motorsSetRatio(MOTOR_M2, motorPower.m2);
+        motorsSetRatio(MOTOR_M3, motorPower.m3);
+        motorsSetRatio(MOTOR_M4, motorPower.m4);
       }
 
 #ifdef CONFIG_DECK_USD

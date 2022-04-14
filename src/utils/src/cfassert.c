@@ -30,7 +30,7 @@
 #include "FreeRTOS.h"
 #include "cfassert.h"
 #include "led.h"
-#include "power_distribution.h"
+#include "motors.h"
 #include "debug.h"
 
 #define MAGIC_ASSERT_INDICATOR 0x2f8a001f
@@ -81,7 +81,7 @@ void assertFail(char *exp, char *file, int line)
   storeAssertFileData(file, line);
   DEBUG_PRINT("Assert failed %s:%d\n", file, line);
 
-  powerStop();
+  motorsStop();
   ledShowFaultPattern();
 
   NVIC_SystemReset();
