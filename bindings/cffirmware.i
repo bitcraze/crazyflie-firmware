@@ -17,6 +17,7 @@
 #include "pid.h"
 #include "filter.h"
 #include "num.h"
+#include "controller_mellinger.h"
 %}
 
 %include "math3d.h"
@@ -26,6 +27,7 @@
 %include "collision_avoidance.h"
 %include "controller_pid.h"
 %include "imu_types.h"
+%include "controller_mellinger.h"
 
 %inline %{
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)

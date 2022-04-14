@@ -22,6 +22,7 @@ fw_sources = [
     "src/modules/src/pid.c",
     "src/utils/src/filter.c",
     "src/utils/src/num.c",
+    "src/modules/src/controller_mellinger.c",
 ]
 
 cffirmware = Extension(
