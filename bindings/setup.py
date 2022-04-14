@@ -4,20 +4,25 @@ import distutils.command.build
 from distutils.core import setup, Extension
 import os
 
-fw_dir = "."
 include = [
-    os.path.join(fw_dir, "src/modules/interface"),
-    os.path.join(fw_dir, "src/hal/interface"),
-    os.path.join(fw_dir, "src/utils/interface/lighthouse"),
+    "src/modules/interface",
+    "src/hal/interface",
+    "src/utils/interface/lighthouse",
+    "src/utils/interface",
 ]
 
-modules = [
-    "pptraj.c",
-    "pptraj_compressed.c",
-    "planner.c",
-    "collision_avoidance.c"
+fw_sources = [
+    "src/modules/src/pptraj.c",
+    "src/modules/src/pptraj_compressed.c",
+    "src/modules/src/planner.c",
+    "src/modules/src/collision_avoidance.c",
+    "src/modules/src/controller_pid.c",
+    "src/modules/src/position_controller_pid.c",
+    "src/modules/src/attitude_pid_controller.c",
+    "src/modules/src/pid.c",
+    "src/utils/src/filter.c",
+    "src/utils/src/num.c",
 ]
-fw_sources = [os.path.join(fw_dir, "src/modules/src", mod) for mod in modules]
 
 cffirmware = Extension(
     "_cffirmware",

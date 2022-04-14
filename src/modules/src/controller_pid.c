@@ -1,5 +1,4 @@
 
-#include "stabilizer.h"
 #include "stabilizer_types.h"
 
 #include "attitude_controller.h"

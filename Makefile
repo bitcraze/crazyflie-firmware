@@ -204,12 +204,12 @@ ifeq ($(KBUILD_SRC),)
 MOD_INC = src/modules/interface
 MOD_SRC = src/modules/src
 
-bindings_python: bindings/setup.py $(MOD_SRC)/*.c
-	swig -python -I$(MOD_INC) -o build/cffirmware_wrap.c bindings/cffirmware.i
+bindings_python cffirmware.py: bindings/setup.py $(MOD_SRC)/*.c
+	swig -python -I$(MOD_INC) -Isrc/hal/interface -Isrc/utils/interface -o build/cffirmware_wrap.c bindings/cffirmware.i
 	$(PYTHON) bindings/setup.py build_ext --inplace
 	mv build/cffirmware.py cffirmware.py
 
-test_python: bindings_python
+test_python: cffirmware.py
 	$(PYTHON) -m pytest test_python
 endif
 

@@ -28,7 +28,7 @@
 #define ATTITUDE_CONTROLLER_H_
 
 #include <stdbool.h>
-#include "commander.h"
+#include <stdint.h>
 
 
 void attitudeControllerInit(const float updateDt);
