@@ -25,7 +25,7 @@
  */
 #include <stdbool.h>
 
-#include "FreeRTOS.h"
+#include "stabilizer_types.h"
 
 #include "attitude_controller.h"
 #include "pid.h"
