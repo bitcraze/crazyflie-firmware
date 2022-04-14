@@ -10,6 +10,8 @@ include = [
     "src/utils/interface/lighthouse",
     "src/utils/interface",
     "build/include/generated",
+    "src/config",
+    "src/drivers/interface",
 ]
 
 fw_sources = [

@@ -31,6 +31,7 @@
 #include "param.h"
 #include "num.h"
 #include "autoconf.h"
+#include "config.h" // Important, since this defines QUAD_FORMATION_X
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0

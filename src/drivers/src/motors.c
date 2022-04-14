@@ -320,17 +320,11 @@ void motorsStop()
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
   if (isInit) {
-    uint16_t ratio;
+    uint16_t ratio = ithrust;
 
     ASSERT(id < NBR_OF_MOTORS);
 
     motorPower[id] = ithrust;
-
-    if (motorSetEnable) {
-      ratio = motorPowerSet[id];
-    } else {
-      ratio = ithrust;
-    }
 
 #ifdef ENABLE_THRUST_BAT_COMPENSATED
     if (motorMap[id]->drvType == BRUSHED)
@@ -342,6 +336,11 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       motor_ratios[id] = ratio;
     }
 #endif
+
+    if (motorSetEnable) {
+      ratio = motorPowerSet[id];
+    }
+
     if (motorMap[id]->drvType == BRUSHLESS)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
@@ -481,19 +480,19 @@ PARAM_GROUP_STOP(motorPowerSet)
  */
 LOG_GROUP_START(motor)
 /**
- * @brief Motor power (PWM value) for M1 [0 - UINT16_MAX]
+ * @brief Requested motor power (PWM value) for M1 [0 - UINT16_MAX]
  */
 LOG_ADD_CORE(LOG_UINT32, m1, &motorPower[0])
 /**
- * @brief Motor power (PWM value) for M2 [0 - UINT16_MAX]
+ * @brief Requested motor power (PWM value) for M2 [0 - UINT16_MAX]
  */
 LOG_ADD_CORE(LOG_UINT32, m2, &motorPower[1])
 /**
- * @brief Motor power (PWM value) for M3 [0 - UINT16_MAX]
+ * @brief Requested motor power (PWM value) for M3 [0 - UINT16_MAX]
  */
 LOG_ADD_CORE(LOG_UINT32, m3, &motorPower[2])
 /**
- * @brief Motor power (PWM value) for M4 [0 - UINT16_MAX]
+ * @brief Requested motor power (PWM value) for M4 [0 - UINT16_MAX]
  */
 LOG_ADD_CORE(LOG_UINT32, m4, &motorPower[3])
 LOG_GROUP_STOP(motor)
