@@ -53,38 +53,42 @@ Today there's a few transports implemented in different parts of the Crazyflie:
 
 ### Communication stack
 
-    +-------------------+
-    +     Functions     +   <- Custom protocol (ex WiFi streamer or GAP8 bootloader)
-    +-------------------+
-    +       CPX         +   <- CPX routing header level
-    +-------------------+
-    +     Transport     +   <- CRTP, WiFI or custom for UART/SPI
-    +-------------------+   
-    +  Physical medium  +   <- 2.4 GHz, USB, UART or SPI
-    +-------------------+
+{% ditaa --alt "Communication stack" %}
++-------------------+
++     Functions     +   <- Custom protocol (ex WiFi streamer or GAP8 bootloader)
++-------------------+
++       CPX         +   <- CPX routing header level
++-------------------+
++     Transport     +   <- CRTP, WiFI or custom for UART/SPI
++-------------------+   
++  Physical medium  +   <- 2.4 GHz, USB, UART or SPI
++-------------------+
+{% endditaa %}
 
 ### Packet structure
 
 Each physical medium and/or transport can have it's own MTU and will also add data
 around the CPX packet to be able to use the medium and/or transport.
 
-    +---------------------+
-    +     Medium data     +
-    +---------------------+
-    +   Transport data    +
-    +---------------------+
-    +     CPX Header      +
-    +---------------------+
-    +                     +
-    +                     +
-    +        DATA         +
-    +                     +
-    +                     +
-    +---------------------+
-    +   Transport data    +
-    +---------------------+
-    +     Medium data     +
-    +---------------------+
+{% ditaa --alt "Packet structure" %}
++---------------------+
++     Medium data     +
++---------------------+
++   Transport data    +
++---------------------+
++     CPX Header      +
++---------------------+
++                     +
++                     +
++        DATA         +
++                     +
++                     +
++---------------------+
++   Transport data    +
++---------------------+
++     Medium data     +
++---------------------+
+{% endditaa %}
 
 As the packet moves up/down the stacks on each target data is added/removed and
 the user only interacts with the CPX part of the packets.
@@ -93,14 +97,14 @@ the user only interacts with the CPX part of the packets.
 
 The header for a CPX packet has the following format:
 
-```text
+{% ditaa --alt "CPX Header" %}
     7        6         5        4        3        2        1       0
 +--------+--------+--------+--------+--------+--------+--------+--------+
 |  RSV   |   LP   |          SOURCE          |        DESTINATION       |
 +--------+--------+--------+--------+--------+--------+--------+--------+
 |                                FUNCTION                               |
 +--------+--------+--------+--------+--------+--------+--------+--------+
-```
+{% endditaa %}
 
 |    Field    | Size (bits) | Range  | Comments |
 | ----------- | ----------- | ------ | -------- |
@@ -151,21 +155,23 @@ will not be the same for different types of links.
 The packets for the UART transport link (ESP32 <> STM32) has be following format.
 The MTU for the UART is 100 bytes (this includes CPX Header and DATA).
 
-    +----------------------+
-    +  Start byte (0xFF)   +
-    +----------------------+
-    +   Length (1 byte)    +
-    +----------------------+
-    + CPX Header (2 bytes) +
-    +----------------------+
-    +                      +
-    +                      +
-    +         DATA         +
-    +                      +
-    +                      +
-    +----------------------+
-    +          CRC         +
-    +----------------------+
+{% ditaa --alt "UART packet structure" %}
++----------------------+
++  Start byte (0xFF)   +
++----------------------+
++   Length (1 byte)    +
++----------------------+
++ CPX Header (2 bytes) +
++----------------------+
++                      +
++                      +
++         DATA         +
++                      +
++                      +
++----------------------+
++          CRC         +
++----------------------+
+{% endditaa %}
 
 | Byte number | Size | Comments |
 | ----------- | ---- | -------- |
@@ -185,17 +191,19 @@ queued and the sender can send the next one.
 The packets for the SPI transport link (ESP32 <> GAP8) has be following format.
 The MTU for the SPI is 1022 bytes (this includes CPX Header and DATA).
 
-    +----------------------+
-    +   Length (2 bytes)   +
-    +----------------------+
-    + CPX Header (2 bytes) +
-    +----------------------+
-    +                      +
-    +                      +
-    +         DATA         +
-    +                      +
-    +                      +
-    +----------------------+
+{% ditaa --alt "SPI packet structure" %}
++----------------------+
++   Length (2 bytes)   +
++----------------------+
++ CPX Header (2 bytes) +
++----------------------+
++                      +
++                      +
++         DATA         +
++                      +
++                      +
++----------------------+
+{% endditaa %}
 
 | Byte number | Size | Comments |
 | ----------- | ---- | -------- |
@@ -217,21 +225,23 @@ The packets for the WiFi transport link (ESP32 <> HOST) has be following format.
 The MTU for the link is 1022 bytes (this includes CPX Header and DATA), but the actual
 transferred data per packet will depend on the underlying TCP data.
 
-    +----------------------+
-    +         TCP          +
-    +----------------------+
-    +   Length (2 bytes)   +
-    +----------------------+
-    + CPX Header (2 bytes) +
-    +----------------------+
-    +                      +
-    +                      +
-    +         DATA         +
-    +                      +
-    +                      +
-    +----------------------+
-    +         TCP          +
-    +----------------------+
+{% ditaa --alt "WiFi packet structure" %}
++----------------------+
++         TCP          +
++----------------------+
++   Length (2 bytes)   +
++----------------------+
++ CPX Header (2 bytes) +
++----------------------+
++                      +
++                      +
++         DATA         +
++                      +
++                      +
++----------------------+
++         TCP          +
++----------------------+
+{% endditaa %}
 
 | Byte number | Size | Comments |
 | ----------- | ---- | -------- |
