@@ -15,6 +15,11 @@
 CRAZYFLIE_BASE := ../..
 
 #
+# To include header files from another dir
+#
+EXTRA_CFLAGS += -I$(PWD)/other
+
+#
 # We override the default OOT_CONFIG here, we could also name our config
 # to oot-config and that would be the default.
 #

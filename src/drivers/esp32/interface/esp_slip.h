@@ -23,7 +23,7 @@
  *
  * @file esp_slip.h
  * Protocol for assembling, sending, receiving and decoding SLIP packets to/from the ESP32 ROM bootloader
- *  
+ *
  */
 
 #pragma once
@@ -31,10 +31,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define ESP_MTU 4000
+#define ESP_SLIP_MTU 4000
 #define ESP_SLIP_TX_BUFFER_SIZE 128
 #define ESP_SLIP_OVERHEAD_LEN 8
-#define ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN 16 // to account for additional overhead in the SLIP packet while flashing data
+
+// to account for additional overhead in the SLIP packet while flashing data
+#define ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN 16
+#define ESP_SLIP_START_CODE_LEN 1
+#define ESP_SLIP_STOP_CODE_LEN 1
+#define ESP_SLIP_DATA_START (ESP_SLIP_START_CODE_LEN + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN)
 
 /* Commands */
 #define DIR_CMD 0x00

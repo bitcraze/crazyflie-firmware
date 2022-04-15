@@ -86,6 +86,8 @@ static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
 
+// A bitmap that indicates which base stations that are available
+static uint16_t baseStationAvailabledMap;
 
 // A bitmap that indicates which base staions that are received
 static uint16_t baseStationReceivedMapWs;
@@ -137,6 +139,10 @@ static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
 void lighthouseCoreInit() {
   lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
+
+  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+    modifyBit(&baseStationAvailabledMap, i, true);
+  }
 }
 
 void lighthouseCoreLedTimer()
@@ -210,7 +216,7 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
 
   for(int i = 0; i < UART_FRAME_LENGTH; i++) {
     while(!uart1GetDataWithTimeout((uint8_t*)&data[i], 2)) {
-      lighthouseTransmitProcessTimeout();      
+      lighthouseTransmitProcessTimeout();
     }
     if ((unsigned char)data[i] == 0xff) {
       syncCounter += 1;
@@ -488,7 +494,7 @@ void lighthouseCoreTask(void *param) {
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT(&frameRate);
 	lighthouseTransmitProcessFrame(&frame);
-	
+
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
         if (pulseProcessorProcessPulse) {
@@ -774,7 +780,7 @@ LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 /**
  * @brief Bit field indicating which base stations that are received by the lighthouse deck
  *
- * The lowest bit mapps to base station channel 1 and the highest to channel 16.
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
  */
 LOG_ADD_CORE(LOG_UINT16, bsReceive, &baseStationReceivedMap)
 
@@ -783,21 +789,21 @@ LOG_ADD_CORE(LOG_UINT16, bsReceive, &baseStationReceivedMap)
  *
  * A bit will be set if there is calibration and geometry data for the base station, and sweeps are received.
  *
- * The lowest bit mapps to base station channel 1 and the highest to channel 16.
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
  */
 LOG_ADD_CORE(LOG_UINT16, bsActive, &baseStationActiveMap)
 
 /**
  * @brief Bit field that indicates which base stations that have received calibration data that was different to what was stored in memory
  *
- * The lowest bit mapps to base station channel 1 and the highest to channel 16.
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
  */
 LOG_ADD_CORE(LOG_UINT16, bsCalUd, &baseStationCalibUpdatedMap)
 
 /**
  * @brief Bit field that indicates which base stations that have received calibration data over the air
  *
- * The lowest bit mapps to base station channel 1 and the highest to channel 16.
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
  */
 LOG_ADD_CORE(LOG_UINT16, bsCalCon, &baseStationCalibConfirmedMap)
 
@@ -831,4 +837,12 @@ PARAM_ADD_CORE(PARAM_UINT8, bsCalibReset, &calibStatusReset)
  *  (default: 2)
  */
 PARAM_ADD_CORE(PARAM_UINT8, systemType, &systemType)
+
+/**
+ * @brief Bit field that indicates which base stations that are supported by the system
+ *
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
+ */
+PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, bsAvailable, &baseStationAvailabledMap)
+
 PARAM_GROUP_STOP(lighthouse)

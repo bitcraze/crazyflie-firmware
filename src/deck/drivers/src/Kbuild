@@ -1,3 +1,4 @@
+obj-y += test/
 obj-$(CONFIG_DECK_ACTIVE_MARKER) += activeMarkerDeck.o
 obj-$(CONFIG_DECK_AI)            += aideck.o
 obj-$(CONFIG_DECK_AI)            += aideck-router.o
