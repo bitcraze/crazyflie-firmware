@@ -26,7 +26,7 @@ The protocol is meant to be a base, where application specific protocols can be
 implemented on top of it. There's a few examples of this, like the AI-deck WiFi
 image streamer and the GAP8 bootloader.
 
-CPX is a hybrid of a packet and stream protocol. Packets below TBD bytes are
+CPX is a hybrid of a packet and stream protocol. Packets below 30 bytes are
 delivered in one chunk, but larger packets can be split up and delivered as
 a stream of chunks where a header flag identifies the last chunk of the packet.
 
