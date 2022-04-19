@@ -174,6 +174,13 @@ typedef struct control_s {
   float thrust;
 } control_t;
 
+typedef struct motors_thrust_s {
+  uint16_t m1;  // PWM ratio
+  uint16_t m2;  // PWM ratio
+  uint16_t m3;  // PWM ratio
+  uint16_t m4;  // PWM ratio
+} motors_thrust_t;
+
 typedef enum mode_e {
   modeDisable = 0,
   modeAbs,
