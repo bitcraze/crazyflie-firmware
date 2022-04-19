@@ -95,27 +95,24 @@ static void cxpRxTest(void *param)
           consolePrintf("UNKNOWN: %s", cpxRx.data);
         }
         break;
+      case CPX_F_SYSTEM:
+        if (cpxRx.data[0] == CPX_ENABLE_CRTP_BRIDGE) {
+          if (cpxRx.data[1] == 0x00) {
+            crtpSetLink(radiolinkGetLink());
+            DEBUG_PRINT("Disable CPX <> CRTP bridge\n");
+          } else {
+            crtpSetLink(cpxlinkGetLink());
+            DEBUG_PRINT("Enable CPX <> CRTP bridge\n");
+          }
+        }
+        break;
+      case CPX_F_CRTP:
+        crtpRx.size = cpxRx.dataLength - 1;
+        crtpRx.header = cpxRx.data[0];
+        memcpy(crtpRx.data, &cpxRx.data[1], cpxRx.dataLength - 1);
+        xQueueSend(cpxCrtpRxQueue, &crtpRx, portMAX_DELAY);
       default:
         DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
-    }
-
-    if (cpxRx.route.function == CPX_F_SYSTEM) {
-      if (cpxRx.data[0] == CPX_ENABLE_CRTP_BRIDGE) {
-        if (cpxRx.data[1] == 0x00) {
-          crtpSetLink(radiolinkGetLink());
-          DEBUG_PRINT("Disable CPX <> CRTP bridge\n");
-        } else {
-          crtpSetLink(cpxlinkGetLink());
-          DEBUG_PRINT("Enable CPX <> CRTP bridge\n");
-        }
-      }
-    }
-
-    if (cpxRx.route.function == CPX_F_CRTP) {
-      crtpRx.size = cpxRx.dataLength - 1;
-      crtpRx.header = cpxRx.data[0];
-      memcpy(crtpRx.data, &cpxRx.data[1], cpxRx.dataLength - 1);
-      xQueueSend(cpxCrtpRxQueue, &crtpRx, portMAX_DELAY);
     }
   }
 }
