@@ -44,7 +44,6 @@ doesn't matter.
 
 Today there's a few transports implemented in different parts of the Crazyflie:
 
-* CRTP: CPX packages can be carried over CRTP and will continue to be routed from the STM32
 * WiFi/TCP: CPX packages can be sent over WiFi/TCP using for example the AI-deck
 * SPI: This is used between the GAP8 and the ESP32 on the AI-deck
 * UART: This is used between the STM32 on the Crazyflie and the ESP32 on the AI-deck
@@ -214,10 +213,6 @@ The MTU for the SPI is 1022 bytes (this includes CPX Header and DATA).
 For the SPI link there's flow control and the GAP8 is the SPI master. The ESP32
 will signal when it can do a transaction and the GAP8 will signal when it can
 to do a transaction. When both are ready a transaction is done.
-
-#### CRTP (CRPA/USB)
-
-TBD
 
 #### WiFi
 
