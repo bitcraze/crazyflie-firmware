@@ -124,10 +124,6 @@ void storeAssertTextData(const char *text)
   snapshot.text.text = text;
 }
 
-static void clearAssertData() {
-  snapshot.type = SnapshotTypeNone;
-}
-
 void printAssertSnapshotData()
 {
   if (MAGIC_ASSERT_INDICATOR == snapshot.magicNumber) {
@@ -169,7 +165,6 @@ bool cfAssertNormalStartTest(void) {
 		wasNormalStart = false;
 		DEBUG_PRINT("The system resumed after a failed assert [WARNING]\n");
 		printAssertSnapshotData();
-    clearAssertData();
 	}
 
 	return wasNormalStart;
