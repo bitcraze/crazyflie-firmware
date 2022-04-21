@@ -74,6 +74,8 @@ SNAPSHOT_DATA snapshot __attribute__((section(".nzds"))) = {
   .type = SnapshotTypeNone,
 };
 
+static enum snapshotType_e currentType = SnapshotTypeNone;
+
 
 void assertFail(char *exp, char *file, int line)
 {
@@ -91,6 +93,7 @@ void storeAssertFileData(const char *file, int line)
 {
   snapshot.magicNumber = MAGIC_ASSERT_INDICATOR;
   snapshot.type = SnapshotTypeFile;
+  currentType = snapshot.type;
   snapshot.file.fileName = file;
   snapshot.file.line = line;
 }
@@ -107,6 +110,7 @@ void storeAssertHardfaultData(
 {
   snapshot.magicNumber = MAGIC_ASSERT_INDICATOR;
   snapshot.type = SnapshotTypeHardFault;
+  currentType = snapshot.type;
   snapshot.hardfault.r0 = r0;
   snapshot.hardfault.r1 = r1;
   snapshot.hardfault.r2 = r2;
@@ -121,36 +125,40 @@ void storeAssertTextData(const char *text)
 {
   snapshot.magicNumber = MAGIC_ASSERT_INDICATOR;
   snapshot.type = SnapshotTypeText;
+  currentType = snapshot.type;
   snapshot.text.text = text;
+}
+
+static void clearAssertData() {
+  snapshot.magicNumber = 0;
 }
 
 void printAssertSnapshotData()
 {
-  if (MAGIC_ASSERT_INDICATOR == snapshot.magicNumber) {
-    switch (snapshot.type) {
-      case SnapshotTypeFile:
-        DEBUG_PRINT("Assert failed at %s:%d\n", snapshot.file.fileName, snapshot.file.line);
-        break;
-      case SnapshotTypeHardFault:
-        DEBUG_PRINT("Hardfault. r0: %X, r1: %X, r2: %X, r3: %X, r12: %X, lr: %X, pc: %X, psr: %X\n",
-          snapshot.hardfault.r0,
-          snapshot.hardfault.r1,
-          snapshot.hardfault.r2,
-          snapshot.hardfault.r3,
-          snapshot.hardfault.r12,
-          snapshot.hardfault.lr,
-          snapshot.hardfault.pc,
-          snapshot.hardfault.psr);
-        break;
-      case SnapshotTypeText:
-        DEBUG_PRINT("Assert failed: %s\n", snapshot.text.text);
-        break;
-      default:
-        DEBUG_PRINT("Assert failed, but unknown type\n");
-        break;
-    }
-  } else {
-    DEBUG_PRINT("No assert information found\n");
+  switch (currentType) {
+    case SnapshotTypeNone:
+      DEBUG_PRINT("No assert information found\n");
+      break;
+    case SnapshotTypeFile:
+      DEBUG_PRINT("Assert failed at %s:%d\n", snapshot.file.fileName, snapshot.file.line);
+      break;
+    case SnapshotTypeHardFault:
+      DEBUG_PRINT("Hardfault. r0: %X, r1: %X, r2: %X, r3: %X, r12: %X, lr: %X, pc: %X, psr: %X\n",
+        snapshot.hardfault.r0,
+        snapshot.hardfault.r1,
+        snapshot.hardfault.r2,
+        snapshot.hardfault.r3,
+        snapshot.hardfault.r12,
+        snapshot.hardfault.lr,
+        snapshot.hardfault.pc,
+        snapshot.hardfault.psr);
+      break;
+    case SnapshotTypeText:
+      DEBUG_PRINT("Assert failed: %s\n", snapshot.text.text);
+      break;
+    default:
+      DEBUG_PRINT("Assert failed, but unknown type\n");
+      break;
   }
 }
 
@@ -163,7 +171,9 @@ bool cfAssertNormalStartTest(void) {
 
 	if (isAssertRegistered()) {
 		wasNormalStart = false;
+    currentType = snapshot.type;
 		DEBUG_PRINT("The system resumed after a failed assert [WARNING]\n");
+    clearAssertData();
 		printAssertSnapshotData();
 	}
 
