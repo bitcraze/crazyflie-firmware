@@ -150,7 +150,9 @@ void memoryRegisterOwHandler(const MemoryOwHandlerDef_t* handlerDef){
 static void memTask(void* param) {
 	crtpInitTaskQueue(CRTP_PORT_MEM);
 
-  systemWaitStart();
+  // This should be synced with decks starting up, otherwise
+  // there might be late arrivals for the registration that will
+  // trigger assert.
 
   // Do not allow registration of new handlers after this point as clients now can start
   // to query for available memories
