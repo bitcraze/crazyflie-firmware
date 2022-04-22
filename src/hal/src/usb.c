@@ -52,17 +52,14 @@
 #include "vcp_esc_passthrough.h"
 #include "bootloader.h"
 
-#define USE_CF_INTERFACE
-
 NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
 
 static bool isInit = false;
-#ifdef USE_CF_INTERFACE
 static bool doingTransfer = false;
-#endif
-static bool rxStopped = true;
-
 static bool doingVcpTransfer = false;
+static bool rxStopped = true;
+static uint16_t command = 0xFF;
+
 
 // This should probably be reduced to a CRTP packet size
 static xQueueHandle usbDataRx;
@@ -70,12 +67,7 @@ STATIC_MEM_QUEUE_ALLOC(usbDataRx, 5, sizeof(USBPacket)); /* Buffer USB packets (
 static xQueueHandle usbDataTx;
 STATIC_MEM_QUEUE_ALLOC(usbDataTx, 1, sizeof(USBPacket)); /* Buffer USB packets (max 64 bytes) */
 
-#ifdef USE_CF_INTERFACE
 #define USB_CDC_CONFIG_DESC_SIZ     98
-#else
-#define USB_CDC_CONFIG_DESC_SIZ    (67)
-#define USB_CDC_DESC_SIZ           (67-9)
-#endif
 
 #define CF_INTERFACE                0x0
 #define VCP_COM_INTERFACE           0x1
@@ -83,11 +75,10 @@ STATIC_MEM_QUEUE_ALLOC(usbDataTx, 1, sizeof(USBPacket)); /* Buffer USB packets (
 /* Endpoints */
 #define CF_IN_EP                    0x81  /* EP1 for data IN */
 #define CF_OUT_EP                   0x01  /* EP1 for data OUT */
-//#define CF_CMD_EP                   0x84  /* EP2 for CDC commands */
 
-#define VCP_IN_EP                   0x82  /* EP3 for data IN */
-#define VCP_OUT_EP                  0x02  /* EP3 for data OUT */
-#define VCP_CMD_EP                  0x83  /* EP4 for command */
+#define VCP_IN_EP                   0x82  /* EP2 for data IN */
+#define VCP_OUT_EP                  0x02  /* EP2 for data OUT */
+#define VCP_CMD_EP                  0x83  /* EP3 for command */
 
 #define DEVICE_DESCRIPTOR           0x01
 #define CONFIGURATION_DESCRIPTOR    0x02
@@ -102,9 +93,6 @@ STATIC_MEM_QUEUE_ALLOC(usbDataTx, 1, sizeof(USBPacket)); /* Buffer USB packets (
 /*********************************************
    CDC specific management functions
  *********************************************/
-//static void Handle_USBAsynchXfer  (void *pdev);
-
-//extern CDC_IF_Prop_TypeDef  APP_FOPS;
 extern uint8_t USBD_DeviceDesc   [USB_SIZ_DEVICE_DESC];
 
 #ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
@@ -143,16 +131,11 @@ __ALIGN_BEGIN uint8_t APP_Rx_Buffer   [APP_RX_DATA_SIZE] __ALIGN_END ;
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
 __ALIGN_BEGIN uint8_t CmdBuff[CDC_CMD_PACKET_SIZE] __ALIGN_END ;
 
-uint32_t APP_Rx_ptr_in  = 0;
-uint32_t APP_Rx_ptr_out = 0;
-uint32_t APP_Rx_length  = 0;
-
 uint8_t  USB_Tx_State = USB_CDC_IDLE;
 
 static uint32_t cdcCmd = 0xFF;
 static uint32_t cdcLen = 0;
 
-#ifdef USE_CF_INTERFACE
 __ALIGN_BEGIN uint8_t  usbd_cf_CfgDesc[USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END = {
   /***** Configuration descriptor ******/
   9,                         //bLength
@@ -286,108 +269,6 @@ __ALIGN_BEGIN uint8_t  usbd_cf_CfgDesc[USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END = {
     HIBYTE(CDC_DATA_MAX_PACKET_SIZE),
     0x00                               /* bInterval: ignore for Bulk transfer */
 };
-#else
-/* USB CDC device Configuration Descriptor */
-__ALIGN_BEGIN uint8_t usbd_cf_CfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
-{
-  /*Configuration Descriptor*/
-  0x09,   /* bLength: Configuration Descriptor size */
-  USB_CONFIGURATION_DESCRIPTOR_TYPE,      /* bDescriptorType: Configuration */
-  USB_CDC_CONFIG_DESC_SIZ,                /* wTotalLength:no of returned bytes */
-  0x00,
-  0x02,   /* bNumInterfaces: 2 interface */
-  0x01,   /* bConfigurationValue: Configuration value */
-  0x00,   /* iConfiguration: Index of string descriptor describing the configuration */
-  0xC0,   /* bmAttributes: self powered */
-  0x32,   /* MaxPower 0 mA */
-
-  /*---------------------------------------------------------------------------*/
-
-  /*Interface Descriptor */
-  0x09,   /* bLength: Interface Descriptor size */
-  USB_INTERFACE_DESCRIPTOR_TYPE,  /* bDescriptorType: Interface */
-  /* Interface descriptor type */
-  0x00,   /* bInterfaceNumber: Number of Interface */
-  0x00,   /* bAlternateSetting: Alternate setting */
-  0x01,   /* bNumEndpoints: One endpoints used */
-  0x02,   /* bInterfaceClass: Communication Interface Class */
-  0x02,   /* bInterfaceSubClass: Abstract Control Model */
-  0x01,   /* bInterfaceProtocol: Common AT commands */
-  0x00,   /* iInterface: */
-
-  /*Header Functional Descriptor*/
-  0x05,   /* bLength: Endpoint Descriptor size */
-  0x24,   /* bDescriptorType: CS_INTERFACE */
-  0x00,   /* bDescriptorSubtype: Header Func Desc */
-  0x10,   /* bcdCDC: spec release number */
-  0x01,
-
-  /*Call Management Functional Descriptor*/
-  0x05,   /* bFunctionLength */
-  0x24,   /* bDescriptorType: CS_INTERFACE */
-  0x01,   /* bDescriptorSubtype: Call Management Func Desc */
-  0x00,   /* bmCapabilities: D0+D1 */
-  0x01,   /* bDataInterface: 1 */
-
-  /*ACM Functional Descriptor*/
-  0x04,   /* bFunctionLength */
-  0x24,   /* bDescriptorType: CS_INTERFACE */
-  0x02,   /* bDescriptorSubtype: Abstract Control Management desc */
-  0x02,   /* bmCapabilities */
-
-  /*Union Functional Descriptor*/
-  0x05,   /* bFunctionLength */
-  0x24,   /* bDescriptorType: CS_INTERFACE */
-  0x06,   /* bDescriptorSubtype: Union func desc */
-  0x00,   /* bMasterInterface: Communication class interface */
-  0x01,   /* bSlaveInterface0: Data Class Interface */
-
-  /*Endpoint 2 Descriptor*/
-  0x07,                           /* bLength: Endpoint Descriptor size */
-  USB_ENDPOINT_DESCRIPTOR_TYPE,   /* bDescriptorType: Endpoint */
-  VCP_CMD_EP,                     /* bEndpointAddress */
-  0x03,                           /* bmAttributes: Interrupt */
-  LOBYTE(CDC_CMD_PACKET_SIZE),     /* wMaxPacketSize: */
-  HIBYTE(CDC_CMD_PACKET_SIZE),
-#ifdef USE_USB_OTG_HS
-  0x10,                           /* bInterval: */
-#else
-  0xFF,                           /* bInterval: */
-#endif /* USE_USB_OTG_HS */
-
-  /*---------------------------------------------------------------------------*/
-
-  /*Data class interface descriptor*/
-  0x09,   /* bLength: Endpoint Descriptor size */
-  USB_INTERFACE_DESCRIPTOR_TYPE,  /* bDescriptorType: */
-  0x01,   /* bInterfaceNumber: Number of Interface */
-  0x00,   /* bAlternateSetting: Alternate setting */
-  0x02,   /* bNumEndpoints: Two endpoints used */
-  0x0A,   /* bInterfaceClass: CDC */
-  0x00,   /* bInterfaceSubClass: */
-  0x00,   /* bInterfaceProtocol: */
-  0x00,   /* iInterface: */
-
-  /*Endpoint OUT Descriptor*/
-  0x07,   /* bLength: Endpoint Descriptor size */
-  USB_ENDPOINT_DESCRIPTOR_TYPE,      /* bDescriptorType: Endpoint */
-  VCP_OUT_EP,                        /* bEndpointAddress */
-  0x02,                              /* bmAttributes: Bulk */
-  LOBYTE(CDC_DATA_MAX_PACKET_SIZE),  /* wMaxPacketSize: */
-  HIBYTE(CDC_DATA_MAX_PACKET_SIZE),
-  0x00,                              /* bInterval: ignore for Bulk transfer */
-
-  /*Endpoint IN Descriptor*/
-  0x07,   /* bLength: Endpoint Descriptor size */
-  USB_ENDPOINT_DESCRIPTOR_TYPE,      /* bDescriptorType: Endpoint */
-  VCP_IN_EP,                         /* bEndpointAddress */
-  0x02,                              /* bmAttributes: Bulk */
-  LOBYTE(CDC_DATA_MAX_PACKET_SIZE),  /* wMaxPacketSize: */
-  HIBYTE(CDC_DATA_MAX_PACKET_SIZE),
-  0x00                               /* bInterval: ignore for Bulk transfer */
-} ;
-#endif
-
 
 static uint8_t  usbd_cf_Init        (void  *pdev, uint8_t cfgidx);
 static uint8_t  usbd_cf_DeInit      (void  *pdev, uint8_t cfgidx);
@@ -399,9 +280,7 @@ static uint8_t  usbd_cf_Setup       (void *pdev , USB_SETUP_REQ  *req);
 static uint8_t  usbd_cdc_EP0_RxReady(void *pdev);
 
 static USBPacket inPacket;
-#ifdef USE_CF_INTERFACE
 static USBPacket outPacket;
-#endif
 static USBPacket outVcpPacket;
 
 /* CDC interface class callbacks structure */
@@ -431,9 +310,7 @@ USBD_Usr_cb_TypeDef USR_cb =
   USBD_USR_DeviceDisconnected,
 };
 
-int command = 0xFF;
 
-#ifdef USE_CF_INTERFACE
 static void resetUSB(void) {
   portBASE_TYPE xTaskWokenByReceive = pdFALSE;
 
@@ -450,14 +327,12 @@ static void resetUSB(void) {
   rxStopped = true;
   doingTransfer = false;
 }
-#endif
 
 static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
 {
   if (((req->bmRequest & USB_REQ_RECIPIENT_MASK) == USB_REQ_RECIPIENT_INTERFACE) ||
       ((req->bmRequest & USB_REQ_RECIPIENT_MASK) == USB_REQ_RECIPIENT_ENDPOINT))
   {
-#ifdef USE_CF_INTERFACE
      if (req->wIndex == CF_INTERFACE)
      {
       command = req->wValue;
@@ -486,7 +361,6 @@ static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
       }
     }
     else // VCP_COM_INTERFACE
-#endif
     {
       switch (req->bmRequest & USB_REQ_TYPE_MASK)
       {
@@ -522,8 +396,7 @@ static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
           }
           else /* No Data request */
           {
-            /* Transfer the command to the interface layer */
-            //APP_FOPS.pIf_Ctrl(req->bRequest, NULL, 0);
+            /* See the command as activating passthrough interface*/
             passthroughEnableFromISR();
           }
 
@@ -569,14 +442,15 @@ static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
 static uint8_t  usbd_cf_Init (void  *pdev,
                                uint8_t cfgidx)
 {
-#ifdef USE_CF_INTERFACE
-  /* Open EP IN */
+  uint8_t *pbuf;
+
+  /* Open CF EP IN */
   DCD_EP_Open(pdev,
               CF_IN_EP,
               USB_RX_TX_PACKET_SIZE,
               USB_OTG_EP_BULK);
 
-  /* Open EP OUT */
+  /* Open CF EP OUT */
   DCD_EP_Open(pdev,
               CF_OUT_EP,
               USB_RX_TX_PACKET_SIZE,
@@ -588,8 +462,6 @@ static uint8_t  usbd_cf_Init (void  *pdev,
                    (uint8_t*)(inPacket.data),
                    USB_RX_TX_PACKET_SIZE);
   rxStopped = false;
-#endif
-  uint8_t *pbuf;
 
   /* Open EP IN for VCP*/
   DCD_EP_Open(pdev,
@@ -613,9 +485,6 @@ static uint8_t  usbd_cf_Init (void  *pdev,
   pbuf[4] = DEVICE_CLASS_CDC;
   pbuf[5] = DEVICE_SUBCLASS_CDC;
 
-  /* Initialize the Interface physical components */
-//  APP_FOPS.pIf_Init();
-
   /* Prepare Out endpoint to receive next packet */
   DCD_EP_PrepareRx(pdev,
                    VCP_OUT_EP,
@@ -637,24 +506,20 @@ static uint8_t  usbd_cf_Init (void  *pdev,
 static uint8_t  usbd_cf_DeInit (void  *pdev,
                                  uint8_t cfgidx)
 {
-#ifdef USE_CF_INTERFACE
-  /* Close EP IN */
+  /* Close CF EP IN */
   DCD_EP_Close(pdev, CF_IN_EP);
 
-  /* Close EP OUT */
+  /* Close CF EP OUT */
   DCD_EP_Close(pdev, CF_OUT_EP);
-#endif
-  /* Close EP IN */
+
+  /* Close VCP EP IN */
   DCD_EP_Close(pdev, VCP_IN_EP);
 
-  /* Close EP OUT */
+  /* Close VCP EP OUT */
   DCD_EP_Close(pdev, VCP_OUT_EP);
 
   /* Close Command IN EP */
   DCD_EP_Close(pdev, VCP_CMD_EP);
-
-  /* Restore default state of the Interface physical components */
-//  APP_FOPS.pIf_DeInit();
 
   return USBD_OK;
 }
@@ -670,7 +535,6 @@ uint8_t  usbd_cdc_EP0_RxReady (void  *pdev)
   if (cdcCmd != NO_CMD)
   {
     /* Process the data */
-    //APP_FOPS.pIf_Ctrl(cdcCmd, CmdBuff, cdcLen);
 
     /* Reset the command variable to default value */
     cdcCmd = NO_CMD;
@@ -688,7 +552,6 @@ uint8_t  usbd_cdc_EP0_RxReady (void  *pdev)
   */
 static uint8_t  usbd_cf_DataIn (void *pdev, uint8_t epnum)
 {
-#ifdef USE_CF_INTERFACE
   if (epnum == (CF_IN_EP &~ 0x80))
   {
     portBASE_TYPE xTaskWokenByReceive = pdFALSE;
@@ -707,8 +570,6 @@ static uint8_t  usbd_cf_DataIn (void *pdev, uint8_t epnum)
     portYIELD_FROM_ISR(xTaskWokenByReceive);
   }
   else // VCP In endpoint
-#endif
-#if 1
   {
     int i;
     doingVcpTransfer = false;
@@ -726,67 +587,11 @@ static uint8_t  usbd_cf_DataIn (void *pdev, uint8_t epnum)
     }
   }
 
-#else
-  {
-    uint16_t USB_Tx_ptr;
-    uint16_t USB_Tx_length;
-
-    if (USB_Tx_State == USB_CDC_BUSY)
-    {
-      if (APP_Rx_length == 0)
-      {
-        USB_Tx_State = USB_CDC_IDLE;
-      }
-      else
-      {
-        if (APP_Rx_length > CDC_DATA_IN_PACKET_SIZE){
-          USB_Tx_ptr = APP_Rx_ptr_out;
-          USB_Tx_length = CDC_DATA_IN_PACKET_SIZE;
-
-          APP_Rx_ptr_out += CDC_DATA_IN_PACKET_SIZE;
-          APP_Rx_length -= CDC_DATA_IN_PACKET_SIZE;
-        }
-        else
-        {
-          USB_Tx_ptr = APP_Rx_ptr_out;
-          USB_Tx_length = APP_Rx_length;
-
-          APP_Rx_ptr_out += APP_Rx_length;
-          APP_Rx_length = 0;
-          if(USB_Tx_length == CDC_DATA_IN_PACKET_SIZE)
-          {
-            USB_Tx_State = USB_CDC_ZLP;
-          }
-        }
-
-        /* Prepare the available data buffer to be sent on IN endpoint */
-        DCD_EP_Tx (pdev,
-                   CF_IN_EP,
-                   (uint8_t*)&APP_Rx_Buffer[USB_Tx_ptr],
-                   USB_Tx_length);
-        return USBD_OK;
-      }
-    }
-
-    /* Avoid any asynchronous transfer during ZLP */
-    if (USB_Tx_State == USB_CDC_ZLP)
-    {
-      /*Send ZLP to indicate the end of the current transfer */
-      DCD_EP_Tx (pdev,
-                 CF_IN_EP,
-                 NULL,
-                 0);
-
-      USB_Tx_State = USB_CDC_IDLE;
-    }
-  }
-#endif
   return USBD_OK;
 }
 
 static uint8_t  usbd_cf_SOF (void *pdev)
 {
-#ifdef USE_CF_INTERFACE
   portBASE_TYPE xTaskWokenByReceive = pdFALSE;
   if (!doingTransfer) {
     if (xQueueReceiveFromISR(usbDataTx, &outPacket, &xTaskWokenByReceive) == pdTRUE)
@@ -799,7 +604,6 @@ static uint8_t  usbd_cf_SOF (void *pdev)
     }
   }
   portYIELD_FROM_ISR(xTaskWokenByReceive);
-#endif
 
   /* VCP */
   if (!doingVcpTransfer) {
@@ -831,7 +635,6 @@ static uint8_t  usbd_cf_SOF (void *pdev)
 static uint8_t  usbd_cf_DataOut (void *pdev, uint8_t epnum)
 {
   uint8_t result;
-#ifdef USE_CF_INTERFACE
   if (epnum == CF_OUT_EP)
   {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -856,8 +659,7 @@ static uint8_t  usbd_cf_DataOut (void *pdev, uint8_t epnum)
       rxStopped = true;
     }
   }
-  else
-#endif
+  else // VCP
   {
     uint16_t USB_Rx_Cnt;
 
@@ -896,79 +698,6 @@ static uint8_t  *usbd_cf_GetCfgDesc (uint8_t speed, uint16_t *length)
   return usbd_cf_CfgDesc;
 }
 
-#if 0
-/**
-  * @brief  Handle_USBAsynchXfer
-  *         Send data to USB
-  * @param  pdev: instance
-  * @retval None
-  */
-static void Handle_USBAsynchXfer (void *pdev)
-{
-  uint16_t USB_Tx_ptr;
-  uint16_t USB_Tx_length;
-
-  if(USB_Tx_State == USB_CDC_IDLE)
-  {
-    if (APP_Rx_ptr_out == APP_RX_DATA_SIZE)
-    {
-      APP_Rx_ptr_out = 0;
-    }
-
-    if(APP_Rx_ptr_out == APP_Rx_ptr_in)
-    {
-      USB_Tx_State = USB_CDC_IDLE;
-      return;
-    }
-
-    if(APP_Rx_ptr_out > APP_Rx_ptr_in) /* rollback */
-    {
-      APP_Rx_length = APP_RX_DATA_SIZE - APP_Rx_ptr_out;
-
-    }
-    else
-    {
-      APP_Rx_length = APP_Rx_ptr_in - APP_Rx_ptr_out;
-
-    }
-#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
-    APP_Rx_length &= ~0x03;
-#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
-
-    if (APP_Rx_length > CDC_DATA_IN_PACKET_SIZE)
-    {
-      USB_Tx_ptr = APP_Rx_ptr_out;
-      USB_Tx_length = CDC_DATA_IN_PACKET_SIZE;
-
-      APP_Rx_ptr_out += CDC_DATA_IN_PACKET_SIZE;
-      APP_Rx_length -= CDC_DATA_IN_PACKET_SIZE;
-      USB_Tx_State = USB_CDC_BUSY;
-    }
-    else
-    {
-      USB_Tx_ptr = APP_Rx_ptr_out;
-      USB_Tx_length = APP_Rx_length;
-
-      APP_Rx_ptr_out += APP_Rx_length;
-      APP_Rx_length = 0;
-      if(USB_Tx_length == CDC_DATA_IN_PACKET_SIZE)
-      {
-        USB_Tx_State = USB_CDC_ZLP;
-      }
-      else
-      {
-        USB_Tx_State = USB_CDC_BUSY;
-      }
-    }
-
-    DCD_EP_Tx (pdev,
-               VCP_IN_EP,
-               (uint8_t*)&APP_Rx_Buffer[USB_Tx_ptr],
-               USB_Tx_length);
-  }
-}
-#endif
-
 /**
 * @brief  USBD_USR_Init
 *         Displays the message on LCD for host lib initialization
@@ -986,9 +715,7 @@ void USBD_USR_Init(void)
 */
 void USBD_USR_DeviceReset(uint8_t speed)
 {
-#ifdef USE_CF_INTERFACE
   resetUSB();
-#endif
 }
 
 
@@ -1009,9 +736,7 @@ void USBD_USR_DeviceConfigured(void)
 void USBD_USR_DeviceSuspended(void)
 {
   /* USB communication suspended (probably USB unplugged). Switch back to radiolink */
-#ifdef USE_CF_INTERFACE
   resetUSB();
-#endif
 }
 
 
@@ -1042,9 +767,7 @@ void USBD_USR_DeviceConnected(void)
 */
 void USBD_USR_DeviceDisconnected(void)
 {
-#ifdef USE_CF_INTERFACE
   resetUSB();
-#endif
 }
 
 void usbInit(void)

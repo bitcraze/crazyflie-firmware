@@ -20,6 +20,7 @@
 
 /*
  * Author: 4712
+ * Modified by Bitcraze to interface with Crazyflie system.
 */
 
 #include <stdbool.h>

@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * vcp_esc_passthrough.c -
+ * vcp_esc_passthrough.c - Module to handle 4way passthough interface
  */
 
 /*FreeRtos includes*/
@@ -46,6 +46,7 @@ STATIC_MEM_TASK_ALLOC(passthroughTask, PASSTHROUGH_TASK_STACKSIZE);
 
 static bool isInit;
 
+// Passthorugh queues to handle VCP data.
 static xQueueHandle  ptRxQueue;
 STATIC_MEM_QUEUE_ALLOC(ptRxQueue, 512, sizeof(uint8_t));
 static xQueueHandle  ptTxQueue;
@@ -96,11 +97,8 @@ int passthroughVcpRxReceiveBlock(uint8_t* receiveChPtr)
   return xQueueReceive(ptRxQueue, receiveChPtr, portMAX_DELAY);
 }
 
-
-
 void passthroughVcpTxSend(uint8_t Ch)
 {
-//  APP_FOPS.pIf_DataTx(Ch);
   ASSERT(xQueueSend(ptTxQueue, &Ch, 0) == pdTRUE);
 }
 
@@ -117,13 +115,23 @@ void passthroughTask(void *param)
 
   while (true)
   {
+    // Wait for interface to be activated, typically when ACM or COM port control message is sent
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    // ESC 1-wire interface is bit-banging so some interrupts must be suspended
     uartslkPauseRx();
     sensorsSuspend();
+
+    // Suspend motor signal output and init them as normal GPIO
     esc4wayInit();
+    // Run the 4way process
     esc4wayProcess();
+
+    // After 4way process is done resume interrupts
     uartslkResumeRx();
     sensorsResume();
+
+    // Clear any notifications that was queued during 4way process.
     ulTaskNotifyValueClear(NULL, 0xFFFFFFFF);
   }
 }
