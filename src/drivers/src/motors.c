@@ -51,20 +51,17 @@ static uint16_t motorsBLConv16ToBits(uint16_t bits);
 static uint16_t motorsConvBitsTo16(uint16_t bits);
 static uint16_t motorsConv16ToBits(uint16_t bits);
 
-<<<<<<< HEAD
 static bool motorSetEnable = false;
 static uint32_t motorPower[] = {0, 0, 0, 0};    // user-requested PWM signals
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
-=======
-uint32_t motor_ratios[] = {0, 0, 0, 0};
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
 // Memory buffer for DSHOT bits
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
 static void motorsDshotDMASetup();
 #endif
->>>>>>> Initial DSHOT implementation.
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
