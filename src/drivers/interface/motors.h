@@ -208,7 +208,6 @@ typedef enum
 {
   BRUSHED,
   BRUSHLESS,
-  BRUSHLESS_DSHOT,
 } motorsDrvType;
 
 typedef struct

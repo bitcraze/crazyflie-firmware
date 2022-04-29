@@ -45,12 +45,6 @@
 #include "log.h"
 #include "param.h"
 
-
-static uint16_t motorsBLConvBitsTo16(uint16_t bits);
-static uint16_t motorsBLConv16ToBits(uint16_t bits);
-static uint16_t motorsConvBitsTo16(uint16_t bits);
-static uint16_t motorsConv16ToBits(uint16_t bits);
-
 static bool motorSetEnable = false;
 static uint32_t motorPower[] = {0, 0, 0, 0};    // user-requested PWM signals
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
@@ -102,20 +96,12 @@ static uint32_t cycleTime;
 
 /* Private functions */
 
-static uint16_t motorsBLConvBitsTo16(uint16_t bits)
-{
-  return (0xFFFF * (bits - MOTORS_BL_PWM_CNT_FOR_HIGH) / MOTORS_BL_PWM_CNT_FOR_HIGH);
-}
-
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static uint16_t motorsBLConv16ToBits(uint16_t bits)
 {
   return (MOTORS_BL_PWM_CNT_FOR_HIGH + ((bits * MOTORS_BL_PWM_CNT_FOR_HIGH) / 0xFFFF));
 }
-
-static uint16_t motorsConvBitsTo16(uint16_t bits)
-{
-  return ((bits) << (16 - MOTORS_PWM_BITS));
-}
+#endif
 
 static uint16_t motorsConv16ToBits(uint16_t bits)
 {
@@ -286,10 +272,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   isInit = true;
 
   // Output zero power
-  motorsSetRatio(MOTOR_M1, 0);
-  motorsSetRatio(MOTOR_M2, 0);
-  motorsSetRatio(MOTOR_M3, 0);
-  motorsSetRatio(MOTOR_M4, 0);
+  motorsStop();
 }
 
 void motorsDeInit(const MotorPerifDef** motorMapSelect)
@@ -349,14 +332,11 @@ void motorsStop()
 static void motorsDshotDMASetup()
 {
   NVIC_InitTypeDef NVIC_InitStructure;
-  /* configure DMA */
+
   /* DMA clock enable */
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
   // Preparation of common things in DMA setup struct
-  //DMA_InitStructureShare.DMA_Channel = DMA_Channel_5;
-  //DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR2;
-  //DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)led_dma.buffer;    // this is the buffer memory
   DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
@@ -395,59 +375,55 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
     dshotRatio = 0;
   }
 
-//  if (id == 0 || id==2 || id==3)
+  dshotBits = (dshotRatio << 1) | (dshot_telemetry ? 1 : 0);
+
+  // compute checksum
+  unsigned cs = 0;
+  unsigned csData = dshotBits;
+
+  for (int i = 0; i < 3; i++)
   {
-    dshotBits = (dshotRatio << 1) | (dshot_telemetry ? 1 : 0);
-
-    // compute checksum
-    unsigned cs = 0;
-    unsigned csData = dshotBits;
-
-    for (int i = 0; i < 3; i++)
-    {
-          cs ^=  csData; // xor data by nibbles
-          csData >>= 4;
-    }
-
-    cs &= 0xf;
-    dshotBits = (dshotBits << 4) | cs;
-
-    for(int i = 0; i < DSHOT_FRAME_SIZE; i++)
-    {
-//        dshotDmaBuffer[id][i] = (i+1)*3;
-      dshotDmaBuffer[id][i] = (dshotBits & 0x8000) ? MOTORS_TIM_VALUE_FOR_1 : MOTORS_TIM_VALUE_FOR_0;
-      dshotBits <<= 1;
-    }
-    dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
-
-    // Wait for DMA to be free
-//    while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE);
-
-    // Setup DMA Stream. TODO optimize reloading
-//    DMA_DeInit(motorMap[id]->DMA_stream); // To clear pending flags
-    DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
-    DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
-    DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
-    DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
-
-    DMA_ITConfig(motorMap[id]->DMA_stream, DMA_IT_TC, ENABLE);
+        cs ^=  csData; // xor data by nibbles
+        csData >>= 4;
   }
+
+  cs &= 0xf;
+  dshotBits = (dshotBits << 4) | cs;
+
+  for(int i = 0; i < DSHOT_FRAME_SIZE; i++)
+  {
+    dshotDmaBuffer[id][i] = (dshotBits & 0x8000) ? MOTORS_TIM_VALUE_FOR_1 : MOTORS_TIM_VALUE_FOR_0;
+    dshotBits <<= 1;
+  }
+  dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
+
+  // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
+  while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
+  {
+    dmaWait++;
+  }
+
+  // Setup DMA Stream. TODO optimize reloading
+  DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
+  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
+  DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
+  DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
+
+  DMA_ITConfig(motorMap[id]->DMA_stream, DMA_IT_TC, ENABLE);
 }
 
+/**
+ * Unfortunately the TIM2_CH2 and TIM2_CH4 share DMA channel 3 request and can't
+ * be used at the same time. Solved by running after each other and TIM2_CH2
+ * will be started in DMA1_Stream6_IRQHandler. Thus M2 will have a bit of latency.
+ */
 void motorsBurstDshot()
 {
-//  for (int i = 0; i < NBR_OF_MOTORS; i++)
-//  {
-//    /* Enable TIM DMA Requests */
-//    TIM_DMACmd(motorMap[i]->tim, motorMap[i]->TIM_DMASource, ENABLE);
-//    /* Enable DMA TIM Stream */
-//    DMA_Cmd(motorMap[i]->DMA_stream, ENABLE);
-//  }
-    /* Enable TIM DMA Requests M2*/
+
+  /* Enable TIM DMA Requests M2*/
     TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
-//    DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
     /* Enable TIM DMA Requests M3*/
     TIM_DMACmd(motorMap[2]->tim, motorMap[2]->TIM_DMASource, ENABLE);
     /* Enable DMA TIM Stream */
@@ -477,21 +453,18 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       // from the battery, we do calculations based on measurements of PWM,
       // voltage and thrust. See comment at function definition for details.
       ratio = motorsCompensateBatteryVoltage(ithrust);
-      motor_ratios[id] = ratio;
     }
 #endif
 
+    motor_ratios[id] = ratio;
     if (motorSetEnable) {
       ratio = motorPowerSet[id];
     }
 
     if (motorMap[id]->drvType == BRUSHLESS)
     {
-      motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
-    }
-    else if (motorMap[id]->drvType == BRUSHLESS_DSHOT)
-    {
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+      // Prepare DSHOT, firing it will be done synchronously with motorsBurstDshot.
       motorsPrepareDshot(id, ratio);
 #else
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
@@ -578,19 +551,9 @@ int motorsESCIsLo(uint32_t id)
 
 int motorsGetRatio(uint32_t id)
 {
-  int ratio;
-
   ASSERT(id < NBR_OF_MOTORS);
-  if (motorMap[id]->drvType == BRUSHLESS)
-  {
-    ratio = motorsBLConvBitsTo16(motorMap[id]->getCompare(motorMap[id]->tim));
-  }
-  else
-  {
-    ratio = motorsConvBitsTo16(motorMap[id]->getCompare(motorMap[id]->tim));
-  }
 
-  return ratio;
+  return motor_ratios[id];
 }
 
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
