@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_spi.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
   *          functionalities of the Serial peripheral interface (SPI):
   *           + Initialization and Configuration
@@ -93,7 +93,7 @@
               
       (#) Configure SPIx in I2S mode (I2S_Init() function) as described above. 
              
-      (#) Call the I2S_FullDuplexConfig() function using the same strucutre passed to  
+      (#) Call the I2S_FullDuplexConfig() function using the same structure passed to  
           I2S_Init() function.
               
       (#) Call I2S_Cmd() for SPIx then for its extended block.
@@ -138,7 +138,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -341,7 +341,7 @@ void SPI_Init(SPI_TypeDef* SPIx, SPI_InitTypeDef* SPI_InitStruct)
   * 
   * @note   if an external clock is used as source clock for the I2S, then the define
   *         I2S_EXTERNAL_CLOCK_VAL in file stm32f4xx_conf.h should be enabled and set
-  *         to the value of the the source clock frequency (in Hz).
+  *         to the value of the source clock frequency (in Hz).
   *  
   * @retval None
   */
@@ -421,10 +421,17 @@ void I2S_Init(SPI_TypeDef* SPIx, I2S_InitTypeDef* I2S_InitStruct)
                       (RCC_PLLI2SCFGR_PLLI2SR >> 28));
     
     /* Get the PLLM value */
-    pllm = (uint32_t)(RCC->PLLCFGR & RCC_PLLCFGR_PLLM);      
+    pllm = (uint32_t)(RCC->PLLCFGR & RCC_PLLCFGR_PLLM);
 
-    /* Get the I2S source clock value */
-    i2sclk = (uint32_t)(((HSE_VALUE / pllm) * plln) / pllr);
+    if((RCC->PLLCFGR & RCC_PLLCFGR_PLLSRC) == RCC_PLLCFGR_PLLSRC_HSE)
+    {
+      /* Get the I2S source clock value */
+      i2sclk = (uint32_t)(((HSE_VALUE / pllm) * plln) / pllr);
+    }
+    else
+    { /* Get the I2S source clock value */
+      i2sclk = (uint32_t)(((HSI_VALUE / pllm) * plln) / pllr);
+    }
   #endif /* I2S_EXTERNAL_CLOCK_VAL */
     
     /* Compute the Real divider depending on the MCLK output state, with a floating point */
@@ -468,8 +475,16 @@ void I2S_Init(SPI_TypeDef* SPIx, I2S_InitTypeDef* I2S_InitStruct)
                   (uint16_t)(I2S_InitStruct->I2S_Standard | (uint16_t)(I2S_InitStruct->I2S_DataFormat | \
                   (uint16_t)I2S_InitStruct->I2S_CPOL))));
  
+#if defined(SPI_I2SCFGR_ASTRTEN)
+  if((I2S_InitStruct->I2S_Standard  == I2S_Standard_PCMShort) || (I2S_InitStruct->I2S_Standard  == I2S_Standard_PCMLong))
+  {
+    /* Write to SPIx I2SCFGR */  
+    SPIx->I2SCFGR = tmpreg | SPI_I2SCFGR_ASTRTEN;
+  }
+#else
   /* Write to SPIx I2SCFGR */  
-  SPIx->I2SCFGR = tmpreg;
+  SPIx->I2SCFGR = tmpreg ;
+#endif 
 }
 
 /**
@@ -718,7 +733,7 @@ void SPI_TIModeCmd(SPI_TypeDef* SPIx, FunctionalState NewState)
   *         used for the master I2S peripheral. In this case, if the master is 
   *         configured as transmitter, the slave will be receiver and vice versa.
   *         Or you can force a different mode by modifying the field I2S_Mode to the
-  *         value I2S_SlaveRx or I2S_SlaveTx indepedently of the master configuration.    
+  *         value I2S_SlaveRx or I2S_SlaveTx independently of the master configuration.    
   *         
   * @note   The I2S full duplex extension can be configured in slave mode only.    
   *  
