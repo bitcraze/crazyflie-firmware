@@ -411,6 +411,7 @@ TCHAR* f_gets_without_comments (
   TCHAR c, *p = buff;
   UINT rc;
   bool isComment = false;
+  bool isPureComment = false;
 
   while (n < len - 1) { /* Read characters until buffer gets filled */
     f_read(fp, &c, 1, &rc);
@@ -418,6 +419,11 @@ TCHAR* f_gets_without_comments (
       break;
     }
     if (c == '\n') {
+      if (isPureComment){
+        isComment = false;
+        isPureComment = false;
+        continue;
+      }      
       break;   /* Break on EOL */
     }
     if (isspace((int)c)) {
@@ -425,6 +431,9 @@ TCHAR* f_gets_without_comments (
     }
     if (c == '#') {
       isComment = true; /* keep reading until end of line */
+      if (n==0){
+        isPureComment = true;
+      }
     }
     if (!isComment) {
       *p++ = c;
