@@ -333,7 +333,7 @@ static bool predictStateForward(uint32_t osTick, float dt) {
   gyroAccumulatorCount = 0;
 
   quadIsFlying = supervisorIsFlying();
-  kalmanCorePredict(&coreData, &coreParams, &accAverage, &gyroAverage, dt, quadIsFlying);
+  kalmanCorePredict(&coreData, &accAverage, &gyroAverage, dt, quadIsFlying);
 
   return true;
 }
