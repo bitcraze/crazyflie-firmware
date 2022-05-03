@@ -186,6 +186,8 @@ STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(kalmanTask, 3 * configMINIMAL_STACK_
 
 // Called one time during system startup
 void estimatorKalmanTaskInit() {
+  kalmanCoreDefaultParams(&coreParams);
+
   vSemaphoreCreateBinary(runTaskSemaphore);
 
   dataMutex = xSemaphoreCreateMutexStatic(&dataMutexBuffer);
@@ -434,7 +436,6 @@ void estimatorKalmanInit(void)
   gyroAccumulatorCount = 0;
   outlierFilterReset(&sweepOutlierFilterState, 0);
 
-  kalmanCoreDefaultParams(&coreParams);
   kalmanCoreInit(&coreData, &coreParams);
 }
 
