@@ -161,9 +161,17 @@ flash_verify:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
                  -c "verify_image $(PROG).bin $(LOAD_ADDRESS) bin" -c "reset run" -c shutdown
 
-flash_dfu:
-	$(PYTHON) tools/make/usb-bootloader.py
-	$(DFU_UTIL) -d 0483:df11 -a 0 -D $(PROG).dfu -s :leave
+#sends a usb message to the CF to place it in DFU mode, then updates firmware over usb
+flash_dfu: set_dfu_mode flash_dfu_manual
+
+#uses python script to place usb connected CF into DFU mode	
+set_dfu_mode:
+	$(PYTHON) $(srctree)/tools/make/usb-bootloader.py
+
+#uses the dfu utility to flash the firmware at 0x08004000, just after the bootloader
+#call this target directly if CF cannont be flashed automatically through flash_dfu
+flash_dfu_manual:
+	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000 -D $(PROG).bin -s :leave
 
 #STM utility targets
 halt:
