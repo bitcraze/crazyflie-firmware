@@ -3,5 +3,8 @@
         "**/generated": true,
         "**/node_modules": true,
         "**/bower_components": true
+    },
+    "files.associations": {
+        "bootloader.h": "c"
     }
 }

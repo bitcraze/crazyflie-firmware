@@ -162,16 +162,14 @@ flash_verify:
                  -c "verify_image $(PROG).bin $(LOAD_ADDRESS) bin" -c "reset run" -c shutdown
 
 #sends a usb message to the CF to place it in DFU mode, then updates firmware over usb
-flash_dfu: set_dfu_mode flash_dfu_manual
-
-#uses python script to place usb connected CF into DFU mode	
-set_dfu_mode:
+flash_dfu:
 	$(PYTHON) $(srctree)/tools/make/usb-bootloader.py
+	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000:leave -D $(PROG).bin 
 
 #uses the dfu utility to flash the firmware at 0x08004000, just after the bootloader
 #call this target directly if CF cannont be flashed automatically through flash_dfu
 flash_dfu_manual:
-	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000 -D $(PROG).bin -s :leave
+	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000:leave -D $(PROG).bin 
 
 #STM utility targets
 halt:
@@ -221,5 +219,5 @@ test_python: cffirmware.py
 	$(PYTHON) -m pytest test_python
 endif
 
-.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_verify cload size print_version clean_version bindings_python
+.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python
 
