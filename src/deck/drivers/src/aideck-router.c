@@ -83,6 +83,11 @@ static void cxpRxTest(void *param)
                         cpxRx.data[4]);
         }
         if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
+          if (cpxRx.data[1] == 0x00) {
+            cpxLinkSetClientConnected(false);
+          } else {
+            cpxLinkSetClientConnected(true);
+          }
           DEBUG_PRINT("WiFi client connected\n");
         }
         break;
@@ -107,10 +112,12 @@ static void cxpRxTest(void *param)
         }
         break;
       case CPX_F_CRTP:
+       // DEBUG_PRINT("PLacing packet on queue\n");
         crtpRx.size = cpxRx.dataLength - 1;
         crtpRx.header = cpxRx.data[0];
         memcpy(crtpRx.data, &cpxRx.data[1], cpxRx.dataLength - 1);
         xQueueSend(cpxCrtpRxQueue, &crtpRx, portMAX_DELAY);
+        break;
       default:
         DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
     }
