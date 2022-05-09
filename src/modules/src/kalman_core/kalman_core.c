@@ -327,7 +327,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *
   kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], params->measNoiseBaro);
 }
 
-void kalmanCorePredict(kalmanCoreData_t* this, const kalmanCoreParams_t * params, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
+void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order
    * to push the covariance forward.
