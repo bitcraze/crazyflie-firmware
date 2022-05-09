@@ -44,10 +44,13 @@
 #include "queuemonitor.h"
 #include "static_mem.h"
 
+#define CONFIG_SYSLINK_RX_DMA
 
 #define UARTSLK_DATA_TIMEOUT_MS 1000
 #define UARTSLK_DATA_TIMEOUT_TICKS (UARTSLK_DATA_TIMEOUT_MS / portTICK_RATE_MS)
 #define CCR_ENABLE_SET  ((uint32_t)0x00000001)
+
+#define UARTSLK_CLKSUM_SIZE   2
 
 static bool isInit = false;
 
@@ -58,20 +61,24 @@ static StaticSemaphore_t uartBusyBuffer;
 static xQueueHandle syslinkPacketDelivery;
 STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 8, sizeof(SyslinkPacket));
 
-static uint8_t dmaBuffer[64];
+#ifdef CONFIG_SYSLINK_RX_DMA
+static uint8_t dmaRXBuffer[64];
+static DMA_InitTypeDef DMA_InitStructureShareRX;
+#endif
+static uint8_t dmaTXBuffer[64];
 static uint8_t *outDataIsr;
 static uint8_t dataIndexIsr;
 static uint8_t dataSizeIsr;
 static bool    isUartDmaInitialized;
-static DMA_InitTypeDef DMA_InitStructureShare;
-static uint32_t initialDMACount;
-static uint32_t remainingDMACount;
+static DMA_InitTypeDef DMA_InitStructureShareTX;
+static uint16_t initialDMACount;
+static uint16_t remainingDMACount;
 static bool     dmaIsPaused;
 
 static volatile SyslinkPacket slp = {0};
 static volatile SyslinkRxState rxState = waitForFirstStart;
 static volatile uint8_t dataIndex = 0;
-static volatile uint8_t cksum[2] = {0};
+static volatile uint8_t cksum[UARTSLK_CLKSUM_SIZE] = {0};
 static void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken);
 
 static void uartslkPauseDma();
@@ -88,27 +95,53 @@ void uartslkDmaInit(void)
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 
   // USART TX DMA Channel Config
-  DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&UARTSLK_TYPE->DR;
-  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dmaBuffer;
-  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  DMA_InitStructureShare.DMA_BufferSize = 0;
-  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
-  DMA_InitStructureShare.DMA_Channel = UARTSLK_DMA_CH;
+  DMA_InitStructureShareTX.DMA_PeripheralBaseAddr = (uint32_t)&UARTSLK_TYPE->DR;
+  DMA_InitStructureShareTX.DMA_Memory0BaseAddr = (uint32_t)dmaTXBuffer;
+  DMA_InitStructureShareTX.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShareTX.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShareTX.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructureShareTX.DMA_BufferSize = 0;
+  DMA_InitStructureShareTX.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShareTX.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructureShareTX.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureShareTX.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructureShareTX.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShareTX.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructureShareTX.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShareTX.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+  DMA_InitStructureShareTX.DMA_Channel = UARTSLK_DMA_TX_CH;
 
-  NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_DMA_IRQ;
+  NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_DMA_TX_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
+
+#ifdef CONFIG_SYSLINK_RX_DMA
+  // USART TX DMA Channel Config
+  DMA_InitStructureShareRX.DMA_PeripheralBaseAddr = (uint32_t)&UARTSLK_TYPE->DR;
+  DMA_InitStructureShareRX.DMA_Memory0BaseAddr = (uint32_t)dmaRXBuffer;
+  DMA_InitStructureShareRX.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShareRX.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShareRX.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructureShareRX.DMA_BufferSize = 0;
+  DMA_InitStructureShareRX.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShareRX.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructureShareRX.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureShareRX.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructureShareRX.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShareRX.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructureShareRX.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShareRX.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+  DMA_InitStructureShareRX.DMA_Channel = UARTSLK_DMA_RX_CH;
+  DMA_Init(UARTSLK_DMA_RX_STREAM, &DMA_InitStructureShareRX);
+
+  NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_DMA_RX_IRQ;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+#endif
 
   isUartDmaInitialized = true;
 }
@@ -238,7 +271,7 @@ void uartslkSendDataIsrBlocking(uint32_t size, uint8_t* data)
 {
   xSemaphoreTake(uartBusy, portMAX_DELAY);
   outDataIsr = data;
-  dataSizeIsr = size;
+  dataSizeIsr = (uint8_t)size;
   dataIndexIsr = 1;
   uartslkSendData(1, &data[0]);
   USART_ITConfig(UARTSLK_TYPE, USART_IT_TXE, ENABLE);
@@ -260,21 +293,21 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
   {
     xSemaphoreTake(uartBusy, portMAX_DELAY);
     // Wait for DMA to be free
-    while(DMA_GetCmdStatus(UARTSLK_DMA_STREAM) != DISABLE);
+    while(DMA_GetCmdStatus(UARTSLK_DMA_TX_STREAM) != DISABLE);
     //Copy data in DMA buffer
-    memcpy(dmaBuffer, data, size);
-    DMA_InitStructureShare.DMA_BufferSize = size;
-    initialDMACount = size;
+    memcpy(dmaTXBuffer, data, size);
+    DMA_InitStructureShareTX.DMA_BufferSize = size;
+    initialDMACount = (uint16_t)size;
     // Init new DMA stream
-    DMA_Init(UARTSLK_DMA_STREAM, &DMA_InitStructureShare);
+    DMA_Init(UARTSLK_DMA_TX_STREAM, &DMA_InitStructureShareTX);
     // Enable the Transfer Complete interrupt
-    DMA_ITConfig(UARTSLK_DMA_STREAM, DMA_IT_TC, ENABLE);
+    DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, ENABLE);
     /* Enable USART DMA TX Requests */
     USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Tx, ENABLE);
     /* Clear transfer complete */
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
     /* Enable DMA USART TX Stream */
-    DMA_Cmd(UARTSLK_DMA_STREAM, ENABLE);
+    DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
     xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
     xSemaphoreGive(uartBusy);
   }
@@ -282,18 +315,18 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
 
 static void uartslkPauseDma()
 {
-  if (DMA_GetCmdStatus(UARTSLK_DMA_STREAM) == ENABLE)
+  if (DMA_GetCmdStatus(UARTSLK_DMA_TX_STREAM) == ENABLE)
   {
     // Disable transfer complete interrupt
-    DMA_ITConfig(UARTSLK_DMA_STREAM, DMA_IT_TC, DISABLE);
+    DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, DISABLE);
     // Disable stream to pause it
-    DMA_Cmd(UARTSLK_DMA_STREAM, DISABLE);
+    DMA_Cmd(UARTSLK_DMA_TX_STREAM, DISABLE);
     // Wait for it to be disabled
-    while(DMA_GetCmdStatus(UARTSLK_DMA_STREAM) != DISABLE);
+    while(DMA_GetCmdStatus(UARTSLK_DMA_TX_STREAM) != DISABLE);
     // Disable transfer complete
-    DMA_ClearITPendingBit(UARTSLK_DMA_STREAM, UARTSLK_DMA_FLAG_TCIF);
+    DMA_ClearITPendingBit(UARTSLK_DMA_TX_STREAM, UARTSLK_DMA_TX_FLAG_TCIF);
     // Read remaining data count
-    remainingDMACount = DMA_GetCurrDataCounter(UARTSLK_DMA_STREAM);
+    remainingDMACount = DMA_GetCurrDataCounter(UARTSLK_DMA_TX_STREAM);
     dmaIsPaused = true;
   }
 }
@@ -303,31 +336,98 @@ static void uartslkResumeDma()
   if (dmaIsPaused)
   {
     // Update DMA counter
-    DMA_SetCurrDataCounter(UARTSLK_DMA_STREAM, remainingDMACount);
+    DMA_SetCurrDataCounter(UARTSLK_DMA_TX_STREAM, remainingDMACount);
     // Update memory read address
-    UARTSLK_DMA_STREAM->M0AR = (uint32_t)&dmaBuffer[initialDMACount - remainingDMACount];
+    UARTSLK_DMA_TX_STREAM->M0AR = (uint32_t)&dmaTXBuffer[initialDMACount - remainingDMACount];
     // Enable the Transfer Complete interrupt
-    DMA_ITConfig(UARTSLK_DMA_STREAM, DMA_IT_TC, ENABLE);
+    DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, ENABLE);
     /* Clear transfer complete */
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
     /* Enable DMA USART TX Stream */
-    DMA_Cmd(UARTSLK_DMA_STREAM, ENABLE);
+    DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
     dmaIsPaused = false;
   }
 }
 
-void uartslkDmaIsr(void)
+static void uartslkDmaTXIsr(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   // Stop and cleanup DMA stream
-  DMA_ITConfig(UARTSLK_DMA_STREAM, DMA_IT_TC, DISABLE);
-  DMA_ClearITPendingBit(UARTSLK_DMA_STREAM, UARTSLK_DMA_FLAG_TCIF);
+  DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(UARTSLK_DMA_TX_STREAM, UARTSLK_DMA_TX_FLAG_TCIF);
   USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Tx, DISABLE);
-  DMA_Cmd(UARTSLK_DMA_STREAM, DISABLE);
+  DMA_Cmd(UARTSLK_DMA_TX_STREAM, DISABLE);
 
   remainingDMACount = 0;
   xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
+}
+
+#ifdef CONFIG_SYSLINK_RX_DMA
+static void uartslkReceiveDMA(uint32_t size)
+{
+  if (isUartDmaInitialized)
+  {
+    // Wait for DMA to be free
+    while(DMA_GetCmdStatus(UARTSLK_DMA_RX_STREAM) != DISABLE);
+    // Init new DMA stream
+    UARTSLK_DMA_RX_STREAM->NDTR = size; // load number of bytes to be transferred
+    // Enable the Transfer Complete interrupt
+    DMA_ITConfig(UARTSLK_DMA_RX_STREAM, DMA_IT_TC, ENABLE);
+    /* Enable USART DMA RX Requests */
+    USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Rx, ENABLE);
+    /* Clear transfer complete */
+    USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
+    /* Disable USART RX interrupt */
+    USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, DISABLE);
+    /* Enable DMA USART RX Stream */
+    DMA_Cmd(UARTSLK_DMA_RX_STREAM, ENABLE);
+  }
+}
+
+static void uartslkDmaRXIsr(void)
+{
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  // Stop and cleanup DMA stream
+  DMA_ITConfig(UARTSLK_DMA_RX_STREAM, DMA_IT_TC, DISABLE);
+  DMA_ClearITPendingBit(UARTSLK_DMA_RX_STREAM, UARTSLK_DMA_RX_FLAG_TCIF);
+  USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Rx, DISABLE);
+  DMA_Cmd(UARTSLK_DMA_RX_STREAM, DISABLE);
+  /* Enable USART RX interrupt */
+  USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, ENABLE);
+
+  for (int i = 0; i < slp.length; i++)
+  {
+    slp.data[i] = dmaRXBuffer[i];
+    cksum[0] += dmaRXBuffer[i];
+    cksum[1] += cksum[0];
+  }
+  // Check checksum and send to queue
+  if ((cksum[0] == dmaRXBuffer[slp.length]) &&
+      (cksum[1] == dmaRXBuffer[slp.length + 1]))
+  {
+    // Post the packet to the queue if there's room
+    if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
+    {
+      xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, &xHigherPriorityTaskWoken);
+    }
+    else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
+    {
+      // Only assert if debugger is not connected
+      ASSERT(0); // Queue overflow
+    }
+  }
+  else
+  { // Checksum error
+    if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
+    {
+      // Only assert if debugger is not connected
+      ASSERT(0);
+    }
+  }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken)
@@ -347,6 +447,102 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     rxState = waitForLength;
     break;
   case waitForLength:
+    if (c <= SYSLINK_MTU)
+    {
+      slp.length = c;
+      cksum[0] += c;
+      cksum[1] += cksum[0];
+      dataIndex = 0;
+      if (c > 1)
+      {
+        rxState = waitForFirstStart;
+        // For efficiency receive using DMA
+        uartslkReceiveDMA(c + UARTSLK_CLKSUM_SIZE);
+      }
+      else if (c == 1)
+      {
+        rxState = waitForData;
+      }
+      else
+      {
+        rxState = waitForChksum1;
+      }
+    }
+    else
+    {
+      rxState = waitForFirstStart;
+    }
+    break;
+  case waitForData:
+    slp.data[dataIndex] = c;
+    cksum[0] += c;
+    cksum[1] += cksum[0];
+    dataIndex++;
+    if (dataIndex == slp.length)
+    {
+      rxState = waitForChksum1;
+    }
+    break;
+  case waitForChksum1:
+    if (cksum[0] == c)
+    {
+      rxState = waitForChksum2;
+    }
+    else
+    {
+      rxState = waitForFirstStart; //Checksum error
+      if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
+      {
+        // Only assert if debugger is not connected
+        ASSERT(0);
+      }
+    }
+    break;
+  case waitForChksum2:
+    if (cksum[1] == c)
+    {
+      // Post the packet to the queue if there's room
+      if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
+      {
+        xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
+      }
+      else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
+      {
+        // Only assert if debugger is not connected
+        ASSERT(0); // Queue overflow
+      }
+    }
+    else
+    {
+      rxState = waitForFirstStart; //Checksum error
+      ASSERT(0);
+    }
+    rxState = waitForFirstStart;
+    break;
+  default:
+    ASSERT(0);
+    break;
+  }
+}
+#else
+void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken)
+{
+  switch (rxState)
+  {
+  case waitForFirstStart:
+    rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
+    break;
+  case waitForSecondStart:
+    rxState = (c == SYSLINK_START_BYTE2) ? waitForType : waitForFirstStart;
+    break;
+  case waitForType:
+    cksum[0] = c;
+    cksum[1] = c;
+    slp.type = c;
+    rxState = waitForLength;
+    break;
+  case waitForLength:
+    packetLength = c;
     if (c <= SYSLINK_MTU)
     {
       slp.length = c;
@@ -411,6 +607,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     break;
   }
 }
+#endif
 
 void uartslkIsr(void)
 {
@@ -472,12 +669,26 @@ void __attribute__((used)) EXTI4_Callback(void)
   uartslkTxenFlowctrlIsr();
 }
 
+#include "led.h"
 void __attribute__((used)) USART6_IRQHandler(void)
 {
+//  ledSet(LED_BLUE_L, 1);
   uartslkIsr();
+//  ledSet(LED_BLUE_L, 0);
 }
 
 void __attribute__((used)) DMA2_Stream7_IRQHandler(void)
 {
-  uartslkDmaIsr();
+  uartslkDmaTXIsr();
 }
+
+#ifdef CONFIG_SYSLINK_RX_DMA
+void __attribute__((used)) DMA2_Stream1_IRQHandler(void)
+{
+  ledSet(LED_BLUE_L, 1);
+  uartslkDmaRXIsr();
+  ledSet(LED_BLUE_L, 0);
+
+}
+#endif
+
