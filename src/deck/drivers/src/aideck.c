@@ -486,6 +486,9 @@ static void aideckInit(DeckInfo *info)
 
   aideckRouterInit();
 
+  // Make sure a full CPX packet can be stored in the UART2 RX buffer
+  ASSERT(UART2_RX_QUEUE_LENGTH > sizeof(uart_transport_packet_t));
+
   isInit = true;
 }
 

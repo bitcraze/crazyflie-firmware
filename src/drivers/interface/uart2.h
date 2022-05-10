@@ -57,6 +57,8 @@
 #define UART2_GPIO_AF_TX       GPIO_AF_USART2
 #define UART2_GPIO_AF_RX       GPIO_AF_USART2
 
+#define UART2_RX_QUEUE_LENGTH 128
+
 /**
  * Initialize the UART.
  */
@@ -101,7 +103,7 @@ int uart2Putchar(int ch);
  */
 void uart2GetPacketBlocking(SyslinkPacket* slp);
 
-#else
+#endif
 
 /**
  * Read a byte of data from incoming queue with a timeout
@@ -127,8 +129,6 @@ void uart2Getchar(char * ch);
  * @return true if an overrun condition has happened
  */
 bool uart2DidOverrun();
-
-#endif
 
 /**
  * Uart printf macro that uses eprintf
