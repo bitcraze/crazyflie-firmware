@@ -71,7 +71,7 @@ static void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorit
 #else
 
 static xQueueHandle uart2queue;
-STATIC_MEM_QUEUE_ALLOC(uart2queue, 64, sizeof(uint8_t));
+STATIC_MEM_QUEUE_ALLOC(uart2queue, UART2_RX_QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool hasOverrun = false;
 

@@ -57,6 +57,8 @@
 #define UART2_GPIO_AF_TX       GPIO_AF_USART2
 #define UART2_GPIO_AF_RX       GPIO_AF_USART2
 
+#define UART2_RX_QUEUE_LENGTH 128
+
 /**
  * Initialize the UART.
  */
