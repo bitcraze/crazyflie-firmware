@@ -372,18 +372,19 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
   DMA_Cmd(UART2_DMA_STREAM, DISABLE);
 
   xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 #ifdef UART2_LINK_COMM
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
   if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
   {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxDataInterrupt = (uint8_t)(UART2_TYPE->DR & 0xFF);
     uart2HandleDataFromISR(rxDataInterrupt, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
   else
   {
@@ -395,21 +396,19 @@ void __attribute__((used)) USART2_IRQHandler(void)
     asm volatile ("" : "=m" (UART2_TYPE->SR) : "r" (UART2_TYPE->SR)); // force non-optimizable reads
     asm volatile ("" : "=m" (UART2_TYPE->DR) : "r" (UART2_TYPE->DR)); // of these two registers
   }
-
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 #else
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {
-  uint8_t rxData;
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
   {
-    rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+    uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
     xQueueSendFromISR(uart2queue, &rxData, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
   else
   {
