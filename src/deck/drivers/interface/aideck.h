@@ -112,3 +112,12 @@ bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
  * @param route Pointer to the route data to initialize
  */
 void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
+
+/**
+ * @brief Forward bootloader message.
+ *
+ * Used as a work around to send data from the bootloader down to the AI deck driver.
+ *
+ * @param packet packet that was received
+ */
+void cpxBootloaderMessage(const CPXPacket_t * packet);

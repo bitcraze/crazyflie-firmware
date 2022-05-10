@@ -86,6 +86,9 @@ static void cxpRxTest(void *param)
           consolePrintf("UNKNOWN: %s", cpxRx.data);
         }
         break;
+      case CPX_F_BOOTLOADER:
+        cpxBootloaderMessage(&cpxRx);
+        break;
       default:
         DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
     }
