@@ -42,7 +42,7 @@
 typedef enum {
   CPX_T_STM32 = 1, // The STM in the Crazyflie
   CPX_T_ESP32 = 2, // The ESP on the AI-deck
-  CPX_T_HOST = 3,  // A remote computer connected via Wifi
+  CPX_T_WIFI_HOST = 3,  // A remote computer connected via Wifi
   CPX_T_GAP8 = 4   // The GAP8 on the AI-deck
 } CPXTarget_t;
 
