@@ -328,6 +328,25 @@ void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWo
   }
 }
 
+bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks) {
+  ASSERT_FAILED();
+  return false;
+}
+
+bool uart2GetDataWithDefaultTimeout(uint8_t *c) {
+  ASSERT_FAILED();
+  return false;
+}
+
+void uart2Getchar(char * ch) {
+  ASSERT_FAILED();
+}
+
+bool uart2DidOverrun() {
+  ASSERT_FAILED();
+  return false;
+}
+
 #else
 
 bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
