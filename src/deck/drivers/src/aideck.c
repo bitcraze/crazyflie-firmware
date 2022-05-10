@@ -89,6 +89,7 @@ typedef struct {
 } __attribute__((packed)) ESP32SysPacket_t;
 
 #define GAP8_BL_CMD_START_WRITE (0x02)
+#define GAP8_BL_CMD_MD5         (0x04)
 
 #define ESP32_SYS_CMD_RESET_GAP8 (0x10)
 
@@ -119,6 +120,9 @@ static EventGroupHandle_t evGroup;
 #define ESP_CTS_EVENT (1 << 0)
 #define ESP_CTR_EVENT (1 << 1)
 #define ESP_TXQ_EVENT (1 << 2)
+
+static EventGroupHandle_t bootloaderSync;
+#define CPX_WAIT_FOR_BOOTLOADER_REPLY (1<<0)
 
 static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp);
 
@@ -328,6 +332,10 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
     route->lastPacket = true;
 }
 
+void cpxBootloaderMessage(const CPXPacket_t * packet) {
+  xEventGroupSetBits(bootloaderSync, CPX_WAIT_FOR_BOOTLOADER_REPLY);
+}
+
 static CPXPacket_t bootPacket;
 
 #define FLASH_BUFFER_SIZE 64
@@ -372,6 +380,24 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
       flashBufferIndex += sizeLeftToBuffer;
     }
   }
+
+  if (memAddr + writeLen == *(memDef->newFwSizeP)) {
+    // Request the MD5 checksum of the flashed data. This is only done
+    // for synchronizing and making sure everything has been written,
+    // we do not care about the results.
+    GAP8BlCmdPacket_t* gap8BlPacket = (GAP8BlCmdPacket_t*)bootPacket.data;
+    gap8BlPacket->cmd = GAP8_BL_CMD_MD5;
+    gap8BlPacket->startAddress = 0x40000;
+    gap8BlPacket->writeSize = *(memDef->newFwSizeP);
+    bootPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
+    cpxSendPacketBlocking(&bootPacket);
+    
+    xEventGroupWaitBits(bootloaderSync,
+                        CPX_WAIT_FOR_BOOTLOADER_REPLY,
+                        pdTRUE,  // Clear bits before returning
+                        pdFALSE, // Wait for any bit
+                        portMAX_DELAY);
+}
 
   return true;
 }
@@ -466,6 +492,7 @@ static void aideckInit(DeckInfo *info)
   espRxQueue = xQueueCreate(ESP_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
 
   evGroup = xEventGroupCreate();
+  bootloaderSync = xEventGroupCreate();
 
   // Pull reset for GAP8/ESP32
   pinMode(DECK_GPIO_IO4, OUTPUT);
