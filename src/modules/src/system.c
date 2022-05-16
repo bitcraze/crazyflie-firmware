@@ -363,12 +363,12 @@ void systemSyslinkReceive(SyslinkPacket *slp)
 {
   if (slp->type == SYSLINK_SYS_NRF_VERSION)
   {
-    size_t len = slp->length - 2;
+    size_t len = slp->length - 1;
 
     if (sizeof(nrf_version) - 1 <=  len) {
       len = sizeof(nrf_version) - 1;
     }
-    memcpy(&nrf_version, &slp->data[0], len);
+    memcpy(&nrf_version, &slp->data[0], len );
     DEBUG_PRINT("NRF51 version: %s\n", nrf_version);
   }
 }
