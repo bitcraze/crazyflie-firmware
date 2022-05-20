@@ -217,7 +217,7 @@ __ALIGN_BEGIN uint8_t  usbd_cf_CfgDesc[USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END = {
     0x04,   /* bFunctionLength */
     0x24,   /* bDescriptorType: CS_INTERFACE */
     0x02,   /* bDescriptorSubtype: Abstract Control Management desc */
-    0x02,   /* bmCapabilities */
+    0x00,   /* bmCapabilities */
 
     /*Union Functional Descriptor*/
     0x05,   /* bFunctionLength */
@@ -243,7 +243,7 @@ __ALIGN_BEGIN uint8_t  usbd_cf_CfgDesc[USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END = {
     /*Data class interface descriptor*/
     0x09,   /* bLength: Endpoint Descriptor size */
     USB_DESC_TYPE_INTERFACE,  /* bDescriptorType: */
-    0x02,   /* bInterfaceNumber: Number of Interface */
+    VCP_COM_INTERFACE + 0x01, /* bInterfaceNumber: Number of Interface */
     0x00,   /* bAlternateSetting: Alternate setting */
     0x02,   /* bNumEndpoints: Two endpoints used */
     0x0A,   /* bInterfaceClass: CDC */
@@ -330,108 +330,104 @@ static void resetUSB(void) {
 
 static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
 {
-  if (((req->bmRequest & USB_REQ_RECIPIENT_MASK) == USB_REQ_RECIPIENT_INTERFACE) ||
-      ((req->bmRequest & USB_REQ_RECIPIENT_MASK) == USB_REQ_RECIPIENT_ENDPOINT))
+  if ((req->bmRequest & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_VENDOR) // Crazyflie interface
   {
-     if (req->wIndex == CF_INTERFACE)
-     {
-      command = req->wValue;
-      if (command == 0x01)
-      {
-        crtpSetLink(usblinkGetLink());
+    command = req->wIndex;
+    if (command == 0x01)
+    {
+      crtpSetLink(usblinkGetLink());
 
-        if (rxStopped && !xQueueIsQueueFullFromISR(usbDataRx))
-        {
-          DCD_EP_PrepareRx(&USB_OTG_dev,
-                          CF_OUT_EP,
-                          (uint8_t*)(inPacket.data),
-                          USB_RX_TX_PACKET_SIZE);
-          rxStopped = false;
-        }
-      }
-      else if(command == 0x02)
+      if (rxStopped && !xQueueIsQueueFullFromISR(usbDataRx))
       {
-        //restart system and transition to DFU bootloader mode
-        //enter bootloader specific to STM32f4xx
-        enter_bootloader(0, 0x00000000);
-      }
-      else
-      {
-        crtpSetLink(radiolinkGetLink());
+        DCD_EP_PrepareRx(&USB_OTG_dev,
+                        CF_OUT_EP,
+                        (uint8_t*)(inPacket.data),
+                        USB_RX_TX_PACKET_SIZE);
+        rxStopped = false;
       }
     }
-    else // VCP_COM_INTERFACE
+    else if(command == 0x02)
     {
-      switch (req->bmRequest & USB_REQ_TYPE_MASK)
-      {
-        /* CDC Class Requests -------------------------------*/
-      case USB_REQ_TYPE_CLASS :
-          /* Check if the request is a data setup packet */
-          if (req->wLength)
-          {
-            /* Check if the request is Device-to-Host */
-            if (req->bmRequest & 0x80)
-            {
-              /* Get the data to be sent to Host from interface layer */
-              //APP_FOPS.pIf_Ctrl(req->bRequest, CmdBuff, req->wLength);
-
-              /* Send the data to the host */
-              USBD_CtlSendData (pdev,
-                                CmdBuff,
-                                req->wLength);
-            }
-            else /* Host-to-Device request */
-            {
-              /* Set the value of the current command to be processed */
-              cdcCmd = req->bRequest;
-              cdcLen = req->wLength;
-
-              /* Prepare the reception of the buffer over EP0
-              Next step: the received data will be managed in usbd_cdc_EP0_TxSent()
-              function. */
-              USBD_CtlPrepareRx (pdev,
-                                 CmdBuff,
-                                 req->wLength);
-            }
-          }
-          else /* No Data request */
-          {
-            /* See the command as activating passthrough interface*/
-            passthroughEnableFromISR();
-          }
-
-          return USBD_OK;
-
-        default:
-          USBD_CtlError (pdev, req);
-          return USBD_FAIL;
-
-        /* Standard Requests -------------------------------*/
-      case USB_REQ_TYPE_STANDARD:
-        switch (req->bRequest)
+      //restart system and transition to DFU bootloader mode
+      //enter bootloader specific to STM32f4xx
+      enter_bootloader(0, 0x00000000);
+    }
+    else
+    {
+      crtpSetLink(radiolinkGetLink());
+    }
+  }
+  else // VCP_COM_INTERFACE
+  {
+    switch (req->bmRequest & USB_REQ_TYPE_MASK)
+    {
+      /* CDC Class Requests -------------------------------*/
+    case USB_REQ_TYPE_CLASS :
+        /* Check if the request is a data setup packet */
+        if (req->wLength)
         {
-        case USB_REQ_GET_DESCRIPTOR:
-          USBD_CtlError (pdev, req);
-          return USBD_FAIL;
-
-        case USB_REQ_GET_INTERFACE :
-          USBD_CtlSendData (pdev,
-                            (uint8_t *)&usbd_cdc_AltSet,
-                            1);
-          break;
-
-        case USB_REQ_SET_INTERFACE :
-          if ((uint8_t)(req->wValue) < USBD_ITF_MAX_NUM)
+          /* Check if the request is Device-to-Host */
+          if (req->bmRequest & 0x80)
           {
-            usbd_cdc_AltSet = (uint8_t)(req->wValue);
+            /* Get the data to be sent to Host from interface layer */
+            //APP_FOPS.pIf_Ctrl(req->bRequest, CmdBuff, req->wLength);
+
+            /* Send the data to the host */
+            USBD_CtlSendData (pdev,
+                              CmdBuff,
+                              req->wLength);
           }
-          else
+          else /* Host-to-Device request */
           {
-            /* Call the error management function (command will be nacked */
-            USBD_CtlError (pdev, req);
+            /* Set the value of the current command to be processed */
+            cdcCmd = req->bRequest;
+            cdcLen = req->wLength;
+
+            /* Prepare the reception of the buffer over EP0
+            Next step: the received data will be managed in usbd_cdc_EP0_TxSent()
+            function. */
+            USBD_CtlPrepareRx (pdev,
+                               CmdBuff,
+                               req->wLength);
           }
-          break;
         }
+        else /* No Data request */
+        {
+          /* See the command as activating passthrough interface*/
+          passthroughEnableFromISR();
+        }
+
+        return USBD_OK;
+
+      default:
+        USBD_CtlError (pdev, req);
+        return USBD_FAIL;
+
+      /* Standard Requests -------------------------------*/
+    case USB_REQ_TYPE_STANDARD:
+      switch (req->bRequest)
+      {
+      case USB_REQ_GET_DESCRIPTOR:
+        USBD_CtlError (pdev, req);
+        return USBD_FAIL;
+
+      case USB_REQ_GET_INTERFACE :
+        USBD_CtlSendData (pdev,
+                          (uint8_t *)&usbd_cdc_AltSet,
+                          1);
+        break;
+
+      case USB_REQ_SET_INTERFACE :
+        if ((uint8_t)(req->wValue) < USBD_ITF_MAX_NUM)
+        {
+          usbd_cdc_AltSet = (uint8_t)(req->wValue);
+        }
+        else
+        {
+          /* Call the error management function (command will be nacked */
+          USBD_CtlError (pdev, req);
+        }
+        break;
       }
     }
   }
