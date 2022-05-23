@@ -203,12 +203,13 @@ bool uartslkTest(void)
 
 void uartslkPauseRx(void)
 {
-  NVIC_DisableIRQ(EXTI4_IRQn);
+  NVIC_DisableIRQ(UARTSLK_IRQ);
 }
 
 void uartslkResumeRx(void)
 {
-  NVIC_EnableIRQ(EXTI4_IRQn);
+  rxState = waitForFirstStart;
+  NVIC_EnableIRQ(UARTSLK_IRQ);
 }
 
 void uartslkGetPacketBlocking(SyslinkPacket* packet)
