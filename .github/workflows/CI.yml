@@ -24,7 +24,7 @@ jobs:
           path: "module.json"
 
       - name: File contents
-        run: echo "${ steps.read_file.outputs.contents }"
+        run: echo "${{ steps.read_file.outputs.contents }}"
         
   build_platforms:
     name: Build platforms
