@@ -11,59 +11,28 @@ on:
     branches: [ master ]
 
 jobs:
-  cf2:
+  build:
+    name: Build platforms
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        platforms: [cf2, tag, bolt]
+        
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          submodules: true
 
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+      - name: build
+        run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platforms }} && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
 
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: cf2-${{ github.sha }}
-        path: cf2.bin
-
-  bolt:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make bolt_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: bolt-${{ github.sha }}
-        path: bolt.bin
-
-  tag:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min"
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: tag-${{ github.sha }}
-        path: tag.bin
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v2.1.4
+        with:
+          name: ${{ matrix.platforms }}-${{ github.sha }}
+          path: ${{ matrix.platforms }}.bin
 
   features:
     runs-on: ubuntu-latest
