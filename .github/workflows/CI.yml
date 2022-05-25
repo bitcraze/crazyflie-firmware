@@ -10,7 +10,22 @@ on:
   pull_request:
     branches: [ master ]
 
-jobs:     
+jobs:
+  file_contents:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+
+      - name: Read file contents
+        id: read_file
+        uses: andstor/file-reader-action@v1
+        with:
+          path: "module.json"
+
+      - name: File contents
+        run: echo "${ steps.read_file.outputs.contents }"
+        
   build_platforms:
     name: Build platforms
     runs-on: ubuntu-latest
