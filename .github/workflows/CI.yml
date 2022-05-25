@@ -11,6 +11,13 @@ on:
     branches: [ master ]
 
 jobs:
+  testJob:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "${{fromJson("module.json").version}}"
+          
   build_platforms:
     name: Build platforms
     runs-on: ubuntu-latest
