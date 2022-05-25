@@ -26,7 +26,7 @@ jobs:
           submodules: true
 
       - name: build
-        run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platforms }} && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
+        run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platforms }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v2.1.4
