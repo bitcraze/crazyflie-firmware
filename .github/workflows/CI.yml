@@ -11,47 +11,63 @@ on:
     branches: [ master ]
 
 jobs:
-  file_contents:
+  cf2:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
 
-      - name: Read file contents
-        id: read_file
-        uses: andstor/file-reader-action@v1
-        with:
-          path: "module.json"
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
 
-      - name: File contents
-        run: echo "${{ steps.read_file.outputs.contents }}"
-        
-  build_platforms:
-    name: Build platforms
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2.1.4
+      with:
+        name: cf2-${{ github.sha }}
+        path: cf2.bin
+
+  bolt:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platforms: [cf2, tag, bolt]
-        
+
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-        with:
-          submodules: true
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
 
-      - name: build
-        run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platforms }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platforms }} UNIT_TEST_STYLE=min"
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make bolt_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v2.1.4
-        with:
-          name: ${{ matrix.platforms }}-${{ github.sha }}
-          path: ${{ matrix.platforms }}.bin
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2.1.4
+      with:
+        name: bolt-${{ github.sha }}
+        path: bolt.bin
+
+  tag:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2.1.4
+      with:
+        name: tag-${{ github.sha }}
+        path: tag.bin
 
   features:
     runs-on: ubuntu-latest
-    needs: build_platforms
+    needs: cf2
 
     strategy:
       fail-fast: false
@@ -87,7 +103,7 @@ jobs:
 
   apps:
     runs-on: ubuntu-latest
-    needs: build_platforms
+    needs: cf2
 
     strategy:
       fail-fast: false
@@ -114,7 +130,7 @@ jobs:
 
   kbuild-targets:
     runs-on: ubuntu-latest
-    needs: build_platforms
+    needs: cf2
 
     strategy:
       fail-fast: false

@@ -7,12 +7,12 @@
   "actions": {
     "artifacts": [
       ".bin",
-      ".dfu",
+      ".dfu"
      ],
     "targets" : [
       "cf2",
       "bolt",
-      "tag",
-      ],
-  },
+      "tag"
+    ]
+  }
 }
