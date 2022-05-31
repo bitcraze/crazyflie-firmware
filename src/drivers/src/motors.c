@@ -364,6 +364,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   uint16_t dshotBits;
   bool dshot_telemetry = false;
   uint16_t dshotRatio;
+  volatile uint32_t dmaWait = 0;
 
   ASSERT(id < NBR_OF_MOTORS);
 
