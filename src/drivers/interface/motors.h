@@ -101,9 +101,15 @@
  * brushed motors connected they can turn on at full speed when it is powered on!
  *
  */
-//  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 150000) // 150kHz bitrate DHSOT150
+#ifdef CONFIG_MOTORS_DSHOT_PWM_150KHZ
+  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 150000) // 150kHz bitrate DHSOT150
+#endif
+#ifdef CONFIG_MOTORS_DSHOT_PWM_300KHZ
   #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 300000) // 300kHz bitrate DHSOT300
-//  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 600000) // 600kHz bitrate DHSOT600
+#endif
+#ifdef CONFIG_MOTORS_DSHOT_PWM_600KHZ
+  #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 600000) // 600kHz bitrate DHSOT600
+#endif
   #define MOTORS_BL_PWM_PRESCALE       (0)
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
   #define MOTORS_TIM_VALUE_FOR_0       (uint16_t)(MOTORS_BL_PWM_PERIOD * 0.37425)

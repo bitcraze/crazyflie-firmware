@@ -80,6 +80,22 @@ choice
 
 endchoice
 
+choice
+  prompt "DSHOT PWM Period"
+  depends on MOTORS_ESC_PROTOCOL_DSHOT
+  default MOTORS_DSHOT_PWM_300KHZ
+
+config MOTORS_DSHOT_PWM_150KHZ
+    bool "150 kHz"
+
+config MOTORS_DSHOT_PWM_300KHZ
+    bool "300 kHz"
+
+config MOTORS_DSHOT_PWM_600KHZ
+    bool "600 kHz"
+
+endchoice
+
 config MOTORS_START_DISARMED
     bool "Set disarmed state after boot"
     default n
