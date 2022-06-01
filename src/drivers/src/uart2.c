@@ -33,6 +33,7 @@
 #include "queue.h"
 #include "semphr.h"
 
+#include "autoconf.h"
 #include "config.h"
 #include "nvic.h"
 #include "uart2.h"
@@ -380,6 +381,7 @@ bool uart2DidOverrun()
 
 #endif
 
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -393,6 +395,7 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
   xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
+#endif
 
 #ifdef UART2_LINK_COMM
 

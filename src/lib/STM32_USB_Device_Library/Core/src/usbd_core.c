@@ -2,25 +2,19 @@
   ******************************************************************************
   * @file    usbd_core.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    19-March-2012
+  * @version V1.2.1
+  * @date    17-March-2018
   * @brief   This file provides all the USBD core functions.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2015 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
-  * You may not use this file except in compliance with the License.
-  * You may obtain a copy of the License at:
-  *
-  *        http://www.st.com/software_license_agreement_liberty_v2
-  *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
+  * This software component is licensed by ST under Ultimate Liberty license
+  * SLA0044, the "License"; You may not use this file except in compliance with
+  * the License. You may obtain a copy of the License at:
+  *                      <http://www.st.com/SLA0044>
   *
   ******************************************************************************
   */ 
@@ -108,8 +102,8 @@ USBD_DCD_INT_cb_TypeDef USBD_DCD_INT_cb =
   USBD_IsoINIncomplete,
   USBD_IsoOUTIncomplete,
 #ifdef VBUS_SENSING_ENABLED
-USBD_DevConnected, 
-USBD_DevDisconnected,    
+  USBD_DevConnected, 
+  USBD_DevDisconnected,    
 #endif  
 };
 
@@ -124,7 +118,7 @@ USBD_DCD_INT_cb_TypeDef  *USBD_DCD_INT_fops = &USBD_DCD_INT_cb;
 
 /**
 * @brief  USBD_Init
-*         Initailizes the device stack and load the class driver
+*         Initializes the device stack and load the class driver
 * @param  pdev: device instance
 * @param  core_address: USB OTG core ID
 * @param  class_cb: Class callback structure address
@@ -159,7 +153,7 @@ void USBD_Init(USB_OTG_CORE_HANDLE *pdev,
 
 /**
 * @brief  USBD_DeInit 
-*         Re-Initialize th device library
+*         Re-Initialize the device library
 * @param  pdev: device instance
 * @retval status: status
 */
@@ -247,7 +241,12 @@ static uint8_t USBD_DataOutStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
           (pdev->dev.device_status == USB_OTG_CONFIGURED))
   {
     pdev->dev.class_cb->DataOut(pdev, epnum); 
-  }  
+  } 
+  
+  else
+  {
+    /* Do Nothing */
+  }
   return USBD_OK;
 }
 
@@ -278,6 +277,12 @@ static uint8_t USBD_DataInStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
         USBD_CtlContinueSendData (pdev, 
                                   ep->xfer_buff, 
                                   ep->rem_data_len);
+        
+        /* Start the transfer */  
+        DCD_EP_PrepareRx (pdev,
+                          0,
+                          NULL,
+                          0);
       }
       else
       { /* last packet is MPS multiple, so send ZLP packet */
@@ -288,6 +293,12 @@ static uint8_t USBD_DataInStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
           
           USBD_CtlContinueSendData(pdev , NULL, 0);
           ep->ctl_data_len = 0;
+          
+          /* Start the transfer */  
+          DCD_EP_PrepareRx (pdev,
+                            0,
+                            NULL,
+                            0);
         }
         else
         {
@@ -310,7 +321,12 @@ static uint8_t USBD_DataInStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
           (pdev->dev.device_status == USB_OTG_CONFIGURED))
   {
     pdev->dev.class_cb->DataIn(pdev, epnum); 
-  }  
+  } 
+  
+  else
+  {
+    /* Do Nothing */
+  }
   return USBD_OK;
 }
 

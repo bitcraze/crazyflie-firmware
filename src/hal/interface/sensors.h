@@ -54,6 +54,12 @@ bool sensorsReadMag(Axis3f *mag);
 bool sensorsReadBaro(baro_t *baro);
 
 /**
+ * Suspend or resume sensor data
+ */
+void sensorsSuspend();
+void sensorsResume();
+
+/**
  * Set acc mode, one of accModes enum
  */
 void sensorsSetAccMode(accModes accMode);

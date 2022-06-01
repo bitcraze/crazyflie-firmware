@@ -71,6 +71,7 @@
 #include "cfassert.h"
 #include "i2cdev.h"
 #include "autoconf.h"
+#include "vcp_esc_passthrough.h"
 
 #ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
@@ -179,6 +180,7 @@ void systemTask(void *arg)
   initUsecTimer();
   i2cdevInit(I2C3_DEV);
   i2cdevInit(I2C1_DEV);
+  passthroughInit();
 
   //Init the high-levels modules
   systemInit();
