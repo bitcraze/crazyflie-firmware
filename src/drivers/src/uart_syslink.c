@@ -56,7 +56,7 @@ static StaticSemaphore_t waitUntilSendDoneBuffer;
 static xSemaphoreHandle uartBusy;
 static StaticSemaphore_t uartBusyBuffer;
 static xQueueHandle syslinkPacketDelivery;
-STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 16, sizeof(SyslinkPacket));
+STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 8, sizeof(SyslinkPacket));
 
 static uint8_t dmaBuffer[64];
 static uint8_t *outDataIsr;

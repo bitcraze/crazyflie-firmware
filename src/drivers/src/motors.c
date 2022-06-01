@@ -55,6 +55,7 @@ static DMA_InitTypeDef DMA_InitStructureShare;
 // Memory buffer for DSHOT bits
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
 static void motorsDshotDMASetup();
+static uint32_t dmaWait;
 #endif
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);

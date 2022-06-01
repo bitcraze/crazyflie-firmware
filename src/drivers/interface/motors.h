@@ -65,7 +65,7 @@
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
 /**
- * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
  *
  * Generates a PWM wave at 2000 Hz update rate, with 125 - 250us high pulse, using the timer.
@@ -81,7 +81,7 @@
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 #elif defined(CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT42)
 /**
- * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
  *
  * Generates a PWM wave at 2000 Hz update rate, with 125 - 250us high pulse, using the timer.
@@ -97,7 +97,7 @@
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 #elif defined(CONFIG_MOTORS_ESC_PROTOCOL_DSHOT)
 /**
- * *VARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
  *
  */
@@ -135,7 +135,7 @@
 
   #define MOTORS_BL_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
   #define MOTORS_BL_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_BL_PWM_PRESCALE_RAW)
-  #define MOTORS_BL_PWM_CNT_FOR_HIGH    (uint32_t)(TIM_CLOCK_HZ * MOTORS_HIGH_PERIOD_ZERO / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_CNT_FOR_HIGH   (uint32_t)(TIM_CLOCK_HZ * MOTORS_HIGH_PERIOD_ZERO / MOTORS_BL_PWM_PRESCALE_RAW)
   #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
   #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low

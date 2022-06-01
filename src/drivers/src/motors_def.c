@@ -324,6 +324,7 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP =
     .getCompare    = TIM_GetCapture3,
     .ocInit        = TIM_OC3Init,
     .preloadConfig = TIM_OC3PreloadConfig,
+
 };
 
 // CF21-BL M1, PA1, TIM2_CH2, Brushless config including DSHOT
