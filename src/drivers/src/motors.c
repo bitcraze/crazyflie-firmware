@@ -327,6 +327,9 @@ void motorsStop()
   motorsSetRatio(MOTOR_M2, 0);
   motorsSetRatio(MOTOR_M3, 0);
   motorsSetRatio(MOTOR_M4, 0);
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+  motorsBurstDshot();
+#endif
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
@@ -353,6 +356,11 @@ static void motorsDshotDMASetup()
 
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
+    DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[i]->DMA_PerifAddr;
+    DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[i];
+    DMA_InitStructureShare.DMA_Channel = motorMap[i]->DMA_Channel;
+    DMA_Init(motorMap[i]->DMA_stream, &DMA_InitStructureShare);
+
     NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -403,34 +411,36 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   {
     dmaWait++;
   }
-
-  // Setup DMA Stream. TODO optimize reloading
-  DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
-  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
-  DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
-  DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
-
-  DMA_ITConfig(motorMap[id]->DMA_stream, DMA_IT_TC, ENABLE);
 }
 
 /**
- * Unfortunately the TIM2_CH2 and TIM2_CH4 share DMA channel 3 request and can't
+ * Unfortunately the TIM2_CH2 (M1) and TIM2_CH4 (M2) share DMA channel 3 request and can't
  * be used at the same time. Solved by running after each other and TIM2_CH2
  * will be started in DMA1_Stream6_IRQHandler. Thus M2 will have a bit of latency.
  */
 void motorsBurstDshot()
 {
 
-  /* Enable TIM DMA Requests M2*/
+    motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    /* Enable TIM DMA Requests M1*/
     TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[0]->DMA_stream, DMA_IT_TC, ENABLE);
+    DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
+
+    motorMap[2]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M3*/
     TIM_DMACmd(motorMap[2]->tim, motorMap[2]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[2]->DMA_stream, DMA_IT_TC, ENABLE);
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[2]->DMA_stream, ENABLE);
+
+    motorMap[3]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M4*/
     TIM_DMACmd(motorMap[3]->tim, motorMap[3]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[3]->DMA_stream, DMA_IT_TC, ENABLE);
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
 }
@@ -563,22 +573,25 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
 
   ASSERT(id < NBR_OF_MOTORS);
 
-  TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-
-  if (enable)
+  if (motorMap[id]->drvType == BRUSHED)
   {
-    TIM_TimeBaseStructure.TIM_Prescaler = (5 - 1);
-    TIM_TimeBaseStructure.TIM_Period = (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency);
-  }
-  else
-  {
-    TIM_TimeBaseStructure.TIM_Period = motorMap[id]->timPeriod;
-    TIM_TimeBaseStructure.TIM_Prescaler = motorMap[id]->timPrescaler;
-  }
+    TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
 
-  // Timer configuration
-  TIM_TimeBaseInit(motorMap[id]->tim, &TIM_TimeBaseStructure);
-  motorMap[id]->setCompare(motorMap[id]->tim, ratio);
+    if (enable)
+    {
+      TIM_TimeBaseStructure.TIM_Prescaler = (5 - 1);
+      TIM_TimeBaseStructure.TIM_Period = (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency);
+    }
+    else
+    {
+      TIM_TimeBaseStructure.TIM_Period = motorMap[id]->timPeriod;
+      TIM_TimeBaseStructure.TIM_Prescaler = motorMap[id]->timPrescaler;
+    }
+
+    // Timer configuration
+    TIM_TimeBaseInit(motorMap[id]->tim, &TIM_TimeBaseStructure);
+    motorMap[id]->setCompare(motorMap[id]->tim, ratio);
+  }
 }
 
 
@@ -632,19 +645,19 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-void __attribute__((used)) DMA1_Stream1_IRQHandler(void)
+void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
   DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
 }
-void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
+void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
   DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
 }
-void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
+void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
@@ -654,7 +667,7 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
   /* Enable DMA TIM Stream */
   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
 }
-void __attribute__((used)) DMA1_Stream7_IRQHandler(void)
+void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
