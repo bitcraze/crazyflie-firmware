@@ -290,9 +290,6 @@ static void stabilizerTask(void* param)
         motorsSetRatio(MOTOR_M2, motorPower.m2);
         motorsSetRatio(MOTOR_M3, motorPower.m3);
         motorsSetRatio(MOTOR_M4, motorPower.m4);
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-        motorsBurstDshot();
-#endif
       }
 
 #ifdef CONFIG_DECK_USD
@@ -314,6 +311,9 @@ static void stabilizerTask(void* param)
         }
       }
     }
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+    motorsBurstDshot();
+#endif
   }
 }
 
