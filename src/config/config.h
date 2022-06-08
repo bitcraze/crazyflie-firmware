@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,22 +48,18 @@
 
 #define PROTOCOL_VERSION 5
 
-#ifdef STM32F4XX
-  #define QUAD_FORMATION_X
-
-  #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
-  #define MCU_ID_ADDRESS          0x1FFF7A10
-  #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
-  #ifndef FREERTOS_HEAP_SIZE
-    #define FREERTOS_HEAP_SIZE      30000
-  #endif
-  #define FREERTOS_MIN_STACK_SIZE 150       // M4-FPU register setup is bigger so stack needs to be bigger
-  #define FREERTOS_MCU_CLOCK_HZ   168000000
-
-  #define configGENERATE_RUN_TIME_STATS 1
-  #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initUsecTimer()
-  #define portGET_RUN_TIME_COUNTER_VALUE() usecTimestamp()
+#define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
+#define MCU_ID_ADDRESS          0x1FFF7A10
+#define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
+#ifndef FREERTOS_HEAP_SIZE
+  #define FREERTOS_HEAP_SIZE      30000
 #endif
+#define FREERTOS_MIN_STACK_SIZE 150       // M4-FPU register setup is bigger so stack needs to be bigger
+#define FREERTOS_MCU_CLOCK_HZ   168000000
+
+#define configGENERATE_RUN_TIME_STATS 1
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initUsecTimer()
+#define portGET_RUN_TIME_COUNTER_VALUE() usecTimestamp()
 
 
 // Task priorities. Higher number higher priority
