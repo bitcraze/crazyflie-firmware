@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2011-2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * power_distribution_stock.c - Crazyflie stock power distribution code
+ * power_distribution_quadrotor.c - Crazyflie stock power distribution code
  */
 
 #include "power_distribution.h"
@@ -31,7 +31,7 @@
 #include "param.h"
 #include "num.h"
 #include "autoconf.h"
-#include "config.h" // Important, since this defines QUAD_FORMATION_X
+#include "config.h"
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
@@ -55,23 +55,12 @@ bool powerDistributionTest(void)
 
 void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
 {
-  #ifdef QUAD_FORMATION_X
-    int16_t r = control->roll / 2.0f;
-    int16_t p = control->pitch / 2.0f;
-    motorPower->m1 = limitThrust(control->thrust - r + p + control->yaw);
-    motorPower->m2 = limitThrust(control->thrust - r - p - control->yaw);
-    motorPower->m3 =  limitThrust(control->thrust + r - p + control->yaw);
-    motorPower->m4 =  limitThrust(control->thrust + r + p - control->yaw);
-  #else // QUAD_FORMATION_NORMAL
-    motorPower->m1 = limitThrust(control->thrust + control->pitch +
-                               control->yaw);
-    motorPower->m2 = limitThrust(control->thrust - control->roll -
-                               control->yaw);
-    motorPower->m3 =  limitThrust(control->thrust - control->pitch +
-                               control->yaw);
-    motorPower->m4 =  limitThrust(control->thrust + control->roll -
-                               control->yaw);
-  #endif
+  int16_t r = control->roll / 2.0f;
+  int16_t p = control->pitch / 2.0f;
+  motorPower->m1 = limitThrust(control->thrust - r + p + control->yaw);
+  motorPower->m2 = limitThrust(control->thrust - r - p - control->yaw);
+  motorPower->m3 =  limitThrust(control->thrust + r - p + control->yaw);
+  motorPower->m4 =  limitThrust(control->thrust + r + p - control->yaw);
 
   if (motorPower->m1 < idleThrust) {
     motorPower->m1 = idleThrust;

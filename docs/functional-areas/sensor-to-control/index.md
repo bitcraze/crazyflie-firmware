@@ -81,17 +81,9 @@ Go to the [Commander page](commanders_setpoints.md), for more in-depth informati
 After the state controller has send out its commands, this is not the end of the line yet.
 The controllers send out their commands relating to their yaw, roll and pitch angles.
 How the motors should respond in order to adhere these attitude based commands depends on a few factors:
-  * Quadrotor configuration (found in: `power_distribution_stock.c`:
-    * x-configuration: The body fixed coordinate system's x-axis is pointed in between two propellors (Default)
-    * +-configuration: The body fixed coordinate system's x-axis is pointed in one propellor
   * Motors:
     * Brushed: The Crazyflie has brushed motors, of which there is battery compensation function enabled. Check out `motors.c` to learn more. Also checkout the [PWM to Thrust investigations](/docs/functional-areas/pwm-to-thrust.md) of those same motors.
     * Brushless: The Bolt enables the control of brushless motors. Checkout the[ product page of the Bolt](https://www.bitcraze.io/products/crazyflie-bolt/) for more information.
 
-
- 
 ## Configuring Controllers and Estimators
 Go to this [configuration page](configure_estimator_controller.md), if you would like to configure different controllers and estimators,
-
-
-

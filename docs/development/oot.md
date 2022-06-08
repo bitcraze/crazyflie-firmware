@@ -38,7 +38,7 @@ The `Kbuild` file in the `$(OOT)` folder should point out your source files:
 obj-y += your_estimator_out_of_tree.o
 ```
 
-It can also add point out another folder where the code resides:
+It can also point out another folder where the code resides:
 
 ```Makefile
 obj-y += src/
