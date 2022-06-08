@@ -5,8 +5,13 @@ name: Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   release:
+    permissions:
+      contents: write  # for actions/create-release to create a release
     name: Create Release on Github
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +34,8 @@ jobs:
         path: release_url.txt       
 
   upload:
+    permissions:
+      contents: write  # for actions/upload-release-asset to upload release asset
     name: Upload Binaries to release
     needs: [release]
     runs-on: ubuntu-latest
