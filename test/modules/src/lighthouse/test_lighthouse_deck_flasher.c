@@ -10,6 +10,9 @@
 
 #include <stdbool.h>
 
+const DeckMemDef_t* noMemDef = 0;
+
+
 void setUp(void) {
   // Empty
 }
@@ -26,7 +29,7 @@ void testThaEraseFwIsCalledWhenWritingTheFirstBlock() {
   lhblFlashWritePage_ExpectWithArrayAndReturn(LH_FW_ADDR + 0, 4, buffer, 4, true);
 
   // Test
-  bool actual = lighthouseDeckFlasherWrite(0, 4, buffer);
+  bool actual = lighthouseDeckFlasherWrite(0, 4, buffer, noMemDef);
 
   // Actual
   TEST_ASSERT_TRUE(actual);
@@ -41,7 +44,7 @@ void testThaEraseFwSplitsWriteBetweenTwoPages() {
 
 
   // Test
-  bool actual = lighthouseDeckFlasherWrite(254, 4, buffer);
+  bool actual = lighthouseDeckFlasherWrite(254, 4, buffer, noMemDef);
 
   // Actual
   TEST_ASSERT_TRUE(actual);

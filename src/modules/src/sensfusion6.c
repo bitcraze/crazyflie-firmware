@@ -279,13 +279,6 @@ float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const flo
   return sensfusion6GetAccZ(ax, ay, az) - baseZacc;
 }
 
-float sensfusion6GetInvThrustCompensationForTilt()
-{
-  // Return the z component of the estimated gravity direction
-  // (0, 0, 1) dot G
-  return gravZ;
-}
-
 //---------------------------------------------------------------------------------------------------
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root

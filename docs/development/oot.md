@@ -3,10 +3,10 @@ title: Out of tree build
 page_id: oot
 ---
 
-It is possible to have an out-of-tree build of parts of the crazyflie firmware. This enables developers to work on elements without worrrying about merging it with the full code base. 
+It is possible to have an out-of-tree build of parts of the crazyflie firmware. This enables developers to work on elements without worrying about merging it with the full code base.
 
 # General out-of-tree build process
-In a seperate folder make a Makefile which contain the following content:
+In a separate folder create a Makefile which contain the following content:
 
 ```Makefile
 CRAZYFLIE_BASE := [LOCATION OF THE CRAZYFLIE FIRMWARE]
@@ -44,7 +44,14 @@ It can also add point out another folder where the code resides:
 obj-y += src/
 ```
 
+If you have header files in another folder, use `EXTRA_CFLAGS` in the Makefile to let the compiler know where to find them:
+
+```Makefile
+EXTRA_CFLAGS += -I$(PWD)/src/inc
+```
+
 And since you are providing a config file by way of `$(OOT_CONFIG)` you do not need to run any make command to create a config like `make menuconfig` or `make defconfig`. Just a simple `make` will suffice.
+
 # OOT estimators
 The `config` file needs to enable ESTIMATOR_OOT, and can also set other config options:
 

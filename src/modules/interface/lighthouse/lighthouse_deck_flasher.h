@@ -30,11 +30,12 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "deck_core.h"
 
 bool lighthouseDeckFlasherCheckVersionAndBoot();
 
 bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
 
-bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef);
 
 uint8_t lighthouseDeckFlasherPropertiesQuery();

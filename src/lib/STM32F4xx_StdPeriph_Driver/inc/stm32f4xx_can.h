@@ -2,14 +2,14 @@
   ******************************************************************************
   * @file    stm32f4xx_can.h
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file contains all the functions prototypes for the CAN firmware 
   *          library.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -46,9 +46,14 @@
   */
 
 /* Exported types ------------------------------------------------------------*/
-
+#if defined(STM32F413_423xx)
+#define IS_CAN_ALL_PERIPH(PERIPH) (((PERIPH) == CAN1) || \
+                                   ((PERIPH) == CAN2) || \
+                                   ((PERIPH) == CAN3))
+#else
 #define IS_CAN_ALL_PERIPH(PERIPH) (((PERIPH) == CAN1) || \
                                    ((PERIPH) == CAN2))
+#endif /* STM32F413_423xx */
 
 /** 
   * @brief  CAN init structure definition
@@ -594,9 +599,17 @@ void CAN_DeInit(CAN_TypeDef* CANx);
 
 /* Initialization and Configuration functions *********************************/ 
 uint8_t CAN_Init(CAN_TypeDef* CANx, CAN_InitTypeDef* CAN_InitStruct);
+#if defined(STM32F413_423xx)
+void CAN_FilterInit(CAN_TypeDef* CANx, CAN_FilterInitTypeDef* CAN_FilterInitStruct);
+#else
 void CAN_FilterInit(CAN_FilterInitTypeDef* CAN_FilterInitStruct);
+#endif /* STM32F413_423xx */
 void CAN_StructInit(CAN_InitTypeDef* CAN_InitStruct);
-void CAN_SlaveStartBank(uint8_t CAN_BankNumber); 
+#if defined(STM32F413_423xx)
+void CAN_SlaveStartBank(CAN_TypeDef* CANx, uint8_t CAN_BankNumber);
+#else
+void CAN_SlaveStartBank(uint8_t CAN_BankNumber);
+#endif /* STM32F413_423xx */
 void CAN_DBGFreeze(CAN_TypeDef* CANx, FunctionalState NewState);
 void CAN_TTComModeCmd(CAN_TypeDef* CANx, FunctionalState NewState);
 

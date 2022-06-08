@@ -2,14 +2,14 @@
   ******************************************************************************
   * @file    stm32f4xx_usart.h
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file contains all the functions prototypes for the USART 
   *          firmware library.    
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ typedef struct
                                                  the word length is set to 9 data bits; 8th bit when the
                                                  word length is set to 8 data bits). */
  
-  uint16_t USART_Mode;                /*!< Specifies wether the Receive or Transmit mode is enabled or disabled.
+  uint16_t USART_Mode;                /*!< Specifies whether the Receive or Transmit mode is enabled or disabled.
                                            This parameter can be a value of @ref USART_Mode */
 
   uint16_t USART_HardwareFlowControl; /*!< Specifies wether the hardware flow control mode is enabled
@@ -114,7 +114,9 @@ typedef struct
                                      ((PERIPH) == UART5)  || \
                                      ((PERIPH) == USART6) || \
                                      ((PERIPH) == UART7)  || \
-                                     ((PERIPH) == UART8))
+                                     ((PERIPH) == UART8)  || \
+                                     ((PERIPH) == UART9)  || \
+                                     ((PERIPH) == UART10)) 
 
 #define IS_USART_1236_PERIPH(PERIPH) (((PERIPH) == USART1) || \
                                       ((PERIPH) == USART2) || \

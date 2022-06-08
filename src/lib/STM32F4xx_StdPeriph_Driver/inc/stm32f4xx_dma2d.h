@@ -2,23 +2,29 @@
   ******************************************************************************
   * @file    stm32f4xx_dma2d.h
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file contains all the functions prototypes for the DMA2D firmware 
   *          library.
   ******************************************************************************
   * @attention
   *
-  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
-  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
-  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
-  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
-  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
-  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
+  * You may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at:
+  *
+  *        http://www.st.com/software_license_agreement_liberty_v2
+  *
+  * Unless required by applicable law or agreed to in writing, software 
+  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F4xx_DMA2D_H
@@ -63,11 +69,11 @@ typedef struct
 
   uint32_t DMA2D_OutputGreen;                    /*!< configures the green value of the output image. 
                                                  This parameter must range:
-                                                 - from 0x00 to 0xFF if ARGB8888 color mode is slected
-                                                 - from 0x00 to 0xFF if RGB888 color mode is slected
-                                                 - from 0x00 to 0x2F if RGB565 color mode is slected
-                                                 - from 0x00 to 0x1F if ARGB1555 color mode is slected
-                                                 - from 0x00 to 0x0F if ARGB4444 color mode is slected  */
+                                                 - from 0x00 to 0xFF if ARGB8888 color mode is selected
+                                                 - from 0x00 to 0xFF if RGB888 color mode is selected
+                                                 - from 0x00 to 0x2F if RGB565 color mode is selected
+                                                 - from 0x00 to 0x1F if ARGB1555 color mode is selected
+                                                 - from 0x00 to 0x0F if ARGB4444 color mode is selected  */
             
   uint32_t DMA2D_OutputRed;                      /*!< configures the red value of the output image. 
                                                  This parameter must range:
@@ -79,9 +85,9 @@ typedef struct
   
   uint32_t DMA2D_OutputAlpha;                    /*!< configures the alpha channel of the output color. 
                                                  This parameter must range:
-                                                 - from 0x00 to 0xFF if ARGB8888 color mode is slected
-                                                 - from 0x00 to 0x01 if ARGB1555 color mode is slected
-                                                 - from 0x00 to 0x0F if ARGB4444 color mode is slected  */
+                                                 - from 0x00 to 0xFF if ARGB8888 color mode is selected
+                                                 - from 0x00 to 0x01 if ARGB1555 color mode is selected
+                                                 - from 0x00 to 0x0F if ARGB4444 color mode is selected  */
 
   uint32_t DMA2D_OutputMemoryAdd;                /*!< Specifies the memory address. This parameter 
                                                  must be range from 0x00000000 to 0xFFFFFFFF. */
@@ -92,7 +98,7 @@ typedef struct
   uint32_t DMA2D_NumberOfLine;                   /*!< Configures the number of line of the area to be transfered.
                                                  This parameter must range from 0x0000 to 0xFFFF */
             
-  uint32_t DMA2D_PixelPerLine;                   /*!< Configures the number pixel per line of the area to be transfered.
+  uint32_t DMA2D_PixelPerLine;                   /*!< Configures the number pixel per line of the area to be transferred.
                                                  This parameter must range from 0x0000 to 0x3FFF */
 } DMA2D_InitTypeDef;
 

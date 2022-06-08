@@ -64,7 +64,10 @@ static uint16_t motorsBLConv16ToBits(uint16_t bits);
 static uint16_t motorsConvBitsTo16(uint16_t bits);
 static uint16_t motorsConv16ToBits(uint16_t bits);
 
-uint16_t motor_ratios[] = {0, 0, 0, 0};
+static bool motorSetEnable = false;
+static uint32_t motorPower[] = {0, 0, 0, 0};    // user-requested PWM signals
+static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
+static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
 void motorsPlayMelody(uint16_t *notes);
@@ -344,15 +347,23 @@ bool motorsTest(void)
   return isInit;
 }
 
+void motorsStop()
+{
+  motorsSetRatio(MOTOR_M1, 0);
+  motorsSetRatio(MOTOR_M2, 0);
+  motorsSetRatio(MOTOR_M3, 0);
+  motorsSetRatio(MOTOR_M4, 0);
+}
+
 // Ithrust is thrust mapped for 65536 <==> 15 grams (per rotor)
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
   if (isInit) {
-    uint16_t ratio;
+    uint16_t ratio = ithrust;
 
     ASSERT(id < NBR_OF_MOTORS);
 
-    ratio = ithrust;
+    motorPower[id] = ithrust;
 
     if (batCompensation)
     {
@@ -365,6 +376,11 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
         motor_ratios[id] = ratio;
       }
     }
+
+    if (motorSetEnable) {
+      ratio = motorPowerSet[id];
+    }
+
     if (motorMap[id]->drvType == BRUSHLESS)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
@@ -501,6 +517,61 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
     return &unknownMotorHealthTestSettings;
   }
 }
+
+/**
+ * Override power distribution to motors.
+ */
+PARAM_GROUP_START(motorPowerSet)
+
+/**
+ * @brief Nonzero to override controller with set values
+ */
+PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
+
+/**
+ * @brief motor power for m1: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m1, &motorPowerSet[0])
+
+/**
+ * @brief motor power for m2: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m2, &motorPowerSet[1])
+
+/**
+ * @brief motor power for m3: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m3, &motorPowerSet[2])
+
+/**
+ * @brief motor power for m4: `0 - UINT16_MAX`
+ */
+PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet[3])
+
+PARAM_GROUP_STOP(motorPowerSet)
+
+/**
+ * Motor output related log variables.
+ */
+LOG_GROUP_START(motor)
+/**
+ * @brief Requested motor power (PWM value) for M1 [0 - UINT16_MAX]
+ */
+LOG_ADD_CORE(LOG_UINT32, m1, &motorPower[0])
+/**
+ * @brief Requested motor power (PWM value) for M2 [0 - UINT16_MAX]
+ */
+LOG_ADD_CORE(LOG_UINT32, m2, &motorPower[1])
+/**
+ * @brief Requested motor power (PWM value) for M3 [0 - UINT16_MAX]
+ */
+LOG_ADD_CORE(LOG_UINT32, m3, &motorPower[2])
+/**
+ * @brief Requested motor power (PWM value) for M4 [0 - UINT16_MAX]
+ */
+LOG_ADD_CORE(LOG_UINT32, m4, &motorPower[3])
+LOG_GROUP_STOP(motor)
+
 
 /**
  * Logging variables of the motors PWM output

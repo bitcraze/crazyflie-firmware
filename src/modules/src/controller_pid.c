@@ -1,9 +1,7 @@
 
-#include "stabilizer.h"
 #include "stabilizer_types.h"
 
 #include "attitude_controller.h"
-#include "sensfusion6.h"
 #include "position_controller.h"
 #include "controller_pid.h"
 
@@ -12,8 +10,6 @@
 #include "math3d.h"
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
-
-static bool tiltCompensationEnabled = false;
 
 static attitude_t attitudeDesired;
 static attitude_t rateDesired;
@@ -136,14 +132,7 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     accelz = sensors->acc.z;
   }
 
-  if (tiltCompensationEnabled)
-  {
-    control->thrust = actuatorThrust / sensfusion6GetInvThrustCompensationForTilt();
-  }
-  else
-  {
-    control->thrust = actuatorThrust;
-  }
+  control->thrust = actuatorThrust;
 
   if (control->thrust == 0)
   {
@@ -232,13 +221,3 @@ LOG_ADD(LOG_FLOAT, pitchRate, &rateDesired.pitch)
 LOG_ADD(LOG_FLOAT, yawRate,   &rateDesired.yaw)
 LOG_GROUP_STOP(controller)
 
-
-/**
- * Controller parameters
- */
-PARAM_GROUP_START(controller)
-/**
- * @brief Nonzero for tilt compensation enabled (default: 0)
- */
-PARAM_ADD(PARAM_UINT8, tiltComp, &tiltCompensationEnabled)
-PARAM_GROUP_STOP(controller)

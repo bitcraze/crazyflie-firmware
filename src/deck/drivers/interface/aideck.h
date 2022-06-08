@@ -34,14 +34,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define ESP_BITSTREAM_SIZE 610576
-#define AIDECK_UART_TRANSPORT_MTU (100)
+#define AIDECK_UART_TRANSPORT_MTU 100
+#define AIDECK_UART_META_DATA_SIZE 2
+#define AIDECK_UART_PAYLOAD_MTU (AIDECK_UART_TRANSPORT_MTU - AIDECK_UART_META_DATA_SIZE)
 
 // This enum is used to identify source and destination for CPX routing information
 typedef enum {
   CPX_T_STM32 = 1, // The STM in the Crazyflie
   CPX_T_ESP32 = 2, // The ESP on the AI-deck
-  CPX_T_HOST = 3,  // A remote computer connected via Wifi
+  CPX_T_WIFI_HOST = 3,  // A remote computer connected via Wifi
   CPX_T_GAP8 = 4   // The GAP8 on the AI-deck
 } CPXTarget_t;
 
@@ -65,7 +66,7 @@ typedef struct {
 typedef struct {
   CPXRouting_t route;
   uint16_t dataLength;
-  uint8_t data[AIDECK_UART_TRANSPORT_MTU-2];
+  uint8_t data[AIDECK_UART_PAYLOAD_MTU];
 } CPXPacket_t;
 
 /**
@@ -94,11 +95,11 @@ void cpxSendPacketBlocking(const CPXPacket_t * packet);
  * This will send a packet to the ESP32 to be routed using CPX.
  *
  * @param packet packet to be sent
- * @param timeoutInMS timeout before giving up if packet cannot be queued
+ * @param timeout timeout before giving up if packet cannot be queued
  * @return true if package could be queued for sending
  * @return false if package could not be queued for sending within timeout
  */
-bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeoutInMS);
+bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
 
 /**
  * @brief Initialize CPX routing data.
@@ -111,3 +112,12 @@ bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeoutInMS);
  * @param route Pointer to the route data to initialize
  */
 void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
+
+/**
+ * @brief Forward bootloader message.
+ *
+ * Used as a work around to send data from the bootloader down to the AI deck driver.
+ *
+ * @param packet packet that was received
+ */
+void cpxBootloaderMessage(const CPXPacket_t * packet);

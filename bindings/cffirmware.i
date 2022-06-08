@@ -1,6 +1,6 @@
 %module cffirmware
+%include <stdint.i>
 
-%include "stdint.i"
 %include "cpointer.i"
 %include "carrays.i"
 // %typemap(in) float[ANY] (float temp[$1_dim0]) {
@@ -50,8 +50,15 @@
 #include "pptraj.h"
 #include "planner.h"
 #include "stabilizer_types.h"
-#include "imu_types.h"
 #include "collision_avoidance.h"
+#include "imu_types.h"
+#include "controller_pid.h"
+#include "position_controller.h"
+#include "pid.h"
+#include "filter.h"
+#include "num.h"
+#include "controller_mellinger.h"
+#include "power_distribution.h"
 #include "controller_sjc.h"
 %}
 
@@ -59,8 +66,11 @@
 %include "pptraj.h"
 %include "planner.h"
 %include "stabilizer_types.h"
-%include "imu_types.h"
 %include "collision_avoidance.h"
+%include "controller_pid.h"
+%include "imu_types.h"
+%include "controller_mellinger.h"
+%include "power_distribution.h"
 %include "controller_sjc.h"
 
 %inline %{

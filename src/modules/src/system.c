@@ -82,6 +82,7 @@
 static bool selftestPassed;
 static bool armed = ARM_INIT;
 static bool forceArm;
+static uint8_t dumpAssertInfo = 0;
 static bool isInit;
 
 static char nrf_version[16];
@@ -384,6 +385,11 @@ void vApplicationIdleHook( void )
     watchdogReset();
   }
 
+  if (dumpAssertInfo != 0) {
+    printAssertSnapshotData();
+    dumpAssertInfo = 0;
+  }
+
   // Enter sleep mode. Does not work when debugging chip with SWD.
   // Currently saves about 20mA STM32F405 current consumption (~30%).
 #ifndef DEBUG
@@ -433,7 +439,12 @@ PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
  */
 PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
 
-PARAM_GROUP_STOP(sytem)
+/**
+ * @brief Set to nonzero to trigger dump of assert information to the log.
+ */
+PARAM_ADD(PARAM_UINT8, assertInfo, &dumpAssertInfo)
+
+PARAM_GROUP_STOP(system)
 
 /**
  *  System loggable variables to check different system states.
