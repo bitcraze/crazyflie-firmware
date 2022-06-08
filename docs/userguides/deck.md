@@ -73,7 +73,7 @@ obj-y += myled.o
 The deck driver will be initialized only if a deck is connected with the
 right OW memory content. During development it is possible to force the
 initialization of a deck by setting the `CONFIG_DECK_FORCE` config option
-to `meMyled` in your `.config` either by hand or using `make menuconfig`.
+to `"meMyled"` in your `.config` either by hand or using `make menuconfig`.
 
 ### Driver declaration API
 
