@@ -195,8 +195,8 @@ To make it easier for people to build for `RINCEWIND` we can add a `defconfig` f
 ```Makefile
 CONFIG_PLATFORM_BOLT=y
 
-CONFIG_ESTIMATOR=any
-CONFIG_CONTROLLER=Any
+CONFIG_ESTIMATOR_ANY=y
+CONFIG_CONTROLLER_ANY=y
 CONFIG_POWER_DISTRIBUTION=stock
 ```
 
@@ -205,8 +205,8 @@ Based on this a start of `rincewind_defconfig` could be:
 ```Makefile
 CONFIG_PLATFORM_RINCEWIND=y
 
-CONFIG_ESTIMATOR=any
-CONFIG_CONTROLLER=Any
+CONFIG_ESTIMATOR_ANY=y
+CONFIG_CONTROLLER_ANY=y
 CONFIG_POWER_DISTRIBUTION=stock
 ```
 
