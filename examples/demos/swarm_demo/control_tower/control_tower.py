@@ -201,7 +201,7 @@ class TrafficController:
         self._cf.connection_failed.add_callback(self._connection_failed)
         self._cf.connection_lost.add_callback(self._connection_lost)
         self._cf.param.all_updated.add_callback(self._all_updated)
-        self._cf.console.receivedChar.add_callback(self._console_incoming) #print debug messages from Crazyflie
+        # self._cf.console.receivedChar.add_callback(self._console_incoming) #print debug messages from Crazyflie
 
         print("Connecting to " + self.uri)
         self._cf.open_link(self.uri)
