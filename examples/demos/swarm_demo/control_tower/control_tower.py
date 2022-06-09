@@ -148,7 +148,7 @@ class TrafficController:
         return self.vbat
 
     def is_charged_for_flight(self):
-        return self.vbat > 4.1
+        return self.vbat > 4.10
 
     def get_traj_cycles(self):
         return self.traj_cycles
@@ -166,32 +166,11 @@ class TrafficController:
         self.connection_state = self.CS_CONNECTED
         print('Connected to %s' % link_uri)
 
-        self._param_check_list = []
-        self._param_groups = []
-        p_toc = self._cf.param.toc.toc
-        for group in sorted(p_toc.keys()):
-            for param in sorted(p_toc[group].keys()):
-                self._param_check_list.append('{0}.{1}'.format(group, param))
-            
-            self._param_groups.append('{}'.format(group))
-            # For every group, register the callback
-            self._cf.param.add_update_callback(group=group, name=None,
-                                               cb=self._param_callback)
-    
-    def _param_callback(self, name, value):
-        """Generic callback registered for all the groups"""
-        self._param_check_list.remove(name)
+    def _all_updated(self):
+        """Callback that is called when all parameters have been updated"""
 
-        if len(self._param_check_list) == 0:
-            print('Have fetched all parameter values.')
-
-            # First remove all the group callbacks
-            for g in self._param_groups:
-                self._cf.param.remove_update_callback(group=g,
-                                                      cb=self._param_callback)
-
-            self.set_trajectory_count(2)
-            self._setup_logging()
+        self.set_trajectory_count(2)
+        self._setup_logging()
 
     def _connection_failed(self, link_uri, msg):
         print('Connection to %s failed: %s' % (link_uri, msg))
@@ -221,7 +200,8 @@ class TrafficController:
         self._cf.disconnected.add_callback(self._disconnected)
         self._cf.connection_failed.add_callback(self._connection_failed)
         self._cf.connection_lost.add_callback(self._connection_lost)
-        # self._cf.console.receivedChar.add_callback(self._console_incoming) #print debug messages from Crazyflie
+        self._cf.param.all_updated.add_callback(self._all_updated)
+        self._cf.console.receivedChar.add_callback(self._console_incoming) #print debug messages from Crazyflie
 
         print("Connecting to " + self.uri)
         self._cf.open_link(self.uri)
@@ -230,7 +210,7 @@ class TrafficController:
         print("CF {} DEBUG:".format( self.uri[-2:] ),console_text, end='')
 
     def _setup_logging(self):
-        print("Setting up logging")
+        # print("Setting up logging")
         self._log_conf = LogConfig(name='Tower', period_in_ms=100)
         self._log_conf.add_variable('app.state', 'uint8_t')
         self._log_conf.add_variable('app.prgr', 'float')
@@ -246,7 +226,7 @@ class TrafficController:
 
     def _log_data(self, timestamp, data, logconf):
         self.copter_state = data['app.state']
-        
+
         if self.copter_state != self.STATE_WAIT_FOR_TAKE_OFF:
             self._pre_state_taking_off_end_time = 0
 
@@ -407,7 +387,6 @@ class Tower(TowerBase):
         if missing > 0:
             print("Trying to prepare", missing, "copter(s)")
             best_controllers = self.find_best_controllers()
-            # print("best_controllers:",best_controllers)
             for best_controller in best_controllers[:missing]:
                 if best_controller:
                     print("Preparing " + best_controller.uri)
@@ -603,8 +582,15 @@ class SyncTower(TowerBase):
 
 
 uris = [
-    'radio://0/40/2M/E7E7E7E704',
-    'radio://0/40/2M/E7E7E7E701'
+    'radio://0/10/2M/E7E7E7E701',
+    'radio://0/10/2M/E7E7E7E702',
+    'radio://0/10/2M/E7E7E7E703',
+    'radio://0/10/2M/E7E7E7E704',
+    'radio://0/10/2M/E7E7E7E705',
+    'radio://0/10/2M/E7E7E7E706',
+    'radio://0/10/2M/E7E7E7E707',
+    'radio://0/10/2M/E7E7E7E708',
+    'radio://0/10/2M/E7E7E7E709'
 ]
 
 count = 1
