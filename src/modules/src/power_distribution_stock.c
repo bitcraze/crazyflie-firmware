@@ -33,10 +33,7 @@
 #include "math3d.h"
 #include "autoconf.h"
 #include "config.h" // Important, since this defines QUAD_FORMATION_X
-// 0 - disable
-// 1 - individual motor power
-// 2 - all motors use m1 variable setting
-static bool motorSetEnable = false;
+
 static uint8_t saturationStatus = 0;
 
 enum saturationBits
@@ -81,6 +78,7 @@ bool powerDistributionTest(void)
 
 static void powerDistributionLegacy(motors_thrust_t* motorPower, const control_t *control)
 {
+  motorPower->mode = motorsThrustModePWM;
   #ifdef QUAD_FORMATION_X
     int16_t r = control->roll / 2.0f;
     int16_t p = control->pitch / 2.0f;
@@ -113,7 +111,7 @@ static void powerDistributionLegacy(motors_thrust_t* motorPower, const control_t
   }
 }
 
-static void powerDistributionForceTorque(motors_thrust_t* motorPower, const control_t *control)
+static void powerDistributionForceTorque(motors_thrust_t* motorPower, const control_t *control, float maxThrust)
 {
   // On CF2, thrust is mapped 65536 <==> 60 grams
   thrust = control->thrustSI;
@@ -212,7 +210,6 @@ static void powerDistributionForceTorque(motors_thrust_t* motorPower, const cont
   // for CF2, motorratio directly maps to thrust (not rpm etc.)
   // Thus, we only need to scale the values here
 
-  const float maxThrustInGram = motorsGetMaxThrust(); // g
 
 #if 0
   const float maxThrust = maxThrustInGram * 9.81f / 1000.0f; // N
@@ -247,44 +244,36 @@ static void powerDistributionForceTorque(motors_thrust_t* motorPower, const cont
 
   // collective-thrust saturation: skip for now
 #endif
-  for (int i = 0; i < 4; ++i) {
-    float forceInGrams = clamp(motorForce[i] / 9.81f * 1000.0f, 0, maxThrustInGram);
-    motorsSetThrust(i, forceInGrams);
-  }
+
+  motorPower->mode = motorsThrustModeForce;
+  motorPower->f1 = clamp(motorForce[0] / 9.81f * 1000.0f, 0, maxThrust);
+  motorPower->f2 = clamp(motorForce[1] / 9.81f * 1000.0f, 0, maxThrust);
+  motorPower->f3 = clamp(motorForce[2] / 9.81f * 1000.0f, 0, maxThrust);
+  motorPower->f4 = clamp(motorForce[3] / 9.81f * 1000.0f, 0, maxThrust);
 }
 
-static void powerDistributionForce(motors_thrust_t* motorPower, const control_t *control)
+static void powerDistributionForce(motors_thrust_t* motorPower, const control_t *control, float maxThrust)
 {
-  const float maxThrustInGram = motorsGetMaxThrust(); // g
-  for (int i = 0; i < 4; ++i) {
-    float forceInGrams = control->normalizedForces[i] * maxThrustInGram;
-    motorsSetThrust(i, forceInGrams);
-  }
+  motorPower->mode = motorsThrustModeForce;
+  motorPower->f1 = control->normalizedForces[0] * maxThrust;
+  motorPower->f2 = control->normalizedForces[1] * maxThrust;
+  motorPower->f3 = control->normalizedForces[2] * maxThrust;
+  motorPower->f4 = control->normalizedForces[3] * maxThrust;
 }
 
-void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
+void powerDistribution(motors_thrust_t* motorPower, const control_t *control, float maxThrust)
 {
-  if (motorSetEnable)
+  switch (control->controlMode)
   {
-    motorsSetRatio(MOTOR_M1, motorPowerSet.m1);
-    motorsSetRatio(MOTOR_M2, motorPowerSet.m2);
-    motorsSetRatio(MOTOR_M3, motorPowerSet.m3);
-    motorsSetRatio(MOTOR_M4, motorPowerSet.m4);
-  } else {
-
-    switch (control->controlMode)
-    {
-      case controlModeLegacy:
-        powerDistributionLegacy(motorPower, control);
-        break;
-      case controlModeForceTorque:
-        powerDistributionForceTorque(motorPower, control);
-        break;
-      case controlModeForce:
-        powerDistributionForce(motorPower, control);
-        break;
-    }
-
+    case controlModeLegacy:
+      powerDistributionLegacy(motorPower, control);
+      break;
+    case controlModeForceTorque:
+      powerDistributionForceTorque(motorPower, control, maxThrust);
+      break;
+    case controlModeForce:
+      powerDistributionForce(motorPower, control, maxThrust);
+      break;
   }
 }
 

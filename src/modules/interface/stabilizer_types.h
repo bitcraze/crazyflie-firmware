@@ -191,11 +191,27 @@ typedef struct control_s {
   control_mode_t controlMode;
 } control_t;
 
+typedef enum motors_thrust_mode_e {
+  motorsThrustModePWM    = 0,
+  motorsThrustModeForce  = 1,
+} motors_thrust_mode_t;
+
 typedef struct motors_thrust_s {
-  uint16_t m1;  // PWM ratio
-  uint16_t m2;  // PWM ratio
-  uint16_t m3;  // PWM ratio
-  uint16_t m4;  // PWM ratio
+  union {
+    struct {
+      uint16_t m1;  // PWM ratio
+      uint16_t m2;  // PWM ratio
+      uint16_t m3;  // PWM ratio
+      uint16_t m4;  // PWM ratio
+    };
+    struct {
+      float f1;  // force in grams
+      float f2;  // force in grams
+      float f3;  // force in grams
+      float f4;  // force in grams
+    };
+  };
+  motors_thrust_mode_t mode;
 } motors_thrust_t;
 
 typedef enum mode_e {

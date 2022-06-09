@@ -13,7 +13,7 @@ def test_controller_mellinger():
     control.pitch = 0
     control.yaw = 0
 
-    cffirmware.powerDistribution(motorPower, control)
+    cffirmware.powerDistribution(motorPower, control, 0)
     # control.thrust will be at a (tuned) hover-state
     assert motorPower.m1 == control.thrust
     assert motorPower.m2 == control.thrust

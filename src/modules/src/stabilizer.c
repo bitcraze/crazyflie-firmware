@@ -286,11 +286,19 @@ static void stabilizerTask(void* param)
       if (emergencyStop || (systemIsArmed() == false)) {
         motorsStop();
       } else {
-        powerDistribution(&motorPower, &control);
-        motorsSetRatio(MOTOR_M1, motorPower.m1);
-        motorsSetRatio(MOTOR_M2, motorPower.m2);
-        motorsSetRatio(MOTOR_M3, motorPower.m3);
-        motorsSetRatio(MOTOR_M4, motorPower.m4);
+        float maxThrust = motorsGetMaxThrust();
+        powerDistribution(&motorPower, &control, maxThrust);
+        if (motorPower.mode == motorsThrustModePWM) {
+          motorsSetRatio(MOTOR_M1, motorPower.m1);
+          motorsSetRatio(MOTOR_M2, motorPower.m2);
+          motorsSetRatio(MOTOR_M3, motorPower.m3);
+          motorsSetRatio(MOTOR_M4, motorPower.m4);
+        } else if (motorPower.mode == motorsThrustModeForce) {
+          motorsSetThrust(MOTOR_M1, motorPower.f1);
+          motorsSetThrust(MOTOR_M2, motorPower.f2);
+          motorsSetThrust(MOTOR_M3, motorPower.f3);
+          motorsSetThrust(MOTOR_M4, motorPower.f4);
+        }
       }
 
 #ifdef CONFIG_DECK_USD

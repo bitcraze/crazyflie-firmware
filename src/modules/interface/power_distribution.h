@@ -31,6 +31,6 @@
 
 void powerDistributionInit(void);
 bool powerDistributionTest(void);
-void powerDistribution(motors_thrust_t* motorPower, const control_t *control);
+void powerDistribution(motors_thrust_t* motorPower, const control_t *control, float maxThrust);
 
 #endif //__POWER_DISTRIBUTION_H__
