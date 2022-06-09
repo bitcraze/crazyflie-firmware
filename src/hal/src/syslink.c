@@ -35,6 +35,7 @@
 #include "semphr.h"
 
 #include "config.h"
+#include "autoconf.h"
 #include "debug.h"
 #include "syslink.h"
 #include "radiolink.h"
@@ -45,7 +46,7 @@
 #include "static_mem.h"
 #include "system.h"
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 #include "uart2.h"
 #endif
 
@@ -70,7 +71,7 @@ static void syslinkTask(void *param)
   }
 }
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 
 STATIC_MEM_TASK_ALLOC(uart2Task, UART2_TASK_STACKSIZE);
 
@@ -126,8 +127,8 @@ void syslinkInit()
 
   STATIC_MEM_TASK_CREATE(syslinkTask, syslinkTask, SYSLINK_TASK_NAME, NULL, SYSLINK_TASK_PRI);
 
-  #ifdef UART2_LINK_COMM
-  uart2Init(512000);
+  #ifdef CONFIG_CRTP_OVER_UART2
+  uart2Init(CONFIG_CRTP_OVER_UART2_BAUDRATE);
   STATIC_MEM_TASK_CREATE(uart2Task, uart2Task, UART2_TASK_NAME, NULL, UART2_TASK_PRI);
   #endif
 
@@ -171,7 +172,7 @@ int syslinkSendPacket(SyslinkPacket *slp)
   sendBuffer[dataSize-2] = cksum[0];
   sendBuffer[dataSize-1] = cksum[1];
 
-  #ifdef UART2_LINK_COMM
+  #ifdef CONFIG_CRTP_OVER_UART2
   uint8_t groupType;
   groupType = slp->type & SYSLINK_GROUP_MASK;
   switch (groupType)
