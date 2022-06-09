@@ -28,8 +28,9 @@
 
 #include <stdbool.h>
 #include "eprintf.h"
+#include "autoconf.h"
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 #include "syslink.h"
 #endif
 
@@ -95,7 +96,7 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data);
  */
 int uart2Putchar(int ch);
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 
 /**
  * Get data from rx queue. Blocks until data is available.
