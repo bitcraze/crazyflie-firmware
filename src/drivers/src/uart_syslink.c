@@ -36,6 +36,7 @@
 #include "queue.h"
 
 #include "config.h"
+#include "autoconf.h"
 #include "uart_syslink.h"
 #include "crtp.h"
 #include "cfassert.h"
@@ -44,7 +45,6 @@
 #include "queuemonitor.h"
 #include "static_mem.h"
 
-#define CONFIG_SYSLINK_RX_DMA
 
 #define UARTSLK_DATA_TIMEOUT_MS 1000
 #define UARTSLK_DATA_TIMEOUT_TICKS (UARTSLK_DATA_TIMEOUT_MS / portTICK_RATE_MS)
@@ -161,24 +161,24 @@ void uartslkInit(void)
   NVIC_InitTypeDef NVIC_InitStructure;
   EXTI_InitTypeDef extiInit;
 
-  /* Enable GPIO and USART clock */
+  // Enable GPIO and USART clock
   RCC_AHB1PeriphClockCmd(UARTSLK_GPIO_PERIF, ENABLE);
   ENABLE_UARTSLK_RCC(UARTSLK_PERIF, ENABLE);
 
-  /* Configure USART Rx as input floating */
+  // Configure USART Rx as input floating
   GPIO_InitStructure.GPIO_Pin   = UARTSLK_GPIO_RX_PIN;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(UARTSLK_GPIO_PORT, &GPIO_InitStructure);
 
-  /* Configure USART Tx as alternate function */
+  // Configure USART Tx as alternate function
   GPIO_InitStructure.GPIO_Pin   = UARTSLK_GPIO_TX_PIN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
   GPIO_Init(UARTSLK_GPIO_PORT, &GPIO_InitStructure);
 
-  //Map uartslk to alternate functions
+  // Map uartslk to alternate functions
   GPIO_PinAFConfig(UARTSLK_GPIO_PORT, UARTSLK_GPIO_AF_TX_PIN, UARTSLK_GPIO_AF_TX);
   GPIO_PinAFConfig(UARTSLK_GPIO_PORT, UARTSLK_GPIO_AF_RX_PIN, UARTSLK_GPIO_AF_RX);
 
@@ -206,7 +206,7 @@ void uartslkInit(void)
 
   USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, ENABLE);
 
-  //Setting up TXEN pin (NRF flow control)
+  // Setting up TXEN pin (NRF flow control)
   RCC_AHB1PeriphClockCmd(UARTSLK_TXEN_PERIF, ENABLE);
 
   bzero(&GPIO_InitStructure, sizeof(GPIO_InitStructure));
@@ -302,11 +302,11 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
     DMA_Init(UARTSLK_DMA_TX_STREAM, &DMA_InitStructureShareTX);
     // Enable the Transfer Complete interrupt
     DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, ENABLE);
-    /* Enable USART DMA TX Requests */
+    // Enable USART DMA TX Requests
     USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Tx, ENABLE);
-    /* Clear transfer complete */
+    // Clear transfer complete
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
-    /* Enable DMA USART TX Stream */
+    // Enable DMA USART TX Stream
     DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
     xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
     xSemaphoreGive(uartBusy);
@@ -341,9 +341,9 @@ static void uartslkResumeDma()
     UARTSLK_DMA_TX_STREAM->M0AR = (uint32_t)&dmaTXBuffer[initialDMACount - remainingDMACount];
     // Enable the Transfer Complete interrupt
     DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, ENABLE);
-    /* Clear transfer complete */
+    // Clear transfer complete
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
-    /* Enable DMA USART TX Stream */
+    // Enable DMA USART TX Stream
     DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
     dmaIsPaused = false;
   }
@@ -370,17 +370,17 @@ static void uartslkReceiveDMA(uint32_t size)
   {
     // Wait for DMA to be free
     while(DMA_GetCmdStatus(UARTSLK_DMA_RX_STREAM) != DISABLE);
-    // Init new DMA stream
-    UARTSLK_DMA_RX_STREAM->NDTR = size; // load number of bytes to be transferred
+    // Reload new DMA stream by loading number of bytes to be transferred
+    UARTSLK_DMA_RX_STREAM->NDTR = size;
     // Enable the Transfer Complete interrupt
     DMA_ITConfig(UARTSLK_DMA_RX_STREAM, DMA_IT_TC, ENABLE);
-    /* Enable USART DMA RX Requests */
+    // Enable USART DMA RX Requests
     USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Rx, ENABLE);
-    /* Clear transfer complete */
+    // Clear transfer complete
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
-    /* Disable USART RX interrupt */
+    // Disable USART RX interrupt
     USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, DISABLE);
-    /* Enable DMA USART RX Stream */
+    // Enable DMA USART RX Stream
     DMA_Cmd(UARTSLK_DMA_RX_STREAM, ENABLE);
   }
 }
@@ -394,7 +394,7 @@ static void uartslkDmaRXIsr(void)
   DMA_ClearITPendingBit(UARTSLK_DMA_RX_STREAM, UARTSLK_DMA_RX_FLAG_TCIF);
   USART_DMACmd(UARTSLK_TYPE, USART_DMAReq_Rx, DISABLE);
   DMA_Cmd(UARTSLK_DMA_RX_STREAM, DISABLE);
-  /* Enable USART RX interrupt */
+  // Enable USART RX interrupt
   USART_ITConfig(UARTSLK_TYPE, USART_IT_RXNE, ENABLE);
 
   for (int i = 0; i < slp.length; i++)
@@ -429,6 +429,7 @@ static void uartslkDmaRXIsr(void)
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
+#endif
 
 void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken)
 {
@@ -453,103 +454,24 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       cksum[0] += c;
       cksum[1] += cksum[0];
       dataIndex = 0;
+#ifdef CONFIG_SYSLINK_RX_DMA
       if (c > 1)
       {
         rxState = waitForFirstStart;
         // For efficiency receive using DMA
-        uartslkReceiveDMA(c + UARTSLK_CLKSUM_SIZE);
+        uartslkReceiveDMA(slp.length + UARTSLK_CLKSUM_SIZE);
       }
       else if (c == 1)
       {
         rxState = waitForData;
       }
-      else
+      else // zero length
       {
         rxState = waitForChksum1;
       }
-    }
-    else
-    {
-      rxState = waitForFirstStart;
-    }
-    break;
-  case waitForData:
-    slp.data[dataIndex] = c;
-    cksum[0] += c;
-    cksum[1] += cksum[0];
-    dataIndex++;
-    if (dataIndex == slp.length)
-    {
-      rxState = waitForChksum1;
-    }
-    break;
-  case waitForChksum1:
-    if (cksum[0] == c)
-    {
-      rxState = waitForChksum2;
-    }
-    else
-    {
-      rxState = waitForFirstStart; //Checksum error
-      if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
-      {
-        // Only assert if debugger is not connected
-        ASSERT(0);
-      }
-    }
-    break;
-  case waitForChksum2:
-    if (cksum[1] == c)
-    {
-      // Post the packet to the queue if there's room
-      if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
-      {
-        xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
-      }
-      else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
-      {
-        // Only assert if debugger is not connected
-        ASSERT(0); // Queue overflow
-      }
-    }
-    else
-    {
-      rxState = waitForFirstStart; //Checksum error
-      ASSERT(0);
-    }
-    rxState = waitForFirstStart;
-    break;
-  default:
-    ASSERT(0);
-    break;
-  }
-}
 #else
-void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken)
-{
-  switch (rxState)
-  {
-  case waitForFirstStart:
-    rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
-    break;
-  case waitForSecondStart:
-    rxState = (c == SYSLINK_START_BYTE2) ? waitForType : waitForFirstStart;
-    break;
-  case waitForType:
-    cksum[0] = c;
-    cksum[1] = c;
-    slp.type = c;
-    rxState = waitForLength;
-    break;
-  case waitForLength:
-    packetLength = c;
-    if (c <= SYSLINK_MTU)
-    {
-      slp.length = c;
-      cksum[0] += c;
-      cksum[1] += cksum[0];
-      dataIndex = 0;
       rxState = (c > 0) ? waitForData : waitForChksum1;
+#endif
     }
     else
     {
@@ -607,14 +529,13 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     break;
   }
 }
-#endif
 
 void uartslkIsr(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   // the following if statement replaces:
-  //   if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_RXNE) == SET)
+  // if (USART_GetITStatus(UARTSLK_TYPE, USART_IT_RXNE) == SET)
   // we do this check as fast as possible to minimize the chance of an overrun,
   // which occasionally cause problems and cause packet loss at high CPU usage
   if ((UARTSLK_TYPE->SR & (1<<5)) != 0) // if the RXNE interrupt has occurred
@@ -669,12 +590,9 @@ void __attribute__((used)) EXTI4_Callback(void)
   uartslkTxenFlowctrlIsr();
 }
 
-#include "led.h"
 void __attribute__((used)) USART6_IRQHandler(void)
 {
-//  ledSet(LED_BLUE_L, 1);
   uartslkIsr();
-//  ledSet(LED_BLUE_L, 0);
 }
 
 void __attribute__((used)) DMA2_Stream7_IRQHandler(void)
@@ -685,10 +603,7 @@ void __attribute__((used)) DMA2_Stream7_IRQHandler(void)
 #ifdef CONFIG_SYSLINK_RX_DMA
 void __attribute__((used)) DMA2_Stream1_IRQHandler(void)
 {
-  ledSet(LED_BLUE_L, 1);
   uartslkDmaRXIsr();
-  ledSet(LED_BLUE_L, 0);
-
 }
 #endif
 
