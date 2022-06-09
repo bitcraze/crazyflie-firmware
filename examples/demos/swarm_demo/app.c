@@ -249,7 +249,7 @@ static void appTimer(xTimerHandle timer) {
   if (isBatLow()) {
     terminateTrajectoryAndLand = true;
   }
-  
+
   switch(state) {
     case STATE_IDLE:
       DEBUG_PRINT("Let's go! Waiting for position lock...\n");
