@@ -46,11 +46,6 @@ TODO:
 #include "math3d.h"
 #include "controller_lee.h"
 
-#include "usec_time.h"
-
-#include "FreeRTOS.h"
-#include "task.h"
-
 #define GRAVITY_MAGNITUDE (9.81f)
 
 static float g_vehicleMass = 0.033; // TODO: should be CF global for other modules
@@ -82,7 +77,7 @@ static struct vec omega;
 static struct vec omega_r;
 static struct vec u;
 
-static uint32_t ticks;
+// static uint32_t ticks;
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
   return mkvec(
@@ -117,7 +112,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     return;
   }
 
-  uint64_t startTime = usecTimestamp();
+  // uint64_t startTime = usecTimestamp();
 
   float dt = (float)(1.0f/ATTITUDE_RATE);
 
@@ -244,7 +239,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   control->torque[1] = u.y;
   control->torque[2] = u.z;
 
-  ticks = usecTimestamp() - startTime;
+  // ticks = usecTimestamp() - startTime;
 }
 
 PARAM_GROUP_START(ctrlLee)
@@ -310,6 +305,6 @@ LOG_ADD(LOG_FLOAT, omegarx, &omega_r.x)
 LOG_ADD(LOG_FLOAT, omegary, &omega_r.y)
 LOG_ADD(LOG_FLOAT, omegarz, &omega_r.z)
 
-LOG_ADD(LOG_UINT32, ticks, &ticks)
+// LOG_ADD(LOG_UINT32, ticks, &ticks)
 
 LOG_GROUP_STOP(ctrlLee)
