@@ -14,7 +14,7 @@
 #include "ledseq.h"
 #include "log.h"
 #include "param.h"
-#include "sitaw.h"
+#include "supervisor.h"
 #include "controller.h"
 #include "ledseq.h"
 #include "pptraj.h"
@@ -179,11 +179,6 @@ static bool isLighthouseAvailable() { return logGetFloat(logIdlighthouseEstBs0Rt
 static void enableMellingerController() { paramSetInt(paramIdStabilizerController, ControllerTypeMellinger); }
 #endif
 static void enableHighlevelCommander() { paramSetInt(paramIdCommanderEnHighLevel, 1); }
-static void useCrossingBeamPositioningMethod() { paramSetInt(paramIdLighthouseMethod, 0); }
-
-static void setupLighthouse() {
-  useCrossingBeamPositioningMethod();
-}
 
 static void defineTrajectory() {
   const uint32_t polyCount = sizeof(sequence) / sizeof(struct poly4d);
@@ -228,7 +223,6 @@ void appMain() {
     enableMellingerController();
   #endif
 
-  setupLighthouse();
   enableHighlevelCommander();
   defineTrajectory();
   defineLedSequence();
@@ -242,7 +236,7 @@ static void appTimer(xTimerHandle timer) {
   now = xTaskGetTickCount();
   uint32_t delta = now - previous;
 
-  if(sitAwTuDetected()) {
+  if(supervisorIsTumbled()) {
     state = STATE_CRASHED;
   }
 
