@@ -64,7 +64,7 @@ menu "Motor configuration"
 
 choice
     prompt "ESC protocol"
-    default MOTORS_ESC_PROTOCOL_STANDARD_PWM
+    default MOTORS_ESC_PROTOCOL_ONESHOT125
 
 	config MOTORS_ESC_PROTOCOL_STANDARD_PWM
 	    bool "Standard PWM"
