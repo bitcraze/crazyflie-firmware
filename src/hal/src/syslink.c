@@ -33,6 +33,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "timers.h"
 
 #include "config.h"
 #include "autoconf.h"
@@ -45,6 +46,7 @@
 #include "ow.h"
 #include "static_mem.h"
 #include "system.h"
+#include "param.h"
 
 #ifdef CONFIG_CRTP_OVER_UART2
 #include "uart2.h"
@@ -54,6 +56,11 @@ static bool isInit = false;
 static uint8_t sendBuffer[SYSLINK_MTU + 6];
 
 static void syslinkRouteIncommingPacket(SyslinkPacket *slp);
+
+static xTimerHandle debugTimer;
+static uint8_t triggerDebugProbe;
+static void debugHandler(xTimerHandle timer);
+static void debugSyslinkReceive(SyslinkPacket *slp);
 
 static xSemaphoreHandle syslinkAccess;
 
@@ -107,6 +114,9 @@ static void syslinkRouteIncommingPacket(SyslinkPacket *slp)
     case SYSLINK_SYS_GROUP:
       systemSyslinkReceive(slp);
       break;
+    case SYSLINK_DEBUG_GROUP:
+      debugSyslinkReceive(slp);
+      break;
     default:
       DEBUG_PRINT("Unknown packet:%X.\n", slp->type);
       break;
@@ -131,6 +141,9 @@ void syslinkInit()
   uart2Init(CONFIG_CRTP_OVER_UART2_BAUDRATE);
   STATIC_MEM_TASK_CREATE(uart2Task, uart2Task, UART2_TASK_NAME, NULL, UART2_TASK_PRI);
   #endif
+
+  debugTimer = xTimerCreate( "syslinkTimer", M2T(1000), pdTRUE, NULL, debugHandler );
+  xTimerStart(debugTimer, M2T(1000));
 
   isInit = true;
 }
@@ -198,3 +211,32 @@ int syslinkSendPacket(SyslinkPacket *slp)
 
   return 0;
 }
+
+static void debugHandler(xTimerHandle timer) {
+  static SyslinkPacket txPacket;
+
+  if (triggerDebugProbe) {
+    triggerDebugProbe = 0;
+
+    txPacket.type = SYSLINK_DEBUG_PROBE;
+    txPacket.length = 0;
+    syslinkSendPacket(&txPacket);
+  }
+}
+
+static void debugSyslinkReceive(SyslinkPacket *slp) {
+  if (slp->type == SYSLINK_DEBUG_PROBE) {
+    DEBUG_PRINT("Syslink debug probe:\n");
+    DEBUG_PRINT("Address received: %d\n", slp->data[0]);
+    DEBUG_PRINT("Chan received: %d\n", slp->data[1]);
+    DEBUG_PRINT("Rate received: %d\n", slp->data[2]);
+    DEBUG_PRINT("Dropped: %d\n", slp->data[3]);
+  }
+}
+
+PARAM_GROUP_START(syslink)
+/**
+ * @brief Trigger syslink debug probe in the NRF by setting to 1
+ */
+PARAM_ADD(PARAM_UINT8, probe, &triggerDebugProbe)
+PARAM_GROUP_STOP(syslink)
