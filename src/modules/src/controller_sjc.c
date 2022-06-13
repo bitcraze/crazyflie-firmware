@@ -59,7 +59,7 @@ static uint32_t ticks;
 
 static uint8_t trigReset;
 
-static float g_vehicleMass = 0.028; // TODO: should be CF global for other modules
+static float g_vehicleMass = 0.032; // TODO: should be CF global for other modules
 
 // Attitude P on omega
 static struct vec K = {0.0005, 0.0005, 0.001};

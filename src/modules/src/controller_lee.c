@@ -36,7 +36,6 @@ CDC 2010
 TODO:
   * Switch position controller
   * consider Omega_d dot (currently assumes this is zero)
-
 */
 
 #include <math.h>
@@ -48,7 +47,7 @@ TODO:
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
-static float g_vehicleMass = 0.028; // TODO: should be CF global for other modules
+static float g_vehicleMass = 0.031; // TODO: should be CF global for other modules
 
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
@@ -73,6 +72,7 @@ static struct vec Komega = {0.004, 0.004, 0.004};
 static struct vec rpy;
 static struct vec rpy_des;
 static struct vec qr;
+static struct mat33 R_des;
 static struct vec omega;
 static struct vec omega_r;
 static struct vec u;
@@ -115,7 +115,9 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   // uint64_t startTime = usecTimestamp();
 
   float dt = (float)(1.0f/ATTITUDE_RATE);
-
+  // Desired Jerk and snap for now are zeros vector
+  struct vec desJerk = vzero();
+  // struct vec dessnap = vzero();
   // Address inconsistency in firmware where we need to compute our own desired yaw angle
   // Rate-controlled YAW is moving YAW angle setpoint
   float desiredYaw = 0; //rad
@@ -128,9 +130,6 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     rpy_des = quat2rpy(setpoint_quat);
     desiredYaw = rpy_des.z;
   }
-
-  // qr: Desired/reference angles in rad
-  // struct vec qr;
 
   // Position controller
   if (   setpoint->mode.x == modeAbs
@@ -145,26 +144,44 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -Kpos_P_limit, Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -Kpos_D_limit, Kpos_D_limit);
-    i_error_pos = vclampscl(vadd(i_error_pos, vscl(dt, pos_e)), -Kpos_I_limit, Kpos_I_limit);
 
-    struct vec F_d = vscl(g_vehicleMass, vadd4(
+    struct vec F_d = vadd3(
       acc_d,
       veltmul(Kpos_D, vel_e),
-      veltmul(Kpos_P, pos_e),
-      veltmul(Kpos_I, i_error_pos)));
+      veltmul(Kpos_P, pos_e));
+    
+    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+    struct mat33 R = quat2rotmat(q);
 
-    control->thrustSI = vmag(F_d);
+    control->thrustSI = g_vehicleMass*vdot(F_d , mcolumn(R, 2));
     // Reset the accumulated error while on the ground
     if (control->thrustSI < 0.01f) {
       controllerLeeReset();
     }
 
     // Use current yaw instead of desired yaw for roll/pitch
-    float yaw = radians(state->attitude.yaw);
-    qr = mkvec(
-      asinf((F_d.x * sinf(yaw) - F_d.y * cosf(yaw)) / control->thrustSI),
-      atanf((F_d.x * cosf(yaw) + F_d.y * sinf(yaw)) / F_d.z),
-      desiredYaw);
+    // float yaw = radians(state->attitude.yaw);
+  // Compute Desired Rotation matrix
+    float normFd = vmag(F_d);
+
+    struct vec xdes = vbasis(0);
+    struct vec ydes = vbasis(1);
+    struct vec zdes = vbasis(2);
+   
+    if (normFd > 0) {
+      zdes = vnormalize(F_d);
+    } 
+    struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
+    struct vec zcrossx = vcross(zdes, xcdes);
+    float normZX = vmag(zcrossx);
+
+    if (normZX > 0) {
+      ydes = vnormalize(zcrossx);
+    } 
+    xdes = vcross(ydes, zdes);
+    
+    R_des = mcolumns(xdes, ydes, zdes);
+
   } else {
     if (setpoint->mode.z == modeDisable) {
       if (setpoint->thrust < 1000) {
@@ -190,15 +207,18 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   // Attitude controller
 
   // current rotation [R]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  // struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  rpy = mkvec(
+    radians(state->attitude.roll),
+    radians(-state->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
+    radians(state->attitude.yaw));
+  struct quat q = rpy2quat(rpy);
   struct mat33 R = quat2rotmat(q);
 
   rpy = quat2rpy(q);
 
   // desired rotation [Rdes]
-  struct quat q_des = rpy2quat(qr);
-  struct mat33 R_des = quat2rotmat(q_des);
-
+  struct quat q_des = mat2quat(R_des);
   rpy_des = quat2rpy(q_des);
 
   // rotation error
@@ -212,23 +232,31 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     radians(sensors->gyro.y),
     radians(sensors->gyro.z));
 
-  struct vec omega_des = mkvec(
-    radians(setpoint->attitudeRate.roll),
-    radians(setpoint->attitudeRate.pitch),
-    radians(setpoint->attitudeRate.yaw));
+  // Compute desired omega
+  struct vec xdes = mcolumn(R_des, 0);
+  struct vec ydes = mcolumn(R_des, 1);
+  struct vec zdes = mcolumn(R_des, 2);
+  struct vec hw = vzero();
+
+  if (control->thrustSI != 0) {
+    struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
+    hw = vscl(g_vehicleMass/control->thrustSI, tmp);
+  }
+
+  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), 0);
 
   omega_r = mvmul(mmul(mtranspose(R), R_des), omega_des);
 
   struct vec omega_error = vsub(omega, omega_r);
+  
+
 
   // compute moments
   // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  u = vadd4(
+  u = vadd3(
     vneg(veltmul(KR, eR)),
     vneg(veltmul(Komega, omega_error)),
-    vcross(omega, veltmul(J, omega)),
-    vneg( veltmul(J, vcross(omega, omega_r)))
-    );
+    vcross(omega, veltmul(J, omega)));
 
   // if (enableNN > 1) {
   //   u = vsub(u, tau_a);
