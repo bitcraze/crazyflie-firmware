@@ -48,7 +48,7 @@ TODO:
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
-static float g_vehicleMass = 0.033; // TODO: should be CF global for other modules
+static float g_vehicleMass = 0.028; // TODO: should be CF global for other modules
 
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
@@ -57,17 +57,17 @@ static float g_vehicleMass = 0.033; // TODO: should be CF global for other modul
 static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 
 // Position PID
-static struct vec Kpos_P = {6, 6, 6}; // Kp in paper
+static struct vec Kpos_P = {10, 10, 10}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {4, 4, 4}; // Kv in paper
+static struct vec Kpos_D = {5, 5, 5}; // Kv in paper
 static float Kpos_D_limit = 100;
 static struct vec Kpos_I = {0, 0, 0}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 
 // Attitude PID
-static struct vec KR = {10, 10, 10};
-static struct vec Komega = {0.0005, 0.0005, 0.001};
+static struct vec KR = {0.05, 0.05, 0.05};
+static struct vec Komega = {0.004, 0.004, 0.004};
 
 // Logging variables
 static struct vec rpy;
