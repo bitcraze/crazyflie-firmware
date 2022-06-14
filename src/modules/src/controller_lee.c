@@ -56,17 +56,17 @@ static float g_vehicleMass = 0.031; // TODO: should be CF global for other modul
 static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 
 // Position PID
-static struct vec Kpos_P = {10, 10, 10}; // Kp in paper
+static struct vec Kpos_P = {5.5, 5.5, 5.5}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {5, 5, 5}; // Kv in paper
+static struct vec Kpos_D = {3, 3, 3}; // Kv in paper
 static float Kpos_D_limit = 100;
 static struct vec Kpos_I = {0, 0, 0}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 
 // Attitude PID
-static struct vec KR = {0.05, 0.05, 0.05};
-static struct vec Komega = {0.004, 0.004, 0.004};
+static struct vec KR = {0.005, 0.005, 0.006};
+static struct vec Komega = {0.0009, 0.0009, 0.0012};
 
 // Logging variables
 static struct vec rpy;
@@ -150,19 +150,24 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
       veltmul(Kpos_D, vel_e),
       veltmul(Kpos_P, pos_e));
     
-    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-    struct mat33 R = quat2rotmat(q);
 
-    control->thrustSI = g_vehicleMass*vdot(F_d , mcolumn(R, 2));
+    rpy = mkvec(
+    radians(state->attitude.roll),
+    radians(-state->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
+    radians(state->attitude.yaw));
+   
+    struct quat q = rpy2quat(rpy);
+    struct mat33 R = quat2rotmat(q);
+    struct vec z  = vbasis(2);
+    control->thrustSI = g_vehicleMass*vdot(F_d , mvmul(R, z));
+  
     // Reset the accumulated error while on the ground
     if (control->thrustSI < 0.01f) {
       controllerLeeReset();
     }
 
-    // Use current yaw instead of desired yaw for roll/pitch
-    // float yaw = radians(state->attitude.yaw);
   // Compute Desired Rotation matrix
-    float normFd = vmag(F_d);
+    float normFd = control->thrustSI;
 
     struct vec xdes = vbasis(0);
     struct vec ydes = vbasis(1);
@@ -207,15 +212,13 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   // Attitude controller
 
   // current rotation [R]
-  // struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  rpy = mkvec(
+    rpy = mkvec(
     radians(state->attitude.roll),
     radians(-state->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
     radians(state->attitude.yaw));
+
   struct quat q = rpy2quat(rpy);
   struct mat33 R = quat2rotmat(q);
-
-  rpy = quat2rpy(q);
 
   // desired rotation [Rdes]
   struct quat q_des = mat2quat(R_des);
@@ -244,7 +247,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   }
 
   struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), 0);
-
+  
   omega_r = mvmul(mmul(mtranspose(R), R_des), omega_des);
 
   struct vec omega_error = vsub(omega, omega_r);
@@ -300,6 +303,8 @@ PARAM_ADD(PARAM_FLOAT, Kpos_Ix, &Kpos_I.x)
 PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &Kpos_I.y)
 PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &Kpos_I.z)
 PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &Kpos_I_limit)
+
+PARAM_ADD(PARAM_FLOAT, mass, &g_vehicleMass)
 PARAM_GROUP_STOP(ctrlLee)
 
 
