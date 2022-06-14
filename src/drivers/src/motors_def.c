@@ -224,6 +224,11 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP =
     .getCompare    = TIM_GetCapture2,
     .ocInit        = TIM_OC2Init,
     .preloadConfig = TIM_OC2PreloadConfig,
+    .DMA_stream    = DMA1_Stream6,
+    .DMA_Channel   = DMA_Channel_3,
+    .DMA_PerifAddr = (uint32_t)&TIM2->CCR2,
+    .TIM_DMASource = TIM_DMA_CC2,
+    .DMA_IRQChannel = DMA1_Stream6_IRQn,
 };
 
 // Bolt M2, PB11, TIM2_CH4, Brushless config
@@ -249,6 +254,12 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP =
     .getCompare    = TIM_GetCapture4,
     .ocInit        = TIM_OC4Init,
     .preloadConfig = TIM_OC4PreloadConfig,
+    .DMA_stream    = DMA1_Stream7,
+    .DMA_Channel   = DMA_Channel_3,
+    .DMA_PerifAddr = (uint32_t)&TIM2->CCR4,
+    .TIM_DMASource = TIM_DMA_CC4,
+    .DMA_IRQChannel = DMA1_Stream7_IRQn,
+
 };
 
 // Bolt M3, PA15, TIM2_CH1, Brushless config
@@ -274,6 +285,11 @@ static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP =
     .getCompare    = TIM_GetCapture1,
     .ocInit        = TIM_OC1Init,
     .preloadConfig = TIM_OC1PreloadConfig,
+    .DMA_stream    = DMA1_Stream5,
+    .DMA_Channel   = DMA_Channel_3,
+    .DMA_PerifAddr = (uint32_t)&TIM2->CCR1,
+    .TIM_DMASource = TIM_DMA_CC1,
+    .DMA_IRQChannel = DMA1_Stream5_IRQn,
 };
 
 // Bolt M4, PB9, TIM4_CH4, Brushless config
@@ -324,7 +340,11 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP =
     .getCompare    = TIM_GetCapture3,
     .ocInit        = TIM_OC3Init,
     .preloadConfig = TIM_OC3PreloadConfig,
-
+    .DMA_stream    = DMA1_Stream1,
+    .DMA_Channel   = DMA_Channel_3,
+    .DMA_PerifAddr = (uint32_t)&TIM2->CCR3,
+    .TIM_DMASource = TIM_DMA_CC3,
+    .DMA_IRQChannel = DMA1_Stream1_IRQn,
 };
 
 // CF21-BL M1, PA1, TIM2_CH2, Brushless config including DSHOT
