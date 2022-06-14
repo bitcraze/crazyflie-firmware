@@ -150,13 +150,8 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
       veltmul(Kpos_D, vel_e),
       veltmul(Kpos_P, pos_e));
     
-
-    rpy = mkvec(
-    radians(state->attitude.roll),
-    radians(-state->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
-    radians(state->attitude.yaw));
    
-    struct quat q = rpy2quat(rpy);
+    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
     struct mat33 R = quat2rotmat(q);
     struct vec z  = vbasis(2);
     control->thrustSI = g_vehicleMass*vdot(F_d , mvmul(R, z));
@@ -212,12 +207,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   // Attitude controller
 
   // current rotation [R]
-    rpy = mkvec(
-    radians(state->attitude.roll),
-    radians(-state->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
-    radians(state->attitude.yaw));
-
-  struct quat q = rpy2quat(rpy);
+  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
   struct mat33 R = quat2rotmat(q);
 
   // desired rotation [Rdes]
