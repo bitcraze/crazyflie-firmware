@@ -48,7 +48,7 @@ static platformConfig_t configs[] = {
     .deviceType = "CF21",
     .deviceTypeName = "Crazyflie 2.1",
     .sensorImplementation = SensorImplementation_bmi088_bmp388,
-    .physicalLayoutAntennasAreClose = false, // TA: TODO This looks wrong
+    .physicalLayoutAntennasAreClose = true,
     .motorMap = motorMapDefaultBrushed,
   },
   {
