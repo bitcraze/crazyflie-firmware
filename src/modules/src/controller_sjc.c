@@ -113,7 +113,7 @@ static struct vec qr;
 static struct vec q;
 static struct vec omega;
 static struct vec omega_r;
-
+static float thrustSI;
 static struct vec qrp;
 static struct vec qr_dot;
 
@@ -213,7 +213,7 @@ void controllerSJC(control_t *control, setpoint_t *setpoint,
         veltmul(Kpos_I, i_error_pos)));
 
       control->thrustSI = vmag(F_d);
-
+      thrustSI = control->thrustSI;
       // This is for delay compensation (idea #1)
       // replace by T_d by T = T_d + T_d dot / lambda
       float T_d_dot = (control->thrustSI - T_d_last) * POSITION_RATE;
@@ -404,6 +404,7 @@ PARAM_ADD(PARAM_UINT8, T_d_lambda, &T_d_lambda)
 PARAM_GROUP_STOP(ctrlSJC)
 
 LOG_GROUP_START(ctrlSJC)
+LOG_ADD(LOG_FLOAT, thrustSI, &thrustSI)
 LOG_ADD(LOG_FLOAT, torquex, &u.x)
 LOG_ADD(LOG_FLOAT, torquey, &u.y)
 LOG_ADD(LOG_FLOAT, torquez, &u.z)

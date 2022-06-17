@@ -47,8 +47,8 @@ TODO:
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
-static float g_vehicleMass = 0.031; // TODO: should be CF global for other modules
-
+static float g_vehicleMass = 0.034; // TODO: should be CF global for other modules
+static float thrustSI;
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
 // BA theses, Julian Foerster, ETHZ
@@ -56,17 +56,18 @@ static float g_vehicleMass = 0.031; // TODO: should be CF global for other modul
 static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 
 // Position PID
-static struct vec Kpos_P = {5.5, 5.5, 5.5}; // Kp in paper
+static struct vec Kpos_P = {20, 20, 20}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {3, 3, 3}; // Kv in paper
+static struct vec Kpos_D = {18, 18,18}; // Kv in paper
 static float Kpos_D_limit = 100;
 static struct vec Kpos_I = {0, 0, 0}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
-
+static struct vec p_error;
+static struct vec v_error;
 // Attitude PID
-static struct vec KR = {0.005, 0.005, 0.006};
-static struct vec Komega = {0.0009, 0.0009, 0.0012};
+static struct vec KR = {0.0055, 0.0055, 0.0055};
+static struct vec Komega = {0.0013, 0.0013, 0.0016};
 
 // Logging variables
 static struct vec rpy;
@@ -115,8 +116,6 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   // uint64_t startTime = usecTimestamp();
 
   float dt = (float)(1.0f/ATTITUDE_RATE);
-  // Desired Jerk and snap for now are zeros vector
-  struct vec desJerk = vzero();
   // struct vec dessnap = vzero();
   // Address inconsistency in firmware where we need to compute our own desired yaw angle
   // Rate-controlled YAW is moving YAW angle setpoint
@@ -145,6 +144,9 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -Kpos_P_limit, Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -Kpos_D_limit, Kpos_D_limit);
 
+    p_error = pos_e;
+    v_error = vel_e;
+
     struct vec F_d = vadd3(
       acc_d,
       veltmul(Kpos_D, vel_e),
@@ -155,7 +157,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     struct mat33 R = quat2rotmat(q);
     struct vec z  = vbasis(2);
     control->thrustSI = g_vehicleMass*vdot(F_d , mvmul(R, z));
-  
+    thrustSI = control->thrustSI;
     // Reset the accumulated error while on the ground
     if (control->thrustSI < 0.01f) {
       controllerLeeReset();
@@ -186,7 +188,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     if (setpoint->mode.z == modeDisable) {
       if (setpoint->thrust < 1000) {
           control->controlMode = controlModeForceTorque;
-          control->thrustSI = 0;
+          control->thrustSI  = 0;
           control->torque[0] = 0;
           control->torque[1] = 0;
           control->torque[2] = 0;
@@ -208,6 +210,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
 
   // current rotation [R]
   struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  rpy = quat2rpy(q);
   struct mat33 R = quat2rotmat(q);
 
   // desired rotation [Rdes]
@@ -230,6 +233,8 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   struct vec ydes = mcolumn(R_des, 1);
   struct vec zdes = mcolumn(R_des, 2);
   struct vec hw = vzero();
+  // Desired Jerk and snap for now are zeros vector
+  struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
 
   if (control->thrustSI != 0) {
     struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
@@ -264,7 +269,6 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
 }
 
 PARAM_GROUP_START(ctrlLee)
-// Attitude P
 PARAM_ADD(PARAM_FLOAT, KR_x, &KR.x)
 PARAM_ADD(PARAM_FLOAT, KR_y, &KR.y)
 PARAM_ADD(PARAM_FLOAT, KR_z, &KR.z)
@@ -299,6 +303,23 @@ PARAM_GROUP_STOP(ctrlLee)
 
 
 LOG_GROUP_START(ctrlLee)
+
+LOG_ADD(LOG_FLOAT, KR_x, &KR.x)
+LOG_ADD(LOG_FLOAT, KR_y, &KR.y)
+LOG_ADD(LOG_FLOAT, KR_z, &KR.z)
+LOG_ADD(LOG_FLOAT, Kw_x, &Komega.x)
+LOG_ADD(LOG_FLOAT, Kw_y, &Komega.y)
+LOG_ADD(LOG_FLOAT, Kw_z, &Komega.z)
+
+LOG_ADD(LOG_FLOAT,Kpos_Px, &Kpos_P.x)
+LOG_ADD(LOG_FLOAT,Kpos_Py, &Kpos_P.y)
+LOG_ADD(LOG_FLOAT,Kpos_Pz, &Kpos_P.z)
+LOG_ADD(LOG_FLOAT,Kpos_Dx, &Kpos_D.x)
+LOG_ADD(LOG_FLOAT,Kpos_Dy, &Kpos_D.y)
+LOG_ADD(LOG_FLOAT,Kpos_Dz, &Kpos_D.z)
+
+
+LOG_ADD(LOG_FLOAT, thrustSI, &thrustSI)
 LOG_ADD(LOG_FLOAT, torquex, &u.x)
 LOG_ADD(LOG_FLOAT, torquey, &u.y)
 LOG_ADD(LOG_FLOAT, torquez, &u.z)
@@ -314,9 +335,13 @@ LOG_ADD(LOG_FLOAT, rpydy, &rpy_des.y)
 LOG_ADD(LOG_FLOAT, rpydz, &rpy_des.z)
 
 // errors
-LOG_ADD(LOG_FLOAT, i_error_posx, &i_error_pos.x)
-LOG_ADD(LOG_FLOAT, i_error_posy, &i_error_pos.y)
-LOG_ADD(LOG_FLOAT, i_error_posz, &i_error_pos.z)
+LOG_ADD(LOG_FLOAT, error_posx, &p_error.x)
+LOG_ADD(LOG_FLOAT, error_posy, &p_error.y)
+LOG_ADD(LOG_FLOAT, error_posz, &p_error.z)
+
+LOG_ADD(LOG_FLOAT, error_velx, &v_error.x)
+LOG_ADD(LOG_FLOAT, error_vely, &v_error.y)
+LOG_ADD(LOG_FLOAT, error_velz, &v_error.z)
 
 // omega
 LOG_ADD(LOG_FLOAT, omegax, &omega.x)
