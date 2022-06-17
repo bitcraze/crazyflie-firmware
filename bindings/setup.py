@@ -9,6 +9,9 @@ include = [
     "src/hal/interface",
     "src/utils/interface/lighthouse",
     "src/utils/interface",
+    "build/include/generated",
+    "src/config",
+    "src/drivers/interface",
 ]
 
 fw_sources = [
@@ -23,6 +26,7 @@ fw_sources = [
     "src/utils/src/filter.c",
     "src/utils/src/num.c",
     "src/modules/src/controller_mellinger.c",
+    "src/modules/src/power_distribution_quadrotor.c",
 ]
 
 cffirmware = Extension(

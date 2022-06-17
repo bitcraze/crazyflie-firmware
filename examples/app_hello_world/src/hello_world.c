@@ -36,14 +36,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "headerInOtherDir.h"
-
+#define DEBUG_MODULE "HELLOWORLD"
 #include "debug.h"
 
-#define DEBUG_MODULE "HELLOWORLD"
 
-void appMain()
-{
+void appMain() {
   DEBUG_PRINT("Waiting for activation ...\n");
 
   while(1) {

@@ -10,3 +10,24 @@ config PM_AUTO_SHUTDOWN
         occured.
 
 endmenu
+
+menu "Communication"
+
+config CRTP_OVER_UART2
+    bool "Move CRTP communication to UART2 instead of over radio"
+    default n
+    help
+        The CRTP (Crazy Real Time Protocol) communication is normally
+        sent over the radio link (via Syslink). By enabling this the
+        communication will instead be sent over UART2 to communicate
+        with e.g. a companion computer instead.
+
+config CRTP_OVER_UART2_BAUDRATE
+    int "CRTP over UART2 baudrate"
+    depends on CRTP_OVER_UART2
+    range 9600 2000000
+    default 512000
+    help
+        Uart baudrate to be used.
+        
+endmenu

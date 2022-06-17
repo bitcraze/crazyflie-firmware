@@ -71,6 +71,7 @@
 #include "cfassert.h"
 #include "i2cdev.h"
 #include "autoconf.h"
+#include "vcp_esc_passthrough.h"
 #ifdef CONFIG_DECK_AI
   #include "cpxlink.h"
 #endif
@@ -85,6 +86,7 @@
 static bool selftestPassed;
 static bool armed = ARM_INIT;
 static bool forceArm;
+static uint8_t dumpAssertInfo = 0;
 static bool isInit;
 
 static char nrf_version[16];
@@ -184,6 +186,7 @@ void systemTask(void *arg)
   initUsecTimer();
   i2cdevInit(I2C3_DEV);
   i2cdevInit(I2C1_DEV);
+  passthroughInit();
 
   //Init the high-levels modules
   systemInit();
@@ -368,12 +371,12 @@ void systemSyslinkReceive(SyslinkPacket *slp)
 {
   if (slp->type == SYSLINK_SYS_NRF_VERSION)
   {
-    size_t len = slp->length - 2;
+    size_t len = slp->length - 1;
 
     if (sizeof(nrf_version) - 1 <=  len) {
       len = sizeof(nrf_version) - 1;
     }
-    memcpy(&nrf_version, &slp->data[0], len);
+    memcpy(&nrf_version, &slp->data[0], len );
     DEBUG_PRINT("NRF51 version: %s\n", nrf_version);
   }
 }
@@ -388,6 +391,11 @@ void vApplicationIdleHook( void )
   {
     tickOfLatestWatchdogReset = tickCount;
     watchdogReset();
+  }
+
+  if (dumpAssertInfo != 0) {
+    printAssertSnapshotData();
+    dumpAssertInfo = 0;
   }
 
   // Enter sleep mode. Does not work when debugging chip with SWD.
@@ -439,7 +447,12 @@ PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
  */
 PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
 
-PARAM_GROUP_STOP(sytem)
+/**
+ * @brief Set to nonzero to trigger dump of assert information to the log.
+ */
+PARAM_ADD(PARAM_UINT8, assertInfo, &dumpAssertInfo)
+
+PARAM_GROUP_STOP(system)
 
 /**
  *  System loggable variables to check different system states.

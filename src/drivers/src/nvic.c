@@ -26,8 +26,9 @@
 #include "exti.h"
 #include "led.h"
 #include "motors.h"
-#include "power_distribution.h"
 #include "cfassert.h"
+#include "usb_dcd_int.h"
+#include "usb_core.h"
 
 #include "uart1.h"
 #define UART_PRINT    uart1Printf
@@ -65,6 +66,20 @@ void DONT_DISCARD PendSV_Handler(void)
 {
 }
 #endif
+
+/**
+* @brief  STM32_USBF_OTG_ISR_Handler
+*         handles all USB Interrupts
+* @param  pdev: device instance
+* @retval status
+*/
+
+void  __attribute__((used)) OTG_FS_IRQHandler(void)
+{
+  extern USB_OTG_CORE_HANDLE USB_OTG_dev;
+
+  USBD_OTG_ISR_Handler(&USB_OTG_dev);
+}
 
 /**
   * @brief  This function handles NMI exception.
@@ -129,7 +144,7 @@ void DONT_DISCARD printHardFault(uint32_t* hardfaultArgs)
   UART_PRINT("DFSR = %x\n", (*((volatile unsigned int *)(0xE000ED30))));
   UART_PRINT("AFSR = %x\n", (*((volatile unsigned int *)(0xE000ED3C))));
 
-  powerStop();
+  motorsStop();
   ledShowFaultPattern();
 
   storeAssertHardfaultData(
@@ -151,7 +166,7 @@ void DONT_DISCARD MemManage_Handler(void)
 {
   /* Go to infinite loop when Memory Manage exception occurs */
   ledShowFaultPattern();
-  powerStop();
+  motorsStop();
 
   storeAssertTextData("MemManage");
   while (1)
@@ -164,7 +179,7 @@ void DONT_DISCARD MemManage_Handler(void)
 void DONT_DISCARD BusFault_Handler(void)
 {
   /* Go to infinite loop when Bus Fault exception occurs */
-  powerStop();
+  motorsStop();
   ledShowFaultPattern();
 
   storeAssertTextData("BusFault");
@@ -178,7 +193,7 @@ void DONT_DISCARD BusFault_Handler(void)
 void DONT_DISCARD UsageFault_Handler(void)
 {
   /* Go to infinite loop when Usage Fault exception occurs */
-  powerStop();
+  motorsStop();
   ledShowFaultPattern();
 
   storeAssertTextData("UsageFault");

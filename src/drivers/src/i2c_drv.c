@@ -570,6 +570,10 @@ static void i2cdrvEventIsrHandler(I2cDrv* i2c)
       {
         // Disable TXE to allow the buffer to flush and get BTF
         I2C_ITConfig(i2c->def->i2cPort, I2C_IT_BUF, DISABLE);
+        // If an instruction is not here an extra byte gets sent, don't know why...
+        // Is is most likely timing issue but STM32F405 I2C peripheral is bugged so
+        // this is the best solution so far.
+        __DMB();
       }
     }
   }
@@ -619,7 +623,7 @@ static void i2cdrvClearDMA(I2cDrv* i2c)
 
 static void i2cdrvDmaIsrHandler(I2cDrv* i2c)
 {
-  if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Tranasfer complete
+  if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Transfer complete
   {
     i2cdrvClearDMA(i2c);
     i2cNotifyClient(i2c);

@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_sai.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013  
+  * @version V1.8.0
+  * @date    04-November-2016  
   * @brief   This file provides firmware functions to manage the following 
   *          functionalities of the Serial Audio Interface (SAI):
   *           + Initialization and Configuration
@@ -52,7 +52,7 @@
           completely independent. The Clock generator is configured using RCC_SAIBlockACLKConfig() and 
           RCC_SAIBlockBCLKConfig() functions.
                   
-      (#) Each SAI Block A or B can be configured separetely : 
+      (#) Each SAI Block A or B can be configured separately : 
           (++) Program the Master clock divider, Audio mode, Protocol, Data Length, Clock Strobing Edge, 
                Synchronous mode, Output drive and FIFO Thresold using SAI_Init() function.   
                In case of master mode, program the Master clock divider (MCKDIV) using 
@@ -101,11 +101,11 @@
             (+@)  The number of slots should be even when bit FSDEF in the SAI_xFRCR is set.    
   
     @endverbatim  
-                                    
+
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -134,6 +134,9 @@
   * @brief SAI driver modules
   * @{
   */ 
+#if defined (STM32F40_41xxx) || defined (STM32F427_437xx) || defined (STM32F429_439xx) || \
+    defined (STM32F401xx) || defined (STM32F411xE) || defined (STM32F446xx) || defined (STM32F469_479xx) || \
+    defined (STM32F413_423xx)
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -183,11 +186,26 @@ void SAI_DeInit(SAI_TypeDef* SAIx)
 {
   /* Check the parameters */
   assert_param(IS_SAI_PERIPH(SAIx));
-
-  /* Enable SAI1 reset state */
-  RCC_APB2PeriphResetCmd(RCC_APB2Periph_SAI1, ENABLE);
-  /* Release SAI1 from reset state */
-  RCC_APB2PeriphResetCmd(RCC_APB2Periph_SAI1, DISABLE);  
+  
+  if(SAIx == SAI1)
+  {
+    /* Enable SAI1 reset state */
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SAI1, ENABLE);
+    /* Release SAI1 from reset state */
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SAI1, DISABLE); 
+  }
+  else
+  {
+#if defined(STM32F446xx)
+  if(SAIx == SAI2)
+    {
+      /* Enable SAI2 reset state */
+      RCC_APB2PeriphResetCmd(RCC_APB2Periph_SAI2, ENABLE);
+      /* Release SAI2 from reset state */
+      RCC_APB2PeriphResetCmd(RCC_APB2Periph_SAI2, DISABLE);   
+    }
+#endif /* STM32F446xx */
+  }
 }
 
 /**
@@ -216,6 +234,7 @@ void SAI_Init(SAI_Block_TypeDef* SAI_Block_x, SAI_InitTypeDef* SAI_InitStruct)
   assert_param(IS_SAI_BLOCK_FIRST_BIT(SAI_InitStruct->SAI_FirstBit));
   assert_param(IS_SAI_BLOCK_CLOCK_STROBING(SAI_InitStruct->SAI_ClockStrobing));
   assert_param(IS_SAI_BLOCK_SYNCHRO(SAI_InitStruct->SAI_Synchro));
+  assert_param(IS_SAI_BLOCK_SYNCEXT(SAI_InitStruct->SAI_SynchroExt));
   assert_param(IS_SAI_BLOCK_OUTPUT_DRIVE(SAI_InitStruct->SAI_OUTDRIV));
   assert_param(IS_SAI_BLOCK_NODIVIDER(SAI_InitStruct->SAI_NoDivider));
   assert_param(IS_SAI_BLOCK_MASTER_DIVIDER(SAI_InitStruct->SAI_MasterDivider));
@@ -240,8 +259,8 @@ void SAI_Init(SAI_Block_TypeDef* SAI_Block_x, SAI_InitTypeDef* SAI_InitStruct)
   tmpreg |= (uint32_t)(SAI_InitStruct->SAI_AudioMode     | SAI_InitStruct->SAI_Protocol  |
                        SAI_InitStruct->SAI_DataSize      | SAI_InitStruct->SAI_FirstBit  |  
                        SAI_InitStruct->SAI_ClockStrobing | SAI_InitStruct->SAI_Synchro   |  
-                       SAI_InitStruct->SAI_OUTDRIV       | SAI_InitStruct->SAI_NoDivider | 
-                       (uint32_t)((SAI_InitStruct->SAI_MasterDivider) << 20));
+                       SAI_InitStruct->SAI_OUTDRIV       | SAI_InitStruct->SAI_NoDivider |
+                       SAI_InitStruct->SAI_SynchroExt    | (uint32_t)((SAI_InitStruct->SAI_MasterDivider) << 20));
   /* Write to SAI_Block_x CR1 */
   SAI_Block_x->CR1 = tmpreg;
   
@@ -371,6 +390,8 @@ void SAI_StructInit(SAI_InitTypeDef* SAI_InitStruct)
   SAI_InitStruct->SAI_ClockStrobing = SAI_ClockStrobing_FallingEdge;
   /* Initialize the SAI_Synchro member */
   SAI_InitStruct->SAI_Synchro = SAI_Asynchronous;
+    /* Initialize the SAI_SynchroExt member */
+  SAI_InitStruct->SAI_SynchroExt = SAI_SyncExt_Disable;
   /* Initialize the SAI_OUTDRIV member */
   SAI_InitStruct->SAI_OUTDRIV = SAI_OutputDrive_Disabled;
   /* Initialize the SAI_NoDivider member */
@@ -470,14 +491,14 @@ void SAI_MonoModeConfig(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_Mono_StreoM
 }
 
 /**
-  * @brief  Configures the TRIState managment on data line for the selected SAI block.
+  * @brief  Configures the TRIState management on data line for the selected SAI block.
   * 
   * @note  This function has a meaning only when the SAI block is configured in transmitter 
   *      
   * @param  SAI_Block_x: where x can be A or B to select the SAI Block peripheral.
   * @param  SAI_TRIState: specifies the SAI block TRIState management.
   *          This parameter can be one of the following values:
-  *            @arg SAI_Output_NotReleased : SD output line is still drived by the SAI.
+  *            @arg SAI_Output_NotReleased : SD output line is still driven by the SAI.
   *            @arg SAI_Output_Released : SD output line is released (HI-Z)                       
   * @retval None
   */
@@ -504,9 +525,9 @@ void SAI_TRIStateConfig(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_TRIState)
   *          This parameter can be one of the following values:
   *            @arg SAI_NoCompanding : no companding algorithm set
   *            @arg SAI_ULaw_1CPL_Companding : Set U law (algorithm 1's complement representation)
-  *            @arg SAI_ALaw_1CPL_Companding : Set A law (algorithm 1's complement repesentation)  
+  *            @arg SAI_ALaw_1CPL_Companding : Set A law (algorithm 1's complement representation)  
   *            @arg SAI_ULaw_2CPL_Companding : Set U law (algorithm 2's complement representation)
-  *            @arg SAI_ALaw_2CPL_Companding : Set A law (algorithm 2's complement repesentation)  
+  *            @arg SAI_ALaw_2CPL_Companding : Set A law (algorithm 2's complement representation)  
   * @retval None
   */
 void SAI_CompandingModeConfig(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_CompandingMode)
@@ -597,6 +618,72 @@ void SAI_MuteFrameCounterConfig(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_Mut
   /* Set new Mute value */
   SAI_Block_x->CR2 |= (SAI_MuteCounter << 7);
 }
+#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) || \
+    defined(STM32F469_479xx) || defined(STM32F413_423xx) || defined(STM32F446xx)
+/**
+  * @brief  Configure SAI Block synchronization mode 
+  * @param  SAI_InitStruct: pointer to a SAI_InitTypeDef structure that
+  *         contains the configuration information for the specified SAI Block peripheral.
+  * @param  SAIx: To select the SAIx peripheral, where x can be the different instances
+  * @retval None 
+  */
+void SAI_BlockSynchroConfig(SAI_InitTypeDef* SAI_InitStruct, SAI_TypeDef* SAIx)
+{
+  uint32_t tmpregisterGCR = 0U;
+
+#if defined(STM32F446xx)  
+  /* This setting must be done with both audio block (A & B) disabled         */
+  switch(SAI_InitStruct->SAI_SynchroExt)
+  {
+  case SAI_SyncExt_Disable :
+    tmpregisterGCR = 0U;
+    break;
+  case SAI_SyncExt_OutBlockA_Enable :
+    tmpregisterGCR = SAI_GCR_SYNCOUT_0;
+    break;
+  case SAI_SyncExt_OutBlockB_Enable :
+    tmpregisterGCR = SAI_GCR_SYNCOUT_1;
+    break;
+  default:
+    break;
+  }
+
+  if(((SAI_InitStruct->SAI_Synchro) == SAI_Synchronous_Ext) && (SAIx == SAI1))
+  {
+    tmpregisterGCR |= SAI_GCR_SYNCIN_0;
+  }
+  
+  if(SAIx == SAI1)
+  {
+   SAI1->GCR = tmpregisterGCR;
+  }
+  else
+  {
+   SAI2->GCR = tmpregisterGCR; 
+  }
+
+#endif /* STM32F446xx */
+#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) || \
+    defined(STM32F469_479xx) || defined(STM32F413_423xx)
+  /* This setting must be done with both audio block (A & B) disabled         */
+  switch(SAI_InitStruct->SAI_SynchroExt)
+  {
+  case SAI_SyncExt_Disable :
+    tmpregisterGCR = 0U;
+    break;
+  case SAI_SyncExt_OutBlockA_Enable :
+    tmpregisterGCR = SAI_GCR_SYNCOUT_0;
+    break;
+  case SAI_SyncExt_OutBlockB_Enable :
+    tmpregisterGCR = SAI_GCR_SYNCOUT_1;
+    break;
+  default:
+    break;
+  }
+  SAI1->GCR = tmpregisterGCR;
+#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx || STM32F469_479xx || STM32F413_423xx */ 
+}
+#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx || STM32F469_479xx || STM32F413_423xx || STM32F446xx */
 
 /**
   * @brief  Reinitialize the FIFO pointer
@@ -1067,6 +1154,7 @@ uint32_t SAI_GetFIFOStatus(SAI_Block_TypeDef* SAI_Block_x)
 /**
   * @}
   */ 
+#endif /* STM32F40_41xxx || STM32F427_437xx || STM32F429_439xx || STM32F401xx || STM32F411xE || STM32F446xx || STM32F469_479xx */
 
 /**
   * @}

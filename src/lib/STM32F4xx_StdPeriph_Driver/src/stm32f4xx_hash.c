@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_hash.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
   *          functionalities of the HASH / HMAC Processor (HASH) peripheral:           
   *           - Initialization and Configuration functions
@@ -23,7 +23,7 @@
    (#) Enable the HASH controller clock using 
        RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_HASH, ENABLE) function.
              
-   (#) Initialise the HASH using HASH_Init() function. 
+   (#) Initialize the HASH using HASH_Init() function. 
                  
    (#) Reset the HASH processor core, so that the HASH will be ready 
        to compute he message digest of a new message by using HASH_Reset() function.
@@ -78,7 +78,7 @@
             
            
  [..]To compute the HMAC, four different phases are required:                  
-   (#) Initialise the HASH using HASH_Init() function to do HMAC 
+   (#) Initialize the HASH using HASH_Init() function to do HMAC 
        operation. 
                   
    (#) The key (to be used for the inner hash function) is then given to the core. 
@@ -96,13 +96,13 @@
        (normally, this key is the same as the one used for the inner hash function). 
        When the last word of the key is entered and computation starts, the HMAC 
        result is made available using HASH_GetDigest() function.
-                                
+
 @endverbatim
   *         
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.

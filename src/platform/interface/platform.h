@@ -56,7 +56,7 @@ typedef enum {
 
 typedef struct {
   char deviceType[PLATFORM_DEVICE_TYPE_MAX_LEN];
-  char deviceTypeName[20];
+  char deviceTypeName[30];
   SensorImplementation_t sensorImplementation;
   bool physicalLayoutAntennasAreClose;
   const MotorPerifDef** motorMap;

@@ -1,0 +1,1 @@
+obj-y += hello_sub.o

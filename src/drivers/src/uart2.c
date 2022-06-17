@@ -33,6 +33,7 @@
 #include "queue.h"
 #include "semphr.h"
 
+#include "autoconf.h"
 #include "config.h"
 #include "nvic.h"
 #include "uart2.h"
@@ -41,7 +42,7 @@
 #include "nvicconf.h"
 #include "static_mem.h"
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 #include "queuemonitor.h"
 #endif
 
@@ -57,7 +58,7 @@ static uint8_t dmaBuffer[UART2_DMA_BUFFER_SIZE];
 static bool    isUartDmaInitialized;
 static uint32_t initialDMACount;
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 
 static xQueueHandle uart2PacketDelivery;
 STATIC_MEM_QUEUE_ALLOC(uart2PacketDelivery, 8, sizeof(SyslinkPacket));
@@ -71,7 +72,7 @@ static void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorit
 #else
 
 static xQueueHandle uart2queue;
-STATIC_MEM_QUEUE_ALLOC(uart2queue, 64, sizeof(uint8_t));
+STATIC_MEM_QUEUE_ALLOC(uart2queue, UART2_RX_QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool hasOverrun = false;
 
@@ -102,7 +103,7 @@ static void uart2DmaInit(void)
   DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
   DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
   DMA_InitStructureShare.DMA_Channel = UART2_DMA_CH;
-  #ifdef UART2_LINK_COMM
+  #ifdef CONFIG_CRTP_OVER_UART2
   DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
   #else
   DMA_InitStructureShare.DMA_Priority = DMA_Priority_Low;
@@ -111,7 +112,7 @@ static void uart2DmaInit(void)
   NVIC_InitStructure.NVIC_IRQChannel = UART2_DMA_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  #ifdef UART2_LINK_COMM
+  #ifdef CONFIG_CRTP_OVER_UART2
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   #else
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
@@ -168,14 +169,14 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitStructure.NVIC_IRQChannel = UART2_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  #ifdef UART2_LINK_COMM
+  #ifdef CONFIG_CRTP_OVER_UART2
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SYSLINK_PRI;
   #else
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
   #endif
   NVIC_Init(&NVIC_InitStructure);
 
-  #ifdef UART2_LINK_COMM
+  #ifdef CONFIG_CRTP_OVER_UART2
   uart2PacketDelivery = STATIC_MEM_QUEUE_CREATE(uart2PacketDelivery);
   DEBUG_QUEUE_MONITOR_REGISTER(uart2PacketDelivery);
   #else
@@ -244,7 +245,7 @@ int uart2Putchar(int ch)
     return (unsigned char)ch;
 }
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 
 void uart2GetPacketBlocking(SyslinkPacket* packet)
 {
@@ -328,6 +329,25 @@ void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWo
   }
 }
 
+bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks) {
+  ASSERT_FAILED();
+  return false;
+}
+
+bool uart2GetDataWithDefaultTimeout(uint8_t *c) {
+  ASSERT_FAILED();
+  return false;
+}
+
+void uart2Getchar(char * ch) {
+  ASSERT_FAILED();
+}
+
+bool uart2DidOverrun() {
+  ASSERT_FAILED();
+  return false;
+}
+
 #else
 
 bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
@@ -361,6 +381,7 @@ bool uart2DidOverrun()
 
 #endif
 
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
@@ -372,18 +393,20 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
   DMA_Cmd(UART2_DMA_STREAM, DISABLE);
 
   xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
+#endif
 
-#ifdef UART2_LINK_COMM
+#ifdef CONFIG_CRTP_OVER_UART2
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
   if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
   {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxDataInterrupt = (uint8_t)(UART2_TYPE->DR & 0xFF);
     uart2HandleDataFromISR(rxDataInterrupt, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
   else
   {
@@ -395,21 +418,19 @@ void __attribute__((used)) USART2_IRQHandler(void)
     asm volatile ("" : "=m" (UART2_TYPE->SR) : "r" (UART2_TYPE->SR)); // force non-optimizable reads
     asm volatile ("" : "=m" (UART2_TYPE->DR) : "r" (UART2_TYPE->DR)); // of these two registers
   }
-
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 #else
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {
-  uint8_t rxData;
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
   {
-    rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+    uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
     xQueueSendFromISR(uart2queue, &rxData, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
   else
   {

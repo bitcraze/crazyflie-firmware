@@ -44,7 +44,7 @@
 #include "aideck-router.h"
 #include "cpxlink.h"
 #include "crtp.h"
-#include "cpxlink.h"
+#include "radiolink.h"
 
 #define WIFI_SET_SSID_CMD         0x10
 #define WIFI_SET_KEY_CMD          0x11
@@ -100,6 +100,9 @@ static void cxpRxTest(void *param)
           consolePrintf("UNKNOWN: %s", cpxRx.data);
         }
         break;
+      case CPX_F_BOOTLOADER:
+        cpxBootloaderMessage(&cpxRx);
+        break;
       case CPX_F_SYSTEM:
         if (cpxRx.data[0] == CPX_ENABLE_CRTP_BRIDGE) {
           if (cpxRx.data[1] == 0x00) {
@@ -129,7 +132,7 @@ int aideckReceiveCRTPPacket(CRTPPacket * inPacket) {
 }
 
 int aideckSendCRTPPacket(CRTPPacket * outPacket) {
-  cpxInitRoute(CPX_T_STM32, CPX_T_HOST, CPX_F_CRTP, &cpxCrtpTx.route);
+  cpxInitRoute(CPX_T_STM32, CPX_T_WIFI_HOST, CPX_F_CRTP, &cpxCrtpTx.route);
   memcpy(&cpxCrtpTx.data, outPacket->raw, outPacket->size + 1);
   cpxCrtpTx.dataLength = outPacket->size + 1;
   cpxSendPacket(&cpxCrtpTx, 100);

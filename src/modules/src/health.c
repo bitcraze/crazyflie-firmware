@@ -157,10 +157,7 @@ void healthRunTests(sensorData_t *sensors)
     minSingleLoadedVoltage[MOTOR_M3] = minLoadedVoltage;
     minSingleLoadedVoltage[MOTOR_M4] = minLoadedVoltage;
     // Make sure motors are stopped first.
-    motorsSetRatio(MOTOR_M1, 0);
-    motorsSetRatio(MOTOR_M2, 0);
-    motorsSetRatio(MOTOR_M3, 0);
-    motorsSetRatio(MOTOR_M4, 0);
+    motorsStop();
   }
   if (testState == measureNoiseFloor)
   {
@@ -251,10 +248,7 @@ void healthRunTests(sensorData_t *sensors)
     }
     else if (i == 50)
     {
-      motorsSetRatio(MOTOR_M1, 0);
-      motorsSetRatio(MOTOR_M2, 0);
-      motorsSetRatio(MOTOR_M3, 0);
-      motorsSetRatio(MOTOR_M4, 0);
+      motorsStop();
       testState = evaluateBatResult;
       i = 0;
     }

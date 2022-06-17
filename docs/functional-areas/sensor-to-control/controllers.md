@@ -40,7 +40,7 @@ Here are the different loops of the cascaded PID explained in more detail.
 
 ### Attitude Rate PID controller
 
-The attitude rate PID controller is the one that directly controls the attitude rate. It receives almost directly the gyroscope rates (through a bit of filtering first) takes the error between the desired attitude rate as input. This output the commands that is send directly to the power distribution `power_distribution_stock.c`. The control loop runs at 500 Hz.
+The attitude rate PID controller is the one that directly controls the attitude rate. It receives almost directly the gyroscope rates (through a bit of filtering first) takes the error between the desired attitude rate as input. This output the commands that is send directly to the power distribution `power_distribution_quadrotor.c`. The control loop runs at 500 Hz.
 
 Check the implementation details in `attitude_pid_controller.c` in `attitudeControllerCorrectRatePID()`.
 
@@ -55,4 +55,3 @@ Check the implementation details in `attitude_pid_controller.c` in `attitudeCont
 The most outer-loop of the cascaded PID controller is the position and velocity controller. It receives position or velocity input from a commander which are handled, since it is possible to set in the variable `setpoint_t` which  stabilization mode to use `stab_mode_t` (either position:  `modeAbs` or `modeVelocity`). These can be found in `stabilizer_types.h`. The control loop runs at 100 Hz.
 
 Check the implementation details in `position_controller_pid.c` in `positionController()` and  `velocityController()`.
-

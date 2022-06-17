@@ -2,14 +2,14 @@
   ******************************************************************************
   * @file    stm32f4xx_sai.h
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file contains all the functions prototypes for the SAI 
   *          firmware library.  
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -44,7 +44,9 @@
 /** @addtogroup SAI
   * @{
   */ 
-
+#if defined (STM32F40_41xxx) || defined (STM32F427_437xx) || defined (STM32F429_439xx) || \
+    defined (STM32F401xx) || defined (STM32F411xE) || defined (STM32F446xx) || defined (STM32F469_479xx) || \
+    defined (STM32F413_423xx)
 /* Exported types ------------------------------------------------------------*/
 
 /** 
@@ -72,6 +74,12 @@ typedef struct
 
   uint32_t SAI_Synchro;             /*!< Specifies SAI Block synchronization
                                          This parameter can be a value of @ref SAI_Block_Synchronization */
+                                           
+  uint32_t SAI_SynchroExt;          /*!< Specifies SAI external output synchronization, this setup is common
+                                         for BlockA and BlockB
+                                         This parameter can be a value of @ref SAI_Block_SyncExt
+                                         @note: If both audio blocks of same SAI are used, this parameter has
+                                                to be set to the same value for each audio block  */
  
   uint32_t SAI_OUTDRIV;             /*!< Specifies when SAI Block outputs are driven.
                                          This parameter can be a value of @ref SAI_Block_Output_Drive
@@ -153,11 +161,22 @@ typedef struct
   * @{
   */
 
+#if defined(STM32F446xx)
+#define IS_SAI_PERIPH(PERIPH) (((PERIPH) == SAI1) || ((PERIPH) == SAI2))
+
+#define IS_SAI_BLOCK_PERIPH(PERIPH) (((PERIPH) == SAI1_Block_A) || \
+                                     ((PERIPH) == SAI1_Block_B) || \
+                                     ((PERIPH) == SAI2_Block_A) || \
+                                     ((PERIPH) == SAI2_Block_B))
+#endif /* STM32F446xx */
+
+#if defined (STM32F40_41xxx) || defined (STM32F427_437xx) || defined (STM32F429_439xx) || defined (STM32F401xx) || defined (STM32F411xE) || defined(STM32F413_423xx) || defined (STM32F469_479xx)
+
 #define IS_SAI_PERIPH(PERIPH) ((PERIPH) == SAI1)
 
 #define IS_SAI_BLOCK_PERIPH(PERIPH) (((PERIPH) == SAI1_Block_A) || \
                                      ((PERIPH) == SAI1_Block_B))
-
+#endif /* STM32F40_41xxx || STM32F427_437xx || STM32F429_439xx || STM32F401xx || STM32F411xE || STM32F413_423xx || STM32F469_479xx */ 
 
 /** @defgroup SAI_Block_Mode 
   * @{
@@ -238,11 +257,26 @@ typedef struct
 
 #define SAI_Asynchronous                   ((uint32_t)0x00000000)
 #define SAI_Synchronous                    ((uint32_t)SAI_xCR1_SYNCEN_0)
-#define IS_SAI_BLOCK_SYNCHRO(SYNCHRO) (((SYNCHRO) == SAI_Synchronous) || \
-                                       ((SYNCHRO) == SAI_Asynchronous))
+#define SAI_Synchronous_Ext                ((uint32_t)SAI_xCR1_SYNCEN_1)
+#define IS_SAI_BLOCK_SYNCHRO(SYNCHRO)      (((SYNCHRO) == SAI_Synchronous) || \
+                                            ((SYNCHRO) == SAI_Asynchronous) || \
+                                            ((SYNCHRO) == SAI_Synchronous_Ext))
 /**
   * @}
   */ 
+
+/** @defgroup SAI_Block_SyncExt SAI External synchronisation
+  * @{
+  */
+#define SAI_SyncExt_Disable                ((uint32_t)0x00000000)
+#define SAI_SyncExt_OutBlockA_Enable       ((uint32_t)SAI_GCR_SYNCOUT_0)
+#define SAI_SyncExt_OutBlockB_Enable       ((uint32_t)SAI_GCR_SYNCOUT_1)
+#define IS_SAI_BLOCK_SYNCEXT(SYNCHRO)      (((SYNCHRO) == SAI_SyncExt_Disable) || \
+                                            ((SYNCHRO) == SAI_SyncExt_OutBlockA_Enable)|| \
+                                            ((SYNCHRO) == SAI_SyncExt_OutBlockB_Enable))  
+/**
+  * @}
+  */
 
 /** @defgroup SAI_Block_Output_Drive 
   * @{
@@ -577,7 +611,10 @@ void SAI_MuteModeCmd(SAI_Block_TypeDef* SAI_Block_x, FunctionalState NewState);
 void SAI_MuteValueConfig(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_MuteValue);
 void SAI_MuteFrameCounterConfig(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_MuteCounter);
 void SAI_FlushFIFO(SAI_Block_TypeDef* SAI_Block_x);
-
+#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) || \
+    defined(STM32F469_479xx) || defined(STM32F413_423xx) || defined(STM32F446xx)
+void SAI_BlockSynchroConfig(SAI_InitTypeDef* SAI_InitStruct, SAI_TypeDef* SAIx);
+#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx || STM32F469_479xx || STM32F413_423xx || STM32F446xx */ 
 /* Data transfers functions ***************************************************/ 
 void SAI_SendData(SAI_Block_TypeDef* SAI_Block_x, uint32_t Data);
 uint32_t SAI_ReceiveData(SAI_Block_TypeDef* SAI_Block_x);
@@ -594,18 +631,19 @@ void SAI_ClearITPendingBit(SAI_Block_TypeDef* SAI_Block_x, uint32_t SAI_IT);
 FunctionalState SAI_GetCmdStatus(SAI_Block_TypeDef* SAI_Block_x);
 uint32_t SAI_GetFIFOStatus(SAI_Block_TypeDef* SAI_Block_x);
 
+#endif /* STM32F40_41xxx || STM32F427_437xx || STM32F429_439xx || STM32F401xx || STM32F411xE || STM32F446xx || STM32F469_479xx */ 
+/**
+  * @}
+  */
+
+/**
+  * @}
+  */
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif /*__STM32F4xx_SAI_H */
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
