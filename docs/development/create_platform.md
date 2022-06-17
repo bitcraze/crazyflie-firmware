@@ -195,9 +195,8 @@ To make it easier for people to build for `RINCEWIND` we can add a `defconfig` f
 ```Makefile
 CONFIG_PLATFORM_BOLT=y
 
-CONFIG_ESTIMATOR=any
-CONFIG_CONTROLLER=Any
-CONFIG_POWER_DISTRIBUTION=stock
+CONFIG_ESTIMATOR_ANY=y
+CONFIG_CONTROLLER_ANY=y
 ```
 
 Based on this a start of `rincewind_defconfig` could be:
@@ -205,9 +204,8 @@ Based on this a start of `rincewind_defconfig` could be:
 ```Makefile
 CONFIG_PLATFORM_RINCEWIND=y
 
-CONFIG_ESTIMATOR=any
-CONFIG_CONTROLLER=Any
-CONFIG_POWER_DISTRIBUTION=stock
+CONFIG_ESTIMATOR_ANY=y
+CONFIG_CONTROLLER_ANY=y
 ```
 
 Then `RINCEWIND` platform could be built by:
@@ -222,6 +220,61 @@ make[1]: Entering directory '/home/jonasdn/sandbox/kbuild-firmware/build'
 make[1]: Leaving directory '/home/jonasdn/sandbox/kbuild-firmware/build'
 $ make -j 12
 [...]
+```
+
+## Need a different power distribution?
+
+Suppose our new platform is a car with 4 wheels, then we will need a new power distribution function, that is
+the translation from roll, pitch and yaw to motor power. The default implementation can be found in
+`src/modules/src/power_distribution_quadrotor.c` but now we need to write a new function that works for cars.
+
+The first step is to add a car power distrbution setting to the configuration.
+In the standard configuration, the quadrotor power distribution is the only option and it is used by all platforms.
+Edit `src/modules/src/Kconfig` and
+find the location where the power distribution is configured
+
+```Makefile
+choice
+    prompt "Type of power distribution"
+    default POWER_DISTRIBUTION_QUADROTOR
+
+config POWER_DISTRIBUTION_QUADROTOR
+    bool "Quadrotor power distribution"
+    depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
+    help
+        Power distribution function for quadrotors
+
+endchoice
+```
+Now add a new car distribution setting and make it available for your platform.
+
+```Makefile
+choice
+    prompt "Type of power distribution"
+    default POWER_DISTRIBUTION_QUADROTOR
+
+config POWER_DISTRIBUTION_QUADROTOR
+    bool "Quadrotor power distribution"
+    depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
+    help
+        Power distribution function for quadrotors
+
+config POWER_DISTRIBUTION_CAR
+    bool "Car power distribution"
+    depends on PLATFORM_RINCEWIND
+    help
+        Power distribution function for cars
+
+endchoice
+```
+
+The next step is to add an implementation of the power distribution function. Copy
+`power_distribution_quadrotor.c` into a new file, `power_distribution_car.c` and modify the
+`powerDistribution()` function to fit your needs.
+
+The final step is to add the c file to the build. Open `src/modules/src/Kbuild` and add your new file.
+```Makefile
+obj-$(CONFIG_POWER_DISTRIBUTION_CAR) += power_distribution_car.o
 ```
 
 And you are done! You have created your own platform, good job!

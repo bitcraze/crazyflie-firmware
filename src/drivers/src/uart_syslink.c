@@ -201,6 +201,17 @@ bool uartslkTest(void)
   return isInit;
 }
 
+void uartslkPauseRx(void)
+{
+  NVIC_DisableIRQ(UARTSLK_IRQ);
+}
+
+void uartslkResumeRx(void)
+{
+  rxState = waitForFirstStart;
+  NVIC_EnableIRQ(UARTSLK_IRQ);
+}
+
 void uartslkGetPacketBlocking(SyslinkPacket* packet)
 {
   xQueueReceive(syslinkPacketDelivery, packet, portMAX_DELAY);

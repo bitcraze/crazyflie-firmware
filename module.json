@@ -4,29 +4,15 @@
     "build": ["arm-none-eabi"],
     "build-docs": ["doxygen"]
   },
-  "artifacts": {
-    "file": [
-      {
-        "source": "*.bin",
-        "insertTag": true,
-        "destination": "currDir"
-      },
-      {
-        "source": "*.dfu",
-        "insertTag": true,
-        "destination": "currDir"
-      }
-    ]
-  },
-  "targets": {
-    "cf2": [
-      "PLATFORM=cf2"
-    ],
-    "bolt": [
-      "PLATFORM=bolt"
-    ],
-    "tag": [
-      "PLATFORM=tag"
+  "actions": {
+    "artifacts": [
+      ".bin",
+      ".dfu"
+     ],
+    "targets" : [
+      "cf2",
+      "bolt",
+      "tag"
     ]
   }
 }

@@ -72,6 +72,16 @@ void uartslkInit(void);
 bool uartslkTest(void);
 
 /**
+ * Pause incoming data handling (disable RX IRQ)
+ */
+void uartslkPauseRx(void);
+
+/**
+ * Resume incoming data handling (enable RX IRQ)
+ */
+void uartslkResumeRx(void);
+
+/**
  * Get CRTP link data structure
  *
  * @return Address of the crtp link operations structure.

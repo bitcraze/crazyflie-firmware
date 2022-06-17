@@ -10,6 +10,9 @@ on:
   pull_request:
     branches: [ master ]
 
+permissions:
+  contents: read
+
 jobs:
   cf2:
     runs-on: ubuntu-latest
@@ -64,6 +67,24 @@ jobs:
       with:
         name: tag-${{ github.sha }}
         path: tag.bin
+
+  cfbl:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make cfbl_defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2.1.4
+      with:
+        name: cfbl-${{ github.sha }}
+        path: cfbl.bin
 
   features:
     runs-on: ubuntu-latest

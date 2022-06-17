@@ -205,6 +205,17 @@ void sensorsSetAccMode(accModes accMode) {
   activeImplementation->setAccMode(accMode);
 }
 
+void sensorsSuspend()
+{
+  NVIC_DisableIRQ(EXTI15_10_IRQn);
+}
+
+void sensorsResume()
+{
+  NVIC_EnableIRQ(EXTI15_10_IRQn);
+
+}
+
 void __attribute__((used)) EXTI14_Callback(void) {
   activeImplementation->dataAvailableCallback();
 }

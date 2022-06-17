@@ -64,7 +64,7 @@ menu "Motor configuration"
 
 choice
     prompt "ESC protocol"
-    default MOTORS_ESC_PROTOCOL_STANDARD_PWM
+    default MOTORS_ESC_PROTOCOL_ONESHOT125
 
 	config MOTORS_ESC_PROTOCOL_STANDARD_PWM
 	    bool "Standard PWM"
@@ -74,6 +74,25 @@ choice
 
 	config MOTORS_ESC_PROTOCOL_ONESHOT42
 	    bool "OneShot42"
+
+  config MOTORS_ESC_PROTOCOL_DSHOT
+      bool "Digital DSHOT protocol"
+
+endchoice
+
+choice
+  prompt "DSHOT PWM Period"
+  depends on MOTORS_ESC_PROTOCOL_DSHOT
+  default MOTORS_DSHOT_PWM_300KHZ
+
+config MOTORS_DSHOT_PWM_150KHZ
+    bool "150 kHz"
+
+config MOTORS_DSHOT_PWM_300KHZ
+    bool "300 kHz"
+
+config MOTORS_DSHOT_PWM_600KHZ
+    bool "600 kHz"
 
 endchoice
 
@@ -105,8 +124,19 @@ config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
         drone uses full thrust for brushed motors and does not spin up brushless
         motors (for safety reasons). It is therefore advised to set this parameter
         explicitly for brushless builds to enable the motor test functionality.
-      
+
         The value specified here can also be overridden with parameters.
+
+choice
+    prompt "Type of power distribution"
+    default POWER_DISTRIBUTION_QUADROTOR
+
+config POWER_DISTRIBUTION_QUADROTOR
+    bool "Quadrotor power distribution"
+    depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
+    help
+        Power distribution function for quadrotors
+endchoice
 
 endmenu
 
@@ -122,4 +152,3 @@ config PARAM_SILENT_UPDATES
         what you are doing.
 
 endmenu
-
