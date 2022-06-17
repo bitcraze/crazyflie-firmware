@@ -36,7 +36,6 @@ CDC 2010
 TODO:
   * Switch position controller
   * consider Omega_d dot (currently assumes this is zero)
-
 */
 
 #include <math.h>
@@ -48,8 +47,8 @@ TODO:
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
-static float g_vehicleMass = 0.028; // TODO: should be CF global for other modules
-
+static float g_vehicleMass = 0.034; // TODO: should be CF global for other modules
+static float thrustSI;
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
 // BA theses, Julian Foerster, ETHZ
@@ -57,22 +56,24 @@ static float g_vehicleMass = 0.028; // TODO: should be CF global for other modul
 static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 
 // Position PID
-static struct vec Kpos_P = {10, 10, 10}; // Kp in paper
+static struct vec Kpos_P = {20, 20, 20}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {5, 5, 5}; // Kv in paper
+static struct vec Kpos_D = {18, 18,18}; // Kv in paper
 static float Kpos_D_limit = 100;
 static struct vec Kpos_I = {0, 0, 0}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
-
+static struct vec p_error;
+static struct vec v_error;
 // Attitude PID
-static struct vec KR = {0.05, 0.05, 0.05};
-static struct vec Komega = {0.004, 0.004, 0.004};
+static struct vec KR = {0.0055, 0.0055, 0.0055};
+static struct vec Komega = {0.0013, 0.0013, 0.0016};
 
 // Logging variables
 static struct vec rpy;
 static struct vec rpy_des;
 static struct vec qr;
+static struct mat33 R_des;
 static struct vec omega;
 static struct vec omega_r;
 static struct vec u;
@@ -115,7 +116,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
   // uint64_t startTime = usecTimestamp();
 
   float dt = (float)(1.0f/ATTITUDE_RATE);
-
+  // struct vec dessnap = vzero();
   // Address inconsistency in firmware where we need to compute our own desired yaw angle
   // Rate-controlled YAW is moving YAW angle setpoint
   float desiredYaw = 0; //rad
@@ -128,9 +129,6 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     rpy_des = quat2rpy(setpoint_quat);
     desiredYaw = rpy_des.z;
   }
-
-  // qr: Desired/reference angles in rad
-  // struct vec qr;
 
   // Position controller
   if (   setpoint->mode.x == modeAbs
@@ -145,31 +143,52 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -Kpos_P_limit, Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -Kpos_D_limit, Kpos_D_limit);
-    i_error_pos = vclampscl(vadd(i_error_pos, vscl(dt, pos_e)), -Kpos_I_limit, Kpos_I_limit);
 
-    struct vec F_d = vscl(g_vehicleMass, vadd4(
+    p_error = pos_e;
+    v_error = vel_e;
+
+    struct vec F_d = vadd3(
       acc_d,
       veltmul(Kpos_D, vel_e),
-      veltmul(Kpos_P, pos_e),
-      veltmul(Kpos_I, i_error_pos)));
-
-    control->thrustSI = vmag(F_d);
+      veltmul(Kpos_P, pos_e));
+    
+   
+    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+    struct mat33 R = quat2rotmat(q);
+    struct vec z  = vbasis(2);
+    control->thrustSI = g_vehicleMass*vdot(F_d , mvmul(R, z));
+    thrustSI = control->thrustSI;
     // Reset the accumulated error while on the ground
     if (control->thrustSI < 0.01f) {
       controllerLeeReset();
     }
 
-    // Use current yaw instead of desired yaw for roll/pitch
-    float yaw = radians(state->attitude.yaw);
-    qr = mkvec(
-      asinf((F_d.x * sinf(yaw) - F_d.y * cosf(yaw)) / control->thrustSI),
-      atanf((F_d.x * cosf(yaw) + F_d.y * sinf(yaw)) / F_d.z),
-      desiredYaw);
+  // Compute Desired Rotation matrix
+    float normFd = control->thrustSI;
+
+    struct vec xdes = vbasis(0);
+    struct vec ydes = vbasis(1);
+    struct vec zdes = vbasis(2);
+   
+    if (normFd > 0) {
+      zdes = vnormalize(F_d);
+    } 
+    struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
+    struct vec zcrossx = vcross(zdes, xcdes);
+    float normZX = vmag(zcrossx);
+
+    if (normZX > 0) {
+      ydes = vnormalize(zcrossx);
+    } 
+    xdes = vcross(ydes, zdes);
+    
+    R_des = mcolumns(xdes, ydes, zdes);
+
   } else {
     if (setpoint->mode.z == modeDisable) {
       if (setpoint->thrust < 1000) {
           control->controlMode = controlModeForceTorque;
-          control->thrustSI = 0;
+          control->thrustSI  = 0;
           control->torque[0] = 0;
           control->torque[1] = 0;
           control->torque[2] = 0;
@@ -191,14 +210,11 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
 
   // current rotation [R]
   struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  rpy = quat2rpy(q);
   struct mat33 R = quat2rotmat(q);
 
-  rpy = quat2rpy(q);
-
   // desired rotation [Rdes]
-  struct quat q_des = rpy2quat(qr);
-  struct mat33 R_des = quat2rotmat(q_des);
-
+  struct quat q_des = mat2quat(R_des);
   rpy_des = quat2rpy(q_des);
 
   // rotation error
@@ -212,23 +228,33 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     radians(sensors->gyro.y),
     radians(sensors->gyro.z));
 
-  struct vec omega_des = mkvec(
-    radians(setpoint->attitudeRate.roll),
-    radians(setpoint->attitudeRate.pitch),
-    radians(setpoint->attitudeRate.yaw));
+  // Compute desired omega
+  struct vec xdes = mcolumn(R_des, 0);
+  struct vec ydes = mcolumn(R_des, 1);
+  struct vec zdes = mcolumn(R_des, 2);
+  struct vec hw = vzero();
+  // Desired Jerk and snap for now are zeros vector
+  struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
 
+  if (control->thrustSI != 0) {
+    struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
+    hw = vscl(g_vehicleMass/control->thrustSI, tmp);
+  }
+
+  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), 0);
+  
   omega_r = mvmul(mmul(mtranspose(R), R_des), omega_des);
 
   struct vec omega_error = vsub(omega, omega_r);
+  
+
 
   // compute moments
   // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  u = vadd4(
+  u = vadd3(
     vneg(veltmul(KR, eR)),
     vneg(veltmul(Komega, omega_error)),
-    vcross(omega, veltmul(J, omega)),
-    vneg( veltmul(J, vcross(omega, omega_r)))
-    );
+    vcross(omega, veltmul(J, omega)));
 
   // if (enableNN > 1) {
   //   u = vsub(u, tau_a);
@@ -243,7 +269,6 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
 }
 
 PARAM_GROUP_START(ctrlLee)
-// Attitude P
 PARAM_ADD(PARAM_FLOAT, KR_x, &KR.x)
 PARAM_ADD(PARAM_FLOAT, KR_y, &KR.y)
 PARAM_ADD(PARAM_FLOAT, KR_z, &KR.z)
@@ -272,10 +297,29 @@ PARAM_ADD(PARAM_FLOAT, Kpos_Ix, &Kpos_I.x)
 PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &Kpos_I.y)
 PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &Kpos_I.z)
 PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &Kpos_I_limit)
+
+PARAM_ADD(PARAM_FLOAT, mass, &g_vehicleMass)
 PARAM_GROUP_STOP(ctrlLee)
 
 
 LOG_GROUP_START(ctrlLee)
+
+LOG_ADD(LOG_FLOAT, KR_x, &KR.x)
+LOG_ADD(LOG_FLOAT, KR_y, &KR.y)
+LOG_ADD(LOG_FLOAT, KR_z, &KR.z)
+LOG_ADD(LOG_FLOAT, Kw_x, &Komega.x)
+LOG_ADD(LOG_FLOAT, Kw_y, &Komega.y)
+LOG_ADD(LOG_FLOAT, Kw_z, &Komega.z)
+
+LOG_ADD(LOG_FLOAT,Kpos_Px, &Kpos_P.x)
+LOG_ADD(LOG_FLOAT,Kpos_Py, &Kpos_P.y)
+LOG_ADD(LOG_FLOAT,Kpos_Pz, &Kpos_P.z)
+LOG_ADD(LOG_FLOAT,Kpos_Dx, &Kpos_D.x)
+LOG_ADD(LOG_FLOAT,Kpos_Dy, &Kpos_D.y)
+LOG_ADD(LOG_FLOAT,Kpos_Dz, &Kpos_D.z)
+
+
+LOG_ADD(LOG_FLOAT, thrustSI, &thrustSI)
 LOG_ADD(LOG_FLOAT, torquex, &u.x)
 LOG_ADD(LOG_FLOAT, torquey, &u.y)
 LOG_ADD(LOG_FLOAT, torquez, &u.z)
@@ -291,9 +335,13 @@ LOG_ADD(LOG_FLOAT, rpydy, &rpy_des.y)
 LOG_ADD(LOG_FLOAT, rpydz, &rpy_des.z)
 
 // errors
-LOG_ADD(LOG_FLOAT, i_error_posx, &i_error_pos.x)
-LOG_ADD(LOG_FLOAT, i_error_posy, &i_error_pos.y)
-LOG_ADD(LOG_FLOAT, i_error_posz, &i_error_pos.z)
+LOG_ADD(LOG_FLOAT, error_posx, &p_error.x)
+LOG_ADD(LOG_FLOAT, error_posy, &p_error.y)
+LOG_ADD(LOG_FLOAT, error_posz, &p_error.z)
+
+LOG_ADD(LOG_FLOAT, error_velx, &v_error.x)
+LOG_ADD(LOG_FLOAT, error_vely, &v_error.y)
+LOG_ADD(LOG_FLOAT, error_velz, &v_error.z)
 
 // omega
 LOG_ADD(LOG_FLOAT, omegax, &omega.x)
