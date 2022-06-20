@@ -241,7 +241,7 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     hw = vscl(g_vehicleMass/control->thrustSI, tmp);
   }
   struct vec z_w = mkvec(0,0,1);
-  desiredYaw = setpoint->attitudeRate.yaw * vdot(mcolumn(R, 2),z_w);
+  desiredYaw = setpoint->attitudeRate.yaw * vdot(zdes,z_w);
   struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), desiredYaw);
   
   omega_r = mvmul(mmul(mtranspose(R), R_des), omega_des);
