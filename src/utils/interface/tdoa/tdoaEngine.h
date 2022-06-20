@@ -4,6 +4,8 @@
 #include "tdoaStorage.h"
 #include "tdoaStats.h"
 
+#define TDOA_ENGINE_MEASUREMENT_NOISE_STD 0.15f
+
 typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
 
 typedef enum {
