@@ -34,7 +34,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define AIDECK_UART_TRANSPORT_MTU 100
+/*#define AIDECK_UART_TRANSPORT_MTU 100
 #define AIDECK_UART_META_DATA_SIZE 2
 #define AIDECK_UART_PAYLOAD_MTU (AIDECK_UART_TRANSPORT_MTU - AIDECK_UART_META_DATA_SIZE)
 
@@ -67,7 +67,7 @@ typedef struct {
   CPXRouting_t route;
   uint16_t dataLength;
   uint8_t data[AIDECK_UART_PAYLOAD_MTU];
-} CPXPacket_t;
+} CPXPacket_t;*/
 
 /**
  * @brief Receive a CPX packet from the ESP32
@@ -77,7 +77,7 @@ typedef struct {
  *
  * @param packet received packet will be stored here
  */
-void cpxReceivePacketBlocking(CPXPacket_t * packet);
+//void cpxReceivePacketBlocking(CPXPacket_t * packet);
 
 /**
  * @brief Send a CPX packet to the ESP32
@@ -87,7 +87,7 @@ void cpxReceivePacketBlocking(CPXPacket_t * packet);
  *
  * @param packet packet to be sent
  */
-void cpxSendPacketBlocking(const CPXPacket_t * packet);
+//void cpxSendPacketBlocking(const CPXPacket_t * packet);
 
 /**
  * @brief Send a CPX packet to the ESP32
@@ -99,7 +99,7 @@ void cpxSendPacketBlocking(const CPXPacket_t * packet);
  * @return true if package could be queued for sending
  * @return false if package could not be queued for sending within timeout
  */
-bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
+//bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
 
 /**
  * @brief Initialize CPX routing data.
@@ -111,7 +111,7 @@ bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
  * @param function The function of the content
  * @param route Pointer to the route data to initialize
  */
-void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
+//void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
 
 /**
  * @brief Forward bootloader message.
@@ -120,4 +120,4 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
  *
  * @param packet packet that was received
  */
-void cpxBootloaderMessage(const CPXPacket_t * packet);
+//void cpxBootloaderMessage(const CPXPacket_t * packet);

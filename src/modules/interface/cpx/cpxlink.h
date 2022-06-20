@@ -30,10 +30,6 @@
 #include <stdbool.h>
 #include "crtp.h"
 
-#define CRTP_START_BYTE  0xAA
-#define SYSLINK_START_BYTE1 0xBC
-#define SYSLINK_START_BYTE2 0xCF
-
 void cpxlinkInit();
 bool cpxlinkTest();
 void cpxLinkSetClientConnected(bool isConnected);

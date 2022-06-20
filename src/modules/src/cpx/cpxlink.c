@@ -41,15 +41,17 @@
 #include "semphr.h"
 #include "static_mem.h"
 
-#include "aideck.h"
-#include "aideck-router.h"
+#include "cpx.h"
+#include "cpx_internal_router.h"
 #include "cpxlink.h"
-#include "aideck-router.h"
 #include "debug.h"
 
 static bool isInit = false;
 
 static bool clientIsConnected = false;
+
+static CPXPacket_t cpxTx;
+static CPXPacket_t cpxRx;
 
 static int cpxlinkSendPacket(CRTPPacket *p);
 static int cpxlinkSetEnable(bool enable);
@@ -66,8 +68,13 @@ static struct crtpLinkOperations cpxlinkOp =
 
 static int cpxlinkReceivePacket(CRTPPacket *p)
 {
-  if (aideckReceiveCRTPPacket(p) == pdTRUE)
+  if (cpxInternalRouterReceiveCRTP(&cpxRx) == pdTRUE)
   {
+
+    p->size = cpxRx.dataLength - 1;
+    p->header = cpxRx.data[0];
+    memcpy(p->data, &cpxRx.data[1], cpxRx.dataLength - 1);
+
     ledseqRun(&seq_linkUp);
     return 0;
   }
@@ -79,7 +86,13 @@ static int cpxlinkSendPacket(CRTPPacket *p)
 {
   ledseqRun(&seq_linkDown);
 
-  return aideckSendCRTPPacket(p);
+  cpxInitRoute(CPX_T_STM32, CPX_T_WIFI_HOST, CPX_F_CRTP, &cpxTx.route);
+
+  memcpy(&cpxTx.data, p->raw, p->size + 1);
+  cpxTx.dataLength = p->size + 1;
+  cpxSendPacketBlocking(&cpxTx);
+
+  return true;
 }
 
 static int cpxlinkSetEnable(bool enable)
