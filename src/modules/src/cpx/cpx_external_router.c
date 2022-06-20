@@ -36,7 +36,6 @@
 
 #include "cpx_external_router.h"
 #include "cpx_internal_router.h"
-
 #include "cpx_uart_transport.h"
 
 typedef struct {
@@ -55,6 +54,7 @@ typedef void (*Sender_t)(const CPXRoutablePacket_t* packet);
 static const int START_UP_UART_ROUTER_RUNNING = (1<<0);
 static const int START_UP_RADIO_ROUTER_RUNNING = (1<<1);
 static const int START_UP_INTERNAL_ROUTER_RUNNING = (1<<2);
+
 static EventGroupHandle_t startUpEventGroup;
 
 static void splitAndSend(const CPXRoutablePacket_t* rxp, RouteContext_t* context, Sender_t sender, const uint16_t mtu) {
@@ -100,10 +100,9 @@ static void route(Receiver_t receive, CPXRoutablePacket_t* rxp, RouteContext_t* 
       case CPX_T_STM32:
         //DEBUG_PRINT("%s [0x%02X] -> STM32 [0x%02X] (%u)\n", routerName, source, destination, cpxDataLength);
         splitAndSend(rxp, context, cpxInternalRouterRouteIn, CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
-        // TODO: Add radio routing via CRTP
         break;
       default:
-        //ESP_LOGW("ROUTER", "Cannot route from %s [0x%02X] to [0x%02X]", routerName, source, destination);
+        DEBUG_PRINT("Cannot route from %s [0x%02X] to [0x%02X](%u)\n", routerName, source, destination, cpxDataLength);
         break;
     }
   }

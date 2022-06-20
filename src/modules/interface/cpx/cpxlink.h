@@ -20,19 +20,41 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * cpxlink.h: Bridge CRTP over CPX
  */
-
-#ifndef __CPXLINK_H__
-#define __CPXLINK_H__
+#pragma once
 
 #include <stdbool.h>
 #include "crtp.h"
 
+/**
+ * @brief Initialize the CRTP link for CPX
+ * 
+ */
 void cpxlinkInit();
-bool cpxlinkTest();
-void cpxLinkSetClientConnected(bool isConnected);
-struct crtpLinkOperations * cpxlinkGetLink();
 
-#endif
+/**
+ * @brief Run tests for CRTP link for CPX
+ * 
+ * @return true if tests pass
+ * @return false if test do not pass
+ */
+bool cpxlinkTest();
+
+/**
+ * @brief Set the connection status of the underlying CPX link
+ * 
+ * This will effect message being pushed from CRTP modules.
+ * 
+ * @param isConnected true if connected otherwise false
+ */
+void cpxLinkSetConnected(bool isConnected);
+
+/**
+ * @brief Get the CPX link structure
+ * 
+ * This will get the function pointers that should be used by the CRTP
+ * stack for using CPX.
+ * 
+ * @return struct crtpLinkOperations* function pointers for using link
+ */
+struct crtpLinkOperations * cpxlinkGetLink();

@@ -27,4 +27,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/**
+ * @brief Initialize the external router
+ * 
+ * This will initialize the external router, which will route
+ * messages between external interfaces as well as into/out from the
+ * internal router.
+ * 
+ */
 void cpxExternalRouterInit();

@@ -27,14 +27,7 @@
 #include "FreeRTOS.h"
 #include "config.h"
 #include "debug.h"
-#include "task.h"
 #include "queue.h"
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
-#include "queue.h"
-#include "stm32fxxx.h"
-#include "system.h"
 
 #include "crtp.h"
 #include "cpx_internal_router.h"

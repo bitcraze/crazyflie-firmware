@@ -53,8 +53,6 @@
 #include "cpx.h"
 #include "cpx_uart_transport.h"
 
-static uint8_t byte;
-
 #define UART_TX_QUEUE_LENGTH 4
 #define UART_RX_QUEUE_LENGTH 4
 
@@ -65,29 +63,6 @@ static xQueueHandle uartRxQueue;
 #define UART_HEADER_LENGTH 2
 #define UART_CRC_LENGTH 1
 #define UART_META_LENGTH (UART_HEADER_LENGTH + UART_CRC_LENGTH)
-
-/*typedef struct {
-  CPXTarget_t destination : 3;
-  CPXTarget_t source : 3;
-  bool lastPacket : 1;
-  bool reserved : 1;
-  CPXFunction_t function : 8;
-} __attribute__((packed)) CPXRoutingPacked_t;*/
-
-typedef struct {
-  uint8_t cmd;
-  uint32_t startAddress;
-  uint32_t writeSize;
-} __attribute__((packed)) GAP8BlCmdPacket_t;
-
-typedef struct {
-  uint8_t cmd;
-} __attribute__((packed)) ESP32SysPacket_t;
-
-#define GAP8_BL_CMD_START_WRITE (0x02)
-#define GAP8_BL_CMD_MD5         (0x04)
-
-#define ESP32_SYS_CMD_RESET_GAP8 (0x10)
 
 #define CPX_ROUTING_PACKED_SIZE (sizeof(CPXRoutingPacked_t))
 
@@ -108,17 +83,14 @@ typedef struct {
 } __attribute__((packed)) uart_transport_packet_t;
 
 // Used when sending/receiving data on the UART
-static uart_transport_packet_t espTxp;
+static uart_transport_packet_t uartTxp;
 static CPXPacket_t cpxTxp;
-static uart_transport_packet_t espRxp;
+static uart_transport_packet_t uartRxp;
 
 static EventGroupHandle_t evGroup;
 #define ESP_CTS_EVENT (1 << 0)
 #define ESP_CTR_EVENT (1 << 1)
 #define ESP_TXQ_EVENT (1 << 2)
-
-static EventGroupHandle_t bootloaderSync;
-#define CPX_WAIT_FOR_BOOTLOADER_REPLY (1<<0)
 
 static uint8_t calcCrc(const uart_transport_packet_t* packet) {
   const uint8_t* start = (const uint8_t*) packet;
@@ -147,11 +119,7 @@ static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * 
   txp->payload[txp->payloadLength] = calcCrc(txp);
 }
 
-static void sendDataToEspUart(uint32_t size, uint8_t* data) {
-  uart2SendData(size, data);
-}
-
-static void getDataFromEspUart(uint8_t *c) {
+static void getByteFromUart(uint8_t *c) {
   bool readSuccess = false;
   while(!readSuccess) {
       readSuccess = uart2GetDataWithTimeout(c, M2T(100));
@@ -167,27 +135,27 @@ static void CPX_UART_RX(void *param)
     // Wait for start!
     do
     {
-      getDataFromEspUart(&espRxp.start);
-    } while (espRxp.start != 0xFF);
+      getByteFromUart(&uartRxp.start);
+    } while (uartRxp.start != 0xFF);
 
-    getDataFromEspUart(&espRxp.payloadLength);
+    getByteFromUart(&uartRxp.payloadLength);
 
-    if (espRxp.payloadLength == 0)
+    if (uartRxp.payloadLength == 0)
     {
       xEventGroupSetBits(evGroup, ESP_CTS_EVENT);
     }
     else
     {
-      for (int i = 0; i < espRxp.payloadLength; i++)
+      for (int i = 0; i < uartRxp.payloadLength; i++)
       {
-        getDataFromEspUart(&espRxp.payload[i]);
+        getByteFromUart(&uartRxp.payload[i]);
       }
 
       uint8_t crc;
-      getDataFromEspUart(&crc);
-      ASSERT(crc == calcCrc(&espRxp));
+      getByteFromUart(&crc);
+      ASSERT(crc == calcCrc(&uartRxp));
 
-      xQueueSend(uartRxQueue, &espRxp, portMAX_DELAY);
+      xQueueSend(uartRxQueue, &uartRxp, portMAX_DELAY);
       xEventGroupSetBits(evGroup, ESP_CTR_EVENT);
     }
   }
@@ -209,7 +177,7 @@ static void CPX_UART_TX(void *param)
   // Sync with ESP32 so both are in CTS
   do
   {
-    sendDataToEspUart(sizeof(ctr), (uint8_t *)&ctr);
+    uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
     vTaskDelay(100);
     evBits = xEventGroupGetBits(evGroup);
   } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
@@ -227,7 +195,7 @@ static void CPX_UART_TX(void *param)
                                    portMAX_DELAY);
       if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT)
       {
-        sendDataToEspUart(sizeof(ctr), (uint8_t *)&ctr);
+        uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
       }
     }
 
@@ -236,8 +204,8 @@ static void CPX_UART_TX(void *param)
       //DEBUG_PRINT("Sending CPX message\n");
       // Dequeue and wait for either CTS or CTR
       xQueueReceive(uartTxQueue, &cpxTxp, 0);
-      espTxp.start = 0xFF;
-      assemblePacket(&cpxTxp, &espTxp);
+      uartTxp.start = 0xFF;
+      assemblePacket(&cpxTxp, &uartTxp);
       do
       {
         evBits = xEventGroupWaitBits(evGroup,
@@ -247,10 +215,10 @@ static void CPX_UART_TX(void *param)
                                      portMAX_DELAY);
         if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT)
         {
-          sendDataToEspUart(sizeof(ctr), (uint8_t *)&ctr);
+          uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
         }
       } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
-      sendDataToEspUart((uint32_t) espTxp.payloadLength + UART_META_LENGTH, (uint8_t *)&espTxp);
+      uart2SendData((uint32_t) uartTxp.payloadLength + UART_META_LENGTH, (uint8_t *)&uartTxp);
     }
   }
 }
@@ -281,9 +249,7 @@ void cpxUARTTransportInit() {
   uartRxQueue = xQueueCreate(UART_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
 
   evGroup = xEventGroupCreate();
-  bootloaderSync = xEventGroupCreate();
 
-  // TODO: This should be in Kbuild
   uart2Init(CONFIG_DECK_CRTP_OVER_UART2_BAUDRATE);
 
   // Initialize task for the ESP while it's held in reset

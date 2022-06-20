@@ -9,7 +9,10 @@
 #include "queue.h"
 #include "event_groups.h"
 #include "debug.h"
+#include "system.h"
+#include "radiolink.h"
 
+#include "cpxlink.h"
 #include "cpx_internal_router.h"
 #include "cpx.h"
 
@@ -35,20 +38,6 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
     route->function = function;
 }
 
-void cpxRouteToPacked(const CPXRouting_t* route, CPXRoutingPacked_t* packed) {
-    packed->source = route->source;
-    packed->destination = route->destination;
-    packed->function = route->function;
-    packed->lastPacket = route->lastPacket;
-}
-
-void cpxPackedToRoute(const CPXRoutingPacked_t* packed, CPXRouting_t* route) {
-    route->source = packed->source;
-    route->destination = packed->destination;
-    route->function = packed->function;
-    route->lastPacket = packed->lastPacket;
-}
-
 static void cpx(void* _param) {
   systemWaitStart();
   while (1) {
@@ -67,11 +56,11 @@ static void cpx(void* _param) {
         }
         if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
           if (cpxRx.data[1] == 0x00) {
-            cpxLinkSetClientConnected(false);
+            cpxLinkSetConnected(false);
           } else {
-            cpxLinkSetClientConnected(true);
+            cpxLinkSetConnected(true);
           }
-          DEBUG_PRINT("WiFi client connected\n");
+          DEBUG_PRINT("CPX connected\n");
         }
         break;
       case CPX_F_CONSOLE:
@@ -99,9 +88,9 @@ static void cpx(void* _param) {
 
         if (cpxRx.data[0] == CPX_SET_CLIENT_CONNECTED) {
           if (cpxRx.data[1] == 0x00) {
-            cpxLinkSetClientConnected(false);
+            cpxLinkSetConnected(false);
           } else {
-            cpxLinkSetClientConnected(true);
+            cpxLinkSetConnected(true);
           }
         }
         break;

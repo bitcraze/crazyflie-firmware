@@ -117,7 +117,7 @@ bool cpxlinkTest()
   return isInit;
 }
 
-void cpxLinkSetClientConnected(bool isConnected) {
+void cpxLinkSetConnected(bool isConnected) {
   clientIsConnected = isConnected;
 }
 

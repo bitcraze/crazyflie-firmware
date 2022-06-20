@@ -5,7 +5,7 @@
  * | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * ESP deck firmware
+ * Crazyflie control firmware
  *
  * Copyright (C) 2022 Bitcraze AB
  *
@@ -77,7 +77,6 @@ typedef struct {
 
 #define CPX_ROUTING_PACKED_SIZE (sizeof(CPXRoutingPacked_t))
 
-
 typedef struct {
   CPXRouting_t route;
   uint16_t dataLength;
@@ -92,7 +91,5 @@ typedef struct {
 } CPXRoutablePacket_t;
 
 void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
-void cpxRouteToPacked(const CPXRouting_t* route, CPXRoutingPacked_t* packed);
-void cpxPackedToRoute(const CPXRoutingPacked_t* packed, CPXRouting_t* route);
 
 void cpxInit();
