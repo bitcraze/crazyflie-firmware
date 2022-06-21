@@ -89,6 +89,7 @@ static float logClockCorrection[LOCODECK_NR_OF_TDOA2_ANCHORS];
 static uint16_t logAnchorDistance[LOCODECK_NR_OF_TDOA2_ANCHORS];
 
 static bool rangingOk;
+static float stdDev = TDOA_ENGINE_MEASUREMENT_NOISE_STD;
 
 // The default receive time in the anchors for messages from other anchors is 0
 // and is overwritten with the actual receive time when a packet arrives.
@@ -277,6 +278,9 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 
 
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
+  // Override the default standard deviation set by the TDoA engine.
+  tdoaMeasurement->stdDev = stdDev;
+
   estimatorEnqueueTDOA(tdoaMeasurement);
 
   #ifdef CONFIG_DECK_LOCO_2D_POSITION
@@ -392,3 +396,11 @@ LOG_ADD(LOG_UINT16, dist4-5, &logAnchorDistance[5])
 LOG_ADD(LOG_UINT16, dist5-6, &logAnchorDistance[6])
 LOG_ADD(LOG_UINT16, dist6-7, &logAnchorDistance[7])
 LOG_GROUP_STOP(tdoa2)
+
+PARAM_GROUP_START(tdoa2)
+/**
+ * @brief The measurement noise to use when sending TDoA measurements to the estimator.
+ */
+PARAM_ADD(PARAM_FLOAT, stddev, &stdDev)
+
+PARAM_GROUP_STOP(tdoa2)

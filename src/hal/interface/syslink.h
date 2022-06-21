@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -70,6 +70,9 @@
 
 #define SYSLINK_SYS_GROUP        0x30
 #define SYSLINK_SYS_NRF_VERSION  0x30
+
+#define SYSLINK_DEBUG_GROUP 0xF0
+#define SYSLINK_DEBUG_PROBE 0xF0
 
 typedef struct _SyslinkPacket
 {

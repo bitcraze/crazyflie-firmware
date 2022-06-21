@@ -23,7 +23,7 @@
  *
  * @file esp_rom_bootloader.c
  * Driver for communicating with the ESP32 ROM bootloader
- *  
+ *
  */
 
 #define DEBUG_MODULE "ESP_ROM_BL"
@@ -46,20 +46,6 @@
 static espSlipSendPacket_t senderPacket;
 static espSlipReceivePacket_t receiverPacket;
 
-void espRomBootloaderInit()
-{
-  pinMode(DECK_GPIO_IO1, OUTPUT);
-  digitalWrite(DECK_GPIO_IO1, LOW);
-  pinMode(DECK_GPIO_IO4, OUTPUT);
-  digitalWrite(DECK_GPIO_IO4, LOW);
-  vTaskDelay(10);
-  digitalWrite(DECK_GPIO_IO4, HIGH);
-  pinMode(DECK_GPIO_IO4, INPUT_PULLUP);
-  vTaskDelay(100);
-  digitalWrite(DECK_GPIO_IO1, HIGH);
-  pinMode(DECK_GPIO_IO1, INPUT_PULLUP);
-}
-
 bool espRomBootloaderSync(uint8_t *sendBuffer)
 {
   senderPacket.command = SYNC;
@@ -80,7 +66,7 @@ bool espRomBootloaderSync(uint8_t *sendBuffer)
   }
 
   //
-  // ESP32 responds multiple times upon succesful SYNC. Wait until all responses are received, so they can be cleared before next transmission.
+  // ESP32 responds multiple times upon successful SYNC. Wait until all responses are received, so they can be cleared before next transmission.
   //
   vTaskDelay(M2T(100));
 
@@ -103,7 +89,7 @@ bool espRomBootloaderSpiAttach(uint8_t *sendBuffer)
   return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
 }
 
-bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPackets, uint32_t firmwareSize, uint32_t flashOffset)
+bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfFlashBuffers, uint32_t firmwareSize, uint32_t flashOffset)
 {
   senderPacket.command = FLASH_BEGIN;
   senderPacket.dataSize = 0x10;
@@ -112,15 +98,15 @@ bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPacket
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 2] = (uint8_t)((firmwareSize >> 16) & 0x000000FF);
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 3] = (uint8_t)((firmwareSize >> 24) & 0x000000FF);
 
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 4] = (uint8_t)((numberOfDataPackets >> 0) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 5] = (uint8_t)((numberOfDataPackets >> 8) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 6] = (uint8_t)((numberOfDataPackets >> 16) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 7] = (uint8_t)((numberOfDataPackets >> 24) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 4] = (uint8_t)((numberOfFlashBuffers >> 0) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 5] = (uint8_t)((numberOfFlashBuffers >> 8) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 6] = (uint8_t)((numberOfFlashBuffers >> 16) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 7] = (uint8_t)((numberOfFlashBuffers >> 24) & 0x000000FF);
 
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 8] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 9] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 10] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 11] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 8] = (uint8_t)((ESP_SLIP_MTU >> 0) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 9] = (uint8_t)((ESP_SLIP_MTU >> 8) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 10] = (uint8_t)((ESP_SLIP_MTU >> 16) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 11] = (uint8_t)((ESP_SLIP_MTU >> 24) & 0x000000FF);
 
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 12] = (uint8_t)((flashOffset >> 0) & 0x000000FF);
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 13] = (uint8_t)((flashOffset >> 8) & 0x000000FF);
@@ -133,12 +119,12 @@ bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfDataPacket
 bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint32_t sequenceNumber)
 {
   senderPacket.command = FLASH_DATA;
-  senderPacket.dataSize = ESP_MTU + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN;
+  senderPacket.dataSize = ESP_SLIP_MTU + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN;
 
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 0] = (uint8_t)((ESP_MTU >> 0) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 1] = (uint8_t)((ESP_MTU >> 8) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 2] = (uint8_t)((ESP_MTU >> 16) & 0x000000FF);
-  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 3] = (uint8_t)((ESP_MTU >> 24) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 0] = (uint8_t)((ESP_SLIP_MTU >> 0) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 1] = (uint8_t)((ESP_SLIP_MTU >> 8) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 2] = (uint8_t)((ESP_SLIP_MTU >> 16) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 3] = (uint8_t)((ESP_SLIP_MTU >> 24) & 0x000000FF);
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 4] = (uint8_t)((sequenceNumber >> 0) & 0x000000FF);
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 5] = (uint8_t)((sequenceNumber >> 8) & 0x000000FF);
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 6] = (uint8_t)((sequenceNumber >> 16) & 0x000000FF);
@@ -152,10 +138,10 @@ bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 14] = 0x00;
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 15] = 0x00;
 
-  if (flashDataSize < ESP_MTU)
+  if (flashDataSize < ESP_SLIP_MTU)
   {
     // pad the data with 0xFF
-    memset(&sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + ESP_SLIP_ADDITIONAL_DATA_OVERHEAD_LEN + flashDataSize], 0xFF, ESP_MTU - flashDataSize);
+    memset(&sendBuffer[ESP_SLIP_DATA_START + flashDataSize], 0xFF, ESP_SLIP_MTU - flashDataSize);
   }
 
   return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);

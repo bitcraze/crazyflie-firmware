@@ -1,4 +1,5 @@
 %module cffirmware
+%include <stdint.i>
 
 // ignore GNU specific compiler attributes
 #define __attribute__(x)
@@ -10,6 +11,14 @@
 #include "planner.h"
 #include "stabilizer_types.h"
 #include "collision_avoidance.h"
+#include "imu_types.h"
+#include "controller_pid.h"
+#include "position_controller.h"
+#include "pid.h"
+#include "filter.h"
+#include "num.h"
+#include "controller_mellinger.h"
+#include "power_distribution.h"
 %}
 
 %include "math3d.h"
@@ -17,6 +26,10 @@
 %include "planner.h"
 %include "stabilizer_types.h"
 %include "collision_avoidance.h"
+%include "controller_pid.h"
+%include "imu_types.h"
+%include "controller_mellinger.h"
+%include "power_distribution.h"
 
 %inline %{
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)

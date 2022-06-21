@@ -35,10 +35,18 @@ config DEBUG_PRINT_ON_UART1
     bool "Switch DEBUG_PRINT to UART1"
     default n
     help
-      Switch output of DEBUG_PRINT from radio to UART1 with 115200 baudrate.
+      Switch output of DEBUG_PRINT from radio to UART1.
       Note! This will interfere with several expansion decks, see the expansion
       deck documentation on https://www.bitcraze.io/ for more information about
       pin allocation.
+
+config DEBUG_PRINT_ON_UART1_BAUDRATE
+    int "Debug print on UART1 baudrate"
+    default 115200
+    depends on DEBUG_PRINT_ON_UART1
+    help
+      Set the baudrate of the debug output   
+
 
 config DEBUG_DECK_IGNORE_OW
     bool "Do not enumerate OW based expansion decks"

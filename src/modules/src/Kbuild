@@ -39,12 +39,14 @@ obj-y += platformservice.o
 obj-y += position_controller_indi.o
 obj-y += position_controller_pid.o
 obj-y += position_estimator_altitude.o
-obj-y += power_distribution_stock.o
+obj-$(CONFIG_POWER_DISTRIBUTION_QUADROTOR) += power_distribution_quadrotor.o
 obj-y += pptraj_compressed.o
 obj-y += pptraj.o
 obj-y += queuemonitor.o
 obj-y += range.o
 obj-y += sensfusion6.o
+obj-y += serial_4way_avrootloader.o
+obj-y += serial_4way.o
 obj-y += sound_cf2.o
 obj-y += stabilizer.o
 obj-y += static_mem.o
@@ -52,6 +54,7 @@ obj-y += supervisor.o
 obj-y += sysload.o
 obj-y += system.o
 obj-y += tdoaEngineInstance.o
+obj-y += vcp_esc_passthrough.o
 obj-y += worker.o
 
 # Kalman core

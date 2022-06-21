@@ -2,14 +2,14 @@
   ******************************************************************************
   * @file    stm32f4xx_flash.h
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file contains all the functions prototypes for the FLASH 
   *          firmware library.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ typedef enum
 #define IS_VOLTAGERANGE(RANGE)(((RANGE) == VoltageRange_1) || \
                                ((RANGE) == VoltageRange_2) || \
                                ((RANGE) == VoltageRange_3) || \
-                               ((RANGE) == VoltageRange_4))                                                                                                               
+                               ((RANGE) == VoltageRange_4))
 /**
   * @}
   */ 
@@ -166,20 +166,35 @@ typedef enum
                                  ((SECTOR) == FLASH_Sector_20)  || ((SECTOR) == FLASH_Sector_21)  ||\
                                  ((SECTOR) == FLASH_Sector_22)  || ((SECTOR) == FLASH_Sector_23))
 
-#if defined (STM32F427_437xx) || defined (STM32F429_439xx)
-#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) < 0x081FFFFF)) ||\
-                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) < 0x1FFF7A0F)))  
-#endif /* STM32F427_437xx ||  STM32F429_439xx */
+#if defined (STM32F427_437xx) || defined (STM32F429_439xx) || defined (STM32F469_479xx)
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) <= 0x081FFFFF)) ||\
+                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) <= 0x1FFF7A0F)))  
+#endif /* STM32F427_437xx || STM32F429_439xx || STM32F469_479xx */
 
-#if defined (STM32F40_41xxx)
-#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) < 0x080FFFFF)) ||\
-                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) < 0x1FFF7A0F))) 
-#endif /* STM32F40_41xxx */
+#if defined (STM32F40_41xxx) || defined(STM32F412xG)
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) <= 0x080FFFFF)) ||\
+                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) <= 0x1FFF7A0F))) 
+#endif /* STM32F40_41xxx || STM32F412xG */
 
-#if defined (STM32F401xx)                                   
-#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) < 0x0803FFFF)) ||\
-                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) < 0x1FFF7A0F)))                                                                       
+#if defined (STM32F401xx)
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) <= 0x0803FFFF)) ||\
+                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) <= 0x1FFF7A0F)))
 #endif /* STM32F401xx */
+
+#if defined (STM32F411xE) || defined (STM32F446xx)
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) <= 0x0807FFFF)) ||\
+                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) <= 0x1FFF7A0F)))
+#endif /* STM32F411xE || STM32F446xx */
+
+#if defined (STM32F410xx)
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) <= 0x0801FFFF)) ||\
+                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) <= 0x1FFF7A0F)))
+#endif /* STM32F410xx */
+
+#if defined(STM32F413_423xx)
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= 0x08000000) && ((ADDRESS) <= 0x0817FFFF)) ||\
+                                   (((ADDRESS) >= 0x1FFF7800) && ((ADDRESS) <= 0x1FFF7BDF)))
+#endif /* STM32F413_423xx */
 /**
   * @}
   */ 

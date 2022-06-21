@@ -62,10 +62,8 @@ clean_o: clean_version
 	@$(if $(QUIET), ,echo $(CLEAN_O_COMMAND$(VERBOSE)) )
 	@$(CLEAN_O_COMMAND)
 
-CLEAN_COMMAND=rm -f *.elf *.hex *.bin *.dfu *.map *.py _cf*.so
-CLEAN_COMMAND_SILENT="  CLEAN"
 clean_cf:
-	@$(if $(QUIET), ,echo $(CLEAN_COMMAND$(VERBOSE)) )
-	@$(CLEAN_COMMAND)
 	@rm -f $(srctree)/$(PROG).*
+	@rm -f $(srctree)/cffirmware.py
+	@rm -f $(srctree)/_cffirmware*.so
 	

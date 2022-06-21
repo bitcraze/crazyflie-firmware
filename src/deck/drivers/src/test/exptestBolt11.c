@@ -21,9 +21,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * exptestBolt.c - Testing of expansion port and motor connectors
+ * exptestBolt11.c - Testing of expansion port and motor connectors for Bolt 1.1
  */
-#define DEBUG_MODULE "ET"
+#define DEBUG_MODULE "ET_BOLT"
 
 #include <stdint.h>
 
@@ -76,7 +76,7 @@
 #define ET_GPIO_PORT_M3  GPIOA
 #define ET_GPIO_PIN_M3   GPIO_Pin_15
 #define ET_GPIO_PORT_M4  GPIOB
-#define ET_GPIO_PIN_M4   GPIO_Pin_9
+#define ET_GPIO_PIN_M4   GPIO_Pin_10
 
 #define ET_GPIO_PORT_M1_OR  GPIOA
 #define ET_GPIO_PIN_M1_OR   GPIO_Pin_0

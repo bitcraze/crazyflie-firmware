@@ -119,7 +119,7 @@ bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, ui
   }
 }
 
-bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer)
+bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef)
 {
   bool pass;
   if (memAddr == 0) {

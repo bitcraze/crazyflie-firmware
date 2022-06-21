@@ -25,7 +25,7 @@
  */
 #include <stdbool.h>
 
-#include "FreeRTOS.h"
+#include "stabilizer_types.h"
 
 #include "attitude_controller.h"
 #include "pid.h"
@@ -49,12 +49,41 @@ static inline int16_t saturateSignedInt16(float in)
     return (int16_t)in;
 }
 
-PidObject pidRollRate;
-PidObject pidPitchRate;
-PidObject pidYawRate;
-PidObject pidRoll;
-PidObject pidPitch;
-PidObject pidYaw;
+PidObject pidRollRate = {
+  .kp = PID_ROLL_RATE_KP,
+  .ki = PID_ROLL_RATE_KI,
+  .kd = PID_ROLL_RATE_KD,
+};
+
+PidObject pidPitchRate = {
+  .kp = PID_PITCH_RATE_KP,
+  .ki = PID_PITCH_RATE_KI,
+  .kd = PID_PITCH_RATE_KD,
+};
+
+PidObject pidYawRate = {
+  .kp = PID_YAW_RATE_KP,
+  .ki = PID_YAW_RATE_KI,
+  .kd = PID_YAW_RATE_KD,
+};
+
+PidObject pidRoll = {
+  .kp = PID_ROLL_KP,
+  .ki = PID_ROLL_KI,
+  .kd = PID_ROLL_KD,
+};
+
+PidObject pidPitch = {
+  .kp = PID_PITCH_KP,
+  .ki = PID_PITCH_KI,
+  .kd = PID_PITCH_KD,
+};
+
+PidObject pidYaw = {
+  .kp = PID_YAW_KP,
+  .ki = PID_YAW_KI,
+  .kd = PID_YAW_KD,
+};
 
 static int16_t rollOutput;
 static int16_t pitchOutput;
@@ -68,22 +97,22 @@ void attitudeControllerInit(const float updateDt)
     return;
 
   //TODO: get parameters from configuration manager instead
-  pidInit(&pidRollRate,  0, PID_ROLL_RATE_KP,  PID_ROLL_RATE_KI,  PID_ROLL_RATE_KD,
+  pidInit(&pidRollRate,  0, pidRollRate.kp,  pidRollRate.ki,  pidRollRate.kd,
       updateDt, ATTITUDE_RATE, ATTITUDE_RATE_LPF_CUTOFF_FREQ, ATTITUDE_RATE_LPF_ENABLE);
-  pidInit(&pidPitchRate, 0, PID_PITCH_RATE_KP, PID_PITCH_RATE_KI, PID_PITCH_RATE_KD,
+  pidInit(&pidPitchRate, 0, pidPitchRate.kp, pidPitchRate.ki, pidPitchRate.kd,
       updateDt, ATTITUDE_RATE, ATTITUDE_RATE_LPF_CUTOFF_FREQ, ATTITUDE_RATE_LPF_ENABLE);
-  pidInit(&pidYawRate,   0, PID_YAW_RATE_KP,   PID_YAW_RATE_KI,   PID_YAW_RATE_KD,
+  pidInit(&pidYawRate,   0, pidYawRate.kp,   pidYawRate.ki,   pidYawRate.kd,
       updateDt, ATTITUDE_RATE, ATTITUDE_RATE_LPF_CUTOFF_FREQ, ATTITUDE_RATE_LPF_ENABLE);
 
   pidSetIntegralLimit(&pidRollRate,  PID_ROLL_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitchRate, PID_PITCH_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYawRate,   PID_YAW_RATE_INTEGRATION_LIMIT);
 
-  pidInit(&pidRoll,  0, PID_ROLL_KP,  PID_ROLL_KI,  PID_ROLL_KD,  updateDt,
+  pidInit(&pidRoll,  0, pidRoll.kp,  pidRoll.ki,  pidRoll.kd,  updateDt,
       ATTITUDE_RATE, ATTITUDE_LPF_CUTOFF_FREQ, ATTITUDE_LPF_ENABLE);
-  pidInit(&pidPitch, 0, PID_PITCH_KP, PID_PITCH_KI, PID_PITCH_KD, updateDt,
+  pidInit(&pidPitch, 0, pidPitch.kp, pidPitch.ki, pidPitch.kd, updateDt,
       ATTITUDE_RATE, ATTITUDE_LPF_CUTOFF_FREQ, ATTITUDE_LPF_ENABLE);
-  pidInit(&pidYaw,   0, PID_YAW_KP,   PID_YAW_KI,   PID_YAW_KD,   updateDt,
+  pidInit(&pidYaw,   0, pidYaw.kp,   pidYaw.ki,   pidYaw.kd,   updateDt,
       ATTITUDE_RATE, ATTITUDE_LPF_CUTOFF_FREQ, ATTITUDE_LPF_ENABLE);
 
   pidSetIntegralLimit(&pidRoll,  PID_ROLL_INTEGRATION_LIMIT);

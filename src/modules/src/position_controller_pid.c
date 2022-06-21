@@ -27,24 +27,17 @@
 #include <math.h>
 #include "num.h"
 
-#include "commander.h"
 #include "log.h"
 #include "param.h"
 #include "pid.h"
 #include "num.h"
 #include "position_controller.h"
 
-struct pidInit_s {
-  float kp;
-  float ki;
-  float kd;
-};
 
 struct pidAxis_s {
   PidObject pid;
 
-  struct pidInit_s init;
-    stab_mode_t previousMode;
+  stab_mode_t previousMode;
   float setpoint;
 
   float output;
@@ -95,16 +88,16 @@ float velZFiltCutoff = 20.0f;
 #ifndef UNIT_TEST
 static struct this_s this = {
   .pidVX = {
-    .init = {
-      .kp = 25.0f,
-      .ki = 1.0f,
-      .kd = 0.0f,
+    .pid = {
+        .kp = 25.0f,
+        .ki = 1.0f,
+        .kd = 0.0f,
     },
     .pid.dt = DT,
   },
 
   .pidVY = {
-    .init = {
+    .pid = {
       .kp = 25.0f,
       .ki = 1.0f,
       .kd = 0.0f,
@@ -113,7 +106,7 @@ static struct this_s this = {
   },
   #ifdef IMPROVED_BARO_Z_HOLD
     .pidVZ = {
-      .init = {
+      .pid = {
         .kp = 3.0f,
         .ki = 1.0f,
         .kd = 1.5f, //kd can be lowered for improved stability, but results in slower response time.
@@ -122,7 +115,7 @@ static struct this_s this = {
     },
   #else
     .pidVZ = {
-      .init = {
+      .pid = {
         .kp = 25.0f,
         .ki = 15.0f,
         .kd = 0,
@@ -131,7 +124,7 @@ static struct this_s this = {
     },
   #endif
   .pidX = {
-    .init = {
+    .pid = {
       .kp = 2.0f,
       .ki = 0.0f,
       .kd = 0.0f,
@@ -140,7 +133,7 @@ static struct this_s this = {
   },
 
   .pidY = {
-    .init = {
+    .pid = {
       .kp = 2.0f,
       .ki = 0.0f,
       .kd = 0.0f,
@@ -149,7 +142,7 @@ static struct this_s this = {
   },
 
   .pidZ = {
-    .init = {
+    .pid = {
       .kp = 2.0f,
       .ki = 0.5f,
       .kd = 0.0f,
@@ -167,18 +160,18 @@ static struct this_s this = {
 
 void positionControllerInit()
 {
-  pidInit(&this.pidX.pid, this.pidX.setpoint, this.pidX.init.kp, this.pidX.init.ki, this.pidX.init.kd,
+  pidInit(&this.pidX.pid, this.pidX.setpoint, this.pidX.pid.kp, this.pidX.pid.ki, this.pidX.pid.kd,
       this.pidX.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
-  pidInit(&this.pidY.pid, this.pidY.setpoint, this.pidY.init.kp, this.pidY.init.ki, this.pidY.init.kd,
+  pidInit(&this.pidY.pid, this.pidY.setpoint, this.pidY.pid.kp, this.pidY.pid.ki, this.pidY.pid.kd,
       this.pidY.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
-  pidInit(&this.pidZ.pid, this.pidZ.setpoint, this.pidZ.init.kp, this.pidZ.init.ki, this.pidZ.init.kd,
+  pidInit(&this.pidZ.pid, this.pidZ.setpoint, this.pidZ.pid.kp, this.pidZ.pid.ki, this.pidZ.pid.kd,
       this.pidZ.pid.dt, POSITION_RATE, posZFiltCutoff, posZFiltEnable);
 
-  pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.init.kp, this.pidVX.init.ki, this.pidVX.init.kd,
+  pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.pid.kp, this.pidVX.pid.ki, this.pidVX.pid.kd,
       this.pidVX.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
-  pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.init.kp, this.pidVY.init.ki, this.pidVY.init.kd,
+  pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.pid.kp, this.pidVY.pid.ki, this.pidVY.pid.kd,
       this.pidVY.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
-  pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.init.kp, this.pidVZ.init.ki, this.pidVZ.init.kd,
+  pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.pid.kp, this.pidVZ.pid.ki, this.pidVZ.pid.kd,
       this.pidVZ.pid.dt, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
 }
 

@@ -62,25 +62,35 @@ static void cxpRxTest(void *param)
   while (1) {
     cpxReceivePacketBlocking(&cpxRx);
 
-    DEBUG_PRINT("CPX RX: Message from [0x%02X] to function [0x%02X] (size=%u)\n", cpxRx.route.source, cpxRx.route.function, cpxRx.dataLength);
+    //DEBUG_PRINT("CPX RX: Message from [0x%02X] to function [0x%02X] (size=%u)\n", cpxRx.route.source, cpxRx.route.function, cpxRx.dataLength);
 
-    if (cpxRx.route.source == CPX_T_ESP32) {
-      switch(cpxRx.route.function) {
-        case CPX_F_WIFI_CTRL:
-          if (cpxRx.data[0] == WIFI_AP_CONNECTED_CMD) {
-              DEBUG_PRINT("WiFi connected to ip: %u.%u.%u.%u\n",
-                          cpxRx.data[1],
-                          cpxRx.data[2],
-                          cpxRx.data[3],
-                          cpxRx.data[4]);
-          }
-          if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
-            DEBUG_PRINT("WiFi client connected\n");
-          }
-          break;
-        default:
-          DEBUG_PRINT("Not handling function [0x%02X]\n", cpxRx.route.function);
-      }
+    switch (cpxRx.route.function) {
+      case CPX_F_WIFI_CTRL:
+        if (cpxRx.data[0] == WIFI_AP_CONNECTED_CMD) {
+            DEBUG_PRINT("WiFi connected to ip: %u.%u.%u.%u\n",
+                        cpxRx.data[1],
+                        cpxRx.data[2],
+                        cpxRx.data[3],
+                        cpxRx.data[4]);
+        }
+        if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
+          DEBUG_PRINT("WiFi client connected\n");
+        }
+        break;
+      case CPX_F_CONSOLE:
+        if (cpxRx.route.source == CPX_T_ESP32) {
+          consolePrintf("ESP32: %s", cpxRx.data);
+        } else if (cpxRx.route.source == CPX_T_GAP8) {
+          consolePrintf("GAP8: %s", cpxRx.data);
+        } else {
+          consolePrintf("UNKNOWN: %s", cpxRx.data);
+        }
+        break;
+      case CPX_F_BOOTLOADER:
+        cpxBootloaderMessage(&cpxRx);
+        break;
+      default:
+        DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
     }
   }
 }
