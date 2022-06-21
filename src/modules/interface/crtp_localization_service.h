@@ -27,6 +27,7 @@
 #define _CRTP_LOCALIZATION_SERVICE_H_
 
 #include "stabilizer_types.h"
+#include "autoconf.h"
 
 #ifdef CONFIG_DECK_LIGHTHOUSE
 #include "pulse_processor.h"

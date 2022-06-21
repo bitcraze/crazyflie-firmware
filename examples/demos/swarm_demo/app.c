@@ -20,7 +20,6 @@
 #include "pptraj.h"
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
-#include "autoconf.h"
 
 #define DEBUG_MODULE "APP"
 #include "debug.h"

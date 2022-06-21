@@ -140,7 +140,7 @@ void lighthouseCoreInit() {
   lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
 
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     modifyBit(&baseStationAvailabledMap, i, true);
   }
 }

@@ -38,6 +38,7 @@
 #include "stabilizer.h"
 #include "configblock.h"
 #include "worker.h"
+#include "autoconf.h"
 
 #ifdef CONFIG_DECK_LIGHTHOUSE
 #include "lighthouse_storage.h"
@@ -52,7 +53,6 @@
 
 #include "num.h"
 
-#include "autoconf.h"
 
 #define NBR_OF_RANGES_IN_PACKET   5
 #define NBR_OF_SWEEPS_IN_PACKET   2
