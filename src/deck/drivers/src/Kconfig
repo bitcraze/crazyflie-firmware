@@ -334,7 +334,8 @@ menu "CPX (on UART2)"
   config DECK_CRTP_OVER_UART2_BAUDRATE
     int "CPX UART2 baudrate"
     depends on DECK_CRTP_OVER_UART2
-    default "115200"
+    range 9600 2000000
+    default 115200
     help
         Set the baudrate that will be used for CPX on UART2
 endmenu  

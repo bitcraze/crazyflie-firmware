@@ -30,10 +30,6 @@
 #include "eprintf.h"
 #include "autoconf.h"
 
-#ifdef CONFIG_CRTP_OVER_UART2
-#include "syslink.h"
-#endif
-
 #define UART2_DATA_TIMEOUT_MS    1000
 #define UART2_DATA_TIMEOUT_TICKS (UART2_DATA_TIMEOUT_MS / portTICK_RATE_MS)
 
@@ -96,15 +92,6 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data);
  */
 int uart2Putchar(int ch);
 
-#ifdef CONFIG_CRTP_OVER_UART2
-
-/**
- * Get data from rx queue. Blocks until data is available.
- * @param[out] slp Pointer to a complete syslink packet
- */
-void uart2GetPacketBlocking(SyslinkPacket* slp);
-
-#endif
 
 /**
  * Read a byte of data from incoming queue with a timeout

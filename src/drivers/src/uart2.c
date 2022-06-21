@@ -42,10 +42,6 @@
 #include "nvicconf.h"
 #include "static_mem.h"
 
-#ifdef CONFIG_CRTP_OVER_UART2
-#include "queuemonitor.h"
-#endif
-
 static xSemaphoreHandle uartBusy;
 static StaticSemaphore_t uartBusyBuffer;
 static xSemaphoreHandle waitUntilSendDone;
@@ -58,25 +54,10 @@ static uint8_t dmaBuffer[UART2_DMA_BUFFER_SIZE];
 static bool    isUartDmaInitialized;
 static uint32_t initialDMACount;
 
-#ifdef CONFIG_CRTP_OVER_UART2
-
-static xQueueHandle uart2PacketDelivery;
-STATIC_MEM_QUEUE_ALLOC(uart2PacketDelivery, 8, sizeof(SyslinkPacket));
-
-static volatile SyslinkPacket slp = {0};
-static volatile SyslinkRxState rxState = waitForFirstStart;
-static volatile uint8_t dataIndex = 0;
-static volatile uint8_t cksum[2] = {0};
-static void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken);
-
-#else
-
 static xQueueHandle uart2queue;
 STATIC_MEM_QUEUE_ALLOC(uart2queue, UART2_RX_QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool hasOverrun = false;
-
-#endif
 
 /**
   * Configures the UART DMA. Mainly used for FreeRTOS trace
@@ -103,20 +84,12 @@ static void uart2DmaInit(void)
   DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
   DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
   DMA_InitStructureShare.DMA_Channel = UART2_DMA_CH;
-  #ifdef CONFIG_CRTP_OVER_UART2
-  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
-  #else
   DMA_InitStructureShare.DMA_Priority = DMA_Priority_Low;
-  #endif
 
   NVIC_InitStructure.NVIC_IRQChannel = UART2_DMA_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  #ifdef CONFIG_CRTP_OVER_UART2
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
-  #else
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
-  #endif
   NVIC_Init(&NVIC_InitStructure);
 
   isUartDmaInitialized = true;
@@ -169,19 +142,10 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitStructure.NVIC_IRQChannel = UART2_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  #ifdef CONFIG_CRTP_OVER_UART2
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SYSLINK_PRI;
-  #else
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
-  #endif
   NVIC_Init(&NVIC_InitStructure);
 
-  #ifdef CONFIG_CRTP_OVER_UART2
-  uart2PacketDelivery = STATIC_MEM_QUEUE_CREATE(uart2PacketDelivery);
-  DEBUG_QUEUE_MONITOR_REGISTER(uart2PacketDelivery);
-  #else
   uart2queue = STATIC_MEM_QUEUE_CREATE(uart2queue);
-  #endif
 
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
 
@@ -245,111 +209,6 @@ int uart2Putchar(int ch)
     return (unsigned char)ch;
 }
 
-#ifdef CONFIG_CRTP_OVER_UART2
-
-void uart2GetPacketBlocking(SyslinkPacket* packet)
-{
-  xQueueReceive(uart2PacketDelivery, packet, portMAX_DELAY);
-}
-
-void uart2HandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTaskWoken)
-{
-  switch (rxState)
-  {
-  case waitForFirstStart:
-    rxState = (c == SYSLINK_START_BYTE1) ? waitForSecondStart : waitForFirstStart;
-    break;
-  case waitForSecondStart:
-    rxState = (c == SYSLINK_START_BYTE2) ? waitForType : waitForFirstStart;
-    break;
-  case waitForType:
-    cksum[0] = c;
-    cksum[1] = c;
-    slp.type = c;
-    rxState = waitForLength;
-    break;
-  case waitForLength:
-    if (c <= SYSLINK_MTU)
-    {
-      slp.length = c;
-      cksum[0] += c;
-      cksum[1] += cksum[0];
-      dataIndex = 0;
-      rxState = (c > 0) ? waitForData : waitForChksum1;
-    }
-    else
-    {
-      rxState = waitForFirstStart;
-    }
-    break;
-  case waitForData:
-    slp.data[dataIndex] = c;
-    cksum[0] += c;
-    cksum[1] += cksum[0];
-    dataIndex++;
-    if (dataIndex == slp.length)
-    {
-      rxState = waitForChksum1;
-    }
-    break;
-  case waitForChksum1:
-    if (cksum[0] == c)
-    {
-      rxState = waitForChksum2;
-    }
-    else
-    {
-      rxState = waitForFirstStart; //Checksum error
-      IF_DEBUG_ASSERT(0);
-    }
-    break;
-  case waitForChksum2:
-    if (cksum[1] == c)
-    {
-      // Post the packet to the queue if there's room
-      if (!xQueueIsQueueFullFromISR(uart2PacketDelivery))
-      {
-        xQueueSendFromISR(uart2PacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
-      }
-      else
-      {
-        IF_DEBUG_ASSERT(0); // Queue overflow
-      }
-    }
-    else
-    {
-      rxState = waitForFirstStart; //Checksum error
-      IF_DEBUG_ASSERT(0);
-    }
-    rxState = waitForFirstStart;
-    break;
-  default:
-    ASSERT(0);
-    break;
-  }
-}
-
-bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks) {
-  ASSERT_FAILED();
-  return false;
-}
-
-bool uart2GetDataWithDefaultTimeout(uint8_t *c) {
-  ASSERT_FAILED();
-  return false;
-}
-
-void uart2Getchar(char * ch) {
-  ASSERT_FAILED();
-}
-
-bool uart2DidOverrun() {
-  ASSERT_FAILED();
-  return false;
-}
-
-#else
-
 bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 {
   if (xQueueReceive(uart2queue, c, timeoutTicks) == pdTRUE)
@@ -379,8 +238,6 @@ bool uart2DidOverrun()
   return result;
 }
 
-#endif
-
 #ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
 {
@@ -396,31 +253,6 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 #endif
-
-#ifdef CONFIG_CRTP_OVER_UART2
-
-void __attribute__((used)) USART2_IRQHandler(void)
-{
-  if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
-  {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-    uint8_t rxDataInterrupt = (uint8_t)(UART2_TYPE->DR & 0xFF);
-    uart2HandleDataFromISR(rxDataInterrupt, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  }
-  else
-  {
-    /** if we get here, the error is most likely caused by an overrun!
-     * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
-     * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
-     * - reading USART_SR register followed reading the USART_DR register.
-     */
-    asm volatile ("" : "=m" (UART2_TYPE->SR) : "r" (UART2_TYPE->SR)); // force non-optimizable reads
-    asm volatile ("" : "=m" (UART2_TYPE->DR) : "r" (UART2_TYPE->DR)); // of these two registers
-  }
-}
-
-#else
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {
@@ -445,6 +277,3 @@ void __attribute__((used)) USART2_IRQHandler(void)
     hasOverrun = true;
   }
 }
-
-
-#endif
