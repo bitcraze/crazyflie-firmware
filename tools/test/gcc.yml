@@ -1,4 +1,6 @@
 ---
+kconfig:
+  config_file: 'build/.config'
 compiler:
   path: gcc
   source_path:     &source_path 'src/'

@@ -1,4 +1,6 @@
-// File under test lighthouse_core.c
+// @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
+
+// File under test lighthouse_storage.c
 #include "lighthouse_storage.h"
 
 #include "unity.h"
