@@ -174,7 +174,7 @@ void systemTask(void *arg)
 #endif
 
 #ifdef CONFIG_DEBUG_PRINT_ON_UART1
-  uart1Init(115200);
+  uart1Init(CONFIG_DEBUG_PRINT_ON_UART1_BAUDRATE);
 #endif
 
   initUsecTimer();
