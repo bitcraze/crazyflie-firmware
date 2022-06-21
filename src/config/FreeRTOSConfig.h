@@ -105,6 +105,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelay				1
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
 #define INCLUDE_xTaskGetIdleTaskHandle 1
+#define INCLUDE_xTimerPendFunctionCall 1
 
 #define configUSE_MUTEXES 1
 

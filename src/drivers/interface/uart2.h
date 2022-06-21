@@ -92,6 +92,7 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data);
  */
 int uart2Putchar(int ch);
 
+int uart2GetData(uint8_t * buffer, size_t size);
 
 /**
  * Read a byte of data from incoming queue with a timeout

@@ -119,13 +119,6 @@ static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * 
   txp->payload[txp->payloadLength] = calcCrc(txp);
 }
 
-static void getByteFromUart(uint8_t *c) {
-  bool readSuccess = false;
-  while(!readSuccess) {
-      readSuccess = uart2GetDataWithTimeout(c, M2T(100));
-  }
-}
-
 static void CPX_UART_RX(void *param)
 {
   systemWaitStart();
@@ -135,10 +128,10 @@ static void CPX_UART_RX(void *param)
     // Wait for start!
     do
     {
-      getByteFromUart(&uartRxp.start);
+      uart2GetData(&uartRxp.start, 1);
     } while (uartRxp.start != 0xFF);
 
-    getByteFromUart(&uartRxp.payloadLength);
+    uart2GetData(&uartRxp.payloadLength, 1);
 
     if (uartRxp.payloadLength == 0)
     {
@@ -146,13 +139,10 @@ static void CPX_UART_RX(void *param)
     }
     else
     {
-      for (int i = 0; i < uartRxp.payloadLength; i++)
-      {
-        getByteFromUart(&uartRxp.payload[i]);
-      }
+      uart2GetData((uint8_t*) &uartRxp.payload, uartRxp.payloadLength);
 
       uint8_t crc;
-      getByteFromUart(&crc);
+      uart2GetData(&crc, 1);
       ASSERT(crc == calcCrc(&uartRxp));
 
       xQueueSend(uartRxQueue, &uartRxp, portMAX_DELAY);

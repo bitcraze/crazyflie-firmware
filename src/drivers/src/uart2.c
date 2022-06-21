@@ -32,6 +32,9 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "semphr.h"
+#include "event_groups.h"
+#include "stream_buffer.h"
+#include "debug.h"
 
 #include "autoconf.h"
 #include "config.h"
@@ -95,6 +98,9 @@ static void uart2DmaInit(void)
   isUartDmaInitialized = true;
 }
 
+static StreamBufferHandle_t rxStream;
+static EventGroupHandle_t isrEvents;
+
 void uart2Init(const uint32_t baudrate)
 {
 
@@ -154,6 +160,11 @@ void uart2Init(const uint32_t baudrate)
 
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
 
+  isrEvents = xEventGroupCreate();
+
+  rxStream = xStreamBufferCreate( 200, 1);
+  // TODO: Check return!
+
   isInit = true;
 }
 
@@ -162,18 +173,29 @@ bool uart2Test(void)
   return isInit;
 }
 
+static const int TX_DONE = (1<<0);
+
+static size_t txSize = 0;
+static size_t txIdx = 0;
+static uint8_t * txBuffer = 0;
+
 void uart2SendData(uint32_t size, uint8_t* data)
 {
-  uint32_t i;
-
   if (!isInit)
     return;
 
-  for(i = 0; i < size; i++)
-  {
-    while (!(UART2_TYPE->SR & USART_FLAG_TXE));
-    UART2_TYPE->DR = (data[i] & 0x00FF);
-  }
+  txIdx = 0;
+  txSize = size;
+  txBuffer = data;
+
+  USART_ITConfig(UART2_TYPE, USART_IT_TXE, ENABLE);
+
+  xEventGroupWaitBits(isrEvents,
+                      TX_DONE,
+                      pdTRUE, // Clear bits before returning
+                      pdTRUE, // Wait for all bits
+                      portMAX_DELAY);
+
 }
 
 void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data)
@@ -254,18 +276,54 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
 }
 #endif
 
+int uart2GetData(uint8_t * buffer, size_t size) {
+  size_t sizeLeft = size;
+  while (sizeLeft > 0) {
+    xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
+    // TODO: Investigate why this loop is needed?
+    sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, portMAX_DELAY);
+  }
+
+  return size;
+}
+
 void __attribute__((used)) USART2_IRQHandler(void)
 {
 
-  if ((UART2_TYPE->SR & (1<<5)) != 0) // fast check if the RXNE interrupt has occurred
+  uint32_t status = UART2_TYPE->SR;
+  if ((UART2_TYPE->SR & USART_FLAG_RXNE) != 0) 
   {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
-    xQueueSendFromISR(uart2queue, &rxData, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    int size = xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken );
+    ASSERT(size==1);
+    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
   }
-  else
+
+  if ((UART2_TYPE->SR & USART_FLAG_TXE) != 0)
   {
+    // TODO: Why do we need this? If we get RXNE this will send garbage otherwise. Shouldn't the flag
+    //       protect against this?
+    if (txBuffer != 0) {
+      uint8_t byteToWrite = txBuffer[txIdx++];
+      UART2_TYPE->DR = (byteToWrite & 0x00FF);
+
+      if (txSize == txIdx) {
+        USART_ITConfig(UART2_TYPE, USART_IT_TXE, DISABLE);
+
+        txBuffer = 0;
+
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xEventGroupSetBitsFromISR(isrEvents, TX_DONE, &xHigherPriorityTaskWoken );
+        portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+      }
+    }
+  }
+
+  if ((status & USART_FLAG_ORE) != 0 ||
+      (status & USART_FLAG_NE) != 0 ||
+      (status & USART_FLAG_FE) != 0 ||
+      (status & USART_FLAG_PE) != 0) {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
      * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
