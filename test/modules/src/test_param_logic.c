@@ -171,7 +171,7 @@ void testGetUint8(void) {
   paramVarId_t varid = paramGetVarId("myGroup", "myUint8");
 
   // Test
-  const float actual = paramGetInt(varid);
+  const uint8_t actual = paramGetInt(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT8(expected, actual);
@@ -185,7 +185,7 @@ void testGetUint16(void) {
   paramVarId_t varid = paramGetVarId("myGroup", "myUint16");
 
   // Test
-  const float actual = paramGetInt(varid);
+  const uint16_t actual = paramGetInt(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT16(expected, actual);
@@ -199,7 +199,7 @@ void testGetUint32(void) {
   paramVarId_t varid = paramGetVarId("myGroup", "myUint32");
 
   // Test
-  const float actual = paramGetInt(varid);
+  const uint32_t actual = paramGetInt(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
@@ -213,7 +213,7 @@ void testGetInt8(void) {
   paramVarId_t varid = paramGetVarId("myGroup", "myInt8");
 
   // Test
-  const float actual = paramGetInt(varid);
+  const int8_t actual = paramGetInt(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_INT8(expected, actual);
@@ -227,7 +227,7 @@ void testGetInt16(void) {
   paramVarId_t varid = paramGetVarId("myGroup", "myInt16");
 
   // Test
-  const float actual = paramGetInt(varid);
+  const int16_t actual = paramGetInt(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_INT16(expected, actual);
@@ -241,7 +241,7 @@ void testGetInt32(void) {
   paramVarId_t varid = paramGetVarId("myGroup", "myInt32");
 
   // Test
-  const float actual = paramGetInt(varid);
+  const int32_t actual = paramGetInt(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_INT32(expected, actual);
