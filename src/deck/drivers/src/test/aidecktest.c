@@ -76,7 +76,7 @@ static bool testOnNina(const uint8_t command, const uint8_t expected)
 
   uart2Putchar(command);
 
-  if (uart2GetDataWithDefaultTimeout(&byte) == true)
+  if (uart2GetCharWithDefaultTimeout(&byte) == true)
   {
     DEBUG_PRINT_COM("[NINA] Received: 0x%02X\r\n", byte);
     if (byte == expected)
@@ -93,7 +93,7 @@ static bool testOnNinaMask(const uint8_t command, uint8_t *byte)
 
   uart2Putchar(command);
 
-  if (uart2GetDataWithDefaultTimeout(byte) == true)
+  if (uart2GetCharWithDefaultTimeout(byte) == true)
   {
     DEBUG_PRINT_COM("Received mask: 0x%02X\r\n", *byte);
 
@@ -235,7 +235,7 @@ static bool aitdecktestTest()
   // Wait for the NINA to start
   vTaskDelay(M2T(1000));
   // Empty the buffer from NINA
-  while (uart2GetDataWithDefaultTimeout(&byte) == true)
+  while (uart2GetCharWithDefaultTimeout(&byte) == true)
     ;
 
   while (uart1GetDataWithDefaultTimeout(&byte) == true)
@@ -416,7 +416,7 @@ static bool aitdecktestTest()
   pinMode(DECK_GPIO_IO4, INPUT);
 
   // (listen on GAP8 and NINA uart for 0xbc)
-  while (uart2GetDataWithDefaultTimeout(&byte) == true)
+  while (uart2GetCharWithDefaultTimeout(&byte) == true)
   {
     if (byte == NINA_INIT_CHAR)
     {

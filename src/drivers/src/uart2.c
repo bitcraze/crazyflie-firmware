@@ -57,8 +57,8 @@ static uint8_t dmaBuffer[UART2_DMA_BUFFER_SIZE];
 static bool    isUartDmaInitialized;
 static uint32_t initialDMACount;
 
-static xQueueHandle uart2queue;
-STATIC_MEM_QUEUE_ALLOC(uart2queue, UART2_RX_QUEUE_LENGTH, sizeof(uint8_t));
+static StreamBufferHandle_t rxStream;
+static EventGroupHandle_t isrEvents;
 
 static bool hasOverrun = false;
 
@@ -97,9 +97,6 @@ static void uart2DmaInit(void)
 
   isUartDmaInitialized = true;
 }
-
-static StreamBufferHandle_t rxStream;
-static EventGroupHandle_t isrEvents;
 
 void uart2Init(const uint32_t baudrate)
 {
@@ -151,8 +148,6 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
   NVIC_Init(&NVIC_InitStructure);
 
-  uart2queue = STATIC_MEM_QUEUE_CREATE(uart2queue);
-
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
 
   //Enable UART
@@ -163,7 +158,7 @@ void uart2Init(const uint32_t baudrate)
   isrEvents = xEventGroupCreate();
 
   rxStream = xStreamBufferCreate( 200, 1);
-  // TODO: Check return!
+  ASSERT(rxStream);
 
   isInit = true;
 }
@@ -228,12 +223,12 @@ int uart2Putchar(int ch)
 {
   uart2SendData(1, (uint8_t *)&ch);
 
-    return (unsigned char)ch;
+  return (unsigned char)ch;
 }
 
-bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
+bool uart2GetCharWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 {
-  if (xQueueReceive(uart2queue, c, timeoutTicks) == pdTRUE)
+  if (uart2GetDataWithTimeout(1, c, timeoutTicks) > 0)
   {
     return true;
   }
@@ -242,15 +237,30 @@ bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
   return false;
 }
 
-bool uart2GetDataWithDefaultTimeout(uint8_t *c)
+bool uart2GetCharWithDefaultTimeout(uint8_t *c)
 {
-  return uart2GetDataWithTimeout(c, UART2_DATA_TIMEOUT_TICKS);
+  return uart2GetCharWithTimeout(c, UART2_DATA_TIMEOUT_TICKS);
 }
 
 void uart2Getchar(char * ch)
- {
-  xQueueReceive(uart2queue, ch, portMAX_DELAY);
- }
+{
+  uart2GetData(1, (uint8_t*) ch);
+}
+
+int uart2GetDataWithTimeout(size_t size, uint8_t * buffer, const uint32_t timeoutTicks) {
+  size_t sizeLeft = size;
+  while (sizeLeft > 0) {
+    xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
+    // TODO: Investigate why this loop is needed?
+    sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, timeoutTicks);
+  }
+
+  return size;
+}
+
+int uart2GetData(size_t size, uint8_t * buffer) {
+  return uart2GetDataWithTimeout(size, buffer, portMAX_DELAY);
+}
 
 bool uart2DidOverrun()
 {
@@ -275,17 +285,6 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 #endif
-
-int uart2GetData(uint8_t * buffer, size_t size) {
-  size_t sizeLeft = size;
-  while (sizeLeft > 0) {
-    xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
-    // TODO: Investigate why this loop is needed?
-    sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, portMAX_DELAY);
-  }
-
-  return size;
-}
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {

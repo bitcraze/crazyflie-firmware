@@ -128,10 +128,10 @@ static void CPX_UART_RX(void *param)
     // Wait for start!
     do
     {
-      uart2GetData(&uartRxp.start, 1);
+      uart2GetData(1, &uartRxp.start);
     } while (uartRxp.start != 0xFF);
 
-    uart2GetData(&uartRxp.payloadLength, 1);
+    uart2GetData(1, &uartRxp.payloadLength);
 
     if (uartRxp.payloadLength == 0)
     {
@@ -139,10 +139,10 @@ static void CPX_UART_RX(void *param)
     }
     else
     {
-      uart2GetData((uint8_t*) &uartRxp.payload, uartRxp.payloadLength);
+      uart2GetData(uartRxp.payloadLength, (uint8_t*) &uartRxp.payload);
 
       uint8_t crc;
-      uart2GetData(&crc, 1);
+      uart2GetData(1, &crc);
       ASSERT(crc == calcCrc(&uartRxp));
 
       xQueueSend(uartRxQueue, &uartRxp, portMAX_DELAY);

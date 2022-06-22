@@ -62,7 +62,7 @@ bool espRomBootloaderSync(uint8_t *sendBuffer)
   bool sync = false;
   for (int i = 0; i < SYNC_ATTEMPTS && !sync; i++)
   {
-    sync = espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
+    sync = espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetCharWithTimeout, 100);
   }
 
   //
@@ -86,7 +86,7 @@ bool espRomBootloaderSpiAttach(uint8_t *sendBuffer)
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 6] = 0x00;
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 7] = 0x00;
 
-  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
+  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetCharWithTimeout, 100);
 }
 
 bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfFlashBuffers, uint32_t firmwareSize, uint32_t flashOffset)
@@ -113,7 +113,7 @@ bool espRomBootloaderFlashBegin(uint8_t *sendBuffer, uint32_t numberOfFlashBuffe
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 14] = (uint8_t)((flashOffset >> 16) & 0x000000FF);
   sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 15] = (uint8_t)((flashOffset >> 24) & 0x000000FF);
 
-  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 10000);
+  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetCharWithTimeout, 10000);
 }
 
 bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint32_t sequenceNumber)
@@ -144,5 +144,5 @@ bool espRomBootloaderFlashData(uint8_t *sendBuffer, uint32_t flashDataSize, uint
     memset(&sendBuffer[ESP_SLIP_DATA_START + flashDataSize], 0xFF, ESP_SLIP_MTU - flashDataSize);
   }
 
-  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetDataWithTimeout, 100);
+  return espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetCharWithTimeout, 100);
 }
