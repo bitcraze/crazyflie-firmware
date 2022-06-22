@@ -182,6 +182,15 @@ config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
         position to the kalman estimator and you can 
         read out the positioning from the loggin lighthouse.x.y.z
 
+config DECK_LIGHTHOUSE_MAX_N_BS
+  int "Max number of base stations"
+  depends on DECK_LIGHTHOUSE
+  default 2
+  range 2 16
+  help
+      Set the max number of base stations supported. NOTE: This is only
+      valid for Lighthouse V2.
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y

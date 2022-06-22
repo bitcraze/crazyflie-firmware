@@ -36,8 +36,9 @@
 #include "lighthouse_calibration.h"
 #include "lighthouse_geometry.h"
 
+#include "autoconf.h"
+
 #define PULSE_PROCESSOR_N_SWEEPS 2
-#define PULSE_PROCESSOR_N_BASE_STATIONS 2
 #define PULSE_PROCESSOR_N_SENSORS 4
 #define PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS 2
 #define PULSE_PROCESSOR_N_WORKSPACE (PULSE_PROCESSOR_N_SENSORS * PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS)
@@ -199,14 +200,14 @@ typedef struct {
   pulseProcessorV2BlockWorkspace_t blockWorkspace;
 
   // Latest block from each base station. Used to pair both blocks (sweeps) from one rotaion of the rotor.
-  pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_BASE_STATIONS];
+  pulseProcessorV2SweepBlock_t blocks[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 
   // Timestamp of the rotor zero position for the latest processed slowbit
-  uint32_t ootxTimestamps[PULSE_PROCESSOR_N_BASE_STATIONS];
+  uint32_t ootxTimestamps[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorV2_t;
 
 typedef struct pulseProcessor_s {
-  bool receivedBsSweep[PULSE_PROCESSOR_N_BASE_STATIONS];
+  bool receivedBsSweep[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 
   union {
     struct {
@@ -218,10 +219,10 @@ typedef struct pulseProcessor_s {
     };
   };
 
-  ootxDecoderState_t ootxDecoder[PULSE_PROCESSOR_N_BASE_STATIONS];
-  lighthouseCalibration_t bsCalibration[PULSE_PROCESSOR_N_BASE_STATIONS];
-  baseStationGeometry_t bsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
-  baseStationGeometryCache_t bsGeoCache[PULSE_PROCESSOR_N_BASE_STATIONS];
+  ootxDecoderState_t ootxDecoder[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  lighthouseCalibration_t bsCalibration[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  baseStationGeometry_t bsGeometry[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  baseStationGeometryCache_t bsGeoCache[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 
   // Health check data
   uint32_t healthFirstSensorTs;
@@ -241,14 +242,14 @@ typedef struct {
 } pulseProcessorBaseStationMeasuremnt_t;
 
 typedef struct {
-  pulseProcessorBaseStationMeasuremnt_t baseStatonMeasurements[PULSE_PROCESSOR_N_BASE_STATIONS];
+  pulseProcessorBaseStationMeasuremnt_t baseStatonMeasurements[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorSensorMeasurement_t;
 
 typedef struct {
   pulseProcessorSensorMeasurement_t sensorMeasurementsLh1[PULSE_PROCESSOR_N_SENSORS];
   pulseProcessorSensorMeasurement_t sensorMeasurementsLh2[PULSE_PROCESSOR_N_SENSORS];
   lighthouseBaseStationType_t measurementType;
-  uint64_t lastUsecTimestamp[PULSE_PROCESSOR_N_BASE_STATIONS];
+  uint64_t lastUsecTimestamp[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorResult_t;
 
 /**

@@ -30,6 +30,7 @@
 
 #include "stm32fxxx.h"
 
+#include "autoconf.h"
 #include "deck.h"
 
 #include "FreeRTOS.h"
@@ -40,9 +41,11 @@
 #include "param.h"
 #include "pm.h"
 #include "log.h"
+
+#ifdef CONFIG_DECK_LIGHTHOUSE
 #include "pulse_processor.h"
+#endif
 #include "mem.h"
-#include "autoconf.h"
 
 #define DEBUG_MODULE "LED"
 #include "debug.h"
@@ -787,6 +790,7 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
  */
 static void lighthouseEffect(uint8_t buffer[][3], bool reset)
 {
+#ifdef CONFIG_DECK_LIGHTHOUSE
   uint16_t validAngles = pulseProcessorAnglesQuality();
 
   for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
@@ -794,6 +798,7 @@ static void lighthouseEffect(uint8_t buffer[][3], bool reset)
     buffer[i][1] = LIMIT(LINSCALE(0.0f, 255.0f, 0.0f, 100.0f, validAngles)); // Green (large validAngles)
     buffer[i][2] = 0;
   }
+#endif
 }
 
 /**

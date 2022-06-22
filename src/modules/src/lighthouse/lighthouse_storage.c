@@ -38,6 +38,8 @@
 #define DEBUG_MODULE "LH_STORE"
 #include "debug.h"
 
+#include "autoconf.h"
+
 // Persistent storage
 #define STORAGE_VERSION_KEY "lh/ver"
 #define CURRENT_STORAGE_VERSION "1"
@@ -64,7 +66,7 @@ bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData,
   bool result = true;
   char key[KEY_LEN];
 
-  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+  if (baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
     if (geoData) {
       generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
       result = result && storageStore(key, &lighthouseCoreState.bsGeometry[baseStation], sizeof(lighthouseCoreState.bsGeometry[baseStation]));
@@ -89,7 +91,7 @@ static void lhPersistDataWorker(void* arg) {
 }
 
 void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation) {
-  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+  if (baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
     workerSchedule(lhPersistDataWorker, (void*)(uint32_t)baseStation);
   }
 }
@@ -117,7 +119,7 @@ void lighthouseStorageVerifySetStorageVersion() {
 void lighthouseStorageInitializeGeoDataFromStorage() {
   char key[KEY_LEN];
 
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+  for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     if (!lighthouseCoreState.bsGeometry[baseStation].valid) {
       generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
       const size_t geoSize = sizeof(geoBuffer);
@@ -132,7 +134,7 @@ void lighthouseStorageInitializeGeoDataFromStorage() {
 void lighthouseStorageInitializeCalibDataFromStorage() {
   char key[KEY_LEN];
 
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+  for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     if (!lighthouseCoreState.bsCalibration[baseStation].valid) {
       generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
       const size_t calibSize = sizeof(calibBuffer);

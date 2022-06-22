@@ -30,6 +30,7 @@
 #include "pulse_processor_v1.h"
 #include "pulse_processor_v2.h"
 #include "cf_math.h"
+#include "autoconf.h"
 
 
 /**
@@ -77,7 +78,7 @@ void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResul
   // Repeated sweep from the same basestation. So in theory we did a cycle, so we should have had all basestations.
   // If not, cleanup the basestation that we didn't receive.
   if(appState->receivedBsSweep[basestation]) {
-    for(int bs=0; bs != PULSE_PROCESSOR_N_BASE_STATIONS; bs++){
+    for(int bs=0; bs != CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; bs++){
       if(!appState->receivedBsSweep[bs]){
         pulseProcessorClear(angles, bs);
       }
@@ -127,7 +128,7 @@ void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
  */
 void pulseProcessorAllClear(pulseProcessorResult_t* angles)
 {
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+  for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation].validCount = 0;
       angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[baseStation].validCount = 0;
