@@ -60,7 +60,7 @@ static struct vec Kpos_P = {20, 20, 20}; // Kp in paper
 static float Kpos_P_limit = 100;
 static struct vec Kpos_D = {18, 18,18}; // Kv in paper
 static float Kpos_D_limit = 100;
-static struct vec Kpos_I = {0, 0, 0}; // not in paper
+static struct vec Kpos_I = {8, 8, 8}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 static struct vec p_error;
@@ -68,7 +68,8 @@ static struct vec v_error;
 // Attitude PID
 static struct vec KR = {0.0055, 0.0055, 0.0055};
 static struct vec Komega = {0.0013, 0.0013, 0.0016};
-
+static struct vec KI = {0.005, 0.005, 0.005};
+static struct vec i_error_att;
 // Logging variables
 static struct vec rpy;
 static struct vec rpy_des;
@@ -90,6 +91,7 @@ static inline struct vec vclampscl(struct vec value, float min, float max) {
 void controllerLeeReset(void)
 {
   i_error_pos = vzero();
+  i_error_att = vzero();
 }
 
 void controllerLeeInit(void)
@@ -143,14 +145,15 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -Kpos_P_limit, Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -Kpos_D_limit, Kpos_D_limit);
-
+    i_error_pos = vadd(i_error_pos, vscl(dt, pos_e));
     p_error = pos_e;
     v_error = vel_e;
 
-    struct vec F_d = vadd3(
+    struct vec F_d = vadd4(
       acc_d,
       veltmul(Kpos_D, vel_e),
-      veltmul(Kpos_P, pos_e));
+      veltmul(Kpos_P, pos_e),
+      veltmul(Kpos_I, i_error_pos));
     
    
     struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
@@ -248,13 +251,16 @@ void controllerLee(control_t *control, setpoint_t *setpoint,
 
   struct vec omega_error = vsub(omega, omega_r);
   
+  // Integral part on angle
+  i_error_att = vadd(i_error_att, vscl(dt, eR));
 
 
   // compute moments
   // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  u = vadd3(
+  u = vadd4(
     vneg(veltmul(KR, eR)),
     vneg(veltmul(Komega, omega_error)),
+    vneg(veltmul(KI, i_error_att)),
     vcross(omega, veltmul(J, omega)));
 
   // if (enableNN > 1) {
@@ -273,6 +279,10 @@ PARAM_GROUP_START(ctrlLee)
 PARAM_ADD(PARAM_FLOAT, KR_x, &KR.x)
 PARAM_ADD(PARAM_FLOAT, KR_y, &KR.y)
 PARAM_ADD(PARAM_FLOAT, KR_z, &KR.z)
+// Attitude I
+PARAM_ADD(PARAM_FLOAT, KI_x, &KI.x)
+PARAM_ADD(PARAM_FLOAT, KI_y, &KI.y)
+PARAM_ADD(PARAM_FLOAT, KI_z, &KI.z)
 // Attitude D
 PARAM_ADD(PARAM_FLOAT, Kw_x, &Komega.x)
 PARAM_ADD(PARAM_FLOAT, Kw_y, &Komega.y)
