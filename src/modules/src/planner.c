@@ -45,9 +45,14 @@ static void plan_takeoff_or_landing(struct planner *p, struct vec curr_pos, floa
 	struct vec hover_pos = curr_pos;
 	hover_pos.z = hover_height;
 
+	// compute the shortest possible rotation towards 0
+	hover_yaw = normalize_radians(hover_yaw);
+	curr_yaw = normalize_radians(curr_yaw);
+	float goal_yaw = hover_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+
 	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
 		curr_pos,  curr_yaw,  vzero(), 0, vzero(),
-		hover_pos, hover_yaw, vzero(), 0, vzero());
+		hover_pos, goal_yaw, vzero(), 0, vzero());
 }
 
 // ----------------- //
@@ -179,12 +184,13 @@ int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool r
 	}
 
 	// compute the shortest possible rotation towards 0
+	float curr_yaw = normalize_radians(curr_eval->yaw);
 	hover_yaw = normalize_radians(hover_yaw);
-	float goal_yaw = hover_yaw + shortest_signed_angle_radians(hover_yaw, 0);
+	float goal_yaw = hover_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
 
 	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
-		curr_eval->pos, curr_eval->yaw, curr_eval->vel, curr_eval->omega.z, curr_eval->acc,
-		hover_pos,      hover_yaw,      vzero(),        goal_yaw,                  vzero());
+		curr_eval->pos, curr_yaw, curr_eval->vel, curr_eval->omega.z, curr_eval->acc,
+		hover_pos,      goal_yaw,      vzero(),        0,                  vzero());
 
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_FLYING;
