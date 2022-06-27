@@ -166,6 +166,10 @@ typedef struct state_s {
   point_t position;         // m
   velocity_t velocity;      // m/s
   acc_t acc;                // Gs (but acc.z without considering gravity)
+
+  // Measured state of the payload
+  point_t payload_pos;         // m   (world frame)
+  velocity_t payload_vel;      // m/s (world frame)
 } state_t;
 
 typedef enum control_mode_e {

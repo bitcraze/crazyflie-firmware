@@ -56,6 +56,8 @@
 #include "statsCnt.h"
 #include "static_mem.h"
 #include "rateSupervisor.h"
+#include "peer_localization.h"
+#include "math3d.h"
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -98,6 +100,16 @@ static struct {
   int16_t rateRoll;
   int16_t ratePitch;
   int16_t rateYaw;
+
+  // payload position - mm
+  int16_t px;
+  int16_t py;
+  int16_t pz;
+
+  // payload velocity - mm / sec
+  int16_t pvx;
+  int16_t pvy;
+  int16_t pvz;
 } stateCompressed;
 
 static struct {
@@ -114,6 +126,10 @@ static struct {
   int16_t ay;
   int16_t az;
 } setpointCompressed;
+
+// for payloads
+point_t payload_last_pos;
+float payload_alpha = 0.9; // between 0...1; 1: no filter
 
 STATIC_MEM_TASK_ALLOC(stabilizerTask, STABILIZER_TASK_STACKSIZE);
 
@@ -150,6 +166,15 @@ static void compressState()
   stateCompressed.rateRoll = sensorData.gyro.x * deg2millirad;
   stateCompressed.ratePitch = -sensorData.gyro.y * deg2millirad;
   stateCompressed.rateYaw = sensorData.gyro.z * deg2millirad;
+
+  // payload
+  stateCompressed.px = state.payload_pos.x * 1000.0f;
+  stateCompressed.py = state.payload_pos.y * 1000.0f;
+  stateCompressed.pz = state.payload_pos.z * 1000.0f;
+
+  stateCompressed.pvx = state.payload_vel.x * 1000.0f;
+  stateCompressed.pvy = state.payload_vel.y * 1000.0f;
+  stateCompressed.pvz = state.payload_vel.z * 1000.0f;
 }
 
 static void compressSetpoint()
@@ -262,6 +287,40 @@ static void stabilizerTask(void* param)
       }
 
       stateEstimator(&state, tick);
+
+      // add the payload state here
+      peerLocalizationOtherPosition_t* payloadPos = peerLocalizationGetPositionByID(255);
+      if (payloadPos != NULL) {
+
+        // if we got a new state
+        if (payload_last_pos.timestamp < state.payload_pos.timestamp) {
+          // update the position
+          state.payload_pos.x = payloadPos->pos.x;
+          state.payload_pos.y = payloadPos->pos.y;
+          state.payload_pos.z = payloadPos->pos.z;
+
+          // estimate the velocity numerically
+          const float dt = (state.payload_pos.timestamp - payload_last_pos.timestamp) / 1000.0f; //s
+          struct vec pos = mkvec(state.payload_pos.x, state.payload_pos.y, state.payload_pos.z);
+          struct vec last_pos = mkvec(payload_last_pos.x, payload_last_pos.y, payload_last_pos.z);
+          struct vec vel = vdiv(vsub(pos, last_pos), dt);
+
+          // apply a simple complementary filter
+          struct vec vel_old = mkvec(state.payload_vel.x, state.payload_vel.y, state.payload_vel.z);
+          struct vec vel_filtered = vadd(vscl(1 - payload_alpha, vel_old), vscl(payload_alpha, vel));
+
+          state.payload_vel.x = vel_filtered.x;
+          state.payload_vel.y = vel_filtered.y;
+          state.payload_vel.z = vel_filtered.z;
+
+          payload_last_pos = state.payload_pos;
+        }
+      } else {
+        state.payload_pos.x = NAN;
+        state.payload_pos.y = NAN;
+        state.payload_pos.z = NAN;
+      }
+
       compressState();
 
       if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
@@ -801,4 +860,37 @@ LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
  * @brief Yaw rate (angular velocity) [milliradians / sec]
  */
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
+
+
+/**
+ * @brief The position of the payload in the global reference frame, X [mm]
+ */
+LOG_ADD(LOG_INT16, x, &stateCompressed.px)
+
+/**
+ * @brief The position of the payload in the global reference frame, Y [mm]
+ */
+LOG_ADD(LOG_INT16, y, &stateCompressed.py)
+
+/**
+ * @brief The position of the payload in the global reference frame, Z [mm]
+ */
+LOG_ADD(LOG_INT16, z, &stateCompressed.pz)
+
+/**
+ * @brief The velocity of the payload in the global reference frame, X [mm/s]
+ */
+LOG_ADD(LOG_INT16, vx, &stateCompressed.pvx)
+
+/**
+ * @brief The velocity of the payload in the global reference frame, Y [mm/s]
+ */
+LOG_ADD(LOG_INT16, vy, &stateCompressed.pvy)
+
+/**
+ * @brief The velocity of the payload in the global reference frame, Z [mm/s]
+ */
+LOG_ADD(LOG_INT16, vz, &stateCompressed.pvz)
+
+
 LOG_GROUP_STOP(stateEstimateZ)

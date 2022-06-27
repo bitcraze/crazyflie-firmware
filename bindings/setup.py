@@ -29,6 +29,7 @@ fw_sources = [
     "src/modules/src/power_distribution_quadrotor.c",
     "src/modules/src/controller_sjc.c",
     "src/modules/src/controller_lee.c",
+    "src/modules/src/controller_lee_payload.c",
 ]
 
 cffirmware = Extension(
