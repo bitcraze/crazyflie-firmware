@@ -266,9 +266,9 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
     if (isfinite(ext_pos.pos[0]) && isfinite(ext_pos.pos[1]) && isfinite(ext_pos.pos[2])) {
       ext_pos.stdDev = 0.01;
       ext_pos.source = MeasurementSourceLighthouse;
-  #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
-      estimatorEnqueuePosition(&ext_pos);
-  #endif
+      #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+        estimatorEnqueuePosition(&ext_pos);
+      #endif
     }
   } else {
     deltaLog = 0;
@@ -309,7 +309,10 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
         sweepInfo.calib = &bsCalib->sweep[1];
         sweepInfo.sweepId = 1;
 
-        estimatorEnqueueSweepAngles(&sweepInfo);
+        #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+          estimatorEnqueueSweepAngles(&sweepInfo);
+        #endif
+
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
         STATS_CNT_RATE_EVENT(&positionRate);
       }
@@ -338,7 +341,9 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         sweepInfo.t = -t30;
         sweepInfo.calib = &bsCalib->sweep[0];
         sweepInfo.sweepId = 0;
-        estimatorEnqueueSweepAngles(&sweepInfo);
+        #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+          estimatorEnqueueSweepAngles(&sweepInfo);
+        #endif
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
         STATS_CNT_RATE_EVENT(&positionRate);
       }
@@ -348,7 +353,9 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         sweepInfo.t = t30;
         sweepInfo.calib = &bsCalib->sweep[1];
         sweepInfo.sweepId = 1;
-        estimatorEnqueueSweepAngles(&sweepInfo);
+        #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+          estimatorEnqueueSweepAngles(&sweepInfo);
+        #endif
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
         STATS_CNT_RATE_EVENT(&positionRate);
       }
@@ -436,7 +443,9 @@ static void estimateYaw(const pulseProcessor_t *state, pulseProcessorResult_t* a
   float yawDelta;
   if (estimateYawDeltaOneBaseStation(baseStation, angles, state->bsGeometry, cfPos, n, &RR, &yawDelta)) {
     yawErrorMeasurement_t yawDeltaMeasurement = {.yawError = yawDelta, .stdDev = 0.01};
-    estimatorEnqueueYawError(&yawDeltaMeasurement);
+    #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+      estimatorEnqueueYawError(&yawDeltaMeasurement);
+    #endif
   }
 }
 
