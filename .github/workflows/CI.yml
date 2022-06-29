@@ -24,13 +24,15 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
       with:
         name: cf2-${{ github.sha }}
-        path: cf2.bin
+        path: |
+          cf2.bin
+          cf2.elf
 
   bolt:
     runs-on: ubuntu-latest
@@ -48,7 +50,9 @@ jobs:
       uses: actions/upload-artifact@v2.1.4
       with:
         name: bolt-${{ github.sha }}
-        path: bolt.bin
+        path: |
+          bolt.bin
+          bolt.elf
 
   tag:
     runs-on: ubuntu-latest
@@ -60,13 +64,15 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
       with:
         name: tag-${{ github.sha }}
-        path: tag.bin
+        path: |
+          tag.bin
+          tag.elf
 
   cfbl:
     runs-on: ubuntu-latest
@@ -78,13 +84,15 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make cfbl_defconfig && ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make cfbl_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
       with:
         name: cfbl-${{ github.sha }}
-        path: cfbl.bin
+        path: |
+          cfbl.bin
+          cfbl.elf
 
   features:
     runs-on: ubuntu-latest
