@@ -61,6 +61,7 @@
 #include "power_distribution.h"
 #include "controller_sjc.h"
 #include "controller_lee.h"
+#include "controller_lee_payload.h"
 %}
 
 %include "math3d.h"
@@ -74,6 +75,7 @@
 %include "power_distribution.h"
 %include "controller_sjc.h"
 %include "controller_lee.h"
+%include "controller_lee_payload.h"
 
 %inline %{
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
