@@ -39,7 +39,7 @@ TODO
 
 static float g_vehicleMass = 0.034; // TODO: should be CF global for other modules
 static float mp = 0.01;
-static float l = 0.5;  //length of the cable
+static float l = 1.0;  //length of the cable
 static float thrustSI;
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
@@ -51,24 +51,24 @@ static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 static struct vec qi_prev;
 static struct vec payload_vel_prev;
 // Position PID
-static struct vec Kpos_P = {4, 4, 4}; // Kp in paper
+static struct vec Kpos_P = {5, 5, 5}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {3, 3, 3}; // Kv in paper
+static struct vec Kpos_D = {4.5, 4.5, 4.5}; // Kv in paper
 static float Kpos_D_limit = 100;
 static struct vec Kpos_I = {0, 0, 0}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 
 // Cable gains
-static struct vec K_q = {25, 25, 25};
-static struct vec K_w = {3, 3, 3}; 
+static struct vec K_q = {20, 20, 18};
+static struct vec K_w = {7, 7, 7}; 
 
 
 static struct vec plp_error;
 static struct vec plv_error;
 // Attitude PID
-static struct vec KR = {0.0055, 0.0055, 0.0055};
-static struct vec Komega = {0.0013, 0.0013, 0.0016};
+static struct vec KR = {0.005, 0.005, 0.005};
+static struct vec Komega = {0.0009, 0.0009, 0.0009};
 
 // Logging variables
 static struct vec rpy;
@@ -121,7 +121,6 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
   // uint64_t startTime = usecTimestamp();
 
   float dt = (float)(1.0f/ATTITUDE_RATE);
-  // struct vec dessnap = vzero();
   // Address inconsistency in firmware where we need to compute our own desired yaw angle
   // Rate-controlled YAW is moving YAW angle setpoint
   float desiredYaw = 0; //rad
@@ -143,9 +142,9 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     struct vec plPos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec plVel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec plAcc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
-    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
+    
     // struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
- 
+    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
      // errors
@@ -162,36 +161,41 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
 
     struct vec desVirtInp = F_d;
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
-    struct vec qi = vnormalize(vsub(statePos, plStPos));
+    struct vec qi = vnormalize(vsub(plStPos, statePos));
     struct vec qidot = vdiv(vsub(qi , qi_prev), dt);
+    qi_prev = qi;
+
     struct vec wi = vcross(qi, qidot);
 
     struct mat33 qiqiT = vecmult(qi);
     struct vec virtualInp = mvmul(qiqiT, desVirtInp);
+    // Compute parallel component
     struct vec grav = mkvec(0,0,-GRAVITY_MAGNITUDE);
     struct vec acc0 = vsub(vdiv(vsub(plStVel, payload_vel_prev),dt), grav); 
     payload_vel_prev = plStVel;
 
     struct vec u_parallel = vadd3(virtualInp, vscl(g_vehicleMass*l*vmag2(wi), qi), vscl(g_vehicleMass, mvmul(qiqiT, acc0)));
-
-    struct vec qdi = vnormalize(desVirtInp);
+    // Compute Perpindicular Component
+    struct vec qdi = vnormalize(vneg(desVirtInp));
     struct vec eq  = vcross(qdi, qi);
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
     struct vec wdi = vzero();
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
 
-    struct vec u_perpind  = vadd(
-    vscl(g_vehicleMass*l, mvmul(skewqi, vadd(vneg(veltmul(K_q, eq)), vneg(veltmul(K_w, ew))))) 
-          , vneg(vscl(g_vehicleMass, mvmul(skewqi2, acc0))));
-    
-    struct vec u = vadd(u_parallel, u_perpind);
-    control->thrustSI = vmag(u);
+    struct vec u_perpind = vsub(
+      vscl(g_vehicleMass*l, mvmul(skewqi, vsub(vneg(veltmul(K_q, eq)), veltmul(K_w, ew)))),
+      vscl(g_vehicleMass, mvmul(skewqi2,acc0))
+    );
 
-   
-    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-    struct mat33 R = quat2rotmat(q);
-    struct vec z = vbasis(2);
+    struct vec u_i = vadd(u_parallel, u_perpind);
+    
+    control->thrustSI = vmag(u_i);
+    control->u_all[0] = u_i.x;
+    control->u_all[1] = u_i.y;
+    control->u_all[2] = u_i.z;
+
+
     thrustSI = control->thrustSI;
   // Reset the accumulated error while on the ground
     if (control->thrustSI < 0.01f) {
@@ -200,7 +204,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
 
   // Compute Desired Rotation matrix
     float thrustSI = control->thrustSI;
-    struct vec Fd_ = vscl(control->thrustSI, mvmul(R, z));
+    struct vec Fd_ = u_i;  //vscl(control->thrustSI, mvmul(R, z));
     struct vec xdes = vbasis(0);
     struct vec ydes = vbasis(1);
     struct vec zdes = vbasis(2);
@@ -299,7 +303,6 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
   control->torque[0] = u.x;
   control->torque[1] = u.y;
   control->torque[2] = u.z;
-
   // ticks = usecTimestamp() - startTime;
 }
 
