@@ -53,10 +53,12 @@ static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 
 float motorForce[4];
 
-// static float g_thrustpart;
-static float g_rollpart;
-static float g_pitchpart;
-static float g_yawpart;
+// Logging
+static int16_t log_thrustpart;  // in 1/100th of a gram
+static int16_t log_rollpart;    // in 1/100th of a gram
+static int16_t log_pitchpart;   // in 1/100th of a gram
+static int16_t log_yawpart;     // in 1/100th of a gram
+static int16_t log_maxThrust;   // in 1/100th of a gram
 
 static float thrust;
 static struct vec torque;
@@ -128,10 +130,11 @@ static void powerDistributionForceTorque(motors_thrust_t* motorPower, const cont
   motorForce[2] = thrustpart + rollpart + pitchpart + yawpart;
   motorForce[3] = thrustpart + rollpart - pitchpart - yawpart;
 
-  // g_thrustpart = thrustpart;
-  g_rollpart = rollpart;
-  g_pitchpart = pitchpart;
-  g_yawpart = yawpart;
+  log_thrustpart = thrustpart / 9.81f * 1000.0f * 100.0f; // convert to 1/100th of a gram
+  log_rollpart = rollpart / 9.81f * 1000.0f * 100.0f;
+  log_pitchpart = pitchpart / 9.81f * 1000.0f * 100.0f;
+  log_yawpart = yawpart / 9.81f * 1000.0f * 100.0f;
+  log_maxThrust = maxThrust * 100.0f;
 #else
   // Thrust mixing similar to PX4 (see https://px4.github.io/Firmware-Doxygen/d7/d2a/mixer__multirotor_8cpp_source.html)
   // 1. Mix thrust, roll, pitch without yaw
@@ -265,6 +268,40 @@ void powerDistribution(motors_thrust_t* motorPower, const control_t *control, fl
       break;
   }
 }
+
+/**
+ * Power distribution related log variables.
+ * Use the following to compute desired motor forces:
+ * 
+ * M1 = thrustPart - rollPart - pitchPart + yawPart;
+ * M2 = thrustPart - rollPart + pitchPart - yawPart;
+ * M3 = thrustPart + rollPart + pitchPart + yawPart;
+ * M4 = thrustPart + rollPart - pitchPart - yawPart;
+ * 
+ * Note that the actual commanded motor forces will be clipped between 0 and maxThrust
+ */
+LOG_GROUP_START(powerDist)
+/**
+ * @brief Thrust part of power distribution; divide by 100 to get grams
+ */
+LOG_ADD_CORE(LOG_INT16, thrustPart, &log_thrustpart)
+/**
+ * @brief Roll part of power distribution; divide by 100 to get grams
+ */
+LOG_ADD_CORE(LOG_INT16, rollPart, &log_rollpart)
+/**
+ * @brief Pitch part of power distribution; divide by 100 to get grams
+ */
+LOG_ADD_CORE(LOG_INT16, pitchPart, &log_pitchpart)
+/**
+ * @brief Yaw part of power distribution; divide by 100 to get grams
+ */
+LOG_ADD_CORE(LOG_INT16, yawPart, &log_yawpart)
+/**
+ * @brief Maximum thrust for one motor; divide by 100 to get grams
+ */
+LOG_ADD_CORE(LOG_INT16, maxThrust, &log_maxThrust)
+LOG_GROUP_STOP(powerDist)
 
 /**
  * Power distribution parameters
