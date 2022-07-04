@@ -49,7 +49,7 @@ menu "Credentials for access-point"
         string "WiFi Password"
         default "mypassword"
         help
-            WiFi password
+            WiFi password (Minimum length of 8)
 endmenu   
 
 config DECK_BIGQUAD
