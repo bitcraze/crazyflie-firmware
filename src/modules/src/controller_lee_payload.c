@@ -49,6 +49,7 @@ static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 
 // initValues:
 static struct vec qi_prev;
+static struct vec qdi_prev;
 static struct vec payload_vel_prev;
 // Position PID
 static struct vec Kpos_P = {5, 5, 5}; // Kp in paper
@@ -60,8 +61,8 @@ static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 
 // Cable gains
-static struct vec K_q = {20, 20, 18};
-static struct vec K_w = {7, 7, 7}; 
+static struct vec K_q = {28, 28, 20};
+static struct vec K_w = {10, 10, 7}; 
 
 
 static struct vec plp_error;
@@ -75,6 +76,8 @@ static struct vec rpy;
 static struct vec rpy_des;
 static struct vec qr;
 static struct mat33 R_des;
+static struct quat q;
+static struct mat33 R;
 static struct vec omega;
 static struct vec omega_r;
 static struct vec u;
@@ -93,6 +96,7 @@ void controllerLeePayloadReset(void)
   i_error_pos = vzero();
   qi_prev = mkvec(0,0,-1);
   payload_vel_prev = mkvec(0,0,0);
+  qdi_prev = vzero();
 }
 
 void controllerLeePayloadInit(void)
@@ -175,12 +179,16 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     payload_vel_prev = plStVel;
 
     struct vec u_parallel = vadd3(virtualInp, vscl(g_vehicleMass*l*vmag2(wi), qi), vscl(g_vehicleMass, mvmul(qiqiT, acc0)));
+    
     // Compute Perpindicular Component
     struct vec qdi = vnormalize(vneg(desVirtInp));
     struct vec eq  = vcross(qdi, qi);
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
-    struct vec wdi = vzero();
+
+    struct vec qdidot = vdiv(vsub(qdi, qdi_prev), dt);
+    qdi_prev = qdi;
+    struct vec wdi = vcross(qdi, qdidot);
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
 
     struct vec u_perpind = vsub(
@@ -201,10 +209,14 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     if (control->thrustSI < 0.01f) {
       controllerLeePayloadReset();
     }
-
+  
+  q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  rpy = quat2rpy(q);
+  R = quat2rotmat(q);
+  struct vec z = vbasis(2);
   // Compute Desired Rotation matrix
     float thrustSI = control->thrustSI;
-    struct vec Fd_ = u_i;  //vscl(control->thrustSI, mvmul(R, z));
+    struct vec Fd_ = vscl(control->thrustSI, mvmul(R, z));
     struct vec xdes = vbasis(0);
     struct vec ydes = vbasis(1);
     struct vec zdes = vbasis(2);
@@ -248,7 +260,6 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
   // Attitude controller
 
   // current rotation [R]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
   rpy = quat2rpy(q);
   struct mat33 R = quat2rotmat(q);
 
