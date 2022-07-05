@@ -347,7 +347,20 @@ PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &Kpos_I.y)
 PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &Kpos_I.z)
 PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &Kpos_I_limit)
 
+// Cable P
+PARAM_ADD(PARAM_FLOAT, Kqx, &K_q.x)
+PARAM_ADD(PARAM_FLOAT, Kqy, &K_q.y)
+PARAM_ADD(PARAM_FLOAT, Kqz, &K_q.z)
+
+// Cable P
+PARAM_ADD(PARAM_FLOAT, Kwx, &K_w.x)
+PARAM_ADD(PARAM_FLOAT, Kwy, &K_w.y)
+PARAM_ADD(PARAM_FLOAT, Kwz, &K_w.z)
+
 PARAM_ADD(PARAM_FLOAT, mass, &g_vehicleMass)
+PARAM_ADD(PARAM_FLOAT, massP, &mp)
+PARAM_ADD(PARAM_FLOAT, length, &l)
+
 PARAM_GROUP_STOP(ctrlLeeP)
 
 
@@ -382,15 +395,6 @@ LOG_ADD(LOG_FLOAT, rpyz, &rpy.z)
 LOG_ADD(LOG_FLOAT, rpydx, &rpy_des.x)
 LOG_ADD(LOG_FLOAT, rpydy, &rpy_des.y)
 LOG_ADD(LOG_FLOAT, rpydz, &rpy_des.z)
-
-// errors
-// LOG_ADD(LOG_FLOAT, error_posx, &p_error.x)
-// LOG_ADD(LOG_FLOAT, error_posy, &p_error.y)
-// LOG_ADD(LOG_FLOAT, error_posz, &p_error.z)
-
-// LOG_ADD(LOG_FLOAT, error_velx, &v_error.x)
-// LOG_ADD(LOG_FLOAT, error_vely, &v_error.y)
-// LOG_ADD(LOG_FLOAT, error_velz, &v_error.z)
 
 // omega
 LOG_ADD(LOG_FLOAT, omegax, &omega.x)
