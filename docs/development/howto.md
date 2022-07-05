@@ -93,6 +93,11 @@ crazyflie-firmware$ make clean && make
 crazyflie-firmware$ make cload
 ```
 
+> If you see `*** Configuration file ".config" not found!`, make sure 
+> select the right build config. Please see [the build instructions](/docs/building-and-flashing/build.md)
+
+
+
 The output will be similar to the following:
 
 ``` {.bash}
