@@ -247,10 +247,10 @@ pass &= exampleTaskTest();
 Adding the task to the build
 ----------------------------
 
-Add this to the Makefile, after the end of the `Modules` block:
+Add this to the  `Kbuild` in `src/modules/src/`
 
 ``` {.make}
-PROJ_OBJ += example.o
+obj-y += example.o
 ```
 
 
@@ -258,12 +258,16 @@ Compile, flash and run!
 -----------------------
 
 Now the last step is to compile and flash your new firmware. Launch the
-following commands in a shell:
+following commands in a shell. 
 
 ``` {.bash}
-crazyflie-firmware$ make
+crazyflie-firmware$ make clean && make
 crazyflie-firmware$ make cload
 ```
+
+> If you see `*** Configuration file ".config" not found!`, make sure 
+> select the right build config. Please see [the build instructions](/docs/building-and-flashing/build.md)
+
 
 The output will be similar to the following:
 
