@@ -24,7 +24,6 @@
     - {page_id: pwm-to-thrust}
 - title: Development Instructions
   subs:
-    - {page_id: starting_development}
     - {page_id: howto}
     - {page_id: serial}
     - {page_id: openocd_gdb_debugging}
