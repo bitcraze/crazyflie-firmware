@@ -442,8 +442,8 @@ static void estimateYaw(const pulseProcessor_t *state, pulseProcessorResult_t* a
   // Calculate yaw delta using only one base station for now
   float yawDelta;
   if (estimateYawDeltaOneBaseStation(baseStation, angles, state->bsGeometry, cfPos, n, &RR, &yawDelta)) {
-    yawErrorMeasurement_t yawDeltaMeasurement = {.yawError = yawDelta, .stdDev = 0.01};
     #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+      yawErrorMeasurement_t yawDeltaMeasurement = {.yawError = yawDelta, .stdDev = 0.01};
       estimatorEnqueueYawError(&yawDeltaMeasurement);
     #endif
   }
