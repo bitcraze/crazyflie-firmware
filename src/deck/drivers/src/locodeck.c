@@ -62,7 +62,7 @@
 #define CS_PIN DECK_GPIO_IO1
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1, TX1), leaving UART1 free for use
-#ifdef LOCODECK_USE_ALT_PINS
+#ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
   #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
 
   #ifndef LOCODECK_ALT_PIN_RESET
@@ -425,7 +425,7 @@ static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
   STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
-#if LOCODECK_USE_ALT_PINS
+#if CONFIG_DECK_LOCODECK_USE_ALT_PINS
   void __attribute__((used)) EXTI5_Callback(void)
 #else
   void __attribute__((used)) EXTI11_Callback(void)
@@ -569,7 +569,7 @@ static const DeckDriver dwm1000_deck = {
   .pid = 0x06,
   .name = "bcDWM1000",
 
-#ifdef LOCODEC_USE_ALT_PINS
+#ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
   .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
 #else
    // (PC10/PC11 is UART1 TX/RX)
