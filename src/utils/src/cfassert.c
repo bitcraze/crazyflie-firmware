@@ -86,7 +86,11 @@ void assertFail(char *exp, char *file, int line)
   motorsStop();
   ledShowFaultPattern();
 
-  NVIC_SystemReset();
+  if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
+  {
+    // Only reset if debugger is not connected
+    NVIC_SystemReset();
+  }
 }
 
 void storeAssertFileData(const char *file, int line)
