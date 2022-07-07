@@ -133,7 +133,7 @@ static void * paramGetDefault(int index)
  *
  * @return number of bytes set
  **/
-int paramSet(uint16_t index, void *data)
+static int paramSet(uint16_t index, void *data)
 {
   int paramLength = 0;
 
@@ -533,6 +533,7 @@ int paramGetInt(paramVarId_t varid)
   int valuei = 0;
 
   ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & PARAM_TYPE_INT) == PARAM_TYPE_INT);
 
   paramGet(varid.index, (void *)&valuei);
 
@@ -542,11 +543,9 @@ int paramGetInt(paramVarId_t varid)
 float paramGetFloat(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & PARAM_TYPE_FLOAT) == PARAM_TYPE_FLOAT);
 
-  if ((params[varid.index].type & (~(PARAM_CORE | PARAM_RONLY))) == PARAM_FLOAT)
-    return *(float *)params[varid.index].address;
-
-  return (float)paramGetInt(varid);
+  return *(float *)params[varid.index].address;
 }
 
 unsigned int paramGetUint(paramVarId_t varid)
@@ -556,18 +555,20 @@ unsigned int paramGetUint(paramVarId_t varid)
 
 void paramSetInt(paramVarId_t varid, int valuei)
 {
-  ASSERT(PARAM_VARID_IS_VALID(varid));
+  uint8_t paramSize;
 
+  ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & (PARAM_TYPE_INT | PARAM_RONLY)) == PARAM_TYPE_INT);
+
+  paramSize = paramSet(varid.index, (void *)&valuei);
+
+#ifndef CONFIG_PARAM_SILENT_UPDATES
   static CRTPPacket pk;
   pk.header=CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
   pk.data[0] = MISC_VALUE_UPDATED;
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size = 3;
-
-  pk.size += paramSet(varid.index, (void *)&valuei);
-
-#ifndef CONFIG_PARAM_SILENT_UPDATES
+  pk.size = 3 + paramSize;
   crtpSendPacketBlock(&pk);
 #endif
 }
@@ -575,22 +576,19 @@ void paramSetInt(paramVarId_t varid, int valuei)
 void paramSetFloat(paramVarId_t varid, float valuef)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & (PARAM_TYPE_FLOAT | PARAM_RONLY)) == PARAM_TYPE_FLOAT);
 
+  *(float *)params[varid.index].address = valuef;
+
+#ifndef CONFIG_PARAM_SILENT_UPDATES
   static CRTPPacket pk;
-  pk.header=CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
+  pk.header  = CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
   pk.data[0] = MISC_VALUE_UPDATED;
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size=3;
-
-  if ((params[varid.index].type & (~PARAM_CORE)) == PARAM_FLOAT) {
-      *(float *)params[varid.index].address = valuef;
-
-      memcpy(&pk.data[2], &valuef, 4);
-      pk.size += 4;
-  }
-
-#ifndef CONFIG_PARAM_SILENT_UPDATES
+  pk.size = 3;
+  memcpy(&pk.data[2], &valuef, 4);
+  pk.size += 4;
   crtpSendPacketBlock(&pk);
 #endif
 }

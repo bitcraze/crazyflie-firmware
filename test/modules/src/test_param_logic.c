@@ -32,6 +32,7 @@ static int8_t myInt8 = 0;
 static int16_t myInt16 = 0;
 static int32_t myInt32 = 0;
 static int32_t myPersistent = 0;
+static float myPersistentFloat = 0;
 static int8_t myShortPersistent = 0;
 static float myFloat = 0.0f;
 
@@ -50,6 +51,7 @@ PARAM_ADD(PARAM_INT16, myInt16, &myInt16)
 PARAM_ADD(PARAM_INT32, myInt32, &myInt32)
 PARAM_ADD(PARAM_FLOAT, myFloat, &myFloat)
 PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, myPersistent, &myPersistent)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, myPersistentFloat, &myPersistentFloat)
 PARAM_ADD_CORE(PARAM_INT8 | PARAM_PERSISTENT, myShortPersistent, &myShortPersistent)
 PARAM_GROUP_STOP(myGroup)
 
@@ -255,6 +257,23 @@ void testGetFloat(void) {
 
   // Test
   const float actual = paramGetFloat(varid);
+
+  // Assert
+  TEST_ASSERT_EQUAL_FLOAT(expected, actual);
+}
+
+void testPersistentSetGetFloat(void) {
+  // Fixture
+  float expected = 10.88f;
+  float actual;
+
+  paramVarId_t varid = paramGetVarId("myGroup", "myPersistentFloat");
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramSetFloat(varid, expected);
+  actual = paramGetFloat(varid);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(expected, actual);
