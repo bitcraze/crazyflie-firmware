@@ -39,8 +39,10 @@ TODO
 
 static float g_vehicleMass = 0.034; // TODO: should be CF global for other modules
 static float mp = 0.01;
-static float l = 1.0;  //length of the cable
+static float l = 0.4;  //length of the cable
 static float thrustSI;
+static float alpha_qidot = 0.6;
+static float alpha_acc  = 0.6;
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
 // BA theses, Julian Foerster, ETHZ
@@ -52,17 +54,17 @@ static struct vec qi_prev;
 static struct vec qdi_prev;
 static struct vec payload_vel_prev;
 // Position PID
-static struct vec Kpos_P = {5, 5, 5}; // Kp in paper
+static struct vec Kpos_P = {4, 4, 4}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {4.5, 4.5, 4.5}; // Kv in paper
+static struct vec Kpos_D = {2, 2, 2}; // Kv in paper
 static float Kpos_D_limit = 100;
 static struct vec Kpos_I = {0, 0, 0}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 
 // Cable gains
-static struct vec K_q = {28, 28, 20};
-static struct vec K_w = {10, 10, 7}; 
+static struct vec K_q = {10, 10, 10};
+static struct vec K_w = {8, 8, 8}; 
 
 
 static struct vec plp_error;
@@ -81,7 +83,9 @@ static struct mat33 R;
 static struct vec omega;
 static struct vec omega_r;
 static struct vec u;
-
+static struct vec u_i;
+static struct vec qidot_prev;
+static struct vec acc_prev;
 // static uint32_t ticks;
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -95,7 +99,9 @@ void controllerLeePayloadReset(void)
 {
   i_error_pos = vzero();
   qi_prev = mkvec(0,0,-1);
-  payload_vel_prev = mkvec(0,0,0);
+  qidot_prev = vzero();
+  acc_prev   = vzero();
+  payload_vel_prev = vzero();
   qdi_prev = vzero();
 }
 
@@ -147,11 +153,14 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     struct vec plVel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec plAcc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
     
-    // struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
     struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
-     // errors
+
+    // struct vec plStPos  = mkvec(state->position.x, state->position.y, state->position.z-l);
+    // struct vec plStVel  = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
+
+    // errors
     struct vec plpos_e = vclampscl(vsub(plPos_d, plStPos), -Kpos_P_limit, Kpos_P_limit);
     struct vec plvel_e = vclampscl(vsub(plVel_d, plStVel), -Kpos_D_limit, Kpos_D_limit);
 
@@ -168,16 +177,28 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     struct vec qi = vnormalize(vsub(plStPos, statePos));
     struct vec qidot = vdiv(vsub(qi , qi_prev), dt);
     qi_prev = qi;
+    struct vec qidot_filtered = vadd(vscl(1.0f - alpha_qidot, qidot_prev), vscl(alpha_qidot, qidot));
+    qidot_prev = qidot_filtered;
 
-    struct vec wi = vcross(qi, qidot);
+    // Testing qidot_filtered to be vzero()
+    qidot_filtered = vzero();
+    
+    struct vec wi = vcross(qi, qidot_filtered);
 
     struct mat33 qiqiT = vecmult(qi);
     struct vec virtualInp = mvmul(qiqiT, desVirtInp);
+    
     // Compute parallel component
     struct vec grav = mkvec(0,0,-GRAVITY_MAGNITUDE);
-    struct vec acc0 = vsub(vdiv(vsub(plStVel, payload_vel_prev),dt), grav); 
+    struct vec acc_ = vdiv(vsub(plStVel, payload_vel_prev),dt);
     payload_vel_prev = plStVel;
+    struct vec acc_filtered = vadd(vscl(1.0f - alpha_acc, acc_prev), vscl(alpha_acc, acc_));
+    acc_prev = acc_filtered;
 
+    // Testing acceleration of payload to be zero
+    struct vec acc0 = vneg(grav); //vsub(acc_filtered, grav); 
+
+ 
     struct vec u_parallel = vadd3(virtualInp, vscl(g_vehicleMass*l*vmag2(wi), qi), vscl(g_vehicleMass, mvmul(qiqiT, acc0)));
     
     // Compute Perpindicular Component
@@ -196,7 +217,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
       vscl(g_vehicleMass, mvmul(skewqi2,acc0))
     );
 
-    struct vec u_i = vadd(u_parallel, u_perpind);
+    u_i = vadd(u_parallel, u_perpind);
     
     control->thrustSI = vmag(u_i);
     control->u_all[0] = u_i.x;
@@ -352,7 +373,7 @@ PARAM_ADD(PARAM_FLOAT, Kqx, &K_q.x)
 PARAM_ADD(PARAM_FLOAT, Kqy, &K_q.y)
 PARAM_ADD(PARAM_FLOAT, Kqz, &K_q.z)
 
-// Cable P
+// Cable D
 PARAM_ADD(PARAM_FLOAT, Kwx, &K_w.x)
 PARAM_ADD(PARAM_FLOAT, Kwy, &K_w.y)
 PARAM_ADD(PARAM_FLOAT, Kwz, &K_w.z)
@@ -366,13 +387,6 @@ PARAM_GROUP_STOP(ctrlLeeP)
 
 LOG_GROUP_START(ctrlLeeP)
 
-LOG_ADD(LOG_FLOAT, KR_x, &KR.x)
-LOG_ADD(LOG_FLOAT, KR_y, &KR.y)
-LOG_ADD(LOG_FLOAT, KR_z, &KR.z)
-LOG_ADD(LOG_FLOAT, Kw_x, &Komega.x)
-LOG_ADD(LOG_FLOAT, Kw_y, &Komega.y)
-LOG_ADD(LOG_FLOAT, Kw_z, &Komega.z)
-
 LOG_ADD(LOG_FLOAT,Kpos_Px, &Kpos_P.x)
 LOG_ADD(LOG_FLOAT,Kpos_Py, &Kpos_P.y)
 LOG_ADD(LOG_FLOAT,Kpos_Pz, &Kpos_P.z)
@@ -380,6 +394,14 @@ LOG_ADD(LOG_FLOAT,Kpos_Dx, &Kpos_D.x)
 LOG_ADD(LOG_FLOAT,Kpos_Dy, &Kpos_D.y)
 LOG_ADD(LOG_FLOAT,Kpos_Dz, &Kpos_D.z)
 
+
+LOG_ADD(LOG_FLOAT, Kqx, &K_q.x)
+LOG_ADD(LOG_FLOAT, Kqy, &K_q.y)
+LOG_ADD(LOG_FLOAT, Kqz, &K_q.z)
+
+LOG_ADD(LOG_FLOAT, Kwx, &K_w.x)
+LOG_ADD(LOG_FLOAT, Kwy, &K_w.y)
+LOG_ADD(LOG_FLOAT, Kwz, &K_w.z)
 
 LOG_ADD(LOG_FLOAT, thrustSI, &thrustSI)
 LOG_ADD(LOG_FLOAT, torquex, &u.x)
@@ -405,6 +427,11 @@ LOG_ADD(LOG_FLOAT, omegaz, &omega.z)
 LOG_ADD(LOG_FLOAT, omegarx, &omega_r.x)
 LOG_ADD(LOG_FLOAT, omegary, &omega_r.y)
 LOG_ADD(LOG_FLOAT, omegarz, &omega_r.z)
+
+LOG_ADD(LOG_FLOAT, ux, &u_i.x)
+LOG_ADD(LOG_FLOAT, uy, &u_i.y)
+LOG_ADD(LOG_FLOAT, uz, &u_i.z)
+
 
 // LOG_ADD(LOG_UINT32, ticks, &ticks)
 
