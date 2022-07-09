@@ -53,30 +53,28 @@
 #include "stm32fxxx.h"
 #include "system.h"
 
+#include "cpx_internal_router.h"
+#include "cpx_external_router.h"
+#include "cpx_uart_transport.h"
+#include "cpx.h"
+
 #include "aideck.h"
-#include "aideck-router.h"
 
 static bool isInit = false;
 static uint8_t byte;
 
-#define ESP_TX_QUEUE_LENGTH 4
-#define ESP_RX_QUEUE_LENGTH 4
+#define WIFI_SET_SSID_CMD         0x10
+#define WIFI_SET_KEY_CMD          0x11
 
-static xQueueHandle espTxQueue;
-static xQueueHandle espRxQueue;
+#define WIFI_CONNECT_CMD          0x20
+#define WIFI_CONNECT_AS_AP        0x01
+#define WIFI_CONNECT_AS_STA       0x00
+#define WIFI_CONNECT_AS_LENGTH    2
 
-// Length of start + payloadLength
-#define UART_HEADER_LENGTH 2
-#define UART_CRC_LENGTH 1
-#define UART_META_LENGTH (UART_HEADER_LENGTH + UART_CRC_LENGTH)
+#define WIFI_AP_CONNECTED_CMD     0x31
+#define WIFI_CLIENT_CONNECTED_CMD 0x32
 
-typedef struct {
-  CPXTarget_t destination : 3;
-  CPXTarget_t source : 3;
-  bool lastPacket : 1;
-  bool reserved : 1;
-  CPXFunction_t function : 8;
-} __attribute__((packed)) CPXRoutingPacked_t;
+#define CPX_ENABLE_CRTP_BRIDGE    0x10
 
 typedef struct {
   uint8_t cmd;
@@ -93,14 +91,14 @@ typedef struct {
 
 #define ESP32_SYS_CMD_RESET_GAP8 (0x10)
 
-#define CPX_ROUTING_PACKED_SIZE (sizeof(CPXRoutingPacked_t))
+//#define CPX_ROUTING_PACKED_SIZE (sizeof(CPXRoutingPacked_t))
 
-typedef struct {
+/*typedef struct {
     CPXRoutingPacked_t route;
     uint8_t data[AIDECK_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE];
-} __attribute__((packed)) uartTransportPayload_t;
+} __attribute__((packed)) uartTransportPayload_t;*/
 
-typedef struct {
+/*typedef struct {
     uint8_t start;
     uint8_t payloadLength; // Excluding start and crc
     union {
@@ -109,22 +107,22 @@ typedef struct {
     };
 
     uint8_t crcPlaceHolder; // Not actual position. CRC is added after the last byte of payload
-} __attribute__((packed)) uart_transport_packet_t;
+} __attribute__((packed)) uart_transport_packet_t;*/
 
 // Used when sending/receiving data on the UART
-static uart_transport_packet_t espTxp;
+/*static uart_transport_packet_t espTxp;
 static CPXPacket_t cpxTxp;
-static uart_transport_packet_t espRxp;
+static uart_transport_packet_t espRxp;*/
 
-static EventGroupHandle_t evGroup;
+/*static EventGroupHandle_t evGroup;
 #define ESP_CTS_EVENT (1 << 0)
 #define ESP_CTR_EVENT (1 << 1)
-#define ESP_TXQ_EVENT (1 << 2)
+#define ESP_TXQ_EVENT (1 << 2)*/
 
 static EventGroupHandle_t bootloaderSync;
 #define CPX_WAIT_FOR_BOOTLOADER_REPLY (1<<0)
 
-static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp);
+//static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp);
 
 
 typedef enum {
@@ -139,7 +137,7 @@ const uint32_t espUartReadMaxWait = M2T(100);
 // This function gets data from the UART that is connected to the ESP.
 // The default behavior is to wait until data arrives, but it can be terminated when the ESP is set to boot loader mode.
 // In this case the function will be NOPed and block forever.
-static void getDataFromEspUart(uint8_t *c) {
+/*static void getDataFromEspUart(uint8_t *c) {
   bool readSuccess = false;
   while(!readSuccess) {
     if (ESP_MODE_NORMAL == espMode) {
@@ -148,11 +146,11 @@ static void getDataFromEspUart(uint8_t *c) {
       vTaskDelay(portMAX_DELAY);
     }
   }
-}
+}*/
 
 // This function sends data to the UART that is connected to the ESP.
 // It will be NOPed if the ESP is set in boot loader mode.
-static void sendDataToEspUart(uint32_t size, uint8_t* data) {
+/*static void sendDataToEspUart(uint32_t size, uint8_t* data) {
   if (ESP_MODE_NORMAL == espMode) {
     uart2SendData(size, data);
   }
@@ -168,9 +166,9 @@ static uint8_t calcCrc(const uart_transport_packet_t* packet) {
   }
 
   return crc;
-}
+}*/
 
-static void ESP_RX(void *param)
+/*static void ESP_RX(void *param)
 {
   systemWaitStart();
 
@@ -203,9 +201,9 @@ static void ESP_RX(void *param)
       xEventGroupSetBits(evGroup, ESP_CTR_EVENT);
     }
   }
-}
+}*/
 
-static void ESP_TX(void *param)
+/*static void ESP_TX(void *param)
 {
   systemWaitStart();
 
@@ -264,7 +262,7 @@ static void ESP_TX(void *param)
       sendDataToEspUart((uint32_t) espTxp.payloadLength + UART_META_LENGTH, (uint8_t *)&espTxp);
     }
   }
-}
+}*/
 
 /*static void Gap8Task(void *param)
 {
@@ -279,7 +277,7 @@ static void ESP_TX(void *param)
   }
 }*/
 
-static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp) {
+/*static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp) {
   ASSERT((packet->route.destination >> 4) == 0);
   ASSERT((packet->route.source >> 4) == 0);
   ASSERT((packet->route.function >> 8) == 0);
@@ -292,9 +290,9 @@ static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * 
   txp->routablePayload.route.function = packet->route.function;
   memcpy(txp->routablePayload.data, &packet->data, packet->dataLength);
   txp->payload[txp->payloadLength] = calcCrc(txp);
-}
+}*/
 
-void cpxReceivePacketBlocking(CPXPacket_t *packet)
+/*void cpxReceivePacketBlocking(CPXPacket_t *packet)
 {
   static uart_transport_packet_t cpxRxp;
 
@@ -323,14 +321,14 @@ bool cpxSendPacket(const CPXPacket_t *packet, uint32_t timeout)
     packetWasSent = true;
   }
   return packetWasSent;
-}
+}*/
 
-void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route) {
+/*void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route) {
     route->source = source;
     route->destination = destination;
     route->function = function;
     route->lastPacket = true;
-}
+}*/
 
 void cpxBootloaderMessage(const CPXPacket_t * packet) {
   xEventGroupSetBits(bootloaderSync, CPX_WAIT_FOR_BOOTLOADER_REPLY);
@@ -477,6 +475,40 @@ uint8_t espDeckFlasherPropertiesQuery()
   return result;
 }
 
+#ifndef CONFIG_DECK_AI_WIFI_NO_SETUP
+  static CPXPacket_t cpxTx;
+  static void setupWiFi() {
+  #ifdef CONFIG_DECK_AI_WIFI_SETUP_STA
+    DEBUG_PRINT("AI-deck will connect to WiFi\n");
+  #endif
+
+  #ifdef CONFIG_DECK_AI_WIFI_SETUP_AP
+    DEBUG_PRINT("AI-deck will become access point\n");
+  #endif
+
+    cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_WIFI_CTRL, &cpxTx.route);
+
+    cpxTx.data[0] = WIFI_SET_SSID_CMD; // Set SSID
+    memcpy(&cpxTx.data[1], CONFIG_DECK_AI_SSID, sizeof(CONFIG_DECK_AI_SSID));
+    cpxTx.dataLength = sizeof(CONFIG_DECK_AI_SSID);
+    cpxSendPacketBlocking(&cpxTx);
+
+    cpxTx.data[0] = WIFI_SET_KEY_CMD; // Set SSID
+    memcpy(&cpxTx.data[1], CONFIG_DECK_AI_PASSWORD, sizeof(CONFIG_DECK_AI_PASSWORD));
+    cpxTx.dataLength = sizeof(CONFIG_DECK_AI_PASSWORD);
+    cpxSendPacketBlocking(&cpxTx);
+
+    cpxTx.data[0] = WIFI_CONNECT_CMD; // Connect wifi
+  #ifdef CONFIG_DECK_AI_WIFI_SETUP_STA
+    cpxTx.data[1] = WIFI_CONNECT_AS_STA;
+  #endif
+  #ifdef CONFIG_DECK_AI_WIFI_SETUP_AP
+    cpxTx.data[1] = WIFI_CONNECT_AS_AP;
+  #endif
+    cpxTx.dataLength = WIFI_CONNECT_AS_LENGTH;
+    cpxSendPacketBlocking(&cpxTx);
+  }
+  #endif
 
 
 static void aideckInit(DeckInfo *info)
@@ -484,14 +516,17 @@ static void aideckInit(DeckInfo *info)
   if (isInit)
     return;
 
+  pinMode(DECK_GPIO_IO2, OUTPUT);
+  pinMode(DECK_GPIO_IO3, OUTPUT);
+
   // Initialize task for the GAP8
   /*xTaskCreate(Gap8Task, AI_DECK_GAP_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
               AI_DECK_TASK_PRI, NULL);*/
 
-  espTxQueue = xQueueCreate(ESP_TX_QUEUE_LENGTH, sizeof(CPXPacket_t));
-  espRxQueue = xQueueCreate(ESP_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
+  //espTxQueue = xQueueCreate(ESP_TX_QUEUE_LENGTH, sizeof(CPXPacket_t));
+  //espRxQueue = xQueueCreate(ESP_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
 
-  evGroup = xEventGroupCreate();
+  //evGroup = xEventGroupCreate();
   bootloaderSync = xEventGroupCreate();
 
   // Pull reset for GAP8/ESP32
@@ -499,22 +534,33 @@ static void aideckInit(DeckInfo *info)
   digitalWrite(DECK_GPIO_IO4, LOW);
   //Initialize UARTs while GAP8/ESP32 is held in reset
   //uart1Init(115200);
-  uart2Init(115200);
+  //uart2Init(576000);
+
+  cpxUARTTransportInit();
+  cpxInternalRouterInit();
+  cpxExternalRouterInit();
+  cpxInit();
 
   // Initialize task for the ESP while it's held in reset
-  xTaskCreate(ESP_RX, AIDECK_ESP_RX_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
+  /*xTaskCreate(ESP_RX, AIDECK_ESP_RX_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
               AI_DECK_TASK_PRI, NULL);
   xTaskCreate(ESP_TX, AIDECK_ESP_TX_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
-              AI_DECK_TASK_PRI, NULL);
+              AI_DECK_TASK_PRI, NULL);*/
 
   // Release reset for GAP8/ESP32
   digitalWrite(DECK_GPIO_IO4, HIGH);
   pinMode(DECK_GPIO_IO4, INPUT_PULLUP);
 
-  aideckRouterInit();
+#ifdef CONFIG_DECK_AI_WIFI_NO_SETUP
+  DEBUG_PRINT("Not setting up WiFi\n");
+#else
+  setupWiFi(); 
+#endif 
+
+  //aideckRouterInit();
 
   // Make sure a full CPX packet can be stored in the UART2 RX buffer
-  ASSERT(UART2_RX_QUEUE_LENGTH > sizeof(uart_transport_packet_t));
+  //ASSERT(UART2_RX_QUEUE_LENGTH > sizeof(uart_transport_packet_t));
 
   isInit = true;
 }
