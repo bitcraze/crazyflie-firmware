@@ -191,6 +191,13 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       Set the max number of base stations supported. NOTE: This is only
       valid for Lighthouse V2.
 
+config DECK_ADHOC
+  bool "Support the Adhoc deck"
+  default y
+  help
+      The Adhoc deck is used for ranging, networking and communication within the 
+      swarm, based on the DW3000 UWB chip.
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
