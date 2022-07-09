@@ -145,7 +145,7 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitStructure.NVIC_IRQChannel = UART2_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART_PRI;
   NVIC_Init(&NVIC_InitStructure);
 
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
@@ -295,7 +295,6 @@ void __attribute__((used)) USART2_IRQHandler(void)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
     int size = xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken );
-    ASSERT(size==1);
     portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
   }
 
