@@ -11,7 +11,6 @@ config DECK_ACTIVE_MARKER
 config DECK_AI
     bool "Support the AI deck"
     default y
-    depends on !DEBUG_PRINT_ON_UART1
     help
         The AI-deck 1.1 extends the computational capabilities and will
         enable complex artificial intelligence-based workloads to run
