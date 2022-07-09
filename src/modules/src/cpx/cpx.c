@@ -57,19 +57,20 @@ static void cpx(void* _param) {
         if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
           if (cpxRx.data[1] == 0x00) {
             cpxLinkSetConnected(false);
+            DEBUG_PRINT("CPX disconnected\n");
           } else {
             cpxLinkSetConnected(true);
+            DEBUG_PRINT("CPX connected\n");
           }
-          DEBUG_PRINT("CPX connected\n");
         }
         break;
       case CPX_F_CONSOLE:
         if (cpxRx.route.source == CPX_T_ESP32) {
-          consolePrintf("ESP32: %s", cpxRx.data);
+          DEBUG_PRINT("ESP32: %s", cpxRx.data);
         } else if (cpxRx.route.source == CPX_T_GAP8) {
-          consolePrintf("GAP8: %s", cpxRx.data);
+          DEBUG_PRINT("GAP8: %s", cpxRx.data);
         } else {
-          consolePrintf("UNKNOWN: %s", cpxRx.data);
+          DEBUG_PRINT("UNKNOWN: %s", cpxRx.data);
         }
         break;
       case CPX_F_BOOTLOADER:
