@@ -93,6 +93,7 @@
 #define UART2_TEST_TASK_PRI     1
 #define KALMAN_TASK_PRI         2
 #define LEDSEQCMD_TASK_PRI      1
+#define ADHOC_DECK_TASK_PRI     3
 
 #define SYSLINK_TASK_PRI        3
 #define USBLINK_TASK_PRI        3
@@ -153,6 +154,7 @@
 #define CRTP_SRV_TASK_NAME      "CRTP-SRV"
 #define PLATFORM_SRV_TASK_NAME  "PLATFORM-SRV"
 #define PASSTHROUGH_TASK_NAME   "PASSTHROUGH"
+#define ADHOC_DECK_TASK_NAME    "ADHOC"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE         (2* configMINIMAL_STACK_SIZE)
