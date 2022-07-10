@@ -68,12 +68,42 @@ static void rxTimeoutCallback() {
 static void rxErrorCallback() {}
 
 static void uwbTask(void *parameters) {
-
   systemWaitStart();
+  if (dwt_configure(&config)) {
+      while (1) {
+        DEBUG_PRINT("dwt_configure error\n");
+      }
+  }
+  dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
+  if (dwt_check_dev_id() == DWT_SUCCESS) {
+    DEBUG_PRINT("dwt_check_dev_id OK\n");
+  }
+  if (!dwt_checkidlerc()) {
+    DEBUG_PRINT("not dwt_checkidlerc\n");
+  }
+  if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR)
+  {
+      while (1) {
+        DEBUG_PRINT("dwt_initialise error\n");
+      }
+  }
+  uint8_t tx_msg[] = {0xC5, 0, 'D', 'E', 'C', 'A', 'W', 'A', 'V', 'E'};
+  
   while (1) {
-    DEBUG_PRINT("uwbTask\n");
+    DEBUG_PRINT("uwb task \n");
+    dwt_writetxdata(sizeof(tx_msg), tx_msg, 0); /* Zero offset in TX buffer. */
+
+        /* In this example since the length of the transmitted frame does not change,
+         * nor the other parameters of the dwt_writetxfctrl function, the
+         * dwt_writetxfctrl call could be outside the main while(1) loop.
+         */
+    dwt_writetxfctrl(sizeof(tx_msg) + 2, 0, 0); /* Zero offset in TX buffer, no ranging. */
+        /* Start transmission. */
+    dwt_starttx(DWT_START_TX_IMMEDIATE);
     vTaskDelay(M2T(1000));
   }
+
+
   while (1) {
     if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
       do {
@@ -147,7 +177,6 @@ static void reset(void) {
   digitalWrite(GPIO_PIN_RESET, 1);
   vTaskDelay(M2T(10));
 }
-
 extern dwOps_t dwt_ops = {
     .spiRead = spiRead,
     .spiWrite = spiWrite,
@@ -162,6 +191,18 @@ static void dwm3000Init(DeckInfo *info) {
 
   spiBegin();
 
+  // Init pins
+  pinMode(CS_PIN, OUTPUT);
+  pinMode(GPIO_PIN_RESET, OUTPUT);
+  pinMode(GPIO_PIN_IRQ, INPUT);
+
+  spiSetSpeed(dwSpiSpeedHigh);
+
+  digitalWrite(GPIO_PIN_RESET, 0);
+  vTaskDelay(M2T(10));
+  digitalWrite(GPIO_PIN_RESET, 1);
+  vTaskDelay(M2T(10));
+
   // Set up interrupt
   SYSCFG_EXTILineConfig(EXTI_PortSource, EXTI_PinSource);
 
@@ -170,60 +211,62 @@ static void dwm3000Init(DeckInfo *info) {
   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
-
-  // Init pins
-  pinMode(CS_PIN, OUTPUT);
-  pinMode(GPIO_PIN_RESET, OUTPUT);
-  pinMode(GPIO_PIN_IRQ, INPUT);
-
   // Reset the DW3000 chip
-  dwt_ops.reset();
+  // dwt_ops.reset();
+  // dwt_softreset();
+  // while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
+  // {
+  //   DEBUG_PRINT("error\n");
+  //   vTaskDelay(1000);
+  // };
+  // if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
+  //   isInit = false;
+  //   while (1) {
+  //     DEBUG_PRINT("dwt_initialise error\n");
+  //     vTaskDelay(1000);
+  //   }
+  //   return;
+  // }
+  // if (dwt_configure(&config) == DWT_ERROR) {
+  //   while (1) {
+  //     DEBUG_PRINT("dwt_configure error\n");
+  //     vTaskDelay(1000);
+  //   }
+  //   isInit = false;
+  //   return;
+  // }
+  // dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
   
-while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before
-                                proceeding */
-  {
-    DEBUG_PRINT("error\n");
-  };
-  if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
-    isInit = false;
-    return;
-  }
-  if (dwt_configure(&config) == DWT_ERROR) {
-    isInit = false;
-    return;
-  }
-  dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
-  
-  /* Configure the TX spectrum parameters (power, PG delay and PG count) */
-  dwt_configuretxrf(&txconfig_options);
+  // /* Configure the TX spectrum parameters (power, PG delay and PG count) */
+  // dwt_configuretxrf(&txconfig_options);
 
-  /* Configure Antenna Delay */
-  dwt_setrxantennadelay(RX_ANT_DLY);
-  dwt_settxantennadelay(TX_ANT_DLY);
+  // /* Configure Antenna Delay */
+  // dwt_setrxantennadelay(RX_ANT_DLY);
+  // dwt_settxantennadelay(TX_ANT_DLY);
 
-  /* Auto re-enable receiver after a frame reception failure (except a frame
-   * wait timeout), the receiver will re-enable to re-attempt reception.*/
-  dwt_or32bitoffsetreg(SYS_CFG_ID, 0, SYS_CFG_RXAUTR_BIT_MASK);
-  dwt_setrxtimeout(DEFAULT_RX_TIMEOUT);
+  // /* Auto re-enable receiver after a frame reception failure (except a frame
+  //  * wait timeout), the receiver will re-enable to re-attempt reception.*/
+  // dwt_or32bitoffsetreg(SYS_CFG_ID, 0, SYS_CFG_RXAUTR_BIT_MASK);
+  // dwt_setrxtimeout(DEFAULT_RX_TIMEOUT);
 
-  dwt_setcallbacks(&txCallback, &rxCallback, &rxTimeoutCallback, &rxErrorCallback, NULL, NULL);
-  /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and
-   * RX errors). */
-  dwt_setinterrupt(SYS_ENABLE_LO_TXFRS_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFTO_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXPTO_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXPHE_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFSL_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXSTO_ENABLE_BIT_MASK,
-                   0, DWT_ENABLE_INT);
+  // dwt_setcallbacks(&txCallback, &rxCallback, &rxTimeoutCallback, &rxErrorCallback, NULL, NULL);
+  // /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and
+  //  * RX errors). */
+  // dwt_setinterrupt(SYS_ENABLE_LO_TXFRS_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXFTO_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXPTO_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXPHE_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXFSL_ENABLE_BIT_MASK |
+  //                      SYS_ENABLE_LO_RXSTO_ENABLE_BIT_MASK,
+  //                  0, DWT_ENABLE_INT);
 
-  /* Clearing the SPI ready interrupt */
-  dwt_write32bitreg(SYS_STATUS_ID,
-                    SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
-  dwt_forcetrxoff();
-  dwt_rxenable(DWT_START_RX_IMMEDIATE);
+  // /* Clearing the SPI ready interrupt */
+  // dwt_write32bitreg(SYS_STATUS_ID,
+  //                   SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
+  // dwt_forcetrxoff();
+  // dwt_rxenable(DWT_START_RX_IMMEDIATE);
 
   /* Create UWB Task */
   xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
@@ -266,7 +309,7 @@ DECK_DRIVER(dwm3000_deck);
 
 PARAM_GROUP_START(deck)
 
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, NetSI_DWM3000, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
