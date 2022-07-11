@@ -11,7 +11,7 @@
 #define FRAME_LEN_MAX 127
 #define FRAME_LEN_MAX_EX 1023
 
-#define MY_UWB_ADDRESS 3
+#define MY_UWB_ADDRESS 4
 #define TX_QUEUE_SIZE 15
 #define RX_QUEUE_SIZE 15
 #define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)

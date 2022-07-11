@@ -64,11 +64,12 @@ static uint8_t rx_buffer[RX_BUFFER_SIZE];
 Timestamp_Tuple_t Tf_buffer[Tf_BUFFER_POLL_SIZE] = {0};
 static int Tf_buffer_index = 0;
 static int seq_number = 0;
-
+static bool isUWBStart = false;
 static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback() {
+  // DEBUG_PRINT("txCallback\n");
   dw_time_t tx_time;
   dwt_readtxtimestamp(&tx_time.raw);
   Tf_buffer_index++;
@@ -78,6 +79,7 @@ static void txCallback() {
 }
 
 static void rxCallback() {
+  // DEBUG_PRINT("rxCallback\n");
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   uint32_t data_length = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
   if (data_length != 0 && data_length <= FRAME_LEN_MAX) {
@@ -95,30 +97,19 @@ static void rxCallback() {
 }
 
 static void rxTimeoutCallback() {
+  // DEBUG_PRINT("rxTimeoutCallback\n");
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 
-static void rxErrorCallback() {}
-
-static void uwbTask(void *parameters) {
-  while (1) {
-    if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
-      do {
-        xSemaphoreTake(algoSemaphore, portMAX_DELAY);
-        dwt_isr();
-        xSemaphoreGive(algoSemaphore);
-      } while (digitalRead(GPIO_PIN_IRQ) != 0);
-    }
-  }
+static void rxErrorCallback() {
+  // DEBUG_PRINT("rxErrorCallback\n");
 }
 
 static void uwbTxTask(void *parameters) {
-  while (!isInit) {
-    DEBUG_PRINT("false");
-    vTaskDelay(1000);
+  while (!isUWBStart) {
+    vTaskDelay(500);
   }
-
   Ranging_Message_t packetCache;
 
   while (true) {
@@ -147,7 +138,7 @@ int16_t compute_distance(Ranging_Table_t* table) {
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
 
   int16_t distance = (int16_t) tprop_ctn * 0.4691763978616;
-  // printf("distance=%d cm\r\n", distance);
+  // DEBUG_PRINT("distance=%d cm\r\n", distance);
   /* update ranging table */
   table->Rp = table->Rf;
   table->Tp = table->Tf;
@@ -189,7 +180,7 @@ void process_ranging_message(Ranging_Message_With_Timestamp_t* ranging_message_w
   neighbor_ranging_table->Re.sequence_number = ranging_message->header.message_sequence;
 
   Timestamp_Tuple_t neighbor_Tr = ranging_message->header.last_tx_timestamp;
-  // printf("##########neighbor Tr=%d#########\r\n", neighbor_Tr.sequence_number);
+  // DEBUG_PRINT("##########neighbor Tr=%d#########\r\n", neighbor_Tr.sequence_number);
   /* update Tr or Rr*/
   if (neighbor_ranging_table->Tr.timestamp.full == 0) {
     if (neighbor_ranging_table->Rr.sequence_number == neighbor_Tr.sequence_number) {
@@ -218,11 +209,11 @@ void process_ranging_message(Ranging_Message_With_Timestamp_t* ranging_message_w
   }
 
   if (neighbor_ranging_table->Tr.timestamp.full && neighbor_ranging_table->Rf.timestamp.full && neighbor_ranging_table->Tf.timestamp.full) {
-      // printf("===before compute distance===\r\n");
+      // DEBUG_PRINT("===before compute distance===\r\n");
       // print_ranging_table(&ranging_table_set);
       int16_t distance = compute_distance(neighbor_ranging_table);
-      printf("distance to neighbor %d = %d cm\r\n", ranging_message->header.source_address, distance);
-      // printf("===after compute distance===\r\n");
+      DEBUG_PRINT("distance to neighbor %d = %d cm\r\n", ranging_message->header.source_address, distance);
+      // DEBUG_PRINT("===after compute distance===\r\n");
       // print_ranging_table(&ranging_table_set);
   } else if (neighbor_ranging_table->Rf.timestamp.full && neighbor_ranging_table->Tf.timestamp.full) {
       neighbor_ranging_table->Rp = neighbor_ranging_table->Rf;
@@ -273,9 +264,8 @@ static void generate_ranging_message(Ranging_Message_t* ranging_message) {
 }
 
 static void uwbRxTask(void* parameters) {
-  while (!isInit) {
-    DEBUG_PRINT("false");
-    vTaskDelay(1000);
+  while (!isUWBStart) {
+    vTaskDelay(500);
   }
 
   Ranging_Message_With_Timestamp_t rx_packet_cache;
@@ -288,9 +278,8 @@ static void uwbRxTask(void* parameters) {
 }
 
 static void uwbRangingTask(void* parameters) {
-  while (!isInit) {
-    printf("false");
-    vTaskDelay(1000);
+  while (!isUWBStart) {
+    vTaskDelay(500);
   }
 
   while (true) {
@@ -301,6 +290,21 @@ static void uwbRangingTask(void* parameters) {
   }
 }
 
+static void uwbTask(void *parameters) {
+  systemWaitStart();
+  uwbInit();
+  isUWBStart = true;    
+  while (1) {
+    // DEBUG_PRINT("uwbTask\n");
+    if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
+      do {
+        xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+        dwt_isr();
+        xSemaphoreGive(algoSemaphore);
+      } while (digitalRead(GPIO_PIN_IRQ) != 0);
+    }
+  }
+}
 static uint8_t spiTxBuffer[196];
 static uint8_t spiRxBuffer[196];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
@@ -372,23 +376,23 @@ extern dwOps_t dwt_ops = {
 };
 
 
-static void uwbInit() {
+void uwbInit() {
   // Reset the DW3000 chip
   dwt_ops.reset();
   // dwt_softreset(); // TODO softreset failed, check.
   while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
   {};
   if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
-    isInit = false;
-    return;
+    isUWBStart = false;
+    // return;
   }
   if (dwt_configure(&config) == DWT_ERROR) {
     while (1) {
       DEBUG_PRINT("dwt_configure error\n");
       vTaskDelay(1000);
     }
-    isInit = false;
-    return;
+    isUWBStart = false;
+    // return;
   }
   dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
   
@@ -421,7 +425,7 @@ static void uwbInit() {
   dwt_write32bitreg(SYS_STATUS_ID,
                     SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
   dwt_forcetrxoff();
-  dwt_rxenable(DWT_START_RX_IMMEDIATE);
+  // dwt_rxenable(DWT_START_RX_IMMEDIATE);
   algoSemaphore = xSemaphoreCreateMutex();
 }
 
@@ -463,14 +467,14 @@ static void uwbStart() {
                     ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
   xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);                
+  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 1 * configMINIMAL_STACK_SIZE, NULL,
+                    ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);            
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
   pinInit();
   queueInit();
-  uwbInit();
+  ranging_table_set_init(&ranging_table_set);
   uwbStart();
   isInit = true;
 }
@@ -484,9 +488,9 @@ static bool dwm3000Test() {
 }
 
 static const DeckDriver dwm3000_deck = {
-    .vid = 0xFF,
-    .pid = 0xFF,
-    .name = "NetSI_DWM3000",
+    .vid = 0xAD,
+    .pid = 0xAD,
+    .name = "DWM3000",
 
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
     .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
@@ -510,7 +514,7 @@ DECK_DRIVER(dwm3000_deck);
 
 PARAM_GROUP_START(deck)
 
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, NetSI_DWM3000, &isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
