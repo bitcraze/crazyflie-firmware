@@ -20,5 +20,19 @@ config SYSLINK_RX_DMA
         Using DMA to receive uart data reduces CPU load and will free
         up recources for other things. DMA is a shared resource though
         and might conflict with other functionality in the future.
-        
+
+config ENABLE_CPX
+  bool "Enable CPX on UART2"
+  default y
+  help
+      This enables using CPX on UART2
+
+config DECK_CRTP_OVER_UART2_BAUDRATE
+  int "UART2 baudrate"
+  depends on ENABLE_CPX
+  range 9600 2000000
+  default 576000
+  help
+      Set the baudrate that will be used for CPX on UART2    
+
 endmenu

@@ -35,7 +35,7 @@
 
 static bool isInit = false;
 
-static void crtpOverUart2Init(DeckInfo *info)
+static void cpxOverUart2Init(DeckInfo *info)
 {
   if (isInit)
     return;
@@ -48,18 +48,18 @@ static void crtpOverUart2Init(DeckInfo *info)
   isInit = true;
 }
 
-static bool crtpOverUart2Test()
+static bool cpxOverUart2Test()
 {
   return true;
 }
 
 static const DeckDriver crtpOver2UART = {
-    .name = "crtpOverUART2",
+    .name = "cpxOverUART2",
 
     .usedPeriph = DECK_USING_UART2,
 
-    .init = crtpOverUart2Init,
-    .test = crtpOverUart2Test,
+    .init = cpxOverUart2Init,
+    .test = cpxOverUart2Test,
 };
 
 /** @addtogroup deck
@@ -69,7 +69,7 @@ PARAM_GROUP_START(deck)
 /**
  * @brief Nonzero if CRTP over UART has been forced
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, crtpOverUART2, &isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, cpxOverUART2, &isInit)
 
 PARAM_GROUP_STOP(deck)
 

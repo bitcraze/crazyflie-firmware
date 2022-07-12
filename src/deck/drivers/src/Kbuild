@@ -17,5 +17,5 @@ obj-$(CONFIG_DECK_OA)               += oa.o
 obj-$(CONFIG_DECK_USD)              += usddeck.o
 obj-$(CONFIG_DECK_ZRANGER)          += zranger.o
 obj-$(CONFIG_DECK_ZRANGER2)         += zranger2.o
-obj-$(CONFIG_DECK_CRTP_OVER_UART2)  += crtp-over-uart2.o
+obj-$(CONFIG_DECK_CPX_OVER_UART2)   += cpx-over-uart2.o
 
