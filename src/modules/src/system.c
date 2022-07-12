@@ -72,7 +72,7 @@
 #include "i2cdev.h"
 #include "autoconf.h"
 #include "vcp_esc_passthrough.h"
-#ifdef CONFIG_DECK_AI
+#if defined(CONFIG_DECK_AI) || defined(DECK_CRTP_OVER_UART2)
   #include "cpxlink.h"
 #endif
 
@@ -117,7 +117,7 @@ void systemInit(void)
 
   usblinkInit();
   sysLoadInit();
-#ifdef CONFIG_DECK_AI
+#if defined(CONFIG_DECK_AI) || defined(DECK_CRTP_OVER_UART2)
   cpxlinkInit();
 #endif
 

@@ -36,50 +36,6 @@
 #include "cpx.h"
 
 /**
- * @brief Receive a CPX packet from the ESP32
- *
- * This function will block until a packet is availale from CPX. The
- * function will return all packets routed to the STM32.
- *
- * @param packet received packet will be stored here
- */
-//void cpxReceivePacketBlocking(CPXPacket_t * packet);
-
-/**
- * @brief Send a CPX packet to the ESP32
- *
- * This will send a packet to the ESP32 to be routed using CPX. This
- * will block until the packet can be queued up for sending.
- *
- * @param packet packet to be sent
- */
-//void cpxSendPacketBlocking(const CPXPacket_t * packet);
-
-/**
- * @brief Send a CPX packet to the ESP32
- *
- * This will send a packet to the ESP32 to be routed using CPX.
- *
- * @param packet packet to be sent
- * @param timeout timeout before giving up if packet cannot be queued
- * @return true if package could be queued for sending
- * @return false if package could not be queued for sending within timeout
- */
-//bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout);
-
-/**
- * @brief Initialize CPX routing data.
- *
- * Initialize values and set lastPacket to true.
- *
- * @param source The starting point of the packet
- * @param destination The destination to send the packet to
- * @param function The function of the content
- * @param route Pointer to the route data to initialize
- */
-//void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
-
-/**
  * @brief Forward bootloader message.
  *
  * Used as a work around to send data from the bootloader down to the AI deck driver.
