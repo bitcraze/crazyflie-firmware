@@ -114,24 +114,14 @@ int paramGetInt(paramVarId_t varid);
  */
 unsigned int paramGetUint(paramVarId_t varid);
 
-/**
- * Set param with [index] to data
- *
- * @param index  The param index
- * @param data  The variable data
- *
- * @return number of bytes set
- **/
-int paramSet(uint16_t index, void *data);
-
-/** Set int value of a parameter
+/** Set int value of an int parameter (1-4 bytes)
  *
  * @param varId variable ID, returned by paramGetVarId()
  * @param valuei Value to set in the variable
  */
 void paramSetInt(paramVarId_t varid, int valuei);
 
-/** Set float value of a parameter
+/** Set float value of a float parameter
  *
  * @param varId variable ID, returned by paramGetVarId()
  * @param valuef Value to set in the variable

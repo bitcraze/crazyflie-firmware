@@ -48,7 +48,7 @@ menu "Credentials for access-point"
         string "WiFi Password"
         default "mypassword"
         help
-            WiFi password
+            WiFi password (Minimum length of 8)
 endmenu   
 
 config DECK_BIGQUAD
@@ -181,6 +181,15 @@ config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
         position to the kalman estimator and you can 
         read out the positioning from the loggin lighthouse.x.y.z
 
+config DECK_LIGHTHOUSE_MAX_N_BS
+  int "Max number of base stations"
+  depends on DECK_LIGHTHOUSE
+  default 2
+  range 2 16
+  help
+      Set the max number of base stations supported. NOTE: This is only
+      valid for Lighthouse V2.
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
@@ -192,6 +201,14 @@ config DECK_LOCO
         which can be used for autonomous flight. The position is calculated
         on-board of the Crazyflie and there is no need for an external
         computer for position estimation.
+
+  config DECK_LOCODECK_USE_ALT_PINS
+  bool "loco deck alternative IRQ and RESET pins"
+  default name
+  depends on DECK_LOCO
+  help
+       LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of
+       default (RX1, TX1), leaving UART1 free for use.
 
   config DECK_LOCO_NR_OF_ANCHORS
   int "The number of anchors in use"

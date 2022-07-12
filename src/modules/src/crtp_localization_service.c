@@ -38,7 +38,11 @@
 #include "stabilizer.h"
 #include "configblock.h"
 #include "worker.h"
+#include "autoconf.h"
+
+#ifdef CONFIG_DECK_LIGHTHOUSE
 #include "lighthouse_storage.h"
+#endif
 
 #include "locodeck.h"
 
@@ -48,6 +52,7 @@
 #include "peer_localization.h"
 
 #include "num.h"
+
 
 #define NBR_OF_RANGES_IN_PACKET   5
 #define NBR_OF_SWEEPS_IN_PACKET   2
@@ -110,7 +115,9 @@ static CRTPPacket pkRange;
 static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 
+#ifdef CONFIG_DECK_LIGHTHOUSE
 static CRTPPacket LhAngle;
+#endif
 static bool enableLighthouseAngleStream = false;
 static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
@@ -243,11 +250,12 @@ typedef union {
 } __attribute__((packed)) LhPersistArgs_t;
 
 static void lhPersistDataWorker(void* arg) {
+#ifdef CONFIG_DECK_LIGHTHOUSE
   LhPersistArgs_t* args = (LhPersistArgs_t*) &arg;
 
   bool result = true;
 
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+  for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     uint16_t mask = 1 << baseStation;
     bool storeGeo = (args->geoDataBsField & mask) != 0;
     bool storeCalibration = (args->calibrationDataBsField & mask) != 0;
@@ -256,7 +264,9 @@ static void lhPersistDataWorker(void* arg) {
       break;
     }
   }
-
+#else
+  bool result = false;
+#endif
   CRTPPacket response = {
     .port = CRTP_PORT_LOCALIZATION,
     .channel = GENERIC_TYPE,
@@ -350,6 +360,7 @@ void locSrvSendRangeFloat(uint8_t id, float range)
   }
 }
 
+#ifdef CONFIG_DECK_LIGHTHOUSE
 void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
 {
   anglePacket *ap = (anglePacket *)LhAngle.data;
@@ -376,6 +387,7 @@ void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles)
     crtpSendPacket(&LhAngle);
   }
 }
+#endif
 
 // This logging group is deprecated
 LOG_GROUP_START(ext_pos)

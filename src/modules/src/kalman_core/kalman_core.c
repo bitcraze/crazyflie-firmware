@@ -57,6 +57,7 @@
 
 #include "kalman_core.h"
 #include "cfassert.h"
+#include "autoconf.h"
 
 #include "physicalConstants.h"
 

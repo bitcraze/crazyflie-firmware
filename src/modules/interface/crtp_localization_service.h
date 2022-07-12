@@ -27,7 +27,11 @@
 #define _CRTP_LOCALIZATION_SERVICE_H_
 
 #include "stabilizer_types.h"
+#include "autoconf.h"
+
+#ifdef CONFIG_DECK_LIGHTHOUSE
 #include "pulse_processor.h"
+#endif
 
 /**
  * CRTP external position data struct
@@ -70,6 +74,8 @@ void locSrvInit(void);
 
 // Send range in float. After 5 ranges it will send the packet.
 void locSrvSendRangeFloat(uint8_t id, float range);
+#ifdef CONFIG_DECK_LIGHTHOUSE
 void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles);
+#endif
 
 #endif /* _CRTP_LOCALIZATION_SERVICE_H_ */

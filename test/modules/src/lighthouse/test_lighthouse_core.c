@@ -1,3 +1,5 @@
+// @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
+
 // File under test lighthouse_core.c
 #include "lighthouse_core.h"
 

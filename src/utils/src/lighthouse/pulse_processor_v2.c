@@ -33,6 +33,7 @@
 #include "math3d.h"
 #include "test_support.h"
 #include "debug.h"
+#include "autoconf.h"
 
 static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
 static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
@@ -59,7 +60,7 @@ static inline uint32_t cyclePeriodToMicroseconds(uint32_t cyclePeriod) {
 // Reset angles after fixed period to avoid using stale data
 static void clearStaleAnglesAfterTimeout(pulseProcessorResult_t *angles) {
     uint64_t timestamp = usecTimestamp();
-    for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; ++bs) {
+    for (int bs = 0; bs < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; ++bs) {
         uint64_t elapsed_us = timestamp - angles->lastUsecTimestamp[bs];
         if (elapsed_us > cyclePeriodToMicroseconds(CYCLE_PERIODS[bs])) {
             pulseProcessorClear(angles, bs);
@@ -277,7 +278,7 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
 TESTABLE_STATIC bool handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData) {
     bool isFullMessage = false;
 
-    if (frameData->channelFound && frameData->channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
+    if (frameData->channelFound && frameData->channel < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
         const uint8_t channel = frameData->channel;
         if (frameData->offset != NO_OFFSET) {
             const uint32_t prevTimestamp0 = state->v2.ootxTimestamps[channel];
@@ -303,7 +304,7 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
     for (int i = 0; i < nrOfBlocks; i++) {
         const pulseProcessorV2SweepBlock_t* block = &state->v2.blockWorkspace.blocks[i];
         const uint8_t channel = block->channel;
-        if (channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
+        if (channel < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
             pulseProcessorV2SweepBlock_t* previousBlock = &state->v2.blocks[channel];
             if (isBlockPairGood(block, previousBlock)) {
                 calculateAngles(block, previousBlock, angles);

@@ -26,12 +26,12 @@ obj-y += kve/kve.o
 obj-y += kve/kve_storage.o
 
 # Lighthouse
-obj-y += lighthouse/lighthouse_calibration.o
-obj-y += lighthouse/lighthouse_geometry.o
-obj-y += lighthouse/ootx_decoder.o
-obj-y += lighthouse/pulse_processor.o
-obj-y += lighthouse/pulse_processor_v1.o
-obj-y += lighthouse/pulse_processor_v2.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/lighthouse_calibration.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/lighthouse_geometry.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/ootx_decoder.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor_v1.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor_v2.o
 obj-y += num.o
 obj-y += rateSupervisor.o
 obj-y += sleepus.o

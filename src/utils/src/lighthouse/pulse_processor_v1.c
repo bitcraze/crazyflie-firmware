@@ -32,6 +32,7 @@
 #include <math.h>
 #include "test_support.h"
 #include "physicalConstants.h"
+#include "autoconf.h"
 
 // Decoding contants
 // Times are expressed in a 24MHz clock
@@ -503,5 +504,5 @@ void pulseProcessorV1ProcessValidAngles(pulseProcessorResult_t* angles, int base
 }
 
 uint8_t pulseProcessorV1AnglesQuality() {
-  return __builtin_popcount(validAngles)*1.0/(PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS*PULSE_PROCESSOR_N_BASE_STATIONS)*255;
+  return __builtin_popcount(validAngles)*1.0/(PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS*CONFIG_DECK_LIGHTHOUSE_MAX_N_BS)*255;
 }

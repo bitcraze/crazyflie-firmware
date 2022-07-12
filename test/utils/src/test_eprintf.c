@@ -240,17 +240,21 @@ void testThatAllIntTypesArePrinted() {
   // Assert
   verify("255", "%u", (uint8_t)255);
   verify("65535", "%u", (uint16_t)65535);
-  verify("4294967295", "%lu", (uint32_t)4294967295);
+  // second cast needed here because sizeof(unsigned long) != sizeof(uint32_t)
+  // on arm64
+  verify("4294967295", "%lu", (unsigned long)(uint32_t)4294967295);
   verify("18446744073709551615", "%llu", (uint64_t)18446744073709551615u);
 
   verify("127", "%i", (int8_t)127);
   verify("32767", "%i", (int16_t)32767);
-  verify("2147483647", "%li", (int32_t)2147483647);
+  // second cast needed here because sizeof(long) != sizeof(int32_t) on arm64
+  verify("2147483647", "%li", (long)(int32_t)2147483647);
   verify("9223372036854775807", "%lli", (int64_t)9223372036854775807);
 
   verify("FF", "%X", (uint8_t)0xFF);
   verify("FFFF", "%X", (uint16_t)0xFFFF);
-  verify("FFFFFFFF", "%lX", (uint32_t)0xFFFFFFFF);
+  // second cast needed here because sizeof(unsigned long) != sizeof(uint32_t) on arm64
+  verify("FFFFFFFF", "%lX", (unsigned long)(uint32_t)0xFFFFFFFF);
   verify("FFFFFFFFFFFFFFFF", "%llX", (uint64_t)0xFFFFFFFFFFFFFFFF);
 }
 

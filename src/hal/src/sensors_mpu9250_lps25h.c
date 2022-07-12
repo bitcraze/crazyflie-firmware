@@ -354,7 +354,8 @@ static void sensorsDeviceInit(void)
   isBarometerPresent = false;
 
   // Wait for sensors to startup
-  while (xTaskGetTickCount() < 1000);
+  TickType_t xStartTime = 0;
+  vTaskDelayUntil(&xStartTime, T2M(1000));
 
   mpu6500Init(I2C3_DEV);
   if (mpu6500TestConnection() == true)

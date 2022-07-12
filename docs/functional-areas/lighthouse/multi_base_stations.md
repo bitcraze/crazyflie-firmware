@@ -17,10 +17,9 @@ guide on our web to get a good understanding of basic use.
 in the python client for this task
 2. Place your base stations. They must overlap, but avoid too many in one spot, there should not be more than 4 visible
 at the same time.
-3. Re-flash the Crazyflie with support for more base stations. Start by editing the
-`src/utils/interface/lighthouse/pulse_processor.h` file in this project and change the PULSE_PROCESSOR_N_BASE_STATIONS
-to the desired number of base stations. Note: more base stations use more RAM. Build the code and flash it to the
-Crazyflie, see the documentation in this repo for instructions on building and flashing.
+3. Re-flash the Crazyflie with support for more base stations. Run `make menuconfig` and go to the `Expansion deck configuration`
+menu and set `Max number of base stations` to the desired value. Note: more base stations use more RAM. Build the code and
+flash it to the Crazyflie, see the documentation in this repo for instructions on building and flashing.
 4. Acquire calibration data from all the base stations in the system. The Crazyflie gets the calibration data from the
 base stations through the light sweeps and this process takes from 20 seconds and up. If more than 2 base stations are
 visible at the same time, the process may take longer and it might be a good idea to hold the Crazyflie closer to one

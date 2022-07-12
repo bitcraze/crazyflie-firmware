@@ -84,7 +84,7 @@ static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 
 static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
-static statsCntRateLogger_t* bsRates[PULSE_PROCESSOR_N_BASE_STATIONS] = {&bs0Rate, &bs1Rate};
+static statsCntRateLogger_t* bsRates[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS] = {&bs0Rate, &bs1Rate};
 
 // A bitmap that indicates which base stations that are available
 static uint16_t baseStationAvailabledMap;
@@ -140,7 +140,7 @@ void lighthouseCoreInit() {
   lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
 
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     modifyBit(&baseStationAvailabledMap, i, true);
   }
 }
@@ -313,7 +313,7 @@ static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResul
 
 static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; bs++) {
+    for (int bs = 0; bs < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; bs++) {
       pulseProcessorBaseStationMeasuremnt_t* from = &angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[bs];
       pulseProcessorBaseStationMeasuremnt_t* to = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[bs];
 
@@ -368,7 +368,7 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
 }
 
 static void useCalibrationData(pulseProcessor_t *appState) {
-  for (int baseStation = 0; baseStation < PULSE_PROCESSOR_N_BASE_STATIONS; baseStation++) {
+  for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     if (appState->ootxDecoder[baseStation].isFullyDecoded) {
       lighthouseCalibration_t newData;
       lighthouseCalibrationInitFromFrame(&newData, &appState->ootxDecoder[baseStation].frame);
@@ -512,7 +512,7 @@ void lighthouseCoreTask(void *param) {
 }
 
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration) {
-  if (baseStation < PULSE_PROCESSOR_N_BASE_STATIONS) {
+  if (baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
     lighthouseCoreState.bsCalibration[baseStation] = *calibration;
     lighthousePositionCalibrationDataWritten(baseStation);
   }

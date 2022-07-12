@@ -1,4 +1,6 @@
-// File under test lighthouse_core.c
+// @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
+
+// File under test lighthouse_deck_flasher.c
 #include "lighthouse_deck_flasher.h"
 
 #include "unity.h"
