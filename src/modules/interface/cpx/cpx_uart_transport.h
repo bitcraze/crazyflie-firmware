@@ -36,6 +36,16 @@
 void cpxUARTTransportInit(void);
 
 /**
+ * @brief De-initialize the UART transport
+ * 
+ * This is used to gracefully shut down the UART transport so
+ * it will stop using the UART. Note, this function will block
+ * until the RX/TX tasks has shut down.
+ * 
+ */
+void cpxUARTTransportDeinit();
+
+/**
  * @brief Send a CPX packet via the UART transport
  * 
  * This will send a CPX packet, packing it according to the

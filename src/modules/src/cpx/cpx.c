@@ -29,7 +29,7 @@ static CPXPacket_t cpxRx;
 #define WIFI_AP_CONNECTED_CMD     0x31
 #define WIFI_CLIENT_CONNECTED_CMD 0x32
 
-#define CPX_ENABLE_CRTP_BRIDGE    0x10
+#define CPX_ENABLE_CRTP_BRIDGE    0x21
 #define CPX_SET_CLIENT_CONNECTED  0x20
 
 void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route) {
@@ -74,7 +74,7 @@ static void cpx(void* _param) {
         }
         break;
       case CPX_F_BOOTLOADER:
-        //cpxBootloaderMessage(&cpxRx);
+        cpxBootloaderMessage(&cpxRx);
         break;
       case CPX_F_SYSTEM:
         if (cpxRx.data[0] == CPX_ENABLE_CRTP_BRIDGE) {

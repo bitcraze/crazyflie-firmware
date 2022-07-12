@@ -249,17 +249,26 @@ void uart2Getchar(char * ch)
 
 int uart2GetDataWithTimeout(size_t size, uint8_t * buffer, const uint32_t timeoutTicks) {
   size_t sizeLeft = size;
-  while (sizeLeft > 0) {
+  uint32_t timeoutEnd = xTaskGetTickCount() + timeoutTicks;
+  while (sizeLeft > 0 && timeoutEnd > xTaskGetTickCount()) {
     xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
     // TODO: Investigate why this loop is needed?
-    sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, timeoutTicks);
+    uint32_t ticksToWait = timeoutEnd - xTaskGetTickCount();
+    sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, ticksToWait);
   }
 
-  return size;
+  return size - sizeLeft;
 }
 
 int uart2GetData(size_t size, uint8_t * buffer) {
-  return uart2GetDataWithTimeout(size, buffer, portMAX_DELAY);
+  size_t sizeLeft = size;
+  while (sizeLeft > 0) {
+    xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
+    // TODO: Investigate why this loop is needed?
+    sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, portMAX_DELAY);
+  }
+
+  return size;
 }
 
 bool uart2DidOverrun()
