@@ -143,7 +143,7 @@ static void CPX_UART_RX(void *param)
     uartRxp.start = 0x00;
     do
     {
-      int c = uart2GetDataWithTimeout(1, &uartRxp.start, M2T(200));
+      uart2GetDataWithTimeout(1, &uartRxp.start, M2T(200));
     } while (uartRxp.start != 0xFF && shutdownTransport == false);
 
     if (uartRxp.start == 0xFF) {

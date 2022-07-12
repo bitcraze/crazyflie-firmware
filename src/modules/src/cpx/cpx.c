@@ -14,6 +14,7 @@
 
 #include "cpxlink.h"
 #include "cpx_internal_router.h"
+#include "aideck.h"
 #include "cpx.h"
 
 static CPXPacket_t cpxRx;

@@ -303,7 +303,7 @@ void __attribute__((used)) USART2_IRQHandler(void)
   {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
-    int size = xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken );
+    xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken );
     portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
   }
 
