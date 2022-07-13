@@ -252,7 +252,6 @@ int uart2GetDataWithTimeout(size_t size, uint8_t * buffer, const uint32_t timeou
   uint32_t timeoutEnd = xTaskGetTickCount() + timeoutTicks;
   while (sizeLeft > 0 && timeoutEnd > xTaskGetTickCount()) {
     xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
-    // TODO: Investigate why this loop is needed?
     uint32_t ticksToWait = timeoutEnd - xTaskGetTickCount();
     sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, ticksToWait);
   }
@@ -264,7 +263,6 @@ int uart2GetData(size_t size, uint8_t * buffer) {
   size_t sizeLeft = size;
   while (sizeLeft > 0) {
     xStreamBufferSetTriggerLevel(rxStream, sizeLeft);
-    // TODO: Investigate why this loop is needed?
     sizeLeft -= xStreamBufferReceive(rxStream, &buffer[size-sizeLeft], sizeLeft, portMAX_DELAY);
   }
 
@@ -309,8 +307,6 @@ void __attribute__((used)) USART2_IRQHandler(void)
 
   if ((UART2_TYPE->SR & USART_FLAG_TXE) != 0)
   {
-    // TODO: Why do we need this? If we get RXNE this will send garbage otherwise. Shouldn't the flag
-    //       protect against this?
     if (txBuffer != 0) {
       uint8_t byteToWrite = txBuffer[txIdx++];
       UART2_TYPE->DR = (byteToWrite & 0x00FF);
