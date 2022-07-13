@@ -21,21 +21,26 @@ config SYSLINK_RX_DMA
         up recources for other things. DMA is a shared resource though
         and might conflict with other functionality in the future.
 
-config CRTP_OVER_UART2
-    bool "Move CRTP communication to UART2 instead of over radio"
-    default n
-    help
-        The CRTP (Crazy Real Time Protocol) communication is normally
-        sent over the radio link (via Syslink). By enabling this the
-        communication will instead be sent over UART2 to communicate
-        with e.g. a companion computer instead.
+config ENABLE_CPX
+  bool "Enable CPX"
+  select ENABLE_CPX_ON_UART2
+  default y
+  help
+      This enables CPX routers and API
 
-config CRTP_OVER_UART2_BAUDRATE
-    int "CRTP over UART2 baudrate"
-    depends on CRTP_OVER_UART2
-    range 9600 2000000
-    default 512000
-    help
-        Uart baudrate to be used.
-        
+config ENABLE_CPX_ON_UART2
+  bool "Enable CPX on UART2"
+  depends on ENABLE_CPX
+  default y
+  help
+      This enables CPX routing on UART2
+
+config CPX_UART2_BAUDRATE
+  int "CPX UART2 baudrate"
+  depends on ENABLE_CPX_ON_UART2
+  range 9600 2000000
+  default 576000
+  help
+      Set the baudrate that will be used for CPX on UART2    
+
 endmenu

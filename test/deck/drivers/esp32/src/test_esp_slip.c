@@ -1,8 +1,6 @@
 // File under test esp_slip.crftq
 #include "esp_slip.h"
 
-#define CONFIG_CRTP_OVER_UART2 1
-
 #include <string.h>
 
 #include "unity.h"

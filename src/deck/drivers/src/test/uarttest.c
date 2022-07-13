@@ -55,7 +55,7 @@ static bool uarttestRun()
   for (int i = 0; i < sizeof(testString) && status; i++)
   {
     uart1Putchar(testString[i]);
-    uart2GetDataWithDefaultTimeout(&testChar);
+    uart2GetCharWithDefaultTimeout(&testChar);
     if (testChar != testString[i])
     {
       DEBUG_PRINT(" Uart1->Uart2 [FAIL]\n");

@@ -10,8 +10,9 @@ config DECK_ACTIVE_MARKER
     
 config DECK_AI
     bool "Support the AI deck"
+    select ENABLE_CPX
+    select ENABLE_CPX_ON_UART2
     default y
-    depends on !DEBUG_PRINT_ON_UART1
     help
         The AI-deck 1.1 extends the computational capabilities and will
         enable complex artificial intelligence-based workloads to run
@@ -335,3 +336,15 @@ config DECK_ZRANGER2
         a constant distance to the objects under it when flying in automatic
         mode. Over a floor it will stay on the same height, but will follow
         the flow of a stair case up or down when going on adventures.
+
+config DECK_CPX_HOST_ON_UART2
+  bool "Support wired external host using CPX on UART2"
+  select ENABLE_CPX
+  select ENABLE_CPX_ON_UART2
+  default n
+  help
+      This enables the driver for using CPX (and CRTP) over UART2 to a wired host
+      (like a Raspberry Pi). Note, that the driver for this will have to be
+      forced, since this is intended to be used without actually having a proper
+      deck attached (i.e there will be no 1-wire memory to automatically detect
+      and start the driver).
