@@ -60,38 +60,38 @@ static QueueHandle_t txQueue;
 static QueueHandle_t rxQueue;
 
 /* rx buffer used in rx_callback */
-static uint8_t rx_buffer[RX_BUFFER_SIZE];
-Timestamp_Tuple_t Tf_buffer[Tf_BUFFER_POLL_SIZE] = {0};
-static int Tf_buffer_index = 0;
-static int seq_number = 0;
+static uint8_t rxBuffer[RX_BUFFER_SIZE];
+Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POLL_SIZE] = {0};
+static int TfBufferIndex = 0;
+static int rangingSeqNumber = 0;
 static bool isUWBStart = false;
 static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback() {
   // DEBUG_PRINT("txCallback\n");
-  dw_time_t tx_time;
-  dwt_readtxtimestamp(&tx_time.raw);
-  Tf_buffer_index++;
-  Tf_buffer_index %= Tf_BUFFER_POLL_SIZE;
-  Tf_buffer[Tf_buffer_index].sequence_number = seq_number;
-  Tf_buffer[Tf_buffer_index].timestamp = tx_time;
+  dwTime_t txTime;
+  dwt_readtxtimestamp(&txTime.raw);
+  TfBufferIndex++;
+  TfBufferIndex %= Tf_BUFFER_POLL_SIZE;
+  TfBuffer[TfBufferIndex].seqNumber = rangingSeqNumber;
+  TfBuffer[TfBufferIndex].timestamp = txTime;
 }
 
 static void rxCallback() {
   // DEBUG_PRINT("rxCallback\n");
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  uint32_t data_length = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
-  if (data_length != 0 && data_length <= FRAME_LEN_MAX) {
-    dwt_readrxdata(rx_buffer, data_length - FCS_LEN, 0); /* No need to read the FCS/CRC. */
+  uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
+  if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
+    dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
-  dw_time_t rx_time;
-  dwt_readrxtimestamp(&rx_time.raw);
-  Ranging_Message_With_Timestamp_t rx_message_with_timestamp;
-  rx_message_with_timestamp.rx_time = rx_time;
-  Ranging_Message_t* ranging_message = &rx_buffer;
-  rx_message_with_timestamp.ranging_message = *ranging_message;
-  xQueueSendFromISR(rxQueue, &rx_message_with_timestamp, &xHigherPriorityTaskWoken);
+  dwTime_t rxTime;
+  dwt_readrxtimestamp(&rxTime.raw);
+  Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
+  rxMessageWithTimestamp.rxTime = rxTime;
+  Ranging_Message_t* rangingMessage = &rxBuffer;
+  rxMessageWithTimestamp.rangingMessage = *rangingMessage;
+  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
@@ -115,8 +115,8 @@ static void uwbTxTask(void *parameters) {
   while (true) {
     if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(packetCache.header.message_length, &packetCache, 0);
-      dwt_writetxfctrl(packetCache.header.message_length + FCS_LEN, 0, 1);
+      dwt_writetxdata(packetCache.header.msgLength, &packetCache, 0);
+      dwt_writetxfctrl(packetCache.header.msgLength + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
@@ -126,7 +126,7 @@ static void uwbTxTask(void *parameters) {
   }
 }
 
-int16_t compute_distance(Ranging_Table_t* table) {
+int16_t computeDistance(Ranging_Table_t* table) {
 
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
   tRound1 = (table->Rr.timestamp.full - table->Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
@@ -145,122 +145,122 @@ int16_t compute_distance(Ranging_Table_t* table) {
   table->Rr = table->Re;
 
   table->Rf.timestamp.full = 0;
-  table->Rf.sequence_number = 0;
+  table->Rf.seqNumber = 0;
   
   table->Tf.timestamp.full = 0;
-  table->Tf.sequence_number = 0;
+  table->Tf.seqNumber = 0;
 
   table->Tr.timestamp.full = 0;
-  table->Tr.sequence_number = 0;
+  table->Tr.seqNumber = 0;
 
   return (int16_t)distance;
 }
 
-void process_ranging_message(Ranging_Message_With_Timestamp_t* ranging_message_with_timestamp) {
-  Ranging_Message_t* ranging_message = &ranging_message_with_timestamp->ranging_message;
-  address_t neighbor_addr = ranging_message->header.source_address;
-  set_index_t neighbor_index = find_in_ranging_table_set(&ranging_table_set, neighbor_addr);
+void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithTimestamp) {
+  Ranging_Message_t* rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
+  address_t neighborAddress = rangingMessage->header.srcAddress;
+  set_index_t neighborIndex = findInRangingTableSet(&rangingTableSet, neighborAddress);
   /* handle new neighbor */
-  if (neighbor_index == -1) {
-    if (ranging_table_set.free_queue_entry == -1) {
+  if (neighborIndex == -1) {
+    if (rangingTableSet.freeQueueEntry == -1) {
       /* ranging table set is full */
       return;
     }
     Ranging_Table_t table;
     memset(&table, 0, sizeof(Ranging_Table_t));  // TODO check if necessary
-    table.neighbor_address = neighbor_addr;
+    table.neighborAddress = neighborAddress;
     table.period = TX_PERIOD_IN_MS;
-    table.next_delivery_time = xTaskGetTickCount() + table.period;
-    table.expiration_time = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
-    neighbor_index = ranging_table_set_insert(&ranging_table_set, &table);
+    table.nextDeliveryTime = xTaskGetTickCount() + table.period;
+    table.expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
+    neighborIndex = rangingTableSetInsert(&rangingTableSet, &table);
   }
-  Ranging_Table_t* neighbor_ranging_table = &ranging_table_set.set_data[neighbor_index].data;
+  Ranging_Table_t* neighborRangingTable = &rangingTableSet.setData[neighborIndex].data;
   /* update Re */
-  neighbor_ranging_table->Re.timestamp = ranging_message_with_timestamp->rx_time;
-  neighbor_ranging_table->Re.sequence_number = ranging_message->header.message_sequence;
+  neighborRangingTable->Re.timestamp = rangingMessageWithTimestamp->rxTime;
+  neighborRangingTable->Re.seqNumber = rangingMessage->header.msgSequence;
 
-  Timestamp_Tuple_t neighbor_Tr = ranging_message->header.last_tx_timestamp;
-  // DEBUG_PRINT("##########neighbor Tr=%d#########\r\n", neighbor_Tr.sequence_number);
+  Timestamp_Tuple_t neighborTr = rangingMessage->header.lastTxTimestamp;
+  // DEBUG_PRINT("##########neighbor Tr=%d#########\r\n", neighborTr.seqNumber);
   /* update Tr or Rr*/
-  if (neighbor_ranging_table->Tr.timestamp.full == 0) {
-    if (neighbor_ranging_table->Rr.sequence_number == neighbor_Tr.sequence_number) {
-      neighbor_ranging_table->Tr = neighbor_Tr;
+  if (neighborRangingTable->Tr.timestamp.full == 0) {
+    if (neighborRangingTable->Rr.seqNumber == neighborTr.seqNumber) {
+      neighborRangingTable->Tr = neighborTr;
     } else {
-      neighbor_ranging_table->Rr = neighbor_ranging_table->Re;
+      neighborRangingTable->Rr = neighborRangingTable->Re;
     }
   }
-  Timestamp_Tuple_t neighbor_Rf = {.timestamp.full = 0};
-  uint8_t body_unit_count = (ranging_message->header.message_length - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
+  Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
+  uint8_t body_unit_count = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
   for (int i = 0; i < body_unit_count; i++) {
-    if (ranging_message->body_units[i].address == MY_UWB_ADDRESS) {
-      neighbor_Rf = ranging_message->body_units[i].timestamp;
+    if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
+      neighborRf = rangingMessage->bodyUnits[i].timestamp;
       break;
     }
   }
   /* update Rf and Tf*/
-  if (neighbor_Rf.timestamp.full) {
-    neighbor_ranging_table->Rf = neighbor_Rf;
-    /* find corresponding Tf in Tf_buffer */
+  if (neighborRf.timestamp.full) {
+    neighborRangingTable->Rf = neighborRf;
+    /* find corresponding Tf in TfBuffer */
     for (int i = 0; i < Tf_BUFFER_POLL_SIZE; i++) {
-      if (Tf_buffer[i].sequence_number == neighbor_Rf.sequence_number) {
-        neighbor_ranging_table->Tf = Tf_buffer[i];
+      if (TfBuffer[i].seqNumber == neighborRf.seqNumber) {
+        neighborRangingTable->Tf = TfBuffer[i];
       }
     }
   }
 
-  if (neighbor_ranging_table->Tr.timestamp.full && neighbor_ranging_table->Rf.timestamp.full && neighbor_ranging_table->Tf.timestamp.full) {
+  if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
       // DEBUG_PRINT("===before compute distance===\r\n");
-      // print_ranging_table(&ranging_table_set);
-      int16_t distance = compute_distance(neighbor_ranging_table);
-      DEBUG_PRINT("distance to neighbor %d = %d cm\r\n", ranging_message->header.source_address, distance);
+      // printRangingTable(&rangingTableSet);
+      int16_t distance = computeDistance(neighborRangingTable);
+      DEBUG_PRINT("distance to neighbor %d = %d cm\r\n", rangingMessage->header.srcAddress, distance);
       // DEBUG_PRINT("===after compute distance===\r\n");
-      // print_ranging_table(&ranging_table_set);
-  } else if (neighbor_ranging_table->Rf.timestamp.full && neighbor_ranging_table->Tf.timestamp.full) {
-      neighbor_ranging_table->Rp = neighbor_ranging_table->Rf;
-      neighbor_ranging_table->Tp = neighbor_ranging_table->Tf;
-      neighbor_ranging_table->Rr = neighbor_ranging_table->Re;
-      neighbor_ranging_table->Rf.timestamp.full = 0;
-      neighbor_ranging_table->Tf.timestamp.full = 0;
-      neighbor_ranging_table->Tr.timestamp.full = 0;
+      // printRangingTable(&rangingTableSet);
+  } else if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+      neighborRangingTable->Rp = neighborRangingTable->Rf;
+      neighborRangingTable->Tp = neighborRangingTable->Tf;
+      neighborRangingTable->Rr = neighborRangingTable->Re;
+      neighborRangingTable->Rf.timestamp.full = 0;
+      neighborRangingTable->Tf.timestamp.full = 0;
+      neighborRangingTable->Tr.timestamp.full = 0;
   }
   /* update expiration time */
-  neighbor_ranging_table->expiration_time = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
+  neighborRangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
 }
 
-static int get_sequence_number() {
-  seq_number++;
-  return seq_number;
+static int getRangingSequenceNumber() {
+  rangingSeqNumber++;
+  return rangingSeqNumber;
 }
 
-static void generate_ranging_message(Ranging_Message_t* ranging_message) {
+static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
   /* generate body unit */
-  int8_t body_unit_number = 0;
-  int cur_seq_number = get_sequence_number();
+  int8_t bodyUnitNumber = 0;
+  int curSeqNumber = getRangingSequenceNumber();
 
-  for (set_index_t index = ranging_table_set.full_queue_entry; index != -1;
-       index = ranging_table_set.set_data[index].next) {
-    Ranging_Table_t* table = &ranging_table_set.set_data[index].data;
-    if (body_unit_number >= MAX_BODY_UNIT_NUMBER) {
+  for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;
+       index = rangingTableSet.setData[index].next) {
+    Ranging_Table_t* table = &rangingTableSet.setData[index].data;
+    if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
       break;
     }
     if (table->Re.timestamp.full) {
-      ranging_message->body_units[body_unit_number].address =
-          table->neighbor_address;
-      ranging_message->body_units[body_unit_number].timestamp = table->Re;
-      body_unit_number++;
-      table->Re.sequence_number = 0;
+      rangingMessage->bodyUnits[bodyUnitNumber].address =
+          table->neighborAddress;
+      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->Re;
+      bodyUnitNumber++;
+      table->Re.seqNumber = 0;
       table->Re.timestamp.full = 0;
     }
   }
   /* generate message header */
-  ranging_message->header.source_address = MY_UWB_ADDRESS;
-  ranging_message->header.message_length = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * body_unit_number;
-  // printf("Tx Task Generate: size of ranging_message=%d\r\n", ranging_message->header.message_length);
-  // printf("Tx Task Generate: number of body_unit=%d\r\n", body_unit_number);
+  rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
+  rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
+  // printf("Tx Task Generate: size of rangingMessage=%d\r\n", rangingMessage->header.msgLength);
+  // printf("Tx Task Generate: number of body_unit=%d\r\n", bodyUnitNumber);
 //   printf("size of message_header=%d, size of body_unit=%d \r\n", sizeof(Ranging_Message_Header_t), sizeof(Body_Unit_t));
-  ranging_message->header.message_sequence = cur_seq_number;
-  ranging_message->header.last_tx_timestamp = Tf_buffer[Tf_buffer_index];
-  ranging_message->header.velocity = 0;
+  rangingMessage->header.msgSequence = curSeqNumber;
+  rangingMessage->header.lastTxTimestamp = TfBuffer[TfBufferIndex];
+  rangingMessage->header.velocity = 0;
 }
 
 static void uwbRxTask(void* parameters) {
@@ -268,11 +268,11 @@ static void uwbRxTask(void* parameters) {
     vTaskDelay(500);
   }
 
-  Ranging_Message_With_Timestamp_t rx_packet_cache;
+  Ranging_Message_With_Timestamp_t rxPacketCache;
 
   while (true) {
-    if (xQueueReceive(rxQueue, &rx_packet_cache, portMAX_DELAY)) {
-      process_ranging_message(&rx_packet_cache);
+    if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
+      processRangingMessage(&rxPacketCache);
     }
   }
 }
@@ -283,9 +283,9 @@ static void uwbRangingTask(void* parameters) {
   }
 
   while (true) {
-    Ranging_Message_t tx_packet_cache;
-    generate_ranging_message(&tx_packet_cache);
-    xQueueSend(txQueue, &tx_packet_cache, portMAX_DELAY);
+    Ranging_Message_t txPacketCache;
+    generateRangingMessage(&txPacketCache);
+    xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
   }
 }
@@ -474,7 +474,7 @@ static void uwbStart() {
 static void dwm3000Init(DeckInfo *info) {
   pinInit();
   queueInit();
-  ranging_table_set_init(&ranging_table_set);
+  rangingTableSetInit(&rangingTableSet);
   uwbStart();
   isInit = true;
 }
