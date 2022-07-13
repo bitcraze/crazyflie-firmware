@@ -40,7 +40,9 @@
 
 #include "cpxlink.h"
 #include "cpx_internal_router.h"
+#ifdef CONFIG_AI_DECK
 #include "aideck.h"
+#endif
 #include "cpx.h"
 
 static CPXPacket_t cpxRx;
@@ -101,7 +103,9 @@ static void cpx(void* _param) {
         }
         break;
       case CPX_F_BOOTLOADER:
+#ifdef CONFIG_AI_DECK
         cpxBootloaderMessage(&cpxRx);
+#endif
         break;
       case CPX_F_SYSTEM:
         if (cpxRx.data[0] == CPX_ENABLE_CRTP_BRIDGE) {
