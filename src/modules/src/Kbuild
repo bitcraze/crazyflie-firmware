@@ -56,11 +56,11 @@ obj-y += system.o
 obj-y += tdoaEngineInstance.o
 obj-y += vcp_esc_passthrough.o
 obj-y += worker.o
-obj-$(CONFIG_ENABLE_CPX) += cpx/cpx_external_router.o
-obj-$(CONFIG_ENABLE_CPX) += cpx/cpx_internal_router.o
-obj-$(CONFIG_ENABLE_CPX) += cpx/cpx_uart_transport.o
-obj-$(CONFIG_ENABLE_CPX) += cpx/cpxlink.o
-obj-$(CONFIG_ENABLE_CPX) += cpx/cpx.o
+obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx_external_router.o
+obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx_internal_router.o
+obj-$(CONFIG_ENABLE_CPX_ON_UART2) += cpx/cpx_uart_transport.o
+obj-$(CONFIG_ENABLE_CPX)          += cpx/cpxlink.o
+obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx.o
 
 # Kalman core
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/

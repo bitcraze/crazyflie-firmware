@@ -22,14 +22,22 @@ config SYSLINK_RX_DMA
         and might conflict with other functionality in the future.
 
 config ENABLE_CPX
-  bool "Enable CPX on UART2"
+  bool "Enable CPX"
+  select ENABLE_CPX_ON_UART2
   default y
   help
-      This enables using CPX on UART2
+      This enables CPX routers and API
 
-config DECK_CRTP_OVER_UART2_BAUDRATE
-  int "UART2 baudrate"
+config ENABLE_CPX_ON_UART2
+  bool "Enable CPX on UART2"
   depends on ENABLE_CPX
+  default y
+  help
+      This enables CPX routing on UART2
+
+config CPX_UART2_BAUDRATE
+  int "CPX UART2 baudrate"
+  depends on ENABLE_CPX_ON_UART2
   range 9600 2000000
   default 576000
   help
