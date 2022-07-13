@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2021 Bitcraze AB
+ * Copyright (C) 2011-2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * aideck.c - Deck driver for the AIdeck
  */
+
+/* Deck driver for AI deck which supports bootloading of GAP8/ESP32 as well as CPX
+ * communication.
+ */
+
 #define DEBUG_MODULE "AIDECK"
 
 #include <math.h>

@@ -22,6 +22,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Routing messages inside the Crazyflie firmware to specific CPX functions */
+
 #define DEBUG_MODULE "CPX-INT-ROUTER"
 
 #include "FreeRTOS.h"

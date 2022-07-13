@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* Fake deck driver for using CPX (and CRTP) over UART2 on the expansion connector.
+ * Note that this has to be forced on in the deck subsystem, since there's no 1-wire
+ * memory available.
+ */
+
 #define DEBUG_MODULE "CRTP-OVER-UART"
 
 #include <stdint.h>

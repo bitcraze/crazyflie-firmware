@@ -22,6 +22,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* UART transport layer for CPX */
+
 #define DEBUG_MODULE "CPX-UART-TRANSP"
 
 #include <math.h>

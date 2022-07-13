@@ -22,6 +22,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Routing CPX messages between external interfaces (like UART) or between
+ * external interfaces and the Crazyflie firmware internal router.
+ */
+
 #define DEBUG_MODULE "CPX-EXT-ROUTER"
 
 #include <stdio.h>
