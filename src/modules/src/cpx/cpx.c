@@ -40,7 +40,7 @@
 
 #include "cpxlink.h"
 #include "cpx_internal_router.h"
-#ifdef CONFIG_AI_DECK
+#ifdef CONFIG_DECK_AI
 #include "aideck.h"
 #endif
 #include "cpx.h"
@@ -103,7 +103,7 @@ static void cpx(void* _param) {
         }
         break;
       case CPX_F_BOOTLOADER:
-#ifdef CONFIG_AI_DECK
+#ifdef CONFIG_DECK_AI
         cpxBootloaderMessage(&cpxRx);
 #endif
         break;
