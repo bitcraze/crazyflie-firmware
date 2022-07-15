@@ -128,8 +128,9 @@ static struct {
 } setpointCompressed;
 
 // for payloads
-point_t payload_last_pos;
-float payload_alpha = 0.9; // between 0...1; 1: no filter
+static float payload_alpha = 0.9; // between 0...1; 1: no filter
+static point_t payload_pos_last;         // m   (world frame)
+static velocity_t payload_vel_last;      // m/s (world frame)
 
 STATIC_MEM_TASK_ALLOC(stabilizerTask, STABILIZER_TASK_STACKSIZE);
 
@@ -262,7 +263,8 @@ static void stabilizerTask(void* param)
 
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
 
-  DEBUG_PRINT("Ready to fly.\n");
+  payload_pos_last.timestamp = 0;
+   DEBUG_PRINT("Ready to fly.\n");
 
   while(1) {
     // The sensor should unlock at 1kHz
@@ -291,36 +293,43 @@ static void stabilizerTask(void* param)
       // add the payload state here
       peerLocalizationOtherPosition_t* payloadPos = peerLocalizationGetPositionByID(255);
       if (payloadPos != NULL) {
-
+        
         // if we got a new state
-        if (payload_last_pos.timestamp < state.payload_pos.timestamp) {
+        if (payload_pos_last.timestamp < payloadPos->pos.timestamp) {
+          struct vec vel_filtered = vzero();
+          // in the beginning, estimate the velocity to be zero, otherwise use
+          // numeric estimation with filter
+          if (payload_pos_last.timestamp != 0) {
+            // estimate the velocity numerically
+            const float dt = (payloadPos->pos.timestamp - payload_pos_last.timestamp) / 1000.0f; //s
+            struct vec pos = mkvec(payloadPos->pos.x, payloadPos->pos.y, payloadPos->pos.z);
+            struct vec last_pos = mkvec(payload_pos_last.x, payload_pos_last.y, payload_pos_last.z);
+            struct vec vel = vdiv(vsub(pos, last_pos), dt);
+
+            // apply a simple complementary filter
+            struct vec vel_old = mkvec(payload_vel_last.x, payload_vel_last.y, payload_vel_last.z);
+            vel_filtered = vadd(vscl(1.0f - payload_alpha, vel_old), vscl(payload_alpha, vel));
+          }
           // update the position
           state.payload_pos.x = payloadPos->pos.x;
           state.payload_pos.y = payloadPos->pos.y;
           state.payload_pos.z = payloadPos->pos.z;
+          state.payload_pos.timestamp = payloadPos->pos.timestamp;
 
-          // estimate the velocity numerically
-          const float dt = (state.payload_pos.timestamp - payload_last_pos.timestamp) / 1000.0f; //s
-          struct vec pos = mkvec(state.payload_pos.x, state.payload_pos.y, state.payload_pos.z);
-          struct vec last_pos = mkvec(payload_last_pos.x, payload_last_pos.y, payload_last_pos.z);
-          struct vec vel = vdiv(vsub(pos, last_pos), dt);
-
-          // apply a simple complementary filter
-          struct vec vel_old = mkvec(state.payload_vel.x, state.payload_vel.y, state.payload_vel.z);
-          struct vec vel_filtered = vadd(vscl(1 - payload_alpha, vel_old), vscl(payload_alpha, vel));
-
+          // update the velocity
           state.payload_vel.x = vel_filtered.x;
           state.payload_vel.y = vel_filtered.y;
           state.payload_vel.z = vel_filtered.z;
-
-          payload_last_pos = state.payload_pos;
+          state.payload_vel.timestamp = payloadPos->pos.timestamp;
+          
+          // update state
+          payload_pos_last = state.payload_pos;
+          payload_vel_last = state.payload_vel;
+        } else {
+          state.payload_pos = payload_pos_last;
+          state.payload_vel = payload_vel_last;
         }
-      } else {
-        state.payload_pos.x = NAN;
-        state.payload_pos.y = NAN;
-        state.payload_pos.z = NAN;
       }
-
       compressState();
 
       if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
@@ -418,6 +427,10 @@ PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
  * @brief If set to nonzero will turn off power
  */
 PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
+
+
+PARAM_ADD_CORE(PARAM_FLOAT, pAlpha, &payload_alpha)
+
 PARAM_GROUP_STOP(stabilizer)
 
 
@@ -865,32 +878,32 @@ LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 /**
  * @brief The position of the payload in the global reference frame, X [mm]
  */
-LOG_ADD(LOG_INT16, x, &stateCompressed.px)
+LOG_ADD(LOG_INT16, px, &stateCompressed.px)
 
 /**
  * @brief The position of the payload in the global reference frame, Y [mm]
  */
-LOG_ADD(LOG_INT16, y, &stateCompressed.py)
+LOG_ADD(LOG_INT16, py, &stateCompressed.py)
 
 /**
  * @brief The position of the payload in the global reference frame, Z [mm]
  */
-LOG_ADD(LOG_INT16, z, &stateCompressed.pz)
+LOG_ADD(LOG_INT16, pz, &stateCompressed.pz)
 
 /**
  * @brief The velocity of the payload in the global reference frame, X [mm/s]
  */
-LOG_ADD(LOG_INT16, vx, &stateCompressed.pvx)
+LOG_ADD(LOG_INT16, pvx, &stateCompressed.pvx)
 
 /**
  * @brief The velocity of the payload in the global reference frame, Y [mm/s]
  */
-LOG_ADD(LOG_INT16, vy, &stateCompressed.pvy)
+LOG_ADD(LOG_INT16, pvy, &stateCompressed.pvy)
 
 /**
  * @brief The velocity of the payload in the global reference frame, Z [mm/s]
  */
-LOG_ADD(LOG_INT16, vz, &stateCompressed.pvz)
+LOG_ADD(LOG_INT16, pvz, &stateCompressed.pvz)
 
 
 LOG_GROUP_STOP(stateEstimateZ)

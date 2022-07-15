@@ -190,6 +190,7 @@ typedef struct control_s {
     struct {
       float thrustSI;  // N
       float torque[3]; // Nm
+      float u_all[3];
     };
     float normalizedForces[4]; // 0 ... 1
   };

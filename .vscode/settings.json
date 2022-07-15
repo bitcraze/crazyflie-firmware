@@ -6,5 +6,6 @@
     },
     "files.associations": {
         "bootloader.h": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }
