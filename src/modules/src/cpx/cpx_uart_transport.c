@@ -192,7 +192,7 @@ static void CPX_UART_TX(void *param)
     uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
     vTaskDelay(100);
     evBits = xEventGroupGetBits(evGroup);
-  } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
+  } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT && shutdownTransport == false);
 
   while (shutdownTransport == false)
   {
