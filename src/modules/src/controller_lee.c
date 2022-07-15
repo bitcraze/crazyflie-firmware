@@ -56,19 +56,19 @@ static float thrustSI;
 static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
 
 // Position PID
-static struct vec Kpos_P = {20, 20, 20}; // Kp in paper
+static struct vec Kpos_P = {9, 9, 9}; // Kp in paper
 static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {18, 18,18}; // Kv in paper
+static struct vec Kpos_D = {7, 7, 7}; // Kv in paper
 static float Kpos_D_limit = 100;
-static struct vec Kpos_I = {8, 8, 8}; // not in paper
+static struct vec Kpos_I = {5, 5, 5}; // not in paper
 static float Kpos_I_limit = 2;
 static struct vec i_error_pos;
 static struct vec p_error;
 static struct vec v_error;
 // Attitude PID
-static struct vec KR = {0.0055, 0.0055, 0.0055};
-static struct vec Komega = {0.0013, 0.0013, 0.0016};
-static struct vec KI = {0.005, 0.005, 0.005};
+static struct vec KR = {0.0055, 0.0055, 0.01};
+static struct vec Komega = {0.0013, 0.0013, 0.002};
+static struct vec KI = {0.012, 0.018, 0.015};
 static struct vec i_error_att;
 // Logging variables
 static struct vec rpy;

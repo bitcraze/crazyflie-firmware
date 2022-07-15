@@ -128,7 +128,7 @@ static struct {
 } setpointCompressed;
 
 // for payloads
-static float payload_alpha = 0.1; // between 0...1; 1: no filter
+static float payload_alpha = 0.9; // between 0...1; 1: no filter
 static point_t payload_pos_last;         // m   (world frame)
 static velocity_t payload_vel_last;      // m/s (world frame)
 
@@ -326,7 +326,7 @@ static void stabilizerTask(void* param)
           payload_pos_last = state.payload_pos;
           payload_vel_last = state.payload_vel;
         } else {
-          state.payload_pos = payload_vel_last;
+          state.payload_pos = payload_pos_last;
           state.payload_vel = payload_vel_last;
         }
       }
