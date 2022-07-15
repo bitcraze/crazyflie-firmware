@@ -146,13 +146,6 @@ static void CPX_UART_RX(void *param)
     do
     {
       uart2GetDataWithTimeout(1, &uartRxp.start, M2T(200));
-      // At startup the ESP bootloader will print out a boot message
-      // that will be read here. If for some reason (maybe badly flashed)
-      // the ESP ends up in a boot-loop, this message keeps being sent over
-      // and over. This causes problems for the rest of the system (like syslink).
-      // To avoid this, delay here if we get something we shouldn't
-      // before trying again.
-      vTaskDelay(M2T(100));
     } while (uartRxp.start != 0xFF && shutdownTransport == false);
 
     if (uartRxp.start == 0xFF) {
