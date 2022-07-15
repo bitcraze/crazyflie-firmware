@@ -9,6 +9,7 @@ obj-y += comm.o
 obj-y += console.o
 obj-y += controller_indi.o
 obj-y += controller_lee.o
+obj-y += controller_lee_payload.o
 obj-y += controller_mellinger.o
 obj-y += controller_mellingerSI.o
 obj-y += controller.o
