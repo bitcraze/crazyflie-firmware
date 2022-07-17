@@ -1,7 +1,7 @@
 #include "ranging_struct.h"
 
 #include <stdio.h>
-
+#include <string.h>
 #include "task.h"
 
 static set_index_t ranging_table_set_malloc(

@@ -281,9 +281,8 @@ static void uwbRangingTask(void* parameters) {
   while (!isUWBStart) {
     vTaskDelay(500);
   }
-
+  Ranging_Message_t txPacketCache;
   while (true) {
-    Ranging_Message_t txPacketCache;
     generateRangingMessage(&txPacketCache);
     xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
@@ -467,7 +466,7 @@ static void uwbStart() {
                     ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
   xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 1 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);            
 }
 /*********** Deck driver initialization ***************/

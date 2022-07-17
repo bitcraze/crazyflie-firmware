@@ -12,12 +12,12 @@
 #define FRAME_LEN_MAX_EX 1023
 
 #define MY_UWB_ADDRESS 4
-#define TX_QUEUE_SIZE 15
-#define RX_QUEUE_SIZE 15
+#define TX_QUEUE_SIZE 20
+#define RX_QUEUE_SIZE 20
 #define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
 #define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
 #define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
-#define Tf_BUFFER_POLL_SIZE 15
+#define Tf_BUFFER_POLL_SIZE 30
 #define TX_PERIOD_IN_MS 50
 
 static dwt_txconfig_t txconfig_options = {
