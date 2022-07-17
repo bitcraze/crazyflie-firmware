@@ -39,7 +39,7 @@
 #include "autoconf.h"
 #include "uart_syslink.h"
 #include "crtp.h"
-#include "cfassert.h"
+// #include "cfassert.h"
 #include "nvicconf.h"
 #include "config.h"
 #include "queuemonitor.h"
@@ -415,7 +415,7 @@ static void uartslkDmaRXIsr(void)
     else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
       // Only assert if debugger is not connected
-      ASSERT(0); // Queue overflow
+      // ASSERT(0); // Queue overflow
     }
   }
   else
@@ -423,7 +423,7 @@ static void uartslkDmaRXIsr(void)
     if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
       // Only assert if debugger is not connected
-      ASSERT(0);
+      // ASSERT(0);
     }
   }
 
@@ -499,7 +499,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
         // Only assert if debugger is not connected
-        ASSERT(0);
+        // ASSERT(0);
       }
     }
     break;
@@ -514,18 +514,18 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
         // Only assert if debugger is not connected
-        ASSERT(0); // Queue overflow
+        // ASSERT(0); // Queue overflow
       }
     }
     else
     {
       rxState = waitForFirstStart; //Checksum error
-      ASSERT(0);
+      // ASSERT(0);
     }
     rxState = waitForFirstStart;
     break;
   default:
-    ASSERT(0);
+    // ASSERT(0);
     break;
   }
 }
