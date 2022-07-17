@@ -45,11 +45,11 @@
 #include "static_mem.h"
 #include "cfassert.h"
 
-#define RADIOLINK_TX_QUEUE_SIZE (1)
-#define RADIOLINK_CRTP_QUEUE_SIZE (5)
-#define RADIO_ACTIVITY_TIMEOUT_MS (1000)
+#define RADIOLINK_TX_QUEUE_SIZE (15)
+#define RADIOLINK_CRTP_QUEUE_SIZE (15)
+#define RADIO_ACTIVITY_TIMEOUT_MS (1500)
 
-#define RADIOLINK_P2P_QUEUE_SIZE (5)
+#define RADIOLINK_P2P_QUEUE_SIZE (15)
 
 static xQueueHandle  txQueue;
 STATIC_MEM_QUEUE_ALLOC(txQueue, RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
@@ -161,7 +161,8 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   {
     slp->length--; // Decrease to get CRTP size.
     // Assert that we are not dopping any packets
-    ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
+    xQueueSend(crtpPacketDelivery, &slp->length, 0);
+    // ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
     ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
