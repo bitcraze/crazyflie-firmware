@@ -4,7 +4,11 @@ import cffirmware
 
 def test_controller_lee():
 
-    cffirmware.controllerLeeInit()
+    lee = cffirmware.controllerLee_t()
+
+    cffirmware.controllerLeeInit(lee)
+    # now we can change some controller parameters
+    lee.Kpos_D.z = 5
 
     control = cffirmware.control_t()
     setpoint = cffirmware.setpoint_t()
@@ -35,7 +39,7 @@ def test_controller_lee():
 
     tick = 100
 
-    cffirmware.controllerLee(control, setpoint,sensors,state,tick)
+    cffirmware.controllerLee(lee,control,setpoint,sensors,state,tick)
     # control.thrust will be at a (tuned) hover-state
     assert control.controlMode == cffirmware.controlModeForceTorque
     assert control.torque[0] == 0
