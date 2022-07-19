@@ -66,8 +66,8 @@ Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POLL_SIZE] = {0};
 static int TfBufferIndex = 0;
 static int rangingSeqNumber = 0;
 
-static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
-static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
+// static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
+// static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback() {
   // DEBUG_PRINT("txCallback\n");
@@ -212,7 +212,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
       // DEBUG_PRINT("===before compute distance===\r\n");
       // printRangingTable(&rangingTableSet);
       int16_t distance = computeDistance(neighborRangingTable);
-      DEBUG_PRINT("distance to neighbor %d = %d cm\r\n", rangingMessage->header.srcAddress, distance);
+      // DEBUG_PRINT("distance to neighbor %d = %d cm\r\n", rangingMessage->header.srcAddress, distance);
       // DEBUG_PRINT("===after compute distance===\r\n");
       // printRangingTable(&rangingTableSet);
   } else if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
@@ -314,7 +314,7 @@ static void spiWrite(const void *header, size_t headerLength, const void *data,
   spiExchange(headerLength + dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
-  STATS_CNT_RATE_EVENT(&spiWriteCount);
+  // STATS_CNT_RATE_EVENT(&spiWriteCount);
 }
 
 static void spiRead(const void *header, size_t headerLength, void *data,
@@ -327,7 +327,7 @@ static void spiRead(const void *header, size_t headerLength, void *data,
   memcpy(data, spiRxBuffer + headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
-  STATS_CNT_RATE_EVENT(&spiReadCount);
+  // STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
@@ -372,9 +372,7 @@ extern dwOps_t dwt_ops = {
 
 
 int uwbInit() {
-  // Reset the DW3000 chip
-  dwt_ops.reset();
-  // dwt_softreset(); // TODO softreset failed, check.
+  // spiSetSpeed(dwSpiSpeedHigh);
   while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
   {};
   if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
@@ -434,13 +432,13 @@ static void pinInit() {
   pinMode(GPIO_PIN_IRQ, INPUT);
 
   spiBegin();
-  spiSetSpeed(dwSpiSpeedHigh);
-
-  digitalWrite(GPIO_PIN_RESET, 0);
-  vTaskDelay(M2T(10));
-  digitalWrite(GPIO_PIN_RESET, 1);
-  vTaskDelay(M2T(10));
-
+  // Reset the DW3000 chip
+#ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
+  dwt_softreset();
+  vTaskDelay(M2T(20));
+#else
+  dwt_ops.reset();
+#endif
   // Set up interrupt
   SYSCFG_EXTILineConfig(EXTI_PortSource, EXTI_PinSource);
 
@@ -514,13 +512,13 @@ static const DeckDriver dwm3000_deck = {
 
 DECK_DRIVER(dwm3000_deck);
 
-PARAM_GROUP_START(deck)
+// PARAM_GROUP_START(deck)
 
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
+// PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 
-PARAM_GROUP_STOP(deck)
+// PARAM_GROUP_STOP(deck)
 
-LOG_GROUP_START(adhoc)
-STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
-STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
-LOG_GROUP_STOP(adhoc)
+// LOG_GROUP_START(adhoc)
+// STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
+// STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
+// LOG_GROUP_STOP(adhoc)

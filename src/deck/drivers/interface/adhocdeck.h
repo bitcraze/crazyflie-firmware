@@ -23,7 +23,7 @@
 #define RANGING_INTERVAL_MAX 500 //default 500
 #define Tf_BUFFER_POLL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 
-#define TX_PERIOD_IN_MS 20
+#define TX_PERIOD_IN_MS 100
 
 static dwt_txconfig_t txconfig_options = {
     .PGcount = 0x0,
