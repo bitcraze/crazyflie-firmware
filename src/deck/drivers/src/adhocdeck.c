@@ -1,3 +1,5 @@
+#define DEBUG_MODULE "DWM3k"
+
 #include "stm32fxxx.h"
 #include <stdint.h>
 #include <string.h>
@@ -26,26 +28,25 @@
 
 #define CS_PIN DECK_GPIO_IO1
 
-// LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1,
-// TX1), leaving UART1 free for use
-#ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
-#define GPIO_PIN_IRQ DECK_GPIO_IO2
+// LOCO deck alternative IRQ and RESET pins(IO_2, IO_4) instead of default (RX1, TX1), leaving UART1 free for use
+#ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
+  #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
 
-#ifndef LOCODECK_ALT_PIN_RESET
-#define GPIO_PIN_RESET DECK_GPIO_IO3
-#else
-#define GPIO_PIN_RESET LOCODECK_ALT_PIN_RESET
-#endif
+  #ifndef ADHOCDECK_ALT_PIN_RESET
+  #define GPIO_PIN_RESET 	DECK_GPIO_IO4
+  #else
+  #define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
+  #endif
 
-#define EXTI_PortSource EXTI_PortSourceGPIOB
-#define EXTI_PinSource EXTI_PinSource5
-#define EXTI_LineN EXTI_Line5
+  #define EXTI_PortSource EXTI_PortSourceGPIOB
+  #define EXTI_PinSource 	EXTI_PinSource5
+  #define EXTI_LineN 		  EXTI_Line5
 #else
-#define GPIO_PIN_IRQ DECK_GPIO_RX1
-#define GPIO_PIN_RESET DECK_GPIO_TX1
-#define EXTI_PortSource EXTI_PortSourceGPIOC
-#define EXTI_PinSource EXTI_PinSource11
-#define EXTI_LineN EXTI_Line11
+  #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
+  #define GPIO_PIN_RESET 	DECK_GPIO_TX1
+  #define EXTI_PortSource EXTI_PortSourceGPIOC
+  #define EXTI_PinSource 	EXTI_PinSource11
+  #define EXTI_LineN 		  EXTI_Line11
 #endif
 
 #define DEFAULT_RX_TIMEOUT 0xFFFFF
@@ -64,7 +65,7 @@ static uint8_t rxBuffer[RX_BUFFER_SIZE];
 Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POLL_SIZE] = {0};
 static int TfBufferIndex = 0;
 static int rangingSeqNumber = 0;
-static bool isUWBStart = false;
+
 static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
@@ -107,9 +108,8 @@ static void rxErrorCallback() {
 }
 
 static void uwbTxTask(void *parameters) {
-  while (!isUWBStart) {
-    vTaskDelay(500);
-  }
+  systemWaitStart();
+
   Ranging_Message_t packetCache;
 
   while (true) {
@@ -264,9 +264,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
 }
 
 static void uwbRxTask(void* parameters) {
-  while (!isUWBStart) {
-    vTaskDelay(500);
-  }
+  systemWaitStart();
 
   Ranging_Message_With_Timestamp_t rxPacketCache;
 
@@ -278,9 +276,8 @@ static void uwbRxTask(void* parameters) {
 }
 
 static void uwbRangingTask(void* parameters) {
-  while (!isUWBStart) {
-    vTaskDelay(500);
-  }
+  systemWaitStart();
+
   Ranging_Message_t txPacketCache;
   while (true) {
     generateRangingMessage(&txPacketCache);
@@ -291,8 +288,7 @@ static void uwbRangingTask(void* parameters) {
 
 static void uwbTask(void *parameters) {
   systemWaitStart();
-  uwbInit();
-  isUWBStart = true;    
+
   while (1) {
     // DEBUG_PRINT("uwbTask\n");
     if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
@@ -334,7 +330,7 @@ static void spiRead(const void *header, size_t headerLength, void *data,
   STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
-#if CONFIG_DECK_LOCODECK_USE_ALT_PINS
+#ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
 void __attribute__((used)) EXTI5_Callback(void)
 #else
 void __attribute__((used)) EXTI11_Callback(void)
@@ -375,23 +371,23 @@ extern dwOps_t dwt_ops = {
 };
 
 
-void uwbInit() {
+int uwbInit() {
   // Reset the DW3000 chip
   dwt_ops.reset();
   // dwt_softreset(); // TODO softreset failed, check.
   while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
   {};
   if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
-    isUWBStart = false;
-    // return;
+    isInit = false;
+    return DWT_ERROR;
   }
   if (dwt_configure(&config) == DWT_ERROR) {
     while (1) {
       DEBUG_PRINT("dwt_configure error\n");
       vTaskDelay(1000);
     }
-    isUWBStart = false;
-    // return;
+    isInit = false;
+    return DWT_ERROR;
   }
   dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
   
@@ -426,6 +422,8 @@ void uwbInit() {
   dwt_forcetrxoff();
   // dwt_rxenable(DWT_START_RX_IMMEDIATE);
   algoSemaphore = xSemaphoreCreateMutex();
+  isInit = true;
+  return DWT_SUCCESS;
 }
 
 static void pinInit() {
@@ -474,6 +472,11 @@ static void dwm3000Init(DeckInfo *info) {
   pinInit();
   queueInit();
   rangingTableSetInit(&rangingTableSet);
+  if (uwbInit() != DWT_SUCCESS) {
+    isInit = false;
+    DEBUG_PRINT("Failed to configure DW3000!\n");
+    return;
+  }
   uwbStart();
   isInit = true;
 }
@@ -491,15 +494,15 @@ static const DeckDriver dwm3000_deck = {
     .pid = 0xAD,
     .name = "DWM3000",
 
-#ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
-    .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
+#ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
+    .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
 #else
     // (PC10/PC11 is UART1 TX/RX)
     .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,
 #endif
     .usedPeriph = DECK_USING_SPI,
     .requiredEstimator = kalmanEstimator,
-#ifdef LOCODECK_NO_LOW_INTERFERENCE
+#ifdef ADHOCDECK_NO_LOW_INTERFERENCE
     .requiredLowInterferenceRadioMode = false,
 #else
     .requiredLowInterferenceRadioMode = true,

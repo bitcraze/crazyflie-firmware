@@ -198,6 +198,14 @@ config DECK_ADHOC
       The Adhoc deck is used for ranging, networking and communication within the 
       swarm, based on the DW3000 UWB chip.
 
+  config DECK_ADHOCDECK_USE_ALT_PINS
+  bool "adhoc deck alternative IRQ and RESET pins"
+  default name
+  depends on DECK_ADHOC
+  help
+       ADHOC deck alternative IRQ and RESET pins(IO_2, IO_4) instead of
+       default (RX1, TX1), leaving UART1 free for use.
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
