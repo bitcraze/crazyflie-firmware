@@ -53,6 +53,8 @@ Click on "Run", then "Add Configuration", then "Cortex Debug".
 
 This should automatically create the needed "launch.json" file.
 
+The version of cortex-debug tested here is 0.3.13. If you want to downgrade, go to 'uninstall' and 'install other versions...'.
+
 #### Cortex Debug Configuration
 
 Inside of the file, replace everything with the following:
@@ -66,7 +68,7 @@ Inside of the file, replace everything with the following:
             {
                 "name": "STM32 Debug",
                 "cwd": "${workspaceRoot}",
-                "executable": "./build/cf2.elf",
+                "executable": "${workspaceRoot}/build/cf2.elf",
                 "request": "launch",
                 "type": "cortex-debug",
                 "device": "STM32F405",
@@ -93,8 +95,8 @@ Inside of the file, replace everything with the following:
 - "runToMain" tells the GDB debug server to jump to main by default
 - "preLaunchCommands" specifies the commands for the GDB server to send before giving away control to you; the commands here mimic the options that the tutorial for Eclipse below specifies
 
-> **_NOTE:_**
-> To debug an app, make sure that "cwd" points to the root dir of your app. Note that the "svdFile" path is relative to the "cwd" dir. You can add your app debugger as a separate configuration.
+> **Note: Debugging an App**
+> To debug an app, make sure to change the "executable" to ""${workspaceRoot}/examples/app_hello_world/build/cf2.elf", or to which app you would like to debug. You can add your app debugger as a separate configuration.
 
 #### Installing the SVD file
 
