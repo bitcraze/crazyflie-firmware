@@ -39,7 +39,7 @@
 #include "autoconf.h"
 #include "uart_syslink.h"
 #include "crtp.h"
-// #include "cfassert.h"
+#include "cfassert.h"
 #include "nvicconf.h"
 #include "config.h"
 #include "queuemonitor.h"
@@ -59,7 +59,7 @@ static StaticSemaphore_t waitUntilSendDoneBuffer;
 static xSemaphoreHandle uartBusy;
 static StaticSemaphore_t uartBusyBuffer;
 static xQueueHandle syslinkPacketDelivery;
-STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 8, sizeof(SyslinkPacket));
+STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 100, sizeof(SyslinkPacket));
 
 #ifdef CONFIG_SYSLINK_RX_DMA
 static uint8_t dmaRXBuffer[64];
@@ -415,7 +415,7 @@ static void uartslkDmaRXIsr(void)
     else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
       // Only assert if debugger is not connected
-      // ASSERT(0); // Queue overflow
+      ASSERT(0); // Queue overflow
     }
   }
   else
@@ -514,7 +514,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
         // Only assert if debugger is not connected
-        // ASSERT(0); // Queue overflow
+        ASSERT(0); // Queue overflow
       }
     }
     else
@@ -525,7 +525,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     rxState = waitForFirstStart;
     break;
   default:
-    // ASSERT(0);
+    ASSERT(0);
     break;
   }
 }
@@ -606,4 +606,3 @@ void __attribute__((used)) DMA2_Stream1_IRQHandler(void)
   uartslkDmaRXIsr();
 }
 #endif
-

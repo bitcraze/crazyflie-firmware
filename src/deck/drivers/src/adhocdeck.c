@@ -456,13 +456,13 @@ static void queueInit() {
 
 static void uwbStart() {
  /* Create UWB Task */
-  xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
-  xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
-  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);            
 }
 /*********** Deck driver initialization ***************/
@@ -488,9 +488,9 @@ static bool dwm3000Test() {
 }
 
 static const DeckDriver dwm3000_deck = {
-    .vid = 0xAD,
-    .pid = 0xAD,
-    .name = "DWM3000",
+    .vid = 0xBC,
+    .pid = 0x06,
+    .name = "bcDWM1000",
 
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
     .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
