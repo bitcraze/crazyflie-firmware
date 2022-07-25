@@ -4,6 +4,7 @@
 #include <string.h>
 #include "task.h"
 
+//TODO add semaphore to protect ranging table structure.
 static set_index_t ranging_table_set_malloc(
     Ranging_Table_Set_t *rangingTableSet) {
   if (rangingTableSet->freeQueueEntry == -1) {

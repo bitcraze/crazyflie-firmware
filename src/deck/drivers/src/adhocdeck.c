@@ -62,7 +62,7 @@ static QueueHandle_t rxQueue;
 
 /* rx buffer used in rx_callback */
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
-Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POLL_SIZE] = {0};
+Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static int TfBufferIndex = 0;
 static int rangingSeqNumber = 0;
 
@@ -78,7 +78,7 @@ static void txCallback() {
   dwTime_t txTime;
   dwt_readtxtimestamp(&txTime.raw);
   TfBufferIndex++;
-  TfBufferIndex %= Tf_BUFFER_POLL_SIZE;
+  TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
   TfBuffer[TfBufferIndex].seqNumber = rangingSeqNumber;
   TfBuffer[TfBufferIndex].timestamp = txTime;
 }
@@ -186,7 +186,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
       return;
     }
     Ranging_Table_t table;
-    memset(&table, 0, sizeof(Ranging_Table_t));  // TODO check if necessary
+    memset(&table, 0, sizeof(Ranging_Table_t));
     table.neighborAddress = neighborAddress;
     table.period = TX_PERIOD_IN_MS;
     table.nextDeliveryTime = xTaskGetTickCount() + table.period;
@@ -209,8 +209,8 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
     }
   }
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
-  uint8_t body_unit_count = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
-  for (int i = 0; i < body_unit_count; i++) {
+  uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
+  for (int i = 0; i < bodyUnitCount; i++) {
     if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
       neighborRf = rangingMessage->bodyUnits[i].timestamp;
       break;
@@ -220,7 +220,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   if (neighborRf.timestamp.full) {
     neighborRangingTable->Rf = neighborRf;
     /* find corresponding Tf in TfBuffer */
-    for (int i = 0; i < Tf_BUFFER_POLL_SIZE; i++) {
+    for (int i = 0; i < Tf_BUFFER_POOL_SIZE; i++) {
       if (TfBuffer[i].seqNumber == neighborRf.seqNumber) {
         neighborRangingTable->Tf = TfBuffer[i];
       }
@@ -257,11 +257,14 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
        index = rangingTableSet.setData[index].next) {
     Ranging_Table_t* table = &rangingTableSet.setData[index].data;
     if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
-      break;
+      break; //TODO test 1023 byte
     }
     if (table->Re.timestamp.full) {
       rangingMessage->bodyUnits[bodyUnitNumber].address =
           table->neighborAddress;
+      /* It is possible that Re is not the newest timestamp, because the newest may be in rxQueue
+       * waiting to be handled.
+       */
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->Re;
       bodyUnitNumber++;
       table->Re.seqNumber = 0;
@@ -269,7 +272,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
     }
   }
   /* generate message header */
-  rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
+  rangingMessage->header.srcAddress = MY_UWB_ADDRESS; // TODO write this address into OTP memory, so that one firmware fits all Crazyflies.  
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
   rangingMessage->header.lastTxTimestamp = TfBuffer[TfBufferIndex];
