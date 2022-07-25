@@ -4,7 +4,7 @@
 #include "dwTypes.h"
 
 
-#define MAX_BODY_UNIT_NUMBER 60
+#define MAX_BODY_UNIT_NUMBER 30
 // #define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
 #define RANGING_TABLE_SIZE 60
 #define RANGING_TABLE_HOLD_TIME 10000
