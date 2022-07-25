@@ -28,12 +28,15 @@ def test_controller_lee_payload():
     state.velocity.y = 0
     state.velocity.z = 0
 
+    state.payload_pos.x = 0
+    state.payload_pos.y = 0
+    state.payload_pos.z = -0.784
     sensors = cffirmware.sensorData_t()
     sensors.gyro.x = 0
     sensors.gyro.y = 0
     sensors.gyro.z = 0
 
-    tick = 100
+    tick = 500
 
     cffirmware.controllerLeePayload(control, setpoint,sensors,state,tick)
     # control.thrust will be at a (tuned) hover-state
