@@ -253,6 +253,10 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
   int8_t bodyUnitNumber = 0;
   int curSeqNumber = getRangingSequenceNumber();
 
+#ifdef ENABLE_BUS_BOARDING_SCHEME
+  sortRangingTableSet(&rangingTableSet);
+#endif
+
   for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;
        index = rangingTableSet.setData[index].next) {
     Ranging_Table_t* table = &rangingTableSet.setData[index].data;
@@ -260,8 +264,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
       break; //TODO test 1023 byte
     }
     if (table->Re.timestamp.full) {
-      rangingMessage->bodyUnits[bodyUnitNumber].address =
-          table->neighborAddress;
+      rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
       /* It is possible that Re is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */

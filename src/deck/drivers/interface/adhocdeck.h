@@ -25,11 +25,16 @@
 
 #define TX_PERIOD_IN_MS 100
 
+/* Function Switch */
+#define ENABLE_BUS_BOARDING_SCHEME
+
+/* TX options */
 static dwt_txconfig_t txconfig_options = {
     .PGcount = 0x0,
     .PGdly = 0x34,
     .power = 0xfdfdfdfd
 };
+
 /* Default communication configuration. We use default non-STS DW mode. */
 static dwt_config_t config = {
     5,            /* Channel number. */
