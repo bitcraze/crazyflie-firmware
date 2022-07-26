@@ -38,11 +38,9 @@ TODO
 #define GRAVITY_MAGNITUDE (9.81f)
 
 static float g_vehicleMass = 0.034; // TODO: should be CF global for other modules
-static float mp = 0.01;
+static float mp = 0.007;
 static float l = 0.663;  //length of the cable
 static float thrustSI;
-static float alpha_qidot = 0.7;
-static float alpha_acc  = 0.9;
 // Inertia matrix (diagonal matrix), see
 // System Identification of the Crazyflie 2.0 Nano Quadrocopter
 // BA theses, Julian Foerster, ETHZ
@@ -158,6 +156,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     struct vec plAcc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
 
     struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
+    struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
@@ -176,31 +175,17 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
 
     struct vec desVirtInp = F_d;
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
-    // struct vec qi = vnormalize(vsub(plStPos, statePos));
-    struct vec qi = vnormalize(vsub(plStPos, statePos)); //mkvec(0,0,-1);
-    struct vec qidot = vdiv(vsub(qi , qi_prev), dt);
-    qi_prev = qi;
-    struct vec qidot_filtered = vadd(vscl(1.0f - alpha_qidot, qidot_prev), vscl(alpha_qidot, qidot));
-    // Testing qidot_filtered to be vzero()
-    // qidot_filtered = vzero();
-    qidot_prev = qidot_filtered;
+    struct vec qi = vnormalize(vsub(plStPos, statePos)); 
 
-    struct vec wi = vcross(qi, qidot_filtered);
-
+    struct vec qidot = vdiv(vsub(plStVel, stateVel), vmag(vsub(plStPos, statePos)));
+    struct vec wi = vcross(qi, qidot);
     struct mat33 qiqiT = vecmult(qi);
     struct vec virtualInp = mvmul(qiqiT, desVirtInp);
     
     // Compute parallel component
-    struct vec grav = mkvec(0,0,-GRAVITY_MAGNITUDE);
-    struct vec acc_ = vsub(vdiv(vsub(plStVel, payload_vel_prev),dt), grav);
-    payload_vel_prev = plStVel;
-    struct vec acc_filtered = vadd(vscl(1.0f - alpha_acc, acc_prev), vscl(alpha_acc, acc_));
-    acc_prev = acc_filtered;
+    struct vec acc_ = plAcc_d;
 
-    // Testing acceleration of payload to be zero (only gravity)
-    acc_filtered = vneg(grav);  
-
-    struct vec u_parallel = vadd3(virtualInp, vscl(g_vehicleMass*l*vmag2(wi), qi), vscl(g_vehicleMass, mvmul(qiqiT, acc_filtered)));
+    struct vec u_parallel = vadd3(virtualInp, vscl(g_vehicleMass*l*vmag2(wi), qi), vscl(g_vehicleMass, mvmul(qiqiT, acc_)));
     
     // Compute Perpindicular Component
     struct vec qdi = vneg(vnormalize(desVirtInp));
@@ -208,15 +193,15 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
 
-    struct vec qdidot = vdiv(vsub(qdi, qdi_prev), dt);
-    qdidot = vzero();
+    // struct vec qdidot = vdiv(vsub(qdi, qdi_prev), dt);
+    struct vec qdidot = vzero();
     qdi_prev = qdi;
     struct vec wdi = vcross(qdi, qdidot);
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
 
     struct vec u_perpind = vsub(
       vscl(g_vehicleMass*l, mvmul(skewqi, vsub(vneg(veltmul(K_q, eq)), veltmul(K_w, ew)))),
-      vscl(g_vehicleMass, mvmul(skewqi2,acc_filtered))
+      vscl(g_vehicleMass, mvmul(skewqi2,acc_))
     );
 
     u_i = vadd(u_parallel, u_perpind);
@@ -401,7 +386,6 @@ PARAM_ADD(PARAM_FLOAT, Kwz, &K_w.z)
 PARAM_ADD(PARAM_FLOAT, mass, &g_vehicleMass)
 PARAM_ADD(PARAM_FLOAT, massP, &mp)
 PARAM_ADD(PARAM_FLOAT, length, &l)
-PARAM_ADD(PARAM_FLOAT, alpha_qidot, &alpha_qidot)
 
 PARAM_GROUP_STOP(ctrlLeeP)
 

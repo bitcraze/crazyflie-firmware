@@ -31,6 +31,10 @@ def test_controller_lee_payload():
     state.payload_pos.x = 0
     state.payload_pos.y = 0
     state.payload_pos.z = -0.784
+    state.payload_vel.x = 0
+    state.payload_vel.y = 0
+    state.payload_vel.z = 0
+
     sensors = cffirmware.sensorData_t()
     sensors.gyro.x = 0
     sensors.gyro.y = 0
