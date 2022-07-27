@@ -51,9 +51,15 @@ def clear_persistent_parameter(cf, complete_param_name):
 
 if __name__ == '__main__':
     cflib.crtp.init_drivers()
-    cf = Crazyflie()
-    uri = input("Input URI: ")
+    print("...........Scanning...........")
+    uris = set()
+    for i in range(2):
+        for interface in cflib.crtp.scan_interfaces():
+            uris.add(interface[0])
+    print("Nearby devices: ", list(uris))
 
+    uri = input("Input URI: ")
+    cf = Crazyflie()
     with SyncCrazyflie(uri, cf=cf) as scf:
         param_name = 'ADHOC.MY_UWB_ADDRESS'
         param_value = input("Input MY_UWB_ADDRESS: ")
