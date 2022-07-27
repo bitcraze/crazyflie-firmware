@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "task.h"
+#include "debug.h"
 
 //TODO add semaphore to protect ranging table structure.
 static set_index_t ranging_table_set_malloc(
@@ -96,36 +97,36 @@ bool deleteRangingTupleByIndex(Ranging_Table_Set_t *rangingTableSet,
 }
 
 void printRangingTableTuple(Ranging_Table_t *table) {
-  // printf("Rp = %2x%8lx, Tr = %2x%8lx, Rf = %2x%8lx, \r\n",
+  // DEBUG_PRINT("Rp = %2x%8lx, Tr = %2x%8lx, Rf = %2x%8lx, \r\n",
   //        table->Rp.timestamp.high8, table->Rp.timestamp.low32,
   //        table->Tr.timestamp.high8, table->Tr.timestamp.low32,
   //        table->Rf.timestamp.high8, table->Rf.timestamp.low32);
-  // printf("Tp = %2x%8lx, Rr = %2x%8lx, Tf = %2x%8lx, Re = %2x%8lx, \r\n",
+  // DEBUG_PRINT("Tp = %2x%8lx, Rr = %2x%8lx, Tf = %2x%8lx, Re = %2x%8lx, \r\n",
   //        table->Tp.timestamp.high8, table->Tp.timestamp.low32,
   //        table->Rr.timestamp.high8, table->Rr.timestamp.low32,
   //        table->Tf.timestamp.high8, table->Tf.timestamp.low32,
   //        table->Re.timestamp.high8, table->Re.timestamp.low32);
-  // printf("====\r\n");
-  // printf("Rp = %llu, Tr = %llu, Rf = %llu, \r\n",
+  // DEBUG_PRINT("====\r\n");
+  // DEBUG_PRINT("Rp = %llu, Tr = %llu, Rf = %llu, \r\n",
   //        table->Rp.timestamp.full,
   //        table->Tr.timestamp.full, 
   //        table->Rf.timestamp.full);
-  // printf("Tp = %llu, Rr = %llu, Tf = %llu, Re = %llu, \r\n",
+  // DEBUG_PRINT("Tp = %llu, Rr = %llu, Tf = %llu, Re = %llu, \r\n",
   //        table->Tp.timestamp.full,
   //        table->Rr.timestamp.full,
   //        table->Tf.timestamp.full,
   //        table->Re.timestamp.full);
-  // printf("====\r\n");
-  printf("Rp = %u, Tr = %u, Rf = %u, \r\n",
+  // DEBUG_PRINT("====\r\n");
+  DEBUG_PRINT("Rp = %u, Tr = %u, Rf = %u, \r\n",
          table->Rp.seqNumber,
          table->Tr.seqNumber, 
          table->Rf.seqNumber);
-  printf("Tp = %u, Rr = %u, Tf = %u, Re = %u, \r\n",
+  DEBUG_PRINT("Tp = %u, Rr = %u, Tf = %u, Re = %u, \r\n",
          table->Tp.seqNumber,
          table->Rr.seqNumber,
          table->Tf.seqNumber,
          table->Re.seqNumber);
-  printf("====\r\n");
+  DEBUG_PRINT("====\r\n");
 }
 
 void printRangingTable(Ranging_Table_Set_t *rangingTableSet) {

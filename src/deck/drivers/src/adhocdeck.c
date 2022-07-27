@@ -222,8 +222,13 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
         neighborRangingTable->Tf = TfBuffer[i];
       }
     }
+  } else {
+    neighborRangingTable->Rr = neighborRangingTable->Re;
+    neighborRangingTable->Tr.timestamp.full = 0;
+    neighborRangingTable->Tr.seqNumber = 0;
   }
 
+  // printRangingTableTuple(neighborRangingTable);
   if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
       int16_t distance = computeDistance(neighborRangingTable);
       neighborRangingTable->distance = distance;
