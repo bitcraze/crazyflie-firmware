@@ -51,6 +51,7 @@
 
 #define DEFAULT_RX_TIMEOUT 0xFFFFF
 
+static address_t MY_UWB_ADDRESS;
 static bool isInit = false;
 static TaskHandle_t uwbTaskHandle = 0;
 static TaskHandle_t uwbTxTaskHandle = 0;
@@ -66,13 +67,9 @@ Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static int TfBufferIndex = 0;
 static int rangingSeqNumber = 0;
 
-
 /* log block */
-
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
-// static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
-// static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
 static void txCallback() {
   dwTime_t txTime;
@@ -200,7 +197,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
 
   Timestamp_Tuple_t neighborTr = rangingMessage->header.lastTxTimestamp;
 
-  /* update Tr or Rr*/
+  /* update Tr or Rr */
   if (neighborRangingTable->Tr.timestamp.full == 0) {
     if (neighborRangingTable->Rr.seqNumber == neighborTr.seqNumber) {
       neighborRangingTable->Tr = neighborTr;
@@ -216,7 +213,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
       break;
     }
   }
-  /* update Rf and Tf*/
+  /* update Rf and Tf */
   if (neighborRf.timestamp.full) {
     neighborRangingTable->Rf = neighborRf;
     /* find corresponding Tf in TfBuffer */
@@ -275,7 +272,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
     }
   }
   /* generate message header */
-  rangingMessage->header.srcAddress = MY_UWB_ADDRESS; // TODO write this address into OTP memory, so that one firmware fits all Crazyflies.  
+  rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
   rangingMessage->header.lastTxTimestamp = TfBuffer[TfBufferIndex];
@@ -332,7 +329,6 @@ static void spiWrite(const void *header, size_t headerLength, const void *data,
   spiExchange(headerLength + dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
-  // STATS_CNT_RATE_EVENT(&spiWriteCount);
 }
 
 static void spiRead(const void *header, size_t headerLength, void *data,
@@ -345,7 +341,6 @@ static void spiRead(const void *header, size_t headerLength, void *data,
   memcpy(data, spiRxBuffer + headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
-  // STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
@@ -415,7 +410,7 @@ int uwbInit() {
   dwt_settxantennadelay(TX_ANT_DLY);
 
   /* Auto re-enable receiver after a frame reception failure (except a frame
-   * wait timeout), the receiver will re-enable to re-attempt reception.*/
+   * wait timeout), the receiver will re-enable to re-attempt reception. */
   dwt_or32bitoffsetreg(SYS_CFG_ID, 0, SYS_CFG_RXAUTR_BIT_MASK);
   dwt_setrxtimeout(DEFAULT_RX_TIMEOUT);
 
@@ -530,16 +525,11 @@ static const DeckDriver dwm3000_deck = {
 
 DECK_DRIVER(dwm3000_deck);
 
-// PARAM_GROUP_START(deck)
+PARAM_GROUP_START(deck)
 
-// PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 
-// PARAM_GROUP_STOP(deck)
-
-// LOG_GROUP_START(adhoc)
-// STATS_CNT_RATE_LOG_ADD(spiWr, &spiWriteCount)
-// STATS_CNT_RATE_LOG_ADD(spiRe, &spiReadCount)
-// LOG_GROUP_STOP(adhoc)
+PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(Ranging)
         LOG_ADD(LOG_INT16, distTo1, distanceTowards+1)
@@ -551,3 +541,7 @@ LOG_GROUP_START(Ranging)
         LOG_ADD(LOG_INT16, distTo7, distanceTowards+7)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
 LOG_GROUP_STOP(Ranging)
+
+PARAM_GROUP_START(ADHOC)
+  PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
+PARAM_GROUP_STOP(ADHOC)
