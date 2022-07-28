@@ -52,18 +52,19 @@ typedef struct {
 typedef struct {
   Timestamp_Tuple_t Tr;
   Timestamp_Tuple_t Rr;
-} __attribute__((packed)) Ranging_Table_Tr_Rr_Candidate;
+  uint16_t Tf_SeqNumber;
+} __attribute__((packed)) Ranging_Table_Tr_Rr_Candidate_t;
 
 /* Tr and Rr candidate buffer for each Ranging Table */
 typedef struct {
   set_index_t index; // Always point to oldest data
-  Ranging_Table_Tr_Rr_Candidate candidates[Tr_Rr_BUFFER_SIZE];
+  Ranging_Table_Tr_Rr_Candidate_t candidates[Tr_Rr_BUFFER_SIZE];
 } __attribute__((packed)) Ranging_Table_Tr_Rr_Buffer_t;
 
 /* Tr_Rr Buffer Operations */
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
-set_index_t rangingTableBufferGet(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Rf);
+Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetLatestCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Rf);
 
 /* Ranging Table
   +------+------+------+------+------+

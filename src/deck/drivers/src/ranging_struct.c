@@ -11,6 +11,7 @@ void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer) {
   for (set_index_t i = 0; i < Tr_Rr_BUFFER_SIZE; i++) {
     rangingTableBuffer->candidates[i].Tr = empty;
     rangingTableBuffer->candidates[i].Rr = empty;
+    rangingTableBuffer->candidates[i].Tf_SeqNumber = 0;
   }
 }
 
@@ -18,6 +19,25 @@ void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, 
   rangingTableBuffer->candidates[rangingTableBuffer->index].Tr = Tr;
   rangingTableBuffer->candidates[rangingTableBuffer->index].Rr = Rr;
   rangingTableBuffer->index = (rangingTableBuffer->index + 1) % Tr_Rr_BUFFER_SIZE;
+}
+
+Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetLatestCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Rf) {
+  set_index_t index = rangingTableBuffer->index;
+  Ranging_Table_Tr_Rr_Candidate_t candidate = {.Rr.timestamp.full = 0, .Tr.timestamp.full = 0, .Tf_SeqNumber = 0};
+  for (int count = 0; count < Tr_Rr_BUFFER_SIZE; count++) {
+    if (rangingTableBuffer->candidates[index].Tf_SeqNumber == Rf.seqNumber) {
+      candidate.Tr = rangingTableBuffer->candidates[index].Tr;
+      candidate.Rr = rangingTableBuffer->candidates[index].Rr;
+      break;
+    }
+
+    if (index == 0) {
+      index = Tr_Rr_BUFFER_SIZE - 1;
+    } else {
+      index--;
+    }
+  }
+  return candidate;
 }
 
 void rangingTableInit(Ranging_Table_t *rangingTable, address_t address) {
