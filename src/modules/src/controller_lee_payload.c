@@ -29,65 +29,41 @@ TODO
 */
 
 #include <math.h>
-
-#include "param.h"
-#include "log.h"
+#include <string.h>
 #include "math3d.h"
 #include "controller_lee_payload.h"
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
-static float g_vehicleMass = 0.034; // TODO: should be CF global for other modules
-static float mp = 0.007;
-static float l = 0.663;  //length of the cable
-static float thrustSI;
-// Inertia matrix (diagonal matrix), see
-// System Identification of the Crazyflie 2.0 Nano Quadrocopter
-// BA theses, Julian Foerster, ETHZ
-// https://polybox.ethz.ch/index.php/s/20dde63ee00ffe7085964393a55a91c7
-static struct vec J = {16.571710e-6, 16.655602e-6, 29.261652e-6}; // kg m^2
+static controllerLeePayload_t g_self = {
+  .mass = 0.034,
+  .mp   = 0.01,
+  .l    = 0.6,
+  .offset = 0.0,
+  // Inertia matrix (diagonal matrix), see
+  // System Identification of the Crazyflie 2.0 Nano Quadrocopter
+  // BA theses, Julian Foerster, ETHZ
+  // https://polybox.ethz.ch/index.php/s/20dde63ee00ffe7085964393a55a91c7
+  .J = {16.571710e-6, 16.655602e-6, 29.261652e-6}, // kg m^2
 
-// initValues:
-static struct vec qi_prev;
-static struct vec qdi_prev;
-static struct vec payload_vel_prev;
-// Position PID
-static struct vec Kpos_P = {60, 60, 90}; //{4, 4, 4}; // Kp in paper
-static float Kpos_P_limit = 100;
-static struct vec Kpos_D = {0, 0, 0}; //{2, 2, 2}; // Kv in paper
-static float Kpos_D_limit = 100;
-static struct vec Kpos_I = {0, 0, 0}; // not in paper
-static float Kpos_I_limit = 2;
-static struct vec i_error_pos;
+  // Position PID
+  .Kpos_P = {18, 18, 18},
+  .Kpos_P_limit = 100,
+  .Kpos_D = {15, 15, 15},
+  .Kpos_D_limit = 100,
+  .Kpos_I ={0, 0, 0},
+  .Kpos_I_limit = 100,
 
-// Cable gains
-static struct vec K_q = {160, 160, 160}; //{10, 10, 10};
-static struct vec K_w = {0, 0, 0}; //{8, 8, 8}; 
+  // Cables PD
+  .K_q = {25, 25, 25},
+  .K_w = {24, 24, 24},
 
+  //Attitude PID 
+  .KR = {0.008, 0.008, 0.01},
+  .Komega = {0.0013, 0.0013, 0.002},
+  .KI = {0.02, 0.02, 0.05},
 
-static struct vec plp_error;
-static struct vec plv_error;
-// Attitude PID
-static struct vec KR = {0.005, 0.005, 0.005};
-static struct vec Komega = {0.0009, 0.0009, 0.0009};
-static struct vec KI = {0.012, 0.018, 0.015};
-static struct vec i_error_att;
-
-
-// Logging variables
-static struct vec rpy;
-static struct vec rpy_des;
-static struct vec qr;
-static struct mat33 R_des;
-static struct quat q;
-static struct mat33 R;
-static struct vec omega;
-static struct vec omega_r;
-static struct vec u;
-static struct vec u_i;
-static struct vec qidot_prev;
-static struct vec acc_prev;
-// static uint32_t ticks;
+};
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
   return mkvec(
@@ -96,36 +72,35 @@ static inline struct vec vclampscl(struct vec value, float min, float max) {
     clamp(value.z, min, max));
 }
 
-void controllerLeePayloadReset(void)
+void controllerLeePayloadReset(controllerLeePayload_t* self)
 {
-  i_error_pos = vzero();
-  i_error_att = vzero();
-  qi_prev = mkvec(0,0,-1);
-  qidot_prev = vzero();
-  acc_prev   = vzero();
-  payload_vel_prev = vzero();
-  qdi_prev = vzero();
+  self->i_error_pos = vzero();
+  self->i_error_att = vzero();
+  self->qi_prev = mkvec(0,0,-1);
+  self->qidot_prev = vzero();
+  self->acc_prev   = vzero();
+  self->payload_vel_prev = vzero();
+  self->qdi_prev = vzero();
 }
 
-void controllerLeePayloadInit(void)
+void controllerLeePayloadInit(controllerLeePayload_t* self)
 {
-  controllerLeePayloadReset();
+  // copy default values (bindings), or NOP (firmware)
+  *self = g_self;
+
+  controllerLeePayloadReset(self);
 }
 
-bool controllerLeePayloadTest(void)
+bool controllerLeePayloadTest(controllerLeePayload_t* self)
 {
   return true;
 }
 
-// static inline struct vec u_parallel()
-
-void controllerLeePayload(control_t *control, setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const uint32_t tick)
+void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setpoint_t *setpoint,
+                                                        const sensorData_t *sensors,
+                                                        const state_t *state,
+                                                        const uint32_t tick)
 {
-
-
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     return;
   }
@@ -142,8 +117,8 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     desiredYaw = radians(setpoint->attitude.yaw);
   } else if (setpoint->mode.quat == modeAbs) {
     struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
-    rpy_des = quat2rpy(setpoint_quat);
-    desiredYaw = rpy_des.z;
+    self->rpy_des = quat2rpy(setpoint_quat);
+    desiredYaw = self->rpy_des.z;
   }
 
   // Position controller
@@ -151,7 +126,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
       || setpoint->mode.y == modeAbs
       || setpoint->mode.z == modeAbs) {
     
-    struct vec plPos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z-l);
+    struct vec plPos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z-self->offset);
     struct vec plVel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec plAcc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
 
@@ -160,18 +135,17 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
- 
     // errors
-    struct vec plpos_e = vclampscl(vsub(plPos_d, plStPos), -Kpos_P_limit, Kpos_P_limit);
-    struct vec plvel_e = vclampscl(vsub(plVel_d, plStVel), -Kpos_D_limit, Kpos_D_limit);
+    struct vec plpos_e = vclampscl(vsub(plPos_d, plStPos), -self->Kpos_P_limit, self->Kpos_P_limit);
+    struct vec plvel_e = vclampscl(vsub(plVel_d, plStVel), -self->Kpos_D_limit, self->Kpos_D_limit);
 
-    plp_error = plpos_e;
-    plv_error = plvel_e;
+    self->plp_error = plpos_e;
+    self->plv_error = plvel_e;
 
-    struct vec F_d =vscl(mp ,vadd3(
+    struct vec F_d =vscl(self->mp ,vadd3(
       plAcc_d,
-      veltmul(Kpos_P, plpos_e),
-      veltmul(Kpos_D, plvel_e)));
+      veltmul(self->Kpos_P, plpos_e),
+      veltmul(self->Kpos_D, plvel_e)));
 
     struct vec desVirtInp = F_d;
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
@@ -185,7 +159,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     // Compute parallel component
     struct vec acc_ = plAcc_d;
 
-    struct vec u_parallel = vadd3(virtualInp, vscl(g_vehicleMass*l*vmag2(wi), qi), vscl(g_vehicleMass, mvmul(qiqiT, acc_)));
+    struct vec u_parallel = vadd3(virtualInp, vscl(self->mass*self->l*vmag2(wi), qi), vscl(self->mass, mvmul(qiqiT, acc_)));
     
     // Compute Perpindicular Component
     struct vec qdi = vneg(vnormalize(desVirtInp));
@@ -195,41 +169,40 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
 
     // struct vec qdidot = vdiv(vsub(qdi, qdi_prev), dt);
     struct vec qdidot = vzero();
-    qdi_prev = qdi;
+    self->qdi_prev = qdi;
     struct vec wdi = vcross(qdi, qdidot);
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
 
     struct vec u_perpind = vsub(
-      vscl(g_vehicleMass*l, mvmul(skewqi, vsub(vneg(veltmul(K_q, eq)), veltmul(K_w, ew)))),
-      vscl(g_vehicleMass, mvmul(skewqi2,acc_))
+      vscl(self->mass*self->l, mvmul(skewqi, vsub(vneg(veltmul(self->K_q, eq)), veltmul(self->K_w, ew)))),
+      vscl(self->mass, mvmul(skewqi2, acc_))
     );
 
-    u_i = vadd(u_parallel, u_perpind);
+    self->u_i = vadd(u_parallel, u_perpind);
     
-    control->thrustSI = vmag(u_i);
-    control->u_all[0] = u_i.x;
-    control->u_all[1] = u_i.y;
-    control->u_all[2] = u_i.z;
+    control->thrustSI = vmag(self->u_i);
+    control->u_all[0] = self->u_i.x;
+    control->u_all[1] = self->u_i.y;
+    control->u_all[2] = self->u_i.z;
 
 
-    thrustSI = control->thrustSI;
+    self->thrustSI = control->thrustSI;
   //  Reset the accumulated error while on the ground
     if (control->thrustSI < 0.01f) {
-      controllerLeePayloadReset();
+      controllerLeePayloadReset(self);
     }
   
-  q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  rpy = quat2rpy(q);
-  R = quat2rotmat(q);
-  // struct vec z = vbasis(2);
+  self->q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  self->rpy = quat2rpy(self->q);
+  self->R = quat2rotmat(self->q);
+
   // Compute Desired Rotation matrix
-    float thrustSI = control->thrustSI;
-    struct vec Fd_ = u_i;
+    struct vec Fd_ = self->u_i;
     struct vec xdes = vbasis(0);
     struct vec ydes = vbasis(1);
     struct vec zdes = vbasis(2);
    
-    if (thrustSI > 0) {
+    if (self->thrustSI > 0) {
       zdes = vnormalize(Fd_);
     } 
     struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
@@ -241,7 +214,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     } 
     xdes = vcross(ydes, zdes);
     
-    R_des = mcolumns(xdes, ydes, zdes);
+    self->R_des = mcolumns(xdes, ydes, zdes);
 
   } else {
     if (setpoint->mode.z == modeDisable) {
@@ -251,7 +224,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
           control->torque[0] = 0;
           control->torque[1] = 0;
           control->torque[2] = 0;
-          controllerLeePayloadReset();
+          controllerLeePayloadReset(self);
           return;
       }
     }
@@ -259,7 +232,7 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
     const float max_thrust = 70.0f / 1000.0f * 9.81f; // N
     control->thrustSI = setpoint->thrust / UINT16_MAX * max_thrust;
 
-    qr = mkvec(
+    self->qr = mkvec(
       radians(setpoint->attitude.roll),
       -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
       desiredYaw);
@@ -268,180 +241,208 @@ void controllerLeePayload(control_t *control, setpoint_t *setpoint,
   // Attitude controller
 
   // current rotation [R]
-  q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  rpy = quat2rpy(q);
-  struct mat33 R = quat2rotmat(q);
+  self->q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  self->rpy = quat2rpy(self->q);
+  self->R = quat2rotmat(self->q);
 
   // desired rotation [Rdes]
-  struct quat q_des = mat2quat(R_des);
-  rpy_des = quat2rpy(q_des);
+  struct quat q_des = mat2quat(self->R_des);
+  self->rpy_des = quat2rpy(q_des);
 
   // rotation error
-  struct mat33 eRM = msub(mmul(mtranspose(R_des), R), mmul(mtranspose(R), R_des));
+  struct mat33 eRM = msub(mmul(mtranspose(self->R_des), self->R), mmul(mtranspose(self->R), self->R_des));
 
   struct vec eR = vscl(0.5f, mkvec(eRM.m[2][1], eRM.m[0][2], eRM.m[1][0]));
 
   // angular velocity
-  omega = mkvec(
+  self->omega = mkvec(
     radians(sensors->gyro.x),
     radians(sensors->gyro.y),
     radians(sensors->gyro.z));
 
   // Compute desired omega
-  struct vec xdes = mcolumn(R_des, 0);
-  struct vec ydes = mcolumn(R_des, 1);
-  struct vec zdes = mcolumn(R_des, 2);
+  struct vec xdes = mcolumn(self->R_des, 0);
+  struct vec ydes = mcolumn(self->R_des, 1);
+  struct vec zdes = mcolumn(self->R_des, 2);
   struct vec hw = vzero();
   // Desired Jerk and snap for now are zeros vector
   struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
 
   if (control->thrustSI != 0) {
     struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
-    hw = vscl(g_vehicleMass/control->thrustSI, tmp);
+    hw = vscl(self->mass/control->thrustSI, tmp);
   }
 
-  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), 0);
+  struct vec z_w = mkvec(0, 0, 1);
+  float desiredYawRate = radians(setpoint->attitudeRate.yaw) * vdot(zdes, z_w);
+  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), desiredYawRate);
   
-  omega_r = mvmul(mmul(mtranspose(R), R_des), omega_des);
+  self->omega_r = mvmul(mmul(mtranspose(self->R), self->R_des), omega_des);
 
-  struct vec omega_error = vsub(omega, omega_r);
+  struct vec omega_error = vsub(self->omega, self->omega_r);
   
   // Integral part on angle
-  i_error_att = vadd(i_error_att, vscl(dt, eR));
+  self->i_error_att = vadd(self->i_error_att, vscl(dt, eR));
 
   // compute moments
   // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  u = vadd4(
-    vneg(veltmul(KR, eR)),
-    vneg(veltmul(Komega, omega_error)),
-    vneg(veltmul(KI, i_error_att)),
-    vcross(omega, veltmul(J, omega)));
+  self->u = vadd4(
+    vneg(veltmul(self->KR, eR)),
+    vneg(veltmul(self->Komega, omega_error)),
+    vneg(veltmul(self->KI, self->i_error_att)),
+    vcross(self->omega, veltmul(self->J, self->omega)));
 
   // if (enableNN > 1) {
   //   u = vsub(u, tau_a);
   // }
 
   control->controlMode = controlModeForceTorque;
-  control->torque[0] = u.x;
-  control->torque[1] = u.y;
-  control->torque[2] = u.z;
+  control->torque[0] = self->u.x;
+  control->torque[1] = self->u.y;
+  control->torque[2] = self->u.z;
+
   // ticks = usecTimestamp() - startTime;
 }
 
+#ifdef CRAZYFLIE_FW
+
+#include "param.h"
+#include "log.h"
+
+void controllerLeePayloadFirmwareInit(void)
+{
+  controllerLeePayloadInit(&g_self);
+}
+
+bool controllerLeePayloadFirmwareTest(void) 
+{
+  return true;
+}
+
+void controllerLeePayloadFirmware(control_t *control, setpoint_t *setpoint,
+                                         const sensorData_t *sensors,
+                                         const state_t *state,
+                                         const uint32_t tick)
+{
+  controllerLeePayload(&g_self, control, setpoint, sensors, state, tick);  
+}
+
 PARAM_GROUP_START(ctrlLeeP)
-PARAM_ADD(PARAM_FLOAT, KR_x, &KR.x)
-PARAM_ADD(PARAM_FLOAT, KR_y, &KR.y)
-PARAM_ADD(PARAM_FLOAT, KR_z, &KR.z)
+PARAM_ADD(PARAM_FLOAT, KR_x, &g_self.KR.x)
+PARAM_ADD(PARAM_FLOAT, KR_y, &g_self.KR.y)
+PARAM_ADD(PARAM_FLOAT, KR_z, &g_self.KR.z)
 // Attitude D
-PARAM_ADD(PARAM_FLOAT, Kw_x, &Komega.x)
-PARAM_ADD(PARAM_FLOAT, Kw_y, &Komega.y)
-PARAM_ADD(PARAM_FLOAT, Kw_z, &Komega.z)
+PARAM_ADD(PARAM_FLOAT, Kw_x, &g_self.Komega.x)
+PARAM_ADD(PARAM_FLOAT, Kw_y, &g_self.Komega.y)
+PARAM_ADD(PARAM_FLOAT, Kw_z, &g_self.Komega.z)
 
 // J
-PARAM_ADD(PARAM_FLOAT, J_x, &J.x)
-PARAM_ADD(PARAM_FLOAT, J_y, &J.y)
-PARAM_ADD(PARAM_FLOAT, J_z, &J.z)
+PARAM_ADD(PARAM_FLOAT, J_x, &g_self.J.x)
+PARAM_ADD(PARAM_FLOAT, J_y, &g_self.J.y)
+PARAM_ADD(PARAM_FLOAT, J_z, &g_self.J.z)
 
 // Position P
-PARAM_ADD(PARAM_FLOAT, Kpos_Px, &Kpos_P.x)
-PARAM_ADD(PARAM_FLOAT, Kpos_Py, &Kpos_P.y)
-PARAM_ADD(PARAM_FLOAT, Kpos_Pz, &Kpos_P.z)
-PARAM_ADD(PARAM_FLOAT, Kpos_P_limit, &Kpos_P_limit)
+PARAM_ADD(PARAM_FLOAT, Kpos_Px, &g_self.Kpos_P.x)
+PARAM_ADD(PARAM_FLOAT, Kpos_Py, &g_self.Kpos_P.y)
+PARAM_ADD(PARAM_FLOAT, Kpos_Pz, &g_self.Kpos_P.z)
+PARAM_ADD(PARAM_FLOAT, Kpos_P_limit, &g_self.Kpos_P_limit)
 // Position D
-PARAM_ADD(PARAM_FLOAT, Kpos_Dx, &Kpos_D.x)
-PARAM_ADD(PARAM_FLOAT, Kpos_Dy, &Kpos_D.y)
-PARAM_ADD(PARAM_FLOAT, Kpos_Dz, &Kpos_D.z)
-PARAM_ADD(PARAM_FLOAT, Kpos_D_limit, &Kpos_D_limit)
+PARAM_ADD(PARAM_FLOAT, Kpos_Dx, &g_self.Kpos_D.x)
+PARAM_ADD(PARAM_FLOAT, Kpos_Dy, &g_self.Kpos_D.y)
+PARAM_ADD(PARAM_FLOAT, Kpos_Dz, &g_self.Kpos_D.z)
+PARAM_ADD(PARAM_FLOAT, Kpos_D_limit, &g_self.Kpos_D_limit)
 // Position I
-PARAM_ADD(PARAM_FLOAT, Kpos_Ix, &Kpos_I.x)
-PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &Kpos_I.y)
-PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &Kpos_I.z)
-PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &Kpos_I_limit)
+PARAM_ADD(PARAM_FLOAT, Kpos_Ix, &g_self.Kpos_I.x)
+PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &g_self.Kpos_I.y)
+PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &g_self.Kpos_I.z)
+PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &g_self.Kpos_I_limit)
 
 // Attitude P
-PARAM_ADD(PARAM_FLOAT, KRx, &KR.x)
-PARAM_ADD(PARAM_FLOAT, KRy, &KR.y)
-PARAM_ADD(PARAM_FLOAT, KRz, &KR.z)
+PARAM_ADD(PARAM_FLOAT, KRx, &g_self.KR.x)
+PARAM_ADD(PARAM_FLOAT, KRy, &g_self.KR.y)
+PARAM_ADD(PARAM_FLOAT, KRz, &g_self.KR.z)
 
 // Attitude D
-PARAM_ADD(PARAM_FLOAT, Komx, &Komega.x)
-PARAM_ADD(PARAM_FLOAT, Komy, &Komega.y)
-PARAM_ADD(PARAM_FLOAT, Komz, &Komega.z)
+PARAM_ADD(PARAM_FLOAT, Komx, &g_self.Komega.x)
+PARAM_ADD(PARAM_FLOAT, Komy, &g_self.Komega.y)
+PARAM_ADD(PARAM_FLOAT, Komz, &g_self.Komega.z)
 
 // Attitude I
-PARAM_ADD(PARAM_FLOAT, KI_x, &KI.x)
-PARAM_ADD(PARAM_FLOAT, KI_y, &KI.y)
-PARAM_ADD(PARAM_FLOAT, KI_z, &KI.z)
+PARAM_ADD(PARAM_FLOAT, KI_x, &g_self.KI.x)
+PARAM_ADD(PARAM_FLOAT, KI_y, &g_self.KI.y)
+PARAM_ADD(PARAM_FLOAT, KI_z, &g_self.KI.z)
 
 // Cable P
-PARAM_ADD(PARAM_FLOAT, Kqx, &K_q.x)
-PARAM_ADD(PARAM_FLOAT, Kqy, &K_q.y)
-PARAM_ADD(PARAM_FLOAT, Kqz, &K_q.z)
+PARAM_ADD(PARAM_FLOAT, Kqx, &g_self.K_q.x)
+PARAM_ADD(PARAM_FLOAT, Kqy, &g_self.K_q.y)
+PARAM_ADD(PARAM_FLOAT, Kqz, &g_self.K_q.z)
 
 // Cable D
-PARAM_ADD(PARAM_FLOAT, Kwx, &K_w.x)
-PARAM_ADD(PARAM_FLOAT, Kwy, &K_w.y)
-PARAM_ADD(PARAM_FLOAT, Kwz, &K_w.z)
+PARAM_ADD(PARAM_FLOAT, Kwx, &g_self.K_w.x)
+PARAM_ADD(PARAM_FLOAT, Kwy, &g_self.K_w.y)
+PARAM_ADD(PARAM_FLOAT, Kwz, &g_self.K_w.z)
 
-PARAM_ADD(PARAM_FLOAT, mass, &g_vehicleMass)
-PARAM_ADD(PARAM_FLOAT, massP, &mp)
-PARAM_ADD(PARAM_FLOAT, length, &l)
+PARAM_ADD(PARAM_FLOAT, mass, &g_self.mass)
+PARAM_ADD(PARAM_FLOAT, massP, &g_self.mp)
+PARAM_ADD(PARAM_FLOAT, length, &g_self.l)
+PARAM_ADD(PARAM_FLOAT, offset, &g_self.offset)
 
 PARAM_GROUP_STOP(ctrlLeeP)
 
 
 LOG_GROUP_START(ctrlLeeP)
 
-LOG_ADD(LOG_FLOAT,Kpos_Px, &Kpos_P.x)
-LOG_ADD(LOG_FLOAT,Kpos_Py, &Kpos_P.y)
-LOG_ADD(LOG_FLOAT,Kpos_Pz, &Kpos_P.z)
-LOG_ADD(LOG_FLOAT,Kpos_Dx, &Kpos_D.x)
-LOG_ADD(LOG_FLOAT,Kpos_Dy, &Kpos_D.y)
-LOG_ADD(LOG_FLOAT,Kpos_Dz, &Kpos_D.z)
+LOG_ADD(LOG_FLOAT,Kpos_Px, &g_self.Kpos_P.x)
+LOG_ADD(LOG_FLOAT,Kpos_Py, &g_self.Kpos_P.y)
+LOG_ADD(LOG_FLOAT,Kpos_Pz, &g_self.Kpos_P.z)
+LOG_ADD(LOG_FLOAT,Kpos_Dx, &g_self.Kpos_D.x)
+LOG_ADD(LOG_FLOAT,Kpos_Dy, &g_self.Kpos_D.y)
+LOG_ADD(LOG_FLOAT,Kpos_Dz, &g_self.Kpos_D.z)
 
 
-LOG_ADD(LOG_FLOAT, Kqx, &K_q.x)
-LOG_ADD(LOG_FLOAT, Kqy, &K_q.y)
-LOG_ADD(LOG_FLOAT, Kqz, &K_q.z)
+LOG_ADD(LOG_FLOAT, Kqx, &g_self.K_q.x)
+LOG_ADD(LOG_FLOAT, Kqy, &g_self.K_q.y)
+LOG_ADD(LOG_FLOAT, Kqz, &g_self.K_q.z)
 
-LOG_ADD(LOG_FLOAT, Kwx, &K_w.x)
-LOG_ADD(LOG_FLOAT, Kwy, &K_w.y)
-LOG_ADD(LOG_FLOAT, Kwz, &K_w.z)
+LOG_ADD(LOG_FLOAT, Kwx, &g_self.K_w.x)
+LOG_ADD(LOG_FLOAT, Kwy, &g_self.K_w.y)
+LOG_ADD(LOG_FLOAT, Kwz, &g_self.K_w.z)
 
-LOG_ADD(LOG_FLOAT, thrustSI, &thrustSI)
-LOG_ADD(LOG_FLOAT, torquex, &u.x)
-LOG_ADD(LOG_FLOAT, torquey, &u.y)
-LOG_ADD(LOG_FLOAT, torquez, &u.z)
+LOG_ADD(LOG_FLOAT, thrustSI, &g_self.thrustSI)
+LOG_ADD(LOG_FLOAT, torquex, &g_self.u.x)
+LOG_ADD(LOG_FLOAT, torquey, &g_self.u.y)
+LOG_ADD(LOG_FLOAT, torquez, &g_self.u.z)
 
 // current angles
-LOG_ADD(LOG_FLOAT, rpyx, &rpy.x)
-LOG_ADD(LOG_FLOAT, rpyy, &rpy.y)
-LOG_ADD(LOG_FLOAT, rpyz, &rpy.z)
+LOG_ADD(LOG_FLOAT, rpyx, &g_self.rpy.x)
+LOG_ADD(LOG_FLOAT, rpyy, &g_self.rpy.y)
+LOG_ADD(LOG_FLOAT, rpyz, &g_self.rpy.z)
 
 // desired angles
-LOG_ADD(LOG_FLOAT, rpydx, &rpy_des.x)
-LOG_ADD(LOG_FLOAT, rpydy, &rpy_des.y)
-LOG_ADD(LOG_FLOAT, rpydz, &rpy_des.z)
+LOG_ADD(LOG_FLOAT, rpydx, &g_self.rpy_des.x)
+LOG_ADD(LOG_FLOAT, rpydy, &g_self.rpy_des.y)
+LOG_ADD(LOG_FLOAT, rpydz, &g_self.rpy_des.z)
 
 // omega
-LOG_ADD(LOG_FLOAT, omegax, &omega.x)
-LOG_ADD(LOG_FLOAT, omegay, &omega.y)
-LOG_ADD(LOG_FLOAT, omegaz, &omega.z)
+LOG_ADD(LOG_FLOAT, omegax, &g_self.omega.x)
+LOG_ADD(LOG_FLOAT, omegay, &g_self.omega.y)
+LOG_ADD(LOG_FLOAT, omegaz, &g_self.omega.z)
 
 // omega_r
-LOG_ADD(LOG_FLOAT, omegarx, &omega_r.x)
-LOG_ADD(LOG_FLOAT, omegary, &omega_r.y)
-LOG_ADD(LOG_FLOAT, omegarz, &omega_r.z)
+LOG_ADD(LOG_FLOAT, omegarx, &g_self.omega_r.x)
+LOG_ADD(LOG_FLOAT, omegary, &g_self.omega_r.y)
+LOG_ADD(LOG_FLOAT, omegarz, &g_self.omega_r.z)
 
-LOG_ADD(LOG_FLOAT, ux, &u_i.x)
-LOG_ADD(LOG_FLOAT, uy, &u_i.y)
-LOG_ADD(LOG_FLOAT, uz, &u_i.z)
+LOG_ADD(LOG_FLOAT, ux, &g_self.u_i.x)
+LOG_ADD(LOG_FLOAT, uy, &g_self.u_i.y)
+LOG_ADD(LOG_FLOAT, uz, &g_self.u_i.z)
 
 
 // LOG_ADD(LOG_UINT32, ticks, &ticks)
 
 LOG_GROUP_STOP(ctrlLeeP)
 
+#endif // CRAZYFLIE_FW defined
 
 
                
