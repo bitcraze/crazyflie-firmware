@@ -1,12 +1,36 @@
 #include "ranging_struct.h"
-
+#include "adhocdeck.h"
 #include <stdio.h>
 #include <string.h>
 #include "task.h"
 #include "debug.h"
 
+void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer) {
+  rangingTableBuffer->index = 0;
+  Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
+  for (set_index_t i = 0; i < Tr_Rr_BUFFER_SIZE; i++) {
+    rangingTableBuffer->candidates[i].Tr = empty;
+    rangingTableBuffer->candidates[i].Rr = empty;
+  }
+}
+
+void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr) {
+  rangingTableBuffer->candidates[rangingTableBuffer->index].Tr = Tr;
+  rangingTableBuffer->candidates[rangingTableBuffer->index].Rr = Rr;
+  rangingTableBuffer->index = (rangingTableBuffer->index + 1) % Tr_Rr_BUFFER_SIZE;
+}
+
+void rangingTableInit(Ranging_Table_t *rangingTable, address_t address) {
+  memset(rangingTable, 0, sizeof(Ranging_Table_t));
+  rangingTable->neighborAddress = address;
+  rangingTable->period = TX_PERIOD_IN_MS;
+  rangingTable->nextDeliveryTime = xTaskGetTickCount() + rangingTable->period;
+  rangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
+  rangingTableBufferInit(&rangingTable->TrRrBuffer);
+}
+
 //TODO add semaphore to protect ranging table structure.
-static set_index_t ranging_table_set_malloc(
+static set_index_t rangingTableSetMalloc(
     Ranging_Table_Set_t *rangingTableSet) {
   if (rangingTableSet->freeQueueEntry == -1) {
     printf("Ranging Table Set is FULL, malloc failed.\r\n");
@@ -23,7 +47,7 @@ static set_index_t ranging_table_set_malloc(
   }
 }
 
-static bool ranging_table_set_free(Ranging_Table_Set_t *rangingTableSet,
+static bool rangingTableSetFree(Ranging_Table_Set_t *rangingTableSet,
                                    set_index_t item_index) {
   if (-1 == item_index) {
     return true;
@@ -69,7 +93,7 @@ void rangingTableSetInit(Ranging_Table_Set_t *rangingTableSet) {
 
 set_index_t rangingTableSetInsert(Ranging_Table_Set_t *rangingTableSet,
                                      Ranging_Table_t *table) {
-  set_index_t candidate = ranging_table_set_malloc(rangingTableSet);
+  set_index_t candidate = rangingTableSetMalloc(rangingTableSet);
   if (candidate != -1) {
     memcpy(&rangingTableSet->setData[candidate].data, table,
            sizeof(Ranging_Table_t));
@@ -91,12 +115,12 @@ set_index_t findInRangingTableSet(Ranging_Table_Set_t *rangingTableSet,
   return iter;
 }
 
-bool deleteRangingTupleByIndex(Ranging_Table_Set_t *rangingTableSet,
+bool deleteRangingTableByIndex(Ranging_Table_Set_t *rangingTableSet,
                                    set_index_t index) {
-  return ranging_table_set_free(rangingTableSet, index);
+  return rangingTableSetFree(rangingTableSet, index);
 }
 
-void printRangingTableTuple(Ranging_Table_t *table) {
+void printRangingTable(Ranging_Table_t *table) {
   // DEBUG_PRINT("Rp = %2x%8lx, Tr = %2x%8lx, Rf = %2x%8lx, \r\n",
   //        table->Rp.timestamp.high8, table->Rp.timestamp.low32,
   //        table->Tr.timestamp.high8, table->Tr.timestamp.low32,
@@ -129,14 +153,14 @@ void printRangingTableTuple(Ranging_Table_t *table) {
   DEBUG_PRINT("====\r\n");
 }
 
-void printRangingTable(Ranging_Table_Set_t *rangingTableSet) {
+void printRangingTableSet(Ranging_Table_Set_t *rangingTableSet) {
   for (set_index_t index = rangingTableSet->fullQueueEntry; index != -1;
        index = rangingTableSet->setData[index].next) {
-    printRangingTableTuple(&rangingTableSet->setData[index].data);
+    printRangingTable(&rangingTableSet->setData[index].data);
   }
 }
 
-bool rangingTableClearExpire(Ranging_Table_Set_t *rangingTableSet) {
+bool rangingTableSetClearExpire(Ranging_Table_Set_t *rangingTableSet) {
   set_index_t candidate = rangingTableSet->fullQueueEntry;
   Time_t now = xTaskGetTickCount();
   bool has_changed = false;
@@ -144,7 +168,7 @@ bool rangingTableClearExpire(Ranging_Table_Set_t *rangingTableSet) {
     Ranging_Table_Set_Item_t temp = rangingTableSet->setData[candidate];
     if (temp.data.expirationTime < now) {
       set_index_t next_index = temp.next;
-      ranging_table_set_free(rangingTableSet, candidate);
+      rangingTableSetFree(rangingTableSet, candidate);
       candidate = next_index;
       has_changed = true;
       continue;

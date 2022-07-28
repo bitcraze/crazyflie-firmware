@@ -47,6 +47,24 @@ typedef struct {
   dwTime_t rxTime;
 } __attribute__((packed)) Ranging_Message_With_Timestamp_t;
 
+#define Tr_Rr_BUFFER_SIZE 3
+
+typedef struct {
+  Timestamp_Tuple_t Tr;
+  Timestamp_Tuple_t Rr;
+} __attribute__((packed)) Ranging_Table_Tr_Rr_Candidate;
+
+/* Tr and Rr candidate buffer for each Ranging Table */
+typedef struct {
+  set_index_t index; // Always point to oldest data
+  Ranging_Table_Tr_Rr_Candidate candidates[Tr_Rr_BUFFER_SIZE];
+} __attribute__((packed)) Ranging_Table_Tr_Rr_Buffer_t;
+
+/* Tr_Rr Buffer Operations */
+void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
+void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
+set_index_t rangingTableBufferGet(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Rf);
+
 /* Ranging Table
   +------+------+------+------+------+
   |  Rp  |  Tr  |  Rf  |  P   |  tn  |
@@ -65,11 +83,15 @@ typedef struct {
   Timestamp_Tuple_t Tf;
   Timestamp_Tuple_t Re;
 
+  Ranging_Table_Tr_Rr_Buffer_t TrRrBuffer;
+
   Time_t period;
   Time_t nextDeliveryTime;
   Time_t expirationTime;
   int16_t distance;
 } __attribute__((packed)) Ranging_Table_t;
+
+void rangingTableInit(Ranging_Table_t *rangingTable, address_t address);
 
 typedef struct {
   set_index_t next;
@@ -90,20 +112,20 @@ Ranging_Table_Set_t rangingTableSet;
 void rangingTableSetInit(Ranging_Table_Set_t *rangingTableSet);
 
 set_index_t rangingTableSetInsert(Ranging_Table_Set_t *rangingTableSet,
-                                     Ranging_Table_t *table);
+                                     Ranging_Table_t *rangingTable);
 
 set_index_t findInRangingTableSet(Ranging_Table_Set_t *rangingTableSet,
-                                      address_t addr);
+                                      address_t address);
 
-bool deleteRangingTupleByIndex(Ranging_Table_Set_t *rangingTableSet,
+bool deleteRangingTableByIndex(Ranging_Table_Set_t *rangingTableSet,
                                    set_index_t index);
 
-void printRangingTableTuple(Ranging_Table_t *tuple);
-
-void printRangingTable(Ranging_Table_Set_t *rangingTableSet);
-
-void printRangingMessage(Ranging_Message_t *rangingMessage);
-
-bool rangingTableClearExpire(Ranging_Table_Set_t *rangingTableSet);
+bool rangingTableSetClearExpire(Ranging_Table_Set_t *rangingTableSet);
 
 void sortRangingTableSet(Ranging_Table_Set_t *rangingTableSet);
+
+void printRangingTable(Ranging_Table_t *rangingTable);
+
+void printRangingTableSet(Ranging_Table_Set_t *rangingTableSet);
+
+void printRangingMessage(Ranging_Message_t *rangingMessage);

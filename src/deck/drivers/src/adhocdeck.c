@@ -183,11 +183,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
       return;
     }
     Ranging_Table_t table;
-    memset(&table, 0, sizeof(Ranging_Table_t));
-    table.neighborAddress = neighborAddress;
-    table.period = TX_PERIOD_IN_MS;
-    table.nextDeliveryTime = xTaskGetTickCount() + table.period;
-    table.expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
+    rangingTableInit(&table, neighborAddress);
     neighborIndex = rangingTableSetInsert(&rangingTableSet, &table);
   }
   Ranging_Table_t* neighborRangingTable = &rangingTableSet.setData[neighborIndex].data;
@@ -228,7 +224,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
     neighborRangingTable->Tr.seqNumber = 0;
   }
 
-  // printRangingTableTuple(neighborRangingTable);
+  // printRangingTable(neighborRangingTable);
   if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
       int16_t distance = computeDistance(neighborRangingTable);
       neighborRangingTable->distance = distance;
