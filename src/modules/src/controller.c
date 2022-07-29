@@ -33,7 +33,7 @@ static ControllerFcns controllerFunctions[] = {
   {.init = controllerSJCInit, .test = controllerSJCTest, .update = controllerSJC, .name = "SJC"},
   {.init = controllerMellingerSIInit, .test = controllerMellingerSITest, .update = controllerMellingerSI, .name = "MellingerSI"},
   {.init = controllerLeeFirmwareInit, .test = controllerLeeFirmwareTest, .update = controllerLeeFirmware, .name = "Lee"},
-  {.init = controllerLeePayloadInit, .test = controllerLeePayloadTest, .update = controllerLeePayload, .name = "LeePayload"},
+  {.init = controllerLeePayloadFirmwareInit, .test = controllerLeePayloadFirmwareTest, .update = controllerLeePayloadFirmware, .name = "LeePayload"},
 };
 
 

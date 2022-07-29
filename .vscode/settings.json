@@ -5,7 +5,8 @@
         "**/bower_components": true
     },
     "files.associations": {
-        "bootloader.h": "c"
+        "bootloader.h": "c",
+        "controller_lee.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
