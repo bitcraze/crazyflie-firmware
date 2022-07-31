@@ -33,13 +33,14 @@ typedef struct {
   Timestamp_Tuple_t lastTxTimestamp; // 10 byte
   short velocity; // 2 byte 
   uint16_t msgLength; // 2 byte
-} __attribute__((packed)) Ranging_Message_Header_t; // 18 byte
+  uint16_t filter; // 16 bits bloom filter
+} __attribute__((packed)) Ranging_Message_Header_t; // 20 byte
 
 /* Ranging Message */
 typedef struct {
   Ranging_Message_Header_t header; // 18 byte
   Body_Unit_t bodyUnits[MAX_BODY_UNIT_NUMBER]; // 12 byte * MAX_NEIGHBOR_SIZE
-} __attribute__((packed)) Ranging_Message_t; // 18 + 12 byte * MAX_NEIGHBOR_SIZE
+} __attribute__((packed)) Ranging_Message_t; // 20 + 12 byte * MAX_NEIGHBOR_SIZE
 
 /* Ranging Message With RX Timestamp, used in RX Queue */
 typedef struct {

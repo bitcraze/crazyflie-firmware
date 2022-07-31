@@ -191,16 +191,18 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   }
   neighborRangingTable->state = RECEIVED;
 
-  /* check body unit */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
-  // TODO add bloom filter
-  uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
-  for (int i = 0; i < bodyUnitCount; i++) {
-    if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
-      neighborRf = rangingMessage->bodyUnits[i].timestamp;
-      break;
+  if (rangingMessage->header.filter & (1 << (MY_UWB_ADDRESS % 16))) {
+    /* check body unit */
+    uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
+    for (int i = 0; i < bodyUnitCount; i++) {
+      if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
+        neighborRf = rangingMessage->bodyUnits[i].timestamp;
+        break;
+      }
     }
   }
+
   /* update Rf and Tf */
   if (neighborRf.timestamp.full) {
     neighborRangingTable->Rf = neighborRf;
@@ -255,6 +257,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
 #endif
   int8_t bodyUnitNumber = 0;
   int curSeqNumber = getAndIncreaseRangingSeqNumber();
+  rangingMessage->header.filter = 0;
   /* generate message body */
   for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;
        index = rangingTableSet.setData[index].next) {
@@ -270,6 +273,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->Re;
       bodyUnitNumber++;
       table->state = TRANSMITTED;
+      rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
     }
     rangingTableBufferUpdateSeqNumber(&table->TrRrBuffer, curSeqNumber);
     rangingTableBufferShift(&table->TrRrBuffer);
