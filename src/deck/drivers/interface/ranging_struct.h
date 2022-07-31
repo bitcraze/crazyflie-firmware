@@ -65,10 +65,10 @@ typedef struct {
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr, uint16_t Tf_SeqNumber);
 void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
-void rangingTableBufferUpdateTimestampPredecessor(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
+void rangingTableBufferUpdateTimestampPredecessors(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
 void rangingTableBufferUpdateSeqNumber(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, uint16_t Tf_SeqNumber);
 void rangingTableBufferShift(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
-Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t neighborRf);
+Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tf);
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetLatestCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 
 typedef enum {

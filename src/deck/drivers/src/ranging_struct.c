@@ -20,15 +20,19 @@ void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTabl
   rangingTableBuffer->candidates[rangingTableBuffer->index].Rr = Rr;
 }
 
-void rangingTableBufferUpdateTimestampPredecessor(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr) {
+void rangingTableBufferUpdateTimestampPredecessors(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr) {
   set_index_t index = rangingTableBuffer->index;
-  if (index == 0) {
-    index = Tr_Rr_BUFFER_SIZE - 1;
-  } else {
-    index--;
+  for (int count = 0; count < Tr_Rr_BUFFER_SIZE; count++) {
+    if (Tr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber + 1) {
+      rangingTableBuffer->candidates[index].Tr = Tr;
+      rangingTableBuffer->candidates[index].Rr = Rr;
+    }
+    if (index == 0) {
+      index = Tr_Rr_BUFFER_SIZE - 1;
+    } else {
+      index--;
+    }
   }
-  rangingTableBuffer->candidates[index].Tr = Tr;
-  rangingTableBuffer->candidates[index].Rr = Rr;
 }
 
 void rangingTableBufferUpdateSeqNumber(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, uint16_t Tf_SeqNumber) {
@@ -41,14 +45,20 @@ void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, 
 }
 
 void rangingTableBufferShift(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer) {
+  set_index_t pre = rangingTableBuffer->index;
   rangingTableBuffer->index = (rangingTableBuffer->index + 1) % Tr_Rr_BUFFER_SIZE;
+  set_index_t cur = rangingTableBuffer->index;
+  rangingTableBuffer->candidates[cur].Tr = rangingTableBuffer->candidates[pre].Tr;
+  rangingTableBuffer->candidates[cur].Rr = rangingTableBuffer->candidates[pre].Rr;
+  rangingTableBuffer->candidates[cur].Tf_SeqNumber = 0;
 }
 
-Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t neighborRf) {
+Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tf) {
   set_index_t index = rangingTableBuffer->index;
   Ranging_Table_Tr_Rr_Candidate_t candidate = {.Rr.timestamp.full = 0, .Tr.timestamp.full = 0, .Tf_SeqNumber = 0};
+  uint64_t rightBound = Tf.timestamp.full % MAX_TIMESTAMP;
   for (int count = 0; count < Tr_Rr_BUFFER_SIZE; count++) {
-    if (rangingTableBuffer->candidates[index].Tf_SeqNumber == neighborRf.seqNumber) {
+    if (rangingTableBuffer->candidates[index].Rr.timestamp.full % MAX_TIMESTAMP < rightBound) {
       candidate.Tr = rangingTableBuffer->candidates[index].Tr;
       candidate.Rr = rangingTableBuffer->candidates[index].Rr;
       candidate.Tf_SeqNumber = rangingTableBuffer->candidates[index].Tf_SeqNumber;
@@ -95,7 +105,7 @@ void rangingTableShift(Ranging_Table_t *rangingTable) {
 static set_index_t rangingTableSetMalloc(
     Ranging_Table_Set_t *rangingTableSet) {
   if (rangingTableSet->freeQueueEntry == -1) {
-    printf("Ranging Table Set is FULL, malloc failed.\r\n");
+    DEBUG_PRINT("Ranging Table Set is FULL, malloc failed.\n");
     return -1;
   } else {
     set_index_t candidate = rangingTableSet->freeQueueEntry;
@@ -183,36 +193,36 @@ bool deleteRangingTableByIndex(Ranging_Table_Set_t *rangingTableSet,
 }
 
 void printRangingTable(Ranging_Table_t *table) {
-  // DEBUG_PRINT("Rp = %2x%8lx, Tr = %2x%8lx, Rf = %2x%8lx, \r\n",
+  // DEBUG_PRINT("Rp = %2x%8lx, Tr = %2x%8lx, Rf = %2x%8lx, \n",
   //        table->Rp.timestamp.high8, table->Rp.timestamp.low32,
   //        table->Tr.timestamp.high8, table->Tr.timestamp.low32,
   //        table->Rf.timestamp.high8, table->Rf.timestamp.low32);
-  // DEBUG_PRINT("Tp = %2x%8lx, Rr = %2x%8lx, Tf = %2x%8lx, Re = %2x%8lx, \r\n",
+  // DEBUG_PRINT("Tp = %2x%8lx, Rr = %2x%8lx, Tf = %2x%8lx, Re = %2x%8lx, \n",
   //        table->Tp.timestamp.high8, table->Tp.timestamp.low32,
   //        table->Rr.timestamp.high8, table->Rr.timestamp.low32,
   //        table->Tf.timestamp.high8, table->Tf.timestamp.low32,
   //        table->Re.timestamp.high8, table->Re.timestamp.low32);
-  // DEBUG_PRINT("====\r\n");
-  // DEBUG_PRINT("Rp = %llu, Tr = %llu, Rf = %llu, \r\n",
+  // DEBUG_PRINT("====\n");
+  // DEBUG_PRINT("Rp = %llu, Tr = %llu, Rf = %llu, \n",
   //        table->Rp.timestamp.full,
   //        table->Tr.timestamp.full, 
   //        table->Rf.timestamp.full);
-  // DEBUG_PRINT("Tp = %llu, Rr = %llu, Tf = %llu, Re = %llu, \r\n",
+  // DEBUG_PRINT("Tp = %llu, Rr = %llu, Tf = %llu, Re = %llu, \n",
   //        table->Tp.timestamp.full,
   //        table->Rr.timestamp.full,
   //        table->Tf.timestamp.full,
   //        table->Re.timestamp.full);
-  // DEBUG_PRINT("====\r\n");
-  DEBUG_PRINT("Rp = %u, Tr = %u, Rf = %u, \r\n",
+  // DEBUG_PRINT("====\n");
+  DEBUG_PRINT("Rp = %u, Tr = %u, Rf = %u, \n",
          table->Rp.seqNumber,
          table->Tr.seqNumber, 
          table->Rf.seqNumber);
-  DEBUG_PRINT("Tp = %u, Rr = %u, Tf = %u, Re = %u, \r\n",
+  DEBUG_PRINT("Tp = %u, Rr = %u, Tf = %u, Re = %u, \n",
          table->Tp.seqNumber,
          table->Rr.seqNumber,
          table->Tf.seqNumber,
          table->Re.seqNumber);
-  DEBUG_PRINT("====\r\n");
+  DEBUG_PRINT("====\n");
 }
 
 void printRangingTableSet(Ranging_Table_Set_t *rangingTableSet) {
@@ -272,7 +282,7 @@ void sortRangingTableSet(Ranging_Table_Set_t *rangingTableSet) {
 }
 
 void printRangingMessage(Ranging_Message_t *rangingMessage) {
-  printf("msgLength=%u, msgSequence=%d, srcAddress=%u, velocity=%d\r\n, last_tx_timestamp_seq=%u, lastTxTimestamp=%2x%8lx\r\n",
+  DEBUG_PRINT("msgLength=%u, msgSequence=%d, srcAddress=%u, velocity=%d\n, last_tx_timestamp_seq=%u, lastTxTimestamp=%2x%8lx\n",
       rangingMessage->header.msgLength,
       rangingMessage->header.msgSequence,
       rangingMessage->header.srcAddress, rangingMessage->header.velocity,
@@ -285,14 +295,14 @@ void printRangingMessage(Ranging_Message_t *rangingMessage) {
   }
   int body_unit_number = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
   if (body_unit_number >= MAX_BODY_UNIT_NUMBER) {
-    printf("===printRangingMessage: wrong body unit number occurs===\r\n");
+    DEBUG_PRINT("===printRangingMessage: wrong body unit number occurs===\n");
     return;
   }
   for (int i = 0; i < body_unit_number; i++) {
-    printf("body_unit_address=%u, body_unit_seq=%u\r\n",
+    DEBUG_PRINT("body_unit_address=%u, body_unit_seq=%u\n",
            rangingMessage->bodyUnits[i].address,
            rangingMessage->bodyUnits[i].timestamp.seqNumber);
-    printf("body_unit_timestamp=%2x%8lx\r\n",
+    DEBUG_PRINT("body_unit_timestamp=%2x%8lx\n",
            rangingMessage->bodyUnits[i].timestamp.timestamp.high8,
            rangingMessage->bodyUnits[i].timestamp.timestamp.low32);
   }
