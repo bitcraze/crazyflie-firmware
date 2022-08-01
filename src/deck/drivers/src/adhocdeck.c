@@ -1,8 +1,9 @@
 #define DEBUG_MODULE "DWM3k"
 
-#include "stm32fxxx.h"
 #include <stdint.h>
 #include <string.h>
+
+#include "stm32fxxx.h"
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -60,6 +61,9 @@ static TaskHandle_t uwbRangingTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 static QueueHandle_t txQueue;
 static QueueHandle_t rxQueue;
+
+static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
+static float velocity;
 
 /* rx buffer used in rx_callback */
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
@@ -283,7 +287,12 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
   rangingMessage->header.lastTxTimestamp = TfBuffer[TfBufferIndex];
-  rangingMessage->header.velocity = 0;
+  float velocityX = logGetFloat(idVelocityX);
+  float velocityY = logGetFloat(idVelocityY);
+  float velocityZ = logGetFloat(idVelocityZ);
+  velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
+  /* velocity in cm/s */
+  rangingMessage->header.velocity = (short) (velocity * 100);
 }
 
 static void uwbRxTask(void* parameters) {
@@ -300,6 +309,11 @@ static void uwbRxTask(void* parameters) {
 
 static void uwbRangingTask(void* parameters) {
   systemWaitStart();
+
+  /* velocity log variable id */
+  idVelocityX = logGetVarId("stateEstimate", "vx");
+  idVelocityY = logGetVarId("stateEstimate", "vy");
+  idVelocityZ = logGetVarId("stateEstimate", "vz");
 
   Ranging_Message_t txPacketCache;
   while (true) {
@@ -547,6 +561,7 @@ LOG_GROUP_START(Ranging)
         LOG_ADD(LOG_INT16, distTo6, distanceTowards+6)
         LOG_ADD(LOG_INT16, distTo7, distanceTowards+7)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
+        LOG_ADD(LOG_FLOAT, velocity, &velocity)
 LOG_GROUP_STOP(Ranging)
 
 PARAM_GROUP_START(ADHOC)
