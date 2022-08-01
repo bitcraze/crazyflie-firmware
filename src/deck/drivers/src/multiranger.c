@@ -46,6 +46,7 @@
 static bool isInit = false;
 static bool isTested = false;
 static bool isPassed = false;
+static uint16_t filterMask = 1 << VL53L1_RANGESTATUS_RANGE_VALID;
 
 #define MR_PIN_UP PCA95X4_P0
 #define MR_PIN_FRONT PCA95X4_P4
@@ -97,10 +98,14 @@ static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 
     status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
 
-    if (rangingData.RangeStatus == VL53L1_RANGESTATUS_RANGE_VALID)
+    if (filterMask & (1 << rangingData.RangeStatus))
+    {
         range = rangingData.RangeMilliMeter;
+    }
     else
+    {
         range = 32767;
+    }
 
     VL53L1_StopMeasurement(dev);
     status = VL53L1_StartMeasurement(dev);
@@ -210,3 +215,11 @@ PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
 
 PARAM_GROUP_STOP(deck)
+
+PARAM_GROUP_START(multiranger)
+/**
+ * @brief Filter mask determining which range measurements is to be let through based on the range status of the VL53L1 chip
+ */
+PARAM_ADD(PARAM_UINT16, filterMask, &filterMask)
+
+PARAM_GROUP_STOP(multiranger)
