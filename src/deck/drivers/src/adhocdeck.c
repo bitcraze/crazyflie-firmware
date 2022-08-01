@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include "stm32fxxx.h"
 
@@ -80,7 +81,7 @@ static void txCallback() {
   dwt_readtxtimestamp(&txTime.raw);
   TfBufferIndex++;
   TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
-  TfBuffer[TfBufferIndex].seqNumber = getRangingSeqNumber();
+  TfBuffer[TfBufferIndex].seqNumber = rangingSeqNumber;
   TfBuffer[TfBufferIndex].timestamp = txTime;
 }
 
@@ -187,11 +188,8 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   neighborRangingTable->Tr = rangingMessage->header.lastTxTimestamp;
   if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full && neighborRangingTable->Rr.seqNumber == neighborRangingTable->Tr.seqNumber) {
     rangingTableBufferUpdateTimestamp(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
-    /* try to update previous (Tr, Rr) pair */
-    if (neighborRangingTable->state == TRANSMITTED) {
-      /* update previous (Tr, Rr) pairs since last transmission */
-      rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
-    }
+    /* try to update previous (Tr, Rr) pairs since last transmission */
+    rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
   }
   neighborRangingTable->state = RECEIVED;
 
@@ -246,21 +244,13 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   neighborRangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
 }
 
-int getAndIncreaseRangingSeqNumber() {
-  rangingSeqNumber++;
-  return rangingSeqNumber;
-}
-
-int getRangingSeqNumber() {
-  return rangingSeqNumber;
-}
-
 static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   sortRangingTableSet(&rangingTableSet);
 #endif
   int8_t bodyUnitNumber = 0;
-  int curSeqNumber = getAndIncreaseRangingSeqNumber();
+  rangingSeqNumber++;
+  int curSeqNumber = rangingSeqNumber;
   rangingMessage->header.filter = 0;
   /* generate message body */
   for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;

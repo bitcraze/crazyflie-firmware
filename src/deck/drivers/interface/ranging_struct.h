@@ -74,7 +74,7 @@ Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetLatestCandidate(Ranging_Tab
 
 typedef enum {
   RESERVED = 0, 
-  TRANSMITTED = 1, 
+  TRANSMITTED = 1, // indicate body unit is transmitted
   RECEIVED = 2,
 } RANGING_TABLE_STATE;
 
