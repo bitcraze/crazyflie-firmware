@@ -74,7 +74,7 @@ int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
 static void txCallback() {
   dwTime_t txTime;
-  dwt_readtxtimestamp(&txTime.raw);
+  dwt_readtxtimestamp((uint8_t *) &txTime.raw);
   TfBufferIndex++;
   TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
   TfBuffer[TfBufferIndex].seqNumber = rangingSeqNumber;

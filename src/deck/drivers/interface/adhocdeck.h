@@ -3,28 +3,35 @@
 
 #include "libdw3000.h"
 
+/* Function Switch */
+#define ENABLE_BUS_BOARDING_SCHEME
+#define ENABLE_PHR_EXT_MODE
+
+#define SPEED_OF_LIGHT 299702547
 #define MAX_TIMESTAMP 1099511627776  // 2**40
 #define TX_ANT_DLY 16385
 #define RX_ANT_DLY 16385
 
-#define SPEED_OF_LIGHT 299702547
-#define FRAME_LEN_MAX 127
-#define FRAME_LEN_MAX_EX 1023
+#define FRAME_LEN_STD 127
+#define FRAME_LEN_EXT 1023
+#ifdef ENABLE_PHR_EXT_MODE
+  #define FRAME_LEN_MAX FRAME_LEN_EXT
+#else
+  #define FRAME_LEN_MAX FRAME_LEN_STD
+#endif
 
+/* Queue Constants */
 #define TX_QUEUE_SIZE 10 // TODO 5
 #define RX_QUEUE_SIZE 20
 #define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
 #define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
 #define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
 
-#define RANGING_INTERVAL_MIN 20 //default 20
-#define RANGING_INTERVAL_MAX 500 //default 500
+/* Ranging Constants */
+#define RANGING_INTERVAL_MIN 20 // default 20
+#define RANGING_INTERVAL_MAX 500 // default 500
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
-
 #define TX_PERIOD_IN_MS 100
-
-/* Function Switch */
-#define ENABLE_BUS_BOARDING_SCHEME
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -33,7 +40,7 @@ static dwt_txconfig_t txconfig_options = {
     .power = 0xfdfdfdfd
 };
 
-/* Default communication configuration. We use default non-STS DW mode. */
+/* PHR configuration */
 static dwt_config_t config = {
     5,            /* Channel number. */
     DWT_PLEN_128, /* Preamble length. Used in TX only. */
@@ -43,7 +50,11 @@ static dwt_config_t config = {
     1, /* 0 to use standard 8 symbol SFD, 1 to use non-standard 8 symbol, 2 for
           non-standard 16 symbol SFD and 3 for 4z 8 symbol SDF type */
     DWT_BR_6M8,      /* Data rate. */
-    DWT_PHRMODE_STD, /* PHY header mode. */
+#ifdef ENABLE_PHR_EXT_MODE
+    DWT_PHRMODE_EXT, /* Extended PHY header mode. */
+#else
+    DWT_PHRMODE_STD, /* Standard PHY header mode. */
+#endif
     DWT_PHRRATE_STD, /* PHY header rate. */
     (129 + 8 - 8), /* SFD timeout (preamble length + 1 + SFD length - PAC size).
                       Used in RX only. */
