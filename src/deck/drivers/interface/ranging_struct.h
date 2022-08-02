@@ -1,14 +1,15 @@
+#ifndef __RANGING_STRUCT_H__
+#define __RANGING_STRUCT_H__
+
 #include <stdbool.h>
 
 #include "FreeRTOS.h"
 #include "dwTypes.h"
 
-
 #define MAX_BODY_UNIT_NUMBER 30
 // #define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
 #define RANGING_TABLE_SIZE 60
 #define RANGING_TABLE_HOLD_TIME 10000
-
 
 typedef uint16_t address_t;
 typedef portTickType Time_t;
@@ -64,16 +65,24 @@ typedef struct {
 
 /* Tr_Rr Buffer Operations */
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
-void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr, uint16_t Tf_SeqNumber);
-void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
-void rangingTableBufferUpdateTimestampPredecessors(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr);
+void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
+                              Timestamp_Tuple_t Tr,
+                              Timestamp_Tuple_t Rr,
+                              uint16_t Tf_SeqNumber);
+void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
+                                       Timestamp_Tuple_t Tr,
+                                       Timestamp_Tuple_t Rr);
+void rangingTableBufferUpdateTimestampPredecessors(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
+                                                   Timestamp_Tuple_t Tr,
+                                                   Timestamp_Tuple_t Rr);
 void rangingTableBufferUpdateSeqNumber(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, uint16_t Tf_SeqNumber);
 void rangingTableBufferShift(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
-Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tf);
+Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
+                                                               Timestamp_Tuple_t Tf);
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetLatestCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 
 typedef enum {
-  RESERVED = 0, 
+  RESERVED = 0,
   TRANSMITTED = 1, // indicate body unit is transmitted
   RECEIVED = 2,
 } RANGING_TABLE_STATE;
@@ -128,13 +137,13 @@ Ranging_Table_Set_t rangingTableSet;
 void rangingTableSetInit(Ranging_Table_Set_t *rangingTableSet);
 
 set_index_t rangingTableSetInsert(Ranging_Table_Set_t *rangingTableSet,
-                                     Ranging_Table_t *rangingTable);
+                                  Ranging_Table_t *rangingTable);
 
 set_index_t findInRangingTableSet(Ranging_Table_Set_t *rangingTableSet,
-                                      address_t address);
+                                  address_t address);
 
 bool deleteRangingTableByIndex(Ranging_Table_Set_t *rangingTableSet,
-                                   set_index_t index);
+                               set_index_t index);
 
 bool rangingTableSetClearExpire(Ranging_Table_Set_t *rangingTableSet);
 
@@ -145,3 +154,5 @@ void printRangingTable(Ranging_Table_t *rangingTable);
 void printRangingTableSet(Ranging_Table_Set_t *rangingTableSet);
 
 void printRangingMessage(Ranging_Message_t *rangingMessage);
+
+#endif

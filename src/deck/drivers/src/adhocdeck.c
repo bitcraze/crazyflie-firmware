@@ -16,10 +16,7 @@
 #include "deck.h"
 #include "estimator.h"
 #include "log.h"
-#include "mem.h"
-#include "nvicconf.h"
 #include "param.h"
-#include "statsCnt.h"
 #include "system.h"
 
 #include "adhocdeck.h"
@@ -75,7 +72,6 @@ static int rangingSeqNumber = 1;
 /* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
-
 static void txCallback() {
   dwTime_t txTime;
   dwt_readtxtimestamp(&txTime.raw);
@@ -92,10 +88,10 @@ static void rxCallback() {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
   dwTime_t rxTime;
-  dwt_readrxtimestamp(&rxTime.raw);
+  dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
-  Ranging_Message_t* rangingMessage = &rxBuffer;
+  Ranging_Message_t *rangingMessage = (Ranging_Message_t *) &rxBuffer;
   rxMessageWithTimestamp.rangingMessage = *rangingMessage;
   xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
   dwt_forcetrxoff();
@@ -119,7 +115,7 @@ static void uwbTxTask(void *parameters) {
   while (true) {
     if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(packetCache.header.msgLength, &packetCache, 0);
+      dwt_writetxdata(packetCache.header.msgLength, (uint8_t *) &packetCache, 0);
       dwt_writetxfctrl(packetCache.header.msgLength + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
@@ -130,7 +126,7 @@ static void uwbTxTask(void *parameters) {
   }
 }
 
-int16_t computeDistance(Ranging_Table_t* rangingTable) {
+int16_t computeDistance(Ranging_Table_t *rangingTable) {
 
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
   tRound1 = (rangingTable->Rr.timestamp.full - rangingTable->Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
@@ -140,7 +136,7 @@ int16_t computeDistance(Ranging_Table_t* rangingTable) {
   diff1 = tRound1 - tReply1;
   diff2 = tRound2 - tReply2;
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
-  int16_t distance = (int16_t) tprop_ctn * 0.4691763978616; 
+  int16_t distance = (int16_t) tprop_ctn * 0.4691763978616;
 
   bool isErrorOccurred = false;
   if (distance > 1000 || distance < 0) {
@@ -158,12 +154,12 @@ int16_t computeDistance(Ranging_Table_t* rangingTable) {
   if (isErrorOccurred) {
     return rangingTable->distance;
   }
-  
+
   return distance;
 }
 
-void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithTimestamp) {
-  Ranging_Message_t* rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
+void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp) {
+  Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   address_t neighborAddress = rangingMessage->header.srcAddress;
   set_index_t neighborIndex = findInRangingTableSet(&rangingTableSet, neighborAddress);
 
@@ -178,7 +174,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
     neighborIndex = rangingTableSetInsert(&rangingTableSet, &table);
   }
 
-  Ranging_Table_t* neighborRangingTable = &rangingTableSet.setData[neighborIndex].data;
+  Ranging_Table_t *neighborRangingTable = &rangingTableSet.setData[neighborIndex].data;
 
   /* update Re */
   neighborRangingTable->Re.timestamp = rangingMessageWithTimestamp->rxTime;
@@ -186,10 +182,15 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
 
   /* update Tr and Rr */
   neighborRangingTable->Tr = rangingMessage->header.lastTxTimestamp;
-  if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full && neighborRangingTable->Rr.seqNumber == neighborRangingTable->Tr.seqNumber) {
-    rangingTableBufferUpdateTimestamp(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
+  if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
+      && neighborRangingTable->Rr.seqNumber == neighborRangingTable->Tr.seqNumber) {
+    rangingTableBufferUpdateTimestamp(&neighborRangingTable->TrRrBuffer,
+                                      neighborRangingTable->Tr,
+                                      neighborRangingTable->Rr);
     /* try to update previous (Tr, Rr) pairs since last transmission */
-    rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
+    rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer,
+                                                  neighborRangingTable->Tr,
+                                                  neighborRangingTable->Rr);
   }
   neighborRangingTable->state = RECEIVED;
 
@@ -215,7 +216,8 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
       }
     }
 
-    Ranging_Table_Tr_Rr_Candidate_t candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tf);
+    Ranging_Table_Tr_Rr_Candidate_t
+        candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tf);
 
     if (candidate.Tr.timestamp.full && candidate.Rr.timestamp.full) {
       // TODO remove Tr and Rr from ranging table, just use TrRrBuffer to update and compute
@@ -223,11 +225,11 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
       neighborRangingTable->Rr = candidate.Rr;
 
       if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
-      && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
-      && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-          int16_t distance = computeDistance(neighborRangingTable);
-          neighborRangingTable->distance = distance;
-          distanceTowards[neighborRangingTable->neighborAddress] = distance; 
+          && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
+          && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+        int16_t distance = computeDistance(neighborRangingTable);
+        neighborRangingTable->distance = distance;
+        distanceTowards[neighborRangingTable->neighborAddress] = distance;
       }
     }
     if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
@@ -239,12 +241,12 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
     rangingTableShift(neighborRangingTable);
   }
-  
+
   /* update expiration time */
   neighborRangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
 }
 
-static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
+static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   sortRangingTableSet(&rangingTableSet);
 #endif
@@ -255,7 +257,7 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
   /* generate message body */
   for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;
        index = rangingTableSet.setData[index].next) {
-    Ranging_Table_t* table = &rangingTableSet.setData[index].data;
+    Ranging_Table_t *table = &rangingTableSet.setData[index].data;
     if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
       break; //TODO test 1023 byte
     }
@@ -285,11 +287,11 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
   rangingMessage->header.velocity = (short) (velocity * 100);
 }
 
-static void uwbRxTask(void* parameters) {
+static void uwbRxTask(void *parameters) {
   systemWaitStart();
 
   Ranging_Message_With_Timestamp_t rxPacketCache;
-  
+
   while (true) {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
       processRangingMessage(&rxPacketCache);
@@ -297,7 +299,7 @@ static void uwbRxTask(void* parameters) {
   }
 }
 
-static void uwbRangingTask(void* parameters) {
+static void uwbRangingTask(void *parameters) {
   systemWaitStart();
 
   /* velocity log variable id */
@@ -394,7 +396,6 @@ extern dwOps_t dwt_ops = {
     .reset = reset
 };
 
-
 int uwbInit() {
   // spiSetSpeed(dwSpiSpeedHigh);
   while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
@@ -412,7 +413,7 @@ int uwbInit() {
     return DWT_ERROR;
   }
   dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
-  
+
   /* Configure the TX spectrum parameters (power, PG delay and PG count) */
   dwt_configuretxrf(&txconfig_options);
 
@@ -479,15 +480,15 @@ static void queueInit() {
 }
 
 static void uwbStart() {
- /* Create UWB Task */
+  /* Create UWB Task */
   xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
+              ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
+              ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
   xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
+              ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
   xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);            
+              ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
@@ -514,7 +515,7 @@ static bool dwm3000Test() {
 static const DeckDriver dwm3000_deck = {
     .vid = 0xBC,
     .pid = 0x06,
-    .name = "bcDWM1000",
+    .name = "DWM3000",
 
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
     .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
@@ -537,21 +538,19 @@ static const DeckDriver dwm3000_deck = {
 DECK_DRIVER(dwm3000_deck);
 
 PARAM_GROUP_START(deck)
-
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
-
+  PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(Ranging)
-        LOG_ADD(LOG_INT16, distTo1, distanceTowards+1)
-        LOG_ADD(LOG_INT16, distTo2, distanceTowards+2)
-        LOG_ADD(LOG_INT16, distTo3, distanceTowards+3)
-        LOG_ADD(LOG_INT16, distTo4, distanceTowards+4)
-        LOG_ADD(LOG_INT16, distTo5, distanceTowards+5)
-        LOG_ADD(LOG_INT16, distTo6, distanceTowards+6)
-        LOG_ADD(LOG_INT16, distTo7, distanceTowards+7)
-        LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
-        LOG_ADD(LOG_FLOAT, velocity, &velocity)
+  LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
+  LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
+  LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
+  LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
+  LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
+  LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
+  LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
+  LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
+  LOG_ADD(LOG_FLOAT, velocity, &velocity)
 LOG_GROUP_STOP(Ranging)
 
 PARAM_GROUP_START(ADHOC)
