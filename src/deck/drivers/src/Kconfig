@@ -206,6 +206,15 @@ config DECK_ADHOC
        ADHOC deck alternative IRQ and RESET pins(IO_2, IO_4) instead of
        default (RX1, TX1), leaving UART1 free for use.
 
+  config DECK_ADHOCDECK_USE_UART2_PINS
+  bool "adhoc deck use UART2 (TX2, RX2) pins"
+  default name
+  depends on DECK_ADHOC
+  help
+       ADHOC deck alternative IRQ and RESET pins(TX2, RX2) instead of
+       default (RX1, TX1).
+
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y

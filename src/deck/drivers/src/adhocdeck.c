@@ -40,6 +40,12 @@
   #define EXTI_PortSource EXTI_PortSourceGPIOB
   #define EXTI_PinSource 	EXTI_PinSource5
   #define EXTI_LineN 		  EXTI_Line5
+#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
+  #define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
+  #define GPIO_PIN_RESET 	DECK_GPIO_RX2
+  #define EXTI_PortSource EXTI_PortSourceGPIOA
+  #define EXTI_PinSource 	EXTI_PinSource2
+  #define EXTI_LineN 		  EXTI_Line2
 #else
   #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
   #define GPIO_PIN_RESET 	DECK_GPIO_TX1
@@ -52,6 +58,9 @@
 
 static address_t MY_UWB_ADDRESS;
 static bool isInit = false;
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+static bool isUWBStart = false;
+#endif
 static TaskHandle_t uwbTaskHandle = 0;
 static TaskHandle_t uwbTxTaskHandle = 0;
 static TaskHandle_t uwbRxTaskHandle = 0;
@@ -107,8 +116,60 @@ static void rxErrorCallback() {
 
 }
 
+static int uwbInit() {
+  /* Need to make sure DW IC is in IDLE_RC before proceeding */
+  while (!dwt_checkidlerc()) {
+
+  }
+  if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
+    return DWT_ERROR;
+  }
+  if (dwt_configure(&config) == DWT_ERROR) {
+    return DWT_ERROR;
+  }
+  dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
+
+  /* Configure the TX spectrum parameters (power, PG delay and PG count) */
+  dwt_configuretxrf(&txconfig_options);
+
+  /* Configure Antenna Delay */
+  dwt_setrxantennadelay(RX_ANT_DLY);
+  dwt_settxantennadelay(TX_ANT_DLY);
+
+  /* Auto re-enable receiver after a frame reception failure (except a frame
+   * wait timeout), the receiver will re-enable to re-attempt reception. */
+  dwt_or32bitoffsetreg(SYS_CFG_ID, 0, SYS_CFG_RXAUTR_BIT_MASK);
+  dwt_setrxtimeout(DEFAULT_RX_TIMEOUT);
+
+  dwt_setcallbacks(&txCallback, &rxCallback, &rxTimeoutCallback, &rxErrorCallback, NULL, NULL);
+  /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and
+   * RX errors). */
+  dwt_setinterrupt(SYS_ENABLE_LO_TXFRS_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXFTO_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXPTO_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXPHE_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXFSL_ENABLE_BIT_MASK |
+                       SYS_ENABLE_LO_RXSTO_ENABLE_BIT_MASK,
+                   0, DWT_ENABLE_INT);
+
+  /* Clearing the SPI ready interrupt */
+  dwt_write32bitreg(SYS_STATUS_ID,
+                    SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
+
+  algoSemaphore = xSemaphoreCreateMutex();
+
+  return DWT_SUCCESS;
+}
+
 static void uwbTxTask(void *parameters) {
   systemWaitStart();
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  while (!isUWBStart) {
+    vTaskDelay(500);
+  }
+#endif
 
   Ranging_Message_t packetCache;
 
@@ -289,6 +350,11 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
 
 static void uwbRxTask(void *parameters) {
   systemWaitStart();
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  while (!isUWBStart) {
+    vTaskDelay(500);
+  }
+#endif
 
   Ranging_Message_With_Timestamp_t rxPacketCache;
 
@@ -301,7 +367,11 @@ static void uwbRxTask(void *parameters) {
 
 static void uwbRangingTask(void *parameters) {
   systemWaitStart();
-
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  while (!isUWBStart) {
+    vTaskDelay(500);
+  }
+#endif
   /* velocity log variable id */
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
@@ -317,6 +387,11 @@ static void uwbRangingTask(void *parameters) {
 
 static void uwbTask(void *parameters) {
   systemWaitStart();
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  if (uwbInit() == DWT_SUCCESS) {
+    isUWBStart = true;
+  }
+#endif
 
   while (1) {
     if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
@@ -358,6 +433,8 @@ static void spiRead(const void *header, size_t headerLength, void *data,
 
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
 void __attribute__((used)) EXTI5_Callback(void)
+#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
+void __attribute__((used)) EXTI2_Callback(void)
 #else
 void __attribute__((used)) EXTI11_Callback(void)
 #endif
@@ -396,74 +473,11 @@ extern dwOps_t dwt_ops = {
     .reset = reset
 };
 
-int uwbInit() {
-  // spiSetSpeed(dwSpiSpeedHigh);
-  while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
-  {};
-  if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
-    isInit = false;
-    return DWT_ERROR;
-  }
-  if (dwt_configure(&config) == DWT_ERROR) {
-    while (1) {
-      DEBUG_PRINT("dwt_configure error\n");
-      vTaskDelay(1000);
-    }
-    isInit = false;
-    return DWT_ERROR;
-  }
-  dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
-
-  /* Configure the TX spectrum parameters (power, PG delay and PG count) */
-  dwt_configuretxrf(&txconfig_options);
-
-  /* Configure Antenna Delay */
-  dwt_setrxantennadelay(RX_ANT_DLY);
-  dwt_settxantennadelay(TX_ANT_DLY);
-
-  /* Auto re-enable receiver after a frame reception failure (except a frame
-   * wait timeout), the receiver will re-enable to re-attempt reception. */
-  dwt_or32bitoffsetreg(SYS_CFG_ID, 0, SYS_CFG_RXAUTR_BIT_MASK);
-  dwt_setrxtimeout(DEFAULT_RX_TIMEOUT);
-
-  dwt_setcallbacks(&txCallback, &rxCallback, &rxTimeoutCallback, &rxErrorCallback, NULL, NULL);
-  /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and
-   * RX errors). */
-  dwt_setinterrupt(SYS_ENABLE_LO_TXFRS_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFCG_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFTO_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXPTO_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXPHE_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFCE_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXFSL_ENABLE_BIT_MASK |
-                       SYS_ENABLE_LO_RXSTO_ENABLE_BIT_MASK,
-                   0, DWT_ENABLE_INT);
-
-  /* Clearing the SPI ready interrupt */
-  dwt_write32bitreg(SYS_STATUS_ID,
-                    SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
-  dwt_forcetrxoff();
-  // dwt_rxenable(DWT_START_RX_IMMEDIATE);
-  algoSemaphore = xSemaphoreCreateMutex();
-  isInit = true;
-  return DWT_SUCCESS;
-}
-
 static void pinInit() {
   EXTI_InitTypeDef EXTI_InitStructure;
-  // Init pins
-  pinMode(CS_PIN, OUTPUT);
-  pinMode(GPIO_PIN_RESET, OUTPUT);
-  pinMode(GPIO_PIN_IRQ, INPUT);
 
   spiBegin();
-  // Reset the DW3000 chip
-#ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
-  dwt_softreset();
-  vTaskDelay(M2T(20));
-#else
-  dwt_ops.reset();
-#endif
+
   // Set up interrupt
   SYSCFG_EXTILineConfig(EXTI_PortSource, EXTI_PinSource);
 
@@ -472,6 +486,14 @@ static void pinInit() {
   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
+
+  // Init pins
+  pinMode(CS_PIN, OUTPUT);
+  pinMode(GPIO_PIN_RESET, OUTPUT);
+  pinMode(GPIO_PIN_IRQ, INPUT);
+
+  //Reset the DW3000 chip
+  dwt_ops.reset();
 }
 
 static void queueInit() {
@@ -495,13 +517,17 @@ static void dwm3000Init(DeckInfo *info) {
   pinInit();
   queueInit();
   rangingTableSetInit(&rangingTableSet);
-  if (uwbInit() != DWT_SUCCESS) {
+#ifndef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  if (uwbInit() == DWT_SUCCESS) {
+    uwbStart();
+    isInit = true;
+  } else {
     isInit = false;
-    DEBUG_PRINT("Failed to configure DW3000!\n");
-    return;
   }
+#else
   uwbStart();
   isInit = true;
+#endif
 }
 
 static bool dwm3000Test() {
@@ -519,9 +545,10 @@ static const DeckDriver dwm3000_deck = {
 
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
     .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
+#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
+    .usedGpio = DECK_USING_IO_1 | DECK_USING_UART2,
 #else
-    // (PC10/PC11 is UART1 TX/RX)
-    .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,
+    .usedGpio = DECK_USING_IO_1 | DECK_USING_UART1,
 #endif
     .usedPeriph = DECK_USING_SPI,
     .requiredEstimator = kalmanEstimator,
