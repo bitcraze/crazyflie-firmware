@@ -49,17 +49,17 @@ typedef struct {
   dwTime_t rxTime;
 } __attribute__((packed)) Ranging_Message_With_Timestamp_t;
 
-#define Tr_Rr_BUFFER_SIZE 3
+#define Tr_Rr_BUFFER_SIZE 5
 
 typedef struct {
   Timestamp_Tuple_t Tr;
   Timestamp_Tuple_t Rr;
-  uint16_t Tf_SeqNumber;
 } __attribute__((packed)) Ranging_Table_Tr_Rr_Candidate_t;
 
 /* Tr and Rr candidate buffer for each Ranging Table */
 typedef struct {
-  set_index_t index; // Always point to oldest data
+  set_index_t latest;
+  set_index_t cur;
   Ranging_Table_Tr_Rr_Candidate_t candidates[Tr_Rr_BUFFER_SIZE];
 } __attribute__((packed)) Ranging_Table_Tr_Rr_Buffer_t;
 
@@ -67,19 +67,9 @@ typedef struct {
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
                               Timestamp_Tuple_t Tr,
-                              Timestamp_Tuple_t Rr,
-                              uint16_t Tf_SeqNumber);
-void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                                       Timestamp_Tuple_t Tr,
-                                       Timestamp_Tuple_t Rr);
-void rangingTableBufferUpdateTimestampPredecessors(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                                                   Timestamp_Tuple_t Tr,
-                                                   Timestamp_Tuple_t Rr);
-void rangingTableBufferUpdateSeqNumber(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, uint16_t Tf_SeqNumber);
-void rangingTableBufferShift(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
+                              Timestamp_Tuple_t Rr);
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
                                                                Timestamp_Tuple_t Tf);
-Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetLatestCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 
 typedef enum {
   RESERVED = 0,
@@ -99,13 +89,10 @@ typedef struct {
 
   Timestamp_Tuple_t Rp;
   Timestamp_Tuple_t Tp;
-  Timestamp_Tuple_t Rr;
-  Timestamp_Tuple_t Tr;
+  Ranging_Table_Tr_Rr_Buffer_t TrRrBuffer;
   Timestamp_Tuple_t Rf;
   Timestamp_Tuple_t Tf;
   Timestamp_Tuple_t Re;
-
-  Ranging_Table_Tr_Rr_Buffer_t TrRrBuffer;
 
   Time_t period;
   Time_t nextDeliveryTime;

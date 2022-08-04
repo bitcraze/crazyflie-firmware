@@ -187,13 +187,15 @@ static void uwbTxTask(void *parameters) {
   }
 }
 
-int16_t computeDistance(Ranging_Table_t *rangingTable) {
+int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
+                        Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
+                        Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf) {
 
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
-  tRound1 = (rangingTable->Rr.timestamp.full - rangingTable->Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply1 = (rangingTable->Tr.timestamp.full - rangingTable->Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tRound2 = (rangingTable->Rf.timestamp.full - rangingTable->Tr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply2 = (rangingTable->Tf.timestamp.full - rangingTable->Rr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tRound1 = (Rr.timestamp.full - Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tReply1 = (Tr.timestamp.full - Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tRound2 = (Rf.timestamp.full - Tr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tReply2 = (Tf.timestamp.full - Rr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
   diff1 = tRound1 - tReply1;
   diff2 = tRound2 - tReply2;
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
@@ -207,13 +209,11 @@ int16_t computeDistance(Ranging_Table_t *rangingTable) {
 
   if (tRound2 < 0 || tReply2 < 0) {
     DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
-    rangingTable->Rf.timestamp.full = 0;
-    rangingTable->Tf.timestamp.full = 0;
-    return -0;
+    isErrorOccurred = true;
   }
 
   if (isErrorOccurred) {
-    return rangingTable->distance;
+    return 0;
   }
 
   return distance;
@@ -236,28 +236,25 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
   }
 
   Ranging_Table_t *neighborRangingTable = &rangingTableSet.setData[neighborIndex].data;
+  Ranging_Table_Tr_Rr_Buffer_t *neighborTrRrBuffer = &neighborRangingTable->TrRrBuffer;
 
   /* update Re */
   neighborRangingTable->Re.timestamp = rangingMessageWithTimestamp->rxTime;
   neighborRangingTable->Re.seqNumber = rangingMessage->header.msgSequence;
 
   /* update Tr and Rr */
-  neighborRangingTable->Tr = rangingMessage->header.lastTxTimestamp;
-  if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
-      && neighborRangingTable->Rr.seqNumber == neighborRangingTable->Tr.seqNumber) {
-    rangingTableBufferUpdateTimestamp(&neighborRangingTable->TrRrBuffer,
-                                      neighborRangingTable->Tr,
-                                      neighborRangingTable->Rr);
-    /* try to update previous (Tr, Rr) pairs since last transmission */
-    rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer,
-                                                  neighborRangingTable->Tr,
-                                                  neighborRangingTable->Rr);
+  Timestamp_Tuple_t neighborTr = rangingMessage->header.lastTxTimestamp;
+  if (neighborTr.timestamp.full && neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr.timestamp.full
+      && neighborTr.seqNumber == neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr.seqNumber) {
+    rangingTableBufferUpdate(&neighborRangingTable->TrRrBuffer,
+                             neighborTr,
+                             neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr);
   }
-  neighborRangingTable->state = RECEIVED;
 
+  /* update Rf */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
   if (rangingMessage->header.filter & (1 << (MY_UWB_ADDRESS % 16))) {
-    /* check body unit */
+    /* retrieve body unit */
     uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
     for (int i = 0; i < bodyUnitCount; i++) {
       if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
@@ -267,9 +264,9 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
     }
   }
 
-  /* update Rf and Tf */
   if (neighborRf.timestamp.full) {
     neighborRangingTable->Rf = neighborRf;
+    // TODO it is possible that can not find corresponding Tf
     /* find corresponding Tf in TfBuffer */
     for (int i = 0; i < Tf_BUFFER_POOL_SIZE; i++) {
       if (TfBuffer[i].seqNumber == neighborRf.seqNumber) {
@@ -277,34 +274,36 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
       }
     }
 
-    Ranging_Table_Tr_Rr_Candidate_t
-        candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tf);
-
-    if (candidate.Tr.timestamp.full && candidate.Rr.timestamp.full) {
-      // TODO remove Tr and Rr from ranging table, just use TrRrBuffer to update and compute
-      neighborRangingTable->Tr = candidate.Tr;
-      neighborRangingTable->Rr = candidate.Rr;
-
-      if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
-          && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
-          && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-        int16_t distance = computeDistance(neighborRangingTable);
+    Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer,
+                                                                                     neighborRangingTable->Tf);
+    /* try to compute distance */
+    if (Tr_Rr_Candidate.Tr.timestamp.full && Tr_Rr_Candidate.Rr.timestamp.full &&
+        neighborRangingTable->Tp.timestamp.full && neighborRangingTable->Rp.timestamp.full &&
+        neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full) {
+      int16_t distance = computeDistance(neighborRangingTable->Tp, neighborRangingTable->Rp,
+                                         Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
+                                         neighborRangingTable->Tf, neighborRangingTable->Rf);
+      if (distance > 0) {
         neighborRangingTable->distance = distance;
         distanceTowards[neighborRangingTable->neighborAddress] = distance;
+      } else {
+        DEBUG_PRINT("distance is not updated since some error occurs");
       }
     }
-    if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-      rangingTableShift(neighborRangingTable);
-    }
-  } else {
-    neighborRangingTable->Rr = neighborRangingTable->Re;
   }
-  if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+
+  /* Tp <- Tf, Rp <- Rf */
+  if (neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full) {
     rangingTableShift(neighborRangingTable);
   }
 
+  /* update Rr */
+  neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr = neighborRangingTable->Re;
+
   /* update expiration time */
   neighborRangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
+
+  neighborRangingTable->state = RECEIVED;
 }
 
 static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
@@ -332,8 +331,6 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
       table->state = TRANSMITTED;
       rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
     }
-    rangingTableBufferUpdateSeqNumber(&table->TrRrBuffer, curSeqNumber);
-    rangingTableBufferShift(&table->TrRrBuffer);
   }
   /* generate message header */
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
