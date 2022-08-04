@@ -56,6 +56,8 @@ The implementation must handle
 #include "libdw1000.h"
 #include "mac.h"
 
+#include "param.h"
+
 #define DEBUG_MODULE "TDOA3"
 #include "debug.h"
 #include "cfassert.h"
@@ -98,6 +100,7 @@ typedef struct {
 static lpsLppShortPacket_t lppPacket;
 
 static bool rangingOk;
+static float stdDev = TDOA_ENGINE_MEASUREMENT_NOISE_STD;
 
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
@@ -259,6 +262,9 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 }
 
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
+  // Override the default standard deviation set by the TDoA engine.
+  tdoaMeasurement->stdDev = stdDev;
+
   estimatorEnqueueTDOA(tdoaMeasurement);
 
   #ifdef CONFIG_DECK_LOCO_2D_POSITION
@@ -320,3 +326,11 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .getAnchorIdList = getAnchorIdList,
   .getActiveAnchorIdList = getActiveAnchorIdList,
 };
+
+PARAM_GROUP_START(tdoa3)
+/**
+ * @brief The measurement noise to use when sending TDoA measurements to the estimator.
+ */
+PARAM_ADD(PARAM_FLOAT, stddev, &stdDev)
+
+PARAM_GROUP_STOP(tdoa3)
