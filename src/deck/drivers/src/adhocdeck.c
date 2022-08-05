@@ -121,12 +121,21 @@ static int uwbInit() {
   while (!dwt_checkidlerc()) {
 
   }
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  while (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
+    vTaskDelay(100);
+  }
+  while (dwt_configure(&config) == DWT_ERROR) {
+    vTaskDelay(100);
+  }
+#else
   if (dwt_initialise(DWT_DW_INIT) == DWT_ERROR) {
     return DWT_ERROR;
   }
   if (dwt_configure(&config) == DWT_ERROR) {
     return DWT_ERROR;
   }
+#endif
   dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
   /* Configure the TX spectrum parameters (power, PG delay and PG count) */
