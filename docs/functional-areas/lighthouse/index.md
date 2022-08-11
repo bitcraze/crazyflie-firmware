@@ -17,3 +17,4 @@ Development related pages:
  * [Terminology and definitions](/docs/functional-areas/lighthouse/terminology_definitions.md)
  * [Kalman estimator measurement model](/docs/functional-areas/lighthouse/kalman_measurement_model.md)
  * [Converting between LH1 and LH2 angles](/docs/functional-areas/lighthouse/angle_conversion.md)
+ * [More than 4 V2 base stations](/docs/functional-areas/lighthouse/multi_base_stations.md)
