@@ -179,16 +179,23 @@ void lighthouseCoreLedTimer()
 
 static void lighthouseUpdateSystemType() {
   // Switch to new pulse processor
-  switch(systemType) {
-    case lighthouseBsTypeV1:
-      pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
-      break;
-    case lighthouseBsTypeV2:
-      pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
-      break;
-    default:
-      // Do nothing if the type is not in range, stay on the previous processor
-      return;
+  switch (systemType)
+  {
+  case lighthouseBsTypeV1:
+    pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
+    baseStationAvailabledMap = 3;
+
+    break;
+  case lighthouseBsTypeV2:
+    pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
+    for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++)
+    {
+      modifyBit(&baseStationAvailabledMap, i, true);
+    }
+    break;
+  default:
+    // Do nothing if the type is not in range, stay on the previous processor
+    return;
   }
 
   if (previousSystemType != systemType) {
