@@ -52,7 +52,7 @@
 #define MCU_ID_ADDRESS          0x1FFF7A10
 #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
 #ifndef FREERTOS_HEAP_SIZE
-  #define FREERTOS_HEAP_SIZE      55000
+  #define FREERTOS_HEAP_SIZE      60000
 #endif
 #define FREERTOS_MIN_STACK_SIZE 150       // M4-FPU register setup is bigger so stack needs to be bigger
 #define FREERTOS_MCU_CLOCK_HZ   168000000

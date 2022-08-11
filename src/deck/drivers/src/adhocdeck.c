@@ -179,6 +179,10 @@ static void uwbTxTask(void *parameters) {
     vTaskDelay(500);
   }
 #endif
+  while (txQueue == 0) {
+    DEBUG_PRINT("txQueue is not init\n");
+    vTaskDelay(M2T(1000));
+  }
 
   Ranging_Message_t packetCache;
 
@@ -361,7 +365,10 @@ static void uwbRxTask(void *parameters) {
     vTaskDelay(500);
   }
 #endif
-
+  while (rxQueue == 0) {
+    DEBUG_PRINT("rxQueue is not init\n");
+    vTaskDelay(M2T(1000));
+  }
   Ranging_Message_With_Timestamp_t rxPacketCache;
 
   while (true) {
@@ -378,6 +385,10 @@ static void uwbRangingTask(void *parameters) {
     vTaskDelay(500);
   }
 #endif
+  while (txQueue == 0) {
+    DEBUG_PRINT("txQueue is not init\n");
+    vTaskDelay(M2T(1000));
+  }
   /* velocity log variable id */
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
@@ -405,6 +416,9 @@ static void uwbTask(void *parameters) {
         xSemaphoreTake(algoSemaphore, portMAX_DELAY);
         dwt_isr();
         xSemaphoreGive(algoSemaphore);
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+        vTaskDelay(M2T(5)); // TODO check if necessary since increasing FREERTOS_HEAP_SIZE
+#endif
       } while (digitalRead(GPIO_PIN_IRQ) != 0);
     }
   }
