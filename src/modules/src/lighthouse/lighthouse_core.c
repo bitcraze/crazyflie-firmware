@@ -859,6 +859,8 @@ PARAM_ADD_CORE(PARAM_UINT8, systemType, &systemType)
  * @brief Bit field that indicates which base stations that are supported by the system
  *
  * The lowest bit maps to base station channel 1 and the highest to channel 16.
+ * 
+ * Deprecated since 2022-08-15
  */
 PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, bsAvailable, &baseStationAvailabledMap)
 
