@@ -87,6 +87,7 @@ static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS] = {&bs0Rate, &bs1Rate};
 
 // A bitmap that indicates which base stations that are available
+static uint16_t baseStationAvailabledMapWs;
 static uint16_t baseStationAvailabledMap;
 
 // A bitmap that indicates which base staions that are received
@@ -183,14 +184,14 @@ static void lighthouseUpdateSystemType() {
   {
   case lighthouseBsTypeV1:
     pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
-    baseStationAvailabledMap = 3;
+    baseStationAvailabledMapWs = 3;
 
     break;
   case lighthouseBsTypeV2:
     pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
     for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++)
     {
-      modifyBit(&baseStationAvailabledMap, i, true);
+      modifyBit(&baseStationAvailabledMapWs, i, true);
     }
     break;
   default:
@@ -442,6 +443,8 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
 
 static void updateSystemStatus(const uint32_t now_ms) {
   if (now_ms > nextUpdateTimeOfSystemStatus) {
+    baseStationAvailabledMap = baseStationAvailabledMapWs;
+
     baseStationReceivedMap = baseStationReceivedMapWs;
     baseStationReceivedMapWs = 0;
 
@@ -783,6 +786,13 @@ LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
 LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
+
+/**
+ * @brief Bit field indicating which base stations that are available
+ *
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
+ */
+LOG_ADD_CORE(LOG_UINT16, bsAvailable, &baseStationAvailabledMap)
 
 /**
  * @brief Bit field indicating which base stations that are received by the lighthouse deck
