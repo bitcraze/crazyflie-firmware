@@ -22,15 +22,4 @@ initiated from a client.
 
 ## Memory types and mappings
 
-* [EEPROM - MEM_TYPE_EEPROM](./MEM_TYPE_EEPROM.md)
-* [One wire memory - MEM_TYPE_OW](MEM_TYPE_OW.md)
-* [LED ring - MEM_TYPE_LED12](MEM_TYPE_LED12.md)
-* [Loco Positioning System 1 - MEM_TYPE_LOCO](MEM_TYPE_LOCO.md)
-* [Trajectory - MEM_TYPE_TRAJ](MEM_TYPE_TRAJ.md)
-* [Loco Positioning System 2 - MEM_TYPE_LOCO2](MEM_TYPE_LOCO2.md)
-* [Lighthouse - MEM_TYPE_LH](MEM_TYPE_LH.md)
-* [Test - MEM_TYPE_TESTER](MEM_TYPE_TESTER.md)
-* [uSD card - MEM_TYPE_USD](MEM_TYPE_USD.md)
-* [LED ring timing - MEM_TYPE_LEDMEM](MEM_TYPE_LEDMEM.md)
-* [Generic application memory - MEM_TYPE_APP](MEM_TYPE_APP.md)
-* [Deck memory - MEM_TYPE_DECK_MEM](MEM_TYPE_DECK_MEM.md)
+{% sub_page_menu %}
