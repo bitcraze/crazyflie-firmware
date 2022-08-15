@@ -186,7 +186,7 @@ config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
 config DECK_LIGHTHOUSE_MAX_N_BS
   int "Max number of base stations"
   depends on DECK_LIGHTHOUSE
-  default 2
+  default 4
   range 2 16
   help
       Set the max number of base stations supported. NOTE: This is only
