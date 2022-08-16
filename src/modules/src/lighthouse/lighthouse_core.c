@@ -281,6 +281,22 @@ void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_
   uart1SendData(2, commandBuffer);
 }
 
+bool findOtherBaseStation(const pulseProcessorResult_t* angles, const int baseStation, int* otherBaseStation) {
+  for (int candidate = baseStation + 1; candidate != baseStation; candidate++) {
+    if (candidate >= CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
+      candidate = 0;
+    }
+
+    // Only looking at sensor 0, assuming this is enough
+    if (angles->sensorMeasurementsLh1[0].baseStatonMeasurements[candidate].validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      *otherBaseStation = candidate;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 // Method used to estimate position
 // 0 = Position calculated outside the estimator using intersection point of beams.
@@ -298,8 +314,25 @@ static uint8_t estimationMethod = 1;
 static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   pulseProcessorClearOutdated(appState, angles, basestation);
 
-  if (basestation == 1) {
-    int otherBaseStation = 0;
+  int otherBaseStation = 0;
+  bool foundPair = false;
+
+  switch (systemType) {
+    case lighthouseBsTypeV1:
+      if (basestation == 1) {
+        otherBaseStation = 0;
+        foundPair = true;
+      }
+      break;
+    case lighthouseBsTypeV2:
+      foundPair = findOtherBaseStation(angles, basestation, &otherBaseStation);
+      break;
+    default:
+      // Nothing here
+      break;
+  }
+
+  if (foundPair) {
     STATS_CNT_RATE_EVENT(&cycleRate);
 
     lighthousePositionEstimatePoseCrossingBeams(appState, angles, basestation, otherBaseStation);
