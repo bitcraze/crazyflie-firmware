@@ -102,15 +102,15 @@ static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, ve
     return true;
 }
 
-bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t baseStations[2], float angles1[2], float angles2[2], vec3d position, float *position_delta)
+bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t* geo1, const baseStationGeometry_t* geo2, float angles1[2], float angles2[2], vec3d position, float *position_delta)
 {
     static vec3d ray1, ray2, origin1, origin2;
 
-    lighthouseGeometryGetRay(&baseStations[0], angles1[0], angles1[1], ray1);
-    lighthouseGeometryGetBaseStationPosition(&baseStations[0], origin1);
+    lighthouseGeometryGetRay(geo1, angles1[0], angles1[1], ray1);
+    lighthouseGeometryGetBaseStationPosition(geo1, origin1);
 
-    lighthouseGeometryGetRay(&baseStations[1], angles2[0], angles2[1], ray2);
-    lighthouseGeometryGetBaseStationPosition(&baseStations[1], origin2);
+    lighthouseGeometryGetRay(geo2, angles2[0], angles2[1], ray2);
+    lighthouseGeometryGetBaseStationPosition(geo2, origin2);
 
     return intersect_lines(origin1, ray1, origin2, ray2, position, position_delta);
 }

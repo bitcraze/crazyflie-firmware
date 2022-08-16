@@ -222,20 +222,23 @@ static vec3d position;
 static vec3d positionLog;
 static float deltaLog;
 
-static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
+static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation1, int baseStation2) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   uint8_t sensorsUsed = 0;
   float deltaSum = 0;
   float delta;
 
+  const baseStationGeometry_t* geo1 = &state->bsGeometry[baseStation1];
+  const baseStationGeometry_t* geo2 = &state->bsGeometry[baseStation2];
+
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       // LH2 angles are converted to LH1 angles, so it is OK to use sensorMeasurementsLh1
-      pulseProcessorBaseStationMeasuremnt_t* bs0Measurement = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[0];
-      pulseProcessorBaseStationMeasuremnt_t* bs1Measurement = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[1];
+      pulseProcessorBaseStationMeasuremnt_t* measurement1 = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation1];
+      pulseProcessorBaseStationMeasuremnt_t* measurement2 = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation2];
 
-      if (bs0Measurement->validCount == PULSE_PROCESSOR_N_SWEEPS && bs1Measurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-        lighthouseGeometryGetPositionFromRayIntersection(state->bsGeometry, bs0Measurement->correctedAngles, bs1Measurement->correctedAngles, position, &delta);
+      if (measurement1->validCount == PULSE_PROCESSOR_N_SWEEPS && measurement2->validCount == PULSE_PROCESSOR_N_SWEEPS) {
+        lighthouseGeometryGetPositionFromRayIntersection(geo1, geo2, measurement1->correctedAngles, measurement2->correctedAngles, position, &delta);
 
         deltaSum += delta;
 
@@ -449,10 +452,10 @@ static void estimateYaw(const pulseProcessor_t *state, pulseProcessorResult_t* a
   }
 }
 
-void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
-  if (state->bsGeometry[0].valid && state->bsGeometry[1].valid) {
-    estimatePositionCrossingBeams(state, angles, baseStation);
-    estimateYaw(state, angles, baseStation);
+void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation1, int baseStation2) {
+  if (state->bsGeometry[baseStation1].valid && state->bsGeometry[baseStation2].valid) {
+    estimatePositionCrossingBeams(state, angles, baseStation1, baseStation2);
+    estimateYaw(state, angles, baseStation1);
   } else {
     deltaLog = 0;
   }
