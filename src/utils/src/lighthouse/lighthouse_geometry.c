@@ -55,14 +55,11 @@ static void vec_add(const vec3d a, const vec3d b, vec3d r) {
 
 static float vec_length(const vec3d vec) {
     float pow = vec_dot(vec, vec);
-
-    float res;
-    arm_sqrt_f32(pow, &res);
-    return res;
+    return arm_sqrt(pow);
 }
 
 static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, vec3d res, float *dist) {
-    // Algoritm: http://geomalgorithms.com/a07-_distance.html#Distance-between-Lines
+    // Algorithm: http://geomalgorithms.com/a07-_distance.html#Distance-between-Lines
 
     vec3d w0 = {};
     arm_sub_f32(orig1, orig2, w0, vec3d_size);
@@ -75,8 +72,9 @@ static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, ve
     arm_dot_prod_f32(vec2, w0, vec3d_size, &e);
 
     float denom = a * c - b * b;
-    if (fabsf(denom) < 1e-5f)
+    if (fabsf(denom) < 1e-5f) {
         return false;
+    }
 
     // Closest point to 2nd line on 1st line
     float t1 = (b * e - c * d) / denom;

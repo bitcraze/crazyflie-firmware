@@ -234,11 +234,11 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
       // LH2 angles are converted to LH1 angles, so it is OK to use sensorMeasurementsLh1
-      pulseProcessorBaseStationMeasuremnt_t* measurement1 = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation1];
-      pulseProcessorBaseStationMeasuremnt_t* measurement2 = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation2];
+    pulseProcessorBaseStationMeasuremnt_t* measurement1 = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation1];
+    pulseProcessorBaseStationMeasuremnt_t* measurement2 = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[baseStation2];
 
-      if (measurement1->validCount == PULSE_PROCESSOR_N_SWEEPS && measurement2->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-        lighthouseGeometryGetPositionFromRayIntersection(geo1, geo2, measurement1->correctedAngles, measurement2->correctedAngles, position, &delta);
+    if (measurement1->validCount == PULSE_PROCESSOR_N_SWEEPS && measurement2->validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      if (lighthouseGeometryGetPositionFromRayIntersection(geo1, geo2, measurement1->correctedAngles, measurement2->correctedAngles, position, &delta)) {
 
         deltaSum += delta;
 
@@ -248,6 +248,7 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
         sensorsUsed++;
 
         STATS_CNT_RATE_EVENT(&positionRate);
+      }
     }
   }
 
