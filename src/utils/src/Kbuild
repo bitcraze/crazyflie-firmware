@@ -33,11 +33,6 @@ obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor.o
 obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor_v1.o
 obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor_v2.o
 
-obj-y += p2pDTR/DTR_timers.o
-obj-y += p2pDTR/p2p_interface.o
-obj-y += p2pDTR/queueing.o
-obj-y += p2pDTR/token_ring.o
-
 obj-y += num.o
 obj-y += rateSupervisor.o
 obj-y += sleepus.o
