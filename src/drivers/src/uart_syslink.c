@@ -112,7 +112,7 @@ void uartslkDmaInit(void)
   DMA_InitStructureShareTX.DMA_Channel = UARTSLK_DMA_TX_CH;
 
   NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_DMA_TX_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SYSLINK_DMA_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -137,7 +137,7 @@ void uartslkDmaInit(void)
   DMA_Init(UARTSLK_DMA_RX_STREAM, &DMA_InitStructureShareRX);
 
   NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_DMA_RX_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SYSLINK_DMA_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -199,7 +199,7 @@ void uartslkInit(void)
 
   // Configure Rx buffer not empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UARTSLK_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SYSLINK_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SYSLINK_UART_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -606,4 +606,3 @@ void __attribute__((used)) DMA2_Stream1_IRQHandler(void)
   uartslkDmaRXIsr();
 }
 #endif
-

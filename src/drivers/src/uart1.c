@@ -99,7 +99,7 @@ static void uart1DmaInit(void)
   DMA_InitStructureShare.DMA_Channel = UART1_DMA_CH;
 
   NVIC_InitStructure.NVIC_IRQChannel = UART1_DMA_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART1_DMA_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -164,7 +164,7 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   uart1DmaInit();
 
   NVIC_InitStructure.NVIC_IRQChannel = UART1_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART1_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);

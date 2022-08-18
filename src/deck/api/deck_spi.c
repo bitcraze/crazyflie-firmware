@@ -181,7 +181,7 @@ static void spiDMAInit()
   DMA_Init(SPI_RX_DMA_STREAM, &DMA_InitStructure);
 
   // Configure interrupts
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SPI_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 

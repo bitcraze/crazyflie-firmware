@@ -135,7 +135,7 @@ void ws2812Init(void)
 	DMA_Init(DMA1_Stream5, &DMA_InitStructure);
 
   NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream5_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_WS2812_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
