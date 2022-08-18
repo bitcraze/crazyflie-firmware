@@ -40,7 +40,7 @@
 void sendDTRpacket(const DTRpacket* packet) ;
 
 // Puts the DTR packet in the queue for the token ring to pick up.
-void DTRp2pcallbackHandler(P2PPacket *p);
+void DTRp2pIncomingHandler(P2PPacket *p);
 
 void feedDTRPacketToProtocol(DTRpacket *incoming_DTR);
 

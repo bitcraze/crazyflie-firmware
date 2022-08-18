@@ -34,7 +34,7 @@ static P2PPacket p2p_TXpacket;
 static DTRpacket prev_received = {0};
 
 void sendDTRpacket(const DTRpacket* packet) {
-    p2p_TXpacket.port=0x00;
+    p2p_TXpacket.port = DTR_P2P_PORT;
 
     memcpy(&p2p_TXpacket.data[0], packet, packet->packetSize);
     p2p_TXpacket.size = packet->packetSize;
@@ -42,7 +42,10 @@ void sendDTRpacket(const DTRpacket* packet) {
     radiolinkSendP2PPacketBroadcast(&p2p_TXpacket);
 }
 
-void DTRp2pcallbackHandler(P2PPacket *p){
+void DTRp2pIncomingHandler(P2PPacket *p){
+    if (p->port != DTR_P2P_PORT  ){
+        return;
+    }
 
     DTRpacket incoming_DTR;	
 

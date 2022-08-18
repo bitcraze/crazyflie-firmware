@@ -46,6 +46,7 @@
 #include "token_ring.h"
 #include "p2p_interface.h"
 
+#define INTERESTING_DATA 104
 
 static uint8_t my_id;
 
@@ -75,13 +76,21 @@ void loadTXPacketsForTesting(void){
 	}
 }
 
+void p2pcallbackHandler(P2PPacket *p){
+	// DEBUG_PRINT("P2P callback at port: %d\n", p->port);
+	// If the packet is a DTR service packet, then the handler will handle it.
+    DTRp2pIncomingHandler(p);
+
+	// Then write your own code below ...
+}
+
 void appMain(){
 	my_id = get_self_id();
 	EnableDTRProtocol();
 	vTaskDelay(2000);
 
 	// Register the callback function so that the CF can receive packets as well.
-	p2pRegisterCB(DTRp2pcallbackHandler);
+	p2pRegisterCB(p2pcallbackHandler);
 
 	if (my_id == 0){
 		DTR_DEBUG_PRINT("Starting communication...\n");
@@ -97,7 +106,7 @@ void appMain(){
 		DEBUG_PRINT("Received data from %d : %d  --> Time elapsed: %lu msec\n",received_packet.source_id, received_packet.data[0],dt);
 		start = T2M(xTaskGetTickCount());
 
-		if (my_id == 1 && received_packet.data[0] == 104){
+		if (my_id == 1 && received_packet.data[0] == INTERESTING_DATA){
 			received_packet.source_id = my_id;
 			received_packet.data[0] = 123;
 			DEBUG_PRINT("Sending response...\n");
@@ -105,5 +114,3 @@ void appMain(){
 		}
 	}
 }
-
-

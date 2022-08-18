@@ -64,7 +64,7 @@
 
 #define NETWORK_SIZE 4
 #define PROTOCOL_TIMEOUT_MS 4 * 1000.0f // ms 
-
+#define DTR_P2P_PORT 15 // between 0 and 15(4 bits)
 
 void initRadio(uint8_t networkSize, uint8_t device_id);
 
