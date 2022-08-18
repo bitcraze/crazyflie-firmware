@@ -48,5 +48,5 @@ void lighthousePositionSetGeometryData(const uint8_t baseStation, const baseStat
  */
 void lighthousePositionCalibrationDataWritten(const uint8_t baseStation);
 
-void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
+void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation1, int baseStation2);
 void lighthousePositionEstimatePoseSweeps(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
