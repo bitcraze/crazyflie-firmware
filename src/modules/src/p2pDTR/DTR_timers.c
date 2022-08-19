@@ -35,14 +35,18 @@
 #include "DTR_timers.h"
 
 static xTimerHandle sender_timer;
-// static xTimerHandle protocol_timer;
+static TaskHandle_t DTRtaskHandler = NULL;
 
 static bool sender_timer_running = false;
 
 static char type_to_spam[15];
 
-void startDTRProtocol(void){
-	xTaskCreate(DTRInterruptHandler, "DTR_P2P", DTR_PROTOCOL_TASK_STACK_SIZE, NULL,DTR_PROTOCOL_TASK_PRIORITY, NULL);
+void startDTRProtocolTask(void){
+	xTaskCreate(DTRInterruptHandler, "DTR_P2P", DTR_PROTOCOL_TASK_STACK_SIZE, NULL,DTR_PROTOCOL_TASK_PRIORITY, &DTRtaskHandler);
+}
+
+void stopDTRProtocolTask(void){
+	vTaskDelete(DTRtaskHandler);
 }
 
 void initDTRSenderTimer(void) {

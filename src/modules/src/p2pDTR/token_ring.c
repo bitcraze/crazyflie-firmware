@@ -141,7 +141,7 @@ static void resetProtocol(void){
 	DTR_DEBUG_PRINT("\nResetting protocol\n");
 	rx_state = RX_IDLE;
 	protocol_timeout_ms = T2M(xTaskGetTickCount()) + PROTOCOL_TIMEOUT_MS;
-	emptyQueues(); // Maybe not all queues, but only the RX_SRV since the data are going to be lost saved in DATA queues 
+	emptyDTRQueues(); // Maybe not all queues, but only the RX_SRV since the data are going to be lost saved in DATA queues 
 	shutdownDTRSenderTimer();
 	last_packet_source_id = 255;
 }
@@ -158,7 +158,7 @@ void DTRInterruptHandler(void *param) {
 	bool new_packet_received;
 
 	DEBUG_PRINT("\nDTRInterruptHandler Task called...\n");
-	while ( receivePacketWaitUntil(&_rxPk, 	RX_SRV_Q, PROTOCOL_TIMEOUT_MS, &new_packet_received) ){
+	while ( receiveDTRPacketWaitUntil(&_rxPk, 	RX_SRV_Q, PROTOCOL_TIMEOUT_MS, &new_packet_received) ){
 			if (!new_packet_received) {
 				DTR_DEBUG_PRINT("\nPROTOCOL TIMEOUT!\n");
 				if (my_id != 0){
@@ -174,7 +174,7 @@ void DTRInterruptHandler(void *param) {
 
 			DTR_DEBUG_PRINT("===============================================================\n");
 			DTR_DEBUG_PRINT("=\n");
-			DTR_DEBUG_PRINT("TX_DATA Q Empty: %d\n", !isPacketInQueueAvailable(TX_DATA_Q));
+			DTR_DEBUG_PRINT("TX_DATA Q Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
 
 
 			DTR_DEBUG_PRINT("rx_state: %s\n", getRXState(rx_state));
@@ -195,7 +195,7 @@ void DTRInterruptHandler(void *param) {
 							last_packet_source_id = rxPk->source_id;
 							/* if packet is relevant and receiver queue is not full, then
 							* push packet in the queue and prepare queue for next packet. */
-							bool queueFull = insertPacketToQueue(rxPk, RX_DATA_Q);
+							bool queueFull = insertDTRPacketToQueue(rxPk, RX_DATA_Q);
 							if (queueFull){
 								radioMetaInfo.failedRxQueueFull++;
 							}
@@ -243,7 +243,7 @@ void DTRInterruptHandler(void *param) {
 						 * send it, otherwise forward the token to the next node. */
 						
 						DTRpacket _txPk;//TODO: bad implementation, should be fixed
-						if (getPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME))) {
+						if (getDTRPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME))) {
 							txPk = &_txPk;
 							DTR_DEBUG_PRINT("TX DATA Packet exists (%d), sending it\n",txPk->data[0]);
 							if(txPk->allToAllFlag) {
@@ -252,9 +252,9 @@ void DTRInterruptHandler(void *param) {
 							if (txPk->target_id >= MAX_NETWORK_SIZE) {
 								DTR_DEBUG_PRINT("Releasing TX DATA Packet because target > default:\n");
 
-								DTR_DEBUG_PRINT("Is Queue Empty: %d\n", !isPacketInQueueAvailable(TX_DATA_Q));
+								DTR_DEBUG_PRINT("Is Queue Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
 								
-								releasePacketFromQueue(TX_DATA_Q);
+								releaseDTRPacketFromQueue(TX_DATA_Q);
 								txPk = &servicePk;
 								txPk->message_type = TOKEN_FRAME;
 								tx_state = TX_TOKEN;
@@ -299,7 +299,7 @@ void DTRInterruptHandler(void *param) {
 
 						//TODO: bad implementation, should be fixed
 						DTRpacket _txPk;
-						getPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME));
+						getDTRPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME));
 						txPk = &_txPk;
 						
 						next_target_id = (txPk->target_id + send_data_to_peer_counter + 1) % MAX_NETWORK_SIZE;
@@ -309,9 +309,9 @@ void DTRInterruptHandler(void *param) {
 							DTR_DEBUG_PRINT("Releasing TX DATA:\n");
 							// printDTRPacket(txPk);
 
-							DTR_DEBUG_PRINT("Is Q Empty: %d\n", !isPacketInQueueAvailable(TX_DATA_Q));
+							DTR_DEBUG_PRINT("Is Q Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
 
-							releasePacketFromQueue(TX_DATA_Q);
+							releaseDTRPacketFromQueue(TX_DATA_Q);
 							txPk = &servicePk;
 							txPk->message_type = TOKEN_FRAME;
 							tx_state = TX_TOKEN;
@@ -490,7 +490,7 @@ uint8_t get_self_id(void){
 
 void EnableDTRProtocol(void){
 	DTR_DEBUG_PRINT("Initializing queues ...\n");
-	queueing_init();
+	DTRqueueingInit();
 
 	DTR_DEBUG_PRINT("Initializing token ring ...\n");
 	initTokenRing(NETWORK_SIZE, my_id);
@@ -499,7 +499,21 @@ void EnableDTRProtocol(void){
 	initDTRSenderTimer();
 
 	DTR_DEBUG_PRINT("Starting protocol timer ...\n");
-	startDTRProtocol();
+	startDTRProtocolTask();
+}
+
+void DisableDTRProtocol(void){
+	DTR_DEBUG_PRINT("Stopping protocol timer ...\n");
+	stopDTRProtocolTask();
+	
+	DTR_DEBUG_PRINT("Stopping DTR Sender ...\n");
+	shutdownDTRSenderTimer();
+	
+	DTR_DEBUG_PRINT("Resetting token ring ...\n");
+	resetProtocol();
+	
+	DTR_DEBUG_PRINT("Stopping queues ...\n");
+	emptyDTRQueues();
 }
 
 

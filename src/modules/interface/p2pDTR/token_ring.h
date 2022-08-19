@@ -97,4 +97,6 @@ uint8_t get_self_id(void);
 // Starts the task of the Dynamic Token Ring Protocol (DTR) and initializes the protocol
 void EnableDTRProtocol(void);
 
+void DisableDTRProtocol(void);
+
 #endif /* SRC_RADIO_RADIO_H_ */

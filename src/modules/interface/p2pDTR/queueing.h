@@ -56,25 +56,25 @@ typedef enum queue_names_e {
 	RX_DATA_Q,
 } DTRQueue_Names;
 
-void queueing_init();
+void DTRqueueingInit();
 
 
-bool isPacketInQueueAvailable(DTRQueue_Names qName);
+bool isDTRPacketInQueueAvailable(DTRQueue_Names qName);
 
-uint8_t getNumberOfPacketsInQueue(DTRQueue_Names qName);
+uint8_t getNumberOfDTRPacketsInQueue(DTRQueue_Names qName);
 
-bool getPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout);
+bool getDTRPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout);
 
 // Blocks to wait for a packet to be received for a given time
 // new_packet_received --> True if a new packet has been received and False if the timeout has been reached
-bool receivePacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received);
+bool receiveDTRPacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received);
 
-bool insertPacketToQueue(DTRpacket *packet, DTRQueue_Names qName);
+bool insertDTRPacketToQueue(DTRpacket *packet, DTRQueue_Names qName);
 
-bool releasePacketFromQueue(DTRQueue_Names qName);
+bool releaseDTRPacketFromQueue(DTRQueue_Names qName);
 
-void emptyQueue(DTRQueue_Names qName);
+void emptyDTRQueue(DTRQueue_Names qName);
 
-void emptyQueues(void);
+void emptyDTRQueues(void);
 
 #endif /* _QUEUEING_H_ */

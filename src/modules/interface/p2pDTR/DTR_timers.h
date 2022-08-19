@@ -53,7 +53,9 @@
 #define DTR_PROTOCOL_TASK_PRIORITY 1 //Higher number higher priority
 
 // DTR protocol Task
-void startDTRProtocol(void);
+void startDTRProtocolTask(void);
+
+void stopDTRProtocolTask(void);
 
 // ================ DTR sender timer ==================
 void initDTRSenderTimer(void);
