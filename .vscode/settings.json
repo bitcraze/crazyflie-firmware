@@ -5,13 +5,6 @@
         "**/bower_components": true
     },
     "files.associations": {
-        "bootloader.h": "c",
-        "token_ring.h": "c",
-        "p2p_interface.h": "c"
-    },
-    "cSpell.words": [
-        "Bitcraze",
-        "pcallback",
-        "Zosimidis"
-    ]
+        "bootloader.h": "c"
+    }
 }
