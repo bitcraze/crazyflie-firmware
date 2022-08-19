@@ -54,7 +54,7 @@ static xQueueHandle *getQueueHandler(DTRQueue_Names qName){
 			return &RX_DATA_queue;
 		default:
 			// The q enum is not valid
-			DEBUG_PRINT("Invalid queue name\n");
+			DEBUG_PRINT("Invalid DTR queue name\n");
 			ASSERT(0);
 			return NULL;
 	}
@@ -105,7 +105,7 @@ bool getDTRPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t tim
 		break;
 
 	default:
-		DEBUG_PRINT("Invalid queue name\n");
+		DEBUG_PRINT("Invalid DTR queue name\n");
 		received_success = false;
 		break;
 	}

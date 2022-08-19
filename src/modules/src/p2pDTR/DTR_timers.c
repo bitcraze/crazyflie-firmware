@@ -59,7 +59,7 @@ void shutdownDTRSenderTimer(void) {
 		DTR_DEBUG_PRINT("Stopped spamming messages\n");
 		sender_timer_running = false;
 	}else{
-		DEBUG_PRINT("Radio timer not running\n");
+		DTR_DEBUG_PRINT("Radio timer not running\n");
 	}
 }
 

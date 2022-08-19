@@ -49,7 +49,7 @@
 #define INTERESTING_DATA 104
 
 // define the ids of each node in the network
-#define NETWORK_TOPOLOGY {.size = 2, .devices_ids = {1, 0, 2, 3} } // Maximum size of the network is 20 by default
+#define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {1, 0, 2, 3} } // Maximum size of network is 20 by default
 
 static uint8_t my_id;
 static DTRtopology topology = NETWORK_TOPOLOGY;
@@ -102,7 +102,7 @@ void appMain(){
 	// Register the callback function so that the CF can receive packets as well.
 	p2pRegisterCB(p2pcallbackHandler);
 
-	if (my_id == networkTopology.devices_ids[0]){
+	if (my_id == topology.devices_ids[0]){
 		DTR_DEBUG_PRINT("Starting communication...\n");
 		startRadioCommunication();
 		loadTXPacketsForTesting();

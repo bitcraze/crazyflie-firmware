@@ -199,7 +199,7 @@ void DTRInterruptHandler(void *param) {
 	protocol_timeout_ms = T2M(xTaskGetTickCount()) + PROTOCOL_TIMEOUT_MS;
 	bool new_packet_received;
 
-	DEBUG_PRINT("\nDTRInterruptHandler Task called...\n");
+	DTR_DEBUG_PRINT("\nDTRInterruptHandler Task called...\n");
 	while ( receiveDTRPacketWaitUntil(&_rxPk, 	RX_SRV_Q, PROTOCOL_TIMEOUT_MS, &new_packet_received) ){
 			if (!new_packet_received) {
 				DTR_DEBUG_PRINT("\nPROTOCOL TIMEOUT!\n");
@@ -292,9 +292,8 @@ void DTRInterruptHandler(void *param) {
 								txPk->target_id = next_node_id;
 							}
 							if (!IdExistsInTopology(txPk->target_id)) {
-								DEBUG_PRINT("Releasing TX DATA Packet because target > default:\n");
-
-								DEBUG_PRINT("Is Queue Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
+								DEBUG_PRINT("Releasing DTR TX packet,target is not in topology.\n");
+								DTR_DEBUG_PRINT("Is Queue Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
 								
 								releaseDTRPacketFromQueue(TX_DATA_Q);
 								txPk = &servicePk;
