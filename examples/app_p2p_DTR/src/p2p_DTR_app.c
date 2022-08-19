@@ -116,7 +116,7 @@ void appMain(){
 		DEBUG_PRINT("Received data from %d : %d  --> Time elapsed: %lu msec\n",received_packet.source_id, received_packet.data[0],dt);
 		start = T2M(xTaskGetTickCount());
 
-		if (my_id == 1 && received_packet.data[0] == INTERESTING_DATA){
+		if (my_id == topology.devices_ids[1] && received_packet.data[0] == INTERESTING_DATA){
 			received_packet.source_id = my_id;
 			received_packet.data[0] = 123;
 			DEBUG_PRINT("Sending response...\n");
