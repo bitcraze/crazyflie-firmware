@@ -48,7 +48,11 @@
 
 #define INTERESTING_DATA 104
 
+// define the ids of each node in the network
+#define NETWORK_TOPOLOGY {.size = 2, .devices_ids = {1, 0, 2, 3} } // Maximum size of the network is 20 by default
+
 static uint8_t my_id;
+static DTRtopology topology = NETWORK_TOPOLOGY;
 
 void loadTXPacketsForTesting(void){
 	DTRpacket  testSignal;
@@ -86,7 +90,13 @@ void p2pcallbackHandler(P2PPacket *p){
 
 void appMain(){
 	my_id = get_self_id();
-	EnableDTRProtocol();
+	DEBUG_PRINT("Network Topology: %d", topology.size);
+	for (int i = 0; i < topology.size; i++){
+		DEBUG_PRINT("%d ", topology.devices_ids[i]);
+	}
+	DEBUG_PRINT("\n");
+
+	EnableDTRProtocol(topology);
 	vTaskDelay(2000);
 
 	// Register the callback function so that the CF can receive packets as well.

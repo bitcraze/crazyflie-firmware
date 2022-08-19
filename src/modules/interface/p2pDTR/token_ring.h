@@ -52,7 +52,8 @@
 // #define UNUSED(...) ((void)sizeof((_Bool[]){__VA_ARGS__})); //Used to silence compiler warnings about unused parameters
 #define UNUSED(...) ; //Used to silence compiler warnings about unused parameters
 
-// #define DEBUG_DTR_PROTOCOL // Enable debug prints for the DTR protocol (WARNING: May cause problems )
+// Enable debug prints for the DTR protocol (WARNING: May cause problems )
+// #define DEBUG_DTR_PROTOCOL
 
 #ifdef DEBUG_DTR_PROTOCOL
     #define DTR_DEBUG_PRINT(fmt, ... ) DEBUG_PRINT(DEBUG_FMT(fmt), ##__VA_ARGS__)
@@ -62,15 +63,10 @@
 #endif
 
 
-#define NETWORK_SIZE 4
 #define PROTOCOL_TIMEOUT_MS 4 * 1000.0f // ms 
 #define DTR_P2P_PORT 15 // between 0 and 15(4 bits)
 
-void initRadio(uint8_t networkSize, uint8_t device_id);
-
-void initTokenRing(uint8_t networkSize, uint8_t device_id);
-
-void setDeviceRadioAddress (uint8_t radio_address);
+void initTokenRing(DTRtopology topology, uint8_t device_id);
 
 uint8_t getDeviceRadioAddress();
 
@@ -95,7 +91,7 @@ const char* getTXState(uint8_t tx_state);
 uint8_t get_self_id(void);
 
 // Starts the task of the Dynamic Token Ring Protocol (DTR) and initializes the protocol
-void EnableDTRProtocol(void);
+void EnableDTRProtocol(DTRtopology topology);
 
 void DisableDTRProtocol(void);
 

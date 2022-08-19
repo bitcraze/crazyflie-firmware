@@ -39,7 +39,7 @@
 #include "stdbool.h"
 #include "radiolink.h"
 
-
+#define MAX_NETWORK_SIZE 20
 #define DTR_PACKET_HEADER_SIZE 6
 
 // max usable size for a packet is -1 byte for the port
@@ -110,5 +110,10 @@ typedef struct radio_meta_info {
 	uint32_t receivedPackets;
 
 } RadioInfo;
+
+typedef struct DTR_network_topology {
+	uint8_t size; // number of nodes in the network
+	uint8_t devices_ids[MAX_NETWORK_SIZE]; // array that contains the device id of each node in the network
+} DTRtopology;
 
 #endif //DTR_TYPES_H

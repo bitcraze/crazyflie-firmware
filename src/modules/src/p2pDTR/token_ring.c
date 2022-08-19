@@ -37,7 +37,6 @@
 #include "debug.h"
 
 
-static uint8_t MAX_NETWORK_SIZE = 0;
 static uint8_t node_id = 0;
 static uint8_t next_node_id = 0;
 static uint8_t prev_node_id = 0;
@@ -62,20 +61,62 @@ static uint32_t protocol_timeout_ms;
 
 static uint8_t my_id ;
 
-static void setNodeIds(uint8_t networkSize, uint8_t device_id) {
-	MAX_NETWORK_SIZE = networkSize;
-	node_id = device_id;
-	servicePk.source_id = node_id;
-	last_packet_source_id = node_id;
-	next_node_id = (node_id + 1) % MAX_NETWORK_SIZE;
-	prev_node_id = (node_id + (MAX_NETWORK_SIZE - 1)) % MAX_NETWORK_SIZE;
+static DTRtopology networkTopology;
+
+static uint8_t getIndexInTopology(uint8_t id){
+	for(uint8_t i = 0; i < networkTopology.size; i++){
+		if(networkTopology.devices_ids[i] == id){
+			return i;
+		}
+	}
+	return 255;
+} 
+
+static uint8_t getNextNodeId(uint8_t id){
+	uint8_t index = getIndexInTopology(id);
+	bool index_is_last = index == networkTopology.size - 1;
+	uint8_t next_index =  index_is_last ? 0 : index + 1;
+
+	return networkTopology.devices_ids[next_index];
 }
 
-void initTokenRing(uint8_t networkSize, uint8_t device_id) {
+static uint8_t getPrevNodeId(uint8_t id){
+	uint8_t index = getIndexInTopology(id);
+
+	bool index_is_first = index == 0;
+	uint8_t prev_index =  index_is_first ? networkTopology.size - 1 : index - 1;
+	return networkTopology.devices_ids[prev_index];
+}
+
+static bool IdExistsInTopology(uint8_t id){
+	for(uint8_t i = 0; i < networkTopology.size; i++){
+		if(networkTopology.devices_ids[i] == id){
+			return true;
+		}
+	}
+	return false;
+}
+
+static void setNodeIds(DTRtopology topology, uint8_t device_id) {
+	networkTopology = topology;
+	node_id = device_id;
+
+	servicePk.source_id = node_id;
+	last_packet_source_id = node_id;
+
+	next_node_id = getNextNodeId(node_id);
+	prev_node_id = getPrevNodeId(node_id);
+
+	DTR_DEBUG_PRINT("self node_id: %d\n", node_id);
+	DTR_DEBUG_PRINT("next node_id: %d\n", next_node_id);
+	DTR_DEBUG_PRINT("prev node_id: %d\n", prev_node_id);
+}
+
+void initTokenRing(DTRtopology topology, uint8_t device_id) {
 	my_id = get_self_id();
 
 	/* Network node configuration*/
-	setNodeIds(networkSize, my_id);
+	setNodeIds(topology, my_id);
 
 	rx_state = RX_IDLE;
 }
@@ -146,7 +187,8 @@ static void resetProtocol(void){
 	last_packet_source_id = 255;
 }
 
-static uint8_t send_data_to_peer_counter = 0;
+// static uint8_t send_data_to_peer_counter = 0;
+static uint8_t next_sender_id = 255;
 
 void DTRInterruptHandler(void *param) {
 
@@ -249,10 +291,10 @@ void DTRInterruptHandler(void *param) {
 							if(txPk->allToAllFlag) {
 								txPk->target_id = next_node_id;
 							}
-							if (txPk->target_id >= MAX_NETWORK_SIZE) {
-								DTR_DEBUG_PRINT("Releasing TX DATA Packet because target > default:\n");
+							if (!IdExistsInTopology(txPk->target_id)) {
+								DEBUG_PRINT("Releasing TX DATA Packet because target > default:\n");
 
-								DTR_DEBUG_PRINT("Is Queue Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
+								DEBUG_PRINT("Is Queue Empty: %d\n", !isDTRPacketInQueueAvailable(TX_DATA_Q));
 								
 								releaseDTRPacketFromQueue(TX_DATA_Q);
 								txPk = &servicePk;
@@ -302,9 +344,14 @@ void DTRInterruptHandler(void *param) {
 						getDTRPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME));
 						txPk = &_txPk;
 						
-						next_target_id = (txPk->target_id + send_data_to_peer_counter + 1) % MAX_NETWORK_SIZE;
-						DTR_DEBUG_PRINT("next_target_id: %d\n", next_target_id);
+						if (next_sender_id == 255){
+							next_target_id = getNextNodeId(node_id);
+						}
+						else {
+							next_target_id = getNextNodeId(next_sender_id);
+						}
 
+						DTR_DEBUG_PRINT("next_target_id: %d\n", next_target_id);
 						if (!txPk->allToAllFlag || next_target_id == node_id) {
 							DTR_DEBUG_PRINT("Releasing TX DATA:\n");
 							// printDTRPacket(txPk);
@@ -315,10 +362,10 @@ void DTRInterruptHandler(void *param) {
 							txPk = &servicePk;
 							txPk->message_type = TOKEN_FRAME;
 							tx_state = TX_TOKEN;
-							send_data_to_peer_counter = 0;
+							next_sender_id = 255;
 						} else {								
 							txPk->target_id = next_target_id;
-							send_data_to_peer_counter++;
+							next_sender_id = next_target_id;
 							DTR_DEBUG_PRINT("Sending DATA to next peer..");
 							DTR_DEBUG_PRINT("with target id: %d\n", txPk->target_id);
 							tx_state = TX_DATA_FRAME;
@@ -346,10 +393,6 @@ void DTRInterruptHandler(void *param) {
 			// resetProtocol(); //TODO: test if it makes sense
 		}
 	
-}
-
-void setDeviceRadioAddress(uint8_t radio_address) {
-	node_id = radio_address;
 }
 
 uint8_t getDeviceRadioAddress() {
@@ -400,7 +443,7 @@ void startRadioCommunication() {
 
 	startSignal->source_id = node_id;
 	startSignal->target_id = next_node_id;
-	startSignal->data[0] = 69;
+	startSignal->data[0] = 111;
 	startSignal->dataSize = 1;
 	startSignal->packetSize = DTR_PACKET_HEADER_SIZE + startSignal->dataSize;
 	startSignal->message_type = DATA_FRAME; 
@@ -488,12 +531,12 @@ uint8_t get_self_id(void){
 	return my_id;
 }
 
-void EnableDTRProtocol(void){
+void EnableDTRProtocol(DTRtopology topology){
 	DTR_DEBUG_PRINT("Initializing queues ...\n");
 	DTRqueueingInit();
 
 	DTR_DEBUG_PRINT("Initializing token ring ...\n");
-	initTokenRing(NETWORK_SIZE, my_id);
+	initTokenRing(topology, my_id);
 	
 	DTR_DEBUG_PRINT("Initializing DTR Sender ...\n");
 	initDTRSenderTimer();
