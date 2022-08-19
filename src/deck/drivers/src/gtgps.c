@@ -283,7 +283,7 @@ static void gtgpsInit(DeckInfo *info)
   uart1Init(9600);
 
   xTaskCreate(gtgpsTask, GTGPS_DECK_TASK_NAME,
-              configMINIMAL_STACK_SIZE, NULL, GTGPS_DECK_TASK_PRI, NULL);
+              GTGPS_DECK_TASK_STACKSIZE, NULL, GTGPS_DECK_TASK_PRI, NULL);
 
   isInit = true;
 }

@@ -100,8 +100,8 @@ static void activeMarkerDeckInit(DeckInfo *info) {
     return;
   }
 
-  xTaskCreate(task, "activeMarkerDeck",
-              configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+  xTaskCreate(task, ACTIVE_MARKER_TASK_NAME,
+              ACTIVEMARKER_TASK_STACKSIZE, NULL, ACTIVE_MARKER_TASK_PRI, NULL);
 
 #ifndef ACTIVE_MARKER_DECK_TEST
   memset(versionString, 0, VERSION_STRING_LEN + 1);

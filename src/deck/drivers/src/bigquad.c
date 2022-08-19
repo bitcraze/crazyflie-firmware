@@ -92,7 +92,7 @@ static void bigquadInit(DeckInfo *info)
   uart1Init(115200);
   mspInit(&s_MspObject, osdResponseCallback);
   xTaskCreate(osdTask, BQ_OSD_TASK_NAME,
-              configMINIMAL_STACK_SIZE, NULL, BQ_OSD_TASK_PRI, NULL);
+              BQ_OSD_TASK_STACKSIZE, NULL, BQ_OSD_TASK_PRI, NULL);
 #endif
 
   isInit = true;
