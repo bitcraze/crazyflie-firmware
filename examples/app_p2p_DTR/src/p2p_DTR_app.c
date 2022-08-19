@@ -49,7 +49,7 @@
 #define INTERESTING_DATA 104
 
 // define the ids of each node in the network
-#define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {1, 0, 2, 3} } // Maximum size of network is 20 by default
+#define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {0, 1, 2, 3} } // Maximum size of network is 20 by default
 
 static uint8_t my_id;
 static DTRtopology topology = NETWORK_TOPOLOGY;
@@ -70,12 +70,12 @@ void loadTXPacketsForTesting(void){
 	bool res;
 	for (int i = 0; i < TX_DATA_QUEUE_SIZE - 1; i++){
 		testSignal.data[0] = 100+i;
-		res = insertDTRPacketToQueue(&testSignal,TX_DATA_Q);
+		res = sendPacketToDTR(&testSignal);
 		if (res){
-			DTR_DEBUG_PRINT("TX Packet sent to TX_DATA Q\n");
+			DTR_DEBUG_PRINT("Packet sent to DTR protocol\n");
 		}
 		else{
-			DEBUG_PRINT("Packet not sent to TX_DATA Q\n");
+			DEBUG_PRINT("Packet not sent to DTR protocol\n");
 		}
 	}
 }
@@ -111,7 +111,7 @@ void appMain(){
 	DTRpacket received_packet;
 	uint32_t start = T2M(xTaskGetTickCount());
 	while(1){
-		getDTRPacketFromQueue(&received_packet, RX_DATA_Q, portMAX_DELAY);
+		getPacketFromDTR(&received_packet, portMAX_DELAY);
 		uint32_t dt = T2M(xTaskGetTickCount()) - start;
 		DEBUG_PRINT("Received data from %d : %d  --> Time elapsed: %lu msec\n",received_packet.source_id, received_packet.data[0],dt);
 		start = T2M(xTaskGetTickCount());

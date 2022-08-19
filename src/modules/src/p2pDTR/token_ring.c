@@ -559,6 +559,23 @@ void DisableDTRProtocol(void){
 }
 
 
+bool sendPacketToDTR(DTRpacket* packet){
+	packet->message_type = DATA_FRAME;
+	packet->source_id = node_id;
+	packet->packetSize = DTR_PACKET_HEADER_SIZE + packet->dataSize;
+	return  insertDTRPacketToQueue(packet,TX_DATA_Q);
+}
+
+
+bool getPacketFromDTR(DTRpacket* packet, uint32_t timeout){
+	if (timeout != portMAX_DELAY){
+		timeout = M2T(timeout);
+	} 
+
+	return  getDTRPacketFromQueue(packet,RX_DATA_Q,timeout);
+}
+
+
 LOG_GROUP_START(DTR_P2P)
 	LOG_ADD(LOG_UINT8, rx_state, &rx_state)
 	LOG_ADD(LOG_UINT8, tx_state, &tx_state)

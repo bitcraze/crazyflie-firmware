@@ -46,7 +46,7 @@ void sendDTRpacket(const DTRpacket* packet) {
 }
 
 void DTRp2pIncomingHandler(P2PPacket *p){
-    if (p->port != DTR_P2P_PORT  ){
+    if (p->port != DTR_P2P_PORT){
         return;
     }
 

@@ -90,9 +90,26 @@ const char* getTXState(uint8_t tx_state);
 
 uint8_t get_self_id(void);
 
+
+// =========================== DTR API ===========================
+
 // Starts the task of the Dynamic Token Ring Protocol (DTR) and initializes the protocol
+// @param topology The topology of the network (see DTR_types.h)
 void EnableDTRProtocol(DTRtopology topology);
 
+// Stops the task of the Dynamic Token Ring Protocol (DTR) and deinitializes the protocol
 void DisableDTRProtocol(void);
+
+// Sends a packet to the DTR protocol
+// @param packet The packet to be sent
+// @return true if the packet was sent successfully to the DTR (not the final receiver), false otherwise 
+bool sendPacketToDTR(DTRpacket* packet);
+
+// Receives a packet from the DTR Protocol
+// Blocks for the specified timeout if no packet is received
+// @param packet: the packet to be received
+// @param timeout: the timeout in milliseconds
+// @return true if the packet was received, false otherwise
+bool getPacketFromDTR(DTRpacket* packet, uint32_t timeout);
 
 #endif /* SRC_RADIO_RADIO_H_ */
