@@ -42,7 +42,6 @@
 
 #include "token_ring.h"
 
-#include "debug.h"
 #define TX_DATA_QUEUE_SIZE 10
 #define RX_SRV_QUEUE_SIZE 20
 #define RX_DATA_QUEUE_SIZE 10

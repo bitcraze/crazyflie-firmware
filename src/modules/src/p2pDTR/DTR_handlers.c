@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *
- * DTR_timers.c
+ * DTR_handlers.c
  *
  *  Created on: 14.02.2021
  *      Author: Christos Zosimidis
@@ -32,7 +32,10 @@
  */
 
 
-#include "DTR_timers.h"
+#include "DTR_handlers.h"
+
+#define DEBUG_MODULE "DTR_HANDL"
+#include "debug.h"
 
 static xTimerHandle sender_timer;
 static TaskHandle_t DTRtaskHandler = NULL;

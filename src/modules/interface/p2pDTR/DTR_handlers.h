@@ -22,7 +22,7 @@
  * SOFTWARE.
  *
  *
- * DTR_timers.h
+ * DTR_handlers.h
  *
  *  Created on: 14.02.2021
  *      Author: Christos Zosimidis
@@ -30,8 +30,8 @@
  * Modified for the P2P protocol by: Bitcraze AB
  *
  */
-#ifndef SRC_RADIO_DTR_TIMERS_H_
-#define SRC_RADIO_DTR_TIMERS_H_
+#ifndef SRC_RADIO_DTR_HANDLERS_H_
+#define SRC_RADIO_DTR_HANDLERS_H_
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -64,4 +64,4 @@ void shutdownDTRSenderTimer(void);
 
 void startDTRSenderTimer(unsigned int time_out);
 
-#endif /* SRC_RADIO_DTR_TIMERS_H_ */
+#endif /* SRC_RADIO_DTR_HANDLERS_H_ */

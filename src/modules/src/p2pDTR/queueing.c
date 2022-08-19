@@ -34,6 +34,8 @@
 
 #include "queueing.h"
 
+#include "debug.h"
+
 // TX SRV packet queue
 static xQueueHandle TX_DATA_queue;
 

@@ -30,6 +30,9 @@
 
 #include "p2p_interface.h"
 
+#define DEBUG_MODULE "DTR_P2P"
+#include "debug.h"
+
 static P2PPacket p2p_TXpacket;
 static DTRpacket prev_received = {0};
 

@@ -23,7 +23,6 @@
  *
  * debug.h - Debugging utility functions
  */
-#pragma once // TODO: check if there is another way to fix this
 #include "config.h"
 #include "console.h"
 #include "autoconf.h"
