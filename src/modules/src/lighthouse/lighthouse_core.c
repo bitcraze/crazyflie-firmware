@@ -288,7 +288,7 @@ bool findOtherBaseStation(const pulseProcessorResult_t* angles, const int baseSt
     }
 
     // Only looking at sensor 0, assuming this is enough
-    if (angles->sensorMeasurementsLh1[0].baseStationMeasurements[candidate].validCount == PULSE_PROCESSOR_N_SWEEPS) {
+    if (angles->baseStationMeasurementsLh1[candidate].sensorMeasurements[0].validCount == PULSE_PROCESSOR_N_SWEEPS) {
       *otherBaseStation = candidate;
       return true;
     }
@@ -355,8 +355,8 @@ static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResul
 static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     for (int bs = 0; bs < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; bs++) {
-      pulseProcessorBaseStationMeasurement_t* from = &angles->sensorMeasurementsLh2[sensor].baseStationMeasurements[bs];
-      pulseProcessorBaseStationMeasurement_t* to = &angles->sensorMeasurementsLh1[sensor].baseStationMeasurements[bs];
+      pulseProcessorSensorMeasurement_t* from = &angles->baseStationMeasurementsLh2[bs].sensorMeasurements[sensor];
+      pulseProcessorSensorMeasurement_t* to = &angles->baseStationMeasurementsLh1[bs].sensorMeasurements[sensor];
 
       if (2 == from->validCount) {
         pulseProcessorV2ConvertToV1Angles(from->correctedAngles[0], from->correctedAngles[1], to->correctedAngles);
@@ -580,7 +580,7 @@ LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQualityLoggerDe
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[0].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
@@ -590,7 +590,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStationMeasu
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[0].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
@@ -600,7 +600,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStationMeasu
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[1].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
@@ -610,7 +610,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.sensorMeasurementsLh1[0].baseStationMeasu
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[1].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The V1 angle received by sensor 0, corrected using calibration data [rad]
@@ -622,7 +622,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.sensorMeasurementsLh1[0].baseStationMeasu
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0x, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0x, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V1 angle received by sensor 0, corrected using calibration data [rad]
@@ -634,7 +634,7 @@ LOG_ADD(LOG_FLOAT, angle0x, &angles.sensorMeasurementsLh1[0].baseStationMeasurem
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0y, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0y, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The angle received by sensor 0, corrected using calibration data [rad]
@@ -646,7 +646,7 @@ LOG_ADD(LOG_FLOAT, angle0y, &angles.sensorMeasurementsLh1[0].baseStationMeasurem
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1x, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1x, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The angle received by sensor 0, corrected using calibration data [rad]
@@ -658,7 +658,7 @@ LOG_ADD(LOG_FLOAT, angle1x, &angles.sensorMeasurementsLh1[0].baseStationMeasurem
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1y, &angles.sensorMeasurementsLh1[0].baseStationMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1y, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The angle received by sensor 1, corrected using calibration data [rad]
@@ -670,7 +670,7 @@ LOG_ADD(LOG_FLOAT, angle1y, &angles.sensorMeasurementsLh1[0].baseStationMeasurem
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0x_1, &angles.sensorMeasurementsLh1[1].baseStationMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0x_1, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[1].correctedAngles[0])
 
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
@@ -682,7 +682,7 @@ LOG_ADD(LOG_FLOAT, angle0x_1, &angles.sensorMeasurementsLh1[1].baseStationMeasur
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0y_1, &angles.sensorMeasurementsLh1[1].baseStationMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0y_1, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[1].correctedAngles[1])
 
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
@@ -694,7 +694,7 @@ LOG_ADD(LOG_FLOAT, angle0y_1, &angles.sensorMeasurementsLh1[1].baseStationMeasur
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1x_1, &angles.sensorMeasurementsLh1[1].baseStationMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1x_1, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[1].correctedAngles[0])
 
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
@@ -706,17 +706,17 @@ LOG_ADD(LOG_FLOAT, angle1x_1, &angles.sensorMeasurementsLh1[1].baseStationMeasur
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1y_1, &angles.sensorMeasurementsLh1[1].baseStationMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1y_1, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[1].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_2, &angles.sensorMeasurementsLh1[2].baseStationMeasurements[0].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle0y_2, &angles.sensorMeasurementsLh1[2].baseStationMeasurements[0].correctedAngles[1])
-LOG_ADD(LOG_FLOAT, angle1x_2, &angles.sensorMeasurementsLh1[2].baseStationMeasurements[1].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle1y_2, &angles.sensorMeasurementsLh1[2].baseStationMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0x_2, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[2].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_2, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[2].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_2, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_2, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_3, &angles.sensorMeasurementsLh1[3].baseStationMeasurements[0].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle0y_3, &angles.sensorMeasurementsLh1[3].baseStationMeasurements[0].correctedAngles[1])
-LOG_ADD(LOG_FLOAT, angle1x_3, &angles.sensorMeasurementsLh1[3].baseStationMeasurements[1].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle1y_3, &angles.sensorMeasurementsLh1[3].baseStationMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0x_3, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[3].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_3, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[3].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_3, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[3].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_3, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[3].correctedAngles[1])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -726,7 +726,7 @@ LOG_ADD(LOG_FLOAT, angle1y_3, &angles.sensorMeasurementsLh1[3].baseStationMeasur
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[0].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -736,7 +736,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStationMe
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[0].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -746,7 +746,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStationMe
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[1].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -756,7 +756,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStationMe
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[1].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -766,7 +766,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStationMe
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -776,7 +776,7 @@ LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMea
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -786,7 +786,7 @@ LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMea
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -796,7 +796,7 @@ LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMea
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.sensorMeasurementsLh2[0].baseStationMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief Rate of frames from the Lighthouse deck on the serial buss [1/s]

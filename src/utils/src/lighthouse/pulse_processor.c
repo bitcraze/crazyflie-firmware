@@ -45,21 +45,21 @@ bool pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResul
   const lighthouseCalibration_t* calibrationData = &state->bsCalibration[baseStation];
   const bool doApplyCalibration = calibrationData->valid;
 
-  pulseProcessorSensorMeasurement_t* sensorMeasurements = angles->sensorMeasurementsLh1;
+  pulseProcessorBaseStationMeasurement_t* bsMeasurement = &angles->baseStationMeasurementsLh1[baseStation];
   if (lighthouseBsTypeV2 == angles->measurementType) {
-    sensorMeasurements = angles->sensorMeasurementsLh2;
+    bsMeasurement = &angles->baseStationMeasurementsLh2[baseStation];
   }
 
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    pulseProcessorBaseStationMeasurement_t* bsMeasurement = &sensorMeasurements[sensor].baseStationMeasurements[baseStation];
+    pulseProcessorSensorMeasurement_t* measurement = &bsMeasurement->sensorMeasurements[sensor];
     if (doApplyCalibration) {
       if (lighthouseBsTypeV2 == angles->measurementType) {
-        lighthouseCalibrationApplyV2(calibrationData, bsMeasurement->angles, bsMeasurement->correctedAngles);
+        lighthouseCalibrationApplyV2(calibrationData, measurement->angles, measurement->correctedAngles);
       } else {
-        lighthouseCalibrationApplyV1(calibrationData, bsMeasurement->angles, bsMeasurement->correctedAngles);
+        lighthouseCalibrationApplyV1(calibrationData, measurement->angles, measurement->correctedAngles);
       }
     } else {
-      lighthouseCalibrationApplyNothing(bsMeasurement->angles, bsMeasurement->correctedAngles);
+      lighthouseCalibrationApplyNothing(measurement->angles, measurement->correctedAngles);
     }
   }
 
@@ -115,8 +115,8 @@ void processValidAngles(pulseProcessorResult_t* angles, int baseStation)
 void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation)
 {
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    angles->sensorMeasurementsLh1[sensor].baseStationMeasurements[baseStation].validCount = 0;
-    angles->sensorMeasurementsLh2[sensor].baseStationMeasurements[baseStation].validCount = 0;
+    angles->baseStationMeasurementsLh1[baseStation].sensorMeasurements[sensor].validCount = 0;
+    angles->baseStationMeasurementsLh2[baseStation].sensorMeasurements[sensor].validCount = 0;
   }
   processValidAngles(angles, baseStation);
 }
@@ -130,8 +130,8 @@ void pulseProcessorAllClear(pulseProcessorResult_t* angles)
 {
   for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-      angles->sensorMeasurementsLh1[sensor].baseStationMeasurements[baseStation].validCount = 0;
-      angles->sensorMeasurementsLh2[sensor].baseStationMeasurements[baseStation].validCount = 0;
+      angles->baseStationMeasurementsLh1[baseStation].sensorMeasurements[sensor].validCount = 0;
+      angles->baseStationMeasurementsLh2[baseStation].sensorMeasurements[sensor].validCount = 0;
     }
     processValidAngles(angles, baseStation);
   }
@@ -148,8 +148,8 @@ void pulseProcessorProcessed(pulseProcessorResult_t* angles, int baseStation)
   processValidAngles(angles, baseStation);
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    angles->sensorMeasurementsLh1[sensor].baseStationMeasurements[baseStation].validCount = 0;
-    angles->sensorMeasurementsLh2[sensor].baseStationMeasurements[baseStation].validCount = 0;
+    angles->baseStationMeasurementsLh1[baseStation].sensorMeasurements[sensor].validCount = 0;
+    angles->baseStationMeasurementsLh2[baseStation].sensorMeasurements[sensor].validCount = 0;
   }
 }
 

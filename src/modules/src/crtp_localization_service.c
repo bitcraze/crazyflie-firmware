@@ -367,13 +367,14 @@ void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles)
 
   if (enableLighthouseAngleStream) {
     ap->baseStation = baseStation;
+    pulseProcessorBaseStationMeasurement_t* baseStationMeasurement = &angles->baseStationMeasurementsLh1[baseStation];
 
     for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
-      float angle_first_sensor =  angles->sensorMeasurementsLh1[0].baseStationMeasurements[baseStation].correctedAngles[its];
+      float angle_first_sensor =  baseStationMeasurement->sensorMeasurements[0].correctedAngles[its];
       ap->sweeps[its].sweep = angle_first_sensor;
 
       for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
-        float angle_other_sensor = angles->sensorMeasurementsLh1[itd + 1].baseStationMeasurements[baseStation].correctedAngles[its];
+        float angle_other_sensor = baseStationMeasurement->sensorMeasurements[itd + 1].correctedAngles[its];
         uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
         ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
       }

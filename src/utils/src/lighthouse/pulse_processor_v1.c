@@ -208,9 +208,9 @@ static bool processPreviousFrame(pulseProcessorV1_t *stateV1, pulseProcessorResu
           *baseStation = stateV1->currentBaseStation;
           *axis = stateV1->currentAxis;
 
-          pulseProcessorBaseStationMeasurement_t* bsMeasurement = &result->sensorMeasurementsLh1[sensor].baseStationMeasurements[stateV1->currentBaseStation];
-          bsMeasurement->angles[stateV1->currentAxis] = angle;
-          bsMeasurement->validCount++;
+          pulseProcessorSensorMeasurement_t* measurement = &result->baseStationMeasurementsLh1[stateV1->currentBaseStation].sensorMeasurements[sensor];
+          measurement->angles[stateV1->currentAxis] = angle;
+          measurement->validCount++;
 
           anglesMeasured = true;
         }
@@ -496,8 +496,8 @@ uint32_t anglesMask = (1 << (PULSE_PROCESSOR_N_SWEEPS * PULSE_PROCESSOR_N_SENSOR
 void pulseProcessorV1ProcessValidAngles(pulseProcessorResult_t* angles, int baseStation) {
   validAngles &= ~(anglesMask << (baseStation*PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS));
   for(int sensor=0; sensor!=PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    if(angles->sensorMeasurementsLh1[sensor].baseStationMeasurements[baseStation].validCount != 0) {
-      uint32_t sensorBits = (1 << angles->sensorMeasurementsLh1[sensor].baseStationMeasurements[baseStation].validCount) - 1;
+    if(angles->baseStationMeasurementsLh1[baseStation].sensorMeasurements[sensor].validCount != 0) {
+      uint32_t sensorBits = (1 << angles->baseStationMeasurementsLh1[baseStation].sensorMeasurements[sensor].validCount) - 1;
       validAngles |= sensorBits << (sensor*PULSE_PROCESSOR_N_SWEEPS + baseStation*PULSE_PROCESSOR_N_SWEEPS*PULSE_PROCESSOR_N_SENSORS);
     }
   }

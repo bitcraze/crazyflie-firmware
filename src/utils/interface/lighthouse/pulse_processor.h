@@ -239,15 +239,15 @@ typedef struct {
   float angles[PULSE_PROCESSOR_N_SWEEPS];
   float correctedAngles[PULSE_PROCESSOR_N_SWEEPS];
   int validCount;
-} pulseProcessorBaseStationMeasurement_t;
-
-typedef struct {
-  pulseProcessorBaseStationMeasurement_t baseStationMeasurements[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorSensorMeasurement_t;
 
 typedef struct {
-  pulseProcessorSensorMeasurement_t sensorMeasurementsLh1[PULSE_PROCESSOR_N_SENSORS];
-  pulseProcessorSensorMeasurement_t sensorMeasurementsLh2[PULSE_PROCESSOR_N_SENSORS];
+  pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
+} pulseProcessorBaseStationMeasurement_t;
+
+typedef struct {
+  pulseProcessorBaseStationMeasurement_t baseStationMeasurementsLh1[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  pulseProcessorBaseStationMeasurement_t baseStationMeasurementsLh2[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
   lighthouseBaseStationType_t measurementType;
   uint64_t lastUsecTimestamp[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorResult_t;
