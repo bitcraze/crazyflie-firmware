@@ -102,7 +102,7 @@ void appMain(){
 	// Register the callback function so that the CF can receive packets as well.
 	p2pRegisterCB(p2pcallbackHandler);
 
-	if (my_id == 0){
+	if (my_id == networkTopology.devices_ids[0]){
 		DTR_DEBUG_PRINT("Starting communication...\n");
 		startRadioCommunication();
 		loadTXPacketsForTesting();

@@ -203,7 +203,7 @@ void DTRInterruptHandler(void *param) {
 	while ( receiveDTRPacketWaitUntil(&_rxPk, 	RX_SRV_Q, PROTOCOL_TIMEOUT_MS, &new_packet_received) ){
 			if (!new_packet_received) {
 				DTR_DEBUG_PRINT("\nPROTOCOL TIMEOUT!\n");
-				if (my_id != 0){
+				if (my_id != networkTopology.devices_ids[0]) {
 					resetProtocol();
 				}
 				
