@@ -67,7 +67,7 @@ static lighthouseBsIdentificationData_t bsIdentificationData;
 
 // Stats
 
-typedef enum uwbEvent_e {
+typedef enum {
   statusNotReceiving = 0,
   statusMissingData = 1,
   statusToEstimator = 2,
@@ -281,6 +281,22 @@ void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_
   uart1SendData(2, commandBuffer);
 }
 
+bool findOtherBaseStation(const pulseProcessorResult_t* angles, const int baseStation, int* otherBaseStation) {
+  for (int candidate = baseStation + 1; candidate != baseStation; candidate++) {
+    if (candidate >= CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
+      candidate = 0;
+    }
+
+    // Only looking at sensor 0, assuming this is enough
+    if (angles->sensorMeasurementsLh1[0].baseStatonMeasurements[candidate].validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      *otherBaseStation = candidate;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 // Method used to estimate position
 // 0 = Position calculated outside the estimator using intersection point of beams.
@@ -298,16 +314,33 @@ static uint8_t estimationMethod = 1;
 static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   pulseProcessorClearOutdated(appState, angles, basestation);
 
-  if (basestation == 1) {
+  int otherBaseStation = 0;
+  bool foundPair = false;
+
+  switch (systemType) {
+    case lighthouseBsTypeV1:
+      if (basestation == 1) {
+        otherBaseStation = 0;
+        foundPair = true;
+      }
+      break;
+    case lighthouseBsTypeV2:
+      foundPair = findOtherBaseStation(angles, basestation, &otherBaseStation);
+      break;
+    default:
+      // Nothing here
+      break;
+  }
+
+  if (foundPair) {
     STATS_CNT_RATE_EVENT(&cycleRate);
 
-    lighthousePositionEstimatePoseCrossingBeams(appState, angles, 1);
+    lighthousePositionEstimatePoseCrossingBeams(appState, angles, basestation, otherBaseStation);
 
-    pulseProcessorProcessed(angles, 0);
-    pulseProcessorProcessed(angles, 1);
+    pulseProcessorProcessed(angles, basestation);
+    pulseProcessorProcessed(angles, otherBaseStation);
   }
 }
-
 
 static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
   STATS_CNT_RATE_EVENT(&cycleRate);
@@ -859,7 +892,7 @@ PARAM_ADD_CORE(PARAM_UINT8, systemType, &systemType)
  * @brief Bit field that indicates which base stations that are supported by the system
  *
  * The lowest bit maps to base station channel 1 and the highest to channel 16.
- * 
+ *
  * Deprecated since 2022-08-15
  */
 PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, bsAvailable, &baseStationAvailabledMap)
