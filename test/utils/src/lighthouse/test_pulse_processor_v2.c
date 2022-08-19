@@ -677,7 +677,7 @@ static void setUpSlowbitFrame(){
     slowbitFrame.timestamp = 1000000;
     slowbitFrame.offset = 100000;
     slowbitFrame.channel = SB_CHANNEL;
-    slowbitFrame.slowbit = SB_BIT;
+    slowbitFrame.slowBit = SB_BIT;
     slowbitFrame.channelFound = true;
 }
 
