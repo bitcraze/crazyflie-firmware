@@ -34,7 +34,7 @@ Where PacketSize is the size of the packet in bytes, MessageType is the type of 
 Since the nodes od the token ring are static, the user has to define the topology of the network. The topology is defined by the number of nodes and their ids in the order they are connected. The topology is defined like following:
 
 ``` C
-#define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {1, 0, 2, 3} } // Maximum size of network is 20 by default
+#define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {0, 1, 2, 3} } // Maximum size of network is 20 by default
 static DTRtopology topology = NETWORK_TOPOLOGY;
 
 ...
@@ -42,7 +42,7 @@ static DTRtopology topology = NETWORK_TOPOLOGY;
 void main() {
   ...
   // Start the token ring protocol
-  EnableDTRProtocol(topology);
+  DTRenableProtocol(topology);
   ...
 }
 ```
@@ -76,9 +76,9 @@ void main(){
 
 ## Data Broadcast
 
-To send data through the protocol, the user must call the function `sendPacketToDTR`. 
+To send data through the protocol, the user must call the function `DTRsendPacket`. 
   ``` C
-  bool sendPacketToDTR(DTRpacket* packet)
+  bool DTRsendPacket(DTRpacket* packet)
   ```
 This function takes the packet to be sent as a parameter. The packet must be filled wit the data the user wants to send and by defining the size of them. The function returns true if the packet was sent successfully to the DTR (**not to the receiver copter**) and false  otherwise.Keep in mind that the packet is sent asynchronously and the user can continue to use the P2P API while the packet is being sent.It is not necessary to fill the `.source_id`, `message_type`, `packet_size` fields of the packet since they are automatically filled by the API function. After the execution of the function, the new packet is inserted in the queue of the protocol responsible for all the packets to be sent. 
   
@@ -95,16 +95,16 @@ This function takes the packet to be sent as a parameter. The packet must be fil
   packet.data[1] = 0x02;
   packet.data[2] = 0x03;
   packet.allToAllFlag = 1;
-  sendPacketToDTR(&packet);
+  DTRsendPacket(&packet);
 
   ```
 
 
 ## Receive Data
 
-The user must call the function `getPacketFromDTR` to receive a packet from the DTR. 
+The user must call the function `DTRgetPacket` to receive a packet from the DTR. 
 ``` C
-bool getPacketFromDTR(DTRpacket* packet, uint32_t timeout);
+bool DTRgetPacket(DTRpacket* packet, uint32_t timeout);
 ```
 
 The function blocks for the specified time (in milliseconds) until a packet is received.If the user wants to block indefinitely, the timeout parameter must be set to `portMAX_DELAY`. The function returns true if a packet was received and false otherwise. If a packet is received, the packet is filled with the data received. In case it was received, the packet is filled with the data received and the corresponding packet is released from the queue responsible for the reception of the DTR packets.
@@ -115,7 +115,7 @@ DTRpacket packet;
 
 // Receive the packet
 while(1){
-  getPacketFromDTR(&packet, portMAX_DELAY);
+  DTRgetPacket(&packet, portMAX_DELAY);
   
   if(packet.dataSize > 0){
     // Do something with the packet

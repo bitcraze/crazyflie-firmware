@@ -81,15 +81,15 @@ void DTRqueueingInit(){
 
 }
 
-uint8_t getNumberOfDTRPacketsInQueue(DTRQueue_Names qName){
+uint8_t DTRgetNumberOfPacketsInQueue(DTRQueue_Names qName){
 	return (uint8_t) uxQueueMessagesWaiting(*getQueueHandler(qName));
 }
 
-bool isDTRPacketInQueueAvailable(DTRQueue_Names qName) {
+bool DTRisPacketInQueueAvailable(DTRQueue_Names qName) {
 	return uxQueueMessagesWaiting(*getQueueHandler(qName)) > 0;
 }
 
-bool getDTRPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout){
+bool DTRgetPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout){
 	// notice that xQueuePeek is used instead of xQueueReceive, because the packet is not removed from the queue
     //TODO: make a separate function for this
 	bool received_success;
@@ -114,12 +114,12 @@ bool getDTRPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t tim
 	return received_success;
 }
 
-bool receiveDTRPacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received){
+bool DTRreceivePacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received){
 	*new_packet_received = xQueueReceive(*getQueueHandler(qName), packet, M2T(timeout_ms)) == pdTRUE;
 	return true;
 }
 
-bool insertDTRPacketToQueue(DTRpacket *packet, DTRQueue_Names qName) {
+bool DTRinsertPacketToQueue(DTRpacket *packet, DTRQueue_Names qName) {
 	bool res = xQueueSend(*getQueueHandler(qName),(void *) packet, 0) == pdTRUE;
 	if (!res) {
 		DEBUG_PRINT("TX_DATA queue busy\n");

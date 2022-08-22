@@ -36,7 +36,7 @@
 static P2PPacket p2p_TXpacket;
 static DTRpacket prev_received = {0};
 
-void sendDTRpacket(const DTRpacket* packet) {
+void DTRsendP2Ppacket(const DTRpacket* packet) {
     p2p_TXpacket.port = DTR_P2P_PORT;
 
     memcpy(&p2p_TXpacket.data[0], packet, packet->packetSize);
@@ -55,19 +55,19 @@ void DTRp2pIncomingHandler(P2PPacket *p){
     uint8_t DTRpacket_size = p->data[0];
 
 	memcpy(&incoming_DTR, &(p->data[0]), DTRpacket_size);
-    feedDTRPacketToProtocol(&incoming_DTR);
+    DTRfeedPacketToProtocol(&incoming_DTR);
 }
 
 
-void feedDTRPacketToProtocol(DTRpacket *incoming_DTR) {
+void DTRfeedPacketToProtocol(DTRpacket *incoming_DTR) {
 
      bool same_packet_received =  incoming_DTR->message_type == prev_received.message_type && 
                         incoming_DTR->target_id == prev_received.target_id &&
                         incoming_DTR->source_id == prev_received.source_id;
 
     // if there are packets in the queue and the new packet is the same as the previous one, ignore it
-    DTR_DEBUG_PRINT("Packets in RX_SRV queue: %d\n", getNumberOfDTRPacketsInQueue(RX_SRV_Q) );
-    if ( getNumberOfDTRPacketsInQueue(RX_SRV_Q) !=0 && same_packet_received ) {
+    DTR_DEBUG_PRINT("Packets in RX_SRV queue: %d\n", DTRgetNumberOfPacketsInQueue(RX_SRV_Q) );
+    if ( DTRgetNumberOfPacketsInQueue(RX_SRV_Q) !=0 && same_packet_received ) {
         DTR_DEBUG_PRINT("Duplicate packet received\n");
         DTR_DEBUG_PRINT("Message type: %d\n", incoming_DTR->message_type);
         DTR_DEBUG_PRINT("Target id: %d\n", incoming_DTR->target_id);
@@ -79,5 +79,5 @@ void feedDTRPacketToProtocol(DTRpacket *incoming_DTR) {
     prev_received.target_id = incoming_DTR->target_id;
     prev_received.source_id = incoming_DTR->source_id;
 
-    insertDTRPacketToQueue(incoming_DTR, RX_SRV_Q);
+    DTRinsertPacketToQueue(incoming_DTR, RX_SRV_Q);
 }

@@ -70,7 +70,7 @@ void loadTXPacketsForTesting(void){
 	bool res;
 	for (int i = 0; i < TX_DATA_QUEUE_SIZE - 1; i++){
 		testSignal.data[0] = 100+i;
-		res = sendPacketToDTR(&testSignal);
+		res = DTRsendPacket(&testSignal);
 		if (res){
 			DTR_DEBUG_PRINT("Packet sent to DTR protocol\n");
 		}
@@ -89,14 +89,14 @@ void p2pcallbackHandler(P2PPacket *p){
 }
 
 void appMain(){
-	my_id = get_self_id();
+	my_id = DTRgetSelfId();
 	DEBUG_PRINT("Network Topology: %d", topology.size);
 	for (int i = 0; i < topology.size; i++){
 		DEBUG_PRINT("%d ", topology.devices_ids[i]);
 	}
 	DEBUG_PRINT("\n");
 
-	EnableDTRProtocol(topology);
+	DTRenableProtocol(topology);
 	vTaskDelay(2000);
 
 	// Register the callback function so that the CF can receive packets as well.
@@ -104,14 +104,14 @@ void appMain(){
 
 	if (my_id == topology.devices_ids[0]){
 		DTR_DEBUG_PRINT("Starting communication...\n");
-		startRadioCommunication();
+		DTRstartCommunication();
 		loadTXPacketsForTesting();
 	}
 
 	DTRpacket received_packet;
 	uint32_t start = T2M(xTaskGetTickCount());
 	while(1){
-		getPacketFromDTR(&received_packet, portMAX_DELAY);
+		DTRgetPacket(&received_packet, portMAX_DELAY);
 		uint32_t dt = T2M(xTaskGetTickCount()) - start;
 		DEBUG_PRINT("Received data from %d : %d  --> Time elapsed: %lu msec\n",received_packet.source_id, received_packet.data[0],dt);
 		start = T2M(xTaskGetTickCount());
@@ -120,7 +120,7 @@ void appMain(){
 			received_packet.source_id = my_id;
 			received_packet.data[0] = 123;
 			DEBUG_PRINT("Sending response...\n");
-			insertDTRPacketToQueue(&received_packet,TX_DATA_Q);
+			DTRinsertPacketToQueue(&received_packet,TX_DATA_Q);
 		}
 	}
 }

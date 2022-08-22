@@ -53,15 +53,15 @@
 #define DTR_PROTOCOL_TASK_PRIORITY 1 //Higher number higher priority
 
 // DTR protocol Task
-void startDTRProtocolTask(void);
+void DTRstartProtocolTask(void);
 
-void stopDTRProtocolTask(void);
+void DTRstopProtocolTask(void);
 
 // ================ DTR sender timer ==================
-void initDTRSenderTimer(void);
+void DTRinitSenderTimer(void);
 
-void shutdownDTRSenderTimer(void);
+void DTRshutdownSenderTimer(void);
 
-void startDTRSenderTimer(unsigned int time_out);
+void DTRstartSenderTimer(unsigned int time_out);
 
 #endif /* SRC_RADIO_DTR_HANDLERS_H_ */

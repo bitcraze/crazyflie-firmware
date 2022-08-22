@@ -58,17 +58,17 @@ typedef enum queue_names_e {
 void DTRqueueingInit();
 
 
-bool isDTRPacketInQueueAvailable(DTRQueue_Names qName);
+bool DTRisPacketInQueueAvailable(DTRQueue_Names qName);
 
-uint8_t getNumberOfDTRPacketsInQueue(DTRQueue_Names qName);
+uint8_t DTRgetNumberOfPacketsInQueue(DTRQueue_Names qName);
 
-bool getDTRPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout);
+bool DTRgetPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout);
 
 // Blocks to wait for a packet to be received for a given time
 // new_packet_received --> True if a new packet has been received and False if the timeout has been reached
-bool receiveDTRPacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received);
+bool DTRreceivePacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received);
 
-bool insertDTRPacketToQueue(DTRpacket *packet, DTRQueue_Names qName);
+bool DTRinsertPacketToQueue(DTRpacket *packet, DTRQueue_Names qName);
 
 bool releaseDTRPacketFromQueue(DTRQueue_Names qName);
 
