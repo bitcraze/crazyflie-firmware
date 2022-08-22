@@ -36,7 +36,7 @@ EVENTTRIGGER(estTOF)
 EVENTTRIGGER(estAbsoluteHeight)
 EVENTTRIGGER(estFlow)
 EVENTTRIGGER(estYawError, float, yawError)
-EVENTTRIGGER(estSweepAngle, uint8, sensorId, uint8, basestationId, uint8, sweepId, float, t, float, sweepAngle)
+EVENTTRIGGER(estSweepAngle, uint8, sensorId, uint8, baseStationId, uint8, sweepId, float, t, float, sweepAngle)
 EVENTTRIGGER(estGyroscope)
 EVENTTRIGGER(estAcceleration)
 EVENTTRIGGER(estBarometer)
@@ -219,7 +219,7 @@ void estimatorEnqueue(const measurement_t *measurement) {
       break;
     case MeasurementTypeSweepAngle:
       eventTrigger_estSweepAngle_payload.sensorId = measurement->data.sweepAngle.sensorId;
-      eventTrigger_estSweepAngle_payload.basestationId = measurement->data.sweepAngle.basestationId;
+      eventTrigger_estSweepAngle_payload.baseStationId = measurement->data.sweepAngle.baseStationId;
       eventTrigger_estSweepAngle_payload.sweepId = measurement->data.sweepAngle.sweepId;
       eventTrigger_estSweepAngle_payload.t = measurement->data.sweepAngle.t;
       eventTrigger_estSweepAngle_payload.sweepAngle = measurement->data.sweepAngle.measuredSweepAngle;

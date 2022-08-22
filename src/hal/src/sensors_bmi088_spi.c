@@ -332,7 +332,7 @@ static void spiDMAInit(void)
   DMA_Init(BMI088_SPI_RX_DMA_STREAM, &DMA_InitStructure);
 
   // Configure interrupts
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_BMI088_SPI_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
@@ -410,4 +410,3 @@ void __attribute__((used)) BMI088_SPI_RX_DMA_IRQHandler(void)
     portYIELD();
   }
 }
-

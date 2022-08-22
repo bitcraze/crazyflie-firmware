@@ -92,7 +92,7 @@ static void uart2DmaInit(void)
   NVIC_InitStructure.NVIC_IRQChannel = UART2_DMA_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART2_DMA_PRI;
   NVIC_Init(&NVIC_InitStructure);
 
   isUartDmaInitialized = true;
@@ -145,7 +145,7 @@ void uart2Init(const uint32_t baudrate)
   NVIC_InitStructure.NVIC_IRQChannel = UART2_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART2_PRI;
   NVIC_Init(&NVIC_InitStructure);
 
   USART_ITConfig(UART2_TYPE, USART_IT_RXNE, ENABLE);
@@ -297,7 +297,7 @@ void __attribute__((used)) USART2_IRQHandler(void)
 {
 
   uint32_t status = UART2_TYPE->SR;
-  if ((UART2_TYPE->SR & USART_FLAG_RXNE) != 0) 
+  if ((UART2_TYPE->SR & USART_FLAG_RXNE) != 0)
   {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;

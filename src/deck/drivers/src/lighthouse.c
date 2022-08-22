@@ -60,7 +60,7 @@ static void lighthouseInit(DeckInfo *info)
   lighthouseCoreInit();
 
   xTaskCreate(lighthouseCoreTask, LIGHTHOUSE_TASK_NAME,
-              2*configMINIMAL_STACK_SIZE, NULL, LIGHTHOUSE_TASK_PRI, NULL);
+              LIGHTHOUSE_TASK_STACKSIZE, NULL, LIGHTHOUSE_TASK_PRI, NULL);
 
   xTimerHandle timer;
   timer = xTimerCreateStatic("ledTimer", M2T(FIFTH_SECOND), pdTRUE,

@@ -133,5 +133,5 @@ static void cpx(void* _param) {
 }
 
 void cpxInit() {
-  xTaskCreate(cpx, "CPX", AI_DECK_TASK_STACKSIZE, NULL, AI_DECK_TASK_PRI, NULL);
+  xTaskCreate(cpx, CPX_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL, AI_DECK_TASK_PRI, NULL);
 }

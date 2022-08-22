@@ -260,21 +260,21 @@ void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
 #else
   NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
 #endif
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_USB_BSP_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 #ifdef USB_OTG_HS_DEDICATED_EP1_ENABLED
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
   NVIC_InitStructure.NVIC_IRQChannel = OTG_HS_EP1_OUT_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_USB_BSP_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
   NVIC_InitStructure.NVIC_IRQChannel = OTG_HS_EP1_IN_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_USB_BSP_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);

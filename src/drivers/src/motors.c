@@ -174,7 +174,7 @@ static uint16_t motorsCompensateBatteryVoltage(uint16_t ithrust)
   /*
    * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
    * discharged.
-   * 
+   *
    * A suiteble sanity check for disabiling the voltage compensation would be
    * under 2V. That would suggest a damaged battery. This protects against
    * rushing the motors on bugs and invalid voltage levels.
@@ -362,7 +362,7 @@ static void motorsDshotDMASetup()
     DMA_Init(motorMap[i]->DMA_stream, &DMA_InitStructureShare);
 
     NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
@@ -737,19 +737,19 @@ LOG_GROUP_STOP(motor)
 LOG_GROUP_START(pwm)
 /**
  * @brief Current motor 1 PWM output
- */ 
+ */
 LOG_ADD(LOG_UINT32, m1_pwm, &motor_ratios[0])
 /**
  * @brief Current motor 2 PWM output
- */ 
+ */
 LOG_ADD(LOG_UINT32, m2_pwm, &motor_ratios[1])
 /**
  * @brief Current motor 3 PWM output
- */ 
+ */
 LOG_ADD(LOG_UINT32, m3_pwm, &motor_ratios[2])
 /**
  * @brief Current motor 4 PWM output
- */ 
+ */
 LOG_ADD(LOG_UINT32, m4_pwm, &motor_ratios[3])
 /**
  * @brief Cycle time of M1 output in microseconds
