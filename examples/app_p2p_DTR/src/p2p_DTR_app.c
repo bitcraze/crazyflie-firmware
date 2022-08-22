@@ -104,7 +104,6 @@ void appMain(){
 
 	if (my_id == topology.devices_ids[0]){
 		DTR_DEBUG_PRINT("Starting communication...\n");
-		DTRstartCommunication();
 		loadTXPacketsForTesting();
 	}
 

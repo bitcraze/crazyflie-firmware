@@ -549,6 +549,11 @@ void DTRenableProtocol(DTRtopology topology){
 
 	DTR_DEBUG_PRINT("Starting protocol timer ...\n");
 	DTRstartProtocolTask();
+
+	// The first node starts the protocol communication 
+	if (my_id == topology.devices_ids[0]) {
+		DTRstartCommunication();
+	}
 }
 
 void DisableDTRProtocol(void){
