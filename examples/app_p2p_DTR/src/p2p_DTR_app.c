@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * peer_to_peer.c - App layer application of simple demonstration peer to peer
- *  communication. Two crazyflies need this program in order to send and receive.
+ * p2p_DTR_app.c - App layer application of simple demonstration of the 
+ * Dynamic Token Ring Protocol used on top of the P2P.
  */
 
 
@@ -48,6 +48,9 @@
 
 #define INTERESTING_DATA 104
 
+#define STARTING_MESSAGE "Hello World"
+#define STARTING_MESSAGE_SIZE 11
+
 // define the ids of each node in the network
 #define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {0, 1, 2, 3} } // Maximum size of network is 20 by default
 
@@ -58,45 +61,64 @@ void loadTXPacketsForTesting(void){
 	DTRpacket  testSignal;
 	testSignal.message_type = DATA_FRAME;
 	testSignal.source_id = my_id;
-	testSignal.target_id = 1;
 	
-	uint8_t data_size = 25;
-	for (int i = 0; i < data_size; i++){
-		testSignal.data[i] = i;
-	}
-	testSignal.dataSize = data_size;
+	const char testMessage[STARTING_MESSAGE_SIZE] = "Hello World";
+	strcpy(testSignal.data, testMessage);
+	testSignal.dataSize = STARTING_MESSAGE_SIZE;
 	testSignal.allToAllFlag = 1;
 	testSignal.packetSize = DTR_PACKET_HEADER_SIZE + testSignal.dataSize;
 	bool res;
-	for (int i = 0; i < TX_DATA_QUEUE_SIZE - 1; i++){
-		testSignal.data[0] = 100+i;
-		res = DTRsendPacket(&testSignal);
-		if (res){
-			DTR_DEBUG_PRINT("Packet sent to DTR protocol\n");
-		}
-		else{
-			DEBUG_PRINT("Packet not sent to DTR protocol\n");
-		}
+	res = dtrSendPacket(&testSignal);
+	if (res){
+		DTR_DEBUG_PRINT("Packet sent to DTR protocol\n");
+	}
+	else{
+		DEBUG_PRINT("Packet not sent to DTR protocol\n");
+	}
+}
+
+void loadResponse(void){
+	DTRpacket  testSignal;
+	testSignal.message_type = DATA_FRAME;
+	testSignal.source_id = my_id;
+	testSignal.target_id = 1;
+	
+	const char testMessage[25] = "Hello from the other side";
+	strcpy(testSignal.data, testMessage);
+	testSignal.dataSize = 25;
+	testSignal.allToAllFlag = 1;
+	testSignal.packetSize = DTR_PACKET_HEADER_SIZE + testSignal.dataSize;
+	bool res;
+	res = dtrSendPacket(&testSignal);
+	if (res){
+		DTR_DEBUG_PRINT("Packet sent to DTR protocol\n");
+	}
+	else{
+		DEBUG_PRINT("Packet not sent to DTR protocol\n");
 	}
 }
 
 void p2pcallbackHandler(P2PPacket *p){
-	// DEBUG_PRINT("P2P callback at port: %d\n", p->port);
 	// If the packet is a DTR service packet, then the handler will handle it.
-    DTRp2pIncomingHandler(p);
+	// It returns true if the packet was handled.
 
-	// Then write your own code below ...
+    if (!dtrP2PIncomingHandler(p)){
+		// If packet was not handled from DTR , then it is a normal packet 
+		// that user has to handle. 
+		
+		// Write your own code below ...
+	}
 }
 
 void appMain(){
-	my_id = DTRgetSelfId();
+	my_id = dtrGetSelfId();
 	DEBUG_PRINT("Network Topology: %d", topology.size);
 	for (int i = 0; i < topology.size; i++){
 		DEBUG_PRINT("%d ", topology.devices_ids[i]);
 	}
 	DEBUG_PRINT("\n");
 
-	DTRenableProtocol(topology);
+	dtrEnableProtocol(topology);
 	vTaskDelay(2000);
 
 	// Register the callback function so that the CF can receive packets as well.
@@ -110,16 +132,22 @@ void appMain(){
 	DTRpacket received_packet;
 	uint32_t start = T2M(xTaskGetTickCount());
 	while(1){
-		DTRgetPacket(&received_packet, portMAX_DELAY);
+		dtrGetPacket(&received_packet, portMAX_DELAY);
 		uint32_t dt = T2M(xTaskGetTickCount()) - start;
-		DEBUG_PRINT("Received data from %d : %d  --> Time elapsed: %lu msec\n",received_packet.source_id, received_packet.data[0],dt);
+
+		// uint8_t array to string conversion
+		char data[received_packet.dataSize + 1];
+		for (int i = 0; i < received_packet.dataSize; i++){
+			data[i] = received_packet.data[i];
+		}
+		data[received_packet.dataSize] = '\0';
+		
+		DEBUG_PRINT("Received data from %d : %s  --> Time elapsed: %lu msec\n",received_packet.source_id, data, dt);
 		start = T2M(xTaskGetTickCount());
 
-		if (my_id == topology.devices_ids[1] && received_packet.data[0] == INTERESTING_DATA){
-			received_packet.source_id = my_id;
-			received_packet.data[0] = 123;
-			DEBUG_PRINT("Sending response...\n");
-			DTRinsertPacketToQueue(&received_packet,TX_DATA_Q);
+
+		if (strcmp(data, "Hello World") == 0){
+			loadResponse();
 		}
 	}
 }

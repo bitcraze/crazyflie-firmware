@@ -111,7 +111,7 @@ typedef struct radio_meta_info {
 
 } RadioInfo;
 
-typedef struct DTR_network_topology {
+typedef struct {
 	uint8_t size; // number of nodes in the network
 	uint8_t devices_ids[MAX_NETWORK_SIZE]; // array that contains the device id of each node in the network
 } DTRtopology;

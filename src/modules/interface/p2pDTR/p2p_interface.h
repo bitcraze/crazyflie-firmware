@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,7 @@
  * 
  */
 
-#ifndef _P2P_INTERFACE_H_
-#define _P2P_INTERFACE_H_
+#pragma once
 
 #include "FreeRTOS.h"
 #include "DTR_types.h"
@@ -37,11 +36,8 @@
 #define INCOMING_DTR_QUEUE_SIZE 10
 
 // Broadcasts a DTR packet through the P2P network
-void DTRsendP2Ppacket(const DTRpacket* packet) ;
+void dtrSendP2Ppacket(const DTRpacket* packet) ;
 
 // Puts the DTR packet in the queue for the token ring to pick up.
-void DTRp2pIncomingHandler(P2PPacket *p);
+bool dtrP2PIncomingHandler(P2PPacket *p);
 
-void DTRfeedPacketToProtocol(DTRpacket *incoming_DTR);
-
-#endif // _P2P_INTERFACE_H_

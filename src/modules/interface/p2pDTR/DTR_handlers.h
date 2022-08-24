@@ -49,19 +49,19 @@
 
 
 // DTR PROTOCOL TASK
-#define DTR_PROTOCOL_TASK_STACK_SIZE 2 * configMINIMAL_STACK_SIZE
+#define DTR_PROTOCOL_TASK_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
 #define DTR_PROTOCOL_TASK_PRIORITY 1 //Higher number higher priority
 
 // DTR protocol Task
-void DTRstartProtocolTask(void);
+void dtrStartProtocolTask(void);
 
-void DTRstopProtocolTask(void);
+void dtrStopProtocolTask(void);
 
 // ================ DTR sender timer ==================
-void DTRinitSenderTimer(void);
+void dtrInitSenderTimer(void);
 
-void DTRshutdownSenderTimer(void);
+void dtrShutdownSenderTimer(void);
 
-void DTRstartSenderTimer(unsigned int time_out);
+void dtrStartSenderTimer(unsigned int time_out);
 
 #endif /* SRC_RADIO_DTR_HANDLERS_H_ */

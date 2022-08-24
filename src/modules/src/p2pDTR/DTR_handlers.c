@@ -44,19 +44,19 @@ static bool sender_timer_running = false;
 
 static char type_to_spam[15];
 
-void DTRstartProtocolTask(void){
-	xTaskCreate(DTRInterruptHandler, "DTR_P2P", DTR_PROTOCOL_TASK_STACK_SIZE, NULL,DTR_PROTOCOL_TASK_PRIORITY, &DTRtaskHandler);
+void dtrStartProtocolTask(void){
+	xTaskCreate(dtrTaskHandler, "DTR_P2P", DTR_PROTOCOL_TASK_STACK_SIZE, NULL,DTR_PROTOCOL_TASK_PRIORITY, &DTRtaskHandler);
 }
 
-void DTRstopProtocolTask(void){
+void dtrStopProtocolTask(void){
 	vTaskDelete(DTRtaskHandler);
 }
 
-void DTRinitSenderTimer(void) {
-	sender_timer = xTimerCreate("DTRSenderTimer", M2T(20), pdTRUE, NULL, DTRtimeOutCallBack);
+void dtrInitSenderTimer(void) {
+	sender_timer = xTimerCreate("DTRSenderTimer", M2T(20), pdTRUE, NULL, dtrTimeOutCallBack);
 }
 
-void DTRshutdownSenderTimer(void) {
+void dtrShutdownSenderTimer(void) {
 	if (xTimerIsTimerActive(sender_timer)==pdTRUE) {
 		xTimerStop(sender_timer, 0);
 		DTR_DEBUG_PRINT("Stopped spamming messages\n");
@@ -67,7 +67,7 @@ void DTRshutdownSenderTimer(void) {
 }
 
 
-void DTRstartSenderTimer(unsigned int time_out) {
+void dtrStartSenderTimer(unsigned int time_out) {
 
 	if(time_out == MAX_WAIT_TIME_FOR_RTS ){
 		strcpy(type_to_spam, "RTS");
