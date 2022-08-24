@@ -65,7 +65,7 @@ void loadTXPacketsForTesting(void){
 	const char testMessage[STARTING_MESSAGE_SIZE] = "Hello World";
 	strcpy(testSignal.data, testMessage);
 	testSignal.dataSize = STARTING_MESSAGE_SIZE;
-	testSignal.allToAllFlag = 1;
+	testSignal.target_id = 0xFF;
 	testSignal.packetSize = DTR_PACKET_HEADER_SIZE + testSignal.dataSize;
 	bool res;
 	res = dtrSendPacket(&testSignal);
@@ -86,7 +86,7 @@ void loadResponse(void){
 	const char testMessage[25] = "Hello from the other side";
 	strcpy(testSignal.data, testMessage);
 	testSignal.dataSize = 25;
-	testSignal.allToAllFlag = 1;
+	testSignal.target_id = 0xFF;
 	testSignal.packetSize = DTR_PACKET_HEADER_SIZE + testSignal.dataSize;
 	bool res;
 	res = dtrSendPacket(&testSignal);

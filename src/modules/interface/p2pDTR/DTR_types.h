@@ -40,7 +40,7 @@
 #include "radiolink.h"
 
 #define MAX_NETWORK_SIZE 20
-#define DTR_PACKET_HEADER_SIZE 6
+#define DTR_PACKET_HEADER_SIZE 5
 
 // max usable size for a packet is -1 byte for the port
 #define P2P_MAX_USABLE_DATA_SIZE P2P_MAX_DATA_SIZE -1
@@ -81,8 +81,6 @@ enum message_types {
 // |--------------------|
 // | 	dataSize 		|	(1 B)
 // |--------------------|
-// |   allToAllFlag 	|	(1 b)
-// |--------------------|
 // | 	  data 			|	(dataSize B)
 // |--------------------|
 typedef struct radio_packet {
@@ -91,7 +89,6 @@ typedef struct radio_packet {
 	uint8_t source_id;
 	uint8_t target_id;
 	uint8_t dataSize;
-	bool allToAllFlag;
 	uint8_t data[MAXIMUM_DTR_PACKET_DATA_SIZE];
 } DTRpacket;
 

@@ -50,7 +50,7 @@ static DTRpacket startPacket; // not sure if this is needed
 static DTRpacket servicePk = {
 	.dataSize = 0,
 	.packetSize = DTR_PACKET_HEADER_SIZE,
-	.allToAllFlag = false,
+	.target_id = 254,
 };
 static TxStates tx_state, timerRadioTxState;
 static RxStates rx_state;
@@ -346,7 +346,7 @@ void dtrTaskHandler(void *param) {
 						if (dtrGetPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME))) {
 							txPk = &_txPk;
 							DTR_DEBUG_PRINT("TX DATA Packet exists (dataSize: %d), sending it\n",txPk->dataSize);
-							if(txPk->allToAllFlag) {
+							if(txPk->target_id == 0xFF) {
 								txPk->target_id = next_node_id;
 							}
 							if (!IdExistsInTopology(txPk->target_id)) {
@@ -409,7 +409,7 @@ void dtrTaskHandler(void *param) {
 						}
 
 						DTR_DEBUG_PRINT("next_target_id: %d\n", next_target_id);
-						if (!txPk->allToAllFlag || next_target_id == node_id) {
+						if (!(txPk->target_id == 0xFF) || next_target_id == node_id) {
 							DTR_DEBUG_PRINT("Releasing TX DATA:\n");
 							// dtrPrintPacket(txPk);
 
@@ -521,7 +521,6 @@ void dtrPrintPacket(DTRpacket* packet){
 	DTR_DEBUG_PRINT("Message Type: %s\n", getMessageType(packet->message_type));
 	DTR_DEBUG_PRINT("Source ID: %d\n", packet->source_id);
 	DTR_DEBUG_PRINT("Target ID: %d\n", packet->target_id);
-	DTR_DEBUG_PRINT("AllToAll Flag: %d\n", packet->allToAllFlag);
 	if (packet->dataSize > 0) {
 		DEBUG_PRINT("Data: ");
 		for (int i = 0; i < packet->dataSize; i++) {

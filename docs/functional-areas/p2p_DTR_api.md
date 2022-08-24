@@ -23,12 +23,11 @@ typedef struct radio_packet {
 	uint8_t source_id;
 	uint8_t target_id;
 	uint8_t dataSize;
-	bool allToAllFlag;
 	uint8_t data[MAXIMUM_DTR_PACKET_DATA_SIZE];
 } DTRpacket;
 ```
 
-Where PacketSize is the size of the packet in bytes, MessageType is the type of the message, SourceID is the ID of the source, TargetID is the ID of the target, DataSize is the size of the data in bytes, AllToAllFlag is a flag indicating if the message is to be sent to all the other Crazyflies or not, and Data is the data of the message.The maximum size of the data is 53 since the data for the P2P is 60 and the protocol occupies 7 of them for operation.
+Where PacketSize is the size of the packet in bytes, MessageType is the type of the message, SourceID is the ID of the source, TargetID is the ID of the target, DataSize is the size of the data in bytes, Data is the data of the message.The maximum size of the data is 55 since the data for the P2P is 60 and the protocol occupies 5 of them for operation.
 
 ## Setting up the Token Ring Protocol
 Since the nodes od the token ring are static, the user has to define the topology of the network. The topology is defined by the number of nodes and their ids in the order they are connected. The topology is defined like following:
@@ -98,7 +97,7 @@ This function takes the packet to be sent as a parameter. The packet must be fil
   packet.data[0] = 0x01;
   packet.data[1] = 0x02;
   packet.data[2] = 0x03;
-  packet.allToAllFlag = 1;
+  packet.target_id = 0xFF;
   dtrSendPacket(&packet);
 
   ```
