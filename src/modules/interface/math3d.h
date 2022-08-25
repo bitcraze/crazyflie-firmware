@@ -45,6 +45,35 @@ SOFTWARE.
 static inline float fsqr(float x) { return x * x; }
 static inline float radians(float degrees) { return (M_PI_F / 180.0f) * degrees; }
 static inline float degrees(float radians) { return (180.0f / M_PI_F) * radians; }
+
+// Normalize radians to be in range [-pi,pi]
+// See https://stackoverflow.com/questions/4633177/c-how-to-wrap-a-float-to-the-interval-pi-pi
+static inline float normalize_radians(float radians)
+{
+	// Copy the sign of the value in radians to the value of pi.
+	float signed_pi = copysignf(M_PI_F, radians);
+	// Set the value of difference to the appropriate signed value between pi and -pi.
+	radians = fmodf(radians + signed_pi, 2 * M_PI_F) - signed_pi;
+	return radians;
+}
+
+// modulo operation that uses the floored definition (as in Python), rather than
+// the truncated definition used for the % operator in C
+// See https://en.wikipedia.org/wiki/Modulo_operation
+static inline float fmodf_floored(float x, float n)
+{
+	return x - floorf(x / n) * n;
+}
+
+// compute shortest signed angle between two given angles (in range [-pi, pi])
+// See https://stackoverflow.com/questions/1878907/how-can-i-find-the-difference-between-two-angles
+static inline float shortest_signed_angle_radians(float start, float goal)
+{
+	float diff = goal - start;
+	float signed_diff = fmodf_floored(diff + M_PI_F, 2 * M_PI_F) - M_PI_F;
+	return signed_diff;
+}
+
 static inline float clamp(float value, float min, float max) {
   if (value < min) return min;
   if (value > max) return max;
