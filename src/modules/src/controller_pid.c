@@ -75,8 +75,12 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
           attitudeDesired.yaw = state->attitude.yaw - YAW_MAX_DELTA;
         }
       #endif
-    } else {
+    } else if (setpoint->mode.yaw == modeAbs) {
       attitudeDesired.yaw = setpoint->attitude.yaw;
+    } else if (setpoint->mode.quat == modeAbs) {
+      struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+      struct vec rpy = quat2rpy(setpoint_quat);
+      attitudeDesired.yaw = degrees(rpy.z);
     }
 
     attitudeDesired.yaw = capAngle(attitudeDesired.yaw);
