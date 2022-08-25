@@ -409,10 +409,19 @@ void dtrTaskHandler(void *param) {
 						}
 
 						DTR_DEBUG_PRINT("next_target_id: %d\n", next_target_id);
-						if (!(txPk->targetId == 0xFF) || next_target_id == node_id) {
+
+						bool not_in_broadcast_mode = !(txPk->targetId == 0xFF);
+						bool reached_desired_node = not_in_broadcast_mode && (txPk->targetId == next_target_id)  ; 
+						
+						bool reached_self = (next_target_id == node_id);
+
+						if ( reached_desired_node || reached_self ) {
 							DTR_DEBUG_PRINT("Releasing TX DATA:\n");
 							// dtrPrintPacket(txPk);
-
+							
+							if (reached_desired_node){
+								DTR_DEBUG_PRINT("Reached desired node (%d), stop data sending earlier...\n", txPk->targetId);
+							}
 							DTR_DEBUG_PRINT("Is Q Empty: %d\n", !dtrIsPacketInQueueAvailable(TX_DATA_Q));
 
 							dtrReleasePacketFromQueue(TX_DATA_Q);
@@ -420,11 +429,11 @@ void dtrTaskHandler(void *param) {
 							txPk->messageType = TOKEN_FRAME;
 							tx_state = TX_TOKEN;
 							next_sender_id = 255;
-						} else {								
+						} else {							
 							txPk->targetId = next_target_id;
 							next_sender_id = next_target_id;
-							DTR_DEBUG_PRINT("Sending DATA to next peer..");
-							DTR_DEBUG_PRINT("with target id: %d\n", txPk->targetId);
+							DEBUG_PRINT("Sending DATA to next peer..");
+							DEBUG_PRINT("with target id: %d\n", txPk->targetId);
 							tx_state = TX_DATA_FRAME;
 						}
 						setupRadioTx(txPk, tx_state);
