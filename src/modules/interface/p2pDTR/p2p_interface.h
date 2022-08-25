@@ -36,7 +36,7 @@
 #define INCOMING_DTR_QUEUE_SIZE 10
 
 // Broadcasts a DTR packet through the P2P network
-void dtrSendP2Ppacket(const DTRpacket* packet) ;
+void dtrSendP2Ppacket(const dtrPacket* packet) ;
 
 // Puts the DTR packet in the queue for the token ring to pick up.
 bool dtrP2PIncomingHandler(P2PPacket *p);

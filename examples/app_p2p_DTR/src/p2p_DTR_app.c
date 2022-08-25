@@ -55,17 +55,17 @@
 #define NETWORK_TOPOLOGY {.size = 4, .devices_ids = {0, 1, 2, 3} } // Maximum size of network is 20 by default
 
 static uint8_t my_id;
-static DTRtopology topology = NETWORK_TOPOLOGY;
+static dtrTopology topology = NETWORK_TOPOLOGY;
 
 void loadTXPacketsForTesting(void){
-	DTRpacket  testSignal;
-	testSignal.message_type = DATA_FRAME;
-	testSignal.source_id = my_id;
+	dtrPacket  testSignal;
+	testSignal.messageType = DATA_FRAME;
+	testSignal.sourceId = my_id;
 	
 	const char testMessage[STARTING_MESSAGE_SIZE] = "Hello World";
 	strcpy(testSignal.data, testMessage);
 	testSignal.dataSize = STARTING_MESSAGE_SIZE;
-	testSignal.target_id = 0xFF;
+	testSignal.targetId = 0xFF;
 	testSignal.packetSize = DTR_PACKET_HEADER_SIZE + testSignal.dataSize;
 	bool res;
 	res = dtrSendPacket(&testSignal);
@@ -78,15 +78,15 @@ void loadTXPacketsForTesting(void){
 }
 
 void loadResponse(void){
-	DTRpacket  testSignal;
-	testSignal.message_type = DATA_FRAME;
-	testSignal.source_id = my_id;
-	testSignal.target_id = 1;
+	dtrPacket  testSignal;
+	testSignal.messageType = DATA_FRAME;
+	testSignal.sourceId = my_id;
+	testSignal.targetId = 1;
 	
 	const char testMessage[25] = "Hello from the other side";
 	strcpy(testSignal.data, testMessage);
 	testSignal.dataSize = 25;
-	testSignal.target_id = 0xFF;
+	testSignal.targetId = 0xFF;
 	testSignal.packetSize = DTR_PACKET_HEADER_SIZE + testSignal.dataSize;
 	bool res;
 	res = dtrSendPacket(&testSignal);
@@ -129,7 +129,7 @@ void appMain(){
 		loadTXPacketsForTesting();
 	}
 
-	DTRpacket received_packet;
+	dtrPacket received_packet;
 	uint32_t start = T2M(xTaskGetTickCount());
 	while(1){
 		dtrGetPacket(&received_packet, portMAX_DELAY);
@@ -142,7 +142,7 @@ void appMain(){
 		}
 		data[received_packet.dataSize] = '\0';
 		
-		DEBUG_PRINT("Received data from %d : %s  --> Time elapsed: %lu msec\n",received_packet.source_id, data, dt);
+		DEBUG_PRINT("Received data from %d : %s  --> Time elapsed: %lu msec\n",received_packet.sourceId, data, dt);
 		start = T2M(xTaskGetTickCount());
 
 

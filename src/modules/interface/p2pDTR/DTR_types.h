@@ -53,16 +53,16 @@ typedef enum tx_states_e {
 	TX_RTS,
 	TX_DATA_FRAME,
 	TX_DATA_ACK,
-} TxStates;
+} dtrTxStates;
 
 typedef enum rx_states_e {
 	RX_IDLE,
 	RX_WAIT_CTS,
 	RX_WAIT_RTS,
 	RX_WAIT_DATA_ACK,
-} RxStates;
+} dtrRxStates;
 
-enum message_types {
+enum dtrMessageTypes {
 	DATA_FRAME = 0,
 	TOKEN_FRAME = 1,
 	CTS_FRAME = 2,
@@ -75,24 +75,24 @@ enum message_types {
 // |--------------------|
 // | 	packetSize   	|	(1 B)
 // |--------------------|
-// |   message_type 	|	(1 B)
+// |   messageType 		|	(1 B)
 // |--------------------|
-// | 	source_id     	|	(1 B)
+// | 	sourceId     	|	(1 B)
 // |--------------------|
 // | 	dataSize 		|	(1 B)
 // |--------------------|
 // | 	  data 			|	(dataSize B)
 // |--------------------|
-typedef struct radio_packet {
+typedef struct {
 	uint8_t packetSize;
-	uint8_t message_type;
-	uint8_t source_id;
-	uint8_t target_id;
+	uint8_t messageType;
+	uint8_t sourceId;
+	uint8_t targetId;
 	uint8_t dataSize;
 	uint8_t data[MAXIMUM_DTR_PACKET_DATA_SIZE];
-} DTRpacket;
+} dtrPacket;
 
-typedef struct radio_meta_info {
+typedef struct {
 	uint8_t deviceId;
 
 	uint32_t failedCRC;
@@ -106,11 +106,11 @@ typedef struct radio_meta_info {
 	uint32_t sendPackets;
 	uint32_t receivedPackets;
 
-} RadioInfo;
+} dtrRadioInfo;
 
 typedef struct {
 	uint8_t size; // number of nodes in the network
 	uint8_t devices_ids[MAX_NETWORK_SIZE]; // array that contains the device id of each node in the network
-} DTRtopology;
+} dtrTopology;
 
 #endif //DTR_TYPES_H

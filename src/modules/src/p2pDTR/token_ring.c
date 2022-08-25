@@ -43,33 +43,33 @@ static uint8_t prev_node_id = 0;
 static uint8_t next_target_id = 0;
 static uint8_t last_packet_source_id = 0;
 
-static DTRpacket* timerDTRpacket;
+static dtrPacket* timerDTRpacket;
 
-static DTRpacket startPacket; // not sure if this is needed
+static dtrPacket startPacket; // not sure if this is needed
 
-static DTRpacket servicePk = {
+static dtrPacket servicePk = {
 	.dataSize = 0,
 	.packetSize = DTR_PACKET_HEADER_SIZE,
-	.target_id = 254,
+	.targetId = 254,
 };
-static TxStates tx_state, timerRadioTxState;
-static RxStates rx_state;
+static dtrTxStates tx_state, timerRadioTxState;
+static dtrRxStates rx_state;
 
 
-static RadioInfo radioMetaInfo;
+static dtrRadioInfo radioMetaInfo;
 static uint32_t protocol_timeout_ms;
 
 static uint8_t my_id ;
 
-static DTRtopology networkTopology;
+static dtrTopology networkTopology;
 
 
 // DEBUGGING FUNCTIONS
 #ifdef DEBUG_DTR_PROTOCOL
 
 // get the message name from the message type
-static const char* getMessageType(uint8_t message_type){
-	switch(message_type){
+static const char* getMessageType(uint8_t messageType){
+	switch(messageType){
 	case DATA_FRAME:
 		return "DATA";
 	case TOKEN_FRAME:
@@ -153,11 +153,11 @@ static bool IdExistsInTopology(uint8_t id){
 	return false;
 }
 
-static void setNodeIds(DTRtopology topology, uint8_t device_id) {
+static void setNodeIds(dtrTopology topology, uint8_t device_id) {
 	networkTopology = topology;
 	node_id = device_id;
 
-	servicePk.source_id = node_id;
+	servicePk.sourceId = node_id;
 	last_packet_source_id = node_id;
 
 	next_node_id = getNextNodeId(node_id);
@@ -168,7 +168,7 @@ static void setNodeIds(DTRtopology topology, uint8_t device_id) {
 	DTR_DEBUG_PRINT("prev node_id: %d\n", prev_node_id);
 }
 
-static void initTokenRing(DTRtopology topology, uint8_t device_id) {
+static void initTokenRing(dtrTopology topology, uint8_t device_id) {
 	my_id = dtrGetSelfId();
 
 	/* Network node configuration*/
@@ -177,7 +177,7 @@ static void initTokenRing(DTRtopology topology, uint8_t device_id) {
 	rx_state = RX_IDLE;
 }
 
-static void setupRadioTx(DTRpacket* packet, TxStates txState) {
+static void setupRadioTx(dtrPacket* packet, dtrTxStates txState) {
 
 	tx_state = txState;
 	DTR_DEBUG_PRINT("Setting up radio tx with state: %s \n", getTXState(tx_state));
@@ -248,10 +248,10 @@ static uint8_t next_sender_id = 255;
 
 void dtrTaskHandler(void *param) {
 
-	DTRpacket* rxPk, *txPk;
+	dtrPacket* rxPk, *txPk;
 
 	//TODO: bad implementation, should be fixed
-	DTRpacket _rxPk ;
+	dtrPacket _rxPk ;
 	protocol_timeout_ms = T2M(xTaskGetTickCount()) + PROTOCOL_TIMEOUT_MS;
 	bool new_packet_received;
 
@@ -278,8 +278,8 @@ void dtrTaskHandler(void *param) {
 			DTR_DEBUG_PRINT("rx_state: %s\n", getRXState(rx_state));
 			
 			// dtrPrintPacket(rxPk);
-			DTR_DEBUG_PRINT("Received packet type: %d\n", rxPk->message_type);
-			DTR_DEBUG_PRINT("Received packet target id: %d\n", rxPk->target_id);
+			DTR_DEBUG_PRINT("Received packet type: %d\n", rxPk->messageType);
+			DTR_DEBUG_PRINT("Received packet target id: %d\n", rxPk->targetId);
 			DTR_DEBUG_PRINT("my_id: %d\n", node_id);
 
 			switch (rx_state) {
@@ -287,12 +287,12 @@ void dtrTaskHandler(void *param) {
 				case RX_IDLE:
 					/* if packet is DATA packet and received from previous node,
 					* then it can be handled. */
-					if (rxPk->message_type == DATA_FRAME && rxPk->target_id == node_id) {
+					if (rxPk->messageType == DATA_FRAME && rxPk->targetId == node_id) {
 						DTR_DEBUG_PRINT("\nReceived DATA packet from prev\n");
 						bool received_starting_packet = (rxPk->data[0] == (uint8_t) (START_PACKET >> 8)) 
 													 && (rxPk->data[1] == (uint8_t) START_PACKET) ;
-						if (rxPk->source_id != last_packet_source_id  && !received_starting_packet) {
-							last_packet_source_id = rxPk->source_id;
+						if (rxPk->sourceId != last_packet_source_id  && !received_starting_packet) {
+							last_packet_source_id = rxPk->sourceId;
 							/* if packet is relevant and receiver queue is not full, then
 							* push packet in the queue and prepare queue for next packet. */
 							bool queueFull = !dtrInsertPacketToQueue(rxPk, RX_DATA_Q);
@@ -303,26 +303,26 @@ void dtrTaskHandler(void *param) {
 							/* Acknowledge the data */
 							DTR_DEBUG_PRINT("Received DATA %d\n", rxPk->data[0]);
 							DTR_DEBUG_PRINT("\nSending ACK packet\n");
-							servicePk.message_type = DATA_ACK_FRAME;
-							servicePk.target_id = rxPk->source_id;
+							servicePk.messageType = DATA_ACK_FRAME;
+							servicePk.targetId = rxPk->sourceId;
 							setupRadioTx(&servicePk, TX_DATA_ACK);
 							continue;
 						}
 
 					/* if packet is TOKEN packet and received from previous node, then
 					* send a TOKEN_ACK packet and prepare the packet for the timer. */
-					if (rxPk->message_type == TOKEN_FRAME && rxPk->source_id == prev_node_id) {
+					if (rxPk->messageType == TOKEN_FRAME && rxPk->sourceId == prev_node_id) {
 						DTR_DEBUG_PRINT("\nReceived TOKEN from prev\n");
-						servicePk.message_type = RTS_FRAME;
+						servicePk.messageType = RTS_FRAME;
 						setupRadioTx(&servicePk, TX_RTS);
 						continue;
 					}
 
 					/* if packet is RTS packet and received from next node, then send
 					* a CTS packet to next node. */
-					if (rxPk->message_type == RTS_FRAME && rxPk->source_id == next_node_id) {
+					if (rxPk->messageType == RTS_FRAME && rxPk->sourceId == next_node_id) {
 						DTR_DEBUG_PRINT("\nReceived RTS from next -> CTS to next\n");
-						servicePk.message_type = CTS_FRAME;
+						servicePk.messageType = CTS_FRAME;
 						setupRadioTx(&servicePk, TX_CTS);
 						continue;
 					}
@@ -335,38 +335,38 @@ void dtrTaskHandler(void *param) {
 
 					/* if packet is CTS and received from previous node, then node can
 					 * send its next DATA packet. */
-					if (rxPk->message_type == CTS_FRAME && rxPk->source_id == prev_node_id) {
+					if (rxPk->messageType == CTS_FRAME && rxPk->sourceId == prev_node_id) {
 						dtrShutdownSenderTimer();
 						last_packet_source_id = node_id;
 						DTR_DEBUG_PRINT("\nRcvd CTS from prev,send DATA to next\n");
 						/* check if there is a DATA packet. If yes, prepare it and
 						 * send it, otherwise forward the token to the next node. */
 						
-						DTRpacket _txPk;//TODO: bad implementation, should be fixed
+						dtrPacket _txPk;//TODO: bad implementation, should be fixed
 						if (dtrGetPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME))) {
 							txPk = &_txPk;
 							DTR_DEBUG_PRINT("TX DATA Packet exists (dataSize: %d), sending it\n",txPk->dataSize);
-							if(txPk->target_id == 0xFF) {
-								txPk->target_id = next_node_id;
+							if(txPk->targetId == 0xFF) {
+								txPk->targetId = next_node_id;
 							}
-							if (!IdExistsInTopology(txPk->target_id)) {
+							if (!IdExistsInTopology(txPk->targetId)) {
 								DEBUG_PRINT("Releasing DTR TX packet,target is not in topology.\n");
 								DTR_DEBUG_PRINT("Is Queue Empty: %d\n", !dtrIsPacketInQueueAvailable(TX_DATA_Q));
 								
 								dtrReleasePacketFromQueue(TX_DATA_Q);
 								txPk = &servicePk;
-								txPk->message_type = TOKEN_FRAME;
+								txPk->messageType = TOKEN_FRAME;
 								tx_state = TX_TOKEN;
 							} else {
 								txPk->packetSize = DTR_PACKET_HEADER_SIZE + txPk->dataSize;
-								txPk->source_id = node_id;
-								txPk->message_type = DATA_FRAME;
+								txPk->sourceId = node_id;
+								txPk->messageType = DATA_FRAME;
 								tx_state = TX_DATA_FRAME;
 							}
 						} else {
 							DTR_DEBUG_PRINT("No TX DATA,forwarding token to next\n");
 							txPk = &servicePk;
-							txPk->message_type = TOKEN_FRAME;
+							txPk->messageType = TOKEN_FRAME;
 							tx_state = TX_TOKEN;
 						}
 
@@ -381,10 +381,10 @@ void dtrTaskHandler(void *param) {
 
 					/* if packet is TOKEN_ACK and received from next node, then
 					 * a CTS packet can be sent. */
-					if (rxPk->message_type == RTS_FRAME && rxPk->source_id == next_node_id) {
+					if (rxPk->messageType == RTS_FRAME && rxPk->sourceId == next_node_id) {
 						DTR_DEBUG_PRINT("\nReceived TOKEN_ACK from next->sending CTS \n");
 						dtrShutdownSenderTimer();
-						servicePk.message_type = CTS_FRAME;
+						servicePk.messageType = CTS_FRAME;
 						setupRadioTx(&servicePk, TX_CTS);
 						continue;
 					}
@@ -393,11 +393,11 @@ void dtrTaskHandler(void *param) {
 					break;
 
 				case RX_WAIT_DATA_ACK:
-					if (rxPk->message_type == DATA_ACK_FRAME && rxPk->target_id == node_id) {
+					if (rxPk->messageType == DATA_ACK_FRAME && rxPk->targetId == node_id) {
 						dtrShutdownSenderTimer();
 
 						//TODO: bad implementation, should be fixed
-						DTRpacket _txPk;
+						dtrPacket _txPk;
 						dtrGetPacketFromQueue(&_txPk, TX_DATA_Q, M2T(TX_RECEIVED_WAIT_TIME));
 						txPk = &_txPk;
 						
@@ -409,7 +409,7 @@ void dtrTaskHandler(void *param) {
 						}
 
 						DTR_DEBUG_PRINT("next_target_id: %d\n", next_target_id);
-						if (!(txPk->target_id == 0xFF) || next_target_id == node_id) {
+						if (!(txPk->targetId == 0xFF) || next_target_id == node_id) {
 							DTR_DEBUG_PRINT("Releasing TX DATA:\n");
 							// dtrPrintPacket(txPk);
 
@@ -417,14 +417,14 @@ void dtrTaskHandler(void *param) {
 
 							dtrReleasePacketFromQueue(TX_DATA_Q);
 							txPk = &servicePk;
-							txPk->message_type = TOKEN_FRAME;
+							txPk->messageType = TOKEN_FRAME;
 							tx_state = TX_TOKEN;
 							next_sender_id = 255;
 						} else {								
-							txPk->target_id = next_target_id;
+							txPk->targetId = next_target_id;
 							next_sender_id = next_target_id;
 							DTR_DEBUG_PRINT("Sending DATA to next peer..");
-							DTR_DEBUG_PRINT("with target id: %d\n", txPk->target_id);
+							DTR_DEBUG_PRINT("with target id: %d\n", txPk->targetId);
 							tx_state = TX_DATA_FRAME;
 						}
 						setupRadioTx(txPk, tx_state);
@@ -445,7 +445,7 @@ void dtrTaskHandler(void *param) {
 
 			// DEBUG_PRINT("Packet Received cannot be processed\n");
 			// DEBUG_PRINT("State: %d\n", rx_state);
-			// DEBUG_PRINT("Packet type: %d\n", rxPk->message_type);
+			// DEBUG_PRINT("Packet type: %d\n", rxPk->messageType);
 
 			// resetProtocol(); //TODO: test if it makes sense
 		}
@@ -458,8 +458,8 @@ uint8_t dtrGetDeviceAddress() {
 
 void dtrTimeOutCallBack(xTimerHandle timer) {
 	#ifdef DEBUG_DTR_PROTOCOL
-	DTR_DEBUG_PRINT("Sending packet after timeout: %s",getMessageType(timerDTRpacket->message_type));
-	if (timerDTRpacket->message_type == DATA_FRAME) {
+	DTR_DEBUG_PRINT("Sending packet after timeout: %s",getMessageType(timerDTRpacket->messageType));
+	if (timerDTRpacket->messageType == DATA_FRAME) {
 		for (size_t i = 0; i <timerDTRpacket->dataSize; i++)
 		{
 			DTR_DEBUG_PRINT(" %d ",timerDTRpacket->data[i]);
@@ -486,7 +486,7 @@ void dtrTimeOutCallBack(xTimerHandle timer) {
 	}
 }
 
-const RadioInfo* dtrGetRadioInfo() {
+const dtrRadioInfo* dtrGetRadioInfo() {
 	radioMetaInfo.deviceId = node_id;
 	return &radioMetaInfo;
 }
@@ -496,15 +496,15 @@ void dtrResetRadioMetaInfo() {
 }
 
 static void dtrStartCommunication() {
-	DTRpacket* startSignal = &startPacket;
+	dtrPacket* startSignal = &startPacket;
 
-	startSignal->source_id = node_id;
-	startSignal->target_id = next_node_id;
+	startSignal->sourceId = node_id;
+	startSignal->targetId = next_node_id;
 	startSignal->data[0] = (uint8_t) (START_PACKET >> 8);
 	startSignal->data[1] = (uint8_t) START_PACKET;
 	startSignal->dataSize = 2;
 	startSignal->packetSize = DTR_PACKET_HEADER_SIZE + startSignal->dataSize;
-	startSignal->message_type = DATA_FRAME; 
+	startSignal->messageType = DATA_FRAME; 
 	timerDTRpacket = startSignal;
 
 	timerRadioTxState = TX_DATA_FRAME;
@@ -515,12 +515,12 @@ static void dtrStartCommunication() {
 }
 
 
-void dtrPrintPacket(DTRpacket* packet){
-	DTR_DEBUG_PRINT("\nDTR Packet Received: %s\n", getMessageType(packet->message_type));
+void dtrPrintPacket(dtrPacket* packet){
+	DTR_DEBUG_PRINT("\nDTR Packet Received: %s\n", getMessageType(packet->messageType));
 	DTR_DEBUG_PRINT("Packet Size: %d\n", packet->packetSize);
-	DTR_DEBUG_PRINT("Message Type: %s\n", getMessageType(packet->message_type));
-	DTR_DEBUG_PRINT("Source ID: %d\n", packet->source_id);
-	DTR_DEBUG_PRINT("Target ID: %d\n", packet->target_id);
+	DTR_DEBUG_PRINT("Message Type: %s\n", getMessageType(packet->messageType));
+	DTR_DEBUG_PRINT("Source ID: %d\n", packet->sourceId);
+	DTR_DEBUG_PRINT("Target ID: %d\n", packet->targetId);
 	if (packet->dataSize > 0) {
 		DEBUG_PRINT("Data: ");
 		for (int i = 0; i < packet->dataSize; i++) {
@@ -540,7 +540,7 @@ uint8_t dtrGetSelfId(void){
 	return my_id;
 }
 
-void dtrEnableProtocol(DTRtopology topology){
+void dtrEnableProtocol(dtrTopology topology){
 	DTR_DEBUG_PRINT("Initializing queues ...\n");
 	dtrQueueingInit();
 
@@ -574,15 +574,15 @@ void DisableDTRProtocol(void){
 }
 
 
-bool dtrSendPacket(DTRpacket* packet){
-	packet->message_type = DATA_FRAME;
-	packet->source_id = node_id;
+bool dtrSendPacket(dtrPacket* packet){
+	packet->messageType = DATA_FRAME;
+	packet->sourceId = node_id;
 	packet->packetSize = DTR_PACKET_HEADER_SIZE + packet->dataSize;
 	return  dtrInsertPacketToQueue(packet,TX_DATA_Q);
 }
 
 
-bool dtrGetPacket(DTRpacket* packet, uint32_t timeout){
+bool dtrGetPacket(dtrPacket* packet, uint32_t timeout){
 	return  dtrGetPacketFromQueue(packet,RX_DATA_Q,timeout);
 }
 

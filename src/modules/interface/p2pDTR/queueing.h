@@ -61,13 +61,13 @@ bool dtrIsPacketInQueueAvailable(DTRQueue_Names qName);
 
 uint8_t dtrGetNumberOfPacketsInQueue(DTRQueue_Names qName);
 
-bool dtrGetPacketFromQueue(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout);
+bool dtrGetPacketFromQueue(dtrPacket *packet, DTRQueue_Names qName, uint32_t timeout);
 
 // Blocks to wait for a packet to be received for a given time
 // new_packet_received --> True if a new packet has been received and False if the timeout has been reached
-bool dtrReceivePacketWaitUntil(DTRpacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received);
+bool dtrReceivePacketWaitUntil(dtrPacket *packet, DTRQueue_Names qName, uint32_t timeout_ms, bool *new_packet_received);
 
-bool dtrInsertPacketToQueue(DTRpacket *packet, DTRQueue_Names qName);
+bool dtrInsertPacketToQueue(dtrPacket *packet, DTRQueue_Names qName);
 
 bool dtrReleasePacketFromQueue(DTRQueue_Names qName);
 
