@@ -432,8 +432,8 @@ void dtrTaskHandler(void *param) {
 						} else {							
 							txPk->targetId = next_target_id;
 							next_sender_id = next_target_id;
-							DEBUG_PRINT("Sending DATA to next peer..");
-							DEBUG_PRINT("with target id: %d\n", txPk->targetId);
+							DTR_DEBUG_PRINT("Sending DATA to next peer..");
+							DTR_DEBUG_PRINT("with target id: %d\n", txPk->targetId);
 							tx_state = TX_DATA_FRAME;
 						}
 						setupRadioTx(txPk, tx_state);
