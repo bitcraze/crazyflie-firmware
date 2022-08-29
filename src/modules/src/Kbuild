@@ -62,6 +62,10 @@ obj-$(CONFIG_ENABLE_CPX_ON_UART2) += cpx/cpx_uart_transport.o
 obj-$(CONFIG_ENABLE_CPX)          += cpx/cpxlink.o
 obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx.o
 
+obj-y += p2pDTR/DTR_handlers.o
+obj-y += p2pDTR/p2p_interface.o
+obj-y += p2pDTR/queueing.o
+obj-y += p2pDTR/token_ring.o
 # Kalman core
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
 
