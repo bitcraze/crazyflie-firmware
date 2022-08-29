@@ -81,6 +81,7 @@
 #define NVIC_RADIO_PRI        11
 #define NVIC_ADC_PRI          12
 #define NVIC_CPPM_PRI         14
+#define NVIC_SYSLINK_FLOW_PRI 4
 #define NVIC_SYSLINK_UART_PRI 5
 #define NVIC_SYSLINK_DMA_PRI  7
 #define NVIC_SPI_PRI          7
@@ -100,7 +101,7 @@
 #define EXTI1_PRI NVIC_LOW_PRI
 #define EXTI2_PRI NVIC_LOW_PRI
 #define EXTI3_PRI NVIC_LOW_PRI
-#define EXTI4_PRI NVIC_SYSLINK_UART_PRI // this serves the syslink UART
+#define EXTI4_PRI NVIC_SYSLINK_FLOW_PRI // this is used for flow control when STM sends data to the NRF on the syslink UART
 #define EXTI9_5_PRI NVIC_LOW_PRI
 #define EXTI15_10_PRI NVIC_MID_PRI // this serves the decks and sensors
 
