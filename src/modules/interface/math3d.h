@@ -327,8 +327,122 @@ static inline void vstoref(struct vec v, float *f) {
 static inline float vindex(struct vec v, int i) {
 	return ((float const *)&v.x)[i];
 }
+// -----------------------FOR QP----------------------------//
+// ------------------------------2x6 matrices------------------------------//
+struct mat26 {
+	float m[2][6];
+};
 
+static inline struct mat26 zero26() {
+	struct mat26 A_zero;
+  	for (int i = 0; i < 2; ++i) {
+		  for (int j = 0; j < 6; ++j) {
+		  	A_zero.m[i][j] = 0;
+		  }
+	}
+	return A_zero;
+}
+static inline struct mat26 addrows(struct vec vector1, struct vec vector2) {
+	struct mat26 A = zero26();	
+	A.m[0][0] = vector1.x;
+	A.m[0][1] = vector1.y;
+	A.m[0][2] = vector1.z;
+	A.m[1][3] = vector2.x;
+	A.m[1][4] = vector2.y;
+	A.m[1][5] = vector2.z;
+	return A;
+}
+// -----------------------FOR QP----------------------------//
+// ------------------------------3x6 matrices------------------------------
+struct mat36 {
+	float m[3][6];
+};
 
+static inline struct mat36 zero36(void) {
+  struct mat36 m;
+  	for (int i = 0; i < 3; ++i) {
+		  for (int j = 0; j < 6; ++j) {
+		  	m.m[i][j] = 0;
+		  }
+	}
+	return m;
+}
+// concatenate 2 identity matrices in the mat36 for two UAVs
+//      [1 0 0 1 0 0
+// P =  0 1 0 0 1 0
+//      0 0 1 0 0 1]
+static inline struct mat36 ones36(void) {
+  struct mat36 P_alloc = zero36();
+  P_alloc.m[0][0] = 1;
+  P_alloc.m[1][1] = 1;
+  P_alloc.m[2][2] = 1;
+  P_alloc.m[0][3] = 1;
+  P_alloc.m[1][4] = 1;
+  P_alloc.m[2][5] = 1;
+  return P_alloc;
+}
+// -----------------------FOR QP----------------------------//
+// ------------------------------6x6 matrices -----------------------------//
+struct mat66 {
+	float m[6][6];
+};
+
+static inline struct mat66 zero66(void) {
+  struct mat66 m;
+  	for (int i = 0; i < 6; ++i) {
+		  for (int j = 0; j < 6; ++j) {
+		  	m.m[i][j] = 0;
+		  }
+	}
+	return m;
+}
+
+static inline struct mat66 eye66(void) {
+  struct mat66 P = zero66();
+  P.m[0][0] = 1;
+  P.m[1][1] = 1;
+  P.m[2][2] = 1;
+  P.m[3][3] = 1;
+  P.m[4][4] = 1;
+  P.m[5][5] = 1;
+  return P;
+}
+static inline struct mat66 setnm(struct mat66 P, float value, int diagID) {
+	P.m[diagID][diagID] = value;
+	return P;
+}
+// -----------------------FOR QP----------------------------//
+//-------------------------------6x1 vectors-------------------------------//
+struct vec6{
+	float a; float b; float c; float x; float y; float z;
+};
+// set the values of 6 Dimensional vector to zero
+static inline struct vec6 zero6() {
+	struct vec6 vector;
+	vector.a = 0;
+	vector.b = 0;
+	vector.c = 0;
+	vector.x = 0;
+	vector.y = 0;
+	vector.z = 0;
+	return vector;
+}
+// return a 3D vector from a 6D vec, given an int value 0 or 1
+// 0 for the first half, and 1 for the second half
+static inline struct vec partialvec(struct vec6 vector6, int value) {
+  struct vec vector3;
+  if (value == 0) {
+	vector3.x = vector6.a; 
+	vector3.y = vector6.b;
+	vector3.z =	vector6.c;
+  }
+  else {
+	vector3.x = vector6.x;
+	vector3.y = vector6.y;
+	vector3.z =	vector6.z;
+  }
+  return vector3;
+}
 // ---------------------------- 3x3 matrices ------------------------------
 
 struct mat33 {

@@ -35,6 +35,31 @@ TODO
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
+static inline struct mat26 Ainequality(float angle_limit) {
+  struct vec q1_limit = mkvec(-radians(angle_limit), 0 , 0);
+  struct vec q2_limit = mkvec(radians(angle_limit), 0 , 0);
+
+  struct quat q1 = rpy2quat(q1_limit);
+  struct quat q2 = rpy2quat(q2_limit);
+
+  struct mat33 R1 = quat2rotmat(q1);
+  struct mat33 R2 = quat2rotmat(q2);
+  struct vec e3 = mkvec(0,0,-1);
+  // Final vectors to rotate
+  struct vec q1vec = mvmul(R1, e3);
+  struct vec q2vec = mvmul(R2, e3);
+  
+  struct quat q_rotate = rpy2quat(mkvec(0,0,radians(20.0)));
+  struct vec q1_ = qvrot(q_rotate, q1vec); 
+  struct vec q2_ = qvrot(q_rotate, q2vec); 
+
+  struct vec n1 = vcross(q1vec, q1_);
+  struct vec n2 = vcross(q2vec, q2_);
+  
+  struct mat26 A_in = addrows(n1,n2);
+  return A_in;
+}
+
 static controllerLeePayload_t g_self = {
   .mass = 0.034,
   .mp   = 0.01,
@@ -62,7 +87,11 @@ static controllerLeePayload_t g_self = {
   .KR = {0.008, 0.008, 0.01},
   .Komega = {0.0013, 0.0013, 0.002},
   .KI = {0.02, 0.02, 0.05},
-
+  // -----------------------FOR QP----------------------------//
+  // 0 for UAV 1 and, 1 for UAV 2
+  .value = 0,
+  // fixed angle hyperplane in degrees
+  .angle_limit = 20.0,
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -81,6 +110,12 @@ void controllerLeePayloadReset(controllerLeePayload_t* self)
   self->acc_prev   = vzero();
   self->payload_vel_prev = vzero();
   self->qdi_prev = vzero();
+  //---------------------FOR QP--------------------//
+  // Create P matrix Fd = P @ mu_des
+  self->P_alloc = ones36(); // P_alloc is the P matrix in the paper (eq. 23)
+  self->desVirtInp = vzero(); // the desired Virtual input;
+  self->P = eye66(); // P matrix of the QP 
+  self->A_in = zero26(); // initialization of the inequality matrix
 }
 
 void controllerLeePayloadInit(controllerLeePayload_t* self)
@@ -147,14 +182,21 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       veltmul(self->Kpos_P, plpos_e),
       veltmul(self->Kpos_D, plvel_e)));
 
-    struct vec desVirtInp = F_d;
+    //------------------------------------------QP------------------------------//
+    // The QP will be added here for the desired virtual input (mu_des)
+    self->A_in = Ainequality(self->angle_limit);
+    // QP method should return struct vec6 defined in math3d
+    // struct vec6 mu_des = QP(F_d, A_in, self->P_alloc, self->P);
+    // self->desVirtInp = partialvec(mu_des, self->value);
+    //------------------------------------------QP------------------------------//
+    self->desVirtInp = F_d;    // COMMENT THIS IF YOU ARE USING THE QP 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
 
     struct vec qidot = vdiv(vsub(plStVel, stateVel), vmag(vsub(plStPos, statePos)));
     struct vec wi = vcross(qi, qidot);
     struct mat33 qiqiT = vecmult(qi);
-    struct vec virtualInp = mvmul(qiqiT, desVirtInp);
+    struct vec virtualInp = mvmul(qiqiT, self->desVirtInp);
     
     // Compute parallel component
     struct vec acc_ = plAcc_d;
@@ -162,7 +204,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec u_parallel = vadd3(virtualInp, vscl(self->mass*self->l*vmag2(wi), qi), vscl(self->mass, mvmul(qiqiT, acc_)));
     
     // Compute Perpindicular Component
-    struct vec qdi = vneg(vnormalize(desVirtInp));
+    struct vec qdi = vneg(vnormalize(self->desVirtInp));
     struct vec eq  = vcross(qdi, qi);
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
@@ -386,6 +428,11 @@ PARAM_ADD(PARAM_FLOAT, mass, &g_self.mass)
 PARAM_ADD(PARAM_FLOAT, massP, &g_self.mp)
 PARAM_ADD(PARAM_FLOAT, length, &g_self.l)
 PARAM_ADD(PARAM_FLOAT, offset, &g_self.offset)
+
+
+//For the QP 
+PARAM_ADD(PARAM_FLOAT, uavId, &g_self.value)
+PARAM_ADD(PARAM_FLOAT, angleLimit, &g_self.angle_limit)
 
 PARAM_GROUP_STOP(ctrlLeeP)
 
