@@ -44,3 +44,16 @@ obj-y += vl53l1/core/src/vl53l1_error_strings.o
 obj-y += vl53l1/core/src/vl53l1_register_funcs.o
 obj-y += vl53l1/core/src/vl53l1_silicon_core.o
 obj-y += vl53l1/core/src/vl53l1_wait.o
+
+# osqp
+obj-y += osqp/src/osqp/auxil.o
+obj-y += osqp/src/osqp/error.o
+obj-y += osqp/src/osqp/kkt.o
+obj-y += osqp/src/osqp/lin_alg.o
+obj-y += osqp/src/osqp/osqp.o
+obj-y += osqp/src/osqp/proj.o
+obj-y += osqp/src/osqp/qdldl_interface.o
+obj-y += osqp/src/osqp/qdldl.o
+obj-y += osqp/src/osqp/scaling.o
+obj-y += osqp/src/osqp/util.o
+obj-y += osqp/src/osqp/workspace.o
