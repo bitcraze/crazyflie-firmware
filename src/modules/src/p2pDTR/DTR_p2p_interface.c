@@ -22,13 +22,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * p2p_interface.c
+ * DTR_p2p_interface.c
  *  
  */
 
 
 
-#include "p2p_interface.h"
+#include "DTR_p2p_interface.h"
 
 #define DEBUG_MODULE "DTR_P2P"
 #include "debug.h"

@@ -63,7 +63,7 @@ obj-$(CONFIG_ENABLE_CPX)          += cpx/cpxlink.o
 obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx.o
 
 obj-y += p2pDTR/DTR_handlers.o
-obj-y += p2pDTR/p2p_interface.o
+obj-y += p2pDTR/DTR_p2p_interface.o
 obj-y += p2pDTR/queueing.o
 obj-y += p2pDTR/token_ring.o
 # Kalman core

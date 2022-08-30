@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * p2p_interface.h
+ * DTR_p2p_interface.h
  * 
  */
 

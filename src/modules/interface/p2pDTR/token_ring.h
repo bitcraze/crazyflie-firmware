@@ -46,7 +46,7 @@
 
 #include "DTR_types.h"
 #include "DTR_handlers.h"
-#include "p2p_interface.h"
+#include "DTR_p2p_interface.h"
 #include "queueing.h"
 
 // #define UNUSED(...) ((void)sizeof((_Bool[]){__VA_ARGS__})); //Used to silence compiler warnings about unused parameters
