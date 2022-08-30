@@ -44,7 +44,7 @@
 #include "debug.h"
 
 #include "token_ring.h"
-#include "p2p_interface.h"
+#include "DTR_p2p_interface.h"
 
 #define INTERESTING_DATA 104
 
