@@ -87,7 +87,6 @@ typedef struct controllerLeePayload_s {
     struct mat26 A_in;
     // value: 0,1: defines which part of the vector in desVirtInp goes to which UAV
     int value;
-   
     // angle limit for hyper plane
     float angle_limit;
 } controllerLeePayload_t;
