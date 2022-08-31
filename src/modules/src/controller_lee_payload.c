@@ -33,6 +33,10 @@ TODO
 #include "math3d.h"
 #include "controller_lee_payload.h"
 
+// QP
+#include "workspace.h"
+#include "osqp.h"
+
 #define GRAVITY_MAGNITUDE (9.81f)
 
 static inline struct mat26 Ainequality(float angle_limit) {
@@ -188,6 +192,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     // QP method should return struct vec6 defined in math3d
     // struct vec6 mu_des = QP(F_d, A_in, self->P_alloc, self->P);
     // self->desVirtInp = partialvec(mu_des, self->value);
+    osqp_solve(&workspace);
+
     //------------------------------------------QP------------------------------//
     self->desVirtInp = F_d;    // COMMENT THIS IF YOU ARE USING THE QP 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
