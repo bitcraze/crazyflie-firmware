@@ -15,7 +15,7 @@ menu "Communication"
 
 config SYSLINK_RX_DMA
     bool "Use DMA to receive uart syslink data instead of interrupts"
-    default y
+    default n
     help
         Using DMA to receive uart data reduces CPU load and will free
         up recources for other things. DMA is a shared resource though
@@ -41,6 +41,6 @@ config CPX_UART2_BAUDRATE
   range 9600 2000000
   default 576000
   help
-      Set the baudrate that will be used for CPX on UART2    
+      Set the baudrate that will be used for CPX on UART2
 
 endmenu
