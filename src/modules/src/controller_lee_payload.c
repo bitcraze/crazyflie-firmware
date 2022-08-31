@@ -32,10 +32,12 @@ TODO
 #include <string.h>
 #include "math3d.h"
 #include "controller_lee_payload.h"
-
+#include "stdio.h"
 // QP
 #include "workspace.h"
 #include "osqp.h"
+#include "usec_time.h"
+// #include "debug.h"
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
@@ -117,7 +119,6 @@ void controllerLeePayloadReset(controllerLeePayload_t* self)
   //---------------------FOR QP--------------------//
   // Create P matrix Fd = P @ mu_des
   self->P_alloc = ones36(); // P_alloc is the P matrix in the paper (eq. 23)
-  self->desVirtInp = vzero(); // the desired Virtual input;
   self->P = eye66(); // P matrix of the QP 
   self->A_in = zero26(); // initialization of the inequality matrix
 }
@@ -188,21 +189,42 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
-    self->A_in = Ainequality(self->angle_limit);
+    // self->A_in = Ainequality(self->angle_limit);
     // QP method should return struct vec6 defined in math3d
     // struct vec6 mu_des = QP(F_d, A_in, self->P_alloc, self->P);
     // self->desVirtInp = partialvec(mu_des, self->value);
+    c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY};
+    c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0};
+    struct vec desVirtInp = vzero(); // the desired Virtual input;
+
+    osqp_update_lower_bound(&workspace, l_new);
+    osqp_update_upper_bound(&workspace, u_new);
+
     osqp_solve(&workspace);
+    // printf("tick %d \n", tick);
+    printf("workspace status:   %s\n", (&workspace)->info->status);
+    printf("tick: %d \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
+    if (self->value == 0) {
+      desVirtInp.x = (&workspace)->solution->x[0]; 
+      desVirtInp.y = (&workspace)->solution->x[1];
+      desVirtInp.z = (&workspace)->solution->x[2];
+    }
+    else {
+      desVirtInp.x = (&workspace)->solution->x[3];
+      desVirtInp.y = (&workspace)->solution->x[4];
+      desVirtInp.z = (&workspace)->solution->x[5];
+    }
+    printf("value: %d desVirtInp: %f %f %f\n", self->value,desVirtInp.x,desVirtInp.y,desVirtInp.z);
 
     //------------------------------------------QP------------------------------//
-    self->desVirtInp = F_d;    // COMMENT THIS IF YOU ARE USING THE QP 
+    // desVirtInp = F_d;  // COMMENT THIS IF YOU ARE USING THE QP 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
 
     struct vec qidot = vdiv(vsub(plStVel, stateVel), vmag(vsub(plStPos, statePos)));
     struct vec wi = vcross(qi, qidot);
     struct mat33 qiqiT = vecmult(qi);
-    struct vec virtualInp = mvmul(qiqiT, self->desVirtInp);
+    struct vec virtualInp = mvmul(qiqiT,desVirtInp);
     
     // Compute parallel component
     struct vec acc_ = mkvec(0,0,GRAVITY_MAGNITUDE); //plAcc_d;
@@ -210,13 +232,12 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec u_parallel = vadd3(virtualInp, vscl(self->mass*self->l*vmag2(wi), qi), vscl(self->mass, mvmul(qiqiT, acc_)));
     
     // Compute Perpindicular Component
-    struct vec qdi = vneg(vnormalize(self->desVirtInp));
+    struct vec qdi = vneg(vnormalize(desVirtInp));
     struct vec eq  = vcross(qdi, qi);
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
 
     struct vec qdidot = vdiv(vsub(qdi, self->qdi_prev), dt);
-    // struct vec qdidot = vzero();
     self->qdi_prev = qdi;
     struct vec wdi = vcross(qdi, qdidot);
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
@@ -438,7 +459,7 @@ PARAM_ADD(PARAM_FLOAT, offset, &g_self.offset)
 
 
 //For the QP 
-PARAM_ADD(PARAM_FLOAT, uavId, &g_self.value)
+PARAM_ADD(PARAM_FLOAT, value, &g_self.value)
 PARAM_ADD(PARAM_FLOAT, angleLimit, &g_self.angle_limit)
 
 PARAM_GROUP_STOP(ctrlLeeP)

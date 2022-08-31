@@ -427,22 +427,7 @@ static inline struct vec6 zero6() {
 	vector.z = 0;
 	return vector;
 }
-// return a 3D vector from a 6D vec, given an int value 0 or 1
-// 0 for the first half, and 1 for the second half
-static inline struct vec partialvec(struct vec6 vector6, int value) {
-  struct vec vector3;
-  if (value == 0) {
-	vector3.x = vector6.a; 
-	vector3.y = vector6.b;
-	vector3.z =	vector6.c;
-  }
-  else {
-	vector3.x = vector6.x;
-	vector3.y = vector6.y;
-	vector3.z =	vector6.z;
-  }
-  return vector3;
-}
+
 // ---------------------------- 3x3 matrices ------------------------------
 
 struct mat33 {
