@@ -45,6 +45,8 @@
 #include "queuemonitor.h"
 #include "static_mem.h"
 
+#define DEBUG_MODULE "U-SLK"
+#include "debug.h"
 
 #define UARTSLK_DATA_TIMEOUT_MS 1000
 #define UARTSLK_DATA_TIMEOUT_TICKS (UARTSLK_DATA_TIMEOUT_MS / portTICK_RATE_MS)
@@ -83,6 +85,14 @@ static void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPrior
 
 static void uartslkPauseDma();
 static void uartslkResumeDma();
+
+// Debug probe
+static uint32_t dmaPausedCounter;
+static uint32_t dmaTxStreamPausedCounter;
+static uint32_t dmaResumedCounter;
+static uint32_t dmaTxStreamResumedCounter;
+static bool dmaNrfFlowControlBufferFull;
+static uint32_t dmaSendWhileNrfBufferFull;
 
 /**
   * Configures the UART DMA. Mainly used for FreeRTOS trace
@@ -289,6 +299,10 @@ int uartslkPutchar(int ch)
 
 void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
 {
+  if (dmaNrfFlowControlBufferFull) {
+    dmaSendWhileNrfBufferFull++;
+  }
+
   if (isUartDmaInitialized)
   {
     xSemaphoreTake(uartBusy, portMAX_DELAY);
@@ -315,6 +329,8 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
 
 static void uartslkPauseDma()
 {
+  dmaNrfFlowControlBufferFull = true;
+  dmaPausedCounter++;
   if (DMA_GetCmdStatus(UARTSLK_DMA_TX_STREAM) == ENABLE)
   {
     // Disable transfer complete interrupt
@@ -328,11 +344,14 @@ static void uartslkPauseDma()
     // Read remaining data count
     remainingDMACount = DMA_GetCurrDataCounter(UARTSLK_DMA_TX_STREAM);
     dmaIsPaused = true;
+    dmaTxStreamPausedCounter++;
   }
 }
 
 static void uartslkResumeDma()
 {
+  dmaNrfFlowControlBufferFull = false;
+  dmaResumedCounter++;
   if (dmaIsPaused)
   {
     // Update DMA counter
@@ -346,6 +365,7 @@ static void uartslkResumeDma()
     // Enable DMA USART TX Stream
     DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
     dmaIsPaused = false;
+    dmaTxStreamResumedCounter++;
   }
 }
 
@@ -606,3 +626,11 @@ void __attribute__((used)) DMA2_Stream1_IRQHandler(void)
   uartslkDmaRXIsr();
 }
 #endif
+
+void uartSyslinkDumpDebugProbe() {
+  DEBUG_PRINT("STM dmaPausedCounter: %ld\n",dmaPausedCounter);
+  DEBUG_PRINT("STM dmaTxStreamPausedCounter: %ld\n", dmaTxStreamPausedCounter);
+  DEBUG_PRINT("STM dmaResumedCounter: %ld\n", dmaResumedCounter);
+  DEBUG_PRINT("STM dmaTxStreamResumedCounter: %ld\n", dmaTxStreamResumedCounter);
+  DEBUG_PRINT("STM dmaSendWhileNrfBufferFull: %ld\n", dmaSendWhileNrfBufferFull);
+}

@@ -173,6 +173,9 @@ static void debugHandler(xTimerHandle timer) {
   if (triggerDebugProbe) {
     triggerDebugProbe = 0;
 
+    uartSyslinkDumpDebugProbe();
+    DEBUG_PRINT("Syslink NRF debug probe initialized\n");
+
     txPacket.type = SYSLINK_DEBUG_PROBE;
     txPacket.length = 0;
     syslinkSendPacket(&txPacket);
@@ -181,11 +184,14 @@ static void debugHandler(xTimerHandle timer) {
 
 static void debugSyslinkReceive(SyslinkPacket *slp) {
   if (slp->type == SYSLINK_DEBUG_PROBE) {
-    DEBUG_PRINT("Syslink debug probe:\n");
-    DEBUG_PRINT("Address received: %d\n", slp->data[0]);
-    DEBUG_PRINT("Chan received: %d\n", slp->data[1]);
-    DEBUG_PRINT("Rate received: %d\n", slp->data[2]);
-    DEBUG_PRINT("Dropped: %d\n", slp->data[3]);
+    DEBUG_PRINT("NRF Address received: %d\n", slp->data[0]);
+    DEBUG_PRINT("NRF Chan received: %d\n", slp->data[1]);
+    DEBUG_PRINT("NRF Rate received: %d\n", slp->data[2]);
+    DEBUG_PRINT("NRF Dropped: %d\n", slp->data[3]);
+    DEBUG_PRINT("NRF uart error code: %d\n", slp->data[4]);
+    DEBUG_PRINT("NRF uart error count: %d\n", slp->data[5]);
+    DEBUG_PRINT("NRF uart checksum 1 fail count: %d\n", slp->data[6]);
+    DEBUG_PRINT("NRF uart checksum 2 fail count: %d\n", slp->data[7]);
   }
 }
 
