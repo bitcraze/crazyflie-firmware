@@ -80,7 +80,7 @@ static controllerLeePayload_t g_self = {
   .Kpos_P_limit = 100,
   .Kpos_D = {15, 15, 15},
   .Kpos_D_limit = 100,
-  .Kpos_I ={0, 0, 0},
+  .Kpos_I ={10, 10, 10},
   .Kpos_I_limit = 100,
 
   // Cables PD
@@ -176,32 +176,29 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     // errors
     struct vec plpos_e = vclampscl(vsub(plPos_d, plStPos), -self->Kpos_P_limit, self->Kpos_P_limit);
     struct vec plvel_e = vclampscl(vsub(plVel_d, plStVel), -self->Kpos_D_limit, self->Kpos_D_limit);
+    self->i_error_pos = vclampscl(vadd(self->i_error_pos, vscl(dt, plpos_e)), -self->Kpos_I_limit, self->Kpos_I_limit);
 
     self->plp_error = plpos_e;
     self->plv_error = plvel_e;
 
-    struct vec F_d =vscl(self->mp ,vadd3(
+    struct vec F_d =vscl(self->mp ,vadd4(
       plAcc_d,
       veltmul(self->Kpos_P, plpos_e),
-      veltmul(self->Kpos_D, plvel_e)));
+      veltmul(self->Kpos_D, plvel_e),
+      veltmul(self->Kpos_I, self->i_error_pos)));
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
     // self->A_in = Ainequality(self->angle_limit);
-    // QP method should return struct vec6 defined in math3d
-    // struct vec6 mu_des = QP(F_d, A_in, self->P_alloc, self->P);
-    // self->desVirtInp = partialvec(mu_des, self->value);
-    
+    workspace.settings->warm_start = 0;
     c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY};
     c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0};
-
+    
     osqp_update_lower_bound(&workspace, l_new);
     osqp_update_upper_bound(&workspace, u_new);
-
+    
     osqp_solve(&workspace);
     
-    // printf("workspace status:   %s\n", (&workspace)->info->status);
-    // printf("tick: %d \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
       if (self->value == 0) {
         self->desVirtInp.x = (&workspace)->solution->x[0]; 
         self->desVirtInp.y = (&workspace)->solution->x[1];
@@ -211,7 +208,9 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
         self->desVirtInp.x = (&workspace)->solution->x[3];
         self->desVirtInp.y = (&workspace)->solution->x[4];
         self->desVirtInp.z = (&workspace)->solution->x[5];      
-        }
+      }
+    // printf("workspace status:   %s\n", (&workspace)->info->status);
+    // printf("tick: %d \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
     // printf("value: %d self->desVirtInp: %f %f %f\n", self->value,self->desVirtInp.x,self->desVirtInp.y,self->desVirtInp.z);
 
     //------------------------------------------QP------------------------------//
@@ -225,8 +224,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec virtualInp = mvmul(qiqiT,self->desVirtInp);
     
     // Compute parallel component
-    struct vec acc_ = mkvec(0,0,GRAVITY_MAGNITUDE); //plAcc_d;
-
+    struct vec acc_ = plAcc_d; 
     struct vec u_parallel = vadd3(virtualInp, vscl(self->mass*self->l*vmag2(wi), qi), vscl(self->mass, mvmul(qiqiT, acc_)));
     
     // Compute Perpindicular Component
