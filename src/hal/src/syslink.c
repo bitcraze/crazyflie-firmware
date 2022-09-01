@@ -188,6 +188,10 @@ static void debugSyslinkReceive(SyslinkPacket *slp) {
     DEBUG_PRINT("NRF Chan received: %d\n", slp->data[1]);
     DEBUG_PRINT("NRF Rate received: %d\n", slp->data[2]);
     DEBUG_PRINT("NRF Dropped: %d\n", slp->data[3]);
+    DEBUG_PRINT("NRF uart error code: %d\n", slp->data[4]);
+    DEBUG_PRINT("NRF uart error count: %d\n", slp->data[5]);
+    DEBUG_PRINT("NRF uart checksum 1 fail count: %d\n", slp->data[6]);
+    DEBUG_PRINT("NRF uart checksum 2 fail count: %d\n", slp->data[7]);
   }
 }
 
