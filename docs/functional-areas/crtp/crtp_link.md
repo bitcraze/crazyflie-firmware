@@ -10,10 +10,10 @@ link to pull downlink packets.
 
 | port | channel | Function |
 |------|---------|----------|
-| 13   | 0       | [Echo](#platform-commands) |
-| 13   | 1       | [Source](#platform-commands)  |
-| 13   | 2       | [Sink](#app-channel) |
-| 13   | 3       | [*Null packets*](#null-packet) |
+| 15   | 0       | [Echo](#platform-commands) |
+| 15   | 1       | [Source](#platform-commands)  |
+| 15   | 2       | [Sink](#app-channel) |
+| 15   | 3       | [*Null packets*](#null-packet) |
 
 ## Echo
 
