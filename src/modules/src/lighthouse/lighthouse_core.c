@@ -52,6 +52,8 @@
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
 
+#include "lighthouse_throttle.h"
+
 #include "lighthouse_storage.h"
 
 #include "test_support.h"
@@ -368,7 +370,7 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
   }
 }
 
-static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation, int sweepId) {
+static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation, int sweepId, const uint32_t now_ms) {
   const uint16_t baseStationBitMap = (1 << baseStation);
   baseStationReceivedMapWs |= baseStationBitMap;
 
@@ -376,7 +378,7 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
     const bool hasCalibrationData = pulseProcessorApplyCalibration(appState, angles, baseStation);
     if (hasCalibrationData) {
       if (lighthouseBsTypeV2 == angles->measurementType) {
-        // Emulate V1 base stations for now, convert to V1 angles
+        // Emulate V1 base stations, convert to V1 angles
         convertV2AnglesToV1Angles(angles);
       }
 
@@ -387,15 +389,22 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
       if (hasGeoData) {
         baseStationActiveMapWs |= baseStationBitMap;
 
-        switch(estimationMethod) {
-          case 0:
-            usePulseResultCrossingBeams(appState, angles, baseStation);
-            break;
-          case 1:
-            usePulseResultSweeps(appState, angles, baseStation);
-            break;
-          default:
-            break;
+        bool useSample = true;
+        if (lighthouseBsTypeV2 == angles->measurementType) {
+          useSample = throttleLh2Samples(now_ms);
+        }
+
+        if (useSample) {
+          switch(estimationMethod) {
+            case 0:
+              usePulseResultCrossingBeams(appState, angles, baseStation);
+              break;
+            case 1:
+              usePulseResultSweeps(appState, angles, baseStation);
+              break;
+            default:
+              break;
+          }
         }
       }
     }
@@ -430,7 +439,7 @@ static void useCalibrationData(pulseProcessor_t *appState) {
   }
 }
 
-static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
+static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame, const uint32_t now_ms) {
     int baseStation;
     int sweepId;
     bool calibDataIsDecoded = false;
@@ -439,7 +448,7 @@ static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* ang
 
     if (pulseProcessorProcessPulse(appState, &frame->data, angles, &baseStation, &sweepId, &calibDataIsDecoded)) {
         STATS_CNT_RATE_EVENT(bsRates[baseStation]);
-        usePulseResult(appState, angles, baseStation, sweepId);
+        usePulseResult(appState, angles, baseStation, sweepId, now_ms);
     }
 
     if (calibDataIsDecoded) {
@@ -541,7 +550,7 @@ void lighthouseCoreTask(void *param) {
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
         if (pulseProcessorProcessPulse) {
-          processFrame(&lighthouseCoreState, &angles, &frame);
+          processFrame(&lighthouseCoreState, &angles, &frame, now_ms);
         }
       }
 
