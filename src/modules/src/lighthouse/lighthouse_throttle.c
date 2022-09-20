@@ -26,8 +26,11 @@
 
 #include <stdlib.h>
 #include "lighthouse_throttle.h"
-#include "log.h"
 #include "param.h"
+
+// Uncomment next line to add extra debug log variables
+// #define CONFIG_DEBUG_LOG_ENABLE 1
+#include "log.h"
 
 static const uint32_t evaluationIntervalMs = 100;
 static uint16_t maxRate = 50;  // Samples / second
@@ -71,5 +74,5 @@ PARAM_ADD(PARAM_UINT16, lh2maxRate, &maxRate)
 PARAM_GROUP_STOP(lighthouse)
 
 LOG_GROUP_START(lighthouse)
-LOG_ADD(LOG_FLOAT, disProb, &discardProbability)
+LOG_ADD_DEBUG(LOG_FLOAT, disProb, &discardProbability)
 LOG_GROUP_STOP(lighthouse)
