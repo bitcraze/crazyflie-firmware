@@ -34,10 +34,13 @@
 #include <stdint.h>
 
 #include "system.h"
-#include "log.h"
 #include "param.h"
-#include "statsCnt.h"
 #include "autoconf.h"
+
+// Uncomment next line to add extra debug log variables
+// #define CONFIG_DEBUG_LOG_ENABLE 1
+#include "log.h"
+#include "statsCnt.h"
 
 #define DEBUG_MODULE "LH"
 #include "debug.h"
@@ -87,6 +90,11 @@ static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS] = {&bs0Rate, &bs1Rate};
+
+#ifdef CONFIG_DEBUG_LOG_ENABLE
+static STATS_CNT_RATE_DEFINE(preThrottleRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(postThrottleRate, ONE_SECOND);
+#endif
 
 // A bitmap that indicates which base stations that are available
 static uint16_t baseStationAvailabledMapWs;
@@ -389,6 +397,7 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
       if (hasGeoData) {
         baseStationActiveMapWs |= baseStationBitMap;
 
+        STATS_CNT_RATE_EVENT_DEBUG(&preThrottleRate);
         bool useSample = true;
         if (lighthouseBsTypeV2 == angles->measurementType) {
           useSample = throttleLh2Samples(now_ms);
@@ -405,6 +414,8 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
             default:
               break;
           }
+
+          STATS_CNT_RATE_EVENT_DEBUG(&postThrottleRate);
         }
       }
     }
@@ -821,6 +832,9 @@ STATS_CNT_RATE_LOG_ADD(cycleRt, &cycleRate)
 
 STATS_CNT_RATE_LOG_ADD(bs0Rt, &bs0Rate)
 STATS_CNT_RATE_LOG_ADD(bs1Rt, &bs1Rate)
+
+STATS_CNT_RATE_LOG_ADD_DEBUG(preThRt, &preThrottleRate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(postThRt, &postThrottleRate)
 
 LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
 LOG_ADD(LOG_UINT16, width1, &pulseWidth[1])
