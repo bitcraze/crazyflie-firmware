@@ -188,6 +188,12 @@ typedef struct {
   LOG_ADD_GROUP(LOG_GROUP | LOG_STOP, stop_##NAME, 0x0) \
   };
 
+#ifdef CONFIG_DEBUG_LOG_ENABLE
+#define LOG_ADD_DEBUG(TYPE, NAME, ADDRESS)
+#else
+#define LOG_ADD_DEBUG(TYPE, NAME, ADDRESS) LOG_ADD(TYPE, NAME, ADDRESS)
+#endif
+
 #else // UNIT_TEST_MODE
 
 // Empty defines when running unit tests
@@ -197,6 +203,7 @@ typedef struct {
 #define LOG_ADD_GROUP(TYPE, NAME, ADDRESS)
 #define LOG_GROUP_START(NAME)
 #define LOG_GROUP_STOP(NAME)
+#define LOG_ADD_DEBUG(TYPE, NAME, ADDRESS)
 
 #endif // UNIT_TEST_MODE
 
