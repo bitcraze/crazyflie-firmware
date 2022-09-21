@@ -15,7 +15,7 @@ menu "Communication"
 
 config SYSLINK_RX_DMA
     bool "Use DMA to receive uart syslink data instead of interrupts"
-    default y
+    default n
     help
         Using DMA to receive uart data reduces CPU load and will free
         up recources for other things. DMA is a shared resource though
