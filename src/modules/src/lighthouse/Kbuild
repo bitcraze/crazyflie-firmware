@@ -3,3 +3,4 @@ obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_deck_flasher.o
 obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_position_est.o
 obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_storage.o
 obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_transmit.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_throttle.o
