@@ -64,7 +64,6 @@
 #include "aideck.h"
 
 static bool isInit = false;
-static uint8_t byte;
 
 #define WIFI_SET_SSID_CMD         0x10
 #define WIFI_SET_KEY_CMD          0x11
@@ -165,7 +164,7 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
     gap8BlPacket->writeSize = *(memDef->newFwSizeP);
     bootPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
     cpxSendPacketBlocking(&bootPacket);
-    
+
     xEventGroupWaitBits(bootloaderSync,
                         CPX_WAIT_FOR_BOOTLOADER_REPLY,
                         pdTRUE,  // Clear bits before returning
@@ -315,8 +314,8 @@ static void aideckInit(DeckInfo *info)
 #ifdef CONFIG_DECK_AI_WIFI_NO_SETUP
   DEBUG_PRINT("Not setting up WiFi\n");
 #else
-  setupWiFi(); 
-#endif 
+  setupWiFi();
+#endif
 
   isInit = true;
 }
@@ -365,9 +364,6 @@ static const DeckDriver aideck_deck = {
     .test = aideckTest,
 };
 
-LOG_GROUP_START(aideck)
-LOG_ADD(LOG_UINT8, receivebyte, &byte)
-LOG_GROUP_STOP(aideck)
 
 /** @addtogroup deck
 */
