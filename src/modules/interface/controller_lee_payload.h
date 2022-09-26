@@ -34,7 +34,7 @@ typedef struct controllerLeePayload_s {
     float l; // length of cable;
     float thrustSI;
     struct vec J; // Inertia matrix (diagonal matrix); kg m^2
-    float offset; // offset for reference
+    struct vec offset; // offset for reference
     //Position PID
     struct vec Kpos_P;
     float Kpos_P_limit;
@@ -86,7 +86,7 @@ typedef struct controllerLeePayload_s {
      // inequality matrix A
     struct mat26 A_in;
     // value: 0,1: defines which part of the vector in desVirtInp goes to which UAV
-    int value;
+    float value;
     // angle limit for hyper plane
     float angle_limit;
 } controllerLeePayload_t;

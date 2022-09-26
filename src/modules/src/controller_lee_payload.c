@@ -33,6 +33,7 @@ TODO
 #include "math3d.h"
 #include "controller_lee_payload.h"
 #include "stdio.h"
+// #include "debug.h"
 // QP
 #include "workspace.h"
 #include "osqp.h"
@@ -68,7 +69,7 @@ static controllerLeePayload_t g_self = {
   .mass = 0.034,
   .mp   = 0.01,
   .l    = 1.0,
-  .offset = 0.0,
+  .offset = {0.0, 0.0, 0.0},
   // Inertia matrix (diagonal matrix), see
   // System Identification of the Crazyflie 2.0 Nano Quadrocopter
   // BA theses, Julian Foerster, ETHZ
@@ -93,7 +94,7 @@ static controllerLeePayload_t g_self = {
   .KI = {0.02, 0.02, 0.05},
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
-  .value = 0,
+  .value = 0.0,
   // fixed angle hyperplane in degrees
   .angle_limit = 20.0,
 };
@@ -164,7 +165,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       || setpoint->mode.y == modeAbs
       || setpoint->mode.z == modeAbs) {
     
-    struct vec plPos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z-self->offset);
+    struct vec plPos_d = mkvec(setpoint->position.x - self->offset.x, setpoint->position.y - self->offset.y, setpoint->position.z - self->offset.z);
     struct vec plVel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec plAcc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
 
@@ -199,19 +200,19 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     
     osqp_solve(&workspace);
     
-      if (self->value == 0) {
+      if (self->value == 0.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[0]; 
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];
       }
-      else if (self->value == 1) {
+      else if (self->value == 1.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[3];
         self->desVirtInp.y = (&workspace)->solution->x[4];
         self->desVirtInp.z = (&workspace)->solution->x[5];      
       }
     // printf("workspace status:   %s\n", (&workspace)->info->status);
-    // printf("tick: %d \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
-    // printf("value: %d self->desVirtInp: %f %f %f\n", self->value,self->desVirtInp.x,self->desVirtInp.y,self->desVirtInp.z);
+    // // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
+    //  DEBUG_PRINT("value: %f self->desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
 
     //------------------------------------------QP------------------------------//
     // self->desVirtInp = F_d;  // COMMENT THIS IF YOU ARE USING THE QP 
@@ -233,7 +234,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
 
-    struct vec qdidot = vdiv(vsub(qdi, self->qdi_prev), dt);
+    struct vec qdidot = vzero(); //vdiv(vsub(qdi, self->qdi_prev), dt);
     self->qdi_prev = qdi;
     struct vec wdi = vcross(qdi, qdidot);
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
@@ -451,7 +452,9 @@ PARAM_ADD(PARAM_FLOAT, Kwz, &g_self.K_w.z)
 PARAM_ADD(PARAM_FLOAT, mass, &g_self.mass)
 PARAM_ADD(PARAM_FLOAT, massP, &g_self.mp)
 PARAM_ADD(PARAM_FLOAT, length, &g_self.l)
-PARAM_ADD(PARAM_FLOAT, offset, &g_self.offset)
+PARAM_ADD(PARAM_FLOAT, offsetx, &g_self.offset.x)
+PARAM_ADD(PARAM_FLOAT, offsety, &g_self.offset.y)
+PARAM_ADD(PARAM_FLOAT, offsetz, &g_self.offset.z)
 
 
 //For the QP 
