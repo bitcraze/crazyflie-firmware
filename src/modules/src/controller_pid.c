@@ -63,18 +63,20 @@ void controllerPid(control_t *control, setpoint_t *setpoint,
     if (setpoint->mode.yaw == modeVelocity) {
       attitudeDesired.yaw = capAngle(attitudeDesired.yaw + setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT);
        
-      #ifdef YAW_MAX_DELTA
+      float yawMaxDelta = attitudeControllerGetYawMaxDelta();
+      if (yawMaxDelta != 0.0f)
+      {
       float delta = capAngle(attitudeDesired.yaw-state->attitude.yaw);
-      // keep the yaw setpoint within +/- YAW_MAX_DELTA from the current yaw
-        if (delta > YAW_MAX_DELTA)
+      // keep the yaw setpoint within +/- yawMaxDelta from the current yaw
+        if (delta > yawMaxDelta)
         {
-          attitudeDesired.yaw = state->attitude.yaw + YAW_MAX_DELTA;
+          attitudeDesired.yaw = state->attitude.yaw + yawMaxDelta;
         }
-        else if (delta < -YAW_MAX_DELTA)
+        else if (delta < -yawMaxDelta)
         {
-          attitudeDesired.yaw = state->attitude.yaw - YAW_MAX_DELTA;
+          attitudeDesired.yaw = state->attitude.yaw - yawMaxDelta;
         }
-      #endif
+      }
     } else if (setpoint->mode.yaw == modeAbs) {
       attitudeDesired.yaw = setpoint->attitude.yaw;
     } else if (setpoint->mode.quat == modeAbs) {
@@ -224,4 +226,3 @@ LOG_ADD(LOG_FLOAT, pitchRate, &rateDesired.pitch)
  */
 LOG_ADD(LOG_FLOAT, yawRate,   &rateDesired.yaw)
 LOG_GROUP_STOP(controller)
-

@@ -32,6 +32,7 @@
 #include "pid.h"
 #include "num.h"
 #include "position_controller.h"
+#include "platform_defaults.h"
 
 
 struct pidAxis_s {
@@ -57,104 +58,105 @@ struct this_s {
 };
 
 // Maximum roll/pitch angle permited
-static float rLimit  = 20;
-static float pLimit  = 20;
+static float rLimit  = PID_VEL_ROLL_MAX;
+static float pLimit  = PID_VEL_PITCH_MAX;
 static float rpLimitOverhead = 1.10f;
 // Velocity maximums
-static float xVelMax = 1.0f;
-static float yVelMax = 1.0f;
-static float zVelMax  = 1.0f;
+static float xVelMax = PID_POS_VEL_X_MAX;
+static float yVelMax = PID_POS_VEL_Y_MAX;
+static float zVelMax  = PID_POS_VEL_Z_MAX;
 static float velMaxOverhead = 1.10f;
+
 static const float thrustScale = 1000.0f;
 
 // Feedforward gains
-static float kFFx = 0.0; // feedforward gain for x direction [deg / m/s]
-static float kFFy = 0.0; // feedforward gain for y direction [deg / m/s]
+static float kFFx = PID_VEL_X_KFF; // feedforward gain for x direction [deg / m/s]
+static float kFFy = PID_VEL_Y_KFF; // feedforward gain for y direction [deg / m/s]
 
 #define DT (float)(1.0f/POSITION_RATE)
-bool posFiltEnable = true;
-bool velFiltEnable = true;
-float posFiltCutoff = 20.0f;
-float velFiltCutoff = 20.0f;
-bool posZFiltEnable = true;
-bool velZFiltEnable = true;
-float posZFiltCutoff = 20.0f;
-#ifdef IMPROVED_BARO_Z_HOLD
-float velZFiltCutoff = 0.7f;
+bool posFiltEnable = PID_POS_XY_FILT_ENABLE;
+bool velFiltEnable = PID_VEL_XY_FILT_ENABLE;
+float posFiltCutoff = PID_POS_XY_FILT_CUTOFF;
+float velFiltCutoff = PID_VEL_XY_FILT_CUTOFF;
+bool posZFiltEnable = PID_POS_Z_FILT_ENABLE;
+bool velZFiltEnable = PID_VEL_Z_FILT_ENABLE;
+float posZFiltCutoff = PID_POS_Z_FILT_CUTOFF;
+#if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD;
 #else
-float velZFiltCutoff = 20.0f;
+float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF;
 #endif
 
 #ifndef UNIT_TEST
 static struct this_s this = {
   .pidVX = {
     .pid = {
-        .kp = 25.0f,
-        .ki = 1.0f,
-        .kd = 0.0f,
+      .kp = PID_VEL_X_KP,
+      .ki = PID_VEL_X_KI,
+      .kd = PID_VEL_X_KD,
     },
     .pid.dt = DT,
   },
 
   .pidVY = {
     .pid = {
-      .kp = 25.0f,
-      .ki = 1.0f,
-      .kd = 0.0f,
+      .kp = PID_VEL_Y_KP,
+      .ki = PID_VEL_Y_KI,
+      .kd = PID_VEL_Y_KD,
     },
     .pid.dt = DT,
   },
-  #ifdef IMPROVED_BARO_Z_HOLD
+  #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
     .pidVZ = {
       .pid = {
-        .kp = 3.0f,
-        .ki = 1.0f,
-        .kd = 1.5f, //kd can be lowered for improved stability, but results in slower response time.
+        .kp = PID_VEL_Z_KP_BARO_Z_HOLD,
+        .ki = PID_VEL_Z_KI_BARO_Z_HOLD,
+        .kd = PID_VEL_Z_KD_BARO_Z_HOLD,
       },
       .pid.dt = DT,
     },
   #else
     .pidVZ = {
       .pid = {
-        .kp = 25.0f,
-        .ki = 15.0f,
-        .kd = 0,
+        .kp = PID_VEL_Z_KP,
+        .ki = PID_VEL_Z_KI,
+        .kd = PID_VEL_Z_KD,
       },
       .pid.dt = DT,
     },
   #endif
   .pidX = {
     .pid = {
-      .kp = 2.0f,
-      .ki = 0.0f,
-      .kd = 0.0f,
+      .kp = PID_POS_X_KP,
+      .ki = PID_POS_X_KI,
+      .kd = PID_POS_X_KD,
     },
     .pid.dt = DT,
   },
 
   .pidY = {
     .pid = {
-      .kp = 2.0f,
-      .ki = 0.0f,
-      .kd = 0.0f,
+      .kp = PID_POS_Y_KP,
+      .ki = PID_POS_Y_KI,
+      .kd = PID_POS_Y_KD,
     },
     .pid.dt = DT,
   },
 
   .pidZ = {
     .pid = {
-      .kp = 2.0f,
-      .ki = 0.5f,
-      .kd = 0.0f,
+      .kp = PID_POS_Z_KP,
+      .ki = PID_POS_Z_KI,
+      .kd = PID_POS_Z_KD,
     },
     .pid.dt = DT,
   },
-  #ifdef IMPROVED_BARO_Z_HOLD
-    .thrustBase = 38000,
+  #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+    .thrustBase = PID_VEL_THRUST_BASE_BARO_Z_HOLD,
   #else
-    .thrustBase = 36000,
+    .thrustBase = PID_VEL_THRUST_BASE,
   #endif
-  .thrustMin  = 20000,
+  .thrustMin  = PID_VEL_THRUST_MIN,
 };
 #endif
 
