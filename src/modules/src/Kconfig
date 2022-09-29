@@ -148,7 +148,19 @@ config POWER_DISTRIBUTION_QUADROTOR
     depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
     help
         Power distribution function for quadrotors
+config POWER_DISTRIBUTION_FLAPPER
+    bool "Flapper power distribution"
+    depends on PLATFORM_FLAPPER
+    help
+        Power distribution function for flappers
+
 endchoice
+config POWER_DISTRIBUTION_FLAPPER_REVB
+    bool "Flapper power distribution (PCB revision B)"
+    depends on POWER_DISTRIBUTION_FLAPPER
+    default n
+    help
+        Power distribution function for flappers with revB PCB
 
 endmenu
 

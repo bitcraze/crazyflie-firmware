@@ -40,6 +40,9 @@
 #ifdef CONFIG_PLATFORM_TAG
     #include "platform_defaults_tag.h"
 #endif
+#ifdef CONFIG_PLATFORM_FLAPPER
+    #include "platform_defaults_flapper.h"
+#endif
 
 // IMU alignment on the airframe 
 #ifndef IMU_PHI

@@ -382,8 +382,7 @@ static void sensorsDeviceInit(void)
   cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI / 180);
   sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI / 180);
   cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI / 180);
-  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI / 180);
-}
+  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI / 180);}
 
 static void sensorsTaskInit(void)
 {

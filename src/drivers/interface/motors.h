@@ -330,6 +330,11 @@ void motorsSetRatio(uint32_t id, uint16_t ratio);
 int motorsGetRatio(uint32_t id);
 
 /**
+ * Get a 1 when motor 'id' is not a servo. Return -1 if wrong ID.
+ */
+int motorIsNotServo(uint32_t id);
+
+/**
  * FreeRTOS Task to test the Motors driver
  */
 void motorsTestTask(void* params);

@@ -102,6 +102,11 @@ ifeq ($(CONFIG_PLATFORM_BOLT), y)
 PLATFORM = bolt
 endif
 
+ifeq ($(CONFIG_PLATFORM_FLAPPER),y)
+PLATFORM = flapper
+endif
+
+
 PLATFORM  ?= cf2
 PROG ?= $(PLATFORM)
 

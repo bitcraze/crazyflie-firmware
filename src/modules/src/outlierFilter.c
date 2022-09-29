@@ -108,7 +108,7 @@ static const int32_t lhMinWindowTime = -2 * LH_TICKS_PER_FRAME;
 static const int32_t lhMaxWindowTime = 5 * LH_TICKS_PER_FRAME;
 static const int32_t lhBadSampleWindowChange = -LH_TICKS_PER_FRAME;
 static const int32_t lhGoodSampleWindowChange = LH_TICKS_PER_FRAME / 2;
-static const float lhMaxError = 0.05f;
+static const float lhMaxError = 0.005f;
 
 void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t now) {
   this->openingTime = now;
