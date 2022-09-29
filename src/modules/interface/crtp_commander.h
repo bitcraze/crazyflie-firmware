@@ -34,4 +34,10 @@ void crtpCommanderInit(void);
 void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
 void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
 
+float getCPPMRollScale();
+float getCPPMRollRateScale();
+float getCPPMPitchScale();
+float getCPPMPitchRateScale();
+float getCPPMYawRateScale();
+
 #endif /* CRTP_COMMANDER_H_ */
