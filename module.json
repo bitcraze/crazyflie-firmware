@@ -3,16 +3,5 @@
   "environmentReqs": {
     "build": ["arm-none-eabi"],
     "build-docs": ["doxygen"]
-  },
-  "actions": {
-    "artifacts": [
-      ".bin",
-      ".dfu"
-     ],
-    "targets" : [
-      "cf2",
-      "bolt",
-      "tag"
-    ]
   }
 }
