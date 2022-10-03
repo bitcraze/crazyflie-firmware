@@ -14,16 +14,25 @@ permissions:
   contents: read
 
 jobs:
+  read_targets_from_file:
+        - id: read_platforms
+        run: |
+          content=`cat ./build_targets.json`
+          # the following lines are required for multi line json
+          content="${content//'%'/'%25'}"
+          content="${content//$'\n'/'%0A'}"
+          content="${content//$'\r'/'%0D'}"
+          # end of handling for multi line json
+          echo "::set-output name=platforms::$content"
+
   basic_build:
+    needs: read_targets_from_file
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        platform:
-        - cf2
-        - bolt
-        - tag
+        ${{fromJson(needs.read_targets_from_file.outputs.platforms)}}
 
     steps:
     - name: Checkout Repo
