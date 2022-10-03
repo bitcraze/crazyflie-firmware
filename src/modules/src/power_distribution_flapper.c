@@ -34,8 +34,6 @@
 #include "autoconf.h"
 #include "config.h"
 
-#include "platform.h"
-#include "motors.h"
 #include "debug.h"
 #include "math.h"
 
