@@ -17,8 +17,12 @@ jobs:
   read_targets_from_file:
     runs-on: ubuntu-latest
     steps:
-    - name: Read build targets from file
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: false
 
+    - name: Read build targets from file
       run: |
         content=`cat ./build_targets.json`
         # the following lines are required for multi line json
