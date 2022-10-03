@@ -33,15 +33,15 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.features }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
       with:
-        name: ${{ matrix.features }}-${{ github.sha }}
+        name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
-          ${{ matrix.features }}.bin
-          ${{ matrix.features }}.elf
+          ${{ matrix.platform }}.bin
+          ${{ matrix.platform }}.elf
 
   features:
     runs-on: ubuntu-latest
