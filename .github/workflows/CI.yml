@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    uses: ./.github/workflows/read_build_targets.yaml
+    uses: ./.github/workflows/read_build_targets.yml
 
   basic_build:
     needs: read_targets_from_file
