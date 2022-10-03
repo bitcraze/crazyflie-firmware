@@ -145,12 +145,7 @@ void attitudeControllerCorrectRatePID(
 
   pidSetDesired(&pidYawRate, yawRateDesired);
 
-  // there is probably a more elegant way to get the yaw rate setpoint...
-  static setpoint_t setpoint;
-  static state_t state;
-  commanderGetSetpoint(&setpoint, &state);
-  // adding a feedforward term
-  yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, true) + yawFeedForw*setpoint.attitudeRate.yaw);
+  yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, true));
 }
 
 void attitudeControllerCorrectAttitudePID(
@@ -334,10 +329,6 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_ki, &pidYaw.ki)
  * @brief Derivative gain for the PID yaw controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kd, &pidYaw.kd)
-/**
- * @brief Feedforward gain for the yaw controller
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yawFeedForw, &yawFeedForw)
 /**
  * @brief If nonzero, yaw setpoint can only be set within +/- yawMaxDelta from the current yaw
  */
