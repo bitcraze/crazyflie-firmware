@@ -24,7 +24,6 @@ jobs:
         - cf2
         - bolt
         - tag
-        - cfbl
 
     steps:
     - name: Checkout Repo
