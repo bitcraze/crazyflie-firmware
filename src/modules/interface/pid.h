@@ -44,9 +44,11 @@ typedef struct
   float kp;           //< proportional gain
   float ki;           //< integral gain
   float kd;           //< derivative gain
+  float kff;          //< feedforward gain
   float outP;         //< proportional output (debugging)
   float outI;         //< integral output (debugging)
   float outD;         //< derivative output (debugging)
+  float outFF;        //< feedforward output (debugging)
   float iLimit;       //< integral limit, absolute value. '0' means no limit.
   float outputLimit;  //< total PID output limit, absolute value. '0' means no limit.
   float dt;           //< delta-time dt
@@ -62,13 +64,14 @@ typedef struct
  * @param[in] kp        The proportional gain
  * @param[in] ki        The integral gain
  * @param[in] kd        The derivative gain
+ * @param[in] kff       The feedforward gain
  * @param[in] dt        Delta time since the last call
  * @param[in] samplingRate Frequency the update will be called
  * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
  * @param[in] enableDFilter Enable setting for the D lowpass filter
  */
  void pidInit(PidObject* pid, const float desired, const float kp,
-              const float ki, const float kd, const float dt,
+              const float ki, const float kd, const float kff, const float dt,
               const float samplingRate, const float cutoffFreq,
               bool enableDFilter);
 
@@ -150,6 +153,14 @@ void pidSetKi(PidObject* pid, const float ki);
  * @param[in] kd    The derivative gain
  */
 void pidSetKd(PidObject* pid, const float kd);
+
+/**
+ * Set a new feed-froward gain for the PID.
+ *
+ * @param[in] pid   A pointer to the pid object.
+ * @param[in] kff    The new proportional gain
+ */
+void pidSetKff(PidObject* pid, const float kff);
 
 /**
  * Set a new dt gain for the PID. Defaults to IMU_UPDATE_DT upon construction

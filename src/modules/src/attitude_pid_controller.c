@@ -59,36 +59,42 @@ PidObject pidRollRate = {
   .kp = PID_ROLL_RATE_KP,
   .ki = PID_ROLL_RATE_KI,
   .kd = PID_ROLL_RATE_KD,
+  .kff = PID_ROLL_RATE_KFF,
 };
 
 PidObject pidPitchRate = {
   .kp = PID_PITCH_RATE_KP,
   .ki = PID_PITCH_RATE_KI,
   .kd = PID_PITCH_RATE_KD,
+  .kff = PID_PITCH_RATE_KFF,
 };
 
 PidObject pidYawRate = {
   .kp = PID_YAW_RATE_KP,
   .ki = PID_YAW_RATE_KI,
   .kd = PID_YAW_RATE_KD,
+  .kff = PID_YAW_RATE_KFF,
 };
 
 PidObject pidRoll = {
   .kp = PID_ROLL_KP,
   .ki = PID_ROLL_KI,
   .kd = PID_ROLL_KD,
+  .kff = PID_ROLL_KFF,
 };
 
 PidObject pidPitch = {
   .kp = PID_PITCH_KP,
   .ki = PID_PITCH_KI,
   .kd = PID_PITCH_KD,
+  .kff = PID_PITCH_KFF,
 };
 
 PidObject pidYaw = {
   .kp = PID_YAW_KP,
   .ki = PID_YAW_KI,
   .kd = PID_YAW_KD,
+  .kff = PID_YAW_KFF,
 };
 
 static int16_t rollOutput;
@@ -104,21 +110,21 @@ void attitudeControllerInit(const float updateDt)
 
   //TODO: get parameters from configuration manager instead - now (partly) implemented
   pidInit(&pidRollRate,  0, pidRollRate.kp,  pidRollRate.ki,  pidRollRate.kd,
-      updateDt, ATTITUDE_RATE, omxFiltCutoff, rateFiltEnable);
+       pidRollRate.kff,  updateDt, ATTITUDE_RATE, omxFiltCutoff, rateFiltEnable);
   pidInit(&pidPitchRate, 0, pidPitchRate.kp, pidPitchRate.ki, pidPitchRate.kd,
-      updateDt, ATTITUDE_RATE, omyFiltCutoff, rateFiltEnable);
+       pidPitchRate.kff, updateDt, ATTITUDE_RATE, omyFiltCutoff, rateFiltEnable);
   pidInit(&pidYawRate,   0, pidYawRate.kp,   pidYawRate.ki,   pidYawRate.kd,
-      updateDt, ATTITUDE_RATE, omzFiltCutoff, rateFiltEnable);
+       pidYawRate.kff,   updateDt, ATTITUDE_RATE, omzFiltCutoff, rateFiltEnable);
 
   pidSetIntegralLimit(&pidRollRate,  PID_ROLL_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitchRate, PID_PITCH_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYawRate,   PID_YAW_RATE_INTEGRATION_LIMIT);
 
-  pidInit(&pidRoll,  0, pidRoll.kp,  pidRoll.ki,  pidRoll.kd,  updateDt,
+  pidInit(&pidRoll,  0, pidRoll.kp,  pidRoll.ki,  pidRoll.kd,  pidRoll.kff,  updateDt,
       ATTITUDE_RATE, attFiltCutoff, attFiltEnable);
-  pidInit(&pidPitch, 0, pidPitch.kp, pidPitch.ki, pidPitch.kd, updateDt,
+  pidInit(&pidPitch, 0, pidPitch.kp, pidPitch.ki, pidPitch.kd, pidPitch.kff, updateDt,
       ATTITUDE_RATE, attFiltCutoff, attFiltEnable);
-  pidInit(&pidYaw,   0, pidYaw.kp,   pidYaw.ki,   pidYaw.kd,   updateDt,
+  pidInit(&pidYaw,   0, pidYaw.kp,   pidYaw.ki,   pidYaw.kd,   pidYaw.kff,   updateDt,
       ATTITUDE_RATE, attFiltCutoff, attFiltEnable);
 
   pidSetIntegralLimit(&pidRoll,  PID_ROLL_INTEGRATION_LIMIT);
@@ -306,6 +312,10 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_ki, &pidRoll.ki)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kd, &pidRoll.kd)
 /**
+ * @brief Feedforward gain for the PID roll controller
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kff, &pidRoll.kff)
+/**
  * @brief Proportional gain for the PID pitch controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kp, &pidPitch.kp)
@@ -318,6 +328,10 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_ki, &pidPitch.ki)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kd, &pidPitch.kd)
 /**
+ * @brief Feedforward gain for the PID pitch controller
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kff, &pidPitch.kff)
+/**
  * @brief Proportional gain for the PID yaw controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kp, &pidYaw.kp)
@@ -329,6 +343,10 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_ki, &pidYaw.ki)
  * @brief Derivative gain for the PID yaw controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kd, &pidYaw.kd)
+/**
+ * @brief Feedforward gain for the PID yaw controller
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kff, &pidYaw.kff)
 /**
  * @brief If nonzero, yaw setpoint can only be set within +/- yawMaxDelta from the current yaw
  */
@@ -361,6 +379,10 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_ki, &pidRollRate.ki)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kd, &pidRollRate.kd)
 /**
+ * @brief Feedforward gain for the PID roll rate controller
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, roll_kff, &pidRollRate.kff)
+/**
  * @brief Proportional gain for the PID pitch rate controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kp, &pidPitchRate.kp)
@@ -373,6 +395,10 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_ki, &pidPitchRate.ki)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kd, &pidPitchRate.kd)
 /**
+ * @brief Feedforward gain for the PID pitch rate controller
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, pitch_kff, &pidPitchRate.kff)
+/**
  * @brief Proportional gain for the PID yaw rate controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kp, &pidYawRate.kp)
@@ -384,6 +410,10 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_ki, &pidYawRate.ki)
  * @brief Derivative gain for the PID yaw rate controller
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kd, &pidYawRate.kd)
+/**
+ * @brief Feedforward gain for the PID yaw rate controller
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, yaw_kff, &pidYawRate.kff)
 /**
  * @brief Low pass filter enable
  */
