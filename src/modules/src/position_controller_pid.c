@@ -347,6 +347,23 @@ LOG_ADD(LOG_FLOAT, bodyX, &state_body_x)
 LOG_ADD(LOG_FLOAT, bodyY, &state_body_y)
 
 /**
+ * @brief PID proportional output position x
+ */
+LOG_ADD(LOG_FLOAT, Xp, &this.pidX.pid.outP)
+/**
+ * @brief PID integral output position x
+ */
+LOG_ADD(LOG_FLOAT, Xi, &this.pidX.pid.outI)
+/**
+ * @brief PID derivative output position x
+ */
+LOG_ADD(LOG_FLOAT, Xd, &this.pidX.pid.outD)
+/**
+ * @brief PID feedforward output position x
+ */
+LOG_ADD(LOG_FLOAT, Xff, &this.pidX.pid.outFF)
+
+/**
  * @brief PID proportional output position y
  */
 LOG_ADD(LOG_FLOAT, Yp, &this.pidY.pid.outP)
@@ -358,6 +375,10 @@ LOG_ADD(LOG_FLOAT, Yi, &this.pidY.pid.outI)
  * @brief PID derivative output position y
  */
 LOG_ADD(LOG_FLOAT, Yd, &this.pidY.pid.outD)
+/**
+ * @brief PID feedforward output position y
+ */
+LOG_ADD(LOG_FLOAT, Yff, &this.pidY.pid.outFF)
 
 /**
  * @brief PID proportional output position z
@@ -371,6 +392,10 @@ LOG_ADD(LOG_FLOAT, Zi, &this.pidZ.pid.outI)
  * @brief PID derivative output position z
  */
 LOG_ADD(LOG_FLOAT, Zd, &this.pidZ.pid.outD)
+/**
+ * @brief PID feedforward output position z
+ */
+LOG_ADD(LOG_FLOAT, Zff, &this.pidZ.pid.outFF)
 
 /**
  * @brief PID proportional output velocity x
@@ -384,6 +409,27 @@ LOG_ADD(LOG_FLOAT, VXi, &this.pidVX.pid.outI)
  * @brief PID derivative output velocity x
  */
 LOG_ADD(LOG_FLOAT, VXd, &this.pidVX.pid.outD)
+/**
+ * @brief PID feedforward output velocity x
+ */
+LOG_ADD(LOG_FLOAT, VXff, &this.pidVX.pid.outFF)
+
+/**
+ * @brief PID proportional output velocity y
+ */
+LOG_ADD(LOG_FLOAT, VYp, &this.pidVY.pid.outP)
+/**
+ * @brief PID integral output velocity y
+ */
+LOG_ADD(LOG_FLOAT, VYi, &this.pidVY.pid.outI)
+/**
+ * @brief PID derivative output velocity y
+ */
+LOG_ADD(LOG_FLOAT, VYd, &this.pidVY.pid.outD)
+/**
+ * @brief PID feedforward output velocity y
+ */
+LOG_ADD(LOG_FLOAT, VYff, &this.pidVY.pid.outFF)
 
 /**
  * @brief PID proportional output velocity z
@@ -397,6 +443,10 @@ LOG_ADD(LOG_FLOAT, VZi, &this.pidVZ.pid.outI)
  * @brief PID integral output velocity z
  */
 LOG_ADD(LOG_FLOAT, VZd, &this.pidVZ.pid.outD)
+/**
+ * @brief PID feedforward output velocity z
+ */
+LOG_ADD(LOG_FLOAT, VZff, &this.pidVZ.pid.outFF)
 
 LOG_GROUP_STOP(posCtl)
 

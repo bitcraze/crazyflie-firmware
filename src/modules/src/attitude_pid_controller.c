@@ -226,6 +226,10 @@ LOG_ADD(LOG_FLOAT, roll_outI, &pidRoll.outI)
  */
 LOG_ADD(LOG_FLOAT, roll_outD, &pidRoll.outD)
 /**
+ * @brief Feedforward output roll
+ */
+LOG_ADD(LOG_FLOAT, roll_outFF, &pidRoll.outFF)
+/**
  * @brief Proportional output pitch
  */
 LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitch.outP)
@@ -238,6 +242,10 @@ LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitch.outI)
  */
 LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitch.outD)
 /**
+ * @brief Feedforward output pitch
+ */
+LOG_ADD(LOG_FLOAT, pitch_outFF, &pidPitch.outFF)
+/**
  * @brief Proportional output yaw
  */
 LOG_ADD(LOG_FLOAT, yaw_outP, &pidYaw.outP)
@@ -249,6 +257,10 @@ LOG_ADD(LOG_FLOAT, yaw_outI, &pidYaw.outI)
  * @brief Derivative output yaw
  */
 LOG_ADD(LOG_FLOAT, yaw_outD, &pidYaw.outD)
+/**
+ * @brief Feedforward output yaw
+ */
+LOG_ADD(LOG_FLOAT, yaw_outFF, &pidYaw.outFF)
 LOG_GROUP_STOP(pid_attitude)
 
 /**
@@ -268,6 +280,10 @@ LOG_ADD(LOG_FLOAT, roll_outI, &pidRollRate.outI)
  */
 LOG_ADD(LOG_FLOAT, roll_outD, &pidRollRate.outD)
 /**
+ * @brief Feedforward output roll rate
+ */
+LOG_ADD(LOG_FLOAT, roll_outFF, &pidRollRate.outFF)
+/**
  * @brief Proportional output pitch rate
  */
 LOG_ADD(LOG_FLOAT, pitch_outP, &pidPitchRate.outP)
@@ -280,6 +296,10 @@ LOG_ADD(LOG_FLOAT, pitch_outI, &pidPitchRate.outI)
  */
 LOG_ADD(LOG_FLOAT, pitch_outD, &pidPitchRate.outD)
 /**
+ * @brief Feedforward output pitch rate
+ */
+LOG_ADD(LOG_FLOAT, pitch_outFF, &pidPitchRate.outFF)
+/**
  * @brief Proportional output yaw rate
  */
 LOG_ADD(LOG_FLOAT, yaw_outP, &pidYawRate.outP)
@@ -291,6 +311,10 @@ LOG_ADD(LOG_FLOAT, yaw_outI, &pidYawRate.outI)
  * @brief Derivative output yaw rate
  */
 LOG_ADD(LOG_FLOAT, yaw_outD, &pidYawRate.outD)
+/**
+ * @brief Feedforward output yaw rate
+ */
+LOG_ADD(LOG_FLOAT, yaw_outFF, &pidYawRate.outFF)
 LOG_GROUP_STOP(pid_rate)
 
 /**
