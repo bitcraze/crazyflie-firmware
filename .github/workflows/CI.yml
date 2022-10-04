@@ -15,25 +15,7 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    runs-on: ubuntu-latest
-    outputs:
-      platforms: ${{ steps.read-build-target-from-file.outputs.platforms }}
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: false
-
-    - id: read-build-target-from-file
-      run: |
-        content=`cat ./build_targets.json`
-        # the following lines are required for multi line json
-        content="${content//'%'/'%25'}"
-        content="${content//$'\n'/'%0A'}"
-        content="${content//$'\r'/'%0D'}"
-        # end of handling for multi line json
-        echo "::set-output name=platforms::$content"
+    uses: ./.github/workflows/read_build_targets.yml
 
   basic_build:
     needs: read_targets_from_file
