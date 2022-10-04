@@ -14,8 +14,17 @@ permissions:
   contents: read
 
 jobs:
-  cf2:
+  read_targets_from_file:
+    uses: ./.github/workflows/read_build_targets.yml
+
+  basic_build:
+    needs: read_targets_from_file
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ${{fromJson(needs.read_targets_from_file.outputs.platforms)}}
 
     steps:
     - name: Checkout Repo
@@ -24,79 +33,19 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2.1.4
       with:
-        name: cf2-${{ github.sha }}
+        name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
-          cf2.bin
-          cf2.elf
-
-  bolt:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make bolt_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: bolt-${{ github.sha }}
-        path: |
-          bolt.bin
-          bolt.elf
-
-  tag:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make tag_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: tag-${{ github.sha }}
-        path: |
-          tag.bin
-          tag.elf
-
-  cfbl:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make cfbl_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: cfbl-${{ github.sha }}
-        path: |
-          cfbl.bin
-          cfbl.elf
+          ${{ matrix.platform }}.bin
+          ${{ matrix.platform }}.elf
 
   features:
     runs-on: ubuntu-latest
-    needs: cf2
+    needs: basic_build
 
     strategy:
       fail-fast: false
@@ -132,7 +81,7 @@ jobs:
 
   apps:
     runs-on: ubuntu-latest
-    needs: cf2
+    needs: basic_build
 
     strategy:
       fail-fast: false
@@ -160,7 +109,7 @@ jobs:
 
   kbuild-targets:
     runs-on: ubuntu-latest
-    needs: cf2
+    needs: basic_build
 
     strategy:
       fail-fast: false
