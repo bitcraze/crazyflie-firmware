@@ -11,6 +11,8 @@ on:
     outputs:
       platforms:
         description: "'platform' is set to the list of targets"
+        value: ${{ jobs.read_targets_from_file.outputs.platforms }}
+
 
 permissions:
   contents: read
