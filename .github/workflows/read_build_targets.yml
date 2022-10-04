@@ -8,6 +8,9 @@ name: Read build targets
 
 on:
   workflow_call:
+    outputs:
+      platforms:
+        description: "'platform' is set to the list of targets"
 
 permissions:
   contents: read
