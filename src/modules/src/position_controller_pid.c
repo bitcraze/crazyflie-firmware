@@ -70,17 +70,17 @@ static float velMaxOverhead = 1.10f;
 static const float thrustScale = 1000.0f;
 
 #define DT (float)(1.0f/POSITION_RATE)
-bool posFiltEnable = PID_POS_XY_FILT_ENABLE;
-bool velFiltEnable = PID_VEL_XY_FILT_ENABLE;
-float posFiltCutoff = PID_POS_XY_FILT_CUTOFF;
-float velFiltCutoff = PID_VEL_XY_FILT_CUTOFF;
-bool posZFiltEnable = PID_POS_Z_FILT_ENABLE;
-bool velZFiltEnable = PID_VEL_Z_FILT_ENABLE;
-float posZFiltCutoff = PID_POS_Z_FILT_CUTOFF;
+static bool posFiltEnable = PID_POS_XY_FILT_ENABLE;
+static bool velFiltEnable = PID_VEL_XY_FILT_ENABLE;
+static float posFiltCutoff = PID_POS_XY_FILT_CUTOFF;
+static float velFiltCutoff = PID_VEL_XY_FILT_CUTOFF;
+static bool posZFiltEnable = PID_POS_Z_FILT_ENABLE;
+static bool velZFiltEnable = PID_VEL_Z_FILT_ENABLE;
+static float posZFiltCutoff = PID_POS_Z_FILT_CUTOFF;
 #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
-float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD;
+static float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD;
 #else
-float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF;
+static float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF;
 #endif
 
 #ifndef UNIT_TEST

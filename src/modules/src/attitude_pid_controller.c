@@ -35,14 +35,13 @@
 #include "platform_defaults.h"
 
 
-bool attFiltEnable = ATTITUDE_LPF_ENABLE;
-bool rateFiltEnable = ATTITUDE_RATE_LPF_ENABLE;
-float attFiltCutoff = ATTITUDE_LPF_CUTOFF_FREQ;
-float omxFiltCutoff = ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ;
-float omyFiltCutoff = ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ;
-float omzFiltCutoff = ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ;
-float yawFeedForw = ATTITUDE_RATE_FF_YAW;
-float yawMaxDelta = YAW_MAX_DELTA;
+static bool attFiltEnable = ATTITUDE_LPF_ENABLE;
+static bool rateFiltEnable = ATTITUDE_RATE_LPF_ENABLE;
+static float attFiltCutoff = ATTITUDE_LPF_CUTOFF_FREQ;
+static float omxFiltCutoff = ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ;
+static float omyFiltCutoff = ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ;
+static float omzFiltCutoff = ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ;
+static float yawMaxDelta = YAW_MAX_DELTA;
 
 static inline int16_t saturateSignedInt16(float in)
 {

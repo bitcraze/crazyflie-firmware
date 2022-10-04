@@ -879,12 +879,14 @@ bool sensorsBmi088Bmp388ManufacturingTest(void)
 static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
 {
   // IMU alignment
-  float sphi   = sinf(imuPhi * (float) M_PI / 180);
-  float cphi   = cosf(imuPhi * (float) M_PI / 180);
-  float stheta = sinf(imuTheta * (float) M_PI / 180);
-  float ctheta = cosf(imuTheta * (float) M_PI / 180);
-  float spsi   = sinf(imuPsi * (float) M_PI / 180);
-  float cpsi   = cosf(imuPsi * (float) M_PI / 180);
+  static float sphi, cphi, stheta, ctheta, spsi, cpsi;
+
+  sphi   = sinf(imuPhi * (float) M_PI / 180);
+  cphi   = cosf(imuPhi * (float) M_PI / 180);
+  stheta = sinf(imuTheta * (float) M_PI / 180);
+  ctheta = cosf(imuTheta * (float) M_PI / 180);
+  spsi   = sinf(imuPsi * (float) M_PI / 180);
+  cpsi   = cosf(imuPsi * (float) M_PI / 180);
 
   R[0][0] = ctheta * cpsi;
   R[0][1] = ctheta * spsi;
