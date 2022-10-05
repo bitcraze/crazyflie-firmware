@@ -219,6 +219,12 @@ int evprintf(putc_t putcf, const char * fmt, va_list ap)
       width = 0;
 
       fmt++;
+      if (*fmt == '%') {
+        putcf(*fmt++);
+        len++;
+        continue;
+      }
+
       while ('0' == *fmt)
       {
         padChar = '0';
