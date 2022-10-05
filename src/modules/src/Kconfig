@@ -14,6 +14,18 @@ config CONTROLLER_PID
     help
         Use the PID (proportional–integral–derivative) controller as default
 
+config CONTROLLER_PID_FILTER_ALL
+    bool "Apply LPF filter to all PID components"
+    depends on CONTROLLER_PID
+    help
+        Apply a low pass filter to all PID components instead of only the D component (default)
+
+config CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+    bool "Use improved baro z hold"
+    depends on CONTROLLER_PID_FILTER_ALL
+    help
+        Uses an improved z hold based on barometric pressure
+
 config CONTROLLER_INDI
     bool "INDI controller"
     help

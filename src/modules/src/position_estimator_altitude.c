@@ -100,7 +100,7 @@ static void positionEstimateInternal(state_t* estimate, const baro_t* baro, cons
       filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
                   (1.0f - state->estAlphaAsl) * baro->asl;
     }
-    #ifdef IMPROVED_BARO_Z_HOLD
+    #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
       state->estimatedZ = filteredZ;
     #else
       // Use asl as base and add velocity changes.

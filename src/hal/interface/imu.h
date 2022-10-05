@@ -60,17 +60,4 @@ bool imu6IsCalibrated(void);
 bool imuHasBarometer(void);
 bool imuHasMangnetometer(void);
 
-// Euler angles defining IMU orientation on the airframe
-#ifndef IMU_PHI
-#define IMU_PHI 0.0f
-#endif
-#ifndef IMU_THETA
-#define IMU_THETA 0.0f
-#endif
-#ifndef IMU_PSI
-#define IMU_PSI 0.0f
-#endif
-
-
-
 #endif /* IMU_H_ */

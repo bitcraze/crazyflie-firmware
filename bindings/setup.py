@@ -12,6 +12,7 @@ include = [
     "build/include/generated",
     "src/config",
     "src/drivers/interface",
+    "src/platform/interface",
 ]
 
 fw_sources = [
