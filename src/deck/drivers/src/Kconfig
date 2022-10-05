@@ -97,6 +97,59 @@ config DECK_CPPM
     help
       Combined PPM / PPM-Sum driver.
 
+choice
+  prompt "ExtRx CPPM pin"
+  depends on DECK_CPPM
+  default DECK_CPPM_USE_PA7
+
+config DECK_CPPM_USE_PB4
+    bool "PB4/IO_3"
+
+config DECK_CPPM_USE_PB5
+    bool "PB5/IO_2"
+
+config DECK_CPPM_USE_PB8
+    bool "PB8/IO_1"
+
+config DECK_CPPM_USE_PA2
+    bool "PA2/TX2"
+
+config DECK_CPPM_USE_PA3
+    bool "PA3/RX2"
+
+config DECK_CPPM_USE_PA7
+    bool "PA7/MOSI"
+
+endchoice  
+
+config DECK_EXTRX_ALT_HOLD
+    bool "Enable altitude hold via ExtRx"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE || DECK_FLAPPER_ENABLE
+    help
+        Switch to altitude hold via ch4 of the external receiver.
+
+config DECK_EXTRX_ARMING
+    bool "Enable arming via ExtRx"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE
+    help
+        Arming via ch5 of the external receiver.
+
+config DECK_EXTRX_MODE_RATE
+    bool "Enable rate mode via ExtRx"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE
+    help
+        Switch to rate mode via ch6 of the external receiver.
+
+config DECK_EXTRX_TAER
+    bool "Use TAER channel mapping"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE
+    help
+        Expecting TAER channel mapping instead of the default AETR.
+
 config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"
     default y

@@ -40,35 +40,35 @@
 #include "debug.h"
 #include "log.h"
 
-#ifdef CPPM_USE_PB4
+#ifdef CONFIG_DECK_CPPM_USE_PB4
   #define CPPM_TIMER_NUMBER            3
   #define CPPM_TIMER_CHANNEL           1
   #define CPPM_GPIO_RCC                RCC_AHB1Periph_GPIOB
   #define CPPM_GPIO_PORT               GPIOB
   #define CPPM_GPIO_PIN                GPIO_Pin_4
   #define CPPM_GPIO_SOURCE             GPIO_PinSource4
-#elif defined(CPPM_USE_PB5) 
+#elif defined(CONFIG_DECK_CPPM_USE_PB5) 
   #define CPPM_TIMER_NUMBER            3
   #define CPPM_TIMER_CHANNEL           2
   #define CPPM_GPIO_RCC                RCC_AHB1Periph_GPIOB
   #define CPPM_GPIO_PORT               GPIOB
   #define CPPM_GPIO_PIN                GPIO_Pin_5
   #define CPPM_GPIO_SOURCE             GPIO_PinSource5
-#elif defined(CPPM_USE_PB8)
+#elif defined(CONFIG_DECK_CPPM_USE_PB8)
   #define CPPM_TIMER_NUMBER            10
   #define CPPM_TIMER_CHANNEL           1
   #define CPPM_GPIO_RCC                RCC_AHB1Periph_GPIOB
   #define CPPM_GPIO_PORT               GPIOB
   #define CPPM_GPIO_PIN                GPIO_Pin_8
   #define CPPM_GPIO_SOURCE             GPIO_PinSource8
-#elif defined(CPPM_USE_PA2)
+#elif defined(CONFIG_DECK_CPPM_USE_PA2)
   #define CPPM_TIMER_NUMBER            9
   #define CPPM_TIMER_CHANNEL           1
   #define CPPM_GPIO_RCC                RCC_AHB1Periph_GPIOA
   #define CPPM_GPIO_PORT               GPIOA
   #define CPPM_GPIO_PIN                GPIO_Pin_2
   #define CPPM_GPIO_SOURCE             GPIO_PinSource2
-#elif defined(CPPM_USE_PA3)
+#elif defined(CONFIG_DECK_CPPM_USE_PA3)
   #define CPPM_TIMER_NUMBER            9
   #define CPPM_TIMER_CHANNEL           2
   #define CPPM_GPIO_RCC                RCC_AHB1Periph_GPIOA
