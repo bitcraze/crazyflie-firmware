@@ -97,3 +97,10 @@ typedef bool (*storageFunc_t)(const char *key, void *buffer, size_t length);
  * @return true in case of success.
  */
 bool storageForeach(const char* prefix, storageFunc_t func);
+
+/**
+ * Print storage information on the debug console
+ * 
+ * This function locks the storage while getting the stats.
+ */
+void storagePrintStats();

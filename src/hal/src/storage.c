@@ -27,6 +27,7 @@
  */
 
 #include "storage.h"
+#include "param.h"
 
 #include "kve/kve.h"
 
@@ -210,3 +211,42 @@ bool storageDelete(const char* key)
 
   return result;
 }
+
+void storagePrintStats()
+{
+  kveStats_t stats;
+
+  xSemaphoreTake(storageMutex, portMAX_DELAY);
+
+  kveGetStats(&kve, &stats);
+
+  xSemaphoreGive(storageMutex);
+
+
+  DEBUG_PRINT("Used storage: %d item stored, %d Bytes/%d Bytes (%d%%)\n", stats.totalItems, stats.itemSize, stats.totalSize, (stats.itemSize*100)/stats.totalSize);
+  DEBUG_PRINT("Fragmentation: %d%%\n", stats.fragmentation);
+  DEBUG_PRINT("Efficiency: Data: %d Bytes (%d%%), Keys: %d Bytes (%d%%), Metadata: %d Bytes (%d%%)\n", 
+    stats.dataSize, (stats.dataSize*100)/stats.totalSize,
+    stats.keySize, (stats.keySize*100)/stats.totalSize,
+    stats.metadataSize, (stats.metadataSize*100)/stats.totalSize);
+}
+
+static bool storageStats;
+
+static void printStats(void)
+{
+  if (storageStats) {
+    storagePrintStats();
+
+    storageStats = false;
+  }
+}
+
+PARAM_GROUP_START(system)
+
+/**
+ * @brief Set to nonzero to dump CPU and stack usage to console
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, storageStats, &storageStats, printStats)
+
+PARAM_GROUP_STOP(system)

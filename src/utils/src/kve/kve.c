@@ -36,7 +36,7 @@ static bool appendItemToEnd(kveMemory_t *kve, size_t address, const char* key, c
     }
 
     // Test that there is enough space to write the item
-    if ((itemAddress + sizeof(kveItemHeader_t) + strlen(key) + length + END_TAG_LENDTH) < kve->memorySize) {
+    if ((itemAddress + sizeof(kveItemHeader_t) + strlen(key) + length + KVE_END_TAG_LENDTH) < kve->memorySize) {
         itemAddress += kveStorageWriteItem(kve, itemAddress, key, buffer, length);
         kveStorageWriteEnd(kve, itemAddress);
     } else {
@@ -45,7 +45,7 @@ static bool appendItemToEnd(kveMemory_t *kve, size_t address, const char* key, c
 
         itemAddress = kveStorageFindEnd(kve, FIRST_ITEM_ADDRESS);
 
-        if ((itemAddress + sizeof(kveItemHeader_t) + strlen(key) + length + END_TAG_LENDTH) < kve->memorySize) {
+        if ((itemAddress + sizeof(kveItemHeader_t) + strlen(key) + length + KVE_END_TAG_LENDTH) < kve->memorySize) {
             itemAddress += kveStorageWriteItem(kve, itemAddress, key, buffer, length);
             kveStorageWriteEnd(kve, itemAddress);
         } else {
@@ -204,4 +204,52 @@ bool kveCheck(kveMemory_t *kve) {
     }
 
     return true;
+}
+
+void kveGetStats(kveMemory_t *kve, kveStats_t *stats) {
+    size_t item_address = FIRST_ITEM_ADDRESS;
+
+    size_t end_address = kveStorageFindEnd(kve, FIRST_ITEM_ADDRESS);
+
+    size_t total_size = 0;
+    size_t total_items = 0;
+    size_t hole_size = 0;
+    size_t item_size = 0;
+    size_t data_size = 0;
+    size_t key_size = 0;
+    size_t metadata_size = 0;
+
+    while (item_address < end_address) {
+        kveItemHeader_t itemInfo = kveStorageGetItemInfo(kve, item_address);
+
+        if (itemInfo.full_length == KVE_END_TAG) {
+            break;
+        }
+
+        total_size += itemInfo.full_length;
+        
+        if (itemInfo.key_length == 0) {
+            hole_size += itemInfo.full_length;
+        } else {
+            item_size += itemInfo.full_length;
+            total_items++;
+
+            key_size += itemInfo.key_length;
+            metadata_size += sizeof(itemInfo);
+            data_size += itemInfo.full_length - itemInfo.key_length - sizeof(itemInfo);
+        }
+
+        item_address = item_address + itemInfo.full_length;
+    }
+
+    stats->totalSize = kve->memorySize;
+    stats->totalItems = total_items;
+    stats->itemSize = item_size;
+    stats->keySize = key_size;
+    stats->dataSize = data_size;
+    stats->metadataSize = metadata_size;
+    stats->holeSize = hole_size;
+    stats->freeSpace = kve->memorySize - item_size;
+    stats->fragmentation = (hole_size * 100) / (kve->memorySize - total_size);
+    stats->spaceLeftUntilForcedDefrag = kve->memorySize - total_size;
 }
