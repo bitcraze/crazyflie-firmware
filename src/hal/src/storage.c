@@ -235,9 +235,11 @@ static bool storageStats;
 
 static void printStats(void)
 {
-  storagePrintStats();
+  if (storageStats) {
+    storagePrintStats();
 
-  storageStats = false;
+    storageStats = false;
+  }
 }
 
 PARAM_GROUP_START(system)
