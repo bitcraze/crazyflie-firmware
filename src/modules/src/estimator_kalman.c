@@ -237,7 +237,11 @@ static void kalmanTask(void* parameters) {
         STATS_CNT_RATE_EVENT(&predictionCounter);
       }
 
-      nextPrediction = osTick + S2T(1.0f / PREDICT_RATE);
+      nextPrediction = nextPrediction + S2T(1.0f / PREDICT_RATE);
+      if (osTick > nextPrediction) {
+        // Overrun
+        nextPrediction = osTick + S2T(1.0f / PREDICT_RATE);
+      }
 
       if (!rateSupervisorValidate(&rateSupervisorContext, T2M(osTick))) {
         DEBUG_PRINT("WARNING: Kalman prediction rate low (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
