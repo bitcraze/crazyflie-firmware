@@ -57,9 +57,10 @@ typedef struct _PmSyslinkInfo
     uint8_t flags;
     struct
     {
-      uint8_t chg    : 1;
-      uint8_t pgood  : 1;
-      uint8_t unused : 6;
+      uint8_t isCharging   : 1;
+      uint8_t usbPluggedIn : 1;
+      uint8_t canCharge    : 1;
+      uint8_t unused       : 5;
     };
   };
   float vBat;
@@ -101,6 +102,8 @@ static PMStates pmState;
 static PmSyslinkInfo pmSyslinkInfo;
 
 static uint8_t batteryLevel;
+
+static bool usingBigQuadDeck;
 
 static void pmSetBatteryVoltage(float voltage);
 
@@ -264,7 +267,7 @@ void pmSyslinkUpdate(SyslinkPacket *slp)
     if (isExtBatVoltDeckPinSet) {
       pmSetBatteryVoltage(extBatteryVoltage);
     } else {
-    pmSetBatteryVoltage(pmSyslinkInfo.vBat);
+      pmSetBatteryVoltage(pmSyslinkInfo.vBat);
     }
 
 #ifdef PM_SYSTLINK_INLCUDE_TEMP
@@ -282,31 +285,38 @@ void pmSetChargeState(PMChargeStates chgState)
 
 PMStates pmUpdateState()
 {
-  PMStates state;
-  bool isCharging = pmSyslinkInfo.chg;
-  bool isPgood = pmSyslinkInfo.pgood;
-  uint32_t batteryLowTime;
+  bool usbPluggedIn = pmSyslinkInfo.usbPluggedIn;
+  bool isCharging = pmSyslinkInfo.isCharging;
+  PMStates nextState;
 
-  batteryLowTime = xTaskGetTickCount() - batteryLowTimeStamp;
+  uint32_t batteryLowTime = xTaskGetTickCount() - batteryLowTimeStamp;
 
-  if (isPgood && !isCharging)
+  if (usingBigQuadDeck)
   {
-    state = charged;
+    // Need special care if big quad deck is connected, because the battery voltage
+    // makes the usbPluggedIn high.
+    nextState = battery;
   }
-  else if (isPgood && isCharging)
+  else if (usbPluggedIn && !isCharging)
   {
-    state = charging;
+    nextState = charged;
   }
-  else if (!isPgood && !isCharging && (batteryLowTime > PM_BAT_LOW_TIMEOUT))
+  else if (usbPluggedIn && isCharging)
   {
-    state = lowPower;
+    nextState = charging;
   }
   else
   {
-    state = battery;
+    nextState = battery;
   }
 
-  return state;
+  if (nextState == battery && batteryLowTime > PM_BAT_LOW_TIMEOUT)
+  {
+    // This is to avoid setting state to lowPower when we're plugged in to USB.
+    nextState = lowPower;
+  }
+
+  return nextState;
 }
 
 void pmEnableExtBatteryCurrMeasuring(const deckPin_t pin, float ampPerVolt)
@@ -385,6 +395,9 @@ void pmTask(void *param)
 
   pmSetChargeState(charge500mA);
   systemWaitStart();
+
+  // Figure out if we're using the big quad deck, which is needed to estimate the correct PM state.
+  usingBigQuadDeck = deckFindDriverByName("bcBigQuad") != NULL;
 
   while(1)
   {
