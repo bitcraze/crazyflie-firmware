@@ -36,6 +36,7 @@
 #include "motors.h"
 #include "pm.h"
 #include "debug.h"
+#include "power_distribution.h"
 #include "nvicconf.h"
 #include "usec_time.h"
 //FreeRTOS includes
@@ -49,6 +50,8 @@ static bool motorSetEnable = false;
 static uint32_t motorPower[] = {0, 0, 0, 0};    // user-requested PWM signals
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
+uint32_t motor_ratios_stop[] = {0, 0, 0, 0}; // motor-stop PWM signals
+bool motor_is_servo[] = {0, 0, 0, 0}; // list motors that are servos
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
@@ -272,6 +275,21 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   isInit = true;
 
+// For platforms that use servos, set motor numbers and motor stop values
+  #ifdef CONFIG_POWER_DISTRIBUTION_FLAPPER
+    #ifdef CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
+      motor_is_servo[1]= true;
+      motor_is_servo[2]= true;
+      motor_ratios_stop[1]=(uint32_t) flapperConfigPitchNeutral()*65535/100.0f;
+      motor_ratios_stop[2]=(uint32_t) flapperConfigYawNeutral()*65535/100.0f;
+    #else
+      motor_is_servo[0]= true;
+      motor_is_servo[2]= true;
+      motor_ratios_stop[0]=(uint32_t) flapperConfigPitchNeutral()*65535/100.0f;
+      motor_ratios_stop[2]=(uint32_t) flapperConfigYawNeutral()*65535/100.0f;
+    #endif
+  #endif
+
   // Output zero power
   motorsStop();
 }
@@ -323,10 +341,11 @@ bool motorsTest(void)
 
 void motorsStop()
 {
-  motorsSetRatio(MOTOR_M1, 0);
-  motorsSetRatio(MOTOR_M2, 0);
-  motorsSetRatio(MOTOR_M3, 0);
-  motorsSetRatio(MOTOR_M4, 0);
+  motorsSetRatio(MOTOR_M1, motor_ratios_stop[0]);
+  motorsSetRatio(MOTOR_M2, motor_ratios_stop[1]);
+  motorsSetRatio(MOTOR_M3, motor_ratios_stop[2]);
+  motorsSetRatio(MOTOR_M4, motor_ratios_stop[3]);
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
   motorsBurstDshot();
 #endif
@@ -560,6 +579,12 @@ int motorsESCIsLo(uint32_t id)
   return GPIO_ReadInputDataBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin) == Bit_RESET;
 }
 
+int motorGivesThrust(uint32_t id)
+{
+  ASSERT(id < NBR_OF_MOTORS);
+
+  return !motor_is_servo[id];
+}
 int motorsGetRatio(uint32_t id)
 {
   ASSERT(id < NBR_OF_MOTORS);

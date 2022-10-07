@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2012 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,22 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * power_distribution.h - Interface to stabilizer power distribution
+ * flapperdeck.h: Flapper PCB driver
  */
-#ifndef __POWER_DISTRIBUTION_H__
-#define __POWER_DISTRIBUTION_H__
 
-#include "stabilizer_types.h"
+#ifndef _FLAPPERDECK_H_
+#define _FLAPPERDECK_H_
 
+#include "deck_core.h"
 
-void powerDistributionInit(void);
-bool powerDistributionTest(void);
-void powerDistribution(motors_thrust_t* motorPower, const control_t *control);
+void flapperDeckInit(DeckInfo* info);
 
-#ifdef CONFIG_POWER_DISTRIBUTION_FLAPPER
-int8_t flapperConfigRollBias(void);
-uint8_t flapperConfigPitchNeutral(void);
-uint8_t flapperConfigYawNeutral(void);
-#endif
+bool flapperDeckTest(void);
+void flapperDeckTask(void* arg);
 
-#endif //__POWER_DISTRIBUTION_H__
+#endif /* _FLAPPERDECK_H_ */

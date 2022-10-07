@@ -8,7 +8,6 @@ bin/*
 .settings/*
 .vscode/*
 *~
-tools/make/config.mk
 cflie.*
 version.c
 tags
@@ -18,6 +17,7 @@ cffirmware.py
 /cf2.*
 /tag.*
 /bolt.*
+/flapper.*
 *.gch
 
 current_platform.mk

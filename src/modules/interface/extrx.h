@@ -28,5 +28,4 @@
 #include <stdint.h>
 
 void extRxInit(void);
-float extRxGetNormalizedChannelValue(uint8_t channel);
 
