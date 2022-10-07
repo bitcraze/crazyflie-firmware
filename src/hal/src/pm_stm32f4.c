@@ -256,8 +256,17 @@ static void pmGracefulShutdown()
 void pmSyslinkUpdate(SyslinkPacket *slp)
 {
   if (slp->type == SYSLINK_PM_BATTERY_STATE) {
+    // First byte of the packet contains some PM flags such as USB power, charging etc.
     memcpy(&pmSyslinkInfo, &slp->data[0], sizeof(pmSyslinkInfo));
+
+    // If using voltage measurements from external battery, we'll set the
+    // voltage to this instead of the one sent from syslink.
+    if (isExtBatVoltDeckPinSet) {
+      pmSetBatteryVoltage(extBatteryVoltage);
+    } else {
     pmSetBatteryVoltage(pmSyslinkInfo.vBat);
+    }
+
 #ifdef PM_SYSTLINK_INLCUDE_TEMP
     temp = pmSyslinkInfo.temp;
 #endif
