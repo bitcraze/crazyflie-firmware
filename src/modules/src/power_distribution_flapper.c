@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB & Flapper Drones (https:\\flapper-drones.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * power_distribution_nimble_FD_PCB_revD.c - Crazyflie stock power distribution code
+ * power_distribution_flapper.c - Power distribution code for the Flapper Nimble+
  */
 #define DEBUG_MODULE "PWR_DIST"
 

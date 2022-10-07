@@ -79,7 +79,7 @@ config PLATFORM_TAG
     select SENSORS_BMI088_BMP388
 
 config PLATFORM_FLAPPER
-    bool "Build for Flapper Drone"
+    bool "Build for Flapper Nimble+"
     select SENSORS_BMI088_BMP388
     select SENSORS_BMI088_SPI
 

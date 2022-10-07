@@ -151,24 +151,24 @@ config DECK_EXTRX_TAER
         Expecting TAER channel mapping instead of the default AETR.
 
 config DECK_FLAPPER
-    bool "Support the Flapper PCB"
+    bool "Enable Flapper Nimble+ PCB functionality"
     default n
     help
-        Flapper PCB with current measurements via ADC on PA2/TX2 and external receiver.
+        Enables Flapper Nimble+ PCB with current measurements via ADC on PA2/TX2 and external receiver.
 
 config DECK_FLAPPER_MEASURE_VBAT_ON_PA3
     bool "Measure VBAT on PA3"
     default n
     depends on DECK_FLAPPER
     help
-        Enables measuring external battery voltage on PA3 (Flapper PCB).
+        Enables measuring external battery voltage on PA3 (Flapper Nimble+ PCB).
 
 config DECK_FLAPPER_EXTRX_ENABLE
     bool "Enable external RX"
     default n
     depends on DECK_FLAPPER
     help
-        Enables external receiver on PA3 (Flapper PCB).
+        Enables external receiver on PA3 (Flapper Nimble+ PCB).
 
 config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"

@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2022 Bitcraze AB
+ * Copyright (C) 2022 Bitcraze AB & Flapper Drones (https://flapper-drones.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * platform_defaults_flapper.h - platform specific default values for the Flapper platform
+ * platform_defaults_flapper.h - platform specific default values for the Flapper Nimble+
  */
 
 #pragma once

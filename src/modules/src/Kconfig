@@ -149,18 +149,18 @@ config POWER_DISTRIBUTION_QUADROTOR
     help
         Power distribution function for quadrotors
 config POWER_DISTRIBUTION_FLAPPER
-    bool "Flapper power distribution"
+    bool "Flapper Nimble+ power distribution"
     depends on PLATFORM_FLAPPER
     help
-        Power distribution function for flappers
+        Power distribution function for Flapper Nimble+
 
 endchoice
 config POWER_DISTRIBUTION_FLAPPER_REVB
-    bool "Flapper power distribution (PCB revision B)"
+    bool "Flapper  Nimble+ power distribution (PCB revision B)"
     depends on POWER_DISTRIBUTION_FLAPPER
     default n
     help
-        Power distribution function for flappers with revB PCB
+        Power distribution function for Flapper Nimble+ with revB PCB
 
 endmenu
 
