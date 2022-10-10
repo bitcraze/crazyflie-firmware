@@ -146,6 +146,6 @@
 
 // Disable tumble check //
 //////////////////////////
-#define SUPERVISOR_TUMBLE_CHECK_DISABLE
+#define SUPERVISOR_TUMBLE_CHECK_ENABLE false
 
 #define YAW_MAX_DELTA 30.0

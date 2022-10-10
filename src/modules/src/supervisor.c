@@ -30,6 +30,7 @@
 
 #include "log.h"
 #include "motors.h"
+#include "power_distribution.h"
 #include "pm.h"
 #include "stabilizer.h"
 #include "supervisor.h"
@@ -80,7 +81,7 @@ static bool isFlyingCheck()
 {
   int sumRatio = 0;
   for (int i = 0; i < NBR_OF_MOTORS; ++i) {
-    sumRatio += motorGivesThrust(i)*motorsGetRatio(i);
+    sumRatio += powerDistributionMotorType(i)*motorsGetRatio(i);
   }
 
   return sumRatio > SUPERVISOR_FLIGHT_THRESHOLD;
@@ -118,12 +119,11 @@ void supervisorUpdate(const sensorData_t *data)
   isFlying = isFlyingCheck();
 
   isTumbled = isTumbledCheck(data);
-  #ifndef SUPERVISOR_TUMBLE_CHECK_DISABLE
+  #if SUPERVISOR_TUMBLE_CHECK_ENABLE
   if (isTumbled && isFlying) {
     stabilizerSetEmergencyStop();
   }
   #endif
-
   canFly = canFlyCheck();
 }
 

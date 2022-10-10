@@ -64,7 +64,15 @@ static uint16_t act_max = 65535;
 
 static float pitch_ampl = 0.4f; // 1 = full servo stroke
 
-uint8_t limitServoNeutral(uint8_t value)
+#if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
+  uint32_t idPitch = 1;
+  uint32_t idYaw = 4;
+#else
+  uint32_t idPitch = 2;
+  uint32_t idYaw = 4;
+#endif
+
+static uint8_t limitServoNeutral(uint8_t value)
 {
   if(value > 75)
   {
@@ -78,7 +86,7 @@ uint8_t limitServoNeutral(uint8_t value)
   return (uint8_t)value;
 }
 
-int8_t limitRollBias(uint8_t value)
+static int8_t limitRollBias(uint8_t value)
 {
   if(value > 25)
   {
@@ -92,23 +100,22 @@ int8_t limitRollBias(uint8_t value)
   return (uint8_t)value;
 }
 
-uint8_t flapperConfigPitchNeutral(void)
+int powerDistributionMotorType(uint32_t id)
 {
-  return limitServoNeutral(flapperConfig.pitchServoNeutral);
+  int type = 0;
+  if (id == (idPitch || idYaw)) type = 1;
+  return type;
 }
 
-uint8_t flapperConfigYawNeutral(void)
+uint16_t powerDistributionStopRatio(uint32_t id)
 {
-  return limitServoNeutral(flapperConfig.yawServoNeutral);
+  uint16_t stopRatio = 0;
+  if (id==idPitch) stopRatio = flapperConfig.pitchServoNeutral*act_max/100.0f;
+  else if (id==idYaw) stopRatio = flapperConfig.yawServoNeutral*act_max/100.0f;
+  return stopRatio;
 }
-
-int8_t flapperConfigRollBias(void)
-{
-  return limitServoNeutral(flapperConfig.rollBias);
-}
-
+  
 void powerDistributionInit(void)
-
 {
   #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
     DEBUG_PRINT("Using Flapper power distribution | PCB revB (2021)\n");
@@ -132,6 +139,7 @@ void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
   
   flapperConfig.pitchServoNeutral=limitServoNeutral(flapperConfig.pitchServoNeutral);
   flapperConfig.yawServoNeutral=limitServoNeutral(flapperConfig.yawServoNeutral);
+  flapperConfig.rollBias=limitRollBias(flapperConfig.rollBias);
 
   #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
     motorPower->m2 = limitThrust(flapperConfig.pitchServoNeutral*act_max/100.0f + pitch_ampl*control->pitch); // pitch servo

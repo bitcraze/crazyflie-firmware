@@ -108,3 +108,8 @@
 #ifndef PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD
     #define PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD 0.7 f
 #endif
+
+// Tumble detection enabled by default
+#ifndef SUPERVISOR_TUMBLE_CHECK_ENABLE
+    #define SUPERVISOR_TUMBLE_CHECK_ENABLE true
+#endif
