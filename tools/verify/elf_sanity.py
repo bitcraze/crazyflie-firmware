@@ -187,6 +187,12 @@ def check_structs(stream, what: str, core: bool) -> dict:
                       file=sys.stderr)
                 sys.exit(1)
 
+            # Parameter and log names must not contain space as they are mapped to topic in ROS that does not support
+            # space.
+            if ' ' in name:
+                print(f'{Colors.RED}Name contains space(s){Colors.END} ("{name}")', file=sys.stderr)
+                sys.exit(1)
+
         offset += struct_len
     return name_type_dict
 
