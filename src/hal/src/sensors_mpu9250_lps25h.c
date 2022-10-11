@@ -715,7 +715,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
     sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
   }
 
-  
+
   meanOut->x = (float) sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
   meanOut->y = (float) sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
   meanOut->z = (float) sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
@@ -870,7 +870,7 @@ static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
 {
   // IMU alignment
   static float sphi, cphi, stheta, ctheta, spsi, cpsi;
-   
+
   sphi   = sinf(imuPhi * (float) M_PI / 180);
   cphi   = cosf(imuPhi * (float) M_PI / 180);
   stheta = sinf(imuTheta * (float) M_PI / 180);
@@ -998,16 +998,16 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, LPS25H, &isLPS25HTestPassed)
 /**
  * @brief Euler angle Phi defining IMU orientation on the airframe (in degrees)
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, IMU Phi, &imuPhi)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPhi, &imuPhi)
 
 /**
  * @brief Euler angle Theta defining IMU orientation on the airframe (in degrees)
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, IMU Theta, &imuTheta)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuTheta, &imuTheta)
 
 /**
  * @brief Euler angle Psi defining IMU orientation on the airframe (in degrees)
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, IMU Psi, &imuPsi)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPsi, &imuPsi)
 
 PARAM_GROUP_STOP(imu_tests)
