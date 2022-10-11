@@ -327,7 +327,7 @@ static void sensorsTask(void *param)
       measurement.type = MeasurementTypeGyroscope;
       measurement.data.gyroscope.gyro = sensorData.gyro;
       estimatorEnqueue(&measurement);
-      
+
       /* Acelerometer */
       accScaledIMU.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       accScaledIMU.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
@@ -1005,16 +1005,16 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
 /**
  * @brief Euler angle Phi defining IMU orientation on the airframe (in degrees)
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, IMU Phi, &imuPhi)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPhi, &imuPhi)
 
 /**
  * @brief Euler angle Theta defining IMU orientation on the airframe (in degrees)
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, IMU Theta, &imuTheta)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuTheta, &imuTheta)
 
 /**
  * @brief Euler angle Psi defining IMU orientation on the airframe (in degrees)
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, IMU Psi, &imuPsi)
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPsi, &imuPsi)
 
 PARAM_GROUP_STOP(imu_sensors)
