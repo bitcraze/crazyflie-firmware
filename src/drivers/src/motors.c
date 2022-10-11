@@ -36,6 +36,7 @@
 #include "motors.h"
 #include "pm.h"
 #include "debug.h"
+#include "power_distribution.h"
 #include "nvicconf.h"
 #include "usec_time.h"
 //FreeRTOS includes
@@ -323,10 +324,11 @@ bool motorsTest(void)
 
 void motorsStop()
 {
-  motorsSetRatio(MOTOR_M1, 0);
-  motorsSetRatio(MOTOR_M2, 0);
-  motorsSetRatio(MOTOR_M3, 0);
-  motorsSetRatio(MOTOR_M4, 0);
+  for (int i = 0; i < NBR_OF_MOTORS; i++)
+  {
+    motorsSetRatio(MOTORS[i], powerDistributionStopRatio(i));
+  }
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
   motorsBurstDshot();
 #endif

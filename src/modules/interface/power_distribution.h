@@ -33,4 +33,14 @@ void powerDistributionInit(void);
 bool powerDistributionTest(void);
 void powerDistribution(motors_thrust_t* motorPower, const control_t *control);
 
+/**
+ * Returns a 1 when motor 'id' gives thrust, returns 0 otherwise
+ */
+int powerDistributionMotorType(uint32_t id);
+
+/**
+ * Returns the stop ratio of the motor 'id'
+ */
+uint16_t powerDistributionStopRatio(uint32_t id);
+
 #endif //__POWER_DISTRIBUTION_H__

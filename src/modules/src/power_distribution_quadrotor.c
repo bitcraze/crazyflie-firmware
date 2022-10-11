@@ -41,6 +41,16 @@
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 
+int powerDistributionMotorType(uint32_t id)
+{
+  return 1;
+}
+
+uint16_t powerDistributionStopRatio(uint32_t id)
+{
+  return 0;
+}
+  
 void powerDistributionInit(void)
 {
 }
