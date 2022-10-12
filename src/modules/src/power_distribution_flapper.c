@@ -103,7 +103,7 @@ static int8_t limitRollBias(uint8_t value)
 int powerDistributionMotorType(uint32_t id)
 {
   int type = 0;
-  if (id == (idPitch || idYaw)) type = 1;
+  if (id != (idPitch || idYaw)) type = 1;
   return type;
 }
 
