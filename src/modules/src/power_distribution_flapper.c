@@ -103,15 +103,26 @@ static int8_t limitRollBias(uint8_t value)
 int powerDistributionMotorType(uint32_t id)
 {
   int type = 1;
-  if (id == (idPitch || idYaw)) type = 0;
+  if (id == idPitch || id == idYaw)
+  { 
+    type = 0;
+  }
+
   return type;
 }
 
 uint16_t powerDistributionStopRatio(uint32_t id)
 {
   uint16_t stopRatio = 0;
-  if (id==idPitch) stopRatio = flapperConfig.pitchServoNeutral*act_max/100.0f;
-  else if (id==idYaw) stopRatio = flapperConfig.yawServoNeutral*act_max/100.0f;
+  if (id == idPitch) 
+  {
+    stopRatio = flapperConfig.pitchServoNeutral*act_max/100.0f;
+  }
+  else if (id == idYaw) 
+  {
+    stopRatio = flapperConfig.yawServoNeutral*act_max/100.0f;
+  }
+
   return stopRatio;
 }
   
