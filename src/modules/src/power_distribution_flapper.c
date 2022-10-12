@@ -66,10 +66,10 @@ static float pitch_ampl = 0.4f; // 1 = full servo stroke
 
 #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
   uint32_t idPitch = 1;
-  uint32_t idYaw = 4;
+  uint32_t idYaw = 2;
 #else
-  uint32_t idPitch = 2;
-  uint32_t idYaw = 4;
+  uint32_t idPitch = 0;
+  uint32_t idYaw = 2;
 #endif
 
 static uint8_t limitServoNeutral(uint8_t value)
@@ -102,8 +102,8 @@ static int8_t limitRollBias(uint8_t value)
 
 int powerDistributionMotorType(uint32_t id)
 {
-  int type = 0;
-  if (id == (idPitch || idYaw)) type = 1;
+  int type = 1;
+  if (id == (idPitch || idYaw)) type = 0;
   return type;
 }
 
