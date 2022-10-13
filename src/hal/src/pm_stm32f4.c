@@ -103,7 +103,7 @@ static PmSyslinkInfo pmSyslinkInfo;
 
 static uint8_t batteryLevel;
 
-static bool usingBigQuadDeck;
+static bool ignoreChargedState = false;
 
 static void pmSetBatteryVoltage(float voltage);
 
@@ -291,10 +291,9 @@ PMStates pmUpdateState()
 
   uint32_t batteryLowTime = xTaskGetTickCount() - batteryLowTimeStamp;
 
-  if (usingBigQuadDeck)
+  if (ignoreChargedState)
   {
-    // Need special care if big quad deck is connected, because the battery voltage
-    // makes the usbPluggedIn high.
+    // For some scenarios we might not care about the charging/charged state.
     nextState = battery;
   }
   else if (usbPluggedIn && !isCharging)
@@ -365,6 +364,10 @@ float pmMeasureExtBatteryVoltage(void)
   return voltage;
 }
 
+void pmIgnoreChargedState(bool ignore) {
+  ignoreChargedState = ignore;
+}
+
 bool pmIsBatteryLow(void) {
   return (pmState == lowPower);
 }
@@ -395,9 +398,6 @@ void pmTask(void *param)
 
   pmSetChargeState(charge500mA);
   systemWaitStart();
-
-  // Figure out if we're using the big quad deck, which is needed to estimate the correct PM state.
-  usingBigQuadDeck = deckFindDriverByName("bcBigQuad") != NULL;
 
   while(1)
   {
