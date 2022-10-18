@@ -88,7 +88,10 @@ typedef struct controllerLeePayload_s {
     // value: 0,1: defines which part of the vector in desVirtInp goes to which UAV
     float value;
     // angle limit for hyper plane
-    float angle_limit;
+    struct vec rpyPlane1;
+    float yawPlane1; // rpy and yaw for one plane of the first UAV
+    struct vec rpyPlane2; 
+    float yawPlane2; //rpy and yaw for one plane second UAV
 } controllerLeePayload_t;
 
 

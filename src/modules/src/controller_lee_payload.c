@@ -40,6 +40,19 @@ TODO
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
+
+static inline struct vec computePlaneNormal(struct vec rpy, float yaw) {
+// Compute the normal of a plane, given the extrinsic roll-pitch-yaw of the z-axis 
+// and the yaw representing the x-axis of the plan's frame
+  struct vec x = mkvec(cosf(yaw), sinf(yaw), 0);
+  struct quat q = rpy2quat(rpy);
+  struct mat33 Rq = quat2rotmat(q);
+  struct vec e3 = mkvec(0,0,1);
+  struct vec z = mvmul(Rq, e3);
+  struct vec xcrossz = vcross(x,z);
+  struct vec ni = vnormalize(xcrossz);
+  return ni;
+}
 static inline struct mat26 Ainequality(float angle_limit) {
   struct vec q1_limit = mkvec(-radians(angle_limit), 0 , 0);
   struct vec q2_limit = mkvec(radians(angle_limit), 0 , 0);
@@ -95,8 +108,11 @@ static controllerLeePayload_t g_self = {
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
   .value = 0.0,
-  // fixed angle hyperplane in degrees
-  .angle_limit = 20.0,
+  // fixed angle hyperplane in degrees for each UAV
+  .rpyPlane1 = {0,0,0},
+  .yawPlane1 = 0,
+  .rpyPlane2 = {0,0,0},
+  .yawPlane2 = 0,
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -190,22 +206,27 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
-    // self->A_in = Ainequality(self->angle_limit);
     workspace.settings->warm_start = 0;
-    c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY};
-    c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0};
-    
+    struct vec n1 = computePlaneNormal(self->rpyPlane1, self->yawPlane1);
+    struct vec n2 = computePlaneNormal(self->rpyPlane2, self->yawPlane2);
+    c_float Ax_new[12] = {1, n1.x, 1, n1.y, 1, n1.z, 1,  n2.x, 1, n2.y, 1, n2.z, };
+    c_int Ax_new_n = 12;
+     
+    c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
+    c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
+
+    osqp_update_A(&workspace, Ax_new, OSQP_NULL, Ax_new_n);    
     osqp_update_lower_bound(&workspace, l_new);
     osqp_update_upper_bound(&workspace, u_new);
     
     osqp_solve(&workspace);
     
-      if (self->value == 0.0f) {
+    if (self->value == 0.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[0]; 
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];
-      }
-      else if (self->value == 1.0f) {
+     }
+     else if (self->value == 1.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[3];
         self->desVirtInp.y = (&workspace)->solution->x[4];
         self->desVirtInp.z = (&workspace)->solution->x[5];      
@@ -459,7 +480,6 @@ PARAM_ADD(PARAM_FLOAT, offsetz, &g_self.offset.z)
 
 //For the QP 
 PARAM_ADD(PARAM_FLOAT, value, &g_self.value)
-PARAM_ADD(PARAM_FLOAT, angleLimit, &g_self.angle_limit)
 
 PARAM_GROUP_STOP(ctrlLeeP)
 
