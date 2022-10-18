@@ -44,11 +44,11 @@
 #include "task.h"
 
 #define BIGQUAD_BAT_VOLT_PIN       DECK_GPIO_MISO
-#define BIGQUAD_BAT_VOLT_MULT      7.8f
+#define BIGQUAD_BAT_VOLT_MULT      (CONFIG_DECK_BIGQUAD_BAT_VOLT_MULT_MV / 1000.0)
 #define BIGQUAD_BAT_CURR_PIN       DECK_GPIO_SCK
-#define BIGQUAD_BAT_AMP_PER_VOLT   1.0f
+#define BIGQUAD_BAT_AMP_PER_VOLT   (CONFIG_DECK_BIGQUAD_BAT_AMP_PER_VOLT_MA / 1000.0)
 
-#ifdef CONFIG_DECK_BIGQUAD_ENABLE
+#ifdef CONFIG_DECK_BIGQUAD
 
 //Hardware configuration
 static bool isInit;
@@ -83,6 +83,10 @@ static void bigquadInit(DeckInfo *info)
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
   extRxInit();
+
+  // Ignore charging/charged state to allow low-battery warning.
+  pmIgnoreChargedState(true);
+
 #ifdef CONFIG_DECK_BIGQUAD_ENABLE_PM
   pmEnableExtBatteryVoltMeasuring(BIGQUAD_BAT_VOLT_PIN, BIGQUAD_BAT_VOLT_MULT);
   pmEnableExtBatteryCurrMeasuring(BIGQUAD_BAT_CURR_PIN, BIGQUAD_BAT_AMP_PER_VOLT);
@@ -132,4 +136,5 @@ PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
 
 PARAM_GROUP_STOP(deck)
-#endif // CONFIG_DECK_BIGQUAD_ENABLE
+
+#endif // CONFIG_DECK_BIGQUAD

@@ -65,18 +65,23 @@ config DECK_BIGQUAD
         accessories such as external receiver (CPPM input) and GPS.
         It can also monitor battery voltage and current.
 
-config DECK_BIGQUAD_ENABLE
-    bool "Enable Bigquad deck capabilities"
+config DECK_BIGQUAD_BAT_VOLT_MULT_MV
+    int "Battery voltage divider multiplier (in mV)."
     depends on DECK_BIGQUAD
-    default n
+    default 7800
+
+config DECK_BIGQUAD_BAT_AMP_PER_VOLT_MA
+    int "Battery ampere per volt (in mA)."
+    depends on DECK_BIGQUAD
+    default 1000
 
 config DECK_BIGQUAD_ENABLE_OSD
-    depends on DECK_BIGQUAD_ENABLE
+    depends on DECK_BIGQUAD
     bool "Enable Bigquad deck OSD"
     default n
 
 config DECK_BIGQUAD_ENABLE_PM
-    depends on DECK_BIGQUAD_ENABLE
+    depends on DECK_BIGQUAD
     bool "Enable Bigquad deck PM"
     default n
 
