@@ -287,3 +287,4 @@ obj-y += libdw1000/src/libdw1000Spi.o
 # libdw3000
 obj-y += libdw3000/src/libdw3000.o
 obj-y += libdw3000/src/libdw3000Spi.o
+obj-y += libdw3000/src/mac_802_15_4.o
