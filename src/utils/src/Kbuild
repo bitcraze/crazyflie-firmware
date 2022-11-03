@@ -38,6 +38,6 @@ obj-y += sleepus.o
 obj-y += statsCnt.o
 
 # TDoA
-obj-y += tdoa/tdoaEngine.o
-obj-y += tdoa/tdoaStats.o
-obj-y += tdoa/tdoaStorage.o
+obj-$(CONFIG_DECK_LOCO) += tdoa/tdoaEngine.o
+obj-$(CONFIG_DECK_LOCO) += tdoa/tdoaStats.o
+obj-$(CONFIG_DECK_LOCO) += tdoa/tdoaStorage.o
