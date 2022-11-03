@@ -50,7 +50,7 @@ uint16_t powerDistributionStopRatio(uint32_t id)
 {
   return 0;
 }
-  
+
 void powerDistributionInit(void)
 {
 }
@@ -61,29 +61,44 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-#define limitThrust(VAL) limitUint16(VAL)
+static uint16_t limitThrust(float thrust, uint32_t minThrust) {
+  if (thrust < minThrust) {
+    return minThrust;
+  }
+
+  return thrust;
+}
 
 void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
 {
+  const int32_t maxThrust = UINT16_MAX;
+
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
-  motorPower->m1 = limitThrust(control->thrust - r + p + control->yaw);
-  motorPower->m2 = limitThrust(control->thrust - r - p - control->yaw);
-  motorPower->m3 =  limitThrust(control->thrust + r - p + control->yaw);
-  motorPower->m4 =  limitThrust(control->thrust + r + p - control->yaw);
 
-  if (motorPower->m1 < idleThrust) {
-    motorPower->m1 = idleThrust;
+  int32_t m1 = control->thrust - r + p + control->yaw;
+  int32_t m2 = control->thrust - r - p - control->yaw;
+  int32_t m3 = control->thrust + r - p + control->yaw;
+  int32_t m4 = control->thrust + r + p - control->yaw;
+
+  int32_t maxM = m1;
+  if (m2 > maxM) { maxM = m2; }
+  if (m3 > maxM) { maxM = m3; }
+  if (m4 > maxM) { maxM = m4; }
+
+  if (maxM > maxThrust) {
+    float reduction = maxM - maxThrust;
+
+    m1 -= reduction;
+    m2 -= reduction;
+    m3 -= reduction;
+    m4 -= reduction;
   }
-  if (motorPower->m2 < idleThrust) {
-    motorPower->m2 = idleThrust;
-  }
-  if (motorPower->m3 < idleThrust) {
-    motorPower->m3 = idleThrust;
-  }
-  if (motorPower->m4 < idleThrust) {
-    motorPower->m4 = idleThrust;
-  }
+
+  motorPower->m1 = limitThrust(m1, idleThrust);
+  motorPower->m2 = limitThrust(m2, idleThrust);
+  motorPower->m3 = limitThrust(m3, idleThrust);
+  motorPower->m4 = limitThrust(m4, idleThrust);
 }
 
 /**
