@@ -15,6 +15,11 @@ how debug the STM32 from VS Code and Eclipse. Debugging the nRF51 chip requires 
 
 ## Debugging in VS Code
 
+### Hardware
+![STLinkV2 Debugging](/docs/images/stlinkv2_debugging.webp)
+
+Connect the the Crazyflie to your ST-Link V2 via the Debug Adapter and the port on the underside. You don't need to solder the second adapter to the drone if you're only planning on debugging the STM32F405 with the crazyflie-firmware.
+
 ### Prerequisites
 
 First ensure that you have the ARM GCC toolchain and OpenOCD installed and in your path. To check, run:
@@ -37,13 +42,131 @@ If you do not have vscode yet, the easiest way to install it on Ubuntu is via sn
     sudo snap install --classic code
 
 
+
+#### Windows (Ubuntu in WSL)
+
+##### Install WSL
+
+Configure your Machine for WSL and install a Ubuntu Distrobution. Instructions can be found here: https://learn.microsoft.com/en-us/windows/wsl/install . It has been tested on Windows 10 and 11 with Ubuntu 20.04.
+
+##### Install the GCC ARM embedded Toolchain
+
+Download the newest `gcc-arm-none-eabi-YOUR-VERSION.tar.bz2` from https://developer.arm.com/downloads/-/gnu-rm and put it in your WSL file System under `/home/<yourUserName`. The folder can be accessed  in Windows by writing `\\wsl$` in your file explorers adress bar.
+The file in this example is called `gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2`, so make sure to change the filename in the following commands according to your version.
+
+Install Make
+
+    sudo apt install make
+
+Remove any previous versions off gcc-arm-none-eabi
+
+    sudo apt remove gcc-arm-none-eabi
+
+Extract the .bz2 file
+
+    sudo tar xjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2 -C /usr/share/
+
+Create the following links
+
+    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gcc /usr/bin/arm-none-eabi-gcc 
+    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-g++ /usr/bin/arm-none-eabi-g++
+    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gdb /usr/bin/arm-none-eabi-gdb
+    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-size /usr/bin/arm-none-eabi-size
+    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-objcopy /usr/bin/arm-none-eabi-objcopy
+    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gcc-ar /usr/bin/arm-none-eabi-ar
+
+
+Check if the links work
+
+    arm-none-eabi-gcc --version
+    arm-none-eabi-g++ --version
+    arm-none-eabi-gdb --version
+    arm-none-eabi-size --version
+    arm-none-eabi-objcopy --version
+    arm-none-eabi-ar --version
+
+If they don't work, delete the links with `find /usr/bin | grep arm | sudo xargs rm -rf` and double-check the version names. Your unzipped folder is in `/usr/share`. 
+
+Install libncurses-dev and create links
+
+    sudo apt install libncurses-dev -y
+    sudo ln -s /usr/lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5
+    sudo ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+
+
+Install build-essentials
+
+    sudo apt install build-essential -y
+
+##### Clone the crazyflie-firmware, build and upload it to your Crazyflie
+
+Clone the firmware from github to your local WSL filesystem
+    
+    git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git
+
+Move in the project directory
+
+    cd crazyflie-firmware
+
+Make the .config file from defconfig
+    
+    make defconfig
+
+Compile the project (-j 16 means use 16 threads, 2 x processor cores is a good rule of thumb)
+
+    make all -j 16
+
+Upload the code to your Crazyflie by typing
+
+    make cload
+> **_NOTE:_**
+> Note: This method uses windows python program to upload the binary. So make sure that you have python, the cfclient and its all dependencies installed under windows and that you're able to connect to the crazyflie via the cfclient and Crazyradio PA(zadig!).
+
+
+
+##### Visual Studio Code
+Make sure you have Visual Studio Code installed in Windows, do not install it in WSL! Get it here: https://code.visualstudio.com/
+Once you have VSCode installed under Windows, go in WSL, cd into the crazyflie-firmware folder and execute the following command
+    code .
+You should now see WSL Ubuntu installing the VS Code Server program. Shortly after, VSCode under Windows will launch with a remote connection to your WSL folder (green box down left).
+> **_NOTE:_**
+> Note: In addition to the Arm-Cortex Debugging Extension (Version 1.2.2!), which is installed later in this instruction, you should also install Microsofts C/C++ Extension Pack and its recommended Extensions. 
+
+##### Attach the ST-Link V2 USB device directly to WSL
+In contrast to `make cload`, which uses the windows programs to interface with usb devices such as Crazyradio PA, the openocd wants to communicate directly in WSL with your ST-Link V2. So it's not sufficient to just connect it to your Windows machine, you also have to attach it to WSL. For that we need to install USBIPD on Windows.
+
+In Windows Powershell(Admin), execute
+
+    winget install --interactive --exact dorssel.usbipd-win
+
+In WSL Ubuntu, execute
+
+    sudo apt install linux-tools-5.4.0-77-generic hwdata sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/5.4.0-77-generic/usbip 20
+
+After that you can use the following Commands in Windows Powershell(Admin)
+- List all USB Devices: ```usbipd wsl list```
+- Attach USB Device to WSL: ```usbipd wsl attach -b <busid of ST-Link>```
+- Detach USB Device to WSL: ```usbipd wsl detach -b <busid of ST-Link>``` (or just unplug it)
+
+Now make sure that it is connected to WSL by listing all usb devices with ```lsusb```
+Currently only the Superuser has access to that usb device, change that by
+
+    sudo chmod +666 /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>
+    
+The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architecture.
+
+    sudo apt-get install openocd
+    sudo apt-get install gcc-arm-none-eabi gdb-multiarch
+    sudo ln -s /usr/bin/gdb-multiarch /usr/local/bin/arm-none-eabi-gdb
+
+
 #### Mac OS
 
     brew install open-ocd
     brew tap PX4/homebrew-px
     brew install arm-none-eabi-gcc
 
-### The Cortex Debug Extension
+### Install the Cortex Debug Extension
 
 Install the [extension](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) either by clicking "Install" on the web page, or by searching "Cortex Debug" in the Extensions tab of VS Code.
 
@@ -53,7 +176,10 @@ Click on "Run", then "Add Configuration", then "Cortex Debug".
 
 This should automatically create the needed "launch.json" file.
 
-The version of cortex-debug tested here is 0.3.13. If you want to downgrade, go to 'uninstall' and 'install other versions...'.
+## The version of cortex-debug tested here is 1.2.2
+Unfortunately it is possible that newer versions of this Extension won't work with our current setup, so please downgrade to 1.2.2 . You can do that by going to 'uninstall' and 'install other versions...'.
+
+![Install other Versions of Extension](/docs/images/cortex_debug_other_versions.webp)
 
 #### Cortex Debug Configuration
 
