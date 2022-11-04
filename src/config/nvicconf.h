@@ -83,7 +83,7 @@
 #define NVIC_CPPM_PRI         14
 #define NVIC_SYSLINK_FLOW_PRI 4
 #define NVIC_SYSLINK_UART_PRI 5
-#define NVIC_SYSLINK_DMA_PRI  7
+#define NVIC_SYSLINK_DMA_PRI  NVIC_SYSLINK_UART_PRI  // Must be the same
 #define NVIC_SPI_PRI          7
 #define NVIC_I2C_PRI          7
 #define NVIC_MOTORS_PRI       10
