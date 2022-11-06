@@ -332,7 +332,7 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
        index = rangingTableSet.setData[index].next) {
     Ranging_Table_t *table = &rangingTableSet.setData[index].data;
     if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
-      break; //TODO test 1023 byte
+      break;
     }
     if (table->state == RECEIVED) {
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
@@ -423,7 +423,7 @@ static void uwbTask(void *parameters) {
     }
   }
 }
-static uint8_t spiTxBuffer[FRAME_LEN_MAX]; // TODO check if FRAME_LEN_MAX includes FCS_LEN?
+static uint8_t spiTxBuffer[FRAME_LEN_MAX];
 static uint8_t spiRxBuffer[FRAME_LEN_MAX];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
