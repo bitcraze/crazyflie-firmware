@@ -423,8 +423,8 @@ static void uwbTask(void *parameters) {
     }
   }
 }
-static uint8_t spiTxBuffer[196];
-static uint8_t spiRxBuffer[196];
+static uint8_t spiTxBuffer[FRAME_LEN_MAX]; // TODO check if FRAME_LEN_MAX includes FCS_LEN?
+static uint8_t spiRxBuffer[FRAME_LEN_MAX];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
 /************ Low level ops for libdw **********/
