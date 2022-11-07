@@ -7,7 +7,7 @@ config DECK_ACTIVE_MARKER
         can set up to 4 different IDs giving you the possibility to uniqly
         identify a large number of rigid bodies, without the need of many
         reflective markers.
-    
+
 config DECK_AI
     bool "Support the AI deck"
     select ENABLE_CPX
@@ -38,7 +38,7 @@ choice
 endchoice
 
 menu "Credentials for access-point"
-    depends on DECK_AI  
+    depends on DECK_AI
     depends on !DECK_AI_WIFI_NO_SETUP
     config DECK_AI_SSID
         string "WiFi SSID"
@@ -51,7 +51,7 @@ menu "Credentials for access-point"
         default "mypassword"
         help
             WiFi password (Minimum length of 8)
-endmenu   
+endmenu
 
 config DECK_BIGQUAD
     bool "Support the BigQuad deck"
@@ -125,7 +125,7 @@ config DECK_CPPM_USE_PA3
 config DECK_CPPM_USE_PA7
     bool "PA7/MOSI"
 
-endchoice  
+endchoice
 
 config DECK_EXTRX_ALT_HOLD
     bool "Enable altitude hold via ExtRx"
@@ -258,7 +258,7 @@ config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
     help
         Use the lighthouse system as a groundtruth. This will also switch the
         estimation method to the crossing beam position estimate and not send the
-        position to the kalman estimator and you can 
+        position to the kalman estimator and you can
         read out the positioning from the loggin lighthouse.x.y.z
 
 config DECK_LIGHTHOUSE_MAX_N_BS
@@ -318,11 +318,12 @@ endchoice
 
 config DECK_LOCO_FULL_TX_POWER
     bool "Full TX power"
+    depends on DECK_LOCO
     default n
 
 config DECK_LOCO_LONGER_RANGE
     bool "Longer range mode"
-    depends on DECK_LOCO_ALGORITHM_TDOA3
+    depends on DECK_LOCO && DECK_LOCO_ALGORITHM_TDOA3
     default n
     help
         Note that anchors need to be built with support for this as well
