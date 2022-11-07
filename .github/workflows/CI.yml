@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -36,7 +36,7 @@ jobs:
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
@@ -72,7 +72,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -100,7 +100,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -124,7 +124,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
