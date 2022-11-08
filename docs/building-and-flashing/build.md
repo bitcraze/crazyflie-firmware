@@ -23,18 +23,18 @@ $ brew install gcc-arm-none-eabi
 
 #### Debian/Ubuntu
 
+For Ubuntu 20.04 and 22.04:
+
+```bash
+$ sudo apt-get install make gcc-arm-none-eabi
+```
+
 For Ubuntu 18.04:
 
 ```bash
 $ sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
 $ sudo apt-get update
 $ sudo apt install gcc-arm-embedded
-```
-
-For Ubuntu 20.04 and 20.10:
-
-```bash
-$ sudo apt-get install make gcc-arm-none-eabi
 ```
 
 #### Arch Linux
