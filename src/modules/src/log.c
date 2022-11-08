@@ -58,6 +58,13 @@
 #define LOG_ERROR(...)
 #endif
 
+/**
+ * Verify that log function is initialized.
+ * This can happen if stats counter is used, STATS_CNT_RATE_INIT() might not
+ * have been called.
+ */
+#define ASSERT_LOG_FUNCTION_INITIALIZED(function) ASSERT(function)
+
 
 static const uint8_t typeLength[] = {
   [LOG_UINT8]  = 1,
@@ -746,6 +753,7 @@ void logRunBlock(void * arg)
         uint8_t v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->acquireUInt8);
           v = logByFunction->acquireUInt8(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(v));
@@ -758,6 +766,7 @@ void logRunBlock(void * arg)
         int8_t v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->acquireInt8);
           v = logByFunction->acquireInt8(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(v));
@@ -770,6 +779,7 @@ void logRunBlock(void * arg)
         uint16_t v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->acquireUInt16);
           v = logByFunction->acquireUInt16(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(v));
@@ -782,6 +792,7 @@ void logRunBlock(void * arg)
         int16_t v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->acquireInt16);
           v = logByFunction->acquireInt16(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(v));
@@ -794,6 +805,7 @@ void logRunBlock(void * arg)
         uint32_t v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->acquireUInt32);
           v = logByFunction->acquireUInt32(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(v));
@@ -806,6 +818,7 @@ void logRunBlock(void * arg)
         int32_t v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->acquireInt32);
           v = logByFunction->acquireInt32(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(v));
@@ -818,6 +831,7 @@ void logRunBlock(void * arg)
         float v;
         if (ops->acquisitionType == acqType_function) {
           logByFunction_t* logByFunction = (logByFunction_t*)ops->variable;
+          ASSERT_LOG_FUNCTION_INITIALIZED(logByFunction->aquireFloat);
           v = logByFunction->aquireFloat(timestamp, logByFunction->data);
         } else {
           memcpy(&v, ops->variable, sizeof(valuef));
