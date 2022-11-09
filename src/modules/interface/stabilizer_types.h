@@ -174,6 +174,29 @@ typedef struct control_s {
   float thrust;
 } control_t;
 
+
+#define STABILIZER_NR_OF_MOTORS 4
+
+typedef union {
+  int32_t list[STABILIZER_NR_OF_MOTORS];
+  struct {
+    int32_t m1;
+    int32_t m2;
+    int32_t m3;
+    int32_t m4;
+  } motors;
+} motors_thrust_uncapped_t;
+
+typedef union {
+  uint16_t list[STABILIZER_NR_OF_MOTORS];
+  struct {
+    uint16_t m1;  // PWM ratio
+    uint16_t m2;  // PWM ratio
+    uint16_t m3;  // PWM ratio
+    uint16_t m4;  // PWM ratio
+  } motors;
+} motors_thrust_pwm_t;
+
 typedef enum mode_e {
   modeDisable = 0,
   modeAbs,

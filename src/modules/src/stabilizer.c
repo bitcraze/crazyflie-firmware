@@ -69,9 +69,9 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
-static int32_t motorThrustUncapped[NBR_OF_MOTORS];
-static int32_t motorThrustBatCompUncapped[NBR_OF_MOTORS];
-static uint16_t motorPwm[NBR_OF_MOTORS];
+static motors_thrust_uncapped_t motorThrustUncapped;
+static motors_thrust_uncapped_t motorThrustBatCompUncapped;
+static motors_thrust_pwm_t motorPwm;
 
 // For scratch storage - never logged or passed to other subsystems.
 static setpoint_t tempSetpoint;
@@ -215,22 +215,22 @@ static void checkEmergencyStopTimeout()
   }
 }
 
-static void batteryCompensation(int32_t motorThrustUncapped[], uint32_t motorThrustBatCompUncapped[])
+static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
 {
-    float supplyVoltage = pmGetBatteryVoltage();
+  float supplyVoltage = pmGetBatteryVoltage();
 
-    for (int motor = 0; motor < NBR_OF_MOTORS; motor++)
-    {
-      motorThrustBatCompUncapped[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped[motor], supplyVoltage);
-    }
+  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
+  {
+    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
+  }
 }
 
-static void setMotorRatios(const uint16_t motorPwm[])
+static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
 {
-    for (int motor = 0; motor < NBR_OF_MOTORS; motor++)
-    {
-      motorsSetRatio(motor, motorPwm[motor]);
-    }
+  motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
+  motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
+  motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
+  motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
 }
 
 /* The stabilizer loop runs at 1kHz. It is the
@@ -306,10 +306,10 @@ static void stabilizerTask(void* param)
       if (emergencyStop || (systemIsArmed() == false)) {
         motorsStop();
       } else {
-        powerDistribution(&control, motorThrustUncapped);
-        batteryCompensation(motorThrustUncapped, motorThrustBatCompUncapped);
-        powerDistributionCap(motorThrustBatCompUncapped, motorPwm);
-        setMotorRatios(motorPwm);
+        powerDistribution(&control, &motorThrustUncapped);
+        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+        powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+        setMotorRatios(&motorPwm);
       }
 
 #ifdef CONFIG_DECK_USD
@@ -821,23 +821,23 @@ LOG_GROUP_START(motor)
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m1, &motorThrustBatCompUncapped[MOTOR_M1])
+LOG_ADD(LOG_INT32, m1, &motorThrustBatCompUncapped.motors.m1)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m2, &motorThrustBatCompUncapped[MOTOR_M2])
+LOG_ADD(LOG_INT32, m2, &motorThrustBatCompUncapped.motors.m2)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m3, &motorThrustBatCompUncapped[MOTOR_M3])
+LOG_ADD(LOG_INT32, m3, &motorThrustBatCompUncapped.motors.m3)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m4, &motorThrustBatCompUncapped[MOTOR_M4])
+LOG_ADD(LOG_INT32, m4, &motorThrustBatCompUncapped.motors.m4)
 LOG_GROUP_STOP(motor)
