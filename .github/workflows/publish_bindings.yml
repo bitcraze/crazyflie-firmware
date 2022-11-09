@@ -1,0 +1,37 @@
+name: publish bindings
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release. Must match the version in the version file!'
+        required: true
+      destination:
+        description: 'Release destination, "testing" for test.pypi.org, "release" for pypi.org.'     
+        required: true
+        default: 'testing'
+
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Start the build workflow for publishing to testing
+      if: ${{ github.event.inputs.destination == 'testing' }}
+      uses: benc-uk/workflow-dispatch@v1
+      with:
+        workflow: build bindings
+        token: ${{ secrets.PERSONAL_TOKEN }}
+        ref: ${{ github.event.inputs.tag }}
+        inputs: '{ "guard": "do-release", "repository_url": "https://test.pypi.org/legacy/" }'
+    
+    - name: Start the build bindings workflow for publishing to Pypi
+      if: ${{ github.event.inputs.destination == 'release' }}
+      uses: benc-uk/workflow-dispatch@v1
+      with:
+        workflow: build bindings
+        token: ${{ secrets.PERSONAL_TOKEN }}
+        ref: ${{ github.event.inputs.tag }}
+        inputs: '{ "guard": "do-release", "repository_url": "https://upload.pypi.org/legacy/" }'
+
+
