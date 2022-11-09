@@ -33,6 +33,7 @@
 #include "num.h"
 #include "autoconf.h"
 #include "config.h"
+#include "motors.h"
 
 #include "debug.h"
 #include "math.h"
@@ -104,7 +105,7 @@ int powerDistributionMotorType(uint32_t id)
 {
   int type = 1;
   if (id == idPitch || id == idYaw)
-  { 
+  {
     type = 0;
   }
 
@@ -114,18 +115,18 @@ int powerDistributionMotorType(uint32_t id)
 uint16_t powerDistributionStopRatio(uint32_t id)
 {
   uint16_t stopRatio = 0;
-  if (id == idPitch) 
+  if (id == idPitch)
   {
     stopRatio = flapperConfig.pitchServoNeutral*act_max/100.0f;
   }
-  else if (id == idYaw) 
+  else if (id == idYaw)
   {
     stopRatio = flapperConfig.yawServoNeutral*act_max/100.0f;
   }
 
   return stopRatio;
 }
-  
+
 void powerDistributionInit(void)
 {
   #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
@@ -133,7 +134,7 @@ void powerDistributionInit(void)
   #else
     DEBUG_PRINT("Using Flapper power distribution | PCB revD (2022) or newer\n");
   #endif
-  
+
 }
 
 bool powerDistributionTest(void)
@@ -142,40 +143,46 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-#define limitThrust(VAL) limitUint16(VAL)
+uint16_t limitThrust(int32_t value, int32_t min, int32_t max)
+{
+  if (value < min) { return min; }
+  if (value > max) { return max; }
+  return value;
+}
 
-void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
+void powerDistribution(const control_t *control, int32_t motorThrustUncapped[])
 {
   thrust = fmin(control->thrust, flapperConfig.maxThrust);
-  
+
   flapperConfig.pitchServoNeutral=limitServoNeutral(flapperConfig.pitchServoNeutral);
   flapperConfig.yawServoNeutral=limitServoNeutral(flapperConfig.yawServoNeutral);
   flapperConfig.rollBias=limitRollBias(flapperConfig.rollBias);
 
   #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
-    motorPower->m2 = limitThrust(flapperConfig.pitchServoNeutral*act_max/100.0f + pitch_ampl*control->pitch); // pitch servo
-    motorPower->m3 = limitThrust(flapperConfig.yawServoNeutral*act_max/100.0f - control->yaw); // yaw servo
-    motorPower->m1 = limitThrust( 0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias/100.0f) ); // left motor
-    motorPower->m4 = limitThrust(-0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias/100.0f) ); // right motor
-    
-    if (motorPower->m1 < idleThrust) {
-      motorPower->m1 = idleThrust;
-    }
-    if (motorPower->m4 < idleThrust) {
-      motorPower->m4 = idleThrust;
-    }
+    motorThrustUncapped[MOTOR_M2] = flapperConfig.pitchServoNeutral*act_max / 100.0f + pitch_ampl * control->pitch; // pitch servo
+    motorThrustUncapped[MOTOR_M3] = flapperConfig.yawServoNeutral*act_max / 100.0f - control->yaw; // yaw servo
+    motorThrustUncapped[MOTOR_M1] =  0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias / 100.0f); // left motor
+    motorThrustUncapped[MOTOR_M4] = -0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias / 100.0f); // right motor
   #else
-    motorPower->m1 = limitThrust(flapperConfig.pitchServoNeutral*act_max/100.0f + pitch_ampl*control->pitch); // pitch servo
-    motorPower->m3 = limitThrust(flapperConfig.yawServoNeutral*act_max/100.0f - control->yaw); // yaw servo
-    motorPower->m2 = limitThrust( 0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias/100.0f) ); // left motor
-    motorPower->m4 = limitThrust(-0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias/100.0f) ); // right motor
-    
-    if (motorPower->m2 < idleThrust) {
-      motorPower->m2 = idleThrust;
-    }
-    if (motorPower->m4 < idleThrust) {
-      motorPower->m4 = idleThrust;
-    }
+    motorThrustUncapped[MOTOR_M1] = flapperConfig.pitchServoNeutral * act_max / 100.0f + pitch_ampl * control->pitch; // pitch servo
+    motorThrustUncapped[MOTOR_M3] = flapperConfig.yawServoNeutral*act_max / 100.0f - control->yaw; // yaw servo
+    motorThrustUncapped[MOTOR_M2] =  0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias / 100.0f); // left motor
+    motorThrustUncapped[MOTOR_M4] = -0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias / 100.0f); // right motor
+  #endif
+}
+
+void powerDistributionCap(int32_t motorThrustBatCompUncapped[], uint16_t motorPwm[])
+{
+  #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
+    motorPwm[MOTOR_M2] = limitThrust(motorThrustBatCompUncapped[MOTOR_M2], 0, UINT16_MAX); // pitch servo
+    motorPwm[MOTOR_M3] = limitThrust(motorThrustBatCompUncapped[MOTOR_M3], 0, UINT16_MAX); // yaw servo
+    motorPwm[MOTOR_M1] = limitThrust(motorThrustBatCompUncapped[MOTOR_M1], idleThrust, UINT16_MAX); // left motor
+    motorPwm[MOTOR_M4] = limitThrust(motorThrustBatCompUncapped[MOTOR_M4], idleThrust, UINT16_MAX); // left motor
+  #else
+    motorPwm[MOTOR_M1] = limitThrust(motorThrustBatCompUncapped[MOTOR_M1], 0, UINT16_MAX); // pitch servo
+    motorPwm[MOTOR_M3] = limitThrust(motorThrustBatCompUncapped[MOTOR_M3], 0, UINT16_MAX); // yaw servo
+    motorPwm[MOTOR_M2] = limitThrust(motorThrustBatCompUncapped[MOTOR_M2], idleThrust, UINT16_MAX); // left motor
+    motorPwm[MOTOR_M4] = limitThrust(motorThrustBatCompUncapped[MOTOR_M4], idleThrust, UINT16_MAX); // right motor
   #endif
 }
 
@@ -202,7 +209,7 @@ PARAM_GROUP_START(flapper)
  * @brief Roll bias <-25%; 25%> (default 0%)
  *
  * This parameter can be used if uneven performance of the left and right flapping mechanaisms and/or wings
- * is observed, which in flight results in a drift in roll/sideways flight. Positive values make the drone roll 
+ * is observed, which in flight results in a drift in roll/sideways flight. Positive values make the drone roll
  * more to the right, negative values to the left.
  */
 PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, motBiasRoll, &flapperConfig.rollBias)
@@ -217,14 +224,14 @@ PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servPitchNeutr, &flapperConfig.pitchSe
 /**
  * @brief Yaw servo neutral <25%; 75%> (default 50%)
  *
- * The parameter sets the neutral position of the yaw servo, such that the yaw control arm is pointed spanwise. If in flight 
+ * The parameter sets the neutral position of the yaw servo, such that the yaw control arm is pointed spanwise. If in flight
  * you observe drift in the clock-wise direction, increase this parameter and vice-versa if the drift is counter-clock-wise.
  */
 PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servYawNeutr, &flapperConfig.yawServoNeutral)
 /**
  * @brief Yaw servo neutral <25%; 75%> (default 50%)
  *
- * The parameter sets the neutral position of the yaw servo, such that the yaw control arm is pointed spanwise. If in flight 
+ * The parameter sets the neutral position of the yaw servo, such that the yaw control arm is pointed spanwise. If in flight
  * you observe drift in the clock-wise direction, increase this parameter and vice-versa if the drift is counter-clock-wise.
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, flapperMaxThrust, &flapperConfig.maxThrust)

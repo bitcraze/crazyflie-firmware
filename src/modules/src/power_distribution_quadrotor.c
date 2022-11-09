@@ -32,6 +32,7 @@
 #include "num.h"
 #include "autoconf.h"
 #include "config.h"
+#include "motors.h"
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
@@ -61,7 +62,7 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-static uint16_t limitThrust(float thrust, uint32_t minThrust) {
+static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
   if (thrust < minThrust) {
     return minThrust;
   }
@@ -69,36 +70,42 @@ static uint16_t limitThrust(float thrust, uint32_t minThrust) {
   return thrust;
 }
 
-void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
+void powerDistribution(const control_t *control, int32_t motorThrustUncapped[])
 {
-  const int32_t maxThrust = UINT16_MAX;
-
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
 
-  int32_t m1 = control->thrust - r + p + control->yaw;
-  int32_t m2 = control->thrust - r - p - control->yaw;
-  int32_t m3 = control->thrust + r - p + control->yaw;
-  int32_t m4 = control->thrust + r + p - control->yaw;
+  motorThrustUncapped[MOTOR_M1] = control->thrust - r + p + control->yaw;
+  motorThrustUncapped[MOTOR_M2] = control->thrust - r - p - control->yaw;
+  motorThrustUncapped[MOTOR_M3] = control->thrust + r - p + control->yaw;
+  motorThrustUncapped[MOTOR_M4] = control->thrust + r + p - control->yaw;
+}
 
-  int32_t maxM = m1;
-  if (m2 > maxM) { maxM = m2; }
-  if (m3 > maxM) { maxM = m3; }
-  if (m4 > maxM) { maxM = m4; }
+void powerDistributionCap(int32_t motorThrustBatCompUncapped[], uint16_t motorPwm[])
+{
+  const int32_t maxAllowedThrust = UINT16_MAX;
 
-  if (maxM > maxThrust) {
-    float reduction = maxM - maxThrust;
-
-    m1 -= reduction;
-    m2 -= reduction;
-    m3 -= reduction;
-    m4 -= reduction;
+  // Find highest thrust
+  int32_t highestThrustFound = 0;
+  for (int motor = 0; motor < NBR_OF_MOTORS; motor++)
+  {
+    if (motorThrustBatCompUncapped[motor] > highestThrustFound)
+    {
+      highestThrustFound = motorThrustBatCompUncapped[motor];
+    }
   }
 
-  motorPower->m1 = limitThrust(m1, idleThrust);
-  motorPower->m2 = limitThrust(m2, idleThrust);
-  motorPower->m3 = limitThrust(m3, idleThrust);
-  motorPower->m4 = limitThrust(m4, idleThrust);
+  int32_t reduction = 0;
+  if (highestThrustFound > maxAllowedThrust)
+  {
+    reduction = highestThrustFound - maxAllowedThrust;
+  }
+
+  for (int motor = 0; motor < NBR_OF_MOTORS; motor++)
+  {
+    int32_t thrustCappedUpper = motorThrustBatCompUncapped[motor] - reduction;
+    motorPwm[motor] = capMinThrust(thrustCappedUpper, idleThrust);
+  }
 }
 
 /**
