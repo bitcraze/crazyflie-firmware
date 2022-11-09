@@ -462,11 +462,12 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     ASSERT(id < NBR_OF_MOTORS);
 
     uint16_t ratio = ithrust;
-    motor_ratios[id] = ratio;
 
     if (motorSetEnable) {
       ratio = motorPowerSet[id];
     }
+
+    motor_ratios[id] = ratio;
 
     if (motorMap[id]->drvType == BRUSHLESS)
     {
