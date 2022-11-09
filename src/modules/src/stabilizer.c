@@ -821,23 +821,23 @@ LOG_GROUP_START(motor)
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m1, &motorThrustBatCompUncapped.motors.m1)
+LOG_ADD(LOG_INT32, m1req, &motorThrustBatCompUncapped.motors.m1)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m2, &motorThrustBatCompUncapped.motors.m2)
+LOG_ADD(LOG_INT32, m2req, &motorThrustBatCompUncapped.motors.m2)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m3, &motorThrustBatCompUncapped.motors.m3)
+LOG_ADD(LOG_INT32, m3req, &motorThrustBatCompUncapped.motors.m3)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m4, &motorThrustBatCompUncapped.motors.m4)
+LOG_ADD(LOG_INT32, m4req, &motorThrustBatCompUncapped.motors.m4)
 LOG_GROUP_STOP(motor)
