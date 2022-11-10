@@ -176,7 +176,7 @@ void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
     motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, 0, UINT16_MAX); // pitch servo
     motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX); // yaw servo
     motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, UINT16_MAX); // left motor
-    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX); // left motor
+    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX); // right motor
   #else
     motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, 0, UINT16_MAX); // pitch servo
     motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX); // yaw servo
