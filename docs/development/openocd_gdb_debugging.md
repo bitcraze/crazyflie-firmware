@@ -22,13 +22,6 @@ Connect the the Crazyflie to your ST-Link V2 via the Debug Adapter and the port 
 
 ### Prerequisites
 
-First ensure that you have the ARM GCC toolchain and OpenOCD installed and in your path. To check, run:
-
-    which openocd
-    which arm-none-eabi-gcc
-
-The path to your OpenOCD binary and ARM GCC binary should output. If not, try installing them again.
-
 #### Ubuntu
 
 These steps have been tested on Ubuntu 20.04. The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architecture.
@@ -45,56 +38,25 @@ If you do not have vscode yet, the easiest way to install it on Ubuntu is via sn
 
 #### Windows (Ubuntu in WSL)
 
-##### Install WSL
+##### Install Windows Subsystem for Linux (WSL)
 
-Configure your Machine for WSL and install a Ubuntu Distrobution. Instructions can be found here: https://learn.microsoft.com/en-us/windows/wsl/install . It has been tested on Windows 10 and 11 with Ubuntu 20.04.
+Configure your Machine for WSL and install a Ubuntu Distrobution. Instructions can be found here: https://learn.microsoft.com/en-us/windows/wsl/install. It has been tested on Windows 10 and 11 with Ubuntu 20.04 as well as Ubuntu 22.04.
 
-##### Install the GCC ARM embedded Toolchain
+##### Install the GCC ARM Embedded Application Binary Interface (eabi) Toolchain
 
-Download the newest `gcc-arm-none-eabi-YOUR-VERSION.tar.bz2` from https://developer.arm.com/downloads/-/gnu-rm and put it in your WSL file System under `/home/<yourUserName`. The folder can be accessed  in Windows by writing `\\wsl$` in your file explorers adress bar.
-The file in this example is called `gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2`, so make sure to change the filename in the following commands according to your version.
+Update Apt
+
+    sudo apt update
 
 Install Make
 
     sudo apt install make
 
-Remove any previous versions off gcc-arm-none-eabi
+Install gcc arm eabi
 
-    sudo apt remove gcc-arm-none-eabi
+    sudo apt install -y gcc-arm-none-eabi
 
-Extract the .bz2 file
-
-    sudo tar xjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2 -C /usr/share/
-
-Create the following links
-
-    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gcc /usr/bin/arm-none-eabi-gcc 
-    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-g++ /usr/bin/arm-none-eabi-g++
-    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gdb /usr/bin/arm-none-eabi-gdb
-    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-size /usr/bin/arm-none-eabi-size
-    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-objcopy /usr/bin/arm-none-eabi-objcopy
-    sudo ln -s /usr/share/gcc-arm-none-eabi-10.3-2021.10/bin/arm-none-eabi-gcc-ar /usr/bin/arm-none-eabi-ar
-
-
-Check if the links work
-
-    arm-none-eabi-gcc --version
-    arm-none-eabi-g++ --version
-    arm-none-eabi-gdb --version
-    arm-none-eabi-size --version
-    arm-none-eabi-objcopy --version
-    arm-none-eabi-ar --version
-
-If they don't work, delete the links with `find /usr/bin | grep arm | sudo xargs rm -rf` and double-check the version names. Your unzipped folder is in `/usr/share`. 
-
-Install libncurses-dev and create links
-
-    sudo apt install libncurses-dev -y
-    sudo ln -s /usr/lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5
-    sudo ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
-
-
-Install build-essentials
+Install build-essential
 
     sudo apt install build-essential -y
 
@@ -127,7 +89,9 @@ Upload the code to your Crazyflie by typing
 ##### Visual Studio Code
 Make sure you have Visual Studio Code installed in Windows, do not install it in WSL! Get it here: https://code.visualstudio.com/
 Once you have VSCode installed under Windows, go in WSL, cd into the crazyflie-firmware folder and execute the following command
+    
     code .
+
 You should now see WSL Ubuntu installing the VS Code Server program. Shortly after, VSCode under Windows will launch with a remote connection to your WSL folder (green box down left).
 > **_NOTE:_**
 > Note: In addition to the Arm-Cortex Debugging Extension (Version 1.2.2!), which is installed later in this instruction, you should also install Microsofts C/C++ Extension Pack and its recommended Extensions. 
@@ -141,22 +105,28 @@ In Windows Powershell(Admin), execute
 
 In WSL Ubuntu, execute
 
-    sudo apt install linux-tools-5.4.0-77-generic hwdata sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/5.4.0-77-generic/usbip 20
+    sudo apt install linux-tools-5.4.0-77-generic hwdata -y 
+    sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/5.4.0-77-generic/usbip 20
 
 After that you can use the following Commands in Windows Powershell(Admin)
 - List all USB Devices: ```usbipd wsl list```
-- Attach USB Device to WSL: ```usbipd wsl attach -b <busid of ST-Link>```
+- Attach USB Device to WSL: 
+    - ```usbipd wsl attach -b <busid of ST-Link>```
+    - ```usbipd wsl attach -b <busid of ST-Link> -d <Name of specific WSL Distro if you have more than one>```
+    - Example: ```usbipd wsl attach -b 2-6 -d Ubuntu-20.04```
 - Detach USB Device to WSL: ```usbipd wsl detach -b <busid of ST-Link>``` (or just unplug it)
 
 Now make sure that it is connected to WSL by listing all usb devices with ```lsusb```
-Currently only the Superuser has access to that usb device, change that by
+Currently only the Superuser has read/write access to that usb device, change that by
+    - ```sudo chmod +666 /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>```
+    - Example: ```sudo chmod +666 /dev/bus/usb/002/003```
+    - if you're unsure, you can check the permissions with ```ls -l /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>```
 
-    sudo chmod +666 /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>
     
 The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architecture.
 
-    sudo apt-get install openocd
-    sudo apt-get install gcc-arm-none-eabi gdb-multiarch
+    sudo apt-get install openocd -y
+    sudo apt-get install gcc-arm-none-eabi gdb-multiarch -y
     sudo ln -s /usr/bin/gdb-multiarch /usr/local/bin/arm-none-eabi-gdb
 
 
@@ -167,6 +137,13 @@ The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi
     brew install arm-none-eabi-gcc
 
 ### Install the Cortex Debug Extension
+
+First ensure that you have the ARM GCC toolchain and OpenOCD installed and in your path. To check, run:
+
+    which openocd
+    which arm-none-eabi-gcc
+
+The path to your OpenOCD binary and ARM GCC binary should output. If not, try installing them again.
 
 Install the [extension](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug) either by clicking "Install" on the web page, or by searching "Cortex Debug" in the Extensions tab of VS Code.
 
@@ -180,6 +157,8 @@ This should automatically create the needed "launch.json" file.
 Unfortunately it is possible that newer versions of this Extension won't work with our current setup, so please downgrade to 1.2.2 . You can do that by going to 'uninstall' and 'install other versions...'.
 
 ![Install other Versions of Extension](/docs/images/cortex_debug_other_versions.webp)
+
+It should also be noted that VSCode updates Extensions automatically, sometimes even if you manually downgraded to a legacy version. If you don't want that to happen, make sure you have checked the setting `Ignore Updates` in the dropdown menu of `Update to vX.X.X`.
 
 #### Cortex Debug Configuration
 
@@ -226,7 +205,7 @@ Inside of the file, replace everything with the following:
 
 #### Installing the SVD file
 
-Now for the SVD file: just download it from [here](https://raw.githubusercontent.com/posborne/cmsis-svd/master/data/STMicro/STM32F405.svd) and into the firmware root dir. Make sure it has the exact name of "STM32F405.svd"!
+Now for the SVD file: just download it from [here](https://raw.githubusercontent.com/posborne/cmsis-svd/master/data/STMicro/STM32F405.svd) and into the firmware root dir. Make sure it has the exact name of ```STM32F405.svd``` !
 
 ### Debug!
 
