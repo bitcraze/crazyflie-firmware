@@ -6,6 +6,7 @@
 #include "controller_pid.h"
 #include "controller_mellinger.h"
 #include "controller_indi.h"
+#include "controller_lqr.h"
 
 #include "autoconf.h"
 
@@ -26,6 +27,7 @@ static ControllerFcns controllerFunctions[] = {
   {.init = controllerPidInit, .test = controllerPidTest, .update = controllerPid, .name = "PID"},
   {.init = controllerMellingerInit, .test = controllerMellingerTest, .update = controllerMellinger, .name = "Mellinger"},
   {.init = controllerINDIInit, .test = controllerINDITest, .update = controllerINDI, .name = "INDI"},
+  {.init = controllerLqrInit, .test = controllerLqrTest, .update = controllerLqr, .name = "LQR"},
 };
 
 
@@ -46,14 +48,16 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeINDI
   #elif defined(CONFIG_CONTROLLER_MELLINGER)
     #define CONTROLLER ControllerTypeMellinger
-  #else
+  #elif defined(CONFIG_CONTROLLER_LQR)
+    #define CONTROLLER ControllerTypeLQR
+  #else 
     #define CONTROLLER ControllerTypeAny
   #endif
 
   ControllerType forcedController = CONTROLLER;
   if (forcedController != ControllerTypeAny) {
     DEBUG_PRINT("Controller type forced\n");
-    currentController = forcedController;
+    currentController = forcedController; 
   }
 
   initController();
