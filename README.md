@@ -33,6 +33,16 @@ Go to the [contribute page](https://www.bitcraze.io/contribute/) on our website 
 
 To run the tests please have a look at the [unit test documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/unit_testing/).
 
+### Customized firmware
+
+This folked branch is used to develop the controller for CMU 24-774 course project. To build and flash this repo, clone this repo recursively to get all submodules. 
+
+``` git clone --recursive https://github.com/shaobow/crazyflie-firmware-customized.git```
+
+or 
+
+run the "Update all projects" shortcut on the desktop if you clone this repo to the project shortcut in the official VM.
+
 ## License
 
 The code is licensed under LGPL-3.0
