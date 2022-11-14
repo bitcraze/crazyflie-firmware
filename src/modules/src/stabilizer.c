@@ -175,7 +175,7 @@ void stabilizerInit(StateEstimatorType estimator)
   sensorsInit();
   stateEstimatorInit(estimator);
   //controllerInit(ControllerTypeAny);
-  controllerInit(ControllerTypePID);
+  controllerInit(ControllerTypeINDI);
   powerDistributionInit();
   motorsInit(platformConfigGetMotorMapping());
   collisionAvoidanceInit();
