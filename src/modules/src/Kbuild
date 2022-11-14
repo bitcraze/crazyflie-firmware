@@ -11,6 +11,7 @@ obj-y += controller_indi.o
 obj-y += controller_mellinger.o
 obj-y += controller.o
 obj-y += controller_pid.o
+obj-y += controller_lqr.o
 obj-y += crtp_commander_generic.o
 obj-y += crtp_commander_high_level.o
 obj-y += crtp_commander.o
