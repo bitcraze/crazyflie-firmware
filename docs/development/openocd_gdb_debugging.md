@@ -82,7 +82,7 @@ Upload the code to your Crazyflie by typing
 
     make cload
 > **_NOTE:_**
-> Note: This method uses windows python program to upload the binary. So make sure that you have python, the cfclient and its all dependencies installed under windows and that you're able to connect to the crazyflie via the cfclient and Crazyradio PA(zadig!).
+> This method uses windows python program to upload the binary. So make sure that you have python, the cfclient and its all dependencies installed under windows and that you're able to connect to the crazyflie via the cfclient and Crazyradio PA(zadig!).
 
 
 
@@ -118,9 +118,9 @@ After that you can use the following Commands in Windows Powershell(Admin)
 
 Now make sure that it is connected to WSL by listing all usb devices with ```lsusb```
 Currently only the Superuser has read/write access to that usb device, change that by
-    - ```sudo chmod +666 /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>```
-    - Example: ```sudo chmod +666 /dev/bus/usb/002/003```
-    - if you're unsure, you can check the permissions with ```ls -l /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>```
+- ```sudo chmod +666 /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>```
+- Example: ```sudo chmod +666 /dev/bus/usb/002/003```
+- if you're unsure, you can check the permissions with ```ls -l /dev/bus/usb/<busid, see lsusb>/<deviceid, see lsusb>```
 
     
 The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architecture.
