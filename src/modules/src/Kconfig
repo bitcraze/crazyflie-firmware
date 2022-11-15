@@ -162,6 +162,15 @@ config POWER_DISTRIBUTION_FLAPPER_REVB
     help
         Power distribution function for Flapper Nimble+ with revB PCB
 
+config ENABLE_THRUST_BAT_COMPENSATED
+    bool "Enable battery thrust compensation"
+    default y
+    help
+        Compensate thrust depending on battery voltage so it will produce about the same
+        amount of thrust independent of the battery voltage.
+        The compensation is based on thrust measurements, which are only valid for CF2.X stock configuration.
+        Not applied for brushless motor setup.
+
 endmenu
 
 menu "Parameter subsystem"
