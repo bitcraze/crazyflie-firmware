@@ -270,7 +270,8 @@ endchoice
 
 The next step is to add an implementation of the power distribution function. Copy
 `power_distribution_quadrotor.c` into a new file, `power_distribution_car.c` and modify the
-`powerDistribution()` function to fit your needs.
+`powerDistribution()` function to fit your needs. Also modify the `powerDistributionCap()`, this function is responsible
+for limiting the thrust to the valid range [0 - UINT16_MAX].
 
 The final step is to add the c file to the build. Open `src/modules/src/Kbuild` and add your new file.
 ```Makefile

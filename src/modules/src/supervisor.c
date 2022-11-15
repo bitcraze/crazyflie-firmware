@@ -74,14 +74,14 @@ static bool canFlyCheck()
 }
 
 //
-// We say we are flying if the sum of the ratios of all motors giving thrust 
+// We say we are flying if the sum of the ratios of all motors giving thrust
 // is above a certain threshold.
 //
 static bool isFlyingCheck()
 {
   int sumRatio = 0;
   for (int i = 0; i < NBR_OF_MOTORS; ++i) {
-    sumRatio += powerDistributionMotorType(i)*motorsGetRatio(i);
+    sumRatio += powerDistributionMotorType(i) * motorsGetRatio(i);
   }
 
   return sumRatio > SUPERVISOR_FLIGHT_THRESHOLD;

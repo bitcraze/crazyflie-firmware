@@ -50,7 +50,7 @@ uint16_t powerDistributionStopRatio(uint32_t id)
 {
   return 0;
 }
-  
+
 void powerDistributionInit(void)
 {
 }
@@ -61,28 +61,50 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-#define limitThrust(VAL) limitUint16(VAL)
+static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
+  if (thrust < minThrust) {
+    return minThrust;
+  }
 
-void powerDistribution(motors_thrust_t* motorPower, const control_t *control)
+  return thrust;
+}
+
+void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
-  motorPower->m1 = limitThrust(control->thrust - r + p + control->yaw);
-  motorPower->m2 = limitThrust(control->thrust - r - p - control->yaw);
-  motorPower->m3 =  limitThrust(control->thrust + r - p + control->yaw);
-  motorPower->m4 =  limitThrust(control->thrust + r + p - control->yaw);
 
-  if (motorPower->m1 < idleThrust) {
-    motorPower->m1 = idleThrust;
+  motorThrustUncapped->motors.m1 = control->thrust - r + p + control->yaw;
+  motorThrustUncapped->motors.m2 = control->thrust - r - p - control->yaw;
+  motorThrustUncapped->motors.m3 = control->thrust + r - p + control->yaw;
+  motorThrustUncapped->motors.m4 = control->thrust + r + p - control->yaw;
+}
+
+void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
+{
+  const int32_t maxAllowedThrust = UINT16_MAX;
+
+  // Find highest thrust
+  int32_t highestThrustFound = 0;
+  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
+  {
+    const int32_t thrust = motorThrustBatCompUncapped->list[motorIndex];
+    if (thrust > highestThrustFound)
+    {
+      highestThrustFound = thrust;
+    }
   }
-  if (motorPower->m2 < idleThrust) {
-    motorPower->m2 = idleThrust;
+
+  int32_t reduction = 0;
+  if (highestThrustFound > maxAllowedThrust)
+  {
+    reduction = highestThrustFound - maxAllowedThrust;
   }
-  if (motorPower->m3 < idleThrust) {
-    motorPower->m3 = idleThrust;
-  }
-  if (motorPower->m4 < idleThrust) {
-    motorPower->m4 = idleThrust;
+
+  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
+  {
+    int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
+    motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, idleThrust);
   }
 }
 

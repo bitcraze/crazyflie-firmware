@@ -68,7 +68,11 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
-static motors_thrust_t motorPower;
+
+static motors_thrust_uncapped_t motorThrustUncapped;
+static motors_thrust_uncapped_t motorThrustBatCompUncapped;
+static motors_thrust_pwm_t motorPwm;
+
 // For scratch storage - never logged or passed to other subsystems.
 static setpoint_t tempSetpoint;
 
@@ -211,11 +215,28 @@ static void checkEmergencyStopTimeout()
   }
 }
 
-/* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
+static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
+{
+  float supplyVoltage = pmGetBatteryVoltage();
+
+  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
+  {
+    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
+  }
+}
+
+static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
+{
+  motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
+  motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
+  motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
+  motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
+}
+
+/* The stabilizer loop runs at 1kHz. It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
  */
-
 static void stabilizerTask(void* param)
 {
   uint32_t tick;
@@ -285,11 +306,10 @@ static void stabilizerTask(void* param)
       if (emergencyStop || (systemIsArmed() == false)) {
         motorsStop();
       } else {
-        powerDistribution(&motorPower, &control);
-        motorsSetRatio(MOTOR_M1, motorPower.m1);
-        motorsSetRatio(MOTOR_M2, motorPower.m2);
-        motorsSetRatio(MOTOR_M3, motorPower.m3);
-        motorsSetRatio(MOTOR_M4, motorPower.m4);
+        powerDistribution(&control, &motorThrustUncapped);
+        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+        powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+        setMotorRatios(&motorPwm);
       }
 
 #ifdef CONFIG_DECK_USD
@@ -793,3 +813,31 @@ LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
  */
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 LOG_GROUP_STOP(stateEstimateZ)
+
+
+LOG_GROUP_START(motor)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m1req, &motorThrustBatCompUncapped.motors.m1)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m2req, &motorThrustBatCompUncapped.motors.m2)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m3req, &motorThrustBatCompUncapped.motors.m3)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m4req, &motorThrustBatCompUncapped.motors.m4)
+LOG_GROUP_STOP(motor)
