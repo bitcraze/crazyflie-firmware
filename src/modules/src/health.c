@@ -334,7 +334,7 @@ PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
 /**
  * @brief PWM ratio to use when testing propellers. Required for brushless motors. [0 - UINT16_MAX]
  */
-PARAM_ADD_CORE(PARAM_UINT16, propTestPWMRatio, &propTestPWMRatio)
+PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, propTestPWMRatio, &propTestPWMRatio)
 
 PARAM_GROUP_STOP(health)
 
