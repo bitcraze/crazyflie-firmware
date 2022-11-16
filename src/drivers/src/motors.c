@@ -170,7 +170,7 @@ GPIO_InitTypeDef GPIO_PassthroughOutput =
 // Voltage needed with the Supply voltage.
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
 {
-  #ifdef ENABLE_THRUST_BAT_COMPENSATED
+  #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
   ASSERT(id < NBR_OF_MOTORS);
 
   if (motorMap[id]->drvType == BRUSHED)
