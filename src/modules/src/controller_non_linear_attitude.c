@@ -94,10 +94,10 @@ void controllerNonLinearAttitudeInit(void) {
 
 
 void controllerNonLinearAttitude(control_t *control,
-                        setpoint_t *setpoint,
-                        const sensorData_t *sensors,
-                        const state_t *state,
-                        const uint32_t tick) {
+                                 setpoint_t *setpoint,
+                                 const sensorData_t *sensors,
+                                 const state_t *state,
+                                 const uint32_t tick) {
 
   static float control_omega[3];
   static struct vec control_torque;
@@ -176,21 +176,21 @@ void controllerNonLinearAttitude(control_t *control,
 
     // compute desired accelerations in X, Y and Z
     accDes.x = 0;
-    { accDes.x += 1.0f / tau_xy / tau_xy * pError.x; }
-    { accDes.x += 2.0f * zeta_xy / tau_xy * vError.x; }
-    { accDes.x += setpoint->acceleration.x; }
+    accDes.x += 1.0f / tau_xy / tau_xy * pError.x;
+    accDes.x += 2.0f * zeta_xy / tau_xy * vError.x;
+    accDes.x += setpoint->acceleration.x;
     accDes.x = constrain(accDes.x, -coll_max, coll_max);
 
     accDes.y = 0;
-    { accDes.y += 1.0f / tau_xy / tau_xy * pError.y; }
-    { accDes.y += 2.0f * zeta_xy / tau_xy * vError.y; }
-    { accDes.y += setpoint->acceleration.y; }
+    accDes.y += 1.0f / tau_xy / tau_xy * pError.y;
+    accDes.y += 2.0f * zeta_xy / tau_xy * vError.y;
+    accDes.y += setpoint->acceleration.y;
     accDes.y = constrain(accDes.y, -coll_max, coll_max);
 
     accDes.z = GRAVITY_MAGNITUDE;
-    { accDes.z += 1.0f / tau_z / tau_z * pError.z; }
-    { accDes.z += 2.0f * zeta_z / tau_z * vError.z; }
-    { accDes.z += setpoint->acceleration.z; }
+    accDes.z += 1.0f / tau_z / tau_z * pError.z;
+    accDes.z += 2.0f * zeta_z / tau_z * vError.z;
+    accDes.z += setpoint->acceleration.z;
     accDes.z = constrain(accDes.z, -coll_max, coll_max);
 
 
@@ -256,12 +256,9 @@ void controllerNonLinearAttitude(control_t *control,
 
     // the axis around which this rotation needs to occur in the inertial frame (ie. an axis orthogonal to the two)
     struct vec rotAxisI = vzero();
-    if (fabsf(alpha) > 1 * ARCMINUTE)
-    {
+    if (fabsf(alpha) > 1 * ARCMINUTE) {
       rotAxisI = vnormalize(vcross(zI_cur, zI_des));
-    }
-    else
-    {
+    } else {
       rotAxisI = mkvec(1, 1, 0);
     }
 
@@ -272,12 +269,10 @@ void controllerNonLinearAttitude(control_t *control,
     attErrorReduced.z = sinf(alpha / 2.0f) * rotAxisI.z;
 
     // choose the shorter rotation
-    if (sinf(alpha / 2.0f) < 0)
-    {
+    if (sinf(alpha / 2.0f) < 0) {
       rotAxisI = vneg(rotAxisI);
     }
-    if (cosf(alpha / 2.0f) < 0)
-    {
+    if (cosf(alpha / 2.0f) < 0) {
       rotAxisI = vneg(rotAxisI);
       attErrorReduced = qneg(attErrorReduced);
     }
@@ -294,12 +289,9 @@ void controllerNonLinearAttitude(control_t *control,
     alpha = acosf(dotProd);
 
     // the axis around which this rotation needs to occur in the inertial frame (ie. an axis orthogonal to the two)
-    if (fabsf(alpha) > 1 * ARCMINUTE)
-    {
+    if (fabsf(alpha) > 1 * ARCMINUTE) {
       rotAxisI = vnormalize(vcross(zI, zI_des));
-    }
-    else
-    {
+    } else {
       rotAxisI = mkvec(1, 1, 0);
     }
 
@@ -319,8 +311,7 @@ void controllerNonLinearAttitude(control_t *control,
     attErrorFull = qqmul(attitudeI, attDesiredFull);
 
     // correct rotation
-    if (attErrorFull.w < 0)
-    {
+    if (attErrorFull.w < 0) {
       attErrorFull = qneg(attErrorFull);
       attDesiredFull = qqmul(attitude, attErrorFull);
     }
@@ -333,18 +324,13 @@ void controllerNonLinearAttitude(control_t *control,
 
     struct quat attError = qeye();
 
-    if (mixing_factor <= 0)
-    {
+    if (mixing_factor <= 0) {
       // 100% reduced control (no yaw control)
       attError = attErrorReduced;
-    }
-    else if (mixing_factor >= 1)
-    {
+    } else if (mixing_factor >= 1) {
       // 100% full control (yaw controlled with same time constant as roll & pitch)
       attError = attErrorFull;
-    }
-    else
-    {
+    } else {
       // mixture of reduced and full control
 
       // calculate rotation between the two errors
