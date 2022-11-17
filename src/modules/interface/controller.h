@@ -33,6 +33,7 @@ typedef enum {
   ControllerTypePID,
   ControllerTypeMellinger,
   ControllerTypeINDI,
+  ControllerTypeNonLinearAttitude,
   ControllerType_COUNT,
 } ControllerType;
 

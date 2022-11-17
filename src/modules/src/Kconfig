@@ -36,6 +36,11 @@ config CONTROLLER_MELLINGER
     help
         Use the Mellinger controller as default
 
+config CONTROLLER_NON_LINEAR_ATTITUDE
+    bool "Non linear attitude controller"
+    help
+        Use the non linear attitude controller as default
+
 endchoice
 
 config ESTIMATOR_KALMAN_ENABLE
