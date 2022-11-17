@@ -119,7 +119,7 @@ static controllerLeePayload_t g_self = {
   .KI = {0.02, 0.02, 0.05},
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
-  .value = 0,
+  .value = 0.0f,
   .radius = 0.1,
   // .mu1 = {0, 0, 0},
   // .mu2 = {0, 0, 0},
@@ -223,11 +223,11 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
-    workspace.settings->warm_start = 0;
+    workspace.settings->warm_start = 1;
     self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius);
     self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius);
     c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
-    c_float Px_new[6] = {1, 1, 100, 1, 1, 100};
+    c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
     
     c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
@@ -244,7 +244,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     
     osqp_solve(&workspace);
 
-    if (self->value == 0) {
+    if (self->value == 0.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[0]; 
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];
@@ -255,7 +255,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
         self->mu2.y = (&workspace)->solution->x[4];
         self->mu2.z = (&workspace)->solution->x[5];
      }
-     else if (self->value == 1) {
+     else if (self->value == 1.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[0];
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];      
@@ -270,7 +270,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     // printf("workspace status:   %s\n", (&workspace)->info->status);
     // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
     // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
-    // printf("value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
+    // DEBUG_PRINT("\nvalue: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
 
     //------------------------------------------QP------------------------------//
     // self->desVirtInp = F_d;  // COMMENT THIS IF YOU ARE USING THE QP 
@@ -519,7 +519,7 @@ PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
 
 
 //For the QP 
-PARAM_ADD(PARAM_UINT8, value, &g_self.value)
+PARAM_ADD(PARAM_FLOAT, value, &g_self.value)
 
 
 PARAM_GROUP_STOP(ctrlLeeP)
