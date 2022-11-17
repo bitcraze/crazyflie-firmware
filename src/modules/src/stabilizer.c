@@ -134,7 +134,7 @@ static struct {
 
 // for payloads
 static float payload_alpha = 0.9; // between 0...1; 1: no filter
-static float otherID = 2.0;
+static uint8_t otherID = 2.0;
 static point_t payload_pos_last;         // m   (world frame)
 static velocity_t payload_vel_last;      // m/s (world frame)
 
@@ -305,8 +305,8 @@ static void stabilizerTask(void* param)
       peerLocalizationOtherPosition_t* otherCF    = peerLocalizationGetPositionByID(otherID);
       if (otherCF != NULL) {
         state.position2.x = otherCF->pos.x;
-        state.position2.x = otherCF->pos.y;
-        state.position2.x = otherCF->pos.z;
+        state.position2.y = otherCF->pos.y;
+        state.position2.z = otherCF->pos.z;
       } 
       if (payloadPos != NULL) {
         // if we got a new state
@@ -446,7 +446,7 @@ PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 
 PARAM_ADD_CORE(PARAM_FLOAT, pAlpha, &payload_alpha)
 
-PARAM_ADD_CORE(PARAM_FLOAT, otherID, &payload_alpha)
+PARAM_ADD_CORE(PARAM_FLOAT, otherID, &otherID)
 
 PARAM_GROUP_STOP(stabilizer)
 

@@ -119,7 +119,7 @@ static controllerLeePayload_t g_self = {
   .KI = {0.02, 0.02, 0.05},
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
-  .value = 0.0,
+  .value = 0,
   .radius = 0.1,
   // .mu1 = {0, 0, 0},
   // .mu2 = {0, 0, 0},
@@ -244,7 +244,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     
     osqp_solve(&workspace);
 
-    if (self->value == 0.0f) {
+    if (self->value == 0) {
         self->desVirtInp.x = (&workspace)->solution->x[0]; 
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];
@@ -255,7 +255,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
         self->mu2.y = (&workspace)->solution->x[4];
         self->mu2.z = (&workspace)->solution->x[5];
      }
-     else if (self->value == 1.0f) {
+     else if (self->value == 1) {
         self->desVirtInp.x = (&workspace)->solution->x[0];
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];      
@@ -514,25 +514,13 @@ PARAM_ADD(PARAM_FLOAT, offsetx, &g_self.offset.x)
 PARAM_ADD(PARAM_FLOAT, offsety, &g_self.offset.y)
 PARAM_ADD(PARAM_FLOAT, offsetz, &g_self.offset.z)
 
-PARAM_ADD(PARAM_FLOAT, n1, &g_self.n1.x)
-PARAM_ADD(PARAM_FLOAT, n1, &g_self.n1.y)
-PARAM_ADD(PARAM_FLOAT, n1, &g_self.n1.z)
-PARAM_ADD(PARAM_FLOAT, n2, &g_self.n2.x)
-PARAM_ADD(PARAM_FLOAT, n2, &g_self.n2.y)
-PARAM_ADD(PARAM_FLOAT, n2, &g_self.n2.z)
-
 
 PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
 
 
 //For the QP 
-PARAM_ADD(PARAM_FLOAT, value, &g_self.value)
-PARAM_ADD(PARAM_FLOAT, mu1x, &g_self.mu1.x)
-PARAM_ADD(PARAM_FLOAT, mu1y, &g_self.mu1.y)
-PARAM_ADD(PARAM_FLOAT, mu1z, &g_self.mu1.z)
-PARAM_ADD(PARAM_FLOAT, mu2x, &g_self.mu2.x)
-PARAM_ADD(PARAM_FLOAT, mu2y, &g_self.mu2.y)
-PARAM_ADD(PARAM_FLOAT, mu2z, &g_self.mu2.z)
+PARAM_ADD(PARAM_UINT8, value, &g_self.value)
+
 
 PARAM_GROUP_STOP(ctrlLeeP)
 

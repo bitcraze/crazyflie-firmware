@@ -89,7 +89,7 @@ typedef struct controllerLeePayload_s {
      // inequality matrix A
     struct mat26 A_in;
     // value: 0,1: defines which part of the vector in desVirtInp goes to which UAV
-    float value;
+    uint8_t value;
     float radius;
     // angle limit for hyper plane
     struct vec rpyPlane1;
