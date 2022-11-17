@@ -32,7 +32,6 @@
 #include "num.h"
 #include "autoconf.h"
 #include "config.h"
-#include "cfassert.h"
 #include "math.h"
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
@@ -79,8 +78,6 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
 
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
-  ASSERT(control->controlMode == controlModeLegacy);
-
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
 
@@ -91,8 +88,6 @@ static void powerDistributionLegacy(const control_t *control, motors_thrust_unca
 }
 
 static void powerDistributionForceTorque(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
-  ASSERT(control->controlMode == controlModeForceTorque);
-
   static float motorForces[STABILIZER_NR_OF_MOTORS];
 
   const float arm = 0.707106781f * armLength;
@@ -118,10 +113,7 @@ static void powerDistributionForceTorque(const control_t *control, motors_thrust
 }
 
 static void powerDistributionForce(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
-  ASSERT(control->controlMode == controlModeForce);
-
   // Not implemented yet
-  ASSERT_FAILED();
 }
 
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
@@ -137,7 +129,8 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
       powerDistributionForce(control, motorThrustUncapped);
       break;
     default:
-      ASSERT_FAILED();
+      // Nothing here
+      break;
   }
 }
 
