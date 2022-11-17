@@ -32,6 +32,7 @@
 #include "num.h"
 #include "autoconf.h"
 #include "config.h"
+#include "cfassert.h"
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
@@ -71,6 +72,9 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
 
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
+  // Only legacy mode is currently supported
+  ASSERT(control->controlMode == controlModeLegacy);
+
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
 

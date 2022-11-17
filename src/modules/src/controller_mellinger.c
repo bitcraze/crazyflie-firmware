@@ -138,6 +138,8 @@ void controllerMellinger(control_t *control, setpoint_t *setpoint,
   float dt;
   float desiredYaw = 0; //deg
 
+  control->controlMode = controlModeLegacy;
+
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     return;
   }
