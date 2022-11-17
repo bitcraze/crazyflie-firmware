@@ -100,7 +100,7 @@ static struct {
   int16_t rateRoll;
   int16_t ratePitch;
   int16_t rateYaw;
-
+  
   // payload position - mm
   int16_t px;
   int16_t py;
@@ -110,6 +110,11 @@ static struct {
   int16_t pvx;
   int16_t pvy;
   int16_t pvz;
+
+  // posiiton of neighboring UAV
+  int16_t p2x;
+  int16_t p2y;
+  int16_t p2z;
 } stateCompressed;
 
 static struct {
@@ -129,6 +134,7 @@ static struct {
 
 // for payloads
 static float payload_alpha = 0.9; // between 0...1; 1: no filter
+static float otherID = 2.0;
 static point_t payload_pos_last;         // m   (world frame)
 static velocity_t payload_vel_last;      // m/s (world frame)
 
@@ -172,6 +178,10 @@ static void compressState()
   stateCompressed.px = state.payload_pos.x * 1000.0f;
   stateCompressed.py = state.payload_pos.y * 1000.0f;
   stateCompressed.pz = state.payload_pos.z * 1000.0f;
+
+  stateCompressed.p2x = state.position2.x * 1000.0f;
+  stateCompressed.p2y = state.position2.y * 1000.0f;
+  stateCompressed.p2z = state.position2.z * 1000.0f;
 
   stateCompressed.pvx = state.payload_vel.x * 1000.0f;
   stateCompressed.pvy = state.payload_vel.y * 1000.0f;
@@ -292,8 +302,13 @@ static void stabilizerTask(void* param)
 
       // add the payload state here
       peerLocalizationOtherPosition_t* payloadPos = peerLocalizationGetPositionByID(255);
+      peerLocalizationOtherPosition_t* otherCF    = peerLocalizationGetPositionByID(otherID);
+      if (otherCF != NULL) {
+        state.position2.x = otherCF->pos.x;
+        state.position2.x = otherCF->pos.y;
+        state.position2.x = otherCF->pos.z;
+      } 
       if (payloadPos != NULL) {
-        
         // if we got a new state
         if (payload_pos_last.timestamp < payloadPos->pos.timestamp) {
           struct vec vel_filtered = vzero();
@@ -430,6 +445,8 @@ PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 
 
 PARAM_ADD_CORE(PARAM_FLOAT, pAlpha, &payload_alpha)
+
+PARAM_ADD_CORE(PARAM_FLOAT, otherID, &payload_alpha)
 
 PARAM_GROUP_STOP(stabilizer)
 

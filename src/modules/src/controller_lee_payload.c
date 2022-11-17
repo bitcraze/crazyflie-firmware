@@ -33,7 +33,7 @@ TODO
 #include "math3d.h"
 #include "controller_lee_payload.h"
 #include "stdio.h"
-// #include "debug.h"
+#include "debug.h"
 // QP
 #include "workspace.h"
 #include "osqp.h"
@@ -41,17 +41,29 @@ TODO
 #define GRAVITY_MAGNITUDE (9.81f)
 
 
-static inline struct vec computePlaneNormal(struct vec rpy, float yaw) {
-// Compute the normal of a plane, given the extrinsic roll-pitch-yaw of the z-axis 
-// and the yaw representing the x-axis of the plan's frame
-  struct vec x = mkvec(cosf(yaw), sinf(yaw), 0);
-  struct quat q = rpy2quat(rpy);
-  struct mat33 Rq = quat2rotmat(q);
-  struct vec e3 = mkvec(0,0,1);
-  struct vec z = mvmul(Rq, e3);
-  struct vec xcrossz = vcross(x,z);
-  struct vec ni = vnormalize(xcrossz);
-  return ni;
+// static inline struct vec computePlaneNormal(struct vec rpy, float yaw) {
+// // Compute the normal of a plane, given the extrinsic roll-pitch-yaw of the z-axis 
+// // and the yaw representing the x-axis of the plan's frame
+//   struct vec x = mkvec(cosf(yaw), sinf(yaw), 0);
+//   struct quat q = rpy2quat(rpy);
+//   struct mat33 Rq = quat2rotmat(q);
+//   struct vec e3 = mkvec(0,0,1);
+//   struct vec z = mvmul(Rq, e3);
+//   struct vec xcrossz = vcross(x,z);
+//   struct vec ni = vnormalize(xcrossz);
+//   return ni;
+// }
+static inline struct vec computePlaneNormal(struct vec pos1, struct vec pos2, struct vec pload, float r) {
+// Compute the normal of a plane, given the minimum desired distance r
+  struct vec mid = vscl(0.5, vsub(pos2, pos1));
+  struct vec rvec = vscl(r, vnormalize(vsub(pos1, pos2)));
+  struct vec pr = vadd(pos1, vadd(mid, rvec));
+
+  struct vec p0pr = vsub(pr, pload);
+  struct vec prp2 = vsub(pos2, pr);
+  struct vec ns = vcross(prp2, p0pr);
+  struct vec n_sol = vcross(p0pr, ns);
+  return n_sol;
 }
 static inline struct mat26 Ainequality(float angle_limit) {
   struct vec q1_limit = mkvec(-radians(angle_limit), 0 , 0);
@@ -108,6 +120,9 @@ static controllerLeePayload_t g_self = {
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
   .value = 0.0,
+  .radius = 0.1,
+  // .mu1 = {0, 0, 0},
+  // .mu2 = {0, 0, 0},
   // fixed angle hyperplane in degrees for each UAV
   .rpyPlane1 = {0,0,0},
   .yawPlane1 = 0,
@@ -190,6 +205,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
+    struct vec statePos2 = mkvec(state->position2.x, state->position2.y, state->position2.z);
+
     // errors
     struct vec plpos_e = vclampscl(vsub(plPos_d, plStPos), -self->Kpos_P_limit, self->Kpos_P_limit);
     struct vec plvel_e = vclampscl(vsub(plVel_d, plStVel), -self->Kpos_D_limit, self->Kpos_D_limit);
@@ -207,39 +224,59 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
     workspace.settings->warm_start = 0;
-    struct vec n1 = computePlaneNormal(self->rpyPlane1, self->yawPlane1);
-    struct vec n2 = computePlaneNormal(self->rpyPlane2, self->yawPlane2);
-    c_float Ax_new[12] = {1, n1.x, 1, n1.y, 1, n1.z, 1,  n2.x, 1, n2.y, 1, n2.z, };
+    self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius);
+    self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius);
+    c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
+    c_float Px_new[6] = {1, 1, 100, 1, 1, 100};
+    
+    c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
     c_int Ax_new_n = 12;
+    c_int Px_new_n = 6;
      
     c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
     c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
 
-    osqp_update_A(&workspace, Ax_new, OSQP_NULL, Ax_new_n);    
+    osqp_update_A(&workspace, Ax_new, Ax_new_idx, Ax_new_n);    
+    osqp_update_P(&workspace, Px_new, Px_new_idx, Px_new_n);
     osqp_update_lower_bound(&workspace, l_new);
     osqp_update_upper_bound(&workspace, u_new);
     
     osqp_solve(&workspace);
-    
+
     if (self->value == 0.0f) {
         self->desVirtInp.x = (&workspace)->solution->x[0]; 
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];
+        self->mu1.x = (&workspace)->solution->x[0]; 
+        self->mu1.y = (&workspace)->solution->x[1];
+        self->mu1.z = (&workspace)->solution->x[2];
+        self->mu2.x = (&workspace)->solution->x[3]; 
+        self->mu2.y = (&workspace)->solution->x[4];
+        self->mu2.z = (&workspace)->solution->x[5];
      }
      else if (self->value == 1.0f) {
-        self->desVirtInp.x = (&workspace)->solution->x[3];
-        self->desVirtInp.y = (&workspace)->solution->x[4];
-        self->desVirtInp.z = (&workspace)->solution->x[5];      
+        self->desVirtInp.x = (&workspace)->solution->x[0];
+        self->desVirtInp.y = (&workspace)->solution->x[1];
+        self->desVirtInp.z = (&workspace)->solution->x[2];      
+        self->mu1.x = (&workspace)->solution->x[3]; 
+        self->mu1.y = (&workspace)->solution->x[4];
+        self->mu1.z = (&workspace)->solution->x[5];
+        self->mu2.x = (&workspace)->solution->x[0]; 
+        self->mu2.y = (&workspace)->solution->x[1];
+        self->mu2.z = (&workspace)->solution->x[2];
+
       }
     // printf("workspace status:   %s\n", (&workspace)->info->status);
-    // // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
-    //  DEBUG_PRINT("value: %f self->desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
+    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
+    // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
+    // printf("value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
 
     //------------------------------------------QP------------------------------//
     // self->desVirtInp = F_d;  // COMMENT THIS IF YOU ARE USING THE QP 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
-
+  
     struct vec qidot = vdiv(vsub(plStVel, stateVel), vmag(vsub(plStPos, statePos)));
     struct vec wi = vcross(qi, qidot);
     struct mat33 qiqiT = vecmult(qi);
@@ -477,9 +514,25 @@ PARAM_ADD(PARAM_FLOAT, offsetx, &g_self.offset.x)
 PARAM_ADD(PARAM_FLOAT, offsety, &g_self.offset.y)
 PARAM_ADD(PARAM_FLOAT, offsetz, &g_self.offset.z)
 
+PARAM_ADD(PARAM_FLOAT, n1, &g_self.n1.x)
+PARAM_ADD(PARAM_FLOAT, n1, &g_self.n1.y)
+PARAM_ADD(PARAM_FLOAT, n1, &g_self.n1.z)
+PARAM_ADD(PARAM_FLOAT, n2, &g_self.n2.x)
+PARAM_ADD(PARAM_FLOAT, n2, &g_self.n2.y)
+PARAM_ADD(PARAM_FLOAT, n2, &g_self.n2.z)
+
+
+PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
+
 
 //For the QP 
 PARAM_ADD(PARAM_FLOAT, value, &g_self.value)
+PARAM_ADD(PARAM_FLOAT, mu1x, &g_self.mu1.x)
+PARAM_ADD(PARAM_FLOAT, mu1y, &g_self.mu1.y)
+PARAM_ADD(PARAM_FLOAT, mu1z, &g_self.mu1.z)
+PARAM_ADD(PARAM_FLOAT, mu2x, &g_self.mu2.x)
+PARAM_ADD(PARAM_FLOAT, mu2y, &g_self.mu2.y)
+PARAM_ADD(PARAM_FLOAT, mu2z, &g_self.mu2.z)
 
 PARAM_GROUP_STOP(ctrlLeeP)
 

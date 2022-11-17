@@ -75,7 +75,6 @@ typedef struct controllerLeePayload_s {
     struct vec u_i;
     struct vec qidot_prev;
     struct vec acc_prev;
-
     // -----------------------FOR QP----------------------------//
     // P_alloc matrix 
     struct mat36 P_alloc;
@@ -83,10 +82,15 @@ typedef struct controllerLeePayload_s {
     struct mat66 P;
     // desired value from the QP
     struct vec desVirtInp;
+    struct vec mu1;
+    struct vec mu2;
+    struct vec n1;
+    struct vec n2;
      // inequality matrix A
     struct mat26 A_in;
     // value: 0,1: defines which part of the vector in desVirtInp goes to which UAV
     float value;
+    float radius;
     // angle limit for hyper plane
     struct vec rpyPlane1;
     float yawPlane1; // rpy and yaw for one plane of the first UAV
