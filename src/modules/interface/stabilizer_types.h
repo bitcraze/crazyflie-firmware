@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -167,15 +167,43 @@ typedef struct state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
 } state_t;
 
-typedef struct control_s {
-  int16_t roll;
-  int16_t pitch;
-  int16_t yaw;
-  float thrust;
-} control_t;
-
-
 #define STABILIZER_NR_OF_MOTORS 4
+
+typedef enum control_mode_e {
+  controlModeLegacy      = 0, // legacy mode with int16_t roll, pitch, yaw and float thrust
+  controlModeForceTorque = 1,
+  controlModeForce       = 2,
+} control_mode_t;
+
+typedef struct control_s {
+  union {
+    // controlModeLegacy
+    struct {
+      int16_t roll;
+      int16_t pitch;
+      int16_t yaw;
+      float thrust;
+    };
+
+    // controlModeForceTorque
+    struct {
+      float thrustSi;  // N
+      union { // Nm
+        float torque[3];
+        struct {
+          float torqueX;
+          float torqueY;
+          float torqueZ;
+        };
+      };
+    };
+
+    // controlModeForce
+    float normalizedForces[STABILIZER_NR_OF_MOTORS]; // 0.0 ... 1.0
+  };
+
+  control_mode_t controlMode;
+} control_t;
 
 typedef union {
   int32_t list[STABILIZER_NR_OF_MOTORS];

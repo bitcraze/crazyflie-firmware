@@ -36,6 +36,7 @@
 
 #include "debug.h"
 #include "math.h"
+#include "cfassert.h"
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
@@ -151,6 +152,9 @@ uint16_t limitThrust(int32_t value, int32_t min, int32_t max)
 
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
+  // Only legacy mode is currently supported
+  ASSERT(control->controlMode == controlModeLegacy);
+
   thrust = fmin(control->thrust, flapperConfig.maxThrust);
 
   flapperConfig.pitchServoNeutral=limitServoNeutral(flapperConfig.pitchServoNeutral);

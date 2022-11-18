@@ -143,10 +143,11 @@ bool controllerINDITest(void)
 }
 
 void controllerINDI(control_t *control, setpoint_t *setpoint,
-		const sensorData_t *sensors,
-		const state_t *state,
-		const uint32_t tick)
+	const sensorData_t *sensors,
+	const state_t *state,
+	const uint32_t tick)
 {
+	control->controlMode = controlModeLegacy;
 
 	//The z_distance decoder adds a negative sign to the yaw command, the position decoder doesn't
 	if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
@@ -194,7 +195,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 
 				// INDI position controller not active, INDI attitude controller is main loop
 				attitudeDesired.roll = radians(setpoint->attitude.roll); //no sign conversion as CF coords is equal to NED for roll
-			
+
 		}else{
 			if (outerLoopActive) {
 				// INDI position controller active, INDI attitude controller becomes inner loop
@@ -213,7 +214,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 				attitudeDesired.pitch = refOuterINDI.y; //outer loop provides radians
 			}
 		}
-		
+
 		//Proportional controller on attitude angles [rad]
 		rateDesired.roll 	= indi.reference_acceleration.err_p*(attitudeDesired.roll - radians(state->attitude.roll));
 		rateDesired.pitch 	= indi.reference_acceleration.err_q*(attitudeDesired.pitch - radians(state->attitude.pitch));
@@ -235,7 +236,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		 * 1 - Update the gyro filter with the new measurements.
 		 */
 
-		body_rates.p = radians(sensors->gyro.x); 
+		body_rates.p = radians(sensors->gyro.x);
 		body_rates.q = -radians(sensors->gyro.y); //Account for gyro measuring pitch rate in opposite direction relative to both the CF coords and INDI coords
 		body_rates.r = -radians(sensors->gyro.z); //Account for conversion of ENU -> NED
 
@@ -262,7 +263,7 @@ void controllerINDI(control_t *control, setpoint_t *setpoint,
 		 */
 
 		//Calculate the attitude rate error, using the unfiltered gyroscope measurements (only the preapplied filters in bmi088)
-		float attitude_error_p = rateDesired.roll - body_rates.p; 
+		float attitude_error_p = rateDesired.roll - body_rates.p;
 		float attitude_error_q = rateDesired.pitch - body_rates.q;
 		float attitude_error_r = rateDesired.yaw - body_rates.r;
 
@@ -348,28 +349,28 @@ PARAM_ADD(PARAM_FLOAT, thrust_threshold, &thrust_threshold)
 PARAM_ADD(PARAM_FLOAT, bound_ctrl_input, &bound_control_input)
 
 /**
- * @brief INDI Controller effeciveness G1 p 
+ * @brief INDI Controller effeciveness G1 p
  */
 PARAM_ADD(PARAM_FLOAT, g1_p, &indi.g1.p)
 /**
- * @brief INDI Controller effectiveness G1 q 
+ * @brief INDI Controller effectiveness G1 q
  */
 PARAM_ADD(PARAM_FLOAT, g1_q, &indi.g1.q)
 /**
- * @brief INDI Controller effectiveness G1 r 
+ * @brief INDI Controller effectiveness G1 r
  */
 PARAM_ADD(PARAM_FLOAT, g1_r, &indi.g1.r)
 /**
- * @brief INDI Controller effectiveness G2 
+ * @brief INDI Controller effectiveness G2
  */
 PARAM_ADD(PARAM_FLOAT, g2, &indi.g2)
 
 /**
- * @brief INDI proportional gain, attitude error p 
+ * @brief INDI proportional gain, attitude error p
  */
 PARAM_ADD(PARAM_FLOAT, ref_err_p, &indi.reference_acceleration.err_p)
 /**
- * @brief INDI proportional gain, attitude error q 
+ * @brief INDI proportional gain, attitude error q
  */
 PARAM_ADD(PARAM_FLOAT, ref_err_q, &indi.reference_acceleration.err_q)
 /**
@@ -413,7 +414,7 @@ PARAM_ADD(PARAM_FLOAT, filt_cutoff, &indi.filt_cutoff)
 PARAM_ADD(PARAM_FLOAT, filt_cutoff_r, &indi.filt_cutoff_r)
 
 /**
- * @brief Activate INDI for position control 
+ * @brief Activate INDI for position control
  */
 PARAM_ADD(PARAM_UINT8, outerLoopActive, &outerLoopActive)
 
