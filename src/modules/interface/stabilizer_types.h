@@ -186,6 +186,8 @@ typedef struct control_s {
     };
 
     // controlModeForceTorque
+    // Note: Using SI units for a controller makes it hard to tune it for different platforms. The normalized force API
+    // is probably a better option.
     struct {
       float thrustSi;  // N
       union { // Nm
