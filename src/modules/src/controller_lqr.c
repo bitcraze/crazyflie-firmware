@@ -51,7 +51,7 @@ void controllerLqr(control_t *control, setpoint_t *setpoint,
   float e11 = setpoint->attitudeRate.pitch - state_ratePitch;
   float e12 = setpoint->attitudeRate.yaw - state_rateYaw;
   float error[12] = {e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12};
-  int i, j, k = 0; 
+  int i, j, k = 0; // to do: initialization 
   float res = 0;
   
   while (i < 4){
