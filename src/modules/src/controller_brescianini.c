@@ -32,7 +32,7 @@
  * ============================================================================
  */
 
-#include "controller_non_linear_attitude.h"
+#include "controller_brescianini.h"
 #include "log.h"
 #include "param.h"
 #include "num.h"
@@ -81,7 +81,7 @@ static float heuristic_yaw = 5;
 // Struct for logging position information
 static bool isInit = false;
 
-void controllerNonLinearAttitudeInit(void) {
+void controllerBrescianiniInit(void) {
   if (isInit) {
     return;
   }
@@ -93,7 +93,7 @@ void controllerNonLinearAttitudeInit(void) {
 #define UPDATE_RATE RATE_100_HZ
 
 
-void controllerNonLinearAttitude(control_t *control,
+void controllerBrescianini(control_t *control,
                                  setpoint_t *setpoint,
                                  const sensorData_t *sensors,
                                  const state_t *state,
@@ -405,7 +405,7 @@ void controllerNonLinearAttitude(control_t *control,
   control->controlMode = controlModeForceTorque;
 }
 
-bool controllerNonLinearAttitudeTest(void) {
+bool controllerBrescianiniTest(void) {
   return true;
 }
 

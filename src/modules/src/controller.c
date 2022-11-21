@@ -6,7 +6,7 @@
 #include "controller_pid.h"
 #include "controller_mellinger.h"
 #include "controller_indi.h"
-#include "controller_non_linear_attitude.h"
+#include "controller_brescianini.h"
 
 #include "autoconf.h"
 
@@ -27,7 +27,7 @@ static ControllerFcns controllerFunctions[] = {
   {.init = controllerPidInit, .test = controllerPidTest, .update = controllerPid, .name = "PID"},
   {.init = controllerMellingerInit, .test = controllerMellingerTest, .update = controllerMellinger, .name = "Mellinger"},
   {.init = controllerINDIInit, .test = controllerINDITest, .update = controllerINDI, .name = "INDI"},
-  {.init = controllerNonLinearAttitudeInit, .test = controllerNonLinearAttitudeTest, .update = controllerNonLinearAttitude, .name = "NonLinAtt"},
+  {.init = controllerBrescianiniInit, .test = controllerBrescianiniTest, .update = controllerBrescianini, .name = "Brescianini"},
 };
 
 
@@ -48,8 +48,8 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeINDI
   #elif defined(CONFIG_CONTROLLER_MELLINGER)
     #define CONTROLLER ControllerTypeMellinger
-  #elif defined(CONFIG_CONTROLLER_NON_LINEAR_ATTITUDE)
-    #define CONTROLLER ControllerTypeNonLinearAttitude
+  #elif defined(CONFIG_CONTROLLER_BRESCIANINI)
+    #define CONTROLLER ControllerTypeBrescianini
   #else
     #define CONTROLLER ControllerTypeAny
   #endif

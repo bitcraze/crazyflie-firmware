@@ -2,9 +2,9 @@
 
 import cffirmware
 
-def test_controller_non_linear_attitude():
+def test_controller_brescianini():
 
-    cffirmware.controllerNonLinearAttitudeInit()
+    cffirmware.controllerBrescianiniInit()
 
     control = cffirmware.control_t()
     setpoint = cffirmware.setpoint_t()
@@ -39,7 +39,7 @@ def test_controller_non_linear_attitude():
 
     tick = 100
 
-    cffirmware.controllerNonLinearAttitude(control, setpoint,sensors,state,tick)
+    cffirmware.controllerBrescianini(control, setpoint,sensors,state,tick)
     assert control.controlMode == cffirmware.controlModeForceTorque
     # control.thrustSi will be at a (tuned) hover-state
     assert control.torqueX == 0
