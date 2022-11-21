@@ -118,9 +118,6 @@ void controllerBrescianini(control_t *control,
     // attitude error as computed by the reduced attitude controller
     struct quat attErrorReduced = qeye();
 
-    // desired attitude as computed by the reduced attitude controller
-    struct quat attDesiredReduced = qeye();
-
     // attitude error as computed by the full attitude controller
     struct quat attErrorFull = qeye();
 
@@ -277,7 +274,6 @@ void controllerBrescianini(control_t *control,
       attErrorReduced = qneg(attErrorReduced);
     }
 
-    attDesiredReduced = qnormalize(qqmul(attitude, attErrorReduced));
     attErrorReduced = qnormalize(attErrorReduced);
 
 
