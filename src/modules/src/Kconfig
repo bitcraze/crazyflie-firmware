@@ -36,6 +36,11 @@ config CONTROLLER_MELLINGER
     help
         Use the Mellinger controller as default
 
+config CONTROLLER_BRESCIANINI
+    bool "Brescianini controller"
+    help
+        Use the Brescianini controller as default
+
 endchoice
 
 config ESTIMATOR_KALMAN_ENABLE
