@@ -303,7 +303,9 @@ static void stabilizerTask(void* param)
       // add the payload state here
       peerLocalizationOtherPosition_t* payloadPos = peerLocalizationGetPositionByID(255);
       peerLocalizationOtherPosition_t* otherCF    = peerLocalizationGetPositionByID(otherID);
-      DEBUG_PRINT("Other ID: %d", otherID);
+      // if (tick % 1000 == 0) {
+      //   DEBUG_PRINT("Other ID: %d\n", otherID);
+      // }
       if (otherCF != NULL) {
         state.position2.x = otherCF->pos.x;
         state.position2.y = otherCF->pos.y;

@@ -107,7 +107,7 @@ static controllerLeePayload_t g_self = {
   .Kpos_D = {15, 15, 15},
   .Kpos_D_limit = 100,
   .Kpos_I ={10, 10, 10},
-  .Kpos_I_limit = 100,
+  .Kpos_I_limit = 0,
 
   // Cables PD
   .K_q = {25, 25, 25},
@@ -130,12 +130,12 @@ static controllerLeePayload_t g_self = {
   .yawPlane2 = 0,
 };
 
-static inline struct vec vclampscl(struct vec value, float min, float max) {
-  return mkvec(
-    clamp(value.x, min, max),
-    clamp(value.y, min, max),
-    clamp(value.z, min, max));
-}
+// static inline struct vec vclampscl(struct vec value, float min, float max) {
+//   return mkvec(
+//     clamp(value.x, min, max),
+//     clamp(value.y, min, max),
+//     clamp(value.z, min, max));
+// }
 
 void controllerLeePayloadReset(controllerLeePayload_t* self)
 {
@@ -208,9 +208,9 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec statePos2 = mkvec(state->position2.x, state->position2.y, state->position2.z);
 
     // errors
-    struct vec plpos_e = vclampscl(vsub(plPos_d, plStPos), -self->Kpos_P_limit, self->Kpos_P_limit);
-    struct vec plvel_e = vclampscl(vsub(plVel_d, plStVel), -self->Kpos_D_limit, self->Kpos_D_limit);
-    self->i_error_pos = vclampscl(vadd(self->i_error_pos, vscl(dt, plpos_e)), -self->Kpos_I_limit, self->Kpos_I_limit);
+    struct vec plpos_e = vclampnorm(vsub(plPos_d, plStPos), self->Kpos_P_limit);
+    struct vec plvel_e = vclampnorm(vsub(plVel_d, plStVel), self->Kpos_D_limit);
+    self->i_error_pos = vclampnorm(vadd(self->i_error_pos, vscl(dt, plpos_e)), self->Kpos_I_limit);
 
     self->plp_error = plpos_e;
     self->plv_error = plvel_e;
@@ -227,18 +227,18 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius);
     self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius);
     c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
-    c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
+    // // c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
     
     c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
+    // // c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
     c_int Ax_new_n = 12;
-    c_int Px_new_n = 6;
+    // // c_int Px_new_n = 6;
      
     c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
     c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
 
     osqp_update_A(&workspace, Ax_new, Ax_new_idx, Ax_new_n);    
-    osqp_update_P(&workspace, Px_new, Px_new_idx, Px_new_n);
+    // osqp_update_P(&workspace, Px_new, Px_new_idx, Px_new_n);
     osqp_update_lower_bound(&workspace, l_new);
     osqp_update_upper_bound(&workspace, u_new);
     
@@ -259,19 +259,29 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
         self->desVirtInp.x = (&workspace)->solution->x[0];
         self->desVirtInp.y = (&workspace)->solution->x[1];
         self->desVirtInp.z = (&workspace)->solution->x[2];      
-        self->mu1.x = (&workspace)->solution->x[3]; 
-        self->mu1.y = (&workspace)->solution->x[4];
-        self->mu1.z = (&workspace)->solution->x[5];
-        self->mu2.x = (&workspace)->solution->x[0]; 
-        self->mu2.y = (&workspace)->solution->x[1];
-        self->mu2.z = (&workspace)->solution->x[2];
+        // self->desVirtInp.x = (&workspace)->solution->x[3];
+        // self->desVirtInp.y = (&workspace)->solution->x[4];
+        // self->desVirtInp.z = (&workspace)->solution->x[5];      
+
+        self->mu1.x = (&workspace)->solution->x[0]; 
+        self->mu1.y = (&workspace)->solution->x[1];
+        self->mu1.z = (&workspace)->solution->x[2];
+        self->mu2.x = (&workspace)->solution->x[3]; 
+        self->mu2.y = (&workspace)->solution->x[4];
+        self->mu2.z = (&workspace)->solution->x[5];
 
       }
     // printf("workspace status:   %s\n", (&workspace)->info->status);
     // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
     // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
-    // DEBUG_PRINT("\nvalue: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
+    // if (tick % 1000 == 0) {
 
+    //   DEBUG_PRINT("\n value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
+    //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position2.x), (double)(state->position2.y), (double)(state->position2.z));
+    //   DEBUG_PRINT("\nn1: %f %f %f\n", (double) (self->n1.x), (double)(self->n1.y),(double)(self->n1.z));
+    //   DEBUG_PRINT("\nn2: %f %f %f\n", (double) (self->n2.x), (double)(self->n2.y),(double)(self->n2.z));
+    // }
+    
     //------------------------------------------QP------------------------------//
     // self->desVirtInp = F_d;  // COMMENT THIS IF YOU ARE USING THE QP 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
