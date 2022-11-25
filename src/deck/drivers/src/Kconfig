@@ -290,6 +290,15 @@ config DECK_LOCO
        LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of
        default (RX1, TX1), leaving UART1 free for use.
 
+  config LOCODECK_ALT_PIN_RESET
+  bool "Set pin GPIO_IO4 for reset on the LOCO deck"
+  default name
+  depends on DECK_LOCODECK_USE_ALT_PINS
+  help
+      Only works when LOCODECK_USE_ALT_PINS is set. For instance useful with
+      Loco + Lighhouse + Flow decks where IO_3 collides with the Flow deck.
+      Requires modified Loco deck with connection to GPIO_IO4.
+
   config DECK_LOCO_NR_OF_ANCHORS
   int "The number of anchors in use"
   default 8
