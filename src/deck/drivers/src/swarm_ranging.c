@@ -63,12 +63,7 @@ int16_t getDistance(uint16_t neighborAddress) {
 
 static void uwbRangingTxTask(void *parameters) {
   systemWaitStart();
-  // TODO check below UART2 related code
-//#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
-//  while (!isUWBStart) {
-//    vTaskDelay(500);
-//  }
-//#endif
+
   /* velocity log variable id */
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
@@ -87,16 +82,7 @@ static void uwbRangingTxTask(void *parameters) {
 
 static void uwbRangingRxTask(void *parameters) {
   systemWaitStart();
-  // TODO check below UART2 related code
-//#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
-//  while (!isUWBStart) {
-//    vTaskDelay(500);
-//  }
-//#endif
-//  while (rxQueue == 0) {
-//    DEBUG_PRINT("rxQueue for RangingRxTask is not init\n");
-//    vTaskDelay(M2T(1000));
-//  }
+
   Ranging_Message_With_Timestamp_t rxPacketCache;
 
   while (true) {

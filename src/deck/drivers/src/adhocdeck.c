@@ -209,7 +209,7 @@ static void uwbTxTask(void *parameters) {
   systemWaitStart();
 #ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
   while (!isUWBStart) {
-    vTaskDelay(500);
+    vTaskDelay(200);
   }
 #endif
 
@@ -361,16 +361,16 @@ static void uwbTaskInit() {
 static void dwm3000Init(DeckInfo *info) {
   pinInit();
   queueInit();
-#ifndef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+  uwbTaskInit();
+  isInit = true;
+#else
   if (uwbInit() == DWT_SUCCESS) {
     uwbTaskInit();
     isInit = true;
   } else {
     isInit = false;
   }
-#else
-  uwbTaskInit();
-  isInit = true;
 #endif
 }
 
