@@ -20,3 +20,6 @@ obj-$(CONFIG_DECK_ZRANGER)       += zranger.o
 obj-$(CONFIG_DECK_ZRANGER2)      += zranger2.o
 obj-$(CONFIG_DECK_ADHOC)         += adhocdeck.o
 obj-$(CONFIG_DECK_ADHOC)         += ranging_struct.o
+obj-$(CONFIG_DECK_ADHOC)         += swarm_ranging.o
+obj-$(CONFIG_DECK_ADHOC)         += routing.o
+obj-$(CONFIG_DECK_ADHOC)         += flooding.o

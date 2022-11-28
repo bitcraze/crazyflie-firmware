@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <math.h>
 
 #include "stm32fxxx.h"
 
@@ -23,86 +22,88 @@
 #include "dwTypes.h"
 #include "libdw3000.h"
 #include "dw3000.h"
-#include "ranging_struct.h"
+#include "swarm_ranging.h"
+#include "routing.h"
 
 #define CS_PIN DECK_GPIO_IO1
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_4) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+#define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
 
-  #ifndef ADHOCDECK_ALT_PIN_RESET
-  #define GPIO_PIN_RESET 	DECK_GPIO_IO4
-  #else
-  #define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
-  #endif
-
-  #define EXTI_PortSource EXTI_PortSourceGPIOB
-  #define EXTI_PinSource 	EXTI_PinSource5
-  #define EXTI_LineN 		  EXTI_Line5
-#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
-  #define GPIO_PIN_RESET 	DECK_GPIO_RX2
-  #define EXTI_PortSource EXTI_PortSourceGPIOA
-  #define EXTI_PinSource 	EXTI_PinSource2
-  #define EXTI_LineN 		  EXTI_Line2
+#ifndef ADHOCDECK_ALT_PIN_RESET
+#define GPIO_PIN_RESET 	DECK_GPIO_IO4
 #else
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
-  #define GPIO_PIN_RESET 	DECK_GPIO_TX1
-  #define EXTI_PortSource EXTI_PortSourceGPIOC
-  #define EXTI_PinSource 	EXTI_PinSource11
-  #define EXTI_LineN 		  EXTI_Line11
+#define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
+#endif
+
+#define EXTI_PortSource EXTI_PortSourceGPIOB
+#define EXTI_PinSource 	EXTI_PinSource5
+#define EXTI_LineN 		  EXTI_Line5
+#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
+#define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
+#define GPIO_PIN_RESET 	DECK_GPIO_RX2
+#define EXTI_PortSource EXTI_PortSourceGPIOA
+#define EXTI_PinSource 	EXTI_PinSource2
+#define EXTI_LineN 		  EXTI_Line2
+#else
+#define GPIO_PIN_IRQ      DECK_GPIO_RX1
+#define GPIO_PIN_RESET    DECK_GPIO_TX1
+#define EXTI_PortSource EXTI_PortSourceGPIOC
+#define EXTI_PinSource    EXTI_PinSource11
+#define EXTI_LineN          EXTI_Line11
 #endif
 
 #define DEFAULT_RX_TIMEOUT 0xFFFFF
 
-static address_t MY_UWB_ADDRESS;
+static uint16_t MY_UWB_ADDRESS;
 static bool isInit = false;
 #ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
 static bool isUWBStart = false;
 #endif
 static TaskHandle_t uwbTaskHandle = 0;
 static TaskHandle_t uwbTxTaskHandle = 0;
-static TaskHandle_t uwbRxTaskHandle = 0;
-static TaskHandle_t uwbRangingTaskHandle = 0;
-static SemaphoreHandle_t algoSemaphore;
-static QueueHandle_t txQueue;
-static QueueHandle_t rxQueue;
+static SemaphoreHandle_t irqSemaphore;
 
-static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
-static float velocity;
+static QueueHandle_t txQueue;
+static xQueueHandle queues[MESSAGE_TYPE_COUNT];
+static UWB_Message_Listener_t listeners[MESSAGE_TYPE_COUNT];
+static MESSAGE_TYPE TX_MESSAGE_TYPE;
+
+static int packetSeqNumber = 1;
 
 /* rx buffer used in rx_callback */
-static uint8_t rxBuffer[RX_BUFFER_SIZE];
-Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
-static int TfBufferIndex = 0;
-static int rangingSeqNumber = 1;
-
-/* log block */
-int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
+static uint8_t rxBuffer[FRAME_LEN_MAX];
 
 static void txCallback() {
-  dwTime_t txTime;
-  dwt_readtxtimestamp((uint8_t *) &txTime.raw);
-  TfBufferIndex++;
-  TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
-  TfBuffer[TfBufferIndex].seqNumber = rangingSeqNumber;
-  TfBuffer[TfBufferIndex].timestamp = txTime;
+  packetSeqNumber++;
+  if (TX_MESSAGE_TYPE < MESSAGE_TYPE_COUNT && listeners[TX_MESSAGE_TYPE].txCb) {
+    listeners[TX_MESSAGE_TYPE].txCb(NULL); // TODO no parameter passed into txCb now
+  }
 }
 
 static void rxCallback() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
-  dwTime_t rxTime;
-  dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
-  Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
-  rxMessageWithTimestamp.rxTime = rxTime;
-  Ranging_Message_t *rangingMessage = (Ranging_Message_t *) &rxBuffer;
-  rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+//  DEBUG_PRINT("rxCallback: data length = %lu \n", dataLength);
+
+  UWB_Packet_t *packet = (UWB_Packet_t *) &rxBuffer;
+  MESSAGE_TYPE msgType = packet->header.type;
+
+  ASSERT(msgType < MESSAGE_TYPE_COUNT);
+
+  if (listeners[msgType].rxCb) {
+    listeners[msgType].rxCb(packet);
+  }
+
+  if (listeners[msgType].rxQueue) {
+    xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
+  }
+
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
@@ -113,7 +114,39 @@ static void rxTimeoutCallback() {
 }
 
 static void rxErrorCallback() {
+  DEBUG_PRINT("rxErrorCallback: some error occurs when rx\n");
+}
 
+uint16_t getUWBAddress() {
+  return MY_UWB_ADDRESS;
+}
+
+int uwbSendPacket(UWB_Packet_t *packet) {
+  xQueueSend(txQueue, packet, 0);
+}
+
+int uwbSendPacketBlock(UWB_Packet_t *packet) {
+  xQueueSend(txQueue, packet, portMAX_DELAY);
+}
+
+int uwbReceivePacket(MESSAGE_TYPE type, UWB_Packet_t *packet) {
+  ASSERT(type < MESSAGE_TYPE_COUNT);
+  return xQueueReceive(queues[type], packet, 0);
+}
+
+int uwbReceivePacketBlock(MESSAGE_TYPE type, UWB_Packet_t *packet) {
+  ASSERT(type < MESSAGE_TYPE_COUNT);
+  return xQueueReceive(queues[type], packet, portMAX_DELAY);
+}
+
+int uwbReceivePacketWait(MESSAGE_TYPE type, UWB_Packet_t *packet, int wait) {
+  ASSERT(type < MESSAGE_TYPE_COUNT);
+  return xQueueReceive(queues[type], packet, M2T(wait));
+}
+
+void uwbRegisterListener(UWB_Message_Listener_t *listener) {
+  queues[listener->type] = listener->rxQueue;
+  listeners[listener->type] = *listener;
 }
 
 static int uwbInit() {
@@ -167,7 +200,7 @@ static int uwbInit() {
   dwt_write32bitreg(SYS_STATUS_ID,
                     SYS_STATUS_RCINIT_BIT_MASK | SYS_STATUS_SPIRDY_BIT_MASK);
 
-  algoSemaphore = xSemaphoreCreateMutex();
+  irqSemaphore = xSemaphoreCreateMutex();
 
   return DWT_SUCCESS;
 }
@@ -179,226 +212,19 @@ static void uwbTxTask(void *parameters) {
     vTaskDelay(500);
   }
 #endif
-  while (txQueue == 0) {
-    DEBUG_PRINT("txQueue is not init\n");
-    vTaskDelay(M2T(1000));
-  }
 
-  Ranging_Message_t packetCache;
-
+  UWB_Packet_t packetCache;
   while (true) {
     if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(packetCache.header.msgLength, (uint8_t *) &packetCache, 0);
-      dwt_writetxfctrl(packetCache.header.msgLength + FCS_LEN, 0, 1);
+      dwt_writetxdata(packetCache.header.length, (uint8_t *) &packetCache, 0);
+      dwt_writetxfctrl(packetCache.header.length + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
       }
     }
-  }
-}
-
-int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
-                        Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
-                        Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf) {
-
-  int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
-  tRound1 = (Rr.timestamp.full - Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply1 = (Tr.timestamp.full - Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tRound2 = (Rf.timestamp.full - Tr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply2 = (Tf.timestamp.full - Rr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  diff1 = tRound1 - tReply1;
-  diff2 = tRound2 - tReply2;
-  tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
-  int16_t distance = (int16_t) tprop_ctn * 0.4691763978616;
-
-  bool isErrorOccurred = false;
-  if (distance > 1000 || distance < 0) {
-    DEBUG_PRINT("isErrorOccurred\n");
-    isErrorOccurred = true;
-  }
-
-  if (tRound2 < 0 || tReply2 < 0) {
-    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
-    isErrorOccurred = true;
-  }
-
-  if (isErrorOccurred) {
-    return 0;
-  }
-
-  return distance;
-}
-
-void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp) {
-  Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
-  address_t neighborAddress = rangingMessage->header.srcAddress;
-  set_index_t neighborIndex = findInRangingTableSet(&rangingTableSet, neighborAddress);
-
-  /* handle new neighbor */
-  if (neighborIndex == -1) {
-    if (rangingTableSet.freeQueueEntry == -1) {
-      /* ranging table set is full, ignore this ranging message */
-      return;
-    }
-    Ranging_Table_t table;
-    rangingTableInit(&table, neighborAddress);
-    neighborIndex = rangingTableSetInsert(&rangingTableSet, &table);
-  }
-
-  Ranging_Table_t *neighborRangingTable = &rangingTableSet.setData[neighborIndex].data;
-  Ranging_Table_Tr_Rr_Buffer_t *neighborTrRrBuffer = &neighborRangingTable->TrRrBuffer;
-
-  /* update Re */
-  neighborRangingTable->Re.timestamp = rangingMessageWithTimestamp->rxTime;
-  neighborRangingTable->Re.seqNumber = rangingMessage->header.msgSequence;
-
-  /* update Tr and Rr */
-  Timestamp_Tuple_t neighborTr = rangingMessage->header.lastTxTimestamp;
-  if (neighborTr.timestamp.full && neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr.timestamp.full
-      && neighborTr.seqNumber == neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr.seqNumber) {
-    rangingTableBufferUpdate(&neighborRangingTable->TrRrBuffer,
-                             neighborTr,
-                             neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr);
-  }
-
-  /* update Rf */
-  Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
-  if (rangingMessage->header.filter & (1 << (MY_UWB_ADDRESS % 16))) {
-    /* retrieve body unit */
-    uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
-    for (int i = 0; i < bodyUnitCount; i++) {
-      if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
-        neighborRf = rangingMessage->bodyUnits[i].timestamp;
-        break;
-      }
-    }
-  }
-
-  if (neighborRf.timestamp.full) {
-    neighborRangingTable->Rf = neighborRf;
-    // TODO it is possible that can not find corresponding Tf
-    /* find corresponding Tf in TfBuffer */
-    for (int i = 0; i < Tf_BUFFER_POOL_SIZE; i++) {
-      if (TfBuffer[i].seqNumber == neighborRf.seqNumber) {
-        neighborRangingTable->Tf = TfBuffer[i];
-      }
-    }
-
-    Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer,
-                                                                                     neighborRangingTable->Tf);
-    /* try to compute distance */
-    if (Tr_Rr_Candidate.Tr.timestamp.full && Tr_Rr_Candidate.Rr.timestamp.full &&
-        neighborRangingTable->Tp.timestamp.full && neighborRangingTable->Rp.timestamp.full &&
-        neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full) {
-      int16_t distance = computeDistance(neighborRangingTable->Tp, neighborRangingTable->Rp,
-                                         Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
-                                         neighborRangingTable->Tf, neighborRangingTable->Rf);
-      if (distance > 0) {
-        neighborRangingTable->distance = distance;
-        distanceTowards[neighborRangingTable->neighborAddress] = distance;
-      } else {
-        DEBUG_PRINT("distance is not updated since some error occurs");
-      }
-    }
-  }
-
-  /* Tp <- Tf, Rp <- Rf */
-  if (neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full) {
-    rangingTableShift(neighborRangingTable);
-  }
-
-  /* update Rr */
-  neighborTrRrBuffer->candidates[neighborTrRrBuffer->cur].Rr = neighborRangingTable->Re;
-
-  /* update expiration time */
-  neighborRangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
-
-  neighborRangingTable->state = RECEIVED;
-}
-
-static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
-#ifdef ENABLE_BUS_BOARDING_SCHEME
-  sortRangingTableSet(&rangingTableSet);
-#endif
-  int8_t bodyUnitNumber = 0;
-  rangingSeqNumber++;
-  int curSeqNumber = rangingSeqNumber;
-  rangingMessage->header.filter = 0;
-  /* generate message body */
-  for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;
-       index = rangingTableSet.setData[index].next) {
-    Ranging_Table_t *table = &rangingTableSet.setData[index].data;
-    if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
-      break;
-    }
-    if (table->state == RECEIVED) {
-      rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
-      /* It is possible that Re is not the newest timestamp, because the newest may be in rxQueue
-       * waiting to be handled.
-       */
-      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->Re;
-      bodyUnitNumber++;
-      table->state = TRANSMITTED;
-      rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
-    }
-  }
-  /* generate message header */
-  rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
-  rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
-  rangingMessage->header.msgSequence = curSeqNumber;
-  rangingMessage->header.lastTxTimestamp = TfBuffer[TfBufferIndex];
-  float velocityX = logGetFloat(idVelocityX);
-  float velocityY = logGetFloat(idVelocityY);
-  float velocityZ = logGetFloat(idVelocityZ);
-  velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
-  /* velocity in cm/s */
-  rangingMessage->header.velocity = (short) (velocity * 100);
-}
-
-static void uwbRxTask(void *parameters) {
-  systemWaitStart();
-#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
-  while (!isUWBStart) {
-    vTaskDelay(500);
-  }
-#endif
-  while (rxQueue == 0) {
-    DEBUG_PRINT("rxQueue is not init\n");
-    vTaskDelay(M2T(1000));
-  }
-  Ranging_Message_With_Timestamp_t rxPacketCache;
-
-  while (true) {
-    if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
-      processRangingMessage(&rxPacketCache);
-    }
-  }
-}
-
-static void uwbRangingTask(void *parameters) {
-  systemWaitStart();
-#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
-  while (!isUWBStart) {
-    vTaskDelay(500);
-  }
-#endif
-  while (txQueue == 0) {
-    DEBUG_PRINT("txQueue is not init\n");
-    vTaskDelay(M2T(1000));
-  }
-  /* velocity log variable id */
-  idVelocityX = logGetVarId("stateEstimate", "vx");
-  idVelocityY = logGetVarId("stateEstimate", "vy");
-  idVelocityZ = logGetVarId("stateEstimate", "vz");
-
-  Ranging_Message_t txPacketCache;
-  while (true) {
-    generateRangingMessage(&txPacketCache);
-    xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
-    vTaskDelay(TX_PERIOD_IN_MS);
   }
 }
 
@@ -413,9 +239,9 @@ static void uwbTask(void *parameters) {
   while (1) {
     if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
       do {
-        xSemaphoreTake(algoSemaphore, portMAX_DELAY);
+        xSemaphoreTake(irqSemaphore, portMAX_DELAY);
         dwt_isr();
-        xSemaphoreGive(algoSemaphore);
+        xSemaphoreGive(irqSemaphore);
 #ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
         vTaskDelay(M2T(5)); // TODO check if necessary since increasing FREERTOS_HEAP_SIZE
 #endif
@@ -423,11 +249,13 @@ static void uwbTask(void *parameters) {
     }
   }
 }
+
+/************ Low level ops for libdw **********/
+
 static uint8_t spiTxBuffer[FRAME_LEN_MAX];
 static uint8_t spiRxBuffer[FRAME_LEN_MAX];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
-/************ Low level ops for libdw **********/
 static void spiWrite(const void *header, size_t headerLength, const void *data,
                      size_t dataLength) {
   spiBeginTransaction(spiSpeed);
@@ -518,34 +346,30 @@ static void pinInit() {
 
 static void queueInit() {
   txQueue = xQueueCreate(TX_QUEUE_SIZE, TX_QUEUE_ITEM_SIZE);
-  rxQueue = xQueueCreate(RX_QUEUE_SIZE, RX_QUEUE_ITEM_SIZE);
 }
 
-static void uwbStart() {
+static void uwbTaskInit() {
   /* Create UWB Task */
   xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-              ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
+              ADHOC_DECK_TASK_PRI, &uwbTaskHandle); // TODO optimize STACK SIZE
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-              ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
-  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-              ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-              ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);
+              ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle); // TODO optimize STACK SIZE
+  rangingInit();
+  routingInit();
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
   pinInit();
   queueInit();
-  rangingTableSetInit(&rangingTableSet);
 #ifndef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
   if (uwbInit() == DWT_SUCCESS) {
-    uwbStart();
+    uwbTaskInit();
     isInit = true;
   } else {
     isInit = false;
   }
 #else
-  uwbStart();
+  uwbTaskInit();
   isInit = true;
 #endif
 }
@@ -585,21 +409,9 @@ static const DeckDriver dwm3000_deck = {
 DECK_DRIVER(dwm3000_deck);
 
 PARAM_GROUP_START(deck)
-  PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
+        PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 PARAM_GROUP_STOP(deck)
 
-LOG_GROUP_START(Ranging)
-  LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
-  LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
-  LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
-  LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
-  LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
-  LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
-  LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
-  LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
-  LOG_ADD(LOG_FLOAT, velocity, &velocity)
-LOG_GROUP_STOP(Ranging)
-
 PARAM_GROUP_START(ADHOC)
-  PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
+        PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
 PARAM_GROUP_STOP(ADHOC)

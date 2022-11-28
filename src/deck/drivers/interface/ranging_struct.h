@@ -12,7 +12,6 @@
 #define RANGING_TABLE_SIZE 60
 #define RANGING_TABLE_HOLD_TIME 10000
 
-typedef uint16_t address_t;
 typedef portTickType Time_t;
 typedef short set_index_t;
 
@@ -24,13 +23,13 @@ typedef struct {
 
 /* Body Unit */
 typedef struct {
-  address_t address; // 2 byte
+  uint16_t address; // 2 byte
   Timestamp_Tuple_t timestamp; // 10 byte
 } __attribute__((packed)) Body_Unit_t; // 12 byte
 
 /* Ranging Message Header*/
 typedef struct {
-  address_t srcAddress; // 2 byte
+  uint16_t srcAddress; // 2 byte
   uint16_t msgSequence; // 2 byte
   Timestamp_Tuple_t lastTxTimestamp; // 10 byte
   short velocity; // 2 byte cm/s
@@ -86,7 +85,7 @@ typedef enum {
   +------+------+------+------+------+
 */
 typedef struct {
-  address_t neighborAddress;
+  uint16_t neighborAddress;
 
   Timestamp_Tuple_t Rp;
   Timestamp_Tuple_t Tp;
@@ -103,7 +102,7 @@ typedef struct {
   RANGING_TABLE_STATE state;
 } __attribute__((packed)) Ranging_Table_t;
 
-void rangingTableInit(Ranging_Table_t *rangingTable, address_t address);
+void rangingTableInit(Ranging_Table_t *rangingTable, uint16_t address);
 void rangingTableShift(Ranging_Table_t *rangingTable);
 
 typedef struct {
@@ -119,8 +118,6 @@ typedef struct {
   int size;
 } Ranging_Table_Set_t;
 
-Ranging_Table_Set_t rangingTableSet;
-
 /*Ranging Table Set Operations*/
 void rangingTableSetInit(Ranging_Table_Set_t *rangingTableSet);
 
@@ -128,7 +125,7 @@ set_index_t rangingTableSetInsert(Ranging_Table_Set_t *rangingTableSet,
                                   Ranging_Table_t *rangingTable);
 
 set_index_t findInRangingTableSet(Ranging_Table_Set_t *rangingTableSet,
-                                  address_t address);
+                                  uint16_t address);
 
 bool deleteRangingTableByIndex(Ranging_Table_Set_t *rangingTableSet,
                                set_index_t index);

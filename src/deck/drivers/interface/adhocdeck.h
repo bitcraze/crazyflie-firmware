@@ -2,9 +2,12 @@
 #define __ADHOCDECK_H__
 
 #include "libdw3000.h"
+#include "mac_802_15_4.h"
+#include "dwTypes.h"
+#include "queue.h"
+#include "ranging_struct.h"
 
 /* Function Switch */
-#define ENABLE_BUS_BOARDING_SCHEME
 #define ENABLE_PHR_EXT_MODE
 
 #define SPEED_OF_LIGHT 299702547
@@ -15,23 +18,20 @@
 #define FRAME_LEN_STD 127
 #define FRAME_LEN_EXT 1023
 #ifdef ENABLE_PHR_EXT_MODE
-  #define FRAME_LEN_MAX FRAME_LEN_EXT
+#define FRAME_LEN_MAX FRAME_LEN_EXT
 #else
-  #define FRAME_LEN_MAX FRAME_LEN_STD
+#define FRAME_LEN_MAX FRAME_LEN_STD
 #endif
 
 /* Queue Constants */
-#define TX_QUEUE_SIZE 10 // TODO 5
-#define RX_QUEUE_SIZE 20
-#define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
-#define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
-#define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
+#define TX_QUEUE_SIZE 15
+#define TX_QUEUE_ITEM_SIZE sizeof(UWB_Packet_t)
 
-/* Ranging Constants */
-#define RANGING_INTERVAL_MIN 20 // default 20
-#define RANGING_INTERVAL_MAX 500 // default 500
-#define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
-#define TX_PERIOD_IN_MS 100
+typedef uint16_t address_t;
+
+/* Packet */
+#define PACKET_SIZE FRAME_LEN_MAX
+#define PAYLOAD_SIZE (PACKET_SIZE - sizeof(Packet_Header_t))
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -63,5 +63,45 @@ static dwt_config_t config = {
                      */
     DWT_PDOA_M0     /* PDOA mode off */
 };
+
+/* UWB packet definition */
+typedef enum {
+  RANGING = 0,
+  DATA = 1,
+  MESSAGE_TYPE_COUNT, /* only used for counting message types. */
+} MESSAGE_TYPE;
+
+typedef struct {
+  mhr_802_15_4_t mac;    // mac header
+  struct {
+    MESSAGE_TYPE type: 6;
+    uint16_t length: 10;
+  };
+} __attribute__((packed)) Packet_Header_t;
+
+typedef struct {
+  Packet_Header_t header; // Packet header
+  uint8_t payload[PAYLOAD_SIZE]
+} __attribute__((packed)) UWB_Packet_t;
+
+typedef void (*UWBCallback)(void *);
+
+typedef struct {
+  MESSAGE_TYPE type;
+  QueueHandle_t rxQueue;
+  UWBCallback rxCb;
+  UWBCallback txCb;
+} UWB_Message_Listener_t;
+
+/* UWB operations */
+uint16_t getUWBAddress();
+int uwbSendPacket(UWB_Packet_t *packet);
+int uwbSendPacketBlock(UWB_Packet_t *packet);
+int uwbReceivePacket(MESSAGE_TYPE type, UWB_Packet_t *packet);
+int uwbReceivePacketBlock(MESSAGE_TYPE type, UWB_Packet_t *packet);
+int uwbReceivePacketWait(MESSAGE_TYPE type, UWB_Packet_t *packet, int wait);
+void uwbRegisterListener(UWB_Message_Listener_t *listener);
+dwTime_t getPacketSendTime();
+dwTime_t getPacketReceivedTime();
 
 #endif

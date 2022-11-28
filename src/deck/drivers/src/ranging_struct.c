@@ -1,5 +1,6 @@
 #include "ranging_struct.h"
 #include "adhocdeck.h"
+#include "swarm_ranging.h"
 #include <stdio.h>
 #include <string.h>
 #include "task.h"
