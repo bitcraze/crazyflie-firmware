@@ -56,4 +56,5 @@ obj-y += osqp/src/osqp/qdldl_interface.o
 obj-y += osqp/src/osqp/qdldl.o
 obj-y += osqp/src/osqp/scaling.o
 obj-y += osqp/src/osqp/util.o
-obj-y += osqp/src/osqp/workspace.o
+obj-y += osqp/src/osqp/workspace_2uav_2hp.o
+obj-y += osqp/src/osqp/workspace_3uav_2hp.o

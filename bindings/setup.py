@@ -41,7 +41,8 @@ fw_sources = [
     "src/lib/osqp/src/osqp/qdldl.c",
     "src/lib/osqp/src/osqp/scaling.c",
     "src/lib/osqp/src/osqp/util.c",
-    "src/lib/osqp/src/osqp/workspace.c",
+    "src/lib/osqp/src/osqp/workspace_2uav_2hp.c",
+    "src/lib/osqp/src/osqp/workspace_3uav_2hp.c",
 ]
 
 cffirmware = Extension(

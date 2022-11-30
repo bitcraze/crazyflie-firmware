@@ -420,7 +420,7 @@ c_float work_D_temp[6];
 c_float work_D_temp_A[6];
 c_float work_E_temp[5];
 
-OSQPWorkspace workspace = {
+OSQPWorkspace workspace_2uav_2hp = {
 &data, (LinSysSolver *)&linsys_solver,
 work_rho_vec, work_rho_inv_vec,
 work_constr_type,

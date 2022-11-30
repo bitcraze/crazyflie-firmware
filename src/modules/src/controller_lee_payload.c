@@ -35,8 +35,9 @@ TODO
 #include "stdio.h"
 #include "debug.h"
 // QP
-#include "workspace.h"
+// #include "workspace_2uav_2hp.h"
 #include "osqp.h"
+extern OSQPWorkspace workspace_2uav_2hp;
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
@@ -223,7 +224,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
-    workspace.settings->warm_start = 1;
+    workspace_2uav_2hp.settings->warm_start = 1;
     self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius);
     self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius);
     c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
@@ -237,42 +238,42 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
     c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
 
-    osqp_update_A(&workspace, Ax_new, Ax_new_idx, Ax_new_n);    
-    // osqp_update_P(&workspace, Px_new, Px_new_idx, Px_new_n);
-    osqp_update_lower_bound(&workspace, l_new);
-    osqp_update_upper_bound(&workspace, u_new);
+    osqp_update_A(&workspace_2uav_2hp, Ax_new, Ax_new_idx, Ax_new_n);    
+    // osqp_update_P(&workspace_2uav_2hp, Px_new, Px_new_idx, Px_new_n);
+    osqp_update_lower_bound(&workspace_2uav_2hp, l_new);
+    osqp_update_upper_bound(&workspace_2uav_2hp, u_new);
     
-    osqp_solve(&workspace);
+    osqp_solve(&workspace_2uav_2hp);
 
     if (self->value == 0.0f) {
-        self->desVirtInp.x = (&workspace)->solution->x[0]; 
-        self->desVirtInp.y = (&workspace)->solution->x[1];
-        self->desVirtInp.z = (&workspace)->solution->x[2];
-        self->mu1.x = (&workspace)->solution->x[0]; 
-        self->mu1.y = (&workspace)->solution->x[1];
-        self->mu1.z = (&workspace)->solution->x[2];
-        self->mu2.x = (&workspace)->solution->x[3]; 
-        self->mu2.y = (&workspace)->solution->x[4];
-        self->mu2.z = (&workspace)->solution->x[5];
+        self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0]; 
+        self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
+        self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];
+        self->mu1.x = (&workspace_2uav_2hp)->solution->x[0]; 
+        self->mu1.y = (&workspace_2uav_2hp)->solution->x[1];
+        self->mu1.z = (&workspace_2uav_2hp)->solution->x[2];
+        self->mu2.x = (&workspace_2uav_2hp)->solution->x[3]; 
+        self->mu2.y = (&workspace_2uav_2hp)->solution->x[4];
+        self->mu2.z = (&workspace_2uav_2hp)->solution->x[5];
      }
      else if (self->value == 1.0f) {
-        self->desVirtInp.x = (&workspace)->solution->x[0];
-        self->desVirtInp.y = (&workspace)->solution->x[1];
-        self->desVirtInp.z = (&workspace)->solution->x[2];      
-        // self->desVirtInp.x = (&workspace)->solution->x[3];
-        // self->desVirtInp.y = (&workspace)->solution->x[4];
-        // self->desVirtInp.z = (&workspace)->solution->x[5];      
+        self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0];
+        self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
+        self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];      
+        // self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[3];
+        // self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[4];
+        // self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[5];      
 
-        self->mu1.x = (&workspace)->solution->x[0]; 
-        self->mu1.y = (&workspace)->solution->x[1];
-        self->mu1.z = (&workspace)->solution->x[2];
-        self->mu2.x = (&workspace)->solution->x[3]; 
-        self->mu2.y = (&workspace)->solution->x[4];
-        self->mu2.z = (&workspace)->solution->x[5];
+        self->mu1.x = (&workspace_2uav_2hp)->solution->x[0]; 
+        self->mu1.y = (&workspace_2uav_2hp)->solution->x[1];
+        self->mu1.z = (&workspace_2uav_2hp)->solution->x[2];
+        self->mu2.x = (&workspace_2uav_2hp)->solution->x[3]; 
+        self->mu2.y = (&workspace_2uav_2hp)->solution->x[4];
+        self->mu2.z = (&workspace_2uav_2hp)->solution->x[5];
 
       }
-    // printf("workspace status:   %s\n", (&workspace)->info->status);
-    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace)->solution->x[0], (&workspace)->solution->x[1], (&workspace)->solution->x[2], (&workspace)->solution->x[3], (&workspace)->solution->x[4], (&workspace)->solution->x[5]);
+    // printf("workspace_2uav_2hp status:   %s\n", (&workspace_2uav_2hp)->info->status);
+    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace_2uav_2hp)->solution->x[0], (&workspace_2uav_2hp)->solution->x[1], (&workspace_2uav_2hp)->solution->x[2], (&workspace_2uav_2hp)->solution->x[3], (&workspace_2uav_2hp)->solution->x[4], (&workspace_2uav_2hp)->solution->x[5]);
     // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
     // if (tick % 1000 == 0) {
 
@@ -537,22 +538,6 @@ PARAM_GROUP_STOP(ctrlLeeP)
 
 LOG_GROUP_START(ctrlLeeP)
 
-LOG_ADD(LOG_FLOAT,Kpos_Px, &g_self.Kpos_P.x)
-LOG_ADD(LOG_FLOAT,Kpos_Py, &g_self.Kpos_P.y)
-LOG_ADD(LOG_FLOAT,Kpos_Pz, &g_self.Kpos_P.z)
-LOG_ADD(LOG_FLOAT,Kpos_Dx, &g_self.Kpos_D.x)
-LOG_ADD(LOG_FLOAT,Kpos_Dy, &g_self.Kpos_D.y)
-LOG_ADD(LOG_FLOAT,Kpos_Dz, &g_self.Kpos_D.z)
-
-
-LOG_ADD(LOG_FLOAT, Kqx, &g_self.K_q.x)
-LOG_ADD(LOG_FLOAT, Kqy, &g_self.K_q.y)
-LOG_ADD(LOG_FLOAT, Kqz, &g_self.K_q.z)
-
-LOG_ADD(LOG_FLOAT, Kwx, &g_self.K_w.x)
-LOG_ADD(LOG_FLOAT, Kwy, &g_self.K_w.y)
-LOG_ADD(LOG_FLOAT, Kwz, &g_self.K_w.z)
-
 LOG_ADD(LOG_FLOAT, thrustSI, &g_self.thrustSI)
 LOG_ADD(LOG_FLOAT, torquex, &g_self.u.x)
 LOG_ADD(LOG_FLOAT, torquey, &g_self.u.y)
@@ -582,6 +567,15 @@ LOG_ADD(LOG_FLOAT, ux, &g_self.u_i.x)
 LOG_ADD(LOG_FLOAT, uy, &g_self.u_i.y)
 LOG_ADD(LOG_FLOAT, uz, &g_self.u_i.z)
 
+// hyperplanes
+LOG_ADD(LOG_FLOAT, n1x, &g_self.n1.x)
+LOG_ADD(LOG_FLOAT, n1y, &g_self.n1.y)
+LOG_ADD(LOG_FLOAT, n1z, &g_self.n1.z)
+
+// computed virtual input
+LOG_ADD(LOG_FLOAT, desVirtInpx, &g_self.desVirtInp.x)
+LOG_ADD(LOG_FLOAT, desVirtInpy, &g_self.desVirtInp.y)
+LOG_ADD(LOG_FLOAT, desVirtInpz, &g_self.desVirtInp.z)
 
 // LOG_ADD(LOG_UINT32, ticks, &ticks)
 
