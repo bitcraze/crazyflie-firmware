@@ -286,6 +286,14 @@ static void stabilizerTask(void* param)
         control.controlMode = controlModeLegacy;
         controllerInit(controllerType);
         controllerType = getControllerType();
+
+        // Make sure we use the correct setpoint (for UAV or payload)
+        crtpCommanderHighLevelTellState(&state);
+        if (!crtpCommanderHighLevelIsStopped()) {
+          // Disable forces the go to command to plan from the current state, rather then current setpoint
+          crtpCommanderHighLevelDisable();
+          crtpCommanderHighLevelGoTo(0, 0, 0, 0, 1.0, true);
+        }
       }
 
       stateEstimator(&state, tick);

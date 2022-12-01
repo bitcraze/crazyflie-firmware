@@ -95,7 +95,6 @@ static controllerLeePayload_t g_self = {
   .mass = 0.034,
   .mp   = 0.01,
   .l    = 1.0,
-  .offset = {0.0, 0.0, 0.0},
   // Inertia matrix (diagonal matrix), see
   // System Identification of the Crazyflie 2.0 Nano Quadrocopter
   // BA theses, Julian Foerster, ETHZ
@@ -196,7 +195,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       || setpoint->mode.y == modeAbs
       || setpoint->mode.z == modeAbs) {
     
-    struct vec plPos_d = mkvec(setpoint->position.x - self->offset.x, setpoint->position.y - self->offset.y, setpoint->position.z - self->offset.z);
+    struct vec plPos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec plVel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec plAcc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
 
@@ -502,9 +501,6 @@ PARAM_ADD(PARAM_FLOAT, Kwz, &g_self.K_w.z)
 PARAM_ADD(PARAM_FLOAT, mass, &g_self.mass)
 PARAM_ADD(PARAM_FLOAT, massP, &g_self.mp)
 PARAM_ADD(PARAM_FLOAT, length, &g_self.l)
-PARAM_ADD(PARAM_FLOAT, offsetx, &g_self.offset.x)
-PARAM_ADD(PARAM_FLOAT, offsety, &g_self.offset.y)
-PARAM_ADD(PARAM_FLOAT, offsetz, &g_self.offset.z)
 
 PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
 

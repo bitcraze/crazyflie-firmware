@@ -57,6 +57,7 @@ such as: take-off, landing, polynomial trajectories.
 #include "commander.h"
 #include "stabilizer_types.h"
 #include "stabilizer.h"
+#include "controller.h"
 
 // Local types
 enum TrajectoryLocation_e {
@@ -288,9 +289,16 @@ bool crtpCommanderHighLevelIsStopped()
 void crtpCommanderHighLevelTellState(const state_t *state)
 {
   xSemaphoreTake(lockTraj, portMAX_DELAY);
-  pos = state2vec(state->position);
-  vel = state2vec(state->velocity);
-  yaw = radians(state->attitude.yaw);
+  if (getControllerType() == ControllerTypeLeePayload) {
+    // If the controller is to track the payload, use its state, rather than the UAVs' state
+    pos = state2vec(state->payload_pos);
+    vel = state2vec(state->payload_vel);
+    yaw = 0.0;
+  } else {
+    pos = state2vec(state->position);
+    vel = state2vec(state->velocity);
+    yaw = radians(state->attitude.yaw);
+  }
   xSemaphoreGive(lockTraj);
 }
 
@@ -315,9 +323,16 @@ bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
   // setpoint" values with the current state estimate, so we have the right
   // initial conditions for future trajectory planning.
   if (plan_is_disabled(&planner) || plan_is_stopped(&planner)) {
-    pos = state2vec(state->position);
-    vel = state2vec(state->velocity);
-    yaw = radians(state->attitude.yaw);
+    if (getControllerType() == ControllerTypeLeePayload) {
+      // If the controller is to track the payload, use its state, rather than the UAVs' state
+      pos = state2vec(state->payload_pos);
+      vel = state2vec(state->payload_vel);
+      yaw = 0.0;
+    } else {
+      pos = state2vec(state->position);
+      vel = state2vec(state->velocity);
+      yaw = radians(state->attitude.yaw);
+    }
     if (plan_is_stopped(&planner)) {
       // Return a null setpoint - when the HLcommander is stopped, it wants the
       // motors to be off. Only reason they should be spinning is if the
