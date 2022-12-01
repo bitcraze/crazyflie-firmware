@@ -29,7 +29,7 @@
 
 /**
  * @brief Initialize the internal router
- * 
+ *
  * Initialize the internal router, used for routing CPX packets
  * on function inside the STM32.
  *
@@ -37,7 +37,7 @@
 void cpxInternalRouterInit(void);
 
 /**
- * @brief Send a CPX packet
+ * @brief Send a CPX packet, blocking
  *
  * This will send a packet to the ESP32 to be routed using CPX. This
  * will block until the packet can be queued up for sending.
@@ -47,8 +47,17 @@ void cpxInternalRouterInit(void);
 void cpxSendPacketBlocking(const CPXPacket_t * packet);
 
 /**
+ * @brief Send a CPX packet, blocking with timeout
+ *
+ * @param packet packet to be sent
+ * @param timeout Timeout in ticks
+ * @return True if sent, false if timeout
+ */
+bool cpxSendPacketBlockingTimeout(const CPXPacket_t * packet, const uint32_t timeout);
+
+/**
  * @brief Receive a CPX packet sent with the CRTP function
- * 
+ *
  * @param packet CPX packet where received packet is stored
  * @return int 0 if no packet was received otherwise non zero.
  */
@@ -56,7 +65,7 @@ int cpxInternalRouterReceiveCRTP(CPXPacket_t * packet);
 
 /**
  * @brief Receive a CPX packet sent with another function than CRTP
- * 
+ *
  * @param packet CPX packet where received packet is stored
  * @return int 0 if no packet was received otherwise non zero.
  */
@@ -65,7 +74,7 @@ void cpxInternalRouterReceiveOthers(CPXPacket_t * packet);
 /**
  * @brief Send a CPX packet from the external router into the internal
  * router
- * 
+ *
  * @param packet CPX packet to send
  */
 void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet);
@@ -73,8 +82,7 @@ void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet);
 /**
  * @brief Retrieve a CPX packet from the internal router to be
  * routed externally.
- * 
+ *
  * @param packet CPX packet where retrieved packet is stored
  */
 void cpxInternalRouterRouteOut(CPXRoutablePacket_t* packet);
-
