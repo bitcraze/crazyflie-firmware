@@ -33,3 +33,5 @@ void supervisorUpdate(const sensorData_t *data);
 bool supervisorCanFly(void);
 bool supervisorIsFlying(void);
 bool supervisorIsTumbled(void);
+void systemSetArmed(bool val);
+bool systemIsArmed();

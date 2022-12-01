@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #include "log.h"
+#include "param.h"
 #include "motors.h"
 #include "power_distribution.h"
 #include "pm.h"
@@ -42,9 +43,17 @@
 /* Number of times in a row we need to see a condition before acting upon it */
 #define SUPERVISOR_HYSTERESIS_THRESHOLD 30
 
+#ifdef START_AS_DISARMED
+#define ARM_INIT_VALUE false
+#else
+#define ARM_INIT_VALUE true
+#endif
+
 static bool canFly;
 static bool isFlying;
 static bool isTumbled;
+static bool armed = ARM_INIT_VALUE;
+static bool forceArm;
 
 bool supervisorCanFly()
 {
@@ -127,6 +136,16 @@ void supervisorUpdate(const sensorData_t *data)
   canFly = canFlyCheck();
 }
 
+void systemSetArmed(bool val)
+{
+  armed = val;
+}
+
+bool systemIsArmed()
+{
+  return armed || forceArm;
+}
+
 /**
  *  System loggable variables to check different system states.
  */
@@ -143,4 +162,19 @@ LOG_ADD_CORE(LOG_UINT8, isFlying, &isFlying)
  * @brief Nonzero if the system thinks it is tumbled/crashed
  */
 LOG_ADD_CORE(LOG_UINT8, isTumbled, &isTumbled)
+/**
+ * @brief If zero, arming system is preventing motors to start
+ */
+LOG_ADD(LOG_INT8, armed, &armed)
 LOG_GROUP_STOP(sys)
+
+
+PARAM_GROUP_START(supervisor)
+
+/**
+ * @brief Set to nonzero to force system to be armed
+ */
+PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
+
+PARAM_GROUP_STOP(supervisor)
+

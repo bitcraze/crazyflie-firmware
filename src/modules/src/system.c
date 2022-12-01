@@ -76,16 +76,8 @@
   #include "cpxlink.h"
 #endif
 
-#ifndef CONFIG_MOTORS_START_DISARMED
-#define ARM_INIT true
-#else
-#define ARM_INIT false
-#endif
-
 /* Private variable */
 static bool selftestPassed;
-static bool armed = ARM_INIT;
-static bool forceArm;
 static uint8_t dumpAssertInfo = 0;
 static bool isInit;
 
@@ -338,17 +330,6 @@ void systemWaitStart(void)
   xSemaphoreGive(canStartMutex);
 }
 
-void systemSetArmed(bool val)
-{
-  armed = val;
-}
-
-bool systemIsArmed()
-{
-
-  return armed || forceArm;
-}
-
 void systemRequestShutdown()
 {
   SyslinkPacket slp;
@@ -443,23 +424,9 @@ PARAM_GROUP_START(system)
 PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
 
 /**
- * @brief Set to nonzero to force system to be armed
- */
-PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
-
-/**
  * @brief Set to nonzero to trigger dump of assert information to the log.
  */
 PARAM_ADD(PARAM_UINT8, assertInfo, &dumpAssertInfo)
 
 PARAM_GROUP_STOP(system)
 
-/**
- *  System loggable variables to check different system states.
- */
-LOG_GROUP_START(sys)
-/**
- * @brief If zero, arming system is preventing motors to start
- */
-LOG_ADD(LOG_INT8, armed, &armed)
-LOG_GROUP_STOP(sys)
