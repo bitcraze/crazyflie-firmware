@@ -113,3 +113,18 @@
 #ifndef SUPERVISOR_TUMBLE_CHECK_ENABLE
     #define SUPERVISOR_TUMBLE_CHECK_ENABLE true
 #endif
+
+// When enabled, the firmware will boot in disarmed state and one needs to
+// arm the drone explicitly before starting the motors
+#ifndef START_AS_DISARMED
+    #define START_AS_DISARMED false
+#endif
+
+// Default thrust for motors when idling in armed state, expressed as an
+// integer in the range 0 to 65535. This can be overridden with parameters;
+// the value specified here applies to the case when the persistent storage
+// does not contain an idle thrust value.
+// range 0 65535
+#ifndef START_AS_DISARMED
+    #define MOTORS_DEFAULT_IDLE_THRUST 0
+#endif
