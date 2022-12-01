@@ -120,7 +120,6 @@ static controllerLeePayload_t g_self = {
   .KI = {0.02, 0.02, 0.05},
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
-  .value = 0.0f,
   .radius = 0.1,
   // .mu1 = {0, 0, 0},
   // .mu2 = {0, 0, 0},
@@ -206,7 +205,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
-    struct vec statePos2 = mkvec(state->position2.x, state->position2.y, state->position2.z);
+    struct vec statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
 
     // errors
     struct vec plpos_e = vclampnorm(vsub(plPos_d, plStPos), self->Kpos_P_limit);
@@ -245,40 +244,22 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     
     osqp_solve(&workspace_2uav_2hp);
 
-    if (self->value == 0.0f) {
-        self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0]; 
-        self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
-        self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];
-        self->mu1.x = (&workspace_2uav_2hp)->solution->x[0]; 
-        self->mu1.y = (&workspace_2uav_2hp)->solution->x[1];
-        self->mu1.z = (&workspace_2uav_2hp)->solution->x[2];
-        self->mu2.x = (&workspace_2uav_2hp)->solution->x[3]; 
-        self->mu2.y = (&workspace_2uav_2hp)->solution->x[4];
-        self->mu2.z = (&workspace_2uav_2hp)->solution->x[5];
-     }
-     else if (self->value == 1.0f) {
-        self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0];
-        self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
-        self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];      
-        // self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[3];
-        // self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[4];
-        // self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[5];      
-
-        self->mu1.x = (&workspace_2uav_2hp)->solution->x[0]; 
-        self->mu1.y = (&workspace_2uav_2hp)->solution->x[1];
-        self->mu1.z = (&workspace_2uav_2hp)->solution->x[2];
-        self->mu2.x = (&workspace_2uav_2hp)->solution->x[3]; 
-        self->mu2.y = (&workspace_2uav_2hp)->solution->x[4];
-        self->mu2.z = (&workspace_2uav_2hp)->solution->x[5];
-
-      }
+    self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0]; 
+    self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
+    self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];
+    self->mu1.x = (&workspace_2uav_2hp)->solution->x[0]; 
+    self->mu1.y = (&workspace_2uav_2hp)->solution->x[1];
+    self->mu1.z = (&workspace_2uav_2hp)->solution->x[2];
+    self->mu2.x = (&workspace_2uav_2hp)->solution->x[3]; 
+    self->mu2.y = (&workspace_2uav_2hp)->solution->x[4];
+    self->mu2.z = (&workspace_2uav_2hp)->solution->x[5];
     // printf("workspace_2uav_2hp status:   %s\n", (&workspace_2uav_2hp)->info->status);
     // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace_2uav_2hp)->solution->x[0], (&workspace_2uav_2hp)->solution->x[1], (&workspace_2uav_2hp)->solution->x[2], (&workspace_2uav_2hp)->solution->x[3], (&workspace_2uav_2hp)->solution->x[4], (&workspace_2uav_2hp)->solution->x[5]);
     // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
     // if (tick % 1000 == 0) {
 
     //   DEBUG_PRINT("\n value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
-    //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position2.x), (double)(state->position2.y), (double)(state->position2.z));
+    //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position_neighbors[0].x), (double)(state->position_neighbors[0].y), (double)(state->position_neighbors[0].z));
     //   DEBUG_PRINT("\nn1: %f %f %f\n", (double) (self->n1.x), (double)(self->n1.y),(double)(self->n1.z));
     //   DEBUG_PRINT("\nn2: %f %f %f\n", (double) (self->n2.x), (double)(self->n2.y),(double)(self->n2.z));
     // }
@@ -525,13 +506,7 @@ PARAM_ADD(PARAM_FLOAT, offsetx, &g_self.offset.x)
 PARAM_ADD(PARAM_FLOAT, offsety, &g_self.offset.y)
 PARAM_ADD(PARAM_FLOAT, offsetz, &g_self.offset.z)
 
-
 PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
-
-
-//For the QP 
-PARAM_ADD(PARAM_FLOAT, value, &g_self.value)
-
 
 PARAM_GROUP_STOP(ctrlLeeP)
 

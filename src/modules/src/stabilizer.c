@@ -110,11 +110,6 @@ static struct {
   int16_t pvx;
   int16_t pvy;
   int16_t pvz;
-
-  // posiiton of neighboring UAV
-  int16_t p2x;
-  int16_t p2y;
-  int16_t p2z;
 } stateCompressed;
 
 static struct {
@@ -134,7 +129,6 @@ static struct {
 
 // for payloads
 static float payload_alpha = 0.9; // between 0...1; 1: no filter
-static uint8_t otherID = 2;
 static point_t payload_pos_last;         // m   (world frame)
 static velocity_t payload_vel_last;      // m/s (world frame)
 
@@ -178,10 +172,6 @@ static void compressState()
   stateCompressed.px = state.payload_pos.x * 1000.0f;
   stateCompressed.py = state.payload_pos.y * 1000.0f;
   stateCompressed.pz = state.payload_pos.z * 1000.0f;
-
-  stateCompressed.p2x = state.position2.x * 1000.0f;
-  stateCompressed.p2y = state.position2.y * 1000.0f;
-  stateCompressed.p2z = state.position2.z * 1000.0f;
 
   stateCompressed.pvx = state.payload_vel.x * 1000.0f;
   stateCompressed.pvy = state.payload_vel.y * 1000.0f;
@@ -300,54 +290,65 @@ static void stabilizerTask(void* param)
 
       stateEstimator(&state, tick);
 
-      // add the payload state here
-      peerLocalizationOtherPosition_t* payloadPos = peerLocalizationGetPositionByID(255);
-      peerLocalizationOtherPosition_t* otherCF    = peerLocalizationGetPositionByID(otherID);
-      // if (tick % 1000 == 0) {
-      //   DEBUG_PRINT("Other ID: %d\n", otherID);
-      // }
-      if (otherCF != NULL) {
-        state.position2.x = otherCF->pos.x;
-        state.position2.y = otherCF->pos.y;
-        state.position2.z = otherCF->pos.z;
-      } 
-      if (payloadPos != NULL) {
-        // if we got a new state
-        if (payload_pos_last.timestamp < payloadPos->pos.timestamp) {
-          struct vec vel_filtered = vzero();
-          // in the beginning, estimate the velocity to be zero, otherwise use
-          // numeric estimation with filter
-          if (payload_pos_last.timestamp != 0) {
-            // estimate the velocity numerically
-            const float dt = (payloadPos->pos.timestamp - payload_pos_last.timestamp) / 1000.0f; //s
-            struct vec pos = mkvec(payloadPos->pos.x, payloadPos->pos.y, payloadPos->pos.z);
-            struct vec last_pos = mkvec(payload_pos_last.x, payload_pos_last.y, payload_pos_last.z);
-            struct vec vel = vdiv(vsub(pos, last_pos), dt);
+      // add the payload and neighbor states here
+      uint8_t num_neighbors = 0;
+      for (int i = 0; i < PEER_LOCALIZATION_MAX_NEIGHBORS; ++i) {
 
-            // apply a simple complementary filter
-            struct vec vel_old = mkvec(payload_vel_last.x, payload_vel_last.y, payload_vel_last.z);
-            vel_filtered = vadd(vscl(1.0f - payload_alpha, vel_old), vscl(payload_alpha, vel));
+        peerLocalizationOtherPosition_t const *other = peerLocalizationGetPositionByIdx(i);
+
+        if (other == NULL || other->id == 0) {
+          continue;
+        }
+
+        if (other->id == 255) {
+          // handle the payload
+
+          // if we got a new state
+          if (payload_pos_last.timestamp < other->pos.timestamp) {
+            struct vec vel_filtered = vzero();
+            // in the beginning, estimate the velocity to be zero, otherwise use
+            // numeric estimation with filter
+            if (payload_pos_last.timestamp != 0) {
+              // estimate the velocity numerically
+              const float dt = (other->pos.timestamp - payload_pos_last.timestamp) / 1000.0f; //s
+              struct vec pos = mkvec(other->pos.x, other->pos.y, other->pos.z);
+              struct vec last_pos = mkvec(payload_pos_last.x, payload_pos_last.y, payload_pos_last.z);
+              struct vec vel = vdiv(vsub(pos, last_pos), dt);
+
+              // apply a simple complementary filter
+              struct vec vel_old = mkvec(payload_vel_last.x, payload_vel_last.y, payload_vel_last.z);
+              vel_filtered = vadd(vscl(1.0f - payload_alpha, vel_old), vscl(payload_alpha, vel));
+            }
+            // update the position
+            state.payload_pos.x = other->pos.x;
+            state.payload_pos.y = other->pos.y;
+            state.payload_pos.z = other->pos.z;
+            state.payload_pos.timestamp = other->pos.timestamp;
+
+            // update the velocity
+            state.payload_vel.x = vel_filtered.x;
+            state.payload_vel.y = vel_filtered.y;
+            state.payload_vel.z = vel_filtered.z;
+            state.payload_vel.timestamp = other->pos.timestamp;
+            
+            // update state
+            payload_pos_last = state.payload_pos;
+            payload_vel_last = state.payload_vel;
+          } else {
+            state.payload_pos = payload_pos_last;
+            state.payload_vel = payload_vel_last;
           }
-          // update the position
-          state.payload_pos.x = payloadPos->pos.x;
-          state.payload_pos.y = payloadPos->pos.y;
-          state.payload_pos.z = payloadPos->pos.z;
-          state.payload_pos.timestamp = payloadPos->pos.timestamp;
 
-          // update the velocity
-          state.payload_vel.x = vel_filtered.x;
-          state.payload_vel.y = vel_filtered.y;
-          state.payload_vel.z = vel_filtered.z;
-          state.payload_vel.timestamp = payloadPos->pos.timestamp;
-          
-          // update state
-          payload_pos_last = state.payload_pos;
-          payload_vel_last = state.payload_vel;
-        } else {
-          state.payload_pos = payload_pos_last;
-          state.payload_vel = payload_vel_last;
+        } else if (num_neighbors < MAX_NEIGHBOR_UAVS) {
+          // handle regular team members
+          state.position_neighbors[num_neighbors].x = other->pos.x;
+          state.position_neighbors[num_neighbors].y = other->pos.y;
+          state.position_neighbors[num_neighbors].z = other->pos.z;
+          ++num_neighbors;
         }
       }
+      state.num_neighbors = num_neighbors;
+
       compressState();
 
       if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
@@ -448,8 +449,6 @@ PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 
 
 PARAM_ADD_CORE(PARAM_FLOAT, pAlpha, &payload_alpha)
-
-PARAM_ADD_CORE(PARAM_UINT8, otherID, &otherID)
 
 PARAM_GROUP_STOP(stabilizer)
 
