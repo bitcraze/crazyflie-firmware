@@ -94,7 +94,6 @@ static inline struct mat26 Ainequality(float angle_limit) {
 static controllerLeePayload_t g_self = {
   .mass = 0.034,
   .mp   = 0.01,
-  .l    = 1.0,
   // Inertia matrix (diagonal matrix), see
   // System Identification of the Crazyflie 2.0 Nano Quadrocopter
   // BA theses, Julian Foerster, ETHZ
@@ -272,10 +271,13 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec wi = vcross(qi, qidot);
     struct mat33 qiqiT = vecmult(qi);
     struct vec virtualInp = mvmul(qiqiT,self->desVirtInp);
+
+    // compute cable length (assuming taut cable)
+    float l = vmag(vsub(plStPos, statePos));
     
     // Compute parallel component
     struct vec acc_ = plAcc_d; 
-    struct vec u_parallel = vadd3(virtualInp, vscl(self->mass*self->l*vmag2(wi), qi), vscl(self->mass, mvmul(qiqiT, acc_)));
+    struct vec u_parallel = vadd3(virtualInp, vscl(self->mass*l*vmag2(wi), qi), vscl(self->mass, mvmul(qiqiT, acc_)));
     
     // Compute Perpindicular Component
     struct vec qdi = vneg(vnormalize(self->desVirtInp));
@@ -289,7 +291,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
 
     struct vec u_perpind = vsub(
-      vscl(self->mass*self->l, mvmul(skewqi, vsub(vsub(vneg(veltmul(self->K_q, eq)), veltmul(self->K_w, ew)), 
+      vscl(self->mass*l, mvmul(skewqi, vsub(vsub(vneg(veltmul(self->K_q, eq)), veltmul(self->K_w, ew)), 
       vscl(vdot(qi, wdi), qidot)))),
       vscl(self->mass, mvmul(skewqi2, acc_))
     );
@@ -500,7 +502,6 @@ PARAM_ADD(PARAM_FLOAT, Kwz, &g_self.K_w.z)
 
 PARAM_ADD(PARAM_FLOAT, mass, &g_self.mass)
 PARAM_ADD(PARAM_FLOAT, massP, &g_self.mp)
-PARAM_ADD(PARAM_FLOAT, length, &g_self.l)
 
 PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
 
