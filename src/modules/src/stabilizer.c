@@ -233,6 +233,12 @@ static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
   motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
 }
 
+static bool shouldStopMotors()
+{
+  bool stopMotors = emergencyStop | !systemIsArmed();
+  return stopMotors;
+}
+
 /* The stabilizer loop runs at 1kHz. It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
@@ -303,7 +309,7 @@ static void stabilizerTask(void* param)
       //
       supervisorUpdate(&sensorData);
 
-      if (emergencyStop || (systemIsArmed() == false)) {
+      if (shouldStopMotors()) {
         motorsStop();
       } else {
         powerDistribution(&control, &motorThrustUncapped);
