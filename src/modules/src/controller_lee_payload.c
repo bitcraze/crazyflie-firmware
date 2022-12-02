@@ -209,7 +209,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
-    workspace_2uav_2hp.settings->warm_start = 1;
+    OSQPWorkspace* workspace = &workspace_2uav_2hp;
+    workspace->settings->warm_start = 1;
     self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius);
     self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius);
     c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
@@ -223,18 +224,22 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
     c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
 
-    osqp_update_A(&workspace_2uav_2hp, Ax_new, Ax_new_idx, Ax_new_n);    
-    // osqp_update_P(&workspace_2uav_2hp, Px_new, Px_new_idx, Px_new_n);
-    osqp_update_lower_bound(&workspace_2uav_2hp, l_new);
-    osqp_update_upper_bound(&workspace_2uav_2hp, u_new);
+    osqp_update_A(workspace, Ax_new, Ax_new_idx, Ax_new_n);    
+    // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
+    osqp_update_lower_bound(workspace, l_new);
+    osqp_update_upper_bound(workspace, u_new);
     
-    osqp_solve(&workspace_2uav_2hp);
+    osqp_solve(workspace);
 
-    self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0]; 
-    self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
-    self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];
-    // printf("workspace_2uav_2hp status:   %s\n", (&workspace_2uav_2hp)->info->status);
-    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace_2uav_2hp)->solution->x[0], (&workspace_2uav_2hp)->solution->x[1], (&workspace_2uav_2hp)->solution->x[2], (&workspace_2uav_2hp)->solution->x[3], (&workspace_2uav_2hp)->solution->x[4], (&workspace_2uav_2hp)->solution->x[5]);
+    if (workspace->info->status_val == OSQP_SOLVED) {
+      self->desVirtInp.x = (workspace)->solution->x[0];
+      self->desVirtInp.y = (workspace)->solution->x[1];
+      self->desVirtInp.z = (workspace)->solution->x[2];
+    } else {
+      DEBUG_PRINT("QP: %s\n", workspace->info->status);
+    }
+    // printf("workspace_2uav_2hp status:   %s\n", (workspace)->info->status);
+    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (workspace)->solution->x[0], (workspace)->solution->x[1], (workspace)->solution->x[2], (workspace)->solution->x[3], (workspace)->solution->x[4], (workspace)->solution->x[5]);
     // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
     // if (tick % 1000 == 0) {
 
