@@ -56,7 +56,6 @@ extern OSQPWorkspace workspace_2uav_2hp;
 // }
 static inline struct vec computePlaneNormal(struct vec ps1, struct vec ps2, struct vec pload, float r, float l1, float l2) {
 // Compute the normal of a plane, given the minimum desired distance r
-// NEEDs TESTING!!!
   struct vec p1 = ps1;
   struct vec p2 = ps2;
   if (l1 <= l2) {
@@ -262,11 +261,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
     workspace_2uav_2hp.settings->warm_start = 1;
-    // compute cable length (assuming taut cable)
-    float l = vmag(vsub(plStPos, statePos));
-    float Otherl = vmag(vsub(plStPos, statePos2));
-    self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius, l, Otherl);
-    self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius, Otherl, l);
+    self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius, self->l, self->Otherl);
+    self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius, self->Otherl, self->l);
     c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
     // // c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
     
@@ -315,6 +311,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct mat33 qiqiT = vecmult(qi);
     struct vec virtualInp = mvmul(qiqiT,self->desVirtInp);
 
+    // compute cable length (assuming taut cable)
+    float l = vmag(vsub(plStPos, statePos));
     
     // Compute parallel component
     struct vec acc_ = plAcc_d; 
