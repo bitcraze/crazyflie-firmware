@@ -91,8 +91,48 @@ STATIC_MEM_QUEUE_ALLOC(queueQPOutput, 1, sizeof(struct QPOutput));
 //   struct vec ni = vnormalize(xcrossz);
 //   return ni;
 // }
-static inline struct vec computePlaneNormal(struct vec pos1, struct vec pos2, struct vec pload, float r) {
+static inline struct vec computePlaneNormal(struct vec ps1, struct vec ps2, struct vec pload, float r, float l1, float l2) {
 // Compute the normal of a plane, given the minimum desired distance r
+// NEEDs TESTING!!!
+  struct vec p1 = ps1;
+  struct vec p2 = ps2;
+  if (l1 <= l2) {
+    p1 = ps1;
+    p2 = ps2;
+  }
+  else {
+    p1 = ps2;
+    p2 = ps1;
+  }
+  struct vec p1_r = vsub(p1, pload);
+  struct vec p2_r = vsub(p2, pload);
+
+  float p1_dot_p2 = vdot(p1_r, p2_r);
+  float normp1    = vmag(p1_r);
+  float normp2    = vmag(p2_r);
+  
+  float angle_12  = acosf(p1_dot_p2/(normp1*normp2));
+  struct vec p1_r_proj = mkvec(p1_r.x, p1_r.y, 0);
+  float normp1_r_proj  = vmag(p1_r_proj);
+  float angle_1 = M_PI_2_F;
+  if (normp1_r_proj > 0) {
+     angle_1 = acosf((vdot(p1_r, p1_r_proj))/(normp1*normp1_r_proj));
+  }
+
+  float angle_2 = M_PI_F - (angle_12 + angle_1);
+  float normp2_r_new = normp1 * (sinf(angle_1)/sinf(angle_2));
+
+  struct vec p2_new = vadd(pload, vscl(normp2_r_new, vnormalize(p2_r)));
+  struct vec pos1 = ps1;
+  struct vec pos2 = ps2;
+  if(l2 >= l1) {
+    pos2 = p2_new;
+  }
+  else{
+    pos1 = p2_new;
+  }
+  // printf("pos1: %f %f %f\n", (double) pos1.x, (double) pos1.y, (double) pos1.z);
+  // printf("pos2: %f %f %f\n", (double) pos2.x, (double) pos2.y, (double) pos2.z);
   struct vec mid = vscl(0.5, vsub(pos2, pos1));
   struct vec rvec = vscl(r, vnormalize(vsub(pos1, pos2)));
   struct vec pr = vadd(pos1, vadd(mid, rvec));
@@ -171,6 +211,8 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     struct vec statePos = input->statePos;
     struct vec plStPos = input->plStPos;
     struct vec statePos2 = input->statePos2;
+    float l = vmag(vsub(plStPos, statePos));
+    float Otherl = vmag(vsub(plStPos, statePos2));
 
     float radius = g_self.radius;
 
@@ -180,8 +222,8 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     // The QP will be added here for the desired virtual input (mu_des)
     OSQPWorkspace* workspace = &workspace_2uav_2hp;
     workspace->settings->warm_start = 1;
-    struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos, radius);
-    struct vec n2 = computePlaneNormal(statePos2, statePos, plStPos, radius);
+    struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos, radius, l, Otherl);
+    struct vec n2 = computePlaneNormal(statePos2, statePos, plStPos, radius, Otherl, l);
     c_float Ax_new[12] = {1, n1.x, 1, n1.y, 1, n1.z, 1,  n2.x, 1, n2.y, 1, n2.z};
     // // c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
     
@@ -353,6 +395,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
+    float l = vmag(vsub(plStPos, statePos));
+
     // errors
     struct vec plpos_e = vclampnorm(vsub(plPos_d, plStPos), self->Kpos_P_limit);
     struct vec plvel_e = vclampnorm(vsub(plVel_d, plStVel), self->Kpos_D_limit);
@@ -377,8 +421,6 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct mat33 qiqiT = vecmult(qi);
     struct vec virtualInp = mvmul(qiqiT,self->desVirtInp);
 
-    // compute cable length (assuming taut cable)
-    float l = vmag(vsub(plStPos, statePos));
     
     // Compute parallel component
     struct vec acc_ = plAcc_d; 
