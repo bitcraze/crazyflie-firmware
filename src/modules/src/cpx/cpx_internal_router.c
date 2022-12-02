@@ -54,6 +54,10 @@ void cpxSendPacketBlocking(const CPXPacket_t * packet) {
   xQueueSend(txq, packet, portMAX_DELAY);
 }
 
+bool cpxSendPacketBlockingTimeout(const CPXPacket_t * packet, const uint32_t timeout) {
+  return xQueueSend(txq, packet, timeout) == pdTRUE;
+}
+
 bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout) {
   return true;
 }
