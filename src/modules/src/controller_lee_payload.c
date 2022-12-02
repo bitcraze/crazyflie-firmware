@@ -119,13 +119,6 @@ static controllerLeePayload_t g_self = {
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
   .radius = 0.1,
-  // .mu1 = {0, 0, 0},
-  // .mu2 = {0, 0, 0},
-  // fixed angle hyperplane in degrees for each UAV
-  .rpyPlane1 = {0,0,0},
-  .yawPlane1 = 0,
-  .rpyPlane2 = {0,0,0},
-  .yawPlane2 = 0,
 };
 
 // static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -144,11 +137,6 @@ void controllerLeePayloadReset(controllerLeePayload_t* self)
   self->acc_prev   = vzero();
   self->payload_vel_prev = vzero();
   self->qdi_prev = vzero();
-  //---------------------FOR QP--------------------//
-  // Create P matrix Fd = P @ mu_des
-  self->P_alloc = ones36(); // P_alloc is the P matrix in the paper (eq. 23)
-  self->P = eye66(); // P matrix of the QP 
-  self->A_in = zero26(); // initialization of the inequality matrix
 }
 
 void controllerLeePayloadInit(controllerLeePayload_t* self)
@@ -245,12 +233,6 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     self->desVirtInp.x = (&workspace_2uav_2hp)->solution->x[0]; 
     self->desVirtInp.y = (&workspace_2uav_2hp)->solution->x[1];
     self->desVirtInp.z = (&workspace_2uav_2hp)->solution->x[2];
-    self->mu1.x = (&workspace_2uav_2hp)->solution->x[0]; 
-    self->mu1.y = (&workspace_2uav_2hp)->solution->x[1];
-    self->mu1.z = (&workspace_2uav_2hp)->solution->x[2];
-    self->mu2.x = (&workspace_2uav_2hp)->solution->x[3]; 
-    self->mu2.y = (&workspace_2uav_2hp)->solution->x[4];
-    self->mu2.z = (&workspace_2uav_2hp)->solution->x[5];
     // printf("workspace_2uav_2hp status:   %s\n", (&workspace_2uav_2hp)->info->status);
     // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (&workspace_2uav_2hp)->solution->x[0], (&workspace_2uav_2hp)->solution->x[1], (&workspace_2uav_2hp)->solution->x[2], (&workspace_2uav_2hp)->solution->x[3], (&workspace_2uav_2hp)->solution->x[4], (&workspace_2uav_2hp)->solution->x[5]);
     // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
