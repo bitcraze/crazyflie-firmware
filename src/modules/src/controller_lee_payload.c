@@ -240,7 +240,7 @@ static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_
   xQueueOverwrite(queueQPInput, &qpinput);
 
   // get the latest result from the async computation (wait until at least one computation has been made)
-  xQueueReceive(queueQPOutput, &qpoutput, portMAX_DELAY);
+  xQueuePeek(queueQPOutput, &qpoutput, portMAX_DELAY);
   return qpoutput.desVirtInp;
 }
 
