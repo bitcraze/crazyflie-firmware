@@ -42,6 +42,43 @@ extern OSQPWorkspace workspace_2uav_2hp;
 #define GRAVITY_MAGNITUDE (9.81f)
 
 
+struct QPInput
+{
+  struct vec F_d;
+  struct vec plStPos;
+  struct vec statePos;
+  struct vec statePos2;
+};
+
+struct QPOutput
+{
+  struct vec desVirtInp;
+};
+
+
+#ifdef CRAZYFLIE_FW
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "static_mem.h"
+
+
+#define CONTROLLER_LEE_PAYLOAD_QP_TASK_STACKSIZE (2 * configMINIMAL_STACK_SIZE)
+#define CONTROLLER_LEE_PAYLOAD_QP_TASK_NAME "LEEQP"
+#define CONTROLLER_LEE_PAYLOAD_QP_TASK_PRI 1
+
+STATIC_MEM_TASK_ALLOC(controllerLeePayloadQPTask, CONTROLLER_LEE_PAYLOAD_QP_TASK_STACKSIZE);
+static void controllerLeePayloadQPTask(void * prm);
+static bool taskInitialized = false;
+
+static QueueHandle_t queueQPInput;
+STATIC_MEM_QUEUE_ALLOC(queueQPInput, 1, sizeof(struct QPInput));
+static QueueHandle_t queueQPOutput;
+STATIC_MEM_QUEUE_ALLOC(queueQPOutput, 1, sizeof(struct QPOutput));
+
+#endif
+
 // static inline struct vec computePlaneNormal(struct vec rpy, float yaw) {
 // // Compute the normal of a plane, given the extrinsic roll-pitch-yaw of the z-axis 
 // // and the yaw representing the x-axis of the plan's frame
@@ -128,11 +165,12 @@ static controllerLeePayload_t g_self = {
 //     clamp(value.z, min, max));
 // }
 
-static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_d)
+static void runQP(const struct QPInput *input, struct QPOutput* output)
 {
-    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
-    struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
-    struct vec statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
+    struct vec F_d = input->F_d;
+    struct vec statePos = input->statePos;
+    struct vec plStPos = input->plStPos;
+    struct vec statePos2 = input->statePos2;
 
     float radius = g_self.radius;
 
@@ -184,8 +222,62 @@ static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_
 
     g_self.n1 = n1;
     g_self.n2 = n2;
-    return desVirtInp;
+    // return desVirtInp;
+    output->desVirtInp = desVirtInp;
 }
+#ifdef CRAZYFLIE_FW
+
+static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_d)
+{
+  struct QPInput qpinput;
+  struct QPOutput qpoutput;
+
+  // push the latest change to the QP
+  qpinput.F_d = F_d;
+  qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
+  qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
+  qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
+  xQueueOverwrite(queueQPInput, &qpinput);
+
+  // get the latest result from the async computation (wait until at least one computation has been made)
+  xQueueReceive(queueQPOutput, &qpoutput, portMAX_DELAY);
+  return qpoutput.desVirtInp;
+}
+
+void controllerLeePayloadQPTask(void * prm)
+{
+  struct QPInput qpinput;
+  struct QPOutput qpoutput;
+
+  while(1) {
+    // wait until we get the next request
+    xQueueReceive(queueQPInput, &qpinput, portMAX_DELAY);
+
+    // solve the QP
+    runQP(&qpinput, &qpoutput);
+
+    // store the result
+    xQueueOverwrite(queueQPOutput, &qpoutput);
+  }
+}
+#else
+
+static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_d)
+{
+  struct QPInput qpinput;
+  struct QPOutput qpoutput;
+
+  // push the latest change to the QP
+  qpinput.F_d = F_d;
+  qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
+  qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
+  qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
+  // solve the QP
+  runQP(&qpinput, &qpoutput);
+  return qpoutput.desVirtInp;
+}
+
+#endif
 
 void controllerLeePayloadReset(controllerLeePayload_t* self)
 {
@@ -202,6 +294,17 @@ void controllerLeePayloadInit(controllerLeePayload_t* self)
 {
   // copy default values (bindings), or NOP (firmware)
   *self = g_self;
+
+#ifdef CRAZYFLIE_FW
+  if (!taskInitialized) {
+    STATIC_MEM_TASK_CREATE(controllerLeePayloadQPTask, controllerLeePayloadQPTask, CONTROLLER_LEE_PAYLOAD_QP_TASK_NAME, NULL, CONTROLLER_LEE_PAYLOAD_QP_TASK_PRI);
+
+    queueQPInput = STATIC_MEM_QUEUE_CREATE(queueQPInput);
+    queueQPOutput = STATIC_MEM_QUEUE_CREATE(queueQPOutput);
+
+    taskInitialized = true;
+  }
+#endif
 
   controllerLeePayloadReset(self);
 }
