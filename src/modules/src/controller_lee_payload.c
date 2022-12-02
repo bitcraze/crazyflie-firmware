@@ -128,6 +128,65 @@ static controllerLeePayload_t g_self = {
 //     clamp(value.z, min, max));
 // }
 
+static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_d)
+{
+    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
+    struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
+    struct vec statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
+
+    float radius = g_self.radius;
+
+    struct vec desVirtInp;
+
+    //------------------------------------------QP------------------------------//
+    // The QP will be added here for the desired virtual input (mu_des)
+    OSQPWorkspace* workspace = &workspace_2uav_2hp;
+    workspace->settings->warm_start = 1;
+    struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos, radius);
+    struct vec n2 = computePlaneNormal(statePos2, statePos, plStPos, radius);
+    c_float Ax_new[12] = {1, n1.x, 1, n1.y, 1, n1.z, 1,  n2.x, 1, n2.y, 1, n2.z};
+    // // c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
+    
+    c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    // // c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
+    c_int Ax_new_n = 12;
+    // // c_int Px_new_n = 6;
+     
+    c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
+    c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
+
+    osqp_update_A(workspace, Ax_new, Ax_new_idx, Ax_new_n);    
+    // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
+    osqp_update_lower_bound(workspace, l_new);
+    osqp_update_upper_bound(workspace, u_new);
+    
+    osqp_solve(workspace);
+
+    if (workspace->info->status_val == OSQP_SOLVED) {
+      desVirtInp.x = (workspace)->solution->x[0];
+      desVirtInp.y = (workspace)->solution->x[1];
+      desVirtInp.z = (workspace)->solution->x[2];
+    } else {
+      DEBUG_PRINT("QP: %s\n", workspace->info->status);
+    }
+    // printf("workspace_2uav_2hp status:   %s\n", (workspace)->info->status);
+    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (workspace)->solution->x[0], (workspace)->solution->x[1], (workspace)->solution->x[2], (workspace)->solution->x[3], (workspace)->solution->x[4], (workspace)->solution->x[5]);
+    // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
+    // if (tick % 1000 == 0) {
+
+    //   DEBUG_PRINT("\n value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
+    //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position_neighbors[0].x), (double)(state->position_neighbors[0].y), (double)(state->position_neighbors[0].z));
+    //   DEBUG_PRINT("\nn1: %f %f %f\n", (double) (self->n1.x), (double)(self->n1.y),(double)(self->n1.z));
+    //   DEBUG_PRINT("\nn2: %f %f %f\n", (double) (self->n2.x), (double)(self->n2.y),(double)(self->n2.z));
+    // }
+    
+    //------------------------------------------QP------------------------------//
+
+    g_self.n1 = n1;
+    g_self.n2 = n2;
+    return desVirtInp;
+}
+
 void controllerLeePayloadReset(controllerLeePayload_t* self)
 {
   self->i_error_pos = vzero();
@@ -191,8 +250,6 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
-    struct vec statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
-
     // errors
     struct vec plpos_e = vclampnorm(vsub(plPos_d, plStPos), self->Kpos_P_limit);
     struct vec plvel_e = vclampnorm(vsub(plVel_d, plStVel), self->Kpos_D_limit);
@@ -207,50 +264,8 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       veltmul(self->Kpos_D, plvel_e),
       veltmul(self->Kpos_I, self->i_error_pos)));
 
-    //------------------------------------------QP------------------------------//
-    // The QP will be added here for the desired virtual input (mu_des)
-    OSQPWorkspace* workspace = &workspace_2uav_2hp;
-    workspace->settings->warm_start = 1;
-    self->n1 = computePlaneNormal(statePos, statePos2, plStPos, self->radius);
-    self->n2 = computePlaneNormal(statePos2, statePos, plStPos, self->radius);
-    c_float Ax_new[12] = {1, self->n1.x, 1, self->n1.y, 1, self->n1.z, 1,  self->n2.x, 1, self->n2.y, 1, self->n2.z};
-    // // c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
-    
-    c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    // // c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
-    c_int Ax_new_n = 12;
-    // // c_int Px_new_n = 6;
-     
-    c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
-    c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
+    self->desVirtInp = computeDesiredVirtualInput(state, F_d);
 
-    osqp_update_A(workspace, Ax_new, Ax_new_idx, Ax_new_n);    
-    // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
-    osqp_update_lower_bound(workspace, l_new);
-    osqp_update_upper_bound(workspace, u_new);
-    
-    osqp_solve(workspace);
-
-    if (workspace->info->status_val == OSQP_SOLVED) {
-      self->desVirtInp.x = (workspace)->solution->x[0];
-      self->desVirtInp.y = (workspace)->solution->x[1];
-      self->desVirtInp.z = (workspace)->solution->x[2];
-    } else {
-      DEBUG_PRINT("QP: %s\n", workspace->info->status);
-    }
-    // printf("workspace_2uav_2hp status:   %s\n", (workspace)->info->status);
-    // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (workspace)->solution->x[0], (workspace)->solution->x[1], (workspace)->solution->x[2], (workspace)->solution->x[3], (workspace)->solution->x[4], (workspace)->solution->x[5]);
-    // printf("tick: %d \n uavID: %f solution: %f %f %f %f %f %f\n", tick, self->value, self->mu1.x, self->mu1.y, self->mu1.z, self->mu2.x, self->mu2.y, self->mu2.z);
-    // if (tick % 1000 == 0) {
-
-    //   DEBUG_PRINT("\n value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
-    //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position_neighbors[0].x), (double)(state->position_neighbors[0].y), (double)(state->position_neighbors[0].z));
-    //   DEBUG_PRINT("\nn1: %f %f %f\n", (double) (self->n1.x), (double)(self->n1.y),(double)(self->n1.z));
-    //   DEBUG_PRINT("\nn2: %f %f %f\n", (double) (self->n2.x), (double)(self->n2.y),(double)(self->n2.z));
-    // }
-    
-    //------------------------------------------QP------------------------------//
-    // self->desVirtInp = F_d;  // COMMENT THIS IF YOU ARE USING THE QP 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
   
