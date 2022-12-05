@@ -198,7 +198,7 @@ static controllerLeePayload_t g_self = {
   .KI = {0.02, 0.02, 0.05},
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
-  .radius = 0.1,
+  .radius = 0.15,
 };
 
 // static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -250,14 +250,14 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     struct vec n6 = computePlaneNormal(statePos3, statePos2, plStPos, radius, l3, l2);
     // printf("%f\n",(double)workspace->data->A->nzmax);
     c_float Ax_new[27] = {1, n1.x, n2.x, 1, n1.y, n2.y, 1, n1.z, n2.z, 1, n3.x, n4.x, 1, n3.y, n4.y, 1, n3.z, n4.z, 1, n5.x, n6.x, 1, n5.y, n6.y, 1, n5.z, n6.z, };
-    c_int Ax_new_idx[27] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+    // c_int Ax_new_idx[27] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
     c_int Ax_new_n = 27;
     c_float l_new[9] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
     c_float u_new[9] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,  0, 0,  0, 0};
 
 
 
-    osqp_update_A(workspace, Ax_new, Ax_new_idx, Ax_new_n);    
+    osqp_update_A(workspace, Ax_new, OSQP_NULL, Ax_new_n);    
     // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
     osqp_update_lower_bound(workspace, l_new);
     osqp_update_upper_bound(workspace, u_new);
@@ -283,12 +283,12 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     //   DEBUG_PRINT("\n value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
     //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position_neighbors[0].x), (double)(state->position_neighbors[0].y), (double)(state->position_neighbors[0].z));
       // printf("\n state 2 %f %f %f\n", statePos2.x, statePos2.y, statePos2.z);
-      printf("\n n1 %f %f %f\n", n1.x, n1.y, n1.z);
-      printf("\n n2 %f %f %f\n", n2.x, n2.y, n2.z);
-      printf("\n n3 %f %f %f\n", n3.x, n3.y, n3.z);
-      printf("\n n4 %f %f %f\n", n4.x, n4.y, n4.z);
-      printf("\n n5 %f %f %f\n", n5.x, n5.y, n5.z);
-      printf("\n n6 %f %f %f\n", n6.x, n6.y, n6.z);
+      // printf("\n n1 %f %f %f\n", n1.x, n1.y, n1.z);
+      // printf("\n n2 %f %f %f\n", n2.x, n2.y, n2.z);
+      // printf("\n n3 %f %f %f\n", n3.x, n3.y, n3.z);
+      // printf("\n n4 %f %f %f\n", n4.x, n4.y, n4.z);
+      // printf("\n n5 %f %f %f\n", n5.x, n5.y, n5.z);
+      // printf("\n n6 %f %f %f\n", n6.x, n6.y, n6.z);
       // printf("\n state 3 %f %f %f\n", statePos3.x, statePos3.y, statePos3.z);
     //   DEBUG_PRINT("\nn1: %f %f %f\n", (double) (self->n1.x), (double)(self->n1.y),(double)(self->n1.z));
     //   DEBUG_PRINT("\nn2: %f %f %f\n", (double) (self->n2.x), (double)(self->n2.y),(double)(self->n2.z));
