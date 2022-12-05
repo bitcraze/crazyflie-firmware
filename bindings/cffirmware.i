@@ -133,6 +133,13 @@ void collisionAvoidanceUpdateSetpointWrap(
     free(workspace);
 }
 
+void state_set_neighbor_position(state_t *state, int idx, float x, float y, float z)
+{
+    state->position_neighbors[idx].x = x;
+    state->position_neighbors[idx].y = y;
+    state->position_neighbors[idx].z = z;
+}
+
 %}
 
 %pythoncode %{
