@@ -54,6 +54,7 @@
 #include "queue.h"
 #include "stm32fxxx.h"
 #include "system.h"
+#include "buf2buf.h"
 
 #include "cpx_internal_router.h"
 #include "cpx_external_router.h"
@@ -111,73 +112,86 @@ void cpxBootloaderMessage(const CPXPacket_t * packet) {
   xEventGroupSetBits(bootloaderSync, CPX_WAIT_FOR_BOOTLOADER_REPLY);
 }
 
-static CPXPacket_t bootPacket;
+static CPXPacket_t txPacket;
 
 #define FLASH_BUFFER_SIZE 64
 static uint8_t flashBuffer[FLASH_BUFFER_SIZE];
-static int flashBufferIndex = 0;
+static Buf2bufContext_t gap8BufContext;
+
+static void sendFlashInit(const uint32_t fwSize) {
+  GAP8BlCmdPacket_t* gap8BlPacket = (GAP8BlCmdPacket_t*)txPacket.data;
+
+  gap8BlPacket->cmd = GAP8_BL_CMD_START_WRITE;
+  gap8BlPacket->startAddress = 0x40000;
+  gap8BlPacket->writeSize = fwSize;
+  txPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
+  bool writeOk = cpxSendPacketBlockingTimeout(&txPacket, M2T(GAP8_MAX_MEM_WRITE_TIMEOUT_MS));
+  ASSERT(writeOk);
+}
+
+static void sendFlashBuffer(const uint32_t size) {
+  memcpy(&txPacket.data, flashBuffer, size);
+  txPacket.dataLength = size;
+  bool writeOk = cpxSendPacketBlockingTimeout(&txPacket, M2T(GAP8_MAX_MEM_WRITE_TIMEOUT_MS));
+  ASSERT(writeOk);
+}
+
+static void sendFlashMd5Request(const uint32_t fwSize) {
+  GAP8BlCmdPacket_t* gap8BlPacket = (GAP8BlCmdPacket_t*)txPacket.data;
+  gap8BlPacket->cmd = GAP8_BL_CMD_MD5;
+  gap8BlPacket->startAddress = 0x40000;
+  gap8BlPacket->writeSize = fwSize;
+  txPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
+  bool writeOk = cpxSendPacketBlockingTimeout(&txPacket, M2T(GAP8_MAX_MEM_WRITE_TIMEOUT_MS));
+  ASSERT(writeOk);
+}
+
+static void waitForCpxResponse() {
+  EventBits_t bits = xEventGroupWaitBits(bootloaderSync,
+                      CPX_WAIT_FOR_BOOTLOADER_REPLY,
+                      pdTRUE,  // Clear bits before returning
+                      pdFALSE, // Wait for any bit
+                      M2T(GAP8_MAX_MEM_VERIFY_TIMEOUT_MS));
+  bool flashWritten = (bits & CPX_WAIT_FOR_BOOTLOADER_REPLY);
+  ASSERT(flashWritten);
+}
 
 static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef) {
+  cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_BOOTLOADER, &txPacket.route);
 
-  cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_BOOTLOADER, &bootPacket.route);
-
-  if (memAddr == 0) {
-    GAP8BlCmdPacket_t* gap8BlPacket = (GAP8BlCmdPacket_t*)bootPacket.data;
-
-    gap8BlPacket->cmd = GAP8_BL_CMD_START_WRITE;
-    gap8BlPacket->startAddress = 0x40000;
-    gap8BlPacket->writeSize = *(memDef->newFwSizeP);
-    bootPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
-    bool writeOk = cpxSendPacketBlockingTimeout(&bootPacket, M2T(GAP8_MAX_MEM_WRITE_TIMEOUT_MS));
-    ASSERT(writeOk);
-  }
+  const uint32_t fwSize = *(memDef->newFwSizeP);
 
   // The GAP8 can only flash data in multiples of 4 bytes,
   // buffering will guard against this and also speed things up.
   // The full binary that will be flashed is multiple of 4.
 
-  uint32_t sizeLeftToBufferFull = sizeof(flashBuffer) - flashBufferIndex;
-  uint32_t sizeAbleToBuffer = sizeLeftToBufferFull < writeLen ? sizeLeftToBufferFull : writeLen;
-  uint32_t lastAddressToWrite = memAddr + sizeAbleToBuffer;
-
-  memcpy(&flashBuffer[flashBufferIndex], buffer, sizeAbleToBuffer);
-  flashBufferIndex += sizeAbleToBuffer;
-
-  if (flashBufferIndex == sizeof(flashBuffer) || lastAddressToWrite == *(memDef->newFwSizeP)) {
-    memcpy(&bootPacket.data, flashBuffer, flashBufferIndex);
-    bootPacket.dataLength = flashBufferIndex;
-
-    bool writeOk = cpxSendPacketBlockingTimeout(&bootPacket, M2T(GAP8_MAX_MEM_WRITE_TIMEOUT_MS));
-    ASSERT(writeOk);
-
-    flashBufferIndex = 0;
-    int sizeLeftToBuffer = writeLen - sizeLeftToBufferFull;
-    if (sizeLeftToBuffer > 0) {
-      memcpy(&flashBuffer[flashBufferIndex], &buffer[sizeLeftToBufferFull], sizeLeftToBuffer);
-      flashBufferIndex += sizeLeftToBuffer;
-    }
+  const bool isFirstBuf = (memAddr == 0);
+  if (isFirstBuf) {
+    sendFlashInit(fwSize);
+    buf2bufInit(&gap8BufContext, flashBuffer, FLASH_BUFFER_SIZE);
   }
 
-  if (memAddr + writeLen == *(memDef->newFwSizeP)) {
+  buf2bufAddInBuf(&gap8BufContext, buffer, writeLen);
+  ASSERT(buf2bufBytesAdded(&gap8BufContext) <= fwSize);
+  while(buf2bufConsumeInBuf(&gap8BufContext)) {
+    sendFlashBuffer(FLASH_BUFFER_SIZE);
+  }
+  buf2bufReleaseInBuf(&gap8BufContext);
+
+  const bool isLastBuf = (buf2bufBytesConsumed(&gap8BufContext) == fwSize);
+  if (isLastBuf) {
+    uint32_t size = buf2bufReleaseOutBuf(&gap8BufContext);
+    if (size > 0) {
+      sendFlashBuffer(size);
+    }
+    ASSERT(buf2bufBytesAdded(&gap8BufContext) == buf2bufBytesConsumed(&gap8BufContext));
+
     // Request the MD5 checksum of the flashed data. This is only done
     // for synchronizing and making sure everything has been written,
     // we do not care about the results.
-    GAP8BlCmdPacket_t* gap8BlPacket = (GAP8BlCmdPacket_t*)bootPacket.data;
-    gap8BlPacket->cmd = GAP8_BL_CMD_MD5;
-    gap8BlPacket->startAddress = 0x40000;
-    gap8BlPacket->writeSize = *(memDef->newFwSizeP);
-    bootPacket.dataLength = sizeof(GAP8BlCmdPacket_t);
-    bool writeOk = cpxSendPacketBlockingTimeout(&bootPacket, M2T(GAP8_MAX_MEM_WRITE_TIMEOUT_MS));
-    ASSERT(writeOk);
-
-    EventBits_t bits = xEventGroupWaitBits(bootloaderSync,
-                        CPX_WAIT_FOR_BOOTLOADER_REPLY,
-                        pdTRUE,  // Clear bits before returning
-                        pdFALSE, // Wait for any bit
-                        M2T(GAP8_MAX_MEM_VERIFY_TIMEOUT_MS));
-    bool flashWritten = (bits & CPX_WAIT_FOR_BOOTLOADER_REPLY);
-    ASSERT(flashWritten);
-}
+    sendFlashMd5Request(fwSize);
+    waitForCpxResponse();
+  }
 
   return true;
 }
@@ -186,14 +200,14 @@ static bool gap8DeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
 static bool isGap8InBootloaderMode = false;
 
 static void resetGap8ToBootloader() {
-  cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_SYSTEM, &bootPacket.route);
+  cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_SYSTEM, &txPacket.route);
 
-  ESP32SysPacket_t* esp32SysPacket = (ESP32SysPacket_t*)bootPacket.data;
+  ESP32SysPacket_t* esp32SysPacket = (ESP32SysPacket_t*)txPacket.data;
 
   esp32SysPacket->cmd = ESP32_SYS_CMD_RESET_GAP8;
-  bootPacket.dataLength = sizeof(ESP32SysPacket_t);
+  txPacket.dataLength = sizeof(ESP32SysPacket_t);
 
-  cpxSendPacketBlocking(&bootPacket);
+  cpxSendPacketBlocking(&txPacket);
   // This should be handled on RX on CPX instead
   vTaskDelay(100);
   isGap8InBootloaderMode = true;
