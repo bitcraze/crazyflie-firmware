@@ -79,6 +79,10 @@ typedef struct controllerLeePayload_s {
     struct vec desVirtInp;
     struct vec n1;
     struct vec n2;
+    struct vec n3;
+    struct vec n4;
+    struct vec n5;
+    struct vec n6;
     float radius;
 } controllerLeePayload_t;
 

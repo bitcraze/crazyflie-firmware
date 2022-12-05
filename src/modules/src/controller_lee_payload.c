@@ -38,6 +38,7 @@ TODO
 // #include "workspace_2uav_2hp.h"
 #include "osqp.h"
 extern OSQPWorkspace workspace_2uav_2hp;
+extern OSQPWorkspace workspace_3uav_2hp;
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
@@ -48,6 +49,7 @@ struct QPInput
   struct vec plStPos;
   struct vec statePos;
   struct vec statePos2;
+  struct vec statePos3;
 };
 
 struct QPOutput
@@ -211,29 +213,48 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     struct vec statePos = input->statePos;
     struct vec plStPos = input->plStPos;
     struct vec statePos2 = input->statePos2;
-    float l = vmag(vsub(plStPos, statePos));
-    float Otherl = vmag(vsub(plStPos, statePos2));
-
+    struct vec statePos3 = input->statePos3;
+    float l1 = vmag(vsub(plStPos, statePos));
+    float l2 = vmag(vsub(plStPos, statePos2));
+    float l3 = vmag(vsub(plStPos, statePos3));
     float radius = g_self.radius;
 
     struct vec desVirtInp;
 
     //------------------------------------------QP------------------------------//
     // The QP will be added here for the desired virtual input (mu_des)
-    OSQPWorkspace* workspace = &workspace_2uav_2hp;
-    workspace->settings->warm_start = 1;
-    struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos, radius, l, Otherl);
-    struct vec n2 = computePlaneNormal(statePos2, statePos, plStPos, radius, Otherl, l);
-    c_float Ax_new[12] = {1, n1.x, 1, n1.y, 1, n1.z, 1,  n2.x, 1, n2.y, 1, n2.z};
+    // OSQPWorkspace* workspace = &workspace_2uav_2hp;
+    // workspace->settings->warm_start = 1;
+    // struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos, radius, l1, l2);
+    // struct vec n2 = computePlaneNormal(statePos2, statePos, plStPos, radius, l2, l1);
+    // c_float Ax_new[12] = {1, n1.x, 1, n1.y, 1, n1.z, 1,  n2.x, 1, n2.y, 1, n2.z};
     // // c_float Px_new[6] = {1, 1, 1, 1, 1, 1};
     
-    c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    // c_int Ax_new_idx[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     // // c_int Px_new_idx[6] = {0, 1, 2, 3, 4, 5};
-    c_int Ax_new_n = 12;
+    // c_int Ax_new_n = 12;
     // // c_int Px_new_n = 6;
-     
-    c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
-    c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
+   
+    // c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
+    // c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
+
+    OSQPWorkspace* workspace = &workspace_3uav_2hp;
+    workspace->settings->warm_start = 1;
+
+    struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos,  radius, l1, l2);
+    struct vec n2 = computePlaneNormal(statePos, statePos3, plStPos,  radius, l1, l3);
+    struct vec n3 = computePlaneNormal(statePos2, statePos, plStPos,  radius, l2, l1);
+    struct vec n4 = computePlaneNormal(statePos2, statePos3, plStPos, radius, l2, l3);
+    struct vec n5 = computePlaneNormal(statePos3, statePos, plStPos,  radius, l3, l1);
+    struct vec n6 = computePlaneNormal(statePos3, statePos2, plStPos, radius, l3, l2);
+    // printf("%f\n",(double)workspace->data->A->nzmax);
+    c_float Ax_new[27] = {1, n1.x, n2.x, 1, n1.y, n2.y, 1, n1.z, n2.z, 1, n3.x, n4.x, 1, n3.y, n4.y, 1, n3.z, n4.z, 1, n5.x, n6.x, 1, n5.y, n6.y, 1, n5.z, n6.z, };
+    c_int Ax_new_idx[27] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+    c_int Ax_new_n = 27;
+    c_float l_new[9] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
+    c_float u_new[9] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,  0, 0,  0, 0};
+
+
 
     osqp_update_A(workspace, Ax_new, Ax_new_idx, Ax_new_n);    
     // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
@@ -260,6 +281,14 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
 
     //   DEBUG_PRINT("\n value: %f, desVirtInp: %f %f %f\n", (double) self->value, (double)(self->desVirtInp.x),(double)(self->desVirtInp.y),(double)(self->desVirtInp.z));
     //   DEBUG_PRINT("\n state 2 %f %f %f\n", (double)(state->position_neighbors[0].x), (double)(state->position_neighbors[0].y), (double)(state->position_neighbors[0].z));
+      // printf("\n state 2 %f %f %f\n", statePos2.x, statePos2.y, statePos2.z);
+      printf("\n n1 %f %f %f\n", n1.x, n1.y, n1.z);
+      printf("\n n2 %f %f %f\n", n2.x, n2.y, n2.z);
+      printf("\n n3 %f %f %f\n", n3.x, n3.y, n3.z);
+      printf("\n n4 %f %f %f\n", n4.x, n4.y, n4.z);
+      printf("\n n5 %f %f %f\n", n5.x, n5.y, n5.z);
+      printf("\n n6 %f %f %f\n", n6.x, n6.y, n6.z);
+      // printf("\n state 3 %f %f %f\n", statePos3.x, statePos3.y, statePos3.z);
     //   DEBUG_PRINT("\nn1: %f %f %f\n", (double) (self->n1.x), (double)(self->n1.y),(double)(self->n1.z));
     //   DEBUG_PRINT("\nn2: %f %f %f\n", (double) (self->n2.x), (double)(self->n2.y),(double)(self->n2.z));
     // }
@@ -268,6 +297,10 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
 
     g_self.n1 = n1;
     g_self.n2 = n2;
+    g_self.n3 = n3;
+    g_self.n4 = n4;
+    g_self.n5 = n5;
+    g_self.n6 = n6;
     // return desVirtInp;
     output->desVirtInp = desVirtInp;
 }
@@ -283,6 +316,7 @@ static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_
   qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
   qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
+  qpinput.statePos3 = mkvec(state->position_neighbors[1].x, state->position_neighbors[1].y, state->position_neighbors[1].z);
   xQueueOverwrite(queueQPInput, &qpinput);
 
   // get the latest result from the async computation (wait until at least one computation has been made)
@@ -318,6 +352,7 @@ static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_
   qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
   qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
+  qpinput.statePos3 = mkvec(state->position_neighbors[1].x, state->position_neighbors[1].y, state->position_neighbors[1].z);
   // solve the QP
   runQP(&qpinput, &qpoutput);
   return qpoutput.desVirtInp;
