@@ -50,6 +50,7 @@ struct QPInput
   struct vec statePos;
   struct vec statePos2;
   struct vec statePos3;
+  controllerLeePayload_t* self;
 };
 
 struct QPOutput
@@ -217,7 +218,7 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     float l1 = vmag(vsub(plStPos, statePos));
     float l2 = vmag(vsub(plStPos, statePos2));
     float l3 = vmag(vsub(plStPos, statePos3));
-    float radius = g_self.radius;
+    float radius = input->self->radius;
 
     struct vec desVirtInp;
 
@@ -295,18 +296,18 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     
     //------------------------------------------QP------------------------------//
 
-    g_self.n1 = n1;
-    g_self.n2 = n2;
-    g_self.n3 = n3;
-    g_self.n4 = n4;
-    g_self.n5 = n5;
-    g_self.n6 = n6;
+    input->self->n1 = n1;
+    input->self->n2 = n2;
+    input->self->n3 = n3;
+    input->self->n4 = n4;
+    input->self->n5 = n5;
+    input->self->n6 = n6;
     // return desVirtInp;
     output->desVirtInp = desVirtInp;
 }
 #ifdef CRAZYFLIE_FW
 
-static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_d)
+static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const state_t *state, struct vec F_d)
 {
   struct QPInput qpinput;
   struct QPOutput qpoutput;
@@ -317,6 +318,7 @@ static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
   qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
   qpinput.statePos3 = mkvec(state->position_neighbors[1].x, state->position_neighbors[1].y, state->position_neighbors[1].z);
+  qpinput.self = self;
   xQueueOverwrite(queueQPInput, &qpinput);
 
   // get the latest result from the async computation (wait until at least one computation has been made)
@@ -342,7 +344,7 @@ void controllerLeePayloadQPTask(void * prm)
 }
 #else
 
-static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_d)
+static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const state_t *state, struct vec F_d)
 {
   struct QPInput qpinput;
   struct QPOutput qpoutput;
@@ -353,6 +355,7 @@ static struct vec computeDesiredVirtualInput(const state_t *state, struct vec F_
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
   qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
   qpinput.statePos3 = mkvec(state->position_neighbors[1].x, state->position_neighbors[1].y, state->position_neighbors[1].z);
+  qpinput.self = self;
   // solve the QP
   runQP(&qpinput, &qpoutput);
   return qpoutput.desVirtInp;
@@ -450,7 +453,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       veltmul(self->Kpos_D, plvel_e),
       veltmul(self->Kpos_I, self->i_error_pos)));
 
-    self->desVirtInp = computeDesiredVirtualInput(state, F_d);
+    self->desVirtInp = computeDesiredVirtualInput(self, state, F_d);
 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
