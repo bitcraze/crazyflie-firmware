@@ -247,7 +247,11 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
       desVirtInp.y = (workspace)->solution->x[1];
       desVirtInp.z = (workspace)->solution->x[2];
     } else {
+#ifdef CRAZYFLIE_FW
       DEBUG_PRINT("QP: %s\n", workspace->info->status);
+#else
+      printf("QP: %s\n", workspace->info->status);
+#endif
     }
     // printf("workspace_2uav_2hp status:   %s\n", (workspace)->info->status);
     // printf("tick: %f \n uavID: %d solution: %f %f %f %f %f %f\n", tick, self->value, (workspace)->solution->x[0], (workspace)->solution->x[1], (workspace)->solution->x[2], (workspace)->solution->x[3], (workspace)->solution->x[4], (workspace)->solution->x[5]);
