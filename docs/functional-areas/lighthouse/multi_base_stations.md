@@ -3,7 +3,7 @@ title: Lighthouse more than 4 base stations
 page_id: lh_multi_base_stations
 ---
 
-4 base stations cover around 8x8 meters of flying space and if it was possible to add more base stations larger flying
+We have tested 4 lighthouse basestations cover around 8x8x3 meters of flying space and  it is possible to add more base stations larger flying
 spaces could be used. The lighthouse positioning system currently supports only 4 base stations, but most of the code
 is (more or less) in reality working with up to 16. This guide will outline the necessary steps to set up a larger
 system. Please first consult the
