@@ -29,7 +29,7 @@ The protocol for the lighthouse V1 is composed of frames starting with sync puls
 
 The protocol in lighthouse 2 does not use the same frame concept and there is no need for frame sync.
 
-The lighthouse V2 protocol supports more than 2 base stations. There's currently experimental support implemented for 2+ base stations, for more information please see [the 2+ base station documentation](/docs/functional-areas/lighthouse/multi_base_stations.md).
+The lighthouse V2 protocol supports more than 2 base stations, up to 4 in the standard firmware. There is currently support implemented for 4+ base stations, for more information please see [the 4+ base station documentation](/docs/functional-areas/lighthouse/multi_base_stations.md).
 
 ## Position estimation methods
 There are currently two ways of calculating the position using the lighthouse.
