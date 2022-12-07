@@ -27,7 +27,30 @@ bool peerLocalizationTellPosition(int cfid, positionMeasurement_t const *pos)
       other_positions[i].pos.x = pos->x;
       other_positions[i].pos.y = pos->y;
       other_positions[i].pos.z = pos->z;
-      other_positions[i].pos.timestamp = xTaskGetTickCount();
+      other_positions[i].orientation.x = nanf("");
+      other_positions[i].orientation.y = nanf("");
+      other_positions[i].orientation.z = nanf("");
+      other_positions[i].orientation.w = nanf("");
+      other_positions[i].timestamp = xTaskGetTickCount();
+      return true;
+    }
+  }
+  return false;
+}
+
+bool peerLocalizationTellPose(int cfid, poseMeasurement_t const *pose)
+{
+  for (uint8_t i = 0; i < PEER_LOCALIZATION_MAX_NEIGHBORS; ++i) {
+    if (other_positions[i].id == 0 || other_positions[i].id == cfid) {
+      other_positions[i].id = cfid;
+      other_positions[i].pos.x = pose->pos[0];
+      other_positions[i].pos.y = pose->pos[1];
+      other_positions[i].pos.z = pose->pos[2];
+      other_positions[i].orientation.x = pose->quat.x;
+      other_positions[i].orientation.y = pose->quat.y;
+      other_positions[i].orientation.z = pose->quat.z;
+      other_positions[i].orientation.w = pose->quat.w;
+      other_positions[i].timestamp = xTaskGetTickCount();
       return true;
     }
   }

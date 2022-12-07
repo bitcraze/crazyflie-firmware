@@ -173,7 +173,9 @@ typedef struct state_s {
   point_t position_neighbors[MAX_NEIGHBOR_UAVS];
   // Measured state of the payload
   point_t payload_pos;         // m   (world frame)
+  quaternion_t payload_quat;   // orientation (world frame)
   velocity_t payload_vel;      // m/s (world frame)
+  Axis3f payload_omega;        // rad/s (world frame)
 } state_t;
 
 typedef enum control_mode_e {

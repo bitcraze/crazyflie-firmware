@@ -19,15 +19,25 @@
 void peerLocalizationInit();
 bool peerLocalizationTest();
 
+// TODO: the name of this type and functions are misleading now,
+//       but kept in this branch to reduce the number of merge
+//       conflicts
 typedef struct peerLocalizationOtherPosition_s {
-  uint8_t id;  // CF id
-  point_t pos; // position and timestamp (millisecs)
+  uint8_t id;               // CF id
+  uint32_t timestamp;       // timestamp when the data was received [ms]
+  struct vec pos;           // position
+  struct quat orientation;  // orientation, if available (nanf's otherwise)
 } peerLocalizationOtherPosition_t;
 
 // Tell the peer localization system the position of another Crazyflie.
 // Should be called when the position is already known with high accuracy,
 // e.g. when a motion capture measurement packet is received.
 bool peerLocalizationTellPosition(int id, positionMeasurement_t const *pos);
+
+// Tell the peer localization system the pose of another Crazyflie.
+// Should be called when the pose is already known with high accuracy,
+// e.g. when a motion capture measurement packet is received.
+bool peerLocalizationTellPose(int id, poseMeasurement_t const *pose);
 
 // Returns true if we have a position value for the given radio ID.
 bool peerLocalizationIsIDActive(uint8_t id);

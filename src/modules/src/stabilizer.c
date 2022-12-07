@@ -130,7 +130,9 @@ static struct {
 // for payloads
 static float payload_alpha = 0.9; // between 0...1; 1: no filter
 static point_t payload_pos_last;         // m   (world frame)
+static quaternion_t payload_quat_last;
 static velocity_t payload_vel_last;      // m/s (world frame)
+static Axis3f payload_omega_last;
 
 STATIC_MEM_TASK_ALLOC(stabilizerTask, STABILIZER_TASK_STACKSIZE);
 
@@ -312,13 +314,14 @@ static void stabilizerTask(void* param)
           // handle the payload
 
           // if we got a new state
-          if (payload_pos_last.timestamp < other->pos.timestamp) {
+          if (payload_pos_last.timestamp < other->timestamp) {
             struct vec vel_filtered = vzero();
+            struct vec omega_filtered = vzero();
             // in the beginning, estimate the velocity to be zero, otherwise use
             // numeric estimation with filter
             if (payload_pos_last.timestamp != 0) {
               // estimate the velocity numerically
-              const float dt = (other->pos.timestamp - payload_pos_last.timestamp) / 1000.0f; //s
+              const float dt = (other->timestamp - payload_pos_last.timestamp) / 1000.0f; //s
               struct vec pos = mkvec(other->pos.x, other->pos.y, other->pos.z);
               struct vec last_pos = mkvec(payload_pos_last.x, payload_pos_last.y, payload_pos_last.z);
               struct vec vel = vdiv(vsub(pos, last_pos), dt);
@@ -326,25 +329,48 @@ static void stabilizerTask(void* param)
               // apply a simple complementary filter
               struct vec vel_old = mkvec(payload_vel_last.x, payload_vel_last.y, payload_vel_last.z);
               vel_filtered = vadd(vscl(1.0f - payload_alpha, vel_old), vscl(payload_alpha, vel));
+
+              // estimate omega numerically
+              struct quat q = mkquat(other->orientation.x, other->orientation.y, other->orientation.z, other->orientation.w);
+              struct quat last_q = mkquat(payload_quat_last.x, payload_quat_last.y, payload_quat_last.z, payload_quat_last.w);
+              struct vec omega = quat2omega(last_q, q, dt);
+              struct vec omega_old = mkvec(payload_omega_last.x, payload_omega_last.y, payload_omega_last.z);
+              omega_filtered = vadd(vscl(1.0f - payload_alpha, omega_old), vscl(payload_alpha, omega));
             }
             // update the position
             state.payload_pos.x = other->pos.x;
             state.payload_pos.y = other->pos.y;
             state.payload_pos.z = other->pos.z;
-            state.payload_pos.timestamp = other->pos.timestamp;
+            state.payload_pos.timestamp = other->timestamp;
+
+            // update the orientation
+            state.payload_quat.x = other->orientation.x;
+            state.payload_quat.y = other->orientation.y;
+            state.payload_quat.z = other->orientation.z;
+            state.payload_quat.w = other->orientation.w;
+            state.payload_quat.timestamp = other->timestamp;
 
             // update the velocity
             state.payload_vel.x = vel_filtered.x;
             state.payload_vel.y = vel_filtered.y;
             state.payload_vel.z = vel_filtered.z;
-            state.payload_vel.timestamp = other->pos.timestamp;
+            state.payload_vel.timestamp = other->timestamp;
+
+            // update the angular velocity
+            state.payload_omega.x = omega_filtered.x;
+            state.payload_omega.y = omega_filtered.y;
+            state.payload_omega.z = omega_filtered.z;
             
             // update state
             payload_pos_last = state.payload_pos;
+            payload_quat_last = state.payload_quat;
             payload_vel_last = state.payload_vel;
+            payload_omega_last = state.payload_omega;
           } else {
             state.payload_pos = payload_pos_last;
+            state.payload_quat = payload_quat_last;
             state.payload_vel = payload_vel_last;
+            state.payload_omega = payload_omega_last;
           }
 
         } else if (num_neighbors < MAX_NEIGHBOR_UAVS) {
@@ -825,6 +851,73 @@ LOG_ADD_CORE(LOG_FLOAT, qz, &state.attitudeQuaternion.z)
  * @brief Attitude as a quaternion, w
  */
 LOG_ADD_CORE(LOG_FLOAT, qw, &state.attitudeQuaternion.w)
+
+
+/**
+ * @brief The position of the payload in the global reference frame, X [m]
+ */
+LOG_ADD(LOG_FLOAT, px, &state.payload_pos.x)
+
+/**
+ * @brief The position of the payload in the global reference frame, Y [m]
+ */
+LOG_ADD(LOG_FLOAT, py, &state.payload_pos.y)
+
+/**
+ * @brief The position of the payload in the global reference frame, Z [m]
+ */
+LOG_ADD(LOG_FLOAT, pz, &state.payload_pos.z)
+
+/**
+ * @brief The orientation of the payload in the global reference frame
+ */
+LOG_ADD(LOG_FLOAT, pqx, &state.payload_quat.x)
+
+/**
+ * @brief The orientation of the payload in the global reference frame
+ */
+LOG_ADD(LOG_FLOAT, pqy, &state.payload_quat.y)
+
+/**
+ * @brief The orientation of the payload in the global reference frame
+ */
+LOG_ADD(LOG_FLOAT, pqz, &state.payload_quat.z)
+
+/**
+ * @brief The orientation of the payload in the global reference frame
+ */
+LOG_ADD(LOG_FLOAT, pqw, &state.payload_quat.w)
+
+/**
+ * @brief The velocity of the payload in the global reference frame, X [m/s]
+ */
+LOG_ADD(LOG_FLOAT, pvx, &state.payload_vel.x)
+
+/**
+ * @brief The velocity of the payload in the global reference frame, Y [m/s]
+ */
+LOG_ADD(LOG_FLOAT, pvy, &state.payload_vel.y)
+
+/**
+ * @brief The velocity of the payload in the global reference frame, Z [m/s]
+ */
+LOG_ADD(LOG_FLOAT, pvz, &state.payload_vel.z)
+
+/**
+ * @brief Angular velocity of the payload, X [rad/s]
+ */
+LOG_ADD(LOG_FLOAT, pwx, &state.payload_omega.x)
+
+/**
+ * @brief Angular velocity of the payload, Y [rad/s]
+ */
+LOG_ADD(LOG_FLOAT, pwy, &state.payload_omega.y)
+
+/**
+ * @brief Angular velocity of the payload, Z [rad/s]
+ */
+LOG_ADD(LOG_FLOAT, pwz, &state.payload_omega.z)
+
 LOG_GROUP_STOP(stateEstimate)
 
 /**

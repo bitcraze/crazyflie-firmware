@@ -196,21 +196,23 @@ static void extPosePackedHandler(const CRTPPacket* pk) {
   uint8_t numItems = (pk->size - 1) / sizeof(extPosePackedItem);
   for (uint8_t i = 0; i < numItems; ++i) {
     const extPosePackedItem* item = (const extPosePackedItem*)&pk->data[1 + i * sizeof(extPosePackedItem)];
+
+    ext_pose.x = item->x / 1000.0f;
+    ext_pose.y = item->y / 1000.0f;
+    ext_pose.z = item->z / 1000.0f;
+    quatdecompress(item->quat, (float *)&ext_pose.quat.q0);
+    ext_pose.stdDevPos = extPosStdDev;
+    ext_pose.stdDevQuat = extQuatStdDev;
+
     if (item->id == my_id) {
-      ext_pose.x = item->x / 1000.0f;
-      ext_pose.y = item->y / 1000.0f;
-      ext_pose.z = item->z / 1000.0f;
-      quatdecompress(item->quat, (float *)&ext_pose.quat.q0);
-      ext_pose.stdDevPos = extPosStdDev;
-      ext_pose.stdDevQuat = extQuatStdDev;
       estimatorEnqueuePose(&ext_pose);
       tickOfLastPacket = xTaskGetTickCount();
     } else {
-      ext_pos.x = item->x / 1000.0f;
-      ext_pos.y = item->y / 1000.0f;
-      ext_pos.z = item->z / 1000.0f;
-      ext_pos.stdDev = extPosStdDev;
-      peerLocalizationTellPosition(item->id, &ext_pos);
+      // ext_pos.x = item->x / 1000.0f;
+      // ext_pos.y = item->y / 1000.0f;
+      // ext_pos.z = item->z / 1000.0f;
+      // ext_pos.stdDev = extPosStdDev;
+      peerLocalizationTellPose(item->id, &ext_pose);
     }
   }
 }
