@@ -256,6 +256,15 @@ static void pmGracefulShutdown()
   syslinkSendPacket(&slp);
 }
 
+static void pmEnableBatteryStatusAutoupdate()
+{
+  SyslinkPacket slp = {
+    .type = SYSLINK_PM_BATTERY_AUTOUPDATE,
+  };
+
+  syslinkSendPacket(&slp);
+}
+
 void pmSyslinkUpdate(SyslinkPacket *slp)
 {
   if (slp->type == SYSLINK_PM_BATTERY_STATE) {
@@ -398,6 +407,10 @@ void pmTask(void *param)
 
   pmSetChargeState(charge500mA);
   systemWaitStart();
+
+  // Continuous battery voltage and status messages must be enabled
+  // after system startup to avoid syslink queue overflow.
+  pmEnableBatteryStatusAutoupdate();
 
   while(1)
   {
