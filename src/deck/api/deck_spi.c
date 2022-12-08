@@ -96,7 +96,7 @@ void spiBegin(void)
   GPIO_InitTypeDef GPIO_InitStructure;
 
   // binary semaphores created using xSemaphoreCreateBinary() are created in a state
-  // such that the the semaphore must first be 'given' before it can be 'taken'
+  // such that the semaphore must first be 'given' before it can be 'taken'
   txComplete = xSemaphoreCreateBinary();
   rxComplete = xSemaphoreCreateBinary();
   spiMutex = xSemaphoreCreateMutex();
