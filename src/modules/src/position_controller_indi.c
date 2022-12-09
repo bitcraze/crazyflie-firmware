@@ -116,7 +116,7 @@ void positionControllerINDIInit(void)
 
 
 void positionControllerINDI(const sensorData_t *sensors,
-                            setpoint_t *setpoint,
+                            const setpoint_t *setpoint,
                             const state_t *state, 
                             vector_t *refOuterINDI){ 
 
