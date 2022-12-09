@@ -256,7 +256,8 @@ void uartslkResumeRx(void)
   NVIC_EnableIRQ(UARTSLK_IRQ);
 }
 
-void uartslkEnableIncoming() {
+void uartslkEnableIncoming()
+{
   syslinkPacketDeliveryReadyToReceive = true;
 }
 
@@ -439,7 +440,8 @@ static void uartslkDmaRXIsr(void)
     // Post the packet to the queue if there's room
     if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
     {
-      if (syslinkPacketDeliveryReadyToReceive) {
+      if (syslinkPacketDeliveryReadyToReceive)
+      {
         xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, &xHigherPriorityTaskWoken);
       }
     }
@@ -536,7 +538,8 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       // Post the packet to the queue if there's room
       if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
       {
-        if (syslinkPacketDeliveryReadyToReceive) {
+        if (syslinkPacketDeliveryReadyToReceive)
+        {
           xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
         }
       }
