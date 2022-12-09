@@ -127,7 +127,7 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
   DEBUG_PRINT("Using %s (%d) estimator\n", stateEstimatorGetName(), currentEstimator);
 }
 
-StateEstimatorType getStateEstimator(void) {
+StateEstimatorType stateEstimatorGetType(void) {
   return currentEstimator;
 }
 

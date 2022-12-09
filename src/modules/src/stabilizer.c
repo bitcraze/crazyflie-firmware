@@ -182,8 +182,8 @@ void stabilizerInit(StateEstimatorType estimator)
   powerDistributionInit();
   motorsInit(platformConfigGetMotorMapping());
   collisionAvoidanceInit();
-  estimatorType = getStateEstimator();
-  controllerType = getControllerType();
+  estimatorType = stateEstimatorGetType();
+  controllerType = controllerGetType();
 
   STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
 
@@ -271,14 +271,14 @@ static void stabilizerTask(void* param)
       healthRunTests(&sensorData);
     } else {
       // allow to update estimator dynamically
-      if (getStateEstimator() != estimatorType) {
+      if (stateEstimatorGetType() != estimatorType) {
         stateEstimatorSwitchTo(estimatorType);
-        estimatorType = getStateEstimator();
+        estimatorType = stateEstimatorGetType();
       }
       // allow to update controller dynamically
-      if (getControllerType() != controllerType) {
+      if (controllerGetType() != controllerType) {
         controllerInit(controllerType);
-        controllerType = getControllerType();
+        controllerType = controllerGetType();
       }
 
       stateEstimator(&state, tick);

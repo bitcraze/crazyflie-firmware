@@ -65,7 +65,7 @@ void controllerInit(ControllerType controller) {
   DEBUG_PRINT("Using %s (%d) controller\n", controllerGetName(), currentController);
 }
 
-ControllerType getControllerType(void) {
+ControllerType controllerGetType(void) {
   return currentController;
 }
 

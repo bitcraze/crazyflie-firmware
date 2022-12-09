@@ -79,7 +79,7 @@ void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
 void stateEstimator(state_t *state, const uint32_t tick);
-StateEstimatorType getStateEstimator(void);
+StateEstimatorType stateEstimatorGetType(void);
 const char* stateEstimatorGetName();
 
 // Support to incorporate additional sensors into the state estimate via the following functions
