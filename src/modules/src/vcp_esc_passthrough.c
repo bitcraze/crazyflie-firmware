@@ -38,8 +38,10 @@
 #include "usb.h"
 #include "motors.h"
 #include "serial_4way.h"
+#include "msp.h"
 #include "uart_syslink.h"
 #include "sensors.h"
+#include "debug.h"
 
 static TaskHandle_t passthroughTaskHandle;
 STATIC_MEM_TASK_ALLOC(passthroughTask, PASSTHROUGH_TASK_STACKSIZE);
@@ -102,16 +104,47 @@ void passthroughVcpTxSend(uint8_t Ch)
   ASSERT(xQueueSend(ptTxQueue, &Ch, 0) == pdTRUE);
 }
 
-int  passthroughVcpTxReceiveFromISR(uint8_t* receiveChPtr)
+void passthroughVcpTxSendBlock(uint8_t Ch)
+{
+  ASSERT(xQueueSend(ptTxQueue, &Ch, portMAX_DELAY) == pdTRUE);
+}
+
+int passthroughVcpTxReceiveFromISR(uint8_t* receiveChPtr)
 {
   BaseType_t xHigherPriorityTaskWoken;
   return xQueueReceiveFromISR(ptTxQueue, receiveChPtr, &xHigherPriorityTaskWoken);
 }
 
+// MSP STUFF
+static uint8_t ReadByte(void)
+{
+    uint8_t byte;
+    passthroughVcpRxReceiveBlock(&byte);
+    return byte;
+}
+void mspCb(uint8_t* pBuffer, uint32_t bufferLen) {
+  // Sent all data through serial
+  DEBUG_PRINT("TX: ");
+  for (int i = 0; i < bufferLen; i++) {
+    uint8_t byte = pBuffer[i];
+    DEBUG_PRINT("%02d ", byte);
+    passthroughVcpTxSendBlock(byte);
+  }
+  DEBUG_PRINT("\n");
+}
+
+static MspObject pMspObject;
 
 void passthroughTask(void *param)
 {
   systemWaitStart();
+
+  mspInit(&pMspObject, mspCb);
+  while (true) {
+    uint8_t byte = ReadByte();
+    DEBUG_PRINT("%02d ", byte);
+    mspProcessByte(&pMspObject, byte);
+  }
 
   while (true)
   {
@@ -121,6 +154,8 @@ void passthroughTask(void *param)
     // ESC 1-wire interface is bit-banging so some interrupts must be suspended
     uartslkPauseRx();
     sensorsSuspend();
+
+    //mspInit();
 
     // Suspend motor signal output and init them as normal GPIO
     esc4wayInit();

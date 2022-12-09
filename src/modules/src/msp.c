@@ -36,10 +36,22 @@
 #include "commander.h"
 
 // MSP command IDs
-#define MSP_STATUS    101
-#define MSP_RC        105
-#define MSP_ATTITUDE  108
-#define MSP_BOXIDS    119
+typedef enum {
+  MSP_API_VERSION = 1,
+  MSP_FC_VARIANT  = 2,
+  MSP_FC_VERSION  = 3,
+  MSP_BOARD_INFO  = 4,
+  MSP_BUILD_INFO  = 5,
+
+  MSP_STATUS      = 101,
+  MSP_RC          = 105,
+  MSP_ATTITUDE    = 108,
+  MSP_BOXIDS      = 119,
+
+  MSP_UID         = 160, // Unique device ID
+
+  MSP_SET_4WAY_IF = 245
+} msp_command_t;
 
 // Misc MSP header defines
 #define MSP_PREAMBLE_0    '$'
@@ -90,19 +102,60 @@ typedef struct _MspRc
   uint16_t roll;      // Range [1000,2000]
   uint16_t pitch;     // Range [1000,2000]
   uint16_t yaw;       // Range [1000,2000]
-  uint16_t throttle;  // Range [1000,2000] 
+  uint16_t throttle;  // Range [1000,2000]
 }__attribute__((packed)) MspRc;
+
+typedef struct _MspApiVersion
+{
+  uint8_t protocolVersion;
+  uint8_t apiVersion[2];
+}__attribute__((packed)) MspApiVersion;
+
+typedef struct _MspFcVariant
+{
+  char variant[4];
+}__attribute__((packed)) MspFcVariant;
+
+typedef struct _MspFcVersion
+{
+  uint8_t version[3];
+}__attribute__((packed)) MspFcVersion;
+
+typedef struct _MspBoardInfo
+{
+  char board_info[4];
+  uint8_t board_version[2];
+}__attribute__((packed)) MspBoardInfo;
+
+typedef struct _MspBuildInfo
+{
+  char date[11];
+  char time[8];
+}__attribute__((packed)) MspBuildInfo;
+
+typedef struct _MspUid
+{
+  uint32_t uid[3];
+}__attribute__((packed)) MspUid;
 
 // Helpers
 static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen);
 static bool mspIsRequestValid(MspObject* pMspObject);
 static void mspProcessRequest(MspObject* pMspObject);
+static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen);
+static void mspTxPacketToBuf(uint8_t* buf, const MspObject* pMspObject);
 
 // Request handlers
 static void mspHandleRequestMspStatus(MspObject* pMspObject);
 static void mspHandleRequestMspRc(MspObject* pMspObject);
 static void mspHandleRequestMspAttitude(MspObject* pMspObject);
 static void mspHandleRequestMspBoxIds(MspObject* pMspObject);
+static void mspHandleRequestsApiVersion(MspObject* pMspObject);
+static void mspHandleRequestsFcVariant(MspObject* pMspObject);
+static void mspHandleRequestsFcVersion(MspObject* pMspObject);
+static void mspHandleRequestsBoardInfo(MspObject* pMspObject);
+static void mspHandleRequestsBuildInfo(MspObject* pMspObject);
+static void mspHandleRequestsUiid(MspObject* pMspObject);
 
 void mspInit(MspObject* pMspObject, const MspResponseCallback callback)
 {
@@ -229,48 +282,51 @@ void mspProcessRequest(MspObject* pMspObject)
     return;
   }
 
+  DEBUG_PRINT("Request: %d\n", pMspObject->requestHeader.command);
+
   switch(pMspObject->requestHeader.command)
   {
-  case MSP_STATUS:
-    mspHandleRequestMspStatus(pMspObject);
-
-    if(pMspObject->responseCallback)
-    {
-      pMspObject->responseCallback(pMspObject->mspResponse, pMspObject->mspResponseSize);
-    }
-    break;
-
-  case MSP_RC:
-    mspHandleRequestMspRc(pMspObject);
-
-    if(pMspObject->responseCallback)
-    {
-      pMspObject->responseCallback(pMspObject->mspResponse, pMspObject->mspResponseSize);
-    }
-    break;
-
-  case MSP_ATTITUDE:
-    mspHandleRequestMspAttitude(pMspObject);
-
-    if(pMspObject->responseCallback)
-    {
-      pMspObject->responseCallback(pMspObject->mspResponse, pMspObject->mspResponseSize);
-    }
-    break;
-
-  case MSP_BOXIDS:
-    mspHandleRequestMspBoxIds(pMspObject);
-    
-    if(pMspObject->responseCallback)
-    {
-      pMspObject->responseCallback(pMspObject->mspResponse, pMspObject->mspResponseSize);
-    }
-    break;
-
-  default:
-    DEBUG_PRINT("Received unsupported MSP request: %d\n", pMspObject->requestHeader.command);
-    break;
+    case MSP_STATUS:
+      mspHandleRequestMspStatus(pMspObject);
+      break;
+    case MSP_RC:
+      mspHandleRequestMspRc(pMspObject);
+      break;
+    case MSP_ATTITUDE:
+      mspHandleRequestMspAttitude(pMspObject);
+      break;
+    case MSP_BOXIDS:
+      mspHandleRequestMspBoxIds(pMspObject);
+      break;
+    case MSP_API_VERSION:
+      mspHandleRequestsApiVersion(pMspObject);
+      break;
+    case MSP_FC_VARIANT:
+      mspHandleRequestsFcVariant(pMspObject);
+      break;
+    case MSP_FC_VERSION:
+      mspHandleRequestsFcVersion(pMspObject);
+      break;
+    case MSP_BOARD_INFO:
+      mspHandleRequestsBoardInfo(pMspObject);
+      break;
+    case MSP_BUILD_INFO:
+      mspHandleRequestsBuildInfo(pMspObject);
+      break;
+    case MSP_UID:
+      mspHandleRequestsUiid(pMspObject);
+      break;
+    default:
+      DEBUG_PRINT("Received unsupported MSP request: %d\n", pMspObject->requestHeader.command);
+      return;
+      break;
   }
+
+  if(pMspObject->responseCallback)
+  {
+    pMspObject->responseCallback(pMspObject->mspResponse, pMspObject->mspResponseSize);
+  }
+
 }
 
 void mspHandleRequestMspStatus(MspObject* pMspObject)
@@ -368,9 +424,9 @@ static void mspHandleRequestMspBoxIds(MspObject* pMspObject)
   pHeader->direction = MSP_DIRECTION_OUT;
   pHeader->size = sizeof(*pData);
   pHeader->command = MSP_BOXIDS;
-  
+
   // TODO: Data - this needs to be properly implemented
-  // For now, we just return byte 0 = 0 which tells 
+  // For now, we just return byte 0 = 0 which tells
   // the client to use box ID 0 for the ARMED box
   pData[0] = 0x00;
 
@@ -379,4 +435,82 @@ static void mspHandleRequestMspBoxIds(MspObject* pMspObject)
 
   // Update total response size
   pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
+}
+
+static void mspHandleRequestsApiVersion(MspObject* pMspObject)
+{
+  MspApiVersion* apiVersion = (MspApiVersion*)(pMspObject->mspResponse + sizeof(MspHeader));
+  apiVersion->protocolVersion = 2;
+  apiVersion->apiVersion[0] = 3;
+  mspMakeTxPacket(pMspObject, MSP_API_VERSION, apiVersion, sizeof(MspApiVersion));
+}
+
+static void mspHandleRequestsFcVariant(MspObject* pMspObject)
+{
+  MspFcVariant* fcVariant = (MspFcVariant*)(pMspObject->mspResponse + sizeof(MspHeader));
+  fcVariant->variant[0] = 'C';
+  fcVariant->variant[1] = 'F';
+  fcVariant->variant[2] = '2';
+  mspMakeTxPacket(pMspObject, MSP_FC_VARIANT, fcVariant, sizeof(MspFcVariant));
+}
+
+static void mspHandleRequestsFcVersion(MspObject* pMspObject)
+{
+  MspFcVersion* fcVersion = (MspFcVersion*)(pMspObject->mspResponse + sizeof(MspHeader));
+  mspMakeTxPacket(pMspObject, MSP_FC_VERSION, fcVersion, sizeof(MspFcVersion));
+}
+
+static void mspHandleRequestsBoardInfo(MspObject* pMspObject)
+{
+  MspBoardInfo* boardInfo = (MspBoardInfo*)(pMspObject->mspResponse + sizeof(MspHeader));
+  mspMakeTxPacket(pMspObject, MSP_BOARD_INFO, boardInfo, sizeof(MspBoardInfo));
+}
+
+static void mspHandleRequestsBuildInfo(MspObject* pMspObject)
+{
+  MspBuildInfo* buildInfo = (MspBuildInfo*)(pMspObject->mspResponse + sizeof(MspHeader));
+  mspMakeTxPacket(pMspObject, MSP_BUILD_INFO, buildInfo, sizeof(MspBuildInfo));
+}
+
+static void mspHandleRequestsUiid(MspObject* pMspObject)
+{
+  MspUid* uuid = (MspUid*)(pMspObject->mspResponse + sizeof(MspHeader));
+  mspMakeTxPacket(pMspObject, MSP_UID, uuid, sizeof(MspUid));
+}
+
+static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen) {
+  MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
+  uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
+  uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + dataLen);
+
+  pHeader->preamble[0] = '$';
+  pHeader->preamble[1] = 'M';
+  pHeader->direction = '>';
+  pHeader->size = dataLen;
+  pHeader->command = command;
+  memcpy(pData, data, dataLen);
+
+  uint8_t checksum = pHeader->size ^ pHeader->command;
+  for (int i = 0; i < dataLen; i++) {
+      checksum ^= pData[i];
+  }
+  *pCrc = checksum;
+
+  // Update the packets entire size. +1 is the CRC
+  pMspObject->mspResponseSize = sizeof(MspHeader) + dataLen + 1;
+}
+
+static void mspTxPacketToBuf(uint8_t* buf, const MspObject* pMspObject) {
+  uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
+
+  // Header: <preamble>,<direction>,<size>,<command>
+  buf[0] = pMspObject->requestHeader.preamble[0];
+  buf[1] = pMspObject->requestHeader.preamble[1];
+  buf[2] = pMspObject->requestHeader.direction;
+  buf[3] = pMspObject->requestHeader.size;
+  buf[4] = pMspObject->requestHeader.command;
+  // Data
+  memcpy(&buf[5], pData, pMspObject->requestHeader.size);
+  // CRC
+  buf[5 + pMspObject->requestHeader.size] = pMspObject->requestCrc;
 }
