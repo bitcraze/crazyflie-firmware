@@ -95,6 +95,14 @@ void uartslkResumeRx(void);
 struct crtpLinkOperations * uartslkGetLink();
 
 /**
+ * @brief Enable posting of incoming data to the message queue.
+ * This function should be called when the consumers of syslink data
+ * have been started to avoid queue overflow. Before this function is called, incoming syslink data is
+ * discarded.
+ */
+void uartslkEnableIncoming();
+
+/**
  * Get data from rx queue. Blocks until data is available.
  * @param[out] slp Pointer to a complete syslink packet
  */

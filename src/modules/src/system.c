@@ -199,6 +199,10 @@ void systemTask(void *arg)
   estimatorKalmanTaskInit();
   #endif
 
+  // Enabling incoming syslink messages to be added to the queue.
+  // This should probably be done later, but deckInit() takes a long time if this is done later.
+  uartslkEnableIncoming();
+
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);

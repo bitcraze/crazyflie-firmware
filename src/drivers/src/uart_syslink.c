@@ -62,6 +62,7 @@ static xSemaphoreHandle uartBusy;
 static StaticSemaphore_t uartBusyBuffer;
 static xQueueHandle syslinkPacketDelivery;
 STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 8, sizeof(SyslinkPacket));
+static bool syslinkPacketDeliveryReadyToReceive = false;
 
 #ifdef CONFIG_SYSLINK_RX_DMA
 static uint8_t dmaRXBuffer[64];
@@ -255,6 +256,11 @@ void uartslkResumeRx(void)
   NVIC_EnableIRQ(UARTSLK_IRQ);
 }
 
+void uartslkEnableIncoming()
+{
+  syslinkPacketDeliveryReadyToReceive = true;
+}
+
 void uartslkGetPacketBlocking(SyslinkPacket* packet)
 {
   xQueueReceive(syslinkPacketDelivery, packet, portMAX_DELAY);
@@ -434,7 +440,10 @@ static void uartslkDmaRXIsr(void)
     // Post the packet to the queue if there's room
     if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
     {
-      xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, &xHigherPriorityTaskWoken);
+      if (syslinkPacketDeliveryReadyToReceive)
+      {
+        xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, &xHigherPriorityTaskWoken);
+      }
     }
     else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
@@ -529,7 +538,10 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       // Post the packet to the queue if there's room
       if (!xQueueIsQueueFullFromISR(syslinkPacketDelivery))
       {
-        xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
+        if (syslinkPacketDeliveryReadyToReceive)
+        {
+          xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
+        }
       }
       else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
