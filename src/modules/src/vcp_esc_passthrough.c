@@ -115,47 +115,23 @@ int passthroughVcpTxReceiveFromISR(uint8_t* receiveChPtr)
   return xQueueReceiveFromISR(ptTxQueue, receiveChPtr, &xHigherPriorityTaskWoken);
 }
 
-// MSP STUFF
-static uint8_t ReadByte(void)
-{
-    uint8_t byte;
-    passthroughVcpRxReceiveBlock(&byte);
-    return byte;
-}
-void mspCb(uint8_t* pBuffer, uint32_t bufferLen) {
-  // Sent all data through serial
-  DEBUG_PRINT("TX: ");
-  for (int i = 0; i < bufferLen; i++) {
-    uint8_t byte = pBuffer[i];
-    DEBUG_PRINT("%02d ", byte);
-    passthroughVcpTxSendBlock(byte);
-  }
-  DEBUG_PRINT("\n");
-}
-
-static MspObject pMspObject;
+static void blHeliConfigHandshake();
 
 void passthroughTask(void *param)
 {
   systemWaitStart();
-
-  mspInit(&pMspObject, mspCb);
-  while (true) {
-    uint8_t byte = ReadByte();
-    DEBUG_PRINT("%02d ", byte);
-    mspProcessByte(&pMspObject, byte);
-  }
 
   while (true)
   {
     // Wait for interface to be activated, typically when ACM or COM port control message is sent
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
+    // Before we start the 4way process, we must perform a "handshake" with the blheli configurator.
+    blHeliConfigHandshake();
+
     // ESC 1-wire interface is bit-banging so some interrupts must be suspended
     uartslkPauseRx();
     sensorsSuspend();
-
-    //mspInit();
 
     // Suspend motor signal output and init them as normal GPIO
     esc4wayInit();
@@ -171,3 +147,44 @@ void passthroughTask(void *param)
   }
 }
 
+
+static uint8_t ReadByte()
+{
+    uint8_t byte;
+    passthroughVcpRxReceiveBlock(&byte);
+    return byte;
+}
+
+static void mspCallback(uint8_t* pBuffer, uint32_t bufferLen)
+{
+  // Sent all data through serial
+  for (int i = 0; i < bufferLen; i++)
+  {
+    uint8_t byte = pBuffer[i];
+    passthroughVcpTxSendBlock(byte);
+  }
+}
+
+/*
+ * Performs a "handshake" that BLHeli Configurator uses during the connection.
+ * This "handshake" is done by sending some special MSP commands and responses.
+ * This method blocks until the handshake is complete.
+ */
+static void blHeliConfigHandshake()
+{
+  static bool isInit = false;
+  static MspObject pMspObject;
+
+  if (!isInit)
+  {
+    isInit = true;
+    mspInit(&pMspObject, mspCallback);
+  }
+
+  while (!mspHasSet4WayIf())
+  {
+    uint8_t byte = ReadByte();
+    mspProcessByte(&pMspObject, byte);
+    vTaskDelay(M2T(2));
+  }
+}

@@ -93,4 +93,8 @@ void mspInit(MspObject* pMspObject, const MspResponseCallback callback);
  */
 void mspProcessByte(MspObject* pMspObject, const uint8_t data);
 
+/*
+*/
+bool mspHasSet4WayIf();
+
 #endif /* MSP_H_ */

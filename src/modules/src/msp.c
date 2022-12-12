@@ -138,6 +138,13 @@ typedef struct _MspUid
   uint32_t uid[3];
 }__attribute__((packed)) MspUid;
 
+typedef struct _MspSet4WayIf
+{
+  uint8_t connectedEscs;
+}__attribute__((packed)) MspSet4WayIf;
+
+static bool _hasSet4WayIf = false;
+
 // Helpers
 static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen);
 static bool mspIsRequestValid(MspObject* pMspObject);
@@ -156,7 +163,9 @@ static void mspHandleRequestsFcVersion(MspObject* pMspObject);
 static void mspHandleRequestsBoardInfo(MspObject* pMspObject);
 static void mspHandleRequestsBuildInfo(MspObject* pMspObject);
 static void mspHandleRequestsUiid(MspObject* pMspObject);
+static void mspHandleRequestsSet4WayIf(MspObject* pMspObject);
 
+// Public API
 void mspInit(MspObject* pMspObject, const MspResponseCallback callback)
 {
   pMspObject->requestState = MSP_REQUEST_STATE_WAIT_FOR_START;
@@ -211,7 +220,12 @@ void mspProcessByte(MspObject* pMspObject, const uint8_t data)
   }
 }
 
-uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen)
+bool mspHasSet4WayIf()
+{
+  return _hasSet4WayIf;
+}
+
+// Private
 {
   uint8_t crc = 0;
 
@@ -299,6 +313,7 @@ void mspProcessRequest(MspObject* pMspObject)
       mspHandleRequestMspBoxIds(pMspObject);
       break;
     case MSP_API_VERSION:
+      _hasSet4WayIf = false;
       mspHandleRequestsApiVersion(pMspObject);
       break;
     case MSP_FC_VARIANT:
@@ -315,6 +330,10 @@ void mspProcessRequest(MspObject* pMspObject)
       break;
     case MSP_UID:
       mspHandleRequestsUiid(pMspObject);
+      break;
+    case MSP_SET_4WAY_IF:
+      mspHandleRequestsSet4WayIf(pMspObject);
+      _hasSet4WayIf = true;
       break;
     default:
       DEBUG_PRINT("Received unsupported MSP request: %d\n", pMspObject->requestHeader.command);
@@ -478,6 +497,13 @@ static void mspHandleRequestsUiid(MspObject* pMspObject)
   mspMakeTxPacket(pMspObject, MSP_UID, uuid, sizeof(MspUid));
 }
 
+static void mspHandleRequestsSet4WayIf(MspObject* pMspObject)
+{
+  MspSet4WayIf* set4WayIf = (MspSet4WayIf*)(pMspObject->mspResponse + sizeof(MspHeader));
+  set4WayIf->connectedEscs = 4;
+  mspMakeTxPacket(pMspObject, MSP_SET_4WAY_IF, set4WayIf, sizeof(MspSet4WayIf));
+}
+
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen) {
   MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
@@ -490,11 +516,7 @@ static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, 
   pHeader->command = command;
   memcpy(pData, data, dataLen);
 
-  uint8_t checksum = pHeader->size ^ pHeader->command;
-  for (int i = 0; i < dataLen; i++) {
-      checksum ^= pData[i];
-  }
-  *pCrc = checksum;
+  *pCrc = mspComputeCrc(pMspObject->mspResponse, sizeof(pMspObject->mspResponse));
 
   // Update the packets entire size. +1 is the CRC
   pMspObject->mspResponseSize = sizeof(MspHeader) + dataLen + 1;
