@@ -41,7 +41,6 @@
 #include "msp.h"
 #include "uart_syslink.h"
 #include "sensors.h"
-#include "debug.h"
 
 static TaskHandle_t passthroughTaskHandle;
 STATIC_MEM_TASK_ALLOC(passthroughTask, PASSTHROUGH_TASK_STACKSIZE);
@@ -53,6 +52,14 @@ static xQueueHandle  ptRxQueue;
 STATIC_MEM_QUEUE_ALLOC(ptRxQueue, 512, sizeof(uint8_t));
 static xQueueHandle  ptTxQueue;
 STATIC_MEM_QUEUE_ALLOC(ptTxQueue, 512, sizeof(uint8_t));
+
+// Helper
+/*
+ * Performs a "handshake" that BLHeli Configurator uses during the connection.
+ * This "handshake" is done by sending some special MSP commands and responses.
+ * This method blocks until the handshake is complete.
+ */
+static void blHeliConfigHandshake();
 
 void passthroughTask(void *param);
 
@@ -115,8 +122,6 @@ int passthroughVcpTxReceiveFromISR(uint8_t* receiveChPtr)
   return xQueueReceiveFromISR(ptTxQueue, receiveChPtr, &xHigherPriorityTaskWoken);
 }
 
-static void blHeliConfigHandshake();
-
 void passthroughTask(void *param)
 {
   systemWaitStart();
@@ -147,8 +152,7 @@ void passthroughTask(void *param)
   }
 }
 
-
-static uint8_t ReadByte()
+static uint8_t readByteBlocking()
 {
     uint8_t byte;
     passthroughVcpRxReceiveBlock(&byte);
@@ -165,11 +169,6 @@ static void mspCallback(uint8_t* pBuffer, uint32_t bufferLen)
   }
 }
 
-/*
- * Performs a "handshake" that BLHeli Configurator uses during the connection.
- * This "handshake" is done by sending some special MSP commands and responses.
- * This method blocks until the handshake is complete.
- */
 static void blHeliConfigHandshake()
 {
   static bool isInit = false;
@@ -183,7 +182,7 @@ static void blHeliConfigHandshake()
 
   while (!mspHasSet4WayIf())
   {
-    uint8_t byte = ReadByte();
+    uint8_t byte = readByteBlocking();
     mspProcessByte(&pMspObject, byte);
     vTaskDelay(M2T(2));
   }

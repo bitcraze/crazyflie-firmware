@@ -36,6 +36,8 @@
 #include "commander.h"
 #include "version.h"
 #include "motors.h"
+#include "string.h"
+#include "platform.h"
 
 // MSP command IDs
 typedef enum {
@@ -145,7 +147,7 @@ typedef struct _MspSet4WayIf
   uint8_t connectedEscs;
 }__attribute__((packed)) MspSet4WayIf;
 
-static bool _hasSet4WayIf = false;
+static bool hasSet4WayIf = false;
 
 // Helpers
 static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen);
@@ -223,7 +225,7 @@ void mspProcessByte(MspObject* pMspObject, const uint8_t data)
 
 bool mspHasSet4WayIf()
 {
-  return _hasSet4WayIf;
+  return hasSet4WayIf;
 }
 
 // Private
@@ -315,7 +317,7 @@ static void mspProcessRequest(MspObject* pMspObject)
       mspHandleRequestMspBoxIds(pMspObject);
       break;
     case MSP_API_VERSION:
-      _hasSet4WayIf = false;
+      hasSet4WayIf = false;
       mspHandleRequestsApiVersion(pMspObject);
       break;
     case MSP_FC_VARIANT:
@@ -335,7 +337,7 @@ static void mspProcessRequest(MspObject* pMspObject)
       break;
     case MSP_SET_4WAY_IF:
       mspHandleRequestsSet4WayIf(pMspObject);
-      _hasSet4WayIf = true;
+      hasSet4WayIf = true;
       break;
     default:
       DEBUG_PRINT("Received unsupported MSP request: %d\n", pMspObject->requestHeader.command);
@@ -464,14 +466,14 @@ static void mspHandleRequestsApiVersion(MspObject* pMspObject)
   MspApiVersion* apiVersion = (MspApiVersion*)(pMspObject->mspResponse + sizeof(MspHeader));
   apiVersion->protocolVersion = 2;
   apiVersion->apiVersion[0] = 3;
-  mspMakeTxPacket(pMspObject, MSP_API_VERSION, apiVersion, sizeof(MspApiVersion));
+  mspMakeTxPacket(pMspObject, MSP_API_VERSION, (uint8_t*) apiVersion, sizeof(MspApiVersion));
 }
 
 static void mspHandleRequestsFcVariant(MspObject* pMspObject)
 {
   MspFcVariant* fcVariant = (MspFcVariant*)(pMspObject->mspResponse + sizeof(MspHeader));
   memcpy(fcVariant->variant, "CF2 ", 4);
-  mspMakeTxPacket(pMspObject, MSP_FC_VARIANT, fcVariant, sizeof(MspFcVariant));
+  mspMakeTxPacket(pMspObject, MSP_FC_VARIANT, (uint8_t*) fcVariant, sizeof(MspFcVariant));
 }
 
 static void mspHandleRequestsFcVersion(MspObject* pMspObject)
@@ -480,7 +482,7 @@ static void mspHandleRequestsFcVersion(MspObject* pMspObject)
   fcVersion->version[0] = 2;
   fcVersion->version[1] = 1;
   fcVersion->version[2] = 0;
-  mspMakeTxPacket(pMspObject, MSP_FC_VERSION, fcVersion, sizeof(MspFcVersion));
+  mspMakeTxPacket(pMspObject, MSP_FC_VERSION, (uint8_t*) fcVersion, sizeof(MspFcVersion));
 }
 
 static void mspHandleRequestsBoardInfo(MspObject* pMspObject)
@@ -489,7 +491,7 @@ static void mspHandleRequestsBoardInfo(MspObject* pMspObject)
   memcpy(boardInfo->board_info, platformConfigGetDeviceTypeName(), 4);
   boardInfo->board_version[0] = 2;
   boardInfo->board_version[1] = 1;
-  mspMakeTxPacket(pMspObject, MSP_BOARD_INFO, boardInfo, sizeof(MspBoardInfo));
+  mspMakeTxPacket(pMspObject, MSP_BOARD_INFO, (uint8_t*) boardInfo, sizeof(MspBoardInfo));
 }
 
 static void mspHandleRequestsBuildInfo(MspObject* pMspObject)
@@ -497,7 +499,7 @@ static void mspHandleRequestsBuildInfo(MspObject* pMspObject)
   MspBuildInfo* buildInfo = (MspBuildInfo*)(pMspObject->mspResponse + sizeof(MspHeader));
   memcpy(buildInfo->date, V_STAG, 11);
   memset(buildInfo->time, 0, 8);
-  mspMakeTxPacket(pMspObject, MSP_BUILD_INFO, buildInfo, sizeof(MspBuildInfo));
+  mspMakeTxPacket(pMspObject, MSP_BUILD_INFO, (uint8_t*) buildInfo, sizeof(MspBuildInfo));
 }
 
 static void mspHandleRequestsUiid(MspObject* pMspObject)
@@ -506,14 +508,14 @@ static void mspHandleRequestsUiid(MspObject* pMspObject)
   uuid->uid[0] = *((int*)(MCU_ID_ADDRESS+8));
   uuid->uid[1] = *((int*)(MCU_ID_ADDRESS+4));
   uuid->uid[2] = *((int*)(MCU_ID_ADDRESS+0));
-  mspMakeTxPacket(pMspObject, MSP_UID, uuid, sizeof(MspUid));
+  mspMakeTxPacket(pMspObject, MSP_UID, (uint8_t*) uuid, sizeof(MspUid));
 }
 
 static void mspHandleRequestsSet4WayIf(MspObject* pMspObject)
 {
   MspSet4WayIf* set4WayIf = (MspSet4WayIf*)(pMspObject->mspResponse + sizeof(MspHeader));
   set4WayIf->connectedEscs = NBR_OF_MOTORS;
-  mspMakeTxPacket(pMspObject, MSP_SET_4WAY_IF, set4WayIf, sizeof(MspSet4WayIf));
+  mspMakeTxPacket(pMspObject, MSP_SET_4WAY_IF, (uint8_t*) set4WayIf, sizeof(MspSet4WayIf));
 }
 
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen) {
@@ -522,9 +524,9 @@ static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, 
   uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
   uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + dataLen);
 
-  pHeader->preamble[0] = '$';
-  pHeader->preamble[1] = 'M';
-  pHeader->direction = '>';
+  pHeader->preamble[0] = MSP_PREAMBLE_0;
+  pHeader->preamble[1] = MSP_PREAMBLE_1;
+  pHeader->direction = MSP_DIRECTION_OUT;
   pHeader->size = dataLen;
   pHeader->command = command;
   memcpy(pData, data, dataLen);
