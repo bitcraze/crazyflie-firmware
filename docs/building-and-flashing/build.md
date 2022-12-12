@@ -127,28 +127,40 @@ $ make -j 12
 
 Please go to [these instructions](/docs/development/kbuild.md) to learn how to use the menuconfig.
 
+
+### Build python bindings
+
+There are certain functions, like the high level commander and controllers, that have been wrapped to python bindings. These can be used to easily test these functions on a computer or use it in a simulation.
+
+```bash
+make cf2_defconfig
+make bindings_python
+```
+
+
 # Make targets
 
 
 
 ## General targets
 ```
-all        : Shortcut for build
-compile    : Compile cflie.hex. WARNING: Do NOT update version.c
-build      : Update version.c and compile cflie.elf/hex
-clean_o    : Clean only the Objects files, keep the executables (ie .elf, .hex)
-clean      : Clean every compiled files
-mrproper   : Clean every compiled files and the classical editors backup files
+all             : Shortcut for build
+compile         : Compile cflie.hex. WARNING: Do NOT update version.c
+build           : Update version.c and compile cflie.elf/hex
+clean_o         : Clean only the Objects files, keep the executables (ie .elf, .hex)
+clean           : Clean every compiled files
+mrproper        : Clean every compiled files and the classical editors backup files
 
-cload      : If the crazyflie-clients-python is placed on the same directory level and
+cload           : If the crazyflie-clients-python is placed on the same directory level and
              the Crazyradio/Crazyradio PA is inserted it will try to flash the firmware
              using the wireless bootloader.
-flash      : Flash .elf using OpenOCD
-halt       : Halt the target using OpenOCD
-reset      : Reset the target using OpenOCD
-openocd    : Launch OpenOCD
-rtt        : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SEGGER_RTT=1"
+flash           : Flash .elf using OpenOCD
+halt            : Halt the target using OpenOCD
+reset           : Reset the target using OpenOCD
+openocd         : Launch OpenOCD
+rtt             : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SEGGER_RTT=1"
              and the console is visible over TCP on port 2000 "telnet localhost 2000".
+bindings_python : Build the python bindings for firmware wrappers
 ```
 
 ## Noteable Kbuild targets
