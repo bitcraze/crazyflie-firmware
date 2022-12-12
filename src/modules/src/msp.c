@@ -227,6 +227,7 @@ bool mspHasSet4WayIf()
 }
 
 // Private
+static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen)
 {
   uint8_t crc = 0;
 
@@ -254,7 +255,7 @@ bool mspHasSet4WayIf()
   return crc;
 }
 
-bool mspIsRequestValid(MspObject* pMspObject)
+static bool mspIsRequestValid(MspObject* pMspObject)
 {
   if(pMspObject->requestHeader.preamble[0] != MSP_PREAMBLE_0 ||
       pMspObject->requestHeader.preamble[1] != MSP_PREAMBLE_1)
@@ -289,7 +290,7 @@ bool mspIsRequestValid(MspObject* pMspObject)
   return true;
 }
 
-void mspProcessRequest(MspObject* pMspObject)
+static void mspProcessRequest(MspObject* pMspObject)
 {
   if(!mspIsRequestValid(pMspObject))
   {
@@ -349,7 +350,7 @@ void mspProcessRequest(MspObject* pMspObject)
 
 }
 
-void mspHandleRequestMspStatus(MspObject* pMspObject)
+static void mspHandleRequestMspStatus(MspObject* pMspObject)
 {
   MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   MspStatus* pData = (MspStatus*)(pMspObject->mspResponse + sizeof(MspHeader));
@@ -376,7 +377,7 @@ void mspHandleRequestMspStatus(MspObject* pMspObject)
   pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
 }
 
-void mspHandleRequestMspRc(MspObject* pMspObject)
+static void mspHandleRequestMspRc(MspObject* pMspObject)
 {
   MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   MspRc* pData = (MspRc*)(pMspObject->mspResponse + sizeof(MspHeader));
