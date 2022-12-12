@@ -34,6 +34,8 @@
 #include "debug.h"
 #include "sensfusion6.h"
 #include "commander.h"
+#include "version.h"
+#include "motors.h"
 
 // MSP command IDs
 typedef enum {
@@ -150,7 +152,6 @@ static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen);
 static bool mspIsRequestValid(MspObject* pMspObject);
 static void mspProcessRequest(MspObject* pMspObject);
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen);
-static void mspTxPacketToBuf(uint8_t* buf, const MspObject* pMspObject);
 
 // Request handlers
 static void mspHandleRequestMspStatus(MspObject* pMspObject);
@@ -458,6 +459,7 @@ static void mspHandleRequestMspBoxIds(MspObject* pMspObject)
 
 static void mspHandleRequestsApiVersion(MspObject* pMspObject)
 {
+  // TODO: Not sure what version we're really using... Most of the protocol was simply reverse engineered from BLHeli Configurator.
   MspApiVersion* apiVersion = (MspApiVersion*)(pMspObject->mspResponse + sizeof(MspHeader));
   apiVersion->protocolVersion = 2;
   apiVersion->apiVersion[0] = 3;
@@ -467,44 +469,54 @@ static void mspHandleRequestsApiVersion(MspObject* pMspObject)
 static void mspHandleRequestsFcVariant(MspObject* pMspObject)
 {
   MspFcVariant* fcVariant = (MspFcVariant*)(pMspObject->mspResponse + sizeof(MspHeader));
-  fcVariant->variant[0] = 'C';
-  fcVariant->variant[1] = 'F';
-  fcVariant->variant[2] = '2';
+  memcpy(fcVariant->variant, "CF2 ", 4);
   mspMakeTxPacket(pMspObject, MSP_FC_VARIANT, fcVariant, sizeof(MspFcVariant));
 }
 
 static void mspHandleRequestsFcVersion(MspObject* pMspObject)
 {
   MspFcVersion* fcVersion = (MspFcVersion*)(pMspObject->mspResponse + sizeof(MspHeader));
+  fcVersion->version[0] = 2;
+  fcVersion->version[1] = 1;
+  fcVersion->version[2] = 0;
   mspMakeTxPacket(pMspObject, MSP_FC_VERSION, fcVersion, sizeof(MspFcVersion));
 }
 
 static void mspHandleRequestsBoardInfo(MspObject* pMspObject)
 {
   MspBoardInfo* boardInfo = (MspBoardInfo*)(pMspObject->mspResponse + sizeof(MspHeader));
+  memcpy(boardInfo->board_info, platformConfigGetDeviceTypeName(), 4);
+  boardInfo->board_version[0] = 2;
+  boardInfo->board_version[1] = 1;
   mspMakeTxPacket(pMspObject, MSP_BOARD_INFO, boardInfo, sizeof(MspBoardInfo));
 }
 
 static void mspHandleRequestsBuildInfo(MspObject* pMspObject)
 {
   MspBuildInfo* buildInfo = (MspBuildInfo*)(pMspObject->mspResponse + sizeof(MspHeader));
+  memcpy(buildInfo->date, V_STAG, 11);
+  memset(buildInfo->time, 0, 8);
   mspMakeTxPacket(pMspObject, MSP_BUILD_INFO, buildInfo, sizeof(MspBuildInfo));
 }
 
 static void mspHandleRequestsUiid(MspObject* pMspObject)
 {
   MspUid* uuid = (MspUid*)(pMspObject->mspResponse + sizeof(MspHeader));
+  uuid->uid[0] = *((int*)(MCU_ID_ADDRESS+8));
+  uuid->uid[1] = *((int*)(MCU_ID_ADDRESS+4));
+  uuid->uid[2] = *((int*)(MCU_ID_ADDRESS+0));
   mspMakeTxPacket(pMspObject, MSP_UID, uuid, sizeof(MspUid));
 }
 
 static void mspHandleRequestsSet4WayIf(MspObject* pMspObject)
 {
   MspSet4WayIf* set4WayIf = (MspSet4WayIf*)(pMspObject->mspResponse + sizeof(MspHeader));
-  set4WayIf->connectedEscs = 4;
+  set4WayIf->connectedEscs = NBR_OF_MOTORS;
   mspMakeTxPacket(pMspObject, MSP_SET_4WAY_IF, set4WayIf, sizeof(MspSet4WayIf));
 }
 
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen) {
+  // Packet structure: http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
   MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
   uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + dataLen);
@@ -520,19 +532,4 @@ static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, 
 
   // Update the packets entire size. +1 is the CRC
   pMspObject->mspResponseSize = sizeof(MspHeader) + dataLen + 1;
-}
-
-static void mspTxPacketToBuf(uint8_t* buf, const MspObject* pMspObject) {
-  uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
-
-  // Header: <preamble>,<direction>,<size>,<command>
-  buf[0] = pMspObject->requestHeader.preamble[0];
-  buf[1] = pMspObject->requestHeader.preamble[1];
-  buf[2] = pMspObject->requestHeader.direction;
-  buf[3] = pMspObject->requestHeader.size;
-  buf[4] = pMspObject->requestHeader.command;
-  // Data
-  memcpy(&buf[5], pData, pMspObject->requestHeader.size);
-  // CRC
-  buf[5 + pMspObject->requestHeader.size] = pMspObject->requestCrc;
 }
