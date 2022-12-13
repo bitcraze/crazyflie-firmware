@@ -140,6 +140,12 @@ void state_set_neighbor_position(state_t *state, int idx, float x, float y, floa
     state->position_neighbors[idx].z = z;
 }
 
+void attPoints_set_neighbors(controllerLeePayload_t* self, int idx, float x, float y, float z)
+{
+    self->attPForNeighbor[idx].x = x;
+    self->attPForNeighbor[idx].y = y;
+    self->attPForNeighbor[idx].z = z;
+}
 %}
 
 %pythoncode %{
