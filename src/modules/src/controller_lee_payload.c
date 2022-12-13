@@ -39,6 +39,7 @@ TODO
 #include "osqp.h"
 extern OSQPWorkspace workspace_2uav_2hp;
 extern OSQPWorkspace workspace_3uav_2hp;
+extern OSQPWorkspace workspace_3uav_2hp_rig;
 
 #define GRAVITY_MAGNITUDE (9.81f)
 
@@ -46,6 +47,7 @@ extern OSQPWorkspace workspace_3uav_2hp;
 struct QPInput
 {
   struct vec F_d;
+  struct vec M_d;
   struct vec plStPos;
   struct vec statePos;
   struct vec statePos2;
@@ -188,6 +190,13 @@ static controllerLeePayload_t g_self = {
   .Kpos_I ={10, 10, 10},
   .Kpos_I_limit = 0,
 
+  // Payload attitude gains
+
+  .Kprot_P = {0.01, 0.01, 0.01},
+  .Kprot_P_limit = 100,
+  .Kprot_D = {0.005, 0.005, 0.005},
+  .Kprot_D_limit = 100,
+
   // Cables PD
   .K_q = {25, 25, 25},
   .K_w = {24, 24, 24},
@@ -196,6 +205,9 @@ static controllerLeePayload_t g_self = {
   .KR = {0.008, 0.008, 0.01},
   .Komega = {0.0013, 0.0013, 0.002},
   .KI = {0.02, 0.02, 0.05},
+  // desired orientation and omega for payload
+  .qp_des = {0, 0, 0, 1},
+  .wp_des = {0, 0, 0},
   // -----------------------FOR QP----------------------------//
   // 0 for UAV 1 and, 1 for UAV 2
   .radius = 0.15,
@@ -211,6 +223,7 @@ static controllerLeePayload_t g_self = {
 static void runQP(const struct QPInput *input, struct QPOutput* output)
 {
     struct vec F_d = input->F_d;
+    struct vec M_d = input->M_d;
     struct vec statePos = input->statePos;
     struct vec plStPos = input->plStPos;
     struct vec statePos2 = input->statePos2;
@@ -219,6 +232,17 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     float l2 = vmag(vsub(plStPos, statePos2));
     float l3 = vmag(vsub(plStPos, statePos3));
     float radius = input->self->radius;
+
+    // att points
+    struct vec attPoint = input->self->attPoint;
+    struct vec attPoint2 = input->self->attPForNeighbor[0];
+    struct vec attPoint3 = input->self->attPForNeighbor[1];
+    // printf("\n%f %f %f\n", attPoint.x, attPoint.y, attPoint.z);
+    // printf("%f %f %f\n", attPoint2.x, attPoint2.y, attPoint2.z);
+    // printf("%f %f %f\n", attPoint3.x, attPoint3.y, attPoint3.z);
+    // printf("\n%f %f %f\n", statePos.x, statePos.y, statePos.z);
+    // printf("%f %f %f\n", statePos2.x, statePos2.y, statePos2.z);
+    // printf("%f %f %f\n", statePos3.x, statePos3.y, statePos3.z);
 
     struct vec desVirtInp;
 
@@ -239,7 +263,23 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     // c_float l_new[6] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY,};
     // c_float u_new[6] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,};
 
-    OSQPWorkspace* workspace = &workspace_3uav_2hp;
+    // OSQPWorkspace* workspace = &workspace_3uav_2hp;
+    // workspace->settings->warm_start = 1;
+
+    // struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos,  radius, l1, l2);
+    // struct vec n2 = computePlaneNormal(statePos, statePos3, plStPos,  radius, l1, l3);
+    // struct vec n3 = computePlaneNormal(statePos2, statePos, plStPos,  radius, l2, l1);
+    // struct vec n4 = computePlaneNormal(statePos2, statePos3, plStPos, radius, l2, l3);
+    // struct vec n5 = computePlaneNormal(statePos3, statePos, plStPos,  radius, l3, l1);
+    // struct vec n6 = computePlaneNormal(statePos3, statePos2, plStPos, radius, l3, l2);
+    // // printf("%f\n",(double)workspace->data->A->nzmax);
+    // c_float Ax_new[27] = {1, n1.x, n2.x, 1, n1.y, n2.y, 1, n1.z, n2.z, 1, n3.x, n4.x, 1, n3.y, n4.y, 1, n3.z, n4.z, 1, n5.x, n6.x, 1, n5.y, n6.y, 1, n5.z, n6.z, };
+    // // c_int Ax_new_idx[27] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+    // c_int Ax_new_n = 27;
+    // c_float l_new[9] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
+    // c_float u_new[9] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,  0, 0,  0, 0};
+
+    OSQPWorkspace* workspace = &workspace_3uav_2hp_rig;
     workspace->settings->warm_start = 1;
 
     struct vec n1 = computePlaneNormal(statePos, statePos2, plStPos,  radius, l1, l2);
@@ -249,11 +289,15 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     struct vec n5 = computePlaneNormal(statePos3, statePos, plStPos,  radius, l3, l1);
     struct vec n6 = computePlaneNormal(statePos3, statePos2, plStPos, radius, l3, l2);
     // printf("%f\n",(double)workspace->data->A->nzmax);
-    c_float Ax_new[27] = {1, n1.x, n2.x, 1, n1.y, n2.y, 1, n1.z, n2.z, 1, n3.x, n4.x, 1, n3.y, n4.y, 1, n3.z, n4.z, 1, n5.x, n6.x, 1, n5.y, n6.y, 1, n5.z, n6.z, };
-    // c_int Ax_new_idx[27] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
-    c_int Ax_new_n = 27;
-    c_float l_new[9] =  {F_d.x,	F_d.y,	F_d.z, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
-    c_float u_new[9] =  {F_d.x,	F_d.y,	F_d.z, 0, 0,  0, 0,  0, 0};
+    // c_float Ax_new[37] = {1, attPoint.x,  n1.x, n2.x, 1, n1.y, n2.y, 1, n1.z, n2.z, 1, n3.x, n4.x, 1, n3.y, n4.y, 1, n3.z, n4.z, 1, n5.x, n6.x, 1, n5.y, n6.y, 1, n5.z, n6.z, };
+    c_float Ax_new[45] = {
+      1, attPoint.z, -attPoint.y, n1.x, n2.x, 1, -attPoint.z, attPoint.x, n1.y, n2.y, 1, attPoint.y, attPoint.x, n1.z, n2.z,
+      1, attPoint2.z, -attPoint2.y, n3.x, n4.x, 1, -attPoint2.z, attPoint2.x, n3.y, n4.y, 1, attPoint2.y, attPoint2.x, n3.z, n4.z,
+      1, attPoint3.z, -attPoint3.y, n5.x, n6.x, 1, -attPoint3.z, attPoint3.x, n5.y, n6.y, 1, attPoint3.y, attPoint3.x, n5.z, n6.z,
+    };
+    c_int Ax_new_n = 45;
+    c_float l_new[12] =  {F_d.x,	F_d.y,	F_d.z,  M_d.x,  M_d.y,  M_d.z,  -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
+    c_float u_new[12] =  {F_d.x,	F_d.y,	F_d.z,  M_d.x,  M_d.y,  M_d.z, 0, 0,  0, 0,  0, 0};
 
 
 
@@ -307,13 +351,14 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
 }
 #ifdef CRAZYFLIE_FW
 
-static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const state_t *state, struct vec F_d)
+static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const state_t *state, struct vec F_d, struct vec M_d)
 {
   struct QPInput qpinput;
   struct QPOutput qpoutput;
 
   // push the latest change to the QP
   qpinput.F_d = F_d;
+  qpinput.M_d = M_d;
   qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
   qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
@@ -344,13 +389,14 @@ void controllerLeePayloadQPTask(void * prm)
 }
 #else
 
-static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const state_t *state, struct vec F_d)
+static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const state_t *state, struct vec F_d, struct vec M_d)
 {
   struct QPInput qpinput;
   struct QPOutput qpoutput;
 
   // push the latest change to the QP
   qpinput.F_d = F_d;
+  qpinput.M_d = M_d;
   qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
   qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
@@ -437,12 +483,28 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct vec plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
     struct vec plStVel = mkvec(state->payload_vel.x, state->payload_vel.y, state->payload_vel.z);
 
+    // rotational states of the payload
+    struct quat plquat = mkquat(state->payload_quat.x, state->payload_quat.y, state->payload_quat.z, state->payload_quat.w);
+    struct vec plomega = mkvec(state->payload_omega.x, state->payload_omega.y, state->payload_omega.z);
     float l = vmag(vsub(plStPos, statePos));
 
     // errors
     struct vec plpos_e = vclampnorm(vsub(plPos_d, plStPos), self->Kpos_P_limit);
     struct vec plvel_e = vclampnorm(vsub(plVel_d, plStVel), self->Kpos_D_limit);
     self->i_error_pos = vclampnorm(vadd(self->i_error_pos, vscl(dt, plpos_e)), self->Kpos_I_limit);
+
+    // payload orientation errors
+    // payload quat to R 
+    struct mat33 Rp = quat2rotmat(plquat);
+    // define desired payload Rp_des = eye(3) (i.e., qp_des = [0,0,0,1] (x,y,z,w))
+    struct mat33 Rp_des = quat2rotmat(mkquat(0,0,0,1)); 
+    // define orientation error     
+    // eRp =  msub(mmul(mtranspose(self->R_des), self->R), mmul(mtranspose(self->R), self->R_des));
+    struct mat33 eRMp =  msub(mmul(mtranspose(Rp_des), Rp), mmul(mtranspose(Rp), Rp_des));
+    struct vec eRp = vscl(0.5f, mkvec(eRMp.m[2][1], eRMp.m[0][2], eRMp.m[1][0]));
+
+    struct vec omega_pr = mvmul(mmul(mtranspose(Rp), Rp_des), self->wp_des);
+    struct vec omega_perror = vsub(plomega, omega_pr);
 
     self->plp_error = plpos_e;
     self->plv_error = plvel_e;
@@ -453,7 +515,13 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       veltmul(self->Kpos_D, plvel_e),
       veltmul(self->Kpos_I, self->i_error_pos)));
 
-    self->desVirtInp = computeDesiredVirtualInput(self, state, self->F_d);
+    self->M_d = vadd(
+      vneg(veltmul(self->Kprot_P, eRp)),
+      vneg(veltmul(self->Kprot_D, omega_perror))
+    );
+    // computed desired generalized forces in rigid payload case for equation 23 is Pmu_des = [Rp.T@F_d, M_d]
+    // if a point mass for the payload is considered then: Pmu_des = F_d
+    self->desVirtInp = computeDesiredVirtualInput(self, state, mvmul(mtranspose(Rp),self->F_d), self->M_d);
 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 

@@ -34,6 +34,10 @@ typedef struct controllerLeePayload_s {
     float thrustSI;
     struct vec J; // Inertia matrix (diagonal matrix); kg m^2
     struct vec offset; // offset for reference
+
+    struct vec attPoint; // attachment point 
+    struct vec attPForNeighbor[2]; // att points for neighbors
+    
     //Position PID
     struct vec Kpos_P;
     float Kpos_P_limit;
@@ -41,6 +45,12 @@ typedef struct controllerLeePayload_s {
     float Kpos_D_limit;
     struct vec Kpos_I;
     float Kpos_I_limit;
+    
+    // Payload attitude control gains
+    struct vec Kprot_P;
+    float Kprot_P_limit;
+    struct vec Kprot_D;
+    float Kprot_D_limit;
 
     struct vec i_error_pos;
     struct vec i_error_att;
@@ -76,6 +86,8 @@ typedef struct controllerLeePayload_s {
     struct vec acc_prev;
     struct vec F_d;
     struct vec M_d; // control moments of the payload
+    struct quat qp_des; // desired quaternion orientation for the payload
+    struct vec wp_des;  // desired omega for the payload
 
     // desired value from the QP
     struct vec desVirtInp;
