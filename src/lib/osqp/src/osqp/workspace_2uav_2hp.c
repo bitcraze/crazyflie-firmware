@@ -8,7 +8,7 @@
 #include "qdldl_interface.h"
 
 // Define data structure
-c_int Pdata_i[6] = {
+static c_int Pdata_i[6] = {
 0,
 1,
 2,
@@ -16,7 +16,7 @@ c_int Pdata_i[6] = {
 4,
 5,
 };
-c_int Pdata_p[7] = {
+static c_int Pdata_p[7] = {
 0,
 1,
 2,
@@ -25,7 +25,7 @@ c_int Pdata_p[7] = {
 5,
 6,
 };
-c_float Pdata_x[6] = {
+static c_float Pdata_x[6] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
@@ -33,8 +33,8 @@ c_float Pdata_x[6] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 };
-csc Pdata = {6, 6, 6, Pdata_p, Pdata_i, Pdata_x, -1};
-c_int Adata_i[12] = {
+static csc Pdata = {6, 6, 6, Pdata_p, Pdata_i, Pdata_x, -1};
+static c_int Adata_i[12] = {
 0,
 3,
 1,
@@ -48,7 +48,7 @@ c_int Adata_i[12] = {
 2,
 4,
 };
-c_int Adata_p[7] = {
+static c_int Adata_p[7] = {
 0,
 2,
 4,
@@ -57,7 +57,7 @@ c_int Adata_p[7] = {
 10,
 12,
 };
-c_float Adata_x[12] = {
+static c_float Adata_x[12] = {
 (c_float)1.00000000000000000000,
 (c_float)0.17594719965875199597,
 (c_float)1.00000000000000000000,
@@ -71,8 +71,8 @@ c_float Adata_x[12] = {
 (c_float)1.00000000000000000000,
 (c_float)0.36318629375584099428,
 };
-csc Adata = {12, 5, 6, Adata_p, Adata_i, Adata_x, -1};
-c_float qdata[6] = {
+static csc Adata = {12, 5, 6, Adata_p, Adata_i, Adata_x, -1};
+static c_float qdata[6] = {
 (c_float)0.00000000000000000000,
 (c_float)0.00000000000000000000,
 (c_float)0.00000000000000000000,
@@ -80,27 +80,27 @@ c_float qdata[6] = {
 (c_float)0.00000000000000000000,
 (c_float)0.00000000000000000000,
 };
-c_float ldata[5] = {
+static c_float ldata[5] = {
 (c_float)0.00000000000000000000,
 (c_float)0.00000000000000000000,
 (c_float)0.09810000000000000664,
 (c_float)-9077669334311812014674932662272.00000000000000000000,
 (c_float)-9077669334311812014674932662272.00000000000000000000,
 };
-c_float udata[5] = {
+static c_float udata[5] = {
 (c_float)0.00000000000000000000,
 (c_float)0.00000000000000000000,
 (c_float)0.09810000000000000664,
 (c_float)0.00000000000000000000,
 (c_float)0.00000000000000000000,
 };
-OSQPData data = {6, 5, &Pdata, &Adata, qdata, ldata, udata};
+static OSQPData data = {6, 5, &Pdata, &Adata, qdata, ldata, udata};
 
 // Define settings structure
-OSQPSettings settings = {(c_float)0.10000000000000000555, (c_float)0.00000100000000000000, 10, 1, 0, (c_float)5.00000000000000000000, 4000, (c_float)0.00100000000000000002, (c_float)0.00100000000000000002, (c_float)0.00010000000000000000, (c_float)0.00010000000000000000, (c_float)1.00000000000000000000, (enum linsys_solver_type) LINSYS_SOLVER, 0, 25, 1, };
-
+static OSQPSettings settings = {(c_float)0.10000000000000000555, (c_float)0.00000100000000000000, 10, 1, 0, (c_float)5.00000000000000000000, 4000, (c_float)0.00100000000000000002, (c_float)0.00100000000000000002, (c_float)0.00010000000000000000, (c_float)0.00010000000000000000, (c_float)1.00000000000000000000, (enum linsys_solver_type) LINSYS_SOLVER, 0, 25, 1, };
+ 
 // Define scaling structure
-c_float Dscaling[6] = {
+static c_float Dscaling[6] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
@@ -108,7 +108,7 @@ c_float Dscaling[6] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 };
-c_float Dinvscaling[6] = {
+static c_float Dinvscaling[6] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
@@ -116,24 +116,24 @@ c_float Dinvscaling[6] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 };
-c_float Escaling[5] = {
+static c_float Escaling[5] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)9.07766933431181222147,
 (c_float)9.07766933431181222147,
 };
-c_float Einvscaling[5] = {
+static c_float Einvscaling[5] = {
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)1.00000000000000000000,
 (c_float)0.11016043470763975387,
 (c_float)0.11016043470763975387,
 };
-OSQPScaling scaling = {(c_float)1.00000000000000000000, Dscaling, Escaling, (c_float)1.00000000000000000000, Dinvscaling, Einvscaling};
+static OSQPScaling scaling = {(c_float)1.00000000000000000000, Dscaling, Escaling, (c_float)1.00000000000000000000, Dinvscaling, Einvscaling};
 
 // Define linsys_solver structure
-c_int linsys_solver_L_i[19] = {
+static c_int linsys_solver_L_i[19] = {
 1,
 2,
 2,
@@ -154,7 +154,7 @@ c_int linsys_solver_L_i[19] = {
 10,
 10,
 };
-c_int linsys_solver_L_p[12] = {
+static c_int linsys_solver_L_p[12] = {
 0,
 2,
 4,
@@ -168,7 +168,7 @@ c_int linsys_solver_L_p[12] = {
 19,
 19,
 };
-c_float linsys_solver_L_x[19] = {
+static c_float linsys_solver_L_x[19] = {
 (c_float)-100.00000000000000000000,
 (c_float)-100.00000000000000000000,
 (c_float)0.99009900009802975784,
@@ -189,8 +189,8 @@ c_float linsys_solver_L_x[19] = {
 (c_float)0.99999900000100006014,
 (c_float)-0.01730430965950979436,
 };
-csc linsys_solver_L = {19, 11, 11, linsys_solver_L_p, linsys_solver_L_i, linsys_solver_L_x, -1};
-c_float linsys_solver_Dinv[11] = {
+static csc linsys_solver_L = {19, 11, 11, linsys_solver_L_p, linsys_solver_L_i, linsys_solver_L_x, -1};
+static c_float linsys_solver_Dinv[11] = {
 (c_float)-100.00000000000000000000,
 (c_float)0.00990099000098029758,
 (c_float)0.50248706217718097644,
@@ -203,7 +203,7 @@ c_float linsys_solver_Dinv[11] = {
 (c_float)-0.09451674820102912156,
 (c_float)-0.49902472692344140848,
 };
-c_int linsys_solver_P[11] = {
+static c_int linsys_solver_P[11] = {
 8,
 5,
 2,
@@ -216,16 +216,16 @@ c_int linsys_solver_P[11] = {
 10,
 6,
 };
-c_float linsys_solver_bp[11];
-c_float linsys_solver_sol[11];
-c_float linsys_solver_rho_inv_vec[5] = {
+static c_float linsys_solver_bp[11];
+static c_float linsys_solver_sol[11];
+static c_float linsys_solver_rho_inv_vec[5] = {
 (c_float)0.01000000000000000021,
 (c_float)0.01000000000000000021,
 (c_float)0.01000000000000000021,
 (c_float)10.00000000000000000000,
 (c_float)10.00000000000000000000,
 };
-c_int linsys_solver_Pdiag_idx[6] = {
+static c_int linsys_solver_Pdiag_idx[6] = {
 0,
 1,
 2,
@@ -233,7 +233,7 @@ c_int linsys_solver_Pdiag_idx[6] = {
 4,
 5,
 };
-c_int linsys_solver_KKT_i[23] = {
+static c_int linsys_solver_KKT_i[23] = {
 0,
 1,
 0,
@@ -258,7 +258,7 @@ c_int linsys_solver_KKT_i[23] = {
 8,
 10,
 };
-c_int linsys_solver_KKT_p[12] = {
+static c_int linsys_solver_KKT_p[12] = {
 0,
 1,
 3,
@@ -272,7 +272,7 @@ c_int linsys_solver_KKT_p[12] = {
 20,
 23,
 };
-c_float linsys_solver_KKT_x[23] = {
+static c_float linsys_solver_KKT_x[23] = {
 (c_float)-0.01000000000000000021,
 (c_float)1.00000099999999991773,
 (c_float)1.00000000000000000000,
@@ -297,8 +297,8 @@ c_float linsys_solver_KKT_x[23] = {
 (c_float)1.00000000000000000000,
 (c_float)-0.01000000000000000021,
 };
-csc linsys_solver_KKT = {23, 11, 11, linsys_solver_KKT_p, linsys_solver_KKT_i, linsys_solver_KKT_x, -1};
-c_int linsys_solver_PtoKKT[6] = {
+static csc linsys_solver_KKT = {23, 11, 11, linsys_solver_KKT_p, linsys_solver_KKT_i, linsys_solver_KKT_x, -1};
+static c_int linsys_solver_PtoKKT[6] = {
 13,
 8,
 3,
@@ -306,7 +306,7 @@ c_int linsys_solver_PtoKKT[6] = {
 6,
 1,
 };
-c_int linsys_solver_AtoKKT[12] = {
+static c_int linsys_solver_AtoKKT[12] = {
 20,
 14,
 9,
@@ -320,14 +320,14 @@ c_int linsys_solver_AtoKKT[12] = {
 2,
 18,
 };
-c_int linsys_solver_rhotoKKT[5] = {
+static c_int linsys_solver_rhotoKKT[5] = {
 22,
 5,
 0,
 12,
 19,
 };
-QDLDL_float linsys_solver_D[11] = {
+static QDLDL_float linsys_solver_D[11] = {
 0,
 101,
 1,
@@ -340,7 +340,7 @@ QDLDL_float linsys_solver_D[11] = {
 -10,
 -2,
 };
-QDLDL_int linsys_solver_etree[11] = {
+static QDLDL_int linsys_solver_etree[11] = {
 1,
 2,
 6,
@@ -353,7 +353,7 @@ QDLDL_int linsys_solver_etree[11] = {
 10,
 -1,
 };
-QDLDL_int linsys_solver_Lnz[11] = {
+static QDLDL_int linsys_solver_Lnz[11] = {
 2,
 2,
 2,
@@ -366,59 +366,59 @@ QDLDL_int linsys_solver_Lnz[11] = {
 1,
 0,
 };
-QDLDL_int   linsys_solver_iwork[33];
-QDLDL_bool  linsys_solver_bwork[11];
-QDLDL_float linsys_solver_fwork[11];
-qdldl_solver linsys_solver = {QDLDL_SOLVER, &solve_linsys_qdldl, &update_linsys_solver_matrices_qdldl, &update_linsys_solver_rho_vec_qdldl, &linsys_solver_L, linsys_solver_Dinv, linsys_solver_P, linsys_solver_bp, linsys_solver_sol, linsys_solver_rho_inv_vec, (c_float)0.00000100000000000000, 6, 5, linsys_solver_Pdiag_idx, 6, &linsys_solver_KKT, linsys_solver_PtoKKT, linsys_solver_AtoKKT, linsys_solver_rhotoKKT, linsys_solver_D, linsys_solver_etree, linsys_solver_Lnz, linsys_solver_iwork, linsys_solver_bwork, linsys_solver_fwork, };
+static QDLDL_int   linsys_solver_iwork[33];
+static QDLDL_bool  linsys_solver_bwork[11];
+static QDLDL_float linsys_solver_fwork[11];
+static qdldl_solver linsys_solver = {QDLDL_SOLVER, &solve_linsys_qdldl, &update_linsys_solver_matrices_qdldl, &update_linsys_solver_rho_vec_qdldl, &linsys_solver_L, linsys_solver_Dinv, linsys_solver_P, linsys_solver_bp, linsys_solver_sol, linsys_solver_rho_inv_vec, (c_float)0.00000100000000000000, 6, 5, linsys_solver_Pdiag_idx, 6, &linsys_solver_KKT, linsys_solver_PtoKKT, linsys_solver_AtoKKT, linsys_solver_rhotoKKT, linsys_solver_D, linsys_solver_etree, linsys_solver_Lnz, linsys_solver_iwork, linsys_solver_bwork, linsys_solver_fwork, };
 
 // Define solution
-c_float xsolution[6];
-c_float ysolution[5];
+static c_float xsolution[6];
+static c_float ysolution[5];
 
-OSQPSolution solution = {xsolution, ysolution};
+static OSQPSolution solution = {xsolution, ysolution};
 
 // Define info
-OSQPInfo info = {0, "Unsolved", OSQP_UNSOLVED, 0.0, 0.0, 0.0};
+static OSQPInfo info = {0, "Unsolved", OSQP_UNSOLVED, 0.0, 0.0, 0.0};
 
 // Define workspace
-c_float work_rho_vec[5] = {
+static c_float work_rho_vec[5] = {
 (c_float)100.00000000000000000000,
 (c_float)100.00000000000000000000,
 (c_float)100.00000000000000000000,
 (c_float)0.10000000000000000555,
 (c_float)0.10000000000000000555,
 };
-c_float work_rho_inv_vec[5] = {
+static c_float work_rho_inv_vec[5] = {
 (c_float)0.01000000000000000021,
 (c_float)0.01000000000000000021,
 (c_float)0.01000000000000000021,
 (c_float)10.00000000000000000000,
 (c_float)10.00000000000000000000,
 };
-c_int work_constr_type[5] = {
+static c_int work_constr_type[5] = {
 1,
 1,
 1,
 0,
 0,
 };
-c_float work_x[6];
-c_float work_y[5];
-c_float work_z[5];
-c_float work_xz_tilde[11];
-c_float work_x_prev[6];
-c_float work_z_prev[5];
-c_float work_Ax[5];
-c_float work_Px[6];
-c_float work_Aty[6];
-c_float work_delta_y[5];
-c_float work_Atdelta_y[6];
-c_float work_delta_x[6];
-c_float work_Pdelta_x[6];
-c_float work_Adelta_x[5];
-c_float work_D_temp[6];
-c_float work_D_temp_A[6];
-c_float work_E_temp[5];
+static c_float work_x[6];
+static c_float work_y[5];
+static c_float work_z[5];
+static c_float work_xz_tilde[11];
+static c_float work_x_prev[6];
+static c_float work_z_prev[5];
+static c_float work_Ax[5];
+static c_float work_Px[6];
+static c_float work_Aty[6];
+static c_float work_delta_y[5];
+static c_float work_Atdelta_y[6];
+static c_float work_delta_x[6];
+static c_float work_Pdelta_x[6];
+static c_float work_Adelta_x[5];
+static c_float work_D_temp[6];
+static c_float work_D_temp_A[6];
+static c_float work_E_temp[5];
 
 OSQPWorkspace workspace_2uav_2hp = {
 &data, (LinSysSolver *)&linsys_solver,
