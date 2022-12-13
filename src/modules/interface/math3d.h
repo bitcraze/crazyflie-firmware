@@ -492,7 +492,7 @@ static inline struct mat33 vecmult(struct vec a) {
 	m.m[1][1] = a.y*a.y;
 	m.m[2][1] = a.z*a.y;
 
-	m.m[0][2] = a.x*a.x;
+	m.m[0][2] = a.x*a.z;
 	m.m[1][2] = a.y*a.z;
 	m.m[2][2] = a.z*a.z;
 
