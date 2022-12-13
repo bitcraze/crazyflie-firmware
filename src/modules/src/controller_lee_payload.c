@@ -447,13 +447,13 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     self->plp_error = plpos_e;
     self->plv_error = plvel_e;
 
-    struct vec F_d =vscl(self->mp ,vadd4(
+    self->F_d =vscl(self->mp ,vadd4(
       plAcc_d,
       veltmul(self->Kpos_P, plpos_e),
       veltmul(self->Kpos_D, plvel_e),
       veltmul(self->Kpos_I, self->i_error_pos)));
 
-    self->desVirtInp = computeDesiredVirtualInput(self, state, F_d);
+    self->desVirtInp = computeDesiredVirtualInput(self, state, self->F_d);
 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
