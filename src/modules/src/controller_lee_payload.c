@@ -543,7 +543,7 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     struct mat33 skewqi = mcrossmat(qi);
     struct mat33 skewqi2 = mmul(skewqi,skewqi);
 
-    struct vec qdidot = vzero(); //vdiv(vsub(qdi, self->qdi_prev), dt);
+    struct vec qdidot = vdiv(vsub(qdi, self->qdi_prev), dt);
     self->qdi_prev = qdi;
     struct vec wdi = vcross(qdi, qdidot);
     struct vec ew = vadd(wi, mvmul(skewqi2, wdi));
