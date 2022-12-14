@@ -55,7 +55,7 @@ endmenu
 
 config DECK_BIGQUAD
     bool "Support the BigQuad deck"
-    default y
+    default n
     help
         With the BigQuad deck you can transform your Crazyflie 2.X to a
         bigger quad by connecting external Electronic speed controllers
