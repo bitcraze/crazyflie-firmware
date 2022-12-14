@@ -733,6 +733,17 @@ PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &g_self.Kpos_I.y)
 PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &g_self.Kpos_I.z)
 PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &g_self.Kpos_I_limit)
 
+// Attitude Payload P
+PARAM_ADD(PARAM_FLOAT, Kprot_Px, &g_self.Kprot_P.x)
+PARAM_ADD(PARAM_FLOAT, Kprot_Py, &g_self.Kprot_P.y)
+PARAM_ADD(PARAM_FLOAT, Kprot_Pz, &g_self.Kprot_P.z)
+PARAM_ADD(PARAM_FLOAT, Kprot_P_limit, &g_self.Kprot_P_limit)
+// Attitude Payload D
+PARAM_ADD(PARAM_FLOAT, Kprot_Dx, &g_self.Kprot_D.x)
+PARAM_ADD(PARAM_FLOAT, Kprot_Dy, &g_self.Kprot_D.y)
+PARAM_ADD(PARAM_FLOAT, Kprot_Dz, &g_self.Kprot_D.z)
+PARAM_ADD(PARAM_FLOAT, Kprot_D_limit, &g_self.Kprot_D_limit)
+
 // Attitude P
 PARAM_ADD(PARAM_FLOAT, KRx, &g_self.KR.x)
 PARAM_ADD(PARAM_FLOAT, KRy, &g_self.KR.y)
