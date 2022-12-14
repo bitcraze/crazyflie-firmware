@@ -208,8 +208,7 @@ static controllerLeePayload_t g_self = {
   // desired orientation and omega for payload
   .qp_des = {0, 0, 0, 1},
   .wp_des = {0, 0, 0},
-  // -----------------------FOR QP----------------------------//
-  // 0 for UAV 1 and, 1 for UAV 2
+
   .radius = 0.15,
 };
 
@@ -497,12 +496,14 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
     // payload quat to R 
     struct mat33 Rp = quat2rotmat(plquat);
     // define desired payload Rp_des = eye(3) (i.e., qp_des = [0,0,0,1] (x,y,z,w))
-    struct mat33 Rp_des = quat2rotmat(mkquat(0,0,0,1)); 
+    self->qp_des = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+    struct mat33 Rp_des = quat2rotmat(self->qp_des); 
     // define orientation error     
     // eRp =  msub(mmul(mtranspose(self->R_des), self->R), mmul(mtranspose(self->R), self->R_des));
     struct mat33 eRMp =  msub(mmul(mtranspose(Rp_des), Rp), mmul(mtranspose(Rp), Rp_des));
     struct vec eRp = vscl(0.5f, mkvec(eRMp.m[2][1], eRMp.m[0][2], eRMp.m[1][0]));
 
+    self->wp_des = mkvec(setpoint->attitudeRate.roll, setpoint->attitudeRate.pitch, setpoint->attitudeRate.yaw);
     struct vec omega_pr = mvmul(mmul(mtranspose(Rp), Rp_des), self->wp_des);
     struct vec omega_perror = vsub(plomega, omega_pr);
 
