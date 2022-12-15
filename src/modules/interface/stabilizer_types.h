@@ -170,7 +170,10 @@ typedef struct state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
   // positions of the neighboring UAVs
   uint8_t num_neighbors;
-  point_t position_neighbors[MAX_NEIGHBOR_UAVS];
+  struct {
+    uint8_t id;
+    point_t pos;
+  } neighbors[MAX_NEIGHBOR_UAVS];
   // Measured state of the payload
   point_t payload_pos;         // m   (world frame)
   quaternion_t payload_quat;   // orientation (world frame)

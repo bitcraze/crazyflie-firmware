@@ -35,8 +35,10 @@ typedef struct controllerLeePayload_s {
     struct vec J; // Inertia matrix (diagonal matrix); kg m^2
     struct vec offset; // offset for reference
 
-    struct vec attPoint; // attachment point 
-    struct vec attPForNeighbor[2]; // att points for neighbors
+    struct {
+        uint8_t id;
+        struct vec point;
+    } attachement_points[3];
     
     //Position PID
     struct vec Kpos_P;

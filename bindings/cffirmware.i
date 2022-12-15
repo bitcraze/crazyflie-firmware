@@ -133,18 +133,20 @@ void collisionAvoidanceUpdateSetpointWrap(
     free(workspace);
 }
 
-void state_set_neighbor_position(state_t *state, int idx, float x, float y, float z)
+void state_set_neighbor_position(state_t *state, int idx, uint8_t id, float x, float y, float z)
 {
-    state->position_neighbors[idx].x = x;
-    state->position_neighbors[idx].y = y;
-    state->position_neighbors[idx].z = z;
+    state->neighbors[idx].id = id;
+    state->neighbors[idx].pos.x = x;
+    state->neighbors[idx].pos.y = y;
+    state->neighbors[idx].pos.z = z;
 }
 
-void attPoints_set_neighbors(controllerLeePayload_t* self, int idx, float x, float y, float z)
+void controller_lee_payload_set_attachement(controllerLeePayload_t* self, int idx, uint8_t id, float x, float y, float z)
 {
-    self->attPForNeighbor[idx].x = x;
-    self->attPForNeighbor[idx].y = y;
-    self->attPForNeighbor[idx].z = z;
+    self->attachement_points[idx].id = id;
+    self->attachement_points[idx].point.x = x;
+    self->attachement_points[idx].point.y = y;
+    self->attachement_points[idx].point.z = z;
 }
 %}
 

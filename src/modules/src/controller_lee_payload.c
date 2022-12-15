@@ -52,6 +52,7 @@ struct QPInput
   struct vec statePos;
   struct vec statePos2;
   struct vec statePos3;
+  uint8_t ids[2]; // ids for statePos2, statePos3
   controllerLeePayload_t* self;
 };
 
@@ -69,9 +70,9 @@ struct QPOutput
 #include "static_mem.h"
 
 
-#define CONTROLLER_LEE_PAYLOAD_QP_TASK_STACKSIZE (2 * configMINIMAL_STACK_SIZE)
+#define CONTROLLER_LEE_PAYLOAD_QP_TASK_STACKSIZE (6 * configMINIMAL_STACK_SIZE)
 #define CONTROLLER_LEE_PAYLOAD_QP_TASK_NAME "LEEQP"
-#define CONTROLLER_LEE_PAYLOAD_QP_TASK_PRI 1
+#define CONTROLLER_LEE_PAYLOAD_QP_TASK_PRI 0
 
 STATIC_MEM_TASK_ALLOC(controllerLeePayloadQPTask, CONTROLLER_LEE_PAYLOAD_QP_TASK_STACKSIZE);
 static void controllerLeePayloadQPTask(void * prm);
@@ -233,9 +234,32 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     float radius = input->self->radius;
 
     // att points
-    struct vec attPoint = input->self->attPoint;
-    struct vec attPoint2 = input->self->attPForNeighbor[0];
-    struct vec attPoint3 = input->self->attPForNeighbor[1];
+    struct vec attPoint = input->self->attachement_points[0].point;
+    struct vec attPoint2 = input->self->attachement_points[1].point;
+    struct vec attPoint3 = input->self->attachement_points[2].point;
+
+    // find the corresponding attachement points
+    for (uint8_t i = 0; i < 3; ++i) {
+      if (input->self->attachement_points[i].id == input->ids[0]) {
+        attPoint2 = input->self->attachement_points[i].point;
+      } else if (input->self->attachement_points[i].id == input->ids[1]) {
+        attPoint3 = input->self->attachement_points[i].point;
+      } else {
+        attPoint = input->self->attachement_points[i].point;
+      }
+    }
+
+    // DEBUG_PRINT("s %f %f %f\n", (double)statePos.x, (double)statePos.y, (double)statePos.z);
+    // DEBUG_PRINT("ap %f %f %f\n", (double)attPoint.x, (double)attPoint.y, (double)attPoint.z);
+
+    // DEBUG_PRINT("s2 %f %f %f\n", (double)statePos2.x, (double)statePos2.y, (double)statePos2.z);
+    // DEBUG_PRINT("ap2 %f %f %f\n", (double)attPoint2.x, (double)attPoint2.y, (double)attPoint2.z);
+
+    // DEBUG_PRINT("s3 %f %f %f\n", (double)statePos3.x, (double)statePos3.y, (double)statePos3.z);
+    // DEBUG_PRINT("ap3 %f %f %f\n", (double)attPoint3.x, (double)attPoint3.y, (double)attPoint3.z);
+
+
+
     // printf("\n%f %f %f\n", attPoint.x, attPoint.y, attPoint.z);
     // printf("%f %f %f\n", attPoint2.x, attPoint2.y, attPoint2.z);
     // printf("%f %f %f\n", attPoint3.x, attPoint3.y, attPoint3.z);
@@ -360,8 +384,10 @@ static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const
   qpinput.M_d = M_d;
   qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
-  qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
-  qpinput.statePos3 = mkvec(state->position_neighbors[1].x, state->position_neighbors[1].y, state->position_neighbors[1].z);
+  qpinput.statePos2 = mkvec(state->neighbors[0].pos.x, state->neighbors[0].pos.y, state->neighbors[0].pos.z);
+  qpinput.statePos3 = mkvec(state->neighbors[1].pos.x, state->neighbors[1].pos.y, state->neighbors[1].pos.z);
+  qpinput.ids[0] = state->neighbors[0].id;
+  qpinput.ids[1] = state->neighbors[1].id;
   qpinput.self = self;
   xQueueOverwrite(queueQPInput, &qpinput);
 
@@ -398,8 +424,10 @@ static struct vec computeDesiredVirtualInput(controllerLeePayload_t* self, const
   qpinput.M_d = M_d;
   qpinput.plStPos = mkvec(state->payload_pos.x, state->payload_pos.y, state->payload_pos.z);
   qpinput.statePos = mkvec(state->position.x, state->position.y, state->position.z);
-  qpinput.statePos2 = mkvec(state->position_neighbors[0].x, state->position_neighbors[0].y, state->position_neighbors[0].z);
-  qpinput.statePos3 = mkvec(state->position_neighbors[1].x, state->position_neighbors[1].y, state->position_neighbors[1].z);
+  qpinput.statePos2 = mkvec(state->neighbors[0].pos.x, state->neighbors[0].pos.y, state->neighbors[0].pos.z);
+  qpinput.statePos3 = mkvec(state->neighbors[1].pos.x, state->neighbors[1].pos.y, state->neighbors[1].pos.z);
+  qpinput.ids[0] = state->neighbors[0].id;
+  qpinput.ids[1] = state->neighbors[1].id;
   qpinput.self = self;
   // solve the QP
   runQP(&qpinput, &qpoutput);
@@ -774,6 +802,23 @@ PARAM_ADD(PARAM_FLOAT, massP, &g_self.mp)
 
 PARAM_ADD(PARAM_FLOAT, radius, &g_self.radius)
 
+// Attachement points rigid body payload
+PARAM_ADD(PARAM_UINT8, ap0id, &g_self.attachement_points[0].id)
+PARAM_ADD(PARAM_FLOAT, ap0x, &g_self.attachement_points[0].point.x)
+PARAM_ADD(PARAM_FLOAT, ap0y, &g_self.attachement_points[0].point.y)
+PARAM_ADD(PARAM_FLOAT, ap0z, &g_self.attachement_points[0].point.z)
+
+PARAM_ADD(PARAM_UINT8, ap1id, &g_self.attachement_points[1].id)
+PARAM_ADD(PARAM_FLOAT, ap1x, &g_self.attachement_points[1].point.x)
+PARAM_ADD(PARAM_FLOAT, ap1y, &g_self.attachement_points[1].point.y)
+PARAM_ADD(PARAM_FLOAT, ap1z, &g_self.attachement_points[1].point.z)
+
+PARAM_ADD(PARAM_UINT8, ap2id, &g_self.attachement_points[2].id)
+PARAM_ADD(PARAM_FLOAT, ap2x, &g_self.attachement_points[2].point.x)
+PARAM_ADD(PARAM_FLOAT, ap2y, &g_self.attachement_points[2].point.y)
+PARAM_ADD(PARAM_FLOAT, ap2z, &g_self.attachement_points[2].point.z)
+
+
 PARAM_GROUP_STOP(ctrlLeeP)
 
 
@@ -812,6 +857,31 @@ LOG_ADD(LOG_FLOAT, uz, &g_self.u_i.z)
 LOG_ADD(LOG_FLOAT, n1x, &g_self.n1.x)
 LOG_ADD(LOG_FLOAT, n1y, &g_self.n1.y)
 LOG_ADD(LOG_FLOAT, n1z, &g_self.n1.z)
+
+LOG_ADD(LOG_FLOAT, n2x, &g_self.n2.x)
+LOG_ADD(LOG_FLOAT, n2y, &g_self.n2.y)
+LOG_ADD(LOG_FLOAT, n2z, &g_self.n2.z)
+
+LOG_ADD(LOG_FLOAT, n3x, &g_self.n3.x)
+LOG_ADD(LOG_FLOAT, n3y, &g_self.n3.y)
+LOG_ADD(LOG_FLOAT, n3z, &g_self.n3.z)
+
+LOG_ADD(LOG_FLOAT, n4x, &g_self.n4.x)
+LOG_ADD(LOG_FLOAT, n4y, &g_self.n4.y)
+LOG_ADD(LOG_FLOAT, n4z, &g_self.n4.z)
+
+LOG_ADD(LOG_FLOAT, n5x, &g_self.n5.x)
+LOG_ADD(LOG_FLOAT, n5y, &g_self.n5.y)
+LOG_ADD(LOG_FLOAT, n5z, &g_self.n5.z)
+
+LOG_ADD(LOG_FLOAT, n6x, &g_self.n6.x)
+LOG_ADD(LOG_FLOAT, n6y, &g_self.n6.y)
+LOG_ADD(LOG_FLOAT, n6z, &g_self.n6.z)
+
+// computed desired payload force
+LOG_ADD(LOG_FLOAT, Fdx, &g_self.F_d.x)
+LOG_ADD(LOG_FLOAT, Fdy, &g_self.F_d.y)
+LOG_ADD(LOG_FLOAT, Fdz, &g_self.F_d.z)
 
 // computed virtual input
 LOG_ADD(LOG_FLOAT, desVirtInpx, &g_self.desVirtInp.x)

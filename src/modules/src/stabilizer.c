@@ -375,9 +375,10 @@ static void stabilizerTask(void* param)
 
         } else if (num_neighbors < MAX_NEIGHBOR_UAVS) {
           // handle regular team members
-          state.position_neighbors[num_neighbors].x = other->pos.x;
-          state.position_neighbors[num_neighbors].y = other->pos.y;
-          state.position_neighbors[num_neighbors].z = other->pos.z;
+          state.neighbors[num_neighbors].id = other->id;
+          state.neighbors[num_neighbors].pos.x = other->pos.x;
+          state.neighbors[num_neighbors].pos.y = other->pos.y;
+          state.neighbors[num_neighbors].pos.z = other->pos.z;
           ++num_neighbors;
         }
       }
