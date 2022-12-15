@@ -93,6 +93,9 @@ typedef struct controllerLeePayload_s {
 
     // desired value from the QP
     struct vec desVirtInp;
+    struct vec desVirt2_prev;
+    struct vec desVirt3_prev;
+
     struct vec n1;
     struct vec n2;
     struct vec n3;

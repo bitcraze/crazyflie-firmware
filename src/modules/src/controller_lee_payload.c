@@ -238,6 +238,10 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     struct vec attPoint2 = input->self->attachement_points[1].point;
     struct vec attPoint3 = input->self->attachement_points[2].point;
 
+    struct vec desVirt_prev =  input->self->desVirtInp;
+    struct vec desVirt2_prev = input->self->desVirt2_prev;
+    struct vec desVirt3_prev = input->self->desVirt3_prev;
+
     // find the corresponding attachement points
     for (uint8_t i = 0; i < 3; ++i) {
       if (input->self->attachement_points[i].id == input->ids[0]) {
@@ -326,7 +330,9 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     c_float l_new[12] =  {F_d.x,	F_d.y,	F_d.z,  M_d.x,  M_d.y,  M_d.z,  -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
     c_float u_new[12] =  {F_d.x,	F_d.y,	F_d.z,  M_d.x,  M_d.y,  M_d.z, 0, 0,  0, 0,  0, 0};
 
-
+    c_float q_new[9] = {desVirt_prev.x,  desVirt_prev.y,  desVirt_prev.z,
+                        desVirt2_prev.x, desVirt2_prev.y, desVirt2_prev.z, 
+                        desVirt3_prev.x, desVirt3_prev.y, desVirt3_prev.z};
 
     osqp_update_A(workspace, Ax_new, OSQP_NULL, Ax_new_n);    
 
@@ -346,11 +352,14 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     // }
 
 
+    osqp_update_lin_cost(workspace, q_new);
     // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
     osqp_update_lower_bound(workspace, l_new);
     osqp_update_upper_bound(workspace, u_new);
     
     osqp_solve(workspace);
+    
+    
     // printf("\nmu_des= %f %f %f %f %f %f %f %f %f\n", 
     // (workspace)->solution->x[0], (workspace)->solution->x[1], (workspace)->solution->x[2],
     // (workspace)->solution->x[3], (workspace)->solution->x[4], (workspace)->solution->x[5],
@@ -359,6 +368,14 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
       desVirtInp.x = (workspace)->solution->x[0];
       desVirtInp.y = (workspace)->solution->x[1];
       desVirtInp.z = (workspace)->solution->x[2];
+      
+      input->self->desVirtInp = desVirtInp;
+      input->self->desVirt2_prev.x =  (workspace)->solution->x[4];
+      input->self->desVirt2_prev.y =  (workspace)->solution->x[5];
+      input->self->desVirt2_prev.z =  (workspace)->solution->x[6];
+      input->self->desVirt3_prev.x =   (workspace)->solution->x[7];
+      input->self->desVirt3_prev.y =   (workspace)->solution->x[8];
+      input->self->desVirt3_prev.z =   (workspace)->solution->x[9];
     } else {
 #ifdef CRAZYFLIE_FW
       DEBUG_PRINT("QP: %s\n", workspace->info->status);
