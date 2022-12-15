@@ -248,7 +248,12 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
         attPoint = input->self->attachement_points[i].point;
       }
     }
-
+    // printf("\nattPoint: %f %f %f\n", attPoint.x, attPoint.y, attPoint.z);
+    // printf("StatePos: %f %f %f\n", statePos.x, statePos.y, statePos.z);
+    // printf("attPoint2: %f %f %f\n", attPoint2.x, attPoint2.y, attPoint2.z);
+    // printf("statePos2: %f %f %f\n", statePos2.x, statePos2.y, statePos2.z);
+    // printf("attPoint3: %f %f %f\n", attPoint3.x, attPoint3.y, attPoint3.z);
+    // printf("statePos3: %f %f %f\n", statePos3.x, statePos3.y, statePos3.z);
     // DEBUG_PRINT("s %f %f %f\n", (double)statePos.x, (double)statePos.y, (double)statePos.z);
     // DEBUG_PRINT("ap %f %f %f\n", (double)attPoint.x, (double)attPoint.y, (double)attPoint.z);
 
@@ -311,12 +316,11 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
     struct vec n4 = computePlaneNormal(statePos2, statePos3, plStPos, radius, l2, l3);
     struct vec n5 = computePlaneNormal(statePos3, statePos, plStPos,  radius, l3, l1);
     struct vec n6 = computePlaneNormal(statePos3, statePos2, plStPos, radius, l3, l2);
-    // printf("%f\n",(double)workspace->data->A->nzmax);
-    // c_float Ax_new[37] = {1, attPoint.x,  n1.x, n2.x, 1, n1.y, n2.y, 1, n1.z, n2.z, 1, n3.x, n4.x, 1, n3.y, n4.y, 1, n3.z, n4.z, 1, n5.x, n6.x, 1, n5.y, n6.y, 1, n5.z, n6.z, };
+
     c_float Ax_new[45] = {
-      1, attPoint.z, -attPoint.y, n1.x, n2.x, 1, -attPoint.z, attPoint.x, n1.y, n2.y, 1, attPoint.y, attPoint.x, n1.z, n2.z,
-      1, attPoint2.z, -attPoint2.y, n3.x, n4.x, 1, -attPoint2.z, attPoint2.x, n3.y, n4.y, 1, attPoint2.y, attPoint2.x, n3.z, n4.z,
-      1, attPoint3.z, -attPoint3.y, n5.x, n6.x, 1, -attPoint3.z, attPoint3.x, n5.y, n6.y, 1, attPoint3.y, attPoint3.x, n5.z, n6.z,
+      1, attPoint.z, -attPoint.y, n1.x, n2.x, 1, -attPoint.z, attPoint.x, n1.y, n2.y, 1, attPoint.y, -attPoint.x, n1.z, n2.z,
+      1, attPoint2.z, -attPoint2.y, n3.x, n4.x, 1, -attPoint2.z, attPoint2.x, n3.y, n4.y, 1, attPoint2.y, -attPoint2.x, n3.z, n4.z,
+      1, attPoint3.z, -attPoint3.y, n5.x, n6.x, 1, -attPoint3.z, attPoint3.x, n5.y, n6.y, 1, attPoint3.y, -attPoint3.x, n5.z, n6.z,
     };
     c_int Ax_new_n = 45;
     c_float l_new[12] =  {F_d.x,	F_d.y,	F_d.z,  M_d.x,  M_d.y,  M_d.z,  -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,};
@@ -325,12 +329,32 @@ static void runQP(const struct QPInput *input, struct QPOutput* output)
 
 
     osqp_update_A(workspace, Ax_new, OSQP_NULL, Ax_new_n);    
+
+    // c_int j, i, row_start, row_stop;
+    // c_int k = 0;
+
+    // for (j = 0; j < workspace->data->A->n; j++) {
+    //   row_start = workspace->data->A->p[j];
+    //   row_stop  = workspace->data->A->p[j + 1];
+
+    //   if (row_start == row_stop) continue;
+    //   else {
+    //     for (i = row_start; i < row_stop; i++) {
+    //       printf("\t[%3u,%3u] = %.3g\n", (int)workspace->data->A->i[i], (int)j, workspace->data->A->x[k++]);
+    //     }
+    //   }
+    // }
+
+
     // osqp_update_P(workspace, Px_new, Px_new_idx, Px_new_n);
     osqp_update_lower_bound(workspace, l_new);
     osqp_update_upper_bound(workspace, u_new);
     
     osqp_solve(workspace);
-
+    // printf("\nmu_des= %f %f %f %f %f %f %f %f %f\n", 
+    // (workspace)->solution->x[0], (workspace)->solution->x[1], (workspace)->solution->x[2],
+    // (workspace)->solution->x[3], (workspace)->solution->x[4], (workspace)->solution->x[5],
+    // (workspace)->solution->x[6], (workspace)->solution->x[7], (workspace)->solution->x[8]);
     if (workspace->info->status_val == OSQP_SOLVED) {
       desVirtInp.x = (workspace)->solution->x[0];
       desVirtInp.y = (workspace)->solution->x[1];
@@ -548,9 +572,10 @@ void controllerLeePayload(controllerLeePayload_t* self, control_t *control, setp
       vneg(veltmul(self->Kprot_P, eRp)),
       vneg(veltmul(self->Kprot_D, omega_perror))
     );
+    struct vec F_dP = mvmul(mtranspose(Rp),self->F_d);
     // computed desired generalized forces in rigid payload case for equation 23 is Pmu_des = [Rp.T@F_d, M_d]
     // if a point mass for the payload is considered then: Pmu_des = F_d
-    self->desVirtInp = computeDesiredVirtualInput(self, state, mvmul(mtranspose(Rp),self->F_d), self->M_d);
+    self->desVirtInp = computeDesiredVirtualInput(self, state, F_dP, self->M_d);
 
     //directional unit vector qi and angular velocity wi pointing from UAV to payload
     struct vec qi = vnormalize(vsub(plStPos, statePos)); 
