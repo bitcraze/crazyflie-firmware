@@ -1,0 +1,61 @@
+# ,---------,       ____  _ __
+# |  ,-^-,  |      / __ )(_) /_______________ _____  ___
+# | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+# | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+#    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
+#
+# Copyright (C) 2022 Bitcraze AB
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, in version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+# This work flow checks out the repo and reads the list of release targets from
+# the build_targetst.json file. It is intended to be used when building projects that have multi platform support.
+
+# The list of targets is available in needs.read_targets_from_file.outputs.platforms as a json dictionary, use it
+# in matrix like this: ${{fromJson(needs.read_targets_from_file.outputs.platforms)}}
+
+name: Read build targets
+
+on:
+  workflow_call:
+    inputs:
+      # The name of the json file containing the targets
+      target_file:
+        default: './build_targets.json'
+        required: false
+        type: string
+    outputs:
+      platforms:
+        description: "'platform' is set to the list of targets"
+        value: ${{ jobs.read_targets_from_file.outputs.platforms }}
+
+permissions:
+  contents: read
+
+jobs:
+  read_targets_from_file:
+    runs-on: ubuntu-latest
+    outputs:
+      platforms: ${{ steps.read-build-target-from-file.outputs.platforms }}
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+
+    - id: read-build-target-from-file
+      run: |
+        echo 'platforms<<EOF' >> $GITHUB_ENV
+        cat ${{inputs.target_file}} >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
