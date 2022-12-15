@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    uses: ./.github/workflows/read_build_targets.yml
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@dfbc8c23a8ec6d4925d01deb20277839ad1235f1
 
   release:
     permissions:
@@ -31,7 +31,7 @@ jobs:
     - name: Release URL on file
       run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
     - name: Save Release URL File For Uploading Files
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: release_url
         path: release_url.txt
@@ -49,7 +49,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -57,7 +57,7 @@ jobs:
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platform }} UNIT_TEST_STYLE=min"
 
     - name: Load Release URL File from release job
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: release_url
 

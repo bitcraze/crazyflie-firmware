@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    uses: ./.github/workflows/read_build_targets.yml
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@dfbc8c23a8ec6d4925d01deb20277839ad1235f1
 
   basic_build:
     needs: read_targets_from_file
@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -36,7 +36,7 @@ jobs:
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2.1.4
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
@@ -72,7 +72,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -100,7 +100,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -124,7 +124,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
