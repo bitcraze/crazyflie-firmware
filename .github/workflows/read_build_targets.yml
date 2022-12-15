@@ -54,8 +54,14 @@ jobs:
       with:
         submodules: false
 
+    - name: file name
+      run: echo "Reading from file ${{inputs.target_file}}"
+
     - id: read-build-target-from-file
       run: |
         echo 'platforms<<EOF' >> $GITHUB_ENV
         cat ${{inputs.target_file}} >> $GITHUB_ENV
         echo 'EOF' >> $GITHUB_ENV
+
+    - name: contents
+      run: echo "the env var is ${{env.platforms}}"
