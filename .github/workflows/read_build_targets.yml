@@ -68,3 +68,10 @@ jobs:
 
     - name: contents2
       run: echo "the env var is ${{steps.read-build-target-from-file.outputs.platforms}}"
+
+  log_output:
+    runs-on: ubuntu-latest
+    needs: read_targets_from_file
+    steps:
+      - name: targets
+        run: echo "got ${{needs.read_targets_from_file.outputs.platforms}}"
