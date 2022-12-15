@@ -65,3 +65,6 @@ jobs:
 
     - name: contents
       run: echo "the env var is ${{env.platforms}}"
+
+    - name: contents2
+      run: echo "the env var is ${{steps.read-build-target-from-file.outputs.platforms}}"
