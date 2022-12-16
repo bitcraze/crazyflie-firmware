@@ -93,4 +93,13 @@ void mspInit(MspObject* pMspObject, const MspResponseCallback callback);
  */
 void mspProcessByte(MspObject* pMspObject, const uint8_t data);
 
+/*
+ * Returns true if the MSP_SET_4WAY_IF request has been answered.
+ * This information can be useful to know whether the connection phase of BLHeli Configurator has been completed.
+ */
+bool mspHasSet4WayIf();
+
+
+void mspResetSet4WayIf();
+
 #endif /* MSP_H_ */
