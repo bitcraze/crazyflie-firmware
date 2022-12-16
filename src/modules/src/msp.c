@@ -254,6 +254,11 @@ bool mspHasSet4WayIf()
   return hasSet4WayIf;
 }
 
+void mspResetSet4WayIf()
+{
+  hasSet4WayIf = false;
+}
+
 // Private
 static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen)
 {

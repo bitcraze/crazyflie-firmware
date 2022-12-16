@@ -184,6 +184,7 @@ static void blHeliConfigHandshake()
   {
     uint8_t byte = readByteBlocking();
     mspProcessByte(&pMspObject, byte);
-    vTaskDelay(M2T(2));
   }
+
+  mspResetSet4WayIf();
 }

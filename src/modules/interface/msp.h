@@ -99,4 +99,7 @@ void mspProcessByte(MspObject* pMspObject, const uint8_t data);
  */
 bool mspHasSet4WayIf();
 
+
+void mspResetSet4WayIf();
+
 #endif /* MSP_H_ */
