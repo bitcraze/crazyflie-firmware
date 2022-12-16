@@ -41,20 +41,20 @@
 
 // MSP command IDs
 typedef enum {
-  MSP_API_VERSION = 1,
-  MSP_FC_VARIANT  = 2,
-  MSP_FC_VERSION  = 3,
-  MSP_BOARD_INFO  = 4,
-  MSP_BUILD_INFO  = 5,
-
-  MSP_STATUS      = 101,
-  MSP_RC          = 105,
-  MSP_ATTITUDE    = 108,
-  MSP_BOXIDS      = 119,
-
-  MSP_UID         = 160, // Unique device ID
-
-  MSP_SET_4WAY_IF = 245
+  MSP_API_VERSION    = 1,
+  MSP_FC_VARIANT     = 2,
+  MSP_FC_VERSION     = 3,
+  MSP_BOARD_INFO     = 4,
+  MSP_BUILD_INFO     = 5,
+  MSP_FEATURE_CONFIG = 36,
+  MSP_STATUS         = 101,
+  MSP_MOTOR          = 104,
+  MSP_RC             = 105,
+  MSP_ATTITUDE       = 108,
+  MSP_BOXIDS         = 119,
+  MSP_BATTERY_STATE  = 130,
+  MSP_UID            = 160, // Unique device ID
+  MSP_SET_4WAY_IF    = 245
 } msp_command_t;
 
 // Misc MSP header defines
@@ -147,6 +147,28 @@ typedef struct _MspSet4WayIf
   uint8_t connectedEscs;
 }__attribute__((packed)) MspSet4WayIf;
 
+typedef struct _MspFeatures
+{
+  uint32_t featureBits;
+}__attribute__((packed)) MspFeatures;
+
+typedef struct _MspMotors
+{
+  uint16_t data[NBR_OF_MOTORS];
+}__attribute__((packed)) MspMotors;
+
+typedef struct _MspBatteryState
+{
+  uint8_t cellCount;
+  uint16_t capacity; // mAh
+  uint8_t voltage;   // V
+  uint16_t drawn;    // mAh
+  uint16_t amps;     // A
+  // '1.41.0',
+  uint8_t state;
+  uint16_t voltage2;
+}__attribute__((packed)) MspBatteryState;
+
 static bool hasSet4WayIf = false;
 
 // Helpers
@@ -167,6 +189,9 @@ static void mspHandleRequestsBoardInfo(MspObject* pMspObject);
 static void mspHandleRequestsBuildInfo(MspObject* pMspObject);
 static void mspHandleRequestsUiid(MspObject* pMspObject);
 static void mspHandleRequestsSet4WayIf(MspObject* pMspObject);
+static void mspHandleRequestMotor(MspObject* pMspObject);
+static void mspHandleRequestFeaturesConfig(MspObject* pMspObject);
+static void mspHandleRequestBatteryState(MspObject* pMspObject);
 
 // Public API
 void mspInit(MspObject* pMspObject, const MspResponseCallback callback)
@@ -177,9 +202,10 @@ void mspInit(MspObject* pMspObject, const MspResponseCallback callback)
 
 void mspProcessByte(MspObject* pMspObject, const uint8_t data)
 {
-  // If the start token is received at any time,
-  // immediately transition back to the first state
-  if(data == MSP_PREAMBLE_0)
+  // If the start token is received when we're in idle state,
+  // we transition to the first state
+  if((pMspObject->requestState == MSP_REQUEST_STATE_WAIT_FOR_START) &&
+     (data == MSP_PREAMBLE_0))
   {
     pMspObject->requestState = MSP_REQUEST_STATE_PREAMBLE;
     pMspObject->requestHeader.preamble[0] = data;
@@ -218,7 +244,7 @@ void mspProcessByte(MspObject* pMspObject, const uint8_t data)
     // Have a completed request
     mspProcessRequest(pMspObject);
 
-    pMspObject->requestState = MSP_REQUEST_STATE_WAIT_FOR_START;
+    //pMspObject->requestState = MSP_REQUEST_STATE_WAIT_FOR_START;
     break;
   }
 }
@@ -339,6 +365,15 @@ static void mspProcessRequest(MspObject* pMspObject)
       mspHandleRequestsSet4WayIf(pMspObject);
       hasSet4WayIf = true;
       break;
+    case MSP_MOTOR:
+      mspHandleRequestMotor(pMspObject);
+      break;
+    case MSP_FEATURE_CONFIG:
+      mspHandleRequestFeaturesConfig(pMspObject);
+      break;
+    case MSP_BATTERY_STATE:
+      mspHandleRequestBatteryState(pMspObject);
+      break;
     default:
       DEBUG_PRINT("Received unsupported MSP request: %d\n", pMspObject->requestHeader.command);
       return;
@@ -350,6 +385,8 @@ static void mspProcessRequest(MspObject* pMspObject)
     pMspObject->responseCallback(pMspObject->mspResponse, pMspObject->mspResponseSize);
   }
 
+  // Once we've responded, we'll go back to idle state, waiting for start.
+  pMspObject->requestState = MSP_REQUEST_STATE_WAIT_FOR_START;
 }
 
 static void mspHandleRequestMspStatus(MspObject* pMspObject)
@@ -460,6 +497,10 @@ static void mspHandleRequestMspBoxIds(MspObject* pMspObject)
   pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
 }
 
+// Note: All request-handlers below have been reverese-engineered from BLHeli Configurator: https://github.com/stylesuxx/esc-configurator
+// and ESC Configurator: https://github.com/blheli-configurator/blheli-configurator
+// since there seems to be no good and valid specification for MSP extensions.
+
 static void mspHandleRequestsApiVersion(MspObject* pMspObject)
 {
   // TODO: Not sure what version we're really using... Most of the protocol was simply reverse engineered from BLHeli Configurator.
@@ -516,6 +557,37 @@ static void mspHandleRequestsSet4WayIf(MspObject* pMspObject)
   MspSet4WayIf* set4WayIf = (MspSet4WayIf*)(pMspObject->mspResponse + sizeof(MspHeader));
   set4WayIf->connectedEscs = NBR_OF_MOTORS;
   mspMakeTxPacket(pMspObject, MSP_SET_4WAY_IF, (uint8_t*) set4WayIf, sizeof(MspSet4WayIf));
+}
+
+static void mspHandleRequestMotor(MspObject* pMspObject)
+{
+  MspMotors* motorData = (MspMotors*)(pMspObject->mspResponse + sizeof(MspHeader));
+  for (int i = 0; i < NBR_OF_MOTORS; i++)
+  {
+    motorData->data[i] = 1000;
+  }
+  mspMakeTxPacket(pMspObject, MSP_MOTOR, (uint8_t*) motorData, sizeof(MspMotors));
+}
+
+static void mspHandleRequestFeaturesConfig(MspObject* pMspObject)
+{
+  MspFeatures* features = (MspFeatures*)(pMspObject->mspResponse + sizeof(MspHeader));
+  features->featureBits = 0;
+  mspMakeTxPacket(pMspObject, MSP_FEATURE_CONFIG, (uint8_t*) features, sizeof(MspFeatures));
+}
+
+static void mspHandleRequestBatteryState(MspObject* pMspObject)
+{
+  MspBatteryState* batteryState = (MspBatteryState*)(pMspObject->mspResponse + sizeof(MspHeader));
+  batteryState->cellCount = 1;
+  batteryState->capacity = 350;
+  batteryState->voltage = 34;
+  batteryState->drawn = 0;
+  batteryState->amps = 0;
+
+  batteryState->state = 0;
+  batteryState->voltage2 = 0;
+  mspMakeTxPacket(pMspObject, MSP_BATTERY_STATE, (uint8_t*) batteryState, sizeof(MspBatteryState));
 }
 
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen) {
