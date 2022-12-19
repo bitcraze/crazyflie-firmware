@@ -79,7 +79,7 @@ static void uwbRangingTxTask(void *parameters) {
 //  txPacketCache.header.mac = ? TODO init mac header
   while (true) {
     int msgLen = generateRangingMessage((Ranging_Message_t *) &txPacketCache.payload);
-    txPacketCache.header.length = sizeof (Packet_Header_t) + msgLen;
+    txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     uwbSendPacketBlock(&txPacketCache);
     vTaskDelay(TX_PERIOD_IN_MS);
   }

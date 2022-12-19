@@ -10,6 +10,5 @@ typedef struct {
   uint16_t seqNumber;
 } __attribute__((packed)) MockData_t;
 
-
 void routingInit();
 #endif

@@ -52,7 +52,7 @@ static void uwbRoutingTxTask(void *parameters) {
   txPacketCache.header.type = DATA;
 //  txPacketCache.header.mac = ? TODO init mac header
   while (true) {
-    int msgLen = generateRoutingDataMessage((MockData_t * ) & txPacketCache.payload);
+    int msgLen = generateRoutingDataMessage((MockData_t *) &txPacketCache.payload);
     txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     uwbSendPacketBlock(&txPacketCache);
     vTaskDelay(M2T(2000));

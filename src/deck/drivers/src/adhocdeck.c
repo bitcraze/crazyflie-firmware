@@ -30,17 +30,17 @@
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_4) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
-#define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+#define GPIO_PIN_IRQ      DECK_GPIO_IO2
 
 #ifndef ADHOCDECK_ALT_PIN_RESET
-#define GPIO_PIN_RESET 	DECK_GPIO_IO4
+#define GPIO_PIN_RESET    DECK_GPIO_IO4
 #else
 #define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
 #endif
 
 #define EXTI_PortSource EXTI_PortSourceGPIOB
-#define EXTI_PinSource 	EXTI_PinSource5
-#define EXTI_LineN 		  EXTI_Line5
+#define EXTI_PinSource    EXTI_PinSource5
+#define EXTI_LineN          EXTI_Line5
 #elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
 #define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
 #define GPIO_PIN_RESET 	DECK_GPIO_RX2

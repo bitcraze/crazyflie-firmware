@@ -21,7 +21,7 @@ void rangingInit();
 int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                         Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                         Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf);
-void processRangingMessage(Ranging_Message_With_Timestamp_t  *rangingMessageWithTimestamp);
+void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp);
 int generateRangingMessage(Ranging_Message_t *rangingMessage);
 int16_t getDistance(uint16_t neighborAddress);
 void setDistance(uint16_t neighborAddress, int16_t distance);
