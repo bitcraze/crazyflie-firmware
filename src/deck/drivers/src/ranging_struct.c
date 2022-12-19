@@ -212,6 +212,7 @@ bool rangingTableSetClearExpire(Ranging_Table_Set_t *rangingTableSet) {
     if (temp.data.expirationTime < now) {
       set_index_t next_index = temp.next;
       rangingTableSetFree(rangingTableSet, candidate);
+      setDistance(temp.data.neighborAddress, -1);
       candidate = next_index;
       has_changed = true;
       continue;
