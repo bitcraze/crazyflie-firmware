@@ -17,7 +17,6 @@ typedef short set_index_t;
 /* Flooding Package */
 /* Flooding Body Unit */
 typedef struct {
-    uint16_t srcAddress; // 2 byte
     uint16_t dstAddress; // 2 byte
     int16_t distance;// 2 byte
 } __attribute__((packed)) Flooding_Body_Unit_t; // 6 byte
@@ -35,42 +34,6 @@ typedef struct {
     Flooding_Message_Header_t header; // 7 byte
     Flooding_Body_Unit_t bodyUnits[MAX_FLOODING_BODY_UNIT_NUMBER]; // 6 * MAX_FLOODING_BODY_UNIT_NUMBER byte
 } __attribute__((packed)) Flooding_Message_t; // 7 + 6 * MAX_FLOODING_BODY_UNIT_NUMBER byte
-
-/* Flooding Table */
-/* Flooding Check Table */
-
-// typedef struct {
-//     uint16_t srcAddress;
-//     uint16_t msgSequence;
-// } __attribute__((packed)) Flooding_Check_Table_t;
-
-// void floodingCheckTableInit(Flooding_Check_Table_t *floodingCheckTable, uint16_t address, uint16_t sequence);
-
-// /* Flooding Check Table Set Item */
-// typedef struct {
-//     set_index_t next;
-//     Flooding_Check_Table_t data;
-// } __attribute__((packed)) Flooding_Check_Table_Set_Item_t;
-
-// /* Flooding Check Table Set */
-// typedef struct {
-//     Flooding_Check_Table_Set_Item_t setData[FLOODING_CHECK_TABLE_SIZE];
-//     set_index_t freeQueueEntry;
-//     set_index_t fullQueueEntry;
-//     int size;
-// } Flooding_Check_Table_Set_t;
-
-// /* Flooding Check Table Set Operations */
-// void floodingCheckTableSetInit(Flooding_Check_Table_Set_t *floodingCheckTableSet);
-
-// set_index_t floodingCheckTableSetInsert(Flooding_Check_Table_Set_t *floodingCheckTableSet,
-//                                         Flooding_Check_Table_t *floodingCheckTable);
-
-// set_index_t findInFloodingCheckTableSet(Flooding_Check_Table_Set_t *floodingCheckTableSet,
-//                                         uint16_t address);
-
-// void sortFloodingCheckTableSet(Flooding_Check_Table_Set_t *floodingCheckTableSet,
-//                                         set_index_t objectIndex);
 
 /* Flooding Topology Table */
 typedef struct {
