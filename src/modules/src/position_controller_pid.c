@@ -58,13 +58,13 @@ struct this_s {
 };
 
 // Maximum roll/pitch angle permited
-static float rLimit  = PID_VEL_ROLL_MAX;
-static float pLimit  = PID_VEL_PITCH_MAX;
+static float rLimit = PID_VEL_ROLL_MAX;
+static float pLimit = PID_VEL_PITCH_MAX;
 static float rpLimitOverhead = 1.10f;
 // Velocity maximums
 static float xVelMax = PID_POS_VEL_X_MAX;
 static float yVelMax = PID_POS_VEL_Y_MAX;
-static float zVelMax  = PID_POS_VEL_Z_MAX;
+static float zVelMax = PID_POS_VEL_Z_MAX;
 static float velMaxOverhead = 1.10f;
 
 static const float thrustScale = 1000.0f;
@@ -207,7 +207,7 @@ void positionController(float* thrust, attitude_t *attitude, const setpoint_t *s
 
   state_body_x = state->position.x * cosyaw + state->position.y * sinyaw;
   state_body_y = -state->position.x * sinyaw + state->position.y * cosyaw;
-    
+
   float globalvx = setpoint->velocity.x;
   float globalvy = setpoint->velocity.y;
 
@@ -287,66 +287,66 @@ void positionControllerResetAllfilters() {
 
 /**
  * Log variables of the PID position controller
- * 
+ *
  * Note: rename to posCtrlPID ?
  */
 LOG_GROUP_START(posCtl)
 
 /**
  * @brief PID controller target desired body-yaw-aligned velocity x [m/s]
- * 
+ *
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetVX, &this.pidVX.pid.desired)
 /**
  * @brief PID controller target desired body-yaw-aligned velocity y [m/s]
- * 
+ *
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetVY, &this.pidVY.pid.desired)
 /**
  * @brief PID controller target desired velocity z [m/s]
- * 
+ *
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetVZ, &this.pidVZ.pid.desired)
 /**
  * @brief PID controller target desired body-yaw-aligned position x [m]
- * 
+ *
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetX, &this.pidX.pid.desired)
 /**
  * @brief PID controller target desired body-yaw-aligned position y [m]
- * 
+ *
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetY, &this.pidY.pid.desired)
 /**
  * @brief PID controller target desired global position z [m]
- * 
+ *
  * Note: Same as stabilizer log
  */
 LOG_ADD(LOG_FLOAT, targetZ, &this.pidZ.pid.desired)
 
 /**
  * @brief PID state body-yaw-aligned velocity x [m/s]
- * 
+ *
  */
 LOG_ADD(LOG_FLOAT, bodyVX, &state_body_vx)
 /**
  * @brief PID state body-yaw-aligned velocity y [m/s]
- * 
+ *
  */
 LOG_ADD(LOG_FLOAT, bodyVY, &state_body_vy)
 /**
  * @brief PID state body-yaw-aligned position x [m]
- * 
+ *
  */
 LOG_ADD(LOG_FLOAT, bodyX, &state_body_x)
 /**
  * @brief PID state body-yaw-aligned position y [m]
- * 
+ *
  */
 LOG_ADD(LOG_FLOAT, bodyY, &state_body_y)
 

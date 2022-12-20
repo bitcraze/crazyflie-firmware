@@ -121,8 +121,8 @@
 #define PID_POS_Z_KFF 0.0f
 
 #define PID_POS_VEL_X_MAX 1.0f
-#define PID_POS_VEL_Y_MAX 0.0f
-#define PID_POS_VEL_Z_MAX 0.0f
+#define PID_POS_VEL_Y_MAX 1.0f
+#define PID_POS_VEL_Z_MAX 1.0f
 
 // PID filter configuration
 #define ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ 12.5f
