@@ -28,10 +28,10 @@ static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
-int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
+int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = -1};
 
 void rangingRxCallback(void *parameters) {
-//  DEBUG_PRINT("rangingRxCallback \n");
+  // DEBUG_PRINT("rangingRxCallback \n");
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -57,8 +57,13 @@ void rangingTxCallback(void *parameters) {
 }
 
 int16_t getDistance(uint16_t neighborAddress) {
-  assert(neighborAddress < RANGING_TABLE_SIZE);
+  ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
   return distanceTowards[neighborAddress];
+}
+
+void setDistance(uint16_t neighborAddress, int16_t distance) {
+  ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
+  distanceTowards[neighborAddress] = distance;
 }
 
 static void uwbRangingTxTask(void *parameters) {
@@ -74,7 +79,7 @@ static void uwbRangingTxTask(void *parameters) {
 //  txPacketCache.header.mac = ? TODO init mac header
   while (true) {
     int msgLen = generateRangingMessage((Ranging_Message_t *) &txPacketCache.payload);
-    txPacketCache.header.length = sizeof (Packet_Header_t) + msgLen;
+    txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     uwbSendPacketBlock(&txPacketCache);
     vTaskDelay(TX_PERIOD_IN_MS);
   }
@@ -95,7 +100,7 @@ static void uwbRangingRxTask(void *parameters) {
 
 void rangingInit() {
   MY_UWB_ADDRESS = getUWBAddress();
-//  DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
+  DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
   rangingTableSetInit(&rangingTableSet);
 
@@ -213,10 +218,9 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
                                          neighborRangingTable->Tf, neighborRangingTable->Rf);
       if (distance > 0) {
         neighborRangingTable->distance = distance;
-        distanceTowards[neighborRangingTable->neighborAddress] = distance;
-        DEBUG_PRINT("distance to %d = %d \n", neighborAddress, distance);
+        setDistance(neighborRangingTable->neighborAddress, distance);
       } else {
-        DEBUG_PRINT("distance is not updated since some error occurs");
+        // DEBUG_PRINT("distance is not updated since some error occurs\n");
       }
     }
   }
@@ -239,6 +243,7 @@ int generateRangingMessage(Ranging_Message_t *rangingMessage) {
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   sortRangingTableSet(&rangingTableSet);
 #endif
+  rangingTableSetClearExpire(&rangingTableSet);
   int8_t bodyUnitNumber = 0;
   rangingSeqNumber++;
   int curSeqNumber = rangingSeqNumber;

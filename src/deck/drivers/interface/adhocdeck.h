@@ -6,6 +6,7 @@
 #include "dwTypes.h"
 #include "queue.h"
 #include "ranging_struct.h"
+#include "flooding_struct.h"
 
 /* Function Switch */
 #define ENABLE_PHR_EXT_MODE
@@ -67,7 +68,8 @@ static dwt_config_t config = {
 /* UWB packet definition */
 typedef enum {
   RANGING = 0,
-  DATA = 1,
+  FLOODING = 1,
+  DATA = 2,
   MESSAGE_TYPE_COUNT, /* only used for counting message types. */
 } MESSAGE_TYPE;
 

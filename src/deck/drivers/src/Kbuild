@@ -22,4 +22,5 @@ obj-$(CONFIG_DECK_ADHOC)         += adhocdeck.o
 obj-$(CONFIG_DECK_ADHOC)         += ranging_struct.o
 obj-$(CONFIG_DECK_ADHOC)         += swarm_ranging.o
 obj-$(CONFIG_DECK_ADHOC)         += routing.o
+obj-$(CONFIG_DECK_ADHOC)         += flooding_struct.o
 obj-$(CONFIG_DECK_ADHOC)         += flooding.o
