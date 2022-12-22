@@ -10,9 +10,9 @@ link to pull downlink packets.
 
 | port | channel | Function |
 |------|---------|----------|
-| 15   | 0       | [Echo](#platform-commands) |
-| 15   | 1       | [Source](#platform-commands)  |
-| 15   | 2       | [Sink](#app-channel) |
+| 15   | 0       | [Echo](../crtp_platform#platform-commands) |
+| 15   | 1       | [Source](../crtp_platform#platform-commands)  |
+| 15   | 2       | [Sink](../crtp_platform#app-channel) |
 | 15   | 3       | [*Null packets*](#null-packet) |
 
 ## Echo
