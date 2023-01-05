@@ -24,8 +24,7 @@
  * cfassert.h - Assert macro
  */
 
-#include "stm32fxxx.h"
-#include "console.h"
+#include <stdbool.h>
 
 #ifndef __CFASSERT_H__
 #define __CFASSERT_H__

@@ -24,12 +24,12 @@
  * console.c - Used to send console data to client
  */
 
-#include <stdbool.h>
 #include <string.h>
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "console.h"
 
 #include "crtp.h"
 
@@ -104,12 +104,12 @@ int consolePutchar(int ch)
   if (xSemaphoreTake(synch, portMAX_DELAY) == pdTRUE)
   {
     // Try to send if we already have a pending message
-    if (messageSendingIsPending) 
+    if (messageSendingIsPending)
     {
       consoleSendMessage();
     }
 
-    if (! messageSendingIsPending) 
+    if (! messageSendingIsPending)
     {
       if (messageToPrint.size < CRTP_MAX_DATA_SIZE)
       {
@@ -171,7 +171,7 @@ void consoleFlush(void)
 static int findMarkerStart()
 {
   int start = messageToPrint.size;
-  
+
   // If last char is new line, rewind one char since the marker contains a new line.
   if (start > 0 && messageToPrint.data[start - 1] == '\n')
   {
@@ -183,9 +183,9 @@ static int findMarkerStart()
 
 static void addBufferFullMarker()
 {
-  // Try to add the marker after the message if it fits in the buffer, otherwise overwrite the end of the message 
+  // Try to add the marker after the message if it fits in the buffer, otherwise overwrite the end of the message
   int endMarker = findMarkerStart() + sizeof(bufferFullMsg);
-  if (endMarker >= (CRTP_MAX_DATA_SIZE)) 
+  if (endMarker >= (CRTP_MAX_DATA_SIZE))
   {
     endMarker = CRTP_MAX_DATA_SIZE;
   }
