@@ -14,7 +14,6 @@
 #include "mock_lighthouse_calibration.h"
 #include "mock_uart1.h"
 #include "mock_statsCnt.h"
-#include "mock_cfassert.h"
 #include "mock_crtp_localization_service.h"
 #include "mock_lighthouse_storage.h"
 

@@ -4,7 +4,6 @@
 #include <string.h>
 #include "unity.h"
 #include "mock_libdw1000.h"
-#include "mock_cfassert.h"
 #include "mock_locodeck.h"
 #include "mock_configblock.h"
 
@@ -137,22 +136,6 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   float actualDistance = lpsTwrTagGetDistance(expectedAnchor);
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDistance, actualDistance);
-}
-
-void testEventReceiveUnhandledEventShouldAssertFailure() {
-  // Fixture
-  assertFail_Expect("", "", 0);
-  assertFail_IgnoreArg_exp();
-  assertFail_IgnoreArg_file();
-  assertFail_IgnoreArg_line();
-
-  uwbEvent_t unknownEvent = 100;
-
-  // Test
-  uwbTwrTagAlgorithm.onEvent(&dev, unknownEvent);
-
-  // Assert
-  // Mock automatically validated after test
 }
 
 void testEventReceiveFailedShouldBeIgnored() {

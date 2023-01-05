@@ -247,6 +247,7 @@ module RakefileHelpers
       end
 
       # build libs
+      obj_list += add_lib_source_files(['TEST_SUPPORT'], test_defines)
       lib_annotations = read_lib_annotations(test)
       obj_list += add_lib_source_files(lib_annotations, test_defines)
 
@@ -414,8 +415,9 @@ module RakefileHelpers
     libs.each do |lib|
       puts 'Adding lib ' + lib
 
-      files = $cfg['compiler']['libs'][lib]['files']
-      extra_options = $cfg['compiler']['libs'][lib]['extra_options']
+      files = $cfg['compiler']['libs'][lib]['files'] || []
+      extra_options = $cfg['compiler']['libs'][lib]['extra_options'] || []
+
       files.each do |src_file|
         obj_list << compile(src_file, test_defines, extra_options=extra_options)
       end
