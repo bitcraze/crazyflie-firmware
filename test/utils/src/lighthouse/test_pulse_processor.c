@@ -15,15 +15,15 @@ void setUp(void) {
 void testThatResultStructIsCleared() {
   // Fixture
   pulseProcessorResult_t angles;
-  angles.sensorMeasurementsLh1[2].baseStationMeasurements[1].validCount = 2;
-  angles.sensorMeasurementsLh2[2].baseStationMeasurements[1].validCount = 2;
+  angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].validCount = 2;
+  angles.baseStationMeasurementsLh2[1].sensorMeasurements[2].validCount = 2;
 
   // Test
   pulseProcessorClear(&angles, 1);
 
   // Assert
-  TEST_ASSERT_EQUAL_INT(0, angles.sensorMeasurementsLh1[2].baseStationMeasurements[1].validCount);
-  TEST_ASSERT_EQUAL_INT(0, angles.sensorMeasurementsLh2[2].baseStationMeasurements[1].validCount);
+  TEST_ASSERT_EQUAL_INT(0, angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].validCount);
+  TEST_ASSERT_EQUAL_INT(0, angles.baseStationMeasurementsLh2[1].sensorMeasurements[2].validCount);
 }
 
 void testThatTsDiffReturnsDifference() {

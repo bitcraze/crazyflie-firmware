@@ -16,6 +16,7 @@
 #include "mock_statsCnt.h"
 #include "mock_crtp_localization_service.h"
 #include "mock_lighthouse_storage.h"
+#include "mock_lighthouse_throttle.h"
 
 #include <stdbool.h>
 
