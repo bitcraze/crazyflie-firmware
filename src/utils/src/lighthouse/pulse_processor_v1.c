@@ -268,13 +268,6 @@ TESTABLE_STATIC bool isNewSync(uint32_t timestamp, uint32_t lastSync) {
   return (diff > max) && (diff < min);
 }
 
-#ifndef UNIT_TEST_MODE
-#include "debug.h"
-#else
-#include <stdio.h>
-#define DEBUG_PRINT printf
-#endif
-
 static bool decodeAndApplyBaseStationCalibrationData(pulseProcessor_t *state) {
   bool isDecoded = false;
 
