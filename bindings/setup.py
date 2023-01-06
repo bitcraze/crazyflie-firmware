@@ -54,6 +54,7 @@ cffirmware = Extension(
         # The following flags are also used for compiling the actual firmware
         "-fno-strict-aliasing",
         "-Wno-address-of-packed-member",
+        "-DUNIT_TEST_MODE",
     ],
 )
 
