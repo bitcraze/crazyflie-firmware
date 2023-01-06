@@ -314,7 +314,6 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   }
 }
 
-#ifdef CRAZYFLIE_FW
 
 void controllerMellingerFirmwareInit(void)
 {
@@ -437,5 +436,3 @@ LOG_ADD(LOG_FLOAT, i_err_x, &g_self.i_error_x)
 LOG_ADD(LOG_FLOAT, i_err_y, &g_self.i_error_y)
 LOG_ADD(LOG_FLOAT, i_err_z, &g_self.i_error_z)
 LOG_GROUP_STOP(ctrlMel)
-
-#endif // CRAZYFLIE_FW
