@@ -23,7 +23,7 @@
  *
  *
  * hello_world.c - App layer application of a simple hello world debug print every
- *   2 seconds.  
+ *   2 seconds.
  */
 
 
@@ -37,12 +37,12 @@
 extern "C"
 {
   #include "app.h"
+
+  #include "FreeRTOS.h"
+  #include "task.h"
+
+  #include "debug.h"
 }
-
-#include "FreeRTOS.h"
-#include "task.h"
-
-#include "debug.h"
 
 #define DEBUG_MODULE "HELLOWORLD"
 

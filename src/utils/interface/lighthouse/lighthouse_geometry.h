@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "arm_math.h"
+#include "cf_math.h"
 #include "stabilizer_types.h"
 
 typedef struct {

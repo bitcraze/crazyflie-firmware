@@ -9,7 +9,6 @@
 #include "unity.h"
 
 #include "mock_crtp.h"
-#include "mock_cfassert.h"
 #include "mock_storage.h"
 #include "crc32.h"
 

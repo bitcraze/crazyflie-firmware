@@ -3,8 +3,6 @@
 
 #include "unity.h"
 
-#include "mock_cfassert.h"
-
 static tdoaMeasurement_t tdoa;
 
 // Helpers

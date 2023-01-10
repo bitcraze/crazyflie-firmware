@@ -84,6 +84,9 @@ compiler:
     extension: '.o'
     destination: *build_path
   libs:
+    TEST_SUPPORT:
+      files:
+        - 'test/testSupport/cfassert_in_test.c'
     ARM_DSP_MATH:
       files:
         - 'vendor/CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_add_f32.c'
