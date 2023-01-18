@@ -1546,15 +1546,18 @@ static void quatFromAtt(float *attVec, float *quat)
   quat[3] = scale * attVec[2];
 }
 
- /** 
-  * Temporary development log groups from the Extended UKF Filter (experimental)
+
+ #ifdef CONFIG_DEBUG
+  /** 
+  * Temporary development log groups from the UKF Filter (experimental)
   */ 
 LOG_GROUP_START(nav_ukf_states)
-//  LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
-//  LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
-//  LOG_ADD(LOG_FLOAT, vx, &coreData.S[KC_STATE_PX])
-//  LOG_ADD(LOG_FLOAT, vy, &coreData.S[KC_STATE_PY])
+  LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
+  LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
+  LOG_ADD(LOG_FLOAT, vx, &coreData.S[KC_STATE_PX])
+  LOG_ADD(LOG_FLOAT, vy, &coreData.S[KC_STATE_PY])
 LOG_GROUP_STOP(nav_ukf_states)
+#endif
 
  /** 
   * Log groups for the navigation filter associated with the error-state Unscented Kalman Filter (experimental)
