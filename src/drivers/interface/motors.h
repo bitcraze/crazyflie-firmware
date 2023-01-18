@@ -315,6 +315,19 @@ int motorsESCIsLo(uint32_t id);
  */
 void motorsBurstDshot();
 
+/*
+ * Enables or disables the ability to set power levels of the motors directly
+ * which is done by calling motorPowerSetValue(id, value)
+*/
+void motorSetPowerEnabled(bool enable);
+
+/*
+ * Sets the power level for the given motor id.
+ * Note that the powerSetEnable functionality must be set to true
+ * in order for this to have any effect.
+*/
+void motorSetPowerValue(uint32_t id, uint16_t value);
+
 /**
  * Set the PWM ratio of the motor 'id'
  */

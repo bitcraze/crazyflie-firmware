@@ -147,6 +147,11 @@ void passthroughTask(void *param)
     uartslkResumeRx();
     sensorsResume();
 
+    // The ability to set the powers of the motors directly might be changed
+    // during the 4way process (for instance while using the motor sliders in ESC Configurator ).
+    // Here we'll just make sure that the ability is set to false, so we don't accidentally start the motors.
+    motorSetPowerEnabled(false);
+
     // Clear any notifications that was queued during 4way process.
     ulTaskNotifyValueClear(NULL, 0xFFFFFFFF);
   }
