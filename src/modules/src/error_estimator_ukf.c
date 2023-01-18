@@ -1547,12 +1547,12 @@ static void quatFromAtt(float *attVec, float *quat)
 }
 
 // Temporary development groups
-LOG_GROUP_START(kalman_states)
+LOG_GROUP_START(nav_ukf_states)
 //  LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
 //  LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
 //  LOG_ADD(LOG_FLOAT, vx, &coreData.S[KC_STATE_PX])
 //  LOG_ADD(LOG_FLOAT, vy, &coreData.S[KC_STATE_PY])
-LOG_GROUP_STOP(kalman_states)
+LOG_GROUP_STOP(nav_ukf_states)
 
 LOG_GROUP_START(navFilter)
 LOG_ADD(LOG_FLOAT, posX, &stateNav[0])
