@@ -72,7 +72,7 @@
 
 #include "statsCnt.h"
 
-#define DEBUG_MODULE "ESTKALMAN"
+#define DEBUG_MODULE "ESTKALMANUNSCENTED"
 #include "debug.h"
 
 // Semaphore to signal that we got data from the stabilzer loop to process
