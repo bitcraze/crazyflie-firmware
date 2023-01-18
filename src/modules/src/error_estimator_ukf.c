@@ -1166,7 +1166,7 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
                 Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
               }
             }
-            // Add TDOA Noise R
+            // Add Sweep angle Noise R
             Pyy = Pyy + m.data.sweepAngle.stdDev * m.data.sweepAngle.stdDev;
             innovation = m.data.sweepAngle.measuredSweepAngle - observation;
 
@@ -1546,7 +1546,9 @@ static void quatFromAtt(float *attVec, float *quat)
   quat[3] = scale * attVec[2];
 }
 
-// Temporary development groups
+ /** 
+  * Temporary development log groups from the Extended UKF Filter (experimental)
+  */ 
 LOG_GROUP_START(nav_ukf_states)
 //  LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
 //  LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
@@ -1554,6 +1556,9 @@ LOG_GROUP_START(nav_ukf_states)
 //  LOG_ADD(LOG_FLOAT, vy, &coreData.S[KC_STATE_PY])
 LOG_GROUP_STOP(nav_ukf_states)
 
+ /** 
+  * Log groups for the navigation filter associated with the error-state Unscented Kalman Filter (experimental)
+  */ 
 LOG_GROUP_START(navFilter)
 LOG_ADD(LOG_FLOAT, posX, &stateNav[0])
 LOG_ADD(LOG_FLOAT, posY, &stateNav[1])
@@ -1576,6 +1581,9 @@ LOG_ADD(LOG_FLOAT, procTimeFilter, &procTime)
 LOG_ADD(LOG_UINT8, recAnchorId, &receivedAnchor)
 LOG_GROUP_STOP(navFilter)
 
+ /** 
+  * Log groups for error-state Unscented Kalman Filter (experimental)
+  */ 
 LOG_GROUP_START(sensorFilter)
 LOG_ADD(LOG_FLOAT, dxPx, &meas_NX)
 LOG_ADD(LOG_FLOAT, dyPx, &meas_NY)
@@ -1590,7 +1598,9 @@ LOG_ADD(LOG_FLOAT, innoChTof, &innoCheckTof)
 LOG_ADD(LOG_FLOAT, distTWR, &distanceTWR)
 LOG_GROUP_STOP(sensorFilter)
 
-// Stock log groups
+ /** 
+  * Log groups different rates for the UKF (experimental)
+  */ 
 LOG_GROUP_START(ukf)
 STATS_CNT_RATE_LOG_ADD(rtUpdate, &updateCounter)
 STATS_CNT_RATE_LOG_ADD(rtPred, &predictionCounter)
@@ -1600,6 +1610,9 @@ STATS_CNT_RATE_LOG_ADD(rtApnd, &measurementAppendedCounter)
 STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
 LOG_GROUP_STOP(ukf)
 
+ /** 
+  * Parameter values used for tuning the Unscented Kalman Filter (experimental)
+  */ 
 PARAM_GROUP_START(ukf)
 PARAM_ADD(PARAM_UINT8, resetEstimation, &resetNavigation)
 PARAM_ADD(PARAM_UINT8, useNavFilter, &useNavigationFilter)
