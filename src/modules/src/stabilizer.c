@@ -359,7 +359,9 @@ void stabilizerSetEmergencyStopTimeout(int timeout)
  */
 PARAM_GROUP_START(stabilizer)
 /**
- * @brief Estimator type Any(0), complementary(1), kalman(2) (Default: 0)
+ * @brief Estimator type Any(0), complementary(1), extended kalman(2), **unscented kalman(3)  (Default: 0)
+ * 
+ * ** Experimental, needs to be enabled in kbuild
  */
 PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
 /**
