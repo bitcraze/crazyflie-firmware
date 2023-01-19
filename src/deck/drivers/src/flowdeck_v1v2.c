@@ -120,7 +120,13 @@ static void flowdeckTask(void *param)
     flowMeasurement_t flowData;
     flowData.stdDevX = stdFlow;
     flowData.stdDevY = stdFlow;
-    flowData.dt = 0.01;
+    flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
+    // we do want to update dt every measurement and not only in the ones with detected motion, 
+    // as we work with instantaneous gyro and velocity values in the update function 
+    // (meaning assuming the current measurements over all of dt)
+    lastTime = usecTimestamp(); 
+
+    
 
 #if defined(USE_MA_SMOOTHING)
       // Use MA Smoothing
@@ -151,8 +157,6 @@ static void flowdeckTask(void *param)
       // Push measurements into the estimator if flow is not disabled
       //    and the PMW flow sensor indicates motion detection
       if (!useFlowDisabled && currentMotion.motion == 0xB0) {
-        flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
-        lastTime = usecTimestamp();
         estimatorEnqueueFlow(&flowData);
       }
     } else {
