@@ -252,8 +252,9 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       }
       break;
     case eventTimeout:
-      setRadioInReceiveMode(dev);
-      break;
+      // Fall through
+    case eventReceiveFailed:
+      // Fall through
     case eventReceiveTimeout:
       setRadioInReceiveMode(dev);
       break;

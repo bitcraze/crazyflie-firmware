@@ -176,6 +176,10 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
   timeout = algorithm->onEvent(dev, eventReceiveTimeout);
 }
 
+static void rxFailedCallback(dwDevice_t * dev) {
+  timeout = algorithm->onEvent(dev, eventReceiveFailed);
+}
+
 static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest) {
   bool result = false;
 
@@ -511,6 +515,7 @@ static void dwm1000Init(DeckInfo *info)
   dwAttachSentHandler(dwm, txCallback);
   dwAttachReceivedHandler(dwm, rxCallback);
   dwAttachReceiveTimeoutHandler(dwm, rxTimeoutCallback);
+  dwAttachReceiveFailedHandler(dwm, rxFailedCallback);
 
   dwNewConfiguration(dwm);
   dwSetDefaults(dwm);
