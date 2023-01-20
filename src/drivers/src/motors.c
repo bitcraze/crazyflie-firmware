@@ -39,6 +39,7 @@
 #include "power_distribution.h"
 #include "nvicconf.h"
 #include "usec_time.h"
+#include "platform_defaults.h"
 //FreeRTOS includes
 #include "task.h"
 
@@ -71,24 +72,27 @@ const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
 const MotorHealthTestDef brushedMotorHealthTestSettings = {
-  /* onPeriodMsec = */ 50,
-  /* offPeriodMsec = */ 950,
-  /* varianceMeasurementStartMsec = */ 0,
-  /* onPeriodPWMRatio = */ 0xFFFF,
+   .onPeriodMsec = HEALTH_BRUSHED_ON_PERIOD_MSEC,
+   .offPeriodMsec = HEALTH_BRUSHED_OFF_PERIOD_MSEC,
+   .varianceMeasurementStartMsec = HEALTH_BRUSHED_VARIANCE_START_MSEC,
+   .onPeriodPWMRatioProp = HEALTH_BRUSHED_PROP_ON_PERIOD_PWM_RATIO,
+   .onPeriodPWMRatioBat = HEALTH_BRUSHED_BAT_ON_PERIOD_PWM_RATIO,
 };
 
 const MotorHealthTestDef brushlessMotorHealthTestSettings = {
-  /* onPeriodMsec = */ 2000,
-  /* offPeriodMsec = */ 1000,
-  /* varianceMeasurementStartMsec = */ 1000,
-  /* onPeriodPWMRatio = */ 0 /* user must set health.propTestPWMRatio explicitly */
+    .onPeriodMsec = HEALTH_BRUSHLESS_ON_PERIOD_MSEC,
+    .offPeriodMsec = HEALTH_BRUSHLESS_OFF_PERIOD_MSEC,
+    .varianceMeasurementStartMsec = HEALTH_BRUSHLESS_VARIANCE_START_MSEC,
+    .onPeriodPWMRatioProp = 0, /* user must set health.propTestPWMRatio explicitly */
+    .onPeriodPWMRatioBat = 0, /* user must set health.batTestPWMRatio explicitly */
 };
 
 const MotorHealthTestDef unknownMotorHealthTestSettings = {
-  /* onPeriodMsec = */ 0,
-  /* offPeriodMseec = */ 0,
-  /* varianceMeasurementStartMsec = */ 0,
-  /* onPeriodPWMRatio = */ 0
+    .onPeriodMsec = 0,
+    .offPeriodMsec = 0,
+    .varianceMeasurementStartMsec = 0,
+    .onPeriodPWMRatioProp = 0,
+    .onPeriodPWMRatioBat = 0,
 };
 
 static bool isInit = false;

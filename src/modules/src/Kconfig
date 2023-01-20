@@ -144,6 +144,18 @@ config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
 
         The value specified here can also be overridden with parameters.
 
+config MOTORS_DEFAULT_BAT_TEST_PWM_RATIO
+    int "Override default PWM ratio to use during battery tests"
+    range 0 65535
+    default 0
+    help
+        PWM ratio to use during battery test, expressed as an integer in the range
+        0 to 65535. Zero means not to override the PWM ratio because there a differences
+        between brushed and brushless;. Brushless is 0 for safety reasons. Different motors
+        needs different value, hance this config variable.
+
+        The value specified here can also be overridden with parameters.
+
 choice
     prompt "Type of power distribution"
     default POWER_DISTRIBUTION_QUADROTOR

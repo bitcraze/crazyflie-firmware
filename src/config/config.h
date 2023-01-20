@@ -222,7 +222,7 @@
  * and measure the voltage sag. The threshold is very experimental and dependent on stock configuration. It is
  * fairly constant over the battery voltage range but testing with fully changed battery is best.
  */
-#define BAT_LOADING_SAG_THRESHOLD  0.95f
+#define BAT_LOADING_SAG_THRESHOLD  0.70f
 
 /**
  * \def ACTIVATE_STARTUP_SOUND
