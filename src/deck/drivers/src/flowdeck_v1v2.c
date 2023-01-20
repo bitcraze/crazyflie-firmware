@@ -5,6 +5,8 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
+ * LPS node firmware.
+ *
  * Copyright 2021, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +22,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
-/* flowdeck_v1v2.c: Flow deck driver */
+/* flowdeck.c: Flow deck driver */
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -30,10 +32,11 @@
 #include "log.h"
 #include "param.h"
 #include "pmw3901.h"
+#include "paa3905e1.h"
 #include "sleepus.h"
+#include "commander.h"
 
 #include "stabilizer_types.h"
-#include "estimator.h"
 #include "estimator.h"
 
 #include "cf_math.h"
@@ -60,11 +63,17 @@ float dpixely_previous = 0;
 
 static uint8_t outlierCount = 0;
 static float stdFlow = 2.0f;
+static uint32_t shutter;
+static int16_t flowDeltaX;
+static int16_t flowDeltaY;
+static uint8_t flowMode;
 
 static bool isInit1 = false;
 static bool isInit2 = false;
 
-motionBurst_t currentMotion;
+motionBurst3905_t currentMotion;
+
+static bool flowRawRead = false;
 
 // Disables pushing the flow measurement in the EKF
 static bool useFlowDisabled = false;
@@ -76,7 +85,12 @@ static bool useAdaptiveStd = false;
 // (will not work if useAdaptiveStd is on)
 static float flowStdFixed = 2.0f;
 
+static uint64_t counter = 0;
+static float yaw_line = 0.0f;
+
 #define NCS_PIN DECK_GPIO_IO3
+
+static float flowdeckReadRaw();
 
 
 static void flowdeckTask(void *param)
@@ -86,80 +100,95 @@ static void flowdeckTask(void *param)
   uint64_t lastTime  = usecTimestamp();
   while(1) {
     vTaskDelay(10);
+    counter++;
 
-    pmw3901ReadMotion(NCS_PIN, &currentMotion);
+    if (flowRawRead)
+      {
+        yaw_line = flowdeckReadRaw();
+      }
+
+    paa3905ReadMotion(NCS_PIN, &currentMotion);
+    flowMeasurement_t flowData;
+    flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
+    lastTime = usecTimestamp();
+
+    flowMode = currentMotion.observation >> 6;
 
     // Flip motion information to comply with sensor mounting
     // (might need to be changed if mounted differently)
     int16_t accpx = -currentMotion.deltaY;
     int16_t accpy = -currentMotion.deltaX;
+    shutter = currentMotion.shutter_h << 16 |
+              currentMotion.shutter_m << 8 |
+              currentMotion.shutter_l;
 
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
+      /* if ((flowMode == BRIGHT_MODE && currentMotion.squal > BRIGHT_MODE_MIN_SQUAL && shutter <= BRIGHT_MODE_MAX_SHUTTER) || \
+      //   (flowMode == LOW_LIGHT_MODE && currentMotion.squal > LOW_LIGHT_MODE_MIN_SQUAL && shutter <= LOW_LIGHT_MODE_MAX_SHUTTER) || \
+      //     (flowMode == SUPER_LOW_LIGHT_MODE && currentMotion.squal > SUPER_LOW_LIGHT_MODE_MIN_SQUAL && shutter <= SUPER_LOW_LIGHT_MODE_MAX_SHUTTER))
+       {*/
+        if (useAdaptiveStd)
+        {
+          // The standard deviation is fitted by measurements flying over low and high texture
+          //   and looking at the shutter time
+          stdFlow=0.0007984f *shutter + 0.4335f;
 
-    if (useAdaptiveStd)
-    {
-      // The standard deviation is fitted by measurements flying over low and high texture
-      //   and looking at the shutter time
-      float shutter_f = (float)currentMotion.shutter;
-      stdFlow=0.0007984f *shutter_f + 0.4335f;
+          // The formula with the amount of features instead
+          /*float squal_f = (float)currentMotion.squal;
+          stdFlow =  -0.01257f * squal_f + 4.406f; */
+          if (stdFlow < 0.1f) stdFlow=0.1f;
+        } else {
+          stdFlow = flowStdFixed;
+        }
 
+        // Form flow measurement struct and push into the EKF
+        flowData.stdDevX = stdFlow;
+        flowData.stdDevY = stdFlow;
+        // flowData.dt = 0.01;
 
-      // The formula with the amount of features instead
-      /*float squal_f = (float)currentMotion.squal;
-      stdFlow =  -0.01257f * squal_f + 4.406f; */
-      if (stdFlow < 0.1f) stdFlow=0.1f;
-    } else {
-      stdFlow = flowStdFixed;
-    }
+    #if defined(USE_MA_SMOOTHING)
+          // Use MA Smoothing
+          pixelAverages.averageX[pixelAverages.ptr] = (float32_t)accpx;
+          pixelAverages.averageY[pixelAverages.ptr] = (float32_t)accpy;
 
+          float32_t meanX;
+          float32_t meanY;
 
-    // Form flow measurement struct and push into the EKF
-    flowMeasurement_t flowData;
-    flowData.stdDevX = stdFlow;
-    flowData.stdDevY = stdFlow;
-    flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
-    // we do want to update dt every measurement and not only in the ones with detected motion,
-    // as we work with instantaneous gyro and velocity values in the update function
-    // (meaning assuming the current measurements over all of dt)
-    lastTime = usecTimestamp();
+          arm_mean_f32(pixelAverages.averageX, AVERAGE_HISTORY_LENGTH, &meanX);
+          arm_mean_f32(pixelAverages.averageY, AVERAGE_HISTORY_LENGTH, &meanY);
 
+          pixelAverages.ptr = (pixelAverages.ptr + 1) % AVERAGE_HISTORY_LENGTH;
 
-
-#if defined(USE_MA_SMOOTHING)
-      // Use MA Smoothing
-      pixelAverages.averageX[pixelAverages.ptr] = (float32_t)accpx;
-      pixelAverages.averageY[pixelAverages.ptr] = (float32_t)accpy;
-
-      float32_t meanX;
-      float32_t meanY;
-
-      arm_mean_f32(pixelAverages.averageX, AVERAGE_HISTORY_LENGTH, &meanX);
-      arm_mean_f32(pixelAverages.averageY, AVERAGE_HISTORY_LENGTH, &meanY);
-
-      pixelAverages.ptr = (pixelAverages.ptr + 1) % AVERAGE_HISTORY_LENGTH;
-
-      flowData.dpixelx = (float)meanX;   // [pixels]
-      flowData.dpixely = (float)meanY;   // [pixels]
-#elif defined(USE_LP_FILTER)
-      // Use LP filter measurements
-      flowData.dpixelx = LP_CONSTANT * dpixelx_previous + (1.0f - LP_CONSTANT) * (float)accpx;
-      flowData.dpixely = LP_CONSTANT * dpixely_previous + (1.0f - LP_CONSTANT) * (float)accpy;
-      dpixelx_previous = flowData.dpixelx;
-      dpixely_previous = flowData.dpixely;
-#else
-      // Use raw measurements
-      flowData.dpixelx = (float)accpx;
-      flowData.dpixely = (float)accpy;
-#endif
-      // Push measurements into the estimator if flow is not disabled
-      //    and the PMW flow sensor indicates motion detection
-      if (!useFlowDisabled && currentMotion.motion == 0xB0) {
-        estimatorEnqueueFlow(&flowData);
-      }
-    } else {
-      outlierCount++;
-    }
+          flowData.dpixelx = (float)meanX;   // [pixels]
+          flowData.dpixely = (float)meanY;   // [pixels]
+    #elif defined(USE_LP_FILTER)
+          // Use LP filter measurements
+          flowData.dpixelx = LP_CONSTANT * dpixelx_previous + (1.0f - LP_CONSTANT) * (float)accpx;
+          flowData.dpixely = LP_CONSTANT * dpixely_previous + (1.0f - LP_CONSTANT) * (float)accpy;
+          dpixelx_previous = flowData.dpixelx;
+          dpixely_previous = flowData.dpixely;
+    #else
+          // Use raw measurements
+          flowData.dpixelx = (float)accpx;
+          flowData.dpixely = (float)accpy;
+    #endif
+          // Push measurements into the estimator if flow is not disabled
+          //    and the PMW flow sensor indicates motion detection
+          if (!useFlowDisabled && (currentMotion.motion & 0x80)) {
+            flowDeltaX = accpx;
+            flowDeltaY = accpy;
+            estimatorEnqueueFlow(&flowData);
+          } else {
+            flowDeltaX = 0;
+            flowDeltaY = 0;
+          }
+        } else {
+          outlierCount++;
+        }
+    //   } else {
+    //   outlierCount++;
+    // }
   }
 }
 
@@ -201,7 +230,7 @@ static const DeckDriver flowdeck1_deck = {
   .name = "bcFlow",
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
-  .requiredEstimator = StateEstimatorTypeKalman,
+  .requiredEstimator = kalmanEstimator,
 
   .init = flowdeck1Init,
   .test = flowdeck1Test,
@@ -219,7 +248,7 @@ static void flowdeck2Init()
   const DeckDriver *zRanger = deckFindDriverByName("bcZRanger2");
   zRanger->init(NULL);
 
-  if (pmw3901Init(NCS_PIN))
+  if (paa3905Init(NCS_PIN))
   {
     xTaskCreate(flowdeckTask, FLOW_TASK_NAME, FLOW_TASK_STACKSIZE, NULL,
                 FLOW_TASK_PRI, NULL);
@@ -241,6 +270,11 @@ static bool flowdeck2Test()
   return zRanger->test();
 }
 
+static float flowdeckReadRaw()
+{
+  return paa3905ReadRaw(NCS_PIN);
+}
+
 static const DeckDriver flowdeck2_deck = {
   .vid = 0xBC,
   .pid = 0x0F,
@@ -248,13 +282,40 @@ static const DeckDriver flowdeck2_deck = {
 
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
-  .requiredEstimator = StateEstimatorTypeKalman,
+  .requiredEstimator = kalmanEstimator,
 
   .init = flowdeck2Init,
   .test = flowdeck2Test,
 };
 
+
 DECK_DRIVER(flowdeck2_deck);
+
+/**
+ * Logging variables of the flow deck
+ */
+LOG_GROUP_START(flow)
+/**
+ * @brief Flow X measurement after filtering  [flow/fr]
+ */
+LOG_ADD(LOG_INT16, deltaX, &flowDeltaX)
+/**
+ * @brief Flow Y measurement after filtering [flow/fr]
+ */
+LOG_ADD(LOG_INT16, deltaY, &flowDeltaY)
+/**
+ * @brief Shutter time [clock cycles]
+ */
+LOG_ADD(LOG_UINT32, shutter, &shutter)
+/**
+ * @brief Counted flow outliers excluded from the estimator
+ */
+LOG_ADD(LOG_UINT8, outlierCount, &outlierCount)
+/**
+ * @brief Standard deviation of flow measurement
+ */
+LOG_ADD(LOG_FLOAT, std, &stdFlow)
+LOG_GROUP_STOP(flow)
 
 /**
  * Logging variables of the motion sensor of the flowdeck
@@ -265,17 +326,13 @@ LOG_GROUP_START(motion)
  */
 LOG_ADD(LOG_UINT8, motion, &currentMotion.motion)
 /**
- * @brief Flow X  measurement  [flow/fr]
+ * @brief Flow X  measurement as from sensor  [flow/fr]
  */
 LOG_ADD(LOG_INT16, deltaX, &currentMotion.deltaX)
 /**
- * @brief Flow Y measurement [flow/fr]
+ * @brief Flow Y measurement as from sensor [flow/fr]
  */
 LOG_ADD(LOG_INT16, deltaY, &currentMotion.deltaY)
-/**
- * @brief Shutter time [clock cycles]
- */
-LOG_ADD(LOG_UINT16, shutter, &currentMotion.shutter)
 /**
  * @brief Maximum raw data value in frame
  */
@@ -289,22 +346,16 @@ LOG_ADD(LOG_UINT8, minRaw, &currentMotion.minRawData)
  */
 LOG_ADD(LOG_UINT8, Rawsum, &currentMotion.rawDataSum)
 /**
- * @brief Counted flow outliers excluded from the estimator
- */
-LOG_ADD(LOG_UINT8, outlierCount, &outlierCount)
-/**
  * @brief Count of surface feature
  */
 LOG_ADD(LOG_UINT8, squal, &currentMotion.squal)
-/**
- * @brief Standard deviation of flow measurement
- */
-LOG_ADD(LOG_FLOAT, std, &stdFlow)
+
+LOG_ADD(LOG_UINT8, mode, &flowMode)
 LOG_GROUP_STOP(motion)
 
 /**
  * Settings and parameters for handling of the flowdecks
- * measurements
+ * measurments
  */
 PARAM_GROUP_START(motion)
 /**
@@ -319,6 +370,9 @@ PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
  * @brief Set standard deviation flow measurement (default: 2.0f)
  */
 PARAM_ADD_CORE(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
+
+PARAM_ADD(PARAM_UINT8, flowRawRead, &flowRawRead)
+
 PARAM_GROUP_STOP(motion)
 
 PARAM_GROUP_START(deck)
