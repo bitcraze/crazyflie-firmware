@@ -26,7 +26,7 @@
 #include "mm_flow.h"
 #include "log.h"
 
-#define FLOW_RESOLUTION 0.1f //We do get the measurements in 10x the motion pixels (experimentally measured)
+#define FLOW_RESOLUTION 0.01372549f //We do get the measurements in 10x the motion pixels (experimentally measured)
 
 // TODO remove the temporary test variables (used for logging)
 static float predictedNX;
