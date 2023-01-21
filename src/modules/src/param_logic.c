@@ -373,6 +373,12 @@ void paramWriteProcess(CRTPPacket *p)
   }
 }
 
+void paramNotifyChanged(paramVarId_t varid) {
+  if (params[varid.index].callback) {
+    params[varid.index].callback();
+  }
+}
+
 static char paramWriteByNameProcess(char* group, char* name, int type, void *valptr) {
   int index;
   char *pgroup = "";
