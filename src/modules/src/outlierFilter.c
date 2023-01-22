@@ -103,44 +103,44 @@ bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float e
 }
 
 
-#define LH_TICKS_PER_FRAME (1000 / 120)
-static const int32_t lhMinWindowTime = -2 * LH_TICKS_PER_FRAME;
-static const int32_t lhMaxWindowTime = 5 * LH_TICKS_PER_FRAME;
-static const int32_t lhBadSampleWindowChange = -LH_TICKS_PER_FRAME;
-static const int32_t lhGoodSampleWindowChange = LH_TICKS_PER_FRAME / 2;
+#define LH_MS_PER_FRAME (1000 / 120)
+static const int32_t lhMinWindowTimeMs = -2 * LH_MS_PER_FRAME;
+static const int32_t lhMaxWindowTimeMs = 5 * LH_MS_PER_FRAME;
+static const int32_t lhBadSampleWindowChangeMs = -LH_MS_PER_FRAME;
+static const int32_t lhGoodSampleWindowChangeMs = LH_MS_PER_FRAME / 2;
 static const float lhMaxError = 0.05f;
 
-void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t now) {
-  this->openingTime = now;
-  this->openingWindow = lhMinWindowTime;
+void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t nowMs) {
+  this->openingTimeMs = nowMs;
+  this->openingWindowMs = lhMinWindowTimeMs;
 }
 
 
-bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t now) {
+bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs) {
   // float error = distanceToBs * tan(angleError);
   // We use an approximattion
   float error = distanceToBs * angleError;
 
   bool isGoodSample = (fabsf(error) < lhMaxError);
   if (isGoodSample) {
-    this->openingWindow += lhGoodSampleWindowChange;
-    if (this->openingWindow > lhMaxWindowTime) {
-      this->openingWindow = lhMaxWindowTime;
+    this->openingWindowMs += lhGoodSampleWindowChangeMs;
+    if (this->openingWindowMs > lhMaxWindowTimeMs) {
+      this->openingWindowMs = lhMaxWindowTimeMs;
     }
   } else {
-    this->openingWindow += lhBadSampleWindowChange;
-    if (this->openingWindow < lhMinWindowTime) {
-      this->openingWindow = lhMinWindowTime;
+    this->openingWindowMs += lhBadSampleWindowChangeMs;
+    if (this->openingWindowMs < lhMinWindowTimeMs) {
+      this->openingWindowMs = lhMinWindowTimeMs;
     }
   }
 
   bool result = true;
-  bool isFilterClosed = (now < this->openingTime);
+  bool isFilterClosed = (nowMs < this->openingTimeMs);
   if (isFilterClosed) {
     result = isGoodSample;
   }
 
-  this->openingTime = now + this->openingWindow;
+  this->openingTimeMs = nowMs + this->openingWindowMs;
 
   return result;
 }

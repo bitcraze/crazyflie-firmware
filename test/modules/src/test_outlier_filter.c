@@ -74,18 +74,6 @@ void testThatSamplesAreRejectedWhenTdoaIsGreaterButNegativeThanDistanceBetweenAn
 #define LH_GOOD_ANGLE 0.0001
 #define LH_TIME_STEP (1000 / 120)
 
-// TOOD krri remove
-static void print(OutlierFilterLhState_t* this, uint32_t time) {
-  printf("win:%i openingTime:%i time:%i ", this->openingWindow, this->openingTime, time);
-  bool isFilterClosed = (time < this->openingTime);
-  if (isFilterClosed) {
-    printf("Is closed\n");
-  } else {
-    printf("Is open\n");
-  }
-}
-
-
 void testThatLhFilterLetsGoodSampleThroughWhenOpen() {
   // Fixture
   OutlierFilterLhState_t this;
