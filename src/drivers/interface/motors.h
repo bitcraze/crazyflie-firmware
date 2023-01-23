@@ -246,7 +246,8 @@ typedef struct {
   uint16_t onPeriodMsec;
   uint16_t offPeriodMsec;
   uint16_t varianceMeasurementStartMsec;
-  uint16_t onPeriodPWMRatio;
+  uint16_t onPeriodPWMRatioProp;
+  uint16_t onPeriodPWMRatioBat;
 } MotorHealthTestDef;
 
 /**
