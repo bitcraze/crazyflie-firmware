@@ -63,6 +63,7 @@
 #include "sound.h"
 #include "sysload.h"
 #include "estimator_kalman.h"
+#include "estimator_ukf.h"
 #include "deck.h"
 #include "extrx.h"
 #include "app.h"
@@ -199,6 +200,10 @@ void systemTask(void *arg)
   estimatorKalmanTaskInit();
   #endif
 
+  #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+  errorEstimatorUkfTaskInit();
+  #endif
+
   // Enabling incoming syslink messages to be added to the queue.
   // This should probably be done later, but deckInit() takes a long time if this is done later.
   uartslkEnableIncoming();
@@ -250,6 +255,13 @@ void systemTask(void *arg)
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
+  }
+  #endif
+
+  #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+  if (errorEstimatorUkfTaskTest() == false) {
+    pass = false;
+    DEBUG_PRINT("estimatorUKFTask [FAIL]\n");
   }
   #endif
 

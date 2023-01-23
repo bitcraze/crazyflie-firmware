@@ -49,6 +49,12 @@ config ESTIMATOR_KALMAN_ENABLE
     help
         Enable the Kalman (EKF) estimator.
 
+config ESTIMATOR_UKF_ENABLE
+    bool "Enable error-state UKF estimator"
+    default n
+    help
+        Enable the (error-state unscented) Kalman filter (UKF) estimator
+
 choice
     prompt "Default estimator"
     default CONFIG_ESTIMATOR_ANY
@@ -63,6 +69,12 @@ config ESTIMATOR_KALMAN
     depends on ESTIMATOR_KALMAN_ENABLE
     help
         Use the (extended) Kalman filter (EKF) estimator as default
+
+config ESTIMATOR_UKF
+    bool "Error-state UKF estimator"
+    depends on ESTIMATOR_UKF_ENABLE
+    help
+        Use the (error-state unscented) Kalman filter (UKF) estimator as default
 
 config ESTIMATOR_COMPLEMENTARY
     bool "Complementary estimator"

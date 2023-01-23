@@ -34,6 +34,9 @@ typedef enum {
 #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   kalmanEstimator,
 #endif
+#ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+  ukfEstimator,
+#endif
 #ifdef CONFIG_ESTIMATOR_OOT
   OutOfTreeEstimator,
 #endif

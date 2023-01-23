@@ -65,10 +65,10 @@
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
   #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
 
-  #ifndef LOCODECK_ALT_PIN_RESET
+  #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
   #define GPIO_PIN_RESET 	DECK_GPIO_IO3
   #else
-  #define GPIO_PIN_RESET 	LOCODECK_ALT_PIN_RESET
+  #define GPIO_PIN_RESET 	DECK_GPIO_IO4
   #endif
 
   #define EXTI_PortSource EXTI_PortSourceGPIOB
@@ -575,7 +575,11 @@ static const DeckDriver dwm1000_deck = {
   .name = "bcDWM1000",
 
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
+  #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
   .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
+  #else
+  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
+  #endif
 #else
    // (PC10/PC11 is UART1 TX/RX)
   .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,

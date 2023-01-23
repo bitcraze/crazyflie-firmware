@@ -22,6 +22,7 @@ obj-y += crtpservice.o
 obj-y += esp_deck_flasher.o
 obj-y += estimator_complementary.o
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += estimator_kalman.o
+obj-$(CONFIG_ESTIMATOR_UKF_ENABLE) += estimator_ukf.o
 obj-y += estimator.o
 obj-y += eventtrigger.o
 obj-y += extrx.o
