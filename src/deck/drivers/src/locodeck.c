@@ -572,7 +572,7 @@ static bool dwm1000Test()
 static const DeckDriver dwm1000_deck = {
   .vid = 0xBC,
   .pid = 0x06,
-  .name = "bcDWM1000",
+  .name = "bcLoco",
 
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
   #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
@@ -601,9 +601,15 @@ DECK_DRIVER(dwm1000_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
+ * @brief Deprecated, replaced with the "deck.bcLoco" parameter.
+ * Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+
+/**
+ * @brief Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLoco, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
@@ -617,7 +623,7 @@ LOG_GROUP_STOP(ranging)
 LOG_GROUP_START(loco)
 
 /**
- * @brief The current mode of the Loco Positionning system
+ * @brief The current mode of the Loco Positioning system
  *
  * | Value | Mode   | \n
  * | -     | -      | \n
