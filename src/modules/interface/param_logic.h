@@ -150,12 +150,6 @@ void paramLogicInit();
  */
 void paramLogicStorageInit();
 
-/**
- * @brief Notify the param subsystem that we changed the value of a param
- * programmatically.
- */
-void paramNotifyChanged(paramVarId_t varid);
-
 // The following functions SHALL NOT be called outside paramTask!
 void paramWriteProcess(CRTPPacket *p);
 void paramReadProcess(CRTPPacket *p);
