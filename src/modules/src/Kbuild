@@ -28,6 +28,7 @@ obj-y += eventtrigger.o
 obj-y += extrx.o
 obj-y += health.o
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_supervisor.o
+obj-y += axis3fSubSampler.o
 obj-y += log.o
 obj-y += mem.o
 obj-y += msp.o

@@ -65,8 +65,6 @@ typedef struct vec3_s acc_t;
 
 /* Orientation as a quaternion */
 typedef struct quaternion_s {
-  uint32_t timestamp;
-
   union {
     struct {
       float q0;

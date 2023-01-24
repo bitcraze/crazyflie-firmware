@@ -29,4 +29,4 @@
 #include "outlierFilter.h"
 
 // Measurement of sweep angles from a Lighthouse base station
-void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t tick, OutlierFilterLhState_t* sweepOutlierFilterState);
+void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState);
