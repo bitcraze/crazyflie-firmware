@@ -20,27 +20,27 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * ============================================================================
  * Error-State Unscented Kalman Filter
  * ============================================================================
- * 
+ *
  * The error-state unscented Kalman filter implemented in this file is based
  * on the paper:
- * 
+ *
  * BIBTEX ENTRIES:
       @INPROCEEDINGS{9841385,
       author={Kefferpütz, Klaus and McGuire, Kimberly},
-      booktitle={2022 25th International Conference on Information Fusion (FUSION)}, 
-      title={Error-State Unscented Kalman-Filter for UAV Indoor Navigation}, 
+      booktitle={2022 25th International Conference on Information Fusion (FUSION)},
+      title={Error-State Unscented Kalman-Filter for UAV Indoor Navigation},
       year={2022},
       volume={},
       number={},
       pages={01-08},
       doi={10.23919/FUSION49751.2022.9841385}}
- * 
+ *
  * ============================================================================
- * 
+ *
  * Authored by Klaus Kefferpütz, December 2022
  *
  * ============================================================================
@@ -453,7 +453,6 @@ static void errorUkfTask(void *parameters)
     taskEstimatorState.attitude.pitch = -eulerOut[1];
     taskEstimatorState.attitude.yaw = eulerOut[2];
 
-    taskEstimatorState.attitudeQuaternion.timestamp = osTick;
     taskEstimatorState.attitudeQuaternion.w = stateNav[6];
     taskEstimatorState.attitudeQuaternion.x = stateNav[7];
     taskEstimatorState.attitudeQuaternion.y = stateNav[8];
@@ -625,7 +624,7 @@ static void navigationInit(void)
   {
     weights[ii] = weight1;
 
-  }	
+  }
 
   for (ii = 0; ii < DIM_FILTER; ii++)
   {
@@ -1548,9 +1547,9 @@ static void quatFromAtt(float *attVec, float *quat)
 
 
  #ifdef CONFIG_DEBUG
-  /** 
+  /**
   * Temporary development log groups from the UKF Filter (experimental)
-  */ 
+  */
 LOG_GROUP_START(nav_ukf_states)
   //LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
   //LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
@@ -1559,9 +1558,9 @@ LOG_GROUP_START(nav_ukf_states)
 LOG_GROUP_STOP(nav_ukf_states)
 #endif
 
- /** 
+ /**
   * Log groups for the navigation filter associated with the error-state Unscented Kalman Filter (experimental)
-  */ 
+  */
 LOG_GROUP_START(navFilter)
 LOG_ADD(LOG_FLOAT, posX, &stateNav[0])
 LOG_ADD(LOG_FLOAT, posY, &stateNav[1])
@@ -1584,9 +1583,9 @@ LOG_ADD(LOG_FLOAT, procTimeFilter, &procTime)
 LOG_ADD(LOG_UINT8, recAnchorId, &receivedAnchor)
 LOG_GROUP_STOP(navFilter)
 
- /** 
+ /**
   * Log groups for error-state Unscented Kalman Filter (experimental)
-  */ 
+  */
 LOG_GROUP_START(sensorFilter)
 LOG_ADD(LOG_FLOAT, dxPx, &meas_NX)
 LOG_ADD(LOG_FLOAT, dyPx, &meas_NY)
@@ -1601,9 +1600,9 @@ LOG_ADD(LOG_FLOAT, innoChTof, &innoCheckTof)
 LOG_ADD(LOG_FLOAT, distTWR, &distanceTWR)
 LOG_GROUP_STOP(sensorFilter)
 
- /** 
+ /**
   * Log groups different rates for the UKF (experimental)
-  */ 
+  */
 LOG_GROUP_START(ukf)
 STATS_CNT_RATE_LOG_ADD(rtUpdate, &updateCounter)
 STATS_CNT_RATE_LOG_ADD(rtPred, &predictionCounter)
@@ -1613,9 +1612,9 @@ STATS_CNT_RATE_LOG_ADD(rtApnd, &measurementAppendedCounter)
 STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
 LOG_GROUP_STOP(ukf)
 
- /** 
+ /**
   * Parameter values used for tuning the Unscented Kalman Filter (experimental)
-  */ 
+  */
 PARAM_GROUP_START(ukf)
 PARAM_ADD(PARAM_UINT8, resetEstimation, &resetNavigation)
 PARAM_ADD(PARAM_UINT8, useNavFilter, &useNavigationFilter)
