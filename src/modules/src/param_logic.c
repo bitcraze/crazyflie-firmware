@@ -65,6 +65,7 @@ static const uint8_t typeLength[] = {
 
 //Private functions
 static int variableGetIndex(int id);
+static void paramNotifyChanged(int index);
 static char paramWriteByNameProcess(char* group, char* name, int type, void *valptr);
 
 
@@ -368,6 +369,10 @@ void paramWriteProcess(CRTPPacket *p)
 
   crtpSendPacketBlock(p);
 
+  paramNotifyChanged(index);
+}
+
+static void paramNotifyChanged(int index) {
   if (params[index].callback) {
     params[index].callback();
   }
@@ -407,9 +412,7 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
 
   paramSet(index, valptr);
 
-  if (params[index].callback) {
-    params[index].callback();
-  }
+  paramNotifyChanged(index);
 
   return 0;
 }
@@ -575,6 +578,8 @@ void paramSetInt(paramVarId_t varid, int valuei)
   pk.size = 3 + paramSize;
   crtpSendPacketBlock(&pk);
 #endif
+
+  paramNotifyChanged(varid.index);
 }
 
 void paramSetFloat(paramVarId_t varid, float valuef)
@@ -595,6 +600,8 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   pk.size += 4;
   crtpSendPacketBlock(&pk);
 #endif
+
+  paramNotifyChanged(varid.index);
 }
 
 void paramSetByName(CRTPPacket *p)
@@ -619,7 +626,7 @@ void paramSetByName(CRTPPacket *p)
   type = p->data[1 + strlen(group) + 1 + strlen(name) + 1];
   valPtr = &p->data[1 + strlen(group) + 1 + strlen(name) + 2];
 
-  error = paramWriteByNameProcess(group, name, type, valPtr);
+  error = paramWriteByNameProcess(group, name, type, valPtr);  /* calls callback */
 
   p->data[1 + strlen(group) + 1 + strlen(name) + 1] = error;
   p->size = 1 + strlen(group) + 1 + strlen(name) + 1 + 1;
