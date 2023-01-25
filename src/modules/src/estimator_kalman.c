@@ -94,6 +94,7 @@
 
 #define DEBUG_MODULE "ESTKALMAN"
 #include "debug.h"
+#include "cfassert.h"
 
 
 // #define KALMAN_USE_BARO_UPDATE
@@ -153,7 +154,7 @@ bool resetEstimation = false;
 static kalmanCoreParams_t coreParams;
 
 // Data used to enable the task and stabilizer loop to run with minimal locking
-static state_t taskEstimatorState; // The estimator state produced by the task, copied to the stabilzer when needed.
+static state_t taskEstimatorState; // The estimator state produced by the task, copied to the stabilizer when needed.
 
 // Statistics
 #define ONE_SECOND 1000
@@ -185,7 +186,10 @@ STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(kalmanTask, KALMAN_TASK_STACKSIZE);
 void estimatorKalmanTaskInit() {
   kalmanCoreDefaultParams(&coreParams);
 
-  vSemaphoreCreateBinary(runTaskSemaphore);
+  // Created in the 'empty' state, meaning the semaphore must first be given, that is it will block in the task
+  // until released by the stabilizer loop
+  runTaskSemaphore = xSemaphoreCreateBinary();
+  ASSERT(runTaskSemaphore);
 
   dataMutex = xSemaphoreCreateMutexStatic(&dataMutexBuffer);
 
