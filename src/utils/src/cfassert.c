@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include "led.h"
 #include "motors.h"
 #include "debug.h"
+#include "log.h"
 
 #define MAGIC_ASSERT_INDICATOR 0x2f8a001f
 
@@ -183,3 +184,15 @@ bool cfAssertNormalStartTest(void) {
 
 	return wasNormalStart;
 }
+
+static uint8_t isAssertLogger(uint32_t timestamp, void* data) {
+  return isAssertRegistered();
+}
+static logByFunction_t assertLogger = {.acquireUInt8 = isAssertLogger, .data = 0};
+
+LOG_GROUP_START(sys)
+/**
+ * @brief Nonzero if the system has failed an assert.
+ */
+LOG_ADD_BY_FUNCTION(LOG_UINT8, isAssert, &assertLogger)
+LOG_GROUP_STOP(sys)
