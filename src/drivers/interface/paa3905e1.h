@@ -30,6 +30,18 @@
 #include <stdint.h>
 #include "deck.h"
 
+#define BRIGHT_MODE                       0 
+#define LOW_LIGHT_MODE                    1
+#define SUPER_LOW_LIGHT_MODE              2
+
+#define BRIGHT_MODE_MIN_SQUAL             0x19
+#define LOW_LIGHT_MODE_MIN_SQUAL          0x46
+#define SUPER_LOW_LIGHT_MODE_MIN_SQUAL    0x55
+
+#define BRIGHT_MODE_MAX_SHUTTER           0x00FF80
+#define LOW_LIGHT_MODE_MAX_SHUTTER        0x00FF80
+#define SUPER_LOW_LIGHT_MODE_MAX_SHUTTER  0x025998
+
 typedef struct motionBurst3905_s {
   union {
     uint8_t motion;
