@@ -147,6 +147,12 @@ static void InitRegisters(const deckPin_t csPin)
   registerWrite(csPin, 0x52, 0xB4);
   registerWrite(csPin, 0x7F, 0x00);
 //  registerWrite(csPin, 0x5B, 0xA0);
+
+  // turn on LED
+  registerWrite(csPin, 0x7F, 0x14);
+  registerWrite(csPin, 0x6F, 0x0c);
+  registerWrite(csPin, 0x7F, 0x00);
+
 }
 
 bool paa3905Init(const deckPin_t csPin)
