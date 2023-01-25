@@ -33,8 +33,12 @@ These steps have been tested on Ubuntu 20.04. The link to gdb-multiarch is requi
 If you do not have vscode yet, the easiest way to install it on Ubuntu is via snap using 'Ubuntu Software' of by typing:
 
     sudo snap install --classic code
+    
+You will also need to add the debugger to the udev rules if not already done - for this you can check with _lsusb_ what the ID of your debugger is (for an ST-LINK/V2 it should be 0483:3748). Then you can add it to a rules file, for example for the STLINK/V2 you could append the line 
 
-
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3748", MODE="0664", GROUP="plugdev"
+    
+to the Crazyflie rules in "/etc/udev/rules.d/99-bitcraze.rules".
 
 #### Windows (Ubuntu in WSL)
 
@@ -202,6 +206,9 @@ Inside of the file, replace everything with the following:
 
 > **Note: Debugging an App**
 > To debug an app, make sure to change the "executable" to ""${workspaceRoot}/examples/app_hello_world/build/cf2.elf", or to which app you would like to debug. You can add your app debugger as a separate configuration.
+
+> **Note: Debugging thread aware**
+> To debug thread aware you need to add ```"rtos": "FreeRTOS"``` to your configuration in the launch.json file - however, while this can be very handy we also occasionally experienced some issues with setting breakpoints while using this configuration.
 
 #### Installing the SVD file
 
