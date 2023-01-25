@@ -161,7 +161,7 @@ void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_ins
 
   vec3d rotatedPos = {0};
   arm_matrix_instance_f32 ROTATED_POS = {1, 3, rotatedPos};
-  arm_mat_mult_f32(R, &LOCAL_POS, &ROTATED_POS);
+  mat_mult(R, &LOCAL_POS, &ROTATED_POS);
 
   vec_add(cfPos, rotatedPos, pos);
 }
