@@ -241,7 +241,10 @@ STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(errorUkfTask, ERROR_UKF_TASK_STACKSI
 // Called one time during system startup
 void errorEstimatorUkfTaskInit()
 {
-  vSemaphoreCreateBinary(runTaskSemaphore);
+  // Created in the 'empty' state, meaning the semaphore must first be given, that is it will block in the task
+  // until released by the stabilizer loop
+  runTaskSemaphore = xSemaphoreCreateBinary();
+  ASSERT(runTaskSemaphore);
 
   dataMutex = xSemaphoreCreateMutexStatic(&dataMutexBuffer);
 
