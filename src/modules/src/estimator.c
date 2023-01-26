@@ -117,7 +117,7 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
   }
 
   #if defined(CONFIG_ESTIMATOR_KALMAN)
-    #define ESTIMATOR KalmanEstimator
+    #define ESTIMATOR kalmanEstimator
   #elif defined(CONFIG_UKF_KALMAN)
     #define ESTIMATOR ukfEstimator
   #elif defined(CONFIG_ESTIMATOR_COMPLEMENTARY)
