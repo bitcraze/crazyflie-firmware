@@ -27,6 +27,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "math.h"
 
 #include "paa3905e1.h"
 #include "deck.h"
@@ -35,11 +36,39 @@
 #include "log.h"
 #include "param.h"
 #include "sleepus.h"
+#include "usec_time.h"
+
+
+#define LINE_THRESHOLD 50
 
 
 static bool isInit = false;
 static uint8_t resolution = 0xFF;
 static uint8_t old_resolution = 0xFF;
+
+static volatile uint8_t rawDataArray[1225];
+
+static float yaw_line = 0.0f;
+static int8_t pos_diff = 0;
+static int8_t line_diff = 0;
+static int8_t min_pos_top = 0;
+static int8_t min_pos_bot = 0;
+static int8_t min_line_top = 0;
+static int8_t min_line_bot = 0;
+
+static float dt = 0.0f;
+static uint64_t lastTime = 0;
+
+static int8_t min_pos1 = 0;
+static int8_t min_pos2 = 0;
+static int8_t min_pos3 = 0;
+static int8_t min_pos4 = 0;
+static int8_t min_pos5 = 0;
+static int8_t min_pos6 = 0;
+static int8_t min_pos7 = 0;
+static int8_t min_pos8 = 0;
+static int8_t min_pos9 = 0;
+static int8_t min_pos10 = 0;
 
 static void registerWrite(const deckPin_t csPin, uint8_t reg, uint8_t value)
 {
@@ -74,6 +103,29 @@ static uint8_t registerRead(const deckPin_t csPin, uint8_t reg)
 
   spiExchange(1, &reg, &reg);
   sleepus(10);
+  spiExchange(1, &dummy, &data);
+
+  digitalWrite(csPin, HIGH);
+  spiEndTransaction();
+
+  return data;
+}
+
+static uint8_t registerReadFast(const deckPin_t csPin, uint8_t reg)
+{
+  uint8_t data = 0;
+  uint8_t dummy = 0;
+
+  // Set MSB to 0 for read
+  reg &= ~0x80u;
+
+  spiBeginTransaction(SPI_BAUDRATE_2MHZ);
+  digitalWrite(csPin, LOW);
+
+  sleepus(2);
+
+  spiExchange(1, &reg, &reg);
+  sleepus(2);
   spiExchange(1, &dummy, &data);
 
   digitalWrite(csPin, HIGH);
@@ -251,7 +303,137 @@ void paa3905ReadMotion(const deckPin_t csPin, motionBurst3905_t * motion)
   }
 }
 
+float paa3905ReadRaw(const deckPin_t csPin)
+{
+  uint8_t min_values[35];
+  uint8_t min_pos[35];
+  registerWrite(csPin, 0x7F, 0x00);
+  registerWrite(csPin, 0x67, 0x25);
+  registerWrite(csPin, 0x55, 0x20);
+  registerWrite(csPin, 0x7F, 0x13);
+  registerWrite(csPin, 0x42, 0x01);
+  registerWrite(csPin, 0x7F, 0x00);
+  registerWrite(csPin, 0x0F, 0x11);
+  registerWrite(csPin, 0x0F, 0x13);
+  registerWrite(csPin, 0x0F, 0x11);
+  
+  uint8_t tempStatus = 0;
+  while( !(tempStatus & 0x01) ) {
+    tempStatus = registerRead(csPin, 0x10) & 0x01; // wait for grab status bit 0 to equal 1
+    vTaskDelay(M2T(1));
+  }
+  registerWrite(csPin, 0x13, 0xFF); //dummy value
+  for (int i = 0; i < 49; ++i)
+  {
+    for (int j = 0; j < 25; ++j)
+    {
+      rawDataArray[i*25+j] = registerReadFast(csPin, 0x13);
+      // DEBUG_PRINT("%d %d %d %d %d\n", registerRead(csPin, 0x13), registerRead(csPin, 0x13), registerRead(csPin, 0x13), registerRead(csPin, 0x13), registerRead(csPin, 0x13));
+    }
+    vTaskDelay(M2T(1));
+  }
+  registerWrite(csPin, 0x7F, 0x00);
+  registerWrite(csPin, 0x55, 0x00);
+  registerWrite(csPin, 0x7F, 0x13);
+  registerWrite(csPin, 0x42, 0x00);
+  registerWrite(csPin, 0x7F, 0x00);
+  registerWrite(csPin, 0x67, 0xA5);
+
+  // Power on reset
+  registerWrite(csPin, 0x3a, 0x5a);
+  vTaskDelay(M2T(5));
+
+  // Reading the motion registers one time
+  registerRead(csPin, 0x02);
+  registerRead(csPin, 0x03);
+  registerRead(csPin, 0x04);
+  registerRead(csPin, 0x05);
+  registerRead(csPin, 0x06);
+  vTaskDelay(M2T(1));
+
+  InitRegisters(csPin);
+  uint8_t temp_min = 255;
+  uint8_t global_temp_min = 255;
+  for (int i = 0; i < 35; ++i)
+  {
+    for (int j = 0; j < 35; ++j)
+    {
+      if (rawDataArray[i*35 + j] < temp_min)
+      {
+        temp_min = rawDataArray[i*35 + j];
+        min_pos[i] = j;
+      }
+    }
+    min_values[i] = temp_min;
+    if (temp_min < global_temp_min)
+    {
+      global_temp_min = temp_min;
+    }
+    temp_min = 255;
+  }
+
+  for (int i = 0; i < 35; ++i)
+  {
+    if (min_values[i] < global_temp_min + LINE_THRESHOLD)
+    {
+      min_pos_top = min_pos[i];
+      min_line_top = i;
+      break;
+    }
+  }
+  for (int i = 34; i >= 0; --i)
+  {
+    if (min_values[i] < global_temp_min + LINE_THRESHOLD)
+    {
+      min_pos_bot = min_pos[i];
+      min_line_bot = i;
+      break;
+    }
+  }
+  pos_diff = min_pos_top - min_pos_bot;
+  line_diff = min_line_bot - min_line_top;
+  yaw_line = atan2f((float)pos_diff, (float)line_diff);
+  dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
+  lastTime = usecTimestamp();
+  min_pos1 = min_pos[0];
+  min_pos2 = min_pos[1];
+  min_pos3 = min_pos[2];
+  min_pos4 = min_pos[3];
+  min_pos5 = min_pos[4];
+  min_pos6 = min_pos[5];
+  min_pos7 = min_pos[6];
+  min_pos8 = min_pos[7];
+  min_pos9 = min_pos[8];
+  min_pos10 = min_pos[9];
+
+  return yaw_line;
+  
+}
+
+
+
 PARAM_GROUP_START(flow)
 PARAM_ADD(PARAM_UINT8, resolution, &resolution)
 PARAM_GROUP_STOP(flow)
+
+LOG_GROUP_START(line)
+LOG_ADD(LOG_FLOAT, yaw, &yaw_line)
+LOG_ADD(LOG_FLOAT, dt, &dt)
+LOG_ADD(LOG_INT8, pos_diff, &pos_diff)
+LOG_ADD(LOG_INT8, line_diff, &line_diff)
+LOG_ADD(LOG_INT8, min_pos_top, &min_pos_top)
+LOG_ADD(LOG_INT8, min_pos_bot, &min_pos_bot)
+LOG_ADD(LOG_INT8, min_line_top, &min_line_top)
+LOG_ADD(LOG_INT8, min_line_bot, &min_line_bot)
+LOG_ADD(LOG_INT8, min_pos1, &min_pos1)
+LOG_ADD(LOG_INT8, min_pos2, &min_pos2)
+LOG_ADD(LOG_INT8, min_pos3, &min_pos3)
+LOG_ADD(LOG_INT8, min_pos4, &min_pos4)
+LOG_ADD(LOG_INT8, min_pos5, &min_pos5)
+LOG_ADD(LOG_INT8, min_pos6, &min_pos6)
+LOG_ADD(LOG_INT8, min_pos7, &min_pos7)
+LOG_ADD(LOG_INT8, min_pos8, &min_pos8)
+LOG_ADD(LOG_INT8, min_pos9, &min_pos9)
+LOG_ADD(LOG_INT8, min_pos10, &min_pos10)
+LOG_GROUP_STOP(line)
 
