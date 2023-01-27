@@ -91,14 +91,11 @@ static float yaw_line = 0.0f;
 #define NCS_PIN DECK_GPIO_IO3
 
 static float flowdeckReadRaw();
-static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate);
-
 
 
 static void flowdeckTask(void *param)
 {
   systemWaitStart();
-  static setpoint_t setpoint;
 
   uint64_t lastTime  = usecTimestamp();
   while(1) {
@@ -107,13 +104,7 @@ static void flowdeckTask(void *param)
 
     if (flowRawRead)
       {
-        if (counter%1 == 0)
-          {
-            yaw_line = flowdeckReadRaw();
-            vTaskDelay(10);
-          }
-        setHoverSetpoint(&setpoint, 0.02f, 0.0f, 0.5f, yaw_line);
-        // commanderSetSetpoint(&setpoint, 3); 
+        yaw_line = flowdeckReadRaw();
       }
 
     paa3905ReadMotion(NCS_PIN, &currentMotion);
@@ -297,24 +288,6 @@ static const DeckDriver flowdeck2_deck = {
   .test = flowdeck2Test,
 };
 
-
-static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
-{
-  setpoint->mode.z = modeAbs;
-  setpoint->position.z = z;
-
-
-  setpoint->mode.yaw = modeVelocity;
-  setpoint->attitudeRate.yaw = yawrate;
-
-
-  setpoint->mode.x = modeVelocity;
-  setpoint->mode.y = modeVelocity;
-  setpoint->velocity.x = vx;
-  setpoint->velocity.y = vy;
-
-  setpoint->velocity_body = true;
-}
 
 DECK_DRIVER(flowdeck2_deck);
 
