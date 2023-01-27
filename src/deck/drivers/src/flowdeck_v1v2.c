@@ -34,9 +34,9 @@
 #include "pmw3901.h"
 #include "paa3905e1.h"
 #include "sleepus.h"
+#include "commander.h"
 
 #include "stabilizer_types.h"
-#include "estimator.h"
 #include "estimator.h"
 
 #include "cf_math.h"
@@ -73,6 +73,8 @@ static bool isInit2 = false;
 
 motionBurst3905_t currentMotion;
 
+static bool flowRawRead = false;
+
 // Disables pushing the flow measurement in the EKF
 static bool useFlowDisabled = false;
 
@@ -83,16 +85,36 @@ static bool useAdaptiveStd = false;
 // (will not work if useAdaptiveStd is on)
 static float flowStdFixed = 2.0f;
 
+static uint64_t counter = 0;
+static float yaw_line = 0.0f;
+
 #define NCS_PIN DECK_GPIO_IO3
+
+static float flowdeckReadRaw();
+static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate);
+
 
 
 static void flowdeckTask(void *param)
 {
   systemWaitStart();
+  static setpoint_t setpoint;
 
   uint64_t lastTime  = usecTimestamp();
   while(1) {
     vTaskDelay(10);
+    counter++;
+
+    if (flowRawRead)
+      {
+        if (counter%1 == 0)
+          {
+            yaw_line = flowdeckReadRaw();
+            vTaskDelay(10);
+          }
+        setHoverSetpoint(&setpoint, 0.02f, 0.0f, 0.5f, yaw_line);
+        // commanderSetSetpoint(&setpoint, 3); 
+      }
 
     paa3905ReadMotion(NCS_PIN, &currentMotion);
     flowMeasurement_t flowData;
@@ -257,6 +279,11 @@ static bool flowdeck2Test()
   return zRanger->test();
 }
 
+static float flowdeckReadRaw()
+{
+  return paa3905ReadRaw(NCS_PIN);
+}
+
 static const DeckDriver flowdeck2_deck = {
   .vid = 0xBC,
   .pid = 0x0F,
@@ -269,6 +296,25 @@ static const DeckDriver flowdeck2_deck = {
   .init = flowdeck2Init,
   .test = flowdeck2Test,
 };
+
+
+static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
+{
+  setpoint->mode.z = modeAbs;
+  setpoint->position.z = z;
+
+
+  setpoint->mode.yaw = modeVelocity;
+  setpoint->attitudeRate.yaw = yawrate;
+
+
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->velocity.x = vx;
+  setpoint->velocity.y = vy;
+
+  setpoint->velocity_body = true;
+}
 
 DECK_DRIVER(flowdeck2_deck);
 
@@ -351,6 +397,9 @@ PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
  * @brief Set standard deviation flow measurement (default: 2.0f)
  */
 PARAM_ADD_CORE(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
+
+PARAM_ADD(PARAM_UINT8, flowRawRead, &flowRawRead)
+
 PARAM_GROUP_STOP(motion)
 
 PARAM_GROUP_START(deck)
