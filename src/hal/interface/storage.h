@@ -100,7 +100,17 @@ bool storageForeach(const char* prefix, storageFunc_t func);
 
 /**
  * Print storage information on the debug console
- * 
+ *
  * This function locks the storage while getting the stats.
  */
 void storagePrintStats();
+
+/**
+ * @brief Reformat the storage.
+ *
+ * Warning! All stored data will be lost!
+ *
+ * @return true   Format was successful
+ * @return false  Format failed
+ */
+bool storageReformat();

@@ -131,21 +131,16 @@ void storageInit()
 
 bool storageTest()
 {
+  xSemaphoreTake(storageMutex, portMAX_DELAY);
+
   bool pass = kveCheck(&kve);
+
+  xSemaphoreGive(storageMutex);
 
   DEBUG_PRINT("Storage check %s.\n", pass?"[OK]":"[FAIL]");
 
   if (!pass) {
-    DEBUG_PRINT("Reformatting storage ...\n");
-
-    kveFormat(&kve);
-
-    pass = kveCheck(&kve);
-    DEBUG_PRINT("Storage check %s.\n", pass?"[OK]":"[FAIL]");
-
-    if (pass == false) {
-      DEBUG_PRINT("Error: Cannot format storage!\n");
-    }
+    pass = storageReformat();
   }
 
   return pass;
@@ -212,6 +207,25 @@ bool storageDelete(const char* key)
   return result;
 }
 
+bool storageReformat() {
+  DEBUG_PRINT("Reformatting storage ...\n");
+
+  xSemaphoreTake(storageMutex, portMAX_DELAY);
+
+  kveFormat(&kve);
+  bool pass = kveCheck(&kve);
+
+  xSemaphoreGive(storageMutex);
+
+  DEBUG_PRINT("Storage check %s.\n", pass?"[OK]":"[FAIL]");
+
+  if (pass == false) {
+    DEBUG_PRINT("Error: Cannot format storage!\n");
+  }
+
+  return pass;
+}
+
 void storagePrintStats()
 {
   kveStats_t stats;
@@ -225,7 +239,7 @@ void storagePrintStats()
 
   DEBUG_PRINT("Used storage: %d item stored, %d Bytes/%d Bytes (%d%%)\n", stats.totalItems, stats.itemSize, stats.totalSize, (stats.itemSize*100)/stats.totalSize);
   DEBUG_PRINT("Fragmentation: %d%%\n", stats.fragmentation);
-  DEBUG_PRINT("Efficiency: Data: %d Bytes (%d%%), Keys: %d Bytes (%d%%), Metadata: %d Bytes (%d%%)\n", 
+  DEBUG_PRINT("Efficiency: Data: %d Bytes (%d%%), Keys: %d Bytes (%d%%), Metadata: %d Bytes (%d%%)\n",
     stats.dataSize, (stats.dataSize*100)/stats.totalSize,
     stats.keySize, (stats.keySize*100)/stats.totalSize,
     stats.metadataSize, (stats.metadataSize*100)/stats.totalSize);
@@ -242,11 +256,25 @@ static void printStats(void)
   }
 }
 
+static bool reformatValue;
+
+static void doReformat(void)
+{
+  if (reformatValue) {
+    storageReformat();
+  }
+}
+
 PARAM_GROUP_START(system)
 
 /**
  * @brief Set to nonzero to dump CPU and stack usage to console
  */
 PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, storageStats, &storageStats, printStats)
+
+/**
+ * @brief Set to nonzero to re-format the storage. Warning: all data will be lost!
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, storageReformat, &reformatValue, doReformat)
 
 PARAM_GROUP_STOP(system)
