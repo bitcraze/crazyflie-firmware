@@ -2,10 +2,10 @@ menu "Controllers and Estimators"
 
 choice
     prompt "Default controller"
-    default CONFIG_CONTROLLER_ANY
+    default CONFIG_CONTROLLER_AUTO_SELECT
 
-config CONTROLLER_ANY
-    bool "Any Controller"
+config CONTROLLER_AUTO_SELECT
+    bool "Auto select Controller"
     help
         Do not care which controller is used, if any
 

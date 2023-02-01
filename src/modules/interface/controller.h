@@ -29,7 +29,7 @@
 #include "stabilizer_types.h"
 
 typedef enum {
-  ControllerTypeAny,
+  ControllerTypeAutoSelect,
   ControllerTypePID,
   ControllerTypeMellinger,
   ControllerTypeINDI,
