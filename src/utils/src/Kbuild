@@ -15,8 +15,8 @@ obj-y += malloc.o
 obj-y += version.o
 version-objs := version_gen.o
 
-src/utils/src/version_gen.c: src/utils/src/version.vtpl
-	$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
+src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
+	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
 
 ###
 
