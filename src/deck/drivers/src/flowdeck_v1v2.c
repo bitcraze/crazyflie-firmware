@@ -121,12 +121,12 @@ static void flowdeckTask(void *param)
     flowData.stdDevX = stdFlow;
     flowData.stdDevY = stdFlow;
     flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
-    // we do want to update dt every measurement and not only in the ones with detected motion, 
-    // as we work with instantaneous gyro and velocity values in the update function 
+    // we do want to update dt every measurement and not only in the ones with detected motion,
+    // as we work with instantaneous gyro and velocity values in the update function
     // (meaning assuming the current measurements over all of dt)
-    lastTime = usecTimestamp(); 
+    lastTime = usecTimestamp();
 
-    
+
 
 #if defined(USE_MA_SMOOTHING)
       // Use MA Smoothing
@@ -203,7 +203,7 @@ static const DeckDriver flowdeck1_deck = {
   .name = "bcFlow",
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
-  .requiredEstimator = kalmanEstimator,
+  .requiredEstimator = StateEstimatorTypeKalman,
 
   .init = flowdeck1Init,
   .test = flowdeck1Test,
@@ -250,7 +250,7 @@ static const DeckDriver flowdeck2_deck = {
 
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
-  .requiredEstimator = kalmanEstimator,
+  .requiredEstimator = StateEstimatorTypeKalman,
 
   .init = flowdeck2Init,
   .test = flowdeck2Test,

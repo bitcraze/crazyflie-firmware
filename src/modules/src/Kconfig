@@ -61,10 +61,10 @@ config ESTIMATOR_UKF_ENABLE
 
 choice
     prompt "Default estimator"
-    default CONFIG_ESTIMATOR_ANY
+    default CONFIG_ESTIMATOR_AUTO_SELECT
 
-config ESTIMATOR_ANY
-    bool "Any Estimator"
+config ESTIMATOR_AUTO_SELECT
+    bool "Auto select Estimator"
     help
         Do not care which estimator is used, if any
 
