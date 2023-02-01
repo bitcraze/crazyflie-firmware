@@ -27,7 +27,7 @@ static size_t min(size_t a, size_t b)
 // Utility function
 static bool appendItemToEnd(kveMemory_t *kve, size_t address, const char* key, const void* buffer, size_t length) {
     size_t itemAddress = kveStorageFindEnd(kve, address);
- 
+
     // If it is over the end of the memory, table corrupted
     // Do not write anything ...
     if (KVE_STORAGE_IS_VALID(itemAddress) == false) {
@@ -187,7 +187,7 @@ void kveFormat(kveMemory_t *kve) {
 }
 
 bool kveCheck(kveMemory_t *kve) {
-    
+
     // Check version
     uint8_t version;
     kve->read(VERSION_ADDRESS, &version, 1);
@@ -227,7 +227,7 @@ void kveGetStats(kveMemory_t *kve, kveStats_t *stats) {
         }
 
         total_size += itemInfo.full_length;
-        
+
         if (itemInfo.key_length == 0) {
             hole_size += itemInfo.full_length;
         } else {
@@ -250,6 +250,6 @@ void kveGetStats(kveMemory_t *kve, kveStats_t *stats) {
     stats->metadataSize = metadata_size;
     stats->holeSize = hole_size;
     stats->freeSpace = kve->memorySize - item_size;
-    stats->fragmentation = (hole_size * 100) / (kve->memorySize - total_size);
+    stats->fragmentation = (hole_size * 100) / (kve->memorySize - item_size);
     stats->spaceLeftUntilForcedDefrag = kve->memorySize - total_size;
 }
