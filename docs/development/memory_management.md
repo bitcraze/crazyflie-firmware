@@ -7,7 +7,14 @@ The RAM is a limiting resource and has to be managed to be used as efficiently a
 
 ## Static VS dynamic allocation
 
-TBD
+Static memory allocation is done at compile time and the build system checks that the amount of memory that is required
+actually is available in the Crazyflie. Dynamic memory on the other hand, is requested and allocated in runtime using
+the `malloc()` function. Dynamic memory allocation may fail (if there is not enough memory) and the error must be
+handled in some way (currently by failing an assert which will reboot the Crazyflie).
+
+In the Crazyflie firmware, we prefer static allocation over dynamic, mainly because it is checked at compile time and no
+more error handling is required. Some calls to FreeRTOS do allocate a limited amount dynamic of RAM, but this is usually done
+in the initialization phase and out of memory conditions should be detected quickly when booting the system.
 
 ## Static allocation
 
@@ -76,4 +83,4 @@ macro instead.
 
 Code that uses DMA through a public API should verify verify that pointers
 passed in through the API do not point to CCM. Use `ASSERT_DMA_SAFE` for this
-pupose to fail fast and indicate what the reason for the failued is.
+purpose to fail fast and indicate what the reason for the failed is.
