@@ -91,7 +91,7 @@ static const DeckDriver lighthouse_deck = {
 
   .usedGpio = 0,
   .usedPeriph = DECK_USING_UART1,
-  .requiredEstimator = kalmanEstimator,
+  .requiredEstimator = StateEstimatorTypeKalman,
 
   .memoryDef = &memoryDef,
 

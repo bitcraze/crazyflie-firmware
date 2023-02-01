@@ -16,8 +16,8 @@
 #include "eventtrigger.h"
 #include "quatcompress.h"
 
-#define DEFAULT_ESTIMATOR complementaryEstimator
-static StateEstimatorType currentEstimator = anyEstimator;
+#define DEFAULT_ESTIMATOR StateEstimatorTypeComplementary
+static StateEstimatorType currentEstimator = StateEstimatorTypeAutoSelect;
 
 
 #define MEASUREMENTS_QUEUE_SIZE (20)
@@ -106,28 +106,28 @@ void stateEstimatorInit(StateEstimatorType estimator) {
 }
 
 void stateEstimatorSwitchTo(StateEstimatorType estimator) {
-  if (estimator < 0 || estimator >= StateEstimatorTypeCount) {
+  if (estimator < 0 || estimator >= StateEstimatorType_COUNT) {
     return;
   }
 
   StateEstimatorType newEstimator = estimator;
 
-  if (anyEstimator == newEstimator) {
+  if (StateEstimatorTypeAutoSelect == newEstimator) {
     newEstimator = DEFAULT_ESTIMATOR;
   }
 
   #if defined(CONFIG_ESTIMATOR_KALMAN)
-    #define ESTIMATOR kalmanEstimator
+    #define ESTIMATOR StateEstimatorTypeKalman
   #elif defined(CONFIG_UKF_KALMAN)
-    #define ESTIMATOR ukfEstimator
+    #define ESTIMATOR StateEstimatorTypeUkf
   #elif defined(CONFIG_ESTIMATOR_COMPLEMENTARY)
-    #define ESTIMATOR complementaryEstimator
+    #define ESTIMATOR StateEstimatorTypeComplementary
   #else
-    #define ESTIMATOR anyEstimator
+    #define ESTIMATOR StateEstimatorTypeAutoSelect
   #endif
 
   StateEstimatorType forcedEstimator = ESTIMATOR;
-  if (forcedEstimator != anyEstimator) {
+  if (forcedEstimator != StateEstimatorTypeAutoSelect) {
     DEBUG_PRINT("Estimator type forced\n");
     newEstimator = forcedEstimator;
   }

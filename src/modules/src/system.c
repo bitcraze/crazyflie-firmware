@@ -194,7 +194,7 @@ void systemTask(void *arg)
   commInit();
   commanderInit();
 
-  StateEstimatorType estimator = anyEstimator;
+  StateEstimatorType estimator = StateEstimatorTypeAutoSelect;
 
   #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();

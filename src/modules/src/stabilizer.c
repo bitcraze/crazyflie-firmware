@@ -178,7 +178,7 @@ void stabilizerInit(StateEstimatorType estimator)
 
   sensorsInit();
   stateEstimatorInit(estimator);
-  controllerInit(ControllerTypeAny);
+  controllerInit(ControllerTypeAutoSelect);
   powerDistributionInit();
   motorsInit(platformConfigGetMotorMapping());
   collisionAvoidanceInit();
@@ -359,13 +359,13 @@ void stabilizerSetEmergencyStopTimeout(int timeout)
  */
 PARAM_GROUP_START(stabilizer)
 /**
- * @brief Estimator type Any(0), complementary(1), extended kalman(2), **unscented kalman(3)  (Default: 0)
- * 
+ * @brief Estimator type Auto select(0), complementary(1), extended kalman(2), **unscented kalman(3)  (Default: 0)
+ *
  * ** Experimental, needs to be enabled in kbuild
  */
 PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
 /**
- * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3), Brescianini(4) (Default: 0)
+ * @brief Controller type Auto select(0), PID(1), Mellinger(2), INDI(3), Brescianini(4) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**

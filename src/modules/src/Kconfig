@@ -2,10 +2,10 @@ menu "Controllers and Estimators"
 
 choice
     prompt "Default controller"
-    default CONFIG_CONTROLLER_ANY
+    default CONFIG_CONTROLLER_AUTO_SELECT
 
-config CONTROLLER_ANY
-    bool "Any Controller"
+config CONTROLLER_AUTO_SELECT
+    bool "Auto select Controller"
     help
         Do not care which controller is used, if any
 
@@ -61,10 +61,10 @@ config ESTIMATOR_UKF_ENABLE
 
 choice
     prompt "Default estimator"
-    default CONFIG_ESTIMATOR_ANY
+    default CONFIG_ESTIMATOR_AUTO_SELECT
 
-config ESTIMATOR_ANY
-    bool "Any Estimator"
+config ESTIMATOR_AUTO_SELECT
+    bool "Auto select Estimator"
     help
         Do not care which estimator is used, if any
 
