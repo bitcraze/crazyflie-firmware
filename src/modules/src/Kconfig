@@ -43,6 +43,10 @@ config CONTROLLER_BRESCIANINI
 
 endchoice
 
+config CONTROLLER_OOT
+    bool "Out-of-tree controller"
+    default n
+
 config ESTIMATOR_KALMAN_ENABLE
     bool "Enable Kalman Estimator"
     default y
