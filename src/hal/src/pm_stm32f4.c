@@ -213,7 +213,7 @@ float pmGetBatteryVoltageMax(void)
  * When a module wants to register a callback to be called on shutdown they
  * call pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t),
  * with a function they which to be run at shutdown. We currently support
- * GRACEFUL_SHUTDOWN_MAX_CALLBACKS number of callbacks to be registred.
+ * GRACEFUL_SHUTDOWN_MAX_CALLBACKS number of callbacks to be registered.
  */
 #define GRACEFUL_SHUTDOWN_MAX_CALLBACKS 5
 static int graceful_shutdown_callbacks_index;
@@ -225,7 +225,7 @@ static graceful_shutdown_callback_t graceful_shutdown_callbacks[GRACEFUL_SHUTDOW
  */
 bool pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb)
 {
-  // To many registered allready! Increase limit if you think you are important
+  // To many registered already! Increase limit if you think you are important
   // enough!
   if (graceful_shutdown_callbacks_index >= GRACEFUL_SHUTDOWN_MAX_CALLBACKS) {
     return false;
@@ -289,7 +289,7 @@ void pmSyslinkUpdate(SyslinkPacket *slp)
 
 void pmSetChargeState(PMChargeStates chgState)
 {
-  // TODO: Send syslink packafe with charge state
+  // TODO: Send syslink package with charge state
 }
 
 PMStates pmUpdateState()
