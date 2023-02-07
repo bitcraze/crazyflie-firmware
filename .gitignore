@@ -45,3 +45,5 @@ build/
 **/*.cmd
 **/*.a
 *.elf
+
+**/.DS_Store
