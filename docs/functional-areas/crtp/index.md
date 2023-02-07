@@ -19,8 +19,8 @@ The version is available using the [getProtocolVersion](crtp_platform#get-protoc
 
 The version is currently 5.
 
-When removing functionality from the protocol, packet will be depreciated for at least one version before being removed.
-Depreciated functionality prints a Warning in the [console](crtp_console). This rule allows for the Crazyflie firmware
+When removing functionality from the protocol, packet will be deprecated for at least one version before being removed.
+Deprecated functionality prints a Warning in the [console](crtp_console). This rule allows for the Crazyflie firmware
 to evolve and remove old functionalities when needed and for a client or lib to have some compatibility guarantee.
 For example if a client support the protocol version 5, it is guarantee to work with version 6 but should likely
 not accept to connect a Crazyflie on version 7 of the protocol.
