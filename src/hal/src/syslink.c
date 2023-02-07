@@ -89,7 +89,7 @@ static void syslinkRouteIncommingPacket(SyslinkPacket *slp)
       pmSyslinkUpdate(slp);
       break;
     case SYSLINK_OW_GROUP:
-      owSyslinkRecieve(slp);
+      owSyslinkReceive(slp);
       break;
     case SYSLINK_SYS_GROUP:
       systemSyslinkReceive(slp);

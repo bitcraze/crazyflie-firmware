@@ -43,7 +43,7 @@ bool owTest()
   return owCommonTest();
 }
 
-void owSyslinkRecieve(SyslinkPacket *slp)
+void owSyslinkReceive(SyslinkPacket *slp)
 {
 }
 
