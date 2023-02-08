@@ -82,7 +82,7 @@ size_t storageFetch(const char *key, void* buffer, size_t length);
  *
  * @param[key] Null terminated string for the key. Its length must be between 1 and 255.
  *
- * @return true in case of success. false if the key was not found or if an error occured.
+ * @return true in case of success. false if the key was not found or if an error occurred.
  */
 bool storageDelete(const char* key);
 
