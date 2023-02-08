@@ -111,7 +111,7 @@ typedef struct collision_avoidance_state_s
 // Main computational routine. Mutates the setpoint such that the new setpoint
 // respects the buffered Voronoi cell constraint.
 //
-// To facilitate compiling and testing on a PC, we take neighbor positions via
+// To facilitate compiling and testing on a PC, we take neighbour positions via
 // array instead of having the implementation call peer_localization.h functions
 // directly. On the other hand, we wish to use the minimum possible amount of
 // memory. Therefore, we allow the input and workspace arrays to overlap. If
@@ -122,7 +122,7 @@ typedef struct collision_avoidance_state_s
 //   params: Algorithm parameters.
 //   collisionState: Algorithm mutable state.
 //   nOthers: Number of other Crazyflies in array arguments.
-//   otherPositons: [nOthers * 3] array of positions (meters).
+//   otherPositions: [nOthers * 3] array of positions (meters).
 //   workspace: Space of no less than 7 * (nOthers + 6) floats. Used for
 //     temporary storage during computation. This can be the same address as
 //     otherPositions - otherPositions is copied into workspace immediately.
