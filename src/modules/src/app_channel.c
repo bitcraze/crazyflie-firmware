@@ -85,7 +85,7 @@ size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_
   }
 }
 
-bool appchannelHasOverflowOccured()
+bool appchannelHasOverflowOccurred()
 {
   bool hasOverflowed = overflow;
   overflow = false;

@@ -136,7 +136,7 @@ void appMain() {
     appchannelSendDataPacket("hello", 5);
     appchannelReceivePacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER); // Deprecated
     appchannelReceiveDataPacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER);
-    appchannelHasOverflowOccured();
+    appchannelHasOverflowOccurred();
   }
 
   // System
