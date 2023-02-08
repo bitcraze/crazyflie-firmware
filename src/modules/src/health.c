@@ -31,7 +31,7 @@
  * The battery test is done by doing a quick burst of all the motors while
  * measuring the maximum voltage sag. The sag is pretty constant over the
  * battery voltage range but usually a tiny bit higher at full voltage. The
- * result is heavily dependent on what components are monunted so needs
+ * result is heavily dependent on what components are mounted so needs
  * returning if anything is different/changed.
  *
  */
