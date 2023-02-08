@@ -3,7 +3,7 @@ title: Platform services
 page_id: crtp_platform
 ---
 
-This ports implements miscellaneous platform-related functionality for the Crazyflie.
+This port implements miscellaneous platform-related functionality for the Crazyflie.
 
 ## CRTP channels
 
@@ -16,7 +16,7 @@ This ports implements miscellaneous platform-related functionality for the Crazy
 
 ## Platform commands
 
-The first byte describe the command:
+The first byte describes the command:
 
 | value | Command |
 |-------|---------|
@@ -101,11 +101,11 @@ Answer:
 | 0    | getDeviceTypeName (2) |
 | 1..  | Device type name string |
 
-Returns a String representation of the device type the firmware is running on. The currently existing device type are:
+Returns a string representation of the device type the firmware is running on. The currently existing device types are:
 
 | Device Type | Device type name |
 |-------------|------------------|
-| RZ10        | Crzyflie Bold    |
+| RZ10        | Crazyflie Bolt    |
 | CF20        | Crazyflie 2.0    |
 | CF2.1       | Crazyflie 2.1    |
 | RR10        | Roadrunner 1.0   |
