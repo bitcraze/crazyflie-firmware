@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/** Functionpointers used to control the buzzer */
+/** Function pointers used to control the buzzer */
 struct buzzerControl
 {
   void (*off)();
