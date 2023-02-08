@@ -93,6 +93,10 @@ bool appchannelHasOverflowOccurred()
   return hasOverflowed;
 }
 
+bool appchannelHasOverflowOccured() {
+    return appchannelHasOverflowOccurred();
+}
+
 void appchannelInit()
 {
   sendMutex = xSemaphoreCreateMutex();

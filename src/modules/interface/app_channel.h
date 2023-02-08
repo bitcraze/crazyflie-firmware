@@ -137,6 +137,17 @@ size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_
  */
 bool appchannelHasOverflowOccurred();
 
+/**
+ * Returns if an overflow has occurred in the receive queue - deprecated, use appchannelHasOverflowOccurred() instead
+ *
+ * The app-channel received packets are put in a queue. It is expected that the app is
+ * regularly calling appchannelReceiveDataPacket() to get the packets from the receive queue.
+ * If that is not the case, the queue can overflow and this function allows the app to know
+ * about it. The overflow flag is being reset by this call.
+ *
+ * @return true if an overflow has occurred in the receive queue.
+ */
+bool appchannelHasOverflowOccured();
 
 // Function declared bellow are private to the Crazyflie firmware and
 // should not be called from an app
