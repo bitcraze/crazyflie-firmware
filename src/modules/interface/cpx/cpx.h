@@ -54,7 +54,7 @@ typedef struct {
 } CPXRouting_t;
 
 // This struct contains routing information in a packed format. This struct
-// should mainly be used to serialize data when tranfering. Unpacked formats
+// should mainly be used to serialize data when tranferring. Unpacked formats
 // should be preferred in application code.
 typedef struct {
   CPXTarget_t destination : 3;
