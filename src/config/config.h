@@ -27,7 +27,7 @@
  * It contains two types of parameters:
  * - The global parameters are globally defined and independent of any
  *   compilation profile. An example of such define could be some pinout.
- * - The profiled defines, they are parameter that can be specific to each
+ * - The profiled defines, they are parameters that can be specific to each
  *   dev build. The vanilla build is intended to be a "customer" build without
  *   fancy spinning debugging stuff. The developers build are anything the
  *   developer could need to debug and run his code/crazy stuff.
@@ -220,7 +220,7 @@
 #define PROPELLER_BALANCE_TEST_THRESHOLD  2.5f
 
 /**
- * \def BAT_LOADING_SAG_THESHOLD
+ * \def BAT_LOADING_SAG_THRESHOLD
  * This is the threshold for a battery and connector to pass. It loads the power path by spinning all 4 motors
  * and measure the voltage sag. The threshold is very experimental and dependent on stock configuration. It is
  * fairly constant over the battery voltage range but testing with fully changed battery is best.
@@ -229,7 +229,7 @@
 
 /**
  * \def ACTIVATE_STARTUP_SOUND
- * Playes a startup melody using the motors and PWM modulation
+ * Plays a startup melody using the motors and PWM modulation
  */
 #define ACTIVATE_STARTUP_SOUND
 
