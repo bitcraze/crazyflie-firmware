@@ -5,7 +5,7 @@ page_id: pwm-to-thrust
 
 
 ## Introduction
-To do modeling, simulations or to improve the flight algorithms the physical parameters of the Crazyflie system is good to know. This page lists several papers related to this, plus listing some internal investigations by Bitcraze itself. 
+To do modeling, simulations or to improve the flight algorithms the physical parameters of the Crazyflie system are good to know. This page lists several papers related to this, plus some internal investigations by Bitcraze itself. 
 
 ### External research on System Identification Crazyflie
 
@@ -20,7 +20,7 @@ Based on [this blogpost](https://www.bitcraze.io/2021/08/building-a-crazyflie-th
 
 ![system id deck](/docs/images/newthrust_stand.jpg)
 
-For the RPM sensors we used the same as on the RPM-deck, the [QRD1114](https://www.onsemi.com/pdf/datasheet/qrd1114-d.pdf). They are not great as they need a reflective surface, this means adding white stickers or paint to black propellers, but they work well enough. The load cell amplifiers ended up to be the [NAU7802](https://www.nuvoton.com/resource-files/NAU7802%20Data%20Sheet%20V1.7.pdf) as it has a high accuracy and sample rate. For power metering we chose the new [ACS37800](https://www.allegromicro.com/en/products/sense/current-sensor-ics/zero-to-fifty-amp-integrated-conductor-sensor-ics/acs37800) power monitoring IC that can handle up to 30A, this looked exiting.
+For the RPM sensors we used the same as on the RPM-deck, the [QRD1114](https://www.onsemi.com/pdf/datasheet/qrd1114-d.pdf). They are not great as they need a reflective surface, this means adding white stickers or paint to black propellers, but they work well enough. The load cell amplifiers ended up to be the [NAU7802](https://www.nuvoton.com/resource-files/NAU7802%20Data%20Sheet%20V1.7.pdf) as it has a high accuracy and sample rate. For power metering we chose the new [ACS37800](https://www.allegromicro.com/en/products/sense/current-sensor-ics/zero-to-fifty-amp-integrated-conductor-sensor-ics/acs37800) power monitoring IC that can handle up to 30A, this looked exciting.
 
 The QRD1114 we wired the same way as previously done on the RPM-deck:
 
@@ -47,7 +47,7 @@ Here it is mounted on a Crazyflie 2.1 together with a 3D printed stand and load 
 
 ### Software
 
-The software, as often, took most of the time to make. Three major deck driver files was created, rpm.c, acs37800.c and loadcell_nau7802.c. Aside from these there where only small changes to make, like making it work when being up-side-down. The modifications have all been pushed to the [dev-systemid](https://github.com/bitcraze/crazyflie-firmware/tree/dev-systemId) branch for those that are interested. As for now we are mainly using the logging framework to transfer the data to the PC, which is quick and easy to setup and use, but writing to SD-card is also possible. The scripts for this can be found in the [tools/sytem_id](https://github.com/bitcraze/crazyflie-firmware/tree/dev-systemId/tools/system_id) folder.
+The software, as often, took most of the time to make. Three major deck driver files were created, rpm.c, acs37800.c and loadcell_nau7802.c. Aside from these there were only small changes to make, like making it work when being up-side-down. The modifications have all been pushed to the [dev-systemid](https://github.com/bitcraze/crazyflie-firmware/tree/dev-systemId) branch for those who are interested. As for now we are mainly using the logging framework to transfer the data to the PC, which is quick and easy to setup and use, but writing to SD-card is also possible. The scripts for this can be found in the [tools/sytem_id](https://github.com/bitcraze/crazyflie-firmware/tree/dev-systemId/tools/system_id) folder.
 
 ![results](/docs/images/new_thrust_stand_cf21-efficency-graph-896x1024.png)
 
@@ -59,7 +59,7 @@ To measure the RPM we used optical switches that we connected to a prototype boa
 ![rpm board](/docs/images/rpm-board.jpg)
 
 ### Measuring the thrust
-To measure the thrust we built a simple test fixture. We use a precision scale to measure the thrust. It is done by letting a weight hold the Crazyflie 2.X down that is standing the scale. The lift generated will show up on the scale as the total weight gets lighter. We glued a prototype expansion board to a bottle which we could attach the Crazyflie 2.X to. It is not a perfect fixture but shouldn't be too far off.
+To measure the thrust we built a simple test fixture. We use a precise scale to measure the thrust. It is done by letting a weight hold the Crazyflie 2.X down that is standing on the scale. The lift generated will show up on the scale as the total weight gets lighter. We glued a prototype expansion board to a bottle which we could attach the Crazyflie 2.X to. It is not a perfect fixture but shouldn't be too far off.
 
 ![cf2 thrust fixture](/docs/images/cf2_thrust_fixture.jpg)
 
@@ -91,17 +91,17 @@ The firmware was adjusted to increase the trust from 0% to 93.75% in 16 steps. E
 | 4.44 | 57.9 | 3.30 | 93.75 | 23882 |
 
 ### Observations
-As can be seen in the graph both then RPM and voltage vs. thrust is quadratic while the Power vs. thrust is linear. Also from the figures one can see that at 93.75% PWM the trust is about 58g. Using the values some interesting plots can be made. Like estimated flight time vs. battery capacity.
+As it can be seen from the graph both then RPM and voltage vs. thrust is quadratic while the power vs. thrust is linear. Also from the figures one can see that at 93.75% PWM the trust is about 58g. Using the values some interesting plots can be made. Like estimated flight time vs. battery capacity.
 
 ![flight time capacity](/docs/images/flighttime_capacity.png)
 
 
-What can also be plotted and estimated is the PWM to thrust transfer function. The issue is that it is not the "PWM" that drives the motors but the voltage and amps = power. With the PWM it is possible to simulate different voltage levels so we are making the assumption that 50% PWM would result in 50% voltage. Then comes the issue that the battery has an internal resistant so that the voltage level wont be constant but will drop with the size of the load. This can be seen by plotting PWM and voltage. The graph is based on the values from the table above. The voltage supply used in this setup was a power box so the "internal resistance" of the battery is not really there but instead the resistance of the cables.
+What can also be plotted and estimated is the PWM to thrust transfer function. The issue is that it is not the "PWM" that drives the motors but the voltage and amps = power. With the PWM it is possible to simulate different voltage levels so we are making the assumption that 50% PWM would result in 50% voltage. Then comes the issue that the battery has an internal resistance so that the voltage level won't be constant but will drop with the size of the load. This can be seen by plotting PWM and voltage. The graph is based on the values from the table above. The voltage supply used in this setup was a power box so the "internal resistance" of the battery is not really there but instead the resistance of the cables.
 
 ![pwm volt](/docs/images/pwm_volt.png)
 
 
-So when we applying the PWM the voltage will be a percentage of the supply voltage which is based on the load which complicates things even more. Therefore two plots was made, one with voltage and one with PWM. The voltage that is applied to the motors is calculated as a percentage of the measured supply voltage. A strange thing here is that the fitting is a better match to the PWM then to the voltage. Something that has to be investigated further.
+So when we are applying the PWM the voltage will be a percentage of the supply voltage which is based on the load which complicates things even more. Therefore two plots were made, one with voltage and another with PWM. The voltage that is applied to the motors is calculated as a percentage of the measured supply voltage. A strange thing here is that the fitting is a better matches to the PWM then to the voltage. Something that has to be investigated further.
 
 ![pwm to thrust](/docs/images/pwm_to_thrust.png)
 
