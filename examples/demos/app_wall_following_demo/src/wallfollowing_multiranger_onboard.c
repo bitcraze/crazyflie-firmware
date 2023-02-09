@@ -314,16 +314,16 @@ StateWF wallFollower(float *cmdVelX, float *cmdVelY, float *cmdAngW, float front
     // If first time around corner
     //first try to find the corner again
 
-    // if side range is larger than prefered distance from wall
+    // if side range is larger than preferred distance from wall
     if (sideRange > refDistanceFromWall + rangerThresholdLost)
     {
 
-      // check if scanning has already occured
+      // check if scanning has already occurred
       if (wraptopi(fabs(currentHeading - prevHeading)) > inCornerAngle)
       {
         aroundCornerBackTrack = true;
       }
-      // turn and adjust distnace to corner from that point
+      // turn and adjust distance to corner from that point
       if (aroundCornerBackTrack)
       {
         // go back if it already went into one direction

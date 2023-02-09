@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * pm.c - Power Management driver and functions.
+ * pm_stm32f4.c - Power Management driver and functions.
  */
 
 #include "stm32fxxx.h"

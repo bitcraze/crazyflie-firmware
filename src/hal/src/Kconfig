@@ -7,7 +7,7 @@ config PM_AUTO_SHUTDOWN
         The power management subsystem can automatically shutdown the system.
         The shutdown time in minutes is defined in platform_defaults_* for
         the specific platform and is the time since the last radio communication
-        occured.
+        occurred.
 
 endmenu
 
