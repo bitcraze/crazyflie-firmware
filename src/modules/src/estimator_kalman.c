@@ -145,6 +145,8 @@ static uint32_t accAccumulatorCount;
 static uint32_t gyroAccumulatorCount;
 static Axis3f accLatest;
 static Axis3f gyroLatest;
+static Axis3f gyroAverage;
+
 static bool quadIsFlying = false;
 
 static OutlierFilterLhState_t sweepOutlierFilterState;
@@ -318,7 +320,6 @@ static bool predictStateForward(uint32_t osTick, float dt) {
   }
 
   // gyro is in deg/sec but the estimator requires rad/sec
-  Axis3f gyroAverage;
   gyroAverage.x = gyroAccumulator.x * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;

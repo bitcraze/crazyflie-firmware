@@ -43,8 +43,8 @@
 
 
 static bool isInit = false;
-static uint8_t resolution = 0xFF;
-static uint8_t old_resolution = 0xFF;
+static uint8_t resolution = 0xFF;//0x26;//0xFF;//0x2c;//0xFF;
+static uint8_t old_resolution = 0xFF;//0x26;//0xFF;//0x2c;//0xFF;
 
 static volatile uint8_t rawDataArray[1225];
 
@@ -190,9 +190,9 @@ static void InitRegisters(const deckPin_t csPin)
 //  registerWrite(csPin, 0x5B, 0xA0);
 
   // turn on LED
-  registerWrite(csPin, 0x7F, 0x14);
-  registerWrite(csPin, 0x6F, 0x0c);
-  registerWrite(csPin, 0x7F, 0x00);
+  // registerWrite(csPin, 0x7F, 0x14);
+  // registerWrite(csPin, 0x6F, 0x0c);
+  // registerWrite(csPin, 0x7F, 0x00);
 
 }
 

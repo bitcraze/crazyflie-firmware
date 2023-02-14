@@ -124,10 +124,10 @@ static void flowdeckTask(void *param)
 
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
-      if ((flowMode == BRIGHT_MODE && currentMotion.squal > BRIGHT_MODE_MIN_SQUAL && shutter <= BRIGHT_MODE_MAX_SHUTTER) || \
-        (flowMode == LOW_LIGHT_MODE && currentMotion.squal > LOW_LIGHT_MODE_MIN_SQUAL && shutter <= LOW_LIGHT_MODE_MAX_SHUTTER) || \
-          (flowMode == SUPER_LOW_LIGHT_MODE && currentMotion.squal > SUPER_LOW_LIGHT_MODE_MIN_SQUAL && shutter <= SUPER_LOW_LIGHT_MODE_MAX_SHUTTER))
-      {
+      /* if ((flowMode == BRIGHT_MODE && currentMotion.squal > BRIGHT_MODE_MIN_SQUAL && shutter <= BRIGHT_MODE_MAX_SHUTTER) || \
+      //   (flowMode == LOW_LIGHT_MODE && currentMotion.squal > LOW_LIGHT_MODE_MIN_SQUAL && shutter <= LOW_LIGHT_MODE_MAX_SHUTTER) || \
+      //     (flowMode == SUPER_LOW_LIGHT_MODE && currentMotion.squal > SUPER_LOW_LIGHT_MODE_MIN_SQUAL && shutter <= SUPER_LOW_LIGHT_MODE_MAX_SHUTTER))
+       {*/
         if (useAdaptiveStd)
         {
           // The standard deviation is fitted by measurements flying over low and high texture
@@ -145,7 +145,7 @@ static void flowdeckTask(void *param)
         // Form flow measurement struct and push into the EKF
         flowData.stdDevX = stdFlow;
         flowData.stdDevY = stdFlow;
-        flowData.dt = 0.01;
+        // flowData.dt = 0.01;
 
     #if defined(USE_MA_SMOOTHING)
           // Use MA Smoothing
@@ -186,9 +186,9 @@ static void flowdeckTask(void *param)
         } else {
           outlierCount++;
         }
-      } else {
-      outlierCount++;
-    }
+    //   } else {
+    //   outlierCount++;
+    // }
   }
 }
 
