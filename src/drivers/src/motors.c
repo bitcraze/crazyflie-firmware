@@ -46,7 +46,7 @@
 #include "log.h"
 #include "param.h"
 
-static bool motorPowerSetIsEnabled = false;
+static bool motorSetEnable = false;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
@@ -454,15 +454,6 @@ void motorsBurstDshot()
 }
 #endif
 
-void motorSetPowerEnabled(bool enable)
-{
-  motorPowerSetIsEnabled = enable;
-}
-
-void motorSetPowerValue(uint32_t id, uint16_t value)
-{
-  motorPowerSet[id] = value;
-}
 
 // Ithrust is thrust mapped for 65536 <==> 60 grams
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
@@ -472,7 +463,7 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
 
     uint16_t ratio = ithrust;
 
-    if (motorPowerSetIsEnabled) {
+    if (motorSetEnable) {
       ratio = motorPowerSet[id];
     }
 
@@ -690,7 +681,7 @@ PARAM_GROUP_START(motorPowerSet)
 /**
  * @brief Nonzero to override controller with set values
  */
-PARAM_ADD_CORE(PARAM_UINT8, enable, &motorPowerSetIsEnabled)
+PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
 
 /**
  * @brief motor power for m1: `0 - UINT16_MAX`

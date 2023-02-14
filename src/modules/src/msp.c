@@ -38,6 +38,7 @@
 #include "motors.h"
 #include "string.h"
 #include "platform.h"
+#include "param.h"
 
 // MSP command IDs
 typedef enum {
@@ -177,6 +178,8 @@ typedef struct _MspSetMotors
 }__attribute__((packed)) MspSetMotors;
 
 static bool hasSet4WayIf = false;
+static paramVarId_t motorPowerSetEnableParam;
+static paramVarId_t motorParams[NBR_OF_MOTORS];
 
 // Helpers
 static uint8_t mspComputeCrc(const MspHeader* header, const uint8_t* data, const uint16_t dataLen);
@@ -207,6 +210,12 @@ void mspInit(MspObject* pMspObject, const MspResponseCallback callback)
 {
   pMspObject->requestState = MSP_REQUEST_STATE_WAIT_FOR_START;
   pMspObject->responseCallback = callback;
+  // Get params from internal parameter API, which we need to enable and set the motor PWM.
+  motorPowerSetEnableParam = paramGetVarId("motorPowerSet", "enable");
+  motorParams[0] = paramGetVarId("motorPowerSet", "m1");
+  motorParams[1] = paramGetVarId("motorPowerSet", "m2");
+  motorParams[2] = paramGetVarId("motorPowerSet", "m3");
+  motorParams[3] = paramGetVarId("motorPowerSet", "m4");
 }
 
 void mspProcessByte(MspObject* pMspObject, const uint8_t data)
@@ -547,13 +556,13 @@ static void mspHandleRequestBatteryState(MspObject* pMspObject)
 static void mspHandleRequestSetMotor(MspObject* pMspObject)
 {
   // Ensure that the motorPowerSet functionality is first enabled
-  motorSetPowerEnabled(true);
+  paramSetInt(motorPowerSetEnableParam, 1);
 
   for (int motor = 0; motor < NBR_OF_MOTORS; motor++) {
     // Set the motor power level for each motor.
     uint16_t motorSpeed = ((uint16_t*) pMspObject->data)[motor];
     motorSpeed = mapMotorRequestSpeed(motorSpeed);
-    motorSetPowerValue(motor, motorSpeed);
+    paramSetInt(motorParams[motor], motorSpeed);
   }
 
   mspMakeTxPacket(pMspObject, MSP_SET_MOTOR, 0, 0);
