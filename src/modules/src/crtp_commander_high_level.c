@@ -433,6 +433,7 @@ int set_group_mask(const struct data_set_group_mask* data)
   return 0;
 }
 
+// Deprecated (removed after August 2023)
 int takeoff(const struct data_takeoff* data)
 {
   int result = 0;
@@ -488,6 +489,7 @@ int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
   return result;
 }
 
+// Deprecated (removed after August 2023)
 int land(const struct data_land* data)
 {
   int result = 0;
