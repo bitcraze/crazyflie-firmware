@@ -43,7 +43,7 @@ static bool overflow;
 
 static int sendDataPacket(void* data, size_t length, const bool doBlock);
 
-// Deprecated
+// Deprecated (removed after August 2023)
 void appchannelSendPacket(void* data, size_t length)
 {
   appchannelSendDataPacketBlock(data, length);
@@ -59,7 +59,7 @@ void appchannelSendDataPacketBlock(void* data, size_t length)
   sendDataPacket(data, length, true);
 }
 
-// Deprecated
+// Deprecated (removed after August 2023)
 size_t appchannelReceivePacket(void* buffer, size_t max_length, int timeout_ms) {
   return appchannelReceiveDataPacket(buffer, max_length, timeout_ms);
 }

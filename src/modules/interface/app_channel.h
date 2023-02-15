@@ -34,7 +34,7 @@
 #define APPCHANNEL_MTU (31)
 
 /**
- * Send an app-channel packet - deprecated, use appchannelSendDataPacketBlock() instead
+ * Send an app-channel packet - deprecated (removed after August 2023). Use appchannelSendDataPacketBlock() instead.
  *
  * The maximum buffer size that can be sent is define in APPCHANNEL_MTU.
  * If the length of the buffer is longer than that, the packet will be cropped
@@ -90,7 +90,7 @@ void appchannelSendDataPacketBlock(void* data, size_t length);
 int appchannelSendDataPacket(void* data, size_t length);
 
 /**
- * Receive an app-channel packet - deprecated, use appchannelReceiveDataPacket() instead
+ * Receive an app-channel packet - deprecated (removed after August 2023). Use appchannelReceiveDataPacket() instead
  *
  * If the data received is longer than max_length, the data will be silently cropped and only
  * the fist "max_length" bytes of the packet will be copied in the buffer.
@@ -138,7 +138,7 @@ size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_
 bool appchannelHasOverflowOccurred();
 
 /**
- * Returns if an overflow has occurred in the receive queue - deprecated, use appchannelHasOverflowOccurred() instead
+ * Returns if an overflow has occurred in the receive queue - deprecated (removed after August 2023). Use appchannelHasOverflowOccurred() instead
  *
  * The app-channel received packets are put in a queue. It is expected that the app is
  * regularly calling appchannelReceiveDataPacket() to get the packets from the receive queue.

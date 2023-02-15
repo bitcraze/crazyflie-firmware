@@ -390,7 +390,7 @@ void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles)
 }
 #endif
 
-// This logging group is deprecated
+// This logging group is deprecated (removed after August 2023)
 LOG_GROUP_START(ext_pos)
   LOG_ADD(LOG_FLOAT, X, &ext_pos.x)
   LOG_ADD(LOG_FLOAT, Y, &ext_pos.y)
