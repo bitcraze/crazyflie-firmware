@@ -26,7 +26,7 @@
 
 #pragma once
 
-#pragma message "sitAwTuDetected is deprecated, consider switching to supervisorIsTumbled!"
+#pragma message "sitAwTuDetected is deprecated (removed after August 2023), consider switching to supervisorIsTumbled!"
 
 #include "supervisor.h"
 #define sitAwTuDetected supervisorIsTumbled

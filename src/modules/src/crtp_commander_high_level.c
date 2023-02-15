@@ -129,8 +129,8 @@ STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE)
 // trajectory command (first byte of crtp packet)
 enum TrajectoryCommand_e {
   COMMAND_SET_GROUP_MASK          = 0,
-  COMMAND_TAKEOFF                 = 1, // Deprecated, use COMMAND_TAKEOFF_2
-  COMMAND_LAND                    = 2, // Deprecated, use COMMAND_LAND_2
+  COMMAND_TAKEOFF                 = 1, // Deprecated (removed after August 2023), use COMMAND_TAKEOFF_2
+  COMMAND_LAND                    = 2, // Deprecated (removed after August 2023), use COMMAND_LAND_2
   COMMAND_STOP                    = 3,
   COMMAND_GO_TO                   = 4,
   COMMAND_START_TRAJECTORY        = 5,
@@ -146,7 +146,7 @@ struct data_set_group_mask {
 } __attribute__((packed));
 
 // vertical takeoff from current x-y position to given height
-// Deprecated
+// Deprecated (removed after August 2023)
 struct data_takeoff {
   uint8_t groupMask;        // mask for which CFs this should apply to
   float height;             // m (absolute)
@@ -174,7 +174,7 @@ struct data_takeoff_with_velocity {
 } __attribute__((packed));
 
 // vertical land from current x-y position to given height
-// Deprecated
+// Deprecated (removed after August 2023)
 struct data_land {
   uint8_t groupMask;        // mask for which CFs this should apply to
   float height;             // m (absolute)
@@ -433,6 +433,7 @@ int set_group_mask(const struct data_set_group_mask* data)
   return 0;
 }
 
+// Deprecated (removed after August 2023)
 int takeoff(const struct data_takeoff* data)
 {
   int result = 0;
@@ -488,6 +489,7 @@ int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
   return result;
 }
 
+// Deprecated (removed after August 2023)
 int land(const struct data_land* data)
 {
   int result = 0;
