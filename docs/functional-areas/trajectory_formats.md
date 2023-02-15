@@ -6,7 +6,7 @@ page_id: trajectory_formats
 This document describes how the Crazyflie high-level commander stores
 trajectories in the internal trajectory memory.
 
-Trajectories for the high-level commander may be stored in one of two formats.
+Trajectories for the high-level commander may be stored in one of two formats,
 either as a sequence of raw 7th degree polynomials, or as a more space-efficient
 representation using the same polynomials in Bernstein form. In both cases, a
 single segment stores a duration and one polynomial for each of the X, Y, Z and
