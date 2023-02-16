@@ -169,7 +169,7 @@ PARAM_GROUP_START(commander)
  * @brief Enable high level commander - deprecated (removed after August 2023)
  *
  * This parameter does not change anything and does not provide any functionality. There is no need
- * to set it before using the high level commander. See https://github.com/bitcraze/crazyflie-firmware/pull/903
+ * to set it before using the high level commander. See %https://github.com/bitcraze/crazyflie-firmware/pull/903
  */
 PARAM_ADD_CORE(PARAM_UINT8, enHighLevel, &enableHighLevel)
 
