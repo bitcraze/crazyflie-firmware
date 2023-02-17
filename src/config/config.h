@@ -67,7 +67,7 @@
 #define STABILIZER_TASK_PRI     5
 #define SENSORS_TASK_PRI        4
 #define ADC_TASK_PRI            3
-#define FLOW_TASK_PRI           3
+#define FLOW_TASK_PRI           0  //FIXME: Changed for PAA3905 debug, was 3
 #define MULTIRANGER_TASK_PRI    3
 #define SYSTEM_TASK_PRI         2
 #define CRTP_TX_TASK_PRI        2
