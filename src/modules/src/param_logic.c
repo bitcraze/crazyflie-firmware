@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2021 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include <errno.h>
 
 #include "config.h"
+#include "FreeRTOS.h"
 #include "param_logic.h"
 #include "storage.h"
 #include "crc32.h"
@@ -576,7 +577,10 @@ void paramSetInt(paramVarId_t varid, int valuei)
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size = 3 + paramSize;
-  crtpSendPacketBlock(&pk);
+  const int sendResult = crtpSendPacket(&pk);
+  if (sendResult == errQUEUE_FULL) {
+    DEBUG_PRINT("WARNING: Param update not sent\n");
+  }
 #endif
 
   paramNotifyChanged(varid.index);
@@ -598,7 +602,10 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   pk.size = 3;
   memcpy(&pk.data[2], &valuef, 4);
   pk.size += 4;
-  crtpSendPacketBlock(&pk);
+  const int sendResult = crtpSendPacket(&pk);
+  if (sendResult == errQUEUE_FULL) {
+    DEBUG_PRINT("WARNING: Param update not sent\n");
+  }
 #endif
 
   paramNotifyChanged(varid.index);

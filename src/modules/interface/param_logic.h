@@ -116,12 +116,8 @@ unsigned int paramGetUint(paramVarId_t varid);
 
 /** Set int value of an int parameter (1-4 bytes)
  *
- *  An update is also send to the client 
- *  NOTE: The update to the client will be added to the output queue. If 
- *  the Crazyflie is not connected to a client, the queue may fill up and
- *  this call will block until the queue is emptied.This could be avoided 
- *  by setting the CONFIG_PARAM_SILENT_UPDATES flag.
- * 
+ *  An update is also send to the client
+ *
  * @param varId variable ID, returned by paramGetVarId()
  * @param valuei Value to set in the variable
  */
@@ -129,12 +125,8 @@ void paramSetInt(paramVarId_t varid, int valuei);
 
 /** Set float value of a float parameter
  *
- *  An update is also send to the client 
- *  NOTE: The update to the client will be added to the output queue. If 
- *  the Crazyflie is not connected to a client, the queue may fill up and
- *  this call will block until the queue is emptied.This could be avoided 
- *  by setting the CONFIG_PARAM_SILENT_UPDATES flag.
- * 
+ *  An update is also send to the client
+ *
  * @param varId variable ID, returned by paramGetVarId()
  * @param valuef Value to set in the variable
  */
