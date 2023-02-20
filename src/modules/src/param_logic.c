@@ -576,7 +576,7 @@ void paramSetInt(paramVarId_t varid, int valuei)
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
   pk.size = 3 + paramSize;
-  crtpSendPacketBlock(&pk);
+  crtpSendPacket(&pk);
 #endif
 
   paramNotifyChanged(varid.index);
@@ -598,7 +598,7 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   pk.size = 3;
   memcpy(&pk.data[2], &valuef, 4);
   pk.size += 4;
-  crtpSendPacketBlock(&pk);
+  crtpSendPacket(&pk);
 #endif
 
   paramNotifyChanged(varid.index);
