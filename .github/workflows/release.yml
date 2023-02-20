@@ -66,14 +66,14 @@ jobs:
     - name: Get Release File Name & Upload URL
       id: get_release_info
       run: |
-        value=`cat release_url/release_url.txt`
-        echo ::set-output name=upload_url::$value
+        value=`cat release_url.txt`
+        echo "upload_url=$value" >> $GITHUB_OUTPUT
 
     - name: Get the version
       id: get_release_version
       env:
         GITHUB_REF : ${{ github.ref }}
-      run: echo ::set-output name=release_version::${GITHUB_REF/refs\/tags\//}
+      run: echo "release_version=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
 
     - name: Upload ${{ matrix.platform }} bin
       uses: actions/upload-release-asset@v1
