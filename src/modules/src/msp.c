@@ -38,6 +38,7 @@
 #include "motors.h"
 #include "string.h"
 #include "platform.h"
+#include "param.h"
 
 // MSP command IDs
 typedef enum {
@@ -54,6 +55,7 @@ typedef enum {
   MSP_BOXIDS         = 119,
   MSP_BATTERY_STATE  = 130,
   MSP_UID            = 160, // Unique device ID
+  MSP_SET_MOTOR      = 214,
   MSP_SET_4WAY_IF    = 245
 } msp_command_t;
 
@@ -76,6 +78,7 @@ typedef enum
   MSP_REQUEST_STATE_DIRECTION,
   MSP_REQUEST_STATE_SIZE,
   MSP_REQUEST_STATE_COMMAND,
+  MSP_REQUEST_STATE_DATA,
   MSP_REQUEST_STATE_CRC
 } MSP_REQUEST_STATE;
 
@@ -169,13 +172,21 @@ typedef struct _MspBatteryState
   uint16_t voltage2;
 }__attribute__((packed)) MspBatteryState;
 
+typedef struct _MspSetMotors
+{
+  uint16_t speed[8];
+}__attribute__((packed)) MspSetMotors;
+
 static bool hasSet4WayIf = false;
+static paramVarId_t motorPowerSetEnableParam;
+static paramVarId_t motorParams[NBR_OF_MOTORS];
 
 // Helpers
-static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen);
+static uint8_t mspComputeCrc(const MspHeader* header, const uint8_t* data, const uint16_t dataLen);
 static bool mspIsRequestValid(MspObject* pMspObject);
 static void mspProcessRequest(MspObject* pMspObject);
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen);
+static uint16_t mapMotorRequestSpeed(const uint16_t from);
 
 // Request handlers
 static void mspHandleRequestMspStatus(MspObject* pMspObject);
@@ -192,12 +203,19 @@ static void mspHandleRequestsSet4WayIf(MspObject* pMspObject);
 static void mspHandleRequestMotor(MspObject* pMspObject);
 static void mspHandleRequestFeaturesConfig(MspObject* pMspObject);
 static void mspHandleRequestBatteryState(MspObject* pMspObject);
+static void mspHandleRequestSetMotor(MspObject* pMspObject);
 
 // Public API
 void mspInit(MspObject* pMspObject, const MspResponseCallback callback)
 {
   pMspObject->requestState = MSP_REQUEST_STATE_WAIT_FOR_START;
   pMspObject->responseCallback = callback;
+  // Get params from internal parameter API, which we need to enable and set the motor PWM.
+  motorPowerSetEnableParam = paramGetVarId("motorPowerSet", "enable");
+  motorParams[0] = paramGetVarId("motorPowerSet", "m1");
+  motorParams[1] = paramGetVarId("motorPowerSet", "m2");
+  motorParams[2] = paramGetVarId("motorPowerSet", "m3");
+  motorParams[3] = paramGetVarId("motorPowerSet", "m4");
 }
 
 void mspProcessByte(MspObject* pMspObject, const uint8_t data)
@@ -235,7 +253,25 @@ void mspProcessByte(MspObject* pMspObject, const uint8_t data)
 
   case MSP_REQUEST_STATE_COMMAND:
     pMspObject->requestHeader.command = data;
-    pMspObject->requestState = MSP_REQUEST_STATE_CRC;
+
+    if (pMspObject->requestHeader.size > 0)
+    {
+      pMspObject->dataRead = 0;
+      pMspObject->requestState = MSP_REQUEST_STATE_DATA;
+    }
+    else
+    {
+      pMspObject->requestState = MSP_REQUEST_STATE_CRC;
+    }
+    break;
+
+  case MSP_REQUEST_STATE_DATA:
+    pMspObject->data[pMspObject->dataRead] = data;
+    pMspObject->dataRead++;
+    if (pMspObject->dataRead >= pMspObject->requestHeader.size)
+    {
+      pMspObject->requestState = MSP_REQUEST_STATE_CRC;
+    }
     break;
 
   case MSP_REQUEST_STATE_CRC:
@@ -260,29 +296,15 @@ void mspResetSet4WayIf()
 }
 
 // Private
-static uint8_t mspComputeCrc(uint8_t* pBuffer, uint32_t bufferLen)
+static uint8_t mspComputeCrc(const MspHeader* header, const uint8_t* data, const uint16_t dataLen)
 {
-  uint8_t crc = 0;
+  // The MSP CRC is defined as the XOR of size, command,
+  // and all data bytes into a zeroed sum.
+  uint8_t crc = header->size ^ header->command;
 
-  // Make sure the buffer is at least the size of a header
-  if(bufferLen >= sizeof(MspHeader))
+  for(uint16_t i = 0; i < dataLen; i++)
   {
-    MspHeader* pHeader = (MspHeader*)pBuffer;
-
-    // Make sure the buffer is at least the size of the buffer and data
-    if(bufferLen >= sizeof(MspHeader) + pHeader->size)
-    {
-      // The MSP CRC is defined as the XOR of size, command, and all
-      // data bytes into a zeroed sum.
-
-      crc ^= pHeader->size;
-      crc ^= pHeader->command;
-
-      for(uint16_t i = 0; i < pHeader->size; i++)
-      {
-        crc ^= pBuffer[sizeof(MspHeader) + i];
-      }
-    }
+    crc ^= data[i];
   }
 
   return crc;
@@ -305,18 +327,10 @@ static bool mspIsRequestValid(MspObject* pMspObject)
     return false;
   }
 
-  if(pMspObject->requestHeader.size != 0)
-  {
-    // Requests should not have a payload
-    DEBUG_PRINT("MSP Request has invalid size %d\n", pMspObject->requestHeader.size);
-    return false;
-  }
-
-  if(pMspObject->requestCrc !=
-      mspComputeCrc((uint8_t*)&pMspObject->requestHeader, sizeof(pMspObject->requestHeader)))
+  if(pMspObject->requestCrc != mspComputeCrc(&pMspObject->requestHeader, pMspObject->data, pMspObject->requestHeader.size))
   {
     // CRC does not match
-    DEBUG_PRINT("MSP Request has invalid crc (%d != %d)\n", pMspObject->requestCrc, mspComputeCrc((uint8_t*)&pMspObject->requestHeader, sizeof(pMspObject->requestHeader)));
+    DEBUG_PRINT("MSP Request has invalid crc (%d != %d)\n", pMspObject->requestCrc, mspComputeCrc(&pMspObject->requestHeader, pMspObject->data, pMspObject->requestHeader.size));
     return false;
   }
 
@@ -379,10 +393,12 @@ static void mspProcessRequest(MspObject* pMspObject)
     case MSP_BATTERY_STATE:
       mspHandleRequestBatteryState(pMspObject);
       break;
+    case MSP_SET_MOTOR:
+      mspHandleRequestSetMotor(pMspObject);
+      break;
     default:
       DEBUG_PRINT("Received unsupported MSP request: %d\n", pMspObject->requestHeader.command);
       return;
-      break;
   }
 
   if(pMspObject->responseCallback)
@@ -396,71 +412,31 @@ static void mspProcessRequest(MspObject* pMspObject)
 
 static void mspHandleRequestMspStatus(MspObject* pMspObject)
 {
-  MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   MspStatus* pData = (MspStatus*)(pMspObject->mspResponse + sizeof(MspHeader));
-  uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + sizeof(*pData));
-
-  // Header
-  pHeader->preamble[0] = MSP_PREAMBLE_0;
-  pHeader->preamble[1] = MSP_PREAMBLE_1;
-  pHeader->direction = MSP_DIRECTION_OUT;
-  pHeader->size = sizeof(*pData);
-  pHeader->command = MSP_STATUS;
-
-  // Data
   pData->cycleTime = 1000; // TODO: API to query this?
   pData->i2cErrors = 0; // unused
   pData->sensors = 0x0001; // no sensors supported yet, but need to report at least one to get the level bars to show
   pData->flags = 0x00000001; // always report armed (bit zero)
   pData->currentSet = 0x00;
 
-  // CRC
-  *pCrc = mspComputeCrc(pMspObject->mspResponse, sizeof(pMspObject->mspResponse));
-
-  // Update total response size
-  pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
+  mspMakeTxPacket(pMspObject, MSP_STATUS, (uint8_t*) pData, sizeof(MspStatus));
 }
 
 static void mspHandleRequestMspRc(MspObject* pMspObject)
 {
-  MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   MspRc* pData = (MspRc*)(pMspObject->mspResponse + sizeof(MspHeader));
-  uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + sizeof(*pData));
-
-  // Header
-  pHeader->preamble[0] = MSP_PREAMBLE_0;
-  pHeader->preamble[1] = MSP_PREAMBLE_1;
-  pHeader->direction = MSP_DIRECTION_OUT;
-  pHeader->size = sizeof(*pData);
-  pHeader->command = MSP_RC;
-
   // TODO: get actual data - for now hardcode the midpoint
   pData->roll = 1500;
   pData->pitch = 1500;
   pData->yaw = 1500;
   pData->throttle = 1500;
 
-  // CRC
-  *pCrc = mspComputeCrc(pMspObject->mspResponse, sizeof(pMspObject->mspResponse));
-
-  // Update total response size
-  pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
+  mspMakeTxPacket(pMspObject, MSP_RC, (uint8_t*) pData, sizeof(MspRc));
 }
 
 static void mspHandleRequestMspAttitude(MspObject* pMspObject)
 {
-  MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   MspAttitude* pData = (MspAttitude*)(pMspObject->mspResponse + sizeof(MspHeader));
-  uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + sizeof(*pData));
-
-  // Header
-  pHeader->preamble[0] = MSP_PREAMBLE_0;
-  pHeader->preamble[1] = MSP_PREAMBLE_1;
-  pHeader->direction = MSP_DIRECTION_OUT;
-  pHeader->size = sizeof(*pData);
-  pHeader->command = MSP_ATTITUDE;
-
-  // Data
   float roll;
   float pitch;
   float yaw;
@@ -470,36 +446,18 @@ static void mspHandleRequestMspAttitude(MspObject* pMspObject)
   pData->angY = (int16_t)(pitch * 10);
   pData->heading = 0; // TODO: mag support
 
-  // CRC
-  *pCrc = mspComputeCrc(pMspObject->mspResponse, sizeof(pMspObject->mspResponse));
-
-  // Update total response size
-  pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
+  mspMakeTxPacket(pMspObject, MSP_ATTITUDE, (uint8_t*) pData, sizeof(MspAttitude));
 }
 
 static void mspHandleRequestMspBoxIds(MspObject* pMspObject)
 {
-  MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
   uint8_t* pData = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader));
-  uint8_t* pCrc = (uint8_t*)(pMspObject->mspResponse + sizeof(MspHeader) + sizeof(*pData));
-
-  // Header
-  pHeader->preamble[0] = MSP_PREAMBLE_0;
-  pHeader->preamble[1] = MSP_PREAMBLE_1;
-  pHeader->direction = MSP_DIRECTION_OUT;
-  pHeader->size = sizeof(*pData);
-  pHeader->command = MSP_BOXIDS;
-
   // TODO: Data - this needs to be properly implemented
   // For now, we just return byte 0 = 0 which tells
   // the client to use box ID 0 for the ARMED box
   pData[0] = 0x00;
 
-  // CRC
-  *pCrc = mspComputeCrc(pMspObject->mspResponse, sizeof(pMspObject->mspResponse));
-
-  // Update total response size
-  pMspObject->mspResponseSize = sizeof(MspHeader) + sizeof(*pData) + 1;
+  mspMakeTxPacket(pMspObject, MSP_BOXIDS, (uint8_t*) pData, 0);
 }
 
 // Note: All request-handlers below have been reverese-engineered from BLHeli Configurator: https://github.com/stylesuxx/esc-configurator
@@ -595,6 +553,31 @@ static void mspHandleRequestBatteryState(MspObject* pMspObject)
   mspMakeTxPacket(pMspObject, MSP_BATTERY_STATE, (uint8_t*) batteryState, sizeof(MspBatteryState));
 }
 
+static void mspHandleRequestSetMotor(MspObject* pMspObject)
+{
+  // Ensure that the motorPowerSet functionality is first enabled
+  paramSetInt(motorPowerSetEnableParam, 1);
+
+  for (int motor = 0; motor < NBR_OF_MOTORS; motor++) {
+    // Set the motor power level for each motor.
+    uint16_t motorSpeed = ((uint16_t*) pMspObject->data)[motor];
+    motorSpeed = mapMotorRequestSpeed(motorSpeed);
+    paramSetInt(motorParams[motor], motorSpeed);
+  }
+
+  mspMakeTxPacket(pMspObject, MSP_SET_MOTOR, 0, 0);
+}
+
+/*
+ * Maps the motorSpeed from a value between 1000 and 2000 to
+ * a value between 0 and 65535.
+*/
+static uint16_t mapMotorRequestSpeed(const uint16_t from)
+{
+  float perc = (from - 1000) / 1000.0;
+  return perc * 65535;
+}
+
 static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, const uint8_t* data, uint8_t dataLen) {
   // Packet structure: http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
   MspHeader* pHeader = (MspHeader*)pMspObject->mspResponse;
@@ -608,7 +591,7 @@ static void mspMakeTxPacket(MspObject* pMspObject, const msp_command_t command, 
   pHeader->command = command;
   memcpy(pData, data, dataLen);
 
-  *pCrc = mspComputeCrc(pMspObject->mspResponse, sizeof(pMspObject->mspResponse));
+  *pCrc = mspComputeCrc(pHeader, pData, pHeader->size);
 
   // Update the packets entire size. +1 is the CRC
   pMspObject->mspResponseSize = sizeof(MspHeader) + dataLen + 1;

@@ -67,6 +67,9 @@ typedef struct
   uint8_t requestCrc;
   uint8_t requestState;
 
+  uint8_t dataRead;
+  uint8_t data[16];
+
   // Response context
   uint8_t mspResponse[256];
   // Size of the complete response message contained

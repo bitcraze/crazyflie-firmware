@@ -41,11 +41,13 @@
 #include "msp.h"
 #include "uart_syslink.h"
 #include "sensors.h"
+#include "param.h"
 
 static TaskHandle_t passthroughTaskHandle;
 STATIC_MEM_TASK_ALLOC(passthroughTask, PASSTHROUGH_TASK_STACKSIZE);
 
 static bool isInit;
+static paramVarId_t motorPowerSetEnableParam;
 
 // Passthorugh queues to handle VCP data.
 static xQueueHandle  ptRxQueue;
@@ -72,6 +74,8 @@ void passthroughInit()
   DEBUG_QUEUE_MONITOR_REGISTER(ptRxQueue);
   ptTxQueue = STATIC_MEM_QUEUE_CREATE(ptTxQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(ptRxQueue);
+
+  motorPowerSetEnableParam = paramGetVarId("motorPowerSet", "enable");
 
   passthroughTaskHandle = STATIC_MEM_TASK_CREATE(passthroughTask, passthroughTask, PASSTHROUGH_TASK_NAME, NULL, PASSTHROUGH_TASK_PRI);
 }
@@ -146,6 +150,11 @@ void passthroughTask(void *param)
     // After 4way process is done resume interrupts
     uartslkResumeRx();
     sensorsResume();
+
+    // The ability to set the powers of the motors directly might be changed
+    // during the 4way process (for instance while using the motor sliders in ESC Configurator ).
+    // Here we'll just make sure that the ability is set to false, so we don't accidentally start the motors.
+    paramSetInt(motorPowerSetEnableParam, 0);
 
     // Clear any notifications that was queued during 4way process.
     ulTaskNotifyValueClear(NULL, 0xFFFFFFFF);
