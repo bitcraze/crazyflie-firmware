@@ -68,5 +68,7 @@ setup(
     name="cffirmware",
     version="1.0",
     cmdclass={"build": BuildCommand},
-    ext_modules=[cffirmware]
+    ext_modules=[cffirmware],
+    py_modules=["cffirmware"],
+    package_dir={"": "build"},
 )

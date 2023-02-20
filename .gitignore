@@ -28,6 +28,7 @@ current_platform.mk
 
 bindings/build/*
 bindings/cffirmware_wrap.c
+dist/
 
 docs/.jekyll-metadata
 docs/.jekyll-cache
