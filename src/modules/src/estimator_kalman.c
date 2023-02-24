@@ -299,7 +299,7 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
           kalmanCoreRobustUpdateWithTDOA(&coreData, &m.data.tdoa);
         }else{
           // standard KF update
-          kalmanCoreUpdateWithTDOA(&coreData, &m.data.tdoa);
+          kalmanCoreUpdateWithTDOA(&coreData, &m.data.tdoa, nowMs);
         }
         break;
       case MeasurementTypePosition:

@@ -30,7 +30,12 @@
 // TODO krri What is this used for? Do we still need it?
 TESTABLE_STATIC uint32_t tdoaCount = 0;
 
-void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
+// Enable this to use the old step outlier filter
+// This filter is deprecated and will be removed after October 2023
+// #define USE_STEP_OUTLIER_FILTER 1
+
+
+void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs)
 {
   if (tdoaCount >= 100)
   {
@@ -71,6 +76,7 @@ void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
       h[KC_STATE_Y] = (dy1 / d1 - dy0 / d0);
       h[KC_STATE_Z] = (dz1 / d1 - dz0 / d0);
 
+    #if USE_STEP_OUTLIER_FILTER
       vector_t jacobian = {
         .x = h[KC_STATE_X],
         .y = h[KC_STATE_Y],
@@ -84,6 +90,10 @@ void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
       };
 
       bool sampleIsGood = outlierFilterValidateTdoaSteps(tdoa, error, &jacobian, &estimatedPosition);
+      #else
+      bool sampleIsGood = outlierFilterValidateTdoaIntegrator(tdoa, error, nowMs);
+      #endif
+
       if (sampleIsGood) {
         kalmanCoreScalarUpdate(this, &H, error, tdoa->stdDev);
       }

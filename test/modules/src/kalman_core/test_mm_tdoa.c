@@ -51,10 +51,10 @@ void testThatScalarUpdateIsCalledInSimpleCase() {
   };
 
   setKalmanCoreScalarUpdateExpectationsSingleCall(&this, expectedHm, expectedError, expectedStdMeasNoise);
-  outlierFilterValidateTdoaSteps_IgnoreAndReturn(true);
+  outlierFilterValidateTdoaIntegrator_IgnoreAndReturn(true);
 
   // Test
-  kalmanCoreUpdateWithTDOA(&this, &measurement);
+  kalmanCoreUpdateWithTDOA(&this, &measurement, 0);
 
   // Assert
   assertScalarUpdateWasCalled();
@@ -77,7 +77,7 @@ void testThatSampleWhereDroneIsInSamePositionAsAnchorIsIgnored() {
   };
 
   // Test
-  kalmanCoreUpdateWithTDOA(&this, &measurement);
+  kalmanCoreUpdateWithTDOA(&this, &measurement, 0);
 
   // Assert
   assertScalarUpdateWasNotCalled();
@@ -99,10 +99,10 @@ void testThatScalarUpdateIsNotCalledWhenTheOutlierFilterIsBlocking() {
     .stdDev = 0.123,
   };
 
-  outlierFilterValidateTdoaSteps_IgnoreAndReturn(false);
+  outlierFilterValidateTdoaIntegrator_IgnoreAndReturn(false);
 
   // Test
-  kalmanCoreUpdateWithTDOA(&this, &measurement);
+  kalmanCoreUpdateWithTDOA(&this, &measurement, 0);
 
   // Assert
   assertScalarUpdateWasNotCalled();

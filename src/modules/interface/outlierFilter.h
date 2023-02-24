@@ -5,7 +5,7 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * Copyright (C) 2011-2019 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 
 bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa);
 bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);
+bool outlierFilterValidateTdoaIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs);
 
 typedef struct {
     uint32_t openingTimeMs;
