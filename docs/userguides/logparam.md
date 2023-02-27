@@ -85,7 +85,7 @@ restrictions. There's one TOC for each framework, one for logging and
 one for parameters. When the client connects it will download the TOC to
 know which variables can be used. It's then easy to use the [Python
 API](https://www.bitcraze.io/documentation/repository/crazyflie-lib-python/master/api/cflib/) ([or another
-API](https://www.bitcraze.io/support/external-projects/)) for accessing them.
+API](https://www.bitcraze.io/development/external-projects/)) for accessing them.
 
 All the variables have a name and belong to a group. So in the examples
 above there's two groups defined: *ring* and *stabilizer*. To refer to
