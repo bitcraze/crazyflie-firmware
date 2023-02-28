@@ -889,7 +889,7 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             };
 
             innoCheck = innovation * innovation / Pyy;
-            if (outlierFilterValidateTdoaSteps(&m.data.tdoa, innovation, &jacobian, &estimatedPosition))
+            if (outlierFilterTdoaValidateSteps(&m.data.tdoa, innovation, &jacobian, &estimatedPosition))
             {
               //	if(innoCheck<qualGateTdoa){ // TdoA outlier rejection
               ukfUpdate(&Pxy[0], &Pyy, innovation);

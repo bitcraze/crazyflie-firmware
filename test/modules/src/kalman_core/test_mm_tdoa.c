@@ -51,7 +51,7 @@ void testThatScalarUpdateIsCalledInSimpleCase() {
   };
 
   setKalmanCoreScalarUpdateExpectationsSingleCall(&this, expectedHm, expectedError, expectedStdMeasNoise);
-  outlierFilterValidateTdoaIntegrator_IgnoreAndReturn(true);
+  outlierFilterTdoaValidateIntegrator_IgnoreAndReturn(true);
 
   // Test
   kalmanCoreUpdateWithTdoa(&this, &measurement, 0);
@@ -99,7 +99,7 @@ void testThatScalarUpdateIsNotCalledWhenTheOutlierFilterIsBlocking() {
     .stdDev = 0.123,
   };
 
-  outlierFilterValidateTdoaIntegrator_IgnoreAndReturn(false);
+  outlierFilterTdoaValidateIntegrator_IgnoreAndReturn(false);
 
   // Test
   kalmanCoreUpdateWithTdoa(&this, &measurement, 0);

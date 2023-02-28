@@ -26,6 +26,6 @@
 
 #include "stabilizer_types.h"
 
-bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa);
-bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);
-bool outlierFilterValidateTdoaIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs);
+bool outlierFilterTdoaValidateSimple(const tdoaMeasurement_t* tdoa);
+bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);
+bool outlierFilterTdoaValidateIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs);

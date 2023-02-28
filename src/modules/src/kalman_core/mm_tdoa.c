@@ -89,9 +89,9 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
         .z = this->S[KC_STATE_Z],
       };
 
-      bool sampleIsGood = outlierFilterValidateTdoaSteps(tdoa, error, &jacobian, &estimatedPosition);
+      bool sampleIsGood = outlierFilterTdoaValidateSteps(tdoa, error, &jacobian, &estimatedPosition);
       #else
-      bool sampleIsGood = outlierFilterValidateTdoaIntegrator(tdoa, error, nowMs);
+      bool sampleIsGood = outlierFilterTdoaValidateIntegrator(tdoa, error, nowMs);
       #endif
 
       if (sampleIsGood) {

@@ -30,7 +30,7 @@ void testThatSamplesAreAcceptedWhenTdoaIsCloserThanDistanceBetweenAnchors() {
   bool expected = true;
 
   // Test
-  bool actual = outlierFilterValidateTdoaSimple(&tdoa);
+  bool actual = outlierFilterTdoaValidateSimple(&tdoa);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -43,7 +43,7 @@ void testThatSamplesAreRejectedWhenTdoaIsGreaterThanDistanceBetweenAnchors() {
   bool expected = false;
 
   // Test
-  bool actual = outlierFilterValidateTdoaSimple(&tdoa);
+  bool actual = outlierFilterTdoaValidateSimple(&tdoa);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -56,7 +56,7 @@ void testThatSamplesAreRejectedWhenTdoaIsGreaterButNegativeThanDistanceBetweenAn
   bool expected = false;
 
   // Test
-  bool actual = outlierFilterValidateTdoaSimple(&tdoa);
+  bool actual = outlierFilterTdoaValidateSimple(&tdoa);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);

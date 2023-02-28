@@ -67,7 +67,7 @@ static void addToBucket(filterLevel_t* filter);
 static void removeFromBucket(filterLevel_t* filter);
 static int updateBuckets(float errorDistance);
 
-bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
+bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
   bool sampleIsGood = false;
 
   if (isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa)) {
@@ -102,7 +102,7 @@ bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float e
 }
 
 // Simple TDoA outlier filter
-bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa) {
+bool outlierFilterTdoaValidateSimple(const tdoaMeasurement_t* tdoa) {
   return isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa);
 }
 
@@ -131,7 +131,7 @@ static uint32_t latestUpdateMs;
 static bool isFilterOpen = true;
 
 
-bool outlierFilterValidateTdoaIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs) {
+bool outlierFilterTdoaValidateIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs) {
   // The accepted error when the filter is closed
   const float acceptedDistance = tdoa->stdDev * 2.5f;
 
