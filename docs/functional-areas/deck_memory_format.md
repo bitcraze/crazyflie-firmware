@@ -20,8 +20,7 @@ in two part:
     the deck name, board revision and driver-specific information (ie.
     for configuration or calibration for example).
 
-Content
--------
+## Content
 
       1. Header     1 Byte 0xEB
       2. UsedPins       4 Bytes
@@ -36,8 +35,7 @@ Content
 -   The header area is from 1 to 5.
 -   The key/value area is from 6 do 9
 
-Header
-------
+## Header
 
 The header allows to detect the deck installed and to verify that the
 deck stack is compatible.
@@ -66,8 +64,7 @@ Bitcraze if you plan to distribute decks and want a *VID*.
 A deck with *VID/PID* = 0/0 must have its name in the key/value area
 (the driver will then be chosen by name instead of pid/vid).
 
-Key/value area
---------------
+## Key/value area
 
 The *version* is 0. The key/value data contains a succession of
 elements. Elements id and types are predefined. Unknown elements are
@@ -89,8 +86,7 @@ The following elements are defined:
 |  revision    | 2            | string    |  |
 |  customData  | 3            | binary    |  Data understood by the deck driver|
 
-Example
--------
+## Example
 
 This is an example of OW memory content for the led ring deck.
 

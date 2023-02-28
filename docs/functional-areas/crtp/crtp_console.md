@@ -6,8 +6,7 @@ page_id: crtp_console
 This port is used as a one-way text console for printing text from the
 Crazyflie to a host using the consoleprintf function.
 
-Communication protocol
-======================
+## Communication protocol
 
     Port: 0
     Channel: 0

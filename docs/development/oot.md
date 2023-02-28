@@ -5,7 +5,7 @@ page_id: oot
 
 It is possible to have an out-of-tree build of parts of the crazyflie firmware. This enables developers to work on elements without worrying about merging it with the full code base.
 
-# General out-of-tree build process
+## General out-of-tree build process
 In a separate folder create a Makefile which contain the following content:
 
 ```Makefile
@@ -52,7 +52,7 @@ EXTRA_CFLAGS += -I$(PWD)/src/inc
 
 And since you are providing a config file by way of `$(OOT_CONFIG)` you do not need to run any make command to create a config like `make menuconfig` or `make defconfig`. Just a simple `make` will suffice.
 
-# OOT estimators
+## OOT estimators
 The `config` file needs to enable ESTIMATOR_OOT, and can also set other config options:
 
 ```
@@ -65,7 +65,7 @@ in [your_estimator_out_of_tree].c in the src folder you will just need to make s
 * ```test = estimatorOutOfTreeTest```
 * ```update = estimatorOutOfTree```
 
-# OOT Controllers
+## OOT Controllers
 
 The `config` file needs to enable CONTROLLER_OOT, and can also set other config options:
 
@@ -79,5 +79,5 @@ in [your_controller_out_of_tree].c in the src folder you will just need to make 
 * ```test = controllerOutOfTreeTest```
 * ```update = controllerOutOfTree```
 
-# App layer
+## App layer
 Technically the app layer is an example of an out of tree build. Follow the [app layer instructions](/docs/userguides/app_layer.md) for this.

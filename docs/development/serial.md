@@ -6,8 +6,7 @@ page_id: serial
 The Crazyflie 2.X ID is a character string of 24 characters. It is
 unique to each Crazyflie 2.X.
 
-Windows
--------
+## Windows
 
 -   Open the \"Device manager\" and find the Crazyflie 2.X.
 -   Right click on Crazyflie 2.X, go in \"Properties\" then in the
@@ -21,8 +20,7 @@ screen it starts by 41:
 
 By right-clicking on the string you can copy it.
 
-Linux
------
+## Linux
 
 Open a terminal and type (ie. cop-paste) the following command:
 
@@ -32,8 +30,7 @@ The Crazyflie serial is then displayed (here it starts by 41):
 
 ![linux serial](/docs/images/linux_serial.png)
 
-Mac OS X
---------
+## Mac OS X
 
 From the \"About this mac\" menu, click on \"System reports\...\"
 

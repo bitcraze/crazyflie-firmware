@@ -8,8 +8,7 @@ first Crazyflie 2.X deck driver. See the deck [api documentation
 page](/docs/userguides/deck/) for more information about the
 code.
 
-Development environment
------------------------
+## Development environment
 
 You should have the
 [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware) and
@@ -22,8 +21,7 @@ The Crazyflie firmware should be on Master branch.
 For the rest of the howto you will work in the crazyflie-firmware
 project.
 
-Writing the driver
-------------------
+## Writing the driver
 
 Deck drivers are in the src/deck/drivers/src folder. Create this file named
 hello.c in the src/deck/drivers/src folder:
@@ -55,8 +53,7 @@ static const DeckDriver helloDriver = {
 DECK_DRIVER(helloDriver);
 ```
 
-Adding the driver to the build
-------------------------------
+## Adding the driver to the build
 
 Add this to the `Kbuild` file in `src/deck/drivers/src/`:
 
@@ -64,8 +61,7 @@ Add this to the `Kbuild` file in `src/deck/drivers/src/`:
 obj-y += hello.o
 ```
 
-Enabling the driver
--------------------
+## Enabling the driver
 
 Decks can have a memory that contains its name. In our case the hello
 driver would be initialized only when a deck identified as \"myHello\"
@@ -82,8 +78,7 @@ Crazyflie out of the lab (it disables the watchdog).
 should recompile the full firmware by cleaning up the build folder with
 \'make clean\'
 
-Compile, flash and run!
------------------------
+## Compile, flash and run!
 
 Now the last step is to compile and flash your new firmware. Launch the
 following commands in a shell:
@@ -93,7 +88,7 @@ crazyflie-firmware$ make clean && make
 crazyflie-firmware$ make cload
 ```
 
-> If you see `*** Configuration file ".config" not found!`, make sure 
+> If you see `*** Configuration file ".config" not found!`, make sure
 > select the right build config. Please see [the build instructions](/docs/building-and-flashing/build.md)
 
 

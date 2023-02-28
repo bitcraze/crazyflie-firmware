@@ -11,7 +11,7 @@ install some ARM toolchain.
 
 ### Install a toolchain
 
-### Toolchain and compiler version policy
+#### Toolchain and compiler version policy
 Our policy for toolchain is to follow what is available in the oldest [Ubuntu Long Term Support release](https://wiki.ubuntu.com/Releases) and treat that as the oldest supported version. At the time of writing this (September 6 2021) the oldest LTS release is 18.04. And in Ubuntu 18.04 (bionic) the version of gcc-arm-none-eabi is 6.3.
 
 This means that if the firmware can not be compiled using gcc 6.3, **or anything newer**, it should be considered a bug.
@@ -123,7 +123,7 @@ $ make -j 12
 ### Customize the firmware with kbuild (Advanced)
 
 
-**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above. You can still configure and change the firmware without kbuild. 
+**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above. You can still configure and change the firmware without kbuild.
 
 Please go to [these instructions](/docs/development/kbuild.md) to learn how to use the menuconfig.
 
@@ -138,11 +138,9 @@ make bindings_python
 ```
 
 
-# Make targets
+## Make targets
 
-
-
-## General targets
+### General targets
 ```
 all             : Shortcut for build
 compile         : Compile cflie.hex. WARNING: Do NOT update version.c
@@ -163,7 +161,7 @@ rtt             : Start RTT server. Compile the firmware with "DEBUG_PRINT_ON_SE
 bindings_python : Build the python bindings for firmware wrappers
 ```
 
-## Noteable Kbuild targets
+### Noteable Kbuild targets
 ```
 menuconfig      : Open up a terminal user interface to set configuration options
 defconfig       : Generate a `.config` with the default configuration options
@@ -175,21 +173,21 @@ allnoconfig     : Generate a `.config` with the all configuration options disabl
 randconfig      : Generate a `.config` with random valid values to all configuration options
 ```
 
-# Flashing
+## Flashing
 Writing a new binary to the Crazyflie is called flashing (writing it to the flash memory). This page describes how to flash from the command line and there are a few different ways to do it.
 
-## Using Crazyradio
+### Using Crazyradio
 
 The supported way to flash when developping for the Crazyflie is to use the Crazyradio and the radio bootloader.
 
-### Prerequisites
+#### Prerequisites
 * A Crazyradio with drivers installed
 * [Crazyflie Client installed](https://github.com/bitcraze/crazyflie-clients-python) with Python's pip (so not by Snap (Ubuntu) or the .exe (Windows))
   * Note than when developping in WSL on Windows, the client needs to be installed on Windows. See the [Windows build instruction](#windows) above.
 * The firmware has been built
 * The current working directory is the root of the crazyflie-firmware project
 
-### Manually entering bootloader mode
+#### Manually entering bootloader mode
 
 * Turn the Crazyflie off
 * Start the Crazyflie in bootloader mode by pressing the power button for 3 seconds. Both the blue LEDs will blink.
@@ -203,7 +201,7 @@ It will try to find a Crazyflie in bootloader mode and flash the binary to it.
 
 Warning: if multiple Crazyflies within range are in bootloader mode the result is unpredictable. This method is not suitable in classroom situation where it is likely that several students are flashing at the same time. Also remember that the Crazyradio PA often reaches into the next room.
 
-### Automatically enter bootloader mode
+#### Automatically enter bootloader mode
 * Make sure the Crazyflie is on
 * In your terminal, run `CLOAD_CMDS="-w radio://0/80/2M" make cload`
 
@@ -211,7 +209,7 @@ It will connect to the Crazyflie with the specified address, put it in bootloade
 
 Note: this method does not work if the Crazyflie does not start, for instance if the current flashed binary is corrupt. You will have to fall back to manually entering bootloader mode.
 
-## Using a debug adapter
+### Using a debug adapter
 
 You need:
 
@@ -224,9 +222,9 @@ In your terminal, run
 
 `make flash`
 
-# Unit testing
+## Unit testing
 
-## Running all unit tests
+### Running all unit tests
 
 With the environment set up locally
 
@@ -236,7 +234,7 @@ with the docker builder image and the toolbelt
 
         tb make unit
 
-## Running one unit test
+### Running one unit test
 
 When working with one specific file it is often convenient to run only one unit test
 
@@ -246,7 +244,7 @@ or with the toolbelt
 
        tb make unit FILES=test/utils/src/test_num.c
 
-## Running unit tests with specific build settings
+### Running unit tests with specific build settings
 
 Defines are managed by make and are passed on to the unit test code. Use the
 normal ways of configuring make when running tests. For instance to run test
@@ -254,7 +252,7 @@ for Crazyflie 1
 
       make unit LPS_TDOA_ENABLE=1
 
-## Dependencies
+### Dependencies
 
 Frameworks for unit testing and mocking are pulled in as git submodules.
 

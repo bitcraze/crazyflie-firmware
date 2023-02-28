@@ -12,8 +12,7 @@ representation using the same polynomials in Bernstein form. In both cases, a
 single segment stores a duration and one polynomial for each of the X, Y, Z and
 yaw coordinates of the trajectory.
 
-Raw representation
-------------------
+## Raw representation
 
 The raw representation stores the coefficients of the polynomial describing
 the X coordinate of the trajectory first, starting with the constant term and
@@ -25,8 +24,7 @@ single-precision floats, meaning that a single segment requires 132 bytes:
 additional float per segment to store its duration. Given that the default
 size of the trajectory memory is 4 Kbytes, you can only store 31 segments.
 
-Compressed representation
--------------------------
+## Compressed representation
 
 The compressed representation was designed to be more space-efficient than the
 raw representation while still trying to maintain almost the same degree of

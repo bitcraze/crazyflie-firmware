@@ -3,8 +3,6 @@ title: Persistent storage
 page_id: persistent_storage
 ---
 
-# Persistent storage
-
 The Crazyflie has a persistent storage subsystem that is intended to be used for configuration and other rarely written data.
 The 7kB of the internal EEPROM is used for storage.
 Fetching data should be fairly fast, storing data can be very slow if the storage space needs to be defragmented/garbage collected.

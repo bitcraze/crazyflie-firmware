@@ -6,16 +6,13 @@ page_id: crtp_log
 For more information on how to use this and how this is implemented have
 a look [here](/docs/userguides/logparam.md).
 
-State machines
-==============
+## State machines
 
-Downloading the Table Of Contents
----------------------------------
+### Downloading the Table Of Contents
 
 ![crtp log](/docs/images/crtp_log.png)
 
-Communication protocol
-======================
+## Communication protocol
 
 The log port is separated in 3 channels:
 
@@ -25,8 +22,7 @@ The log port is separated in 3 channels:
 |  5         | 1            | Log control: Used for adding/removing/starting/pausing log blocks|
 |  5         | 2            | Log data: Used to send log data from the Crazyflie to the client|
 
-Table of content access
------------------------
+### Table of content access
 
 This channel is used to download the Table Of Contents that contains all
 the variables that are available for logging and what types they are.
@@ -107,8 +103,7 @@ variables.
 |  6     | LOG\_MAX\_PACKET  | Maximum number of log packets that can be programmed in the copter|
  | 7     | LOG\_MAX\_OPS     | Maximum number of operation programmable in the copter. An operation is one log variable retrieval programming|
 
-Log control
------------
+### Log control
 
 The log control channel permits to setup, activate, deactivate and
 remove log packets. Like the TOC access channel the first data byte
@@ -133,8 +128,7 @@ represents a command.
 
 ### Stop block
 
-Log data
---------
+### Log data
 
 The log data channel is used by the copter to send the log blocks at the
 programmed rate. The packet format is
