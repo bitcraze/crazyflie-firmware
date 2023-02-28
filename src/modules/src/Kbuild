@@ -32,7 +32,6 @@ obj-y += axis3fSubSampler.o
 obj-y += log.o
 obj-y += mem.o
 obj-y += msp.o
-obj-y += outlierFilter.o
 obj-y += param_logic.o
 obj-y += param_task.o
 obj-y += peer_localization.o

@@ -10,3 +10,4 @@ obj-y += mm_tdoa.o
 obj-y += mm_tdoa_robust.o
 obj-y += mm_tof.o
 obj-y += mm_yaw_error.o
+obj-y += outlierFilter.o
