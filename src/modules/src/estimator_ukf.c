@@ -67,7 +67,8 @@
 #include "log.h"
 #include "param.h"
 #include "physicalConstants.h"
-#include "outlierFilter.h"
+#include "outlierFilterTdoa.h"
+#include "outlierFilterLighthouse.h"
 #include "usec_time.h"
 
 #include "statsCnt.h"

@@ -25,7 +25,7 @@
  */
 
 #include <math.h>
-#include "outlierFilter.h"
+#include "outlierFilterTdoa.h"
 #include "stabilizer_types.h"
 #include "log.h"
 #include "debug.h"
@@ -177,49 +177,6 @@ bool outlierFilterValidateTdoaIntegrator(const tdoaMeasurement_t* tdoa, const fl
   }
 
   return sampleIsGood;
-}
-
-
-#define LH_MS_PER_FRAME (1000 / 120)
-static const int32_t lhMinWindowTimeMs = -2 * LH_MS_PER_FRAME;
-static const int32_t lhMaxWindowTimeMs = 5 * LH_MS_PER_FRAME;
-static const int32_t lhBadSampleWindowChangeMs = -LH_MS_PER_FRAME;
-static const int32_t lhGoodSampleWindowChangeMs = LH_MS_PER_FRAME / 2;
-static const float lhMaxError = 0.05f;
-
-void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t nowMs) {
-  this->openingTimeMs = nowMs;
-  this->openingWindowMs = lhMinWindowTimeMs;
-}
-
-
-bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs) {
-  // float error = distanceToBs * tan(angleError);
-  // We use an approximattion
-  float error = distanceToBs * angleError;
-
-  bool isGoodSample = (fabsf(error) < lhMaxError);
-  if (isGoodSample) {
-    this->openingWindowMs += lhGoodSampleWindowChangeMs;
-    if (this->openingWindowMs > lhMaxWindowTimeMs) {
-      this->openingWindowMs = lhMaxWindowTimeMs;
-    }
-  } else {
-    this->openingWindowMs += lhBadSampleWindowChangeMs;
-    if (this->openingWindowMs < lhMinWindowTimeMs) {
-      this->openingWindowMs = lhMinWindowTimeMs;
-    }
-  }
-
-  bool result = true;
-  bool isFilterClosed = (nowMs < this->openingTimeMs);
-  if (isFilterClosed) {
-    result = isGoodSample;
-  }
-
-  this->openingTimeMs = nowMs + this->openingWindowMs;
-
-  return result;
 }
 
 

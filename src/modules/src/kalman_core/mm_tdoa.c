@@ -24,7 +24,7 @@
  */
 
 #include "mm_tdoa.h"
-#include "outlierFilter.h"
+#include "outlierFilterTdoa.h"
 #include "test_support.h"
 
 // TODO krri What is this used for? Do we still need it?

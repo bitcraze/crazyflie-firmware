@@ -357,7 +357,7 @@ void estimatorKalmanInit(void)
   axis3fSubSamplerInit(&accSubSampler, GRAVITY_MAGNITUDE);
   axis3fSubSamplerInit(&gyroSubSampler, DEG_TO_RAD);
 
-  outlierFilterReset(&sweepOutlierFilterState, 0);
+  outlierFilterLighthouseReset(&sweepOutlierFilterState, 0);
 
   uint32_t nowMs = T2M(xTaskGetTickCount());
   kalmanCoreInit(&coreData, &coreParams, nowMs);

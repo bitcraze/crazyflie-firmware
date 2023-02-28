@@ -4,7 +4,7 @@
 #include "unity.h"
 
 #include "mock_kalman_core.h"
-#include "mock_outlierFilter.h"
+#include "mock_outlierFilterTdoa.h"
 #include "kalman_core_mm_test_helpers.c"
 
 // Default data initialized in setup()
