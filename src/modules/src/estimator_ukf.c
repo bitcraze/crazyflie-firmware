@@ -204,7 +204,6 @@ static float baroOut;
 static float PxOut;
 static float PvxOut;
 static float PattxOut;
-static uint32_t tdoaCount;
 
 static bool useNavigationFilter = true;
 static bool resetNavigation = true;
@@ -352,7 +351,6 @@ static void errorUkfTask(void *parameters)
       accNed[1] = 0.0f;
       accNed[2] = 0.0f;
 
-      tdoaCount = 0;
       nanCounterFilter = 0;
 
       navigationInit();
@@ -826,59 +824,55 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
       switch (m.type)
       {
         case MeasurementTypeTDOA:
-          if (tdoaCount >= 100)
+          //_________________________________________________________________________________
+          // UKF update - TDOA
+          //_________________________________________________________________________________
+          // compute mean tdoa observation
+          observation = 0.0f;
+          for (jj = 0; jj < (DIM_FILTER + 2); jj++)
           {
-            //_________________________________________________________________________________
-            // UKF update - TDOA
-            //_________________________________________________________________________________
-            // compute mean tdoa observation
-            observation = 0.0f;
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
+            for (ii = 0; ii < DIM_FILTER; ii++)
             {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
-                tmpSigmaVec[ii] = sigmaPoints[ii][jj];
-              }
-              computeOutputTdoa(&outTmp, &tmpSigmaVec[0], &m.data.tdoa);
-              observation = observation + weights[jj] * outTmp;
+              tmpSigmaVec[ii] = sigmaPoints[ii][jj];
             }
+            computeOutputTdoa(&outTmp, &tmpSigmaVec[0], &m.data.tdoa);
+            observation = observation + weights[jj] * outTmp;
+          }
 
-            // initialize measurement and cross covariance
-            Pyy = 0.0f;
-            for (jj = 0; jj < DIM_FILTER; jj++)
+          // initialize measurement and cross covariance
+          Pyy = 0.0f;
+          for (jj = 0; jj < DIM_FILTER; jj++)
+          {
+            Pxy[jj] = 0.0f;
+          }
+
+          // loop over all sigma points
+          for (jj = 0; jj < (DIM_FILTER + 2); jj++)
+          {
+            for (ii = 0; ii < DIM_FILTER; ii++)
             {
-              Pxy[jj] = 0.0f;
+              tmpSigmaVec[ii] = sigmaPoints[ii][jj];
             }
+            computeOutputTdoa(&outTmp, &tmpSigmaVec[0], &m.data.tdoa);
+            Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-            // loop over all sigma points
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
+            for (kk = 0; kk < DIM_FILTER; kk++)
             {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
-                tmpSigmaVec[ii] = sigmaPoints[ii][jj];
-              }
-              computeOutputTdoa(&outTmp, &tmpSigmaVec[0], &m.data.tdoa);
-              Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
-
-              for (kk = 0; kk < DIM_FILTER; kk++)
-              {
-                Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
-              }
-            }
-
-            // Add TDOA Noise R
-            Pyy = Pyy + m.data.tdoa.stdDev * m.data.tdoa.stdDev;
-            innovation = m.data.tdoa.distanceDiff - observation;
-
-            innoCheck = innovation * innovation / Pyy;
-            if (outlierFilterTdoaValidateIntegrator(&outlierFilterTdoaState, &m.data.tdoa, innovation, nowMs))
-            {
-              //	if(innoCheck<qualGateTdoa){ // TdoA outlier rejection
-              ukfUpdate(&Pxy[0], &Pyy, innovation);
-              //	}
+              Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
             }
           }
-          tdoaCount++;
+
+          // Add TDOA Noise R
+          Pyy = Pyy + m.data.tdoa.stdDev * m.data.tdoa.stdDev;
+          innovation = m.data.tdoa.distanceDiff - observation;
+
+          innoCheck = innovation * innovation / Pyy;
+          if (outlierFilterTdoaValidateIntegrator(&outlierFilterTdoaState, &m.data.tdoa, innovation, nowMs))
+          {
+            //	if(innoCheck<qualGateTdoa){ // TdoA outlier rejection
+            ukfUpdate(&Pxy[0], &Pyy, innovation);
+            //	}
+          }
           break;
 
         case MeasurementTypeTOF:

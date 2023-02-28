@@ -12,15 +12,9 @@ static kalmanCoreData_t this;
 static float expectedHm[KC_STATE_DIM];
 static OutlierFilterTdoaState_t outlierFilterTdoaState;
 
-// Instrumented in code under test
-extern uint32_t tdoaCount;
-
 void setUp(void) {
   memset(&this, 0, sizeof(this));
   memset(&expectedHm, 0, sizeof(expectedHm));
-
-  // Make sure we pass the tdoaCount counter
-  tdoaCount = 100;
 
   initKalmanCoreScalarUpdateExpectationsSingleCall();
 
