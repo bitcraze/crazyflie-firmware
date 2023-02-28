@@ -26,4 +26,8 @@
 
 #include "stabilizer_types.h"
 
-bool outlierFilterTdoaValidateIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs);
+// This functionality is deprecated and will be removed after September 2023. Use outlierFilterTdoaValidateIntegrator() instead.
+// This code is kept here for a while to make it possible to switch back to the "old" outlier filter if the new one is
+// not performing well.
+
+bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);

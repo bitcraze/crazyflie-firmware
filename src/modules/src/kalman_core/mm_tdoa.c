@@ -25,6 +25,7 @@
 
 #include "mm_tdoa.h"
 #include "outlierFilterTdoa.h"
+#include "outlierFilterTdoaSteps.h"
 #include "test_support.h"
 
 // TODO krri What is this used for? Do we still need it?
@@ -32,7 +33,7 @@ TESTABLE_STATIC uint32_t tdoaCount = 0;
 
 // Enable this to use the old step outlier filter
 // This filter is deprecated and will be removed after October 2023
-// #define USE_STEP_OUTLIER_FILTER 1
+#define USE_STEP_OUTLIER_FILTER 1
 
 
 void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs)
