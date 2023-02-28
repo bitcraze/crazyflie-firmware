@@ -94,6 +94,9 @@ log the *roll* variable in the *stabilizer* group it's access by
 *stabilizer.roll*. And if you would like to set the *effect* variable in
 the ring group it's accessed using *ring.effect*.
 
+### Log Variable length
+Please use length upto 26 as total log variable length (group + name +1)
+
 ## Parameters
 
 Using the parameter framework it's possible to both read and write
