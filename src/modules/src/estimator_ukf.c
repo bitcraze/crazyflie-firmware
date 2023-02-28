@@ -184,6 +184,7 @@ static float innoCheckFlow_y = 0.0f;
 static float distanceTWR = 0.0f;
 
 static float qualGateSweep = 1000.63f;
+static OutlierFilterTdoaState_t outlierFilterTdoaState;
 static OutlierFilterLhState_t sweepOutlierFilterState;
 
 //static bool activateFlowDeck = true;
@@ -497,7 +498,8 @@ void errorEstimatorUkfInit(void)
   baroAccumulatorCount = 0;
   xSemaphoreGive(dataMutex);
 
-  outlierFilterReset(&sweepOutlierFilterState, 0);
+  outlierFilterTdoaReset(&outlierFilterTdoaState);
+  outlierFilterLighthouseReset(&sweepOutlierFilterState, 0);
   //sweepOutlierFilterState.openingWindow=2*sweepOutlierFilterState.openingWindow;
   navigationInit();
 
@@ -789,6 +791,8 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
   bool doneUpdate = false;
   float zeroState[DIM_FILTER] = {0};
 
+  const uint32_t nowMs = T2M(tick);
+
   // Pull the latest sensors values of interest; discard the rest
   measurement_t m;
   while (estimatorDequeue(&m))
@@ -866,30 +870,8 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             Pyy = Pyy + m.data.tdoa.stdDev * m.data.tdoa.stdDev;
             innovation = m.data.tdoa.distanceDiff - observation;
 
-            float dx1 = stateNav[0] - m.data.tdoa.anchorPositions[1].x;
-            float dy1 = stateNav[1] - m.data.tdoa.anchorPositions[1].y;
-            float dz1 = stateNav[2] - m.data.tdoa.anchorPositions[1].z;
-
-            float dx0 = stateNav[0] - m.data.tdoa.anchorPositions[0].x;
-            float dy0 = stateNav[1] - m.data.tdoa.anchorPositions[0].y;
-            float dz0 = stateNav[2] - m.data.tdoa.anchorPositions[0].z;
-
-            float d1 = sqrtf(powf(dx1, 2) + powf(dy1, 2) + powf(dz1, 2));
-            float d0 = sqrtf(powf(dx0, 2) + powf(dy0, 2) + powf(dz0, 2));
-            vector_t jacobian = {
-                .x = (dx1 / d1 - dx0 / d0),
-                .y = (dy1 / d1 - dy0 / d0),
-                .z = (dz1 / d1 - dz0 / d0),
-            };
-
-            point_t estimatedPosition = {
-                .x = stateNav[0],
-                .y = stateNav[1],
-                .z = stateNav[2],
-            };
-
             innoCheck = innovation * innovation / Pyy;
-            if (outlierFilterTdoaValidateSteps(&m.data.tdoa, innovation, &jacobian, &estimatedPosition))
+            if (outlierFilterTdoaValidateIntegrator(&outlierFilterTdoaState, &m.data.tdoa, innovation, nowMs))
             {
               //	if(innoCheck<qualGateTdoa){ // TdoA outlier rejection
               ukfUpdate(&Pxy[0], &Pyy, innovation);
@@ -1174,7 +1156,7 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             innovation = m.data.sweepAngle.measuredSweepAngle - observation;
 
             innoCheck = innovation * innovation / Pyy;
-            if (outlierFilterValidateLighthouseSweep(&sweepOutlierFilterState, r, innovation, tick))
+            if (outlierFilterLighthouseValidateSweep(&sweepOutlierFilterState, r, innovation, tick))
             {
               //if(innoCheck<qualGateSweep){
               ukfUpdate(&Pxy[0], &Pyy, innovation);

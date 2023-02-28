@@ -146,7 +146,9 @@ static Axis3fSubSampler_t gyroSubSampler;
 static Axis3f accLatest;
 static Axis3f gyroLatest;
 
+static OutlierFilterTdoaState_t outlierFilterTdoaState;
 static OutlierFilterLhState_t sweepOutlierFilterState;
+
 
 // Indicates that the internal state is corrupt and should be reset
 bool resetEstimation = false;
@@ -296,10 +298,10 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
       case MeasurementTypeTDOA:
         if(robustTdoa){
           // robust KF update with TDOA measurements
-          kalmanCoreRobustUpdateWithTdoa(&coreData, &m.data.tdoa);
+          kalmanCoreRobustUpdateWithTdoa(&coreData, &m.data.tdoa, &outlierFilterTdoaState);
         }else{
           // standard KF update
-          kalmanCoreUpdateWithTdoa(&coreData, &m.data.tdoa, nowMs);
+          kalmanCoreUpdateWithTdoa(&coreData, &m.data.tdoa, nowMs, &outlierFilterTdoaState);
         }
         break;
       case MeasurementTypePosition:
@@ -357,6 +359,7 @@ void estimatorKalmanInit(void)
   axis3fSubSamplerInit(&accSubSampler, GRAVITY_MAGNITUDE);
   axis3fSubSamplerInit(&gyroSubSampler, DEG_TO_RAD);
 
+  outlierFilterTdoaReset(&outlierFilterTdoaState);
   outlierFilterLighthouseReset(&sweepOutlierFilterState, 0);
 
   uint32_t nowMs = T2M(xTaskGetTickCount());

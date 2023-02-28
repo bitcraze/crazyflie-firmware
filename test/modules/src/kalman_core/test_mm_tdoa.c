@@ -10,6 +10,7 @@
 // Default data initialized in setup()
 static kalmanCoreData_t this;
 static float expectedHm[KC_STATE_DIM];
+static OutlierFilterTdoaState_t outlierFilterTdoaState;
 
 // Instrumented in code under test
 extern uint32_t tdoaCount;
@@ -22,6 +23,9 @@ void setUp(void) {
   tdoaCount = 100;
 
   initKalmanCoreScalarUpdateExpectationsSingleCall();
+
+  outlierFilterTdoaReset_Ignore();
+  outlierFilterTdoaReset(&outlierFilterTdoaState);
 }
 
 void tearDown(void) {
@@ -54,7 +58,7 @@ void testThatScalarUpdateIsCalledInSimpleCase() {
   outlierFilterTdoaValidateIntegrator_IgnoreAndReturn(true);
 
   // Test
-  kalmanCoreUpdateWithTdoa(&this, &measurement, 0);
+  kalmanCoreUpdateWithTdoa(&this, &measurement, 0, &outlierFilterTdoaState);
 
   // Assert
   assertScalarUpdateWasCalled();
@@ -77,7 +81,7 @@ void testThatSampleWhereDroneIsInSamePositionAsAnchorIsIgnored() {
   };
 
   // Test
-  kalmanCoreUpdateWithTdoa(&this, &measurement, 0);
+  kalmanCoreUpdateWithTdoa(&this, &measurement, 0, &outlierFilterTdoaState);
 
   // Assert
   assertScalarUpdateWasNotCalled();
@@ -102,7 +106,7 @@ void testThatScalarUpdateIsNotCalledWhenTheOutlierFilterIsBlocking() {
   outlierFilterTdoaValidateIntegrator_IgnoreAndReturn(false);
 
   // Test
-  kalmanCoreUpdateWithTdoa(&this, &measurement, 0);
+  kalmanCoreUpdateWithTdoa(&this, &measurement, 0, &outlierFilterTdoaState);
 
   // Assert
   assertScalarUpdateWasNotCalled();

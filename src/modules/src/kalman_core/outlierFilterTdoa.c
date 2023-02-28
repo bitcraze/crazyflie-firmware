@@ -49,12 +49,14 @@ static const float INTEGRATOR_FORCE_OPEN_LEVEL = INTEGRATOR_SIZE * 0.1f;
 // The level when the filter closes again
 static const float INTEGRATOR_RESUME_ACTION_LEVEL = INTEGRATOR_SIZE * 0.9f;
 
-static float integrator;
-static uint32_t latestUpdateMs;
-static bool isFilterOpen = true;
 
+void outlierFilterTdoaReset(OutlierFilterTdoaState_t* this) {
+  this->integrator = 0.0f;
+  this->isFilterOpen = true;
+  this->latestUpdateMs = 0;
+}
 
-bool outlierFilterTdoaValidateIntegrator(const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs) {
+bool outlierFilterTdoaValidateIntegrator(OutlierFilterTdoaState_t* this, const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs) {
   // The accepted error when the filter is closed
   const float acceptedDistance = tdoa->stdDev * 2.5f;
 
@@ -66,37 +68,37 @@ bool outlierFilterTdoaValidateIntegrator(const tdoaMeasurement_t* tdoa, const fl
 
   // Discard samples that are physically impossible, most likely measurement error
   if (isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa)) {
-    uint32_t dtMs = nowMs - latestUpdateMs;
+    uint32_t dtMs = nowMs - this->latestUpdateMs;
     // Limit dt to minimize the impact on the integrator if we have not received samples for a long time (or at start up)
     dtMs = fminf(dtMs, INTEGRATOR_SIZE / 10.0f);
 
     if (fabsf(error) < integratorTriggerDistance) {
-      integrator += dtMs;
-      integrator = fminf(integrator, INTEGRATOR_SIZE);
+      this->integrator += dtMs;
+      this->integrator = fminf(this->integrator, INTEGRATOR_SIZE);
     } else {
-      integrator -= dtMs;
-      integrator = fmaxf(integrator, 0.0f);
+      this->integrator -= dtMs;
+      this->integrator = fmaxf(this->integrator, 0.0f);
     }
 
-    if (isFilterOpen) {
+    if (this->isFilterOpen) {
       // The filter is open, let all samples through
       sampleIsGood = true;
 
-      if (integrator > INTEGRATOR_RESUME_ACTION_LEVEL) {
+      if (this->integrator > INTEGRATOR_RESUME_ACTION_LEVEL) {
         // We have recovered and converged, close the filter again
-        isFilterOpen = false;
+        this->isFilterOpen = false;
       }
     } else {
       // The filter is closed, let samples with a small error through
       sampleIsGood = (fabsf(error) < acceptedDistance);
 
-      if (integrator < INTEGRATOR_FORCE_OPEN_LEVEL) {
+      if (this->integrator < INTEGRATOR_FORCE_OPEN_LEVEL) {
         // We have got lots of outliers lately, the kalman filter may have diverged. Open up to try to recover
-        isFilterOpen = true;
+        this->isFilterOpen = true;
       }
     }
 
-    latestUpdateMs = nowMs;
+    this->latestUpdateMs = nowMs;
   }
 
   return sampleIsGood;

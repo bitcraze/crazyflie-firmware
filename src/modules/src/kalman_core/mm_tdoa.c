@@ -24,19 +24,16 @@
  */
 
 #include "mm_tdoa.h"
-#include "outlierFilterTdoa.h"
-#include "outlierFilterTdoaSteps.h"
 #include "test_support.h"
+
+#if CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
+#include "outlierFilterTdoaSteps.h"
+#endif
 
 // TODO krri What is this used for? Do we still need it?
 TESTABLE_STATIC uint32_t tdoaCount = 0;
 
-// Enable this to use the old step outlier filter
-// This filter is deprecated and will be removed after October 2023
-#define USE_STEP_OUTLIER_FILTER 1
-
-
-void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs)
+void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs, OutlierFilterTdoaState_t* outlierFilterState)
 {
   if (tdoaCount >= 100)
   {
@@ -77,7 +74,7 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
       h[KC_STATE_Y] = (dy1 / d1 - dy0 / d0);
       h[KC_STATE_Z] = (dz1 / d1 - dz0 / d0);
 
-    #if USE_STEP_OUTLIER_FILTER
+    #if CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
       vector_t jacobian = {
         .x = h[KC_STATE_X],
         .y = h[KC_STATE_Y],
@@ -92,7 +89,7 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
 
       bool sampleIsGood = outlierFilterTdoaValidateSteps(tdoa, error, &jacobian, &estimatedPosition);
       #else
-      bool sampleIsGood = outlierFilterTdoaValidateIntegrator(tdoa, error, nowMs);
+      bool sampleIsGood = outlierFilterTdoaValidateIntegrator(outlierFilterState, tdoa, error, nowMs);
       #endif
 
       if (sampleIsGood) {

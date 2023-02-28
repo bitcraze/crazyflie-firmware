@@ -18,6 +18,7 @@
 #pragma once
 
 #include "kalman_core.h"
+#include "outlierFilterTdoa.h"
 
 // M-estimation based robust Kalman filter update for UWB TDOA measurements
-void kalmanCoreRobustUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);
+void kalmanCoreRobustUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, OutlierFilterTdoaState_t* outlierFilterState);

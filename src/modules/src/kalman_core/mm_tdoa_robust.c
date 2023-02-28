@@ -63,7 +63,7 @@ static void GM_state(float e, float * GM_e){
 }
 
 // robsut update function
-void kalmanCoreRobustUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa)
+void kalmanCoreRobustUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, OutlierFilterTdoaState_t* outlierFilterState)
 {
     // Measurement equation:
     // d_ij = d_j - d_i
