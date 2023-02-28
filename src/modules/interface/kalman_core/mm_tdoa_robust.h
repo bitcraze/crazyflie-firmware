@@ -1,4 +1,4 @@
-/** 
+/**
  * This robust M-estimation-based Kalman filter was originally implemented in
  * work by the Dynamic Systems Lab (DSL) at the University of Toronto
  * Institute for Aerospace Studies (UTIAS) and the Vector Institute for
@@ -20,4 +20,4 @@
 #include "kalman_core.h"
 
 // M-estimation based robust Kalman filter update for UWB TDOA measurements
-void kalmanCoreRobustUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);
+void kalmanCoreRobustUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa);

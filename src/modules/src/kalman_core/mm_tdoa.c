@@ -35,7 +35,7 @@ TESTABLE_STATIC uint32_t tdoaCount = 0;
 // #define USE_STEP_OUTLIER_FILTER 1
 
 
-void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs)
+void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs)
 {
   if (tdoaCount >= 100)
   {

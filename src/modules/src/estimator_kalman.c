@@ -296,10 +296,10 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
       case MeasurementTypeTDOA:
         if(robustTdoa){
           // robust KF update with TDOA measurements
-          kalmanCoreRobustUpdateWithTDOA(&coreData, &m.data.tdoa);
+          kalmanCoreRobustUpdateWithTdoa(&coreData, &m.data.tdoa);
         }else{
           // standard KF update
-          kalmanCoreUpdateWithTDOA(&coreData, &m.data.tdoa, nowMs);
+          kalmanCoreUpdateWithTdoa(&coreData, &m.data.tdoa, nowMs);
         }
         break;
       case MeasurementTypePosition:

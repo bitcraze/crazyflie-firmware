@@ -28,4 +28,4 @@
 #include "kalman_core.h"
 
 // Measurements of a UWB Tx/Rx
-void kalmanCoreUpdateWithTDOA(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs);
+void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs);
