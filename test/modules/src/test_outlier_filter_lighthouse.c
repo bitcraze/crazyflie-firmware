@@ -1,9 +1,7 @@
-// File under test outlierFilter.h
-#include "outlierFilter.h"
+// File under test outlierFilterLighthouse.c
+#include "outlierFilterLighthouse.h"
 
 #include "unity.h"
-
-static tdoaMeasurement_t tdoa;
 
 // Helpers
 uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t* this);
@@ -11,63 +9,13 @@ uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t* this);
 
 
 void setUp(void) {
-  // TDoA filter
-  tdoa.anchorPositions[0].x = 1.0;
-  tdoa.anchorPositions[0].y = 1.0;
-  tdoa.anchorPositions[0].z = 1.0;
-
-  tdoa.anchorPositions[1].x = 5.0;
-  tdoa.anchorPositions[1].y = 1.0;
-  tdoa.anchorPositions[1].z = 1.0;
-
-  tdoa.distanceDiff = 0.0;
+  // Empty
 }
 
 void tearDown(void) {
   // Empty
 }
 
-
-void testThatSamplesAreAcceptedWhenTdoaIsCloserThanDistanceBetweenAnchors() {
-  // Fixture
-  tdoa.distanceDiff = 1.0;
-  bool expected = true;
-
-  // Test
-  bool actual = outlierFilterValidateTdoaSimple(&tdoa);
-
-  // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
-}
-
-
-void testThatSamplesAreRejectedWhenTdoaIsGreaterThanDistanceBetweenAnchors() {
-  // Fixture
-  tdoa.distanceDiff = 10.0;
-  bool expected = false;
-
-  // Test
-  bool actual = outlierFilterValidateTdoaSimple(&tdoa);
-
-  // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
-}
-
-
-void testThatSamplesAreRejectedWhenTdoaIsGreaterButNegativeThanDistanceBetweenAnchors() {
-  // Fixture
-  tdoa.distanceDiff = -10.0;
-  bool expected = false;
-
-  // Test
-  bool actual = outlierFilterValidateTdoaSimple(&tdoa);
-
-  // Assert
-  TEST_ASSERT_EQUAL(expected, actual);
-}
-
-
-// Lighthouse filter tests ----------------------------------------------------------
 
 #define LH_DISTANCE 4
 #define LH_BAD_ANGLE 1
@@ -81,7 +29,7 @@ void testThatLhFilterLetsGoodSampleThroughWhenOpen() {
   bool expected = true;
 
   // Test
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -94,7 +42,7 @@ void testThatLhFilterLetsBadSampleThroughWhenOpen() {
   bool expected = true;
 
   // Test
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -107,7 +55,7 @@ void testThatLhFilterLetsGoodSampleThroughWhenClosed() {
   bool expected = true;
 
   // Test
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -120,7 +68,7 @@ void testThatLhFilterBlocksBadSampleWhenClosed() {
   bool expected = false;
 
   // Test
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -133,7 +81,7 @@ void testThatLhFilterOpensForManyBadSamples() {
 
   // Test, Assert
   for (int i = 0; i < 10; i++) {
-    bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
+    bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
     time += LH_TIME_STEP;
 
     // Should block the first 4 samples and let the rest through
@@ -150,7 +98,7 @@ void testThatLhFilterOpensAfterInactivity() {
   bool expected = true;
 
   // Test
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, newTime);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, newTime);
 
   // Assert
   TEST_ASSERT_EQUAL(expected, actual);
@@ -163,13 +111,13 @@ void testThatLhFilterClosesAfterManyGoodSamples() {
 
   // Test
   for (int i = 0; i < 7; i++) {
-    outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
+    outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
     time += LH_TIME_STEP;
   }
 
   // Assert
   bool expected = false;
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
@@ -180,14 +128,14 @@ void testThatLhFilterOpensWithMixedSamples() {
 
   // Test
   for (int i = 0; i < 7; i++) {
-    outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
-    outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
+    outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_GOOD_ANGLE, time);
+    outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
     time += LH_TIME_STEP;
   }
 
   // Assert
   bool expected = true;
-  bool actual = outlierFilterValidateLighthouseSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
+  bool actual = outlierFilterLighthouseValidateSweep(&this, LH_DISTANCE, LH_BAD_ANGLE, time);
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
@@ -196,11 +144,11 @@ void testThatLhFilterOpensWithMixedSamples() {
 uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t* this) {
   uint32_t time = 1000;
 
-  outlierFilterReset(this, time);
+  outlierFilterLighthouseReset(this, time);
   time += LH_TIME_STEP;
 
   for (int i = 0; i < 20; i++) {
-    outlierFilterValidateLighthouseSweep(this, LH_DISTANCE, LH_GOOD_ANGLE, time);
+    outlierFilterLighthouseValidateSweep(this, LH_DISTANCE, LH_GOOD_ANGLE, time);
     time += LH_TIME_STEP;
   }
 
@@ -210,7 +158,7 @@ uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t* this) {
 uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t* this) {
   uint32_t time = 1000;
 
-  outlierFilterReset(this, time);
+  outlierFilterLighthouseReset(this, time);
   time += LH_TIME_STEP;
 
   return time;

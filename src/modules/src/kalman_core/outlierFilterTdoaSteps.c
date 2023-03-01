@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2018 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,10 +25,16 @@
  */
 
 #include <math.h>
-#include "outlierFilter.h"
+#include "outlierFilterTdoaSteps.h"
 #include "stabilizer_types.h"
 #include "log.h"
 #include "debug.h"
+
+
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa);
+
+
+// The step TDoA outlier filter is deprecated and will be removed
 
 #define BUCKET_ACCEPTANCE_LEVEL 3
 #define MAX_BUCKET_FILL 10
@@ -55,20 +61,13 @@ filterLevel_t filterLevels[FILTER_LEVELS] = {
 };
 
 
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa);
 static float distanceSq(const point_t* a, const point_t* b);
 static float sq(float a) {return a * a;}
 static void addToBucket(filterLevel_t* filter);
 static void removeFromBucket(filterLevel_t* filter);
 static int updateBuckets(float errorDistance);
 
-
-
-bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa) {
-  return isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa);
-}
-
-bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
+bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
   bool sampleIsGood = false;
 
   if (isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa)) {
@@ -100,49 +99,6 @@ bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float e
   }
 
   return sampleIsGood;
-}
-
-
-#define LH_MS_PER_FRAME (1000 / 120)
-static const int32_t lhMinWindowTimeMs = -2 * LH_MS_PER_FRAME;
-static const int32_t lhMaxWindowTimeMs = 5 * LH_MS_PER_FRAME;
-static const int32_t lhBadSampleWindowChangeMs = -LH_MS_PER_FRAME;
-static const int32_t lhGoodSampleWindowChangeMs = LH_MS_PER_FRAME / 2;
-static const float lhMaxError = 0.05f;
-
-void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t nowMs) {
-  this->openingTimeMs = nowMs;
-  this->openingWindowMs = lhMinWindowTimeMs;
-}
-
-
-bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs) {
-  // float error = distanceToBs * tan(angleError);
-  // We use an approximattion
-  float error = distanceToBs * angleError;
-
-  bool isGoodSample = (fabsf(error) < lhMaxError);
-  if (isGoodSample) {
-    this->openingWindowMs += lhGoodSampleWindowChangeMs;
-    if (this->openingWindowMs > lhMaxWindowTimeMs) {
-      this->openingWindowMs = lhMaxWindowTimeMs;
-    }
-  } else {
-    this->openingWindowMs += lhBadSampleWindowChangeMs;
-    if (this->openingWindowMs < lhMinWindowTimeMs) {
-      this->openingWindowMs = lhMinWindowTimeMs;
-    }
-  }
-
-  bool result = true;
-  bool isFilterClosed = (nowMs < this->openingTimeMs);
-  if (isFilterClosed) {
-    result = isGoodSample;
-  }
-
-  this->openingTimeMs = nowMs + this->openingWindowMs;
-
-  return result;
 }
 
 

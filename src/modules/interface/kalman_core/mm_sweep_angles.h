@@ -26,7 +26,7 @@
 #pragma once
 
 #include "kalman_core.h"
-#include "outlierFilter.h"
+#include "outlierFilterLighthouse.h"
 
 // Measurement of sweep angles from a Lighthouse base station
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState);

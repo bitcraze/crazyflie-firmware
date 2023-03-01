@@ -24,7 +24,6 @@
  */
 
 #include "mm_sweep_angles.h"
-#include "outlierFilter.h"
 
 
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState) {
@@ -65,7 +64,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
   const float error = measuredSweepAngle - predictedSweepAngle;
 
-  if (outlierFilterValidateLighthouseSweep(sweepOutlierFilterState, r, error, nowMs)) {
+  if (outlierFilterLighthouseValidateSweep(sweepOutlierFilterState, r, error, nowMs)) {
     // Calculate H vector (in the rotor reference frame)
     const float z_tan_t = z * tan_t;
     const float qNum = r2 - z_tan_t * z_tan_t;

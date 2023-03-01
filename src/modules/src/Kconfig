@@ -53,6 +53,13 @@ config ESTIMATOR_KALMAN_ENABLE
     help
         Enable the Kalman (EKF) estimator.
 
+config ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
+    bool "Use 'old' TDoA outlier filter."
+    default n
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        Use the 'old' TDoA outlier filter instead of the default one. Deprecated, will be removed after September 2023.
+
 config ESTIMATOR_UKF_ENABLE
     bool "Enable error-state UKF estimator"
     default n
