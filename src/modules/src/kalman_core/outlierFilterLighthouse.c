@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * outlierFilter.c: Outlier rejection filter for the LPS system
+ * outlierFilter.c: Outlier rejection filter for the Lighthouse system
  */
 
 #include <math.h>
