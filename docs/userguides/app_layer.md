@@ -72,10 +72,11 @@ make
 or with [the toolbelt](https://www.bitcraze.io/documentation/repository/toolbelt/master/), from the crazyflie-firmware root:
 
 ```
-tb make_app examples/app_hello_world/
+tb make_app examples/app_hello_world/ clean
+tb make_app examples/app_hello_world/ -j8
 ```
 
-Then flash the resulting bin on your crazyflie according to [the flashing instructions](/docs/building-and-flashing/build.md).
+Then flash the resulting bin on your crazyflie according to [the flashing instructions](/docs/building-and-flashing/build.md). Make sure to point to the right build binary.
 
 
 ## Internal log and param system
