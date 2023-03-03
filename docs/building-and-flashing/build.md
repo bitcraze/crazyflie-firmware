@@ -132,6 +132,8 @@ Please go to [these instructions](/docs/development/kbuild.md) to learn how to u
 
 There are certain functions, like the high level commander and controllers, that have been wrapped to python bindings. These can be used to easily test these functions on a computer or use it in a simulation.
 
+First make sure that you have [SWIG](https://swig.org/) installed on your system. Then execute the following commands in the terminal
+
 ```bash
 make cf2_defconfig
 make bindings_python
