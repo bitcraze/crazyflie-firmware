@@ -126,8 +126,14 @@ static void cpx(void* _param) {
           }
         }
         break;
+      case CPX_F_APP:
+      {
+        messageReceive(cpxRx);
+        break;
+      }
       default:
         DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
+        break;
     }
   }
 }

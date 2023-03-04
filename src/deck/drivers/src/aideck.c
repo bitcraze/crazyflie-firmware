@@ -62,6 +62,7 @@
 #include "cpx.h"
 
 #include "aideck.h"
+#include "msg.h"
 
 static bool isInit = false;
 
@@ -111,6 +112,21 @@ const uint32_t espUartReadMaxWait = M2T(100);
 void cpxBootloaderMessage(const CPXPacket_t * packet) {
   xEventGroupSetBits(bootloaderSync, CPX_WAIT_FOR_BOOTLOADER_REPLY);
 }
+
+void messageReceive(const CPXPacket_t packet) {
+
+  TagPacket tp = {};
+  deserialization(&tp, packet);
+
+  // DEBUG_PRINT("(receive) id(uint8_t) %d c[0](uint16_t) %d, %d\n", 
+  //   tp.id, tp.corners[0].x, tp.corners[0].y);
+
+  DEBUG_PRINT("(receive)\n[%.2f, %.2f, %.2f\n%.2f, %.2f, %.2f\n%.2f, %.2f, %.2f]\n",
+    (double)tp.homography[0][0], (double)tp.homography[1][0], (double)tp.homography[2][0], 
+    (double)tp.homography[0][1], (double)tp.homography[1][1], (double)tp.homography[2][1],
+    (double)tp.homography[0][2], (double)tp.homography[1][2], (double)tp.homography[2][2]);
+}
+
 
 static CPXPacket_t txPacket;
 

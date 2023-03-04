@@ -70,6 +70,7 @@ void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet) {
     case CPX_F_WIFI_CTRL:
     case CPX_F_BOOTLOADER:
     case CPX_F_TEST:
+    case CPX_F_APP:
       xQueueSend(mixedQueue, packet, portMAX_DELAY);
       break;
     case CPX_F_CRTP:

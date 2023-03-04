@@ -43,3 +43,5 @@
  * @param packet packet that was received
  */
 void cpxBootloaderMessage(const CPXPacket_t * packet);
+
+void messageReceive(const CPXPacket_t packet);
