@@ -14,6 +14,8 @@ When an oject (ie. an hand) has passed close to the top sensor, the Crazyflie ta
 If anything is detected on side sensors, the Crazyflie moves in the oposite direction.
 So, it is possible to push the Crazyflie around.
 
+Per default, the Crazyflie will fly on 0.2m. If something is detected closer than 10cm on both sides it will go up, if front and back (or 30cm from the top) it will go down. It will land once it is closer than 10cm to the ground.
+
 ## Build
 
 You must have the required tools to build the [Crazyflie firmware](https://github.com/bitcraze/crazyflie-firmware).

@@ -77,8 +77,10 @@ static const uint16_t stoppedTh = 500;
 
 static const float velMax = 1.0f;
 static const uint16_t radius = 300;
+static const uint16_t radius_up_down = 100;
+static const float up_down_delta = 0.002f;
 
-static const float height_sp = 0.2f;
+static float height_sp = 0.2f;
 
 #define MAX(a,b) ((a>b)?a:b)
 #define MIN(a,b) ((a<b)?a:b)
@@ -132,8 +134,21 @@ void appMain()
       float b_comp = back_o * factor;
       float velFront = b_comp + f_comp;
 
+      // we want to go up when there are obstacles (hands) closer than radius_up_down on both sides
+      if(left < radius_up_down && right < radius_up_down)
+      {
+        height_sp += up_down_delta;
+      }
+
+      // we want to go down when there are obstacles (hands) closer than radius_up_down in front and back (or there is something on top)
+      if((front < radius_up_down && back < radius_up_down) || up < radius)
+      {
+        height_sp -= up_down_delta;
+      }
+
       uint16_t up_o = radius - MIN(up, radius);
       float height = height_sp - up_o/1000.0f;
+
 
       /*DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
       DEBUG_PRINT("f=%i, b=%i, fo=%f, bo=%f, vel=%f\n", front_o, back_o, f_comp, b_comp, velFront);
