@@ -51,7 +51,8 @@ INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interf
 INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
 INCLUDES += -I$(srctree)/src/drivers/esp32/interface
 INCLUDES += -I$(srctree)/src/hal/interface
-INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR
+INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse
+INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
 INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
 INCLUDES += -I$(LIB)/FatFS
 INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
@@ -169,12 +170,12 @@ flash_verify:
 #sends a usb message to the CF to place it in DFU mode, then updates firmware over usb
 flash_dfu:
 	$(PYTHON) $(srctree)/tools/make/usb-bootloader.py
-	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000:leave -D $(PROG).bin 
+	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000:leave -D $(PROG).bin
 
 #uses the dfu utility to flash the firmware at 0x08004000, just after the bootloader
 #call this target directly if CF cannont be flashed automatically through flash_dfu
 flash_dfu_manual:
-	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000:leave -D $(PROG).bin 
+	$(DFU_UTIL) -d 0483:df11 -a 0 -s 0x08004000:leave -D $(PROG).bin
 
 #STM utility targets
 halt:
@@ -216,7 +217,7 @@ MOD_INC = src/modules/interface
 MOD_SRC = src/modules/src
 
 bindings_python build/cffirmware.py: bindings/setup.py $(MOD_SRC)/*.c
-	swig -python -I$(MOD_INC) -Isrc/hal/interface -Isrc/utils/interface -o build/cffirmware_wrap.c bindings/cffirmware.i
+	swig -python -I$(MOD_INC) -Isrc/hal/interface -Isrc/utils/interface -Isrc/modules/interface/controller -o build/cffirmware_wrap.c bindings/cffirmware.i
 	$(PYTHON) bindings/setup.py build_ext --inplace
 
 test_python: build/cffirmware.py
@@ -227,4 +228,3 @@ python_wheel: build/cffirmware.py
 endif
 
 .PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
-

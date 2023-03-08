@@ -50,6 +50,8 @@ compiler:
       - 'src/modules/interface/'
       - 'src/modules/interface/kalman_core/'
       - 'src/modules/interface/lighthouse/'
+      - 'src/modules/interface/estimator/'
+      - 'src/modules/interface/controller/'
       - 'src/modules/src/'
       - 'src/modules/src/kalman_core/'
       - 'src/modules/src/lighthouse/'
