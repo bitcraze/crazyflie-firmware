@@ -1,0 +1,6 @@
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_calibration.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse_geometry.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += ootx_decoder.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += pulse_processor.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += pulse_processor_v1.o
+obj-$(CONFIG_DECK_LIGHTHOUSE) += pulse_processor_v2.o
