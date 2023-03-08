@@ -9,12 +9,11 @@ obj-y += buf2buf.o
 ### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
 obj-y += abort.o
 obj-y += malloc.o
+obj-y += pid.o
 
-### Add rules for handling generated version.c
-
+### Rules for handling generated version.c
 obj-y += version.o
 version-objs := version_gen.o
-
 src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
 	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
 

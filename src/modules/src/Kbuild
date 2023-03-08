@@ -25,7 +25,6 @@ obj-y += msp.o
 obj-y += param_logic.o
 obj-y += param_task.o
 obj-y += peer_localization.o
-obj-y += pid.o
 obj-y += planner.o
 obj-y += platformservice.o
 obj-$(CONFIG_POWER_DISTRIBUTION_QUADROTOR) += power_distribution_quadrotor.o
