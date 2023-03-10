@@ -56,6 +56,7 @@
 #include "console.h"
 #include "usblink.h"
 #include "mem.h"
+#include "crtp_mem.h"
 #include "proximity.h"
 #include "watchdog.h"
 #include "queuemonitor.h"
@@ -217,6 +218,7 @@ void systemTask(void *arg)
   }
   soundInit();
   memInit();
+  crtpMemInit();
 
 #ifdef PROXIMITY_ENABLED
   proximityInit();
