@@ -53,30 +53,38 @@ static float capAngle(float angle) {
   return result;
 }
 
-void controllerPid(control_t *control, setpoint_t *setpoint,
+void controllerPid(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick)
 {
+  control->controlMode = controlModeLegacy;
+
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     // Rate-controled YAW is moving YAW angle setpoint
     if (setpoint->mode.yaw == modeVelocity) {
       attitudeDesired.yaw = capAngle(attitudeDesired.yaw + setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT);
-       
-      #ifdef YAW_MAX_DELTA
+
+      float yawMaxDelta = attitudeControllerGetYawMaxDelta();
+      if (yawMaxDelta != 0.0f)
+      {
       float delta = capAngle(attitudeDesired.yaw-state->attitude.yaw);
-      // keep the yaw setpoint within +/- YAW_MAX_DELTA from the current yaw
-        if (delta > YAW_MAX_DELTA)
+      // keep the yaw setpoint within +/- yawMaxDelta from the current yaw
+        if (delta > yawMaxDelta)
         {
-          attitudeDesired.yaw = state->attitude.yaw + YAW_MAX_DELTA;
+          attitudeDesired.yaw = state->attitude.yaw + yawMaxDelta;
         }
-        else if (delta < -YAW_MAX_DELTA)
+        else if (delta < -yawMaxDelta)
         {
-          attitudeDesired.yaw = state->attitude.yaw - YAW_MAX_DELTA;
+          attitudeDesired.yaw = state->attitude.yaw - yawMaxDelta;
         }
-      #endif
-    } else {
+      }
+    } else if (setpoint->mode.yaw == modeAbs) {
       attitudeDesired.yaw = setpoint->attitude.yaw;
+    } else if (setpoint->mode.quat == modeAbs) {
+      struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+      struct vec rpy = quat2rpy(setpoint_quat);
+      attitudeDesired.yaw = degrees(rpy.z);
     }
 
     attitudeDesired.yaw = capAngle(attitudeDesired.yaw);
@@ -220,4 +228,3 @@ LOG_ADD(LOG_FLOAT, pitchRate, &rateDesired.pitch)
  */
 LOG_ADD(LOG_FLOAT, yawRate,   &rateDesired.yaw)
 LOG_GROUP_STOP(controller)
-

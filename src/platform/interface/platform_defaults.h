@@ -40,3 +40,106 @@
 #ifdef CONFIG_PLATFORM_TAG
     #include "platform_defaults_tag.h"
 #endif
+#ifdef CONFIG_PLATFORM_FLAPPER
+    #include "platform_defaults_flapper.h"
+#endif
+
+// IMU alignment on the airframe 
+#ifndef IMU_PHI
+    #define IMU_PHI     0.0f
+#endif
+#ifndef IMU_THETA
+    #define IMU_THETA   0.0f
+#endif
+#ifndef IMU_PSI
+    #define IMU_PSI     0.0f
+#endif
+
+// Attitude PID control filter settings
+#ifndef ATTITUDE_LPF_CUTOFF_FREQ 
+    #define ATTITUDE_LPF_CUTOFF_FREQ      15.0f
+#endif
+#ifndef ATTITUDE_LPF_ENABLE
+    #define ATTITUDE_LPF_ENABLE false
+#endif
+#ifndef ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ
+    #define ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ 30.0f
+#endif
+#ifndef ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ
+    #define ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ 30.0f
+#endif
+#ifndef ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ
+    #define ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ 30.0f
+#endif
+#ifndef ATTITUDE_RATE_LPF_ENABLE
+    #define ATTITUDE_RATE_LPF_ENABLE false
+#endif
+#ifndef ATTITUDE_RATE_FF_YAW
+    #define ATTITUDE_RATE_FF_YAW 0.0f
+#endif
+#ifndef YAW_MAX_DELTA
+    #define YAW_MAX_DELTA     0.0f
+#endif
+
+#ifndef PID_POS_XY_FILT_ENABLE
+    #define PID_POS_XY_FILT_ENABLE true
+#endif
+#ifndef PID_POS_XY_FILT_CUTOFF
+    #define PID_POS_XY_FILT_CUTOFF 20.0f
+#endif
+#ifndef PID_POS_Z_FILT_ENABLE
+    #define PID_POS_Z_FILT_ENABLE true
+#endif
+#ifndef PID_POS_Z_FILT_CUTOFF
+    #define PID_POS_Z_FILT_CUTOFF 20.0f
+#endif
+#ifndef PID_VEL_XY_FILT_ENABLE
+    #define PID_VEL_XY_FILT_ENABLE true
+#endif
+#ifndef PID_VEL_XY_FILT_CUTOFF
+    #define PID_VEL_XY_FILT_CUTOFF 20.0f
+#endif
+#ifndef PID_VEL_Z_FILT_ENABLE
+    #define PID_VEL_Z_FILT_ENABLE true
+#endif
+#ifndef PID_VEL_Z_FILT_CUTOFF
+    #define PID_VEL_Z_FILT_CUTOFF 20.0f
+#endif
+#ifndef PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD
+    #define PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD 0.7 f
+#endif
+
+// Tumble detection enabled by default
+#ifndef SUPERVISOR_TUMBLE_CHECK_ENABLE
+    #define SUPERVISOR_TUMBLE_CHECK_ENABLE true
+#endif
+
+
+// Health test parameters
+#ifndef HEALTH_BRUSHED_ON_PERIOD_MSEC
+    #define HEALTH_BRUSHED_ON_PERIOD_MSEC 50
+#endif
+#ifndef HEALTH_BRUSHED_OFF_PERIOD_MSEC
+    #define HEALTH_BRUSHED_OFF_PERIOD_MSEC 950
+#endif
+#ifndef HEALTH_BRUSHED_VARIANCE_START_MSEC
+    #define HEALTH_BRUSHED_VARIANCE_START_MSEC 0
+#endif
+#ifndef HEALTH_BRUSHED_PROP_ON_PERIOD_PWM_RATIO
+    #define HEALTH_BRUSHED_PROP_ON_PERIOD_PWM_RATIO 0xFFFF
+#endif
+#ifndef HEALTH_BRUSHED_BAT_ON_PERIOD_PWM_RATIO
+    #define HEALTH_BRUSHED_BAT_ON_PERIOD_PWM_RATIO 40000
+#endif
+
+#ifndef HEALTH_BRUSHLESS_ON_PERIOD_MSEC
+    #define HEALTH_BRUSHLESS_ON_PERIOD_MSEC 2000
+#endif
+#ifndef HEALTH_BRUSHLESS_OFF_PERIOD_MSEC
+    #define HEALTH_BRUSHLESS_OFF_PERIOD_MSEC 1000
+#endif
+#ifndef HEALTH_BRUSHLESS_VARIANCE_START_MSEC
+    #define HEALTH_BRUSHLESS_VARIANCE_START_MSEC 1000
+#endif
+
+

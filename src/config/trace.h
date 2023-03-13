@@ -37,7 +37,7 @@
                            ((uint32_t*)0xE0000000)[CH] = DATA
 #endif
 
-// Send 4 first chatacters of task name to ITM port 1
+// Send 4 first characters of task name to ITM port 1
 #define traceTASK_SWITCHED_IN() ITM_SEND(1, *((uint32_t*)pxCurrentTCB->pcTaskName))
 
 // Systick value on port 2

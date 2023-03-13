@@ -63,6 +63,7 @@
 #include "sound.h"
 #include "sysload.h"
 #include "estimator_kalman.h"
+#include "estimator_ukf.h"
 #include "deck.h"
 #include "extrx.h"
 #include "app.h"
@@ -72,6 +73,9 @@
 #include "i2cdev.h"
 #include "autoconf.h"
 #include "vcp_esc_passthrough.h"
+#if CONFIG_ENABLE_CPX
+  #include "cpxlink.h"
+#endif
 
 #ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
@@ -114,6 +118,9 @@ void systemInit(void)
 
   usblinkInit();
   sysLoadInit();
+#if CONFIG_ENABLE_CPX
+  cpxlinkInit();
+#endif
 
   /* Initialized here so that DEBUG_PRINT (buffered) can be used early */
   debugInit();
@@ -187,11 +194,19 @@ void systemTask(void *arg)
   commInit();
   commanderInit();
 
-  StateEstimatorType estimator = anyEstimator;
+  StateEstimatorType estimator = StateEstimatorTypeAutoSelect;
 
   #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();
   #endif
+
+  #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+  errorEstimatorUkfTaskInit();
+  #endif
+
+  // Enabling incoming syslink messages to be added to the queue.
+  // This should probably be done later, but deckInit() takes a long time if this is done later.
+  uartslkEnableIncoming();
 
   deckInit();
   estimator = deckGetRequiredEstimator();
@@ -240,6 +255,13 @@ void systemTask(void *arg)
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
+  }
+  #endif
+
+  #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+  if (errorEstimatorUkfTaskTest() == false) {
+    pass = false;
+    DEBUG_PRINT("estimatorUKFTask [FAIL]\n");
   }
   #endif
 

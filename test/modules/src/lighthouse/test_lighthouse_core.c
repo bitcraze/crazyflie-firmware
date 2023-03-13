@@ -14,9 +14,9 @@
 #include "mock_lighthouse_calibration.h"
 #include "mock_uart1.h"
 #include "mock_statsCnt.h"
-#include "mock_cfassert.h"
 #include "mock_crtp_localization_service.h"
 #include "mock_lighthouse_storage.h"
+#include "mock_lighthouse_throttle.h"
 
 #include <stdbool.h>
 
@@ -210,7 +210,7 @@ void testThatLackOfChannelIsDecodedInUartFrame() {
 
   // Verify we did not get data in other fields
   TEST_ASSERT_EQUAL_UINT8(0, frame.data.channel);
-  TEST_ASSERT_FALSE(frame.data.slowbit);
+  TEST_ASSERT_FALSE(frame.data.slowBit);
 }
 
 
@@ -228,7 +228,7 @@ void testThatChannelIsDecodedInUartFrame() {
 
   // Verify we did not get data in other fields
   TEST_ASSERT_TRUE(frame.data.channelFound);
-  TEST_ASSERT_FALSE(frame.data.slowbit);
+  TEST_ASSERT_FALSE(frame.data.slowBit);
 }
 
 
@@ -242,7 +242,7 @@ void testThatSlowBitIsDecodedInUartFrame() {
   getUartFrameRaw(&frame);
 
   // Assert
-  TEST_ASSERT_TRUE(frame.data.slowbit);
+  TEST_ASSERT_TRUE(frame.data.slowBit);
 
   // Verify we did not get data in other fields
   TEST_ASSERT_TRUE(frame.data.channelFound);

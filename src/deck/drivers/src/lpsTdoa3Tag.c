@@ -244,6 +244,8 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       break;
     case eventReceiveTimeout:
       break;
+    case eventReceiveFailed:
+      break;
     case eventPacketSent:
       // Service packet sent, the radio is back to receive automatically
       break;

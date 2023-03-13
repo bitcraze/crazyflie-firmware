@@ -30,37 +30,6 @@
 #include <stdbool.h>
 #include "filter.h"
 
-#define PID_ROLL_RATE_KP  250.0
-#define PID_ROLL_RATE_KI  500.0
-#define PID_ROLL_RATE_KD  2.5
-#define PID_ROLL_RATE_INTEGRATION_LIMIT    33.3
-
-#define PID_PITCH_RATE_KP  250.0
-#define PID_PITCH_RATE_KI  500.0
-#define PID_PITCH_RATE_KD  2.5
-#define PID_PITCH_RATE_INTEGRATION_LIMIT   33.3
-
-#define PID_YAW_RATE_KP  120.0
-#define PID_YAW_RATE_KI  16.7
-#define PID_YAW_RATE_KD  0.0
-#define PID_YAW_RATE_INTEGRATION_LIMIT     166.7
-
-#define PID_ROLL_KP  6.0
-#define PID_ROLL_KI  3.0
-#define PID_ROLL_KD  0.0
-#define PID_ROLL_INTEGRATION_LIMIT    20.0
-
-#define PID_PITCH_KP  6.0
-#define PID_PITCH_KI  3.0
-#define PID_PITCH_KD  0.0
-#define PID_PITCH_INTEGRATION_LIMIT   20.0
-
-#define PID_YAW_KP  6.0
-#define PID_YAW_KI  1.0
-#define PID_YAW_KD  0.35
-#define PID_YAW_INTEGRATION_LIMIT     360.0
-
-
 #define DEFAULT_PID_INTEGRATION_LIMIT 5000.0
 #define DEFAULT_PID_OUTPUT_LIMIT      0.0
 
@@ -75,9 +44,11 @@ typedef struct
   float kp;           //< proportional gain
   float ki;           //< integral gain
   float kd;           //< derivative gain
+  float kff;          //< feedforward gain
   float outP;         //< proportional output (debugging)
   float outI;         //< integral output (debugging)
   float outD;         //< derivative output (debugging)
+  float outFF;        //< feedforward output (debugging)
   float iLimit;       //< integral limit, absolute value. '0' means no limit.
   float outputLimit;  //< total PID output limit, absolute value. '0' means no limit.
   float dt;           //< delta-time dt
@@ -93,13 +64,14 @@ typedef struct
  * @param[in] kp        The proportional gain
  * @param[in] ki        The integral gain
  * @param[in] kd        The derivative gain
+ * @param[in] kff       The feedforward gain
  * @param[in] dt        Delta time since the last call
  * @param[in] samplingRate Frequency the update will be called
  * @param[in] cutoffFreq   Frequency to set the low pass filter cutoff at
  * @param[in] enableDFilter Enable setting for the D lowpass filter
  */
  void pidInit(PidObject* pid, const float desired, const float kp,
-              const float ki, const float kd, const float dt,
+              const float ki, const float kd, const float kff, const float dt,
               const float samplingRate, const float cutoffFreq,
               bool enableDFilter);
 
@@ -183,6 +155,14 @@ void pidSetKi(PidObject* pid, const float ki);
 void pidSetKd(PidObject* pid, const float kd);
 
 /**
+ * Set a new feed-froward gain for the PID.
+ *
+ * @param[in] pid   A pointer to the pid object.
+ * @param[in] kff    The new proportional gain
+ */
+void pidSetKff(PidObject* pid, const float kff);
+
+/**
  * Set a new dt gain for the PID. Defaults to IMU_UPDATE_DT upon construction
  *
  * @param[in] pid   A pointer to the pid object.
@@ -201,4 +181,3 @@ void pidSetDt(PidObject* pid, const float dt);
 void filterReset(PidObject* pid, const float samplingRate, const float cutoffFreq, bool enableDFilter);
 
 #endif /* PID_H_ */
-  

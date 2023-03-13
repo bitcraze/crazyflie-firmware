@@ -39,7 +39,7 @@ typedef struct motionBurst_s {
       uint8_t reserved1     : 1;
       uint8_t rawFrom0      : 1;
       uint8_t reserved2     : 2;
-      uint8_t motionOccured : 1;
+      uint8_t motionOccurred: 1;
     };
   };
 

@@ -31,11 +31,11 @@ bool outlierFilterValidateTdoaSimple(const tdoaMeasurement_t* tdoa);
 bool outlierFilterValidateTdoaSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos);
 
 typedef struct {
-    uint32_t openingTime;
-    int32_t openingWindow;
+    uint32_t openingTimeMs;
+    int32_t openingWindowMs;
 } OutlierFilterLhState_t;
-bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t now);
-void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t now);
+bool outlierFilterValidateLighthouseSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs);
+void outlierFilterReset(OutlierFilterLhState_t* this, const uint32_t nowMs);
 
 
 #endif // __OUTLIER_FILTER_H__

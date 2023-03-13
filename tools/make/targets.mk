@@ -66,4 +66,4 @@ clean_cf:
 	@rm -f $(srctree)/$(PROG).*
 	@rm -f $(srctree)/cffirmware.py
 	@rm -f $(srctree)/_cffirmware*.so
-	
+	@rm -f $(srctree)/build/cffirmware_wrap.c

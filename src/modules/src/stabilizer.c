@@ -7,7 +7,7 @@
  *
  * Crazyflie Firmware
  *
- * Copyright (C) 2011-2016 Bitcraze AB
+ * Copyright (C) 2011-2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,11 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
-static motors_thrust_t motorPower;
+
+static motors_thrust_uncapped_t motorThrustUncapped;
+static motors_thrust_uncapped_t motorThrustBatCompUncapped;
+static motors_thrust_pwm_t motorPwm;
+
 // For scratch storage - never logged or passed to other subsystems.
 static setpoint_t tempSetpoint;
 
@@ -174,12 +178,12 @@ void stabilizerInit(StateEstimatorType estimator)
 
   sensorsInit();
   stateEstimatorInit(estimator);
-  controllerInit(ControllerTypeAny);
+  controllerInit(ControllerTypeAutoSelect);
   powerDistributionInit();
   motorsInit(platformConfigGetMotorMapping());
   collisionAvoidanceInit();
-  estimatorType = getStateEstimator();
-  controllerType = getControllerType();
+  estimatorType = stateEstimatorGetType();
+  controllerType = controllerGetType();
 
   STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
 
@@ -211,11 +215,28 @@ static void checkEmergencyStopTimeout()
   }
 }
 
-/* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
+static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
+{
+  float supplyVoltage = pmGetBatteryVoltage();
+
+  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
+  {
+    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
+  }
+}
+
+static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
+{
+  motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
+  motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
+  motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
+  motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
+}
+
+/* The stabilizer loop runs at 1kHz. It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
  */
-
 static void stabilizerTask(void* param)
 {
   uint32_t tick;
@@ -250,14 +271,14 @@ static void stabilizerTask(void* param)
       healthRunTests(&sensorData);
     } else {
       // allow to update estimator dynamically
-      if (getStateEstimator() != estimatorType) {
+      if (stateEstimatorGetType() != estimatorType) {
         stateEstimatorSwitchTo(estimatorType);
-        estimatorType = getStateEstimator();
+        estimatorType = stateEstimatorGetType();
       }
       // allow to update controller dynamically
-      if (getControllerType() != controllerType) {
+      if (controllerGetType() != controllerType) {
         controllerInit(controllerType);
-        controllerType = getControllerType();
+        controllerType = controllerGetType();
       }
 
       stateEstimator(&state, tick);
@@ -285,11 +306,10 @@ static void stabilizerTask(void* param)
       if (emergencyStop || (systemIsArmed() == false)) {
         motorsStop();
       } else {
-        powerDistribution(&motorPower, &control);
-        motorsSetRatio(MOTOR_M1, motorPower.m1);
-        motorsSetRatio(MOTOR_M2, motorPower.m2);
-        motorsSetRatio(MOTOR_M3, motorPower.m3);
-        motorsSetRatio(MOTOR_M4, motorPower.m4);
+        powerDistribution(&control, &motorThrustUncapped);
+        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+        powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+        setMotorRatios(&motorPwm);
       }
 
 #ifdef CONFIG_DECK_USD
@@ -339,11 +359,13 @@ void stabilizerSetEmergencyStopTimeout(int timeout)
  */
 PARAM_GROUP_START(stabilizer)
 /**
- * @brief Estimator type Any(0), complementary(1), kalman(2) (Default: 0)
+ * @brief Estimator type Auto select(0), complementary(1), extended kalman(2), **unscented kalman(3)  (Default: 0)
+ *
+ * ** Experimental, needs to be enabled in kbuild
  */
 PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
 /**
- * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3) (Default: 0)
+ * @brief Controller type Auto select(0), PID(1), Mellinger(2), INDI(3), Brescianini(4) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
@@ -793,3 +815,31 @@ LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
  */
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 LOG_GROUP_STOP(stateEstimateZ)
+
+
+LOG_GROUP_START(motor)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m1req, &motorThrustBatCompUncapped.motors.m1)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m2req, &motorThrustBatCompUncapped.motors.m2)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m3req, &motorThrustBatCompUncapped.motors.m3)
+
+/**
+ * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
+ * and may have values outside the [0 - UINT16_MAX] range.
+ */
+LOG_ADD(LOG_INT32, m4req, &motorThrustBatCompUncapped.motors.m4)
+LOG_GROUP_STOP(motor)

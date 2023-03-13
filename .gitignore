@@ -9,7 +9,6 @@ bin/*
 .vscode/*
 .idea/*
 *~
-tools/make/config.mk
 cflie.*
 version.c
 tags
@@ -19,6 +18,7 @@ cffirmware.py
 /cf2.*
 /tag.*
 /bolt.*
+/flapper.*
 *.gch
 
 current_platform.mk
@@ -29,6 +29,7 @@ current_platform.mk
 
 bindings/build/*
 bindings/cffirmware_wrap.c
+dist/
 
 docs/.jekyll-metadata
 docs/.jekyll-cache
@@ -46,4 +47,3 @@ build/
 **/*.cmd
 **/*.a
 *.elf
-src/utils/src/version_gen.c

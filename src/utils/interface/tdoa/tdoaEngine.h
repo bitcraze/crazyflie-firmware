@@ -3,8 +3,13 @@
 
 #include "tdoaStorage.h"
 #include "tdoaStats.h"
+#include "autoconf.h"
 
+#if CONFIG_DECK_LOCO_LONGER_RANGE
+#define TDOA_ENGINE_MEASUREMENT_NOISE_STD 0.30f
+#else
 #define TDOA_ENGINE_MEASUREMENT_NOISE_STD 0.15f
+#endif
 
 typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
 

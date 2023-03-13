@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2021 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include <errno.h>
 
 #include "config.h"
+#include "FreeRTOS.h"
 #include "param_logic.h"
 #include "storage.h"
 #include "crc32.h"
@@ -65,6 +66,7 @@ static const uint8_t typeLength[] = {
 
 //Private functions
 static int variableGetIndex(int id);
+static void paramNotifyChanged(int index);
 static char paramWriteByNameProcess(char* group, char* name, int type, void *valptr);
 
 
@@ -133,7 +135,7 @@ static void * paramGetDefault(int index)
  *
  * @return number of bytes set
  **/
-int paramSet(uint16_t index, void *data)
+static int paramSet(uint16_t index, void *data)
 {
   int paramLength = 0;
 
@@ -368,6 +370,10 @@ void paramWriteProcess(CRTPPacket *p)
 
   crtpSendPacketBlock(p);
 
+  paramNotifyChanged(index);
+}
+
+static void paramNotifyChanged(int index) {
   if (params[index].callback) {
     params[index].callback();
   }
@@ -406,6 +412,8 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
   }
 
   paramSet(index, valptr);
+
+  paramNotifyChanged(index);
 
   return 0;
 }
@@ -533,6 +541,7 @@ int paramGetInt(paramVarId_t varid)
   int valuei = 0;
 
   ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & PARAM_TYPE_INT) == PARAM_TYPE_INT);
 
   paramGet(varid.index, (void *)&valuei);
 
@@ -542,11 +551,9 @@ int paramGetInt(paramVarId_t varid)
 float paramGetFloat(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & PARAM_TYPE_FLOAT) == PARAM_TYPE_FLOAT);
 
-  if ((params[varid.index].type & (~(PARAM_CORE | PARAM_RONLY))) == PARAM_FLOAT)
-    return *(float *)params[varid.index].address;
-
-  return (float)paramGetInt(varid);
+  return *(float *)params[varid.index].address;
 }
 
 unsigned int paramGetUint(paramVarId_t varid)
@@ -556,43 +563,52 @@ unsigned int paramGetUint(paramVarId_t varid)
 
 void paramSetInt(paramVarId_t varid, int valuei)
 {
-  ASSERT(PARAM_VARID_IS_VALID(varid));
+  uint8_t paramSize;
 
+  ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & (PARAM_TYPE_INT | PARAM_RONLY)) == PARAM_TYPE_INT);
+
+  paramSize = paramSet(varid.index, (void *)&valuei);
+
+#ifndef CONFIG_PARAM_SILENT_UPDATES
   static CRTPPacket pk;
   pk.header=CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
   pk.data[0] = MISC_VALUE_UPDATED;
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size = 3;
-
-  pk.size += paramSet(varid.index, (void *)&valuei);
-
-#ifndef CONFIG_PARAM_SILENT_UPDATES
-  crtpSendPacketBlock(&pk);
+  pk.size = 3 + paramSize;
+  const int sendResult = crtpSendPacket(&pk);
+  if (sendResult == errQUEUE_FULL) {
+    DEBUG_PRINT("WARNING: Param update not sent\n");
+  }
 #endif
+
+  paramNotifyChanged(varid.index);
 }
 
 void paramSetFloat(paramVarId_t varid, float valuef)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
+  ASSERT((params[varid.index].type & (PARAM_TYPE_FLOAT | PARAM_RONLY)) == PARAM_TYPE_FLOAT);
 
+  *(float *)params[varid.index].address = valuef;
+
+#ifndef CONFIG_PARAM_SILENT_UPDATES
   static CRTPPacket pk;
-  pk.header=CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
+  pk.header  = CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
   pk.data[0] = MISC_VALUE_UPDATED;
   pk.data[1] = varid.id & 0xffu;
   pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size=3;
-
-  if ((params[varid.index].type & (~PARAM_CORE)) == PARAM_FLOAT) {
-      *(float *)params[varid.index].address = valuef;
-
-      memcpy(&pk.data[2], &valuef, 4);
-      pk.size += 4;
+  pk.size = 3;
+  memcpy(&pk.data[2], &valuef, 4);
+  pk.size += 4;
+  const int sendResult = crtpSendPacket(&pk);
+  if (sendResult == errQUEUE_FULL) {
+    DEBUG_PRINT("WARNING: Param update not sent\n");
   }
-
-#ifndef CONFIG_PARAM_SILENT_UPDATES
-  crtpSendPacketBlock(&pk);
 #endif
+
+  paramNotifyChanged(varid.index);
 }
 
 void paramSetByName(CRTPPacket *p)
@@ -617,7 +633,7 @@ void paramSetByName(CRTPPacket *p)
   type = p->data[1 + strlen(group) + 1 + strlen(name) + 1];
   valPtr = &p->data[1 + strlen(group) + 1 + strlen(name) + 2];
 
-  error = paramWriteByNameProcess(group, name, type, valPtr);
+  error = paramWriteByNameProcess(group, name, type, valPtr);  /* calls callback */
 
   p->data[1 + strlen(group) + 1 + strlen(name) + 1] = error;
   p->size = 1 + strlen(group) + 1 + strlen(name) + 1 + 1;

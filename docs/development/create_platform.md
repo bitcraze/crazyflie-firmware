@@ -195,8 +195,8 @@ To make it easier for people to build for `RINCEWIND` we can add a `defconfig` f
 ```Makefile
 CONFIG_PLATFORM_BOLT=y
 
-CONFIG_ESTIMATOR_ANY=y
-CONFIG_CONTROLLER_ANY=y
+CONFIG_ESTIMATOR_AUTO_SELECT=y
+CONFIG_CONTROLLER_AUTO_SELECT=y
 ```
 
 Based on this a start of `rincewind_defconfig` could be:
@@ -204,8 +204,8 @@ Based on this a start of `rincewind_defconfig` could be:
 ```Makefile
 CONFIG_PLATFORM_RINCEWIND=y
 
-CONFIG_ESTIMATOR_ANY=y
-CONFIG_CONTROLLER_ANY=y
+CONFIG_ESTIMATOR_AUTO_SELECT=y
+CONFIG_CONTROLLER_AUTO_SELECT=y
 ```
 
 Then `RINCEWIND` platform could be built by:
@@ -270,7 +270,8 @@ endchoice
 
 The next step is to add an implementation of the power distribution function. Copy
 `power_distribution_quadrotor.c` into a new file, `power_distribution_car.c` and modify the
-`powerDistribution()` function to fit your needs.
+`powerDistribution()` function to fit your needs. Also modify the `powerDistributionCap()`, this function is responsible
+for limiting the thrust to the valid range [0 - UINT16_MAX].
 
 The final step is to add the c file to the build. Open `src/modules/src/Kbuild` and add your new file.
 ```Makefile

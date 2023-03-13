@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * lighthouse_state.h - storage for basestation state struct
+ * lighthouse_state.h - storage for baseStation state struct
  */
 
 #pragma once

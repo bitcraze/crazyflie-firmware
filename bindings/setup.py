@@ -12,9 +12,23 @@ include = [
     "build/include/generated",
     "src/config",
     "src/drivers/interface",
+    "src/platform/interface",
+    "vendor/CMSIS/CMSIS/DSP/Include",
+    "vendor/CMSIS/CMSIS/Core/Include",
 ]
 
 fw_sources = [
+    'vendor/CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_add_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_dot_prod_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_scale_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_sub_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/CommonTables/arm_common_tables.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/FastMathFunctions/arm_cos_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/FastMathFunctions/arm_sin_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/StatisticsFunctions/arm_power_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_mult_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_scale_f32.c',
+    'vendor/CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_trans_f32.c',
     "src/modules/src/pptraj.c",
     "src/modules/src/pptraj_compressed.c",
     "src/modules/src/planner.c",
@@ -26,7 +40,9 @@ fw_sources = [
     "src/utils/src/filter.c",
     "src/utils/src/num.c",
     "src/modules/src/controller_mellinger.c",
+    "src/modules/src/controller_brescianini.c",
     "src/modules/src/power_distribution_quadrotor.c",
+    # "src/modules/src/power_distribution_flapper.c",
 ]
 
 cffirmware = Extension(
@@ -38,6 +54,7 @@ cffirmware = Extension(
         # The following flags are also used for compiling the actual firmware
         "-fno-strict-aliasing",
         "-Wno-address-of-packed-member",
+        "-DUNIT_TEST_MODE",
     ],
 )
 
@@ -51,5 +68,7 @@ setup(
     name="cffirmware",
     version="1.0",
     cmdclass={"build": BuildCommand},
-    ext_modules=[cffirmware]
+    ext_modules=[cffirmware],
+    py_modules=["cffirmware"],
+    package_dir={"": "build"},
 )

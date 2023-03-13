@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "arm_math.h"
+#include "cf_math.h"
 #include "stabilizer_types.h"
 
 typedef struct {
@@ -17,15 +17,16 @@ typedef struct {
 } baseStationGeometryCache_t;
 
 /**
- * @brief Find closest point between rays from two bases stations.
+ * @brief Find closest point between rays from two base stations.
  *
- * @param baseStations - Geometry data for the two base statsions (position and orientation)
+ * @param geo1 - Geometry data for base station 1 (position and orientation)
+ * @param geo2 - Geometry data for base station 2 (position and orientation)
  * @param angles1 - array with 2 angles, horizontal and vertical sweep angle for base station 1
  * @param angles2 - array with 2 angles, horizontal and vertical sweep angle for base station 2
  * @param position - (output) the closest point between the rays
  * @param postion_delta - (output) the distance between the rays at the closest point
  */
-bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t baseStations[2], float angles1[2], float angles2[2], vec3d position, float *position_delta);
+bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t* geo1, const baseStationGeometry_t* geo2, float angles1[2], float angles2[2], vec3d position, float *position_delta);
 
 /**
  * @brief Get the base station position from the base station geometry in world reference frame. This position can be seen as the

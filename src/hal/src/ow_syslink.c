@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * ow.c - One-wire functions
+ * ow_syslink.c - One-wire functions
  */
 #define DEBUG_MODULE "OW"
 
@@ -86,7 +86,7 @@ bool owTest()
   return owCommonTest();
 }
 
-void owSyslinkRecieve(SyslinkPacket *slp)
+void owSyslinkReceive(SyslinkPacket *slp)
 {
   switch (slp->type)
   {

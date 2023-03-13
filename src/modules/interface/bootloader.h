@@ -32,7 +32,7 @@
 /**
  * @brief Check if memory is set after software 
  * reboot indicating we need to branch to the bootloader.
- * Run everytime on startup.
+ * Run every time on startup.
  */
 void check_enter_bootloader();
 

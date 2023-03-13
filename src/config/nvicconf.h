@@ -77,24 +77,31 @@
 #define NVIC_VERY_HIGH_PRI 7
 
 
-// Priorities used for Crazyflie
-#define NVIC_I2C_HIGH_PRI    3
-#define NVIC_I2C_LOW_PRI      4
 #define NVIC_TRACE_TIM_PRI    4
-#define NVIC_UART_PRI         6
-
-// Priorities for Crazyflie 2.X
 #define NVIC_RADIO_PRI        11
 #define NVIC_ADC_PRI          12
 #define NVIC_CPPM_PRI         14
-#define NVIC_SYSLINK_PRI      5
+#define NVIC_SYSLINK_FLOW_PRI 4
+#define NVIC_SYSLINK_UART_PRI 5
+#define NVIC_SYSLINK_DMA_PRI  NVIC_SYSLINK_UART_PRI  // Must be the same
+#define NVIC_SPI_PRI          7
+#define NVIC_I2C_PRI          7
+#define NVIC_MOTORS_PRI       10
+#define NVIC_UART1_PRI        10
+#define NVIC_UART1_DMA_PRI    10
+#define NVIC_UART2_PRI        6
+#define NVIC_UART2_DMA_PRI    10
+#define NVIC_WS2812_PRI       13
+#define NVIC_BMI088_SPI_PRI   7
+#define NVIC_USB_BSP_PRI      10
+
 
 // Priorities for external interrupts
 #define EXTI0_PRI NVIC_LOW_PRI
 #define EXTI1_PRI NVIC_LOW_PRI
 #define EXTI2_PRI NVIC_LOW_PRI
 #define EXTI3_PRI NVIC_LOW_PRI
-#define EXTI4_PRI NVIC_SYSLINK_PRI // this serves the syslink UART
+#define EXTI4_PRI NVIC_SYSLINK_FLOW_PRI // this is used for flow control when STM sends data to the NRF on the syslink UART
 #define EXTI9_5_PRI NVIC_LOW_PRI
 #define EXTI15_10_PRI NVIC_MID_PRI // this serves the decks and sensors
 

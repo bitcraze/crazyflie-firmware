@@ -18,6 +18,7 @@
 #include "filter.h"
 #include "num.h"
 #include "controller_mellinger.h"
+#include "controller_brescianini.h"
 #include "power_distribution.h"
 %}
 
@@ -29,6 +30,7 @@
 %include "controller_pid.h"
 %include "imu_types.h"
 %include "controller_mellinger.h"
+%include "controller_brescianini.h"
 %include "power_distribution.h"
 
 %inline %{
@@ -87,6 +89,12 @@ void collisionAvoidanceUpdateSetpointWrap(
     free(workspace);
 }
 
+void assertFail(char *exp, char *file, int line) {
+    char buf[150];
+    sprintf(buf, "%s in File: \"%s\", line %d\n", exp, file, line);
+
+    PyErr_SetString(PyExc_AssertionError, buf);
+}
 %}
 
 %pythoncode %{

@@ -54,6 +54,7 @@
 #include "estimator.h"
 
 #include "sensors_bmi088_common.h"
+#include "platform_defaults.h"
 
 #define GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
 
@@ -88,6 +89,7 @@
 #define GYRO_VARIANCE_THRESHOLD_Z       (GYRO_VARIANCE_BASE)
 
 #define SENSORS_ACC_SCALE_SAMPLES  200
+
 
 typedef struct
 {
@@ -145,13 +147,10 @@ static void applyAxis3fLpf(lpf2pData *data, Axis3f* in);
 static bool isBarometerPresent = false;
 static uint8_t baroMeasDelayMin = SENSORS_DELAY_BARO;
 
-// Precalculated values for IMU alignment
-static float sphi   = sinf(IMU_PHI * (float) M_PI / 180);
-static float cphi   = cosf(IMU_PHI * (float) M_PI / 180);
-static float stheta = sinf(IMU_THETA * (float) M_PI / 180);
-static float ctheta = cosf(IMU_THETA * (float) M_PI / 180);
-static float spsi   = sinf(IMU_PSI * (float) M_PI / 180);
-static float cpsi   = cosf(IMU_PSI * (float) M_PI / 180);
+// IMU alignment Euler angles
+static float imuPhi = IMU_PHI;
+static float imuTheta = IMU_THETA;
+static float imuPsi = IMU_PSI;
 
 static float R[3][3];
 
@@ -328,7 +327,7 @@ static void sensorsTask(void *param)
       measurement.type = MeasurementTypeGyroscope;
       measurement.data.gyroscope.gyro = sensorData.gyro;
       estimatorEnqueue(&measurement);
-      
+
       /* Acelerometer */
       accScaledIMU.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
       accScaledIMU.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
@@ -879,6 +878,16 @@ bool sensorsBmi088Bmp388ManufacturingTest(void)
  */
 static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
 {
+  // IMU alignment
+  static float sphi, cphi, stheta, ctheta, spsi, cpsi;
+
+  sphi   = sinf(imuPhi * (float) M_PI / 180);
+  cphi   = cosf(imuPhi * (float) M_PI / 180);
+  stheta = sinf(imuTheta * (float) M_PI / 180);
+  ctheta = cosf(imuTheta * (float) M_PI / 180);
+  spsi   = sinf(imuPsi * (float) M_PI / 180);
+  cpsi   = cosf(imuPsi * (float) M_PI / 180);
+
   R[0][0] = ctheta * cpsi;
   R[0][1] = ctheta * spsi;
   R[0][2] = -stheta;
@@ -992,4 +1001,20 @@ PARAM_GROUP_START(imu_sensors)
  * @brief Nonzero if BMP388 barometer is present
  */
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
+
+/**
+ * @brief Euler angle Phi defining IMU orientation on the airframe (in degrees)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPhi, &imuPhi)
+
+/**
+ * @brief Euler angle Theta defining IMU orientation on the airframe (in degrees)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuTheta, &imuTheta)
+
+/**
+ * @brief Euler angle Psi defining IMU orientation on the airframe (in degrees)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPsi, &imuPsi)
+
 PARAM_GROUP_STOP(imu_sensors)

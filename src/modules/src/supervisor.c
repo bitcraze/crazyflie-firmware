@@ -30,9 +30,11 @@
 
 #include "log.h"
 #include "motors.h"
+#include "power_distribution.h"
 #include "pm.h"
 #include "stabilizer.h"
 #include "supervisor.h"
+#include "platform_defaults.h"
 
 /* Minimum summed motor PWM that means we are flying */
 #define SUPERVISOR_FLIGHT_THRESHOLD 1000
@@ -72,14 +74,14 @@ static bool canFlyCheck()
 }
 
 //
-// We say we are flying if the sum of the ratio of all motors are above
-// a certain threshold.
+// We say we are flying if the sum of the ratios of all motors giving thrust
+// is above a certain threshold.
 //
 static bool isFlyingCheck()
 {
   int sumRatio = 0;
   for (int i = 0; i < NBR_OF_MOTORS; ++i) {
-    sumRatio += motorsGetRatio(i);
+    sumRatio += powerDistributionMotorType(i) * motorsGetRatio(i);
   }
 
   return sumRatio > SUPERVISOR_FLIGHT_THRESHOLD;
@@ -117,10 +119,11 @@ void supervisorUpdate(const sensorData_t *data)
   isFlying = isFlyingCheck();
 
   isTumbled = isTumbledCheck(data);
+  #if SUPERVISOR_TUMBLE_CHECK_ENABLE
   if (isTumbled && isFlying) {
     stabilizerSetEmergencyStop();
   }
-
+  #endif
   canFly = canFlyCheck();
 }
 

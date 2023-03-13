@@ -3,8 +3,6 @@
 
 #include "unity.h"
 
-#include "mock_cfassert.h"
-
 static tdoaMeasurement_t tdoa;
 
 // Helpers
@@ -75,18 +73,6 @@ void testThatSamplesAreRejectedWhenTdoaIsGreaterButNegativeThanDistanceBetweenAn
 #define LH_BAD_ANGLE 1
 #define LH_GOOD_ANGLE 0.0001
 #define LH_TIME_STEP (1000 / 120)
-
-// TOOD krri remove
-static void print(OutlierFilterLhState_t* this, uint32_t time) {
-  printf("win:%i openingTime:%i time:%i ", this->openingWindow, this->openingTime, time);
-  bool isFilterClosed = (time < this->openingTime);
-  if (isFilterClosed) {
-    printf("Is closed\n");
-  } else {
-    printf("Is open\n");
-  }
-}
-
 
 void testThatLhFilterLetsGoodSampleThroughWhenOpen() {
   // Fixture

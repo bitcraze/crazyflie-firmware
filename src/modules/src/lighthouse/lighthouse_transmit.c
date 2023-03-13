@@ -33,8 +33,8 @@
 
 typedef struct lighthouseTransmitState {
   uint8_t enabled;
-  
-  CRTPPacket txPacket;  
+
+  CRTPPacket txPacket;
   uint8_t queuedPackets;
 
   uint32_t last_timestamp;
@@ -42,7 +42,7 @@ typedef struct lighthouseTransmitState {
   uint32_t sensor_timestamps[4];
   uint32_t offset;
   int8_t channel;
-  bool slowbit;
+  bool slowBit;
   int8_t sensor_flags;
 
 } lighthouseTransmitState;
@@ -76,12 +76,12 @@ static inline int32_t timediff_24bit(int32_t first_ts, int32_t second_ts) {
   if(abs(diff) > 1 << 23) {
     diff -= 1 << 24;
   }
-  return diff; 
+  return diff;
 }
 
 static void lighthouseQueue(lighthouseTransmitState* state) {
   if(state->channel == -1) return;
-  
+
   // Basic strategy:
   // 3     Bytes: 0bCCCC 00OY 0xYY 0xYY - Channel, OOTX bit, 17 bits of sync data
   // 3     Bytes: 0xTT TT TT - 24mhz Timestamp of first packet
@@ -93,7 +93,7 @@ static void lighthouseQueue(lighthouseTransmitState* state) {
 
   uint32_t channel_ootx_sync =
     ((uint32_t)state->channel << 20) |
-    (state->slowbit << 17) |
+    (state->slowBit << 17) |
     (state->offset / 4);
 
   memcpy(data, &channel_ootx_sync, 3);
@@ -102,7 +102,7 @@ static void lighthouseQueue(lighthouseTransmitState* state) {
   if(state->offset > state->ref_timestamp) {
     state->offset -= (1 << 24);
   }
-  
+
   for(int i = 0;i < 4;i++) {
     int16_t delta16 = 0x7FFF;
     if(state->sensor_flags & (1 << i)) {
@@ -116,7 +116,7 @@ static void lighthouseQueue(lighthouseTransmitState* state) {
     memcpy(&data[6 + 2 * i], &delta16, 2);
   }
 
-  state->txPacket.size += 14; 
+  state->txPacket.size += 14;
   lighthouseResetCurrent(state);
   if(state->queuedPackets) {
     lighthouseTransmit(state);
@@ -135,16 +135,16 @@ void lighthouseTransmitProcessFrame(const lighthouseUartFrame_t* frame) {
   if(frame->data.timestamp > state->ref_timestamp) timediff = frame->data.timestamp - state->last_timestamp;
   else if(frame->data.timestamp > state->ref_timestamp) timediff = state->last_timestamp - frame->data.timestamp;
   state->last_timestamp = frame->data.timestamp;
-  
+
   if(state->channel != -1 && timediff > 0xFFFF) {
-    lighthouseQueue(state);    
+    lighthouseQueue(state);
   }
 
   uint32_t ts_mid = frame->data.timestamp + (frame->data.width / 2);
-  if(frame->data.channelFound) {   
+  if(frame->data.channelFound) {
     if(state->channel == -1) {
       state->channel = frame->data.channel;
-      state->slowbit = frame->data.slowbit;
+      state->slowBit = frame->data.slowBit;
       state->ref_timestamp = frame->data.timestamp;
     } else if (state->channel != frame->data.channel) {
       lighthouseQueue(state);

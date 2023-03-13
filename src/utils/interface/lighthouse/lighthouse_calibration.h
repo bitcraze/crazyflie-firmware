@@ -4,15 +4,15 @@
 #include "lighthouse_types.h"
 
 /**
- * @brief Initialize calibration structure from basestation ootx frame
+ * @brief Initialize calibration structure from baseStation ootx frame
  *
  * @param calib Calibration  object to initialize, calib->valid will be set to true
- * @param frame ootx frame received from the basestation
+ * @param frame ootx frame received from the baseStation
  */
 void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct ootxDataFrame_s *frame);
 
 /**
- * @brief Apply basestation calibration to the two received angles for LH 1
+ * @brief Apply baseStation calibration to the two received angles for LH 1
  *
  * @param calib Calibration object to use
  * @param rawAngles Array containing the two raw measured angles
@@ -21,7 +21,7 @@ void lighthouseCalibrationInitFromFrame(lighthouseCalibration_t *calib, struct o
 void lighthouseCalibrationApplyV1(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles);
 
 /**
- * @brief Apply basestation calibration to the two received angles for LH 2
+ * @brief Apply baseStation calibration to the two received angles for LH 2
  *
  * @param calib Calibration object to use
  * @param rawAngles Array containing the two raw measured angles
@@ -30,7 +30,7 @@ void lighthouseCalibrationApplyV1(const lighthouseCalibration_t* calib, const fl
 void lighthouseCalibrationApplyV2(const lighthouseCalibration_t* calib, const float* rawAngles, float* correctedAngles);
 
 /**
- * @brief Apply no basestation calibration to the two received angles, that is copy the raw angles
+ * @brief Apply no baseStation calibration to the two received angles, that is copy the raw angles
  *
  * @param rawAngles i/j raw angles measured
  * @param correctedAngles i/j will be same as the raw angles

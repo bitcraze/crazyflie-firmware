@@ -2,10 +2,10 @@ menu "Controllers and Estimators"
 
 choice
     prompt "Default controller"
-    default CONFIG_CONTROLLER_ANY
+    default CONFIG_CONTROLLER_AUTO_SELECT
 
-config CONTROLLER_ANY
-    bool "Any Controller"
+config CONTROLLER_AUTO_SELECT
+    bool "Auto select Controller"
     help
         Do not care which controller is used, if any
 
@@ -13,6 +13,18 @@ config CONTROLLER_PID
     bool "PID controller"
     help
         Use the PID (proportional–integral–derivative) controller as default
+
+config CONTROLLER_PID_FILTER_ALL
+    bool "Apply LPF filter to all PID components"
+    depends on CONTROLLER_PID
+    help
+        Apply a low pass filter to all PID components instead of only the D component (default)
+
+config CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+    bool "Use improved baro z hold"
+    depends on CONTROLLER_PID_FILTER_ALL
+    help
+        Uses an improved z hold based on barometric pressure
 
 config CONTROLLER_INDI
     bool "INDI controller"
@@ -24,7 +36,16 @@ config CONTROLLER_MELLINGER
     help
         Use the Mellinger controller as default
 
+config CONTROLLER_BRESCIANINI
+    bool "Brescianini controller"
+    help
+        Use the Brescianini controller as default
+
 endchoice
+
+config CONTROLLER_OOT
+    bool "Out-of-tree controller"
+    default n
 
 config ESTIMATOR_KALMAN_ENABLE
     bool "Enable Kalman Estimator"
@@ -32,12 +53,18 @@ config ESTIMATOR_KALMAN_ENABLE
     help
         Enable the Kalman (EKF) estimator.
 
+config ESTIMATOR_UKF_ENABLE
+    bool "Enable error-state UKF estimator"
+    default n
+    help
+        Enable the (error-state unscented) Kalman filter (UKF) estimator
+
 choice
     prompt "Default estimator"
-    default CONFIG_ESTIMATOR_ANY
+    default CONFIG_ESTIMATOR_AUTO_SELECT
 
-config ESTIMATOR_ANY
-    bool "Any Estimator"
+config ESTIMATOR_AUTO_SELECT
+    bool "Auto select Estimator"
     help
         Do not care which estimator is used, if any
 
@@ -46,6 +73,12 @@ config ESTIMATOR_KALMAN
     depends on ESTIMATOR_KALMAN_ENABLE
     help
         Use the (extended) Kalman filter (EKF) estimator as default
+
+config ESTIMATOR_UKF
+    bool "Error-state UKF estimator"
+    depends on ESTIMATOR_UKF_ENABLE
+    help
+        Use the (error-state unscented) Kalman filter (UKF) estimator as default
 
 config ESTIMATOR_COMPLEMENTARY
     bool "Complementary estimator"
@@ -127,6 +160,18 @@ config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
 
         The value specified here can also be overridden with parameters.
 
+config MOTORS_DEFAULT_BAT_TEST_PWM_RATIO
+    int "Override default PWM ratio to use during battery tests"
+    range 0 65535
+    default 0
+    help
+        PWM ratio to use during battery test, expressed as an integer in the range
+        0 to 65535. Zero means not to override the PWM ratio because there a differences
+        between brushed and brushless;. Brushless is 0 for safety reasons. Different motors
+        needs different value, hance this config variable.
+
+        The value specified here can also be overridden with parameters.
+
 choice
     prompt "Type of power distribution"
     default POWER_DISTRIBUTION_QUADROTOR
@@ -136,7 +181,28 @@ config POWER_DISTRIBUTION_QUADROTOR
     depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
     help
         Power distribution function for quadrotors
+config POWER_DISTRIBUTION_FLAPPER
+    bool "Flapper Nimble+ power distribution"
+    depends on PLATFORM_FLAPPER
+    help
+        Power distribution function for Flapper Nimble+
+
 endchoice
+config POWER_DISTRIBUTION_FLAPPER_REVB
+    bool "Flapper  Nimble+ power distribution (PCB revision B)"
+    depends on POWER_DISTRIBUTION_FLAPPER
+    default n
+    help
+        Power distribution function for Flapper Nimble+ with revB PCB
+
+config ENABLE_THRUST_BAT_COMPENSATED
+    bool "Enable battery thrust compensation"
+    default y
+    help
+        Compensate thrust depending on battery voltage so it will produce about the same
+        amount of thrust independent of the battery voltage.
+        The compensation is based on thrust measurements, which are only valid for CF2.X stock configuration.
+        Not applied for brushless motor setup.
 
 endmenu
 

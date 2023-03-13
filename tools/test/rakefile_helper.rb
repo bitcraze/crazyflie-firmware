@@ -247,6 +247,7 @@ module RakefileHelpers
       end
 
       # build libs
+      obj_list += add_lib_source_files(['TEST_SUPPORT'], test_defines)
       lib_annotations = read_lib_annotations(test)
       obj_list += add_lib_source_files(lib_annotations, test_defines)
 
@@ -353,8 +354,11 @@ module RakefileHelpers
   end
 
   def exclude_test_files(files, defines)
+    # Extract the names of the defines and remove the values
+    trimmed_defines = defines.map {|define| define.split('=')[0]}
+
     files.select do |file|
-      !annotation_ignore_file?(file, defines)
+      !annotation_ignore_file?(file, trimmed_defines)
     end
   end
 
@@ -363,10 +367,10 @@ module RakefileHelpers
   # // @IGNORE_IF_NOT PLATFORM_CF2
   # or
   # // @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
-  # Ignores values of defines, so this would fail and keep the file
+  # Ignores values of defines, so this would remove the file
   # param to gradle: -DMYDEFINE=0
   # // @IGNORE_IF_NOT MYDEFINE
-  def annotation_ignore_file?(file, defines)
+  def annotation_ignore_file?(file, trimmed_defines)
     ignore_str = '@IGNORE_IF_NOT'
 
     File.foreach( file ) do |line|
@@ -376,7 +380,7 @@ module RakefileHelpers
 
         if tokens.length >= (index + 2)
           condition = tokens[index + 1]
-          conditionIsMet = defines.detect {|define| define == condition}
+          conditionIsMet = trimmed_defines.include? condition
           if !conditionIsMet
             return true
           end
@@ -414,8 +418,9 @@ module RakefileHelpers
     libs.each do |lib|
       puts 'Adding lib ' + lib
 
-      files = $cfg['compiler']['libs'][lib]['files']
-      extra_options = $cfg['compiler']['libs'][lib]['extra_options']
+      files = $cfg['compiler']['libs'][lib]['files'] || []
+      extra_options = $cfg['compiler']['libs'][lib]['extra_options'] || []
+
       files.each do |src_file|
         obj_list << compile(src_file, test_defines, extra_options=extra_options)
       end

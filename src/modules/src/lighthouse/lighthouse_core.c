@@ -34,10 +34,13 @@
 #include <stdint.h>
 
 #include "system.h"
-#include "log.h"
 #include "param.h"
-#include "statsCnt.h"
 #include "autoconf.h"
+
+// Uncomment next line to add extra debug log variables
+// #define CONFIG_DEBUG_LOG_ENABLE 1
+#include "log.h"
+#include "statsCnt.h"
 
 #define DEBUG_MODULE "LH"
 #include "debug.h"
@@ -51,6 +54,8 @@
 #include "lighthouse_deck_flasher.h"
 #include "lighthouse_position_est.h"
 #include "lighthouse_core.h"
+
+#include "lighthouse_throttle.h"
 
 #include "lighthouse_storage.h"
 
@@ -67,7 +72,7 @@ static lighthouseBsIdentificationData_t bsIdentificationData;
 
 // Stats
 
-typedef enum uwbEvent_e {
+typedef enum {
   statusNotReceiving = 0,
   statusMissingData = 1,
   statusToEstimator = 2,
@@ -78,6 +83,8 @@ static bool uartSynchronized = false;
 #define ONE_SECOND 1000
 #define HALF_SECOND 500
 #define FIFTH_SECOND 200
+
+#ifdef CONFIG_DEBUG_LOG_ENABLE
 static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
@@ -86,7 +93,12 @@ static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
 static statsCntRateLogger_t* bsRates[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS] = {&bs0Rate, &bs1Rate};
 
+static STATS_CNT_RATE_DEFINE(preThrottleRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(postThrottleRate, ONE_SECOND);
+#endif
+
 // A bitmap that indicates which base stations that are available
+static uint16_t baseStationAvailabledMapWs;
 static uint16_t baseStationAvailabledMap;
 
 // A bitmap that indicates which base staions that are received
@@ -179,16 +191,23 @@ void lighthouseCoreLedTimer()
 
 static void lighthouseUpdateSystemType() {
   // Switch to new pulse processor
-  switch(systemType) {
-    case lighthouseBsTypeV1:
-      pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
-      break;
-    case lighthouseBsTypeV2:
-      pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
-      break;
-    default:
-      // Do nothing if the type is not in range, stay on the previous processor
-      return;
+  switch (systemType)
+  {
+  case lighthouseBsTypeV1:
+    pulseProcessorProcessPulse = pulseProcessorV1ProcessPulse;
+    baseStationAvailabledMapWs = 3;
+
+    break;
+  case lighthouseBsTypeV2:
+    pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
+    for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++)
+    {
+      modifyBit(&baseStationAvailabledMapWs, i, true);
+    }
+    break;
+  default:
+    // Do nothing if the type is not in range, stay on the previous processor
+    return;
   }
 
   if (previousSystemType != systemType) {
@@ -230,7 +249,7 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   frame->data.sensor = data[0] & 0x03;
   frame->data.channelFound = (data[0] & 0x80) == 0;
   frame->data.channel = (data[0] >> 3) & 0x0f;
-  frame->data.slowbit = (data[0] >> 2) & 0x01;
+  frame->data.slowBit = (data[0] >> 2) & 0x01;
   memcpy(&frame->data.width, &data[1], 2);
   memcpy(&frame->data.offset, &data[3], 3);
   memcpy(&frame->data.beamData, &data[6], 3);
@@ -242,7 +261,7 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
   bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
 
-  STATS_CNT_RATE_EVENT(&serialFrameRate);
+  STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
 
   return isFrameValid;
 }
@@ -273,6 +292,22 @@ void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_
   uart1SendData(2, commandBuffer);
 }
 
+bool findOtherBaseStation(const pulseProcessorResult_t* angles, const int baseStation, int* otherBaseStation) {
+  for (int candidate = baseStation + 1; candidate != baseStation; candidate++) {
+    if (candidate >= CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
+      candidate = 0;
+    }
+
+    // Only looking at sensor 0, assuming this is enough
+    if (angles->baseStationMeasurementsLh1[candidate].sensorMeasurements[0].validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      *otherBaseStation = candidate;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 // Method used to estimate position
 // 0 = Position calculated outside the estimator using intersection point of beams.
@@ -287,35 +322,52 @@ static uint8_t estimationMethod = 1;
 #endif
 
 
-static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
-  pulseProcessorClearOutdated(appState, angles, basestation);
+static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation) {
+  pulseProcessorClearOutdated(appState, angles, baseStation);
 
-  if (basestation == 1) {
-    STATS_CNT_RATE_EVENT(&cycleRate);
+  int otherBaseStation = 0;
+  bool foundPair = false;
 
-    lighthousePositionEstimatePoseCrossingBeams(appState, angles, 1);
+  switch (systemType) {
+    case lighthouseBsTypeV1:
+      if (baseStation == 1) {
+        otherBaseStation = 0;
+        foundPair = true;
+      }
+      break;
+    case lighthouseBsTypeV2:
+      foundPair = findOtherBaseStation(angles, baseStation, &otherBaseStation);
+      break;
+    default:
+      // Nothing here
+      break;
+  }
 
-    pulseProcessorProcessed(angles, 0);
-    pulseProcessorProcessed(angles, 1);
+  if (foundPair) {
+    STATS_CNT_RATE_EVENT_DEBUG(&cycleRate);
+
+    lighthousePositionEstimatePoseCrossingBeams(appState, angles, baseStation, otherBaseStation);
+
+    pulseProcessorProcessed(angles, baseStation);
+    pulseProcessorProcessed(angles, otherBaseStation);
   }
 }
 
+static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation) {
+  STATS_CNT_RATE_EVENT_DEBUG(&cycleRate);
 
-static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation) {
-  STATS_CNT_RATE_EVENT(&cycleRate);
+  pulseProcessorClearOutdated(appState, angles, baseStation);
 
-  pulseProcessorClearOutdated(appState, angles, basestation);
+  lighthousePositionEstimatePoseSweeps(appState, angles, baseStation);
 
-  lighthousePositionEstimatePoseSweeps(appState, angles, basestation);
-
-  pulseProcessorProcessed(angles, basestation);
+  pulseProcessorProcessed(angles, baseStation);
 }
 
 static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
     for (int bs = 0; bs < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; bs++) {
-      pulseProcessorBaseStationMeasuremnt_t* from = &angles->sensorMeasurementsLh2[sensor].baseStatonMeasurements[bs];
-      pulseProcessorBaseStationMeasuremnt_t* to = &angles->sensorMeasurementsLh1[sensor].baseStatonMeasurements[bs];
+      pulseProcessorSensorMeasurement_t* from = &angles->baseStationMeasurementsLh2[bs].sensorMeasurements[sensor];
+      pulseProcessorSensorMeasurement_t* to = &angles->baseStationMeasurementsLh1[bs].sensorMeasurements[sensor];
 
       if (2 == from->validCount) {
         pulseProcessorV2ConvertToV1Angles(from->correctedAngles[0], from->correctedAngles[1], to->correctedAngles);
@@ -327,34 +379,44 @@ static void convertV2AnglesToV1Angles(pulseProcessorResult_t* angles) {
   }
 }
 
-static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int sweepId) {
-  const uint16_t basestationBitMap = (1 << basestation);
-  baseStationReceivedMapWs |= basestationBitMap;
+static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation, int sweepId, const uint32_t now_ms) {
+  const uint16_t baseStationBitMap = (1 << baseStation);
+  baseStationReceivedMapWs |= baseStationBitMap;
 
   if (sweepId == sweepIdSecond) {
-    const bool hasCalibrationData = pulseProcessorApplyCalibration(appState, angles, basestation);
+    const bool hasCalibrationData = pulseProcessorApplyCalibration(appState, angles, baseStation);
     if (hasCalibrationData) {
       if (lighthouseBsTypeV2 == angles->measurementType) {
-        // Emulate V1 base stations for now, convert to V1 angles
+        // Emulate V1 base stations, convert to V1 angles
         convertV2AnglesToV1Angles(angles);
       }
 
       // Send measurement to the ground
-      locSrvSendLighthouseAngle(basestation, angles);
+      locSrvSendLighthouseAngle(baseStation, angles);
 
-      const bool hasGeoData = appState->bsGeometry[basestation].valid;
+      const bool hasGeoData = appState->bsGeometry[baseStation].valid;
       if (hasGeoData) {
-        baseStationActiveMapWs |= basestationBitMap;
+        baseStationActiveMapWs |= baseStationBitMap;
 
-        switch(estimationMethod) {
-          case 0:
-            usePulseResultCrossingBeams(appState, angles, basestation);
-            break;
-          case 1:
-            usePulseResultSweeps(appState, angles, basestation);
-            break;
-          default:
-            break;
+        STATS_CNT_RATE_EVENT_DEBUG(&preThrottleRate);
+        bool useSample = true;
+        if (lighthouseBsTypeV2 == angles->measurementType) {
+          useSample = throttleLh2Samples(now_ms);
+        }
+
+        if (useSample) {
+          switch(estimationMethod) {
+            case 0:
+              usePulseResultCrossingBeams(appState, angles, baseStation);
+              break;
+            case 1:
+              usePulseResultSweeps(appState, angles, baseStation);
+              break;
+            default:
+              break;
+          }
+
+          STATS_CNT_RATE_EVENT_DEBUG(&postThrottleRate);
         }
       }
     }
@@ -389,16 +451,16 @@ static void useCalibrationData(pulseProcessor_t *appState) {
   }
 }
 
-static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame) {
-    int basestation;
+static void processFrame(pulseProcessor_t *appState, pulseProcessorResult_t* angles, const lighthouseUartFrame_t* frame, const uint32_t now_ms) {
+    int baseStation;
     int sweepId;
     bool calibDataIsDecoded = false;
 
     pulseWidth[frame->data.sensor] = frame->data.width;
 
-    if (pulseProcessorProcessPulse(appState, &frame->data, angles, &basestation, &sweepId, &calibDataIsDecoded)) {
-        STATS_CNT_RATE_EVENT(bsRates[basestation]);
-        usePulseResult(appState, angles, basestation, sweepId);
+    if (pulseProcessorProcessPulse(appState, &frame->data, angles, &baseStation, &sweepId, &calibDataIsDecoded)) {
+        STATS_CNT_RATE_EVENT_DEBUG(bsRates[baseStation]);
+        usePulseResult(appState, angles, baseStation, sweepId, now_ms);
     }
 
     if (calibDataIsDecoded) {
@@ -435,6 +497,8 @@ static void deckHealthCheck(pulseProcessor_t *appState, const lighthouseUartFram
 
 static void updateSystemStatus(const uint32_t now_ms) {
   if (now_ms > nextUpdateTimeOfSystemStatus) {
+    baseStationAvailabledMap = baseStationAvailabledMapWs;
+
     baseStationReceivedMap = baseStationReceivedMapWs;
     baseStationReceivedMapWs = 0;
 
@@ -492,13 +556,13 @@ void lighthouseCoreTask(void *param) {
       }
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
-        STATS_CNT_RATE_EVENT(&frameRate);
+        STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
 	lighthouseTransmitProcessFrame(&frame);
 
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
         if (pulseProcessorProcessPulse) {
-          processFrame(&lighthouseCoreState, &angles, &frame);
+          processFrame(&lighthouseCoreState, &angles, &frame, now_ms);
         }
       }
 
@@ -537,7 +601,7 @@ LOG_ADD_BY_FUNCTION(LOG_UINT8, validAngles, &pulseProcessorAnglesQualityLoggerDe
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
@@ -547,7 +611,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasur
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
@@ -557,7 +621,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasur
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[1].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V1 angle received by sensor 0 [rad]
@@ -567,7 +631,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.sensorMeasurementsLh1[0].baseStatonMeasur
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[1].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The V1 angle received by sensor 0, corrected using calibration data [rad]
@@ -579,7 +643,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.sensorMeasurementsLh1[0].baseStatonMeasur
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0x, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V1 angle received by sensor 0, corrected using calibration data [rad]
@@ -591,7 +655,7 @@ LOG_ADD(LOG_FLOAT, angle0x, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0y, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The angle received by sensor 0, corrected using calibration data [rad]
@@ -603,7 +667,7 @@ LOG_ADD(LOG_FLOAT, angle0y, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1x, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1x, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The angle received by sensor 0, corrected using calibration data [rad]
@@ -615,7 +679,7 @@ LOG_ADD(LOG_FLOAT, angle1x, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1y, &angles.sensorMeasurementsLh1[0].baseStatonMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1y, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The angle received by sensor 1, corrected using calibration data [rad]
@@ -627,7 +691,7 @@ LOG_ADD(LOG_FLOAT, angle1y, &angles.sensorMeasurementsLh1[0].baseStatonMeasureme
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD_DEBUG(LOG_FLOAT, angle0x_1, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[1].correctedAngles[0])
 
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
@@ -639,7 +703,7 @@ LOG_ADD(LOG_FLOAT, angle0x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasure
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 1.
  */
-LOG_ADD(LOG_FLOAT, angle0y_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD_DEBUG(LOG_FLOAT, angle0y_1, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[1].correctedAngles[1])
 
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
@@ -651,7 +715,7 @@ LOG_ADD(LOG_FLOAT, angle0y_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasure
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD_DEBUG(LOG_FLOAT, angle1x_1, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[1].correctedAngles[0])
 
 /**
  * @brief The V1 angle received by sensor 1, corrected using calibration data [rad]
@@ -663,17 +727,17 @@ LOG_ADD(LOG_FLOAT, angle1x_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasure
  *
  * If a base station of type V2 is used, this will contain the V2 angles converted to V1 style for the base station with channel 2.
  */
-LOG_ADD(LOG_FLOAT, angle1y_1, &angles.sensorMeasurementsLh1[1].baseStatonMeasurements[1].correctedAngles[1])
+LOG_ADD_DEBUG(LOG_FLOAT, angle1y_1, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[1].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_2, &angles.sensorMeasurementsLh1[2].baseStatonMeasurements[0].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle0y_2, &angles.sensorMeasurementsLh1[2].baseStatonMeasurements[0].correctedAngles[1])
-LOG_ADD(LOG_FLOAT, angle1x_2, &angles.sensorMeasurementsLh1[2].baseStatonMeasurements[1].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle1y_2, &angles.sensorMeasurementsLh1[2].baseStatonMeasurements[1].correctedAngles[1])
+LOG_ADD_DEBUG(LOG_FLOAT, angle0x_2, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[2].correctedAngles[0])
+LOG_ADD_DEBUG(LOG_FLOAT, angle0y_2, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[2].correctedAngles[1])
+LOG_ADD_DEBUG(LOG_FLOAT, angle1x_2, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].correctedAngles[0])
+LOG_ADD_DEBUG(LOG_FLOAT, angle1y_2, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_3, &angles.sensorMeasurementsLh1[3].baseStatonMeasurements[0].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle0y_3, &angles.sensorMeasurementsLh1[3].baseStatonMeasurements[0].correctedAngles[1])
-LOG_ADD(LOG_FLOAT, angle1x_3, &angles.sensorMeasurementsLh1[3].baseStatonMeasurements[1].correctedAngles[0])
-LOG_ADD(LOG_FLOAT, angle1y_3, &angles.sensorMeasurementsLh1[3].baseStatonMeasurements[1].correctedAngles[1])
+LOG_ADD_DEBUG(LOG_FLOAT, angle0x_3, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[3].correctedAngles[0])
+LOG_ADD_DEBUG(LOG_FLOAT, angle0y_3, &angles.baseStationMeasurementsLh1[0].sensorMeasurements[3].correctedAngles[1])
+LOG_ADD_DEBUG(LOG_FLOAT, angle1x_3, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[3].correctedAngles[0])
+LOG_ADD_DEBUG(LOG_FLOAT, angle1y_3, &angles.baseStationMeasurementsLh1[1].sensorMeasurements[3].correctedAngles[1])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -683,7 +747,7 @@ LOG_ADD(LOG_FLOAT, angle1y_3, &angles.sensorMeasurementsLh1[3].baseStatonMeasure
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -693,7 +757,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -703,7 +767,7 @@ LOG_ADD(LOG_FLOAT, rawAngle0ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].angles[0])
 
 /**
  * @brief The raw V2 angle received by sensor 0 [rad]
@@ -713,7 +777,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1xlh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].angles[1])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -723,7 +787,7 @@ LOG_ADD(LOG_FLOAT, rawAngle1ylh2, &angles.sensorMeasurementsLh2[0].baseStatonMea
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -733,7 +797,7 @@ LOG_ADD(LOG_FLOAT, angle0x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeas
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.baseStationMeasurementsLh2[0].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -743,7 +807,7 @@ LOG_ADD(LOG_FLOAT, angle0y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeas
  * | Sweep | 1 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].correctedAngles[0])
 
 /**
  * @brief The V2 angle received by sensor 0, corrected using calibration data [rad]
@@ -753,29 +817,39 @@ LOG_ADD(LOG_FLOAT, angle1x_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeas
  * | Sweep | 2 |\n
  * | Sensor | 0 |\n
  */
-LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.sensorMeasurementsLh2[0].baseStatonMeasurements[1].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1y_0lh2, &angles.baseStationMeasurementsLh2[1].sensorMeasurements[0].correctedAngles[1])
 
 /**
  * @brief Rate of frames from the Lighthouse deck on the serial buss [1/s]
  */
-STATS_CNT_RATE_LOG_ADD(serRt, &serialFrameRate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(serRt, &serialFrameRate)
 
 /**
  * @brief Rate of frames from the Lighthouse deck that contains sweep data [1/s]
  */
-STATS_CNT_RATE_LOG_ADD(frmRt, &frameRate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(frmRt, &frameRate)
 
-STATS_CNT_RATE_LOG_ADD(cycleRt, &cycleRate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(cycleRt, &cycleRate)
 
-STATS_CNT_RATE_LOG_ADD(bs0Rt, &bs0Rate)
-STATS_CNT_RATE_LOG_ADD(bs1Rt, &bs1Rate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(bs0Rt, &bs0Rate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(bs1Rt, &bs1Rate)
 
-LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
-LOG_ADD(LOG_UINT16, width1, &pulseWidth[1])
-LOG_ADD(LOG_UINT16, width2, &pulseWidth[2])
-LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
+STATS_CNT_RATE_LOG_ADD_DEBUG(preThRt, &preThrottleRate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(postThRt, &postThrottleRate)
+
+LOG_ADD_DEBUG(LOG_UINT16, width0, &pulseWidth[0])
+LOG_ADD_DEBUG(LOG_UINT16, width1, &pulseWidth[1])
+LOG_ADD_DEBUG(LOG_UINT16, width2, &pulseWidth[2])
+LOG_ADD_DEBUG(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
+
+/**
+ * @brief Bit field indicating which base stations that are available
+ *
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
+ */
+LOG_ADD_CORE(LOG_UINT16, bsAvailable, &baseStationAvailabledMap)
 
 /**
  * @brief Bit field indicating which base stations that are received by the lighthouse deck
@@ -833,13 +907,13 @@ PARAM_ADD_CORE(PARAM_UINT8, method, &estimationMethod)
  */
 PARAM_ADD_CORE(PARAM_UINT8, bsCalibReset, &calibStatusReset)
 /**
- * @brief Lighthouse basestation version: 1: LighthouseV1, 2:LighthouseV2
+ * @brief Lighthouse baseStation version: 1: LighthouseV1, 2:LighthouseV2
  *  (default: 2)
  */
 PARAM_ADD_CORE(PARAM_UINT8, systemType, &systemType)
 
 /**
- * @brief Bit field that indicates which base stations that are supported by the system
+ * @brief Bit field that indicates which base stations that are supported by the system - deprecated (removed after August 2023)
  *
  * The lowest bit maps to base station channel 1 and the highest to channel 16.
  */

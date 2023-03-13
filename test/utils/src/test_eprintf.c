@@ -258,6 +258,13 @@ void testThatAllIntTypesArePrinted() {
   verify("FFFFFFFFFFFFFFFF", "%llX", (uint64_t)0xFFFFFFFFFFFFFFFF);
 }
 
+void testThatPercentIsPrinted() {
+  // Fixture
+  // Test
+  // Assert
+  verify("This is 100% correct", "This is %d%% correct", 100);
+}
+
 //////////////////////////////
 
 static int putcMock(int c) {

@@ -6,7 +6,6 @@
 #include "unity.h"
 #include "mock_system.h"
 #include "mock_storage.h"
-#include "mock_cfassert.h"
 #include "mock_lighthouse_position_est.h"
 #include "mock_lighthouse_calibration.h"
 #include "mock_lighthouse_core.h"

@@ -59,16 +59,25 @@ The `config` file needs to enable ESTIMATOR_OOT, and can also set other config o
 CONFIG_ESTIMATOR_OOT=y
 ```
 
-in [your_estimator_out_of_tree].c in the src folder you will just need to make sure that the following functions are filled:
+in [your_estimator_out_of_tree].c in the src folder you will just need to make sure that the following functions are implemented:
 
 * ```init = estimatorOutOfTreeInit```
 * ```test = estimatorOutOfTreeTest```
 * ```update = estimatorOutOfTree```
-* ```name = "OOT```
 
 # OOT Controllers
 
-Not yet implemented. Please request this feature in the [crazyflie-firmware issue list](https://github.com/bitcraze/crazyflie-firmware/issues)
+The `config` file needs to enable CONTROLLER_OOT, and can also set other config options:
+
+```
+CONFIG_CONTROLLER_OOT=y
+```
+
+in [your_controller_out_of_tree].c in the src folder you will just need to make sure that the following functions are implemented:
+
+* ```init = controllerOutOfTreeInit```
+* ```test = controllerOutOfTreeTest```
+* ```update = controllerOutOfTree```
 
 # App layer
 Technically the app layer is an example of an out of tree build. Follow the [app layer instructions](/docs/userguides/app_layer.md) for this.

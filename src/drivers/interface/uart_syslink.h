@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -95,6 +95,14 @@ void uartslkResumeRx(void);
 struct crtpLinkOperations * uartslkGetLink();
 
 /**
+ * @brief Enable posting of incoming data to the message queue.
+ * This function should be called when the consumers of syslink data
+ * have been started to avoid queue overflow. Before this function is called, incoming syslink data is
+ * discarded.
+ */
+void uartslkEnableIncoming();
+
+/**
  * Get data from rx queue. Blocks until data is available.
  * @param[out] slp Pointer to a complete syslink packet
  */
@@ -130,5 +138,9 @@ int uartslkPutchar(int ch);
  */
 void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data);
 
+/**
+ * @brief Dump debug information to the console about the syslink performance
+ */
+void uartSyslinkDumpDebugProbe();
 
 #endif /* UART_SYSLINK_H_ */

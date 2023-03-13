@@ -213,3 +213,38 @@ void testRemoveAndStoreBiggerWhenMemoryIsFull(void) {
   TEST_ASSERT_EQUAL(true, actualDelete);
   TEST_ASSERT_EQUAL(false, actualStore);
 }
+
+void testStorageStatistics(void) {
+  // Fixture
+  // Fill memory
+  char *name = "hello";
+  uint32_t i = 42;
+  kveStore(&kve, name, &i, sizeof(i));
+  // Test
+  kveStats_t stats;
+  kveGetStats(&kve, &stats);
+  // Assert
+  TEST_ASSERT_EQUAL(strlen(name), stats.keySize);
+  TEST_ASSERT_EQUAL(sizeof(i), stats.dataSize);
+  TEST_ASSERT_EQUAL(3, stats.metadataSize);
+  TEST_ASSERT_EQUAL(strlen(name) + sizeof(i) + 3, stats.itemSize);
+  TEST_ASSERT_EQUAL(1, stats.totalItems);
+  TEST_ASSERT_EQUAL(strlen(name) + sizeof(i) + 3, stats.totalSize - stats.freeSpace);
+  TEST_ASSERT_EQUAL(0, stats.fragmentation);
+  TEST_ASSERT_EQUAL(0, stats.holeSize);
+  TEST_ASSERT_EQUAL(strlen(name) + sizeof(i) + 3, stats.totalSize - stats.spaceLeftUntilForcedDefrag);
+}
+
+void testFragmentationStatisticsIncreaseWhenFragmented(void) {
+  // Fixture
+  // Fill memory
+  char data[128];
+  kveStore(&kve, "hello", data, sizeof(data));
+  kveDelete(&kve, "hello");
+  kveStore(&kve, "hello", data, sizeof(data));
+  // Test
+  kveStats_t stats;
+  kveGetStats(&kve, &stats);
+  // Assert
+  TEST_ASSERT_NOT_EQUAL(0, stats.fragmentation);
+}

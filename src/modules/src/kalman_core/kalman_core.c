@@ -64,7 +64,6 @@
 #include "math3d.h"
 #include "static_mem.h"
 
-#include "lighthouse_calibration.h"
 // #define DEBUG_STATE_CHECK
 
 // the reversion of pitch and roll to zero
@@ -153,7 +152,7 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
   params->initialYaw = 0.0;
 }
 
-void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params)
+void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs)
 {
   // Reset all data to 0 (like upon system reset)
   memset(this, 0, sizeof(kalmanCoreData_t));
@@ -204,6 +203,10 @@ void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params)
   this->Pm.pData = (float*)this->P;
 
   this->baroReferenceHeight = 0.0;
+
+  this->isUpdated = false;
+  this->lastPredictionMs = nowMs;
+  this->lastProcessNoiseUpdateMs = nowMs;
 }
 
 void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
@@ -274,6 +277,8 @@ void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm,
   }
 
   assertStateNotNaN(this);
+
+  this->isUpdated = true;
 }
 
 void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error)
@@ -310,6 +315,7 @@ void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm
     }
     assertStateNotNaN(this);
 
+    this->isUpdated = true;
 }
 
 void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float baroAsl, bool quadIsFlying)
@@ -328,7 +334,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *
   kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], params->measNoiseBaro);
 }
 
-void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
+static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order
    * to push the covariance forward.
@@ -561,24 +567,30 @@ void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float 
   float norm = arm_sqrt(tmpq0*tmpq0 + tmpq1*tmpq1 + tmpq2*tmpq2 + tmpq3*tmpq3) + EPS;
   this->q[0] = tmpq0/norm; this->q[1] = tmpq1/norm; this->q[2] = tmpq2/norm; this->q[3] = tmpq3/norm;
   assertStateNotNaN(this);
+
+  this->isUpdated = true;
 }
 
-void kalmanCoreAddProcessNoise(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float dt)
+void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, const uint32_t nowMs, bool quadIsFlying) {
+  float dt = (nowMs - this->lastPredictionMs) / 1000.0f;
+  predictDt(this, acc, gyro, dt, quadIsFlying);
+  this->lastPredictionMs = nowMs;
+}
+
+
+static void addProcessNoiseDt(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float dt)
 {
-  if (dt>0)
-  {
-    this->P[KC_STATE_X][KC_STATE_X] += powf(params->procNoiseAcc_xy*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
-    this->P[KC_STATE_Y][KC_STATE_Y] += powf(params->procNoiseAcc_xy*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
-    this->P[KC_STATE_Z][KC_STATE_Z] += powf(params->procNoiseAcc_z*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
+  this->P[KC_STATE_X][KC_STATE_X] += powf(params->procNoiseAcc_xy*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
+  this->P[KC_STATE_Y][KC_STATE_Y] += powf(params->procNoiseAcc_xy*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
+  this->P[KC_STATE_Z][KC_STATE_Z] += powf(params->procNoiseAcc_z*dt*dt + params->procNoiseVel*dt + params->procNoisePos, 2);  // add process noise on position
 
-    this->P[KC_STATE_PX][KC_STATE_PX] += powf(params->procNoiseAcc_xy*dt + params->procNoiseVel, 2); // add process noise on velocity
-    this->P[KC_STATE_PY][KC_STATE_PY] += powf(params->procNoiseAcc_xy*dt + params->procNoiseVel, 2); // add process noise on velocity
-    this->P[KC_STATE_PZ][KC_STATE_PZ] += powf(params->procNoiseAcc_z*dt + params->procNoiseVel, 2); // add process noise on velocity
+  this->P[KC_STATE_PX][KC_STATE_PX] += powf(params->procNoiseAcc_xy*dt + params->procNoiseVel, 2); // add process noise on velocity
+  this->P[KC_STATE_PY][KC_STATE_PY] += powf(params->procNoiseAcc_xy*dt + params->procNoiseVel, 2); // add process noise on velocity
+  this->P[KC_STATE_PZ][KC_STATE_PZ] += powf(params->procNoiseAcc_z*dt + params->procNoiseVel, 2); // add process noise on velocity
 
-    this->P[KC_STATE_D0][KC_STATE_D0] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
-    this->P[KC_STATE_D1][KC_STATE_D1] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
-    this->P[KC_STATE_D2][KC_STATE_D2] += powf(params->measNoiseGyro_yaw * dt + params->procNoiseAtt, 2);
-  }
+  this->P[KC_STATE_D0][KC_STATE_D0] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
+  this->P[KC_STATE_D1][KC_STATE_D1] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
+  this->P[KC_STATE_D2][KC_STATE_D2] += powf(params->measNoiseGyro_yaw * dt + params->procNoiseAtt, 2);
 
   for (int i=0; i<KC_STATE_DIM; i++) {
     for (int j=i; j<KC_STATE_DIM; j++) {
@@ -596,10 +608,22 @@ void kalmanCoreAddProcessNoise(kalmanCoreData_t *this, const kalmanCoreParams_t 
   assertStateNotNaN(this);
 }
 
+void kalmanCoreAddProcessNoise(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs) {
+  float dt = (nowMs - this->lastProcessNoiseUpdateMs) / 1000.0f;
+  if (dt > 0.0f) {
+    addProcessNoiseDt(this, params, dt);
+    this->lastProcessNoiseUpdateMs = nowMs;
+  }
+}
 
-
-void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
+bool kalmanCoreFinalize(kalmanCoreData_t* this)
 {
+  // Only finalize if data is updated
+  if (! this->isUpdated) {
+    return false;
+  }
+
+
   // Matrix to rotate the attitude covariances once updated
   NO_DMA_CCM_SAFE_ZERO_INIT static float A[KC_STATE_DIM][KC_STATE_DIM];
   static arm_matrix_instance_f32 Am = {KC_STATE_DIM, KC_STATE_DIM, (float *)A};
@@ -710,13 +734,15 @@ void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick)
   }
 
   assertStateNotNaN(this);
+
+  this->isUpdated = false;
+  return true;
 }
 
-void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, const Axis3f *acc, uint32_t tick)
+void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, const Axis3f *acc)
 {
   // position state is already in world frame
   state->position = (point_t){
-      .timestamp = tick,
       .x = this->S[KC_STATE_X],
       .y = this->S[KC_STATE_Y],
       .z = this->S[KC_STATE_Z]
@@ -724,7 +750,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 
   // velocity is in body frame and needs to be rotated to world frame
   state->velocity = (velocity_t){
-      .timestamp = tick,
       .x = this->R[0][0]*this->S[KC_STATE_PX] + this->R[0][1]*this->S[KC_STATE_PY] + this->R[0][2]*this->S[KC_STATE_PZ],
       .y = this->R[1][0]*this->S[KC_STATE_PX] + this->R[1][1]*this->S[KC_STATE_PY] + this->R[1][2]*this->S[KC_STATE_PZ],
       .z = this->R[2][0]*this->S[KC_STATE_PX] + this->R[2][1]*this->S[KC_STATE_PY] + this->R[2][2]*this->S[KC_STATE_PZ]
@@ -734,7 +759,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
   // Furthermore, the legacy code requires acc.z to be acceleration without gravity.
   // Finally, note that these accelerations are in Gs, and not in m/s^2, hence - 1 for removing gravity
   state->acc = (acc_t){
-      .timestamp = tick,
       .x = this->R[0][0]*acc->x + this->R[0][1]*acc->y + this->R[0][2]*acc->z,
       .y = this->R[1][0]*acc->x + this->R[1][1]*acc->y + this->R[1][2]*acc->z,
       .z = this->R[2][0]*acc->x + this->R[2][1]*acc->y + this->R[2][2]*acc->z - 1
@@ -747,7 +771,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
 
   // Save attitude, adjusted for the legacy CF2 body coordinate system
   state->attitude = (attitude_t){
-      .timestamp = tick,
       .roll = roll*RAD_TO_DEG,
       .pitch = -pitch*RAD_TO_DEG,
       .yaw = yaw*RAD_TO_DEG
@@ -756,7 +779,6 @@ void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, co
   // Save quaternion, hopefully one day this could be used in a better controller.
   // Note that this is not adjusted for the legacy coordinate system
   state->attitudeQuaternion = (quaternion_t){
-      .timestamp = tick,
       .w = this->q[0],
       .x = this->q[1],
       .y = this->q[2],

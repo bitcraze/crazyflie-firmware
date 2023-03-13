@@ -68,6 +68,7 @@ bool deckTest(void);
 #define DECK_USING_TIMER5  (1 << 14)
 #define DECK_USING_TIMER10 (1 << 16)
 #define DECK_USING_TIMER14 (1 << 15)
+#define DECK_USING_TIMER9  (1 << 17)
 
 struct deckInfo_s;
 struct deckFwUpdate_s;

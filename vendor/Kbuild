@@ -279,6 +279,7 @@ obj-y += FreeRTOS/portable/MemMang/heap_4.o
 obj-y += FreeRTOS/queue.o
 obj-y += FreeRTOS/tasks.o
 obj-y += FreeRTOS/timers.o
+obj-y += FreeRTOS/stream_buffer.o
 
 # libdw1000
 obj-y += libdw1000/src/libdw1000.o

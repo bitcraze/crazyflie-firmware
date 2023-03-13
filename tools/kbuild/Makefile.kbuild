@@ -339,11 +339,9 @@ endif
 # Detect when mixed targets is specified, and make a second invocation
 # of make so .config is not included in this case either (for *config).
 
-version_h := include/generated/version.h
-
 no-dot-config-targets := clean mrproper distclean \
 			 cscope help% %docs check% coccicheck \
-			 $(version_h) headers_% archheaders archscripts \
+			 headers_% archheaders archscripts \
 			 kernelversion %src-pkg
 
 config-targets := 0
@@ -614,7 +612,7 @@ endif
 # prepare2 creates a makefile if using a separate output directory
 prepare2: prepare3 outputmakefile
 
-prepare1: prepare2 $(version_h) include/config/auto.conf
+prepare1: prepare2 include/config/auto.conf
 
 archprepare:
 
@@ -629,16 +627,6 @@ prepare: prepare0
 
 # KERNELRELEASE can change from a few different places, meaning version.h
 # needs to be updated, so this check is forced on all builds
-
-define filechk_version.h
-	(echo \#define firmware_VERSION_CODE $(shell                         \
-	expr $(VERSION) \* 65536 + 0$(PATCHLEVEL) \* 256 + 0$(SUBLEVEL)); \
-	echo '#define firmware_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))';)
-endef
-
-$(version_h): $(srctree)/Makefile FORCE
-	$(call filechk,version.h)
-
 
 PHONY += headerdep
 headerdep:

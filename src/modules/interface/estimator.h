@@ -29,15 +29,18 @@
 #include "stabilizer_types.h"
 
 typedef enum {
-  anyEstimator = 0,
-  complementaryEstimator,
+  StateEstimatorTypeAutoSelect = 0,
+  StateEstimatorTypeComplementary,
 #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
-  kalmanEstimator,
+  StateEstimatorTypeKalman,
+#endif
+#ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+  StateEstimatorTypeUkf,
 #endif
 #ifdef CONFIG_ESTIMATOR_OOT
-  OutOfTreeEstimator,
+  StateEstimatorTypeOutOfTree,
 #endif
-  StateEstimatorTypeCount,
+  StateEstimatorType_COUNT,
 } StateEstimatorType;
 
 typedef enum {
@@ -79,7 +82,7 @@ void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
 void stateEstimator(state_t *state, const uint32_t tick);
-StateEstimatorType getStateEstimator(void);
+StateEstimatorType stateEstimatorGetType(void);
 const char* stateEstimatorGetName();
 
 // Support to incorporate additional sensors into the state estimate via the following functions

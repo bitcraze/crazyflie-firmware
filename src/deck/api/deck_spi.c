@@ -96,7 +96,7 @@ void spiBegin(void)
   GPIO_InitTypeDef GPIO_InitStructure;
 
   // binary semaphores created using xSemaphoreCreateBinary() are created in a state
-  // such that the the semaphore must first be 'given' before it can be 'taken'
+  // such that the semaphore must first be 'given' before it can be 'taken'
   txComplete = xSemaphoreCreateBinary();
   rxComplete = xSemaphoreCreateBinary();
   spiMutex = xSemaphoreCreateMutex();
@@ -181,7 +181,7 @@ static void spiDMAInit()
   DMA_Init(SPI_RX_DMA_STREAM, &DMA_InitStructure);
 
   // Configure interrupts
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_SPI_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 

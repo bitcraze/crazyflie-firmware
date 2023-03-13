@@ -357,7 +357,7 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle); // TODO optimize STACK SIZE
   rangingInit();
 //  routingInit();
-  floodingInit();
+//  floodingInit();
 
 }
 /*********** Deck driver initialization ***************/
@@ -398,7 +398,7 @@ static const DeckDriver dwm3000_deck = {
     .usedGpio = DECK_USING_IO_1 | DECK_USING_UART1,
 #endif
     .usedPeriph = DECK_USING_SPI,
-    .requiredEstimator = kalmanEstimator,
+    .requiredEstimator = StateEstimatorTypeKalman,
 #ifdef ADHOCDECK_NO_LOW_INTERFERENCE
     .requiredLowInterferenceRadioMode = false,
 #else

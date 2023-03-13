@@ -7,11 +7,12 @@ config DECK_ACTIVE_MARKER
         can set up to 4 different IDs giving you the possibility to uniqly
         identify a large number of rigid bodies, without the need of many
         reflective markers.
-    
+
 config DECK_AI
     bool "Support the AI deck"
+    select ENABLE_CPX
+    select ENABLE_CPX_ON_UART2
     default y
-    depends on !DEBUG_PRINT_ON_UART1
     help
         The AI-deck 1.1 extends the computational capabilities and will
         enable complex artificial intelligence-based workloads to run
@@ -37,7 +38,7 @@ choice
 endchoice
 
 menu "Credentials for access-point"
-    depends on DECK_AI  
+    depends on DECK_AI
     depends on !DECK_AI_WIFI_NO_SETUP
     config DECK_AI_SSID
         string "WiFi SSID"
@@ -50,11 +51,11 @@ menu "Credentials for access-point"
         default "mypassword"
         help
             WiFi password (Minimum length of 8)
-endmenu   
+endmenu
 
 config DECK_BIGQUAD
     bool "Support the BigQuad deck"
-    default y
+    default n
     help
         With the BigQuad deck you can transform your Crazyflie 2.X to a
         bigger quad by connecting external Electronic speed controllers
@@ -64,18 +65,23 @@ config DECK_BIGQUAD
         accessories such as external receiver (CPPM input) and GPS.
         It can also monitor battery voltage and current.
 
-config DECK_BIGQUAD_ENABLE
-    bool "Enable Bigquad deck capabilities"
+config DECK_BIGQUAD_BAT_VOLT_MULT_MV
+    int "Battery voltage divider multiplier (in mV)."
     depends on DECK_BIGQUAD
-    default n
+    default 7800
+
+config DECK_BIGQUAD_BAT_AMP_PER_VOLT_MA
+    int "Battery ampere per volt (in mA)."
+    depends on DECK_BIGQUAD
+    default 1000
 
 config DECK_BIGQUAD_ENABLE_OSD
-    depends on DECK_BIGQUAD_ENABLE
+    depends on DECK_BIGQUAD
     bool "Enable Bigquad deck OSD"
     default n
 
 config DECK_BIGQUAD_ENABLE_PM
-    depends on DECK_BIGQUAD_ENABLE
+    depends on DECK_BIGQUAD
     bool "Enable Bigquad deck PM"
     default n
 
@@ -95,6 +101,79 @@ config DECK_CPPM
     default n
     help
       Combined PPM / PPM-Sum driver.
+
+choice
+  prompt "ExtRx CPPM pin"
+  depends on DECK_CPPM
+  default DECK_CPPM_USE_PA7
+
+config DECK_CPPM_USE_PB4
+    bool "PB4/IO_3"
+
+config DECK_CPPM_USE_PB5
+    bool "PB5/IO_2"
+
+config DECK_CPPM_USE_PB8
+    bool "PB8/IO_1"
+
+config DECK_CPPM_USE_PA2
+    bool "PA2/TX2"
+
+config DECK_CPPM_USE_PA3
+    bool "PA3/RX2"
+
+config DECK_CPPM_USE_PA7
+    bool "PA7/MOSI"
+
+endchoice
+
+config DECK_EXTRX_ALT_HOLD
+    bool "Enable altitude hold via ExtRx"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE || DECK_FLAPPER_ENABLE
+    help
+        Switch to altitude hold via ch4 of the external receiver.
+
+config DECK_EXTRX_ARMING
+    bool "Enable arming via ExtRx"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE
+    help
+        Arming via ch5 of the external receiver.
+
+config DECK_EXTRX_MODE_RATE
+    bool "Enable rate mode via ExtRx"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE
+    help
+        Switch to rate mode via ch6 of the external receiver.
+
+config DECK_EXTRX_TAER
+    bool "Use TAER channel mapping"
+    default n
+    depends on DECK_CPPM || DECK_BIGQUAD_ENABLE
+    help
+        Expecting TAER channel mapping instead of the default AETR.
+
+config DECK_FLAPPER
+    bool "Enable Flapper Nimble+ PCB functionality"
+    default n
+    help
+        Enables Flapper Nimble+ PCB with current measurements via ADC on PA2/TX2 and external receiver.
+
+config DECK_FLAPPER_MEASURE_VBAT_ON_PA3
+    bool "Measure VBAT on PA3"
+    default n
+    depends on DECK_FLAPPER
+    help
+        Enables measuring external battery voltage on PA3 (Flapper Nimble+ PCB).
+
+config DECK_FLAPPER_EXTRX_ENABLE
+    bool "Enable external RX"
+    default n
+    depends on DECK_FLAPPER
+    help
+        Enables external receiver on PA3 (Flapper Nimble+ PCB).
 
 config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"
@@ -179,13 +258,13 @@ config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
     help
         Use the lighthouse system as a groundtruth. This will also switch the
         estimation method to the crossing beam position estimate and not send the
-        position to the kalman estimator and you can 
+        position to the kalman estimator and you can
         read out the positioning from the loggin lighthouse.x.y.z
 
 config DECK_LIGHTHOUSE_MAX_N_BS
   int "Max number of base stations"
   depends on DECK_LIGHTHOUSE
-  default 2
+  default 4
   range 2 16
   help
       Set the max number of base stations supported. NOTE: This is only
@@ -193,7 +272,7 @@ config DECK_LIGHTHOUSE_MAX_N_BS
 
 config DECK_ADHOC
   bool "Support the Adhoc deck"
-  default y
+  default n
   help
       The Adhoc deck is used for ranging, networking and communication within the 
       swarm, based on the DW3000 UWB chip.
@@ -235,6 +314,15 @@ config DECK_LOCO
        LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of
        default (RX1, TX1), leaving UART1 free for use.
 
+  config LOCODECK_ALT_PIN_RESET
+  bool "Set pin GPIO_IO4 for reset on the LOCO deck"
+  default name
+  depends on DECK_LOCODECK_USE_ALT_PINS
+  help
+      Only works when LOCODECK_USE_ALT_PINS is set. For instance useful with
+      Loco + Lighhouse + Flow decks where IO_3 collides with the Flow deck.
+      Requires modified Loco deck with connection to GPIO_IO4.
+
   config DECK_LOCO_NR_OF_ANCHORS
   int "The number of anchors in use"
   default 8
@@ -263,11 +351,12 @@ endchoice
 
 config DECK_LOCO_FULL_TX_POWER
     bool "Full TX power"
+    depends on DECK_LOCO
     default n
 
 config DECK_LOCO_LONGER_RANGE
     bool "Longer range mode"
-    depends on DECK_LOCO_ALGORITHM_TDOA3
+    depends on DECK_LOCO && DECK_LOCO_ALGORITHM_TDOA3
     default n
     help
         Note that anchors need to be built with support for this as well
@@ -359,3 +448,15 @@ config DECK_ZRANGER2
         a constant distance to the objects under it when flying in automatic
         mode. Over a floor it will stay on the same height, but will follow
         the flow of a stair case up or down when going on adventures.
+
+config DECK_CPX_HOST_ON_UART2
+  bool "Support wired external host using CPX on UART2"
+  select ENABLE_CPX
+  select ENABLE_CPX_ON_UART2
+  default n
+  help
+      This enables the driver for using CPX (and CRTP) over UART2 to a wired host
+      (like a Raspberry Pi). Note, that the driver for this will have to be
+      forced, since this is intended to be used without actually having a proper
+      deck attached (i.e there will be no 1-wire memory to automatically detect
+      and start the driver).

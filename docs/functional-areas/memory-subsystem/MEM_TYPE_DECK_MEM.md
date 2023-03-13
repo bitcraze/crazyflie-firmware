@@ -169,6 +169,7 @@ Also implement the `write_mem` and `read_mem` functions as needed, depending on 
 Some decks have the need to support two hardware devices with two firmwares and memory mappings, like the AI deck with
 the ESP and the GAP8 modules. To support this, it is possible to add a second `DeckMemDef_t` definition:
 
+```
 static const DeckMemDef_t memoryDefEsp = {
   .write = write_esp,
   .read = read_esp,
@@ -192,9 +193,10 @@ static const DeckMemDef_t memoryDefGap8 = {
 
   .id = "gap8"
 };
-
+```
 And then you can add them like:
 
+```
 static const DeckDriver aideck_deck = {
     .vid = 0xBC,
     .pid = 0x12,
@@ -209,6 +211,7 @@ static const DeckDriver aideck_deck = {
     .memoryDef = memoryDefEsp,
     .memoryDefSecondary = memoryDefGap8,
 };
+```
 
 And the names visible to the lib would be:
     "bcAI:esp" and

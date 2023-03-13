@@ -58,10 +58,6 @@
 #define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
 #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
-// Compensate thrust depending on battery voltage so it will produce about the same
-// amount of thrust independent of the battery voltage. Based on thrust measurement.
-// Not applied for brushless motor setup.
-#define ENABLE_THRUST_BAT_COMPENSATED
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
 /**
@@ -250,7 +246,8 @@ typedef struct {
   uint16_t onPeriodMsec;
   uint16_t offPeriodMsec;
   uint16_t varianceMeasurementStartMsec;
-  uint16_t onPeriodPWMRatio;
+  uint16_t onPeriodPWMRatioProp;
+  uint16_t onPeriodPWMRatioBat;
 } MotorHealthTestDef;
 
 /**
@@ -351,5 +348,15 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
  */
 const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
 
-#endif /* __MOTORS_H__ */
+/**
+ * @brief Utility function to calculate thrust (actually PWM ratio), compensated for the battery state
+ * Note: both input and output may be outside the valid PWM range.
+ *
+ * @param id The id of the motor
+ * @param ithrust The desired thrust
+ * @param supplyVoltage The battery voltage
+ * @return float The PWM ratio required to get the desired thrust given the battery state.
+ */
+float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage);
 
+#endif /* __MOTORS_H__ */

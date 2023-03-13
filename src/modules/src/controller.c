@@ -6,26 +6,31 @@
 #include "controller_pid.h"
 #include "controller_mellinger.h"
 #include "controller_indi.h"
+#include "controller_brescianini.h"
 
 #include "autoconf.h"
 
 #define DEFAULT_CONTROLLER ControllerTypePID
-static ControllerType currentController = ControllerTypeAny;
+static ControllerType currentController = ControllerTypeAutoSelect;
 
 static void initController();
 
 typedef struct {
   void (*init)(void);
   bool (*test)(void);
-  void (*update)(control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick);
+  void (*update)(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick);
   const char* name;
 } ControllerFcns;
 
 static ControllerFcns controllerFunctions[] = {
   {.init = 0, .test = 0, .update = 0, .name = "None"}, // Any
   {.init = controllerPidInit, .test = controllerPidTest, .update = controllerPid, .name = "PID"},
-  {.init = controllerMellingerInit, .test = controllerMellingerTest, .update = controllerMellinger, .name = "Mellinger"},
+  {.init = controllerMellingerFirmwareInit, .test = controllerMellingerFirmwareTest, .update = controllerMellingerFirmware, .name = "Mellinger"},
   {.init = controllerINDIInit, .test = controllerINDITest, .update = controllerINDI, .name = "INDI"},
+  {.init = controllerBrescianiniInit, .test = controllerBrescianiniTest, .update = controllerBrescianini, .name = "Brescianini"},
+  #ifdef CONFIG_CONTROLLER_OOT
+  {.init = controllerOutOfTreeInit, .test = controllerOutOfTreeTest, .update = controllerOutOfTree, .name = "OutOfTree"},
+  #endif
 };
 
 
@@ -36,7 +41,7 @@ void controllerInit(ControllerType controller) {
 
   currentController = controller;
 
-  if (ControllerTypeAny == currentController) {
+  if (ControllerTypeAutoSelect == currentController) {
     currentController = DEFAULT_CONTROLLER;
   }
 
@@ -46,12 +51,14 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeINDI
   #elif defined(CONFIG_CONTROLLER_MELLINGER)
     #define CONTROLLER ControllerTypeMellinger
+  #elif defined(CONFIG_CONTROLLER_BRESCIANINI)
+    #define CONTROLLER ControllerTypeBrescianini
   #else
-    #define CONTROLLER ControllerTypeAny
+    #define CONTROLLER ControllerTypeAutoSelect
   #endif
 
   ControllerType forcedController = CONTROLLER;
-  if (forcedController != ControllerTypeAny) {
+  if (forcedController != ControllerTypeAutoSelect) {
     DEBUG_PRINT("Controller type forced\n");
     currentController = forcedController;
   }
@@ -61,7 +68,7 @@ void controllerInit(ControllerType controller) {
   DEBUG_PRINT("Using %s (%d) controller\n", controllerGetName(), currentController);
 }
 
-ControllerType getControllerType(void) {
+ControllerType controllerGetType(void) {
   return currentController;
 }
 
@@ -73,7 +80,7 @@ bool controllerTest(void) {
   return controllerFunctions[currentController].test();
 }
 
-void controller(control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
+void controller(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
   controllerFunctions[currentController].update(control, setpoint, sensors, state, tick);
 }
 

@@ -52,7 +52,7 @@ INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interf
 INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
 INCLUDES += -I$(srctree)/src/drivers/esp32/interface
 INCLUDES += -I$(srctree)/src/hal/interface
-INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse
+INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR
 INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
 INCLUDES += -I$(LIB)/FatFS
 INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
@@ -102,6 +102,11 @@ endif
 ifeq ($(CONFIG_PLATFORM_BOLT), y)
 PLATFORM = bolt
 endif
+
+ifeq ($(CONFIG_PLATFORM_FLAPPER),y)
+PLATFORM = flapper
+endif
+
 
 PLATFORM  ?= cf2
 PROG ?= $(PLATFORM)
@@ -211,14 +216,16 @@ ifeq ($(KBUILD_SRC),)
 MOD_INC = src/modules/interface
 MOD_SRC = src/modules/src
 
-bindings_python cffirmware.py: bindings/setup.py $(MOD_SRC)/*.c
+bindings_python build/cffirmware.py: bindings/setup.py $(MOD_SRC)/*.c
 	swig -python -I$(MOD_INC) -Isrc/hal/interface -Isrc/utils/interface -o build/cffirmware_wrap.c bindings/cffirmware.i
 	$(PYTHON) bindings/setup.py build_ext --inplace
-	mv build/cffirmware.py cffirmware.py
 
-test_python: cffirmware.py
-	$(PYTHON) -m pytest test_python
+test_python: build/cffirmware.py
+	PYTHONPATH=build $(PYTHON) -m pytest test_python
+
+python_wheel: build/cffirmware.py
+	$(PYTHON) bindings/setup.py bdist_wheel
 endif
 
-.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python
+.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
 

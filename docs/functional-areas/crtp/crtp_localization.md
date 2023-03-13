@@ -16,7 +16,7 @@ External Position
 -----------------
 
 This packet is used to send the Crazyflie position as acquired by an
-external system. The main use it to send the position acquired by a
+external system. The main use is to send the position acquired by a
 motion capture system to push it in the Extended Kalman Filter to allow
 the Crazyflie to calculate an estimate and control its state.
 

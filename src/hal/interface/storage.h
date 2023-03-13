@@ -82,7 +82,7 @@ size_t storageFetch(const char *key, void* buffer, size_t length);
  *
  * @param[key] Null terminated string for the key. Its length must be between 1 and 255.
  *
- * @return true in case of success. false if the key was not found or if an error occured.
+ * @return true in case of success. false if the key was not found or if an error occurred.
  */
 bool storageDelete(const char* key);
 
@@ -97,3 +97,20 @@ typedef bool (*storageFunc_t)(const char *key, void *buffer, size_t length);
  * @return true in case of success.
  */
 bool storageForeach(const char* prefix, storageFunc_t func);
+
+/**
+ * Print storage information on the debug console
+ *
+ * This function locks the storage while getting the stats.
+ */
+void storagePrintStats();
+
+/**
+ * @brief Reformat the storage.
+ *
+ * Warning! All stored data will be lost!
+ *
+ * @return true   Format was successful
+ * @return false  Format failed
+ */
+bool storageReformat();

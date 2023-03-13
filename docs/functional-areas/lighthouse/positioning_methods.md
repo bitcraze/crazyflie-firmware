@@ -9,8 +9,8 @@ There are two basic methods for estimating the position of the Lighthouse deck, 
 
 This was the first method to be implemented and is simple and robust, but requires two base stations to be visible.
 
-The idea is to calculate the vectors from two basestation to a sensor on the Lighthouse deck. This vector is defined by the
-intersection line between the two lightplanes of the base station and is sometimes referred to as a "beam", hence the name.
+The idea is to calculate the vectors from two base station to a sensor on the Lighthouse deck. This vector is defined by the
+intersection line between the two light planes of the base station and is sometimes referred to as a "beam", hence the name.
 
 In theory the beams should cross in the point where the sensor is located, in real life there are errors and the
 beams will not exactly meet. To handle this the algorithm calculates the point that is closest to both beams instead, and uses
@@ -33,5 +33,5 @@ One base station is enough to estimate the position using this method, but more 
 
 ## Ground truth
 
-To use the lighthouse positioning as a ground truth measurement for your research, you should enable the 'lighthouse positioning system as groundtruth' in the [kbuild Expansion deck configuration](/docs/development/kbuild.md).  
+To use the lighthouse positioning as a ground truth measurement for your research, you should enable the 'lighthouse positioning system as groundtruth' in the [kbuild Expansion deck configuration](/docs/development/kbuild.md).
  This will default the position estimator for lighthouse to be crossing beam (which you should not change), and you will be able to get the X, Y, Z position from the logs ```lighthouse.x/.y/.z```

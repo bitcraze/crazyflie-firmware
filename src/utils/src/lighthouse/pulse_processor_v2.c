@@ -255,7 +255,7 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         float firstBeam = (firstOffset * 2 * M_PI_F / period) - M_PI_F + M_PI_F / 3.0f;
         float secondBeam = (secondOffset * 2 * M_PI_F / period) - M_PI_F - M_PI_F / 3.0f;
 
-        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurementsLh2[i].baseStatonMeasurements[channel];
+        pulseProcessorSensorMeasurement_t* measurement = &angles->baseStationMeasurementsLh2[channel].sensorMeasurements[i];
         measurement->angles[0] = firstBeam;
         measurement->angles[1] = secondBeam;
         measurement->validCount = 2;
@@ -285,7 +285,7 @@ TESTABLE_STATIC bool handleCalibrationData(pulseProcessor_t *state, const pulseP
             const uint32_t timestamp0 = TS_DIFF(frameData->timestamp, frameData->offset);
 
             if (TS_ABS_DIFF_LARGER_THAN(timestamp0, prevTimestamp0, MIN_TICKS_BETWEEN_SLOW_BITS)) {
-                isFullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowbit);
+                isFullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowBit);
             }
 
             state->v2.ootxTimestamps[channel] = timestamp0;

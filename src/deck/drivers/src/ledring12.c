@@ -786,7 +786,7 @@ static void rssiEffect(uint8_t buffer[][3], bool reset)
 /**
  * An effect that shows the status of the lighthouse.
  *
- * Red means 0 angles, green means 16 angles (2 basestations x 4 crazyflie sensors x 2 sweeping directions).
+ * Red means 0 angles, green means 16 angles (2 base stations x 4 crazyflie sensors x 2 sweeping directions).
  */
 static void lighthouseEffect(uint8_t buffer[][3], bool reset)
 {

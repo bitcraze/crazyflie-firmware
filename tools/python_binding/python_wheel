@@ -1,0 +1,6 @@
+#!/bin/env bash
+set -e
+
+make cf2_defconfig
+make include/generated/autoconf.h
+make python_wheel

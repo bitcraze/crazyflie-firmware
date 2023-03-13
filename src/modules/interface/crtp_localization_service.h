@@ -75,7 +75,7 @@ void locSrvInit(void);
 // Send range in float. After 5 ranges it will send the packet.
 void locSrvSendRangeFloat(uint8_t id, float range);
 #ifdef CONFIG_DECK_LIGHTHOUSE
-void locSrvSendLighthouseAngle(int basestation, pulseProcessorResult_t* angles);
+void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles);
 #endif
 
 #endif /* _CRTP_LOCALIZATION_SERVICE_H_ */

@@ -132,6 +132,12 @@ void pmEnableExtBatteryCurrMeasuring(const deckPin_t pin, float ampPerVolt);
  */
 float pmMeasureExtBatteryCurrent(void);
 
+/*
+ * Ignore charging/charge state in the PM state machine.
+ * This can be useful if a platform doesn't have a charger.
+ */
+void pmIgnoreChargedState(bool ignore);
+
 /**
  * Register a callback to be run when the NRF51 signals shutdown
  */

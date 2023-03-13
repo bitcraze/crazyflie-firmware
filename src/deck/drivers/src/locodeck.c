@@ -65,10 +65,10 @@
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
   #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
 
-  #ifndef LOCODECK_ALT_PIN_RESET
+  #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
   #define GPIO_PIN_RESET 	DECK_GPIO_IO3
   #else
-  #define GPIO_PIN_RESET 	LOCODECK_ALT_PIN_RESET
+  #define GPIO_PIN_RESET 	DECK_GPIO_IO4
   #endif
 
   #define EXTI_PortSource EXTI_PortSourceGPIOB
@@ -174,6 +174,10 @@ static void rxCallback(dwDevice_t *dev)
 
 static void rxTimeoutCallback(dwDevice_t * dev) {
   timeout = algorithm->onEvent(dev, eventReceiveTimeout);
+}
+
+static void rxFailedCallback(dwDevice_t * dev) {
+  timeout = algorithm->onEvent(dev, eventReceiveFailed);
 }
 
 static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest) {
@@ -511,6 +515,7 @@ static void dwm1000Init(DeckInfo *info)
   dwAttachSentHandler(dwm, txCallback);
   dwAttachReceivedHandler(dwm, rxCallback);
   dwAttachReceiveTimeoutHandler(dwm, rxTimeoutCallback);
+  dwAttachReceiveFailedHandler(dwm, rxFailedCallback);
 
   dwNewConfiguration(dwm);
   dwSetDefaults(dwm);
@@ -540,7 +545,7 @@ static void dwm1000Init(DeckInfo *info)
 
   algoSemaphore= xSemaphoreCreateMutex();
 
-  xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, LPS_DECK_STACKSIZE, NULL,
                     LPS_DECK_TASK_PRI, &uwbTaskHandle);
 
   isInit = true;
@@ -567,16 +572,20 @@ static bool dwm1000Test()
 static const DeckDriver dwm1000_deck = {
   .vid = 0xBC,
   .pid = 0x06,
-  .name = "bcDWM1000",
+  .name = "bcLoco",
 
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
+  #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
   .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
+  #else
+  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
+  #endif
 #else
    // (PC10/PC11 is UART1 TX/RX)
   .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,
 #endif
   .usedPeriph = DECK_USING_SPI,
-  .requiredEstimator = kalmanEstimator,
+  .requiredEstimator = StateEstimatorTypeKalman,
   #ifdef LOCODECK_NO_LOW_INTERFERENCE
   .requiredLowInterferenceRadioMode = false,
   #else
@@ -592,9 +601,16 @@ DECK_DRIVER(dwm1000_deck);
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
+ * @brief Deprecated (removed after August 2023). Use the "deck.bcLoco" parameter instead.
+ *
+ * Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
+
+/**
+ * @brief Nonzero if [Loco positioning deck](%https://store.bitcraze.io/products/loco-positioning-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLoco, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
@@ -608,7 +624,7 @@ LOG_GROUP_STOP(ranging)
 LOG_GROUP_START(loco)
 
 /**
- * @brief The current mode of the Loco Positionning system
+ * @brief The current mode of the Loco Positioning system
  *
  * | Value | Mode   | \n
  * | -     | -      | \n
