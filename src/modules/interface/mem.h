@@ -103,7 +103,7 @@ uint16_t memGetNrOfOwMems();
 /**
  * @brief Get the type of a specific memory handler
  *
- * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order.
+ * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order, between 0 and memGetNrOfMems() - 1.
  * @return MemoryType_t The type of the memory handler
  */
 MemoryType_t memGetType(const uint16_t memId);
@@ -111,7 +111,7 @@ MemoryType_t memGetType(const uint16_t memId);
 /**
  * @brief Get the size of the mapped memory for a specific memory handler
  *
- * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order.
+ * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order, between 0 and memGetNrOfMems() - 1.
  * @return uint32_t The size of the mapped memory
  */
 uint32_t memGetSize(const uint16_t memId);
@@ -126,7 +126,7 @@ uint32_t memGetOwSize();
 /**
  * @brief Read data from a memory handler
  *
- * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order.
+ * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order, between 0 and memGetNrOfMems() - 1.
  * @param memAddr The mapped start address to read from. Starts from 0 for each mapped memory.
  * @param readLen The number of bytes to read
  * @param buffer The buffer to copy the data into
@@ -138,7 +138,7 @@ bool memRead(const uint16_t memId, const uint32_t memAddr, const uint8_t readLen
 /**
  * @brief Write data to a memory handler
  *
- * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order.
+ * @param memId The id of the memory handler to get the type for. The id is an index based on the registration order, between 0 and memGetNrOfMems() - 1.
  * @param memAddr The mapped start address to read from. Starts from 0 for each mapped memory.
  * @param writeLen The number of bytes to write
  * @param buffer The buffer to copy data from
@@ -150,7 +150,7 @@ bool memWrite(const uint16_t memId, const uint32_t memAddr, const uint8_t writeL
 /**
  * @brief Read from a One Wire memory
  *
- * @param owMemId The id of the one wire memory. The id is an index based on the available One Wire memories on decks for instance.
+ * @param owMemId The id of the one wire memory. The id is an index based on the available One Wire memories on decks for instance, between 0 and memGetNrOfOwMems() - 1.
  * @param memAddr The address to start reading from
  * @param readLen The number of bytes to read
  * @param buffer The buffer to copy data into
@@ -162,7 +162,7 @@ bool memReadOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t rea
 /**
  * @brief Get the serial number of a specific One Wire memory
  *
- * @param owMemId The id of the one wire memory. The id is an index based on the available One Wire memories on decks for instance.
+ * @param owMemId The id of the one wire memory. The id is an index based on the available One Wire memories on decks for instance, between 0 and memGetNrOfOwMems() - 1.
  * @param serialNr A buffer of minimum 8 bytes to write the serial number to
  * @return true If successful
  * @return false If failure
@@ -172,7 +172,7 @@ bool memGetOwSerialNr(const uint8_t owMemId, uint8_t* serialNr);
 /**
  * @brief Write to a One Wire
  *
- * @param owMemId The id of the one wire memory. The id is an index based on the available One Wire memories on decks for instance.
+ * @param owMemId The id of the one wire memory. The id is an index based on the available One Wire memories on decks for instance, between 0 and memGetNrOfOwMems() - 1.
  * @param memAddr The address to start writing to
  * @param writeLen The number of bytes to write
  * @param buffer The buffer to copy data from
