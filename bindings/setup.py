@@ -6,6 +6,7 @@ import os
 
 include = [
     "src/modules/interface",
+    "src/modules/interface/controller",
     "src/hal/interface",
     "src/utils/interface/lighthouse",
     "src/utils/interface",
@@ -33,14 +34,14 @@ fw_sources = [
     "src/modules/src/pptraj_compressed.c",
     "src/modules/src/planner.c",
     "src/modules/src/collision_avoidance.c",
-    "src/modules/src/controller_pid.c",
-    "src/modules/src/position_controller_pid.c",
-    "src/modules/src/attitude_pid_controller.c",
-    "src/modules/src/pid.c",
+    "src/modules/src/controller/controller_pid.c",
+    "src/modules/src/controller/position_controller_pid.c",
+    "src/modules/src/controller/attitude_pid_controller.c",
+    "src/modules/src/controller/controller_mellinger.c",
+    "src/modules/src/controller/controller_brescianini.c",
+    "src/utils/src/pid.c",
     "src/utils/src/filter.c",
     "src/utils/src/num.c",
-    "src/modules/src/controller_mellinger.c",
-    "src/modules/src/controller_brescianini.c",
     "src/modules/src/power_distribution_quadrotor.c",
     # "src/modules/src/power_distribution_flapper.c",
 ]

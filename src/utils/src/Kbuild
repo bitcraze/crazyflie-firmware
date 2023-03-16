@@ -6,38 +6,28 @@ obj-y += crc32.o
 obj-y += debug.o
 obj-y += eprintf.o
 obj-y += buf2buf.o
-### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
-obj-y += abort.o
-obj-y += malloc.o
-
-### Add rules for handling generated version.c
-
-obj-y += version.o
-version-objs := version_gen.o
-
-src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
-	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
-
-###
 
 obj-y += filter.o
 obj-y += FreeRTOS-openocd.o
-obj-y += kve/kve.o
-obj-y += kve/kve_storage.o
 
-# Lighthouse
-obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/lighthouse_calibration.o
-obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/lighthouse_geometry.o
-obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/ootx_decoder.o
-obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor.o
-obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor_v1.o
-obj-$(CONFIG_DECK_LIGHTHOUSE) += lighthouse/pulse_processor_v2.o
 obj-y += num.o
 obj-y += rateSupervisor.o
 obj-y += sleepus.o
 obj-y += statsCnt.o
 
-# TDoA
-obj-$(CONFIG_DECK_LOCO) += tdoa/tdoaEngine.o
-obj-$(CONFIG_DECK_LOCO) += tdoa/tdoaStats.o
-obj-$(CONFIG_DECK_LOCO) += tdoa/tdoaStorage.o
+### Sub directories
+obj-y += kve/
+obj-y += lighthouse/
+obj-y += tdoa/
+
+
+### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
+obj-y += abort.o
+obj-y += malloc.o
+obj-y += pid.o
+
+### Rules for handling generated version.c
+obj-y += version.o
+version-objs := version_gen.o
+src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
+	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@

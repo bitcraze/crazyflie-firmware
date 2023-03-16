@@ -1,17 +1,11 @@
 obj-y += app_channel.o
 obj-$(CONFIG_APP_ENABLE) += app_handler.o
 obj-y += bootloader.o
-obj-y += attitude_pid_controller.o
 obj-y += collision_avoidance.o
 obj-y += collision_avoidance.o
 obj-y += commander.o
 obj-y += comm.o
 obj-y += console.o
-obj-y += controller_indi.o
-obj-y += controller_mellinger.o
-obj-y += controller.o
-obj-y += controller_pid.o
-obj-y += controller_brescianini.o
 obj-y += crtp_commander_generic.o
 obj-y += crtp_commander_high_level.o
 obj-y += crtp_commander.o
@@ -20,10 +14,6 @@ obj-y += crtp_localization_service.o
 obj-y += crtp.o
 obj-y += crtpservice.o
 obj-y += esp_deck_flasher.o
-obj-y += estimator_complementary.o
-obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += estimator_kalman.o
-obj-$(CONFIG_ESTIMATOR_UKF_ENABLE) += estimator_ukf.o
-obj-y += estimator.o
 obj-y += eventtrigger.o
 obj-y += extrx.o
 obj-y += health.o
@@ -36,12 +26,8 @@ obj-y += msp.o
 obj-y += param_logic.o
 obj-y += param_task.o
 obj-y += peer_localization.o
-obj-y += pid.o
 obj-y += planner.o
 obj-y += platformservice.o
-obj-y += position_controller_indi.o
-obj-y += position_controller_pid.o
-obj-y += position_estimator_altitude.o
 obj-$(CONFIG_POWER_DISTRIBUTION_QUADROTOR) += power_distribution_quadrotor.o
 obj-$(CONFIG_POWER_DISTRIBUTION_FLAPPER) += power_distribution_flapper.o
 obj-y += pptraj_compressed.o
@@ -60,18 +46,11 @@ obj-y += system.o
 obj-$(CONFIG_DECK_LOCO) += tdoaEngineInstance.o
 obj-y += vcp_esc_passthrough.o
 obj-y += worker.o
-obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx_external_router.o
-obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx_internal_router.o
-obj-$(CONFIG_ENABLE_CPX_ON_UART2) += cpx/cpx_uart_transport.o
-obj-$(CONFIG_ENABLE_CPX)          += cpx/cpxlink.o
-obj-$(CONFIG_ENABLE_CPX)          += cpx/cpx.o
 
-obj-y += p2pDTR/DTR_handlers.o
-obj-y += p2pDTR/DTR_p2p_interface.o
-obj-y += p2pDTR/queueing.o
-obj-y += p2pDTR/token_ring.o
-# Kalman core
+# Sub folders
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
-
-# Lighthouse
 obj-y += lighthouse/
+obj-y += controller/
+obj-y += estimator/
+obj-y += cpx/
+obj-y += p2pDTR/
