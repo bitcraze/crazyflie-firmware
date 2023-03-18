@@ -41,11 +41,21 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     float predictedDistance = this->S[KC_STATE_Z] / this->R[2][2];
     float measuredDistance = tof->distance; // [m]
 
-    //Measurement equation
-    //
-    // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
-    h[KC_STATE_Z] = 1 / this->R[2][2];
-    //h[KC_STATE_Z] = 1 / cosf(angle);
+    /*
+    The sensor model (Pg.95-96, https://lup.lub.lu.se/student-papers/search/publication/8905295)
+    
+    h = z/((R*z_b).z_b) = z/cos(alpha)
+    
+    Here,
+    h (Measured variable)[m] = Distance given by TOF sensor. This is the closest point from any surface to the sensor in the measurement cone
+    z (Estimated variable)[m] = THe actual elevation of the crazyflie
+    z_b = Basis vector in z direction of body coordinate system
+    R = Rotation matrix made from ZYX Tait-Bryan angles. Assumed to be stationary
+    alpha = angle between [line made by measured point <---> sensor] and [the intertial z-axis] 
+    */
+
+    h[KC_STATE_Z] = 1 / this->R[2][2]; // This just acts like a gain for the sensor model. Further updates are done in the scalar update function below
+    // h[KC_STATE_Z] = 1 / cosf(angle);
 
     // Scalar update
     kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
