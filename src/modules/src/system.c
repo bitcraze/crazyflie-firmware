@@ -209,6 +209,7 @@ void systemTask(void *arg)
   // This should probably be done later, but deckInit() takes a long time if this is done later.
   uartslkEnableIncoming();
 
+  memInit();
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
@@ -217,7 +218,6 @@ void systemTask(void *arg)
     platformSetLowInterferenceRadioMode();
   }
   soundInit();
-  memInit();
   crtpMemInit();
 
 #ifdef PROXIMITY_ENABLED
@@ -278,6 +278,10 @@ void systemTask(void *arg)
   if (memTest() == false) {
     pass = false;
     DEBUG_PRINT("mem [FAIL]\n");
+  }
+  if (crtpMemTest() == false) {
+    pass = false;
+    DEBUG_PRINT("CRTP mem [FAIL]\n");
   }
   if (watchdogNormalStartTest() == false) {
     pass = false;

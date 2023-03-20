@@ -111,6 +111,8 @@ static void memTask(void* param) {
   // there might be late arrivals for the registration that will
   // trigger assert.
 
+  systemWaitStart();
+
   // Do not allow registration of new handlers after this point as clients now can start
   // to query for available memories
   memBlockHandlerRegistration();
