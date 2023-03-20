@@ -26,7 +26,7 @@
 #include "mm_flow.h"
 #include "log.h"
 
-#define FLOW_RESOLUTION 0.0149f//0.1f//0.017254902f//0.1f//0.01372549f //We do get the measurements in 10x the motion pixels (experimentally measured)
+#define FLOW_RESOLUTION 0.05f //We do get the measurements in 10x the motion pixels (experimentally measured)
 
 // TODO remove the temporary test variables (used for logging)
 static float predictedNX;
@@ -80,7 +80,7 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   measuredNX = flow->dpixelx*FLOW_RESOLUTION;
 
   // derive measurement equation with respect to dx (and z?)
-  hx[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dx_g) / (-z_g * z_g));
+  // hx[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dx_g) / (-z_g * z_g));
   hx[KC_STATE_PX] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
 
   //First update
@@ -93,7 +93,7 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   measuredNY = flow->dpixely*FLOW_RESOLUTION;
 
   // derive measurement equation with respect to dy (and z?)
-  hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
+  // hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
   hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
 
   // Second update

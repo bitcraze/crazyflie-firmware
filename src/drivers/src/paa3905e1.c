@@ -43,8 +43,9 @@
 
 
 static bool isInit = false;
-static uint8_t resolution = 0xFF;//0x26;//0xFF;//0x2c;//0xFF;
-static uint8_t old_resolution = 0xFF;//0x26;//0xFF;//0x2c;//0xFF;
+static uint8_t mode = 0; //0: Bright mode, 1: Low light mode, 2: Super low light mode (read only currently)
+static uint8_t resolution = 0x4c;//0x26;//0xFF;//0x2c;//0xFF;
+static uint8_t old_resolution = 0x4c;//0x26;//0xFF;//0x2c;//0xFF;
 
 static volatile uint8_t rawDataArray[1225];
 
@@ -187,12 +188,14 @@ static void InitRegisters(const deckPin_t csPin)
   registerWrite(csPin, 0x48, 0x96);
   registerWrite(csPin, 0x52, 0xB4);
   registerWrite(csPin, 0x7F, 0x00);
-//  registerWrite(csPin, 0x5B, 0xA0);
+  // registerWrite(csPin, 0x5B, 0xA0);
 
   // turn on LED
-  // registerWrite(csPin, 0x7F, 0x14);
-  // registerWrite(csPin, 0x6F, 0x0c);
-  // registerWrite(csPin, 0x7F, 0x00);
+  registerWrite(csPin, 0x7F, 0x14);
+  registerWrite(csPin, 0x6F, 0x0c);
+  registerWrite(csPin, 0x7F, 0x00);
+  DEBUG_PRINT("Turned on LED\n");
+
 
 }
 
@@ -267,7 +270,7 @@ void paa3905ReadMotion(const deckPin_t csPin, motionBurst3905_t * motion)
                      motion->shutter_m << 8 |
                      motion->shutter_l;
 
-
+  mode = (motion->observation >> 6);
   switch(motion->observation >> 6)
   {
     case 0x00:
@@ -394,6 +397,10 @@ float paa3905ReadRaw(const deckPin_t csPin)
 PARAM_GROUP_START(flow)
 PARAM_ADD(PARAM_UINT8, resolution, &resolution)
 PARAM_GROUP_STOP(flow)
+
+LOG_GROUP_START(flow)
+LOG_ADD(LOG_UINT8, mode, &mode)
+LOG_GROUP_STOP(flow)
 
 LOG_GROUP_START(line)
 LOG_ADD(LOG_FLOAT, yaw, &yaw_line)
