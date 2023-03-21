@@ -256,6 +256,13 @@ void uart1Getchar(char * ch)
   xQueueReceive(uart1queue, ch, portMAX_DELAY);
 }
 
+void uart1GetData(uint32_t size, uint8_t* data)
+{
+  for (size_t i = 0; i < size; i++) {
+    xQueueReceive(uart1queue, &data[i], portMAX_DELAY);
+  }
+}
+
 bool uart1DidOverrun()
 {
   bool result = hasOverrun;

@@ -99,6 +99,17 @@ bool uart1GetDataWithDefaultTimeout(uint8_t *c);
 void uart1SendData(uint32_t size, uint8_t* data);
 
 /**
+ * Get data from the UART. Blocking until the amount of
+ * data has been read
+ *
+ * @param[in] size  Number of bytes to read
+ * @param[out] data  Pointer to data
+ * 
+ * @return number of bytes read
+ */
+void uart1GetData(uint32_t size, uint8_t* data);
+
+/**
  * Sends raw data using DMA transfer.
  * @param[in] size  Number of bytes to send
  * @param[in] data  Pointer to data
