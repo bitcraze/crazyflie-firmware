@@ -65,6 +65,12 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
     route->source = source;
     route->destination = destination;
     route->function = function;
+    route->version = CPX_VERSION;
+}
+
+bool cpxCheckVersion(const uint8_t version)
+{
+  return (version == CPX_VERSION);
 }
 
 static void cpx(void* _param) {
