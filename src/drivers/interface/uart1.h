@@ -90,16 +90,7 @@ bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks);
 bool uart1GetDataWithDefaultTimeout(uint8_t *c);
 
 /**
- * Sends raw data using a lock. Should be used from
- * exception functions and for debugging when a lot of data
- * should be transfered.
- * @param[in] size  Number of bytes to send
- * @param[in] data  Pointer to data
- */
-void uart1SendData(uint32_t size, uint8_t* data);
-
-/**
- * Get data from the UART. Blocking until the amount of
+ * Get data from the UART connection. Blocking until the amount of
  * data has been read
  *
  * @param[in] size  Number of bytes to read
@@ -107,7 +98,17 @@ void uart1SendData(uint32_t size, uint8_t* data);
  * 
  * @return number of bytes read
  */
-void uart1GetData(uint32_t size, uint8_t* data);
+void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data);
+
+
+/**
+ * Sends raw data using a lock. Should be used from
+ * exception functions and for debugging when a lot of data
+ * should be transfered.
+ * @param[in] size  Number of bytes to send
+ * @param[in] data  Pointer to data
+ */
+void uart1SendData(uint32_t size, uint8_t* data);
 
 /**
  * Sends raw data using DMA transfer.
