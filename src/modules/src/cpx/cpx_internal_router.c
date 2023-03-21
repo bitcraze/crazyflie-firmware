@@ -51,10 +51,12 @@ void cpxInternalRouterReceiveOthers(CPXPacket_t * packet) {
 }
 
 void cpxSendPacketBlocking(const CPXPacket_t * packet) {
+  ASSERT(cpxCheckVersion(packet->route.version));
   xQueueSend(txq, packet, portMAX_DELAY);
 }
 
 bool cpxSendPacketBlockingTimeout(const CPXPacket_t * packet, const uint32_t timeout) {
+  ASSERT(cpxCheckVersion(packet->route.version));
   return xQueueSend(txq, packet, timeout) == pdTRUE;
 }
 
@@ -63,6 +65,10 @@ bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout) {
 }
 
 void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet) {
+  // this should never fail, as it should be checked when the packet is received
+  // however, double checking doesn't harm
+  ASSERT(cpxCheckVersion(packet->route.version));
+
 
   switch (packet->route.function) {
     case CPX_F_SYSTEM:
