@@ -101,7 +101,7 @@ The header for a CPX packet has the following format:
 +--------+--------+--------+--------+--------+--------+--------+--------+
 |  RSV   |   LP   |          SOURCE          |        DESTINATION       |
 +--------+--------+--------+--------+--------+--------+--------+--------+
-|                                FUNCTION                               |
+|     VERSION     |               FUNCTION                              |
 +--------+--------+--------+--------+--------+--------+--------+--------+
 {% endditaa %}
 
@@ -111,7 +111,8 @@ The header for a CPX packet has the following format:
 | LP          |           1 |  0-1   | If a packet is split up in chunks, this will be 1 for the last chunk and 0 for the rest |
 | SOURCE      |           3 |  0-7   | ID of the target sending the packet |
 | DESTINATION |           3 |  0-7   | ID of the target which should receive the packet |
-| FUNCTION    |           8 |  0-255 | ID of the function where the target should route the packet internally |
+| VERSION     |           2 |  0-3   | CPX version |
+| FUNCTION    |           6 |  0-63  | ID of the function where the target should route the packet internally |
 
 There's no discovery for targets, so these will have to be in sync for all the targets routing packages.
 There's also no discovery for functions, but these only have to be in sync for source and destination, since
