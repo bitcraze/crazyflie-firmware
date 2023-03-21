@@ -139,5 +139,5 @@ void cpxExternalRouterInit() {
                       pdTRUE, // Wait for all bits
                       portMAX_DELAY);
 
-  DEBUG_PRINT("CPX External router initialized\n");
+  DEBUG_PRINT("CPX External router initialized, CPX_VERSION: %d\n", CPX_VERSION);
 }
