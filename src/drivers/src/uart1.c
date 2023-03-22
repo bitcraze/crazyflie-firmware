@@ -202,6 +202,13 @@ bool uart1GetDataWithDefaultTimeout(uint8_t *c)
   return uart1GetDataWithTimeout(c, UART1_DATA_TIMEOUT_TICKS);
 }
 
+void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data)
+{
+  for (size_t i = 0; i < size; i++) {
+    xQueueReceive(uart1queue, &data[i], portMAX_DELAY);
+  }
+}
+
 void uart1SendData(uint32_t size, uint8_t* data)
 {
   uint32_t i;
