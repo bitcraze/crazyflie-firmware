@@ -58,7 +58,7 @@
 #define FREERTOS_MCU_CLOCK_HZ   168000000
 
 #define configGENERATE_RUN_TIME_STATS 1
-#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initUsecTimer()
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() usecTimerInit()
 #define portGET_RUN_TIME_COUNTER_VALUE() usecTimestamp()
 
 
