@@ -185,7 +185,7 @@ void systemTask(void *arg)
   uart1Init(CONFIG_DEBUG_PRINT_ON_UART1_BAUDRATE);
 #endif
 
-  initUsecTimer();
+  usecTimerInit();
   i2cdevInit(I2C3_DEV);
   i2cdevInit(I2C1_DEV);
   passthroughInit();
