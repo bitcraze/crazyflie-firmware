@@ -668,7 +668,7 @@ static void usdLogTask(void* prm)
               continue;
             }
           }
-          if (usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS - 1) {
+          if (usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS) {
             ++usdLogConfig.numEventConfigs;
             cfg = &usdLogConfig.eventConfigs[usdLogConfig.numEventConfigs];
           } else {
