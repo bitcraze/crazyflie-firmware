@@ -37,8 +37,7 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     if (angle < 0.0f) {
       angle = 0.0f;
     }
-    //float predictedDistance = S[KC_STATE_Z] / cosf(angle);
-    float predictedDistance = this->S[KC_STATE_Z] / this->R[2][2];
+    float predictedDistance = S[KC_STATE_Z] / cosf(angle);
     float measuredDistance = tof->distance; // [m]
 
     /*
@@ -54,8 +53,7 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     alpha = angle between [line made by measured point <---> sensor] and [the intertial z-axis] 
     */
 
-    h[KC_STATE_Z] = 1 / this->R[2][2]; // This just acts like a gain for the sensor model. Further updates are done in the scalar update function below
-    // h[KC_STATE_Z] = 1 / cosf(angle);
+    h[KC_STATE_Z] = 1 / cosf(angle); // This just acts like a gain for the sensor model. Further updates are done in the scalar update function below
 
     // Scalar update
     kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
