@@ -37,7 +37,7 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     if (angle < 0.0f) {
       angle = 0.0f;
     }
-    float predictedDistance = S[KC_STATE_Z] / cosf(angle);
+    float predictedDistance = this->S[KC_STATE_Z] / cosf(angle);
     float measuredDistance = tof->distance; // [m]
 
     /*
