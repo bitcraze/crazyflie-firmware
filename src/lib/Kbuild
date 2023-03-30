@@ -32,15 +32,39 @@ obj-y += STM32_USB_OTG_Driver/src/usb_dcd_int.o
 obj-y += STM32_USB_OTG_Driver/src/usb_dcd.o
 
 # vl53l1
-obj-y += vl53l1/core/src/vl53l1_api_calibration.o
-obj-y += vl53l1/core/src/vl53l1_api_core.o
-obj-y += vl53l1/core/src/vl53l1_api_debug.o
-obj-y += vl53l1/core/src/vl53l1_api.o
-obj-y += vl53l1/core/src/vl53l1_api_preset_modes.o
-obj-y += vl53l1/core/src/vl53l1_api_strings.o
-obj-y += vl53l1/core/src/vl53l1_core.o
-obj-y += vl53l1/core/src/vl53l1_core_support.o
-obj-y += vl53l1/core/src/vl53l1_error_strings.o
-obj-y += vl53l1/core/src/vl53l1_register_funcs.o
-obj-y += vl53l1/core/src/vl53l1_silicon_core.o
-obj-y += vl53l1/core/src/vl53l1_wait.o
+# obj-y += vl53l1/core/src/vl53l1_api_calibration.o
+# obj-y += vl53l1/core/src/vl53l1_api_core.o
+# obj-y += vl53l1/core/src/vl53l1_api_debug.o
+# obj-y += vl53l1/core/src/vl53l1_api.o
+# obj-y += vl53l1/core/src/vl53l1_api_preset_modes.o
+# obj-y += vl53l1/core/src/vl53l1_api_strings.o
+# obj-y += vl53l1/core/src/vl53l1_core.o
+# obj-y += vl53l1/core/src/vl53l1_core_support.o
+# obj-y += vl53l1/core/src/vl53l1_error_strings.o
+# obj-y += vl53l1/core/src/vl53l1_register_funcs.o
+# obj-y += vl53l1/core/src/vl53l1_silicon_core.o
+# obj-y += vl53l1/core/src/vl53l1_wait.o
+
+# vl53lx
+obj-y += vl53lx/platform/src/vl53lx_platform.o
+obj-y += vl53lx/core/src/vl53lx_api_calibration.o
+obj-y += vl53lx/core/src/vl53lx_api_core.o
+obj-y += vl53lx/core/src/vl53lx_api_debug.o
+obj-y += vl53lx/core/src/vl53lx_api.o
+obj-y += vl53lx/core/src/vl53lx_api_preset_modes.o
+obj-y += vl53lx/core/src/vl53lx_core.o
+obj-y += vl53lx/core/src/vl53lx_core_support.o
+obj-y += vl53lx/core/src/vl53lx_register_funcs.o
+obj-y += vl53lx/core/src/vl53lx_silicon_core.o
+obj-y += vl53lx/core/src/vl53lx_wait.o
+obj-y += vl53lx/core/src/vl53lx_nvm.o
+obj-y += vl53lx/platform/src/vl53lx_platform_ipp.o
+obj-y += vl53lx/core/src/vl53lx_hist_core.o
+obj-y += vl53lx/core/src/vl53lx_hist_char.o
+obj-y += vl53lx/core/src/vl53lx_hist_funcs.o
+obj-y += vl53lx/core/src/vl53lx_xtalk.o
+obj-y += vl53lx/core/src/vl53lx_hist_algos_gen3.o
+obj-y += vl53lx/core/src/vl53lx_hist_algos_gen4.o
+obj-y += vl53lx/core/src/vl53lx_sigma_estimate.o
+obj-y += vl53lx/core/src/vl53lx_dmax.o
+

@@ -30,7 +30,8 @@
 #include "debug.h"
 #include "log.h"
 #include "pca95x4.h"
-#include "vl53l1x.h"
+#include "vl53lx_platform.h"
+#include "vl53lx_api.h"
 #include "range.h"
 #include "static_mem.h"
 
@@ -44,7 +45,7 @@
 static bool isInit = false;
 static bool isTested = false;
 static bool isPassed = false;
-static uint16_t filterMask = 1 << VL53L1_RANGESTATUS_RANGE_VALID;
+static uint16_t filterMask = 1 << VL53LX_RANGESTATUS_RANGE_VALID;
 
 #define MR_PIN_UP PCA95X4_P0
 #define MR_PIN_FRONT PCA95X4_P4
@@ -52,61 +53,61 @@ static uint16_t filterMask = 1 << VL53L1_RANGESTATUS_RANGE_VALID;
 #define MR_PIN_LEFT PCA95X4_P6
 #define MR_PIN_RIGHT PCA95X4_P2
 
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devFront;
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devBack;
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
+static VL53LX_Dev_t devFront;
+static VL53LX_Dev_t devBack;
+// static VL53LX_Dev_t devUp;
+static VL53LX_Dev_t devLeft;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53LX_Dev_t devRight;
 
-static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
+static bool mrInitSensor(VL53LX_Dev_t *pdev, uint32_t pca95pin, char *name)
 {
-    bool status;
+    bool status = false;
 
     // Bring up VL53 by releasing XSHUT
     pca95x4SetOutput(pca95pin);
     // Let VL53 boot
     vTaskDelay(M2T(2));
     // Init VL53
-    if (vl53l1xInit(pdev, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init %s sensor [OK]\n", name);
-        status = true;
-    }
-    else
-    {
-        DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
-        status = false;
-    }
+    // if (VL53LX_Init(pdev, I2C1_DEV))
+    // {
+    //     DEBUG_PRINT("Init %s sensor [OK]\n", name);
+    //     status = true;
+    // }
+    // else
+    // {
+    //     DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
+    //     status = false;
+    // }
 
     return status;
 }
 
-static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
+static uint16_t mrGetMeasurementAndRestart(VL53LX_Dev_t *dev)
 {
-    VL53L1_Error status = VL53L1_ERROR_NONE;
-    VL53L1_RangingMeasurementData_t rangingData;
+    VL53LX_Error status = VL53LX_ERROR_NONE;
+    // VL53LX_RangingMeasurementData_t rangingData;
     uint8_t dataReady = 0;
-    uint16_t range;
+    uint16_t range = 0;
 
     while (dataReady == 0)
     {
-        status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
+        status = VL53LX_GetMeasurementDataReady(dev, &dataReady);
         vTaskDelay(M2T(1));
     }
 
-    status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
+    // status = VL53LX_GetRangingMeasurementData(dev, &rangingData);
 
-    if (filterMask & (1 << rangingData.RangeStatus))
-    {
-        range = rangingData.RangeMilliMeter;
-    }
-    else
-    {
-        range = 32767;
-    }
+    // if (filterMask & (1 << rangingData.RangeStatus))
+    // {
+    //     range = rangingData.RangeMilliMeter;
+    // }
+    // else
+    // {
+    //     range = 32767;
+    // }
 
-    VL53L1_StopMeasurement(dev);
-    status = VL53L1_StartMeasurement(dev);
+    VL53LX_StopMeasurement(dev);
+    status = VL53LX_StartMeasurement(dev);
     status = status;
 
     return range;
@@ -114,21 +115,21 @@ static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 
 static void mrTask(void *param)
 {
-    VL53L1_Error status = VL53L1_ERROR_NONE;
+    VL53LX_Error status = VL53LX_ERROR_NONE;
 
     systemWaitStart();
 
     // Restart all sensors
-    status = VL53L1_StopMeasurement(&devFront);
-    status = VL53L1_StartMeasurement(&devFront);
-    status = VL53L1_StopMeasurement(&devBack);
-    status = VL53L1_StartMeasurement(&devBack);
-    status = VL53L1_StopMeasurement(&devUp);
-    status = VL53L1_StartMeasurement(&devUp);
-    status = VL53L1_StopMeasurement(&devLeft);
-    status = VL53L1_StartMeasurement(&devLeft);
-    status = VL53L1_StopMeasurement(&devRight);
-    status = VL53L1_StartMeasurement(&devRight);
+    status = VL53LX_StopMeasurement(&devFront);
+    status = VL53LX_StartMeasurement(&devFront);
+    status = VL53LX_StopMeasurement(&devBack);
+    status = VL53LX_StartMeasurement(&devBack);
+    // status = VL53LX_StopMeasurement(&devUp);
+    // status = VL53LX_StartMeasurement(&devUp);
+    status = VL53LX_StopMeasurement(&devLeft);
+    status = VL53LX_StartMeasurement(&devLeft);
+    status = VL53LX_StopMeasurement(&devRight);
+    status = VL53LX_StartMeasurement(&devRight);
     status = status;
 
     TickType_t lastWakeTime = xTaskGetTickCount();
@@ -138,7 +139,7 @@ static void mrTask(void *param)
         vTaskDelayUntil(&lastWakeTime, M2T(100));
         rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront) / 1000.0f);
         rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack) / 1000.0f);
-        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp) / 1000.0f);
+        // rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp) / 1000.0f);
         rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft) / 1000.0f);
         rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight) / 1000.0f);
     }
@@ -182,7 +183,7 @@ static bool mrTest()
 
     isPassed &= mrInitSensor(&devFront, MR_PIN_FRONT, "front");
     isPassed &= mrInitSensor(&devBack, MR_PIN_BACK, "back");
-    isPassed &= mrInitSensor(&devUp, MR_PIN_UP, "up");
+    // isPassed &= mrInitSensor(&devUp, MR_PIN_UP, "up");
     isPassed &= mrInitSensor(&devLeft, MR_PIN_LEFT, "left");
     isPassed &= mrInitSensor(&devRight, MR_PIN_RIGHT, "right");
 
@@ -216,7 +217,7 @@ PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(multiranger)
 /**
- * @brief Filter mask determining which range measurements is to be let through based on the range status of the VL53L1 chip
+ * @brief Filter mask determining which range measurements is to be let through based on the range status of the VL53LX chip
  */
 PARAM_ADD(PARAM_UINT16, filterMask, &filterMask)
 

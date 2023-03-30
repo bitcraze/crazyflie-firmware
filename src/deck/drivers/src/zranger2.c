@@ -40,7 +40,8 @@
 
 #include "i2cdev.h"
 #include "zranger2.h"
-#include "vl53l1x.h"
+#include "vl53lx_api.h"
+#include "vl53lx_platform.h"
 
 #include "cf_math.h"
 
@@ -57,26 +58,51 @@ static uint16_t range_last = 0;
 
 static bool isInit;
 
-NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t dev;
+static VL53LX_Dev_t dev;
 
-static uint16_t zRanger2GetMeasurementAndRestart(VL53L1_Dev_t *dev)
+uint16_t range = 8192;
+
+static uint16_t zRanger2GetMeasurementAndRestart(VL53LX_Dev_t *dev)
 {
-    VL53L1_Error status = VL53L1_ERROR_NONE;
-    VL53L1_RangingMeasurementData_t rangingData;
+    VL53LX_Error status = VL53LX_ERROR_NONE;
+    VL53LX_MultiRangingData_t MultiRangingData;
+	  VL53LX_MultiRangingData_t *pMultiRangingData = &MultiRangingData;
     uint8_t dataReady = 0;
-    uint16_t range;
 
     while (dataReady == 0)
     {
-        status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
+        status = VL53LX_GetMeasurementDataReady(dev, &dataReady);
         vTaskDelay(M2T(1));
     }
 
-    status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
-    range = rangingData.RangeMilliMeter;
+    status = VL53LX_GetMultiRangingData(dev, pMultiRangingData);
+    int no_of_object_found=pMultiRangingData->NumberOfObjectsFound;
+				// DEBUG_PRINT("Count=%5d, ", pMultiRangingData->StreamCount);
+				// DEBUG_PRINT("#Objs=%1d \n", no_of_object_found);
+        uint16_t range_temp = 8192;
+				for(int j=0;j<no_of_object_found;j++){
+          // if(pMultiRangingData->RangeData[j].RangeStatus == 0 && pMultiRangingData->RangeData[j].RangeMilliMeter < range_temp && pMultiRangingData->RangeData[j].RangeMaxMilliMeter - pMultiRangingData->RangeData[j].RangeMinMilliMeter < 100)
+          if(pMultiRangingData->RangeData[j].RangeStatus == 0 && pMultiRangingData->RangeData[j].RangeMaxMilliMeter < range_temp )
+          {
+            range = pMultiRangingData->RangeData[j].RangeMaxMilliMeter; 
+            range_temp = range;
+          }
+					// DEBUG_PRINT("status=%d, D=%5dmm, Signal=%2.2f Mcps, Ambient=%2.2f Mcps",
+					// 		pMultiRangingData->RangeData[j].RangeStatus,
+					// 		pMultiRangingData->RangeData[j].RangeMilliMeter,
+					// 		pMultiRangingData->RangeData[j].SignalRateRtnMegaCps/65536.0,
+					// 		pMultiRangingData->RangeData[j].AmbientRateRtnMegaCps/65536.0);
+          // DEBUG_PRINT("status=%d, D=%5dmm, D=%5dmm, D=%5dmm\n",
+					// 		pMultiRangingData->RangeData[j].RangeStatus,
+					// 		pMultiRangingData->RangeData[j].RangeMinMilliMeter,
+					// 		pMultiRangingData->RangeData[j].RangeMilliMeter,
+					// 		pMultiRangingData->RangeData[j].RangeMaxMilliMeter);
+				}
+        						status = VL53LX_ClearInterruptAndStartMeasurement(dev);
 
-    VL53L1_StopMeasurement(dev);
-    status = VL53L1_StartMeasurement(dev);
+
+    // VL53LX_StopMeasurement(dev);
+    // status = VL53LX_StartMeasurement(dev);
     status = status;
 
     return range;
@@ -87,7 +113,7 @@ void zRanger2Init(DeckInfo* info)
   if (isInit)
     return;
 
-  if (vl53l1xInit(&dev, I2C1_DEV))
+  if (VL53LX_Init(&dev, I2C1_DEV))
   {
       DEBUG_PRINT("Z-down sensor [OK]\n");
   }
@@ -120,11 +146,11 @@ void zRanger2Task(void* arg)
   systemWaitStart();
 
   // Restart sensor
-  VL53L1_StopMeasurement(&dev);
-  VL53L1_SetDistanceMode(&dev, VL53L1_DISTANCEMODE_MEDIUM);
-  VL53L1_SetMeasurementTimingBudgetMicroSeconds(&dev, 25000);
+  VL53LX_StopMeasurement(&dev);
+  VL53LX_SetDistanceMode(&dev, VL53LX_DISTANCEMODE_MEDIUM);
+  VL53LX_SetMeasurementTimingBudgetMicroSeconds(&dev, 25000);
 
-  VL53L1_StartMeasurement(&dev);
+  VL53LX_StartMeasurement(&dev);
 
   lastWakeTime = xTaskGetTickCount();
 

@@ -22,7 +22,5 @@ obj-y += swd.o
 obj-y += uart1.o
 obj-y += uart2.o
 obj-y += uart_syslink.o
-obj-y += vl53l0x.o
-obj-y += vl53l1x.o
 obj-y += watchdog.o
 obj-y += ws2812_cf2.o

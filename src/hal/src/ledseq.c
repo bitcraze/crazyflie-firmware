@@ -179,10 +179,10 @@ struct ledseqCmd_s {
 static void runLedseq(xTimerHandle xTimer);
 static void updateActive(led_t led);
 
-NO_DMA_CCM_SAFE_ZERO_INIT static ledseqContext_t* activeSeq[LED_NUM];
+static ledseqContext_t* activeSeq[LED_NUM];
 
-NO_DMA_CCM_SAFE_ZERO_INIT static xTimerHandle timer[LED_NUM];
-NO_DMA_CCM_SAFE_ZERO_INIT static StaticTimer_t timerBuffer[LED_NUM];
+static xTimerHandle timer[LED_NUM];
+static StaticTimer_t timerBuffer[LED_NUM];
 
 static xSemaphoreHandle ledseqMutex;
 static xQueueHandle ledseqCmdQueue;
