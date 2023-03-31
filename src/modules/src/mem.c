@@ -63,10 +63,6 @@ void memInit(void)
     return;
   }
 
-  registrationEnabled = true;
-  nrOfHandlers = 0;
-  owMemHandler = 0;
-
   memoryRegisterHandler(&memTesterDef);
 
   isInit = true;
@@ -87,6 +83,10 @@ bool memTest(void) {
 #ifdef UNIT_TEST_MODE
 void memReset() {
   isInit = false;
+
+  registrationEnabled = true;
+  nrOfHandlers = 0;
+  owMemHandler = 0;
 }
 #endif
 
