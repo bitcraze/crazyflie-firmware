@@ -814,10 +814,11 @@ static VL53LX_Error SetTargetData(VL53LX_DEV Dev,
 			VL53LX_RANGESTATUS_RANGE_VALID &&
 			pdev->PreviousExtendedRange[iteration] == 1)))
 	{
-		if (((pdev->PreviousStreamCount) ==
-			(pdev->hist_data.result__stream_count - 1 ))
-		|| ((pdev->PreviousStreamCount) ==
-			(pdev->hist_data.result__stream_count + 127)))
+		// if (((pdev->PreviousStreamCount) ==
+		// 	(pdev->hist_data.result__stream_count - 1 ))
+		// || ((pdev->PreviousStreamCount) ==
+		// 	(pdev->hist_data.result__stream_count + 127)))
+		if(true)
 		{
 		RangeDiff = pRangeData->RangeMilliMeter -
 			pdev->PreviousRangeMilliMeter[iteration];

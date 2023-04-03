@@ -10,7 +10,7 @@
  */
 
 
-
+#pragma once
 
 
 #ifndef _VL53LX_LL_DEF_H_
@@ -1428,9 +1428,6 @@ typedef struct {
 	uint8_t PreviousRangeActiveResults;
 	uint8_t PreviousStreamCount;
 } VL53LX_LLDriverData_t;
-
-
-
 
 typedef struct {
 
