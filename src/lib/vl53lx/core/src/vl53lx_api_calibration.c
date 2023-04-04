@@ -231,7 +231,7 @@ VL53LX_Error VL53LX_get_and_avg_xtalk_samples(
 #endif
 
 	VL53LX_range_results_t      *prs =
-			(VL53LX_range_results_t *) pdev->wArea1;
+			(VL53LX_range_results_t *) (pdev->VL53LX_LLDriverCommonData->wArea1);
 
 	VL53LX_range_data_t         *prange_data;
 	VL53LX_xtalk_range_data_t   *pxtalk_range_data;
@@ -850,7 +850,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 	uint8_t histo_merge_nb;
 	uint8_t wait_for_accumulation;
 	VL53LX_range_results_t     *prange_results =
-		(VL53LX_range_results_t *) pdev->wArea1;
+		(VL53LX_range_results_t *) pdev->VL53LX_LLDriverCommonData->wArea1;
 	uint8_t Very1stRange = 0;
 
 	LOG_FUNCTION_START("");

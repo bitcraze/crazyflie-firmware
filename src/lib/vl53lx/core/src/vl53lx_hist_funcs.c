@@ -61,8 +61,8 @@ VL53LX_Error VL53LX_hist_process_data(
 	VL53LX_hist_post_process_config_t  *ppost_cfg,
 	VL53LX_histogram_bin_data_t        *pbins_input,
 	VL53LX_xtalk_histogram_data_t      *pxtalk_shape,
-	uint8_t                            *pArea1,
-	uint8_t                            *pArea2,
+	uint32_t                           *pArea1,
+	uint32_t                           *pArea2,
 	VL53LX_range_results_t             *presults,
 	uint8_t                            *HistMergeNumber)
 {

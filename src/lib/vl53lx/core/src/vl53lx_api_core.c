@@ -2230,8 +2230,8 @@ VL53LX_Error VL53LX_get_device_results(
 				&(pdev->histpostprocess),
 				&(pdev->hist_data),
 				&(pdev->xtalk_shapes),
-				pdev->wArea1,
-				pdev->wArea2,
+				pdev->VL53LX_LLDriverCommonData->wArea1,
+				pdev->VL53LX_LLDriverCommonData->wArea2,
 				&histo_merge_nb,
 				presults);
 

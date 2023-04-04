@@ -35,6 +35,8 @@
 #include "range.h"
 #include "static_mem.h"
 
+#include "vl53lx_hist_private_structs.h"
+
 #include "i2cdev.h"
 
 #include "FreeRTOS.h"
@@ -58,10 +60,12 @@ static VL53LX_Dev_t devBack;
 static VL53LX_Dev_t devUp;
 static VL53LX_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53LX_Dev_t devRight;
+static VL53LX_LLDriverCommonData_t VL53LX_LLDriverCommonData;
 
 static bool mrInitSensor(VL53LX_Dev_t *pdev, uint32_t pca95pin, char *name)
 {
     bool status = false;
+    pdev->Data.LLData.VL53LX_LLDriverCommonData = &VL53LX_LLDriverCommonData;
 
     // Bring up VL53 by releasing XSHUT
     pca95x4SetOutput(pca95pin);

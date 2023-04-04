@@ -59,6 +59,7 @@ static uint16_t range_last = 0;
 static bool isInit;
 
 static VL53LX_Dev_t dev;
+static VL53LX_LLDriverCommonData_t VL53LX_LLDriverCommonData;
 
 uint16_t range = 8192;
 
@@ -112,6 +113,7 @@ void zRanger2Init(DeckInfo* info)
 {
   if (isInit)
     return;
+  dev.Data.LLData.VL53LX_LLDriverCommonData = &VL53LX_LLDriverCommonData;
 
   if (VL53LX_Init(&dev, I2C1_DEV))
   {

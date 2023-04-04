@@ -1029,7 +1029,7 @@ VL53LX_Error VL53LX_GetMultiRangingData(VL53LX_DEV Dev,
 	VL53LX_LLDriverData_t *pdev =
 			VL53LXDevStructGetLLDriverHandle(Dev);
 	VL53LX_range_results_t *presults =
-			(VL53LX_range_results_t *) pdev->wArea1;
+			(VL53LX_range_results_t *) pdev->VL53LX_LLDriverCommonData->wArea1;
 
 	LOG_FUNCTION_START("");
 

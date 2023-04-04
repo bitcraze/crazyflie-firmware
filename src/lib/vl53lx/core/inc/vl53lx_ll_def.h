@@ -1303,6 +1303,21 @@ typedef struct {
 } VL53LX_ll_driver_state_t;
 
 
+typedef struct {
+	uint32_t  wArea1[1528/4];
+	uint32_t  wArea2[512/4];
+
+	// VL53LX_histogram_bin_data_t         hist_data;
+	// VL53LX_histogram_bin_data_t         hist_xtalk;
+	
+	// VL53LX_xtalk_histogram_data_t       xtalk_shapes;
+	// VL53LX_xtalk_range_results_t        xtalk_results;
+	// VL53LX_hist_xtalk_extract_data_t    xtalk_extract;
+
+	// int32_t  multi_bins_rec[VL53LX_BIN_REC_SIZE]
+	// 	[VL53LX_TIMING_CONF_A_B_SIZE][VL53LX_HISTOGRAM_BUFFER_SIZE];
+
+} VL53LX_LLDriverCommonData_t;
 
 
 typedef struct {
@@ -1391,7 +1406,7 @@ typedef struct {
 
 
 	VL53LX_xtalk_histogram_data_t       xtalk_shapes;
-	// VL53LX_xtalk_range_results_t        xtalk_results;
+	// // VL53LX_xtalk_range_results_t        xtalk_results;
 	VL53LX_xtalk_calibration_results_t  xtalk_cal;
 	VL53LX_hist_xtalk_extract_data_t    xtalk_extract;
 
@@ -1411,8 +1426,9 @@ typedef struct {
 
 	VL53LX_low_power_auto_data_t		low_power_auto_data;
 
-	uint8_t  wArea1[1536];
-	uint8_t  wArea2[512];
+	// uint8_t  wArea1[1536];
+	// uint8_t  wArea2[512];
+	VL53LX_LLDriverCommonData_t			*VL53LX_LLDriverCommonData;
 	VL53LX_per_vcsel_period_offset_cal_data_t per_vcsel_cal_data;
 
 	uint8_t bin_rec_pos;
