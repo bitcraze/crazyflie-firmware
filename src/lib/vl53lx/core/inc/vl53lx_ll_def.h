@@ -1317,6 +1317,9 @@ typedef struct {
 
 	VL53LX_tuning_parm_storage_t        tuning_parms;
 
+	VL53LX_refspadchar_config_t         refspadchar;
+
+
 } VL53LX_LLDriverCommonData_t;
 
 
@@ -1380,7 +1383,7 @@ typedef struct {
 	uint8_t rtn_good_spads[VL53LX_RTN_SPAD_BUFFER_SIZE];
 
 
-	VL53LX_refspadchar_config_t         refspadchar;
+	// VL53LX_refspadchar_config_t         refspadchar;
 	VL53LX_ssc_config_t                 ssc_cfg;
 	VL53LX_hist_post_process_config_t   histpostprocess;
 	VL53LX_hist_gen3_dmax_config_t      dmax_cfg;

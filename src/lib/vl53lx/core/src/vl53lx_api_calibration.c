@@ -52,7 +52,7 @@ VL53LX_Error VL53LX_run_ref_spad_char(
 
 	uint8_t comms_buffer[6];
 
-	VL53LX_refspadchar_config_t *prefspadchar  = &(pdev->refspadchar);
+	VL53LX_refspadchar_config_t *prefspadchar  = &(pdev->VL53LX_LLDriverCommonData->refspadchar);
 
 	LOG_FUNCTION_START("");
 

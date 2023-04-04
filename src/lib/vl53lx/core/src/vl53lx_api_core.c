@@ -416,7 +416,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_refspadchar_config_struct(
-			&(pdev->refspadchar));
+			&(pdev->VL53LX_LLDriverCommonData->refspadchar));
 
 
 	if (status == VL53LX_ERROR_NONE)
@@ -3414,27 +3414,27 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_DEVICE_TEST_MODE:
 		*ptuning_parm_value =
-		(int32_t)pdev->refspadchar.device_test_mode;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->refspadchar.device_test_mode;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_VCSEL_PERIOD:
 		*ptuning_parm_value =
-		(int32_t)pdev->refspadchar.VL53LX_p_005;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->refspadchar.VL53LX_p_005;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_PHASECAL_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->refspadchar.timeout_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->refspadchar.timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_TARGET_COUNT_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->refspadchar.target_count_rate_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->refspadchar.target_count_rate_mcps;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_MIN_COUNTRATE_LIMIT_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->refspadchar.min_count_rate_limit_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->refspadchar.min_count_rate_limit_mcps;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_MAX_COUNTRATE_LIMIT_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->refspadchar.max_count_rate_limit_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->refspadchar.max_count_rate_limit_mcps;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_EXTRACT_NUM_OF_SAMPLES:
 		*ptuning_parm_value =
@@ -4196,27 +4196,27 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_DEVICE_TEST_MODE:
-		pdev->refspadchar.device_test_mode =
+		pdev->VL53LX_LLDriverCommonData->refspadchar.device_test_mode =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_VCSEL_PERIOD:
-		pdev->refspadchar.VL53LX_p_005 =
+		pdev->VL53LX_LLDriverCommonData->refspadchar.VL53LX_p_005 =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_PHASECAL_TIMEOUT_US:
-		pdev->refspadchar.timeout_us =
+		pdev->VL53LX_LLDriverCommonData->refspadchar.timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_TARGET_COUNT_RATE_MCPS:
-		pdev->refspadchar.target_count_rate_mcps =
+		pdev->VL53LX_LLDriverCommonData->refspadchar.target_count_rate_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_MIN_COUNTRATE_LIMIT_MCPS:
-		pdev->refspadchar.min_count_rate_limit_mcps =
+		pdev->VL53LX_LLDriverCommonData->refspadchar.min_count_rate_limit_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_REFSPADCHAR_MAX_COUNTRATE_LIMIT_MCPS:
-		pdev->refspadchar.max_count_rate_limit_mcps =
+		pdev->VL53LX_LLDriverCommonData->refspadchar.max_count_rate_limit_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_EXTRACT_NUM_OF_SAMPLES:
