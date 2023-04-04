@@ -342,7 +342,7 @@ VL53LX_Error VL53LX_get_and_avg_xtalk_samples(
 
 			if ((valid_result == 1) && (zone_id >= 4)) {
 				status = VL53LX_sum_histogram_data(
-						&(pdev->hist_data),
+						&(pdev->VL53LX_LLDriverCommonData->hist_data),
 						psum_histo);
 
 
@@ -438,7 +438,7 @@ VL53LX_Error VL53LX_get_and_avg_xtalk_samples(
 
 
 
-	memcpy(pavg_histo, &(pdev->hist_data),
+	memcpy(pavg_histo, &(pdev->VL53LX_LLDriverCommonData->hist_data),
 			sizeof(VL53LX_histogram_bin_data_t));
 
 
@@ -551,16 +551,16 @@ VL53LX_Error VL53LX_run_phasecal_average(
 
 			period = 2048 *
 				(uint32_t)VL53LX_decode_vcsel_period(
-					pdev->hist_data.VL53LX_p_005);
+					pdev->VL53LX_LLDriverCommonData->hist_data.VL53LX_p_005);
 
 			VL53LX_p_014  = period;
 			VL53LX_p_014 += (uint32_t)(
-			pdev->hist_data.phasecal_result__reference_phase);
+			pdev->VL53LX_LLDriverCommonData->hist_data.phasecal_result__reference_phase);
 			VL53LX_p_014 +=
 				(2048 *
 				(uint32_t)phasecal_result__vcsel_start);
 			VL53LX_p_014 -= (2048 *
-			(uint32_t)pdev->hist_data.cal_config__vcsel_start);
+			(uint32_t)pdev->VL53LX_LLDriverCommonData->hist_data.cal_config__vcsel_start);
 
 			if (period != 0) {
 				VL53LX_p_014  = VL53LX_p_014 % period;
@@ -572,7 +572,7 @@ VL53LX_Error VL53LX_run_phasecal_average(
 			}
 
 			phasecal_result__reference_phase += (uint32_t)(
-			pdev->hist_data.phasecal_result__reference_phase);
+			pdev->VL53LX_LLDriverCommonData->hist_data.phasecal_result__reference_phase);
 
 			zero_distance_phase += (uint32_t)VL53LX_p_014;
 		}
@@ -930,7 +930,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 					VL53LX_hist_xtalk_extract_update(
 						cal_distance_mm,
 						OVERSIZE,
-						&(pdev->hist_data),
+						&(pdev->VL53LX_LLDriverCommonData->hist_data),
 						&(pdev->xtalk_extract));
 				}
 			}
@@ -944,7 +944,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 		if (status == VL53LX_ERROR_NONE)
 			status =
 			VL53LX_hist_xtalk_extract_fini(
-				&(pdev->hist_data),
+				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				&(pdev->xtalk_extract),
 				&(pdev->xtalk_cal),
 				&(pdev->xtalk_shapes.xtalk_shape));

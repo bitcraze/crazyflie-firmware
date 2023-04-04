@@ -815,9 +815,9 @@ static VL53LX_Error SetTargetData(VL53LX_DEV Dev,
 			pdev->PreviousExtendedRange[iteration] == 1)))
 	{
 		// if (((pdev->PreviousStreamCount) ==
-		// 	(pdev->hist_data.result__stream_count - 1 ))
+		// 	(pdev->VL53LX_LLDriverCommonData->hist_data.result__stream_count - 1 ))
 		// || ((pdev->PreviousStreamCount) ==
-		// 	(pdev->hist_data.result__stream_count + 127)))
+		// 	(pdev->VL53LX_LLDriverCommonData->hist_data.result__stream_count + 127)))
 		if(true)
 		{
 		RangeDiff = pRangeData->RangeMilliMeter -
@@ -1011,7 +1011,7 @@ static VL53LX_Error SetMeasurementData(VL53LX_DEV Dev,
 				presults_data->VL53LX_p_004;
 
 	}
-	pdev->PreviousStreamCount = pdev->hist_data.result__stream_count;
+	pdev->PreviousStreamCount = pdev->VL53LX_LLDriverCommonData->hist_data.result__stream_count;
 	for (i = iteration; i < VL53LX_MAX_RANGE_RESULTS; i++) {
 		pdev->PreviousRangeMilliMeter[i] = 0;
 		pdev->PreviousRangeStatus[i] = 255;

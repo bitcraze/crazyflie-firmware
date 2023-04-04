@@ -1307,8 +1307,8 @@ typedef struct {
 	uint32_t  wArea1[1528/4];
 	uint32_t  wArea2[512/4];
 
-	// VL53LX_histogram_bin_data_t         hist_data;
-	// VL53LX_histogram_bin_data_t         hist_xtalk;
+	VL53LX_histogram_bin_data_t         hist_data;
+	VL53LX_histogram_bin_data_t         hist_xtalk;
 	
 	// VL53LX_xtalk_histogram_data_t       xtalk_shapes;
 	// VL53LX_xtalk_range_results_t        xtalk_results;
@@ -1401,8 +1401,8 @@ typedef struct {
 	VL53LX_nvm_copy_data_t              nvm_copy_data;
 
 
-	VL53LX_histogram_bin_data_t         hist_data;
-	VL53LX_histogram_bin_data_t         hist_xtalk;
+	// VL53LX_histogram_bin_data_t         hist_data;
+	// VL53LX_histogram_bin_data_t         hist_xtalk;
 
 
 	VL53LX_xtalk_histogram_data_t       xtalk_shapes;
@@ -1436,7 +1436,7 @@ typedef struct {
 	uint8_t pos_before_next_recom;
 
 	int32_t  multi_bins_rec[VL53LX_BIN_REC_SIZE]
-		[VL53LX_TIMING_CONF_A_B_SIZE][VL53LX_HISTOGRAM_BUFFER_SIZE];
+		[VL53LX_TIMING_CONF_A_B_SIZE][VL53LX_HISTOGRAM_BUFFER_SIZE]; //cannot be shared
 
 	int16_t PreviousRangeMilliMeter[VL53LX_MAX_RANGE_RESULTS];
 	uint8_t PreviousRangeStatus[VL53LX_MAX_RANGE_RESULTS];

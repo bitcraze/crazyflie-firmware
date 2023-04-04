@@ -476,12 +476,12 @@ VL53LX_Error VL53LX_data_init(
 	VL53LX_init_histogram_bin_data_struct(
 			0,
 			VL53LX_HISTOGRAM_BUFFER_SIZE,
-			&(pdev->hist_data));
+			&(pdev->VL53LX_LLDriverCommonData->hist_data));
 
 	VL53LX_init_histogram_bin_data_struct(
 			0,
 			VL53LX_HISTOGRAM_BUFFER_SIZE,
-			&(pdev->hist_xtalk));
+			&(pdev->VL53LX_LLDriverCommonData->hist_xtalk));
 
 
 	VL53LX_init_xtalk_bin_data_struct(
@@ -2084,7 +2084,7 @@ VL53LX_Error VL53LX_get_device_results(
 	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
 	VL53LX_xtalk_config_t *pC = &(pdev->xtalk_cfg);
 	VL53LX_low_power_auto_data_t *pL = &(pdev->low_power_auto_data);
-	VL53LX_histogram_bin_data_t *pHD = &(pdev->hist_data);
+	VL53LX_histogram_bin_data_t *pHD = &(pdev->VL53LX_LLDriverCommonData->hist_data);
 	VL53LX_customer_nvm_managed_t *pN = &(pdev->customer);
 	VL53LX_zone_histograms_t *pZH = &(pres->zone_hists);
 	VL53LX_xtalk_calibration_results_t *pXCR = &(pdev->xtalk_cal);
@@ -2105,7 +2105,7 @@ VL53LX_Error VL53LX_get_device_results(
 
 		status = VL53LX_get_histogram_bin_data(
 						Dev,
-						&(pdev->hist_data));
+						&(pdev->VL53LX_LLDriverCommonData->hist_data));
 
 
 
@@ -2115,7 +2115,7 @@ VL53LX_Error VL53LX_get_device_results(
 			zid = pdev->ll_state.rd_zone_id;
 			status = VL53LX_hist_copy_and_scale_ambient_info(
 			&(pZH->VL53LX_p_003[zid]),
-			&(pdev->hist_data));
+			&(pdev->VL53LX_LLDriverCommonData->hist_data));
 		}
 
 
@@ -2228,7 +2228,7 @@ VL53LX_Error VL53LX_get_device_results(
 				pdmax_cal,
 				&(pdev->dmax_cfg),
 				&(pdev->histpostprocess),
-				&(pdev->hist_data),
+				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				&(pdev->xtalk_shapes),
 				pdev->VL53LX_LLDriverCommonData->wArea1,
 				pdev->VL53LX_LLDriverCommonData->wArea2,
@@ -2254,7 +2254,7 @@ VL53LX_Error VL53LX_get_device_results(
 
 		status = VL53LX_hist_wrap_dmax(
 				&(pdev->histpostprocess),
-				&(pdev->hist_data),
+				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				&(presults->wrap_dmax_mm));
 
 
@@ -2321,7 +2321,7 @@ VL53LX_Error VL53LX_get_device_results(
 			goto UPDATE_DYNAMIC_CONFIG;
 
 		VL53LX_hist_copy_results_to_sys_and_core(
-				&(pdev->hist_data),
+				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				presults,
 				&(pdev->sys_results),
 				&(pdev->core_results));
@@ -2359,7 +2359,7 @@ UPDATE_DYNAMIC_CONFIG:
 #ifdef VL53LX_LOG_ENABLE
 		if (status == VL53LX_ERROR_NONE)
 			VL53LX_print_histogram_bin_data(
-				&(pdev->hist_data),
+				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				"get_device_results():pdev->lldata.hist_data.",
 				VL53LX_TRACE_MODULE_HISTOGRAM_DATA);
 #endif

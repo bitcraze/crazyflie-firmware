@@ -93,7 +93,7 @@ VL53LX_Error VL53LX_get_histogram_debug_data(
 
 	memcpy(
 		pdata,
-		&(pdev->hist_data),
+		&(pdev->VL53LX_LLDriverCommonData->hist_data),
 		sizeof(VL53LX_histogram_bin_data_t));
 
 	LOG_FUNCTION_END(status);
@@ -172,7 +172,7 @@ VL53LX_Error VL53LX_get_xtalk_debug_data(
 
 	memcpy(
 		&(pdata->hist_data),
-		&(pdev->hist_data),
+		&(pdev->VL53LX_LLDriverCommonData->hist_data),
 		sizeof(VL53LX_histogram_bin_data_t));
 
 	memcpy(
@@ -3098,7 +3098,7 @@ void VL53LX_print_xtalk_debug_data(
 
 	sprintf(ppre_text, "%shist_data.", pprefix);
 	VL53LX_print_histogram_bin_data(
-		&(pdata->hist_data),
+		&(pdata->VL53LX_LLDriverCommonData->hist_data),
 		ppre_text, trace_flags);
 
 	sprintf(ppre_text, "%sxtalk_shapes.", pprefix);

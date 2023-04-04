@@ -217,7 +217,7 @@ VL53LX_Error VL53LX_check_ll_driver_rd_state(
 
 	VL53LX_ll_driver_state_t  *pstate       = &(pdev->ll_state);
 	VL53LX_system_results_t   *psys_results = &(pdev->sys_results);
-	VL53LX_histogram_bin_data_t *phist_data = &(pdev->hist_data);
+	VL53LX_histogram_bin_data_t *phist_data = &(pdev->VL53LX_LLDriverCommonData->hist_data);
 	VL53LX_zone_private_dyn_cfgs_t *pZ = &(pres->zone_dyn_cfgs);
 
 	uint8_t   device_range_status   = 0;
@@ -4819,7 +4819,7 @@ VL53LX_Error VL53LX_compute_histo_merge_nb(
 	uint8_t i, timing;
 	uint8_t sum = 0;
 
-	timing = (pdev->hist_data.bin_seq[0] == 7 ? 1 : 0);
+	timing = (pdev->VL53LX_LLDriverCommonData->hist_data.bin_seq[0] == 7 ? 1 : 0);
 	for (i = 0; i < VL53LX_BIN_REC_SIZE; i++)
 		if (pdev->multi_bins_rec[i][timing][7] > 0)
 			sum++;
