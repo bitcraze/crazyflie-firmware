@@ -453,7 +453,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_hist_gen3_dmax_config_struct(
-			&(pdev->dmax_cfg));
+			&(pdev->VL53LX_LLDriverCommonData->dmax_cfg));
 
 
 	if (status == VL53LX_ERROR_NONE)
@@ -2143,15 +2143,15 @@ VL53LX_Error VL53LX_get_device_results(
 		pHP->algo__crosstalk_compensation_y_plane_gradient_kcps =
 		pC->algo__crosstalk_compensation_y_plane_gradient_kcps;
 
-		pdev->dmax_cfg.ambient_thresh_sigma =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.ambient_thresh_sigma =
 			pHP->ambient_thresh_sigma1;
-		pdev->dmax_cfg.min_ambient_thresh_events =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.min_ambient_thresh_events =
 			pHP->min_ambient_thresh_events;
-		pdev->dmax_cfg.signal_total_events_limit =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.signal_total_events_limit =
 			pHP->signal_total_events_limit;
-		pdev->dmax_cfg.dss_config__target_total_rate_mcps =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.dss_config__target_total_rate_mcps =
 			pdev->stat_cfg.dss_config__target_total_rate_mcps;
-		pdev->dmax_cfg.dss_config__aperture_attenuation =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.dss_config__aperture_attenuation =
 			pdev->gen_cfg.dss_config__aperture_attenuation;
 
 		pHP->algo__crosstalk_detect_max_valid_range_mm =
@@ -2211,7 +2211,7 @@ VL53LX_Error VL53LX_get_device_results(
 		pHD->roi_config__user_roi_requested_global_xy_size,
 		&(pdev->rtn_good_spads[0]),
 		(uint16_t)pdev->gen_cfg.dss_config__aperture_attenuation,
-		&(pdev->dmax_cfg.max_effective_spads));
+		&(pdev->VL53LX_LLDriverCommonData->dmax_cfg.max_effective_spads));
 
 		status =
 			VL53LX_get_dmax_calibration_data(
@@ -2226,7 +2226,7 @@ VL53LX_Error VL53LX_get_device_results(
 		status = VL53LX_ipp_hist_process_data(
 				Dev,
 				pdmax_cal,
-				&(pdev->dmax_cfg),
+				&(pdev->VL53LX_LLDriverCommonData->dmax_cfg),
 				&(pdev->histpostprocess),
 				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				&(pdev->xtalk_shapes),
@@ -3386,27 +3386,27 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_SIGNAL_THRESH_SIGMA:
 		*ptuning_parm_value =
-		(int32_t)pdev->dmax_cfg.signal_thresh_sigma;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->dmax_cfg.signal_thresh_sigma;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_0:
 		*ptuning_parm_value =
-		(int32_t)pdev->dmax_cfg.target_reflectance_for_dmax_calc[0];
+		(int32_t)pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[0];
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_1:
 		*ptuning_parm_value =
-		(int32_t)pdev->dmax_cfg.target_reflectance_for_dmax_calc[1];
+		(int32_t)pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[1];
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_2:
 		*ptuning_parm_value =
-		(int32_t)pdev->dmax_cfg.target_reflectance_for_dmax_calc[2];
+		(int32_t)pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[2];
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_3:
 		*ptuning_parm_value =
-		(int32_t)pdev->dmax_cfg.target_reflectance_for_dmax_calc[3];
+		(int32_t)pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[3];
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_4:
 		*ptuning_parm_value =
-		(int32_t)pdev->dmax_cfg.target_reflectance_for_dmax_calc[4];
+		(int32_t)pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[4];
 	break;
 	case VL53LX_TUNINGPARM_VHV_LOOPBOUND:
 		*ptuning_parm_value =
@@ -4168,27 +4168,27 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_SIGNAL_THRESH_SIGMA:
-		pdev->dmax_cfg.signal_thresh_sigma =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.signal_thresh_sigma =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_0:
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[0] =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[0] =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_1:
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[1] =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[1] =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_2:
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[2] =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[2] =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_3:
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[3] =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[3] =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_REFLECTANCE_ARRAY_4:
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[4] =
+		pdev->VL53LX_LLDriverCommonData->dmax_cfg.target_reflectance_for_dmax_calc[4] =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_VHV_LOOPBOUND:
