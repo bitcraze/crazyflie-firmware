@@ -442,7 +442,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_zone_cal_config_struct(
-			&(pdev->zonecal_cfg));
+			&(pdev->VL53LX_LLDriverCommonData->zonecal_cfg));
 
 
 	if (status == VL53LX_ERROR_NONE)
@@ -3502,27 +3502,27 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_DSS_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->zonecal_cfg.dss_config__target_total_rate_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->zonecal_cfg.dss_config__target_total_rate_mcps;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_PHASECAL_TIMEOUT_US:
 		*ptuning_parm_value =
-	(int32_t)pdev->zonecal_cfg.phasecal_config_timeout_us;
+	(int32_t)pdev->VL53LX_LLDriverCommonData->zonecal_cfg.phasecal_config_timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_DSS_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->zonecal_cfg.mm_config_timeout_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->zonecal_cfg.mm_config_timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_PHASECAL_NUM_SAMPLES:
 		*ptuning_parm_value =
-		(int32_t)pdev->zonecal_cfg.phasecal_num_of_samples;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->zonecal_cfg.phasecal_num_of_samples;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_RANGE_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->zonecal_cfg.range_config_timeout_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->zonecal_cfg.range_config_timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_ZONE_NUM_SAMPLES:
 		*ptuning_parm_value =
-		(int32_t)pdev->zonecal_cfg.zone_num_of_samples;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->zonecal_cfg.zone_num_of_samples;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_VCSEL_PERIOD:
 		*ptuning_parm_value =
@@ -4284,27 +4284,27 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_DSS_RATE_MCPS:
-		pdev->zonecal_cfg.dss_config__target_total_rate_mcps =
+		pdev->VL53LX_LLDriverCommonData->zonecal_cfg.dss_config__target_total_rate_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_PHASECAL_TIMEOUT_US:
-		pdev->zonecal_cfg.phasecal_config_timeout_us =
+		pdev->VL53LX_LLDriverCommonData->zonecal_cfg.phasecal_config_timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_DSS_TIMEOUT_US:
-		pdev->zonecal_cfg.mm_config_timeout_us =
+		pdev->VL53LX_LLDriverCommonData->zonecal_cfg.mm_config_timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_PHASECAL_NUM_SAMPLES:
-		pdev->zonecal_cfg.phasecal_num_of_samples =
+		pdev->VL53LX_LLDriverCommonData->zonecal_cfg.phasecal_num_of_samples =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_RANGE_TIMEOUT_US:
-		pdev->zonecal_cfg.range_config_timeout_us =
+		pdev->VL53LX_LLDriverCommonData->zonecal_cfg.range_config_timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_ZONE_NUM_SAMPLES:
-		pdev->zonecal_cfg.zone_num_of_samples =
+		pdev->VL53LX_LLDriverCommonData->zonecal_cfg.zone_num_of_samples =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_VCSEL_PERIOD:
