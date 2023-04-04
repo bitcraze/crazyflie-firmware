@@ -1325,6 +1325,8 @@ typedef struct {
 	VL53LX_xtalk_config_t               xtalk_cfg;
 	VL53LX_offsetcal_config_t           offsetcal_cfg;
 
+	VL53LX_smudge_corrector_config_t	smudge_correct_config;
+
 
 } VL53LX_LLDriverCommonData_t;
 
@@ -1426,7 +1428,7 @@ typedef struct {
 	// VL53LX_core_results_t               core_results;
 	// VL53LX_debug_results_t              dbg_results;
 
-	VL53LX_smudge_corrector_config_t	smudge_correct_config;
+	// VL53LX_smudge_corrector_config_t	smudge_correct_config;
 
 	VL53LX_smudge_corrector_internals_t smudge_corrector_internals;
 

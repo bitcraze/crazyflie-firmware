@@ -1385,7 +1385,7 @@ VL53LX_Error VL53LX_PerformOffsetSimpleCalibration(VL53LX_DEV Dev,
 
 	pdev = VL53LXDevStructGetLLDriverHandle(Dev);
 
-	smudge_corr_en = pdev->smudge_correct_config.smudge_corr_enabled;
+	smudge_corr_en = pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled;
 	SmudgeStatus = VL53LX_dynamic_xtalk_correction_disable(Dev);
 
 	pdev->customer.algo__part_to_part_range_offset_mm = 0;
@@ -1485,7 +1485,7 @@ VL53LX_Error VL53LX_PerformOffsetZeroDistanceCalibration(VL53LX_DEV Dev)
 	LOG_FUNCTION_START("");
 
 	pdev = VL53LXDevStructGetLLDriverHandle(Dev);
-	smudge_corr_en = pdev->smudge_correct_config.smudge_corr_enabled;
+	smudge_corr_en = pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled;
 	SmudgeStatus = VL53LX_dynamic_xtalk_correction_disable(Dev);
 	pdev->customer.algo__part_to_part_range_offset_mm = 0;
 	pdev->customer.mm_config__inner_offset_mm = START_OFFSET;
@@ -1811,7 +1811,7 @@ VL53LX_Error VL53LX_PerformOffsetPerVcselCalibration(VL53LX_DEV Dev,
 
 	pdev = VL53LXDevStructGetLLDriverHandle(Dev);
 
-	smudge_corr_en = pdev->smudge_correct_config.smudge_corr_enabled;
+	smudge_corr_en = pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled;
 	SmudgeStatus = VL53LX_dynamic_xtalk_correction_disable(Dev);
 
 	pdev->customer.algo__part_to_part_range_offset_mm = 0;

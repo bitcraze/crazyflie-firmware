@@ -3618,75 +3618,75 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_MARGIN:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.smudge_margin;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_margin;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NOISE_MARGIN:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.noise_margin;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.noise_margin;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XTALK_OFFSET_LIMIT:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.user_xtalk_offset_limit;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_xtalk_offset_limit;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XTALK_OFFSET_LIMIT_HI:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.user_xtalk_offset_limit_hi;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_xtalk_offset_limit_hi;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SAMPLE_LIMIT:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.sample_limit;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.sample_limit;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SINGLE_XTALK_DELTA:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.single_xtalk_delta;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.single_xtalk_delta;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_AVERAGED_XTALK_DELTA:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.averaged_xtalk_delta;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.averaged_xtalk_delta;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_CLIP_LIMIT:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.smudge_corr_clip_limit;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_clip_limit;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SCALER_CALC_METHOD:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.scaler_calc_method;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.scaler_calc_method;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XGRADIENT_SCALER:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.x_gradient_scaler;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.x_gradient_scaler;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_YGRADIENT_SCALER:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.y_gradient_scaler;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.y_gradient_scaler;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_USER_SCALER_SET:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.user_scaler_set;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_scaler_set;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_COR_SINGLE_APPLY:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.smudge_corr_single_apply;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_single_apply;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XTALK_AMB_THRESHOLD:
 		*ptuning_parm_value = (int32_t)(
-		pdev->smudge_correct_config.smudge_corr_ambient_threshold);
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_ambient_threshold);
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_AMB_THRESHOLD_KCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.nodetect_ambient_threshold;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_ambient_threshold;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_SAMPLE_LIMIT:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.nodetect_sample_limit;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_sample_limit;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_XTALK_OFFSET_KCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.nodetect_xtalk_offset;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_xtalk_offset;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_MIN_RANGE_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->smudge_correct_config.nodetect_min_range_mm;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_min_range_mm;
 	break;
 	case VL53LX_TUNINGPARM_LOWPOWERAUTO_VHV_LOOP_BOUND:
 		*ptuning_parm_value =
@@ -3722,7 +3722,7 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_MAX_SMUDGE_FACTOR:
 		*ptuning_parm_value =
-		pdev->smudge_correct_config.max_smudge_factor;
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.max_smudge_factor;
 	break;
 
 	case VL53LX_TUNINGPARM_UWR_ENABLE:
@@ -4400,76 +4400,76 @@ VL53LX_Error VL53LX_set_tuning_parm(
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_MARGIN:
-		pdev->smudge_correct_config.smudge_margin =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_margin =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NOISE_MARGIN:
-		pdev->smudge_correct_config.noise_margin =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.noise_margin =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XTALK_OFFSET_LIMIT:
-		pdev->smudge_correct_config.user_xtalk_offset_limit =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_xtalk_offset_limit =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XTALK_OFFSET_LIMIT_HI:
-		pdev->smudge_correct_config.user_xtalk_offset_limit_hi =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_xtalk_offset_limit_hi =
 			(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SAMPLE_LIMIT:
-		pdev->smudge_correct_config.sample_limit =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.sample_limit =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SINGLE_XTALK_DELTA:
-		pdev->smudge_correct_config.single_xtalk_delta =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.single_xtalk_delta =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_AVERAGED_XTALK_DELTA:
-		pdev->smudge_correct_config.averaged_xtalk_delta =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.averaged_xtalk_delta =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_CLIP_LIMIT:
-		pdev->smudge_correct_config.smudge_corr_clip_limit =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_clip_limit =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SCALER_CALC_METHOD:
-		pdev->smudge_correct_config.scaler_calc_method =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.scaler_calc_method =
 			(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XGRADIENT_SCALER:
-		pdev->smudge_correct_config.x_gradient_scaler =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.x_gradient_scaler =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_YGRADIENT_SCALER:
-		pdev->smudge_correct_config.y_gradient_scaler =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.y_gradient_scaler =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_USER_SCALER_SET:
-		pdev->smudge_correct_config.user_scaler_set =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_scaler_set =
 			(uint8_t)tuning_parm_value;
 	break;
 
 	case VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_COR_SINGLE_APPLY:
-		pdev->smudge_correct_config.smudge_corr_single_apply =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_single_apply =
 			(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_XTALK_AMB_THRESHOLD:
-		pdev->smudge_correct_config.smudge_corr_ambient_threshold =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_ambient_threshold =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_AMB_THRESHOLD_KCPS:
-		pdev->smudge_correct_config.nodetect_ambient_threshold =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_ambient_threshold =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_SAMPLE_LIMIT:
-		pdev->smudge_correct_config.nodetect_sample_limit =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_sample_limit =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_XTALK_OFFSET_KCPS:
-		pdev->smudge_correct_config.nodetect_xtalk_offset =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_xtalk_offset =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_NODETECT_MIN_RANGE_MM:
-		pdev->smudge_correct_config.nodetect_min_range_mm =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_min_range_mm =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LOWPOWERAUTO_VHV_LOOP_BOUND:
@@ -4505,7 +4505,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 			(uint16_t) tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_MAX_SMUDGE_FACTOR:
-		pdev->smudge_correct_config.max_smudge_factor =
+		pdev->VL53LX_LLDriverCommonData->smudge_correct_config.max_smudge_factor =
 			(uint32_t)tuning_parm_value;
 	break;
 
@@ -4702,7 +4702,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_enable(
 
 	LOG_FUNCTION_START("");
 
-	pdev->smudge_correct_config.smudge_corr_enabled = 1;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled = 1;
 
 	LOG_FUNCTION_END(status);
 
@@ -4722,7 +4722,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_disable(
 
 	LOG_FUNCTION_START("");
 
-	pdev->smudge_correct_config.smudge_corr_enabled = 0;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled = 0;
 
 	LOG_FUNCTION_END(status);
 
@@ -4742,7 +4742,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_apply_disable(
 
 	LOG_FUNCTION_START("");
 
-	pdev->smudge_correct_config.smudge_corr_apply_enabled = 0;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_apply_enabled = 0;
 
 	LOG_FUNCTION_END(status);
 
@@ -4762,7 +4762,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_single_apply_enable(
 
 	LOG_FUNCTION_START("");
 
-	pdev->smudge_correct_config.smudge_corr_single_apply = 1;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_single_apply = 1;
 
 	LOG_FUNCTION_END(status);
 
@@ -4782,7 +4782,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_single_apply_disable(
 
 	LOG_FUNCTION_START("");
 
-	pdev->smudge_correct_config.smudge_corr_single_apply = 0;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_single_apply = 0;
 
 	LOG_FUNCTION_END(status);
 
@@ -4803,7 +4803,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_apply_enable(
 
 	LOG_FUNCTION_START("");
 
-	pdev->smudge_correct_config.smudge_corr_apply_enabled = 1;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_apply_enabled = 1;
 
 	LOG_FUNCTION_END(status);
 

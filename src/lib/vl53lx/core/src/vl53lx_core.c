@@ -3861,7 +3861,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_calc_required_samples(
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
 	VL53LX_LLDriverResults_t *pres = VL53LXDevStructGetLLResultsHandle(Dev);
 	VL53LX_smudge_corrector_config_t *pconfig =
-				&(pdev->smudge_correct_config);
+				&(pdev->VL53LX_LLDriverCommonData->smudge_correct_config);
 	VL53LX_smudge_corrector_internals_t *pint =
 				&(pdev->smudge_corrector_internals);
 
@@ -4125,7 +4125,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_corrector(
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
 	VL53LX_LLDriverResults_t *pres = VL53LXDevStructGetLLResultsHandle(Dev);
 	VL53LX_smudge_corrector_config_t *pconfig =
-				&(pdev->smudge_correct_config);
+				&(pdev->VL53LX_LLDriverCommonData->smudge_correct_config);
 	VL53LX_smudge_corrector_internals_t *pint =
 				&(pdev->smudge_corrector_internals);
 	VL53LX_smudge_corrector_data_t *pout =
@@ -4446,46 +4446,46 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_data_init(
 
 
 
-	pdev->smudge_correct_config.smudge_corr_enabled       = 1;
-	pdev->smudge_correct_config.smudge_corr_apply_enabled = 1;
-	pdev->smudge_correct_config.smudge_corr_single_apply  =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled       = 1;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_apply_enabled = 1;
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_single_apply  =
 		VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_COR_SINGLE_APPLY_DEFAULT;
 
-	pdev->smudge_correct_config.smudge_margin =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_margin =
 		VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_MARGIN_DEFAULT;
-	pdev->smudge_correct_config.noise_margin =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.noise_margin =
 		VL53LX_TUNINGPARM_DYNXTALK_NOISE_MARGIN_DEFAULT;
-	pdev->smudge_correct_config.user_xtalk_offset_limit =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_xtalk_offset_limit =
 		VL53LX_TUNINGPARM_DYNXTALK_XTALK_OFFSET_LIMIT_DEFAULT;
-	pdev->smudge_correct_config.user_xtalk_offset_limit_hi =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_xtalk_offset_limit_hi =
 		VL53LX_TUNINGPARM_DYNXTALK_XTALK_OFFSET_LIMIT_HI_DEFAULT;
-	pdev->smudge_correct_config.sample_limit =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.sample_limit =
 		VL53LX_TUNINGPARM_DYNXTALK_SAMPLE_LIMIT_DEFAULT;
-	pdev->smudge_correct_config.single_xtalk_delta =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.single_xtalk_delta =
 		VL53LX_TUNINGPARM_DYNXTALK_SINGLE_XTALK_DELTA_DEFAULT;
-	pdev->smudge_correct_config.averaged_xtalk_delta =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.averaged_xtalk_delta =
 		VL53LX_TUNINGPARM_DYNXTALK_AVERAGED_XTALK_DELTA_DEFAULT;
-	pdev->smudge_correct_config.smudge_corr_clip_limit =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_clip_limit =
 		VL53LX_TUNINGPARM_DYNXTALK_CLIP_LIMIT_DEFAULT;
-	pdev->smudge_correct_config.smudge_corr_ambient_threshold =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_ambient_threshold =
 		VL53LX_TUNINGPARM_DYNXTALK_XTALK_AMB_THRESHOLD_DEFAULT;
-	pdev->smudge_correct_config.scaler_calc_method =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.scaler_calc_method =
 		0;
-	pdev->smudge_correct_config.x_gradient_scaler =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.x_gradient_scaler =
 		VL53LX_TUNINGPARM_DYNXTALK_XGRADIENT_SCALER_DEFAULT;
-	pdev->smudge_correct_config.y_gradient_scaler =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.y_gradient_scaler =
 		VL53LX_TUNINGPARM_DYNXTALK_YGRADIENT_SCALER_DEFAULT;
-	pdev->smudge_correct_config.user_scaler_set =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.user_scaler_set =
 		VL53LX_TUNINGPARM_DYNXTALK_USER_SCALER_SET_DEFAULT;
-	pdev->smudge_correct_config.nodetect_ambient_threshold =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_ambient_threshold =
 		VL53LX_TUNINGPARM_DYNXTALK_NODETECT_AMB_THRESHOLD_KCPS_DEFAULT;
-	pdev->smudge_correct_config.nodetect_sample_limit =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_sample_limit =
 		VL53LX_TUNINGPARM_DYNXTALK_NODETECT_SAMPLE_LIMIT_DEFAULT;
-	pdev->smudge_correct_config.nodetect_xtalk_offset =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_xtalk_offset =
 		VL53LX_TUNINGPARM_DYNXTALK_NODETECT_XTALK_OFFSET_KCPS_DEFAULT;
-	pdev->smudge_correct_config.nodetect_min_range_mm =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.nodetect_min_range_mm =
 		VL53LX_TUNINGPARM_DYNXTALK_NODETECT_MIN_RANGE_MM_DEFAULT;
-	pdev->smudge_correct_config.max_smudge_factor =
+	pdev->VL53LX_LLDriverCommonData->smudge_correct_config.max_smudge_factor =
 		VL53LX_TUNINGPARM_DYNXTALK_MAX_SMUDGE_FACTOR_DEFAULT;
 
 

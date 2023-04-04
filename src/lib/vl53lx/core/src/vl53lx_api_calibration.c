@@ -247,7 +247,7 @@ VL53LX_Error VL53LX_get_and_avg_xtalk_samples(
 
 
 
-	smudge_corr_en = pdev->smudge_correct_config.smudge_corr_enabled;
+	smudge_corr_en = pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled;
 
 	status = VL53LX_dynamic_xtalk_correction_disable(Dev);
 
@@ -875,7 +875,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 
 
 
-	smudge_corr_en = pdev->smudge_correct_config.smudge_corr_enabled;
+	smudge_corr_en = pdev->VL53LX_LLDriverCommonData->smudge_correct_config.smudge_corr_enabled;
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_dynamic_xtalk_correction_disable(Dev);
