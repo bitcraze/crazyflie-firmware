@@ -1318,6 +1318,8 @@ typedef struct {
 	VL53LX_tuning_parm_storage_t        tuning_parms;
 
 	VL53LX_refspadchar_config_t         refspadchar;
+	VL53LX_ssc_config_t                 ssc_cfg;
+
 
 
 } VL53LX_LLDriverCommonData_t;
@@ -1384,7 +1386,7 @@ typedef struct {
 
 
 	// VL53LX_refspadchar_config_t         refspadchar;
-	VL53LX_ssc_config_t                 ssc_cfg;
+	// VL53LX_ssc_config_t                 ssc_cfg;
 	VL53LX_hist_post_process_config_t   histpostprocess;
 	VL53LX_hist_gen3_dmax_config_t      dmax_cfg;
 	VL53LX_xtalkextract_config_t        xtalk_extract_cfg;

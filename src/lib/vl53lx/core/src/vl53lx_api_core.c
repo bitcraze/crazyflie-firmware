@@ -421,7 +421,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_ssc_config_struct(
-			&(pdev->ssc_cfg));
+			&(pdev->VL53LX_LLDriverCommonData->ssc_cfg));
 
 
 	if (status == VL53LX_ERROR_NONE)
@@ -3526,15 +3526,15 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_VCSEL_PERIOD:
 		*ptuning_parm_value =
-		(int32_t)pdev->ssc_cfg.VL53LX_p_005;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->ssc_cfg.VL53LX_p_005;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_VCSEL_START:
 		*ptuning_parm_value =
-		(int32_t)pdev->ssc_cfg.vcsel_start;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->ssc_cfg.vcsel_start;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_RATE_LIMIT_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->ssc_cfg.rate_limit_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->ssc_cfg.rate_limit_mcps;
 	break;
 	case VL53LX_TUNINGPARM_LITE_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
 		*ptuning_parm_value =
@@ -4308,15 +4308,15 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_VCSEL_PERIOD:
-		pdev->ssc_cfg.VL53LX_p_005 =
+		pdev->VL53LX_LLDriverCommonData->ssc_cfg.VL53LX_p_005 =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_VCSEL_START:
-		pdev->ssc_cfg.vcsel_start =
+		pdev->VL53LX_LLDriverCommonData->ssc_cfg.vcsel_start =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_SPADMAP_RATE_LIMIT_MCPS:
-		pdev->ssc_cfg.rate_limit_mcps =
+		pdev->VL53LX_LLDriverCommonData->ssc_cfg.rate_limit_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
