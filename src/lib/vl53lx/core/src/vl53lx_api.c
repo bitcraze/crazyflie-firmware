@@ -721,7 +721,7 @@ static VL53LX_Error SetTargetData(VL53LX_DEV Dev,
 	VL53LX_LLDriverData_t *pdev =
 			VL53LXDevStructGetLLDriverHandle(Dev);
 	VL53LX_tuning_parm_storage_t *tp =
-			&(pdev->tuning_parms);
+			&(pdev->VL53LX_LLDriverCommonData->tuning_parms);
 	uint8_t sequency;
 	uint8_t FilteredRangeStatus;
 	FixPoint1616_t AmbientRate;

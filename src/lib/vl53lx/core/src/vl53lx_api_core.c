@@ -458,7 +458,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_tuning_parm_storage_struct(
-			&(pdev->tuning_parms));
+			&(pdev->VL53LX_LLDriverCommonData->tuning_parms));
 
 
 
@@ -698,7 +698,7 @@ VL53LX_Error VL53LX_read_p2p_data(
 			VL53LX_RdWord(
 				Dev,
 				VL53LX_RESULT__OSC_CALIBRATE_VAL,
-				&(pdev->dbg_results.result__osc_calibrate_val));
+				&(pdev->VL53LX_LLDriverCommonData->dbg_results.result__osc_calibrate_val));
 
 
 
@@ -958,14 +958,14 @@ VL53LX_Error VL53LX_set_inter_measurement_period_ms(
 
 	LOG_FUNCTION_START("");
 
-	if (pdev->dbg_results.result__osc_calibrate_val == 0)
+	if (pdev->VL53LX_LLDriverCommonData->dbg_results.result__osc_calibrate_val == 0)
 		status = VL53LX_ERROR_DIVISION_BY_ZERO;
 
 	if (status == VL53LX_ERROR_NONE) {
 		pdev->inter_measurement_period_ms = inter_measurement_period_ms;
 		pdev->tim_cfg.system__intermeasurement_period =
 			inter_measurement_period_ms *
-			(uint32_t)pdev->dbg_results.result__osc_calibrate_val;
+			(uint32_t)pdev->VL53LX_LLDriverCommonData->dbg_results.result__osc_calibrate_val;
 	}
 
 	LOG_FUNCTION_END(status);
@@ -985,13 +985,13 @@ VL53LX_Error VL53LX_get_inter_measurement_period_ms(
 
 	LOG_FUNCTION_START("");
 
-	if (pdev->dbg_results.result__osc_calibrate_val == 0)
+	if (pdev->VL53LX_LLDriverCommonData->dbg_results.result__osc_calibrate_val == 0)
 		status = VL53LX_ERROR_DIVISION_BY_ZERO;
 
 	if (status == VL53LX_ERROR_NONE)
 		*pinter_measurement_period_ms =
 			pdev->tim_cfg.system__intermeasurement_period /
-			(uint32_t)pdev->dbg_results.result__osc_calibrate_val;
+			(uint32_t)pdev->VL53LX_LLDriverCommonData->dbg_results.result__osc_calibrate_val;
 
 
 	LOG_FUNCTION_END(status);
@@ -1303,36 +1303,36 @@ VL53LX_Error VL53LX_get_preset_mode_timing_cfg(
 
 	case VL53LX_DEVICEPRESETMODE_HISTOGRAM_LONG_RANGE:
 		*pdss_config__target_total_rate_mcps =
-			pdev->tuning_parms.tp_dss_target_histo_mcps;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mcps;
 		*pphasecal_config_timeout_us =
-			pdev->tuning_parms.tp_phasecal_timeout_hist_long_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_long_us;
 		*pmm_config_timeout_us =
-			pdev->tuning_parms.tp_mm_timeout_histo_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_histo_us;
 		*prange_config_timeout_us =
-			pdev->tuning_parms.tp_range_timeout_histo_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_histo_us;
 
 	break;
 
 	case VL53LX_DEVICEPRESETMODE_HISTOGRAM_MEDIUM_RANGE:
 		*pdss_config__target_total_rate_mcps =
-			pdev->tuning_parms.tp_dss_target_histo_mcps;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mcps;
 		*pphasecal_config_timeout_us =
-			pdev->tuning_parms.tp_phasecal_timeout_hist_med_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_med_us;
 		*pmm_config_timeout_us =
-			pdev->tuning_parms.tp_mm_timeout_histo_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_histo_us;
 		*prange_config_timeout_us =
-			pdev->tuning_parms.tp_range_timeout_histo_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_histo_us;
 	break;
 
 	case VL53LX_DEVICEPRESETMODE_HISTOGRAM_SHORT_RANGE:
 		*pdss_config__target_total_rate_mcps =
-				pdev->tuning_parms.tp_dss_target_histo_mcps;
+				pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mcps;
 		*pphasecal_config_timeout_us =
-			pdev->tuning_parms.tp_phasecal_timeout_hist_short_us;
+			pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_short_us;
 		*pmm_config_timeout_us =
-				pdev->tuning_parms.tp_mm_timeout_histo_us;
+				pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_histo_us;
 		*prange_config_timeout_us =
-				pdev->tuning_parms.tp_range_timeout_histo_us;
+				pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_histo_us;
 	break;
 
 	default:
@@ -1374,7 +1374,7 @@ VL53LX_Error VL53LX_set_preset_mode(
 	VL53LX_dynamic_config_t       *pdynamic      = &(pdev->dyn_cfg);
 	VL53LX_system_control_t       *psystem       = &(pdev->sys_ctrl);
 	VL53LX_zone_config_t          *pzone_cfg     = &(pdev->zone_cfg);
-	VL53LX_tuning_parm_storage_t  *ptuning_parms = &(pdev->tuning_parms);
+	VL53LX_tuning_parm_storage_t  *ptuning_parms = &(pdev->VL53LX_LLDriverCommonData->tuning_parms);
 
 	LOG_FUNCTION_START("");
 
@@ -1970,8 +1970,8 @@ VL53LX_Error VL53LX_get_measurement_results(
 	uint8_t buffer[VL53LX_MAX_I2C_XFER_SIZE];
 
 	VL53LX_system_results_t   *psystem_results = &(pdev->sys_results);
-	VL53LX_core_results_t     *pcore_results   = &(pdev->core_results);
-	VL53LX_debug_results_t    *pdebug_results  = &(pdev->dbg_results);
+	VL53LX_core_results_t     *pcore_results   = &(pdev->VL53LX_LLDriverCommonData->core_results);
+	VL53LX_debug_results_t    *pdebug_results  = &(pdev->VL53LX_LLDriverCommonData->dbg_results);
 
 	uint16_t i2c_index               = VL53LX_SYSTEM_RESULTS_I2C_INDEX;
 	uint16_t i2c_buffer_offset_bytes = 0;
@@ -2126,7 +2126,7 @@ VL53LX_Error VL53LX_get_device_results(
 		if (histo_merge_nb == 0)
 			histo_merge_nb = 1;
 		idx = histo_merge_nb - 1;
-		if (pdev->tuning_parms.tp_hist_merge == 1)
+		if (pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge == 1)
 			pC->algo__crosstalk_compensation_plane_offset_kcps =
 				pXCR->algo__xtalk_cpo_HistoMerge_kcps[idx];
 
@@ -2235,7 +2235,7 @@ VL53LX_Error VL53LX_get_device_results(
 				&histo_merge_nb,
 				presults);
 
-		if ((pdev->tuning_parms.tp_hist_merge == 1) &&
+		if ((pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge == 1) &&
 			(histo_merge_nb > 1))
 		for (i = 0; i < VL53LX_MAX_RANGE_RESULTS; i++) {
 			pdata = &(presults->VL53LX_p_003[i]);
@@ -2324,7 +2324,7 @@ VL53LX_Error VL53LX_get_device_results(
 				&(pdev->VL53LX_LLDriverCommonData->hist_data),
 				presults,
 				&(pdev->sys_results),
-				&(pdev->core_results));
+				&(pdev->VL53LX_LLDriverCommonData->core_results));
 
 
 UPDATE_DYNAMIC_CONFIG:
@@ -2364,7 +2364,7 @@ UPDATE_DYNAMIC_CONFIG:
 				VL53LX_TRACE_MODULE_HISTOGRAM_DATA);
 #endif
 
-		if (pdev->tuning_parms.tp_hist_merge == 1)
+		if (pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge == 1)
 			pC->algo__crosstalk_compensation_plane_offset_kcps =
 				pXCR->algo__xtalk_cpo_HistoMerge_kcps[0];
 	} else {
@@ -2378,7 +2378,7 @@ UPDATE_DYNAMIC_CONFIG:
 			VL53LX_copy_sys_and_core_results_to_range_results(
 			(int32_t)pdev->gain_cal.standard_ranging_gain_factor,
 			&(pdev->sys_results),
-			&(pdev->core_results),
+			&(pdev->VL53LX_LLDriverCommonData->core_results),
 			presults);
 
 
@@ -2590,9 +2590,9 @@ VL53LX_Error VL53LX_get_histogram_bin_data(
 
 
 
-	pdev->dbg_results.phasecal_result__reference_phase =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.phasecal_result__reference_phase =
 			pdata->phasecal_result__reference_phase;
-	pdev->dbg_results.phasecal_result__vcsel_start =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.phasecal_result__vcsel_start =
 			pdata->phasecal_result__vcsel_start;
 
 
@@ -3125,452 +3125,6 @@ VL53LX_Error VL53LX_get_offset_correction_mode(
 
 
 
-VL53LX_Error VL53LX_get_tuning_debug_data(
-	VL53LX_DEV                            Dev,
-	VL53LX_tuning_parameters_t           *ptun_data)
-{
-
-
-	VL53LX_Error  status = VL53LX_ERROR_NONE;
-
-	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
-	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
-	VL53LX_xtalkextract_config_t *pXC = &(pdev->xtalk_extract_cfg);
-
-	LOG_FUNCTION_START("");
-
-	ptun_data->vl53lx_tuningparm_version =
-		pdev->tuning_parms.tp_tuning_parm_version;
-
-	ptun_data->vl53lx_tuningparm_key_table_version =
-		pdev->tuning_parms.tp_tuning_parm_key_table_version;
-
-
-	ptun_data->vl53lx_tuningparm_lld_version =
-		pdev->tuning_parms.tp_tuning_parm_lld_version;
-
-	ptun_data->vl53lx_tuningparm_hist_algo_select =
-		pHP->hist_algo_select;
-
-	ptun_data->vl53lx_tuningparm_hist_target_order =
-		pHP->hist_target_order;
-
-	ptun_data->vl53lx_tuningparm_hist_filter_woi_0 =
-		pHP->filter_woi0;
-
-	ptun_data->vl53lx_tuningparm_hist_filter_woi_1 =
-		pHP->filter_woi1;
-
-	ptun_data->vl53lx_tuningparm_hist_amb_est_method =
-		pHP->hist_amb_est_method;
-
-	ptun_data->vl53lx_tuningparm_hist_amb_thresh_sigma_0 =
-		pHP->ambient_thresh_sigma0;
-
-	ptun_data->vl53lx_tuningparm_hist_amb_thresh_sigma_1 =
-		pHP->ambient_thresh_sigma1;
-
-	ptun_data->vl53lx_tuningparm_hist_min_amb_thresh_events =
-		pHP->min_ambient_thresh_events;
-
-	ptun_data->vl53lx_tuningparm_hist_amb_events_scaler =
-		pHP->ambient_thresh_events_scaler;
-
-	ptun_data->vl53lx_tuningparm_hist_noise_threshold =
-		pHP->noise_threshold;
-
-	ptun_data->vl53lx_tuningparm_hist_signal_total_events_limit =
-		pHP->signal_total_events_limit;
-
-	ptun_data->vl53lx_tuningparm_hist_sigma_est_ref_mm =
-		pHP->sigma_estimator__sigma_ref_mm;
-
-	ptun_data->vl53lx_tuningparm_hist_sigma_thresh_mm =
-		pHP->sigma_thresh;
-
-	ptun_data->vl53lx_tuningparm_hist_gain_factor =
-		pdev->gain_cal.histogram_ranging_gain_factor;
-
-	ptun_data->vl53lx_tuningparm_consistency_hist_phase_tolerance =
-		pHP->algo__consistency_check__phase_tolerance;
-
-	ptun_data->vl53lx_tuningparm_consistency_hist_min_max_tolerance_mm =
-		pHP->algo__consistency_check__min_max_tolerance;
-
-	ptun_data->vl53lx_tuningparm_consistency_hist_event_sigma =
-		pHP->algo__consistency_check__event_sigma;
-
-	ptun_data->vl53lx_tuningparm_consistency_hist_event_sigma_min_spad_limit
-		= pHP->algo__consistency_check__event_min_spad_count;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_rtn_histo_long_range =
-		pdev->tuning_parms.tp_init_phase_rtn_hist_long;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_rtn_histo_med_range =
-		pdev->tuning_parms.tp_init_phase_rtn_hist_med;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_rtn_histo_short_range =
-		pdev->tuning_parms.tp_init_phase_rtn_hist_short;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_ref_histo_long_range =
-		pdev->tuning_parms.tp_init_phase_ref_hist_long;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_ref_histo_med_range =
-		pdev->tuning_parms.tp_init_phase_ref_hist_med;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_ref_histo_short_range =
-		pdev->tuning_parms.tp_init_phase_ref_hist_short;
-
-	ptun_data->vl53lx_tuningparm_xtalk_detect_min_valid_range_mm =
-		pdev->xtalk_cfg.algo__crosstalk_detect_min_valid_range_mm;
-
-	ptun_data->vl53lx_tuningparm_xtalk_detect_max_valid_range_mm =
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_valid_range_mm;
-
-	ptun_data->vl53lx_tuningparm_xtalk_detect_max_sigma_mm =
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_sigma_mm;
-
-	ptun_data->vl53lx_tuningparm_xtalk_detect_min_max_tolerance =
-		pHP->algo__crosstalk_detect_min_max_tolerance;
-
-	ptun_data->vl53lx_tuningparm_xtalk_detect_max_valid_rate_kcps =
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_valid_rate_kcps;
-
-	ptun_data->vl53lx_tuningparm_xtalk_detect_event_sigma =
-		pHP->algo__crosstalk_detect_event_sigma;
-
-	ptun_data->vl53lx_tuningparm_hist_xtalk_margin_kcps =
-		pdev->xtalk_cfg.histogram_mode_crosstalk_margin_kcps;
-
-	ptun_data->vl53lx_tuningparm_consistency_lite_phase_tolerance =
-		pdev->tuning_parms.tp_consistency_lite_phase_tolerance;
-
-	ptun_data->vl53lx_tuningparm_phasecal_target =
-		pdev->tuning_parms.tp_phasecal_target;
-
-	ptun_data->vl53lx_tuningparm_lite_cal_repeat_rate =
-		pdev->tuning_parms.tp_cal_repeat_rate;
-
-	ptun_data->vl53lx_tuningparm_lite_ranging_gain_factor =
-		pdev->gain_cal.standard_ranging_gain_factor;
-
-	ptun_data->vl53lx_tuningparm_lite_min_clip_mm =
-		pdev->tuning_parms.tp_lite_min_clip;
-
-	ptun_data->vl53lx_tuningparm_lite_long_sigma_thresh_mm =
-		pdev->tuning_parms.tp_lite_long_sigma_thresh_mm;
-
-	ptun_data->vl53lx_tuningparm_lite_med_sigma_thresh_mm =
-		pdev->tuning_parms.tp_lite_med_sigma_thresh_mm;
-
-	ptun_data->vl53lx_tuningparm_lite_short_sigma_thresh_mm =
-		pdev->tuning_parms.tp_lite_short_sigma_thresh_mm;
-
-	ptun_data->vl53lx_tuningparm_lite_long_min_count_rate_rtn_mcps =
-		pdev->tuning_parms.tp_lite_long_min_count_rate_rtn_mcps;
-
-	ptun_data->vl53lx_tuningparm_lite_med_min_count_rate_rtn_mcps =
-		pdev->tuning_parms.tp_lite_med_min_count_rate_rtn_mcps;
-
-	ptun_data->vl53lx_tuningparm_lite_short_min_count_rate_rtn_mcps =
-		pdev->tuning_parms.tp_lite_short_min_count_rate_rtn_mcps;
-
-	ptun_data->vl53lx_tuningparm_lite_sigma_est_pulse_width =
-		pdev->tuning_parms.tp_lite_sigma_est_pulse_width_ns;
-
-	ptun_data->vl53lx_tuningparm_lite_sigma_est_amb_width_ns =
-		pdev->tuning_parms.tp_lite_sigma_est_amb_width_ns;
-
-	ptun_data->vl53lx_tuningparm_lite_sigma_ref_mm =
-		pdev->tuning_parms.tp_lite_sigma_ref_mm;
-
-	ptun_data->vl53lx_tuningparm_lite_rit_mult =
-		pdev->xtalk_cfg.crosstalk_range_ignore_threshold_mult;
-
-	ptun_data->vl53lx_tuningparm_lite_seed_config =
-		pdev->tuning_parms.tp_lite_seed_cfg;
-
-	ptun_data->vl53lx_tuningparm_lite_quantifier =
-		pdev->tuning_parms.tp_lite_quantifier;
-
-	ptun_data->vl53lx_tuningparm_lite_first_order_select =
-		pdev->tuning_parms.tp_lite_first_order_select;
-
-	ptun_data->vl53lx_tuningparm_lite_xtalk_margin_kcps =
-		pdev->xtalk_cfg.lite_mode_crosstalk_margin_kcps;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_rtn_lite_long_range =
-		pdev->tuning_parms.tp_init_phase_rtn_lite_long;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_rtn_lite_med_range =
-		pdev->tuning_parms.tp_init_phase_rtn_lite_med;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_rtn_lite_short_range =
-		pdev->tuning_parms.tp_init_phase_rtn_lite_short;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_ref_lite_long_range =
-		pdev->tuning_parms.tp_init_phase_ref_lite_long;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_ref_lite_med_range =
-		pdev->tuning_parms.tp_init_phase_ref_lite_med;
-
-	ptun_data->vl53lx_tuningparm_initial_phase_ref_lite_short_range =
-		pdev->tuning_parms.tp_init_phase_ref_lite_short;
-
-	ptun_data->vl53lx_tuningparm_timed_seed_config =
-		pdev->tuning_parms.tp_timed_seed_cfg;
-
-	ptun_data->vl53lx_tuningparm_dmax_cfg_signal_thresh_sigma =
-		pdev->dmax_cfg.signal_thresh_sigma;
-
-	ptun_data->vl53lx_tuningparm_dmax_cfg_reflectance_array_0 =
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[0];
-
-	ptun_data->vl53lx_tuningparm_dmax_cfg_reflectance_array_1 =
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[1];
-
-	ptun_data->vl53lx_tuningparm_dmax_cfg_reflectance_array_2 =
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[2];
-
-	ptun_data->vl53lx_tuningparm_dmax_cfg_reflectance_array_3 =
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[3];
-
-	ptun_data->vl53lx_tuningparm_dmax_cfg_reflectance_array_4 =
-		pdev->dmax_cfg.target_reflectance_for_dmax_calc[4];
-
-	ptun_data->vl53lx_tuningparm_vhv_loopbound =
-		pdev->stat_nvm.vhv_config__timeout_macrop_loop_bound;
-
-	ptun_data->vl53lx_tuningparm_refspadchar_device_test_mode =
-		pdev->refspadchar.device_test_mode;
-
-	ptun_data->vl53lx_tuningparm_refspadchar_vcsel_period =
-		pdev->refspadchar.VL53LX_p_005;
-
-	ptun_data->vl53lx_tuningparm_refspadchar_phasecal_timeout_us =
-		pdev->refspadchar.timeout_us;
-
-	ptun_data->vl53lx_tuningparm_refspadchar_target_count_rate_mcps =
-		pdev->refspadchar.target_count_rate_mcps;
-
-	ptun_data->vl53lx_tuningparm_refspadchar_min_countrate_limit_mcps =
-		pdev->refspadchar.min_count_rate_limit_mcps;
-
-	ptun_data->vl53lx_tuningparm_refspadchar_max_countrate_limit_mcps =
-		pdev->refspadchar.max_count_rate_limit_mcps;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_num_of_samples =
-		pXC->num_of_samples;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_min_filter_thresh_mm =
-		pXC->algo__crosstalk_extract_min_valid_range_mm;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_max_filter_thresh_mm =
-		pXC->algo__crosstalk_extract_max_valid_range_mm;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_dss_rate_mcps =
-		pXC->dss_config__target_total_rate_mcps;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_phasecal_timeout_us =
-		pXC->phasecal_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_max_valid_rate_kcps =
-		pXC->algo__crosstalk_extract_max_valid_rate_kcps;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_sigma_threshold_mm =
-		pXC->algo__crosstalk_extract_max_sigma_mm;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_dss_timeout_us =
-		pXC->mm_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_xtalk_extract_bin_timeout_us =
-		pXC->range_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_dss_rate_mcps =
-		pdev->offsetcal_cfg.dss_config__target_total_rate_mcps;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_phasecal_timeout_us =
-		pdev->offsetcal_cfg.phasecal_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_mm_timeout_us =
-		pdev->offsetcal_cfg.mm_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_range_timeout_us =
-		pdev->offsetcal_cfg.range_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_pre_samples =
-		pdev->offsetcal_cfg.pre_num_of_samples;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_mm1_samples =
-		pdev->offsetcal_cfg.mm1_num_of_samples;
-
-	ptun_data->vl53lx_tuningparm_offset_cal_mm2_samples =
-		pdev->offsetcal_cfg.mm2_num_of_samples;
-
-	ptun_data->vl53lx_tuningparm_zone_cal_dss_rate_mcps =
-		pdev->zonecal_cfg.dss_config__target_total_rate_mcps;
-
-	ptun_data->vl53lx_tuningparm_zone_cal_phasecal_timeout_us =
-		pdev->zonecal_cfg.phasecal_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_zone_cal_dss_timeout_us =
-		pdev->zonecal_cfg.mm_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_zone_cal_phasecal_num_samples =
-		pdev->zonecal_cfg.phasecal_num_of_samples;
-
-	ptun_data->vl53lx_tuningparm_zone_cal_range_timeout_us =
-		pdev->zonecal_cfg.range_config_timeout_us;
-
-	ptun_data->vl53lx_tuningparm_zone_cal_zone_num_samples =
-		pdev->zonecal_cfg.zone_num_of_samples;
-
-	ptun_data->vl53lx_tuningparm_spadmap_vcsel_period =
-		pdev->ssc_cfg.VL53LX_p_005;
-
-	ptun_data->vl53lx_tuningparm_spadmap_vcsel_start =
-		pdev->ssc_cfg.vcsel_start;
-
-	ptun_data->vl53lx_tuningparm_spadmap_rate_limit_mcps =
-		pdev->ssc_cfg.rate_limit_mcps;
-
-	ptun_data->vl53lx_tuningparm_lite_dss_config_target_total_rate_mcps =
-		pdev->tuning_parms.tp_dss_target_lite_mcps;
-
-	ptun_data->vl53lx_tuningparm_ranging_dss_config_target_total_rate_mcps =
-		pdev->tuning_parms.tp_dss_target_histo_mcps;
-
-	ptun_data->vl53lx_tuningparm_mz_dss_config_target_total_rate_mcps =
-		pdev->tuning_parms.tp_dss_target_histo_mz_mcps;
-
-	ptun_data->vl53lx_tuningparm_timed_dss_config_target_total_rate_mcps =
-		pdev->tuning_parms.tp_dss_target_timed_mcps;
-
-	ptun_data->vl53lx_tuningparm_lite_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_lite_us;
-
-	ptun_data->vl53lx_tuningparm_ranging_long_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_hist_long_us;
-
-	ptun_data->vl53lx_tuningparm_ranging_med_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_hist_med_us;
-
-	ptun_data->vl53lx_tuningparm_ranging_short_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_hist_short_us;
-
-	ptun_data->vl53lx_tuningparm_mz_long_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_mz_long_us;
-
-	ptun_data->vl53lx_tuningparm_mz_med_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_mz_med_us;
-
-	ptun_data->vl53lx_tuningparm_mz_short_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_mz_short_us;
-
-	ptun_data->vl53lx_tuningparm_timed_phasecal_config_timeout_us =
-		pdev->tuning_parms.tp_phasecal_timeout_timed_us;
-
-	ptun_data->vl53lx_tuningparm_lite_mm_config_timeout_us =
-		pdev->tuning_parms.tp_mm_timeout_lite_us;
-
-	ptun_data->vl53lx_tuningparm_ranging_mm_config_timeout_us =
-		pdev->tuning_parms.tp_mm_timeout_histo_us;
-
-	ptun_data->vl53lx_tuningparm_mz_mm_config_timeout_us =
-		pdev->tuning_parms.tp_mm_timeout_mz_us;
-
-	ptun_data->vl53lx_tuningparm_timed_mm_config_timeout_us =
-		pdev->tuning_parms.tp_mm_timeout_timed_us;
-
-	ptun_data->vl53lx_tuningparm_lite_range_config_timeout_us =
-		pdev->tuning_parms.tp_range_timeout_lite_us;
-
-	ptun_data->vl53lx_tuningparm_ranging_range_config_timeout_us =
-		pdev->tuning_parms.tp_range_timeout_histo_us;
-
-	ptun_data->vl53lx_tuningparm_mz_range_config_timeout_us =
-		pdev->tuning_parms.tp_range_timeout_mz_us;
-
-	ptun_data->vl53lx_tuningparm_timed_range_config_timeout_us =
-		pdev->tuning_parms.tp_range_timeout_timed_us;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_smudge_margin =
-		pdev->smudge_correct_config.smudge_margin;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_noise_margin =
-		pdev->smudge_correct_config.noise_margin;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_xtalk_offset_limit =
-		pdev->smudge_correct_config.user_xtalk_offset_limit;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_xtalk_offset_limit_hi =
-		pdev->smudge_correct_config.user_xtalk_offset_limit_hi;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_sample_limit =
-		pdev->smudge_correct_config.sample_limit;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_single_xtalk_delta =
-		pdev->smudge_correct_config.single_xtalk_delta;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_averaged_xtalk_delta =
-		pdev->smudge_correct_config.averaged_xtalk_delta;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_clip_limit =
-		pdev->smudge_correct_config.smudge_corr_clip_limit;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_scaler_calc_method =
-		pdev->smudge_correct_config.scaler_calc_method;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_xgradient_scaler =
-		pdev->smudge_correct_config.x_gradient_scaler;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_ygradient_scaler =
-		pdev->smudge_correct_config.y_gradient_scaler;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_user_scaler_set =
-		pdev->smudge_correct_config.user_scaler_set;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_smudge_cor_single_apply =
-		pdev->smudge_correct_config.smudge_corr_single_apply;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_xtalk_amb_threshold =
-		pdev->smudge_correct_config.smudge_corr_ambient_threshold;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_nodetect_amb_threshold_kcps =
-		pdev->smudge_correct_config.nodetect_ambient_threshold;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_nodetect_sample_limit =
-		pdev->smudge_correct_config.nodetect_sample_limit;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_nodetect_xtalk_offset_kcps =
-		pdev->smudge_correct_config.nodetect_xtalk_offset;
-
-	ptun_data->vl53lx_tuningparm_dynxtalk_nodetect_min_range_mm =
-		pdev->smudge_correct_config.nodetect_min_range_mm;
-
-	ptun_data->vl53lx_tuningparm_lowpowerauto_vhv_loop_bound =
-		pdev->low_power_auto_data.vhv_loop_bound;
-
-	ptun_data->vl53lx_tuningparm_lowpowerauto_mm_config_timeout_us =
-		pdev->tuning_parms.tp_mm_timeout_lpa_us;
-
-	ptun_data->vl53lx_tuningparm_lowpowerauto_range_config_timeout_us =
-		pdev->tuning_parms.tp_range_timeout_lpa_us;
-
-	ptun_data->vl53lx_tuningparm_very_short_dss_rate_mcps =
-		pdev->tuning_parms.tp_dss_target_very_short_mcps;
-
-	ptun_data->vl53lx_tuningparm_phasecal_patch_power =
-			pdev->tuning_parms.tp_phasecal_patch_power;
-
-	LOG_FUNCTION_END(status);
-
-	return status;
-}
-
-
-
-
 
 VL53LX_Error VL53LX_get_tuning_parm(
 	VL53LX_DEV                     Dev,
@@ -3592,15 +3146,15 @@ VL53LX_Error VL53LX_get_tuning_parm(
 
 	case VL53LX_TUNINGPARM_VERSION:
 		*ptuning_parm_value =
-			(int32_t)pdev->tuning_parms.tp_tuning_parm_version;
+			(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_tuning_parm_version;
 	break;
 	case VL53LX_TUNINGPARM_KEY_TABLE_VERSION:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_tuning_parm_key_table_version;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_tuning_parm_key_table_version;
 	break;
 	case VL53LX_TUNINGPARM_LLD_VERSION:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_tuning_parm_lld_version;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_tuning_parm_lld_version;
 	break;
 	case VL53LX_TUNINGPARM_HIST_ALGO_SELECT:
 		*ptuning_parm_value =
@@ -3676,27 +3230,27 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_HISTO_LONG_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_rtn_hist_long;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_hist_long;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_HISTO_MED_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_rtn_hist_med;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_hist_med;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_HISTO_SHORT_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_rtn_hist_short;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_hist_short;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_HISTO_LONG_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_ref_hist_long;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_hist_long;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_HISTO_MED_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_ref_hist_med;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_hist_med;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_HISTO_SHORT_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_ref_hist_short;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_hist_short;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MIN_VALID_RANGE_MM:
 		*ptuning_parm_value = (int32_t)(
@@ -3728,15 +3282,15 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_CONSISTENCY_LITE_PHASE_TOLERANCE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_consistency_lite_phase_tolerance;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_consistency_lite_phase_tolerance;
 	break;
 	case VL53LX_TUNINGPARM_PHASECAL_TARGET:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_target;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_target;
 	break;
 	case VL53LX_TUNINGPARM_LITE_CAL_REPEAT_RATE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_cal_repeat_rate;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_cal_repeat_rate;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RANGING_GAIN_FACTOR:
 		*ptuning_parm_value =
@@ -3744,43 +3298,43 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_LITE_MIN_CLIP_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_min_clip;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_min_clip;
 	break;
 	case VL53LX_TUNINGPARM_LITE_LONG_SIGMA_THRESH_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_long_sigma_thresh_mm;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_long_sigma_thresh_mm;
 	break;
 	case VL53LX_TUNINGPARM_LITE_MED_SIGMA_THRESH_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_med_sigma_thresh_mm;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_med_sigma_thresh_mm;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SHORT_SIGMA_THRESH_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_short_sigma_thresh_mm;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_short_sigma_thresh_mm;
 	break;
 	case VL53LX_TUNINGPARM_LITE_LONG_MIN_COUNT_RATE_RTN_MCPS:
 		*ptuning_parm_value = (int32_t)(
-		pdev->tuning_parms.tp_lite_long_min_count_rate_rtn_mcps);
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_long_min_count_rate_rtn_mcps);
 	break;
 	case VL53LX_TUNINGPARM_LITE_MED_MIN_COUNT_RATE_RTN_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_med_min_count_rate_rtn_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_med_min_count_rate_rtn_mcps;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SHORT_MIN_COUNT_RATE_RTN_MCPS:
 		*ptuning_parm_value = (int32_t)(
-		pdev->tuning_parms.tp_lite_short_min_count_rate_rtn_mcps);
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_short_min_count_rate_rtn_mcps);
 	break;
 	case VL53LX_TUNINGPARM_LITE_SIGMA_EST_PULSE_WIDTH:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_sigma_est_pulse_width_ns;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_sigma_est_pulse_width_ns;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SIGMA_EST_AMB_WIDTH_NS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_sigma_est_amb_width_ns;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_sigma_est_amb_width_ns;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SIGMA_REF_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_sigma_ref_mm;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_sigma_ref_mm;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RIT_MULT:
 		*ptuning_parm_value =
@@ -3788,15 +3342,15 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_LITE_SEED_CONFIG:
 		*ptuning_parm_value =
-				(int32_t)pdev->tuning_parms.tp_lite_seed_cfg;
+				(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_seed_cfg;
 	break;
 	case VL53LX_TUNINGPARM_LITE_QUANTIFIER:
 		*ptuning_parm_value =
-				(int32_t)pdev->tuning_parms.tp_lite_quantifier;
+				(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_quantifier;
 	break;
 	case VL53LX_TUNINGPARM_LITE_FIRST_ORDER_SELECT:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_lite_first_order_select;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_first_order_select;
 	break;
 	case VL53LX_TUNINGPARM_LITE_XTALK_MARGIN_KCPS:
 		*ptuning_parm_value =
@@ -3804,31 +3358,31 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_LONG_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_rtn_lite_long;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_lite_long;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_MED_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_rtn_lite_med;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_lite_med;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_SHORT_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_rtn_lite_short;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_lite_short;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_LITE_LONG_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_ref_lite_long;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_lite_long;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_LITE_MED_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_ref_lite_med;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_lite_med;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_LITE_SHORT_RANGE:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_init_phase_ref_lite_short;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_lite_short;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_SEED_CONFIG:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_timed_seed_cfg;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_timed_seed_cfg;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_SIGNAL_THRESH_SIGMA:
 		*ptuning_parm_value =
@@ -3984,83 +3538,83 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_LITE_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_dss_target_lite_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_lite_mcps;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_dss_target_histo_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mcps;
 	break;
 	case VL53LX_TUNINGPARM_MZ_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_dss_target_histo_mz_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mz_mcps;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_dss_target_timed_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_timed_mcps;
 	break;
 	case VL53LX_TUNINGPARM_LITE_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_lite_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_lite_us;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_LONG_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_hist_long_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_long_us;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_MED_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_hist_med_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_med_us;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_SHORT_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_hist_short_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_short_us;
 	break;
 	case VL53LX_TUNINGPARM_MZ_LONG_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_mz_long_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_mz_long_us;
 	break;
 	case VL53LX_TUNINGPARM_MZ_MED_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_mz_med_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_mz_med_us;
 	break;
 	case VL53LX_TUNINGPARM_MZ_SHORT_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_mz_short_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_mz_short_us;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_PHASECAL_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_phasecal_timeout_timed_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_timed_us;
 	break;
 	case VL53LX_TUNINGPARM_LITE_MM_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_mm_timeout_lite_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_lite_us;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_MM_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_mm_timeout_histo_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_histo_us;
 	break;
 	case VL53LX_TUNINGPARM_MZ_MM_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_mm_timeout_mz_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_mz_us;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_MM_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_mm_timeout_timed_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_timed_us;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RANGE_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_range_timeout_lite_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_lite_us;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_RANGE_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_range_timeout_histo_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_histo_us;
 	break;
 	case VL53LX_TUNINGPARM_MZ_RANGE_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_range_timeout_mz_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_mz_us;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_RANGE_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_range_timeout_timed_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_timed_us;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_MARGIN:
 		*ptuning_parm_value =
@@ -4140,31 +3694,31 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_LOWPOWERAUTO_MM_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_mm_timeout_lpa_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_lpa_us;
 	break;
 	case VL53LX_TUNINGPARM_LOWPOWERAUTO_RANGE_CONFIG_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_range_timeout_lpa_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_lpa_us;
 	break;
 	case VL53LX_TUNINGPARM_VERY_SHORT_DSS_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->tuning_parms.tp_dss_target_very_short_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_very_short_mcps;
 	break;
 	case VL53LX_TUNINGPARM_PHASECAL_PATCH_POWER:
 		*ptuning_parm_value =
-		(int32_t) pdev->tuning_parms.tp_phasecal_patch_power;
+		(int32_t) pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_patch_power;
 	break;
 	case VL53LX_TUNINGPARM_HIST_MERGE:
 		*ptuning_parm_value =
-		(int32_t) pdev->tuning_parms.tp_hist_merge;
+		(int32_t) pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge;
 	break;
 	case VL53LX_TUNINGPARM_RESET_MERGE_THRESHOLD:
 		*ptuning_parm_value =
-		(int32_t) pdev->tuning_parms.tp_reset_merge_threshold;
+		(int32_t) pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_reset_merge_threshold;
 	break;
 	case VL53LX_TUNINGPARM_HIST_MERGE_MAX_SIZE:
 		*ptuning_parm_value =
-		(int32_t) pdev->tuning_parms.tp_hist_merge_max_size;
+		(int32_t) pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge_max_size;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_MAX_SMUDGE_FACTOR:
 		*ptuning_parm_value =
@@ -4173,167 +3727,167 @@ VL53LX_Error VL53LX_get_tuning_parm(
 
 	case VL53LX_TUNINGPARM_UWR_ENABLE:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_enable;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_enable;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_1_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_1_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_1_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_1_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_1_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_1_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_2_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_2_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_2_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_2_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_2_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_2_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_3_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_3_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_3_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_3_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_3_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_3_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_4_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_4_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_4_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_4_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_4_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_4_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_5_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_5_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_5_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_5_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_z_5_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_5_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_1_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_1_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_1_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_1_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_1_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_1_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_2_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_2_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_2_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_2_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_2_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_2_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_3_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_3_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_3_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_3_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_3_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_3_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_4_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_4_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_4_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_4_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_4_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_4_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_5_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_5_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_5_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_5_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_med_corr_z_5_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_5_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_1_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_1_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_1_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_1_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_1_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_1_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_2_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_2_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_2_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_2_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_2_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_2_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_3_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_3_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_3_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_3_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_3_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_3_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_4_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_4_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_4_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_4_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_4_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_4_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_5_MIN:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_5_min;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_5_min;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_5_MAX:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_z_5_max;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_5_max;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_1_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_1_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_1_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_1_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_1_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_1_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_2_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_2_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_2_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_2_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_2_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_2_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_3_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_3_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_3_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_3_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_3_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_3_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_4_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_4_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_4_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_4_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_4_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_4_rangeb;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_5_RANGEA:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_5_rangea;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_5_rangea;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_5_RANGEB:
 		*ptuning_parm_value =
-		pdev->tuning_parms.tp_uwr_lng_corr_z_5_rangeb;
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_5_rangeb;
 	break;
 
 	default:
@@ -4367,11 +3921,11 @@ VL53LX_Error VL53LX_set_tuning_parm(
 	switch (tuning_parm_key) {
 
 	case VL53LX_TUNINGPARM_VERSION:
-		pdev->tuning_parms.tp_tuning_parm_version =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_tuning_parm_version =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_KEY_TABLE_VERSION:
-		pdev->tuning_parms.tp_tuning_parm_key_table_version =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_tuning_parm_key_table_version =
 					(uint16_t)tuning_parm_value;
 
 
@@ -4382,7 +3936,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 
 	break;
 	case VL53LX_TUNINGPARM_LLD_VERSION:
-		pdev->tuning_parms.tp_tuning_parm_lld_version =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_tuning_parm_lld_version =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_HIST_ALGO_SELECT:
@@ -4458,27 +4012,27 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_HISTO_LONG_RANGE:
-		pdev->tuning_parms.tp_init_phase_rtn_hist_long =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_hist_long =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_HISTO_MED_RANGE:
-		pdev->tuning_parms.tp_init_phase_rtn_hist_med =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_hist_med =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_HISTO_SHORT_RANGE:
-		pdev->tuning_parms.tp_init_phase_rtn_hist_short =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_hist_short =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_HISTO_LONG_RANGE:
-		pdev->tuning_parms.tp_init_phase_ref_hist_long =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_hist_long =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_HISTO_MED_RANGE:
-		pdev->tuning_parms.tp_init_phase_ref_hist_med =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_hist_med =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_HISTO_SHORT_RANGE:
-		pdev->tuning_parms.tp_init_phase_ref_hist_short =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_hist_short =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MIN_VALID_RANGE_MM:
@@ -4510,15 +4064,15 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_CONSISTENCY_LITE_PHASE_TOLERANCE:
-		pdev->tuning_parms.tp_consistency_lite_phase_tolerance =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_consistency_lite_phase_tolerance =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_PHASECAL_TARGET:
-		pdev->tuning_parms.tp_phasecal_target =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_target =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_CAL_REPEAT_RATE:
-		pdev->tuning_parms.tp_cal_repeat_rate =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_cal_repeat_rate =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RANGING_GAIN_FACTOR:
@@ -4526,43 +4080,43 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_MIN_CLIP_MM:
-		pdev->tuning_parms.tp_lite_min_clip =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_min_clip =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_LONG_SIGMA_THRESH_MM:
-		pdev->tuning_parms.tp_lite_long_sigma_thresh_mm =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_long_sigma_thresh_mm =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_MED_SIGMA_THRESH_MM:
-		pdev->tuning_parms.tp_lite_med_sigma_thresh_mm =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_med_sigma_thresh_mm =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SHORT_SIGMA_THRESH_MM:
-		pdev->tuning_parms.tp_lite_short_sigma_thresh_mm =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_short_sigma_thresh_mm =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_LONG_MIN_COUNT_RATE_RTN_MCPS:
-		pdev->tuning_parms.tp_lite_long_min_count_rate_rtn_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_long_min_count_rate_rtn_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_MED_MIN_COUNT_RATE_RTN_MCPS:
-		pdev->tuning_parms.tp_lite_med_min_count_rate_rtn_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_med_min_count_rate_rtn_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SHORT_MIN_COUNT_RATE_RTN_MCPS:
-		pdev->tuning_parms.tp_lite_short_min_count_rate_rtn_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_short_min_count_rate_rtn_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SIGMA_EST_PULSE_WIDTH:
-		pdev->tuning_parms.tp_lite_sigma_est_pulse_width_ns =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_sigma_est_pulse_width_ns =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SIGMA_EST_AMB_WIDTH_NS:
-		pdev->tuning_parms.tp_lite_sigma_est_amb_width_ns =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_sigma_est_amb_width_ns =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SIGMA_REF_MM:
-		pdev->tuning_parms.tp_lite_sigma_ref_mm =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_sigma_ref_mm =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RIT_MULT:
@@ -4570,15 +4124,15 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SEED_CONFIG:
-		pdev->tuning_parms.tp_lite_seed_cfg =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_seed_cfg =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_QUANTIFIER:
-		pdev->tuning_parms.tp_lite_quantifier =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_quantifier =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_FIRST_ORDER_SELECT:
-		pdev->tuning_parms.tp_lite_first_order_select =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_lite_first_order_select =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_XTALK_MARGIN_KCPS:
@@ -4586,31 +4140,31 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_LONG_RANGE:
-		pdev->tuning_parms.tp_init_phase_rtn_lite_long =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_lite_long =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_MED_RANGE:
-		pdev->tuning_parms.tp_init_phase_rtn_lite_med =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_lite_med =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_SHORT_RANGE:
-		pdev->tuning_parms.tp_init_phase_rtn_lite_short =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_rtn_lite_short =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_LITE_LONG_RANGE:
-		pdev->tuning_parms.tp_init_phase_ref_lite_long =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_lite_long =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_LITE_MED_RANGE:
-		pdev->tuning_parms.tp_init_phase_ref_lite_med =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_lite_med =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_REF_LITE_SHORT_RANGE:
-		pdev->tuning_parms.tp_init_phase_ref_lite_short =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_init_phase_ref_lite_short =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_SEED_CONFIG:
-		pdev->tuning_parms.tp_timed_seed_cfg =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_timed_seed_cfg =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DMAX_CFG_SIGNAL_THRESH_SIGMA:
@@ -4766,83 +4320,83 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
-		pdev->tuning_parms.tp_dss_target_lite_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_lite_mcps =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
-		pdev->tuning_parms.tp_dss_target_histo_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mcps =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_MZ_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
-		pdev->tuning_parms.tp_dss_target_histo_mz_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_histo_mz_mcps =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_DSS_CONFIG_TARGET_TOTAL_RATE_MCPS:
-		pdev->tuning_parms.tp_dss_target_timed_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_timed_mcps =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_lite_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_lite_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_LONG_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_hist_long_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_long_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_MED_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_hist_med_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_med_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_SHORT_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_hist_short_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_hist_short_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_MZ_LONG_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_mz_long_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_mz_long_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_MZ_MED_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_mz_med_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_mz_med_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_MZ_SHORT_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_mz_short_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_mz_short_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_PHASECAL_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_phasecal_timeout_timed_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_timeout_timed_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_MM_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_mm_timeout_lite_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_lite_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_MM_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_mm_timeout_histo_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_histo_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_MZ_MM_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_mm_timeout_mz_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_mz_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_MM_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_mm_timeout_timed_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_timed_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RANGE_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_range_timeout_lite_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_lite_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RANGING_RANGE_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_range_timeout_histo_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_histo_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_MZ_RANGE_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_range_timeout_mz_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_mz_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_TIMED_RANGE_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_range_timeout_timed_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_timed_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_SMUDGE_MARGIN:
@@ -4923,31 +4477,31 @@ VL53LX_Error VL53LX_set_tuning_parm(
 			(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LOWPOWERAUTO_MM_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_mm_timeout_lpa_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_mm_timeout_lpa_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LOWPOWERAUTO_RANGE_CONFIG_TIMEOUT_US:
-		pdev->tuning_parms.tp_range_timeout_lpa_us =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_range_timeout_lpa_us =
 			(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_VERY_SHORT_DSS_RATE_MCPS:
-		pdev->tuning_parms.tp_dss_target_very_short_mcps =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_dss_target_very_short_mcps =
 			(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_PHASECAL_PATCH_POWER:
-		pdev->tuning_parms.tp_phasecal_patch_power =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_phasecal_patch_power =
 			(uint16_t) tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_HIST_MERGE:
-		pdev->tuning_parms.tp_hist_merge =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge =
 			(uint16_t) tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_RESET_MERGE_THRESHOLD:
-		pdev->tuning_parms.tp_reset_merge_threshold =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_reset_merge_threshold =
 			(uint16_t) tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_HIST_MERGE_MAX_SIZE:
-		pdev->tuning_parms.tp_hist_merge_max_size =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge_max_size =
 			(uint16_t) tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_DYNXTALK_MAX_SMUDGE_FACTOR:
@@ -4956,167 +4510,167 @@ VL53LX_Error VL53LX_set_tuning_parm(
 	break;
 
 	case VL53LX_TUNINGPARM_UWR_ENABLE:
-		pdev->tuning_parms.tp_uwr_enable =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_enable =
 			(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_1_MIN:
-		pdev->tuning_parms.tp_uwr_med_z_1_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_1_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_1_MAX:
-		pdev->tuning_parms.tp_uwr_med_z_1_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_1_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_2_MIN:
-		pdev->tuning_parms.tp_uwr_med_z_2_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_2_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_2_MAX:
-		pdev->tuning_parms.tp_uwr_med_z_2_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_2_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_3_MIN:
-		pdev->tuning_parms.tp_uwr_med_z_3_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_3_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_3_MAX:
-		pdev->tuning_parms.tp_uwr_med_z_3_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_3_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_4_MIN:
-		pdev->tuning_parms.tp_uwr_med_z_4_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_4_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_4_MAX:
-		pdev->tuning_parms.tp_uwr_med_z_4_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_4_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_5_MIN:
-		pdev->tuning_parms.tp_uwr_med_z_5_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_5_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_ZONE_5_MAX:
-		pdev->tuning_parms.tp_uwr_med_z_5_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_z_5_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_1_RANGEA:
-		pdev->tuning_parms.tp_uwr_med_corr_z_1_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_1_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_1_RANGEB:
-		pdev->tuning_parms.tp_uwr_med_corr_z_1_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_1_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_2_RANGEA:
-		pdev->tuning_parms.tp_uwr_med_corr_z_2_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_2_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_2_RANGEB:
-		pdev->tuning_parms.tp_uwr_med_corr_z_2_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_2_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_3_RANGEA:
-		pdev->tuning_parms.tp_uwr_med_corr_z_3_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_3_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_3_RANGEB:
-		pdev->tuning_parms.tp_uwr_med_corr_z_3_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_3_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_4_RANGEA:
-		pdev->tuning_parms.tp_uwr_med_corr_z_4_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_4_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_4_RANGEB:
-		pdev->tuning_parms.tp_uwr_med_corr_z_4_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_4_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_5_RANGEA:
-		pdev->tuning_parms.tp_uwr_med_corr_z_5_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_5_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_MEDIUM_CORRECTION_ZONE_5_RANGEB:
-		pdev->tuning_parms.tp_uwr_med_corr_z_5_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_med_corr_z_5_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_1_MIN:
-		pdev->tuning_parms.tp_uwr_lng_z_1_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_1_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_1_MAX:
-		pdev->tuning_parms.tp_uwr_lng_z_1_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_1_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_2_MIN:
-		pdev->tuning_parms.tp_uwr_lng_z_2_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_2_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_2_MAX:
-		pdev->tuning_parms.tp_uwr_lng_z_2_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_2_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_3_MIN:
-		pdev->tuning_parms.tp_uwr_lng_z_3_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_3_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_3_MAX:
-		pdev->tuning_parms.tp_uwr_lng_z_3_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_3_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_4_MIN:
-		pdev->tuning_parms.tp_uwr_lng_z_4_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_4_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_4_MAX:
-		pdev->tuning_parms.tp_uwr_lng_z_4_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_4_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_5_MIN:
-		pdev->tuning_parms.tp_uwr_lng_z_5_min =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_5_min =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_ZONE_5_MAX:
-		pdev->tuning_parms.tp_uwr_lng_z_5_max =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_z_5_max =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_1_RANGEA:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_1_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_1_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_1_RANGEB:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_1_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_1_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_2_RANGEA:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_2_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_2_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_2_RANGEB:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_2_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_2_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_3_RANGEA:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_3_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_3_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_3_RANGEB:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_3_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_3_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_4_RANGEA:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_4_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_4_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_4_RANGEB:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_4_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_4_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_5_RANGEA:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_5_rangea =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_5_rangea =
 			(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_UWR_LONG_CORRECTION_ZONE_5_RANGEB:
-		pdev->tuning_parms.tp_uwr_lng_corr_z_5_rangeb =
+		pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_uwr_lng_corr_z_5_rangeb =
 			(int16_t)tuning_parm_value;
 	break;
 

@@ -49,23 +49,23 @@ VL53LX_Error VL53LX_is_firmware_ready_silicon(
 	if (status != VL53LX_ERROR_NONE)
 		goto ENDFUNC;
 
-	pdev->dbg_results.interrupt_manager__enables =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.interrupt_manager__enables =
 			comms_buffer[0];
-	pdev->dbg_results.interrupt_manager__clear =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.interrupt_manager__clear =
 			comms_buffer[1];
-	pdev->dbg_results.interrupt_manager__status =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.interrupt_manager__status =
 			comms_buffer[2];
-	pdev->dbg_results.mcu_to_host_bank__wr_access_en =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.mcu_to_host_bank__wr_access_en =
 			comms_buffer[3];
-	pdev->dbg_results.power_management__go1_reset_status =
+	pdev->VL53LX_LLDriverCommonData->dbg_results.power_management__go1_reset_status =
 			comms_buffer[4];
 
 	if ((pdev->sys_ctrl.power_management__go1_power_force & 0x01)
 			== 0x01) {
 
-		if (((pdev->dbg_results.interrupt_manager__enables &
+		if (((pdev->VL53LX_LLDriverCommonData->dbg_results.interrupt_manager__enables &
 				0x1F) == 0x1F) &&
-			((pdev->dbg_results.interrupt_manager__clear
+			((pdev->VL53LX_LLDriverCommonData->dbg_results.interrupt_manager__clear
 					& 0x1F) == 0x1F))
 			*pready = 0x01;
 		else
@@ -74,7 +74,7 @@ VL53LX_Error VL53LX_is_firmware_ready_silicon(
 	} else {
 
 
-		if ((pdev->dbg_results.power_management__go1_reset_status
+		if ((pdev->VL53LX_LLDriverCommonData->dbg_results.power_management__go1_reset_status
 				& 0x01) == 0x00)
 			*pready = 0x01;
 		else

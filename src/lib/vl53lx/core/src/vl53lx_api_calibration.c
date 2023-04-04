@@ -92,9 +92,9 @@ VL53LX_Error VL53LX_run_ref_spad_char(
 			2);
 
 	if (status == VL53LX_ERROR_NONE) {
-		pdev->dbg_results.ref_spad_char_result__num_actual_ref_spads =
+		pdev->VL53LX_LLDriverCommonData->dbg_results.ref_spad_char_result__num_actual_ref_spads =
 				comms_buffer[0];
-		pdev->dbg_results.ref_spad_char_result__ref_location =
+		pdev->VL53LX_LLDriverCommonData->dbg_results.ref_spad_char_result__ref_location =
 				comms_buffer[1];
 	}
 
@@ -894,7 +894,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 			Dev, measurement_mode,
 			VL53LX_DEVICECONFIGLEVEL_CUSTOMER_ONWARDS);
 
-	MaxId = pdev->tuning_parms.tp_hist_merge_max_size - 1;
+	MaxId = pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge_max_size - 1;
 	nbloops = (MergeEnabled == 0 ? 1 : 2);
 	for (k = 0; k < nbloops; k++) {
 
@@ -920,7 +920,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 				(MergeEnabled) &&
 				(status == VL53LX_ERROR_NONE) &&
 				(histo_merge_nb <
-				pdev->tuning_parms.tp_hist_merge_max_size));
+				pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge_max_size));
 			if (wait_for_accumulation)
 				i = 0;
 			else {

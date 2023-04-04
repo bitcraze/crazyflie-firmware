@@ -59,13 +59,6 @@ VL53LX_Error VL53LX_get_part_to_part_data(
 
 
 
-VL53LX_Error VL53LX_get_tuning_debug_data(
-	VL53LX_DEV                            Dev,
-	VL53LX_tuning_parameters_t            *ptun_data);
-
-
-
-
 VL53LX_Error VL53LX_set_inter_measurement_period_ms(
 	VL53LX_DEV          Dev,
 	uint32_t            inter_measurement_period_ms);

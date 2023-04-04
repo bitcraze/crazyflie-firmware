@@ -3961,7 +3961,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_calc_new_xtalk(
 
 		if (histo_merge_nb == 0)
 			histo_merge_nb = 1;
-		if (pdev->tuning_parms.tp_hist_merge != 1)
+		if (pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge != 1)
 			orig_xtalk_offset =
 			pC->algo__crosstalk_compensation_plane_offset_kcps;
 		else
@@ -4062,10 +4062,10 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_calc_new_xtalk(
 		nXtalk = pout->algo__crosstalk_compensation_plane_offset_kcps;
 
 		VL53LX_compute_histo_merge_nb(Dev, &histo_merge_nb);
-		max = pdev->tuning_parms.tp_hist_merge_max_size;
+		max = pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge_max_size;
 		pcpo = &(pC->algo__xtalk_cpo_HistoMerge_kcps[0]);
 		if ((histo_merge_nb > 0) &&
-			(pdev->tuning_parms.tp_hist_merge == 1) &&
+			(pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge == 1) &&
 			(nXtalk != 0)) {
 			cXtalk =
 			pX->algo__crosstalk_compensation_plane_offset_kcps;
@@ -4155,7 +4155,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_corrector(
 
 	VL53LX_compute_histo_merge_nb(Dev, &histo_merge_nb);
 	if ((histo_merge_nb == 0) ||
-		(pdev->tuning_parms.tp_hist_merge != 1))
+		(pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge != 1))
 		histo_merge_nb = 1;
 
 
@@ -4168,8 +4168,8 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_corrector(
 
 
 	merging_complete =
-		((pdev->tuning_parms.tp_hist_merge != 1) ||
-		(histo_merge_nb == pdev->tuning_parms.tp_hist_merge_max_size));
+		((pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge != 1) ||
+		(histo_merge_nb == pdev->VL53LX_LLDriverCommonData->tuning_parms.tp_hist_merge_max_size));
 	run_smudge_detection =
 		(pconfig->smudge_corr_enabled == 1) &&
 		ambient_check &&
@@ -4705,7 +4705,7 @@ VL53LX_Error VL53LX_low_power_auto_setup_manual_calibration(
 
 	pdev->gen_cfg.phasecal_config__override = 0x01;
 	pdev->low_power_auto_data.first_run_phasecal_result =
-		pdev->dbg_results.phasecal_result__vcsel_start;
+		pdev->VL53LX_LLDriverCommonData->dbg_results.phasecal_result__vcsel_start;
 	pdev->gen_cfg.cal_config__vcsel_start =
 		pdev->low_power_auto_data.first_run_phasecal_result;
 

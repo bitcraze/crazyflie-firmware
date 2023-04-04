@@ -1310,12 +1310,12 @@ typedef struct {
 	VL53LX_histogram_bin_data_t         hist_data;
 	VL53LX_histogram_bin_data_t         hist_xtalk;
 	
-	// VL53LX_xtalk_histogram_data_t       xtalk_shapes;
 	// VL53LX_xtalk_range_results_t        xtalk_results;
-	// VL53LX_hist_xtalk_extract_data_t    xtalk_extract;
 
-	// int32_t  multi_bins_rec[VL53LX_BIN_REC_SIZE]
-	// 	[VL53LX_TIMING_CONF_A_B_SIZE][VL53LX_HISTOGRAM_BUFFER_SIZE];
+	VL53LX_core_results_t               core_results;
+	VL53LX_debug_results_t              dbg_results;
+
+	VL53LX_tuning_parm_storage_t        tuning_parms;
 
 } VL53LX_LLDriverCommonData_t;
 
@@ -1374,7 +1374,7 @@ typedef struct {
 	VL53LX_zone_config_t                zone_cfg;
 
 
-	VL53LX_tuning_parm_storage_t        tuning_parms;
+	// VL53LX_tuning_parm_storage_t        tuning_parms;
 
 
 	uint8_t rtn_good_spads[VL53LX_RTN_SPAD_BUFFER_SIZE];
@@ -1414,8 +1414,8 @@ typedef struct {
 	VL53LX_offset_range_results_t       offset_results;
 
 
-	VL53LX_core_results_t               core_results;
-	VL53LX_debug_results_t              dbg_results;
+	// VL53LX_core_results_t               core_results;
+	// VL53LX_debug_results_t              dbg_results;
 
 	VL53LX_smudge_corrector_config_t	smudge_correct_config;
 
@@ -1504,153 +1504,6 @@ typedef struct {
 	VL53LX_offset_range_results_t        offset_results;
 
 } VL53LX_offset_debug_data_t;
-
-
-
-
-typedef struct {
-	uint16_t        vl53lx_tuningparm_version;
-	uint16_t        vl53lx_tuningparm_key_table_version;
-	uint16_t        vl53lx_tuningparm_lld_version;
-	uint8_t        vl53lx_tuningparm_hist_algo_select;
-	uint8_t        vl53lx_tuningparm_hist_target_order;
-	uint8_t        vl53lx_tuningparm_hist_filter_woi_0;
-	uint8_t        vl53lx_tuningparm_hist_filter_woi_1;
-	uint8_t        vl53lx_tuningparm_hist_amb_est_method;
-	uint8_t        vl53lx_tuningparm_hist_amb_thresh_sigma_0;
-	uint8_t        vl53lx_tuningparm_hist_amb_thresh_sigma_1;
-	int32_t        vl53lx_tuningparm_hist_min_amb_thresh_events;
-	uint16_t        vl53lx_tuningparm_hist_amb_events_scaler;
-	uint16_t        vl53lx_tuningparm_hist_noise_threshold;
-	int32_t        vl53lx_tuningparm_hist_signal_total_events_limit;
-	uint8_t        vl53lx_tuningparm_hist_sigma_est_ref_mm;
-	uint16_t        vl53lx_tuningparm_hist_sigma_thresh_mm;
-	uint16_t        vl53lx_tuningparm_hist_gain_factor;
-	uint8_t        vl53lx_tuningparm_consistency_hist_phase_tolerance;
-	uint16_t  vl53lx_tuningparm_consistency_hist_min_max_tolerance_mm;
-	uint8_t        vl53lx_tuningparm_consistency_hist_event_sigma;
-	uint16_t  vl53lx_tuningparm_consistency_hist_event_sigma_min_spad_limit;
-	uint8_t        vl53lx_tuningparm_initial_phase_rtn_histo_long_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_rtn_histo_med_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_rtn_histo_short_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_ref_histo_long_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_ref_histo_med_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_ref_histo_short_range;
-	int16_t        vl53lx_tuningparm_xtalk_detect_min_valid_range_mm;
-	int16_t        vl53lx_tuningparm_xtalk_detect_max_valid_range_mm;
-	uint16_t        vl53lx_tuningparm_xtalk_detect_max_sigma_mm;
-	uint16_t        vl53lx_tuningparm_xtalk_detect_min_max_tolerance;
-	uint16_t        vl53lx_tuningparm_xtalk_detect_max_valid_rate_kcps;
-	uint8_t        vl53lx_tuningparm_xtalk_detect_event_sigma;
-	int16_t        vl53lx_tuningparm_hist_xtalk_margin_kcps;
-	uint8_t        vl53lx_tuningparm_consistency_lite_phase_tolerance;
-	uint8_t        vl53lx_tuningparm_phasecal_target;
-	uint16_t        vl53lx_tuningparm_lite_cal_repeat_rate;
-	uint16_t        vl53lx_tuningparm_lite_ranging_gain_factor;
-	uint8_t        vl53lx_tuningparm_lite_min_clip_mm;
-	uint16_t        vl53lx_tuningparm_lite_long_sigma_thresh_mm;
-	uint16_t        vl53lx_tuningparm_lite_med_sigma_thresh_mm;
-	uint16_t        vl53lx_tuningparm_lite_short_sigma_thresh_mm;
-	uint16_t        vl53lx_tuningparm_lite_long_min_count_rate_rtn_mcps;
-	uint16_t        vl53lx_tuningparm_lite_med_min_count_rate_rtn_mcps;
-	uint16_t        vl53lx_tuningparm_lite_short_min_count_rate_rtn_mcps;
-	uint8_t        vl53lx_tuningparm_lite_sigma_est_pulse_width;
-	uint8_t        vl53lx_tuningparm_lite_sigma_est_amb_width_ns;
-	uint8_t        vl53lx_tuningparm_lite_sigma_ref_mm;
-	uint8_t        vl53lx_tuningparm_lite_rit_mult;
-	uint8_t        vl53lx_tuningparm_lite_seed_config;
-	uint8_t        vl53lx_tuningparm_lite_quantifier;
-	uint8_t        vl53lx_tuningparm_lite_first_order_select;
-	int16_t        vl53lx_tuningparm_lite_xtalk_margin_kcps;
-	uint8_t        vl53lx_tuningparm_initial_phase_rtn_lite_long_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_rtn_lite_med_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_rtn_lite_short_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_ref_lite_long_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_ref_lite_med_range;
-	uint8_t        vl53lx_tuningparm_initial_phase_ref_lite_short_range;
-	uint8_t        vl53lx_tuningparm_timed_seed_config;
-	uint8_t        vl53lx_tuningparm_dmax_cfg_signal_thresh_sigma;
-	uint16_t        vl53lx_tuningparm_dmax_cfg_reflectance_array_0;
-	uint16_t        vl53lx_tuningparm_dmax_cfg_reflectance_array_1;
-	uint16_t        vl53lx_tuningparm_dmax_cfg_reflectance_array_2;
-	uint16_t        vl53lx_tuningparm_dmax_cfg_reflectance_array_3;
-	uint16_t        vl53lx_tuningparm_dmax_cfg_reflectance_array_4;
-	uint8_t        vl53lx_tuningparm_vhv_loopbound;
-	uint8_t        vl53lx_tuningparm_refspadchar_device_test_mode;
-	uint8_t        vl53lx_tuningparm_refspadchar_vcsel_period;
-	uint32_t        vl53lx_tuningparm_refspadchar_phasecal_timeout_us;
-	uint16_t        vl53lx_tuningparm_refspadchar_target_count_rate_mcps;
-	uint16_t        vl53lx_tuningparm_refspadchar_min_countrate_limit_mcps;
-	uint16_t        vl53lx_tuningparm_refspadchar_max_countrate_limit_mcps;
-	uint8_t        vl53lx_tuningparm_xtalk_extract_num_of_samples;
-	int16_t        vl53lx_tuningparm_xtalk_extract_min_filter_thresh_mm;
-	int16_t        vl53lx_tuningparm_xtalk_extract_max_filter_thresh_mm;
-	uint16_t        vl53lx_tuningparm_xtalk_extract_dss_rate_mcps;
-	uint32_t        vl53lx_tuningparm_xtalk_extract_phasecal_timeout_us;
-	uint16_t        vl53lx_tuningparm_xtalk_extract_max_valid_rate_kcps;
-	uint16_t        vl53lx_tuningparm_xtalk_extract_sigma_threshold_mm;
-	uint32_t        vl53lx_tuningparm_xtalk_extract_dss_timeout_us;
-	uint32_t        vl53lx_tuningparm_xtalk_extract_bin_timeout_us;
-	uint16_t        vl53lx_tuningparm_offset_cal_dss_rate_mcps;
-	uint32_t        vl53lx_tuningparm_offset_cal_phasecal_timeout_us;
-	uint32_t        vl53lx_tuningparm_offset_cal_mm_timeout_us;
-	uint32_t        vl53lx_tuningparm_offset_cal_range_timeout_us;
-	uint8_t        vl53lx_tuningparm_offset_cal_pre_samples;
-	uint8_t        vl53lx_tuningparm_offset_cal_mm1_samples;
-	uint8_t        vl53lx_tuningparm_offset_cal_mm2_samples;
-	uint16_t        vl53lx_tuningparm_zone_cal_dss_rate_mcps;
-	uint32_t        vl53lx_tuningparm_zone_cal_phasecal_timeout_us;
-	uint32_t        vl53lx_tuningparm_zone_cal_dss_timeout_us;
-	uint16_t        vl53lx_tuningparm_zone_cal_phasecal_num_samples;
-	uint32_t        vl53lx_tuningparm_zone_cal_range_timeout_us;
-	uint16_t        vl53lx_tuningparm_zone_cal_zone_num_samples;
-	uint8_t        vl53lx_tuningparm_spadmap_vcsel_period;
-	uint8_t        vl53lx_tuningparm_spadmap_vcsel_start;
-	uint16_t        vl53lx_tuningparm_spadmap_rate_limit_mcps;
-	uint16_t  vl53lx_tuningparm_lite_dss_config_target_total_rate_mcps;
-	uint16_t   vl53lx_tuningparm_ranging_dss_config_target_total_rate_mcps;
-	uint16_t        vl53lx_tuningparm_mz_dss_config_target_total_rate_mcps;
-	uint16_t     vl53lx_tuningparm_timed_dss_config_target_total_rate_mcps;
-	uint32_t        vl53lx_tuningparm_lite_phasecal_config_timeout_us;
-	uint32_t     vl53lx_tuningparm_ranging_long_phasecal_config_timeout_us;
-	uint32_t      vl53lx_tuningparm_ranging_med_phasecal_config_timeout_us;
-	uint32_t    vl53lx_tuningparm_ranging_short_phasecal_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_mz_long_phasecal_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_mz_med_phasecal_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_mz_short_phasecal_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_timed_phasecal_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_lite_mm_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_ranging_mm_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_mz_mm_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_timed_mm_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_lite_range_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_ranging_range_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_mz_range_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_timed_range_config_timeout_us;
-	uint16_t        vl53lx_tuningparm_dynxtalk_smudge_margin;
-	uint32_t        vl53lx_tuningparm_dynxtalk_noise_margin;
-	uint32_t        vl53lx_tuningparm_dynxtalk_xtalk_offset_limit;
-	uint8_t        vl53lx_tuningparm_dynxtalk_xtalk_offset_limit_hi;
-	uint32_t        vl53lx_tuningparm_dynxtalk_sample_limit;
-	uint32_t        vl53lx_tuningparm_dynxtalk_single_xtalk_delta;
-	uint32_t        vl53lx_tuningparm_dynxtalk_averaged_xtalk_delta;
-	uint32_t        vl53lx_tuningparm_dynxtalk_clip_limit;
-	uint8_t        vl53lx_tuningparm_dynxtalk_scaler_calc_method;
-	int16_t        vl53lx_tuningparm_dynxtalk_xgradient_scaler;
-	int16_t        vl53lx_tuningparm_dynxtalk_ygradient_scaler;
-	uint8_t        vl53lx_tuningparm_dynxtalk_user_scaler_set;
-	uint8_t        vl53lx_tuningparm_dynxtalk_smudge_cor_single_apply;
-	uint32_t        vl53lx_tuningparm_dynxtalk_xtalk_amb_threshold;
-	uint32_t        vl53lx_tuningparm_dynxtalk_nodetect_amb_threshold_kcps;
-	uint32_t        vl53lx_tuningparm_dynxtalk_nodetect_sample_limit;
-	uint32_t        vl53lx_tuningparm_dynxtalk_nodetect_xtalk_offset_kcps;
-	uint16_t        vl53lx_tuningparm_dynxtalk_nodetect_min_range_mm;
-	uint8_t        vl53lx_tuningparm_lowpowerauto_vhv_loop_bound;
-	uint32_t        vl53lx_tuningparm_lowpowerauto_mm_config_timeout_us;
-	uint32_t        vl53lx_tuningparm_lowpowerauto_range_config_timeout_us;
-	uint16_t        vl53lx_tuningparm_very_short_dss_rate_mcps;
-	uint32_t        vl53lx_tuningparm_phasecal_patch_power;
-} VL53LX_tuning_parameters_t;
 
 
 
