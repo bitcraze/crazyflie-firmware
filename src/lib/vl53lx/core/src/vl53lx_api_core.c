@@ -437,7 +437,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_offset_cal_config_struct(
-		    &(pdev->offsetcal_cfg));
+		    &(pdev->VL53LX_LLDriverCommonData->offsetcal_cfg));
 
 
 	if (status == VL53LX_ERROR_NONE)
@@ -3474,31 +3474,31 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_DSS_RATE_MCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.dss_config__target_total_rate_mcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.dss_config__target_total_rate_mcps;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_PHASECAL_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.phasecal_config_timeout_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.phasecal_config_timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_MM_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.mm_config_timeout_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.mm_config_timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_RANGE_TIMEOUT_US:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.range_config_timeout_us;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.range_config_timeout_us;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_PRE_SAMPLES:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.pre_num_of_samples;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.pre_num_of_samples;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_MM1_SAMPLES:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.mm1_num_of_samples;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.mm1_num_of_samples;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_MM2_SAMPLES:
 		*ptuning_parm_value =
-		(int32_t)pdev->offsetcal_cfg.mm2_num_of_samples;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.mm2_num_of_samples;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_DSS_RATE_MCPS:
 		*ptuning_parm_value =
@@ -4256,31 +4256,31 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_DSS_RATE_MCPS:
-		pdev->offsetcal_cfg.dss_config__target_total_rate_mcps =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.dss_config__target_total_rate_mcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_PHASECAL_TIMEOUT_US:
-		pdev->offsetcal_cfg.phasecal_config_timeout_us =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.phasecal_config_timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_MM_TIMEOUT_US:
-		pdev->offsetcal_cfg.mm_config_timeout_us =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.mm_config_timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_RANGE_TIMEOUT_US:
-		pdev->offsetcal_cfg.range_config_timeout_us =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.range_config_timeout_us =
 				(uint32_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_PRE_SAMPLES:
-		pdev->offsetcal_cfg.pre_num_of_samples =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.pre_num_of_samples =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_MM1_SAMPLES:
-		pdev->offsetcal_cfg.mm1_num_of_samples =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.mm1_num_of_samples =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_OFFSET_CAL_MM2_SAMPLES:
-		pdev->offsetcal_cfg.mm2_num_of_samples =
+		pdev->VL53LX_LLDriverCommonData->offsetcal_cfg.mm2_num_of_samples =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_ZONE_CAL_DSS_RATE_MCPS:

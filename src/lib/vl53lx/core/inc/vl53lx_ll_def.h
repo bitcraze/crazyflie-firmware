@@ -1323,7 +1323,7 @@ typedef struct {
 	VL53LX_hist_gen3_dmax_config_t      dmax_cfg;
 	VL53LX_xtalkextract_config_t        xtalk_extract_cfg;
 	VL53LX_xtalk_config_t               xtalk_cfg;
-
+	VL53LX_offsetcal_config_t           offsetcal_cfg;
 
 
 } VL53LX_LLDriverCommonData_t;
@@ -1395,7 +1395,7 @@ typedef struct {
 	// VL53LX_hist_gen3_dmax_config_t      dmax_cfg;
 	// VL53LX_xtalkextract_config_t        xtalk_extract_cfg;
 	// VL53LX_xtalk_config_t               xtalk_cfg;
-	VL53LX_offsetcal_config_t           offsetcal_cfg;
+	// VL53LX_offsetcal_config_t           offsetcal_cfg;
 	VL53LX_zonecal_config_t             zonecal_cfg;
 
 
