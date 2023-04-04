@@ -167,7 +167,7 @@ VL53LX_Error VL53LX_get_xtalk_debug_data(
 
 	memcpy(
 		&(pdata->xtalk_cfg),
-		&(pdev->xtalk_cfg),
+		&(pdev->VL53LX_LLDriverCommonData->xtalk_cfg),
 		sizeof(VL53LX_xtalk_config_t));
 
 	memcpy(

@@ -427,12 +427,12 @@ VL53LX_Error VL53LX_data_init(
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_xtalk_config_struct(
 			&(pdev->customer),
-			&(pdev->xtalk_cfg));
+			&(pdev->VL53LX_LLDriverCommonData->xtalk_cfg));
 
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_xtalk_extract_config_struct(
-			&(pdev->xtalk_extract_cfg));
+			&(pdev->VL53LX_LLDriverCommonData->xtalk_extract_cfg));
 
 
 	if (status == VL53LX_ERROR_NONE)
@@ -447,7 +447,7 @@ VL53LX_Error VL53LX_data_init(
 
 	if (status == VL53LX_ERROR_NONE)
 		status = VL53LX_init_hist_post_process_config_struct(
-			pdev->xtalk_cfg.global_crosstalk_compensation_enable,
+			pdev->VL53LX_LLDriverCommonData->xtalk_cfg.global_crosstalk_compensation_enable,
 			&(pdev->histpostprocess));
 
 
@@ -744,7 +744,7 @@ VL53LX_Error VL53LX_set_part_to_part_data(
 
 	VL53LX_Error  status = VL53LX_ERROR_NONE;
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
-	VL53LX_xtalk_config_t *pC = &(pdev->xtalk_cfg);
+	VL53LX_xtalk_config_t *pC = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
 	VL53LX_customer_nvm_managed_t *pN = &(pdev->customer);
 
@@ -864,7 +864,7 @@ VL53LX_Error VL53LX_get_part_to_part_data(
 
 	VL53LX_Error  status = VL53LX_ERROR_NONE;
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
-	VL53LX_xtalk_config_t *pC = &(pdev->xtalk_cfg);
+	VL53LX_xtalk_config_t *pC = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 	VL53LX_customer_nvm_managed_t *pCN = &(pcal_data->customer);
 
 	LOG_FUNCTION_START("");
@@ -1487,7 +1487,7 @@ VL53LX_Error  VL53LX_enable_xtalk_compensation(
 	uint32_t tempu32;
 
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
-	VL53LX_xtalk_config_t *pC = &(pdev->xtalk_cfg);
+	VL53LX_xtalk_config_t *pC = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
 	VL53LX_customer_nvm_managed_t *pN = &(pdev->customer);
 
@@ -1566,7 +1566,7 @@ void VL53LX_get_xtalk_compensation_enable(
 
 
 	*pcrosstalk_compensation_enable =
-		pdev->xtalk_cfg.global_crosstalk_compensation_enable;
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.global_crosstalk_compensation_enable;
 
 }
 
@@ -1596,15 +1596,15 @@ VL53LX_Error  VL53LX_disable_xtalk_compensation(
 
 
 
-	pdev->xtalk_cfg.global_crosstalk_compensation_enable = 0x00;
+	pdev->VL53LX_LLDriverCommonData->xtalk_cfg.global_crosstalk_compensation_enable = 0x00;
 
 	pHP->algo__crosstalk_compensation_enable =
-		pdev->xtalk_cfg.global_crosstalk_compensation_enable;
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.global_crosstalk_compensation_enable;
 
 
 
 	if (status == VL53LX_ERROR_NONE) {
-		pdev->xtalk_cfg.crosstalk_range_ignore_threshold_rate_mcps =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.crosstalk_range_ignore_threshold_rate_mcps =
 			0x0000;
 	}
 
@@ -1687,10 +1687,10 @@ VL53LX_Error VL53LX_init_and_start_range(
 
 	if (((pdev->sys_ctrl.system__mode_start &
 		VL53LX_DEVICESCHEDULERMODE_HISTOGRAM) == 0x00) &&
-		(pdev->xtalk_cfg.global_crosstalk_compensation_enable
+		(pdev->VL53LX_LLDriverCommonData->xtalk_cfg.global_crosstalk_compensation_enable
 				== 0x01)) {
 		pdev->stat_cfg.algo__range_ignore_threshold_mcps =
-		pdev->xtalk_cfg.crosstalk_range_ignore_threshold_rate_mcps;
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.crosstalk_range_ignore_threshold_rate_mcps;
 	}
 
 
@@ -2082,7 +2082,7 @@ VL53LX_Error VL53LX_get_device_results(
 	VL53LX_dmax_calibration_data_t   dmax_cal;
 	VL53LX_dmax_calibration_data_t *pdmax_cal = &dmax_cal;
 	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
-	VL53LX_xtalk_config_t *pC = &(pdev->xtalk_cfg);
+	VL53LX_xtalk_config_t *pC = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 	VL53LX_low_power_auto_data_t *pL = &(pdev->low_power_auto_data);
 	VL53LX_histogram_bin_data_t *pHD = &(pdev->VL53LX_LLDriverCommonData->hist_data);
 	VL53LX_customer_nvm_managed_t *pN = &(pdev->customer);
@@ -3138,7 +3138,7 @@ VL53LX_Error VL53LX_get_tuning_parm(
 
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
 	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
-	VL53LX_xtalkextract_config_t *pXC = &(pdev->xtalk_extract_cfg);
+	VL53LX_xtalkextract_config_t *pXC = &(pdev->VL53LX_LLDriverCommonData->xtalk_extract_cfg);
 
 	LOG_FUNCTION_START("");
 
@@ -3254,15 +3254,15 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MIN_VALID_RANGE_MM:
 		*ptuning_parm_value = (int32_t)(
-		pdev->xtalk_cfg.algo__crosstalk_detect_min_valid_range_mm);
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_min_valid_range_mm);
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MAX_VALID_RANGE_MM:
 		*ptuning_parm_value = (int32_t)(
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_valid_range_mm);
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_max_valid_range_mm);
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MAX_SIGMA_MM:
 		*ptuning_parm_value =
-		(int32_t)pdev->xtalk_cfg.algo__crosstalk_detect_max_sigma_mm;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_max_sigma_mm;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MIN_MAX_TOLERANCE:
 		*ptuning_parm_value =
@@ -3270,7 +3270,7 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MAX_VALID_RATE_KCPS:
 		*ptuning_parm_value = (int32_t)(
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_valid_rate_kcps);
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_max_valid_rate_kcps);
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_EVENT_SIGMA:
 		*ptuning_parm_value =
@@ -3278,7 +3278,7 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_HIST_XTALK_MARGIN_KCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->xtalk_cfg.histogram_mode_crosstalk_margin_kcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->xtalk_cfg.histogram_mode_crosstalk_margin_kcps;
 	break;
 	case VL53LX_TUNINGPARM_CONSISTENCY_LITE_PHASE_TOLERANCE:
 		*ptuning_parm_value =
@@ -3338,7 +3338,7 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_LITE_RIT_MULT:
 		*ptuning_parm_value =
-		(int32_t)pdev->xtalk_cfg.crosstalk_range_ignore_threshold_mult;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->xtalk_cfg.crosstalk_range_ignore_threshold_mult;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SEED_CONFIG:
 		*ptuning_parm_value =
@@ -3354,7 +3354,7 @@ VL53LX_Error VL53LX_get_tuning_parm(
 	break;
 	case VL53LX_TUNINGPARM_LITE_XTALK_MARGIN_KCPS:
 		*ptuning_parm_value =
-		(int32_t)pdev->xtalk_cfg.lite_mode_crosstalk_margin_kcps;
+		(int32_t)pdev->VL53LX_LLDriverCommonData->xtalk_cfg.lite_mode_crosstalk_margin_kcps;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_LONG_RANGE:
 		*ptuning_parm_value =
@@ -3914,7 +3914,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
 	VL53LX_hist_post_process_config_t *pHP = &(pdev->histpostprocess);
-	VL53LX_xtalkextract_config_t *pXC = &(pdev->xtalk_extract_cfg);
+	VL53LX_xtalkextract_config_t *pXC = &(pdev->VL53LX_LLDriverCommonData->xtalk_extract_cfg);
 
 	LOG_FUNCTION_START("");
 
@@ -4036,15 +4036,15 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MIN_VALID_RANGE_MM:
-		pdev->xtalk_cfg.algo__crosstalk_detect_min_valid_range_mm =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_min_valid_range_mm =
 				(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MAX_VALID_RANGE_MM:
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_valid_range_mm =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_max_valid_range_mm =
 				(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MAX_SIGMA_MM:
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_sigma_mm =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_max_sigma_mm =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MIN_MAX_TOLERANCE:
@@ -4052,7 +4052,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_MAX_VALID_RATE_KCPS:
-		pdev->xtalk_cfg.algo__crosstalk_detect_max_valid_rate_kcps =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_detect_max_valid_rate_kcps =
 				(uint16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_XTALK_DETECT_EVENT_SIGMA:
@@ -4060,7 +4060,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_HIST_XTALK_MARGIN_KCPS:
-		pdev->xtalk_cfg.histogram_mode_crosstalk_margin_kcps =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.histogram_mode_crosstalk_margin_kcps =
 				(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_CONSISTENCY_LITE_PHASE_TOLERANCE:
@@ -4120,7 +4120,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_RIT_MULT:
-		pdev->xtalk_cfg.crosstalk_range_ignore_threshold_mult =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.crosstalk_range_ignore_threshold_mult =
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_SEED_CONFIG:
@@ -4136,7 +4136,7 @@ VL53LX_Error VL53LX_set_tuning_parm(
 				(uint8_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_LITE_XTALK_MARGIN_KCPS:
-		pdev->xtalk_cfg.lite_mode_crosstalk_margin_kcps =
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.lite_mode_crosstalk_margin_kcps =
 				(int16_t)tuning_parm_value;
 	break;
 	case VL53LX_TUNINGPARM_INITIAL_PHASE_RTN_LITE_LONG_RANGE:
@@ -4830,11 +4830,11 @@ VL53LX_Error VL53LX_get_current_xtalk_settings(
 	LOG_FUNCTION_START("");
 
 	pxtalk->algo__crosstalk_compensation_plane_offset_kcps =
-		pdev->xtalk_cfg.algo__crosstalk_compensation_plane_offset_kcps;
+		pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_compensation_plane_offset_kcps;
 	pxtalk->algo__crosstalk_compensation_x_plane_gradient_kcps =
-	pdev->xtalk_cfg.algo__crosstalk_compensation_x_plane_gradient_kcps;
+	pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_compensation_x_plane_gradient_kcps;
 	pxtalk->algo__crosstalk_compensation_y_plane_gradient_kcps =
-	pdev->xtalk_cfg.algo__crosstalk_compensation_y_plane_gradient_kcps;
+	pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_compensation_y_plane_gradient_kcps;
 	for (i = 0; i < VL53LX_BIN_REC_SIZE; i++)
 		pxtalk->algo__xtalk_cpo_HistoMerge_kcps[i] =
 		pdev->xtalk_cal.algo__xtalk_cpo_HistoMerge_kcps[i];
@@ -4862,11 +4862,11 @@ VL53LX_Error VL53LX_set_current_xtalk_settings(
 
 	LOG_FUNCTION_START("");
 
-	pdev->xtalk_cfg.algo__crosstalk_compensation_plane_offset_kcps =
+	pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_compensation_plane_offset_kcps =
 		pxtalk->algo__crosstalk_compensation_plane_offset_kcps;
-	pdev->xtalk_cfg.algo__crosstalk_compensation_x_plane_gradient_kcps =
+	pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_compensation_x_plane_gradient_kcps =
 		pxtalk->algo__crosstalk_compensation_x_plane_gradient_kcps;
-	pdev->xtalk_cfg.algo__crosstalk_compensation_y_plane_gradient_kcps =
+	pdev->VL53LX_LLDriverCommonData->xtalk_cfg.algo__crosstalk_compensation_y_plane_gradient_kcps =
 		pxtalk->algo__crosstalk_compensation_y_plane_gradient_kcps;
 	for (i = 0; i < VL53LX_BIN_REC_SIZE; i++)
 		pdev->xtalk_cal.algo__xtalk_cpo_HistoMerge_kcps[i] =

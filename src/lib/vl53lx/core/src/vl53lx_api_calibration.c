@@ -829,8 +829,8 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 	#define OVERSIZE 4
 	VL53LX_Error status = VL53LX_ERROR_NONE;
 	VL53LX_LLDriverData_t *pdev = VL53LXDevStructGetLLDriverHandle(Dev);
-	VL53LX_xtalkextract_config_t *pX = &(pdev->xtalk_extract_cfg);
-	VL53LX_xtalk_config_t *pC = &(pdev->xtalk_cfg);
+	VL53LX_xtalkextract_config_t *pX = &(pdev->VL53LX_LLDriverCommonData->xtalk_extract_cfg);
+	VL53LX_xtalk_config_t *pC = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 	VL53LX_xtalk_calibration_results_t *pXC = &(pdev->xtalk_cal);
 
 
@@ -1008,7 +1008,7 @@ VL53LX_Error   VL53LX_run_hist_xtalk_extraction(
 		VL53LX_TRACE_MODULE_XTALK_DATA);
 
 	VL53LX_print_xtalk_config(
-		&(pdev->xtalk_cfg),
+		&(pdev->VL53LX_LLDriverCommonData->xtalk_cfg),
 		"run_xtalk_extraction():pdev->lldata.xtalk_cfg.",
 		VL53LX_TRACE_MODULE_XTALK_DATA);
 

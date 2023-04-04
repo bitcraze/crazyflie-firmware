@@ -3925,7 +3925,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_calc_new_xtalk(
 	uint8_t  i;
 	int32_t  itemp32;
 	uint32_t SmudgeFactor;
-	VL53LX_xtalk_config_t  *pX = &(pdev->xtalk_cfg);
+	VL53LX_xtalk_config_t  *pX = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 	VL53LX_xtalk_calibration_results_t  *pC = &(pdev->xtalk_cal);
 	uint32_t *pcpo;
 	uint32_t max, nXtalk, cXtalk;
@@ -4131,7 +4131,7 @@ VL53LX_Error VL53LX_dynamic_xtalk_correction_corrector(
 	VL53LX_smudge_corrector_data_t *pout =
 			&(pres->range_results.smudge_corrector_data);
 	VL53LX_range_results_t  *pR = &(pres->range_results);
-	VL53LX_xtalk_config_t  *pX = &(pdev->xtalk_cfg);
+	VL53LX_xtalk_config_t  *pX = &(pdev->VL53LX_LLDriverCommonData->xtalk_cfg);
 
 	uint8_t	run_smudge_detection = 0;
 	uint8_t merging_complete = 0;
