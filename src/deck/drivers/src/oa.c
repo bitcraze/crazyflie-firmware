@@ -48,11 +48,11 @@ static bool isTested = false;
 #define OA_PIN_LEFT   PCA95X4_P6
 #define OA_PIN_RIGHT  PCA95X4_P2
 
-static VL53L0xDev devFront;
-static VL53L0xDev devBack;
-static VL53L0xDev devUp;
-static VL53L0xDev devLeft;
-static VL53L0xDev devRight;
+// static VL53L0xDev devFront;
+// static VL53L0xDev devBack;
+// static VL53L0xDev devUp;
+// static VL53L0xDev devLeft;
+// static VL53L0xDev devRight;
 
 static uint16_t rangeFront;
 static uint16_t rangeBack;
@@ -64,22 +64,22 @@ static void oaTask(void *param)
 {
   systemWaitStart();
 
-  vl53l0xStartContinuous(&devFront, 0);
-  vl53l0xStartContinuous(&devBack, 0);
-  vl53l0xStartContinuous(&devUp, 0);
-  vl53l0xStartContinuous(&devLeft, 0);
-  vl53l0xStartContinuous(&devRight, 0);
+  // vl53l0xStartContinuous(&devFront, 0);
+  // vl53l0xStartContinuous(&devBack, 0);
+  // vl53l0xStartContinuous(&devUp, 0);
+  // vl53l0xStartContinuous(&devLeft, 0);
+  // vl53l0xStartContinuous(&devRight, 0);
 
   TickType_t lastWakeTime = xTaskGetTickCount();
 
   while(1) {
     vTaskDelayUntil(&lastWakeTime, M2T(50));
 
-    rangeFront = vl53l0xReadRangeContinuousMillimeters(&devFront);
-    rangeBack = vl53l0xReadRangeContinuousMillimeters(&devBack);
-    rangeUp = vl53l0xReadRangeContinuousMillimeters(&devUp);
-    rangeLeft = vl53l0xReadRangeContinuousMillimeters(&devLeft);
-    rangeRight = vl53l0xReadRangeContinuousMillimeters(&devRight);
+    // rangeFront = vl53l0xReadRangeContinuousMillimeters(&devFront);
+    // rangeBack = vl53l0xReadRangeContinuousMillimeters(&devBack);
+    // rangeUp = vl53l0xReadRangeContinuousMillimeters(&devUp);
+    // rangeLeft = vl53l0xReadRangeContinuousMillimeters(&devLeft);
+    // rangeRight = vl53l0xReadRangeContinuousMillimeters(&devRight);
   }
 }
 
@@ -119,44 +119,44 @@ static bool oaTest()
   }
 
   pca95x4SetOutput(OA_PIN_FRONT);
-  if (vl53l0xInit(&devFront, I2C1_DEV, true)) {
-    DEBUG_PRINT("Init front sensor [OK]\n");
-  } else {
-    DEBUG_PRINT("Init front sensor [FAIL]\n");
-    pass = false;
-  }
+  // if (vl53l0xInit(&devFront, I2C1_DEV, true)) {
+  //   DEBUG_PRINT("Init front sensor [OK]\n");
+  // } else {
+  //   DEBUG_PRINT("Init front sensor [FAIL]\n");
+  //   pass = false;
+  // }
 
-  pca95x4SetOutput(OA_PIN_BACK);
-  if (vl53l0xInit(&devBack, I2C1_DEV, true)) {
-    DEBUG_PRINT("Init back sensor [OK]\n");
-  } else {
-    DEBUG_PRINT("Init back sensor [FAIL]\n");
-    pass = false;
-  }
+  // pca95x4SetOutput(OA_PIN_BACK);
+  // if (vl53l0xInit(&devBack, I2C1_DEV, true)) {
+  //   DEBUG_PRINT("Init back sensor [OK]\n");
+  // } else {
+  //   DEBUG_PRINT("Init back sensor [FAIL]\n");
+  //   pass = false;
+  // }
 
-  pca95x4SetOutput(OA_PIN_UP);
-  if (vl53l0xInit(&devUp, I2C1_DEV, true)) {
-    DEBUG_PRINT("Init up sensor [OK]\n");
-  } else {
-    DEBUG_PRINT("Init up sensor [FAIL]\n");
-    pass = false;
-  }
+  // pca95x4SetOutput(OA_PIN_UP);
+  // if (vl53l0xInit(&devUp, I2C1_DEV, true)) {
+  //   DEBUG_PRINT("Init up sensor [OK]\n");
+  // } else {
+  //   DEBUG_PRINT("Init up sensor [FAIL]\n");
+  //   pass = false;
+  // }
 
-  pca95x4SetOutput(OA_PIN_LEFT);
-  if (vl53l0xInit(&devLeft, I2C1_DEV, true)) {
-    DEBUG_PRINT("Init left sensor [OK]\n");
-  } else {
-    DEBUG_PRINT("Init left sensor [FAIL]\n");
-    pass = false;
-  }
+  // pca95x4SetOutput(OA_PIN_LEFT);
+  // if (vl53l0xInit(&devLeft, I2C1_DEV, true)) {
+  //   DEBUG_PRINT("Init left sensor [OK]\n");
+  // } else {
+  //   DEBUG_PRINT("Init left sensor [FAIL]\n");
+  //   pass = false;
+  // }
 
-  pca95x4SetOutput(OA_PIN_RIGHT);
-  if (vl53l0xInit(&devRight, I2C1_DEV, true)) {
-    DEBUG_PRINT("Init right sensor [OK]\n");
-  } else {
-    DEBUG_PRINT("Init right sensor [FAIL]\n");
-    pass = false;
-  }
+  // pca95x4SetOutput(OA_PIN_RIGHT);
+  // if (vl53l0xInit(&devRight, I2C1_DEV, true)) {
+  //   DEBUG_PRINT("Init right sensor [OK]\n");
+  // } else {
+  //   DEBUG_PRINT("Init right sensor [FAIL]\n");
+  //   pass = false;
+  // }
 
   isTested = true;
 

@@ -52,7 +52,7 @@ static float expCoeff;
 
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
-static uint16_t range_last = 0;
+// static uint16_t range_last = 0;
 
 static bool isInit;
 
@@ -63,7 +63,7 @@ void zRangerInit(DeckInfo* info)
   if (isInit)
     return;
 
-  vl53l0xInit(&dev, I2C1_DEV, true);
+  // vl53l0xInit(&dev, I2C1_DEV, true);
 
   xTaskCreate(zRangerTask, ZRANGER_TASK_NAME, ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
 
@@ -80,7 +80,7 @@ bool zRangerTest(void)
   if (!isInit)
     return false;
 
-  testStatus  = vl53l0xTestConnection(&dev);
+  // testStatus  = vl53l0xTestConnection(&dev);
 
   return testStatus;
 }
@@ -90,26 +90,26 @@ void zRangerTask(void* arg)
   systemWaitStart();
   TickType_t xLastWakeTime;
 
-  vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodPreRange, 18);
-  vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(&dev, 0);
+  // vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodPreRange, 18);
+  // vl53l0xSetVcselPulsePeriod(&dev, VcselPeriodFinalRange, 14);
+  // vl53l0xStartContinuous(&dev, 0);
 
   xLastWakeTime = xTaskGetTickCount();
 
   while (1) {
     vTaskDelayUntil(&xLastWakeTime, M2T(dev.measurement_timing_budget_ms));
 
-    range_last = vl53l0xReadRangeContinuousMillimeters(&dev);
-    rangeSet(rangeDown, range_last / 1000.0f);
+    // range_last = vl53l0xReadRangeContinuousMillimeters(&dev);
+    // rangeSet(rangeDown, range_last / 1000.0f);
 
-    // check if range is feasible and push into the estimator
-    // the sensor should not be able to measure >3 [m], and outliers typically
-    // occur as >8 [m] measurements
-    if (range_last < RANGE_OUTLIER_LIMIT) {
-      float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
-      rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
-    }
+    // // check if range is feasible and push into the estimator
+    // // the sensor should not be able to measure >3 [m], and outliers typically
+    // // occur as >8 [m] measurements
+    // if (range_last < RANGE_OUTLIER_LIMIT) {
+    //   float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
+    //   float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
+    //   rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
+    // }
   }
 }
 
