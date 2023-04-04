@@ -58,7 +58,7 @@ static uint16_t filterMask = 1 << VL53LX_RANGESTATUS_RANGE_VALID;
 static VL53LX_Dev_t devFront;
 static VL53LX_Dev_t devBack;
 static VL53LX_Dev_t devUp;
-static VL53LX_Dev_t devLeft;
+NO_DMA_CCM_SAFE_ZERO_INIT static VL53LX_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53LX_Dev_t devRight;
 static VL53LX_LLDriverCommonData_t VL53LX_LLDriverCommonData;
 
