@@ -88,7 +88,7 @@ bool paa3905Init(const deckPin_t csPin);
  */
 void paa3905ReadMotion(const deckPin_t csPin, motionBurst3905_t * motion);
 
-float paa3905ReadRaw(const deckPin_t csPin);
+void paa3905ReadRaw(const deckPin_t csPin);
 
 
 #endif /* PMW3901_H_ */

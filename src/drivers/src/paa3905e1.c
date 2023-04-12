@@ -39,23 +39,15 @@
 #include "usec_time.h"
 
 
-#define LINE_THRESHOLD 50
+#define TURN_ON_FLOW_DECK_LED
 
 
 static bool isInit = false;
 static uint8_t mode = 0; //0: Bright mode, 1: Low light mode, 2: Super low light mode (read only currently)
-static uint8_t resolution = 0x4c;//0x26;//0xFF;//0x2c;//0xFF;
-static uint8_t old_resolution = 0x4c;//0x26;//0xFF;//0x2c;//0xFF;
+static uint8_t resolution = 0x4c;//0x26 corresponds to 0.1pixel, which was the resolution in flowV2, 0xFF is the max;
+static uint8_t old_resolution = 0x4c;
 
 static volatile uint8_t rawDataArray[1225];
-
-static float yaw_line = 0.0f;
-// static int8_t pos_diff = 0;
-// static int8_t line_diff = 0;
-// static int8_t min_pos_top = 0;
-// static int8_t min_pos_bot = 0;
-// static int8_t min_line_top = 0;
-// static int8_t min_line_bot = 0;
 
 static float dt = 0.0f;
 static uint64_t lastTime = 0;
@@ -190,11 +182,13 @@ static void InitRegisters(const deckPin_t csPin)
   registerWrite(csPin, 0x7F, 0x00);
   // registerWrite(csPin, 0x5B, 0xA0);
 
+#ifdef TURN_ON_FLOW_DECK_LED
   // turn on LED
   registerWrite(csPin, 0x7F, 0x14);
   registerWrite(csPin, 0x6F, 0x0c);
   registerWrite(csPin, 0x7F, 0x00);
   DEBUG_PRINT("Turned on LED\n");
+#endif
 
 
 }
@@ -291,14 +285,13 @@ void paa3905ReadMotion(const deckPin_t csPin, motionBurst3905_t * motion)
   if (old_resolution != resolution)
   {
     registerWrite(csPin, 0x4E, resolution);
+    resolution = registerRead(csPin, 0x4E);
     old_resolution = resolution;
   }
 }
 
-float paa3905ReadRaw(const deckPin_t csPin)
+void paa3905ReadRaw(const deckPin_t csPin)
 {
-  // uint8_t min_values[35];
-  // uint8_t min_pos[35];
   registerWrite(csPin, 0x7F, 0x00);
   registerWrite(csPin, 0x67, 0x25);
   registerWrite(csPin, 0x55, 0x20);
@@ -344,52 +337,8 @@ float paa3905ReadRaw(const deckPin_t csPin)
   vTaskDelay(M2T(1));
 
   InitRegisters(csPin);
-  // uint8_t temp_min = 255;
-  // uint8_t global_temp_min = 255;
-  // for (int i = 0; i < 35; ++i)
-  // {
-  //   for (int j = 0; j < 35; ++j)
-  //   {
-  //     if (rawDataArray[i*35 + j] < temp_min)
-  //     {
-  //       temp_min = rawDataArray[i*35 + j];
-  //       min_pos[i] = j;
-  //     }
-  //   }
-  //   min_values[i] = temp_min;
-  //   if (temp_min < global_temp_min)
-  //   {
-  //     global_temp_min = temp_min;
-  //   }
-  //   temp_min = 255;
-  // }
-
-  // for (int i = 0; i < 35; ++i)
-  // {
-  //   if (min_values[i] < global_temp_min + LINE_THRESHOLD)
-  //   {
-  //     min_pos_top = min_pos[i];
-  //     min_line_top = i;
-  //     break;
-  //   }
-  // }
-  // for (int i = 34; i >= 0; --i)
-  // {
-  //   if (min_values[i] < global_temp_min + LINE_THRESHOLD)
-  //   {
-  //     min_pos_bot = min_pos[i];
-  //     min_line_bot = i;
-  //     break;
-  //   }
-  // }
-  // pos_diff = min_pos_top - min_pos_bot;
-  // line_diff = min_line_bot - min_line_top;
-  yaw_line = 0.0f;//atan2f((float)pos_diff, (float)line_diff);
   dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
   lastTime = usecTimestamp();
-
-  return yaw_line;
-  
 }
 
 
@@ -401,9 +350,4 @@ PARAM_GROUP_STOP(flow)
 LOG_GROUP_START(flow)
 LOG_ADD(LOG_UINT8, mode, &mode)
 LOG_GROUP_STOP(flow)
-
-LOG_GROUP_START(line)
-LOG_ADD(LOG_FLOAT, yaw, &yaw_line)
-LOG_ADD(LOG_FLOAT, dt, &dt)
-LOG_GROUP_STOP(line)
 

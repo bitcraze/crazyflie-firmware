@@ -86,11 +86,10 @@ static bool useAdaptiveStd = false;
 static float flowStdFixed = 2.0f;
 
 static uint64_t counter = 0;
-static float yaw_line = 0.0f;
 
 #define NCS_PIN DECK_GPIO_IO3
 
-static float flowdeckReadRaw();
+static void flowdeckReadRaw();
 
 
 static void flowdeckTask(void *param)
@@ -104,7 +103,7 @@ static void flowdeckTask(void *param)
 
     if (flowRawRead)
       {
-        yaw_line = flowdeckReadRaw();
+        flowdeckReadRaw();
       }
 
     paa3905ReadMotion(NCS_PIN, &currentMotion);
@@ -124,71 +123,69 @@ static void flowdeckTask(void *param)
 
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
-      /* if ((flowMode == BRIGHT_MODE && currentMotion.squal > BRIGHT_MODE_MIN_SQUAL && shutter <= BRIGHT_MODE_MAX_SHUTTER) || \
-      //   (flowMode == LOW_LIGHT_MODE && currentMotion.squal > LOW_LIGHT_MODE_MIN_SQUAL && shutter <= LOW_LIGHT_MODE_MAX_SHUTTER) || \
-      //     (flowMode == SUPER_LOW_LIGHT_MODE && currentMotion.squal > SUPER_LOW_LIGHT_MODE_MIN_SQUAL && shutter <= SUPER_LOW_LIGHT_MODE_MAX_SHUTTER))
-       {*/
-        if (useAdaptiveStd)
-        {
-          // The standard deviation is fitted by measurements flying over low and high texture
-          //   and looking at the shutter time
-          stdFlow=0.0007984f *shutter + 0.4335f;
+      if (useAdaptiveStd)
+      {
+        // The standard deviation is fitted by measurements flying over low and high texture
+        //   and looking at the shutter time
+        stdFlow=0.0007984f *shutter + 0.4335f;
 
-          // The formula with the amount of features instead
-          /*float squal_f = (float)currentMotion.squal;
-          stdFlow =  -0.01257f * squal_f + 4.406f; */
-          if (stdFlow < 0.1f) stdFlow=0.1f;
-        } else {
-          stdFlow = flowStdFixed;
-        }
+        // The formula with the amount of features instead
+        /*float squal_f = (float)currentMotion.squal;
+        stdFlow =  -0.01257f * squal_f + 4.406f; */
+        if (stdFlow < 0.1f) stdFlow=0.1f;
+      } else {
+        stdFlow = flowStdFixed;
+      }
 
-        // Form flow measurement struct and push into the EKF
-        flowData.stdDevX = stdFlow;
-        flowData.stdDevY = stdFlow;
-        // flowData.dt = 0.01;
+      // Form flow measurement struct and push into the EKF
+      flowData.stdDevX = stdFlow*0.1f;
+      flowData.stdDevY = stdFlow*0.1f;
+      // flowData.dt = 0.01;
 
-    #if defined(USE_MA_SMOOTHING)
-          // Use MA Smoothing
-          pixelAverages.averageX[pixelAverages.ptr] = (float32_t)accpx;
-          pixelAverages.averageY[pixelAverages.ptr] = (float32_t)accpy;
+#if defined(USE_MA_SMOOTHING)
+      // Use MA Smoothing
+      pixelAverages.averageX[pixelAverages.ptr] = (float32_t)accpx;
+      pixelAverages.averageY[pixelAverages.ptr] = (float32_t)accpy;
 
-          float32_t meanX;
-          float32_t meanY;
+      float32_t meanX;
+      float32_t meanY;
 
-          arm_mean_f32(pixelAverages.averageX, AVERAGE_HISTORY_LENGTH, &meanX);
-          arm_mean_f32(pixelAverages.averageY, AVERAGE_HISTORY_LENGTH, &meanY);
+      arm_mean_f32(pixelAverages.averageX, AVERAGE_HISTORY_LENGTH, &meanX);
+      arm_mean_f32(pixelAverages.averageY, AVERAGE_HISTORY_LENGTH, &meanY);
 
-          pixelAverages.ptr = (pixelAverages.ptr + 1) % AVERAGE_HISTORY_LENGTH;
+      pixelAverages.ptr = (pixelAverages.ptr + 1) % AVERAGE_HISTORY_LENGTH;
 
-          flowData.dpixelx = (float)meanX;   // [pixels]
-          flowData.dpixely = (float)meanY;   // [pixels]
-    #elif defined(USE_LP_FILTER)
-          // Use LP filter measurements
-          flowData.dpixelx = LP_CONSTANT * dpixelx_previous + (1.0f - LP_CONSTANT) * (float)accpx;
-          flowData.dpixely = LP_CONSTANT * dpixely_previous + (1.0f - LP_CONSTANT) * (float)accpy;
-          dpixelx_previous = flowData.dpixelx;
-          dpixely_previous = flowData.dpixely;
-    #else
-          // Use raw measurements
-          flowData.dpixelx = (float)accpx;
-          flowData.dpixely = (float)accpy;
-    #endif
-          // Push measurements into the estimator if flow is not disabled
-          //    and the PMW flow sensor indicates motion detection
-          if (!useFlowDisabled && (currentMotion.motion & 0x80)) {
-            flowDeltaX = accpx;
-            flowDeltaY = accpy;
-            estimatorEnqueueFlow(&flowData);
-          } else {
-            flowDeltaX = 0;
-            flowDeltaY = 0;
-          }
-        } else {
-          outlierCount++;
-        }
-    //   } else {
-    //   outlierCount++;
-    // }
+      flowData.dpixelx = (float)meanX; // [pixels]
+      flowData.dpixely = (float)meanY; // [pixels]
+#elif defined(USE_LP_FILTER)
+      // Use LP filter measurements
+      flowData.dpixelx = LP_CONSTANT * dpixelx_previous + (1.0f - LP_CONSTANT) * (float)accpx;
+      flowData.dpixely = LP_CONSTANT * dpixely_previous + (1.0f - LP_CONSTANT) * (float)accpy;
+      dpixelx_previous = flowData.dpixelx;
+      dpixely_previous = flowData.dpixely;
+#else
+      // Use raw measurements
+      flowData.dpixelx = (float)accpx;
+      flowData.dpixely = (float)accpy;
+#endif
+      // Push measurements into the estimator if flow is not disabled
+      //    and the PMW flow sensor indicates motion detection
+      if (!useFlowDisabled && (currentMotion.motion & 0x80))
+      {
+        flowDeltaX = accpx;
+        flowDeltaY = accpy;
+        estimatorEnqueueFlow(&flowData);
+      }
+      else
+      {
+        flowDeltaX = 0;
+        flowDeltaY = 0;
+      }
+    }
+    else
+    {
+      outlierCount++;
+    }
   }
 }
 
@@ -230,7 +227,7 @@ static const DeckDriver flowdeck1_deck = {
   .name = "bcFlow",
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
-  .requiredEstimator = kalmanEstimator,
+  .requiredEstimator = StateEstimatorTypeKalman,
 
   .init = flowdeck1Init,
   .test = flowdeck1Test,
@@ -270,9 +267,9 @@ static bool flowdeck2Test()
   return zRanger->test();
 }
 
-static float flowdeckReadRaw()
+static void flowdeckReadRaw()
 {
-  return paa3905ReadRaw(NCS_PIN);
+  paa3905ReadRaw(NCS_PIN);
 }
 
 static const DeckDriver flowdeck2_deck = {
@@ -282,7 +279,7 @@ static const DeckDriver flowdeck2_deck = {
 
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
-  .requiredEstimator = kalmanEstimator,
+  .requiredEstimator = StateEstimatorTypeKalman,
 
   .init = flowdeck2Init,
   .test = flowdeck2Test,
