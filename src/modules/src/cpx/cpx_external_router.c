@@ -91,26 +91,26 @@ static void route(Receiver_t receive, CPXRoutablePacket_t* rxp, RouteContext_t* 
     receive(rxp);
     // this should never fail, as it should be checked when the packet is received
     // however, double checking doesn't harm
-    ASSERT(cpxCheckVersion(rxp->route.version));
+    if (cpxCheckVersion(rxp->route.version)) {
+      const CPXTarget_t source = rxp->route.source;
+      const CPXTarget_t destination = rxp->route.destination;
+      const uint16_t cpxDataLength = rxp->dataLength;
 
-    const CPXTarget_t source = rxp->route.source;
-    const CPXTarget_t destination = rxp->route.destination;
-    const uint16_t cpxDataLength = rxp->dataLength;
-
-    switch (destination) {
-      case CPX_T_WIFI_HOST:
-      case CPX_T_ESP32:
-      case CPX_T_GAP8:
-        //DEBUG_PRINT("%s [0x%02X] -> UART2 [0x%02X] (%u)\n", routerName, source, destination, cpxDataLength);
-        splitAndSend(rxp, context, cpxUARTTransportSend, CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
-        break;
-      case CPX_T_STM32:
-        //DEBUG_PRINT("%s [0x%02X] -> STM32 [0x%02X] (%u)\n", routerName, source, destination, cpxDataLength);
-        splitAndSend(rxp, context, cpxInternalRouterRouteIn, CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
-        break;
-      default:
-        DEBUG_PRINT("Cannot route from %s [0x%02X] to [0x%02X](%u)\n", routerName, source, destination, cpxDataLength);
-        break;
+      switch (destination) {
+        case CPX_T_WIFI_HOST:
+        case CPX_T_ESP32:
+        case CPX_T_GAP8:
+          //DEBUG_PRINT("%s [0x%02X] -> UART2 [0x%02X] (%u)\n", routerName, source, destination, cpxDataLength);
+          splitAndSend(rxp, context, cpxUARTTransportSend, CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
+          break;
+        case CPX_T_STM32:
+          //DEBUG_PRINT("%s [0x%02X] -> STM32 [0x%02X] (%u)\n", routerName, source, destination, cpxDataLength);
+          splitAndSend(rxp, context, cpxInternalRouterRouteIn, CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
+          break;
+        default:
+          DEBUG_PRINT("Cannot route from %s [0x%02X] to [0x%02X](%u)\n", routerName, source, destination, cpxDataLength);
+          break;
+      }
     }
   }
 }

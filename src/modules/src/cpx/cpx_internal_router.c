@@ -51,13 +51,17 @@ void cpxInternalRouterReceiveOthers(CPXPacket_t * packet) {
 }
 
 void cpxSendPacketBlocking(const CPXPacket_t * packet) {
-  ASSERT(cpxCheckVersion(packet->route.version));
-  xQueueSend(txq, packet, portMAX_DELAY);
+  if (cpxCheckVersion(packet->route.version)) {
+    xQueueSend(txq, packet, portMAX_DELAY);
+  }
 }
 
 bool cpxSendPacketBlockingTimeout(const CPXPacket_t * packet, const uint32_t timeout) {
-  ASSERT(cpxCheckVersion(packet->route.version));
-  return xQueueSend(txq, packet, timeout) == pdTRUE;
+  if (cpxCheckVersion(packet->route.version)) {
+    return xQueueSend(txq, packet, timeout) == pdTRUE;
+  } else {
+    return pdTRUE;
+  }
 }
 
 bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout) {
@@ -67,22 +71,21 @@ bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout) {
 void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet) {
   // this should never fail, as it should be checked when the packet is received
   // however, double checking doesn't harm
-  ASSERT(cpxCheckVersion(packet->route.version));
-
-
-  switch (packet->route.function) {
-    case CPX_F_SYSTEM:
-    case CPX_F_CONSOLE:
-    case CPX_F_WIFI_CTRL:
-    case CPX_F_BOOTLOADER:
-    case CPX_F_TEST:
-      xQueueSend(mixedQueue, packet, portMAX_DELAY);
-      break;
-    case CPX_F_CRTP:
-      xQueueSend(crtpQueue, packet, portMAX_DELAY);
-      break;
-    default:
-      DEBUG_PRINT("Message on function which is not handled (0x%X)\n", packet->route.function);
+  if (cpxCheckVersion(packet->route.version)) {
+    switch (packet->route.function) {
+      case CPX_F_SYSTEM:
+      case CPX_F_CONSOLE:
+      case CPX_F_WIFI_CTRL:
+      case CPX_F_BOOTLOADER:
+      case CPX_F_TEST:
+        xQueueSend(mixedQueue, packet, portMAX_DELAY);
+        break;
+      case CPX_F_CRTP:
+        xQueueSend(crtpQueue, packet, portMAX_DELAY);
+        break;
+      default:
+        DEBUG_PRINT("Message on function which is not handled (0x%X)\n", packet->route.function);
+    }
   }
 }
 
