@@ -162,8 +162,9 @@ static void CPX_UART_RX(void *param)
         uint8_t crc;
         uart2GetData(1, &crc);
         ASSERT(crc == calcCrc(&uartRxp));
-        ASSERT(cpxCheckVersion(uartRxp.routablePayload.route.version));
-        xQueueSend(uartRxQueue, &uartRxp, portMAX_DELAY);
+        if (cpxCheckVersion(uartRxp.routablePayload.route.version)) {
+          xQueueSend(uartRxQueue, &uartRxp, portMAX_DELAY);
+        }
         xEventGroupSetBits(evGroup, ESP_CTR_EVENT);
       }
     }

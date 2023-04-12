@@ -68,9 +68,22 @@ void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const
     route->version = CPX_VERSION;
 }
 
-bool cpxCheckVersion(const uint8_t version)
-{
-  return (version == CPX_VERSION);
+bool cpxCheckVersion(const uint8_t version) {
+  static bool hasLoggedVersionMismatch = false;
+
+  // Version mismatch is generally handled by ignoring messages and logging the problem once.
+  // Asserting has turned out to be a bad idea as it prevents flashing new firmware in some cases.
+
+  const bool isVersionOk = (version == CPX_VERSION);
+
+  if (!isVersionOk) {
+    if (!hasLoggedVersionMismatch) {
+      DEBUG_PRINT("WARNING! CPX version mismatch. Got %i, require %i\n", version, CPX_VERSION);
+      hasLoggedVersionMismatch = true;
+    }
+  }
+
+  return isVersionOk;
 }
 
 static void cpx(void* _param) {
