@@ -297,10 +297,10 @@ extern "C"
     uint16_t bmi088_accel_switch_control(struct bmi088_dev *dev, uint8_t switch_input);
 
     /*!
-     *  @brief This API reads the temperature of the sensor in ° Celcius.
+     *  @brief This API reads the temperature of the sensor in ï¿½ Celcius.
      *
      *  @param[in]  dev             : Structure instance of bmi088_dev.
-     *  @param[out] sensor_temp     : Pointer to store sensor temperature in ° Celcius
+     *  @param[out] sensor_temp     : Pointer to store sensor temperature in ï¿½ Celcius
      *
      *  @return Result of API execution status
      *  @retval zero -> Success

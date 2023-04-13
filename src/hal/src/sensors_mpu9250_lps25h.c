@@ -878,6 +878,9 @@ static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
   spsi   = sinf(imuPsi * (float) M_PI / 180);
   cpsi   = cosf(imuPsi * (float) M_PI / 180);
 
+  // tait-bryan passive rotation in order: yaw, psi (1) -> pitch, theta (2) ->  roll, phi (3) [https://en.wikipedia.org/wiki/Euler_angles#cite_note-3]
+  // mathematically R = R_x(phi)^T . R_y(theta)^T . R_z(psi)^T  [http://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf]
+  // transpose because it's a passive rotation not active [https://en.wikipedia.org/wiki/Active_and_passive_transformation]
   R[0][0] = ctheta * cpsi;
   R[0][1] = ctheta * spsi;
   R[0][2] = -stheta;

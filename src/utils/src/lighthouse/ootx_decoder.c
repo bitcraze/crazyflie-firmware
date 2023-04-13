@@ -33,12 +33,19 @@
 #include <stdint.h>
 
 #include "ootx_decoder.h"
+#include "crc32.h"
 
 // #include "debug.h"
 
 uint16_t betole(uint16_t value)
 {
   return ((value&0xff00u)>>8) | ((value&0xffu)<<8);
+}
+
+static bool checkCrc(const ootxDecoderState_t* state) {
+  const uint32_t crc32 = crc32CalculateBuffer(state->data, state->frameLength);
+  const bool isCrcCheckOk = (crc32 == state->crc32);
+  return isCrcCheckOk;
 }
 
 // Frame format described there: https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md#ootx-frame
@@ -75,11 +82,11 @@ bool ootxDecoderProcessBit(ootxDecoderState_t * state, int data)
       state->bitInWord = 0;
 
       // At the stuffing bit after CRC1, we are done!
-      // TODO: Check CRC!
       if (state->rxState == rxDone) {
+        const bool isDataValid = checkCrc(state);
+        state->isFullyDecoded = isDataValid;
         state->synchronized = false;
-        state->isFullyDecoded = true;
-        return true;
+        return isDataValid;
       } else {
         state->isFullyDecoded = false;
         return false;

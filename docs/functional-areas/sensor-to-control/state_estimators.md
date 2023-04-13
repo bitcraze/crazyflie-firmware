@@ -47,9 +47,9 @@ This section will explain how the signals of the sensors are transformed to stat
 
 #### Flowdeck Measurement Model
 
-This illustration explains how the height from the VL53L1x sensor and flow from the PMW3901 sensor are combined to calculate velocity. This has been implemented by the work of [3] and can be found in `kalman_core.c` in the function `kalmanCoreUpdateWithFlow()`.
+This illustration explains how the height from the VL53L1x sensor and flow from the PMW3901 sensor are combined to calculate velocity. This has been implemented by the work of [3] and can be found in `kalman_core.c` in the function `kalmanCoreUpdateWithFlow()` for the velocity and in `mm_tof.c` for the height.
 
-![flowdeck velocity](/docs/images/flowdeck_velocity.png){:width="500"}
+![flowdeck velocity](/docs/images/flowdeck_velocity.png){:width="600"}
 
 ## Unscented Kalman Filter
 **NOTE**
