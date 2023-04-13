@@ -128,22 +128,33 @@ static uint16_t mrGetMeasurementAndRestart(VL53LX_Dev_t *dev)
 
 static void mrTask(void *param)
 {
-    VL53LX_Error status = VL53LX_ERROR_NONE;
-
     systemWaitStart();
 
-    // Restart all sensors
-    status = VL53LX_StopMeasurement(&devFront);
-    status = VL53LX_StartMeasurement(&devFront);
-    status = VL53LX_StopMeasurement(&devBack);
-    status = VL53LX_StartMeasurement(&devBack);
-    status = VL53LX_StopMeasurement(&devUp);
-    status = VL53LX_StartMeasurement(&devUp);
-    status = VL53LX_StopMeasurement(&devLeft);
-    status = VL53LX_StartMeasurement(&devLeft);
-    status = VL53LX_StopMeasurement(&devRight);
-    status = VL53LX_StartMeasurement(&devRight);
-    status = status;
+    // Restart sensor
+    VL53LX_StopMeasurement(&devFront);
+    VL53LX_SetDistanceMode(&devFront, VL53LX_DISTANCEMODE_MEDIUM);
+    VL53LX_SetMeasurementTimingBudgetMicroSeconds(&devFront, 33000);
+    VL53LX_StartMeasurement(&devFront);
+
+    VL53LX_StopMeasurement(&devBack);
+    VL53LX_SetDistanceMode(&devBack, VL53LX_DISTANCEMODE_MEDIUM);
+    VL53LX_SetMeasurementTimingBudgetMicroSeconds(&devBack, 33000);
+    VL53LX_StartMeasurement(&devBack);
+
+    VL53LX_StopMeasurement(&devUp);
+    VL53LX_SetDistanceMode(&devUp, VL53LX_DISTANCEMODE_MEDIUM);
+    VL53LX_SetMeasurementTimingBudgetMicroSeconds(&devUp, 33000);
+    VL53LX_StartMeasurement(&devUp);
+
+    VL53LX_StopMeasurement(&devLeft);
+    VL53LX_SetDistanceMode(&devLeft, VL53LX_DISTANCEMODE_MEDIUM);
+    VL53LX_SetMeasurementTimingBudgetMicroSeconds(&devLeft, 33000);
+    VL53LX_StartMeasurement(&devLeft);
+
+    VL53LX_StopMeasurement(&devRight);
+    VL53LX_SetDistanceMode(&devRight, VL53LX_DISTANCEMODE_MEDIUM);
+    VL53LX_SetMeasurementTimingBudgetMicroSeconds(&devRight, 33000);
+    VL53LX_StartMeasurement(&devRight);
 
     TickType_t lastWakeTime = xTaskGetTickCount();
 

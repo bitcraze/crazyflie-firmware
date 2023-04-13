@@ -52,7 +52,7 @@ static const float expPointB = 4.0f;
 static const float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
 
-#define RANGE_OUTLIER_LIMIT 5000 // the measured range is in [mm]
+#define RANGE_OUTLIER_LIMIT 10000 // the measured range is in [mm]
 
 static uint16_t range_last = 0;
 
@@ -61,7 +61,7 @@ static bool isInit;
 static VL53LX_Dev_t dev;
 static VL53LX_LLDriverCommonData_t VL53LX_LLDriverCommonData;
 
-uint16_t range = 8192;
+uint16_t range = 32767;
 
 static uint16_t zRanger2GetMeasurementAndRestart(VL53LX_Dev_t *dev)
 {
@@ -80,30 +80,31 @@ static uint16_t zRanger2GetMeasurementAndRestart(VL53LX_Dev_t *dev)
     int no_of_object_found=pMultiRangingData->NumberOfObjectsFound;
 				// DEBUG_PRINT("Count=%5d, ", pMultiRangingData->StreamCount);
 				// DEBUG_PRINT("#Objs=%1d \n", no_of_object_found);
-        uint16_t range_temp = 8192;
+        uint16_t range_temp = 32767;
 				for(int j=0;j<no_of_object_found;j++){
           // if(pMultiRangingData->RangeData[j].RangeStatus == 0 && pMultiRangingData->RangeData[j].RangeMilliMeter < range_temp && pMultiRangingData->RangeData[j].RangeMaxMilliMeter - pMultiRangingData->RangeData[j].RangeMinMilliMeter < 100)
-          if(pMultiRangingData->RangeData[j].RangeStatus == 0 && pMultiRangingData->RangeData[j].RangeMaxMilliMeter < range_temp )
+          if(pMultiRangingData->RangeData[j].RangeStatus == 0 && pMultiRangingData->RangeData[j].RangeMilliMeter < range_temp && pMultiRangingData->RangeData[j].RangeMilliMeter > 0)
           {
-            range = pMultiRangingData->RangeData[j].RangeMaxMilliMeter; 
+            range = pMultiRangingData->RangeData[j].RangeMilliMeter; 
             range_temp = range;
           }
-					// DEBUG_PRINT("status=%d, D=%5dmm, Signal=%2.2f Mcps, Ambient=%2.2f Mcps",
+          // if(pMultiRangingData->RangeData[j].RangeStatus == 12)
+          // {
+					//   DEBUG_PRINT("status=%d, D=%5dmm, Signal=%2.2f Mcps, Ambient=%2.2f Mcps",
 					// 		pMultiRangingData->RangeData[j].RangeStatus,
 					// 		pMultiRangingData->RangeData[j].RangeMilliMeter,
 					// 		pMultiRangingData->RangeData[j].SignalRateRtnMegaCps/65536.0,
 					// 		pMultiRangingData->RangeData[j].AmbientRateRtnMegaCps/65536.0);
+          // }
           // DEBUG_PRINT("status=%d, D=%5dmm, D=%5dmm, D=%5dmm\n",
 					// 		pMultiRangingData->RangeData[j].RangeStatus,
 					// 		pMultiRangingData->RangeData[j].RangeMinMilliMeter,
 					// 		pMultiRangingData->RangeData[j].RangeMilliMeter,
 					// 		pMultiRangingData->RangeData[j].RangeMaxMilliMeter);
 				}
-        						status = VL53LX_ClearInterruptAndStartMeasurement(dev);
 
+        status = VL53LX_ClearInterruptAndStartMeasurement(dev);
 
-    // VL53LX_StopMeasurement(dev);
-    // status = VL53LX_StartMeasurement(dev);
     status = status;
 
     return range;
@@ -150,7 +151,7 @@ void zRanger2Task(void* arg)
   // Restart sensor
   VL53LX_StopMeasurement(&dev);
   VL53LX_SetDistanceMode(&dev, VL53LX_DISTANCEMODE_MEDIUM);
-  VL53LX_SetMeasurementTimingBudgetMicroSeconds(&dev, 25000);
+  VL53LX_SetMeasurementTimingBudgetMicroSeconds(&dev, 33000);
 
   VL53LX_StartMeasurement(&dev);
 
@@ -163,15 +164,15 @@ void zRanger2Task(void* arg)
     rangeSet(rangeDown, range_last / 1000.0f);
 
     // check if range is feasible and push into the estimator
-    // the sensor should not be able to measure >5 [m], and outliers typically
-    // occur as >8 [m] measurements
+    // the sensor should not be able to measure >8 [m], so we classify all >10 [m] as outliers
     if (range_last < RANGE_OUTLIER_LIMIT) {
       float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
       // float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
-      float stdDev = 0.08f;
+      // float stdDev = distance*0.0125f; // according to the datasheet indoors the accuracy is within 2.5%
+      float stdDev = 0.01f;
       if (distance > 1.0f)
       {
-        stdDev = distance*0.04f;
+        stdDev = distance*0.01f;
       }
       rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
     }
