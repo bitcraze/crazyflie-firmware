@@ -49,8 +49,7 @@ static tofMeasurement_t tof;
 #define POS_UPDATE_RATE RATE_100_HZ
 #define POS_UPDATE_DT 1.0/POS_UPDATE_RATE
 
-    void
-    estimatorComplementaryInit(void)
+void estimatorComplementaryInit(void)
 {
   sensfusion6Init();
 }
