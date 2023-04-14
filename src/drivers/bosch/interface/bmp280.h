@@ -395,7 +395,7 @@ struct bmp280_calib_param_t {
 	int16_t dig_P8;/**<calibration P8 data*/
 	int16_t dig_P9;/**<calibration P9 data*/
 	int8_t dig_P10;/**<calibration P10 data*/
-	
+
 	int32_t t_fine;/**<calibration t_fine data*/
 };
 

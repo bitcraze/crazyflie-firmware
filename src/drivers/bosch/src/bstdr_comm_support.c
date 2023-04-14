@@ -160,4 +160,3 @@ void bstdr_ms_delay(uint32_t period)
 	/**< Delay code comes */
 	vTaskDelay(M2T(period)); // Delay a while to let the device stabilize
 }
-

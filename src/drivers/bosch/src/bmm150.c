@@ -1871,6 +1871,3 @@ static int8_t set_adv_self_test_current(uint8_t self_test_current, const struct 
 
 	return rslt;
 }
-
-
-

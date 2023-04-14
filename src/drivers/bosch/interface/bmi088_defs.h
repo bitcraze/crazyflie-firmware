@@ -38,10 +38,10 @@
  * other rights of third parties which may result from its use.
  * No license is granted by implication or otherwise under any patent or
  * patent rights of the copyright holder.
- * 
+ *
  * @file    bmi088_defs.h
  * @date	Oct 5, 2016
- * @version	
+ * @version
  * @brief
  *
  */

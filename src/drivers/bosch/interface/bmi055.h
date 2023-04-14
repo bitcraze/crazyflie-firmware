@@ -354,4 +354,3 @@ int8_t bmi055_set_gyro_int_config(struct bmi055_gyro_int_sett *gyr_int_config, s
 #endif
 
 #endif /* BMI055_H_ */
-

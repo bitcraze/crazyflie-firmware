@@ -1674,7 +1674,7 @@ int8_t bmi160_aux_init(const struct bmi160_dev *dev)
 int8_t bmi160_set_aux_auto_mode(uint8_t* data_addr, struct bmi160_dev *dev)
 {
 	int8_t rslt;
-	
+
 	/* Null-pointer check */
 	rslt = null_ptr_check(dev);
 
@@ -1690,7 +1690,7 @@ int8_t bmi160_set_aux_auto_mode(uint8_t* data_addr, struct bmi160_dev *dev)
 				sensor is in auto-mode (data-mode) */
 				dev->aux_cfg.manual_enable = BMI160_DISABLE;
 				rslt = bmi160_config_aux_mode(dev);
-				/* Auxiliary sensor data is obtained 
+				/* Auxiliary sensor data is obtained
 				   in auto mode from this point */
 				if (rslt == BMI160_OK) {
 					/* Configure the polling ODR for
@@ -1731,13 +1731,13 @@ int8_t bmi160_config_aux_mode(const struct bmi160_dev *dev)
 }
 
 /*!
- * @brief This API is used to read the raw uncompensated auxiliary sensor 
+ * @brief This API is used to read the raw uncompensated auxiliary sensor
  * data of 8 bytes from BMI160 register address 0x04 to 0x0B
  */
 int8_t bmi160_read_aux_data_auto_mode(uint8_t *aux_data, const struct bmi160_dev *dev)
 {
 	int8_t rslt;
-	
+
 	/* Null-pointer check */
 	rslt = null_ptr_check(dev);
 
@@ -1752,7 +1752,7 @@ int8_t bmi160_read_aux_data_auto_mode(uint8_t *aux_data, const struct bmi160_dev
 			rslt = BMI160_E_INVALID_INPUT;
 		}
 	}
-	
+
 	return rslt;
 }
 
@@ -3726,7 +3726,7 @@ static int8_t config_aux_odr(const struct bmi160_dev *dev)
 	rslt = bmi160_get_regs(BMI160_AUX_ODR_ADDR, &aux_odr, 1, dev);
 	if (rslt == BMI160_OK) {
 		aux_odr = (uint8_t)(dev->aux_cfg.aux_odr);
-		/* Set the secondary interface ODR 
+		/* Set the secondary interface ODR
 		   i.e polling rate of secondary sensor */
 		rslt = bmi160_set_regs(BMI160_AUX_ODR_ADDR, &aux_odr, 1, dev);
 		dev->delay_ms(BMI160_AUX_COM_DELAY);
