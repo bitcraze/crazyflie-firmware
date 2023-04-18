@@ -50,6 +50,7 @@ config CONTROLLER_OOT
 config ESTIMATOR_KALMAN_ENABLE
     bool "Enable Kalman Estimator"
     default y
+    select ESTIMATOR_OUTLIER_FILTERS
     help
         Enable the Kalman (EKF) estimator.
 
@@ -62,9 +63,15 @@ config ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
 
 config ESTIMATOR_UKF_ENABLE
     bool "Enable error-state UKF estimator"
+    select ESTIMATOR_OUTLIER_FILTERS
     default n
     help
         Enable the (error-state unscented) Kalman filter (UKF) estimator
+
+config ESTIMATOR_OUTLIER_FILTERS
+    bool
+    help
+        Include outlier filters for estimators
 
 choice
     prompt "Default estimator"

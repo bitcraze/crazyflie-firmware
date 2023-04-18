@@ -54,3 +54,4 @@ obj-y += controller/
 obj-y += estimator/
 obj-y += cpx/
 obj-y += p2pDTR/
+obj-y += outlierfilter/
