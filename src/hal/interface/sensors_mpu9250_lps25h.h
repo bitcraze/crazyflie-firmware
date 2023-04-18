@@ -31,7 +31,7 @@ void sensorsMpu9250Lps25hInit(void);
 bool sensorsMpu9250Lps25hTest(void);
 bool sensorsMpu9250Lps25hAreCalibrated(void);
 bool sensorsMpu9250Lps25hManufacturingTest(void);
-void sensorsMpu9250Lps25hAcquire(sensorData_t *sensors, const uint32_t tick);
+void sensorsMpu9250Lps25hAcquire(sensorData_t *sensors);
 void sensorsMpu9250Lps25hWaitDataReady(void);
 bool sensorsMpu9250Lps25hReadGyro(Axis3f *gyro);
 bool sensorsMpu9250Lps25hReadAcc(Axis3f *acc);

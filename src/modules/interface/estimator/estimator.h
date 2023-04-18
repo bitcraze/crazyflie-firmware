@@ -81,7 +81,7 @@ typedef struct
 void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
-void stateEstimator(state_t *state, const uint32_t tick);
+void stateEstimator(state_t *state, const stabilizerStep_t stabilizerStep);
 StateEstimatorType stateEstimatorGetType(void);
 const char* stateEstimatorGetName();
 
@@ -167,5 +167,5 @@ bool estimatorDequeue(measurement_t *measurement);
 #ifdef CONFIG_ESTIMATOR_OOT
 void estimatorOutOfTreeInit(void);
 bool estimatorOutOfTreeTest(void);
-void estimatorOutOfTree(state_t *state, const uint32_t tick);
+void estimatorOutOfTree(state_t *state, const stabilizerStep_t stabilizerStep);
 #endif

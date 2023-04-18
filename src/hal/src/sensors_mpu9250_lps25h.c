@@ -200,7 +200,7 @@ bool sensorsMpu9250Lps25hReadBaro(baro_t *baro)
   return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
 }
 
-void sensorsMpu9250Lps25hAcquire(sensorData_t *sensors, const uint32_t tick)
+void sensorsMpu9250Lps25hAcquire(sensorData_t *sensors)
 {
   sensorsReadGyro(&sensors->gyro);
   sensorsReadAcc(&sensors->acc);

@@ -270,7 +270,7 @@ bool sensorsBmi088Bmp388ReadBaro(baro_t *baro)
   return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
 }
 
-void sensorsBmi088Bmp388Acquire(sensorData_t *sensors, const uint32_t tick)
+void sensorsBmi088Bmp388Acquire(sensorData_t *sensors)
 {
   sensorsReadGyro(&sensors->gyro);
   sensorsReadAcc(&sensors->acc);

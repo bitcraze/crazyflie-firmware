@@ -33,7 +33,7 @@ void sensorsBmi088Bmp388Init_SPI(void);
 bool sensorsBmi088Bmp388Test(void);
 bool sensorsBmi088Bmp388AreCalibrated(void);
 bool sensorsBmi088Bmp388ManufacturingTest(void);
-void sensorsBmi088Bmp388Acquire(sensorData_t *sensors, const uint32_t tick);
+void sensorsBmi088Bmp388Acquire(sensorData_t *sensors);
 void sensorsBmi088Bmp388WaitDataReady(void);
 bool sensorsBmi088Bmp388ReadGyro(Axis3f *gyro);
 bool sensorsBmi088Bmp388ReadAcc(Axis3f *acc);

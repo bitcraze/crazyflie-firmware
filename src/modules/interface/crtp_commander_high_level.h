@@ -59,7 +59,7 @@ void crtpCommanderHighLevelInit(void);
 
 // Retrieves the current setpoint. Returns false if the high-level commander is
 // disabled, i.e. it does not have an "opinion" on what the setpoint should be.
-bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, uint32_t tick);
+bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, stabilizerStep_t stabilizerStep);
 
 // When flying sequences of high-level commands, the high-level commander uses
 // its own history of commands to determine the initial conditions of the next

@@ -239,7 +239,7 @@ static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
  */
 static void stabilizerTask(void* param)
 {
-  uint32_t tick;
+  stabilizerStep_t stabilizerStep;
   uint32_t lastWakeTime;
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
@@ -253,8 +253,8 @@ static void stabilizerTask(void* param)
   while(!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
-  // Initialize tick to something else then 0
-  tick = 1;
+  // Initialize stabilizerStep to something else than 0
+  stabilizerStep = 1;
 
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
 
@@ -265,7 +265,7 @@ static void stabilizerTask(void* param)
     sensorsWaitDataReady();
 
     // update sensorData struct (for logging variables)
-    sensorsAcquire(&sensorData, tick);
+    sensorsAcquire(&sensorData);
 
     if (healthShallWeRunTest()) {
       healthRunTests(&sensorData);
@@ -281,19 +281,19 @@ static void stabilizerTask(void* param)
         controllerType = controllerGetType();
       }
 
-      stateEstimator(&state, tick);
+      stateEstimator(&state, stabilizerStep);
       compressState();
 
-      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
+      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
 
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
-      collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
+      collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, stabilizerStep);
 
-      controller(&control, &setpoint, &sensorData, &state, tick);
+      controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
       checkEmergencyStopTimeout();
 
@@ -316,12 +316,12 @@ static void stabilizerTask(void* param)
       // Log data to uSD card if configured
       if (usddeckLoggingEnabled()
           && usddeckLoggingMode() == usddeckLoggingMode_SynchronousStabilizer
-          && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
+          && RATE_DO_EXECUTE(usddeckFrequency(), stabilizerStep)) {
         usddeckTriggerLogging();
       }
 #endif
       calcSensorToOutputLatency(&sensorData);
-      tick++;
+      stabilizerStep++;
       STATS_CNT_RATE_EVENT(&stabilizerRate);
 
       if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {

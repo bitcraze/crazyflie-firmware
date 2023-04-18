@@ -56,7 +56,7 @@ typedef struct {
   bool (*test)(void);
   bool (*areCalibrated)(void);
   bool (*manufacturingTest)(void);
-  void (*acquire)(sensorData_t *sensors, const uint32_t tick);
+  void (*acquire)(sensorData_t *sensors);
   void (*waitDataReady)(void);
   bool (*readGyro)(Axis3f *gyro);
   bool (*readAcc)(Axis3f *acc);
@@ -177,8 +177,8 @@ bool sensorsManufacturingTest(void){
   return activeImplementation->manufacturingTest;
 }
 
-void sensorsAcquire(sensorData_t *sensors, const uint32_t tick) {
-  activeImplementation->acquire(sensors, tick);
+void sensorsAcquire(sensorData_t *sensors) {
+  activeImplementation->acquire(sensors);
 }
 
 void sensorsWaitDataReady(void) {

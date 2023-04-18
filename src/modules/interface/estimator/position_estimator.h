@@ -27,5 +27,5 @@
 
 #include "stabilizer_types.h"
 
-void positionEstimate(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, uint32_t tick);
+void positionEstimate(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, stabilizerStep_t stabilizerStep);
 void positionUpdateVelocity(float accWZ, float dt);

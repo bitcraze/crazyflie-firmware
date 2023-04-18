@@ -273,7 +273,7 @@ static void kalmanTask(void* parameters) {
   }
 }
 
-void estimatorKalman(state_t *state, const uint32_t tick) {
+void estimatorKalman(state_t *state, const stabilizerStep_t stabilizerStep) {
   // This function is called from the stabilizer loop. It is important that this call returns
   // as quickly as possible. The dataMutex must only be locked short periods by the task.
   xSemaphoreTake(dataMutex, portMAX_DELAY);
