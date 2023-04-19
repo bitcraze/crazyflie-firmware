@@ -247,6 +247,8 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
     case actionMotorsDisabled:
       // Fall through
     case actionStopMotorsAndFreeFall:
+      // Fall through
+    default:
       memcpy(setpoint, &nullSetpoint, sizeof(nullSetpoint));
       break;
   }
