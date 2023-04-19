@@ -28,7 +28,15 @@
 
 #include "stabilizer_types.h"
 
-void supervisorUpdate(const sensorData_t *data);
+/**
+ * @brief Update the supervisor. The supervisor will evaluate the current situation to determine if some action is
+ * required.
+ *
+ * @param sensors  Sensor values
+ * @return true   Motors are allowed to run
+ * @return false  Motors must not run
+ */
+bool supervisorUpdate(const sensorData_t *sensors);
 
 bool supervisorCanFly(void);
 bool supervisorIsFlying(void);

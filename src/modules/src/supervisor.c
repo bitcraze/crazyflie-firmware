@@ -29,12 +29,19 @@
 #include <stdlib.h>
 
 #include "log.h"
+#include "param.h"
 #include "motors.h"
 #include "power_distribution.h"
 #include "pm.h"
 #include "stabilizer.h"
 #include "supervisor.h"
 #include "platform_defaults.h"
+#include "crtp_localization_service.h"
+#include "system.h"
+
+
+#define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
+
 
 /* Minimum summed motor PWM that means we are flying */
 #define SUPERVISOR_FLIGHT_THRESHOLD 1000
@@ -45,6 +52,10 @@
 static bool canFly;
 static bool isFlying;
 static bool isTumbled;
+static bool areMotorsLocked = false;
+
+// TODO krri
+// * Add reset functionality
 
 bool supervisorCanFly()
 {
@@ -59,18 +70,6 @@ bool supervisorIsFlying()
 bool supervisorIsTumbled()
 {
   return isTumbled;
-}
-
-//
-// We cannot fly if the Crazyflie is tumbled and we cannot fly if the Crazyflie
-// is connected to a charger.
-//
-static bool canFlyCheck()
-{
-  if (isTumbled) {
-    return false;
-  }
-  return !pmIsChargerConnected();
 }
 
 //
@@ -114,17 +113,62 @@ static bool isTumbledCheck(const sensorData_t *data)
   return false;
 }
 
-void supervisorUpdate(const sensorData_t *data)
+static bool checkEmergencyStopWatchdog() {
+  bool isOk = true;
+  const uint32_t latestNotification = locSrvGetEmergencyStopWatchdogNotificationTick();
+  if (latestNotification > 0) {
+    const uint32_t tick = xTaskGetTickCount();
+    isOk = tick < (latestNotification + DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT);
+  }
+
+  return isOk;
+}
+
+bool supervisorUpdate(const sensorData_t *sensors)
 {
   isFlying = isFlyingCheck();
+  isTumbled = isTumbledCheck(sensors);
 
-  isTumbled = isTumbledCheck(data);
-  #if SUPERVISOR_TUMBLE_CHECK_ENABLE
-  if (isTumbled && isFlying) {
-    stabilizerSetEmergencyStop();
+  bool areMotorsAllowedToSpin = true;
+
+  // canFly is kept for backwards compatibility. TODO krri deprecate?
+  canFly = true;
+
+  if (isTumbled) {
+    #if SUPERVISOR_TUMBLE_CHECK_ENABLE
+    // It is OK to tumble before flying
+    if (isFlying) {
+      areMotorsAllowedToSpin = false;
+      areMotorsLocked = true;
+    }
+    #endif
+
+    canFly = false;
   }
-  #endif
-  canFly = canFlyCheck();
+
+  if (locSrvIsEmergencyStopRequested()) {
+    areMotorsAllowedToSpin = false;
+    areMotorsLocked = true;
+  }
+
+  if (pmIsChargerConnected()) {
+    areMotorsAllowedToSpin = false;
+    canFly = false;
+  }
+
+  if (! checkEmergencyStopWatchdog()) {
+    areMotorsAllowedToSpin = false;
+  }
+
+  if (! systemIsArmed()) {
+    areMotorsAllowedToSpin = false;
+  }
+
+  if (areMotorsLocked) {
+    areMotorsAllowedToSpin = false;
+  }
+
+  return areMotorsAllowedToSpin;
 }
 
 /**
@@ -144,3 +188,12 @@ LOG_ADD_CORE(LOG_UINT8, isFlying, &isFlying)
  */
 LOG_ADD_CORE(LOG_UINT8, isTumbled, &isTumbled)
 LOG_GROUP_STOP(sys)
+
+
+// TODO Krri rename? deprecate?
+PARAM_GROUP_START(stabilizer)
+/**
+ * @brief If set to nonzero will turn off power
+ */
+PARAM_ADD_CORE(PARAM_UINT8, stop, &areMotorsLocked)
+PARAM_GROUP_STOP(stabilizer)

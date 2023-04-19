@@ -58,8 +58,6 @@
 #include "rateSupervisor.h"
 
 static bool isInit;
-static bool emergencyStop = false;
-static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
 static uint32_t inToOutLatency;
 
@@ -204,17 +202,6 @@ bool stabilizerTest(void)
   return pass;
 }
 
-static void checkEmergencyStopTimeout()
-{
-  if (emergencyStopTimeout >= 0) {
-    emergencyStopTimeout -= 1;
-
-    if (emergencyStopTimeout == 0) {
-      emergencyStop = true;
-    }
-  }
-}
-
 static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
 {
   float supplyVoltage = pmGetBatteryVoltage();
@@ -295,21 +282,19 @@ static void stabilizerTask(void* param)
 
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
-      checkEmergencyStopTimeout();
-
       //
       // The supervisor module keeps track of Crazyflie state such as if
       // we are ok to fly, or if the Crazyflie is in flight.
       //
-      supervisorUpdate(&sensorData);
+      const bool areMotorsAllowedToSpin = supervisorUpdate(&sensorData);
 
-      if (emergencyStop || (systemIsArmed() == false)) {
-        motorsStop();
-      } else {
+      if (areMotorsAllowedToSpin) {
         powerDistribution(&control, &motorThrustUncapped);
         batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
         powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
         setMotorRatios(&motorPwm);
+      } else {
+        motorsStop();
       }
 
 #ifdef CONFIG_DECK_USD
@@ -337,25 +322,9 @@ static void stabilizerTask(void* param)
   }
 }
 
-void stabilizerSetEmergencyStop()
-{
-  emergencyStop = true;
-}
-
-void stabilizerResetEmergencyStop()
-{
-  emergencyStop = false;
-}
-
-void stabilizerSetEmergencyStopTimeout(int timeout)
-{
-  emergencyStop = false;
-  emergencyStopTimeout = timeout;
-}
-
 /**
  * Parameters to set the estimator and controller type
- * for the stabilizer module, or to do an emergency stop
+ * for the stabilizer module
  */
 PARAM_GROUP_START(stabilizer)
 /**
@@ -368,10 +337,6 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  * @brief Controller type Auto select(0), PID(1), Mellinger(2), INDI(3), Brescianini(4) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
-/**
- * @brief If set to nonzero will turn off power
- */
-PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
 
