@@ -58,7 +58,7 @@
 
 void estimatorKalmanInit(void);
 bool estimatorKalmanTest(void);
-void estimatorKalman(state_t *state, const uint32_t tick);
+void estimatorKalman(state_t *state, const stabilizerStep_t stabilizerStep);
 
 void estimatorKalmanTaskInit();
 bool estimatorKalmanTaskTest();

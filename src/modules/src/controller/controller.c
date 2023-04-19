@@ -80,8 +80,8 @@ bool controllerTest(void) {
   return controllerFunctions[currentController].test();
 }
 
-void controller(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
-  controllerFunctions[currentController].update(control, setpoint, sensors, state, tick);
+void controller(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const stabilizerStep_t stabilizerStep) {
+  controllerFunctions[currentController].update(control, setpoint, sensors, state, stabilizerStep);
 }
 
 const char* controllerGetName() {

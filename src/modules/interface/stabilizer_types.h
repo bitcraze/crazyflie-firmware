@@ -35,6 +35,9 @@
  * All have a timestamp to be set when the data is calculated.
  */
 
+// stabilizerStep_t represents the number of times the stabilizer loop has run (at 1000 Hz)
+typedef uint32_t stabilizerStep_t;
+
 /** Attitude in euler angle form */
 typedef struct attitude_s {
   uint32_t timestamp;  // Timestamp when the data was computed
