@@ -220,6 +220,25 @@ static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
   motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
 }
 
+static void updateStateEstimatorAndControllerTypes() {
+  if (stateEstimatorGetType() != estimatorType) {
+    stateEstimatorSwitchTo(estimatorType);
+    estimatorType = stateEstimatorGetType();
+  }
+
+  if (controllerGetType() != controllerType) {
+    controllerInit(controllerType);
+    controllerType = controllerGetType();
+  }
+}
+
+static void controlMotors(const control_t* control) {
+  powerDistribution(control, &motorThrustUncapped);
+  batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+  powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+  setMotorRatios(&motorPwm);
+}
+
 /* The stabilizer loop runs at 1kHz. It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
@@ -257,45 +276,27 @@ static void stabilizerTask(void* param)
     if (healthShallWeRunTest()) {
       healthRunTests(&sensorData);
     } else {
-      // allow to update estimator dynamically
-      if (stateEstimatorGetType() != estimatorType) {
-        stateEstimatorSwitchTo(estimatorType);
-        estimatorType = stateEstimatorGetType();
-      }
-      // allow to update controller dynamically
-      if (controllerGetType() != controllerType) {
-        controllerInit(controllerType);
-        controllerType = controllerGetType();
-      }
+      updateStateEstimatorAndControllerTypes();
 
       stateEstimator(&state, stabilizerStep);
-      compressState();
 
       if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
-
       commanderGetSetpoint(&setpoint, &state);
-      compressSetpoint();
+      supervisorUpdate(&sensorData, &setpoint);
 
+      // Let the collision avoidance module modify the setpoint, if needed
       collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, stabilizerStep);
+      supervisorOverrideSetpoint(&setpoint);
 
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
+      controlMotors(&control);
+      // Todo krri: Do we trust the controller to stop the motors if we set the thrust to 0 in the setpoint? Use stopMotors() to be extra sure??
 
-      //
-      // The supervisor module keeps track of Crazyflie state such as if
-      // we are ok to fly, or if the Crazyflie is in flight.
-      //
-      const bool areMotorsAllowedToSpin = supervisorUpdate(&sensorData);
-
-      if (areMotorsAllowedToSpin) {
-        powerDistribution(&control, &motorThrustUncapped);
-        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-        powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
-        setMotorRatios(&motorPwm);
-      } else {
-        motorsStop();
-      }
+      // Compute compressed log formats
+      compressState();
+      compressSetpoint();
 
 #ifdef CONFIG_DECK_USD
       // Log data to uSD card if configured

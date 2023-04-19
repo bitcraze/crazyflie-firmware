@@ -32,9 +32,6 @@
 
 #define DEFAULT_YAW_MODE  XMODE
 
-#define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
-#define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
-
 #define COMMANDER_PRIORITY_DISABLE   0
 // Keep a macro for lowest non-disabled priority, regardless of source, in case
 // some day there is a priority lower than the high-level commander.
