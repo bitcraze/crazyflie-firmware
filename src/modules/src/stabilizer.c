@@ -284,15 +284,27 @@ static void stabilizerTask(void* param)
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
       commanderGetSetpoint(&setpoint, &state);
+
+      // Critical for safety, be careful if you modify this code!
+      // Let the supervisor update it's view of the current situation
       supervisorUpdate(&sensorData, &setpoint);
 
       // Let the collision avoidance module modify the setpoint, if needed
       collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, stabilizerStep);
+
+      // Critical for safety, be careful if you modify this code!
+      // Let the supervisor modify the setpoint to handle exceptional conditions
       supervisorOverrideSetpoint(&setpoint);
 
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
-      controlMotors(&control);
-      // Todo krri: Do we trust the controller to stop the motors if we set the thrust to 0 in the setpoint? Use stopMotors() to be extra sure??
+
+      // Critical for safety, be careful if you modify this code!
+      // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
+      if (supervisorAreMotorsAllowedToRun()) {
+        controlMotors(&control);
+      } else {
+        motorsStop();
+      }
 
       // Compute compressed log formats
       compressState();

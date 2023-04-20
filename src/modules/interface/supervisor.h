@@ -31,6 +31,7 @@
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint);
 
 void supervisorOverrideSetpoint(setpoint_t* setpoint);
+bool supervisorAreMotorsAllowedToRun();
 
 bool supervisorCanFly(void);
 bool supervisorIsFlying(void);

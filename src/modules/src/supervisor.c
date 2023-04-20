@@ -157,7 +157,7 @@ static action_t setAction(SupervisorState_t* this, const action_t newAction) {
       // Intentionally empty
       break;
     default:
-      ASSERT_FAILED();
+      // Do nothing
       break;
   }
 
@@ -254,6 +254,10 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
   }
 }
 
+bool supervisorAreMotorsAllowedToRun() {
+  SupervisorState_t* this = &supervisorState;
+  return (this->action == actionNone) || (this->action == actionLevelOut);
+}
 
 /**
  *  System loggable variables to check different system states.
