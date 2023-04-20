@@ -41,6 +41,7 @@ obj-y += sound_cf2.o
 obj-y += stabilizer.o
 obj-y += static_mem.o
 obj-y += supervisor.o
+obj-y += supervisor_state_machine.o
 obj-y += sysload.o
 obj-y += system.o
 obj-$(CONFIG_DECK_LOCO) += tdoaEngineInstance.o

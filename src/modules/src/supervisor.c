@@ -7,7 +7,7 @@
 *
 * Crazyflie control firmware
 *
-* Copyright (C) 2021 Bitcraze AB
+* Copyright (C) 2021 - 2023 Bitcraze AB
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 #include "power_distribution.h"
 #include "pm.h"
 #include "supervisor.h"
+#include "supervisor_state_machine.h"
 #include "platform_defaults.h"
 #include "crtp_localization_service.h"
 #include "system.h"
@@ -66,9 +67,10 @@ typedef struct {
   uint32_t tumbleHysteresis;
 
   action_t action;
-} SupervisorState_t;
+  supervisorState_t state;
+} SupervisorMem_t;
 
-static SupervisorState_t supervisorState;
+static SupervisorMem_t supervisorMem;
 
 const static setpoint_t nullSetpoint;
 
@@ -77,15 +79,15 @@ const static setpoint_t nullSetpoint;
 // * Add reset functionality
 
 bool supervisorCanFly() {
-  return supervisorState.canFly;
+  return supervisorMem.canFly;
 }
 
 bool supervisorIsFlying() {
-  return supervisorState.isFlying;
+  return supervisorMem.isFlying;
 }
 
 bool supervisorIsTumbled() {
-  return supervisorState.isTumbled;
+  return supervisorMem.isTumbled;
 }
 
 //
@@ -108,7 +110,7 @@ static bool isFlyingCheck() {
 // the thrust to the motors, avoiding the Crazyflie from running propellers at
 // significant thrust when accidentally crashing into walls or the ground.
 //
-static bool isTumbledCheck(SupervisorState_t* this, const sensorData_t *data) {
+static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data) {
   const float tolerance = -0.5;
   //
   // We need a TUMBLE_HYSTERESIS_THRESHOLD amount of readings that indicate
@@ -126,6 +128,11 @@ static bool isTumbledCheck(SupervisorState_t* this, const sensorData_t *data) {
   return false;
 }
 
+static bool isMovingCheck(SupervisorMem_t* this, const sensorData_t *data) {
+  // TODO krri implement
+  return true;
+}
+
 static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   bool isOk = true;
 
@@ -138,34 +145,8 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
 }
 
 
-static action_t setAction(SupervisorState_t* this, const action_t newAction) {
-  switch(this->action) {
-    case actionNone:
-      this->action = newAction;
-      break;
-    case actionMotorsDisabled:
-      if (newAction == actionNone || newAction == actionStopMotorsAndFreeFall) {
-        this->action = newAction;
-      }
-      break;
-    case actionLevelOut:
-      if (newAction == actionNone || newAction == actionStopMotorsAndFreeFall) {
-        this->action = newAction;
-      }
-      break;
-    case actionStopMotorsAndFreeFall:
-      // Intentionally empty
-      break;
-    default:
-      // Do nothing
-      break;
-  }
-
-  return this->action;
-}
-
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
-  SupervisorState_t* this = &supervisorState;
+  SupervisorMem_t* this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
   this->isFlying = isFlyingCheck();
@@ -174,66 +155,55 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
   // canFly is kept for backwards compatibility. TODO krri deprecate?
   this->canFly = true;
 
-  // Reset action (if possible)
-  setAction(this, actionNone);
 
-  if (this->isTumbled) {
-    #if SUPERVISOR_TUMBLE_CHECK_ENABLE
-    if (this->isFlying) {
-      setAction(this, actionStopMotorsAndFreeFall);
-    } else {
-      setAction(this, actionMotorsDisabled);
-    }
-    #endif
-
-    this->canFly = false;
+  supervisorConditionBit_t conditions = 0;
+  if (systemIsArmed()) {
+    conditions |= SUPERVISOR_TB_ARMED;
   }
-
-  if (locSrvIsEmergencyStopRequested()) {
-      setAction(this, actionStopMotorsAndFreeFall);
-  }
-
   if (pmIsChargerConnected()) {
-    setAction(this, actionMotorsDisabled);
-    this->canFly = false;
+    conditions |= SUPERVISOR_TB_CHARGER_CONNECTED;
   }
-
-  if (! checkEmergencyStopWatchdog(currentTick)) {
-    if (this->isFlying){
-      setAction(this, actionStopMotorsAndFreeFall);
-    } else {
-      setAction(this, actionMotorsDisabled);
-    }
-  }
-
-  if (! systemIsArmed()) {
-      setAction(this, actionMotorsDisabled);
-  }
-
-  const uint32_t setpointAge = currentTick - setpoint->timestamp;
   if (this->isFlying) {
-    if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
-      setAction(this, actionLevelOut);
-    }
-
-    if (setpointAge > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
-      setAction(this, actionStopMotorsAndFreeFall);
-    }
-  } else {
-    if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
-      setAction(this, actionMotorsDisabled);
-    }
+    conditions |= SUPERVISOR_TB_IS_FLYING;
   }
+  if (this->isTumbled) {
+    conditions |= SUPERVISOR_TB_IS_TUMBLED;
+  }
+  if (isMovingCheck(this, sensors)) {
+    conditions |= SUPERVISOR_TB_IS_MOVING;
+  }
+  const uint32_t setpointAge = currentTick - setpoint->timestamp;
+  if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
+    conditions |= SUPERVISOR_TB_COMMANDER_WDT_WARNING;
+  }
+  if (setpointAge > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
+    conditions |= SUPERVISOR_TB_COMMANDER_WDT_TIMEOUT;
+  }
+  if (!checkEmergencyStopWatchdog(currentTick)) {
+    conditions |= SUPERVISOR_TB_EMERGENCY_STOP;
+  }
+  if (locSrvIsEmergencyStopRequested()) {
+    conditions |= SUPERVISOR_TB_EMERGENCY_STOP;
+  }
+
+  supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
+
+  // TODO krri add transition actions?
+
+  this->state = newState;
 }
 
 
 void supervisorOverrideSetpoint(setpoint_t* setpoint) {
-  SupervisorState_t* this = &supervisorState;
-  switch(this->action){
-    case actionNone:
+  SupervisorMem_t* this = &supervisorMem;
+  switch(this->state){
+    case supervisorStateReadyToFly:
+      // Fall through
+    case supervisorStateFlying:
       // Do nothing
       break;
-    case actionLevelOut:
+
+    case supervisorStateWarningLevelOut:
       setpoint->mode.x = modeDisable;
       setpoint->mode.y = modeDisable;
       setpoint->mode.roll = modeAbs;
@@ -244,9 +214,18 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
       setpoint->attitudeRate.yaw = 0;
       // Keep Z as it is
       break;
-    case actionMotorsDisabled:
+
+    case supervisorStateLanded:
       // Fall through
-    case actionStopMotorsAndFreeFall:
+    case supervisorStateReset:
+      // Fall through
+    case supervisorStateExceptFreeFall:
+      // Fall through
+    case supervisorStateExceptNotMoving:
+      // Fall through
+    case supervisorStatePreFlChecksNotPassed:
+      // Fall through
+    case supervisorStatePreFlChecksPassed:
       // Fall through
     default:
       memcpy(setpoint, &nullSetpoint, sizeof(nullSetpoint));
@@ -255,7 +234,7 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
 }
 
 bool supervisorAreMotorsAllowedToRun() {
-  SupervisorState_t* this = &supervisorState;
+  SupervisorMem_t* this = &supervisorMem;
   return (this->action == actionNone) || (this->action == actionLevelOut);
 }
 
@@ -266,15 +245,15 @@ LOG_GROUP_START(sys)
 /**
  * @brief If nonzero if system is ready to fly.
  */
-LOG_ADD_CORE(LOG_UINT8, canfly, &supervisorState.canFly)
+LOG_ADD_CORE(LOG_UINT8, canfly, &supervisorMem.canFly)
 /**
  * @brief Nonzero if the system thinks it is flying
  */
-LOG_ADD_CORE(LOG_UINT8, isFlying, &supervisorState.isFlying)
+LOG_ADD_CORE(LOG_UINT8, isFlying, &supervisorMem.isFlying)
 /**
  * @brief Nonzero if the system thinks it is tumbled/crashed
  */
-LOG_ADD_CORE(LOG_UINT8, isTumbled, &supervisorState.isTumbled)
+LOG_ADD_CORE(LOG_UINT8, isTumbled, &supervisorMem.isTumbled)
 LOG_GROUP_STOP(sys)
 
 
@@ -285,5 +264,5 @@ PARAM_GROUP_START(stabilizer)
  */
 
 // TODO krri How to handle?
-// PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorState.areMotorsLocked)
+// PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.areMotorsLocked)
 PARAM_GROUP_STOP(stabilizer)
