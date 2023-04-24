@@ -1,0 +1,55 @@
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <script src="lib/bindings/utils.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css"
+        integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js"
+        integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+    <div>
+        <div id="mynetwork" style="width: 100%; height: 100vh; background-color: #ffffff; border: 1px solid lightgray;"></div>
+    </div>
+</body>
+
+<script type="text/javascript" src=./data.js></script>
+<script type="text/javascript">
+    let options = {
+        "configure": {
+            "enabled": false
+        },
+        "edges": {
+            "color": {
+                "inherit": true
+            },
+            "smooth": {
+                "enabled": true,
+                "type": "dynamic"
+            }
+        },
+        "interaction": {
+            "dragNodes": true,
+            "hideEdgesOnDrag": false,
+            "hideNodesOnDrag": false
+        },
+        "physics": {
+            "enabled": true,
+            "stabilization": {
+                "enabled": true,
+                "fit": true,
+                "iterations": 1000,
+                "onlyDynamicEdges": false,
+                "updateInterval": 50
+            }
+        }
+    };
+
+    let container = document.getElementById('mynetwork');
+    new vis.Network(container, { nodes: nodes, edges: edges }, options);
+</script>
+</html>
