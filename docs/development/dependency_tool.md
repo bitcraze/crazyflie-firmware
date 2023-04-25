@@ -46,7 +46,7 @@ dependencies to commander.c and cpx.c
 
 It is also possible to use regex for targets. If the target does not match a full path, or a file name, the tool will
 try to interpret it as a regex. For instance, to show all files in src/hal/interface/, use
-`./tools/dependency/deps.py -d -l 0 -v src/hal/interface/.*`
+`./tools/dependency/deps.py -v src/hal/interface/.*`
 
 ### Visualizing dependencies from one location to another
 
