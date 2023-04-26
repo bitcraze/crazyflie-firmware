@@ -48,7 +48,6 @@
 /* The minimum time (in ms) we need to see tumble condition before acting on it */
 #define TUMBLE_HYSTERESIS_THRESHOLD M2T(30)
 
-// TODO krri rename
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
@@ -144,10 +143,6 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   this->isFlying = isFlyingCheck();
   this->isTumbled = isTumbledCheck(this, sensors, currentTick);
 
-  // canFly is kept for backwards compatibility. TODO krri deprecate?
-  this->canFly = true;
-
-
   supervisorConditionBits_t conditions = 0;
   if (systemIsArmed()) {
     conditions |= SUPERVISOR_CB_ARMED;
@@ -180,7 +175,9 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
 
   supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
 
-  // TODO krri add transition actions?
+  this->canFly = supervisorAreMotorsAllowedToRun();
+
+  // Transition actions can be added here if needed
 
   this->state = newState;
 }
@@ -221,6 +218,7 @@ bool supervisorAreMotorsAllowedToRun() {
          (this->state == supervisorStateWarningLevelOut);
 }
 
+// TODO krri Do we want to deprecate any of these?
 /**
  *  System loggable variables to check different system states.
  */
@@ -240,7 +238,6 @@ LOG_ADD_CORE(LOG_UINT8, isTumbled, &supervisorMem.isTumbled)
 LOG_GROUP_STOP(sys)
 
 
-// TODO Krri rename? deprecate?
 PARAM_GROUP_START(stabilizer)
 /**
  * @brief If set to nonzero will turn off power

@@ -28,7 +28,7 @@
 
 #include "stabilizer_types.h"
 
-void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint);
+void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep);
 
 void supervisorOverrideSetpoint(setpoint_t* setpoint);
 bool supervisorAreMotorsAllowedToRun();
