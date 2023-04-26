@@ -133,7 +133,11 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
 }
 
 
-void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
+void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
+  if (!RATE_DO_EXECUTE(RATE_SUPERVISOR, stabilizerStep)) {
+    return;
+  }
+
   SupervisorMem_t* this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
