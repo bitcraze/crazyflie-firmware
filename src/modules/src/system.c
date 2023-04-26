@@ -78,16 +78,15 @@
   #include "cpxlink.h"
 #endif
 
-#ifndef CONFIG_MOTORS_START_DISARMED
-#define ARM_INIT true
+#ifndef CONFIG_MOTORS_REQUIRE_ARMING
+  #define ARMING_REQUIRED true
 #else
-#define ARM_INIT false
+  #define ARMING_REQUIRED false
 #endif
 
 /* Private variable */
 static bool selftestPassed;
-static bool armed = ARM_INIT;
-static bool forceArm;
+static bool arm = ARMING_REQUIRED;
 static uint8_t dumpAssertInfo = 0;
 static bool isInit;
 
@@ -363,13 +362,16 @@ void systemWaitStart(void)
 
 void systemSetArmed(bool val)
 {
-  armed = val;
+  if (arm != val) {
+    // Set using parameter to update any client
+    paramVarId_t armId = paramGetVarId("system", "arm");
+    paramSetInt(armId, val);
+  }
 }
 
 bool systemIsArmed()
 {
-
-  return armed || forceArm;
+  return arm;
 }
 
 void systemRequestShutdown()
@@ -466,9 +468,9 @@ PARAM_GROUP_START(system)
 PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
 
 /**
- * @brief Set to nonzero to force system to be armed
+ * @brief Set to nonzero to arm the system
  */
-PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
+PARAM_ADD_CORE(PARAM_INT8, arm, &arm)
 
 /**
  * @brief Set to nonzero to trigger dump of assert information to the log.
@@ -490,7 +492,7 @@ LOG_GROUP_START(sys)
 /**
  * @brief If zero, arming system is preventing motors to start
  */
-LOG_ADD(LOG_INT8, armed, &armed)
+LOG_ADD(LOG_INT8, armed, &arm)
 
 /**
  * @brief Test util for log and param. The value is set through the system.testLogParam parameter
