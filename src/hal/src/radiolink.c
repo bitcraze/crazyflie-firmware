@@ -45,7 +45,7 @@
 #include "static_mem.h"
 #include "cfassert.h"
 
-#define RADIOLINK_TX_QUEUE_SIZE (5)
+#define RADIOLINK_TX_QUEUE_SIZE (1)
 #define RADIOLINK_CRTP_QUEUE_SIZE (5)
 #define RADIO_ACTIVITY_TIMEOUT_MS (1000)
 
@@ -160,9 +160,8 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
-    xQueueSend(crtpPacketDelivery, &slp->length, 0);
     // Assert that we are not dropping any packets
-    // ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
+    ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
     ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)

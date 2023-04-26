@@ -61,7 +61,7 @@ static StaticSemaphore_t waitUntilSendDoneBuffer;
 static xSemaphoreHandle uartBusy;
 static StaticSemaphore_t uartBusyBuffer;
 static xQueueHandle syslinkPacketDelivery;
-STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 100, sizeof(SyslinkPacket));
+STATIC_MEM_QUEUE_ALLOC(syslinkPacketDelivery, 8, sizeof(SyslinkPacket));
 static bool syslinkPacketDeliveryReadyToReceive = false;
 
 #ifdef CONFIG_SYSLINK_RX_DMA
@@ -456,7 +456,7 @@ static void uartslkDmaRXIsr(void)
     if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
       // Only assert if debugger is not connected
-      // ASSERT(0);
+      ASSERT(0);
     }
   }
 
@@ -528,7 +528,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
         // Only assert if debugger is not connected
-        // ASSERT(0);
+        ASSERT(0);
       }
     }
     break;
@@ -552,7 +552,7 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     else
     {
       rxState = waitForFirstStart; //Checksum error
-      // ASSERT(0);
+      ASSERT(0);
     }
     rxState = waitForFirstStart;
     break;

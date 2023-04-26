@@ -7,9 +7,9 @@
 #include "dwTypes.h"
 #include "adhocdeck.h"
 
-#define MAX_BODY_UNIT_NUMBER 30
+#define MAX_BODY_UNIT_NUMBER 7
 //#define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t) // 1 ~ 83
-#define RANGING_TABLE_SIZE 60
+#define RANGING_TABLE_SIZE 10
 #define RANGING_TABLE_HOLD_TIME 10000
 
 typedef portTickType Time_t;

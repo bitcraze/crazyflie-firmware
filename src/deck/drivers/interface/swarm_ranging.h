@@ -7,7 +7,7 @@
 #define ENABLE_BUS_BOARDING_SCHEME
 
 /* Queue Constants */
-#define RANGING_RX_QUEUE_SIZE 20
+#define RANGING_RX_QUEUE_SIZE 10
 #define RANGING_RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
 
 /* Ranging Constants */

@@ -9,7 +9,7 @@
 #include "flooding_struct.h"
 
 /* Function Switch */
-#define ENABLE_PHR_EXT_MODE
+// #define ENABLE_PHR_EXT_MODE
 
 #define SPEED_OF_LIGHT 299702547
 #define MAX_TIMESTAMP 1099511627776  // 2**40
