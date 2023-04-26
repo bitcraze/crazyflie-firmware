@@ -43,7 +43,7 @@ static const char* const stateNames[] = {
   "Reset",
   "Warning, level out",
   "Exception, free fall",
-  "Exception, not moving",
+  "Locked",
 };
 static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOfStates);
 #endif
@@ -73,6 +73,11 @@ static SupervisorStateTransition_t transitionsReadyToFly[] = {
     .mustNotBeSet = SUPERVISOR_CB_ARMED
   },
   {
+    .newState = supervisorStateExceptFreeFall,
+    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
     .newState = supervisorStateFlying,
     .mustBeSet = SUPERVISOR_CB_IS_FLYING,
     .mustNotBeSet = SUPERVISOR_CB_NONE
@@ -83,6 +88,16 @@ static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
     .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
+    .newState = supervisorStateExceptFreeFall,
+    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
+    .newState = supervisorStateExceptFreeFall,
+    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
     .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
@@ -101,7 +116,7 @@ static SupervisorStateTransition_t transitionsLanded[] = {
   {
     .newState = supervisorStateReset,
     .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_IS_MOVING
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
 };
 
@@ -120,6 +135,11 @@ static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
     .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
+    .newState = supervisorStateExceptFreeFall,
+    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
     .newState = supervisorStateFlying,
     .mustBeSet = SUPERVISOR_CB_NONE,
     .mustNotBeSet = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT
@@ -128,15 +148,15 @@ static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
 
 static SupervisorStateTransition_t transitionsExceptFreeFall[] = {
   {
-    .newState = supervisorStateExceptNotMoving,
+    .newState = supervisorStateLocked,
     .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_IS_MOVING
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
 };
 
-static SupervisorStateTransition_t transitionsExceptNotMoving[] = {
+static SupervisorStateTransition_t transitionsLocked[] = {
   {
-    .newState = supervisorStateReset,
+    .newState = supervisorStateLocked,
     .mustBeSet = SUPERVISOR_CB_NONE,
     .mustNotBeSet = SUPERVISOR_CB_NONE
   },
@@ -151,7 +171,7 @@ SupervisorStateTransitionList_t transitionLists[] = {
   {SUPERVISOR_TRANSITION_ENTRY(transitionsReset)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsWarningLevelOut)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsExceptFreeFall)},
-  {SUPERVISOR_TRANSITION_ENTRY(transitionsExceptNotMoving)},
+  {SUPERVISOR_TRANSITION_ENTRY(transitionsLocked)},
 };
 static_assert(sizeof(transitionLists) / sizeof(transitionLists[0]) == supervisorState_NrOfStates);
 

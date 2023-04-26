@@ -52,13 +52,6 @@
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
-typedef enum {
-  actionNone = 0,               // All is normal, we can fly
-  actionMotorsDisabled,         // Motors are disabled for now, for instance when not armed
-  actionLevelOut,               // Level out, all is not lost yet
-  actionStopMotorsAndFreeFall,  // Stop motors permanently and free fall
-} action_t;
-
 typedef struct {
   bool canFly;
   bool isFlying;
@@ -66,7 +59,6 @@ typedef struct {
 
   uint32_t tumbleHysteresis;
 
-  action_t action;
   supervisorState_t state;
 } SupervisorMem_t;
 
@@ -74,9 +66,6 @@ static SupervisorMem_t supervisorMem;
 
 const static setpoint_t nullSetpoint;
 
-
-// TODO krri
-// * Add reset functionality
 
 bool supervisorCanFly() {
   return supervisorMem.canFly;
@@ -128,11 +117,6 @@ static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data) {
   return false;
 }
 
-static bool isMovingCheck(SupervisorMem_t* this, const sensorData_t *data) {
-  // TODO krri implement
-  return true;
-}
-
 static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   bool isOk = true;
 
@@ -168,9 +152,6 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
   }
   if (this->isTumbled) {
     conditions |= SUPERVISOR_CB_IS_TUMBLED;
-  }
-  if (isMovingCheck(this, sensors)) {
-    conditions |= SUPERVISOR_CB_IS_MOVING;
   }
   const uint32_t setpointAge = currentTick - setpoint->timestamp;
   if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
@@ -215,19 +196,8 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
       // Keep Z as it is
       break;
 
-    case supervisorStateLanded:
-      // Fall through
-    case supervisorStateReset:
-      // Fall through
-    case supervisorStateExceptFreeFall:
-      // Fall through
-    case supervisorStateExceptNotMoving:
-      // Fall through
-    case supervisorStatePreFlChecksNotPassed:
-      // Fall through
-    case supervisorStatePreFlChecksPassed:
-      // Fall through
     default:
+      // Replace with null setpoint to stop motors
       memcpy(setpoint, &nullSetpoint, sizeof(nullSetpoint));
       break;
   }
@@ -235,7 +205,9 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
 
 bool supervisorAreMotorsAllowedToRun() {
   SupervisorMem_t* this = &supervisorMem;
-  return (this->action == actionNone) || (this->action == actionLevelOut);
+  return (this->state == supervisorStateReadyToFly) ||
+         (this->state == supervisorStateFlying) ||
+         (this->state == supervisorStateWarningLevelOut);
 }
 
 /**

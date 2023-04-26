@@ -35,7 +35,7 @@ typedef enum {
     supervisorStateReset,
     supervisorStateWarningLevelOut,
     supervisorStateExceptFreeFall,
-    supervisorStateExceptNotMoving,
+    supervisorStateLocked,
     supervisorState_NrOfStates,
 } supervisorState_t;
 
@@ -45,7 +45,6 @@ enum {
   supervisorConditionChargerConnected,
   supervisorConditionIsFlying,
   supervisorConditionIsTumbled,
-  supervisorConditionIsMoving,
   supervisorConditionCommanderWdtWarning,
   supervisorConditionCommanderWdtTimeout,
   supervisorConditionEmergencyStop,
@@ -59,7 +58,6 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_CHARGER_CONNECTED (1 << supervisorConditionChargerConnected)
 #define SUPERVISOR_CB_IS_FLYING (1 << supervisorConditionIsFlying)
 #define SUPERVISOR_CB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
-#define SUPERVISOR_CB_IS_MOVING (1 << supervisorConditionIsMoving)
 #define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
 #define SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT (1 << supervisorConditionCommanderWdtTimeout)
 #define SUPERVISOR_CB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)
