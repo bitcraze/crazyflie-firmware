@@ -101,6 +101,11 @@ static SupervisorStateTransition_t transitionsFlying[] = {
     .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
+    .newState = supervisorStateExceptFreeFall,
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_ARMED
+  },
+  {
     .newState = supervisorStateWarningLevelOut,
     .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_WARNING,
     .mustNotBeSet = SUPERVISOR_CB_NONE
