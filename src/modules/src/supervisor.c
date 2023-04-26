@@ -45,8 +45,8 @@
 /* Minimum summed motor PWM that means we are flying */
 #define SUPERVISOR_FLIGHT_THRESHOLD 1000
 
-/* Number of times in a row we need to see a condition before acting upon it */
-#define TUMBLE_HYSTERESIS_THRESHOLD 30
+/* The minimum time (in ms) we need to see tumble condition before acting on it */
+#define TUMBLE_HYSTERESIS_THRESHOLD M2T(30)
 
 // TODO krri rename
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
@@ -58,7 +58,8 @@ typedef struct {
   bool isTumbled;
   uint8_t paramEmergencyStop;
 
-  uint32_t tumbleHysteresis;
+  // The time (in ticks) of the first tumble event. 0=no tumble
+  uint32_t initialTumbleTick;
 
   supervisorState_t state;
 } SupervisorMem_t;
@@ -100,19 +101,21 @@ static bool isFlyingCheck() {
 // the thrust to the motors, avoiding the Crazyflie from running propellers at
 // significant thrust when accidentally crashing into walls or the ground.
 //
-static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data) {
+static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, const uint32_t tick) {
   const float tolerance = -0.5;
   //
   // We need a TUMBLE_HYSTERESIS_THRESHOLD amount of readings that indicate
   // that we are tumbled before we act on it. This is to reduce false positives.
   //
   if (data->acc.z <= tolerance) {
-    this->tumbleHysteresis++;
-    if (this->tumbleHysteresis > TUMBLE_HYSTERESIS_THRESHOLD) {
+    if (0 == this->initialTumbleTick) {
+      this->initialTumbleTick = tick;
+    }
+    if ((tick - this->initialTumbleTick) > TUMBLE_HYSTERESIS_THRESHOLD) {
       return true;
     }
   } else {
-    this->tumbleHysteresis = 0;
+    this->initialTumbleTick = 0;
   }
 
   return false;
@@ -135,7 +138,7 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
   const uint32_t currentTick = xTaskGetTickCount();
 
   this->isFlying = isFlyingCheck();
-  this->isTumbled = isTumbledCheck(this, sensors);
+  this->isTumbled = isTumbledCheck(this, sensors, currentTick);
 
   // canFly is kept for backwards compatibility. TODO krri deprecate?
   this->canFly = true;
