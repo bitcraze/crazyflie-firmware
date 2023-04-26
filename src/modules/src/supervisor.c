@@ -156,34 +156,34 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
   this->canFly = true;
 
 
-  supervisorConditionBit_t conditions = 0;
+  supervisorConditionBits_t conditions = 0;
   if (systemIsArmed()) {
-    conditions |= SUPERVISOR_TB_ARMED;
+    conditions |= SUPERVISOR_CB_ARMED;
   }
   if (pmIsChargerConnected()) {
-    conditions |= SUPERVISOR_TB_CHARGER_CONNECTED;
+    conditions |= SUPERVISOR_CB_CHARGER_CONNECTED;
   }
   if (this->isFlying) {
-    conditions |= SUPERVISOR_TB_IS_FLYING;
+    conditions |= SUPERVISOR_CB_IS_FLYING;
   }
   if (this->isTumbled) {
-    conditions |= SUPERVISOR_TB_IS_TUMBLED;
+    conditions |= SUPERVISOR_CB_IS_TUMBLED;
   }
   if (isMovingCheck(this, sensors)) {
-    conditions |= SUPERVISOR_TB_IS_MOVING;
+    conditions |= SUPERVISOR_CB_IS_MOVING;
   }
   const uint32_t setpointAge = currentTick - setpoint->timestamp;
   if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
-    conditions |= SUPERVISOR_TB_COMMANDER_WDT_WARNING;
+    conditions |= SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   }
   if (setpointAge > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
-    conditions |= SUPERVISOR_TB_COMMANDER_WDT_TIMEOUT;
+    conditions |= SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT;
   }
   if (!checkEmergencyStopWatchdog(currentTick)) {
-    conditions |= SUPERVISOR_TB_EMERGENCY_STOP;
+    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
   if (locSrvIsEmergencyStopRequested()) {
-    conditions |= SUPERVISOR_TB_EMERGENCY_STOP;
+    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 
   supervisorState_t newState = supervisorStateUpdate(this->state, conditions);

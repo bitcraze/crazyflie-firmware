@@ -7,11 +7,11 @@
 #include "unity.h"
 
 // Function under test
-supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBit_t triggerBitField, const SupervisorStateTransitionList_t* transitions);
+supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBits_t triggerBitField, const SupervisorStateTransitionList_t* transitions);
 
 // Helpers
-static void assertStateTransition(supervisorConditionBit_t conditions, supervisorConditionBit_t mustBeSet, supervisorConditionBit_t mustNotBeSet);
-static void assertNoStateTransition(supervisorConditionBit_t conditions, supervisorConditionBit_t mustBeSet, supervisorConditionBit_t mustNotBeSet);
+static void assertStateTransition(supervisorConditionBits_t conditions, supervisorConditionBits_t mustBeSet, supervisorConditionBits_t mustNotBeSet);
+static void assertNoStateTransition(supervisorConditionBits_t conditions, supervisorConditionBits_t mustBeSet, supervisorConditionBits_t mustNotBeSet);
 
 void setUp(void) {
   // Empty
@@ -23,9 +23,9 @@ void tearDown(void) {
 
 void testTransitionWithNoConditions(void) {
   // Fixture
-  supervisorConditionBit_t conditions = 123;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_NONE;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = 123;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -34,9 +34,9 @@ void testTransitionWithNoConditions(void) {
 
 void testTransitionOnePositiveConditionMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_CHARGER_CONNECTED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -45,9 +45,9 @@ void testTransitionOnePositiveConditionMet(void) {
 
 void testTransitionOnePositiveConditionNotMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_CHARGER_CONNECTED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -56,9 +56,9 @@ void testTransitionOnePositiveConditionNotMet(void) {
 
 void testTransitionMultiPositiveConditionsMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -67,9 +67,9 @@ void testTransitionMultiPositiveConditionsMet(void) {
 
 void testTransitionMultiPositiveConditionsMetWithOtherPositives(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_ARMED | SUPERVISOR_TB_EMERGENCY_STOP;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -78,9 +78,9 @@ void testTransitionMultiPositiveConditionsMetWithOtherPositives(void) {
 
 void testTransitionMultiPositiveConditionsOneMissing(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -89,9 +89,9 @@ void testTransitionMultiPositiveConditionsOneMissing(void) {
 
 void testTransitionMultiPositiveConditionsOneMissingButOtherPositives(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_NONE;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_NONE;
 
   // Test
   // Assert
@@ -100,9 +100,9 @@ void testTransitionMultiPositiveConditionsOneMissingButOtherPositives(void) {
 
 void testTransitionOneNegativeConditionMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = 0;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_NONE;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = 0;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
 
   // Test
   // Assert
@@ -111,9 +111,9 @@ void testTransitionOneNegativeConditionMet(void) {
 
 void testTransitionOneNegativeConditionNotMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_NONE;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
 
   // Test
   // Assert
@@ -122,9 +122,9 @@ void testTransitionOneNegativeConditionNotMet(void) {
 
 void testTransitionOneNegativeConditionNotMetWithOtherPositives(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_NONE;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
 
   // Test
   // Assert
@@ -133,9 +133,9 @@ void testTransitionOneNegativeConditionNotMetWithOtherPositives(void) {
 
 void testTransitionMultiNegativeConditionsMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = 0;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_NONE;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = 0;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
 
   // Test
   // Assert
@@ -144,9 +144,9 @@ void testTransitionMultiNegativeConditionsMet(void) {
 
 void testTransitionMultiNegativeConditionsOneNotMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_NONE;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
 
   // Test
   // Assert
@@ -155,9 +155,9 @@ void testTransitionMultiNegativeConditionsOneNotMet(void) {
 
 void testTransitionMultiPositiveAndNegativeConditionsMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_ARMED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_ARMED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
 
   // Test
   // Assert
@@ -166,9 +166,9 @@ void testTransitionMultiPositiveAndNegativeConditionsMet(void) {
 
 void testTransitionMultiPositiveAndNegativeConditionsOnePositiveNotMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_ARMED;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_ARMED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
 
   // Test
   // Assert
@@ -177,9 +177,9 @@ void testTransitionMultiPositiveAndNegativeConditionsOnePositiveNotMet(void) {
 
 void testTransitionMultiPositiveAndNegativeConditionsOneNegativeNotMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_ARMED | SUPERVISOR_TB_IS_TUMBLED | SUPERVISOR_TB_EMERGENCY_STOP;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_ARMED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
 
   // Test
   // Assert
@@ -188,9 +188,9 @@ void testTransitionMultiPositiveAndNegativeConditionsOneNegativeNotMet(void) {
 
 void testTransitionMultiPositiveAndNegativeConditionsMultipleNotMet(void) {
   // Fixture
-  supervisorConditionBit_t conditions = SUPERVISOR_TB_IS_TUMBLED | SUPERVISOR_TB_EMERGENCY_STOP;
-  supervisorConditionBit_t mustBeSet = SUPERVISOR_TB_ARMED | SUPERVISOR_TB_IS_TUMBLED;
-  supervisorConditionBit_t mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
 
   // Test
   // Assert
@@ -199,7 +199,7 @@ void testTransitionMultiPositiveAndNegativeConditionsMultipleNotMet(void) {
 
 void testFirstValidTransitionIsChosen(void) {
     // Fixture
-  const supervisorConditionBit_t conditions = SUPERVISOR_TB_IS_TUMBLED | SUPERVISOR_TB_EMERGENCY_STOP;
+  const supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
 
   const supervisorState_t currentState = supervisorStateFlying;
   const supervisorState_t expected = supervisorStateExceptFreeFall;
@@ -207,18 +207,18 @@ void testFirstValidTransitionIsChosen(void) {
   SupervisorStateTransition_t transitions[] = {
     {
       .newState = supervisorStateLanded,
-      .mustBeSet = SUPERVISOR_TB_IS_TUMBLED,
-      .mustNotBeSet = SUPERVISOR_TB_EMERGENCY_STOP
+      .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
+      .mustNotBeSet = SUPERVISOR_CB_EMERGENCY_STOP
     },
     { // We expect this state to be chosen
       .newState = expected,
-      .mustBeSet = SUPERVISOR_TB_IS_TUMBLED,
-      .mustNotBeSet = SUPERVISOR_TB_NONE
+      .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
+      .mustNotBeSet = SUPERVISOR_CB_NONE
     },
     {
       .newState = supervisorStatePreFlChecksNotPassed,
-      .mustBeSet = SUPERVISOR_TB_IS_TUMBLED | SUPERVISOR_TB_EMERGENCY_STOP,
-      .mustNotBeSet = SUPERVISOR_TB_NONE
+      .mustBeSet = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+      .mustNotBeSet = SUPERVISOR_CB_NONE
     }
   };
 
@@ -233,7 +233,7 @@ void testFirstValidTransitionIsChosen(void) {
 
 // Helpers ////////////////////////////////////////////////
 
-static bool check_state_transition(supervisorConditionBit_t conditions, supervisorConditionBit_t mustBeSet, supervisorConditionBit_t mustNotBeSet) {
+static bool check_state_transition(supervisorConditionBits_t conditions, supervisorConditionBits_t mustBeSet, supervisorConditionBits_t mustNotBeSet) {
   // Fixture
   const supervisorState_t currentState = supervisorStateFlying;
 
@@ -254,10 +254,10 @@ static bool check_state_transition(supervisorConditionBit_t conditions, supervis
   return newState != currentState;
 }
 
-static void assertStateTransition(supervisorConditionBit_t conditions, supervisorConditionBit_t mustBeSet, supervisorConditionBit_t mustNotBeSet) {
+static void assertStateTransition(supervisorConditionBits_t conditions, supervisorConditionBits_t mustBeSet, supervisorConditionBits_t mustNotBeSet) {
   TEST_ASSERT_TRUE(check_state_transition(conditions, mustBeSet, mustNotBeSet))
 }
 
-static void assertNoStateTransition(supervisorConditionBit_t conditions, supervisorConditionBit_t mustBeSet, supervisorConditionBit_t mustNotBeSet) {
+static void assertNoStateTransition(supervisorConditionBits_t conditions, supervisorConditionBits_t mustBeSet, supervisorConditionBits_t mustNotBeSet) {
   TEST_ASSERT_FALSE(check_state_transition(conditions, mustBeSet, mustNotBeSet))
 }

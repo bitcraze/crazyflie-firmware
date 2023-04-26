@@ -51,24 +51,24 @@ enum {
   supervisorConditionEmergencyStop,
 };
 
-typedef uint32_t supervisorConditionBit_t;
+typedef uint32_t supervisorConditionBits_t;
 
 // Condition bit definitions
-#define SUPERVISOR_TB_NONE (0)
-#define SUPERVISOR_TB_ARMED (1 << supervisorConditionArmed)
-#define SUPERVISOR_TB_CHARGER_CONNECTED (1 << supervisorConditionChargerConnected)
-#define SUPERVISOR_TB_IS_FLYING (1 << supervisorConditionIsFlying)
-#define SUPERVISOR_TB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
-#define SUPERVISOR_TB_IS_MOVING (1 << supervisorConditionIsMoving)
-#define SUPERVISOR_TB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
-#define SUPERVISOR_TB_COMMANDER_WDT_TIMEOUT (1 << supervisorConditionCommanderWdtTimeout)
-#define SUPERVISOR_TB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)
+#define SUPERVISOR_CB_NONE (0)
+#define SUPERVISOR_CB_ARMED (1 << supervisorConditionArmed)
+#define SUPERVISOR_CB_CHARGER_CONNECTED (1 << supervisorConditionChargerConnected)
+#define SUPERVISOR_CB_IS_FLYING (1 << supervisorConditionIsFlying)
+#define SUPERVISOR_CB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
+#define SUPERVISOR_CB_IS_MOVING (1 << supervisorConditionIsMoving)
+#define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
+#define SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT (1 << supervisorConditionCommanderWdtTimeout)
+#define SUPERVISOR_CB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)
 
 
 typedef struct {
   supervisorState_t newState;
-  supervisorConditionBit_t mustBeSet;
-  supervisorConditionBit_t mustNotBeSet;
+  supervisorConditionBits_t mustBeSet;
+  supervisorConditionBits_t mustNotBeSet;
 } SupervisorStateTransition_t;
 
 typedef struct {
@@ -79,4 +79,4 @@ typedef struct {
 // Macro used when defining SupervisorStateTransitionLists
 #define SUPERVISOR_TRANSITION_ENTRY(TRANSITION_DEF) .transitionList=TRANSITION_DEF, .length=(sizeof(TRANSITION_DEF) / sizeof(SupervisorStateTransition_t))
 
-supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBit_t conditions);
+supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBits_t conditions);

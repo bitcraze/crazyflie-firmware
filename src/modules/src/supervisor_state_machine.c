@@ -53,92 +53,92 @@ static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOf
 static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
   {
     .newState = supervisorStatePreFlChecksPassed,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_IS_TUMBLED | SUPERVISOR_TB_EMERGENCY_STOP
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP
   }
 };
 
 static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
     .newState = supervisorStateReadyToFly,
-    .mustBeSet = SUPERVISOR_TB_ARMED,
-    .mustNotBeSet = SUPERVISOR_TB_CHARGER_CONNECTED | SUPERVISOR_TB_IS_TUMBLED | SUPERVISOR_TB_EMERGENCY_STOP
+    .mustBeSet = SUPERVISOR_CB_ARMED,
+    .mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP
   }
 };
 
 static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_ARMED
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_ARMED
   },
   {
     .newState = supervisorStateFlying,
-    .mustBeSet = SUPERVISOR_TB_IS_FLYING,
-    .mustNotBeSet = SUPERVISOR_TB_NONE
+    .mustBeSet = SUPERVISOR_CB_IS_FLYING,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   }
 };
 
 static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_TB_COMMANDER_WDT_TIMEOUT,
-    .mustNotBeSet = SUPERVISOR_TB_NONE
+    .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
     .newState = supervisorStateWarningLevelOut,
-    .mustBeSet = SUPERVISOR_TB_COMMANDER_WDT_WARNING,
-    .mustNotBeSet = SUPERVISOR_TB_NONE
+    .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_WARNING,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
     .newState = supervisorStateLanded,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_IS_FLYING
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_IS_FLYING
   }
 };
 
 static SupervisorStateTransition_t transitionsLanded[] = {
   {
     .newState = supervisorStateReset,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_IS_MOVING
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_IS_MOVING
   },
 };
 
 static SupervisorStateTransition_t transitionsReset[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_NONE
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
 };
 
 static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
   {
     .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_TB_COMMANDER_WDT_TIMEOUT,
-    .mustNotBeSet = SUPERVISOR_TB_NONE
+    .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
     .newState = supervisorStateFlying,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_COMMANDER_WDT_WARNING | SUPERVISOR_TB_COMMANDER_WDT_TIMEOUT
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT
   },
 };
 
 static SupervisorStateTransition_t transitionsExceptFreeFall[] = {
   {
     .newState = supervisorStateExceptNotMoving,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_IS_MOVING
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_IS_MOVING
   },
 };
 
 static SupervisorStateTransition_t transitionsExceptNotMoving[] = {
   {
     .newState = supervisorStateReset,
-    .mustBeSet = SUPERVISOR_TB_NONE,
-    .mustNotBeSet = SUPERVISOR_TB_NONE
+    .mustBeSet = SUPERVISOR_CB_NONE,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   },
 };
 
@@ -164,18 +164,18 @@ bool supervisorStateMachineInit() {
   return true;
 }
 
-TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBit_t conditions, const SupervisorStateTransitionList_t* transitions) {
+TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBits_t conditions, const SupervisorStateTransitionList_t* transitions) {
   supervisorState_t newState = currentState;
   for (int i = 0; i < transitions->length; i++) {
     const SupervisorStateTransition_t* transitionDef = &transitions->transitionList[i];
 
-    const supervisorConditionBit_t maskPos = transitionDef->mustBeSet;
-    const supervisorConditionBit_t conditionsNotMetPos = (~conditions) & maskPos;
+    const supervisorConditionBits_t maskPos = transitionDef->mustBeSet;
+    const supervisorConditionBits_t conditionsNotMetPos = (~conditions) & maskPos;
 
-    const supervisorConditionBit_t maskNeg = transitionDef->mustNotBeSet;
-    const supervisorConditionBit_t conditionsNotMetNeg = conditions & maskNeg;
+    const supervisorConditionBits_t maskNeg = transitionDef->mustNotBeSet;
+    const supervisorConditionBits_t conditionsNotMetNeg = conditions & maskNeg;
 
-    const supervisorConditionBit_t conditionsNotMet = conditionsNotMetPos | conditionsNotMetNeg;
+    const supervisorConditionBits_t conditionsNotMet = conditionsNotMetPos | conditionsNotMetNeg;
 
     if (conditionsNotMet == 0) {
       newState = transitionDef->newState;
@@ -185,7 +185,7 @@ TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t current
   return newState;
 }
 
-supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBit_t conditions) {
+supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBits_t conditions) {
   #ifdef DEBUG_ME
   ASSERT(currentState < supervisorState_NrOfStates);
   #endif
