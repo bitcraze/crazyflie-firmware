@@ -56,6 +56,7 @@ typedef struct {
   bool canFly;
   bool isFlying;
   bool isTumbled;
+  uint8_t paramEmergencyStop;
 
   uint32_t tumbleHysteresis;
 
@@ -166,6 +167,9 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint) {
   if (locSrvIsEmergencyStopRequested()) {
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
+  if (this->paramEmergencyStop) {
+    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
+  }
 
   supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
 
@@ -234,7 +238,5 @@ PARAM_GROUP_START(stabilizer)
 /**
  * @brief If set to nonzero will turn off power
  */
-
-// TODO krri How to handle?
-// PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.areMotorsLocked)
+PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.paramEmergencyStop)
 PARAM_GROUP_STOP(stabilizer)
