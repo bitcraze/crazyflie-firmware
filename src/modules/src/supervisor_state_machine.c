@@ -68,13 +68,23 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
 
 static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
+    .newState = supervisorStateExceptFreeFall,
+    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
     .newState = supervisorStatePreFlChecksNotPassed,
     .mustBeSet = SUPERVISOR_CB_NONE,
     .mustNotBeSet = SUPERVISOR_CB_ARMED
   },
   {
-    .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED,
     .mustNotBeSet = SUPERVISOR_CB_NONE
   },
   {
