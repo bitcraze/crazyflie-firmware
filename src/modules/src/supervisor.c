@@ -63,8 +63,8 @@ typedef struct {
   // The time (in ticks) of the first tumble event. 0=no tumble
   uint32_t initialTumbleTick;
 
-  // The time (in ticks) of the first low thrust event, when flying. 0=no low thrust event
-  uint32_t initialLowThrustTick;
+  // The time (in ticks) of the latest high thrust event. 0=no high thrust event yet
+  uint32_t latestThrustTick;
 
   supervisorState_t state;
 } SupervisorMem_t;
@@ -90,8 +90,6 @@ bool supervisorIsTumbled() {
 // We say we are flying if one or more motors are running over the idle thrust.
 //
 static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
-  bool result = false;
-
   bool isThrustOverIdle = false;
   const uint32_t idleThrust = powerDistributionGetIdleThrust();
   for (int i = 0; i < NBR_OF_MOTORS; ++i) {
@@ -103,13 +101,12 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
   }
 
   if (isThrustOverIdle) {
-    this->initialLowThrustTick = 0;
-    result = true;
-  } else {
-    if (0 == this->initialLowThrustTick) {
-      this->initialLowThrustTick = tick;
-    }
-    if ((tick - this->initialLowThrustTick) < IS_FLYING_HYSTERESIS_THRESHOLD) {
+    this->latestThrustTick = tick;
+  }
+
+  bool result = false;
+  if (0 != this->latestThrustTick) {
+    if ((tick - this->latestThrustTick) < IS_FLYING_HYSTERESIS_THRESHOLD) {
       result = true;
     }
   }
@@ -216,8 +213,8 @@ static supervisorConditionBits_t updateAndpopulateConditions(SupervisorMem_t* th
 
 static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
   this->canFly = supervisorAreMotorsAllowedToRun();
-  this->isFlying = (bool)(conditions & SUPERVISOR_CB_IS_FLYING);
-  this->isTumbled = (bool)(conditions & SUPERVISOR_CB_IS_TUMBLED);
+  this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
+  this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
 }
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
