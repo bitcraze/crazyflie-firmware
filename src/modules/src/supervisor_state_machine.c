@@ -30,7 +30,7 @@
 // #define DEBUG_ME
 
 #ifdef DEBUG_ME
-#define DEBUG_MODULE "SupSt"
+#define DEBUG_MODULE "SUPST"
 #include "debug.h"
 #include "cfassert.h"
 

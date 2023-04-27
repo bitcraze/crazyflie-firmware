@@ -39,7 +39,7 @@
 #include "crtp_localization_service.h"
 #include "system.h"
 
-#define DEBUG_MODULE "Sup"
+#define DEBUG_MODULE "SUP"
 #include "debug.h"
 
 
@@ -170,6 +170,56 @@ static void transitionActions(const supervisorState_t currentState, const superv
   }
 }
 
+static supervisorConditionBits_t updateAndpopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
+  supervisorConditionBits_t conditions = 0;
+
+  if (systemIsArmed()) {
+    conditions |= SUPERVISOR_CB_ARMED;
+  }
+
+  if (pmIsChargerConnected()) {
+    conditions |= SUPERVISOR_CB_CHARGER_CONNECTED;
+  }
+
+  const bool isFlying = isFlyingCheck(this, currentTick);
+  if (isFlying) {
+    conditions |= SUPERVISOR_CB_IS_FLYING;
+  }
+
+  const bool isTumbled = isTumbledCheck(this, sensors, currentTick);
+  if (isTumbled) {
+    conditions |= SUPERVISOR_CB_IS_TUMBLED;
+  }
+
+  const uint32_t setpointAge = currentTick - setpoint->timestamp;
+  if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
+    conditions |= SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  }
+  if (setpointAge > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
+    conditions |= SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT;
+  }
+
+  if (!checkEmergencyStopWatchdog(currentTick)) {
+    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
+  }
+
+  if (locSrvIsEmergencyStopRequested()) {
+    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
+  }
+
+  if (this->paramEmergencyStop) {
+    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
+  }
+
+  return conditions;
+}
+
+static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
+  this->canFly = supervisorAreMotorsAllowedToRun();
+  this->isFlying = (bool)(conditions & SUPERVISOR_CB_IS_FLYING);
+  this->isTumbled = (bool)(conditions & SUPERVISOR_CB_IS_TUMBLED);
+}
+
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
   if (!RATE_DO_EXECUTE(RATE_SUPERVISOR, stabilizerStep)) {
     return;
@@ -178,48 +228,15 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   SupervisorMem_t* this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
-  this->isFlying = isFlyingCheck(this, currentTick);
-  this->isTumbled = isTumbledCheck(this, sensors, currentTick);
-
-  supervisorConditionBits_t conditions = 0;
-  if (systemIsArmed()) {
-    conditions |= SUPERVISOR_CB_ARMED;
-  }
-  if (pmIsChargerConnected()) {
-    conditions |= SUPERVISOR_CB_CHARGER_CONNECTED;
-  }
-  if (this->isFlying) {
-    conditions |= SUPERVISOR_CB_IS_FLYING;
-  }
-  if (this->isTumbled) {
-    conditions |= SUPERVISOR_CB_IS_TUMBLED;
-  }
-  const uint32_t setpointAge = currentTick - setpoint->timestamp;
-  if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
-    conditions |= SUPERVISOR_CB_COMMANDER_WDT_WARNING;
-  }
-  if (setpointAge > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
-    conditions |= SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT;
-  }
-  if (!checkEmergencyStopWatchdog(currentTick)) {
-    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
-  }
-  if (locSrvIsEmergencyStopRequested()) {
-    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
-  }
-  if (this->paramEmergencyStop) {
-    conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
-  }
-
+  const supervisorConditionBits_t conditions = updateAndpopulateConditions(this, sensors, setpoint, currentTick);
   const supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
   if (this->state != newState) {
     transitionActions(this->state, newState);
+    this->state = newState;
   }
-  this->state = newState;
 
-  this->canFly = supervisorAreMotorsAllowedToRun();
+  updateLogData(this, conditions);
 }
-
 
 void supervisorOverrideSetpoint(setpoint_t* setpoint) {
   SupervisorMem_t* this = &supervisorMem;
@@ -256,7 +273,6 @@ bool supervisorAreMotorsAllowedToRun() {
          (this->state == supervisorStateWarningLevelOut);
 }
 
-// TODO krri Do we want to deprecate any of these?
 /**
  *  System loggable variables to check different system states.
  */
