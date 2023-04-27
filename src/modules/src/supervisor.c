@@ -39,6 +39,9 @@
 #include "crtp_localization_service.h"
 #include "system.h"
 
+#define DEBUG_MODULE "Sup"
+#include "debug.h"
+
 
 #define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
 
@@ -152,6 +155,20 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   return isOk;
 }
 
+static void transitionActions(const supervisorState_t currentState, const supervisorState_t newState) {
+  if (newState == supervisorStateReadyToFly) {
+    DEBUG_PRINT("Ready to fly\n");
+  }
+
+  if (newState == supervisorStateLocked) {
+    DEBUG_PRINT("Locked, reboot required\n");
+  }
+
+  if ((currentState == supervisorStateReadyToFly || currentState == supervisorStateFlying) &&
+      newState != supervisorStateReadyToFly && newState != supervisorStateFlying) {
+    DEBUG_PRINT("Can not fly\n");
+  }
+}
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
   if (!RATE_DO_EXECUTE(RATE_SUPERVISOR, stabilizerStep)) {
@@ -194,13 +211,13 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 
-  supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
+  const supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
+  if (this->state != newState) {
+    transitionActions(this->state, newState);
+  }
+  this->state = newState;
 
   this->canFly = supervisorAreMotorsAllowedToRun();
-
-  // Transition actions can be added here if needed
-
-  this->state = newState;
 }
 
 
@@ -245,7 +262,7 @@ bool supervisorAreMotorsAllowedToRun() {
  */
 LOG_GROUP_START(sys)
 /**
- * @brief If nonzero if system is ready to fly.
+ * @brief Nonzero if system is ready to fly.
  */
 LOG_ADD_CORE(LOG_UINT8, canfly, &supervisorMem.canFly)
 /**
