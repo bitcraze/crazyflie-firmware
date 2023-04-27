@@ -42,11 +42,11 @@
 
 #define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
 
-/* Minimum summed motor PWM that means we are flying */
-#define SUPERVISOR_FLIGHT_THRESHOLD 1000
-
-/* The minimum time (in ms) we need to see tumble condition before acting on it */
+// The minimum time (in ms) we need to see tumble condition before acting on it
 #define TUMBLE_HYSTERESIS_THRESHOLD M2T(30)
+
+// The minimum time (in ms) we need to see low thrust before saying that we are not flying anymore
+#define IS_FLYING_HYSTERESIS_THRESHOLD M2T(2000)
 
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
@@ -59,6 +59,9 @@ typedef struct {
 
   // The time (in ticks) of the first tumble event. 0=no tumble
   uint32_t initialTumbleTick;
+
+  // The time (in ticks) of the first low thrust event, when flying. 0=no low thrust event
+  uint32_t initialLowThrustTick;
 
   supervisorState_t state;
 } SupervisorMem_t;
@@ -81,16 +84,34 @@ bool supervisorIsTumbled() {
 }
 
 //
-// We say we are flying if the sum of the ratios of all motors giving thrust
-// is above a certain threshold.
+// We say we are flying if one or more motors are running over the idle thrust.
 //
-static bool isFlyingCheck() {
-  int sumRatio = 0;
+static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
+  bool result = false;
+
+  bool isThrustOverIdle = false;
+  const uint32_t idleThrust = powerDistributionGetIdleThrust();
   for (int i = 0; i < NBR_OF_MOTORS; ++i) {
-    sumRatio += powerDistributionMotorType(i) * motorsGetRatio(i);
+    const uint32_t ratio = powerDistributionMotorType(i) * motorsGetRatio(i);
+    if (ratio > idleThrust) {
+      isThrustOverIdle = true;
+      break;
+    }
   }
 
-  return sumRatio > SUPERVISOR_FLIGHT_THRESHOLD;
+  if (isThrustOverIdle) {
+    this->initialLowThrustTick = 0;
+    result = true;
+  } else {
+    if (0 == this->initialLowThrustTick) {
+      this->initialLowThrustTick = tick;
+    }
+    if ((tick - this->initialLowThrustTick) < IS_FLYING_HYSTERESIS_THRESHOLD) {
+      result = true;
+    }
+  }
+
+  return result;
 }
 
 //
@@ -140,7 +161,7 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   SupervisorMem_t* this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
-  this->isFlying = isFlyingCheck();
+  this->isFlying = isFlyingCheck(this, currentTick);
   this->isTumbled = isTumbledCheck(this, sensors, currentTick);
 
   supervisorConditionBits_t conditions = 0;

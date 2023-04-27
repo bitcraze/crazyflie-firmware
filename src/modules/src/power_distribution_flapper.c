@@ -189,6 +189,10 @@ void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
   #endif
 }
 
+uint32_t powerDistributionGetIdleThrust() {
+  return idleThrust;
+}
+
 /**
  * Power distribution parameters
  */
