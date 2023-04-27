@@ -87,7 +87,7 @@ void plan_stop(struct planner *p);
 
 // query if the planner is stopped.
 // currently this is true at startup before we take off,
-// and also after an emergency stop.
+// and also after a stop.
 bool plan_is_stopped(struct planner *p);
 
 // disable the planner.

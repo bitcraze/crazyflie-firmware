@@ -280,6 +280,11 @@ static void stabilizerTask(void* param)
 
       stateEstimator(&state, stabilizerStep);
 
+      const bool areMotorsAllowedToRun = supervisorAreMotorsAllowedToRun();
+
+      // Critical for safety, be careful if you modify this code!
+      crtpCommanderBlock(! areMotorsAllowedToRun);
+
       if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
@@ -300,7 +305,7 @@ static void stabilizerTask(void* param)
 
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
-      if (supervisorAreMotorsAllowedToRun()) {
+      if (areMotorsAllowedToRun) {
         controlMotors(&control);
       } else {
         motorsStop();
