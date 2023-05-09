@@ -27,7 +27,7 @@
 #include "supervisor_state_machine.h"
 #include "test_support.h"
 
-// #define DEBUG_ME
+#define DEBUG_ME
 
 #ifdef DEBUG_ME
 #define DEBUG_MODULE "SUPST"
@@ -63,6 +63,11 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .newState = supervisorStateReadyToFly,
     .mustBeSet = SUPERVISOR_CB_ARMED,
     .mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP
+  },
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
   }
 };
 

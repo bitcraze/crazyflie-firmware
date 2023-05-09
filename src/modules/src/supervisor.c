@@ -56,6 +56,7 @@
 
 typedef struct {
   bool canFly;
+  bool canArm;
   bool isFlying;
   bool isTumbled;
   uint8_t paramEmergencyStop;
@@ -76,6 +77,10 @@ const static setpoint_t nullSetpoint;
 
 bool supervisorCanFly() {
   return supervisorMem.canFly;
+}
+
+bool supervisorCanArm() {
+  return supervisorMem.canArm;
 }
 
 bool supervisorIsFlying() {
@@ -213,6 +218,7 @@ static supervisorConditionBits_t updateAndpopulateConditions(SupervisorMem_t* th
 
 static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
   this->canFly = supervisorAreMotorsAllowedToRun();
+  this->canArm = supervisorCanSystemArm();
   this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
   this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
 }
@@ -270,6 +276,10 @@ bool supervisorAreMotorsAllowedToRun() {
          (this->state == supervisorStateWarningLevelOut);
 }
 
+bool supervisorCanSystemArm() {
+  SupervisorMem_t* this = &supervisorMem;
+  return (this->state == supervisorStatePreFlChecksPassed);
+}
 /**
  *  System loggable variables to check different system states.
  */
@@ -278,6 +288,10 @@ LOG_GROUP_START(sys)
  * @brief Nonzero if system is ready to fly.
  */
 LOG_ADD_CORE(LOG_UINT8, canfly, &supervisorMem.canFly)
+/**
+ * @brief Nonzero if system can be armed.
+ */
+LOG_ADD(LOG_UINT8, canArm, &supervisorMem.canArm)
 /**
  * @brief Nonzero if the system thinks it is flying
  */

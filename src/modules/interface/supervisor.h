@@ -60,12 +60,27 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint);
 bool supervisorAreMotorsAllowedToRun();
 
 /**
+ * @brief Check if system is allowed to arm
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorCanSystemArm();
+/**
  * @brief Is the system ready to fly
  *
  * @return true
  * @return false
  */
 bool supervisorCanFly(void);
+
+/**
+ * @brief Is the system ready to be armed
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorCanArm(void);
 
 /**
  * @brief Is the Crazyflie flying
