@@ -270,30 +270,6 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       Set the max number of base stations supported. NOTE: This is only
       valid for Lighthouse V2.
 
-config DECK_ADHOC
-  bool "Support the Adhoc deck"
-  default n
-  help
-      The Adhoc deck is used for ranging, networking and communication within the 
-      swarm, based on the DW3000 UWB chip.
-
-  config DECK_ADHOCDECK_USE_ALT_PINS
-  bool "adhoc deck alternative IRQ and RESET pins"
-  default name
-  depends on DECK_ADHOC
-  help
-       ADHOC deck alternative IRQ and RESET pins(IO_2, IO_4) instead of
-       default (RX1, TX1), leaving UART1 free for use.
-
-  config DECK_ADHOCDECK_USE_UART2_PINS
-  bool "adhoc deck use UART2 (TX2, RX2) pins"
-  default name
-  depends on DECK_ADHOC
-  help
-       ADHOC deck alternative IRQ and RESET pins(TX2, RX2) instead of
-       default (RX1, TX1).
-
-
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
@@ -460,3 +436,26 @@ config DECK_CPX_HOST_ON_UART2
       forced, since this is intended to be used without actually having a proper
       deck attached (i.e there will be no 1-wire memory to automatically detect
       and start the driver).
+
+config DECK_ADHOC
+  bool "Support the Adhoc deck"
+  default y
+  help
+      The Adhoc deck is used for ranging, networking and communication within the
+      swarm, based on the DW3000 UWB chip.
+
+  config DECK_ADHOCDECK_USE_ALT_PINS
+  bool "adhoc deck alternative IRQ and RESET pins"
+  default name
+  depends on DECK_ADHOC
+  help
+       ADHOC deck alternative IRQ and RESET pins(IO_2, IO_4) instead of
+       default (RX1, TX1), leaving UART1 free for use.
+
+  config DECK_ADHOCDECK_USE_UART2_PINS
+  bool "adhoc deck use UART2 (TX2, RX2) pins"
+  default name
+  depends on DECK_ADHOC
+  help
+       ADHOC deck alternative IRQ and RESET pins(TX2, RX2) instead of
+       default (RX1, TX1).
