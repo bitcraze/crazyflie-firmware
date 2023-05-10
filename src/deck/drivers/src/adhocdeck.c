@@ -123,24 +123,34 @@ uint16_t getUWBAddress() {
 }
 
 int uwbSendPacket(UWB_Packet_t *packet) {
-  xQueueSend(txQueue, packet, 0);
+  ASSERT(packet);
+  ASSERT(packet->header.length <= FRAME_LEN_MAX);
+  return xQueueSend(txQueue, packet, 0);
 }
 
 int uwbSendPacketBlock(UWB_Packet_t *packet) {
-  xQueueSend(txQueue, packet, portMAX_DELAY);
+  ASSERT(packet);
+  ASSERT(packet->header.length <= FRAME_LEN_MAX);
+  return xQueueSend(txQueue, packet, portMAX_DELAY);
 }
 
 int uwbReceivePacket(MESSAGE_TYPE type, UWB_Packet_t *packet) {
+  ASSERT(packet);
+  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   ASSERT(type < MESSAGE_TYPE_COUNT);
   return xQueueReceive(queues[type], packet, 0);
 }
 
 int uwbReceivePacketBlock(MESSAGE_TYPE type, UWB_Packet_t *packet) {
+  ASSERT(packet);
+  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   ASSERT(type < MESSAGE_TYPE_COUNT);
   return xQueueReceive(queues[type], packet, portMAX_DELAY);
 }
 
 int uwbReceivePacketWait(MESSAGE_TYPE type, UWB_Packet_t *packet, int wait) {
+  ASSERT(packet);
+  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   ASSERT(type < MESSAGE_TYPE_COUNT);
   return xQueueReceive(queues[type], packet, M2T(wait));
 }
@@ -314,6 +324,7 @@ static void reset(void) {
   digitalWrite(GPIO_PIN_RESET, 1);
   vTaskDelay(M2T(10));
 }
+
 extern dwOps_t dwt_ops = {
     .spiRead = spiRead,
     .spiWrite = spiWrite,
