@@ -125,12 +125,14 @@ uint16_t getUWBAddress() {
 int uwbSendPacket(UWB_Packet_t *packet) {
   ASSERT(packet);
   ASSERT(packet->header.length <= FRAME_LEN_MAX);
+  TX_MESSAGE_TYPE = packet->header.type;   // TODO ugly code
   return xQueueSend(txQueue, packet, 0);
 }
 
 int uwbSendPacketBlock(UWB_Packet_t *packet) {
   ASSERT(packet);
   ASSERT(packet->header.length <= FRAME_LEN_MAX);
+  TX_MESSAGE_TYPE = packet->header.type;   // TODO ugly code
   return xQueueSend(txQueue, packet, portMAX_DELAY);
 }
 
