@@ -32,7 +32,7 @@ void testTransitionWithNoConditions(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionOnePositiveConditionMet(void) {
+void testTransitionOneRequiredConditionMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
@@ -43,7 +43,7 @@ void testTransitionOnePositiveConditionMet(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionOnePositiveConditionNotMet(void) {
+void testTransitionOneRequiredConditionNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED;
@@ -54,7 +54,7 @@ void testTransitionOnePositiveConditionNotMet(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveConditionsMet(void) {
+void testTransitionMultiRequiredConditionsMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
@@ -65,7 +65,7 @@ void testTransitionMultiPositiveConditionsMet(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveConditionsMetWithOtherPositives(void) {
+void testTransitionMultiRequiredConditionsMetWithOtherBitsSet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
@@ -76,7 +76,7 @@ void testTransitionMultiPositiveConditionsMetWithOtherPositives(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveConditionsOneMissing(void) {
+void testTransitionMultiRequiredConditionsOneMissing(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
@@ -87,7 +87,7 @@ void testTransitionMultiPositiveConditionsOneMissing(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveConditionsOneMissingButOtherPositives(void) {
+void testTransitionMultiRequiredConditionsOneMissingButOtherBitsSet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
@@ -98,7 +98,7 @@ void testTransitionMultiPositiveConditionsOneMissingButOtherPositives(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionOneNegativeConditionMet(void) {
+void testTransitionOneProhibitedConditionMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = 0;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
@@ -109,7 +109,7 @@ void testTransitionOneNegativeConditionMet(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionOneNegativeConditionNotMet(void) {
+void testTransitionOneProhibitedConditionNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
@@ -120,7 +120,7 @@ void testTransitionOneNegativeConditionNotMet(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionOneNegativeConditionNotMetWithOtherPositives(void) {
+void testTransitionOneProhibitedConditionNotMetWithOtherBitsSet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
@@ -131,7 +131,7 @@ void testTransitionOneNegativeConditionNotMetWithOtherPositives(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiNegativeConditionsMet(void) {
+void testTransitionMultiProhibitedConditionsMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = 0;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
@@ -142,7 +142,7 @@ void testTransitionMultiNegativeConditionsMet(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiNegativeConditionsOneNotMet(void) {
+void testTransitionMultiProhibitedConditionsOneNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_NONE;
@@ -153,7 +153,7 @@ void testTransitionMultiNegativeConditionsOneNotMet(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveAndNegativeConditionsMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
@@ -164,7 +164,7 @@ void testTransitionMultiPositiveAndNegativeConditionsMet(void) {
   assertStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveAndNegativeConditionsOnePositiveNotMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsOneRequiredNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
@@ -175,7 +175,7 @@ void testTransitionMultiPositiveAndNegativeConditionsOnePositiveNotMet(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveAndNegativeConditionsOneNegativeNotMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsOneProhibitedNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
@@ -186,7 +186,7 @@ void testTransitionMultiPositiveAndNegativeConditionsOneNegativeNotMet(void) {
   assertNoStateTransition(conditions, mustBeSet, mustNotBeSet);
 }
 
-void testTransitionMultiPositiveAndNegativeConditionsMultipleNotMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsMultipleNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t mustBeSet = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
