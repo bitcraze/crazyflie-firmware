@@ -63,10 +63,25 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)
 
 
+// Enum that is used to describe how to combine the bits in the required field
+typedef enum {
+  supervisorAll = 0, // AKA and
+  supervisorAny,     // AKA or
+  supervisorAlways,
+  supervisorNever,
+} SupervisorConditionCombiner_t;
+
+// Describes the requirements for a state transition
 typedef struct {
   supervisorState_t newState;
-  supervisorConditionBits_t mustBeSet;
-  supervisorConditionBits_t mustNotBeSet;
+
+  supervisorConditionBits_t triggers;
+  supervisorConditionBits_t negatedTriggers;
+  SupervisorConditionCombiner_t triggerCombiner;
+
+  supervisorConditionBits_t blockers;
+  supervisorConditionBits_t negatedBlockers;
+  SupervisorConditionCombiner_t blockerCombiner;
 } SupervisorStateTransition_t;
 
 typedef struct {

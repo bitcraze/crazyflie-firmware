@@ -53,142 +53,157 @@ static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOf
 static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
   {
     .newState = supervisorStatePreFlChecksPassed,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP
+
+    .triggers = SUPERVISOR_CB_NONE,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAlways,
+
+    .blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .blockerCombiner = supervisorAny,
   }
 };
 
 static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
   },
   {
     .newState = supervisorStateReadyToFly,
-    .mustBeSet = SUPERVISOR_CB_ARMED,
-    .mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP
+
+    .triggers = SUPERVISOR_CB_ARMED,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedBlockers = SUPERVISOR_CB_NONE,
+    .blockerCombiner = supervisorAny,
   },
 };
 
 static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
   },
   {
     .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_ARMED
-  },
-  {
-    .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_CHARGER_CONNECTED,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
   },
   {
     .newState = supervisorStateFlying,
-    .mustBeSet = SUPERVISOR_CB_IS_FLYING,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggers = SUPERVISOR_CB_IS_FLYING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
   }
 };
 
 static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_ARMED
+
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
   },
   {
     .newState = supervisorStateWarningLevelOut,
-    .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_WARNING,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
   },
   {
     .newState = supervisorStateLanded,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_IS_FLYING
+
+    .triggerCombiner = supervisorAlways,
+
+    .blockers = SUPERVISOR_CB_IS_FLYING,
+    .negatedBlockers = SUPERVISOR_CB_NONE,
+    .blockerCombiner = supervisorAny,
   }
 };
 
 static SupervisorStateTransition_t transitionsLanded[] = {
   {
     .newState = supervisorStateReset,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggerCombiner = supervisorAlways,
+
+    .blockerCombiner = supervisorNever,
   },
 };
 
 static SupervisorStateTransition_t transitionsReset[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggerCombiner = supervisorAlways,
+
+    .blockerCombiner = supervisorNever,
   },
 };
 
 static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
   {
     .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  },
-  {
-    .newState = supervisorStateExceptFreeFall,
-    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
   },
   {
     .newState = supervisorStateFlying,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT
+
+    .triggers = SUPERVISOR_CB_NONE,
+    .negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
   },
 };
 
 static SupervisorStateTransition_t transitionsExceptFreeFall[] = {
   {
     .newState = supervisorStateLocked,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggerCombiner = supervisorAlways,
+
+    .blockerCombiner = supervisorNever,
   },
 };
 
 static SupervisorStateTransition_t transitionsLocked[] = {
   {
     .newState = supervisorStateLocked,
-    .mustBeSet = SUPERVISOR_CB_NONE,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
+
+    .triggerCombiner = supervisorNever,
+
+    .blockerCombiner = supervisorAlways,
   },
 };
 
@@ -219,13 +234,13 @@ TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t current
   for (int i = 0; i < transitions->length; i++) {
     const SupervisorStateTransition_t* transitionDef = &transitions->transitionList[i];
 
-    const supervisorConditionBits_t maskMustBeSet = transitionDef->mustBeSet;
-    const supervisorConditionBits_t conditionsNotMetMustBeSet = (~conditions) & maskMustBeSet;
+    const supervisorConditionBits_t maskRequired = transitionDef->triggers;
+    const supervisorConditionBits_t conditionsNotMetRequired = (~conditions) & maskRequired;
 
-    const supervisorConditionBits_t maskMustNotBeSet = transitionDef->mustNotBeSet;
-    const supervisorConditionBits_t conditionsNotMetMustNotBeSet = conditions & maskMustNotBeSet;
+    const supervisorConditionBits_t maskBlocking = transitionDef->blockers;
+    const supervisorConditionBits_t conditionsNotMetBlocking = conditions & maskBlocking;
 
-    const supervisorConditionBits_t conditionsNotMet = conditionsNotMetMustBeSet | conditionsNotMetMustNotBeSet;
+    const supervisorConditionBits_t conditionsNotMet = conditionsNotMetRequired | conditionsNotMetBlocking;
 
     if (conditionsNotMet == 0) {
       newState = transitionDef->newState;
