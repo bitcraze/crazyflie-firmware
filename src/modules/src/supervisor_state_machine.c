@@ -54,8 +54,6 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
   {
     .newState = supervisorStatePreFlChecksPassed,
 
-    .triggers = SUPERVISOR_CB_NONE,
-    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAlways,
 
     .blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
@@ -229,20 +227,48 @@ bool supervisorStateMachineInit() {
   return true;
 }
 
+static bool areAllSet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements) {
+    return (~conditions & requirements) == 0;
+}
+
+static bool isAnySet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements) {
+    return (conditions & requirements) != 0;
+}
+
+static bool areConditionsMet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements, const SupervisorConditionCombiner_t combiner) {
+  bool result = false;
+
+  switch(combiner) {
+    case supervisorAll:
+      result = areAllSet(conditions, requirements);
+      break;
+    case supervisorAny:
+      result = isAnySet(conditions, requirements);
+      break;
+    case supervisorAlways:
+      result = true;
+      break;
+    case supervisorNever:
+      result = false;
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
 TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBits_t conditions, const SupervisorStateTransitionList_t* transitions) {
   supervisorState_t newState = currentState;
   for (int i = 0; i < transitions->length; i++) {
     const SupervisorStateTransition_t* transitionDef = &transitions->transitionList[i];
 
-    const supervisorConditionBits_t maskRequired = transitionDef->triggers;
-    const supervisorConditionBits_t conditionsNotMetRequired = (~conditions) & maskRequired;
+    const bool triggerConditionsMet = areConditionsMet(conditions, transitionDef->triggers, transitionDef->triggerCombiner);
+    const bool blockerConditionsMet = areConditionsMet(conditions, transitionDef->blockers, transitionDef->blockerCombiner);
 
-    const supervisorConditionBits_t maskBlocking = transitionDef->blockers;
-    const supervisorConditionBits_t conditionsNotMetBlocking = conditions & maskBlocking;
+    const bool conditionsMet = triggerConditionsMet && !blockerConditionsMet;
 
-    const supervisorConditionBits_t conditionsNotMet = conditionsNotMetRequired | conditionsNotMetBlocking;
-
-    if (conditionsNotMet == 0) {
+    if (conditionsMet) {
       newState = transitionDef->newState;
       break;
     }
