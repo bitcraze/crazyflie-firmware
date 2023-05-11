@@ -60,15 +60,25 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
 
 static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .mustBeSet = SUPERVISOR_CB_IS_TUMBLED,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .mustBeSet = SUPERVISOR_CB_EMERGENCY_STOP,
+    .mustNotBeSet = SUPERVISOR_CB_NONE
+  },
+  {
     .newState = supervisorStateReadyToFly,
     .mustBeSet = SUPERVISOR_CB_ARMED,
     .mustNotBeSet = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP
   },
-  {
-    .newState = supervisorStatePreFlChecksNotPassed,
-    .mustBeSet = SUPERVISOR_CB_CHARGER_CONNECTED,
-    .mustNotBeSet = SUPERVISOR_CB_NONE
-  }
 };
 
 static SupervisorStateTransition_t transitionsReadyToFly[] = {
@@ -209,13 +219,13 @@ TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t current
   for (int i = 0; i < transitions->length; i++) {
     const SupervisorStateTransition_t* transitionDef = &transitions->transitionList[i];
 
-    const supervisorConditionBits_t maskPos = transitionDef->mustBeSet;
-    const supervisorConditionBits_t conditionsNotMetPos = (~conditions) & maskPos;
+    const supervisorConditionBits_t maskMustBeSet = transitionDef->mustBeSet;
+    const supervisorConditionBits_t conditionsNotMetMustBeSet = (~conditions) & maskMustBeSet;
 
-    const supervisorConditionBits_t maskNeg = transitionDef->mustNotBeSet;
-    const supervisorConditionBits_t conditionsNotMetNeg = conditions & maskNeg;
+    const supervisorConditionBits_t maskMustNotBeSet = transitionDef->mustNotBeSet;
+    const supervisorConditionBits_t conditionsNotMetMustNotBeSet = conditions & maskMustNotBeSet;
 
-    const supervisorConditionBits_t conditionsNotMet = conditionsNotMetPos | conditionsNotMetNeg;
+    const supervisorConditionBits_t conditionsNotMet = conditionsNotMetMustBeSet | conditionsNotMetMustNotBeSet;
 
     if (conditionsNotMet == 0) {
       newState = transitionDef->newState;
