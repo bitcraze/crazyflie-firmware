@@ -87,9 +87,11 @@ static void rxCallback() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
-  if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
-    dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
-  }
+
+  ASSERT(dataLength != 0 && dataLength <= FRAME_LEN_MAX);
+
+  dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
+
 //  DEBUG_PRINT("rxCallback: data length = %lu \n", dataLength);
 
   UWB_Packet_t *packet = (UWB_Packet_t *) &rxBuffer;
@@ -124,35 +126,30 @@ uint16_t getUWBAddress() {
 
 int uwbSendPacket(UWB_Packet_t *packet) {
   ASSERT(packet);
-  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   TX_MESSAGE_TYPE = packet->header.type;   // TODO ugly code
   return xQueueSend(txQueue, packet, 0);
 }
 
 int uwbSendPacketBlock(UWB_Packet_t *packet) {
   ASSERT(packet);
-  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   TX_MESSAGE_TYPE = packet->header.type;   // TODO ugly code
   return xQueueSend(txQueue, packet, portMAX_DELAY);
 }
 
 int uwbReceivePacket(MESSAGE_TYPE type, UWB_Packet_t *packet) {
   ASSERT(packet);
-  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   ASSERT(type < MESSAGE_TYPE_COUNT);
   return xQueueReceive(queues[type], packet, 0);
 }
 
 int uwbReceivePacketBlock(MESSAGE_TYPE type, UWB_Packet_t *packet) {
   ASSERT(packet);
-  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   ASSERT(type < MESSAGE_TYPE_COUNT);
   return xQueueReceive(queues[type], packet, portMAX_DELAY);
 }
 
 int uwbReceivePacketWait(MESSAGE_TYPE type, UWB_Packet_t *packet, int wait) {
   ASSERT(packet);
-  ASSERT(packet->header.length <= FRAME_LEN_MAX);
   ASSERT(type < MESSAGE_TYPE_COUNT);
   return xQueueReceive(queues[type], packet, M2T(wait));
 }
@@ -229,6 +226,7 @@ static void uwbTxTask(void *parameters) {
   UWB_Packet_t packetCache;
   while (true) {
     if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
+      ASSERT(packetCache.header.length <= FRAME_LEN_MAX);
       dwt_forcetrxoff();
       dwt_writetxdata(packetCache.header.length, (uint8_t *) &packetCache, 0);
       dwt_writetxfctrl(packetCache.header.length + FCS_LEN, 0, 1);
