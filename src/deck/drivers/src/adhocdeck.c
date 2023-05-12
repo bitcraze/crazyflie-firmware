@@ -126,13 +126,11 @@ uint16_t getUWBAddress() {
 
 int uwbSendPacket(UWB_Packet_t *packet) {
   ASSERT(packet);
-  TX_MESSAGE_TYPE = packet->header.type;   // TODO ugly code
   return xQueueSend(txQueue, packet, 0);
 }
 
 int uwbSendPacketBlock(UWB_Packet_t *packet) {
   ASSERT(packet);
-  TX_MESSAGE_TYPE = packet->header.type;   // TODO ugly code
   return xQueueSend(txQueue, packet, portMAX_DELAY);
 }
 
@@ -230,11 +228,13 @@ static void uwbTxTask(void *parameters) {
       dwt_forcetrxoff();
       dwt_writetxdata(packetCache.header.length, (uint8_t *) &packetCache, 0);
       dwt_writetxfctrl(packetCache.header.length + FCS_LEN, 0, 1);
+      TX_MESSAGE_TYPE = packetCache.header.type;
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
       }
+      vTaskDelay(M2T(1)); // TODO: workaround to fix strange packet loss when sending packet (i.e. routing packet) except ranging packet, need further debugging.
     }
   }
 }
