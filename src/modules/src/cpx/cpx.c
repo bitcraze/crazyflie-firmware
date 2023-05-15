@@ -92,17 +92,6 @@ void cpxRegisterAppMessageHandler(cpxAppMessageHandlerCallback_t callback) {
   appMessageHandlerCallback = callback;
 }
 
-// Deepcopy from the received packet cpxRx to the provided packet
-void cpxGetRxPacket(CPXPacket_t* packet) {
-  packet->route.destination=cpxRx.route.destination;
-  packet->route.source=cpxRx.route.source;
-  packet->route.lastPacket=cpxRx.route.lastPacket;
-  packet->route.function=cpxRx.route.function;
-  packet->route.version=cpxRx.route.version;
-  packet->dataLength=cpxRx.dataLength;
-  memcpy(packet->data, cpxRx.data, cpxRx.dataLength);
-}
-
 static void cpx(void* _param) {
   systemWaitStart();
   while (1) {
