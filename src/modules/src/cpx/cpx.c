@@ -47,6 +47,8 @@
 
 static CPXPacket_t cpxRx;
 
+static volatile cpxAppMessageHandlerCallback_t appMessageHandlerCallback;
+
 #define WIFI_SET_SSID_CMD         0x10
 #define WIFI_SET_KEY_CMD          0x11
 
@@ -84,6 +86,10 @@ bool cpxCheckVersion(const uint8_t version) {
   }
 
   return isVersionOk;
+}
+
+void cpxRegisterAppMessageHandler(cpxAppMessageHandlerCallback_t callback) {
+  appMessageHandlerCallback = callback;
 }
 
 // Deepcopy from the received packet cpxRx to the provided packet
@@ -157,7 +163,9 @@ static void cpx(void* _param) {
         }
         break;
       case CPX_F_APP:
-        DEBUG_PRINT("CPX:Receive APP Message from [0x%02X]\n", cpxRx.route.source);
+        if (appMessageHandlerCallback) {
+          appMessageHandlerCallback(&cpxRx);
+        }
         break;
       default:
         DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
