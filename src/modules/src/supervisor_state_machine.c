@@ -235,15 +235,15 @@ static bool isAnySet(const supervisorConditionBits_t conditions, const superviso
     return (conditions & requirements) != 0;
 }
 
-static bool areConditionsMet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements, const SupervisorConditionCombiner_t combiner) {
+static bool areConditionsMet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements, const supervisorConditionBits_t negRequirements, const SupervisorConditionCombiner_t combiner) {
   bool result = false;
 
   switch(combiner) {
     case supervisorAll:
-      result = areAllSet(conditions, requirements);
+      result = areAllSet(conditions, requirements) && !isAnySet(conditions, negRequirements);
       break;
     case supervisorAny:
-      result = isAnySet(conditions, requirements);
+      result = isAnySet(conditions, requirements) || !areAllSet(conditions, negRequirements);
       break;
     case supervisorAlways:
       result = true;
@@ -263,12 +263,11 @@ TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t current
   for (int i = 0; i < transitions->length; i++) {
     const SupervisorStateTransition_t* transitionDef = &transitions->transitionList[i];
 
-    const bool triggerConditionsMet = areConditionsMet(conditions, transitionDef->triggers, transitionDef->triggerCombiner);
-    const bool blockerConditionsMet = areConditionsMet(conditions, transitionDef->blockers, transitionDef->blockerCombiner);
+    const bool isTriggerMatch = areConditionsMet(conditions, transitionDef->triggers, transitionDef->negatedTriggers, transitionDef->triggerCombiner);
+    const bool isBlockerMatch = areConditionsMet(conditions, transitionDef->blockers, transitionDef->negatedBlockers, transitionDef->blockerCombiner);
 
-    const bool conditionsMet = triggerConditionsMet && !blockerConditionsMet;
-
-    if (conditionsMet) {
+    const bool isStateTransitionValid = isTriggerMatch && !isBlockerMatch;
+    if (isStateTransitionValid) {
       newState = transitionDef->newState;
       break;
     }

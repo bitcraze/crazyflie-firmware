@@ -14,8 +14,8 @@ situations or for protection.
 
 The update sequence is separated into a few steps:
 1. Collect data from sensors and the system. We call these [conditions](conditions.md).
-2. Based on the conditions, check if the state machine should transition into a new [state](states.md)
-3. If there is a state transition, possibly execute one ore more actions
+2. Based on the conditions, check if the state machine should [transition](transitions.md) into a new [state](states.md)
+3. If there is a state [transition](transitions.md), possibly execute one ore more actions
 4. Set the new state
 
 ## Modifying behavior

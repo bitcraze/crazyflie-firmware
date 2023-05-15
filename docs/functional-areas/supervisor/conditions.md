@@ -10,3 +10,5 @@ All conditions are collected in a bit field that expresses the full state of the
 that are relevant to the supervisor.
 
 All conditions can be found in the `src/modules/interface/supervisor_state_machine.h` file.
+
+The condition bit field is used to trigger [state transitions](transitions.md).
