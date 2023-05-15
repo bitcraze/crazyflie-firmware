@@ -86,6 +86,17 @@ bool cpxCheckVersion(const uint8_t version) {
   return isVersionOk;
 }
 
+// Deepcopy from the received packet cpxRx to the provided packet
+void cpxGetRxPacket(CPXPacket_t* packet) {
+  packet->route.destination=cpxRx.route.destination;
+  packet->route.source=cpxRx.route.source;
+  packet->route.lastPacket=cpxRx.route.lastPacket;
+  packet->route.function=cpxRx.route.function;
+  packet->route.version=cpxRx.route.version;
+  packet->dataLength=cpxRx.dataLength;
+  memcpy(packet->data, cpxRx.data, cpxRx.dataLength);
+}
+
 static void cpx(void* _param) {
   systemWaitStart();
   while (1) {
@@ -144,6 +155,9 @@ static void cpx(void* _param) {
             cpxLinkSetConnected(true);
           }
         }
+        break;
+      case CPX_F_APP:
+        DEBUG_PRINT("CPX:Receive APP Message from [0x%02X]\n", cpxRx.route.source);
         break;
       default:
         DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
