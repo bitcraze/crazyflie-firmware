@@ -83,6 +83,7 @@ void testSetUint8(void) {
   // Fixture
   uint8_t expected = UINT8_MAX - 1;
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
   paramVarId_t varid = paramGetVarId("myGroup", "myUint8");
 
@@ -97,6 +98,7 @@ void testSetUint16(void) {
   // Fixture
   uint16_t expected = UINT16_MAX - 1;
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
   paramVarId_t varid = paramGetVarId("myGroup", "myUint16");
 
@@ -111,6 +113,7 @@ void testSetUint32(void) {
   // Fixture
   uint32_t expected = UINT32_MAX - 1;
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
   paramVarId_t varid = paramGetVarId("myGroup", "myUint32");
 
@@ -125,6 +128,7 @@ void testSetInt8(void) {
   // Fixture
   uint8_t expected = INT8_MAX - 1;
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
   paramVarId_t varid = paramGetVarId("myGroup", "myInt8");
 
@@ -139,6 +143,7 @@ void testSetInt16(void) {
   // Fixture
   uint16_t expected =UINT16_MAX - 1;
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
   paramVarId_t varid = paramGetVarId("myGroup", "myInt16");
 
@@ -153,6 +158,7 @@ void testSetInt32(void) {
   // Fixture
   uint32_t expected = INT32_MAX - 1;
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
   paramVarId_t varid = paramGetVarId("myGroup", "myInt32");
 
@@ -268,6 +274,7 @@ void testPersistentSetGetFloat(void) {
 
   paramVarId_t varid = paramGetVarId("myGroup", "myPersistentFloat");
 
+  crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
 
   // Test

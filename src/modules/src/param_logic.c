@@ -571,15 +571,19 @@ void paramSetInt(paramVarId_t varid, int valuei)
   paramSize = paramSet(varid.index, (void *)&valuei);
 
 #ifndef CONFIG_PARAM_SILENT_UPDATES
-  static CRTPPacket pk;
-  pk.header=CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
-  pk.data[0] = MISC_VALUE_UPDATED;
-  pk.data[1] = varid.id & 0xffu;
-  pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size = 3 + paramSize;
-  const int sendResult = crtpSendPacket(&pk);
-  if (sendResult == errQUEUE_FULL) {
-    DEBUG_PRINT("WARNING: Param update not sent\n");
+  if (crtpIsConnected())
+  {
+    static CRTPPacket pk;
+    pk.header=CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
+    pk.data[0] = MISC_VALUE_UPDATED;
+    pk.data[1] = varid.id & 0xffu;
+    pk.data[2] = (varid.id >> 8) & 0xffu;
+    pk.size = 3 + paramSize;
+    const int sendResult = crtpSendPacket(&pk);
+    if (sendResult == errQUEUE_FULL)
+    {
+      DEBUG_PRINT("WARNING: Param update not sent\n");
+    }
   }
 #endif
 
@@ -594,17 +598,21 @@ void paramSetFloat(paramVarId_t varid, float valuef)
   *(float *)params[varid.index].address = valuef;
 
 #ifndef CONFIG_PARAM_SILENT_UPDATES
-  static CRTPPacket pk;
-  pk.header  = CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
-  pk.data[0] = MISC_VALUE_UPDATED;
-  pk.data[1] = varid.id & 0xffu;
-  pk.data[2] = (varid.id >> 8) & 0xffu;
-  pk.size = 3;
-  memcpy(&pk.data[2], &valuef, 4);
-  pk.size += 4;
-  const int sendResult = crtpSendPacket(&pk);
-  if (sendResult == errQUEUE_FULL) {
-    DEBUG_PRINT("WARNING: Param update not sent\n");
+  if (crtpIsConnected())
+  {
+    static CRTPPacket pk;
+    pk.header  = CRTP_HEADER(CRTP_PORT_PARAM, MISC_CH);
+    pk.data[0] = MISC_VALUE_UPDATED;
+    pk.data[1] = varid.id & 0xffu;
+    pk.data[2] = (varid.id >> 8) & 0xffu;
+    pk.size = 3;
+    memcpy(&pk.data[2], &valuef, 4);
+    pk.size += 4;
+    const int sendResult = crtpSendPacket(&pk);
+    if (sendResult == errQUEUE_FULL)
+    {
+      DEBUG_PRINT("WARNING: Param update not sent\n");
+    }
   }
 #endif
 

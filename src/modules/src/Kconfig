@@ -143,12 +143,12 @@ config MOTORS_DSHOT_PWM_600KHZ
 
 endchoice
 
-config MOTORS_START_DISARMED
-    bool "Set disarmed state after boot"
+config MOTORS_REQUIRE_ARMING
+    bool "Require arming to be able to start motors and take off"
     default n
     help
-        When enabled, the firmware will boot in disarmed state and one needs to
-        arm the drone explicitly before starting the motors
+        When enabled, system must be armed to be able to take off. Arming can
+        be done in several ways, e.g. though cfclient or external transmitter.
 
 config MOTORS_DEFAULT_IDLE_THRUST
     int "Default idle thrust for motors in armed state"

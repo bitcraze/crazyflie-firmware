@@ -59,7 +59,6 @@
 #define NBR_OF_SENSOR_DIFFS_IN_PACKET   3
 #define NBR_OF_BASESTATIONS   2
 #define NBR_OF_
-#define DEFAULT_EMERGENCY_STOP_TIMEOUT (1 * RATE_MAIN_LOOP)
 
 typedef enum
 {
@@ -129,6 +128,9 @@ static void locSrvCrtpCB(CRTPPacket* pk);
 static void extPositionHandler(CRTPPacket* pk);
 static void genericLocHandle(CRTPPacket* pk);
 static void extPositionPackedHandler(CRTPPacket* pk);
+
+static bool isEmergencyStopRequested = false;
+static uint32_t emergencyStopWatchdogNotificationTick = 0;
 
 void locSrvInit()
 {
@@ -294,10 +296,10 @@ static void genericLocHandle(CRTPPacket* pk)
       lpsShortLppPacketHandler(pk);
       break;
     case EMERGENCY_STOP:
-      stabilizerSetEmergencyStop();
+      isEmergencyStopRequested = true;
       break;
     case EMERGENCY_STOP_WATCHDOG:
-      stabilizerSetEmergencyStopTimeout(DEFAULT_EMERGENCY_STOP_TIMEOUT);
+      emergencyStopWatchdogNotificationTick = xTaskGetTickCount();
       break;
     case EXT_POSE:
       extPoseHandler(pk);
@@ -389,6 +391,18 @@ void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles)
   }
 }
 #endif
+
+bool locSrvIsEmergencyStopRequested() {
+  return isEmergencyStopRequested;
+}
+
+void locSrvResetEmergencyStopRequest() {
+  isEmergencyStopRequested = false;
+}
+
+uint32_t locSrvGetEmergencyStopWatchdogNotificationTick() {
+  return emergencyStopWatchdogNotificationTick;
+}
 
 // This logging group is deprecated (removed after August 2023)
 LOG_GROUP_START(ext_pos)

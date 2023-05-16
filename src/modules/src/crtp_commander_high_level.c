@@ -97,6 +97,7 @@ const static setpoint_t nullSetpoint;
 static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;
+static bool isBlocked; // Are we blocked to do anything by the supervisor
 static struct vec pos; // last known setpoint (position [m])
 static struct vec vel; // last known setpoint (velocity [m/s])
 static float yaw; // last known setpoint yaw (yaw [rad])
@@ -275,6 +276,8 @@ void crtpCommanderHighLevelInit(void)
   vel = vzero();
   yaw = 0;
 
+  isBlocked = false;
+
   isInit = true;
 }
 
@@ -436,6 +439,10 @@ int set_group_mask(const struct data_set_group_mask* data)
 // Deprecated (removed after August 2023)
 int takeoff(const struct data_takeoff* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -448,6 +455,10 @@ int takeoff(const struct data_takeoff* data)
 
 int takeoff2(const struct data_takeoff_2* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -466,6 +477,10 @@ int takeoff2(const struct data_takeoff_2* data)
 
 int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -492,6 +507,10 @@ int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
 // Deprecated (removed after August 2023)
 int land(const struct data_land* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -504,6 +523,10 @@ int land(const struct data_land* data)
 
 int land2(const struct data_land_2* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -522,6 +545,10 @@ int land2(const struct data_land_2* data)
 
 int land_with_velocity(const struct data_land_with_velocity* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -564,6 +591,10 @@ int go_to(const struct data_go_to* data)
     .omega = {0.0f, 0.0f, 0.0f},
   };
 
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     struct vec hover_pos = mkvec(data->x, data->y, data->z);
@@ -585,6 +616,10 @@ int go_to(const struct data_go_to* data)
 
 int start_trajectory(const struct data_start_trajectory* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     if (data->trajectoryId < NUM_TRAJECTORY_DEFINITIONS) {
@@ -615,7 +650,6 @@ int start_trajectory(const struct data_start_trajectory* data)
           result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relative, pos);
           xSemaphoreGive(lockTraj);
         }
-
       }
     }
   }
@@ -736,6 +770,33 @@ int crtpCommanderHighLevelStop()
   };
 
   return handleCommand(COMMAND_STOP, (const uint8_t*)&data);
+}
+
+int crtpCommanderBlock(bool doBlock)
+{
+  if (doBlock)
+  {
+    if (!isBlocked)
+    {
+      const bool isNotDisabled = !plan_is_disabled(&planner);
+      const bool isNotStopped = !plan_is_stopped(&planner);
+      if (isNotDisabled && isNotStopped)
+      {
+        xSemaphoreTake(lockTraj, portMAX_DELAY);
+        plan_stop(&planner);
+        xSemaphoreGive(lockTraj);
+      }
+    }
+  }
+
+  isBlocked = doBlock;
+
+  return 0;
+}
+
+bool crtpCommanderHighLevelIsBlocked()
+{
+  return isBlocked;
 }
 
 int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)

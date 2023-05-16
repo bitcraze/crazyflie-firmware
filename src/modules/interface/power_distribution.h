@@ -60,4 +60,11 @@ int powerDistributionMotorType(uint32_t id);
  */
 uint16_t powerDistributionStopRatio(uint32_t id);
 
+/**
+ * @brief Get the current setting for idle thrust
+ *
+ * @return uint32_t The idle thrust
+ */
+uint32_t powerDistributionGetIdleThrust();
+
 #endif //__POWER_DISTRIBUTION_H__

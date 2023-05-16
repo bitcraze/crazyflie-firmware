@@ -58,8 +58,6 @@
 #include "rateSupervisor.h"
 
 static bool isInit;
-static bool emergencyStop = false;
-static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
 
 static uint32_t inToOutLatency;
 
@@ -204,17 +202,6 @@ bool stabilizerTest(void)
   return pass;
 }
 
-static void checkEmergencyStopTimeout()
-{
-  if (emergencyStopTimeout >= 0) {
-    emergencyStopTimeout -= 1;
-
-    if (emergencyStopTimeout == 0) {
-      emergencyStop = true;
-    }
-  }
-}
-
 static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
 {
   float supplyVoltage = pmGetBatteryVoltage();
@@ -231,6 +218,25 @@ static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
   motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
   motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
   motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
+}
+
+static void updateStateEstimatorAndControllerTypes() {
+  if (stateEstimatorGetType() != estimatorType) {
+    stateEstimatorSwitchTo(estimatorType);
+    estimatorType = stateEstimatorGetType();
+  }
+
+  if (controllerGetType() != controllerType) {
+    controllerInit(controllerType);
+    controllerType = controllerGetType();
+  }
+}
+
+static void controlMotors(const control_t* control) {
+  powerDistribution(control, &motorThrustUncapped);
+  batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+  powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+  setMotorRatios(&motorPwm);
 }
 
 /* The stabilizer loop runs at 1kHz. It is the
@@ -256,9 +262,9 @@ static void stabilizerTask(void* param)
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
+  systemWaitStart();
+  DEBUG_PRINT("Starting stabilizer loop\n");
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
-
-  DEBUG_PRINT("Ready to fly.\n");
 
   while(1) {
     // The sensor should unlock at 1kHz
@@ -270,47 +276,44 @@ static void stabilizerTask(void* param)
     if (healthShallWeRunTest()) {
       healthRunTests(&sensorData);
     } else {
-      // allow to update estimator dynamically
-      if (stateEstimatorGetType() != estimatorType) {
-        stateEstimatorSwitchTo(estimatorType);
-        estimatorType = stateEstimatorGetType();
-      }
-      // allow to update controller dynamically
-      if (controllerGetType() != controllerType) {
-        controllerInit(controllerType);
-        controllerType = controllerGetType();
-      }
+      updateStateEstimatorAndControllerTypes();
 
       stateEstimator(&state, stabilizerStep);
-      compressState();
+
+      const bool areMotorsAllowedToRun = supervisorAreMotorsAllowedToRun();
+
+      // Critical for safety, be careful if you modify this code!
+      crtpCommanderBlock(! areMotorsAllowedToRun);
 
       if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
-
       commanderGetSetpoint(&setpoint, &state);
-      compressSetpoint();
 
+      // Critical for safety, be careful if you modify this code!
+      // Let the supervisor update it's view of the current situation
+      supervisorUpdate(&sensorData, &setpoint, stabilizerStep);
+
+      // Let the collision avoidance module modify the setpoint, if needed
       collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, stabilizerStep);
+
+      // Critical for safety, be careful if you modify this code!
+      // Let the supervisor modify the setpoint to handle exceptional conditions
+      supervisorOverrideSetpoint(&setpoint);
 
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
-      checkEmergencyStopTimeout();
-
-      //
-      // The supervisor module keeps track of Crazyflie state such as if
-      // we are ok to fly, or if the Crazyflie is in flight.
-      //
-      supervisorUpdate(&sensorData);
-
-      if (emergencyStop || (systemIsArmed() == false)) {
-        motorsStop();
+      // Critical for safety, be careful if you modify this code!
+      // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
+      if (areMotorsAllowedToRun) {
+        controlMotors(&control);
       } else {
-        powerDistribution(&control, &motorThrustUncapped);
-        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-        powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
-        setMotorRatios(&motorPwm);
+        motorsStop();
       }
+
+      // Compute compressed log formats
+      compressState();
+      compressSetpoint();
 
 #ifdef CONFIG_DECK_USD
       // Log data to uSD card if configured
@@ -337,25 +340,9 @@ static void stabilizerTask(void* param)
   }
 }
 
-void stabilizerSetEmergencyStop()
-{
-  emergencyStop = true;
-}
-
-void stabilizerResetEmergencyStop()
-{
-  emergencyStop = false;
-}
-
-void stabilizerSetEmergencyStopTimeout(int timeout)
-{
-  emergencyStop = false;
-  emergencyStopTimeout = timeout;
-}
-
 /**
  * Parameters to set the estimator and controller type
- * for the stabilizer module, or to do an emergency stop
+ * for the stabilizer module
  */
 PARAM_GROUP_START(stabilizer)
 /**
@@ -368,10 +355,6 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  * @brief Controller type Auto select(0), PID(1), Mellinger(2), INDI(3), Brescianini(4) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
-/**
- * @brief If set to nonzero will turn off power
- */
-PARAM_ADD_CORE(PARAM_UINT8, stop, &emergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
 
