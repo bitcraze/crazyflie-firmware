@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2021 Bitcraze AB
+ * Copyright (C) 2021-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,3 +82,7 @@ bool supervisorIsFlying(void);
  * @return false
  */
 bool supervisorIsTumbled(void);
+
+bool supervisorRequestArming(const bool doArm);
+bool supervisorIsArmed();
+bool supervisorCanArm();

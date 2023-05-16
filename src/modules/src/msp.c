@@ -39,6 +39,7 @@
 #include "string.h"
 #include "platform.h"
 #include "param.h"
+#include "supervisor.h"
 
 // MSP command IDs
 typedef enum {
@@ -416,7 +417,12 @@ static void mspHandleRequestMspStatus(MspObject* pMspObject)
   pData->cycleTime = 1000; // TODO: API to query this?
   pData->i2cErrors = 0; // unused
   pData->sensors = 0x0001; // no sensors supported yet, but need to report at least one to get the level bars to show
-  pData->flags = 0x00000001; // always report armed (bit zero)
+
+  pData->flags = 0x0;
+  if (supervisorIsArmed()) {
+    pData->flags |= 0x00000001; // report armed (bit zero)
+  }
+
   pData->currentSet = 0x00;
 
   mspMakeTxPacket(pMspObject, MSP_STATUS, (uint8_t*) pData, sizeof(MspStatus));

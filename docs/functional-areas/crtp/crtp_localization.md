@@ -9,8 +9,8 @@ channels:
 
  | Port  | Channel  | Name|
  | ------| ---------| ----------------------|
- | 6     | 0        | External Position|
- | 6     | 1        | Generic localization|
+ | 6     | 0        | External Position     |
+ | 6     | 1        | Generic localization  |
 
 External Position
 -----------------
@@ -39,16 +39,24 @@ subsystem. It has been created to serve the Loco Positioning System
 packets but can be used for more general things like GPS NMEA or binary
 streams. The format of the packet is:
 
-|  Byte  | Value    | Note|
-|  ------| ---------| ---------------------------------------|
-|  0     | ID       | ID of the packet|
- | 1..   | Payload  | Packet payload. Format defined per ID|
+|  Byte  | Value    | Note                                  |
+|  ------| ---------| --------------------------------------|
+|  0     | ID       | ID of the packet                      |
+|  1..   | Payload  | Packet payload. Format defined per ID |
 
-|  ID  | Packet |
-|  ----| ------------------------------|
-|  2  |  LPP Short packet tunnel|
-|  3  |  Enable emergency stop|
-|  4  |  Reset emergency stop timeout|
+|  ID  | Packet                                     |
+|  ----| -------------------------------------------|
+|   0  | Range stream report                        |
+|   1  | Range stream report, 16 bit floating point |
+|   2  | LPP Short packet tunnel                    |
+|   3  | Enable emergency stop                      |
+|   4  | Reset emergency stop timeout               |
+|   6  | COMM GNSS NMEA                             |
+|   7  | COMM GNSS proprietary                      |
+|   8  | External pose information                  |
+|   9  | External pose information, packed          |
+|  10  | Lighthouse angle stream                    |
+|  11  | Lighthouse data persist                    |
 
 ### LPP Short packet tunnel
 

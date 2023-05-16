@@ -213,6 +213,23 @@ void testTransitionMultiRequiredConditionsOneMet(void) {
   assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
 }
 
+void testTransitionMultiRequiredConditionsNoneMet(void) {
+  // Fixture
+  supervisorConditionBits_t conditions = 0;
+
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
+  SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
+
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
+  SupervisorConditionCombiner_t blockerCombiner = supervisorNever;
+
+  // Test
+  // Assert
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+}
+
 void testTransitionMultiNegatedRequiredConditionOneNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
