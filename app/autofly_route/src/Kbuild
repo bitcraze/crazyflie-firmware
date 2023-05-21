@@ -1,0 +1,2 @@
+obj-y += communicate.o
+obj-y += main_route.o
