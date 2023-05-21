@@ -18,6 +18,7 @@
 
 static bool octotree_Flying = false;
 static bool octotree_Print = false;
+bool flag_Terminate = false;
 // static bool data_lock = false;
 uint16_t seqnumber = 0;  //SGL
 
@@ -58,6 +59,15 @@ void appMain()
         vTaskDelay(M2T(LOOP_DELAY));
         if(MODEL >= 1){
             // MUL
+            if(flag_Terminate){
+                // Send termination message at 2Hz
+                if(xTaskGetTickCount() - last_time > M2T(TERMINATE_DIF)){
+                    sendTerminate();
+                    last_time = xTaskGetTickCount();
+                }
+                continue;
+            }
+
             if(xTaskGetTickCount() - last_time > M2T(MAPPING_DIF)){
                 item_point = uavRange.current_point;
                 GetRange(&uavRange);
@@ -88,6 +98,14 @@ void appMain()
                 sendExploreRequest(&exploreReqPacket);
                 last_time = xTaskGetTickCount();
             }
+
+            if(exploreReqPacket.seq >=  EXPLORE_MAX || mappingReqPacket.seq >= MAPPING_MAX){
+                sendTerminate();
+                Land();
+                flag_Terminate = true;
+                CommunicateTerminate();
+            }
+
         }
         else{
             // SGL

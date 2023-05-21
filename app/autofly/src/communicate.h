@@ -13,6 +13,8 @@ typedef enum{
     EXPLORE_REQ = 0x20, // explore
     PATH_REQ = 0x30,    // path
     CLUSTER_REQ = 0x40,  // cluster
+    
+    TERMINATE = 0xFF,   // terminate
 
     // response
     EXPLORE_RESP = 0x2A,
@@ -65,8 +67,11 @@ typedef struct
 } Autofly_packet_t;   // 60
 
 void CommunicateInit();
+void CommunicateTerminate();
 bool generateMappingReqPacket(mapping_req_packet_t* mappingReqPacket);
 bool generateExploreReqPacket(explore_req_packet_t* exploreReqPacket);
 bool sendMappingRequest(mapping_req_packet_t* mappingReqPacket);
 bool sendExploreRequest(explore_req_packet_t* exploreReqPacket);
+
+bool sendTerminate();
 #endif

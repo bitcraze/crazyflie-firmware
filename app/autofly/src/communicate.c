@@ -49,6 +49,9 @@ void CommunicateInit(){
     ListeningInit();
 }
 
+void CommunicateTerminate(){
+    p2pRegisterCB(NULL);
+}
 
 bool generateMappingReqPacket(mapping_req_packet_t* mappingReqPacket){
     coordinateF_t item_end;
@@ -135,6 +138,30 @@ bool sendExploreRequest(explore_req_packet_t* exploreReqPacket)
     }
     else
         return false;
+}
+
+bool sendTerminate(){
+    static P2PPacket packet;
+    packet.port = 0x00;
+
+    uint8_t sourceId = getSourceId();
+    uint8_t destinationId = UAV_COMPUTING_ID;
+    // Assemble the packet
+    Autofly_packet_t Autofly_packet;
+    Autofly_packet.sourceId = sourceId;
+    Autofly_packet.destinationId = destinationId;
+    Autofly_packet.packetType = TERMINATE;
+    memcpy(&packet.data, &Autofly_packet, sizeof(Autofly_packet));
+
+    packet.size = 3;
+    // Send the P2P packet
+    if(radiolinkSendP2PPacketBroadcast(&packet)){
+        return true;
+    }
+    else{
+        vTaskDelay(M2T(WAIT_DELAY));
+        return sendTerminate();
+    }
 }
 
 void P2PCallbackHandler(P2PPacket *p)
