@@ -14,6 +14,15 @@
 #define MAXRUN 300
 #define RELIABILITY_DISTANCE 24
 
+#define WAIT_DELAY 300
+#define LOOP_DELAY 50
+#define PROBABILITY_MEM(octomap) (double)octomap->octoNodeSet->length / NODE_SET_SIZE
+#define PRESENT_JUMP 2
+#define SPEED 0.25
+
+#define MAPPING_DIF 100
+#define EXPLORE_DIF 300
+
 //octomap config
 #define TREE_CENTER_X 128
 #define TREE_CENTER_Y 128

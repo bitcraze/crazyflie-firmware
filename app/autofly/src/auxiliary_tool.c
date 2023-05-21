@@ -8,6 +8,39 @@
 #include "octoMap.h"
 #include "octoTree.h"
 
+void inituavRange(uavRange_t* uavRange){
+    uavRange->measurement.data[0] = 0;
+    uavRange->measurement.data[1] = 0;
+    uavRange->measurement.data[2] = 0;
+    uavRange->measurement.data[3] = 0;
+    uavRange->measurement.data[4] = 0;
+    uavRange->measurement.data[5] = 0;
+    uavRange->measurement.roll = 0;
+    uavRange->measurement.pitch = 0;
+    uavRange->measurement.yaw = 0;
+    uavRange->current_point.x = 0;
+    uavRange->current_point.y = 0;
+    uavRange->current_point.z = 0;
+}
+
+void inituavControl(uavControl_t* uavControl){
+    // initCoordinateQueue(&uavControl->paths);
+    uavControl->next_point.x = 0;
+    uavControl->next_point.y = 0;
+    uavControl->next_point.z = 0;
+    inituavRange(&uavControl->uavRange);
+    for(int i = 0; i < 6; ++i){
+        uavControl->direction_weight[i] = 1;
+    }
+    uavControl->lastdir = 0;
+    initQueue(&uavControl->queue);
+    for(int i = 0; i < WINDOW_SIZE; ++i){
+        uavControl->loops[i] = 0;
+    }
+    uavControl->flag_jump = false;
+    uavControl->Jump_Dir = rangeFront;
+}
+
 void get_measurement(example_measure_t *measurement)
 {
     // distance unit: cm
@@ -22,9 +55,50 @@ void get_measurement(example_measure_t *measurement)
     measurement->yaw = logGetFloat(logGetVarId("stabilizer", "yaw"));
 }
 
+
+rangeDirection_t GetRandomDir(example_measure_t *measurement)
+{
+    // Randomly sample twice to choose the larger
+    rangeDirection_t dir = (rangeDirection_t)rand() % 6;
+    rangeDirection_t maxdir = (rangeDirection_t)rand() % 6;
+    int i = 0;
+    // Guaranteed to get a feasible direction
+    while (measurement->data[maxdir] < STRIDE + AVOID_DISTANCE && i < 20)
+    {
+        maxdir = (rangeDirection_t)rand() % 6;
+        ++i;
+    }
+    // Try to get a better and feasible direction
+    dir = (rangeDirection_t)rand() % 6;
+    ++i;
+    if (i == 20)
+        return -1;
+    if (measurement->data[dir] > measurement->data[maxdir])
+        maxdir = dir;
+    return maxdir;
+}
+
 double caldistance(coordinate_t *A, coordinate_t *B)
 {
     return sqrt(pow(A->x - B->x, 2) + pow(A->y - B->y, 2) + pow(A->z - B->z, 2));
+}
+
+bool ReliabilityTest(coordinateF_t* last, coordinateF_t* cur){
+   static bool first = true;
+    if( (abs(last->x-cur->x)+abs(last->y-cur->y)+abs(last->z-cur->z) < RELIABILITY_DISTANCE || first)
+        && (abs(cur->x) <= WIDTH_X)
+        && (abs(cur->y) <= WIDTH_Y)
+        && (abs(cur->z) <= WIDTH_Z)){
+            first = false;
+            return true;
+    }
+    return false;
+}
+
+bool IsSameCell(coordinateF_t* last, coordinateF_t* cur){
+    return ((int)last->x / TREE_RESOLUTION == (int)cur->x / TREE_RESOLUTION) 
+            && ((int)last->y / TREE_RESOLUTION == (int)cur->y / TREE_RESOLUTION) 
+            && ((int)last->z / TREE_RESOLUTION == (int)cur->z / TREE_RESOLUTION);
 }
 
 bool cal_Point(example_measure_t *measurement, coordinateF_t *start_point, rangeDirection_t dir, coordinateF_t *res)
@@ -405,3 +479,4 @@ Cost_C_t Cost_Sum(octoTree_t *octoTree, octoMap_t *octoMap, coordinate_t *start,
     cost_C.income_info = income_info;
     return cost_C;
 }
+

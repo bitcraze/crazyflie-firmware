@@ -7,4 +7,5 @@ obj-y += rrtConnect.o
 obj-y += communicate.o
 obj-y += circularQueue.o
 obj-y += coordinateQueue.o
+obj-y += control_tool.o
 obj-y += Autofly_Main.o

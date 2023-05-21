@@ -85,3 +85,4 @@ typedef struct
 }Cost_C_t;
 
 void recursiveExportOctoMap(octoMap_t* octoMap, octoNode_t* node, coordinate_t origin, uint16_t width);
+void printOctomap(octoMap_t *octoMap);

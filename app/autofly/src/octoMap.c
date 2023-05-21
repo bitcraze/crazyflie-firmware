@@ -159,6 +159,24 @@ void recursiveExportOctoMap(octoMap_t* octoMap, octoNode_t* node, coordinate_t o
     }
 }
 
+void printOctomap(octoMap_t* octoMap){
+    int Free = 0;
+    int Occupied = 0;
+    for(int i=0;i<NODE_SET_SIZE;++i){
+        for(int j=0;j<8;j++){
+            if(octoMap->octoNodeSet->setData[i].data[j].isLeaf){
+                if(octoMap->octoNodeSet->setData[i].data[j].logOdds == LOG_ODDS_OCCUPIED){
+                    ++Occupied;
+                }
+                else if(octoMap->octoNodeSet->setData[i].data[j].logOdds == LOG_ODDS_FREE){
+                    ++Free;
+                }
+            }
+        }
+    }
+    DEBUG_PRINT("Free:%d,Occupied:%d\n",Free,Occupied);
+}
+
 // void exportOctoMap(octoMap_t* octoMap) {
 //     FILE *fp = fopen("../assets/octoMap.csv", "w");
 //     if (fp == NULL) {
