@@ -86,7 +86,7 @@ struct trajectoryDescription
 #define ALL_GROUPS 0
 
 // Global variables
-uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
+uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE] __attribute__((aligned(4)));
 static struct trajectoryDescription trajectory_descriptions[NUM_TRAJECTORY_DEFINITIONS];
 
 // Static structs are zero-initialized, so nullSetpoint corresponds to
