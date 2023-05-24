@@ -27,7 +27,8 @@
 #include <stdint.h>
 
 typedef enum {
-    supervisorStatePreFlChecksNotPassed = 0,
+    supervisorStateNotInitialized = 0,
+    supervisorStatePreFlChecksNotPassed,
     supervisorStatePreFlChecksPassed,
     supervisorStateReadyToFly,
     supervisorStateFlying,

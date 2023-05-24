@@ -50,6 +50,14 @@ static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOf
 
 
 // State transition definitions
+static SupervisorStateTransition_t transitionsNotInitialized[] = {
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+    .triggerCombiner = supervisorAlways,
+    .blockerCombiner = supervisorNever,
+  }
+};
+
 static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
   {
     .newState = supervisorStatePreFlChecksPassed,
@@ -198,6 +206,7 @@ static SupervisorStateTransition_t transitionsLocked[] = {
 };
 
 SupervisorStateTransitionList_t transitionLists[] = {
+  {SUPERVISOR_TRANSITION_ENTRY(transitionsNotInitialized)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksNotPassed)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksPassed)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsReadyToFly)},

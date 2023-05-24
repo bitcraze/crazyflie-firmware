@@ -161,7 +161,7 @@ static void transitionActions(const supervisorState_t currentState, const superv
     DEBUG_PRINT("Locked, reboot required\n");
   }
 
-  if ((currentState == supervisorStateReadyToFly || currentState == supervisorStateFlying) &&
+  if ((currentState == supervisorStateNotInitialized || currentState == supervisorStateReadyToFly || currentState == supervisorStateFlying) &&
       newState != supervisorStateReadyToFly && newState != supervisorStateFlying) {
     DEBUG_PRINT("Can not fly\n");
   }
