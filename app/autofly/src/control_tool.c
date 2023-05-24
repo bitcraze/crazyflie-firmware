@@ -204,6 +204,6 @@ bool CalNextPoint(uavControl_t* uavControl,octoMap_t* octoMap){
 
 void Land(){
     vTaskDelay(M2T(WAIT_DELAY));
-    crtpCommanderHighLevelLand(0, 0.5);
+    crtpCommanderHighLevelLand(0, 2);
     vTaskDelay(M2T(500 + WAIT_DELAY));
 }

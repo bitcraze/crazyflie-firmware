@@ -3,7 +3,7 @@
 #define OFFSET_Y 50
 #define OFFSET_Z 0
 #define TOP 65 //obstacle top
-#define BOTTOM 30 //obstacle bottom
+#define BOTTOM 25 //obstacle bottom
 #define AVOID_DISTANCE 15 // obstacle avoidance distance
 #define DIRECTION_AWARD 1.2 // factor of direction reward 
 #define DISCIPLINE 0 // Penalty number without information entropy
@@ -23,7 +23,7 @@
 #define MAPPING_DIF 100
 #define EXPLORE_DIF 300
 #define TERMINATE_DIF 500
-#define MAPPING_MAX 2000
+#define MAPPING_MAX 100
 #define EXPLORE_MAX MAXRUN*2
 
 //octomap config

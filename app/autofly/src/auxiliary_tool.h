@@ -9,6 +9,7 @@ typedef struct
     float y;
     float z;
 } coordinateF_t;
+
 typedef struct
 {
     float data[6];

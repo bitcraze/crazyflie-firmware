@@ -22,10 +22,8 @@ void processExploreResp(explore_resp_packet_t* exploreRespPacket);
 void processPathResp();
 void processClusterResp();
 
-uint16_t mappingRequestSeq;
-uint16_t exploreRequestSeq;
-static uavRange_t uavRange;
 static bool flag_exploreResp;
+static uint8_t destinationId = AIDECK_ID;
 
 uint8_t getSourceId()
 {
@@ -87,29 +85,36 @@ bool generateExploreReqPacket(explore_req_packet_t* exploreReqPacket){
 bool sendMappingRequest(mapping_req_packet_t* mappingReqPacket)
 {
     // Initialize the p2p packet
-    if(mappingReqPacket->mappingRequestPayload->len == 0)
-        return false;
+    // if(mappingReqPacket->mappingRequestPayload->len == 0){
+    //     DEBUG_PRINT("mappingRequestPayload is NULL!\n");
+    //     return false;
+    // }
+
+    DEBUG_PRINT("[mapping]currentP: (%.2f,%.2f,%.2f)\n",(double)uavRange.current_point.x,(double)uavRange.current_point.y,(double)uavRange.current_point.z);
 
     ++mappingRequestSeq;
     static P2PPacket packet;
     packet.port = 0x00;
     uint8_t sourceId = getSourceId();
-    uint8_t destinationId = UAV_COMPUTING_ID;
 
     Autofly_packet_t Autofly_packet;
     Autofly_packet.sourceId = sourceId;
     Autofly_packet.destinationId = destinationId;
     Autofly_packet.packetType = MAPPING_REQ;
-    memcpy(&Autofly_packet.data, mappingReqPacket, sizeof(mapping_req_packet_t));
-    memcpy(&packet.data, &Autofly_packet, sizeof(Autofly_packet));
+    Autofly_packet.length = 4+sizeof(mapping_req_packet_t);
+    memcpy(Autofly_packet.data, &mappingReqPacket, sizeof(mapping_req_packet_t));
+    memcpy(packet.data, &Autofly_packet, Autofly_packet.length);
 
-    packet.size = 3+sizeof(mapping_req_packet_t);
+    packet.size = Autofly_packet.length;
     // Send the P2P packet
     if(radiolinkSendP2PPacketBroadcast(&packet)){
+        DEBUG_PRINT("Send mapping request successfully!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
         return true;
     }
-    else
+    else{
+        DEBUG_PRINT("Send mapping request failed!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
         return false;
+    }
 }
 
 bool sendExploreRequest(explore_req_packet_t* exploreReqPacket)
@@ -121,23 +126,26 @@ bool sendExploreRequest(explore_req_packet_t* exploreReqPacket)
     if(flag_exploreResp)
         ++exploreRequestSeq;
     uint8_t sourceId = getSourceId();
-    uint8_t destinationId = UAV_COMPUTING_ID;
     // Assemble the packet
     Autofly_packet_t Autofly_packet;
     Autofly_packet.sourceId = sourceId;
     Autofly_packet.destinationId = destinationId;
     Autofly_packet.packetType = EXPLORE_REQ;
-    memcpy(&Autofly_packet.data, exploreReqPacket, sizeof(explore_req_packet_t));
-    memcpy(&packet.data, &Autofly_packet, sizeof(Autofly_packet));
+    Autofly_packet.length = 4+sizeof(explore_req_packet_t);
+    memcpy(Autofly_packet.data, &exploreReqPacket, sizeof(explore_req_packet_t));
+    memcpy(packet.data, &Autofly_packet, Autofly_packet.length);
 
-    packet.size = 3 + sizeof(explore_req_packet_t);
+    packet.size = Autofly_packet.length;
     // Send the P2P packet
     if(radiolinkSendP2PPacketBroadcast(&packet)){
         flag_exploreResp = false;
+        DEBUG_PRINT("Send explore request successfully!,destinationId:%d,seq=%d\n",destinationId,exploreRequestSeq);
         return true;
     }
-    else
+    else{
+        DEBUG_PRINT("Send explore request failed!,destinationId:%d,seq=%d\n",destinationId,exploreRequestSeq);
         return false;
+    }
 }
 
 bool sendTerminate(){
@@ -145,21 +153,23 @@ bool sendTerminate(){
     packet.port = 0x00;
 
     uint8_t sourceId = getSourceId();
-    uint8_t destinationId = UAV_COMPUTING_ID;
     // Assemble the packet
     Autofly_packet_t Autofly_packet;
     Autofly_packet.sourceId = sourceId;
     Autofly_packet.destinationId = destinationId;
     Autofly_packet.packetType = TERMINATE;
-    memcpy(&packet.data, &Autofly_packet, sizeof(Autofly_packet));
+    Autofly_packet.length = 4;
+    memcpy(packet.data, &Autofly_packet, Autofly_packet.length);
 
-    packet.size = 3;
+    packet.size = Autofly_packet.length;
     // Send the P2P packet
     if(radiolinkSendP2PPacketBroadcast(&packet)){
+        DEBUG_PRINT("Send terminate successfully!,destinationId:%d\n",destinationId);
         return true;
     }
     else{
         vTaskDelay(M2T(WAIT_DELAY));
+        DEBUG_PRINT("Send terminate failed!,destinationId:%d\n",destinationId);
         return sendTerminate();
     }
 }

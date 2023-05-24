@@ -2,10 +2,9 @@
 #define __COMMUNICATE_H__
 #define DEBUG_MODULE "P2P"
 #include "auxiliary_tool.h"
-#define MOVE_DELAY 600
 #define MAPPING_REQUEST_PAYLOAD_LENGTH 1
-#define AUTOFLY_PACKET_MUT 60-3
-#define UAV_COMPUTING_ID 0x00
+#define AUTOFLY_PACKET_MUT 60-4
+#define AIDECK_ID 0x7E
 
 typedef enum{
     // request
@@ -63,8 +62,13 @@ typedef struct
     uint8_t sourceId;
     uint8_t destinationId;
     uint8_t packetType;
+    uint8_t length;
     uint8_t data[AUTOFLY_PACKET_MUT];
 } Autofly_packet_t;   // 60
+
+static uavRange_t uavRange;
+static uint16_t mappingRequestSeq;
+static uint16_t exploreRequestSeq;
 
 void CommunicateInit();
 void CommunicateTerminate();
