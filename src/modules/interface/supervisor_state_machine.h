@@ -43,7 +43,6 @@ typedef enum {
 // Conditions supported by the supervisor
 enum {
   supervisorConditionArmed = 0,
-  supervisorConditionChargerConnected,
   supervisorConditionIsFlying,
   supervisorConditionIsTumbled,
   supervisorConditionCommanderWdtWarning,
@@ -56,7 +55,6 @@ typedef uint32_t supervisorConditionBits_t;
 // Condition bit definitions
 #define SUPERVISOR_CB_NONE (0)
 #define SUPERVISOR_CB_ARMED (1 << supervisorConditionArmed)
-#define SUPERVISOR_CB_CHARGER_CONNECTED (1 << supervisorConditionChargerConnected)
 #define SUPERVISOR_CB_IS_FLYING (1 << supervisorConditionIsFlying)
 #define SUPERVISOR_CB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
 #define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)

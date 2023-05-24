@@ -64,7 +64,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
 
     .triggerCombiner = supervisorAlways,
 
-    .blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   }
@@ -74,7 +74,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -87,7 +87,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAll,
 
-    .blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   },
@@ -97,7 +97,7 @@ static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
     .triggerCombiner = supervisorAny,
 

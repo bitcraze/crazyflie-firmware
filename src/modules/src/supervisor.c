@@ -28,11 +28,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "log.h"
 #include "param.h"
 #include "motors.h"
 #include "power_distribution.h"
-#include "pm.h"
 #include "supervisor.h"
 #include "supervisor_state_machine.h"
 #include "platform_defaults.h"
@@ -172,10 +174,6 @@ static supervisorConditionBits_t updateAndpopulateConditions(SupervisorMem_t* th
 
   if (systemIsArmed()) {
     conditions |= SUPERVISOR_CB_ARMED;
-  }
-
-  if (pmIsChargerConnected()) {
-    conditions |= SUPERVISOR_CB_CHARGER_CONNECTED;
   }
 
   const bool isFlying = isFlyingCheck(this, currentTick);
