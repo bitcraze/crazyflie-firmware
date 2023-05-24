@@ -69,12 +69,17 @@ typedef struct {
   uint32_t latestThrustTick;
 
   supervisorState_t state;
+
+  // Copy of latest conditions, for logging
+  supervisorConditionBits_t latestConditions;
+  uint8_t doinfodump;
 } SupervisorMem_t;
 
 static SupervisorMem_t supervisorMem;
 
 const static setpoint_t nullSetpoint;
 
+void infoDump(const SupervisorMem_t* this);
 
 bool supervisorCanFly() {
   return supervisorMem.canFly;
@@ -169,7 +174,7 @@ static void transitionActions(const supervisorState_t currentState, const superv
   }
 }
 
-static supervisorConditionBits_t updateAndpopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
+static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
   supervisorConditionBits_t conditions = 0;
 
   if (systemIsArmed()) {
@@ -223,14 +228,19 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   SupervisorMem_t* this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
-  const supervisorConditionBits_t conditions = updateAndpopulateConditions(this, sensors, setpoint, currentTick);
+  const supervisorConditionBits_t conditions = updateAndPopulateConditions(this, sensors, setpoint, currentTick);
   const supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
   if (this->state != newState) {
     transitionActions(this->state, newState);
     this->state = newState;
   }
 
+  this->latestConditions = conditions;
   updateLogData(this, conditions);
+  if (this->doinfodump) {
+    this->doinfodump = 0;
+    infoDump(this);
+  }
 }
 
 void supervisorOverrideSetpoint(setpoint_t* setpoint) {
@@ -268,6 +278,23 @@ bool supervisorAreMotorsAllowedToRun() {
          (this->state == supervisorStateWarningLevelOut);
 }
 
+void infoDump(const SupervisorMem_t* this) {
+  DEBUG_PRINT("Supervisor info ---\n");
+  DEBUG_PRINT("State: %s\n", supervisorGetStateName(this->state));
+  DEBUG_PRINT("Conditions: (0x%lx)\n", this->latestConditions);
+  for (supervisorConditions_t condition = 0; condition < supervisorCondition_NrOfConditions; condition++) {
+    const supervisorConditionBits_t bit = 1 << condition;
+    int bitValue = 0;
+    if (this->latestConditions & bit) {
+      bitValue = 1;
+    }
+
+    DEBUG_PRINT("  %s (0x%lx): %u\n", supervisorGetConditionName(condition), bit, bitValue);
+  }
+}
+
+
+
 /**
  *  System loggable variables to check different system states.
  */
@@ -293,3 +320,14 @@ PARAM_GROUP_START(stabilizer)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.paramEmergencyStop)
 PARAM_GROUP_STOP(stabilizer)
+
+/**
+ * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
+ * can enable/disable functionality as well as take action to protect the system or humans close by.
+ */
+PARAM_GROUP_START(superv)
+/**
+ * @brief Set to nonzero to dump information about the current supervisor state to the console log
+ */
+PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
+PARAM_GROUP_STOP(superv)

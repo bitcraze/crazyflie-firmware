@@ -34,8 +34,10 @@
 #define DEBUG_MODULE "SUPST"
 #include "debug.h"
 #include "cfassert.h"
+#endif
 
 static const char* const stateNames[] = {
+  "Not initialized",
   "Pre-flight checks not passed",
   "Pre-flight checks passed",
   "Ready to fly",
@@ -47,8 +49,16 @@ static const char* const stateNames[] = {
   "Locked",
 };
 static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOfStates);
-#endif
 
+static const char* const conditionNames[] = {
+  "armed",
+  "isFlying",
+  "isTumbled",
+  "commanderWdtWarning",
+  "commanderWdtTimeout",
+  "emergencyStop",
+};
+static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
 #if SUPERVISOR_TUMBLE_CHECK_ENABLE
   #define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_IS_TUMBLED)
@@ -301,4 +311,12 @@ supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, co
   #endif
 
   return newState;
+}
+
+const char* supervisorGetStateName(const supervisorState_t state) {
+  return stateNames[state];
+}
+
+const char* supervisorGetConditionName(const supervisorState_t condition) {
+  return conditionNames[condition];
 }

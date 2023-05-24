@@ -41,14 +41,15 @@ typedef enum {
 } supervisorState_t;
 
 // Conditions supported by the supervisor
-enum {
+typedef enum {
   supervisorConditionArmed = 0,
   supervisorConditionIsFlying,
   supervisorConditionIsTumbled,
   supervisorConditionCommanderWdtWarning,
   supervisorConditionCommanderWdtTimeout,
   supervisorConditionEmergencyStop,
-};
+  supervisorCondition_NrOfConditions,
+} supervisorConditions_t;
 
 typedef uint32_t supervisorConditionBits_t;
 
@@ -92,3 +93,6 @@ typedef struct {
 #define SUPERVISOR_TRANSITION_ENTRY(TRANSITION_DEF) .transitionList=TRANSITION_DEF, .length=(sizeof(TRANSITION_DEF) / sizeof(SupervisorStateTransition_t))
 
 supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBits_t conditions);
+
+const char* supervisorGetStateName(const supervisorState_t currentState);
+const char* supervisorGetConditionName(const supervisorState_t condition);
