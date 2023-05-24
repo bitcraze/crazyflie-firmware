@@ -94,8 +94,12 @@ typedef struct {
   uint8_t data[CPX_MAX_PAYLOAD_SIZE - CPX_ROUTING_PACKED_SIZE];
 } CPXRoutablePacket_t;
 
+typedef void (*cpxAppMessageHandlerCallback_t)(const CPXPacket_t* cpxRx);
+
 void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route);
 
 void cpxInit();
+
+void cpxRegisterAppMessageHandler(cpxAppMessageHandlerCallback_t callback);
 
 bool cpxCheckVersion(uint8_t version);

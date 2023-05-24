@@ -47,6 +47,8 @@
 
 static CPXPacket_t cpxRx;
 
+static volatile cpxAppMessageHandlerCallback_t appMessageHandlerCallback;
+
 #define WIFI_SET_SSID_CMD         0x10
 #define WIFI_SET_KEY_CMD          0x11
 
@@ -84,6 +86,10 @@ bool cpxCheckVersion(const uint8_t version) {
   }
 
   return isVersionOk;
+}
+
+void cpxRegisterAppMessageHandler(cpxAppMessageHandlerCallback_t callback) {
+  appMessageHandlerCallback = callback;
 }
 
 static void cpx(void* _param) {
@@ -143,6 +149,11 @@ static void cpx(void* _param) {
           } else {
             cpxLinkSetConnected(true);
           }
+        }
+        break;
+      case CPX_F_APP:
+        if (appMessageHandlerCallback) {
+          appMessageHandlerCallback(&cpxRx);
         }
         break;
       default:

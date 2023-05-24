@@ -8,6 +8,12 @@ page_id: supervisor_states
      Boot|
          V
 +-------------------+
++  Not initialized  +
++                   +
++--------+----------+
+         |
+         V
++-------------------+
 + Pre-flight checks +<------------+
 +    not passed     +<--+         |
 +-------+-----------+   |         |

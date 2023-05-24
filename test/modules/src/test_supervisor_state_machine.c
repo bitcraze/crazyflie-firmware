@@ -79,9 +79,9 @@ void testTransitionWithNoConditionsBlockAlways(void) {
 
 void testTransitionOneRequiredConditionMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
@@ -98,7 +98,7 @@ void testTransitionOneRequiredConditionNotMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
@@ -113,10 +113,10 @@ void testTransitionOneRequiredConditionNotMet(void) {
 
 void testTransitionOneNegatedRequiredConditionNotMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -133,7 +133,7 @@ void testTransitionOneNegatedRequiredConditionMet(void) {
   supervisorConditionBits_t conditions = 0;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -147,9 +147,9 @@ void testTransitionOneNegatedRequiredConditionMet(void) {
 
 void testTransitionMultiRequiredConditionsMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
@@ -164,9 +164,9 @@ void testTransitionMultiRequiredConditionsMet(void) {
 
 void testTransitionMultiRequiredConditionsMetWithOtherBitsSet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_EMERGENCY_STOP;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
@@ -181,9 +181,9 @@ void testTransitionMultiRequiredConditionsMetWithOtherBitsSet(void) {
 
 void testTransitionMultiRequiredConditionsOneMissing(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
@@ -198,9 +198,9 @@ void testTransitionMultiRequiredConditionsOneMissing(void) {
 
 void testTransitionMultiRequiredConditionsOneMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
@@ -235,7 +235,7 @@ void testTransitionMultiNegatedRequiredConditionOneNotMet(void) {
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -252,7 +252,7 @@ void testTransitionMultiNegatedRequiredConditionsMet(void) {
   supervisorConditionBits_t conditions = 0;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -269,7 +269,7 @@ void testTransitionMultiMixedRequiredConditionsAllMet(void) {
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -286,7 +286,7 @@ void testTransitionMultiMixedRequiredConditionsOnePositiveNotMet(void) {
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -300,10 +300,10 @@ void testTransitionMultiMixedRequiredConditionsOnePositiveNotMet(void) {
 
 void testTransitionMultiMixedRequiredConditionsOneNegativeNotMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -317,10 +317,10 @@ void testTransitionMultiMixedRequiredConditionsOneNegativeNotMet(void) {
 
 void testTransitionMultiMixedOnePositiveRequirementMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -334,10 +334,10 @@ void testTransitionMultiMixedOnePositiveRequirementMet(void) {
 
 void testTransitionMultiMixedNoRequirementMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -351,10 +351,10 @@ void testTransitionMultiMixedNoRequirementMet(void) {
 
 void testTransitionMultiMixedOneNegativeRequirementMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -368,9 +368,9 @@ void testTransitionMultiMixedOneNegativeRequirementMet(void) {
 
 void testTransitionMultiRequiredConditionsOneMissingButOtherBitsSet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
@@ -391,7 +391,7 @@ void testTransitionOneProhibitedConditionMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -402,13 +402,13 @@ void testTransitionOneProhibitedConditionMet(void) {
 
 void testTransitionOneProhibitedConditionNotMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -419,13 +419,13 @@ void testTransitionOneProhibitedConditionNotMet(void) {
 
 void testTransitionOneProhibitedConditionNotMetWithOtherBitsSet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -442,7 +442,7 @@ void testTransitionMultiProhibitedConditionsMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -459,7 +459,7 @@ void testTransitionMultiProhibitedConditionsOneNotMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -470,13 +470,13 @@ void testTransitionMultiProhibitedConditionsOneNotMet(void) {
 
 void testTransitionMultiProhibitedConditionsAllNotMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAll;
 
@@ -487,13 +487,13 @@ void testTransitionMultiProhibitedConditionsAllNotMet(void) {
 
 void testTransitionMultiProhibitedConditionsAllMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAll;
 
@@ -504,14 +504,14 @@ void testTransitionMultiProhibitedConditionsAllMet(void) {
 
 void testTransitionMultiNegativeProhibitedConditionsNoneMet(void) {
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
@@ -528,7 +528,7 @@ void testTransitionMultiNegativeProhibitedConditionsOneMet(void) {
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
@@ -545,7 +545,7 @@ void testTransitionMultiNegativeProhibitedConditionsOneNotMet(void) {
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAll;
 
   // Test
@@ -562,7 +562,7 @@ void testTransitionMultiNegativeProhibitedConditionsAllMet(void) {
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAll;
 
   // Test
@@ -578,7 +578,7 @@ void testTransitionMultiRequiredAndProhibitedConditionsMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -595,7 +595,7 @@ void testTransitionMultiRequiredAndProhibitedConditionsOneRequiredNotMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -612,7 +612,7 @@ void testTransitionMultiRequiredAndProhibitedConditionsOneProhibitedNotMet(void)
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
@@ -629,7 +629,7 @@ void testTransitionMultiRequiredAndProhibitedConditionsMultipleNotMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 

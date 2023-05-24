@@ -27,7 +27,8 @@
 #include <stdint.h>
 
 typedef enum {
-    supervisorStatePreFlChecksNotPassed = 0,
+    supervisorStateNotInitialized = 0,
+    supervisorStatePreFlChecksNotPassed,
     supervisorStatePreFlChecksPassed,
     supervisorStateReadyToFly,
     supervisorStateFlying,
@@ -40,22 +41,21 @@ typedef enum {
 } supervisorState_t;
 
 // Conditions supported by the supervisor
-enum {
+typedef enum {
   supervisorConditionArmed = 0,
-  supervisorConditionChargerConnected,
   supervisorConditionIsFlying,
   supervisorConditionIsTumbled,
   supervisorConditionCommanderWdtWarning,
   supervisorConditionCommanderWdtTimeout,
   supervisorConditionEmergencyStop,
-};
+  supervisorCondition_NrOfConditions,
+} supervisorConditions_t;
 
 typedef uint32_t supervisorConditionBits_t;
 
 // Condition bit definitions
 #define SUPERVISOR_CB_NONE (0)
 #define SUPERVISOR_CB_ARMED (1 << supervisorConditionArmed)
-#define SUPERVISOR_CB_CHARGER_CONNECTED (1 << supervisorConditionChargerConnected)
 #define SUPERVISOR_CB_IS_FLYING (1 << supervisorConditionIsFlying)
 #define SUPERVISOR_CB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
 #define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
@@ -93,3 +93,6 @@ typedef struct {
 #define SUPERVISOR_TRANSITION_ENTRY(TRANSITION_DEF) .transitionList=TRANSITION_DEF, .length=(sizeof(TRANSITION_DEF) / sizeof(SupervisorStateTransition_t))
 
 supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBits_t conditions);
+
+const char* supervisorGetStateName(const supervisorState_t currentState);
+const char* supervisorGetConditionName(const supervisorState_t condition);

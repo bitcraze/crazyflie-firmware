@@ -27,12 +27,15 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "FreeRTOS.h"
+#include "task.h"
 
 #include "log.h"
 #include "param.h"
 #include "motors.h"
 #include "power_distribution.h"
-#include "pm.h"
 #include "supervisor.h"
 #include "supervisor_state_machine.h"
 #include "platform_defaults.h"
@@ -79,12 +82,17 @@ typedef struct {
   uint32_t latestThrustTick;
 
   supervisorState_t state;
+
+  // Copy of latest conditions, for logging
+  supervisorConditionBits_t latestConditions;
+  uint8_t doinfodump;
 } SupervisorMem_t;
 
 static SupervisorMem_t supervisorMem;
 
 const static setpoint_t nullSetpoint;
 
+void infoDump(const SupervisorMem_t* this);
 
 bool supervisorCanFly() {
   return supervisorMem.canFly;
@@ -196,7 +204,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     DEBUG_PRINT("Locked, reboot required\n");
   }
 
-  if ((previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
+  if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
       newState != supervisorStateReadyToFly && newState != supervisorStateFlying) {
     DEBUG_PRINT("Can not fly\n");
   }
@@ -220,10 +228,6 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 
   if (supervisorIsArmed()) {
     conditions |= SUPERVISOR_CB_ARMED;
-  }
-
-  if (pmIsChargerConnected()) {
-    conditions |= SUPERVISOR_CB_CHARGER_CONNECTED;
   }
 
   const bool isFlying = isFlyingCheck(this, currentTick);
@@ -301,7 +305,12 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
     postTransitionActions(this, previousState);
   }
 
+  this->latestConditions = conditions;
   updateLogData(this, conditions);
+  if (this->doinfodump) {
+    this->doinfodump = 0;
+    infoDump(this);
+  }
 }
 
 void supervisorOverrideSetpoint(setpoint_t* setpoint) {
@@ -339,6 +348,26 @@ bool supervisorAreMotorsAllowedToRun() {
          (this->state == supervisorStateWarningLevelOut);
 }
 
+void infoDump(const SupervisorMem_t* this) {
+  DEBUG_PRINT("Supervisor info ---\n");
+  DEBUG_PRINT("State: %s\n", supervisorGetStateName(this->state));
+  DEBUG_PRINT("Conditions: (0x%lx)\n", this->latestConditions);
+  for (supervisorConditions_t condition = 0; condition < supervisorCondition_NrOfConditions; condition++) {
+    const supervisorConditionBits_t bit = 1 << condition;
+    int bitValue = 0;
+    if (this->latestConditions & bit) {
+      bitValue = 1;
+    }
+
+    DEBUG_PRINT("  %s (0x%lx): %u\n", supervisorGetConditionName(condition), bit, bitValue);
+  }
+}
+
+
+
+/**
+ *  System loggable variables to check different system states.
+ */
 LOG_GROUP_START(sys)
 /**
  * @brief Nonzero if system is ready to fly.
@@ -369,9 +398,21 @@ PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.paramEmergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
 
+PARAM_GROUP_START(system)
+
 /**
- * Log group for the supervisor
-*/
+ * @brief Set to nonzero to arm the system. A nonzero value enables the auto arm functionality
+ *
+ * Deprecated, will be removed after 2024-06-01. Use the CRTP `PlatformCommand` `armSystem` on the CRTP_PORT_PLATFORM port instead.
+ */
+PARAM_ADD_CORE(PARAM_INT8, arm, &supervisorMem.deprecatedArmParam)
+PARAM_GROUP_STOP(system)
+
+
+/**
+ * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
+ * can enable/disable functionality as well as take action to protect the system or humans close by.
+ */
 LOG_GROUP_START(superv)
 /**
  * @brief Bitfield containing information about the supervisor status
@@ -386,12 +427,13 @@ LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
 LOG_GROUP_STOP(superv)
 
 
-PARAM_GROUP_START(system)
-
 /**
- * @brief Set to nonzero to arm the system. A nonzero value enables the auto arm functionality
- *
- * Deprecated, will be removed after 2024-06-01. Use the CRTP `PlatformCommand` `armSystem` on the CRTP_PORT_PLATFORM port instead.
+ * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
+ * can enable/disable functionality as well as take action to protect the system or humans close by.
  */
-PARAM_ADD_CORE(PARAM_INT8, arm, &supervisorMem.deprecatedArmParam)
-PARAM_GROUP_STOP(system)
+PARAM_GROUP_START(superv)
+/**
+ * @brief Set to nonzero to dump information about the current supervisor state to the console log
+ */
+PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
+PARAM_GROUP_STOP(superv)
