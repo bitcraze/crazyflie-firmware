@@ -14,7 +14,7 @@
 #include "octoMap.h"
 #include "communicate.h"
 
-#define MODEL 1  // 0:SGL,1:MUL,2:TEST
+#define MODEL 0  // 0:SGL,1:MUL,2:TEST
 
 static bool octotree_Flying = false;
 static bool octotree_Print = false;
@@ -25,6 +25,7 @@ uint16_t seqnumber = 0;  //SGL
 //MUL
 explore_req_packet_t exploreReqPacket;
 mapping_req_packet_t mappingReqPacket;
+
 /*
 make cload:
     CLOAD_CMDS="-w radio://0/86/2M/86E7E7E7E7" make cload
@@ -34,11 +35,9 @@ void appMain()
 {
     // DEBUG_PRINT("appMain start\n");
     vTaskDelay(M2T(10000));
-    extern uavRange_t uavRange;
-    extern uint16_t mappingRequestSeq;
-    extern uint16_t exploreRequestSeq;
     coordinateF_t item_point;
     uavControl_t* uavControl;
+    // uavRange_t* uavRange;
     TickType_t last_time_mapping, last_time_explore, last_time_terminate;
     octoMap_t *octoMap;
     if(MODEL>=1){
@@ -58,7 +57,6 @@ void appMain()
         inituavControl(uavControl);
     }
     DEBUG_PRINT("init success\n");
-
     while (1)
     {
         vTaskDelay(M2T(LOOP_DELAY));
@@ -74,6 +72,10 @@ void appMain()
                                                                                                                 (double)uavControl->uavRange.measurement.pitch,(double)uavControl->uavRange.measurement.roll,
                                                                                                                 (double)uavControl->uavRange.measurement.yaw,seqnumber);
                 UpdateMap(octoMap, &uavControl->uavRange);
+                DEBUG_PRINT("[app]NN:%d,%d,%d,%d,%d,seq:%d\n",octoMap->octoNodeSet->length,
+                                                        octoMap->octoNodeSet->numFree,octoMap->octoNodeSet->numOccupied,
+                                                        octoMap->octoNodeSet->volumeFree,octoMap->octoNodeSet->volumeOccupied,
+                                                        seqnumber);
                 if(seqnumber % MAXRUN == 0){
                     octotree_Flying = false;
                     Land();
@@ -110,9 +112,9 @@ void appMain()
             }
 
             if(xTaskGetTickCount() - last_time_mapping > M2T(MAPPING_DIF)){
-                item_point = uavRange.current_point;
-                GetRange(&uavRange);
-                if(IsSameCell(&item_point,&uavRange.current_point)){
+                item_point = uavRange->current_point;
+                GetRange(uavRange);
+                if(IsSameCell(&item_point,&uavRange->current_point)){
                     mappingReqPacket.mappingRequestPayload->mergedNums++;
                 }
                 else{
@@ -128,11 +130,12 @@ void appMain()
             }
 
             if(xTaskGetTickCount() - last_time_explore > M2T(EXPLORE_DIF)){
-                GetRange(&uavRange);
+                GetRange(uavRange);
                 generateExploreReqPacket(&exploreReqPacket);
                 sendExploreRequest(&exploreReqPacket);
                 last_time_explore = xTaskGetTickCount();
             }
+
             DEBUG_PRINT("exploreRequestSeq:%d, mappingRequestSeq:%d\n",exploreRequestSeq,mappingRequestSeq);
             if(exploreRequestSeq >=  EXPLORE_MAX || mappingRequestSeq >= MAPPING_MAX){
                 sendTerminate();
@@ -144,7 +147,7 @@ void appMain()
         }
         else if(MODEL == 2){
             // Just test packet loss rate using mapping messages
-            GetRange(&uavRange);
+            GetRange(uavRange);
             if(flag_Terminate){
                 // Send termination message at 2Hz
                 if(xTaskGetTickCount() - last_time_terminate > M2T(TERMINATE_DIF)){

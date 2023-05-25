@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "FreeRTOS.h"
@@ -39,10 +40,11 @@ void ListeningInit()
 }
 
 void CommunicateInit(){
-    // Initialize the uavRange
-    inituavRange(&uavRange);
     mappingRequestSeq = 0;
     exploreRequestSeq = 0;
+    uavRange = (uavRange_t *)malloc(sizeof(uavRange_t));
+    inituavRange(uavRange);
+    // Initialize the uavRange
     flag_exploreResp = false;
     ListeningInit();
 }
@@ -56,12 +58,13 @@ bool generateMappingReqPacket(mapping_req_packet_t* mappingReqPacket){
     uint8_t len = 0;
     mappingReqPacket->mappingRequestPayload[0].mergedNums = 1;
 
-    mappingReqPacket->mappingRequestPayload[0].startPoint.x = uavRange.current_point.x;
-    mappingReqPacket->mappingRequestPayload[0].startPoint.y = uavRange.current_point.y;
-    mappingReqPacket->mappingRequestPayload[0].startPoint.z = uavRange.current_point.z;
+    mappingReqPacket->mappingRequestPayload[0].startPoint.x = (int)uavRange->current_point.x;
+    mappingReqPacket->mappingRequestPayload[0].startPoint.y = (int)uavRange->current_point.y;
+    mappingReqPacket->mappingRequestPayload[0].startPoint.z = (int)uavRange->current_point.z;
+
     for (rangeDirection_t dir = rangeFront; dir <= rangeDown; ++dir)
     {
-        if (cal_Point(&uavRange.measurement, &uavRange.current_point, dir, &item_end))
+        if (cal_Point(&uavRange->measurement, &uavRange->current_point, dir, &item_end))
         {
             mappingReqPacket->mappingRequestPayload[0].endPoint[len].x = item_end.x;
             mappingReqPacket->mappingRequestPayload[0].endPoint[len].y = item_end.y;
@@ -69,28 +72,27 @@ bool generateMappingReqPacket(mapping_req_packet_t* mappingReqPacket){
             ++len;
         }
     }
-    if(len == 0)
-        return false;
+    // Test
+    // if(len == 0)
+    //     return false;
     mappingReqPacket->mappingRequestPayload[0].len = len;
     mappingReqPacket->seq = mappingRequestSeq;
     return true;
 }
 
 bool generateExploreReqPacket(explore_req_packet_t* exploreReqPacket){
-    memcpy(&exploreReqPacket->exploreRequestPayload.uavRange, &uavRange, sizeof(uavRange_t));
+    memcpy(&exploreReqPacket->exploreRequestPayload.uavRange, uavRange, sizeof(uavRange_t));
     exploreReqPacket->seq = exploreRequestSeq;
     return true;
 }
 
 bool sendMappingRequest(mapping_req_packet_t* mappingReqPacket)
 {
-    // Initialize the p2p packet
+    // Test
     // if(mappingReqPacket->mappingRequestPayload->len == 0){
     //     DEBUG_PRINT("mappingRequestPayload is NULL!\n");
     //     return false;
     // }
-
-    DEBUG_PRINT("[mapping]currentP: (%.2f,%.2f,%.2f)\n",(double)uavRange.current_point.x,(double)uavRange.current_point.y,(double)uavRange.current_point.z);
 
     ++mappingRequestSeq;
     static P2PPacket packet;
@@ -214,7 +216,7 @@ void processExploreResp(explore_resp_packet_t* exploreRespPacket)
 {
     if(exploreRespPacket->seq == exploreRequestSeq){
         flag_exploreResp = true;
-        MoveToNext(&uavRange.current_point,&exploreRespPacket->exploreResponsePayload.nextpoint);
+        MoveToNext(&uavRange->current_point,&exploreRespPacket->exploreResponsePayload.nextpoint);
     }
     else{
         DEBUG_PRINT("[LiDAR-STM32]P2P: Received an exploration response message in the wrong order\n");

@@ -11,7 +11,7 @@
 #define COST_PRUNE_TIMES 1 // coefficient of pruning benefit
 #define MAX_LOOP 5  // The number of judgments that trigger jumping out of the local optimum
 #define WINDOW_SIZE 30 
-#define MAXRUN 300
+#define MAXRUN 200
 #define RELIABILITY_DISTANCE 24
 
 #define WAIT_DELAY 300
