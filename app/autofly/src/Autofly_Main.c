@@ -14,7 +14,7 @@
 #include "octoMap.h"
 #include "communicate.h"
 
-#define MODEL 0  // 0:SGL,1:MUL,2:TEST
+#define MODEL 1  // 0:SGL,1:MUL,2:TEST
 
 static bool octotree_Flying = false;
 static bool octotree_Print = false;

@@ -23,7 +23,7 @@
 #define MAPPING_DIF 100
 #define EXPLORE_DIF 300
 #define TERMINATE_DIF 500
-#define MAPPING_MAX 100
+#define MAPPING_MAX 200
 #define EXPLORE_MAX MAXRUN*2
 
 //octomap config
