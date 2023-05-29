@@ -28,7 +28,7 @@
 #include "platform_defaults.h"
 #include "test_support.h"
 
-#define DEBUG_ME
+// #define DEBUG_ME
 
 #ifdef DEBUG_ME
 #define DEBUG_MODULE "SUPST"
