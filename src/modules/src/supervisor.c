@@ -48,9 +48,6 @@
 
 #define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
 
-// The minimum time (in ms) we need to see tumble condition before acting on it
-#define TUMBLE_HYSTERESIS_THRESHOLD M2T(30)
-
 // The minimum time (in ms) we need to see low thrust before saying that we are not flying anymore
 #define IS_FLYING_HYSTERESIS_THRESHOLD M2T(2000)
 
@@ -123,26 +120,47 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
 }
 
 //
-// We say we are tumbled when the accelerometer reports negative values.
+// Tumbling is defined as being tilted more than 60 degrees for one second, or more than 90 degrees for 30 ms.
+// Free falling is considered a valid flight mode.
 //
 // Once a tumbled situation is identified, we can use this for instance to cut
 // the thrust to the motors, avoiding the Crazyflie from running propellers at
 // significant thrust when accidentally crashing into walls or the ground.
 //
 static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, const uint32_t tick) {
-  const float tolerance = -0.5;
-  //
-  // We need a TUMBLE_HYSTERESIS_THRESHOLD amount of readings that indicate
-  // that we are tumbled before we act on it. This is to reduce false positives.
-  //
-  if (data->acc.z <= tolerance) {
+  const float freeFallThreshold = 0.1;
+
+  const float acceptedTiltAccZ = 0.5;  // 60 degrees tilt (when stationary)
+  const uint32_t maxTiltTime = M2T(1000);
+
+  const float acceptedUpsideDownAccZ = -0.0;  // 90 degrees tilt
+  const uint32_t maxUpsideDownTime = M2T(30);
+
+  const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold && fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
+  if (isFreeFalling) {
+    // Falling is OK, reset
+    this->initialTumbleTick = 0;
+  }
+
+  const bool isTilted = (data->acc.z < acceptedTiltAccZ);
+  if(isTilted) {  // Will also be true for up side down
     if (0 == this->initialTumbleTick) {
+      // Start the clock
       this->initialTumbleTick = tick;
     }
-    if ((tick - this->initialTumbleTick) > TUMBLE_HYSTERESIS_THRESHOLD) {
+
+    const uint32_t ticksBeingTumbled = tick - this->initialTumbleTick;
+
+    const bool isUpSideDown = (data->acc.z < acceptedUpsideDownAccZ);
+    if (isUpSideDown && (ticksBeingTumbled > maxUpsideDownTime)) {
+      return true;
+    }
+
+    if (ticksBeingTumbled > maxTiltTime) {
       return true;
     }
   } else {
+    // We're OK, reset
     this->initialTumbleTick = 0;
   }
 
