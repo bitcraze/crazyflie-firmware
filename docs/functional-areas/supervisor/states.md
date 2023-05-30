@@ -1,6 +1,7 @@
 ---
 title: Supervisor states
 page_id: supervisor_states
+sort_order: 2
 ---
 
 ## State diagram

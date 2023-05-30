@@ -21,7 +21,7 @@ The first byte describes the command:
 | value | Command |
 |-------|---------|
 | 0     | [Set continuous wave](#set-continuous-wave) |
-| 1     | [Request arm/disarm the system](#arm-disarm-system) |
+| 1     | [Request arm/disarm the system](#armdisarm-system) |
 
 ### Set continuous wave
 

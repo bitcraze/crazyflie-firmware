@@ -1,6 +1,7 @@
 ---
 title: Supervisor conditions
 page_id: supervisor_conditions
+sort_order: 1
 ---
 
 A condition express the state of some part of the system, for instance if we are flying, if the system is armed or
