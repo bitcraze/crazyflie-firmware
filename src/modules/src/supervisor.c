@@ -413,7 +413,7 @@ PARAM_GROUP_STOP(system)
  * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
  * can enable/disable functionality as well as take action to protect the system or humans close by.
  */
-LOG_GROUP_START(superv)
+LOG_GROUP_START(supervisor)
 /**
  * @brief Bitfield containing information about the supervisor status
  * Bit 0 = Can be armed - the system can be armed and will accept an arming command
@@ -424,16 +424,16 @@ LOG_GROUP_START(superv)
  * Bit 5 = is tumbled - the Crazyflie is up side down.
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
-LOG_GROUP_STOP(superv)
+LOG_GROUP_STOP(supervisor)
 
 
 /**
  * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
  * can enable/disable functionality as well as take action to protect the system or humans close by.
  */
-PARAM_GROUP_START(superv)
+PARAM_GROUP_START(supervisor)
 /**
  * @brief Set to nonzero to dump information about the current supervisor state to the console log
  */
 PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
-PARAM_GROUP_STOP(superv)
+PARAM_GROUP_STOP(supervisor)
