@@ -217,7 +217,7 @@ void testTransitionMultiRequiredConditionsNoneMet(void) {
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
-  supervisorConditionBits_t triggers = SUPERVISOR_CB_CHARGER_CONNECTED | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
