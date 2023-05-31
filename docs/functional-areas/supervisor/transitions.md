@@ -1,6 +1,7 @@
 ---
 title: Supervisor transitions
 page_id: supervisor_transitions
+sort_order: 3
 ---
 
 A state transition takes the state machine from one state to another. The [conditions bit field](conditions.md) is used to identify

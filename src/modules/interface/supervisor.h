@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2021 Bitcraze AB
+ * Copyright (C) 2021-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,3 +82,29 @@ bool supervisorIsFlying(void);
  * @return false
  */
 bool supervisorIsTumbled(void);
+
+/**
+ * @brief Request the system to be armed or disarmed. The system can only be armed under certain conditions, this is
+ * indicated by the supervisorCanArm() function.
+ *
+ * @param doArm  true - request arming. false - request disarming.
+ * @return true   The request was granted
+ * @return false  The request could not be granted
+ */
+bool supervisorRequestArming(const bool doArm);
+
+/**
+ * @brief Query if the system can be armed
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorCanArm();
+
+/**
+ * @brief Query if the system is armed
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorIsArmed();

@@ -40,6 +40,7 @@
 #include "platform.h"
 #include "app_channel.h"
 #include "static_mem.h"
+#include "supervisor.h"
 
 static bool isInit=false;
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(platformSrvTask, PLATFORM_SRV_TASK_STACKSIZE);
@@ -51,7 +52,8 @@ typedef enum {
 } Channel;
 
 typedef enum {
-  setContinousWave   = 0x00,
+  setContinuousWave  = 0x00,
+  armSystem          = 0x01,
 } PlatformCommand;
 
 typedef enum {
@@ -61,7 +63,7 @@ typedef enum {
 } VersionCommand;
 
 static void platformSrvTask(void*);
-static void platformCommandProcess(uint8_t command, uint8_t *data);
+static void platformCommandProcess(CRTPPacket *p);
 static void versionCommandProcess(CRTPPacket *p);
 
 void platformserviceInit(void)
@@ -94,7 +96,7 @@ static void platformSrvTask(void* prm)
     switch (p.channel)
     {
       case platformCommand:
-        platformCommandProcess(p.data[0], &p.data[1]);
+        platformCommandProcess(&p);
         crtpSendPacketBlock(&p);
         break;
       case versionCommand:
@@ -109,17 +111,30 @@ static void platformSrvTask(void* prm)
   }
 }
 
-static void platformCommandProcess(uint8_t command, uint8_t *data)
+static void platformCommandProcess(CRTPPacket *p)
 {
-  static SyslinkPacket slp;
+  uint8_t command = p->data[0];
+  uint8_t *data = &p->data[1];
 
   switch (command) {
-    case setContinousWave:
+    case setContinuousWave:
+    {
+      static SyslinkPacket slp;
       slp.type = SYSLINK_RADIO_CONTWAVE;
       slp.length = 1;
       slp.data[0] = data[0];
       syslinkSendPacket(&slp);
       break;
+    }
+    case armSystem:
+    {
+      const bool doArm = data[0];
+      const bool success = supervisorRequestArming(doArm);
+      data[0] = success;
+      data[1] = supervisorIsArmed();
+      p->size = 2;
+      break;
+    }
     default:
       break;
   }

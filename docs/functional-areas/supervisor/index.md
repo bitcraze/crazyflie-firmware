@@ -21,7 +21,7 @@ The update sequence is separated into a few steps:
 ## Modifying behavior
 
 The main modification of behavior is to prevent the motors from spinning when the system is not ready to fly, for
-instance if the system is not armed or the USB cable is connected. Also the high level commander is blocked from
+instance if the system is not armed or the Crazyflie is up side down. Also the high level commander is blocked from
 running trajectories in this case.
 
 Exceptional situations when flying, for instance when tumbling is detected, are simply handled by stopping the

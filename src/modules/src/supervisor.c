@@ -41,6 +41,7 @@
 #include "platform_defaults.h"
 #include "crtp_localization_service.h"
 #include "system.h"
+#include "autoconf.h"
 
 #define DEBUG_MODULE "SUP"
 #include "debug.h"
@@ -54,11 +55,22 @@
 #define COMMANDER_WDT_TIMEOUT_STABILIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
+#ifndef CONFIG_MOTORS_REQUIRE_ARMING
+  #define AUTO_ARMING 1
+#else
+  #define AUTO_ARMING 0
+#endif
+
 typedef struct {
   bool canFly;
   bool isFlying;
   bool isTumbled;
+  bool isArmingActivated;
+  uint16_t infoBitfield;
   uint8_t paramEmergencyStop;
+
+  // Deprecated, remove after 2024-06-01
+  int8_t deprecatedArmParam;
 
   // The time (in ticks) of the first tumble event. 0=no tumble
   uint32_t initialTumbleTick;
@@ -89,6 +101,27 @@ bool supervisorIsFlying() {
 
 bool supervisorIsTumbled() {
   return supervisorMem.isTumbled;
+}
+
+bool supervisorCanArm() {
+  return supervisorStatePreFlChecksPassed == supervisorMem.state;
+}
+
+bool supervisorIsArmed() {
+  return supervisorMem.isArmingActivated || supervisorMem.deprecatedArmParam;
+}
+
+bool supervisorRequestArming(const bool doArm) {
+  if (doArm == supervisorMem.isArmingActivated) {
+    return true;
+  }
+
+  if (doArm && !supervisorCanArm()) {
+    return false;
+  }
+
+  supervisorMem.isArmingActivated = doArm;
+  return true;
 }
 
 //
@@ -178,7 +211,9 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   return isOk;
 }
 
-static void transitionActions(const supervisorState_t currentState, const supervisorState_t newState) {
+static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t previousState) {
+  const supervisorState_t newState = this->state;
+
   if (newState == supervisorStateReadyToFly) {
     DEBUG_PRINT("Ready to fly\n");
   }
@@ -187,16 +222,29 @@ static void transitionActions(const supervisorState_t currentState, const superv
     DEBUG_PRINT("Locked, reboot required\n");
   }
 
-  if ((currentState == supervisorStateNotInitialized || currentState == supervisorStateReadyToFly || currentState == supervisorStateFlying) &&
+  if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
       newState != supervisorStateReadyToFly && newState != supervisorStateFlying) {
     DEBUG_PRINT("Can not fly\n");
+  }
+
+  if (newState != supervisorStateReadyToFly &&
+      newState != supervisorStateFlying &&
+      newState != supervisorStateWarningLevelOut) {
+    supervisorRequestArming(false);
+  }
+
+  // We do not require an arming action by the user, auto arm
+  if (AUTO_ARMING || this->deprecatedArmParam) {
+    if (newState == supervisorStatePreFlChecksPassed) {
+      supervisorRequestArming(true);
+    }
   }
 }
 
 static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
   supervisorConditionBits_t conditions = 0;
 
-  if (systemIsArmed()) {
+  if (supervisorIsArmed()) {
     conditions |= SUPERVISOR_CB_ARMED;
   }
 
@@ -237,6 +285,26 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   this->canFly = supervisorAreMotorsAllowedToRun();
   this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
   this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
+
+  this->infoBitfield = 0;
+  if (supervisorCanArm()) {
+    this->infoBitfield |= 0x0001;
+  }
+  if (supervisorIsArmed()) {
+    this->infoBitfield |= 0x0002;
+  }
+  if(AUTO_ARMING || this->deprecatedArmParam) {
+    this->infoBitfield |= 0x0004;
+  }
+  if (this->canFly) {
+    this->infoBitfield |= 0x0008;
+  }
+  if (this->isFlying) {
+    this->infoBitfield |= 0x0010;
+  }
+  if (this->isTumbled) {
+    this->infoBitfield |= 0x0020;
+  }
 }
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
@@ -250,8 +318,9 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   const supervisorConditionBits_t conditions = updateAndPopulateConditions(this, sensors, setpoint, currentTick);
   const supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
   if (this->state != newState) {
-    transitionActions(this->state, newState);
+    const supervisorState_t previousState = this->state;
     this->state = newState;
+    postTransitionActions(this, previousState);
   }
 
   this->latestConditions = conditions;
@@ -320,14 +389,20 @@ void infoDump(const SupervisorMem_t* this) {
 LOG_GROUP_START(sys)
 /**
  * @brief Nonzero if system is ready to fly.
+ *
+ * Deprecated, will be removed after 2024-06-01. Use superv.info instead
  */
 LOG_ADD_CORE(LOG_UINT8, canfly, &supervisorMem.canFly)
 /**
  * @brief Nonzero if the system thinks it is flying
+ *
+ * Deprecated, will be removed after 2024-06-01. Use superv.info instead
  */
 LOG_ADD_CORE(LOG_UINT8, isFlying, &supervisorMem.isFlying)
 /**
  * @brief Nonzero if the system thinks it is tumbled/crashed
+ *
+ * Deprecated, will be removed after 2024-06-01. Use superv.info instead
  */
 LOG_ADD_CORE(LOG_UINT8, isTumbled, &supervisorMem.isTumbled)
 LOG_GROUP_STOP(sys)
@@ -335,18 +410,48 @@ LOG_GROUP_STOP(sys)
 
 PARAM_GROUP_START(stabilizer)
 /**
- * @brief If set to nonzero will turn off power
+ * @brief If set to nonzero will turn off motors
  */
 PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.paramEmergencyStop)
 PARAM_GROUP_STOP(stabilizer)
+
+
+PARAM_GROUP_START(system)
+
+/**
+ * @brief Set to nonzero to arm the system. A nonzero value enables the auto arm functionality
+ *
+ * Deprecated, will be removed after 2024-06-01. Use the CRTP `PlatformCommand` `armSystem` on the CRTP_PORT_PLATFORM port instead.
+ */
+PARAM_ADD_CORE(PARAM_INT8, arm, &supervisorMem.deprecatedArmParam)
+PARAM_GROUP_STOP(system)
+
 
 /**
  * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
  * can enable/disable functionality as well as take action to protect the system or humans close by.
  */
-PARAM_GROUP_START(superv)
+LOG_GROUP_START(supervisor)
+/**
+ * @brief Bitfield containing information about the supervisor status
+ * Bit 0 = Can be armed - the system can be armed and will accept an arming command
+ * Bit 1 = is armed - the system is armed
+ * Bit 2 = auto arm - the system is configured to automatically arm
+ * Bit 3 = can fly - the Crazyflie is ready to fly
+ * Bit 4 = is flying - the Crazyflie is flying.
+ * Bit 5 = is tumbled - the Crazyflie is up side down.
+ */
+LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
+LOG_GROUP_STOP(supervisor)
+
+
+/**
+ * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
+ * can enable/disable functionality as well as take action to protect the system or humans close by.
+ */
+PARAM_GROUP_START(supervisor)
 /**
  * @brief Set to nonzero to dump information about the current supervisor state to the console log
  */
 PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
-PARAM_GROUP_STOP(superv)
+PARAM_GROUP_STOP(supervisor)

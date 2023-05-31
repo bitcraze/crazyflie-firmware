@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2013 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@
 #include "uart1.h"
 #include "cppm.h"
 #include "crtp_commander.h"
+#include "supervisor.h"
 
 #define DEBUG_MODULE  "EXTRX"
 #include "debug.h"
@@ -87,7 +88,7 @@
 bool extRxArm = false;
 bool extRxAltHold = false;
 bool extRxModeRate = false;
-  
+
 #if CONFIG_DECK_EXTRX_ARMING
   bool extRxArmPrev = false;
   int8_t arm_cnt = 0;
@@ -153,17 +154,20 @@ static void extRxTask(void *param)
 
 static void extRxDecodeChannels(void)
 {
-  
+
   #if CONFIG_DECK_EXTRX_ARMING
   if (EXTRX_SIGN_ARM * cppmConvert2Float(ch[EXTRX_CH_ARM], -1, 1, 0.0) > 0.5f) // channel needs to be 75% or more to work correctly with 2/3 way switches
   {
     if (arm_cnt < EXTRX_SWITCH_MIN_CNT) arm_cnt++;
     else extRxArm = true;
-    
+
     if (extRxArmPrev != extRxArm)
     {
-      DEBUG_PRINT("Engines armed\n");
-      systemSetArmed(extRxArm);
+      if (supervisorRequestArming(extRxArm)) {
+        DEBUG_PRINT("System armed\n");
+      } else {
+        DEBUG_PRINT("Arming failed\n");
+      }
     }
   }
   else
@@ -173,8 +177,8 @@ static void extRxDecodeChannels(void)
 
     if (extRxArmPrev != extRxArm)
     {
-      DEBUG_PRINT("Engines unarmed\n");
-      systemSetArmed(extRxArm);
+      DEBUG_PRINT("System unarmed\n");
+      supervisorRequestArming(extRxArm);
     }
   }
 
@@ -197,22 +201,22 @@ static void extRxDecodeChannels(void)
     if (extRxAltHoldPrev != extRxAltHold) DEBUG_PRINT("Althold mode OFF\n");
   }
 
-  if (extRxAltHold) 
+  if (extRxAltHold)
   {
     extrxSetpoint.thrust = 0;
     extrxSetpoint.mode.z = modeVelocity;
 
     extrxSetpoint.velocity.z = cppmConvert2Float(ch[EXTRX_CH_THRUST], -1, 1, EXTRX_DEADBAND_ZVEL);
-  } 
-  else 
+  }
+  else
   {
     extrxSetpoint.mode.z = modeDisable;
     extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
   }
-  
+
   extRxAltHoldPrev = extRxAltHold;
   #else
-  
+
   extrxSetpoint.mode.z = modeDisable;
   extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
   #endif
@@ -222,7 +226,7 @@ static void extRxDecodeChannels(void)
   {
     if (modeRate_cnt < EXTRX_SWITCH_MIN_CNT) modeRate_cnt++;
     else extRxModeRate = true;
-    
+
     if (extRxModeRatePrev != extRxModeRate)
     {
       DEBUG_PRINT("Switched to rate mode\n");
@@ -245,14 +249,14 @@ static void extRxDecodeChannels(void)
 
   extRxModeRatePrev = extRxModeRate;
   #endif
-  
+
   if (extRxModeRate)
-  {  
+  {
     extrxSetpoint.attitudeRate.roll = EXTRX_SIGN_ROLL * getCPPMRollRateScale() * cppmConvert2Float(ch[EXTRX_CH_ROLL], -1, 1, EXTRX_DEADBAND_ROLL);
     extrxSetpoint.attitudeRate.pitch = EXTRX_SIGN_PITCH * getCPPMPitchRateScale() * cppmConvert2Float(ch[EXTRX_CH_PITCH], -1, 1, EXTRX_DEADBAND_PITCH);
   }
   else
-  {  
+  {
     extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * getCPPMRollScale() * cppmConvert2Float(ch[EXTRX_CH_ROLL], -1, 1, EXTRX_DEADBAND_ROLL);
     extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * getCPPMPitchScale() * cppmConvert2Float(ch[EXTRX_CH_PITCH], -1, 1, EXTRX_DEADBAND_PITCH);
   }
@@ -368,8 +372,8 @@ LOG_ADD(LOG_UINT16, ch7, &ch[7])
 LOG_GROUP_STOP(extrx_raw)
 
 /**
- * External receiver (RX) log group. This contains setpoints for 
- * thrust, roll, pitch, yaw rate, z velocity, and arming and 
+ * External receiver (RX) log group. This contains setpoints for
+ * thrust, roll, pitch, yaw rate, z velocity, and arming and
  * altitude-hold signals
  */
 LOG_GROUP_START(extrx)

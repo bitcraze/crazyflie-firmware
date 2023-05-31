@@ -77,11 +77,20 @@ static SupervisorStateTransition_t transitionsNotInitialized[] = {
 
 static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
   {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
     .newState = supervisorStatePreFlChecksPassed,
 
     .triggerCombiner = supervisorAlways,
 
-    .blockers = SUPERVISOR_CB_CONF_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .blockers = SUPERVISOR_CB_CONF_IS_TUMBLED,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   }
@@ -89,9 +98,18 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
 
 static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_CONF_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .triggers = SUPERVISOR_CB_CONF_IS_TUMBLED,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -104,7 +122,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAll,
 
-    .blockers = SUPERVISOR_CB_CONF_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .blockers = SUPERVISOR_CB_CONF_IS_TUMBLED,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   },
@@ -112,9 +130,18 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
 
 static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_CONF_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .triggers = SUPERVISOR_CB_CONF_IS_TUMBLED,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
     .triggerCombiner = supervisorAny,
 
