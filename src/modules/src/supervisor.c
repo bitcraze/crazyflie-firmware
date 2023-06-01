@@ -390,19 +390,19 @@ LOG_GROUP_START(sys)
 /**
  * @brief Nonzero if system is ready to fly.
  *
- * Deprecated, will be removed after 2024-06-01. Use superv.info instead
+ * Deprecated, will be removed after 2024-06-01. Use supervisor.info instead
  */
 LOG_ADD_CORE(LOG_UINT8, canfly, &supervisorMem.canFly)
 /**
  * @brief Nonzero if the system thinks it is flying
  *
- * Deprecated, will be removed after 2024-06-01. Use superv.info instead
+ * Deprecated, will be removed after 2024-06-01. Use supervisor.info instead
  */
 LOG_ADD_CORE(LOG_UINT8, isFlying, &supervisorMem.isFlying)
 /**
  * @brief Nonzero if the system thinks it is tumbled/crashed
  *
- * Deprecated, will be removed after 2024-06-01. Use superv.info instead
+ * Deprecated, will be removed after 2024-06-01. Use supervisor.info instead
  */
 LOG_ADD_CORE(LOG_UINT8, isTumbled, &supervisorMem.isTumbled)
 LOG_GROUP_STOP(sys)
