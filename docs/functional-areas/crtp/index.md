@@ -17,7 +17,7 @@ Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x`, the
 In order to allow for improvement and breaking change the protocol is versioned.
 The version is available using the [getProtocolVersion](crtp_platform#get-protocol-version) packet.
 
-The version is currently 5.
+The current version is defined in the constant `CRTP_PROTOCOL_VERSION`.
 
 When removing functionality from the protocol, packet will be deprecated for at least one version before being removed.
 Deprecated functionality prints a Warning in the [console](crtp_console). This rule allows for the Crazyflie firmware
@@ -35,7 +35,7 @@ The Crayzyflie communication is implemented as a stack of independent layers:
     +       CRTP        +   <- (port, channel, payload)
     +-------------------+
     +       Link        +   <- Radio link or USB link
-    +-------------------+   
+    +-------------------+
     +  Physical medium  +   <- radio or USB
     +-------------------+
 
@@ -58,7 +58,7 @@ The Crayzyflie communication is implemented as a stack of independent layers:
 There is currently two actively supported link implementation. They are
 documented on their own thread:
  - The radio link implements CRTP link over nRF24 compatible radios
- - The USB link implements CRTP link over USB to the Crazylfie 2.x USB port 
+ - The USB link implements CRTP link over USB to the Crazylfie 2.x USB port
 
 ### Packet ordering and real-time support
 
@@ -97,7 +97,7 @@ be sent.
 The NULL packet has been extensively used by links to implement side-channel
 packets that are communicated outside the CRTP data flows. For example this is
 used to implement bootloader packets that should be interpreted by the
-Crazyflie's nRF51 radio chip without being passed to the STM32 application 
+Crazyflie's nRF51 radio chip without being passed to the STM32 application
 processor.
 
 ## Port allocation
@@ -124,7 +124,7 @@ Connection procedure
 
 Generaly speaking CRTP is connection-less and most of the subsystem in the
 Crazyflie will strive to be stateless. This is not true for all the subsystem or
-links though: 
+links though:
  - The USB link needs to be enabled in the Crazyflie using a USB control packet
  - The Radio link maintains two packet counters to ensure that there are no packet
    loss and strict packet ordering. This is called Safelink and needs to be
