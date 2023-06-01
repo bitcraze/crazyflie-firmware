@@ -158,7 +158,7 @@ static void versionCommandProcess(CRTPPacket *p)
 {
   switch (p->data[0]) {
     case getProtocolVersion:
-      *(int*)&p->data[1] = PROTOCOL_VERSION;
+      *(int*)&p->data[1] = CRTP_PROTOCOL_VERSION;
       p->size = 5;
       crtpSendPacketBlock(p);
       break;

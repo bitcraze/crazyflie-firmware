@@ -46,8 +46,6 @@
 #include "trace.h"
 #include "usec_time.h"
 
-#define PROTOCOL_VERSION 6
-
 #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
 #define MCU_ID_ADDRESS          0x1FFF7A10
 #define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
