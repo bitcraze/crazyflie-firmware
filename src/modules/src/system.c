@@ -84,6 +84,7 @@ static bool isInit;
 
 static char nrf_version[16];
 static uint8_t testLogParam;
+static uint8_t doAssert;
 
 STATIC_MEM_TASK_ALLOC(systemTask, SYSTEM_TASK_STACKSIZE);
 
@@ -408,6 +409,12 @@ void vApplicationIdleHook( void )
 #endif
 }
 
+static void doAssertCallback(void) {
+  if (doAssert) {
+    ASSERT_FAILED();
+  }
+}
+
 /**
  * This parameter group contain read-only parameters pertaining to the CPU
  * in the Crazyflie.
@@ -455,6 +462,13 @@ PARAM_ADD(PARAM_UINT8, assertInfo, &dumpAssertInfo)
  *
  */
 PARAM_ADD(PARAM_UINT8, testLogParam, &testLogParam)
+
+/**
+ * @brief Set to non-zero to trigger a failed assert, useful for debugging
+ *
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, doAssert, &doAssert, doAssertCallback)
+
 
 PARAM_GROUP_STOP(system)
 
