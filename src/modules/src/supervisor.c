@@ -153,7 +153,7 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
 }
 
 //
-// Tumbling is defined as being tilted more than 60 degrees for one second, or more than 90 degrees for 30 ms.
+// Tumbling is defined as being tilted a bit for some time, or closer to up side down for a shorter time.
 // Free falling is considered a valid flight mode.
 //
 // Once a tumbled situation is identified, we can use this for instance to cut
@@ -166,8 +166,8 @@ static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, cons
   const float acceptedTiltAccZ = 0.5;  // 60 degrees tilt (when stationary)
   const uint32_t maxTiltTime = M2T(1000);
 
-  const float acceptedUpsideDownAccZ = -0.0;  // 90 degrees tilt
-  const uint32_t maxUpsideDownTime = M2T(30);
+  const float acceptedUpsideDownAccZ = -0.2;
+  const uint32_t maxUpsideDownTime = M2T(100);
 
   const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold && fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
   if (isFreeFalling) {
