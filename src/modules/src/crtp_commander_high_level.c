@@ -321,8 +321,9 @@ bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     yaw = radians(state->attitude.yaw);
     if (plan_is_stopped(&planner)) {
       // Return a null setpoint - when the HLcommander is stopped, it wants the
-      // motors to be off. Only reason they should be spinning is if the
-      // HLcommander has been preempted by a streaming setpoint command.
+      // motors to be off.
+      // Note: this set point will be overridden by low level set points, for instance received from an external source,
+      // due to the priority. To switch back to the high level commander, use the `commanderRelaxPriority()` functionality.
       *setpoint = nullSetpoint;
       return true;
     }

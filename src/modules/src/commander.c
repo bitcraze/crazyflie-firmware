@@ -84,9 +84,8 @@ void commanderSetSetpoint(setpoint_t *setpoint, int priority)
     xQueueOverwrite(setpointQueue, setpoint);
     xQueueOverwrite(priorityQueue, &priority);
     if (priority > COMMANDER_PRIORITY_HIGHLEVEL) {
-      // Disable the high-level planner so it will forget its current state and
-      // start over if we switch from low-level to high-level in the future.
-      crtpCommanderHighLevelDisable();
+      // Stop the high-level planner so it will forget its current state
+      crtpCommanderHighLevelStop();
     }
   }
 }
