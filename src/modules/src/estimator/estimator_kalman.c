@@ -112,7 +112,9 @@ static StaticSemaphore_t dataMutexBuffer;
 /**
  * Tuning parameters
  */
-#define PREDICT_RATE RATE_100_HZ // this is slower than the IMU update rate of 500Hz
+#define PREDICT_RATE RATE_100_HZ // this is slower than the IMU update rate of 1000Hz
+const uint32_t PREDICTION_UPDATE_INTERVAL_MS = 1000 / PREDICT_RATE;
+
 // The bounds on the covariance, these shouldn't be hit, but sometimes are... why?
 #define MAX_COVARIANCE (100)
 #define MIN_COVARIANCE (1e-6f)
@@ -233,12 +235,12 @@ static void kalmanTask(void* parameters) {
       axis3fSubSamplerFinalize(&gyroSubSampler);
 
       kalmanCorePredict(&coreData, &accSubSampler.subSample, &gyroSubSampler.subSample, nowMs, quadIsFlying);
-      nextPredictionMs = nowMs + (1000.0f / PREDICT_RATE);
+      nextPredictionMs = nowMs + PREDICTION_UPDATE_INTERVAL_MS;
 
       STATS_CNT_RATE_EVENT(&predictionCounter);
 
       if (!rateSupervisorValidate(&rateSupervisorContext, nowMs)) {
-        DEBUG_PRINT("WARNING: Kalman prediction rate low (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+        DEBUG_PRINT("WARNING: Kalman prediction rate off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
       }
     }
 
