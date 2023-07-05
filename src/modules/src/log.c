@@ -990,6 +990,7 @@ logVarId_t logGetVarId(const char* group, const char* name)
   int i;
   logVarId_t varId = invalidVarId;
   char * currgroup = "";
+  uint16_t n = 0;
 
   for(i=0; i<logsLen; i++)
   {
@@ -997,12 +998,15 @@ logVarId_t logGetVarId(const char* group, const char* name)
       if (logs[i].type & LOG_START) {
         currgroup = logs[i].name;
       }
-    } else if ((!strcmp(group, currgroup)) && (!strcmp(name, logs[i].name))) {
-      varId = (logVarId_t)i;
-      return varId;
-    }
+    } 
+    else {
+      if ((strcmp(group, currgroup) == 0) && (strcmp(name, logs[i].name)) == 0) {
+        varId = (logVarId_t)i;
+        return n;
+        }
+        n++;
+        }
   }
-
   return invalidVarId;
 }
 
