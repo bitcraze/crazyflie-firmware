@@ -1119,8 +1119,8 @@ static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen
 static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
-  if (memAddr + readLen <= sizeof(ledringtimingsmem.timings)) {
-    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+  if (memAddr + readLen <= sizeof(ledringtimingsmem)) {
+    uint8_t* mem = (uint8_t*) &ledringtimingsmem;
     memcpy(buffer, mem + memAddr, readLen);
     result = true;
   }
@@ -1131,8 +1131,8 @@ static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, u
 static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
-  if ((memAddr + writeLen) <= sizeof(ledringtimingsmem.timings)) {
-    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+  if ((memAddr + writeLen) <= sizeof(ledringtimingsmem)) {
+    uint8_t* mem = (uint8_t*) &ledringtimingsmem;
     memcpy(mem+memAddr, buffer, writeLen);
     result = true;
   }
