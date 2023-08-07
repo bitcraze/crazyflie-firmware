@@ -138,7 +138,7 @@ First make sure that you have [SWIG](https://swig.org/) installed on your system
 make cf2_defconfig
 make bindings_python
 cd build
-sudo python3 setup.py install
+python3 setup.py install --user
 ```
 
 ## Make targets
