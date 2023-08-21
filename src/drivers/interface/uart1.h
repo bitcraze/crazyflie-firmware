@@ -95,11 +95,24 @@ bool uart1GetDataWithDefaultTimeout(uint8_t *c);
  *
  * @param[in] size  Number of bytes to read
  * @param[out] data  Pointer to data
- * 
+ *
  * @return number of bytes read
  */
 void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data);
 
+/**
+ * @brief Get the number of bytes available in the UART1 in queue
+ *
+ * @return uint32_t  Number of bytes available
+ */
+uint32_t uart1bytesAvailable();
+
+/**
+ * @brief Get the maximum number of bytes that can be stored in the UART1 in queue
+ *
+ * @return uint32_t  The maximum length of the in queue
+ */
+uint32_t uart1QueueMaxLength();
 
 /**
  * Sends raw data using a lock. Should be used from
