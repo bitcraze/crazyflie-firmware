@@ -124,13 +124,6 @@ all: $(PROG).hex $(PROG).bin
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
 
-	#
-	# Create symlinks to the ouput files in the build directory
-	#
-	for f in $$(ls $(PROG).*); do \
-		ln -sf $(KBUILD_OUTPUT)/$$f $(srctree)/$$(basename $$f); \
-	done
-
 include tools/make/targets.mk
 
 size:

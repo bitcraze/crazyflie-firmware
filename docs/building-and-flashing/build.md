@@ -104,6 +104,8 @@ $ tb make cf2_defconfig
 $ tb make
 ```
 
+Build artifacts, including binaries, will end up in the `build` directory.
+
 ### Bolt and Roadrunner
 We have some ready-to-go config files in the `configs/` directory. So, for example, if you want to build the Roadrunner (tag) you can go:
 

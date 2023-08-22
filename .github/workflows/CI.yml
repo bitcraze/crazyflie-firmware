@@ -45,8 +45,8 @@ jobs:
       with:
         name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
-          ${{ matrix.platform }}.bin
-          ${{ matrix.platform }}.elf
+          build/${{ matrix.platform }}.bin
+          build/${{ matrix.platform }}.elf
 
   features:
     runs-on: ubuntu-latest
