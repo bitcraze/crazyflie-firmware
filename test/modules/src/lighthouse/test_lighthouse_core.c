@@ -41,6 +41,8 @@ void vTaskDelay(const uint32_t ignore) {}
 static int nrOfCallsToStorageFetchForCalib = 0;
 static size_t mockStorageFetchForCalib(char* key, void* buffer, size_t length, int cmock_num_calls);
 
+static const uint32_t FRAME_LENGTH = 12;
+
 void setUp(void) {
     nrOfCallsToStorageFetchForCalib = 0;
     uart1SetSequence(emptySequence, 0);
@@ -74,6 +76,8 @@ void testThatUartSyncFramesAreSkipped() {
                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   int expectedRead = 24;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   do {
@@ -91,6 +95,7 @@ void testThatCorruptUartFramesAreDetectedWithOnesInFirstPadding() {
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   bool actual = getUartFrameRaw(&frame);
@@ -104,6 +109,7 @@ void testThatCorruptUartFramesAreDetectedWithOnesInSecondPadding() {
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   bool actual = getUartFrameRaw(&frame);
@@ -118,6 +124,7 @@ void testThatTimeStampIsDecodedInUartFrame() {
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2, 1};
   uint32_t expected = 0x010203;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   getUartFrameRaw(&frame);
@@ -133,6 +140,7 @@ void testThatWidthIsDecodedInUartFrame() {
   unsigned char sequence[] = {0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint32_t expected = 0x0201;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   getUartFrameRaw(&frame);
@@ -150,6 +158,7 @@ void testThatOffsetIsDecodedInUartFrame() {
   // The offset is converted from a 6 MHz to 24 MHz clock when read
   uint32_t expected = 0x10203 * 4;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   bool frameOk = getUartFrameRaw(&frame);
@@ -168,6 +177,7 @@ void testThatBeamDataIsDecodedInUartFrame() {
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 3, 2, 1, 0, 0, 0};
   uint32_t expected = 0x10203;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   bool frameOk = getUartFrameRaw(&frame);
@@ -185,6 +195,7 @@ void testThatSensorIsDecodedInUartFrame() {
   unsigned char sequence[] = {3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x3;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   getUartFrameRaw(&frame);
@@ -201,6 +212,7 @@ void testThatLackOfChannelIsDecodedInUartFrame() {
   // Fixture
   unsigned char sequence[] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   getUartFrameRaw(&frame);
@@ -219,6 +231,7 @@ void testThatChannelIsDecodedInUartFrame() {
   unsigned char sequence[] = {0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x0f;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   getUartFrameRaw(&frame);
@@ -237,6 +250,7 @@ void testThatSlowBitIsDecodedInUartFrame() {
   unsigned char sequence[] = {0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x0f;
   uart1SetSequence(sequence, sizeof(sequence));
+  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
   getUartFrameRaw(&frame);
@@ -259,7 +273,7 @@ static void uart1ReadCallback(char* ch, int cmock_num_calls) {
     uart1BytesRead++;
 }
 
-static bool uart1GetDataWithTimeoutCallback(char* ch, const uint32_t timeoutTicks, int cmock_num_calls) {
+static bool uart1GetcharCallback(char* ch, int cmock_num_calls) {
     uart1ReadCallback(ch, cmock_num_calls);
     return true;
 }
@@ -270,5 +284,5 @@ static void uart1SetSequence(char* sequence, int length) {
     uart1SequenceLength = length;
 
     uart1Getchar_StubWithCallback(uart1ReadCallback);
-    uart1GetDataWithTimeout_StubWithCallback(uart1GetDataWithTimeoutCallback);
+    uart1Getchar_StubWithCallback(uart1GetcharCallback);
 }
