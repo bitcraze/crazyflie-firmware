@@ -100,6 +100,7 @@ jobs:
         - examples/demos/app_push_demo
         - examples/demos/swarm_demo
         - examples/demos/app_wall_following_demo
+        - examples/demos/app_stm_gap8_cpx
     env:
       EXAMPLE: ${{ matrix.example }}
 
