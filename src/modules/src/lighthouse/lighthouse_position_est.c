@@ -301,7 +301,10 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
         sweepInfo.calib = &bsCalib->sweep[0];
         sweepInfo.sweepId = 0;
 
-        estimatorEnqueueSweepAngles(&sweepInfo);
+        #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+          estimatorEnqueueSweepAngles(&sweepInfo);
+        #endif
+
         STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
         STATS_CNT_RATE_EVENT(&positionRate);
       }
