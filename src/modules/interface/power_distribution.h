@@ -47,8 +47,10 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
  *
  * @param motorThrustBatCompUncapped The desired thrust for the motors
  * @param motorPwm The capped thrust
+ * @return true   Thrust was capped
+ * @return false  Thrust was unchanged and not capped
  */
-void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm);
+bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm);
 
 /**
  * Returns a 1 when motor 'id' gives thrust, returns 0 otherwise

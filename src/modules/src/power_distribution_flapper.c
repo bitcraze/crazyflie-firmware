@@ -143,10 +143,17 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-uint16_t limitThrust(int32_t value, int32_t min, int32_t max)
+uint16_t limitThrust(int32_t value, int32_t min, int32_t max, bool* isCapped)
 {
-  if (value < min) { return min; }
-  if (value > max) { return max; }
+  if (value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    *isCapped = true;
+    return max;
+  }
+
   return value;
 }
 
@@ -174,19 +181,23 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
   #endif
 }
 
-void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
+bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
 {
+  bool isCapped = false;
+
   #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
-    motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, 0, UINT16_MAX); // pitch servo
-    motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX); // yaw servo
-    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, UINT16_MAX); // left motor
-    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX); // right motor
+    motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, 0, UINT16_MAX, &isCapped); // pitch servo
+    motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX, &isCapped); // yaw servo
+    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, UINT16_MAX, &isCapped); // left motor
+    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX, &isCapped); // right motor
   #else
-    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, 0, UINT16_MAX); // pitch servo
-    motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX); // yaw servo
-    motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, idleThrust, UINT16_MAX); // left motor
-    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX); // right motor
+    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, 0, UINT16_MAX, &isCapped); // pitch servo
+    motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX, &isCapped); // yaw servo
+    motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, idleThrust, UINT16_MAX, &isCapped); // left motor
+    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX, &isCapped); // right motor
   #endif
+
+  return isCapped;
 }
 
 uint32_t powerDistributionGetIdleThrust() {
