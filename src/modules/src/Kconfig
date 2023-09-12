@@ -218,6 +218,14 @@ config ENABLE_THRUST_BAT_COMPENSATED
         The compensation is based on thrust measurements, which are only valid for CF2.X stock configuration.
         Not applied for brushless motor setup.
 
+config LOG_MOTOR_CAP_WARNING
+    bool "Log a warning if the motor thrust is capped"
+    default n
+    help
+        If the computed thrust of one or more motors is outside of the possible range, the thrust will be capped or
+        reduced for one or more motors depending on configuration. Enabeling this setting will report in the console log
+        that the thrust has been capped.
+
 endmenu
 
 menu "Parameter subsystem"
