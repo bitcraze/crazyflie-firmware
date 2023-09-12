@@ -239,7 +239,7 @@ static void logCapWarning(const bool isCapped) {
   if (isCapped) {
     uint32_t now = xTaskGetTickCount();
     if (now > nextReportTick) {
-      DEBUG_PRINT("Motor thrust was capped\n");
+      DEBUG_PRINT("Warning: motor thrust saturated\n");
       nextReportTick = now + M2T(3000);
     }
   }
