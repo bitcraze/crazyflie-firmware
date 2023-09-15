@@ -24,7 +24,7 @@
  * servo.c - Servo driver
  *
  * This code mainly interfacing the PWM peripheral lib of ST.
- * Author: Eric Ewing
+ * Author: Eric Ewing, Will Wu
  */
 
 #include <stdbool.h>
@@ -44,10 +44,13 @@
 
 
 // TODO Verify PWM settings
-#define SERVO_PWM_BITS      (0)
-#define SERVO_PWM_PERIOD    1000  // 84mhz -> 50hz with 100 as a prescaler
-#define SERVO_PWM_PRESCALE  (uint16_t) (1680 * 2) //84mhz to khz
-#define SERVO_BASE_FREQ     (0) // should be calculated
+#define SERVO_PWM_BITS           (0)
+#define SERVO_PWM_PERIOD         1000  // ARR register content
+#define SERVO_PWM_FREQUENCY_HZ   50 // target servo pwm frequency
+#define SERVO_PWM_PRESCALE       (uint16_t) (1680) // 84mhz / (50hz * ARR)
+#define SERVO_BASE_FREQ          (0) // should be calculated
+static const double SERVO_ZERO_PULSE_ms = 0.5;
+static const double SERVO_180_PULSE_ms  = 2.5;
 
 #include "servo.h"
 
@@ -94,7 +97,7 @@ void servoInit()
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
   TIM_OCInitStructure.TIM_Pulse = 0;
-  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
+  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
   TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
   // Configure OC3
@@ -109,7 +112,7 @@ void servoInit()
   //Enable the timer
   TIM_Cmd(servoMapMOSI->tim, ENABLE);
 
-  servoSetAngle(90);
+  servoSetAngle(130);
   isInit = true;
 }
 
@@ -120,12 +123,15 @@ bool servoTest(void)
 
 void servoSetAngle(uint8_t angle)
 {
-  // Convert angle to between .025 and .125 and then to ratio of signal
-  double angle_d = (double) angle;
-  uint32_t ratio = ((angle_d / 180.)* SERVO_PWM_PERIOD) / 10. + 100;
-  servoMapMOSI->setCompare(servoMapMOSI->tim, ratio);
-  // TIM_SetCompare4(SERVO_TIM, ratio);
-  DEBUG_PRINT("Set Angle: %u, set ratio: %" PRId32 "\n", angle, ratio);
+  // set CCR register
+  // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
+
+  double pulse_length_ms = (double)(angle) / 180. * (SERVO_180_PULSE_ms - SERVO_ZERO_PULSE_ms) + SERVO_ZERO_PULSE_ms;
+  double pulse_length_s = pulse_length_ms / 1000;
+  const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ);
+  servoMapMOSI->setCompare(servoMapMOSI->tim, ccr_val);
+  DEBUG_PRINT("[SERVO]: Set Angle: %u, set ratio: %" PRId32 "\n", angle, ccr_val);
+
 }
 
 PARAM_GROUP_START(servo_controller)
