@@ -112,6 +112,27 @@ static const MotorPerifDef MOTORS_PB9_TIM4_CH4_BRUSHED =
     .ocInit        = TIM_OC4Init,
     .preloadConfig = TIM_OC4PreloadConfig,
 };
+// Bolt 1.1 M4, PB10, TIM2_CH3, Brushed config
+static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHED =
+{
+    .drvType       = BRUSHED,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_10,
+    .gpioPinSource = GPIO_PinSource10,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM2,
+    .timPerif      = RCC_APB1Periph_TIM2,
+    .tim           = TIM2,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM2_STOP,
+    .timPeriod     = MOTORS_PWM_PERIOD,
+    .timPrescaler  = MOTORS_PWM_PRESCALE,
+    .setCompare    = TIM_SetCompare3,
+    .getCompare    = TIM_GetCapture3,
+    .ocInit        = TIM_OC3Init,
+    .preloadConfig = TIM_OC3PreloadConfig,
+};
 
 // CF2.X connector M1, PA1, TIM2_CH2, Brushless config, inversed
 static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_INV_PP =
@@ -758,6 +779,19 @@ const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS] =
   &MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP,
   &MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP,
   &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP
+};
+
+/**
+ * Brushed motors mapped to the Bolt 1.1 PWM outputs.
+ * 0R resistors 0402 should be mounted at R19, R22, R33, R34 and
+ * motor override signals will be disabled (high impedance).
+ */
+const MotorPerifDef* motorMapBolt11Brushed[NBR_OF_MOTORS] =
+{
+  &MOTORS_PA1_TIM2_CH2_BRUSHED,
+  &MOTORS_PB11_TIM2_CH4_BRUSHED,
+  &MOTORS_PA15_TIM2_CH1_BRUSHED,
+  &MOTORS_PB10_TIM2_CH3_BRUSHED
 };
 
 /**

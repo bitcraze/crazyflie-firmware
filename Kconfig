@@ -85,6 +85,15 @@ config PLATFORM_FLAPPER
 
 endchoice
 
+config BOLT11_BRUSHED
+    bool "Bolt 1.1: Use brushed motor driver (HW mod required)"
+    depends on PLATFORM_BOLT
+    default n
+    help
+        0R resistors 0402 (or simple wire to short) should be mounted at 
+        R19, R22, R33, R34 and motor override signals will be disabled (high impedance).
+        Brushed motor should be connected + and - at motor connector (not S).
+
 endmenu
 
 menu "IMU configuration"
