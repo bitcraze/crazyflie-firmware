@@ -51,6 +51,8 @@
 #define SERVO_BASE_FREQ          (0) // should be calculated
 static const double SERVO_ZERO_PULSE_ms = 0.5;
 static const double SERVO_180_PULSE_ms  = 2.5;
+static const uint8_t SERVO_ANGLE_ZERO = 130;
+static uint8_t s_servo_angle = SERVO_ANGLE_ZERO;
 
 #include "servo.h"
 
@@ -112,7 +114,7 @@ void servoInit()
   //Enable the timer
   TIM_Cmd(servoMapMOSI->tim, ENABLE);
 
-  servoSetAngle(130);
+  servoSetAngle(SERVO_ANGLE_ZERO);
   isInit = true;
 }
 
@@ -134,8 +136,14 @@ void servoSetAngle(uint8_t angle)
 
 }
 
+void servoAngleCallBack(void)
+{
+  servoSetAngle(s_servo_angle);
+}
+
 PARAM_GROUP_START(servo_controller)
 
-// PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInit, &isInit)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInit, &isInit)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
 
 PARAM_GROUP_STOP(servo_controller)

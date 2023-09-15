@@ -50,8 +50,16 @@ void servoInit();
 bool servoTest(void);
 
 /**
- * Set servo ratio/power.
+ *
+ * @brief Set servo angle.
+ * @param: angle: desired servo angle
  */
-void servoSetAngle(uint8_t ratio);
+void servoSetAngle(uint8_t angle);
+
+/**
+ * Servo angle parameter callback. When servo angle is changed, call
+ * function to change servo angle automatically
+ *  */
+void servoAngleCallBack(void);
 
 #endif /* __MOTORS_H__ */
