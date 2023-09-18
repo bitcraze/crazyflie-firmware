@@ -771,3 +771,7 @@ const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS] =
     &MOTORS_PB10_TIM2_CH3_BRUSHLESS_OD
 };
 
+/**
+ * Servo mapped to the Bigquad CPPM (MOSI) port
+ */
+ const MotorPerifDef* servoMapMOSI = &MOTORS_PA7_TIM14_CH1_BRUSHLESS_OD;
