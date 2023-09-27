@@ -7,6 +7,8 @@ import os
 include = [
     "src/modules/interface",
     "src/modules/interface/controller",
+    "src/modules/interface/kalman_core",
+    "src/modules/interface/outlierfilter",
     "src/hal/interface",
     "src/utils/interface/lighthouse",
     "src/utils/interface",
@@ -44,6 +46,10 @@ fw_sources = [
     "src/utils/src/num.c",
     "src/modules/src/power_distribution_quadrotor.c",
     # "src/modules/src/power_distribution_flapper.c",
+    "src/modules/src/axis3fSubSampler.c",
+    "src/modules/src/kalman_core/kalman_core.c",
+    "src/modules/src/kalman_core/mm_tdoa.c",
+    "src/modules/src/outlierfilter/outlierFilterTdoa.c",
 ]
 
 cffirmware = Extension(
