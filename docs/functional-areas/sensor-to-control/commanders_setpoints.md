@@ -50,7 +50,7 @@ As already explained before: The high level commander generates setpoints from w
 
 ### Setpoint priority
 
-The commander framework may receive setpoints from both from the High level commander as well as low level setpoints,
+The commander framework may receive setpoints from both the High level commander as well as low level setpoints,
 for instance from a user on the ground. Low level setpoints will always have higher priority as they might originate
 from a user that wants to take over control from the High level commander and handle an emergency situation.
 Once the High level commander has been disabled by receiving a low level setpoint, it will not generate any more
@@ -70,7 +70,7 @@ High level commander requires a call to the `commanderRelaxPriority()` function 
 
 Note that it takes a few seconds for the platform to understand that it is not flying after landing, and if you are using
 a script or application that is feeding low level setpoints to the Crazyflie during the landing phase, you have to
-continue to feed zero setpoints for a while to avoid that the supervisor locks the platofirm. Another option is to
+continue to feed zero setpoints for a while to avoid that the supervisor locks the platform. Another option is to
 re-enable the high level commander as it continuously is feeding zero setpoints to the commander framework, also when
 not flying a trajectory.
 
