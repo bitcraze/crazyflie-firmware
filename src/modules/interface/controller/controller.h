@@ -37,6 +37,7 @@ typedef enum {
 #ifdef CONFIG_CONTROLLER_OOT
   ControllerTypeOot,
 #endif
+  ControllerTypeLee,
   ControllerType_COUNT,
 } ControllerType;
 
