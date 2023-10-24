@@ -46,7 +46,10 @@
 static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
+
+#ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
 static statsCntRateLogger_t* bsEstRates[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS] = {&estBs0Rate, &estBs1Rate};
+#endif
 
 // The light planes in LH2 are tilted +- 30 degrees
 static const float t30 = M_PI / 6;
