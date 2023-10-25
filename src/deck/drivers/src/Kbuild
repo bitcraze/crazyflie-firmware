@@ -9,6 +9,7 @@ obj-$(CONFIG_DECK_FLOW)                 += flowdeck_v1v2.o
 obj-$(CONFIG_DECK_GTGPS)                += gtgps.o
 obj-$(CONFIG_DECK_LEDRING)              += ledring12.o
 obj-$(CONFIG_DECK_LIGHTHOUSE)           += lighthouse.o
+obj-$(CONFIG_DECK_LIGHTHOUSE2)          += lighthouse2.o
 obj-$(CONFIG_DECK_LOCO)                 += locodeck.o
 obj-$(CONFIG_DECK_LOCO)                 += lpsTdoa2Tag.o
 obj-$(CONFIG_DECK_LOCO)                 += lpsTdoa3Tag.o

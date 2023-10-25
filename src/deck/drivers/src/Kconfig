@@ -270,6 +270,19 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       Set the max number of base stations supported. NOTE: This is only
       valid for Lighthouse V2.
 
+config DECK_LIGHTHOUSE2
+    bool "Support the Lighthouse positioning deck 2.0"
+    default y
+    depends on !DEBUG_PRINT_ON_UART1
+    select ESTIMATOR_KALMAN_ENABLE
+    help
+        With Crazyflie and the Lighthouse positioning deck 2.0, high precision
+        autonomous flight becomes available for everyone. The Lighthouse
+        deck 2.0 uses the
+        SteamVR Base Station 2.0 (aka Lighthouse V2) to achieve high
+        precision positioning. The deck has 4 receivers which gives the
+        full pose of the Crazyflie.
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y

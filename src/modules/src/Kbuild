@@ -51,6 +51,7 @@ obj-y += worker.o
 # Sub folders
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
 obj-y += lighthouse/
+obj-$(CONFIG_DECK_LIGHTHOUSE2) += lighthouse2/
 obj-y += controller/
 obj-y += estimator/
 obj-y += cpx/
