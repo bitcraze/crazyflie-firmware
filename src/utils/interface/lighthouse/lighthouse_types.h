@@ -29,3 +29,8 @@ typedef struct {
  *
  */
 typedef float (*lighthouseCalibrationMeasurementModel_t)(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);
+
+typedef enum {
+    lighthouseBsTypeV1 = 1,
+    lighthouseBsTypeV2 = 2,
+} lighthouseBaseStationType_t;

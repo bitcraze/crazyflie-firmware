@@ -28,7 +28,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "pulse_processor.h"
+#include "lighthouse_types.h"
+#include "lighthouse_geometry.h"
+#include "lighthouse_calibration.h"
+
+
+typedef struct {
+    baseStationGeometry_t* geometries;
+    lighthouseCalibration_t* calibrations;
+    uint8_t nrOfSupportedBs;
+} LighthouseStorageDef_t;
 
 /**
  * @brief Copy current data in RAM for one base station to permanent storage.
@@ -38,21 +47,25 @@
  * @param baseStation  The base station id to store data for
  * @param geoData      If true, write geometry data for the base station
  * @param calibData    if true, write calibration data for the base station
+ * @param def          Definition of where calibration and geometry data is located
  * @return true if data was stored
  */
-bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
+bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData, const bool calibData, const LighthouseStorageDef_t* def);
 
 /**
  * @brief Copy current calibration data for one base station in RAM to permanent storage.
- *        This function runns as a worker and will return imediatley.
+ *        This function runs as a worker and will return immediately.
  *
  * @param baseStation  The base station id to store calibration data for
+ * @param geoData      Indicate if the geometry data should be stored
+ * @param calibData    Indicate if the calibration data should be stored
+ * @param def          Definition of where calibration and geometry data is located
  */
-void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation);
+void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation, const LighthouseStorageDef_t* def);
 
 /**
  * @brief Save system type in storage
- * 
+ *
  * @param type System type to store
  */
 void lighthouseStoragePersistSystemType(lighthouseBaseStationType_t type);
@@ -66,17 +79,19 @@ void lighthouseStorageVerifySetStorageVersion();
 /**
  * @brief Load geometry data from the permanent storage, used at start up.
  *
+ * @param def          Definition of where calibration and geometry data is located
  */
-void lighthouseStorageInitializeGeoDataFromStorage();
+void lighthouseStorageInitializeGeoDataFromStorage(LighthouseStorageDef_t* def);
 
 /**
  * @brief Load calibration data from the permanent storage, used at start up.
  *
+ * @param def          Definition of where calibration and geometry data is located
  */
-void lighthouseStorageInitializeCalibDataFromStorage();
+void lighthouseStorageInitializeCalibDataFromStorage(LighthouseStorageDef_t* def);
 
 /**
  * @brief Fetch system type from storage and set it in ligthouseCore
- * 
+ *
  */
 void lighthouseStorageInitializeSystemTypeFromStorage();
