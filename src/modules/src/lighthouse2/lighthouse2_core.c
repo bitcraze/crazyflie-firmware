@@ -146,7 +146,7 @@ bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
   memcpy(&frame->first_angle, &data[2], 4);
   memcpy(&frame->second_angle, &data[6], 4);
 
-  bool isFrameValid = frame->isSyncFrame;
+  bool isFrameValid = true;
 
   STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
 
