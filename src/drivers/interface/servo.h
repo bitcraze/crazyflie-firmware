@@ -38,7 +38,13 @@
 #include "config.h"
 
 /******** Defines ********/
-
+#define SERVO_PWM_BITS           (0)
+#define SERVO_PWM_PERIOD         1000  // ARR register content
+#define SERVO_PWM_FREQUENCY_HZ   50 // target servo pwm frequency
+#define SERVO_PWM_PRESCALE       (uint16_t) (1680) // 84mhz / (50hz * ARR)
+#define SERVO_BASE_FREQ          (0) // should be calculated
+#define SERVO_ANGLE_ZERO         130
+#define SERVO_ANGLE_LIMIT        30
 /*** Public interface ***/
 
 /**
@@ -62,4 +68,9 @@ void servoSetAngle(uint8_t angle);
  *  */
 void servoAngleCallBack(void);
 
+/**
+ * Saturate servo angle. Limit is defined by macro: SERVO_ANGLE_LIMIT
+ * @param angle: pointer to desired angle
+ * */
+uint8_t saturateAngle(int8_t angle);
 #endif /* __MOTORS_H__ */

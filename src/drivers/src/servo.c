@@ -42,17 +42,9 @@
 #include <inttypes.h>
 #include <motors.h>
 
-
 // TODO Verify PWM settings
-#define SERVO_PWM_BITS           (0)
-#define SERVO_PWM_PERIOD         1000  // ARR register content
-#define SERVO_PWM_FREQUENCY_HZ   50 // target servo pwm frequency
-#define SERVO_PWM_PRESCALE       (uint16_t) (1680) // 84mhz / (50hz * ARR)
-#define SERVO_BASE_FREQ          (0) // should be calculated
 static const double SERVO_ZERO_PULSE_ms = 0.5;
 static const double SERVO_180_PULSE_ms  = 2.5;
-static const uint8_t SERVO_ANGLE_ZERO = 130;
-static uint8_t s_servo_angle = SERVO_ANGLE_ZERO;
 
 #include "servo.h"
 
@@ -136,14 +128,23 @@ void servoSetAngle(uint8_t angle)
 
 }
 
-void servoAngleCallBack(void)
+uint8_t saturateAngle(int8_t angle)
 {
-  servoSetAngle(s_servo_angle);
+  if (angle > SERVO_ANGLE_LIMIT || angle < -SERVO_ANGLE_LIMIT) {
+    DEBUG_PRINT("[SERVO]: Servo angle out of range! Capping...\n");
+    bool sign = angle > 0;
+    return sign ? SERVO_ANGLE_LIMIT + SERVO_ANGLE_ZERO : -SERVO_ANGLE_LIMIT+SERVO_ANGLE_ZERO;
+  }
+  else {
+    return angle + SERVO_ANGLE_ZERO;
+  }
+
 }
 
-PARAM_GROUP_START(servo_controller)
 
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInit, &isInit)
-PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
+//PARAM_GROUP_START(servo_controller)
 
-PARAM_GROUP_STOP(servo_controller)
+//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInit, &isInit)
+//PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
+
+//PARAM_GROUP_STOP(servo_controller)

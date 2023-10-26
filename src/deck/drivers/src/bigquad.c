@@ -53,6 +53,7 @@
 
 //Hardware configuration
 static bool isInit;
+static int8_t s_servo_angle = 0;
 
 #ifdef CONFIG_DECK_BIGQUAD_ENABLE_OSD
 static MspObject s_MspObject;
@@ -128,6 +129,11 @@ static const DeckDriver bigquad_deck = {
   .test = bigquadTest,
 };
 
+void servoAngleCallBack(void)
+{
+  servoSetAngle(saturateAngle(s_servo_angle));
+}
+
 DECK_DRIVER(bigquad_deck);
 
 PARAM_GROUP_START(deck)
@@ -136,6 +142,8 @@ PARAM_GROUP_START(deck)
  * @brief Nonzero if [BigQuad deck](%https://www.bitcraze.io/products/bigquad-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInit, &isInit)
+PARAM_ADD_WITH_CALLBACK(PARAM_INT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
 
 PARAM_GROUP_STOP(deck)
 
