@@ -259,26 +259,32 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 
   const bool isTumbled = isTumbledCheck(this, sensors, currentTick);
   if (isTumbled) {
+      DEBUG_PRINT("Is Tumbled!\n");
     conditions |= SUPERVISOR_CB_IS_TUMBLED;
   }
 
   const uint32_t setpointAge = currentTick - setpoint->timestamp;
   if (setpointAge > COMMANDER_WDT_TIMEOUT_STABILIZE) {
+      DEBUG_PRINT("Setpoint is old!\n");
     conditions |= SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   }
   if (setpointAge > COMMANDER_WDT_TIMEOUT_SHUTDOWN) {
+      DEBUG_PRINT("Setpoint is old! Timeout!\n");
     conditions |= SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT;
   }
 
   if (!checkEmergencyStopWatchdog(currentTick)) {
+          DEBUG_PRINT("Emergency Stop!\n");
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 
   if (locSrvIsEmergencyStopRequested()) {
+          DEBUG_PRINT("Loc Srv Emergency stop!\n");
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 
   if (this->paramEmergencyStop) {
+              DEBUG_PRINT("Param Emergency stop!\n");
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 

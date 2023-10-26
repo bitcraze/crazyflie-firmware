@@ -53,6 +53,7 @@ static bool isInit = false;
 extern const MotorPerifDef* servoMapMOSI;
 
 /* Public functions */
+static int8_t s_servo_angle = 0;
 
 void servoInit()
 {
@@ -94,16 +95,16 @@ void servoInit()
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
   TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
-  // Configure OC3
+  // Configure OC1
   servoMapMOSI->ocInit(servoMapMOSI->tim, &TIM_OCInitStructure);
   servoMapMOSI->preloadConfig(servoMapMOSI->tim, TIM_OCPreload_Enable);
 
 
   //Enable the timer PWM outputs
   TIM_CtrlPWMOutputs(servoMapMOSI->tim, ENABLE);
-  servoMapMOSI->setCompare(servoMapMOSI->tim, 0x00);
+servoMapMOSI->setCompare(servoMapMOSI->tim, 0x00);
 
-  //Enable the timer
+//Enable the timer
   TIM_Cmd(servoMapMOSI->tim, ENABLE);
 
   servoSetAngle(SERVO_ANGLE_ZERO);
@@ -141,10 +142,15 @@ uint8_t saturateAngle(int8_t angle)
 
 }
 
+void servoAngleCallBack(void)
+{
+  servoInit();
+  servoSetAngle(saturateAngle(s_servo_angle));
+}
 
-//PARAM_GROUP_START(servo_controller)
+PARAM_GROUP_START(servo)
 
-//PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInit, &isInit)
-//PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInitialized, &isInit)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
 
-//PARAM_GROUP_STOP(servo_controller)
+PARAM_GROUP_STOP(servo)
