@@ -111,6 +111,10 @@ bool supervisorIsArmed() {
   return supervisorMem.isArmingActivated || supervisorMem.deprecatedArmParam;
 }
 
+bool supervisorIsLocked() {
+  return supervisorStateLocked == supervisorMem.state;
+}
+
 bool supervisorRequestArming(const bool doArm) {
   if (doArm == supervisorMem.isArmingActivated) {
     return true;
@@ -305,6 +309,9 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (this->isTumbled) {
     this->infoBitfield |= 0x0020;
   }
+  if (supervisorStateLocked == this->state) {
+    this->infoBitfield |= 0x0040;
+  }
 }
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
@@ -440,6 +447,7 @@ LOG_GROUP_START(supervisor)
  * Bit 3 = can fly - the Crazyflie is ready to fly
  * Bit 4 = is flying - the Crazyflie is flying.
  * Bit 5 = is tumbled - the Crazyflie is up side down.
+ * Bit 6 = is locked - the Crazyflie is in the locked state and must be restarted.
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
 LOG_GROUP_STOP(supervisor)

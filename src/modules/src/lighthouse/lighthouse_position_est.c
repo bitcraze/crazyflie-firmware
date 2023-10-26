@@ -46,7 +46,10 @@
 static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
 static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
+
+#ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
 static statsCntRateLogger_t* bsEstRates[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS] = {&estBs0Rate, &estBs1Rate};
+#endif
 
 // The light planes in LH2 are tilted +- 30 degrees
 static const float t30 = M_PI / 6;
@@ -301,9 +304,12 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
         sweepInfo.calib = &bsCalib->sweep[0];
         sweepInfo.sweepId = 0;
 
-        estimatorEnqueueSweepAngles(&sweepInfo);
-        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-        STATS_CNT_RATE_EVENT(&positionRate);
+        #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
+          estimatorEnqueueSweepAngles(&sweepInfo);
+
+          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+          STATS_CNT_RATE_EVENT(&positionRate);
+        #endif
       }
 
       sweepInfo.measuredSweepAngle = measurement->angles[1];
@@ -315,10 +321,10 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
 
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           estimatorEnqueueSweepAngles(&sweepInfo);
-        #endif
 
-        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-        STATS_CNT_RATE_EVENT(&positionRate);
+          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+          STATS_CNT_RATE_EVENT(&positionRate);
+        #endif
       }
     }
   }
@@ -347,9 +353,10 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         sweepInfo.sweepId = 0;
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           estimatorEnqueueSweepAngles(&sweepInfo);
+
+          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+          STATS_CNT_RATE_EVENT(&positionRate);
         #endif
-        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-        STATS_CNT_RATE_EVENT(&positionRate);
       }
 
       sweepInfo.measuredSweepAngle = measurement->angles[1];
@@ -359,9 +366,10 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         sweepInfo.sweepId = 1;
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           estimatorEnqueueSweepAngles(&sweepInfo);
+
+          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+          STATS_CNT_RATE_EVENT(&positionRate);
         #endif
-        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-        STATS_CNT_RATE_EVENT(&positionRate);
       }
     }
   }

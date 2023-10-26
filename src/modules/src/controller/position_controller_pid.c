@@ -524,7 +524,7 @@ PARAM_GROUP_START(posCtlPid)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, xKp, &this.pidX.pid.kp)
 /**
- * @brief Proportional gain for the position PID in the body-yaw-aligned X direction
+ * @brief Integral gain for the position PID in the body-yaw-aligned X direction
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, xKi, &this.pidX.pid.ki)
 /**
