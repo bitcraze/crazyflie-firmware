@@ -95,6 +95,11 @@ typedef struct {
   bool channelFound;
 } pulseProcessorFrame_t;
 
+typedef enum {
+    lighthouseBsTypeV1 = 1,
+    lighthouseBsTypeV2 = 2,
+} lighthouseBaseStationType_t;
+
 enum pulseClass_e {unknown, sync0, sync1, sweep};
 
 typedef struct {

@@ -128,7 +128,6 @@ static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 pulseProcessor_t lighthouseCoreState;
-static LighthouseStorageDef_t storageDef;
 
 static lighthouseBaseStationType_t systemType = lighthouseBsTypeV2;
 static lighthouseBaseStationType_t previousSystemType = lighthouseBsTypeV2;
@@ -150,10 +149,6 @@ static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
 }
 
 void lighthouseCoreInit() {
-  storageDef.geometries = lighthouseCoreState.bsGeometry;
-  storageDef.calibrations = lighthouseCoreState.bsCalibration;
-  storageDef.nrOfSupportedBs = CONFIG_DECK_LIGHTHOUSE_MAX_N_BS;
-
   lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
 
@@ -464,7 +459,7 @@ static void useCalibrationData(pulseProcessor_t *appState) {
       if (isDataDifferent) {
         DEBUG_PRINT("Got calibration from %08X on channel %d\n", (unsigned int)appState->ootxDecoder[baseStation].frame.id, baseStation + 1);
         lighthouseCoreSetCalibrationData(baseStation, &newData);
-        lighthouseStoragePersistCalibDataBackground(baseStation, &storageDef);
+        lighthouseStoragePersistCalibDataBackground(baseStation);
 
         modifyBit(&baseStationCalibUpdatedMap, baseStation, currentCalibDataValid);
       }
@@ -545,8 +540,8 @@ void lighthouseCoreTask(void *param) {
   systemWaitStart();
 
   lighthouseStorageVerifySetStorageVersion();
-  lighthouseStorageInitializeGeoDataFromStorage(&storageDef);
-  lighthouseStorageInitializeCalibDataFromStorage(&storageDef);
+  lighthouseStorageInitializeGeoDataFromStorage();
+  lighthouseStorageInitializeCalibDataFromStorage();
 
   ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
 
@@ -603,10 +598,6 @@ void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthous
     lighthouseCoreState.bsCalibration[baseStation] = *calibration;
     lighthousePositionCalibrationDataWritten(baseStation);
   }
-}
-
-bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData) {
-  return lighthouseStoragePersistData(baseStation, geoData, calibData, &storageDef);
 }
 
 static uint8_t pulseProcessorAnglesQualityLogger(uint32_t timestamp, void* ignored) {

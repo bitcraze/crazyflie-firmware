@@ -54,17 +54,6 @@ void lighthouseCoreTask(void *param);
 void lighthouseCoreSetCalibrationData(const uint8_t baseStation, const lighthouseCalibration_t* calibration);
 
 /**
- * @brief Persist geometry and calibration data
- *
- * @param baseStation   The base station to store data for
- * @param geoData       Indicates if geometry data should be stored
- * @param calibData     Indicates if calibration data should be stored
- * @return true         Success
- * @return false        Failed
- */
-bool lighthouseCorePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
-
-/**
  * @brief Set system type
  *
  * @param type System type

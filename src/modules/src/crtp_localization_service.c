@@ -41,7 +41,7 @@
 #include "autoconf.h"
 
 #ifdef CONFIG_DECK_LIGHTHOUSE
-#include "lighthouse_core.h"
+#include "lighthouse_storage.h"
 #endif
 
 #include "locodeck.h"
@@ -261,7 +261,7 @@ static void lhPersistDataWorker(void* arg) {
     uint16_t mask = 1 << baseStation;
     bool storeGeo = (args->geoDataBsField & mask) != 0;
     bool storeCalibration = (args->calibrationDataBsField & mask) != 0;
-    if (! lighthouseCorePersistData(baseStation, storeGeo, storeCalibration)) {
+    if (! lighthouseStoragePersistData(baseStation, storeGeo, storeCalibration)) {
       result = false;
       break;
     }

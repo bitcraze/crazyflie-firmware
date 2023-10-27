@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 - 2021 Bitcraze AB
+ * Copyright (C) 2019 - 2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,16 +28,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "lighthouse_types.h"
-#include "lighthouse_geometry.h"
-#include "lighthouse_calibration.h"
-
-
-typedef struct {
-    baseStationGeometry_t* geometries;
-    lighthouseCalibration_t* calibrations;
-    uint8_t nrOfSupportedBs;
-} LighthouseStorageDef_t;
+#include "pulse_processor.h"
 
 /**
  * @brief Copy current data in RAM for one base station to permanent storage.
@@ -47,21 +38,17 @@ typedef struct {
  * @param baseStation  The base station id to store data for
  * @param geoData      If true, write geometry data for the base station
  * @param calibData    if true, write calibration data for the base station
- * @param def          Definition of where calibration and geometry data is located
  * @return true if data was stored
  */
-bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData, const bool calibData, const LighthouseStorageDef_t* def);
+bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData, const bool calibData);
 
 /**
  * @brief Copy current calibration data for one base station in RAM to permanent storage.
- *        This function runs as a worker and will return immediately.
+ *        This function runns as a worker and will return imediatley.
  *
  * @param baseStation  The base station id to store calibration data for
- * @param geoData      Indicate if the geometry data should be stored
- * @param calibData    Indicate if the calibration data should be stored
- * @param def          Definition of where calibration and geometry data is located
  */
-void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation, const LighthouseStorageDef_t* def);
+void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation);
 
 /**
  * @brief Save system type in storage
@@ -79,19 +66,37 @@ void lighthouseStorageVerifySetStorageVersion();
 /**
  * @brief Load geometry data from the permanent storage, used at start up.
  *
- * @param def          Definition of where calibration and geometry data is located
  */
-void lighthouseStorageInitializeGeoDataFromStorage(LighthouseStorageDef_t* def);
+void lighthouseStorageInitializeGeoDataFromStorage();
 
 /**
  * @brief Load calibration data from the permanent storage, used at start up.
  *
- * @param def          Definition of where calibration and geometry data is located
  */
-void lighthouseStorageInitializeCalibDataFromStorage(LighthouseStorageDef_t* def);
+void lighthouseStorageInitializeCalibDataFromStorage();
 
 /**
  * @brief Fetch system type from storage and set it in ligthouseCore
  *
  */
 void lighthouseStorageInitializeSystemTypeFromStorage();
+
+/**
+ * @brief Read geometry data from persistent storage
+ *
+ * @param baseStation   The base station id
+ * @param geoData       Buffer to write data to
+ * @return true         Data was successfully read
+ * @return false        Data was not read
+ */
+bool lighthouseStorageReadGeoDataFromStorage(const uint8_t baseStation, baseStationGeometry_t* geoData);
+
+/**
+ * @brief Read calibration data from persistent storage
+ *
+ * @param baseStation   The base station id
+ * @param calibData     Buffer to write data to
+ * @return true         Data was successfully read
+ * @return false        Data was not read
+ */
+bool lighthouseStorageReadCalibDataFromStorage(const uint8_t baseStation, lighthouseCalibration_t* calibData);

@@ -96,18 +96,11 @@ static lighthouseCalibration_t bsCalibration[NR_OF_BASE_STATIONS];
 static baseStationGeometry_t bsGeometry[NR_OF_BASE_STATIONS];
 static baseStationGeometryCache_t bsGeoCache[NR_OF_BASE_STATIONS];
 
-static LighthouseStorageDef_t storageDef;
-
-static void initGeometryCache();
 static void useFrame(const lighthouse2UartFrame_t* frame);
 static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Rotor2Rot, mat3d lh1Rotor2RotInverted);
 
 void lighthouse2CoreInit() {
-  storageDef.geometries = bsGeometry;
-  storageDef.calibrations = bsCalibration;
-  storageDef.nrOfSupportedBs = NR_OF_BASE_STATIONS;
 }
-
 
 #define OPTIMIZE_UART1_ACCESS 1
 bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
@@ -169,16 +162,28 @@ void waitForUartSynchFrame() {
   }
 }
 
+static void initGeoAndCalibDataFromStorage() {
+  lighthouseStorageVerifySetStorageVersion();
+
+  for (int baseStation = 0; baseStation < NR_OF_BASE_STATIONS; baseStation++) {
+    lighthouseStorageReadCalibDataFromStorage(baseStation, &bsCalibration[baseStation]);
+
+    lighthouseStorageReadGeoDataFromStorage(baseStation, &bsGeometry[baseStation]);
+    if (bsGeometry[baseStation].valid) {
+      baseStationGeometryCache_t* cache = &bsGeoCache[baseStation];
+      preProcessGeometryData(bsGeometry[baseStation].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
+    }
+  }
+}
+
+
 void lighthouse2CoreTask(void *param) {
   bool isUartFrameValid = false;
 
   uart1Init(230400);
   systemWaitStart();
 
-  lighthouseStorageVerifySetStorageVersion();
-  lighthouseStorageInitializeGeoDataFromStorage(&storageDef);
-  lighthouseStorageInitializeCalibDataFromStorage(&storageDef);
-  initGeometryCache();
+  initGeoAndCalibDataFromStorage();
 
   ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
 
@@ -196,15 +201,6 @@ void lighthouse2CoreTask(void *param) {
     }
 
     uartSynchronized = false;
-  }
-}
-
-static void initGeometryCache() {
-  for (uint8_t baseStation = 0; baseStation < NR_OF_BASE_STATIONS; baseStation++ ) {
-    if (bsGeometry[baseStation].valid) {
-      baseStationGeometryCache_t* cache = &bsGeoCache[baseStation];
-      preProcessGeometryData(bsGeometry[baseStation].mat, cache->baseStationInvertedRotationMatrixes, cache->lh1Rotor2RotationMatrixes, cache->lh1Rotor2InvertedRotationMatrixes);
-    }
   }
 }
 

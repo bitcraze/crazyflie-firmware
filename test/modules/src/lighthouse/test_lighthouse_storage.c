@@ -19,15 +19,10 @@ void lighthouseStorageInitializeGeoDataFromStorage();
 void lighthouseStorageInitializeCalibDataFromStorage();
 void generateStorageKey(char* buf, const char* base, const uint8_t baseStation);
 
-#define NR_OF_BASE_STATIONS 16
-static lighthouseCalibration_t bsCalibration[NR_OF_BASE_STATIONS];
-static baseStationGeometry_t bsGeometry[NR_OF_BASE_STATIONS];
-static LighthouseStorageDef_t storageDef;
+pulseProcessor_t lighthouseCoreState;
 
 void setUp(void) {
-  storageDef.geometries = bsGeometry;
-  storageDef.calibrations = bsCalibration;
-  storageDef.nrOfSupportedBs = NR_OF_BASE_STATIONS;
+  // Empty
 }
 
 void tearDown(void) {
@@ -37,10 +32,10 @@ void tearDown(void) {
 
 void testThatGeoDataIsWrittenToStorage() {
   // Fixture
-  storageStore_ExpectAndReturn("lh/sys/0/geo/1", &bsGeometry[1], sizeof(baseStationGeometry_t), true);
+  storageStore_ExpectAndReturn("lh/sys/0/geo/1", &lighthouseCoreState.bsGeometry[1], sizeof(baseStationGeometry_t), true);
 
   // Test
-  bool actual = lighthouseStoragePersistData(1, true, false, &storageDef);
+  bool actual = lighthouseStoragePersistData(1, true, false);
 
   // Actual
   TEST_ASSERT_TRUE(actual);
@@ -51,7 +46,7 @@ void testThatFailedGeoDataWriteToStorageReturnsFailure() {
   storageStore_IgnoreAndReturn(false);
 
   // Test
-  bool actual = lighthouseStoragePersistData(1, true, false, &storageDef);
+  bool actual = lighthouseStoragePersistData(1, true, false);
 
   // Actual
   TEST_ASSERT_FALSE(actual);
@@ -59,10 +54,10 @@ void testThatFailedGeoDataWriteToStorageReturnsFailure() {
 
 void testThatCalibDataIsWrittenToStorage() {
   // Fixture
-  storageStore_ExpectAndReturn("lh/sys/0/cal/1", &bsCalibration[1], sizeof(lighthouseCalibration_t), true);
+  storageStore_ExpectAndReturn("lh/sys/0/cal/1", &lighthouseCoreState.bsCalibration[1], sizeof(lighthouseCalibration_t), true);
 
   // Test
-  bool actual = lighthouseStoragePersistData(1, false, true, &storageDef);
+  bool actual = lighthouseStoragePersistData(1, false, true);
 
   // Actual
   TEST_ASSERT_TRUE(actual);
@@ -73,7 +68,7 @@ void testThatFailedCalibDataWriteToStorageReturnsFailure() {
   storageStore_IgnoreAndReturn(false);
 
   // Test
-  bool actual = lighthouseStoragePersistData(1, false, true, &storageDef);
+  bool actual = lighthouseStoragePersistData(1, false, true);
 
   // Actual
   TEST_ASSERT_FALSE(actual);
@@ -84,7 +79,7 @@ void testThatNoInitializationOfGeoIsDoneWhenStorageIsEmpty() {
   storageFetch_IgnoreAndReturn(0);
 
   // Test
-  lighthouseStorageInitializeGeoDataFromStorage(&storageDef);
+  lighthouseStorageInitializeGeoDataFromStorage();
 
   // Actual
   // Verified in mocks
@@ -95,7 +90,7 @@ void testInitializationOfGeoIsDoneFromStorage() {
   int geoSize = sizeof(baseStationGeometry_t);
   const void* ignored = 0;
 
-  for (int i = 0; i < NR_OF_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, geoSize, geoSize);
     storageFetch_IgnoreArg_key();
     storageFetch_IgnoreArg_buffer();
@@ -105,7 +100,7 @@ void testInitializationOfGeoIsDoneFromStorage() {
   }
 
   // Test
-  lighthouseStorageInitializeGeoDataFromStorage(&storageDef);
+  lighthouseStorageInitializeGeoDataFromStorage();
 
   // Actual
   // Verified in mocks
@@ -116,7 +111,7 @@ void testThatNoInitializationOfCalibIsDoneWhenStorageIsEmpty() {
   storageFetch_IgnoreAndReturn(0);
 
   // Test
-  lighthouseStorageInitializeCalibDataFromStorage(&storageDef);
+  lighthouseStorageInitializeCalibDataFromStorage();
 
   // Actual
   // Verified in mocks
@@ -127,7 +122,7 @@ void testInitializationOfCalibIsDoneFromStorage() {
   int calibSize = sizeof(lighthouseCalibration_t);
   const void* ignored = 0;
 
-  for (int i = 0; i < NR_OF_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, calibSize, calibSize);
     storageFetch_IgnoreArg_key();
     storageFetch_IgnoreArg_buffer();
@@ -137,7 +132,7 @@ void testInitializationOfCalibIsDoneFromStorage() {
   }
 
   // Test
-  lighthouseStorageInitializeCalibDataFromStorage(&storageDef);
+  lighthouseStorageInitializeCalibDataFromStorage();
 
   // Actual
   // Verified in mocks
