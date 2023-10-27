@@ -102,6 +102,15 @@ for improved position estimation.
 #define ANCHOR_MIN_TX_FREQ 20.0f
 #define ID_COUNT 256
 
+// Short LPP packets for position
+#define SHORT_LPP 0xF0
+#define LPP_SHORT_ANCHOR_POSITION 0x01
+
+// Log ids for estimated position
+static logVarId_t estimatedPosLogX;
+static logVarId_t estimatedPosLogY;
+static logVarId_t estimatedPosLogZ;
+
 static const locoAddress_t base_address = 0xcfbc;
 static const float hybridModeTwrStd = 0.25;
 static float logDistance;
@@ -148,7 +157,16 @@ static struct {
   uint32_t nextTxDelayEvaluationTime_ms;
   uint32_t rxCount[ID_COUNT];
 
+  // Transmit packets if true
   bool isTwrActive;
+
+  // Indicates if the current estimated position should be transmitted when sending packets.
+  // If false, the CF can use TWR for positioning itself only
+  // If true, other CFs can use the this CF as an anchor
+  bool twrSendEstimatedPosition;
+
+  // If TWR data should be used for position estimation
+  bool useTwrForPositionEstimation;
 
   // Outgoing LPP packet
   lpsLppShortPacket_t lppPacket;
@@ -258,8 +276,10 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
               logDistance = measurement.distance;
             }
 
-            estimatorEnqueueDistance(&measurement);
-            STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
+            if (ctx.useTwrForPositionEstimation) {
+              estimatorEnqueueDistance(&measurement);
+              STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
+            }
           }
         }
       }
@@ -444,18 +464,28 @@ static void setTxData(dwDevice_t *dev)
 
   if (firstEntry) {
     MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
-
-    txPacket.sourceAddress = (base_address & 0xffffffffffffff00) | ctx.anchorId;
     txPacket.destAddress = (base_address & 0xffffffffffffff00) | 0xff;
-
     txPacket.payload[0] = PACKET_TYPE_TDOA3;
 
     firstEntry = false;
   }
 
+  txPacket.sourceAddress = (base_address & 0xffffffffffffff00) | ctx.anchorId;
+
   int rangePacketSize = populateTxData((rangePacket3_t *)txPacket.payload);
-  // This where to add LPP data, for instance the position to enable the
-  // CF to act as an anchor in hybrid mode (TWR)
+
+  if (ctx.twrSendEstimatedPosition) {
+    txPacket.payload[rangePacketSize + LPP_HEADER] = SHORT_LPP;
+    txPacket.payload[rangePacketSize + LPP_TYPE] = LPP_SHORT_ANCHOR_POSITION;
+
+    struct lppShortAnchorPos_s *pos = (struct lppShortAnchorPos_s*) &txPacket.payload[rangePacketSize + LPP_PAYLOAD];
+    pos->x = logGetFloat(estimatedPosLogX);
+    pos->y = logGetFloat(estimatedPosLogY);
+    pos->z = logGetFloat(estimatedPosLogZ);
+
+    lppLength = 2 + sizeof(struct lppShortAnchorPos_s);
+  }
+
 
   dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH + rangePacketSize + lppLength);
 }
@@ -587,11 +617,17 @@ static void Initialize(dwDevice_t *dev) {
   ctx.nextTxTick = 0;
   ctx.isTdoaActive = true;
   ctx.isTwrActive = false;
+  ctx.twrSendEstimatedPosition = true;
 
   ctx.averageTxDelay = 1000.0f / ANCHOR_MAX_TX_FREQ;
   ctx.nextTxDelayEvaluationTime_ms = 0;
 
   ctx.isReceivingPackets = false;
+
+  // Get log ids to aquire the current estimated position
+  estimatedPosLogX = logGetVarId("stateEstimate", "x");
+  estimatedPosLogY = logGetVarId("stateEstimate", "y");
+  estimatedPosLogZ = logGetVarId("stateEstimate", "z");
 
   STATS_CNT_RATE_INIT(&ctx.cntPacketsTransmited, STATS_INTERVAL);
   STATS_CNT_RATE_INIT(&ctx.cntTwrSeqNrOk, STATS_INTERVAL);
@@ -623,5 +659,7 @@ PARAM_GROUP_START(tdoa3)
   PARAM_ADD(PARAM_UINT8, hmId, &ctx.anchorId)
   PARAM_ADD(PARAM_UINT8, hmTdoa, &ctx.isTdoaActive)
   PARAM_ADD(PARAM_UINT8, hmTwr, &ctx.isTwrActive)
+  PARAM_ADD(PARAM_UINT8, hmTwrTXPos, &ctx.twrSendEstimatedPosition)
+  PARAM_ADD(PARAM_UINT8, hmTwrEstPos, &ctx.useTwrForPositionEstimation)
   PARAM_ADD(PARAM_UINT8, hmAnchLog, &logDistAnchorId)
 PARAM_GROUP_STOP(tdoa3)
