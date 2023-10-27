@@ -104,6 +104,8 @@ for improved position estimation.
 
 static const locoAddress_t base_address = 0xcfbc;
 static const float hybridModeTwrStd = 0.25;
+static float logDistance;
+static uint8_t logDistAnchorId;
 
 typedef struct {
   uint8_t type;
@@ -221,7 +223,7 @@ static void handleLppPacket(const int dataLength, int rangePacketLength, const p
 }
 
 
-static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T) {
+static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T, const uint8_t anchorId) {
   // We assume updateRemoteData() has been called before this function
   // and that the remote data from the current packet is in the storage, as we read data from the storage.
 
@@ -239,20 +241,26 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
         int64_t t_since_tx_T = tdoaEngineTruncateToAnchorTimeStamp(rxAn_by_T_in_cl_T - ctx.txT_in_cl_T);
         int64_t tof_T = (t_since_tx_T - t_in_anchor_T) / 2;
 
-        // TODO krri add outlier filter
+        float distance = SPEED_OF_LIGHT * (tof_T - LOCODECK_ANTENNA_DELAY) / LOCODECK_TS_FREQ;
+        // TODO krri add real outlier filter. Simple implementation for our flight lab
+        if (distance > 0.0f && distance < 10.0f) {
+          point_t position;
+          if (tdoaStorageGetAnchorPosition(anchorCtx, &position)) {
+            distanceMeasurement_t measurement = {
+              .distance = distance,
+              .stdDev = hybridModeTwrStd,
+              .x = position.x,
+              .y = position.y,
+              .z = position.z,
+            };
 
-        point_t position;
-        if (tdoaStorageGetAnchorPosition(anchorCtx, &position)) {
-          distanceMeasurement_t measurement = {
-            .distance = SPEED_OF_LIGHT * (tof_T - LOCODECK_ANTENNA_DELAY) / LOCODECK_TS_FREQ,
-            .stdDev = hybridModeTwrStd,
-            .x = position.x,
-            .y = position.y,
-            .z = position.z,
-          };
+            if (anchorId == logDistAnchorId) {
+              logDistance = measurement.distance;
+            }
 
-          estimatorEnqueueDistance(&measurement);
-          STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
+            estimatorEnqueueDistance(&measurement);
+            STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
+          }
         }
       }
     }
@@ -292,7 +300,7 @@ static void rxcallback(dwDevice_t *dev) {
     handleLppPacket(dataLength, rangeDataLength, &rxPacket, &anchorCtx);
 
     if (ctx.isTwrActive) {
-      processTwoWayRanging(&anchorCtx, now_ms, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+      processTwoWayRanging(&anchorCtx, now_ms, txAn_in_cl_An, rxAn_by_T_in_cl_T, anchorId);
     }
 
     ctx.isReceivingPackets = true;
@@ -506,6 +514,8 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       break;
     case eventTimeout:
       break;
+    case eventReceiveFailed:
+      break;
     case eventReceiveTimeout:
       break;
     case eventPacketSent:
@@ -606,10 +616,12 @@ LOG_GROUP_START(tdoa3)
   STATS_CNT_RATE_LOG_ADD(hmTx, &ctx.cntPacketsTransmited)
   STATS_CNT_RATE_LOG_ADD(hmSeqOk, &ctx.cntTwrSeqNrOk)
   STATS_CNT_RATE_LOG_ADD(hmEst, &ctx.cntTwrToEstimator)
+  LOG_ADD(LOG_FLOAT, hmDist, &logDistance)
 LOG_GROUP_STOP(tdoa3)
 
 PARAM_GROUP_START(tdoa3)
   PARAM_ADD(PARAM_UINT8, hmId, &ctx.anchorId)
   PARAM_ADD(PARAM_UINT8, hmTdoa, &ctx.isTdoaActive)
   PARAM_ADD(PARAM_UINT8, hmTwr, &ctx.isTwrActive)
+  PARAM_ADD(PARAM_UINT8, hmAnchLog, &logDistAnchorId)
 PARAM_GROUP_STOP(tdoa3)
