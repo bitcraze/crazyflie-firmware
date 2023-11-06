@@ -66,6 +66,7 @@ for improved position estimation.
 
 #include "param.h"
 #include "autoconf.h"
+#include "cf_math.h"
 
 #include "physicalConstants.h"
 #include "statsCnt.h"
@@ -116,6 +117,12 @@ static logVarId_t estimatedPosLogZ;
 static const locoAddress_t base_address = 0xcfbc;
 
 static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T, const uint8_t anchorId);
+
+typedef enum {
+  txOwnPosNot = 0,
+  txOwnPosEstimated,
+  txOwnPosLocked
+} TxOwnPosition;
 #endif
 
 typedef struct {
@@ -168,10 +175,12 @@ static struct {
   // Transmit packets if true
   bool isTwrActive;
 
-  // Indicates if the current estimated position should be transmitted when sending packets.
-  // If false, the CF can use TWR for positioning itself only
-  // If true, other CFs can use the this CF as an anchor
-  bool twrSendEstimatedPosition;
+  // Indicates if position information should be transmitted when sending packets.
+  // If no position information is transmitted, the CF can use TWR for positioning itself only while other CFs can not
+  // use the transmitted packets for positioning.
+  // If position is transmitted other CFs can use the packets for positioning.
+  TxOwnPosition twrSendPosition;
+  struct lppShortAnchorPos_s twrTxPos;
 
   // Std dev for TWR samples sent to the estimator
   float twrStdDev;
@@ -179,10 +188,11 @@ static struct {
   // If TWR data should be used for position estimation
   bool useTwrForPositionEstimation;
 
-  statsCntRateLogger_t cntPacketsTransmited;
+  statsCntRateLogger_t cntPacketsTransmitted;
   statsCntRateLogger_t cntTwrSeqNrOk;
   statsCntRateLogger_t cntTwrToEstimator;
 
+  // Logging of hybrid mode distances
   uint8_t logDistAnchorId;
   float logDistance;
 #endif
@@ -309,6 +319,26 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
 }
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+
+static bool twrOutlierFilter(const tdoaAnchorContext_t* anchorCtx, const float distance) {
+  // Simplistic outlier filter for TWR samples in hybrid mode
+
+  tdoaAnchorInfo_t* info = anchorCtx->anchorInfo;
+  info->twrHistoryIndex = (info->twrHistoryIndex + 1) % TWR_HISTORY_LENGTH;
+
+  float32_t stddev;
+  arm_std_f32(info->twrHistory, TWR_HISTORY_LENGTH, &stddev);
+
+  float32_t mean;
+  arm_mean_f32(info->twrHistory, TWR_HISTORY_LENGTH, &mean);
+
+  float32_t diff = fabsf(mean - distance);
+  info->twrHistory[info->twrHistoryIndex] = distance;
+
+  bool sampleAccepted = diff < (TWR_OUTLIER_TH * stddev);
+  return sampleAccepted;
+}
+
 static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T, const uint8_t anchorId) {
   // We assume updateRemoteData() has been called before this function
   // and that the remote data from the current packet is in the storage, as we read data from the storage.
@@ -328,8 +358,9 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
         int64_t tof_T = (t_since_tx_T - t_in_anchor_T) / 2;
 
         float distance = SPEED_OF_LIGHT * (tof_T - LOCODECK_ANTENNA_DELAY) / LOCODECK_TS_FREQ;
-        // TODO krri add real outlier filter. Simple implementation for our flight lab
-        if (distance > 0.0f && distance < 10.0f) {
+
+        bool sampleAccepted = twrOutlierFilter(anchorCtx, distance);
+        if (sampleAccepted) {
           point_t position;
           if (tdoaStorageGetAnchorPosition(anchorCtx, &position)) {
             distanceMeasurement_t measurement = {
@@ -466,14 +497,19 @@ static void setTxData(dwDevice_t *dev)
 
   int rangePacketSize = populateTxData((rangePacket3_t *)txPacket.payload);
 
-  if (ctx.twrSendEstimatedPosition) {
+  if (ctx.twrSendPosition != txOwnPosLocked) {
+      // Store current estimated position
+      ctx.twrTxPos.x = logGetFloat(estimatedPosLogX);
+      ctx.twrTxPos.y = logGetFloat(estimatedPosLogY);
+      ctx.twrTxPos.z = logGetFloat(estimatedPosLogZ);
+  }
+
+  if (ctx.twrSendPosition != txOwnPosNot) {
     txPacket.payload[rangePacketSize + LPP_HEADER] = SHORT_LPP;
     txPacket.payload[rangePacketSize + LPP_TYPE] = LPP_SHORT_ANCHOR_POSITION;
 
     struct lppShortAnchorPos_s *pos = (struct lppShortAnchorPos_s*) &txPacket.payload[rangePacketSize + LPP_PAYLOAD];
-    pos->x = logGetFloat(estimatedPosLogX);
-    pos->y = logGetFloat(estimatedPosLogY);
-    pos->z = logGetFloat(estimatedPosLogZ);
+    *pos = ctx.twrTxPos;
 
     lppLength = 2 + sizeof(struct lppShortAnchorPos_s);
   }
@@ -544,7 +580,7 @@ static uint32_t startNextEvent(dwDevice_t *dev, const uint32_t now) {
         setupTx(dev);
         isTxPending = true;
         ctx.latestTransmissionTime_ms = now_ms;
-        STATS_CNT_RATE_EVENT(&ctx.cntPacketsTransmited);
+        STATS_CNT_RATE_EVENT(&ctx.cntPacketsTransmitted);
 
         uint32_t newDelay = randomizeDelayToNextTx(now_ms);
         ctx.nextTxTick = now + newDelay;
@@ -647,7 +683,7 @@ static void Initialize(dwDevice_t *dev) {
   ctx.latestTransmissionTime_ms = 0;
   ctx.nextTxTick = 0;
   ctx.isTwrActive = false;
-  ctx.twrSendEstimatedPosition = true;
+  ctx.twrSendPosition = txOwnPosNot;
   ctx.twrStdDev = 0.25;
 
   ctx.averageTxDelay = 1000.0f / ANCHOR_MAX_TX_FREQ;
@@ -658,7 +694,7 @@ static void Initialize(dwDevice_t *dev) {
   estimatedPosLogY = logGetVarId("stateEstimate", "y");
   estimatedPosLogZ = logGetVarId("stateEstimate", "z");
 
-  STATS_CNT_RATE_INIT(&ctx.cntPacketsTransmited, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&ctx.cntPacketsTransmitted, STATS_INTERVAL);
   STATS_CNT_RATE_INIT(&ctx.cntTwrSeqNrOk, STATS_INTERVAL);
   STATS_CNT_RATE_INIT(&ctx.cntTwrToEstimator, STATS_INTERVAL);
 #endif
@@ -679,9 +715,24 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
 LOG_GROUP_START(tdoa3)
-  STATS_CNT_RATE_LOG_ADD(hmTx, &ctx.cntPacketsTransmited)
+  /**
+   * @brief Transmission rate of TWR packets in hybrid mode [packets/s]
+   */
+  STATS_CNT_RATE_LOG_ADD(hmTx, &ctx.cntPacketsTransmitted)
+
+  /**
+   * @brief Rate of received TWR packets with matching seq nr in hybrid mode [packets/s]
+   */
   STATS_CNT_RATE_LOG_ADD(hmSeqOk, &ctx.cntTwrSeqNrOk)
+
+  /**
+   * @brief Rate of TWR measurements that are sent to the estimator in hybrid mode [samples/s]
+   */
   STATS_CNT_RATE_LOG_ADD(hmEst, &ctx.cntTwrToEstimator)
+
+  /**
+   * @brief Measured distance to the anchor selected by the tdoa3.hmAnchLog parameter in hybrid mode [m]
+   */
   LOG_ADD(LOG_FLOAT, hmDist, &ctx.logDistance)
 LOG_GROUP_STOP(tdoa3)
 #endif
@@ -693,12 +744,43 @@ PARAM_GROUP_START(tdoa3)
 PARAM_ADD(PARAM_FLOAT, stddev, &ctx.tdoaStdDev)
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+  /**
+   * @brief Anchor id used when transmitting packets in hybrid mode [m]
+   */
   PARAM_ADD(PARAM_UINT8, hmId, &ctx.anchorId)
+
+  /**
+   * @brief If non-zero use TDoA for position estimation in hybrid mode
+   */
   PARAM_ADD(PARAM_UINT8, hmTdoa, &ctx.isTdoaActive)
+
+  /**
+   * @brief If non-zero transmit TWR packets in hybrid mode
+   */
   PARAM_ADD(PARAM_UINT8, hmTwr, &ctx.isTwrActive)
-  PARAM_ADD(PARAM_UINT8, hmTwrTXPos, &ctx.twrSendEstimatedPosition)
+
+  /**
+   * @brief Include position information in transmitted TWR packets for other CFs to use for positioning
+   * 0 = do not send TWR packets
+   * 1 = use the current estimated position
+   * 2 = use the estimated position that was sampled when this parameter was set to 2
+   */
+  PARAM_ADD(PARAM_UINT8, hmTwrTXPos, &ctx.twrSendPosition)
+
+  /**
+   * @brief If non-zero use data from the TWR process for position estimation in hybrid mode. Requires hmTwr to be enabled.
+   */
   PARAM_ADD(PARAM_UINT8, hmTwrEstPos, &ctx.useTwrForPositionEstimation)
+
+  /**
+   * @brief Select an anchor id to use for logging distance to a specific anchor. The distance is available in the
+   * tdoa3.hmDist log variable. Used in hybrid mode.
+   */
   PARAM_ADD(PARAM_UINT8, hmAnchLog, &ctx.logDistAnchorId)
+
+  /**
+   * @brief The measurement noise to use when sending TWR measurements to the estimator in hybrid mode
+   */
   PARAM_ADD(PARAM_FLOAT, twrStd, &ctx.twrStdDev)
 #endif
 PARAM_GROUP_STOP(tdoa3)

@@ -3,11 +3,16 @@
 
 #include "stabilizer_types.h"
 #include "clockCorrectionEngine.h"
+#include "autoconf.h"
 
 #define ANCHOR_STORAGE_COUNT 16
 #define REMOTE_ANCHOR_DATA_COUNT 16
 #define TOF_PER_ANCHOR_COUNT 16
 
+#ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+#define TWR_HISTORY_LENGTH 32
+#define TWR_OUTLIER_TH 4
+#endif
 
 typedef struct {
   uint8_t id; // Id of remote remote anchor
@@ -37,6 +42,12 @@ typedef struct {
 
   tdoaTimeOfFlight_t tof[TOF_PER_ANCHOR_COUNT];
   tdoaRemoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];
+
+  #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+  // Outlier filter for TWR in hybrid mode
+  float twrHistory[TWR_HISTORY_LENGTH];
+  uint8_t twrHistoryIndex;
+  #endif
 } tdoaAnchorInfo_t;
 
 typedef tdoaAnchorInfo_t tdaoAnchorInfoArray_t[ANCHOR_STORAGE_COUNT];
