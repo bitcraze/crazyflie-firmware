@@ -53,7 +53,7 @@
 
 //Hardware configuration
 static bool isInit;
-static int8_t s_servo_angle = 0;
+//static int8_t s_servo_angle = 0;
 
 #ifdef CONFIG_DECK_BIGQUAD_ENABLE_OSD
 static MspObject s_MspObject;
@@ -84,7 +84,7 @@ static void bigquadInit(DeckInfo *info)
 
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
-  extRxInit();
+//  extRxInit();
 
   // Ignore charging/charged state to allow low-battery warning.
   pmIgnoreChargedState(true);

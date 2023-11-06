@@ -26,13 +26,12 @@
  * This code mainly interfacing the PWM peripheral lib of ST.
  * Author: Eric Ewing, Will Wu
  */
-
+#define DEBUG_MODULE "SERVO"
+#
 #include <stdbool.h>
 
 /* ST includes */
 #include "stm32fxxx.h"
-#include "param.h"
-
 
 //FreeRTOS includes
 #include "FreeRTOS.h"
@@ -40,7 +39,9 @@
 #include "debug.h"
 #include <string.h>
 #include <inttypes.h>
-#include <motors.h>
+#include "motors.h"
+#include "param.h"
+#include "deck.h"
 
 // TODO Verify PWM settings
 static const double SERVO_ZERO_PULSE_ms = 0.5;
@@ -58,9 +59,9 @@ static int8_t s_servo_angle = 0;
 void servoInit()
 {
   if (isInit){
-    DEBUG_PRINT("Already Initialized!");
     return;
   }
+
   GPIO_InitTypeDef GPIO_InitStructure;
   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
   TIM_OCInitTypeDef  TIM_OCInitStructure;
@@ -72,13 +73,13 @@ void servoInit()
   //configure gpio for timer out
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz; // TODO: verify this
   GPIO_InitStructure.GPIO_Pin = servoMapMOSI->gpioPin;
   GPIO_Init(servoMapMOSI->gpioPort, &GPIO_InitStructure);
 
   //map timer to alternate function
-  GPIO_PinAFConfig(servoMapMOSI->gpioPort, servoMapMOSI->gpioPin, servoMapMOSI->gpioAF);
+  GPIO_PinAFConfig(servoMapMOSI->gpioPort, servoMapMOSI->gpioPinSource, servoMapMOSI->gpioAF);
 
   //Timer configuration
   TIM_TimeBaseStructure.TIM_Period = SERVO_PWM_PERIOD;
@@ -102,12 +103,14 @@ void servoInit()
 
   //Enable the timer PWM outputs
   TIM_CtrlPWMOutputs(servoMapMOSI->tim, ENABLE);
-servoMapMOSI->setCompare(servoMapMOSI->tim, 0x00);
+  servoMapMOSI->setCompare(servoMapMOSI->tim, 0x00);
 
-//Enable the timer
+  //Enable the timer
   TIM_Cmd(servoMapMOSI->tim, ENABLE);
 
+  DEBUG_PRINT("Init [OK]\n");
   servoSetAngle(SERVO_ANGLE_ZERO);
+
   isInit = true;
 }
 
@@ -132,7 +135,7 @@ void servoSetAngle(uint8_t angle)
 uint8_t saturateAngle(int8_t angle)
 {
   if (angle > SERVO_ANGLE_LIMIT || angle < -SERVO_ANGLE_LIMIT) {
-    DEBUG_PRINT("[SERVO]: Servo angle out of range! Capping...\n");
+//    DEBUG_PRINT("[SERVO]: Servo angle out of range! Capping...\n");
     bool sign = angle > 0;
     return sign ? SERVO_ANGLE_LIMIT + SERVO_ANGLE_ZERO : -SERVO_ANGLE_LIMIT+SERVO_ANGLE_ZERO;
   }
@@ -144,9 +147,21 @@ uint8_t saturateAngle(int8_t angle)
 
 void servoAngleCallBack(void)
 {
-  servoInit();
   servoSetAngle(saturateAngle(s_servo_angle));
 }
+
+static const DeckDriver servo_deck = {
+  .vid = 0x00,
+  .pid = 0x00,
+  .name = "bcServo",
+
+  .usedPeriph = 0,
+  .usedGpio = 0,
+  .init = servoInit,
+  .test = 0,
+};
+
+DECK_DRIVER(servo_deck);
 
 PARAM_GROUP_START(servo)
 
