@@ -116,7 +116,7 @@ static logVarId_t estimatedPosLogZ;
 
 static const locoAddress_t base_address = 0xcfbc;
 
-static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T, const uint8_t anchorId);
+static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T);
 
 typedef enum {
   txOwnPosNot = 0,
@@ -293,18 +293,21 @@ static void rxcallback(dwDevice_t *dev) {
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
     const bool doExcludeId = ctx.isTwrActive;
     const uint8_t excludedId = ctx.anchorId;
+    const bool timeIsGood = tdoaEngineProcessPacketFiltered(&tdoaEngineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, doExcludeId, excludedId);
 #else
     const bool doExcludeId = false;
     const uint8_t excludedId = 0;
-#endif
     tdoaEngineProcessPacketFiltered(&tdoaEngineState, &anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, doExcludeId, excludedId);
+#endif
 
     tdoaStorageSetRxTxData(&anchorCtx, rxAn_by_T_in_cl_T, txAn_in_cl_An, seqNr);
     handleLppPacket(dataLength, rangeDataLength, &rxPacket, &anchorCtx);
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
     if (ctx.isTwrActive) {
-      processTwoWayRanging(&anchorCtx, now_ms, txAn_in_cl_An, rxAn_by_T_in_cl_T, anchorId);
+      if (timeIsGood) {
+        processTwoWayRanging(&anchorCtx, now_ms, txAn_in_cl_An, rxAn_by_T_in_cl_T);
+      }
     }
 #endif
 
@@ -320,26 +323,7 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
 
-static bool twrOutlierFilter(const tdoaAnchorContext_t* anchorCtx, const float distance) {
-  // Simplistic outlier filter for TWR samples in hybrid mode
-
-  tdoaAnchorInfo_t* info = anchorCtx->anchorInfo;
-  info->twrHistoryIndex = (info->twrHistoryIndex + 1) % TWR_HISTORY_LENGTH;
-
-  float32_t stddev;
-  arm_std_f32(info->twrHistory, TWR_HISTORY_LENGTH, &stddev);
-
-  float32_t mean;
-  arm_mean_f32(info->twrHistory, TWR_HISTORY_LENGTH, &mean);
-
-  float32_t diff = fabsf(mean - distance);
-  info->twrHistory[info->twrHistoryIndex] = distance;
-
-  bool sampleAccepted = diff < (TWR_OUTLIER_TH * stddev);
-  return sampleAccepted;
-}
-
-static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T, const uint8_t anchorId) {
+static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T) {
   // We assume updateRemoteData() has been called before this function
   // and that the remote data from the current packet is in the storage, as we read data from the storage.
 
@@ -358,27 +342,23 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
         int64_t tof_T = (t_since_tx_T - t_in_anchor_T) / 2;
 
         float distance = SPEED_OF_LIGHT * (tof_T - LOCODECK_ANTENNA_DELAY) / LOCODECK_TS_FREQ;
+        point_t position;
+        if (tdoaStorageGetAnchorPosition(anchorCtx, &position)) {
+          distanceMeasurement_t measurement = {
+            .distance = distance,
+            .stdDev = ctx.twrStdDev,
+            .x = position.x,
+            .y = position.y,
+            .z = position.z,
+          };
 
-        bool sampleAccepted = twrOutlierFilter(anchorCtx, distance);
-        if (sampleAccepted) {
-          point_t position;
-          if (tdoaStorageGetAnchorPosition(anchorCtx, &position)) {
-            distanceMeasurement_t measurement = {
-              .distance = distance,
-              .stdDev = ctx.twrStdDev,
-              .x = position.x,
-              .y = position.y,
-              .z = position.z,
-            };
+          if (tdoaStorageGetId(anchorCtx) == ctx.logDistAnchorId) {
+            ctx.logDistance = measurement.distance;
+          }
 
-            if (anchorId == ctx.logDistAnchorId) {
-              ctx.logDistance = measurement.distance;
-            }
-
-            if (ctx.useTwrForPositionEstimation) {
-              estimatorEnqueueDistance(&measurement);
-              STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
-            }
+          if (ctx.useTwrForPositionEstimation) {
+            estimatorEnqueueDistance(&measurement);
+            STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
           }
         }
       }
@@ -512,6 +492,8 @@ static void setTxData(dwDevice_t *dev)
     *pos = ctx.twrTxPos;
 
     lppLength = 2 + sizeof(struct lppShortAnchorPos_s);
+  } else {
+    lppLength = 0;
   }
 
 
@@ -678,13 +660,14 @@ static void Initialize(dwDevice_t *dev) {
   ctx.isReceivingPackets = false;
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
-  ctx.anchorId = 255;
+  ctx.anchorId = 254;
   ctx.txSeqNr = 0;
   ctx.latestTransmissionTime_ms = 0;
   ctx.nextTxTick = 0;
   ctx.isTwrActive = false;
   ctx.twrSendPosition = txOwnPosNot;
   ctx.twrStdDev = 0.25;
+  ctx.useTwrForPositionEstimation = false;
 
   ctx.averageTxDelay = 1000.0f / ANCHOR_MAX_TX_FREQ;
   ctx.nextTxDelayEvaluationTime_ms = 0;
@@ -745,7 +728,8 @@ PARAM_ADD(PARAM_FLOAT, stddev, &ctx.tdoaStdDev)
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
   /**
-   * @brief Anchor id used when transmitting packets in hybrid mode [m]
+   * @brief Anchor id used when transmitting packets in hybrid mode. Don't use 255 as this means broadcast and is
+   * received by all nodes.
    */
   PARAM_ADD(PARAM_UINT8, hmId, &ctx.anchorId)
 

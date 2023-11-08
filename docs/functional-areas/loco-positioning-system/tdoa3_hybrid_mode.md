@@ -63,7 +63,7 @@ There are a few parameters that must be configured to use the hybrid mode functi
 
 | Parameter     | Functionality                                                                                        |
 |---------------|------------------------------------------------------------------------------------------------------|
-| `hmId`        | The anchor id used in transmissions, this id must be unique in the system                            |
+| `hmId`        | The anchor id used in transmissions, this id must be unique in the system. Don't use 255 as it means "broadcast" and is received by all nodes |
 | `hmTdoa`      | Indicates if received packets should be used for TDoA positioning                                    |
 | `hmTwr`       | Indicates if TWR packets should be transmitted                                                       |
 | `hmTwrTXPos`  | Indicates if a position should be included in transmitted packets, that is enable other Crazyflies to use the transmissions for TDoA positioning |
@@ -86,7 +86,7 @@ Similarly all logs are in the `tdoa3` log group.
 
 | Parameter     | Value | Comment                                                    |
 |---------------|-------|------------------------------------------------------------|
-| `hmId`        | X     | Unique ids for each Crazyflie, it is set to 255 by default |
+| `hmId`        | X     | Unique ids for each Crazyflie, it is set to 254 by default |
 | `hmTwr`       | 1     | to start transmission                                      |
 | `hmTwrEstPos` | 1     | to use TWR in position estimation                          |
 
@@ -96,17 +96,17 @@ Settings for Crazyflie 1
 
 | Parameter     | Value | Comment                |
 |---------------|--------------------------------|
-| `hmId`        | 255   | the anchor id to use   |
+| `hmId`        | 254   | the anchor id to use   |
 | `hmTwr`       | 1     | to start transmission  |
-| `hmAnchLog`   | 254   | the id of the other CF |
+| `hmAnchLog`   | 253   | the id of the other CF |
 
 Settings for Crazyflie 2
 
 | Parameter     | Value | Comment                |
 |---------------|--------------------------------|
-| `hmId`        | 254   | the anchor id to use   |
+| `hmId`        | 253   | the anchor id to use   |
 | `hmTwr`       | 1     | to start transmission  |
-| `hmAnchLog`   | 255   | the id of the other CF |
+| `hmAnchLog`   | 254   | the id of the other CF |
 
 The distance to the other Crazyflie is available in the `tdoa3.hmDist` log variable.
 
