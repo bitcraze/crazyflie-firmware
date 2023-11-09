@@ -109,6 +109,10 @@ for improved position estimation.
 #define SHORT_LPP 0xF0
 #define LPP_SHORT_ANCHOR_POSITION 0x01
 
+// Maximum acceptable age of time of flight information to be used in transmissions. The ToF information is used by
+// other CFs for TDoA positioning. A longer time is acceptable if the transmitting CF is not moving.
+#define MAX_AGE_OF_TOF_MS 200
+
 // Log ids for estimated position
 static logVarId_t estimatedPosLogX;
 static logVarId_t estimatedPosLogY;
@@ -116,7 +120,7 @@ static logVarId_t estimatedPosLogZ;
 
 static const locoAddress_t base_address = 0xcfbc;
 
-static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T);
+static void processTwoWayRanging(tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T);
 
 typedef enum {
   txOwnPosNot = 0,
@@ -220,7 +224,7 @@ static int updateRemoteData(tdoaAnchorContext_t* anchorCtx, const void* payload)
     if (hasDistance) {
       int64_t tof = anchorData->distance;
       if (isValidTimeStamp(tof)) {
-        tdoaStorageSetTimeOfFlight(anchorCtx, remoteId, tof);
+        tdoaStorageSetRemoteTimeOfFlight(anchorCtx, remoteId, tof);
 
         uint8_t anchorId = tdoaStorageGetId(anchorCtx);
         tdoaStats_t* stats = &tdoaEngineState.stats;
@@ -323,7 +327,7 @@ static void setRadioInReceiveMode(dwDevice_t *dev) {
 
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
 
-static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T) {
+static void processTwoWayRanging(tdoaAnchorContext_t* anchorCtx, const uint32_t now_ms, const uint64_t txAn_in_cl_An, const uint64_t rxAn_by_T_in_cl_T) {
   // We assume updateRemoteData() has been called before this function
   // and that the remote data from the current packet is in the storage, as we read data from the storage.
 
@@ -342,6 +346,7 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
         int64_t tof_T = (t_since_tx_T - t_in_anchor_T) / 2;
 
         float distance = SPEED_OF_LIGHT * (tof_T - LOCODECK_ANTENNA_DELAY) / LOCODECK_TS_FREQ;
+        tdoaStorageSetTimeOfFlight(anchorCtx, tof_T, now_ms);
 
         if (tdoaStorageGetId(anchorCtx) == ctx.logDistAnchorId) {
           ctx.logDistance = distance;
@@ -446,11 +451,17 @@ static int populateTxData(rangePacket3_t *rangePacket, const uint32_t now_ms) {
     tdoaStorageGetAnchorCtx(tdoaEngineState.anchorInfoArray, id, now_ms, &anchorCtx);
 
     anchorData->id = id;
-    anchorData->seq = anchorCtx.anchorInfo->seqNr;
-    anchorData->rxTimeStamp = anchorCtx.anchorInfo->rxTime;
+    anchorData->seq = tdoaStorageGetSeqNr(&anchorCtx);
+    anchorData->rxTimeStamp = tdoaStorageGetRxTime(&anchorCtx);
 
-    // Not adding distance to other anchors, only support simple ranging in hybrid mode (TWR) to anchors for now.
-    anchorDataPtr += sizeof(remoteAnchorDataShort_t);
+    uint64_t tof = tdoaStorageGetTimeOfFlight(&anchorCtx, now_ms - MAX_AGE_OF_TOF_MS);
+    if (tof > 0 && tof <= 0xfffful) {
+      anchorData->distance = tof;
+      anchorDataPtr += sizeof(remoteAnchorDataFull_t);
+      anchorData->seq |= 0x80;  // Set bit to indicate tof is included
+    } else {
+      anchorDataPtr += sizeof(remoteAnchorDataShort_t);
+    }
 
     remoteAnchorCount++;
   }
