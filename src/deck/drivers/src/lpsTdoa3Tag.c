@@ -422,7 +422,7 @@ static dwTime_t findTransmitTimeAsSoonAsPossible(dwDevice_t *dev) {
   return transmitTime;
 }
 
-static int populateTxData(rangePacket3_t *rangePacket) {
+static int populateTxData(rangePacket3_t *rangePacket, const uint32_t now_ms) {
   // rangePacket->header.type already populated
   rangePacket->header.seq = ctx.txSeqNr;
   rangePacket->header.txTimeStamp = ctx.txT_in_cl_T;
@@ -433,7 +433,7 @@ static int populateTxData(rangePacket3_t *rangePacket) {
   // Consider a more clever selection of which anchors to include as remote data.
   // This implementation will give a somewhat randomized set but can probably be improved
   uint8_t ids[MAX_NR_OF_ANCHORS_IN_TX];
-  uint8_t anchorCount = tdoaStorageGetListOfAnchorIds(tdoaEngineState.anchorInfoArray, ids, MAX_NR_OF_ANCHORS_IN_TX);
+  uint8_t anchorCount = tdoaStorageGetListOfActiveAnchorIds(tdoaEngineState.anchorInfoArray, ids, MAX_NR_OF_ANCHORS_IN_TX, now_ms);
 
   for (uint8_t i = 0; i < anchorCount; i++) {
     remoteAnchorDataFull_t* anchorData = (remoteAnchorDataFull_t*) anchorDataPtr;
@@ -459,7 +459,7 @@ static int populateTxData(rangePacket3_t *rangePacket) {
 }
 
 // Set TX data in the radio TX buffer
-static void setTxData(dwDevice_t *dev)
+static void setTxData(dwDevice_t *dev, const uint32_t now_ms)
 {
   static packet_t txPacket;
   static bool firstEntry = true;
@@ -475,7 +475,7 @@ static void setTxData(dwDevice_t *dev)
 
   txPacket.sourceAddress = (base_address & 0xffffffffffffff00) | ctx.anchorId;
 
-  int rangePacketSize = populateTxData((rangePacket3_t *)txPacket.payload);
+  int rangePacketSize = populateTxData((rangePacket3_t *)txPacket.payload, now_ms);
 
   if (ctx.twrSendPosition != txOwnPosLocked) {
       // Store current estimated position
@@ -496,20 +496,19 @@ static void setTxData(dwDevice_t *dev)
     lppLength = 0;
   }
 
-
   dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH + rangePacketSize + lppLength);
 }
 
 
 // Setup the radio to send a ranging packet
-static void setupTx(dwDevice_t *dev) {
+static void setupTx(dwDevice_t *dev, const uint32_t now_ms) {
   dwTime_t txTime = findTransmitTimeAsSoonAsPossible(dev);
   ctx.txT_in_cl_T = txTime.low32;
   ctx.txSeqNr = (ctx.txSeqNr + 1) & 0x7f;
 
   dwIdle(dev);
 
-  setTxData(dev);
+  setTxData(dev, now_ms);
 
   dwNewTransmit(dev);
   dwSetDefaults(dev);
@@ -559,7 +558,7 @@ static uint32_t startNextEvent(dwDevice_t *dev, const uint32_t now) {
     if (!isTxPending) {
       if (ctx.nextTxTick < now) {
         const uint32_t now_ms = T2M(now);
-        setupTx(dev);
+        setupTx(dev, now_ms);
         isTxPending = true;
         ctx.latestTransmissionTime_ms = now_ms;
         STATS_CNT_RATE_EVENT(&ctx.cntPacketsTransmitted);
