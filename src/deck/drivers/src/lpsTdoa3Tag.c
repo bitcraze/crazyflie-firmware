@@ -342,6 +342,11 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
         int64_t tof_T = (t_since_tx_T - t_in_anchor_T) / 2;
 
         float distance = SPEED_OF_LIGHT * (tof_T - LOCODECK_ANTENNA_DELAY) / LOCODECK_TS_FREQ;
+
+        if (tdoaStorageGetId(anchorCtx) == ctx.logDistAnchorId) {
+          ctx.logDistance = distance;
+        }
+
         point_t position;
         if (tdoaStorageGetAnchorPosition(anchorCtx, &position)) {
           distanceMeasurement_t measurement = {
@@ -351,10 +356,6 @@ static void processTwoWayRanging(const tdoaAnchorContext_t* anchorCtx, const uin
             .y = position.y,
             .z = position.z,
           };
-
-          if (tdoaStorageGetId(anchorCtx) == ctx.logDistAnchorId) {
-            ctx.logDistance = measurement.distance;
-          }
 
           if (ctx.useTwrForPositionEstimation) {
             estimatorEnqueueDistance(&measurement);
