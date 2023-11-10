@@ -242,6 +242,13 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
       GPIO_WriteBit(motorMap[i]->gpioPowerswitchPort, motorMap[i]->gpioPowerswitchPin, 1);
     }
 
+    // Configure the GPIO for CF-BL ESC RST
+    GPIO_StructInit(&GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+
     // Configure the GPIO for the timer output
     GPIO_StructInit(&GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Mode = MOTORS_GPIO_MODE;
@@ -340,7 +347,10 @@ void motorsStop()
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-  motorsBurstDshot();
+  if (motorMap[0]->drvType == BRUSHLESS)
+  {
+    motorsBurstDshot();
+  }
 #endif
 }
 
