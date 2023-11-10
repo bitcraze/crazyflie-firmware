@@ -682,9 +682,9 @@ void testThatTofReplacesTheOldestEntryWhenStorageIsFull() {
   TEST_ASSERT_EQUAL_INT64(0, actualReplaced);
 }
 
+// Not possible to put the ifdef outside the test function due to the way the test framework is implemented
+void testThatTimeOfFlightIsSet() {
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
-// Disabled for now as the unit test system does not support kconfig
-void _testThatTimeOfFlightIsSet() {
   // Fixture
   uint32_t storageTime_ms = 1234;
   int64_t expectedToF = 4747474747;
@@ -699,8 +699,8 @@ void _testThatTimeOfFlightIsSet() {
   TEST_ASSERT_EQUAL_UINT64(expectedToF, tdoaStorageGetTimeOfFlight(&context, storageTime_ms - 1));
   TEST_ASSERT_EQUAL_UINT64(expectedToF, tdoaStorageGetTimeOfFlight(&context, storageTime_ms));
   TEST_ASSERT_EQUAL_UINT64(0, tdoaStorageGetTimeOfFlight(&context, storageTime_ms + 1));
-}
 #endif
+}
 
 
 // Helpers ///////////////
