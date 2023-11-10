@@ -109,10 +109,6 @@ for improved position estimation.
 #define SHORT_LPP 0xF0
 #define LPP_SHORT_ANCHOR_POSITION 0x01
 
-// Maximum acceptable age of time of flight information to be used in transmissions. The ToF information is used by
-// other CFs for TDoA positioning. A longer time is acceptable if the transmitting CF is not moving.
-#define MAX_AGE_OF_TOF_MS 200
-
 // Log ids for estimated position
 static logVarId_t estimatedPosLogX;
 static logVarId_t estimatedPosLogY;
@@ -191,6 +187,10 @@ static struct {
 
   // If TWR data should be used for position estimation
   bool useTwrForPositionEstimation;
+
+  // Maximum acceptable age of time of flight information to be used in transmissions. The ToF information is used by
+  // other CFs for TDoA positioning. A longer time is acceptable if the transmitting CF is not moving.
+  uint32_t maxAgeOfTof_ms;
 
   statsCntRateLogger_t cntPacketsTransmitted;
   statsCntRateLogger_t cntTwrSeqNrOk;
@@ -454,7 +454,7 @@ static int populateTxData(rangePacket3_t *rangePacket, const uint32_t now_ms) {
     anchorData->seq = tdoaStorageGetSeqNr(&anchorCtx);
     anchorData->rxTimeStamp = tdoaStorageGetRxTime(&anchorCtx);
 
-    uint64_t tof = tdoaStorageGetTimeOfFlight(&anchorCtx, now_ms - MAX_AGE_OF_TOF_MS);
+    uint64_t tof = tdoaStorageGetTimeOfFlight(&anchorCtx, now_ms - ctx.maxAgeOfTof_ms);
     if (tof > 0 && tof <= 0xfffful) {
       anchorData->distance = tof;
       anchorDataPtr += sizeof(remoteAnchorDataFull_t);
@@ -679,6 +679,7 @@ static void Initialize(dwDevice_t *dev) {
   ctx.twrSendPosition = txOwnPosNot;
   ctx.twrStdDev = 0.25;
   ctx.useTwrForPositionEstimation = false;
+  ctx.maxAgeOfTof_ms = 200;
 
   ctx.averageTxDelay = 1000.0f / ANCHOR_MAX_TX_FREQ;
   ctx.nextTxDelayEvaluationTime_ms = 0;
@@ -766,6 +767,11 @@ PARAM_ADD(PARAM_FLOAT, stddev, &ctx.tdoaStdDev)
    * @brief If non-zero use data from the TWR process for position estimation in hybrid mode. Requires hmTwr to be enabled.
    */
   PARAM_ADD(PARAM_UINT8, hmTwrEstPos, &ctx.useTwrForPositionEstimation)
+
+  /**
+   * @brief Max age of tof to include in transmitted packets.
+   */
+  PARAM_ADD(PARAM_UINT32, hmTofAge, &ctx.maxAgeOfTof_ms)
 
   /**
    * @brief Select an anchor id to use for logging distance to a specific anchor. The distance is available in the
