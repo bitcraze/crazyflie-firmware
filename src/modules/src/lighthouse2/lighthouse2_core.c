@@ -80,14 +80,14 @@ static float sweepStd = 0.01;
 // The light planes in LH2 are tilted +- 30 degrees
 static const float t30 = M_PI / 6;
 
-// Sensor positions on the deck
+// Sensor positions on the deck. The positions are rotated compared to the original lighthouse deck
 #define SENSOR_POS_W (0.015f / 2.0f)
 #define SENSOR_POS_L (0.030f / 2.0f)
-static vec3d sensorDeckPositions[4] = {
-    {-SENSOR_POS_L, SENSOR_POS_W, 0.0},
-    {-SENSOR_POS_L, -SENSOR_POS_W, 0.0},
-    {SENSOR_POS_L, SENSOR_POS_W, 0.0},
+static vec3d sensorDeckPositionsV2[4] = {
     {SENSOR_POS_L, -SENSOR_POS_W, 0.0},
+    {SENSOR_POS_L, SENSOR_POS_W, 0.0},
+    {-SENSOR_POS_L, -SENSOR_POS_W, 0.0},
+    {-SENSOR_POS_L, SENSOR_POS_W, 0.0},
 };
 
 
@@ -217,7 +217,7 @@ static void useFrame(const lighthouse2UartFrame_t* frame) {
     sweepInfo.baseStationId = bs;
     sweepInfo.sensorId = frame->sensor;
 
-    sweepInfo.sensorPos = &sensorDeckPositions[frame->sensor];
+    sweepInfo.sensorPos = &sensorDeckPositionsV2[frame->sensor];
 
     sweepInfo.measuredSweepAngle = frame->first_angle;
     sweepInfo.t = -t30;
