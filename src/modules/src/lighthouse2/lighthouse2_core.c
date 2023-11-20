@@ -141,14 +141,23 @@ bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
   memset(frame, 0, sizeof(*frame));
 
   frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
+
   bool isFrameValid = true;
   if (!frame->isSyncFrame) {
-    frame->bs = data[0] & 0x7f;
-    frame->sweepId = (data[0] & 0x80) >> 7;
-    frame->sensor = data[1];
-    memcpy(&frame->angle, &data[2], 4);
+    uint8_t crc = 0;
+    for (int i = 0; i < UART_FRAME_LENGTH - 1; i++) {
+      crc ^= data[i];
+    }
 
-    isFrameValid = (frame->bs < 16) && (frame->sensor < 4);
+    const uint8_t expectedCrc = data[5];
+    if (expectedCrc == crc) {
+      frame->bs = data[0] & 0x0f;
+      frame->sensor = (data[0] >> 4) & 0x03;
+      frame->sweepId = (data[0] >> 6) & 0x01;
+      memcpy(&frame->angle, &data[1], 4);
+    } else {
+      isFrameValid = false;
+    }
   }
 
   STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
@@ -203,7 +212,7 @@ void lighthouse2CoreTask(void *param) {
     waitForUartSynchFrame();
     uartSynchronized = true;
 
-    DEBUG_PRINT("UART sybchronized\n");
+    DEBUG_PRINT("UART synchronized\n");
 
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
       if(!frame.isSyncFrame) {
