@@ -30,13 +30,5 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct {
-  bool isSyncFrame;
-  uint8_t bs;
-  uint8_t sensor;
-  float first_angle;
-  float second_angle;
-} lighthouse2UartFrame_t;
-
 void lighthouse2CoreInit();
 void lighthouse2CoreTask(void *param);

@@ -46,7 +46,9 @@
 #define DEBUG_MODULE "LH2"
 #include "debug.h"
 
+// TODO krri Temporarily change to uart2.
 #include "uart1.h"
+#include "uart2.h"
 
 #include "static_mem.h"
 #include "estimator.h"
@@ -58,6 +60,14 @@
 #include "lighthouse_calibration.h"
 #include "lighthouse_storage.h"
 #include "physicalConstants.h"
+
+typedef struct {
+  bool isSyncFrame;
+  uint8_t bs;
+  uint8_t sweepId;
+  uint8_t sensor;
+  float angle;
+} lighthouse2UartFrame_t;
 
 static lighthouse2UartFrame_t frame;
 
@@ -73,9 +83,14 @@ static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
 #endif
 
-#define UART_FRAME_LENGTH 10
+#define UART_FRAME_LENGTH 6
+
 
 static float sweepStd = 0.01;
+static uint8_t logBaseStationId;
+static uint8_t logSensor;
+static float logAngle1;
+static float logAngle2;
 
 // The light planes in LH2 are tilted +- 30 degrees
 static const float t30 = M_PI / 6;
@@ -102,28 +117,21 @@ static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Ro
 void lighthouse2CoreInit() {
 }
 
-#define OPTIMIZE_UART1_ACCESS 1
+// #define OPTIMIZE_UART1_ACCESS 1
 bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
-
   #ifdef OPTIMIZE_UART1_ACCESS
     // Wait until there is enough data available in the queue before reading
-    // to optimize the CPU usage. Locking on the queue (as is done in uart1GetDataWithTimeout()) seems to take a lot
+    // to optimize the CPU usage. Locking on the queue (as is done in uart2GetDataWithTimeout()) seems to take a lot
     // of time and the vTaskDelay() solution uses much less CPU.
-  while (uart1bytesAvailable() < UART_FRAME_LENGTH) {
+  while (uart2bytesAvailable() < UART_FRAME_LENGTH) {
     vTaskDelay(1);
   }
   #endif
 
   for(int i = 0; i < UART_FRAME_LENGTH; i++) {
-  #ifdef OPTIMIZE_UART1_ACCESS
-    uart1Getchar((char*)&data[i]);
-  #else
-    while(!uart1GetDataWithTimeout((uint8_t*)&data[i], 2)) {
-      lighthouseTransmitProcessTimeout();
-    }
-  #endif
+    uart2Getchar((char*)&data[i]);
 
     if ((unsigned char)data[i] == 0xff) {
       syncCounter += 1;
@@ -133,13 +141,15 @@ bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
   memset(frame, 0, sizeof(*frame));
 
   frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
-
-  frame->bs = data[0];
-  frame->sensor = data[1];
-  memcpy(&frame->first_angle, &data[2], 4);
-  memcpy(&frame->second_angle, &data[6], 4);
-
   bool isFrameValid = true;
+  if (!frame->isSyncFrame) {
+    frame->bs = data[0] & 0x7f;
+    frame->sweepId = (data[0] & 0x80) >> 7;
+    frame->sensor = data[1];
+    memcpy(&frame->angle, &data[2], 4);
+
+    isFrameValid = (frame->bs < 16) && (frame->sensor < 4);
+  }
 
   STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
 
@@ -152,7 +162,7 @@ void waitForUartSynchFrame() {
   bool synchronized = false;
 
   while (!synchronized) {
-    uart1Getchar(&c);
+    uart2Getchar(&c);
     if ((unsigned char)c == 0xff) {
       syncCounter += 1;
     } else {
@@ -165,7 +175,7 @@ void waitForUartSynchFrame() {
 static void initGeoAndCalibDataFromStorage() {
   lighthouseStorageVerifySetStorageVersion();
 
-  for (int baseStation = 0; baseStation < NR_OF_BASE_STATIONS; baseStation++) {
+  for (uint8_t baseStation = 0; baseStation < NR_OF_BASE_STATIONS; baseStation++) {
     lighthouseStorageReadCalibDataFromStorage(baseStation, &bsCalibration[baseStation]);
 
     lighthouseStorageReadGeoDataFromStorage(baseStation, &bsGeometry[baseStation]);
@@ -180,7 +190,7 @@ static void initGeoAndCalibDataFromStorage() {
 void lighthouse2CoreTask(void *param) {
   bool isUartFrameValid = false;
 
-  uart1Init(230400);
+  uart2Init(230400);
   systemWaitStart();
 
   initGeoAndCalibDataFromStorage();
@@ -193,10 +203,22 @@ void lighthouse2CoreTask(void *param) {
     waitForUartSynchFrame();
     uartSynchronized = true;
 
+    DEBUG_PRINT("UART sybchronized\n");
+
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
       if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
         useFrame(&frame);
+
+        if (frame.bs == logBaseStationId) {
+          if (frame.sensor == logSensor) {
+            if (frame.sweepId == 0) {
+              logAngle1 = frame.angle;
+            } else {
+              logAngle2 = frame.angle;
+            }
+          }
+        }
       }
     }
 
@@ -219,16 +241,14 @@ static void useFrame(const lighthouse2UartFrame_t* frame) {
 
     sweepInfo.sensorPos = &sensorDeckPositionsV2[frame->sensor];
 
-    sweepInfo.measuredSweepAngle = frame->first_angle;
-    sweepInfo.t = -t30;
-    sweepInfo.calib = &bsCalib->sweep[0];
-    sweepInfo.sweepId = 0;
-    estimatorEnqueueSweepAngles(&sweepInfo);
-
-    sweepInfo.measuredSweepAngle = frame->second_angle;
-    sweepInfo.t = t30;
-    sweepInfo.calib = &bsCalib->sweep[1];
-    sweepInfo.sweepId = 1;
+    sweepInfo.measuredSweepAngle = frame->angle;
+    sweepInfo.calib = &bsCalib->sweep[frame->sweepId];
+    sweepInfo.sweepId = frame->sweepId;
+    if (frame->sweepId == 0) {
+      sweepInfo.t = -t30;
+    } else {
+      sweepInfo.t = t30;
+    }
     estimatorEnqueueSweepAngles(&sweepInfo);
   }
 }
@@ -272,6 +292,8 @@ STATS_CNT_RATE_LOG_ADD_DEBUG(frmRt, &frameRate)
 STATS_CNT_RATE_LOG_ADD_DEBUG(cycleRt, &cycleRate)
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
+LOG_ADD(LOG_FLOAT, ang1, &logAngle1)
+LOG_ADD(LOG_FLOAT, ang2, &logAngle2)
 LOG_GROUP_STOP(lighthouse2)
 
 /**
@@ -282,5 +304,7 @@ PARAM_GROUP_START(lighthouse2)
  * @brief Standard deviation for Sweep angles
  */
 PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
+PARAM_ADD(PARAM_UINT8, logBs, &logBaseStationId)
+PARAM_ADD(PARAM_UINT8, logSens, &logSensor)
 
 PARAM_GROUP_STOP(lighthouse)
