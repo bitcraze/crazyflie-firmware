@@ -46,9 +46,12 @@
 #define DEBUG_MODULE "LH2"
 #include "debug.h"
 
-// TODO krri Temporarily change to uart2.
+// #define USE_UART1 1
+#ifdef USE_UART1
 #include "uart1.h"
+#else
 #include "uart2.h"
+#endif
 
 #include "static_mem.h"
 #include "estimator.h"
@@ -117,22 +120,25 @@ static void preProcessGeometryData(mat3d bsRot, mat3d bsRotInverted, mat3d lh1Ro
 void lighthouse2CoreInit() {
 }
 
-// #define OPTIMIZE_UART1_ACCESS 1
 bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
-  #ifdef OPTIMIZE_UART1_ACCESS
+
+  #ifdef USE_UART1
     // Wait until there is enough data available in the queue before reading
     // to optimize the CPU usage. Locking on the queue (as is done in uart2GetDataWithTimeout()) seems to take a lot
     // of time and the vTaskDelay() solution uses much less CPU.
-  while (uart2bytesAvailable() < UART_FRAME_LENGTH) {
+  while (uart1bytesAvailable() < UART_FRAME_LENGTH) {
     vTaskDelay(1);
   }
+  for(int i = 0; i < UART_FRAME_LENGTH; i++) {
+    uart1Getchar((char*)&data[i]);
+  }
+  #else
+  uart2GetData(UART_FRAME_LENGTH, data);
   #endif
 
   for(int i = 0; i < UART_FRAME_LENGTH; i++) {
-    uart2Getchar((char*)&data[i]);
-
     if ((unsigned char)data[i] == 0xff) {
       syncCounter += 1;
     }
@@ -171,7 +177,11 @@ void waitForUartSynchFrame() {
   bool synchronized = false;
 
   while (!synchronized) {
+    #ifdef USE_UART1
+    uart1Getchar(&c);
+    #else
     uart2Getchar(&c);
+    #endif
     if ((unsigned char)c == 0xff) {
       syncCounter += 1;
     } else {
@@ -199,7 +209,12 @@ static void initGeoAndCalibDataFromStorage() {
 void lighthouse2CoreTask(void *param) {
   bool isUartFrameValid = false;
 
+  #ifdef USE_UART1
+  uart1Init(230400);
+  #else
   uart2Init(230400);
+  #endif
+
   systemWaitStart();
 
   initGeoAndCalibDataFromStorage();
