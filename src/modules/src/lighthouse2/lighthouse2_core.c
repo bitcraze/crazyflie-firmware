@@ -69,6 +69,7 @@ typedef struct {
   uint8_t bs;
   uint8_t sweepId;
   uint8_t sensor;
+  uint8_t rotationPseudoCount;
   float angle;
 } lighthouse2UartFrame_t;
 
@@ -86,7 +87,7 @@ static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(estimatorRate, ONE_SECOND);
 #endif
 
-#define UART_FRAME_LENGTH 6
+#define UART_FRAME_LENGTH 7
 
 
 static float sweepStd = 0.01;
@@ -157,10 +158,14 @@ bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
 
     const uint8_t expectedCrc = data[5];
     if (expectedCrc == crc) {
-      frame->bs = data[0] & 0x0f;
-      frame->sensor = (data[0] >> 4) & 0x03;
-      frame->sweepId = (data[0] >> 6) & 0x01;
-      memcpy(&frame->angle, &data[1], 4);
+      const bool isAux = (data[0] >> 7) & 0x01;
+      if (!isAux) {
+        frame->bs = data[0] & 0x0f;
+        frame->sensor = (data[0] >> 4) & 0x03;
+        frame->sweepId = (data[0] >> 6) & 0x01;
+        frame->rotationPseudoCount = data[1];
+        memcpy(&frame->angle, &data[2], 4);
+      }
     } else {
       isFrameValid = false;
     }
