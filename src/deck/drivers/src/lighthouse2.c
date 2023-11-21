@@ -48,8 +48,8 @@ static void lighthouseInit(DeckInfo *info) {
     return;
   }
 
-  xTaskCreate(lighthouse2CoreTask, LIGHTHOUSE_TASK_NAME,
-              LIGHTHOUSE_TASK_STACKSIZE, NULL, LIGHTHOUSE_TASK_PRI, NULL);
+  xTaskCreate(lighthouse2CoreTask, LIGHTHOUSE2_TASK_NAME,
+              LIGHTHOUSE2_TASK_STACKSIZE, NULL, LIGHTHOUSE2_TASK_PRI, NULL);
 
   isInit = true;
 }
