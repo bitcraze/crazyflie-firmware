@@ -83,7 +83,7 @@ static bool uartSynchronized = false;
 #ifdef CONFIG_DEBUG_LOG_ENABLE
 static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
-static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(estimatorRate, ONE_SECOND);
 #endif
 
 #define UART_FRAME_LENGTH 6
@@ -274,6 +274,7 @@ static void useFrame(const lighthouse2UartFrame_t* frame) {
       sweepInfo.t = t30;
     }
     estimatorEnqueueSweepAngles(&sweepInfo);
+    STATS_CNT_RATE_EVENT_DEBUG(&estimatorRate);
   }
 }
 
@@ -313,7 +314,7 @@ STATS_CNT_RATE_LOG_ADD_DEBUG(serRt, &serialFrameRate)
  */
 STATS_CNT_RATE_LOG_ADD_DEBUG(frmRt, &frameRate)
 
-STATS_CNT_RATE_LOG_ADD_DEBUG(cycleRt, &cycleRate)
+STATS_CNT_RATE_LOG_ADD_DEBUG(estRt, &estimatorRate)
 
 LOG_ADD(LOG_UINT8, comSync, &uartSynchronized)
 LOG_ADD(LOG_FLOAT, ang1, &logAngle1)
