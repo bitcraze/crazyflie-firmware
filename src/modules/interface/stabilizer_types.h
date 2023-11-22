@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2022 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -323,16 +323,20 @@ typedef struct {
 /** Sweep angle measurement */
 typedef struct {
   uint32_t timestamp;
-  const vec3d* sensorPos;    // Sensor position in the CF reference frame
-  const vec3d* rotorPos;     // Pos of rotor origin in global reference frame
-  const mat3d* rotorRot;     // Rotor rotation matrix
-  const mat3d* rotorRotInv;  // Inverted rotor rotation matrix
-  uint8_t sensorId;
+  const vec3d* sensorPos1;    // Sensor position of the first sensor in the CF reference frame
+  const vec3d* sensorPos2;    // Sensor position of the second sensor in the CF reference frame
+  const vec3d* rotorPos;      // Pos of rotor origin in global reference frame
+  const mat3d* rotorRot;      // Rotor rotation matrix
+  const mat3d* rotorRotInv;   // Inverted rotor rotation matrix
+  uint8_t sensorId1;          // Id of the first sensor
+  uint8_t sensorId2;          // Id of the second sensor. Set to 0xff to indicate that data is not valid for the second sensor.
   uint8_t baseStationId;
   uint8_t sweepId;
-  float t;                   // t is the tilt angle of the light plane on the rotor
-  float measuredSweepAngle;
-  float stdDev;
+  float t;                    // t is the tilt angle of the light plane on the rotor
+  float measuredSweepAngle1;  // Measured angle for the first sensor
+  float measuredSweepAngle2;  // Measured angle for the second sensor
+  float stdDevAngle;
+  float stdDevAngleDiff;
   const lighthouseCalibrationSweep_t* calib;
   lighthouseCalibrationMeasurementModel_t calibrationMeasurementModel;
 } sweepAngleMeasurement_t;

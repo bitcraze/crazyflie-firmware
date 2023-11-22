@@ -1,3 +1,27 @@
+/**
+ * ,---------,       ____  _ __
+ * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
+ * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+ * | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+ *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
+ *
+ * Crazyflie control firmware
+ *
+ * Copyright (C) 2017-2023 Bitcraze AB
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, in version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -231,11 +255,11 @@ void estimatorEnqueue(const measurement_t *measurement) {
       eventTrigger(&eventTrigger_estYawError);
       break;
     case MeasurementTypeSweepAngle:
-      eventTrigger_estSweepAngle_payload.sensorId = measurement->data.sweepAngle.sensorId;
+      eventTrigger_estSweepAngle_payload.sensorId = measurement->data.sweepAngle.sensorId1;
       eventTrigger_estSweepAngle_payload.baseStationId = measurement->data.sweepAngle.baseStationId;
       eventTrigger_estSweepAngle_payload.sweepId = measurement->data.sweepAngle.sweepId;
       eventTrigger_estSweepAngle_payload.t = measurement->data.sweepAngle.t;
-      eventTrigger_estSweepAngle_payload.sweepAngle = measurement->data.sweepAngle.measuredSweepAngle;
+      eventTrigger_estSweepAngle_payload.sweepAngle = measurement->data.sweepAngle.measuredSweepAngle1;
       eventTrigger(&eventTrigger_estSweepAngle);
       break;
     case MeasurementTypeGyroscope:

@@ -90,7 +90,8 @@ static STATS_CNT_RATE_DEFINE(estimatorRate, ONE_SECOND);
 #define UART_FRAME_LENGTH 7
 
 
-static float sweepStd = 0.01;
+static float stdDevAngle = 0.01;
+static float stdDevAngleDiff = 0.00005;
 static uint8_t logBaseStationId;
 static uint8_t logSensor;
 static float logAngle1;
@@ -260,17 +261,19 @@ static void useFrame(const lighthouse2UartFrame_t* frame) {
   if (bs < NR_OF_BASE_STATIONS && bsGeometry[bs].valid) {
     const lighthouseCalibration_t* bsCalib = &bsCalibration[bs];
     sweepAngleMeasurement_t sweepInfo;
-    sweepInfo.stdDev = sweepStd;
+    sweepInfo.stdDevAngle = stdDevAngle;
+    sweepInfo.stdDevAngleDiff = stdDevAngleDiff;
     sweepInfo.rotorPos = &bsGeometry[bs].origin;
     sweepInfo.rotorRot = &bsGeometry[bs].mat;
     sweepInfo.rotorRotInv = &bsGeoCache[bs].baseStationInvertedRotationMatrixes;
     sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
     sweepInfo.baseStationId = bs;
-    sweepInfo.sensorId = frame->sensor;
+    sweepInfo.sensorId1 = frame->sensor;
+    sweepInfo.sensorId2 = 0xff; // Not uses
 
-    sweepInfo.sensorPos = &sensorDeckPositionsV2[frame->sensor];
+    sweepInfo.sensorPos1 = &sensorDeckPositionsV2[frame->sensor];
 
-    sweepInfo.measuredSweepAngle = frame->angle;
+    sweepInfo.measuredSweepAngle1 = frame->angle;
     sweepInfo.calib = &bsCalib->sweep[frame->sweepId];
     sweepInfo.sweepId = frame->sweepId;
     if (frame->sweepId == 0) {
@@ -333,7 +336,8 @@ PARAM_GROUP_START(lighthouse2)
 /**
  * @brief Standard deviation for Sweep angles
  */
-PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
+PARAM_ADD(PARAM_FLOAT, angStd, &stdDevAngle)
+PARAM_ADD(PARAM_FLOAT, difStd, &stdDevAngleDiff)
 PARAM_ADD(PARAM_UINT8, logBs, &logBaseStationId)
 PARAM_ADD(PARAM_UINT8, logSens, &logSensor)
 

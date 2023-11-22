@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2019 - 2020 Bitcraze AB
+ * Copyright (C) 2019 - 2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -285,20 +285,21 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
 static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulseProcessorResult_t* angles, int baseStation) {
   const lighthouseCalibration_t* bsCalib = &appState->bsCalibration[baseStation];
   sweepAngleMeasurement_t sweepInfo;
-  sweepInfo.stdDev = sweepStd;
+  sweepInfo.stdDevAngle = sweepStd;
   sweepInfo.rotorPos = &appState->bsGeometry[baseStation].origin;
   sweepInfo.t = 0;
   sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh1;
   sweepInfo.baseStationId = baseStation;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    sweepInfo.sensorId = sensor;
+    sweepInfo.sensorId1 = sensor;
+    sweepInfo.sensorId2 = 0xff; // Not used
     pulseProcessorSensorMeasurement_t* measurement = &angles->baseStationMeasurementsLh1[baseStation].sensorMeasurements[sensor];
     if (measurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-      sweepInfo.sensorPos = &sensorDeckPositions[sensor];
+      sweepInfo.sensorPos1 = &sensorDeckPositions[sensor];
 
-      sweepInfo.measuredSweepAngle = measurement->angles[0];
-      if (sweepInfo.measuredSweepAngle != 0) {
+      sweepInfo.measuredSweepAngle1 = measurement->angles[0];
+      if (sweepInfo.measuredSweepAngle1 != 0) {
         sweepInfo.rotorRot = &appState->bsGeometry[baseStation].mat;
         sweepInfo.rotorRotInv = &appState->bsGeoCache[baseStation].baseStationInvertedRotationMatrixes;
         sweepInfo.calib = &bsCalib->sweep[0];
@@ -312,8 +313,8 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
         #endif
       }
 
-      sweepInfo.measuredSweepAngle = measurement->angles[1];
-      if (sweepInfo.measuredSweepAngle != 0) {
+      sweepInfo.measuredSweepAngle1 = measurement->angles[1];
+      if (sweepInfo.measuredSweepAngle1 != 0) {
         sweepInfo.rotorRot = &appState->bsGeoCache[baseStation].lh1Rotor2RotationMatrixes;
         sweepInfo.rotorRotInv = &appState->bsGeoCache[baseStation].lh1Rotor2InvertedRotationMatrixes;
         sweepInfo.calib = &bsCalib->sweep[1];
@@ -333,7 +334,7 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
 static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulseProcessorResult_t* angles, int baseStation) {
   const lighthouseCalibration_t* bsCalib = &appState->bsCalibration[baseStation];
   sweepAngleMeasurement_t sweepInfo;
-  sweepInfo.stdDev = sweepStdLh2;
+  sweepInfo.stdDevAngle = sweepStdLh2;
   sweepInfo.rotorPos = &appState->bsGeometry[baseStation].origin;
   sweepInfo.rotorRot = &appState->bsGeometry[baseStation].mat;
   sweepInfo.rotorRotInv = &appState->bsGeoCache[baseStation].baseStationInvertedRotationMatrixes;
@@ -341,13 +342,14 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
   sweepInfo.baseStationId = baseStation;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    sweepInfo.sensorId = sensor;
+    sweepInfo.sensorId1 = sensor;
+    sweepInfo.sensorId2 = 0xff; // Not used
     pulseProcessorSensorMeasurement_t* measurement = &angles->baseStationMeasurementsLh2[baseStation].sensorMeasurements[sensor];
     if (measurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
-      sweepInfo.sensorPos = &sensorDeckPositions[sensor];
+      sweepInfo.sensorPos1 = &sensorDeckPositions[sensor];
 
-      sweepInfo.measuredSweepAngle = measurement->angles[0];
-      if (sweepInfo.measuredSweepAngle != 0) {
+      sweepInfo.measuredSweepAngle1 = measurement->angles[0];
+      if (sweepInfo.measuredSweepAngle1 != 0) {
         sweepInfo.t = -t30;
         sweepInfo.calib = &bsCalib->sweep[0];
         sweepInfo.sweepId = 0;
@@ -359,8 +361,8 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         #endif
       }
 
-      sweepInfo.measuredSweepAngle = measurement->angles[1];
-      if (sweepInfo.measuredSweepAngle != 0) {
+      sweepInfo.measuredSweepAngle1 = measurement->angles[1];
+      if (sweepInfo.measuredSweepAngle1 != 0) {
         sweepInfo.t = t30;
         sweepInfo.calib = &bsCalib->sweep[1];
         sweepInfo.sweepId = 1;
@@ -473,6 +475,7 @@ void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, 
 void lighthousePositionEstimatePoseSweeps(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
   if (state->bsGeometry[baseStation].valid) {
     estimatePositionSweeps(state, angles, baseStation);
+    // TODO Consider using the yaw estimation in the sweep measurement model instead of the estimateYaw() function
     estimateYaw(state, angles, baseStation);
   }
 }
