@@ -216,15 +216,15 @@ void lighthouse2CoreTask(void *param) {
 
   #ifdef USE_UART1
   uart1Init(230400);
+  ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
   #else
   uart2Init(230400);
+  // ASSERT(uart2QueueMaxLength() >= UART_FRAME_LENGTH);
   #endif
 
   systemWaitStart();
 
   initGeoAndCalibDataFromStorage();
-
-  ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
 
   vTaskDelay(M2T(100));
 
