@@ -66,11 +66,12 @@
 
 typedef struct {
   bool isSyncFrame;
-  uint8_t bs;
+  uint8_t baseStationId;
   uint8_t sweepId;
-  uint8_t sensor;
-  uint8_t rotationPseudoCount;
-  float angle;
+  uint8_t sensorId1;
+  uint8_t sensorId2;
+  float measuredSweepAngle1;
+  float measuredSweepAngle2;
 } lighthouse2UartFrame_t;
 
 static lighthouse2UartFrame_t frame;
@@ -87,7 +88,7 @@ static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
 static STATS_CNT_RATE_DEFINE(estimatorRate, ONE_SECOND);
 #endif
 
-#define UART_FRAME_LENGTH 7
+#define UART_FRAME_LENGTH 11
 
 
 static float stdDevAngle = 0.01;
@@ -157,15 +158,18 @@ bool getUartFrameRaw(lighthouse2UartFrame_t *frame) {
       crc ^= data[i];
     }
 
-    const uint8_t expectedCrc = data[5];
+    const uint8_t expectedCrc = data[10];
     if (expectedCrc == crc) {
       const bool isAux = (data[0] >> 7) & 0x01;
       if (!isAux) {
-        frame->bs = data[0] & 0x0f;
-        frame->sensor = (data[0] >> 4) & 0x03;
-        frame->sweepId = (data[0] >> 6) & 0x01;
-        frame->rotationPseudoCount = data[1];
-        memcpy(&frame->angle, &data[2], 4);
+        frame->baseStationId = data[0] & 0x0f;
+        frame->sweepId = (data[0] >> 4) & 0x01;
+
+        frame->sensorId1 = data[1] & 0x03;
+        frame->sensorId2 = (data[1] >> 2) & 0x03;
+
+        memcpy(&frame->measuredSweepAngle1, &data[2], 4);
+        memcpy(&frame->measuredSweepAngle2, &data[6], 4);
       }
     } else {
       isFrameValid = false;
@@ -211,6 +215,27 @@ static void initGeoAndCalibDataFromStorage() {
   }
 }
 
+static void logAngles(const lighthouse2UartFrame_t* frame) {
+  if (frame->baseStationId == logBaseStationId) {
+    float angle = 0.0;
+    bool doLog = false;
+    if (frame->sensorId1 == logSensor) {
+      angle = frame->measuredSweepAngle1;
+      doLog = true;
+    } else if (frame->sensorId2 == logSensor) {
+      angle = frame->measuredSweepAngle2;
+      doLog = true;
+    }
+
+    if (doLog) {
+      if (frame->sweepId == 0) {
+        logAngle1 = angle;
+      } else {
+        logAngle2 = angle;
+      }
+    }
+  }
+}
 
 void lighthouse2CoreTask(void *param) {
   bool isUartFrameValid = false;
@@ -239,16 +264,7 @@ void lighthouse2CoreTask(void *param) {
       if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
         useFrame(&frame);
-
-        if (frame.bs == logBaseStationId) {
-          if (frame.sensor == logSensor) {
-            if (frame.sweepId == 0) {
-              logAngle1 = frame.angle;
-            } else {
-              logAngle2 = frame.angle;
-            }
-          }
-        }
+        logAngles(&frame);
       }
     }
 
@@ -257,23 +273,26 @@ void lighthouse2CoreTask(void *param) {
 }
 
 static void useFrame(const lighthouse2UartFrame_t* frame) {
-  const uint8_t bs = frame->bs;
-  if (bs < NR_OF_BASE_STATIONS && bsGeometry[bs].valid) {
-    const lighthouseCalibration_t* bsCalib = &bsCalibration[bs];
+  const uint8_t baseStationId = frame->baseStationId;
+  if (baseStationId < NR_OF_BASE_STATIONS && bsGeometry[baseStationId].valid) {
+    const lighthouseCalibration_t* bsCalib = &bsCalibration[baseStationId];
     sweepAngleMeasurement_t sweepInfo;
     sweepInfo.stdDevAngle = stdDevAngle;
     sweepInfo.stdDevAngleDiff = stdDevAngleDiff;
-    sweepInfo.rotorPos = &bsGeometry[bs].origin;
-    sweepInfo.rotorRot = &bsGeometry[bs].mat;
-    sweepInfo.rotorRotInv = &bsGeoCache[bs].baseStationInvertedRotationMatrixes;
+    sweepInfo.rotorPos = &bsGeometry[baseStationId].origin;
+    sweepInfo.rotorRot = &bsGeometry[baseStationId].mat;
+    sweepInfo.rotorRotInv = &bsGeoCache[baseStationId].baseStationInvertedRotationMatrixes;
     sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
-    sweepInfo.baseStationId = bs;
-    sweepInfo.sensorId1 = frame->sensor;
-    sweepInfo.sensorId2 = 0xff; // Not uses
+    sweepInfo.baseStationId = baseStationId;
+    sweepInfo.sensorId1 = frame->sensorId1;
+    sweepInfo.sensorId2 = frame->sensorId2;
 
-    sweepInfo.sensorPos1 = &sensorDeckPositionsV2[frame->sensor];
+    sweepInfo.sensorPos1 = &sensorDeckPositionsV2[frame->sensorId1];
+    sweepInfo.sensorPos2 = &sensorDeckPositionsV2[frame->sensorId2];
 
-    sweepInfo.measuredSweepAngle1 = frame->angle;
+    sweepInfo.measuredSweepAngle1 = frame->measuredSweepAngle1;
+    sweepInfo.measuredSweepAngle2 = frame->measuredSweepAngle2;
+
     sweepInfo.calib = &bsCalib->sweep[frame->sweepId];
     sweepInfo.sweepId = frame->sweepId;
     if (frame->sweepId == 0) {
