@@ -337,6 +337,15 @@ config DECK_LOCO_LONGER_RANGE
     help
         Note that anchors need to be built with support for this as well
 
+config DECK_LOCO_TDOA3_HYBRID_MODE
+    bool "Support TDoA3 hybrid mode"
+    depends on DECK_LOCO
+    default n
+    help
+        In the standard TDoA3 mode anchors are transmitting while the Crazyflies only receive. In hybrid mode the
+        Crazyflies can also transmit and thus do TWR, either for positioning them selfs or to act as an anchor for
+        other Crazyflies.
+
 config DECK_LOCO_TDMA
     bool "Use Time Division Multiple Access"
     depends on DECK_LOCO_ALGORITHM_TWR
