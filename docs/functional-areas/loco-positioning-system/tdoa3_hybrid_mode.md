@@ -95,7 +95,7 @@ Similarly all logs are in the `tdoa3` log group.
 Settings for Crazyflie 1
 
 | Parameter     | Value | Comment                |
-|---------------|--------------------------------|
+|---------------|-------|------------------------|
 | `hmId`        | 254   | the anchor id to use   |
 | `hmTwr`       | 1     | to start transmission  |
 | `hmAnchLog`   | 253   | the id of the other CF |
@@ -103,7 +103,7 @@ Settings for Crazyflie 1
 Settings for Crazyflie 2
 
 | Parameter     | Value | Comment                |
-|---------------|--------------------------------|
+|---------------|-------|------------------------|
 | `hmId`        | 253   | the anchor id to use   |
 | `hmTwr`       | 1     | to start transmission  |
 | `hmAnchLog`   | 254   | the id of the other CF |
