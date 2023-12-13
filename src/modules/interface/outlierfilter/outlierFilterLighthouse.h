@@ -27,8 +27,7 @@
 #include "stabilizer_types.h"
 
 typedef struct {
-    uint32_t openingTimeMs;
-    int32_t openingWindowMs;
+    uint32_t validUntilMs;
 } OutlierFilterLhState_t;
 
 bool outlierFilterLighthouseValidateSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs);

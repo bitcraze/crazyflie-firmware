@@ -501,10 +501,6 @@ LOG_GROUP_START(kalman)
   STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
 LOG_GROUP_STOP(kalman)
 
-LOG_GROUP_START(outlierf)
-  LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindowMs)
-LOG_GROUP_STOP(outlierf)
-
 /**
  * Tuning parameters for the Extended Kalman Filter (EKF)
  *     estimator

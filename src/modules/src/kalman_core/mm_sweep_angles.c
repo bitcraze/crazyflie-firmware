@@ -24,6 +24,9 @@
  */
 
 #include "mm_sweep_angles.h"
+#include "log.h"
+static void logAngles(const sweepAngleMeasurement_t *sweepInfo);
+
 
 static float predictSweepAngle(const kalmanCoreData_t *this, const sweepAngleMeasurement_t *sweepInfo, const vec3d *sensPos_cf, vec3d *sensPos_r, const mat3d *R);
 static void scalarUpdatePosition(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState, const vec3d *sensPos_r, const float error);
@@ -37,6 +40,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float error1 = sweepInfo->measuredSweepAngle1 - predictedSweepAngle1;
   scalarUpdatePosition(this, sweepInfo, nowMs, sweepOutlierFilterState, &sensPos1_r, error1);
 
+#if 0
   const uint8_t INVALID = 0xff;
   if (sweepInfo->sensorId2 != INVALID) {
     // Estimate yaw
@@ -63,6 +67,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
     arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
     kalmanCoreScalarUpdate(this, &H, errorAngDelta, sweepInfo->stdDevAngleDiff);
   }
+#endif
 }
 
 static float predictSweepAngle(const kalmanCoreData_t *this, const sweepAngleMeasurement_t *sweepInfo, const vec3d *sensPos_cf, vec3d *sensPos_r, const mat3d *R) {
@@ -107,6 +112,8 @@ static void scalarUpdatePosition(kalmanCoreData_t *this, sweepAngleMeasurement_t
   const float r = arm_sqrt(r2);
 
   if (outlierFilterLighthouseValidateSweep(sweepOutlierFilterState, r, error, nowMs)) {
+    logAngles(sweepInfo);
+
     const float tan_t = tanf(sweepInfo->t);
 
     // Calculate H vector (in the rotor reference frame)
@@ -148,3 +155,38 @@ static void yawRotMatrix(const float yaw, const mat3d* R, mat3d* result) {
   arm_matrix_instance_f32 result_ = {3, 3, (float*)*result};
   mat_mult(&Ryaw_, &R_, &result_);
 }
+
+
+extern uint8_t logBaseStationId;
+extern uint8_t logSensor;
+static float logAngle1;
+static float logAngle2;
+
+
+static void logAngles(const sweepAngleMeasurement_t *sweepInfo) {
+  if (sweepInfo->baseStationId == logBaseStationId) {
+    float angle = 0.0;
+    bool doLog = false;
+    if (sweepInfo->sensorId1 == logSensor) {
+      angle = sweepInfo->measuredSweepAngle1;
+      doLog = true;
+    } else if (sweepInfo->sensorId2 == logSensor) {
+      angle = sweepInfo->measuredSweepAngle2;
+      doLog = true;
+    }
+
+    if (doLog) {
+      if (sweepInfo->sweepId == 0) {
+        logAngle1 = angle;
+      } else {
+        logAngle2 = angle;
+      }
+    }
+  }
+}
+
+
+LOG_GROUP_START(lighthouse2)
+LOG_ADD(LOG_FLOAT, ang1f, &logAngle1)
+LOG_ADD(LOG_FLOAT, ang2f, &logAngle2)
+LOG_GROUP_STOP(lighthouse2)

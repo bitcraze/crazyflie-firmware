@@ -28,47 +28,48 @@
 #include "outlierFilterLighthouse.h"
 #include "stabilizer_types.h"
 #include "log.h"
+#include "param.h"
 #include "debug.h"
 
 
-#define LH_MS_PER_FRAME (1000 / 120)
-static const int32_t lhMinWindowTimeMs = -2 * LH_MS_PER_FRAME;
-static const int32_t lhMaxWindowTimeMs = 5 * LH_MS_PER_FRAME;
-static const int32_t lhBadSampleWindowChangeMs = -LH_MS_PER_FRAME;
-static const int32_t lhGoodSampleWindowChangeMs = LH_MS_PER_FRAME / 2;
-static const float lhMaxError = 0.05f;
+static int32_t lhValidityTimeMs = 100;
+static float lhMaxError = 0.2f;
 
 void outlierFilterLighthouseReset(OutlierFilterLhState_t* this, const uint32_t nowMs) {
-  this->openingTimeMs = nowMs;
-  this->openingWindowMs = lhMinWindowTimeMs;
+  this->validUntilMs = 0;
 }
 
-
+static bool isFilterClosed;
+static float error;
 bool outlierFilterLighthouseValidateSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs) {
   // float error = distanceToBs * tan(angleError);
-  // We use an approximattion
-  float error = distanceToBs * angleError;
-
+  // We use an approximation
+  error = distanceToBs * angleError;
   bool isGoodSample = (fabsf(error) < lhMaxError);
   if (isGoodSample) {
-    this->openingWindowMs += lhGoodSampleWindowChangeMs;
-    if (this->openingWindowMs > lhMaxWindowTimeMs) {
-      this->openingWindowMs = lhMaxWindowTimeMs;
-    }
-  } else {
-    this->openingWindowMs += lhBadSampleWindowChangeMs;
-    if (this->openingWindowMs < lhMinWindowTimeMs) {
-      this->openingWindowMs = lhMinWindowTimeMs;
-    }
+    this->validUntilMs = nowMs + lhValidityTimeMs;
   }
 
   bool result = true;
-  bool isFilterClosed = (nowMs < this->openingTimeMs);
+  isFilterClosed = (nowMs < this->validUntilMs);
   if (isFilterClosed) {
     result = isGoodSample;
+  } else {
+    // Seems as if we have not got any good measurements for a while. Let all samples through to enable the kalman
+    // filter to converge again.
+    result = true;
   }
-
-  this->openingTimeMs = nowMs + this->openingWindowMs;
 
   return result;
 }
+
+
+LOG_GROUP_START(outlierf)
+LOG_ADD(LOG_UINT8, lhclosed, &isFilterClosed)
+LOG_ADD(LOG_FLOAT, lhErr, &error)
+LOG_GROUP_STOP(outlierf)
+
+PARAM_GROUP_START(outlierf)
+PARAM_ADD(PARAM_UINT8, valTime, &lhValidityTimeMs)
+PARAM_ADD(PARAM_FLOAT, maxErr, &lhMaxError)
+PARAM_GROUP_STOP(outlierf)

@@ -93,8 +93,8 @@ static STATS_CNT_RATE_DEFINE(estimatorRate, ONE_SECOND);
 
 static float stdDevAngle = 0.01;
 static float stdDevAngleDiff = 0.00005;
-static uint8_t logBaseStationId;
-static uint8_t logSensor;
+uint8_t logBaseStationId;
+uint8_t logSensor;
 static float logAngle1;
 static float logAngle2;
 
