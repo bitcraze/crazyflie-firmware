@@ -1,0 +1,257 @@
+/* Copyright 2011-2016 The MathWorks, Inc. */
+body,p,table {font-family: calibri, verdana, sans-serif;}
+button,.buton {font-family: calibri, verdana, sans-serif;}  
+button,.button {font-size: small;}
+.small_font {font-size: small;}
+h1 { font-weight: normal; color: #000066; }
+td { vertical-align: top }
+th { background-color: #eeeeee; text-align: left; }
+a:link { color: #0033cc; }
+a:visited { color: #666666; }
+input { font-family: sans-serif, verdana, calibri; }
+table {
+  background-color: #ffffff;
+  width: 100%;
+}
+
+table.toc, table.button, table.panel {
+  border-style: none;
+}
+
+/* LineNumber */
+.LN {
+    font-style: italic;
+    color: #888888;
+}
+
+/* Comment */
+.CT {
+    font-style: italic;
+    color: #117755;
+}
+
+/* PreProcessor */
+PP {
+    /* font-weight: bold; */
+    color: #992211;
+}
+
+/* Keyword */
+.KW {
+    /* font-weight: bold; */
+    color: #0000FF;
+}
+
+/* Datatype */
+.DT {
+    /* font-weight: bold; */
+    color: #112266
+}
+
+.highlighted {
+    background-color: yellow;
+}
+
+.highlightedCurrent {
+    background-color: rgba(150, 12, 116, 0.1);
+}
+
+input.search {
+    background-color: #ffffff;
+}
+
+input.failedSearch {
+    background-color: #F78181;
+}
+
+/* ensure that code2model links are comment green */
+a.code2model:link {
+    color: #117755;
+    font-style: italic;
+}
+a.code2model:visited{
+    color: #117755;
+    font-style: italic;
+}
+
+.toc td, .button td, .panel td {
+  border-style: none;
+  padding: 4px;
+}
+
+h1 { font-weight: normal; color: #000066; }
+td { vertical-align: top }
+th { background-color: #eeeeee; text-align: left; }
+a:link { color: #0033cc; }
+a:visited { color: #666666; }
+
+/******* table *******/
+/* default table style */
+table.AltRow {
+    border-collapse: collapse; border: none; border-spacing: 0pt;
+    border-top: solid #4F81BD 1.0pt; border-bottom: solid #4F81BD 1.0pt;
+}
+table.AltRow th, table.AltRow td { padding: 2pt 8pt 2pt 2pt }
+/* default alternating row style */
+table.AltRow tr.even td { background-color:#D3DFEE; border:none;}
+table.AltRow tr.odd td { background-color:#FFFFFF; border:none;}
+/* tr class="heading" */
+table.AltRow tr.heading td, table.AltRow th {
+  background-color:#FFFFFF; font-weight:bold; border:none;
+  border-bottom: solid #4F81BD 1.0pt;
+}
+/* table class="FirstColumn" */
+table.FirstColumn td:first-child { font-weight:bold }
+/* table class="TotalRow" */
+table.TotalRow tr:last-child { font-weight:bold }
+table.TotalRow tr:last-child td { border-top: solid #4F81BD 1.0pt }
+
+a.closeButton {
+	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #f9f9f9), color-stop(1, #e9e9e9) );
+	background:-moz-linear-gradient( center top, #f9f9f9 5%, #e9e9e9 100% );
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#f9f9f9', endColorstr='#e9e9e9');
+	background-color:#f9f9f9;
+	-webkit-border-top-left-radius:20px;
+	-moz-border-radius-topleft:20px;
+	border-top-left-radius:20px;
+	-webkit-border-top-right-radius:20px;
+	-moz-border-radius-topright:20px;
+	border-top-right-radius:20px;
+	-webkit-border-bottom-right-radius:20px;
+	-moz-border-radius-bottomright:20px;
+	border-bottom-right-radius:20px;
+	-webkit-border-bottom-left-radius:20px;
+	-moz-border-radius-bottomleft:20px;
+	border-bottom-left-radius:20px;
+	text-indent:0;
+	border:2px solid #dcdcdc;
+	display:inline-block;
+	color:#454143;
+	font-family:Arial;
+	font-size:15px;
+	font-weight:bold;
+	font-style:normal;
+	height:20px;
+	line-height:20px;
+	width:20px;
+	text-decoration:none;
+	text-align:center;
+        cursor: pointer;
+}
+a.closeButton:hover {
+	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #e9e9e9), color-stop(1, #f9f9f9) );
+	background:-moz-linear-gradient( center top, #e9e9e9 5%, #f9f9f9 100% );
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#e9e9e9', endColorstr='#f9f9f9');
+	background-color:#e9e9e9;
+}
+a.closeButton:active {
+	position:relative;
+	top:1px;
+}
+
+.button {
+	-moz-box-shadow:inset 0px 1px 0px 0px #ffffff;
+	-webkit-box-shadow:inset 0px 1px 0px 0px #ffffff;
+	box-shadow:inset 0px 1px 0px 0px #ffffff;
+	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #ededed), color-stop(1, #dfdfdf) );
+	background:-moz-linear-gradient( center top, #ededed 5%, #dfdfdf 100% );
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#ededed', endColorstr='#dfdfdf');
+	background-color:#ededed;
+	-webkit-border-top-left-radius:5px;
+	-moz-border-radius-topleft:5px;
+	border-top-left-radius:5px;
+	-webkit-border-top-right-radius:5px;
+	-moz-border-radius-topright:5px;
+	border-top-right-radius:5px;
+	-webkit-border-bottom-right-radius:5px;
+	-moz-border-radius-bottomright:5px;
+	border-bottom-right-radius:5px;
+	-webkit-border-bottom-left-radius:5px;
+	-moz-border-radius-bottomleft:5px;
+	border-bottom-left-radius:5px;
+	text-indent:0px;
+	border:1px solid #dcdcdc;
+	display:inline-block;
+	color:black;
+	font-family:Arial;
+	font-size:12px;
+	font-weight:bold;
+	font-style:normal;
+	height:12px;
+	line-height:12px;
+	width:45px;
+	text-decoration:none;
+	text-align:center;
+	text-shadow:1px 1px 0px #ffffff;
+}
+.button:hover {
+	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #dfdfdf), color-stop(1, #ededed) );
+	background:-moz-linear-gradient( center top, #dfdfdf 5%, #ededed 100% );
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#dfdfdf', endColorstr='#ededed');
+	background-color:#dfdfdf;
+}.button:active {
+	position:relative;
+	top:1px;
+}.button:disabled {
+	color:#777777;
+}
+
+ul.nav_list {
+        list-style-type:none; 
+        display: block;		
+	margin: 0;
+	padding: 0;
+}
+ul.nav_list li {
+        list-style-type:none; 
+	display: inline;
+	margin: 0 18px 0 0;
+	padding: 0;
+}
+
+.nav_toolbar {
+    background-color: ivory;
+    margin-top: 0;
+}
+
+.inspect_body {
+    margin: 0;
+    margin-bottom: 0;
+    display: inline;
+    vertical-align:middle; 
+}
+
+table.nav_table {
+    background-color: ivory;
+    border: none;
+    width: 100%;
+    display: inline;
+    vertical-align:middle;    
+}
+
+table#rtwIdTracePanel > tr > td {
+    white-space: nowrap;
+    table-layout:fixed;
+    vertical-align:middle; 
+}
+
+table.nav_table > button {
+  height: 20px;
+}
+select#fileSelector {
+   padding: 5px;
+   font-size: 16px;
+   line-height: 1;
+   border-radius: 0;
+   height: 34px;
+}
+
+.treeTable table{
+   table-layout: fixed;
+}
+.treeTable td:first-child > span{
+   display: inline-block;
+   text-overflow: ellipsis;
+   overflow: hidden;
+   width: 100%;
+}

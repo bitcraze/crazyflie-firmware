@@ -1,0 +1,31 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>Block-to-Code Highlighting Message</title>
+    <link rel="stylesheet" type="text/css" href="rtwreport.css" />
+  </head>
+  <body onload="if (top.rtwDisplayMessage) top.rtwDisplayMessage();">
+    <h1>Block-to-Code Highlighting Message</h1>
+    <p id="rtwMsg_notTraceable" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />For '%s', you cannot trace code from the model because there is no traceability information.
+    </p>
+    <p id="rtwMsg_virtualBlock" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />'%s' is a virtual block. Code is not generated for virtual blocks.
+    </p>
+    <p id="rtwMsg_reducedBlock" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />'%s' is reduced during model compilation. Code is not generated for reduced blocks.
+    </p>
+    <p id="rtwMsg_reusableFunction" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />Code for '%s' is from reusable function and cannot be traced. 
+    </p>
+    <p id="rtwMsg_blockOutsideSystem" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />'%s' is outside of source subsystem and cannot be traced.
+    </p>
+    <p id="rtwMsg_illegalCharacter" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />'%s' contains illegal character (single quote) that disables model-to-code navigation. Remove single quote from block name and rebuild model.
+    </p>
+    <p id="rtwMsg_maskedSubSystem" style="display: none">
+      <img src=hilite_warning.png vspace="3px" align="top" />'%s' is a masked subsystem and cannot be traced at the subsystem block level. Traceability information is available for individual blocks under the mask.
+    </p>
+  </body>
+</html>

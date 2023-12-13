@@ -5,6 +5,14 @@
         "**/bower_components": true
     },
     "files.associations": {
-        "bootloader.h": "c"
+        "bootloader.h": "c",
+        "sensfusion6.h": "c",
+        "controller_single_ppid.h": "c",
+        "controller.h": "c",
+        "controller_mellinger.h": "c",
+        "stabilizer_types.h": "c",
+        "single_qc_ppid_private.h": "c",
+        "rtwtypes.h": "c"
     }
 }
+

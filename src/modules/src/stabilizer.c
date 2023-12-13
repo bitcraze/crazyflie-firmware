@@ -67,9 +67,9 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
-static motors_thrust_uncapped_t motorThrustUncapped;
+// static motors_thrust_uncapped_t motorThrustUncapped;
 static motors_thrust_uncapped_t motorThrustBatCompUncapped;
-static motors_thrust_pwm_t motorPwm;
+// static motors_thrust_pwm_t motorPwm;
 
 // For scratch storage - never logged or passed to other subsystems.
 static setpoint_t tempSetpoint;
@@ -202,23 +202,23 @@ bool stabilizerTest(void)
   return pass;
 }
 
-static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
-{
-  float supplyVoltage = pmGetBatteryVoltage();
+// static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
+// {
+//   float supplyVoltage = pmGetBatteryVoltage();
 
-  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
-  {
-    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
-  }
-}
+//   for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
+//   {
+//     motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
+//   }
+// }
 
-static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
-{
-  motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
-  motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
-  motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
-  motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
-}
+// static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
+// {
+//   motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
+//   motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
+//   motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
+//   motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
+// }
 
 static void updateStateEstimatorAndControllerTypes() {
   if (stateEstimatorGetType() != estimatorType) {
@@ -232,27 +232,27 @@ static void updateStateEstimatorAndControllerTypes() {
   }
 }
 
-static void logCapWarning(const bool isCapped) {
-  #ifdef CONFIG_LOG_MOTOR_CAP_WARNING
-  static uint32_t nextReportTick = 0;
+// static void logCapWarning(const bool isCapped) {
+//   #ifdef CONFIG_LOG_MOTOR_CAP_WARNING
+//   static uint32_t nextReportTick = 0;
 
-  if (isCapped) {
-    uint32_t now = xTaskGetTickCount();
-    if (now > nextReportTick) {
-      DEBUG_PRINT("Warning: motor thrust saturated\n");
-      nextReportTick = now + M2T(3000);
-    }
-  }
-  #endif
-}
+//   if (isCapped) {
+//     uint32_t now = xTaskGetTickCount();
+//     if (now > nextReportTick) {
+//       DEBUG_PRINT("Warning: motor thrust saturated\n");
+//       nextReportTick = now + M2T(3000);
+//     }
+//   }
+//   #endif
+// }
 
-static void controlMotors(const control_t* control) {
-  powerDistribution(control, &motorThrustUncapped);
-  batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-  const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
-  logCapWarning(isCapped);
-  setMotorRatios(&motorPwm);
-}
+// static void controlMotors(const control_t* control) {
+//   powerDistribution(control, &motorThrustUncapped);
+//   batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+//   const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+//   logCapWarning(isCapped);
+//   setMotorRatios(&motorPwm);
+// }
 
 /* The stabilizer loop runs at 1kHz. It is the
  * responsibility of the different functions to run slower by skipping call
@@ -321,9 +321,9 @@ static void stabilizerTask(void* param)
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
       if (areMotorsAllowedToRun) {
-        controlMotors(&control);
+        // controlMotors(&control);
       } else {
-        motorsStop();
+        // motorsStop();
       }
 
       // Compute compressed log formats

@@ -1,0 +1,184 @@
+/* Copyright 2013-2018 The MathWorks, Inc. */
+pre#code {    
+    font-family: Consolas, Courier;
+    font-size: small;
+}
+
+.ct { 
+    font-style: italic; 
+    color: #117755 
+} /* comment */
+.pp { 
+    font-weight:bold;   
+    color: #992211 
+} /* preprocessor */
+.kw, .br { 
+    font-weight:bold;   
+    color: #112266
+} /* keyword or brace */
+.dt { 
+    font-weight:bold;   
+    color: #112266 
+} /* data type */
+.tk { 
+    font-style: normal;   
+    color: #112266
+} /* regular token */
+pre#code a.req {
+    text-decoration: none;
+    color: #112266
+}
+pre#code a.req_active {
+    cursor: pointer;  
+    text-decoration: underline;
+}
+pre#code a.req_active:hover { 
+    cursor: pointer;  
+    color: blue; 
+    text-decoration: underline
+}
+pre#code a.blk {
+    text-decoration: none;
+}
+pre#code a.blk_active {
+    cursor: pointer;  
+    text-decoration: underline;
+}
+pre#code a.blk_active:hover { 
+    cursor: pointer;  
+    color: blue; 
+    text-decoration: underline
+}
+a.hilite { 
+    font-style: normal;   
+    color: black;
+    background-color: rgba(150, 12, 116, 0.1);
+} /* highlight token */
+tr.hilite { 
+    font-style: normal;   
+    color: black;
+    background-color: rgba(150, 12, 116, 0.1);
+} /* highlight row */
+a.hiliteToken, tr.hiliteToken, td.hiliteToken {
+    background-color: #ffff99;
+}
+.hiliteCurrentLine, tr.hiliteCurrentLine > td {
+    font-style: normal;   
+    color: black;   
+    background-color: rgba(150, 12, 116, 0.1);
+    box-shadow:  inset 0 1px 0 0 rgba(150, 12, 116, 0.25), inset 0 -1px 0 0 rgba(150, 12, 116, 0.25);
+}
+span.hiliteTotalLine {
+    font-style: normal;   
+    color: #aff;
+} 
+a.tk {
+    text-decoration: none;
+}
+a.tk:hover {
+    text-decoration: none;
+}
+a.active {
+    text-decoration: underline;
+}
+a.active:hover { 
+    cursor: pointer;  
+    color: blue; 
+    text-decoration: underline
+} /* hyperlink */
+table.code {
+    border: 0px    
+}
+table.code td {
+    vertical-align: top;
+}
+table.code td.highlightedCurrent {
+    background-color: rgba(150, 12, 116, 0.1);
+}
+table.code > tr:first {
+    text-align: right;
+} /* hyperlink */
+
+ul.popup_attrib_list {	
+    list-style-type:none; 
+    display: block;		
+    margin: 0;
+    padding: 0;	
+}
+ul.popup_attrib_list li {
+    list-style-type:none; 
+    display: inline;
+    margin: 0 18px 0 0;
+    padding: 0;	
+}
+.highlighted {
+    background-color:yellow;
+}
+a:class1 {
+    color: -webkit-link;
+    text-decoration: underline;
+    cursor: hand;
+}
+.scroll
+{
+    height:80px;
+    overflow:scroll;
+    overflow-x:hidden;
+}
+div#popup_window {
+    position: absolute;
+    background-color: rgb(203,203,255);
+    border: solid 3px #ECECEC;		
+    border-radius: 5px;
+    /* shadow box around the window*/
+    -moz-box-shadow: 0 3px 3px rgba(0,0,0,0.4), inset 0 1px #FFF;
+    -webkit-box-shadow: 0 3px 3px rgba(0,0,0,0.4), inset 0 1px #FFF;
+    box-shadow: 0 3px 3px rgba(0,0,0,0.4), inset 0 1px #FFF;	
+    padding: 2px;
+}
+div#popup_window a {
+    text-decoration: none;
+    color: green;
+}
+div#popup_window a:hover {
+    cursor: pointer;
+    text-decoration: underline;
+    color: blue;
+}
+div#popup_window tr.selected {
+    background-color: #ffff99;
+}
+div#token_usage_nav {
+    border-bottom: 1px solid gray;
+}
+table#token_usage_details {
+    cellpadding: 100px;
+    table-layout:fixed;
+    border: 0px;		
+}
+.token_usage_details_tabrow {
+    width: 40px;
+}
+table#token_usage_details td {
+    padding-right: 5em;	
+    padding-left: 1em;	
+}
+.token_usage_details_tabrow:hover {
+    background-color: gray;
+}
+.nav_table td.hidden {
+    display: none;
+}
+table#codeTbl tr td {
+    color: #112266
+}
+table#codeTbl tr td {
+    padding-left: 10px;
+}
+table#codeTbl tr td:first-child {
+    font-style: italic; 
+    color: #888888;
+    text-align: right;
+    padding-left:0px;
+}
+

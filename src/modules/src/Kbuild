@@ -56,3 +56,4 @@ obj-y += estimator/
 obj-y += cpx/
 obj-y += p2pDTR/
 obj-y += outlierfilter/
+obj-y += single_qc_ppid_ert_rtw/

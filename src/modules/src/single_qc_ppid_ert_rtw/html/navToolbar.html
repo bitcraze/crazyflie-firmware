@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="rtwreport.css" />
+    <link rel="stylesheet" type="text/css" href="css/coder_app.css" />
+  <script>
+    function NavOnloadFcn() {
+        var node = document.getElementById("rtwIdTraceBlock");
+        var td1 = document.getElementById("td1");
+        if (node && top.RTW_TraceArgs.instance) {
+            var sid = top.RTW_TraceArgs.instance.getBlock();
+            if (sid) {
+                if (top.RTW_TraceArgs.instance.getNumBlocks() === 1) {
+                    var block = sid;
+                    if (top.RTW_rtwnameSIDMap && top.RTW_rtwnameSIDMap.instance && top.RTW_rtwnameSIDMap.instance.getRtwname(sid)) {
+                        block = top.RTW_rtwnameSIDMap.instance.getRtwname(sid).rtwname;
+                    }
+                    if (block) {
+                        node.textContent = "'" + block + "'";
+                    }
+                    td1.className = "";
+                } else {
+                    td1.innerHTML = "<b>Highlight code for selected blocks:</b>";
+                }
+            } else {
+                td1.className = "hidden";
+            }
+         }
+        if (top.RTW_TraceInfo && top.RTW_TraceInfo.instance) {
+           top.RTW_TraceInfo.instance.updateNavState();
+        }        
+   }
+   function resize_text() {
+        var node = document.getElementById("rtwIdTraceBlock");        
+        if (node) {
+            node.style.maxWidth = "" + (window.innerWidth - 450) + "px";
+        }
+        top.resize_NavToolbar_frame();
+   }
+  </script>
+  </head>
+  <body class="nav_toolbar" onload="NavOnloadFcn(); resize_text();" onresize="resize_text();">
+    <table class="nav_table" id="rtwIdTracePanel">
+      <col style="width: 90%;">
+      <col style="width: 150px;">
+      <col style="width: 150px;">
+      <tr>
+        <td title="Navigation control for highlighted code" id="td1">
+          <b>Highlight code for block:</b>
+          <div id="rtwIdTraceBlock" style="overflow: hidden;text-overflow:ellipsis;white-space: nowrap"></div>
+        </td>
+        <td style="white-space:nowrap">
+	  <INPUT class="button" TYPE="button" VALUE="<<" style="width: 45px; height: 2em" ID="rtwIdButtonFirst" ONCLICK="if (top.rtwGoFirst) top.rtwGoFirst();" title="goto the first highlighted line" />
+	  <INPUT class="button" TYPE="button" VALUE="<" style="width: 45px; height: 2em" ID="rtwIdButtonPrev" ONCLICK="if (top.rtwGoPrev) top.rtwGoPrev();" disabled="disabled" title="goto the previous highlighted line"/>        
+	  <span id="rtwIdTraceNumber"></span>
+	  <INPUT class="button" TYPE="button" VALUE=">" style="width: 45px; height: 2em" ID="rtwIdButtonNext" ONCLICK="if (top.rtwGoNext) top.rtwGoNext();" disabled="disabled" title="goto the next highlighted line"/>
+	  <INPUT class="button" TYPE="button" VALUE=">>" style="width: 45px; height: 2em" ID="rtwIdButtonLast" ONCLICK="if (top.rtwGoLast) top.rtwGoLast();" title="goto the last highlighted line" />
+        </td>
+        <td>
+          <INPUT class="button" TYPE="button" VALUE="Remove Highlights" style="width: 150px; height: 2em" ID="rtwIdButtonRemove" ONCLICK="if (top.removeInCodeTraceHighlight()) top.removeInCodeTraceHighlight()" title="remove highlighted lines"/>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+</table>
+
+<!-- LocalWords:  Onload px ONCLICK
+-->
