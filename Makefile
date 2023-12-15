@@ -55,6 +55,7 @@ INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interfac
 INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
 INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
 INCLUDES += -I$(srctree)/src/modules/src/single_qc_ppid_ert_rtw
+INCLUDES += -I$(srctree)/src/modules/src/omni_attitude_controller_ert_rtw
 INCLUDES += -I$(LIB)/FatFS
 INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
 INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc

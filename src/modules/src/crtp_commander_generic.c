@@ -74,6 +74,7 @@ enum packet_type {
   basePoseType      = 8,
   thrustType        = 9,
   twoDType         = 10,
+  OmniType         = 11,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -476,6 +477,30 @@ static void twoDDecoder(setpoint_t *setpoint, uint8_t type, const void *data, si
   setpoint->thrust = values->thrust;
 }
 
+/* 
+ * Compressed Quaternion
+ */
+ struct OmniPacket_s {
+   uint8_t index;
+   float CompressedQuat;
+   float wx_r;
+   float wy_r;
+   float wz_r;
+   float thrust;
+ } __attribute__((packed));
+static void OmniDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct OmniPacket_s *values = data;
+
+  quatdecompress(values->CompressedQuat, (float *)&setpoint->attitudeQuaternion.w);
+
+  setpoint->attitude.roll = values->wx_r
+  setpoint->attitude.pitch = values->wy_r;  
+  setpoint->attitude.yaw = values->wz_r; 
+
+  setpoint->thrust = values->thrust;
+}
+
 
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
@@ -490,6 +515,7 @@ const static packetDecoder_t packetDecoders[] = {
   [basePoseType]      = basePoseDecoder,
   [thrustType]        = thrustDecoder,
   [twoDType]          = twoDDecoder,
+  [OmniType]          = OmniDecoder,
 };
 
 /* Decoder switch */

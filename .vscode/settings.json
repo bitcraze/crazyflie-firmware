@@ -12,7 +12,8 @@
         "controller_mellinger.h": "c",
         "stabilizer_types.h": "c",
         "single_qc_ppid_private.h": "c",
-        "rtwtypes.h": "c"
+        "rtwtypes.h": "c",
+        "quatcompress.h": "c"
     }
 }
 

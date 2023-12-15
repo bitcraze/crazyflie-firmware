@@ -1,0 +1,5 @@
+obj-y += omni_attitude_controller_data.o
+obj-y += omni_attitude_controller.o
+obj-y += rt_nonfinite.o
+obj-y += rtGetInf.o
+obj-y += rtGetNaN.o
