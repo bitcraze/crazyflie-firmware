@@ -494,7 +494,7 @@ static void OmniDecoder(setpoint_t *setpoint, uint8_t type, const void *data, si
 
   quatdecompress(values->CompressedQuat, (float *)&setpoint->attitudeQuaternion.w);
 
-  setpoint->attitude.roll = values->wx_r
+  setpoint->attitude.roll = values->wx_r;
   setpoint->attitude.pitch = values->wy_r;  
   setpoint->attitude.yaw = values->wz_r; 
 

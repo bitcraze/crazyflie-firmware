@@ -1,5 +1,7 @@
 obj-y += omni_attitude_controller_data.o
 obj-y += omni_attitude_controller.o
+obj-y += single_qc_ppid_data.o
+obj-y += single_qc_ppid.o
 obj-y += rt_nonfinite.o
 obj-y += rtGetInf.o
 obj-y += rtGetNaN.o
