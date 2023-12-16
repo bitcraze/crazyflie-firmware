@@ -13,7 +13,10 @@
         "stabilizer_types.h": "c",
         "single_qc_ppid_private.h": "c",
         "rtwtypes.h": "c",
-        "quatcompress.h": "c"
+        "quatcompress.h": "c",
+        "single_qc_ppid.h": "c",
+        "omni_attitude_controller.h": "c",
+        "controller_omni_att.h": "c"
     }
 }
 
