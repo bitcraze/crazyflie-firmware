@@ -76,6 +76,8 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
 
 LOG_GROUP_START(sctrl_omni)
 
+LOG_ADD(LOG_FLOAT, thrust, &omni_attitude_controller_U.thrust)
+
 LOG_ADD(LOG_FLOAT, qw_r, &omni_attitude_controller_U.qw_r)
 LOG_ADD(LOG_FLOAT, qx_r, &omni_attitude_controller_U.qx_r)
 LOG_ADD(LOG_FLOAT, qy_r, &omni_attitude_controller_U.qy_r)
