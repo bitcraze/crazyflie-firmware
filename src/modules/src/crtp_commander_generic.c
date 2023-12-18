@@ -481,8 +481,7 @@ static void twoDDecoder(setpoint_t *setpoint, uint8_t type, const void *data, si
  * Compressed Quaternion
  */
  struct OmniPacket_s {
-   uint8_t index;
-   float CompressedQuat;
+   int32_t CompressedQuat;
    float wx_r;
    float wy_r;
    float wz_r;
@@ -492,7 +491,7 @@ static void OmniDecoder(setpoint_t *setpoint, uint8_t type, const void *data, si
 {
   const struct OmniPacket_s *values = data;
 
-  quatdecompress(values->CompressedQuat, (float *)&setpoint->attitudeQuaternion.w);
+  quatdecompress(values->CompressedQuat, (float *)&setpoint->attitudeQuaternion.q0);
 
   setpoint->attitude.roll = values->wx_r;
   setpoint->attitude.pitch = values->wy_r;  

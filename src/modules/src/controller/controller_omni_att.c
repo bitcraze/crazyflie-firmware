@@ -34,10 +34,10 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
 {
   omni_attitude_controller_U.thrust = setpoint->thrust;
 
-  omni_attitude_controller_U.qw_r = setpoint->attitudeQuaternion.w;
-  omni_attitude_controller_U.qx_r = setpoint->attitudeQuaternion.x;
-  omni_attitude_controller_U.qy_r = setpoint->attitudeQuaternion.y;
-  omni_attitude_controller_U.qz_r = setpoint->attitudeQuaternion.z;
+  omni_attitude_controller_U.qw_r = setpoint->attitudeQuaternion.q0;
+  omni_attitude_controller_U.qx_r = setpoint->attitudeQuaternion.q1;
+  omni_attitude_controller_U.qy_r = setpoint->attitudeQuaternion.q2;
+  omni_attitude_controller_U.qz_r = setpoint->attitudeQuaternion.q3;
 
   omni_attitude_controller_U.wx_r = setpoint->attitude.roll;
   omni_attitude_controller_U.wy_r = setpoint->attitude.pitch;
