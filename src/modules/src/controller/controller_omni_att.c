@@ -63,10 +63,14 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
   }
   else
   {
-    motorsSetRatio(0, omni_attitude_controller_Y.m1);
-    motorsSetRatio(1, omni_attitude_controller_Y.m2);
-    motorsSetRatio(2, omni_attitude_controller_Y.m3);
-    motorsSetRatio(3, omni_attitude_controller_Y.m4);
+    motorsSetRatio(0, 7500);
+    motorsSetRatio(1, 7500);
+    motorsSetRatio(2, 7500);
+    motorsSetRatio(3, 7500);
+    // motorsSetRatio(0, omni_attitude_controller_Y.m1);
+    // motorsSetRatio(1, omni_attitude_controller_Y.m2);
+    // motorsSetRatio(2, omni_attitude_controller_Y.m3);
+    // motorsSetRatio(3, omni_attitude_controller_Y.m4);
   }
 }
 
@@ -100,6 +104,23 @@ LOG_ADD(LOG_FLOAT, t_m1, &omni_attitude_controller_Y.t_m1)
 LOG_ADD(LOG_FLOAT, t_m2, &omni_attitude_controller_Y.t_m2)
 LOG_ADD(LOG_FLOAT, t_m3, &omni_attitude_controller_Y.t_m3)
 LOG_ADD(LOG_FLOAT, t_m4, &omni_attitude_controller_Y.t_m4)
+
+LOG_ADD(LOG_FLOAT, debug0, &omni_attitude_controller_Y.debug[0])
+LOG_ADD(LOG_FLOAT, debug1, &omni_attitude_controller_Y.debug[1])
+LOG_ADD(LOG_FLOAT, debug2, &omni_attitude_controller_Y.debug[2])
+LOG_ADD(LOG_FLOAT, debug3, &omni_attitude_controller_Y.debug[3])
+
+LOG_ADD(LOG_FLOAT, uW_x, &omni_attitude_controller_Y.uW_x)
+LOG_ADD(LOG_FLOAT, uW_y, &omni_attitude_controller_Y.uW_y)
+LOG_ADD(LOG_FLOAT, uW_z, &omni_attitude_controller_Y.uW_z)
+
+LOG_ADD(LOG_FLOAT, uP_x, &omni_attitude_controller_Y.uP_x)
+LOG_ADD(LOG_FLOAT, uP_y, &omni_attitude_controller_Y.uP_y)
+LOG_ADD(LOG_FLOAT, uP_z, &omni_attitude_controller_Y.uP_z)
+
+LOG_ADD(LOG_FLOAT, tau_x, &omni_attitude_controller_Y.tau_x)
+LOG_ADD(LOG_FLOAT, tau_y, &omni_attitude_controller_Y.tau_y)
+LOG_ADD(LOG_FLOAT, tau_z, &omni_attitude_controller_Y.tau_z)
 
 LOG_GROUP_STOP(sctrl_omni)
 

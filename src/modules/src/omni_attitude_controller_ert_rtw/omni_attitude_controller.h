@@ -62,6 +62,16 @@ typedef struct {
   real32_T t_m2;                       /* '<Root>/t_m2' */
   real32_T t_m3;                       /* '<Root>/t_m3' */
   real32_T t_m4;                       /* '<Root>/t_m4' */
+  float uW_x;
+  float uW_y;
+  float uW_z;
+  float uP_x;
+  float uP_y;
+  float uP_z;
+  float tau_x;
+  float tau_y;
+  float tau_z;
+  float debug[4];
 } ExtY_omni_attitude_controller_T;
 
 /* Parameters (default storage) */

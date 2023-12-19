@@ -431,6 +431,8 @@ void omni_attitude_controller_step(void)
   rtb_Product3_k = rtb_VectorConcatenate_f_0[1];
   rtb_Product2_iz = rtb_VectorConcatenate_f_0[0];
   rtb_Product1_a = rtb_VectorConcatenate_f_0[2];
+
+
   rtb_Product_i = E[6];
   fty = E[5];
   ftz = E[1];
@@ -444,6 +446,14 @@ void omni_attitude_controller_step(void)
       omni_attitude_controller_P.KR[i + 6] * ftz;
   }
 
+  omni_attitude_controller_Y.uW_x = rtb_VectorConcatenate_f_0[0];
+  omni_attitude_controller_Y.uW_y = rtb_VectorConcatenate_f_0[1];
+  omni_attitude_controller_Y.uW_z = rtb_VectorConcatenate_f_0[2];
+
+  omni_attitude_controller_Y.uP_x = rtb_eR[0];
+  omni_attitude_controller_Y.uP_y = rtb_eR[1];
+  omni_attitude_controller_Y.uP_z = rtb_eR[2];
+
   for (i = 0; i < 9; i++) {
     rtb_VectorConcatenate_o[i] = (real32_T)-omni_attitude_controller_P.Ji[i];
   }
@@ -451,11 +461,17 @@ void omni_attitude_controller_step(void)
   rtb_Product3_k = rtb_eRiout[1];
   rtb_Product2_iz = rtb_eRiout[0];
   rtb_Product1_a = rtb_eRiout[2];
+  // for (i = 0; i < 3; i++) {
+  //   tmp[i] = (((real32_T)omni_attitude_controller_P.Ki[i + 3] * rtb_Product3_k +
+  //              (real32_T)omni_attitude_controller_P.Ki[i] * rtb_Product2_iz) +
+  //             (real32_T)omni_attitude_controller_P.Ki[i + 6] * rtb_Product1_a) +
+  //     (rtb_eR[i] + rtb_VectorConcatenate_f_0[i]);
+  //   omni_attitude_controller_Y.debug[i] = tmp[i];
+  // }
+
   for (i = 0; i < 3; i++) {
-    tmp[i] = (((real32_T)omni_attitude_controller_P.Ki[i + 3] * rtb_Product3_k +
-               (real32_T)omni_attitude_controller_P.Ki[i] * rtb_Product2_iz) +
-              (real32_T)omni_attitude_controller_P.Ki[i + 6] * rtb_Product1_a) +
-      (rtb_eR[i] + rtb_VectorConcatenate_f_0[i]);
+    tmp[i] = (rtb_eR[i] + rtb_VectorConcatenate_f_0[i]);
+    omni_attitude_controller_Y.debug[i] = tmp[i];
   }
 
   rtb_Product3_k = tmp[1];
@@ -466,6 +482,10 @@ void omni_attitude_controller_step(void)
                  rtb_VectorConcatenate_o[i] * rtb_Product2_iz) +
       rtb_VectorConcatenate_o[i + 6] * rtb_Product1_a;
   }
+  omni_attitude_controller_Y.tau_x = rtb_eR[0];
+  omni_attitude_controller_Y.tau_y = rtb_eR[1];
+  omni_attitude_controller_Y.tau_z = rtb_eR[2];
+  
 
   /* Saturate: '<Root>/Saturation' incorporates:
    *  Inport: '<Root>/thrust'
