@@ -479,10 +479,11 @@ void omni_attitude_controller_step(void)
   rtb_Product1_a = rtb_eRiout[0];
   rtb_Product3_k = rtb_eRiout[2];
   for (i = 0; i < 3; i++) {
-    tmp[i] = (((real32_T)omni_attitude_controller_P.Ki[i + 3] * rtb_Product2_iz
-               + (real32_T)omni_attitude_controller_P.Ki[i] * rtb_Product1_a) +
-              (real32_T)omni_attitude_controller_P.Ki[i + 6] * rtb_Product3_k) +
-      (rtb_eR[i] + rtb_VectorConcatenate_f_0[i]);
+    //tmp[i] = (((real32_T)omni_attitude_controller_P.Ki[i + 3] * rtb_Product2_iz
+    //           + (real32_T)omni_attitude_controller_P.Ki[i] * rtb_Product1_a) +
+    //          (real32_T)omni_attitude_controller_P.Ki[i + 6] * rtb_Product3_k) +
+    //  (rtb_eR[i] + rtb_VectorConcatenate_f_0[i]);
+    tmp[i] = (rtb_eR[i] + rtb_VectorConcatenate_f_0[i]);
   }
 
   rtb_Product2_iz = tmp[1];
