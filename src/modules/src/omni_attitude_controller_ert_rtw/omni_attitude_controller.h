@@ -54,6 +54,7 @@ typedef struct {
 
 /* External outputs (root outports fed by signals with default storage) */
 typedef struct {
+  float debug[4];
   uint16_T m1;                         /* '<Root>/m1' */
   uint16_T m2;                         /* '<Root>/m2' */
   uint16_T m3;                         /* '<Root>/m3' */
