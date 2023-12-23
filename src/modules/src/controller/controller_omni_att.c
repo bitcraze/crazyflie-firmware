@@ -13,6 +13,7 @@
 
 #include "log.h"
 #include "param.h"
+#include "math3d.h"
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
 
@@ -48,9 +49,9 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
   omni_attitude_controller_U.qy_IMU = state->attitudeQuaternion.y;
   omni_attitude_controller_U.qz_IMU = state->attitudeQuaternion.z;
 
-  omni_attitude_controller_U.gyro_x = sensors->gyro.x;
-  omni_attitude_controller_U.gyro_y = sensors->gyro.y;
-  omni_attitude_controller_U.gyro_z = sensors->gyro.z;
+  omni_attitude_controller_U.gyro_x = radians(sensors->gyro.x);
+  omni_attitude_controller_U.gyro_y = radians(sensors->gyro.y);
+  omni_attitude_controller_U.gyro_z = radians(sensors->gyro.z);
 
   omni_attitude_controller_step();
 
@@ -63,14 +64,14 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
   }
   else
   {
-    motorsSetRatio(0, 7500);
-    motorsSetRatio(1, 7500);
-    motorsSetRatio(2, 7500);
-    motorsSetRatio(3, 7500);
-    // motorsSetRatio(0, omni_attitude_controller_Y.m1);
-    // motorsSetRatio(1, omni_attitude_controller_Y.m2);
-    // motorsSetRatio(2, omni_attitude_controller_Y.m3);
-    // motorsSetRatio(3, omni_attitude_controller_Y.m4);
+    // motorsSetRatio(0, 7500);
+    // motorsSetRatio(1, 7500);
+    // motorsSetRatio(2, 7500);
+    // motorsSetRatio(3, 7500);
+    motorsSetRatio(0, omni_attitude_controller_Y.m1);
+    motorsSetRatio(1, omni_attitude_controller_Y.m2);
+    motorsSetRatio(2, omni_attitude_controller_Y.m3);
+    motorsSetRatio(3, omni_attitude_controller_Y.m4);
   }
 }
 
