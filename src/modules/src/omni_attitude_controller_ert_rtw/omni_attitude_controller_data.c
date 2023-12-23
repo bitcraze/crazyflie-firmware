@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'omni_attitude_controller'.
  *
- * Model version                  : 8.7
+ * Model version                  : 8.19
  * Simulink Coder version         : 23.2 (R2023b) 01-Aug-2023
- * C/C++ source code generated on : Thu Dec 14 15:57:15 2023
+ * C/C++ source code generated on : Fri Dec 22 16:31:48 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: Intel->x86-64 (Windows64)
@@ -57,62 +57,62 @@ P_omni_attitude_controller_T omni_attitude_controller_P = {
   0.0F,
 
   /* Computed Parameter: Gain_Gain
-   * Referenced by: '<S8>/Gain'
+   * Referenced by: '<S9>/Gain'
    */
   2.0F,
 
   /* Computed Parameter: Gain_Gain_l
-   * Referenced by: '<S11>/Gain'
-   */
-  2.0F,
-
-  /* Computed Parameter: Gain_Gain_f
-   * Referenced by: '<S6>/Gain'
-   */
-  2.0F,
-
-  /* Computed Parameter: Gain_Gain_d
    * Referenced by: '<S12>/Gain'
    */
   2.0F,
 
-  /* Computed Parameter: Gain_Gain_b
+  /* Computed Parameter: Gain_Gain_f
    * Referenced by: '<S7>/Gain'
    */
   2.0F,
 
+  /* Computed Parameter: Gain_Gain_d
+   * Referenced by: '<S13>/Gain'
+   */
+  2.0F,
+
+  /* Computed Parameter: Gain_Gain_b
+   * Referenced by: '<S8>/Gain'
+   */
+  2.0F,
+
   /* Computed Parameter: Gain_Gain_c
-   * Referenced by: '<S10>/Gain'
+   * Referenced by: '<S11>/Gain'
    */
   2.0F,
 
   /* Computed Parameter: Gain_Gain_p
-   * Referenced by: '<S21>/Gain'
+   * Referenced by: '<S22>/Gain'
    */
   2.0F,
 
   /* Computed Parameter: Gain_Gain_i
-   * Referenced by: '<S24>/Gain'
-   */
-  2.0F,
-
-  /* Computed Parameter: Gain_Gain_fl
-   * Referenced by: '<S19>/Gain'
-   */
-  2.0F,
-
-  /* Computed Parameter: Gain_Gain_a
    * Referenced by: '<S25>/Gain'
    */
   2.0F,
 
-  /* Computed Parameter: Gain_Gain_h
+  /* Computed Parameter: Gain_Gain_fl
    * Referenced by: '<S20>/Gain'
    */
   2.0F,
 
+  /* Computed Parameter: Gain_Gain_a
+   * Referenced by: '<S26>/Gain'
+   */
+  2.0F,
+
+  /* Computed Parameter: Gain_Gain_h
+   * Referenced by: '<S21>/Gain'
+   */
+  2.0F,
+
   /* Computed Parameter: Gain_Gain_ao
-   * Referenced by: '<S23>/Gain'
+   * Referenced by: '<S24>/Gain'
    */
   2.0F,
 
