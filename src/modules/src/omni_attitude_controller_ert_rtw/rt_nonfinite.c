@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'omni_attitude_controller'.
  *
- * Model version                  : 8.19
+ * Model version                  : 8.24
  * Simulink Coder version         : 23.2 (R2023b) 01-Aug-2023
- * C/C++ source code generated on : Fri Dec 22 16:31:48 2023
+ * C/C++ source code generated on : Tue Dec 26 12:13:00 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: Intel->x86-64 (Windows64)

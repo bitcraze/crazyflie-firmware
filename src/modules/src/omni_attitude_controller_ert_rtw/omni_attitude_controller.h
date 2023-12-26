@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'omni_attitude_controller'.
  *
- * Model version                  : 8.19
+ * Model version                  : 8.24
  * Simulink Coder version         : 23.2 (R2023b) 01-Aug-2023
- * C/C++ source code generated on : Fri Dec 22 16:31:48 2023
+ * C/C++ source code generated on : Tue Dec 26 12:13:00 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: Intel->x86-64 (Windows64)
@@ -25,13 +25,7 @@
 #endif                           /* omni_attitude_controller_COMMON_INCLUDES_ */
 
 #include "omni_attitude_controller_types.h"
-#include <string.h>
 #include "rt_nonfinite.h"
-
-/* Block states (default storage) for system '<Root>' */
-typedef struct {
-  real32_T Memory5_PreviousInput[3];   /* '<Root>/Memory5' */
-} DW_omni_attitude_controller_T;
 
 /* External inputs (root inport signals with default storage) */
 typedef struct {
@@ -54,7 +48,6 @@ typedef struct {
 
 /* External outputs (root outports fed by signals with default storage) */
 typedef struct {
-  float debug[4];
   uint16_T m1;                         /* '<Root>/m1' */
   uint16_T m2;                         /* '<Root>/m2' */
   uint16_T m3;                         /* '<Root>/m3' */
@@ -70,20 +63,26 @@ typedef struct {
 
 /* Parameters (default storage) */
 struct P_omni_attitude_controller_T_ {
+  real_T A;                            /* Variable: A
+                                        * Referenced by: '<Root>/MATLAB Function1'
+                                        */
+  real_T B;                            /* Variable: B
+                                        * Referenced by: '<Root>/MATLAB Function1'
+                                        */
   real_T Ji[9];                        /* Variable: Ji
                                         * Referenced by: '<Root>/LLATC'
                                         */
   real_T KR[9];                        /* Variable: KR
                                         * Referenced by: '<Root>/LLATC'
                                         */
-  real_T Ki[9];                        /* Variable: Ki
-                                        * Referenced by: '<Root>/LLATC'
-                                        */
   real_T Kw[9];                        /* Variable: Kw
                                         * Referenced by: '<Root>/LLATC'
                                         */
-  real_T Constant_Value;               /* Expression: (31.65e-3)/(5.964552e-3)
-                                        * Referenced by: '<Root>/Constant'
+  real_T ThrustToTorque;               /* Variable: ThrustToTorque
+                                        * Referenced by: '<Root>/MATLAB Function1'
+                                        */
+  real_T a_perpen;                     /* Variable: a_perpen
+                                        * Referenced by: '<Root>/MATLAB Function1'
                                         */
   real32_T Saturation_UpperSat;       /* Computed Parameter: Saturation_UpperSat
                                        * Referenced by: '<Root>/Saturation'
@@ -92,45 +91,41 @@ struct P_omni_attitude_controller_T_ {
                                        * Referenced by: '<Root>/Saturation'
                                        */
   real32_T Gain_Gain;                  /* Computed Parameter: Gain_Gain
-                                        * Referenced by: '<S9>/Gain'
-                                        */
-  real32_T Gain_Gain_l;                /* Computed Parameter: Gain_Gain_l
-                                        * Referenced by: '<S12>/Gain'
-                                        */
-  real32_T Gain_Gain_f;                /* Computed Parameter: Gain_Gain_f
-                                        * Referenced by: '<S7>/Gain'
-                                        */
-  real32_T Gain_Gain_d;                /* Computed Parameter: Gain_Gain_d
-                                        * Referenced by: '<S13>/Gain'
-                                        */
-  real32_T Gain_Gain_b;                /* Computed Parameter: Gain_Gain_b
                                         * Referenced by: '<S8>/Gain'
                                         */
-  real32_T Gain_Gain_c;                /* Computed Parameter: Gain_Gain_c
+  real32_T Gain_Gain_l;                /* Computed Parameter: Gain_Gain_l
                                         * Referenced by: '<S11>/Gain'
                                         */
+  real32_T Gain_Gain_f;                /* Computed Parameter: Gain_Gain_f
+                                        * Referenced by: '<S6>/Gain'
+                                        */
+  real32_T Gain_Gain_d;                /* Computed Parameter: Gain_Gain_d
+                                        * Referenced by: '<S12>/Gain'
+                                        */
+  real32_T Gain_Gain_b;                /* Computed Parameter: Gain_Gain_b
+                                        * Referenced by: '<S7>/Gain'
+                                        */
+  real32_T Gain_Gain_c;                /* Computed Parameter: Gain_Gain_c
+                                        * Referenced by: '<S10>/Gain'
+                                        */
   real32_T Gain_Gain_p;                /* Computed Parameter: Gain_Gain_p
-                                        * Referenced by: '<S22>/Gain'
-                                        */
-  real32_T Gain_Gain_i;                /* Computed Parameter: Gain_Gain_i
-                                        * Referenced by: '<S25>/Gain'
-                                        */
-  real32_T Gain_Gain_fl;               /* Computed Parameter: Gain_Gain_fl
-                                        * Referenced by: '<S20>/Gain'
-                                        */
-  real32_T Gain_Gain_a;                /* Computed Parameter: Gain_Gain_a
-                                        * Referenced by: '<S26>/Gain'
-                                        */
-  real32_T Gain_Gain_h;                /* Computed Parameter: Gain_Gain_h
                                         * Referenced by: '<S21>/Gain'
                                         */
-  real32_T Gain_Gain_ao;               /* Computed Parameter: Gain_Gain_ao
+  real32_T Gain_Gain_i;                /* Computed Parameter: Gain_Gain_i
                                         * Referenced by: '<S24>/Gain'
                                         */
-  real32_T Memory5_InitialCondition[3];
-                                 /* Computed Parameter: Memory5_InitialCondition
-                                  * Referenced by: '<Root>/Memory5'
-                                  */
+  real32_T Gain_Gain_fl;               /* Computed Parameter: Gain_Gain_fl
+                                        * Referenced by: '<S19>/Gain'
+                                        */
+  real32_T Gain_Gain_a;                /* Computed Parameter: Gain_Gain_a
+                                        * Referenced by: '<S25>/Gain'
+                                        */
+  real32_T Gain_Gain_h;                /* Computed Parameter: Gain_Gain_h
+                                        * Referenced by: '<S20>/Gain'
+                                        */
+  real32_T Gain_Gain_ao;               /* Computed Parameter: Gain_Gain_ao
+                                        * Referenced by: '<S23>/Gain'
+                                        */
   real32_T Saturation1_UpperSat;     /* Computed Parameter: Saturation1_UpperSat
                                       * Referenced by: '<Root>/Saturation1'
                                       */
@@ -141,9 +136,6 @@ struct P_omni_attitude_controller_T_ {
 
 /* Block parameters (default storage) */
 extern P_omni_attitude_controller_T omni_attitude_controller_P;
-
-/* Block states (default storage) */
-extern DW_omni_attitude_controller_T omni_attitude_controller_DW;
 
 /* External inputs (root inport signals with default storage) */
 extern ExtU_omni_attitude_controller_T omni_attitude_controller_U;
@@ -159,8 +151,8 @@ extern void omni_attitude_controller_terminate(void);
 /*-
  * These blocks were eliminated from the model due to optimizations:
  *
- * Block '<S15>/Reshape (9) to [3x3] column-major' : Reshape block reduction
- * Block '<S28>/Reshape (9) to [3x3] column-major' : Reshape block reduction
+ * Block '<S14>/Reshape (9) to [3x3] column-major' : Reshape block reduction
+ * Block '<S27>/Reshape (9) to [3x3] column-major' : Reshape block reduction
  */
 
 /*-
@@ -180,35 +172,34 @@ extern void omni_attitude_controller_terminate(void);
  * '<Root>' : 'omni_attitude_controller'
  * '<S1>'   : 'omni_attitude_controller/LLATC'
  * '<S2>'   : 'omni_attitude_controller/MATLAB Function1'
- * '<S3>'   : 'omni_attitude_controller/MATLAB Function2'
- * '<S4>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix'
- * '<S5>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1'
- * '<S6>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A11'
- * '<S7>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A12'
- * '<S8>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A13'
- * '<S9>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A21'
- * '<S10>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A22'
- * '<S11>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A23'
- * '<S12>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A31'
- * '<S13>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A32'
- * '<S14>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A33'
- * '<S15>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Create 3x3 Matrix'
- * '<S16>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Quaternion Normalize'
- * '<S17>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Quaternion Normalize/Quaternion Modulus'
- * '<S18>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Quaternion Normalize/Quaternion Modulus/Quaternion Norm'
- * '<S19>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A11'
- * '<S20>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A12'
- * '<S21>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A13'
- * '<S22>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A21'
- * '<S23>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A22'
- * '<S24>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A23'
- * '<S25>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A31'
- * '<S26>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A32'
- * '<S27>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A33'
- * '<S28>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Create 3x3 Matrix'
- * '<S29>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Quaternion Normalize'
- * '<S30>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Quaternion Normalize/Quaternion Modulus'
- * '<S31>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Quaternion Normalize/Quaternion Modulus/Quaternion Norm'
+ * '<S3>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix'
+ * '<S4>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1'
+ * '<S5>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A11'
+ * '<S6>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A12'
+ * '<S7>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A13'
+ * '<S8>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A21'
+ * '<S9>'   : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A22'
+ * '<S10>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A23'
+ * '<S11>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A31'
+ * '<S12>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A32'
+ * '<S13>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/A33'
+ * '<S14>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Create 3x3 Matrix'
+ * '<S15>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Quaternion Normalize'
+ * '<S16>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Quaternion Normalize/Quaternion Modulus'
+ * '<S17>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix/Quaternion Normalize/Quaternion Modulus/Quaternion Norm'
+ * '<S18>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A11'
+ * '<S19>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A12'
+ * '<S20>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A13'
+ * '<S21>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A21'
+ * '<S22>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A22'
+ * '<S23>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A23'
+ * '<S24>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A31'
+ * '<S25>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A32'
+ * '<S26>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/A33'
+ * '<S27>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Create 3x3 Matrix'
+ * '<S28>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Quaternion Normalize'
+ * '<S29>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Quaternion Normalize/Quaternion Modulus'
+ * '<S30>'  : 'omni_attitude_controller/Quaternions to  Direction Cosine Matrix1/Quaternion Normalize/Quaternion Modulus/Quaternion Norm'
  */
 #endif                              /* RTW_HEADER_omni_attitude_controller_h_ */
 
