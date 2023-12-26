@@ -106,10 +106,10 @@ LOG_ADD(LOG_FLOAT, t_m2, &omni_attitude_controller_Y.t_m2)
 LOG_ADD(LOG_FLOAT, t_m3, &omni_attitude_controller_Y.t_m3)
 LOG_ADD(LOG_FLOAT, t_m4, &omni_attitude_controller_Y.t_m4)
 
-LOG_ADD(LOG_FLOAT, debug0, &omni_attitude_controller_Y.debug[0])
-LOG_ADD(LOG_FLOAT, debug1, &omni_attitude_controller_Y.debug[1])
-LOG_ADD(LOG_FLOAT, debug2, &omni_attitude_controller_Y.debug[2])
-LOG_ADD(LOG_FLOAT, debug3, &omni_attitude_controller_Y.debug[3])
+// LOG_ADD(LOG_FLOAT, debug0, &omni_attitude_controller_Y.debug[0])
+// LOG_ADD(LOG_FLOAT, debug1, &omni_attitude_controller_Y.debug[1])
+// LOG_ADD(LOG_FLOAT, debug2, &omni_attitude_controller_Y.debug[2])
+// LOG_ADD(LOG_FLOAT, debug3, &omni_attitude_controller_Y.debug[3])
 
 LOG_GROUP_STOP(sctrl_omni)
 
@@ -118,15 +118,9 @@ PARAM_ADD(PARAM_FLOAT, KRx, &omni_attitude_controller_P.KR[0])
 PARAM_ADD(PARAM_FLOAT, KRy, &omni_attitude_controller_P.KR[4])
 PARAM_ADD(PARAM_FLOAT, KRz, &omni_attitude_controller_P.KR[8])
 
-PARAM_ADD(PARAM_FLOAT, Kix, &omni_attitude_controller_P.Ki[0])
-PARAM_ADD(PARAM_FLOAT, Kiy, &omni_attitude_controller_P.Ki[4])
-PARAM_ADD(PARAM_FLOAT, Kiz, &omni_attitude_controller_P.Ki[8])
-
 PARAM_ADD(PARAM_FLOAT, Kwx, &omni_attitude_controller_P.Kw[0])
 PARAM_ADD(PARAM_FLOAT, Kwy, &omni_attitude_controller_P.Kw[4])
 PARAM_ADD(PARAM_FLOAT, Kwz, &omni_attitude_controller_P.Kw[8])
-
-PARAM_ADD(PARAM_FLOAT, t_mod, &omni_attitude_controller_P.Constant_Value)
 
 PARAM_GROUP_STOP(sparam_omni)
 
