@@ -492,19 +492,19 @@ void omni_attitude_controller_step(void)
 
   rtb_motor_com_idx_3 = (real32_T)(omni_attitude_controller_P.B *
     omni_attitude_controller_P.B);
-  rtb_Product2_iz = (sqrtf(rtb_motor_com_idx_3 - (real32_T)(4.0 *
+  rtb_Product2_iz = (sqrtf(rtb_motor_com_idx_3 + (real32_T)(4.0 *
     omni_attitude_controller_P.A) * rtb_Product2_iz) - (real32_T)
                      omni_attitude_controller_P.B) / 2.0F / (real32_T)
     omni_attitude_controller_P.A * 65535.0F;
-  fty = (sqrtf(rtb_motor_com_idx_3 - (real32_T)(4.0 *
+  fty = (sqrtf(rtb_motor_com_idx_3 + (real32_T)(4.0 *
            omni_attitude_controller_P.A) * rtb_Product1_a) - (real32_T)
          omni_attitude_controller_P.B) / 2.0F / (real32_T)
     omni_attitude_controller_P.A * 65535.0F;
-  ftz = (sqrtf(rtb_motor_com_idx_3 - (real32_T)(4.0 *
+  ftz = (sqrtf(rtb_motor_com_idx_3 + (real32_T)(4.0 *
            omni_attitude_controller_P.A) * rtb_Product_i) - (real32_T)
          omni_attitude_controller_P.B) / 2.0F / (real32_T)
     omni_attitude_controller_P.A * 65535.0F;
-  rtb_motor_com_idx_3 = (sqrtf(rtb_motor_com_idx_3 - (real32_T)(4.0 *
+  rtb_motor_com_idx_3 = (sqrtf(rtb_motor_com_idx_3 + (real32_T)(4.0 *
     omni_attitude_controller_P.A) * rtb_Product3_k) - (real32_T)
     omni_attitude_controller_P.B) / 2.0F / (real32_T)
     omni_attitude_controller_P.A * 65535.0F;
