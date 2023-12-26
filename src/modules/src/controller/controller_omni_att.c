@@ -106,10 +106,10 @@ LOG_ADD(LOG_FLOAT, t_m2, &omni_attitude_controller_Y.t_m2)
 LOG_ADD(LOG_FLOAT, t_m3, &omni_attitude_controller_Y.t_m3)
 LOG_ADD(LOG_FLOAT, t_m4, &omni_attitude_controller_Y.t_m4)
 
-// LOG_ADD(LOG_FLOAT, debug0, &omni_attitude_controller_Y.debug[0])
-// LOG_ADD(LOG_FLOAT, debug1, &omni_attitude_controller_Y.debug[1])
-// LOG_ADD(LOG_FLOAT, debug2, &omni_attitude_controller_Y.debug[2])
-// LOG_ADD(LOG_FLOAT, debug3, &omni_attitude_controller_Y.debug[3])
+LOG_ADD(LOG_FLOAT, debug0, &omni_attitude_controller_Y.debug[0])
+LOG_ADD(LOG_FLOAT, debug1, &omni_attitude_controller_Y.debug[1])
+LOG_ADD(LOG_FLOAT, debug2, &omni_attitude_controller_Y.debug[2])
+LOG_ADD(LOG_FLOAT, debug3, &omni_attitude_controller_Y.debug[3])
 
 LOG_GROUP_STOP(sctrl_omni)
 
