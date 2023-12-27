@@ -22,12 +22,130 @@
 #include "rt_nonfinite.h"
 #include "rtwtypes.h"
 #include <string.h>
+#include "math3d.h"
 
 /* External inputs (root inport signals with default storage) */
 ExtU_omni_attitude_controller_T omni_attitude_controller_U;
 
 /* External outputs (root outports fed by signals with default storage) */
 ExtY_omni_attitude_controller_T omni_attitude_controller_Y;
+
+static struct mat33 CRAZYFLIE_INERTIA_O =
+    {{{16.6e-6f, 0.83e-6f, 0.72e-6f},
+      {0.83e-6f, 16.6e-6f, 1.8e-6f},
+      {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
+
+// make sure the quaternion is normalized
+void quatToDCM(float *quat, struct mat33 RotM)
+{
+  float q0 = *quat;
+  float q1 = *(quat+1);
+  float q2 = *(quat+2);
+  float q3 = *(quat+3);
+
+  RotM.m[0][0] = q0*q0+q1*q1-q2*q2-q3*q3;
+  RotM.m[0][1] = 2.0*(q1*q2+q0*q3);
+  RotM.m[0][2] = 2.0*(q1*q3-q0*q2);
+
+  RotM.m[1][0] = 2.0*(q1*q2-q0*q3);
+  RotM.m[1][1] = q0*q0-q1*q1+q2*q2-q3*q3;
+  RotM.m[1][2] = 2.0*(q2*q3+q0*q1);
+
+  RotM.m[2][0] = 2.0*(q1*q3+q0*q2);
+  RotM.m[2][1] = 2.0*(q2*q3-q0*q1);
+  RotM.m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
+}
+
+void omni_attitude_controller_step_hand(void)
+{
+  // quaternion command to DCM
+  // https://www.mathworks.com/help/aeroblks/quaternionstodirectioncosinematrix.html
+  struct mat33 R_r = mzero();
+  float q0 = omni_attitude_controller_U.qw_r;
+  quatToDCM((float*)&omni_attitude_controller_U.qw_r, R_r);
+
+  // quaternion fbk to DCM
+  struct mat33 R = mzero();
+  quatToDCM((float*)&omni_attitude_controller_U.qw_IMU, R);
+
+  // attitude controller
+
+  // 0.5*(R_r_T * R - R_T * R_r), eR = [m32, m12, m21]';
+  struct mat33 R_r_T =  mtranspose(R_r);
+  struct mat33 R_T =  mtranspose(R);
+  struct mat33 E = mscl(0.5f, msub(mmul(R_r_T, R) , mmul(R_T, R_r)));
+
+  struct vec eR = vzero();
+  eR.x = E.m[3][2];
+  eR.y = E.m[1][3];
+  eR.z = E.m[2][1];
+
+  // eW = Omega - R_T * (R_r * agvr);
+  struct vec Omega = vzero();
+  Omega.x = omni_attitude_controller_U.wx_r;
+  Omega.y = omni_attitude_controller_U.wy_r;
+  Omega.z = omni_attitude_controller_U.wz_r;
+
+  struct vec agvr = vzero();
+  agvr.x = omni_attitude_controller_U.gyro_x;
+  agvr.y = omni_attitude_controller_U.gyro_y;
+  agvr.z = omni_attitude_controller_U.gyro_z;
+
+  struct vec eW = vsub(Omega, mvmul(R_r_T, mvmul(R_r, agvr)));
+
+  // M = -Ji * (KR*eR + Kw*eW) with unit Nm
+  struct vec controlTorque = vzero();
+  struct vec KR = vzero();
+  KR.x = omni_attitude_controller_P.KR[0];
+  KR.y = omni_attitude_controller_P.KR[4];
+  KR.z = omni_attitude_controller_P.KR[8];
+
+  struct vec KW = vzero();
+  KW.x = omni_attitude_controller_P.KW[0];
+  KW.y = omni_attitude_controller_P.KW[4];
+  KW.z = omni_attitude_controller_P.KW[8];
+
+  struct vec uR = veltmul(KR, eR);
+  struct vec uW = veltmul(KW, eW);
+  controlTorque = -mvmul(CRAZYFLIE_INERTIA_O, vadd(uR,uW));
+
+  // Thrust Clamper
+  float Thrust;
+  if (omni_attitude_controller_U.thrust >
+      omni_attitude_controller_P.Saturation_UpperSat) {
+    Thrust = omni_attitude_controller_P.Saturation_UpperSat;
+  } else if (omni_attitude_controller_U.thrust <
+             omni_attitude_controller_P.Saturation_LowerSat) {
+    Thrust = omni_attitude_controller_P.Saturation_LowerSat;
+  } else {
+    Thrust = omni_attitude_controller_U.thrust;
+  }
+
+  // power distribution and turn Nm into N
+  const float arm = 0.707106781f * 0.046;
+  const float rollPart = 0.25f / arm * controlTorque.x;
+  const float pitchPart = 0.25f / arm * controlTorque.y;
+  const float thrustPart = 0.25f * Thrust; // N (per rotor)
+  const float yawPart = 0.25f * controlTorque.z / 0.005964552f;
+
+  // corresponding to CrazyFlie's Body coordinate, t_mi 's Unit is Newton
+  omni_attitude_controller_Y.t_m1 = thrustPart - rollPart - pitchPart - yawPart;
+  omni_attitude_controller_Y.t_m2 = thrustPart - rollPart + pitchPart + yawPart;
+  omni_attitude_controller_Y.t_m3 = thrustPart + rollPart + pitchPart - yawPart;
+  omni_attitude_controller_Y.t_m4 = thrustPart + rollPart - pitchPart + yawPart;
+
+  if (omni_attitude_controller_Y.t_m1 < 0.0f) omni_attitude_controller_Y.t_m1 = 0.0f;
+  if (omni_attitude_controller_Y.t_m2 < 0.0f) omni_attitude_controller_Y.t_m2 = 0.0f;
+  if (omni_attitude_controller_Y.t_m3 < 0.0f) omni_attitude_controller_Y.t_m3 = 0.0f;
+  if (omni_attitude_controller_Y.t_m4 < 0.0f) omni_attitude_controller_Y.t_m4 = 0.0f;
+
+  // Turn Newton into % and count
+  omni_attitude_controller_Y.m1 = omni_attitude_controller_Y.t_m1 / 0.1472f * 65535;
+  omni_attitude_controller_Y.m2 = omni_attitude_controller_Y.t_m2 / 0.1472f * 65535;
+  omni_attitude_controller_Y.m3 = omni_attitude_controller_Y.t_m3 / 0.1472f * 65535;
+  omni_attitude_controller_Y.m4 = omni_attitude_controller_Y.t_m4 / 0.1472f * 65535;
+}
+
 
 /* Model step function */
 void omni_attitude_controller_step(void)
