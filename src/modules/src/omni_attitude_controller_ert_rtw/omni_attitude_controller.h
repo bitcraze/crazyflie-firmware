@@ -147,6 +147,7 @@ extern ExtY_omni_attitude_controller_T omni_attitude_controller_Y;
 /* Model entry point functions */
 extern void omni_attitude_controller_initialize(void);
 extern void omni_attitude_controller_step(void);
+extern void omni_attitude_controller_step_hand(void);
 extern void omni_attitude_controller_terminate(void);
 
 /*-

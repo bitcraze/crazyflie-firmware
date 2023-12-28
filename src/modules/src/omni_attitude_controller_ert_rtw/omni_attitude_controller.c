@@ -44,15 +44,15 @@ void quatToDCM(float *quat, struct mat33 RotM)
   float q3 = *(quat+3);
 
   RotM.m[0][0] = q0*q0+q1*q1-q2*q2-q3*q3;
-  RotM.m[0][1] = 2.0*(q1*q2+q0*q3);
-  RotM.m[0][2] = 2.0*(q1*q3-q0*q2);
+  RotM.m[0][1] = 2.0F*(q1*q2+q0*q3);
+  RotM.m[0][2] = 2.0F*(q1*q3-q0*q2);
 
-  RotM.m[1][0] = 2.0*(q1*q2-q0*q3);
+  RotM.m[1][0] = 2.0F*(q1*q2-q0*q3);
   RotM.m[1][1] = q0*q0-q1*q1+q2*q2-q3*q3;
-  RotM.m[1][2] = 2.0*(q2*q3+q0*q1);
+  RotM.m[1][2] = 2.0F*(q2*q3+q0*q1);
 
-  RotM.m[2][0] = 2.0*(q1*q3+q0*q2);
-  RotM.m[2][1] = 2.0*(q2*q3-q0*q1);
+  RotM.m[2][0] = 2.0F*(q1*q3+q0*q2);
+  RotM.m[2][1] = 2.0F*(q2*q3-q0*q1);
   RotM.m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
 }
 
@@ -61,7 +61,6 @@ void omni_attitude_controller_step_hand(void)
   // quaternion command to DCM
   // https://www.mathworks.com/help/aeroblks/quaternionstodirectioncosinematrix.html
   struct mat33 R_r = mzero();
-  float q0 = omni_attitude_controller_U.qw_r;
   quatToDCM((float*)&omni_attitude_controller_U.qw_r, R_r);
 
   // quaternion fbk to DCM
@@ -80,9 +79,9 @@ void omni_attitude_controller_step_hand(void)
   eR.y = E.m[1][3];
   eR.z = E.m[2][1];
 
-  // omni_attitude_controller_Y.debug[0] = eR.x;
-  // omni_attitude_controller_Y.debug[1] = eR.y;
-  // omni_attitude_controller_Y.debug[2] = eR.z;
+  omni_attitude_controller_Y.debug[0] = eR.x;
+  omni_attitude_controller_Y.debug[1] = eR.y;
+  omni_attitude_controller_Y.debug[2] = eR.z;
 
   // eW = Omega - R_T * (R_r * agvr);
   struct vec Omega = vzero();
@@ -109,13 +108,13 @@ void omni_attitude_controller_step_hand(void)
   KR.z = omni_attitude_controller_P.KR[8];
 
   struct vec KW = vzero();
-  KW.x = omni_attitude_controller_P.KW[0];
-  KW.y = omni_attitude_controller_P.KW[4];
-  KW.z = omni_attitude_controller_P.KW[8];
+  KW.x = omni_attitude_controller_P.Kw[0];
+  KW.y = omni_attitude_controller_P.Kw[4];
+  KW.z = omni_attitude_controller_P.Kw[8];
 
   struct vec uR = veltmul(KR, eR);
   struct vec uW = veltmul(KW, eW);
-  controlTorque = -mvmul(CRAZYFLIE_INERTIA_O, vadd(uR,uW));
+  controlTorque = vneg(mvmul(CRAZYFLIE_INERTIA_O, vadd(uR,uW)));
 
   // omni_attitude_controller_Y.debug[0] = controlTorque.x;
   // omni_attitude_controller_Y.debug[1] = controlTorque.y;
@@ -134,7 +133,7 @@ void omni_attitude_controller_step_hand(void)
   }
 
   // power distribution and turn Nm into N
-  const float arm = 0.707106781f * 0.046;
+  const float arm = 0.707106781f * 0.046f;
   const float rollPart = 0.25f / arm * controlTorque.x;
   const float pitchPart = 0.25f / arm * controlTorque.y;
   const float thrustPart = 0.25f * Thrust; // N (per rotor)
