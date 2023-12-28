@@ -80,6 +80,10 @@ void omni_attitude_controller_step_hand(void)
   eR.y = E.m[1][3];
   eR.z = E.m[2][1];
 
+  // omni_attitude_controller_Y.debug[0] = eR.x;
+  // omni_attitude_controller_Y.debug[1] = eR.y;
+  // omni_attitude_controller_Y.debug[2] = eR.z;
+
   // eW = Omega - R_T * (R_r * agvr);
   struct vec Omega = vzero();
   Omega.x = omni_attitude_controller_U.wx_r;
@@ -92,6 +96,10 @@ void omni_attitude_controller_step_hand(void)
   agvr.z = omni_attitude_controller_U.gyro_z;
 
   struct vec eW = vsub(Omega, mvmul(R_r_T, mvmul(R_r, agvr)));
+
+  // omni_attitude_controller_Y.debug[0] = eW.x;
+  // omni_attitude_controller_Y.debug[1] = eW.y;
+  // omni_attitude_controller_Y.debug[2] = eW.z;
 
   // M = -Ji * (KR*eR + Kw*eW) with unit Nm
   struct vec controlTorque = vzero();
@@ -108,6 +116,10 @@ void omni_attitude_controller_step_hand(void)
   struct vec uR = veltmul(KR, eR);
   struct vec uW = veltmul(KW, eW);
   controlTorque = -mvmul(CRAZYFLIE_INERTIA_O, vadd(uR,uW));
+
+  // omni_attitude_controller_Y.debug[0] = controlTorque.x;
+  // omni_attitude_controller_Y.debug[1] = controlTorque.y;
+  // omni_attitude_controller_Y.debug[2] = controlTorque.z;
 
   // Thrust Clamper
   float Thrust;
@@ -134,16 +146,26 @@ void omni_attitude_controller_step_hand(void)
   omni_attitude_controller_Y.t_m3 = thrustPart + rollPart + pitchPart - yawPart;
   omni_attitude_controller_Y.t_m4 = thrustPart + rollPart - pitchPart + yawPart;
 
+  // omni_attitude_controller_Y.debug[0] = omni_attitude_controller_Y.t_m1;
+  // omni_attitude_controller_Y.debug[1] = omni_attitude_controller_Y.t_m2;
+  // omni_attitude_controller_Y.debug[2] = omni_attitude_controller_Y.t_m3;
+  // omni_attitude_controller_Y.debug[3] = omni_attitude_controller_Y.t_m4;
+
   if (omni_attitude_controller_Y.t_m1 < 0.0f) omni_attitude_controller_Y.t_m1 = 0.0f;
   if (omni_attitude_controller_Y.t_m2 < 0.0f) omni_attitude_controller_Y.t_m2 = 0.0f;
   if (omni_attitude_controller_Y.t_m3 < 0.0f) omni_attitude_controller_Y.t_m3 = 0.0f;
   if (omni_attitude_controller_Y.t_m4 < 0.0f) omni_attitude_controller_Y.t_m4 = 0.0f;
 
-  // Turn Newton into % and count
+  // Turn Newton into percentage and count
   omni_attitude_controller_Y.m1 = omni_attitude_controller_Y.t_m1 / 0.1472f * 65535;
   omni_attitude_controller_Y.m2 = omni_attitude_controller_Y.t_m2 / 0.1472f * 65535;
   omni_attitude_controller_Y.m3 = omni_attitude_controller_Y.t_m3 / 0.1472f * 65535;
   omni_attitude_controller_Y.m4 = omni_attitude_controller_Y.t_m4 / 0.1472f * 65535;
+
+  // omni_attitude_controller_Y.debug[0] = omni_attitude_controller_Y.m1;
+  // omni_attitude_controller_Y.debug[1] = omni_attitude_controller_Y.m2;
+  // omni_attitude_controller_Y.debug[2] = omni_attitude_controller_Y.m3;
+  // omni_attitude_controller_Y.debug[3] = omni_attitude_controller_Y.m4;
 }
 
 
