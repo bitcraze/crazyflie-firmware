@@ -92,14 +92,14 @@ void omni_attitude_controller_step_hand(void)
 
   // eW = Omega - R_T * (R_r * agvr);
   struct vec Omega = vzero();
-  Omega.x = omni_attitude_controller_U.wx_r;
-  Omega.y = omni_attitude_controller_U.wy_r;
-  Omega.z = omni_attitude_controller_U.wz_r;
+  Omega.x = omni_attitude_controller_U.gyro_x;
+  Omega.y = omni_attitude_controller_U.gyro_y;
+  Omega.z = omni_attitude_controller_U.gyro_z;
 
   struct vec agvr = vzero();
-  agvr.x = omni_attitude_controller_U.gyro_x;
-  agvr.y = omni_attitude_controller_U.gyro_y;
-  agvr.z = omni_attitude_controller_U.gyro_z;
+  agvr.x = omni_attitude_controller_U.wx_r;
+  agvr.y = omni_attitude_controller_U.wy_r;
+  agvr.z = omni_attitude_controller_U.wz_r;
 
   struct vec eW = vsub(Omega, mvmul(R_r_T, mvmul(R_r, agvr)));
 
