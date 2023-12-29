@@ -101,7 +101,7 @@ void omni_attitude_controller_step_hand(void)
   agvr.y = omni_attitude_controller_U.wy_r;
   agvr.z = omni_attitude_controller_U.wz_r;
 
-  struct vec eW = vsub(Omega, mvmul(R_r_T, mvmul(R_r, agvr)));
+  struct vec eW = vsub(Omega, mvmul(R_T, mvmul(R_r, agvr)));
 
   omni_attitude_controller_Y.eWx = eW.x;
   omni_attitude_controller_Y.eWy = eW.y;
