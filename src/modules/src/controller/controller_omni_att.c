@@ -64,14 +64,14 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
   }
   else
   {
-    motorsSetRatio(0, 7500);
-    motorsSetRatio(1, 7500);
-    motorsSetRatio(2, 7500);
-    motorsSetRatio(3, 7500);
-    // motorsSetRatio(0, omni_attitude_controller_Y.m1);
-    // motorsSetRatio(1, omni_attitude_controller_Y.m2);
-    // motorsSetRatio(2, omni_attitude_controller_Y.m3);
-    // motorsSetRatio(3, omni_attitude_controller_Y.m4);
+    // motorsSetRatio(0, 12000);
+    // motorsSetRatio(1, 7500);
+    // motorsSetRatio(2, 7500);
+    // motorsSetRatio(3, 12000);
+    motorsSetRatio(0, omni_attitude_controller_Y.m1);
+    motorsSetRatio(1, omni_attitude_controller_Y.m2);
+    motorsSetRatio(2, omni_attitude_controller_Y.m3);
+    motorsSetRatio(3, omni_attitude_controller_Y.m4);
   }
 }
 
@@ -101,15 +101,28 @@ LOG_ADD(LOG_FLOAT, gyro_x, &omni_attitude_controller_U.gyro_x)
 LOG_ADD(LOG_FLOAT, gyro_y, &omni_attitude_controller_U.gyro_y)
 LOG_ADD(LOG_FLOAT, gyro_z, &omni_attitude_controller_U.gyro_z)
 
+LOG_ADD(LOG_FLOAT, eRx, &omni_attitude_controller_Y.eRx)
+LOG_ADD(LOG_FLOAT, eRy, &omni_attitude_controller_Y.eRy)
+LOG_ADD(LOG_FLOAT, eRz, &omni_attitude_controller_Y.eRz)
+
+LOG_ADD(LOG_FLOAT, eWx, &omni_attitude_controller_Y.eWx)
+LOG_ADD(LOG_FLOAT, eWy, &omni_attitude_controller_Y.eWy)
+LOG_ADD(LOG_FLOAT, eWz, &omni_attitude_controller_Y.eWz)
+
+LOG_ADD(LOG_FLOAT, Tau_x, &omni_attitude_controller_Y.Tau_x)
+LOG_ADD(LOG_FLOAT, Tau_y, &omni_attitude_controller_Y.Tau_y)
+LOG_ADD(LOG_FLOAT, Tau_z, &omni_attitude_controller_Y.Tau_z)
+
+LOG_ADD(LOG_FLOAT, rollPart, &omni_attitude_controller_Y.rollPart)
+LOG_ADD(LOG_FLOAT, pitchPart, &omni_attitude_controller_Y.pitchPart)
+LOG_ADD(LOG_FLOAT, thrustPart, &omni_attitude_controller_Y.thrustPart)
+LOG_ADD(LOG_FLOAT, yawPart, &omni_attitude_controller_Y.yawPart)
+
 LOG_ADD(LOG_FLOAT, t_m1, &omni_attitude_controller_Y.t_m1)
 LOG_ADD(LOG_FLOAT, t_m2, &omni_attitude_controller_Y.t_m2)
 LOG_ADD(LOG_FLOAT, t_m3, &omni_attitude_controller_Y.t_m3)
 LOG_ADD(LOG_FLOAT, t_m4, &omni_attitude_controller_Y.t_m4)
 
-LOG_ADD(LOG_FLOAT, debug0, &omni_attitude_controller_Y.debug[0])
-LOG_ADD(LOG_FLOAT, debug1, &omni_attitude_controller_Y.debug[1])
-LOG_ADD(LOG_FLOAT, debug2, &omni_attitude_controller_Y.debug[2])
-LOG_ADD(LOG_FLOAT, debug3, &omni_attitude_controller_Y.debug[3])
 
 LOG_GROUP_STOP(sctrl_omni)
 

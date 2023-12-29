@@ -48,7 +48,6 @@ typedef struct {
 
 /* External outputs (root outports fed by signals with default storage) */
 typedef struct {
-  float debug[4];
   uint16_T m1;                         /* '<Root>/m1' */
   uint16_T m2;                         /* '<Root>/m2' */
   uint16_T m3;                         /* '<Root>/m3' */
@@ -57,6 +56,16 @@ typedef struct {
   real32_T t_m2;                       /* '<Root>/t_m2' */
   real32_T t_m3;                       /* '<Root>/t_m3' */
   real32_T t_m4;                       /* '<Root>/t_m4' */
+  real32_T eRx;
+  real32_T eRy;
+  real32_T eRz;
+  real32_T eWx;
+  real32_T eWy;
+  real32_T eWz;
+  real32_T rollPart;
+  real32_T pitchPart;
+  real32_T yawPart;
+  real32_T thrustPart;
   real32_T Tau_x;                      /* '<Root>/Tau_x' */
   real32_T Tau_y;                      /* '<Root>/Tau_y' */
   real32_T Tau_z;                      /* '<Root>/Tau_z' */

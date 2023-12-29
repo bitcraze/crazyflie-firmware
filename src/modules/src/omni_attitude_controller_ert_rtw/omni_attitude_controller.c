@@ -36,24 +36,30 @@ static struct mat33 CRAZYFLIE_INERTIA_O =
       {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
 
 // make sure the quaternion is normalized
-void quatToDCM(float *quat, struct mat33 RotM)
+void quatToDCM(float *quat, struct mat33 *RotM)
 {
   float q0 = *quat;
   float q1 = *(quat+1);
   float q2 = *(quat+2);
   float q3 = *(quat+3);
 
-  RotM.m[0][0] = q0*q0+q1*q1-q2*q2-q3*q3;
-  RotM.m[0][1] = 2.0F*(q1*q2+q0*q3);
-  RotM.m[0][2] = 2.0F*(q1*q3-q0*q2);
+  // PASS
+  // omni_attitude_controller_Y.debug[0] = q0;
+  // omni_attitude_controller_Y.debug[1] = q1;
+  // omni_attitude_controller_Y.debug[2] = q2;
+  // omni_attitude_controller_Y.debug[3] = q3;
 
-  RotM.m[1][0] = 2.0F*(q1*q2-q0*q3);
-  RotM.m[1][1] = q0*q0-q1*q1+q2*q2-q3*q3;
-  RotM.m[1][2] = 2.0F*(q2*q3+q0*q1);
+  RotM->m[0][0] = q0*q0+q1*q1-q2*q2-q3*q3;
+  RotM->m[0][1] = 2.0F*(q1*q2+q0*q3);
+  RotM->m[0][2] = 2.0F*(q1*q3-q0*q2);
 
-  RotM.m[2][0] = 2.0F*(q1*q3+q0*q2);
-  RotM.m[2][1] = 2.0F*(q2*q3-q0*q1);
-  RotM.m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
+  RotM->m[1][0] = 2.0F*(q1*q2-q0*q3);
+  RotM->m[1][1] = q0*q0-q1*q1+q2*q2-q3*q3;
+  RotM->m[1][2] = 2.0F*(q2*q3+q0*q1);
+
+  RotM->m[2][0] = 2.0F*(q1*q3+q0*q2);
+  RotM->m[2][1] = 2.0F*(q2*q3-q0*q1);
+  RotM->m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
 }
 
 void omni_attitude_controller_step_hand(void)
@@ -61,11 +67,11 @@ void omni_attitude_controller_step_hand(void)
   // quaternion command to DCM
   // https://www.mathworks.com/help/aeroblks/quaternionstodirectioncosinematrix.html
   struct mat33 R_r = mzero();
-  quatToDCM((float*)&omni_attitude_controller_U.qw_r, R_r);
+  quatToDCM((float*)&omni_attitude_controller_U.qw_r, &R_r);
 
   // quaternion fbk to DCM
   struct mat33 R = mzero();
-  quatToDCM((float*)&omni_attitude_controller_U.qw_IMU, R);
+  quatToDCM((float*)&omni_attitude_controller_U.qw_IMU, &R);
 
   // attitude controller
 
@@ -75,13 +81,14 @@ void omni_attitude_controller_step_hand(void)
   struct mat33 E = mscl(0.5f, msub(mmul(R_r_T, R) , mmul(R_T, R_r)));
 
   struct vec eR = vzero();
-  eR.x = E.m[3][2];
-  eR.y = E.m[1][3];
-  eR.z = E.m[2][1];
+  eR.x = E.m[2][1];
+  eR.y = E.m[0][2];
+  eR.z = E.m[1][0];
 
-  omni_attitude_controller_Y.debug[0] = eR.x;
-  omni_attitude_controller_Y.debug[1] = eR.y;
-  omni_attitude_controller_Y.debug[2] = eR.z;
+  // PASS
+  omni_attitude_controller_Y.eRx = eR.x;
+  omni_attitude_controller_Y.eRy = eR.y;
+  omni_attitude_controller_Y.eRz = eR.z;
 
   // eW = Omega - R_T * (R_r * agvr);
   struct vec Omega = vzero();
@@ -96,9 +103,9 @@ void omni_attitude_controller_step_hand(void)
 
   struct vec eW = vsub(Omega, mvmul(R_r_T, mvmul(R_r, agvr)));
 
-  // omni_attitude_controller_Y.debug[0] = eW.x;
-  // omni_attitude_controller_Y.debug[1] = eW.y;
-  // omni_attitude_controller_Y.debug[2] = eW.z;
+  omni_attitude_controller_Y.eWx = eW.x;
+  omni_attitude_controller_Y.eWy = eW.y;
+  omni_attitude_controller_Y.eWz = eW.z;
 
   // M = -Ji * (KR*eR + Kw*eW) with unit Nm
   struct vec controlTorque = vzero();
@@ -116,9 +123,9 @@ void omni_attitude_controller_step_hand(void)
   struct vec uW = veltmul(KW, eW);
   controlTorque = vneg(mvmul(CRAZYFLIE_INERTIA_O, vadd(uR,uW)));
 
-  // omni_attitude_controller_Y.debug[0] = controlTorque.x;
-  // omni_attitude_controller_Y.debug[1] = controlTorque.y;
-  // omni_attitude_controller_Y.debug[2] = controlTorque.z;
+  omni_attitude_controller_Y.Tau_x = controlTorque.x;
+  omni_attitude_controller_Y.Tau_y = controlTorque.y;
+  omni_attitude_controller_Y.Tau_z = controlTorque.z;
 
   // Thrust Clamper
   float Thrust;
@@ -139,16 +146,16 @@ void omni_attitude_controller_step_hand(void)
   const float thrustPart = 0.25f * Thrust; // N (per rotor)
   const float yawPart = 0.25f * controlTorque.z / 0.005964552f;
 
-  // corresponding to CrazyFlie's Body coordinate, t_mi 's Unit is Newton
-  omni_attitude_controller_Y.t_m1 = thrustPart - rollPart - pitchPart - yawPart;
-  omni_attitude_controller_Y.t_m2 = thrustPart - rollPart + pitchPart + yawPart;
-  omni_attitude_controller_Y.t_m3 = thrustPart + rollPart + pitchPart - yawPart;
-  omni_attitude_controller_Y.t_m4 = thrustPart + rollPart - pitchPart + yawPart;
+  omni_attitude_controller_Y.rollPart = rollPart;
+  omni_attitude_controller_Y.pitchPart = pitchPart;
+  omni_attitude_controller_Y.thrustPart = thrustPart;
+  omni_attitude_controller_Y.yawPart = yawPart;
 
-  // omni_attitude_controller_Y.debug[0] = omni_attitude_controller_Y.t_m1;
-  // omni_attitude_controller_Y.debug[1] = omni_attitude_controller_Y.t_m2;
-  // omni_attitude_controller_Y.debug[2] = omni_attitude_controller_Y.t_m3;
-  // omni_attitude_controller_Y.debug[3] = omni_attitude_controller_Y.t_m4;
+  // corresponding to CrazyFlie's Body coordinate, t_mi 's Unit is Newton
+  omni_attitude_controller_Y.t_m1 = thrustPart - rollPart - pitchPart + yawPart;
+  omni_attitude_controller_Y.t_m2 = thrustPart - rollPart + pitchPart - yawPart;
+  omni_attitude_controller_Y.t_m3 = thrustPart + rollPart + pitchPart + yawPart;
+  omni_attitude_controller_Y.t_m4 = thrustPart + rollPart - pitchPart - yawPart;
 
   if (omni_attitude_controller_Y.t_m1 < 0.0f) omni_attitude_controller_Y.t_m1 = 0.0f;
   if (omni_attitude_controller_Y.t_m2 < 0.0f) omni_attitude_controller_Y.t_m2 = 0.0f;
@@ -160,11 +167,6 @@ void omni_attitude_controller_step_hand(void)
   omni_attitude_controller_Y.m2 = omni_attitude_controller_Y.t_m2 / 0.1472f * 65535;
   omni_attitude_controller_Y.m3 = omni_attitude_controller_Y.t_m3 / 0.1472f * 65535;
   omni_attitude_controller_Y.m4 = omni_attitude_controller_Y.t_m4 / 0.1472f * 65535;
-
-  // omni_attitude_controller_Y.debug[0] = omni_attitude_controller_Y.m1;
-  // omni_attitude_controller_Y.debug[1] = omni_attitude_controller_Y.m2;
-  // omni_attitude_controller_Y.debug[2] = omni_attitude_controller_Y.m3;
-  // omni_attitude_controller_Y.debug[3] = omni_attitude_controller_Y.m4;
 }
 
 
@@ -628,11 +630,6 @@ void omni_attitude_controller_step(void)
   if (rtb_Product3_k < 0.0F) {
     rtb_Product3_k = 0.0F;
   }
-
-  omni_attitude_controller_Y.debug[0] = rtb_Product2_iz;
-  omni_attitude_controller_Y.debug[1] = rtb_Product1_a;
-  omni_attitude_controller_Y.debug[2] = rtb_Product_i;
-  omni_attitude_controller_Y.debug[3] = rtb_Product3_k;
 
   rtb_motor_com_idx_3 = (real32_T)(omni_attitude_controller_P.B *
     omni_attitude_controller_P.B);
