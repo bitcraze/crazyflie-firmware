@@ -78,16 +78,21 @@ void omni_attitude_controller_step_hand(void)
   quatToDCM((float*)&omni_attitude_controller_U.qw_r, &R_r);
 
   // rotate quaternion fbk to i-frame 
-  struct mat33 R = mzero();
-  real32_T temp[4] = {0.0, 0.0, 0.0, 0.0};
   static const real32_T q45[4] = { 0.707106769F, 0.0F, 0.0F, 0.707106769F };
   static const real32_T q45inv[4] = { -0.707106769F, 0.0F, 0.0F, 0.707106769F };
-
-  quatmultiply((real32_T*)&omni_attitude_controller_U.qw_IMU, q45inv, temp);
-  quatmultiply(q45, temp, (real32_T*)&omni_attitude_controller_U.qw_IMU);
+  real32_T temp[4] = {0.0, 0.0, 0.0, 0.0};
+  real32_T q_Qi[4] = {0.0, 0.0, 0.0, 0.0};
+  real32_T q_i[4] = {0.0, 0.0, 0.0, 0.0};
+  q_Qi[0] = omni_attitude_controller_U.qw_IMU;
+  q_Qi[1] = omni_attitude_controller_U.qx_IMU;
+  q_Qi[2] = omni_attitude_controller_U.qy_IMU;
+  q_Qi[3] = omni_attitude_controller_U.qz_IMU;
+  quatmultiply(q_Qi, q45inv, temp);
+  quatmultiply(q45, temp, q_i);
 
   // quaternion fbk to DCM
-  quatToDCM((real32_T*)&omni_attitude_controller_U.qw_IMU, &R);
+  struct mat33 R = mzero();
+  quatToDCM(q_i, &R);
 
   // attitude controller
 
@@ -108,8 +113,8 @@ void omni_attitude_controller_step_hand(void)
 
   // eW = Omega - R_T * (R_r * agvr);
   struct vec Omega = vzero();
-  Omega.x = omni_attitude_controller_U.gyro_x;
-  Omega.y = omni_attitude_controller_U.gyro_y;
+  Omega.x = -omni_attitude_controller_U.gyro_y;
+  Omega.y = omni_attitude_controller_U.gyro_x;
   Omega.z = omni_attitude_controller_U.gyro_z;
 
   struct vec agvr = vzero();
