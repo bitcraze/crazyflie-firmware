@@ -64,14 +64,23 @@ void quatToDCM(float *quat, struct mat33 *RotM)
 
 void omni_attitude_controller_step_hand(void)
 {
-  // quaternion command to DCM
+  // quaternion command to DCM (in i-frame)
   // https://www.mathworks.com/help/aeroblks/quaternionstodirectioncosinematrix.html
   struct mat33 R_r = mzero();
   quatToDCM((float*)&omni_attitude_controller_U.qw_r, &R_r);
 
   // quaternion fbk to DCM
+  struct mat33 R_Qi = mzero();
+  quatToDCM((float*)&omni_attitude_controller_U.qw_IMU, &R_Qi);
+
+  // rotate quaternion fbk to i-frame
+  struct mat33 Rz90 = mzero();
+  Rz90.m[0][1] = -1.0f;
+  Rz90.m[1][0] = 1.0f;
+  Rz90.m[2][2] = 1.0f;
+
   struct mat33 R = mzero();
-  quatToDCM((float*)&omni_attitude_controller_U.qw_IMU, &R);
+  R = mmul(Rz90, R_Qi);
 
   // attitude controller
 
@@ -151,11 +160,11 @@ void omni_attitude_controller_step_hand(void)
   omni_attitude_controller_Y.thrustPart = thrustPart;
   omni_attitude_controller_Y.yawPart = yawPart;
 
-  // corresponding to CrazyFlie's Body coordinate, t_mi 's Unit is Newton
-  omni_attitude_controller_Y.t_m1 = thrustPart - rollPart - pitchPart + yawPart;
-  omni_attitude_controller_Y.t_m2 = thrustPart - rollPart + pitchPart - yawPart;
-  omni_attitude_controller_Y.t_m3 = thrustPart + rollPart + pitchPart + yawPart;
-  omni_attitude_controller_Y.t_m4 = thrustPart + rollPart - pitchPart - yawPart;
+  // corresponding to i-frame Body coordinate, t_mi 's Unit is Newton
+  omni_attitude_controller_Y.t_m1 = thrustPart + rollPart - pitchPart - yawPart;
+  omni_attitude_controller_Y.t_m2 = thrustPart - rollPart - pitchPart + yawPart;
+  omni_attitude_controller_Y.t_m3 = thrustPart - rollPart + pitchPart - yawPart;
+  omni_attitude_controller_Y.t_m4 = thrustPart + rollPart + pitchPart + yawPart;
 
   if (omni_attitude_controller_Y.t_m1 < 0.0f) omni_attitude_controller_Y.t_m1 = 0.0f;
   if (omni_attitude_controller_Y.t_m2 < 0.0f) omni_attitude_controller_Y.t_m2 = 0.0f;
