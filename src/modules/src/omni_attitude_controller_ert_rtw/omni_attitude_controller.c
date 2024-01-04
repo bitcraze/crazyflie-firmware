@@ -58,15 +58,15 @@ void quatToDCM(float *quat, struct mat33 *RotM)
   // omni_attitude_controller_Y.debug[3] = q3;
 
   RotM->m[0][0] = q0*q0+q1*q1-q2*q2-q3*q3;
-  RotM->m[0][1] = 2.0F*(q1*q2+q0*q3);
-  RotM->m[0][2] = 2.0F*(q1*q3-q0*q2);
+  RotM->m[0][1] = 2.0F*(q1*q2-q0*q3);
+  RotM->m[0][2] = 2.0F*(q1*q3+q0*q2);
 
-  RotM->m[1][0] = 2.0F*(q1*q2-q0*q3);
+  RotM->m[1][0] = 2.0F*(q1*q2+q0*q3);
   RotM->m[1][1] = q0*q0-q1*q1+q2*q2-q3*q3;
-  RotM->m[1][2] = 2.0F*(q2*q3+q0*q1);
+  RotM->m[1][2] = 2.0F*(q2*q3-q0*q1);
 
-  RotM->m[2][0] = 2.0F*(q1*q3+q0*q2);
-  RotM->m[2][1] = 2.0F*(q2*q3-q0*q1);
+  RotM->m[2][0] = 2.0F*(q1*q3-q0*q2);
+  RotM->m[2][1] = 2.0F*(q2*q3+q0*q1);
   RotM->m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
 }
 
