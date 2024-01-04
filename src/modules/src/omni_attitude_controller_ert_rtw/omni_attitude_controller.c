@@ -35,6 +35,14 @@ static struct mat33 CRAZYFLIE_INERTIA_O =
       {0.83e-6f, 16.6e-6f, 1.8e-6f},
       {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
 
+static void quatmultiply(const real32_T q[4], const real32_T r[4], real32_T qout[4])
+{
+  qout[0] = ((q[0] * r[0] - q[1] * r[1]) - q[2] * r[2]) - q[3] * r[3];
+  qout[1] = (q[0] * r[1] + r[0] * q[1]) + (q[2] * r[3] - q[3] * r[2]);
+  qout[2] = (q[0] * r[2] + r[0] * q[2]) + (q[3] * r[1] - q[1] * r[3]);
+  qout[3] = (q[0] * r[3] + r[0] * q[3]) + (q[1] * r[2] - q[2] * r[1]);
+}
+
 // make sure the quaternion is normalized
 void quatToDCM(float *quat, struct mat33 *RotM)
 {
@@ -69,18 +77,17 @@ void omni_attitude_controller_step_hand(void)
   struct mat33 R_r = mzero();
   quatToDCM((float*)&omni_attitude_controller_U.qw_r, &R_r);
 
-  // quaternion fbk to DCM
-  struct mat33 R_Qi = mzero();
-  quatToDCM((float*)&omni_attitude_controller_U.qw_IMU, &R_Qi);
-
-  // rotate quaternion fbk to i-frame
-  struct mat33 Rz90 = mzero();
-  Rz90.m[0][1] = -1.0f;
-  Rz90.m[1][0] = 1.0f;
-  Rz90.m[2][2] = 1.0f;
-
+  // rotate quaternion fbk to i-frame 
   struct mat33 R = mzero();
-  R = mmul(Rz90, R_Qi);
+  real32_T temp[4] = {0.0, 0.0, 0.0, 0.0};
+  static const real32_T q45[4] = { 0.707106769F, 0.0F, 0.0F, 0.707106769F };
+  static const real32_T q45inv[4] = { -0.707106769F, 0.0F, 0.0F, 0.707106769F };
+
+  quatmultiply((real32_T*)&omni_attitude_controller_U.qw_IMU, q45inv, temp);
+  quatmultiply(q45, temp, (real32_T*)&omni_attitude_controller_U.qw_IMU);
+
+  // quaternion fbk to DCM
+  quatToDCM((real32_T*)&omni_attitude_controller_U.qw_IMU, &R);
 
   // attitude controller
 
