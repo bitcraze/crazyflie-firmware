@@ -127,9 +127,9 @@ void omni_attitude_controller_step_hand(void)
   omni_attitude_controller_Y.eWz = eW.z;
 
   // ei
-  omni_attitude_controller_Y.eixInt += eR.x * 0.001; // 1kHz loop
-  omni_attitude_controller_Y.eiyInt += eR.y * 0.001; // 1kHz loop
-  omni_attitude_controller_Y.eizInt += eR.z * 0.001; // 1kHz loop
+  omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eR.x * 0.001f; // 1kHz loop
+  omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eR.y * 0.001f; // 1kHz loop
+  omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eR.z * 0.001f; // 1kHz loop
 
   struct vec ei = vzero();
   ei.x = omni_attitude_controller_Y.eixInt;
