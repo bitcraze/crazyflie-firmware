@@ -64,18 +64,10 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
   }
   else
   {
-    if((uint16_T)omni_attitude_controller_P.KR[0]>1000)
-    {
-      motorsSetRatio(0, 12000);
-      motorsSetRatio(1, 7500);
-      motorsSetRatio(2, 7500);
-      motorsSetRatio(3, 12000);
-    } else {
-      motorsSetRatio(0, omni_attitude_controller_Y.m1);
-      motorsSetRatio(1, omni_attitude_controller_Y.m2);
-      motorsSetRatio(2, omni_attitude_controller_Y.m3);
-      motorsSetRatio(3, omni_attitude_controller_Y.m4);
-    }
+    motorsSetRatio(0, omni_attitude_controller_Y.m1);
+    motorsSetRatio(1, omni_attitude_controller_Y.m2);
+    motorsSetRatio(2, omni_attitude_controller_Y.m3);
+    motorsSetRatio(3, omni_attitude_controller_Y.m4);
   }
 }
 
@@ -101,9 +93,9 @@ LOG_ADD(LOG_FLOAT, qx_IMU, &omni_attitude_controller_U.qx_IMU)
 LOG_ADD(LOG_FLOAT, qy_IMU, &omni_attitude_controller_U.qy_IMU)
 LOG_ADD(LOG_FLOAT, qz_IMU, &omni_attitude_controller_U.qz_IMU)
 
-LOG_ADD(LOG_FLOAT, gyro_x, &omni_attitude_controller_U.gyro_x)
-LOG_ADD(LOG_FLOAT, gyro_y, &omni_attitude_controller_U.gyro_y)
-LOG_ADD(LOG_FLOAT, gyro_z, &omni_attitude_controller_U.gyro_z)
+LOG_ADD(LOG_FLOAT, eix, &omni_attitude_controller_Y.eix)
+LOG_ADD(LOG_FLOAT, eiy, &omni_attitude_controller_Y.eiy)
+LOG_ADD(LOG_FLOAT, eiz, &omni_attitude_controller_Y.eiz)
 
 LOG_ADD(LOG_FLOAT, eRx, &omni_attitude_controller_Y.eRx)
 LOG_ADD(LOG_FLOAT, eRy, &omni_attitude_controller_Y.eRy)

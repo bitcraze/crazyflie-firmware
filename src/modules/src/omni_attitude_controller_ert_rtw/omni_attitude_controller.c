@@ -30,10 +30,10 @@ ExtU_omni_attitude_controller_T omni_attitude_controller_U;
 /* External outputs (root outports fed by signals with default storage) */
 ExtY_omni_attitude_controller_T omni_attitude_controller_Y;
 
-static struct mat33 CRAZYFLIE_INERTIA_O =
-    {{{16.6e-6f, 0.83e-6f, 0.72e-6f},
-      {0.83e-6f, 16.6e-6f, 1.8e-6f},
-      {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
+static struct mat33 CRAZYFLIE_INERTIA_I =
+    {{{16.6e-6f, 0.83e-6f, 1.8e-6f},
+      {0.83e-6f, 16.6e-6f, 0.72e-6f},
+      {1.8e-6f, 0.72e-6f, 29.3e-6f}}};
 
 static void quatmultiply(const real32_T q[4], const real32_T r[4], real32_T qout[4])
 {
@@ -95,7 +95,6 @@ void omni_attitude_controller_step_hand(void)
   quatToDCM(q_i, &R);
 
   // attitude controller
-
   // 0.5*(R_r_T * R - R_T * R_r), eR = [m32, m12, m21]';
   struct mat33 R_r_T =  mtranspose(R_r);
   struct mat33 R_T =  mtranspose(R);
@@ -106,7 +105,6 @@ void omni_attitude_controller_step_hand(void)
   eR.y = E.m[0][2];
   eR.z = E.m[1][0];
 
-  // PASS
   omni_attitude_controller_Y.eRx = eR.x;
   omni_attitude_controller_Y.eRy = eR.y;
   omni_attitude_controller_Y.eRz = eR.z;
@@ -128,8 +126,17 @@ void omni_attitude_controller_step_hand(void)
   omni_attitude_controller_Y.eWy = eW.y;
   omni_attitude_controller_Y.eWz = eW.z;
 
-  // M = -Ji * (KR*eR + Kw*eW) with unit Nm
-  struct vec controlTorque = vzero();
+  // ei
+  omni_attitude_controller_Y.eixInt += eR.x * 0.001; // 1kHz loop
+  omni_attitude_controller_Y.eiyInt += eR.y * 0.001; // 1kHz loop
+  omni_attitude_controller_Y.eizInt += eR.z * 0.001; // 1kHz loop
+
+  struct vec ei = vzero();
+  ei.x = omni_attitude_controller_Y.eixInt;
+  ei.y = omni_attitude_controller_Y.eiyInt;
+  ei.z = omni_attitude_controller_Y.eizInt;
+
+  // PID Controller M = -Ji * (KR*eR + Kw*eW) with unit Nm
   struct vec KR = vzero();
   KR.x = omni_attitude_controller_P.KR[0];
   KR.y = omni_attitude_controller_P.KR[4];
@@ -140,9 +147,16 @@ void omni_attitude_controller_step_hand(void)
   KW.y = omni_attitude_controller_P.Kw[4];
   KW.z = omni_attitude_controller_P.Kw[8];
 
+  struct vec Ki = vzero();
+  Ki.x = omni_attitude_controller_P.Ki[0];
+  Ki.y = omni_attitude_controller_P.Ki[1];
+  Ki.z = omni_attitude_controller_P.Ki[2];
+
   struct vec uR = veltmul(KR, eR);
   struct vec uW = veltmul(KW, eW);
-  controlTorque = vneg(mvmul(CRAZYFLIE_INERTIA_O, vadd(uR,uW)));
+  struct vec ui = veltmul(Ki, eW);
+  struct vec controlTorque = vzero();
+  controlTorque = vneg(mvmul(CRAZYFLIE_INERTIA_I, vadd(vadd(uR,uW), ui)));
 
   omni_attitude_controller_Y.Tau_x = controlTorque.x;
   omni_attitude_controller_Y.Tau_y = controlTorque.y;

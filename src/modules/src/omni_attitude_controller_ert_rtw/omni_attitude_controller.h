@@ -62,6 +62,12 @@ typedef struct {
   real32_T eWx;
   real32_T eWy;
   real32_T eWz;
+  real32_T eix;
+  real32_T eiy;
+  real32_T eiz;
+  real32_T eixInt;
+  real32_T eiyInt;
+  real32_T eizInt;
   real32_T rollPart;
   real32_T pitchPart;
   real32_T yawPart;
@@ -88,6 +94,7 @@ struct P_omni_attitude_controller_T_ {
   real_T Kw[9];                        /* Variable: Kw
                                         * Referenced by: '<Root>/LLATC'
                                         */
+  real_T Ki[3];
   real_T ThrustToTorque;               /* Variable: ThrustToTorque
                                         * Referenced by: '<Root>/MATLAB Function1'
                                         */
