@@ -131,5 +131,9 @@ PARAM_ADD(PARAM_FLOAT, Kwx, &omni_attitude_controller_P.Kw[0])
 PARAM_ADD(PARAM_FLOAT, Kwy, &omni_attitude_controller_P.Kw[4])
 PARAM_ADD(PARAM_FLOAT, Kwz, &omni_attitude_controller_P.Kw[8])
 
+PARAM_ADD(PARAM_FLOAT, Kix, &omni_attitude_controller_P.Ki[0])
+PARAM_ADD(PARAM_FLOAT, Kiy, &omni_attitude_controller_P.Ki[1])
+PARAM_ADD(PARAM_FLOAT, Kiz, &omni_attitude_controller_P.Ki[2])
+
 PARAM_GROUP_STOP(sparam_omni)
 
