@@ -18,7 +18,10 @@
         "omni_attitude_controller.h": "c",
         "controller_omni_att.h": "c",
         "math.h": "c",
-        "math3d.h": "c"
+        "math3d.h": "c",
+        "controller_pid.h": "c",
+        "attitude_controller.h": "c",
+        "platform_defaults.h": "c"
     }
 }
 
