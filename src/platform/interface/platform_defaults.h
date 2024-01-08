@@ -45,6 +45,7 @@
 #endif
 
 // Drone physical constants
+// TODO provide those in each config. Those are values of cf2 platform
 #ifndef ARM_LENGTH
     // m
     #define ARM_LENGTH  0.046f
