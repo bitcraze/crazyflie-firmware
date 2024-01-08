@@ -104,9 +104,9 @@ void omni_attitude_controller_DoAttitudeLoop(void)
   omni_attitude_controller_Y.eRy = eR.y;
   omni_attitude_controller_Y.eRz = eR.z;
 
-  omni_attitude_controller_Y.wx_r = (real32_T)omni_attitude_controller_P.KR[0] * eR.x; 
-  omni_attitude_controller_Y.wy_r = (real32_T)omni_attitude_controller_P.KR[4] * eR.y; 
-  omni_attitude_controller_Y.wz_r = (real32_T)omni_attitude_controller_P.KR[8] * eR.z; 
+  omni_attitude_controller_Y.wx_r = (real32_T)omni_attitude_controller_P.KRx * eR.x; 
+  omni_attitude_controller_Y.wy_r = (real32_T)omni_attitude_controller_P.KRy * eR.y; 
+  omni_attitude_controller_Y.wz_r = (real32_T)omni_attitude_controller_P.KRz * eR.z; 
 }
 
 void omni_attitude_controller_DoAttitudeRateLoop(void)
@@ -141,14 +141,14 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
 
   // PID Controller M = J * ( Kw*eW + Ki * eiInt ) with unit Nm
   struct vec KW = vzero();
-  KW.x = omni_attitude_controller_P.Kw[0];
-  KW.y = omni_attitude_controller_P.Kw[4];
-  KW.z = omni_attitude_controller_P.Kw[8];
+  KW.x = omni_attitude_controller_P.Kwx;
+  KW.y = omni_attitude_controller_P.Kwy;
+  KW.z = omni_attitude_controller_P.Kwz;
 
   struct vec Ki = vzero();
-  Ki.x = omni_attitude_controller_P.Ki[0];
-  Ki.y = omni_attitude_controller_P.Ki[1];
-  Ki.z = omni_attitude_controller_P.Ki[2];
+  Ki.x = omni_attitude_controller_P.Kix;
+  Ki.y = omni_attitude_controller_P.Kiy;
+  Ki.z = omni_attitude_controller_P.Kiz;
 
   struct vec uW = veltmul(KW, eW);
   struct vec ui = veltmul(Ki, eiInt);

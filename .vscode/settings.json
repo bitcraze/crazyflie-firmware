@@ -21,7 +21,8 @@
         "math3d.h": "c",
         "controller_pid.h": "c",
         "attitude_controller.h": "c",
-        "platform_defaults.h": "c"
+        "platform_defaults.h": "c",
+        "omni_attitude_controller_types.h": "c"
     }
 }
 
