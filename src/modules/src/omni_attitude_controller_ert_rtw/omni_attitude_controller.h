@@ -25,6 +25,7 @@
 #endif                           /* omni_attitude_controller_COMMON_INCLUDES_ */
 
 #include "omni_attitude_controller_types.h"
+#include "pid.h"
 #include "rt_nonfinite.h"
 
 /* External inputs (root inport signals with default storage) */
@@ -56,18 +57,21 @@ typedef struct {
   real32_T t_m2;                       /* '<Root>/t_m2' */
   real32_T t_m3;                       /* '<Root>/t_m3' */
   real32_T t_m4;                       /* '<Root>/t_m4' */
-  real32_T eRx;
-  real32_T eRy;
-  real32_T eRz;
-  real32_T eWx;
-  real32_T eWy;
-  real32_T eWz;
-  real32_T eix;
-  real32_T eiy;
-  real32_T eiz;
-  real32_T eixInt;
-  real32_T eiyInt;
-  real32_T eizInt;
+  real32_T eRx;  // att loop state
+  real32_T eRy;  // att loop state
+  real32_T eRz;  // att loop state
+  real32_T wx_r;  // att loop output
+  real32_T wy_r;  // att loop output
+  real32_T wz_r;  // att loop output
+  real32_T eWx;  // att rate loop state
+  real32_T eWy;  // att rate loop state
+  real32_T eWz;  // att rate loop state
+  real32_T eix;  // att rate loop state
+  real32_T eiy;  // att rate loop state
+  real32_T eiz;  // att rate loop state
+  real32_T eixInt;  // att rate loop state
+  real32_T eiyInt;  // att rate loop state
+  real32_T eizInt;  // att rate loop state
   real32_T rollPart;
   real32_T pitchPart;
   real32_T yawPart;
@@ -165,6 +169,9 @@ extern void omni_attitude_controller_initialize(void);
 extern void omni_attitude_controller_step(void);
 extern void omni_attitude_controller_step_hand(void);
 extern void omni_attitude_controller_terminate(void);
+extern void omni_attitude_controller_DoAttitudeLoop(void);
+extern void omni_attitude_controller_DoAttitudeRateLoop(void);
+extern void omni_attitude_controller_PowerDistribution(void);
 
 /*-
  * These blocks were eliminated from the model due to optimizations:

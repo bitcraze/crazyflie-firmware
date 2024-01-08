@@ -51,12 +51,6 @@ void quatToDCM(float *quat, struct mat33 *RotM)
   float q2 = *(quat+2);
   float q3 = *(quat+3);
 
-  // PASS
-  // omni_attitude_controller_Y.debug[0] = q0;
-  // omni_attitude_controller_Y.debug[1] = q1;
-  // omni_attitude_controller_Y.debug[2] = q2;
-  // omni_attitude_controller_Y.debug[3] = q3;
-
   RotM->m[0][0] = q0*q0+q1*q1-q2*q2-q3*q3;
   RotM->m[0][1] = 2.0F*(q1*q2-q0*q3);
   RotM->m[0][2] = 2.0F*(q1*q3+q0*q2);
@@ -70,7 +64,7 @@ void quatToDCM(float *quat, struct mat33 *RotM)
   RotM->m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
 }
 
-void omni_attitude_controller_step_hand(void)
+void omni_attitude_controller_DoAttitudeLoop(void)
 {
   // quaternion command to DCM (in i-frame)
   // https://www.mathworks.com/help/aeroblks/quaternionstodirectioncosinematrix.html
@@ -99,11 +93,12 @@ void omni_attitude_controller_step_hand(void)
   struct mat33 R_r_T =  mtranspose(R_r);
   struct mat33 R_T =  mtranspose(R);
   struct mat33 E = mscl(0.5f, msub(mmul(R_r_T, R) , mmul(R_T, R_r)));
-
+  
+  // eR -> xd - x
   struct vec eR = vzero();
-  eR.x = E.m[2][1];
-  eR.y = E.m[0][2];
-  eR.z = E.m[1][0];
+  eR.x = -E.m[2][1];
+  eR.y = -E.m[0][2];
+  eR.z = -E.m[1][0];
 
   omni_attitude_controller_Y.eRx = eR.x;
   omni_attitude_controller_Y.eRy = eR.y;
@@ -114,35 +109,44 @@ void omni_attitude_controller_step_hand(void)
   KR.y = omni_attitude_controller_P.KR[4];
   KR.z = omni_attitude_controller_P.KR[8];
   
-  struct vec agvr = vneg(veltmul(KR, eR));
-  // agvr.x = omni_attitude_controller_U.wx_r;
-  // agvr.y = omni_attitude_controller_U.wy_r;
-  // agvr.z = omni_attitude_controller_U.wz_r;
+  // agvr = KR * eR
+  struct vec agvr = veltmul(KR, eR);
+  omni_attitude_controller_Y.wx_r = agvr.x;
+  omni_attitude_controller_Y.wy_r = agvr.y;
+  omni_attitude_controller_Y.wz_r = agvr.z;
+}
 
+void omni_attitude_controller_DoAttitudeRateLoop(void)
+{
+  /* Be aware of the sign of the signals */
   // eW = Omega - R_T * (R_r * agvr);
+  // struct vec eW = vsub(Omega, mvmul(R_T, mvmul(R_r, agvr)));
   struct vec Omega = vzero();
   Omega.x = -omni_attitude_controller_U.gyro_y;
   Omega.y = omni_attitude_controller_U.gyro_x;
   Omega.z = omni_attitude_controller_U.gyro_z;
 
-  // struct vec eW = vsub(Omega, mvmul(R_T, mvmul(R_r, agvr)));
-  struct vec eW = vsub(Omega, agvr);
+  // eW = agvr - w
+  struct vec eW = vzero();
+  eW.x = omni_attitude_controller_Y.wx_r - Omega.x;
+  eW.y = omni_attitude_controller_Y.wy_r - Omega.y;
+  eW.z = omni_attitude_controller_Y.wz_r - Omega.z;
 
   omni_attitude_controller_Y.eWx = eW.x;
   omni_attitude_controller_Y.eWy = eW.y;
   omni_attitude_controller_Y.eWz = eW.z;
 
-  // ei
-  omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * 0.001f; // 1kHz loop
-  omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * 0.001f; // 1kHz loop
-  omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eW.z * 0.001f; // 1kHz loop
+  // eiInt
+  omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * 0.002f; // 500Hz loop
+  omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * 0.002f; // 500Hz loop
+  omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eW.z * 0.002f; // 500Hz loop
 
-  struct vec ei = vzero();
-  ei.x = omni_attitude_controller_Y.eixInt;
-  ei.y = omni_attitude_controller_Y.eiyInt;
-  ei.z = omni_attitude_controller_Y.eizInt;
+  struct vec eiInt = vzero();
+  eiInt.x = omni_attitude_controller_Y.eixInt;
+  eiInt.y = omni_attitude_controller_Y.eiyInt;
+  eiInt.z = omni_attitude_controller_Y.eizInt;
 
-  // PID Controller M = -Ji * (KR*eR + Kw*eW) with unit Nm
+  // PID Controller M = J * ( Kw*eW + Ki * eiInt ) with unit Nm
   struct vec KW = vzero();
   KW.x = omni_attitude_controller_P.Kw[0];
   KW.y = omni_attitude_controller_P.Kw[4];
@@ -154,14 +158,17 @@ void omni_attitude_controller_step_hand(void)
   Ki.z = omni_attitude_controller_P.Ki[2];
 
   struct vec uW = veltmul(KW, eW);
-  struct vec ui = veltmul(Ki, ei);
+  struct vec ui = veltmul(Ki, eiInt);
   struct vec controlTorque = vzero();
-  controlTorque = vneg(mvmul(CRAZYFLIE_INERTIA_I, vadd(ui,uW)));
+  controlTorque = mvmul(CRAZYFLIE_INERTIA_I, vadd(ui,uW));
 
   omni_attitude_controller_Y.Tau_x = controlTorque.x;
   omni_attitude_controller_Y.Tau_y = controlTorque.y;
   omni_attitude_controller_Y.Tau_z = controlTorque.z;
+}
 
+void omni_attitude_controller_PowerDistribution(void)
+{
   // Thrust Clamper
   float Thrust;
   if (omni_attitude_controller_U.thrust >
@@ -176,10 +183,10 @@ void omni_attitude_controller_step_hand(void)
 
   // power distribution and turn Nm into N
   const float arm = 0.707106781f * 0.046f;
-  const float rollPart = 0.25f / arm * controlTorque.x;
-  const float pitchPart = 0.25f / arm * controlTorque.y;
+  const float rollPart = 0.25f / arm * omni_attitude_controller_Y.Tau_x;
+  const float pitchPart = 0.25f / arm * omni_attitude_controller_Y.Tau_y;
   const float thrustPart = 0.25f * Thrust; // N (per rotor)
-  const float yawPart = 0.25f * controlTorque.z / 0.005964552f;
+  const float yawPart = 0.25f * omni_attitude_controller_Y.Tau_z / 0.005964552f;
 
   omni_attitude_controller_Y.rollPart = rollPart;
   omni_attitude_controller_Y.pitchPart = pitchPart;
@@ -204,6 +211,10 @@ void omni_attitude_controller_step_hand(void)
   omni_attitude_controller_Y.m4 = omni_attitude_controller_Y.t_m4 / 0.1472f * 65535;
 }
 
+void omni_attitude_controller_step_hand(void)
+{
+  return;
+}
 
 /* Model step function */
 void omni_attitude_controller_step(void)
