@@ -104,16 +104,9 @@ void omni_attitude_controller_DoAttitudeLoop(void)
   omni_attitude_controller_Y.eRy = eR.y;
   omni_attitude_controller_Y.eRz = eR.z;
 
-  struct vec KR = vzero();
-  KR.x = omni_attitude_controller_P.KR[0];
-  KR.y = omni_attitude_controller_P.KR[4];
-  KR.z = omni_attitude_controller_P.KR[8];
-  
-  // agvr = KR * eR
-  struct vec agvr = veltmul(KR, eR);
-  omni_attitude_controller_Y.wx_r = agvr.x;
-  omni_attitude_controller_Y.wy_r = agvr.y;
-  omni_attitude_controller_Y.wz_r = agvr.z;
+  omni_attitude_controller_Y.wx_r = (real32_T)omni_attitude_controller_P.KR[0] * eR.x; 
+  omni_attitude_controller_Y.wy_r = (real32_T)omni_attitude_controller_P.KR[4] * eR.y; 
+  omni_attitude_controller_Y.wz_r = (real32_T)omni_attitude_controller_P.KR[8] * eR.z; 
 }
 
 void omni_attitude_controller_DoAttitudeRateLoop(void)

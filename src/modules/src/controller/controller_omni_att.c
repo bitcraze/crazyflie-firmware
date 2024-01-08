@@ -41,9 +41,9 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
       omni_attitude_controller_U.qy_r = setpoint->attitudeQuaternion.q2;
       omni_attitude_controller_U.qz_r = setpoint->attitudeQuaternion.q3;
 
-      omni_attitude_controller_U.wx_r = setpoint->attitude.roll;
-      omni_attitude_controller_U.wy_r = setpoint->attitude.pitch;
-      omni_attitude_controller_U.wz_r = setpoint->attitude.yaw;
+      // omni_attitude_controller_U.wx_r = setpoint->attitude.roll;
+      // omni_attitude_controller_U.wy_r = setpoint->attitude.pitch;
+      // omni_attitude_controller_U.wz_r = setpoint->attitude.yaw;
 
       omni_attitude_controller_U.qw_IMU = state->attitudeQuaternion.w;
       omni_attitude_controller_U.qx_IMU = state->attitudeQuaternion.x;
@@ -95,9 +95,9 @@ LOG_ADD(LOG_FLOAT, eRx, &omni_attitude_controller_Y.eRx)
 LOG_ADD(LOG_FLOAT, eRy, &omni_attitude_controller_Y.eRy)
 LOG_ADD(LOG_FLOAT, eRz, &omni_attitude_controller_Y.eRz)
 
-LOG_ADD(LOG_FLOAT, wx_r, &omni_attitude_controller_U.wx_r)
-LOG_ADD(LOG_FLOAT, wy_r, &omni_attitude_controller_U.wy_r)
-LOG_ADD(LOG_FLOAT, wz_r, &omni_attitude_controller_U.wz_r)
+LOG_ADD(LOG_FLOAT, wx_r, &omni_attitude_controller_Y.wx_r)
+LOG_ADD(LOG_FLOAT, wy_r, &omni_attitude_controller_Y.wy_r)
+LOG_ADD(LOG_FLOAT, wz_r, &omni_attitude_controller_Y.wz_r)
 
 // Angular speed loop
 LOG_ADD(LOG_FLOAT, eWx, &omni_attitude_controller_Y.eWx)
