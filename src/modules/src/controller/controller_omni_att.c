@@ -56,7 +56,6 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
 
       omni_attitude_controller_DoAttitudeLoop();
       omni_attitude_controller_DoAttitudeRateLoop();
-      omni_attitude_controller_PowerDistribution();
   }
 
   if (setpoint->thrust < 0.000898f)
