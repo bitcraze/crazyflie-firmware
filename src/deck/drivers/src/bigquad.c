@@ -42,6 +42,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "servo.h"
 
 #define BIGQUAD_BAT_VOLT_PIN       DECK_GPIO_MISO
 #define BIGQUAD_BAT_VOLT_MULT      (CONFIG_DECK_BIGQUAD_BAT_VOLT_MULT_MV / 1000.0)
@@ -52,6 +53,7 @@
 
 //Hardware configuration
 static bool isInit;
+//static int8_t s_servo_angle = 0;
 
 #ifdef CONFIG_DECK_BIGQUAD_ENABLE_OSD
 static MspObject s_MspObject;
@@ -82,7 +84,7 @@ static void bigquadInit(DeckInfo *info)
 
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
-  extRxInit();
+//  extRxInit();
 
   // Ignore charging/charged state to allow low-battery warning.
   pmIgnoreChargedState(true);
@@ -99,6 +101,7 @@ static void bigquadInit(DeckInfo *info)
               BQ_OSD_TASK_STACKSIZE, NULL, BQ_OSD_TASK_PRI, NULL);
 #endif
 
+  servoInit();
   isInit = true;
 }
 
@@ -121,7 +124,7 @@ static const DeckDriver bigquad_deck = {
 
   .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,
   .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_IO_3 |
-              DECK_USING_IO_2 | DECK_USING_PA7,
+              DECK_USING_IO_2 | DECK_USING_PA7 | DECK_USING_IO_4,
   .init = bigquadInit,
   .test = bigquadTest,
 };
@@ -134,7 +137,6 @@ PARAM_GROUP_START(deck)
  * @brief Nonzero if [BigQuad deck](%https://www.bitcraze.io/products/bigquad-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &isInit)
-
 PARAM_GROUP_STOP(deck)
 
 #endif // CONFIG_DECK_BIGQUAD

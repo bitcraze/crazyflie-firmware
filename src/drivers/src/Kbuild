@@ -17,6 +17,7 @@ obj-y += nvic.o
 obj-y += pca9685.o
 obj-y += piezo.o
 obj-y += pmw3901.o
+obj-y += servo.o
 obj-y += swd.o
 obj-y += uart1.o
 obj-y += uart2.o
