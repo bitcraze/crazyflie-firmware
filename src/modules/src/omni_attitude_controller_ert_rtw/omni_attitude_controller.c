@@ -142,7 +142,7 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
   }
 
   // eiInt
-  if( omni_attitude_controller_Y.IsClamped = 0 && Thrust > 0.000898f )
+  if( omni_attitude_controller_Y.IsClamped == 0 && Thrust > 0.000898f )
   {
     omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * 0.002f; // 500Hz loop
     omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * 0.002f; // 500Hz loop
