@@ -49,6 +49,7 @@ typedef struct {
 
 /* External outputs (root outports fed by signals with default storage) */
 typedef struct {
+  uint16_T IsClamped;
   uint16_T m1;                         /* '<Root>/m1' */
   uint16_T m2;                         /* '<Root>/m2' */
   uint16_T m3;                         /* '<Root>/m3' */
@@ -183,7 +184,6 @@ extern void omni_attitude_controller_step_hand(void);
 extern void omni_attitude_controller_terminate(void);
 extern void omni_attitude_controller_DoAttitudeLoop(void);
 extern void omni_attitude_controller_DoAttitudeRateLoop(void);
-extern void omni_attitude_controller_PowerDistribution(void);
 
 /*-
  * These blocks were eliminated from the model due to optimizations:

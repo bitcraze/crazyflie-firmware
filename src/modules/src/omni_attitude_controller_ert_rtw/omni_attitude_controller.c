@@ -129,10 +129,25 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
   omni_attitude_controller_Y.eWy = eW.y;
   omni_attitude_controller_Y.eWz = eW.z;
 
+    // Thrust Clamper
+  float Thrust;
+  if (omni_attitude_controller_U.thrust >
+      omni_attitude_controller_P.Saturation_UpperSat) {
+    Thrust = omni_attitude_controller_P.Saturation_UpperSat;
+  } else if (omni_attitude_controller_U.thrust <
+             omni_attitude_controller_P.Saturation_LowerSat) {
+    Thrust = omni_attitude_controller_P.Saturation_LowerSat;
+  } else {
+    Thrust = omni_attitude_controller_U.thrust;
+  }
+
   // eiInt
-  omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * 0.002f; // 500Hz loop
-  omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * 0.002f; // 500Hz loop
-  omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eW.z * 0.002f; // 500Hz loop
+  if( omni_attitude_controller_Y.IsClamped = 0 && Thrust > 0.000898f )
+  {
+    omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * 0.002f; // 500Hz loop
+    omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * 0.002f; // 500Hz loop
+    omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eW.z * 0.002f; // 500Hz loop
+  }
 
   struct vec eiInt = vzero();
   eiInt.x = omni_attitude_controller_Y.eixInt;
@@ -158,21 +173,6 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
   omni_attitude_controller_Y.Tau_x = controlTorque.x;
   omni_attitude_controller_Y.Tau_y = controlTorque.y;
   omni_attitude_controller_Y.Tau_z = controlTorque.z;
-}
-
-void omni_attitude_controller_PowerDistribution(void)
-{
-  // Thrust Clamper
-  float Thrust;
-  if (omni_attitude_controller_U.thrust >
-      omni_attitude_controller_P.Saturation_UpperSat) {
-    Thrust = omni_attitude_controller_P.Saturation_UpperSat;
-  } else if (omni_attitude_controller_U.thrust <
-             omni_attitude_controller_P.Saturation_LowerSat) {
-    Thrust = omni_attitude_controller_P.Saturation_LowerSat;
-  } else {
-    Thrust = omni_attitude_controller_U.thrust;
-  }
 
   // power distribution and turn Nm into N
   const float arm = 0.707106781f * 0.046f;
@@ -192,10 +192,42 @@ void omni_attitude_controller_PowerDistribution(void)
   omni_attitude_controller_Y.t_m3 = thrustPart - rollPart + pitchPart - yawPart;
   omni_attitude_controller_Y.t_m4 = thrustPart + rollPart + pitchPart + yawPart;
 
-  if (omni_attitude_controller_Y.t_m1 < 0.0f) omni_attitude_controller_Y.t_m1 = 0.0f;
-  if (omni_attitude_controller_Y.t_m2 < 0.0f) omni_attitude_controller_Y.t_m2 = 0.0f;
-  if (omni_attitude_controller_Y.t_m3 < 0.0f) omni_attitude_controller_Y.t_m3 = 0.0f;
-  if (omni_attitude_controller_Y.t_m4 < 0.0f) omni_attitude_controller_Y.t_m4 = 0.0f;
+  omni_attitude_controller_Y.IsClamped = 0;
+  if (omni_attitude_controller_Y.t_m1 < 0.0f) 
+  {
+    omni_attitude_controller_Y.t_m1 = 0.0f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  } else if (omni_attitude_controller_Y.t_m1 > 0.1472f) {
+    omni_attitude_controller_Y.t_m1 = 0.1472f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  }
+
+  if (omni_attitude_controller_Y.t_m2 < 0.0f) 
+  {
+    omni_attitude_controller_Y.t_m2 = 0.0f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  } else if (omni_attitude_controller_Y.t_m2 > 0.1472f) {
+    omni_attitude_controller_Y.t_m2 = 0.1472f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  }
+
+  if (omni_attitude_controller_Y.t_m3 < 0.0f) 
+  {
+    omni_attitude_controller_Y.t_m3 = 0.0f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  } else if (omni_attitude_controller_Y.t_m3 > 0.1472f) {
+    omni_attitude_controller_Y.t_m3 = 0.1472f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  }
+
+  if (omni_attitude_controller_Y.t_m4 < 0.0f) 
+  {
+    omni_attitude_controller_Y.t_m4 = 0.0f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  } else if (omni_attitude_controller_Y.t_m4 > 0.1472f) {
+    omni_attitude_controller_Y.t_m4 = 0.1472f;
+    omni_attitude_controller_Y.IsClamped = 1;
+  }
 
   // Turn Newton into percentage and count
   omni_attitude_controller_Y.m1 = omni_attitude_controller_Y.t_m1 / 0.1472f * 65535;

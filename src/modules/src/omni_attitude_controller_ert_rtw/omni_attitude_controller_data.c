@@ -52,9 +52,9 @@ P_omni_attitude_controller_T omni_attitude_controller_P = {
 
 
   /* Ki */
-  100.0F,
-  100.0F,
-  75.0F,
+  0.0F,
+  0.0F,
+  0.0F,
 
   /* Variable: ThrustToTorque
    * Referenced by: '<Root>/MATLAB Function1'
