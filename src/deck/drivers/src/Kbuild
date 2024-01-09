@@ -15,6 +15,7 @@ obj-$(CONFIG_DECK_LOCO)                 += lpsTdoa3Tag.o
 obj-$(CONFIG_DECK_LOCO)                 += lpsTwrTag.o
 obj-$(CONFIG_DECK_MULTIRANGER)          += multiranger.o
 obj-$(CONFIG_DECK_OA)                   += oa.o
+obj-$(CONFIG_DECK_SERVO)                += servo.o
 obj-$(CONFIG_DECK_USD)                  += usddeck.o
 obj-$(CONFIG_DECK_ZRANGER)              += zranger.o
 obj-$(CONFIG_DECK_ZRANGER2)             += zranger2.o
