@@ -46,25 +46,25 @@ P_omni_attitude_controller_T omni_attitude_controller_P = {
   /* Variable: Kw
    * Referenced by: '<Root>/LLATC'
    */
-  12.0F,
-  12.0F,
-  8.0F,
+  30.0F,
+  30.0F,
+  20.0F,
 
 
   /* Ki */
-  1.67F,
-  1.67F,
-  1.25F
+  100.0F,
+  100.0F,
+  75.0F,
 
   /* Variable: ThrustToTorque
    * Referenced by: '<Root>/MATLAB Function1'
    */
-  0.005964552,
+  0.005964552F,
 
   /* Variable: a_perpen
    * Referenced by: '<Root>/MATLAB Function1'
    */
-  0.032521999999999995,
+  0.032521999999999995F,
 
   /* Computed Parameter: Saturation_UpperSat
    * Referenced by: '<Root>/Saturation'

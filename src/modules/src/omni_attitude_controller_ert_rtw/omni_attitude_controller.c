@@ -140,12 +140,12 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
   eiInt.z = omni_attitude_controller_Y.eizInt;
 
   // PID Controller M = J * ( Kw*eW + Ki * eiInt ) with unit Nm
-  struct vec KW = vzero();
+  volatile struct vec KW = vzero();
   KW.x = omni_attitude_controller_P.Kwx;
   KW.y = omni_attitude_controller_P.Kwy;
   KW.z = omni_attitude_controller_P.Kwz;
 
-  struct vec Ki = vzero();
+  volatile struct vec Ki = vzero();
   Ki.x = omni_attitude_controller_P.Kix;
   Ki.y = omni_attitude_controller_P.Kiy;
   Ki.z = omni_attitude_controller_P.Kiz;
@@ -604,19 +604,19 @@ void omni_attitude_controller_step(void)
   rtb_Product3_k = rtb_VectorConcatenate_f_0[1];
   rtb_Product1_a = rtb_VectorConcatenate_f_0[0];
   rtb_Product_i = rtb_VectorConcatenate_f_0[2];
-  for (i_0 = 0; i_0 < 3; i_0++) {
-    rtb_VectorConcatenate_f_0[i_0] = ((real32_T)
-      omni_attitude_controller_P.Kw[i_0 + 3] * rtb_Product3_k + (real32_T)
-      omni_attitude_controller_P.Kw[i_0] * rtb_Product1_a) + (real32_T)
-      omni_attitude_controller_P.Kw[i_0 + 6] * rtb_Product_i;
-    rtb_M[i_0] = ((real32_T)omni_attitude_controller_P.KR[i_0 + 3] * fty +
-                  (real32_T)omni_attitude_controller_P.KR[i_0] * rtb_Product2_iz)
-      + (real32_T)omni_attitude_controller_P.KR[i_0 + 6] * ftz;
-  }
+  // for (i_0 = 0; i_0 < 3; i_0++) {
+  //   rtb_VectorConcatenate_f_0[i_0] = ((real32_T)
+  //     omni_attitude_controller_P.Kw[i_0 + 3] * rtb_Product3_k + (real32_T)
+  //     omni_attitude_controller_P.Kw[i_0] * rtb_Product1_a) + (real32_T)
+  //     omni_attitude_controller_P.Kw[i_0 + 6] * rtb_Product_i;
+  //   rtb_M[i_0] = ((real32_T)omni_attitude_controller_P.KR[i_0 + 3] * fty +
+  //                 (real32_T)omni_attitude_controller_P.KR[i_0] * rtb_Product2_iz)
+  //     + (real32_T)omni_attitude_controller_P.KR[i_0 + 6] * ftz;
+  // }
 
-  for (i_0 = 0; i_0 < 9; i_0++) {
-    rtb_VectorConcatenate_o[i_0] = (real32_T)-omni_attitude_controller_P.Ji[i_0];
-  }
+  // for (i_0 = 0; i_0 < 9; i_0++) {
+  //   rtb_VectorConcatenate_o[i_0] = (real32_T)-omni_attitude_controller_P.Ji[i_0];
+  // }
 
   rtb_Product3_k = rtb_M[0] + rtb_VectorConcatenate_f_0[0];
   rtb_Product2_iz = rtb_M[1] + rtb_VectorConcatenate_f_0[1];

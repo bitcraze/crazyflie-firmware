@@ -95,21 +95,21 @@ struct P_omni_attitude_controller_T_ {
   real_T Jiy;
   real_T Jiz;
 
-  real_T KRx;                        /* Variable: KR
+  volatile real_T KRx;                        /* Variable: KR
                                         * Referenced by: '<Root>/LLATC'
                                         */
-  real_T KRy;
-  real_T KRz;
+  volatile real_T KRy;
+  volatile real_T KRz;
 
-  real_T Kwx;                        /* Variable: Kw
+  volatile real_T Kwx;                        /* Variable: Kw
                                         * Referenced by: '<Root>/LLATC'
                                         */
-  real_T Kwy;
-  real_T Kwz;
+  volatile real_T Kwy;
+  volatile real_T Kwz;
 
-  real_T Kix;
-  real_T Kiy;
-  real_T Kiz;
+  volatile real_T Kix;
+  volatile real_T Kiy;
+  volatile real_T Kiz;
   
   real_T ThrustToTorque;               /* Variable: ThrustToTorque
                                         * Referenced by: '<Root>/MATLAB Function1'
