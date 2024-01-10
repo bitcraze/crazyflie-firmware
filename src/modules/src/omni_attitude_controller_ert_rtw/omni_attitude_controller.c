@@ -24,6 +24,8 @@
 #include <string.h>
 #include "math3d.h"
 
+omni_attitude_controller_Gain Omni_gains = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+
 /* External inputs (root inport signals with default storage) */
 ExtU_omni_attitude_controller_T omni_attitude_controller_U;
 
@@ -104,9 +106,9 @@ void omni_attitude_controller_DoAttitudeLoop(void)
   omni_attitude_controller_Y.eRy = eR.y;
   omni_attitude_controller_Y.eRz = eR.z;
 
-  omni_attitude_controller_Y.wx_r = (real32_T)omni_attitude_controller_P.KRx * eR.x; 
-  omni_attitude_controller_Y.wy_r = (real32_T)omni_attitude_controller_P.KRy * eR.y; 
-  omni_attitude_controller_Y.wz_r = (real32_T)omni_attitude_controller_P.KRz * eR.z; 
+  omni_attitude_controller_Y.wx_r = (real32_T)Omni_gains.krx * eR.x; 
+  omni_attitude_controller_Y.wy_r = (real32_T)Omni_gains.kry * eR.y; 
+  omni_attitude_controller_Y.wz_r = (real32_T)Omni_gains.krz * eR.z; 
 }
 
 void omni_attitude_controller_DoAttitudeRateLoop(void)
@@ -121,9 +123,9 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
 
   // eW = agvr - w
   struct vec eW = vzero();
-  eW.x = omni_attitude_controller_Y.wx_r - Omega.x;
-  eW.y = omni_attitude_controller_Y.wy_r - Omega.y;
-  eW.z = omni_attitude_controller_Y.wz_r - Omega.z;
+  eW.x = (float)omni_attitude_controller_Y.wx_r - Omega.x;
+  eW.y = (float)omni_attitude_controller_Y.wy_r - Omega.y;
+  eW.z = (float)omni_attitude_controller_Y.wz_r - Omega.z;
 
   omni_attitude_controller_Y.eWx = eW.x;
   omni_attitude_controller_Y.eWy = eW.y;
@@ -155,25 +157,34 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
   eiInt.z = omni_attitude_controller_Y.eizInt;
 
   // PID Controller M = J * ( Kw*eW + Ki * eiInt ) with unit Nm
-  volatile struct vec KW = vzero();
-  KW.x = omni_attitude_controller_P.Kwx;
-  KW.y = omni_attitude_controller_P.Kwy;
-  KW.z = omni_attitude_controller_P.Kwz;
+  // volatile struct vec KW = vzero();
+  // KW.x = omni_attitude_controller_P.Kwx;
+  // KW.y = omni_attitude_controller_P.Kwy;
+  // KW.z = omni_attitude_controller_P.Kwz;
 
-  volatile struct vec Ki = vzero();
-  Ki.x = omni_attitude_controller_P.Kix;
-  Ki.y = omni_attitude_controller_P.Kiy;
-  Ki.z = omni_attitude_controller_P.Kiz;
+  // volatile struct vec Ki = vzero();
+  // Ki.x = omni_attitude_controller_P.Kix;
+  // Ki.y = omni_attitude_controller_P.Kiy;
+  // Ki.z = omni_attitude_controller_P.Kiz;
 
-  struct vec uW = veltmul(KW, eW);
-  struct vec ui = veltmul(Ki, eiInt);
+  struct vec uW = vzero();
+  struct vec ui = vzero();
   struct vec controlTorque = vzero();
+
+  uW.x = Omni_gains.kwx * eW.x;
+  uW.y = Omni_gains.kwy * eW.y;
+  uW.z = Omni_gains.kwz * eW.z;
+
+  ui.x = Omni_gains.kix * eiInt.x;
+  ui.y = Omni_gains.kiy * eiInt.y;
+  ui.z = Omni_gains.kiz * eiInt.z;
+
   controlTorque = mvmul(CRAZYFLIE_INERTIA_I, vadd(ui,uW));
 
   float dJzy = CRAZYFLIE_INERTIA_I.m[2][2] - CRAZYFLIE_INERTIA_I.m[1][1];
   float dJzx = CRAZYFLIE_INERTIA_I.m[2][2] - CRAZYFLIE_INERTIA_I.m[0][0];
-  omni_attitude_controller_Y.Tau_x = controlTorque.x + dJzy * omni_attitude_controller_Y.wy_r * Omega.z;
-  omni_attitude_controller_Y.Tau_y = controlTorque.y - dJzx * omni_attitude_controller_Y.wx_r * Omega.z;
+  omni_attitude_controller_Y.Tau_x = controlTorque.x + Omni_gains.kffx * dJzy * omni_attitude_controller_Y.wy_r * Omega.z;
+  omni_attitude_controller_Y.Tau_y = controlTorque.y - Omni_gains.kffy * dJzx * omni_attitude_controller_Y.wx_r * Omega.z;
   // omni_attitude_controller_Y.Tau_z = controlTorque.z;
   omni_attitude_controller_Y.Tau_z = controlTorque.x * tanf(omni_attitude_controller_U.wx_r);
 

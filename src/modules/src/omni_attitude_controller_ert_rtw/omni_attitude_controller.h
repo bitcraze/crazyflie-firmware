@@ -28,6 +28,21 @@
 #include "pid.h"
 #include "rt_nonfinite.h"
 
+typedef struct {
+  float krx;
+  float kry;
+  float krz;
+  float kix;
+  float kiy;
+  float kiz;
+  float kwx;
+  float kwy;
+  float kwz;
+  float kffx;
+  float kffy;
+} omni_attitude_controller_Gain;
+
+
 /* External inputs (root inport signals with default storage) */
 typedef struct {
   real32_T thrust;                     /* '<Root>/thrust' */
@@ -167,6 +182,8 @@ struct P_omni_attitude_controller_T_ {
                                       * Referenced by: '<Root>/Saturation1'
                                       */
 };
+
+extern omni_attitude_controller_Gain Omni_gains;
 
 /* Block parameters (default storage) */
 extern P_omni_attitude_controller_T omni_attitude_controller_P;

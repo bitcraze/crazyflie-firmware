@@ -54,6 +54,21 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
       omni_attitude_controller_U.gyro_y = radians(sensors->gyro.y);
       omni_attitude_controller_U.gyro_z = radians(sensors->gyro.z);
 
+      Omni_gains.krx = omni_attitude_controller_P.KRx;
+      Omni_gains.kry = omni_attitude_controller_P.KRy;
+      Omni_gains.krz = omni_attitude_controller_P.KRz;
+
+      Omni_gains.kix = omni_attitude_controller_P.Kix;
+      Omni_gains.kiy = omni_attitude_controller_P.Kiy;
+      Omni_gains.kiz = omni_attitude_controller_P.Kiz;
+
+      Omni_gains.kwx = omni_attitude_controller_P.Kwx;
+      Omni_gains.kwy = omni_attitude_controller_P.Kwy;
+      Omni_gains.kwz = omni_attitude_controller_P.Kwz;
+
+      Omni_gains.kffx = 0.6f;
+      Omni_gains.kffy = 0.6f;
+
       omni_attitude_controller_DoAttitudeLoop();
       omni_attitude_controller_DoAttitudeRateLoop();
   }
