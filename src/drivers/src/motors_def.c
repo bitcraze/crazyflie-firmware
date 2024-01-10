@@ -623,7 +623,7 @@ static const MotorPerifDef MOTORS_PB5_TIM3_CH2_BRUSHLESS_OD =
 };
 
 // Deck IO3, PB4, TIM3_CH1
-static const MotorPerifDef MOTORS_PB4_TIM2_CH1_BRUSHLESS_OD =
+static const MotorPerifDef MOTORS_PB4_TIM3_CH1_BRUSHLESS_OD =
 {
     .drvType       = BRUSHLESS,
     .gpioPerif     = RCC_AHB1Periph_GPIOB,
@@ -743,7 +743,7 @@ const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
 const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
 {
   &MOTORS_PA2_TIM2_CH3_BRUSHLESS_OD,
-  &MOTORS_PB4_TIM2_CH1_BRUSHLESS_OD,
+  &MOTORS_PB4_TIM3_CH1_BRUSHLESS_OD,
   &MOTORS_PB5_TIM3_CH2_BRUSHLESS_OD,
   &MOTORS_PA3_TIM2_CH4_BRUSHLESS_OD
 };
@@ -823,7 +823,7 @@ const MotorPerifDef* servoMapIO2 = &MOTORS_PB5_TIM3_CH2_BRUSHLESS_OD;
 /**
  * Servo mapped to the Bigquad M2 / IO3 port
  */
-const MotorPerifDef* servoMapIO3 = &MOTORS_PB4_TIM2_CH1_BRUSHLESS_OD;
+const MotorPerifDef* servoMapIO3 = &MOTORS_PB4_TIM3_CH1_BRUSHLESS_OD;
 
 /**
  * Servo mapped to the Bigquad M4 / RX2 port
