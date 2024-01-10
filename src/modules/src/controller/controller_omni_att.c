@@ -41,7 +41,7 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
       omni_attitude_controller_U.qy_r = setpoint->attitudeQuaternion.q2;
       omni_attitude_controller_U.qz_r = setpoint->attitudeQuaternion.q3;
 
-      // omni_attitude_controller_U.wx_r = setpoint->attitude.roll;
+      omni_attitude_controller_U.wx_r = setpoint->attitude.roll;
       // omni_attitude_controller_U.wy_r = setpoint->attitude.pitch;
       // omni_attitude_controller_U.wz_r = setpoint->attitude.yaw;
 
@@ -80,6 +80,9 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
 
 LOG_GROUP_START(sctrl_omni)
 // Angular position loop
+LOG_ADD(LOG_FLOAT, KRx, &omni_attitude_controller_P.KRx)
+LOG_ADD(LOG_FLOAT, KWx, &omni_attitude_controller_P.Kwx)
+
 LOG_ADD(LOG_FLOAT, qw_r, &omni_attitude_controller_U.qw_r)
 LOG_ADD(LOG_FLOAT, qx_r, &omni_attitude_controller_U.qx_r)
 LOG_ADD(LOG_FLOAT, qy_r, &omni_attitude_controller_U.qy_r)
