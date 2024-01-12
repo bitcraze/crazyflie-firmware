@@ -108,7 +108,8 @@ void omni_attitude_controller_DoAttitudeLoop(void)
 
   omni_attitude_controller_Y.wx_r = (real32_T)Omni_gains.krx * eR.x; 
   omni_attitude_controller_Y.wy_r = (real32_T)Omni_gains.kry * eR.y; 
-  omni_attitude_controller_Y.wz_r = (real32_T)Omni_gains.krz * eR.z; 
+  // omni_attitude_controller_Y.wz_r = (real32_T)Omni_gains.krz * eR.z; 
+  omni_attitude_controller_Y.wz_r = omni_attitude_controller_Y.wx_r * tanf(omni_attitude_controller_U.wx_r);
 }
 
 void omni_attitude_controller_DoAttitudeRateLoop(float dt)
@@ -185,8 +186,8 @@ void omni_attitude_controller_DoAttitudeRateLoop(float dt)
   float dJzx = CRAZYFLIE_INERTIA_I.m[2][2] - CRAZYFLIE_INERTIA_I.m[0][0];
   omni_attitude_controller_Y.Tau_x = controlTorque.x + Omni_gains.kffx * dJzy * omni_attitude_controller_Y.wy_r * Omega.z;
   omni_attitude_controller_Y.Tau_y = controlTorque.y - Omni_gains.kffy * dJzx * omni_attitude_controller_Y.wx_r * Omega.z;
-  // omni_attitude_controller_Y.Tau_z = controlTorque.z;
-  omni_attitude_controller_Y.Tau_z = controlTorque.x * tanf(omni_attitude_controller_U.wx_r);
+  omni_attitude_controller_Y.Tau_z = controlTorque.z;
+  // omni_attitude_controller_Y.Tau_z = controlTorque.x * tanf(omni_attitude_controller_U.wx_r);
 
   // power distribution and turn Nm into N
   const float arm = 0.707106781f * 0.046f;
