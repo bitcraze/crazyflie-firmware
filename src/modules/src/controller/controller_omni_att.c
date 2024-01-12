@@ -25,6 +25,9 @@ void controllerOmniAttInit(void)
   Omni_gains.kry = omni_attitude_controller_P.KRy;
   Omni_gains.krz = omni_attitude_controller_P.KRz;
 
+  Omni_gains.krix = omni_attitude_controller_P.KRix;
+  Omni_gains.kriy = omni_attitude_controller_P.KRiy;
+
   Omni_gains.kix = omni_attitude_controller_P.Kix;
   Omni_gains.kiy = omni_attitude_controller_P.Kiy;
   Omni_gains.kiz = omni_attitude_controller_P.Kiz;
@@ -32,6 +35,10 @@ void controllerOmniAttInit(void)
   Omni_gains.kwx = omni_attitude_controller_P.Kwx;
   Omni_gains.kwy = omni_attitude_controller_P.Kwy;
   Omni_gains.kwz = omni_attitude_controller_P.Kwz;
+
+  Omni_gains.kdx = omni_attitude_controller_P.Kdx;
+  Omni_gains.kdy = omni_attitude_controller_P.Kdy;
+  Omni_gains.kdz = omni_attitude_controller_P.Kdz;
 
   Omni_gains.kffx = 0.6f;
   Omni_gains.kffy = 0.6f;
@@ -64,8 +71,8 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
       omni_attitude_controller_U.qy_IMU = state->attitudeQuaternion.y;
       omni_attitude_controller_U.qz_IMU = state->attitudeQuaternion.z;
 
-      omni_attitude_controller_U.gyro_x = radians(sensors->gyro.x);
-      omni_attitude_controller_U.gyro_y = radians(sensors->gyro.y);
+      omni_attitude_controller_U.gyro_x = -radians(sensors->gyro.y);
+      omni_attitude_controller_U.gyro_y = radians(sensors->gyro.x);
       omni_attitude_controller_U.gyro_z = radians(sensors->gyro.z);
 
       omni_attitude_controller_DoAttitudeLoop();
@@ -117,6 +124,9 @@ LOG_ADD(LOG_FLOAT, wx_r, &omni_attitude_controller_Y.wx_r)
 LOG_ADD(LOG_FLOAT, wy_r, &omni_attitude_controller_Y.wy_r)
 LOG_ADD(LOG_FLOAT, wz_r, &omni_attitude_controller_Y.wz_r)
 
+LOG_ADD(LOG_FLOAT, wx, &omni_attitude_controller_U.gyro_x)
+LOG_ADD(LOG_FLOAT, wy, &omni_attitude_controller_U.gyro_y)
+
 // Angular speed loop
 LOG_ADD(LOG_FLOAT, eWx, &omni_attitude_controller_Y.eWx)
 LOG_ADD(LOG_FLOAT, eWy, &omni_attitude_controller_Y.eWy)
@@ -151,6 +161,9 @@ PARAM_ADD(PARAM_FLOAT, KRx, &Omni_gains.krx)
 PARAM_ADD(PARAM_FLOAT, KRy, &Omni_gains.kry)
 PARAM_ADD(PARAM_FLOAT, KRz, &Omni_gains.krz)
 
+PARAM_ADD(PARAM_FLOAT, KRix, &Omni_gains.krix)
+PARAM_ADD(PARAM_FLOAT, KRiy, &Omni_gains.kriy)
+
 PARAM_ADD(PARAM_FLOAT, Kwx, &Omni_gains.kwx)
 PARAM_ADD(PARAM_FLOAT, Kwy, &Omni_gains.kwy)
 PARAM_ADD(PARAM_FLOAT, Kwz, &Omni_gains.kwz)
@@ -158,6 +171,10 @@ PARAM_ADD(PARAM_FLOAT, Kwz, &Omni_gains.kwz)
 PARAM_ADD(PARAM_FLOAT, Kix, &Omni_gains.kix)
 PARAM_ADD(PARAM_FLOAT, Kiy, &Omni_gains.kiy)
 PARAM_ADD(PARAM_FLOAT, Kiz, &Omni_gains.kiz)
+
+PARAM_ADD(PARAM_FLOAT, Kdx, &Omni_gains.kdx)
+PARAM_ADD(PARAM_FLOAT, Kdy, &Omni_gains.kdy)
+PARAM_ADD(PARAM_FLOAT, Kdz, &Omni_gains.kdz)
 
 PARAM_ADD(PARAM_FLOAT, Kffx, &Omni_gains.kffx)
 PARAM_ADD(PARAM_FLOAT, Kffy, &Omni_gains.kffy)

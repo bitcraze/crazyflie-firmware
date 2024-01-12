@@ -29,15 +29,23 @@
 #include "rt_nonfinite.h"
 
 typedef struct {
+  // pos loop
   float krx;
   float kry;
   float krz;
+  float krix;
+  float kriy;
+  // speed loop
   float kix;
   float kiy;
   float kiz;
+  float kdx;
+  float kdy;
+  float kdz;
   float kwx;
   float kwy;
   float kwz;
+  // feedforward
   float kffx;
   float kffy;
 } omni_attitude_controller_Gain;
@@ -65,10 +73,12 @@ typedef struct {
 /* External outputs (root outports fed by signals with default storage) */
 typedef struct {
   uint16_T IsClamped;
+  uint16_T Treset;
   uint16_T m1;                         /* '<Root>/m1' */
   uint16_T m2;                         /* '<Root>/m2' */
   uint16_T m3;                         /* '<Root>/m3' */
   uint16_T m4;                         /* '<Root>/m4' */
+  real32_T LastThrustCmd;
   real32_T t_m1;                       /* '<Root>/t_m1' */
   real32_T t_m2;                       /* '<Root>/t_m2' */
   real32_T t_m3;                       /* '<Root>/t_m3' */
@@ -79,9 +89,15 @@ typedef struct {
   real32_T wx_r;  // att loop output
   real32_T wy_r;  // att loop output
   real32_T wz_r;  // att loop output
+  real32_T eRxInt;  // att loop state
+  real32_T eRyInt;  // att loop state
+  real32_T eRzInt;// att loop state
   real32_T eWx;  // att rate loop state
   real32_T eWy;  // att rate loop state
   real32_T eWz;  // att rate loop state
+  real32_T LasteWx;  // att rate loop state
+  real32_T LasteWy;  // att rate loop state
+  real32_T LasteWz;  // att rate loop state
   real32_T eix;  // att rate loop state
   real32_T eiy;  // att rate loop state
   real32_T eiz;  // att rate loop state
@@ -116,6 +132,8 @@ struct P_omni_attitude_controller_T_ {
                                         */
   volatile real_T KRy;
   volatile real_T KRz;
+  volatile real_T KRix;
+  volatile real_T KRiy;
 
   volatile real_T Kwx;                        /* Variable: Kw
                                         * Referenced by: '<Root>/LLATC'
@@ -126,6 +144,9 @@ struct P_omni_attitude_controller_T_ {
   volatile real_T Kix;
   volatile real_T Kiy;
   volatile real_T Kiz;
+  volatile real_T Kdx;
+  volatile real_T Kdy;
+  volatile real_T Kdz;
   
   real_T ThrustToTorque;               /* Variable: ThrustToTorque
                                         * Referenced by: '<Root>/MATLAB Function1'

@@ -24,7 +24,7 @@
 #include <string.h>
 #include "math3d.h"
 
-omni_attitude_controller_Gain Omni_gains = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+omni_attitude_controller_Gain Omni_gains = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 
 /* External inputs (root inport signals with default storage) */
 ExtU_omni_attitude_controller_T omni_attitude_controller_U;
@@ -106,8 +106,11 @@ void omni_attitude_controller_DoAttitudeLoop(void)
   omni_attitude_controller_Y.eRy = eR.y;
   omni_attitude_controller_Y.eRz = eR.z;
 
-  omni_attitude_controller_Y.wx_r = (real32_T)Omni_gains.krx * eR.x; 
-  omni_attitude_controller_Y.wy_r = (real32_T)Omni_gains.kry * eR.y; 
+  omni_attitude_controller_Y.eRxInt = omni_attitude_controller_Y.eRxInt + eR.x * 0.002f;
+  omni_attitude_controller_Y.eRyInt = omni_attitude_controller_Y.eRyInt + eR.y * 0.002f;
+
+  omni_attitude_controller_Y.wx_r = (real32_T)Omni_gains.krx * eR.x + (real32_T)Omni_gains.krix * omni_attitude_controller_Y.eRxInt; 
+  omni_attitude_controller_Y.wy_r = (real32_T)Omni_gains.kry * eR.y + (real32_T)Omni_gains.kriy * omni_attitude_controller_Y.eRyInt; ; 
   // omni_attitude_controller_Y.wz_r = (real32_T)Omni_gains.krz * eR.z; 
   omni_attitude_controller_Y.wz_r = omni_attitude_controller_Y.wx_r * tanf(omni_attitude_controller_U.wx_r);
 }
@@ -118,8 +121,8 @@ void omni_attitude_controller_DoAttitudeRateLoop(float dt)
   // eW = Omega - R_T * (R_r * agvr);
   // struct vec eW = vsub(Omega, mvmul(R_T, mvmul(R_r, agvr)));
   struct vec Omega = vzero();
-  Omega.x = -omni_attitude_controller_U.gyro_y;
-  Omega.y = omni_attitude_controller_U.gyro_x;
+  Omega.x = omni_attitude_controller_U.gyro_x;
+  Omega.y = omni_attitude_controller_U.gyro_y;
   Omega.z = omni_attitude_controller_U.gyro_z;
 
   // eW = agvr - w
@@ -143,6 +146,21 @@ void omni_attitude_controller_DoAttitudeRateLoop(float dt)
   } else {
     Thrust = omni_attitude_controller_U.thrust;
   }
+
+  if(omni_attitude_controller_Y.LastThrustCmd < 0.000898f && Thrust > 0.000898f)
+  {
+    omni_attitude_controller_Y.Treset = 1;
+    omni_attitude_controller_Y.eixInt = 0;
+    omni_attitude_controller_Y.eiyInt = 0;
+    omni_attitude_controller_Y.eizInt = 0;
+    omni_attitude_controller_Y.eRxInt = 0;
+    omni_attitude_controller_Y.eRyInt = 0;
+    omni_attitude_controller_Y.eRzInt = 0;
+  } else {
+    omni_attitude_controller_Y.Treset = 0;
+  }
+
+  omni_attitude_controller_Y.LastThrustCmd = (real32_T)Thrust;
 
   // eiInt
   if( omni_attitude_controller_Y.IsClamped == 0 && Thrust > 0.000898f )
@@ -170,6 +188,7 @@ void omni_attitude_controller_DoAttitudeRateLoop(float dt)
 
   struct vec uW = vzero();
   struct vec ui = vzero();
+  struct vec ud = vzero();
   struct vec controlTorque = vzero();
 
   uW.x = Omni_gains.kwx * eW.x;
@@ -180,7 +199,16 @@ void omni_attitude_controller_DoAttitudeRateLoop(float dt)
   ui.y = Omni_gains.kiy * eiInt.y;
   ui.z = Omni_gains.kiz * eiInt.z;
 
-  controlTorque = mvmul(CRAZYFLIE_INERTIA_I, vadd(ui,uW));
+  ud.x = Omni_gains.kdx * (eW.x - omni_attitude_controller_Y.LasteWx) / dt;
+  ud.y = Omni_gains.kdy * (eW.y - omni_attitude_controller_Y.LasteWy) / dt;
+  ud.z = Omni_gains.kdz * (eW.z - omni_attitude_controller_Y.LasteWz) / dt;
+
+  // update 
+  omni_attitude_controller_Y.LasteWx = eW.x;
+  omni_attitude_controller_Y.LasteWy = eW.y;
+  omni_attitude_controller_Y.LasteWz = eW.z;
+
+  controlTorque = mvmul(CRAZYFLIE_INERTIA_I, vadd(ud, vadd(ui,uW)));
 
   float dJzy = CRAZYFLIE_INERTIA_I.m[2][2] - CRAZYFLIE_INERTIA_I.m[1][1];
   float dJzx = CRAZYFLIE_INERTIA_I.m[2][2] - CRAZYFLIE_INERTIA_I.m[0][0];

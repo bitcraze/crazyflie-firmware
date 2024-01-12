@@ -43,6 +43,9 @@ P_omni_attitude_controller_T omni_attitude_controller_P = {
   6.0F,
   6.0F,
   4.0F,
+
+  0.0F,
+  0.0F,
   /* Variable: Kw
    * Referenced by: '<Root>/LLATC'
    */
@@ -54,7 +57,9 @@ P_omni_attitude_controller_T omni_attitude_controller_P = {
   15.0F,
   15.0F,
   10.0F,
-
+  0.0F,
+  0.0F,
+  0.0F,
   /* Variable: ThrustToTorque
    * Referenced by: '<Root>/MATLAB Function1'
    */
