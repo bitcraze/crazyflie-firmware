@@ -111,7 +111,7 @@ void omni_attitude_controller_DoAttitudeLoop(void)
   omni_attitude_controller_Y.wz_r = (real32_T)Omni_gains.krz * eR.z; 
 }
 
-void omni_attitude_controller_DoAttitudeRateLoop(void)
+void omni_attitude_controller_DoAttitudeRateLoop(float dt)
 {
   /* Be aware of the sign of the signals */
   // eW = Omega - R_T * (R_r * agvr);
@@ -146,9 +146,9 @@ void omni_attitude_controller_DoAttitudeRateLoop(void)
   // eiInt
   if( omni_attitude_controller_Y.IsClamped == 0 && Thrust > 0.000898f )
   {
-    omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * 0.002f; // 500Hz loop
-    omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * 0.002f; // 500Hz loop
-    omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eW.z * 0.002f; // 500Hz loop
+    omni_attitude_controller_Y.eixInt = omni_attitude_controller_Y.eixInt + eW.x * dt;
+    omni_attitude_controller_Y.eiyInt = omni_attitude_controller_Y.eiyInt + eW.y * dt;
+    omni_attitude_controller_Y.eizInt = omni_attitude_controller_Y.eizInt + eW.z * dt;
   }
 
   struct vec eiInt = vzero();

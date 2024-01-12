@@ -200,8 +200,7 @@ extern void omni_attitude_controller_step(void);
 extern void omni_attitude_controller_step_hand(void);
 extern void omni_attitude_controller_terminate(void);
 extern void omni_attitude_controller_DoAttitudeLoop(void);
-extern void omni_attitude_controller_DoAttitudeRateLoop(void);
-
+extern void omni_attitude_controller_DoAttitudeRateLoop(float dt);
 /*-
  * These blocks were eliminated from the model due to optimizations:
  *

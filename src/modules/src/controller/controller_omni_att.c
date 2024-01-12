@@ -69,8 +69,10 @@ void controllerOmniAtt(control_t *control, const setpoint_t *setpoint,
       omni_attitude_controller_U.gyro_z = radians(sensors->gyro.z);
 
       omni_attitude_controller_DoAttitudeLoop();
-      omni_attitude_controller_DoAttitudeRateLoop();
   }
+
+  float dt = 0.001f;
+  omni_attitude_controller_DoAttitudeRateLoop(dt);
 
   if (setpoint->thrust < 0.000898f)
   {
@@ -156,6 +158,9 @@ PARAM_ADD(PARAM_FLOAT, Kwz, &Omni_gains.kwz)
 PARAM_ADD(PARAM_FLOAT, Kix, &Omni_gains.kix)
 PARAM_ADD(PARAM_FLOAT, Kiy, &Omni_gains.kiy)
 PARAM_ADD(PARAM_FLOAT, Kiz, &Omni_gains.kiz)
+
+PARAM_ADD(PARAM_FLOAT, Kffx, &Omni_gains.kffx)
+PARAM_ADD(PARAM_FLOAT, Kffy, &Omni_gains.kffy)
 
 PARAM_GROUP_STOP(sparam_omni)
 
