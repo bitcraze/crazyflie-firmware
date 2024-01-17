@@ -47,6 +47,8 @@ static uint16_t servo_MAX_us = 2000;
 
 #include "servo.h"
 
+// #define DEBUG_SERVO
+
 static bool isInit = false;
 
 const MotorPerifDef* servoMap;
@@ -164,8 +166,10 @@ void servoSetAngle(uint8_t angle)
   double pulse_length_s = pulse_length_us / 1000000;
   const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ);
   servoMap->setCompare(servoMap->tim, ccr_val);
-  DEBUG_PRINT("Set Angle: %u deg, pulse width: %f us \n", angle, pulse_length_us);
-
+  
+  #ifdef DEBUG_SERVO
+    DEBUG_PRINT("Set Angle: %u deg, pulse width: %f us \n", angle, pulse_length_us);
+  #endif
 }
 
 uint8_t saturateAngle(uint8_t angle)
