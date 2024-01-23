@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2019 Wolfgang Hoenig
+Copyright (c) 2024 Khaled Wahba
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,10 +32,6 @@ CDC 2010
 * Difference to Mellinger:
   * Different angular velocity error
   * Higher-order terms in attitude controller
-
-TODO:
-  * Switch position controller
-  * consider Omega_d dot (currently assumes this is zero)
 */
 
 #include <math.h>
@@ -43,11 +39,11 @@ TODO:
 
 #include "math3d.h"
 #include "controller_lee.h"
-
-#define GRAVITY_MAGNITUDE (9.81f)
+#include "physicalConstants.h"
+#include "power_distribution.h"
 
 static controllerLee_t g_self = {
-  .mass = 0.034, // TODO: should be CF global for other modules
+  .mass = CF_MASS,
 
   // Inertia matrix (diagonal matrix), see
   // System Identification of the Crazyflie 2.0 Nano Quadrocopter
@@ -157,7 +153,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       controllerLeeReset(self);
     }
 
-  // Compute Desired Rotation matrix
+    // Compute Desired Rotation matrix
     float normFd = control->thrustSi;
 
     struct vec xdes = vbasis(0);
@@ -190,8 +186,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
           return;
       }
     }
-    // On CF2, thrust is mapped 65536 <==> 4 * 12 grams
-    const float max_thrust = 70.0f / 1000.0f * 9.81f; // N
+    const float max_thrust = powerDistributionGetMaxThrust(); // N
     control->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
    self->qr = mkvec(
@@ -229,7 +224,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   struct vec hw = vzero();
   // Desired Jerk and snap for now are zeros vector
   struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
-  // struct vec desJerk = vzero();
 
   if (control->thrustSi != 0) {
     struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
@@ -246,7 +240,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   // Integral part on angle
   self->i_error_att = vadd(self->i_error_att, vscl(dt, eR));
 
-
   // compute moments
   // M = -kR eR - kw ew + w x Jw - J(w x wr)
   self->u = vadd4(
@@ -254,10 +247,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     vneg(veltmul(self->Komega, omega_error)),
     vneg(veltmul(self->KI, self->i_error_att)),
     vcross(self->omega, veltmul(self->J, self->omega)));
-
-  // if (enableNN > 1) {
-  //   u = vsub(u, tau_a);
-  // }
 
   control->controlMode = controlModeForceTorque;
   control->torque[0] = self->u.x;
