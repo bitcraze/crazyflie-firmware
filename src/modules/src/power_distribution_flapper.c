@@ -207,6 +207,7 @@ uint32_t powerDistributionGetIdleThrust() {
 float powerDistributionGetMaxThrust() {
   // Unknown
   ASSERT(false);
+  return 0.0f;
 }
 
 /**
