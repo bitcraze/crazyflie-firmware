@@ -45,6 +45,8 @@ static float armLength = 0.046f; // m;
 static float thrustToTorque = 0.005964552f;
 
 // thrust = a * pwm^2 + b * pwm
+//    where PWM is normalized (range 0...1)
+//          thrust is in Newtons (per rotor)
 static float pwmToThrustA = 0.091492681f;
 static float pwmToThrustB = 0.067673604f;
 
@@ -171,8 +173,9 @@ uint32_t powerDistributionGetIdleThrust() {
 }
 
 float powerDistributionGetMaxThrust() {
-  const uint16_t pwm = UINT16_MAX;
-  return pwmToThrustA * pwm * pwm + pwmToThrustB * pwm;
+  // max thrust per rotor occurs if normalized PWM is 1
+  // pwmToThrustA * pwm * pwm + pwmToThrustB * pwm = pwmToThrustA + pwmToThrustB
+  return STABILIZER_NR_OF_MOTORS * (pwmToThrustA + pwmToThrustB);
 }
 
 /**

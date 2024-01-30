@@ -187,10 +187,10 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     const float max_thrust = powerDistributionGetMaxThrust(); // N
     control->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
-   self->qr = mkvec(
-      radians(setpoint->attitude.roll),
-      -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
-      desiredYaw);
+    self->qr = mkvec(
+        radians(setpoint->attitude.roll),
+        -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
+        desiredYaw);
   }
 
   // Attitude controller
