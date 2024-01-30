@@ -52,17 +52,17 @@ static controllerLee_t g_self = {
   .J = {16.571710e-6, 16.655602e-6, 29.261652e-6}, // kg m^2
 
   // Position PID
-  .Kpos_P = {9, 9, 9}, // Kp in paper
+  .Kpos_P = {9.5, 9.5, 9.5}, // Kp in paper
   .Kpos_P_limit = 100,
-  .Kpos_D = {7, 7, 7}, // Kv in paper
+  .Kpos_D = {7.0, 7.0, 7.0}, // Kv in paper
   .Kpos_D_limit = 100,
-  .Kpos_I = {5, 5, 5}, // not in paper
+  .Kpos_I = {0.0, 0.0, 0.0}, // not in paper
   .Kpos_I_limit = 2,
 
   // Attitude PID
-  .KR = {0.0055, 0.0055, 0.01},
-  .Komega = {0.0013, 0.0013, 0.002},
-  .KI = {0.012, 0.018, 0.015},
+  .KR = {0.0076, 0.0076, 0.008},
+  .Komega = {0.00115, 0.00115 0.002},
+  .KI = {0.03, 0.03, 0.03},
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
