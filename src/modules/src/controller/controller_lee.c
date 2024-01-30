@@ -61,7 +61,7 @@ static controllerLee_t g_self = {
 
   // Attitude PID
   .KR = {0.0076, 0.0076, 0.008},
-  .Komega = {0.00115, 0.00115 0.002},
+  .Komega = {0.00115, 0.00115, 0.002},
   .KI = {0.03, 0.03, 0.03},
 };
 
@@ -96,7 +96,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
                                          const state_t *state,
                                          const uint32_t tick)
 {
-
 
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     return;
@@ -141,8 +140,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       veltmul(self->Kpos_D, vel_e),
       veltmul(self->Kpos_P, pos_e),
       veltmul(self->Kpos_I, self->i_error_pos));
-    
-   
+
     struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
     struct mat33 R = quat2rotmat(q);
     struct vec z  = vbasis(2);
