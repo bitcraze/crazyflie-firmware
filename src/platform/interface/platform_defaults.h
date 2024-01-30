@@ -44,6 +44,17 @@
     #include "platform_defaults_flapper.h"
 #endif
 
+// Drone physical constants
+// TODO provide those in each config. Those are values of cf2 platform
+#ifndef ARM_LENGTH
+    // m
+    #define ARM_LENGTH  0.046f
+#endif
+#ifndef CF_MASS
+    // kg
+    #define CF_MASS     0.027f
+#endif
+
 // IMU alignment on the airframe 
 #ifndef IMU_PHI
     #define IMU_PHI     0.0f

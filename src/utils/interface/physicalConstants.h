@@ -47,7 +47,3 @@
 #ifndef ARCMINUTE
   #define ARCMINUTE (M_PI_F / 10800.0f)
 #endif
-
-#ifndef CF_MASS
-  #define CF_MASS (0.027f) // in kg
-#endif
