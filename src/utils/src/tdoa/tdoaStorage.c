@@ -187,6 +187,22 @@ void tdoaStorageSetRxTxData(tdoaAnchorContext_t* anchorCtx, int64_t rxTime, int6
   anchorInfo->lastUpdateTime = now;
 }
 
+#ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint32_t oldestAcceptableTime_ms) {
+  if (anchorCtx->anchorInfo->tofTime_ms < oldestAcceptableTime_ms) {
+    return 0;
+  }
+
+  return anchorCtx->anchorInfo->tof;
+}
+
+void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const int64_t tof, const uint32_t currentTime_ms) {
+  anchorCtx->anchorInfo->tof = tof;
+  anchorCtx->anchorInfo->tofTime_ms = currentTime_ms;
+}
+
+#endif
+
 double tdoaStorageGetClockCorrection(const tdoaAnchorContext_t* anchorCtx) {
   return clockCorrectionEngineGet(&anchorCtx->anchorInfo->clockCorrectionStorage);
 }
@@ -264,14 +280,14 @@ void tdoaStorageGetRemoteSeqNrList(const tdoaAnchorContext_t* anchorCtx, int* re
   *remoteCount = count;
 }
 
-int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor) {
+int64_t tdoaStorageGetRemoteTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor) {
   const tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
 
   for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
-    if (otherAnchor == anchorInfo->tof[i].id) {
+    if (otherAnchor == anchorInfo->remoteTof[i].id) {
       uint32_t now = anchorCtx->currentTime_ms;
-      if (anchorInfo->tof[i].endOfLife > now) {
-        return anchorInfo->tof[i].tof;
+      if (anchorInfo->remoteTof[i].endOfLife > now) {
+        return anchorInfo->remoteTof[i].tof;
       }
       break;
     }
@@ -280,7 +296,7 @@ int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const u
   return 0;
 }
 
-void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof) {
+void tdoaStorageSetRemoteTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof) {
   tdoaAnchorInfo_t* anchorInfo = anchorCtx->anchorInfo;
 
   int indexToUpdate = 0;
@@ -288,20 +304,20 @@ void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t re
   uint32_t oldestTime = 0xFFFFFFFF;
 
   for (int i = 0; i < TOF_PER_ANCHOR_COUNT; i++) {
-    if (remoteAnchor == anchorInfo->tof[i].id) {
+    if (remoteAnchor == anchorInfo->remoteTof[i].id) {
       indexToUpdate = i;
       break;
     }
 
-    if (anchorInfo->tof[i].endOfLife < oldestTime) {
-      oldestTime = anchorInfo->tof[i].endOfLife;
+    if (anchorInfo->remoteTof[i].endOfLife < oldestTime) {
+      oldestTime = anchorInfo->remoteTof[i].endOfLife;
       indexToUpdate = i;
     }
   }
 
-  anchorInfo->tof[indexToUpdate].id = remoteAnchor;
-  anchorInfo->tof[indexToUpdate].tof = tof;
-  anchorInfo->tof[indexToUpdate].endOfLife = now + TOF_VALIDITY_PERIOD;
+  anchorInfo->remoteTof[indexToUpdate].id = remoteAnchor;
+  anchorInfo->remoteTof[indexToUpdate].tof = tof;
+  anchorInfo->remoteTof[indexToUpdate].endOfLife = now + TOF_VALIDITY_PERIOD;
 }
 
 bool tdoaStorageIsAnchorInStorage(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor) {

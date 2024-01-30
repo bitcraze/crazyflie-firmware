@@ -120,10 +120,11 @@ def test_power_distribution_cap_when_in_range():
     actual = cffirmware.motors_thrust_pwm_t()
 
     # Test
-    cffirmware.powerDistributionCap(input, actual)
+    isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
     # control.thrust will be at a (tuned) hover-state
+    assert not isCapped
     assert actual.motors.m1 == input.motors.m1
     assert actual.motors.m2 == input.motors.m2
     assert actual.motors.m3 == input.motors.m3
@@ -141,9 +142,10 @@ def test_power_distribution_cap_when_all_negative():
     actual = cffirmware.motors_thrust_pwm_t()
 
     # Test
-    cffirmware.powerDistributionCap(input, actual)
+    isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
+    assert not isCapped
     assert actual.motors.m1 == 0
     assert actual.motors.m2 == 0
     assert actual.motors.m3 == 0
@@ -161,9 +163,10 @@ def test_power_distribution_cap_when_all_above_range():
     actual = cffirmware.motors_thrust_pwm_t()
 
     # Test
-    cffirmware.powerDistributionCap(input, actual)
+    isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
+    assert isCapped
     assert actual.motors.m1 == 0xffff
     assert actual.motors.m2 == 0xffff
     assert actual.motors.m3 == 0xffff
@@ -181,9 +184,10 @@ def test_power_distribution_cap_reduces_thrust_equally_much():
     actual = cffirmware.motors_thrust_pwm_t()
 
     # Test
-    cffirmware.powerDistributionCap(input, actual)
+    isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
+    assert isCapped
     assert actual.motors.m1 == 0xffff - 14
     assert actual.motors.m2 == 0xffff - 10
     assert actual.motors.m3 == 0xffff - 5
@@ -201,9 +205,10 @@ def test_power_distribution_cap_reduces_thrust_equally_much_with_lower_cap():
     actual = cffirmware.motors_thrust_pwm_t()
 
     # Test
-    cffirmware.powerDistributionCap(input, actual)
+    isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
+    assert isCapped
     assert actual.motors.m1 == 0
     assert actual.motors.m2 == 0
     assert actual.motors.m3 == 1000 - 10

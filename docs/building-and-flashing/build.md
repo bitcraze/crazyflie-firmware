@@ -104,6 +104,8 @@ $ tb make cf2_defconfig
 $ tb make
 ```
 
+Build artifacts, including binaries, will end up in the `build` directory.
+
 ### Bolt and Roadrunner
 We have some ready-to-go config files in the `configs/` directory. So, for example, if you want to build the Roadrunner (tag) you can go:
 
@@ -137,8 +139,9 @@ First make sure that you have [SWIG](https://swig.org/) installed on your system
 ```bash
 make cf2_defconfig
 make bindings_python
+cd build
+python3 setup.py install --user
 ```
-
 
 ## Make targets
 

@@ -232,10 +232,25 @@ static void updateStateEstimatorAndControllerTypes() {
   }
 }
 
+static void logCapWarning(const bool isCapped) {
+  #ifdef CONFIG_LOG_MOTOR_CAP_WARNING
+  static uint32_t nextReportTick = 0;
+
+  if (isCapped) {
+    uint32_t now = xTaskGetTickCount();
+    if (now > nextReportTick) {
+      DEBUG_PRINT("Warning: motor thrust saturated\n");
+      nextReportTick = now + M2T(3000);
+    }
+  }
+  #endif
+}
+
 static void controlMotors(const control_t* control) {
   powerDistribution(control, &motorThrustUncapped);
   batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-  powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+  const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+  logCapWarning(isCapped);
   setMotorRatios(&motorPwm);
 }
 

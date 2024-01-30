@@ -229,14 +229,30 @@ void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
   lighthouseUpdateSystemType();
 }
 
+#define OPTIMIZE_UART1_ACCESS 1
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
 
+  #ifdef OPTIMIZE_UART1_ACCESS
+    // Wait until there is enough data available in the queue before reading
+    // to optimize the CPU usage. Locking on the queue (as is done in uart1GetDataWithTimeout()) seems to take a lot
+    // of time and the vTaskDelay() solution uses much less CPU.
+  while (uart1bytesAvailable() < UART_FRAME_LENGTH) {
+    vTaskDelay(1);
+    lighthouseTransmitProcessTimeout();
+  }
+  #endif
+
   for(int i = 0; i < UART_FRAME_LENGTH; i++) {
+  #ifdef OPTIMIZE_UART1_ACCESS
+    uart1Getchar((char*)&data[i]);
+  #else
     while(!uart1GetDataWithTimeout((uint8_t*)&data[i], 2)) {
       lighthouseTransmitProcessTimeout();
     }
+  #endif
+
     if ((unsigned char)data[i] == 0xff) {
       syncCounter += 1;
     }
@@ -526,6 +542,8 @@ void lighthouseCoreTask(void *param) {
   lighthouseStorageVerifySetStorageVersion();
   lighthouseStorageInitializeGeoDataFromStorage();
   lighthouseStorageInitializeCalibDataFromStorage();
+
+  ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
 
   if (lighthouseDeckFlasherCheckVersionAndBoot() == false) {
     DEBUG_PRINT("FPGA not booted. Lighthouse disabled!\n");

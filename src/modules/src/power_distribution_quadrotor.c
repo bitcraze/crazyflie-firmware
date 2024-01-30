@@ -134,9 +134,10 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
   }
 }
 
-void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
+bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
 {
   const int32_t maxAllowedThrust = UINT16_MAX;
+  bool isCapped = false;
 
   // Find highest thrust
   int32_t highestThrustFound = 0;
@@ -153,6 +154,7 @@ void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
   if (highestThrustFound > maxAllowedThrust)
   {
     reduction = highestThrustFound - maxAllowedThrust;
+    isCapped = true;
   }
 
   for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
@@ -160,6 +162,8 @@ void powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
     int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
     motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, idleThrust);
   }
+
+  return isCapped;
 }
 
 uint32_t powerDistributionGetIdleThrust() {

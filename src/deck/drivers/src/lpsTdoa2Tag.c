@@ -116,7 +116,7 @@ static void updateRemoteData(tdoaAnchorContext_t* anchorCtx, const rangePacket2_
       if (hasDistance) {
         int64_t tof = packet->distances[i];
         if (isValidTimeStamp(tof)) {
-          tdoaStorageSetTimeOfFlight(anchorCtx, remoteId, tof);
+          tdoaStorageSetRemoteTimeOfFlight(anchorCtx, remoteId, tof);
 
           if (isConsecutiveIds(previousAnchor, anchorId)) {
             logAnchorDistance[anchorId] = packet->distances[previousAnchor];

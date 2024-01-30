@@ -45,8 +45,8 @@ jobs:
       with:
         name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
-          ${{ matrix.platform }}.bin
-          ${{ matrix.platform }}.elf
+          build/${{ matrix.platform }}.bin
+          build/${{ matrix.platform }}.elf
 
   features:
     runs-on: ubuntu-latest
@@ -97,6 +97,7 @@ jobs:
         - examples/app_hello_file_tree
         - examples/app_peer_to_peer
         - examples/app_p2p_DTR
+        - examples/app_stm_gap8_cpx
         - examples/demos/app_push_demo
         - examples/demos/swarm_demo
         - examples/demos/app_wall_following_demo

@@ -259,6 +259,7 @@ extern const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS];
+extern const MotorPerifDef* motorMapBolt11Brushed[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS];
 
 /**

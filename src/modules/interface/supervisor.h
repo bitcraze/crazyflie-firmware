@@ -108,3 +108,11 @@ bool supervisorCanArm();
  * @return false
  */
 bool supervisorIsArmed();
+
+/**
+ * @brief Query if the system is locked (due to a crash)
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorIsLocked();
