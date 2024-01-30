@@ -170,6 +170,11 @@ uint32_t powerDistributionGetIdleThrust() {
   return idleThrust;
 }
 
+float powerDistributionGetMaxThrust() {
+  const uint16_t pwm = UINT16_MAX;
+  return pwmToThrustA * pwm * pwm + pwmToThrustB * pwm;
+}
+
 /**
  * Power distribution parameters
  */
