@@ -50,7 +50,6 @@ typedef struct controllerLee_s {
     // Logging variables
     struct vec rpy;
     struct vec rpy_des;
-    struct vec qr;
     struct mat33 R_des;
     struct vec omega;
     struct vec omega_r;
