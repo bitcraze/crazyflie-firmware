@@ -225,13 +225,35 @@ static const DeckDriver servo_deck = {
 
 DECK_DRIVER(servo_deck);
 
+PARAM_GROUP_START(deck)
+
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcServo, &isInit)
+PARAM_GROUP_STOP(deck)
+
+/**
+ * "Servo" deck parameters
+ */
 PARAM_GROUP_START(servo)
 
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, servoInitialized, &isInit)
+/**
+ * @brief PWM pulse width for minimal servo position (in microseconds)
+ */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, servoMINus, &servo_MIN_us)
+/**
+ * @brief PWM pulse width for maximal servo position (in microseconds)
+ */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, servoMAXus, &servo_MAX_us)
+/**
+ * @brief Servo range, i.e. angle between the min and max positions (in degrees)
+ */
 PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servoRange, &servo_range)
+/**
+ * @brief Servo idle (startup) angular position (in degrees, min = 0, max = servoRange)
+ */
 PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servoIdle, &servo_idle)
+/**
+ * @brief Servo angular position (in degrees, min = 0, max = servoRange)
+ */
 PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
 
 PARAM_GROUP_STOP(servo)
