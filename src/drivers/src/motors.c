@@ -484,6 +484,12 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     }
     else
     {
+      float thrust = ((float)ithrust / 65536.0f) * 60;
+      float volts = (-0.0006239f * thrust * thrust + 0.088f * thrust) / 3.03396f * 3.4f;
+      float supply_voltage = pmGetBatteryVoltage();
+      float percentage = volts / supply_voltage;
+      percentage = percentage > 1.0f ? 1.0f : percentage;
+      ratio = UINT16_MAX * percentage;
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
     }
 
