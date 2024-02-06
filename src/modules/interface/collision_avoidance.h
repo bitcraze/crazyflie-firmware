@@ -38,25 +38,30 @@
 #include "stabilizer_types.h"
 
 
-// Algorithm parameters. They can be changed online by the user,
-// but the algorithm will never mutate them.
+// Algorithm parameters. They can be changed online by the user, but the
+// algorithm will never mutate them.
+//
+// See the parameter group comment in collision_avoidance.c for a detailed
+// overview of the buffered Voronoi collision avoidance algorithm.
 
 typedef struct collision_avoidance_params_s
 {
-  // The Crazyflie's boundary for collision checking is a tall ellipsoid.
+  // The Crazyflie's volume for collision checking is a tall ellipsoid.
   // This accounts for the downwash effect: Due to the fast-moving stream of
   // air produced by the rotors, the safe distance to pass underneath another
   // rotorcraft is much further than the safe distance to pass to the side.
   struct vec ellipsoidRadii;
 
-  // The minimal and maximal corners of the bounding box in which we fly.
-  // These are applied to the Crazyflie's center point only;
-  // the ellipsoid collision volume is ignored.
+  // The minimal and maximal corners of the bounding box in which we fly. These
+  // are applied to the Crazyflie's center point only; the ellipsoid collision
+  // volume is ignored. Can be set to +/- infinity if the flight space is
+  // unbounded.
   struct vec bboxMin;
   struct vec bboxMax;
 
-  // The BVC algorithm will ensure that we stay within our Voronoi cell
-  // for this duration. Higher values lead to more conservative behavior.
+  // BVCA will ensure that we stay within our Voronoi cell for this duration.
+  // Most relevant for velocity control modes. Higher values lead to more
+  // conservative behavior.
   float horizonSecs;
 
   // Maximum speed (meters/second) we will command. This is currently enforced
@@ -67,19 +72,24 @@ typedef struct collision_avoidance_params_s
   // connecting our current position to goal position (in position mode)
   // intersects a cell wall, and the intersection is within this distance,
   // activate the "sidestep" heuristic and move to the right to avoid deadlock
-  // situations.
+  // situations. Sidestepping is especially important when two robots swap
+  // positions.
   float sidestepThreshold;
 
-  // If peer localization measurements are older than this, ignore them.
+  // If peer localization measurements are older than this value, ignore them.
   // If negative, never ignore.
   int maxPeerLocAgeMillis;
 
-  // Tolerance for projecting position vectors into our Voronoi cell.
-  // Units are roughly Euclidean distance in meters, but not exactly.
+  // Tolerance for projecting position vectors into our Voronoi cell. Units are
+  // roughly Euclidean distance in meters, but not exactly.
+  //
+  // Most users should not need to tune this.
   float voronoiProjectionTolerance;
 
-  // Max number of iterations for projecting into our Voronoi cell.
-  // Using Dykstra's algorithm.
+  // Max number of iterations for projecting into our Voronoi cell using
+  // Dykstra's projection algorithm.
+  //
+  // Most users should not need to tune this.
   int voronoiProjectionMaxIters;
 
 } collision_avoidance_params_t;
@@ -101,7 +111,7 @@ typedef struct collision_avoidance_state_s
 // Main computational routine. Mutates the setpoint such that the new setpoint
 // respects the buffered Voronoi cell constraint.
 //
-// To facilitate compiling and testing on a PC, we take neighbor positions via
+// To facilitate compiling and testing on a PC, we take neighbour positions via
 // array instead of having the implementation call peer_localization.h functions
 // directly. On the other hand, we wish to use the minimum possible amount of
 // memory. Therefore, we allow the input and workspace arrays to overlap. If
@@ -112,7 +122,7 @@ typedef struct collision_avoidance_state_s
 //   params: Algorithm parameters.
 //   collisionState: Algorithm mutable state.
 //   nOthers: Number of other Crazyflies in array arguments.
-//   otherPositons: [nOthers * 3] array of positions (meters).
+//   otherPositions: [nOthers * 3] array of positions (meters).
 //   workspace: Space of no less than 7 * (nOthers + 6) floats. Used for
 //     temporary storage during computation. This can be the same address as
 //     otherPositions - otherPositions is copied into workspace immediately.
@@ -139,7 +149,7 @@ bool collisionAvoidanceTest(void);
 // Wrapper that uses the peer localization system to construct the input arrays
 // for collisionAvoidanceUpdateSetpointCore.
 void collisionAvoidanceUpdateSetpoint(
-  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state, uint32_t tick);
+  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state, stabilizerStep_t stabilizerStep);
 
 #endif // CRAZYFLIE_FW defined
 

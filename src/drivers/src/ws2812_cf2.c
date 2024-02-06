@@ -35,6 +35,8 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
+#include "autoconf.h"
+
 //#define TIM1_CCR1_Address 0x40012C34	// physical memory address of Timer 3 CCR1 register
 
 static TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -133,7 +135,7 @@ void ws2812Init(void)
 	DMA_Init(DMA1_Stream5, &DMA_InitStructure);
 
   NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream5_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_WS2812_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -215,6 +217,8 @@ void ws2812DmaIsr(void)
     	DMA_Cmd(DMA1_Stream5, DISABLE);
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     if (DMA_GetITStatus(DMA1_Stream5, DMA_IT_HTIF5))
     {
       DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_HTIF5);
@@ -226,6 +230,7 @@ void ws2812DmaIsr(void)
       DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
       buffer = led_dma.end;
     }
+#pragma GCC diagnostic pop
 
     for(i=0; (i<LED_PER_HALF) && (current_led<total_led+2); i++, current_led++) {
       if (current_led<total_led)
@@ -244,7 +249,7 @@ void ws2812DmaIsr(void)
     }
 }
 
-#ifndef USDDECK_USE_ALT_PINS_AND_SPI
+#if  !defined(CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI) && !defined(CONFIG_MOTORS_ESC_PROTOCOL_DSHOT)
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
 {
   ws2812DmaIsr();

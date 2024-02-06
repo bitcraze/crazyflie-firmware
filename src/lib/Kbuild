@@ -1,0 +1,46 @@
+obj-$(CONFIG_PRINT_ON_SEGER_RT) += Segger_RTT/RTT
+obj-y += CMSIS/STM32F4xx/Source/system_stm32f4xx.o
+
+# FatFS
+obj-y += FatFS/ff.o
+obj-y += FatFS/ffunicode.o
+
+# STM32F4xx_StdPeriph_Driver
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_adc.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dbgmcu.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_exti.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_flash.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_gpio.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_i2c.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_iwdg.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_misc.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rcc.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_spi.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_syscfg.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_tim.o
+obj-y += STM32F4xx_StdPeriph_Driver/src/stm32f4xx_usart.o
+
+# STM32_USB_Device_Library
+obj-y += STM32_USB_Device_Library/Core/src/usbd_core.o
+obj-y += STM32_USB_Device_Library/Core/src/usbd_ioreq.o
+obj-y += STM32_USB_Device_Library/Core/src/usbd_req.o
+
+# STM32_USB_OTG_Driver
+obj-y += STM32_USB_OTG_Driver/src/usb_core.o
+obj-y += STM32_USB_OTG_Driver/src/usb_dcd_int.o
+obj-y += STM32_USB_OTG_Driver/src/usb_dcd.o
+
+# vl53l1
+obj-y += vl53l1/core/src/vl53l1_api_calibration.o
+obj-y += vl53l1/core/src/vl53l1_api_core.o
+obj-y += vl53l1/core/src/vl53l1_api_debug.o
+obj-y += vl53l1/core/src/vl53l1_api.o
+obj-y += vl53l1/core/src/vl53l1_api_preset_modes.o
+obj-y += vl53l1/core/src/vl53l1_api_strings.o
+obj-y += vl53l1/core/src/vl53l1_core.o
+obj-y += vl53l1/core/src/vl53l1_core_support.o
+obj-y += vl53l1/core/src/vl53l1_error_strings.o
+obj-y += vl53l1/core/src/vl53l1_register_funcs.o
+obj-y += vl53l1/core/src/vl53l1_silicon_core.o
+obj-y += vl53l1/core/src/vl53l1_wait.o

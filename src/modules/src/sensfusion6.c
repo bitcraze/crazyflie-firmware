@@ -30,16 +30,16 @@
 #include "param.h"
 #include "physicalConstants.h"
 
-//#define MADWICK_QUATERNION_IMU
+#include "autoconf.h"
 
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
   #define BETA_DEF     0.01f    // 2 * proportional gain
 #else // MAHONY_QUATERNION_IMU
     #define TWO_KP_DEF  (2.0f * 0.4f) // 2 * proportional gain
     #define TWO_KI_DEF  (2.0f * 0.001f) // 2 * integral gain
 #endif
 
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
   float beta = BETA_DEF;     // 2 * proportional gain (Kp)
 #else // MAHONY_QUATERNION_IMU
   float twoKp = TWO_KP_DEF;    // 2 * proportional gain (Kp)
@@ -96,7 +96,7 @@ void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float 
   }
 }
 
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
 // Implementation of Madgwick's IMU and AHRS algorithms.
 // See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
@@ -171,8 +171,8 @@ static void sensfusion6UpdateQImpl(float gx, float gy, float gz, float ax, float
   qy *= recipNorm;
   qz *= recipNorm;
 }
-#else // MAHONY_QUATERNION_IMU
-// Madgwick's implementation of Mayhony's AHRS algorithm.
+#else
+// Madgwick's implementation of Mahony's AHRS algorithm.
 // See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
 //
 // Date     Author      Notes
@@ -279,13 +279,6 @@ float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const flo
   return sensfusion6GetAccZ(ax, ay, az) - baseZacc;
 }
 
-float sensfusion6GetInvThrustCompensationForTilt()
-{
-  // Return the z component of the estimated gravity direction
-  // (0, 0, 1) dot G
-  return gravZ;
-}
-
 //---------------------------------------------------------------------------------------------------
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -314,25 +307,78 @@ static void estimatedGravityDirection(float* gx, float* gy, float* gz)
   *gz = qw * qw - qx * qx - qy * qy + qz * qz;
 }
 
+/**
+ * Sensor fusion is the process of combining sensory data or data derived from
+ * disparate sources such that the resulting information has less uncertainty
+ * than would be possible when these sources were used individually.
+ *
+ * The sensfusion6 module uses an 3 axis accelerometer and a 3 axis gyro to get
+ * accurate attitude measurements.
+ */
 LOG_GROUP_START(sensfusion6)
+/**
+ * @brief W quaternion
+ */
   LOG_ADD(LOG_FLOAT, qw, &qw)
+/**
+ * @brief X quaternion
+ */
   LOG_ADD(LOG_FLOAT, qx, &qx)
+/**
+ * @brief y quaternion
+ */
   LOG_ADD(LOG_FLOAT, qy, &qy)
+/**
+ * @brief z quaternion
+ */
   LOG_ADD(LOG_FLOAT, qz, &qz)
+/**
+ * @brief Gravity vector X
+ */
   LOG_ADD(LOG_FLOAT, gravityX, &gravX)
+/**
+ * @brief Gravity vector Y
+ */
   LOG_ADD(LOG_FLOAT, gravityY, &gravY)
+/**
+ * @brief Gravity vector Z
+ */
   LOG_ADD(LOG_FLOAT, gravityZ, &gravZ)
+/**
+ * @brief Gravity scale factor after calibration
+ */
   LOG_ADD(LOG_FLOAT, accZbase, &baseZacc)
+/**
+ * @brief Nonzero if complimentary filter been initialized
+ */
   LOG_ADD(LOG_UINT8, isInit, &isInit)
+/**
+ * @brief Nonzero if gravity scale been calibrated
+ */
   LOG_ADD(LOG_UINT8, isCalibrated, &isCalibrated)
 LOG_GROUP_STOP(sensfusion6)
 
+/**
+ * Sensor fusion is the process of combining sensory data or data derived from
+ * disparate sources such that the resulting information has less uncertainty
+ * than would be possible when these sources were used individually.
+ *
+ * The sensfusion6 module uses an 3 axis accelerometer and a 3 axis gyro to get
+ * accurate attitude measurements.
+ */
 PARAM_GROUP_START(sensfusion6)
-#ifdef MADWICK_QUATERNION_IMU
+#ifdef CONFIG_IMU_MADGWICK_QUATERNION
 PARAM_ADD(PARAM_FLOAT, beta, &beta)
 #else // MAHONY_QUATERNION_IMU
-PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
-PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
+/**
+ * @brief Integral gain (default: 0.002)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, kp, &twoKp)
+
+/**
+ * @brief Propotional gain (default: 0.8)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, ki, &twoKi)
 #endif
 PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
 PARAM_GROUP_STOP(sensfusion6)

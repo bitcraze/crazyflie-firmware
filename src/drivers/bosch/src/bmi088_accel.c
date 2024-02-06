@@ -737,7 +737,7 @@ uint16_t bmi088_accel_switch_control(struct bmi088_dev *dev, uint8_t switch_inpu
 }
 
 /*!
- * @brief This API reads the temperature of the sensor in ° Celcius.
+ * @brief This API reads the temperature of the sensor in ï¿½ Celcius.
  */
 uint16_t bmi088_get_sensor_temperature(struct bmi088_dev *dev, float *sensor_temp)
 {
@@ -1114,4 +1114,3 @@ static int32_t power(int16_t base, uint8_t resolution)
 }
 
 /** @}*/
-

@@ -1,0 +1,2 @@
+obj-y += kve.o
+obj-y += kve_storage.o

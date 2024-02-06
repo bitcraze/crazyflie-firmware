@@ -45,9 +45,14 @@ static void plan_takeoff_or_landing(struct planner *p, struct vec curr_pos, floa
 	struct vec hover_pos = curr_pos;
 	hover_pos.z = hover_height;
 
+	// compute the shortest possible rotation towards 0
+	hover_yaw = normalize_radians(hover_yaw);
+	curr_yaw = normalize_radians(curr_yaw);
+	float goal_yaw = curr_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+
 	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
 		curr_pos,  curr_yaw,  vzero(), 0, vzero(),
-		hover_pos, hover_yaw, vzero(), 0, vzero());
+		hover_pos, goal_yaw, vzero(), 0, vzero());
 }
 
 // ----------------- //
@@ -86,6 +91,16 @@ bool plan_is_finished(struct planner *p, float t)
 bool plan_is_stopped(struct planner *p)
 {
 	return p->state == TRAJECTORY_STATE_IDLE;
+}
+
+void plan_disable(struct planner *p)
+{
+	p->state = TRAJECTORY_STATE_DISABLED;
+}
+
+bool plan_is_disabled(struct planner *p)
+{
+	return p->state == TRAJECTORY_STATE_DISABLED;
 }
 
 struct traj_eval plan_current_goal(struct planner *p, float t)
@@ -168,9 +183,14 @@ int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool r
 		hover_yaw += curr_eval->yaw;
 	}
 
+	// compute the shortest possible rotation towards 0
+	float curr_yaw = normalize_radians(curr_eval->yaw);
+	hover_yaw = normalize_radians(hover_yaw);
+	float goal_yaw = curr_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+
 	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
-		curr_eval->pos, curr_eval->yaw, curr_eval->vel, curr_eval->omega.z, curr_eval->acc,
-		hover_pos,      hover_yaw,      vzero(),        0,                  vzero());
+		curr_eval->pos, curr_yaw, curr_eval->vel, curr_eval->omega.z, curr_eval->acc,
+		hover_pos,      goal_yaw,      vzero(),        0,                  vzero());
 
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_FLYING;
@@ -186,22 +206,49 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 	return plan_go_to_from(p, &setpoint, relative, hover_pos, hover_yaw, duration, t);
 }
 
-int plan_start_trajectory( struct planner *p, const struct piecewise_traj* trajectory, bool reversed)
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from)
 {
 	p->reversed = reversed;
 	p->state = TRAJECTORY_STATE_FLYING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
 	p->trajectory = trajectory;
 
+	if (relative) {
+		struct traj_eval traj_init;
+		trajectory->shift = vzero();
+		if (reversed) {
+			traj_init = piecewise_eval_reversed(trajectory, trajectory->t_begin);
+		}
+		else {
+			traj_init = piecewise_eval(trajectory, trajectory->t_begin);
+		}
+		struct vec shift_pos = vsub(start_from, traj_init.pos);
+		trajectory->shift = shift_pos;
+	}
+	else {
+		trajectory->shift = vzero();
+	}
+
 	return 0;
 }
 
-int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_compressed* trajectory)
+int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_compressed* trajectory, bool relative, struct vec start_from)
 {
 	p->reversed = 0;
 	p->state = TRAJECTORY_STATE_FLYING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE_COMPRESSED;
 	p->compressed_trajectory = trajectory;
+
+	if (relative) {
+		trajectory->shift = vzero();
+		struct traj_eval traj_init = piecewise_compressed_eval(
+			trajectory, trajectory->t_begin
+		);
+		struct vec shift_pos = vsub(start_from, traj_init.pos);
+		trajectory->shift = shift_pos;
+	} else {
+		trajectory->shift = vzero();
+	}
 
 	return 0;
 }

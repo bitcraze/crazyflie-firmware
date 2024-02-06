@@ -1,0 +1,12 @@
+obj-y += kalman_core.o
+obj-y += mm_absolute_height.o
+obj-y += mm_distance.o
+obj-y += mm_distance_robust.o
+obj-y += mm_flow.o
+obj-y += mm_pose.o
+obj-y += mm_position.o
+obj-y += mm_sweep_angles.o
+obj-y += mm_tdoa.o
+obj-y += mm_tdoa_robust.o
+obj-y += mm_tof.o
+obj-y += mm_yaw_error.o

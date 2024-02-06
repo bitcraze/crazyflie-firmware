@@ -13,8 +13,7 @@ format:
 |  ------| ---------| --------------------------------------------------|
 |  7     | 0        | [Generic setpoint](#generic-setpoint)|
 
-Generic setpoint
-----------------
+## Generic setpoint
 
 Generic setpoint packet format:
 
@@ -167,13 +166,13 @@ struct fullStatePacket_s {
 
 #### Position
 
-Set the absolute postition and orientation.
+Set the absolute position and orientation.
 
 ``` {.c}
  struct positionPacket_s {
    float x;     // Position in m
    float y;
    float z;
-   float yaw;   // Orientation in degree
+   float yaw;   // Orientation in degrees
  } __attribute__((packed));
 ```

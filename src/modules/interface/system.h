@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -38,7 +38,9 @@ void systemLaunch(void);
 
 void systemStart();
 void systemWaitStart(void);
-void systemSetArmed(bool val);
-bool systemIsArmed();
+
+void systemRequestShutdown();
+void systemRequestNRFVersion();
+void systemSyslinkReceive();
 
 #endif //__SYSTEM_H__

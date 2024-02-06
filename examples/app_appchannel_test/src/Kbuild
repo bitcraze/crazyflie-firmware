@@ -1,0 +1,1 @@
+obj-y += appchannel_test.o

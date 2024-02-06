@@ -5,8 +5,6 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * LPS node firmware.
- *
  * Copyright 2020, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
@@ -41,22 +39,30 @@ static xQueueHandle  rxQueue;
 
 static bool overflow;
 
+static int sendDataPacket(void* data, size_t length, const bool doBlock);
+
+// Deprecated (removed after August 2023)
 void appchannelSendPacket(void* data, size_t length)
 {
-  static CRTPPacket packet;
-
-  xSemaphoreTake(sendMutex, portMAX_DELAY);
-
-  packet.size = (length > APPCHANNEL_MTU)?APPCHANNEL_MTU:length;
-  memcpy(packet.data, data, packet.size);
-
-  // CRTP channel and ports are set in platformservice
-  platformserviceSendAppchannelPacket(&packet);
-
-  xSemaphoreGive(sendMutex);
+  appchannelSendDataPacketBlock(data, length);
 }
 
+int appchannelSendDataPacket(void* data, size_t length)
+{
+  return sendDataPacket(data, length, false);
+}
+
+void appchannelSendDataPacketBlock(void* data, size_t length)
+{
+  sendDataPacket(data, length, true);
+}
+
+// Deprecated (removed after August 2023)
 size_t appchannelReceivePacket(void* buffer, size_t max_length, int timeout_ms) {
+  return appchannelReceiveDataPacket(buffer, max_length, timeout_ms);
+}
+
+size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_ms) {
   static CRTPPacket packet;
   int tickToWait = 0;
 
@@ -77,12 +83,16 @@ size_t appchannelReceivePacket(void* buffer, size_t max_length, int timeout_ms) 
   }
 }
 
-bool appchannelHasOverflowOccured()
+bool appchannelHasOverflowOccurred()
 {
   bool hasOverflowed = overflow;
   overflow = false;
 
   return hasOverflowed;
+}
+
+bool appchannelHasOverflowOccured() {
+    return appchannelHasOverflowOccurred();
 }
 
 void appchannelInit()
@@ -101,4 +111,27 @@ void appchannelIncomingPacket(CRTPPacket *p)
   if (res != pdTRUE) {
     overflow = true;
   }
+}
+
+static int sendDataPacket(void* data, size_t length, const bool doBlock)
+{
+  static CRTPPacket packet;
+
+  xSemaphoreTake(sendMutex, portMAX_DELAY);
+
+  packet.size = (length > APPCHANNEL_MTU)?APPCHANNEL_MTU:length;
+  memcpy(packet.data, data, packet.size);
+
+  // CRTP channel and ports are set in platformservice
+  int result = 0;
+  if (doBlock)
+  {
+    result = platformserviceSendAppchannelPacketBlock(&packet);
+  } else {
+    result = platformserviceSendAppchannelPacket(&packet);
+  }
+
+  xSemaphoreGive(sendMutex);
+
+  return result;
 }

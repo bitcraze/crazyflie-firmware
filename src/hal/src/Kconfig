@@ -1,0 +1,46 @@
+menu "Power management configuration"
+
+config PM_AUTO_SHUTDOWN
+    bool "Enable automatic shutdown"
+    default n
+    help
+        The power management subsystem can automatically shutdown the system.
+        The shutdown time in minutes is defined in platform_defaults_* for
+        the specific platform and is the time since the last radio communication
+        occurred.
+
+endmenu
+
+menu "Communication"
+
+config SYSLINK_RX_DMA
+    bool "Use DMA to receive uart syslink data instead of interrupts"
+    default n
+    help
+        Using DMA to receive uart data reduces CPU load and will free
+        up recources for other things. DMA is a shared resource though
+        and might conflict with other functionality in the future.
+
+config ENABLE_CPX
+  bool "Enable CPX"
+  select ENABLE_CPX_ON_UART2
+  default y
+  help
+      This enables CPX routers and API
+
+config ENABLE_CPX_ON_UART2
+  bool "Enable CPX on UART2"
+  depends on ENABLE_CPX
+  default y
+  help
+      This enables CPX routing on UART2
+
+config CPX_UART2_BAUDRATE
+  int "CPX UART2 baudrate"
+  depends on ENABLE_CPX_ON_UART2
+  range 9600 2000000
+  default 576000
+  help
+      Set the baudrate that will be used for CPX on UART2
+
+endmenu

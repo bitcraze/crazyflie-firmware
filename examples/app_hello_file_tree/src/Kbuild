@@ -1,0 +1,3 @@
+obj-y += hello_file_tree.o
+obj-y += hello_sub/
+obj-y += world_sub/

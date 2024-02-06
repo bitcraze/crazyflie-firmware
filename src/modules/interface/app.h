@@ -5,8 +5,6 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * LPS node firmware.
- *
  * Copyright 2019, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,11 +25,11 @@
 
 /**
  * App Inintialization
- * 
+ *
  * Called during firmware initialization. A default weak function is implemented
  * that creates a task and calls appMain() when the system is started.
- * 
- * Implementation can be overwriten.
+ *
+ * Implementation can be overwritten.
  */
 void appInit();
 

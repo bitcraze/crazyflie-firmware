@@ -6,14 +6,13 @@ page_id: trajectory_formats
 This document describes how the Crazyflie high-level commander stores
 trajectories in the internal trajectory memory.
 
-Trajectories for the high-level commander may be stored in one of two formats.
+Trajectories for the high-level commander may be stored in one of two formats,
 either as a sequence of raw 7th degree polynomials, or as a more space-efficient
 representation using the same polynomials in Bernstein form. In both cases, a
 single segment stores a duration and one polynomial for each of the X, Y, Z and
 yaw coordinates of the trajectory.
 
-Raw representation
-------------------
+## Raw representation
 
 The raw representation stores the coefficients of the polynomial describing
 the X coordinate of the trajectory first, starting with the constant term and
@@ -25,8 +24,7 @@ single-precision floats, meaning that a single segment requires 132 bytes:
 additional float per segment to store its duration. Given that the default
 size of the trajectory memory is 4 Kbytes, you can only store 31 segments.
 
-Compressed representation
--------------------------
+## Compressed representation
 
 The compressed representation was designed to be more space-efficient than the
 raw representation while still trying to maintain almost the same degree of
@@ -52,31 +50,32 @@ The general guidelines of this representation are as follows:
 The compressed representation starts with the description of the starting point
 of the trajectory:
 
-```
+{% ditaa --alt "Starting point format" %}
 +--------------+--------------+--------------+--------------+
 | X coordinate | Y coordinate | Z coordinate | Initial yaw  |
 +--------------+--------------+--------------+--------------+
-```
+{% endditaa %}
 
 This is then followed by data blocks describing the individual segments - one
 data block per segment:
 
-```
+{% ditaa --alt "Segment list" %}
 +------------------+----------------+------------------+----------------+-----+
 | Segment 1 header | Segment 1 body | Segment 2 header | Segment 2 body | ... |
 +------------------+----------------+------------------+----------------+-----+
-```
+{% endditaa %}
+
 
 The header of a segment is three bytes long. The first byte describes how the
 X, Y, Z and yaw coordinates will be encoded in the body of the data block. The
 remaining two bytes contain the duration of the segment:
 
-```
-  Bits 6-7     Bits 4-5   Bits 2-3   Bits 0-1        Byte 2         Byte 3
+{% ditaa --alt "Segment header" %}
+  Bits 6- 7   Bits 4- 5  Bits 2- 3  Bits 0- 1        Byte 2         Byte 3
 +------------+----------+----------+----------+  +--------------+--------------+
 | Yaw format | Z format | Y format | X format |  | Duration LSB | Duration MSB |
 +------------+----------+----------+----------+  +--------------+--------------+
-```
+{% endditaa %}
 
 For each of the X, Y, Z and yaw coordiates, there are two bits in the first byte
 of the header. `00` means that the coordinate is constant throughout the
@@ -104,11 +103,12 @@ because it is always the same as the last control point of the previous
 segment. (That's why we needed to store the starting point of the trajectory
 separately).
 
-```
+{% ditaa --alt "Segment body" %}
 +----------------------+----------------------+----------------------+------------------------+
 | Control points for X | Control points for Y | Control points for Z | Control points for yaw |
 +----------------------+----------------------+----------------------+------------------------+
-```
+{% endditaa %}
+
 
 Obviously, when the header specifies that a coordinate is constant, it means
 that we do not need to store the control points for that coordinate at all
@@ -120,7 +120,7 @@ of the segment. This can result in significant space savings if the trajectory
 consists mostly of linear segments and cubic Bézier curves, especially if the
 yaw does not change, or if the movement mostly occurs in the X-Y, X-Z or Y-Z
 plane. Note that cubic Bézier curves are enough to ensure C0, C1 and C2
-continuity (inposition, velocity and acceleration) for the trajectories.
+continuity (in position, velocity and acceleration) for the trajectories.
 
 Internally, whenever the high-level commander starts processing a trajectory
 segment that is encoded using the compressed representation, it converts the

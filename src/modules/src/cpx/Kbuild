@@ -1,0 +1,5 @@
+obj-$(CONFIG_ENABLE_CPX)          += cpx_external_router.o
+obj-$(CONFIG_ENABLE_CPX)          += cpx_internal_router.o
+obj-$(CONFIG_ENABLE_CPX_ON_UART2) += cpx_uart_transport.o
+obj-$(CONFIG_ENABLE_CPX)          += cpxlink.o
+obj-$(CONFIG_ENABLE_CPX)          += cpx.o

@@ -9,99 +9,130 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  schedule:
+    # Weekly build to make sure dependencies are OK
+    - cron:  '30 16 * * 1'
+
+permissions:
+  contents: read
 
 jobs:
-  cf2:
+  read_targets_from_file:
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@dfbc8c23a8ec6d4925d01deb20277839ad1235f1
+    with:
+      target_file: './build_targets.json'
+
+  basic_build:
+    needs: read_targets_from_file
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ${{fromJson(needs.read_targets_from_file.outputs.platforms)}}
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 UNIT_TEST_STYLE=min
-  
-  tag:
-    runs-on: ubuntu-latest
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v3
       with:
-        submodules: true
-
-    - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=tag UNIT_TEST_STYLE=min
-  
-  all-flags:
-    runs-on: ubuntu-latest
-    needs: cf2
-
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - name: All features
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 DEBUG=1 "EXTRA_CFLAGS=-DCALIBRATED_LED_MORSE -DIMU_TAKE_ACCEL_BIAS -DIMU_MPU6500_DLPF_256HZ -DMADWICK_QUATERNION_IMU -DDEBUG_QUEUE_MONITOR -DENABLE_BQ_DECK -DSITAW_ENABLED -DOW_WRITE_TEST -DOW_READ_TEST -DDEBUG_PRINT_ON_UART -DENABLE_UART1 -DENABLE_UART2"  UNIT_TEST_STYLE=min    
+        name: ${{ matrix.platform }}-${{ github.sha }}
+        path: |
+          build/${{ matrix.platform }}.bin
+          build/${{ matrix.platform }}.elf
 
   features:
     runs-on: ubuntu-latest
-    needs: cf2
+    needs: basic_build
 
     strategy:
       fail-fast: false
       matrix:
         features:
         # Build cf2 with bosch sensors
-        - SENSORS=bosch
+        - bosch.conf
         # Build cf2 with TDMA
-        - LPS_TDMA_ENABLE=1 "EXTRA_CFLAGS=-DTDMA_NSLOTS_BITS=1 -DTDMA_SLOT=0"
+        - loco_tdma.conf
         # Build cf2 with TDOA2 positioning mode
-        - LPS_TDOA_ENABLE=1
+        - loco_tdoa2.conf
+        #- LPS_TDOA_ENABLE=1
         # Build cf2 with TDOA3 positioning mode
-        - LPS_TDOA3_ENABLE=1
+        - loco_tdoa3.conf
+        #- LPS_TDOA3_ENABLE=1
         # Build cf2 with TDOA3 and all config options
-        - LPS_TDOA3_ENABLE=1 "EXTRA_CFLAGS=-DLPS_2D_POSITION_HEIGHT=1.2 -DLPS_LONGER_RANGE -DLPS_FULL_TX_POWER"
+        - loco_tdoa3_all.conf
         # Build Bigquad deck with all config options
-        - >
-          "EXTRA_CFLAGS=-DENABLE_BQ_DECK -DBQ_DECK_ENABLE_OSD -DBQ_DECK_ENABLE_PM"
+        - bigquad.conf
+        # Build API test app layer app
+        - app_api.conf
     env:
-      FEATURE: ${{ matrix.features }}
-    
+      CONF: ${{ matrix.features }}
+
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder ./tools/build/build PLATFORM=cf2 ${{ env.FEATURE }} UNIT_TEST_STYLE=min
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./scripts/kconfig/merge_config.sh configs/${CONF} configs/defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
   apps:
     runs-on: ubuntu-latest
-    needs: cf2
+    needs: basic_build
 
     strategy:
       fail-fast: false
       matrix:
         example:
-        - app_api
         - examples/app_hello_world
+        - examples/app_hello_world-cpp
+        - examples/app_hello_file_tree
         - examples/app_peer_to_peer
+        - examples/app_p2p_DTR
+        - examples/app_stm_gap8_cpx
         - examples/demos/app_push_demo
         - examples/demos/swarm_demo
+        - examples/demos/app_wall_following_demo
     env:
       EXAMPLE: ${{ matrix.example }}
-    
+
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "cd ${EXAMPLE}; make -j$(nproc)"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/make_app ${EXAMPLE}"
+
+  kbuild-targets:
+    runs-on: ubuntu-latest
+    needs: basic_build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+        - allyesconfig
+        - allnoconfig
+        - randconfig
+
+    env:
+      TARGET: ${{ matrix.target }}
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} &&  ./tools/build/build UNIT_TEST_STYLE=min"

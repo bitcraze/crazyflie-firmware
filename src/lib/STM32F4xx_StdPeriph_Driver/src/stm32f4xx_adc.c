@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_adc.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
   *          functionalities of the Analog to Digital Convertor (ADC) peripheral:
   *           + Initialization and Configuration (in addition to ADC multi mode 
@@ -85,7 +85,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   *
-  ******************************************************************************  
+  ******************************************************************************
   */ 
 
 /* Includes ------------------------------------------------------------------*/
@@ -652,7 +652,7 @@ void ADC_VBATCmd(FunctionalState NewState)
          (++) Activate the continuous Mode  (*)
          (++) Activate the Discontinuous Mode 
          -@@- Please Note that the following features for regular channels 
-             are configurated using the ADC_Init() function : 
+             are configured using the ADC_Init() function : 
            (+@@) scan mode activation 
            (+@@) continuous mode activation (**) 
            (+@@) External trigger source  

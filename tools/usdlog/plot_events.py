@@ -31,13 +31,13 @@ if __name__ == "__main__":
             start_time = min(start_time, data['timestamp'][0])
 
     # new figure
-    fig, ax = plt.subplots(len(data_usd.keys()),1,sharex=True)
+    fig, ax = plt.subplots(len(data_usd.keys()),1,sharex=True,squeeze=False)
 
     for k, (event_name, data) in enumerate(data_usd.items()):
         # print(k, event_name)
         t = (data['timestamp'] - start_time) / 1000
-        ax[k].scatter(t, t*0)
-        ax[k].set_title(event_name)
+        ax[k,0].scatter(t, t*0)
+        ax[k,0].set_title(event_name)
 
         print(data.keys())
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
         crs.connect("add", functools.partial(showAnnotation, data))
 
-    ax[-1].set_xlabel('Time [s]')
+    ax[-1,0].set_xlabel('Time [s]')
 
 
     plt.show()

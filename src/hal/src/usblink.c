@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * syslink.c: nRF24L01 implementation of the CRTP link
+ * usblink.c
  */
 
 #include <stdbool.h>

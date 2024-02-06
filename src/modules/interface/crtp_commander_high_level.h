@@ -57,8 +57,9 @@ typedef enum {
 /* Public functions */
 void crtpCommanderHighLevelInit(void);
 
-// Retrieves the current setpoint
-void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state);
+// Retrieves the current setpoint. Returns false if the high-level commander is
+// disabled, i.e. it does not have an "opinion" on what the setpoint should be.
+bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, stabilizerStep_t stabilizerStep);
 
 // When flying sequences of high-level commands, the high-level commander uses
 // its own history of commands to determine the initial conditions of the next
@@ -68,7 +69,7 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
 // commander what initial conditions to use for trajectory planning.
 void crtpCommanderHighLevelTellState(const state_t *state);
 
-// True if we have landed or emergency-stopped.
+// True if we have landed or stopped.
 bool crtpCommanderHighLevelIsStopped();
 
 // Public API - can be used from an app
@@ -137,14 +138,51 @@ int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float dura
 /**
  * @brief stops the current trajectory (turns off the motors)
  *
- * Send the trajectory planner to idle state, where it has no plan. Also used when
- * switching from high-level to low-level commands, or for emergencies.
+ * Send the trajectory planner to stopped state, where it requests motors off.
  *
  * @return zero if the command succeeded, an error code otherwise. The function
  * should never fail, but we provide the error code nevertheless for sake of
  * consistency with the other high-level commander functions.
  */
 int crtpCommanderHighLevelStop();
+
+/**
+ * @brief stops the current trajectory (without requesting motors off)
+ *
+ * Send the trajectory planner to disabled state, where it does not generate
+ * setpoints, but also does not request motors off.
+ *
+ * @return zero if the command succeeded, an error code otherwise. The function
+ * should never fail, but we provide the error code nevertheless for sake of
+ * consistency with the other high-level commander functions.
+ */
+int crtpCommanderHighLevelDisable();
+
+/**
+ * @brief Block/unblock the use of the high level commander.
+ *
+ * This function is called from the stabilizer loop. The purpose is to provide a way for the supervisor to block a user
+ * (or app) from starting a trajectory when the system is not in a flyable state.
+ *
+ * When entering the blocked state, the planer will stop any running trajectory and go to the stopped state. If
+ * the planner already is in the stopped or disabled state, it will remain.
+ *
+ * When blocked, functions that plans a new trajectory will be blocked.
+ *
+ * @param doBlock Enter blocked state if true, unblock if false
+ * @return zero if the command succeeded, an error code otherwise. The function
+ * should never fail, but we provide the error code nevertheless for sake of
+ * consistency with the other high-level commander functions.
+ */
+int crtpCommanderBlock(bool doBlock);
+
+/**
+ * @brief Check if the high level commander is blocked by the supervisor
+ *
+ * @return true   If the high level commander is blocked by the supervisor
+ * @return false  If not blocked
+ */
+bool crtpCommanderHighLevelIsBlocked();
 
 /**
  * @brief Go to an absolute or relative position

@@ -1,0 +1,33 @@
+obj-y += cfassert.o
+obj-y += clockCorrectionEngine.o
+obj-y += configblockeeprom.o
+obj-y += cpuid.o
+obj-y += crc32.o
+obj-y += debug.o
+obj-y += eprintf.o
+obj-y += buf2buf.o
+
+obj-y += filter.o
+obj-y += FreeRTOS-openocd.o
+
+obj-y += num.o
+obj-y += rateSupervisor.o
+obj-y += sleepus.o
+obj-y += statsCnt.o
+
+### Sub directories
+obj-y += kve/
+obj-y += lighthouse/
+obj-y += tdoa/
+
+
+### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
+obj-y += abort.o
+obj-y += malloc.o
+obj-y += pid.o
+
+### Rules for handling generated version.c
+obj-y += version.o
+version-objs := version_gen.o
+src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
+	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@

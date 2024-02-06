@@ -40,7 +40,7 @@ bool sensorsAreCalibrated(void);
 bool sensorsManufacturingTest(void);
 
 // For legacy control
-void sensorsAcquire(sensorData_t *sensors, const uint32_t tick);
+void sensorsAcquire(sensorData_t *sensors);
 
 /**
  * This function should block and unlock at 1KhZ
@@ -52,6 +52,12 @@ bool sensorsReadGyro(Axis3f *gyro);
 bool sensorsReadAcc(Axis3f *acc);
 bool sensorsReadMag(Axis3f *mag);
 bool sensorsReadBaro(baro_t *baro);
+
+/**
+ * Suspend or resume sensor data
+ */
+void sensorsSuspend();
+void sensorsResume();
 
 /**
  * Set acc mode, one of accModes enum

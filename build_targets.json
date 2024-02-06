@@ -1,0 +1,8 @@
+{
+    "platform" : [
+      "cf2",
+      "bolt",
+      "tag",
+      "flapper"
+    ]
+  }

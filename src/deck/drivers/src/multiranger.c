@@ -5,9 +5,7 @@
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
  *
- * LPS node firmware.
- *
- * Copyright 2018, Bitcraze AB
+ * Copyright 2021, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -46,12 +44,13 @@
 static bool isInit = false;
 static bool isTested = false;
 static bool isPassed = false;
+static uint16_t filterMask = 1 << VL53L1_RANGESTATUS_RANGE_VALID;
 
-#define MR_PIN_UP     PCA95X4_P0
-#define MR_PIN_FRONT  PCA95X4_P4
-#define MR_PIN_BACK   PCA95X4_P1
-#define MR_PIN_LEFT   PCA95X4_P6
-#define MR_PIN_RIGHT  PCA95X4_P2
+#define MR_PIN_UP PCA95X4_P0
+#define MR_PIN_FRONT PCA95X4_P4
+#define MR_PIN_BACK PCA95X4_P1
+#define MR_PIN_LEFT PCA95X4_P6
+#define MR_PIN_RIGHT PCA95X4_P2
 
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devFront;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devBack;
@@ -61,25 +60,25 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
 static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
 {
-  bool status;
+    bool status;
 
-  // Bring up VL53 by releasing XSHUT
-  pca95x4SetOutput(pca95pin);
-  // Let VL53 boot
-  vTaskDelay(M2T(2));
-  // Init VL53
-  if (vl53l1xInit(pdev, I2C1_DEV))
-  {
-      DEBUG_PRINT("Init %s sensor [OK]\n", name);
-      status = true;
-  }
-  else
-  {
-      DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
-      status = false;
-  }
+    // Bring up VL53 by releasing XSHUT
+    pca95x4SetOutput(pca95pin);
+    // Let VL53 boot
+    vTaskDelay(M2T(2));
+    // Init VL53
+    if (vl53l1xInit(pdev, I2C1_DEV))
+    {
+        DEBUG_PRINT("Init %s sensor [OK]\n", name);
+        status = true;
+    }
+    else
+    {
+        DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
+        status = false;
+    }
 
-  return status;
+    return status;
 }
 
 static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
@@ -96,7 +95,15 @@ static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
     }
 
     status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
-    range = rangingData.RangeMilliMeter;
+
+    if (filterMask & (1 << rangingData.RangeStatus))
+    {
+        range = rangingData.RangeMilliMeter;
+    }
+    else
+    {
+        range = 32767;
+    }
 
     VL53L1_StopMeasurement(dev);
     status = VL53L1_StartMeasurement(dev);
@@ -129,12 +136,11 @@ static void mrTask(void *param)
     while (1)
     {
         vTaskDelayUntil(&lastWakeTime, M2T(100));
-
-        rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront)/1000.0f);
-        rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack)/1000.0f);
-        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp)/1000.0f);
-        rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft)/1000.0f);
-        rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight)/1000.0f);
+        rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront) / 1000.0f);
+        rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack) / 1000.0f);
+        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp) / 1000.0f);
+        rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft) / 1000.0f);
+        rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight) / 1000.0f);
     }
 }
 
@@ -162,7 +168,7 @@ static void mrInit()
     isInit = true;
 
     xTaskCreate(mrTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
-        MULTIRANGER_TASK_PRI, NULL);
+                MULTIRANGER_TASK_PRI, NULL);
 }
 
 static bool mrTest()
@@ -190,7 +196,8 @@ static const DeckDriver multiranger_deck = {
     .pid = 0x0C,
     .name = "bcMultiranger",
 
-    .usedGpio = 0, // FIXME: set the used pins
+    .usedGpio = 0,
+    .usedPeriph = DECK_USING_I2C,
 
     .init = mrInit,
     .test = mrTest,
@@ -199,5 +206,18 @@ static const DeckDriver multiranger_deck = {
 DECK_DRIVER(multiranger_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
+
+/**
+ * @brief Nonzero if [Multi-ranger deck](%https://store.bitcraze.io/collections/decks/products/multi-ranger-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
+
 PARAM_GROUP_STOP(deck)
+
+PARAM_GROUP_START(multiranger)
+/**
+ * @brief Filter mask determining which range measurements is to be let through based on the range status of the VL53L1 chip
+ */
+PARAM_ADD(PARAM_UINT16, filterMask, &filterMask)
+
+PARAM_GROUP_STOP(multiranger)

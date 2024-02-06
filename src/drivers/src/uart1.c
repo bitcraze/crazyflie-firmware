@@ -48,8 +48,9 @@
  */
 //#define ENABLE_UART1_DMA
 
+#define QUEUE_LENGTH 64
 static xQueueHandle uart1queue;
-STATIC_MEM_QUEUE_ALLOC(uart1queue, 64, sizeof(uint8_t));
+STATIC_MEM_QUEUE_ALLOC(uart1queue, QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool isInit = false;
 static bool hasOverrun = false;
@@ -99,7 +100,7 @@ static void uart1DmaInit(void)
   DMA_InitStructureShare.DMA_Channel = UART1_DMA_CH;
 
   NVIC_InitStructure.NVIC_IRQChannel = UART1_DMA_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART1_DMA_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -164,7 +165,7 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   uart1DmaInit();
 
   NVIC_InitStructure.NVIC_IRQChannel = UART1_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MID_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART1_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -200,6 +201,13 @@ bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 bool uart1GetDataWithDefaultTimeout(uint8_t *c)
 {
   return uart1GetDataWithTimeout(c, UART1_DATA_TIMEOUT_TICKS);
+}
+
+void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data)
+{
+  for (size_t i = 0; i < size; i++) {
+    xQueueReceive(uart1queue, &data[i], portMAX_DELAY);
+  }
 }
 
 void uart1SendData(uint32_t size, uint8_t* data)
@@ -256,6 +264,16 @@ void uart1Getchar(char * ch)
   xQueueReceive(uart1queue, ch, portMAX_DELAY);
 }
 
+uint32_t uart1bytesAvailable()
+{
+  return uxQueueMessagesWaiting(uart1queue);
+}
+
+uint32_t uart1QueueMaxLength()
+{
+  return QUEUE_LENGTH;
+}
+
 bool uart1DidOverrun()
 {
   bool result = hasOverrun;
@@ -276,18 +294,18 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
   DMA_Cmd(UART1_DMA_STREAM, DISABLE);
 
   xSemaphoreGiveFromISR(waitUntilSendDone, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 #endif
 
 void __attribute__((used)) USART3_IRQHandler(void)
 {
-  uint8_t rxData;
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
   if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
   {
-    rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+    uint8_t rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
     xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   } else {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)

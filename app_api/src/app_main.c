@@ -46,6 +46,7 @@
 #include "param.h"
 #include "pm.h"
 #include "app_channel.h"
+#include "system.h"
 
 
 #define DEBUG_MODULE "APPAPI"
@@ -84,6 +85,7 @@ void appMain() {
   }
 
   // LPS
+  #ifdef CONFIG_DECK_LOCO
   {
     point_t position;
     uint8_t unorderedAnchorList[5];
@@ -92,6 +94,7 @@ void appMain() {
     locoDeckGetAnchorIdList(unorderedAnchorList, 5);
     locoDeckGetActiveAnchorIdList(unorderedAnchorList, 5);
   }
+  #endif
 
   // Memory sub system
   {
@@ -128,8 +131,17 @@ void appMain() {
   // App-channel
   {
     char buffer[APPCHANNEL_MTU];
-    appchannelSendPacket("hello", 5);
-    appchannelReceivePacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER);
-    appchannelHasOverflowOccured();
+    appchannelSendPacket("hello", 5); // Deprecated (removed after August 2023)
+    appchannelSendDataPacketBlock("hello", 5);
+    appchannelSendDataPacket("hello", 5);
+    appchannelReceivePacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER); // Deprecated (removed after August 2023)
+    appchannelReceiveDataPacket(buffer, APPCHANNEL_MTU, APPCHANNEL_WAIT_FOREVER);
+    appchannelHasOverflowOccured(); // Deprecated (removed after August 2023)
+    appchannelHasOverflowOccurred();
+  }
+
+  // System
+  {
+    systemRequestShutdown();
   }
 }

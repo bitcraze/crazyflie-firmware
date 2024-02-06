@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+python3 ${scriptDir}/../verify/elf_sanity.py ${scriptDir}/../../build/*.elf

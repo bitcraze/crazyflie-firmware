@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2022 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,11 +29,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "imu_types.h"
-#include "lighthouse_calibration.h"
+#include "lighthouse_types.h"
 
 /* Data structure used by the stabilizer subsystem.
  * All have a timestamp to be set when the data is calculated.
  */
+
+// stabilizerStep_t represents the number of times the stabilizer loop has run (at 1000 Hz)
+typedef uint32_t stabilizerStep_t;
 
 /** Attitude in euler angle form */
 typedef struct attitude_s {
@@ -65,8 +68,6 @@ typedef struct vec3_s acc_t;
 
 /* Orientation as a quaternion */
 typedef struct quaternion_s {
-  uint32_t timestamp;
-
   union {
     struct {
       float q0;
@@ -89,8 +90,21 @@ typedef enum {
 } measurementSource_t;
 
 typedef struct tdoaMeasurement_s {
-  point_t anchorPositions[2];
-  uint8_t anchorIds[2];
+  union {
+    point_t anchorPositions[2];
+    struct {
+      point_t anchorPositionA;
+      point_t anchorPositionB;
+    };
+  };
+  union {
+    uint8_t anchorIds[2];
+    struct {
+      uint8_t anchorIdA;
+      uint8_t anchorIdB;
+    };
+  };
+
   float distanceDiff;
   float stdDev;
 } tdoaMeasurement_t;
@@ -167,12 +181,65 @@ typedef struct state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
 } state_t;
 
+#define STABILIZER_NR_OF_MOTORS 4
+
+typedef enum control_mode_e {
+  controlModeLegacy      = 0, // legacy mode with int16_t roll, pitch, yaw and float thrust
+  controlModeForceTorque = 1,
+  controlModeForce       = 2,
+} control_mode_t;
+
 typedef struct control_s {
-  int16_t roll;
-  int16_t pitch;
-  int16_t yaw;
-  float thrust;
+  union {
+    // controlModeLegacy
+    struct {
+      int16_t roll;
+      int16_t pitch;
+      int16_t yaw;
+      float thrust;
+    };
+
+    // controlModeForceTorque
+    // Note: Using SI units for a controller makes it hard to tune it for different platforms. The normalized force API
+    // is probably a better option.
+    struct {
+      float thrustSi;  // N
+      union { // Nm
+        float torque[3];
+        struct {
+          float torqueX;
+          float torqueY;
+          float torqueZ;
+        };
+      };
+    };
+
+    // controlModeForce
+    float normalizedForces[STABILIZER_NR_OF_MOTORS]; // 0.0 ... 1.0
+  };
+
+  control_mode_t controlMode;
 } control_t;
+
+typedef union {
+  int32_t list[STABILIZER_NR_OF_MOTORS];
+  struct {
+    int32_t m1;
+    int32_t m2;
+    int32_t m3;
+    int32_t m4;
+  } motors;
+} motors_thrust_uncapped_t;
+
+typedef union {
+  uint16_t list[STABILIZER_NR_OF_MOTORS];
+  struct {
+    uint16_t m1;  // PWM ratio
+    uint16_t m2;  // PWM ratio
+    uint16_t m3;  // PWM ratio
+    uint16_t m4;  // PWM ratio
+  } motors;
+} motors_thrust_pwm_t;
 
 typedef enum mode_e {
   modeDisable = 0,
@@ -261,7 +328,7 @@ typedef struct {
   const mat3d* rotorRot;     // Rotor rotation matrix
   const mat3d* rotorRotInv;  // Inverted rotor rotation matrix
   uint8_t sensorId;
-  uint8_t basestationId;
+  uint8_t baseStationId;
   uint8_t sweepId;
   float t;                   // t is the tilt angle of the light plane on the rotor
   float measuredSweepAngle;
@@ -289,7 +356,7 @@ typedef struct
 } barometerMeasurement_t;
 
 
-// Frequencies to bo used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
+// Frequencies to be used with the RATE_DO_EXECUTE_HZ macro. Do NOT use an arbitrary number.
 #define RATE_1000_HZ 1000
 #define RATE_500_HZ 500
 #define RATE_250_HZ 250
@@ -300,6 +367,8 @@ typedef struct
 #define RATE_MAIN_LOOP RATE_1000_HZ
 #define ATTITUDE_RATE RATE_500_HZ
 #define POSITION_RATE RATE_100_HZ
+#define RATE_HL_COMMANDER RATE_100_HZ
+#define RATE_SUPERVISOR RATE_25_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 

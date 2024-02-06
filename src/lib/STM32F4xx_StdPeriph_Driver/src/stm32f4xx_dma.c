@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_dma.c
   * @author  MCD Application Team
-  * @version V1.3.0
-  * @date    08-November-2013
+  * @version V1.8.0
+  * @date    04-November-2016
   * @brief   This file provides firmware functions to manage the following 
   *          functionalities of the Direct Memory Access controller (DMA):           
   *           + Initialization and Configuration
@@ -29,7 +29,7 @@
           data formats, Circular or Normal mode, Stream Priority level, Source and Destination 
           Incrementation mode, FIFO mode and its Threshold (if needed), Burst 
           mode for Source and/or Destination (if needed) using the DMA_Init() function.
-          To avoid filling unneccessary fields, you can call DMA_StructInit() function
+          To avoid filling unnecessary fields, you can call DMA_StructInit() function
           to initialize a given structure with default values (reset values), the modify
           only necessary fields 
           (ie. Source and Destination addresses, Transfer size and Data Formats).
@@ -99,11 +99,11 @@
            Data Sizes for Source and Destination. In this case the Peripheral 
            Data Size will be applied to both Source and Destination.               
   
-  @endverbatim                                 
+  @endverbatim
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2016 STMicroelectronics</center></h2>
   *
   * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
   * You may not use this file except in compliance with the License.
@@ -692,7 +692,7 @@ uint16_t DMA_GetCurrDataCounter(DMA_Stream_TypeDef* DMAy_Streamx)
   
     [..]
     Two functions can be called dynamically when the transfer is ongoing (or when the DMA Stream is 
-    stopped) to modify on of the target Memories addresses or to check wich Memory target is currently
+    stopped) to modify on of the target Memories addresses or to check which Memory target is currently
     used:
       (+) void DMA_MemoryTargetConfig(DMA_Stream_TypeDef* DMAy_Streamx, 
                 uint32_t MemoryBaseAddr, uint32_t DMA_MemoryTarget);

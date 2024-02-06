@@ -89,34 +89,79 @@ typedef struct {
   __attribute__((aligned(4))) float P[KC_STATE_DIM][KC_STATE_DIM];
   arm_matrix_instance_f32 Pm;
 
-  // Indicates that the internal state is corrupt and should be reset
-  bool resetEstimation;
-
   float baroReferenceHeight;
+
+  // Quaternion used for initial orientation [w,x,y,z]
+  float initialQuaternion[4];
+
+  // Tracks whether an update to the state has been made, and the state therefore requires finalization
+  bool isUpdated;
+
+  uint32_t lastPredictionMs;
+  uint32_t lastProcessNoiseUpdateMs;
 } kalmanCoreData_t;
 
+// The parameters used by the filter
+typedef struct {
+  // Initial variances, uncertain of position, but know we're stationary and roughly flat
+  float stdDevInitialPosition_xy;
+  float stdDevInitialPosition_z;
+  float stdDevInitialVelocity;
+  float stdDevInitialAttitude_rollpitch;
+  float stdDevInitialAttitude_yaw;
 
-void kalmanCoreInit(kalmanCoreData_t* this);
+  float procNoiseAcc_xy;
+  float procNoiseAcc_z;
+  float procNoiseVel;
+  float procNoisePos;
+  float procNoiseAtt;
+  float measNoiseBaro;           // meters
+  float measNoiseGyro_rollpitch; // radians per second
+  float measNoiseGyro_yaw;       // radians per second
+
+  float initialX;
+  float initialY;
+  float initialZ;
+
+  // Initial yaw of the Crazyflie in radians.
+  // 0 --- facing positive X
+  // PI / 2 --- facing positive Y
+  // PI --- facing negative X
+  // 3 * PI / 2 --- facing negative Y
+  float initialYaw;
+} kalmanCoreParams_t;
+
+/*  - Load default parameters */
+void kalmanCoreDefaultParams(kalmanCoreParams_t *params);
+
+/*  - Initialize Kalman State */
+void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs);
 
 /*  - Measurement updates based on sensors */
 
 // Barometer
-void kalmanCoreUpdateWithBaro(kalmanCoreData_t* this, float baroAsl, bool quadIsFlying);
+void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float baroAsl, bool quadIsFlying);
 
 /**
  * Primary Kalman filter functions
  *
  * The filter progresses as:
  *  - Predicting the current state forward */
-void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying);
+void kalmanCorePredict(kalmanCoreData_t *this, Axis3f *acc, Axis3f *gyro, const uint32_t nowMs, bool quadIsFlying);
 
-void kalmanCoreAddProcessNoise(kalmanCoreData_t* this, float dt);
+void kalmanCoreAddProcessNoise(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs);
 
-/*  - Finalization to incorporate attitude error into body attitude */
-void kalmanCoreFinalize(kalmanCoreData_t* this, uint32_t tick);
+/**
+ * @brief Finalization to incorporate attitude error into body attitude
+ *
+ * @param this Core data
+ * @return true The state was finalized
+ * @return false The state was not changed and did not require finalization
+ */
+bool kalmanCoreFinalize(kalmanCoreData_t* this);
 
 /*  - Externalization to move the filter's internal state into the external state expected by other modules */
-void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, const Axis3f *acc, uint32_t tick);
+void kalmanCoreExternalizeState(const kalmanCoreData_t* this, state_t *state, const Axis3f *acc);
 
 void kalmanCoreDecoupleXY(kalmanCoreData_t* this);
 

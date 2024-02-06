@@ -53,6 +53,7 @@
 #include "sensors.h"
 #include "debug.h"
 #include "led.h"
+#include "pm.h"
 
 #include "statsCnt.h"
 #include "log.h"
@@ -62,8 +63,10 @@
 #include "mem.h"
 #include "eventtrigger.h"
 
+#include "autoconf.h"
+
 // Hardware defines
-#ifdef USDDECK_USE_ALT_PINS_AND_SPI
+#ifdef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
 #include "deck_spi3.h"
 #define USD_CS_PIN    DECK_GPIO_RX2
 
@@ -91,6 +94,10 @@
 #define MAX_USD_LOG_EVENTS                (20)
 #define FIXED_FREQUENCY_EVENT_ID          (0xFFFF)
 #define FIXED_FREQUENCY_EVENT_NAME        "fixedFrequency"
+
+
+/* set to true when graceful shutdown is triggered */
+static volatile bool in_shutdown = false;
 
 typedef struct usdLogEventConfig_s {
   uint16_t eventId;
@@ -237,6 +244,7 @@ static crc32Context_t crcContext;
 static xTimerHandle timer;
 static void usdTimer(xTimerHandle timer);
 
+static SemaphoreHandle_t shutdownMutex;
 
 // Handling from the memory module
 static uint32_t handleMemGetSize(void) { return usddeckFileSize(); }
@@ -403,13 +411,20 @@ TCHAR* f_gets_without_comments (
   TCHAR c, *p = buff;
   UINT rc;
   bool isComment = false;
+  bool isPureComment = false;
 
   while (n < len - 1) { /* Read characters until buffer gets filled */
     f_read(fp, &c, 1, &rc);
     if (rc != 1) {
-      break;
+      *p = 0;
+      return 0; /* When no data read (eof or error), return with error. */
     }
     if (c == '\n') {
+      if (isPureComment){
+        isComment = false;
+        isPureComment = false;
+        continue;
+      }      
       break;   /* Break on EOL */
     }
     if (isspace((int)c)) {
@@ -417,6 +432,9 @@ TCHAR* f_gets_without_comments (
     }
     if (c == '#') {
       isComment = true; /* keep reading until end of line */
+      if (n==0){
+        isPureComment = true;
+      }
     }
     if (!isComment) {
       *p++ = c;
@@ -424,7 +442,7 @@ TCHAR* f_gets_without_comments (
     }
   }
   *p = 0;
-  return n ? buff : 0;      /* When no data read (eof or error), return with error. */
+  return buff;
 }
 
 
@@ -440,6 +458,8 @@ static void usdInit(DeckInfo *info)
 
     logFileMutex = xSemaphoreCreateMutex();
     logBufferMutex = xSemaphoreCreateMutex();
+    shutdownMutex = xSemaphoreCreateMutex();
+
     /* try to mount drives before creating the tasks */
     if (f_mount(&FatFs, "", 1) == FR_OK) {
       DEBUG_PRINT("mount SD-Card [OK].\n");
@@ -519,6 +539,14 @@ static void usddeckEventtriggerCallback(const eventtrigger *event)
       break;
     }
   }
+}
+
+static void usdGracefulShutdownCallback()
+{
+  uint32_t timeout = 15; /* ms */
+  in_shutdown = true;
+  vTaskResume(xHandleWriteTask);
+  xSemaphoreTake(shutdownMutex, M2T(timeout));
 }
 
 static void usdLogTask(void* prm)
@@ -609,8 +637,13 @@ static void usdLogTask(void* prm)
           cfg->numBytes = 0;
           while (true) {
             line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-            if (!line || strncmp(line, "on:", 3) == 0)
+            if (!line || strncmp(line, "on:", 3) == 0) {
               break;
+            }
+            // skip lines that do not have at least two characters (1 for group, 1 for '.', 1 for name)
+            if (strlen(line) <= 3) {
+              continue;
+            }
             char *group = line;
             char *name = 0;
             for (int i = 0; i < strlen(line); ++i) {
@@ -635,7 +668,7 @@ static void usdLogTask(void* prm)
               continue;
             }
           }
-          if (usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS - 1) {
+          if (usdLogConfig.numEventConfigs < MAX_USD_LOG_EVENTS) {
             ++usdLogConfig.numEventConfigs;
             cfg = &usdLogConfig.eventConfigs[usdLogConfig.numEventConfigs];
           } else {
@@ -681,6 +714,8 @@ static void usdLogTask(void* prm)
 
     xHandleWriteTask = 0;
     enableLogging = usdLogConfig.enableOnStartup; // enable logging if desired
+
+    pmRegisterGracefulShutdownCallback(usdGracefulShutdownCallback);
 
     /* create usd-write task */
     xTaskCreate(usdWriteTask, USDWRITE_TASK_NAME,
@@ -774,9 +809,13 @@ static void usdWriteData(const void *data, size_t size)
 {
   UINT bytesWritten;
   FRESULT status = f_write(&logFile, data, size, &bytesWritten);
-  ASSERT(status == FR_OK);
-  crc32Update(&crcContext, data, size);
-  STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
+  if (status != FR_OK) {
+    DEBUG_PRINT("usd deck write failure %d\n", status);
+    enableLogging = false;
+  } else {
+    crc32Update(&crcContext, data, size);
+    STATS_CNT_RATE_MULTI_EVENT(&fatWriteRate, bytesWritten);
+  }
 }
 
 static void usdWriteTask(void* prm)
@@ -788,7 +827,7 @@ static void usdWriteTask(void* prm)
 
   vTaskDelay(M2T(50));
 
-  while (true) {
+  while (!in_shutdown) {
     vTaskSuspend(NULL);
     if (enableLogging) {
       // reset stats
@@ -836,7 +875,7 @@ static void usdWriteTask(void* prm)
         // write header
         uint8_t magic = 0xBC;
         usdWriteData(&magic, sizeof(magic));
-        
+
         uint16_t version = 2;
         usdWriteData(&version, sizeof(version));
 
@@ -884,6 +923,9 @@ static void usdWriteTask(void* prm)
                 break;
               case eventtriggerType_float:
                 typeChar = 'f';
+                break;
+              case eventtrigerType_fp16:
+                typeChar = 'e';
                 break;
               default:
                 ASSERT(false);
@@ -942,7 +984,7 @@ static void usdWriteTask(void* prm)
           uint16_t size;
           bool hasData = ringBuffer_pop_start(&logBuffer, &buf, &size);
           xSemaphoreGive(logBufferMutex);
-          
+
           // execute the actual write operation
           if (hasData) {
             usdWriteData(buf, size);
@@ -980,7 +1022,7 @@ static void usdWriteTask(void* prm)
           lastFileSize = info.fsize;
         }
 
-        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n", 
+        DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n",
           lastFileSize,
           usdLogConfig.filename,
           usdLogStats.eventsWritten,
@@ -994,6 +1036,11 @@ static void usdWriteTask(void* prm)
       }
     }
   }
+
+  if (in_shutdown) {
+    xSemaphoreGive(shutdownMutex);
+  }
+
   /* something went wrong */
   xHandleWriteTask = 0;
   vTaskDelete(NULL);
@@ -1030,7 +1077,7 @@ static const DeckDriver usd_deck = {
     .vid = 0xBC,
     .pid = 0x08,
     .name = "bcUSD",
-    .usedGpio = DECK_USING_MISO|DECK_USING_MOSI|DECK_USING_SCK|DECK_USING_IO_4,
+    .usedGpio = DECK_USING_IO_4,
     .usedPeriph = DECK_USING_SPI,
     .init = usdInit,
     .test = usdTest,
@@ -1039,16 +1086,43 @@ static const DeckDriver usd_deck = {
 DECK_DRIVER(usd_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
+
+/**
+ * @brief Nonzero if [SD-card deck](%https://store.bitcraze.io/collections/decks/products/sd-card-deck) is attached
+*/
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
+
 PARAM_GROUP_STOP(deck)
 
+/**
+ * The micro SD card deck is used for on-board logging of data to a micro SD card.
+ */
 PARAM_GROUP_START(usd)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
-PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
+/**
+ * @brief Non zero if logging is possible, 0 indicates there might be a problem with the logging configuration.
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, canLog, &initSuccess)
+
+/**
+ * @brief Controls if logging to the SD-card is active. Set to 1 to start logging, set to 0 to stop logging (default).
+ */
+PARAM_ADD_CORE(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
 PARAM_GROUP_STOP(usd)
 
+/**
+ * Micro-SD related log variables for debug purposes mainly.
+ */
 LOG_GROUP_START(usd)
+/**
+ * @brief SPI write rate (includes overhead) [bytes/s]
+ */
 STATS_CNT_RATE_LOG_ADD(spiWrBps, &spiWriteRate)
+/**
+ * @brief SPI read rate (includes overhead) [bytes/s]
+ */
 STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
+/**
+ * @brief Data write rate to the SD card [bytes/s]
+ */
 STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
 LOG_GROUP_STOP(usd)

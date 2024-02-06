@@ -1,0 +1,3 @@
+obj-$(CONFIG_ESTIMATOR_OUTLIER_FILTERS) += outlierFilterTdoa.o
+obj-$(CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK) += outlierFilterTdoaSteps.o
+obj-$(CONFIG_ESTIMATOR_OUTLIER_FILTERS) += outlierFilterLighthouse.o

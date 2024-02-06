@@ -1,0 +1,242 @@
+menu "Controllers and Estimators"
+
+choice
+    prompt "Default controller"
+    default CONFIG_CONTROLLER_AUTO_SELECT
+
+config CONTROLLER_AUTO_SELECT
+    bool "Auto select Controller"
+    help
+        Do not care which controller is used, if any
+
+config CONTROLLER_PID
+    bool "PID controller"
+    help
+        Use the PID (proportional–integral–derivative) controller as default
+
+config CONTROLLER_PID_FILTER_ALL
+    bool "Apply LPF filter to all PID components"
+    depends on CONTROLLER_PID
+    help
+        Apply a low pass filter to all PID components instead of only the D component (default)
+
+config CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+    bool "Use improved baro z hold"
+    depends on CONTROLLER_PID_FILTER_ALL
+    help
+        Uses an improved z hold based on barometric pressure
+
+config CONTROLLER_INDI
+    bool "INDI controller"
+    help
+        Use the INDI (Incremental non-linear dynamic inversion) controller as default
+
+config CONTROLLER_MELLINGER
+    bool "Mellinger controller"
+    help
+        Use the Mellinger controller as default
+
+config CONTROLLER_BRESCIANINI
+    bool "Brescianini controller"
+    help
+        Use the Brescianini controller as default
+
+endchoice
+
+config CONTROLLER_OOT
+    bool "Out-of-tree controller"
+    default n
+
+config ESTIMATOR_KALMAN_ENABLE
+    bool "Enable Kalman Estimator"
+    default y
+    select ESTIMATOR_OUTLIER_FILTERS
+    help
+        Enable the Kalman (EKF) estimator.
+
+config ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
+    bool "Use 'old' TDoA outlier filter."
+    default n
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        Use the 'old' TDoA outlier filter instead of the default one. Deprecated, will be removed after September 2023.
+
+config ESTIMATOR_UKF_ENABLE
+    bool "Enable error-state UKF estimator"
+    select ESTIMATOR_OUTLIER_FILTERS
+    default n
+    help
+        Enable the (error-state unscented) Kalman filter (UKF) estimator
+
+config ESTIMATOR_OUTLIER_FILTERS
+    bool
+    help
+        Include outlier filters for estimators
+
+choice
+    prompt "Default estimator"
+    default CONFIG_ESTIMATOR_AUTO_SELECT
+
+config ESTIMATOR_AUTO_SELECT
+    bool "Auto select Estimator"
+    help
+        Do not care which estimator is used, if any
+
+config ESTIMATOR_KALMAN
+    bool "Kalman estimator"
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        Use the (extended) Kalman filter (EKF) estimator as default
+
+config ESTIMATOR_UKF
+    bool "Error-state UKF estimator"
+    depends on ESTIMATOR_UKF_ENABLE
+    help
+        Use the (error-state unscented) Kalman filter (UKF) estimator as default
+
+config ESTIMATOR_COMPLEMENTARY
+    bool "Complementary estimator"
+    help
+        Use the lightweight complementary estimator as default
+
+endchoice
+
+config ESTIMATOR_OOT
+    bool "Out-of-tree estimator"
+    default n
+
+endmenu
+
+menu "Motor configuration"
+
+choice
+    prompt "ESC protocol"
+    default MOTORS_ESC_PROTOCOL_ONESHOT125
+
+	config MOTORS_ESC_PROTOCOL_STANDARD_PWM
+	    bool "Standard PWM"
+
+	config MOTORS_ESC_PROTOCOL_ONESHOT125
+	    bool "OneShot125"
+
+	config MOTORS_ESC_PROTOCOL_ONESHOT42
+	    bool "OneShot42"
+
+  config MOTORS_ESC_PROTOCOL_DSHOT
+      bool "Digital DSHOT protocol"
+
+endchoice
+
+choice
+  prompt "DSHOT PWM Period"
+  depends on MOTORS_ESC_PROTOCOL_DSHOT
+  default MOTORS_DSHOT_PWM_300KHZ
+
+config MOTORS_DSHOT_PWM_150KHZ
+    bool "150 kHz"
+
+config MOTORS_DSHOT_PWM_300KHZ
+    bool "300 kHz"
+
+config MOTORS_DSHOT_PWM_600KHZ
+    bool "600 kHz"
+
+endchoice
+
+config MOTORS_REQUIRE_ARMING
+    bool "Require arming to be able to start motors and take off"
+    default n
+    help
+        When enabled, system must be armed to be able to take off. Arming can
+        be done in several ways, e.g. though cfclient or external transmitter.
+
+config MOTORS_DEFAULT_IDLE_THRUST
+    int "Default idle thrust for motors in armed state"
+    range 0 65535
+    default 0
+    depends on MOTORS_REQUIRE_ARMING
+    help
+        Default thrust for motors when idling in armed state, expressed as an
+        integer in the range 0 to 65535. This can be overridden with parameters;
+        the value specified here applies to the case when the persistent storage
+        does not contain an idle thrust value.
+
+config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
+    int "Override default PWM ratio to use during motor tests"
+    range 0 65535
+    default 0
+    help
+        PWM ratio to use during motor tests, expressed as an integer in the range
+        0 to 65535. Zero means not to override the PWM ratio; in this case, the
+        drone uses full thrust for brushed motors and does not spin up brushless
+        motors (for safety reasons). It is therefore advised to set this parameter
+        explicitly for brushless builds to enable the motor test functionality.
+
+        The value specified here can also be overridden with parameters.
+
+config MOTORS_DEFAULT_BAT_TEST_PWM_RATIO
+    int "Override default PWM ratio to use during battery tests"
+    range 0 65535
+    default 0
+    help
+        PWM ratio to use during battery test, expressed as an integer in the range
+        0 to 65535. Zero means not to override the PWM ratio because there a differences
+        between brushed and brushless;. Brushless is 0 for safety reasons. Different motors
+        needs different value, hance this config variable.
+
+        The value specified here can also be overridden with parameters.
+
+choice
+    prompt "Type of power distribution"
+    default POWER_DISTRIBUTION_QUADROTOR
+
+config POWER_DISTRIBUTION_QUADROTOR
+    bool "Quadrotor power distribution"
+    depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
+    help
+        Power distribution function for quadrotors
+config POWER_DISTRIBUTION_FLAPPER
+    bool "Flapper Nimble+ power distribution"
+    depends on PLATFORM_FLAPPER
+    help
+        Power distribution function for Flapper Nimble+
+
+endchoice
+config POWER_DISTRIBUTION_FLAPPER_REVB
+    bool "Flapper  Nimble+ power distribution (PCB revision B)"
+    depends on POWER_DISTRIBUTION_FLAPPER
+    default n
+    help
+        Power distribution function for Flapper Nimble+ with revB PCB
+
+config ENABLE_THRUST_BAT_COMPENSATED
+    bool "Enable battery thrust compensation"
+    default y
+    help
+        Compensate thrust depending on battery voltage so it will produce about the same
+        amount of thrust independent of the battery voltage.
+        The compensation is based on thrust measurements, which are only valid for CF2.X stock configuration.
+        Not applied for brushless motor setup.
+
+config LOG_MOTOR_CAP_WARNING
+    bool "Log a warning if the motor thrust is capped"
+    default n
+    help
+        If the computed thrust of one or more motors is outside of the possible range, the thrust will be capped or
+        reduced for one or more motors depending on configuration. Enabeling this setting will report in the console log
+        that the thrust has been capped.
+
+endmenu
+
+menu "Parameter subsystem"
+
+config PARAM_SILENT_UPDATES
+    bool "Silent parameter updates"
+    default n
+    help
+        Do not send CRTP packets when a parameter is updated. Note that this may
+        break some functionality in clients that expect to receive feedback
+        about parameter updates, so this option should be enabled if you know
+        what you are doing.
+
+endmenu

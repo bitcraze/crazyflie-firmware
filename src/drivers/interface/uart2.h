@@ -23,15 +23,11 @@
  *
  * uart2.h - uart2 driver for deck port
  */
-#ifndef UART2_H_
-#define UART2_H_
+#pragma once
 
 #include <stdbool.h>
 #include "eprintf.h"
-
-#ifdef UART2_LINK_COMM
-#include "syslink.h"
-#endif
+#include "autoconf.h"
 
 #define UART2_DATA_TIMEOUT_MS    1000
 #define UART2_DATA_TIMEOUT_TICKS (UART2_DATA_TIMEOUT_MS / portTICK_RATE_MS)
@@ -41,6 +37,7 @@
 #define ENABLE_UART2_RCC       RCC_APB1PeriphClockCmd
 #define UART2_IRQ              USART2_IRQn
 
+#define UART2_DMA_BUFFER_SIZE 128
 #define UART2_DMA_IRQ           DMA1_Stream6_IRQn
 #define UART2_DMA_IT_TC         DMA_IT_TC4
 #define UART2_DMA_STREAM        DMA1_Stream6
@@ -55,6 +52,8 @@
 #define UART2_GPIO_AF_RX_PIN   GPIO_PinSource3
 #define UART2_GPIO_AF_TX       GPIO_AF_USART2
 #define UART2_GPIO_AF_RX       GPIO_AF_USART2
+
+#define UART2_RX_QUEUE_LENGTH 128
 
 /**
  * Initialize the UART.
@@ -92,31 +91,50 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data);
  */
 int uart2Putchar(int ch);
 
-#ifdef UART2_LINK_COMM
-
 /**
- * Get data from rx queue. Blocks until data is available.
- * @param[out] slp Pointer to a complete syslink packet
+ * Get data from the UART. Blocking until the amount of
+ * data has been read
+ *
+ * @param[in] size  Number of bytes to read
+ * @param[out] data  Pointer to data
+ * 
+ * @return number of bytes read
  */
-void uart2GetPacketBlocking(SyslinkPacket* slp);
-
-#else
+int uart2GetData(size_t size, uint8_t * buffer);
 
 /**
- * Read a byte of data from incoming queue with a timeout
+ * Get data from the UART. Blocking until the amount of
+ * data has been read or the timeout occurs.
+ *
+ * @param[in] size  Number of bytes to read
+ * @param[out] data  Pointer to data
+ * @param[in] timeoutTicks timeout in ticks
+ * 
+ * @return number of bytes read
+ */
+int uart2GetDataWithTimeout(size_t size, uint8_t * buffer, const uint32_t timeoutTicks);
+
+/**
+ * Read a byte of data from the UART with a timeout
  * @param[out] c  Read byte
  * @param[in] timeoutTicks The timeout in sys ticks
  * @return true if data, false if timeout was reached.
  */
-bool uart2GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks);
+bool uart2GetCharWithTimeout(uint8_t *c, const uint32_t timeoutTicks);
 
 /**
- * Read a byte of data from incoming queue with a timeout defined by UART2_DATA_TIMEOUT_MS
+ * Read a byte of data from the UART with a timeout defined by UART2_DATA_TIMEOUT_MS
  * @param[out] c  Read byte
  * @return true if data, false if timeout was reached.
  */
-bool uart2GetDataWithDefaultTimeout(uint8_t *c);
+bool uart2GetCharWithDefaultTimeout(uint8_t *c);
 
+/**
+ * Read a byte of data from the UART. Blocking until a byte
+ * can be read. 
+ * 
+ * @param[out] ch pointer to data
+ */
 void uart2Getchar(char * ch);
 
 /**
@@ -127,8 +145,6 @@ void uart2Getchar(char * ch);
  */
 bool uart2DidOverrun();
 
-#endif
-
 /**
  * Uart printf macro that uses eprintf
  * @param[in] FMT String format
@@ -137,5 +153,3 @@ bool uart2DidOverrun();
  * @note If UART Crtp link is activated this function does nothing
  */
 #define uart2Printf(FMT, ...) eprintf(uart2Putchar, FMT, ## __VA_ARGS__)
-
-#endif /* UART2_H_ */

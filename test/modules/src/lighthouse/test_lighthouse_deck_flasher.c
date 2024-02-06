@@ -1,4 +1,6 @@
-// File under test lighthouse_core.c
+// @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
+
+// File under test lighthouse_deck_flasher.c
 #include "lighthouse_deck_flasher.h"
 
 #include "unity.h"
@@ -9,6 +11,9 @@
 #include "freertosMocks.h"
 
 #include <stdbool.h>
+
+const DeckMemDef_t* noMemDef = 0;
+
 
 void setUp(void) {
   // Empty
@@ -26,7 +31,7 @@ void testThaEraseFwIsCalledWhenWritingTheFirstBlock() {
   lhblFlashWritePage_ExpectWithArrayAndReturn(LH_FW_ADDR + 0, 4, buffer, 4, true);
 
   // Test
-  bool actual = lighthouseDeckFlasherWrite(0, 4, buffer);
+  bool actual = lighthouseDeckFlasherWrite(0, 4, buffer, noMemDef);
 
   // Actual
   TEST_ASSERT_TRUE(actual);
@@ -41,7 +46,7 @@ void testThaEraseFwSplitsWriteBetweenTwoPages() {
 
 
   // Test
-  bool actual = lighthouseDeckFlasherWrite(254, 4, buffer);
+  bool actual = lighthouseDeckFlasherWrite(254, 4, buffer, noMemDef);
 
   // Actual
   TEST_ASSERT_TRUE(actual);

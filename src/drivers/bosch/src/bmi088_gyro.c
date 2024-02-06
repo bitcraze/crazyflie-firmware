@@ -715,4 +715,3 @@ static uint16_t set_int_pin_config(const struct bmi088_int_cfg *int_config, stru
 }
 
 /** @}*/
-

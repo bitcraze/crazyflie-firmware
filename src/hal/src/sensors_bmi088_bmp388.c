@@ -54,6 +54,7 @@
 #include "estimator.h"
 
 #include "sensors_bmi088_common.h"
+#include "platform_defaults.h"
 
 #define GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
 
@@ -82,12 +83,13 @@
 #define SENSORS_NBR_OF_BIAS_SAMPLES  512
 
 // Variance threshold to take zero bias for gyro
-#define GYRO_VARIANCE_BASE              10000
+#define GYRO_VARIANCE_BASE              100
 #define GYRO_VARIANCE_THRESHOLD_X       (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Y       (GYRO_VARIANCE_BASE)
 #define GYRO_VARIANCE_THRESHOLD_Z       (GYRO_VARIANCE_BASE)
 
 #define SENSORS_ACC_SCALE_SAMPLES  200
+
 
 typedef struct
 {
@@ -145,6 +147,13 @@ static void applyAxis3fLpf(lpf2pData *data, Axis3f* in);
 static bool isBarometerPresent = false;
 static uint8_t baroMeasDelayMin = SENSORS_DELAY_BARO;
 
+// IMU alignment Euler angles
+static float imuPhi = IMU_PHI;
+static float imuTheta = IMU_THETA;
+static float imuPsi = IMU_PSI;
+
+static float R[3][3];
+
 // Pre-calculated values for accelerometer alignment
 static float cosPitch;
 static float sinPitch;
@@ -162,6 +171,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
 static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsAddBiasValue(BiasObj* bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj* bias);
+static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out);
 static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out);
 
 STATIC_MEM_TASK_ALLOC(sensorsTask, SENSORS_TASK_STACKSIZE);
@@ -260,7 +270,7 @@ bool sensorsBmi088Bmp388ReadBaro(baro_t *baro)
   return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
 }
 
-void sensorsBmi088Bmp388Acquire(sensorData_t *sensors, const uint32_t tick)
+void sensorsBmi088Bmp388Acquire(sensorData_t *sensors)
 {
   sensorsReadGyro(&sensors->gyro);
   sensorsReadAcc(&sensors->acc);
@@ -278,6 +288,8 @@ static void sensorsTask(void *param)
 {
   systemWaitStart();
 
+  Axis3f gyroScaledIMU;
+  Axis3f accScaledIMU;
   Axis3f accScaled;
   measurement_t measurement;
   /* wait an additional second the keep bus free
@@ -304,20 +316,23 @@ static void sensorsTask(void *param)
       {
          processAccScale(accelRaw.x, accelRaw.y, accelRaw.z);
       }
+
       /* Gyro */
-      sensorData.gyro.x =  (gyroRaw.x - gyroBias.x) * SENSORS_BMI088_DEG_PER_LSB_CFG;
-      sensorData.gyro.y =  (gyroRaw.y - gyroBias.y) * SENSORS_BMI088_DEG_PER_LSB_CFG;
-      sensorData.gyro.z =  (gyroRaw.z - gyroBias.z) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      gyroScaledIMU.x =  (gyroRaw.x - gyroBias.x) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      gyroScaledIMU.y =  (gyroRaw.y - gyroBias.y) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      gyroScaledIMU.z =  (gyroRaw.z - gyroBias.z) * SENSORS_BMI088_DEG_PER_LSB_CFG;
+      sensorsAlignToAirframe(&gyroScaledIMU, &sensorData.gyro);
       applyAxis3fLpf((lpf2pData*)(&gyroLpf), &sensorData.gyro);
 
       measurement.type = MeasurementTypeGyroscope;
       measurement.data.gyroscope.gyro = sensorData.gyro;
       estimatorEnqueue(&measurement);
 
-      /* Accelerometer */
-      accScaled.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
-      accScaled.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
-      accScaled.z = accelRaw.z * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      /* Acelerometer */
+      accScaledIMU.x = accelRaw.x * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      accScaledIMU.y = accelRaw.y * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      accScaledIMU.z = accelRaw.z * SENSORS_BMI088_G_PER_LSB_CFG / accScale;
+      sensorsAlignToAirframe(&accScaledIMU, &accScaled);
       sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
       applyAxis3fLpf((lpf2pData*)(&accLpf), &sensorData.acc);
 
@@ -498,7 +513,7 @@ static void sensorsDeviceInit(void)
   }
   else
   {
-#ifndef SENSORS_IGNORE_BAROMETER_FAIL
+#ifndef CONFIG_SENSORS_IGNORE_BAROMETER_FAIL
     DEBUG_PRINT("BMP388 I2C connection [FAIL]\n");
     isInit = false;
     return;
@@ -757,13 +772,13 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
     sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
   }
 
-  varOut->x = (sumSq[0] - ((int64_t)sum[0] * sum[0]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-  varOut->y = (sumSq[1] - ((int64_t)sum[1] * sum[1]) / SENSORS_NBR_OF_BIAS_SAMPLES);
-  varOut->z = (sumSq[2] - ((int64_t)sum[2] * sum[2]) / SENSORS_NBR_OF_BIAS_SAMPLES);
+  meanOut->x = (float) sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->y = (float) sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  meanOut->z = (float) sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
 
-  meanOut->x = (float)sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->y = (float)sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
-  meanOut->z = (float)sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
+  varOut->x = sumSq[0] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->x * meanOut->x;
+  varOut->y = sumSq[1] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->y * meanOut->y;
+  varOut->z = sumSq[2] / SENSORS_NBR_OF_BIAS_SAMPLES - meanOut->z * meanOut->z;
 }
 
 /**
@@ -859,6 +874,36 @@ bool sensorsBmi088Bmp388ManufacturingTest(void)
 }
 
 /**
+ * Align the sensors to the Airframe axes
+ */
+static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
+{
+  // IMU alignment
+  static float sphi, cphi, stheta, ctheta, spsi, cpsi;
+
+  sphi   = sinf(imuPhi * (float) M_PI / 180);
+  cphi   = cosf(imuPhi * (float) M_PI / 180);
+  stheta = sinf(imuTheta * (float) M_PI / 180);
+  ctheta = cosf(imuTheta * (float) M_PI / 180);
+  spsi   = sinf(imuPsi * (float) M_PI / 180);
+  cpsi   = cosf(imuPsi * (float) M_PI / 180);
+
+  R[0][0] = ctheta * cpsi;
+  R[0][1] = ctheta * spsi;
+  R[0][2] = -stheta;
+  R[1][0] = sphi * stheta * cpsi - cphi * spsi;
+  R[1][1] = sphi * stheta * spsi + cphi * cpsi;
+  R[1][2] = sphi * ctheta;
+  R[2][0] = cphi * stheta * cpsi + sphi * spsi;
+  R[2][1] = cphi * stheta * spsi - sphi * cpsi;
+  R[2][2] = cphi * ctheta;
+
+  out->x = in->x*R[0][0] + in->y*R[0][1] + in->z*R[0][2];
+  out->y = in->x*R[1][0] + in->y*R[1][1] + in->z*R[1][2];
+  out->z = in->x*R[2][0] + in->y*R[2][1] + in->z*R[2][2];
+}
+
+/**
  * Compensate for a miss-aligned accelerometer. It uses the trim
  * data gathered from the UI and written in the config-block to
  * rotate the accelerometer to be aligned with gravity.
@@ -951,5 +996,25 @@ LOG_GROUP_STOP(gyro)
 #endif
 
 PARAM_GROUP_START(imu_sensors)
+
+/**
+ * @brief Nonzero if BMP388 barometer is present
+ */
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
+
+/**
+ * @brief Euler angle Phi defining IMU orientation on the airframe (in degrees)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPhi, &imuPhi)
+
+/**
+ * @brief Euler angle Theta defining IMU orientation on the airframe (in degrees)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuTheta, &imuTheta)
+
+/**
+ * @brief Euler angle Psi defining IMU orientation on the airframe (in degrees)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPsi, &imuPsi)
+
 PARAM_GROUP_STOP(imu_sensors)

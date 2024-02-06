@@ -8,19 +8,43 @@ bin/*
 .settings/*
 .vscode/*
 *~
-tools/make/config.mk
 cflie.*
 version.c
 tags
+*cffirmware*.so
+cffirmware.py
 
 /cf2.*
 /tag.*
+/bolt.*
+/flapper.*
 *.gch
 
 current_platform.mk
 
-/generated-test/**
+/generated/**
 **/__pycache__/**
+**/*.pyc
 
-/docs/.jekyll-metadata
+bindings/build/*
+bindings/cffirmware_wrap.c
+dist/
+
+docs/.jekyll-metadata
 docs/.jekyll-cache
+
+docs/api/logs.md_raw
+docs/api/params.md_raw
+docs/api/log_param_doc.json
+docs/api
+
+build/
+# To avoid that /tools/build is ignored
+!/tools/*
+
+**/*.o
+**/*.cmd
+**/*.a
+*.elf
+
+tools/dependency/web/data.js

@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2013 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,8 @@
 #include "commander.h"
 #include "uart1.h"
 #include "cppm.h"
+#include "crtp_commander.h"
+#include "supervisor.h"
 
 #define DEBUG_MODULE  "EXTRX"
 #include "debug.h"
@@ -49,25 +51,67 @@
 
 #define EXTRX_NR_CHANNELS  8
 
-#define EXTRX_CH_TRUST     2
-#define EXTRX_CH_ROLL      0
-#define EXTRX_CH_PITCH     1
-#define EXTRX_CH_YAW       3
+#ifdef EXTRX_TAER
+  #define EXTRX_CH_THRUST     0
+  #define EXTRX_CH_ROLL      1
+  #define EXTRX_CH_PITCH     2
+  #define EXTRX_CH_YAW       3
 
-#define EXTRX_SIGN_ROLL    (-1)
-#define EXTRX_SIGN_PITCH   (-1)
-#define EXTRX_SIGN_YAW     (-1)
+  #define EXTRX_SIGN_ROLL    (1)
+  #define EXTRX_SIGN_PITCH   (-1)
+  #define EXTRX_SIGN_YAW     (-1)
+#else // default is AETR, like in BetaFlight
+  #define EXTRX_CH_THRUST     2
+  #define EXTRX_CH_ROLL      0
+  #define EXTRX_CH_PITCH     1
+  #define EXTRX_CH_YAW       3
 
-#define EXTRX_SCALE_ROLL   (40.0f)
-#define EXTRX_SCALE_PITCH  (40.0f)
-#define EXTRX_SCALE_YAW    (400.0f)
+  #define EXTRX_SIGN_ROLL    (1)
+  #define EXTRX_SIGN_PITCH   (-1)
+  #define EXTRX_SIGN_YAW     (-1)
+#endif
+
+#define EXTRX_CH_ALTHOLD   4
+#define EXTRX_CH_ARM       5
+#define EXTRX_CH_MODE     6
+
+#define EXTRX_SIGN_ALTHOLD   (-1)
+#define EXTRX_SIGN_ARM       (-1)
+#define EXTRX_SIGN_MODE       (-1)
+
+#define EXTRX_DEADBAND_ROLL (0.05f)
+#define EXTRX_DEADBAND_PITCH (0.05f)
+#define EXTRX_DEADBAND_YAW (0.05f)
+
+#define EXTRX_SWITCH_MIN_CNT 5 // number of identical subsequent switch states before the switch variable is changed
+
+bool extRxArm = false;
+bool extRxAltHold = false;
+bool extRxModeRate = false;
+
+#if CONFIG_DECK_EXTRX_ARMING
+  bool extRxArmPrev = false;
+  int8_t arm_cnt = 0;
+#endif
+
+#if CONFIG_DECK_EXTRX_ALT_HOLD
+  #define EXTRX_DEADBAND_ZVEL  (0.25f)
+  bool extRxAltHoldPrev = false;
+  int8_t altHold_cnt = 0;
+#endif
+
+#if CONFIG_DECK_EXTRX_MODE_RATE
+  bool extRxModeRatePrev = false;
+  int8_t modeRate_cnt = 0;
+#endif
 
 static setpoint_t extrxSetpoint;
-static uint16_t ch[EXTRX_NR_CHANNELS];
+static uint16_t ch[EXTRX_NR_CHANNELS] = {0};
 
 static void extRxTask(void *param);
 static void extRxDecodeCppm(void);
 static void extRxDecodeChannels(void);
+
 
 STATIC_MEM_TASK_ALLOC(extRxTask, EXTRX_TASK_STACKSIZE);
 
@@ -80,6 +124,12 @@ void extRxInit(void)
 
 #ifdef ENABLE_CPPM
   cppmInit();
+  #ifdef CONFIG_DECK_EXTRX_TAER
+    DEBUG_PRINT("CPPM initialized, expecting TAER channel mapping\n");
+  #else
+    DEBUG_PRINT("CPPM initialized, expecting AETR channel mapping\n");
+  #endif
+
 #endif
 
 #ifdef ENABLE_SPEKTRUM
@@ -94,6 +144,7 @@ static void extRxTask(void *param)
 
   //Wait for the system to be fully started
   systemWaitStart();
+  DEBUG_PRINT("CPPM Task Started\n");
 
   while (true)
   {
@@ -103,10 +154,114 @@ static void extRxTask(void *param)
 
 static void extRxDecodeChannels(void)
 {
-  extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_TRUST]);
-  extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * cppmConvert2Float(ch[EXTRX_CH_ROLL], -EXTRX_SCALE_ROLL, EXTRX_SCALE_ROLL);
-  extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * cppmConvert2Float(ch[EXTRX_CH_PITCH], -EXTRX_SCALE_PITCH, EXTRX_SCALE_PITCH);
-  extrxSetpoint.attitude.yaw = EXTRX_SIGN_YAW * cppmConvert2Float(ch[EXTRX_CH_YAW], -EXTRX_SCALE_YAW, EXTRX_SCALE_YAW);
+
+  #if CONFIG_DECK_EXTRX_ARMING
+  if (EXTRX_SIGN_ARM * cppmConvert2Float(ch[EXTRX_CH_ARM], -1, 1, 0.0) > 0.5f) // channel needs to be 75% or more to work correctly with 2/3 way switches
+  {
+    if (arm_cnt < EXTRX_SWITCH_MIN_CNT) arm_cnt++;
+    else extRxArm = true;
+
+    if (extRxArmPrev != extRxArm)
+    {
+      if (supervisorRequestArming(extRxArm)) {
+        DEBUG_PRINT("System armed\n");
+      } else {
+        DEBUG_PRINT("Arming failed\n");
+      }
+    }
+  }
+  else
+  {
+    if (arm_cnt > 0) arm_cnt--;
+    else extRxArm = false;
+
+    if (extRxArmPrev != extRxArm)
+    {
+      DEBUG_PRINT("System unarmed\n");
+      supervisorRequestArming(extRxArm);
+    }
+  }
+
+  extRxArmPrev = extRxArm;
+  #endif
+
+  #if CONFIG_DECK_EXTRX_ALT_HOLD
+  if (EXTRX_SIGN_ALTHOLD * cppmConvert2Float(ch[EXTRX_CH_ALTHOLD], -1, 1, 0.0) > 0.5f)
+  {
+    if (altHold_cnt < EXTRX_SWITCH_MIN_CNT) altHold_cnt++;
+    else extRxAltHold=true;
+
+    if (extRxAltHoldPrev != extRxAltHold) DEBUG_PRINT("Althold mode ON\n");
+  }
+  else
+  {
+    if (altHold_cnt > 0) altHold_cnt--;
+    else extRxAltHold=false;
+
+    if (extRxAltHoldPrev != extRxAltHold) DEBUG_PRINT("Althold mode OFF\n");
+  }
+
+  if (extRxAltHold)
+  {
+    extrxSetpoint.thrust = 0;
+    extrxSetpoint.mode.z = modeVelocity;
+
+    extrxSetpoint.velocity.z = cppmConvert2Float(ch[EXTRX_CH_THRUST], -1, 1, EXTRX_DEADBAND_ZVEL);
+  }
+  else
+  {
+    extrxSetpoint.mode.z = modeDisable;
+    extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
+  }
+
+  extRxAltHoldPrev = extRxAltHold;
+  #else
+
+  extrxSetpoint.mode.z = modeDisable;
+  extrxSetpoint.thrust = cppmConvert2uint16(ch[EXTRX_CH_THRUST]);
+  #endif
+
+  #if CONFIG_DECK_EXTRX_MODE_RATE
+  if (EXTRX_SIGN_MODE * cppmConvert2Float(ch[EXTRX_CH_MODE], -1, 1, 0.0) > 0.5f) // channel needs to be 75% or more to work correctly with 2/3 way switches
+  {
+    if (modeRate_cnt < EXTRX_SWITCH_MIN_CNT) modeRate_cnt++;
+    else extRxModeRate = true;
+
+    if (extRxModeRatePrev != extRxModeRate)
+    {
+      DEBUG_PRINT("Switched to rate mode\n");
+      extrxSetpoint.mode.roll = modeVelocity;
+      extrxSetpoint.mode.pitch = modeVelocity;
+    }
+  }
+  else
+  {
+    if (modeRate_cnt > 0) modeRate_cnt--;
+    else extRxModeRate = false;
+
+    if (extRxModeRatePrev != extRxModeRate)
+    {
+      DEBUG_PRINT("Switched to level mode\n");
+      extrxSetpoint.mode.roll = modeAbs;
+      extrxSetpoint.mode.pitch = modeAbs;
+    }
+  }
+
+  extRxModeRatePrev = extRxModeRate;
+  #endif
+
+  if (extRxModeRate)
+  {
+    extrxSetpoint.attitudeRate.roll = EXTRX_SIGN_ROLL * getCPPMRollRateScale() * cppmConvert2Float(ch[EXTRX_CH_ROLL], -1, 1, EXTRX_DEADBAND_ROLL);
+    extrxSetpoint.attitudeRate.pitch = EXTRX_SIGN_PITCH * getCPPMPitchRateScale() * cppmConvert2Float(ch[EXTRX_CH_PITCH], -1, 1, EXTRX_DEADBAND_PITCH);
+  }
+  else
+  {
+    extrxSetpoint.attitude.roll = EXTRX_SIGN_ROLL * getCPPMRollScale() * cppmConvert2Float(ch[EXTRX_CH_ROLL], -1, 1, EXTRX_DEADBAND_ROLL);
+    extrxSetpoint.attitude.pitch = EXTRX_SIGN_PITCH * getCPPMPitchScale() * cppmConvert2Float(ch[EXTRX_CH_PITCH], -1, 1, EXTRX_DEADBAND_PITCH);
+  }
+  extrxSetpoint.attitudeRate.yaw = EXTRX_SIGN_YAW * getCPPMYawRateScale() * cppmConvert2Float(ch[EXTRX_CH_YAW], -1, 1, EXTRX_DEADBAND_YAW);
+
   commanderSetSetpoint(&extrxSetpoint, COMMANDER_PRIORITY_EXTRX);
 }
 
@@ -177,14 +332,86 @@ static void extRxDecodeSpektrum(void)
 
 /* Loggable variables */
 #ifdef ENABLE_EXTRX_LOG
-LOG_GROUP_START(extrx)
+/**
+ * External receiver (RX) log group. This contains received raw
+ * channel data
+ */
+LOG_GROUP_START(extrx_raw)
+/**
+ * @brief External RX received channel 0 value
+ */
 LOG_ADD(LOG_UINT16, ch0, &ch[0])
+/**
+ * @brief External RX received channel 1 value
+ */
 LOG_ADD(LOG_UINT16, ch1, &ch[1])
+/**
+ * @brief External RX received channel 2 value
+ */
 LOG_ADD(LOG_UINT16, ch2, &ch[2])
+/**
+ * @brief External RX received channel 3 value
+ */
 LOG_ADD(LOG_UINT16, ch3, &ch[3])
-LOG_ADD(LOG_UINT16, thrust, &extrxSetpoint.thrust)
+/**
+ * @brief External RX received channel 4 value
+ */
+LOG_ADD(LOG_UINT16, ch4, &ch[4])
+/**
+ * @brief External RX received channel 5 value
+ */
+LOG_ADD(LOG_UINT16, ch5, &ch[5])
+/**
+ * @brief External RX received channel 6 value
+ */
+LOG_ADD(LOG_UINT16, ch6, &ch[6])
+/**
+ * @brief External RX received channel 7 value
+ */
+LOG_ADD(LOG_UINT16, ch7, &ch[7])
+LOG_GROUP_STOP(extrx_raw)
+
+/**
+ * External receiver (RX) log group. This contains setpoints for
+ * thrust, roll, pitch, yaw rate, z velocity, and arming and
+ * altitude-hold signals
+ */
+LOG_GROUP_START(extrx)
+/**
+ * @brief External RX thrust
+ */
+LOG_ADD(LOG_FLOAT, thrust, &extrxSetpoint.thrust)
+/**
+ * @brief External RX roll setpoint
+ */
 LOG_ADD(LOG_FLOAT, roll, &extrxSetpoint.attitude.roll)
+/**
+ * @brief External RX pitch setpoint
+ */
 LOG_ADD(LOG_FLOAT, pitch, &extrxSetpoint.attitude.pitch)
-LOG_ADD(LOG_FLOAT, yaw, &extrxSetpoint.attitude.yaw)
+/**
+ * @brief External RX roll rate setpoint
+ */
+LOG_ADD(LOG_FLOAT, rollRate, &extrxSetpoint.attitudeRate.roll)
+/**
+ * @brief External RX pitch rate setpoint
+ */
+LOG_ADD(LOG_FLOAT, pitchRate, &extrxSetpoint.attitudeRate.pitch)
+/**
+ * @brief External RX yaw rate setpoint
+ */
+LOG_ADD(LOG_FLOAT, yawRate, &extrxSetpoint.attitudeRate.yaw)
+/**
+ * @brief External RX z-velocity setpoint
+ */
+LOG_ADD(LOG_FLOAT, zVel, &extrxSetpoint.velocity.z)
+/**
+ * @brief External RX Altitude Hold signal
+ */
+LOG_ADD(LOG_UINT8, AltHold, &extRxAltHold)
+/**
+ * @brief External RX Arming signal
+ */
+LOG_ADD(LOG_UINT8, Arm, &extRxArm)
 LOG_GROUP_STOP(extrx)
 #endif

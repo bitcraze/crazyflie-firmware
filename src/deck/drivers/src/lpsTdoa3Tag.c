@@ -43,6 +43,7 @@ The implementation must handle
 */
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -54,6 +55,8 @@ The implementation must handle
 
 #include "libdw1000.h"
 #include "mac.h"
+
+#include "param.h"
 
 #define DEBUG_MODULE "TDOA3"
 #include "debug.h"
@@ -97,6 +100,7 @@ typedef struct {
 static lpsLppShortPacket_t lppPacket;
 
 static bool rangingOk;
+static float stdDev = TDOA_ENGINE_MEASUREMENT_NOISE_STD;
 
 static bool isValidTimeStamp(const int64_t anchorRxTime) {
   return anchorRxTime != 0;
@@ -240,6 +244,8 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       break;
     case eventReceiveTimeout:
       break;
+    case eventReceiveFailed:
+      break;
     case eventPacketSent:
       // Service packet sent, the radio is back to receive automatically
       break;
@@ -258,14 +264,15 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 }
 
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
+  // Override the default standard deviation set by the TDoA engine.
+  tdoaMeasurement->stdDev = stdDev;
+
   estimatorEnqueueTDOA(tdoaMeasurement);
 
-  #ifdef LPS_2D_POSITION_HEIGHT
-  // If LPS_2D_POSITION_HEIGHT is defined we assume that we are doing 2D positioning.
-  // LPS_2D_POSITION_HEIGHT contains the height (Z) that the tag will be located at
+  #ifdef CONFIG_DECK_LOCO_2D_POSITION
   heightMeasurement_t heightData;
   heightData.timestamp = xTaskGetTickCount();
-  heightData.height = LPS_2D_POSITION_HEIGHT;
+  heightData.height = DECK_LOCO_2D_POSITION_HEIGHT;
   heightData.stdDev = 0.0001;
   estimatorEnqueueAbsoluteHeight(&heightData);
   #endif
@@ -297,8 +304,8 @@ static void Initialize(dwDevice_t *dev) {
   uint32_t now_ms = T2M(xTaskGetTickCount());
   tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ, TdoaEngineMatchingAlgorithmRandom);
 
-  #ifdef LPS_2D_POSITION_HEIGHT
-  DEBUG_PRINT("2D positioning enabled at %f m height\n", LPS_2D_POSITION_HEIGHT);
+  #ifdef CONFIG_DECK_LOCO_2D_POSITION
+  DEBUG_PRINT("2D positioning enabled at %f m height\n", DECK_LOCO_2D_POSITION_HEIGHT);
   #endif
 
   dwSetReceiveWaitTimeout(dev, TDOA3_RECEIVE_TIMEOUT);
@@ -321,3 +328,11 @@ uwbAlgorithm_t uwbTdoa3TagAlgorithm = {
   .getAnchorIdList = getAnchorIdList,
   .getActiveAnchorIdList = getActiveAnchorIdList,
 };
+
+PARAM_GROUP_START(tdoa3)
+/**
+ * @brief The measurement noise to use when sending TDoA measurements to the estimator.
+ */
+PARAM_ADD(PARAM_FLOAT, stddev, &stdDev)
+
+PARAM_GROUP_STOP(tdoa3)

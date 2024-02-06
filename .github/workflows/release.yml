@@ -1,0 +1,86 @@
+# Release jobs
+
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read_targets_from_file:
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@dfbc8c23a8ec6d4925d01deb20277839ad1235f1
+    with:
+      target_file: './build_targets.json'
+
+  release:
+    permissions:
+      contents: write  # for actions/create-release to create a release
+    name: Create Release on Github
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        draft: true
+        prerelease: true
+    - name: Release URL on file
+      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+    - name: Save Release URL File For Uploading Files
+      uses: actions/upload-artifact@v3
+      with:
+        name: release_url
+        path: release_url.txt
+
+  upload:
+    permissions:
+      contents: write  # for actions/upload-release-asset to upload release asset
+    name: Upload Binaries to release
+    needs: [release, read_targets_from_file]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ${{fromJson(needs.read_targets_from_file.outputs.platforms)}}
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platform }} UNIT_TEST_STYLE=min"
+
+    - name: Load Release URL File from release job
+      uses: actions/download-artifact@v3
+      with:
+        name: release_url
+
+    - name: Get Release File Name & Upload URL
+      id: get_release_info
+      run: |
+        value=`cat release_url.txt`
+        echo "upload_url=$value" >> $GITHUB_OUTPUT
+
+    - name: Get the version
+      id: get_release_version
+      env:
+        GITHUB_REF : ${{ github.ref }}
+      run: echo "release_version=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+
+    - name: Upload ${{ matrix.platform }} bin
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: build/${{ matrix.platform }}.bin
+        asset_name: ${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
+        asset_content_type: application/octet-stream

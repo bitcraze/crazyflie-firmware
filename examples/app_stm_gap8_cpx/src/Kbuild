@@ -1,0 +1,1 @@
+obj-y += stm_gap8_cpx.o

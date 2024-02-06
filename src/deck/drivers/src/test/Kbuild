@@ -1,0 +1,3 @@
+obj-y += exptest.o
+obj-y += exptestRR.o
+obj-y += exptestBolt11.o

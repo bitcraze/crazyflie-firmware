@@ -40,8 +40,6 @@ static size_t min(size_t a, size_t b)
     }
 }
 
-#define END_TAG (0xffffu)
-
 int kveStorageWriteItem(kveMemory_t *kve, size_t address, const char* key, const void* buffer, size_t length)
 {
   kveItemHeader_t header;
@@ -66,11 +64,11 @@ uint16_t kveStorageWriteHole(kveMemory_t *kve, size_t address, size_t full_lengt
   kve->write(address, &header, sizeof(header));
   kve->flush();
 
-  return full_length;   
+  return full_length;
 }
 
 uint16_t kveStorageWriteEnd(kveMemory_t *kve, size_t address) {
-    uint16_t endTag = END_TAG;
+    uint16_t endTag = KVE_END_TAG;
 
     kve->write(address, &endTag, 2);
 
@@ -98,7 +96,7 @@ void kveStorageMoveMemory(kveMemory_t *kve, size_t sourceAddress, size_t destina
 }
 
 size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * key) {
-    char searchBuffer[255];
+    static char searchBuffer[255];
     size_t currentAddress = address;
     uint16_t length;
     uint8_t keyLength;
@@ -110,7 +108,7 @@ size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * ke
         length = searchBuffer[0] + (searchBuffer[1]<<8);
         keyLength = searchBuffer[2];
 
-        if (length == END_TAG) {
+        if (length == KVE_END_TAG) {
             return SIZE_MAX;
         }
 
@@ -127,13 +125,54 @@ size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * ke
     return SIZE_MAX;
 }
 
+// Find the first item from `address` with a key that has an overlapping
+// prefix with the one we supply.
+// We return the itemsize using return, and we return the key and itemAddress
+// using out-argumetns.
+size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
+                                  const char *prefix, char *keyBuffer,
+                                  size_t *itemAddress)
+{
+    static uint8_t searchBuffer[255];
+    size_t currentAddress = address;
+    uint16_t length;
+    uint8_t keyLength;
+    uint8_t searchedKeyLength = strlen(prefix);
+
+    while (currentAddress < (kve->memorySize - 3)) {
+        kve->read(currentAddress, searchBuffer, 3);
+        length = searchBuffer[0] + (searchBuffer[1]<<8);
+        keyLength = searchBuffer[2];
+
+        if (length == KVE_END_TAG) {
+            *itemAddress = SIZE_MAX;
+            return SIZE_MAX;
+        }
+
+        if (keyLength >= searchedKeyLength) {
+            kve->read(currentAddress + 3, &searchBuffer, keyLength);
+            if (!memcmp(prefix, searchBuffer, searchedKeyLength)) {
+                memcpy(keyBuffer, searchBuffer, keyLength);
+                keyBuffer[keyLength] = 0;
+                *itemAddress = currentAddress;
+                return length;
+            }
+        }
+
+        currentAddress += length;
+    }
+
+    *itemAddress = SIZE_MAX;
+    return SIZE_MAX;
+}
+
 size_t kveStorageFindEnd(kveMemory_t *kve, size_t address) {
     size_t currentAddress = address;
     kveItemHeader_t header;
 
     while (currentAddress < (kve->memorySize - 2)) {
         kve->read(currentAddress, &header, sizeof(header));
-        if (header.full_length == END_TAG) {
+        if (header.full_length == KVE_END_TAG) {
             return currentAddress;
         }
 
@@ -172,7 +211,7 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
 
     // Jump over the current item
     kve->read(currentAddress, &header, sizeof(header));
-    if (header.full_length == END_TAG) {
+    if (header.full_length == KVE_END_TAG) {
         return KVE_STORAGE_INVALID_ADDRESS;
     }
     currentAddress += header.full_length;
@@ -181,14 +220,14 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
         kve->read(currentAddress, &header, sizeof(header));
 
 
-        if (header.full_length == END_TAG) {
+        if (header.full_length == KVE_END_TAG) {
             return KVE_STORAGE_INVALID_ADDRESS;
         }
 
         if (header.key_length != 0) {
             return currentAddress;
         }
-        
+
         currentAddress += header.full_length;
     }
 
@@ -198,7 +237,7 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
 kveItemHeader_t kveStorageGetItemInfo(kveMemory_t *kve, size_t address)
 {
   kveItemHeader_t header;
-  
+
   kve->read(address, &header, sizeof(header));
 
   return header;

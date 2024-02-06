@@ -1,0 +1,206 @@
+mainmenu "Crazyflie Platform Configuration"
+
+menu "Build and debug options"
+
+config CROSS_COMPILE
+    string "Cross-compiler tool prefix"
+    default "arm-none-eabi-"
+    help
+        Same as running 'make CROSS_COMPILE=prefix-' but stored for
+        default make runs in this application build directory.  You don't
+        need to set this unless you want the configured application build
+        directory to select the cross-compiler automatically.
+
+config DEBUG
+    bool "Enable debug build"
+    default n
+    help
+        Enable debug symbols and extra output from firmware.
+
+config DEBUG_QUEUE_MONITOR
+    bool "Enable debug queue monitoring"
+    depends on DEBUG
+    default n
+    help
+        Enable the queue monitoring functionality.
+
+config DEBUG_ENABLE_LED_MORSE
+    bool "Enable blinking morse sequence with LEDs"
+    default n
+    help
+        If enabled makes it possible to define LED sequences in form of the DOT,
+        DASH, GAP, LETTER_GAP and WORD_GAP parts of Morse code.
+
+config DEBUG_PRINT_ON_UART1
+    bool "Switch DEBUG_PRINT to UART1"
+    default n
+    help
+      Switch output of DEBUG_PRINT from radio to UART1.
+      Note! This will interfere with several expansion decks, see the expansion
+      deck documentation on https://www.bitcraze.io/ for more information about
+      pin allocation.
+
+config DEBUG_PRINT_ON_UART1_BAUDRATE
+    int "Debug print on UART1 baudrate"
+    default 115200
+    depends on DEBUG_PRINT_ON_UART1
+    help
+      Set the baudrate of the debug output   
+
+
+config DEBUG_DECK_IGNORE_OW
+    bool "Do not enumerate OW based expansion decks"
+    default n
+    help
+      Do not enumerate decks discovered by OneWire memory. This might be useful
+      if one deck memory is very wrong. One could use the Crazyflie as a
+      passive onewire memory writer.
+
+endmenu
+
+menu "Platform configuration"
+
+choice
+    prompt "Platform to build"
+    default CONFIG_PLATFORM_CF2
+
+config PLATFORM_CF2
+    bool "Build for CF2"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_MPU9250_LPS25H
+
+config PLATFORM_BOLT
+    bool "Build for Bolt"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_SPI
+
+config PLATFORM_TAG
+    bool "Build for the roadrunner"
+    select SENSORS_BMI088_BMP388
+
+config PLATFORM_FLAPPER
+    bool "Build for Flapper Nimble+"
+    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_SPI
+
+endchoice
+
+config BOLT11_BRUSHED
+    bool "Bolt 1.1: Use brushed motor driver (HW mod required)"
+    depends on PLATFORM_BOLT
+    default n
+    help
+        0R resistors 0402 (or simple wire to short) should be mounted at 
+        R19, R22, R33, R34 and motor override signals will be disabled (high impedance).
+        Brushed motor should be connected + and - at motor connector (not S).
+
+endmenu
+
+menu "IMU configuration"
+
+choice
+    prompt "IMU algorithm"
+    default IMU_MAHONY_QUATERNION
+
+config IMU_MADGWICK_QUATERNION
+    bool "Madgwick's AHRS and IMU algorithms"
+    help
+        Use Madgwick's IMU and AHRS algorithms.
+        See: http://www.x-io.co.uk/open-source-ahrs-with-x-imu
+
+config IMU_MAHONY_QUATERNION
+    bool "Mahony IMU algorithm"
+    help
+        Use Mahony's algorithm from the paper:
+        Nonlinear Complementary Filters on the Special Orthogonal Group
+        See: https://ieeexplore.ieee.org/document/4608934
+
+endchoice
+
+endmenu
+
+menu "Sensor configuration"
+
+config SENSORS_MPU9250_LPS25H
+    bool "Support for mpu9250 and lps25h sensors"
+    default n
+    help
+        Include support for the Bosch bmi088 inertial and bmp388
+        barometric sensors
+
+config SENSORS_BMI088_BMP388
+    bool "Support for bmi088 and bmp388 sensors"
+    default n
+    select SENSORS_BMI088_I2C
+    help
+        Include support for the Bosch bmi088 inertial and bmp388
+        barometric sensors
+
+config SENSORS_BOSCH
+    bool "Include Bosch sensors"
+    default n
+
+config SENSORS_IGNORE_BAROMETER_FAIL
+    bool "Ignore failure from barometer"
+    depends on SENSORS_BMI088_BMP388
+    default n
+
+config SENSORS_BMI088_SPI
+    bool "Support for SPI communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default n
+    help
+        Include support using SPI with the Bosch bmi088 inertial sensor
+
+config SENSORS_BMI088_I2C
+    bool "Support for I2C communincation with the bmi088 sensor"
+    depends on SENSORS_BMI088_BMP388
+    default n
+    help
+        Include support using I2C with the Bosch bmi088 inertial sensor
+
+endmenu
+
+source src/hal/src/Kconfig
+
+menu "App layer configuration"
+
+source "app_api/Kconfig"
+
+config APP_ENABLE
+    bool "Enable app entry point"
+    default n
+    help
+        When enabled the firmware will call a function void appMain() from a
+        task after the startup sequence has completed. This function should not
+        return.
+
+config APP_STACKSIZE
+    int "Set the task stack size"
+    depends on APP_ENABLE
+    default 300
+    help
+        Size is in 32bit word (4 Bytes). The default is 300 (1.2KBytes)
+
+config APP_PRIORITY
+    int "Set the task priority"
+    depends on APP_ENABLE
+    default 0
+    help
+        Set the task priority between 0 and 5. Default is 0 (same as IDLE).
+
+endmenu
+
+menu "Expansion deck configuration"
+
+config DECK_FORCE
+    string "Force load specified custom deck driver"
+    default "none"
+    help
+        A colon seperated list of custom drivers to force load or "none".
+
+source src/deck/drivers/src/Kconfig
+
+endmenu
+
+source "src/modules/src/Kconfig"

@@ -33,6 +33,7 @@
 #include "math3d.h"
 #include "test_support.h"
 #include "debug.h"
+#include "autoconf.h"
 
 static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
 static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
@@ -59,7 +60,7 @@ static inline uint32_t cyclePeriodToMicroseconds(uint32_t cyclePeriod) {
 // Reset angles after fixed period to avoid using stale data
 static void clearStaleAnglesAfterTimeout(pulseProcessorResult_t *angles) {
     uint64_t timestamp = usecTimestamp();
-    for (int bs = 0; bs < PULSE_PROCESSOR_N_BASE_STATIONS; ++bs) {
+    for (int bs = 0; bs < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; ++bs) {
         uint64_t elapsed_us = timestamp - angles->lastUsecTimestamp[bs];
         if (elapsed_us > cyclePeriodToMicroseconds(CYCLE_PERIODS[bs])) {
             pulseProcessorClear(angles, bs);
@@ -151,14 +152,19 @@ TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], 
 TESTABLE_STATIC void augmentFramesInWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorkspace) {
     const int slotsUsed = pulseWorkspace->slotsUsed;
 
-    for (int i = 0; i < slotsUsed - 1; i++) {
-        pulseProcessorFrame_t* previousFrame = &pulseWorkspace->slots[i];
-        const pulseProcessorFrame_t* frame = &pulseWorkspace->slots[i + 1];
-        if (! previousFrame->channelFound) {
-            if (frame->channelFound) {
-                previousFrame->channel = frame->channel;
-                previousFrame->channelFound = frame->channelFound;
-                i++;
+    bool channelIsKnown = false;
+    uint8_t channel = 0;
+
+    for (int i = slotsUsed - 1; i >= 0; i--) {
+        pulseProcessorFrame_t* frame = &pulseWorkspace->slots[i];
+
+        if (frame->channelFound) {
+            channel = frame->channel;
+            channelIsKnown = true;
+        } else {
+            if (channelIsKnown) {
+                frame->channel = channel;
+                frame->channelFound = true;
             }
         }
     }
@@ -212,7 +218,7 @@ TESTABLE_STATIC void clearWorkspace(pulseProcessorV2PulseWorkspace_t* pulseWorks
     pulseWorkspace->slotsUsed = 0;
 }
 
-static bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace, pulseProcessorV2BlockWorkspace_t* blockWorkspace) {
+TESTABLE_STATIC bool processFrame(const pulseProcessorFrame_t* frameData, pulseProcessorV2PulseWorkspace_t* pulseWorkspace, pulseProcessorV2BlockWorkspace_t* blockWorkspace) {
     int nrOfBlocks = 0;
 
     // Sensor timestamps may arrive in the wrong order, we need an abs() when checking the diff
@@ -249,7 +255,7 @@ static void calculateAngles(const pulseProcessorV2SweepBlock_t* latestBlock, con
         float firstBeam = (firstOffset * 2 * M_PI_F / period) - M_PI_F + M_PI_F / 3.0f;
         float secondBeam = (secondOffset * 2 * M_PI_F / period) - M_PI_F - M_PI_F / 3.0f;
 
-        pulseProcessorBaseStationMeasuremnt_t* measurement = &angles->sensorMeasurementsLh2[i].baseStatonMeasurements[channel];
+        pulseProcessorSensorMeasurement_t* measurement = &angles->baseStationMeasurementsLh2[channel].sensorMeasurements[i];
         measurement->angles[0] = firstBeam;
         measurement->angles[1] = secondBeam;
         measurement->validCount = 2;
@@ -272,14 +278,14 @@ TESTABLE_STATIC bool isBlockPairGood(const pulseProcessorV2SweepBlock_t* latest,
 TESTABLE_STATIC bool handleCalibrationData(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData) {
     bool isFullMessage = false;
 
-    if (frameData->channelFound && frameData->channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
+    if (frameData->channelFound && frameData->channel < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
         const uint8_t channel = frameData->channel;
         if (frameData->offset != NO_OFFSET) {
             const uint32_t prevTimestamp0 = state->v2.ootxTimestamps[channel];
             const uint32_t timestamp0 = TS_DIFF(frameData->timestamp, frameData->offset);
 
             if (TS_ABS_DIFF_LARGER_THAN(timestamp0, prevTimestamp0, MIN_TICKS_BETWEEN_SLOW_BITS)) {
-                isFullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowbit);
+                isFullMessage = ootxDecoderProcessBit(&state->ootxDecoder[channel], frameData->slowBit);
             }
 
             state->v2.ootxTimestamps[channel] = timestamp0;
@@ -298,7 +304,7 @@ bool handleAngles(pulseProcessor_t *state, const pulseProcessorFrame_t* frameDat
     for (int i = 0; i < nrOfBlocks; i++) {
         const pulseProcessorV2SweepBlock_t* block = &state->v2.blockWorkspace.blocks[i];
         const uint8_t channel = block->channel;
-        if (channel < PULSE_PROCESSOR_N_BASE_STATIONS) {
+        if (channel < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
             pulseProcessorV2SweepBlock_t* previousBlock = &state->v2.blocks[channel];
             if (isBlockPairGood(block, previousBlock)) {
                 calculateAngles(block, previousBlock, angles);

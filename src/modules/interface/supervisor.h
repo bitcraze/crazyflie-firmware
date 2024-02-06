@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2021 Bitcraze AB
+ * Copyright (C) 2021-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,91 @@
 
 #include "stabilizer_types.h"
 
-void supervisorUpdate(const sensorData_t *data);
+/**
+ * @brief Update the supervisor state.
+ *
+ * The overall process includes:
+ *   - collecting data from the system (conditions)
+ *   - possibly change state, based on the conditions
+ *
+ * @param sensors        Latest sensor data
+ * @param setpoint       Current setpoint
+ * @param stabilizerStep Stabilizer step for rate control
+ */
+void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep);
 
+/**
+ * @brief Replace the values in the current setpoint, if required.
+ *
+ * If the supervisor thinks it is necessary to take precautions, for instance in case of an emergency stop,
+ * if may replace values in the current setpoint.
+ *
+ * @param setpoint The current setpoint
+ */
+void supervisorOverrideSetpoint(setpoint_t* setpoint);
+
+/**
+ * @brief Check if it is OK to spin the motors
+ *
+ * @return true  OK to spin motors
+ * @return false Not OK to spin motors
+ */
+bool supervisorAreMotorsAllowedToRun();
+
+/**
+ * @brief Is the system ready to fly
+ *
+ * @return true
+ * @return false
+ */
 bool supervisorCanFly(void);
+
+/**
+ * @brief Is the Crazyflie flying
+ *
+ * @return true
+ * @return false
+ */
 bool supervisorIsFlying(void);
+
+/**
+ * @brief Is the Crazyflie tumbled
+ *
+ * @return true
+ * @return false
+ */
 bool supervisorIsTumbled(void);
+
+/**
+ * @brief Request the system to be armed or disarmed. The system can only be armed under certain conditions, this is
+ * indicated by the supervisorCanArm() function.
+ *
+ * @param doArm  true - request arming. false - request disarming.
+ * @return true   The request was granted
+ * @return false  The request could not be granted
+ */
+bool supervisorRequestArming(const bool doArm);
+
+/**
+ * @brief Query if the system can be armed
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorCanArm();
+
+/**
+ * @brief Query if the system is armed
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorIsArmed();
+
+/**
+ * @brief Query if the system is locked (due to a crash)
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorIsLocked();

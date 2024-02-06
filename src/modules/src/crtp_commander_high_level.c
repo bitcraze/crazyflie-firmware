@@ -47,7 +47,6 @@ such as: take-off, landing, polynomial trajectories.
 #include "task.h"
 #include "semphr.h"
 
-// Crazyswarm includes
 #include "crtp.h"
 #include "crtp_commander_high_level.h"
 #include "planner.h"
@@ -55,6 +54,9 @@ such as: take-off, landing, polynomial trajectories.
 #include "param.h"
 #include "static_mem.h"
 #include "mem.h"
+#include "commander.h"
+#include "stabilizer_types.h"
+#include "stabilizer.h"
 
 // Local types
 enum TrajectoryLocation_e {
@@ -80,17 +82,22 @@ struct trajectoryDescription
 // 4k allows us to store 31 poly4d pieces
 // other (compressed) formats might be added in the future
 #define TRAJECTORY_MEMORY_SIZE 4096
-extern uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
 
 #define ALL_GROUPS 0
 
 // Global variables
-uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE];
+uint8_t trajectories_memory[TRAJECTORY_MEMORY_SIZE] __attribute__((aligned(4)));
 static struct trajectoryDescription trajectory_descriptions[NUM_TRAJECTORY_DEFINITIONS];
+
+// Static structs are zero-initialized, so nullSetpoint corresponds to
+// modeDisable for all stab_mode_t members and zero for all physical values.
+// In other words, the controller should cut power upon recieving it.
+const static setpoint_t nullSetpoint;
 
 static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;
+static bool isBlocked; // Are we blocked to do anything by the supervisor
 static struct vec pos; // last known setpoint (position [m])
 static struct vec vel; // last known setpoint (velocity [m/s])
 static float yaw; // last known setpoint yaw (yaw [rad])
@@ -123,8 +130,8 @@ STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE)
 // trajectory command (first byte of crtp packet)
 enum TrajectoryCommand_e {
   COMMAND_SET_GROUP_MASK          = 0,
-  COMMAND_TAKEOFF                 = 1, // Deprecated, use COMMAND_TAKEOFF_2
-  COMMAND_LAND                    = 2, // Deprecated, use COMMAND_LAND_2
+  COMMAND_TAKEOFF                 = 1, // Deprecated (removed after August 2023), use COMMAND_TAKEOFF_2
+  COMMAND_LAND                    = 2, // Deprecated (removed after August 2023), use COMMAND_LAND_2
   COMMAND_STOP                    = 3,
   COMMAND_GO_TO                   = 4,
   COMMAND_START_TRAJECTORY        = 5,
@@ -140,7 +147,7 @@ struct data_set_group_mask {
 } __attribute__((packed));
 
 // vertical takeoff from current x-y position to given height
-// Deprecated
+// Deprecated (removed after August 2023)
 struct data_takeoff {
   uint8_t groupMask;        // mask for which CFs this should apply to
   float height;             // m (absolute)
@@ -168,7 +175,7 @@ struct data_takeoff_with_velocity {
 } __attribute__((packed));
 
 // vertical land from current x-y position to given height
-// Deprecated
+// Deprecated (removed after August 2023)
 struct data_land {
   uint8_t groupMask;        // mask for which CFs this should apply to
   float height;             // m (absolute)
@@ -269,6 +276,8 @@ void crtpCommanderHighLevelInit(void)
   vel = vzero();
   yaw = 0;
 
+  isBlocked = false;
+
   isInit = true;
 }
 
@@ -286,25 +295,42 @@ void crtpCommanderHighLevelTellState(const state_t *state)
   xSemaphoreGive(lockTraj);
 }
 
-void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state)
+int crtpCommanderHighLevelDisable()
 {
+  plan_disable(&planner);
+  return 0;
+}
+
+bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, stabilizerStep_t stabilizerStep)
+{
+  if (!RATE_DO_EXECUTE(RATE_HL_COMMANDER, stabilizerStep)) {
+    return false;
+  }
+
   xSemaphoreTake(lockTraj, portMAX_DELAY);
   float t = usecTimestamp() / 1e6;
   struct traj_eval ev = plan_current_goal(&planner, t);
-  if (!is_traj_eval_valid(&ev)) {
-    // programming error
-    plan_stop(&planner);
-  }
   xSemaphoreGive(lockTraj);
 
-  // if we are on the ground, update the last setpoint with the current state estimate
-  if (plan_is_stopped(&planner)) {
+  // If we are not actively following a trajectory, then update the "last
+  // setpoint" values with the current state estimate, so we have the right
+  // initial conditions for future trajectory planning.
+  if (plan_is_disabled(&planner) || plan_is_stopped(&planner)) {
     pos = state2vec(state->position);
     vel = state2vec(state->velocity);
     yaw = radians(state->attitude.yaw);
+    if (plan_is_stopped(&planner)) {
+      // Return a null setpoint - when the HLcommander is stopped, it wants the
+      // motors to be off.
+      // Note: this set point will be overridden by low level set points, for instance received from an external source,
+      // due to the priority. To switch back to the high level commander, use the `commanderRelaxPriority()` functionality.
+      *setpoint = nullSetpoint;
+      return true;
+    }
+    // Otherwise, do not mutate the setpoint.
+    return false;
   }
-
-  if (is_traj_eval_valid(&ev)) {
+  else if (is_traj_eval_valid(&ev)) {
     setpoint->position.x = ev.pos.x;
     setpoint->position.y = ev.pos.y;
     setpoint->position.z = ev.pos.z;
@@ -330,6 +356,13 @@ void crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     pos = ev.pos;
     vel = ev.vel;
     yaw = ev.yaw;
+
+    return true;
+  }
+  else {
+    // Not disabled or stopped but invalid eval indicates a programming error.
+    plan_disable(&planner);
+    return false;
   }
 }
 
@@ -404,8 +437,13 @@ int set_group_mask(const struct data_set_group_mask* data)
   return 0;
 }
 
+// Deprecated (removed after August 2023)
 int takeoff(const struct data_takeoff* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -418,6 +456,10 @@ int takeoff(const struct data_takeoff* data)
 
 int takeoff2(const struct data_takeoff_2* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -436,6 +478,10 @@ int takeoff2(const struct data_takeoff_2* data)
 
 int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -459,8 +505,13 @@ int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
   return result;
 }
 
+// Deprecated (removed after August 2023)
 int land(const struct data_land* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -473,6 +524,10 @@ int land(const struct data_land* data)
 
 int land2(const struct data_land_2* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -491,6 +546,10 @@ int land2(const struct data_land_2* data)
 
 int land_with_velocity(const struct data_land_with_velocity* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
@@ -533,12 +592,16 @@ int go_to(const struct data_go_to* data)
     .omega = {0.0f, 0.0f, 0.0f},
   };
 
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     struct vec hover_pos = mkvec(data->x, data->y, data->z);
     xSemaphoreTake(lockTraj, portMAX_DELAY);
     float t = usecTimestamp() / 1e6;
-    if (plan_is_stopped(&planner)) {
+    if (plan_is_disabled(&planner) || plan_is_stopped(&planner)) {
       ev.pos = pos;
       ev.vel = vel;
       ev.yaw = yaw;
@@ -554,6 +617,10 @@ int go_to(const struct data_go_to* data)
 
 int start_trajectory(const struct data_start_trajectory* data)
 {
+  if (isBlocked) {
+    return EBUSY;
+  }
+
   int result = 0;
   if (isInGroup(data->groupMask)) {
     if (data->trajectoryId < NUM_TRAJECTORY_DEFINITIONS) {
@@ -566,21 +633,7 @@ int start_trajectory(const struct data_start_trajectory* data)
         trajectory.timescale = data->timescale;
         trajectory.n_pieces = trajDesc->trajectoryIdentifier.mem.n_pieces;
         trajectory.pieces = (struct poly4d*)&trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
-        if (data->relative) {
-          trajectory.shift = vzero();
-          struct traj_eval traj_init;
-          if (data->reversed) {
-            traj_init = piecewise_eval_reversed(&trajectory, trajectory.t_begin);
-          }
-          else {
-            traj_init = piecewise_eval(&trajectory, trajectory.t_begin);
-          }
-          struct vec shift_pos = vsub(pos, traj_init.pos);
-          trajectory.shift = shift_pos;
-        } else {
-          trajectory.shift = vzero();
-        }
-        result = plan_start_trajectory(&planner, &trajectory, data->reversed);
+        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, pos);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
           && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
@@ -595,19 +648,9 @@ int start_trajectory(const struct data_start_trajectory* data)
             &trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset]
           );
           compressed_trajectory.t_begin = t;
-          if (data->relative) {
-            struct traj_eval traj_init = piecewise_compressed_eval(
-              &compressed_trajectory, compressed_trajectory.t_begin
-            );
-            struct vec shift_pos = vsub(pos, traj_init.pos);
-            compressed_trajectory.shift = shift_pos;
-          } else {
-            compressed_trajectory.shift = vzero();
-          }
-          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory);
+          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relative, pos);
           xSemaphoreGive(lockTraj);
         }
-
       }
     }
   }
@@ -730,6 +773,33 @@ int crtpCommanderHighLevelStop()
   return handleCommand(COMMAND_STOP, (const uint8_t*)&data);
 }
 
+int crtpCommanderBlock(bool doBlock)
+{
+  if (doBlock)
+  {
+    if (!isBlocked)
+    {
+      const bool isNotDisabled = !plan_is_disabled(&planner);
+      const bool isNotStopped = !plan_is_stopped(&planner);
+      if (isNotDisabled && isNotStopped)
+      {
+        xSemaphoreTake(lockTraj, portMAX_DELAY);
+        plan_stop(&planner);
+        xSemaphoreGive(lockTraj);
+      }
+    }
+  }
+
+  isBlocked = doBlock;
+
+  return 0;
+}
+
+bool crtpCommanderHighLevelIsBlocked()
+{
+  return isBlocked;
+}
+
 int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
 {
   struct data_go_to data =
@@ -815,7 +885,20 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
   return plan_is_finished(&planner, t);
 }
 
+/**
+ * computes smooth setpoints based on high-level inputs such as: take-off,
+ * landing, polynomial trajectories.
+ */
 PARAM_GROUP_START(hlCommander)
-PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
-PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)
+
+/**
+ * @brief Default take off velocity (m/s)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
+
+/**
+ * @brief Default landing velocity (m/s)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
+
 PARAM_GROUP_STOP(hlCommander)

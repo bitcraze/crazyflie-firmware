@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,112 +24,28 @@
  * param.h - Crazy parameter system header file.
  */
 
-#ifndef __PARAM_H__
-#define __PARAM_H__
+#pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
 
-/* Public functions */
-void paramInit(void);
-bool paramTest(void);
-
-/* Public API to access param variables */
-
-/** Variable identifier.
- * 
- * Should be fetched with paramGetVarId(). This is to be considered as an
- * opaque type, internal structure might change.
- * 
- * Use PARAM_VARID_IS_VALID() to check if the ID is valid.
- */
-typedef struct paramVarId_s {
-  uint16_t id;
-  uint16_t ptr;
-} __attribute__((packed)) paramVarId_t;
-
-/** Get the varId from group and name of variable
- * 
- * @param group Group name of the variable
- * @param name Name of the variable
- * @return The variable ID or an invalid ID. Use PARAM_VARID_IS_VALID() to check validity.
- */
-paramVarId_t paramGetVarId(char* group, char* name);
-
-/** Check variable ID validity
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @return true if the variable ID is valid, false otherwise.
- */
-#define PARAM_VARID_IS_VALID(varId) (varId.id != 0xffffu)
-
-/** Return the parameter type
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @return Type of the variable. The value correspond to the defines used when
- *         declaring a param variable.
- */
-int paramGetType(paramVarId_t varid);
-
-/** Get group and name strings of a parameter
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @param group Pointer to a char* that will be filled with the group name
- * @param group Pointer to a char* that will be filled with the variable name
- * 
- * The string buffers must be able to hold at least 32 bytes.
- */
-void paramGetGroupAndName(paramVarId_t varid, char** group, char** name);
-
-/** Get parameter variable size in byte
- * 
- * @param type Type returned by paramGetType()
- * @return Size in byte occupied by variable of this type
- */
-uint8_t paramVarSize(int type);
-
-/** Return float value of a parameter
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @return Current value of the variable
- */
-float paramGetFloat(paramVarId_t varid);
-
-/** Return int value of a parameter
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @return Current value of the variable
- */
-int paramGetInt(paramVarId_t varid);
-
-/** Return Unsigned int value of a paramter
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @return Current value of the variable
- */
-unsigned int paramGetUint(paramVarId_t varid);
-
-/** Set int value of a parameter
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @param valuei Value to set in the variable
- */
-void paramSetInt(paramVarId_t varid, int valuei);
-
-/** Set float value of a parameter
- * 
- * @param varId variable ID, returned by paramGetVarId()
- * @param valuef Value to set in the variable
- */
-void paramSetFloat(paramVarId_t varid, float valuef);
-
+// Include param_logic.h for backwards compatibility in apps
+#include "param_logic.h"
 
 /* Basic parameter structure */
 struct param_s {
   uint8_t type;
+  uint8_t extended_type;
   char * name;
   void * address;
+  void (*callback)(void);
+  void * (*getter)(void);
 };
+
+typedef uint8_t * (*paramGetterUInt8)(void);
+typedef uint16_t * (*paramGetterUInt16)(void);
+typedef uint32_t * (*paramGetterUInt32)(void);
+typedef uint64_t * (*paramGetterUInt64)(void);
+typedef float * (*paramGetterFloat)(void);
 
 #define PARAM_BYTES_MASK 0x03
 #define PARAM_1BYTE  0x00
@@ -137,6 +53,7 @@ struct param_s {
 #define PARAM_4BYTES 0x02
 #define PARAM_8BYTES 0x03
 
+#define PARAM_TYPE_MASK   0x0F
 #define PARAM_TYPE_INT   (0x00<<2)
 #define PARAM_TYPE_FLOAT (0x01<<2)
 
@@ -146,12 +63,22 @@ struct param_s {
 #define PARAM_VARIABLE (0x00<<7)
 #define PARAM_GROUP    (0x01<<7)
 
+#define PARAM_EXTENDED (1<<4)
+
+#define PARAM_CORE (1<<5)
+
 #define PARAM_RONLY (1<<6)
 
 #define PARAM_START 1
 #define PARAM_STOP  0
 
 #define PARAM_SYNC 0x02
+
+// Extended type bits
+#define PARAM_PERSISTENT (1 << 8)
+
+#define PARAM_PERSISTENT_STORED      1
+#define PARAM_PERSISTENT_NOT_STORED  0
 
 // User-friendly macros
 #define PARAM_UINT8 (PARAM_1BYTE | PARAM_TYPE_INT | PARAM_UNSIGNED)
@@ -163,34 +90,70 @@ struct param_s {
 
 #define PARAM_FLOAT (PARAM_4BYTES | PARAM_TYPE_FLOAT | PARAM_SIGNED)
 
+// CRTP
+#define TOC_CH 0
+#define READ_CH 1
+#define WRITE_CH 2
+#define MISC_CH 3
+// CRTP Misc
+#define MISC_SETBYNAME            0
+#define MISC_VALUE_UPDATED        1
+#define MISC_GET_EXTENDED_TYPE    2
+#define MISC_PERSISTENT_STORE     3
+#define MISC_PERSISTENT_GET_STATE 4
+#define MISC_PERSISTENT_CLEAR     5
+#define MISC_GET_DEFAULT_VALUE    6
+
 /* Macros */
-#ifndef UNIT_TEST_MODE
+
+#define PARAM_ADD_FULL(TYPE, NAME, ADDRESS, CALLBACK, DEFAULT_GETTER) \
+    { .type = ((TYPE) <= 0xFF) ? (TYPE) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
+      .extended_type = (((TYPE) & 0xFF00) >> 8), \
+      .name = #NAME, \
+      .address = (void*)(ADDRESS), \
+      .callback = (void *)CALLBACK, \
+      .getter = (void *)DEFAULT_GETTER, },
 
 #define PARAM_ADD(TYPE, NAME, ADDRESS) \
-   { .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
+    PARAM_ADD_FULL(TYPE, NAME, ADDRESS, 0, 0)
+
+// The callback notification function will run from the param task, it should not block and should run quickly.
+#define PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+    PARAM_ADD_FULL(TYPE, NAME, ADDRESS, CALLBACK, 0)
+
+#define PARAM_ADD_CORE(TYPE, NAME, ADDRESS) \
+  PARAM_ADD(TYPE | PARAM_CORE, NAME, ADDRESS)
+
+#define PARAM_ADD_CORE_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK) \
+  PARAM_ADD_WITH_CALLBACK(TYPE | PARAM_CORE, NAME, ADDRESS, CALLBACK)
 
 #define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS) \
-   { \
-  .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), },
-
-#define PARAM_GROUP_START(NAME)  \
-  static const struct param_s __params_##NAME[] __attribute__((section(".param." #NAME), used)) = { \
-  PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
-
-//#define PARAM_GROUP_START_SYNC(NAME, LOCK) PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, LOCK);
+  { \
+  .type = TYPE, .name = #NAME, .address = (void*)(ADDRESS), .callback = 0, .getter = 0, },
 
 #define PARAM_GROUP_STOP(NAME) \
   PARAM_ADD_GROUP(PARAM_GROUP | PARAM_STOP, stop_##NAME, 0x0) \
   };
 
+#ifndef UNIT_TEST_MODE
+
+#define PARAM_GROUP_START(NAME)  \
+  static struct param_s __params_##NAME[] __attribute__((section(".param." #NAME), used)) = { \
+  PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
+
 #else // UNIT_TEST_MODE
 
-// Empty defines when running unit tests
-#define PARAM_ADD(TYPE, NAME, ADDRESS)
-#define PARAM_ADD_GROUP(TYPE, NAME, ADDRESS)
-#define PARAM_GROUP_START(NAME)
-#define PARAM_GROUP_STOP(NAME)
+  // Do not use a different data section when running unit tests
+#define PARAM_GROUP_START(NAME)  \
+  static const struct param_s __params_##NAME[] = { \
+  PARAM_ADD_GROUP(PARAM_GROUP | PARAM_START, NAME, 0x0)
 
 #endif // UNIT_TEST_MODE
 
-#endif /* __PARAM_H__ */
+// Do not remove! This definition is used by doxygen to generate parameter documentation.
+/** @brief Core parameters
+ *
+ * The core parameters are considered part of the official API and are guaranteed
+ * to be stable over time.
+ *
+ * @defgroup PARAM_CORE_GROUP */

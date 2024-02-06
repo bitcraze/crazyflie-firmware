@@ -1,0 +1,1 @@
+obj-y += internal_param_log.o

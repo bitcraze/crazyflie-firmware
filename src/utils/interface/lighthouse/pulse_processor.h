@@ -36,11 +36,12 @@
 #include "lighthouse_calibration.h"
 #include "lighthouse_geometry.h"
 
+#include "autoconf.h"
+
 #define PULSE_PROCESSOR_N_SWEEPS 2
-#define PULSE_PROCESSOR_N_BASE_STATIONS 2
 #define PULSE_PROCESSOR_N_SENSORS 4
-#define PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS 2
-#define PULSE_PROCESSOR_N_WORKSPACE (PULSE_PROCESSOR_N_SENSORS * PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS)
+#define PULSE_PROCESSOR_N_CONCURRENT_BLOCKS 2
+#define PULSE_PROCESSOR_N_WORKSPACE (PULSE_PROCESSOR_N_SENSORS * PULSE_PROCESSOR_N_CONCURRENT_BLOCKS)
 
 #define PULSE_PROCESSOR_HISTORY_LENGTH 8
 #define PULSE_PROCESSOR_TIMESTAMP_BITWIDTH 24
@@ -53,7 +54,7 @@
  * @brief Difference of two timestamps, truncated to time stamp bit width (PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)
  *
  * @param x A timestamp
- * @param y A teimstamp
+ * @param y A timestamp
  * @return x - y, truncated
  */
 inline static uint32_t TS_DIFF(const uint32_t x, const uint32_t y) {
@@ -61,7 +62,7 @@ inline static uint32_t TS_DIFF(const uint32_t x, const uint32_t y) {
 }
 
 /**
- * @brief Check if abs(a - b) > limit. Works for timestampa where the bitwidth is PULSE_PROCESSOR_TIMESTAMP_BITWIDTH
+ * @brief Check if abs(a - b) > limit. Works for timestamp where the bitwidth is PULSE_PROCESSOR_TIMESTAMP_BITWIDTH
  *
  * @param a A timestamp
  * @param b A timestamp
@@ -90,7 +91,7 @@ typedef struct {
   uint32_t offset;
   // Channel is zero indexed (0-15) here, while it is one indexed in the base station config (1 - 16)
   uint8_t channel; // Valid if channelFound is true
-  uint8_t slowbit; // Valid if channelFound is true
+  uint8_t slowBit; // Valid if channelFound is true
   bool channelFound;
 } pulseProcessorFrame_t;
 
@@ -122,8 +123,8 @@ typedef enum {
  *
  */
 typedef struct {
-  bool synchronized;    // At true if we are currently syncthonized
-  int basestationsSynchronizedCount;
+  bool synchronized;    // At true if we are currently synchronized
+  int baseStationsSynchronizedCount;
 
   // Synchronization state
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_N_SENSORS][PULSE_PROCESSOR_HISTORY_LENGTH];
@@ -187,7 +188,7 @@ typedef struct {
  *
  */
 typedef struct {
-    pulseProcessorV2SweepBlock_t blocks[PULSE_PROCRSSOR_N_CONCURRENT_BLOCKS];
+    pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_CONCURRENT_BLOCKS];
 } pulseProcessorV2BlockWorkspace_t;
 
 /**
@@ -198,15 +199,15 @@ typedef struct {
   pulseProcessorV2PulseWorkspace_t pulseWorkspace;
   pulseProcessorV2BlockWorkspace_t blockWorkspace;
 
-  // Latest block from each base station. Used to pair both blocks (sweeps) from one rotaion of the rotor.
-  pulseProcessorV2SweepBlock_t blocks[PULSE_PROCESSOR_N_BASE_STATIONS];
+  // Latest block from each base station. Used to pair both blocks (sweeps) from one rotation of the rotor.
+  pulseProcessorV2SweepBlock_t blocks[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 
-  // Timestamp of the rotor zero position for the latest processed slowbit
-  uint32_t ootxTimestamps[PULSE_PROCESSOR_N_BASE_STATIONS];
+  // Timestamp of the rotor zero position for the latest processed slowBit
+  uint32_t ootxTimestamps[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorV2_t;
 
 typedef struct pulseProcessor_s {
-  bool receivedBsSweep[PULSE_PROCESSOR_N_BASE_STATIONS];
+  bool receivedBsSweep[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 
   union {
     struct {
@@ -218,10 +219,10 @@ typedef struct pulseProcessor_s {
     };
   };
 
-  ootxDecoderState_t ootxDecoder[PULSE_PROCESSOR_N_BASE_STATIONS];
-  lighthouseCalibration_t bsCalibration[PULSE_PROCESSOR_N_BASE_STATIONS];
-  baseStationGeometry_t bsGeometry[PULSE_PROCESSOR_N_BASE_STATIONS];
-  baseStationGeometryCache_t bsGeoCache[PULSE_PROCESSOR_N_BASE_STATIONS];
+  ootxDecoderState_t ootxDecoder[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  lighthouseCalibration_t bsCalibration[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  baseStationGeometry_t bsGeometry[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  baseStationGeometryCache_t bsGeoCache[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 
   // Health check data
   uint32_t healthFirstSensorTs;
@@ -238,17 +239,17 @@ typedef struct {
   float angles[PULSE_PROCESSOR_N_SWEEPS];
   float correctedAngles[PULSE_PROCESSOR_N_SWEEPS];
   int validCount;
-} pulseProcessorBaseStationMeasuremnt_t;
-
-typedef struct {
-  pulseProcessorBaseStationMeasuremnt_t baseStatonMeasurements[PULSE_PROCESSOR_N_BASE_STATIONS];
 } pulseProcessorSensorMeasurement_t;
 
 typedef struct {
-  pulseProcessorSensorMeasurement_t sensorMeasurementsLh1[PULSE_PROCESSOR_N_SENSORS];
-  pulseProcessorSensorMeasurement_t sensorMeasurementsLh2[PULSE_PROCESSOR_N_SENSORS];
+  pulseProcessorSensorMeasurement_t sensorMeasurements[PULSE_PROCESSOR_N_SENSORS];
+} pulseProcessorBaseStationMeasurement_t;
+
+typedef struct {
+  pulseProcessorBaseStationMeasurement_t baseStationMeasurementsLh1[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
+  pulseProcessorBaseStationMeasurement_t baseStationMeasurementsLh2[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
   lighthouseBaseStationType_t measurementType;
-  uint64_t lastUsecTimestamp[PULSE_PROCESSOR_N_BASE_STATIONS];
+  uint64_t lastUsecTimestamp[CONFIG_DECK_LIGHTHOUSE_MAX_N_BS];
 } pulseProcessorResult_t;
 
 /**
@@ -277,7 +278,7 @@ typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const puls
  */
 bool pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 
-void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation);
+void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation);
 
 /**
  * @brief Clear the result struct for one base station when the data is processed and converted to measurements
@@ -303,7 +304,7 @@ void pulseProcessorClear(pulseProcessorResult_t* angles, int baseStation);
 void pulseProcessorAllClear(pulseProcessorResult_t* angles);
 
 /**
- * Get quality of angles reception of the basestations.
- * 0 means no angles, 255 means reception of all angles of all axis of all basestations.
+ * Get quality of angles reception of the base stations.
+ * 0 means no angles, 255 means reception of all angles of all axis of all base stations.
  */
 uint8_t pulseProcessorAnglesQuality();

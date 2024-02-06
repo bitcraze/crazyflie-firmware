@@ -23,7 +23,7 @@
  *
  *
  * hello_world.c - App layer application of a simple hello world debug print every
- *   2 seconds.  
+ *   2 seconds.
  */
 
 
@@ -36,12 +36,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#define DEBUG_MODULE "HELLOWORLD"
 #include "debug.h"
 
-#define DEBUG_MODULE "HELLOWORLD"
 
-void appMain()
-{
+void appMain() {
   DEBUG_PRINT("Waiting for activation ...\n");
 
   while(1) {

@@ -31,19 +31,21 @@
 #include "platform.h"
 #include "debug.h"
 
+#include "autoconf.h"
+
 // https://gcc.gnu.org/onlinedocs/cpp/Stringizing.html
 #define xstr(s) str(s)
 #define str(s) #s
 
-#if defined(SENSOR_INCLUDED_BMI088_BMP388) || defined(SENSOR_INCLUDED_BMI088_SPI_BMP388)
+#if defined(CONFIG_SENSORS_BMI088_BMP388) || defined(CONFIG_SENSORS_BMI088_SPI)
   #include "sensors_bmi088_bmp388.h"
 #endif
 
-#ifdef SENSOR_INCLUDED_MPU9250_LPS25H
+#ifdef CONFIG_SENSORS_MPU9250_LPS25H
   #include "sensors_mpu9250_lps25h.h"
 #endif
 
-#ifdef SENSOR_INCLUDED_BOSCH
+#ifdef CONFIG_SENSORS_BOSCH
   #include "sensors_bosch.h"
 #endif
 
@@ -54,7 +56,7 @@ typedef struct {
   bool (*test)(void);
   bool (*areCalibrated)(void);
   bool (*manufacturingTest)(void);
-  void (*acquire)(sensorData_t *sensors, const uint32_t tick);
+  void (*acquire)(sensorData_t *sensors);
   void (*waitDataReady)(void);
   bool (*readGyro)(Axis3f *gyro);
   bool (*readAcc)(Axis3f *acc);
@@ -70,7 +72,7 @@ static void nullFunction(void) {}
 #pragma GCC diagnostic pop
 
 static const sensorsImplementation_t sensorImplementations[SensorImplementation_COUNT] = {
-#ifdef SENSOR_INCLUDED_BMI088_BMP388
+#ifdef CONFIG_SENSORS_BMI088_BMP388
   {
     .implements = SensorImplementation_bmi088_bmp388,
     .init = sensorsBmi088Bmp388Init_I2C,
@@ -87,7 +89,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .dataAvailableCallback = sensorsBmi088Bmp388DataAvailableCallback,
   },
 #endif
-#ifdef SENSOR_INCLUDED_BMI088_SPI_BMP388
+#ifdef CONFIG_SENSORS_BMI088_SPI
   {
     .implements = SensorImplementation_bmi088_spi_bmp388,
     .init = sensorsBmi088Bmp388Init_SPI,
@@ -104,7 +106,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .dataAvailableCallback = sensorsBmi088Bmp388DataAvailableCallback,
   },
 #endif
-#ifdef SENSOR_INCLUDED_MPU9250_LPS25H
+#ifdef CONFIG_SENSORS_MPU9250_LPS25H
   {
     .implements = SensorImplementation_mpu9250_lps25h,
     .init = sensorsMpu9250Lps25hInit,
@@ -121,7 +123,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .dataAvailableCallback = nullFunction,
   },
 #endif
-#ifdef SENSOR_INCLUDED_BOSCH
+#ifdef CONFIG_SENSORS_BOSCH
   {
     .implements = SensorImplementation_bosch,
     .init = sensorsBoschInit,
@@ -175,8 +177,8 @@ bool sensorsManufacturingTest(void){
   return activeImplementation->manufacturingTest;
 }
 
-void sensorsAcquire(sensorData_t *sensors, const uint32_t tick) {
-  activeImplementation->acquire(sensors, tick);
+void sensorsAcquire(sensorData_t *sensors) {
+  activeImplementation->acquire(sensors);
 }
 
 void sensorsWaitDataReady(void) {
@@ -201,6 +203,17 @@ bool sensorsReadBaro(baro_t *baro) {
 
 void sensorsSetAccMode(accModes accMode) {
   activeImplementation->setAccMode(accMode);
+}
+
+void sensorsSuspend()
+{
+  NVIC_DisableIRQ(EXTI15_10_IRQn);
+}
+
+void sensorsResume()
+{
+  NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 void __attribute__((used)) EXTI14_Callback(void) {

@@ -311,7 +311,7 @@ static const DeckDriver rpm_deck = {
   .pid = 0x00,
   .name = "bcRpm",
 
-  .usedGpio = DECK_USING_IO_2 | DECK_USING_IO_3 | DECK_USING_TX2 | DECK_USING_RX2,
+  .usedGpio = DECK_USING_IO_2 | DECK_USING_IO_3 | DECK_USING_PA2 | DECK_USING_PA3,
 
   .init = rpmInit,
 };

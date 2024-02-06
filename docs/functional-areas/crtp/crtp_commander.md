@@ -8,8 +8,7 @@ roll/pitch/yaw/thrust regulators from the host to the Crazyflie. As soon
 as the communication link has been established these packets can be sent
 and the values are valid until the next packet is received.
 
-Communication protocol
---------------------
+## Communication protocol
 
             +-------+-------+-------+-------+
             | ROLL  | PITCH |  YAW  |THRUST |

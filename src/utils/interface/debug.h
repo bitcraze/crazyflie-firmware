@@ -23,10 +23,14 @@
  *
  * debug.h - Debugging utility functions
  */
+
+#pragma once
+
 #include "config.h"
 #include "console.h"
+#include "autoconf.h"
 
-#ifdef DEBUG_PRINT_ON_UART
+#ifdef CONFIG_DEBUG_PRINT_ON_UART1
   #include "uart1.h"
   #define uartPrintf uart1Printf
 #endif
@@ -46,10 +50,10 @@
 void debugInit(void);
 
 #if defined(UNIT_TEST_MODE)
-  // Empty defines when running unit tests
-  #define DEBUG_PRINT(fmt, ...)
-  #define DEBUG_PRINT_OS(fmt, ...)
-#elif defined(DEBUG_PRINT_ON_UART)
+  #include <stdio.h>
+  #define DEBUG_PRINT(fmt, ...) printf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+  #define DEBUG_PRINT_OS(fmt, ...) printf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+#elif defined(CONFIG_DEBUG_PRINT_ON_UART1)
   #define DEBUG_PRINT(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
   #define DEBUG_PRINT_OS(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
 #elif defined(DEBUG_PRINT_ON_SWO)
@@ -60,7 +64,7 @@ void debugInit(void);
   #define DEBUG_PRINT_OS(fmt, ...) SEGGER_RTT_printf(0, fmt, ## __VA_ARGS__)
 #else // Debug using radio or USB
   #define DEBUG_PRINT(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
-#define DEBUG_PRINT_OS(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
+  #define DEBUG_PRINT_OS(fmt, ...) consolePrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
   //#define DEBUG_PRINT(fmt, ...)
 #endif
 

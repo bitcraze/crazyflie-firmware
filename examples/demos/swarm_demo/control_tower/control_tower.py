@@ -18,10 +18,8 @@
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA  02110-1301, USA.
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import time
 import cflib.crtp  # noqa
@@ -168,6 +166,9 @@ class TrafficController:
         self.connection_state = self.CS_CONNECTED
         print('Connected to %s' % link_uri)
 
+    def _all_updated(self):
+        """Callback that is called when all parameters have been updated"""
+
         self.set_trajectory_count(2)
         self._setup_logging()
 
@@ -199,9 +200,14 @@ class TrafficController:
         self._cf.disconnected.add_callback(self._disconnected)
         self._cf.connection_failed.add_callback(self._connection_failed)
         self._cf.connection_lost.add_callback(self._connection_lost)
+        self._cf.param.all_updated.add_callback(self._all_updated)
+        # self._cf.console.receivedChar.add_callback(self._console_incoming) #print debug messages from Crazyflie
 
         print("Connecting to " + self.uri)
         self._cf.open_link(self.uri)
+
+    def _console_incoming(self, console_text):
+        print("CF {} DEBUG:".format( self.uri[-2:] ),console_text, end='')
 
     def _setup_logging(self):
         # print("Setting up logging")

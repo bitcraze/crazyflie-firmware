@@ -2,25 +2,19 @@
   ******************************************************************************
   * @file    usb_dcd_int.c
   * @author  MCD Application Team
-  * @version V2.1.0
-  * @date    19-March-2012
+  * @version V2.2.1
+  * @date    17-March-2018
   * @brief   Peripheral Device interrupt subroutines
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2015 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
-  * You may not use this file except in compliance with the License.
-  * You may obtain a copy of the License at:
-  *
-  *        http://www.st.com/software_license_agreement_liberty_v2
-  *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
+  * This software component is licensed by ST under Ultimate Liberty license
+  * SLA0044, the "License"; You may not use this file except in compliance with
+  * the License. You may obtain a copy of the License at:
+  *                      <http://www.st.com/SLA0044>
   *
   ******************************************************************************
   */
@@ -130,8 +124,7 @@ uint32_t USBD_OTG_EP1OUT_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
     if (pdev->cfg.dma_enable == 1)
     {
       deptsiz.d32 = USB_OTG_READ_REG32(&(pdev->regs.OUTEP_REGS[1]->DOEPTSIZ));
-      /*ToDo : handle more than one single MPS size packet */
-      pdev->dev.out_ep[1].xfer_count = pdev->dev.out_ep[1].maxpacket - \
+      pdev->dev.out_ep[1].xfer_count = pdev->dev.out_ep[1].xfer_len- \
         deptsiz.b.xfersize;
     }    
     /* Inform upper layer: data ready */
@@ -194,7 +187,6 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
   if (diepint.b.emptyintr)
   {
     DCD_WriteEmptyTxFifo(pdev , 1);
-    CLEAR_IN_EP_INTR(1, emptyintr);
   }
   return 1;
 }
@@ -206,14 +198,6 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
 * @param  pdev: device instance
 * @retval status
 */
-
-void  __attribute__((used)) OTG_FS_IRQHandler(void)
-{
-  extern USB_OTG_CORE_HANDLE USB_OTG_dev;
-
-  USBD_OTG_ISR_Handler (&USB_OTG_dev);
-}
-
 uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
 {
   USB_OTG_GINTSTS_TypeDef  gintr_status;
@@ -360,7 +344,7 @@ static uint32_t DCD_HandleResume_ISR(USB_OTG_CORE_HANDLE *pdev)
   if(pdev->cfg.low_power)
   {
     /* un-gate USB Core clock */
-    power.d32 = USB_OTG_READ_REG32(&pdev->regs.PCGCCTL);
+    power.d32 = USB_OTG_READ_REG32(pdev->regs.PCGCCTL);
     power.b.gatehclk = 0;
     power.b.stoppclk = 0;
     USB_OTG_WRITE_REG32(pdev->regs.PCGCCTL, power.d32);
@@ -437,14 +421,16 @@ static uint32_t DCD_HandleInEP_ISR(USB_OTG_CORE_HANDLE *pdev)
   uint32_t fifoemptymsk;
   diepint.d32 = 0;
   ep_intr = USB_OTG_ReadDevAllInEPItr(pdev);
-
+  
   while ( ep_intr )
   {
-    if (ep_intr&0x1) /* In ITR */
+    if ((ep_intr & 0x1) == 0x01) /* In ITR */
     {
       diepint.d32 = DCD_ReadDevInEP(pdev , epnum); /* Get In ITR status */
       if ( diepint.b.xfercompl )
       {
+        fifoemptymsk = 0x1 << epnum;
+        USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, fifoemptymsk, 0);
         CLEAR_IN_EP_INTR(epnum, xfercompl);
         /* TX COMPLETE */
         USBD_DCD_INT_fops->DataInStage(pdev , epnum);
@@ -476,13 +462,7 @@ static uint32_t DCD_HandleInEP_ISR(USB_OTG_CORE_HANDLE *pdev)
       }       
       if (diepint.b.emptyintr)
       {
-
         DCD_WriteEmptyTxFifo(pdev , epnum);
-        
-        fifoemptymsk = 0x1 << epnum;
-        USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, fifoemptymsk, 0);
-
-        CLEAR_IN_EP_INTR(epnum, emptyintr);
       }
     }
     epnum++;
@@ -651,6 +631,7 @@ static uint32_t DCD_WriteEmptyTxFifo(USB_OTG_CORE_HANDLE *pdev, uint32_t epnum)
   uint32_t len = 0;
   uint32_t len32b;
   txstatus.d32 = 0;
+  uint32_t fifoemptymsk;
   
   ep = &pdev->dev.in_ep[epnum];    
   
@@ -663,8 +644,6 @@ static uint32_t DCD_WriteEmptyTxFifo(USB_OTG_CORE_HANDLE *pdev, uint32_t epnum)
   
   len32b = (len + 3) / 4;
   txstatus.d32 = USB_OTG_READ_REG32( &pdev->regs.INEP_REGS[epnum]->DTXFSTS);
-  
-  
   
   while  (txstatus.b.txfspcavail > len32b &&
           ep->xfer_count < ep->xfer_len &&
@@ -685,8 +664,16 @@ static uint32_t DCD_WriteEmptyTxFifo(USB_OTG_CORE_HANDLE *pdev, uint32_t epnum)
     ep->xfer_count += len;
     
     txstatus.d32 = USB_OTG_READ_REG32(&pdev->regs.INEP_REGS[epnum]->DTXFSTS);
+    
+    /* Mask the TxFIFOEmpty interrupt  */
+    if (ep->xfer_len == ep->xfer_count)
+    {
+      fifoemptymsk = 0x1 << ep->num;  
+      USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, 
+                           fifoemptymsk, 0); 
+    }
   }
-
+  
   return 1;
 }
 
@@ -773,28 +760,102 @@ static uint32_t DCD_HandleUsbReset_ISR(USB_OTG_CORE_HANDLE *pdev)
 */
 static uint32_t DCD_HandleEnumDone_ISR(USB_OTG_CORE_HANDLE *pdev)
 {
+  uint32_t hclk = 168000000;
+  
   USB_OTG_GINTSTS_TypeDef  gintsts;
   USB_OTG_GUSBCFG_TypeDef  gusbcfg;
-  
+  RCC_ClocksTypeDef RCC_Clocks;
   USB_OTG_EP0Activate(pdev);
   
-  /* Set USB turn-around time based on device speed and PHY interface. */
+  /* Get HCLK frequency */
+  RCC_GetClocksFreq(&RCC_Clocks);
+  hclk = RCC_Clocks.HCLK_Frequency;
+
+  /* Clear default TRDT value and Set USB turn-around time based on device speed and PHY interface. */
   gusbcfg.d32 = USB_OTG_READ_REG32(&pdev->regs.GREGS->GUSBCFG);
+  gusbcfg.b.usbtrdtim = 0;
+  USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GUSBCFG, gusbcfg.d32);
   
   /* Full or High speed */
   if ( USB_OTG_GetDeviceSpeed(pdev) == USB_SPEED_HIGH)
   {
     pdev->cfg.speed            = USB_OTG_SPEED_HIGH;
     pdev->cfg.mps              = USB_OTG_HS_MAX_PACKET_SIZE ;    
+    
+    /*USBTRD min For HS device*/
     gusbcfg.b.usbtrdtim = 9;
   }
   else
   {
     pdev->cfg.speed            = USB_OTG_SPEED_FULL;
-    pdev->cfg.mps              = USB_OTG_FS_MAX_PACKET_SIZE ;  
-    gusbcfg.b.usbtrdtim = 5;
+    pdev->cfg.mps              = USB_OTG_FS_MAX_PACKET_SIZE ; 
+    
+    /* The USBTRD is configured according to the tables below, depending on AHB frequency 
+    used by application. In the low AHB frequency range it is used to stretch enough the USB response 
+    time to IN tokens, the USB turnaround time, so to compensate for the longer AHB read access 
+    latency to the Data FIFO */
+    
+    if((hclk >= 15000000)&&(hclk < 16000000))
+    {
+      /* hclk Clock Range between 15-16 MHz */
+      gusbcfg.b.usbtrdtim = 0xE;
+    }
+    
+    else if((hclk >= 16000000)&&(hclk < 17100000))
+    {
+      /* hclk Clock Range between 16-17.1 MHz */
+      gusbcfg.b.usbtrdtim = 0xD;
+    }
+    
+    else if((hclk >= 17100000)&&(hclk < 18400000))
+    {
+      /* hclk Clock Range between 17-18.4 MHz */
+      gusbcfg.b.usbtrdtim = 0xC;
+    }
+    
+    else if((hclk >= 18400000)&&(hclk < 20000000))
+    {
+      /* hclk Clock Range between 18.4-20 MHz */
+      gusbcfg.b.usbtrdtim = 0xB;
+    }
+    
+    else if((hclk >= 20000000)&&(hclk < 21800000))
+    {
+      /* hclk Clock Range between 20-21.8 MHz */
+      gusbcfg.b.usbtrdtim = 0xA;
+    }
+    
+    else if((hclk >= 21800000)&&(hclk < 24000000))
+    {
+      /* hclk Clock Range between 21.8-24 MHz */
+      gusbcfg.b.usbtrdtim = 0x9;
+    }
+    
+    else if((hclk >= 24000000)&&(hclk < 26600000))
+    {
+      /* hclk Clock Range between 24-26.6 MHz */
+      gusbcfg.b.usbtrdtim = 0x8;
+    }
+    
+    else if((hclk >= 26600000)&&(hclk < 30000000))
+    {
+      /* hclk Clock Range between 26.6-30 MHz */
+      gusbcfg.b.usbtrdtim = 0x7;
+    }
+    
+    else if((hclk >= 30000000)&&(hclk < 34300000))
+    {
+      /* hclk Clock Range between 30-34.3 MHz */
+      gusbcfg.b.usbtrdtim= 0x6;
+    } 
+    
+    else /* if(hclk >= 34300000) */
+    {
+      /* hclk Clock Range between 34.3-168 MHz */
+      gusbcfg.b.usbtrdtim = 0x5;
+    }
   }
-  
+
   USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GUSBCFG, gusbcfg.d32);
   
   /* Clear interrupt */
@@ -860,8 +921,6 @@ static uint32_t DCD_ReadDevInEP (USB_OTG_CORE_HANDLE *pdev, uint8_t epnum)
   v = USB_OTG_READ_REG32(&pdev->regs.INEP_REGS[epnum]->DIEPINT) & msk;
   return v;
 }
-
-
 
 /**
 * @}

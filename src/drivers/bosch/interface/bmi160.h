@@ -249,10 +249,10 @@ int8_t bmi160_aux_init(const struct bmi160_dev *dev);
  *
  * @param[in] data_addr	   : Starting address of aux. sensor's data register
  *                           (BMI160 registers 0x04 to 0x0B will be updated
- *                           with 8 bytes of data from auxiliary sensor 
+ *                           with 8 bytes of data from auxiliary sensor
  *                           starting from this register address.)
  * @param[in] dev	   : Structure instance of bmi160_dev.
- * 
+ *
  * @note : Set the value of auxiliary polling rate by setting
  *         dev->aux_cfg.aux_odr to the required value from the table
  *         before calling this API
@@ -260,16 +260,16 @@ int8_t bmi160_aux_init(const struct bmi160_dev *dev);
  *   dev->aux_cfg.aux_odr  |   Auxiliary ODR (Hz)
  *  -----------------------|-----------------------
  *  BMI160_AUX_ODR_0_78HZ  |        25/32
- *  BMI160_AUX_ODR_1_56HZ  |        25/16 
- *  BMI160_AUX_ODR_3_12HZ  |        25/8 
- *  BMI160_AUX_ODR_6_25HZ  |        25/4 
- *  BMI160_AUX_ODR_12_5HZ  |        25/2 
- *  BMI160_AUX_ODR_25HZ    |        25 
- *  BMI160_AUX_ODR_50HZ    |        50 
- *  BMI160_AUX_ODR_100HZ   |        100 
- *  BMI160_AUX_ODR_200HZ   |        200 
- *  BMI160_AUX_ODR_400HZ   |        400 
- *  BMI160_AUX_ODR_800HZ   |        800 
+ *  BMI160_AUX_ODR_1_56HZ  |        25/16
+ *  BMI160_AUX_ODR_3_12HZ  |        25/8
+ *  BMI160_AUX_ODR_6_25HZ  |        25/4
+ *  BMI160_AUX_ODR_12_5HZ  |        25/2
+ *  BMI160_AUX_ODR_25HZ    |        25
+ *  BMI160_AUX_ODR_50HZ    |        50
+ *  BMI160_AUX_ODR_100HZ   |        100
+ *  BMI160_AUX_ODR_200HZ   |        200
+ *  BMI160_AUX_ODR_400HZ   |        400
+ *  BMI160_AUX_ODR_800HZ   |        800
  *
  * @note : Other values of  dev->aux_cfg.aux_odr are reserved and not for use
  *
@@ -290,11 +290,11 @@ int8_t bmi160_set_aux_auto_mode(uint8_t* data_addr, struct bmi160_dev *dev);
 int8_t bmi160_config_aux_mode(const struct bmi160_dev *dev);
 
 /*!
- * @brief This API is used to read the raw uncompensated auxiliary sensor 
+ * @brief This API is used to read the raw uncompensated auxiliary sensor
  * data of 8 bytes from BMI160 register address 0x04 to 0x0B
  *
  * @param[in] aux_data	     : Pointer to user array of length 8 bytes
- *                             Ensure that the aux_data array is of 
+ *                             Ensure that the aux_data array is of
  *                             length 8 bytes
  * @param[in] dev	     : Structure instance of bmi160_dev
  *

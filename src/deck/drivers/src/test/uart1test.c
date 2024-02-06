@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2012 Bitcraze AB
+ * Copyright (C) 2011-2021 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ static void uart1testInit(DeckInfo *info)
 
   uart1Init(115200);
 
-  xTaskCreate(uart1testTask, UART1_TEST_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, UART1_TEST_TASK_PRI, NULL);
+  xTaskCreate(uart1testTask, UART1_TEST_TASK_NAME, UART1_TEST_TASK_STACKSIZE, NULL, UART1_TEST_TASK_PRI, NULL);
 
   isInit = true;
 }
@@ -84,7 +84,7 @@ static const DeckDriver uart1test_deck = {
 //  .pid = 0x08,
   .name = "bcUart1Test",
 
-  .usedPeriph = 0,
+  .usedPeriph = DECK_USING_UART1,
   .usedGpio = 0,
   .init = uart1testInit,
   .test = uart1testTest,

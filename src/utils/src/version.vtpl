@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -40,9 +40,24 @@ const bool V_PRODUCTION_RELEASE={productionRelease};
 const uint32_t V_REVISION_0={irevision0};
 const uint16_t V_REVISION_1={irevision1};
 
+/**
+ * Read-only parameters that describe the current quad firmware.
+ */
 PARAM_GROUP_START(firmware)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, revision0, &V_REVISION_0)
-PARAM_ADD(PARAM_UINT16 | PARAM_RONLY, revision1, &V_REVISION_1)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, modified, &V_MODIFIED)
-PARAM_GROUP_STOP(firmware)
 
+/**
+ * @brief Byte `0 - 7` of firmware revision
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, revision0, &V_REVISION_0)
+
+/**
+ * @brief Byte `8 - 11` of firmware revision
+ */
+PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, revision1, &V_REVISION_1)
+
+/**
+ * @brief Nonzero if firmware has local changes
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, modified, &V_MODIFIED)
+
+PARAM_GROUP_STOP(firmware)

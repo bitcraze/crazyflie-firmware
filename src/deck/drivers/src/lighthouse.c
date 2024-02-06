@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018-2020 Bitcraze AB
+ * Copyright (C) 2018-2021 Bitcraze AB
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,7 +60,7 @@ static void lighthouseInit(DeckInfo *info)
   lighthouseCoreInit();
 
   xTaskCreate(lighthouseCoreTask, LIGHTHOUSE_TASK_NAME,
-              2*configMINIMAL_STACK_SIZE, NULL, LIGHTHOUSE_TASK_PRI, NULL);
+              LIGHTHOUSE_TASK_STACKSIZE, NULL, LIGHTHOUSE_TASK_PRI, NULL);
 
   xTimerHandle timer;
   timer = xTimerCreateStatic("ledTimer", M2T(FIFTH_SECOND), pdTRUE,
@@ -89,8 +89,9 @@ static const DeckDriver lighthouse_deck = {
   .pid = 0x10,
   .name = "bcLighthouse4",
 
-  .usedGpio = 0,  // FIXME: set the used pins
-  .requiredEstimator = kalmanEstimator,
+  .usedGpio = 0,
+  .usedPeriph = DECK_USING_UART1,
+  .requiredEstimator = StateEstimatorTypeKalman,
 
   .memoryDef = &memoryDef,
 
@@ -101,5 +102,10 @@ static const DeckDriver lighthouse_deck = {
 DECK_DRIVER(lighthouse_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLighthouse4, &isInit)
+
+/**
+ * @brief Nonzero if [Lighthouse positioning deck](%https://store.bitcraze.io/collections/decks/products/lighthouse-positioning-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthouse4, &isInit)
+
 PARAM_GROUP_STOP(deck)

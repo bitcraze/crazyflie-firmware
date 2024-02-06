@@ -55,14 +55,11 @@ static void vec_add(const vec3d a, const vec3d b, vec3d r) {
 
 static float vec_length(const vec3d vec) {
     float pow = vec_dot(vec, vec);
-
-    float res;
-    arm_sqrt_f32(pow, &res);
-    return res;
+    return arm_sqrt(pow);
 }
 
 static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, vec3d res, float *dist) {
-    // Algoritm: http://geomalgorithms.com/a07-_distance.html#Distance-between-Lines
+    // Algorithm: http://geomalgorithms.com/a07-_distance.html#Distance-between-Lines
 
     vec3d w0 = {};
     arm_sub_f32(orig1, orig2, w0, vec3d_size);
@@ -75,8 +72,9 @@ static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, ve
     arm_dot_prod_f32(vec2, w0, vec3d_size, &e);
 
     float denom = a * c - b * b;
-    if (fabsf(denom) < 1e-5f)
+    if (fabsf(denom) < 1e-5f) {
         return false;
+    }
 
     // Closest point to 2nd line on 1st line
     float t1 = (b * e - c * d) / denom;
@@ -102,15 +100,15 @@ static bool intersect_lines(vec3d orig1, vec3d vec1, vec3d orig2, vec3d vec2, ve
     return true;
 }
 
-bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t baseStations[2], float angles1[2], float angles2[2], vec3d position, float *position_delta)
+bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t* geo1, const baseStationGeometry_t* geo2, float angles1[2], float angles2[2], vec3d position, float *position_delta)
 {
     static vec3d ray1, ray2, origin1, origin2;
 
-    lighthouseGeometryGetRay(&baseStations[0], angles1[0], angles1[1], ray1);
-    lighthouseGeometryGetBaseStationPosition(&baseStations[0], origin1);
+    lighthouseGeometryGetRay(geo1, angles1[0], angles1[1], ray1);
+    lighthouseGeometryGetBaseStationPosition(geo1, origin1);
 
-    lighthouseGeometryGetRay(&baseStations[1], angles2[0], angles2[1], ray2);
-    lighthouseGeometryGetBaseStationPosition(&baseStations[1], origin2);
+    lighthouseGeometryGetRay(geo2, angles2[0], angles2[1], ray2);
+    lighthouseGeometryGetBaseStationPosition(geo2, origin2);
 
     return intersect_lines(origin1, ray1, origin2, ray2, position, position_delta);
 }
@@ -163,7 +161,7 @@ void lighthouseGeometryGetSensorPosition(const vec3d cfPos, const arm_matrix_ins
 
   vec3d rotatedPos = {0};
   arm_matrix_instance_f32 ROTATED_POS = {1, 3, rotatedPos};
-  arm_mat_mult_f32(R, &LOCAL_POS, &ROTATED_POS);
+  mat_mult(R, &LOCAL_POS, &ROTATED_POS);
 
   vec_add(cfPos, rotatedPos, pos);
 }

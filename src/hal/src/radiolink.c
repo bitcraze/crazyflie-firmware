@@ -160,7 +160,7 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
-    // Assert that we are not dopping any packets
+    // Assert that we are not dropping any packets
     ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
     ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
@@ -186,10 +186,14 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
     P2PPacket p2pp;
     p2pp.port=slp->data[0];
     p2pp.rssi = slp->data[1];
-    memcpy(&p2pp.data[0], &slp->data[2],slp->length-2);
-    p2pp.size=slp->length;
-    if (p2p_callback)
+
+    const uint8_t p2pDataLength = slp->length - 2;
+    memcpy(&p2pp.data[0], &slp->data[2], p2pDataLength);
+    p2pp.size = p2pDataLength;
+
+    if (p2p_callback) {
         p2p_callback(&p2pp);
+    }
   }
 
   isConnected = radiolinkIsConnected();
@@ -256,6 +260,6 @@ static int radiolinkSetEnable(bool enable)
 }
 
 LOG_GROUP_START(radio)
-LOG_ADD(LOG_UINT8, rssi, &rssi)
-LOG_ADD(LOG_UINT8, isConnected, &isConnected)
+LOG_ADD_CORE(LOG_UINT8, rssi, &rssi)
+LOG_ADD_CORE(LOG_UINT8, isConnected, &isConnected)
 LOG_GROUP_STOP(radio)

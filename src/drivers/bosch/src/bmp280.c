@@ -1427,7 +1427,7 @@ float bmp280_compensate_pressure_float(int32_t v_uncomp_pressure_s32)
 					6250.0f / v_x1_u32r;
 	else
 		return BMP280_INVALID_DATA;
-		
+
 	v_x1_u32r = ((float)p_bmp280->calib_param.dig_P9) *
 	pressure * pressure / 2147483648.0f;
 	v_x2_u32r = pressure * ((float)p_bmp280->calib_param.dig_P8) / 32768.0f;

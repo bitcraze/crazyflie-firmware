@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2021 Bitcraze AB
+ * Copyright (C) 2011-2023 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,12 @@
 /**
  * Initialize microsecond-resolution timer (TIM1).
  */
-void initUsecTimer(void);
+void usecTimerInit(void);
+
+/**
+ * Reset the microsecond-resolution timer to 0.
+ */
+void usecTimerReset(void);
 
 /**
  * Get microsecond-resolution timestamp.

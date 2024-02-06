@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2021 BitCraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,7 +117,8 @@ static const DeckDriver zranger_deck = {
   .vid = 0xBC,
   .pid = 0x09,
   .name = "bcZRanger",
-  .usedGpio = 0x0C,
+  .usedGpio = 0,
+  .usedPeriph = DECK_USING_I2C,
 
   .init = zRangerInit,
   .test = zRangerTest,
@@ -126,5 +127,10 @@ static const DeckDriver zranger_deck = {
 DECK_DRIVER(zranger_deck);
 
 PARAM_GROUP_START(deck)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
+
+/**
+ * @brief Nonzero if [Z-ranger deck](%https://store.bitcraze.io/collections/decks/products/z-ranger-deck) is attached
+*/
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
+
 PARAM_GROUP_STOP(deck)

@@ -82,11 +82,8 @@
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		0
 #define configUSE_CO_ROUTINES 		0
-#ifdef DEBUG
-  #define configCHECK_FOR_STACK_OVERFLOW      1
-#else
-  #define configCHECK_FOR_STACK_OVERFLOW      0
-#endif
+#define configCHECK_FOR_STACK_OVERFLOW      1
+#define configUSE_TASK_NOTIFICATIONS 1
 #define configUSE_TIMERS          1
 #define configTIMER_TASK_PRIORITY 1
 #define configTIMER_QUEUE_LENGTH  20
@@ -108,6 +105,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelay				1
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
 #define INCLUDE_xTaskGetIdleTaskHandle 1
+#define INCLUDE_xTimerPendFunctionCall 1
 
 #define configUSE_MUTEXES 1
 
@@ -161,13 +159,13 @@ to exclude the API function. */
 #define configSUPPORT_STATIC_ALLOCATION 1
 
 // Queue monitoring
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
     #undef traceQUEUE_SEND
     #undef traceQUEUE_SEND_FAILED
     #define traceQUEUE_SEND(xQueue) qm_traceQUEUE_SEND(xQueue)
     void qm_traceQUEUE_SEND(void* xQueue);
     #define traceQUEUE_SEND_FAILED(xQueue) qm_traceQUEUE_SEND_FAILED(xQueue)
     void qm_traceQUEUE_SEND_FAILED(void* xQueue);
-#endif // DEBUG_QUEUE_MONITOR
+#endif // CONFIG_DEBUG_QUEUE_MONITOR
 
 #endif /* FREERTOS_CONFIG_H */

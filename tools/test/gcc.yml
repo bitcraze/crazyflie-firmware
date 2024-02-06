@@ -1,10 +1,12 @@
 ---
+kconfig:
+  config_file: 'build/.config'
 compiler:
   path: gcc
   source_path:     &source_path 'src/'
   unit_tests_path: &unit_tests_path 'test/**/'
-  mocks_path:      &mocks_path 'generated-test/mocks/'
-  build_path:      &build_path 'generated-test/build/'
+  mocks_path:      &mocks_path 'generated/test/mocks/'
+  build_path:      &build_path 'generated/test/build/'
   options:
     - '-c'
     - '-Wall'
@@ -15,6 +17,7 @@ compiler:
     - '-std=c11'
     - '-pedantic'
     - '-O0'
+    - '-g3'
     - '-fsanitize=address'
     - '-fno-omit-frame-pointer'
   includes:
@@ -23,6 +26,7 @@ compiler:
       - *source_path
       - *unit_tests_path
       - *mocks_path
+      - 'build/include/generated'
       - 'src/config'
       - 'src/deck/drivers/interface/'
       - 'src/deck/drivers/src/'
@@ -38,19 +42,27 @@ compiler:
       - 'src/config/'
       - 'src/drivers/interface/'
       - 'src/drivers/src'
+      - 'src/drivers/esp32/interface/'
+      - 'src/drivers/esp32/src/'
       - 'src/hal/interface/'
       - 'src/lib/CMSIS/STM32F4xx/Include'
       - 'src/lib/STM32F4xx_StdPeriph_Driver/inc'
       - 'src/modules/interface/'
       - 'src/modules/interface/kalman_core/'
       - 'src/modules/interface/lighthouse/'
+      - 'src/modules/interface/estimator/'
+      - 'src/modules/interface/controller/'
+      - 'src/modules/interface/outlierfilter/'
       - 'src/modules/src/'
       - 'src/modules/src/kalman_core/'
       - 'src/modules/src/lighthouse/'
-      - 'src/platform/'
+      - 'src/modules/src/outlierfilter/'
+      - 'src/platform/interface/'
+      - 'src/platform/src/'
       - 'src/utils/interface/'
       - 'src/utils/interface/lighthouse/'
       - 'src/utils/interface/tdoa'
+      - 'src/modules/interface/cpx'
       - 'src/utils/src/'
       - 'src/utils/src/lighthouse/'
       - 'src/utils/src/tdoa/'
@@ -77,6 +89,9 @@ compiler:
     extension: '.o'
     destination: *build_path
   libs:
+    TEST_SUPPORT:
+      files:
+        - 'test/testSupport/cfassert_in_test.c'
     ARM_DSP_MATH:
       files:
         - 'vendor/CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_add_f32.c'

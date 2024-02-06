@@ -1,10 +1,11 @@
-// File under test lighthouse_core.c
+// @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
+
+// File under test lighthouse_storage.c
 #include "lighthouse_storage.h"
 
 #include "unity.h"
 #include "mock_system.h"
 #include "mock_storage.h"
-#include "mock_cfassert.h"
 #include "mock_lighthouse_position_est.h"
 #include "mock_lighthouse_calibration.h"
 #include "mock_lighthouse_core.h"
@@ -88,7 +89,7 @@ void testInitializationOfGeoIsDoneFromStorage() {
   int geoSize = sizeof(baseStationGeometry_t);
   const void* ignored = 0;
 
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, geoSize, geoSize);
     storageFetch_IgnoreArg_key();
     storageFetch_IgnoreArg_buffer();
@@ -120,7 +121,7 @@ void testInitializationOfCalibIsDoneFromStorage() {
   int calibSize = sizeof(lighthouseCalibration_t);
   const void* ignored = 0;
 
-  for (int i = 0; i < PULSE_PROCESSOR_N_BASE_STATIONS; i++) {
+  for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, calibSize, calibSize);
     storageFetch_IgnoreArg_key();
     storageFetch_IgnoreArg_buffer();

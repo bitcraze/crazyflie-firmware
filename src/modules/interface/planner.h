@@ -38,15 +38,22 @@ Header file for planning state machine
 
 #pragma once
 
+#include <stdint.h>
+
 #include "math3d.h"
 #include "pptraj.h"
 #include "pptraj_compressed.h"
 
 enum trajectory_state
 {
+	// Motors off.
 	TRAJECTORY_STATE_IDLE            = 0,
+	// Follow a trajectory, then hover at its endpoint.
 	TRAJECTORY_STATE_FLYING          = 1,
+	// Follow a trajectory, but cut motors when it ends.
 	TRAJECTORY_STATE_LANDING         = 3,
+	// Not producing setpoints but also not wanting motors off.
+	TRAJECTORY_STATE_DISABLED        = 4,
 };
 
 enum trajectory_type
@@ -80,8 +87,17 @@ void plan_stop(struct planner *p);
 
 // query if the planner is stopped.
 // currently this is true at startup before we take off,
-// and also after an emergency stop.
+// and also after a stop.
 bool plan_is_stopped(struct planner *p);
+
+// disable the planner.
+// subsequently, plan_is_disabled(p) will return true,
+// and it is no longer valid to call plan_current_goal(p).
+void plan_disable(struct planner *p);
+
+// query if the planner is disabled.
+// currently this is true when preempted by low-level commands.
+bool plan_is_disabled(struct planner *p);
 
 // get the planner's current goal.
 struct traj_eval plan_current_goal(struct planner *p, float t);
@@ -98,11 +114,11 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 // same as above, but with current state provided from outside.
 int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool relative, struct vec hover_pos, float hover_yaw, float duration, float t);
 
-// start trajectory
-int plan_start_trajectory(struct planner *p, const struct piecewise_traj* trajectory, bool reversed);
+// start trajectory. start_from param is ignored if relative == false.
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from);
 
-// start compressed trajectory
-int plan_start_compressed_trajectory(struct planner *p, struct piecewise_traj_compressed* trajectory);
+// start compressed trajectory. start_from param is ignored if relative == false.
+int plan_start_compressed_trajectory(struct planner *p, struct piecewise_traj_compressed* trajectory, bool relative, struct vec start_from);
 
 // Query if the trjectory is finished
 bool plan_is_finished(struct planner *p, float t);

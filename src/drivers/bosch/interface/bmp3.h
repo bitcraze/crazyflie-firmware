@@ -319,4 +319,3 @@ int8_t bmp3_set_fifo_watermark(const struct bmp3_dev *dev);
 
 #endif /* BMP3_H_ */
 /** @}*/
-

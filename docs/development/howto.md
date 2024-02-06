@@ -5,11 +5,10 @@ page_id: howto
 
 This howto is going to describe step-by-step how to make and flash your
 first Crazyflie 2.X deck driver. See the deck [api documentation
-page](/docs/userguides/decks/) for more information about the
+page](/docs/userguides/deck/) for more information about the
 code.
 
-Development environment
------------------------
+## Development environment
 
 You should have the
 [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware) and
@@ -22,8 +21,7 @@ The Crazyflie firmware should be on Master branch.
 For the rest of the howto you will work in the crazyflie-firmware
 project.
 
-Writing the driver
-------------------
+## Writing the driver
 
 Deck drivers are in the src/deck/drivers/src folder. Create this file named
 hello.c in the src/deck/drivers/src folder:
@@ -37,7 +35,7 @@ hello.c in the src/deck/drivers/src folder:
 
 static void helloInit()
 {
-  DEBUG_PRINT("Hello Crazyflie 2.0 deck world!\n");
+  DEBUG_PRINT("Hello Crazyflie 2.1 deck world!\n");
 }
 
 static bool helloTest()
@@ -55,40 +53,32 @@ static const DeckDriver helloDriver = {
 DECK_DRIVER(helloDriver);
 ```
 
-Adding the driver to the build
-------------------------------
+## Adding the driver to the build
 
-Add this to the Makefile, after the line \'\# Decks\':
+Add this to the `Kbuild` file in `src/deck/drivers/src/`:
 
 ``` {.make}
-PROJ_OBJ += hello.o
+obj-y += hello.o
 ```
 
-Enabling the driver
--------------------
+## Enabling the driver
 
 Decks can have a memory that contains its name. In our case the hello
-driver would be initialised only when a deck identified as \"myHello\"
+driver would be initialized only when a deck identified as \"myHello\"
 is installed on the Crazyflie. For development purpose it is possible to
-force enabling a deck driver with a compile flag. To do so create the
-file tools/make/config.mk with the content:
+force enabling a deck driver with a compile flag. To do so set the
+`CONFIG_DECK_FORCE` config option to `"myHello"` in your `.config` either
+by hand or using `make menuconfig`.
 
-``` {.make}
-CFLAGS += -DDECK_FORCE=myHello
-
-DEBUG=1
-```
-
-DEBUG=1 allows to get more information from the Crazyflie console when
+`CONFIG_DEBUG=y` allows to get more information from the Crazyflie console when
 it starts. Debug should not be enabled if you intend to fly the
 Crazyflie out of the lab (it disables the watchdog).
 
-**Note** Each time you modify config.mk you
+**Note** Each time you modify your `.config` you
 should recompile the full firmware by cleaning up the build folder with
 \'make clean\'
 
-Compile, flash and run!
------------------------
+## Compile, flash and run!
 
 Now the last step is to compile and flash your new firmware. Launch the
 following commands in a shell:
@@ -97,6 +87,11 @@ following commands in a shell:
 crazyflie-firmware$ make clean && make
 crazyflie-firmware$ make cload
 ```
+
+> If you see `*** Configuration file ".config" not found!`, make sure
+> select the right build config. Please see [the build instructions](/docs/building-and-flashing/build.md)
+
+
 
 The output will be similar to the following:
 
