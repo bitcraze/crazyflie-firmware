@@ -490,6 +490,7 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       float percentage = volts / supply_voltage;
       percentage = percentage > 1.0f ? 1.0f : percentage;
       ratio = UINT16_MAX * percentage;
+      motor_ratios[id] = ratio;
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
     }
 
