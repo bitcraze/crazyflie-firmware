@@ -1,21 +1,16 @@
 """
-Example that uses a load cell to measure thrust using different RPMs
+Ramp motors and collect data using the system-id deck
 """
 import argparse
 import logging
 import time
-from threading import Thread
-import numpy as np
 import yaml
+from threading import Thread
 
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.localization import Localization
-
-
-# Only output errors from the logging framework
-logging.basicConfig(level=logging.ERROR)
 
 
 class CollectData:
@@ -26,15 +21,13 @@ class CollectData:
 
     def __init__(self, link_uri, calib_a, calib_b):
         """ Initialize and run the example with the specified link_uri """
-        self.measurements = []
-        self.desiredThrust = 0
         self.calib_a = calib_a
         self.calib_b = calib_b
 
         self._cf = Crazyflie(rw_cache='./cache')
 
         # Connect some callbacks from the Crazyflie API
-        self._cf.connected.add_callback(self._connected)
+        self._cf.fully_connected.add_callback(self._connected)
         self._cf.disconnected.add_callback(self._disconnected)
         self._cf.connection_failed.add_callback(self._connection_failed)
         self._cf.connection_lost.add_callback(self._connection_lost)
@@ -57,17 +50,20 @@ class CollectData:
         self._cf.param.set_value('loadcell.b', str(self.calib_b))
 
         self._file = open("data.csv", "w+")
-        self._file.write("thrust[g],pwm,vbat[V],maxThrust[g],maxThrustVbat[V],rpm\n");
+        self._file.write("weight[g],pwm,vbat[V],rpm1,rpm2,rpm3,rpm4,v[V],i[A],p[W]\n");
 
         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='data', period_in_ms=10)
         self._lg_stab.add_variable('loadcell.weight', 'float')
         self._lg_stab.add_variable('motor.m1', 'uint16_t')
-        self._lg_stab.add_variable('pm.vbat', 'float')
+        self._lg_stab.add_variable('pm.vbatMV', 'uint16_t')
         self._lg_stab.add_variable('rpm.m1', 'uint16_t')
         self._lg_stab.add_variable('rpm.m2', 'uint16_t')
         self._lg_stab.add_variable('rpm.m3', 'uint16_t')
         self._lg_stab.add_variable('rpm.m4', 'uint16_t')
+        self._lg_stab.add_variable('asc37800.v_mV', 'int16_t')
+        self._lg_stab.add_variable('asc37800.i_mA', 'int16_t')
+        self._lg_stab.add_variable('asc37800.p_mW', 'int16_t')
 
         # Adding the configuration cannot be done until a Crazyflie is
         # connected, since we need to check that the variables we
@@ -86,15 +82,9 @@ class CollectData:
         except AttributeError:
             print('Could not add Stabilizer log config, bad configuration.')
 
-        self._localization = Localization(self._cf)
-
         # Start a separate thread to do the motor test.
         # Do not hijack the calling thread!
         Thread(target=self._ramp_motors).start()
-
-        # # Start a timer to disconnect in 10s
-        # t = Timer(5, self._cf.close_link)
-        # t.start()
 
     def _stab_log_error(self, logconf, msg):
         """Callback from the log API when an error occurs"""
@@ -102,11 +92,18 @@ class CollectData:
 
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
-        # print('[%d][%s]: %s' % (timestamp, logconf.name, data))
-        # self._file.write("{},{},{}\n".format(data['loadcell.weight'], data['motor.m1'], data['pm.vbat']))
-        if self.desiredThrust == data['motor.m1']:
-            self.measurements.append(np.array([data['loadcell.weight'], data['pm.vbat']]))
-        # pass
+        print('[%d][%s]: %s' % (timestamp, logconf.name, data))
+        self._file.write("{},{},{},{},{},{},{},{},{},{}\n".format(
+            data['loadcell.weight'],
+            data['motor.m1'],
+            data['pm.vbatMV']/ 1000,
+            data['rpm.m1'],
+            data['rpm.m2'],
+            data['rpm.m3'],
+            data['rpm.m4'],
+            data['asc37800.v_mV']/ 1000,
+            data['asc37800.i_mA']/ 1000,
+            data['asc37800.p_mW']/ 1000))
 
     def _connection_failed(self, link_uri, msg):
         """Callback when connection initial connection fails (i.e no Crazyflie
@@ -124,57 +121,39 @@ class CollectData:
         print('Disconnected from %s' % link_uri)
         self.is_connected = False
 
-    def _measure(self, thrust, min_samples = 50):
-        self.desiredThrust = thrust
-        self.measurements = []
-        self._cf.param.set_value('motorPowerSet.m1', str(thrust))
-        while len(self.measurements) < min_samples:
-            self._localization.send_emergency_stop_watchdog()
-            time.sleep(0.1)
-        m = np.array(self.measurements)
-        # only return the last few samples
-        return m[40:]
-
     def _ramp_motors(self):
+        thrust_mult = 1
+        thrust_steps = 10
+        time_step = 1.0
+        thrust = 0
+        pitch = 0
+        roll = 0
+        yawrate = 0
+
+        # # Unlock startup thrust protection
+        # for i in range(0, 100):
+        #     self._cf.commander.send_setpoint(0, 0, 0, 0)
+
+        localization = Localization(self._cf)
 
         self._cf.param.set_value('motorPowerSet.m1', 0)
         self._cf.param.set_value('motorPowerSet.enable', 2)
 
-        while self.is_connected: #thrust >= 0:
-            # randomply sample PWM
-            thrust = int(np.random.uniform(15000, 65535))
-            measurements = self._measure(thrust)
-            # print(measurements)
-            achievedThrust = np.mean(measurements[:,0])
-            vbat = np.mean(measurements[:,1])
-
-            # go to full thrust
-            measurements = self._measure(65535)
-            # print(measurements)
-            maxThrust = np.mean(measurements[:,0])
-            vbatAtMaxThrust = np.mean(measurements[:,1])
-
-            # write result
-            print(achievedThrust, thrust, vbat, maxThrust, vbatAtMaxThrust)
-            self._file.write("{},{},{},{},{}\n".format(
-                achievedThrust,
-                thrust,
-                vbat,
-                maxThrust,
-                vbatAtMaxThrust))
-
-            if vbatAtMaxThrust < 2.8:
-                break
+        for i in range(10):       
+            thrust = int((65536/10)*i)
+            localization.send_emergency_stop_watchdog()
+            self._cf.param.set_value('motorPowerSet.m1', str(thrust))
+            time.sleep(time_step)
 
         # self._cf.commander.send_setpoint(0, 0, 0, 0)
         # Make sure that the last packet leaves before the link is closed
         # since the message queue is not flushed before closing
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self._cf.close_link()
-        self._file.close()
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--calibration", default="calibration.yaml", help="Input file containing the calibration")
     parser.add_argument("--uri", default="radio://0/42/2M/E7E7E7E7E7", help="URI of Crazyflie")

@@ -61,7 +61,7 @@ class CollectData:
         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='data', period_in_ms=5)
         self._lg_stab.add_variable('loadcell.weight', 'float')
-        self._lg_stab.add_variable('pwm.m1_pwm', 'uint16_t')
+        self._lg_stab.add_variable('motor.m1', 'uint16_t')
         self._lg_stab.add_variable('pm.vbatMV', 'uint16_t')
         self._lg_stab.add_variable('rpm.m1', 'uint16_t')
         self._lg_stab.add_variable('rpm.m2', 'uint16_t')
@@ -107,7 +107,7 @@ class CollectData:
         self._file.write("{},{},{},{},{},{},{},{},{},{}\n".format(
             timestamp,
             data['loadcell.weight'],
-            data['pwm.m1_pwm'],
+            data['motor.m1'],
             data['pm.vbatMV'] / 1000,
             data['rpm.m1'],
             data['rpm.m2'],
@@ -141,10 +141,8 @@ class CollectData:
             time.sleep(0.1)
 
     def _ramp_motors(self):
-        self._cf.param.set_value('motor.batCompensation', 0)
         self._cf.param.set_value('motorPowerSet.m1', 0)
         self._cf.param.set_value('motorPowerSet.enable', 2)
-        self._cf.param.set_value('system.forceArm', 1)
 
         while self.is_connected:
             # base speed

@@ -24,8 +24,9 @@ Mount CF upside down (to avoid downwash)
 
 1. Mount CF
 2. Switch to crazyflie-lib-python with branch `feature-emergency-stop` in order to be able to CTRL+C a script safely.
-3. Flash firmware from dev-systemId branch
-4. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument).
+3. Build firmware with configuration `make sysid_defconfig`
+4. Flash firmware
+5. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument).
 
 ### Ramping Motors
 
@@ -54,3 +55,13 @@ This test uses a higher sampling rate and visualizes the delayed motor response 
 python3 collect_data_motor_delay.py --uri <URI>
 python3 plot_motor_delay.py
 ```
+
+### Efficency
+
+This test will staircase the motors and write collected data to `data.csv`.
+
+```
+python3 collect_data_efficiency.py --uri <URI>
+```
+
+The results can be visualized with `plot_data_efficiency.py`.
