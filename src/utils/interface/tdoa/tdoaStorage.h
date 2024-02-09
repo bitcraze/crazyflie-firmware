@@ -3,11 +3,16 @@
 
 #include "stabilizer_types.h"
 #include "clockCorrectionEngine.h"
+#include "autoconf.h"
 
 #define ANCHOR_STORAGE_COUNT 16
 #define REMOTE_ANCHOR_DATA_COUNT 16
 #define TOF_PER_ANCHOR_COUNT 16
 
+#ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+#define TWR_HISTORY_LENGTH 32
+#define TWR_OUTLIER_TH 4
+#endif
 
 typedef struct {
   uint8_t id; // Id of remote remote anchor
@@ -35,8 +40,13 @@ typedef struct {
 
   point_t position; // The coordinates of the anchor
 
-  tdoaTimeOfFlight_t tof[TOF_PER_ANCHOR_COUNT];
+  tdoaTimeOfFlight_t remoteTof[TOF_PER_ANCHOR_COUNT];
   tdoaRemoteAnchorData_t remoteAnchorData[REMOTE_ANCHOR_DATA_COUNT];
+
+  #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+  uint64_t tof;
+  uint32_t tofTime_ms;
+  #endif
 } tdoaAnchorInfo_t;
 
 typedef tdoaAnchorInfo_t tdaoAnchorInfoArray_t[ANCHOR_STORAGE_COUNT];
@@ -72,8 +82,13 @@ int64_t tdoaStorageGetRemoteRxTime(const tdoaAnchorContext_t* anchorCtx, const u
 bool tdoaStorageGetRemoteRxTimeSeqNr(const tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, int64_t* rxTime, uint8_t* seqNr);
 void tdoaStorageSetRemoteRxTime(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t remoteRxTime, const uint8_t remoteSeqNr);
 void tdoaStorageGetRemoteSeqNrList(const tdoaAnchorContext_t* anchorCtx, int* remoteCount, uint8_t seqNr[], uint8_t id[]);
-int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor);
-void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof);
+int64_t tdoaStorageGetRemoteTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint8_t otherAnchor);
+void tdoaStorageSetRemoteTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const uint8_t remoteAnchor, const int64_t tof);
+
+#ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+int64_t tdoaStorageGetTimeOfFlight(const tdoaAnchorContext_t* anchorCtx, const uint32_t oldestAcceptableTime_ms);
+void tdoaStorageSetTimeOfFlight(tdoaAnchorContext_t* anchorCtx, const int64_t tof, const uint32_t currentTime_ms);
+#endif
 
 // Mainly for test
 bool tdoaStorageIsAnchorInStorage(tdoaAnchorInfo_t anchorStorage[], const uint8_t anchor);

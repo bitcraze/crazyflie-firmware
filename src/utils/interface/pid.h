@@ -38,7 +38,7 @@ typedef struct
 {
   float desired;      //< set point
   float error;        //< error
-  float prevError;    //< previous error
+  float prevMeasured; //< previous measurement
   float integ;        //< integral
   float deriv;        //< derivative
   float kp;           //< proportional gain

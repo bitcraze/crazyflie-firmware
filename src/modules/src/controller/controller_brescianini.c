@@ -38,6 +38,7 @@
 #include "num.h"
 #include "math3d.h"
 #include "physicalConstants.h"
+#include "platform_defaults.h"
 
 static struct mat33 CRAZYFLIE_INERTIA =
     {{{16.6e-6f, 0.83e-6f, 0.72e-6f},

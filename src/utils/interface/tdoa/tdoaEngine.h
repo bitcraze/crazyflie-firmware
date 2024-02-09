@@ -41,7 +41,7 @@ void tdoaEngineInit(tdoaEngineState_t* state, const uint32_t now_ms, tdoaEngineS
 
 void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, const uint8_t anchorId, const uint32_t currentTime_ms, tdoaAnchorContext_t* anchorCtx);
 void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T);
-void tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const bool doExcludeId, const uint8_t excludedId);
+bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const bool doExcludeId, const uint8_t excludedId);
 
 #define TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
 static inline uint64_t tdoaEngineTruncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
