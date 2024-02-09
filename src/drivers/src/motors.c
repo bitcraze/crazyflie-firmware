@@ -478,11 +478,12 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
 
     uint16_t ratio = ithrust;
 
+    // Override ratio in case of motorSetEnable
     if (motorSetEnable == 2)
     {
       ratio = motorPowerSet[MOTOR_M1];
     }
-    else
+    else if (motorSetEnable == 1)
     {
       ratio = motorPowerSet[id];
     }
