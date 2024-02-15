@@ -53,21 +53,21 @@ void pca95x4Init();
 /**
  * Test the PCA95X4 sub-system.
  */
-bool pca95x4Test();
+bool pca95x4Test(uint8_t devAddr);
 
 /**
  * Set the output register value.
  */
-bool pca95x4ConfigOutput(uint32_t val);
+bool pca95x4ConfigOutput(uint8_t devAddr, uint32_t val);
 
 /**
  * Set output bits.
  */
-bool pca95x4SetOutput(uint32_t mask);
+bool pca95x4SetOutput(uint8_t devAddr, uint32_t mask);
 
 /**
  * Reset output bits.
  */
-bool pca95x4ClearOutput(uint32_t mask);
+bool pca95x4ClearOutput(uint8_t devAddr, uint32_t mask);
 
 #endif //__PCA95X4_H__

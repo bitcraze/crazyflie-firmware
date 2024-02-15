@@ -63,7 +63,7 @@ static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
     bool status;
 
     // Bring up VL53 by releasing XSHUT
-    pca95x4SetOutput(pca95pin);
+    pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, pca95pin);
     // Let VL53 boot
     vTaskDelay(M2T(2));
     // Init VL53
@@ -153,13 +153,15 @@ static void mrInit()
 
     pca95x4Init();
 
-    pca95x4ConfigOutput(~(MR_PIN_UP |
+    pca95x4ConfigOutput(PCA95X4_DEFAULT_ADDRESS,
+                        ~(MR_PIN_UP |
                           MR_PIN_RIGHT |
                           MR_PIN_LEFT |
                           MR_PIN_FRONT |
                           MR_PIN_BACK));
 
-    pca95x4ClearOutput(MR_PIN_UP |
+    pca95x4ClearOutput(PCA95X4_DEFAULT_ADDRESS,
+                       MR_PIN_UP |
                        MR_PIN_RIGHT |
                        MR_PIN_LEFT |
                        MR_PIN_FRONT |

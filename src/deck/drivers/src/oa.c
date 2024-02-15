@@ -91,13 +91,15 @@ static void oaInit()
 
   pca95x4Init();
 
-  pca95x4ConfigOutput(~(OA_PIN_UP |
+  pca95x4ConfigOutput(PCA95X4_DEFAULT_ADDRESS,
+                      ~(OA_PIN_UP |
                         OA_PIN_RIGHT |
                         OA_PIN_LEFT |
                         OA_PIN_FRONT |
                         OA_PIN_BACK));
 
-  pca95x4ClearOutput(OA_PIN_UP |
+  pca95x4ClearOutput(PCA95X4_DEFAULT_ADDRESS,
+                     OA_PIN_UP |
                      OA_PIN_RIGHT |
                      OA_PIN_LEFT |
                      OA_PIN_FRONT |
@@ -118,7 +120,7 @@ static bool oaTest()
     return false;
   }
 
-  pca95x4SetOutput(OA_PIN_FRONT);
+  pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, OA_PIN_FRONT);
   if (vl53l0xInit(&devFront, I2C1_DEV, true)) {
     DEBUG_PRINT("Init front sensor [OK]\n");
   } else {
@@ -126,7 +128,7 @@ static bool oaTest()
     pass = false;
   }
 
-  pca95x4SetOutput(OA_PIN_BACK);
+  pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, OA_PIN_BACK);
   if (vl53l0xInit(&devBack, I2C1_DEV, true)) {
     DEBUG_PRINT("Init back sensor [OK]\n");
   } else {
@@ -134,7 +136,7 @@ static bool oaTest()
     pass = false;
   }
 
-  pca95x4SetOutput(OA_PIN_UP);
+  pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, OA_PIN_UP);
   if (vl53l0xInit(&devUp, I2C1_DEV, true)) {
     DEBUG_PRINT("Init up sensor [OK]\n");
   } else {
@@ -142,7 +144,7 @@ static bool oaTest()
     pass = false;
   }
 
-  pca95x4SetOutput(OA_PIN_LEFT);
+  pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, OA_PIN_LEFT);
   if (vl53l0xInit(&devLeft, I2C1_DEV, true)) {
     DEBUG_PRINT("Init left sensor [OK]\n");
   } else {
@@ -150,7 +152,7 @@ static bool oaTest()
     pass = false;
   }
 
-  pca95x4SetOutput(OA_PIN_RIGHT);
+  pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, OA_PIN_RIGHT);
   if (vl53l0xInit(&devRight, I2C1_DEV, true)) {
     DEBUG_PRINT("Init right sensor [OK]\n");
   } else {

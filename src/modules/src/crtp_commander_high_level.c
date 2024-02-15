@@ -129,7 +129,7 @@ STATIC_MEM_TASK_ALLOC(crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_STACKSIZE)
 
 // trajectory command (first byte of crtp packet)
 enum TrajectoryCommand_e {
-  COMMAND_SET_GROUP_MASK          = 0,
+  COMMAND_SET_GROUP_MASK          = 0, // Deprecated (removed after Dec 2024), use parameter hlCommander.groupmask instead
   COMMAND_TAKEOFF                 = 1, // Deprecated (removed after August 2023), use COMMAND_TAKEOFF_2
   COMMAND_LAND                    = 2, // Deprecated (removed after August 2023), use COMMAND_LAND_2
   COMMAND_STOP                    = 3,
@@ -900,5 +900,14 @@ PARAM_ADD_CORE(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
  * @brief Default landing velocity (m/s)
  */
 PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
+
+/**
+ * @brief Group mask of this Crazyflie
+ * 
+ * There are up to 8 groups each robot may belong to.
+ * Use 0 to indicate no group, i.e., this Crazyflie will react to all commands.
+ * Otherwise, for each group this robot should belong to set the corresponding bit to 1.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, groupmask, &group_mask)
 
 PARAM_GROUP_STOP(hlCommander)
