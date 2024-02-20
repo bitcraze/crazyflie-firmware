@@ -54,6 +54,7 @@ typedef enum {
 typedef enum {
   setContinuousWave  = 0x00,
   armSystem          = 0x01,
+  recoverSystem     = 0x02, 
 } PlatformCommand;
 
 typedef enum {
@@ -135,6 +136,14 @@ static void platformCommandProcess(CRTPPacket *p)
       p->size = 2;
       break;
     }
+    case recoverSystem:
+    {
+      const bool success = supervisorRequestCrashRecovery(true);
+      data[0] = success;
+      data[1] = !supervisorIsCrashed();
+      p->size = 2;
+      break;
+    }    
     default:
       break;
   }

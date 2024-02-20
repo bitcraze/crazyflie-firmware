@@ -66,6 +66,7 @@ typedef struct {
   bool isFlying;
   bool isTumbled;
   bool isArmingActivated;
+  bool isCrashed;
   uint16_t infoBitfield;
   uint8_t paramEmergencyStop;
 
@@ -113,6 +114,25 @@ bool supervisorIsArmed() {
 
 bool supervisorIsLocked() {
   return supervisorStateLocked == supervisorMem.state;
+}
+
+bool supervisorIsCrashed() {
+  return supervisorMem.isCrashed;
+}
+
+bool supervisorRequestCrashRecovery(const bool doRecovery) {
+
+  if (doRecovery && !supervisorIsCrashed()) {
+    return true;
+  } else if (doRecovery && supervisorIsCrashed() && !supervisorIsTumbled()) {
+    supervisorMem.isCrashed = false;
+    return true;
+  } else if (!doRecovery) {
+    supervisorMem.isCrashed = true;
+    return true;
+  }
+
+  return false;
 }
 
 bool supervisorRequestArming(const bool doArm) {
@@ -226,6 +246,11 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     DEBUG_PRINT("Locked, reboot required\n");
   }
 
+  if (newState == supervisorStateCrashed) {
+    DEBUG_PRINT("Crashed, recovery required\n");
+    supervisorRequestCrashRecovery(false);
+  }
+
   if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
       newState != supervisorStateReadyToFly && newState != supervisorStateFlying) {
     DEBUG_PRINT("Can not fly\n");
@@ -282,6 +307,10 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 
+  if (supervisorIsCrashed()) {
+    conditions |= SUPERVISOR_CB_CRASHED;
+  }
+
   return conditions;
 }
 
@@ -311,6 +340,9 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   }
   if (supervisorStateLocked == this->state) {
     this->infoBitfield |= 0x0040;
+  }
+  if (this->isCrashed) {
+    this->infoBitfield |= 0x0080;
   }
 }
 
