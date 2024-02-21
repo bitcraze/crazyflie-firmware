@@ -59,6 +59,7 @@ static const char* const conditionNames[] = {
   "commanderWdtTimeout",
   "emergencyStop",
   "isCrashed",
+  "landingTimeout",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
@@ -203,10 +204,21 @@ static SupervisorStateTransition_t transitionsLanded[] = {
   {
     .newState = supervisorStateReset,
 
-    .triggerCombiner = supervisorAlways,
+    .triggers = SUPERVISOR_CB_LANDING_TIMEOUT,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
 
     .blockerCombiner = supervisorNever,
   },
+  {
+    .newState = supervisorStateFlying,
+
+    .triggers = SUPERVISOR_CB_IS_FLYING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  }
 };
 
 static SupervisorStateTransition_t transitionsReset[] = {
