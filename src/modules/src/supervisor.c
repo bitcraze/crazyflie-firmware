@@ -261,8 +261,11 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
   if (newState == supervisorStateLanded) {
-    DEBUG_PRINT("Landed, starting disarm timer\n");
     supervisorSetLatestLandingTime(this, currentTick);
+  }
+  
+  if ((previousState == supervisorStateLanded) && (newState == supervisorStateReset)) {
+    DEBUG_PRINT("Landing timeout, disarming\n");
   }
 
   if (newState == supervisorStateLocked) {
