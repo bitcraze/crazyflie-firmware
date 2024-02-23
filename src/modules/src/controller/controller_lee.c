@@ -41,6 +41,7 @@ CDC 2010
 #include "controller_lee.h"
 #include "physicalConstants.h"
 #include "power_distribution.h"
+#include "platform_defaults.h"
 
 static controllerLee_t g_self = {
   .mass = CF_MASS,
