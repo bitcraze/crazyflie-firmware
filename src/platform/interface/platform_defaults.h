@@ -44,6 +44,17 @@
     #include "platform_defaults_flapper.h"
 #endif
 
+// Drone physical constants
+// TODO provide those in each config. Those are values of cf2 platform
+#ifndef ARM_LENGTH
+    // m
+    #define ARM_LENGTH  0.046f
+#endif
+#ifndef CF_MASS
+    // kg
+    #define CF_MASS     0.027f
+#endif
+
 // IMU alignment on the airframe 
 #ifndef IMU_PHI
     #define IMU_PHI     0.0f
@@ -112,6 +123,11 @@
 // Tumble detection enabled by default
 #ifndef SUPERVISOR_TUMBLE_CHECK_ENABLE
     #define SUPERVISOR_TUMBLE_CHECK_ENABLE true
+#endif
+
+// Landing timeout before disarming
+#ifndef LANDING_TIMEOUT_MS
+    #define LANDING_TIMEOUT_MS 3000
 #endif
 
 

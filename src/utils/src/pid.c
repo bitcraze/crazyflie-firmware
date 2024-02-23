@@ -36,7 +36,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
              bool enableDFilter)
 {
   pid->error         = 0;
-  pid->prevError     = 0;
+  pid->prevMeasured  = 0;
   pid->integ         = 0;
   pid->deriv         = 0;
   pid->desired       = desired;
@@ -56,86 +56,82 @@ void pidInit(PidObject* pid, const float desired, const float kp,
 
 float pidUpdate(PidObject* pid, const float measured, const bool updateError)
 {
-    float output = 0.0f;
+  float output = 0.0f;
 
-    if (updateError)
-    {
-        pid->error = pid->desired - measured;
-    }
+  if (updateError)
+  {
+      pid->error = pid->desired - measured;
+  }
 
-    pid->outP = pid->kp * pid->error;
-    output += pid->outP;
+  pid->outP = pid->kp * pid->error;
+  output += pid->outP;
 
-    float deriv = (pid->error - pid->prevError) / pid->dt;
-    
-    #if CONFIG_CONTROLLER_PID_FILTER_ALL
+  float deriv = -(measured - pid->prevMeasured) / pid->dt;
+  
+  #if CONFIG_CONTROLLER_PID_FILTER_ALL
+    pid->deriv = deriv;
+  #else
+    if (pid->enableDFilter){
+      pid->deriv = lpf2pApply(&pid->dFilter, deriv);
+    } else {
       pid->deriv = deriv;
-    #else
-      if (pid->enableDFilter){
-        pid->deriv = lpf2pApply(&pid->dFilter, deriv);
-      } else {
-        pid->deriv = deriv;
-      }
+    }
+  #endif
+  if (isnan(pid->deriv)) {
+    pid->deriv = 0;
+  }
+  pid->outD = pid->kd * pid->deriv;
+  output += pid->outD;
+
+  pid->integ += pid->error * pid->dt;
+
+  // Constrain the integral (unless the iLimit is zero)
+  if(pid->iLimit != 0)
+  {
+    pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
+  }
+
+  pid->outI = pid->ki * pid->integ;
+  output += pid->outI;
+
+  pid->outFF = pid->kff * pid->desired;
+  output += pid->outFF;
+  
+  #if CONFIG_CONTROLLER_PID_FILTER_ALL
+    //filter complete output instead of only D component to compensate for increased noise from increased barometer influence
+    if (pid->enableDFilter)
+    {
+      output = lpf2pApply(&pid->dFilter, output);
+    }
+    else {
+      output = output;
+    }
+    if (isnan(output)) {
+      output = 0;
+    }
     #endif
-    if (isnan(pid->deriv)) {
-      pid->deriv = 0;
-    }
-    pid->outD = pid->kd * pid->deriv;
-    output += pid->outD;
 
-    pid->integ += pid->error * pid->dt;
+  // Constrain the total PID output (unless the outputLimit is zero)
+  if(pid->outputLimit != 0)
+  {
+    output = constrain(output, -pid->outputLimit, pid->outputLimit);
+  }
 
-    // Constrain the integral (unless the iLimit is zero)
-    if(pid->iLimit != 0)
-    {
-    	pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
-    }
+  pid->prevMeasured = measured;
 
-    pid->outI = pid->ki * pid->integ;
-    output += pid->outI;
-
-    pid->outFF = pid->kff * pid->desired;
-    output += pid->outFF;
-    
-    #if CONFIG_CONTROLLER_PID_FILTER_ALL
-      //filter complete output instead of only D component to compensate for increased noise from increased barometer influence
-      if (pid->enableDFilter)
-      {
-        output = lpf2pApply(&pid->dFilter, output);
-      }
-      else {
-        output = output;
-      }
-      if (isnan(output)) {
-        output = 0;
-      }
-     #endif
-      
-    
-
-    // Constrain the total PID output (unless the outputLimit is zero)
-    if(pid->outputLimit != 0)
-    {
-      output = constrain(output, -pid->outputLimit, pid->outputLimit);
-    }
-
-
-    pid->prevError = pid->error;
-
-    return output;
+  return output;
 }
 
 void pidSetIntegralLimit(PidObject* pid, const float limit) {
     pid->iLimit = limit;
 }
 
-
 void pidReset(PidObject* pid)
 {
-  pid->error     = 0;
-  pid->prevError = 0;
-  pid->integ     = 0;
-  pid->deriv     = 0;
+  pid->error        = 0;
+  pid->prevMeasured = 0;
+  pid->integ        = 0;
+  pid->deriv        = 0;
 }
 
 void pidSetError(PidObject* pid, const float error)

@@ -33,6 +33,7 @@
 #include "autoconf.h"
 #include "config.h"
 #include "math.h"
+#include "platform_defaults.h"
 
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
@@ -41,7 +42,7 @@
 #endif
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
-static float armLength = 0.046f; // m;
+static float armLength = ARM_LENGTH; // m
 static float thrustToTorque = 0.005964552f;
 
 // thrust = a * pwm^2 + b * pwm

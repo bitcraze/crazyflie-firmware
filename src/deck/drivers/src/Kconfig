@@ -390,6 +390,37 @@ config DECK_OA
     help
         Codename: Obstacle Avoidance driver, obsolete deck.
 
+config DECK_SERVO
+    bool "Support the servo deck (prototype/via BigQuad deck)"
+    default n
+    help
+      Servo PWM driver.
+
+choice
+    prompt "Servo pin"
+    depends on DECK_SERVO
+    default DECK_SERVO_USE_TX2
+
+    config DECK_SERVO_USE_TX2
+        bool "PA2/TX2"
+    
+    config DECK_SERVO_USE_RX2
+        bool "PA3/RX2"
+
+    config DECK_SERVO_USE_IO1
+        bool "PB8/IO_1"
+
+    config DECK_SERVO_USE_IO2
+        bool "PB5/IO_2"
+
+    config DECK_SERVO_USE_IO3
+        bool "PB4/IO_3"
+
+    config DECK_SERVO_USE_MOSI
+        bool "PA7/MOSI"
+
+endchoice
+
 config DECK_USD
     bool "Support the Micro SD card deck"
     default y
