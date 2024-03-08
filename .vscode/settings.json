@@ -27,7 +27,9 @@
         "controller_gimbal2d.h": "c",
         "rtgetinf.h": "c",
         "rtgetnan.h": "c",
-        "rt_defines.h": "c"
+        "rt_defines.h": "c",
+        "variant": "c",
+        "chrono": "c"
     }
 }
 

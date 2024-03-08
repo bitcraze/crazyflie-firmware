@@ -18,6 +18,8 @@ typedef struct {
   float qz_Base;                      /* '<Root>/qz_op' */
   float index;                      /* '<Root>/index' */
   float thrust;                     /* '<Root>/thrust' */
+  float LastThrust;
+  float ClampedThrust;
   float alpha_desired;              /* '<Root>/alpha_desired' */
   float beta_desired;               /* '<Root>/beta_desired' */
   float qw_IMU;                     /* '<Root>/qw_IMU' */
@@ -30,10 +32,20 @@ typedef struct {
 } Gimbal2D_U_Type;
 
 typedef struct {
+  unsigned short IsClamped;
+  unsigned short Treset;
   unsigned short m1;                         /* '<Root>/m1' */
   unsigned short m2;                         /* '<Root>/m2' */
   unsigned short m3;                         /* '<Root>/m3' */
   unsigned short m4;                         /* '<Root>/m4' */
+  float acount_prev;
+  float bcount_prev;
+  float alpha_prev;
+  float beta_prev;
+  float alpha_e;
+  float beta_e;
+  float alpha_speed_e;
+  float beta_speed_e;
   float error_alpha;                /* '<Root>/error_alpha' */
   float error_beta;                 /* '<Root>/error_beta' */
   float u_alpha;                    /* '<Root>/u_alpha' */
@@ -44,10 +56,19 @@ typedef struct {
   float t_m4;                       /* '<Root>/t_m4' */
   float error_alphas;               /* '<Root>/error_alphas' */
   float error_betas;                /* '<Root>/error_betas' */
+  float rollPart;
+  float pitchPart;
+  float yawPart;
+  float thrustPart;
+  float Tau_x;                      /* '<Root>/Tau_x' */
+  float Tau_y;                      /* '<Root>/Tau_y' */
+  float Tau_z;                      /* '<Root>/Tau_z' */
 } Gimbal2D_Y_Type;
 
 typedef struct {
     float Kp;
+    float ThrustUpperBound;
+    float ThrustLowerBound;
 } Gimbal2D_P_Type;
 
 extern Gimbal2D_P_Type Gimbal2D_P;
