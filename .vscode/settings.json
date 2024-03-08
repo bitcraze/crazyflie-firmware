@@ -23,7 +23,11 @@
         "attitude_controller.h": "c",
         "platform_defaults.h": "c",
         "omni_attitude_controller_types.h": "c",
-        "controller_brescianini.h": "c"
+        "controller_brescianini.h": "c",
+        "controller_gimbal2d.h": "c",
+        "rtgetinf.h": "c",
+        "rtgetnan.h": "c",
+        "rt_defines.h": "c"
     }
 }
 

@@ -36,6 +36,7 @@ typedef enum {
   ControllerTypeBrescianini,
   ControllerTypeSinglePPID,
   ControllerTypeOmniAtt,
+  ControllerTypeGimbal2D,
 #ifdef CONFIG_CONTROLLER_OOT
   ControllerTypeOot,
 #endif

@@ -9,6 +9,7 @@
 #include "controller_brescianini.h"
 #include "controller_single_ppid.h"
 #include "controller_omni_att.h"
+#include "controller_Gimbal2D.h"
 
 #include "autoconf.h"
 
@@ -33,6 +34,7 @@ static ControllerFcns controllerFunctions[] = {
   {.init = controllerBrescianiniInit, .test = controllerBrescianiniTest, .update = controllerBrescianini, .name = "Brescianini"},
   {.init = controllerSinglePPIDInit, .test = controllerSinglePPIDTest, .update = controllerSinglePPID, .name = "SinglePPID"},
   {.init = controllerOmniAttInit, .test = controllerOmniAttTest, .update = controllerOmniAtt, .name = "OmniAtt"},
+  {.init = controllerGimbal2DInit, .test = controllerGimbal2DTest, .update = controllerGimbal2D, .name = "Gimbal2D"},
   #ifdef CONFIG_CONTROLLER_OOT
   {.init = controllerOutOfTreeInit, .test = controllerOutOfTreeTest, .update = controllerOutOfTree, .name = "OutOfTree"},
   #endif
