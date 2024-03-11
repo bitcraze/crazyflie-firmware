@@ -6,8 +6,7 @@
  * ============================================================================
  */
 
-#ifndef GIMBAL2D_CONTROLLER_H_
-#define GIMBAL2D_CONTROLLER_H_
+#pragma once
 
 #include "stabilizer_types.h"
 

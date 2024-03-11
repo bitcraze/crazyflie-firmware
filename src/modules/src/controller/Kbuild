@@ -6,5 +6,7 @@ obj-y += controller_pid.o
 obj-y += controller_brescianini.o
 obj-y += controller_single_ppid.o
 obj-y += controller_omni_att.o
+obj-y += controller_Gimbal2D.o
 obj-y += position_controller_indi.o
 obj-y += position_controller_pid.o
+

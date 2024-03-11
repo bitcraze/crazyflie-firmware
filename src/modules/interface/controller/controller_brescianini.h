@@ -34,8 +34,6 @@
  * ============================================================================
  */
 
-#pragma once
-
 #include "stabilizer_types.h"
 
 void controllerBrescianiniInit(void);
