@@ -13,7 +13,7 @@
 
 #include "autoconf.h"
 
-#define DEFAULT_CONTROLLER ControllerTypeSinglePPID
+#define DEFAULT_CONTROLLER ControllerTypeGimbal2D
 // #define DEFAULT_CONTROLLER ControllerTypePID
 static ControllerType currentController = ControllerTypeAutoSelect;
 

@@ -123,7 +123,7 @@ typedef struct {
   } wordL;
 } IEEESingle;
 
-unsigned char rtIsNaNF(float value)
+unsigned char IsNaNF(float value)
 {
   IEEESingle tmp;
   tmp.wordL.wordLreal = value;
@@ -131,7 +131,7 @@ unsigned char rtIsNaNF(float value)
                      (tmp.wordL.wordLuint & 0x007FFFFF) != 0 );
 }
 
-unsigned char rtIsInfF(float value)
+unsigned char IsInfF(float value)
 {
   IEEESingle infF;
   infF.wordL.wordLuint = 0x7F800000U;
@@ -142,14 +142,14 @@ unsigned char rtIsInfF(float value)
   return (unsigned char)(((value)==rtInfF || (value)==rtMinusInfF) ? 1U : 0U);
 }
 
-float rt_atan2f_snf(float u0, float u1)
+float atan2f_snf(float u0, float u1)
 {
   float y;
   int u0_0;
   int u1_0;
-  if (rtIsNaNF(u0) || rtIsNaNF(u1)) {
+  if (IsNaNF(u0) || IsNaNF(u1)) {
     y = (float)0xFFC00000U;
-  } else if (rtIsInfF(u0) && rtIsInfF(u1)) {
+  } else if (IsInfF(u0) && IsInfF(u1)) {
     if (u0 > 0.0F) {
       u0_0 = 1;
     } else {
@@ -227,8 +227,8 @@ void Gimbal2D_AlphaBetaEstimator()
   Gimbal2D_quatToDCM(q_bii, &RotM);
 
   // incremental alpha-beta estimator
-  float alpha0_e = rt_atan2f_snf(RotM.m[1][2], RotM.m[1][1]);
-  float beta0_e = rt_atan2f_snf(RotM.m[2][0], RotM.m[0][0]);
+  float alpha0_e = atan2f_snf(RotM.m[1][2], RotM.m[1][1]);
+  float beta0_e = atan2f_snf(RotM.m[2][0], RotM.m[0][0]);
 
   // Thrust Clamper
   if (Gimbal2D_U.thrust >
