@@ -411,16 +411,16 @@ bool controllerGimbal2DTest(void) {
 }
 
 // Update your parameter here
-PARAM_GROUP_START(ctrlGimbal2D)
+PARAM_GROUP_START(sparam_Gimbal2D)
 PARAM_ADD(PARAM_FLOAT, Kp, &Gimbal2D_P.Kp)
-PARAM_GROUP_STOP(ctrlGimbal2D)
+PARAM_GROUP_STOP(sparam_Gimbal2D)
 
 /**
  * Update your debug scope here
  * Logging variables for the command and reference signals for the
  * Gimbal2D controller
  */
-LOG_GROUP_START(ctrlGimbal2D)
+LOG_GROUP_START(sctrl_Gimbal2D)
 LOG_ADD(LOG_FLOAT, alpha, &Gimbal2D_Y.alpha_e)
 LOG_ADD(LOG_FLOAT, alphas, &Gimbal2D_Y.alpha_speed_e)
 LOG_ADD(LOG_FLOAT, beta, &Gimbal2D_Y.beta_e)
@@ -430,4 +430,4 @@ LOG_ADD(LOG_FLOAT, t_m1, &Gimbal2D_Y.t_m1)
 LOG_ADD(LOG_FLOAT, t_m2, &Gimbal2D_Y.t_m2)
 LOG_ADD(LOG_FLOAT, t_m3, &Gimbal2D_Y.t_m3)
 LOG_ADD(LOG_FLOAT, t_m4, &Gimbal2D_Y.t_m4)
-LOG_GROUP_STOP(ctrlGimbal2D)
+LOG_GROUP_STOP(sctrl_Gimbal2D)
