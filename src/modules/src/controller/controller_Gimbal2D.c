@@ -225,6 +225,7 @@ void Gimbal2D_AlphaBetaEstimator()
   // change to R3x3
   struct mat33 RotM;
   Gimbal2D_quatToDCM(q_bii, &RotM);
+  RotM = mtranspose(RotM);
 
   // incremental alpha-beta estimator
   float alpha0_e = atan2f_snf(RotM.m[1][2], RotM.m[1][1]);
@@ -282,6 +283,7 @@ void Gimbal2D_AlphaBetaEstimator()
   Gimbal2D_Y.beta_speed_e = Gimbal2D_U.beta_speed;
 
   // Last
+  Gimbal2D_U.LastThrust = Gimbal2D_U.ClampedThrust;
   Gimbal2D_Y.acount_prev = acount;
   Gimbal2D_Y.bcount_prev = bcount;
   Gimbal2D_Y.alpha_prev = Gimbal2D_Y.alpha_e;
