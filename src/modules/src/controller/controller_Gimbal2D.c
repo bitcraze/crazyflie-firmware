@@ -11,18 +11,23 @@
 #include "math3d.h"
 #include "physicalConstants.h"
 
+#include "stabilizer.h"
+#include "stabilizer_types.h"
+#include "debug.h"
+#include "motors.h"
+
 #define MOTOR_MAX_THRUST_N        (0.1472f)
 
-static struct mat33 CRAZYFLIE_INERTIA =
-    {{{16.6e-6f, 0.83e-6f, 0.72e-6f},
-      {0.83e-6f, 16.6e-6f, 1.8e-6f},
-      {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
+// static struct mat33 CRAZYFLIE_INERTIA =
+//     {{{16.6e-6f, 0.83e-6f, 0.72e-6f},
+//       {0.83e-6f, 16.6e-6f, 1.8e-6f},
+//       {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
 
 static bool isInit = false;
 
 Gimbal2D_P_Type Gimbal2D_P = {
   .Kp = 1.0f,
-  .ThrustUpperBound = 4.0*MOTOR_MAX_THRUST_N,
+  .ThrustUpperBound = 4.0f*MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
 };
 
@@ -111,6 +116,32 @@ void Gimbal2D_quatToDCM(float *quat, struct mat33 *RotM)
   RotM->m[2][2] = q0*q0-q1*q1-q2*q2+q3*q3;
 }
 
+typedef struct {
+  union {
+    float wordLreal;
+    unsigned int wordLuint;
+  } wordL;
+} IEEESingle;
+
+unsigned char rtIsNaNF(float value)
+{
+  IEEESingle tmp;
+  tmp.wordL.wordLreal = value;
+  return (unsigned char)( (tmp.wordL.wordLuint & 0x7F800000) == 0x7F800000 &&
+                     (tmp.wordL.wordLuint & 0x007FFFFF) != 0 );
+}
+
+unsigned char rtIsInfF(float value)
+{
+  IEEESingle infF;
+  infF.wordL.wordLuint = 0x7F800000U;
+  IEEESingle minfF;
+  minfF.wordL.wordLuint = 0xFF800000U;
+  float rtInfF = infF.wordL.wordLreal;
+  float rtMinusInfF = minfF.wordL.wordLuint;
+  return (unsigned char)(((value)==rtInfF || (value)==rtMinusInfF) ? 1U : 0U);
+}
+
 float rt_atan2f_snf(float u0, float u1)
 {
   float y;
@@ -180,7 +211,7 @@ void Gimbal2D_AlphaBetaEstimator()
 
   // ith base quat
   Gimbal2D_quatmultiply((float*)&Gimbal2D_U.qw_Base, q_Bbi_inv, q_tmp);
-  Gimbal2D_quatmultiply(q_Bbi, q_tmp, q_bi)
+  Gimbal2D_quatmultiply(q_Bbi, q_tmp, q_bi);
   
   // inv of ith base quat
   q_bi_inv[0] = -q_bi[0];
@@ -198,8 +229,6 @@ void Gimbal2D_AlphaBetaEstimator()
   // incremental alpha-beta estimator
   float alpha0_e = rt_atan2f_snf(RotM.m[1][2], RotM.m[1][1]);
   float beta0_e = rt_atan2f_snf(RotM.m[2][0], RotM.m[0][0]);
-  float acount_prev;
-  float bcount_prev;
 
   // Thrust Clamper
   if (Gimbal2D_U.thrust >
