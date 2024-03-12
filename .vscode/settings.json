@@ -45,7 +45,8 @@
         "vector": "c",
         "cstddef": "c",
         "stabilizer.h": "c",
-        "motors.h": "c"
+        "motors.h": "c",
+        "pid.h": "c"
     }
 }
 

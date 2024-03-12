@@ -87,27 +87,27 @@ Gimbal2D_Y_Type Gimbal2D_Y = {
         .Tau_y = 0.0,
         .Tau_z = 0.0,
         .alphaPID = {
-            .kp = 900.0f/180.0f*3.1415925f,
-            .ki = 10/180.0f*3.1415925f,
+            .kp = 900.0f,
+            .ki = 10.0f,
             .kd = 0,
             .kff = 0,
         },
         .alphasPID = {
-            .kp = 0.00007/3.0f*180.f/3.1415925f,
-            .ki = 0.00006/3.0f*180.f/3.1415925f,
-            .kd = 0.00003/3.0f*180.f/3.1415925f,
+            .kp = 0.00007f/3.0f,
+            .ki = 0.00006f/3.0f,
+            .kd = 0.00003f/3.0f,
             .kff = 0,
         },
         .betaPID = {
-            .kp = 900/180.0f*3.1415925f,
-            .ki = 10/180.0f*3.1415925f,
+            .kp = 900.0f,
+            .ki = 10.0f,
             .kd = 0,
             .kff = 0,
         },
         .betasPID = {
-            .kp = 0.00004/1.0f*180.f/3.1415925f,
-            .ki = 0.00004/1.0f*180.f/3.1415925f,
-            .kd = 0.000032/1.0f*180.f/3.1415925f,
+            .kp = 0.00004f,
+            .ki = 0.00004f,
+            .kd = 0.00002f,
             .kff = 0,
         },
         };
@@ -328,6 +328,9 @@ void Gimbal2D_controller()
   float alphas_desired;
   float betas_desired;
 
+  float J_alpha = 1.66e-5f*cosf(Gimbal2D_Y.beta_e) + 2.93e-5f*sinf(Gimbal2D_Y.beta_e);
+  float J_beta = 1.66e-5f;
+
   Gimbal2D_Y.error_alpha = Gimbal2D_U.alpha_desired - Gimbal2D_Y.alpha_e;
   Gimbal2D_Y.error_beta = Gimbal2D_U.beta_desired - Gimbal2D_Y.beta_e;
 
@@ -338,18 +341,18 @@ void Gimbal2D_controller()
   betas_desired = pidUpdate(&Gimbal2D_Y.betaPID, Gimbal2D_Y.beta_e, false);
 
   pidSetDesired(&Gimbal2D_Y.alphasPID, alphas_desired);
-  Gimbal2D_Y.u_alpha = pidUpdate(&Gimbal2D_Y.alphasPID, Gimbal2D_Y.alpha_speed_e, true);
+  Gimbal2D_Y.u_alpha = J_alpha * pidUpdate(&Gimbal2D_Y.alphasPID, Gimbal2D_Y.alpha_speed_e, true);
 
   pidSetDesired(&Gimbal2D_Y.betasPID, betas_desired);
-  Gimbal2D_Y.u_beta = pidUpdate(&Gimbal2D_Y.betasPID, Gimbal2D_Y.beta_speed_e, true);
-
-  Gimbal2D_Y.Tau_x = Gimbal2D_Y.u_alpha * cosf(Gimbal2D_Y.beta_e);
-  Gimbal2D_Y.Tau_y = Gimbal2D_Y.u_beta;
-  Gimbal2D_Y.Tau_z = Gimbal2D_Y.u_alpha * sinf(Gimbal2D_Y.beta_e);
+  Gimbal2D_Y.u_beta = J_beta * pidUpdate(&Gimbal2D_Y.betasPID, Gimbal2D_Y.beta_speed_e, true);
 }
 
 void Gimbal2D_PowerDistribution()
 {
+  Gimbal2D_Y.Tau_x = Gimbal2D_Y.u_alpha * cosf(Gimbal2D_Y.beta_e);
+  Gimbal2D_Y.Tau_y = Gimbal2D_Y.u_beta;
+  Gimbal2D_Y.Tau_z = Gimbal2D_Y.u_alpha * sinf(Gimbal2D_Y.beta_e);
+
     // power distribution and turn Nm into N
   const float arm = 0.707106781f * 0.046f;
   const float rollPart = 0.25f / arm * Gimbal2D_Y.Tau_x;
@@ -442,6 +445,11 @@ void controllerGimbal2D(control_t *control,
     Gimbal2D_U.beta_speed = radians(sensors->gyro.x);
     Gimbal2D_U.omega_z = radians(sensors->gyro.z);
 
+    // deg /s 
+    // Gimbal2D_U.omega_x = -sensors->gyro.y;
+    // Gimbal2D_U.beta_speed = sensors->gyro.x;
+    // Gimbal2D_U.omega_z = sensors->gyro.z;
+
     Gimbal2D_AlphaBetaEstimator();
     Gimbal2D_controller();
     Gimbal2D_PowerDistribution();
@@ -470,7 +478,21 @@ bool controllerGimbal2DTest(void) {
 
 // Update your parameter here
 PARAM_GROUP_START(sparam_Gimbal2D)
-PARAM_ADD(PARAM_FLOAT, Kp, &Gimbal2D_P.Kp)
+PARAM_ADD(PARAM_FLOAT, pgaina, &Gimbal2D_Y.alphaPID.kp)
+PARAM_ADD(PARAM_FLOAT, igaina, &Gimbal2D_Y.alphaPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgaina, &Gimbal2D_Y.alphaPID.kd)
+
+PARAM_ADD(PARAM_FLOAT, pgainb, &Gimbal2D_Y.betaPID.kp)
+PARAM_ADD(PARAM_FLOAT, igainb, &Gimbal2D_Y.betaPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgainb, &Gimbal2D_Y.betaPID.kd)
+
+PARAM_ADD(PARAM_FLOAT, pgainas, &Gimbal2D_Y.alphasPID.kp)
+PARAM_ADD(PARAM_FLOAT, igainas, &Gimbal2D_Y.alphasPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgainas, &Gimbal2D_Y.alphasPID.kd)
+
+PARAM_ADD(PARAM_FLOAT, pgainbs, &Gimbal2D_Y.betasPID.kp)
+PARAM_ADD(PARAM_FLOAT, igainbs, &Gimbal2D_Y.betasPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_Y.betasPID.kd)
 PARAM_GROUP_STOP(sparam_Gimbal2D)
 
 /**
@@ -483,6 +505,9 @@ LOG_ADD(LOG_FLOAT, alpha, &Gimbal2D_Y.alpha_e)
 LOG_ADD(LOG_FLOAT, alphas, &Gimbal2D_Y.alpha_speed_e)
 LOG_ADD(LOG_FLOAT, beta, &Gimbal2D_Y.beta_e)
 LOG_ADD(LOG_FLOAT, betas, &Gimbal2D_Y.beta_speed_e)
+
+LOG_ADD(LOG_FLOAT, alphain, &Gimbal2D_U.alpha_desired)
+LOG_ADD(LOG_FLOAT, betain, &Gimbal2D_U.beta_desired)
 
 LOG_ADD(LOG_FLOAT, t_m1, &Gimbal2D_Y.t_m1)
 LOG_ADD(LOG_FLOAT, t_m2, &Gimbal2D_Y.t_m2)
