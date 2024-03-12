@@ -17,6 +17,7 @@
 #include "motors.h"
 
 #define MOTOR_MAX_THRUST_N        (0.1472f)
+#define GIMBAL2D_ATTITUDE_UPDATE_DT    (float)(1.0f / ATTITUDE_RATE)
 
 // static struct mat33 CRAZYFLIE_INERTIA =
 //     {{{16.6e-6f, 0.83e-6f, 0.72e-6f},
@@ -27,7 +28,7 @@ static bool isInit = false;
 
 Gimbal2D_P_Type Gimbal2D_P = {
   .Kp = 1.0f,
-  .ThrustUpperBound = 4.0f*MOTOR_MAX_THRUST_N,
+  .ThrustUpperBound = 4.0f * MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
 };
 
@@ -85,6 +86,30 @@ Gimbal2D_Y_Type Gimbal2D_Y = {
         .Tau_x = 0.0, 
         .Tau_y = 0.0,
         .Tau_z = 0.0,
+        .alphaPID = {
+            .kp = 900.0f/180.0f*3.1415925f,
+            .ki = 10/180.0f*3.1415925f,
+            .kd = 0,
+            .kff = 0,
+        },
+        .alphasPID = {
+            .kp = 0.00007/3.0f*180.f/3.1415925f,
+            .ki = 0.00006/3.0f*180.f/3.1415925f,
+            .kd = 0.00003/3.0f*180.f/3.1415925f,
+            .kff = 0,
+        },
+        .betaPID = {
+            .kp = 900/180.0f*3.1415925f,
+            .ki = 10/180.0f*3.1415925f,
+            .kd = 0,
+            .kff = 0,
+        },
+        .betasPID = {
+            .kp = 0.00004/1.0f*180.f/3.1415925f,
+            .ki = 0.00004/1.0f*180.f/3.1415925f,
+            .kd = 0.000032/1.0f*180.f/3.1415925f,
+            .kff = 0,
+        },
         };
 
 static void Gimbal2D_quatmultiply(const float q[4], const float r[4],
@@ -183,10 +208,17 @@ void controllerGimbal2DInit(void) {
     return;
   }
 
+  pidInit(&Gimbal2D_Y.alphaPID,  0, Gimbal2D_Y.alphaPID.kp,  Gimbal2D_Y.alphaPID.ki,  Gimbal2D_Y.alphaPID.kd,
+      Gimbal2D_Y.alphaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_Y.alphasPID,  0, Gimbal2D_Y.alphasPID.kp,  Gimbal2D_Y.alphasPID.ki,  Gimbal2D_Y.alphasPID.kd,
+      Gimbal2D_Y.alphasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_Y.betaPID,  0, Gimbal2D_Y.betaPID.kp,  Gimbal2D_Y.betaPID.ki,  Gimbal2D_Y.betaPID.kd,
+      Gimbal2D_Y.betaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_Y.betasPID,  0, Gimbal2D_Y.betasPID.kp,  Gimbal2D_Y.betasPID.ki,  Gimbal2D_Y.betasPID.kd,
+      Gimbal2D_Y.betasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+      
   isInit = true;
 }
-
-#define GIMBAL2D_ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
 
 void Gimbal2D_AlphaBetaEstimator()
 {
@@ -292,7 +324,28 @@ void Gimbal2D_AlphaBetaEstimator()
 
 void Gimbal2D_controller()
 {
-  // Update your control law here
+    // Update your control law here
+  float alphas_desired;
+  float betas_desired;
+
+  Gimbal2D_Y.error_alpha = Gimbal2D_U.alpha_desired - Gimbal2D_Y.alpha_e;
+  Gimbal2D_Y.error_beta = Gimbal2D_U.beta_desired - Gimbal2D_Y.beta_e;
+
+  pidSetError(&Gimbal2D_Y.alphaPID, Gimbal2D_Y.error_alpha);
+  alphas_desired = pidUpdate(&Gimbal2D_Y.alphaPID, Gimbal2D_Y.alpha_e, false);
+
+  pidSetError(&Gimbal2D_Y.betaPID, Gimbal2D_Y.error_beta);
+  betas_desired = pidUpdate(&Gimbal2D_Y.betaPID, Gimbal2D_Y.beta_e, false);
+
+  pidSetDesired(&Gimbal2D_Y.alphasPID, alphas_desired);
+  Gimbal2D_Y.u_alpha = pidUpdate(&Gimbal2D_Y.alphasPID, Gimbal2D_Y.alpha_speed_e, true);
+
+  pidSetDesired(&Gimbal2D_Y.betasPID, betas_desired);
+  Gimbal2D_Y.u_beta = pidUpdate(&Gimbal2D_Y.betasPID, Gimbal2D_Y.beta_speed_e, true);
+
+  Gimbal2D_Y.Tau_x = Gimbal2D_Y.u_alpha * cosf(Gimbal2D_Y.beta_e);
+  Gimbal2D_Y.Tau_y = Gimbal2D_Y.u_beta;
+  Gimbal2D_Y.Tau_z = Gimbal2D_Y.u_alpha * sinf(Gimbal2D_Y.beta_e);
 }
 
 void Gimbal2D_PowerDistribution()
@@ -365,46 +418,49 @@ void controllerGimbal2D(control_t *control,
                                  const state_t *state,
                                  const stabilizerStep_t stabilizerStep) 
 {
-  // Update Command (Send2D)
-  Gimbal2D_U.index = setpoint->attitude.roll;
+  if (RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
 
-  Gimbal2D_U.qw_Base = setpoint->attitudeQuaternion.w;
-  Gimbal2D_U.qx_Base = setpoint->attitudeQuaternion.x;
-  Gimbal2D_U.qy_Base = setpoint->attitudeQuaternion.y;
-  Gimbal2D_U.qz_Base = setpoint->attitudeQuaternion.z;
+    // Update Command (Send2D)
+    Gimbal2D_U.index = setpoint->attitude.roll;
 
-  Gimbal2D_U.alpha_desired = setpoint->attitude.pitch;
-  Gimbal2D_U.beta_desired = setpoint->attitude.yaw;
-  Gimbal2D_U.thrust = setpoint->thrust;
+    Gimbal2D_U.qw_Base = setpoint->attitudeQuaternion.w;
+    Gimbal2D_U.qx_Base = setpoint->attitudeQuaternion.x;
+    Gimbal2D_U.qy_Base = setpoint->attitudeQuaternion.y;
+    Gimbal2D_U.qz_Base = setpoint->attitudeQuaternion.z;
 
-  // Update Feedback
-  Gimbal2D_U.qw_IMU = state->attitudeQuaternion.w;
-  Gimbal2D_U.qx_IMU = state->attitudeQuaternion.x;
-  Gimbal2D_U.qy_IMU = state->attitudeQuaternion.y;
-  Gimbal2D_U.qz_IMU = state->attitudeQuaternion.z;
+    Gimbal2D_U.alpha_desired = setpoint->attitude.pitch;
+    Gimbal2D_U.beta_desired = setpoint->attitude.yaw;
+    Gimbal2D_U.thrust = setpoint->thrust;
 
-  Gimbal2D_U.omega_x = -radians(sensors->gyro.y);
-  Gimbal2D_U.beta_speed = radians(sensors->gyro.x);
-  Gimbal2D_U.omega_z = radians(sensors->gyro.z);
+    // Update Feedback
+    Gimbal2D_U.qw_IMU = state->attitudeQuaternion.w;
+    Gimbal2D_U.qx_IMU = state->attitudeQuaternion.x;
+    Gimbal2D_U.qy_IMU = state->attitudeQuaternion.y;
+    Gimbal2D_U.qz_IMU = state->attitudeQuaternion.z;
 
-  Gimbal2D_AlphaBetaEstimator();
-  Gimbal2D_controller();
-  Gimbal2D_PowerDistribution();
+    Gimbal2D_U.omega_x = -radians(sensors->gyro.y);
+    Gimbal2D_U.beta_speed = radians(sensors->gyro.x);
+    Gimbal2D_U.omega_z = radians(sensors->gyro.z);
 
-  // Update the output
-  if (setpoint->thrust < 0.000898f)
-  {
-    motorsSetRatio(0, 0);
-    motorsSetRatio(1, 0);
-    motorsSetRatio(2, 0);
-    motorsSetRatio(3, 0);    
-  }
-  else
-  {
-    motorsSetRatio(0, Gimbal2D_Y.m1);
-    motorsSetRatio(1, Gimbal2D_Y.m2);
-    motorsSetRatio(2, Gimbal2D_Y.m3);
-    motorsSetRatio(3, Gimbal2D_Y.m4);
+    Gimbal2D_AlphaBetaEstimator();
+    Gimbal2D_controller();
+    Gimbal2D_PowerDistribution();
+
+    // Update the output
+    if (setpoint->thrust < 0.000898f)
+    {
+      motorsSetRatio(0, 0);
+      motorsSetRatio(1, 0);
+      motorsSetRatio(2, 0);
+      motorsSetRatio(3, 0);    
+    }
+    else
+    {
+      motorsSetRatio(0, Gimbal2D_Y.m1);
+      motorsSetRatio(1, Gimbal2D_Y.m2);
+      motorsSetRatio(2, Gimbal2D_Y.m3);
+      motorsSetRatio(3, Gimbal2D_Y.m4);
+    }
   }
 }
 
