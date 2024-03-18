@@ -506,6 +506,9 @@ LOG_ADD(LOG_FLOAT, alphas, &Gimbal2D_Y.alpha_speed_e)
 LOG_ADD(LOG_FLOAT, beta, &Gimbal2D_Y.beta_e)
 LOG_ADD(LOG_FLOAT, betas, &Gimbal2D_Y.beta_speed_e)
 
+LOG_ADD(LOG_FLOAT, u_alpha, &Gimbal2D_Y.u_alpha)
+LOG_ADD(LOG_FLOAT, u_beta, &Gimbal2D_Y.u_beta)
+
 LOG_ADD(LOG_FLOAT, alphain, &Gimbal2D_U.alpha_desired)
 LOG_ADD(LOG_FLOAT, betain, &Gimbal2D_U.beta_desired)
 
