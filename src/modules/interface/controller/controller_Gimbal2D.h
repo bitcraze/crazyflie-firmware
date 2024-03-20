@@ -68,10 +68,6 @@ typedef struct {
   float Tau_x;                      /* '<Root>/Tau_x' */
   float Tau_y;                      /* '<Root>/Tau_y' */
   float Tau_z;                      /* '<Root>/Tau_z' */
-  PidObject alphaPID;
-  PidObject betaPID;
-  PidObject alphasPID;
-  PidObject betasPID;
 } Gimbal2D_Y_Type;
 
 typedef struct {
@@ -79,6 +75,10 @@ typedef struct {
     float Kp;
     float ThrustUpperBound;
     float ThrustLowerBound;
+    PidObject alphaPID;
+    PidObject betaPID;
+    PidObject alphasPID;
+    PidObject betasPID;
 } Gimbal2D_P_Type;
 
 extern Gimbal2D_P_Type Gimbal2D_P;

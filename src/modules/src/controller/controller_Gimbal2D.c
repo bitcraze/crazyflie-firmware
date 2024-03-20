@@ -31,9 +31,33 @@ Gimbal2D_P_Type Gimbal2D_P = {
   .Kp = 1.0f,
   .ThrustUpperBound = 4.0f * MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
+  .alphaPID = {
+      .kp = 900.0f,
+      .ki = 10.0f,
+      .kd = 0,
+      .kff = 0,
+  },
+  .alphasPID = {
+      .kp = 0.00007f/3.0f,
+      .ki = 0.00006f/3.0f,
+      .kd = 0.00003f/3.0f,
+      .kff = 0,
+  },
+  .betaPID = {
+      .kp = 900.0f,
+      .ki = 10.0f,
+      .kd = 0,
+      .kff = 0,
+  },
+  .betasPID = {
+      .kp = 0.00004f,
+      .ki = 0.00004f,
+      .kd = 0.00002f,
+      .kff = 0,
+  },
 };
 
-/**Instance of Input structure*/
+/**Instance of Controller Input structure*/
 Gimbal2D_U_Type Gimbal2D_U = {
         .qw_Base = 0.0,
         .qx_Base = 0.0,
@@ -54,7 +78,7 @@ Gimbal2D_U_Type Gimbal2D_U = {
         .omega_z = 0.0,
         };
 
-/**Instance of Output structure*/
+/**Instance of Controller States and Output structure*/
 Gimbal2D_Y_Type Gimbal2D_Y = {
         .IsClamped = 0,
         .Treset = 0,
@@ -87,30 +111,6 @@ Gimbal2D_Y_Type Gimbal2D_Y = {
         .Tau_x = 0.0, 
         .Tau_y = 0.0,
         .Tau_z = 0.0,
-        .alphaPID = {
-            .kp = 900.0f,
-            .ki = 10.0f,
-            .kd = 0,
-            .kff = 0,
-        },
-        .alphasPID = {
-            .kp = 0.00007f/3.0f,
-            .ki = 0.00006f/3.0f,
-            .kd = 0.00003f/3.0f,
-            .kff = 0,
-        },
-        .betaPID = {
-            .kp = 900.0f,
-            .ki = 10.0f,
-            .kd = 0,
-            .kff = 0,
-        },
-        .betasPID = {
-            .kp = 0.00004f,
-            .ki = 0.00004f,
-            .kd = 0.00002f,
-            .kff = 0,
-        },
         };
 
 static void Gimbal2D_quatmultiply(const float q[4], const float r[4],
@@ -209,14 +209,14 @@ void controllerGimbal2DInit(void) {
     return;
   }
 
-  pidInit(&Gimbal2D_Y.alphaPID,  0, Gimbal2D_Y.alphaPID.kp,  Gimbal2D_Y.alphaPID.ki,  Gimbal2D_Y.alphaPID.kd,
-      Gimbal2D_Y.alphaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-  pidInit(&Gimbal2D_Y.alphasPID,  0, Gimbal2D_Y.alphasPID.kp,  Gimbal2D_Y.alphasPID.ki,  Gimbal2D_Y.alphasPID.kd,
-      Gimbal2D_Y.alphasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-  pidInit(&Gimbal2D_Y.betaPID,  0, Gimbal2D_Y.betaPID.kp,  Gimbal2D_Y.betaPID.ki,  Gimbal2D_Y.betaPID.kd,
-      Gimbal2D_Y.betaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-  pidInit(&Gimbal2D_Y.betasPID,  0, Gimbal2D_Y.betasPID.kp,  Gimbal2D_Y.betasPID.ki,  Gimbal2D_Y.betasPID.kd,
-      Gimbal2D_Y.betasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_P.alphaPID,  0, Gimbal2D_P.alphaPID.kp,  Gimbal2D_P.alphaPID.ki,  Gimbal2D_P.alphaPID.kd,
+      Gimbal2D_P.alphaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_P.alphasPID,  0, Gimbal2D_P.alphasPID.kp,  Gimbal2D_P.alphasPID.ki,  Gimbal2D_P.alphasPID.kd,
+      Gimbal2D_P.alphasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_P.betaPID,  0, Gimbal2D_P.betaPID.kp,  Gimbal2D_P.betaPID.ki,  Gimbal2D_P.betaPID.kd,
+      Gimbal2D_P.betaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+  pidInit(&Gimbal2D_P.betasPID,  0, Gimbal2D_P.betasPID.kp,  Gimbal2D_P.betasPID.ki,  Gimbal2D_P.betasPID.kd,
+      Gimbal2D_P.betasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
       
   isInit = true;
 }
@@ -333,7 +333,7 @@ void Gimbal2D_controller()
   float Jx = 1.66e-5f, Jy = 1.66e-5f, Jz = 2.93e-5f;
   float J_alpha, J_beta;
 
-  if(Gimbal2D_P.ControlMode==GIMBAL2D_CONTROLMODE_PID_JALPHA)
+  if(Gimbal2D_P.ControlMode == GIMBAL2D_CONTROLMODE_PID_JALPHA)
   {
     float temp = (Jz-Jx)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
     J_alpha = Jz*(temp - Jx)/(2.0f*temp - Jz);
@@ -346,17 +346,17 @@ void Gimbal2D_controller()
   Gimbal2D_Y.error_alpha = Gimbal2D_U.alpha_desired - Gimbal2D_Y.alpha_e;
   Gimbal2D_Y.error_beta = Gimbal2D_U.beta_desired - Gimbal2D_Y.beta_e;
 
-  pidSetError(&Gimbal2D_Y.alphaPID, Gimbal2D_Y.error_alpha);
-  alphas_desired = pidUpdate(&Gimbal2D_Y.alphaPID, Gimbal2D_Y.alpha_e, false);
+  pidSetError(&Gimbal2D_P.alphaPID, Gimbal2D_Y.error_alpha);
+  alphas_desired = pidUpdate(&Gimbal2D_P.alphaPID, Gimbal2D_Y.alpha_e, false);
 
-  pidSetError(&Gimbal2D_Y.betaPID, Gimbal2D_Y.error_beta);
-  betas_desired = pidUpdate(&Gimbal2D_Y.betaPID, Gimbal2D_Y.beta_e, false);
+  pidSetError(&Gimbal2D_P.betaPID, Gimbal2D_Y.error_beta);
+  betas_desired = pidUpdate(&Gimbal2D_P.betaPID, Gimbal2D_Y.beta_e, false);
 
-  pidSetDesired(&Gimbal2D_Y.alphasPID, alphas_desired);
-  Gimbal2D_Y.u_alpha = J_alpha * pidUpdate(&Gimbal2D_Y.alphasPID, Gimbal2D_Y.alpha_speed_e, true);
+  pidSetDesired(&Gimbal2D_P.alphasPID, alphas_desired);
+  Gimbal2D_Y.u_alpha = J_alpha * pidUpdate(&Gimbal2D_P.alphasPID, Gimbal2D_Y.alpha_speed_e, true);
 
-  pidSetDesired(&Gimbal2D_Y.betasPID, betas_desired);
-  Gimbal2D_Y.u_beta = J_beta * pidUpdate(&Gimbal2D_Y.betasPID, Gimbal2D_Y.beta_speed_e, true);
+  pidSetDesired(&Gimbal2D_P.betasPID, betas_desired);
+  Gimbal2D_Y.u_beta = J_beta * pidUpdate(&Gimbal2D_P.betasPID, Gimbal2D_Y.beta_speed_e, true);
 }
 
 void Gimbal2D_PowerDistribution()
@@ -491,21 +491,21 @@ bool controllerGimbal2DTest(void) {
 // Update your parameter here
 // The name of the variable cannot be too long
 PARAM_GROUP_START(sparam_Gimbal2D)
-PARAM_ADD(PARAM_FLOAT, pgaina, &Gimbal2D_Y.alphaPID.kp)
-PARAM_ADD(PARAM_FLOAT, igaina, &Gimbal2D_Y.alphaPID.ki)
-PARAM_ADD(PARAM_FLOAT, dgaina, &Gimbal2D_Y.alphaPID.kd)
+PARAM_ADD(PARAM_FLOAT, pgaina, &Gimbal2D_P.alphaPID.kp)
+PARAM_ADD(PARAM_FLOAT, igaina, &Gimbal2D_P.alphaPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgaina, &Gimbal2D_P.alphaPID.kd)
 
-PARAM_ADD(PARAM_FLOAT, pgainb, &Gimbal2D_Y.betaPID.kp)
-PARAM_ADD(PARAM_FLOAT, igainb, &Gimbal2D_Y.betaPID.ki)
-PARAM_ADD(PARAM_FLOAT, dgainb, &Gimbal2D_Y.betaPID.kd)
+PARAM_ADD(PARAM_FLOAT, pgainb, &Gimbal2D_P.betaPID.kp)
+PARAM_ADD(PARAM_FLOAT, igainb, &Gimbal2D_P.betaPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgainb, &Gimbal2D_P.betaPID.kd)
 
-PARAM_ADD(PARAM_FLOAT, pgainas, &Gimbal2D_Y.alphasPID.kp)
-PARAM_ADD(PARAM_FLOAT, igainas, &Gimbal2D_Y.alphasPID.ki)
-PARAM_ADD(PARAM_FLOAT, dgainas, &Gimbal2D_Y.alphasPID.kd)
+PARAM_ADD(PARAM_FLOAT, pgainas, &Gimbal2D_P.alphasPID.kp)
+PARAM_ADD(PARAM_FLOAT, igainas, &Gimbal2D_P.alphasPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgainas, &Gimbal2D_P.alphasPID.kd)
 
-PARAM_ADD(PARAM_FLOAT, pgainbs, &Gimbal2D_Y.betasPID.kp)
-PARAM_ADD(PARAM_FLOAT, igainbs, &Gimbal2D_Y.betasPID.ki)
-PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_Y.betasPID.kd)
+PARAM_ADD(PARAM_FLOAT, pgainbs, &Gimbal2D_P.betasPID.kp)
+PARAM_ADD(PARAM_FLOAT, igainbs, &Gimbal2D_P.betasPID.ki)
+PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_P.betasPID.kd)
 PARAM_ADD(PARAM_FLOAT, cmode, &Gimbal2D_P.ControlMode)
 
 PARAM_GROUP_STOP(sparam_Gimbal2D)
