@@ -18,11 +18,9 @@
 
 #define MOTOR_MAX_THRUST_N        (0.1472f)
 #define GIMBAL2D_ATTITUDE_UPDATE_DT    (float)(1.0f / ATTITUDE_RATE)
-
-// static struct mat33 CRAZYFLIE_INERTIA =
-//     {{{16.6e-6f, 0.83e-6f, 0.72e-6f},
-//       {0.83e-6f, 16.6e-6f, 1.8e-6f},
-//       {0.72e-6f, 1.8e-6f, 29.3e-6f}}};
+#define JX    (16.6e-6f)
+#define JY    (16.6e-6f)
+#define JZ    (29.3e-6f)
 
 static bool isInit = false;
 
@@ -31,6 +29,8 @@ Gimbal2D_P_Type Gimbal2D_P = {
   .Kp = 1.0f,
   .ThrustUpperBound = 4.0f * MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
+  .OFL_k1 = -4800.0f,
+  .OFL_k2 = -140.0f,
   .alphaPID = {
       .kp = 900.0f,
       .ki = 10.0f,
@@ -69,6 +69,10 @@ Gimbal2D_U_Type Gimbal2D_U = {
         .ClampedThrust = 0.0,
         .alpha_desired = 0.0,
         .beta_desired = 0.0,
+        .alpha_desired_prev = 0.0,
+        .beta_desired_prev = 0.0,
+        .alphas_desired = 0.0,             
+        .betas_desired = 0.0,
         .qw_IMU = 0.0,
         .qx_IMU = 0.0,
         .qy_IMU = 0.0,
@@ -102,6 +106,10 @@ Gimbal2D_Y_Type Gimbal2D_Y = {
         .t_m2 = 0.0,
         .t_m3 = 0.0,
         .t_m4 = 0.0,
+        .z1 = 0.0,
+        .z2 = 0.0,
+        .z3 = 0.0,
+        .z4 = 0.0,
         .error_alphas = 0.0,
         .error_betas = 0.0,
         .rollPart = 0.0,
@@ -208,16 +216,26 @@ void controllerGimbal2DInit(void) {
   if (isInit) {
     return;
   }
-
-  pidInit(&Gimbal2D_P.alphaPID,  0, Gimbal2D_P.alphaPID.kp,  Gimbal2D_P.alphaPID.ki,  Gimbal2D_P.alphaPID.kd,
-      Gimbal2D_P.alphaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-  pidInit(&Gimbal2D_P.alphasPID,  0, Gimbal2D_P.alphasPID.kp,  Gimbal2D_P.alphasPID.ki,  Gimbal2D_P.alphasPID.kd,
-      Gimbal2D_P.alphasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-  pidInit(&Gimbal2D_P.betaPID,  0, Gimbal2D_P.betaPID.kp,  Gimbal2D_P.betaPID.ki,  Gimbal2D_P.betaPID.kd,
-      Gimbal2D_P.betaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-  pidInit(&Gimbal2D_P.betasPID,  0, Gimbal2D_P.betasPID.kp,  Gimbal2D_P.betasPID.ki,  Gimbal2D_P.betasPID.kd,
-      Gimbal2D_P.betasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
-      
+  switch( Gimbal2D_P.ControlMode )
+  {
+    case GIMBAL2D_CONTROLMODE_PID:
+    case GIMBAL2D_CONTROLMODE_PID_JALPHA:
+        pidInit(&Gimbal2D_P.alphaPID,  0, Gimbal2D_P.alphaPID.kp,  Gimbal2D_P.alphaPID.ki,  Gimbal2D_P.alphaPID.kd,
+            Gimbal2D_P.alphaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+        pidInit(&Gimbal2D_P.alphasPID,  0, Gimbal2D_P.alphasPID.kp,  Gimbal2D_P.alphasPID.ki,  Gimbal2D_P.alphasPID.kd,
+            Gimbal2D_P.alphasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+        pidInit(&Gimbal2D_P.betaPID,  0, Gimbal2D_P.betaPID.kp,  Gimbal2D_P.betaPID.ki,  Gimbal2D_P.betaPID.kd,
+            Gimbal2D_P.betaPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+        pidInit(&Gimbal2D_P.betasPID,  0, Gimbal2D_P.betasPID.kp,  Gimbal2D_P.betasPID.ki,  Gimbal2D_P.betasPID.kd,
+            Gimbal2D_P.betasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
+        break;
+    case GIMBAL2D_CONTROLMODE_OFL:
+        break;
+    case GIMBAL2D_CONTROLMODE_NSF:
+        break;
+    default:
+        break;
+  }      
   isInit = true;
 }
 
@@ -323,49 +341,96 @@ void Gimbal2D_AlphaBetaEstimator()
   Gimbal2D_Y.beta_prev = Gimbal2D_Y.beta_e; 
 }
 
-void Gimbal2D_controller()
+void Gimbal2D_controller_pid()
 {
-    // Update your control law here
-  float alphas_desired;
-  float betas_desired;
+  float alphas_desired_pid;
+  float betas_desired_pid;
 
-  // float J_alpha = 1.66e-5f*cosf(Gimbal2D_Y.beta_e) + 2.93e-5f*sinf(Gimbal2D_Y.beta_e);
-  float Jx = 1.66e-5f, Jy = 1.66e-5f, Jz = 2.93e-5f;
   float J_alpha, J_beta;
-
   if(Gimbal2D_P.ControlMode == GIMBAL2D_CONTROLMODE_PID_JALPHA)
-  {
-    float temp = (Jz-Jx)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
-    J_alpha = Jz*(temp - Jx)/(2.0f*temp - Jz);
-  } else {
-    J_alpha = Jx;
+    {
+      float temp = (JZ-JX)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
+      J_alpha = JZ*(temp - JX)/(2.0f*temp - JZ);
+    } else {
+      J_alpha = JX;
   }
-
-  J_beta = Jy;
-
+  J_beta = JY;
   Gimbal2D_Y.error_alpha = Gimbal2D_U.alpha_desired - Gimbal2D_Y.alpha_e;
   Gimbal2D_Y.error_beta = Gimbal2D_U.beta_desired - Gimbal2D_Y.beta_e;
 
   pidSetError(&Gimbal2D_P.alphaPID, Gimbal2D_Y.error_alpha);
-  alphas_desired = pidUpdate(&Gimbal2D_P.alphaPID, Gimbal2D_Y.alpha_e, false);
+  alphas_desired_pid = pidUpdate(&Gimbal2D_P.alphaPID, Gimbal2D_Y.alpha_e, false);
 
   pidSetError(&Gimbal2D_P.betaPID, Gimbal2D_Y.error_beta);
-  betas_desired = pidUpdate(&Gimbal2D_P.betaPID, Gimbal2D_Y.beta_e, false);
+  betas_desired_pid = pidUpdate(&Gimbal2D_P.betaPID, Gimbal2D_Y.beta_e, false);
 
-  pidSetDesired(&Gimbal2D_P.alphasPID, alphas_desired);
+  pidSetDesired(&Gimbal2D_P.alphasPID, alphas_desired_pid);
   Gimbal2D_Y.u_alpha = J_alpha * pidUpdate(&Gimbal2D_P.alphasPID, Gimbal2D_Y.alpha_speed_e, true);
 
-  pidSetDesired(&Gimbal2D_P.betasPID, betas_desired);
+  pidSetDesired(&Gimbal2D_P.betasPID, betas_desired_pid);
   Gimbal2D_Y.u_beta = J_beta * pidUpdate(&Gimbal2D_P.betasPID, Gimbal2D_Y.beta_speed_e, true);
+
+  Gimbal2D_Y.Tau_x = Gimbal2D_Y.u_alpha * cosf(Gimbal2D_Y.beta_e);
+  Gimbal2D_Y.Tau_y = Gimbal2D_Y.u_beta;
+  Gimbal2D_Y.Tau_z = Gimbal2D_Y.u_alpha * sinf(Gimbal2D_Y.beta_e);
+}
+
+void Gimbal2D_controller_ofl()
+{
+  Gimbal2D_P_Type *P = &Gimbal2D_P;
+  Gimbal2D_U_Type *U = &Gimbal2D_U;
+  Gimbal2D_Y_Type *Y = &Gimbal2D_Y;
+  
+  Y->z1 = Y->alpha_e - U->alpha_desired;
+  Y->z2 = Y->beta_e - U->beta_desired;
+  Y->z3 = Y->alpha_speed_e - U->alphas_desired;
+  Y->z4 = Y->beta_speed_e - U->betas_desired;
+
+  float Star = 1.0f / (JX * cosf(Y->beta_e) + JZ * sinf(Y->beta_e));
+  float alphaa_desired = 0.0f; // acceleration reference
+  float betaa_desired = 0.0f;  // acceleration reference
+  float v1 = ((JX + JY - JZ) * sinf(Y->beta_e) - JZ * cosf(Y->beta_e) * Y->alpha_speed_e * Y->beta_speed_e) * Star;
+  float v2 = (JZ - JX) * sinf(Y->beta_e) * cosf(Y->beta_e) * Y->alpha_speed_e * Y->alpha_speed_e / JY;
+  float square = 2.0f * Y->z3 * Y->z3 + 2.0f * Y->z4 * Y->z4 + 2.0f * Y->z1 * (v1 - alphaa_desired) + 2.0f * Y->z2 * (v1 - betaa_desired);
+  float miu = P->OFL_k1 * (Y->z1 * Y->z1 + Y->z2 * Y->z2) + P->OFL_k2 * (2.0f * Y->z1 * Y->z3 + 2.0f * Y->z2 * Y->z4);
+
+  float s1 = 2.0f * Y->z1 * Star;
+  float s2 = 2.0f * Y->z2 / JY;
+  float s3 = 1.0f / (s1*s1 + s2*s2);
+
+  float u_tilt1 = s1*s3*(-square+miu);
+  float u_tilt2 = s2*s3*(-square+miu);
+
+  Gimbal2D_Y.Tau_x = (u_tilt1 * cosf(Y->beta_e) - u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
+  Gimbal2D_Y.Tau_y = u_tilt2;
+  Gimbal2D_Y.Tau_z =(u_tilt1 * sinf(Y->beta_e) - u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
+}
+
+void Gimbal2D_controller()
+{
+  // Update your control law here
+  switch( Gimbal2D_P.ControlMode )
+  {
+    case GIMBAL2D_CONTROLMODE_PID:
+    case GIMBAL2D_CONTROLMODE_PID_JALPHA:
+        Gimbal2D_controller_pid();
+        break;
+
+    case GIMBAL2D_CONTROLMODE_OFL:
+        Gimbal2D_controller_ofl();
+        break;
+
+    case GIMBAL2D_CONTROLMODE_NSF:
+        break;
+
+    default:
+        break;
+  }      
 }
 
 void Gimbal2D_PowerDistribution()
 {
-  Gimbal2D_Y.Tau_x = Gimbal2D_Y.u_alpha * cosf(Gimbal2D_Y.beta_e);
-  Gimbal2D_Y.Tau_y = Gimbal2D_Y.u_beta;
-  Gimbal2D_Y.Tau_z = Gimbal2D_Y.u_alpha * sinf(Gimbal2D_Y.beta_e);
-
-    // power distribution and turn Nm into N
+  // power distribution and turn Nm into N
   const float arm = 0.707106781f * 0.046f;
   const float rollPart = 0.25f / arm * Gimbal2D_Y.Tau_x;
   const float pitchPart = 0.25f / arm * Gimbal2D_Y.Tau_y;
@@ -447,6 +512,12 @@ void controllerGimbal2D(control_t *control,
     Gimbal2D_U.beta_desired = setpoint->attitude.yaw;
     Gimbal2D_U.thrust = setpoint->thrust;
 
+    // speed reference 
+    Gimbal2D_U.alphas_desired = (Gimbal2D_U.alpha_desired - Gimbal2D_U.alpha_desired_prev) / GIMBAL2D_ATTITUDE_UPDATE_DT;
+    Gimbal2D_U.betas_desired = (Gimbal2D_U.beta_desired - Gimbal2D_U.beta_desired_prev) / GIMBAL2D_ATTITUDE_UPDATE_DT;
+    Gimbal2D_U.alpha_desired_prev = Gimbal2D_U.alpha_desired;
+    Gimbal2D_U.beta_desired_prev = Gimbal2D_U.beta_desired;
+
     // Update Feedback
     Gimbal2D_U.qw_IMU = state->attitudeQuaternion.w;
     Gimbal2D_U.qx_IMU = state->attitudeQuaternion.x;
@@ -491,6 +562,8 @@ bool controllerGimbal2DTest(void) {
 // Update your parameter here
 // The name of the variable cannot be too long
 PARAM_GROUP_START(sparam_Gimbal2D)
+PARAM_ADD(PARAM_FLOAT, cmode, &Gimbal2D_P.ControlMode)
+// for PID type controller
 PARAM_ADD(PARAM_FLOAT, pgaina, &Gimbal2D_P.alphaPID.kp)
 PARAM_ADD(PARAM_FLOAT, igaina, &Gimbal2D_P.alphaPID.ki)
 PARAM_ADD(PARAM_FLOAT, dgaina, &Gimbal2D_P.alphaPID.kd)
@@ -506,10 +579,12 @@ PARAM_ADD(PARAM_FLOAT, dgainas, &Gimbal2D_P.alphasPID.kd)
 PARAM_ADD(PARAM_FLOAT, pgainbs, &Gimbal2D_P.betasPID.kp)
 PARAM_ADD(PARAM_FLOAT, igainbs, &Gimbal2D_P.betasPID.ki)
 PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_P.betasPID.kd)
-PARAM_ADD(PARAM_FLOAT, cmode, &Gimbal2D_P.ControlMode)
+
+// for OFL type controller
+PARAM_ADD(PARAM_FLOAT, ofl_k1, &Gimbal2D_P.OFL_k1)
+PARAM_ADD(PARAM_FLOAT, ofl_k2, &Gimbal2D_P.OFL_k2)
 
 PARAM_GROUP_STOP(sparam_Gimbal2D)
-
 /**
  * Update your debug scope here
  * Logging variables for the command and reference signals for the
@@ -526,9 +601,16 @@ LOG_ADD(LOG_FLOAT, u_beta, &Gimbal2D_Y.u_beta)
 
 LOG_ADD(LOG_FLOAT, alphain, &Gimbal2D_U.alpha_desired)
 LOG_ADD(LOG_FLOAT, betain, &Gimbal2D_U.beta_desired)
+LOG_ADD(LOG_FLOAT, als_in, &Gimbal2D_U.alphas_desired)
+LOG_ADD(LOG_FLOAT, bes_in, &Gimbal2D_U.betas_desired)
 
 LOG_ADD(LOG_FLOAT, t_m1, &Gimbal2D_Y.t_m1)
 LOG_ADD(LOG_FLOAT, t_m2, &Gimbal2D_Y.t_m2)
 LOG_ADD(LOG_FLOAT, t_m3, &Gimbal2D_Y.t_m3)
 LOG_ADD(LOG_FLOAT, t_m4, &Gimbal2D_Y.t_m4)
+
+LOG_ADD(LOG_FLOAT, z1, &Gimbal2D_Y.z1)
+LOG_ADD(LOG_FLOAT, z2, &Gimbal2D_Y.z2)
+LOG_ADD(LOG_FLOAT, z3, &Gimbal2D_Y.z3)
+LOG_ADD(LOG_FLOAT, z4, &Gimbal2D_Y.z4)
 LOG_GROUP_STOP(sctrl_Gimbal2D)
