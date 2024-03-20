@@ -29,6 +29,8 @@ Gimbal2D_P_Type Gimbal2D_P = {
   .Kp = 1.0f,
   .ThrustUpperBound = 4.0f * MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
+  .OFL_Lambda1 = -80.0f,
+  .OFL_Lambda2 = -60.0f,
   .OFL_k1 = -4800.0f,
   .OFL_k2 = -140.0f,
   .alphaPID = {
@@ -231,6 +233,8 @@ void controllerGimbal2DInit(void) {
             Gimbal2D_P.betasPID.kff,  GIMBAL2D_ATTITUDE_UPDATE_DT, ATTITUDE_RATE, 0, 0);
         break;
     case GIMBAL2D_CONTROLMODE_OFL:
+        Gimbal2D_P.OFL_k1 = -1.0f * Gimbal2D_P.OFL_Lambda1 * Gimbal2D_P.OFL_Lambda2;
+        Gimbal2D_P.OFL_k2 = Gimbal2D_P.OFL_Lambda1 + Gimbal2D_P.OFL_Lambda2;
         break;
     case GIMBAL2D_CONTROLMODE_NSF:
         break;
@@ -588,8 +592,8 @@ PARAM_ADD(PARAM_FLOAT, igainbs, &Gimbal2D_P.betasPID.ki)
 PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_P.betasPID.kd)
 
 // for OFL type controller
-PARAM_ADD(PARAM_FLOAT, ofl_k1, &Gimbal2D_P.OFL_k1)
-PARAM_ADD(PARAM_FLOAT, ofl_k2, &Gimbal2D_P.OFL_k2)
+PARAM_ADD(PARAM_FLOAT, ofl_ld1, &Gimbal2D_P.OFL_Lambda1)
+PARAM_ADD(PARAM_FLOAT, ofl_ld2, &Gimbal2D_P.OFL_Lambda2)
 
 PARAM_GROUP_STOP(sparam_Gimbal2D)
 /**

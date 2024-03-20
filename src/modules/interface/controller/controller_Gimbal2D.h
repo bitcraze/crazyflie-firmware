@@ -83,6 +83,8 @@ typedef struct {
 typedef struct {
     unsigned short ControlMode;
     float Kp;
+    float OFL_Lambda1;
+    float OFL_Lambda2;
     float OFL_k1;
     float OFL_k2;
     float ThrustUpperBound;
