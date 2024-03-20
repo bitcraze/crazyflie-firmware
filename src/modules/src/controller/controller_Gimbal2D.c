@@ -86,6 +86,7 @@ Gimbal2D_U_Type Gimbal2D_U = {
 Gimbal2D_Y_Type Gimbal2D_Y = {
         .IsClamped = 0,
         .Treset = 0,
+        .UsingControlMode = GIMBAL2D_CONTROLMODE_PID,
         .m1 = 0,
         .m2 = 0,
         .m3 = 0,
@@ -349,9 +350,11 @@ void Gimbal2D_controller_pid()
   float J_alpha, J_beta;
   if(Gimbal2D_P.ControlMode == GIMBAL2D_CONTROLMODE_PID_JALPHA)
     {
+      Gimbal2D_Y.UsingControlMode = GIMBAL2D_CONTROLMODE_PID_JALPHA;
       float temp = (JZ-JX)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
       J_alpha = JZ*(temp - JX)/(2.0f*temp - JZ);
     } else {
+      Gimbal2D_Y.UsingControlMode = GIMBAL2D_CONTROLMODE_PID;
       J_alpha = JX;
   }
   J_beta = JY;
@@ -380,6 +383,7 @@ void Gimbal2D_controller_ofl()
   Gimbal2D_P_Type *P = &Gimbal2D_P;
   Gimbal2D_U_Type *U = &Gimbal2D_U;
   Gimbal2D_Y_Type *Y = &Gimbal2D_Y;
+  Y->UsingControlMode = GIMBAL2D_CONTROLMODE_OFL;
   
   Y->z1 = Y->alpha_e - U->alpha_desired;
   Y->z2 = Y->beta_e - U->beta_desired;
@@ -391,7 +395,7 @@ void Gimbal2D_controller_ofl()
   float betaa_desired = 0.0f;  // acceleration reference
   float v1 = ((JX + JY - JZ) * sinf(Y->beta_e) - JZ * cosf(Y->beta_e) * Y->alpha_speed_e * Y->beta_speed_e) * Star;
   float v2 = (JZ - JX) * sinf(Y->beta_e) * cosf(Y->beta_e) * Y->alpha_speed_e * Y->alpha_speed_e / JY;
-  float square = 2.0f * Y->z3 * Y->z3 + 2.0f * Y->z4 * Y->z4 + 2.0f * Y->z1 * (v1 - alphaa_desired) + 2.0f * Y->z2 * (v1 - betaa_desired);
+  float square = 2.0f * Y->z3 * Y->z3 + 2.0f * Y->z4 * Y->z4 + 2.0f * Y->z1 * (v1 - alphaa_desired) + 2.0f * Y->z2 * (v2 - betaa_desired);
   float miu = P->OFL_k1 * (Y->z1 * Y->z1 + Y->z2 * Y->z2) + P->OFL_k2 * (2.0f * Y->z1 * Y->z3 + 2.0f * Y->z2 * Y->z4);
 
   float s1 = 2.0f * Y->z1 * Star;
@@ -400,6 +404,9 @@ void Gimbal2D_controller_ofl()
 
   float u_tilt1 = s1*s3*(-square+miu);
   float u_tilt2 = s2*s3*(-square+miu);
+
+  Y->u_alpha = u_tilt1;
+  Y->u_beta = u_tilt2;
 
   Gimbal2D_Y.Tau_x = (u_tilt1 * cosf(Y->beta_e) - u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
   Gimbal2D_Y.Tau_y = u_tilt2;
@@ -562,7 +569,7 @@ bool controllerGimbal2DTest(void) {
 // Update your parameter here
 // The name of the variable cannot be too long
 PARAM_GROUP_START(sparam_Gimbal2D)
-PARAM_ADD(PARAM_FLOAT, cmode, &Gimbal2D_P.ControlMode)
+PARAM_ADD(PARAM_UINT16, cmode, &Gimbal2D_P.ControlMode)
 // for PID type controller
 PARAM_ADD(PARAM_FLOAT, pgaina, &Gimbal2D_P.alphaPID.kp)
 PARAM_ADD(PARAM_FLOAT, igaina, &Gimbal2D_P.alphaPID.ki)
@@ -613,4 +620,5 @@ LOG_ADD(LOG_FLOAT, z1, &Gimbal2D_Y.z1)
 LOG_ADD(LOG_FLOAT, z2, &Gimbal2D_Y.z2)
 LOG_ADD(LOG_FLOAT, z3, &Gimbal2D_Y.z3)
 LOG_ADD(LOG_FLOAT, z4, &Gimbal2D_Y.z4)
+LOG_ADD(LOG_UINT16, ucmode, &Gimbal2D_Y.UsingControlMode)
 LOG_GROUP_STOP(sctrl_Gimbal2D)

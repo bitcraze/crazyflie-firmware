@@ -43,6 +43,7 @@ typedef struct {
 
 typedef struct {
   unsigned short IsClamped;
+  unsigned short UsingControlMode;
   unsigned short Treset;
   unsigned short m1;                         /* '<Root>/m1' */
   unsigned short m2;                         /* '<Root>/m2' */
