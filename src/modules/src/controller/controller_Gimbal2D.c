@@ -57,6 +57,7 @@ Gimbal2D_U_Type Gimbal2D_U = {
 Gimbal2D_Y_Type Gimbal2D_Y = {
         .IsClamped = 0,
         .Treset = 0,
+        .Enable_J_alpha_comp = 1,
         .m1 = 0,
         .m2 = 0,
         .m3 = 0,
@@ -328,8 +329,17 @@ void Gimbal2D_controller()
   float alphas_desired;
   float betas_desired;
 
-  float J_alpha = 1.66e-5f*cosf(Gimbal2D_Y.beta_e) + 2.93e-5f*sinf(Gimbal2D_Y.beta_e);
-  float J_beta = 1.66e-5f;
+  // float J_alpha = 1.66e-5f*cosf(Gimbal2D_Y.beta_e) + 2.93e-5f*sinf(Gimbal2D_Y.beta_e);
+  float Jx = 1.66e-5f, Jy = 1.66e-5f, Jz = 2.93e-5f;
+  float J_alpha, J_beta;
+  if( Gimbal2D_Y.Enable_J_alpha_comp == 1 )
+  {
+    float temp = (Jz-Jx)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
+    J_alpha = Jz*(temp - Jx)/(2.0f*temp - Jz);
+  } else {  
+    J_alpha = Jx;
+  }
+  J_beta = Jy;
 
   Gimbal2D_Y.error_alpha = Gimbal2D_U.alpha_desired - Gimbal2D_Y.alpha_e;
   Gimbal2D_Y.error_beta = Gimbal2D_U.beta_desired - Gimbal2D_Y.beta_e;
@@ -493,6 +503,8 @@ PARAM_ADD(PARAM_FLOAT, dgainas, &Gimbal2D_Y.alphasPID.kd)
 PARAM_ADD(PARAM_FLOAT, pgainbs, &Gimbal2D_Y.betasPID.kp)
 PARAM_ADD(PARAM_FLOAT, igainbs, &Gimbal2D_Y.betasPID.ki)
 PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_Y.betasPID.kd)
+PARAM_ADD(PARAM_FLOAT, enable_J_alpha_comp, &Gimbal2D_Y.Enable_J_alpha_comp)
+
 PARAM_GROUP_STOP(sparam_Gimbal2D)
 
 /**

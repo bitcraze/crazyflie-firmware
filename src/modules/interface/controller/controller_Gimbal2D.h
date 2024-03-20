@@ -32,6 +32,7 @@ typedef struct {
 typedef struct {
   unsigned short IsClamped;
   unsigned short Treset;
+  unsigned short Enable_J_alpha_comp;
   unsigned short m1;                         /* '<Root>/m1' */
   unsigned short m2;                         /* '<Root>/m2' */
   unsigned short m3;                         /* '<Root>/m3' */
