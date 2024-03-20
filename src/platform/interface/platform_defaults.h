@@ -125,6 +125,11 @@
     #define SUPERVISOR_TUMBLE_CHECK_ENABLE true
 #endif
 
+// Landing timeout before disarming
+#ifndef LANDING_TIMEOUT_MS
+    #define LANDING_TIMEOUT_MS 3000
+#endif
+
 
 // Health test parameters
 #ifndef HEALTH_BRUSHED_ON_PERIOD_MSEC
