@@ -9,6 +9,13 @@
 #include "stabilizer_types.h"
 #include "pid.h"
 
+enum CONTROL_MODE
+{
+  GIMBAL2D_CONTROLMODE_PID = 0,
+  GIMBAL2D_CONTROLMODE_PID_JALPHA = 1,
+
+};
+
 typedef struct {
   float qw_Base;                      /* '<Root>/qw_op' */
   float qx_Base;                      /* '<Root>/qx_op' */
@@ -32,7 +39,6 @@ typedef struct {
 typedef struct {
   unsigned short IsClamped;
   unsigned short Treset;
-  unsigned short Enable_J_alpha_comp;
   unsigned short m1;                         /* '<Root>/m1' */
   unsigned short m2;                         /* '<Root>/m2' */
   unsigned short m3;                         /* '<Root>/m3' */
@@ -69,6 +75,7 @@ typedef struct {
 } Gimbal2D_Y_Type;
 
 typedef struct {
+    unsigned short ControlMode;
     float Kp;
     float ThrustUpperBound;
     float ThrustLowerBound;
