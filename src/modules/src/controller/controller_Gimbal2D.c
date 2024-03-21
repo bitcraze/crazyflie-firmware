@@ -397,7 +397,7 @@ void Gimbal2D_controller_ofl()
   float Star = 1.0f / (JX * cosf(Y->beta_e) + JZ * sinf(Y->beta_e));
   float alphaa_desired = 0.0f; // acceleration reference
   float betaa_desired = 0.0f;  // acceleration reference
-  float v1 = ((JX + JY - JZ) * sinf(Y->beta_e) - JZ * cosf(Y->beta_e) * Y->alpha_speed_e * Y->beta_speed_e) * Star;
+  float v1 = (((JX + JY - JZ) * sinf(Y->beta_e) - JZ * cosf(Y->beta_e)) * Y->alpha_speed_e * Y->beta_speed_e) * Star;
   float v2 = (JZ - JX) * sinf(Y->beta_e) * cosf(Y->beta_e) * Y->alpha_speed_e * Y->alpha_speed_e / JY;
   float square = 2.0f * Y->z3 * Y->z3 + 2.0f * Y->z4 * Y->z4 + 2.0f * Y->z1 * (v1 - alphaa_desired) + 2.0f * Y->z2 * (v2 - betaa_desired);
   float miu = P->OFL_k1 * (Y->z1 * Y->z1 + Y->z2 * Y->z2) + P->OFL_k2 * (2.0f * Y->z1 * Y->z3 + 2.0f * Y->z2 * Y->z4);
@@ -509,7 +509,7 @@ void controllerGimbal2D(control_t *control,
                                  const state_t *state,
                                  const stabilizerStep_t stabilizerStep) 
 {
-  if (RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
+  if (RATE_DO_EXECUTE(RATE_500_HZ, stabilizerStep)) {
 
     // Update Command (Send2D)
     Gimbal2D_U.index = setpoint->attitude.roll;
