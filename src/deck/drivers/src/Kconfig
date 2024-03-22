@@ -476,3 +476,22 @@ config DECK_CPX_HOST_ON_UART2
       forced, since this is intended to be used without actually having a proper
       deck attached (i.e there will be no 1-wire memory to automatically detect
       and start the driver).
+
+config DECK_ACS37800
+    bool "Support for the power measurement deck"
+    default n
+    help
+        Enables the support for the ACS37800 chip that can measure power/current/voltage.
+      
+config DECK_RPM
+    bool "Support the rpm deck"
+    default n
+    help
+        Enables the rpm deck that can be usfull in testing.
+      
+config DECK_LOADCELL
+    bool "Support for loadcell NAU7802"
+    default n
+    help
+        Enables the support for the NAU7802 loadcell.
+      
