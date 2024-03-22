@@ -629,7 +629,7 @@ static void i2cdrvDmaIsrHandler(I2cDrv* i2c)
     //TODO: Best thing we could do?
     i2c->txMessage.status = i2cNack;
   }
-  if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Tranasfer complete
+  if (DMA_GetFlagStatus(i2c->def->dmaRxStream, i2c->def->dmaRxTCFlag)) // Transfer complete
   {
     i2c->txMessage.status = i2cAck;
   }

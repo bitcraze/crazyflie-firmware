@@ -193,7 +193,7 @@ int configblockInit(void)
 
 bool configblockTest(void)
 {
-  return cb_ok;
+  return eepromTest();
 }
 
 static bool configblockCheckMagic(configblock_t *configblock)
