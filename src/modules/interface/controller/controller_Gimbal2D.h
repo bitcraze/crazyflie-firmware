@@ -94,7 +94,6 @@ typedef struct {
     float ThrustUpperBound;
     float ThrustLowerBound;
     float NSF_K[2][4]; // Optimal Gain Matrix
-    float NSF_B_inv[2][4]; // Pseudo-inverse Matrix
     PidObject alphaPID;
     PidObject betaPID;
     PidObject alphasPID;

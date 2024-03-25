@@ -33,8 +33,7 @@ Gimbal2D_P_Type Gimbal2D_P = {
   .OFL_Lambda2 = -10.0f,
   .OFL_k1 = -600.0f,
   .OFL_k2 = -70.0f,
-  .NSF_K = { { 1000.0f, 0.0f, 109.5f, 0.0f }, { 0.0f, 1000.0f, 0.0f, 109.5f } }, // { { 0.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } }  Optimal Gain Matrix (default): 
-  .NSF_B_inv = { { 0.0f, 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f } }, //  { { 0.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } } Pseudo-inverse Matrix (default): 
+  .NSF_K = { { 1000.0f, 0.0f, 109.5f, 0.0f }, { 0.0f, 1000.0f, 0.0f, 109.5f } }, // { { 0.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } }  Optimal Gain Matrix (default):
   .alphaPID = {
       .kp = 900.0f,
       .ki = 10.0f,
@@ -251,8 +250,6 @@ void controllerGimbal2DInit(void) {
         Gimbal2D_P.NSF_K[1][1] = 1000.0f;
         Gimbal2D_P.NSF_K[1][2] = 0.0f;
         Gimbal2D_P.NSF_K[1][3] = 109.5f;
-        Gimbal2D_P.NSF_B_inv[0][2] = 1.0f;
-        Gimbal2D_P.NSF_B_inv[1][3] = 1.0f;
         break;
     default:
         break;
@@ -371,8 +368,9 @@ void Gimbal2D_controller_pid()
   if(Gimbal2D_P.ControlMode == GIMBAL2D_CONTROLMODE_PID_JALPHA)
     {
       Gimbal2D_Y.UsingControlMode = GIMBAL2D_CONTROLMODE_PID_JALPHA;
-      float temp = (JZ-JX)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
-      J_alpha = JZ*(temp - JX)/(2.0f*temp - JZ);
+      // float temp = (JZ-JX)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
+      // J_alpha = JZ*(temp - JX)/(2.0f*temp - JZ);
+      J_alpha = sqrtf(JX*JX*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e) + JZ*JZ*cosf(Gimbal2D_Y.beta_e)*cosf(Gimbal2D_Y.beta_e));
     } else {
       Gimbal2D_Y.UsingControlMode = GIMBAL2D_CONTROLMODE_PID;
       J_alpha = JX;
@@ -459,6 +457,10 @@ void Gimbal2D_controller_nsf()
   Y->utilt2 = - P->NSF_K[1][1]*Y->z2 - P->NSF_K[1][3]*Y->z4 - cir2;
   Y->u_u1 = Y->utilt1 / star; // Tau_x + Tau_z
   Y->u_u2 = Y->utilt2 * JY; // Tau_y
+
+  Y->u_alpha = Y->u_u1;
+  Y->u_beta = Y->u_u2;
+
   Y->Tau_x = (cosf(Y->beta_e)*Y->u_u1 + tanf(Y->alpha_e)*Y->u_u2)/(sinf(Y->beta_e)+cosf(Y->beta_e));
   Y->Tau_y = Y->u_u2;
   Y->Tau_z = (sinf(Y->beta_e)*Y->u_u1 - tanf(Y->alpha_e)*Y->u_u2)/(sinf(Y->beta_e)+cosf(Y->beta_e));
@@ -646,23 +648,14 @@ PARAM_ADD(PARAM_FLOAT, ofl_ld1, &Gimbal2D_P.OFL_Lambda1)
 PARAM_ADD(PARAM_FLOAT, ofl_ld2, &Gimbal2D_P.OFL_Lambda2)
 
 // for nsf type controller
-PARAM_ADD(PARAM_FLOAT, K11, &Gimbal2D_P.NSF_K[0][0])
-PARAM_ADD(PARAM_FLOAT, K12, &Gimbal2D_P.NSF_K[0][1])
-PARAM_ADD(PARAM_FLOAT, K13, &Gimbal2D_P.NSF_K[0][2])
-PARAM_ADD(PARAM_FLOAT, K14, &Gimbal2D_P.NSF_K[0][3])
-PARAM_ADD(PARAM_FLOAT, K21, &Gimbal2D_P.NSF_K[1][0])
-PARAM_ADD(PARAM_FLOAT, K22, &Gimbal2D_P.NSF_K[1][1])
-PARAM_ADD(PARAM_FLOAT, K23, &Gimbal2D_P.NSF_K[1][2])
-PARAM_ADD(PARAM_FLOAT, K24, &Gimbal2D_P.NSF_K[1][3])
-
-PARAM_ADD(PARAM_FLOAT, B_inv11, &Gimbal2D_P.NSF_B_inv[0][0])
-PARAM_ADD(PARAM_FLOAT, B_inv12, &Gimbal2D_P.NSF_B_inv[0][1])
-PARAM_ADD(PARAM_FLOAT, B_inv13, &Gimbal2D_P.NSF_B_inv[0][2])
-PARAM_ADD(PARAM_FLOAT, B_inv14, &Gimbal2D_P.NSF_B_inv[0][3])
-PARAM_ADD(PARAM_FLOAT, B_inv21, &Gimbal2D_P.NSF_B_inv[1][0])
-PARAM_ADD(PARAM_FLOAT, B_inv22, &Gimbal2D_P.NSF_B_inv[1][1])
-PARAM_ADD(PARAM_FLOAT, B_inv23, &Gimbal2D_P.NSF_B_inv[1][2])
-PARAM_ADD(PARAM_FLOAT, B_inv24, &Gimbal2D_P.NSF_B_inv[1][3])
+PARAM_ADD(PARAM_FLOAT, nsf_K11, &Gimbal2D_P.NSF_K[0][0])
+PARAM_ADD(PARAM_FLOAT, nsf_K12, &Gimbal2D_P.NSF_K[0][1])
+PARAM_ADD(PARAM_FLOAT, nsf_K13, &Gimbal2D_P.NSF_K[0][2])
+PARAM_ADD(PARAM_FLOAT, nsf_K14, &Gimbal2D_P.NSF_K[0][3])
+PARAM_ADD(PARAM_FLOAT, nsf_K21, &Gimbal2D_P.NSF_K[1][0])
+PARAM_ADD(PARAM_FLOAT, nsf_K22, &Gimbal2D_P.NSF_K[1][1])
+PARAM_ADD(PARAM_FLOAT, nsf_K23, &Gimbal2D_P.NSF_K[1][2])
+PARAM_ADD(PARAM_FLOAT, nsf_K24, &Gimbal2D_P.NSF_K[1][3])
 
 PARAM_GROUP_STOP(sparam_Gimbal2D)
 /**
