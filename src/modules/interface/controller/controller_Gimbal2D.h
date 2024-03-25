@@ -15,6 +15,7 @@ enum CONTROL_MODE
   GIMBAL2D_CONTROLMODE_PID_JALPHA = 1,
   GIMBAL2D_CONTROLMODE_OFL = 2,
   GIMBAL2D_CONTROLMODE_NSF = 3,
+  GIMBAL2D_CONTROLMODE_PWMTEST = 10,
 };
 
 typedef struct {
@@ -86,7 +87,7 @@ typedef struct {
 
 typedef struct {
     unsigned short ControlMode;
-    float Kp;
+    unsigned short PWMTest[4];
     float OFL_Lambda1;
     float OFL_Lambda2;
     float OFL_k1;

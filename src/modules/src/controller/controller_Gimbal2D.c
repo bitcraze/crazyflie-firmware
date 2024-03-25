@@ -26,7 +26,7 @@ static bool isInit = false;
 
 Gimbal2D_P_Type Gimbal2D_P = {
   .ControlMode = GIMBAL2D_CONTROLMODE_PID,
-  .Kp = 1.0f,
+  .PWMTest = {0, 0, 0, 0},
   .ThrustUpperBound = 4.0f * MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
   .OFL_Lambda1 = -60.0f,
@@ -251,6 +251,11 @@ void controllerGimbal2DInit(void) {
         Gimbal2D_P.NSF_K[1][2] = 0.0f;
         Gimbal2D_P.NSF_K[1][3] = 109.5f;
         break;
+    case GIMBAL2D_CONTROLMODE_PWMTEST:
+        Gimbal2D_P.PWMTest[0] = 0;
+        Gimbal2D_P.PWMTest[1] = 0;
+        Gimbal2D_P.PWMTest[2] = 0;
+        Gimbal2D_P.PWMTest[3] = 0;
     default:
         break;
   }      
@@ -467,6 +472,14 @@ void Gimbal2D_controller_nsf()
   Y->Tau_z = (sinf(Y->beta_e)*Y->u_u1 - tanf(Y->alpha_e)*Y->u_u2)/(sinf(Y->beta_e)+cosf(Y->beta_e));
 }
 
+Gimbal2D_controller_pwmtest()
+{
+  // Directly assign M1~M4, so torque commands are all zero.
+  Gimbal2D_Y.Tau_x = 0.0f;
+  Gimbal2D_Y.Tau_y = 0.0f;
+  Gimbal2D_Y.Tau_z = 0.0f;
+}
+
 void Gimbal2D_controller()
 {
   // Update your control law here
@@ -483,6 +496,10 @@ void Gimbal2D_controller()
 
     case GIMBAL2D_CONTROLMODE_NSF:
         Gimbal2D_controller_nsf();
+        break;
+
+    case GIMBAL2D_CONTROLMODE_PWMTEST:
+        Gimbal2D_controller_pwmtest();
         break;
 
     default:
@@ -548,10 +565,18 @@ void Gimbal2D_PowerDistribution()
   }
 
   // Turn Newton into percentage and count
-  Gimbal2D_Y.m1 = Gimbal2D_Y.t_m1 / MOTOR_MAX_THRUST_N * 65535;
-  Gimbal2D_Y.m2 = Gimbal2D_Y.t_m2 / MOTOR_MAX_THRUST_N * 65535;
-  Gimbal2D_Y.m3 = Gimbal2D_Y.t_m3 / MOTOR_MAX_THRUST_N * 65535;
-  Gimbal2D_Y.m4 = Gimbal2D_Y.t_m4 / MOTOR_MAX_THRUST_N * 65535;
+  if ( Gimbal2D_P.ControlMode == GIMBAL2D_CONTROLMODE_PWMTEST )
+  {
+    Gimbal2D_Y.m1 = Gimbal2D_P.PWMTest[0];
+    Gimbal2D_Y.m2 = Gimbal2D_P.PWMTest[1];
+    Gimbal2D_Y.m3 = Gimbal2D_P.PWMTest[2];
+    Gimbal2D_Y.m4 = Gimbal2D_P.PWMTest[3];
+  } else {
+    Gimbal2D_Y.m1 = Gimbal2D_Y.t_m1 / MOTOR_MAX_THRUST_N * 65535;
+    Gimbal2D_Y.m2 = Gimbal2D_Y.t_m2 / MOTOR_MAX_THRUST_N * 65535;
+    Gimbal2D_Y.m3 = Gimbal2D_Y.t_m3 / MOTOR_MAX_THRUST_N * 65535;
+    Gimbal2D_Y.m4 = Gimbal2D_Y.t_m4 / MOTOR_MAX_THRUST_N * 65535;
+  }
 }
 
 void controllerGimbal2D(control_t *control,
@@ -627,6 +652,13 @@ bool controllerGimbal2DTest(void) {
 // The name of the variable cannot be too long
 PARAM_GROUP_START(sparam_Gimbal2D)
 PARAM_ADD(PARAM_UINT16, cmode, &Gimbal2D_P.ControlMode)
+
+// for PWM Test
+PARAM_ADD(PARAM_UINT16, M1, &Gimbal2D_P.PWMTest[0])
+PARAM_ADD(PARAM_UINT16, M2, &Gimbal2D_P.PWMTest[1])
+PARAM_ADD(PARAM_UINT16, M3, &Gimbal2D_P.PWMTest[2])
+PARAM_ADD(PARAM_UINT16, M4, &Gimbal2D_P.PWMTest[3])
+
 // for PID type controller
 PARAM_ADD(PARAM_FLOAT, pgaina, &Gimbal2D_P.alphaPID.kp)
 PARAM_ADD(PARAM_FLOAT, igaina, &Gimbal2D_P.alphaPID.ki)
