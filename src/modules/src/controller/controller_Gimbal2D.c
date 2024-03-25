@@ -370,7 +370,7 @@ void Gimbal2D_controller_pid()
       Gimbal2D_Y.UsingControlMode = GIMBAL2D_CONTROLMODE_PID_JALPHA;
       // float temp = (JZ-JX)*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e);
       // J_alpha = JZ*(temp - JX)/(2.0f*temp - JZ);
-      J_alpha = sqrtf(JX*JX*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e) + JZ*JZ*cosf(Gimbal2D_Y.beta_e)*cosf(Gimbal2D_Y.beta_e));
+      J_alpha = sqrtf(JX*JX*cosf(Gimbal2D_Y.beta_e)*cosf(Gimbal2D_Y.beta_e) + JZ*JZ*sinf(Gimbal2D_Y.beta_e)*sinf(Gimbal2D_Y.beta_e));
     } else {
       Gimbal2D_Y.UsingControlMode = GIMBAL2D_CONTROLMODE_PID;
       J_alpha = JX;
