@@ -69,6 +69,10 @@ typedef struct {
   float z2;                       
   float z3;                       
   float z4;                       
+  float utilt1;
+  float utilt2;
+  float u_u1;
+  float u_u2;
   float error_alphas;               /* '<Root>/error_alphas' */
   float error_betas;                /* '<Root>/error_betas' */
   float rollPart;
@@ -89,6 +93,8 @@ typedef struct {
     float OFL_k2;
     float ThrustUpperBound;
     float ThrustLowerBound;
+    float NSF_K[2][4]; // Optimal Gain Matrix
+    float NSF_B_inv[2][4]; // Pseudo-inverse Matrix
     PidObject alphaPID;
     PidObject betaPID;
     PidObject alphasPID;

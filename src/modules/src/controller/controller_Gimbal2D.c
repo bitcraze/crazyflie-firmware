@@ -29,10 +29,12 @@ Gimbal2D_P_Type Gimbal2D_P = {
   .Kp = 1.0f,
   .ThrustUpperBound = 4.0f * MOTOR_MAX_THRUST_N,
   .ThrustLowerBound = 0.0f,
-  .OFL_Lambda1 = -80.0f,
-  .OFL_Lambda2 = -60.0f,
-  .OFL_k1 = -4800.0f,
-  .OFL_k2 = -140.0f,
+  .OFL_Lambda1 = -60.0f,
+  .OFL_Lambda2 = -10.0f,
+  .OFL_k1 = -600.0f,
+  .OFL_k2 = -70.0f,
+  .NSF_K = { { 1000.0f, 0.0f, 109.5f, 0.0f }, { 0.0f, 1000.0f, 0.0f, 109.5f } }, // { { 0.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } }  Optimal Gain Matrix (default): 
+  .NSF_B_inv = { { 0.0f, 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f } }, //  { { 0.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } } Pseudo-inverse Matrix (default): 
   .alphaPID = {
       .kp = 900.0f,
       .ki = 10.0f,
@@ -113,6 +115,10 @@ Gimbal2D_Y_Type Gimbal2D_Y = {
         .z2 = 0.0,
         .z3 = 0.0,
         .z4 = 0.0,
+        .utilt1 = 0.0,
+        .utilt2 = 0.0,
+        .u_u1 = 0.0,
+        .u_u2 = 0.0,
         .error_alphas = 0.0,
         .error_betas = 0.0,
         .rollPart = 0.0,
@@ -236,7 +242,17 @@ void controllerGimbal2DInit(void) {
         Gimbal2D_P.OFL_k1 = -1.0f * Gimbal2D_P.OFL_Lambda1 * Gimbal2D_P.OFL_Lambda2;
         Gimbal2D_P.OFL_k2 = Gimbal2D_P.OFL_Lambda1 + Gimbal2D_P.OFL_Lambda2;
         break;
-    case GIMBAL2D_CONTROLMODE_NSF:
+    case GIMBAL2D_CONTROLMODE_NSF: 
+        Gimbal2D_P.NSF_K[0][0] = 1000.0f;
+        Gimbal2D_P.NSF_K[0][1] = 0.0f;
+        Gimbal2D_P.NSF_K[0][2] = 109.5f;
+        Gimbal2D_P.NSF_K[0][3] = 0.0f;
+        Gimbal2D_P.NSF_K[1][0] = 0.0f;
+        Gimbal2D_P.NSF_K[1][1] = 1000.0f;
+        Gimbal2D_P.NSF_K[1][2] = 0.0f;
+        Gimbal2D_P.NSF_K[1][3] = 109.5f;
+        Gimbal2D_P.NSF_B_inv[0][2] = 1.0f;
+        Gimbal2D_P.NSF_B_inv[1][3] = 1.0f;
         break;
     default:
         break;
@@ -417,6 +433,37 @@ void Gimbal2D_controller_ofl()
   Gimbal2D_Y.Tau_z =(u_tilt1 * sinf(Y->beta_e) - u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
 }
 
+void Gimbal2D_controller_nsf()
+{
+  // Update your control law here
+  // NSF Controller -- State Feedback
+  Gimbal2D_P_Type *P = &Gimbal2D_P;
+  Gimbal2D_U_Type *U = &Gimbal2D_U;
+  Gimbal2D_Y_Type *Y = &Gimbal2D_Y;
+  Y->UsingControlMode = GIMBAL2D_CONTROLMODE_NSF;
+  
+  Y->z1 = Y->alpha_e - U->alpha_desired;
+  Y->z2 = Y->beta_e - U->beta_desired;
+  Y->z3 = Y->alpha_speed_e - U->alphas_desired;
+  Y->z4 = Y->beta_speed_e - U->betas_desired;
+
+  float num1 = ((JX + JY - JZ)*sinf(Y->beta_e) -JZ*cosf(Y->beta_e))*Y->z3*Y->z4;
+  float den1 = JX*cosf(Y->beta_e) + JY*sinf(Y->beta_e);
+  float cir1 = num1 / den1;
+  float num2 = (JZ - JX)*sinf(Y->beta_e)*cosf(Y->beta_e)*Y->z3*Y->z3;
+  float den2 = JY;
+  float cir2 = num2 / den2;
+  float star = 1.0f / den1;
+
+  Y->utilt1 = - P->NSF_K[0][0]*Y->z1 - P->NSF_K[0][2]*Y->z3 - cir1;
+  Y->utilt2 = - P->NSF_K[1][1]*Y->z2 - P->NSF_K[1][3]*Y->z4 - cir2;
+  Y->u_u1 = Y->utilt1 / star; // Tau_x + Tau_z
+  Y->u_u2 = Y->utilt2 * JY; // Tau_y
+  Y->Tau_x = (cosf(Y->beta_e)*Y->u_u1 + tanf(Y->alpha_e)*Y->u_u2)/(sinf(Y->beta_e)+cosf(Y->beta_e));
+  Y->Tau_y = Y->u_u2;
+  Y->Tau_z = (sinf(Y->beta_e)*Y->u_u1 - tanf(Y->alpha_e)*Y->u_u2)/(sinf(Y->beta_e)+cosf(Y->beta_e));
+}
+
 void Gimbal2D_controller()
 {
   // Update your control law here
@@ -432,6 +479,7 @@ void Gimbal2D_controller()
         break;
 
     case GIMBAL2D_CONTROLMODE_NSF:
+        Gimbal2D_controller_nsf();
         break;
 
     default:
@@ -594,6 +642,25 @@ PARAM_ADD(PARAM_FLOAT, dgainbs, &Gimbal2D_P.betasPID.kd)
 // for OFL type controller
 PARAM_ADD(PARAM_FLOAT, ofl_ld1, &Gimbal2D_P.OFL_Lambda1)
 PARAM_ADD(PARAM_FLOAT, ofl_ld2, &Gimbal2D_P.OFL_Lambda2)
+
+// for nsf type controller
+PARAM_ADD(PARAM_FLOAT, K11, &Gimbal2D_P.NSF_K[0][0])
+PARAM_ADD(PARAM_FLOAT, K12, &Gimbal2D_P.NSF_K[0][1])
+PARAM_ADD(PARAM_FLOAT, K13, &Gimbal2D_P.NSF_K[0][2])
+PARAM_ADD(PARAM_FLOAT, K14, &Gimbal2D_P.NSF_K[0][3])
+PARAM_ADD(PARAM_FLOAT, K21, &Gimbal2D_P.NSF_K[1][0])
+PARAM_ADD(PARAM_FLOAT, K22, &Gimbal2D_P.NSF_K[1][1])
+PARAM_ADD(PARAM_FLOAT, K23, &Gimbal2D_P.NSF_K[1][2])
+PARAM_ADD(PARAM_FLOAT, K24, &Gimbal2D_P.NSF_K[1][3])
+
+PARAM_ADD(PARAM_FLOAT, B_inv11, &Gimbal2D_P.NSF_B_inv[0][0])
+PARAM_ADD(PARAM_FLOAT, B_inv12, &Gimbal2D_P.NSF_B_inv[0][1])
+PARAM_ADD(PARAM_FLOAT, B_inv13, &Gimbal2D_P.NSF_B_inv[0][2])
+PARAM_ADD(PARAM_FLOAT, B_inv14, &Gimbal2D_P.NSF_B_inv[0][3])
+PARAM_ADD(PARAM_FLOAT, B_inv21, &Gimbal2D_P.NSF_B_inv[1][0])
+PARAM_ADD(PARAM_FLOAT, B_inv22, &Gimbal2D_P.NSF_B_inv[1][1])
+PARAM_ADD(PARAM_FLOAT, B_inv23, &Gimbal2D_P.NSF_B_inv[1][2])
+PARAM_ADD(PARAM_FLOAT, B_inv24, &Gimbal2D_P.NSF_B_inv[1][3])
 
 PARAM_GROUP_STOP(sparam_Gimbal2D)
 /**
