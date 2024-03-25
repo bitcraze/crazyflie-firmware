@@ -428,7 +428,7 @@ void Gimbal2D_controller_ofl()
   Y->u_alpha = u_tilt1;
   Y->u_beta = u_tilt2;
 
-  Gimbal2D_Y.Tau_x = (u_tilt1 * cosf(Y->beta_e) - u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
+  Gimbal2D_Y.Tau_x = (u_tilt1 * cosf(Y->beta_e) + u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
   Gimbal2D_Y.Tau_y = u_tilt2;
   Gimbal2D_Y.Tau_z =(u_tilt1 * sinf(Y->beta_e) - u_tilt2 * tanf(Y->alpha_e)) / (cosf(Y->beta_e) + sinf(Y->beta_e));
 }
@@ -572,10 +572,12 @@ void controllerGimbal2D(control_t *control,
     Gimbal2D_U.thrust = setpoint->thrust;
 
     // speed reference 
-    Gimbal2D_U.alphas_desired = (Gimbal2D_U.alpha_desired - Gimbal2D_U.alpha_desired_prev) / GIMBAL2D_ATTITUDE_UPDATE_DT;
-    Gimbal2D_U.betas_desired = (Gimbal2D_U.beta_desired - Gimbal2D_U.beta_desired_prev) / GIMBAL2D_ATTITUDE_UPDATE_DT;
-    Gimbal2D_U.alpha_desired_prev = Gimbal2D_U.alpha_desired;
-    Gimbal2D_U.beta_desired_prev = Gimbal2D_U.beta_desired;
+    // Gimbal2D_U.alphas_desired = (Gimbal2D_U.alpha_desired - Gimbal2D_U.alpha_desired_prev) / GIMBAL2D_ATTITUDE_UPDATE_DT;
+    // Gimbal2D_U.betas_desired = (Gimbal2D_U.beta_desired - Gimbal2D_U.beta_desired_prev) / GIMBAL2D_ATTITUDE_UPDATE_DT;
+    // Gimbal2D_U.alpha_desired_prev = Gimbal2D_U.alpha_desired;
+    // Gimbal2D_U.beta_desired_prev = Gimbal2D_U.beta_desired;
+    Gimbal2D_U.alphas_desired = 0.0f;
+    Gimbal2D_U.betas_desired = 0.0f;
 
     // Update Feedback
     Gimbal2D_U.qw_IMU = state->attitudeQuaternion.w;
