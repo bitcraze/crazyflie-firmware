@@ -212,7 +212,7 @@ Inside of the file, replace everything with the following:
 
 #### Installing the SVD file
 
-Now for the SVD file: just download it from [here](https://raw.githubusercontent.com/posborne/cmsis-svd/master/data/STMicro/STM32F405.svd) and into the firmware root dir. Make sure it has the exact name of ```STM32F405.svd``` !
+Now for the SVD file: just download it from [here](STM32F405.svd) and into the firmware root dir, or download it from the ST website (search for `svd stm32f4`). Make sure it has the exact name of ```STM32F405.svd``` !
 
 ### Debug!
 
