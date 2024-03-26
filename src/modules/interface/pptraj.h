@@ -136,7 +136,7 @@ bool is_traj_eval_valid(struct traj_eval const *ev);
 // evaluate a single polynomial piece
 struct traj_eval poly4d_eval(struct poly4d const *p, float t);
 
-
+void traj_eval_transform(struct traj_eval *ev, struct vec shift, float rotation);
 
 // ----------------------------------//
 // piecewise polynomial trajectories //
@@ -147,6 +147,7 @@ struct piecewise_traj
 	float t_begin;
 	float timescale;
 	struct vec shift;
+	float shift_yaw;
 	unsigned char n_pieces;
 	struct poly4d* pieces;
 };

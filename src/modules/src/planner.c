@@ -206,7 +206,7 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 	return plan_go_to_from(p, &setpoint, relative, hover_pos, hover_yaw, duration, t);
 }
 
-int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from)
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from, float start_yaw)
 {
 	p->reversed = reversed;
 	p->state = TRAJECTORY_STATE_FLYING;
@@ -216,23 +216,32 @@ int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, 
 	if (relative) {
 		struct traj_eval traj_init;
 		trajectory->shift = vzero();
+		trajectory->shift_yaw = 0;
 		if (reversed) {
 			traj_init = piecewise_eval_reversed(trajectory, trajectory->t_begin);
 		}
 		else {
 			traj_init = piecewise_eval(trajectory, trajectory->t_begin);
 		}
+
+		// translate trajectory to current position
 		struct vec shift_pos = vsub(start_from, traj_init.pos);
 		trajectory->shift = shift_pos;
+		
+		// compute the shortest possible rotation towards trajectory start yaw to current yaw 
+		float traj_yaw = normalize_radians(traj_init.yaw);
+		start_yaw = normalize_radians(start_yaw);
+		trajectory->shift_yaw = shortest_signed_angle_radians(traj_yaw, start_yaw);
 	}
 	else {
 		trajectory->shift = vzero();
+		trajectory->shift_yaw = 0;
 	}
 
 	return 0;
 }
 
-int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_compressed* trajectory, bool relative, struct vec start_from)
+int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_compressed* trajectory, bool relative, struct vec start_from, float start_yaw)
 {
 	p->reversed = 0;
 	p->state = TRAJECTORY_STATE_FLYING;
@@ -241,13 +250,20 @@ int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_c
 
 	if (relative) {
 		trajectory->shift = vzero();
-		struct traj_eval traj_init = piecewise_compressed_eval(
-			trajectory, trajectory->t_begin
-		);
+		trajectory->shift_yaw = 0;
+		struct traj_eval traj_init = piecewise_compressed_eval(trajectory, trajectory->t_begin);
+
+		// translate trajectory to current position
 		struct vec shift_pos = vsub(start_from, traj_init.pos);
 		trajectory->shift = shift_pos;
+
+		// compute the shortest possible rotation towards trajectory start yaw to current yaw
+		float traj_yaw = normalize_radians(traj_init.yaw);
+		start_yaw = normalize_radians(start_yaw);
+		trajectory->shift_yaw = shortest_signed_angle_radians(start_yaw, traj_yaw);
 	} else {
 		trajectory->shift = vzero();
+		trajectory->shift_yaw = 0;
 	}
 
 	return 0;
