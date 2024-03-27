@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 import cffirmware
 
@@ -20,7 +21,7 @@ class EstimatorKalmanEmulator:
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
         self.outlierFilterStateTdoa = cffirmware.OutlierFilterTdoaState_t()
-        self.outlierFilterStateLH = cffirmware.OutlierFilterLighthouseState_t()
+        self.outlierFilterStateLH = cffirmware.OutlierFilterLhState_t()
 
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
         self.LH_ENGINE_MEASUREMENT_NOISE_STD = 0.001
