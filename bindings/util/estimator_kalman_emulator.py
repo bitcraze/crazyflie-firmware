@@ -1,10 +1,6 @@
 import math
 import cffirmware
 
-
-
-
-
 class EstimatorKalmanEmulator:
     """
     This class emulates the behavior of estimator_kalman.c and is used as a helper to enable testing of the kalman
@@ -23,9 +19,11 @@ class EstimatorKalmanEmulator:
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
-        self.outlierFilterState = cffirmware.OutlierFilterTdoaState_t()
+        self.outlierFilterStateTdoa = cffirmware.OutlierFilterTdoaState_t()
+        self.outlierFilterStateLH = cffirmware.OutlierFilterLighthouseState_t()
 
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
+        self.LH_ENGINE_MEASUREMENT_NOISE_STD = 0.001
         self.PREDICT_RATE = 100
         self.PREDICT_STEP_MS = 1000 / self.PREDICT_RATE
 
@@ -86,7 +84,7 @@ class EstimatorKalmanEmulator:
 
         self.coreParams = cffirmware.kalmanCoreParams_t()
         cffirmware.kalmanCoreDefaultParams(self.coreParams)
-        cffirmware.outlierFilterTdoaReset(self.outlierFilterState)
+        cffirmware.outlierFilterTdoaReset(self.outlierFilterStateTdoa)
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
@@ -114,7 +112,7 @@ class EstimatorKalmanEmulator:
             tdoa.distanceDiff = float(tdoa_data['distanceDiff'])
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
 
-            cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
+            cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterStateTdoa)
 
         if sample[0] == 'estAcceleration':
             acc_data = sample[1]
@@ -135,3 +133,23 @@ class EstimatorKalmanEmulator:
             gyro.z = float(gyro_data['gyro.z'])
 
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
+
+        if sample[0] == 'estLighthouse':
+            lh_data = sample[1]
+            lh = cffirmware.sweepAngleMeasurement_t()
+
+            # lh.timestamp
+            # lh.sensorPos
+            # lh.rotorPos
+            # lh.RoterPot
+            # lh.rotorRotInv
+            lh.sensorId = int(lh_data['sensorId'])
+            lh.baseStationId = int(lh_data['baseStationId'])
+            lh.sweepId = int(lh_data['sweepId'])
+            lh.t = float(lh_data['t'])
+            lh.measuredSweepAngle = float(lh_data['sweepAngle'])
+            lh.stdDev = self.LH_ENGINE_MEASUREMENT_NOISE_STD
+            # lh.calib
+             # lh.calibrationMeasurementModel
+
+            cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, lh, now_ms, self.outlierFilterStateLH)
