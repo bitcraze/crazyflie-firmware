@@ -4,6 +4,7 @@ import numpy as np
 from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 from bindings.util.sd_card_file_runner import SdCardFileRunner
 from bindings.util.loco_utils import read_loco_anchor_positions
+from bindings.util.lighthouse_utils import read_lh_basestation_positions_calibration
 
 def test_kalman_core_with_tdoa3():
     # Fixture
@@ -19,3 +20,10 @@ def test_kalman_core_with_tdoa3():
     # Verify that the final position is close-ish to (0, 0, 0)
     actual_final_pos = np.array(actual[-1][1])
     assert np.linalg.norm(actual_final_pos - [0.0, 0.0, 0.0]) < 0.4
+
+
+def test_kalman_core_with_sweep_angles():
+
+    # Fixture
+    fixture_base = 'test_python/fixtures/kalman_core'
+    basestation_positions = read_lh_basestation_positions_calibration(fixture_base + '/basestation_positions_calibration.yaml')

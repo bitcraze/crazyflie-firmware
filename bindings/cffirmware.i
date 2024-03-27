@@ -24,6 +24,10 @@
 #include "outlierFilterTdoa.h"
 #include "kalman_core.h"
 #include "mm_tdoa.h"
+#include "mm_sweep_angles.h"
+#include "outlierFilterLighthouse.h"
+#include "mm_yaw_error.h"
+#include "lighthouse_types.h"
 %}
 
 %include "math3d.h"
@@ -40,7 +44,10 @@
 %include "outlierFilterTdoa.h"
 %include "kalman_core.h"
 %include "mm_tdoa.h"
-
+%include "mm_sweep_angles.h"
+%include "outlierFilterLighthouse.h"
+%include "mm_yaw_error.h"
+%include "lighthouse_types.h"
 
 %inline %{
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
