@@ -138,18 +138,19 @@ class EstimatorKalmanEmulator:
             lh_data = sample[1]
             lh = cffirmware.sweepAngleMeasurement_t()
 
+
             # lh.timestamp
-            # lh.sensorPos
-            # lh.rotorPos
-            # lh.RoterPot
-            # lh.rotorRotInv
-            lh.sensorId = int(lh_data['sensorId'])
-            lh.baseStationId = int(lh_data['baseStationId'])
+            lh.sensorPos = [0.0, 0.0, 0.0]
+            lh.rotorPos = [0.0, 0.0, 0.0]
+            lh.RoterPot = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            lh.rotorRotInv = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            #lh.sensorId = int(lh_data['sensorId'])
+            #lh.baseStationId = int(lh_data['baseStationId'])
             lh.sweepId = int(lh_data['sweepId'])
             lh.t = float(lh_data['t'])
             lh.measuredSweepAngle = float(lh_data['sweepAngle'])
             lh.stdDev = self.LH_ENGINE_MEASUREMENT_NOISE_STD
-            # lh.calib
-             # lh.calibrationMeasurementModel
+            lh.calib = cffirmware.lighthouseCalibration_t()
+            lh.calibrationMeasurementModel = cffirmware.lighthouseCalibrationMeasurementModel_t()
 
             cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, lh, now_ms, self.outlierFilterStateLH)
