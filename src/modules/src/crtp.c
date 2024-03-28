@@ -70,7 +70,7 @@ static struct {
 static xQueueHandle  txQueue;
 
 #define CRTP_NBR_OF_PORTS 16
-#define CRTP_TX_QUEUE_SIZE 120
+#define CRTP_TX_QUEUE_SIZE 200
 #define CRTP_RX_QUEUE_SIZE 16
 
 static void crtpTxTask(void *param);

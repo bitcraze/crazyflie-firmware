@@ -1,0 +1,725 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="89.967194mm"
+   height="152.18498mm"
+   viewBox="0 0 89.967194 152.18498"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="states-supervisor.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.72819698"
+     inkscape:cx="-128.39932"
+     inkscape:cy="418.84272"
+     inkscape:window-width="1717"
+     inkscape:window-height="1171"
+     inkscape:window-x="2222"
+     inkscape:window-y="107"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mstart"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mstart"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83663" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Lstart"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Lstart"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(1.1,0,0,1.1,1.1,0)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83657" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mstart-7"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mstart"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83663-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-9"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-4"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-5" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-4-3"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-5-6" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-4-0"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-5-63" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-9-0"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-3-6" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-9-0-5"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-3-6-5" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-4-3-7"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-5-6-6" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mstart-4"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mstart"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83663-5" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-4-2"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-5-5" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mstart-4-7"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mstart"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83663-5-4" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-4-2-4"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-5-5-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow2Mend-2-6-9-0-8"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(-0.6)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.625;stroke-linejoin:round"
+         id="path83666-8-1-3-6-6" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-18.171985,-10.525075)">
+    <g
+       id="g68587"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156"
+         width="26.70858"
+         height="15.092562"
+         x="18.851685"
+         y="10.778495"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="20.070618"
+         y="19.639942"
+         id="text33457"><tspan
+           sodipodi:role="line"
+           id="tspan33455"
+           style="font-size:3.52778px;stroke-width:0.264583"
+           x="20.070618"
+           y="19.639942">Not initialized</tspan></text>
+    </g>
+    <g
+       id="g68594"
+       transform="translate(-0.54979324,-4.1882214)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3"
+         width="26.70858"
+         height="15.092562"
+         x="19.401478"
+         y="42.212101"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="32.700645"
+         y="46.321896"
+         id="text33457-6"><tspan
+           sodipodi:role="line"
+           id="tspan33455-7"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="32.700645"
+           y="46.321896">Pre flight</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="32.700645"
+           y="50.731621"
+           id="tspan36600">checks not</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="32.700645"
+           y="55.141346"
+           id="tspan39714">passed</tspan></text>
+    </g>
+    <g
+       id="g68599"
+       transform="translate(-0.42620087,-1.9758968)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5"
+         width="26.70858"
+         height="15.092562"
+         x="19.277885"
+         y="67.245163"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="32.511597"
+         y="75.764687"
+         id="text33457-6-3"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="32.511597"
+           y="75.764687"
+           id="tspan39714-2">Ready to fly</tspan></text>
+    </g>
+    <g
+       id="g68604"
+       transform="translate(-0.18936157,0.29069608)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-9"
+         width="26.70858"
+         height="15.092562"
+         x="19.041046"
+         y="92.223961"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="32.382416"
+         y="100.74348"
+         id="text33457-6-3-1"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="32.382416"
+           y="100.74348"
+           id="tspan39714-2-7">Flying</tspan></text>
+    </g>
+    <g
+       id="g68609"
+       transform="translate(-0.7964325)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-0"
+         width="26.70858"
+         height="15.092562"
+         x="19.648117"
+         y="119.76004"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="32.989487"
+         y="128.62149"
+         id="text33457-6-3-9"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="32.989487"
+           y="128.62149"
+           id="tspan39714-2-6">Landed</tspan></text>
+    </g>
+    <g
+       id="g68632"
+       transform="translate(-55.695307,-27.285355)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-0-0"
+         width="26.70858"
+         height="15.092562"
+         x="107.57527"
+         y="76.570145"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="120.79865"
+         y="85.377335"
+         id="text33457-6-3-9-6"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="120.79865"
+           y="85.377335"
+           id="tspan39714-2-6-6">Reset</tspan></text>
+    </g>
+    <g
+       id="g68621"
+       transform="translate(-25.854785,-30.483692)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-0-0-1"
+         width="26.70858"
+         height="15.092562"
+         x="107.03197"
+         y="152.69757"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="120.363"
+         y="159.35416"
+         id="text33457-6-3-9-6-8"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="120.363"
+           y="159.35416"
+           id="tspan39714-2-6-6-9">Exception</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="120.363"
+           y="163.76389"
+           id="tspan67362">Free fall</tspan></text>
+    </g>
+    <g
+       id="g68615"
+       transform="translate(-23.918102,-32.733411)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-0-0-1-2"
+         width="26.70858"
+         height="15.092562"
+         x="105.09528"
+         y="129.7971"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="118.31866"
+         y="136.45369"
+         id="text33457-6-3-9-6-8-0"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="118.31866"
+           y="136.45369"
+           id="tspan39714-2-6-6-9-3">Warning</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="118.31866"
+           y="140.86342"
+           id="tspan58268">Level out</tspan></text>
+    </g>
+    <g
+       id="g71489"
+       transform="translate(11.474606,-16.716802)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-0-0-1-7"
+         width="26.70858"
+         height="15.092562"
+         x="69.702576"
+         y="164.08087"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="83.043945"
+         y="172.94232"
+         id="text33457-6-3-9-6-8-5"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="83.043945"
+           y="172.94232"
+           id="tspan39714-2-6-6-9-2">Locked</tspan></text>
+    </g>
+    <g
+       id="g71489-9"
+       transform="translate(11.474606,-92.167361)"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <rect
+         style="fill:none;fill-opacity:1;stroke:#95c941;stroke-width:0.506839;stroke-opacity:1"
+         id="rect1156-3-5-0-0-1-7-4"
+         width="26.70858"
+         height="15.092562"
+         x="69.702576"
+         y="164.08087"
+         ry="0.017672366" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="83.043945"
+         y="172.94232"
+         id="text33457-6-3-9-6-8-5-7"><tspan
+           sodipodi:role="line"
+           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.264583"
+           x="83.043945"
+           y="172.94232"
+           id="tspan39714-2-6-6-9-2-8">Crashed</tspan></text>
+    </g>
+    <g
+       id="g2106"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100">
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend)"
+         d="M 31.74224,25.81981 V 37.191661"
+         id="path71570"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-start:url(#Arrow2Mstart);marker-end:url(#Arrow2Mend-2)"
+         d="M 31.747044,54.007744 V 64.402307"
+         id="path71570-9"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6)"
+         d="M 31.74224,80.495305 V 91.659113"
+         id="path71570-9-2"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.490519;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-start:url(#Arrow2Mstart);marker-end:url(#Arrow2Mend-2-6-4)"
+         d="M 46.557293,102.18643 H 80.086351"
+         id="path71570-9-2-0"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6-4-2)"
+         d="M 66.586838,128.03038 V 65.504838"
+         id="path71570-9-2-0-4"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627"
+         d="M 45.532437,127.80333 H 66.879753"
+         id="path71570-9-2-0-4-0"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-start:url(#Arrow2Mstart)"
+         d="M 46.313734,44.542309 H 66.696787"
+         id="path71570-9-2-0-4-0-7"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.507418;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6-4-0)"
+         d="M 81.132718,74.511198 H 46.448558"
+         id="path71570-9-2-0-2"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.555425;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6-4-3)"
+         d="M 45.712099,97.131958 80.175656,81.20542"
+         id="path71570-9-2-0-1"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.610483;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6-4-3-7)"
+         d="m 45.745695,105.38138 34.292826,23.7765"
+         id="path71570-9-2-0-1-5"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-start:url(#Arrow2Mstart);marker-end:url(#Arrow2Mend-2-6-9)"
+         d="m 31.74224,108.45165 v 10.36918"
+         id="path71570-9-2-1"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.457522;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6-9-0)"
+         d="m 94.643313,111.99556 v 9.34752"
+         id="path71570-9-2-1-1"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627"
+         d="m 66.437781,49.257723 v -4.66904"
+         id="path71570-9-2-1-1-8"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+      <path
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.457522;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.506627;marker-end:url(#Arrow2Mend-2-6-9-0-5)"
+         d="M 94.643313,137.42948 V 146.777"
+         id="path71570-9-2-1-1-4"
+         inkscape:export-filename="/home/macke/g68587.png"
+         inkscape:export-xdpi="100"
+         inkscape:export-ydpi="100" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="18.359743"
+       y="60.263298"
+       id="text89911"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100"><tspan
+         sodipodi:role="line"
+         id="tspan89909"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.264583"
+         x="18.359743"
+         y="60.263298">Armed</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="49.358051"
+       y="73.510498"
+       id="text89911-6"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100"><tspan
+         sodipodi:role="line"
+         id="tspan89909-9"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.264583"
+         x="49.358051"
+         y="73.510498">Recover</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="49.081947"
+       y="132.70079"
+       id="text89911-6-3"
+       inkscape:export-filename="/home/macke/supervisor_states.png"
+       inkscape:export-xdpi="100"
+       inkscape:export-ydpi="100"><tspan
+         sodipodi:role="line"
+         id="tspan89909-9-7"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.264583"
+         x="49.081947"
+         y="132.70079">Timeout</tspan></text>
+  </g>
+</svg>

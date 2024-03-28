@@ -47,7 +47,7 @@
 #include "log.h"
 #include "param.h"
 
-static bool motorSetEnable = false;
+static uint8_t motorSetEnable = 0;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
@@ -98,6 +98,7 @@ const MotorHealthTestDef unknownMotorHealthTestSettings = {
 static bool isInit = false;
 static uint64_t lastCycleTime;
 static uint32_t cycleTime;
+
 
 /* Private functions */
 
@@ -477,7 +478,13 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
 
     uint16_t ratio = ithrust;
 
-    if (motorSetEnable) {
+    // Override ratio in case of motorSetEnable
+    if (motorSetEnable == 2)
+    {
+      ratio = motorPowerSet[MOTOR_M1];
+    }
+    else if (motorSetEnable == 1)
+    {
       ratio = motorPowerSet[id];
     }
 

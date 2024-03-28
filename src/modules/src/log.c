@@ -121,6 +121,9 @@ struct ops_setting_v2 {
     uint16_t id;
 } __attribute__((packed));
 
+struct control_start_block_v2 {
+  uint16_t period_in_ms;
+} __attribute__((packed));
 
 #define TOC_CH      0
 #define CONTROL_CH  1
@@ -139,6 +142,7 @@ struct ops_setting_v2 {
 #define CONTROL_RESET           5
 #define CONTROL_CREATE_BLOCK_V2 6
 #define CONTROL_APPEND_BLOCK_V2 7
+#define CONTROL_START_BLOCK_V2  8
 
 #define BLOCK_ID_FREE -1
 
@@ -419,6 +423,12 @@ void logControlProcess()
       ret = logAppendBlockV2( p.data[1],
                             (struct ops_setting_v2*)&p.data[2],
                             (p.size-2)/sizeof(struct ops_setting_v2) );
+      break;
+    case CONTROL_START_BLOCK_V2:
+      {
+        struct control_start_block_v2* args = (struct control_start_block_v2 *)&p.data[2];
+        ret = logStartBlock(p.data[1], args->period_in_ms);
+      }
       break;
   }
 
