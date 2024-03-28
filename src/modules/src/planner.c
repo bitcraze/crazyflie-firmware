@@ -224,7 +224,7 @@ int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, 
 			traj_init = piecewise_eval(trajectory, trajectory->t_begin);
 		}
 
-		// translate trajectory to current position
+		// translate trajectory to starting point
 		struct vec shift_pos = vsub(start_from, traj_init.pos);
 		trajectory->shift = shift_pos;
 		
