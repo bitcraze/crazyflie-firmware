@@ -472,7 +472,7 @@ void Gimbal2D_controller_nsf()
   Y->Tau_z = (sinf(Y->beta_e)*Y->u_u1 - tanf(Y->alpha_e)*Y->u_u2)/(sinf(Y->beta_e)+cosf(Y->beta_e));
 }
 
-Gimbal2D_controller_pwmtest()
+void Gimbal2D_controller_pwmtest()
 {
   // Directly assign M1~M4, so torque commands are all zero.
   Gimbal2D_Y.Tau_x = 0.0f;
