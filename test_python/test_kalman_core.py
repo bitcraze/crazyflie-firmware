@@ -26,4 +26,4 @@ def test_kalman_core_with_sweep_angles():
 
     # Fixture
     fixture_base = 'test_python/fixtures/kalman_core'
-    basestation_positions = read_lh_basestation_positions_calibration(fixture_base + '/basestation_positions_calibration.yaml')
+    basestation_positions = read_lh_basestation_pose_calibration(fixture_base + '/basestation_positions_calibration.yaml')

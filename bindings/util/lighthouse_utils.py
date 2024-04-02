@@ -4,9 +4,9 @@ import yaml
 import ctypes
 
 
-def read_lh_basestation_positions_calibration(file_name: str) -> dict[int, cffirmware.vec3_s]:
+def read_lh_basestation_pose_calibration(file_name: str) -> dict[int, cffirmware.vec3_s]:
     """
-    Read anchor position data from a file exported from the client.
+    Read basestation calibration and position data from a file exported from the client.
 
     Args:
         file_name (str): The name of the file
@@ -23,16 +23,22 @@ def read_lh_basestation_positions_calibration(file_name: str) -> dict[int, cffir
         for id, vals in data_calib.items():
 
             lhCalibration = cffirmware.lighthouseCalibration_t()
-            ptr = lhCalibration.sweep
-            sweep = cffirmware.sweepAngleMeasurement_t()
-            lhCalibration.sweep =
-            print(vals['sweeps'][0])
-            print(lhCalibration.sweep)# = vals['sweeps'][0]['curve']
-            #results_calib[id] = lhCalbiration
 
-            #point.x = vals['x']
-            #point.y = vals['y']
-            #point.z = vals['z']
-            #result[id] = point
+            for i in range(0, 2):
+                data_calib_sweep = vals['sweeps'][i]
+                lhSweep = cffirmware.lighthouseCalibrationSweep_t()
+                lhSweep.phase = data_calib_sweep['phase']
+                lhSweep.tilt = data_calib_sweep['tilt']
+                lhSweep.curve = data_calib_sweep['curve']
+                lhSweep.gibmag = data_calib_sweep['gibmag']
+                lhSweep.gibphase = data_calib_sweep['gibphase']
+                lhSweep.ogeemag = data_calib_sweep['ogeemag']
+                lhSweep.ogeephase = data_calib_sweep['ogeephase']
+                cffirmware.set_sweep(lhCalibration, lhSweep, i)
+
+            lhCalibration.uid = vals['uid']
+
+            cffirmware.print_sweeps(lhCalibration)
+
 
     return result

@@ -50,6 +50,16 @@
 %include "lighthouse_types.h"
 
 %inline %{
+
+void set_sweep(lighthouseCalibration_t *calib, lighthouseCalibrationSweep_t sweep, int i)
+{
+    calib->sweep[i] = sweep;
+}
+void print_sweeps(lighthouseCalibration_t calib)
+{
+    printf("Sweep 0: phase: %f, tilt: %f, curve: %f, gibmag: %f, gibphase: %f\n", calib.sweep[0].phase, calib.sweep[0].tilt, calib.sweep[0].curve, calib.sweep[0].gibmag, calib.sweep[0].gibphase);
+    printf("Sweep 1: phase: %f, tilt: %f, curve: %f, gibmag: %f, gibphase: %f\n", calib.sweep[1].phase, calib.sweep[1].tilt, calib.sweep[1].curve, calib.sweep[1].gibmag, calib.sweep[1].gibphase);
+}
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
 {
     return &pp->pieces[i];
