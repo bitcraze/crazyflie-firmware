@@ -34,6 +34,8 @@
 
 #define OOTX_MAX_FRAME_LENGTH 43
 
+typedef float __fp16;
+
 // Content from https://github.com/nairol/LighthouseRedox/blob/master/docs/Base%20Station.md#base-station-info-block
 struct ootxDataFrame_s {
   uint16_t protocolVersion:6;
