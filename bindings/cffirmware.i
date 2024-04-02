@@ -28,6 +28,9 @@
 #include "outlierFilterLighthouse.h"
 #include "mm_yaw_error.h"
 #include "lighthouse_types.h"
+#include "lighthouse_geometry.h"
+#include "ootx_decoder.h"
+#include "crc32.h"
 %}
 
 %include "math3d.h"
@@ -48,8 +51,35 @@
 %include "outlierFilterLighthouse.h"
 %include "mm_yaw_error.h"
 %include "lighthouse_types.h"
+%include "lighthouse_geometry.h"
+%include "ootx_decoder.h"
+%include "crc32.h"
+
+
 
 %inline %{
+
+void set_origin_mat(baseStationGeometry_t *geo, struct vec3_s *origin, struct vec3_s *mat1, struct vec3_s *mat2, struct vec3_s *mat3)
+{
+    geo->origin[0] = origin->x;
+    geo->origin[1] = origin->y;
+    geo->origin[2] = origin->z;
+    geo->mat[0][0] = mat1->x;
+    geo->mat[0][1] = mat1->y;
+    geo->mat[0][2] = mat1->z;
+    geo->mat[1][0] = mat2->x;
+    geo->mat[1][1] = mat2->y;
+    geo->mat[1][2] = mat2->z;
+    geo->mat[2][0] = mat3->x;
+    geo->mat[2][1] = mat3->y;
+    geo->mat[2][2] = mat3->z;
+
+    //print origin and mat
+    printf("origin: %f, %f, %f\n", geo->origin[0], geo->origin[1], geo->origin[2]);
+    printf("mat: %f, %f, %f\n", geo->mat[0][0], geo->mat[0][1], geo->mat[0][2]);
+    printf("mat: %f, %f, %f\n", geo->mat[1][0], geo->mat[1][1], geo->mat[1][2]);
+    printf("mat: %f, %f, %f\n", geo->mat[2][0], geo->mat[2][1], geo->mat[2][2]);
+}
 
 void set_sweep(lighthouseCalibration_t *calib, lighthouseCalibrationSweep_t sweep, int i)
 {

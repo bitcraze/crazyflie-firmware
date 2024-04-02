@@ -4,7 +4,7 @@ import numpy as np
 from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 from bindings.util.sd_card_file_runner import SdCardFileRunner
 from bindings.util.loco_utils import read_loco_anchor_positions
-from bindings.util.lighthouse_utils import read_lh_basestation_positions_calibration
+from bindings.util.lighthouse_utils import read_lh_basestation_pose_calibration
 
 def test_kalman_core_with_tdoa3():
     # Fixture

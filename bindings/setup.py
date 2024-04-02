@@ -53,6 +53,10 @@ fw_sources = [
     "src/modules/src/kalman_core/mm_sweep_angles.c",
     "src/modules/src/outlierfilter/outlierFilterLighthouse.c",
     "src/modules/src/kalman_core/mm_yaw_error.c",
+    "src/utils/src/lighthouse/lighthouse_calibration.c",
+    "src/utils/src/lighthouse/ootx_decoder.c",
+    "src/utils/src/lighthouse/lighthouse_geometry.c",
+    "src/utils/src/crc32.c",
 ]
 
 cffirmware = Extension(

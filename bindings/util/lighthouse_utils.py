@@ -38,7 +38,34 @@ def read_lh_basestation_pose_calibration(file_name: str) -> dict[int, cffirmware
 
             lhCalibration.uid = vals['uid']
 
+            results_calib[id] = lhCalibration
+
             cffirmware.print_sweeps(lhCalibration)
+
+        print(results_calib)
+
+        data_geo = data['geos']
+        results_geo = {}
+        for id, vals in data_geo.items():
+            basestation_geo = cffirmware.baseStationGeometry_t()
+            origin = cffirmware.vec3_s()
+            origin.x = vals['origin'][0]
+            origin.y = vals['origin'][1]
+            origin.z = vals['origin'][2]
+            mat1 = cffirmware.vec3_s()
+            mat1.x = vals['rotation'][0][0]
+            mat1.y = vals['rotation'][0][1]
+            mat1.z = vals['rotation'][0][2]
+            mat2 = cffirmware.vec3_s()
+            mat2.x = vals['rotation'][1][0]
+            mat2.y = vals['rotation'][1][1]
+            mat2.z = vals['rotation'][1][2]
+            mat3 = cffirmware.vec3_s()
+            mat3.x = vals['rotation'][2][0]
+            mat3.y = vals['rotation'][2][1]
+            mat3.z = vals['rotation'][2][2]
+
+            cffirmware.set_origin_mat(basestation_geo, origin, mat1, mat2, mat3)
 
 
     return result
