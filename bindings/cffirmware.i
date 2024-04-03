@@ -31,6 +31,7 @@
 #include "lighthouse_geometry.h"
 #include "ootx_decoder.h"
 #include "crc32.h"
+#include "lighthouse_calibration.h"
 %}
 
 %include "math3d.h"
@@ -54,6 +55,7 @@
 %include "lighthouse_geometry.h"
 %include "ootx_decoder.h"
 %include "crc32.h"
+%include "lighthouse_calibration.h"
 
 
 

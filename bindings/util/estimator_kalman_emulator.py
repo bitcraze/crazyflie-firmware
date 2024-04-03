@@ -15,8 +15,10 @@ class EstimatorKalmanEmulator:
     how they are connected.
 
     """
-    def __init__(self, anchor_positions) -> None:
-        self.anchor_positions = anchor_positions
+    def __init__(self, anchor_positions, basestation_poses, basestation_calibration) -> None:
+        self.anchor_positions = anchor_poses
+        self.basestation_poses = basestation_positions
+        self.basestation_calibration = basestation_calibration
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
@@ -86,6 +88,7 @@ class EstimatorKalmanEmulator:
         self.coreParams = cffirmware.kalmanCoreParams_t()
         cffirmware.kalmanCoreDefaultParams(self.coreParams)
         cffirmware.outlierFilterTdoaReset(self.outlierFilterStateTdoa)
+        cffirmware.outlierFilterLighthouseReset(self.outlierFilterStateLH)
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
@@ -114,6 +117,40 @@ class EstimatorKalmanEmulator:
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
 
             cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterStateTdoa)
+
+        if sample[0] == 'estSweepAngle':
+            sweep_data = sample[1]
+            sweep = cffirmware.sweepAngleMeasurement_t()
+
+            sweep.sensorId = int(sweep_data['sensorId'])
+            sweep.baseStationId = int(sweep_data['baseStationId'])
+            sweep.sweepId = int(sweep_data['sweepId'])
+            sweep.t = float(sweep_data['t'])
+            sweep.measuredSweepAngle = float(sweep_data['sweepAngle'])
+            sweep.stdDev = self.LH_ENGINE_MEASUREMENT_NOISE_STD
+            sweep.calib = self.basestation_calibration[sweep.baseStationId]
+
+            sweep.calibrationMeasurementModel = cffirmware.lighthouseCalibrationMeasurementModelLh2()
+            sweep.calib = self.basestation_calibration[sweep.baseStationId]
+
+            sensor_pos_w = 0.015/2.0
+            sensor_pos_l = 0.030/2.0
+            sensor_position[0] = {-sensor_pos_w, sensor_pos_l, 0.0}
+            sensor_position[1] = {-sensor_pos_w, -sensor_pos_l, 0.0}
+            sensor_position[2] = {sensor_pos_w, sensor_pos_l, 0.0}
+            sensor_position[3] = {sensor_pos_w, -sensor_pos_l, 0.0}
+
+            sweep.sensorPos = sensor_position[sweep.sensorId]
+            sweep.rotorPos = self.basestation_poses[sweep.baseStationId].origin
+            sweep.rotorRot = self.basestation_poses[sweep.baseStationId].mat
+
+            geometry_cache = cffirmware.lighthouseGeometryCache_t()
+            cffirmware.preProcessGeometryData(sweep.rotorRot, geometry_cache.baseStationInvertedRotationMatrixes, geometry_cache.lh1Rotor2RotationMatrixes, geometry_cache.lh1Rotor2InvertedRotationMatrixes)
+
+            sweep.rotorRotInv = geometry_cache.baseStationInvertedRotationMatrixes[sweep.sensorId]
+
+            cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
+
 
         if sample[0] == 'estAcceleration':
             acc_data = sample[1]
