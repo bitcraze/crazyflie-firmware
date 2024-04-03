@@ -27,17 +27,17 @@ choice
 
 config PLATFORM_CF2
     bool "Build for CF2"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_MPU9250_LPS25H
 
 config PLATFORM_BOLT
     bool "Build for Bolt"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 config PLATFORM_TAG
     bool "Build for the roadrunner"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
 
 endchoice
 ```
@@ -53,21 +53,21 @@ choice
 
 config PLATFORM_CF2
     bool "Build for CF2"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_MPU9250_LPS25H
 
 config PLATFORM_BOLT
     bool "Build for Bolt"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 config PLATFORM_TAG
     bool "Build for the roadrunner"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
 
 config PLATFORM_RINCEWIND
     bool "Build for the Rincewind platform"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 endchoice
@@ -116,7 +116,7 @@ static platformConfig_t configs[] = {
   {
     .deviceType = "CB10",
     .deviceTypeName = "Rincewind",
-    .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBoltBrushless,
   }
