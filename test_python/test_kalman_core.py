@@ -11,7 +11,7 @@ def test_kalman_core_with_tdoa3():
     fixture_base = 'test_python/fixtures/kalman_core'
     anchor_positions = read_loco_anchor_positions(fixture_base + '/anchor_positions.yaml')
     runner = SdCardFileRunner(fixture_base + '/log05')
-    emulator = EstimatorKalmanEmulator(anchor_positions)
+    emulator = EstimatorKalmanEmulator(anchor_positions=anchor_positions)
 
     # Test
     actual = runner.run_estimator_loop(emulator)
@@ -26,4 +26,14 @@ def test_kalman_core_with_sweep_angles():
 
     # Fixture
     fixture_base = 'test_python/fixtures/kalman_core'
-    basestation_positions = read_lh_basestation_pose_calibration(fixture_base + '/basestation_positions_calibration.yaml')
+    bs_calib, bs_geo = read_lh_basestation_pose_calibration(fixture_base + '/basestation_positions_calibration.yaml')
+    runner = SdCardFileRunner(fixture_base + '/log05')
+    emulator = EstimatorKalmanEmulator(basestation_calibration=bs_calib, basestation_poses=bs_geo)
+
+    # Test
+    actual = runner.run_estimator_loop(emulator)
+
+    # Assert
+    # Verify that the final position is close-ish to (0, 0, 0)
+    actual_final_pos = np.array(actual[-1][1])
+    assert np.linalg.norm(actual_final_pos - [0.0, 0.0, 0.0]) < 0.4

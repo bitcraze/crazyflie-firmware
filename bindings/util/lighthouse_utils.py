@@ -22,7 +22,8 @@ def read_lh_basestation_pose_calibration(file_name: str) -> dict[int, cffirmware
         results_calib = {}
         for id, vals in data_calib.items():
 
-            lhCalibration = cffirmware.lighthouseCalibration_t()
+
+            lhCalibration = {}
 
             for i in range(0, 2):
                 data_calib_sweep = vals['sweeps'][i]
@@ -34,15 +35,10 @@ def read_lh_basestation_pose_calibration(file_name: str) -> dict[int, cffirmware
                 lhSweep.gibphase = data_calib_sweep['gibphase']
                 lhSweep.ogeemag = data_calib_sweep['ogeemag']
                 lhSweep.ogeephase = data_calib_sweep['ogeephase']
-                cffirmware.set_sweep(lhCalibration, lhSweep, i)
-
-            lhCalibration.uid = vals['uid']
+                lhCalibration[i] = lhSweep
 
             results_calib[id] = lhCalibration
 
-            cffirmware.print_sweeps(lhCalibration)
-
-        print(results_calib)
 
         data_geo = data['geos']
         results_geo = {}
@@ -66,6 +62,7 @@ def read_lh_basestation_pose_calibration(file_name: str) -> dict[int, cffirmware
             mat3.z = vals['rotation'][2][2]
 
             cffirmware.set_origin_mat(basestation_geo, origin, mat1, mat2, mat3)
+            results_geo[id] = basestation_geo
 
 
-    return result
+    return results_calib, results_geo
