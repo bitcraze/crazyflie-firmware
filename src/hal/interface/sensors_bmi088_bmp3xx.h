@@ -23,23 +23,23 @@
  *
  */
 
-#ifndef __SENSORS_BMI088_BMP388_H__
-#define __SENSORS_BMI088_BMP388_H__
+#ifndef __SENSORS_BMI088_BMP3XX_H__
+#define __SENSORS_BMI088_BMP3XX_H__
 
 #include "sensors.h"
 
-void sensorsBmi088Bmp388Init_I2C(void);
-void sensorsBmi088Bmp388Init_SPI(void);
-bool sensorsBmi088Bmp388Test(void);
-bool sensorsBmi088Bmp388AreCalibrated(void);
-bool sensorsBmi088Bmp388ManufacturingTest(void);
-void sensorsBmi088Bmp388Acquire(sensorData_t *sensors);
-void sensorsBmi088Bmp388WaitDataReady(void);
-bool sensorsBmi088Bmp388ReadGyro(Axis3f *gyro);
-bool sensorsBmi088Bmp388ReadAcc(Axis3f *acc);
-bool sensorsBmi088Bmp388ReadMag(Axis3f *mag);
-bool sensorsBmi088Bmp388ReadBaro(baro_t *baro);
-void sensorsBmi088Bmp388SetAccMode(accModes accMode);
-void sensorsBmi088Bmp388DataAvailableCallback(void);
+void sensorsBmi088Bmp3xxInit_I2C(void);
+void sensorsBmi088Bmp3xxInit_SPI(void);
+bool sensorsBmi088Bmp3xxTest(void);
+bool sensorsBmi088Bmp3xxAreCalibrated(void);
+bool sensorsBmi088Bmp3xxManufacturingTest(void);
+void sensorsBmi088Bmp3xxAcquire(sensorData_t *sensors);
+void sensorsBmi088Bmp3xxWaitDataReady(void);
+bool sensorsBmi088Bmp3xxReadGyro(Axis3f *gyro);
+bool sensorsBmi088Bmp3xxReadAcc(Axis3f *acc);
+bool sensorsBmi088Bmp3xxReadMag(Axis3f *mag);
+bool sensorsBmi088Bmp3xxReadBaro(baro_t *baro);
+void sensorsBmi088Bmp3xxSetAccMode(accModes accMode);
+void sensorsBmi088Bmp3xxDataAvailableCallback(void);
 
-#endif // __SENSORS_BMI088_BMP388_H__
+#endif // __SENSORS_BMI088_BMP3XX_H__
