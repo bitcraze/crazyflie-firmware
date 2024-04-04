@@ -67,7 +67,6 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t, sweepInfo->calib);
   const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
   const float error = measuredSweepAngle - predictedSweepAngle;
-  printf("hello1\n");
 
   if (outlierFilterLighthouseValidateSweep(sweepOutlierFilterState, r, error, nowMs)) {
     // Calculate H vector (in the rotor reference frame)

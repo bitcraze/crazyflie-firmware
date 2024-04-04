@@ -109,16 +109,12 @@ class EstimatorKalmanEmulator:
         position[0] = cffirmware.get_state(self.coreData, 0)
         position[1] = cffirmware.get_state(self.coreData, 1)
         position[2] = cffirmware.get_state(self.coreData, 2)
-        #print("Position: ", position)
 
         rotation_matrix = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
 
         for i in range(0, 3):
             for j in range(0, 3):
                 rotation_matrix[i][j] = cffirmware.get_mat_index(self.coreData, i,j)
-
-        #print("Position: ", position)
-        #print("Rotation Matrix: ", rotation_matrix)
 
         if sample[0] == 'estTDOA':
             tdoa_data = sample[1]
@@ -171,7 +167,6 @@ class EstimatorKalmanEmulator:
             rotorPos.x = self.basestation_poses[sweep.baseStationId]['origin'].x
             rotorPos.y = self.basestation_poses[sweep.baseStationId]['origin'].y
             rotorPos.z = self.basestation_poses[sweep.baseStationId]['origin'].z
-            print(rotorPos.x, rotorPos.y, rotorPos.z)
 
             rotorRot = cffirmware.mat3_s()
             rotorRot.i11 = self.basestation_poses[sweep.baseStationId]['mat'].i11
