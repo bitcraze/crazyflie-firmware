@@ -103,8 +103,26 @@ class EstimatorKalmanEmulator:
                 self._update_with_sample(sample, now_ms)
             else:
                 return
+    def convert_to_angles(v2angle1, v2angle2):
+        v1Angles = []
+        v1Angles[0] = (v2angle1 + v2angle2) / 2.0
+        v1Angles[1] = atan1(sin(v2angle2 - v2angle1), (tan(np.pi/6.0) * (cos(v2angle1) + cos(v2angle2))))
 
     def _update_with_sample(self, sample, now_ms):
+        position = [0.0, 0.0, 0.0]
+        position[0] = cffirmware.get_state(self.coreData, 0)
+        position[1] = cffirmware.get_state(self.coreData, 1)
+        position[2] = cffirmware.get_state(self.coreData, 2)
+
+        rotation_matrix = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
+
+        for i in range(0, 3):
+            for j in range(0, 3):
+                rotation_matrix[i][j] = cffirmware.get_mat_index(self.coreData, i,j)
+
+        #print("Position: ", position)
+        #print("Rotation Matrix: ", rotation_matrix)
+
         if sample[0] == 'estTDOA':
             tdoa_data = sample[1]
             tdoa = cffirmware.tdoaMeasurement_t()
@@ -129,25 +147,39 @@ class EstimatorKalmanEmulator:
             sweep.measuredSweepAngle = float(sweep_data['sweepAngle'])
             sweep.stdDev = self.LH_ENGINE_MEASUREMENT_NOISE_STD
             sweep.calib = self.basestation_calibration[sweep.baseStationId][sweep.sweepId]
-            sweep.calibrationMeasurementModel = cffirmware.lighthouseCalibrationMeasurementModelLh2()
+            cffirmware.set_calibration_model(sweep.calibrationMeasurementModel)
 
             sensor_pos_w = 0.015/2.0
             sensor_pos_l = 0.030/2.0
-            sensor_position[0] = {-sensor_pos_w, sensor_pos_l, 0.0}
-            sensor_position[1] = {-sensor_pos_w, -sensor_pos_l, 0.0}
-            sensor_position[2] = {sensor_pos_w, sensor_pos_l, 0.0}
-            sensor_position[3] = {sensor_pos_w, -sensor_pos_l, 0.0}
+            sensor_position = {}
+            sensor_position[0] = [-sensor_pos_w, sensor_pos_l, 0.0]
+            sensor_position[1] = [-sensor_pos_w, -sensor_pos_l, 0.0]
+            sensor_position[2] = [sensor_pos_w, sensor_pos_l, 0.0]
+            sensor_position[3] = [sensor_pos_w, -sensor_pos_l, 0.0]
 
-            sweep.sensorPos = sensor_position[sweep.sensorId]
-            sweep.rotorPos = self.basestation_poses[sweep.baseStationId].origin
-            sweep.rotorRot = self.basestation_poses[sweep.baseStationId].mat
+            sensorPos = cffirmware.vec3_s()
+            sensorPos.x = sensor_position[int(sweep.sensorId)][0]
+            sensorPos.y = sensor_position[int(sweep.sensorId)][1]
+            sensorPos.z = sensor_position[int(sweep.sensorId)][2]
+            cffirmware.set_sensor_pos(sweep, sensorPos)
 
-            geometry_cache = cffirmware.lighthouseGeometryCache_t()
+            cffirmware.set_pose_origin_mat(sweep, self.basestation_poses[sweep.baseStationId].origin, self.basestation_poses[sweep.baseStationId].mat)
+
+            geometry_cache = cffirmware.baseStationGeometryCache_t()
             cffirmware.preProcessGeometryData(sweep.rotorRot, geometry_cache.baseStationInvertedRotationMatrixes, geometry_cache.lh1Rotor2RotationMatrixes, geometry_cache.lh1Rotor2InvertedRotationMatrixes)
 
-            sweep.rotorRotInv = geometry_cache.baseStationInvertedRotationMatrixes[sweep.sensorId]
+            #sweep.rotorRotInv = geometry_cache.baseStationInvertedRotationMatrixes[sweep.sensorId]
+            #cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
 
-            cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
+            # yaw error
+
+            # apply calibration
+            #corrected_angle = 0.0
+            #cffirmware.lighthouseCalibrationApplyV2(sweep.callib, sweep.measuredSweepAngle, corrected_angle)
+            # get basestation geometry
+            #basestation_geo = self.basestation_poses[sweep.baseStationId]
+            # get ray per position
+
 
 
         if sample[0] == 'estAcceleration':

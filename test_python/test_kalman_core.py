@@ -26,8 +26,8 @@ def test_kalman_core_with_sweep_angles():
 
     # Fixture
     fixture_base = 'test_python/fixtures/kalman_core'
-    bs_calib, bs_geo = read_lh_basestation_pose_calibration(fixture_base + '/basestation_positions_calibration.yaml')
-    runner = SdCardFileRunner(fixture_base + '/log05')
+    bs_calib, bs_geo = read_lh_basestation_pose_calibration(fixture_base + '/geometry.yaml')
+    runner = SdCardFileRunner(fixture_base + '/Bindings13')
     emulator = EstimatorKalmanEmulator(basestation_calibration=bs_calib, basestation_poses=bs_geo)
 
     # Test

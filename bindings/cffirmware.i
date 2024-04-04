@@ -61,6 +61,33 @@
 
 %inline %{
 
+float get_state(kalmanCoreData_t *data, int i)
+{
+    return data->S[i];
+}
+
+float get_mat_index(kalmanCoreData_t *data, int i, int j)
+{
+    return data->R[i][j];
+}
+
+float set_calibration_model(lighthouseCalibrationMeasurementModel_t *calib_model)
+{
+    calib_model = &lighthouseCalibrationMeasurementModelLh2;
+}
+
+void set_sensor_pos(sweepAngleMeasurement_t *sweep,  struct vec3_s sensorpos)
+{
+    vec3d sensorPos = {sensorpos.x, sensorpos.y, sensorpos.z};
+    sweep->sensorPos = sensorPos;
+}
+
+void set_pose_origin_mat(sweepAngleMeasurement_t *sweep, vec3d  origin, mat3d mat)
+{
+    sweep->rotorPos = origin;
+    sweep->rotorRot = mat;
+}
+
 void set_origin_mat(baseStationGeometry_t *geo, struct vec3_s *origin, struct vec3_s *mat1, struct vec3_s *mat2, struct vec3_s *mat3)
 {
     geo->origin[0] = origin->x;
