@@ -31,7 +31,8 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   // using the CF roatation matrix
   vec3d s;
   arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
-  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
+  vec3d scf = {sweepInfo->sensorPos.x, sweepInfo->sensorPos.y, sweepInfo->sensorPos.z};
+  arm_matrix_instance_f32 scf_ = {3, 1, scf};
   arm_matrix_instance_f32 s_ = {3, 1, s};
   mat_mult(&Rcf_, &scf_, &s_);
 
@@ -39,14 +40,17 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   vec3d pcf = {this->S[KC_STATE_X] + s[0], this->S[KC_STATE_Y] + s[1], this->S[KC_STATE_Z] + s[2]};
 
   // Calculate the difference between the rotor and the sensor on the CF (global reference frame)
-  const vec3d* pr = sweepInfo->rotorPos;
+  const vec3d* pr = {&sweepInfo->rotorPos.x, &sweepInfo->rotorPos.y, &sweepInfo->rotorPos.z};
   vec3d stmp = {pcf[0] - (*pr)[0], pcf[1] - (*pr)[1], pcf[2] - (*pr)[2]};
   arm_matrix_instance_f32 stmp_ = {3, 1, stmp};
 
   // Rotate the difference in position to the rotor reference frame,
   // using the rotor inverse rotation matrix
+  mat3d Rr_inv = {{sweepInfo->rotorRotInv.i11, sweepInfo->rotorRotInv.i12, sweepInfo->rotorRotInv.i13},
+                  {sweepInfo->rotorRotInv.i21, sweepInfo->rotorRotInv.i22, sweepInfo->rotorRotInv.i23},
+                  {sweepInfo->rotorRotInv.i31, sweepInfo->rotorRotInv.i32, sweepInfo->rotorRotInv.i33}};
   vec3d sr;
-  arm_matrix_instance_f32 Rr_inv_ = {3, 3, (float32_t *)(*sweepInfo->rotorRotInv)};
+  arm_matrix_instance_f32 Rr_inv_ = {3, 3, (float32_t *)(*Rr_inv)};
   arm_matrix_instance_f32 sr_ = {3, 1, sr};
   mat_mult(&Rr_inv_, &stmp_, &sr_);
 
@@ -63,6 +67,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t, sweepInfo->calib);
   const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
   const float error = measuredSweepAngle - predictedSweepAngle;
+  printf("hello1\n");
 
   if (outlierFilterLighthouseValidateSweep(sweepOutlierFilterState, r, error, nowMs)) {
     // Calculate H vector (in the rotor reference frame)
@@ -75,9 +80,12 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
 
       // gr is in the rotor reference frame, rotate back to the global
       // reference frame using the rotor rotation matrix
+      mat3d Rr = {{sweepInfo->rotorRot.i11, sweepInfo->rotorRot.i12, sweepInfo->rotorRot.i13},
+                  {sweepInfo->rotorRot.i21, sweepInfo->rotorRot.i22, sweepInfo->rotorRot.i23},
+                  {sweepInfo->rotorRot.i31, sweepInfo->rotorRot.i32, sweepInfo->rotorRot.i33}};
       vec3d g;
       arm_matrix_instance_f32 gr_ = {3, 1, gr};
-      arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot)};
+      arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*Rr)};
       arm_matrix_instance_f32 g_ = {3, 1, g};
       mat_mult(&Rr_, &gr_, &g_);
 

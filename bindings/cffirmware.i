@@ -78,47 +78,19 @@ float set_calibration_model(sweepAngleMeasurement_t *sweep, lighthouseCalibratio
 
 }
 
-void set_sensor_pos(sweepAngleMeasurement_t *sweep,  struct vec3_s sensorpos)
-{
-    vec3d sensorPos = {sensorpos.x, sensorpos.y, sensorpos.z};
-    sweep->sensorPos = sensorPos;
-}
-
-void set_pose_origin_mat(sweepAngleMeasurement_t *sweep, vec3d  origin, mat3d mat)
-{
-    sweep->rotorPos = origin;
-    sweep->rotorRot = mat;
-}
-
-
-
-void set_inv_mat(sweepAngleMeasurement_t *sweep, mat3d rotorRot)
-{
-
-    mat3d rotorRotInv;
-    //printf("rotorRot: %f, %f, %f\n", rotorRot[0][0], rotorRot[0][1], rotorRot[0][2]);
-
-    // Copy the transposed matrix to sweep->rotorRotInv
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            rotorRotInv[i][j] = rotorRot[j][i];
-    sweep->rotorRotInv = rotorRotInv;
-    //printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[0][0], sweep->rotorRot[0][1], sweep->rotorRot[0][2]);
-
-}
 
 void print_sweep_angle(sweepAngleMeasurement_t *sweep)
 {
     //print all variables of struct
     printf("uint32_t timestamp: %d\n", sweep->timestamp);
-    printf("sensorPos: %f, %f, %f\n", sweep->sensorPos[0], sweep->sensorPos[1], sweep->sensorPos[2]);
-    printf("rotorPos: %f, %f, %f\n", sweep->rotorPos[0], sweep->rotorPos[1], sweep->rotorPos[2]);
-    printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[0][0], sweep->rotorRot[0][1], sweep->rotorRot[0][2]);
-    printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[1][0], sweep->rotorRot[1][1], sweep->rotorRot[1][2]);
-    printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[2][0], sweep->rotorRot[2][1], sweep->rotorRot[2][2]);
-    printf("rotorRotInv: %f, %f, %f\n", sweep->rotorRotInv[0][0], sweep->rotorRotInv[0][1], sweep->rotorRotInv[0][2]);
-    printf("rotorRotInv: %f, %f, %f\n", sweep->rotorRotInv[1][0], sweep->rotorRotInv[1][1], sweep->rotorRotInv[1][2]);
-    printf("rotorRotInv: %f, %f, %f\n", sweep->rotorRotInv[2][0], sweep->rotorRotInv[2][1], sweep->rotorRotInv[2][2]);
+    printf("sensorPos: %f, %f, %f\n", sweep->sensorPos.x, sweep->sensorPos.y, sweep->sensorPos.z);
+    printf('rotorPos: %f, %f, %f\n', sweep->rotorPos.x, sweep->rotorPos.y, sweep->rotorPos.z);
+    printf('rotorRot: %f, %f, %f\n', sweep->rotorRot.i11, sweep->rotorRot.i12, sweep->rotorRot.i13);
+    printf('rotorRot: %f, %f, %f\n', sweep->rotorRot.i21, sweep->rotorRot.i22, sweep->rotorRot.i23);
+    printf('rotorRot: %f, %f, %f\n', sweep->rotorRot.i31, sweep->rotorRot.i32, sweep->rotorRot.i33);
+    printf('rotorRotInv: %f, %f, %f\n', sweep->rotorRotInv.i11, sweep->rotorRotInv.i12, sweep->rotorRotInv.i13);
+    printf('rotorRotInv: %f, %f, %f\n', sweep->rotorRotInv.i21, sweep->rotorRotInv.i22, sweep->rotorRotInv.i23);
+    printf('rotorRotInv: %f, %f, %f\n', sweep->rotorRotInv.i31, sweep->rotorRotInv.i32, sweep->rotorRotInv.i33);
     printf("sensorID: %d\n", sweep->sensorId);
     printf("baseStationID: %d\n", sweep->baseStationId);
     printf("sweepID: %d\n", sweep->sweepId);
@@ -130,27 +102,7 @@ void print_sweep_angle(sweepAngleMeasurement_t *sweep)
 }
 
 
-void set_origin_mat(baseStationGeometry_t *geo, struct vec3_s *origin, struct vec3_s *mat1, struct vec3_s *mat2, struct vec3_s *mat3)
-{
-    geo->origin[0] = origin->x;
-    geo->origin[1] = origin->y;
-    geo->origin[2] = origin->z;
-    geo->mat[0][0] = mat1->x;
-    geo->mat[0][1] = mat1->y;
-    geo->mat[0][2] = mat1->z;
-    geo->mat[1][0] = mat2->x;
-    geo->mat[1][1] = mat2->y;
-    geo->mat[1][2] = mat2->z;
-    geo->mat[2][0] = mat3->x;
-    geo->mat[2][1] = mat3->y;
-    geo->mat[2][2] = mat3->z;
 
-    //print origin and mat
-    printf("origin: %f, %f, %f\n", geo->origin[0], geo->origin[1], geo->origin[2]);
-    printf("mat: %f, %f, %f\n", geo->mat[0][0], geo->mat[0][1], geo->mat[0][2]);
-    printf("mat: %f, %f, %f\n", geo->mat[1][0], geo->mat[1][1], geo->mat[1][2]);
-    printf("mat: %f, %f, %f\n", geo->mat[2][0], geo->mat[2][1], geo->mat[2][2]);
-}
 
 void set_sweep(lighthouseCalibration_t *calib, lighthouseCalibrationSweep_t sweep, int i)
 {

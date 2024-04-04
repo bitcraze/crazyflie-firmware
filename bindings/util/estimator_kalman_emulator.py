@@ -103,10 +103,6 @@ class EstimatorKalmanEmulator:
                 self._update_with_sample(sample, now_ms)
             else:
                 return
-    def convert_to_angles(v2angle1, v2angle2):
-        v1Angles = []
-        v1Angles[0] = (v2angle1 + v2angle2) / 2.0
-        v1Angles[1] = atan1(sin(v2angle2 - v2angle1), (tan(np.pi/6.0) * (cos(v2angle1) + cos(v2angle2))))
 
     def _update_with_sample(self, sample, now_ms):
         position = [0.0, 0.0, 0.0]
@@ -170,10 +166,42 @@ class EstimatorKalmanEmulator:
             sensorPos.x = sensor_position[int(sweep.sensorId)][0]
             sensorPos.y = sensor_position[int(sweep.sensorId)][1]
             sensorPos.z = sensor_position[int(sweep.sensorId)][2]
-            cffirmware.set_sensor_pos(sweep, sensorPos)
 
-            cffirmware.set_pose_origin_mat(sweep, self.basestation_poses[sweep.baseStationId].origin, self.basestation_poses[sweep.baseStationId].mat)
-            cffirmware.set_inv_mat(sweep,  self.basestation_poses[sweep.baseStationId].mat )
+            rotorPos = cffirmware.vec3_s()
+            rotorPos.x = self.basestation_poses[sweep.baseStationId]['origin'].x
+            rotorPos.y = self.basestation_poses[sweep.baseStationId]['origin'].y
+            rotorPos.z = self.basestation_poses[sweep.baseStationId]['origin'].z
+            print(rotorPos.x, rotorPos.y, rotorPos.z)
+
+            rotorRot = cffirmware.mat3_s()
+            rotorRot.i11 = self.basestation_poses[sweep.baseStationId]['mat'].i11
+            rotorRot.i12 = self.basestation_poses[sweep.baseStationId]['mat'].i12
+            rotorRot.i13 = self.basestation_poses[sweep.baseStationId]['mat'].i13
+            rotorRot.i21 = self.basestation_poses[sweep.baseStationId]['mat'].i21
+            rotorRot.i22 = self.basestation_poses[sweep.baseStationId]['mat'].i22
+            rotorRot.i23 = self.basestation_poses[sweep.baseStationId]['mat'].i23
+            rotorRot.i31 = self.basestation_poses[sweep.baseStationId]['mat'].i31
+            rotorRot.i32 = self.basestation_poses[sweep.baseStationId]['mat'].i32
+            rotorRot.i33 = self.basestation_poses[sweep.baseStationId]['mat'].i33
+
+            # transpose of the rotation matrix
+            rotorRotInv = cffirmware.mat3_s()
+            rotorRotInv.i11 = self.basestation_poses[sweep.baseStationId]['mat'].i11
+            rotorRotInv.i12 = self.basestation_poses[sweep.baseStationId]['mat'].i21
+            rotorRotInv.i13 = self.basestation_poses[sweep.baseStationId]['mat'].i31
+            rotorRotInv.i21 = self.basestation_poses[sweep.baseStationId]['mat'].i12
+            rotorRotInv.i22 = self.basestation_poses[sweep.baseStationId]['mat'].i22
+            rotorRotInv.i23 = self.basestation_poses[sweep.baseStationId]['mat'].i32
+            rotorRotInv.i31 = self.basestation_poses[sweep.baseStationId]['mat'].i13
+            rotorRotInv.i32 = self.basestation_poses[sweep.baseStationId]['mat'].i23
+            rotorRotInv.i33 = self.basestation_poses[sweep.baseStationId]['mat'].i33
+
+
+
+            sweep.sensorPos = sensorPos
+            sweep.rotorPos = rotorPos
+            sweep.rotorRot = rotorRot
+            sweep.rotorRotInv = rotorRotInv
 
             cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
 

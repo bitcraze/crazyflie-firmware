@@ -61,6 +61,14 @@ struct vec3_s {
   float z;
 };
 
+struct mat3_s {
+  uint32_t timestamp; // Timestamp when the data was computed
+
+  float i11, i12, i13;
+  float i21, i22, i23;
+  float i31, i32, i33;
+};
+
 typedef struct vec3_s vector_t;
 typedef struct vec3_s point_t;
 typedef struct vec3_s velocity_t;
@@ -323,10 +331,10 @@ typedef struct {
 /** Sweep angle measurement */
 typedef struct {
   uint32_t timestamp;
-  const vec3d* sensorPos;    // Sensor position in the CF reference frame
-  const vec3d* rotorPos;     // Pos of rotor origin in global reference frame
-  const mat3d* rotorRot;     // Rotor rotation matrix
-  const mat3d* rotorRotInv;  // Inverted rotor rotation matrix
+  struct vec3_s sensorPos;    // Sensor position in the CF reference frame
+  struct vec3_s rotorPos;     // Pos of rotor origin in global reference frame
+  struct mat3_s rotorRot;     // Rotor rotation matrix
+  struct mat3_s rotorRotInv;  // Inverted rotor rotation matrix
   uint8_t sensorId;
   uint8_t baseStationId;
   uint8_t sweepId;
