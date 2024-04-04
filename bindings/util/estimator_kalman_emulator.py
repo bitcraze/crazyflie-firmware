@@ -137,6 +137,15 @@ class EstimatorKalmanEmulator:
 
             cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterStateTdoa)
 
+        if sample[0] == 'estYawError':
+            yaw_error_data  = sample[1]
+            yaw_error = cffirmware.yawErrorMeasurement_t()
+            yaw_error.yawError = float(yaw_error_data['yawError'])
+            yaw_error.stdDev = 0.01
+
+            cffirmware.kalmanCoreUpdateWithYawError(self.coreData, yaw_error)
+
+
         if sample[0] == 'estSweepAngle':
             sweep_data = sample[1]
             sweep = cffirmware.sweepAngleMeasurement_t()
@@ -165,21 +174,9 @@ class EstimatorKalmanEmulator:
 
             cffirmware.set_pose_origin_mat(sweep, self.basestation_poses[sweep.baseStationId].origin, self.basestation_poses[sweep.baseStationId].mat)
             cffirmware.set_inv_mat(sweep,  self.basestation_poses[sweep.baseStationId].mat )
-            #cffirmware.print_sweep_angle(sweep)
-            #geometry_cache = cffirmware.baseStationGeometryCache_t()
-            #cffirmware.preProcessGeometryData(sweep.rotorRot, geometry_cache.baseStationInvertedRotationMatrixes, geometry_cache.lh1Rotor2RotationMatrixes, geometry_cache.lh1Rotor2InvertedRotationMatrixes)
-
-            #sweep.rotorRotInv = geometry_cache.baseStationInvertedRotationMatrixes[sweep.sensorId]
 
             cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
-            # yaw error
 
-            # apply calibration
-            #corrected_angle = 0.0
-            #cffirmware.lighthouseCalibrationApplyV2(sweep.callib, sweep.measuredSweepAngle, corrected_angle)
-            # get basestation geometry
-            #basestation_geo = self.basestation_poses[sweep.baseStationId]
-            # get ray per position
 
 
 
@@ -202,24 +199,3 @@ class EstimatorKalmanEmulator:
             gyro.z = float(gyro_data['gyro.z'])
 
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
-
-        if sample[0] == 'estLighthouse':
-            lh_data = sample[1]
-            lh = cffirmware.sweepAngleMeasurement_t()
-
-
-            # lh.timestamp
-            lh.sensorPos = [0.0, 0.0, 0.0]
-            lh.rotorPos = [0.0, 0.0, 0.0]
-            lh.RoterPot = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
-            lh.rotorRotInv = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
-            #lh.sensorId = int(lh_data['sensorId'])
-            #lh.baseStationId = int(lh_data['baseStationId'])
-            lh.sweepId = int(lh_data['sweepId'])
-            lh.t = float(lh_data['t'])
-            lh.measuredSweepAngle = float(lh_data['sweepAngle'])
-            lh.stdDev = self.LH_ENGINE_MEASUREMENT_NOISE_STD
-            lh.calib = cffirmware.lighthouseCalibration_t()
-            lh.calibrationMeasurementModel = cffirmware.lighthouseCalibrationMeasurementModel_t()
-
-            cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, lh, now_ms, self.outlierFilterStateLH)
