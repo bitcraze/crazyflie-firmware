@@ -113,6 +113,7 @@ class EstimatorKalmanEmulator:
         position[0] = cffirmware.get_state(self.coreData, 0)
         position[1] = cffirmware.get_state(self.coreData, 1)
         position[2] = cffirmware.get_state(self.coreData, 2)
+        #print("Position: ", position)
 
         rotation_matrix = [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]]
 
@@ -146,8 +147,7 @@ class EstimatorKalmanEmulator:
             sweep.t = float(sweep_data['t'])
             sweep.measuredSweepAngle = float(sweep_data['sweepAngle'])
             sweep.stdDev = self.LH_ENGINE_MEASUREMENT_NOISE_STD
-            sweep.calib = self.basestation_calibration[sweep.baseStationId][sweep.sweepId]
-            cffirmware.set_calibration_model(sweep.calibrationMeasurementModel)
+            cffirmware.set_calibration_model(sweep, self.basestation_calibration[sweep.baseStationId][sweep.sweepId])
 
             sensor_pos_w = 0.015/2.0
             sensor_pos_l = 0.030/2.0
@@ -164,13 +164,14 @@ class EstimatorKalmanEmulator:
             cffirmware.set_sensor_pos(sweep, sensorPos)
 
             cffirmware.set_pose_origin_mat(sweep, self.basestation_poses[sweep.baseStationId].origin, self.basestation_poses[sweep.baseStationId].mat)
-
-            geometry_cache = cffirmware.baseStationGeometryCache_t()
-            cffirmware.preProcessGeometryData(sweep.rotorRot, geometry_cache.baseStationInvertedRotationMatrixes, geometry_cache.lh1Rotor2RotationMatrixes, geometry_cache.lh1Rotor2InvertedRotationMatrixes)
+            cffirmware.set_inv_mat(sweep,  self.basestation_poses[sweep.baseStationId].mat )
+            #cffirmware.print_sweep_angle(sweep)
+            #geometry_cache = cffirmware.baseStationGeometryCache_t()
+            #cffirmware.preProcessGeometryData(sweep.rotorRot, geometry_cache.baseStationInvertedRotationMatrixes, geometry_cache.lh1Rotor2RotationMatrixes, geometry_cache.lh1Rotor2InvertedRotationMatrixes)
 
             #sweep.rotorRotInv = geometry_cache.baseStationInvertedRotationMatrixes[sweep.sensorId]
-            #cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
 
+            cffirmware.kalmanCoreUpdateWithSweepAngles(self.coreData, sweep, now_ms, self.outlierFilterStateLH)
             # yaw error
 
             # apply calibration

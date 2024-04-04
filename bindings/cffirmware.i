@@ -71,9 +71,11 @@ float get_mat_index(kalmanCoreData_t *data, int i, int j)
     return data->R[i][j];
 }
 
-float set_calibration_model(lighthouseCalibrationMeasurementModel_t *calib_model)
+float set_calibration_model(sweepAngleMeasurement_t *sweep, lighthouseCalibrationSweep_t *calib_in)
 {
-    calib_model = &lighthouseCalibrationMeasurementModelLh2;
+    sweep->calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
+    sweep->calib = calib_in;
+
 }
 
 void set_sensor_pos(sweepAngleMeasurement_t *sweep,  struct vec3_s sensorpos)
@@ -87,6 +89,46 @@ void set_pose_origin_mat(sweepAngleMeasurement_t *sweep, vec3d  origin, mat3d ma
     sweep->rotorPos = origin;
     sweep->rotorRot = mat;
 }
+
+
+
+void set_inv_mat(sweepAngleMeasurement_t *sweep, mat3d rotorRot)
+{
+
+    mat3d rotorRotInv;
+    //printf("rotorRot: %f, %f, %f\n", rotorRot[0][0], rotorRot[0][1], rotorRot[0][2]);
+
+    // Copy the transposed matrix to sweep->rotorRotInv
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            rotorRotInv[i][j] = rotorRot[j][i];
+    sweep->rotorRotInv = rotorRotInv;
+    //printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[0][0], sweep->rotorRot[0][1], sweep->rotorRot[0][2]);
+
+}
+
+void print_sweep_angle(sweepAngleMeasurement_t *sweep)
+{
+    //print all variables of struct
+    printf("uint32_t timestamp: %d\n", sweep->timestamp);
+    printf("sensorPos: %f, %f, %f\n", sweep->sensorPos[0], sweep->sensorPos[1], sweep->sensorPos[2]);
+    printf("rotorPos: %f, %f, %f\n", sweep->rotorPos[0], sweep->rotorPos[1], sweep->rotorPos[2]);
+    printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[0][0], sweep->rotorRot[0][1], sweep->rotorRot[0][2]);
+    printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[1][0], sweep->rotorRot[1][1], sweep->rotorRot[1][2]);
+    printf("rotorRot: %f, %f, %f\n", sweep->rotorRot[2][0], sweep->rotorRot[2][1], sweep->rotorRot[2][2]);
+    printf("rotorRotInv: %f, %f, %f\n", sweep->rotorRotInv[0][0], sweep->rotorRotInv[0][1], sweep->rotorRotInv[0][2]);
+    printf("rotorRotInv: %f, %f, %f\n", sweep->rotorRotInv[1][0], sweep->rotorRotInv[1][1], sweep->rotorRotInv[1][2]);
+    printf("rotorRotInv: %f, %f, %f\n", sweep->rotorRotInv[2][0], sweep->rotorRotInv[2][1], sweep->rotorRotInv[2][2]);
+    printf("sensorID: %d\n", sweep->sensorId);
+    printf("baseStationID: %d\n", sweep->baseStationId);
+    printf("sweepID: %d\n", sweep->sweepId);
+    printf("t: %f\n", sweep->t);
+    printf("measuredSweepAngle: %f\n", sweep->measuredSweepAngle);
+    printf("stdDev: %f\n", sweep->stdDev);
+    printf("calib: %f, %f, %f, %f, %f\n", sweep->calib->phase, sweep->calib->tilt, sweep->calib->curve, sweep->calib->gibmag, sweep->calib->gibphase);
+    printf("calibrationMeasurementModel: %f\n", sweep->calibrationMeasurementModel);
+}
+
 
 void set_origin_mat(baseStationGeometry_t *geo, struct vec3_s *origin, struct vec3_s *mat1, struct vec3_s *mat2, struct vec3_s *mat3)
 {
