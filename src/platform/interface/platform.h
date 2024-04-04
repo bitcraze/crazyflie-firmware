@@ -35,12 +35,12 @@
 #define PLATFORM_DEVICE_TYPE_MAX_LEN (4 + 1)
 
 typedef enum {
-  #ifdef CONFIG_SENSORS_BMI088_BMP388
-  SensorImplementation_bmi088_bmp388,
+  #ifdef CONFIG_SENSORS_BMI088_BMP3XX
+  SensorImplementation_bmi088_bmp3xx,
   #endif
 
   #ifdef CONFIG_SENSORS_BMI088_SPI
-  SensorImplementation_bmi088_spi_bmp388,
+  SensorImplementation_bmi088_spi_bmp3xx,
   #endif
 
   #ifdef CONFIG_SENSORS_MPU9250_LPS25H

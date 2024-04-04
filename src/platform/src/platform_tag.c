@@ -37,7 +37,7 @@ static platformConfig_t configs[] = {
   {
     .deviceType = "RR10",
     .deviceTypeName = "Roadrunner 1.0",
-    .sensorImplementation = SensorImplementation_bmi088_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapNoMotors,
   },
