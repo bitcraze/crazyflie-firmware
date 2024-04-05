@@ -222,33 +222,33 @@ void systemTask(void *arg)
   //Test the modules
   DEBUG_PRINT("About to run tests in system.c.\n");
   if (systemTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("system [FAIL]\n");
   }
   if (configblockTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("configblock [FAIL]\n");
   }
   if (storageTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("storage [FAIL]\n");
   }
   if (commTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("comm [FAIL]\n");
   }
   if (commanderTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("commander [FAIL]\n");
   }
   if (stabilizerTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
 
   #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   if (estimatorKalmanTaskTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
   #endif
@@ -261,31 +261,31 @@ void systemTask(void *arg)
   #endif
 
   if (deckTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("deck [FAIL]\n");
   }
   if (soundTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("sound [FAIL]\n");
   }
   if (memTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("mem [FAIL]\n");
   }
   if (crtpMemTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("CRTP mem [FAIL]\n");
   }
   if (watchdogNormalStartTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("watchdogNormalStart [FAIL]\n");
   }
   if (cfAssertNormalStartTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("cfAssertNormalStart [FAIL]\n");
   }
   if (peerLocalizationTest() == false) {
-    pass = false;
+    pass &= false;
     DEBUG_PRINT("peerLocalization [FAIL]\n");
   }
 
