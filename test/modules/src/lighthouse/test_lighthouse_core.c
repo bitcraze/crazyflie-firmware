@@ -168,7 +168,7 @@ void testThatOffsetIsDecodedInUartFrame() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 
   // Verify the padding data was not affected
-  TEST_ASSERT_TRUE(frameOk)
+  TEST_ASSERT_TRUE(frameOk);
 }
 
 
@@ -187,7 +187,7 @@ void testThatBeamDataIsDecodedInUartFrame() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 
   // Verify the padding data was not affected
-  TEST_ASSERT_TRUE(frameOk)
+  TEST_ASSERT_TRUE(frameOk);
 }
 
 void testThatSensorIsDecodedInUartFrame() {
