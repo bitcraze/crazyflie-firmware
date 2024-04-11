@@ -181,7 +181,7 @@ Inside of the file, replace everything with the following:
                 "request": "launch",
                 "type": "cortex-debug",
                 "device": "STM32F405",
-                "svdFile": "STM32F405.svd",
+                "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
                 "servertype": "openocd",
                 "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
                 "runToMain": true,
@@ -209,10 +209,6 @@ Inside of the file, replace everything with the following:
 
 > **Note: Debugging thread aware**
 > To debug thread aware you need to add ```"rtos": "FreeRTOS"``` to your configuration in the launch.json file - however, while this can be very handy we also occasionally experienced some issues with setting breakpoints while using this configuration.
-
-#### Installing the SVD file
-
-Now for the SVD file: just download it from [here](STM32F405.svd) and into the firmware root dir, or download it from the ST website (search for `svd stm32f4`). Make sure it has the exact name of ```STM32F405.svd``` !
 
 ### Debug!
 
