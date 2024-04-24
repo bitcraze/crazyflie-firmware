@@ -21,12 +21,7 @@
 #define LPS_TWR_LPP_PAYLOAD 4
 
 #define LPS_TWR_SEND_LPP_PAYLOAD 1
-
-#ifdef LOCODECK_NR_OF_ANCHORS
-#define LOCODECK_NR_OF_TWR_ANCHORS LOCODECK_NR_OF_ANCHORS
-#else
 #define LOCODECK_NR_OF_TWR_ANCHORS 8
-#endif
 
 extern uwbAlgorithm_t uwbTwrTagAlgorithm;
 
